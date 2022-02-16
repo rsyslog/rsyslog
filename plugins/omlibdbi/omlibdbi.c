@@ -225,7 +225,7 @@ reportDBError(instanceData *pData, int bSilent)
 	/* output log message */
 	errno = 0;
 	if(pData->conn == NULL) {
-		LogError(0, NO_ERRCODE, "unknown DB error occured - could not obtain connection handle");
+		LogError(0, NO_ERRCODE, "unknown DB error occurred - could not obtain connection handle");
 	} else { /* we can ask dbi for the error description... */
 		uDBErrno = dbi_conn_error(pData->conn, &pszDbiErr);
 		snprintf(errMsg, sizeof(errMsg), "db error (%d): %s\n", uDBErrno, pszDbiErr);
@@ -330,7 +330,7 @@ writeDB(const uchar *psz, instanceData *const __restrict__ pData)
 
 	/* try insert */
 	if((dbiRes = dbi_conn_query(pData->conn, (const char*)psz)) == NULL) {
-		/* error occured, try to re-init connection and retry */
+		/* error occurred, try to re-init connection and retry */
 		closeConn(pData); /* close the current handle */
 		CHKiRet(initConn(pData, 0)); /* try to re-open */
 		if((dbiRes = dbi_conn_query(pData->conn, (const char*)psz)) == NULL) { /* re-try insert */

@@ -530,7 +530,7 @@ rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 			break;
 		} else if(iRet != RS_RET_CONFLINE_UNPROCESSED) {
 			/* In this case, the module would have handled the config
-			 * line, but some error occured while doing so. This error should
+			 * line, but some error occurred while doing so. This error should
 			 * already by reported by the module. We do not try any other
 			 * modules on this line, because we found the right one.
 			 * rgerhards, 2007-07-24

@@ -1426,7 +1426,7 @@ finalize_it:
 
 
 /* issue write() api calls until either the buffer is completely
- * written or an error occured (it may happen that multiple writes
+ * written or an error occurred (it may happen that multiple writes
  * are required, what is perfectly legal. On exit, *pLenBuf contains
  * the number of bytes actually written.
  * rgerhards, 2009-06-08

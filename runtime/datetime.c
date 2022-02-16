@@ -821,7 +821,7 @@ applyDfltTZ(struct syslogTime *pTime, char *tz)
  * The caller must provide the timestamp as well as a character
  * buffer that will receive the resulting string. The function
  * returns the size of the timestamp written in bytes (without
- * the string terminator). If 0 is returend, an error occured.
+ * the string terminator). If 0 is returend, an error occurred.
  */
 static int
 formatTimestampToMySQL(struct syslogTime *ts, char* pBuf)
@@ -890,7 +890,7 @@ formatTimestampToPgSQL(struct syslogTime *ts, char *pBuf)
  * The caller must provide the timestamp as well as a character
  * buffer that will receive the resulting string. The function
  * returns the size of the timestamp written in bytes (without
- * the string terminator). If 0 is returend, an error occured.
+ * the string terminator). If 0 is returend, an error occurred.
  * The buffer must be at least 7 bytes large.
  * rgerhards, 2008-06-06
  */
@@ -931,7 +931,7 @@ formatTimestampSecFrac(struct syslogTime *ts, char* pBuf)
  * The caller must provide the timestamp as well as a character
  * buffer that will receive the resulting string. The function
  * returns the size of the timestamp written in bytes (without
- * the string terminator). If 0 is returend, an error occured.
+ * the string terminator). If 0 is returend, an error occurred.
  */
 static int
 formatTimestamp3339(struct syslogTime *ts, char* pBuf)
@@ -1006,7 +1006,7 @@ formatTimestamp3339(struct syslogTime *ts, char* pBuf)
  * The caller must provide the timestamp as well as a character
  * buffer that will receive the resulting string. The function
  * returns the size of the timestamp written in bytes (without
- * the string termnator). If 0 is returend, an error occured.
+ * the string termnator). If 0 is returend, an error occurred.
  * rgerhards, 2010-03-05: Added support to for buggy 3164 dates,
  * where a zero-digit is written instead of a space for the first
  * day character if day < 10. syslog-ng seems to do that, and some

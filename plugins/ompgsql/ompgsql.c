@@ -170,7 +170,7 @@ static void reportDBError(wrkrInstanceData_t *pWrkrData, int bSilent)
 	/* output log message */
 	errno = 0;
 	if (pWrkrData->f_hpgsql == NULL) {
-		LogError(0, NO_ERRCODE, "unknown DB error occured - could not obtain PgSQL handle");
+		LogError(0, NO_ERRCODE, "unknown DB error occurred - could not obtain PgSQL handle");
 	} else { /* we can ask pgsql for the error description... */
 		ePgSQLStatus = PQstatus(pWrkrData->f_hpgsql);
 		snprintf(errMsg, sizeof(errMsg), "db error (%d): %s\n", ePgSQLStatus,
@@ -286,7 +286,7 @@ writePgSQL(uchar *psz, wrkrInstanceData_t *pWrkrData)
 
 	if (bHadError || (PQstatus(pWrkrData->f_hpgsql) != CONNECTION_OK)) {
 #if 0		/* re-enable once we have transaction support */
-		/* error occured, try to re-init connection and retry */
+		/* error occurred, try to re-init connection and retry */
 		int inTransaction = 0;
 		if(pData->f_hpgsql != NULL) {
 			PGTransactionStatusType xactStatus = PQtransactionStatus(pData->f_hpgsql);

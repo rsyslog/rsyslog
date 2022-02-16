@@ -4566,10 +4566,10 @@ cnfstmtNewAct(struct nvlst *lst)
 	}
 	localRet = actionNewInst(lst, &cnfstmt->d.act);
 	if(localRet == RS_RET_OK_WARN) {
-		parser_errmsg("warnings occured in file '%s' around line %d",
+		parser_errmsg("warnings occurred in file '%s' around line %d",
 			      cnfcurrfn, yylineno);
 	} else if(localRet != RS_RET_OK) {
-		parser_errmsg("errors occured in file '%s' around line %d",
+		parser_errmsg("errors occurred in file '%s' around line %d",
 			      cnfcurrfn, yylineno);
 		cnfstmt->nodetype = S_NOP; /* disable action! */
 		goto done;
@@ -4593,7 +4593,7 @@ cnfstmtNewLegaAct(char *actline)
 	cnfstmt->printable = (uchar*)strdup((char*)actline);
 	localRet = cflineDoAction(loadConf, (uchar**)&actline, &cnfstmt->d.act);
 	if(localRet != RS_RET_OK) {
-		parser_errmsg("%s occured in file '%s' around line %d",
+		parser_errmsg("%s occurred in file '%s' around line %d",
 			      (localRet == RS_RET_OK_WARN) ? "warnings" : "errors",
 			      cnfcurrfn, yylineno);
 		if(localRet != RS_RET_OK_WARN) {

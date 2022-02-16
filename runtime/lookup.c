@@ -883,7 +883,7 @@ lookupPendingReloadCount(void)
 
 
 /* returns either a pointer to the value (read only!) or NULL
- * if either the key could not be found or an error occured.
+ * if either the key could not be found or an error occurred.
  * Note that an estr_t object is returned. The caller is
  * responsible for freeing it.
  */

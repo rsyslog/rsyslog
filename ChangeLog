@@ -1023,7 +1023,7 @@ Scheduled Release 8.2001.0 (aka 2020.01) 2020-01-14
   kafka component download improvements, and prevent dangling left-over test tool
   instances from aborted tests
 - 2020-01-07: tls subsystem bugfix: default for permitExpiredCerts was invalidly "on"
-  The problem occured with commit 3d9b8df in December 2018 and went into
+  The problem occurred with commit 3d9b8df in December 2018 and went into
   scheduled stable 8.1901.0. Unfortunately, the change in default was not detected
   until a year later. This commit re-enables the previous default ("off"), which is
   also the only sensible default from a security PoV. Unfortunately, new 2019
@@ -1623,7 +1623,7 @@ an easy way to identify which changes went into the respective daily stable.
 - core bugfix: message duplication copied incorrect timestamp
   MsgDup() placed timereported into timegenerated property, resulting
   in invalid property values. Original timegenerated was lost. This
-  occured always when a message needed to be duplicated. Most
+  occurred always when a message needed to be duplicated. Most
   importantly this is the case when queues are used.
   closes https://github.com/rsyslog/rsyslog/issues/3716
 - core bugfix: segfault on startup depending on queue file names
@@ -1748,7 +1748,7 @@ Version 8.1905.0 (aka 2019.05) 2019-05-28
   see also https://github.com/rsyslog/rsyslog/issues/3639
 - config processing bugfix: error messages if config.enabled="off" is used
   Using config.enabled="off" could lead to error messages on
-  "parameter xxx not known", which were invalid. They occured
+  "parameter xxx not known", which were invalid. They occurred
   because the config handler expected them to be used, which
   was not the case due to being disabled.
   This commit fixes that issue.
@@ -1898,7 +1898,7 @@ Version 8.1904.0 (aka 2019.04) 2019-04-16
 - pmnormalize: fix memory leaks, improve tests
   This patch fixes a set of problems plus provides more and enhanced
   tests for the module.
-  Most important problem was a memory leak that occured when a message
+  Most important problem was a memory leak that occurred when a message
   could not be passed at all. For each message that could not be parsed
   memory of at least the size the message is leaked. Depending on
   traffic pattern this can quickly lead to OOM. Note, however, that
@@ -2103,7 +2103,7 @@ Version 8.1901.0 (aka 2019.01) 2019-01-22
   we add configure switch --enable-helgrind. We need to turn helgrind off
   when we use clang coverage instrumentation. The instrumentation injects
   mt-unsafe counter updates which we seem to be unable to suppress.
-  Note: for gcc this was possible, because they all occured in a utility
+  Note: for gcc this was possible, because they all occurred in a utility
   function. For clang, they are inlined so we get many -and changing- violations.
   see also https://github.com/rsyslog/rsyslog/issues/3361#issuecomment-450502569
 - imzmq3/omzmq3: remove modules
@@ -2658,7 +2658,7 @@ Version 8.38.0 [v8-stable] 2018-09-18
   - another two major leaks of similar magnitude could occur if
     "fromhost-ip" and/or "fromhost" properties were set
   - minor leaks upon termination. these were unproblematic as
-    static and only occured immediately before shutdown.
+    static and only occurred immediately before shutdown.
     But they triggered memory debugger errors.
   - fixed test which did not check for mem leaks albeit it should
   - core invalid handling of the "fromhost" property, if set via
@@ -3264,7 +3264,7 @@ Version 8.35.0 [v8-stable] 2018-05-15
   Thanks to github user jvymazal for the patch.
 - imuxsock: replace select() call by poll()
   While extremely unlikely, imuxsock could abort if a file descriptor
-  > 1024 was received during the startup phase (never occured in
+  > 1024 was received during the startup phase (never occurred in
   practice, but theoretically could if imfile monitored a large number
   of files and were loaded before imuxsock - and maybe other
   strange cases).
@@ -3544,7 +3544,7 @@ Version 8.33.1 [v8-stable] 2018-03-06
   resulting in make check failures if build from tarball.
   Thanks to Thomas D. (whissi), and Michael Biebl for alerting us on the
   problem, providing advise and some of the patches. We also added addt'l
-  patches ourselves. The problem occured as the CI check for tarball
+  patches ourselves. The problem occurred as the CI check for tarball
   completeness was more or less disabled a couple of weeks ago, which
   unfortunately went unnoticed. We have also applied some more safeguards
   to detect such problems in the future.
@@ -3618,7 +3618,7 @@ Version 8.33.0 [v8-stable] 2018-02-20
 - core bugfix: misaddressing in external command parser
   This parser is used whenever a module (e.g. omprog) needs to process
   command lines. If command parameters were given, memory misaddressing
-  occured. This could lead to a segfault.
+  occurred. This could lead to a segfault.
   This is a regression in 8.32.0.
   closes https://github.com/rsyslog/rsyslog/issues/2408
 - core bugfix: small memory leak in external command parser
@@ -3877,7 +3877,7 @@ Version 8.32.0 [v8-stable] 2018-01-09
   This should not cause any change of behavior, but is worth noting in case
   we see a regression not caught by the CI system.
 - mmsnmptrapd bugfix: potential misaddressing
-  This only occured in situations when the system was totally out of memory.
+  This only occurred in situations when the system was totally out of memory.
 - imkafka: fix potential small resource leak
   If rdkafka handle cannot fully populated, cleanup is added. Previously, we
   could leak a handle if e.g. no brokers were available. Note that this was
@@ -4055,7 +4055,7 @@ Version 8.31.0 [v8-stable] 2017-11-28
   respected, but no "hard error".
 - core/template bugfix: potential NULL pointer access at config load
   could happen if the config was loaded and the parameters could not properly
-  be processed. If so, this occured only during the startup phase.
+  be processed. If so, this occurred only during the startup phase.
   Detected by Coverity scan, CID 185318
 - core/json var subsystem bugfix: segfault in MsgSetPropsViaJSON
   Invalid libfastjson API use lead to double-free. This was most importantly
@@ -4931,7 +4931,7 @@ Version 8.26.0 [v8-stable] 2017-04-04
 - bugfix omsnmp: improper handling of new-style configuration parameters
   Thanks to Radovan Sroka for the patch.
 - bugfix: rsyslog identifies itself as "liblogging-stdlog" in internal messages
-  This occured when liblogging-stdlog was used, and was used by default (without
+  This occurred when liblogging-stdlog was used, and was used by default (without
   explicit configuration). This is a regression of the new default, which does
   not correctly call stdlog_open() in the default case.
   closes https://github.com/rsyslog/rsyslog/issues/1442
@@ -7123,7 +7123,7 @@ Version 7.5.5 [devel] 2013-10-16
 - now requires libestr 0.1.7 as early versions had a nasty bug in
   string comparisons
 - bugfix: mmanon did not detect all IP addresses in rewrite mode
-  The problem occured if two IPs were close to each other and the first one
+  The problem occurred if two IPs were close to each other and the first one
   was shrunk.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=485
   Thanks to micah-at-riseup.net for reporting this bug
@@ -7389,7 +7389,7 @@ Version 7.4.5  [v7.4-stable] 2013-10-22
   support atomic instructions - in this case the associated mutexes also
   did not get properly initialized.
 - bugfix: mmanon did not detect all IP addresses in rewrite mode
-  The problem occured if two IPs were close to each other and the first one
+  The problem occurred if two IPs were close to each other and the first one
   was shrunk.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=485
   Thanks to micah-at-riseup.net for reporting this bug
@@ -8857,7 +8857,7 @@ Version 6.1.4  [DEVEL] (rgerhards), 2011-02-18
   circumstances. This has now been solved, at least for common
   situations.
 - bugfix: fixed compile problem due to empty structs
-  this occured only on some platforms/compilers. thanks to Dražen Kačar 
+  this occurred only on some platforms/compilers. thanks to Dražen Kačar 
   for the fix
 ---------------------------------------------------------------------------
 Version 6.1.3  [DEVEL] (rgerhards), 2011-02-01
@@ -8911,7 +8911,7 @@ Version 6.1.1  [DEVEL] (rgerhards), 2010-11-30
 - merged imuxsock improvements from 5.7.1 (see there)
 - support for systemd officially added (import from 5.7.0)
 - bugfix: a couple of problems that imfile had on some platforms, namely
-  Ubuntu (not their fault, but occured there)
+  Ubuntu (not their fault, but occurred there)
 - bugfix: imfile utilizes 32 bit to track offset. Most importantly,
   this problem can not experienced on Fedora 64 bit OS (which has
   64 bit long's!)
@@ -9299,7 +9299,7 @@ Version 5.8.7  [V5-stable] 2012-01-17
 - bugfix: instabilities when using RFC5424 header fields
   Thanks to Kaiwang Chen for the patch
 - bugfix: imuxsock did truncate part of received message if it did not
-  contain a proper date. The truncation occured because we removed that
+  contain a proper date. The truncation occurred because we removed that
   part of the messages that was expected to be the date.
   closes: http://bugzilla.adiscon.com/show_bug.cgi?id=295
 - bugfix: potential abort after reading invalid X.509 certificate
@@ -9380,7 +9380,7 @@ Version 5.8.2  [V5-stable] (rgerhards), 2011-06-21
 Version 5.8.1  [V5-stable] (rgerhards), 2011-05-19
 - bugfix: invalid processing in QUEUE_FULL condition
   If the the multi-submit interface was used and a QUEUE_FULL condition
-  occured, the failed message was properly destructed. However, the
+  occurred, the failed message was properly destructed. However, the
   rest of the input batch, if it existed, was not processed. So this
   lead to potential loss of messages and a memory leak. The potential
   loss of messages was IMHO minor, because they would have been dropped
@@ -9527,7 +9527,7 @@ Version 5.7.4  [V5-BETA] (rgerhards), 2011-02-17
   circumstances. This has now been solved, at least for common
   situations.
 - bugfix: fixed compile problem due to empty structs
-  this occured only on some platforms/compilers. thanks to Dražen Kačar 
+  this occurred only on some platforms/compilers. thanks to Dražen Kačar 
   for the fix
 ---------------------------------------------------------------------------
 Version 5.7.3  [V5-BETA] (rgerhards), 2011-02-07
@@ -9669,7 +9669,7 @@ This release brings all changes and enhancements of the 5.5.x series
 to the v5-stable branch.
 
 - bugfix: a couple of problems that imfile had on some platforms, namely
-  Ubuntu (not their fault, but occured there)
+  Ubuntu (not their fault, but occurred there)
 - bugfix: imfile utilizes 32 bit to track offset. Most importantly,
   this problem can not experienced on Fedora 64 bit OS (which has
   64 bit long's!)
@@ -10109,7 +10109,7 @@ Version 5.1.2  [DEVEL] (rgerhards), 2009-07-08
 ---------------------------------------------------------------------------
 Version 5.1.1  [DEVEL] (rgerhards), 2009-07-03
 - bugfix: huge memory leak in queue engine (made rsyslogd unusable in
-  production). Occured if at least one queue was in direct mode 
+  production). Occurred if at least one queue was in direct mode 
   (the default for action queues)
 - imported many performance optimizations from v4-devel (4.5.0)
 - bugfix: subtle (and usually irrelevant) issue in timeout processing
@@ -10199,7 +10199,7 @@ Version 4.7.3  [v4-devel] (rgerhards), 2010-11-25
 - added imptcp, a simplified, Linux-specific and potentially fast
   syslog plain tcp input plugin (NOT supporting TLS!)
 - bugfix: a couple of problems that imfile had on some platforms, namely
-  Ubuntu (not their fault, but occured there)
+  Ubuntu (not their fault, but occurred there)
 - bugfix: imfile utilizes 32 bit to track offset. Most importantly,
   this problem can not experienced on Fedora 64 bit OS (which has
   64 bit long's!)
@@ -10269,7 +10269,7 @@ Version 4.6.6  [v4-stable] (rgerhards), 2011-06-24
   of some data structures. [backport from v6, limited testing under v4]
 - bugfix: invalid processing in QUEUE_FULL condition
   If the the multi-submit interface was used and a QUEUE_FULL condition
-  occured, the failed message was properly destructed. However, the
+  occurred, the failed message was properly destructed. However, the
   rest of the input batch, if it existed, was not processed. So this
   lead to potential loss of messages and a memory leak. The potential
   loss of messages was IMHO minor, because they would have been dropped
@@ -10306,7 +10306,7 @@ Version 4.6.6  [v4-stable] (rgerhards), 2011-06-24
   code has now been removed, a file change (and thus resent) is only
   detected if the inode number changes.
 - bugfix: a couple of problems that imfile had on some platforms, namely
-  Ubuntu (not their fault, but occured there)
+  Ubuntu (not their fault, but occurred there)
 - bugfix: imfile utilizes 32 bit to track offset. Most importantly,
   this problem can not experienced on Fedora 64 bit OS (which has
   64 bit long's!)
@@ -10422,8 +10422,8 @@ Version 4.6.2  [v4-stable] (rgerhards), 2010-03-26
   unlikely) could lead to some issues. We have not been able to describe
   any fatal cases, but there was some bug potential. Sequence has now
   been straighted out.
-- bugfix: potential problem (loop, abort) when file write error occured
-  When a write error occured in stream.c, variable iWritten had the error
+- bugfix: potential problem (loop, abort) when file write error occurred
+  When a write error occurred in stream.c, variable iWritten had the error
   code but this was handled as if it were the actual number of bytes
   written. That was used in pointer arithmetic later on, and thus could
   lead to all sorts of problems. However, this could only happen if the
@@ -12328,7 +12328,7 @@ Version 1.19.7 (rgerhards), 2007-09-25
   handled.
 - replaced some non-thread-safe function calls by their thread-safe
   counterparts
-- fixed a minor memory leak that occured when the %APPNAME% property was
+- fixed a minor memory leak that occurred when the %APPNAME% property was
   used (I think nobody used that in practice)
 - fixed a bug that caused signal handlers in cvthname() not to be restored when
   a malicious pointer record was detected and processing of the message been
@@ -12461,7 +12461,7 @@ Version 1.17.6 (rgerhards), 2007-08-01
   The initial fix and idea was developed by mildew, I fine-tuned
   it a bit. Thanks a lot for the fix, I'd probably had pulled out my
   hair to find the bug...
-- added output of config file line number when a parsing error occured
+- added output of config file line number when a parsing error occurred
 - fixed bug in objomsr.c that caused program to abort in debug mode with
   an invalid assertion (in some cases)
 - fixed a typo that caused the default template for MySQL to be wrong.
@@ -12838,7 +12838,7 @@ Version 1.10.2 (RGer), 2005-09-27
   (only if -d switch is given)
 - changed some function definitions to static, which eventually enables
   some compiler optimizations
-- fixed a bug in MySQL code; when a SQL error occured, rsyslogd could
+- fixed a bug in MySQL code; when a SQL error occurred, rsyslogd could
   run in a tight loop. This was due to invalid sequence of error reporting
   and is now fixed.
 ---------------------------------------------------------------------------
@@ -12896,7 +12896,7 @@ Version 1.0.3 (RGer), 2005-11-14
   was present in the syslog message
 ---------------------------------------------------------------------------
 Version 1.0.2 (RGer), 2005-10-05
-- fixed an issue with MySQL error reporting. When an error occured,
+- fixed an issue with MySQL error reporting. When an error occurred,
   the MySQL driver went into an endless loop (at least in most cases).
 ---------------------------------------------------------------------------
 Version 1.0.1 (RGer), 2005-09-23
@@ -13271,7 +13271,7 @@ Version 1.19.7 (rgerhards), 2007-09-25
   handled.
 - replaced some non-thread-safe function calls by their thread-safe
   counterparts
-- fixed a minor memory leak that occured when the %APPNAME% property was
+- fixed a minor memory leak that occurred when the %APPNAME% property was
   used (I think nobody used that in practice)
 - fixed a bug that caused signal handlers in cvthname() not to be restored when
   a malicious pointer record was detected and processing of the message been
@@ -13404,7 +13404,7 @@ Version 1.17.6 (rgerhards), 2007-08-01
   The initial fix and idea was developed by mildew, I fine-tuned
   it a bit. Thanks a lot for the fix, I'd probably had pulled out my
   hair to find the bug...
-- added output of config file line number when a parsing error occured
+- added output of config file line number when a parsing error occurred
 - fixed bug in objomsr.c that caused program to abort in debug mode with
   an invalid assertion (in some cases)
 - fixed a typo that caused the default template for MySQL to be wrong.
@@ -13781,7 +13781,7 @@ Version 1.10.2 (RGer), 2005-09-27
   (only if -d switch is given)
 - changed some function definitions to static, which eventually enables
   some compiler optimizations
-- fixed a bug in MySQL code; when a SQL error occured, rsyslogd could
+- fixed a bug in MySQL code; when a SQL error occurred, rsyslogd could
   run in a tight loop. This was due to invalid sequence of error reporting
   and is now fixed.
 ---------------------------------------------------------------------------
@@ -13839,7 +13839,7 @@ Version 1.0.3 (RGer), 2005-11-14
   was present in the syslog message
 ---------------------------------------------------------------------------
 Version 1.0.2 (RGer), 2005-10-05
-- fixed an issue with MySQL error reporting. When an error occured,
+- fixed an issue with MySQL error reporting. When an error occurred,
   the MySQL driver went into an endless loop (at least in most cases).
 ---------------------------------------------------------------------------
 Version 1.0.1 (RGer), 2005-09-23
@@ -14214,7 +14214,7 @@ Version 1.19.7 (rgerhards), 2007-09-25
   handled.
 - replaced some non-thread-safe function calls by their thread-safe
   counterparts
-- fixed a minor memory leak that occured when the %APPNAME% property was
+- fixed a minor memory leak that occurred when the %APPNAME% property was
   used (I think nobody used that in practice)
 - fixed a bug that caused signal handlers in cvthname() not to be restored when
   a malicious pointer record was detected and processing of the message been
@@ -14347,7 +14347,7 @@ Version 1.17.6 (rgerhards), 2007-08-01
   The initial fix and idea was developed by mildew, I fine-tuned
   it a bit. Thanks a lot for the fix, I'd probably had pulled out my
   hair to find the bug...
-- added output of config file line number when a parsing error occured
+- added output of config file line number when a parsing error occurred
 - fixed bug in objomsr.c that caused program to abort in debug mode with
   an invalid assertion (in some cases)
 - fixed a typo that caused the default template for MySQL to be wrong.
@@ -14724,7 +14724,7 @@ Version 1.10.2 (RGer), 2005-09-27
   (only if -d switch is given)
 - changed some function definitions to static, which eventually enables
   some compiler optimizations
-- fixed a bug in MySQL code; when a SQL error occured, rsyslogd could
+- fixed a bug in MySQL code; when a SQL error occurred, rsyslogd could
   run in a tight loop. This was due to invalid sequence of error reporting
   and is now fixed.
 ---------------------------------------------------------------------------
@@ -14782,7 +14782,7 @@ Version 1.0.3 (RGer), 2005-11-14
   was present in the syslog message
 ---------------------------------------------------------------------------
 Version 1.0.2 (RGer), 2005-10-05
-- fixed an issue with MySQL error reporting. When an error occured,
+- fixed an issue with MySQL error reporting. When an error occurred,
   the MySQL driver went into an endless loop (at least in most cases).
 ---------------------------------------------------------------------------
 Version 1.0.1 (RGer), 2005-09-23

@@ -2212,7 +2212,7 @@ ConsumerDA(qqueue_t *pThis, wti_t *pWti)
 		iRet = qqueueEnqMsg(pThis->pqDA, eFLOWCTL_NO_DELAY, MsgAddRef(pWti->batch.pElem[i].pMsg));
 		if(iRet != RS_RET_OK) {
 			if(iRet == RS_RET_ERR_QUEUE_EMERGENCY) {
-				/* Queue emergency error occured */
+				/* Queue emergency error occurred */
 				DBGOPRINT((obj_t*) pThis, "ConsumerDA:qqueueEnqMsg caught RS_RET_ERR_QUEUE_EMERGENCY,"
 						"aborting loop.\n");
 				FINALIZE;

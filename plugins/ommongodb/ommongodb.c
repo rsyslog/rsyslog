@@ -176,7 +176,7 @@ CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
-/* report error that occured during *last* operation
+/* report error that occurred during *last* operation
  */
 static void
 reportMongoError(instanceData *pData)

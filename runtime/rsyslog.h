@@ -337,7 +337,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_QTYPE_MISMATCH = -2038, /**< different qType when reading back a property type */
 	RS_RET_NO_FILE_ACCESS = -2039, /**< covers EACCES error on file open() */
 	RS_RET_FILE_NOT_FOUND = -2040, /**< file not found */
-	RS_RET_TIMED_OUT = -2041, /**< timeout occured (not necessarily an error) */
+	RS_RET_TIMED_OUT = -2041, /**< timeout occurred (not necessarily an error) */
 	RS_RET_QSIZE_ZERO = -2042, /**< queue size is zero where this is not supported */
 	RS_RET_ALREADY_STARTING = -2043, /**< something (a thread?) is already starting - not necessarily an error */
 	RS_RET_NO_MORE_THREADS = -2044, /**< no more threads available, not necessarily an error */
@@ -390,13 +390,13 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_CERT_INVALID_DN = -2091, /**< distinguised name in x509 certificate is invalid (e.g. wrong escaping) */
 	RS_RET_CERT_EXPIRED = -2092, /**< we are past a x.509 cert's expiration time */
 	RS_RET_CERT_NOT_YET_ACTIVE = -2094, /**< x.509 cert's activation time not yet reached */
-	RS_RET_SYS_ERR = -2095, /**< system error occured (e.g. time() returned -1, quite unexpected) */
+	RS_RET_SYS_ERR = -2095, /**< system error occurred (e.g. time() returned -1, quite unexpected) */
 	RS_RET_FILE_NO_STAT = -2096, /**< can not stat() a file */
 	RS_RET_FILE_TOO_LARGE = -2097, /**< a file is larger than permitted */
 	RS_RET_INVALID_WILDCARD = -2098, /**< a wildcard entry is invalid */
 	RS_RET_CLOSED = -2099, /**< connection was closed */
 	RS_RET_RETRY = -2100, /**< call should be retried (e.g. EGAIN on recv) */
-	RS_RET_GSS_ERR = -2101, /**< generic error occured in GSSAPI subsystem */
+	RS_RET_GSS_ERR = -2101, /**< generic error occurred in GSSAPI subsystem */
 	RS_RET_CERTLESS = -2102, /**< state: we run without machine cert (this may be OK) */
 	RS_RET_NO_ACTIONS = -2103, /**< no active actions are configured (no output will be created) */
 	RS_RET_CONF_FILE_NOT_FOUND = -2104, /**< config file or directory not found */
@@ -444,11 +444,11 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_NO_RULESET= -2158,/**< no ruleset name as specified where one was needed */
 	RS_RET_PARSER_NOT_FOUND = -2159,/**< parser with the specified name was not found */
 	RS_RET_COULD_NOT_PARSE = -2160,/**< (this) parser could not parse the message (no error, means try next one) */
-	RS_RET_EINTR = -2161,		/**< EINTR occured during a system call (not necessarily an error) */
+	RS_RET_EINTR = -2161,		/**< EINTR occurred during a system call (not necessarily an error) */
 	RS_RET_ERR_EPOLL = -2162,	/**< epoll() returned with an unexpected error code */
 	RS_RET_ERR_EPOLL_CTL = -2163,	/**< epol_ctll() returned with an unexpected error code */
-	RS_RET_TIMEOUT = -2164,		/**< timeout occured during operation */
-	RS_RET_RCV_ERR = -2165,		/**< error occured during socket rcv operation */
+	RS_RET_TIMEOUT = -2164,		/**< timeout occurred during operation */
+	RS_RET_RCV_ERR = -2165,		/**< error occurred during socket rcv operation */
 	RS_RET_NO_SOCK_CONFIGURED = -2166, /**< no socket (name) was configured where one is required */
 	RS_RET_CONF_NOT_GLBL = -2167,	/**< $Begin not in global scope */
 	RS_RET_CONF_IN_GLBL = -2168,	/**< $End when in global scope */
@@ -536,7 +536,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_RELP_AUTH_FAIL = -2353,/**< RELP peer authentication failed */
 	RS_RET_ERR_UDPSEND = -2354,/**< sending msg via UDP failed */
 	RS_RET_LAST_ERRREPORT = -2355,/**< module does not emit more error messages as limit is reached */
-	RS_RET_READ_ERR = -2356,/**< read error occured (file i/o) */
+	RS_RET_READ_ERR = -2356,/**< read error occurred (file i/o) */
 	RS_RET_CONF_PARSE_WARNING = -2357,/**< warning parsing config file */
 	RS_RET_CONF_WRN_FULLDLY_BELOW_HIGHWTR = -2358,/**< warning queue full delay mark below high wtr mark */
 	RS_RET_RESUMED = -2359,/**< status: action was resumed (used for reporting) */
@@ -564,7 +564,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_SENDER_APPEARED = -2430,/**< info: new sender appeared */
 	RS_RET_FILE_ALREADY_IN_TABLE = -2431,/**< in imfile: table already contains to be added file */
 	RS_RET_ERR_DROP_PRIV = -2432,/**< error droping privileges */
-	RS_RET_FILE_OPEN_ERROR = -2433, /**< error other than "not found" occured during open() */
+	RS_RET_FILE_OPEN_ERROR = -2433, /**< error other than "not found" occurred during open() */
 	RS_RET_RENAME_TMP_QI_ERROR = -2435, /**< renaming temporary .qi file failed */
 	RS_RET_ERR_SETENV = -2436, /**< error setting an environment variable */
 	RS_RET_DIR_CHOWN_ERROR = -2437, /**< error during chown() */

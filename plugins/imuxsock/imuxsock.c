@@ -1533,7 +1533,7 @@ CODESTARTrunInput
 
 		if(nfds < 0) {
 			if(errno == EINTR) {
-				DBGPRINTF("imuxsock: EINTR occured\n");
+				DBGPRINTF("imuxsock: EINTR occurred\n");
 			} else {
 				LogMsg(errno, RS_RET_POLL_ERR, LOG_WARNING, "imuxsock: poll "
 					"system call failed, may cause further troubles");
