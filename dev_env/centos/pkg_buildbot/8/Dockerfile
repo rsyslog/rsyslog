@@ -1,10 +1,9 @@
-FROM rsyslog/rsyslog_dev_pkg_base_centos:7
+FROM rsyslog/rsyslog_dev_pkg_base_centos:8
 USER root
 RUN yum -y install epel-release
 RUN yum -y install  \
    python3-devel \
-   python3-pip \
-   python3-pathlib
+   python3-pip
 RUN pip3 install buildbot-worker buildbot-slave
 RUN groupadd -r buildbot && useradd -r -g buildbot buildbot
 RUN mkdir /worker && chown buildbot:buildbot /worker
