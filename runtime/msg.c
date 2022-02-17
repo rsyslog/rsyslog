@@ -491,7 +491,7 @@ MsgSetRulesetByName(smsg_t * const pMsg, cstr_t *const rulesetName)
 
 	if(localRet != RS_RET_OK) {
 		LogError(0, localRet, "msg: ruleset '%s' could not be found and could not "
-			"be assgined to message object. This possibly leads to the message "
+			"be assigned to message object. This possibly leads to the message "
 			"being processed incorrectly. We cannot do anything against this, but "
 			"wanted to let you know.", rs_name);
 	}
@@ -1481,7 +1481,7 @@ smsg_t *MsgAddRef(smsg_t * const pM)
 }
 
 
-/* This functions tries to aquire the PROCID from TAG. Its primary use is
+/* This functions tries to acquire the PROCID from TAG. Its primary use is
  * when a legacy syslog message has been received and should be forwarded as
  * syslog-protocol (or the PROCID is requested for any other reason).
  * In legacy syslog, the PROCID is considered to be the character sequence
@@ -1492,7 +1492,7 @@ smsg_t *MsgAddRef(smsg_t * const pM)
  * rgerhards, 2005-11-24
  * THIS MUST be called with the message lock locked.
  */
-static rsRetVal aquirePROCIDFromTAG(smsg_t * const pM)
+static rsRetVal acquirePROCIDFromTAG(smsg_t * const pM)
 {
 	register int i;
 	uchar *pszTag;
@@ -1557,7 +1557,7 @@ finalize_it:
  * rgerhards, 2005-10-19
  */
 static rsRetVal
-aquireProgramName(smsg_t * const pM)
+acquireProgramName(smsg_t * const pM)
 {
 	int i;
 	uchar *pszTag, *pszProgName;
@@ -2243,7 +2243,7 @@ finalize_it:
 }
 
 
-/* check if we have a procid, and, if not, try to aquire/emulate it.
+/* check if we have a procid, and, if not, try to acquire/emulate it.
  * This must be called WITHOUT the message lock being held.
  * rgerhards, 2009-06-26
  */
@@ -2254,7 +2254,7 @@ static void preparePROCID(smsg_t * const pM, sbool bLockMutex)
 			MsgLock(pM);
 		/* re-query, things may have changed in the mean time... */
 		if(pM->pCSPROCID == NULL)
-			aquirePROCIDFromTAG(pM);
+			acquirePROCIDFromTAG(pM);
 		if(bLockMutex == LOCK_MUTEX)
 			MsgUnlock(pM);
 	}
@@ -2505,7 +2505,7 @@ tryEmulateTAG(smsg_t *const pM, const sbool bLockMutex)
 			bufTAG[sizeof(bufTAG)-1] = '\0'; /* just to make sure... */
 			MsgSetTAG(pM, bufTAG, lenTAG);
 		}
-		/* Signal change in TAG for aquireProgramName */
+		/* Signal change in TAG for acquireProgramName */
 		pM->iLenPROGNAME = -1;
 	}
 	if(bLockMutex == LOCK_MUTEX)
@@ -2633,7 +2633,7 @@ getProgramName(smsg_t *const pM, const sbool bLockMutex)
 			rs_size_t bufLen = -1;
 			getTAG(pM, &pRes, &bufLen, MUTEX_ALREADY_LOCKED);
 		}
-		aquireProgramName(pM);
+		acquireProgramName(pM);
 	}
 
 	if(bLockMutex == LOCK_MUTEX) {
@@ -2645,7 +2645,7 @@ getProgramName(smsg_t *const pM, const sbool bLockMutex)
 
 
 
-/* check if we have a APPNAME, and, if not, try to aquire/emulate it.
+/* check if we have a APPNAME, and, if not, try to acquire/emulate it.
  * rgerhards, 2009-06-26
  */
 static void ATTR_NONNULL(1)

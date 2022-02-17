@@ -508,7 +508,7 @@ if(dbgTimeoutToStderr) {
 		ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
 
 	/* wait for the new thread to initialize its signal mask and
-	 * cancelation cleanup handler before proceeding
+	 * cancellation cleanup handler before proceeding
 	 */
 	do {
 		d_pthread_cond_wait(&pThis->condThrdInitDone, &pThis->mutWtp);

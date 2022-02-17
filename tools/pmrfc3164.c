@@ -369,7 +369,7 @@ CODESTARTparse
 		 * to parse HOSTNAME and TAG - rgerhards, 2006-03-13
 		 */
 		if(!(pMsg->msgFlags & INTERNAL_MSG)) {
-			DBGPRINTF("HOSTNAME and TAG not parsed by user configuraton.\n");
+			DBGPRINTF("HOSTNAME and TAG not parsed by user configuration.\n");
 		}
 	}
 

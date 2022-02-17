@@ -767,7 +767,7 @@ content_check_with_count() {
 			count=$(grep -c -F -- "$1" <${RSYSLOG_OUT_LOG})
 		fi
 		if [ ${count:=0} -eq $2 ]; then
-			echo content_check_with_count SUCCESS, \"$1\" occured $2 times
+			echo content_check_with_count SUCCESS, \"$1\" occurred $2 times
 			break
 		else
 			if [ "$timecounter" == "$timeoutend" ]; then

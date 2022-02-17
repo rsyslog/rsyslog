@@ -46,7 +46,7 @@ shutdown_when_empty
 wait_shutdown
 
 echo "file name: $RSYSLOG_OUT_LOG"
-echo "\"tailed item\" occured: $(grep -c 'tailed item ' $RSYSLOG_OUT_LOG)/100 (expect less)."
+echo "\"tailed item\" occurred: $(grep -c 'tailed item ' $RSYSLOG_OUT_LOG)/100 (expect less)."
 
 docker container rm $COOKIE
 exit_test

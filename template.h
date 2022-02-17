@@ -107,7 +107,7 @@ struct templateEntry {
 
 #endif
 			unsigned has_fields; /* support for field-counting: field to extract */
-			unsigned char field_delim; /* support for field-counting: field delemiter char */
+			unsigned char field_delim; /* support for field-counting: field delimiter char */
 #ifdef STRICT_GPLV3
 			int field_expand;	/* use multiple instances of the field delimiter as a single one? */
 #endif

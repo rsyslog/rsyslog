@@ -53,9 +53,9 @@ struct action_s {
 	int	iResumeIntervalMax;/* maximum resume interval for this action --> -1: unbounded */
 	int	iResumeRetryCount;/* how often shall we retry a suspended action? (-1 --> eternal) */
 	int	iNbrNoExec;	/* number of matches that did not yet yield to an exec */
-	int	iExecEveryNthOccur;/* execute this action only every n-th occurence (with n=0,1 -> always) */
-	int  	iExecEveryNthOccurTO;/* timeout for n-th occurence feature */
-	time_t  tLastOccur;	/* time last occurence was seen (for timing them out) */
+	int	iExecEveryNthOccur;/* execute this action only every n-th occurrence (with n=0,1 -> always) */
+	int  	iExecEveryNthOccurTO;/* timeout for n-th occurrence feature */
+	time_t  tLastOccur;	/* time last occurrence was seen (for timing them out) */
 	struct modInfo_s *pMod;/* pointer to output module handling this selector */
 	void	*pModData;	/* pointer to module data - content is module-specific */
 	sbool	bRepMsgHasMsg;	/* "message repeated..." has msg fragment in it (0-no, 1-yes) */

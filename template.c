@@ -544,7 +544,7 @@ tplConstruct(rsconf_t *conf)
 
 /* helper to tplAddLine. Parses a constant and generates
  * the necessary structure.
- * Paramter "bDoEscapes" is to support legacy vs. v6+ config system. In
+ * Parameter "bDoEscapes" is to support legacy vs. v6+ config system. In
  * legacy, we must do escapes ourselves, whereas v6+ passes in already
  * escaped strings (which we are NOT permitted to further escape, this would
  * cause invalid result strings!). Note: if escapes are not permitted,
@@ -2397,7 +2397,7 @@ void tplPrintList(rsconf_t *conf)
 				  	dbgprintf("[drop last LF in msg] ");
 				}
 				if(pTpe->data.field.has_fields == 1) {
-				  	dbgprintf("[substring, field #%d only (delemiter %d)] ",
+				  	dbgprintf("[substring, field #%d only (delimiter %d)] ",
 						pTpe->data.field.iFieldNr, pTpe->data.field.field_delim);
 				}
 				if(pTpe->data.field.iFromPos != 0 || pTpe->data.field.iToPos != 0) {

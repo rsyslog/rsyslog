@@ -620,7 +620,7 @@ int decodeSyslogName(uchar *name, syslogName_t *codetab)
 			will be stored.
  * \param DstSize	Maximum numbers of characters to store.
  * \param cSep		Separator char.
- * \ret int		Returns 0 if no error occured.
+ * \ret int		Returns 0 if no error occurred.
  *
  * rgerhards, 2008-02-12: some notes are due... I will once again fix this function, this time
  * so that it treats ' ' as a request for whitespace. But in general, the function and its callers

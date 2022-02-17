@@ -221,7 +221,7 @@ readkmsg(void)
 		} else {
 			/* something went wrong - error or zero length message */
 			if (i < 0 && errno != EINTR && errno != EAGAIN) {
-				/* error occured */
+				/* error occurred */
 				imkmsgLogIntMsg(LOG_ERR,
 				       "imkmsg: error reading kernel log - shutting down: %s",
 					rs_strerror_r(errno, errmsg, sizeof(errmsg)));

@@ -314,9 +314,9 @@ wtiWorkerCancelCleanup(void *arg)
 	pWtp = pThis->pWtp;
 	ISOBJ_TYPE_assert(pWtp, wtp);
 
-	DBGPRINTF("%s: cancelation cleanup handler called.\n", wtiGetDbgHdr(pThis));
+	DBGPRINTF("%s: cancellation cleanup handler called.\n", wtiGetDbgHdr(pThis));
 	pWtp->pfObjProcessed(pWtp->pUsr, pThis);
-	DBGPRINTF("%s: done cancelation cleanup handler.\n", wtiGetDbgHdr(pThis));
+	DBGPRINTF("%s: done cancellation cleanup handler.\n", wtiGetDbgHdr(pThis));
 
 }
 
@@ -350,7 +350,7 @@ wtiWaitNonEmpty(wti_t *const pThis, const struct timespec timeout)
  * rgerhards, 2009-05-20
  */
 static void ATTR_NONNULL()
-doIdleProcessing(wti_t *const pThis, wtp_t *const pWtp, int *const pbInactivityTOOccured)
+doIdleProcessing(wti_t *const pThis, wtp_t *const pWtp, int *const pbInactivityTOOccurred)
 {
 	struct timespec t;
 
@@ -363,7 +363,7 @@ doIdleProcessing(wti_t *const pThis, wtp_t *const pWtp, int *const pbInactivityT
 		timeoutComp(&t, pWtp->toWrkShutdown);/* get absolute timeout */
 		if(d_pthread_cond_timedwait(&pThis->pcondBusy, pWtp->pmutUsr, &t) != 0) {
 			DBGPRINTF("%s: inactivity timeout, worker terminating...\n", wtiGetDbgHdr(pThis));
-			*pbInactivityTOOccured = 1; /* indicate we had a timeout */
+			*pbInactivityTOOccurred = 1; /* indicate we had a timeout */
 		}
 	}
 	DBGOPRINT((obj_t*) pThis, "worker awoke from idle processing\n");
@@ -392,7 +392,7 @@ wtiWorker(wti_t *__restrict__ const pThis)
 
 	dbgSetThrdName(pThis->pszDbgHdr);
 	pthread_cleanup_push(wtiWorkerCancelCleanup, pThis);
-	int bInactivityTOOccured = 0;
+	int bInactivityTOOccurred = 0;
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
 	DBGPRINTF("wti %p: worker starting\n", pThis);
 	/* now we have our identity, on to real processing */
@@ -431,16 +431,16 @@ wtiWorker(wti_t *__restrict__ const pThis)
 		if(localRet == RS_RET_ERR_QUEUE_EMERGENCY) {
 			break;	/* end of loop */
 		} else if(localRet == RS_RET_IDLE) {
-			if(terminateRet == RS_RET_TERMINATE_WHEN_IDLE || bInactivityTOOccured) {
+			if(terminateRet == RS_RET_TERMINATE_WHEN_IDLE || bInactivityTOOccurred) {
 				DBGOPRINT((obj_t*) pThis, "terminating worker terminateRet=%d, "
-					"bInactivityTOOccured=%d\n", terminateRet, bInactivityTOOccured);
+					"bInactivityTOOccurred=%d\n", terminateRet, bInactivityTOOccurred);
 				break;	/* end of loop */
 			}
-			doIdleProcessing(pThis, pWtp, &bInactivityTOOccured);
+			doIdleProcessing(pThis, pWtp, &bInactivityTOOccurred);
 			continue; /* request next iteration */
 		}
 
-		bInactivityTOOccured = 0; /* reset for next run */
+		bInactivityTOOccurred = 0; /* reset for next run */
 	}
 
 	d_pthread_mutex_unlock(pWtp->pmutUsr);

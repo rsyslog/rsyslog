@@ -650,7 +650,7 @@ void rsCStrRegexDestruct(void *rc)
  * I have opted for performance and thus duplicated the code. I hope
  * this is a good, or at least acceptable, compromise.
  * rgerhards, 2005-09-26
- * This function also has an offset-pointer which allows to
+ * This function also has an offset-pointer which allows one to
  * specify *where* the compare operation should begin in
  * the CStr. If everything is to be compared, it must be set
  * to 0. If some leading bytes are to be skipped, it must be set
@@ -711,7 +711,7 @@ int rsCStrSzStrCmp(cstr_t *pCS1, uchar *psz, size_t iLenSz)
 }
 
 
-/* Locate the first occurence of this rsCStr object inside a standard sz string.
+/* Locate the first occurrence of this rsCStr object inside a standard sz string.
  * Returns the offset (0-bound) of this first occurrence. If not found, -1 is
  * returned. Both parameters MUST be given (NULL is not allowed).
  * rgerhards 2005-09-19

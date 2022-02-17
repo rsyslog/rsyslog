@@ -66,7 +66,7 @@ static rsRetVal doInit(void) \
 #define ENDInit \
 finalize_it: \
 	if(iRet != RS_RET_OK) { \
-		printf("failure occured during init of object '%s'\n", pErrObj); \
+		printf("failure occurred during init of object '%s'\n", pErrObj); \
 	} \
 \
 	RETiRet; \

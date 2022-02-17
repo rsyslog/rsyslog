@@ -143,7 +143,7 @@ CODESTARTparse
 	pMsg->iLenRawMsg -=2;
 	pMsg->iLenMSG -=2;
 	/* now, claim to abort so that something else can parse the now modified message */
-	DBGPRINTF("pmcisconames: new mesage: [%d]'%s'\n", lenMsg, p2parse);
+	DBGPRINTF("pmcisconames: new message: [%d]'%s'\n", lenMsg, p2parse);
 	ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 
 finalize_it:

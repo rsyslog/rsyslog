@@ -909,7 +909,7 @@ rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr)
 
 		if(nfds < 0) {
 			if(errno == EINTR) {
-				DBGPRINTF("imudp: EINTR occured\n");
+				DBGPRINTF("imudp: EINTR occurred\n");
 			} else {
 				LogMsg(errno, RS_RET_POLL_ERR, LOG_WARNING, "imudp: poll "
 					"system call failed, may cause further troubles");

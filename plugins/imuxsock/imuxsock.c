@@ -1224,7 +1224,7 @@ activateListeners(void)
 
 	if(actSocks == 0) {
 		LogError(0, RS_RET_ERR, "imuxsock does not run because we could not "
-			"aquire any socket\n");
+			"acquire any socket\n");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -1533,7 +1533,7 @@ CODESTARTrunInput
 
 		if(nfds < 0) {
 			if(errno == EINTR) {
-				DBGPRINTF("imuxsock: EINTR occured\n");
+				DBGPRINTF("imuxsock: EINTR occurred\n");
 			} else {
 				LogMsg(errno, RS_RET_POLL_ERR, LOG_WARNING, "imuxsock: poll "
 					"system call failed, may cause further troubles");

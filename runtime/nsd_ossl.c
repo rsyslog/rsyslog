@@ -481,7 +481,7 @@ sslerr:
 			osslLastSSLErrorMsg(lenRcvd, pThis->ssl, LOG_ERR, "osslRecordRecv");
 			/* Check for underlaying socket errors **/
 			if (local_errno == ECONNRESET) {
-				DBGPRINTF("osslRecordRecv: Errno %d, connection resetted by peer\n", local_errno);
+				DBGPRINTF("osslRecordRecv: Errno %d, connection reset by peer\n", local_errno);
 				ABORT_FINALIZE(RS_RET_CLOSED);
 			} else {
 				DBGPRINTF("osslRecordRecv: Errno %d\n", local_errno);
@@ -1518,7 +1518,7 @@ finalize_it:
 		free(fromHostIP);
 	}
 	if(iRet == RS_RET_OK) {
-		/* If no error occured, set socket to SSL mode */
+		/* If no error occurred, set socket to SSL mode */
 		pNsd->iMode = 1;
 	}
 

@@ -261,7 +261,7 @@ else:
 							aProblemFound[logDataID]['endline'] = iLineNum
 							aProblemFound[logDataID]['enddate'] = szLineDate
 						elif aProblemFound[logDataID]['value'] > iLogData:
-							# Logdata was resetted
+							# Logdata was reset
 							aProblemFound[logDataID]['endline'] = iLineNum
 							aProblemFound[logDataID]['enddate'] = szLineDate
 
@@ -293,7 +293,7 @@ else:
 						aProblemFound['omfile']['endline'] = iLineNum
 						aProblemFound['omfile']['enddate'] = szLineDate
 					elif aProblemFound['omfile'][logDataID] > iLogData:
-						# Logdata was resetted
+						# Logdata was reset
 						aProblemFound['omfile']['endline'] = iLineNum
 						aProblemFound['omfile']['enddate'] = szLineDate
 

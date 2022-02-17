@@ -758,7 +758,7 @@ finalize_it:
  * the number of octets read (or -1 in case of error) on exit. This function
  * never blocks, not even when called on a blocking socket. That is important
  * for client sockets, which are set to block during send, but should not
- * block when trying to read data. If *pLenBuf is -1, an error occured and
+ * block when trying to read data. If *pLenBuf is -1, an error occurred and
  * oserr holds the exact error cause.
  * rgerhards, 2008-03-17
  */

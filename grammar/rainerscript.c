@@ -732,7 +732,7 @@ nvlstChkDupes(struct nvlst *lst)
 		if(nvlstFindName(lst->next, lst->name) != NULL) {
 			cstr = es_str2cstr(lst->name, NULL);
 			parser_errmsg("duplicate parameter '%s' -- "
-			  "interpretation is ambigious, one value "
+			  "interpretation is ambiguous, one value "
 			  "will be randomly selected. Fix this problem.",
 			  cstr);
 			free(cstr);
@@ -2865,7 +2865,7 @@ doFunct_num2ipv4(struct cnffunc *__restrict__ const func,
 		numip[0], numip[1], numip[2], numip[3]);
 	len = snprintf(str, 16, "%d.%d.%d.%d", numip[3], numip[2], numip[1], numip[0]);
 done:
-	DBGPRINTF("rainerscript: (num2ipv4) ipv4-Address: %s, lengh: %zu\n", str, len);
+	DBGPRINTF("rainerscript: (num2ipv4) ipv4-Address: %s, length: %zu\n", str, len);
 	ret->d.estr = es_newStrFromCStr(str, len);
 	ret->datatype = 'S';
 }
@@ -4566,10 +4566,10 @@ cnfstmtNewAct(struct nvlst *lst)
 	}
 	localRet = actionNewInst(lst, &cnfstmt->d.act);
 	if(localRet == RS_RET_OK_WARN) {
-		parser_errmsg("warnings occured in file '%s' around line %d",
+		parser_errmsg("warnings occurred in file '%s' around line %d",
 			      cnfcurrfn, yylineno);
 	} else if(localRet != RS_RET_OK) {
-		parser_errmsg("errors occured in file '%s' around line %d",
+		parser_errmsg("errors occurred in file '%s' around line %d",
 			      cnfcurrfn, yylineno);
 		cnfstmt->nodetype = S_NOP; /* disable action! */
 		goto done;
@@ -4593,7 +4593,7 @@ cnfstmtNewLegaAct(char *actline)
 	cnfstmt->printable = (uchar*)strdup((char*)actline);
 	localRet = cflineDoAction(loadConf, (uchar**)&actline, &cnfstmt->d.act);
 	if(localRet != RS_RET_OK) {
-		parser_errmsg("%s occured in file '%s' around line %d",
+		parser_errmsg("%s occurred in file '%s' around line %d",
 			      (localRet == RS_RET_OK_WARN) ? "warnings" : "errors",
 			      cnfcurrfn, yylineno);
 		if(localRet != RS_RET_OK_WARN) {
@@ -5475,7 +5475,7 @@ includeProcessCnf(struct nvlst *const lst)
 			} else if(!strcmp(md, "optional")) {
 				optional = 1;
 			} else {
-				parser_errmsg("invalid 'mode' paramter: '%s' - ignored", md);
+				parser_errmsg("invalid 'mode' parameter: '%s' - ignored", md);
 			}
 			free((void*)md);
 		} else {
