@@ -8,8 +8,8 @@ template(name="outfmt" type="list") {
 	property(name="$!result")
 	constant(value="\n")
 }
-set $!lower_nr  = 1111;
-set $!higher_nr = 2222;
+set $!lower_nr  = '$LOWER_VAL';
+set $!higher_nr = '$HIGHER_VAL';
 
 if $!lower_nr <= $!higher_nr
 	then {  set $!result = "<= RIGHT"; }
