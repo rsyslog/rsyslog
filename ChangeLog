@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2204.0 (aka 2022.04) 2021-04-??
+- regression fix: script string comparison did not work correctly
+  In rscript, comparison operations on strings did not work correctly
+  and returned false results. This is cause by a regression in commit
+  5cec5dd634e0. While it fixed number comparisons, it introduced new
+  problems in string comparisons, which were not present before. Note
+  that most items in rsyslog are strings, so this can actually cause
+  some problems.
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2202.0 (aka 2022.02) 2021-02-15
 - 2022-02-14: imfile bugfix: remove cause for "internal error message" (not causing harm)
