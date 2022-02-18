@@ -3071,7 +3071,7 @@ static int eval_strcmp_like(const struct cnfexpr *__restrict__ const expr,
 	} else {
 		estr_l = var2String(&l, &bMustFree);
 		estr_r = var2String(&r, &bMustFree2);
-		ret = es_strcmp(estr_l, estr_r) < 0; /*CMP*/
+		ret = es_strcmp(estr_l, estr_r);
 		if(bMustFree) es_deleteStr(estr_l);
 		if(bMustFree2) es_deleteStr(estr_r);
 	}
