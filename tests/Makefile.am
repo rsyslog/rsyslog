@@ -718,6 +718,7 @@ TESTS +=  \
 	mysql-actq-mt.sh \
 	mysql-actq-mt-withpause.sh \
 	action-tx-single-processing.sh \
+	action-tx-errfile-maxsize.sh \
 	action-tx-errfile.sh
 
 mysql-basic.log: mysqld-start.log
@@ -2333,6 +2334,8 @@ EXTRA_DIST= \
 	sndrcv_omudpspoof_nonstdpt.sh \
 	sndrcv_gzip.sh \
 	action-tx-single-processing.sh \
+	omfwd-errfile-maxsize.sh \
+	action-tx-errfile-maxsize.sh \
 	action-tx-errfile.sh \
 	testsuites/action-tx-errfile.result \
 	pipeaction.sh \
