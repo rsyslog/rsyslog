@@ -718,7 +718,8 @@ TESTS +=  \
 	mysql-actq-mt.sh \
 	mysql-actq-mt-withpause.sh \
 	action-tx-single-processing.sh \
-	action-tx-errfile.sh
+	action-tx-errfile.sh \
+	action-tx-errfile-maxsize.sh
 
 mysql-basic.log: mysqld-start.log
 mysql-basic-cnf6.log: mysqld-start.log
@@ -2334,6 +2335,7 @@ EXTRA_DIST= \
 	sndrcv_gzip.sh \
 	action-tx-single-processing.sh \
 	action-tx-errfile.sh \
+	action-tx-errfile-maxsize.sh \
 	testsuites/action-tx-errfile.result \
 	pipeaction.sh \
 	improg-simul.sh \

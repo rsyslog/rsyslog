@@ -2522,6 +2522,17 @@ wait_for_stats_flush() {
 	echo "stats push registered"
 }
 
+# Check file exists and is of a particular size
+# $1 - file to check
+# $2 - size to check
+file_size_check() {
+    local size=$(ls -l $1 | awk {'print $5'})
+    if [ "${size}" != "${2}" ]; then
+	printf 'File:[%s] has unexpected size. Expected:[%d], Size:[%d]\n', $1 $2 $size
+        error_exit 1
+    fi
+    return 0
+}
 
 case $1 in
    'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
