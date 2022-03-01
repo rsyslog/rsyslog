@@ -85,6 +85,7 @@ static uchar *LocalHostName = NULL;/* our hostname  - read-only after startup, e
 static uchar *LocalHostNameOverride = NULL;/* user-overridden hostname - read-only after startup */
 static uchar *LocalFQDNName = NULL;/* our hostname as FQDN - read-only after startup, except HUP */
 static uchar *LocalDomain = NULL;/* our local domain name  - read-only after startup, except HUP */
+static int iMaxLine = 8096;
 int bTerminateInputs = 0;		/* global switch that inputs shall terminate ASAP (1=> terminate) */
 int glblUnloadModules = 1;
 char** glblDbgFiles = NULL;
@@ -191,8 +192,8 @@ static struct cnfparamvals *cnfparamvals = NULL;
 int
 glblGetMaxLine(rsconf_t *cnf)
 {
-	assert(cnf != NULL);
-	return(cnf->globals.iMaxLine);
+	/* glblGetMaxLine might be invoked before our configuration exists */
+	return((cnf != NULL) ? cnf->globals.iMaxLine : iMaxLine);
 }
 
 
