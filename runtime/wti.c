@@ -91,11 +91,12 @@ wtiGetState(wti_t *pThis)
 void ATTR_NONNULL()
 wtiJoinThrd(wti_t *const pThis)
 {
+	int r;
 	ISOBJ_TYPE_assert(pThis, wti);
 	if(wtiGetState(pThis) == WRKTHRD_WAIT_JOIN) {
 		DBGPRINTF("%s: joining terminated worker\n", wtiGetDbgHdr(pThis));
-		if(pthread_join(pThis->thrdID, NULL) != 0) {
-			LogMsg(errno, RS_RET_INTERNAL_ERROR, LOG_WARNING,
+		if((r = pthread_join(pThis->thrdID, NULL)) != 0) {
+			LogMsg(r, RS_RET_INTERNAL_ERROR, LOG_WARNING,
 				"rsyslog bug? wti cannot join terminated wrkr");
 		}
 		DBGPRINTF("%s: worker fully terminated\n", wtiGetDbgHdr(pThis));
