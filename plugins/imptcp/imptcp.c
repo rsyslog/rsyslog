@@ -10,7 +10,7 @@
  *
  * File begun on 2010-08-10 by RGerhards
  *
- * Copyright 2007-2018 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2022 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -1395,7 +1395,7 @@ addEPollSock(epolld_type_t typ, void *ptr, int sock, epolld_t **pEpd)
 	epd->ptr = ptr;
 	epd->sock = sock;
 	*pEpd = epd;
-	epd->ev.events = EPOLLIN|EPOLLET|EPOLLONESHOT;
+	epd->ev.events = EPOLLIN|EPOLLONESHOT;
 	epd->ev.data.ptr = (void*) epd;
 
 	if(epoll_ctl(epollfd, EPOLL_CTL_ADD, sock, &(epd->ev)) != 0) {
@@ -1944,11 +1944,12 @@ sessActivity(ptcpsess_t *const pSess, int *const continue_polling)
 	int remsock = 0; /* init just to keep compiler happy... :-( */
 	sbool bEmitOnClose = 0;
 	char rcvBuf[128*1024];
+	int runs = 0;
 	DEFiRet;
 
 	DBGPRINTF("imptcp: new activity on session socket %d\n", pSess->sock);
 
-	while(1) {
+	while(runs++ < 16) {
 		lenBuf = sizeof(rcvBuf);
 		lenRcv = recv(pSess->sock, rcvBuf, lenBuf, 0);
 
