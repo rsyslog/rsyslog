@@ -90,6 +90,12 @@ Note: parameter names are case-insensitive.
    provided to the action in question, the action name as well as
    the rsyslog status code roughly explaining why it failed.
 
+-  **action.errorfile.maxsize** integer
+
+   In some cases, error file needs to be limited in size.
+   This option allows specifying a maximum size, in bytes, for the error file.
+   When error file reaches that size, no more errors are written to it.
+
 -  **action.execOnlyOnceEveryInterval** integer
 
    Execute action only if the last execute is at last seconds in the
