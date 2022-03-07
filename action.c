@@ -189,6 +189,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "name", eCmdHdlrGetWord, 0 }, /* legacy: actionname */
 	{ "type", eCmdHdlrString, CNFPARAM_REQUIRED }, /* legacy: actionname */
 	{ "action.errorfile", eCmdHdlrString, 0 },
+	{ "action.errorfile.maxsize", eCmdHdlrInt, 0 },
 	{ "action.writeallmarkmessages", eCmdHdlrBinary, 0 }, /* legacy: actionwriteallmarkmessages */
 	{ "action.execonlyeverynthtime", eCmdHdlrInt, 0 }, /* legacy: actionexeconlyeverynthtime */
 	{ "action.execonlyeverynthtimetimeout", eCmdHdlrInt, 0 }, /* legacy: actionexeconlyeverynthtimetimeout */
@@ -391,6 +392,8 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->iResumeRetryCount = 0;
 	pThis->pszName = NULL;
 	pThis->pszErrFile = NULL;
+	pThis->maxErrFileSize = 0;
+	pThis->errFileWritten = 0;
 	pThis->pszExternalStateFile = NULL;
 	pThis->fdErrFile = -1;
 	pThis->bWriteAllMarkMsgs = 1;
@@ -1445,16 +1448,27 @@ actionWriteErrorFile(action_t *__restrict__ const pThis, const rsRetVal ret,
 		char *const rendered = strdup((char*)fjson_object_to_json_string(etry));
 		if(rendered == NULL)
 			goto done;
-		const size_t toWrite = strlen(rendered) + 1;
-		/* note: we use the '\0' inside the string to store a LF - we do not
-		 * otherwise need it and it safes us a copy/realloc.
-		 */
-		rendered[toWrite-1] = '\n'; /* NO LONGER A STRING! */
-		const ssize_t wrRet = write(pThis->fdErrFile, rendered, toWrite);
-		if(wrRet != (ssize_t) toWrite) {
-			LogError(errno, RS_RET_IO_ERROR,
-				"action %s: error writing errorFile %s, write returned %lld",
-				pThis->pszName, pThis->pszErrFile, (long long) wrRet);
+
+		size_t toWrite = strlen(rendered) + 1;
+		// Check if need to truncate the amount of bytes to write
+		if (pThis->maxErrFileSize > 0) {
+			if (pThis->errFileWritten + toWrite > pThis->maxErrFileSize) {
+				// Truncate to the pending available
+				toWrite = pThis->maxErrFileSize - pThis->errFileWritten;
+			}
+			pThis->errFileWritten += toWrite;
+		}
+		if(toWrite > 0) {
+			/* note: we use the '\0' inside the string to store a LF - we do not
+			 * otherwise need it and it safes us a copy/realloc.
+			 */
+			rendered[toWrite-1] = '\n'; /* NO LONGER A STRING! */
+			const ssize_t wrRet = write(pThis->fdErrFile, rendered, toWrite);
+			if(wrRet != (ssize_t) toWrite) {
+				LogError(errno, RS_RET_IO_ERROR,
+					"action %s: error writing errorFile %s, write returned %lld",
+					pThis->pszName, pThis->pszErrFile, (long long) wrRet);
+			}
 		}
 		free(rendered);
 
@@ -2039,6 +2053,8 @@ actionApplyCnfParam(action_t * const pAction, struct cnfparamvals * const pvals)
 			continue; /* this is handled seperately during module select! */
 		} else if(!strcmp(pblk.descr[i].name, "action.errorfile")) {
 			pAction->pszErrFile = es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(pblk.descr[i].name, "action.errorfile.maxsize")) {
+			pAction->maxErrFileSize = pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "action.externalstate.file")) {
 			pAction->pszExternalStateFile = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(pblk.descr[i].name, "action.writeallmarkmessages")) {
