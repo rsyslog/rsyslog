@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2204.0 (aka 2022.04) 2021-04-??
+- regression bugfix: rsyslog may segfault during startup
+  glblGetMaxLine() might be called even before the main configuration file exists
+  resulting unexpected behavior, most probably segmentation fault. This is addressed
+  by re-introducing the old default of 8KiB. The problem was introduced earlier in
+  2022.
 - regression fix: script string comparison did not work correctly
   In rscript, comparison operations on strings did not work correctly
   and returned false results. This is cause by a regression in commit
