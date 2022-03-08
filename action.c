@@ -393,7 +393,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->pszName = NULL;
 	pThis->pszErrFile = NULL;
 	pThis->maxErrFileSize = 0;
-	pThis->errFileWritten = 0;
+	pThis->currentErrFileSize = 0;
 	pThis->pszExternalStateFile = NULL;
 	pThis->fdErrFile = -1;
 	pThis->bWriteAllMarkMsgs = 1;
@@ -1430,6 +1430,14 @@ actionWriteErrorFile(action_t *__restrict__ const pThis, const rsRetVal ret,
 				pThis->pszName, pThis->pszErrFile);
 			goto done;
 		}
+		if (pThis->maxErrFileSize > 0) {
+			struct stat statbuf;
+			if (fstat(pThis->fdErrFile, &statbuf) == -1) {
+				LogError(errno, RS_RET_ERR, "failed to fstat %s", pThis->pszErrFile);
+				goto done;
+			}
+			pThis->currentErrFileSize = statbuf.st_size;
+		}
 	}
 
 	for(int i = 0 ; i < nparams ; ++i) {
@@ -1452,11 +1460,11 @@ actionWriteErrorFile(action_t *__restrict__ const pThis, const rsRetVal ret,
 		size_t toWrite = strlen(rendered) + 1;
 		// Check if need to truncate the amount of bytes to write
 		if (pThis->maxErrFileSize > 0) {
-			if (pThis->errFileWritten + toWrite > pThis->maxErrFileSize) {
+			if (pThis->currentErrFileSize + toWrite > pThis->maxErrFileSize) {
 				// Truncate to the pending available
-				toWrite = pThis->maxErrFileSize - pThis->errFileWritten;
+				toWrite = pThis->maxErrFileSize - pThis->currentErrFileSize;
 			}
-			pThis->errFileWritten += toWrite;
+			pThis->currentErrFileSize += toWrite;
 		}
 		if(toWrite > 0) {
 			/* note: we use the '\0' inside the string to store a LF - we do not

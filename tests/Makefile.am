@@ -2335,6 +2335,7 @@ EXTRA_DIST= \
 	sndrcv_gzip.sh \
 	action-tx-single-processing.sh \
 	omfwd-errfile-maxsize.sh \
+	omfwd-errfile-maxsize-filled.sh \
 	action-tx-errfile-maxsize.sh \
 	action-tx-errfile.sh \
 	testsuites/action-tx-errfile.result \

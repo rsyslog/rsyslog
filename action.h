@@ -75,7 +75,7 @@ struct action_s {
 	const char *pszErrFile;
 	int fdErrFile;
 	size_t maxErrFileSize;
-	size_t errFileWritten;
+	size_t currentErrFileSize;
 	pthread_mutex_t mutErrFile;
 	/* external stat file system */
 	const char *pszExternalStateFile;
