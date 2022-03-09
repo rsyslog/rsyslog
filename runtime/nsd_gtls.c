@@ -551,8 +551,9 @@ gtlsRecordRecv(nsd_gtls_t *pThis)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
-	DBGPRINTF("gtlsRecordRecv: start\n");
-
+	DBGPRINTF("gtlsRecordRecv: start (Pending Data: %zd | Wanted Direction: %s)\n",
+		gnutls_record_check_pending(pThis->sess),
+		(gnutls_record_get_direction(pThis->sess) == gtlsDir_READ ? "READ" : "WRITE") );
 	lenRcvd = gnutls_record_recv(pThis->sess, pThis->pszRcvBuf, NSD_GTLS_MAX_RCVBUF);
 	if(lenRcvd >= 0) {
 		DBGPRINTF("gtlsRecordRecv: gnutls_record_recv received %zd bytes\n", lenRcvd);
@@ -576,14 +577,30 @@ gtlsRecordRecv(nsd_gtls_t *pThis)
 					(NSD_GTLS_MAX_RCVBUF+lenRcvd));
 				pThis->lenRcvBuf = NSD_GTLS_MAX_RCVBUF+lenRcvd;
 			} else {
-				goto sslerr;
+				if (lenRcvd == GNUTLS_E_AGAIN || lenRcvd == GNUTLS_E_INTERRUPTED) {
+					goto sslerragain;	/* Go to ERR AGAIN handling */
+				} else {
+					/* Do all other error handling */
+					int gnuRet = lenRcvd;
+					ABORTgnutls;
+				}
 			}
 		}
 	} else if(lenRcvd == GNUTLS_E_AGAIN || lenRcvd == GNUTLS_E_INTERRUPTED) {
-sslerr:
-		pThis->rtryCall = gtlsRtry_recv;
-		dbgprintf("GnuTLS receive requires a retry (this most probably is OK and no error condition)\n");
-		ABORT_FINALIZE(RS_RET_RETRY);
+sslerragain:
+		/* Check if the underlaying file descriptor needs to read or write data!*/
+		if (gnutls_record_get_direction(pThis->sess) == gtlsDir_READ) {
+			pThis->rtryCall = gtlsRtry_recv;
+			dbgprintf("GnuTLS receive requires a retry, this most probably is OK and no error condition\n");
+			ABORT_FINALIZE(RS_RET_RETRY);
+		} else {
+			uchar *pErr = gtlsStrerror(lenRcvd);
+			LogError(0, RS_RET_GNUTLS_ERR, "GnuTLS receive error %zd has wrong read direction(wants write) "
+				"- this could be caused by a broken connection. GnuTLS reports: %s\n",
+				lenRcvd, pErr);
+			free(pErr);
+			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+		}
 	} else {
 		int gnuRet = lenRcvd;
 		ABORTgnutls;
@@ -2032,6 +2049,7 @@ static rsRetVal
 Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 {
 	int iSent;
+	int wantsWriteData = 0;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
@@ -2052,10 +2070,12 @@ Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 			break;
 		}
 		if(iSent != GNUTLS_E_INTERRUPTED && iSent != GNUTLS_E_AGAIN) {
+			/* Check if the underlaying file descriptor needs to read or write data!*/
+			wantsWriteData = gnutls_record_get_direction(pThis->sess);
 			uchar *pErr = gtlsStrerror(iSent);
-			LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d - this "
-				"could be caused by a broken connection. GnuTLS reports: %s \n",
-				iSent, pErr);
+			LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d, wantsWriteData=%d - this "
+				"could be caused by a broken connection. GnuTLS reports: %s\n",
+				iSent, wantsWriteData, pErr);
 			free(pErr);
 			gnutls_perror(iSent);
 			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
