@@ -103,7 +103,8 @@ struct modInfo_s {
 	uchar*		pszName;	/* printable module name, e.g. for dbgprintf */
 	uchar*		cnfName;	/* name to be used in config statements (e.g. 'name="omusrmsg"') */
 	unsigned	uRefCnt;	/* reference count for this module; 0 -> may be unloaded */
-	sbool		bSetModCnfCalled;/* is setModCnf already called? Needed for built-in modules */
+	sbool		bSetModCnfCalled;/* is setModCnf already called? Needed for built-in modules
+	                                and after configuration reload*/
 	/* functions supported by all types of modules */
 	rsRetVal (*modInit)(int, int*, rsRetVal(**)(void*));		/* initialize the module */
 		/* be sure to support version handshake! */
@@ -125,6 +126,7 @@ struct modInfo_s {
 	rsRetVal (*activateCnf)(void*Cnf);	/* make provided config the running conf */
 	rsRetVal (*freeCnf)(void*Cnf);
 	/* end v2 config system specific */
+	rsRetVal (*reloadCnf)(void); /* calculate difference between loaded and running conf */
 	union	{
 		struct {/* data for input modules */
 /* TODO: remove? */rsRetVal (*willRun)(void); 		/* check if the current config will be able to run*/

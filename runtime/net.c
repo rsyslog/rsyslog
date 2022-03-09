@@ -1654,6 +1654,34 @@ finalize_it:
 
 }
 
+static int
+wildcardsEqual(permittedPeerWildcard_t *pCard1, permittedPeerWildcard_t *pCard2)
+{
+	while (pCard1 != NULL && pCard2 != NULL) {
+		if (strcmp((char *)pCard1->pszDomainPart, (char *)pCard2->pszDomainPart) != 0)
+			return 0;
+		pCard1 = pCard1->pNext;
+		pCard2 = pCard2->pNext;
+	}
+
+	return (pCard1 == pCard2);
+}
+
+static int
+permittedPeersEqual(permittedPeers_t *pPeer1, permittedPeers_t *pPeer2)
+{
+	while (pPeer1 != NULL && pPeer2 != NULL) {
+		if ((strcmp((char *)pPeer1->pszID, (char *)pPeer2->pszID) != 0) ||
+			(wildcardsEqual(pPeer1->pWildcardRoot, pPeer2->pWildcardRoot) != 0)) {
+			return 0;
+		}
+
+		pPeer1 = pPeer1->pNext;
+		pPeer2 = pPeer2->pNext;
+	}
+	return (pPeer1 == pPeer2);
+}
+
 
 /* queryInterface function
  * rgerhards, 2008-03-05
@@ -1687,6 +1715,7 @@ CODESTARTobjQueryInterface(net)
 	pIf->CmpHost = CmpHost;
 	pIf->HasRestrictions = HasRestrictions;
 	pIf->GetIFIPAddr = getIFIPAddr;
+	pIf->PermittedPeersEqual = permittedPeersEqual;
 finalize_it:
 ENDobjQueryInterface(net)
 

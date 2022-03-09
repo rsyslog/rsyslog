@@ -104,6 +104,7 @@ struct tcpsrv_s {
 	int bDisableLFDelim;	/**< if 1, standard LF frame delimiter is disabled (*very dangerous*) */
 	int discardTruncatedMsg;/**< discard msg part that has been truncated*/
 	sbool bPreserveCase;	/**< preserve case in fromhost */
+	int bTerminateInput; /**< input should be terminated */
 	unsigned int ratelimitInterval;
 	unsigned int ratelimitBurst;
 	tcps_sess_t **pSessions;/**< array of all of our sessions */
@@ -208,8 +209,10 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetDrvrCAFile)(tcpsrv_t *pThis, uchar *pszMode);
 	rsRetVal (*SetDrvrKeyFile)(tcpsrv_t *pThis, uchar *pszMode);
 	rsRetVal (*SetDrvrCertFile)(tcpsrv_t *pThis, uchar *pszMode);
+	/* added v26 -- Force tcpsrv object to terminate, 2022-01-23 */
+	rsRetVal (*SetTerminateInput)(tcpsrv_t *pThis);
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 25 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 26 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

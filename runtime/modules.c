@@ -83,6 +83,7 @@ static struct cnfparamblk pblk =
 
 
 typedef rsRetVal (*pModInit_t)(int,int*, rsRetVal(**)(), rsRetVal(*)(), modInfo_t*);
+static rsRetVal findModule(uchar *pModName, int iModNameLen, modInfo_t **pMod);
 
 /* we provide a set of dummy functions for modules that do not support the
  * some interfaces.
@@ -572,9 +573,18 @@ doModInit(pModInit_t modInit, uchar *name, void *pModHdlr, modInfo_t **pNewModul
 	struct dlhandle_s *pHandle = NULL;
 	rsRetVal (*getModCnfName)(uchar **cnfName);
 	uchar *cnfName;
+	size_t iNameLen;
 	DEFiRet;
 
 	assert(modInit != NULL);
+
+	iNameLen = strlen((char*)name);
+	/* if module was already loaded, we skip it*/
+	findModule(name, iNameLen, &pNew);
+	if (pNew != NULL) {
+		*pNewModule = pNew;
+		FINALIZE;
+	}
 
 	if((iRet = moduleConstruct(&pNew)) != RS_RET_OK) {
 		pNew = NULL;
@@ -595,7 +605,7 @@ doModInit(pModInit_t modInit, uchar *name, void *pModHdlr, modInfo_t **pNewModul
 	CHKiRet((*pNew->modQueryEtryPt)((uchar*)"getKeepType", &modGetKeepType));
 	CHKiRet((*modGetKeepType)(&pNew->eKeepType));
 	dbgprintf("module %s of type %d being loaded (keepType=%d).\n", name, pNew->eType, pNew->eKeepType);
-	
+
 	/* OK, we know we can successfully work with the module. So we now fill the
 	 * rest of the data elements. First we load the interfaces common to all
 	 * module types.
@@ -628,6 +638,7 @@ doModInit(pModInit_t modInit, uchar *name, void *pModHdlr, modInfo_t **pNewModul
 		dbgprintf("module %s supports rsyslog v6 config interface\n", name);
 		CHKiRet((*pNew->modQueryEtryPt)((uchar*)"endCnfLoad", &pNew->endCnfLoad));
 		CHKiRet((*pNew->modQueryEtryPt)((uchar*)"freeCnf", &pNew->freeCnf));
+		(*pNew->modQueryEtryPt)((uchar*)"reloadCnf", &pNew->reloadCnf);
 		CHKiRet((*pNew->modQueryEtryPt)((uchar*)"checkCnf", &pNew->checkCnf));
 		CHKiRet((*pNew->modQueryEtryPt)((uchar*)"activateCnf", &pNew->activateCnf));
 		localRet = (*pNew->modQueryEtryPt)((uchar*)"activateCnfPrePrivDrop", &pNew->activateCnfPrePrivDrop);
@@ -1146,6 +1157,8 @@ Load(uchar *const pModName, const sbool bConfLoad, struct nvlst *const lst)
 					/* regular modules need to be added to conf list (for
 					 * builtins, this happend during initial load).
 					 */
+					if(lst != NULL)
+						pModInfo->setModCnf(lst);
 					addModToCnfList(&pNew, pLast);
 				}
 			}
@@ -1242,7 +1255,7 @@ Load(uchar *const pModName, const sbool bConfLoad, struct nvlst *const lst)
 		}
 
 		iLoadCnt++;
-	
+
 	} while(pModHdlr == NULL && *pModName != '/' && pModDirNext);
 
 	if(load_err_msg != NULL) {
@@ -1323,7 +1336,7 @@ modulesProcessCnf(struct cnfobj *o)
 
 	cnfModName = (uchar*)es_str2cstr(pvals[typeIdx].val.d.estr, NULL);
 	iRet = Load(cnfModName, 1, o->nvlst);
-	
+
 finalize_it:
 	free(cnfModName);
 	cnfparamvalsDestruct(pvals, &pblk);

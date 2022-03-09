@@ -33,6 +33,7 @@ struct thrdInfo {
 	pthread_t thrdID;
 	sbool bNeedsCancel;	/* must input be terminated by pthread_cancel()? */
 	uchar *name;		/* a thread name, mainly for user interaction */
+	int serial; /* in which dynamic conf reload has the thread been created */
 };
 
 /* prototypes */
@@ -40,7 +41,7 @@ rsRetVal thrdExit(void);
 rsRetVal thrdInit(void);
 rsRetVal thrdTerminate(thrdInfo_t *pThis);
 rsRetVal thrdTerminateAll(void);
-rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdInfo_t *), sbool, uchar*);
+rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdInfo_t *), sbool, uchar*, int);
 
 /* macros (replace inline functions) */
 

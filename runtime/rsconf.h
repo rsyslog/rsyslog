@@ -157,6 +157,7 @@ struct globals_s {
 
 	// TODO are the following ones defaults?
 	int bReduceRepeatMsgs; /* reduce repeated message - 0 - no, 1 - yes */
+	int bHUPReloadConfig;
 
 	//TODO: other representation for main queue? Or just load it differently?
 	queuecnf_t mainQ;	/* main queue parameters */

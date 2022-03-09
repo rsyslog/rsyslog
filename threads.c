@@ -266,7 +266,7 @@ thrdStarter(void *const arg)
  * rgerhards, 2007-12-14
  */
 rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdInfo_t *),
-	sbool bNeedsCancel, uchar *name)
+	sbool bNeedsCancel, uchar *name, int serial)
 {
 	DEFiRet;
 	thrdInfo_t *pThis;
@@ -281,7 +281,9 @@ rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdI
 	pThis->pUsrThrdMain = thrdMain;
 	pThis->pAfterRun = afterRun;
 	pThis->bNeedsCancel = bNeedsCancel;
-	pThis->name = ustrdup(name);
+	pThis->serial = serial;
+	if (asprintf((char **)(&pThis->name), "%s%d", name, serial) == -1)
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 #if defined (_AIX)
 	pthread_attr_init(&aix_attr);
 	pthread_attr_setstacksize(&aix_attr, 4096*512);
