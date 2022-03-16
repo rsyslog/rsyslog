@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2204.0 (aka 2022.04) 2021-04-??
+- 2022-03-16: refactor: ake the main message queue part of the config
+  The intent of this patch is to make the main message queue part of the main config.
+  It will help us to proceed towards dynamic configuration reload.
 - regression bugfix: rsyslog may segfault during startup
   glblGetMaxLine() might be called even before the main configuration file exists
   resulting unexpected behavior, most probably segmentation fault. This is addressed
