@@ -1693,7 +1693,7 @@ startWorkerPool(void)
 		if(r == 0) {
 			wrkrInfo[i].enabled = 1;
 		} else {
-			LogError(errno, NO_ERRCODE, "tcpsrv error creating thread");
+			LogError(r, NO_ERRCODE, "tcpsrv error creating thread");
 		}
 	}
 	pthread_attr_destroy(&sessThrdAttr);

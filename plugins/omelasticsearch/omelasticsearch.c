@@ -231,9 +231,10 @@ static rsRetVal curlSetup(wrkrInstanceData_t *pWrkrData);
 
 BEGINcreateInstance
 CODESTARTcreateInstance
+	int r;
 	pData->fdErrFile = -1;
-	if(pthread_mutex_init(&pData->mutErrFile, NULL) != 0) {
-		LogError(errno, RS_RET_ERR, "omelasticsearch: cannot create "
+	if((r = pthread_mutex_init(&pData->mutErrFile, NULL)) != 0) {
+		LogError(r, RS_RET_ERR, "omelasticsearch: cannot create "
 			"error file mutex, failing this action");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
