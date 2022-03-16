@@ -563,6 +563,7 @@ actionConstructFinalize(action_t *__restrict__ const pThis, struct nvlst *lst)
 		qqueueSetDefaultsActionQueue(pThis->pQueue);
 		qqueueApplyCnfParam(pThis->pQueue, lst);
 	}
+	qqueueCorrectParams(pThis->pQueue);
 
 #	undef setQPROP
 #	undef setQPROPstr
@@ -1961,7 +1962,7 @@ DEFFUNC_llExecFunc(doActivateActions)
 {
 	rsRetVal localRet;
 	action_t * const pThis = (action_t*) pData;
-	localRet = qqueueStart(pThis->pQueue);
+	localRet = qqueueStart(runConf, pThis->pQueue);
 	if(localRet != RS_RET_OK) {
 		LogError(0, localRet, "error starting up action queue");
 		if(localRet == RS_RET_FILE_PREFIX_MISSING) {
