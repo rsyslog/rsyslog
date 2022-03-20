@@ -763,11 +763,13 @@ static void ATTR_NONNULL() actionRetry(action_t * const pThis, wti_t * const pWt
 {
 	setSuspendMessageConfVars(pThis);
 	actionSetState(pThis, pWti, ACT_STATE_RTRY);
-	LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
-	      "action '%s' suspended (module '%s'), retry %d. There should "
-	      "be messages before this one giving the reason for suspension.",
-	      pThis->pszName, pThis->pMod->pszName,
-	      getActionNbrResRtry(pWti, pThis));
+	if(pThis->bReportSuspension) {
+		LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
+		      "action '%s' suspended (module '%s'), retry %d. There should "
+		      "be messages before this one giving the reason for suspension.",
+		      pThis->pszName, pThis->pMod->pszName,
+		      getActionNbrResRtry(pWti, pThis));
+	}
 	incActionResumeInRow(pWti, pThis);
 }
 
