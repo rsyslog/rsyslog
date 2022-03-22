@@ -829,7 +829,7 @@ create_signer_thread(rsksictx ctx) {
 
 		ctx->signer_state = SIGNER_INIT;
 		if ((r = pthread_create(&ctx->signer_thread, NULL, signer_thread, ctx))) {
-			report(ctx, "pthread_mutex_init: %s", strerror(r));
+			report(ctx, "pthread_create: %s", strerror(r));
 			ctx->signer_state = SIGNER_IDLE;
 			return RSGTE_INTERNAL;
 		}
