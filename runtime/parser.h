@@ -50,18 +50,21 @@ BEGINinterface(parser) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetName)(parser_t *pThis, uchar *name);
 	rsRetVal (*SetModPtr)(parser_t *pThis, modInfo_t *pMod);
 	rsRetVal (*SetDoPRIParsing)(parser_t *pThis, int);
-	rsRetVal (*FindParser)(parser_t **ppThis, uchar*name);
-	rsRetVal (*InitParserList)(parserList_t **pListRoot);
+	rsRetVal (*FindParser)(parserList_t *pParserListRoot, parser_t **ppThis, uchar*name);
 	rsRetVal (*DestructParserList)(parserList_t **pListRoot);
 	rsRetVal (*AddParserToList)(parserList_t **pListRoot, parser_t *pParser);
+	rsRetVal (*destroyMasterParserList)(parserList_t *pParserListRoot);
 	/* static functions */
 	rsRetVal (*ParseMsg)(smsg_t *pMsg);
 	rsRetVal (*SanitizeMsg)(smsg_t *pMsg);
 	rsRetVal (*AddDfltParser)(uchar *);
 ENDinterface(parser)
-#define parserCURR_IF_VERSION 2 /* increment whenever you change the interface above! */
+#define parserCURR_IF_VERSION 3 /* increment whenever you change the interface above! */
 /* version changes
 	2       SetDoSanitization removed, no longer needed
+	3       InitParserList removed, no longer needed
+	        destroyMasterParserList added
+	        findParser extended with new parameter specifying the parser list
 */
 
 void printParserList(parserList_t *pList);

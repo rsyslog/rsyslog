@@ -204,6 +204,17 @@ struct templates_s {
 	struct template *lastStatic; /* last static element of the template list */
 };
 
+struct parsers_s {
+	/* This is the list of all parsers known to us.
+	 * This is also used to unload all modules on shutdown.
+	 */
+	parserList_t *pParsLstRoot;
+
+	/* this is the list of the default parsers, to be used if no others
+	 * are specified.
+	 */
+	parserList_t *pDfltParsLst;
+};
 
 struct actions_s {
 	/* number of active actions */
@@ -235,6 +246,7 @@ struct rsconf_s {
 	globals_t globals;
 	defaults_t defaults;
 	templates_t templates;
+	parsers_t parsers;
 	lookup_tables_t lu_tabs;
 	dynstats_buckets_t dynstats_buckets;
 	perctile_buckets_t perctile_buckets;
