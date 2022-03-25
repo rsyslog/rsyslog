@@ -5,7 +5,7 @@ mkdir local_env
 mkdir local_env/install
 cd local_env
 pwd
-git clone git://github.com/rsyslog/librelp
+git clone http://github.com/rsyslog/librelp
 cd librelp
 git log -2
 env | grep FLAGS
