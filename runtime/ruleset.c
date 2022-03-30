@@ -1027,7 +1027,7 @@ doRulesetAddParser(ruleset_t *pRuleset, uchar *pName)
 	DEFiRet;
 
 	CHKiRet(objUse(parser, CORE_COMPONENT));
-	iRet = parser.FindParser(&pParser, pName);
+	iRet = parser.FindParser(loadConf->parsers.pParsLstRoot, &pParser, pName);
 	if(iRet == RS_RET_PARSER_NOT_FOUND) {
 		LogError(0, RS_RET_PARSER_NOT_FOUND, "error: parser '%s' unknown at this time "
 			  	"(maybe defined too late in rsyslog.conf?)", pName);

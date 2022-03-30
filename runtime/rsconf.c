@@ -260,6 +260,9 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.parser.bParserEscapeCCCStyle = 0;
 	pThis->globals.parser.bPermitSlashInProgramname = 0;
 	pThis->globals.parser.bParseHOSTNAMEandTAG = 1;
+
+	pThis->parsers.pDfltParsLst = NULL;
+	pThis->parsers.pParsLstRoot = NULL;
 }
 
 
@@ -316,6 +319,8 @@ CODESTARTobjDestruct(rsconf)
 	perctileBucketsDestruct();
 	ochDeleteAll();
 	freeTimezones(pThis);
+	parser.DestructParserList(&pThis->parsers.pDfltParsLst);
+	parser.destroyMasterParserList(pThis->parsers.pParsLstRoot);
 	free(pThis->globals.mainQ.pszMainMsgQFName);
 	free(pThis->globals.pszConfDAGFile);
 	free(pThis->globals.pszWorkDir);
@@ -413,7 +418,7 @@ parserProcessCnf(struct cnfobj *o)
 	cnfparamsPrint(&parserpblk, pvals);
 	paramIdx = cnfparamGetIdx(&parserpblk, "name");
 	parserName = (uchar*)es_str2cstr(pvals[paramIdx].val.d.estr, NULL);
-	if(parser.FindParser(&myparser, parserName) != RS_RET_PARSER_NOT_FOUND) {
+	if(parser.FindParser(loadConf->parsers.pParsLstRoot, &myparser, parserName) != RS_RET_PARSER_NOT_FOUND) {
 		LogError(0, RS_RET_PARSER_NAME_EXISTS,
 			"parser module name '%s' already exists", parserName);
 		ABORT_FINALIZE(RS_RET_PARSER_NAME_EXISTS);
