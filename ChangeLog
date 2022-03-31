@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2204.0 (aka 2022.04) 2021-04-??
+- 2022-03-20: refactor: Move the parser directive to the main config
+  Thanks to Attila Lakatos for the patch.
 - 2022-03-16: refactor: ake the main message queue part of the config
   The intent of this patch is to make the main message queue part of the main config.
   It will help us to proceed towards dynamic configuration reload.
