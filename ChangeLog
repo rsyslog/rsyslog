@@ -1,5 +1,14 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2204.0 (aka 2022.04) 2021-04-??
+- core bugfix: make internal logs emitted during HUP procesing appear quicker
+  After call doHUP(), probably there is a internal log in the list. However, it
+  will not be wrote out immediately, because the mainloop will be blocked at
+  pselect in wait_timeout() until a long timeout or next message occur.
+  More deadly, the log may be lost if the deamon exits unexpectedly.
+  We might as well put processImInternal() after doHUP(), so that the message
+  will be flushed out immediately.
+  Fixes: 723f6fdfa6(rsyslogd: Fix race between signals and main loop timeout)
+  Thanks to Yun Zhou for the patch.
 - 2022-03-20: refactor: Move the parser directive to the main config
   Thanks to Attila Lakatos for the patch.
 - 2022-03-16: refactor: ake the main message queue part of the config
