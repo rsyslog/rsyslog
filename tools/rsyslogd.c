@@ -1952,8 +1952,6 @@ mainloop(void)
 	sigaddset(&sigblockset, SIGHUP);
 
 	do {
-		processImInternal();
-
 		pthread_sigmask(SIG_BLOCK, &sigblockset, &origmask);
 		if(bChildDied) {
 			reapChild();
@@ -1964,6 +1962,8 @@ mainloop(void)
 			doHUP();
 			bHadHUP = 0;
 		}
+
+		processImInternal();
 
 		if(bFinished)
 			break;	/* exit as quickly as possible */
