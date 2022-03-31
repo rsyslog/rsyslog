@@ -16,10 +16,16 @@ RUN	mkdir /home/pkg/rsyslog-pkg-rhel-centos/yumrepo
 VOLUME	/home/pkg/rsyslog-pkg-rhel-centos/yumrepo
 COPY	extra/initenv.sh ./
 COPY	extra/do_upload.sh ./
+COPY	extra/do_upload_delete.sh ./
 COPY	extra/sync_remote.sh ./
+COPY	extra/sync_remote_delete.sh ./
+COPY	extra/cleanup_repo.sh ./
 RUN	chmod +x ./initenv.sh
 RUN	chmod +x ./do_upload.sh
+RUN	chmod +x ./do_upload_delete.sh
 RUN	chmod +x ./sync_remote.sh
+RUN	chmod +x ./sync_remote_delete.sh
+RUN	chmod +x ./cleanup_repo.sh
 COPY	extra/adisconextra.repo /etc/yum.repos.d/
 RUN	dnf -y update
 RUN	dnf -y install \
