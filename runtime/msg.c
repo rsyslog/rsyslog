@@ -1784,6 +1784,25 @@ getPRI(smsg_t * const pM)
 }
 
 
+static const char *
+formatISOWeekOrYear(enum tplFormatTypes eFmt, struct syslogTime *pTm)
+{
+	if(pTm->year >= 1970 && pTm->year <= 2099) {
+		int isoWeekYear;
+		int isoWeek;
+
+		isoWeek = getISOWeek(pTm, &isoWeekYear);
+
+		if (eFmt == tplFmtISOWeek) {
+			return two_digits[isoWeek];
+		} else {
+			return years[isoWeekYear - 1967];
+		}
+	} else {
+		return "YEAR OUT OF RANGE(1970-2099)";
+	}
+}
+
 const char *
 getTimeReported(smsg_t * const pM, enum tplFormatTypes eFmt)
 {
@@ -1878,6 +1897,9 @@ getTimeReported(smsg_t * const pM, enum tplFormatTypes eFmt)
 		return daysInYear[getOrdinal(&pM->tTIMESTAMP)];
 	case tplFmtWeek:
 		return two_digits[getWeek(&pM->tTIMESTAMP)];
+	case tplFmtISOWeek:
+	case tplFmtISOWeekYear:
+		return formatISOWeekOrYear(eFmt, &pM->tTIMESTAMP);
 	}
 	return "INVALID eFmt OPTION!";
 }
@@ -1972,6 +1994,10 @@ static const char *getTimeUTC(struct syslogTime *const __restrict__ pTmIn,
 		break;
 	case tplFmtWeek:
 		retbuf = strdup(two_digits[getWeek(pTm)]);
+		break;
+	case tplFmtISOWeek:
+	case tplFmtISOWeekYear:
+		retbuf = strdup(formatISOWeekOrYear(eFmt, pTm));
 		break;
 	}
 
@@ -2096,6 +2122,9 @@ getTimeGenerated(smsg_t *const __restrict__ pM,
 		return daysInYear[getOrdinal(pTm)];
 	case tplFmtWeek:
 		return two_digits[getWeek(pTm)];
+	case tplFmtISOWeek:
+	case tplFmtISOWeekYear:
+		return formatISOWeekOrYear(eFmt, pTm);
 	}
 	return "INVALID eFmt OPTION!";
 }

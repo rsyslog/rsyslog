@@ -88,6 +88,21 @@ static const long long yearInSecs[] = {
 	3944678399, 3976214399, 4007836799, 4039372799, 4070908799,
 	4102444799};
 
+/* note ramge is 1969 -> 2100 because it needs to access previous/next year */
+/* for x in $(seq 1969 2100) ; do
+ *   printf %s', ' $(date --date="Dec 28 ${x} UTC 12:00:00" +%V)
+ * done | fold -w 70 -s */
+static const int weeksInYear[] = {
+	52, 53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52, 53, 52, 52, 52, 52,
+	52, 53, 52, 52, 52, 52, 53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52,
+	52, 53, 52, 52, 52, 52, 53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52,
+	53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52,
+	53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52, 53, 52, 52, 52, 52, 52,
+	53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52, 53, 52, 52, 52, 52, 52,
+	53, 52, 52, 52, 52, 53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52, 52,
+	53, 52, 52, 52, 52, 53, 52, 52, 52, 52, 52, 53, 52,
+};
+
 static const char* monthNames[12] = {
 	"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 };
@@ -1264,6 +1279,40 @@ int getWeek(struct syslogTime *ts)
 	if (curDow < jan1Dow) {
 		++weekNum;
 	}
+	return weekNum;
+}
+
+/* getISOWeek - 1-53 week of the year */
+int getISOWeek(struct syslogTime *ts, int *year)
+{
+	int weekNum;
+	int curDow;
+	int curYearDay;
+
+	/* get current day in year, current day of week
+	 * and the day of week of 1/1 */
+	curYearDay = getOrdinal(ts);
+	curDow = getWeekdayNbr(ts);
+
+	/* map from 0 - Sunday, 1, Monday to 1, Monday, 7 - Sunday */
+	if (curDow == 0) {
+		curDow = 7;
+	}
+	/* make ordinal in range 1-366 */
+	curYearDay++;
+
+	weekNum = (10 + curYearDay - curDow) / 7;
+	*year = ts->year;
+	if (weekNum == 0) {
+		/* this is actually W52 or W53 of previous year */
+		weekNum = weeksInYear[ts->year - 1 - 1969];
+		*year = ts->year - 1;
+	} else if (weekNum > weeksInYear[ts->year - 1969]) {
+		/* this is actually W01 of next year */
+		weekNum = 1;
+		*year = ts->year + 1;
+	}
+
 	return weekNum;
 }
 
