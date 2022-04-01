@@ -92,6 +92,7 @@ void applyDfltTZ(struct syslogTime *pTime, char *tz);
 int getWeekdayNbr(struct syslogTime *ts);
 int getOrdinal(struct syslogTime *ts);
 int getWeek(struct syslogTime *ts);
+int getISOWeek(struct syslogTime *ts, int *year);
 void timeConvertToUTC(const struct syslogTime *const __restrict__ local, struct syslogTime *const __restrict__ utc);
 time_t getTime(time_t *ttSeconds);
 dateTimeFormat_t getDateTimeFormatFromStr(const char * const __restrict__ s);

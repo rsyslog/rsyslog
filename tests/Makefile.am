@@ -169,6 +169,7 @@ TESTS +=  \
 	empty-hostname.sh \
 	timestamp-3164.sh \
 	timestamp-3339.sh \
+	timestamp-isoweek.sh \
 	timestamp-mysql.sh \
 	timestamp-pgsql.sh \
 	timestamp-subseconds.sh \
@@ -1820,6 +1821,7 @@ EXTRA_DIST= \
 	proprepltest-rfctag.sh \
 	timestamp-3164.sh \
 	timestamp-3339.sh \
+	timestamp-isoweek.sh \
 	timestamp-mysql.sh \
 	timestamp-pgsql.sh \
 	timestamp-subseconds.sh \
