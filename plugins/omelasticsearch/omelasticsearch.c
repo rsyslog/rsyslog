@@ -116,6 +116,7 @@ typedef struct instanceConf_s {
 	uchar **serverBaseUrls;
 	int numServers;
 	long healthCheckTimeout;
+	long indexTimeout;
 	uchar *uid;
 	uchar *pwd;
 	uchar *authBuf;
@@ -187,6 +188,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "server", eCmdHdlrArray, 0 },
 	{ "serverport", eCmdHdlrInt, 0 },
 	{ "healthchecktimeout", eCmdHdlrInt, 0 },
+	{ "indextimeout", eCmdHdlrInt, 0 },
 	{ "uid", eCmdHdlrGetWord, 0 },
 	{ "pwd", eCmdHdlrGetWord, 0 },
 	{ "searchindex", eCmdHdlrGetWord, 0 },
@@ -356,6 +358,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\ttemplate='%s'\n", pData->tplName);
 	dbgprintf("\tnumServers=%d\n", pData->numServers);
 	dbgprintf("\thealthCheckTimeout=%lu\n", pData->healthCheckTimeout);
+	dbgprintf("\tindexTimeout=%lu\n", pData->indexTimeout);
 	dbgprintf("\tserverBaseUrls=");
 	for(i = 0 ; i < pData->numServers ; ++i)
 		dbgprintf("%c'%s'", i == 0 ? '[' : ' ', pData->serverBaseUrls[i]);
@@ -1771,6 +1774,8 @@ curlPostSetup(wrkrInstanceData_t *const pWrkrData)
 	PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
 	curlSetupCommon(pWrkrData, pWrkrData->curlPostHandle);
 	curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_POST, 1);
+	curl_easy_setopt(pWrkrData->curlPostHandle,
+		CURLOPT_TIMEOUT_MS, pWrkrData->pData->indexTimeout);
 }
 
 #define CONTENT_JSON "Content-Type: application/json; charset=utf-8"
@@ -1800,6 +1805,7 @@ setInstParamDefaults(instanceData *const pData)
 	pData->serverBaseUrls = NULL;
 	pData->defaultPort = 9200;
 	pData->healthCheckTimeout = 3500;
+	pData->indexTimeout = 0;
 	pData->uid = NULL;
 	pData->pwd = NULL;
 	pData->authBuf = NULL;
@@ -1868,6 +1874,8 @@ CODESTARTnewActInst
 			pData->defaultPort = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "healthchecktimeout")) {
 			pData->healthCheckTimeout = (long) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "indextimeout")) {
+			pData->indexTimeout = (long) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "uid")) {
 			pData->uid = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "pwd")) {
