@@ -43,7 +43,7 @@ processed asynchronously. With asynchronous processing you do not have any
 feedback capability. As such, the action will never fail.
 
 **If you would like to use a queue on the forwarding process as whole, the solution
-is** to put all actions into a ruleset and assing a queue to the ruleset. In
+is** to put all actions into a ruleset and assign a queue to the ruleset. In
 that configuration, the ruleset is process asynchronously, but inside the
 rule set each action is processed synchronously and can provide feedback,
 which permits to detect failed actions.
