@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2204.0 (aka 2022.04) 2021-04-??
+- 2022-04-01: add property options to support ISO week/year number
+  Thanks to Mattia Barbon for the patch.
 - 2022-04-01: core bugfix: "action suspended" message was emitted even when turned off
   Most messages were diasabled, but there was one part of the code that ignored the
   user configuration.
