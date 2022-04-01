@@ -178,7 +178,9 @@ void rsyslogdDoDie(int sig);
 #endif
 
 /* global data items */
-static int bChildDied;
+static pthread_mutex_t mutChildDied;
+static int bChildDied = 0;
+static pthread_mutex_t mutHadHUP;
 static int bHadHUP;
 static int doFork = 1; 	/* fork - run in daemon mode - read-only after startup */
 int bFinished = 0;	/* used by termination signal handler, read-only except there
@@ -1232,7 +1234,9 @@ hdlr_enable(int sig, void (*hdlr)())
 static void
 hdlr_sighup(void)
 {
+	pthread_mutex_lock(&mutHadHUP);
 	bHadHUP = 1;
+	pthread_mutex_unlock(&mutHadHUP);
 	/* at least on FreeBSD we seem not to necessarily awake the main thread.
 	 * So let's do it explicitely.
 	 */
@@ -1243,7 +1247,9 @@ hdlr_sighup(void)
 static void
 hdlr_sigchld(void)
 {
+	pthread_mutex_lock(&mutChildDied);
 	bChildDied = 1;
+	pthread_mutex_unlock(&mutChildDied);
 }
 
 static void
@@ -1855,9 +1861,12 @@ wait_timeout(const sigset_t *sigmask)
 		tvSelectTimeout.tv_sec = 0;
 		tvSelectTimeout.tv_nsec = wait_period;
 		do {
+			pthread_mutex_lock(&mutHadHUP);
 			if(bFinished || bHadHUP) {
+				pthread_mutex_unlock(&mutHadHUP);
 				break;
 			}
+			pthread_mutex_unlock(&mutHadHUP);
 			pselect(1, NULL, NULL, NULL, &tvSelectTimeout, sigmask);
 		} while(--timeout > 0);
 	} else {
@@ -1945,6 +1954,7 @@ mainloop(void)
 	time_t tTime;
 	sigset_t origmask;
 	sigset_t sigblockset;
+	int need_free_mutex;
 
 	sigemptyset(&sigblockset);
 	sigaddset(&sigblockset, SIGTERM);
@@ -1953,14 +1963,28 @@ mainloop(void)
 
 	do {
 		pthread_sigmask(SIG_BLOCK, &sigblockset, &origmask);
+		pthread_mutex_lock(&mutChildDied);
+		need_free_mutex = 1;
 		if(bChildDied) {
-			reapChild();
 			bChildDied = 0;
+			pthread_mutex_unlock(&mutChildDied);
+			need_free_mutex = 0;
+			reapChild();
+		}
+		if(need_free_mutex) {
+			pthread_mutex_unlock(&mutChildDied);
 		}
 
+		pthread_mutex_lock(&mutHadHUP);
+		need_free_mutex = 1;
 		if(bHadHUP) {
-			doHUP();
 			bHadHUP = 0;
+			need_free_mutex = 0;
+			pthread_mutex_unlock(&mutHadHUP);
+			doHUP();
+		}
+		if(need_free_mutex) {
+			pthread_mutex_unlock(&mutHadHUP);
 		}
 
 		processImInternal();
@@ -2095,6 +2119,8 @@ main(int argc, char **argv)
 	 * internally by rsyslogd.
 	 */
 
+	pthread_mutex_init(&mutHadHUP, NULL);
+	pthread_mutex_init(&mutChildDied, NULL);
 	strncpy(progname,argv[0], sizeof(progname)-1);
 	addrsz = sizeof(srcaddr);
 	if ((rc = getsockname(0, &srcaddr, &addrsz)) < 0) {
@@ -2146,5 +2172,7 @@ main(int argc, char **argv)
 	LogMsg(0, RS_RET_OK, LOG_DEBUG, "rsyslogd shutting down");
 	deinitAll();
 	osf_close();
+	pthread_mutex_destroy(&mutChildDied);
+	pthread_mutex_destroy(&mutHadHUP);
 	return 0;
 }
