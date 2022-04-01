@@ -1,6 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2204.0 (aka 2022.04) 2021-04-??
-- core bugfix: make internal logs emitted during HUP procesing appear quicker
+- 2022-04-01: core bugfix: "action suspended" message was emitted even when turned off
+  Most messages were diasabled, but there was one part of the code that ignored the
+  user configuration.
+  Thanks to Deyneko Aleksey for the patch.
+- 2022-03-31: testbench: add more tests for rscript comparison operations
+- 2022-03-31: core bugfix: make internal logs emitted during HUP procesing appear quicker
   After call doHUP(), probably there is a internal log in the list. However, it
   will not be wrote out immediately, because the mainloop will be blocked at
   pselect in wait_timeout() until a long timeout or next message occur.
