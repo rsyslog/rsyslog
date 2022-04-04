@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2204.0 (aka 2022.04) 2021-04-??
+- 2022-04-04: imfile: potential processing delay
+  This was mentioned by Mikko Kortelainen without exact details on what exactly
+  this could cause in practice. But we were confident enough that it is worth
+  merging (though it does not look like something that brought real problems in
+  practice, as we do not know any related reports).
+  see also: https://github.com/rsyslog/rsyslog/pull/4445
+  Thanks to Mikko Kortelainen for the patch.
 - 2022-04-04: bugfix: cosmetic data races
   there was a more or less cosmetic data race which could happen when children
   processes died in quick sequence. Even then, no real harm happened, as all
