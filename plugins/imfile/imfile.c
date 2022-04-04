@@ -2444,10 +2444,11 @@ do_inotify(void)
 	int rd;
 	int currev;
 	static int last_timeout = 0;
+	struct pollfd pollfd;
 	DEFiRet;
 
 	CHKiRet(wdmapInit());
-	ino_fd = inotify_init();
+	ino_fd = inotify_init1(IN_NONBLOCK);
 	if(ino_fd < 0) {
 		LogError(errno, RS_RET_INOTIFY_INIT_FAILED, "imfile: Init inotify "
 			"instance failed ");
@@ -2458,58 +2459,73 @@ do_inotify(void)
 	do_initial_poll_run();
 
 	while(glbl.GetGlobalInputTermState() == 0) {
-		if(runModConf->haveReadTimeouts) {
-			int r;
-			struct pollfd pollfd;
-			pollfd.fd = ino_fd;
-			pollfd.events = POLLIN;
-			do {
-				r = poll(&pollfd, 1, runModConf->timeoutGranularity);
-			} while(r  == -1 && errno == EINTR);
-			if(r == 0) {
-				DBGPRINTF("readTimeouts are configured, checking if some apply\n");
+		int r;
+
+		pollfd.fd = ino_fd;
+		pollfd.events = POLLIN;
+
+		if (runModConf->haveReadTimeouts)
+			r = poll(&pollfd, 1, runModConf->timeoutGranularity);
+		else
+			r = poll(&pollfd, 1, -1);
+
+		if (r  == -1 && errno == EINTR) {
+			DBGPRINTF("do_inotify interrupted while polling on ino_fd\n");
+			continue;
+		}
+		if(r == 0) {
+			DBGPRINTF("readTimeouts are configured, checking if some apply\n");
+			if (runModConf->haveReadTimeouts) {
 				fs_node_walk(runModConf->conf_tree, poll_timeouts);
 				last_timeout = time(NULL);
-				continue;
-			} else if (r == -1) {
-				LogError(errno, RS_RET_INTERNAL_ERROR,
+			}
+			continue;
+		} else if (r == -1) {
+			LogError(errno, RS_RET_INTERNAL_ERROR,
 					"%s:%d: unexpected error during poll timeout wait",
 					__FILE__, __LINE__);
-				/* we do not abort, as this would render the whole input defunct */
-				continue;
-			} else if(r != 1) {
-				LogError(errno, RS_RET_INTERNAL_ERROR,
+			/* we do not abort, as this would render the whole input defunct */
+			continue;
+		} else if(r != 1) {
+			LogError(errno, RS_RET_INTERNAL_ERROR,
 					"%s:%d: ERROR: poll returned more fds (%d) than given to it (1)",
 					__FILE__, __LINE__, r);
-				/* we do not abort, as this would render the whole input defunct */
+			/* we do not abort, as this would render the whole input defunct */
+			continue;
+		}
+		else {
+			// process timeouts always, ino_fd may be too busy to ever have timeout occur from poll
+			if(runModConf->haveReadTimeouts) {
+				int now = time(NULL);
+				if(last_timeout + (runModConf->timeoutGranularity / 1000) > now) {
+					fs_node_walk(runModConf->conf_tree, poll_timeouts);
+					last_timeout = time(NULL);
+				}
+			}
+			rd = read(ino_fd, iobuf, sizeof(iobuf));
+			if(rd == -1 && errno == EINTR) {
+				/* This might have been our termination signal! */
+				DBGPRINTF("EINTR received during inotify, restarting poll\n");
 				continue;
 			}
-		}
-		rd = read(ino_fd, iobuf, sizeof(iobuf));
-		if(rd == -1 && errno == EINTR) {
-			/* This might have been our termination signal! */
-			DBGPRINTF("EINTR received during inotify, restarting poll\n");
-			continue;
-		}
-		if(rd < 0) {
-			LogError(errno, RS_RET_IO_ERROR, "imfile: error during inotify - ignored");
-			continue;
-		}
-		currev = 0;
-		while(currev < rd) {
-			union {
-				char *buf;
-				struct inotify_event *ev;
-			} savecast;
-			savecast.buf = iobuf+currev;
-			in_dbg_showEv(savecast.ev);
-			in_processEvent(savecast.ev);
-			currev += sizeof(struct inotify_event) + savecast.ev->len;
-		}
-		int now = time(NULL);
-		if(last_timeout + (runModConf->timeoutGranularity / 1000) > now) {
-			fs_node_walk(runModConf->conf_tree, poll_timeouts);
-			last_timeout = time(NULL);
+			if (rd == -1 && errno == EWOULDBLOCK) {
+				continue;
+			}
+			if(rd < 0) {
+				LogError(errno, RS_RET_IO_ERROR, "imfile: error during inotify - ignored");
+				continue;
+			}
+			currev = 0;
+			while(currev < rd) {
+				union {
+					char *buf;
+					struct inotify_event *ev;
+				} savecast;
+				savecast.buf = iobuf+currev;
+				in_dbg_showEv(savecast.ev);
+				in_processEvent(savecast.ev);
+				currev += sizeof(struct inotify_event) + savecast.ev->len;
+			}
 		}
 	}
 
