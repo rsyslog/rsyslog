@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2204.0 (aka 2022.04) 2021-04-??
+- 2022-04-04: bugfix: cosmetic data races
+  there was a more or less cosmetic data race which could happen when children
+  processes died in quick sequence. Even then, no real harm happened, as all
+  children were reaped eventually.
+  A similar data race exists for HUP processing.
+  However, these races polluted TSAN test runs, and so we fixed them
 - 2022-04-01: add property options to support ISO week/year number
   Thanks to Mattia Barbon for the patch.
 - 2022-04-01: core bugfix: "action suspended" message was emitted even when turned off
