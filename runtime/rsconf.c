@@ -115,6 +115,15 @@ static uchar template_StdJSONFmt[] = "\"{\\\"message\\\":\\\"%msg:::json%\\\",\\
 "%HOSTNAME:::json%\\\",\\\"facility\\\":\\\"%syslogfacility-text%\\\",\\\"priority\\\":\\\""
 "%syslogpriority-text%\\\",\\\"timereported\\\":\\\"%timereported:::date-rfc3339%\\\",\\\"timegenerated\\\":\\\""
 "%timegenerated:::date-rfc3339%\\\"}\"";
+static uchar template_FullJSONFmt[] = "\"{\\\"message\\\":\\\"%msg:::json%\\\","
+"\\\"fromhost\\\":\\\"%HOSTNAME:::json%\\\","
+"\\\"programname\\\":\\\"%programname%\\\","
+"\\\"procid\\\":\\\"%PROCID%\\\","
+"\\\"msgid\\\":\\\"%MSGID%\\\","
+"\\\"facility\\\":\\\"%syslogfacility-text%\\\","
+"\\\"priority\\\":\\\"%syslogpriority-text%\\\","
+"\\\"timereported\\\":\\\"%timereported:::date-rfc3339%\\\","
+"\\\"timegenerated\\\":\\\"%timegenerated:::date-rfc3339%\\\"}\"";
 static uchar template_StdClickHouseFmt[] = "\"INSERT INTO rsyslog.SystemEvents (severity, facility, "
 "timestamp, hostname, tag, message) VALUES (%syslogseverity%, %syslogfacility%, "
 "'%timereported:::date-unixtimestamp%', '%hostname%', '%syslogtag%', '%msg%')\",STDSQL";
@@ -1405,6 +1414,8 @@ initLegacyConf(void)
 	tplAddLine(ourConf, " StdPgSQLFmt", &pTmp);
 	pTmp = template_StdJSONFmt;
 	tplAddLine(ourConf, " StdJSONFmt", &pTmp);
+	pTmp = template_FullJSONFmt;
+	tplAddLine(ourConf, " FullJSONFmt", &pTmp);
 	pTmp = template_StdClickHouseFmt;
 	tplAddLine(ourConf, " StdClickHouseFmt", &pTmp);
 	pTmp = template_spoofadr;
