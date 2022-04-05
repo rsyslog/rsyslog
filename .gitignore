@@ -4,3 +4,4 @@ source/_build
 .vscode
 *.pyc
 *.sw?
+.idea/

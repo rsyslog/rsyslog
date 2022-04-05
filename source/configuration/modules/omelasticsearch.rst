@@ -308,7 +308,7 @@ will return an error. Defaults to:
 
 .. code-block:: none
 
-    $template JSONDefault, "{\"message\":\"%msg:::json%\",\"fromhost\":\"%HOSTNAME:::json%\",\"facility\":\"%syslogfacility-text%\",\"priority\":\"%syslogpriority-text%\",\"timereported\":\"%timereported:::date-rfc3339%\",\"timegenerated\":\"%timegenerated:::date-rfc3339%\"}"
+    $template StdJSONFmt, "{\"message\":\"%msg:::json%\",\"fromhost\":\"%HOSTNAME:::json%\",\"facility\":\"%syslogfacility-text%\",\"priority\":\"%syslogpriority-text%\",\"timereported\":\"%timereported:::date-rfc3339%\",\"timegenerated\":\"%timegenerated:::date-rfc3339%\"}"
 
 Which will produce this sort of documents (pretty-printed here for
 readability):
@@ -324,6 +324,7 @@ readability):
         "timegenerated": "2013-03-12T18:05:01.344864+02:00"
     }
 
+Another template, FullJSONFmt, is available that includes more fields including programname, PROCID (usually the process ID), and MSGID.
 
 .. _bulkmode:
 
@@ -925,6 +926,20 @@ Example 2
 The following sample does the following:
 
 -  loads the omelasticsearch module
+-  outputs all logs to Elasticsearch using the full JSON logging template including program name
+
+.. code-block:: none
+
+    module(load="omelasticsearch")
+    *.*     action(type="omelasticsearch" template="FullJSONFmt")
+
+
+Example 3
+---------
+
+The following sample does the following:
+
+-  loads the omelasticsearch module
 -  defines a template that will make the JSON contain the following
    properties
 
@@ -979,7 +994,7 @@ The following sample does the following:
 
 .. _omelasticsearch-writeoperation-example:
 
-Example 3
+Example 4
 ---------
 
 The following sample shows how to use :ref:`omelasticsearch-writeoperation`
@@ -1002,7 +1017,7 @@ provides the `uuid` property for each record:
 
 .. _omelasticsearch-retry-example:
 
-Example 4
+Example 5
 ---------
 
 The following sample shows how to use :ref:`omelasticsearch-retryfailures` to
