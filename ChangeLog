@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2204.0 (aka 2022.04) 2021-04-??
+- 2022-04-06: added new "FullJSONFmt" standard template (with addtl fields)
+  This comes handy for a number of use cases, especially with ElasticSearch.
+  Thanks to Art O Cathain for the patch.
 - 2022-04-04: imfile: potential processing delay
   This was mentioned by Mikko Kortelainen without exact details on what exactly
   this could cause in practice. But we were confident enough that it is worth
