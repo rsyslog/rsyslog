@@ -489,9 +489,9 @@ It can have one of the following values:
 
 -  on = Expired certificates are allowed
 
--  off = Expired certificates are not allowed
+-  off = Expired certificates are not allowed  (Default, changed from warn to off since Version 8.2012.0)
 
--  warn = Expired certificates are allowed but warning will be logged (Default due legacy support)
+-  warn = Expired certificates are allowed but warning will be logged
 
 
 StreamDriverPermittedPeers
