@@ -25,7 +25,7 @@ if ! tests/CI/check_commit_text.py gitlog; then
 	EOF
 	cat <<- EOF
 	For more info, please see
-	https://rainer.gerhards.net/posts#descriptive_commit_message
+	https://rainer.gerhards.net/2019/03/howto-great-pull-request.html#descriptive_commit_message
 
 	EOF
 	exitcode=1
