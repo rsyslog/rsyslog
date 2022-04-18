@@ -596,14 +596,15 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 	int oserr = 0;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
-	DBGPRINTF("netstream %p with new data\n", (*ppSess)->pStrm);
+	prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
+	DBGPRINTF("netstream %p with new data from remote peer %s\n", (*ppSess)->pStrm, pszPeer);
 	/* Receive message */
 	iRet = pThis->pRcvData(*ppSess, buf, sizeof(buf), &iRcvd, &oserr);
 	switch(iRet) {
 	case RS_RET_CLOSED:
 		if(pThis->bEmitMsgOnClose) {
 			errno = 0;
-			prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
+			// prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
 			LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p closed by remote "
 				"peer %s.\n", (*ppSess)->pStrm, pszPeer);
 		}
@@ -619,13 +620,13 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 			/* in this case, something went awfully wrong.
 			 * We are instructed to terminate the session.
 			 */
-			prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
+			// prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
 			LogError(oserr, localRet, "Tearing down TCP Session from %s", pszPeer);
 			CHKiRet(closeSess(pThis, ppSess, pPoll));
 		}
 		break;
 	default:
-		prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
+		// prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
 		LogError(oserr, iRet, "netstream session %p from %s will be closed due to error",
 				(*ppSess)->pStrm, pszPeer);
 		CHKiRet(closeSess(pThis, ppSess, pPoll));
@@ -835,6 +836,8 @@ RunSelect(tcpsrv_t *pThis, nsd_epworkset_t workset[], size_t sizeWorkset)
 		while(iTCPSess != -1) {
 			/* TODO: access to pNsd is NOT really CLEAN, use method... */
 			CHKiRet(nssel.Add(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD));
+			DBGPRINTF("tcpsrv process session %d:\n", iTCPSess);
+
 			/* now get next... */
 			iTCPSess = TCPSessGetNxtSess(pThis, iTCPSess);
 		}

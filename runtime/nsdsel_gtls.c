@@ -81,6 +81,7 @@ Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
 
 	ISOBJ_TYPE_assert(pThis, nsdsel_gtls);
 	ISOBJ_TYPE_assert(pNsdGTLS, nsd_gtls);
+	DBGPRINTF("Add on nsd %p:\n", pNsdGTLS);
 	if(pNsdGTLS->iMode == 1) {
 		if(waitOp == NSDSEL_RD && gtlsHasRcvInBuffer(pNsdGTLS)) {
 			++pThis->iBufferRcvReady;
@@ -99,6 +100,7 @@ Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
 		}
 	}
 
+	dbgprintf("nsdsel_gtls: reached end on nsd %p, calling nsdsel_ptcp.Add with waitOp %d... \n", pNsdGTLS, waitOp);
 	/* if we reach this point, we need no special handling */
 	CHKiRet(nsdsel_ptcp.Add(pThis->pTcp, pNsdGTLS->pTcp, waitOp));
 
@@ -120,7 +122,8 @@ Select(nsdsel_t *pNsdsel, int *piNumReady)
 	if(pThis->iBufferRcvReady > 0) {
 		/* we still have data ready! */
 		*piNumReady = pThis->iBufferRcvReady;
-		dbgprintf("nsdsel_gtls: doing dummy select, data present\n");
+		dbgprintf("nsdsel_gtls: doing dummy select for %p->iBufferRcvReady=%d, data present\n",
+			pThis, pThis->iBufferRcvReady);
 	} else {
 		iRet = nsdsel_ptcp.Select(pThis->pTcp, piNumReady);
 	}
@@ -138,7 +141,7 @@ doRetry(nsd_gtls_t *pNsd)
 	DEFiRet;
 	int gnuRet;
 
-	dbgprintf("GnuTLS requested retry of %d operation - executing\n", pNsd->rtryCall);
+	dbgprintf("doRetry: GnuTLS requested retry of %d operation - executing\n", pNsd->rtryCall);
 
 	/* We follow a common scheme here: first, we do the systen call and
 	 * then we check the result. So far, the result is checked after the
@@ -151,7 +154,7 @@ doRetry(nsd_gtls_t *pNsd)
 		case gtlsRtry_handshake:
 			gnuRet = gnutls_handshake(pNsd->sess);
 			if(gnuRet == GNUTLS_E_AGAIN || gnuRet == GNUTLS_E_INTERRUPTED) {
-				dbgprintf("GnuTLS handshake retry did not finish - "
+				dbgprintf("doRetry: GnuTLS handshake retry did not finish - "
 					"setting to retry (this is OK and can happen)\n");
 				FINALIZE;
 			} else if(gnuRet == 0) {
@@ -167,9 +170,20 @@ doRetry(nsd_gtls_t *pNsd)
 			}
 			break;
 		case gtlsRtry_recv:
-			dbgprintf("retrying gtls recv, nsd: %p\n", pNsd);
-			CHKiRet(gtlsRecordRecv(pNsd));
-			pNsd->rtryCall = gtlsRtry_None; /* we are done */
+			dbgprintf("doRetry: retrying gtls recv, nsd: %p\n", pNsd);
+			iRet = gtlsRecordRecv(pNsd);
+			if (iRet == RS_RET_RETRY) {
+				// Check if there is pending data
+				size_t stBytesLeft = gnutls_record_check_pending(pNsd->sess);
+				if (stBytesLeft > 0) {
+					// We are in retry and more data waiting, finalize it
+					goto finalize_it;
+				} else {
+					dbgprintf("doRetry: gtlsRecordRecv returned RETRY, but there is no pending"
+						"data on nsd: %p\n", pNsd);
+				}
+			}
+			pNsd->rtryCall = gtlsRtry_None; /* no more data, we are done */
 			gnuRet = 0;
 			break;
 		case gtlsRtry_None:
@@ -241,7 +255,7 @@ IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
 		 * socket. -- rgerhards, 2010-11-20
 		 */
 		if(pThis->iBufferRcvReady) {
-			dbgprintf("nsd_gtls: dummy read, buffer not available for this FD\n");
+			dbgprintf("nsd_gtls: dummy read, %p->buffer not available for this FD\n", pThis);
 			*pbIsReady = 0;
 			FINALIZE;
 		}

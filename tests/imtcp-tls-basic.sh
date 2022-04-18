@@ -5,6 +5,9 @@
 export NUMMESSAGES=50000
 export TB_TEST_MAX_RUNTIME=1500
 export QUEUE_EMPTY_CHECK_FUNC=wait_seq_check
+# uncomment for debugging support:
+#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
+#export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.debuglog"
 generate_conf
 add_conf '
 global( defaultNetstreamDriverCAFile="'$srcdir'/tls-certs/ca.pem"
