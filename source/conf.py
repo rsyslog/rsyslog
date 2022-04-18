@@ -92,8 +92,8 @@ rst_epilog = """
 # real values will be generated dynamically from info in the repo. If the
 # user builds the docs from "bare" sources not yet processed
 ###############################################################################
-version = '8.2202'
-release = version + ' daily stable'
+version = '8.2204'
+release = '8.2204.0'
 #release = version + ''.0'
 
 
