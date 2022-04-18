@@ -1,5 +1,38 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2204.0 (aka 2022.04) 2021-04-??
+Scheduled Release 8.2204.0 (aka 2022.04) 2021-04-19
+- 2022-04-18: gnutls bugfix: possibility of infinite loop
+  There was a rare possibility that the E_AGAIN/E_INTERRUPT handling
+  could cause an infinite loop (100% CPU Usage), for example when a TLS
+  handshake is interrupted at a certain stage.
+  * After gnutls_record_recv is called, and E_AGAIN/E_INTERRUPT error
+    occurs, we need to do additional read/write direction handling
+    with gnutls_record_get_direction.
+  * After the second call of gnutls_record_recv (Expand buffer)
+    we needed to also check the eror codes for E_AGAIN/E_INTERRUPT
+    to do propper errorhandling.
+  * Add extra debug output based on ossl driver.
+  * Potential fix for 100% CPU Loop Receiveloop after gtlsRecordRecv
+    in doRetry call.
+  closes https://github.com/rsyslog/rsyslog/issues/4834
+  closes https://github.com/rsyslog/rsyslog/issues/4818
+  closes https://github.com/rsyslog/rsyslog/issues/4638
+- 2022-04-17: core/bugfix: errorfile could grow over max configures size
+   When action.errorfile.maxsize configuration option is enabled and error file
+   already has a certain size smaller than max size configured, it is increasing
+   higher than configured max size as the error file is considered to be zero in code.
+   This fix reads current error file size and limits the size to the maximum
+   size configured.
+   Thanks to Sergio Arroutbi for the patch.
+   fixes https://github.com/rsyslog/rsyslog/issues/4821
+- 2022-04-17: omkafka bugfix: potential misadressing
+  The `failedmsg_entry` expects a null-terminated string in `key`, but
+  here we allocate with malloc and copy a string-with-length-n into only
+  the first n bytes. If the final byte is null, this is by coincidence
+  only.
+  This was observed by means of seeing random binary data appended to
+  keys submitted to kafka apparently at random. This could also result
+  in more severe problems, inclusing a segfault.
+  Thanks to David Buckley for the patch.
 - 2022-04-06: added new "FullJSONFmt" standard template (with addtl fields)
   This comes handy for a number of use cases, especially with ElasticSearch.
   Thanks to Art O Cathain for the patch.
