@@ -68,6 +68,7 @@ typedef struct wrkrInstanceData {
 	instanceData *pData;
 	MMDB_s        mmdb;
 	pthread_mutex_t mmdbMutex;
+	sbool mmdb_is_open;
 } wrkrInstanceData_t;
 
 struct modConfData_s {
@@ -122,13 +123,28 @@ int open_mmdb(const char *file, MMDB_s *mmdb) {
 			dbgprintf("  IO error: %s\n", strerror(errno));
 		}
 		LogError(0, RS_RET_SUSPENDED, "maxminddb error: cannot open database file");
+		return RS_RET_SUSPENDED;
 	}
 
-	return MMDB_SUCCESS != status;
+	return RS_RET_OK;
 }
 
 void close_mmdb(MMDB_s *mmdb) {
 	MMDB_close(mmdb);
+}
+
+static rsRetVal wrkr_reopen_mmdb(wrkrInstanceData_t *pWrkrData) {
+	DEFiRet;
+	pthread_mutex_lock(&pWrkrData->mmdbMutex);
+	LogMsg(0, NO_ERRCODE, LOG_INFO, "mmdblookup: reopening MMDB file");
+	if (pWrkrData->mmdb_is_open) close_mmdb(&pWrkrData->mmdb);
+	pWrkrData->mmdb_is_open = 0;
+	CHKiRet(open_mmdb(pWrkrData->pData->pszMmdbFile, &pWrkrData->mmdb));
+	pWrkrData->mmdb_is_open = 1;
+
+finalize_it:
+	pthread_mutex_unlock(&pWrkrData->mmdbMutex);
+	RETiRet;
 }
 
 BEGINbeginCnfLoad
@@ -163,6 +179,7 @@ ENDcreateInstance
 BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
 	CHKiRet(open_mmdb(pData->pszMmdbFile, &pWrkrData->mmdb));
+	pWrkrData->mmdb_is_open = 1;
 	CHKiConcCtrl(pthread_mutex_init(&pWrkrData->mmdbMutex, NULL));
 finalize_it:
 ENDcreateWrkrInstance
@@ -190,7 +207,8 @@ ENDfreeInstance
 
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
-	close_mmdb(&pWrkrData->mmdb);
+	if (pWrkrData->mmdb_is_open) close_mmdb(&pWrkrData->mmdb);
+	pWrkrData->mmdb_is_open = 0;
 	pthread_mutex_destroy(&pWrkrData->mmdbMutex);
 ENDfreeWrkrInstance
 
@@ -312,6 +330,7 @@ ENDdbgPrintInstInfo
 
 BEGINtryResume
 CODESTARTtryResume
+	iRet = wrkr_reopen_mmdb(pWrkrData);
 ENDtryResume
 
 
@@ -364,6 +383,11 @@ BEGINdoAction_NoStrings
 	json_object *total_json = NULL;
 	MMDB_entry_data_list_s *entry_data_list = NULL;
 CODESTARTdoAction
+	/* ensure file is open before beginning */
+	if (!pWrkrData->mmdb_is_open) {
+		CHKiRet(wrkr_reopen_mmdb(pWrkrData));
+	}
+
 	/* key is given, so get the property json */
 	msgPropDescr_t pProp;
 	msgPropDescrFill(&pProp, (uchar*)pData->pszKey, strlen(pData->pszKey));
@@ -390,7 +414,9 @@ CODESTARTdoAction
 	}
 	if (MMDB_SUCCESS != mmdb_err) {
 		dbgprintf("Got an error from the maxminddb library: %s\n", MMDB_strerror(mmdb_err));
-		ABORT_FINALIZE(RS_RET_OK);
+		close_mmdb(&pWrkrData->mmdb);
+		pWrkrData->mmdb_is_open = 0;
+		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 	if (!result.found_entry) {
 		dbgprintf("No entry found in database for '%s'\n", pszValue);
@@ -458,12 +484,7 @@ BEGINdoHUPWrkr
 CODESTARTdoHUPWrkr
 	dbgprintf("mmdblookup: HUP received\n");
 	if (pWrkrData->pData->reloadOnHup) {
-		// a mutex is needed, as it's the main thread that runs this handler
-		pthread_mutex_lock(&pWrkrData->mmdbMutex);
-		LogMsg(0, NO_ERRCODE, LOG_INFO, "mmdblookup: reloading MMDB file");
-		close_mmdb(&pWrkrData->mmdb);
-		iRet = open_mmdb(pWrkrData->pData->pszMmdbFile, &pWrkrData->mmdb);
-		pthread_mutex_unlock(&pWrkrData->mmdbMutex);
+		iRet = wrkr_reopen_mmdb(pWrkrData);
 	}
 ENDdoHUPWrkr
 
