@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2204.0 (aka 2022.04) 2021-04-19
+Scheduled Release 8.2206.0 (aka 2022.06) 2022-06-??
+----------------------------------------------------------------------------------------
+Scheduled Release 8.2204.0 (aka 2022.04) 2022-04-19
 - 2022-04-18: gnutls bugfix: possibility of infinite loop
   There was a rare possibility that the E_AGAIN/E_INTERRUPT handling
   could cause an infinite loop (100% CPU Usage), for example when a TLS
@@ -83,7 +85,7 @@ Scheduled Release 8.2204.0 (aka 2022.04) 2021-04-19
   that most items in rsyslog are strings, so this can actually cause
   some problems.
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2202.0 (aka 2022.02) 2021-02-15
+Scheduled Release 8.2202.0 (aka 2022.02) 2022-02-15
 - 2022-02-14: imfile bugfix: remove cause for "internal error message" (not causing harm)
   When any message is output into a renamed input file, rsyslogd output the following:
   message.
