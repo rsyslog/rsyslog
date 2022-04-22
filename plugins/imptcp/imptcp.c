@@ -1107,7 +1107,9 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 			if(pThis->iOctetsRemain <= 200000000) {
 				pThis->iOctetsRemain = pThis->iOctetsRemain * 10 + c - '0';
 			}
-			*(pThis->pMsg + pThis->iMsg++) = c;
+			if(pThis->iMsg < iMaxLine) {
+				*(pThis->pMsg + pThis->iMsg++) = c;
+			}
 		} else { /* done with the octet count, so this must be the SP terminator */
 			DBGPRINTF("TCP Message with octet-counter, size %d.\n", pThis->iOctetsRemain);
 			prop.GetString(pThis->peerName, &propPeerName, &lenPeerName);
