@@ -324,16 +324,25 @@ str_split(char **membuf)
 	memset(tempbuf, 0, strlen(buf));
 
 	while (*buf++ != '\0') {
-		if (*buf == '\n' || *buf == '\t' || (*buf == ' ' && !in_quotes))
-			continue;
-		else {
+		if (in_quotes) {
+			if (*buf == '"' && *(buf - 1) != '\\') {
+				in_quotes = !in_quotes;
+				strncat(tempbuf, buf, 1);
+			} else {
+				strncat(tempbuf, buf, 1);
+			}
+		} else {
+			if (*buf == '\n' || *buf == '\t' || *buf == ' ')
+				continue;
 			if (*buf == '<') {
 				char *p = strchr(buf, '>');
 				buf = buf + (int)(p - buf);
 				strcat(tempbuf, ",");
 			} else if (*buf == '}') {
 				strcat(tempbuf, "},");
-			} else if (*buf == '"') {
+			} else if (*buf == ']') {
+				strcat(tempbuf, "],");
+			} else if (*buf == '"' && *(buf - 1) != '\\') {
 				in_quotes = !in_quotes;
 				strncat(tempbuf, buf, 1);
 			} else {
@@ -342,8 +351,7 @@ str_split(char **membuf)
 		}
 	}
 
-	tempbuf[strlen(tempbuf) + 1] = '\n';
-	memcpy(*membuf, tempbuf, strlen(tempbuf));
+	memcpy(*membuf, tempbuf, strlen(tempbuf)+1);
 }
 
 
