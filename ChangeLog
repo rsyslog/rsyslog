@@ -1,5 +1,15 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2206.0 (aka 2022.06) 2022-06-??
+- 2022-04-22: mmdblookup fix: wrong copy of buffer
+  ...following parse of libmaxminddb's return after a successful search sometimes
+  failed to return specific field from data.
+  Thanks to Théo Bertin for the patch.
+- 2022-04-22: mmdblookup: several enhancements
+  - support arrays in MMDB entry
+  - support escaped quotes '"' in MMDB entry
+  - support '<' characters in MMDB entry, when in a field
+  - support '}' characters in MMDB entry, when in a field
+  Thanks to Théo Bertin for the patch.
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2204.0 (aka 2022.04) 2022-04-19
 - 2022-04-18: gnutls bugfix: possibility of infinite loop
