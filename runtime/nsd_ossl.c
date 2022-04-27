@@ -1443,13 +1443,16 @@ osslPostHandshakeCheck(nsd_ossl_t *pNsd)
 		"Information, no shared curve between syslog client and server");
 	}
 	#endif
+	dbgprintf("osslPostHandshakeCheck: Debug Protocol Version: %s\n",
+		SSL_get_version(pNsd->ssl));
+
 	sslCipher = (const SSL_CIPHER*) SSL_get_current_cipher(pNsd->ssl);
 	if (sslCipher != NULL){
 		if(SSL_CIPHER_get_version(sslCipher) == NULL) {
 			LogError(0, RS_RET_NO_ERRCODE, "nsd_ossl:"
 		"TLS version mismatch between syslog client and server.");
 		}
-		dbgprintf("osslPostHandshakeCheck: Debug Version: %s Name: %s\n",
+		dbgprintf("osslPostHandshakeCheck: Debug Cipher Version: %s Name: %s\n",
 			SSL_CIPHER_get_version(sslCipher), SSL_CIPHER_get_name(sslCipher));
 	}else {
 		LogError(0, RS_RET_NO_ERRCODE, "nsd_ossl:No shared ciphers between syslog client and server.");
