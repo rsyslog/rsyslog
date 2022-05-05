@@ -1,5 +1,15 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2206.0 (aka 2022.06) 2022-06-??
+- 2022-05-05: imptcp: set OS worker thread name
+  We now set the worker thread names to "imptcp/<thrd nbr>" where
+  <thrd nbr> is the numerical index (0, 1, ...) of the worker thread.
+  This enables to distinguish individual worker threads in OS tools like
+  htop. That is useful for performance testing and system monitoring.
+  The choosen name format is consistant with other similar thread
+  names inside rsyslog. For imptcp, worker threads were not yet
+  given individual names.
+  Note: "in:imptcp" is imptcp's "main" thread, which also is used
+  as a worker in some scenarios. This name was not modified.
 - 2022-04-26: mmanon bugfix: shortened IPv6 form not always anonymized
   If the IPv6 is in non-recommended form followed by a 5 digit port number, it
   is not anonymized.
