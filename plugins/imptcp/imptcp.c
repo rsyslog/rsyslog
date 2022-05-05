@@ -59,6 +59,9 @@
 #if HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
+#ifdef HAVE_SYS_PRCTL_H
+#  include <sys/prctl.h>
+#endif
 #include "rsyslog.h"
 #include "cfsysline.h"
 #include "prop.h"
@@ -346,6 +349,7 @@ struct ptcplstn_s {
 static struct wrkrInfo_s {
 	pthread_t tid;	/* the worker's thread ID */
 	long long unsigned numCalled;	/* how often was this called */
+	int wrkrIdx;	/* index for this worker - shortcut for thread name */
 } *wrkrInfo;
 static int wrkrRunning;
 
@@ -1833,6 +1837,7 @@ startWorkerPool(void)
 	}
 	for(i = 0 ; i < runModConf->wrkrMax ; ++i) {
 		/* init worker info structure! */
+		wrkrInfo[i].wrkrIdx = i;
 		wrkrInfo[i].numCalled = 0;
 		pthread_create(&wrkrInfo[i].tid, &wrkrThrdAttr, wrkr, &(wrkrInfo[i]));
 	}
@@ -2120,6 +2125,15 @@ wrkr(void *myself)
 	pthread_mutex_lock(&io_q.mut);
 	++wrkrRunning;
 	pthread_mutex_unlock(&io_q.mut);
+
+	uchar thrdName[32];
+	snprintf((char*)thrdName, sizeof(thrdName), "imptcp/w%d", me->wrkrIdx);
+#	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
+	/* set thread name - we ignore if the call fails, has no harsh consequences... */
+	if(prctl(PR_SET_NAME, thrdName, 0, 0, 0) != 0) {
+		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", thrdName);
+	}
+#	endif
 
 	io_req_t *n;
 	while(1) {
