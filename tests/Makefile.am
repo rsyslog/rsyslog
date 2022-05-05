@@ -283,6 +283,7 @@ TESTS +=  \
 	allowed-sender-tcp-fail.sh \
 	allowed-sender-tcp-hostname-ok.sh \
 	allowed-sender-tcp-hostname-fail.sh \
+	imtcp-octet-framing-too-long-vg.sh \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
 	imtcp-basic-hup.sh \
@@ -1074,6 +1075,7 @@ if ENABLE_IMPTCP
 # need to be disabled if we do not have this module
 TESTS +=  \
 	manyptcp.sh \
+	imptcp-octet-framing-too-long-vg.sh \
 	imptcp_framing_regex.sh \
 	imptcp_framing_regex-oversize.sh \
 	imptcp_large.sh \
@@ -2121,6 +2123,7 @@ EXTRA_DIST= \
 	mmjsonparse_simple.sh \
 	mmjsonparse-invalid-containerName.sh \
 	wtpShutdownAll-assertionFailure.sh \
+	imptcp-octet-framing-too-long-vg.sh \
 	imptcp-oversize-message-display.sh \
 	imptcp-msg-truncation-on-number.sh \
 	imptcp-msg-truncation-on-number2.sh \
@@ -2199,6 +2202,7 @@ EXTRA_DIST= \
 	allowed-sender-tcp-fail.sh \
 	allowed-sender-tcp-hostname-ok.sh \
 	allowed-sender-tcp-hostname-fail.sh \
+	imtcp-octet-framing-too-long-vg.sh \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
 	imtcp-basic-hup.sh \
