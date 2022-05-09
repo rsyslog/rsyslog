@@ -880,7 +880,8 @@ RunSelect(tcpsrv_t *pThis, nsd_epworkset_t workset[], size_t sizeWorkset)
 					processWorkset(pThis, NULL, iWorkset, workset);
 					iWorkset = 0;
 				}
-				--nfds; /* indicate we have processed one */
+				if(bIsReady)
+					--nfds; /* indicate we have processed one */
 			}
 			iTCPSess = TCPSessGetNxtSess(pThis, iTCPSess);
 		}
