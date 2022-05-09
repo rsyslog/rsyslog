@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h for more specifics!
  *
  * Copyright 2011 Nathan Scott.
- * Copyright 2009-2021 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2022 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -130,6 +130,7 @@ typedef struct instanceConf_s {
 	uchar *timeout;
 	uchar *bulkId;
 	uchar *errorFile;
+	int esVersion;
 	sbool errorOnly;
 	sbool interleaved;
 	sbool dynSrchIdx;
@@ -221,7 +222,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "ratelimit.burst", eCmdHdlrInt, 0 },
 	{ "retryruleset", eCmdHdlrString, 0 },
-	{ "rebindinterval", eCmdHdlrInt, 0 }
+	{ "rebindinterval", eCmdHdlrInt, 0 },
+	{ "esversion.major", eCmdHdlrPositiveInt, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -246,6 +248,7 @@ CODESTARTcreateInstance
 	pData->retryRulesetName = NULL;
 	pData->retryRuleset = NULL;
 	pData->rebindInterval = DEFAULT_REBIND_INTERVAL;
+	pData->esVersion = 0;
 finalize_it:
 ENDcreateInstance
 
@@ -364,8 +367,10 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tdefaultPort=%d\n", pData->defaultPort);
 	dbgprintf("\tuid='%s'\n", pData->uid == NULL ? (uchar*)"(not configured)" : pData->uid);
 	dbgprintf("\tpwd=(%sconfigured)\n", pData->pwd == NULL ? "not " : "");
-	dbgprintf("\tsearch index='%s'\n", pData->searchIndex == NULL ? (uchar*)"(not configured)" : pData->searchIndex);
-        dbgprintf("\tsearch type='%s'\n",  pData->searchType == NULL ? (uchar*)"(not configured)" : pData->searchType);
+	dbgprintf("\tsearch index='%s'\n", pData->searchIndex == NULL
+			? (uchar*)"(not configured)" : pData->searchIndex);
+	dbgprintf("\tsearch type='%s'\n",  pData->searchType == NULL
+			? (uchar*)"(not configured)" : pData->searchType);
 	dbgprintf("\tpipeline name='%s'\n", pData->pipelineName);
 	dbgprintf("\tdynamic pipeline name=%d\n", pData->dynPipelineName);
 	dbgprintf("\tskipPipelineIfEmpty=%d\n", pData->skipPipelineIfEmpty);
@@ -598,8 +603,6 @@ getIndexTypeAndParent(const instanceData *const pData, uchar **const tpls,
 	}
 
 done:
-	//assert(srchIndex != NULL);
-	//assert(srchType != NULL);
 	return;
 }
 
@@ -700,11 +703,12 @@ computeMessageSize(const wrkrInstanceData_t *const pWrkrData,
 
 	getIndexTypeAndParent(pWrkrData->pData, tpls, &searchIndex, &searchType, &parent, &bulkId, &pipelineName);
 	r += ustrlen((char *)message);
-        if(searchIndex != NULL)
-                r += ustrlen(searchIndex);
-        if(searchType != NULL)
-                r += ustrlen(searchType);
-
+	if(searchIndex != NULL) {
+		r += ustrlen(searchIndex);
+	}
+	if(searchType != NULL) {
+		r += ustrlen(searchType);
+	}
 	if(parent != NULL) {
 		r += sizeof(META_PARENT)-1 + ustrlen(parent);
 	}
@@ -728,7 +732,7 @@ buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls)
 {
 	int length = strlen((char *)message);
 	int r;
-       	int endQuote = 1;
+	int endQuote = 1;
 	uchar *searchIndex = NULL;
 	uchar *searchType;
 	uchar *parent = NULL;
@@ -1990,6 +1994,8 @@ CODESTARTnewActInst
 			pData->retryRulesetName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "rebindinterval")) {
 			pData->rebindInterval = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "esversion.major")) {
+			pData->esVersion = pvals[i].val.d.n;
 		} else {
 			LogError(0, RS_RET_INTERNAL_ERROR, "omelasticsearch: program error, "
 				"non-handled param '%s'", actpblk.descr[i].name);
@@ -2121,19 +2127,18 @@ CODESTARTnewActInst
 		CHKiRet(computeBaseUrl("localhost", pData->defaultPort, pData->useHttps, pData->serverBaseUrls));
 	}
 
-	//Only needed befor ES-Version 7.x
-	/*
-	if(pData->searchIndex == NULL)
-		pData->searchIndex = (uchar*) strdup("system");
-	if(pData->searchType == NULL)
-		pData->searchType = (uchar*) strdup("events");
+	if(pData->esVersion < 8) {
+		if(pData->searchIndex == NULL)
+			pData->searchIndex = (uchar*) strdup("system");
+		if(pData->searchType == NULL)
+			pData->searchType = (uchar*) strdup("events");
 
-	if ((pData->writeOperation != ES_WRITE_INDEX) && (pData->bulkId == NULL)) {
-		LogError(0, RS_RET_CONFIG_ERROR,
-			"omelasticsearch: writeoperation '%d' requires bulkid", pData->writeOperation);
-		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+		if ((pData->writeOperation != ES_WRITE_INDEX) && (pData->bulkId == NULL)) {
+			LogError(0, RS_RET_CONFIG_ERROR,
+				"omelasticsearch: writeoperation '%d' requires bulkid", pData->writeOperation);
+			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+		}
 	}
-	*/
 
 	if (pData->retryFailures) {
 		CHKiRet(ratelimitNew(&pData->ratelimiter, "omelasticsearch", NULL));
