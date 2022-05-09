@@ -1,5 +1,30 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2206.0 (aka 2022.06) 2022-06-??
+- 2022-05-09: tcp receiver bugfix: delay/potential hang on some error conditions
+  Error were not correctly handled in some cases for imtcp and imgssapi. This could
+  lead to a temporary stall of some connections. For ultry-low traffic systems, this
+  stall could stay for a long period of time. In most cases, it was resolved very quickly.
+  Note that imptcp was not affected.
+  Thanks to Iwan Timmer for the fix.
+- 2022-05-05: net bugfix: potential buffer overrun
+  there is heap buffer overflow vulnerability in rsyslog tcp reception components.
+  This can only happen in octet-counted mode, which is enabled by default.
+  Affected components: imtcp, imptcp, imhttp, imgssapi, imdiag when octet-counted
+  framing was enabled.
+  If the receiver ports are exposed to the public Internet AND are used
+  without authentication, this can lead to remote DoS and potentially to
+  remote code execution. It is unclear if remote code execution is
+  actually possible. If so, it needs a very sophisticated attack.
+  When syslog best practices with proper firewalling and authentication
+  is used, thean attack can only be carried out from within the Intranet
+  and authorized systems. This limits the severity of the vulnerability
+  considerably (it would obviously require an attacker already to be
+  present inside the internal network).
+  Credits to Peter Agten for initially reporting the issue and working
+  with us on the resolution.
+  fixes CVE-2022-24903
+  Advisory:
+    https://github.com/rsyslog/rsyslog/security/advisories/GHSA-ggw7-xr6h-mmr8#advisory-comment-72243
 - 2022-05-05: imptcp: set OS worker thread name
   We now set the worker thread names to "imptcp/<thrd nbr>" where
   <thrd nbr> is the numerical index (0, 1, ...) of the worker thread.
