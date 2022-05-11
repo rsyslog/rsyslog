@@ -93,6 +93,24 @@ this timeframe. Defaults to 3500.
 the Elasticsearch cluster.*
 
 
+.. _esVersion_major:
+
+esVersion.major
+^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", "none"
+
+ElasticSearch is notoriously bad at maintaining backwards compatibility. For this
+reason, the setting can be used to configure the server's major version number (e.g. 7, 8, ...).
+As far as we know breaking changes only happen with major version changes.
+As of now, only value 8 triggers API changes. All other values select
+pre-version-8 API usage.
+
 .. _searchIndex:
 
 searchIndex
