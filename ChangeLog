@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2206.0 (aka 2022.06) 2022-06-??
+- 2022-05-11: omelasticsearch: several support option for ElasticSearch 8
+  - config params searchIndex and documentType can be empty
+  - support for Data Stream API
+  Thanks to github user EHerzog76 for these changes.
+  - new config param esVersion.major
 - 2022-05-09: tcp receiver bugfix: delay/potential hang on some error conditions
   Error were not correctly handled in some cases for imtcp and imgssapi. This could
   lead to a temporary stall of some connections. For ultry-low traffic systems, this
