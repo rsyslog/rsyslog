@@ -3319,9 +3319,12 @@ jsonAddVal(uchar *pSrc, unsigned buflen, es_str_t **dst, int escapeAll)
 			if(*dst == NULL) {
 				if(i == 0) {
 					/* we hope we have only few escapes... */
-					*dst = es_newStr(buflen+10);
+					*dst = es_newStr(buflen+10+10000);
 				} else {
-					*dst = es_newStrFromBuf((char*)pSrc, i);
+					*dst = es_newStr(buflen+10000);
+					memcpy(es_getBufAddr(*dst), pSrc, i);
+					(*dst)->lenStr = i;
+					//*dst = es_newStrFromBuf((char*)pSrc, i);
 				}
 				if(*dst == NULL) {
 					ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
