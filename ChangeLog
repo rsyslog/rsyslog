@@ -1,5 +1,18 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2206.0 (aka 2022.06) 2022-06-??
+- 2022-05-12: imptcp bugfix: worker thread starvation on extreme traffic
+  When connectes were totally busy, without any pause, the assigened worker
+  did never terminate its reading loop. As such, it could not service any
+  other conenctions. If this happened multiple time and to all configured
+  workers, all other connections could not be processed at all. This extreme
+  scenario is very unlikely, as the whole issue is relatively unlikely.
+  In practice, the issue could lead to somewhat degraded performance and
+  resolved itself after some time (in practice no connection is 100% busy
+  for an extended period of time).
+  Note that this patch sets a fixed limit of 16 iterations for very busy
+  connections. This sounds like a good compromise between non-starvation
+  and performance. The exact number may be made configurable if there
+  is really need to.
 - 2022-05-11: omelasticsearch: several support option for ElasticSearch 8
   - config params searchIndex and documentType can be empty
   - support for Data Stream API
