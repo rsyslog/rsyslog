@@ -986,6 +986,18 @@ endif
 endif
 endif
 
+if ENABLE_OMAZUREEVENTHUBS
+if ENABLE_OMAZUREEVENTHUBS_TESTS
+TESTS += \
+	omazureeventhubs-basic.sh \
+	omazureeventhubs-list.sh
+if HAVE_VALGRIND
+TESTS += \
+	omazureeventhubs-stress.sh
+endif
+endif
+endif
+
 if ENABLE_IMDOCKER
 if ENABLE_IMDOCKER_TESTS
 TESTS += \
@@ -2772,6 +2784,9 @@ EXTRA_DIST= \
 	testsuites/zoo.dep_wrk1.cfg \
 	testsuites/zoo.dep_wrk2.cfg \
 	testsuites/zoo.dep_wrk3.cfg \
+	omazureeventhubs-basic.sh \
+	omazureeventhubs-list.sh \
+	omazureeventhubs-stress.sh \
 	mmpstrucdata.sh \
 	mmpstrucdata-escaping.sh \
 	mmpstrucdata-case.sh \

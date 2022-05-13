@@ -214,6 +214,10 @@ if ENABLE_IMKAFKA
 SUBDIRS += plugins/imkafka
 endif
 
+if ENABLE_OMAZUREEVENTHUBS
+SUBDIRS += plugins/omazureeventhubs
+endif
+
 if ENABLE_OMPROG
 SUBDIRS += plugins/omprog
 endif
@@ -530,6 +534,10 @@ DISTCHECK_CONFIGURE_FLAGS+= --enable-omkafka
 endif
 if ENABLE_KAFKA_TESTS
 DISTCHECK_CONFIGURE_FLAGS+= --enable-kafka-tests
+endif
+
+if ENABLE_OMAZUREEVENTHUBS
+DISTCHECK_CONFIGURE_FLAGS+= --enable-omazureeventhubs
 endif
 
 if ENABLE_IMJOURNAL
