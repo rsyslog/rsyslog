@@ -7,7 +7,7 @@
  * of the "old" message code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
- * Copyright 2007-2020 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2022 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -3304,39 +3304,66 @@ jsonAddVal(uchar *pSrc, unsigned buflen, es_str_t **dst, int escapeAll)
 	unsigned ni;
 	unsigned char nc;
 	int j;
+	uchar wrkbuf[100000];
+	size_t dst_size = sizeof(wrkbuf);
+	uchar *dst_base = wrkbuf;
+	uchar *dst_w = NULL;
+	uchar *newbuf;
 	DEFiRet;
 
 	for(i = 0 ; i < buflen ; ++i) {
+		if(dst_w != NULL) {
+			const size_t dst_offset = dst_w - dst_base;
+			if(dst_offset + 10 >= dst_size) {
+				const size_t new_size = 2 * dst_size;
+				if(dst_base == wrkbuf) {
+					CHKmalloc(newbuf = malloc(new_size));
+					memcpy(newbuf, dst_base, dst_offset);
+				} else {
+					CHKmalloc(newbuf = realloc(dst_base, new_size));
+				}
+				dst_size = new_size;
+				dst_base = newbuf;
+				dst_w = dst_base + dst_offset;
+			}
+		}
 		c = pSrc[i];
-		if(   (c >= 0x23 && c <= 0x2e)
-		   || (c >= 0x30 && c <= 0x5b)
+		if(   (c >= 0x30 && c <= 0x5b)
+		   || (c >= 0x23 && c <= 0x2e)
 		   || (c >= 0x5d /* && c <= 0x10FFFF*/)
 		   || c == 0x20 || c == 0x21) {
 			/* no need to escape */
-			if(*dst != NULL)
-				es_addChar(dst, c);
+			if(dst_w != NULL)
+				*dst_w++ = c;
 		} else {
-			if(*dst == NULL) {
-				if(i == 0) {
-					/* we hope we have only few escapes... */
-					*dst = es_newStr(buflen+10);
-				} else {
-					*dst = es_newStrFromBuf((char*)pSrc, i);
+			if(dst_w == NULL) {
+				if(i > 0) {
+					if(i+10 > dst_size) {
+						dst_size = 2 * i;
+						CHKmalloc(dst_base = malloc(dst_size));
+					}
 				}
-				if(*dst == NULL) {
-					ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-				}
+				dst_w = dst_base;
+				memcpy(dst_w, pSrc, i);
+				dst_w += i;
 			}
 			/* we must escape, try RFC4627-defined special sequences first */
 			switch(c) {
 			case '\0':
-				es_addBuf(dst, "\\u0000", 6);
+				*dst_w++ = '\\';
+				*dst_w++ = 'u';
+				*dst_w++ = '0';
+				*dst_w++ = '0';
+				*dst_w++ = '0';
+				*dst_w++ = '0';
 				break;
 			case '\"':
-				es_addBuf(dst, "\\\"", 2);
+				*dst_w++ = '\\';
+				*dst_w++ = '"';
 				break;
 			case '/':
-				es_addBuf(dst, "\\/", 2);
+				*dst_w++ = '\\';
+				*dst_w++ = '/';
 				break;
 			case '\\':
 				if (escapeAll == RSFALSE) {
@@ -3347,31 +3374,35 @@ jsonAddVal(uchar *pSrc, unsigned buflen, es_str_t **dst, int escapeAll)
 						/* Attempt to not double encode */
 						if (   nc == '"' || nc == '/' || nc == '\\' || nc == 'b' || nc == 'f'
 							|| nc == 'n' || nc == 'r' || nc == 't' || nc == 'u') {
-
-							es_addChar(dst, c);
-							es_addChar(dst, nc);
+							*dst_w++ = c;
+							*dst_w++ = nc;
 							i = ni;
 							break;
 						}
 					}
 				}
-
-				es_addBuf(dst, "\\\\", 2);
+				*dst_w++ = '\\';
+				*dst_w++ = '\\';
 				break;
 			case '\010':
-				es_addBuf(dst, "\\b", 2);
+				*dst_w++ = '\\';
+				*dst_w++ = 'b';
 				break;
 			case '\014':
-				es_addBuf(dst, "\\f", 2);
+				*dst_w++ = '\\';
+				*dst_w++ = 'f';
 				break;
 			case '\n':
-				es_addBuf(dst, "\\n", 2);
+				*dst_w++ = '\\';
+				*dst_w++ = 'n';
 				break;
 			case '\r':
-				es_addBuf(dst, "\\r", 2);
+				*dst_w++ = '\\';
+				*dst_w++ = 'r';
 				break;
 			case '\t':
-				es_addBuf(dst, "\\t", 2);
+				*dst_w++ = '\\';
+				*dst_w++ = 't';
 				break;
 			default:
 				/* TODO : proper Unicode encoding (see header comment) */
@@ -3379,13 +3410,31 @@ jsonAddVal(uchar *pSrc, unsigned buflen, es_str_t **dst, int escapeAll)
 					numbuf[3-j] = hexdigit[c % 16];
 					c = c / 16;
 				}
-				es_addBuf(dst, "\\u", 2);
-				es_addBuf(dst, numbuf, 4);
+				*dst_w++ = '\\';
+				*dst_w++ = 'u';
+				*dst_w++ = numbuf[0];
+				*dst_w++ = numbuf[1];
+				*dst_w++ = numbuf[2];
+				*dst_w++ = numbuf[3];
 				break;
 			}
 		}
 	}
+	if(*dst == NULL) {
+		if(dst_w != NULL) {
+			*dst = es_newStrFromBuf((char *) dst_base, dst_w - dst_base);
+		}
+	} else {
+		if(dst_w == NULL) {
+			es_addBuf(dst, (const char *) pSrc, buflen);
+		} else {
+			es_addBuf(dst, (const char *) dst_base, dst_w - dst_base);
+		}
+	}
 finalize_it:
+	if(dst_base != wrkbuf) {
+		free(dst_base);
+	}
 	RETiRet;
 }
 
