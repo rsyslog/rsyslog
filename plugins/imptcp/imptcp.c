@@ -320,6 +320,8 @@ struct ptcpsess_s {
 	uchar *pMsg_save;	/* message (fragment) save area in regex framing mode */
 	prop_t *peerName;	/* host name we received messages from */
 	prop_t *peerIP;
+	const uchar *startRegex;/* cache for performance reasons */
+	int iAddtlFrameDelim;	/* cache for performance reasons */
 };
 
 
@@ -1093,12 +1095,90 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 	uchar *propPeerIP = NULL;
 	int lenPeerIP = 0;
 
-	if(pThis->pLstn->pSrv->inst->startRegex != NULL) {
+	if(pThis->startRegex != NULL) {
 		processDataRcvd_regexFraming(pThis, buff, stTime, ttGenTime, pMultiSub, pnMsgs);
 		FINALIZE;
 	}
 
-	if(pThis->inputState == eAtStrtFram) {
+	if(pThis->inputState == eInMsg) {
+		if (pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) {
+			if(pThis->iMsg >= iMaxLine) {
+				/* emergency, we now need to flush, no matter if we are at end of message or not... */
+				int i = 1;
+				char currBuffChar;
+				while(i < buffLen && ((currBuffChar = (*buff)[i]) != '\n'
+					&& (pThis->iAddtlFrameDelim == TCPSRV_NO_ADDTL_DELIMITER
+						|| currBuffChar != pThis->iAddtlFrameDelim))) {
+					i++;
+				}
+				LogError(0, NO_ERRCODE, "imptcp %s: message received is at least %d byte larger than "
+					"max msg size; message will be split starting at: \"%.*s\"\n",
+					pThis->pLstn->pSrv->pszInputName, i, (i < 32) ? i : 32, *buff);
+				doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
+				++(*pnMsgs);
+				if(pThis->pLstn->pSrv->discardTruncatedMsg == 1) {
+					pThis->inputState = eInMsgTruncation;
+				}
+				/* we might think if it is better to ignore the rest of the
+				 * message than to treat it as a new one. Maybe this is a good
+				 * candidate for a configuration parameter...
+				 * rgerhards, 2006-12-04
+				 */
+			}
+			if ((c == '\n')
+				   || ((pThis->iAddtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER)
+					   && (c == pThis->iAddtlFrameDelim))
+				   ) { /* record delimiter? */
+				if(pThis->pLstn->pSrv->multiLine) {
+					if((buffLen == 1) || ((*buff)[1] == '<')) {
+						doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
+						++(*pnMsgs);
+						pThis->inputState = eAtStrtFram;
+					} else {
+						if(pThis->iMsg < iMaxLine) {
+							*(pThis->pMsg + pThis->iMsg++) = c;
+						}
+					}
+				} else {
+					doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
+					++(*pnMsgs);
+					pThis->inputState = eAtStrtFram;
+				}
+			} else {
+				/* IMPORTANT: here we copy the actual frame content to the message - for BOTH
+				 * framing modes! If we have a message that is larger than the max msg size,
+				 * we truncate it. This is the best we can do in light of what the engine supports.
+				 * -- rgerhards, 2008-03-14
+				 */
+				if(pThis->iMsg < iMaxLine) {
+					*(pThis->pMsg + pThis->iMsg++) = c;
+				}
+			}
+		} else {
+			assert(pThis->eFraming == TCP_FRAMING_OCTET_COUNTING);
+			octatesToCopy = pThis->iOctetsRemain;
+			octatesToDiscard = 0;
+			if (buffLen < octatesToCopy) {
+				octatesToCopy = buffLen;
+			}
+			if (octatesToCopy + pThis->iMsg > iMaxLine) {
+				octatesToDiscard = octatesToCopy - (iMaxLine - pThis->iMsg);
+				octatesToCopy = iMaxLine - pThis->iMsg;
+			}
+
+			memcpy(pThis->pMsg + pThis->iMsg, *buff, octatesToCopy);
+			pThis->iMsg += octatesToCopy;
+			pThis->iOctetsRemain -= (octatesToCopy + octatesToDiscard);
+			*buff += (octatesToCopy + octatesToDiscard - 1);
+			if (pThis->iOctetsRemain == 0) {
+				/* we have end of frame! */
+				doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
+				++(*pnMsgs);
+				pThis->inputState = eAtStrtFram;
+			}
+		}
+
+	} else if(pThis->inputState == eAtStrtFram) {
 		if(pThis->bSuppOctetFram && isdigit((int) c)) {
 			pThis->inputState = eInOctetCnt;
 			pThis->iOctetsRemain = 0;
@@ -1163,90 +1243,12 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 		}
 	} else if(pThis->inputState == eInMsgTruncation) {
 		if ((c == '\n')
-		|| ((pThis->pLstn->pSrv->iAddtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER)
-		&& (c == pThis->pLstn->pSrv->iAddtlFrameDelim))) {
+		|| ((pThis->iAddtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER)
+		&& (c == pThis->iAddtlFrameDelim))) {
 			pThis->inputState = eAtStrtFram;
 		}
 	} else {
-		assert(pThis->inputState == eInMsg);
-
-		if (pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) {
-			if(pThis->iMsg >= iMaxLine) {
-				/* emergency, we now need to flush, no matter if we are at end of message or not... */
-				int i = 1;
-				char currBuffChar;
-				while(i < buffLen && ((currBuffChar = (*buff)[i]) != '\n'
-					&& (pThis->pLstn->pSrv->iAddtlFrameDelim == TCPSRV_NO_ADDTL_DELIMITER
-						|| currBuffChar != pThis->pLstn->pSrv->iAddtlFrameDelim))) {
-					i++;
-				}
-				LogError(0, NO_ERRCODE, "imptcp %s: message received is at least %d byte larger than "
-					"max msg size; message will be split starting at: \"%.*s\"\n",
-					pThis->pLstn->pSrv->pszInputName, i, (i < 32) ? i : 32, *buff);
-				doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
-				++(*pnMsgs);
-				if(pThis->pLstn->pSrv->discardTruncatedMsg == 1) {
-					pThis->inputState = eInMsgTruncation;
-				}
-				/* we might think if it is better to ignore the rest of the
-				 * message than to treat it as a new one. Maybe this is a good
-				 * candidate for a configuration parameter...
-				 * rgerhards, 2006-12-04
-				 */
-			}
-			if ((c == '\n')
-				   || ((pThis->pLstn->pSrv->iAddtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER)
-					   && (c == pThis->pLstn->pSrv->iAddtlFrameDelim))
-				   ) { /* record delimiter? */
-				if(pThis->pLstn->pSrv->multiLine) {
-					if((buffLen == 1) || ((*buff)[1] == '<')) {
-						doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
-						++(*pnMsgs);
-						pThis->inputState = eAtStrtFram;
-					} else {
-						if(pThis->iMsg < iMaxLine) {
-							*(pThis->pMsg + pThis->iMsg++) = c;
-						}
-					}
-				} else {
-					doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
-					++(*pnMsgs);
-					pThis->inputState = eAtStrtFram;
-				}
-			} else {
-				/* IMPORTANT: here we copy the actual frame content to the message - for BOTH
-				 * framing modes! If we have a message that is larger than the max msg size,
-				 * we truncate it. This is the best we can do in light of what the engine supports.
-				 * -- rgerhards, 2008-03-14
-				 */
-				if(pThis->iMsg < iMaxLine) {
-					*(pThis->pMsg + pThis->iMsg++) = c;
-				}
-			}
-		} else {
-			assert(pThis->eFraming == TCP_FRAMING_OCTET_COUNTING);
-			octatesToCopy = pThis->iOctetsRemain;
-			octatesToDiscard = 0;
-			if (buffLen < octatesToCopy) {
-				octatesToCopy = buffLen;
-			}
-			if (octatesToCopy + pThis->iMsg > iMaxLine) {
-				octatesToDiscard = octatesToCopy - (iMaxLine - pThis->iMsg);
-				octatesToCopy = iMaxLine - pThis->iMsg;
-			}
-
-			memcpy(pThis->pMsg + pThis->iMsg, *buff, octatesToCopy);
-			pThis->iMsg += octatesToCopy;
-			pThis->iOctetsRemain -= (octatesToCopy + octatesToDiscard);
-			*buff += (octatesToCopy + octatesToDiscard - 1);
-			if (pThis->iOctetsRemain == 0) {
-				/* we have end of frame! */
-				doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
-				++(*pnMsgs);
-				pThis->inputState = eAtStrtFram;
-			}
-		}
-
+		assert(0);
 	}
 
 finalize_it:
@@ -1532,7 +1534,9 @@ addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
 	pSess->bAtStrtOfFram = 1;
 	pSess->peerName = peerName;
 	pSess->peerIP = peerIP;
+	pSess->startRegex = pLstn->pSrv->inst->startRegex;
 	pSess->compressionMode = pLstn->pSrv->compressionMode;
+	pSess->iAddtlFrameDelim = pLstn->pSrv->iAddtlFrameDelim;
 
 	/* add to start of server's listener list */
 	pSess->prev = NULL;
