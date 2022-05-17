@@ -1,7 +1,7 @@
 /* Definitions for tcps_sess class. This implements a session of the
  * plain TCP server.
  *
- * Copyright 2008-2015 Adiscon GmbH.
+ * Copyright 2008-2022 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -50,6 +50,7 @@ struct tcps_sess_s {
 	prop_t *fromHostIP;
 	void *pUsr;		/* a user-pointer */
 	rsRetVal (*DoSubmitMessage)(tcps_sess_t*, uchar*, int); /* submit message callback */
+	int iMaxLine;		/* fast lookup buffer for config property */
 };
 
 
