@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2206.0 (aka 2022.06) 2022-06-??
+- 2022-05-18: tcpsrv/imtcp: slight performance improvements
+  This change slightly improves performance for tcpsrv-based servers.
+  This affects imtcp and imgssapi as well as some helpers.
+  No other functional change is included in this change.
 - 2022-05-12: imptcp bugfix: worker thread starvation on extreme traffic
   When connectes were totally busy, without any pause, the assigened worker
   did never terminate its reading loop. As such, it could not service any
