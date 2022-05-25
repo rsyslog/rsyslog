@@ -2138,9 +2138,16 @@ prepare_elasticsearch() {
 	if [ -n "${ES_PORT:-}" ] ; then
 		rm -f $dep_work_dir/es/config/elasticsearch.yml
 		sed "s/^http.port:.*\$/http.port: ${ES_PORT}/" $srcdir/testsuites/$dep_work_es_config > $dep_work_dir/es/config/elasticsearch.yml
+		if [ "$ES_DOWNLOAD" != "elasticsearch-6.0.0.tar.gz" ]; then
+			printf 'xpack.security.enabled: false\n' >> $dep_work_dir/es/config/elasticsearch.yml
+		fi
 	else
 		cp -f $srcdir/testsuites/$dep_work_es_config $dep_work_dir/es/config/elasticsearch.yml
 	fi
+
+	# Avoid deprecated parameter, new option introduced with 6.7
+	echo "Setting transport tcp option to ${ES_PORT_OPTION:-transport.tcp.port}"
+	sed -i "s/transport.tcp.port/${ES_PORT_OPTION:-transport.tcp.port}/g" "$dep_work_dir/es/config/elasticsearch.yml"
 
 	if [ ! -d $dep_work_dir/es/data ]; then
 			echo "Creating elastic search directories"

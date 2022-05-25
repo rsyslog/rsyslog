@@ -620,8 +620,10 @@ setPostURL(wrkrInstanceData_t *const pWrkrData, uchar **const tpls)
 	uchar *parent;
 	uchar *bulkId;
 	char* baseUrl;
+	/* since 7.0, the API always requires /idx/_doc, so use that if searchType is not explicitly set */
+	uchar* actualSearchType = (uchar*)"_doc";
 	es_str_t *url;
-	int r;
+	int r = 0;
 	DEFiRet;
 	instanceData *const pData = pWrkrData->pData;
 	char separator;
@@ -644,12 +646,12 @@ setPostURL(wrkrInstanceData_t *const pWrkrData, uchar **const tpls)
 		getIndexTypeAndParent(pData, tpls, &searchIndex, &searchType, &parent, &bulkId, &pipelineName);
 		if(searchIndex != NULL) {
 			r = es_addBuf(&url, (char*)searchIndex, ustrlen(searchIndex));
-			if(r == 0) r = es_addChar(&url, '/');
-			if(searchType != NULL) {
-				if(r == 0) r = es_addBuf(&url, (char*)searchType, ustrlen(searchType));
+			if(searchType != NULL && searchType[0] != '\0') {
+				actualSearchType = searchType;
 			}
-		} else
-			r = 0;
+			if(r == 0) r = es_addChar(&url, '/');
+			if(r == 0) r = es_addBuf(&url, (char*)actualSearchType, ustrlen(actualSearchType));
+		}
 		if(pipelineName != NULL && (!pData->skipPipelineIfEmpty || pipelineName[0] != '\0')) {
 			if(r == 0) r = es_addChar(&url, separator);
 			if(r == 0) r = es_addBuf(&url, "pipeline=", sizeof("pipeline=")-1);
@@ -693,7 +695,7 @@ computeMessageSize(const wrkrInstanceData_t *const pWrkrData,
 	const uchar *const message,
 	uchar **const tpls)
 {
-	size_t r = sizeof(META_TYPE)-1 + sizeof(META_END)-1 + sizeof("\n")-1;
+	size_t r = sizeof(META_END)-1 + sizeof("\n")-1;
 	if (pWrkrData->pData->writeOperation == ES_WRITE_CREATE)
 		r += sizeof(META_STRT_CREATE)-1;
 	else
@@ -711,7 +713,11 @@ computeMessageSize(const wrkrInstanceData_t *const pWrkrData,
 		r += ustrlen(searchIndex);
 	}
 	if(searchType != NULL) {
-		r += ustrlen(searchType);
+		if(searchType[0] == '\0') {
+			r += 4; // "_doc"
+		} else {
+			r += ustrlen(searchType);
+		}
 	}
 	if(parent != NULL) {
 		r += sizeof(META_PARENT)-1 + ustrlen(parent);
@@ -756,7 +762,7 @@ buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls)
 			if(r == 0) r = es_addBuf(&pWrkrData->batch.data, META_IX, sizeof(META_IX)-1);
 		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, (char*)searchIndex,
 				 ustrlen(searchIndex));
-		if(searchType != NULL) {
+		if(searchType != NULL && searchType[0] != '\0') {
 			if(r == 0) r = es_addBuf(&pWrkrData->batch.data, META_TYPE, sizeof(META_TYPE)-1);
 			if(r == 0) r = es_addBuf(&pWrkrData->batch.data, (char*)searchType,
 				 ustrlen(searchType));
