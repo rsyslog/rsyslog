@@ -1,5 +1,14 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2206.0 (aka 2022.06) 2022-06-??
+- 2022-05-25: omelastisearch: allow omitting _type field
+  Allow omitting the _type field by setting it to an empty string.
+  Setting this field has been deprecated since 6.0, and support will
+  be removed in 8.0
+  Also add testbench test for empty searchType with ES 7.0
+  This checks for messages in the deprecation log and also provides
+  avoids deprecation messages from usage of transport.tcp.port in the
+  test configuration
+  Thanks to Jarkko Oranen for the patch.
 - 2022-05-18: tcpsrv/imtcp: slight performance improvements
   This change slightly improves performance for tcpsrv-based servers.
   This affects imtcp and imgssapi as well as some helpers.
