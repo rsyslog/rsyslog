@@ -1565,6 +1565,7 @@ TESTS += \
 	imfile-symlink.sh \
 	imfile-symlink-multi.sh \
 	imfile-logrotate.sh \
+	imfile-logrotate-async.sh \
 	imfile-logrotate-multiple.sh \
 	imfile-logrotate-copytruncate.sh \
 	imfile-logrotate-nocopytruncate.sh \
@@ -2575,6 +2576,7 @@ EXTRA_DIST= \
 	imfile-symlink.sh \
 	imfile-symlink-multi.sh \
 	imfile-logrotate.sh \
+	imfile-logrotate-async.sh \
 	imfile-logrotate-copytruncate.sh \
 	imfile-logrotate-nocopytruncate.sh \
 	imfile-logrotate-multiple.sh \
