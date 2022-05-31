@@ -26,8 +26,8 @@ generate_conf
 add_conf '
 $WorkDirectory '$RSYSLOG_DYNNAME'.spool
 
-global( debug.whitelist="off"
-	debug.files=["rainerscript.c", "ratelimit.c", "ruleset.c", "main Q", "msg.c", "../action.c"]
+global( debug.whitelist="on"
+	debug.files=["imfile.c", "stream.c"]
 	)
 
 module(load="../plugins/imfile/.libs/imfile" mode="inotify" PollingInterval="2")
@@ -71,6 +71,9 @@ ls -li $RSYSLOG_DYNNAME.input*
 #msgcount=$((2* TESTMESSAGES))
 #wait_file_lines $RSYSLOG_OUT_LOG $msgcount $RETRIES
 wait_file_lines
+
+touch $RSYSLOG_DYNNAME.input.log
+./msleep 1000
 
 shutdown_when_empty
 wait_shutdown
