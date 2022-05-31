@@ -26,8 +26,8 @@ generate_conf
 add_conf '
 $WorkDirectory '$RSYSLOG_DYNNAME'.spool
 
-global( debug.whitelist="off"
-	debug.files=["rainerscript.c", "ratelimit.c", "ruleset.c", "main Q", "msg.c", "../action.c"]
+global( debug.whitelist="on"
+	debug.files=["imfile.c", "stream.c"]
 	)
 
 module(load="../plugins/imfile/.libs/imfile" mode="inotify" PollingInterval="2")

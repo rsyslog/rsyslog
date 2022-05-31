@@ -827,11 +827,23 @@ detect_updates(fs_edge_t *const edge)
 
 	for(act = edge->active ; act != NULL ; act = act->next) {
 		DBGPRINTF("detect_updates checking active obj '%s'\n", act->name);
-		const int r = lstat(act->name, &fileInfo);
+		// lstat() has the disadvantage, that we get "deleted" when the name has changed
+		// but inode is still the same (like with logrotate)
+		int r = lstat(act->name, &fileInfo);
 		if(r == -1) { /* object gone away? */
-			DBGPRINTF("object gone away, unlinking: '%s'\n", act->name);
-			act_obj_unlink(act);
-			restart = 1;
+			/* now let's see if the file itself already exist (e.g. rotated away) */
+			/* NOTE: this will NOT stall the file. The reason is that when a new file
+			 * with the same name is detected, we will not run into this code.
+			 TODO: check the full implications, there are for sure some!
+			       e.g. file has been closed, so we will never have old inode (but
+			            why was it closed then? --> check)
+			 */
+			r = fstat(act->ino, &fileInfo);
+			if(r == -1) {
+				DBGPRINTF("object gone away, unlinking: '%s'\n", act->name);
+				act_obj_unlink(act);
+				restart = 1;
+			}
 			break;
 		} else if(fileInfo.st_ino != act->ino) {
 			DBGPRINTF("file '%s' inode changed from %llu to %llu, unlinking from "

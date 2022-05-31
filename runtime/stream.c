@@ -652,7 +652,8 @@ strmHandleEOF(strm_t *const pThis)
 		case STREAMTYPE_FILE_MONITOR:
 			DBGOPRINT((obj_t*) pThis, "file '%s' (%d) EOF, rotationCheck %d\n",
 				pThis->pszCurrFName, pThis->fd, pThis->rotationCheck);
-			if(pThis->rotationCheck == STRM_ROTATION_DO_CHECK) {
+DBGPRINTF("RGER: EOF!\n");
+			if( 0 && pThis->rotationCheck == STRM_ROTATION_DO_CHECK) {
 				CHKiRet(strmHandleEOFMonitor(pThis));
 			} else {
 				ABORT_FINALIZE(RS_RET_EOF);
@@ -773,6 +774,7 @@ strmReadBuf(strm_t *pThis, int *padBytes)
 		}
 		iLenRead = read(pThis->fd, pThis->pIOBuf, toRead);
 		DBGOPRINT((obj_t*) pThis, "file %d read %ld bytes\n", pThis->fd, iLenRead);
+		DBGOPRINT((obj_t*) pThis, "file %d read %*s\n", pThis->fd, (unsigned) iLenRead, (char*) pThis->pIOBuf);
 		/* end crypto */
 		if(iLenRead == 0) {
 			CHKiRet(strmHandleEOF(pThis));
@@ -1022,6 +1024,7 @@ finalize_it:
 		}
 		pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
 	} else {
+DBGPRINTF("RGER: strmReadLine iRet %d\n", iRet);
 		if(*ppCStr != NULL) {
 			if(cstrLen(*ppCStr) > 0) {
 			/* we may have an empty string in an unsuccesfull poll or after restart! */
