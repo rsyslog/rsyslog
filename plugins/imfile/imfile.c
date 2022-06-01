@@ -84,6 +84,7 @@ MODULE_CNFNAME("imfile")
 /* defines */
 #define FILE_ID_HASH_SIZE 20	/* max size of a file_id hash */
 #define FILE_ID_SIZE	512	/* how many bytes are used for file-id? */
+#define FILE_DELETE_DELAY 5	/* how many seconds to wait before finally deleting a gone file */
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA	/* must be present, starts static data */
@@ -209,6 +210,7 @@ struct act_obj_s {
 	ratelimit_t *ratelimiter;
 	multi_submit_t multiSub;
 	int is_symlink;
+	time_t time_to_delete;	/* Helper variable to DELAY the actual file delete in act_obj_unlink */
 };
 struct fs_edge_s {
 	fs_node_t *parent;	/* node pointing to this edge */
@@ -774,6 +776,7 @@ act_obj_add(fs_edge_t *const edge, const char *const name, const int is_file,
 	act->file_id_prev[0] = '\0';
 	act->is_symlink = is_symlink;
 	act->ratelimiter = NULL;
+	act->time_to_delete = 0;
 	if (source) { /* we are target of symlink */
 		CHKmalloc(act->source_name = strdup(source));
 	} else {
@@ -840,9 +843,24 @@ detect_updates(fs_edge_t *const edge)
 			 */
 			r = fstat(act->ino, &fileInfo);
 			if(r == -1) {
-				DBGPRINTF("object gone away, unlinking: '%s'\n", act->name);
-				act_obj_unlink(act);
-				restart = 1;
+				time_t ttNow;
+				time(&ttNow);
+				if (act->time_to_delete == 0) {
+					act->time_to_delete = ttNow;
+				}
+				/*
+				* 
+				*/
+				if (act->time_to_delete + FILE_DELETE_DELAY < ttNow) {
+					DBGPRINTF("detect_updates obj gone away, unlinking: '%s', ttDelete: %ld/%ld\n",
+						act->name, act->time_to_delete, ttNow);
+					act_obj_unlink(act);
+					restart = 1;
+				} else {
+					DBGPRINTF("detect_updates obj gone away, keep '%s' open: %ld/%ld/%lds!\n", 
+						act->name, act->time_to_delete, ttNow, ttNow - act->time_to_delete);
+					pollFile(act);
+				}
 			}
 			break;
 		} else if(fileInfo.st_ino != act->ino) {
@@ -1115,7 +1133,8 @@ chk_active(const act_obj_t *act, const act_obj_t *const deleted)
 static void ATTR_NONNULL()
 act_obj_unlink(act_obj_t *act)
 {
-	DBGPRINTF("act_obj_unlink %p: %s, pStrm %p\n", act, act->name, act->pStrm);
+	DBGPRINTF("act_obj_unlink %p: %s, pStrm %p, ttDelete: %ld\n", 
+		act, act->name, act->pStrm, act->time_to_delete);
 	if(act->prev == NULL) {
 		act->edge->active = act->next;
 	} else {

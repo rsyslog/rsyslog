@@ -72,6 +72,10 @@ ls -li $RSYSLOG_DYNNAME.input*
 #wait_file_lines $RSYSLOG_OUT_LOG $msgcount $RETRIES
 wait_file_lines
 
+./msleep 5000
+touch $RSYSLOG_DYNNAME.input.log
+./msleep 1000
+
 shutdown_when_empty
 wait_shutdown
 seq_check 
