@@ -848,8 +848,10 @@ detect_updates(fs_edge_t *const edge)
 				if (act->time_to_delete == 0) {
 					act->time_to_delete = ttNow;
 				}
-				/*
-				* 
+				/* First time we run into this code, we need to give imfile a little time to process
+				*  the old file in case a process is still writing into it until the FILE_DELETE_DELAY
+				*  is reached OR the inode has changed (see elseif below). In most cases, the
+				*  delay will never be reached and the file will be closed when the inode has changed.
 				*/
 				if (act->time_to_delete + FILE_DELETE_DELAY < ttNow) {
 					DBGPRINTF("detect_updates obj gone away, unlinking: '%s', ttDelete: %ld/%ld\n",
@@ -857,7 +859,7 @@ detect_updates(fs_edge_t *const edge)
 					act_obj_unlink(act);
 					restart = 1;
 				} else {
-					DBGPRINTF("detect_updates obj gone away, keep '%s' open: %ld/%ld/%lds!\n", 
+					DBGPRINTF("detect_updates obj gone away, keep '%s' open: %ld/%ld/%lds!\n",
 						act->name, act->time_to_delete, ttNow, ttNow - act->time_to_delete);
 					pollFile(act);
 				}
@@ -1127,7 +1129,7 @@ chk_active(const act_obj_t *act, const act_obj_t *const deleted)
 static void ATTR_NONNULL()
 act_obj_unlink(act_obj_t *act)
 {
-	DBGPRINTF("act_obj_unlink %p: %s, pStrm %p, ttDelete: %ld\n", 
+	DBGPRINTF("act_obj_unlink %p: %s, pStrm %p, ttDelete: %ld\n",
 		act, act->name, act->pStrm, act->time_to_delete);
 	if(act->prev == NULL) {
 		act->edge->active = act->next;
