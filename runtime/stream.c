@@ -584,47 +584,6 @@ finalize_it:
 }
 
 
-/* handle the eof case for monitored files.
- * If we are monitoring a file, someone may have rotated it. In this case, we
- * also need to close it and reopen it under the same name.
- * rgerhards, 2008-02-13
- * The previous code also did a check for file truncation, in which case the
- * file was considered rewritten. However, this potential border case turned
- * out to be a big trouble spot on busy systems. It caused massive message
- * duplication (I guess stat() can return a too-low number under some
- * circumstances). So starting as of now, we only check the inode number and
- * a file change is detected only if the inode changes. -- rgerhards, 2011-01-10
- */
-static rsRetVal ATTR_NONNULL()
-strmHandleEOFMonitor(strm_t *const pThis)
-{
-	DEFiRet;
-	struct stat statName;
-
-	ISOBJ_TYPE_assert(pThis, strm);
-	if(stat((char*) pThis->pszCurrFName, &statName) == -1)
-		ABORT_FINALIZE(RS_RET_IO_ERROR);
-	DBGPRINTF("strmHandleEOFMonitor: stream checking for file change on '%s', inode %u/%u size %llu/%llu\n",
-		pThis->pszCurrFName, (unsigned) pThis->inode, (unsigned) statName.st_ino,
-		(long long unsigned) pThis->iCurrOffs, (long long unsigned) statName.st_size);
-
-	/* Inode unchanged but file size on disk is less than current offset
-	 * means file was truncated, we also reopen if 'reopenOnTruncate' is on
-	 */
-	if (pThis->inode != statName.st_ino
-		  || (pThis->bReopenOnTruncate && statName.st_size < pThis->iCurrOffs)) {
-		DBGPRINTF("we had a file change on '%s'\n", pThis->pszCurrFName);
-		CHKiRet(strmCloseFile(pThis));
-		CHKiRet(strmOpenFile(pThis));
-	} else {
-		ABORT_FINALIZE(RS_RET_EOF);
-	}
-
-finalize_it:
-	RETiRet;
-}
-
-
 /* handle the EOF case of a stream
  * The EOF case is somewhat complicated, as the proper action depends on the
  * mode the stream is in. If there are multiple files (circular logs, most
@@ -653,11 +612,7 @@ strmHandleEOF(strm_t *const pThis)
 			DBGOPRINT((obj_t*) pThis, "file '%s' (%d) EOF, rotationCheck %d\n",
 				pThis->pszCurrFName, pThis->fd, pThis->rotationCheck);
 DBGPRINTF("RGER: EOF!\n");
-			if( 0 && pThis->rotationCheck == STRM_ROTATION_DO_CHECK) {
-				CHKiRet(strmHandleEOFMonitor(pThis));
-			} else {
-				ABORT_FINALIZE(RS_RET_EOF);
-			}
+			ABORT_FINALIZE(RS_RET_EOF);
 			break;
 	}
 
@@ -2214,14 +2169,6 @@ strmSetReadTimeout(strm_t *const __restrict__ pThis, const int val)
 	ISOBJ_TYPE_assert(pThis, strm);
 	pThis->readTimeout = val;
 }
-
-void ATTR_NONNULL()
-strmSet_checkRotation(strm_t *const pThis, const int val) {
-	ISOBJ_TYPE_assert(pThis, strm);
-	assert(val == STRM_ROTATION_DO_CHECK || val == STRM_ROTATION_DO_NOT_CHECK);
-	pThis->rotationCheck = val;
-}
-
 
 static rsRetVal ATTR_NONNULL()
 strmSetbDeleteOnClose(strm_t *const pThis, const int val)

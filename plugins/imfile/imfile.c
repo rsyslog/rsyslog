@@ -867,16 +867,10 @@ detect_updates(fs_edge_t *const edge)
 			DBGPRINTF("file '%s' inode changed from %llu to %llu, unlinking from "
 				"internal lists\n", act->name, (long long unsigned) act->ino,
 				(long long unsigned) fileInfo.st_ino);
-			if(act->pStrm != NULL) {
-				/* we do no need to re-set later, as act_obj_unlink
-				 * will destroy the strm obj */
-				strmSet_checkRotation(act->pStrm, STRM_ROTATION_DO_NOT_CHECK);
-			}
 			act_obj_unlink(act);
 			restart = 1;
 			break;
 		}
-
 	}
 
 	if (restart) {
