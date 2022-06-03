@@ -96,6 +96,7 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	SIMP_PROP(DfltNetstrmDrvr, uchar*)
 	SIMP_PROP(DefPFFamily, int)
 	SIMP_PROP(DisableDNS, int)
+	SIMP_PROP(NetstrmDrvrCAExtraFiles, uchar*)
 	SIMP_PROP(ParserControlCharacterEscapePrefix, uchar)
 	SIMP_PROP(ParserDropTrailingLFOnReception, int)
 	SIMP_PROP(ParserEscapeControlCharactersOnReceive, int)

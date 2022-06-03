@@ -38,6 +38,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include <stdint.h>
+#include <string.h>
 #include <errno.h>
 
 #include "rsyslog.h"
@@ -117,6 +118,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "defaultnetstreamdriverkeyfile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdrivercertfile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdriver", eCmdHdlrString, 0 },
+	{ "netstreamdrivercaextrafiles", eCmdHdlrString, 0 },
 	{ "maxmessagesize", eCmdHdlrSize, 0 },
 	{ "oversizemsg.errorfile", eCmdHdlrGetWord, 0 },
 	{ "oversizemsg.report", eCmdHdlrBinary, 0 },
@@ -260,6 +262,7 @@ SIMP_PROP(OptionDisallowWarning, optionDisallowWarning, int)
 SIMP_PROP_GET(DfltNetstrmDrvrCAF, pszDfltNetstrmDrvrCAF, uchar*)
 SIMP_PROP_GET(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar*)
 SIMP_PROP_GET(DfltNetstrmDrvrKeyFile, pszDfltNetstrmDrvrKeyFile, uchar*)
+SIMP_PROP_GET(NetstrmDrvrCAExtraFiles, pszNetstrmDrvrCAExtraFiles, uchar*)
 SIMP_PROP_GET(ParserControlCharacterEscapePrefix, parser.cCCEscapeChar, uchar)
 SIMP_PROP_GET(ParserDropTrailingLFOnReception, parser.bDropTrailingLF, int)
 SIMP_PROP_GET(ParserEscapeControlCharactersOnReceive, parser.bEscapeCCOnRcv, int)
@@ -412,6 +415,36 @@ setDfltNetstrmDrvrCAF(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 		loadConf->globals.pszDfltNetstrmDrvrCAF = pNewVal;
 	}
 
+	RETiRet;
+}
+
+static rsRetVal
+setNetstrmDrvrCAExtraFiles(void __attribute__((unused)) *pVal, uchar *pNewVal) {
+	DEFiRet;
+	FILE *fp;
+	char* token;
+	int error = 0;
+	free(loadConf->globals.pszNetstrmDrvrCAExtraFiles);
+
+	token = strtok((char*)pNewVal, ",");
+	// Here, fopen per strtok ...
+	while(token != NULL) {
+		fp = fopen((const char*)token, "r");
+		if(fp == NULL) {
+			LogError(errno, RS_RET_NO_FILE_ACCESS,
+				"error: netstreamdrivercaextrafiles file '%s' "
+				"could not be accessed", token);
+				error = 1;
+		} else {
+			fclose(fp);
+		}
+		token = strtok(NULL, ",");
+	}
+	if(!error) {
+		loadConf->globals.pszNetstrmDrvrCAExtraFiles = pNewVal;
+	} else {
+		loadConf->globals.pszNetstrmDrvrCAExtraFiles = NULL;
+	}
 	RETiRet;
 }
 
@@ -894,6 +927,7 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetDfltNetstrmDrvrCertFile = GetDfltNetstrmDrvrCertFile;
 	pIf->GetDfltNetstrmDrvrKeyFile = GetDfltNetstrmDrvrKeyFile;
 	pIf->GetDfltNetstrmDrvr = GetDfltNetstrmDrvr;
+	pIf->GetNetstrmDrvrCAExtraFiles = GetNetstrmDrvrCAExtraFiles;
 	pIf->GetParserControlCharacterEscapePrefix = GetParserControlCharacterEscapePrefix;
 	pIf->GetParserDropTrailingLFOnReception = GetParserDropTrailingLFOnReception;
 	pIf->GetParserEscapeControlCharactersOnReceive = GetParserEscapeControlCharactersOnReceive;
@@ -1168,6 +1202,9 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdriver")) {
 			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 			setDfltNetstrmDrvr(NULL, cstr);
+		} else if(!strcmp(paramblk.descr[i].name, "netstreamdrivercaextrafiles")) {
+			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			setNetstrmDrvrCAExtraFiles(NULL, cstr);
 		} else if(!strcmp(paramblk.descr[i].name, "preservefqdn")) {
 			bPreserveFQDN = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name,
@@ -1386,6 +1423,8 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	setDfltNetstrmDrvrCertFile, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"localhostname", 0, eCmdHdlrGetWord, NULL, &LocalHostNameOverride, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"localhostipif", 0, eCmdHdlrGetWord, setLocalHostIPIF, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"netstreamdrivercaextrafiles", 0, eCmdHdlrGetWord, setNetstrmDrvrCAExtraFiles,
+	NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"optimizeforuniprocessor", 0, eCmdHdlrGoneAway, NULL, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"preservefqdn", 0, eCmdHdlrBinary, NULL, &bPreserveFQDN, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize, legacySetMaxMessageSize, NULL, NULL));
