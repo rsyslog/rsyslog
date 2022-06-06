@@ -58,27 +58,14 @@ static char hexdigit[16] =
 	{'0', '1', '2', '3', '4', '5', '6', '7', '8',
 	 '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
-/* This is the list of all parsers known to us.
- * This is also used to unload all modules on shutdown.
- */
-parserList_t *pParsLstRoot = NULL;
-
-/* this is the list of the default parsers, to be used if no others
- * are specified.
- */
-parserList_t *pDfltParsLst = NULL;
-
-/* intialize (but NOT allocate) a parser list. Primarily meant as a hook
- * which can be used to extend the list in the future. So far, just sets
- * it to NULL.
- */
-static rsRetVal
-InitParserList(parserList_t **pListRoot)
-{
-	*pListRoot = NULL;
-	return RS_RET_OK;
-}
-
+BEGINobjDestruct(parser) /* be sure to specify the object type also in END and CODESTART macros! */
+CODESTARTobjDestruct(parser)
+	DBGPRINTF("destructing parser '%s'\n", pThis->pName);
+	if(pThis->pInst != NULL) {
+		pThis->pModule->mod.pm.freeParserInst(pThis->pInst);
+	}
+	free(pThis->pName);
+ENDobjDestruct(parser)
 
 /* destruct a parser list. The list elements are destroyed, but the parser objects
  * themselves are not modified. (That is done at a late stage during rsyslogd
@@ -146,12 +133,12 @@ printParserList(parserList_t *pList)
 
 /* find a parser based on the provided name */
 static rsRetVal
-FindParser(parser_t **ppParser, uchar *pName)
+FindParser(parserList_t *pParserListRoot, parser_t **ppParser, uchar *pName)
 {
 	parserList_t *pThis;
 	DEFiRet;
 
-	for(pThis = pParsLstRoot ; pThis != NULL ; pThis = pThis->pNext) {
+	for(pThis = pParserListRoot ; pThis != NULL ; pThis = pThis->pNext) {
 		if(ustrcmp(pThis->pParser->pName, pName) == 0) {
 			*ppParser = pThis->pParser;
 			FINALIZE;	/* found it, iRet still eq. OK! */
@@ -178,8 +165,8 @@ AddDfltParser(uchar *pName)
 	parser_t *pParser;
 	DEFiRet;
 
-	CHKiRet(FindParser(&pParser, pName));
-	CHKiRet(AddParserToList(&pDfltParsLst, pParser));
+	CHKiRet(FindParser(loadConf->parsers.pParsLstRoot, &pParser, pName));
+	CHKiRet(AddParserToList(&loadConf->parsers.pDfltParsLst, pParser));
 	DBGPRINTF("Parser '%s' added to default parser set.\n", pName);
 
 finalize_it:
@@ -250,7 +237,7 @@ static rsRetVal parserConstructFinalize(parser_t *pThis)
 	DEFiRet;
 
 	ISOBJ_TYPE_assert(pThis, parser);
-	CHKiRet(AddParserToList(&pParsLstRoot, pThis));
+	CHKiRet(AddParserToList(&loadConf->parsers.pParsLstRoot, pThis));
 	DBGPRINTF("Parser '%s' added to list of available parsers.\n", pThis->pName);
 
 finalize_it:
@@ -293,15 +280,6 @@ finalize_it:
 		free(pParser);
 	RETiRet;
 }
-BEGINobjDestruct(parser) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(parser)
-	DBGPRINTF("destructing parser '%s'\n", pThis->pName);
-	if(pThis->pInst != NULL) {
-		pThis->pModule->mod.pm.freeParserInst(pThis->pInst);
-	}
-	free(pThis->pName);
-ENDobjDestruct(parser)
-
 
 /* uncompress a received message if it is compressed.
  * pMsg->pszRawMsg buffer is updated.
@@ -643,10 +621,10 @@ ParseMsg(smsg_t *pMsg)
 	 */
 	pParserList = ruleset.GetParserList(runConf, pMsg);
 	if(pParserList == NULL) {
-		pParserList = pDfltParsLst;
+		pParserList = runConf->parsers.pDfltParsLst;
 	}
 	DBGPRINTF("parse using parser list %p%s.\n", pParserList,
-		  (pParserList == pDfltParsLst) ? " (the default list)" : "");
+		  (pParserList == runConf->parsers.pDfltParsLst) ? " (the default list)" : "");
 
 	bIsSanitized = RSFALSE;
 	bPRIisParsed = RSFALSE;
@@ -691,6 +669,28 @@ ParseMsg(smsg_t *pMsg)
 finalize_it:
 	RETiRet;
 }
+
+/* This destroys the master parserlist and all of its parser entries.
+ * Parser modules are NOT unloaded, rsyslog does that at a later stage
+ * for all dynamically loaded modules.
+ */
+static rsRetVal
+destroyMasterParserList(parserList_t *pParserListRoot)
+{
+	DEFiRet;
+	parserList_t *pParsLst;
+	parserList_t *pParsLstDel;
+
+	pParsLst = pParserListRoot;
+	while(pParsLst != NULL) {
+		parserDestruct(&pParsLst->pParser);
+		pParsLstDel = pParsLst;
+		pParsLst = pParsLst->pNext;
+		free(pParsLstDel);
+	}
+	RETiRet;
+}
+
 /* queryInterface function-- rgerhards, 2009-11-03
  */
 BEGINobjQueryInterface(parser)
@@ -712,39 +712,18 @@ CODESTARTobjQueryInterface(parser)
 	pIf->SetDoPRIParsing = SetDoPRIParsing;
 	pIf->ParseMsg = ParseMsg;
 	pIf->SanitizeMsg = SanitizeMsg;
-	pIf->InitParserList = InitParserList;
 	pIf->DestructParserList = DestructParserList;
 	pIf->AddParserToList = AddParserToList;
 	pIf->AddDfltParser = AddDfltParser;
 	pIf->FindParser = FindParser;
+	pIf->destroyMasterParserList = destroyMasterParserList;
 finalize_it:
 ENDobjQueryInterface(parser)
-
-/* This destroys the master parserlist and all of its parser entries. MUST only be
- * done when the module is shut down. Parser modules are NOT unloaded, rsyslog
- * does that at a later stage for all dynamically loaded modules.
- */
-static void
-destroyMasterParserList(void)
-{
-	parserList_t *pParsLst;
-	parserList_t *pParsLstDel;
-
-	pParsLst = pParsLstRoot;
-	while(pParsLst != NULL) {
-		parserDestruct(&pParsLst->pParser);
-		pParsLstDel = pParsLst;
-		pParsLst = pParsLst->pNext;
-		free(pParsLstDel);
-	}
-}
 
 /* Exit our class.
  * rgerhards, 2009-11-04
  */
 BEGINObjClassExit(parser, OBJ_IS_CORE_MODULE) /* class, version */
-	DestructParserList(&pDfltParsLst);
-	destroyMasterParserList();
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
@@ -760,7 +739,4 @@ BEGINObjClassInit(parser, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(datetime, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
-
-	InitParserList(&pParsLstRoot);
-	InitParserList(&pDfltParsLst);
 ENDObjClassInit(parser)

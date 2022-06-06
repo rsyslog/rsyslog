@@ -73,6 +73,7 @@
 #include "cryprov.h"
 #include "parserif.h"
 #include "janitor.h"
+#include "rsconf.h"
 
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP

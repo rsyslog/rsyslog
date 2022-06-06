@@ -350,6 +350,7 @@ const size_t msglen, const char *const topicname)
 			return NULL;
 		}
 		memcpy(etry->key, key, keylen);
+		etry->key[keylen] = '\0';
 	} else {
 		etry->key=NULL;
 	}

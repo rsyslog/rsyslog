@@ -495,11 +495,10 @@ isValidHexNum(const uchar *const __restrict__ buf,
 		case 'E':
 		case 'F':
 			cyc++;
+			(*nprocessed)++;
 			if(cyc == 5) {
-				cyc = 0;
 				goto done;
 			}
-			(*nprocessed)++;
 			break;
 		case '.':
 			if(handleDot && cyc == 0) {
@@ -537,7 +536,7 @@ syntax_ipv6(const uchar *const __restrict__ buf,
 
 	while(*nprocessed < buflen) {
 		numLen = isValidHexNum(buf + *nprocessed, buflen - *nprocessed, nprocessed, 0);
-		if(numLen > 0) {  //found a valid num
+		if(numLen > 0 && numLen < 5) {  //found a valid num
 			if((ipParts == 7 && hadAbbrev) || ipParts > 7) {
 				isIP = 0;
 				goto done;
@@ -560,6 +559,18 @@ syntax_ipv6(const uchar *const __restrict__ buf,
 				}
 			}
 			lastSep = 1;
+		} else if (numLen == 5) {  // maybe truncated with port
+			if(hadAbbrev && ipParts >= 2) {
+				isIP = 1;
+				/* we need to go back 6 chars:
+				 * 5 digits plus leading ":" which designates port!
+				 */
+				*nprocessed -= 6;
+			} else {
+				isIP = 0;
+				/* nprocessed need not be corrected - it's only used if isIP == 1 */
+			}
+			goto done;
 		} else {  //no valid num
 			if(lastSep) {
 				if(lastAbbrev && ipParts < 8) {

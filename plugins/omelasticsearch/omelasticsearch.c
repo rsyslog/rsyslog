@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h for more specifics!
  *
  * Copyright 2011 Nathan Scott.
- * Copyright 2009-2021 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2022 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -86,12 +86,14 @@ STATSCOUNTER_DEF(rebinds, mutRebinds)
 static prop_t *pInputName = NULL;
 
 #	define META_STRT "{\"index\":{\"_index\": \""
-#	define META_STRT_CREATE "{\"create\":{\"_index\": \""
+#	define META_STRT_CREATE "{\"create\":{"    /* \"_index\": \" */
+#	define META_IX "\"_index\": \""
 #	define META_TYPE "\",\"_type\":\""
 #       define META_PIPELINE "\",\"pipeline\":\""
 #	define META_PARENT "\",\"_parent\":\""
 #	define META_ID "\", \"_id\":\""
 #	define META_END  "\"}}\n"
+#	define META_END_NOQUOTE  " }}\n"
 
 typedef enum {
 	ES_WRITE_INDEX,
@@ -116,6 +118,7 @@ typedef struct instanceConf_s {
 	uchar **serverBaseUrls;
 	int numServers;
 	long healthCheckTimeout;
+	long indexTimeout;
 	uchar *uid;
 	uchar *pwd;
 	uchar *authBuf;
@@ -128,6 +131,7 @@ typedef struct instanceConf_s {
 	uchar *timeout;
 	uchar *bulkId;
 	uchar *errorFile;
+	int esVersion;
 	sbool errorOnly;
 	sbool interleaved;
 	sbool dynSrchIdx;
@@ -187,6 +191,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "server", eCmdHdlrArray, 0 },
 	{ "serverport", eCmdHdlrInt, 0 },
 	{ "healthchecktimeout", eCmdHdlrInt, 0 },
+	{ "indextimeout", eCmdHdlrInt, 0 },
 	{ "uid", eCmdHdlrGetWord, 0 },
 	{ "pwd", eCmdHdlrGetWord, 0 },
 	{ "searchindex", eCmdHdlrGetWord, 0 },
@@ -219,7 +224,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "ratelimit.burst", eCmdHdlrInt, 0 },
 	{ "retryruleset", eCmdHdlrString, 0 },
-	{ "rebindinterval", eCmdHdlrInt, 0 }
+	{ "rebindinterval", eCmdHdlrInt, 0 },
+	{ "esversion.major", eCmdHdlrPositiveInt, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -231,9 +237,10 @@ static rsRetVal curlSetup(wrkrInstanceData_t *pWrkrData);
 
 BEGINcreateInstance
 CODESTARTcreateInstance
+	int r;
 	pData->fdErrFile = -1;
-	if(pthread_mutex_init(&pData->mutErrFile, NULL) != 0) {
-		LogError(errno, RS_RET_ERR, "omelasticsearch: cannot create "
+	if((r = pthread_mutex_init(&pData->mutErrFile, NULL)) != 0) {
+		LogError(r, RS_RET_ERR, "omelasticsearch: cannot create "
 			"error file mutex, failing this action");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
@@ -244,6 +251,7 @@ CODESTARTcreateInstance
 	pData->retryRulesetName = NULL;
 	pData->retryRuleset = NULL;
 	pData->rebindInterval = DEFAULT_REBIND_INTERVAL;
+	pData->esVersion = 0;
 finalize_it:
 ENDcreateInstance
 
@@ -355,6 +363,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\ttemplate='%s'\n", pData->tplName);
 	dbgprintf("\tnumServers=%d\n", pData->numServers);
 	dbgprintf("\thealthCheckTimeout=%lu\n", pData->healthCheckTimeout);
+	dbgprintf("\tindexTimeout=%lu\n", pData->indexTimeout);
 	dbgprintf("\tserverBaseUrls=");
 	for(i = 0 ; i < pData->numServers ; ++i)
 		dbgprintf("%c'%s'", i == 0 ? '[' : ' ', pData->serverBaseUrls[i]);
@@ -362,8 +371,10 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tdefaultPort=%d\n", pData->defaultPort);
 	dbgprintf("\tuid='%s'\n", pData->uid == NULL ? (uchar*)"(not configured)" : pData->uid);
 	dbgprintf("\tpwd=(%sconfigured)\n", pData->pwd == NULL ? "not " : "");
-	dbgprintf("\tsearch index='%s'\n", pData->searchIndex);
-	dbgprintf("\tsearch type='%s'\n", pData->searchType);
+	dbgprintf("\tsearch index='%s'\n", pData->searchIndex == NULL
+			? (uchar*)"(not configured)" : pData->searchIndex);
+	dbgprintf("\tsearch type='%s'\n",  pData->searchType == NULL
+			? (uchar*)"(not configured)" : pData->searchType);
 	dbgprintf("\tpipeline name='%s'\n", pData->pipelineName);
 	dbgprintf("\tdynamic pipeline name=%d\n", pData->dynPipelineName);
 	dbgprintf("\tskipPipelineIfEmpty=%d\n", pData->skipPipelineIfEmpty);
@@ -596,8 +607,6 @@ getIndexTypeAndParent(const instanceData *const pData, uchar **const tpls,
 	}
 
 done:
-	assert(srchIndex != NULL);
-	assert(srchType != NULL);
 	return;
 }
 
@@ -611,8 +620,10 @@ setPostURL(wrkrInstanceData_t *const pWrkrData, uchar **const tpls)
 	uchar *parent;
 	uchar *bulkId;
 	char* baseUrl;
+	/* since 7.0, the API always requires /idx/_doc, so use that if searchType is not explicitly set */
+	uchar* actualSearchType = (uchar*)"_doc";
 	es_str_t *url;
-	int r;
+	int r = 0;
 	DEFiRet;
 	instanceData *const pData = pWrkrData->pData;
 	char separator;
@@ -633,9 +644,14 @@ setPostURL(wrkrInstanceData_t *const pWrkrData, uchar **const tpls)
 		parent = NULL;
 	} else {
 		getIndexTypeAndParent(pData, tpls, &searchIndex, &searchType, &parent, &bulkId, &pipelineName);
-		r = es_addBuf(&url, (char*)searchIndex, ustrlen(searchIndex));
-		if(r == 0) r = es_addChar(&url, '/');
-		if(r == 0) r = es_addBuf(&url, (char*)searchType, ustrlen(searchType));
+		if(searchIndex != NULL) {
+			r = es_addBuf(&url, (char*)searchIndex, ustrlen(searchIndex));
+			if(searchType != NULL && searchType[0] != '\0') {
+				actualSearchType = searchType;
+			}
+			if(r == 0) r = es_addChar(&url, '/');
+			if(r == 0) r = es_addBuf(&url, (char*)actualSearchType, ustrlen(actualSearchType));
+		}
 		if(pipelineName != NULL && (!pData->skipPipelineIfEmpty || pipelineName[0] != '\0')) {
 			if(r == 0) r = es_addChar(&url, separator);
 			if(r == 0) r = es_addBuf(&url, "pipeline=", sizeof("pipeline=")-1);
@@ -679,7 +695,7 @@ computeMessageSize(const wrkrInstanceData_t *const pWrkrData,
 	const uchar *const message,
 	uchar **const tpls)
 {
-	size_t r = sizeof(META_TYPE)-1 + sizeof(META_END)-1 + sizeof("\n")-1;
+	size_t r = sizeof(META_END)-1 + sizeof("\n")-1;
 	if (pWrkrData->pData->writeOperation == ES_WRITE_CREATE)
 		r += sizeof(META_STRT_CREATE)-1;
 	else
@@ -692,8 +708,17 @@ computeMessageSize(const wrkrInstanceData_t *const pWrkrData,
 	uchar *pipelineName;
 
 	getIndexTypeAndParent(pWrkrData->pData, tpls, &searchIndex, &searchType, &parent, &bulkId, &pipelineName);
-	r += ustrlen((char *)message) + ustrlen(searchIndex) + ustrlen(searchType);
-
+	r += ustrlen((char *)message);
+	if(searchIndex != NULL) {
+		r += ustrlen(searchIndex);
+	}
+	if(searchType != NULL) {
+		if(searchType[0] == '\0') {
+			r += 4; // "_doc"
+		} else {
+			r += ustrlen(searchType);
+		}
+	}
 	if(parent != NULL) {
 		r += sizeof(META_PARENT)-1 + ustrlen(parent);
 	}
@@ -717,6 +742,7 @@ buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls)
 {
 	int length = strlen((char *)message);
 	int r;
+	int endQuote = 1;
 	uchar *searchIndex = NULL;
 	uchar *searchType;
 	uchar *parent = NULL;
@@ -725,28 +751,43 @@ buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message, uchar **tpls)
 	DEFiRet;
 
 	getIndexTypeAndParent(pWrkrData->pData, tpls, &searchIndex, &searchType, &parent, &bulkId, &pipelineName);
-	if (pWrkrData->pData->writeOperation == ES_WRITE_CREATE)
+	if (pWrkrData->pData->writeOperation == ES_WRITE_CREATE) {
 		r = es_addBuf(&pWrkrData->batch.data, META_STRT_CREATE, sizeof(META_STRT_CREATE)-1);
-	else
+		endQuote = 0;
+	} else
 		r = es_addBuf(&pWrkrData->batch.data, META_STRT, sizeof(META_STRT)-1);
-	if(r == 0) r = es_addBuf(&pWrkrData->batch.data, (char*)searchIndex,
+	if(searchIndex != NULL) {
+		endQuote = 1;
+		if (pWrkrData->pData->writeOperation == ES_WRITE_CREATE)
+			if(r == 0) r = es_addBuf(&pWrkrData->batch.data, META_IX, sizeof(META_IX)-1);
+		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, (char*)searchIndex,
 				 ustrlen(searchIndex));
-	if(r == 0) r = es_addBuf(&pWrkrData->batch.data, META_TYPE, sizeof(META_TYPE)-1);
-	if(r == 0) r = es_addBuf(&pWrkrData->batch.data, (char*)searchType,
+		if(searchType != NULL && searchType[0] != '\0') {
+			if(r == 0) r = es_addBuf(&pWrkrData->batch.data, META_TYPE, sizeof(META_TYPE)-1);
+			if(r == 0) r = es_addBuf(&pWrkrData->batch.data, (char*)searchType,
 				 ustrlen(searchType));
+		}
+	}
 	if(parent != NULL) {
+		endQuote = 1;
 		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, META_PARENT, sizeof(META_PARENT)-1);
 		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, (char*)parent, ustrlen(parent));
 	}
 	if(pipelineName != NULL && (!pWrkrData->pData->skipPipelineIfEmpty || pipelineName[0] != '\0')) {
+		endQuote = 1;
 		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, META_PIPELINE, sizeof(META_PIPELINE)-1);
 		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, (char*)pipelineName, ustrlen(pipelineName));
 	}
 	if(bulkId != NULL) {
+		endQuote = 1;
 		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, META_ID, sizeof(META_ID)-1);
 		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, (char*)bulkId, ustrlen(bulkId));
 	}
-	if(r == 0) r = es_addBuf(&pWrkrData->batch.data, META_END, sizeof(META_END)-1);
+	if(endQuote == 0) {
+		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, META_END_NOQUOTE, sizeof(META_END_NOQUOTE)-1);
+	} else {
+		if(r == 0) r = es_addBuf(&pWrkrData->batch.data, META_END, sizeof(META_END)-1);
+	}
 	if(r == 0) r = es_addBuf(&pWrkrData->batch.data, (char*)message, length);
 	if(r == 0) r = es_addBuf(&pWrkrData->batch.data, "\n", sizeof("\n")-1);
 	if(r != 0) {
@@ -1770,6 +1811,8 @@ curlPostSetup(wrkrInstanceData_t *const pWrkrData)
 	PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
 	curlSetupCommon(pWrkrData, pWrkrData->curlPostHandle);
 	curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_POST, 1);
+	curl_easy_setopt(pWrkrData->curlPostHandle,
+		CURLOPT_TIMEOUT_MS, pWrkrData->pData->indexTimeout);
 }
 
 #define CONTENT_JSON "Content-Type: application/json; charset=utf-8"
@@ -1799,6 +1842,7 @@ setInstParamDefaults(instanceData *const pData)
 	pData->serverBaseUrls = NULL;
 	pData->defaultPort = 9200;
 	pData->healthCheckTimeout = 3500;
+	pData->indexTimeout = 0;
 	pData->uid = NULL;
 	pData->pwd = NULL;
 	pData->authBuf = NULL;
@@ -1867,6 +1911,8 @@ CODESTARTnewActInst
 			pData->defaultPort = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "healthchecktimeout")) {
 			pData->healthCheckTimeout = (long) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "indextimeout")) {
+			pData->indexTimeout = (long) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "uid")) {
 			pData->uid = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "pwd")) {
@@ -1963,6 +2009,8 @@ CODESTARTnewActInst
 			pData->retryRulesetName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "rebindinterval")) {
 			pData->rebindInterval = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "esversion.major")) {
+			pData->esVersion = pvals[i].val.d.n;
 		} else {
 			LogError(0, RS_RET_INTERNAL_ERROR, "omelasticsearch: program error, "
 				"non-handled param '%s'", actpblk.descr[i].name);
@@ -2094,15 +2142,17 @@ CODESTARTnewActInst
 		CHKiRet(computeBaseUrl("localhost", pData->defaultPort, pData->useHttps, pData->serverBaseUrls));
 	}
 
-	if(pData->searchIndex == NULL)
-		pData->searchIndex = (uchar*) strdup("system");
-	if(pData->searchType == NULL)
-		pData->searchType = (uchar*) strdup("events");
+	if(pData->esVersion < 8) {
+		if(pData->searchIndex == NULL)
+			pData->searchIndex = (uchar*) strdup("system");
+		if(pData->searchType == NULL)
+			pData->searchType = (uchar*) strdup("events");
 
-	if ((pData->writeOperation != ES_WRITE_INDEX) && (pData->bulkId == NULL)) {
-		LogError(0, RS_RET_CONFIG_ERROR,
-			"omelasticsearch: writeoperation '%d' requires bulkid", pData->writeOperation);
-		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+		if ((pData->writeOperation != ES_WRITE_INDEX) && (pData->bulkId == NULL)) {
+			LogError(0, RS_RET_CONFIG_ERROR,
+				"omelasticsearch: writeoperation '%d' requires bulkid", pData->writeOperation);
+			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+		}
 	}
 
 	if (pData->retryFailures) {

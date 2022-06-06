@@ -95,6 +95,7 @@ typedef struct statsobj_s statsobj_t;
 typedef void (*statsobj_read_notifier_t)(statsobj_t *, void *);
 typedef struct nsd_epworkset_s nsd_epworkset_t;
 typedef struct templates_s templates_t;
+typedef struct parsers_s parsers_t;
 typedef struct queuecnf_s queuecnf_t;
 typedef struct parsercnf_s parsercnf_t;
 typedef struct rulesets_s rulesets_t;

@@ -115,6 +115,15 @@ static uchar template_StdJSONFmt[] = "\"{\\\"message\\\":\\\"%msg:::json%\\\",\\
 "%HOSTNAME:::json%\\\",\\\"facility\\\":\\\"%syslogfacility-text%\\\",\\\"priority\\\":\\\""
 "%syslogpriority-text%\\\",\\\"timereported\\\":\\\"%timereported:::date-rfc3339%\\\",\\\"timegenerated\\\":\\\""
 "%timegenerated:::date-rfc3339%\\\"}\"";
+static uchar template_FullJSONFmt[] = "\"{\\\"message\\\":\\\"%msg:::json%\\\","
+"\\\"fromhost\\\":\\\"%HOSTNAME:::json%\\\","
+"\\\"programname\\\":\\\"%programname%\\\","
+"\\\"procid\\\":\\\"%PROCID%\\\","
+"\\\"msgid\\\":\\\"%MSGID%\\\","
+"\\\"facility\\\":\\\"%syslogfacility-text%\\\","
+"\\\"priority\\\":\\\"%syslogpriority-text%\\\","
+"\\\"timereported\\\":\\\"%timereported:::date-rfc3339%\\\","
+"\\\"timegenerated\\\":\\\"%timegenerated:::date-rfc3339%\\\"}\"";
 static uchar template_StdClickHouseFmt[] = "\"INSERT INTO rsyslog.SystemEvents (severity, facility, "
 "timestamp, hostname, tag, message) VALUES (%syslogseverity%, %syslogfacility%, "
 "'%timereported:::date-unixtimestamp%', '%hostname%', '%syslogtag%', '%msg%')\",STDSQL";
@@ -249,6 +258,7 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.mainQ.bMainMsgQSaveOnShutdown = 1;
 	pThis->globals.mainQ.iMainMsgQueueDeqtWinFromHr = 0;
 	pThis->globals.mainQ.iMainMsgQueueDeqtWinToHr = 25;
+	pThis->pMsgQueue = NULL;
 
 	pThis->globals.parser.cCCEscapeChar = '#';
 	pThis->globals.parser.bDropTrailingLF = 1;
@@ -259,6 +269,9 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.parser.bParserEscapeCCCStyle = 0;
 	pThis->globals.parser.bPermitSlashInProgramname = 0;
 	pThis->globals.parser.bParseHOSTNAMEandTAG = 1;
+
+	pThis->parsers.pDfltParsLst = NULL;
+	pThis->parsers.pParsLstRoot = NULL;
 }
 
 
@@ -315,6 +328,8 @@ CODESTARTobjDestruct(rsconf)
 	perctileBucketsDestruct();
 	ochDeleteAll();
 	freeTimezones(pThis);
+	parser.DestructParserList(&pThis->parsers.pDfltParsLst);
+	parser.destroyMasterParserList(pThis->parsers.pParsLstRoot);
 	free(pThis->globals.mainQ.pszMainMsgQFName);
 	free(pThis->globals.pszConfDAGFile);
 	free(pThis->globals.pszWorkDir);
@@ -412,7 +427,7 @@ parserProcessCnf(struct cnfobj *o)
 	cnfparamsPrint(&parserpblk, pvals);
 	paramIdx = cnfparamGetIdx(&parserpblk, "name");
 	parserName = (uchar*)es_str2cstr(pvals[paramIdx].val.d.estr, NULL);
-	if(parser.FindParser(&myparser, parserName) != RS_RET_PARSER_NOT_FOUND) {
+	if(parser.FindParser(loadConf->parsers.pParsLstRoot, &myparser, parserName) != RS_RET_PARSER_NOT_FOUND) {
 		LogError(0, RS_RET_PARSER_NAME_EXISTS,
 			"parser module name '%s' already exists", parserName);
 		ABORT_FINALIZE(RS_RET_PARSER_NAME_EXISTS);
@@ -894,36 +909,61 @@ startInputModules(void)
 	return RS_RET_OK; /* intentional: we do not care about module errors */
 }
 
+/* load the main queue */
+static rsRetVal
+loadMainQueue(void)
+{
+	DEFiRet;
+	struct cnfobj *mainqCnfObj;
+
+	mainqCnfObj = glbl.GetmainqCnfObj();
+	DBGPRINTF("loadMainQueue: mainq cnf obj ptr is %p\n", mainqCnfObj);
+	/* create message queue */
+	iRet = createMainQueue(&loadConf->pMsgQueue, UCHAR_CONSTANT("main Q"),
+		    		(mainqCnfObj == NULL) ? NULL : mainqCnfObj->nvlst);
+	if (iRet == RS_RET_OK) {
+		if (runConf != NULL) { /* dynamic config reload */
+			int areEqual = queuesEqual(loadConf->pMsgQueue, runConf->pMsgQueue);
+			DBGPRINTF("Comparison of old and new main queues: %d\n", areEqual);
+			if (areEqual) { /* content of the new main queue is the same as it was in previous conf */
+				qqueueDestruct(&loadConf->pMsgQueue);
+				loadConf->pMsgQueue = runConf->pMsgQueue;
+			}
+		}
+	}
+
+	if(iRet != RS_RET_OK) {
+		/* no queue is fatal, we need to give up in that case... */
+		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
+		FINALIZE;
+	}
+finalize_it:
+	glblDestructMainqCnfObj();
+	RETiRet;
+}
 
 /* activate the main queue */
 static rsRetVal
 activateMainQueue(void)
 {
-	struct cnfobj *mainqCnfObj;
 	DEFiRet;
 
-	mainqCnfObj = glbl.GetmainqCnfObj();
-	DBGPRINTF("activateMainQueue: mainq cnf obj ptr is %p\n", mainqCnfObj);
-	/* create message queue */
-	iRet = createMainQueue(&pMsgQueue, UCHAR_CONSTANT("main Q"),
-		    		(mainqCnfObj == NULL) ? NULL : mainqCnfObj->nvlst);
-	if(iRet == RS_RET_OK) {
-		iRet = startMainQueue(pMsgQueue);
-	}
+	DBGPRINTF("activateMainQueue: will try to activate main queue %p\n", runConf->pMsgQueue);
+
+	iRet = startMainQueue(runConf, runConf->pMsgQueue);
 	if(iRet != RS_RET_OK) {
 		/* no queue is fatal, we need to give up in that case... */
 		fprintf(stderr, "fatal error %d: could not create message queue - rsyslogd can not run!\n", iRet);
 		FINALIZE;
 	}
 
-	if(runConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT) { // ourConf -> runConf
+	if(runConf->globals.mainQ.MainMsgQueType == QUEUETYPE_DIRECT) {
 		PREFER_STORE_0_TO_INT(&bHaveMainQueue);
 	} else {
 		PREFER_STORE_1_TO_INT(&bHaveMainQueue);
 	}
 	DBGPRINTF("Main processing queue is initialized and running\n");
 finalize_it:
-	glblDestructMainqCnfObj();
 	RETiRet;
 }
 
@@ -940,6 +980,20 @@ setUmask(int iUmask)
 	return RS_RET_OK;
 }
 
+/* Remove resources from previous config */
+static void
+cleanupOldCnf(rsconf_t *cnf)
+{
+	if (cnf == NULL)
+		FINALIZE;
+
+	if (runConf->pMsgQueue != cnf->pMsgQueue)
+		qqueueDestruct(&cnf->pMsgQueue);
+
+finalize_it:
+	return;
+}
+
 
 /* Activate an already-loaded configuration. The configuration will become
  * the new running conf (if successful). Note that in theory this method may
@@ -951,6 +1005,7 @@ static rsRetVal
 activate(rsconf_t *cnf)
 {
 	DEFiRet;
+	rsconf_t *runCnfOld = runConf;
 
 	/* at this point, we "switch" over to the running conf */
 	runConf = cnf;
@@ -985,6 +1040,7 @@ activate(rsconf_t *cnf)
 	qqueueDoneLoadCnf(); /* we no longer need config-load-only data structures */
 
 	dbgprintf("configuration %p activated\n", cnf);
+	cleanupOldCnf(runCnfOld);
 
 finalize_it:
 	RETiRet;
@@ -1358,6 +1414,8 @@ initLegacyConf(void)
 	tplAddLine(ourConf, " StdPgSQLFmt", &pTmp);
 	pTmp = template_StdJSONFmt;
 	tplAddLine(ourConf, " StdJSONFmt", &pTmp);
+	pTmp = template_FullJSONFmt;
+	tplAddLine(ourConf, " FullJSONFmt", &pTmp);
 	pTmp = template_StdClickHouseFmt;
 	tplAddLine(ourConf, " StdClickHouseFmt", &pTmp);
 	pTmp = template_spoofadr;
@@ -1455,6 +1513,7 @@ load(rsconf_t **cnf, uchar *confFile)
 
 	tellModulesCheckConfig();
 	CHKiRet(validateConf(loadConf));
+	CHKiRet(loadMainQueue());
 
 	/* we are done checking the config - now validate if we should actually run or not.
 	 * If not, terminate. -- rgerhards, 2008-07-25

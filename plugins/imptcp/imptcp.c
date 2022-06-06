@@ -10,7 +10,7 @@
  *
  * File begun on 2010-08-10 by RGerhards
  *
- * Copyright 2007-2018 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2022 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -58,6 +58,9 @@
 #include <regex.h>
 #if HAVE_FCNTL_H
 #include <fcntl.h>
+#endif
+#ifdef HAVE_SYS_PRCTL_H
+#  include <sys/prctl.h>
 #endif
 #include "rsyslog.h"
 #include "cfsysline.h"
@@ -346,6 +349,7 @@ struct ptcplstn_s {
 static struct wrkrInfo_s {
 	pthread_t tid;	/* the worker's thread ID */
 	long long unsigned numCalled;	/* how often was this called */
+	int wrkrIdx;	/* index for this worker - shortcut for thread name */
 } *wrkrInfo;
 static int wrkrRunning;
 
@@ -1107,7 +1111,9 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 			if(pThis->iOctetsRemain <= 200000000) {
 				pThis->iOctetsRemain = pThis->iOctetsRemain * 10 + c - '0';
 			}
-			*(pThis->pMsg + pThis->iMsg++) = c;
+			if(pThis->iMsg < iMaxLine) {
+				*(pThis->pMsg + pThis->iMsg++) = c;
+			}
 		} else { /* done with the octet count, so this must be the SP terminator */
 			DBGPRINTF("TCP Message with octet-counter, size %d.\n", pThis->iOctetsRemain);
 			prop.GetString(pThis->peerName, &propPeerName, &lenPeerName);
@@ -1389,7 +1395,7 @@ addEPollSock(epolld_type_t typ, void *ptr, int sock, epolld_t **pEpd)
 	epd->ptr = ptr;
 	epd->sock = sock;
 	*pEpd = epd;
-	epd->ev.events = EPOLLIN|EPOLLET|EPOLLONESHOT;
+	epd->ev.events = EPOLLIN|EPOLLONESHOT;
 	epd->ev.data.ptr = (void*) epd;
 
 	if(epoll_ctl(epollfd, EPOLL_CTL_ADD, sock, &(epd->ev)) != 0) {
@@ -1833,6 +1839,7 @@ startWorkerPool(void)
 	}
 	for(i = 0 ; i < runModConf->wrkrMax ; ++i) {
 		/* init worker info structure! */
+		wrkrInfo[i].wrkrIdx = i;
 		wrkrInfo[i].numCalled = 0;
 		pthread_create(&wrkrInfo[i].tid, &wrkrThrdAttr, wrkr, &(wrkrInfo[i]));
 	}
@@ -1937,11 +1944,12 @@ sessActivity(ptcpsess_t *const pSess, int *const continue_polling)
 	int remsock = 0; /* init just to keep compiler happy... :-( */
 	sbool bEmitOnClose = 0;
 	char rcvBuf[128*1024];
+	int runs = 0;
 	DEFiRet;
 
 	DBGPRINTF("imptcp: new activity on session socket %d\n", pSess->sock);
 
-	while(1) {
+	while(runs++ < 16) {
 		lenBuf = sizeof(rcvBuf);
 		lenRcv = recv(pSess->sock, rcvBuf, lenBuf, 0);
 
@@ -2120,6 +2128,15 @@ wrkr(void *myself)
 	pthread_mutex_lock(&io_q.mut);
 	++wrkrRunning;
 	pthread_mutex_unlock(&io_q.mut);
+
+	uchar thrdName[32];
+	snprintf((char*)thrdName, sizeof(thrdName), "imptcp/w%d", me->wrkrIdx);
+#	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
+	/* set thread name - we ignore if the call fails, has no harsh consequences... */
+	if(prctl(PR_SET_NAME, thrdName, 0, 0, 0) != 0) {
+		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", thrdName);
+	}
+#	endif
 
 	io_req_t *n;
 	while(1) {

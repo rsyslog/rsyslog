@@ -821,14 +821,15 @@ seedIVKSI(ksifile ksi)
 
 static int
 create_signer_thread(rsksictx ctx) {
+	int r;
 	if (ctx->signer_state != SIGNER_STARTED) {
-		if (pthread_mutex_init(&ctx->module_lock, 0))
-			report(ctx, "pthread_mutex_init: %s", strerror(errno));
+		if ((r = pthread_mutex_init(&ctx->module_lock, 0)))
+			report(ctx, "pthread_mutex_init: %s", strerror(r));
 		ctx->signer_queue = ProtectedQueue_new(10);
 
 		ctx->signer_state = SIGNER_INIT;
-		if (pthread_create(&ctx->signer_thread, NULL, signer_thread, ctx)) {
-			report(ctx, "pthread_mutex_init: %s", strerror(errno));
+		if ((r = pthread_create(&ctx->signer_thread, NULL, signer_thread, ctx))) {
+			report(ctx, "pthread_create: %s", strerror(r));
 			ctx->signer_state = SIGNER_IDLE;
 			return RSGTE_INTERNAL;
 		}

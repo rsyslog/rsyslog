@@ -724,6 +724,10 @@ static void doOptions(unsigned char **pp, struct templateEntry *pTpe)
 			pTpe->data.field.eDateFormat = tplFmtOrdinal;
 		} else if (!strcmp((char*)Buf, "date-week")) {
 			pTpe->data.field.eDateFormat = tplFmtWeek;
+		} else if (!strcmp((char*)Buf, "date-iso-week")) {
+			pTpe->data.field.eDateFormat = tplFmtISOWeek;
+		} else if (!strcmp((char*)Buf, "date-iso-week-year")) {
+			pTpe->data.field.eDateFormat = tplFmtISOWeekYear;
 		} else if(!strcmp((char*)Buf, "date-utc")) {
 			pTpe->data.field.options.bDateInUTC = 1;
 		} else if(!strcmp((char*)Buf, "lowercase")) {

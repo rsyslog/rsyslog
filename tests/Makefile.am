@@ -104,6 +104,7 @@ TESTS +=  \
 	es-basic-errfile-popul.sh \
 	es-bulk-errfile-empty.sh \
 	es-bulk-errfile-popul.sh \
+	es-searchType-empty.sh \
 	diskqueue-multithread-es.sh \
 	es-writeoperation.sh
 
@@ -114,7 +115,8 @@ es-basic-errfile-empty.log: es-maxbytes-bulk.log
 es-basic-errfile-popul.log: es-basic-errfile-empty.log
 es-bulk-errfile-empty.log: es-basic-errfile-popul.log
 es-bulk-errfile-popul.log: es-bulk-errfile-empty.log
-diskqueue-multithread-es.log: es-bulk-errfile-popul.log
+es-searchType-empty.log: es-bulk-errfile-popul.log
+diskqueue-multithread-es.log: es-searchType-empty.log
 es-writeoperation.log: diskqueue-multithread-es.log
 elasticsearch-stop.log: es-writeoperation.log
 
@@ -169,6 +171,7 @@ TESTS +=  \
 	empty-hostname.sh \
 	timestamp-3164.sh \
 	timestamp-3339.sh \
+	timestamp-isoweek.sh \
 	timestamp-mysql.sh \
 	timestamp-pgsql.sh \
 	timestamp-subseconds.sh \
@@ -428,9 +431,17 @@ TESTS +=  \
 	rscript_lt_var.sh \
 	rscript_ne.sh \
 	rscript_ne_var.sh \
-	rscript_number_comparison_all.sh \
 	rscript_number_comparison_LE.sh \
 	rscript_number_comparison_LT.sh \
+	rscript_compare_str-numstr.sh \
+	rscript_compare_str-num.sh \
+	rscript_compare_numstr-str.sh \
+	rscript_compare_num-str.sh \
+	rscript_compare_numstr-numstr.sh \
+	rscript_compare_numstr-num.sh \
+	rscript_compare_num-numstr.sh \
+	rscript_compare_num-num.sh \
+	rscript_compare_str-str.sh \
 	rscript_num2ipv4.sh \
 	rscript_int2Hex.sh \
 	rscript_trim.sh \
@@ -504,6 +515,7 @@ TESTS +=  \
 	omfile_hup-vg.sh \
 	gzipwr_hup-vg.sh \
 	tcpflood_wrong_option_output.sh \
+	imtcp-octet-framing-too-long-vg.sh \
 	smtradfile-vg.sh \
 	dnscache-TTL-0-vg.sh \
 	include-obj-outside-control-flow-vg.sh \
@@ -531,8 +543,16 @@ TESTS +=  \
 	udp-msgreduc-orgmsg-vg.sh \
 	tcp-msgreduc-vg.sh \
 	rscript_field-vg.sh \
-	rscript_number_comparison_all-vg.sh \
 	rscript_number_comparison_LE-vg.sh \
+	rscript_compare_str-str-vg.sh \
+	rscript_compare_str-num-vg.sh \
+	rscript_compare_str-numstr-vg.sh \
+	rscript_compare_num-str-vg.sh \
+	rscript_compare_numstr-str-vg.sh \
+	rscript_compare_numstr-num-vg.sh \
+	rscript_compare_numstr-numstr-vg.sh \
+	rscript_compare_num-num-vg.sh \
+	rscript_compare_num-numstr-vg.sh \
 	unused_lookup_table-vg.sh \
 	lookup_table-vg.sh \
 	lookup_table_no_hup_reload-vg.sh \
@@ -1081,6 +1101,7 @@ TESTS +=  \
 	omfile-outchannel-many.sh
 if HAVE_VALGRIND
 TESTS +=  \
+	imptcp-octet-framing-too-long-vg.sh \
 	imptcp_conndrop-vg.sh
 if ENABLE_FMHASH
 TESTS +=  \
@@ -1804,6 +1825,7 @@ EXTRA_DIST= \
 	proprepltest-rfctag.sh \
 	timestamp-3164.sh \
 	timestamp-3339.sh \
+	timestamp-isoweek.sh \
 	timestamp-mysql.sh \
 	timestamp-pgsql.sh \
 	timestamp-subseconds.sh \
@@ -1844,11 +1866,28 @@ EXTRA_DIST= \
 	rscript_gt_var.sh \
 	rscript_ne.sh \
 	rscript_ne_var.sh \
-	rscript_number_comparison_all.sh \
-	rscript_number_comparison_all-vg.sh \
 	rscript_number_comparison_LE.sh \
 	rscript_number_comparison_LE-vg.sh \
 	rscript_number_comparison_LT.sh \
+	rscript_compare_str-numstr.sh \
+	rscript_compare_str-num.sh \
+	rscript_compare_numstr-str.sh \
+	rscript_compare_num-str.sh \
+	rscript_compare_numstr-numstr.sh \
+	rscript_compare_numstr-num.sh \
+	rscript_compare_num-numstr.sh \
+	rscript_compare_num-num.sh \
+	rscript_compare_str-str.sh \
+	rscript_compare_str-str-vg.sh \
+	rscript_compare_str-num-vg.sh \
+	rscript_compare_str-numstr-vg.sh \
+	rscript_compare_num-str-vg.sh \
+	rscript_compare_numstr-str-vg.sh \
+	rscript_compare_numstr-num-vg.sh \
+	rscript_compare_numstr-numstr-vg.sh \
+	rscript_compare_num-num-vg.sh \
+	rscript_compare_num-numstr-vg.sh \
+	rscript_compare-common.sh \
 	rscript_num2ipv4.sh \
 	rscript_int2Hex.sh \
 	rscript_trim.sh \
@@ -2086,6 +2125,7 @@ EXTRA_DIST= \
 	mmjsonparse_simple.sh \
 	mmjsonparse-invalid-containerName.sh \
 	wtpShutdownAll-assertionFailure.sh \
+	imptcp-octet-framing-too-long-vg.sh \
 	imptcp-oversize-message-display.sh \
 	imptcp-msg-truncation-on-number.sh \
 	imptcp-msg-truncation-on-number2.sh \
@@ -2145,6 +2185,7 @@ EXTRA_DIST= \
 	es-bulk-errfile-popul-erronly.sh \
 	es-bulk-errfile-popul-erronly-interleaved.sh \
 	es-bulk-errfile-popul-def-interleaved.sh \
+	es-searchType-empty.sh \
 	diskqueue-multithread-es.sh \
 	es-basic-vg.sh \
 	es-basic-bulk-vg.sh \
@@ -2164,6 +2205,7 @@ EXTRA_DIST= \
 	allowed-sender-tcp-fail.sh \
 	allowed-sender-tcp-hostname-ok.sh \
 	allowed-sender-tcp-hostname-fail.sh \
+	imtcp-octet-framing-too-long-vg.sh \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
 	imtcp-basic-hup.sh \
@@ -2335,6 +2377,7 @@ EXTRA_DIST= \
 	sndrcv_gzip.sh \
 	action-tx-single-processing.sh \
 	omfwd-errfile-maxsize.sh \
+	omfwd-errfile-maxsize-filled.sh \
 	action-tx-errfile-maxsize.sh \
 	action-tx-errfile.sh \
 	testsuites/action-tx-errfile.result \

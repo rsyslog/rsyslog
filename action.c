@@ -393,7 +393,7 @@ rsRetVal actionConstruct(action_t **ppThis)
 	pThis->pszName = NULL;
 	pThis->pszErrFile = NULL;
 	pThis->maxErrFileSize = 0;
-	pThis->errFileWritten = 0;
+	pThis->currentErrFileSize = 0;
 	pThis->pszExternalStateFile = NULL;
 	pThis->fdErrFile = -1;
 	pThis->bWriteAllMarkMsgs = 1;
@@ -563,6 +563,7 @@ actionConstructFinalize(action_t *__restrict__ const pThis, struct nvlst *lst)
 		qqueueSetDefaultsActionQueue(pThis->pQueue);
 		qqueueApplyCnfParam(pThis->pQueue, lst);
 	}
+	qqueueCorrectParams(pThis->pQueue);
 
 #	undef setQPROP
 #	undef setQPROPstr
@@ -762,11 +763,13 @@ static void ATTR_NONNULL() actionRetry(action_t * const pThis, wti_t * const pWt
 {
 	setSuspendMessageConfVars(pThis);
 	actionSetState(pThis, pWti, ACT_STATE_RTRY);
-	LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
-	      "action '%s' suspended (module '%s'), retry %d. There should "
-	      "be messages before this one giving the reason for suspension.",
-	      pThis->pszName, pThis->pMod->pszName,
-	      getActionNbrResRtry(pWti, pThis));
+	if(pThis->bReportSuspension) {
+		LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
+		      "action '%s' suspended (module '%s'), retry %d. There should "
+		      "be messages before this one giving the reason for suspension.",
+		      pThis->pszName, pThis->pMod->pszName,
+		      getActionNbrResRtry(pWti, pThis));
+	}
 	incActionResumeInRow(pWti, pThis);
 }
 
@@ -1430,6 +1433,14 @@ actionWriteErrorFile(action_t *__restrict__ const pThis, const rsRetVal ret,
 				pThis->pszName, pThis->pszErrFile);
 			goto done;
 		}
+		if (pThis->maxErrFileSize > 0) {
+			struct stat statbuf;
+			if (fstat(pThis->fdErrFile, &statbuf) == -1) {
+				LogError(errno, RS_RET_ERR, "failed to fstat %s", pThis->pszErrFile);
+				goto done;
+			}
+			pThis->currentErrFileSize = statbuf.st_size;
+		}
 	}
 
 	for(int i = 0 ; i < nparams ; ++i) {
@@ -1452,11 +1463,11 @@ actionWriteErrorFile(action_t *__restrict__ const pThis, const rsRetVal ret,
 		size_t toWrite = strlen(rendered) + 1;
 		// Check if need to truncate the amount of bytes to write
 		if (pThis->maxErrFileSize > 0) {
-			if (pThis->errFileWritten + toWrite > pThis->maxErrFileSize) {
+			if (pThis->currentErrFileSize + toWrite > pThis->maxErrFileSize) {
 				// Truncate to the pending available
-				toWrite = pThis->maxErrFileSize - pThis->errFileWritten;
+				toWrite = pThis->maxErrFileSize - pThis->currentErrFileSize;
 			}
-			pThis->errFileWritten += toWrite;
+			pThis->currentErrFileSize += toWrite;
 		}
 		if(toWrite > 0) {
 			/* note: we use the '\0' inside the string to store a LF - we do not
@@ -1961,7 +1972,7 @@ DEFFUNC_llExecFunc(doActivateActions)
 {
 	rsRetVal localRet;
 	action_t * const pThis = (action_t*) pData;
-	localRet = qqueueStart(pThis->pQueue);
+	localRet = qqueueStart(runConf, pThis->pQueue);
 	if(localRet != RS_RET_OK) {
 		LogError(0, localRet, "error starting up action queue");
 		if(localRet == RS_RET_FILE_PREFIX_MISSING) {

@@ -184,7 +184,7 @@ DEFFUNC_llExecFunc(doActivateRulesetQueues)
 	dbgprintf("Activating Ruleset Queue[%p] for Ruleset %s\n",
 		  pThis->pQueue, pThis->pszName);
 	if(pThis->pQueue != NULL)
-		startMainQueue(pThis->pQueue);
+		startMainQueue(runConf, pThis->pQueue);
 	RETiRet;
 }
 /* activate all ruleset queues */
@@ -385,7 +385,7 @@ finalize_it:
 	 * we put an assertion in its place.
 	 */
 	assert(key == NULL);
-	
+
 	RETiRet;
 }
 
@@ -397,7 +397,7 @@ execForeach(struct cnfstmt *const stmt, smsg_t *const pMsg, wti_t *const pWti)
 
 	/* arr can either be an array or an associative-array (obj) */
 	arr = cnfexprEvalCollection(stmt->d.s_foreach.iter->collection, pMsg, pWti);
-	
+
 	if (arr == NULL) {
 		DBGPRINTF("foreach loop skipped, as object to iterate upon is empty\n");
 		FINALIZE;
@@ -558,12 +558,12 @@ execReloadLookupTable(struct cnfstmt *stmt)
 	if (t == NULL) {
 		ABORT_FINALIZE(RS_RET_NONE);
 	}
-	
+
 	iRet = lookupReload(t, stmt->d.s_reload_lookup_table.stub_value);
 	/* Note that reload dispatched above is performed asynchronously,
 	   on a different thread. So rsRetVal it returns means it was triggered
 	   successfully, and not that it was reloaded successfully. */
-	
+
 finalize_it:
 	RETiRet;
 }
@@ -737,7 +737,7 @@ static qqueue_t*
 GetRulesetQueue(ruleset_t *pThis)
 {
 	ISOBJ_TYPE_assert(pThis, ruleset);
-	return (pThis->pQueue == NULL) ? pMsgQueue : pThis->pQueue;
+	return (pThis->pQueue == NULL) ? runConf->pMsgQueue : pThis->pQueue;
 }
 
 
@@ -1027,7 +1027,7 @@ doRulesetAddParser(ruleset_t *pRuleset, uchar *pName)
 	DEFiRet;
 
 	CHKiRet(objUse(parser, CORE_COMPONENT));
-	iRet = parser.FindParser(&pParser, pName);
+	iRet = parser.FindParser(loadConf->parsers.pParsLstRoot, &pParser, pName);
 	if(iRet == RS_RET_PARSER_NOT_FOUND) {
 		LogError(0, RS_RET_PARSER_NOT_FOUND, "error: parser '%s' unknown at this time "
 			  	"(maybe defined too late in rsyslog.conf?)", pName);
@@ -1078,7 +1078,7 @@ rulesetProcessCnf(struct cnfobj *o)
 	cnfparamsPrint(&rspblk, pvals);
 	nameIdx = cnfparamGetIdx(&rspblk, "name");
 	rsName = (uchar*)es_str2cstr(pvals[nameIdx].val.d.estr, NULL);
-	
+
 	localRet = rulesetGetRuleset(loadConf, &pRuleset, rsName);
 	if(localRet == RS_RET_OK) {
 		LogError(0, RS_RET_RULESET_EXISTS,

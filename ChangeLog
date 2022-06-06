@@ -1,5 +1,163 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2204.0 (aka 2022.04) 2021-04-??
+Scheduled Release 8.2206.0 (aka 2022.06) 2022-06-??
+- 2022-05-25: omelastisearch: allow omitting _type field
+  Allow omitting the _type field by setting it to an empty string.
+  Setting this field has been deprecated since 6.0, and support will
+  be removed in 8.0
+  Also add testbench test for empty searchType with ES 7.0
+  This checks for messages in the deprecation log and also provides
+  avoids deprecation messages from usage of transport.tcp.port in the
+  test configuration
+  Thanks to Jarkko Oranen for the patch.
+- 2022-05-18: tcpsrv/imtcp: slight performance improvements
+  This change slightly improves performance for tcpsrv-based servers.
+  This affects imtcp and imgssapi as well as some helpers.
+  No other functional change is included in this change.
+- 2022-05-12: imptcp bugfix: worker thread starvation on extreme traffic
+  When connectes were totally busy, without any pause, the assigened worker
+  did never terminate its reading loop. As such, it could not service any
+  other conenctions. If this happened multiple time and to all configured
+  workers, all other connections could not be processed at all. This extreme
+  scenario is very unlikely, as the whole issue is relatively unlikely.
+  In practice, the issue could lead to somewhat degraded performance and
+  resolved itself after some time (in practice no connection is 100% busy
+  for an extended period of time).
+  Note that this patch sets a fixed limit of 16 iterations for very busy
+  connections. This sounds like a good compromise between non-starvation
+  and performance. The exact number may be made configurable if there
+  is really need to.
+- 2022-05-11: omelasticsearch: several support option for ElasticSearch 8
+  - config params searchIndex and documentType can be empty
+  - support for Data Stream API
+  Thanks to github user EHerzog76 for these changes.
+  - new config param esVersion.major
+- 2022-05-09: tcp receiver bugfix: delay/potential hang on some error conditions
+  Error were not correctly handled in some cases for imtcp and imgssapi. This could
+  lead to a temporary stall of some connections. For ultry-low traffic systems, this
+  stall could stay for a long period of time. In most cases, it was resolved very quickly.
+  Note that imptcp was not affected.
+  Thanks to Iwan Timmer for the fix.
+- 2022-05-05: net bugfix: potential buffer overrun
+  there is heap buffer overflow vulnerability in rsyslog tcp reception components.
+  This can only happen in octet-counted mode, which is enabled by default.
+  Affected components: imtcp, imptcp, imhttp, imgssapi, imdiag when octet-counted
+  framing was enabled.
+  If the receiver ports are exposed to the public Internet AND are used
+  without authentication, this can lead to remote DoS and potentially to
+  remote code execution. It is unclear if remote code execution is
+  actually possible. If so, it needs a very sophisticated attack.
+  When syslog best practices with proper firewalling and authentication
+  is used, thean attack can only be carried out from within the Intranet
+  and authorized systems. This limits the severity of the vulnerability
+  considerably (it would obviously require an attacker already to be
+  present inside the internal network).
+  Credits to Peter Agten for initially reporting the issue and working
+  with us on the resolution.
+  fixes CVE-2022-24903
+  Advisory:
+    https://github.com/rsyslog/rsyslog/security/advisories/GHSA-ggw7-xr6h-mmr8#advisory-comment-72243
+- 2022-05-05: imptcp: set OS worker thread name
+  We now set the worker thread names to "imptcp/<thrd nbr>" where
+  <thrd nbr> is the numerical index (0, 1, ...) of the worker thread.
+  This enables to distinguish individual worker threads in OS tools like
+  htop. That is useful for performance testing and system monitoring.
+  The choosen name format is consistant with other similar thread
+  names inside rsyslog. For imptcp, worker threads were not yet
+  given individual names.
+  Note: "in:imptcp" is imptcp's "main" thread, which also is used
+  as a worker in some scenarios. This name was not modified.
+- 2022-04-26: mmanon bugfix: shortened IPv6 form not always anonymized
+  If the IPv6 is in non-recommended form followed by a 5 digit port number, it
+  is not anonymized.
+  A reproducer for this is: 1a00:c820:1180:c84c::ad3f:d991:ec2e:49255
+  closes https://github.com/rsyslog/rsyslog/issues/4856
+- 2022-04-22: mmdblookup fix: wrong copy of buffer
+  ...following parse of libmaxminddb's return after a successful search sometimes
+  failed to return specific field from data.
+  Thanks to Théo Bertin for the patch.
+- 2022-04-22: mmdblookup: several enhancements
+  - support arrays in MMDB entry
+  - support escaped quotes '"' in MMDB entry
+  - support '<' characters in MMDB entry, when in a field
+  - support '}' characters in MMDB entry, when in a field
+  Thanks to Théo Bertin for the patch.
+----------------------------------------------------------------------------------------
+Scheduled Release 8.2204.1 (aka 2022.04) 2021-05-05
+- security bugfix: potential buffer overrun in imptcp, imtcp, imgssapi and others
+  This addresses CVE-2022-24903
+  see also https://github.com/rsyslog/rsyslog/security/advisories/GHSA-ggw7-xr6h-mmr8
+----------------------------------------------------------------------------------------
+Scheduled Release 8.2204.0 (aka 2022.04) 2021-04-19
+- 2022-04-18: gnutls bugfix: possibility of infinite loop
+  There was a rare possibility that the E_AGAIN/E_INTERRUPT handling
+  could cause an infinite loop (100% CPU Usage), for example when a TLS
+  handshake is interrupted at a certain stage.
+  * After gnutls_record_recv is called, and E_AGAIN/E_INTERRUPT error
+    occurs, we need to do additional read/write direction handling
+    with gnutls_record_get_direction.
+  * After the second call of gnutls_record_recv (Expand buffer)
+    we needed to also check the eror codes for E_AGAIN/E_INTERRUPT
+    to do propper errorhandling.
+  * Add extra debug output based on ossl driver.
+  * Potential fix for 100% CPU Loop Receiveloop after gtlsRecordRecv
+    in doRetry call.
+  closes https://github.com/rsyslog/rsyslog/issues/4834
+  closes https://github.com/rsyslog/rsyslog/issues/4818
+  closes https://github.com/rsyslog/rsyslog/issues/4638
+- 2022-04-17: core/bugfix: errorfile could grow over max configures size
+   When action.errorfile.maxsize configuration option is enabled and error file
+   already has a certain size smaller than max size configured, it is increasing
+   higher than configured max size as the error file is considered to be zero in code.
+   This fix reads current error file size and limits the size to the maximum
+   size configured.
+   Thanks to Sergio Arroutbi for the patch.
+   fixes https://github.com/rsyslog/rsyslog/issues/4821
+- 2022-04-17: omkafka bugfix: potential misadressing
+  The `failedmsg_entry` expects a null-terminated string in `key`, but
+  here we allocate with malloc and copy a string-with-length-n into only
+  the first n bytes. If the final byte is null, this is by coincidence
+  only.
+  This was observed by means of seeing random binary data appended to
+  keys submitted to kafka apparently at random. This could also result
+  in more severe problems, inclusing a segfault.
+  Thanks to David Buckley for the patch.
+- 2022-04-06: added new "FullJSONFmt" standard template (with addtl fields)
+  This comes handy for a number of use cases, especially with ElasticSearch.
+  Thanks to Art O Cathain for the patch.
+- 2022-04-04: imfile: potential processing delay
+  This was mentioned by Mikko Kortelainen without exact details on what exactly
+  this could cause in practice. But we were confident enough that it is worth
+  merging (though it does not look like something that brought real problems in
+  practice, as we do not know any related reports).
+  see also: https://github.com/rsyslog/rsyslog/pull/4445
+  Thanks to Mikko Kortelainen for the patch.
+- 2022-04-04: bugfix: cosmetic data races
+  there was a more or less cosmetic data race which could happen when children
+  processes died in quick sequence. Even then, no real harm happened, as all
+  children were reaped eventually.
+  A similar data race exists for HUP processing.
+  However, these races polluted TSAN test runs, and so we fixed them
+- 2022-04-01: add property options to support ISO week/year number
+  Thanks to Mattia Barbon for the patch.
+- 2022-04-01: core bugfix: "action suspended" message was emitted even when turned off
+  Most messages were diasabled, but there was one part of the code that ignored the
+  user configuration.
+  Thanks to Deyneko Aleksey for the patch.
+- 2022-03-31: testbench: add more tests for rscript comparison operations
+- 2022-03-31: core bugfix: make internal logs emitted during HUP procesing appear quicker
+  After call doHUP(), probably there is a internal log in the list. However, it
+  will not be wrote out immediately, because the mainloop will be blocked at
+  pselect in wait_timeout() until a long timeout or next message occur.
+  More deadly, the log may be lost if the deamon exits unexpectedly.
+  We might as well put processImInternal() after doHUP(), so that the message
+  will be flushed out immediately.
+  Fixes: 723f6fdfa6(rsyslogd: Fix race between signals and main loop timeout)
+  Thanks to Yun Zhou for the patch.
+- 2022-03-20: refactor: Move the parser directive to the main config
+  Thanks to Attila Lakatos for the patch.
+- 2022-03-16: refactor: ake the main message queue part of the config
+  The intent of this patch is to make the main message queue part of the main config.
+  It will help us to proceed towards dynamic configuration reload.
 - regression bugfix: rsyslog may segfault during startup
   glblGetMaxLine() might be called even before the main configuration file exists
   resulting unexpected behavior, most probably segmentation fault. This is addressed
@@ -13,7 +171,7 @@ Scheduled Release 8.2204.0 (aka 2022.04) 2021-04-??
   that most items in rsyslog are strings, so this can actually cause
   some problems.
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2202.0 (aka 2022.02) 2021-02-15
+Scheduled Release 8.2202.0 (aka 2022.02) 2022-02-15
 - 2022-02-14: imfile bugfix: remove cause for "internal error message" (not causing harm)
   When any message is output into a renamed input file, rsyslogd output the following:
   message.

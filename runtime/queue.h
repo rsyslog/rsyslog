@@ -188,6 +188,7 @@ struct queue_s {
 	STATSCOUNTER_DEF(ctrNFDscrd, mutCtrNFDscrd)
 	int ctrMaxqsize; /* NOT guarded by a mutex */
 	int iSmpInterval; /* line interval of sampling logs */
+	int isRunning;
 };
 
 
@@ -201,7 +202,7 @@ struct queue_s {
 /* prototypes */
 rsRetVal qqueueDestruct(qqueue_t **ppThis);
 rsRetVal qqueueEnqMsg(qqueue_t *pThis, flowControl_t flwCtlType, smsg_t *pMsg);
-rsRetVal qqueueStart(qqueue_t *pThis);
+rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis);
 rsRetVal qqueueSetMaxFileSize(qqueue_t *pThis, size_t iMaxFileSize);
 rsRetVal qqueueSetFilePrefix(qqueue_t *pThis, uchar *pszPrefix, size_t iLenPrefix);
 rsRetVal qqueueConstruct(qqueue_t **ppThis, queueType_t qType, int iWorkerThreads,
@@ -213,6 +214,8 @@ void qqueueSetDefaultsActionQueue(qqueue_t *pThis);
 void qqueueDbgPrint(qqueue_t *pThis);
 rsRetVal qqueueShutdownWorkers(qqueue_t *pThis);
 void qqueueDoneLoadCnf(void);
+int queuesEqual(qqueue_t *pOld, qqueue_t *pNew);
+void qqueueCorrectParams(qqueue_t *pThis);
 
 PROTOTYPEObjClassInit(qqueue);
 PROTOTYPEpropSetMeth(qqueue, iPersistUpdCnt, int);

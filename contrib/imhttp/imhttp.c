@@ -487,7 +487,9 @@ processOctetMsgLen(const instanceConf_t *const inst, struct conn_wrkr_s *connWrk
 				connWrkr->parseState.iOctetsRemain = connWrkr->parseState.iOctetsRemain * 10 + ch - '0';
 			}
 			// temporarily save this character into the message buffer
-			connWrkr->pMsg[connWrkr->iMsg++] = ch;
+			if(connWrkr->iMsg + 1 < s_iMaxLine) {
+				connWrkr->pMsg[connWrkr->iMsg++] = ch;
+			}
 		} else {
 			const char *remoteAddr = "";
 			if (connWrkr->propRemoteAddr) {
