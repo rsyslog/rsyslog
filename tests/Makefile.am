@@ -2818,6 +2818,7 @@ EXTRA_DIST= \
 	sndrcv_tls_ossl_serveranon_gtls_clientanon.sh \
 	sndrcv_tls_gtls_servercert_ossl_clientanon.sh \
 	sndrcv_tls_gtls_serveranon_ossl_clientanon.sh \
+	sndrcv_ossl_cert_chain.sh \
 	omtcl.sh \
 	omtcl.tcl \
 	pmsnare-default.sh \

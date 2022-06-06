@@ -1244,7 +1244,9 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 	int bHaveCA;
 	int bHaveCert;
 	int bHaveKey;
+	int bHaveExtraCAFiles;
 	const char *caFile, *certFile, *keyFile;
+	char *extraCaFiles, *extraCaFile;
 	/* Setup certificates */
 	caFile = (char*) ((pThis->pszCAFile == NULL) ? glbl.GetDfltNetstrmDrvrCAF(runConf) : pThis->pszCAFile);
 	if(caFile == NULL) {
@@ -1271,9 +1273,28 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 	} else {
 		bHaveKey = 1;
 	}
+	extraCaFiles = (char*) ((pThis->pszExtraCAFiles == NULL) ? glbl.GetNetstrmDrvrCAExtraFiles(runConf) :
+				pThis->pszExtraCAFiles);
+	if(extraCaFiles == NULL) {
+		bHaveExtraCAFiles = 0;
+	} else {
+	        bHaveExtraCAFiles = 1;
+	}
 
 	/* Create main CTX Object */
 	pThis->ctx = SSL_CTX_new(SSLv23_method());
+	if(bHaveExtraCAFiles == 1) {
+		while((extraCaFile = strsep(&extraCaFiles, ","))) {
+			if(SSL_CTX_load_verify_locations(pThis->ctx, extraCaFile, NULL) != 1) {
+				LogError(0, RS_RET_TLS_CERT_ERR, "Error: Extra Certificate file could not be accessed. "
+					"Check at least: 1) file path is correct, 2) file exist, "
+					"3) permissions are correct, 4) file content is correct. "
+					"Open ssl error info may follow in next messages");
+				osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit");
+				ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
+			}
+		}
+	}
 	if(bHaveCA == 1 && SSL_CTX_load_verify_locations(pThis->ctx, caFile, NULL) != 1) {
 		LogError(0, RS_RET_TLS_CERT_ERR, "Error: CA certificate could not be accessed. "
 				"Check at least: 1) file path is correct, 2) file exist, "
