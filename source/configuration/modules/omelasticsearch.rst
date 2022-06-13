@@ -166,7 +166,11 @@ searchType
 
 `Elasticsearch
 type <http://www.elasticsearch.org/guide/appendix/glossary.html#type>`_
-to send your index to. Defaults to "events"
+to send your index to. Defaults to "events".
+Setting this parameter to an empty string will cause the type to be omitted,
+which is required since Elasticsearch 7.0. See
+`Elasticsearch documentation <https://www.elastic.co/guide/en/elasticsearch/reference/current/removal-of-types.html>`_
+for more information.
 
 
 .. _dynSearchType:
