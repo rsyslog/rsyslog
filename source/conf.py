@@ -93,7 +93,7 @@ rst_epilog = """
 # user builds the docs from "bare" sources not yet processed
 ###############################################################################
 version = '8.2206'
-release = version + '.0'
+release = '8.2206.0'
 
 
 # For this to be true, it means that we are not attempting to build from
