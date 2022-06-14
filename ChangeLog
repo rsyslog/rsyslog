@@ -1,4 +1,6 @@
 ----------------------------------------------------------------------------------------
+Scheduled Release 8.2208.0 (aka 2022.08) 2022-08-??
+----------------------------------------------------------------------------------------
 Scheduled Release 8.2206.0 (aka 2022.06) 2022-06-14
 - 2022-05-25: omelastisearch: allow omitting _type field
   Allow omitting the _type field by setting it to an empty string.
