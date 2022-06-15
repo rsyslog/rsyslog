@@ -1915,6 +1915,7 @@ applyGnutlsPriorityString(nsd_ossl_t *const pThis)
 					pszCmd = strndup(pCurrentPos, pNextPos-pCurrentPos);
 					pCurrentPos = pNextPos+1;
 					pNextPos = index(pCurrentPos, '\n');
+					pNextPos = (pNextPos == NULL ? index(pCurrentPos, ';') : pNextPos);
 					pszValue = (pNextPos == NULL ?
 							strdup(pCurrentPos) :
 							strndup(pCurrentPos, pNextPos - pCurrentPos));
