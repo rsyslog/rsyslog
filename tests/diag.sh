@@ -303,7 +303,7 @@ wait_startup_pid() {
 		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
 		   printf '%s ABORT! Timeout waiting on startup (pid file %s)\n' "$(tb_timestamp)" "$1"
 		   ls -l "$1"
-		   ps -fp $(cat "$1")
+		   ps -fp $($SUDO cat "$1")
 		   error_exit 1
 		fi
 	done
@@ -1397,6 +1397,9 @@ seq_check() {
 	fi
 	if [ "${SEQ_CHECK_FILE##*.}" == "gz" ]; then
 		gunzip -c "${SEQ_CHECK_FILE}" | $RS_SORTCMD $RS_SORT_NUMERIC_OPT | ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7 $SEQ_CHECK_OPTIONS
+	elif [ "${SEQ_CHECK_FILE##*.}" == "zst" ]; then
+		ls -l "${SEQ_CHECK_FILE}"
+		unzstd < "${SEQ_CHECK_FILE}" | $RS_SORTCMD $RS_SORT_NUMERIC_OPT | ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7 $SEQ_CHECK_OPTIONS
 	else
 		$RS_SORTCMD $RS_SORT_NUMERIC_OPT < "${SEQ_CHECK_FILE}" | ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7 $SEQ_CHECK_OPTIONS
 	fi
@@ -1407,6 +1410,10 @@ seq_check() {
 	if [ $ret -ne 0 ]; then
 		if [ "${SEQ_CHECK_FILE##*.}" == "gz" ]; then
 			gunzip -c "${SEQ_CHECK_FILE}" | $RS_SORTCMD $RS_SORT_NUMERIC_OPT \
+				| ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7 $SEQ_CHECK_OPTIONS \
+				> $RSYSLOG_DYNNAME.error.log
+		elif [ "${SEQ_CHECK_FILE##*.}" == "zst" ]; then
+			unzstd < "${SEQ_CHECK_FILE}" | $RS_SORTCMD $RS_SORT_NUMERIC_OPT \
 				| ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7 $SEQ_CHECK_OPTIONS \
 				> $RSYSLOG_DYNNAME.error.log
 		else

@@ -1,8 +1,8 @@
-/* The zlibw object. It encapsulates the zlib functionality. The primary
+/* The zstdw object. It encapsulates the zstd functionality. The primary
  * purpose of this wrapper class is to enable rsyslogd core to be build without
- * zlib libraries.
+ * zstd libraries.
  *
- * Copyright 2009-2022 Adiscon GmbH.
+ * Copyright 2022 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -20,32 +20,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef INCLUDED_ZLIBW_H
-#define INCLUDED_ZLIBW_H
-
-#include <zlib.h>
-
-#include "errmsg.h"
+#ifndef INCLUDED_ZSTDW_H
+#define INCLUDED_ZSTDW_H
 
 /* interfaces */
-BEGINinterface(zlibw) /* name must also be changed in ENDinterface macro! */
-	int (*DeflateInit)(z_streamp strm, int);
-	int (*DeflateInit2)(z_streamp strm, int level, int method, int windowBits, int memLevel, int strategy);
-	int (*Deflate)(z_streamp strm, int);
-	int (*DeflateEnd)(z_streamp strm);
+BEGINinterface(zstdw) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*doStrmWrite)(strm_t *pThis, uchar *const pBuf, const size_t lenBuf, const int bFlush,
 		rsRetVal (*strmPhysWrite)(strm_t *pThis, uchar *pBuf, size_t lenBuf) );
 	rsRetVal (*doCompressFinish)(strm_t *pThis,
 		rsRetVal (*Destruct)(strm_t *pThis, uchar *pBuf, size_t lenBuf) );
 	rsRetVal (*Destruct)(strm_t *pThis);
-ENDinterface(zlibw)
-#define zlibwCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
+ENDinterface(zstdw)
+#define zstdwCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */
-PROTOTYPEObj(zlibw);
+PROTOTYPEObj(zstdw);
 
 /* the name of our library binary */
-#define LM_ZLIBW_FILENAME "lmzlibw"
+#define LM_ZSTDW_FILENAME "lmzstdw"
 
-#endif /* #ifndef INCLUDED_ZLIBW_H */
+#endif /* #ifndef INCLUDED_ZSTDW_H */

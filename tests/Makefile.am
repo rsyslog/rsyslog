@@ -503,6 +503,15 @@ TESTS +=  \
 	parsertest-snare_ccoff_udp.sh \
 	parsertest-snare_ccoff_udp2.sh
 
+if ENABLE_LIBZSTD
+TESTS +=  \
+	zstd.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	zstd-vg.sh
+endif # if HAVE_VALGRIND
+endif
+
 if ENABLE_LIBGCRYPT
 TESTS +=  \
 	queue-encryption-disk.sh \
@@ -1979,6 +1988,8 @@ EXTRA_DIST= \
 	omfwd-keepalive.sh \
 	omfwd_fast_imuxsock.sh \
 	omfile_hup-vg.sh \
+	zstd.sh \
+	zstd-vg.sh \
 	gzipwr_hup-vg.sh \
 	omusrmsg-noabort-legacy.sh \
 	omusrmsg-errmsg-no-params.sh \

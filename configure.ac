@@ -1182,6 +1182,42 @@ AM_CONDITIONAL(ENABLE_LIBGCRYPT, test x$enable_libgcrypt = xyes)
 AC_SUBST(LIBGCRYPT_CFLAGS)
 AC_SUBST(LIBGCRYPT_LIBS)
 
+# libzstd support
+AC_ARG_ENABLE(libzstd,
+        [AS_HELP_STRING([--enable-libzstd],[Enable log file compression support via libzstd @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_libzstd="yes" ;;
+          no) enable_libzstd="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-libzstd) ;;
+         esac],
+        [enable_libzstd=no]
+)
+if test "x$enable_libzstd" = "xyes"; then
+    save_LIBS="$LIBS"
+    PKG_CHECK_MODULES([ZSTD], zstd >= 1.4.0, [],
+        [
+	LIBS="$LIBS -lzstd"
+	ZSTD_LIBS="-lzstd"
+	AC_SUBST(ZSTD_LIBS)
+	AC_SEARCH_LIBS(ZSTD_compressStream2, zstd,
+            [AC_COMPILE_IFELSE(
+                [AC_LANG_PROGRAM(
+                    [[ #include <zstd.h> ]],
+                    [[
+		       ZSTD_CCtx* cctx = ZSTD_createCCtx();
+		       ZSTD_CCtx_setParameter(cctx, ZSTD_c_nbWorkers, 5);
+                    ]]
+                )],
+                [],
+                [AC_MSG_ERROR([libzstd version must be >= 1.4.0])]
+            )],
+            [AC_MSG_ERROR([libzstd not found])]
+        )]
+    )
+    LIBS="$save_LIBS"
+fi
+AM_CONDITIONAL(ENABLE_LIBZSTD, test x$enable_libzstd = xyes)
+
 
 # support for building the rsyslogd runtime
 AC_ARG_ENABLE(rsyslogrt,
@@ -2777,6 +2813,7 @@ echo "    Unlimited select() support enabled:       $enable_unlimited_select"
 echo "    uuid support enabled:                     $enable_uuid"
 echo "    Log file signing support via KSI LS12:    $enable_ksi_ls12"
 echo "    Log file encryption support:              $enable_libgcrypt"
+echo "    Log file compression via zstd support:    $enable_libzstd"
 echo "    anonymization support enabled:            $enable_mmanon"
 echo "    message counting support enabled:         $enable_mmcount"
 echo "    liblogging-stdlog support enabled:        $enable_liblogging_stdlog"

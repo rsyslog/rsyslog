@@ -177,6 +177,11 @@ jobs:
                      --enable-imdiag --enable-impstats --enable-imfile --disable-imfile-tests \
                      --disable-fmhttp --enable-valgrind --disable-default-tests \
                      --enable-elasticsearch-tests --enable-elasticsearch"
+              export CI_MAKE_OPT='-j20'
+              export CI_MAKE_CHECK_OPT='-j8'
+              export CI_CHECK_CMD='check'
+              export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp" # they are still valid
+              devtools/devcontainer.sh --rm devtools/run-ci.sh
               ;;
           esac
           devtools/devcontainer.sh --rm devtools/run-ci.sh
