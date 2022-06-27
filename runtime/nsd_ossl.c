@@ -31,6 +31,9 @@
 #include <openssl/ssl.h>
 #include <openssl/x509v3.h>
 #include <openssl/err.h>
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+#	include <openssl/bioerr.h>
+#endif
 #include <openssl/engine.h>
 #include <errno.h>
 #include <sys/stat.h>
@@ -288,16 +291,20 @@ int verify_callback(int status, X509_STORE_CTX *store)
 	return status;
 }
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+long BIO_debug_callback_ex(BIO *bio, int cmd, const char __attribute__((unused)) *argp,
+			   size_t __attribute__((unused)) len, int argi, long __attribute__((unused)) argl,
+			   int ret, size_t __attribute__((unused)) *processed)
+#else
 long BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *argp,
 			int argi, long __attribute__((unused)) argl, long ret)
+#endif
 {
+	long ret2 = ret; // Helper value to avoid printf compile errors long<>int
 	long r = 1;
-
 	if (BIO_CB_RETURN & cmd)
 		r = ret;
-
 	dbgprintf("openssl debugmsg: BIO[%p]: ", (void *)bio);
-
 	switch (cmd) {
 	case BIO_CB_FREE:
 		dbgprintf("Free - %s\n", RSYSLOG_BIO_method_name(bio));
@@ -344,19 +351,19 @@ long BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *a
 			RSYSLOG_BIO_method_name(bio));
 		break;
 	case BIO_CB_RETURN | BIO_CB_READ:
-		dbgprintf("read return %ld\n", ret);
+		dbgprintf("read return %ld\n", ret2);
 		break;
 	case BIO_CB_RETURN | BIO_CB_WRITE:
-		dbgprintf("write return %ld\n", ret);
+		dbgprintf("write return %ld\n", ret2);
 		break;
 	case BIO_CB_RETURN | BIO_CB_GETS:
-		dbgprintf("gets return %ld\n", ret);
+		dbgprintf("gets return %ld\n", ret2);
 		break;
 	case BIO_CB_RETURN | BIO_CB_PUTS:
-		dbgprintf("puts return %ld\n", ret);
+		dbgprintf("puts return %ld\n", ret2);
 		break;
 	case BIO_CB_RETURN | BIO_CB_CTRL:
-		dbgprintf("ctrl return %ld\n", ret);
+		dbgprintf("ctrl return %ld\n", ret2);
 		break;
 	default:
 		dbgprintf("bio callback - unknown type (%d)\n", cmd);
@@ -414,9 +421,19 @@ osslGlblInit(void)
 
 	/* Load readable error strings */
 	SSL_load_error_strings();
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+	/*
+	* ERR_load_*(), ERR_func_error_string(), ERR_get_error_line(), ERR_get_error_line_data(), ERR_get_state()
+	* OpenSSL now loads error strings automatically so these functions are not needed.
+	* SEE FOR MORE:
+	*	https://www.openssl.org/docs/manmaster/man7/migration_guide.html
+	*
+	*/
+#else
+	/* Load error strings into mem*/
 	ERR_load_BIO_strings();
 	ERR_load_crypto_strings();
-
+#endif
 	RETiRet;
 }
 
@@ -551,7 +568,11 @@ osslInitSession(nsd_ossl_t *pThis, osslSslState_t osslType) /* , nsd_ossl_t *pSe
 	dbgprintf("osslInitSession: Init conn BIO[%p] done\n", (void *)conn);
 
 	/* Set debug Callback for conn BIO as well! */
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+	BIO_set_callback_ex(conn, BIO_debug_callback_ex);
+#else
 	BIO_set_callback(conn, BIO_debug_callback);
+#endif
 
 	/* TODO: still needed? Set to NON blocking ! */
 	BIO_set_nbio( conn, 1 );
