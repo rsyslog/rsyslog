@@ -35,7 +35,7 @@ jobs:
       # When set to true, cancel all in-progress jobs if any matrix job fails.
       fail-fast: false
       matrix:
-        config: [clang8, clang9, clang10, gcc10, gcc9, gcc8]
+        config: [clang9, clang10, clang-14, gcc-11, gcc10, gcc9, gcc8]
 
     steps:
       - name: git checkout project
@@ -45,28 +45,34 @@ jobs:
         run: |
           chmod -R go+rw .
           export RSYSLOG_CONTAINER_UID="" # use default
-          export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
           export CFLAGS='-g'
           case "${{ matrix.config }}" in
-          'clang8')
-              export CC='clang-8'
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
-              ;;
           'clang9')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
               export CC='clang-9'
               ;;
           'clang10')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
               export CC='clang-10'
               ;;
+          'clang14')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
+              export CC='clang-14'
+              ;;
           'gcc8')
-              export CC='gcc-8'
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
+              export CC='gcc-8'
               ;;
           'gcc9')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
               export CC='gcc-9'
               ;;
           'gcc10')
               export CC='gcc-10'
+              ;;
+          'gcc11')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
+              export CC='gcc-11'
               ;;
           esac
           devtools/devcontainer.sh --rm devtools/run-configure.sh
