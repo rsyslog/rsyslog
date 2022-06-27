@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2208.0 (aka 2022.08) 2022-08-??
+- 2022-06-22: OpenSSL: fix depreacted API issues for OpenSSL 3.x
+  - OpenSSL error strings are loaded automatically now
+  - Debug Callback has changed
+  - See for more:
+    https://www.openssl.org/docs/manmaster/man7/migration_guide.html
+  closes: https://github.com/rsyslog/rsyslog/issues/4912
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2206.0 (aka 2022.06) 2022-06-14
 - 2022-05-25: omelastisearch: allow omitting _type field
