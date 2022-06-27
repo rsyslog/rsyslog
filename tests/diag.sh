@@ -1632,7 +1632,7 @@ dep_kafka_url="https://www.rsyslog.com/files/download/rsyslog/$RS_KAFKA_DOWNLOAD
 dep_kafka_cached_file=$dep_cache_dir/$RS_KAFKA_DOWNLOAD
 
 if [ -z "$ES_DOWNLOAD" ]; then
-	export ES_DOWNLOAD=elasticsearch-7.14.1-linux-x86_64.tar.gz #elasticsearch-5.6.9.tar.gz
+	export ES_DOWNLOAD=elasticsearch-7.14.1-linux-x86_64.tar.gz
 fi
 if [ -z "$ES_PORT" ]; then
 	export ES_PORT=19200

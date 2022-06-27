@@ -2,7 +2,7 @@
  * logctl - a tool to access lumberjack logs in MongoDB
  *  ... and potentially other sources in the future.
  *
- * Copyright 2012 Ulrike Gerhards and Adiscon GmbH.
+ * Copyright 2012-2022 Ulrike Gerhards and Adiscon GmbH.
  *
  * Copyright 2017 Hugo Soszynski and aDvens
  *
@@ -58,6 +58,8 @@
 #pragma GCC diagnostic ignored "-Wpragmas"
 #pragma GCC diagnostic ignored "-Wunknown-attributes"
 #pragma GCC diagnostic ignored "-Wexpansion-to-defined"
+#pragma GCC diagnostic ignored "-Wstrict-prototypes"
+#pragma GCC diagnostic ignored "-Wold-style-definition"
 #endif
 #include <mongoc.h>
 #include <bson.h>

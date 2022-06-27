@@ -88,6 +88,8 @@
 #if defined(__GNUC__)
 	#define PRAGMA_INGORE_Wswitch_enum	_Pragma("GCC diagnostic ignored \"-Wswitch-enum\"")
 	#define PRAGMA_IGNORE_Wempty_body	_Pragma("GCC diagnostic ignored \"-Wempty-body\"")
+	#define PRAGMA_IGNORE_Wstrict_prototypes _Pragma("GCC diagnostic ignored \"-Wstrict-prototypes\"")
+	#define PRAGMA_IGNORE_Wold_style_definition _Pragma("GCC diagnostic ignored \"-Wold-style-definition\"")
 	#define PRAGMA_IGNORE_Wsign_compare	_Pragma("GCC diagnostic ignored \"-Wsign-compare\"")
 	#define PRAGMA_IGNORE_Wpragmas		_Pragma("GCC diagnostic ignored \"-Wpragmas\"")
 	#define PRAGMA_IGNORE_Wmissing_noreturn _Pragma("GCC diagnostic ignored \"-Wmissing-noreturn\"")
@@ -110,6 +112,8 @@
 	#define PRAGMA_IGNORE_Wpragmas
 	#define PRAGMA_IGNORE_Wmissing_noreturn
 	#define PRAGMA_IGNORE_Wempty_body
+	#define PRAGMA_IGNORE_Wstrict_prototypes
+	#define PRAGMA_IGNORE_Wold_style_definition
 	#define PRAGMA_IGNORE_Wdeprecated_declarations
 	#define PRAGMA_IGNORE_Wexpansion_to_defined
 	#define PRAGMA_IGNORE_Wunknown_attribute
