@@ -1,4 +1,4 @@
-# Copyright 2020 Rainer Gerhards and Others
+# Copyright 2022 Rainer Gerhards and Others
 #
 # https://github.com/rsyslog/rsyslog-pkg-ubuntu
 #
@@ -29,13 +29,13 @@ on:
 
 jobs:
   CI:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-20.04
     timeout-minutes: 50
     strategy:
       # When set to true, cancel all in-progress jobs if any matrix job fails.
       fail-fast: false
       matrix:
-        config: [debian_10]
+        config: [centos_7, debian_10, debian_11, ubuntu_22]
 
     steps:
       - name: git checkout project
@@ -58,50 +58,31 @@ jobs:
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--disable-elasticsearch-tests --disable-kafka-tests --disable-snmp-tests'
               export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
               ;;
-          'centos_8')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_centos:8'
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--disable-elasticsearch-tests --disable-kafka-tests --disable-snmp-tests'
-              ;;
           'debian_10')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_debian:10'
               export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
                             --without-valgrind-testbench"
               ;;
-          'suse_tumbleweed')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_suse:tumbleweed'
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests"
-              ;;
-          'ubuntu_16')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:16.04'
+          'debian_11')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_debian:11'
+              export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
-                        --disable-omrabbitmq"
+                            --without-valgrind-testbench"
               ;;
-          'ubuntu_18_san')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
-              export CC='clang'
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --enable-imfile-tests\
-                      --disable-libfaketime --without-valgrind-testbench --disable-valgrind"
-              export CFLAGS="-fstack-protector -D_FORTIFY_SOURCE=2 \
-                     -fsanitize=address,undefined,nullability,unsigned-integer-overflow \
-                     -fno-sanitize-recover=undefined,nullability,unsigned-integer-overflow \
-                     -g -O3 -fno-omit-frame-pointer -fno-color-diagnostics"
-              export LSAN_OPTIONS='detect_leaks=0'
-              export UBSAN_OPTIONS='print_stacktrace=1'
-              ;;
-          'ubuntu_18_tsan')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
-              export CC='clang-8'
-              export CFLAGS="-g -fstack-protector -D_FORTIFY_SOURCE=2 -fsanitize=thread \
-                        -O0 -fno-omit-frame-pointer -fno-color-diagnostics"
-              export CI_SANITIZE_BLACKLIST='tests/tsan.supp'
-              export TSAN_OPTIONS='halt_on_error=1'
-              export ABORT_ALL_ON_TEST_FAIL='YES'
-              # impstats has known and OK races
-              # mmpstrucdata TEMPORARILY disabled because of a threading hang on shutdown
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --enable-imfile-tests \
-                        --disable-impstats --disable-kafka-tests --disable-mmpstrucdata \
-                        --disable-libfaketime --without-valgrind-testbench --disable-valgrind"
+          'ubuntu_22')
+              chmod -R go+rw .
+              export RSYSLOG_CONTAINER_UID="" # use default
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
+              export RSYSLOG_STATSURL='http://build.rsyslog.com/testbench-failedtest.php'
+              export CFLAGS='-g'
+              export CC='gcc'
+              export USE_AUTO_DEBUG='off'
+              export CI_MAKE_OPT='-j20'
+              export CI_MAKE_CHECK_OPT='-j8'
+              export CI_CHECK_CMD='check'
+              export CI_VALGRIND_SUPPRESSIONS="ubuntu20.04.supp" # they are still valid
+              devtools/devcontainer.sh --rm devtools/run-ci.sh
               ;;
           esac
           devtools/devcontainer.sh --rm devtools/run-ci.sh

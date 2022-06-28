@@ -1,4 +1,4 @@
-# Copyright 2020 Rainer Gerhards and Others
+# Copyright 2022 Rainer Gerhards and Others
 #
 # https://github.com/rsyslog/rsyslog-pkg-ubuntu
 #
@@ -22,7 +22,7 @@
 
 
 ---
-name: check ubuntu 16
+name: check ubuntu 22
 
 on:
   pull_request:
@@ -35,7 +35,7 @@ jobs:
       # When set to true, cancel all in-progress jobs if any matrix job fails.
       fail-fast: false
       matrix:
-        config: [ubuntu_16]
+        config: [ubuntu_22]
 
     steps:
       - name: git checkout project
@@ -72,11 +72,6 @@ jobs:
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_suse:tumbleweed'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests"
               ;;
-          'ubuntu_16')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:16.04'
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
-                        --disable-omrabbitmq"
-              ;;
           'ubuntu_18_san')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
               export CC='clang'
@@ -102,6 +97,20 @@ jobs:
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --enable-imfile-tests \
                         --disable-impstats --disable-kafka-tests --disable-mmpstrucdata \
                         --disable-libfaketime --without-valgrind-testbench --disable-valgrind"
+              ;;
+          'ubuntu_22')
+              chmod -R go+rw .
+              export RSYSLOG_CONTAINER_UID="" # use default
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
+              export RSYSLOG_STATSURL='http://build.rsyslog.com/testbench-failedtest.php'
+              export CFLAGS='-g'
+              export CC='gcc'
+              export USE_AUTO_DEBUG='off'
+              export CI_MAKE_OPT='-j20'
+              export CI_MAKE_CHECK_OPT='-j8'
+              export CI_CHECK_CMD='check'
+              export CI_VALGRIND_SUPPRESSIONS="ubuntu20.04.supp" # they are still valid
+              devtools/devcontainer.sh --rm devtools/run-ci.sh
               ;;
           esac
           devtools/devcontainer.sh --rm devtools/run-ci.sh
