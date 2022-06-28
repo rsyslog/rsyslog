@@ -165,7 +165,13 @@ doNameLine(uchar **pp, void* pVal)
 	p = *pp;
 	assert(p != NULL);
 
-	eDir = (enum eDirective) pVal;	/* this time, it actually is NOT a pointer! */
+	PRAGMA_DIAGNOSTIC_PUSH
+	PRAGMA_IGNORE_Wvoid_pointer_to_enum_cast;
+	/* this time, pVal actually is NOT a pointer! It is save to case, as
+	 * the enum was written to it, so there can be no loss of bits (ptr is larger).
+	 */
+	eDir = (enum eDirective) pVal;
+	PRAGMA_DIAGNOSTIC_POP
 
 	if(getSubString(&p, szName, sizeof(szName), ',')  != 0) {
 		LogError(0, RS_RET_NOT_FOUND, "Invalid config line: could not extract name - line ignored");
