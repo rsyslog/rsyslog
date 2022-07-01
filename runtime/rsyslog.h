@@ -89,7 +89,14 @@
 	#define PRAGMA_INGORE_Wswitch_enum	_Pragma("GCC diagnostic ignored \"-Wswitch-enum\"")
 	#define PRAGMA_IGNORE_Wempty_body	_Pragma("GCC diagnostic ignored \"-Wempty-body\"")
 	#define PRAGMA_IGNORE_Wstrict_prototypes _Pragma("GCC diagnostic ignored \"-Wstrict-prototypes\"")
-	#define PRAGMA_IGNORE_Wold_style_definition _Pragma("GCC diagnostic ignored \"-Wold-style-definition\"")
+	#define PRAGMA_IGNORE_Wold_style_definition \
+		_Pragma("GCC diagnostic ignored \"-Wold-style-definition\"")
+	#if defined(__clang_major__) && __clang_major__  >= 14
+		#define PRAGMA_IGNORE_Wvoid_pointer_to_enum_cast \
+			_Pragma("GCC diagnostic ignored \"-Wvoid-pointer-to-enum-cast\"")
+	#else
+		#define PRAGMA_IGNORE_Wvoid_pointer_to_enum_cast
+	#endif
 	#define PRAGMA_IGNORE_Wsign_compare	_Pragma("GCC diagnostic ignored \"-Wsign-compare\"")
 	#define PRAGMA_IGNORE_Wpragmas		_Pragma("GCC diagnostic ignored \"-Wpragmas\"")
 	#define PRAGMA_IGNORE_Wmissing_noreturn _Pragma("GCC diagnostic ignored \"-Wmissing-noreturn\"")
@@ -114,6 +121,7 @@
 	#define PRAGMA_IGNORE_Wempty_body
 	#define PRAGMA_IGNORE_Wstrict_prototypes
 	#define PRAGMA_IGNORE_Wold_style_definition
+	#define PRAGMA_IGNORE_Wvoid_pointer_to_enum_cast
 	#define PRAGMA_IGNORE_Wdeprecated_declarations
 	#define PRAGMA_IGNORE_Wexpansion_to_defined
 	#define PRAGMA_IGNORE_Wunknown_attribute

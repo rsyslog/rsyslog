@@ -89,7 +89,7 @@ typedef struct configSettings_s {
 	uchar *dbName;		/* database to use */
 } configSettings_t;
 static configSettings_t cs;
-uchar	*pszFileDfltTplName; /* name of the default template to use */
+static uchar *pszFileDfltTplName; /* name of the default template to use */
 
 struct modConfData_s {
 	rsconf_t *pConf;	/* our overall config object */

@@ -52,7 +52,7 @@ jobs:
           export CI_MAKE_CHECK_OPT='-j8'
           export CI_CHECK_CMD='check'
           export CI_CODECOV_TOKEN='9958eda4-50ae-4f2c-b6b6-567d3e6a2e81'
-          export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:30'
+          export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:35'
           export ABORT_ALL_ON_TEST_FAIL='NO'
           # Note: we completely override the container configure options here!
           export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
