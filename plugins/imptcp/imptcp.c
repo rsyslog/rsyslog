@@ -397,18 +397,28 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 static rsRetVal addLstn(ptcpsrv_t *pSrv, int sock, int isIPv6);
 
 
+/* function to suppress TSAN known-good case
+ * We do not use a mutex an epd, but we do always access it in
+ * pure sequence. Adding a mutex just to cover this "cosmetic"
+ * would result in uncesseary performance penalty.
+ */
+static void ATTR_NONNULL()
+imptcp_destruct_epd(ptcpsess_t *const pSess) {
+	free(pSess->epd);
+	pSess->epd = NULL;
+}
+
 /* some simple constructors/destructors */
-static void
-destructSess(ptcpsess_t *pSess)
+static void ATTR_NONNULL()
+destructSess(ptcpsess_t *const pSess)
 {
+	imptcp_destruct_epd(pSess);
 	free(pSess->pMsg_save);
 	free(pSess->pMsg);
-	free(pSess->epd);
 	prop.Destruct(&pSess->peerName);
 	prop.Destruct(&pSess->peerIP);
 	/* TODO: make these inits compile-time switch depending: */
 	pSess->pMsg = NULL;
-	pSess->epd = NULL;
 	free(pSess);
 }
 

@@ -1,3 +1,6 @@
+# supressions for LLVM TSAN
+# doc: https://github.com/google/sanitizers/wiki/ThreadSanitizerSuppressions
+race:^imptcp_destruct_epd$
 race:doLogMsg
 race:setlocale
 race:doSIGTTIN
