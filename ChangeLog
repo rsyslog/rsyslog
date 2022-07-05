@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2208.0 (aka 2022.08) 2022-08-??
+- 2022-07-04: mmdblookup bugfix: Don't crash Rsyslog on mmdb file errors
+  Thanks to Théo Bertin (frikilax) for the patch.
 - 2022-06-28: build error fix: libbson requires out-of-date language constructs
 - 2022-06-27: OpenSSL: fix depreacted API issues for OpenSSL 3.x
   - OpenSSL error strings are loaded automatically now
