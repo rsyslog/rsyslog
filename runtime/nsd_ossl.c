@@ -381,7 +381,7 @@ long BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *a
  * rgerhards, 2008-05-08
  */
 static rsRetVal
-GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr)
+GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr, const char* prefix)
 {
 	cstr_t *pStr = NULL;
 	uchar buf[4];
@@ -389,7 +389,7 @@ GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr)
 	DEFiRet;
 
 	CHKiRet(rsCStrConstruct(&pStr));
-	CHKiRet(rsCStrAppendStrWithLen(pStr, (uchar*)"SHA1", 4));
+	CHKiRet(rsCStrAppendStrWithLen(pStr, (uchar*) prefix, strlen(prefix)));
 	for(i = 0 ; i < sizeFingerprint ; ++i) {
 		snprintf((char*)buf, sizeof(buf), ":%2.2X", pFingerprint[i]);
 		CHKiRet(rsCStrAppendStrWithLen(pStr, buf, 3));
@@ -607,11 +607,15 @@ osslChkPeerFingerprint(nsd_ossl_t *pThis, X509 *pCert)
 	unsigned int n;
 	uchar *fromHostIP = NULL;
 	uchar fingerprint[20 /*EVP_MAX_MD_SIZE**/];
+	uchar fingerprintSha256[32 /*EVP_MAX_MD_SIZE**/];
 	size_t size;
+	size_t sizeSha256;
 	cstr_t *pstrFingerprint = NULL;
+	cstr_t *pstrFingerprintSha256 = NULL;
 	int bFoundPositiveMatch;
 	permittedPeers_t *pPeer;
 	const EVP_MD *fdig = EVP_sha1();
+	const EVP_MD *fdigSha256 = EVP_sha256();
 
 	ISOBJ_TYPE_assert(pThis, nsd_ossl);
 
@@ -621,17 +625,27 @@ osslChkPeerFingerprint(nsd_ossl_t *pThis, X509 *pCert)
 		dbgprintf("osslChkPeerFingerprint: error X509cert is not valid!\n");
 		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
 	}
-
-	CHKiRet(GenFingerprintStr(fingerprint, size, &pstrFingerprint));
+	sizeSha256 = sizeof(fingerprintSha256);
+	if (!X509_digest(pCert,fdigSha256,fingerprintSha256,&n)) {
+		dbgprintf("osslChkPeerFingerprint: error X509cert is not valid!\n");
+		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
+	}
+	CHKiRet(GenFingerprintStr(fingerprint, size, &pstrFingerprint, "SHA1"));
 	dbgprintf("osslChkPeerFingerprint: peer's certificate SHA1 fingerprint: %s\n",
 		cstrGetSzStrNoNULL(pstrFingerprint));
+	CHKiRet(GenFingerprintStr(fingerprintSha256, sizeSha256, &pstrFingerprintSha256, "SHA256"));
+	dbgprintf("osslChkPeerFingerprint: peer's certificate SHA256 fingerprint: %s\n",
+		cstrGetSzStrNoNULL(pstrFingerprintSha256));
 
 	/* now search through the permitted peers to see if we can find a permitted one */
 	bFoundPositiveMatch = 0;
 	pPeer = pThis->pPermPeers;
 	while(pPeer != NULL && !bFoundPositiveMatch) {
 		if(!rsCStrSzStrCmp(pstrFingerprint, pPeer->pszID, strlen((char*) pPeer->pszID))) {
-			dbgprintf("osslChkPeerFingerprint: peer's certificate MATCH found: %s\n", pPeer->pszID);
+			dbgprintf("osslChkPeerFingerprint: peer's certificate SHA1 MATCH found: %s\n", pPeer->pszID);
+			bFoundPositiveMatch = 1;
+		} else if(!rsCStrSzStrCmp(pstrFingerprintSha256, pPeer->pszID, strlen((char*) pPeer->pszID))) {
+			dbgprintf("osslChkPeerFingerprint: peer's certificate SHA256 MATCH found: %s\n", pPeer->pszID);
 			bFoundPositiveMatch = 1;
 		} else {
 			dbgprintf("osslChkPeerFingerprint: NOMATCH peer certificate: %s\n", pPeer->pszID);

@@ -494,7 +494,7 @@ print_info(nsd_gtls_t *pThis)
  * rgerhards, 2008-05-08
  */
 static rsRetVal
-GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr)
+GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr, const char* prefix)
 {
 	cstr_t *pStr = NULL;
 	uchar buf[4];
@@ -502,7 +502,7 @@ GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr)
 	DEFiRet;
 
 	CHKiRet(rsCStrConstruct(&pStr));
-	CHKiRet(rsCStrAppendStrWithLen(pStr, (uchar*)"SHA1", 4));
+	CHKiRet(rsCStrAppendStrWithLen(pStr, (uchar*) prefix, strlen(prefix)));
 	for(i = 0 ; i < sizeFingerprint ; ++i) {
 		snprintf((char*)buf, sizeof(buf), ":%2.2X", pFingerprint[i]);
 		CHKiRet(rsCStrAppendStrWithLen(pStr, buf, 3));
@@ -919,8 +919,11 @@ static rsRetVal
 gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 {
 	uchar fingerprint[20];
+	uchar fingerprintSha256[32];
 	size_t size;
+	size_t sizeSha256;
 	cstr_t *pstrFingerprint = NULL;
+	cstr_t *pstrFingerprintSha256 = NULL;
 	int bFoundPositiveMatch;
 	permittedPeers_t *pPeer;
 	int gnuRet;
@@ -930,17 +933,27 @@ gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 
 	/* obtain the SHA1 fingerprint */
 	size = sizeof(fingerprint);
+	sizeSha256 = sizeof(fingerprintSha256);
 	CHKgnutls(gnutls_x509_crt_get_fingerprint(*pCert, GNUTLS_DIG_SHA1, fingerprint, &size));
-	CHKiRet(GenFingerprintStr(fingerprint, size, &pstrFingerprint));
+	CHKgnutls(gnutls_x509_crt_get_fingerprint(*pCert, GNUTLS_DIG_SHA256, fingerprintSha256, &sizeSha256));
+	CHKiRet(GenFingerprintStr(fingerprint, size, &pstrFingerprint, "SHA1"));
+	CHKiRet(GenFingerprintStr(fingerprintSha256, sizeSha256, &pstrFingerprintSha256, "SHA256"));
 	dbgprintf("peer's certificate SHA1 fingerprint: %s\n", cstrGetSzStrNoNULL(pstrFingerprint));
+	dbgprintf("peer's certificate SHA256 fingerprint: %s\n", cstrGetSzStrNoNULL(pstrFingerprintSha256));
+
 
 	/* now search through the permitted peers to see if we can find a permitted one */
 	bFoundPositiveMatch = 0;
 	pPeer = pThis->pPermPeers;
 	while(pPeer != NULL && !bFoundPositiveMatch) {
 		if(!rsCStrSzStrCmp(pstrFingerprint, pPeer->pszID, strlen((char*) pPeer->pszID))) {
+			dbgprintf("gtlsChkPeerFingerprint: peer's certificate SHA1 MATCH found: %s\n", pPeer->pszID);
 			bFoundPositiveMatch = 1;
-		} else {
+		} else if(!rsCStrSzStrCmp(pstrFingerprintSha256 , pPeer->pszID, strlen((char*) pPeer->pszID))) {
+			dbgprintf("gtlsChkPeerFingerprint: peer's certificate SHA256 MATCH found: %s\n", pPeer->pszID);
+			bFoundPositiveMatch = 1;
+		}
+		else {
 			pPeer = pPeer->pNext;
 		}
 	}
@@ -2373,3 +2386,4 @@ CODESTARTmodInit
 ENDmodInit
 /* vi:set ai:
  */
+
