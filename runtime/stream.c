@@ -1467,11 +1467,11 @@ doWriteCall(strm_t *pThis, uchar *pBuf, size_t *pLenBuf)
 			const int err = errno;
 			iWritten = 0; /* we have written NO bytes! */
 			if(err == EBADF) {
-				LogError(err, RS_RET_IO_ERROR, "file %s: fd %d no longer valid, recovery by "
+				DBGPRINTF("file %s: errno %d, fd %d no longer valid, recovery by "
 					"reopen; if you see this, consider reporting at "
 					"https://github.com/rsyslog/rsyslog/issues/3404 "
 					"so that we know when it happens. Include output of uname -a. "
-					"OS error reason", pThis->pszCurrFName, pThis->fd);
+					"OS error reason", pThis->pszCurrFName, err, pThis->fd);
 				pThis->fd = -1;
 				CHKiRet(doPhysOpen(pThis));
 			} else {
