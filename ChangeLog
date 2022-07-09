@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2208.0 (aka 2022.08) 2022-08-??
+- 2022-07-07: stream cleanup: move error message to debug log, only
+  This error message is most probably rooted in a kernel problem. At
+  least knowbody knows how it can happen. It's definitely not a
+  rsyslog issue. We also can recover from it for a long time now
+  so there is no reason to irritate users by emitteing this
+  "error" message.
 - 2022-07-04: mmdblookup bugfix: Don't crash Rsyslog on mmdb file errors
   Thanks to Théo Bertin (frikilax) for the patch.
 - 2022-06-28: build error fix: libbson requires out-of-date language constructs
