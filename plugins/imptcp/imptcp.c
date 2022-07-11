@@ -1071,6 +1071,101 @@ processDataRcvd_regexFraming(ptcpsess_t *const __restrict__ pThis,
 }
 
 
+/* function to handle the common "in message" case
+*/
+static rsRetVal
+processDataRcvd_inMsg(ptcpsess_t *const __restrict__ pThis,
+	char **buff,
+	const int buffLen,
+	struct syslogTime *stTime,
+	const time_t ttGenTime,
+	multi_submit_t *pMultiSub,
+	unsigned *const __restrict__ pnMsgs)
+{
+	DEFiRet;
+	char c = **buff;
+	int octetsToCopy, octetsToDiscard;
+
+	if (pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) {
+		if(pThis->iMsg >= iMaxLine) {
+			/* emergency, we now need to flush, no matter if we are at end of message or not... */
+			int i = 1;
+			char currBuffChar;
+			while(i < buffLen && ((currBuffChar = (*buff)[i]) != '\n'
+				&& (pThis->iAddtlFrameDelim == TCPSRV_NO_ADDTL_DELIMITER
+					|| currBuffChar != pThis->iAddtlFrameDelim))) {
+				i++;
+			}
+			LogError(0, NO_ERRCODE, "imptcp %s: message received is at least %d byte larger than "
+				"max msg size; message will be split starting at: \"%.*s\"\n",
+				pThis->pLstn->pSrv->pszInputName, i, (i < 32) ? i : 32, *buff);
+			doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
+			++(*pnMsgs);
+			if(pThis->pLstn->pSrv->discardTruncatedMsg == 1) {
+				pThis->inputState = eInMsgTruncation;
+			}
+			/* we might think if it is better to ignore the rest of the
+			 * message than to treat it as a new one. Maybe this is a good
+			 * candidate for a configuration parameter...
+			 * rgerhards, 2006-12-04
+			 */
+		}
+		if ((c == '\n')
+			   || ((pThis->iAddtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER)
+				   && (c == pThis->iAddtlFrameDelim))
+			   ) { /* record delimiter? */
+			if(pThis->pLstn->pSrv->multiLine) {
+				if((buffLen == 1) || ((*buff)[1] == '<')) {
+					doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
+					++(*pnMsgs);
+					pThis->inputState = eAtStrtFram;
+				} else {
+					if(pThis->iMsg < iMaxLine) {
+						*(pThis->pMsg + pThis->iMsg++) = c;
+					}
+				}
+			} else {
+				doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
+				++(*pnMsgs);
+				pThis->inputState = eAtStrtFram;
+			}
+		} else {
+			/* IMPORTANT: here we copy the actual frame content to the message - for BOTH
+			 * framing modes! If we have a message that is larger than the max msg size,
+			 * we truncate it. This is the best we can do in light of what the engine supports.
+			 * -- rgerhards, 2008-03-14
+			 */
+			if(pThis->iMsg < iMaxLine) {
+				*(pThis->pMsg + pThis->iMsg++) = c;
+			}
+		}
+	} else {
+		assert(pThis->eFraming == TCP_FRAMING_OCTET_COUNTING);
+		octetsToCopy = pThis->iOctetsRemain;
+		octetsToDiscard = 0;
+		if (buffLen < octetsToCopy) {
+			octetsToCopy = buffLen;
+		}
+		if (octetsToCopy + pThis->iMsg > iMaxLine) {
+			octetsToDiscard = octetsToCopy - (iMaxLine - pThis->iMsg);
+			octetsToCopy = iMaxLine - pThis->iMsg;
+		}
+
+		memcpy(pThis->pMsg + pThis->iMsg, *buff, octetsToCopy);
+		pThis->iMsg += octetsToCopy;
+		pThis->iOctetsRemain -= (octetsToCopy + octetsToDiscard);
+		*buff += (octetsToCopy + octetsToDiscard - 1);
+		if (pThis->iOctetsRemain == 0) {
+			/* we have end of frame! */
+			doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
+			++(*pnMsgs);
+			pThis->inputState = eAtStrtFram;
+		}
+	}
+	RETiRet;
+}
+
+
 /* process the data received. As TCP is stream based, we need to process the
  * data inside a state machine. The actual data received is passed in byte-by-byte
  * from DataRcvd, and this function here compiles messages from them and submits
@@ -1089,7 +1184,6 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 {
 	DEFiRet;
 	char c = **buff;
-	int octatesToCopy, octatesToDiscard;
 	uchar *propPeerName = NULL;
 	int lenPeerName = 0;
 	uchar *propPeerIP = NULL;
@@ -1101,83 +1195,8 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 	}
 
 	if(pThis->inputState == eInMsg) {
-		if (pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) {
-			if(pThis->iMsg >= iMaxLine) {
-				/* emergency, we now need to flush, no matter if we are at end of message or not... */
-				int i = 1;
-				char currBuffChar;
-				while(i < buffLen && ((currBuffChar = (*buff)[i]) != '\n'
-					&& (pThis->iAddtlFrameDelim == TCPSRV_NO_ADDTL_DELIMITER
-						|| currBuffChar != pThis->iAddtlFrameDelim))) {
-					i++;
-				}
-				LogError(0, NO_ERRCODE, "imptcp %s: message received is at least %d byte larger than "
-					"max msg size; message will be split starting at: \"%.*s\"\n",
-					pThis->pLstn->pSrv->pszInputName, i, (i < 32) ? i : 32, *buff);
-				doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
-				++(*pnMsgs);
-				if(pThis->pLstn->pSrv->discardTruncatedMsg == 1) {
-					pThis->inputState = eInMsgTruncation;
-				}
-				/* we might think if it is better to ignore the rest of the
-				 * message than to treat it as a new one. Maybe this is a good
-				 * candidate for a configuration parameter...
-				 * rgerhards, 2006-12-04
-				 */
-			}
-			if ((c == '\n')
-				   || ((pThis->iAddtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER)
-					   && (c == pThis->iAddtlFrameDelim))
-				   ) { /* record delimiter? */
-				if(pThis->pLstn->pSrv->multiLine) {
-					if((buffLen == 1) || ((*buff)[1] == '<')) {
-						doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
-						++(*pnMsgs);
-						pThis->inputState = eAtStrtFram;
-					} else {
-						if(pThis->iMsg < iMaxLine) {
-							*(pThis->pMsg + pThis->iMsg++) = c;
-						}
-					}
-				} else {
-					doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
-					++(*pnMsgs);
-					pThis->inputState = eAtStrtFram;
-				}
-			} else {
-				/* IMPORTANT: here we copy the actual frame content to the message - for BOTH
-				 * framing modes! If we have a message that is larger than the max msg size,
-				 * we truncate it. This is the best we can do in light of what the engine supports.
-				 * -- rgerhards, 2008-03-14
-				 */
-				if(pThis->iMsg < iMaxLine) {
-					*(pThis->pMsg + pThis->iMsg++) = c;
-				}
-			}
-		} else {
-			assert(pThis->eFraming == TCP_FRAMING_OCTET_COUNTING);
-			octatesToCopy = pThis->iOctetsRemain;
-			octatesToDiscard = 0;
-			if (buffLen < octatesToCopy) {
-				octatesToCopy = buffLen;
-			}
-			if (octatesToCopy + pThis->iMsg > iMaxLine) {
-				octatesToDiscard = octatesToCopy - (iMaxLine - pThis->iMsg);
-				octatesToCopy = iMaxLine - pThis->iMsg;
-			}
-
-			memcpy(pThis->pMsg + pThis->iMsg, *buff, octatesToCopy);
-			pThis->iMsg += octatesToCopy;
-			pThis->iOctetsRemain -= (octatesToCopy + octatesToDiscard);
-			*buff += (octatesToCopy + octatesToDiscard - 1);
-			if (pThis->iOctetsRemain == 0) {
-				/* we have end of frame! */
-				doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
-				++(*pnMsgs);
-				pThis->inputState = eAtStrtFram;
-			}
-		}
-
+		iRet = processDataRcvd_inMsg(pThis, buff, buffLen, stTime, ttGenTime, pMultiSub, pnMsgs);
+		FINALIZE;
 	} else if(pThis->inputState == eAtStrtFram) {
 		if(pThis->bSuppOctetFram && isdigit((int) c)) {
 			pThis->inputState = eInOctetCnt;
@@ -1193,6 +1212,9 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 		} else {
 			pThis->inputState = eInMsg;
 			pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
+			/* we need to record the first character, so let's process it */
+			iRet = processDataRcvd_inMsg(pThis, buff, buffLen, stTime, ttGenTime, pMultiSub, pnMsgs);
+			FINALIZE;
 		}
 	}
 
