@@ -182,7 +182,7 @@ A Templated example.
 
 .. code-block:: none
 
-   template(name="sql-syslog" type="list" option.sql="on") {
+   template(name="sql-syslog" type="list" option.stdsql="on") {
      constant(value="INSERT INTO SystemEvents (message, timereported) values ('")
      property(name="msg")
      constant(value="','")
@@ -206,7 +206,7 @@ An action queue and templated example.
 
 .. code-block:: none
 
-   template(name="sql-syslog" type="list" option.sql="on") {
+   template(name="sql-syslog" type="list" option.stdsql="on") {
      constant(value="INSERT INTO SystemEvents (message, timereported) values ('")
      property(name="msg")
      constant(value="','")
