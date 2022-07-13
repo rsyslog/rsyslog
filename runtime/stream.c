@@ -16,7 +16,7 @@
  * it turns out to be problematic. Then, we need to quasi-refcount the number of accesses
  * to the object.
  *
- * Copyright 2008-2018 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2022 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -62,6 +62,7 @@
 #include "unicode-helper.h"
 #include "module-template.h"
 #include "errmsg.h"
+#include "zstdw.h"
 #include "cryprov.h"
 #include "datetime.h"
 #include "rsconf.h"
@@ -77,6 +78,7 @@
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(zlibw)
+DEFobjCurrIf(zstdw)
 
 /* forward definitions */
 static rsRetVal strmFlushInternal(strm_t *pThis, int bFlushZip);
@@ -92,6 +94,7 @@ static rsRetVal strmSeekCurrOffs(strm_t *pThis);
 
 
 /* methods */
+
 
 /* note: this may return NULL if not line segment is currently set  */
 // TODO: due to the cstrFinalize() this is not totally clean, albeit for our
@@ -1230,6 +1233,7 @@ BEGINobjConstruct(strm) /* be sure to specify the object type also in END macro!
 	pThis->sType = STREAMTYPE_FILE_SINGLE;
 	pThis->sIOBufSize = glblGetIOBufSize();
 	pThis->tOpenMode = 0600;
+	pThis->compressionDriver = STRM_COMPRESS_ZIP;
 	pThis->pszSizeLimitCmd = NULL;
 	pThis->prevLineSegment = NULL;
 	pThis->prevMsgSegment = NULL;
@@ -1256,18 +1260,27 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 
 	pThis->iBufPtrMax = 0; /* results in immediate read request */
 	if(pThis->iZipLevel) { /* do we need a zip buf? */
-		localRet = objUse(zlibw, LM_ZLIBW_FILENAME);
-		if(localRet != RS_RET_OK) {
-			pThis->iZipLevel = 0;
-			DBGPRINTF("stream was requested with zip mode, but zlibw module unavailable (%d) - using "
-				  "without zip\n", localRet);
+		if(pThis->compressionDriver == STRM_COMPRESS_ZSTD) {
+			localRet = objUse(zstdw, LM_ZSTDW_FILENAME);
+			if(localRet != RS_RET_OK) {
+				pThis->iZipLevel = 0;
+				LogError(0, localRet, "stream was requested with zstd compression mode, "
+					 "but zstdw module unavailable - using without compression\n");
+			}
 		} else {
-			/* we use the same size as the original buf, as we would like
-			 * to make sure we can write out everything with a SINGLE api call!
-			 * We add another 128 bytes to take care of the gzip header and "all eventualities".
-			 */
-			CHKmalloc(pThis->pZipBuf = (Bytef*) malloc(pThis->sIOBufSize + 128));
+			assert(pThis->compressionDriver == STRM_COMPRESS_ZIP);
+			localRet = objUse(zlibw, LM_ZLIBW_FILENAME);
+			if(localRet != RS_RET_OK) {
+				pThis->iZipLevel = 0;
+				LogError(0, localRet, "stream was requested with zip mode, but zlibw "
+					 "module unavailable - using without zip\n");
+			}
 		}
+		/* we use the same size as the original buf, as we would like
+		 * to make sure we can write out everything with a SINGLE api call!
+		 * We add another 128 bytes to take care of the gzip header and "all eventualities".
+		 */
+		CHKmalloc(pThis->pZipBuf = (Bytef*) malloc(pThis->sIOBufSize + 128));
 	}
 
 	/* if we are set to sync, we must obtain a file handle to the directory for fsync() purposes */
@@ -1354,6 +1367,9 @@ CODESTARTobjDestruct(strm)
 	 * IMPORTANT: we MUST free this only AFTER the ansyncWriter has been stopped, else
 	 * we get random errors...
 	 */
+	if(pThis->compressionDriver == STRM_COMPRESS_ZSTD) {
+		zstdw.Destruct(pThis);
+	}
 	if(pThis->prevLineSegment)
 		cstrDestruct(&pThis->prevLineSegment);
 	if(pThis->prevMsgSegment)
@@ -1802,53 +1818,11 @@ finalize_it:
 static rsRetVal
 doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, const int bFlush)
 {
-	int zRet;	/* zlib return state */
-	DEFiRet;
-	unsigned outavail = 0;
-	assert(pThis != NULL);
-	assert(pBuf != NULL);
-
-	if(!pThis->bzInitDone) {
-		/* allocate deflate state */
-		pThis->zstrm.zalloc = Z_NULL;
-		pThis->zstrm.zfree = Z_NULL;
-		pThis->zstrm.opaque = Z_NULL;
-		/* see note in file header for the params we use with deflateInit2() */
-		zRet = zlibw.DeflateInit2(&pThis->zstrm, pThis->iZipLevel, Z_DEFLATED, 31, 9, Z_DEFAULT_STRATEGY);
-		if(zRet != Z_OK) {
-			LogError(0, RS_RET_ZLIB_ERR, "error %d returned from zlib/deflateInit2()", zRet);
-			ABORT_FINALIZE(RS_RET_ZLIB_ERR);
-		}
-		pThis->bzInitDone = RSTRUE;
+	if(pThis->compressionDriver == STRM_COMPRESS_ZSTD) {
+		return zstdw.doStrmWrite(pThis, pBuf, lenBuf, bFlush, strmPhysWrite);
+	} else {
+		return zlibw.doStrmWrite(pThis, pBuf, lenBuf, bFlush, strmPhysWrite);
 	}
-
-	/* now doing the compression */
-	pThis->zstrm.next_in = (Bytef*) pBuf;
-	pThis->zstrm.avail_in = lenBuf;
-	/* run deflate() on buffer until everything has been compressed */
-	do {
-		DBGPRINTF("in deflate() loop, avail_in %d, total_in %ld, bFlush %d\n",
-			pThis->zstrm.avail_in, pThis->zstrm.total_in, bFlush);
-		pThis->zstrm.avail_out = pThis->sIOBufSize;
-		pThis->zstrm.next_out = pThis->pZipBuf;
-		zRet = zlibw.Deflate(&pThis->zstrm, bFlush ? Z_SYNC_FLUSH : Z_NO_FLUSH);    /* no bad return value */
-		DBGPRINTF("after deflate, ret %d, avail_out %d, to write %d\n",
-			zRet, pThis->zstrm.avail_out, outavail);
-		if(zRet != Z_OK) {
-			LogError(0, RS_RET_ZLIB_ERR, "error %d returned from zlib/Deflate()", zRet);
-			ABORT_FINALIZE(RS_RET_ZLIB_ERR);
-		}
-		outavail = pThis->sIOBufSize - pThis->zstrm.avail_out;
-		if(outavail != 0) {
-			CHKiRet(strmPhysWrite(pThis, (uchar*)pThis->pZipBuf, outavail));
-		}
-	} while (pThis->zstrm.avail_out == 0);
-
-finalize_it:
-	if(pThis->bzInitDone && pThis->bVeryReliableZip) {
-		doZipFinish(pThis);
-	}
-	RETiRet;
 }
 
 
@@ -1859,37 +1833,11 @@ finalize_it:
 static rsRetVal
 doZipFinish(strm_t *pThis)
 {
-	int zRet;	/* zlib return state */
-	DEFiRet;
-	unsigned outavail;
-	assert(pThis != NULL);
-
-	if(!pThis->bzInitDone)
-		goto done;
-
-	pThis->zstrm.avail_in = 0;
-	/* run deflate() on buffer until everything has been compressed */
-	do {
-		DBGPRINTF("in deflate() loop, avail_in %d, total_in %ld\n", pThis->zstrm.avail_in,
-			pThis->zstrm.total_in);
-		pThis->zstrm.avail_out = pThis->sIOBufSize;
-		pThis->zstrm.next_out = pThis->pZipBuf;
-		zRet = zlibw.Deflate(&pThis->zstrm, Z_FINISH);    /* no bad return value */
-		DBGPRINTF("after deflate, ret %d, avail_out %d\n", zRet, pThis->zstrm.avail_out);
-		outavail = pThis->sIOBufSize - pThis->zstrm.avail_out;
-		if(outavail != 0) {
-			CHKiRet(strmPhysWrite(pThis, (uchar*)pThis->pZipBuf, outavail));
-		}
-	} while (pThis->zstrm.avail_out == 0);
-
-finalize_it:
-	zRet = zlibw.DeflateEnd(&pThis->zstrm);
-	if(zRet != Z_OK) {
-		LogError(0, RS_RET_ZLIB_ERR, "error %d returned from zlib/deflateEnd()", zRet);
+	if(pThis->compressionDriver == STRM_COMPRESS_ZSTD) {
+		return zstdw.doCompressFinish(pThis, strmPhysWrite);
+	} else {
+		return zlibw.doCompressFinish(pThis, strmPhysWrite);
 	}
-
-	pThis->bzInitDone = 0;
-done:	RETiRet;
 }
 
 /* flush stream output buffer to persistent storage. This can be called at any time
@@ -2192,6 +2140,7 @@ DEFpropSetMeth(strm, iMaxFileSize, int64)
 DEFpropSetMeth(strm, iFileNumDigits, int)
 DEFpropSetMeth(strm, tOperationsMode, int)
 DEFpropSetMeth(strm, tOpenMode, mode_t)
+DEFpropSetMeth(strm, compressionDriver, strm_compressionDriver_t)
 DEFpropSetMeth(strm, sType, strmType_t)
 DEFpropSetMeth(strm, iZipLevel, int)
 DEFpropSetMeth(strm, bVeryReliableZip, int)
@@ -2438,6 +2387,7 @@ strmDup(strm_t *const pThis, strm_t **ppNew)
 	pNew->lenDir = pThis->lenDir;
 	pNew->tOperationsMode = pThis->tOperationsMode;
 	pNew->tOpenMode = pThis->tOpenMode;
+	pNew->compressionDriver = pThis->compressionDriver;
 	pNew->iMaxFileSize = pThis->iMaxFileSize;
 	pNew->iMaxFiles = pThis->iMaxFiles;
 	pNew->iFileNumDigits = pThis->iFileNumDigits;
@@ -2453,6 +2403,18 @@ finalize_it:
 
 	RETiRet;
 }
+
+
+static rsRetVal
+SetCompressionWorkers(strm_t *const pThis, int num_wrkrs)
+{
+	ISOBJ_TYPE_assert(pThis, strm);
+	if(num_wrkrs < 0)
+		num_wrkrs = 1;
+	pThis->zstd.num_wrkrs = num_wrkrs;
+	return RS_RET_OK;
+}
+
 
 /* set a user write-counter. This counter is initialized to zero and
  * receives the number of bytes written. It is accurate only after a
@@ -2582,6 +2544,7 @@ CODESTARTobjQueryInterface(strm)
 	pIf->Serialize = strmSerialize;
 	pIf->GetCurrOffset = strmGetCurrOffset;
 	pIf->Dup = strmDup;
+	pIf->SetCompressionWorkers = SetCompressionWorkers;
 	pIf->SetWCntr = strmSetWCntr;
 	pIf->CheckFileChange = CheckFileChange;
 	/* set methods */
@@ -2591,6 +2554,7 @@ CODESTARTobjQueryInterface(strm)
 	pIf->SetiFileNumDigits = strmSetiFileNumDigits;
 	pIf->SettOperationsMode = strmSettOperationsMode;
 	pIf->SettOpenMode = strmSettOpenMode;
+	pIf->SetcompressionDriver = strmSetcompressionDriver;
 	pIf->SetsType = strmSetsType;
 	pIf->SetiZipLevel = strmSetiZipLevel;
 	pIf->SetbVeryReliableZip = strmSetbVeryReliableZip;

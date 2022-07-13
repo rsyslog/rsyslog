@@ -244,6 +244,17 @@ if ENABLE_LIBGCRYPT
    lmcry_gcry_la_LIBADD = libgcry.la $(LIBGCRYPT_LIBS)
 endif
 
+#
+# support library for zstd
+#
+if ENABLE_LIBZSTD
+pkglib_LTLIBRARIES += lmzstdw.la
+    lmzstdw_la_SOURCES = zstdw.c zstdw.h
+    lmzstdw_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
+    lmzstdw_la_LDFLAGS = -module -avoid-version $(ZSTD_LIBS)
+    lmzstdw_la_LIBADD = -lzstd
+endif
+
 
 #
 # gssapi support
