@@ -228,6 +228,53 @@ never entered for dynafiles as it would have blocked overall processing
 flow. Default is not to suspend (and thus block).
 
 
+compression.driver
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "zlib", "no", "none"
+
+.. versionadded:: 8.2208.0
+
+For compressed operation ("zlib mode"), this permits to set the compression
+driver to be used. Originally, only zlib was supported and still is the
+default. Since 8.2208.0 zstd is also supported. It provides much better
+compression ratios and performance, especially with multiple zstd worker
+threads enabled.
+
+Possible values are:
+- zlib
+- zstd
+
+
+compression.zstd.workers
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "positive integer", "zlib library default", "no", "none"
+
+.. versionadded:: 8.2208.0
+
+In zstd mode, this enables to configure zstd-internal compression worker threads.
+This setting has nothing to do with rsyslog workers. The zstd library provides
+an enhanced worker thread pool which permits multithreaed compression of serial
+data streams. Rsyslog fully supports this mode for optimal performance.
+
+Please note that for this parameter to have an effect, the zstd library must
+be compiled with multithreading support. As of this writing (2022), this is
+**not** the case for many frequently used distros and distro versions. In this
+case, you may want to custom install the zstd library with threading enabled. Note
+that this does not require a rsyslog rebuild.
+
+
 Action Parameters
 -----------------
 
