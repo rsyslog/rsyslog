@@ -78,11 +78,11 @@ DynaKey
 ^^^^^^^
 
 .. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive", "Available since"
    :widths: auto
    :class: parameter-table
 
-   "binary", "off", "no", "none"
+   "binary", "off", "no", "none", v8.1903
 
 If set, the key parameter becomes a template for the key to base the
 partitioning on. 
