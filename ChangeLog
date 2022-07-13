@@ -1,5 +1,14 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2208.0 (aka 2022.08) 2022-08-??
+- 2022-07-13: omfile: support for zstd compression
+  The zstd library provides better and faster compression than zlib.
+  This patch integrates zstd as a dynamically-loadable functionality.
+  As such, no further dependencies need to be added to the rsyslog
+  base package.
+  Due to the increased performance, usage of zstd is highly recommended
+  for high-volume use cases.
+  This patch also refactor zlib compression in order to unify handling
+  in both compression cases.
 - 2022-07-07: stream cleanup: move error message to debug log, only
   This error message is most probably rooted in a kernel problem. At
   least knowbody knows how it can happen. It's definitely not a
