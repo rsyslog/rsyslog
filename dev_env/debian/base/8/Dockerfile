@@ -49,6 +49,8 @@ RUN	apt-get install -y \
 	valgrind \
 	vim \
 	wget \
+	sudo \
+	logrotate \
 	zlib1g-dev
 #	libbson-dev
 #	libmaxminddb-dev 
@@ -256,7 +258,6 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-mysql \
 	--disable-omamqp1 \
 	--disable-omczmq \
-	--enable-omhiredis \
 	--enable-omhttpfs \
 	--enable-omjournal \
 	--disable-omkafka \
