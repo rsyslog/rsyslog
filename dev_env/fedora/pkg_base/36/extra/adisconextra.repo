@@ -1,0 +1,19 @@
+[adiscon]
+name=adiscon
+baseurl=http://rpms.adiscon.com/v8-stable/epel-8/$basearch
+enabled=1
+gpgcheck=0
+
+[adiscon-2]
+name=adiscon
+baseurl=http://rpms.adiscon.com/v8-stable-build/epel-8/$basearch
+enabled=1
+gpgcheck=0
+
+[guardtime]
+name = KSI
+baseurl = http://download.guardtime.com/ksi/rhel/7/$basearch/
+enabled=1
+gpgcheck=0
+repo_gpgcheck=1
+gpgkey=http://download.guardtime.com/ksi/GUARDTIME-GPG-KEY
