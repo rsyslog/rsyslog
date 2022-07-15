@@ -1,0 +1,5 @@
+Following Privat files need to be placed here: 
+
+sync_remote.sh	Script to sync local RPM repo with remote RPM repo
+do_upload.sh	Script to upload new RPM from local to remote repo
+initenv.sh	Script to init env for pkg build
