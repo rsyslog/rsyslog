@@ -49,6 +49,8 @@ RUN	apt-get install -y \
 	valgrind \
 	vim \
 	wget \
+	sudo \
+	logrotate \
 	zlib1g-dev
 #	libbson-dev
 #	libmaxminddb-dev 
@@ -86,11 +88,11 @@ ENV	PKG_CONFIG_PATH=/usr/lib64/pkgconfig \
 	DEBIAN_FRONTEND=
 
 # create dependency cache
-RUN	mkdir /local_dep_cache && \
-	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz  && \
-	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz && \
-	wget -nv https://downloads.apache.org/zookeeper/zookeeper-3.6.2/apache-zookeeper-3.6.2-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.6.2-bin.tar.gz  && \
-	wget -nv http://www-us.apache.org/dist/kafka/2.7.0/kafka_2.12-2.7.0.tgz -O /local_dep_cache/kafka_2.12-2.7.0.tgz
+#RUN	mkdir /local_dep_cache && \
+#	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz  && \
+#	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz && \
+#	wget -nv https://downloads.apache.org/zookeeper/zookeeper-3.6.2/apache-zookeeper-3.6.2-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.6.2-bin.tar.gz  && \
+#	wget -nv http://www-us.apache.org/dist/kafka/2.7.0/kafka_2.12-2.7.0.tgz -O /local_dep_cache/kafka_2.12-2.7.0.tgz
 # tell tests which are the newester versions, so they can be checked without the need
 # to adjust test sources.
 #ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
