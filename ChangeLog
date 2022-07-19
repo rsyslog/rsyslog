@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2208.0 (aka 2022.08) 2022-08-??
+- 2022-07.19: core bugfix: memory leak when free action worker data table
+  During free action worker data table when action destruct, worker instance in worker
+  data table were not null. It resulted in memory leak.
+  Thanks to github user seuzw930 for the patch.
 - 2022-07-13: omfile: support for zstd compression
   The zstd library provides better and faster compression than zlib.
   This patch integrates zstd as a dynamically-loadable functionality.
