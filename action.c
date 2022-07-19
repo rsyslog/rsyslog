@@ -316,6 +316,20 @@ actionResetQueueParams(void)
 	RETiRet;
 }
 
+/* free action worker data table
+*/
+static void freeWrkrDataTable(action_t * const pThis)
+{
+	int freeSpot;
+	for(freeSpot = 0; freeSpot < pThis->wrkrDataTableSize; ++freeSpot) {
+		if(pThis->wrkrDataTable[freeSpot] != NULL) {
+			pThis->pMod->mod.om.freeWrkrInstance(pThis->wrkrDataTable[freeSpot]);
+			pThis->wrkrDataTable[freeSpot] = NULL;
+		}
+	}
+	free(pThis->wrkrDataTable);
+	return;
+}
 
 /* destructs an action descriptor object
  * rgerhards, 2007-08-01
@@ -353,7 +367,7 @@ rsRetVal actionDestruct(action_t * const pThis)
 	free(pThis->pszName);
 	free(pThis->ppTpl);
 	free(pThis->peParamPassing);
-	free(pThis->wrkrDataTable);
+	freeWrkrDataTable(pThis);
 
 finalize_it:
 	free(pThis);
