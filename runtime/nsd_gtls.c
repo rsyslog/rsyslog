@@ -1307,6 +1307,8 @@ static rsRetVal
 gtlsGlblExit(void)
 {
 	DEFiRet;
+	gnutls_anon_free_server_credentials(anoncredSrv);
+	gnutls_dh_params_deinit(dh_params);
 	gnutls_global_deinit();
 	RETiRet;
 }
