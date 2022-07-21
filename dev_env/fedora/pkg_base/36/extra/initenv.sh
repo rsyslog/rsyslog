@@ -22,6 +22,10 @@ cp -rf /private-files/.ssh /root/.ssh/
 cp -rf /private-files/.ssh/* /root/.ssh/
 cp -rf /private-files/.ssh /home/pkg/.ssh/
 cp -rf /private-files/.ssh/* /home/pkg/.ssh/
+# Copy entitlements and subscription manager configurations
+cp -rf /home/pkg/private/mount/rhel/etc-pki-entitlement /etc/pki/entitlement
+cp -rf /home/pkg/private/mount/rhel/rhsm-conf /etc/rhsm
+cp -rf /home/pkg/private/mount/rhel/rhsm-ca /etc/rhsm/ca
 echo "---------------------------------------------"
 
 echo "--------------------------------"
@@ -59,5 +63,12 @@ else
 	git rev-parse HEAD
 fi
 
-cp -rf etc-mock/* /etc/mock/
-chown -R pkg ./ 
+# Set PKGNOREPLACEMOCKFILES env variable to anything to use system mock files
+if [ -z $PKGNOREPLACEMOCKFILES ]; then
+        echo "initenv: replace MOCK files with our own (default)"
+        cp -rf etc-mock/* /etc/mock/
+        chown -R pkg ./ >> /dev/null 2>&1   
+else
+        echo "initenv: use system MOCK files"
+fi
+
