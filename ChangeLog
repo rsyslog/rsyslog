@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2208.0 (aka 2022.08) 2022-08-??
+- 2022-07-21: imptcp: slight tuning
+  - reduce indirect addressing to obtain more speed
+  - also a fix for an annoying typo
+  - minor other optimizations
+  - modernization of one test
 - 2022-07-20: template procesing/json: performance optimization
 - 2022-07-19: core bugfix: memory leak when free action worker data table
   During free action worker data table when action destruct, worker instance in worker
