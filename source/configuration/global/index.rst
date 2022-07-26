@@ -73,6 +73,11 @@ True Global Directives
 -  **$DefaultNetstreamDriverCAFile** </path/to/cafile.pem>
 -  **$DefaultNetstreamDriverCertFile** </path/to/certfile.pem>
 -  **$DefaultNetstreamDriverKeyFile** </path/to/keyfile.pem>
+-  **$NetstreamDriverCaExtraFiles** </path/to/extracafile.pem> - This
+   directive allows to configure multiple additional extra CA files.
+   This is intended for SSL certificate chains to work appropriately,
+   as the different CA files in the chain need to be specified.
+   It must be remarked that this directive only works with the OpenSSL driver.
 -  **$RepeatedMsgContainsOriginalMsg** [on/**off**] - "last message
    repeated n times" messages, if generated, have a different format
    that contains the message that is being repeated. Note that only the
