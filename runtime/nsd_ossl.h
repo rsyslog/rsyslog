@@ -82,6 +82,7 @@ struct nsd_ossl_s {
 	int lenRcvBuf;
 	/**< -1: empty, 0: connection closed, 1..NSD_OSSL_MAX_RCVBUF-1: data of that size present */
 	int ptrRcvBuf;		/**< offset for next recv operation if 0 < lenRcvBuf < NSD_OSSL_MAX_RCVBUF */
+	char *device;
 
 	/* Open SSL objects */
 //	BIO *acc;		/* OpenSSL main BIO obj */
@@ -90,6 +91,7 @@ struct nsd_ossl_s {
 	SSL_CTX *ctx;		/* credentials, ciphers, ... */
 	SSL *ssl;		/* OpenSSL main SSL obj */
 	osslSslState_t sslState;/**< what must we retry? */
+	STACK_OF(X509) *trusted_issuers;
 };
 
 /* interface is defined in nsd.h, we just implement it! */
