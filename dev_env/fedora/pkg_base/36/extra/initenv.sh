@@ -18,24 +18,26 @@ cp -rf /private-files/.gnupg /home/pkg/.gnupg/
 cp -rf /private-files/.gnupg/* /home/pkg/.gnupg/
 cp -rf /private-files/.gnupg /root/.gnupg/
 cp -rf /private-files/.gnupg/* /root/.gnupg/
-cp -rf /private-files/.ssh /root/.ssh/
-cp -rf /private-files/.ssh/* /root/.ssh/
-cp -rf /private-files/.ssh /home/pkg/.ssh/
-cp -rf /private-files/.ssh/* /home/pkg/.ssh/
+cp -rf /private-files/.ssh /root/
+cp -rf /private-files/.ssh /home/pkg/
 # Copy entitlements and subscription manager configurations
-cp -rf /home/pkg/private/mount/rhel/etc-pki-entitlement /etc/pki/entitlement
-cp -rf /home/pkg/private/mount/rhel/rhsm-conf /etc/rhsm
-cp -rf /home/pkg/private/mount/rhel/rhsm-ca /etc/rhsm/ca
+cp -rf /private-files/rhel/etc-pki-entitlement/* /etc/pki/entitlement/
+cp -rf /private-files/rhel/rhsm-conf /etc/rhsm/
+cp -rf /private-files/rhel/rhsm-ca /etc/rhsm/ca/
 echo "---------------------------------------------"
 
 echo "--------------------------------"
 echo "--- Setting file permissions ---"
 chmod -R 600 /home/pkg/.gnupg/
 chmod -R 600 /root/.gnupg/
-chown pkg:pkg /private-files/* 
+chown pkg:pkg /private-files/*
 chown pkg:pkg /private-files/.*
-chmod -R 0600 /private-files/.ssh/id_rsa 
-
+chmod -R 0600 /private-files/.ssh/id_rsa
+chmod -R 0600 /private-files/.ssh/id_dsa
+chmod -R 0600 /home/pkg/.ssh/id_rsa
+chmod -R 0600 /home/pkg/.ssh/id_dsa
+chmod -R 0600 /root/.ssh/id_rsa
+chmod -R 0600 /root/.ssh/id_dsa
 echo "--------------------------------"
 
 echo "--------------------------------"
