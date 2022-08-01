@@ -105,7 +105,7 @@ rsRetVal osslRecordRecv(nsd_ossl_t *pThis);
 rsRetVal osslHandshakeCheck(nsd_ossl_t *pNsd);
 
 /* some more prototypes to avoid warnings ... */
-void osslLastSSLErrorMsg(int ret, SSL *ssl, int severity, const char* pszCallSource);
+void osslLastSSLErrorMsg(int ret, SSL *ssl, int severity, const char* pszCallSource, const char* pszOsslApi);
 int verify_callback(int status, X509_STORE_CTX *store);
 rsRetVal osslPostHandshakeCheck(nsd_ossl_t *pNsd);
 
