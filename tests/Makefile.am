@@ -617,6 +617,7 @@ TESTS +=  \
 	mmanon_simple_12_ipv4.sh \
 	mmanon_simple_33_ipv4.sh \
 	mmanon_simple_8_ipv4.sh \
+	mmanon_simple_mallformed_ipv4.sh \
 	mmanon_random_128_ipv6.sh \
 	mmanon_zero_128_ipv6.sh \
 	mmanon_zero_96_ipv6.sh \
@@ -1966,6 +1967,7 @@ EXTRA_DIST= \
 	mmanon_simple_12_ipv4.sh \
 	mmanon_simple_33_ipv4.sh \
 	mmanon_simple_8_ipv4.sh \
+	mmanon_simple_mallformed_ipv4.sh \
 	mmanon_random_128_ipv6.sh \
 	mmanon_zero_128_ipv6.sh \
 	mmanon_zero_96_ipv6.sh \
