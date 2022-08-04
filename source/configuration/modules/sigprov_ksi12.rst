@@ -63,6 +63,11 @@ Optional parameters (if not defined, default value is used):
   Other SHA-2, as well as RIPEMED-160 functions are supported.
 - **sig.block.timeLimit** defines the maximum duration of one block in seconds.
   Default value ``"0"`` indicates that no time limit is set.
+- **sig.block.signTimeout** specifies a time window within the block signatures
+  have to be issued, default is ``10``. For example, issuing 4 signatures in a
+  second with sign timeout 10s, it is possible to handle 4 x 10 signatures
+  request created at the same time. More than that, will close last blocks with
+  signature failure as signature requests were not sent out within 10 seconds.
 - **sig.aggregator.hmacAlg** defines the HMAC algorithm to be used in communication with the KSI Gateway.
   This must be agreed on with the KSI service provider, default is SHA2-256.
 - **sig.keepTreeHashes** turns on/off the storing of the hashes that were used as leaves
