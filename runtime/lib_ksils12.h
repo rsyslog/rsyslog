@@ -90,6 +90,8 @@ struct rsksictx_s {
 	KSI_HashAlgorithm hmacAlg;
 	uint8_t bKeepRecordHashes;
 	uint8_t bKeepTreeHashes;
+	uint64_t confInterval;
+	time_t tConfRequested;
 	uint64_t blockLevelLimit;
 	uint32_t blockTimeLimit;
 	uint32_t effectiveBlockLevelLimit; /* level limit adjusted by gateway settings */
@@ -201,6 +203,7 @@ struct rsksistatefile {
 #define getIVLenKSI(bh) (hashOutputLengthOctetsKSI((bh)->hashID))
 #define rsksiSetBlockLevelLimit(ctx, limit) ((ctx)->blockLevelLimit = (ctx)->effectiveBlockLevelLimit = limit)
 #define rsksiSetBlockTimeLimit(ctx, limit) ((ctx)->blockTimeLimit = limit)
+#define rsksiSetConfInterval(ctx, val) ((ctx)->confInterval = val)
 #define rsksiSetKeepRecordHashes(ctx, val) ((ctx)->bKeepRecordHashes = val)
 #define rsksiSetKeepTreeHashes(ctx, val) ((ctx)->bKeepTreeHashes = val)
 #define rsksiSetFileFormat(ctx, val) ((ctx)->fileFormat = val)

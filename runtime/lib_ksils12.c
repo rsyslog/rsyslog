@@ -732,6 +732,19 @@ static void handle_ksi_config(rsksictx ctx, KSI_AsyncService *as, KSI_Config *co
 	}
 }
 
+static int
+isAggrConfNeeded(rsksictx ctx) {
+	time_t now = 0;
+
+	now = time(NULL);
+
+	if ((uint64_t)ctx->tConfRequested + ctx->confInterval <= (uint64_t)now || ctx->tConfRequested == 0) {
+		ctx->tConfRequested = now;
+		return 1;
+	}
+
+	return 0;
+}
 
 /* note: if file exists, the last hash for chaining must
  * be read from file.
@@ -741,7 +754,6 @@ ksiOpenSigFile(ksifile ksi) {
 	int r = 0, tmpRes = 0;
 	const char *header;
 	FILE* signatureFile = NULL;
-	KSI_Config *config = NULL;
 
 	if (ksi->ctx->syncMode == LOGSIG_ASYNCHRONOUS)
 		header = LS12_BLOCKFILE_HEADER;
@@ -777,14 +789,17 @@ ksiOpenSigFile(ksifile ksi) {
 	ksiReadStateFile(ksi);
 
 	if (ksi->ctx->syncMode == LOGSIG_SYNCHRONOUS) {
-		tmpRes = KSI_receiveAggregatorConfig(ksi->ctx->ksi_ctx, &config);
-		if(tmpRes == KSI_OK) {
-			handle_ksi_config(ksi->ctx, NULL, config);
+		if (isAggrConfNeeded(ksi->ctx)) {
+			KSI_Config *config = NULL;
+
+			tmpRes = KSI_receiveAggregatorConfig(ksi->ctx->ksi_ctx, &config);
+			if (tmpRes == KSI_OK) {
+				handle_ksi_config(ksi->ctx, NULL, config);
+			} else {
+				reportKSIAPIErr(ksi->ctx, NULL, "KSI_receiveAggregatorConfig", tmpRes);
+			}
+			KSI_Config_free(config);
 		}
-		else {
-			reportKSIAPIErr(ksi->ctx, NULL, "KSI_receiveAggregatorConfig", tmpRes);
-		}
-		KSI_Config_free(config);
 	}
 
 done:	return r;
@@ -856,6 +871,8 @@ rsksiCtxNew(void) {
 	ctx->bKeepTreeHashes = false;
 	ctx->bKeepRecordHashes = true;
 	ctx->max_requests = (1 << 8);
+	ctx->confInterval = 3600;
+	ctx->tConfRequested = 0;
 	ctx->errFunc = NULL;
 	ctx->usrptr = NULL;
 	ctx->fileUID = -1;
@@ -1998,6 +2015,10 @@ void *signer_thread(void *arg) {
 	while (true) {
 		timeout = 1;
 
+		if (isAggrConfNeeded(ctx)) {
+			request_async_config(ctx, ksi_ctx, as);
+		}
+
 		/* Wait for a work item or timeout*/
 		ProtectedQueue_waitForItem(ctx->signer_queue, NULL, timeout * 1000);
 		/* Check for block time limit*/
@@ -2035,8 +2056,6 @@ void *signer_thread(void *arg) {
 				if (ksiFileCount > 0) ksiFileCount--;
 			} else if (item->type == QITEM_NEW_FILE) {
 				ksiFileCount++;
-				request_async_config(ctx, ksi_ctx, as);
-				/* renew the config when opening a new file */
 			} else if (item->type == QITEM_QUIT) {
 				free(item);
 
