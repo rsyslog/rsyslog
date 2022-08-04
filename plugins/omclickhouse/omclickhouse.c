@@ -377,7 +377,9 @@ checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 {
 	DEFiRet;
 
-	if(strstr(pWrkrData->reply, " = DB::Exception") != NULL) {
+	if((strstr(pWrkrData->reply, " = DB::Exception" ) != NULL)
+		|| (strstr(pWrkrData->reply, "DB::NetException" ) != NULL)
+		|| (strstr(pWrkrData->reply, "DB::ParsingException" ) != NULL)) {
 		dbgprintf("omclickhouse: action failed with error: %s\n", pWrkrData->reply);
 		iRet = RS_RET_DATAFAIL;
 	}
