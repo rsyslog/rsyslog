@@ -33,28 +33,41 @@ To get started with log signing:
 
 - Sign up to the Guardtime tryout service to be able to connect to KSI blockchain:
   `guardtime.com/technology/blockchain-developers <https://guardtime.com/technology/blockchain-developers>`_
-- Install the ``libksi`` library (v3.13 or later) from Guardtime repository either for RHEL/CentOS 6
-  `<https://download.guardtime.com/ksi/configuration/guardtime.el6.repo>`_
-  or RHEL/CentOS 7 `<https://download.guardtime.com/ksi/configuration/guardtime.el7.repo>`_
+- Install the ``libksi`` library (v3.20 or later)
+  `(libksi install) <https://github.com/guardtime/libksi#installation>`_
 - Install the ``rsyslog-ksi-ls12`` module (same version as rsyslog) from Adiscon repository.
-- Install the accompanying ``logksi`` tool (v1.0 or later) from Guardtime repository either for RHEL/CentOS 6
-  `<https://download.guardtime.com/ksi/configuration/guardtime.el6.repo>`_
-  or RHEL/CentOS 7 `<https://download.guardtime.com/ksi/configuration/guardtime.el7.repo>`_
+- Install the accompanying ``logksi`` tool (recommended v1.5 or later)
+  `(logksi install) <https://github.com/guardtime/logksi#installation>`_
+
+The format of the output depends on signing mode enabled (synchronous (``sync``) or asynchronous (``async``)).
+
+- In ``sync`` mode, log signature file is written directly into file ``<logfile>.logsig``. This mode is blocking as issuing KSI signatures one at a time will halt actual writing of log lines into log files. This mode suits for a system where signatures are issued rarely and delay caused by signing process is acceptable. Advantage compared to ``async`` mode is that the user has no need to integrate intermediate files to get actual log signature.
+
+- In ``async`` mode, log signature intermediate files are written into directory ``<logfile>.logsig.parts``. This mode is not blocking enabling high availability and concurrent signing of several blocks at the same time. Log signature is divided into two files, where one contains info about log records and blocks, and the other contains KSI signatures issued asynchronously. To create ``<logfile>.logsig`` from ``<logfile>.logsig.parts``, use ``logksi integrate <logfile>``. Advantage compared to ``sync`` mode is much better operational stability and speed.
 
 Currently the log signing is only supported by the file output module, thus the action type must be ``omfile``. To activate signing, add the following parameters to the action of interest in your rsyslog configuration file:
 
 Mandatory parameters (no default value defined):
 
 - **sig.provider** specifies the signature provider; in case of ``rsyslog-ksi-ls12`` package this is ``"ksi_ls12"``.
-- **sig.block.levelLimit** defines the maximum level of the root of the local aggregation tree per one block.
-- **sig.aggregator.url** defines the endpoint of the KSI signing service in KSI Gateway. Supported URI schemes are:
+- **sig.block.levelLimit** defines the maximum level of the root of the local aggregation tree per one block. The maximum number of log lines in one block is calculated as ``2^(levelLimit - 1)``.
+- **sig.aggregator.url** defines the endpoint of the KSI signing service in KSI Gateway. In ``async`` mode it is possible to specify up to 3 endpoints for high availability service, where user credentials are integrated into URL. Supported URI schemes are:
 
-  - *http://*
   - *ksi+http://*
   - *ksi+tcp://*
 
-- **sig.aggregator.user** specifies the login name for the KSI signing service.
-- **sig.aggregator.key** specifies the key for the login name.
+  Examples:
+
+  - sig.aggregator.url="ksi+tcp://signingservice1.example.com"
+
+    sig.aggregator.user="rsmith"
+
+    sig.aggregator.key= "secret"
+
+  - sig.aggregator.url="ksi+tcp://rsmith:secret@signingservice1.example.com|ksi+tcp://jsmith:terces@signingservice2.example.com"
+
+- **sig.aggregator.user** specifies the login name for the KSI signing service. For high availability service, credentials are specified in URI.
+- **sig.aggregator.key** specifies the key for the login name. For high availability service, credentials are specified in URI.
 
 Optional parameters (if not defined, default value is used):
 
@@ -64,12 +77,22 @@ Optional parameters (if not defined, default value is used):
 - **sig.block.timeLimit** defines the maximum duration of one block in seconds.
   Default value ``"0"`` indicates that no time limit is set.
 - **sig.aggregator.hmacAlg** defines the HMAC algorithm to be used in communication with the KSI Gateway.
-  This must be agreed on with the KSI service provider, default is SHA2-256.
+  This must be agreed on with the KSI service provider, default is ``"SHA2-256"``.
 - **sig.keepTreeHashes** turns on/off the storing of the hashes that were used as leaves
   for building the Merkle tree, default is ``"off"``.
 - **sig.keepRecordHashes** turns on/off the storing of the hashes of the log records, default is ``"on"``.
+- **sig.randomSource** defines source of random as file, default is ``"/dev/urandom"``.
+- **sig.debugFile** enables libksi log and redirects it into file specified. Note that logger level has to be specified (see ``sig.debugLevel``).
+- **sig.debugLevel** specifies libksi log level. Note that log file has to be specified (see ``sig.debugFile``).
 
-The log signature file, which stores the KSI signatures and information about the signed blocks, appears in the same directory as the log file itself; it is named ``<logfile>.logsig``.
+  - *0* None (default).
+  - *1* Error.
+  - *2* Warning.
+  - *3* Notice.
+  - *4* Info.
+  - *5* Debug.
+
+The log signature file, which stores the KSI signatures and information about the signed blocks, appears in the same directory as the log file itself.
 
 Sample
 ######
@@ -78,7 +101,7 @@ To sign the logs in ``/var/log/secure`` with KSI:
 ::
 
   # The authpriv file has restricted access and is signed with KSI
-  authpriv.*	action(type="omfile" file="/var/log/secure"
+  authpriv.*  action(type="omfile" file="/var/log/secure"
     sig.provider="ksi_ls12"
     sig.syncmode="sync"
     sig.hashFunction="SHA2-256"
