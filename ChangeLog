@@ -1,5 +1,35 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2208.0 (aka 2022.08) 2022-08-??
+- 2022-08-04: openssl: add support to split tls commands by semicolon
+  - Add support to split tls commands by semicolon.
+  - Changed one test with multiple tls commands to use semicolon as
+    seperator instead of newline.
+  closes: https://github.com/rsyslog/rsyslog/issues/4852
+- 2022-08-04: openssl subsystem bugfix: build issue on Solaris
+  Needed header file was added. Platforms other than Solaris did not actually need it,
+  so this bug was discovered late.
+  Thanks to Jakub Kulík for the patch.
+    Import <strings.h> when index() is used.
+- 2022-08-04: openssl: add more details to error messages
+  - Avoid LogMsg outputs osslEndSess on successfull terminated
+    connection. Only LogMsg if the connection was terminated
+    unsuccessfully.
+  - Handle SSL_ERROR_SYSCALL in both Send / osslRecordRecv,
+    do not log as error if underlaying socket was terminated
+    (ECONNRESET). Log as information instead.
+  closes: https://github.com/rsyslog/rsyslog/issues/4946
+- 2022-08-04: omclickhouse: capture additional exceptions
+    - DB::NetException
+    - DB::ParsingExceptions
+  Thanks to Victor Kustov for the patch.
+- 2022-08-04: mmanon bugfix: Simplified and fixed IPv4 digit detection.
+    - Fixed an issue with numbers above int64 in syntax_ipv4.
+      Numbers that were up to 256 above the max of an int64
+      could incorrectly be detected as valid ipv4 digit.
+    - Simplified the IPv4 digit detection function and renamed
+      to isPosByte.
+    - added testcasse for malformed IPvc4 addresses
+    closes: https://github.com/rsyslog/rsyslog/issues/4940
 - 2022-07-21: imptcp: slight tuning
   - reduce indirect addressing to obtain more speed
   - also a fix for an annoying typo
