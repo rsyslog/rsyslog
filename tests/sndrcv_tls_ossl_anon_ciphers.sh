@@ -18,7 +18,7 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.Mode="1"
 	StreamDriver.AuthMode="anon"
 	StreamDriver.PermitExpiredCerts="off"
-	gnutlsPriorityString="CipherString=ECDHE-RSA-AES256-SHA384\nCiphersuites=TLS_AES_256_GCM_SHA384"
+	gnutlsPriorityString="CipherString=ECDHE-RSA-AES256-SHA384;Ciphersuites=TLS_AES_256_GCM_SHA384"
 	)
 input(	type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
@@ -40,7 +40,7 @@ action(	type="omfwd"
 	port="'$PORT_RCVR'"
 	StreamDriverMode="1"
 	StreamDriverAuthMode="anon"
-	gnutlsPriorityString="CipherString=ECDHE-RSA-AES256-SHA384\nCiphersuites=TLS_AES_128_GCM_SHA256"
+	gnutlsPriorityString="CipherString=ECDHE-RSA-AES256-SHA384;Ciphersuites=TLS_AES_128_GCM_SHA256"
 )
 ' 2
 startup 2
