@@ -1,5 +1,17 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2208.0 (aka 2022.08) 2022-08-??
+- 2022-08-04: ksi bugfix: possible crash fixed when several log files are opened.
+  KSI module in async mode used to request aggregator conf. every time a log
+  file was opened. When several log files were opened simultaneously
+  corresponding amount of pointless concurrent conf. requests were posted.
+  Concurrent conf. requests lead to a bug in libksi, where internal count of
+  pending requests was not decremented correctly causing system to crash.
+  Fix for the issue is to optimize the frequency of conf. requests so that only
+  one conf. requests is handled at once. Instead of checking conf. every time
+  log file is opened, conf is requested periodically after conf timeout. This will
+  affect both sync and async mode.
+  New option for KSI module introduced - sig.confinterval="time, s".
+  Thanks to Taavi Valjaots for the patch.
 - 2022-08-04: openssl: add support to split tls commands by semicolon
   - Add support to split tls commands by semicolon.
   - Changed one test with multiple tls commands to use semicolon as
