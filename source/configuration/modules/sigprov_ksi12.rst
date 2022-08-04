@@ -81,6 +81,7 @@ Optional parameters (if not defined, default value is used):
 - **sig.keepTreeHashes** turns on/off the storing of the hashes that were used as leaves
   for building the Merkle tree, default is ``"off"``.
 - **sig.keepRecordHashes** turns on/off the storing of the hashes of the log records, default is ``"on"``.
+- **sig.confInterval** defines interval of periodic request for aggregator configuration in seconds, default is ``3600``.
 - **sig.randomSource** defines source of random as file, default is ``"/dev/urandom"``.
 - **sig.debugFile** enables libksi log and redirects it into file specified. Note that logger level has to be specified (see ``sig.debugLevel``).
 - **sig.debugLevel** specifies libksi log level. Note that log file has to be specified (see ``sig.debugFile``).
