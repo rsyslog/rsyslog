@@ -107,6 +107,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <string.h>
+#include <strings.h>
 #include <netinet/in.h>
 #include <pthread.h>
 #ifdef ENABLE_RELP
