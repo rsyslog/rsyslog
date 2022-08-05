@@ -95,6 +95,7 @@ struct rsksictx_s {
 	uint64_t blockLevelLimit;
 	uint32_t blockTimeLimit;
 	uint32_t effectiveBlockLevelLimit; /* level limit adjusted by gateway settings */
+	uint32_t threadSleepms;
 	uint8_t syncMode;
 	uid_t	fileUID;	/* IDs for creation */
 	uid_t	dirUID;
