@@ -1,6 +1,7 @@
 FROM	fedora:36
 RUN	dnf -y update
-RUN	dnf -y install wget mock git sudo mc vim screen rsync createrepo rpm-sign yum
+RUN	dnf -y install wget mock git sudo mc vim screen rsync createrepo rpm-sign yum crypto-policies-scripts.noarch
+RUN	update-crypto-policies --set LEGACY
 RUN	mkdir /private-files
 VOLUME	/private-files
 RUN	useradd pkg --uid 1001 -ms /bin/bash
