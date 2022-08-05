@@ -97,10 +97,6 @@ typedef enum {
 		STRM_COMPRESS_ZSTD = 1
 	} strm_compressionDriver_t;
 
-/* settings for stream rotation (applies not to all processing modes!) */
-#define	STRM_ROTATION_DO_CHECK		0
-#define	STRM_ROTATION_DO_NOT_CHECK	1
-
 #define STREAM_ASYNC_NUMBUFS 2 /* must be a power of 2 -- TODO: make configurable */
 /* The strm_t data structure */
 struct strm_s {
@@ -254,6 +250,5 @@ void strmSetReadTimeout(strm_t *const __restrict__ pThis, const int val);
 const uchar * ATTR_NONNULL() strmGetPrevLineSegment(strm_t *const pThis);
 const uchar * ATTR_NONNULL() strmGetPrevMsgSegment(strm_t *const pThis);
 int ATTR_NONNULL() strmGetPrevWasNL(const strm_t *const pThis);
-void ATTR_NONNULL() strmSet_checkRotation(strm_t *const pThis, const int val);
 
 #endif /* #ifndef STREAM_H_INCLUDED */
