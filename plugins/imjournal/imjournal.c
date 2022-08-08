@@ -991,7 +991,9 @@ CODESTARTafterRun
 		persistJournalState();
 	}
 	closeJournal();
-	ratelimitDestruct(ratelimiter);
+	if (ratelimiter) {
+		ratelimitDestruct(ratelimiter);
+	}
 ENDafterRun
 
 
