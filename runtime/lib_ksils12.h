@@ -94,6 +94,7 @@ struct rsksictx_s {
 	time_t tConfRequested;
 	uint64_t blockLevelLimit;
 	uint32_t blockTimeLimit;
+	uint32_t blockSigTimeout;
 	uint32_t effectiveBlockLevelLimit; /* level limit adjusted by gateway settings */
 	uint32_t threadSleepms;
 	uint8_t syncMode;
@@ -204,6 +205,7 @@ struct rsksistatefile {
 #define getIVLenKSI(bh) (hashOutputLengthOctetsKSI((bh)->hashID))
 #define rsksiSetBlockLevelLimit(ctx, limit) ((ctx)->blockLevelLimit = (ctx)->effectiveBlockLevelLimit = limit)
 #define rsksiSetBlockTimeLimit(ctx, limit) ((ctx)->blockTimeLimit = limit)
+#define rsksiSetBlockSigTimeout(ctx, val) ((ctx)->blockSigTimeout = val)
 #define rsksiSetConfInterval(ctx, val) ((ctx)->confInterval = val)
 #define rsksiSetKeepRecordHashes(ctx, val) ((ctx)->bKeepRecordHashes = val)
 #define rsksiSetKeepTreeHashes(ctx, val) ((ctx)->bKeepTreeHashes = val)

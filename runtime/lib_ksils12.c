@@ -710,7 +710,7 @@ static void handle_ksi_config(rsksictx ctx, KSI_AsyncService *as, KSI_Config *co
 			if(res != KSI_OK)
 				reportKSIAPIErr(ctx, NULL, "KSI_AsyncService_setOption(max_request)", res);
 
-			optValue = 5 * ctx->max_requests;
+			optValue = 3 * ctx->max_requests * ctx->blockSigTimeout;
 			KSI_AsyncService_setOption(as, KSI_ASYNC_OPT_REQUEST_CACHE_SIZE,
 				(void*)optValue);
 		}
@@ -892,6 +892,7 @@ rsksiCtxNew(void) {
 	ctx->bKeepTreeHashes = false;
 	ctx->bKeepRecordHashes = true;
 	ctx->max_requests = (1 << 8);
+	ctx->blockSigTimeout = 10;
 	ctx->confInterval = 3600;
 	ctx->tConfRequested = 0;
 	ctx->threadSleepms = 1000;
@@ -1979,6 +1980,7 @@ void *signer_thread(void *arg) {
 	rsksictx ctx = (rsksictx) arg;
 	KSI_CTX *ksi_ctx = NULL;
 	KSI_AsyncService *as = NULL;
+	size_t size_t_value = 0;
 	size_t ksiFileCount = 0;
 	int endpoints = 0;
 	bool bSleep = true;
@@ -2028,8 +2030,14 @@ void *signer_thread(void *arg) {
 		goto cleanup;
 	}
 
+	/* Lets use buffer value, as libksi requires size_t. */
+	size_t_value = ctx->max_requests;
 	KSI_AsyncService_setOption(as, KSI_ASYNC_OPT_REQUEST_CACHE_SIZE,
-		(void*) (ctx->max_requests));
+		(void*)size_t_value);
+	size_t_value = ctx->blockSigTimeout;
+	KSI_AsyncService_setOption(as, KSI_ASYNC_OPT_SND_TIMEOUT,
+		(void*)size_t_value);
+
 
 	ctx->signer_state = SIGNER_STARTED;
 	while (true) {
