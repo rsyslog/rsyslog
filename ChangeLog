@@ -1,5 +1,50 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2208.0 (aka 2022.08) 2022-08-??
+- 2022-08-09: ksi bugfix: request cache size and send timeout issue fixed.
+  Async service send timeout is not configurable and request cache size is too
+  small to handle large amount of signing requests with small amount of permitted
+  requests per aggregation round. For example user with max_requests = 4 results
+  cache size 5 * max_requests or at least 256. When signing 300 log files cache
+  will be too small resulting several unsigned blocks. When signing 200 log file
+  cache will be adequate, but with rate of 4 signatures per second, it is only
+  possible to sign 4 * 10 blocks before all requests that are not sent out will
+  timeout.
+  Fix for the issue is to make send timeout configurable and make the size of the
+  cache depend on the value of send timeout. New configuration value
+  sig.block.signtimeout="time, s" introduced that defines the time window wherein
+  the block has to be signed. The size of the request cache is increased to
+  3 * max_requests * sign_timeout or at least 256.
+  Thanks to Taavi Valjaots for the patch.
+- 2022-08-09: imjournal bugfix: segmentation fault in close journal
+  Thanks to github user t-feng for the patch.
+- 2022-08-09: net subsystem: support sha256 for StreamDriverAuthMode="x509/fingerprint"
+  Thanks to github user codemaker219 for the patch.
+- 2022-08-05: imfile bugfix: message loss/duplication when monitored file is rotated
+  When a to-be-monitored file is being rotated, some messages may be lost or
+  duplicated. In case of duplication, many file lines may be duplicated
+  depending on actual timing. The whole bug was primarily timing depenedent
+  in general. It most often was visible in practice when the monitored
+  file was very frequently rotated (we had some report with every few
+  seconds).
+  Note that while we try hard to not lose any messages, input file
+  rotation always has some loss potential. This is inevitable if
+  the monitored file is being truncated.
+  Also note that this bugfix affects imfile, only. It has nothing to do
+  and no relation to rsyslog output files being rotated on HUP.
+  closes: https://github.com/rsyslog/rsyslog/issues/4797
+- 2022-08-05: ksi bugfix: optimize processing of signer queue to fix delays.
+  There is a worker queue where rsyslog KSI module collects events and signing
+  requests. When queue is processed thread is periodically put to sleep. Previous
+  implementation handles signature requests well but sleeps every time after
+  handling new file open / close event. When several log files are opened or
+  closed simultaneously process is significantly slowed down. Another issue is
+  that thread always sleeps 1000ms that may be 2x longer than aggregation round.
+  This slows down overall signing process.
+  Fix for the issue is to simply not sleep after file open / close event if there
+  are next items to be processed. To speed up the signing process, rsyslog uses
+  KSI aggregator conf. to obtain the aggregation period that is used for the sleep
+  time configuration.
+  Thanks to Taavi Valjaots for the patch.
 - 2022-08-04: ksi bugfix: possible crash fixed when several log files are opened.
   KSI module in async mode used to request aggregator conf. every time a log
   file was opened. When several log files were opened simultaneously
