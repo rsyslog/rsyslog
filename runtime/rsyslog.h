@@ -110,8 +110,15 @@
 						_Pragma("GCC diagnostic ignored \"-Wformat-nonliteral\"")
 	#define PRAGMA_IGNORE_Wdeprecated_declarations \
 						_Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
-	#define PRAGMA_DIAGNOSTIC_PUSH		_Pragma("GCC diagnostic push")
-	#define PRAGMA_DIAGNOSTIC_POP		_Pragma("GCC diagnostic pop")
+	#if  __GNUC__ >= 5
+		#define PRAGMA_DIAGNOSTIC_PUSH \
+			_Pragma("GCC diagnostic push")
+		#define PRAGMA_DIAGNOSTIC_POP \
+			_Pragma("GCC diagnostic pop")
+	#else
+		#define PRAGMA_DIAGNOSTIC_PUSH
+		#define PRAGMA_DIAGNOSTIC_POP
+	#endif
 #else
 	#define PRAGMA_INGORE_Wswitch_enum
 	#define PRAGMA_IGNORE_Wsign_compare
