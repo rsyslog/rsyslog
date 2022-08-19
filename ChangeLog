@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2210.0 (aka 2022.10) 2022-10-??
+- 2022-08-19: fix compile issue with older gcc compilers
+  Thanks to Julien Thomas for the contribution.
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2208.0 (aka 2022.08) 2022-08-09
 - 2022-08-09: ksi bugfix: request cache size and send timeout issue fixed.
