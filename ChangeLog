@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2208.0 (aka 2022.08) 2022-08-??
+Scheduled Release 8.2208.0 (aka 2022.08) 2022-08-09
 - 2022-08-09: ksi bugfix: request cache size and send timeout issue fixed.
   Async service send timeout is not configurable and request cache size is too
   small to handle large amount of signing requests with small amount of permitted
