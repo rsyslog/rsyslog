@@ -26,6 +26,6 @@ assign_tcpflood_port $RSYSLOG_DYNNAME.tcpflood_port
 tcpflood -m$NUMMESSAGES
 shutdown_when_empty
 wait_shutdown
-content_check --regex "TCP message from disallowed sender .* discarded"
+content_check --regex "connection request from disallowed sender .* discarded"
 check_file_not_exists "$RSYSLOG_DYNNAME.must-not-be-created"
 exit_test

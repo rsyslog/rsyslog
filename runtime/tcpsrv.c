@@ -21,7 +21,7 @@
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c[which was
  * licensed under BSD at the time of the rsyslog fork])
  *
- * Copyright 2007-2021 Adiscon GmbH.
+ * Copyright 2007-2022 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -441,7 +441,7 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 	int iSess = -1;
 	struct sockaddr_storage *addr;
 	uchar *fromHostFQDN = NULL;
-	prop_t *fromHostIP;
+	prop_t *fromHostIP = NULL;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	assert(pLstnInfo != NULL);
@@ -496,7 +496,7 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 		DBGPRINTF("%s is not an allowed sender\n", fromHostFQDN);
 		if(glbl.GetOptionDisallowWarning(runConf)) {
 			errno = 0;
-			LogError(0, RS_RET_HOST_NOT_PERMITTED, "TCP message from disallowed "
+			LogError(0, RS_RET_HOST_NOT_PERMITTED, "connection request from disallowed "
 					"sender %s discarded", fromHostFQDN);
 		}
 		ABORT_FINALIZE(RS_RET_HOST_NOT_PERMITTED);
@@ -523,8 +523,20 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 		pThis->pSessions[iSess] = pSess;
 	pSess = NULL; /* this is now also handed over */
 
+	if(pThis->bEmitMsgOnOpen) {
+		LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO,
+			"imtcp: connection established with host: %s",
+			propGetSzStr(fromHostIP));
+	}
+
 finalize_it:
 	if(iRet != RS_RET_OK) {
+		if(iRet != RS_RET_HOST_NOT_PERMITTED && pThis->bEmitMsgOnOpen) {
+			LogError(0, NO_ERRCODE, "imtcp: connection could not be "
+				"established with host: %s",
+				fromHostIP == NULL ? "(IP unknown)"
+					: (const char*)propGetSzStr(fromHostIP));
+		}
 		if(pSess != NULL)
 			tcps_sess.Destruct(&pSess);
 		if(pNewStrm != NULL)
@@ -1357,9 +1369,16 @@ SetLinuxLikeRatelimiters(tcpsrv_t *pThis, unsigned int ratelimitInterval, unsign
 }
 
 
+/* Set connection open notification */
+static rsRetVal
+SetNotificationOnRemoteOpen(tcpsrv_t *pThis, const int bNewVal)
+{
+	pThis->bEmitMsgOnOpen = bNewVal;
+	return RS_RET_OK;
+}
 /* Set connection close notification */
 static rsRetVal
-SetNotificationOnRemoteClose(tcpsrv_t *pThis, int bNewVal)
+SetNotificationOnRemoteClose(tcpsrv_t *pThis, const int bNewVal)
 {
 	DEFiRet;
 	pThis->bEmitMsgOnClose = bNewVal;
@@ -1611,6 +1630,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetOnMsgReceive = SetOnMsgReceive;
 	pIf->SetLinuxLikeRatelimiters = SetLinuxLikeRatelimiters;
 	pIf->SetNotificationOnRemoteClose = SetNotificationOnRemoteClose;
+	pIf->SetNotificationOnRemoteOpen = SetNotificationOnRemoteOpen;
 	pIf->SetPreserveCase = SetPreserveCase;
 	pIf->SetDrvrCheckExtendedKeyUsage = SetDrvrCheckExtendedKeyUsage;
 	pIf->SetDrvrPrioritizeSAN = SetDrvrPrioritizeSAN;
