@@ -108,6 +108,7 @@ struct globals_s {
 	uchar *pszDfltNetstrmDrvrCertFile;/* default cert file for the netstrm driver (server) */
 	uchar *pszDfltNetstrmDrvrKeyFile; /* default key file for the netstrm driver (server) */
 	uchar *pszDfltNetstrmDrvr; /* module name of default netstream driver */
+	uchar *pszNetstrmDrvrCAExtraFiles; /* CA extra file for the netstrm driver */
 	uchar *oversizeMsgErrorFile; /* File where oversize messages are written to */
 	int reportOversizeMsg; /* shall error messages be generated for oversize messages? */
 	int oversizeMsgInputMode; /* Mode which oversize messages will be forwarded */
