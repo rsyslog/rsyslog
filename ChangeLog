@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2210.0 (aka 2022.10) 2022-10-??
+- 2022-08-26: openssl TLS driver: add mechanism to include extra CA files parameter
+  This change allows to include extra CA files so that no "unable to get issuer
+  certificates" issue is obtained when using chained cert files. New parameter name is
+  "NetstreamDriverCAExtraFiles".
+  Thanks to Sergio Arroutbi for the patch.
+  closes: https://github.com/rsyslog/rsyslog/issues/4851
 - 2022-08-19: fix compile issue with older gcc compilers
   Thanks to Julien Thomas for the contribution.
 ----------------------------------------------------------------------------------------
