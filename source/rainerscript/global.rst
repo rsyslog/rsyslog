@@ -64,6 +64,13 @@ The following parameters can be set:
   small parameters to prevent that from happening.
   **This parameter only has an effect if general debugging is enabled.**
 
+-  **netstreamDriverCaExtraFiles**
+
+   This directive allows to configure multiple additional extra CA files.
+   This is intended for SSL certificate chains to work appropriately,
+   as the different CA files in the chain need to be specified.
+   It must be remarked that this parameter only works with the OpenSSL driver.
+
 - **processInternalMessages** binary (on/off)
 
   This tells rsyslog if it shall process internal messages itself. The
