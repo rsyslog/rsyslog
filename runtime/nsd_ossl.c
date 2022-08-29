@@ -1318,7 +1318,7 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 					"Check at least: 1) file path is correct, 2) file exist, "
 					"3) permissions are correct, 4) file content is correct. "
 					"Open ssl error info may follow in next messages");
-				osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit");
+				osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit", "SSL_CTX_load_verify_locations");
 				ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
 			}
 		}
