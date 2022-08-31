@@ -4,7 +4,7 @@
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c,
  * which at the time of the rsyslog fork was BSD-licensed)
  *
- * Copyright 2007-2021 Adiscon GmbH.
+ * Copyright 2007-2022 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -104,6 +104,7 @@ static struct configSettings_s {
 	int iKeepAliveProbes;
 	int iKeepAliveTime;
 	int bEmitMsgOnClose;
+	int bEmitMsgOnOpen;
 	int iAddtlFrameDelim;
 	int maxFrameSize;
 	int bDisableLFDelim;
@@ -136,6 +137,7 @@ struct instanceConf_s {
 	int bDisableLFDelim;
 	int discardTruncatedMsg;
 	int bEmitMsgOnClose;
+	int bEmitMsgOnOpen;
 	int bPreserveCase;
 	uchar *pszStrmDrvrName; /* stream driver to use */
 	int iStrmDrvrMode;
@@ -177,6 +179,7 @@ struct modConfData_s {
 	int iKeepAliveProbes;
 	int iKeepAliveTime;
 	sbool bEmitMsgOnClose; /* emit an informational message on close by remote peer */
+	sbool bEmitMsgOnOpen; /* emit an informational message on close by remote peer */
 	uchar *gnutlsPriorityString;
 	uchar *pszStrmDrvrName; /* stream driver to use */
 	uchar *pszStrmDrvrAuthMode; /* authentication mode to use */
@@ -199,6 +202,7 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "discardtruncatedmsg", eCmdHdlrBinary, 0 },
 	{ "octetcountedframing", eCmdHdlrBinary, 0 },
 	{ "notifyonconnectionclose", eCmdHdlrBinary, 0 },
+	{ "notifyonconnectionopen", eCmdHdlrBinary, 0 },
 	{ "addtlframedelimiter", eCmdHdlrNonNegInt, 0 },
 	{ "maxframesize", eCmdHdlrInt, 0 },
 	{ "maxsessions", eCmdHdlrPositiveInt, 0 },
@@ -234,6 +238,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "disablelfdelimiter", eCmdHdlrBinary, 0 },
 	{ "discardtruncatedmsg", eCmdHdlrBinary, 0 },
 	{ "notifyonconnectionclose", eCmdHdlrBinary, 0 },
+	{ "notifyonconnectionopen", eCmdHdlrBinary, 0 },
 	{ "addtlframedelimiter", eCmdHdlrNonNegInt, 0 },
 	{ "maxframesize", eCmdHdlrInt, 0 },
 	{ "preservecase", eCmdHdlrBinary, 0 },
@@ -383,6 +388,7 @@ createInstance(instanceConf_t **pinst)
 	inst->bDisableLFDelim = loadModConf->bDisableLFDelim;
 	inst->discardTruncatedMsg = loadModConf->discardTruncatedMsg;
 	inst->bEmitMsgOnClose = loadModConf->bEmitMsgOnClose;
+	inst->bEmitMsgOnOpen = loadModConf->bEmitMsgOnOpen;
 	inst->bPreserveCase = loadModConf->bPreserveCase;
 	inst->iTCPLstnMax = loadModConf->iTCPLstnMax;
 	inst->iTCPSessMax = loadModConf->iTCPSessMax;
@@ -482,6 +488,7 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 	CHKiRet(tcpsrv.SetbDisableLFDelim(pOurTcpsrv, inst->bDisableLFDelim));
 	CHKiRet(tcpsrv.SetDiscardTruncatedMsg(pOurTcpsrv, inst->discardTruncatedMsg));
 	CHKiRet(tcpsrv.SetNotificationOnRemoteClose(pOurTcpsrv, inst->bEmitMsgOnClose));
+	CHKiRet(tcpsrv.SetNotificationOnRemoteOpen(pOurTcpsrv, inst->bEmitMsgOnOpen));
 	CHKiRet(tcpsrv.SetPreserveCase(pOurTcpsrv, inst->bPreserveCase));
 	/* now set optional params, but only if they were actually configured */
 	psz = (inst->pszStrmDrvrName == NULL) ? modConf->pszStrmDrvrName : inst->pszStrmDrvrName;
@@ -629,6 +636,8 @@ CODESTARTnewInpInst
 			inst->discardTruncatedMsg = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "notifyonconnectionclose")) {
 			inst->bEmitMsgOnClose = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "notifyonconnectionopen")) {
+			inst->bEmitMsgOnOpen = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "addtlframedelimiter")) {
 			inst->iAddtlFrameDelim = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "maxframesize")) {
@@ -691,6 +700,7 @@ CODESTARTbeginCnfLoad
 	loadModConf->iKeepAliveProbes = 0;
 	loadModConf->iKeepAliveTime = 0;
 	loadModConf->bEmitMsgOnClose = 0;
+	loadModConf->bEmitMsgOnOpen = 0;
 	loadModConf->iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
 	loadModConf->maxFrameSize = 200000;
 	loadModConf->bDisableLFDelim = 0;
@@ -740,6 +750,8 @@ CODESTARTsetModCnf
 			loadModConf->bSuppOctetFram = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "notifyonconnectionclose")) {
 			loadModConf->bEmitMsgOnClose = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "notifyonconnectionopen")) {
+			loadModConf->bEmitMsgOnOpen = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "addtlframedelimiter")) {
 			loadModConf->iAddtlFrameDelim = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "maxframesize")) {
