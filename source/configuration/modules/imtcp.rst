@@ -91,6 +91,34 @@ the integer could become negative and this would result in a
 Segmentation Fault. (Max Value = 200000000)
 
 
+NotifyOnConnectionOpen
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", ""
+
+Instructs imtcp to emit a message if the remote peer closes a
+connection.
+
+
+NotifyOnConnectionOpen
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+Instructs imtcp to emit a message if the remote peer opens a
+connection.
+
+
 NotifyOnConnectionClose
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -104,8 +132,6 @@ NotifyOnConnectionClose
 Instructs imtcp to emit a message if the remote peer closes a
 connection.
 
-**Important:** This directive is global to all listeners and must be
-given right after loading imtcp, otherwise it may have no effect.
 
 
 KeepAlive
@@ -863,7 +889,7 @@ NotifyOnConnectionClose
    :widths: auto
    :class: parameter-table
 
-   "binary", "module parameter", "no", ""
+   "binary", "module parameter", "no", "none"
 
 .. versionadded:: 8.2106.0
 
