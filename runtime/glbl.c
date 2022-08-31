@@ -662,8 +662,8 @@ SetLocalHostName(uchar *const newname)
 
 /* return our local hostname. if it is not set, "[localhost]" is returned
  */
-static uchar*
-GetLocalHostName(void)
+uchar*
+glblGetLocalHostName(void)
 {
 	uchar *pszRet;
 
@@ -934,6 +934,8 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetParserSpaceLFOnReceive = GetParserSpaceLFOnReceive;
 	pIf->GetParserEscape8BitCharactersOnReceive = GetParserEscape8BitCharactersOnReceive;
 	pIf->GetParserEscapeControlCharacterTab = GetParserEscapeControlCharacterTab;
+	pIf->GetLocalHostName = glblGetLocalHostName;
+	pIf->SetLocalHostName = SetLocalHostName;
 #define SIMP_PROP(name) \
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;
@@ -941,7 +943,6 @@ CODESTARTobjQueryInterface(glbl)
 	SIMP_PROP(DropMalPTRMsgs);
 	SIMP_PROP(mainqCnfObj);
 	SIMP_PROP(LocalFQDNName)
-	SIMP_PROP(LocalHostName)
 	SIMP_PROP(LocalDomain)
 	SIMP_PROP(ParserEscapeControlCharactersCStyle)
 	SIMP_PROP(ParseHOSTNAMEandTAG)
@@ -1391,6 +1392,15 @@ glblDoneLoadCnf(void)
 		Debug = DEBUG_ONDEMAND;
 		stddbg = -1;
 	}
+
+	/* we have now read the config. We need to query the local host name now
+	 * as it was set by the config.
+	 *
+	 * Note: early messages are already emited, and have "[localhost]" as
+	 * hostname. These messages are currently in iminternal queue. Once they
+	 * are taken from that queue, the hostname will be adapted.
+	 */
+	queryLocalHostname();
 
 finalize_it:	RETiRet;
 }

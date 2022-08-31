@@ -175,7 +175,6 @@ TESTS +=  \
 	timestamp-mysql.sh \
 	timestamp-pgsql.sh \
 	timestamp-subseconds.sh \
-	hostname-getaddrinfo-fail.sh \
 	msleep_usage_output.sh \
 	mangle_qi_usage_output.sh \
 	minitcpsrv_usage_output.sh \
@@ -1680,10 +1679,6 @@ TESTS +=  \
 endif
 endif # ENABLE_OMAMQP1
 
-# test samples...
-#empty-hostname.log: hostname-getaddrinfo-fail.log
-#hostname-getaddrinfo-fail.log: empty-hostname.log
-
 endif # if ENABLE_TESTBENCH
 
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
@@ -1720,7 +1715,6 @@ EXTRA_DIST= \
 	config_enabled-off.sh \
 	empty-app-name.sh \
 	empty-hostname.sh \
-	hostname-getaddrinfo-fail.sh \
 	hostname-with-slash-pmrfc5424.sh \
 	hostname-with-slash-pmrfc3164.sh \
 	pmrfc3164-msgFirstSpace.sh \
