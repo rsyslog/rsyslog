@@ -1,5 +1,15 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2210.0 (aka 2022.10) 2022-10-??
+- 2022-08-31: imtcp: add option notifyonconnectionopen
+  Add this both as module an input parameter. Complements already-existing
+  config param notifyonconnectionclose and mirrors the similar feature from
+  imptcp.
+  The module parameter acts as default, similarly to notifyonconnectionclose.
+  Note that in contrast to imptcp, we emit IP addresses and not host
+  names. This sticks with the traditional semantics of imtcp.
+  Note that we also fixed a mislading error message in the case when a
+  disallowed sender tried to connect.
+  Thanks to John Chivian for suggesting the addition.
 - 2022-08-26: openssl TLS driver: add mechanism to include extra CA files parameter
   This change allows to include extra CA files so that no "unable to get issuer
   certificates" issue is obtained when using chained cert files. New parameter name is
