@@ -1438,7 +1438,9 @@ if HAVE_VALGRIND
 TESTS += \
 	 imrelp-basic-vg.sh \
 	 imrelp-sessionbreak-vg.sh \
-	 imrelp-manyconn-vg.sh
+	 imrelp-manyconn-vg.sh \
+	 sndrcv_relp-vg-rcvr.sh \
+	 sndrcv_relp-vg-sender.sh
 endif # HAVE_VALGRIND
 endif
 
@@ -2371,6 +2373,8 @@ EXTRA_DIST= \
 	sndrcv_relp_tls_chainedcert.sh \
 	sndrcv_relp_tls.sh \
 	sndrcv_relp_tls_certvalid.sh \
+	sndrcv_relp-vg-rcvr.sh \
+	sndrcv_relp-vg-sender.sh \
 	relp_tls_certificate_not_found.sh \
 	omrelp_wrong_authmode.sh \
 	imrelp-tls.sh \
