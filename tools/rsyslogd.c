@@ -3,7 +3,7 @@
  * because it was either written from scratch by me (rgerhards) or
  * contributors who agreed to ASL 2.0.
  *
- * Copyright 2004-2019 Rainer Gerhards and Adiscon
+ * Copyright 2004-2022 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
@@ -230,7 +230,7 @@ setsid(void)
 #endif
 
 
-static rsRetVal
+rsRetVal
 queryLocalHostname(void)
 {
 	uchar *LocalHostName = NULL;
@@ -1384,12 +1384,6 @@ initAll(int argc, char **argv)
 			iRet);
 		exit(1); /* "good" exit, leaving at init for fatal error */
 	}
-
-	/* get our host and domain names - we need to do this early as we may emit
-	 * error log messages, which need the correct hostname. -- rgerhards, 2008-04-04
-	 * But we need to have imInternal up first!
-	 */
-	queryLocalHostname();
 
 	/* we now can emit error messages "the regular way" */
 

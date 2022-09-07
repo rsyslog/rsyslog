@@ -777,8 +777,8 @@ rsRetVal rsrtInit(const char **ppErrObj, obj_if_t *pObjIF);
 rsRetVal rsrtExit(void);
 int rsrtIsInit(void);
 void rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar*));
-
 void dfltErrLogger(const int, const int, const uchar *errMsg);
+rsRetVal queryLocalHostname(void);
 
 
 /* this define below is (later) intended to be used to implement empty
