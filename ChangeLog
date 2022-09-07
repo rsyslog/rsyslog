@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2210.0 (aka 2022.10) 2022-10-??
+- 2022-09-07: cor bugfix: leak in helper function SetString
+  A part of rsyslog runtime, SetString(), had a small memory leak when a value was
+  assigned multiple times. While this could potentially consume larger amounts of
+  memory, this did not happen in practice. The reason is that multiple assignments
+  to the same object occur very seldom.
+  Thanks to github user seuzw930 for the patch.
+  closes: https://github.com/rsyslog/rsyslog/issues/4961
 - 2022-09-07: core bugfix: correct local host name after config processing
   rsyslog.conf may affect the host's local name. These changes were
   so far only activated after the first HUP. This patch now ensures
