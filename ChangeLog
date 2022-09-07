@@ -1,5 +1,19 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2210.0 (aka 2022.10) 2022-10-??
+- 2022-09-07: core bugfix: correct local host name after config processing
+  rsyslog.conf may affect the host's local name. These changes were
+  so far only activated after the first HUP. This patch now ensures
+  that the configured local host name is applied correctly throughout
+  all processing, including early startup.
+  This patch causes a slight change of behaviour. However, the behaviour
+  was inconsitent before. Now it is consistent and according to the config.
+  Please note: this patch also exposes a global entry point via "regular"
+  dynamic loading as this makes things much easier to do. This is in-line
+  with ongoing simplification effort.
+  Finally, we also remove a CI test that we do no longer need because
+  the problem covered is now addressed differently and the original issue
+  can no longer occur.
+  closes https://github.com/rsyslog/rsyslog/issues/4975
 - 2022-08-31: imtcp: add option notifyonconnectionopen
   Add this both as module an input parameter. Complements already-existing
   config param notifyonconnectionclose and mirrors the similar feature from
