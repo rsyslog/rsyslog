@@ -11,7 +11,7 @@ The following parameters can be set:
 
 -  **action.reportSuspension** - binary, default "on", v7.5.8+
 
-   If enabled ("on") action will log message under *syslog.\** when an
+   If enabled ("on") action will log message under `*syslog.\**` when an
    action suspends or resumes itself. This usually happens when there are
    problems connecting to backend systems. If disabled ("off"), these
    messages are not generated. These messages can be useful in detecting
@@ -504,7 +504,7 @@ The following parameters can be set:
   This parameter specifies if an error shall be reported when an oversized
   message is seen. The default is "on".
 
-- **abortOnUncleanConfig** [boolean (on/of)] available 8.37.0+
+- **abortOnUncleanConfig** [boolean (on/off)] available 8.37.0+
 
   This parameter permits to prevent rsyslog from running when the
   configuration file is not clean. "Not Clean" means there are errors or
@@ -514,6 +514,25 @@ The following parameters can be set:
   real error and a warning-like condition. As such, the startup will also
   prevented if warnings are present. I consider this a good thing in being
   "strict", but I admit there also currently is no other way of doing it.
+
+- **abortOnFailedQueueStartup** [boolean (on/off)] available 8.2210.0+
+
+  This parameter is similiar to *abortOnUncleanConfig* but makes rsyslog
+  abort when there are any problems with queue startup. This is usually
+  caused by disk queue settings or disk queue file corruption. Normally,
+  rsyslog ignores disk queue definitions in this case and switches the
+  queue to emergency mode, which permits in-memory operations. This is
+  desired by the fast majority of users, because it permits rsyslog to
+  remain operational and process all remaining actions as well as handle
+  actions associated with the failed queue decently.
+  When this setting is "on", rsyslog aborts immediately when a queue
+  problem is detected during startup. If you use this mode, ensure that
+  your startup scripts monitor for these type of errors and handle them
+  appropriately.
+  In our opinion, it is much safer to let rsyslog start and monitor queue
+  error messages.
+
+  The **default** for this setting is "off"
 
 - **inputs.timeout.shutdown** [numeric, ms] available 8.37.0+
 
