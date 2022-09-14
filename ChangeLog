@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2210.0 (aka 2022.10) 2022-10-??
+- 2022-09-14: config: add "abortOnFailedQueueStartup" global config parameter
+  similiar to "abortONUncleanConfig", this parameter aborts rsyslog
+  when a queue has problems during startup. Some users perfer rsyslog
+  to terminate in this case. By default, nothing changes.
+  closes https://github.com/rsyslog/rsyslog/issues/4902
 - 2022-09-07: cor bugfix: leak in helper function SetString
   A part of rsyslog runtime, SetString(), had a small memory leak when a value was
   assigned multiple times. While this could potentially consume larger amounts of
