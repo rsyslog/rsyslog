@@ -64,7 +64,7 @@
  * beast.
  * rgerhards, 2011-06-15
  *
- * Copyright 2007-2019 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2022 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -1988,6 +1988,12 @@ DEFFUNC_llExecFunc(doActivateActions)
 	action_t * const pThis = (action_t*) pData;
 	localRet = qqueueStart(runConf, pThis->pQueue);
 	if(localRet != RS_RET_OK) {
+		if(runConf->globals.bAbortOnFailedQueueStartup) {
+			fprintf(stderr, "rsyslogd: error %d starting up action queue, "
+				"abortOnFailedQueueStartup is set, so we abort rsyslog now.", localRet);
+			fflush(stderr);
+			exit(1); /* "good" exit, this is intended here */
+		}
 		LogError(0, localRet, "error starting up action queue");
 		if(localRet == RS_RET_FILE_PREFIX_MISSING) {
 			LogError(0, localRet, "file prefix (work directory?) "

@@ -1,6 +1,6 @@
 /* The rsconf object. It models a complete rsyslog configuration.
  *
- * Copyright 2011-2020 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2022 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -93,6 +93,8 @@ struct globals_s {
 	int maxErrMsgToStderr;	/* how many messages to forward at most to stderr? */
 	int bAbortOnUncleanConfig; /* abort run (rather than starting with partial
 				      config) if there was any issue in conf */
+	int bAbortOnFailedQueueStartup; /* similar to bAbortOnUncleanConfig, but abort if a queue
+					   startup fails. This is not exactly an unclan config. */
 	int uidDropPriv;	/* user-id to which priveleges should be dropped to */
 	int gidDropPriv;	/* group-id to which priveleges should be dropped to */
 	int gidDropPrivKeepSupplemental; /* keep supplemental groups when dropping? */

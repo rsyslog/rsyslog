@@ -187,7 +187,7 @@ int bFinished = 0;	/* used by termination signal handler, read-only except there
 			 * is either 0 or the number of the signal that requested the
 			 * termination.
 			 */
-const char *PidFile;
+const char *PidFile = NULL;
 #define NO_PIDFILE "NONE"
 int iConfigVerify = 0;	/* is this just a config verify run? */
 rsconf_t *ourConf = NULL;	/* our config object */
@@ -295,6 +295,16 @@ writePidFile(void)
 	}
 finalize_it:
 	RETiRet;
+}
+
+static void
+clearPidFile(void)
+{
+	if(PidFile != NULL) {
+		if(strcmp(PidFile, NO_PIDFILE)) {
+			unlink(PidFile);
+		}
+	}
 }
 
 /* duplicate startup protection: check, based on pid file, if our instance
@@ -818,6 +828,13 @@ startMainQueue(rsconf_t *cnf, qqueue_t *const pQueue)
 	CHKiRet_Hdlr(qqueueStart(cnf, pQueue)) {
 		/* no queue is fatal, we need to give up in that case... */
 		LogError(0, iRet, "could not start (ruleset) main message queue");
+		if(runConf->globals.bAbortOnFailedQueueStartup) {
+			fprintf(stderr, "rsyslogd: could not start (ruleset) main message queue, "
+				"abortOnFailedQueueStartup is set, so we abort rsyslog now.\n");
+			fflush(stderr);
+			clearPidFile();
+			exit(1); /* "good" exit, this is intended here */
+		}
 		pQueue->qType = QUEUETYPE_DIRECT;
 		CHKiRet_Hdlr(qqueueStart(cnf, pQueue)) {
 			/* no queue is fatal, we need to give up in that case... */
@@ -2094,9 +2111,7 @@ deinitAll(void)
 	dbgClassExit();
 
 	/* NO CODE HERE - dbgClassExit() must be the last thing before exit()! */
-	if(strcmp(PidFile, NO_PIDFILE)) {
-		unlink(PidFile);
-	}
+	clearPidFile();
 }
 
 /* This is the main entry point into rsyslogd. This must be a function in its own

@@ -2,7 +2,7 @@
  *
  * Module begun 2011-04-19 by Rainer Gerhards
  *
- * Copyright 2011-2020 Adiscon GmbH.
+ * Copyright 2011-2022 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -160,6 +160,7 @@ int rsconfNeedDropPriv(rsconf_t *const cnf)
 static void cnfSetDefaults(rsconf_t *pThis)
 {
 	pThis->globals.bAbortOnUncleanConfig = 0;
+	pThis->globals.bAbortOnFailedQueueStartup = 0;
 	pThis->globals.bReduceRepeatMsgs = 0;
 	pThis->globals.bDebugPrintTemplateList = 1;
 	pThis->globals.bDebugPrintModuleList = 0;

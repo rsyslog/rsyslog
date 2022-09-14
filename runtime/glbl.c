@@ -7,7 +7,7 @@
  *
  * Module begun 2008-04-16 by Rainer Gerhards
  *
- * Copyright 2008-2021 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2022 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -153,6 +153,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "net.enabledns", eCmdHdlrBinary, 0 },
 	{ "net.permitACLwarning", eCmdHdlrBinary, 0 },
 	{ "abortonuncleanconfig", eCmdHdlrBinary, 0 },
+	{ "abortonfailedqueuestartup", eCmdHdlrBinary, 0 },
 	{ "variables.casesensitive", eCmdHdlrBinary, 0 },
 	{ "environment", eCmdHdlrArray, 0 },
 	{ "processinternalmessages", eCmdHdlrBinary, 0 },
@@ -1325,6 +1326,8 @@ glblDoneLoadCnf(void)
 			SetOptionDisallowWarning(!((int) cnfparamvals[i].val.d.n));
 		} else if(!strcmp(paramblk.descr[i].name, "abortonuncleanconfig")) {
 			loadConf->globals.bAbortOnUncleanConfig = cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "abortonfailedqueuestartup")) {
+			loadConf->globals.bAbortOnFailedQueueStartup = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "internalmsg.ratelimit.burst")) {
 			loadConf->globals.intMsgRateLimitBurst = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "internalmsg.ratelimit.interval")) {
