@@ -46,7 +46,18 @@ that puts it into "config verification mode". In that mode, it interprets
 and checks the configuration file, but does not startup. This mode can be
 used in parallel to a running instance of rsyslogd.
 
-The *value* is a set of binary values. Currently, there only is
+Please note that many distros have (unfortunately) begun to split the rsyslog
+config into many small config snippets (a.k.a input files), usually in `/etc/rsyslog.d`. From
+rsyslog's point of view, only a single config file exists and these snippets
+are logically combined into that single config. For that reason, config checking
+does usually **not** work on snippets. Because the interdependencies are missing.
+For example, binding a ruleset to a module that is not possible if the ruleset is
+loaded outside of the snippet.
+
+**As a general guideline, never do config checks on config snippets. Always use
+the main configuration file as a starting point** (usually  /etc/rsyslog.conf`).
+
+The *value* given after -N is a set of binary values. Currently, there only is
 
 ======= ======================================
 value   meaning
