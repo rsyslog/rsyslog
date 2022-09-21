@@ -216,7 +216,7 @@ as follows:
     ruleset(name="remote"){
         action(type="omfile" file="/var/log/remotefile")
     }
-    # only messages not from 192.0.21 make it past this point
+    # only messages not from 192.0.2.1 make it past this point
 
     # bind ruleset to tcp listener and activate it:
     input(type="imptcp" port="10514" ruleset="remote")
