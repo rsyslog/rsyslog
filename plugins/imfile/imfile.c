@@ -854,13 +854,13 @@ detect_updates(fs_edge_t *const edge)
 				*  delay will never be reached and the file will be closed when the inode has changed.
 				*/
 				if (act->time_to_delete + FILE_DELETE_DELAY < ttNow) {
-					DBGPRINTF("detect_updates obj gone away, unlinking: '%s', ttDelete: %ld/%ld\n",
-						act->name, act->time_to_delete, ttNow);
+				DBGPRINTF("detect_updates obj gone away, unlinking: '%s', ttDelete: %lds, ttNow:%ld\n",
+					act->name, ttNow - (act->time_to_delete + FILE_DELETE_DELAY), ttNow);
 					act_obj_unlink(act);
 					restart = 1;
 				} else {
-					DBGPRINTF("detect_updates obj gone away, keep '%s' open: %ld/%ld/%lds!\n",
-						act->name, act->time_to_delete, ttNow, ttNow - act->time_to_delete);
+				DBGPRINTF("detect_updates obj gone away, keep '%s' open: %ld/%ld/%lds!\n",
+					act->name, act->time_to_delete, ttNow, ttNow - act->time_to_delete);
 					pollFile(act);
 				}
 			}
