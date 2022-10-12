@@ -4,7 +4,7 @@ omrabbitmq: RabbitMQ output module
 
 ===========================  ===========================================================================
 **Module Name:**             **omrabbitmq**
-**Authors:**                 Jean-Philippe Hilaire <jean-philippe.hilaire@pmu.fr> & Philippe Duveau <philippe.duveau@free.fr>
+**Authors:**                 Jean-Philippe Hilaire <jean-philippe.hilaire@pmu.fr> / Philippe Duveau <philippe.duveau@free.fr> / Hamid Maadani <hamid@dexo.tech>
 ===========================  ===========================================================================
 
 
@@ -86,6 +86,78 @@ password
   "string", "yes", "password",
 
 user password
+
+ssl
+^^^
+
+.. csv-table::
+  :header: "type", "mandatory", "format", "default"
+  :widths: auto
+  :class: parameter-table
+
+  "binary", "no", , "off"
+
+enable TLS for AMQP connection
+
+init_openssl
+^^^^^^^^^^^^
+
+.. csv-table::
+  :header: "type", "mandatory", "format", "default"
+  :widths: auto
+  :class: parameter-table
+
+  "binary", "no", , "off"
+
+should rabbitmq-c initialize OpenSSL? This is included to prevent crashes caused by OpenSSL double initialization. Should stay off in most cases. ONLY turn on if SSL does not work due to OpenSSL not being initialized.
+
+verify_peer
+^^^^^^^^^^^
+
+.. csv-table::
+  :header: "type", "mandatory", "format", "default"
+  :widths: auto
+  :class: parameter-table
+
+  "binary", "no", , "off"
+
+SSL peer verification
+
+verify_hostname
+^^^^^^^^^^^^^^^
+
+.. csv-table::
+  :header: "type", "mandatory", "format", "default"
+  :widths: auto
+  :class: parameter-table
+
+  "binary", "no", , "off"
+
+SSL certificate hostname verification
+
+ca_cert
+^^^^^^^
+
+.. csv-table::
+  :header: "type", "mandatory", "format", "default"
+  :widths: auto
+  :class: parameter-table
+
+  "string", "no", "file path",
+
+CA certificate to be used for the SSL connection
+
+heartbeat_interval
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+  :header: "type", "mandatory", "format", "default"
+  :widths: auto
+  :class: parameter-table
+
+  "integer", "no", , "0"
+
+AMQP heartbeat interval in seconds. 0 means disabled, which is default.
 
 exchange
 ^^^^^^^^
@@ -303,3 +375,30 @@ HA action :
            routing_key_template="rkTpl"
            template_body="RSYSLOG_ForwardFormat")
 
+Example 4
+---------
+
+SSL enabled connection, with Heartbeat : 
+
+- No High Availability
+
+- The routing-key is constant
+
+- The sent message use JSON format
+
+- Heartbeat is set to 20 seconds
+
+.. code-block:: none
+
+    module(load='omrabbitmq')
+    action(type="omrabbitmq" 
+           host="localhost"
+           virtual_host="/"
+           user="guest"
+           password="guest"
+           ssl="on"
+           verify_peer="off"
+           verify_hostname="off"
+           heartbeat_interval="20"
+           exchange="syslog"
+           routing_key="syslog.all")
