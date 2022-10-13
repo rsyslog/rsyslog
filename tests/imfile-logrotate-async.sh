@@ -6,6 +6,10 @@ check_command_available logrotate
 export NUMMESSAGES=10000
 export RETRIES=50
 
+# Uncomment fdor debuglogs
+#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
+#export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.debuglog"
+
 # Write logrotate config file
 echo '"./'$RSYSLOG_DYNNAME'.input*.log"
 {
@@ -41,27 +45,30 @@ if $msg contains "msgnum:" then
 '
 startup
 
-./inputfilegen -m $NUMMESSAGES -S 5 -B 500 -f $RSYSLOG_DYNNAME.input.log &
+./inputfilegen -m $NUMMESSAGES -S 5 -B 100 -I 1000 -f $RSYSLOG_DYNNAME.input.log &
 INPUTFILEGEN_PID=$!
 echo "$INPUTFILEGEN_PID" > $RSYSLOG_DYNNAME.inputfilegen_pid
-
-
 
 ./msleep 1
 logrotate --state $RSYSLOG_DYNNAME.logrotate.state -f $RSYSLOG_DYNNAME.logrotate
 ./msleep 20
-echo INPUT FILES:
+echo ======================:
+echo ROTATE 1	INPUT FILES:
 ls -li $RSYSLOG_DYNNAME.input*
 logrotate --state $RSYSLOG_DYNNAME.logrotate.state -f $RSYSLOG_DYNNAME.logrotate
 ./msleep 20
-echo INPUT FILES:
+echo ======================:
+echo ROTATE 2	INPUT FILES:
 ls -li $RSYSLOG_DYNNAME.input*
 logrotate --state $RSYSLOG_DYNNAME.logrotate.state -f $RSYSLOG_DYNNAME.logrotate
-echo INPUT FILES:
+echo ======================:
+echo ROTATE 3	INPUT FILES:
 ls -li $RSYSLOG_DYNNAME.input*
+echo ======================:
 echo ls ${RSYSLOG_DYNNAME}.spool:
 ls -li ${RSYSLOG_DYNNAME}.spool
-echo INPUT FILES:
+echo ======================:
+echo FINAL	INPUT FILES:
 ls -li $RSYSLOG_DYNNAME.input*
 
 # generate more input after logrotate into new logfile
@@ -70,6 +77,25 @@ ls -li $RSYSLOG_DYNNAME.input*
 
 #msgcount=$((2* TESTMESSAGES))
 #wait_file_lines $RSYSLOG_OUT_LOG $msgcount $RETRIES
+# Output extra information
+./msleep 1000
+echo ======================:
+echo LINES:	$(wc -l $RSYSLOG_DYNNAME.input.log)
+echo TAIL	$RSYSLOG_DYNNAME.input.log:
+tail $RSYSLOG_DYNNAME.input.log
+echo ""
+echo LINES:	$(wc -l $RSYSLOG_DYNNAME.input.log.1)
+echo TAIL	$RSYSLOG_DYNNAME.input.log.1:
+tail $RSYSLOG_DYNNAME.input.log.1
+echo ""
+echo LINES:	$(wc -l $RSYSLOG_DYNNAME.input.log.2)
+echo TAIL	$RSYSLOG_DYNNAME.input.log.2:
+tail $RSYSLOG_DYNNAME.input.log.2
+echo ""
+echo LINES:	$(wc -l $RSYSLOG_DYNNAME.inpt.log.3)
+echo TAIL	$RSYSLOG_DYNNAME.input.log.3:
+tail $RSYSLOG_DYNNAME.input.log.3
+echo ""
 wait_file_lines
 
 touch $RSYSLOG_DYNNAME.input.log
