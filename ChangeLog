@@ -1,5 +1,13 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2210.0 (aka 2022.10) 2022-10-??
+- 2022-10-13: fix NetBSD build issue
+  On NetBSD, time_t has for a long time now been __int64_t.
+  On 32-bit CPUs, the compiler is not obliged to define
+  __sync_bool_compare_and_swap_8, so instead this ends up
+  as an undefined symbol when linking rsyslog.  This makes
+  the code fall back to the pthread / locking method on these
+  systems, but at least lets the program build.
+  Thanks to Havard Eidnes for the patch.
 - 2022-10-12: omrabbitmq: Add TLS support
   Thanks to github user 21stcavenan for the patch.
 - 2022-09-14: config: add "abortOnFailedQueueStartup" global config parameter
