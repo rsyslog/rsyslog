@@ -595,7 +595,7 @@ doModInit(pModInit_t modInit, uchar *name, void *pModHdlr, modInfo_t **pNewModul
 	CHKiRet((*pNew->modQueryEtryPt)((uchar*)"getKeepType", &modGetKeepType));
 	CHKiRet((*modGetKeepType)(&pNew->eKeepType));
 	dbgprintf("module %s of type %d being loaded (keepType=%d).\n", name, pNew->eType, pNew->eKeepType);
-	
+
 	/* OK, we know we can successfully work with the module. So we now fill the
 	 * rest of the data elements. First we load the interfaces common to all
 	 * module types.
@@ -1242,7 +1242,7 @@ Load(uchar *const pModName, const sbool bConfLoad, struct nvlst *const lst)
 		}
 
 		iLoadCnt++;
-	
+
 	} while(pModHdlr == NULL && *pModName != '/' && pModDirNext);
 
 	if(load_err_msg != NULL) {
@@ -1323,7 +1323,7 @@ modulesProcessCnf(struct cnfobj *o)
 
 	cnfModName = (uchar*)es_str2cstr(pvals[typeIdx].val.d.estr, NULL);
 	iRet = Load(cnfModName, 1, o->nvlst);
-	
+
 finalize_it:
 	free(cnfModName);
 	cnfparamvalsDestruct(pvals, &pblk);
