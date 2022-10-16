@@ -26,7 +26,13 @@ Supported Authentication Modes
    draft-ietf-syslog-transport-tls-12 Internet draft
 
 -  **x509/fingerprint** - certificate fingerprint authentication as
-   described in IETF's draft-ietf-syslog-transport-tls-12 Internet draft
+   described in IETF's draft-ietf-syslog-transport-tls-12 Internet draft.
+   The fingerprint must be provided as the SHA1 or the SHA256 hex string of
+   the certificate. Multiple values must be separated by comma (,).
+   A valid configuration would be e.G.
+   ::
+
+      StreamDriverPermittedPeers="SHA256:10:C4:26:1D:CB:3C:AB:12:DB:1A:F0:47:37:AE:6D:D2:DE:66:B5:71:B7:2E:5B:BB:AE:0C:7E:7F:5F:0D:E9:64,SHA1:DD:23:E3:E7:70:F5:B4:13:44:16:78:A5:5A:8C:39:48:53:A6:DD:25"
 
 -  **x509/certvalid** - certificate validation only
 
@@ -59,10 +65,6 @@ are deployed and it is sufficient proof of authenticity when their
 certificates are signed by the CA the server trusts. This is better than
 anon authentication, but still not recommended. **Known Problems**
 
-Even in x509/fingerprint mode, both the client and server certificate
-currently must be signed by the same root CA. This is an artifact of the
-underlying GnuTLS library and the way we use it. It is expected that we
-can resolve this issue in the future.
 
 CheckExtendedKeyPurpose
 =======================
