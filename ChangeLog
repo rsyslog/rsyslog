@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2210.0 (aka 2022.10) 2022-10-??
+Scheduled Release 8.2210.0 (aka 2022.10) 2022-10-18
 - 2022-10-13: fix NetBSD build issue
   On NetBSD, time_t has for a long time now been __int64_t.
   On 32-bit CPUs, the compiler is not obliged to define
