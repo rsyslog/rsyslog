@@ -16,7 +16,7 @@ stock syslogd formats are hardcoded into rsyslogd. So if no template is
 specified, we use one of those hardcoded templates. Search for
 "template\_" in rsconf.c and you will find the hardcoded ones.
 
-Templates are specified by template() statements. They can also be
+Templates are specified by template() objects. They can also be
 specified via $template legacy statements.
 
 .. note::
@@ -44,15 +44,15 @@ nor TAG are specified, the outgoing parser will split the message as:
    MSG:is a message
 
 
-The template() statement
-========================
+The template() object
+=====================
 
-The template() statement is used to define templates. Note that it is a
-**static** statement, that means all templates are defined when rsyslog
+The template() object is used to define templates. Note that it is a
+**static** object, that means all templates are defined when rsyslog
 reads the config file. As such, templates are not affected by
 if-statements or config nesting.
 
-The basic structure of the template statement is as follows:
+The basic structure of the template object is as follows:
 
 .. code-block:: none
 
@@ -850,6 +850,40 @@ properties.
                 \"%syslogfacility-text%\",\"priority\":\"%syslogpriority-text%\",\"timereported\":
                 \"%timereported:::date-rfc3339%\",\"timegenerated\":
                 \"%timegenerated:::date-rfc3339%\"}")
+
+
+
+The LEGACY \$template statement
+===============================
+
+Legacy format provides limited functionality, but is still frequently used.
+So you probably need to at least be able to understand them. Legacy format
+is also good for fairly simple templates.
+
+In legacy, only string templates are supported. The full format is as follows:
+
+.. code-block:: none
+
+   $template myname,<string-template>
+
+Here, *myname* is the name of the template (like the *name="myname"* property in
+modern template format). The *<string-template>* is exactly the *string* property
+like in modern template format.
+
+Take for example the following modern template object:
+
+.. code-block:: none
+
+   template(name="tpl3" type="string"
+            string="%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
+           )
+
+
+It translates to the following legacy template statement:
+
+.. code-block:: none
+
+   $template tpl3,"%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n"
 
 
 
