@@ -1396,6 +1396,7 @@ glblDoneLoadCnf(void)
 		stddbg = -1;
 	}
 
+finalize_it:
 	/* we have now read the config. We need to query the local host name now
 	 * as it was set by the config.
 	 *
@@ -1404,8 +1405,7 @@ glblDoneLoadCnf(void)
 	 * are taken from that queue, the hostname will be adapted.
 	 */
 	queryLocalHostname();
-
-finalize_it:	RETiRet;
+	RETiRet;
 }
 
 
