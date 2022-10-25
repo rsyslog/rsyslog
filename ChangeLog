@@ -7,6 +7,9 @@ Scheduled Release 8.2212.0 (aka 2022.12) 2022-12-xx
   This is a regression from ba00a9f25293f
   closes https://github.com/rsyslog/rsyslog/issues/4975
   closes https://github.com/rsyslog/rsyslog/issues/4825
+- 2022-10-25: testbench bugfix: fixed timing issue that sometimes lead to test failure
+  Timing caused a race in test tool sync and could lead to premature termination of
+  tools, which in turn caused test failure
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2210.0 (aka 2022.10) 2022-10-18
 - 2022-10-13: fix NetBSD build issue
