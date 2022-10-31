@@ -113,6 +113,10 @@ struct rsksictx_s {
 	pthread_mutex_t module_lock;
 	pthread_t signer_thread;
 	ProtectedQueue *signer_queue;
+#if KSI_SDK_VER_MAJOR == 3 && KSI_SDK_VER_MINOR < 22
+	size_t roundCount;	/* Count of signing requests in round. */
+	uint8_t bRoundLock;		/* A lock for async. signer. */
+#endif
 	int signer_state;
 	uint8_t disabled;	/* permits to disable the plugin --> set to 1 */
 
