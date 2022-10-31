@@ -1754,6 +1754,21 @@ cleanup:
 	return ret;
 }
 
+static KSI_DataHash* clone_hash(KSI_CTX *ksi_ctx, const KSI_DataHash* hash) {
+	int res = KSI_UNKNOWN_ERROR;
+	const unsigned char *imprint = NULL;
+	size_t imprint_len = 0;
+	KSI_DataHash* tmp = NULL;
+
+	if (hash == NULL) return NULL;
+	res = KSI_DataHash_getImprint(hash, &imprint, &imprint_len);
+	if (res != KSI_OK) return NULL;
+	res = KSI_DataHash_fromImprint(ksi_ctx, imprint, imprint_len, &tmp);
+	if (res != KSI_OK) return NULL;
+
+	return tmp;
+}
+
 static bool
 process_requests_async(rsksictx ctx, KSI_CTX *ksi_ctx, KSI_AsyncService *as) {
 	bool ret = false;
@@ -1761,6 +1776,7 @@ process_requests_async(rsksictx ctx, KSI_CTX *ksi_ctx, KSI_AsyncService *as) {
 	int res = KSI_OK, tmpRes;
 	KSI_AsyncHandle *reqHandle = NULL;
 	KSI_AsyncHandle *respHandle = NULL;
+	KSI_DataHash *clonedHash = NULL;
 	KSI_AggregationReq *req = NULL;
 	KSI_Config *config = NULL;
 	KSI_Integer *level;
@@ -1837,10 +1853,18 @@ process_requests_async(rsksictx ctx, KSI_CTX *ksi_ctx, KSI_AsyncService *as) {
 		if(item->status != QITEM_WAITING)
 			continue;
 
+		/* The data hash is produced in another thread by another KSI_CTX and
+		 * libksi internal uses KSI_DataHash cache to reduce the amount of
+		 * memory allocations by recycling old objects. Lets clone the hash
+		 * value with current KSI_CTX as we can not be sure that this thread is
+		 * not affecting the data hash cache operated by another thread.
+		 */
+		clonedHash = clone_hash(ksi_ctx, item->root);
 		CHECK_KSI_API(KSI_AggregationReq_new(ksi_ctx, &req), ctx, "KSI_AggregationReq_new");
 		CHECK_KSI_API(KSI_AggregationReq_setRequestHash((KSI_AggregationReq*)req,
-			KSI_DataHash_ref(item->root)), ctx,
+			clonedHash), ctx,
 			"KSI_AggregationReq_setRequestHash");
+		clonedHash = NULL;
 		CHECK_KSI_API(KSI_Integer_new(ksi_ctx, item->intarg2, &level), ctx,
 			"KSI_Integer_new");
 		CHECK_KSI_API(KSI_AggregationReq_setRequestLevel(req, level), ctx,
@@ -1902,6 +1926,7 @@ process_requests_async(rsksictx ctx, KSI_CTX *ksi_ctx, KSI_AsyncService *as) {
 	ret = true;
 
 cleanup:
+	KSI_DataHash_free(clonedHash);
 	KSI_AsyncService_getPendingCount(as, &p);
 	return ret;
 }
