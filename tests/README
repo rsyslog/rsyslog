@@ -41,15 +41,19 @@ make check
 
 Running named tests
 ===================
-make testname.sh.log
+make testname.log
 
 For example, to run the imfile-basic.sh test, use
 
-make imfile-basic.sh.log
+    make imfile-basic.log
 
-Test output is in imfile-basic.sh.log
+Test output is in imfile-basic.log
 
-To re-run the test, first remove imfile-basic.sh.log then make again
+To re-run the test, first remove imfile-basic.log then make again
+
+Or an alternative option is to run
+
+    make check TESTS='imfile-basic.sh'
 
 * Using gdb to debug rsyslog during a test run
 
