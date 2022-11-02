@@ -452,6 +452,8 @@ readjournal(void)
 	/* Get message identifier, client pid and add ':' */
 	if (journalGetData("SYSLOG_IDENTIFIER", &get, &length) >= 0) {
 		CHKiRet(sanitizeValue(((const char *)get) + 18, length - 18, &sys_iden));
+	} else if (journalGetData("_COMM", &get, &length) >= 0) {
+		CHKiRet(sanitizeValue(((const char *)get) + 6, length - 6, &sys_iden));
 	} else {
 		CHKmalloc(sys_iden = strdup("journal"));
 	}
