@@ -102,7 +102,7 @@ separator character of comma is being used.
 
    module(load="mmfields")
    template(name="ftpl"
-            type=string
+            type="string"
             string="%$!%\\n")
    action(type="mmfields")
    action(type="omfile"
@@ -121,7 +121,7 @@ json path.
 
    module(load="mmfields")
    template(name="ftpl"
-            type=string
+            type="string"
             string="%$!%\\n")
    action(type="mmfields"
           separator=":"
