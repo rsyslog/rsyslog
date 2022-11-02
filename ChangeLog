@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2212.0 (aka 2022.12) 2022-12-xx
+- 2022-11-02: imjournal: add second fallback to _COMM
+  If SYSLOG_IDENTIFIER is not present in the journal message,
+  then lookup the _COMM field, which stands for the name
+  of the process the journal entry originates from. This is
+  needed in order to be in compliance with the journalctl
+  output.
+  Thanks to Attila Lakatos for the patch.
 - 2022-10-25: core bugfix: local hostname invalid if no global() config object given
   The local hostname is invalidly set to "[localhost]" on rsyslog startup
   if no global() config object is present in rsyslog.conf. Sending a HUP
