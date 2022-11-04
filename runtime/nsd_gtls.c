@@ -379,6 +379,11 @@ gtlsGetCertInfo(nsd_gtls_t *const pThis, cstr_t **ppStr)
 				CHKiRet(rsCStrAppendStrf(pStr, "SAN:DNSname: %s; ", szBuf));
 				/* do NOT break, because there may be multiple dNSName's! */
 			}
+			else if(gnuRet == GNUTLS_SAN_IPADDRESS) {
+				/* we found it! */
+				CHKiRet(rsCStrAppendStrf(pStr, "SAN:IPaddress: %s; ", szBuf));
+				/* do NOT break, because there may be multiple ipAddr's! */		
+			}
 			++iAltName;
 		}
 
@@ -1022,7 +1027,7 @@ static rsRetVal
 gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 {
 	uchar lnBuf[256];
-	char szAltName[1024]; /* this is sufficient for the DNSNAME... */
+	char szAltName[1024]; /* this is sufficient for the DNSNAME and IPADDRESS... */
 	int iAltName;
 	size_t szAltNameLen;
 	int bFoundPositiveMatch;
@@ -1037,7 +1042,7 @@ gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 	bFoundPositiveMatch = 0;
 	CHKiRet(rsCStrConstruct(&pStr));
 
-	/* first search through the dNSName subject alt names */
+	/* first search through the dNSName and ipAddr subject alt names */
 	iAltName = 0;
 	while(!bFoundPositiveMatch) { /* loop broken below */
 		szAltNameLen = sizeof(szAltName);
@@ -1052,6 +1057,14 @@ gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 			CHKiRet(rsCStrAppendStr(pStr, lnBuf));
 			CHKiRet(gtlsChkOnePeerName(pThis, (uchar*)szAltName, &bFoundPositiveMatch));
 			/* do NOT break, because there may be multiple dNSName's! */
+		}
+		else if(gnuRet == GNUTLS_SAN_IPADDRESS) {
+			bHaveSAN = 1;
+			dbgprintf("subject alt ipAddr: '%s'\n", szAltName);
+			snprintf((char*)lnBuf, sizeof(lnBuf), "IPaddress: %s; ", szAltName);
+			CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+			CHKiRet(gtlsChkOnePeerName(pThis, (uchar*)szAltName, &bFoundPositiveMatch));
+			/* do NOT break, because there may be multiple ipAddr's! */
 		}
 		++iAltName;
 	}
