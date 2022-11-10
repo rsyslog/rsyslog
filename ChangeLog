@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2212.0 (aka 2022.12) 2022-12-xx
+- 2022-11-08: ksi bugfix: Segmentation fault in async mode fixed
+  Thanks to Taavi Valjaots for the patch.
 - 2022-11-02: imjournal: add second fallback to _COMM
   If SYSLOG_IDENTIFIER is not present in the journal message,
   then lookup the _COMM field, which stands for the name
