@@ -1,5 +1,14 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2212.0 (aka 2022.12) 2022-12-xx
+- 2022-11-14: bugfix: prevent potential segfault when switchung to queue emergency mode
+  When switching to Disk queue emergency mode, we destructed the in-memory
+  queue object.  Practice has shown that this MAY cause races during
+  destruction which themselfs can lead to segfault. For that reason, we
+  now keep the disk queueu object. This will keep some ressources,
+  including disk space, allocated. But  we prefer that over a segfault.
+  After all, it only happens after a serious queue error when we are
+  already at the edge of hard problems.
+  see also: https://github.com/rsyslog/rsyslog/issues/4963
 - 2022-11-08: ksi bugfix: Segmentation fault in async mode fixed
   Thanks to Taavi Valjaots for the patch.
 - 2022-11-02: imjournal: add second fallback to _COMM
