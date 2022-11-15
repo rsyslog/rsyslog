@@ -449,6 +449,20 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 		CHKmalloc(inst->pszInputName = ustrdup(cs.pszInputName));
 	}
 	inst->cnf_params->bSuppOctetFram = cs.bSuppOctetFram;
+	inst->iStrmDrvrMode = cs.iStrmDrvrMode;
+	inst->bKeepAlive = cs.bKeepAlive ;
+	inst->bUseFlowControl = cs.bUseFlowControl;
+	inst->bDisableLFDelim = cs.bDisableLFDelim;
+	inst->bEmitMsgOnClose = cs.bEmitMsgOnClose;
+	inst->bPreserveCase = cs.bPreserveCase;
+	inst->iKeepAliveProbes = cs.iKeepAliveProbes;
+	inst->iKeepAliveIntvl = cs.iKeepAliveIntvl;
+	inst->iKeepAliveTime = cs.iKeepAliveTime;
+	inst->iKeepAliveTime = cs.iKeepAliveTime;
+	inst->iAddtlFrameDelim = cs.iAddtlFrameDelim;
+	inst->iTCPLstnMax = cs.iTCPLstnMax;
+	inst->iTCPSessMax = cs.iTCPSessMax;
+	inst->iStrmDrvrMode = cs.iStrmDrvrMode;
 
 finalize_it:
 	free(pNewVal);
@@ -954,7 +968,6 @@ RunServerThread(void *myself)
 {
 	tcpsrv_etry_t *const etry = (tcpsrv_etry_t*) myself;
 	rsRetVal iRet;
-	dbgprintf("RGER: running ety %p\n", etry);
 	iRet = tcpsrv.Run(etry->tcpsrv);
 	if(iRet != RS_RET_OK) {
 		LogError(0, iRet, "imtcp: error while terminating server; rsyslog may hang on shutdown");

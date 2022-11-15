@@ -1416,12 +1416,13 @@ ENDobjDestruct(nsd_gtls)
  * rgerhards, 2008-04-28
  */
 static rsRetVal
-SetMode(nsd_t *pNsd, int mode)
+SetMode(nsd_t *const pNsd, const int mode)
 {
 	DEFiRet;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	dbgprintf("(tls) mode: %d\n", mode);
 	if(mode != 0 && mode != 1) {
 		LogError(0, RS_RET_INVALID_DRVR_MODE, "error: driver mode %d not supported by "
 				"gtls netstream driver", mode);
