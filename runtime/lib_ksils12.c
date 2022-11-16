@@ -904,6 +904,10 @@ rsksiCtxNew(void) {
 	ctx->dirGID = -1;
 	ctx->fCreateMode = 0644;
 	ctx->fDirCreateMode = 0700;
+#if KSI_SDK_VER_MAJOR == 3 && KSI_SDK_VER_MINOR < 22
+	ctx->roundCount = 0;
+	ctx->bRoundLock = 0;
+#endif
 	ctx->syncMode = LOGSIG_SYNCHRONOUS;
 	ctx->signer_state = SIGNER_IDLE;
 	ctx->disabled = false;
@@ -1800,6 +1804,14 @@ process_requests_async(rsksictx ctx, KSI_CTX *ksi_ctx, KSI_AsyncService *as) {
 			break;
 		}
 
+#if KSI_SDK_VER_MAJOR == 3 && KSI_SDK_VER_MINOR < 22
+		if (p != 0 && ctx->roundCount > 0) {
+			ctx->roundCount--;
+		} else {
+			ctx->bRoundLock = 0;
+			ctx->roundCount = 0;
+		}
+#endif
 		state = KSI_ASYNC_STATE_UNDEFINED;
 
 		CHECK_KSI_API(KSI_AsyncHandle_getState(respHandle, &state), ctx, "KSI_AsyncHandle_getState");
@@ -1853,6 +1865,16 @@ process_requests_async(rsksictx ctx, KSI_CTX *ksi_ctx, KSI_AsyncService *as) {
 		if(item->status != QITEM_WAITING)
 			continue;
 
+		/* Due to a bug in libksi it is possible that async signer may send out
+		 * more signing requests than permitted by the gateway. Workaround is to
+		 * keep track of signing requests here.
+		 */
+#if KSI_SDK_VER_MAJOR == 3 && KSI_SDK_VER_MINOR < 22
+		if (ctx->roundCount >= ctx->max_requests) ctx->bRoundLock = 1;
+		if (ctx->bRoundLock) break;
+#endif
+
+
 		/* The data hash is produced in another thread by another KSI_CTX and
 		 * libksi internal uses KSI_DataHash cache to reduce the amount of
 		 * memory allocations by recycling old objects. Lets clone the hash
@@ -1877,11 +1899,9 @@ process_requests_async(rsksictx ctx, KSI_CTX *ksi_ctx, KSI_AsyncService *as) {
 
 		if (res == KSI_OK) {
 			item->status = QITEM_SENT;
-
-			tmpRes=KSI_AsyncService_run(as, NULL, NULL);
-			if(tmpRes!=KSI_OK)
-				reportKSIAPIErr(ctx, NULL, "KSI_AsyncService_run", tmpRes);
-
+#if KSI_SDK_VER_MAJOR == 3 && KSI_SDK_VER_MINOR < 22
+			ctx->roundCount++;
+#endif
 		} else {
 			reportKSIAPIErr(ctx, NULL, "KSI_AsyncService_addRequest", res);
 			KSI_AsyncHandle_free(reqHandle);
@@ -1889,8 +1909,14 @@ process_requests_async(rsksictx ctx, KSI_CTX *ksi_ctx, KSI_AsyncService *as) {
 			item->ksi_status = res;
 			break;
 		}
-	}
 
+		if (i != 0 && i % ctx->max_requests == 0) {
+			CHECK_KSI_API(KSI_AsyncService_run(as, NULL, NULL), ctx,
+				"KSI_AsyncService_run");
+		}
+	}
+	CHECK_KSI_API(KSI_AsyncService_run(as, NULL, NULL), ctx,
+		"KSI_AsyncService_run");
 
 	/* Save all consequent fulfilled responses in the front of the queue to the signature file */
 	while(ProtectedQueue_count(ctx->signer_queue)) {
