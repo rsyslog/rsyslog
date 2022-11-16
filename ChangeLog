@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2212.0 (aka 2022.12) 2022-12-xx
+- 2022-11-16: ksi bugfix: sending of too many signing requests fixed.
+  As there is a bug in libksi where too many signing requests may have bene sent
+  out the amount of signing requests will be limited by KSI module until the fix
+  is implemented.
+  Thanks to Taavi Valjaots for the patch.
 - 2022-11-14: bugfix: prevent potential segfault when switchung to queue emergency mode
   When switching to Disk queue emergency mode, we destructed the in-memory
   queue object.  Practice has shown that this MAY cause races during
