@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2212.0 (aka 2022.12) 2022-12-xx
+- 2022-11-18: imtcp bugfix: legacy config directives did no longer work
+  Many "$InputTCPServer..." config directives did no longer work
+  and were completely ignored (e.g. "$InputTCPServerStreamDriverMode").
+  This was a regression from a08591be5d9 (May, 5th 2021).
+  closes https://github.com/rsyslog/rsyslog/issues/5021
 - 2022-11-16: ksi bugfix: sending of too many signing requests fixed.
   As there is a bug in libksi where too many signing requests may have bene sent
   out the amount of signing requests will be limited by KSI module until the fix
