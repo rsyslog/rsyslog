@@ -12,12 +12,14 @@ global(	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
 
 # NOTE: we intentionally use legacy statements here! This *IS* what we want to test!
 $ModLoad ../plugins/imtcp/.libs/imtcp
+$DefaultNetstreamDriver gtls
 $inputTcpserverStreamdriverPermittedPeer rsyslog-client
 
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port"
-	StreamDriver.Name="gtls"
-	StreamDriver.Mode="1"
-	StreamDriver.AuthMode="x509/name")
+$InputTCPServerStreamDriverAuthMode x509/name
+$InputTCPServerStreamDriverPermittedPeer Log_Streaming_Client
+$InputTCPServerStreamDriverMode 1
+$InputTCPServerListenPortFile '$RSYSLOG_DYNNAME'.tcpflood_port
+$InputTCPServerRun 0
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" action(	type="omfile" 
