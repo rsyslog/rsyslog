@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2212.0 (aka 2022.12) 2022-12-xx
+- 2022-11-21: rsyslog.conf man page bugfix: description of selectors
+  Document historic difference to BSD syslog selectors.
 - 2022-11-18: imtcp bugfix: legacy config directives did no longer work
   Many "$InputTCPServer..." config directives did no longer work
   and were completely ignored (e.g. "$InputTCPServerStreamDriverMode").
