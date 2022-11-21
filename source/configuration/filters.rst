@@ -63,13 +63,37 @@ field is capable to overwrite the preceding ones. Using this behavior
 you can exclude some priorities from the pattern.
 
 Rsyslogd has a syntax extension to the original BSD source, that makes
-its use more intuitively. You may precede every priority with an equals
+the use of selectors use more intuitively. You may precede every priority
+with an equals
 sign ("='') to specify only this single priority and not any of the
 above. You may also (both is valid, too) precede the priority with an
 exclamation mark ("!'') to ignore all that priorities, either exact this
 one or this and any higher priority. If you use both extensions then the
 exclamation mark must occur before the equals sign, just use it
 intuitively.
+
+However, please note that there are some restrictions over the traditional
+BSD syslog behaviour. These restrictions stem back to sysklogd, exist
+probably since at least the 1990's and as such have always been in
+rsyslog.
+
+Namely, in BSD syslogd you can craft a selector like this:
+
+\*.debug;local6.err
+
+The intent is to log all facilities at debug or higher, except for local6,
+which should only log at err or higher.
+
+Unfortunately, local6.err will permit error severity and higher, but will
+*not* exclude lower sevrity messages from facility local6.
+
+As an alternative, you can explicitely exclude all severities that you do
+not want to match. For the above case, this selector is equivalent to the
+BSD syslog selector:
+
+\*.debug;local6.!=info;local6.!=notice;local6.!=warn
+
+An easier approach is probably to do if ... then based matching in script.
 
 Property-Based Filters
 ----------------------
