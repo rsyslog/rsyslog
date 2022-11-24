@@ -382,7 +382,7 @@ gtlsGetCertInfo(nsd_gtls_t *const pThis, cstr_t **ppStr)
 			else if(gnuRet == GNUTLS_SAN_IPADDRESS) {
 				/* we found it! */
 				CHKiRet(rsCStrAppendStrf(pStr, "SAN:IPaddress: %s; ", szBuf));
-				/* do NOT break, because there may be multiple ipAddr's! */		
+				/* do NOT break, because there may be multiple ipAddr's! */
 			}
 			++iAltName;
 		}
