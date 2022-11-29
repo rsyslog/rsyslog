@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2212.0 (aka 2022.12) 2022-12-xx
+- 2022-11-29: testbench bugfix: wrong message injection object of instance 1
+  In some client-server test cases, messages are supposed to be injected into
+  the instance 2(client), but they are actually injected into instance 1(server),
+  which may lead to false negative results. This patch fixed it by replacing
+  'injectmsg' with 'injectmsg2', and dealt with some minor issues.
+  Thanks to Guodong Zhu for the patch.
 - 2022-11-21: rsyslog.conf man page bugfix: description of selectors
   Document historic difference to BSD syslog selectors.
 - 2022-11-18: imtcp bugfix: legacy config directives did no longer work
