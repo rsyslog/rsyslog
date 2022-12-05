@@ -380,6 +380,7 @@ cleanupChild(instanceData *pData, childProcessCtx_t *pChildCtx)
 static void
 terminateChild(instanceData *pData, childProcessCtx_t *pChildCtx)
 {
+	DBGPRINTF("terminateChild called\n");
 	assert(pChildCtx->bIsRunning);
 
 	if (pData->bSignalOnClose) {
@@ -928,9 +929,6 @@ CODESTARTcreateWrkrInstance
 	}
 
 finalize_it:
-	if(iRet != RS_RET_OK && !pWrkrData->pData->bForceSingleInst) {
-		free(pWrkrData->pChildCtx);
-	}
 ENDcreateWrkrInstance
 
 
