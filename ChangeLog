@@ -1,5 +1,15 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2212.0 (aka 2022.12) 2022-12-xx
+- 2022-12-05: omprog bugfix: invalid status handling at called program startup
+  There is a bug when external program *startup* does not return "OK". This
+  can also lead to a misadressing with potentially a segfault (very unlikely).
+  Note that no problem exists once the initializiation phase of the external
+  program is finished and regular message transfer runs.
+  The problem basically is that for a startup failure, the control data for
+  that external program instance is freed on error. Unfortunately, that state
+  data is needed later on to detect a suspended instance. We now keep the control
+  data even on init failure (as we then need to do normal control options).
+  closes https://github.com/rsyslog/rsyslog/issues/4967
 - 2022-11-29: testbench bugfix: wrong message injection object of instance 1
   In some client-server test cases, messages are supposed to be injected into
   the instance 2(client), but they are actually injected into instance 1(server),
