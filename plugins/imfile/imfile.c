@@ -852,10 +852,13 @@ detect_updates(fs_edge_t *const edge)
 				*  the old file in case a process is still writing into it until the FILE_DELETE_DELAY
 				*  is reached OR the inode has changed (see elseif below). In most cases, the
 				*  delay will never be reached and the file will be closed when the inode has changed.
+				*  Directories are deleted without delay.
 				*/
-				if (act->time_to_delete + FILE_DELETE_DELAY < ttNow) {
-				DBGPRINTF("detect_updates obj gone away, unlinking: '%s', ttDelete: %lds, ttNow:%ld\n",
-					act->name, ttNow - (act->time_to_delete + FILE_DELETE_DELAY), ttNow);
+				sbool is_file = act->edge->is_file;
+				if (!is_file || act->time_to_delete + FILE_DELETE_DELAY < ttNow) {
+				DBGPRINTF("detect_updates obj gone away, unlinking: "
+					"'%s', ttDelete: %lds, ttNow:%ld isFile: %d\n",
+					act->name, ttNow - (act->time_to_delete + FILE_DELETE_DELAY), ttNow, is_file);
 					act_obj_unlink(act);
 					restart = 1;
 				} else {
@@ -1038,9 +1041,9 @@ act_obj_destroy(act_obj_t *const act, const int is_deleted)
 		act_obj_t *target_act;
 		for(target_act = act->edge->active ; target_act != NULL ; target_act = target_act->next) {
 			if(target_act->source_name && !strcmp(target_act->source_name, act->name)) {
-				DBGPRINTF("act_obj_destroy: unlinking slink target %s of %s "
-						"symlink\n", target_act->name, act->name);
-				act_obj_unlink(target_act);
+				DBGPRINTF("act_obj_destroy: detect_updates for parent of target %s of %s symlink\n",
+						target_act->name, act->name);
+				detect_updates(target_act->edge->parent->root->edges);
 				break;
 			}
 		}
