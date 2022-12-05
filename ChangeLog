@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2212.0 (aka 2022.12) 2022-12-xx
+- 2022-12-05: testbench: make python http server based tests more reliable
+  Harden them against races during server port assignment. Prevents
+  testbench flakes.
 - 2022-12-05: omprog bugfix: invalid status handling at called program startup
   There is a bug when external program *startup* does not return "OK". This
   can also lead to a misadressing with potentially a segfault (very unlikely).
