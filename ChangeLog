@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2212.0 (aka 2022.12) 2022-12-xx
+Scheduled Release 8.2212.0 (aka 2022.12) 2022-12-06
 - 2022-12-05: testbench: make python http server based tests more reliable
   Harden them against races during server port assignment. Prevents
   testbench flakes.
