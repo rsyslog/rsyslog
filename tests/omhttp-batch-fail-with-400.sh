@@ -4,8 +4,7 @@
 #  Starting actual testbench
 . ${srcdir:=.}/diag.sh init
 
-port="$(get_free_port)"
-omhttp_start_server $port --fail-with-400-after 1000
+omhttp_start_server 0 --fail-with-400-after 1000
 
 generate_conf
 add_conf '
@@ -28,7 +27,7 @@ ruleset(name="ruleset_omhttp") {
         template="tpl"
 
         server="localhost"
-        serverport="'$port'"
+        serverport="'$omhttp_server_lstnport'"
         restpath="my/endpoint"
         batch="off"
 
@@ -46,7 +45,7 @@ startup
 injectmsg  0 10000
 shutdown_when_empty
 wait_shutdown
-omhttp_get_data $port my/endpoint
+omhttp_get_data $omhttp_server_lstnport my/endpoint
 omhttp_stop_server
 seq_check  0 999
 exit_test

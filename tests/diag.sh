@@ -2311,7 +2311,7 @@ omhttp_start_server() {
     omhttp_server_logfile="${omhttp_work_dir}/omhttp_server.log"
     mkdir -p ${omhttp_work_dir}
 
-    server_args="-p $omhttp_server_port ${*:2}"
+    server_args="-p $omhttp_server_port ${*:2} --port-file $RSYSLOG_DYNNAME.omhttp_server_lstnport.file"
 
     timeout 30m $PYTHON ${omhttp_server_py} ${server_args} >> ${omhttp_server_logfile} 2>&1 &
     if [ ! $? -eq 0 ]; then
@@ -2319,10 +2319,12 @@ omhttp_start_server() {
         rm -rf $omhttp_work_dir
         error_exit 1
     fi
-
     omhttp_server_pid=$!
+
+    wait_file_exists "$RSYSLOG_DYNNAME.omhttp_server_lstnport.file"
+    omhttp_server_lstnport="$(cat $RSYSLOG_DYNNAME.omhttp_server_lstnport.file)"
     echo ${omhttp_server_pid} > ${omhttp_server_pidfile}
-    echo "Started omhttp test server with args ${server_args} with pid ${omhttp_server_pid}"
+    echo "Started omhttp test server with args ${server_args} with pid ${omhttp_server_pid}, port {$omhttp_server_lstnport}"
 }
 
 omhttp_stop_server() {
