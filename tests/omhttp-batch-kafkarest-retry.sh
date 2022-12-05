@@ -6,8 +6,7 @@
 
 export NUMMESSAGES=50000
 
-port="$(get_free_port)"
-omhttp_start_server $port --fail-every 100
+omhttp_start_server 0 --fail-every 100
 
 generate_conf
 add_conf '
@@ -29,7 +28,7 @@ ruleset(name="ruleset_omhttp_retry") {
         template="tpl_echo"
 
         server="localhost"
-        serverport="'$port'"
+        serverport="'$omhttp_server_lstnport'"
         restpath="my/endpoint"
         batch="on"
         batch.maxsize="100"
@@ -51,7 +50,7 @@ ruleset(name="ruleset_omhttp") {
         template="tpl"
 
         server="localhost"
-        serverport="'$port'"
+        serverport="'$omhttp_server_lstnport'"
         restpath="my/endpoint"
         batch="on"
         batch.maxsize="100"
@@ -72,7 +71,7 @@ startup
 injectmsg
 shutdown_when_empty
 wait_shutdown
-omhttp_get_data $port my/endpoint kafkarest
+omhttp_get_data $omhttp_server_lstnport my/endpoint kafkarest
 omhttp_stop_server
 seq_check
 exit_test
