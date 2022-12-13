@@ -71,7 +71,7 @@ startup 2
 
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
-injectmsg
+injectmsg2
 shutdown_when_empty 2
 wait_shutdown 2
 # now it is time to stop the receiver as well
