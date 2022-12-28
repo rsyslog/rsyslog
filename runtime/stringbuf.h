@@ -144,7 +144,7 @@ rsRetVal cstrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend);
 
 /* now come inline-like functions */
 #ifdef NDEBUG
-#	define cstrLen(x) ((int)((x)->iStrLen))
+#	define cstrLen(x) ((size_t)((x)->iStrLen))
 #else
 	int cstrLen(cstr_t *pThis);
 #endif
