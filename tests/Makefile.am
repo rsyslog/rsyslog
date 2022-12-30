@@ -230,6 +230,7 @@ TESTS +=  \
 	privdropabortonidfail.sh \
 	privdropabortonidfaillegacy.sh \
 	json-nonstring.sh \
+        json-onempty-at-end.sh \
 	template-json.sh \
 	template-pure-json.sh \
 	template-pos-from-to.sh \
@@ -2047,6 +2048,7 @@ EXTRA_DIST= \
 	privdropabortonidfail.sh \
 	privdropabortonidfaillegacy.sh \
 	json-nonstring.sh \
+        json-onempty-at-end.sh \
 	template-json.sh \
 	template-pure-json.sh \
 	template-pos-from-to.sh \
