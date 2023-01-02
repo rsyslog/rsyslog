@@ -1,5 +1,15 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2302.0 (aka 2023.02) 2023-02-??
+- 2023-01-02: core bugfix: template system may generate invalid json
+  When
+  - a list template
+  - is created with option.jsonf="on"
+  - and the last list element is a property with onEmpty="skip"
+  - and that property is actually empty
+  invalid JSON is generated.
+  The JSON string in this case ends with ", " instead of "}\n". This
+  patch fixes the issue.
+  closes https://github.com/rsyslog/rsyslog/issues/5050
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2212.0 (aka 2022.12) 2022-12-06
 - 2022-12-05: testbench: make python http server based tests more reliable
