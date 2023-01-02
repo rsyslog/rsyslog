@@ -163,6 +163,7 @@ tplToString(struct template *__restrict__ const pTpl,
 	unsigned short bMustBeFreed = 0;
 	uchar *pVal;
 	rs_size_t iLenVal = 0;
+	int need_comma = 0;
 
 	if(pTpl->pStrgen != NULL) {
 		CHKiRet(pTpl->pStrgen(pMsg, iparam));
@@ -230,13 +231,22 @@ tplToString(struct template *__restrict__ const pTpl,
 			if(iBuf + iLenVal + extra_space >= iparam->lenBuf) /* we reserve one char for the final \0! */
 				CHKiRet(ExtendBuf(iparam, iBuf + iLenVal + 1));
 
+			if(need_comma) {
+				memcpy(iparam->param + iBuf, ", ", 2);
+				iBuf += 2;
+			}
 			memcpy(iparam->param + iBuf, pVal, iLenVal);
 			iBuf += iLenVal;
 			if(pTpl->optFormatEscape == JSONF) {
-				memcpy(iparam->param + iBuf,
-					(pTpe->pNext == NULL) ? "}\n" : ", ", 2);
-				iBuf += 2;
+				need_comma = 1;
 			}
+		}
+
+		if((pTpl->optFormatEscape == JSONF) && (pTpe->pNext == NULL)) {
+			/* space was reserved while processing field above
+			   (via extra_space in ExtendBuf() new size formula. */
+			memcpy(iparam->param + iBuf, "}\n", 2);
+			iBuf += 2;
 		}
 
 		if(bMustBeFreed) {
