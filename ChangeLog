@@ -189,7 +189,7 @@ Scheduled Release 8.2208.0 (aka 2022.08) 2022-08-09
 - 2022-08-04: openssl: add support to split tls commands by semicolon
   - Add support to split tls commands by semicolon.
   - Changed one test with multiple tls commands to use semicolon as
-    seperator instead of newline.
+    separator instead of newline.
   closes: https://github.com/rsyslog/rsyslog/issues/4852
 - 2022-08-04: openssl subsystem bugfix: build issue on Solaris
   Needed header file was added. Platforms other than Solaris did not actually need it,
