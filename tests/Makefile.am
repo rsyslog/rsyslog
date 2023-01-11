@@ -1108,6 +1108,7 @@ TESTS +=  \
 	rscript_hash32.sh \
 	rscript_hash64.sh \
 	rscript_replace.sh \
+	omfile-sizelimitcmd-many.sh \
 	omfile-outchannel-many.sh
 if HAVE_VALGRIND
 TESTS +=  \
@@ -2001,6 +2002,7 @@ EXTRA_DIST= \
 	omfile-read-only.sh \
 	omfile-outchannel.sh \
 	omfile-outchannel-many.sh \
+	omfile-sizelimitcmd-many.sh \
 	omfile_both_files_set.sh \
 	omfile_hup.sh \
 	omrabbitmq_no_params.sh \

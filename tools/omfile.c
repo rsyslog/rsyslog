@@ -17,7 +17,7 @@
  * pipes. These have been moved to ompipe, to reduced the entanglement
  * between the two different functionalities. -- rgerhards
  *
- * Copyright 2007-2022 Adiscon GmbH.
+ * Copyright 2007-2023 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -282,6 +282,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "sig.provider", eCmdHdlrGetWord, 0 },
 	{ "cry.provider", eCmdHdlrGetWord, 0 },
 	{ "closetimeout", eCmdHdlrPositiveInt, 0 },
+	{ "rotation.sizelimit", eCmdHdlrSize, 0 },
+	{ "rotation.sizelimitcommand", eCmdHdlrString, 0 },
 	{ "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
@@ -1132,6 +1134,8 @@ setInstParamDefaults(instanceData *__restrict__ const pData)
 	pData->useSigprov = 0;
 	pData->useCryprov = 0;
 	pData->iCloseTimeout = -1;
+	pData->iSizeLimit = 0;
+	pData->pszSizeLimitCmd = NULL;
 }
 
 
@@ -1345,6 +1349,10 @@ CODESTARTnewActInst
 			pData->cryprovName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "closetimeout")) {
 			pData->iCloseTimeout = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "rotation.sizelimit")) {
+			pData->iSizeLimit = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "rotation.sizelimitcommand")) {
+			pData->pszSizeLimitCmd = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("omfile: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);
