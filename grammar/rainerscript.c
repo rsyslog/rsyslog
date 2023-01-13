@@ -2427,8 +2427,23 @@ doFunct_Substring(struct cnffunc *__restrict__ const func,
 	cnfexprEval(func->expr[1], &srcVal[1], usrptr, pWti);
 	cnfexprEval(func->expr[2], &srcVal[2], usrptr, pWti);
 	es_str_t *es = var2String(&srcVal[0], &bMustFree);
-	const int start = var2Number(&srcVal[1], NULL);
-	const int subStrLen = var2Number(&srcVal[2], NULL);
+	const int lenSrcStr = es_strlen(es);
+	int start = var2Number(&srcVal[1], NULL);
+	int subStrLen = var2Number(&srcVal[2], NULL);
+	if(start >= lenSrcStr) {
+		/* begin PAST the source string - ensure nothing is copied at all */
+		start = subStrLen = 0;
+	} else {
+		if(subStrLen < 0) {
+			subStrLen = lenSrcStr + subStrLen; /* "add" negative offset! */
+			if(subStrLen < 0) {
+				subStrLen = 0;
+			}
+		}
+		if(subStrLen > (lenSrcStr - start)) {
+			subStrLen = lenSrcStr - start;
+		}
+	}
 
 	ret->datatype = 'S';
 	ret->d.estr = es_newStrFromSubStr(es, (es_size_t)start, (es_size_t)subStrLen);
