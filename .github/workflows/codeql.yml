@@ -1,0 +1,54 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  schedule:
+    - cron: "38 1 * * 3"
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ javascript, java, python, cpp ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Packages (cpp)
+        if: ${{ matrix.language == 'cpp' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes python-docutils tcl-dev
+
+      - name: Configure (cpp)
+        if: ${{ matrix.language == 'cpp' }}
+        run: |
+          autoreconf -fvi
+          ./configure --enable-imfile --enable-mysql --enable-usertools --enable-pgsql --enable-libdbi --enable-snmp --enable-elasticsearch --enable-gnutls --enable-mail --enable-imdiag --enable-mmjsonparse --enable-mmaudit --enable-mmanon --enable-mmrm1stspace --enable-mmutf8fix --enable-mmcount --enable-mmdblookup --enable-mmfields --enable-mmpstrucdata --enable-imptcp --enable-impstats --enable-omprog --enable-omudpspoof --enable-omstdout --enable-omjournal --enable-pmlastmsg --enable-pmcisconames --enable-pmciscoios --enable-pmnull --enable-pmaixforwardedfrom --enable-pmsnare --enable-pmpanngfw --enable-omuxsock --enable-omkafka --enable-imkafka --enable-ommongodb --enable-omhiredis --enable-omhttpfs --enable-gssapi-krb5 --enable-mmkubernetes --enable-relp --enable-mmnormalize --enable-pmnormalize --enable-openssl --enable-mmgrok --enable-omtcl --enable-omhttp --enable-improg --enable-imtuxedoulog --enable-mmtaghostname --enable-imbatchreport --enable-imdocker --enable-mmdarwin --enable-pmdb2diag --enable-omrabbitmq
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: ${{ matrix.language }}
+          config-file: ./.github/codeql.yml
+          queries: +security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v2
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:${{ matrix.language }}"
