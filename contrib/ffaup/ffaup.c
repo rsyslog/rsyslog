@@ -77,13 +77,22 @@ do_faup_parse(struct cnffunc *__restrict__ const func, struct svar *__restrict__
 	int bMustFree;
 	cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
 	char *url = (char*) var2CString(&srcVal, &bMustFree);
-	faup_handler_t *fh = (faup_handler_t *)func->funcdata;
+
+	/*
+	We use the faup_handler_t struct directly instead of calling faup_init to avoid overhead and useless
+	allocations. Using one handler is not possible as the lib is not thread-safe and thread-locale solutions
+	still cause some issues.
+	If the faup_init function changes significantly in the future, it may cause issue.
+	(Validated with faup v1.5 and faup-master fecf768603e713bc903c56c8df0870fae14e3f93)
+	*/
+	faup_handler_t fh = {0};
+	fh.options = glbOptions;
 
 	// default, return 0
 	ret->datatype = 'N';
 	ret->d.n = 0;
 
-	if(!faup_decode(fh, url, strlen(url))) {
+	if(!faup_decode(&fh, url, strlen(url))) {
 		parser_errmsg("faup: could not parse the value\n");
 		// No returned error code, so the reason doesn't matter
 		FINALIZE;
@@ -97,123 +106,123 @@ do_faup_parse(struct cnffunc *__restrict__ const func, struct svar *__restrict__
 				ret->d.json,
 				"scheme",
 				json_object_new_string_len(
-					url + faup_get_scheme_pos(fh),
-					faup_get_scheme_size(fh)));
+					url + faup_get_scheme_pos(&fh),
+					faup_get_scheme_size(&fh)));
 			json_object_object_add(
 				ret->d.json,
 				"credential",
 				json_object_new_string_len(
-					url + faup_get_credential_pos(fh),
-					faup_get_credential_size(fh)));
+					url + faup_get_credential_pos(&fh),
+					faup_get_credential_size(&fh)));
 			json_object_object_add(
 				ret->d.json,
 				"subdomain",
 				json_object_new_string_len(
-					url + faup_get_subdomain_pos(fh),
-					faup_get_subdomain_size(fh)));
+					url + faup_get_subdomain_pos(&fh),
+					faup_get_subdomain_size(&fh)));
 			json_object_object_add(
 				ret->d.json,
 				"domain",
 				json_object_new_string_len(
-					url + faup_get_domain_pos(fh),
-					faup_get_domain_size(fh)));
+					url + faup_get_domain_pos(&fh),
+					faup_get_domain_size(&fh)));
 			json_object_object_add(
 				ret->d.json,
 				"domain_without_tld",
 				json_object_new_string_len(
-					url + faup_get_domain_without_tld_pos(fh),
-					faup_get_domain_without_tld_size(fh)));
+					url + faup_get_domain_without_tld_pos(&fh),
+					faup_get_domain_without_tld_size(&fh)));
 			json_object_object_add(
 				ret->d.json,
 				"host",
 				json_object_new_string_len(
-					url + faup_get_host_pos(fh),
-					faup_get_host_size(fh)));
+					url + faup_get_host_pos(&fh),
+					faup_get_host_size(&fh)));
 			json_object_object_add(
 				ret->d.json,
 				"tld",
 				json_object_new_string_len(
-					url + faup_get_tld_pos(fh),
-					faup_get_tld_size(fh)));
+					url + faup_get_tld_pos(&fh),
+					faup_get_tld_size(&fh)));
 			json_object_object_add(
 				ret->d.json,
 				"port",
 				json_object_new_string_len(
-					url + faup_get_port_pos(fh),
-					faup_get_port_size(fh)));
+					url + faup_get_port_pos(&fh),
+					faup_get_port_size(&fh)));
 			json_object_object_add(
 				ret->d.json,
 				"resource_path",
 				json_object_new_string_len(
-					url + faup_get_resource_path_pos(fh),
-					faup_get_resource_path_size(fh)));
+					url + faup_get_resource_path_pos(&fh),
+					faup_get_resource_path_size(&fh)));
 			json_object_object_add(
 				ret->d.json,
 				"query_string",
 				json_object_new_string_len(
-					url + faup_get_query_string_pos(fh),
-					faup_get_query_string_size(fh)));
+					url + faup_get_query_string_pos(&fh),
+					faup_get_query_string_size(&fh)));
 			json_object_object_add(
 				ret->d.json,
 				"fragment",
 				json_object_new_string_len(
-					url + faup_get_fragment_pos(fh),
-					faup_get_fragment_size(fh)));
+					url + faup_get_fragment_pos(&fh),
+					faup_get_fragment_size(&fh)));
 			break;
 		case FAUP_PARSE_SCHEME:
 			ret->datatype = 'S';
 			ret->d.estr = es_newStrFromCStr(
-				url + faup_get_scheme_pos(fh), faup_get_scheme_size(fh));
+				url + faup_get_scheme_pos(&fh), faup_get_scheme_size(&fh));
 			break;
 		case FAUP_PARSE_CREDENTIAL:
 			ret->datatype = 'S';
 			ret->d.estr = es_newStrFromCStr(
-				url + faup_get_credential_pos(fh), faup_get_credential_size(fh));
+				url + faup_get_credential_pos(&fh), faup_get_credential_size(&fh));
 			break;
 		case FAUP_PARSE_SUBDOMAIN:
 			ret->datatype = 'S';
 			ret->d.estr = es_newStrFromCStr(
-				url + faup_get_subdomain_pos(fh), faup_get_subdomain_size(fh));
+				url + faup_get_subdomain_pos(&fh), faup_get_subdomain_size(&fh));
 			break;
 		case FAUP_PARSE_DOMAIN:
 			ret->datatype = 'S';
 			ret->d.estr = es_newStrFromCStr(
-				url + faup_get_domain_pos(fh), faup_get_domain_size(fh));
+				url + faup_get_domain_pos(&fh), faup_get_domain_size(&fh));
 			break;
 		case FAUP_PARSE_DOMAIN_WITHOUT_TLD:
 			ret->datatype = 'S';
 			ret->d.estr = es_newStrFromCStr(
-				url + faup_get_domain_without_tld_pos(fh), faup_get_domain_without_tld_size(fh));
+				url + faup_get_domain_without_tld_pos(&fh), faup_get_domain_without_tld_size(&fh));
 			break;
 		case FAUP_PARSE_HOST:
 			ret->datatype = 'S';
 			ret->d.estr = es_newStrFromCStr(
-				url + faup_get_host_pos(fh), faup_get_host_size(fh));
+				url + faup_get_host_pos(&fh), faup_get_host_size(&fh));
 			break;
 		case FAUP_PARSE_TLD:
 			ret->datatype = 'S';
 			ret->d.estr = es_newStrFromCStr(
-				url + faup_get_tld_pos(fh), faup_get_tld_size(fh));
+				url + faup_get_tld_pos(&fh), faup_get_tld_size(&fh));
 			break;
 		case FAUP_PARSE_PORT:
 			ret->datatype = 'S';
 			ret->d.estr = es_newStrFromCStr(
-				url + faup_get_port_pos(fh), faup_get_port_size(fh));
+				url + faup_get_port_pos(&fh), faup_get_port_size(&fh));
 			break;
 		case FAUP_PARSE_RESOURCE_PATH:
 			ret->datatype = 'S';
 			ret->d.estr = es_newStrFromCStr(
-				url + faup_get_resource_path_pos(fh), faup_get_resource_path_size(fh));
+				url + faup_get_resource_path_pos(&fh), faup_get_resource_path_size(&fh));
 			break;
 		case FAUP_PARSE_QUERY_STRING:
 			ret->datatype = 'S';
 			ret->d.estr = es_newStrFromCStr(
-				url + faup_get_query_string_pos(fh), faup_get_query_string_size(fh));
+				url + faup_get_query_string_pos(&fh), faup_get_query_string_size(&fh));
 			break;
 		case FAUP_PARSE_FRAGMENT:
 			ret->datatype = 'S';
 			ret->d.estr = es_newStrFromCStr(
-				url + faup_get_fragment_pos(fh), faup_get_fragment_size(fh));
+				url + faup_get_fragment_pos(&fh), faup_get_fragment_size(&fh));
 			break;
 	}
 
@@ -322,35 +331,24 @@ initFunc_faup_parse(struct cnffunc *const func)
 		ABORT_FINALIZE(RS_RET_INVLD_NBR_ARGUMENTS);
 	}
 
-	CHKmalloc(func->funcdata = (void *) faup_init(glbOptions));
-
 finalize_it:
 	RETiRet;
 }
 
-static void ATTR_NONNULL(1)
-destructFunc_faup_parse(struct cnffunc *const func)
-{
-	if(func->funcdata != NULL) {
-		faup_terminate((faup_handler_t *)func->funcdata);
-		func->funcdata = NULL;
-	}
-}
 
 static struct scriptFunct functions[] = {
-		{"faup", 1, 1, do_faup_parse_full, initFunc_faup_parse, destructFunc_faup_parse},
-		{"faup_scheme", 1, 1, do_faup_parse_scheme, initFunc_faup_parse, destructFunc_faup_parse},
-		{"faup_credential", 1, 1, do_faup_parse_credential, initFunc_faup_parse, destructFunc_faup_parse},
-		{"faup_subdomain", 1, 1, do_faup_parse_subdomain, initFunc_faup_parse, destructFunc_faup_parse},
-		{"faup_domain", 1, 1, do_faup_parse_domain, initFunc_faup_parse, destructFunc_faup_parse},
-		{"faup_domain_without_tld", 1, 1, do_faup_parse_domain_without_tld, initFunc_faup_parse,
-			destructFunc_faup_parse},
-		{"faup_host", 1, 1, do_faup_parse_host, initFunc_faup_parse, destructFunc_faup_parse},
-		{"faup_tld", 1, 1, do_faup_parse_tld, initFunc_faup_parse, destructFunc_faup_parse},
-		{"faup_port", 1, 1, do_faup_parse_port, initFunc_faup_parse, destructFunc_faup_parse},
-		{"faup_resource_path", 1, 1, do_faup_parse_resource_path, initFunc_faup_parse, destructFunc_faup_parse},
-		{"faup_query_string", 1, 1, do_faup_parse_query_string, initFunc_faup_parse, destructFunc_faup_parse},
-		{"faup_fragment", 1, 1, do_faup_parse_fragment, initFunc_faup_parse, destructFunc_faup_parse},
+		{"faup", 1, 1, do_faup_parse_full, initFunc_faup_parse, NULL},
+		{"faup_scheme", 1, 1, do_faup_parse_scheme, initFunc_faup_parse, NULL},
+		{"faup_credential", 1, 1, do_faup_parse_credential, initFunc_faup_parse, NULL},
+		{"faup_subdomain", 1, 1, do_faup_parse_subdomain, initFunc_faup_parse, NULL},
+		{"faup_domain", 1, 1, do_faup_parse_domain, initFunc_faup_parse, NULL},
+		{"faup_domain_without_tld", 1, 1, do_faup_parse_domain_without_tld, initFunc_faup_parse, NULL},
+		{"faup_host", 1, 1, do_faup_parse_host, initFunc_faup_parse, NULL},
+		{"faup_tld", 1, 1, do_faup_parse_tld, initFunc_faup_parse, NULL},
+		{"faup_port", 1, 1, do_faup_parse_port, initFunc_faup_parse, NULL},
+		{"faup_resource_path", 1, 1, do_faup_parse_resource_path, initFunc_faup_parse, NULL},
+		{"faup_query_string", 1, 1, do_faup_parse_query_string, initFunc_faup_parse, NULL},
+		{"faup_fragment", 1, 1, do_faup_parse_fragment, initFunc_faup_parse, NULL},
 		{NULL, 0, 0, NULL, NULL, NULL} //last element to check end of array
 };
 
@@ -392,7 +390,6 @@ CODESTARTmodInit
 	// This is useful only for the faup executable
 	glbOptions->output = FAUP_OUTPUT_NONE;
 	glbOptions->exec_modules = FAUP_MODULES_NOEXEC;
-
 CODEmodInit_QueryRegCFSLineHdlr
 	dbgprintf("rsyslog ffaup init called, compiled with version %s\n", VERSION);
 ENDmodInit
