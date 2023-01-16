@@ -8,6 +8,17 @@ Scheduled Release 8.2302.0 (aka 2023.02) 2023-02-??
     provide automatic output file rotation functionality feature-wise
     equivalent to legacy $outchannel. This finally permits to use
     this feature set in rscript.
+  - core substring function: enhancement and hardening
+    Now, length can have a negative value -n to denote that the
+    substring should be build between startpos and the character
+    -n chars from the end. This is a shortcut for stripping charactes
+    on "both ends" of the string. See doc for details on the enhanced
+    semantics.
+    Also, some hardening against invalid startpos and length has
+    been added.
+  - core bugfix: wrong type conversion in internal string class could lead to segfault
+    This could only happen with very unusually large strings
+    Thanks to Flos Lonicerae for the patch.
   - QA: changed to CodeQL scanning on github as LGTM replacement
   - bugfix: wrong version number on daily stable builds
   - CI: use newer version of zookeeper (needed modernization)
