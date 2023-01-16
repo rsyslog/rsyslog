@@ -184,6 +184,10 @@ TESTS +=  \
 	hostname-with-slash-pmrfc5424.sh \
 	hostname-with-slash-pmrfc3164.sh \
 	hostname-with-slash-dflt-invld.sh \
+	func-substring-invld-startpos.sh \
+	func-substring-large-endpos.sh \
+	func-substring-large-neg-endpos.sh \
+	func-substring-relative-endpos.sh \
 	hostname-with-slash-dflt-slash-valid.sh \
 	empty-app-name.sh \
 	stop-localvar.sh \
@@ -576,6 +580,7 @@ TESTS +=  \
 	badqi.sh \
 	threadingmq.sh \
 	threadingmqaq.sh \
+	func-substring-invld-startpos-vg.sh \
 	rscript_trim-vg.sh
 if ENABLE_LIBGCRYPT
 TESTS +=  \
@@ -1719,6 +1724,11 @@ EXTRA_DIST= \
 	config_enabled-off.sh \
 	empty-app-name.sh \
 	empty-hostname.sh \
+	func-substring-invld-startpos.sh \
+	func-substring-invld-startpos-vg.sh \
+	func-substring-large-endpos.sh \
+	func-substring-large-neg-endpos.sh \
+	func-substring-relative-endpos.sh \
 	hostname-with-slash-pmrfc5424.sh \
 	hostname-with-slash-pmrfc3164.sh \
 	pmrfc3164-msgFirstSpace.sh \
