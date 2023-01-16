@@ -785,6 +785,45 @@ the encryption feature is turned on.
 Currently, there only is one provider called ":doc:`gcry <../cryprov_gcry>`".
 
 
+rotation.sizeLimit
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "size", "0 (disabled)", "no", "`$outchannel` (partly)"
+
+This permits to set a size limit on the output file. When the limit is reached,
+rotation of the file is tried. The rotation script needs to be configured via
+`rotation.sizeLimitCommand`.
+
+Please note that the size limit is not exact. Some excess bytes are permitted
+to prevent messages from being split across two files. Also, a full batch of
+messages is not terminated in between. As such, in practice, the size of the
+output file can grow some KiB larger than configured.
+
+Also avoid to configer a too-low limit, especially for busy files. Calling the
+rotation script is relatively performance intense. As such, it could negatively
+affect overall rsyslog performance.
+
+
+rotation.sizeLimitCommand
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "(empty)", "no", "`$outchannel` (partly)"
+
+This permits to configure the script to be called whe a size limit on the output
+file is reached. The actual size limit needs to be configured via
+`rotation.sizeLimit`.
+
+
 .. _omfile-statistic-counter:
 
 Statistic Counter
