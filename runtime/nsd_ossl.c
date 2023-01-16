@@ -147,7 +147,9 @@ int opensslh_THREAD_setup(void)
 	for (i = 0; i < CRYPTO_num_locks( ); i++)
 		MUTEX_SETUP(mutex_buf[i]);
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	CRYPTO_set_id_callback(id_function);
+#endif /* OPENSSL_VERSION_NUMBER < 0x10100000L */
 	CRYPTO_set_locking_callback(locking_function);
 	/* The following three CRYPTO_... functions are the OpenSSL functions
 	for registering the callbacks we implemented above */
@@ -168,7 +170,9 @@ int opensslh_THREAD_cleanup(void)
 	if (!mutex_buf)
 		return 0;
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	CRYPTO_set_id_callback(NULL);
+#endif /* OPENSSL_VERSION_NUMBER < 0x10100000L */
 	CRYPTO_set_locking_callback(NULL);
 	CRYPTO_set_dynlock_create_callback(NULL);
 	CRYPTO_set_dynlock_lock_callback(NULL);
