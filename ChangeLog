@@ -1,6 +1,13 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2302.0 (aka 2023.02) 2023-02-??
 - 2023-01-16:
+  - omfile: add action parameters "rotation.*"
+    Add new action parameters
+    - rotation.sizeLimit
+    - rotation.sizeLimitCommand
+    provide automatic output file rotation functionality feature-wise
+    equivalent to legacy $outchannel. This finally permits to use
+    this feature set in rscript.
   - QA: changed to CodeQL scanning on github as LGTM replacement
   - bugfix: wrong version number on daily stable builds
   - CI: use newer version of zookeeper (needed modernization)
