@@ -1,5 +1,17 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2302.0 (aka 2023.02) 2023-02-??
+- 2023-01-16:
+  - QA: changed to CodeQL scanning on github as LGTM replacement
+  - bugfix: wrong version number on daily stable builds
+  - CI: use newer version of zookeeper (needed modernization)
+  - ffaup bugfix : memory corruption with concurrent workers
+    The ffaup function fails to work properly when it is used with multiple workers.
+    The faup_handler_t struct is not supposed to be shared between threads.
+    This may have caused memory corruptions and race conditions when used
+    inside of actions.
+    Thanks to Thibaud Cartegnie for the fix.
+  - openssl bugfix: undefined reference error on OpenSSL 1.1 or higher.
+    This could have prevented ossl components from being loaded/used.
 - 2023-01-02: core bugfix: template system may generate invalid json
   When
   - a list template
