@@ -760,6 +760,29 @@ dropPrivileges(rsconf_t *cnf)
 			  cnf->globals.uidDropPriv);
 	}
 
+#ifdef ENABLE_LIBCAPNG
+	/* In case privileges were dropped, do not allow bypassing
+	 * file read, write, and execute permission checks
+	 */
+	if (cnf->globals.gidDropPriv != 0 || cnf->globals.uidDropPriv != 0) {
+		int capng_rc;
+		if ((capng_rc = capng_update(CAPNG_DROP, CAPNG_EFFECTIVE|CAPNG_PERMITTED, CAP_DAC_OVERRIDE)) != 0) {
+			LogError(0, RS_RET_LIBCAPNG_ERR,
+				"could not update the internal posix capabilities settings "
+				"based on the options passed to it, capng_update=%d\n", capng_rc);
+			exit(-1);
+		}
+
+		if ((capng_rc = capng_apply(CAPNG_SELECT_BOTH)) != 0) {
+			LogError(0, RS_RET_LIBCAPNG_ERR,
+				"could not transfer  the  specified  internal posix  capabilities "
+				"settings to the kernel, capng_apply=%d\n", capng_rc);
+			exit(-1);
+		}
+	}
+
+#endif
+
 finalize_it:
 	RETiRet;
 }
