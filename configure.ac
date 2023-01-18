@@ -377,6 +377,28 @@ AC_ARG_ENABLE(fmhash,
 	[enable_fmhash=yes]
 )
 
+AC_ARG_ENABLE(libcap-ng,
+        [AS_HELP_STRING([--enable-libcap-ng],[Enable dropping capabilities to only the necessary set @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_libcapng="yes" ;;
+          no) enable_libcapng="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable_libcapng) ;;
+         esac],
+        [enable_libcapng=no]
+)
+
+if test "$enable_libcapng" = "yes"; then
+        PKG_CHECK_MODULES(
+                [LIBCAPNG],
+                [libcap-ng >= 0.8.2],
+                [AC_DEFINE([ENABLE_LIBCAPNG], [1], [Indicator that libcap-ng is present])],
+                [AC_MSG_ERROR(libcap-ng is not present.)]
+        )
+        CFLAGS="$CFLAGS $LIBCAPNG_CFLAGS"
+        LIBS="$LIBS $LIBCAPNG_LIBS"
+fi
+
+
 AC_ARG_ENABLE(fmhash-xxhash,
 	[AS_HELP_STRING([--enable-fmhash-xxhash],[Enable xxhash in fmhash support @<:@default=no@:>@])],
         [case "${enableval}" in
@@ -2820,6 +2842,8 @@ echo "    liblogging-stdlog support enabled:        $enable_liblogging_stdlog"
 echo "    libsystemd enabled:                       $enable_libsystemd"
 echo "    kafka static linking enabled:             $enable_kafka_static"
 echo "    atomic operations enabled:                $enable_atomic_operations"
+echo "    libcap-ng support enabled:                $enable_libcapng"
+
 echo
 echo "---{ input plugins }---"
 if test "$unamestr" != "AIX"; then

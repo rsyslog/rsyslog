@@ -37,6 +37,9 @@
 #ifdef HAVE_LIBSYSTEMD
 #	include <systemd/sd-daemon.h>
 #endif
+#ifdef ENABLE_LIBCAPNG
+	#include <cap-ng.h>
+#endif
 
 #include "rsyslog.h"
 #include "wti.h"
@@ -2167,6 +2170,46 @@ main(int argc, char **argv)
 	fjson_global_do_case_sensitive_comparison(0);
 
 	dbgClassInit();
+
+#ifdef ENABLE_LIBCAPNG
+	/*
+	 * Drop capabilities to the necessary set
+	 */
+	int capng_rc;
+	capng_clear(CAPNG_SELECT_BOTH);
+
+	if ((capng_rc = capng_updatev(CAPNG_ADD, CAPNG_EFFECTIVE|CAPNG_PERMITTED,
+		CAP_BLOCK_SUSPEND,
+		CAP_CHOWN,
+		CAP_IPC_LOCK,
+		CAP_LEASE,
+		CAP_NET_ADMIN,
+		CAP_NET_BIND_SERVICE,
+		CAP_DAC_OVERRIDE,
+		CAP_SETGID,
+		CAP_SETUID,
+		CAP_SETPCAP,
+		CAP_SYS_ADMIN,
+		CAP_SYS_CHROOT,
+		CAP_SYS_RESOURCE,
+		CAP_SYSLOG,
+		-1
+	)) != 0) {
+		LogError(0, RS_RET_LIBCAPNG_ERR,
+				"could not update the internal posix capabilities settings "
+				"based on the options passed to it, capng_updatev=%d\n", capng_rc);
+		exit(-1);
+	}
+
+	if ((capng_rc = capng_apply(CAPNG_SELECT_BOTH)) != 0) {
+		LogError(0, RS_RET_LIBCAPNG_ERR,
+			"could not transfer  the  specified  internal posix  capabilities "
+			"settings to the kernel, capng_apply=%d\n", capng_rc);
+		exit(-1);
+	}
+	DBGPRINTF("Capabilities were dropped successfully\n");
+#endif
+
 	initAll(argc, argv);
 #ifdef HAVE_LIBSYSTEMD
 	sd_notify(0, "READY=1");
