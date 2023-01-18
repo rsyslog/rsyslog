@@ -1,5 +1,16 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2302.0 (aka 2023.02) 2023-02-??
+- 2023-01-18: Introduce --enable-libcap-ng configure option
+  The option allows to drop the capabilities to only
+  the necessary set, to minimize security exposure in
+  case there was ever a mistake in a networking
+  plugin or some other input resource. Moreover, it adds
+  ability to change uid and gid while retaining the
+  previously specified capabilities.
+  Add ability to change uid and gid while retaining the
+  capabilities previously specified.
+  closes https://github.com/rsyslog/rsyslog/issues/4986
+  Thanks to Attila Lakatos for the patch.
 - 2023-01-16:
   - omfile: add action parameters "rotation.*"
     Add new action parameters
