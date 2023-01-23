@@ -146,7 +146,7 @@ rsRetVal cstrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend);
 #ifdef NDEBUG
 #	define cstrLen(x) ((size_t)((x)->iStrLen))
 #else
-	int cstrLen(cstr_t *pThis);
+	size_t cstrLen(cstr_t *pThis);
 #endif
 #define rsCStrLen(s) cstrLen((s))
 

@@ -1033,7 +1033,7 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *start_preg, regex_t *
 	cstr_t *thisLine = NULL;
 	rsRetVal readCharRet;
 	const time_t tCurr = pThis->readTimeout ? getTime(NULL) : 0;
-	int maxMsgSize = glblGetMaxLine(runConf);
+	size_t maxMsgSize = glblGetMaxLine(runConf);
 	DEFiRet;
 
 	do {
@@ -1094,9 +1094,9 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *start_preg, regex_t *
 					}
 
 
-					int currLineLen = cstrLen(thisLine);
+					size_t currLineLen = cstrLen(thisLine);
 					if(currLineLen > 0) {
-						int len;
+						size_t len;
 						if((len = cstrLen(pThis->prevMsgSegment) + currLineLen) <
 						maxMsgSize) {
 							CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
@@ -1106,7 +1106,7 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *start_preg, regex_t *
 								len = 0;
 							} else {
 								len = currLineLen-(len-maxMsgSize);
-								for(int z=0; z<len; z++) {
+								for(size_t z=0; z<len; z++) {
 									cstrAppendChar(pThis->prevMsgSegment,
 										thisLine->pBuf[z]);
 								}

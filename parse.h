@@ -56,7 +56,7 @@ struct rsParsObject
 	rsObjID OID;			/**< object ID */
 #endif
 	cstr_t *pCStr;		/**< pointer to the string object we are parsing */
-	int iCurrPos;			/**< current parsing position (char offset) */
+	size_t iCurrPos;	/**< current parsing position (char offset) */
 };
 typedef struct rsParsObject rsParsObj;
 
