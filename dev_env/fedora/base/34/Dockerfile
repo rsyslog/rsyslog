@@ -4,7 +4,7 @@
 # build the "rsyslog libraries" - we do not have packages for them
 FROM	fedora:34
 # search for packages that contain <file>: dnf whatprovides <file>
-RUN	dnf  update
+RUN	dnf -y update
 RUN	dnf -y install \
 	autoconf \
 	autoconf-archive \
@@ -39,6 +39,7 @@ RUN	dnf -y install \
 	librabbitmq-devel \
 	libtool \
 	libuuid-devel \
+	libzstd-devel \
 	logrotate \
 	lsof \
 	make \
@@ -63,7 +64,8 @@ RUN	dnf -y install \
 	tcl-devel \
 	valgrind \
 	wget \
-	zlib-devel
+	zlib-devel \
+	zstd
 	# end of this RUN
 # unfortunately, tcl-devel does not properly setup required bits in the environment
 # so we now try to do that. In case this does no longer work with a version, search
@@ -171,7 +173,7 @@ RUN	cd helper-projects && \
 
 # we need libfaup for some modules - packages do usually not exist
 RUN	cd helper-projects && \
-	git clone git://github.com/stricaud/faup.git && \
+	git clone https://github.com/stricaud/faup.git && \
 	cd faup && \
 	cd build && \
 	cmake .. && make -j&& \
@@ -236,6 +238,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-libdbi \
 	--enable-libfaketime \
 	--enable-libgcrypt \
+	--enable-libzstd \
 	--enable-mail \
 	--enable-mmanon \
 	--enable-mmaudit \

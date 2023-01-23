@@ -1,10 +1,10 @@
 # container for rsyslog development
 # creates the build environment
-FROM	ubuntu:20.04
+FROM	ubuntu:22.04
 ENV	DEBIAN_FRONTEND=noninteractive
 RUN 	apt-get update && \
-	apt-get upgrade -y && \
-	apt-get install -y \
+	apt-get upgrade -y
+RUN	apt-get install -y \
 	autoconf \
 	autoconf-archive \
 	automake \
@@ -18,8 +18,7 @@ RUN 	apt-get update && \
 	faketime libdbd-mysql \
 	flex \
 	gcc \
-	gcc-8 \
-	gcc-10 \
+	gcc-12 \
 	gdb \
 	git \
 	libaprutil1-dev \
@@ -42,6 +41,7 @@ RUN 	apt-get update && \
 	libsnmp-dev \
 	libssl-dev libsasl2-dev \
 	libsystemd-dev \
+	libtirpc-dev \
 	libtokyocabinet-dev \
 	libtool \
 	libtool-bin \
@@ -69,8 +69,8 @@ ENV	REBUILD=1
 #RUN	apt-key adv --keyserver keyserver.ubuntu.com --recv E0C56BD4 && \
  	#add-apt-repository ppa:adiscon/v8-stable -y && \
 	# END
-RUN	echo 'deb http://download.opensuse.org/repositories/home:/rgerhards/xUbuntu_20.04/ /' > /etc/apt/sources.list.d/home:rgerhards.list && \
-	wget -nv https://download.opensuse.org/repositories/home:rgerhards/xUbuntu_20.04/Release.key -O Release.key && \
+RUN	echo 'deb http://download.opensuse.org/repositories/home:/rgerhards/xUbuntu_22.04/ /' > /etc/apt/sources.list.d/home:rgerhards.list && \
+	wget -nv https://download.opensuse.org/repositories/home:rgerhards/xUbuntu_22.04/Release.key -O Release.key && \
 	apt-key add - < Release.key && \
 	apt-get update -y && \
 	apt-get install -y  \
@@ -96,25 +96,8 @@ RUN	apt-get update -y && \
 #	clickhouse-client \
 #	clickhouse-server
 
-# clang devel version
-RUN	echo "deb http://apt.llvm.org/disco/ llvm-toolchain-disco-9 main" > /etc/apt/sources.list.d/llvm8.list && \
-	echo "deb-src http://apt.llvm.org/disco/ llvm-toolchain-disco-9 main" >> /etc/apt/sources.list.d/llvm8.list && \
-	wget -nv -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
-	apt-get update -y && \
-	apt-get install -y \
-	clang-9 \
-	clang-tools-9 \
-	lldb-9 \
-	lld-9
-RUN	echo "deb http://apt.llvm.org/disco/ llvm-toolchain-disco main" > /etc/apt/sources.list.d/llvm10.list && \
-	echo "deb-src http://apt.llvm.org/disco/ llvm-toolchain-disco main" >> /etc/apt/sources.list.d/llvm10.list && \
-	wget -nv -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
-	apt-get update -y && \
-	apt-get install -y clang-10 clang-tools-10 clang-10-doc libclang-common-10-dev libclang-10-dev libclang1-10 clang-format-10 python-clang clangd-10
-
 # create dependency cache
-RUN	mkdir /local_dep_cache && \
-	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz
+RUN	mkdir /local_dep_cache
 RUN	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz
 RUN	wget -nv https://www.rsyslog.com/files/download/rsyslog/elasticsearch-7.14.1-linux-x86_64.tar.gz -O /local_dep_cache/elasticsearch-7.14.1-linux-x86_64.tar.gz
 RUN	wget -nv https://dlcdn.apache.org/zookeeper/zookeeper-3.6.3/apache-zookeeper-3.6.3-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.6.2-bin.tar.gz
@@ -382,6 +365,10 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 # to a docker instance.
 # module needs fixes: --enable-kmsg
 RUN	printf '\n' > /var/log/mysql/error.log
+# fix up llvm symbolizer - not correct for some reason
+RUN	ln -s /usr/bin/asan_symbolize /usr/bin/llvm-symb
+ENV	export ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer
 VOLUME	/var/lib/mysql
+ENV	C_INCLUDE_PATH="/usr/include/tirpc/"
 WORKDIR	/rsyslog
 USER	rsyslog
