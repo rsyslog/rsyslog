@@ -38,7 +38,7 @@ jobs:
         # note: we compile only with oldest and newest support compiler to
         # save ressources. Other important ones are used during the rest of
         # the check runs (most importantly the distro-default ones).
-        config: [clang9, clang-14, gcc-11, gcc8]
+        config: [clang9, clang-14-ndebug, gcc-11-ndebug, gcc8-ndebug, gcc8-debug]
 
     steps:
       - name: git checkout project
@@ -54,15 +54,23 @@ jobs:
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
               export CC='clang-9'
               ;;
-          'clang14')
+          'clang14-ndebug')
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=no'
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
               export CC='clang-14'
               ;;
-          'gcc8')
+          'gcc8-ndebug')
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=no'
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
               export CC='gcc-8'
               ;;
-          'gcc11')
+          'gcc8-debug')
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=yes'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
+              export CC='gcc-8'
+              ;;
+          'gcc11-ndebug')
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=no'
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
               export CC='gcc-11'
               ;;
