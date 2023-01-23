@@ -1,5 +1,6 @@
 # container for rsyslog development
 # creates the build environment
+# Note: platform not suitable for zstd, distro-version is too old
 FROM	ubuntu:18.04
 ENV	DEBIAN_FRONTEND=noninteractive
 RUN 	apt-get update && \
@@ -61,7 +62,7 @@ RUN 	apt-get update && \
 	valgrind \
 	vim \
 	wget \
-	zlib1g-dev
+	zlib1g-dev 
 ENV	REBUILD=3
 # Adiscon/rsyslog components
 RUN	apt-key adv --keyserver keyserver.ubuntu.com --recv E0C56BD4 && \
@@ -103,8 +104,7 @@ RUN	echo "deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-8 main" > /etc/a
 	lld-8 # version 9 currently has a conflict!
 
 # create dependency cache
-RUN	mkdir /local_dep_cache && \
-	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz
+RUN	mkdir /local_dep_cache
 RUN	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz
 RUN	wget -nv https://www.rsyslog.com/files/download/rsyslog/elasticsearch-7.14.1-linux-x86_64.tar.gz -O /local_dep_cache/elasticsearch-7.14.1-linux-x86_64.tar.gz
 RUN	wget -nv https://dlcdn.apache.org/zookeeper/zookeeper-3.6.3/apache-zookeeper-3.6.3-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.6.2-bin.tar.gz

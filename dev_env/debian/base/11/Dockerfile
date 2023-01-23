@@ -1,6 +1,6 @@
 # container for rsyslog development
 # creates the build environment
-FROM	debian:10
+FROM	debian:11
 ENV	DEBIAN_FRONTEND=noninteractive
 RUN 	apt-get update && \
 	apt-get upgrade -y
@@ -37,22 +37,21 @@ RUN	apt-get install -y \
 	libsystemd-dev \
 	libtokyocabinet-dev \
 	libtool \
+	libzstd-dev \
 	default-mysql-server \
 	net-tools \
 	pkg-config \
 	postgresql-client \
-	python-docutils \
-	python-pysnmp4 \
+	python3-docutils \
+	python3-pysnmp4 \
 	software-properties-common \
-	sudo \
 	tcl-dev \
 	uuid-dev \
 	valgrind \
 	vim \
 	wget \
-	sudo \
-	logrotate \
-	zlib1g-dev
+	zlib1g-dev \
+	zstd
 #	libbson-dev
 #	libmaxminddb-dev 
 #	libmongoc-dev 
@@ -243,6 +242,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-libdbi \
 	--enable-libfaketime \
 	--enable-libgcrypt \
+	--enable-libzstd \
 	--enable-mail \
 	--enable-mmanon \
 	--enable-mmaudit \
