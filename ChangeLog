@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2302.0 (aka 2023.02) 2023-02-??
+- 2023-01-27: core/template: implement negative position.to
+  This will easily permit to drop the last n characters from a property
+  without the need to know the exact length of the string. This is
+  especially useful as the exact length is most often not known
+  beforehand.
 - 2023-01-18: Introduce --enable-libcap-ng configure option
   The option allows to drop the capabilities to only
   the necessary set, to minimize security exposure in
