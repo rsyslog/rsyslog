@@ -144,7 +144,7 @@ KeepAlive
 
    "binary", "off", "no", "``$InputTCPServerKeepAlive``"
 
-Enable of disable keep-alive packets at the tcp socket layer. The
+Enable or disable keep-alive packets at the tcp socket layer. The
 default is to disable them.
 
 
