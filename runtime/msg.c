@@ -4241,8 +4241,15 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			/* need to zero-base to and from (they are 1-based!) */
 			if(iFrom > 0)
 				--iFrom;
-			if(iTo > 0)
+			if(iTo > 0) {
 				--iTo;
+			} else if(iTo < 0) {
+				/* note: we ADD negative value, 0-based (-1)! */
+				iTo = bufLen - 1 + iTo;
+				if(iTo < 0) {
+					iTo = 0;
+				}
+			}
 		}
 		if(iFrom >= bufLen) {
 			DBGPRINTF("msgGetProp: iFrom %d >= buflen %d, returning empty string\n",

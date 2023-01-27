@@ -1471,7 +1471,8 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	int spifno1stsp = 0;
 	int mandatory = 0;
 	int frompos = -1;
-	int topos = -1;
+	int topos = 0;
+	int topos_set = 0;
 	int fieldnum = -1;
 	int fielddelim = 9; /* default is HT (USACSII 9) */
 	int fixedwidth = 0;
@@ -1555,6 +1556,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 			bComplexProcessing = 1;
 		} else if(!strcmp(pblkProperty.descr[i].name, "position.to")) {
 			topos = pvals[i].val.d.n;
+			topos_set = 1;
 			bComplexProcessing = 1;
 		} else if(!strcmp(pblkProperty.descr[i].name, "position.relativetoend")) {
 			bPosRelativeToEnd = pvals[i].val.d.n;
@@ -1736,9 +1738,9 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	}
 
 	/* sanity check */
-	if(topos == -1 && frompos != -1)
+	if(topos_set == 0 && frompos != -1)
 		topos = 2000000000; /* large enough ;) */
-	if(frompos == -1 && topos != -1)
+	if(frompos == -1 && topos_set != 0)
 		frompos = 0;
 	if(bPosRelativeToEnd) {
 		if(topos > frompos) {
@@ -1747,7 +1749,7 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
 	} else {
-		if(topos < frompos) {
+		if((topos >= 0) && (topos < frompos)) {
 			LogError(0, RS_RET_ERR, "position.to=%d is lower than postion.from=%d\n",
 				topos, frompos);
 			ABORT_FINALIZE(RS_RET_ERR);
