@@ -247,7 +247,16 @@ property or modifying it. It supports the following parameters:
 -  **position.from** - obtain substring starting from this position (1 is
    the first position)
 
--  **position.to** - obtain substring up to this position
+-  **position.to** - obtain substring up to this position. As a special
+   extension available since 8.2302.0. the `position.to` value may be
+   negative (-n). In this case, all characters from `position.from` to the
+   end of the actual property string except the last n characters are extracted.
+   This makes it easy to strip the beginning and end of a string with changing
+   legth. Let us assume you have a string `"[abc]"` and want to remove the
+   braces. In this case, use `position.from="2" position.to="-1"` in the
+   `property()` object. This will result in the string `"abc"` after template
+   processing. This is especially useful if you want to drop the braces around
+   the `STRUCTURED-DATA` message property.
 
 -  **position.relativeToEnd** - the from and to position is relative to the
    end of the string instead of the usual start of string. (available
