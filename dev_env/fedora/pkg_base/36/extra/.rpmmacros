@@ -1,3 +1,4 @@
 %_signature gpg
-%_gpg_name Andre Lorbach (RPM Signing Key) <alorbach@adiscon.com>
+%_gpg_path /root/.gnupg
+%_gpg_name Andre Lorbach (RPM Package signing key for rsyslog 2023) <alorbach@adiscon.com>
 
