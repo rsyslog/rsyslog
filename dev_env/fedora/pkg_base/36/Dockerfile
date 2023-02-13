@@ -22,6 +22,7 @@ COPY	extra/do_upload_delete.sh ./
 COPY	extra/sync_remote.sh ./
 COPY	extra/sync_remote_delete.sh ./
 COPY	extra/cleanup_repo.sh ./
+COPY	extra/resignrepo.sh ./
 RUN	chmod +x ./initenv.sh
 RUN	chmod +x ./do_upload.sh
 RUN	chmod +x ./do_upload_delete.sh
