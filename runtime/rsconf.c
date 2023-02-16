@@ -34,10 +34,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
-#ifdef ENABLE_LIBCAPNG
-	#include <cap-ng.h>
-#endif
-
 
 #include "rsyslog.h"
 #include "obj.h"
@@ -660,7 +656,6 @@ rsRetVal doDropPrivGid(rsconf_t *cnf)
 	uchar szBuf[1024];
 	DEFiRet;
 
-#ifndef ENABLE_LIBCAPNG
 	if(!cnf->globals.gidDropPrivKeepSupplemental) {
 		res = setgroups(0, NULL); /* remove all supplemental group IDs */
 		if(res) {
@@ -676,15 +671,6 @@ rsRetVal doDropPrivGid(rsconf_t *cnf)
 				"could not set requested group id %d via setgid()", cnf->globals.gidDropPriv);
 		ABORT_FINALIZE(RS_RET_ERR_DROP_PRIV);
 	}
-#else
-	int capng_flags = cnf->globals.gidDropPrivKeepSupplemental ? CAPNG_NO_FLAG : CAPNG_DROP_SUPP_GRP;
-	res = capng_change_id(-1, cnf->globals.gidDropPriv, capng_flags);
-	if (res) {
-		LogError(0, RS_RET_LIBCAPNG_ERR,
-				"could not set requested group id %d via capng_change_id()", cnf->globals.gidDropPriv);
-		ABORT_FINALIZE(RS_RET_LIBCAPNG_ERR);
-	}
-#endif
 
 	DBGPRINTF("setgid(%d): %d\n", cnf->globals.gidDropPriv, res);
 	snprintf((char*)szBuf, sizeof(szBuf), "rsyslogd's groupid changed to %d",
@@ -720,12 +706,7 @@ static void doDropPrivUid(rsconf_t *cnf)
 			cnf->globals.uidDropPriv);
 	}
 
-#ifndef ENABLE_LIBCAPNG
 	res = setuid(cnf->globals.uidDropPriv);
-#else
-	int capng_flags = cnf->globals.gidDropPrivKeepSupplemental ? CAPNG_NO_FLAG : CAPNG_DROP_SUPP_GRP;
-	res = capng_change_id(cnf->globals.uidDropPriv, -1, capng_flags);
-#endif
 	if(res) {
 		/* if we can not set the userid, this is fatal, so let's unconditionally abort */
 		perror("could not set requested userid");
@@ -759,29 +740,6 @@ dropPrivileges(rsconf_t *cnf)
 		DBGPRINTF("user privileges have been dropped to uid %u\n", (unsigned)
 			  cnf->globals.uidDropPriv);
 	}
-
-#ifdef ENABLE_LIBCAPNG
-	/* In case privileges were dropped, do not allow bypassing
-	 * file read, write, and execute permission checks
-	 */
-	if (cnf->globals.gidDropPriv != 0 || cnf->globals.uidDropPriv != 0) {
-		int capng_rc;
-		if ((capng_rc = capng_update(CAPNG_DROP, CAPNG_EFFECTIVE|CAPNG_PERMITTED, CAP_DAC_OVERRIDE)) != 0) {
-			LogError(0, RS_RET_LIBCAPNG_ERR,
-				"could not update the internal posix capabilities settings "
-				"based on the options passed to it, capng_update=%d\n", capng_rc);
-			exit(-1);
-		}
-
-		if ((capng_rc = capng_apply(CAPNG_SELECT_BOTH)) != 0) {
-			LogError(0, RS_RET_LIBCAPNG_ERR,
-				"could not transfer  the  specified  internal posix  capabilities "
-				"settings to the kernel, capng_apply=%d\n", capng_rc);
-			exit(-1);
-		}
-	}
-
-#endif
 
 finalize_it:
 	RETiRet;
