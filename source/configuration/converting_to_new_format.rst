@@ -51,7 +51,7 @@ This is very simply converted to::
 Sometimes modules provide global settings. In |FmtObsoleteName| format these are given in
 individual lines **after** the \$ModLoad. In |FmtAdvancedName| format they are given inside
 the module object. This makes it much clearer which module they belong to and
-that they actually are global parameters (in constrast to per-action or per-listener
+that they actually are global parameters (in contrast to per-action or per-listener
 parameters). A typical example is `imtcp`::
 
    $ModLoad imtcp
