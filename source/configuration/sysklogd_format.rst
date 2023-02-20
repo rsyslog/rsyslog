@@ -24,7 +24,7 @@ Lines starting with a hash mark ("#") and empty lines are ignored.
 
 This variant of syslogd is able to understand a slightly extended syntax
 compared to the original BSD syslogd. One rule may be divided into several
-lines if the leading line is terminated with an backslash ("\\\\").
+lines if the leading line is terminated with an backslash ("\\").
 
 SELECTORS
 =========
