@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2302.0 (aka 2023.02) 2023-02-??
+Scheduled Release 8.2302.0 (aka 2023.02) 2023-02-21
 - 2023-01-27: core/template: implement negative position.to
   This will easily permit to drop the last n characters from a property
   without the need to know the exact length of the string. This is
