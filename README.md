@@ -52,7 +52,7 @@ In general, you need
 
 It is best to build these from source.
 
-#### CentOS 6
+#### CentOS 6 / RHEL
 
 For json-c, we need:
 ```
