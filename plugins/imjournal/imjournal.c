@@ -85,6 +85,7 @@ static struct configSettings_s {
 	int bWorkAroundJournalBug; /* deprecated, left for backwards compatibility only */
 	int bFsync;
 	int bRemote;
+	int disableJournalForwarding;
 } cs;
 
 static rsRetVal facilityHdlr(uchar **pp, void *pVal);
@@ -103,7 +104,8 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "usepid", eCmdHdlrString, 0 },
 	{ "workaroundjournalbug", eCmdHdlrBinary, 0 },
 	{ "fsync", eCmdHdlrBinary, 0 },
-	{ "remote", eCmdHdlrBinary, 0 }
+	{ "remote", eCmdHdlrBinary, 0 },
+	{ "disablejournalforwarding", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -842,6 +844,14 @@ CODESTARTrunInput
 	while (glbl.GetGlobalInputTermState() == 0) {
 		int r;
 
+		if (cs.stateFile && cs.disableJournalForwarding &&
+		     glbl.GetGlobalJournalDisableForwarding()) {
+			// disableJournalForwarding enabled.
+			// Skip the journal pointer if GetGlobalJournalDisableForwarding is
+			// 1.
+			continue;
+		}
+
 		r = sd_journal_next(journalContext.j);
 		if (r < 0) {
 			LogError(-r, RS_RET_ERR, "imjournal: sd_journal_next() failed");
@@ -1035,7 +1045,9 @@ CODESTARTsetModCnf
 	for (i = 0 ; i < modpblk.nParams ; ++i) {
 		if (!pvals[i].bUsed)
 			continue;
-		if (!strcmp(modpblk.descr[i].name, "persiststateinterval")) {
+		if (!strcmp(modpblk.descr[i].name, "disablejournalforwarding")) {
+			cs.disableJournalForwarding = (int) pvals[i].val.d.n;
+		} else if (!strcmp(modpblk.descr[i].name, "persiststateinterval")) {
 			cs.iPersistStateInterval = (int) pvals[i].val.d.n;
 		} else if (!strcmp(modpblk.descr[i].name, "statefile")) {
 			cs.stateFile = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);

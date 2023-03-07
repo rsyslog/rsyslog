@@ -108,6 +108,7 @@ typedef struct _instanceData {
 	int iConErrSkip;    /* skipping excessive connection errors */
 	uchar *gnutlsPriorityString;
 	int ipfreebind;
+	int disableJournalForwarding;
 
 #	define	FORW_UDP 0
 #	define	FORW_TCP 1
@@ -220,7 +221,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "udp.sendbuf", eCmdHdlrSize, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
-	{ "ratelimit.burst", eCmdHdlrInt, 0 }
+	{ "ratelimit.burst", eCmdHdlrInt, 0 },
+	{ "disablejournalforwarding", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk actpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -636,6 +638,14 @@ finalize_it:
 		}
 		DestructTCPInstanceData(pWrkrData);
 		iRet = RS_RET_SUSPENDED;
+
+		// Disable Journal Forwarding
+		if (pWrkrData->pData->disableJournalForwarding &&
+		      !glbl.GetGlobalJournalDisableForwarding()){
+			LogMsg(errno, iRet, LOG_WARNING,
+			  "omfwd: Disable Journal Forwarding Logs...");
+			glbl.SetGlobalJournalDisableForwarding(1);
+		}
 	}
 	RETiRet;
 }
@@ -837,8 +847,18 @@ static rsRetVal TCPSendInit(void *pvData)
 		if(pData->gnutlsPriorityString != NULL) {
 			CHKiRet(netstrm.SetGnutlsPriorityString(pWrkrData->pNetstrm, pData->gnutlsPriorityString));
 		}
-		CHKiRet(netstrm.Connect(pWrkrData->pNetstrm, glbl.GetDefPFFamily(runModConf->pConf),
-			(uchar*)pData->port, (uchar*)pData->target, pData->device));
+		iRet = netstrm.Connect(pWrkrData->pNetstrm, glbl.GetDefPFFamily(runModConf->pConf),
+			(uchar*)pData->port, (uchar*)pData->target, pData->device);
+		if(iRet != RS_RET_OK) {
+			// Disable Journal Forwarding
+			if (pWrkrData->pData->disableJournalForwarding &&
+				  !glbl.GetGlobalJournalDisableForwarding()){
+				LogMsg(errno, iRet, LOG_WARNING,
+				  "omfwd: Disable Journal Forwarding Logs...");
+				glbl.SetGlobalJournalDisableForwarding(1);
+			}
+			FINALIZE;
+		}
 
 		/* set keep-alive if enabled */
 		if(pData->bKeepAlive) {
@@ -1019,6 +1039,14 @@ finalize_it:
 			pWrkrData->f_addr = NULL;
 		}
 		iRet = RS_RET_SUSPENDED;
+	} else {
+		// Enable Journal Forwarding
+		if (pWrkrData->pData->disableJournalForwarding &&
+		      glbl.GetGlobalJournalDisableForwarding()){
+			LogMsg(errno, RS_RET_RESUMED, LOG_WARNING,
+			  "omfwd: Enable Journal Forwarding Logs...");
+			glbl.SetGlobalJournalDisableForwarding(0);
+		}
 	}
 
 	RETiRet;
@@ -1289,7 +1317,9 @@ CODESTARTnewActInst
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
-		if(!strcmp(actpblk.descr[i].name, "target")) {
+		if(!strcmp(actpblk.descr[i].name, "disablejournalforwarding")) {
+			pData->disableJournalForwarding = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "target")) {
 			pData->target = es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "address")) {
 			pData->address = es_str2cstr(pvals[i].val.d.estr, NULL);

@@ -93,6 +93,7 @@ char** glblDbgFiles = NULL;
 size_t glblDbgFilesNum = 0;
 int glblDbgWhitelist = 1;
 int glblPermitCtlC = 0;
+int bJournalDisableForwarding = 0;		/* global switch that journal state should stop forwarding */
 
 pid_t glbl_ourpid;
 #ifndef HAVE_ATOMIC_BUILTINS
@@ -292,6 +293,15 @@ static void SetGlobalInputTermination(void)
 	ATOMIC_STORE_1_TO_INT(&bTerminateInputs, &mutTerminateInputs);
 }
 
+static int GetGlobalJournalDisableForwarding(void)
+{
+	return bJournalDisableForwarding;
+}
+
+static void SetGlobalJournalDisableForwarding(int val)
+{
+	bJournalDisableForwarding = val;
+}
 
 /* set the local host IP address to a specific string. Helper to
  * small set of functions. No checks done, caller must ensure it is
@@ -918,6 +928,8 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetLocalHostIP = GetLocalHostIP;
 	pIf->SetGlobalInputTermination = SetGlobalInputTermination;
 	pIf->GetGlobalInputTermState = GetGlobalInputTermState;
+	pIf->GetGlobalJournalDisableForwarding = GetGlobalJournalDisableForwarding;
+	pIf->SetGlobalJournalDisableForwarding = SetGlobalJournalDisableForwarding;
 	pIf->GetSourceIPofLocalClient = GetSourceIPofLocalClient;	/* [ar] */
 	pIf->SetSourceIPofLocalClient = SetSourceIPofLocalClient;	/* [ar] */
 	pIf->GetDefPFFamily = getDefPFFamily;

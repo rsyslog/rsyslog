@@ -63,6 +63,8 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 	/* added v4, 2009-07-20 */
 	int (*GetGlobalInputTermState)(void);
 	void (*SetGlobalInputTermination)(void);
+	int (*GetGlobalJournalDisableForwarding)(void);
+	void (*SetGlobalJournalDisableForwarding)(int);
 	/* added v5, 2009-11-03 */
 	/* note: v4, v5 are already used by more recent versions, so we need to skip them! */
 	/* added v6, 2009-11-16 as part of varmojfekoj's "unlimited select()" patch
