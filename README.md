@@ -2,8 +2,6 @@ Rsyslog - what is it?
 =====================
 
 [![Help Contribute to Open Source](https://www.codetriage.com/rsyslog/rsyslog/badges/users.svg)](https://www.codetriage.com/rsyslog/rsyslog)
-[![Language Grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/rsyslog/rsyslog.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/rsyslog/rsyslog/context:cpp)
-[![Total Alerts](https://img.shields.io/lgtm/alerts/g/rsyslog/rsyslog.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/rsyslog/rsyslog/alerts/)
 
 Rsyslog is a **r**ocket-fast **sys**tem for **log** processing.
 
