@@ -7,6 +7,7 @@ Documentation=http://www.rsyslog.com/doc/
 [Service]
 Type=notify
 ExecStart=/usr/sbin/rsyslogd -n
+ExecReload=/bin/kill -HUP $MAINPID
 StandardOutput=null
 Restart=on-failure
 
