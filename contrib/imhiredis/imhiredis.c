@@ -62,7 +62,7 @@ MODULE_CNFNAME("imhiredis")
 
 /* static data */
 DEF_IMOD_STATIC_DATA
-#define QUEUE_BATCH_SIZE 10
+#define BATCH_SIZE 10
 #define IMHIREDIS_MODE_QUEUE 1
 #define IMHIREDIS_MODE_SUBSCRIBE 2
 DEFobjCurrIf(prop)
@@ -117,6 +117,9 @@ struct modConfData_s {
 static struct imhiredisWrkrInfo_s {
 	pthread_t tid;		/* the worker's thread ID */
 	instanceConf_t *inst;	/* Pointer to imhiredis instance */
+	rsRetVal (*fnConnectMaster)(instanceConf_t *inst);
+	sbool (*fnIsConnected)(instanceConf_t *inst);
+	rsRetVal (*fnRun)(instanceConf_t *inst);
 } *imhiredisWrkrInfo;
 
 
@@ -124,7 +127,23 @@ static struct imhiredisWrkrInfo_s {
 pthread_attr_t wrkrThrdAttr;	/* Attribute for worker threads ; read only after startup */
 
 static int activeHiredisworkers = 0;
-static char *redis_replies[] = {"unknown", "string", "array", "integer", "nil", "status", "error"};
+static char *REDIS_REPLIES[] = {
+	"unknown", // 0
+	"string", // 1
+	"array", // 2
+	"integer", // 3
+	"nil", // 4
+	"status", // 5
+	"error", // 6
+	"double", // 7
+	"bool", // 8
+	"map", // 9
+	"set", // 10
+	"attr", // 11
+	"push", // 12
+	"bignum", // 13
+	"verb", // 14
+	};
 
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
@@ -148,7 +167,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrInt, 0 },
 	{ "password", eCmdHdlrGetWord, 0 },
 	{ "mode", eCmdHdlrGetWord, 0 },
-	{ "key", eCmdHdlrGetWord, 0 },
+	{ "key", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
 	{ "uselpop", eCmdHdlrBinary, 0 },
 	{ "ruleset", eCmdHdlrString, 0 },
 };
@@ -168,17 +187,21 @@ struct timeval glblRedisConnectTimeout = { 3, 0 }; /* 3 seconds */
 static void redisAsyncRecvCallback (redisAsyncContext __attribute__((unused)) *c, void *reply, void *inst_obj);
 static void redisAsyncConnectCallback (const redisAsyncContext *c, int status);
 static void redisAsyncDisconnectCallback (const redisAsyncContext *c, int status);
-static rsRetVal enqMsg(instanceConf_t *const inst, const char *message);
+static rsRetVal enqMsg(instanceConf_t *const inst, const char *message, size_t msgLen);
 rsRetVal redisAuthentSynchronous(redisContext *conn, uchar *password);
 rsRetVal redisAuthentAsynchronous(redisAsyncContext *aconn, uchar *password);
 rsRetVal redisActualizeCurrentNode(instanceConf_t *inst);
 rsRetVal redisGetServersList(redisNode *node, uchar *password, redisNode **result);
 rsRetVal redisAuthenticate(instanceConf_t *inst);
 rsRetVal redisConnectSync(redisContext **conn, redisNode *node);
+rsRetVal connectMasterSync(instanceConf_t *inst);
+static sbool isConnectedSync(instanceConf_t *inst);
 rsRetVal redisConnectAsync(redisAsyncContext **aconn, redisNode *node);
+rsRetVal connectMasterAsync(instanceConf_t *inst);
+static sbool isConnectedAsync(instanceConf_t *inst);
 rsRetVal redisDequeue(instanceConf_t *inst);
-void workerLoopSubscribe(struct imhiredisWrkrInfo_s *me);
-void workerLoopQueue(struct imhiredisWrkrInfo_s *me);
+rsRetVal redisSubscribe(instanceConf_t *inst);
+void workerLoop(struct imhiredisWrkrInfo_s *me);
 static void *imhirediswrkr(void *myself);
 static rsRetVal createRedisNode(redisNode **root);
 rsRetVal copyNode(redisNode *src, redisNode **dst);
@@ -195,7 +218,7 @@ createInstance(instanceConf_t **pinst)
 {
 	DEFiRet;
 	instanceConf_t *inst;
-	CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
+	CHKmalloc(inst = calloc(1, sizeof(instanceConf_t)));
 
 	inst->next = NULL;
 	inst->password = NULL;
@@ -265,20 +288,14 @@ checkInstance(instanceConf_t *const inst)
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 
-	if (inst->key != NULL) {
-		DBGPRINTF("imhiredis: key/channel is '%s'\n", inst->key);
-	} else {
-		LogError(0, RS_RET_CONFIG_ERROR, "imhiredis: no key defined !");
-		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-	}
 
 	if (inst->mode != IMHIREDIS_MODE_QUEUE && inst->mode != IMHIREDIS_MODE_SUBSCRIBE) {
 		LogError(0, RS_RET_CONFIG_ERROR, "imhiredis: invalid mode, please choose 'subscribe' or 'queue' mode.");
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 
-	if (inst->mode == IMHIREDIS_MODE_SUBSCRIBE && inst->useLPop) {
-		LogMsg(0, RS_RET_CONFIG_ERROR, LOG_WARNING,"imhiredis: 'uselpop' set with mode = subscribe : ignored.");
+	if (inst->mode != IMHIREDIS_MODE_QUEUE && inst->useLPop) {
+		LogMsg(0, RS_RET_CONFIG_ERROR, LOG_WARNING,"imhiredis: 'uselpop' set with mode != queue : ignored.");
 
 	}
 
@@ -348,7 +365,7 @@ CODESTARTnewInpInst
 				inst->mode = IMHIREDIS_MODE_SUBSCRIBE;
 			} else {
 				LogMsg(0, RS_RET_PARAM_ERROR, LOG_ERR, "imhiredis: unsupported mode "
-					"'%s'", inppblk.descr[i].name);
+					"'%s'", inst->modeDescription);
 				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 			}
 		} else if(!strcmp(inppblk.descr[i].name, "key")) {
@@ -552,10 +569,10 @@ CODESTARTrunInput
 	// This thread simply runs the various threads, then waits for Rsyslog to stop
 	while(glbl.GetGlobalInputTermState() == 0) {
 		if(glbl.GetGlobalInputTermState() == 0)
-			/* Check termination state every 100ms
+			/* Check termination state every 0.5s
 			 * should be sufficient to grant fast response to shutdown while not hogging CPU
 			 */
-			srSleep(0, 100000);
+			srSleep(0, 500000);
 	}
 	DBGPRINTF("imhiredis: terminating upon request of rsyslog core\n");
 
@@ -662,7 +679,7 @@ static void redisAsyncRecvCallback (redisAsyncContext *aconn, void *reply, void 
 	if (r->elements < 3 || r->element[2]->str == NULL) {
 		return;
 	}
-	enqMsg(inst, r->element[2]->str);
+	enqMsg(inst, r->element[2]->str, r->element[2]->len);
 
 	return;
 }
@@ -746,7 +763,7 @@ redisReply *getRole(redisContext *c) {
  *	enqueue the hiredis message. The provided string is
  *	not freed - this must be done by the caller.
  */
-static rsRetVal enqMsg(instanceConf_t *const inst, const char *message) {
+static rsRetVal enqMsg(instanceConf_t *const inst, const char *message, size_t msgLen) {
 	DEFiRet;
 	smsg_t *pMsg;
 
@@ -759,7 +776,7 @@ static rsRetVal enqMsg(instanceConf_t *const inst, const char *message) {
 
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetInputName(pMsg, pInputName);
-	MsgSetRawMsg(pMsg, message, strlen(message));
+	MsgSetRawMsg(pMsg, message, msgLen);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
 	MsgSetRuleset(pMsg, inst->pBindRuleset);
 	MsgSetMSGoffs(pMsg, 0);	/* we do not have a header... */
@@ -1127,6 +1144,79 @@ finalize_it:
 }
 
 /*
+ *	Helper method to connect to the current master asynchronously
+ *	'inst' parameter should be non-NULL and have a valid currentNode object
+ */
+rsRetVal connectMasterAsync(instanceConf_t *inst) {
+	DEFiRet;
+
+	if(RS_RET_OK != redisConnectAsync(&(inst->aconn), inst->currentNode)) {
+		inst->currentNode = NULL;
+		ABORT_FINALIZE(RS_RET_REDIS_ERROR);
+	}
+	if(	inst->password != NULL &&
+		inst->password[0] != '\0' &&
+		RS_RET_OK != redisAuthenticate(inst)) {
+
+		redisAsyncFree(inst->aconn);
+		inst->aconn = NULL;
+		inst->currentNode = NULL;
+		ABORT_FINALIZE(RS_RET_REDIS_AUTH_FAILED);
+	}
+
+	// finalize context creation
+	inst->aconn->data = (void *)inst;
+	redisAsyncSetConnectCallback(inst->aconn, redisAsyncConnectCallback);
+	redisAsyncSetDisconnectCallback(inst->aconn, redisAsyncDisconnectCallback);
+	redisLibeventAttach(inst->aconn, inst->evtBase);
+
+finalize_it:
+	RETiRet;
+}
+
+
+/*
+ *	Helper method to check if (async) instance is connected
+ */
+static sbool isConnectedAsync(instanceConf_t *inst) {
+	return inst->aconn != NULL;
+}
+
+
+/*
+ *	Helper method to connect to the current master synchronously
+ *	'inst' parameter should be non-NULL and have a valid currentNode object
+ */
+rsRetVal connectMasterSync(instanceConf_t *inst) {
+	DEFiRet;
+
+	if(RS_RET_OK != redisConnectSync(&(inst->conn), inst->currentNode)) {
+		inst->currentNode = NULL;
+		ABORT_FINALIZE(RS_RET_REDIS_ERROR);
+	}
+	if(	inst->password != NULL &&
+		inst->password[0] != '\0' &&
+		RS_RET_OK != redisAuthenticate(inst)) {
+
+		redisFree(inst->conn);
+		inst->conn = NULL;
+		inst->currentNode = NULL;
+		ABORT_FINALIZE(RS_RET_REDIS_AUTH_FAILED);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+/*
+ *	Helper method to check if instance is connected
+ */
+static sbool isConnectedSync(instanceConf_t *inst) {
+	return inst->conn != NULL;
+}
+
+/*
  *	dequeue all entries in the redis list, using batches of 10 commands
  */
 rsRetVal redisDequeue(instanceConf_t *inst) {
@@ -1136,58 +1226,63 @@ rsRetVal redisDequeue(instanceConf_t *inst) {
 
 	assert(inst != NULL);
 
-	DBGPRINTF("imhiredis: beginning to dequeue key '%s'\n", inst->key);
+	DBGPRINTF("redisDequeue: beginning to dequeue key '%s'\n", inst->key);
 
 	do {
-		// append a batch of QUEUE_BATCH_SIZE POP commands (either LPOP or RPOP depending on conf)
+		// append a batch of BATCH_SIZE POP commands (either LPOP or RPOP depending on conf)
 		if (inst->useLPop == 1) {
-			DBGPRINTF("imhiredis: Queuing #%d LPOP commands on key '%s' \n",
-					QUEUE_BATCH_SIZE,
+			DBGPRINTF("redisDequeue: Queuing #%d LPOP commands on key '%s' \n",
+					BATCH_SIZE,
 					inst->key);
-			for (i=0; i<QUEUE_BATCH_SIZE; ++i ) {
+			for (i=0; i<BATCH_SIZE; ++i ) {
 				if (REDIS_OK != redisAppendCommand(inst->conn, "LPOP %s", inst->key))
 					break;
 			}
 		} else {
-			DBGPRINTF("imhiredis: Queuing #%d RPOP commands on key '%s' \n",
-					QUEUE_BATCH_SIZE,
+			DBGPRINTF("redisDequeue: Queuing #%d RPOP commands on key '%s' \n",
+					BATCH_SIZE,
 					inst->key);
-			for (i=0; i<QUEUE_BATCH_SIZE; i++) {
+			for (i=0; i<BATCH_SIZE; i++) {
 				if (REDIS_OK != redisAppendCommand(inst->conn, "RPOP %s", inst->key))
 					break;
 			}
 		}
 
+		DBGPRINTF("redisDequeue: Dequeuing...\n")
 		// parse responses from appended commands
 		do {
 			if (REDIS_OK != redisGetReply(inst->conn, (void **) &reply)) {
 				// error getting reply, must stop
-				LogError(0, RS_RET_REDIS_ERROR, "imhiredis: Error reading reply after POP #%d on key "
-								"'%s'", (QUEUE_BATCH_SIZE - i), inst->key);
+				LogError(0, RS_RET_REDIS_ERROR, "redisDequeue: Error reading reply after POP #%d "
+								"on key '%s'", (BATCH_SIZE - i), inst->key);
+				// close connection
+				redisFree(inst->conn);
+				inst->currentNode = NULL;
+				inst->conn = NULL;
 				ABORT_FINALIZE(RS_RET_REDIS_ERROR);
 			} else {
 				if (reply != NULL) {
 					replyType = reply->type;
 					switch(replyType) {
 						case REDIS_REPLY_STRING:
-							enqMsg(inst, reply->str);
+							enqMsg(inst, reply->str, reply->len);
 							break;
 						case REDIS_REPLY_NIL:
 							// replies are dequeued but are empty = end of list
 							break;
 						case REDIS_REPLY_ERROR:
 							// There is a problem with the key or the Redis instance
-							LogMsg(0, RS_RET_REDIS_ERROR, LOG_ERR, "imhiredis: error "
+							LogMsg(0, RS_RET_REDIS_ERROR, LOG_ERR, "redisDequeue: error "
 							"while POP'ing key '%s' -> %s", inst->key, reply->str);
 							ABORT_FINALIZE(RS_RET_REDIS_ERROR);
 						default:
-							LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "imhiredis: unexpected "
-							"reply type: %s", redis_replies[replyType%7]);
+							LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "redisDequeue: "
+							"unexpected reply type: %s", REDIS_REPLIES[replyType%15]);
 					}
 					freeReplyObject(reply);
 					reply = NULL;
 				} else { /* reply == NULL */
-					LogMsg(0, RS_RET_REDIS_ERROR, LOG_ERR, "imhiredis: unexpected empty reply "
+					LogMsg(0, RS_RET_REDIS_ERROR, LOG_ERR, "redisDequeue: unexpected empty reply "
 						"for successful return");
 					ABORT_FINALIZE(RS_RET_REDIS_ERROR);
 				}
@@ -1196,10 +1291,23 @@ rsRetVal redisDequeue(instanceConf_t *inst) {
 		// while there are replies to unpack, continue
 		} while (--i > 0);
 
-	// while input can run and last reply was a string, continue with a new batch
-	} while (replyType == REDIS_REPLY_STRING && glbl.GetGlobalInputTermState() == 0);
+		if(replyType == REDIS_REPLY_NIL) {
+			/* sleep 1s between 2 POP tries, when no new entries are available (list is empty)
+			* this does NOT limit dequeing rate, but prevents the input from polling Redis too often
+			*/
+			for(i = 0; i < 10; i++) {
+				// Time to stop the thread
+				if (glbl.GetGlobalInputTermState() != 0)
+					FINALIZE;
+				// 100ms sleeps
+				srSleep(0, 100000);
+			}
+		}
 
-	DBGPRINTF("imhiredis: finished to dequeue key '%s'\n", inst->key);
+	// while input can run, continue with a new batch
+	} while (glbl.GetGlobalInputTermState() == 0);
+
+	DBGPRINTF("redisDequeue: finished to dequeue key '%s'\n", inst->key);
 
 finalize_it:
 	if (reply)
@@ -1209,40 +1317,56 @@ finalize_it:
 
 
 /*
- *	worker function for asynchronous (subscribe) mode
+ *	Subscribe to Redis channel
  */
-void workerLoopSubscribe(struct imhiredisWrkrInfo_s *me) {
+rsRetVal redisSubscribe(instanceConf_t *inst) {
+	DEFiRet;
+
+	DBGPRINTF("redisSubscribe: subscribing to channel '%s'\n", inst->key);
+	int ret = redisAsyncCommand(
+		inst->aconn,
+		redisAsyncRecvCallback,
+		NULL,
+		"SUBSCRIBE %s",
+		inst->key);
+
+	if (ret != REDIS_OK) {
+		LogMsg(0, RS_RET_REDIS_ERROR, LOG_ERR, "redisSubscribe: Could not subscribe");
+		ABORT_FINALIZE(RS_RET_REDIS_ERROR);
+	}
+
+	// Will block on this function as long as connection is open and event loop is not stopped
+	event_base_dispatch(inst->evtBase);
+	DBGPRINTF("redisSubscribe: finished.\n");
+
+finalize_it:
+	RETiRet;
+}
+
+
+/*
+ *	generic worker function
+ */
+void workerLoop(struct imhiredisWrkrInfo_s *me) {
 	uint i;
-	DBGPRINTF("imhiredis (async): beginning of subscribe worker loop...\n");
+	DBGPRINTF("workerLoop: beginning of worker loop...\n");
 
 	// Connect first time without delay
 	if (me->inst->currentNode != NULL) {
-		if(RS_RET_OK != redisConnectAsync(&(me->inst->aconn), me->inst->currentNode)) {
-			me->inst->currentNode = NULL;
+		rsRetVal ret = me->fnConnectMaster(me->inst);
+		if(ret != RS_RET_OK) {
+			LogMsg(0, ret, LOG_WARNING, "workerLoop: Could not connect successfully to master");
 		}
-		if(	me->inst->password != NULL &&
-			me->inst->password[0] != '\0' &&
-			RS_RET_OK != redisAuthenticate(me->inst)) {
-
-			redisAsyncFree(me->inst->aconn);
-			me->inst->aconn = NULL;
-			me->inst->currentNode = NULL;
-		}
-
-		// finalize context creation
-		me->inst->aconn->data = (void *)me->inst;
-		redisAsyncSetConnectCallback(me->inst->aconn, redisAsyncConnectCallback);
-		redisAsyncSetDisconnectCallback(me->inst->aconn, redisAsyncDisconnectCallback);
-		redisLibeventAttach(me->inst->aconn, me->inst->evtBase);
 	}
 
 	while(glbl.GetGlobalInputTermState() == 0) {
-		if (me->inst->aconn == NULL) {
+		if (!me->fnIsConnected(me->inst)) {
 			/*
 			 * Sleep 10 seconds before attempting to resume a broken connexion
 			 * (sleep small amounts to avoid missing termination status)
 			 */
-			DBGPRINTF("imhiredis: no valid connection, sleeping 10 seconds before retrying...\n");
+			LogMsg(0, RS_RET_OK, LOG_INFO, "workerLoop: "
+							"no valid connection, sleeping 10 seconds before retrying...");
 			for(i = 0; i < 100; i++) {
 				// Rsyslog asked for shutdown, thread should be stopped
 				if (glbl.GetGlobalInputTermState() != 0)
@@ -1258,122 +1382,16 @@ void workerLoopSubscribe(struct imhiredisWrkrInfo_s *me) {
 			}
 
 			// connect to current master
-			if(me->inst->currentNode != NULL) {
-				if(RS_RET_OK != redisConnectAsync(&(me->inst->aconn), me->inst->currentNode)) {
-					me->inst->currentNode = NULL;
-					continue;
-				}
-				if(	me->inst->password != NULL &&
-					me->inst->password[0] != '\0' &&
-					RS_RET_OK != redisAuthenticate(me->inst)) {
-
-					redisAsyncFree(me->inst->aconn);
-					me->inst->aconn = NULL;
-					me->inst->currentNode = NULL;
-					continue;
-				}
-			}
-
-			// finalize context creation
-			me->inst->aconn->data = (void *)me->inst;
-			redisAsyncSetConnectCallback(me->inst->aconn, redisAsyncConnectCallback);
-			redisAsyncSetDisconnectCallback(me->inst->aconn, redisAsyncDisconnectCallback);
-			redisLibeventAttach(me->inst->aconn, me->inst->evtBase);
-		}
-		if (me->inst->aconn != NULL) {
-			DBGPRINTF("imhiredis (async): subscribing to channel '%s'\n", me->inst->key);
-			redisAsyncCommand(
-				me->inst->aconn,
-				redisAsyncRecvCallback,
-				NULL,
-				"SUBSCRIBE %s",
-				me->inst->key);
-			event_base_dispatch(me->inst->evtBase);
-		}
-	}
-
-end_loop:
-	return;
-}
-
-
-/*
- *	worker function for synchronous (queue) mode
- */
-void workerLoopQueue(struct imhiredisWrkrInfo_s *me) {
-	uint i;
-	DBGPRINTF("imhiredis: beginning of queue worker loop...\n");
-	// Connect first time without delay
-	if (me->inst->currentNode != NULL) {
-		if(RS_RET_OK != redisConnectSync(&(me->inst->conn), me->inst->currentNode)) {
-			me->inst->currentNode = NULL;
-		}
-		if(	me->inst->password != NULL &&
-			me->inst->password[0] != '\0' &&
-			RS_RET_OK != redisAuthenticate(me->inst)) {
-
-			redisFree(me->inst->conn);
-			me->inst->conn = NULL;
-			me->inst->currentNode = NULL;
-		}
-	}
-
-	while(glbl.GetGlobalInputTermState() == 0) {
-		if (me->inst->conn == NULL) {
-			/* Sleep 10 seconds before attempting to resume a broken connexion
-			 * (sleep small amounts to avoid missing termination status)
-			 */
-			DBGPRINTF("imhiredis: no valid connection, sleeping 10 seconds before retrying...\n");
-			for(i = 0; i < 100; i++) {
-				// Time to stop the thread
-				if (glbl.GetGlobalInputTermState() != 0)
-					goto end_loop;
-				// 100ms sleeps
-				srSleep(0, 100000);
-			}
-
-			// search the current master node
-			if (me->inst->currentNode == NULL) {
-				if(RS_RET_OK != redisActualizeCurrentNode(me->inst))
-					continue;
-			}
-
-			// connect to current master
-			if(me->inst->currentNode != NULL) {
-				if(RS_RET_OK != redisConnectSync(&(me->inst->conn), me->inst->currentNode)) {
-					me->inst->currentNode = NULL;
-					continue;
-				}
-				if(	me->inst->password != NULL &&
-					me->inst->password[0] != '\0' &&
-					RS_RET_OK != redisAuthenticate(me->inst)) {
-
-					redisFree(me->inst->conn);
-					me->inst->conn = NULL;
-					me->inst->currentNode = NULL;
-					continue;
+			if (me->inst->currentNode != NULL) {
+				rsRetVal ret = me->fnConnectMaster(me->inst);
+				if(ret != RS_RET_OK) {
+					LogMsg(0, ret, LOG_WARNING, "workerLoop: "
+									"Could not connect successfully to master");
 				}
 			}
 		}
-		if (me->inst->conn != NULL) {
-			if (redisDequeue(me->inst) == RS_RET_REDIS_ERROR) {
-				DBGPRINTF("imhiredis: current connection invalidated\n");
-				redisFree(me->inst->conn);
-				me->inst->currentNode = NULL;
-				me->inst->conn = NULL;
-			}
-			if(glbl.GetGlobalInputTermState() == 0) {
-				/* sleep 1s between 2 POP tries
-				* this does NOT limit dequeing rate, but prevents the input from polling Redis too often
-				*/
-				for(i = 0; i < 10; i++) {
-					// Time to stop the thread
-					if (glbl.GetGlobalInputTermState() != 0)
-						goto end_loop;
-					// 100ms sleeps
-					srSleep(0, 100000);
-				}
-			}
+		if (me->fnIsConnected(me->inst)) {
+			me->fnRun(me->inst);
 		}
 	}
 
@@ -1392,10 +1410,18 @@ imhirediswrkr(void *myself)
 	DBGPRINTF("imhiredis: started hiredis consumer workerthread\n");
 	dbgPrintNode(me->inst->currentNode);
 
-	if(me->inst->mode == IMHIREDIS_MODE_QUEUE)
-		workerLoopQueue(me);
-	else if (me->inst->mode == IMHIREDIS_MODE_SUBSCRIBE)
-		workerLoopSubscribe(me);
+	if(me->inst->mode == IMHIREDIS_MODE_QUEUE) {
+		me->fnConnectMaster = connectMasterSync;
+		me->fnIsConnected = isConnectedSync;
+		me->fnRun = redisDequeue;
+	}
+	else if (me->inst->mode == IMHIREDIS_MODE_SUBSCRIBE) {
+		me->fnConnectMaster = connectMasterAsync;
+		me->fnIsConnected = isConnectedAsync;
+		me->fnRun = redisSubscribe;
+	}
+
+	workerLoop(me);
 
 	DBGPRINTF("imhiredis: stopped hiredis consumer workerthread\n");
 	return NULL;
@@ -1421,7 +1447,7 @@ createRedisNode(redisNode **root) {
 	node->isMaster = 0;
 	node->next = NULL;
 
-	if (!root) {
+	if ((*root) == NULL) {
 		*root = node;
 	} else {
 		node->next = (*root);
