@@ -1,5 +1,27 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2304.0 (aka 2023.04) 2023-04-??
+- 2023-04-17: core/bugfix: using $uuid msg prop can deadlock rsyslog on shutdown
+  This problem can occur if a large number of threads is used and rsyslog
+  cannot shut down all queues etc within the regular time interval. In this
+  case, it cancels some threads. That can leave the mutex guarding libuuid
+  calls locked and thus prevents other, not yet cancelled threads from
+  progressing. Assuming pthread_mutex_lock() is not a cancellation point,
+  this will case these other threads to hang forever and thus create a
+  deadlock situation.
+  closes https://github.com/rsyslog/rsyslog/issues/5104
+- 2023-04-17: Do not preserve capabilities when changing credentials
+  In configurations where $PrivDropToGroup or $PrivDropToUser are used,
+  rsyslogd changes uid/gid to a non-privileged user. As part of that
+  change, all capabilities should be lost. However, if rsyslog is
+  compiled with --enable-libcap-ng option, some capabilities are
+  preserved due to using capng_change_id() instead of setgid()and
+  setuid(). https://linux.die.net/man/3/capng_change_id:
+  This function preserves capabilities while changing uid/gid, causing
+  rsyslogd to run as non-root user, but with some root capabilities.
+  Unfortunately, rsyslogd will run with higher privileges than before.
+  The patch also removes CAP_SETPCAP, because the capability set does
+  not need to be altered at a later phase.
+  Thanks to Attila Lakatos for the patch.
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2302.0 (aka 2023.02) 2023-02-21
 - 2023-01-27: core/template: implement negative position.to
