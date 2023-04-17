@@ -1,4 +1,6 @@
 ----------------------------------------------------------------------------------------
+Scheduled Release 8.2306.0 (aka 2023.06) 2023-06-??
+----------------------------------------------------------------------------------------
 Scheduled Release 8.2304.0 (aka 2023.04) 2023-04-18
 - 2034-04-17: imptcp bugfix: spam log on oversize message
   If an oversize message was received by imptcp, imptcp reported
