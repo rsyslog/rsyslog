@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2304.0 (aka 2023.04) 2023-04-??
+Scheduled Release 8.2304.0 (aka 2023.04) 2023-04-18
 - 2034-04-17: imptcp bugfix: spam log on oversize message
   If an oversize message was received by imptcp, imptcp reported
   one error message for EACH oversize character. This could
