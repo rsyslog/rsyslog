@@ -1186,6 +1186,7 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 					"max msg size; message will be split starting at: \"%.*s\"\n",
 					pThis->pLstn->pSrv->pszInputName, i, (i < 32) ? i : 32, *buff);
 				doSubmitMsg(pThis, stTime, ttGenTime, pMultiSub);
+				iMsg = 0;
 				++(*pnMsgs);
 				if(pThis->pLstn->pSrv->discardTruncatedMsg == 1) {
 					pThis->inputState = eInMsgTruncation;
