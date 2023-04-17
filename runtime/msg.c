@@ -7,7 +7,7 @@
  * of the "old" message code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
- * Copyright 2007-2022 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2023 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -1618,13 +1618,22 @@ msgSetPRI(smsg_t *const __restrict__ pMsg, syslog_pri_t pri)
 /* note: libuuid seems not to be thread-safe, so we need
  * to get some safeguards in place.
  */
+static pthread_mutex_t mutUUID = PTHREAD_MUTEX_INITIALIZER;
+
+static void call_uuid_generate(uuid_t uuid)
+{
+	pthread_mutex_lock(&mutUUID);
+	pthread_cleanup_push(mutexCancelCleanup, &mutUUID);
+	uuid_generate(uuid);
+	pthread_cleanup_pop(1);
+}
+
 static void msgSetUUID(smsg_t * const pM)
 {
 	size_t lenRes = sizeof(uuid_t) * 2 + 1;
 	char hex_char [] = "0123456789ABCDEF";
 	unsigned int byte_nbr;
 	uuid_t uuid;
-	static pthread_mutex_t mutUUID = PTHREAD_MUTEX_INITIALIZER;
 
 	dbgprintf("[MsgSetUUID] START, lenRes %llu\n", (long long unsigned) lenRes);
 	assert(pM != NULL);
@@ -1632,9 +1641,7 @@ static void msgSetUUID(smsg_t * const pM)
 	if((pM->pszUUID = (uchar*) malloc(lenRes)) == NULL) {
 		pM->pszUUID = (uchar *)"";
 	} else {
-		pthread_mutex_lock(&mutUUID);
-		uuid_generate(uuid);
-		pthread_mutex_unlock(&mutUUID);
+		call_uuid_generate(uuid);
 		for (byte_nbr = 0; byte_nbr < sizeof (uuid_t); byte_nbr++) {
 			pM->pszUUID[byte_nbr * 2 + 0] = hex_char[uuid [byte_nbr] >> 4];
 			pM->pszUUID[byte_nbr * 2 + 1] = hex_char[uuid [byte_nbr] & 15];
@@ -5461,5 +5468,3 @@ BEGINObjClassInit(msg, 1, OBJ_IS_CORE_MODULE)
 	INIT_ATOMIC_HELPER_MUT(mutTrimCtr);
 #	endif
 ENDObjClassInit(msg)
-/* vim:set ai:
- */
