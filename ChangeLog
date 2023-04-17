@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2304.0 (aka 2023.04) 2023-04-??
+- 2034-04-17: imptcp bugfix: spam log on oversize message
+  If an oversize message was received by imptcp, imptcp reported
+  one error message for EACH oversize character. This could
+  result in a potentially very large number of similar (and
+  useless) messages.
+  This is a regression from commit f052717178.
+  closes https://github.com/rsyslog/rsyslog/issues/5078
 - 2023-04-17: core/bugfix: using $uuid msg prop can deadlock rsyslog on shutdown
   This problem can occur if a large number of threads is used and rsyslog
   cannot shut down all queues etc within the regular time interval. In this
