@@ -898,7 +898,7 @@ actionDoRetry(action_t * const pThis, wti_t * const pWti)
 				++iRetries;
 				datetime.GetTime(&ttTemp);
 				iSleepPeriod = 0;
-				DBGPRINTF("actionDoRetry: %s earliest retry=%lld"
+				DBGPRINTF("actionDoRetry: %s ResumeRtry=%lld"
 				"(now %lld), iRetries %d\n",
 				pThis->pszName, (long long)pThis->ttResumeRtry,
 						(long long)ttTemp, iRetries);
