@@ -898,20 +898,12 @@ actionDoRetry(action_t * const pThis, wti_t * const pWti)
 				++iRetries;
 				datetime.GetTime(&ttTemp);
 				iSleepPeriod = 0;
-				DBGPRINTF("actionDoRetry: %s ResumeRtry=%lld"
-				"(now %lld), iRetries %d\n",
-				pThis->pszName, (long long)pThis->ttResumeRtry,
-						(long long)ttTemp, iRetries);
-				if(pThis->ttResumeRtry > 0 && pThis->iResumeInterval > 0) {
-						if(difftime(pThis->ttResumeRtry, ttTemp) > pThis->iResumeInterval) {
-							iSleepPeriod = pThis->iResumeInterval;
-						} else if(difftime(pThis->ttResumeRtry, ttTemp) > 1) {
-							iSleepPeriod = (int)difftime(pThis->ttResumeRtry, ttTemp);
-						}
-						DBGPRINTF("actionDoRetry: %s sleep %d seconds\n",
-						pThis->pszName, iSleepPeriod);
-						srSleep(iSleepPeriod, 0);
-				}
+				DBGPRINTF("actionDoRetry: %s, controlled by resumeInterval, may miss the next try."
+				"Will sleep %d seconds. ResumeRtry=%lld (now %lld), iRetries %d\n",
+				pThis->pszName,
+				pThis->iResumeInterval, (long long)pThis->ttResumeRtry, (long long)ttTemp, iRetries);
+				iSleepPeriod = pThis->iResumeInterval;
+				srSleep(iSleepPeriod, 0);
 				if(*pWti->pbShutdownImmediate) {
 					ABORT_FINALIZE(RS_RET_FORCE_TERM);
 				}
