@@ -2461,6 +2461,17 @@ AC_ARG_ENABLE(omhiredis,
         [enable_omhiredis=no]
 )
 
+AC_ARG_ENABLE(redis_tests,
+        [AS_HELP_STRING([--enable-redis-tests],[Enable redis tests, needs redis-server @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_redis_tests="yes" ;;
+          no) enable_redis_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-redis-tests) ;;
+         esac],
+        [enable_redis_tests=no]
+)
+AM_CONDITIONAL(ENABLE_REDIS_TESTS, test x$enable_redis_tests = xyes)
+
 if test "x$enable_omhiredis" = "xyes" -o "x$enable_imhiredis" = "xyes" ; then
     PKG_CHECK_MODULES(HIREDIS, hiredis >= 0.10.1, [],
         [AC_SEARCH_LIBS(redisConnectWithTimeout, hiredis,
@@ -2495,6 +2506,21 @@ if test "x$enable_imhiredis" = "xyes" ; then
         ],
         # libevent not found
         [AC_MSG_ERROR([no libevent >= 2.0 found with pthreads support, imhiredis cannot use pub/sub])])
+fi
+
+if test "x$enable_imhiredis" = "xyes" || test "x$enable_omhiredis" = "xyes"; then
+	if test "x$enable_redis_tests" = "xyes"; then
+		AC_CHECK_PROG(REDIS, [redis-server], [yes], [no])
+		if test "x${REDIS}" = "xno"; then
+			AC_MSG_FAILURE([redis-server, which is a redis-tests dependency, not found])
+		fi
+	fi
+else
+	if test "x$enable_redis_tests" = "xyes"; then
+		AC_MSG_WARN([redis-tests can not be enabled without imhiredis or omhiredis support.
+                        Disabling enable_redis_tests...])
+		enable_redis_tests="no"
+	fi
 fi
 
 AM_CONDITIONAL(ENABLE_OMHIREDIS, test x$enable_omhiredis = xyes)
@@ -2896,6 +2922,7 @@ echo "    Elasticsearch Tests:                      $enable_elasticsearch_tests"
 echo "    ClickHouse Tests:                         $enable_clickhouse_tests"
 echo "    PostgreSQL Tests enabled:                 $enable_pgsql_tests"
 echo "    Kafka Tests enabled:                      $enable_kafka_tests"
+echo "    Redis Tests enabled:                      $enable_redis_tests"
 echo "    Imdocker Tests enabled:                   $enable_imdocker_tests"
 echo "    gnutls tests enabled:                     $enable_gnutls_tests"
 echo "    imfile tests enabled:                     $enable_imfile_tests"

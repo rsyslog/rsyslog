@@ -1039,6 +1039,24 @@ TESTS += \
 endif # HAVE_VALGRIND
 endif # ENABLE_OMRABBITMQ
 
+if ENABLE_REDIS_TESTS
+
+TESTS +=  \
+	imhiredis-queue.sh \
+	imhiredis-queue-lpop.sh \
+	imhiredis-redis-restart.sh \
+	imhiredis-redis-start-after.sh \
+	imhiredis-subscribe.sh
+if HAVE_VALGRIND
+TESTS += \
+	imhiredis-queue-vg.sh \
+	imhiredis-queue-lpop-vg.sh \
+	imhiredis-redis-restart-vg.sh \
+	imhiredis-redis-start-after-vg.sh \
+	imhiredis-subscribe-vg.sh
+endif # HAVE_VALGRIND
+endif # ENABLE_REDIS_TESTS
+
 if ENABLE_IMPSTATS
 TESTS +=  \
 	impstats-hup.sh \
@@ -2009,6 +2027,16 @@ EXTRA_DIST= \
 	omrabbitmq_error_server3.sh \
 	omrabbitmq_json.sh \
 	omrabbitmq_raw.sh \
+	imhiredis-queue.sh \
+	imhiredis-queue-vg.sh \
+	imhiredis-queue-lpop.sh \
+	imhiredis-queue-lpop-vg.sh \
+	imhiredis-redis-restart.sh \
+	imhiredis-redis-restart-vg.sh \
+	imhiredis-redis-start-after.sh \
+	imhiredis-redis-start-after-vg.sh \
+	imhiredis-subscribe.sh \
+	imhiredis-subscribe-vg.sh
 	msgvar-concurrency.sh \
 	msgvar-concurrency-array.sh \
 	testsuites/msgvar-concurrency-array.rulebase \
