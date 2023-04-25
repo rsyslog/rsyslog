@@ -1046,14 +1046,24 @@ TESTS +=  \
 	imhiredis-queue-lpop.sh \
 	imhiredis-redis-restart.sh \
 	imhiredis-redis-start-after.sh \
-	imhiredis-subscribe.sh
+	imhiredis-subscribe.sh \
+	imhiredis-stream.sh \
+	imhiredis-stream-from-beginning.sh \
+	imhiredis-stream-consumerGroup-ack.sh \
+	imhiredis-stream-consumerGroup-noack.sh \
+	imhiredis-stream-consumerGroup-reclaim.sh
 if HAVE_VALGRIND
 TESTS += \
 	imhiredis-queue-vg.sh \
 	imhiredis-queue-lpop-vg.sh \
 	imhiredis-redis-restart-vg.sh \
 	imhiredis-redis-start-after-vg.sh \
-	imhiredis-subscribe-vg.sh
+	imhiredis-subscribe-vg.sh \
+	imhiredis-stream-vg.sh \
+	imhiredis-stream-from-beginning-vg.sh \
+	imhiredis-stream-consumerGroup-ack-vg.sh \
+	imhiredis-stream-consumerGroup-noack-vg.sh \
+	imhiredis-stream-consumerGroup-reclaim-vg.sh
 endif # HAVE_VALGRIND
 endif # ENABLE_REDIS_TESTS
 
@@ -2036,7 +2046,17 @@ EXTRA_DIST= \
 	imhiredis-redis-start-after.sh \
 	imhiredis-redis-start-after-vg.sh \
 	imhiredis-subscribe.sh \
-	imhiredis-subscribe-vg.sh
+	imhiredis-subscribe-vg.sh \
+	imhiredis-stream.sh \
+	imhiredis-stream-vg.sh \
+	imhiredis-stream-from-beginning.sh \
+	imhiredis-stream-from-beginning-vg.sh \
+	imhiredis-stream-consumerGroup-ack.sh \
+	imhiredis-stream-consumerGroup-ack-vg.sh \
+	imhiredis-stream-consumerGroup-noack.sh \
+	imhiredis-stream-consumerGroup-noack-vg.sh \
+	imhiredis-stream-consumerGroup-reclaim.sh \
+	imhiredis-stream-consumerGroup-reclaim-vg.sh \
 	msgvar-concurrency.sh \
 	msgvar-concurrency-array.sh \
 	testsuites/msgvar-concurrency-array.rulebase \
