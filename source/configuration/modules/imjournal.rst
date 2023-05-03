@@ -74,6 +74,24 @@ state be persisted. The persists happens after each *number-of-messages*.
 This option is useful for rsyslog to start reading from the last journal
 message it read.
 
+FileCreateMode
+^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "octalNumber", "0644", "no", "none"
+
+Set the access permissions for the state file. The value given must
+always be a 4-digit octal number, with the initial digit being zero.
+Please note that the actual permission depend on rsyslogd's process
+umask. If in doubt, use "$umask 0000" right at the beginning of the
+configuration file to remove any restrictions. The state file's only
+consumer is rsyslog, so it's recommended to adjust the value according
+to that.
+
 
 StateFile
 ^^^^^^^^^
