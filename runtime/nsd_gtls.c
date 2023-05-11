@@ -711,7 +711,10 @@ gtlsInitCred(nsd_gtls_t *const pThis )
 	DEFiRet;
 
 	/* X509 stuff */
-	CHKgnutls(gnutls_certificate_allocate_credentials(&pThis->xcred));
+	if (pThis->xcred == NULL) {
+		/* Allocate only ONCE */
+		CHKgnutls(gnutls_certificate_allocate_credentials(&pThis->xcred));
+	}
 
 	/* sets the trusted cas file */
 	cafile = (pThis->pszCAFile == NULL) ? glbl.GetDfltNetstrmDrvrCAF(runConf) : pThis->pszCAFile;
@@ -2277,7 +2280,12 @@ finalize_it:
 		if(pThis->bHaveSess) {
 			gnutls_deinit(pThis->sess);
 			pThis->bHaveSess = 0;
+			/* Free memory using gnutls api first*/
+			gnutls_certificate_free_credentials(pThis->xcred);
 			pThis->xcred = NULL;
+			/* Free other memory */
+			free(pThis->pszConnectHost);
+			pThis->pszConnectHost = NULL;
 		}
 	}
 
