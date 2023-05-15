@@ -79,6 +79,22 @@ Defines the mode to use for the module.
 Should be either "**subscribe**" (:ref:`imhiredis_channel_mode`), or "**queue**" (:ref:`imhiredis_queue_mode`) (case-sensitive).
 
 
+.. _imhiredis_batchsize:
+
+batchsize
+^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "number", "10", "yes", "none"
+
+Defines the dequeue batch size for redis pipelining.
+imhiredis will read "**batchsize**" elements from redis at a time.
+
+
 .. _imhiredis_key:
 
 key
