@@ -94,6 +94,7 @@ struct instanceConf_s {
 	int streamAutoclaimIdleTime;
 	sbool streamConsumerACK;
 	int mode;
+	uint batchsize;
 	sbool useLPop;
 
 	struct {
@@ -182,6 +183,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrInt, 0 },
 	{ "password", eCmdHdlrGetWord, 0 },
 	{ "mode", eCmdHdlrGetWord, 0 },
+	{ "batchsize", eCmdHdlrInt, 0 },
 	{ "key", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
 	{ "uselpop", eCmdHdlrBinary, 0 },
 	{ "ruleset", eCmdHdlrString, 0 },
@@ -259,6 +261,7 @@ createInstance(instanceConf_t **pinst)
 	inst->password = NULL;
 	inst->key = NULL;
 	inst->mode = 0;
+	inst->batchsize = 0;
 	inst->useLPop = 0;
 	inst->streamConsumerGroup = NULL;
 	inst->streamConsumerName = NULL;
@@ -374,6 +377,15 @@ checkInstance(instanceConf_t *const inst)
 			LogMsg(0, RS_RET_CONFIG_ERROR, LOG_WARNING,"imhiredis: 'fields' "
 									"unused for mode != stream : ignored.");
 		}
+	}
+
+	if (inst->batchsize !=0 ) {
+		DBGPRINTF("imhiredis: batchsize is '%d'\n", inst->batchsize);
+	}
+	else {
+		LogMsg(0, RS_RET_OK_WARN, LOG_WARNING,
+			"imhiredis: batchsize not set, setting to default (%d)",BATCH_SIZE);
+		inst->batchsize=BATCH_SIZE;
 	}
 
 	if (inst->password != NULL) {
@@ -492,6 +504,8 @@ CODESTARTnewInpInst
 						inst->fieldList.varname[j]);
 				free(param);
 			}
+		} else if(!strcmp(inppblk.descr[i].name, "batchsize")) {
+			inst->batchsize = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "key")) {
 			inst->key = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
@@ -1499,20 +1513,20 @@ rsRetVal redisDequeue(instanceConf_t *inst) {
 	DBGPRINTF("redisDequeue: beginning to dequeue key '%s'\n", inst->key);
 
 	do {
-		// append a batch of BATCH_SIZE POP commands (either LPOP or RPOP depending on conf)
+		// append a batch of inst->batchsize POP commands (either LPOP or RPOP depending on conf)
 		if (inst->useLPop == 1) {
 			DBGPRINTF("redisDequeue: Queuing #%d LPOP commands on key '%s' \n",
-					BATCH_SIZE,
+					inst->batchsize,
 					inst->key);
-			for (i=0; i<BATCH_SIZE; ++i ) {
+			for (i=0; i<inst->batchsize; ++i ) {
 				if (REDIS_OK != redisAppendCommand(inst->conn, "LPOP %s", inst->key))
 					break;
 			}
 		} else {
 			DBGPRINTF("redisDequeue: Queuing #%d RPOP commands on key '%s' \n",
-					BATCH_SIZE,
+					inst->batchsize,
 					inst->key);
-			for (i=0; i<BATCH_SIZE; i++) {
+			for (i=0; i<inst->batchsize; i++) {
 				if (REDIS_OK != redisAppendCommand(inst->conn, "RPOP %s", inst->key))
 					break;
 			}
@@ -1524,7 +1538,7 @@ rsRetVal redisDequeue(instanceConf_t *inst) {
 			if (REDIS_OK != redisGetReply(inst->conn, (void **) &reply)) {
 				// error getting reply, must stop
 				LogError(0, RS_RET_REDIS_ERROR, "redisDequeue: Error reading reply after POP #%d "
-								"on key '%s'", (BATCH_SIZE - i), inst->key);
+								"on key '%s'", (inst->batchsize - i), inst->key);
 				// close connection
 				redisFree(inst->conn);
 				inst->currentNode = NULL;
