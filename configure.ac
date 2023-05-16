@@ -2856,6 +2856,7 @@ echo "    omhttpfs module will be compiled:         $enable_omhttpfs"
 echo "    omamqp1 module will be compiled:          $enable_omamqp1"
 echo "    omtcl module will be compiled:            $enable_omtcl"
 echo "    omkafka module will be compiled:          $enable_omkafka"
+echo "    omhiredis module will be compiled:        $enable_omhiredis"
 echo
 echo "---{ parser modules }---"
 echo "    pmlastmsg module will be compiled:        $enable_pmlastmsg"

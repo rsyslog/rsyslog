@@ -1079,6 +1079,12 @@ TESTS +=  \
 	omhiredis-template.sh \
 	omhiredis-withpass.sh \
 	omhiredis-wrongpass.sh \
+	omhiredis-stream-ack.sh \
+	omhiredis-stream-capped.sh \
+	omhiredis-stream-del.sh \
+	omhiredis-stream-dynack.sh \
+	omhiredis-stream-outfield.sh \
+	omhiredis-stream.sh
 if HAVE_VALGRIND
 TESTS += \
 	mmdb-reload-vg.sh \
@@ -1091,6 +1097,12 @@ TESTS += \
 	omhiredis-template-vg.sh \
 	omhiredis-withpass-vg.sh \
 	omhiredis-wrongpass-vg.sh \
+	omhiredis-stream-ack-vg.sh \
+	omhiredis-stream-capped-vg.sh \
+	omhiredis-stream-del-vg.sh \
+	omhiredis-stream-dynack-vg.sh \
+	omhiredis-stream-outfield-vg.sh \
+	omhiredis-stream-vg.sh
 endif # HAVE_VALGRIND
 endif # ENABLE_OMHIREDIS
 endif # ENABLE_REDIS_TESTS
