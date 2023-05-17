@@ -836,12 +836,25 @@ split_binary_parameters(uchar **const szBinary, char ***const __restrict__ aPara
 		iCnt = iStr = 0;
 		c = es_getBufAddr(estrParams); /* Reset to beginning */
 		while(iCnt < es_strlen(estrParams) ) {
-			if ( c[iCnt] == ' ' && !bInQuotes ) {
-				estrTmp = es_newStrFromSubStr( estrParams, iStr, iCnt-iStr);
-			} else if ( iCnt+1 >= es_strlen(estrParams) ) {
-				estrTmp = es_newStrFromSubStr( estrParams, iStr, iCnt-iStr+1);
-			} else if (c[iCnt] == '"') {
-				bInQuotes = !bInQuotes;
+			if (c[iCnt] == '"' && iCnt == iStr && !bInQuotes) {
+				bInQuotes = TRUE;
+				iStr++;
+			} else {
+				int bEOL = iCnt+1 == es_strlen(estrParams);
+				int bSpace = c[iCnt] == ' ';
+				int bQuoteEnd = bInQuotes && ((bSpace && c[iCnt-1] == '"') ||
+							      (c[iCnt] == '"' && bEOL));
+				if (bEOL || bQuoteEnd || (bSpace && !bInQuotes)) {
+					int iSubCnt = iCnt - iStr;
+					if (bEOL)
+					    iSubCnt++;
+					if (bQuoteEnd)
+					    iSubCnt--;
+					estrTmp = es_newStrFromSubStr(estrParams, iStr, iSubCnt);
+				}
+
+				if (bQuoteEnd)
+				    bInQuotes = FALSE;
 			}
 
 			if ( estrTmp != NULL ) {
