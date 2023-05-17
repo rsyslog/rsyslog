@@ -143,7 +143,7 @@ ENDdbgPrintInstInfo
 static rsRetVal initHiredis(wrkrInstanceData_t *pWrkrData, int bSilent)
 {
 	char *server;
-	char *serverpasswd;
+	redisReply *reply = NULL;
 	DEFiRet;
 
 	server = (pWrkrData->pData->server == NULL) ? (char *)"127.0.0.1" :
@@ -162,18 +162,23 @@ static rsRetVal initHiredis(wrkrInstanceData_t *pWrkrData, int bSilent)
 	}
 
 	if (pWrkrData->pData->serverpassword != NULL) {
-		serverpasswd = (char*) pWrkrData->pData->serverpassword;
-		int rc;
-		rc = redisAppendCommand(pWrkrData->conn, "AUTH %s", serverpasswd);
-		if (rc == REDIS_ERR) {
-			LogError(0, NO_ERRCODE, "omhiredis: %s", pWrkrData->conn->errstr);
+		reply = redisCommand(pWrkrData->conn, "AUTH %s", (char*) pWrkrData->pData->serverpassword);
+		if (reply == NULL) {
+			DBGPRINTF("omhiredis: could not get reply from AUTH command\n");
+			ABORT_FINALIZE(RS_RET_SUSPENDED);
+		}
+		else if (reply->type == REDIS_REPLY_ERROR) {
+			LogError(0, NO_ERRCODE, "omhiredis: error while authenticating: %s", reply->str);
 			ABORT_FINALIZE(RS_RET_ERR);
-		} else {
-			pWrkrData->count++;
 		}
 	}
 
 finalize_it:
+	if (iRet != RS_RET_OK && pWrkrData-> conn != NULL) {
+		redisFree(pWrkrData->conn);
+		pWrkrData->conn = NULL;
+	}
+	if (reply != NULL) freeReplyObject(reply);
 	RETiRet;
 }
 
