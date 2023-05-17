@@ -1040,7 +1040,7 @@ endif # HAVE_VALGRIND
 endif # ENABLE_OMRABBITMQ
 
 if ENABLE_REDIS_TESTS
-
+if ENABLE_IMHIREDIS
 TESTS +=  \
 	imhiredis-queue.sh \
 	imhiredis-queue-lpop.sh \
@@ -1065,6 +1065,34 @@ TESTS += \
 	imhiredis-stream-consumerGroup-noack-vg.sh \
 	imhiredis-stream-consumerGroup-reclaim-vg.sh
 endif # HAVE_VALGRIND
+endif # ENABLE_IMHIREDIS
+
+if ENABLE_OMHIREDIS
+TESTS +=  \
+	mmdb-reload.sh \
+	omhiredis-dynakey.sh \
+	omhiredis-publish.sh \
+	omhiredis-queue-rpush.sh \
+	omhiredis-queue.sh \
+	omhiredis-set.sh \
+	omhiredis-setex.sh \
+	omhiredis-template.sh \
+	omhiredis-withpass.sh \
+	omhiredis-wrongpass.sh \
+if HAVE_VALGRIND
+TESTS += \
+	mmdb-reload-vg.sh \
+	omhiredis-dynakey-vg.sh \
+	omhiredis-publish-vg.sh \
+	omhiredis-queue-rpush-vg.sh \
+	omhiredis-queue-vg.sh \
+	omhiredis-set-vg.sh \
+	omhiredis-setex-vg.sh \
+	omhiredis-template-vg.sh \
+	omhiredis-withpass-vg.sh \
+	omhiredis-wrongpass-vg.sh \
+endif # HAVE_VALGRIND
+endif # ENABLE_OMHIREDIS
 endif # ENABLE_REDIS_TESTS
 
 if ENABLE_IMPSTATS
