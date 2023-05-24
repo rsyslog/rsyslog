@@ -29,7 +29,7 @@ on:
 
 jobs:
   check_run:
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     timeout-minutes: 50
 
     steps:
