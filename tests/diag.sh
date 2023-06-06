@@ -893,6 +893,39 @@ check_journal_testmsg_received() {
 	fi;
 }
 
+# checks that among the open files found in /proc/<PID>/fd/*
+# there is or is not, depending on the calling mode,
+# a link with the specified suffix in the target name
+check_fd_for_pid() {
+  local pid="$1" mode="$2" suffix="$3" target seen
+  seen="false"
+  for fd in $(echo /proc/$pid/fd/*); do
+    target="$(readlink -m "$fd")"
+    if [[ "$target" != *$RSYSLOG_DYNNAME* ]]; then
+      continue
+    fi
+    if ((i % 10 == 0)); then
+      echo "INFO: check target='$target'"
+    fi
+    if [[ "$target" == *$suffix ]]; then
+      seen="true"
+      if [[ "$mode" == "exists" ]]; then
+        echo "PASS: check fd for pid=$pid mode='$mode' suffix='$suffix'"
+        return 0
+      fi
+    fi
+  done
+  if [[ "$seen" == "false" ]] && [[ "$mode" == "absent" ]]; then
+    echo "PASS: check fd for pid=$pid mode='$mode' suffix='$suffix'"
+    return 0
+  fi
+  echo "FAIL: check fd for pid=$pid mode='$mode' suffix='$suffix'"
+  if [[ "$mode" != "ignore" ]]; then
+    return 1
+  fi
+  return 0
+}
+
 # wait for main message queue to be empty. $1 is the instance.
 # we run in a loop to ensure rsyslog is *really* finished when a
 # function for the "finished predicate" is defined. This is done

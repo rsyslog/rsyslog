@@ -1573,6 +1573,7 @@ TESTS += \
 	imfile-rename.sh \
 	imfile-symlink.sh \
 	imfile-symlink-multi.sh \
+	imfile-symlink-ext-tmp-dir-tree.sh \
 	imfile-logrotate.sh \
 	imfile-logrotate-async.sh \
 	imfile-logrotate-multiple.sh \
@@ -2589,6 +2590,7 @@ EXTRA_DIST= \
 	imfile-rename.sh \
 	imfile-symlink.sh \
 	imfile-symlink-multi.sh \
+	imfile-symlink-ext-tmp-dir-tree.sh \
 	imfile-logrotate.sh \
 	imfile-logrotate-async.sh \
 	imfile-logrotate-copytruncate.sh \
