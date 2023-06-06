@@ -1,5 +1,26 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2306.0 (aka 2023.06) 2023-06-??
+- 2023-06-05: imfile bugfix: file handle leak, primarily in kubernetes context
+  At this point there is a code imfile.c#L919 that adds an inotify observer to the
+  parent of the symbolic link target. But there is no such code that removes this
+  observer in the case when inotify events do not occur in the directory tree above.
+  This may be if the directory tree of the symbolic link target and the directory tree
+  of the symbolic link itself are divided into different subtrees somewhere at the levels
+  above.
+  For example, in the rsyslog configuration, an imfile with the
+  template /var/log/containers/*.log is configured and there is the following directory
+  tree:
+    /var/log/pods/pod-1/a/0.log
+    /var/log/containers/pod-1-a-0.log -> /var/log/pods/pod-1/a/0.log
+  In this example, kubernetes cron jobs will permanently delete directories at the
+  /var/log/pods/pod-* level. And thus, inotify observer on the parent object of the
+  symbolic link target (/var/log/pods/pod-1/a/0.log) looking at the directory
+  /var/log/pods/pod-1/a will constantly leak.
+  This is due to the fact that the list of active objects in the edge with path
+  /var/log/containers, where the parent object of the target symbolic link is added,
+  is not checked. Verification and deletion will occur only in the case of an inotify
+  event in the upper nodes of the directory tree, in /var/log and above.
+  Thanks to Sergey Kacheev for the patch!
 - 2023-06-05: GNUTls Driver: Fix memory leaks in gtlsInitCred
   Missing CA Certificate or multiple Connections caused
   a memory leak in pThis->xcred as it was allocated each time in
