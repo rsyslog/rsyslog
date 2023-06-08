@@ -62,7 +62,7 @@ jobs:
             software-properties-common \
             valgrind \
             wget \
-	    zstd
+            zstd
 
       - name: git checkout project
         uses: actions/checkout@v1
