@@ -178,7 +178,8 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "parser.supportcompressionextension", eCmdHdlrBinary, 0 },
 	{ "shutdown.queue.doublesize", eCmdHdlrBinary, 0 },
 	{ "debug.files", eCmdHdlrArray, 0 },
-	{ "debug.whitelist", eCmdHdlrBinary, 0 }
+	{ "debug.whitelist", eCmdHdlrBinary, 0 },
+	{ "libcapng.default", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk paramblk =
 	{ CNFPARAMBLK_VERSION,
@@ -1183,6 +1184,13 @@ glblDoneLoadCnf(void)
 		if(!strcmp(paramblk.descr[i].name, "workdirectory")) {
 			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 			setWorkDir(NULL, cstr);
+		} else if(!strcmp(paramblk.descr[i].name, "libcapng.default")) {
+#ifdef ENABLE_LIBCAPNG
+			loadConf->globals.bAbortOnFailedLibcapngSetup = (int) cnfparamvals[i].val.d.n;
+#else
+			LogError(0, RS_RET_ERR, "rsyslog wasn't "
+				"compiled with libcap-ng support.");
+#endif
 		} else if(!strcmp(paramblk.descr[i].name, "variables.casesensitive")) {
 			const int val = (int) cnfparamvals[i].val.d.n;
 			fjson_global_do_case_sensitive_comparison(val);
