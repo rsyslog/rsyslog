@@ -768,3 +768,22 @@ the ID will always happen if the ID is valid.
 
 Note: See the :doc:`privilege drop documentation<../configuration/droppriv>`
 for more details on dropping privileges on startup.
+
+libcapng.default
+^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "on", "no", "none"
+
+.. versionadded:: 8.2306.0
+
+The `libcapng.default` global option defines how rsyslog should behave
+in case something went wrong when capabilities were to be dropped.
+The default value is "on", in which case rsyslog exits on a libcapng
+related error. If set to "off", an error message describing the problem
+appears at startup, nothing more. Default value is preserved for backwards
+compatibility.
