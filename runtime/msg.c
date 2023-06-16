@@ -2552,12 +2552,15 @@ tryEmulateTAG(smsg_t *const pM, const sbool bLockMutex)
 void ATTR_NONNULL(2,3)
 getTAG(smsg_t * const pM, uchar **const ppBuf, int *const piLen, const sbool bLockMutex)
 {
+	if(bLockMutex == LOCK_MUTEX)
+		MsgLock(pM);
+
 	if(pM == NULL) {
 		*ppBuf = UCHAR_CONSTANT("");
 		*piLen = 0;
 	} else {
 		if(pM->iLenTAG == 0)
-			tryEmulateTAG(pM, bLockMutex);
+			tryEmulateTAG(pM, MUTEX_ALREADY_LOCKED);
 		if(pM->iLenTAG == 0) {
 			*ppBuf = UCHAR_CONSTANT("");
 			*piLen = 0;
@@ -2566,6 +2569,9 @@ getTAG(smsg_t * const pM, uchar **const ppBuf, int *const piLen, const sbool bLo
 			*piLen = pM->iLenTAG;
 		}
 	}
+
+	if(bLockMutex == LOCK_MUTEX)
+		MsgUnlock(pM);
 }
 
 
