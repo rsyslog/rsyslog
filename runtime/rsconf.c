@@ -159,6 +159,9 @@ int rsconfNeedDropPriv(rsconf_t *const cnf)
 
 static void cnfSetDefaults(rsconf_t *pThis)
 {
+#ifdef ENABLE_LIBCAPNG
+	pThis->globals.bAbortOnFailedLibcapngSetup = 1;
+#endif
 	pThis->globals.bAbortOnUncleanConfig = 0;
 	pThis->globals.bAbortOnFailedQueueStartup = 0;
 	pThis->globals.bReduceRepeatMsgs = 0;
