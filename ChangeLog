@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2306.0 (aka 2023.06) 2023-06-??
+Scheduled Release 8.2306.0 (aka 2023.06) 2023-06-20
 - 2023-06-19: mmnormalize bugfix: if msg cannot be parsed, parser chain is stopped
   When an parser is not able to parse a message, it should indicate this
   to rsyslog core, which then activates the next parser(s) inside the
