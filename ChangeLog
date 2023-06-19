@@ -1,5 +1,19 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2306.0 (aka 2023.06) 2023-06-??
+- 2023-06-19: mmnormalize bugfix: if msg cannot be parsed, parser chain is stopped
+  When an parser is not able to parse a message, it should indicate this
+  to rsyslog core, which then activates the next parser(s) inside the
+  configured parser chain.
+  Unfortunatley, mmnormalize always tells core "success", and so no
+  other parsers are activated.
+  closes https://github.com/rsyslog/rsyslog/issues/5148
+- 2023-06-19: [i/o]mhiredis: various fixes and enhancements
+  please see the change log for details. Among others, suspending of the modules
+  has been fixed. Also a new "stream" mode has been added.
+  Thanks to Théo Bertin (frikilax) for the patch.
+- 2023-06-19: testbench/bug: mmexternal-SegFault-empty-jroot-vg.sh fails due to typo
+  Fix the typo that makes the test fail.
+  Thanks to Paul Fertser for the patch.
 - 2023-06-16: imjournal: Add FileCreateMode module parameter
     FileCreateMode allows to set the default file mode bits
     when creating new files. As of now, it has only impact on the state file.
