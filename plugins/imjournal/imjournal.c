@@ -35,6 +35,7 @@
 #include <sys/socket.h>
 #include <errno.h>
 #include <systemd/sd-journal.h>
+#include <fcntl.h>
 
 #include "dirty.h"
 #include "cfsysline.h"
@@ -73,6 +74,7 @@ struct modConfData_s {
 
 static struct configSettings_s {
 	char *stateFile;
+	int fCreateMode; /* default mode to use when creating new files, e.g. stateFile */
 	int iPersistStateInterval;
 	unsigned int ratelimitInterval;
 	unsigned int ratelimitBurst;
@@ -92,6 +94,7 @@ static rsRetVal facilityHdlr(uchar **pp, void *pVal);
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
 	{ "statefile", eCmdHdlrGetWord, 0 },
+	{ "filecreatemode", eCmdHdlrFileCreateMode, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "ratelimit.burst", eCmdHdlrInt, 0 },
 	{ "persiststateinterval", eCmdHdlrInt, 0 },
@@ -523,8 +526,10 @@ static rsRetVal
 persistJournalState(void)
 {
 	DEFiRet;
-	FILE *sf = NULL; /* state file */
 	char tmp_sf[MAXFNAME];
+	int fd = -1;
+	size_t len;
+	ssize_t wr_ret;
 
 	DBGPRINTF("Persisting journal position, cursor: %s, at head? %d\n",
 			  journalContext.cursor, journalContext.atHead);
@@ -556,18 +561,19 @@ persistJournalState(void)
 			(int)(sizeof(tmp_sf) - sizeof(IM_SF_TMP_SUFFIX)),
 			cs.stateFile, IM_SF_TMP_SUFFIX);
 
-	sf = fopen(tmp_sf, "wb");
-	if (sf == NULL) {
-		LogError(errno, RS_RET_FOPEN_FAILURE, "imjournal: fopen() failed for path: '%s'", tmp_sf);
-		ABORT_FINALIZE(RS_RET_FOPEN_FAILURE);
+	fd = open((char*) tmp_sf, O_WRONLY|O_CREAT|O_CLOEXEC, cs.fCreateMode);
+	if (fd == -1) {
+		LogError(errno, RS_RET_FILE_OPEN_ERROR, "imjournal: open() failed for path: '%s'", tmp_sf);
+		ABORT_FINALIZE(RS_RET_FILE_OPEN_ERROR);
 	}
 
-	if(fputs(journalContext.cursor, sf) == EOF) {
-		LogError(errno, RS_RET_IO_ERROR, "imjournal: failed to save cursor to: '%s'", tmp_sf);
+	len = strlen(journalContext.cursor);
+	wr_ret = write(fd, journalContext.cursor, len);
+	if (wr_ret != (ssize_t)len) {
+		LogError(errno, RS_RET_IO_ERROR, "imjournal: failed to save cursor to: '%s',"
+			"write returned %zd, expected %zu", cs.stateFile, wr_ret, len);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
-
-	fflush(sf);
 
 	/* change the name of the file to the configured one */
 	if (rename(tmp_sf, cs.stateFile) < 0) {
@@ -576,7 +582,7 @@ persistJournalState(void)
 	}
 
 	if (cs.bFsync) {
-		if (fsync(fileno(sf)) != 0) {
+		if (fsync(fd) != 0) {
 			LogError(errno, RS_RET_IO_ERROR, "imjournal: fsync on '%s' failed", cs.stateFile);
 			ABORT_FINALIZE(RS_RET_IO_ERROR);
 		}
@@ -599,9 +605,9 @@ persistJournalState(void)
 	DBGPRINTF("Persisted journal to '%s'\n", cs.stateFile);
 
 finalize_it:
-	if (sf != NULL) {
-		if (fclose(sf) == EOF) {
-			LogError(errno, RS_RET_IO_ERROR, "imjournal: fclose() failed for path: '%s'", tmp_sf);
+	if (fd != -1) {
+		if (close(fd) == -1) {
+			LogError(errno, RS_RET_IO_ERROR, "imjournal: close() failed for path: '%s'", tmp_sf);
 			iRet = RS_RET_IO_ERROR;
 		}
 	}
@@ -898,6 +904,7 @@ CODESTARTbeginCnfLoad
 	cs.bIgnoreNonValidStatefile = 1;
 	cs.iPersistStateInterval = DFLT_persiststateinterval;
 	cs.stateFile = NULL;
+	cs.fCreateMode = -1;
 	cs.ratelimitBurst = 20000;
 	cs.ratelimitInterval = 600;
 	cs.iDfltSeverity = DFLT_SEVERITY;
@@ -1039,6 +1046,8 @@ CODESTARTsetModCnf
 			cs.iPersistStateInterval = (int) pvals[i].val.d.n;
 		} else if (!strcmp(modpblk.descr[i].name, "statefile")) {
 			cs.stateFile = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(modpblk.descr[i].name, "filecreatemode")) {
+			cs.fCreateMode = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "ratelimit.burst")) {
 			cs.ratelimitBurst = (unsigned int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "ratelimit.interval")) {
@@ -1072,6 +1081,14 @@ CODESTARTsetModCnf
 			dbgprintf("imjournal: program error, non-handled "
 				"param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
 		}
+	}
+
+	/* File create mode is not set */
+	if (cs.fCreateMode == -1) {
+		const int fCreateMode = 0644;
+		LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "imjournal: filecreatemode is not set, "
+			"using default %04o", fCreateMode);
+		cs.fCreateMode = fCreateMode;
 	}
 
 finalize_it:

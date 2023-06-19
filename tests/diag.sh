@@ -893,6 +893,39 @@ check_journal_testmsg_received() {
 	fi;
 }
 
+# checks that among the open files found in /proc/<PID>/fd/*
+# there is or is not, depending on the calling mode,
+# a link with the specified suffix in the target name
+check_fd_for_pid() {
+  local pid="$1" mode="$2" suffix="$3" target seen
+  seen="false"
+  for fd in $(echo /proc/$pid/fd/*); do
+    target="$(readlink -m "$fd")"
+    if [[ "$target" != *$RSYSLOG_DYNNAME* ]]; then
+      continue
+    fi
+    if ((i % 10 == 0)); then
+      echo "INFO: check target='$target'"
+    fi
+    if [[ "$target" == *$suffix ]]; then
+      seen="true"
+      if [[ "$mode" == "exists" ]]; then
+        echo "PASS: check fd for pid=$pid mode='$mode' suffix='$suffix'"
+        return 0
+      fi
+    fi
+  done
+  if [[ "$seen" == "false" ]] && [[ "$mode" == "absent" ]]; then
+    echo "PASS: check fd for pid=$pid mode='$mode' suffix='$suffix'"
+    return 0
+  fi
+  echo "FAIL: check fd for pid=$pid mode='$mode' suffix='$suffix'"
+  if [[ "$mode" != "ignore" ]]; then
+    return 1
+  fi
+  return 0
+}
+
 # wait for main message queue to be empty. $1 is the instance.
 # we run in a loop to ensure rsyslog is *really* finished when a
 # function for the "finished predicate" is defined. This is done
@@ -1316,6 +1349,11 @@ error_exit() {
 	# Extended Exit handling for kafka / zookeeper instances 
 	kafka_exit_handling "false"
 
+	# Ensure redis instance is stopped
+	if [ -n "$REDIS_DYN_DIR" ]; then
+		stop_redis
+	fi
+
 	error_stats $1 # Report error to rsyslog testbench stats
 	do_cleanup
 
@@ -1534,6 +1572,9 @@ exit_test() {
 
 	# Extended Exit handling for kafka / zookeeper instances 
 	kafka_exit_handling "true"
+
+	# Ensure redis is stopped
+	stop_redis
 
 	printf '%s Test %s SUCCESSFUL (took %s seconds)\n' "$(tb_timestamp)" "$0" "$(( $(date +%s) - TB_STARTTEST ))"
 	echo  -------------------------------------------------------------------------------
@@ -2420,6 +2461,97 @@ mysql_cleanup_test() {
 		2>&1 | grep -iv "Using a password on the command line interface can be insecure."
 }
 
+
+start_redis() {
+	check_command_available redis-server
+
+	export REDIS_DYN_CONF="${RSYSLOG_DYNNAME}.redis.conf"
+	export REDIS_DYN_DIR="$(pwd)/${RSYSLOG_DYNNAME}-redis"
+
+	# Only set a random port if not set (useful when Redis must be restarted during a test)
+	if [ -z "$REDIS_RANDOM_PORT" ]; then
+		export REDIS_RANDOM_PORT="$(get_free_port)"
+	fi
+
+	cp $srcdir/testsuites/redis.conf $REDIS_DYN_CONF
+	mkdir -p $REDIS_DYN_DIR
+
+	sed -itemp "s+<tmpdir>+${REDIS_DYN_DIR}+g" $REDIS_DYN_CONF
+	sed -itemp "s+<rndport>+${REDIS_RANDOM_PORT}+g" $REDIS_DYN_CONF
+
+	# Start the server
+	echo "Starting redis with conf file $REDIS_DYN_CONF"
+	redis-server $REDIS_DYN_CONF &
+	$TESTTOOL_DIR/msleep 2000
+
+	# Wait for Redis to be fully up
+	timeoutend=10
+	until nc -w1 -z 127.0.0.1 $REDIS_RANDOM_PORT; do
+		echo "Waiting for Redis to start..."
+		$TESTTOOL_DIR/msleep 1000
+		(( timeseconds=timeseconds + 2 ))
+
+		if [ "$timeseconds" -gt "$timeoutend" ]; then
+			echo "--- TIMEOUT ( $timeseconds ) reached!!!"
+			if [ ! -d ${REDIS_DYN_DIR}/redis.log ]; then
+				echo "no Redis logs"
+			else
+				echo "Dumping ${REDIS_DYN_DIR}/redis.log"
+				echo "========================================="
+				cat ${REDIS_DYN_DIR}/redis.log
+				echo "========================================="
+			fi
+			error_exit 1
+		fi
+	done
+}
+
+cleanup_redis() {
+	if [ -d ${REDIS_DYN_DIR} ]; then
+		rm -rf ${REDIS_DYN_DIR}
+	fi
+	if [ -f ${REDIS_DYN_CONF} ]; then
+		rm -f ${REDIS_DYN_CONF}
+	fi
+}
+
+stop_redis() {
+	if [ -f "$REDIS_DYN_DIR/redis.pid" ]; then
+		redispid=$(cat $REDIS_DYN_DIR/redis.pid)
+		echo "Stopping Redis instance"
+		kill $redispid
+
+		i=0
+
+		# Check if redis instance went down!
+		while [ -f $REDIS_DYN_DIR/redis.pid ]; do
+			redispid=$(cat $REDIS_DYN_DIR/redis.pid)
+			if [[ "" !=  "$redispid" ]]; then
+				$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
+				if test $i -gt $TB_TIMEOUT_STARTSTOP; then
+					echo "redis server (PID $redispid) still running - Performing hard shutdown (-9)"
+					kill -9 $redispid
+					break
+				fi
+				(( i++ ))
+			else
+				# Break the loop
+				break
+			fi
+		done
+	fi
+}
+
+redis_command() {
+	check_command_available redis-cli
+
+	if [ -z "$1" ]; then
+		echo "redis_command: no command provided!"
+		error_exit 1
+	fi
+
+	printf "$1\n" | redis-cli -p "$REDIS_RANDOM_PORT"
+}
 
 # $1 - replacement string
 # $2 - start search string

@@ -84,6 +84,9 @@ struct parsercnf_s {
  * be re-set as often as the user likes).
  */
 struct globals_s {
+#ifdef ENABLE_LIBCAPNG
+	int bAbortOnFailedLibcapngSetup;
+#endif
 	int bDebugPrintTemplateList;
 	int bDebugPrintModuleList;
 	int bDebugPrintCfSysLineHandlerList;

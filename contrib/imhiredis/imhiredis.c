@@ -62,9 +62,12 @@ MODULE_CNFNAME("imhiredis")
 
 /* static data */
 DEF_IMOD_STATIC_DATA
-#define QUEUE_BATCH_SIZE 10
+#define BATCH_SIZE 10
+#define WAIT_TIME_MS 500
+#define STREAM_INDEX_STR_MAXLEN 44 // "18446744073709551615-18446744073709551615"
 #define IMHIREDIS_MODE_QUEUE 1
 #define IMHIREDIS_MODE_SUBSCRIBE 2
+#define IMHIREDIS_MODE_STREAM 3
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
 DEFobjCurrIf(glbl)
@@ -85,8 +88,20 @@ struct instanceConf_s {
 	uchar *password;
 	uchar *key;
 	uchar *modeDescription;
+	uchar *streamConsumerGroup;
+	uchar *streamConsumerName;
+	uchar *streamReadFrom;
+	int streamAutoclaimIdleTime;
+	sbool streamConsumerACK;
 	int mode;
 	sbool useLPop;
+
+	struct {
+		int     nmemb;
+		char **name;
+		char **varname;
+	} fieldList;
+
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
 	uchar *pszBindRuleset;		/* default name of Ruleset to bind to */
 
@@ -117,6 +132,9 @@ struct modConfData_s {
 static struct imhiredisWrkrInfo_s {
 	pthread_t tid;		/* the worker's thread ID */
 	instanceConf_t *inst;	/* Pointer to imhiredis instance */
+	rsRetVal (*fnConnectMaster)(instanceConf_t *inst);
+	sbool (*fnIsConnected)(instanceConf_t *inst);
+	rsRetVal (*fnRun)(instanceConf_t *inst);
 } *imhiredisWrkrInfo;
 
 
@@ -124,7 +142,23 @@ static struct imhiredisWrkrInfo_s {
 pthread_attr_t wrkrThrdAttr;	/* Attribute for worker threads ; read only after startup */
 
 static int activeHiredisworkers = 0;
-static char *redis_replies[] = {"unknown", "string", "array", "integer", "nil", "status", "error"};
+static char *REDIS_REPLIES[] = {
+	"unknown", // 0
+	"string", // 1
+	"array", // 2
+	"integer", // 3
+	"nil", // 4
+	"status", // 5
+	"error", // 6
+	"double", // 7
+	"bool", // 8
+	"map", // 9
+	"set", // 10
+	"attr", // 11
+	"push", // 12
+	"bignum", // 13
+	"verb", // 14
+	};
 
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
@@ -148,9 +182,15 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrInt, 0 },
 	{ "password", eCmdHdlrGetWord, 0 },
 	{ "mode", eCmdHdlrGetWord, 0 },
-	{ "key", eCmdHdlrGetWord, 0 },
+	{ "key", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
 	{ "uselpop", eCmdHdlrBinary, 0 },
 	{ "ruleset", eCmdHdlrString, 0 },
+	{ "stream.consumerGroup", eCmdHdlrGetWord, 0 },
+	{ "stream.consumerName", eCmdHdlrGetWord, 0 },
+	{ "stream.readFrom", eCmdHdlrGetWord, 0 },
+	{ "stream.consumerACK", eCmdHdlrBinary, 0 },
+	{ "stream.autoclaimIdleTime", eCmdHdlrNonNegInt, 0 },
+	{ "fields", eCmdHdlrArray, 0 },
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
@@ -168,17 +208,33 @@ struct timeval glblRedisConnectTimeout = { 3, 0 }; /* 3 seconds */
 static void redisAsyncRecvCallback (redisAsyncContext __attribute__((unused)) *c, void *reply, void *inst_obj);
 static void redisAsyncConnectCallback (const redisAsyncContext *c, int status);
 static void redisAsyncDisconnectCallback (const redisAsyncContext *c, int status);
-static rsRetVal enqMsg(instanceConf_t *const inst, const char *message);
+static struct json_object* _redisParseIntegerReply(const redisReply *reply);
+static struct json_object* _redisParseDoubleReply(const redisReply *reply);
+static struct json_object* _redisParseStringReply(const redisReply *reply);
+static struct json_object* _redisParseArrayReply(const redisReply *reply);
+static rsRetVal enqMsg(instanceConf_t *const inst, const char *message, size_t msgLen);
+static rsRetVal enqMsgJson(instanceConf_t *const inst, struct json_object *json, struct json_object *metadata);
 rsRetVal redisAuthentSynchronous(redisContext *conn, uchar *password);
 rsRetVal redisAuthentAsynchronous(redisAsyncContext *aconn, uchar *password);
 rsRetVal redisActualizeCurrentNode(instanceConf_t *inst);
 rsRetVal redisGetServersList(redisNode *node, uchar *password, redisNode **result);
 rsRetVal redisAuthenticate(instanceConf_t *inst);
 rsRetVal redisConnectSync(redisContext **conn, redisNode *node);
+rsRetVal connectMasterSync(instanceConf_t *inst);
+static sbool isConnectedSync(instanceConf_t *inst);
 rsRetVal redisConnectAsync(redisAsyncContext **aconn, redisNode *node);
+rsRetVal connectMasterAsync(instanceConf_t *inst);
+static sbool isConnectedAsync(instanceConf_t *inst);
 rsRetVal redisDequeue(instanceConf_t *inst);
-void workerLoopSubscribe(struct imhiredisWrkrInfo_s *me);
-void workerLoopQueue(struct imhiredisWrkrInfo_s *me);
+rsRetVal ensureConsumerGroupCreated(instanceConf_t *inst);
+rsRetVal ackStreamIndex(instanceConf_t *inst, uchar *stream, uchar *group, uchar *index);
+static rsRetVal enqueueRedisStreamReply(instanceConf_t *const inst, redisReply *reply);
+static rsRetVal handleRedisXREADReply(instanceConf_t *const inst, const redisReply *reply);
+static rsRetVal handleRedisXAUTOCLAIMReply(
+		instanceConf_t *const inst, const redisReply *reply, char **autoclaimIndex);
+rsRetVal redisStreamRead(instanceConf_t *inst);
+rsRetVal redisSubscribe(instanceConf_t *inst);
+void workerLoop(struct imhiredisWrkrInfo_s *me);
 static void *imhirediswrkr(void *myself);
 static rsRetVal createRedisNode(redisNode **root);
 rsRetVal copyNode(redisNode *src, redisNode **dst);
@@ -195,15 +251,21 @@ createInstance(instanceConf_t **pinst)
 {
 	DEFiRet;
 	instanceConf_t *inst;
-	CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
+	CHKmalloc(inst = calloc(1, sizeof(instanceConf_t)));
 
 	inst->next = NULL;
 	inst->password = NULL;
 	inst->key = NULL;
 	inst->mode = 0;
 	inst->useLPop = 0;
+	inst->streamConsumerGroup = NULL;
+	inst->streamConsumerName = NULL;
+	CHKmalloc(inst->streamReadFrom = calloc(1, STREAM_INDEX_STR_MAXLEN));
+	inst->streamAutoclaimIdleTime = 0;
+	inst->streamConsumerACK = 1;
 	inst->pszBindRuleset = NULL;
 	inst->pBindRuleset = NULL;
+	inst->fieldList.nmemb = 0;
 
 	/* Redis objects */
 	inst->conn = NULL;
@@ -265,21 +327,51 @@ checkInstance(instanceConf_t *const inst)
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 
-	if (inst->key != NULL) {
-		DBGPRINTF("imhiredis: key/channel is '%s'\n", inst->key);
+
+	if (inst->mode < IMHIREDIS_MODE_QUEUE || inst->mode > IMHIREDIS_MODE_STREAM) {
+		LogError(0, RS_RET_CONFIG_ERROR, "imhiredis: invalid mode, please choose 'subscribe', "
+						"'queue' or 'stream' mode.");
+		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+	}
+
+	if (inst->mode != IMHIREDIS_MODE_QUEUE && inst->useLPop) {
+		LogMsg(0, RS_RET_CONFIG_ERROR, LOG_WARNING,"imhiredis: 'uselpop' set with mode != queue : ignored.");
+	}
+
+	if (inst->mode == IMHIREDIS_MODE_STREAM) {
+		if(inst->streamConsumerGroup != NULL && inst->streamConsumerName == NULL) {
+			LogError(0, RS_RET_CONFIG_ERROR, "imhiredis: invalid configuration, "
+					"please set a consumer name when mode is 'stream' and a consumer group is set");
+			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+		}
+		if(inst->streamAutoclaimIdleTime != 0 && inst->streamConsumerGroup == NULL) {
+			LogMsg(0, RS_RET_CONFIG_ERROR, LOG_WARNING,"imhiredis: 'stream.autoclaimIdleTime' "
+					"set with no consumer group set : ignored.");
+		}
+		if(inst->streamReadFrom[0] == '\0') {
+			inst->streamReadFrom[0] = '$';
+		}
 	} else {
-		LogError(0, RS_RET_CONFIG_ERROR, "imhiredis: no key defined !");
-		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-	}
-
-	if (inst->mode != IMHIREDIS_MODE_QUEUE && inst->mode != IMHIREDIS_MODE_SUBSCRIBE) {
-		LogError(0, RS_RET_CONFIG_ERROR, "imhiredis: invalid mode, please choose 'subscribe' or 'queue' mode.");
-		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-	}
-
-	if (inst->mode == IMHIREDIS_MODE_SUBSCRIBE && inst->useLPop) {
-		LogMsg(0, RS_RET_CONFIG_ERROR, LOG_WARNING,"imhiredis: 'uselpop' set with mode = subscribe : ignored.");
-
+		if (inst->streamConsumerGroup != NULL) {
+			LogMsg(0, RS_RET_CONFIG_ERROR, LOG_WARNING,"imhiredis: 'stream.consumerGroup' "
+									"set with mode != stream : ignored.");
+		}
+		if (inst->streamConsumerName != NULL) {
+			LogMsg(0, RS_RET_CONFIG_ERROR, LOG_WARNING,"imhiredis: 'stream.consumerName' "
+									"set with mode != stream : ignored.");
+		}
+		if (inst->streamAutoclaimIdleTime != 0) {
+			LogMsg(0, RS_RET_CONFIG_ERROR, LOG_WARNING,"imhiredis: 'stream.autoclaimIdleTime' "
+									"set with mode != stream : ignored.");
+		}
+		if (inst->streamConsumerACK == 0) {
+			LogMsg(0, RS_RET_CONFIG_ERROR, LOG_WARNING,"imhiredis: 'stream.consumerACK' "
+									"disabled with mode != stream : ignored.");
+		}
+		if (inst->fieldList.nmemb > 0) {
+			LogMsg(0, RS_RET_CONFIG_ERROR, LOG_WARNING,"imhiredis: 'fields' "
+									"unused for mode != stream : ignored.");
+		}
 	}
 
 	if (inst->password != NULL) {
@@ -338,6 +430,20 @@ CODESTARTnewInpInst
 			inst->redisNodesList->port = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "password")) {
 			inst->password = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "stream.consumerGroup")) {
+			inst->streamConsumerGroup = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "stream.consumerName")) {
+			inst->streamConsumerName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "stream.consumerACK")) {
+			inst->streamConsumerACK = pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "stream.readFrom")) {
+			// inst->streamReadFrom is already allocated, only copy contents
+			memcpy(inst->streamReadFrom,
+				es_getBufAddr(pvals[i].val.d.estr),
+				es_strlen(pvals[i].val.d.estr));
+			inst->streamReadFrom[es_strlen(pvals[i].val.d.estr)] = '\0';
+		} else if(!strcmp(inppblk.descr[i].name, "stream.autoclaimIdleTime")) {
+			inst->streamAutoclaimIdleTime = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "uselpop")) {
 			inst->useLPop = pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "mode")) {
@@ -346,10 +452,43 @@ CODESTARTnewInpInst
 				inst->mode = IMHIREDIS_MODE_QUEUE;
 			} else if (!strcmp((const char*)inst->modeDescription, "subscribe")) {
 				inst->mode = IMHIREDIS_MODE_SUBSCRIBE;
+			} else if (!strcmp((const char*)inst->modeDescription, "stream")) {
+				inst->mode = IMHIREDIS_MODE_STREAM;
 			} else {
 				LogMsg(0, RS_RET_PARAM_ERROR, LOG_ERR, "imhiredis: unsupported mode "
-					"'%s'", inppblk.descr[i].name);
+					"'%s'", inst->modeDescription);
 				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+			}
+		} else if (!strcmp(inppblk.descr[i].name, "fields")) {
+			inst->fieldList.nmemb = pvals[i].val.d.ar->nmemb;
+			CHKmalloc(inst->fieldList.name = calloc(inst->fieldList.nmemb, sizeof(char *)));
+			CHKmalloc(inst->fieldList.varname = calloc(inst->fieldList.nmemb, sizeof(char *)));
+			for (int j = 0; j <  pvals[i].val.d.ar->nmemb; ++j) {
+				char *const param = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+				char *varname = NULL;
+				char *name;
+				if(*param == ':') {
+					char *b = strchr(param+1, ':');
+					if(b == NULL) {
+						LogMsg(0, RS_RET_PARAM_ERROR, LOG_ERR,
+							"imhiredis: missing closing colon: '%s'", param);
+						ABORT_FINALIZE(RS_RET_ERR);
+					}
+					*b = '\0'; /* split name & varname */
+					varname = param+1;
+					name = b+1;
+				} else {
+					name = param;
+				}
+				CHKmalloc(inst->fieldList.name[j] = strdup(name));
+				char vnamebuf[1024];
+				snprintf(vnamebuf, sizeof(vnamebuf),
+					"!%s", (varname == NULL) ? name : varname);
+				CHKmalloc(inst->fieldList.varname[j] = strdup(vnamebuf));
+				DBGPRINTF("will map '%s' to '%s'\n",
+						inst->fieldList.name[j],
+						inst->fieldList.varname[j]);
+				free(param);
 			}
 		} else if(!strcmp(inppblk.descr[i].name, "key")) {
 			inst->key = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -464,7 +603,20 @@ CODESTARTfreeCnf
 			free(inst->password);
 		free(inst->modeDescription);
 		free(inst->key);
+		if(inst->streamConsumerGroup != NULL)
+			free(inst->streamConsumerGroup);
+		if(inst->streamConsumerName != NULL)
+			free(inst->streamConsumerName);
+		free(inst->streamReadFrom);
 		free(inst->pszBindRuleset);
+		if(inst->fieldList.name != NULL) {
+			for(int i = 0 ; i < inst->fieldList.nmemb ; ++i) {
+				free(inst->fieldList.name[i]);
+				free(inst->fieldList.varname[i]);
+			}
+			free(inst->fieldList.name);
+			free(inst->fieldList.varname);
+		}
 		if(inst->conn != NULL) {
 			redisFree(inst->conn);
 			inst->conn = NULL;
@@ -552,10 +704,10 @@ CODESTARTrunInput
 	// This thread simply runs the various threads, then waits for Rsyslog to stop
 	while(glbl.GetGlobalInputTermState() == 0) {
 		if(glbl.GetGlobalInputTermState() == 0)
-			/* Check termination state every 100ms
+			/* Check termination state every 0.5s
 			 * should be sufficient to grant fast response to shutdown while not hogging CPU
 			 */
-			srSleep(0, 100000);
+			srSleep(0, 500000);
 	}
 	DBGPRINTF("imhiredis: terminating upon request of rsyslog core\n");
 
@@ -662,7 +814,7 @@ static void redisAsyncRecvCallback (redisAsyncContext *aconn, void *reply, void 
 	if (r->elements < 3 || r->element[2]->str == NULL) {
 		return;
 	}
-	enqMsg(inst, r->element[2]->str);
+	enqMsg(inst, r->element[2]->str, r->element[2]->len);
 
 	return;
 }
@@ -742,11 +894,66 @@ redisReply *getRole(redisContext *c) {
 }
 
 
+static struct json_object* _redisParseIntegerReply(const redisReply *reply) {
+	return json_object_new_int64(reply->integer);
+}
+
+static struct json_object* _redisParseDoubleReply(const redisReply *reply) {
+	return json_object_new_double_s(reply->dval, reply->str);
+}
+
+static struct json_object* _redisParseStringReply(const redisReply *reply) {
+	return json_object_new_string_len(reply->str, reply->len);
+}
+
+static struct json_object* _redisParseArrayReply(const redisReply *reply) {
+	struct json_object *result = NULL;
+	struct json_object *res = NULL;
+	char *key = NULL;
+
+	result = json_object_new_object(); // the redis type name is ARRAY, but represents a dict
+
+	if (result != NULL) {
+		for(size_t i = 0; i < reply->elements; i++) {
+			if (reply->element[i]->type == REDIS_REPLY_STRING && i % 2 == 0) {
+				key = reply->element[i]->str;
+			} else {
+				switch(reply->element[i]->type) {
+					case REDIS_REPLY_INTEGER:
+						res = _redisParseIntegerReply(reply->element[i]);
+						json_object_object_add(result, key, res);
+						break;
+					case REDIS_REPLY_DOUBLE:
+						res = _redisParseDoubleReply(reply->element[i]);
+						json_object_object_add(result, key, res);
+						break;
+					case REDIS_REPLY_STRING:
+						res = _redisParseStringReply(reply->element[i]);
+						json_object_object_add(result, key, res);
+						break;
+					case REDIS_REPLY_ARRAY:
+						res = _redisParseArrayReply(reply->element[i]);
+						json_object_object_add(result, key, res);
+						break;
+					default:
+						DBGPRINTF("Unhandled case!\n");
+						LogMsg(0, RS_RET_OK_WARN, LOG_WARNING,
+							"Redis reply object contains an unhandled type!");
+						break;
+				}
+			}
+		}
+	}
+
+	return result;
+}
+
+
 /*
  *	enqueue the hiredis message. The provided string is
  *	not freed - this must be done by the caller.
  */
-static rsRetVal enqMsg(instanceConf_t *const inst, const char *message) {
+static rsRetVal enqMsg(instanceConf_t *const inst, const char *message, size_t msgLen) {
 	DEFiRet;
 	smsg_t *pMsg;
 
@@ -759,11 +966,85 @@ static rsRetVal enqMsg(instanceConf_t *const inst, const char *message) {
 
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetInputName(pMsg, pInputName);
-	MsgSetRawMsg(pMsg, message, strlen(message));
+	MsgSetRawMsg(pMsg, message, msgLen);
 	MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY);
 	MsgSetRuleset(pMsg, inst->pBindRuleset);
 	MsgSetMSGoffs(pMsg, 0);	/* we do not have a header... */
 	CHKiRet(submitMsg2(pMsg));
+
+finalize_it:
+	RETiRet;
+}
+
+
+static rsRetVal enqMsgJson(instanceConf_t *const inst, struct json_object *json, struct json_object *metadata) {
+	DEFiRet;
+	smsg_t *pMsg;
+	struct json_object *tempJson = NULL;
+
+	assert(json != NULL);
+
+	CHKiRet(msgConstruct(&pMsg)); // In case of allocation error -> needs to break
+	MsgSetInputName(pMsg, pInputName);
+	MsgSetRuleset(pMsg, inst->pBindRuleset);
+	MsgSetMSGoffs(pMsg, 0);	/* we do not have a header... */
+	if(RS_RET_OK != MsgSetFlowControlType(pMsg, eFLOWCTL_LIGHT_DELAY))
+		LogMsg(0, RS_RET_OK_WARN, LOG_WARNING,
+			"Could not set Flow Control on message.");
+	if(inst->fieldList.nmemb != 0) {
+		for (int i = 0; i < inst->fieldList.nmemb; i++)
+		{
+			DBGPRINTF("processing field '%s'\n", inst->fieldList.name[i]);
+
+			/* case 1: static field. We simply forward it */
+			if (inst->fieldList.name[i][0] != '!' && inst->fieldList.name[i][0] != '.')
+			{
+				DBGPRINTF("field is static, taking it as it is...\n");
+				tempJson = json_object_new_string(inst->fieldList.name[i]);
+			}
+			/* case 2: dynamic field. We retrieve its value from the JSON logline and add it */
+			else
+			{
+				DBGPRINTF("field is dynamic, searching in root object...\n");
+				if (!json_object_object_get_ex(json, inst->fieldList.name[i]+1, &tempJson)) {
+
+					DBGPRINTF("Did not find value %s in message\n", inst->fieldList.name[i]);
+					continue;
+				}
+				// Getting object as it will not keep the same lifetime as its origin object
+				tempJson = json_object_get(tempJson);
+				// original object is put: no need for it anymore
+				json_object_put(json);
+			}
+
+			DBGPRINTF("got value of field '%s'\n", inst->fieldList.name[i]);
+			DBGPRINTF("will insert to '%s'\n", inst->fieldList.varname[i]);
+
+			if(RS_RET_OK != msgAddJSON(pMsg, (uchar *)inst->fieldList.varname[i], tempJson, 0, 0)) {
+				LogMsg(0, RS_RET_OBJ_CREATION_FAILED, LOG_ERR,
+					"Failed to add value to '%s'", inst->fieldList.varname[i]);
+			}
+
+			tempJson = NULL;
+		}
+	} else {
+		if(RS_RET_OK != msgAddJSON(pMsg, (uchar*)"!", json, 0, 0)) {
+			LogMsg(0, RS_RET_OBJ_CREATION_FAILED, LOG_ERR,
+				"Failed to add json info to message!");
+			ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
+		}
+	}
+	if (metadata != NULL && RS_RET_OK != msgAddJSON(pMsg, (uchar*)".", metadata, 0, 0)) {
+		LogMsg(0, RS_RET_OBJ_CREATION_FAILED, LOG_ERR,
+			"Failed to add metadata to message!");
+		ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
+	}
+	if(RS_RET_OK != submitMsg2(pMsg)) {
+		LogMsg(0, RS_RET_OBJ_CREATION_FAILED, LOG_ERR,
+			"Failed to submit message to main queue!");
+		ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
+	}
+	DBGPRINTF("enqMsgJson: message enqueued!\n");
 
 finalize_it:
 	RETiRet;
@@ -1127,6 +1408,79 @@ finalize_it:
 }
 
 /*
+ *	Helper method to connect to the current master asynchronously
+ *	'inst' parameter should be non-NULL and have a valid currentNode object
+ */
+rsRetVal connectMasterAsync(instanceConf_t *inst) {
+	DEFiRet;
+
+	if(RS_RET_OK != redisConnectAsync(&(inst->aconn), inst->currentNode)) {
+		inst->currentNode = NULL;
+		ABORT_FINALIZE(RS_RET_REDIS_ERROR);
+	}
+	if(	inst->password != NULL &&
+		inst->password[0] != '\0' &&
+		RS_RET_OK != redisAuthenticate(inst)) {
+
+		redisAsyncFree(inst->aconn);
+		inst->aconn = NULL;
+		inst->currentNode = NULL;
+		ABORT_FINALIZE(RS_RET_REDIS_AUTH_FAILED);
+	}
+
+	// finalize context creation
+	inst->aconn->data = (void *)inst;
+	redisAsyncSetConnectCallback(inst->aconn, redisAsyncConnectCallback);
+	redisAsyncSetDisconnectCallback(inst->aconn, redisAsyncDisconnectCallback);
+	redisLibeventAttach(inst->aconn, inst->evtBase);
+
+finalize_it:
+	RETiRet;
+}
+
+
+/*
+ *	Helper method to check if (async) instance is connected
+ */
+static sbool isConnectedAsync(instanceConf_t *inst) {
+	return inst->aconn != NULL;
+}
+
+
+/*
+ *	Helper method to connect to the current master synchronously
+ *	'inst' parameter should be non-NULL and have a valid currentNode object
+ */
+rsRetVal connectMasterSync(instanceConf_t *inst) {
+	DEFiRet;
+
+	if(RS_RET_OK != redisConnectSync(&(inst->conn), inst->currentNode)) {
+		inst->currentNode = NULL;
+		ABORT_FINALIZE(RS_RET_REDIS_ERROR);
+	}
+	if(	inst->password != NULL &&
+		inst->password[0] != '\0' &&
+		RS_RET_OK != redisAuthenticate(inst)) {
+
+		redisFree(inst->conn);
+		inst->conn = NULL;
+		inst->currentNode = NULL;
+		ABORT_FINALIZE(RS_RET_REDIS_AUTH_FAILED);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+/*
+ *	Helper method to check if instance is connected
+ */
+static sbool isConnectedSync(instanceConf_t *inst) {
+	return inst->conn != NULL;
+}
+
+/*
  *	dequeue all entries in the redis list, using batches of 10 commands
  */
 rsRetVal redisDequeue(instanceConf_t *inst) {
@@ -1136,58 +1490,63 @@ rsRetVal redisDequeue(instanceConf_t *inst) {
 
 	assert(inst != NULL);
 
-	DBGPRINTF("imhiredis: beginning to dequeue key '%s'\n", inst->key);
+	DBGPRINTF("redisDequeue: beginning to dequeue key '%s'\n", inst->key);
 
 	do {
-		// append a batch of QUEUE_BATCH_SIZE POP commands (either LPOP or RPOP depending on conf)
+		// append a batch of BATCH_SIZE POP commands (either LPOP or RPOP depending on conf)
 		if (inst->useLPop == 1) {
-			DBGPRINTF("imhiredis: Queuing #%d LPOP commands on key '%s' \n",
-					QUEUE_BATCH_SIZE,
+			DBGPRINTF("redisDequeue: Queuing #%d LPOP commands on key '%s' \n",
+					BATCH_SIZE,
 					inst->key);
-			for (i=0; i<QUEUE_BATCH_SIZE; ++i ) {
+			for (i=0; i<BATCH_SIZE; ++i ) {
 				if (REDIS_OK != redisAppendCommand(inst->conn, "LPOP %s", inst->key))
 					break;
 			}
 		} else {
-			DBGPRINTF("imhiredis: Queuing #%d RPOP commands on key '%s' \n",
-					QUEUE_BATCH_SIZE,
+			DBGPRINTF("redisDequeue: Queuing #%d RPOP commands on key '%s' \n",
+					BATCH_SIZE,
 					inst->key);
-			for (i=0; i<QUEUE_BATCH_SIZE; i++) {
+			for (i=0; i<BATCH_SIZE; i++) {
 				if (REDIS_OK != redisAppendCommand(inst->conn, "RPOP %s", inst->key))
 					break;
 			}
 		}
 
+		DBGPRINTF("redisDequeue: Dequeuing...\n")
 		// parse responses from appended commands
 		do {
 			if (REDIS_OK != redisGetReply(inst->conn, (void **) &reply)) {
 				// error getting reply, must stop
-				LogError(0, RS_RET_REDIS_ERROR, "imhiredis: Error reading reply after POP #%d on key "
-								"'%s'", (QUEUE_BATCH_SIZE - i), inst->key);
+				LogError(0, RS_RET_REDIS_ERROR, "redisDequeue: Error reading reply after POP #%d "
+								"on key '%s'", (BATCH_SIZE - i), inst->key);
+				// close connection
+				redisFree(inst->conn);
+				inst->currentNode = NULL;
+				inst->conn = NULL;
 				ABORT_FINALIZE(RS_RET_REDIS_ERROR);
 			} else {
 				if (reply != NULL) {
 					replyType = reply->type;
 					switch(replyType) {
 						case REDIS_REPLY_STRING:
-							enqMsg(inst, reply->str);
+							enqMsg(inst, reply->str, reply->len);
 							break;
 						case REDIS_REPLY_NIL:
 							// replies are dequeued but are empty = end of list
 							break;
 						case REDIS_REPLY_ERROR:
 							// There is a problem with the key or the Redis instance
-							LogMsg(0, RS_RET_REDIS_ERROR, LOG_ERR, "imhiredis: error "
+							LogMsg(0, RS_RET_REDIS_ERROR, LOG_ERR, "redisDequeue: error "
 							"while POP'ing key '%s' -> %s", inst->key, reply->str);
 							ABORT_FINALIZE(RS_RET_REDIS_ERROR);
 						default:
-							LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "imhiredis: unexpected "
-							"reply type: %s", redis_replies[replyType%7]);
+							LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "redisDequeue: "
+							"unexpected reply type: %s", REDIS_REPLIES[replyType%15]);
 					}
 					freeReplyObject(reply);
 					reply = NULL;
 				} else { /* reply == NULL */
-					LogMsg(0, RS_RET_REDIS_ERROR, LOG_ERR, "imhiredis: unexpected empty reply "
+					LogMsg(0, RS_RET_REDIS_ERROR, LOG_ERR, "redisDequeue: unexpected empty reply "
 						"for successful return");
 					ABORT_FINALIZE(RS_RET_REDIS_ERROR);
 				}
@@ -1196,10 +1555,23 @@ rsRetVal redisDequeue(instanceConf_t *inst) {
 		// while there are replies to unpack, continue
 		} while (--i > 0);
 
-	// while input can run and last reply was a string, continue with a new batch
-	} while (replyType == REDIS_REPLY_STRING && glbl.GetGlobalInputTermState() == 0);
+		if(replyType == REDIS_REPLY_NIL) {
+			/* sleep 1s between 2 POP tries, when no new entries are available (list is empty)
+			* this does NOT limit dequeing rate, but prevents the input from polling Redis too often
+			*/
+			for(i = 0; i < 10; i++) {
+				// Time to stop the thread
+				if (glbl.GetGlobalInputTermState() != 0)
+					FINALIZE;
+				// 100ms sleeps
+				srSleep(0, 100000);
+			}
+		}
 
-	DBGPRINTF("imhiredis: finished to dequeue key '%s'\n", inst->key);
+	// while input can run, continue with a new batch
+	} while (glbl.GetGlobalInputTermState() == 0);
+
+	DBGPRINTF("redisDequeue: finished to dequeue key '%s'\n", inst->key);
 
 finalize_it:
 	if (reply)
@@ -1208,41 +1580,526 @@ finalize_it:
 }
 
 
+rsRetVal ensureConsumerGroupCreated(instanceConf_t *inst) {
+	DEFiRet;
+	redisReply *reply = NULL;
+
+	DBGPRINTF("ensureConsumerGroupCreated: Creating group %s on stream %s\n", inst->streamConsumerGroup, inst->key);
+
+	reply = (redisReply *)redisCommand(inst->conn, "XGROUP CREATE %s %s %s MKSTREAM",
+				inst->key,
+				inst->streamConsumerGroup,
+				inst->streamReadFrom);
+	if(reply != NULL) {
+		switch(reply->type) {
+			case REDIS_REPLY_STATUS:
+			case REDIS_REPLY_STRING:
+				if(0 == strncmp("OK", reply->str, reply->len))
+					DBGPRINTF("ensureConsumerGroupCreated: Consumer group %s created successfully "
+						"for stream %s\n",
+						inst->streamConsumerGroup,
+						inst->key);
+				break;
+			case REDIS_REPLY_ERROR:
+				if(strcasestr(reply->str, "BUSYGROUP") != NULL) {
+					DBGPRINTF("ensureConsumerGroupCreated: Consumer group %s already exists for "
+						"stream %s, ignoring\n",
+						inst->streamConsumerGroup,
+						inst->key);
+				} else {
+					LogError(0, RS_RET_ERR, "ensureConsumerGroupCreated: An unknown error "
+						"occurred while creating a Consumer group %s on stream %s -> %s",
+						inst->streamConsumerGroup,
+						inst->key,
+						reply->str);
+					ABORT_FINALIZE(RS_RET_ERR);
+				}
+				break;
+			default:
+				LogError(0, RS_RET_ERR, "ensureConsumerGroupCreated: An unknown reply was received "
+							"-> %s", REDIS_REPLIES[(reply->type)%15]);
+				ABORT_FINALIZE(RS_RET_ERR);
+		}
+	} else {
+		LogError(0, RS_RET_REDIS_ERROR, "ensureConsumerGroupCreated: Could not create group %s on stream %s!",
+						inst->streamConsumerGroup,
+						inst->key);
+		ABORT_FINALIZE(RS_RET_REDIS_ERROR);
+	}
+
+finalize_it:
+	if(reply != NULL)
+		freeReplyObject(reply);
+	RETiRet;
+}
+
+
+rsRetVal ackStreamIndex(instanceConf_t *inst, uchar *stream, uchar *group, uchar *index) {
+	DEFiRet;
+	redisReply *reply = NULL;
+
+	DBGPRINTF("ackStream: Acknowledging index '%s' in stream %s\n", index, stream);
+
+	reply = (redisReply *)redisCommand(inst->conn, "XACK %s %s %s",
+				stream,
+				group,
+				index);
+	if(reply != NULL) {
+		switch(reply->type) {
+			case REDIS_REPLY_INTEGER:
+				if(reply->integer == 1) {
+					DBGPRINTF("ackStreamIndex: index successfully acknowledged "
+						"for stream %s\n",
+						inst->key);
+				} else {
+					DBGPRINTF("ackStreamIndex: message was not acknowledged "
+						"-> already done?");
+				}
+				break;
+			case REDIS_REPLY_ERROR:
+				LogError(0, RS_RET_ERR, "ackStreamIndex: An error occurred "
+					"while trying to ACK message %s on %s[%s] -> %s",
+					index,
+					stream,
+					group,
+					reply->str);
+				ABORT_FINALIZE(RS_RET_ERR);
+			default:
+				LogError(0, RS_RET_ERR, "ackStreamIndex: unexpected reply type: %s",
+							REDIS_REPLIES[(reply->type)%15]);
+				ABORT_FINALIZE(RS_RET_ERR);
+		}
+
+	} else {
+		LogError(0, RS_RET_REDIS_ERROR, "ackStreamIndex: Could not ACK message with index %s for %s[%s]!",
+						index,
+						stream,
+						group);
+		ABORT_FINALIZE(RS_RET_REDIS_ERROR);
+	}
+
+finalize_it:
+	if(reply != NULL) {
+		freeReplyObject(reply);
+	}
+	RETiRet;
+}
+
+
+static rsRetVal enqueueRedisStreamReply(instanceConf_t *const inst, redisReply *reply) {
+	DEFiRet;
+	struct json_object *json = NULL, *metadata = NULL, *redis = NULL;
+
+	json = _redisParseArrayReply(reply->element[1]);
+
+	CHKmalloc(metadata = json_object_new_object());
+	CHKmalloc(redis = json_object_new_object());
+	json_object_object_add(redis, "stream", json_object_new_string((char *)inst->key));
+	json_object_object_add(redis, "index", _redisParseStringReply(reply->element[0]));
+	if(inst->streamConsumerGroup != NULL) {
+		json_object_object_add(redis, "group", json_object_new_string((char *)inst->streamConsumerGroup));
+	}
+	if(inst->streamConsumerName != NULL) {
+		json_object_object_add(redis, "consumer", json_object_new_string((char *)inst->streamConsumerName));
+	}
+
+	// ownership of redis object allocated by json_object_new_object() is taken by json
+	// no need to free/destroy/put redis object
+	json_object_object_add(metadata, "redis", redis);
+
+	CHKiRet(enqMsgJson(inst, json, metadata));
+	// enqueued message successfully, json and metadata objects are now owned by enqueued message
+	// no need to free/destroy/put json objects
+	json = NULL;
+	metadata = NULL;
+
+	if(inst->streamConsumerGroup != NULL && inst->streamConsumerACK) {
+		CHKiRet(ackStreamIndex(
+			inst,
+			(uchar *)inst->key,
+			inst->streamConsumerGroup,
+			(uchar *)reply->element[0]->str
+		));
+	}
+
+finalize_it:
+	// If that happens, there was an error during one of the steps and the json object is not enqueued
+	if(json != NULL) json_object_put(json);
+	if(metadata != NULL) json_object_put(metadata);
+	RETiRet;
+}
+
+
 /*
- *	worker function for asynchronous (subscribe) mode
+ *	handle the hiredis Stream XREAD/XREADGROUP return objects. The provided reply is
+ *	not freed - this must be done by the caller.
+ *	example of stream to parse:
+ *	  1) 1) "mystream"			<- name of the stream indexes are from (list of streams requested)
+ *	     2) 1) 1) "1681749395006-0"		<- list of indexes returned for stream
+ *	           2) 1) "key1"
+ *	              2) "value1"
+ *	        2) 1) "1681749409349-0"
+ *	           2) 1) "key2"
+ *	              2) "value2"
+ *	              3) "key2.2"
+ *	              4) "value2.2"
+ *	json equivalent:
+ *	  [
+ *	    "mystream": [
+ *	      {
+ *	        "1681749395006-0": {
+ *	          "key1": "value1"
+ *	        }
+ *	      },
+ *	      {
+ *	        "1681749409349-0": {
+ *	          "key2": "value2",
+ *	          "key2.2": "value2.2"
+ *	        }
+ *	      }
+ *	    ]
+ *	  ]
  */
-void workerLoopSubscribe(struct imhiredisWrkrInfo_s *me) {
+static rsRetVal handleRedisXREADReply(instanceConf_t *const inst, const redisReply *reply) {
+	DEFiRet;
+	redisReply *streamObj = NULL, *msgList = NULL, *msgObj = NULL;
+
+	if(reply == NULL || reply->type != REDIS_REPLY_ARRAY) {
+		/* we do not process empty or non-ARRAY lines */
+		DBGPRINTF("handleRedisXREADReply: object is not an array, ignoring\n");
+		LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "handleRedisXREADReply: object is not an array, ignoring");
+		ABORT_FINALIZE(RS_RET_OK_WARN);
+	} else {
+		// iterating on streams
+		for(size_t i = 0; i < reply->elements; i++) {
+			streamObj = reply->element[i];
+			// object should contain the name of the stream, and an array containing the messages
+			if(streamObj->type != REDIS_REPLY_ARRAY || streamObj->elements != 2) {
+				LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "handleRedisXREADReply: wrong object format, "
+				"object should contain the name of the stream and an array of messages");
+				ABORT_FINALIZE(RS_RET_OK_WARN);
+			}
+			if(streamObj->element[0]->type != REDIS_REPLY_STRING) {
+				LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "handleRedisXREADReply: wrong field format, "
+				"first entry is not a string (supposed to be stream name)");
+				ABORT_FINALIZE(RS_RET_OK_WARN);
+			}
+
+			msgList = streamObj->element[1];
+
+			if(msgList->type != REDIS_REPLY_ARRAY) {
+				LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "handleRedisXREADReply: wrong field format, "
+				"second entry is not an array (supposed to be list of messages for stream)");
+				ABORT_FINALIZE(RS_RET_OK_WARN);
+			}
+
+			DBGPRINTF("handleRedisXREADReply: enqueuing messages for stream '%s'\n",
+				streamObj->element[0]->str);
+
+			for(size_t j = 0; j < msgList->elements; j++) {
+				msgObj = msgList->element[j];
+				// Object should contain the name of the index, and its content(s)
+				if(msgObj->type != REDIS_REPLY_ARRAY || msgObj->elements != 2) {
+					LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "handleRedisXREADReply: wrong object "
+						"format, object should contain the index and its content(s)");
+					ABORT_FINALIZE(RS_RET_OK_WARN);
+				}
+				if(msgObj->element[0]->type != REDIS_REPLY_STRING) {
+					LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "handleRedisXREADReply: wrong field "
+						"format, first entry should be a string (index name)");
+					ABORT_FINALIZE(RS_RET_OK_WARN);
+				}
+
+				if(msgObj->type != REDIS_REPLY_ARRAY) {
+					LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "handleRedisXREADReply: wrong field "
+						"format, second entry should be an array (index content(s))");
+					ABORT_FINALIZE(RS_RET_OK_WARN);
+				}
+
+				CHKiRet(enqueueRedisStreamReply(inst, msgObj));
+
+				// Update current stream index
+				memcpy(inst->streamReadFrom, msgObj->element[0]->str, msgObj->element[0]->len);
+				inst->streamReadFrom[msgObj->element[0]->len] = '\0';
+				DBGPRINTF("handleRedisXREADReply: current stream index is %s\n", inst->streamReadFrom);
+			}
+		}
+	}
+
+	DBGPRINTF("handleRedisXREADReply: finished enqueuing!\n");
+finalize_it:
+	RETiRet;
+}
+
+
+/*
+ *	handle the hiredis Stream XAUTOCLAIM return object. The provided reply is
+ *	not freed - this must be done by the caller.
+ *	example of stream to parse:
+ *	  1) "1681904437564-0"		<- next index to use for XAUTOCLAIM
+ *	  2)  1) 1) "1681904437525-0"	<- list of indexes reclaimed
+ *	         2) 1) "toto"
+ *	            2) "tata"
+ *	      2) 1) "1681904437532-0"
+ *	         2) 1) "titi"
+ *	            2) "tutu"
+ *	  3) (empty)			<- indexes that no longer exist, were deleted from the PEL
+ *	json equivalent:
+ *	  "1681904437564-0": [
+ *	    {
+ *	      "1681904437525-0": {
+ *	        "toto": "tata"
+ *	      }
+ *	    },
+ *	    {
+ *	      "1681904437532-0": {
+ *	        "titi": "tutu"
+ *	      }
+ *	    }
+ *	  ]
+ */
+static rsRetVal handleRedisXAUTOCLAIMReply(
+		instanceConf_t *const inst,
+		const redisReply *reply,
+		char **autoclaimIndex) {
+	DEFiRet;
+	redisReply *msgList = NULL, *msgObj = NULL;
+
+	if(reply == NULL || reply->type != REDIS_REPLY_ARRAY) {
+		/* we do not process empty or non-ARRAY lines */
+		DBGPRINTF("handleRedisXAUTOCLAIMReply: object is not an array, ignoring\n");
+		FINALIZE;
+	} else {
+		// Object should contain between 2 and 3 elements (depends on Redis server version)
+		if(reply->elements < 2 || reply->elements > 3) {
+			LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "handleRedisXAUTOCLAIMReply: wrong number of fields, "
+								"cannot process entry");
+			ABORT_FINALIZE(RS_RET_OK_WARN);
+		}
+		if(reply->element[0]->type != REDIS_REPLY_STRING) {
+			LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "handleRedisXAUTOCLAIMReply: the first element "
+								"is not a string, cannot process entry");
+			ABORT_FINALIZE(RS_RET_OK_WARN);
+		}
+
+		msgList = reply->element[1];
+
+		if(msgList->type != REDIS_REPLY_ARRAY) {
+			LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "handleRedisXAUTOCLAIMReply: the second element "
+								"is not an array, cannot process entry");
+			ABORT_FINALIZE(RS_RET_OK_WARN);
+		}
+
+		DBGPRINTF("handleRedisXAUTOCLAIMReply: re-claiming messages for stream '%s'\n", inst->key);
+
+		for(size_t j = 0; j < msgList->elements; j++) {
+			msgObj = msgList->element[j];
+			// Object should contain the name of the index, and its content(s)
+			if(msgObj->type != REDIS_REPLY_ARRAY || msgObj->elements != 2) {
+				LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "handleRedisXAUTOCLAIMReply: wrong message "
+									"format, cannot process");
+				ABORT_FINALIZE(RS_RET_OK_WARN);
+			}
+			if(msgObj->element[0]->type != REDIS_REPLY_STRING) {
+				LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "handleRedisXAUTOCLAIMReply: first message "
+									"element not a string, cannot process");
+				ABORT_FINALIZE(RS_RET_OK_WARN);
+			}
+
+			if(msgObj->type != REDIS_REPLY_ARRAY) {
+				LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "handleRedisXAUTOCLAIMReply: second message "
+									"element not an array, cannot process");
+				ABORT_FINALIZE(RS_RET_OK_WARN);
+			}
+
+			CHKiRet(enqueueRedisStreamReply(inst, msgObj));
+		}
+
+		// Update current stream index with next index from XAUTOCLAIM
+		// No message has to be claimed after that if value is "0-0"
+		memcpy(*autoclaimIndex, reply->element[0]->str, reply->element[0]->len);
+		(*autoclaimIndex)[reply->element[0]->len] = '\0';
+		DBGPRINTF("handleRedisXAUTOCLAIMReply: next stream index is %s\n", (*autoclaimIndex));
+	}
+
+	DBGPRINTF("handleRedisXAUTOCLAIMReply: finished re-claiming!\n");
+finalize_it:
+	RETiRet;
+}
+
+
+/*
+ *	Read Redis stream
+ */
+rsRetVal redisStreamRead(instanceConf_t *inst) {
+	DEFiRet;
+	redisReply *reply = NULL;
+	uint replyType = 0;
+	sbool mustClaimIdle = 0;
+	char *autoclaimIndex = NULL;
+
+	assert(inst != NULL);
+
+	// Ensure stream group is created before reading from it
+	if(inst->streamConsumerGroup != NULL) {
+		CHKiRet(ensureConsumerGroupCreated(inst));
+	}
+
+
+	if(inst->streamAutoclaimIdleTime != 0) {
+		DBGPRINTF("redisStreamRead: getting pending entries for stream '%s' from '%s', with idle time %d\n",
+			inst->key, inst->streamReadFrom, inst->streamAutoclaimIdleTime);
+		CHKmalloc(autoclaimIndex = calloc(1, STREAM_INDEX_STR_MAXLEN));
+		// Cannot claim from '$', will have to claim from the beginning of the stream
+		if(inst->streamReadFrom[0] == '$') {
+			LogMsg(0, RS_RET_OK, LOG_WARNING, "Cannot claim pending entries from '$', "
+				"will have to claim from the beginning of the stream");
+			memcpy(autoclaimIndex, "0-0", 4);
+		} else {
+			memcpy(autoclaimIndex, inst->streamReadFrom, STREAM_INDEX_STR_MAXLEN);
+		}
+		mustClaimIdle = 1;
+	} else {
+		DBGPRINTF("redisStreamRead: beginning to read stream '%s' from '%s'\n",
+			inst->key, inst->streamReadFrom);
+	}
+
+	do {
+		if(inst->streamConsumerGroup == NULL) {
+			reply = (redisReply *)redisCommand(inst->conn, "XREAD COUNT %d BLOCK %d STREAMS %s %s",
+						BATCH_SIZE,
+						WAIT_TIME_MS,
+						inst->key,
+						inst->streamReadFrom);
+		} else {
+			if(mustClaimIdle) {
+				reply = (redisReply *)redisCommand(inst->conn,
+							"XAUTOCLAIM %s %s %s %d %s COUNT %d",
+							inst->key,
+							inst->streamConsumerGroup,
+							inst->streamConsumerName,
+							inst->streamAutoclaimIdleTime,
+							autoclaimIndex,
+							BATCH_SIZE);
+			} else {
+
+				reply = (redisReply *)redisCommand(inst->conn,
+							"XREADGROUP GROUP %s %s COUNT %d BLOCK %d STREAMS %s >",
+							inst->streamConsumerGroup,
+							inst->streamConsumerName,
+							BATCH_SIZE,
+							WAIT_TIME_MS,
+							inst->key);
+			}
+		}
+		if(reply == NULL) {
+			LogError(0, RS_RET_REDIS_ERROR, "redisStreamRead: Error while trying to read stream '%s'",
+							inst->key);
+			ABORT_FINALIZE(RS_RET_REDIS_ERROR);
+		}
+
+		replyType = reply->type;
+		switch(replyType) {
+			case REDIS_REPLY_ARRAY:
+				DBGPRINTF("reply is an array, proceeding...\n");
+				if(mustClaimIdle) {
+					CHKiRet(handleRedisXAUTOCLAIMReply(inst, reply, &autoclaimIndex));
+					if(!strncmp(autoclaimIndex, "0-0", 4)) {
+						DBGPRINTF("redisStreamRead: Caught up with pending messages, "
+							"getting back to regular reads\n");
+						mustClaimIdle = 0;
+					}
+				} else {
+					CHKiRet(handleRedisXREADReply(inst, reply));
+				}
+				break;
+			case REDIS_REPLY_NIL:
+				// replies are dequeued but are empty = end of list
+				if(mustClaimIdle) mustClaimIdle = 0;
+				break;
+			case REDIS_REPLY_ERROR:
+				// There is a problem with the key or the Redis instance
+				LogMsg(0, RS_RET_REDIS_ERROR, LOG_ERR, "redisStreamRead: error "
+				"while reading stream(s) -> %s", reply->str);
+				srSleep(1, 0);
+				ABORT_FINALIZE(RS_RET_REDIS_ERROR);
+			default:
+				LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "redisStreamRead: unexpected "
+				"reply type: %s", REDIS_REPLIES[replyType%15]);
+		}
+		freeReplyObject(reply);
+		reply = NULL;
+
+	// while input can run, continue with a new batch
+	} while (glbl.GetGlobalInputTermState() == 0);
+
+	DBGPRINTF("redisStreamRead: finished to dequeue key '%s'\n", inst->key);
+
+finalize_it:
+	if(reply != NULL)
+		freeReplyObject(reply);
+	if(inst->conn != NULL) {
+		redisFree(inst->conn);
+		inst->conn = NULL;
+		inst->currentNode = NULL;
+	}
+	if(autoclaimIndex != NULL)
+		free(autoclaimIndex);
+	RETiRet;
+}
+
+
+/*
+ *	Subscribe to Redis channel
+ */
+rsRetVal redisSubscribe(instanceConf_t *inst) {
+	DEFiRet;
+
+	DBGPRINTF("redisSubscribe: subscribing to channel '%s'\n", inst->key);
+	int ret = redisAsyncCommand(
+		inst->aconn,
+		redisAsyncRecvCallback,
+		NULL,
+		"SUBSCRIBE %s",
+		inst->key);
+
+	if (ret != REDIS_OK) {
+		LogMsg(0, RS_RET_REDIS_ERROR, LOG_ERR, "redisSubscribe: Could not subscribe");
+		ABORT_FINALIZE(RS_RET_REDIS_ERROR);
+	}
+
+	// Will block on this function as long as connection is open and event loop is not stopped
+	event_base_dispatch(inst->evtBase);
+	DBGPRINTF("redisSubscribe: finished.\n");
+
+finalize_it:
+	RETiRet;
+}
+
+
+/*
+ *	generic worker function
+ */
+void workerLoop(struct imhiredisWrkrInfo_s *me) {
 	uint i;
-	DBGPRINTF("imhiredis (async): beginning of subscribe worker loop...\n");
+	DBGPRINTF("workerLoop: beginning of worker loop...\n");
 
 	// Connect first time without delay
 	if (me->inst->currentNode != NULL) {
-		if(RS_RET_OK != redisConnectAsync(&(me->inst->aconn), me->inst->currentNode)) {
-			me->inst->currentNode = NULL;
+		rsRetVal ret = me->fnConnectMaster(me->inst);
+		if(ret != RS_RET_OK) {
+			LogMsg(0, ret, LOG_WARNING, "workerLoop: Could not connect successfully to master");
 		}
-		if(	me->inst->password != NULL &&
-			me->inst->password[0] != '\0' &&
-			RS_RET_OK != redisAuthenticate(me->inst)) {
-
-			redisAsyncFree(me->inst->aconn);
-			me->inst->aconn = NULL;
-			me->inst->currentNode = NULL;
-		}
-
-		// finalize context creation
-		me->inst->aconn->data = (void *)me->inst;
-		redisAsyncSetConnectCallback(me->inst->aconn, redisAsyncConnectCallback);
-		redisAsyncSetDisconnectCallback(me->inst->aconn, redisAsyncDisconnectCallback);
-		redisLibeventAttach(me->inst->aconn, me->inst->evtBase);
 	}
 
 	while(glbl.GetGlobalInputTermState() == 0) {
-		if (me->inst->aconn == NULL) {
+		if (!me->fnIsConnected(me->inst)) {
 			/*
 			 * Sleep 10 seconds before attempting to resume a broken connexion
 			 * (sleep small amounts to avoid missing termination status)
 			 */
-			DBGPRINTF("imhiredis: no valid connection, sleeping 10 seconds before retrying...\n");
+			LogMsg(0, RS_RET_OK, LOG_INFO, "workerLoop: "
+							"no valid connection, sleeping 10 seconds before retrying...");
 			for(i = 0; i < 100; i++) {
 				// Rsyslog asked for shutdown, thread should be stopped
 				if (glbl.GetGlobalInputTermState() != 0)
@@ -1258,122 +2115,16 @@ void workerLoopSubscribe(struct imhiredisWrkrInfo_s *me) {
 			}
 
 			// connect to current master
-			if(me->inst->currentNode != NULL) {
-				if(RS_RET_OK != redisConnectAsync(&(me->inst->aconn), me->inst->currentNode)) {
-					me->inst->currentNode = NULL;
-					continue;
-				}
-				if(	me->inst->password != NULL &&
-					me->inst->password[0] != '\0' &&
-					RS_RET_OK != redisAuthenticate(me->inst)) {
-
-					redisAsyncFree(me->inst->aconn);
-					me->inst->aconn = NULL;
-					me->inst->currentNode = NULL;
-					continue;
-				}
-			}
-
-			// finalize context creation
-			me->inst->aconn->data = (void *)me->inst;
-			redisAsyncSetConnectCallback(me->inst->aconn, redisAsyncConnectCallback);
-			redisAsyncSetDisconnectCallback(me->inst->aconn, redisAsyncDisconnectCallback);
-			redisLibeventAttach(me->inst->aconn, me->inst->evtBase);
-		}
-		if (me->inst->aconn != NULL) {
-			DBGPRINTF("imhiredis (async): subscribing to channel '%s'\n", me->inst->key);
-			redisAsyncCommand(
-				me->inst->aconn,
-				redisAsyncRecvCallback,
-				NULL,
-				"SUBSCRIBE %s",
-				me->inst->key);
-			event_base_dispatch(me->inst->evtBase);
-		}
-	}
-
-end_loop:
-	return;
-}
-
-
-/*
- *	worker function for synchronous (queue) mode
- */
-void workerLoopQueue(struct imhiredisWrkrInfo_s *me) {
-	uint i;
-	DBGPRINTF("imhiredis: beginning of queue worker loop...\n");
-	// Connect first time without delay
-	if (me->inst->currentNode != NULL) {
-		if(RS_RET_OK != redisConnectSync(&(me->inst->conn), me->inst->currentNode)) {
-			me->inst->currentNode = NULL;
-		}
-		if(	me->inst->password != NULL &&
-			me->inst->password[0] != '\0' &&
-			RS_RET_OK != redisAuthenticate(me->inst)) {
-
-			redisFree(me->inst->conn);
-			me->inst->conn = NULL;
-			me->inst->currentNode = NULL;
-		}
-	}
-
-	while(glbl.GetGlobalInputTermState() == 0) {
-		if (me->inst->conn == NULL) {
-			/* Sleep 10 seconds before attempting to resume a broken connexion
-			 * (sleep small amounts to avoid missing termination status)
-			 */
-			DBGPRINTF("imhiredis: no valid connection, sleeping 10 seconds before retrying...\n");
-			for(i = 0; i < 100; i++) {
-				// Time to stop the thread
-				if (glbl.GetGlobalInputTermState() != 0)
-					goto end_loop;
-				// 100ms sleeps
-				srSleep(0, 100000);
-			}
-
-			// search the current master node
-			if (me->inst->currentNode == NULL) {
-				if(RS_RET_OK != redisActualizeCurrentNode(me->inst))
-					continue;
-			}
-
-			// connect to current master
-			if(me->inst->currentNode != NULL) {
-				if(RS_RET_OK != redisConnectSync(&(me->inst->conn), me->inst->currentNode)) {
-					me->inst->currentNode = NULL;
-					continue;
-				}
-				if(	me->inst->password != NULL &&
-					me->inst->password[0] != '\0' &&
-					RS_RET_OK != redisAuthenticate(me->inst)) {
-
-					redisFree(me->inst->conn);
-					me->inst->conn = NULL;
-					me->inst->currentNode = NULL;
-					continue;
+			if (me->inst->currentNode != NULL) {
+				rsRetVal ret = me->fnConnectMaster(me->inst);
+				if(ret != RS_RET_OK) {
+					LogMsg(0, ret, LOG_WARNING, "workerLoop: "
+									"Could not connect successfully to master");
 				}
 			}
 		}
-		if (me->inst->conn != NULL) {
-			if (redisDequeue(me->inst) == RS_RET_REDIS_ERROR) {
-				DBGPRINTF("imhiredis: current connection invalidated\n");
-				redisFree(me->inst->conn);
-				me->inst->currentNode = NULL;
-				me->inst->conn = NULL;
-			}
-			if(glbl.GetGlobalInputTermState() == 0) {
-				/* sleep 1s between 2 POP tries
-				* this does NOT limit dequeing rate, but prevents the input from polling Redis too often
-				*/
-				for(i = 0; i < 10; i++) {
-					// Time to stop the thread
-					if (glbl.GetGlobalInputTermState() != 0)
-						goto end_loop;
-					// 100ms sleeps
-					srSleep(0, 100000);
-				}
-			}
+		if (me->fnIsConnected(me->inst)) {
+			me->fnRun(me->inst);
 		}
 	}
 
@@ -1392,10 +2143,23 @@ imhirediswrkr(void *myself)
 	DBGPRINTF("imhiredis: started hiredis consumer workerthread\n");
 	dbgPrintNode(me->inst->currentNode);
 
-	if(me->inst->mode == IMHIREDIS_MODE_QUEUE)
-		workerLoopQueue(me);
-	else if (me->inst->mode == IMHIREDIS_MODE_SUBSCRIBE)
-		workerLoopSubscribe(me);
+	if(me->inst->mode == IMHIREDIS_MODE_QUEUE) {
+		me->fnConnectMaster = connectMasterSync;
+		me->fnIsConnected = isConnectedSync;
+		me->fnRun = redisDequeue;
+	}
+	else if (me->inst->mode == IMHIREDIS_MODE_STREAM) {
+		me->fnConnectMaster = connectMasterSync;
+		me->fnIsConnected = isConnectedSync;
+		me->fnRun = redisStreamRead;
+	}
+	else if (me->inst->mode == IMHIREDIS_MODE_SUBSCRIBE) {
+		me->fnConnectMaster = connectMasterAsync;
+		me->fnIsConnected = isConnectedAsync;
+		me->fnRun = redisSubscribe;
+	}
+
+	workerLoop(me);
 
 	DBGPRINTF("imhiredis: stopped hiredis consumer workerthread\n");
 	return NULL;
@@ -1421,7 +2185,7 @@ createRedisNode(redisNode **root) {
 	node->isMaster = 0;
 	node->next = NULL;
 
-	if (!root) {
+	if ((*root) == NULL) {
 		*root = node;
 	} else {
 		node->next = (*root);

@@ -1,4 +1,72 @@
 ----------------------------------------------------------------------------------------
+Scheduled Release 8.2306.0 (aka 2023.06) 2023-06-??
+- 2023-06-19: mmnormalize bugfix: if msg cannot be parsed, parser chain is stopped
+  When an parser is not able to parse a message, it should indicate this
+  to rsyslog core, which then activates the next parser(s) inside the
+  configured parser chain.
+  Unfortunatley, mmnormalize always tells core "success", and so no
+  other parsers are activated.
+  closes https://github.com/rsyslog/rsyslog/issues/5148
+- 2023-06-19: [i/o]mhiredis: various fixes and enhancements
+  please see the change log for details. Among others, suspending of the modules
+  has been fixed. Also a new "stream" mode has been added.
+  Thanks to Théo Bertin (frikilax) for the patch.
+- 2023-06-19: testbench/bug: mmexternal-SegFault-empty-jroot-vg.sh fails due to typo
+  Fix the typo that makes the test fail.
+  Thanks to Paul Fertser for the patch.
+- 2023-06-16: imjournal: Add FileCreateMode module parameter
+    FileCreateMode allows to set the default file mode bits
+    when creating new files. As of now, it has only impact on the state file.
+    Add test suite as well.
+    Minor indentation fix in run_journal.yml
+  Thanks to Attila Lakatos for the patch.
+- 2023-06-16: core bugfix: potential segfault on busy systems
+  This was discovered by Konstantin J. Chernov in a practicaly deployment.
+  Here, msg object tag processing caused sporadic segfaults. We did not
+  hear from similiar cases, but there clearly is potential for problems
+  because a mutex lock had insufficient range, thus leading to a potential
+  race.
+  The patch is directly from Konstantin J. Chernov, thanks for that.
+  Please note that the mutex lock could be minimized as it is not strictly
+  needed for the pM == NULL case, but this cause is extremely exotic
+  and the resulting code would be harder to understand. Thus we opt
+  to do the locking on funtion level (as usual).
+  Descriptiond edited by Rainer Gerhards
+  closes: https://github.com/rsyslog/rsyslog/issues/5110
+- 2023-06-16: Add new global config option "libcapng.default"
+  Defines how rsyslog should behave in case something went wrong
+  when capabilities were to be dropped. Default value is "on",
+  in which case rsyslog exits on a libcapng related error.
+  Thanks to Attila Lakatos for the patch.
+  Closes https://github.com/rsyslog/rsyslog/issues/5096
+- 2023-06-05: imfile bugfix: file handle leak, primarily in kubernetes context
+  At this point there is a code imfile.c#L919 that adds an inotify observer to the
+  parent of the symbolic link target. But there is no such code that removes this
+  observer in the case when inotify events do not occur in the directory tree above.
+  This may be if the directory tree of the symbolic link target and the directory tree
+  of the symbolic link itself are divided into different subtrees somewhere at the levels
+  above.
+  For example, in the rsyslog configuration, an imfile with the
+  template /var/log/containers/*.log is configured and there is the following directory
+  tree:
+    /var/log/pods/pod-1/a/0.log
+    /var/log/containers/pod-1-a-0.log -> /var/log/pods/pod-1/a/0.log
+  In this example, kubernetes cron jobs will permanently delete directories at the
+  /var/log/pods/pod-* level. And thus, inotify observer on the parent object of the
+  symbolic link target (/var/log/pods/pod-1/a/0.log) looking at the directory
+  /var/log/pods/pod-1/a will constantly leak.
+  This is due to the fact that the list of active objects in the edge with path
+  /var/log/containers, where the parent object of the target symbolic link is added,
+  is not checked. Verification and deletion will occur only in the case of an inotify
+  event in the upper nodes of the directory tree, in /var/log and above.
+  Thanks to Sergey Kacheev for the patch!
+- 2023-06-05: GNUTls Driver: Fix memory leaks in gtlsInitCred
+  Missing CA Certificate or multiple Connections caused
+  a memory leak in pThis->xcred as it was allocated each time in
+  gtlsInitCred by gnutls_certificate_allocate_credentials
+  closes: https://github.com/rsyslog/rsyslog/issues/5135
+- 2023-05-24: CI: update base ubuntu image for github actions
+----------------------------------------------------------------------------------------
 Scheduled Release 8.2304.0 (aka 2023.04) 2023-04-18
 - 2023-04-17: imptcp bugfix: spam log on oversize message
   If an oversize message was received by imptcp, imptcp reported
