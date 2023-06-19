@@ -1055,6 +1055,74 @@ TESTS += \
 endif # HAVE_VALGRIND
 endif # ENABLE_OMRABBITMQ
 
+if ENABLE_REDIS_TESTS
+if ENABLE_IMHIREDIS
+TESTS +=  \
+	imhiredis-queue.sh \
+	imhiredis-queue-lpop.sh \
+	imhiredis-redis-restart.sh \
+	imhiredis-redis-start-after.sh \
+	imhiredis-subscribe.sh \
+	imhiredis-stream.sh \
+	imhiredis-stream-from-beginning.sh \
+	imhiredis-stream-consumerGroup-ack.sh \
+	imhiredis-stream-consumerGroup-noack.sh \
+	imhiredis-stream-consumerGroup-reclaim.sh
+if HAVE_VALGRIND
+TESTS += \
+	imhiredis-queue-vg.sh \
+	imhiredis-queue-lpop-vg.sh \
+	imhiredis-redis-restart-vg.sh \
+	imhiredis-redis-start-after-vg.sh \
+	imhiredis-subscribe-vg.sh \
+	imhiredis-stream-vg.sh \
+	imhiredis-stream-from-beginning-vg.sh \
+	imhiredis-stream-consumerGroup-ack-vg.sh \
+	imhiredis-stream-consumerGroup-noack-vg.sh \
+	imhiredis-stream-consumerGroup-reclaim-vg.sh
+endif # HAVE_VALGRIND
+endif # ENABLE_IMHIREDIS
+
+if ENABLE_OMHIREDIS
+TESTS +=  \
+	mmdb-reload.sh \
+	omhiredis-dynakey.sh \
+	omhiredis-publish.sh \
+	omhiredis-queue-rpush.sh \
+	omhiredis-queue.sh \
+	omhiredis-set.sh \
+	omhiredis-setex.sh \
+	omhiredis-template.sh \
+	omhiredis-withpass.sh \
+	omhiredis-wrongpass.sh \
+	omhiredis-stream-ack.sh \
+	omhiredis-stream-capped.sh \
+	omhiredis-stream-del.sh \
+	omhiredis-stream-dynack.sh \
+	omhiredis-stream-outfield.sh \
+	omhiredis-stream.sh
+if HAVE_VALGRIND
+TESTS += \
+	mmdb-reload-vg.sh \
+	omhiredis-dynakey-vg.sh \
+	omhiredis-publish-vg.sh \
+	omhiredis-queue-rpush-vg.sh \
+	omhiredis-queue-vg.sh \
+	omhiredis-set-vg.sh \
+	omhiredis-setex-vg.sh \
+	omhiredis-template-vg.sh \
+	omhiredis-withpass-vg.sh \
+	omhiredis-wrongpass-vg.sh \
+	omhiredis-stream-ack-vg.sh \
+	omhiredis-stream-capped-vg.sh \
+	omhiredis-stream-del-vg.sh \
+	omhiredis-stream-dynack-vg.sh \
+	omhiredis-stream-outfield-vg.sh \
+	omhiredis-stream-vg.sh
+endif # HAVE_VALGRIND
+endif # ENABLE_OMHIREDIS
+endif # ENABLE_REDIS_TESTS
+
 if ENABLE_IMPSTATS
 TESTS +=  \
 	impstats-hup.sh \
@@ -2034,6 +2102,26 @@ EXTRA_DIST= \
 	omrabbitmq_error_server3.sh \
 	omrabbitmq_json.sh \
 	omrabbitmq_raw.sh \
+	imhiredis-queue.sh \
+	imhiredis-queue-vg.sh \
+	imhiredis-queue-lpop.sh \
+	imhiredis-queue-lpop-vg.sh \
+	imhiredis-redis-restart.sh \
+	imhiredis-redis-restart-vg.sh \
+	imhiredis-redis-start-after.sh \
+	imhiredis-redis-start-after-vg.sh \
+	imhiredis-subscribe.sh \
+	imhiredis-subscribe-vg.sh \
+	imhiredis-stream.sh \
+	imhiredis-stream-vg.sh \
+	imhiredis-stream-from-beginning.sh \
+	imhiredis-stream-from-beginning-vg.sh \
+	imhiredis-stream-consumerGroup-ack.sh \
+	imhiredis-stream-consumerGroup-ack-vg.sh \
+	imhiredis-stream-consumerGroup-noack.sh \
+	imhiredis-stream-consumerGroup-noack-vg.sh \
+	imhiredis-stream-consumerGroup-reclaim.sh \
+	imhiredis-stream-consumerGroup-reclaim-vg.sh \
 	msgvar-concurrency.sh \
 	msgvar-concurrency-array.sh \
 	testsuites/msgvar-concurrency-array.rulebase \
