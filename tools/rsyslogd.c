@@ -1570,44 +1570,80 @@ initAll(int argc, char **argv)
 	 * Drop capabilities to the necessary set
 	 */
 	int capng_rc, capng_failed = 0;
-	capng_clear(CAPNG_SELECT_BOTH);
+	typedef struct capabilities_s {
+		int capability; /* capability code */
+		const char *name; /* name of the capability to be displayed */
+		sbool present; /* is the capability present that is needed by rsyslog? if so we do not drop it */
+	} capabilities_t;
 
-	if ((capng_rc = capng_updatev(CAPNG_ADD, CAPNG_EFFECTIVE|CAPNG_PERMITTED,
-		CAP_BLOCK_SUSPEND,
-		CAP_CHOWN,
-		CAP_IPC_LOCK,
-		CAP_LEASE,
-		CAP_NET_ADMIN,
-		CAP_NET_BIND_SERVICE,
-		CAP_DAC_OVERRIDE,
-		CAP_SETGID,
-		CAP_SETUID,
-		CAP_SYS_ADMIN,
-		CAP_SYS_CHROOT,
-		CAP_SYS_RESOURCE,
-		CAP_SYSLOG,
-		-1
-	)) != 0) {
-		LogError(0, RS_RET_LIBCAPNG_ERR,
-				"could not update the internal posix capabilities settings "
-				"based on the options passed to it, capng_updatev=%d", capng_rc);
-		capng_failed = 1;
-	}
+	capabilities_t capabilities[] = {
+		#define CAP_FIELD(code) { code, #code,  0 }
+		CAP_FIELD(CAP_BLOCK_SUSPEND),
+		CAP_FIELD(CAP_CHOWN),
+		CAP_FIELD(CAP_IPC_LOCK),
+		CAP_FIELD(CAP_LEASE),
+		CAP_FIELD(CAP_NET_ADMIN),
+		CAP_FIELD(CAP_NET_BIND_SERVICE),
+		CAP_FIELD(CAP_DAC_OVERRIDE),
+		CAP_FIELD(CAP_SETGID),
+		CAP_FIELD(CAP_SETUID),
+		CAP_FIELD(CAP_SYS_ADMIN),
+		CAP_FIELD(CAP_SYS_CHROOT),
+		CAP_FIELD(CAP_SYS_RESOURCE),
+		CAP_FIELD(CAP_SYSLOG)
+		#undef CAP_FIELD
+	};
 
-	if ((capng_rc = capng_apply(CAPNG_SELECT_BOTH)) != 0) {
-		LogError(0, RS_RET_LIBCAPNG_ERR,
-			"could not transfer the specified internal posix capabilities "
-			"settings to the kernel, capng_apply=%d", capng_rc);
-		capng_failed = 1;
-	}
+	if (capng_have_capabilities(CAPNG_SELECT_CAPS) > CAPNG_NONE) {
+		/* Examine which capabilities are available to us, so we do not try to
+		   drop something that is not present. We need to do this in two steps,
+		   because capng_clear clears the capability set. In the second step,
+		   we add back those caps, which were present before clearing the selected
+		   posix capabilities set.
+		*/
+		unsigned long caps_len = sizeof(capabilities) / sizeof(capabilities_t);
+		for (unsigned long i = 0; i < caps_len; i++) {
+			if (capng_have_capability(CAPNG_EFFECTIVE, capabilities[i].capability)) {
+				capabilities[i].present = 1;
+			}
+		}
 
-	if (capng_failed) {
-		DBGPRINTF("Capabilities were not dropped successfully.\n");
-		if (loadConf->globals.bAbortOnFailedLibcapngSetup) {
-			ABORT_FINALIZE(RS_RET_LIBCAPNG_ERR);
+		capng_clear(CAPNG_SELECT_BOTH);
+
+		for (unsigned long i = 0; i < caps_len; i++) {
+			if (capabilities[i].present) {
+				DBGPRINTF("The %s capability is present, "
+					"will try to preserve it.\n", capabilities[i].name);
+				if ((capng_rc = capng_update(CAPNG_ADD, CAPNG_EFFECTIVE|CAPNG_PERMITTED,
+				capabilities[i].capability)) != 0) {
+					LogError(0, RS_RET_LIBCAPNG_ERR,
+							"could not update the internal posix capabilities settings "
+							"based on the options passed to it, capng_update=%d", capng_rc);
+					capng_failed = 1;
+				}
+			} else {
+				DBGPRINTF("The %s capability is not present, "
+					"will not try to preserve it.\n", capabilities[i].name);
+			}
+		}
+
+		if ((capng_rc = capng_apply(CAPNG_SELECT_BOTH)) != 0) {
+			LogError(0, RS_RET_LIBCAPNG_ERR,
+				"could not transfer the specified internal posix capabilities "
+				"settings to the kernel, capng_apply=%d", capng_rc);
+			capng_failed = 1;
+		}
+
+		if (capng_failed) {
+			DBGPRINTF("Capabilities were not dropped successfully.\n");
+			if (loadConf->globals.bAbortOnFailedLibcapngSetup) {
+				ABORT_FINALIZE(RS_RET_LIBCAPNG_ERR);
+			}
+		} else {
+			DBGPRINTF("Capabilities were dropped successfully\n");
 		}
 	} else {
-		DBGPRINTF("Capabilities were dropped successfully\n");
+		DBGPRINTF("No capabilities to drop\n");
 	}
 #endif
 
