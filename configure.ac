@@ -389,10 +389,16 @@ AC_ARG_ENABLE(libcap-ng,
 
 if test "$enable_libcapng" = "yes"; then
         PKG_CHECK_MODULES(
+                [LIBCAPNG_PRESENT],
+                [libcap-ng],
+                [AC_DEFINE([ENABLE_LIBCAPNG_PRESENT], [1], [Indicator that libcap-ng is present])],
+                [AC_MSG_ERROR(libcap-ng is not present.)]
+        )
+        PKG_CHECK_MODULES(
                 [LIBCAPNG],
                 [libcap-ng >= 0.8.2],
                 [AC_DEFINE([ENABLE_LIBCAPNG], [1], [Indicator that libcap-ng is present])],
-                [AC_MSG_ERROR(libcap-ng is not present.)]
+                [AC_MSG_ERROR([libcap-ng is present, but outdated - need 0.8.2 or above.])]
         )
         CFLAGS="$CFLAGS $LIBCAPNG_CFLAGS"
         LIBS="$LIBS $LIBCAPNG_LIBS"
