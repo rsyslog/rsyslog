@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2308.0 (aka 2023.08) 2023-08-??
+- 2023-06-23: testbench: use newer zookeeper version in tests
+- 2023-06-23: build system: more precise error message on too-old lib
+  When libcap-ng was enabled, the lib was present but did not meet the minimum version
+  dependency during configure, it was reported as "missing". We now emit a message
+  telling that it is present, but the version too old.
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2306.0 (aka 2023.06) 2023-06-20
 - 2023-06-19: mmnormalize bugfix: if msg cannot be parsed, parser chain is stopped
