@@ -209,9 +209,11 @@ static void redisAsyncRecvCallback (redisAsyncContext __attribute__((unused)) *c
 static void redisAsyncConnectCallback (const redisAsyncContext *c, int status);
 static void redisAsyncDisconnectCallback (const redisAsyncContext *c, int status);
 static struct json_object* _redisParseIntegerReply(const redisReply *reply);
-static struct json_object* _redisParseDoubleReply(const redisReply *reply);
 static struct json_object* _redisParseStringReply(const redisReply *reply);
 static struct json_object* _redisParseArrayReply(const redisReply *reply);
+#ifdef REDIS_REPLY_DOUBLE
+static struct json_object* _redisParseDoubleReply(const redisReply *reply);
+#endif
 static rsRetVal enqMsg(instanceConf_t *const inst, const char *message, size_t msgLen);
 static rsRetVal enqMsgJson(instanceConf_t *const inst, struct json_object *json, struct json_object *metadata);
 rsRetVal redisAuthentSynchronous(redisContext *conn, uchar *password);
@@ -898,9 +900,11 @@ static struct json_object* _redisParseIntegerReply(const redisReply *reply) {
 	return json_object_new_int64(reply->integer);
 }
 
+#ifdef REDIS_REPLY_DOUBLE
 static struct json_object* _redisParseDoubleReply(const redisReply *reply) {
 	return json_object_new_double_s(reply->dval, reply->str);
 }
+#endif
 
 static struct json_object* _redisParseStringReply(const redisReply *reply) {
 	return json_object_new_string_len(reply->str, reply->len);
@@ -923,10 +927,12 @@ static struct json_object* _redisParseArrayReply(const redisReply *reply) {
 						res = _redisParseIntegerReply(reply->element[i]);
 						json_object_object_add(result, key, res);
 						break;
+#ifdef REDIS_REPLY_DOUBLE
 					case REDIS_REPLY_DOUBLE:
 						res = _redisParseDoubleReply(reply->element[i]);
 						json_object_object_add(result, key, res);
 						break;
+#endif
 					case REDIS_REPLY_STRING:
 						res = _redisParseStringReply(reply->element[i]);
 						json_object_object_add(result, key, res);
