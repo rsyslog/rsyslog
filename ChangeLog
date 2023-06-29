@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2308.0 (aka 2023.08) 2023-08-??
+- 2023-06-29: imhiredis bugfix: Restore compatiblity with hiredis < v1.0.0
+  RESP3 protocol wasn't implemented yet, some types weren't
+  available (REDIS_REPLY_DOUBLE)
+  Thanks to Théo Bertin (frikilax) for the patch.
 - 2023-06-23: testbench: use newer zookeeper version in tests
 - 2023-06-23: build system: more precise error message on too-old lib
   When libcap-ng was enabled, the lib was present but did not meet the minimum version
