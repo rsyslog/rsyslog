@@ -2110,7 +2110,7 @@ actionApplyCnfParam(action_t * const pAction, struct cnfparamvals * const pvals)
 			pAction->bCopyMsg = (int) pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "action.resumeinterval")) {
 			pAction->iResumeInterval = pvals[i].val.d.n;
-		} else if(!strcmp(pblk.descr[i].name, "action.resumeintervalMax")) {
+		} else if(!strcmp(pblk.descr[i].name, "action.resumeintervalmax")) {
 			pAction->iResumeIntervalMax = pvals[i].val.d.n;
 		} else {
 			dbgprintf("action: program error, non-handled "
