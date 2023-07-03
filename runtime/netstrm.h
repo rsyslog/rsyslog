@@ -89,10 +89,11 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 
 	/* v15 -- Tls cert functions */
 	rsRetVal (*SetDrvrTlsCAFile)(netstrm_t *pThis, const uchar* file);
+	rsRetVal (*SetDrvrTlsCRLFile)(netstrm_t *pThis, const uchar* file);
 	rsRetVal (*SetDrvrTlsKeyFile)(netstrm_t *pThis, const uchar* file);
 	rsRetVal (*SetDrvrTlsCertFile)(netstrm_t *pThis, const uchar* file);
 ENDinterface(netstrm)
-#define netstrmCURR_IF_VERSION 15 /* increment whenever you change the interface structure! */
+#define netstrmCURR_IF_VERSION 16 /* increment whenever you change the interface structure! */
 /* interface version 3 added GetRemAddr()
  * interface version 4 added EnableKeepAlive() -- rgerhards, 2009-06-02
  * interface version 5 changed return of CheckConnection from void to rsRetVal -- alorbach, 2012-09-06
@@ -101,6 +102,7 @@ ENDinterface(netstrm)
  * interface version 8 changed signature of Connect() -- dsa, 2016-11-14
  * interface version 9 added SetGnutlsPriorityString -- PascalWithopf, 2017-08-08
  * interface version 10 added oserr parameter to Rcv() -- rgerhards, 2017-09-04
+ * interface version 16 CRL file -- Oracle, 2022-01-16
  * */
 
 /* prototypes */

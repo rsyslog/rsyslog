@@ -1049,6 +1049,7 @@ CODESTARTobjDestruct(nsd_ossl)
 		SSL_CTX_free(pThis->ctx);
 	}
 	free((void*) pThis->pszCAFile);
+	free((void*) pThis->pszCRLFile);
 	free((void*) pThis->pszKeyFile);
 	free((void*) pThis->pszCertFile);
 ENDobjDestruct(nsd_ossl)
@@ -1274,10 +1275,11 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 {
 	DEFiRet;
 	int bHaveCA;
+	int bHaveCRL;
 	int bHaveCert;
 	int bHaveKey;
 	int bHaveExtraCAFiles;
-	const char *caFile, *certFile, *keyFile;
+	const char *caFile, *crlFile, *certFile, *keyFile;
 	char *extraCaFiles, *extraCaFile;
 	/* Setup certificates */
 	caFile = (char*) ((pThis->pszCAFile == NULL) ? glbl.GetDfltNetstrmDrvrCAF(runConf) : pThis->pszCAFile);
@@ -1287,6 +1289,14 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 		bHaveCA = 0;
 	} else {
 		bHaveCA	= 1;
+	}
+	crlFile = (char*) ((pThis->pszCRLFile == NULL) ? glbl.GetDfltNetstrmDrvrCRLF(runConf) : pThis->pszCRLFile);
+	if(crlFile == NULL) {
+		LogMsg(0, RS_RET_CA_CERT_MISSING, LOG_WARNING,
+			"Warning: CRL file is not set");
+		bHaveCRL = 0;
+	} else {
+		bHaveCRL = 1;
 	}
 	certFile = (char*) ((pThis->pszCertFile == NULL) ?
 		glbl.GetDfltNetstrmDrvrCertFile(runConf) : pThis->pszCertFile);
@@ -1334,6 +1344,18 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 				"Open ssl error info may follow in next messages");
 		osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit", "SSL_CTX_load_verify_locations");
 		ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
+	}
+	if(bHaveCRL == 1) {
+		X509_STORE *store = SSL_CTX_get_cert_store(pThis->ctx);
+		if (!X509_STORE_load_file(store, crlFile)) {
+			LogError(0, RS_RET_TLS_CERT_ERR, "Error: CRL could not be accessed. "
+					"Check at least: 1) file path is correct, 2) file exist, "
+					"3) permissions are correct, 4) file content is correct. "
+					"Open ssl error info may follow in next messages");
+			osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit");
+			ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
+		}
+		X509_STORE_set_flags(store, X509_V_FLAG_CRL_CHECK);
 	}
 	if(bHaveCert == 1 && SSL_CTX_use_certificate_chain_file(pThis->ctx, certFile) != 1) {
 		LogError(0, RS_RET_TLS_CERT_ERR, "Error: Certificate file could not be accessed. "
@@ -2104,6 +2126,24 @@ finalize_it:
 }
 
 static rsRetVal
+SetTlsCRLFile(nsd_t *pNsd, const uchar *const crlFile)
+{
+	DEFiRet;
+	nsd_ossl_t *const pThis = (nsd_ossl_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_ossl);
+	if(crlFile == NULL) {
+		pThis->pszCRLFile = NULL;
+	} else {
+		CHKmalloc(pThis->pszCRLFile = (const uchar*) strdup((const char*) crlFile));
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+static rsRetVal
 SetTlsKeyFile(nsd_t *pNsd, const uchar *const pszFile)
 {
 	DEFiRet;
@@ -2176,6 +2216,7 @@ CODESTARTobjQueryInterface(nsd_ossl)
 	pIf->SetPrioritizeSAN = SetPrioritizeSAN; /* we don't NEED this interface! */
 	pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
 	pIf->SetTlsCAFile = SetTlsCAFile;
+	pIf->SetTlsCRLFile = SetTlsCRLFile;
 	pIf->SetTlsKeyFile = SetTlsKeyFile;
 	pIf->SetTlsCertFile = SetTlsCertFile;
 

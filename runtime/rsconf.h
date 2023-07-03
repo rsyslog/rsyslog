@@ -110,6 +110,7 @@ struct globals_s {
 	int debugOnShutdown; /* start debug log when we are shut down */
 	int iGnuTLSLoglevel;/* Sets GNUTLS Debug Level */
 	uchar *pszDfltNetstrmDrvrCAF; /* default CA file for the netstrm driver */
+	uchar *pszDfltNetstrmDrvrCRLF; /* default CRL file for the netstrm driver */
 	uchar *pszDfltNetstrmDrvrCertFile;/* default cert file for the netstrm driver (server) */
 	uchar *pszDfltNetstrmDrvrKeyFile; /* default key file for the netstrm driver (server) */
 	uchar *pszDfltNetstrmDrvr; /* module name of default netstream driver */

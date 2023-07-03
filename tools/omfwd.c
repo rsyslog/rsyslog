@@ -90,6 +90,7 @@ typedef struct _instanceData {
 	int iStrmDrvrSANPreference; /* ignore CN when any SAN set */
 	int iStrmTlsVerifyDepth; /**< Verify Depth for certificate chains */
 	const uchar *pszStrmDrvrCAFile;
+	const uchar *pszStrmDrvrCRLFile;
 	const uchar *pszStrmDrvrKeyFile;
 	const uchar *pszStrmDrvrCertFile;
 	char	*target;
@@ -434,6 +435,7 @@ CODESTARTfreeInstance
 	free(pData->address);
 	free(pData->device);
 	free((void*)pData->pszStrmDrvrCAFile);
+	free((void*)pData->pszStrmDrvrCRLFile);
 	free((void*)pData->pszStrmDrvrKeyFile);
 	free((void*)pData->pszStrmDrvrCertFile);
 	net.DestructPermittedPeers(&pData->pPermPeers);
@@ -827,6 +829,7 @@ static rsRetVal TCPSendInit(void *pvData)
 		CHKiRet(netstrm.SetDrvrPermitExpiredCerts(pWrkrData->pNetstrm,
 			pData->pszStrmDrvrPermitExpiredCerts));
 		CHKiRet(netstrm.SetDrvrTlsCAFile(pWrkrData->pNetstrm, pData->pszStrmDrvrCAFile));
+		CHKiRet(netstrm.SetDrvrTlsCRLFile(pWrkrData->pNetstrm, pData->pszStrmDrvrCRLFile));
 		CHKiRet(netstrm.SetDrvrTlsKeyFile(pWrkrData->pNetstrm, pData->pszStrmDrvrKeyFile));
 		CHKiRet(netstrm.SetDrvrTlsCertFile(pWrkrData->pNetstrm, pData->pszStrmDrvrCertFile));
 
@@ -1214,6 +1217,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->iStrmDrvrSANPreference = 0;
 	pData->iStrmTlsVerifyDepth = 0;
 	pData->pszStrmDrvrCAFile = NULL;
+	pData->pszStrmDrvrCRLFile = NULL;
 	pData->pszStrmDrvrKeyFile = NULL;
 	pData->pszStrmDrvrCertFile = NULL;
 	pData->iRebindInterval = 0;
@@ -1376,6 +1380,8 @@ CODESTARTnewActInst
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "streamdriver.cafile")) {
 			pData->pszStrmDrvrCAFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "streamdriver.crlfile")) {
+			pData->pszStrmDrvrCRLFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "streamdriver.keyfile")) {
 			pData->pszStrmDrvrKeyFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "streamdriver.certfile")) {

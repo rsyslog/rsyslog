@@ -254,6 +254,19 @@ finalize_it:
 }
 
 static rsRetVal
+SetTlsCRLFile(nsd_t __attribute__((unused)) *pNsd, const uchar *const pszFile)
+{
+	DEFiRet;
+	if(pszFile != NULL) {
+		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: CRL File setting not supported by "
+				"ptcp netstream driver - value %s", pszFile);
+		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+	}
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
 SetTlsKeyFile(nsd_t __attribute__((unused)) *pNsd, const uchar *const pszFile)
 {
 	DEFiRet;
@@ -705,6 +718,7 @@ LstnInit(netstrms_t *const pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*
 		CHKiRet(pNS->Drvr.SetCheckExtendedKeyUsage(pNewNsd, netstrms.GetDrvrCheckExtendedKeyUsage(pNS)));
 		CHKiRet(pNS->Drvr.SetPrioritizeSAN(pNewNsd, netstrms.GetDrvrPrioritizeSAN(pNS)));
 		CHKiRet(pNS->Drvr.SetTlsCAFile(pNewNsd, netstrms.GetDrvrTlsCAFile(pNS)));
+		CHKiRet(pNS->Drvr.SetTlsCRLFile(pNewNsd, netstrms.GetDrvrTlsCRLFile(pNS)));
 		CHKiRet(pNS->Drvr.SetTlsKeyFile(pNewNsd, netstrms.GetDrvrTlsKeyFile(pNS)));
 		CHKiRet(pNS->Drvr.SetTlsCertFile(pNewNsd, netstrms.GetDrvrTlsCertFile(pNS)));
 		CHKiRet(pNS->Drvr.SetTlsVerifyDepth(pNewNsd, netstrms.GetDrvrTlsVerifyDepth(pNS)));
@@ -1069,6 +1083,7 @@ CODESTARTobjQueryInterface(nsd_ptcp)
 	pIf->SetPrioritizeSAN = SetPrioritizeSAN;
 	pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
 	pIf->SetTlsCAFile = SetTlsCAFile;
+	pIf->SetTlsCRLFile = SetTlsCRLFile;
 	pIf->SetTlsKeyFile = SetTlsKeyFile;
 	pIf->SetTlsCertFile = SetTlsCertFile;
 finalize_it:

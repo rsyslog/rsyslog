@@ -47,6 +47,7 @@ struct nsd_gtls_s {
 	uchar *pszConnectHost;	/**< hostname used for connect - may be used to
 					authenticate peer if no other name given */
 	const uchar *pszCAFile;
+	const uchar *pszCRLFile;
 	const uchar *pszKeyFile;
 	const uchar *pszCertFile;
 	gnutls_certificate_credentials_t xcred;

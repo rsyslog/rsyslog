@@ -116,6 +116,8 @@ CODESTARTobjDestruct(netstrms)
 	}
 	free((void*)pThis->pszDrvrCAFile);
 	pThis->pszDrvrCAFile = NULL;
+	free((void*)pThis->pszDrvrCRLFile);
+	pThis->pszDrvrCRLFile = NULL;
 	free((void*)pThis->pszDrvrKeyFile);
 	pThis->pszDrvrKeyFile = NULL;
 	free((void*)pThis->pszDrvrCertFile);
@@ -245,6 +247,18 @@ SetDrvrTlsCAFile(netstrms_t *pThis, const uchar *mode)
 	ISOBJ_TYPE_assert(pThis, netstrms);
 	if (mode != NULL) {
 		CHKmalloc(pThis->pszDrvrCAFile = (uchar*) strdup((char*)mode));
+	}
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+SetDrvrTlsCRLFile(netstrms_t *pThis, const uchar *mode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	if (mode != NULL) {
+		CHKmalloc(pThis->pszDrvrCRLFile = (uchar*) strdup((char*)mode));
 	}
 finalize_it:
 	RETiRet;
@@ -394,6 +408,12 @@ GetDrvrTlsCAFile(netstrms_t *pThis)
 	return pThis->pszDrvrCAFile;
 }
 static const uchar *
+GetDrvrTlsCRLFile(netstrms_t *pThis)
+{
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	return pThis->pszDrvrCRLFile;
+}
+static const uchar *
 GetDrvrTlsKeyFile(netstrms_t *pThis)
 {
 	ISOBJ_TYPE_assert(pThis, netstrms);
@@ -471,9 +491,11 @@ CODESTARTobjQueryInterface(netstrms)
 	pIf->SetDrvrTlsVerifyDepth = SetDrvrTlsVerifyDepth;
 	pIf->GetDrvrTlsVerifyDepth = GetDrvrTlsVerifyDepth;
 	pIf->GetDrvrTlsCAFile = GetDrvrTlsCAFile;
+	pIf->GetDrvrTlsCRLFile = GetDrvrTlsCRLFile;
 	pIf->GetDrvrTlsKeyFile = GetDrvrTlsKeyFile;
 	pIf->GetDrvrTlsCertFile = GetDrvrTlsCertFile;
 	pIf->SetDrvrTlsCAFile = SetDrvrTlsCAFile;
+	pIf->SetDrvrTlsCRLFile = SetDrvrTlsCRLFile;
 	pIf->SetDrvrTlsKeyFile = SetDrvrTlsKeyFile;
 	pIf->SetDrvrTlsCertFile = SetDrvrTlsCertFile;
 finalize_it:

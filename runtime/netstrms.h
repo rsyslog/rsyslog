@@ -38,6 +38,7 @@ struct netstrms_s {
 	int DrvrVerifyDepth;		/**< Verify Depth for certificate chains */
 	uchar *pszDrvrPermitExpiredCerts;
 	const uchar *pszDrvrCAFile;
+	const uchar *pszDrvrCRLFile;
 	const uchar *pszDrvrKeyFile;
 	const uchar *pszDrvrCertFile;
 	uchar *gnutlsPriorityString; /**< priorityString for connection */
@@ -78,9 +79,11 @@ BEGINinterface(netstrms) /* name must also be changed in ENDinterface macro! */
 	const uchar* (*GetDrvrTlsKeyFile)(netstrms_t *pThis);
 	rsRetVal (*SetDrvrTlsCertFile)(netstrms_t *pThis, const uchar *);
 	const uchar* (*GetDrvrTlsCertFile)(netstrms_t *pThis);
-
+	/* v3 */
+	rsRetVal (*SetDrvrTlsCRLFile)(netstrms_t *pThis, const uchar *);
+	const uchar* (*GetDrvrTlsCRLFile)(netstrms_t *pThis);
 ENDinterface(netstrms)
-#define netstrmsCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
+#define netstrmsCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(netstrms);

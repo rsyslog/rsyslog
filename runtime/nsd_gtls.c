@@ -707,7 +707,7 @@ static rsRetVal
 gtlsInitCred(nsd_gtls_t *const pThis )
 {
 	int gnuRet;
-	const uchar *cafile;
+	const uchar *cafile, *crlfile;
 	DEFiRet;
 
 	/* X509 stuff */
@@ -739,6 +739,11 @@ gtlsInitCred(nsd_gtls_t *const pThis )
 		}
 	}
 
+	crlfile = (pThis->pszCRLFile == NULL) ? glbl.GetDfltNetstrmDrvrCRLF(runConf) : pThis->pszCRLFile;
+	if(crlfile == NULL) {
+		LogMsg(0, RS_RET_VALUE_NOT_SUPPORTED, LOG_WARNING,
+			"Warning: CRL not supported with gtls netstream driver");
+	}
 
 finalize_it:
 	RETiRet;
@@ -1394,6 +1399,7 @@ CODESTARTobjDestruct(nsd_gtls)
 	free(pThis->pszConnectHost);
 	free(pThis->pszRcvBuf);
 	free((void*) pThis->pszCAFile);
+	free((void*) pThis->pszCRLFile);
 
 	if(pThis->bOurCertIsInit)
 		for(unsigned i=0; i<pThis->nOurCerts; ++i) {
@@ -1631,6 +1637,23 @@ SetTlsCAFile(nsd_t *pNsd, const uchar *const caFile)
 		pThis->pszCAFile = NULL;
 	} else {
 		CHKmalloc(pThis->pszCAFile = (const uchar*) strdup((const char*) caFile));
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+SetTlsCRLFile(nsd_t *pNsd, const uchar *const crlFile)
+{
+	DEFiRet;
+	nsd_gtls_t *const pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	if(crlFile == NULL) {
+		pThis->pszCRLFile = NULL;
+	} else {
+		CHKmalloc(pThis->pszCRLFile = (const uchar*) strdup((const char*) crlFile));
 	}
 
 finalize_it:
@@ -2332,6 +2355,7 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->SetPrioritizeSAN = SetPrioritizeSAN;
 	pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
 	pIf->SetTlsCAFile = SetTlsCAFile;
+	pIf->SetTlsCRLFile = SetTlsCRLFile;
 	pIf->SetTlsKeyFile = SetTlsKeyFile;
 	pIf->SetTlsCertFile = SetTlsCertFile;
 finalize_it:

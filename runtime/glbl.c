@@ -115,6 +115,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "debug.gnutls", eCmdHdlrNonNegInt, 0 },
 	{ "debug.unloadmodules", eCmdHdlrBinary, 0 },
 	{ "defaultnetstreamdrivercafile", eCmdHdlrString, 0 },
+	{ "defaultnetstreamdrivercrlfile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdriverkeyfile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdrivercertfile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdriver", eCmdHdlrString, 0 },
@@ -262,6 +263,7 @@ SIMP_PROP(ParseHOSTNAMEandTAG, parser.bParseHOSTNAMEandTAG, int)
 SIMP_PROP(OptionDisallowWarning, optionDisallowWarning, int)
 /* We omit setter on purpose, because we want to customize it */
 SIMP_PROP_GET(DfltNetstrmDrvrCAF, pszDfltNetstrmDrvrCAF, uchar*)
+SIMP_PROP_GET(DfltNetstrmDrvrCRLF, pszDfltNetstrmDrvrCRLF, uchar*)
 SIMP_PROP_GET(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar*)
 SIMP_PROP_GET(DfltNetstrmDrvrKeyFile, pszDfltNetstrmDrvrKeyFile, uchar*)
 SIMP_PROP_GET(NetstrmDrvrCAExtraFiles, pszNetstrmDrvrCAExtraFiles, uchar*)
@@ -449,6 +451,25 @@ setNetstrmDrvrCAExtraFiles(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	}
 	RETiRet;
 }
+
+static rsRetVal
+setDfltNetstrmDrvrCRLF(void __attribute__((unused)) *pVal, uchar *pNewVal) {
+	DEFiRet;
+	FILE *fp;
+	free(loadConf->globals.pszDfltNetstrmDrvrCRLF);
+	fp = fopen((const char*)pNewVal, "r");
+	if(fp == NULL) {
+		LogError(errno, RS_RET_NO_FILE_ACCESS,
+			"error: defaultnetstreamdrivercrlfile file '%s' "
+			"could not be accessed", pNewVal);
+	} else {
+		fclose(fp);
+		loadConf->globals.pszDfltNetstrmDrvrCRLF = pNewVal;
+	}
+
+	RETiRet;
+}
+
 
 static rsRetVal
 setDfltNetstrmDrvrCertFile(void __attribute__((unused)) *pVal, uchar *pNewVal) {
@@ -926,6 +947,7 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetMaxLine = glblGetMaxLine;
 	pIf->GetOptionDisallowWarning = GetOptionDisallowWarning;
 	pIf->GetDfltNetstrmDrvrCAF = GetDfltNetstrmDrvrCAF;
+	pIf->GetDfltNetstrmDrvrCRLF = GetDfltNetstrmDrvrCRLF;
 	pIf->GetDfltNetstrmDrvrCertFile = GetDfltNetstrmDrvrCertFile;
 	pIf->GetDfltNetstrmDrvrKeyFile = GetDfltNetstrmDrvrKeyFile;
 	pIf->GetDfltNetstrmDrvr = GetDfltNetstrmDrvr;
@@ -964,6 +986,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	loadConf->globals.pszDfltNetstrmDrvr = NULL;
 	free(loadConf->globals.pszDfltNetstrmDrvrCAF);
 	loadConf->globals.pszDfltNetstrmDrvrCAF = NULL;
+	free(loadConf->globals.pszDfltNetstrmDrvrCRLF);
+	loadConf->globals.pszDfltNetstrmDrvrCRLF = NULL;
 	free(loadConf->globals.pszDfltNetstrmDrvrKeyFile);
 	loadConf->globals.pszDfltNetstrmDrvrKeyFile = NULL;
 	free(loadConf->globals.pszDfltNetstrmDrvrCertFile);
@@ -1209,6 +1233,9 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdrivercafile")) {
 			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 			setDfltNetstrmDrvrCAF(NULL, cstr);
+		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdrivercrlfile")) {
+			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			setDfltNetstrmDrvrCRLF(NULL, cstr);
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdriver")) {
 			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 			setDfltNetstrmDrvr(NULL, cstr);
@@ -1438,6 +1465,8 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercafile", 0, eCmdHdlrGetWord,
 	setDfltNetstrmDrvrCAF, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercrlfile", 0, eCmdHdlrGetWord,
+	setDfltNetstrmDrvrCRLF, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriverkeyfile", 0, eCmdHdlrGetWord,
 	setDfltNetstrmDrvrKeyFile, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercertfile", 0, eCmdHdlrGetWord,
