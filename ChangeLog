@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2308.0 (aka 2023.08) 2023-08-??
+- 2023-07-04: core bugfix: action.resumeintervalmax parameter was not respected
+  Unfortunately, defining action.resumeintervalmax in the configration
+  did not have any effect at all. Instead, the default value was used,
+  which is 1800. This was caused by not having all the letters in
+  lower-case.
+  Fixes https://github.com/rsyslog/rsyslog/issues/5132
+  Thanks to Attila Lakatos for the patch.
 - 2023-06-29: core bugfix: do not try to drop capabilities when we don't have any
   In case the process does not have any capabilities, e.g. running as regular user then
   we do not have to force capability dropping. The capng_have_capabilities() returns
