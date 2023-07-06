@@ -547,6 +547,9 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_CA_CERT_MISSING = -2329,/**< a CA cert is missing where one is required (e.g. TLS) */
 	RS_RET_CERT_MISSING = -2330,/**< a cert is missing where one is required (e.g. TLS) */
 	RS_RET_CERTKEY_MISSING = -2331,/**< a cert (private) key is missing where one is required (e.g. TLS) */
+	RS_RET_CRL_MISSING = -2332,/**< a CRL file is missing but not required (e.g. TLS) */
+	RS_RET_CRL_INVALID = -2333, /**< a CRL file PEM file failed validation */
+	RS_RET_CERT_REVOKED = -2334, /**< a certificate has been revoked */
 	RS_RET_STRUC_DATA_INVLD = -2349,/**< structured data is malformed */
 
 	/* up to 2350 reserved for 7.4 */

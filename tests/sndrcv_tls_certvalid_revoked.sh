@@ -4,13 +4,14 @@
 printf 'using TLS driver: %s\n' ${RS_TLS_DRIVER:=gtls}
 
 # start up the instances
-# export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
+#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"
 generate_conf
 add_conf '
 global(
 	defaultNetstreamDriverCAFile="'$srcdir/testsuites/x.509/ca.pem'"
-	defaultNetstreamDriverCertFile="'$srcdir/testsuites/x.509/client-cert.pem'"
+	defaultnetstreamdriverCRLfile="'$srcdir/testsuites/x.509/crl.pem'"
+	defaultNetstreamDriverCertFile="'$srcdir/testsuites/x.509/client-cert-new.pem'"
 	defaultNetstreamDriverKeyFile="'$srcdir/testsuites/x.509/client-key.pem'"
 	defaultNetstreamDriver="'$RS_TLS_DRIVER'"
 #	debug.whitelist="on"
@@ -30,13 +31,13 @@ action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 startup
 export PORT_RCVR=$TCPFLOOD_PORT
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.sender.debuglog"
-#valgrind="valgrind"
 generate_conf 2
 add_conf '
 global(
 	defaultNetstreamDriverCAFile="'$srcdir/testsuites/x.509/ca.pem'"
-	defaultNetstreamDriverCertFile="'$srcdir/testsuites/x.509/client-expired-cert.pem'"
-	defaultNetstreamDriverKeyFile="'$srcdir/testsuites/x.509/client-expired-key.pem'"
+	defaultnetstreamdriverCRLfile="'$srcdir/testsuites/x.509/crl.pem'"
+	defaultNetstreamDriverCertFile="'$srcdir/testsuites/x.509/client-revoked.pem'"
+	defaultNetstreamDriverKeyFile="'$srcdir/testsuites/x.509/client-revoked-key.pem'"
 	defaultNetstreamDriver="'$RS_TLS_DRIVER'"
 )
 
@@ -58,6 +59,6 @@ wait_shutdown 2
 shutdown_when_empty
 wait_shutdown
 
-content_check "not permitted to talk to peer, certificate invalid: certificate expired"
+content_check "not permitted to talk to peer, certificate invalid: certificate revoked"
 
 exit_test
