@@ -1058,6 +1058,7 @@ tcpsrvConstructFinalize(tcpsrv_t *pThis)
 	 * when param is NULL default handling for ExpiredCerts is set! */
 	CHKiRet(netstrms.SetDrvrPermitExpiredCerts(pThis->pNS, pThis->pszDrvrPermitExpiredCerts));
 	CHKiRet(netstrms.SetDrvrTlsCAFile(pThis->pNS, pThis->pszDrvrCAFile));
+	CHKiRet(netstrms.SetDrvrTlsCRLFile(pThis->pNS, pThis->pszDrvrCRLFile));
 	CHKiRet(netstrms.SetDrvrTlsKeyFile(pThis->pNS, pThis->pszDrvrKeyFile));
 	CHKiRet(netstrms.SetDrvrTlsCertFile(pThis->pNS, pThis->pszDrvrCertFile));
 	if(pThis->pPermPeers != NULL)
@@ -1096,6 +1097,7 @@ CODESTARTobjDestruct(tcpsrv)
 	free(pThis->pszDrvrAuthMode);
 	free(pThis->pszDrvrPermitExpiredCerts);
 	free(pThis->pszDrvrCAFile);
+	free(pThis->pszDrvrCRLFile);
 	free(pThis->pszDrvrKeyFile);
 	free(pThis->pszDrvrCertFile);
 	free(pThis->ppLstn);
@@ -1447,6 +1449,18 @@ finalize_it:
 }
 
 static rsRetVal
+SetDrvrCRLFile(tcpsrv_t *const pThis, uchar *const mode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	if (mode != NULL) {
+		CHKmalloc(pThis->pszDrvrCRLFile = ustrdup(mode));
+	}
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
 SetDrvrKeyFile(tcpsrv_t *pThis, uchar *mode)
 {
 	DEFiRet;
@@ -1610,6 +1624,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetDrvrAuthMode = SetDrvrAuthMode;
 	pIf->SetDrvrPermitExpiredCerts = SetDrvrPermitExpiredCerts;
 	pIf->SetDrvrCAFile = SetDrvrCAFile;
+	pIf->SetDrvrCRLFile = SetDrvrCRLFile;
 	pIf->SetDrvrKeyFile = SetDrvrKeyFile;
 	pIf->SetDrvrCertFile = SetDrvrCertFile;
 	pIf->SetDrvrName = SetDrvrName;

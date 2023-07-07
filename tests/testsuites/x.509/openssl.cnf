@@ -1,0 +1,40 @@
+[ ca ]
+default_ca = CA_default
+
+[ CA_default ]
+dir              = ./
+certs            = $dir/certs
+crl_dir          = $dir/crl
+database         = $dir/index.txt
+new_certs_dir    = $dir/newcerts
+
+certificate      = $dir/ca.pem
+serial           = $dir/serial
+crl              = $dir/crl.pem
+private_key      = $dir/ca-key.pem
+
+x509_extensions  = usr_cert
+name_opt         = ca_default
+cert_opt         = ca_default
+default_days     = 36500
+default_md       = sha256
+
+default_crl_days = 1   # How long before next CRL
+
+preserve         = no
+policy           = policy_match
+
+[ policy_match ]
+countryName             = supplied
+stateOrProvinceName     = supplied
+organizationName        = supplied
+organizationalUnitName  = optional
+commonName              = supplied
+emailAddress            = optional
+
+[ usr_cert ]
+basicConstraints=CA:FALSE
+nsComment="OpenSSL Generated Certificate"
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid,issuer
+

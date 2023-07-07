@@ -1415,6 +1415,7 @@ TESTS +=  \
 	sndrcv_tls_certvalid_action_level.sh \
 	sndrcv_tls_certvalid_expired.sh \
 	sndrcv_tls_certvalid_expired_defaultmode.sh \
+	sndrcv_tls_certvalid_revoked.sh \
 	imtcp-tls-no-lstn-startup.sh \
 	imtcp-tls-gtls-x509fingerprint-invld.sh \
 	imtcp-tls-gtls-x509fingerprint.sh \
@@ -1455,6 +1456,7 @@ TESTS +=  \
 	sndrcv_tls_ossl_certvalid_expired.sh \
 	sndrcv_tls_ossl_certvalid_tlscommand.sh \
 	sndrcv_tls_ossl_certvalid_ciphers.sh \
+	sndrcv_tls_ossl_certvalid_revoked.sh \
 	imtcp-tls-ossl-x509valid.sh \
 	imtcp-tls-ossl-x509name.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \
@@ -1871,6 +1873,23 @@ EXTRA_DIST= \
 	tls-certs/ca-fail.pem \
 	tls-certs/cert-fail.pem \
 	tls-certs/key-fail.pem \
+	testsuites/x.509/ca.srl \
+	testsuites/x.509/client-cert-new.pem \
+	testsuites/x.509/client-new.csr \
+	testsuites/x.509/client-revoked-key.pem \
+	testsuites/x.509/client-revoked-valid.pem \
+	testsuites/x.509/client-revoked.csr \
+	testsuites/x.509/client-revoked.pem \
+	testsuites/x.509/crl.pem \
+	testsuites/x.509/index.txt \
+	testsuites/x.509/index.txt.attr \
+	testsuites/x.509/newcerts/01.pem \
+	testsuites/x.509/newcerts/02.pem \
+	testsuites/x.509/newcerts/03.pem \
+	testsuites/x.509/newcerts/04.pem \
+	testsuites/x.509/openssl-cmds.sh \
+	testsuites/x.509/openssl.cnf \
+	testsuites/x.509/serial \
 	testsuites/x.509/ca.pem \
 	testsuites/x.509/ca-key.pem \
 	testsuites/x.509/client-cert.pem \
@@ -2378,6 +2397,7 @@ EXTRA_DIST= \
 	sndrcv_tls_ossl_certvalid_expired.sh \
 	sndrcv_tls_ossl_certvalid_tlscommand.sh \
 	sndrcv_tls_ossl_certvalid_ciphers.sh \
+	sndrcv_tls_ossl_certvalid_revoked.sh \
 	imtcp-tls-ossl-x509valid.sh \
 	imtcp-tls-ossl-x509name.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \
@@ -2942,6 +2962,7 @@ EXTRA_DIST= \
 	sndrcv_tls_certvalid_action_level.sh \
 	sndrcv_tls_certvalid_expired.sh \
 	sndrcv_tls_certvalid_expired_defaultmode.sh \
+	sndrcv_tls_certvalid_revoked.sh \
 	sndrcv_tls_certless_clientonly.sh \
 	sndrcv_tls_gtls_servercert_gtls_clientanon.sh \
 	sndrcv_tls_gtls_servercert_gtls_clientanon_legacy.sh \

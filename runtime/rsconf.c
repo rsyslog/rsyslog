@@ -185,6 +185,7 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.iGnuTLSLoglevel = 0;
 	pThis->globals.debugOnShutdown = 0;
 	pThis->globals.pszDfltNetstrmDrvrCAF = NULL;
+	pThis->globals.pszDfltNetstrmDrvrCRLF = NULL;
 	pThis->globals.pszDfltNetstrmDrvrCertFile = NULL;
 	pThis->globals.pszDfltNetstrmDrvrKeyFile = NULL;
 	pThis->globals.pszDfltNetstrmDrvr = NULL;
@@ -339,6 +340,7 @@ CODESTARTobjDestruct(rsconf)
 	free(pThis->globals.pszWorkDir);
 	free(pThis->globals.operatingStateFile);
 	free(pThis->globals.pszDfltNetstrmDrvrCAF);
+	free(pThis->globals.pszDfltNetstrmDrvrCRLF);
 	free(pThis->globals.pszDfltNetstrmDrvrCertFile);
 	free(pThis->globals.pszDfltNetstrmDrvrKeyFile);
 	free(pThis->globals.pszDfltNetstrmDrvr);

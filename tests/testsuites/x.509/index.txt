@@ -1,0 +1,3 @@
+R	21230612125925Z	230706130100Z	02	unknown	/C=DE/ST=NRW/O=Adiscon GmbH/OU=rsyslog/CN=rsyslog revoked certificate test/emailAddress=alorbach@adiscon.com
+V	21230612133806Z		03	unknown	/C=DE/ST=NRW/O=Adiscon GmbH/OU=rsyslog/CN=rsyslog revoked certificate test/emailAddress=alorbach@adiscon.com
+V	21230612135250Z		04	unknown	/C=US/ST=CA/O=SomeComp/OU=SomeUnit/CN=rsyslog/emailAddress=alorbach@adiscon.com

@@ -50,6 +50,7 @@ struct nsd_ossl_s {
 	int iMode;		/* 0 - plain tcp, 1 - TLS */
 	int bAbortConn;		/* if set, abort conncection (fatal error had happened) */
 	const uchar *pszCAFile;
+	const uchar *pszCRLFile;
 	const uchar *pszExtraCAFiles;
 	const uchar *pszKeyFile;
 	const uchar *pszCertFile;

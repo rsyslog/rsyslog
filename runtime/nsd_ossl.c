@@ -58,9 +58,6 @@
 #include "nsd_ossl.h"
 #include "unicode-helper.h"
 #include "rsconf.h"
-/* things to move to some better place/functionality - TODO */
-// #define CRLFILE "crl.pem"
-
 
 MODULE_TYPE_LIB
 MODULE_TYPE_KEEP
@@ -86,6 +83,7 @@ DEFobjCurrIf(nsd_ptcp)
 #endif
 
 static rsRetVal applyGnutlsPriorityString(nsd_ossl_t *const pNsd);
+static rsRetVal osslChkPeerCertValidity(nsd_ossl_t *pThis);
 
 /*--------------------------------------MT OpenSSL helpers ------------------------------------------*/
 static MUTEX_TYPE *mutex_buf = NULL;
@@ -256,7 +254,7 @@ int verify_callback(int status, X509_STORE_CTX *store)
 					status = 1;
 				}
 				else if (pThis->permitExpiredCerts == OSSL_EXPIRED_WARN) {
-					LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
+					LogMsg(0, RS_RET_CERT_EXPIRED, LOG_WARNING,
 						"Certificate EXPIRED warning at depth: %d \n\t"
 						"issuer  = %s\n\t"
 						"subject = %s\n\t"
@@ -268,14 +266,26 @@ int verify_callback(int status, X509_STORE_CTX *store)
 					status = 1;
 				}
 				else /* also default - if (pThis->permitExpiredCerts == OSSL_EXPIRED_DENY)*/ {
-					LogMsg(0, RS_RET_NO_ERRCODE, LOG_ERR,
+					LogMsg(0, RS_RET_CERT_EXPIRED, LOG_ERR,
 						"Certificate EXPIRED at depth: %d \n\t"
 						"issuer  = %s\n\t"
 						"subject = %s\n\t"
-						"err %d:%s",
+						"err %d:%s\n\t"
+						"not permitted to talk to peer, certificate invalid: "
+						"certificate expired",
 						depth, szdbgdata1, szdbgdata2,
 						err, X509_verify_cert_error_string(err));
 				}
+			} else if (err == X509_V_ERR_CERT_REVOKED) {
+				LogMsg(0, RS_RET_CERT_REVOKED, LOG_ERR,
+					"Certificate REVOKED at depth: %d \n\t"
+					"issuer  = %s\n\t"
+					"subject = %s\n\t"
+					"err %d:%s\n\t"
+					"not permitted to talk to peer, certificate invalid: "
+					"certificate revoked",
+					depth, szdbgdata1, szdbgdata2,
+					err, X509_verify_cert_error_string(err));
 			} else {
 				/* all other error codes cause failure */
 				LogMsg(0, RS_RET_NO_ERRCODE, LOG_ERR,
@@ -283,7 +293,8 @@ int verify_callback(int status, X509_STORE_CTX *store)
 					"issuer  = %s\n\t"
 					"subject = %s\n\t"
 					"err %d:%s",
-					depth, szdbgdata1, szdbgdata2, err, X509_verify_cert_error_string(err));
+					depth, szdbgdata1, szdbgdata2,
+					err, X509_verify_cert_error_string(err));
 			}
 		} else {
 			/* do not verify certs in ANON mode, just log into debug */
@@ -871,7 +882,7 @@ osslChkPeerCertValidity(nsd_ossl_t *pThis)
 			if (pThis->permitExpiredCerts == OSSL_EXPIRED_DENY) {
 				LogMsg(0, RS_RET_CERT_EXPIRED, LOG_INFO,
 					"nsd_ossl:TLS session terminated with remote syslog server '%s': "
-					"not permitted to talk to peer, "
+					"not permitted to talk to peer, certificate invalid: "
 					"Certificate expired: %s",
 					fromHostIP, X509_verify_cert_error_string(iVerErr));
 				ABORT_FINALIZE(RS_RET_CERT_EXPIRED);
@@ -885,11 +896,17 @@ osslChkPeerCertValidity(nsd_ossl_t *pThis)
 					"certificate expired: %s\n",
 					fromHostIP, X509_verify_cert_error_string(iVerErr));
 			}/* Else do nothing */
+		} else if (iVerErr == X509_V_ERR_CERT_REVOKED) {
+			LogMsg(0, RS_RET_CERT_REVOKED, LOG_INFO,
+				"nsd_ossl:TLS session terminated with remote syslog server '%s': "
+				"not permitted to talk to peer, certificate invalid: "
+				"certificate revoked '%s'",
+				fromHostIP, X509_verify_cert_error_string(iVerErr));
+			ABORT_FINALIZE(RS_RET_CERT_EXPIRED);
 		} else {
 			LogMsg(0, RS_RET_CERT_INVALID, LOG_INFO,
 				"nsd_ossl:TLS session terminated with remote syslog server '%s': "
-				"not permitted to talk to peer, "
-				"Certificate validation failed: %s",
+				"not permitted to talk to peer, certificate validation failed: %s",
 				fromHostIP, X509_verify_cert_error_string(iVerErr));
 			ABORT_FINALIZE(RS_RET_CERT_INVALID);
 		}
@@ -1049,6 +1066,7 @@ CODESTARTobjDestruct(nsd_ossl)
 		SSL_CTX_free(pThis->ctx);
 	}
 	free((void*) pThis->pszCAFile);
+	free((void*) pThis->pszCRLFile);
 	free((void*) pThis->pszKeyFile);
 	free((void*) pThis->pszCertFile);
 ENDobjDestruct(nsd_ossl)
@@ -1274,10 +1292,11 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 {
 	DEFiRet;
 	int bHaveCA;
+	int bHaveCRL;
 	int bHaveCert;
 	int bHaveKey;
 	int bHaveExtraCAFiles;
-	const char *caFile, *certFile, *keyFile;
+	const char *caFile, *crlFile, *certFile, *keyFile;
 	char *extraCaFiles, *extraCaFile;
 	/* Setup certificates */
 	caFile = (char*) ((pThis->pszCAFile == NULL) ? glbl.GetDfltNetstrmDrvrCAF(runConf) : pThis->pszCAFile);
@@ -1286,7 +1305,16 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 			"Warning: CA certificate is not set");
 		bHaveCA = 0;
 	} else {
+		dbgprintf("OSSL CA file: '%s'\n", caFile);
 		bHaveCA	= 1;
+	}
+	crlFile = (char*) ((pThis->pszCRLFile == NULL) ? glbl.GetDfltNetstrmDrvrCRLF(runConf) : pThis->pszCRLFile);
+	if(crlFile == NULL) {
+		dbgprintf("Certificate revocation list (CRL) file not set.");
+		bHaveCRL = 0;
+	} else {
+		dbgprintf("OSSL CRL file: '%s'\n", crlFile);
+		bHaveCRL = 1;
 	}
 	certFile = (char*) ((pThis->pszCertFile == NULL) ?
 		glbl.GetDfltNetstrmDrvrCertFile(runConf) : pThis->pszCertFile);
@@ -1295,6 +1323,7 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 			"Warning: Certificate file is not set");
 		bHaveCert = 0;
 	} else {
+		dbgprintf("OSSL CERT file: '%s'\n", certFile);
 		bHaveCert = 1;
 	}
 	keyFile = (char*) ((pThis->pszKeyFile == NULL) ? glbl.GetDfltNetstrmDrvrKeyFile(runConf) : pThis->pszKeyFile);
@@ -1303,6 +1332,7 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 			"Warning: Key file is not set");
 		bHaveKey = 0;
 	} else {
+		dbgprintf("OSSL KEY file: '%s'\n", keyFile);
 		bHaveKey = 1;
 	}
 	extraCaFiles = (char*) ((pThis->pszExtraCAFiles == NULL) ? glbl.GetNetstrmDrvrCAExtraFiles(runConf) :
@@ -1310,6 +1340,7 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 	if(extraCaFiles == NULL) {
 		bHaveExtraCAFiles = 0;
 	} else {
+		dbgprintf("OSSL EXTRA CA files: '%s'\n", extraCaFiles);
 	        bHaveExtraCAFiles = 1;
 	}
 
@@ -1321,7 +1352,7 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 				LogError(0, RS_RET_TLS_CERT_ERR, "Error: Extra Certificate file could not be accessed. "
 					"Check at least: 1) file path is correct, 2) file exist, "
 					"3) permissions are correct, 4) file content is correct. "
-					"Open ssl error info may follow in next messages");
+					"OpenSSL error info may follow in next messages");
 				osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit", "SSL_CTX_load_verify_locations");
 				ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
 			}
@@ -1331,15 +1362,72 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 		LogError(0, RS_RET_TLS_CERT_ERR, "Error: CA certificate could not be accessed. "
 				"Check at least: 1) file path is correct, 2) file exist, "
 				"3) permissions are correct, 4) file content is correct. "
-				"Open ssl error info may follow in next messages");
+				"OpenSSL error info may follow in next messages");
 		osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit", "SSL_CTX_load_verify_locations");
 		ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
+	}
+	if(bHaveCRL == 1) {
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+		// Get X509_STORE reference
+		X509_STORE *store = SSL_CTX_get_cert_store(pThis->ctx);
+		if (!X509_STORE_load_file(store, crlFile)) {
+			LogError(0, RS_RET_CRL_INVALID, "Error: CRL could not be accessed. "
+					"Check at least: 1) file path is correct, 2) file exist, "
+					"3) permissions are correct, 4) file content is correct. "
+					"OpenSSL error info may follow in next messages");
+			osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit", "X509_STORE_load_file");
+			ABORT_FINALIZE(RS_RET_CRL_INVALID);
+		}
+		X509_STORE_set_flags(store, X509_V_FLAG_CRL_CHECK);
+#else
+#	if OPENSSL_VERSION_NUMBER >= 0x10002000L
+		// Get X509_STORE reference
+		X509_STORE *store = SSL_CTX_get_cert_store(pThis->ctx);
+		// Load the CRL PEM file
+		FILE *fp = fopen(crlFile, "r");
+		if(fp == NULL) {
+			LogError(0, RS_RET_CRL_MISSING, "Error: CRL could not be accessed. "
+					"Check at least: 1) file path is correct, 2) file exist, "
+					"3) permissions are correct, 4) file content is correct. "
+					"OpenSSL error info may follow in next messages");
+			osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit", "fopen");
+			ABORT_FINALIZE(RS_RET_CRL_MISSING);
+		}
+		X509_CRL *crl = PEM_read_X509_CRL(fp, NULL, NULL, NULL);
+		fclose(fp);
+		if(crl == NULL) {
+			LogError(0, RS_RET_CRL_INVALID, "Error: Unable to read CRL."
+					"OpenSSL error info may follow in next messages");
+			osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit", "PEM_read_X509_CRL");
+			ABORT_FINALIZE(RS_RET_CRL_INVALID);
+		}
+		// Add the CRL to the X509_STORE
+		if(!X509_STORE_add_crl(store, crl)) {
+			LogError(0, RS_RET_CRL_INVALID, "Error: Unable to add CRL to store."
+					"OpenSSL error info may follow in next messages");
+			osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit", "X509_STORE_add_crl");
+			X509_CRL_free(crl);
+			ABORT_FINALIZE(RS_RET_CRL_INVALID);
+		}
+		// Set the X509_STORE to the SSL_CTX
+		// SSL_CTX_set_cert_store(pThis->ctx, store);
+		// Enable CRL checking
+		X509_VERIFY_PARAM *param = X509_VERIFY_PARAM_new();
+		X509_VERIFY_PARAM_set_flags(param, X509_V_FLAG_CRL_CHECK);
+		SSL_CTX_set1_param(pThis->ctx, param);
+		X509_VERIFY_PARAM_free(param);
+#	else
+		LogError(0, RS_RET_SYS_ERR, "Warning: TLS library does not support X509_STORE_load_file"
+			"(requires OpenSSL 3.x or higher). Cannot use Certificate revocation list (CRL) '%s'.",
+			crlFile);
+#	endif
+#endif
 	}
 	if(bHaveCert == 1 && SSL_CTX_use_certificate_chain_file(pThis->ctx, certFile) != 1) {
 		LogError(0, RS_RET_TLS_CERT_ERR, "Error: Certificate file could not be accessed. "
 				"Check at least: 1) file path is correct, 2) file exist, "
 				"3) permissions are correct, 4) file content is correct. "
-				"Open ssl error info may follow in next messages");
+				"OpenSSL error info may follow in next messages");
 		osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit", "SSL_CTX_use_certificate_chain_file");
 		ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
 	}
@@ -1347,7 +1435,7 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 		LogError(0, RS_RET_TLS_KEY_ERR , "Error: Key could not be accessed. "
 				"Check at least: 1) file path is correct, 2) file exist, "
 				"3) permissions are correct, 4) file content is correct. "
-				"Open ssl error info may follow in next messages");
+				"OpenSSL error info may follow in next messages");
 		osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit", "SSL_CTX_use_PrivateKey_file");
 		ABORT_FINALIZE(RS_RET_TLS_KEY_ERR);
 	}
@@ -2018,7 +2106,7 @@ applyGnutlsPriorityString(nsd_ossl_t *const pThis)
 			iConfErr = SSL_CONF_CTX_finish(cctx);
 			if (!iConfErr) {
 				LogError(0, RS_RET_SYS_ERR, "Error: setting openssl command parameters: %s"
-						"Open ssl error info may follow in next messages",
+						"OpenSSL error info may follow in next messages",
 						pThis->gnutlsPriorityString);
 				osslLastSSLErrorMsg(0, NULL, LOG_ERR, "SetGnutlsPriorityString", "SSL_CONF_CTX_finish");
 			}
@@ -2104,6 +2192,24 @@ finalize_it:
 }
 
 static rsRetVal
+SetTlsCRLFile(nsd_t *pNsd, const uchar *const crlFile)
+{
+	DEFiRet;
+	nsd_ossl_t *const pThis = (nsd_ossl_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_ossl);
+	if(crlFile == NULL) {
+		pThis->pszCRLFile = NULL;
+	} else {
+		CHKmalloc(pThis->pszCRLFile = (const uchar*) strdup((const char*) crlFile));
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+static rsRetVal
 SetTlsKeyFile(nsd_t *pNsd, const uchar *const pszFile)
 {
 	DEFiRet;
@@ -2176,6 +2282,7 @@ CODESTARTobjQueryInterface(nsd_ossl)
 	pIf->SetPrioritizeSAN = SetPrioritizeSAN; /* we don't NEED this interface! */
 	pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
 	pIf->SetTlsCAFile = SetTlsCAFile;
+	pIf->SetTlsCRLFile = SetTlsCRLFile;
 	pIf->SetTlsKeyFile = SetTlsKeyFile;
 	pIf->SetTlsCertFile = SetTlsCertFile;
 

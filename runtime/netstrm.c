@@ -266,6 +266,15 @@ SetDrvrTlsCAFile(netstrm_t *const pThis, const uchar *const file)
 }
 
 static rsRetVal
+SetDrvrTlsCRLFile(netstrm_t *const pThis, const uchar *const file)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrm);
+	iRet = pThis->Drvr.SetTlsCRLFile(pThis->pDrvrData, file);
+	RETiRet;
+}
+
+static rsRetVal
 SetDrvrTlsKeyFile(netstrm_t *const pThis, const uchar *const file)
 {
 	DEFiRet;
@@ -470,6 +479,7 @@ CODESTARTobjQueryInterface(netstrm)
 	pIf->SetDrvrPrioritizeSAN = SetDrvrPrioritizeSAN;
 	pIf->SetDrvrTlsVerifyDepth = SetDrvrTlsVerifyDepth;
 	pIf->SetDrvrTlsCAFile = SetDrvrTlsCAFile;
+	pIf->SetDrvrTlsCRLFile = SetDrvrTlsCRLFile;
 	pIf->SetDrvrTlsKeyFile = SetDrvrTlsKeyFile;
 	pIf->SetDrvrTlsCertFile = SetDrvrTlsCertFile;
 finalize_it:

@@ -144,6 +144,7 @@ struct instanceConf_s {
 	uchar *pszStrmDrvrAuthMode;
 	uchar *pszStrmDrvrPermitExpiredCerts;
 	uchar *pszStrmDrvrCAFile;
+	uchar *pszStrmDrvrCRLFile;
 	uchar *pszStrmDrvrKeyFile;
 	uchar *pszStrmDrvrCertFile;
 	permittedPeers_t *pPermPeersRoot;
@@ -185,6 +186,7 @@ struct modConfData_s {
 	uchar *pszStrmDrvrAuthMode; /* authentication mode to use */
 	uchar *pszStrmDrvrPermitExpiredCerts; /* control how to handly expired certificates */
 	uchar *pszStrmDrvrCAFile;
+	uchar *pszStrmDrvrCRLFile;
 	uchar *pszStrmDrvrKeyFile;
 	uchar *pszStrmDrvrCertFile;
 	permittedPeers_t *pPermPeersRoot;
@@ -370,6 +372,7 @@ createInstance(instanceConf_t **pinst)
 	inst->pszStrmDrvrAuthMode = NULL;
 	inst->pszStrmDrvrPermitExpiredCerts = NULL;
 	inst->pszStrmDrvrCAFile = NULL;
+	inst->pszStrmDrvrCRLFile = NULL;
 	inst->pszStrmDrvrKeyFile = NULL;
 	inst->pszStrmDrvrCertFile = NULL;
 	inst->pPermPeersRoot = NULL;
@@ -526,6 +529,10 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 			? modConf->pszStrmDrvrCAFile : inst->pszStrmDrvrCAFile;
 	CHKiRet(tcpsrv.SetDrvrCAFile(pOurTcpsrv, psz));
 
+	psz = (inst->pszStrmDrvrCRLFile == NULL)
+			? modConf->pszStrmDrvrCRLFile : inst->pszStrmDrvrCRLFile;
+	CHKiRet(tcpsrv.SetDrvrCRLFile(pOurTcpsrv, psz));
+
 	psz = (inst->pszStrmDrvrKeyFile == NULL)
 			? modConf->pszStrmDrvrKeyFile : inst->pszStrmDrvrKeyFile;
 	CHKiRet(tcpsrv.SetDrvrKeyFile(pOurTcpsrv, psz));
@@ -628,6 +635,8 @@ CODESTARTnewInpInst
 			inst->pszStrmDrvrPermitExpiredCerts = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "streamdriver.cafile")) {
 			inst->pszStrmDrvrCAFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "streamdriver.crlfile")) {
+			inst->pszStrmDrvrCRLFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "streamdriver.keyfile")) {
 			inst->pszStrmDrvrKeyFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "streamdriver.certfile")) {
@@ -724,6 +733,7 @@ CODESTARTbeginCnfLoad
 	loadModConf->pszStrmDrvrAuthMode = NULL;
 	loadModConf->pszStrmDrvrPermitExpiredCerts = NULL;
 	loadModConf->pszStrmDrvrCAFile = NULL;
+	loadModConf->pszStrmDrvrCRLFile = NULL;
 	loadModConf->pszStrmDrvrKeyFile = NULL;
 	loadModConf->pszStrmDrvrCertFile = NULL;
 	loadModConf->pPermPeersRoot = NULL;
@@ -811,6 +821,8 @@ CODESTARTsetModCnf
 			loadModConf->pszStrmDrvrPermitExpiredCerts = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.cafile")) {
 			loadModConf->pszStrmDrvrCAFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.crlfile")) {
+			loadModConf->pszStrmDrvrCRLFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.keyfile")) {
 			loadModConf->pszStrmDrvrKeyFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.certfile")) {
@@ -937,6 +949,7 @@ CODESTARTfreeCnf
 	free(pModConf->pszStrmDrvrAuthMode);
 	free(pModConf->pszStrmDrvrPermitExpiredCerts);
 	free(pModConf->pszStrmDrvrCAFile);
+	free(pModConf->pszStrmDrvrCRLFile);
 	free(pModConf->pszStrmDrvrKeyFile);
 	free(pModConf->pszStrmDrvrCertFile);
 	if(pModConf->pPermPeersRoot != NULL) {
@@ -949,6 +962,7 @@ CODESTARTfreeCnf
 		free((void*)inst->pszStrmDrvrName);
 		free((void*)inst->pszStrmDrvrPermitExpiredCerts);
 		free((void*)inst->pszStrmDrvrCAFile);
+		free((void*)inst->pszStrmDrvrCRLFile);
 		free((void*)inst->pszStrmDrvrKeyFile);
 		free((void*)inst->pszStrmDrvrCertFile);
 		free((void*)inst->gnutlsPriorityString);

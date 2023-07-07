@@ -55,10 +55,6 @@
 #include "unicode-helper.h"
 #include "rsconf.h"
 
-/* things to move to some better place/functionality - TODO */
-#define CRLFILE "crl.pem"
-
-
 #if GNUTLS_VERSION_NUMBER <= 0x020b00
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #endif
@@ -707,7 +703,7 @@ static rsRetVal
 gtlsInitCred(nsd_gtls_t *const pThis )
 {
 	int gnuRet;
-	const uchar *cafile;
+	const uchar *cafile, *crlfile;
 	DEFiRet;
 
 	/* X509 stuff */
@@ -732,13 +728,35 @@ gtlsInitCred(nsd_gtls_t *const pThis )
 		} else if(gnuRet < 0) {
 			/* TODO; a more generic error-tracking function (this one based on CHKgnutls()) */
 			uchar *pErr = gtlsStrerror(gnuRet);
-			LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n",
+			LogError(0, RS_RET_GNUTLS_ERR,
+				"unexpected GnuTLS error reading CA certificate file %d in %s:%d: %s\n",
 			gnuRet, __FILE__, __LINE__, pErr);
 			free(pErr);
 			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
 		}
 	}
 
+	crlfile = (pThis->pszCRLFile == NULL) ? glbl.GetDfltNetstrmDrvrCRLF(runConf) : pThis->pszCRLFile;
+	if(crlfile == NULL) {
+		dbgprintf("Certificate revocation list (CRL) file not set.");
+	} else {
+		dbgprintf("GTLS CRL file: '%s'\n", crlfile);
+		gnuRet = gnutls_certificate_set_x509_crl_file(pThis->xcred, (char*)crlfile, GNUTLS_X509_FMT_PEM);
+		if(gnuRet == GNUTLS_E_FILE_ERROR) {
+			LogError(0, RS_RET_GNUTLS_ERR,
+				"error reading Certificate revocation list (CRL) '%s' - a common cause is that the "
+				"file  does not exist", crlfile);
+			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+		} else if(gnuRet < 0) {
+			/* TODO; a more generic error-tracking function (this one based on CHKgnutls()) */
+			uchar *pErr = gtlsStrerror(gnuRet);
+			LogError(0, RS_RET_GNUTLS_ERR,
+				"unexpected GnuTLS error reading Certificate revocation list (CRL) %d in %s:%d: %s\n",
+			gnuRet, __FILE__, __LINE__, pErr);
+			free(pErr);
+			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+		}
+	}
 
 finalize_it:
 	RETiRet;
@@ -1230,6 +1248,7 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		} else if(stateCert & GNUTLS_CERT_REVOKED) {
 			pszErrCause = "certificate revoked";
 			bAbort = RSTRUE;
+			iAbortCode = RS_RET_CERT_REVOKED;
 #ifdef EXTENDED_CERT_CHECK_AVAILABLE
 		} else if(stateCert & GNUTLS_CERT_PURPOSE_MISMATCH) {
 			pszErrCause = "key purpose OID does not match";
@@ -1394,6 +1413,7 @@ CODESTARTobjDestruct(nsd_gtls)
 	free(pThis->pszConnectHost);
 	free(pThis->pszRcvBuf);
 	free((void*) pThis->pszCAFile);
+	free((void*) pThis->pszCRLFile);
 
 	if(pThis->bOurCertIsInit)
 		for(unsigned i=0; i<pThis->nOurCerts; ++i) {
@@ -1631,6 +1651,23 @@ SetTlsCAFile(nsd_t *pNsd, const uchar *const caFile)
 		pThis->pszCAFile = NULL;
 	} else {
 		CHKmalloc(pThis->pszCAFile = (const uchar*) strdup((const char*) caFile));
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+SetTlsCRLFile(nsd_t *pNsd, const uchar *const crlFile)
+{
+	DEFiRet;
+	nsd_gtls_t *const pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	if(crlFile == NULL) {
+		pThis->pszCRLFile = NULL;
+	} else {
+		CHKmalloc(pThis->pszCRLFile = (const uchar*) strdup((const char*) crlFile));
 	}
 
 finalize_it:
@@ -2332,6 +2369,7 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->SetPrioritizeSAN = SetPrioritizeSAN;
 	pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
 	pIf->SetTlsCAFile = SetTlsCAFile;
+	pIf->SetTlsCRLFile = SetTlsCRLFile;
 	pIf->SetTlsKeyFile = SetTlsKeyFile;
 	pIf->SetTlsCertFile = SetTlsCertFile;
 finalize_it:

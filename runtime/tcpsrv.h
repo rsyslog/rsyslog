@@ -79,6 +79,7 @@ struct tcpsrv_s {
 	uchar *pszDrvrAuthMode;	/**< auth mode of the stream driver to use */
 	uchar *pszDrvrPermitExpiredCerts;/**< current driver setting for handlign expired certs */
 	uchar *pszDrvrCAFile;
+	uchar *pszDrvrCRLFile;
 	uchar *pszDrvrKeyFile;
 	uchar *pszDrvrCertFile;
 	uchar *pszDrvrName;	/**< name of stream driver to use */
@@ -210,6 +211,8 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetDrvrCAFile)(tcpsrv_t *pThis, uchar *pszMode);
 	rsRetVal (*SetDrvrKeyFile)(tcpsrv_t *pThis, uchar *pszMode);
 	rsRetVal (*SetDrvrCertFile)(tcpsrv_t *pThis, uchar *pszMode);
+	/* added v26 -- Options for TLS CRL file */
+	rsRetVal (*SetDrvrCRLFile)(tcpsrv_t *pThis, uchar *pszMode);
 ENDinterface(tcpsrv)
 #define tcpsrvCURR_IF_VERSION 26 /* increment whenever you change the interface structure! */
 /* change for v4:
