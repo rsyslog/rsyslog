@@ -1,5 +1,28 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2308.0 (aka 2023.08) 2023-08-??
+- 2023-07-07: add CRL support for network (TLS) drivers
+  Thanks to Darren J Moffat for implementing the OpenSSL part.
+- 2023-07-07: omazureeventhubs: Initial implementation of new output module
+  The output module uses Apache "Qpid Proton C API" which is a solid
+  AMQP protocol library implementation that can be integrated
+  very well into the rsyslog dev environment.
+  - Implemented Delivery with submitted and accepted state checking
+  - saving of failed messages in a failed list with support of saving
+    and restoring.
+  - Add testcases (requires ENV variables) to testbench
+  - Using application/octect-stream (binary) to send messages based on
+    Microsoft Code Sample:
+    https://docs.microsoft.com/en-us/azure/event-hubs/event-hubs-c-getstarted-send
+    * Note original Microsoft Samplecode is not working anymore, we are using
+    * QPID Proton Proactor based on
+      https://github.com/apache/qpid-proton/blob/main/c/examples/send.c
+  - requires QPID-PROTON Version 0.13 or higher because of the proactor API
+  - Add EventProperties configuration parameters
+  - Slow down when sender credit reaches zero (10ns).
+  - Add support for static library linking of qpid-proton
+    This is needed to build the module from source and remove
+    library package dependencies.
+  - adjusted valgrind suppressions
 - 2023-07-04: core bugfix: action.resumeintervalmax parameter was not respected
   Unfortunately, defining action.resumeintervalmax in the configration
   did not have any effect at all. Instead, the default value was used,
