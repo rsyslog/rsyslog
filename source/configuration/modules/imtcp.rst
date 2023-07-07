@@ -738,6 +738,22 @@ streamDriver.CAFile
 This permits to override the DefaultNetstreamDriverCAFile global parameter on the input()
 level. For further details, see the global parameter.
 
+streamDriver.CRLFile
+^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "optional", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "global parameter", "no", "none"
+
+.. versionadded:: 8.2308.0
+
+This permits to override the CRL (Certificate revocation list) file set via `global()` config
+object at the per-action basis. This parameter is ignored if the netstream driver and/or its
+mode does not need or support certificates.
+
 streamDriver.KeyFile
 ^^^^^^^^^^^^^^^^^^^^
 

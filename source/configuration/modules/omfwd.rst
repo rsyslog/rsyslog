@@ -571,6 +571,22 @@ This permits to override the CA file set via `global()` config object at the
 per-action basis. This parameter is ignored if the netstream driver and/or its
 mode does not need or support certificates.
 
+StreamDriver.CRLFile
+^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "optional", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "global() default", "no", "none"
+
+.. versionadded:: 8.2308.0
+
+This permits to override the CRL (Certificate revocation list) file set via `global()` config
+object at the per-action basis. This parameter is ignored if the netstream driver and/or its
+mode does not need or support certificates.
+
 StreamDriver.KeyFile
 ^^^^^^^^^^^^^^^^^^^^
 
