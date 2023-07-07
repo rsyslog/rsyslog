@@ -47,6 +47,11 @@ The following parameters can be set:
   For `TLS syslog <http://www.rsyslog.com/doc/rsyslog_secure_tls.html>`_,
   the CA certificate that can verify the machine keys and certs (see below)
 
+- **defaultNetstreamDriverCRLFile**
+
+  For `TLS syslog <http://www.rsyslog.com/doc/rsyslog_secure_tls.html>`_,
+  the CRL File contains a List contains a list of revoked certrificates.
+
 - **defaultNetstreamDriverKeyFile**
 
   Machine private key
