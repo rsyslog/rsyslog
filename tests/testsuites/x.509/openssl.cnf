@@ -19,7 +19,8 @@ cert_opt         = ca_default
 default_days     = 36500
 default_md       = sha256
 
-default_crl_days = 1   # How long before next CRL
+# How long before next CRL, default is 1 but for testing we need no expire, so 100 years is fine.
+default_crl_days = 36500
 
 preserve         = no
 policy           = policy_match
