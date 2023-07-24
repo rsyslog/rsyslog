@@ -1,5 +1,6 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2308.0 (aka 2023.08) 2023-08-??
+- 2023-07-24: openssl: add support for new-version init function
 - 2023-07-07: add CRL support for network (TLS) drivers
   Thanks to Darren J Moffat for implementing the OpenSSL part.
 - 2023-07-07: omazureeventhubs: Initial implementation of new output module
