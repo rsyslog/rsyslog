@@ -1184,8 +1184,13 @@ static void
 initTLS(void)
 {
 
-	/* Setup OpenSSL library */
-	if( /*(opensslh_THREAD_setup() == 0) || */ !SSL_library_init()) {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+	/* Setup OpenSSL library  < 1.1.0 */
+	if( !SSL_library_init()) {
+#else
+	/* Setup OpenSSL library >= 1.1.0 with system default settings */
+	if( OPENSSL_init_ssl(0, NULL) == 0) {
+#endif
 		printf("tcpflood: error openSSL initialization failed!\n");
 		exit(1);
 	}
