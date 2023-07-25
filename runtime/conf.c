@@ -629,7 +629,7 @@ ENDObjClassExit(conf)
 BEGINAbstractObjClassInit(conf, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE class also in END MACRO! */
 	/* request objects we use */
 	CHKiRet(objUse(module, CORE_COMPONENT));
-	CHKiRet(objUse(net, LM_NET_FILENAME)); /* TODO: make this dependcy go away! */
+	CHKiRet(objUse(net, LM_NET_FILENAME));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));
 
 	/* These commands will NOT be supported -- the new v6.3 config system provides
@@ -638,6 +638,3 @@ BEGINAbstractObjClassInit(conf, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANG
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables,
 NULL, NULL));
 ENDObjClassInit(conf)
-
-/* vi:set ai:
- */

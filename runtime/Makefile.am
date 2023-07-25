@@ -160,16 +160,17 @@ lmzlibw_la_LDFLAGS += $(LIBLOGGING_STDLOG_LIBS)
 endif
 
 
-if ENABLE_INET
-pkglib_LTLIBRARIES += lmnet.la lmnetstrms.la
 #
-# network support
+# basic network support, needed for rsyslog startup (e.g. our own system name)
 #
+pkglib_LTLIBRARIES += lmnet.la
 lmnet_la_SOURCES = net.c net.h
 lmnet_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 lmnet_la_LDFLAGS = -module -avoid-version ../compat/compat_la-getifaddrs.lo
 lmnet_la_LIBADD =
 
+if ENABLE_INET
+pkglib_LTLIBRARIES += lmnetstrms.la
 if ENABLE_LIBLOGGING_STDLOG
 lmnet_la_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 lmnet_la_LDFLAGS += $(LIBLOGGING_STDLOG_LIBS)

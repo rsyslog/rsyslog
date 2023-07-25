@@ -100,10 +100,6 @@ rsRetVal rsParsDestruct(rsParsObj *pThis);
 int parsIsAtEndOfParseString(rsParsObj *pThis);
 int parsGetCurrentPosition(rsParsObj *pThis);
 char parsPeekAtCharAtParsPtr(rsParsObj *pThis);
-#ifdef SYSLOG_INET
 rsRetVal parsAddrWithBits(rsParsObj *pThis, netAddr_t **pIP, int *pBits);
-#endif
 
 #endif
-/* vim:set ai:
- */
