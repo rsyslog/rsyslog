@@ -5,7 +5,7 @@
  *
  * File begun on 2008-07-25 by RGerhards
  *
- * Copyright 2008-2020 Adiscon GmbH.
+ * Copyright 2008-2023 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -376,6 +376,40 @@ finalize_it:
 }
 
 static rsRetVal
+awaitHUPComplete(tcps_sess_t *pSess)
+{
+	const int max_tries = 10;
+	const int ms_to_sleep = 50;
+	const char *return_msg;
+	int b_saw_HUP = 0;
+	int tries = max_tries;
+	unsigned actual_tries = 0;
+	DEFiRet;
+
+	while(tries > 0) {
+		++actual_tries;
+		if(get_bHadHUP() == 1) {
+			tries = max_tries;
+			b_saw_HUP = 1;
+		} else {
+			--tries;
+		}
+		srSleep(0, ms_to_sleep * 50);
+	}
+
+	if(b_saw_HUP) {
+		return_msg = "seen HUP request, looks like it has completed";
+	} else {
+		return_msg = "timeout - looks like_HUP has completed";
+	}
+	CHKiRet(sendResponse(pSess, "%s [%d tries]\n", return_msg, actual_tries));
+	DBGPRINTF("imdiag: %s\n", return_msg);
+
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
 enableDebug(tcps_sess_t *pSess)
 {
 	DEFiRet;
@@ -522,6 +556,8 @@ OnMsgReceived(tcps_sess_t *const pSess, uchar *const pRcv, const int iLenMsg)
 		CHKiRet(blockStatsReporting(pSess));
 	} else if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("awaitstatsreport"))) {
 		CHKiRet(awaitStatsReport(pszMsg, pSess));
+	} else if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("awaithupcomplete"))) {
+		CHKiRet(awaitHUPComplete(pSess));
 	} else if(!ustrcmp(cmdBuf, UCHAR_CONSTANT("enabledebug"))) {
 		CHKiRet(enableDebug(pSess));
 	} else {
