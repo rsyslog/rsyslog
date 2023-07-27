@@ -373,7 +373,6 @@ finalize_it:
  * full hostname (e.g.: localhost.localdomain) or hostname wildcard
  * (e.g.: *.localdomain).
  */
-#ifdef SYSLOG_INET
 rsRetVal parsAddrWithBits(rsParsObj *pThis, struct NetAddr **pIP, int *pBits)
 {
 	register uchar *pC;
@@ -509,7 +508,6 @@ finalize_it:
 	free(pszIP);
 	RETiRet;
 }
-#endif  /* #ifdef SYSLOG_INET */
 
 
 /* tell if the parsepointer is at the end of the

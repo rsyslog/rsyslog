@@ -677,7 +677,7 @@ fi
 
 # inet
 AC_ARG_ENABLE(inet,
-        [AS_HELP_STRING([--enable-inet],[Enable networking support @<:@default=yes@:>@])],
+        [AS_HELP_STRING([--enable-inet],[Enable automatic load of omfwd and limit build of networking libraries @<:@default=yes@:>@])],
         [case "${enableval}" in
          yes) enable_inet="yes" ;;
           no) enable_inet="no" ;;
