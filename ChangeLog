@@ -1,6 +1,20 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2308.0 (aka 2023.08) 2023-08-??
-- 2023-07-27: testbench/CI: update zookeper download to newer version
+- 2023-07-27: build system: make rsyslogd execute when --disable-inet is configured
+  This option is mostly useless, as network functionality depends on the
+  modules loaded by the config. The only real, and important, effect it
+  has is to control auto-load of omfwd - a feature almost all installations
+  depend in (backward compatibility).
+  This has been clarified in ./configure -help
+  Also, when --disable-inet is given, rsyslog now executes successfully.
+  The reason for the abort was that previously building of the lmnet
+  component was prevented, but that component is also needed by rsyslog
+  startup itself to query its own (correct) hostname.
+  Note that --disable-inet still does not compile some networking
+  libraries. So do not use it if you intend to load standard networking
+  modules like omfwd, imtcp or imudp.
+  closes https://github.com/rsyslog/rsyslog/issues/5188
+- 2023-07-26: testbench/CI: update zookeper download to newer version
   Old version is no longer available.
 - 2023-07-24: openssl: add support for new-version init function
 - 2023-07-07: add CRL support for network (TLS) drivers
