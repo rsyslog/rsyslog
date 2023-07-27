@@ -6,12 +6,14 @@
 export IMFILECHECKTIMEOUT="60"
 export IMFILELASTINPUTLINES="6"
 
+mkdir $RSYSLOG_DYNNAME.statefiles
 generate_conf
 add_conf '
 module(load="../plugins/imfile/.libs/imfile")
 module(load="../plugins/mmnormalize/.libs/mmnormalize")
 
 input(type="imfile"
+      statefile.directory="'${RSYSLOG_DYNNAME}'.statefiles"
       File="./'$RSYSLOG_DYNNAME'.*.input"
       Tag="file:" addMetadata="on" escapelf="off"
       endmsg.regex="(^[^ ]+ (stdout|stderr) F )|(\\n\"}$)")
@@ -62,7 +64,7 @@ if $msg contains "msgnum:" then
    template="outfmt"
  )
 '
-if [ "x${USE_VALGRIND:-false}" == "xtrue" ] ; then
+if [ "${USE_VALGRIND:-false}" == "true" ] ; then
 	startup_vg
 else
 	startup
@@ -109,7 +111,7 @@ echo '{"time":"date", "stream":"stdout", "log":"msgnum:7"}' >> $RSYSLOG_DYNNAME.
 content_check_with_count "$RSYSLOG_DYNNAME" $IMFILELASTINPUTLINES $IMFILECHECKTIMEOUT
 
 shutdown_when_empty # shut down rsyslogd when done processing messages
-if [ "x${USE_VALGRIND:-false}" == "xtrue" ] ; then
+if [ "${USE_VALGRIND:-false}" == "true" ] ; then
 	wait_shutdown_vg
 	check_exit_vg
 else
