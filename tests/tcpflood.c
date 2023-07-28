@@ -266,7 +266,7 @@ static enum { TP_UDP, TP_TCP, TP_TLS, TP_RELP_PLAIN, TP_RELP_TLS } transport = T
 
 /* forward definitions */
 static void initTLSSess(int);
-static int sendTLS(int i, char *buf, int lenBuf);
+static int sendTLS(int i, char *buf, size_t lenBuf);
 static void closeTLSSess(int __attribute__((unused)) i);
 
 #ifdef ENABLE_RELP
@@ -579,7 +579,7 @@ void closeConnections(void)
  * of constructing test messages. -- rgerhards, 2010-03-31
  */
 static void
-genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
+genMsg(char *buf, size_t maxBuf, size_t *pLenBuf, struct instdata *inst)
 {
 	int edLen; /* actual extra data length to use */
 	char extraData[MAX_EXTRADATA_LEN + 1];
@@ -650,7 +650,7 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 		*pLenBuf = snprintf(buf, maxBuf, "%s%c", MsgToSend, frameDelim);
 	}
 	if (octateCountFramed == 1) {
-		snprintf(payloadLen, sizeof(payloadLen), "%d ", *pLenBuf);
+		snprintf(payloadLen, sizeof(payloadLen), "%zd ", *pLenBuf);
 		payloadStringLen = strlen(payloadLen);
 		memmove(buf + payloadStringLen, buf, *pLenBuf);
 		memcpy(buf, payloadLen, payloadStringLen);
@@ -660,6 +660,29 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 
 finalize_it: /*EMPTY to keep the compiler happy */;
 }
+
+
+static int
+sendPlainTCP(int socknum, char *buf, size_t lenBuf, int *ret_errno)
+{
+	size_t lenSent;
+	int r, err;
+
+	lenSent = 0;
+	while(lenSent != lenBuf) {
+		r = send(sockArray[socknum], buf, lenBuf, 0);
+		if(r > 0) {
+			lenSent += r;
+		} else {
+			err = errno;
+			goto finalize_it;
+		}
+	}
+
+finalize_it:
+	return lenSent;
+}
+
 
 /* send messages to the tcp connections we keep open. We use
  * a very basic format that helps identify the message
@@ -673,8 +696,8 @@ int sendMessages(struct instdata *inst)
 {
 	unsigned i = 0;
 	int socknum;
-	int lenBuf;
-	int lenSend = 0;
+	size_t lenBuf;
+	size_t lenSend = 0;
 	char *statusText = "";
 	char buf[MAX_EXTRADATA_LEN + 1024];
 	char sendBuf[MAX_SENDBUF];
@@ -722,8 +745,7 @@ int sendMessages(struct instdata *inst)
 					exit(1);
 				}
 			}
-			lenSend = send(sockArray[socknum], buf, lenBuf, 0);
-			error_number = errno;
+			lenSend = sendPlainTCP(socknum, buf, lenBuf, &error_number);
 		} else if(transport == TP_UDP) {
 			lenSend = sendto(udpsock, buf, lenBuf, 0, &udpRcvr, sizeof(udpRcvr));
 			error_number = errno;
@@ -771,8 +793,10 @@ int sendMessages(struct instdata *inst)
 			printf("\r%5.5u\n", i);
 			fflush(stdout);
 			test_rs_strerror_r(error_number, errStr, sizeof(errStr));
-			printf("send() failed \"%s\" at socket %d, index %u, msgNum %lld\n",
-				   errStr, sockArray[socknum], i, inst->numSent);
+			printf("send() failed \"%s\" at socket %d, index %u, msgNum %lld, "
+				"lenSend %zd, lenBuf %zd\n",
+				errStr, sockArray[socknum], i, inst->numSent, lenSend,
+				lenBuf);
 			fflush(stderr);
 
 			return(1);
@@ -792,7 +816,7 @@ int sendMessages(struct instdata *inst)
 					lenSend = sendTLS(socknum, sendBuf, offsSendBuf);
 					if(lenSend != offsSendBuf) {
 						fprintf(stderr, "tcpflood: error in send function causes potential "
-						"data loss lenSend %d, offsSendBuf %d\n",
+						"data loss lenSend %zd, offsSendBuf %d\n",
 						lenSend, offsSendBuf);
 					}
 					offsSendBuf = 0;
@@ -1375,9 +1399,9 @@ initTLSSess(int i)
 
 
 static int
-sendTLS(int i, char *buf, int lenBuf)
+sendTLS(int i, char *buf, size_t lenBuf)
 {
-	int lenSent;
+	size_t lenSent;
 	int r, err;
 
 	lenSent = 0;
@@ -1525,7 +1549,7 @@ initTLSSess(int i)
 
 
 static int
-sendTLS(int i, char *buf, int lenBuf)
+sendTLS(int i, char *buf, size_t lenBuf)
 {
 	int lenSent;
 	int r;
@@ -1552,7 +1576,7 @@ static void initTLS(void) {}
 static void exitTLS(void) {}
 static void initTLSSess(int __attribute__((unused)) i) {}
 static int sendTLS(int __attribute__((unused)) i, char __attribute__((unused)) *buf,
-	int __attribute__((unused)) lenBuf) { return 0; }
+	size_t __attribute__((unused)) lenBuf) { return 0; }
 static void closeTLSSess(int __attribute__((unused)) i) {}
 #	endif
 
