@@ -1,5 +1,23 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2308.0 (aka 2023.08) 2023-08-??
+- 2023-07-28: testbench: make waiting for HUP processing more reliable
+  The previous approach was more or less delay based. We have now
+  changed the code to enable imdiag to detect if HUP is underway
+  and wait until it is completed. The new method still employs some
+  kind of timeout, but is now quite reliable. Most importantly,
+  it works great with long-running HUP processing, which can happen
+  e.g. when querying the system name takes long or some actions need
+  longer time to persist their HUP processing.
+  The new approach will most likely reduce CI flakes and also speed
+  up testbench runs. The speedup happens from not having to wait a
+  full delay in cases where we detect HUP is completed (plus reduced
+  timeout when we cannot clearly detect this - see code comments why
+  the new method is still considered more reliable than the old one).
+  Code note: we needed to slightly re-structure the way actual HUP
+  processing and the "HUP mutex" is handled. After best analysis,
+  this does not affect the reliability or speed in production
+  settings.
+  closes https://github.com/rsyslog/rsyslog/issues/5192
 - 2023-07-27: build system: make rsyslogd execute when --disable-inet is configured
   This option is mostly useless, as network functionality depends on the
   modules loaded by the config. The only real, and important, effect it
