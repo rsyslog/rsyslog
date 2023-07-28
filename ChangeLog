@@ -1,5 +1,16 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2308.0 (aka 2023.08) 2023-08-??
+- 2023-07-28: openssl: make connection setup more reliable by use of newer lib feature
+  Replaced depreceated method SSLv23_method with TLS_method.
+  In OpenSSL 1.1.0 and higher, SSLv23_method causes some errors
+  in TLS handshake from time to time. As this method is depreceated
+  since 1.1.0, I have replaced it with the follow up method
+  TLS_method which is the most generic one.
+  It fixes the random test failures in tests like
+  - sndrcv_tls_ossl_anon_rebind.sh
+  Also added some debug output in OpenSSL error handling, which is
+  useful when analysing debug files.
+  closes: https://github.com/rsyslog/rsyslog/issues/5201
 - 2023-07-28: testbench improvement: define state file directories for imfile tests
   Not all imfile tests have state file directories or a global working
   directory defined. This results in usage of the default location.
