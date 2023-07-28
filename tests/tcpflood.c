@@ -63,6 +63,7 @@
  * -z	private key file for TLS mode
  * -Z	cert (public key) file for TLS mode
  * -a	Authentication Mode for relp-tls
+ * -A	do NOT abort if an error occured during sending messages
  * -E	Permitted Peer for relp-tls
  * -L	loglevel to use for GnuTLS troubleshooting (0-off to 10-all, 0 default)
  * -j	format message in json, parameter is JSON cookie
@@ -208,6 +209,7 @@ static long long batchsize = 100000000ll;
 static int waittime = 0;
 static int runMultithreaded = 0; /* run tests in multithreaded mode */
 static int numThrds = 1;	/* number of threads to use */
+static int abortOnSendFail = 1;	/* abort run if sending fails? */
 static char *tlsCAFile = NULL;
 static char *tlsCertFile = NULL;
 static char *tlsKeyFile = NULL;
@@ -793,13 +795,21 @@ int sendMessages(struct instdata *inst)
 			printf("\r%5.5u\n", i);
 			fflush(stdout);
 			test_rs_strerror_r(error_number, errStr, sizeof(errStr));
-			printf("send() failed \"%s\" at socket %d, index %u, msgNum %lld, "
-				"lenSend %zd, lenBuf %zd\n",
-				errStr, sockArray[socknum], i, inst->numSent, lenSend,
-				lenBuf);
+			if(lenSend == 0) {
+				printf("tcpflood: socket %d, index %u, msgNum %lld CLOSED REMOTELY\n",
+					sockArray[socknum], i, inst->numSent);
+			} else {
+				printf("tcpflood: send() failed \"%s\" at socket %d, index %u, "
+					"msgNum %lld, lenSend %zd, lenBuf %zd\n",
+					errStr, sockArray[socknum], i, inst->numSent, lenSend,
+					lenBuf);
+			}
 			fflush(stderr);
 
-			return(1);
+			if(abortOnSendFail) {
+				printf("tcpflood terminates due to send failure\n");
+				return(1);
+			}
 		}
 		if(i % show_progress_interval == 0) {
 			if(bShowProgress)
@@ -1629,7 +1639,7 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, buf, _IONBF, 48);
 
-	while((opt = getopt(argc, argv, "a:Bb:c:C:d:DeE:f:F:i:I:j:k:l:L:m:M:n:OP:p:rR:sS:t:T:u:vW:x:XyYz:Z:")) != -1) {
+	while((opt = getopt(argc, argv, "a:ABb:c:C:d:DeE:f:F:i:I:j:k:l:L:m:M:n:OP:p:rR:sS:t:T:u:vW:x:XyYz:Z:")) != -1) {
 		switch (opt) {
 		case 'b':	batchsize = atoll(optarg);
 				break;
@@ -1736,6 +1746,8 @@ int main(int argc, char *argv[])
 				}
 				break;
 		case 'a':	relpAuthMode = optarg;
+				break;
+		case 'A':	abortOnSendFail = 0;
 				break;
 		case 'E':	relpPermittedPeer = optarg;
 				break;
