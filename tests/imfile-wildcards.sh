@@ -6,11 +6,14 @@ export IMFILEINPUTFILES="10"
 export IMFILELASTINPUTLINES="3"
 export IMFILECHECKTIMEOUT="60"
 
+mkdir "$RSYSLOG_DYNNAME.work"
 generate_conf
 add_conf '
 # comment out if you need more debug info:
 	global( debug.whitelist="on"
 		debug.files=["imfile.c"])
+
+global(workDirectory="./'"$RSYSLOG_DYNNAME"'.work")
 
 module(load="../plugins/imfile/.libs/imfile"
        mode="inotify" normalizePath="off")

@@ -7,11 +7,13 @@
 . $srcdir/diag.sh check-inotify
 export IMFILEINPUTFILES="10"
 
+mkdir "$RSYSLOG_DYNNAME.work"
 generate_conf
 add_conf '
 # comment out if you need more debug info:
 	global( debug.whitelist="on"
 		debug.files=["imfile.c"])
+global(workDirectory="./'"$RSYSLOG_DYNNAME"'.work")
 module(load="../plugins/imfile/.libs/imfile"
        mode="inotify" normalizePath="off")
 input(type="imfile" File="./'$RSYSLOG_DYNNAME'.input-symlink.log" Tag="file:"

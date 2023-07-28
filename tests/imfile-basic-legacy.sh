@@ -2,8 +2,10 @@
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 NUMMESSAGES=50000
+mkdir WorkDirectory  $RSYSLOG_DYNNAME.work
 generate_conf
 add_conf '
+$WorkDirectory '$RSYSLOG_DYNNAME'.work
 $ModLoad ../plugins/imfile/.libs/imfile
 $InputFileName ./'$RSYSLOG_DYNNAME'.input
 $InputFileTag file:

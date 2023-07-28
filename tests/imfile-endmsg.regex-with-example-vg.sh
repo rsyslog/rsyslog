@@ -1,15 +1,18 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 # This test tests imfile endmsg.regex.
-export USE_VALGRIND="YES"
-. $srcdir/diag.sh check-inotify
 . ${srcdir:=.}/diag.sh init
+. $srcdir/diag.sh check-inotify
+export USE_VALGRIND="YES"
+
+mkdir $RSYSLOG_DYNNAME.statefiles
 generate_conf
 add_conf '
 module(load="../plugins/imfile/.libs/imfile")
 module(load="../plugins/mmnormalize/.libs/mmnormalize")
 
 input(type="imfile"
+      statefile.directory="'${RSYSLOG_DYNNAME}'.statefiles"
       File="./'$RSYSLOG_DYNNAME'.*.input"
       Tag="file:" addMetadata="on" escapelf="off"
       endmsg.regex="(^[^ ]+ (stdout|stderr) F )|(\\n\"}$)")
