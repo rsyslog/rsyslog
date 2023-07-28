@@ -670,7 +670,7 @@ sendPlainTCP(int socknum, char *buf, size_t lenBuf, int *ret_errno)
 
 	lenSent = 0;
 	while(lenSent != lenBuf) {
-		r = send(sockArray[socknum], buf, lenBuf, 0);
+		r = send(sockArray[socknum], buf + lenSent, lenBuf - lenSent, 0);
 		if(r > 0) {
 			lenSent += r;
 		} else {
