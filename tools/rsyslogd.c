@@ -232,6 +232,22 @@ setsid(void)
 }
 #endif
 
+/* helper for imdiag. Returns if HUP processing has been requested or
+ * is not yet finished. We know this is racy, but imdiag handles this
+ * part by repeating operations. The mutex look is primarily to force
+ * a memory barrier, so that we have a change to see changes already
+ * written, but not present in the core's cache.
+ * 2023-07-26 Rainer Gerhards
+ */
+int
+get_bHadHUP(void)
+{
+	pthread_mutex_lock(&mutHadHUP);
+	const int ret = bHadHUP;
+	pthread_mutex_unlock(&mutHadHUP);
+	/* note: at this point ret can already be invalid */
+	return ret;
+}
 
 rsRetVal
 queryLocalHostname(void)
@@ -2074,10 +2090,12 @@ mainloop(void)
 		pthread_mutex_lock(&mutHadHUP);
 		need_free_mutex = 1;
 		if(bHadHUP) {
-			bHadHUP = 0;
 			need_free_mutex = 0;
 			pthread_mutex_unlock(&mutHadHUP);
 			doHUP();
+			pthread_mutex_lock(&mutHadHUP);
+			bHadHUP = 0;
+			pthread_mutex_unlock(&mutHadHUP);
 		}
 		if(need_free_mutex) {
 			pthread_mutex_unlock(&mutHadHUP);

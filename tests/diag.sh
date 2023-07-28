@@ -1019,6 +1019,19 @@ quit"
 }
 
 
+# wait for HUP to complete. $1 is the instance
+# note: there is a slight chance HUP was not completed. This can happen if it takes
+# the system very long (> 500ms) to receive the HUP and set the internal flag
+# variable. aka "very very low probability".
+await_HUP_processed() {
+	if [ "$1" == "2" ]; then
+		echo AwaitHUPComplete | $TESTTOOL_DIR/diagtalker -pIMDIAG_PORT2 || error_exit  $?
+	else
+		echo AwaitHUPComplete | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
+	fi
+}
+
+
 # wait for all pending lookup table reloads to complete $1 is the instance.
 await_lookup_table_reload() {
 	if [ "$1" == "2" ]; then
@@ -1203,8 +1216,10 @@ issue_HUP() {
 		sleeptime=1000
 	fi
 	kill -HUP $(cat $RSYSLOG_PIDBASE$1.pid)
-	printf 'HUP issued to pid %d\n' $(cat $RSYSLOG_PIDBASE$1.pid)
-	$TESTTOOL_DIR/msleep $sleeptime
+	printf 'HUP issued to pid %d - waiting for it to become processed\n' \
+		$(cat $RSYSLOG_PIDBASE$1.pid)
+	await_HUP_processed
+	#$TESTTOOL_DIR/msleep $sleeptime
 }
 
 
