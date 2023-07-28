@@ -194,10 +194,19 @@ void osslLastSSLErrorMsg(int ret, SSL *ssl, int severity, const char* pszCallSou
 	int iSSLErr = 0;
 	if (ssl == NULL) {
 		/* Output Error Info*/
-		dbgprintf("osslLastSSLErrorMsg: Error in '%s' with ret=%d\n", pszCallSource, ret);
+		DBGPRINTF("osslLastSSLErrorMsg: Error in '%s' with ret=%d\n", pszCallSource, ret);
 	} else {
 		/* if object is set, get error code */
 		iSSLErr = SSL_get_error(ssl, ret);
+		/* Output Debug as well */
+		DBGPRINTF("osslLastSSLErrorMsg: %s Error in '%s': '%s(%d)' with ret=%d, errno=%d, sslapi='%s'\n",
+			(iSSLErr == SSL_ERROR_SSL ? "SSL_ERROR_SSL" :
+			(iSSLErr == SSL_ERROR_SYSCALL ? "SSL_ERROR_SYSCALL" : "SSL_ERROR_UNKNOWN")),
+			pszCallSource, ERR_error_string(iSSLErr, NULL),
+			iSSLErr,
+			ret,
+			errno,
+			pszOsslApi);
 
 		/* Output error message */
 		LogMsg(0, RS_RET_NO_ERRCODE, severity,
@@ -1317,7 +1326,6 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 	}
 	crlFile = (char*) ((pThis->pszCRLFile == NULL) ? glbl.GetDfltNetstrmDrvrCRLF(runConf) : pThis->pszCRLFile);
 	if(crlFile == NULL) {
-		dbgprintf("Certificate revocation list (CRL) file not set.");
 		bHaveCRL = 0;
 	} else {
 		dbgprintf("OSSL CRL file: '%s'\n", crlFile);
@@ -1351,8 +1359,12 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 	        bHaveExtraCAFiles = 1;
 	}
 
-	/* Create main CTX Object */
+	/* Create main CTX Object. Use SSLv23_method for < Openssl 1.1.0 and TLS_method for all newer versions! */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	pThis->ctx = SSL_CTX_new(SSLv23_method());
+#else
+	pThis->ctx = SSL_CTX_new(TLS_method());
+#endif
 	if(bHaveExtraCAFiles == 1) {
 		while((extraCaFile = strsep(&extraCaFiles, ","))) {
 			if(SSL_CTX_load_verify_locations(pThis->ctx, extraCaFile, NULL) != 1) {
@@ -1674,6 +1686,8 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 					"SSL_do_handshake");
 				ABORT_FINALIZE(RS_RET_NO_ERRCODE /*RS_RET_RETRY*/);
 			} else {
+				dbgprintf("osslHandshakeCheck: OpenSSL Client handshake failed with %d "
+					"- Aborting handshake.\n", resErr);
 				osslLastSSLErrorMsg(res, pNsd->ssl, LOG_ERR, "osslHandshakeCheck Client",
 					"SSL_do_handshake");
 				LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,

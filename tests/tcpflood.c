@@ -1224,8 +1224,12 @@ initTLS(void)
 	ERR_load_BIO_strings();
 	ERR_load_crypto_strings();
 
-	/* Create main CTX Object */
+	/* Create main CTX Object. Use SSLv23_method for < Openssl 1.1.0 and TLS_method for all newer versions! */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	ctx = SSL_CTX_new(SSLv23_method());
+#else
+	ctx = SSL_CTX_new(TLS_method());
+#endif
 
 	if(tlsCAFile != NULL && SSL_CTX_load_verify_locations(ctx, tlsCAFile, NULL) != 1) {
 		printf("tcpflood: Error, Failed loading CA certificate"

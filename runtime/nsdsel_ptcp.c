@@ -158,6 +158,9 @@ IsReady(nsdsel_t *const pNsdsel, nsd_t *const pNsd, const nsdsel_waitOp_t waitOp
 	}
 
 	const short revent = pThis->fds[idx].revents;
+	if (revent & POLLNVAL) {
+		DBGPRINTF("ndssel_ptcp: revent & POLLNVAL is TRUE, something is wrong, revent = %d", revent);
+	}
 	assert(!(revent & POLLNVAL));
 	switch(waitOp) {
 		case NSDSEL_RD:
