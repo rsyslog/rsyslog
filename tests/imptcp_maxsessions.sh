@@ -35,7 +35,8 @@ startup
 echo "INFO: RSYSLOG_OUT_LOG: $RSYSLOG_OUT_LOG"
 
 echo "About to run tcpflood"
-tcpflood -c$CONNECTIONS -m$NUMMESSAGES -r -d100 -P129
+tcpflood -c$CONNECTIONS -m$NUMMESSAGES -r -d100 -P129 -A
+echo "-------> NOTE: CLOSED REMOTELY messages are expected and OK! <-------"
 echo "done run tcpflood"
 shutdown_when_empty
 wait_shutdown
