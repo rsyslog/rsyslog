@@ -1,5 +1,15 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2308.0 (aka 2023.08) 2023-08-??
+- 2023-07-30: testbench: make test more reliable
+  There was a race between tcpflood and rsyslog in imptpc_maxsessions.sh.
+  We now use the new -A tcpflood option to make the timing more
+  predictable, hopefully fixing test flakiness.
+  Note: if that does not help, we need to introduce a wait on the number
+  of error messages and maybe a delay before tcpflood termination. The
+  theory behind the latter is that rsyslog possibly does not fully
+  iniaitlize session which are quickly aborted before rsyslog receives
+  the related OS notification! We just record this info in case we
+  need it and are positive that this change will fix the situation.
 - 2023-07-28: openssl: make connection setup more reliable by use of newer lib feature
   Replaced depreceated method SSLv23_method with TLS_method.
   In OpenSSL 1.1.0 and higher, SSLv23_method causes some errors
