@@ -1,5 +1,17 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2308.0 (aka 2023.08) 2023-08-??
+- 2023-08-02: lookup tables: fix static analyzer issue
+  If something goes really wrong, a lookup table's name would not
+  be set. That could lead to a NULL pointer access. HOWEVER, this
+  would require serious bugs in config parameter parsing, as the
+  lookup table name is a required parameter and the parser will
+  error out if not set.
+  So the bug is mostly cosmetic - but it does not hurt to handle
+  this case, of course.
+- 2023-08-02: lookup tables bugfix: reload on HUP did not work when backgrounded
+  Lookup tables were only reloaded on HUP if the -n option was given
+  and rsyslog no backgrounded. This patch fixes the issue.
+  closes: https://github.com/rsyslog/rsyslog/issues/4813
 - 2023-07-30: testbench: make test more reliable
   There was a race between tcpflood and rsyslog in imptpc_maxsessions.sh.
   We now use the new -A tcpflood option to make the timing more
