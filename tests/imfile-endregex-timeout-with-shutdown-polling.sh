@@ -3,8 +3,10 @@
 . ${srcdir:=.}/diag.sh init
 export IMFILECHECKTIMEOUT="60"
 
+mkdir "$RSYSLOG_DYNNAME.work"
 generate_conf
 add_conf '
+global(workDirectory="./'"$RSYSLOG_DYNNAME"'.work")
 module(load="../plugins/imfile/.libs/imfile" mode="polling" pollingInterval="1")
 
 input(type="imfile"

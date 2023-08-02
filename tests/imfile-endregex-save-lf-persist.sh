@@ -2,10 +2,12 @@
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 echo ======================================================================
 echo [imfile-endregex-save-lf-persist.sh]
-. $srcdir/diag.sh check-inotify
 . ${srcdir:=.}/diag.sh init
+. $srcdir/diag.sh check-inotify
+mkdir "$RSYSLOG_DYNNAME.work"
 generate_conf
 add_conf '
+global(workDirectory="./'"$RSYSLOG_DYNNAME"'.work")
 module(load="../plugins/imfile/.libs/imfile")
 input(type="imfile"
       File="./'$RSYSLOG_DYNNAME'.input"

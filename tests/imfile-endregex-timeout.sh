@@ -4,8 +4,10 @@
 . $srcdir/diag.sh check-inotify-only
 export IMFILECHECKTIMEOUT="60"
 
+mkdir "$RSYSLOG_DYNNAME.work"
 generate_conf
 add_conf '
+global(workDirectory="./'"$RSYSLOG_DYNNAME"'.work")
 module(load="../plugins/imfile/.libs/imfile" timeoutGranularity="1")
 
 input(type="imfile" File="./'$RSYSLOG_DYNNAME'.input" Tag="file:"
