@@ -3,10 +3,12 @@
 # This test tests imfile endmsg.regex.
 echo ======================================================================
 echo [imfile-endmsg.regex.sh]
-. $srcdir/diag.sh check-inotify
 . ${srcdir:=.}/diag.sh init
+. $srcdir/diag.sh check-inotify
+mkdir "$RSYSLOG_DYNNAME.work"
 generate_conf
 add_conf '
+global(workDirectory="./'"$RSYSLOG_DYNNAME"'.work")
 module(load="../plugins/imfile/.libs/imfile")
 
 input(type="imfile"
@@ -28,7 +30,7 @@ if $msg contains "msgnum:" then
    template="outfmt"
  )
 '
-if [ "x${USE_VALGRIND:-false}" == "xtrue" ] ; then
+if [ "${USE_VALGRIND:-false}" == "true" ] ; then
 	startup_vg
 else
 	startup
@@ -65,7 +67,7 @@ echo 'date stdout F msgnum:6' >> $RSYSLOG_DYNNAME.crio.input
 echo 'date stdout P msgnum:7' >> $RSYSLOG_DYNNAME.crio.input
 
 shutdown_when_empty # shut down rsyslogd when done processing messages
-if [ "x${USE_VALGRIND:-false}" == "xtrue" ] ; then
+if [ "${USE_VALGRIND:-false}" == "true" ] ; then
 	wait_shutdown_vg
 	check_exit_vg
 else
