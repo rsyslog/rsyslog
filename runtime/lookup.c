@@ -1037,11 +1037,18 @@ lookupTableDefProcessCnf(struct cnfobj *o)
 			  "param '%s'\n", modpblk.descr[i].name);
 		}
 	}
+	const uchar *const lu_name = lu->name; /* we need a const to keep TSAN happy :-( */
+	const uchar *const lu_filename = lu->filename; /* we need a const to keep TSAN happy :-( */
+	if(lu_name == NULL || lu_filename == NULL) {
+		iRet = RS_RET_INTERNAL_ERROR;
+		LogError(0, iRet, "internal error: lookup table name not set albeit being mandatory");
+		ABORT_FINALIZE(iRet);
+	}
 #ifdef HAVE_PTHREAD_SETNAME_NP
-	thd_name_len = ustrlen(lu->name) + strlen(reloader_prefix) + 1;
+	thd_name_len = ustrlen(lu_name) + strlen(reloader_prefix) + 1;
 	CHKmalloc(reloader_thd_name = malloc(thd_name_len));
 	strcpy(reloader_thd_name, reloader_prefix);
-	strcpy(reloader_thd_name + strlen(reloader_prefix), (char*) lu->name);
+	strcpy(reloader_thd_name + strlen(reloader_prefix), (char*) lu_name);
 	reloader_thd_name[thd_name_len - 1] = '\0';
 #if defined(__NetBSD__)
 	pthread_setname_np(lu->reloader, "%s", reloader_thd_name);
@@ -1051,9 +1058,9 @@ lookupTableDefProcessCnf(struct cnfobj *o)
 	pthread_setname_np(lu->reloader, reloader_thd_name);
 #endif
 #endif
-	CHKiRet(lookupReadFile(lu->self, lu->name, lu->filename));
+	CHKiRet(lookupReadFile(lu->self, lu_name, lu_filename));
 	LogMsg(0, RS_RET_OK, LOG_INFO, "lookup table '%s' loaded from file '%s'",
-		lu->name, lu->filename);
+		lu_name, lu->filename);
 
 finalize_it:
 #ifdef HAVE_PTHREAD_SETNAME_NP
