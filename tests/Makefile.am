@@ -480,6 +480,7 @@ TESTS +=  \
 	incltest_dir_empty_wildcard.sh \
 	linkedlistqueue.sh \
 	lookup_table.sh \
+	lookup_table-hup-backgrounded.sh \
 	lookup_table_no_hup_reload.sh \
 	key_dereference_on_uninitialized_variable_space.sh \
 	array_lookup_table.sh \
@@ -2893,6 +2894,7 @@ EXTRA_DIST= \
 	rscript_re_match.sh \
 	rscript_re_match-dbl_quotes.sh \
 	lookup_table.sh \
+	lookup_table-hup-backgrounded.sh \
 	lookup_table_no_hup_reload.sh \
 	lookup_table_no_hup_reload-vg.sh \
 	lookup_table_rscript_reload.sh \

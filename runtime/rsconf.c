@@ -2,7 +2,7 @@
  *
  * Module begun 2011-04-19 by Rainer Gerhards
  *
- * Copyright 2011-2022 Adiscon GmbH.
+ * Copyright 2011-2023 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -1038,6 +1038,7 @@ activate(rsconf_t *cnf)
 
 	CHKiRet(dropPrivileges(cnf));
 
+	lookupActivateConf();
 	tellModulesActivateConfig();
 	startInputModules();
 	CHKiRet(activateActions());

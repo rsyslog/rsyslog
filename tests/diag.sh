@@ -130,6 +130,20 @@ skip_platform() {
 
 }
 
+# function to skip a test if TSAN is enabled
+# This is necessary as TSAN does not properly handle thread creation
+# after fork() - which happens regularly in rsyslog if backgrounding
+# is activated.
+# $1 is the reason why TSAN is not supported
+# note: we depend on CFLAGS to properly reflect build options (what
+#       usually is the case when the testbench is run)
+skip_TSAN() {
+	if [[ "$CFLAGS" == *"sanitize=thread"* ]]; then
+		printf 'test incompatible with TSAN because of %s\n' "$1"
+		exit 77
+	fi
+}
+
 
 # a consistent format to output testbench timestamps
 tb_timestamp() {
