@@ -1861,7 +1861,6 @@ finalize_it:
  */
 DEFFUNC_llExecFunc(doHUPActions)
 {
-	dbgprintf("doHUP called\n");
 	actionCallHUPHdlr((action_t*) pData);
 	return RS_RET_OK; /* we ignore errors, we can not do anything either way */
 }
@@ -1882,6 +1881,7 @@ doHUP(void)
 {
 	char buf[512];
 
+	DBGPRINTF("doHUP: doing modules\n");
 	if(ourConf->globals.bLogStatusMsgs) {
 		snprintf(buf, sizeof(buf),
 			 "[origin software=\"rsyslogd\" " "swVersion=\"" VERSION
@@ -1893,8 +1893,11 @@ doHUP(void)
 
 	queryLocalHostname(); /* re-read our name */
 	ruleset.IterateAllActions(ourConf, doHUPActions, NULL);
+	DBGPRINTF("doHUP: doing modules\n");
 	modDoHUP();
+	DBGPRINTF("doHUP: doing lookup tables\n");
 	lookupDoHUP();
+	DBGPRINTF("doHUP: doing errmsgs\n");
 	errmsgDoHUP();
 }
 
