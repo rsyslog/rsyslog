@@ -575,7 +575,7 @@ seedIV(gcryfile gf, uchar **iv)
 		if(shift == 0) { /* need new random data? */
 			rndnum = randomNumber();
 		}
-		(*iv)[i] = 0xff & ((rndnum & (0xff << shift)) >> shift);
+		(*iv)[i] = 0xff & ((rndnum & (255u << shift)) >> shift);
 	}
 finalize_it:
 	RETiRet;
