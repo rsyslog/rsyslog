@@ -1,5 +1,14 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2308.0 (aka 2023.08) 2023-08-??
+- 2023-08-07: crypto subsystem bugfix: potential undefined behaviour
+  The is some potential undefined behaviour when initializting the IV for locally
+  encrypting log files. The issue cancels itself out, but at least causes
+  some confusion when using undefined behaviour sanitizer (UBSAN). However,
+  UBSAN seems not to detect the issue on all platforms and/or in all versions
+  (we were not able to reproduce this issue in our CI).
+  Please also note that the functionality where this can happen is extremely
+  rarely being used.
+  Thanks to Jeffrey Walton for providing the patch.
 - 2023-08-02: lookup tables: fix static analyzer issue
   If something goes really wrong, a lookup table's name would not
   be set. That could lead to a NULL pointer access. HOWEVER, this
