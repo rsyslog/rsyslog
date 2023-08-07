@@ -35,10 +35,10 @@ jobs:
       # When set to true, cancel all in-progress jobs if any matrix job fails.
       fail-fast: false
       matrix:
-        config: [centos_7, centos_8, debian_10, debian_11, tumbleweed
+        config: [centos_7, centos_8, debian_10, debian_11,
                  fedora_35, fedora_36,
                  ubuntu_18, ubuntu_20, ubuntu_22,
-                 ubuntu_22_san, ubuntu_22_tsan, ubuntu_22_codecov,
+                 ubuntu_22_san, ubuntu_22_tsan, ubuntu_22_distcheck, ubuntu_22_codecov,
                  kafka_codecov, elasticsearch]
 
     steps:
