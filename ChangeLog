@@ -1,4 +1,6 @@
 ----------------------------------------------------------------------------------------
+Scheduled Release 8.2310.0 (aka 2023.10) 2023-10-??
+----------------------------------------------------------------------------------------
 Scheduled Release 8.2308.0 (aka 2023.08) 2023-08-15
 - 2023-08-07: crypto subsystem bugfix: potential undefined behaviour
   The is some potential undefined behaviour when initializting the IV for locally
