@@ -123,6 +123,22 @@ ruleset
 Assign messages from this input to a specific Rsyslog ruleset.
 
 
+.. _imhiredis_batchsize:
+
+batchsize
+^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "number", "10", "yes", "none"
+
+Defines the dequeue batch size for redis pipelining.
+imhiredis will read "**batchsize**" elements from redis at a time.
+
+
 .. _imhiredis_key:
 
 key
