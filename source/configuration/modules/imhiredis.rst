@@ -34,7 +34,7 @@ This mode should be preferred if the user wants to use Redis as a caching system
 .. Warning::
 	This mode was configured to provide optimal performances while not straining Redis, but as imhiredis has to poll the instance some trade-offs had to be made:
 
-	- imhiredis  POPs entries by batches of 10 to improve performances (this is currently not configurable)
+	- imhiredis POPs entries by batches of 10 to improve performances (size of batch is configurable via the :ref:`imhiredis_batchsize` parameter)
 	- when no entries are left in the list, the module sleeps for 1 second before checking the list again. This means messages might be delayed by as much as 1 second between a push to the list and a pop by imhiredis (entries will still be POP'ed out as fast as possible while the list is not empty)
 
 
@@ -212,6 +212,21 @@ uselpop
 
 | When using the :ref:`imhiredis_queue_mode`, defines if imhiredis should use a LPOP instruction instead of a RPOP (the default).
 | Has no influence on the :ref:`imhiredis_channel_mode` and will be ignored if set with this mode.
+
+
+.. _imhiredis_batchsize:
+
+batchsize
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "number", "10", "no", "none"
+
+| When using the :ref:`imhiredis_queue_mode`, defines the size of the batch to use with LPOP / RPOP.
 
 
 .. _imhiredis_stream_consumergroup:
