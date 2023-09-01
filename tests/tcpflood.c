@@ -233,7 +233,8 @@ static gnutls_certificate_credentials_t tlscred;
 /* Main OpenSSL CTX pointer */
 static SSL_CTX *ctx;
 static SSL **sslArray;
-
+static struct sockaddr_in dtls_client_addr;	/* socket address sender for receiving DTLS data */
+static int udpsockin;				/* socket for receiving messages in DTLS mode */
 #endif
 
 /* variables for managing multi-threaded operations */
@@ -261,15 +262,19 @@ struct runstats {
 	int numRuns;
 };
 
-static int udpsock;			/* socket for sending in UDP mode */
+static int udpsockout;			/* socket for sending in UDP mode */
 static struct sockaddr_in udpRcvr;	/* remote receiver in UDP mode */
 
-static enum { TP_UDP, TP_TCP, TP_TLS, TP_RELP_PLAIN, TP_RELP_TLS } transport = TP_TCP;
+static enum { TP_UDP, TP_TCP, TP_TLS, TP_RELP_PLAIN, TP_RELP_TLS, TP_DTLS } transport = TP_TCP;
 
 /* forward definitions */
 static void initTLSSess(int);
 static int sendTLS(int i, char *buf, size_t lenBuf);
 static void closeTLSSess(int __attribute__((unused)) i);
+
+static void initDTLSSess(void);
+static int sendDTLS(char *buf, size_t lenBuf);
+static void closeDTLSSess(void);
 
 #ifdef ENABLE_RELP
 /* RELP subsystem */
@@ -321,7 +326,7 @@ initRELP_PLAIN(void)
 static int
 setupUDP(void)
 {
-	if((udpsock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
+	if((udpsockout = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
 		return 1;
 
 	memset((char *) &udpRcvr, 0, sizeof(udpRcvr));
@@ -335,6 +340,46 @@ setupUDP(void)
 	return 0;
 }
 
+#if defined(ENABLE_OPENSSL)
+static int
+setupDTLS(void)
+{
+	// Setup receiving Socket for DTLS
+	if((udpsockin = socket(AF_INET, SOCK_DGRAM, 0)) == -1)
+		return 1;
+
+	memset(&dtls_client_addr, 0, sizeof(dtls_client_addr));
+	dtls_client_addr.sin_family = AF_INET;
+	dtls_client_addr.sin_port = htons(0);
+	dtls_client_addr.sin_addr.s_addr = INADDR_ANY;
+	if (bind(udpsockin, (struct sockaddr*)&dtls_client_addr, sizeof(dtls_client_addr)) < 0) {
+		perror("bind()");
+		fprintf(stderr, "Unable to bind DTLS CLient socket\n");
+		return(1);
+	}
+
+	memset((char *) &udpRcvr, 0, sizeof(udpRcvr));
+	udpRcvr.sin_family = AF_INET;
+	udpRcvr.sin_port = htons(targetPort[0]);
+	if(inet_aton(targetIP, &udpRcvr.sin_addr)==0) {
+		fprintf(stderr, "inet_aton() failed\n");
+		return(1);
+	}
+	
+	// Init Socket Connection (Which technically does not connect but prepares socket for DTLS)
+	printf("[DEBUG] Init Session to %s:%d ...\n", targetIP, targetPort[0]);
+	udpsockout = socket(AF_INET, SOCK_DGRAM, 0);
+	// Connect the UDP socket to the server's address
+	if (connect(udpsockout, (const struct sockaddr *) &udpRcvr, sizeof(udpRcvr)) < 0) {
+		perror("connect()");
+		fprintf(stderr, "connect to %s:%d failed\n", targetIP, targetPort[0]);
+		return(1);
+	}
+	sockArray[0] = -1;
+
+	return 0;
+}
+#endif
 
 /* open a single tcp connection
  */
@@ -461,6 +506,13 @@ int openConnections(void)
 	sessArray = calloc(numConnections, sizeof(gnutls_session_t));
 #	endif
 	sockArray = calloc(numConnections, sizeof(int));
+
+#	if defined(ENABLE_OPENSSL)
+	// Use setupDTLS on DTLS
+	if(transport == TP_DTLS)
+		return setupDTLS();
+#	endif
+
 	#ifdef ENABLE_RELP
 	if(transport == TP_RELP_PLAIN || transport == TP_RELP_TLS)
 		relpCltArray = calloc(numConnections, sizeof(relpClt_t*));
@@ -532,8 +584,15 @@ void closeConnections(void)
 	struct linger ling;
 	char msgBuf[128];
 
-	if(transport == TP_UDP)
+	if(transport == TP_UDP) {
 		return;
+	}
+#	if defined(ENABLE_OPENSSL)
+	else if(transport == TP_DTLS) {
+		closeDTLSSess();
+		return;
+	}
+#	endif
 
 	if(bShowProgress)
 		if(write(1, "      close connections", sizeof("      close connections")-1)){}
@@ -749,7 +808,7 @@ int sendMessages(struct instdata *inst)
 			}
 			lenSend = sendPlainTCP(socknum, buf, lenBuf, &error_number);
 		} else if(transport == TP_UDP) {
-			lenSend = sendto(udpsock, buf, lenBuf, 0, &udpRcvr, sizeof(udpRcvr));
+			lenSend = sendto(udpsockout, buf, lenBuf, 0, &udpRcvr, sizeof(udpRcvr));
 			error_number = errno;
 		} else if(transport == TP_TLS) {
 			if(sockArray[socknum] == -1) {
@@ -770,6 +829,14 @@ int sendMessages(struct instdata *inst)
 				memcpy(sendBuf, buf, lenBuf);
 				offsSendBuf = lenBuf;
 			}
+#	if defined(ENABLE_OPENSSL)
+		} else if(transport == TP_DTLS) {
+			if(sockArray[0] == -1) {
+				// Init DTLS Session (Bind local listener)
+				initDTLSSess();
+			}
+			lenSend = sendDTLS(buf, lenBuf);
+#	endif
 		} else if(transport == TP_RELP_PLAIN || transport == TP_RELP_TLS) {
 			#ifdef ENABLE_RELP
 			relpRetVal relp_ret;
@@ -1158,7 +1225,7 @@ void osslLastSSLErrorMsg(int ret, SSL *ssl, const char* pszCallSource)
 				} else {
 					ERR_error_string_n(iMyRet, psz, 256);
 				}
-				printf("tcpflood: SysErr: %s\n", psz);
+				printf("tcpflood: Errno %d, SysErr: %s\n", errno, psz);
 			}
 		} else {
 			printf("tcpflood: Unknown SSL Error in '%s' (%d), SSL_get_error: %ld\n",
@@ -1215,9 +1282,8 @@ int verify_callback(int status, X509_STORE_CTX *store)
 /* global init OpenSSL
  */
 static void
-initTLS(void)
+initTLS(const SSL_METHOD *method)
 {
-
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 	/* Setup OpenSSL library  < 1.1.0 */
 	if( !SSL_library_init()) {
@@ -1231,21 +1297,19 @@ initTLS(void)
 
 	/* Load readable error strings */
 	SSL_load_error_strings();
+	OpenSSL_add_ssl_algorithms();
 	ERR_load_BIO_strings();
 	ERR_load_crypto_strings();
 
-	/* Create main CTX Object. Use SSLv23_method for < Openssl 1.1.0 and TLS_method for all newer versions! */
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
-	ctx = SSL_CTX_new(SSLv23_method());
-#else
-	ctx = SSL_CTX_new(TLS_method());
-#endif
+	// Create OpenSSL Context
+	ctx = SSL_CTX_new(method);
 
 	if(tlsCAFile != NULL && SSL_CTX_load_verify_locations(ctx, tlsCAFile, NULL) != 1) {
 		printf("tcpflood: Error, Failed loading CA certificate"
 				" Is the file at the right path? And do we have the permissions?");
 		exit(1);
 	}
+	SSL_CTX_set_ecdh_auto(ctx, 1);
 	if(SSL_CTX_use_certificate_chain_file(ctx, tlsCertFile) != 1) {
 		printf("tcpflood: error cert file could not be accessed -- have you mixed up key and certificate?\n");
 		printf("If in doubt, try swapping the files in -z/-Z\n");
@@ -1373,7 +1437,7 @@ static void
 initTLSSess(int i)
 {
 	int res;
-	BIO *client;
+	BIO *bio_client;
 	SSL* pNewSsl = SSL_new(ctx);
 
 	sslArray[i] = pNewSsl;
@@ -1385,22 +1449,22 @@ initTLSSess(int i)
 	SSL_set_verify(sslArray[i], SSL_VERIFY_NONE, verify_callback);
 
 	/* Create BIO from socket array! */
-	client = BIO_new_socket(sockArray[i], BIO_CLOSE /*BIO_NOCLOSE*/);
-	if (client == NULL) {
+	bio_client = BIO_new_socket(sockArray[i], BIO_CLOSE /*BIO_NOCLOSE*/);
+	if (bio_client == NULL) {
 		osslLastSSLErrorMsg(0, sslArray[i], "initTLSSess2");
 		exit(1);
 	} else {
-	//	printf("initTLSSess: Init client BIO[%p] done\n", (void *)client);
+	//	printf("initTLSSess: Init client BIO[%p] done\n", (void *)bio_client);
 	}
 
 	if(tlsLogLevel > 0) {
 		/* Set debug Callback for client BIO as well! */
-		BIO_set_callback(client, BIO_debug_callback);
+		BIO_set_callback(bio_client, BIO_debug_callback);
 	}
 
 	/* Blocking socket */
-	BIO_set_nbio( client, 0 );
-	SSL_set_bio(sslArray[i], client, client);
+	BIO_set_nbio( bio_client, 0 );
+	SSL_set_bio(sslArray[i], bio_client, bio_client);
 	SSL_set_connect_state(sslArray[i]); /*sets ssl to work in client mode.*/
 
 	/* Perform the TLS handshake */
@@ -1432,19 +1496,15 @@ sendTLS(int i, char *buf, size_t lenBuf)
 				 * in the protocol, i.e. if the connection has been closed cleanly.
 				 *SSL_ERROR_WANT_READ/WRITE: The operation did not complete, try
 				 * again later. */
-				printf("Error while sending data: "
-						"[%d] %s", err, ERR_error_string(err, NULL));
-				printf("Error is: %s",
-						ERR_reason_error_string(err));
+				printf("Error while sending data: [%d] %s", err, ERR_error_string(err, NULL));
+				printf("Error is: %s", ERR_reason_error_string(err));
 			} else {
 				/* Check for SSL Shutdown */
 				if (SSL_get_shutdown(sslArray[i]) == SSL_RECEIVED_SHUTDOWN) {
 					printf("received SSL_RECEIVED_SHUTDOWN!\n");
 				} else {
-					printf("Error while sending data: "
-							"[%d] %s", err, ERR_error_string(err, NULL));
-					printf("Error is: %s",
-							ERR_reason_error_string(err));
+					printf("[ERROR] while sending data: [%d] %s", err, ERR_error_string(err, NULL));
+					printf("[ERROR] Reason: %s", ERR_reason_error_string(err));
 				}
 			}
 			exit(1);
@@ -1469,6 +1529,140 @@ closeTLSSess(int i)
 	}
 	SSL_free(sslArray[i]);
 }
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
+static void
+initDTLSSess()
+{
+	int res;
+	BIO *bio_client;
+
+	// Create new SSL
+	SSL* pNewSsl = SSL_new(ctx);
+
+	// set to array variables
+	sslArray[0] = pNewSsl;
+	sockArray[0] = udpsockout;
+
+	if(!sslArray[0]) {
+		fprintf(stderr, "Unable to create SSL\n");
+		osslLastSSLErrorMsg(0, sslArray[0], "initDTLSSess1");
+		exit(1);
+	}
+
+	SSL_set_verify(sslArray[0], SSL_VERIFY_NONE, verify_callback);
+
+	/* Create BIO from socket array! */
+	bio_client = BIO_new_dgram(udpsockout, BIO_NOCLOSE);
+	if (!bio_client) {
+		fprintf(stderr, "Unable to create BIO\n");
+		osslLastSSLErrorMsg(0, sslArray[0], "initDTLSSess2");
+		exit(1);
+	}
+	BIO_ctrl(bio_client, BIO_CTRL_DGRAM_SET_CONNECTED, 0, &dtls_client_addr);
+	SSL_set_bio(sslArray[0], bio_client, bio_client);
+
+
+	if(tlsLogLevel > 0) {
+		/* Set debug Callback for client BIO as well! */
+		BIO_set_callback(bio_client, BIO_debug_callback);
+	}
+
+	/* Blocking socket */
+//	BIO_set_nbio( bio_client, 0 );
+//	SSL_set_bio(sslArray[0], bio_client, bio_client);
+//	SSL_set_connect_state(sslArray[0]); /*sets ssl to work in client mode.*/
+
+	printf("[DEBUG] Starting DTLS session ...\n");
+	/* Perform handshake */
+	if (SSL_connect(sslArray[0]) <= 0) {
+		fprintf(stderr, "SSL_connect failed\n");
+		osslLastSSLErrorMsg(0, sslArray[0], "initDTLSSess3");
+		exit(1);
+	}
+
+	// Print Cipher info
+	const SSL_CIPHER *cipher = SSL_get_current_cipher(sslArray[0]);
+	if(tlsLogLevel > 0) {
+		printf("[DEBUG] Cipher used: %s\n", SSL_CIPHER_get_name(cipher));
+	}
+
+	// Print Peer Certificate info
+	if(tlsLogLevel > 0) {
+		X509 *cert = SSL_get_peer_certificate(sslArray[0]);
+		if (cert != NULL) {
+			char *line;
+			line = X509_NAME_oneline(X509_get_subject_name(cert), 0, 0);
+			printf("[DEBUG] Subject: %s\n", line);
+			OPENSSL_free(line);
+
+			line = X509_NAME_oneline(X509_get_issuer_name(cert), 0, 0);
+			printf("[DEBUG] Issuer: %s\n", line);
+			OPENSSL_free(line);
+			X509_free(cert);
+		} else {
+			printf("[DEBUG] No certificates.\n");
+		}
+	}
+
+	/* Set and activate timeouts */
+	struct timeval timeout;
+	timeout.tv_sec = 3;
+	timeout.tv_usec = 0;
+	BIO_ctrl(bio_client, BIO_CTRL_DGRAM_SET_RECV_TIMEOUT, 0, &timeout);
+}
+#pragma GCC diagnostic pop
+
+
+static int
+sendDTLS(char *buf, size_t lenBuf)
+{
+	size_t lenSent;
+	int r, err;
+
+	lenSent = 0;
+	r = SSL_write(sslArray[0], buf + lenSent, lenBuf - lenSent);
+	if(r > 0) {
+		lenSent += r;
+	} else {
+		err = SSL_get_error(sslArray[0], r);
+		int err = SSL_get_error(sslArray[0], r);
+		switch(err) {
+			case SSL_ERROR_SYSCALL:
+				printf("[ERROR] SSL_write (SSL_ERROR_SYSCALL): %s\n", strerror(errno));
+				break;
+			default:
+				printf("[ERROR] while sending data: [%d] %s", err, ERR_error_string(err, NULL));
+				printf("[ERROR] Reason: %s", ERR_reason_error_string(err));
+		}
+		exit(1);
+	}
+	return lenSent;
+}
+
+static void
+closeDTLSSess()
+{
+	printf("closeDTLSSess ENTER\n");
+
+	int r;
+	r = SSL_shutdown(sslArray[0]);
+	if (r <= 0){
+		/* Shutdown not finished, call SSL_read to do a bidirectional shutdown, see doc for more:
+		*	https://www.openssl.org/docs/man1.1.1/man3/SSL_shutdown.html
+		*/
+		char rcvBuf[MAX_RCVBUF];
+		SSL_read(sslArray[0], rcvBuf, MAX_RCVBUF);
+
+	}
+	SSL_free(sslArray[0]);
+	close(udpsockout);
+	close(udpsockin);
+
+	printf("closeDTLSSess EXIT\n");
+}
+
 #	elif defined(ENABLE_GNUTLS)
 /* This defines a log function to be provided to GnuTLS. It hopefully
  * helps us track down hard to find problems.
@@ -1592,6 +1786,10 @@ static void initTLSSess(int __attribute__((unused)) i) {}
 static int sendTLS(int __attribute__((unused)) i, char __attribute__((unused)) *buf,
 	size_t __attribute__((unused)) lenBuf) { return 0; }
 static void closeTLSSess(int __attribute__((unused)) i) {}
+
+static void initDTLSSess(void) {}
+static int sendDTLS(char *buf, size_t lenBuf) {}
+static void closeDTLSSess(void) {}
 #	endif
 
 static void
@@ -1740,6 +1938,14 @@ int main(int argc, char *argv[])
 							"if desired)\n");
 						exit(1);
 #					endif
+				} else if(!strcmp(optarg, "dtls")) {
+#					if defined(ENABLE_OPENSSL)
+						transport = TP_DTLS;
+#					else
+						fprintf(stderr, "compiled without openssl TLS support: "
+							"\"-Tdtls\" not supported!\n");
+						exit(1);
+#					endif
 				} else {
 					fprintf(stderr, "unknown transport '%s'\n", optarg);
 					exit(1);
@@ -1827,7 +2033,9 @@ int main(int argc, char *argv[])
 	}
 
 	if(tlsKeyFile != NULL || tlsCertFile != NULL) {
-		if(transport != TP_TLS && transport != TP_RELP_TLS) {
+		if(	transport != TP_TLS &&
+			transport != TP_DTLS &&
+			transport != TP_RELP_TLS) {
 			printf("error: TLS certificates were specified, but TLS is NOT enabled: "
 					"To enable TLS use parameter -Ttls\n");
 			exit(1);
@@ -1840,7 +2048,28 @@ int main(int argc, char *argv[])
 				"be specified\n");
 			exit(1);
 		}
+		/* Create main CTX Object. Use SSLv23_method for < Openssl 1.1.0 and TLS_method for newer versions! */
+#if defined(ENABLE_OPENSSL)
+#	if OPENSSL_VERSION_NUMBER < 0x10100000L
+		initTLS(SSLv23_method());
+#	else
+		initTLS(TLS_method());
+#	endif
+#else
 		initTLS();
+#endif
+	} else if(transport == TP_DTLS) {
+		if(tlsKeyFile == NULL || tlsCertFile == NULL) {
+			printf("error: transport DTLS is specified (-Tdtls), -z and -Z must also "
+				"be specified\n");
+			exit(1);
+		}
+#if defined(ENABLE_OPENSSL)
+		initTLS(DTLS_client_method());
+#else
+		printf("error: transport DTLS is specified (-Tdtls) but not supported in GnuTLS driver\n");
+		exit(1);
+#endif
 	} else if(transport == TP_RELP_PLAIN || transport == TP_RELP_TLS) {
 		#ifdef ENABLE_RELP
 		initRELP_PLAIN();

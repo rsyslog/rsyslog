@@ -64,7 +64,8 @@ jobs:
               ;;
           'centos_8')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_centos:8'
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--disable-elasticsearch-tests --disable-kafka-tests --disable-snmp-tests'
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
+                            --disable-snmp-tests --enable-imdtls --enable-omdtls"
               ;;
           'debian_10')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_debian:10'
@@ -76,7 +77,7 @@ jobs:
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_debian:11'
               export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
-                            --without-valgrind-testbench"
+                            --without-valgrind-testbench --enable-imdtls --enable-omdtls"
               ;;
           'fedora_35')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:35'
@@ -86,7 +87,7 @@ jobs:
           'fedora_36')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:36'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
-                     --disable-kafka-tests --enable-debug"
+                     --disable-kafka-tests --enable-debug --enable-imdtls --enable-omdtls"
               ;;
           'ubuntu_18')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
@@ -102,6 +103,7 @@ jobs:
           'ubuntu_22')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--enable-imdtls --enable-omdtls"
               ;;
           'ubuntu_22_distcheck')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
@@ -116,7 +118,7 @@ jobs:
               export CC='clang'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
                       --disable-libfaketime --without-valgrind-testbench --disable-valgrind \
-                      --disable-kafka-tests"
+                      --disable-kafka-tests --enable-imdtls --enable-omdtls"
               export CFLAGS="-fstack-protector -D_FORTIFY_SOURCE=2 \
                      -fsanitize=address,undefined,nullability,unsigned-integer-overflow \
                      -fno-sanitize-recover=undefined,nullability,unsigned-integer-overflow \

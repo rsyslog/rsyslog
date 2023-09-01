@@ -5,5 +5,5 @@ if [ "$(valgrind --version)" == "valgrind-3.11.0" ]; then
 	exit 77
 fi
 export USE_VALGRIND="YES"
-# not working on CENTOS 7 export RS_TEST_VALGRIND_EXTRA_OPTS="--keep-debuginfo=yes"
-source ${srcdir:-.}/imtcp-tls-ossl-basic.sh
+export RS_TEST_VALGRIND_EXTRA_OPTS="--keep-debuginfo=yes"
+source ${srcdir:-.}/imdtls-sessionbreak.sh
