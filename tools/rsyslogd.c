@@ -1590,23 +1590,24 @@ initAll(int argc, char **argv)
 		int capability; /* capability code */
 		const char *name; /* name of the capability to be displayed */
 		sbool present; /* is the capability present that is needed by rsyslog? if so we do not drop it */
+		capng_type_t type;
 	} capabilities_t;
 
 	capabilities_t capabilities[] = {
-		#define CAP_FIELD(code) { code, #code,  0 }
-		CAP_FIELD(CAP_BLOCK_SUSPEND),
-		CAP_FIELD(CAP_CHOWN),
-		CAP_FIELD(CAP_IPC_LOCK),
-		CAP_FIELD(CAP_LEASE),
-		CAP_FIELD(CAP_NET_ADMIN),
-		CAP_FIELD(CAP_NET_BIND_SERVICE),
-		CAP_FIELD(CAP_DAC_OVERRIDE),
-		CAP_FIELD(CAP_SETGID),
-		CAP_FIELD(CAP_SETUID),
-		CAP_FIELD(CAP_SYS_ADMIN),
-		CAP_FIELD(CAP_SYS_CHROOT),
-		CAP_FIELD(CAP_SYS_RESOURCE),
-		CAP_FIELD(CAP_SYSLOG)
+		#define CAP_FIELD(code, type) { code, #code,  0 , type}
+		CAP_FIELD(CAP_BLOCK_SUSPEND, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+		CAP_FIELD(CAP_CHOWN, CAPNG_EFFECTIVE | CAPNG_PERMITTED ),
+		CAP_FIELD(CAP_IPC_LOCK, CAPNG_EFFECTIVE | CAPNG_PERMITTED ),
+		CAP_FIELD(CAP_LEASE, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+		CAP_FIELD(CAP_NET_ADMIN, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+		CAP_FIELD(CAP_NET_BIND_SERVICE, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+		CAP_FIELD(CAP_DAC_OVERRIDE, CAPNG_EFFECTIVE | CAPNG_PERMITTED | CAPNG_BOUNDING_SET),
+		CAP_FIELD(CAP_SETGID, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+		CAP_FIELD(CAP_SETUID, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+		CAP_FIELD(CAP_SYS_ADMIN, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+		CAP_FIELD(CAP_SYS_CHROOT, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+		CAP_FIELD(CAP_SYS_RESOURCE, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+		CAP_FIELD(CAP_SYSLOG, CAPNG_EFFECTIVE | CAPNG_PERMITTED)
 		#undef CAP_FIELD
 	};
 
@@ -1630,7 +1631,7 @@ initAll(int argc, char **argv)
 			if (capabilities[i].present) {
 				DBGPRINTF("The %s capability is present, "
 					"will try to preserve it.\n", capabilities[i].name);
-				if ((capng_rc = capng_update(CAPNG_ADD, CAPNG_EFFECTIVE|CAPNG_PERMITTED,
+				if ((capng_rc = capng_update(CAPNG_ADD, capabilities[i].type,
 				capabilities[i].capability)) != 0) {
 					LogError(0, RS_RET_LIBCAPNG_ERR,
 							"could not update the internal posix capabilities settings "
