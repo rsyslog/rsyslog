@@ -665,10 +665,10 @@ finalize_it: /*EMPTY to keep the compiler happy */;
 
 
 static int
-sendPlainTCP(int socknum, char *buf, size_t lenBuf, int *ret_errno)
+sendPlainTCP(const int socknum, const char *const buf, const size_t lenBuf, int *const ret_errno)
 {
 	size_t lenSent;
-	int r, err;
+	int r;
 
 	lenSent = 0;
 	while(lenSent != lenBuf) {
@@ -676,7 +676,7 @@ sendPlainTCP(int socknum, char *buf, size_t lenBuf, int *ret_errno)
 		if(r > 0) {
 			lenSent += r;
 		} else {
-			err = errno;
+			*ret_errno = errno;
 			goto finalize_it;
 		}
 	}
