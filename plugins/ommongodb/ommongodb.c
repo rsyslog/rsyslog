@@ -143,7 +143,7 @@ static void closeMongoDB(instanceData *pData)
 		mongoc_client_destroy (pData->client);
 		pData->client = NULL;
 		mongoc_cleanup ();
-		DBGPRINTF("ommongodb: Mongodb connexion closed.");
+		DBGPRINTF("ommongodb: Mongodb connection closed.");
 	}
 }
 
