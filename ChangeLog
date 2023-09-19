@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2310.0 (aka 2023.10) 2023-10-??
+- 2023-09-13: Add the 'batchsize' parameter to imhiredis
+  Parameter set to allow configuring the amount of entries imhiredis debatches at once.
+  Default value of '10' has been kept to avoid any side effect on existing
+  configurations.
+  Thanks to Jérémie Jourdin for the patch.
 - 2023-09-13: omprog bugfix: Add CAP_DAC_OVERRIDE to the bounding set
   The omprog module uses the execve() function to execute
   a third party program. Some required capabilities were not
