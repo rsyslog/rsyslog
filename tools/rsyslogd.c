@@ -3,7 +3,7 @@
  * because it was either written from scratch by me (rgerhards) or
  * contributors who agreed to ASL 2.0.
  *
- * Copyright 2004-2022 Rainer Gerhards and Adiscon
+ * Copyright 2004-2023 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <dirent.h>
 #include <unistd.h>
 #include <errno.h>
 #ifdef ENABLE_LIBLOGGING_STDLOG
@@ -39,6 +40,9 @@
 #endif
 #ifdef ENABLE_LIBCAPNG
 	#include <cap-ng.h>
+#endif
+#if defined(HAVE_LINUX_CLOSE_RANGE_H)
+#	include <linux/close_range.h>
 #endif
 
 #include "rsyslog.h"
@@ -368,6 +372,36 @@ finalize_it:
 	RETiRet;
 }
 
+
+
+/* note: this function is specific to OS'es which provide
+ * the ability to read open file descriptors via /proc.
+ * returns 0 - success, something else otherwise
+ */
+static int
+close_unneeded_open_files(const char *const procdir,
+	const int beginClose, const int parentPipeFD)
+{
+	DIR *dir;
+	struct dirent *entry;
+
+	dir = opendir(procdir);
+	if (dir == NULL) {
+		dbgprintf("closes unneeded files: opendir failed for %s\n", procdir);
+		return 1;
+	}
+
+	while ((entry = readdir(dir)) != NULL) {
+		const int fd = atoi(entry->d_name);
+		if(fd >= beginClose && (((fd != dbgGetDbglogFd()) && (fd != parentPipeFD)))) {
+			close(fd);
+		}
+	}
+
+	closedir(dir);
+	return 0;
+}
+
 /* prepares the background processes (if auto-backbrounding) for
  * operation.
  */
@@ -413,12 +447,32 @@ prepareBackground(const int parentPipeFD)
 	}
 #endif
 
-	/* close unnecessary open files */
-	const int endClose = getdtablesize();
-	close(0);
-	for(int i = beginClose ; i <= endClose ; ++i) {
-		if((i != dbgGetDbglogFd()) && (i != parentPipeFD)) {
-			  aix_close_it(i); /* AIXPORT */
+	/* close unnecessary open files - first try to use /proc file system,
+	 * if that is not possible iterate through all potentially open file
+	 * descriptors. This can be lenghty, but in practice /proc should work
+	 * for almost all current systems, and the fallback is primarily for
+	 * Solaris and AIX, where we do expect a decent max numbers of fds.
+	 */
+	close(0); /* always close stdin, we do not need it */
+
+	/* try Linux, Cygwin, NetBSD */
+	if(close_unneeded_open_files("/proc/self/fd", beginClose, parentPipeFD) != 0) {
+		/* try MacOS, FreeBSD */
+		if(close_unneeded_open_files("/proc/fd", beginClose, parentPipeFD) != 0) {
+			/* did not work out, so let's close everything... */
+			const int endClose = getdtablesize();
+#		if defined(HAVE_CLOSE_RANGE)
+			if(close_range(beginClose, endClose, 0) != 0) {
+				dbgprintf("errno %d after close_range(), fallback to loop\n", errno);
+#		endif
+				for(int i = beginClose ; i <= endClose ; ++i) {
+					if((i != dbgGetDbglogFd()) && (i != parentPipeFD)) {
+						  aix_close_it(i); /* AIXPORT */
+					}
+				}
+#		if defined(HAVE_CLOSE_RANGE)
+			}
+#		endif
 		}
 	}
 	seedRandomNumberForChild();

@@ -200,7 +200,7 @@ AC_CHECK_HEADERS([malloc.h],[],[],[
      #endif
   ]
 ])
-AC_CHECK_HEADERS([fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h unistd.h utmp.h utmpx.h sys/epoll.h sys/prctl.h sys/select.h getopt.h])
+AC_CHECK_HEADERS([fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h unistd.h utmp.h utmpx.h sys/epoll.h sys/prctl.h sys/select.h getopt.h linux/close_range.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -233,7 +233,7 @@ AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_STRERROR_R
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([flock recvmmsg basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setsid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r getline malloc_trim prctl epoll_create epoll_create1 fdatasync syscall lseek64 asprintf])
+AC_CHECK_FUNCS([flock recvmmsg basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setsid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r getline malloc_trim prctl epoll_create epoll_create1 fdatasync syscall lseek64 asprintf close_range])
 AC_CHECK_FUNC([setns], [AC_DEFINE([HAVE_SETNS], [1], [Define if setns exists.])])
 AC_CHECK_TYPES([off64_t])
 
