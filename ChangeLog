@@ -1,5 +1,44 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2310.0 (aka 2023.10) 2023-10-??
+- 2023-09-28: fix startup issue on modern systemd systems
+  When we startup AND are told to auto-background ourselfs, we must
+  close all unneeded file descriptors. Not doing this has some
+  security implications. Traditionally, we do this by iterating
+  over all possible file descriptor values. This is fairly compatible,
+  because we need no OS-specific method. However, modern systemd configs
+  tend to not limit the number of fds, so there are potentially 2^30(*)
+  fds to close. While this is OKish, it takes some time and makes
+  systemd think that rsyslog did not properly start up.
+  We have now solved this by using the /proc filesystem to obtain our
+  currently open fds. This works for Linux, as well as Cygwin, NetBSD,
+  FreeBDS and MacOS. Where not available,and close_range() is available
+  on the (build) platform, we try to use it. If that fails as well, we
+  fall back to the traditional method. In our opionion, this fallback
+  is unproblematic, as on these platforms there is no systemd and in
+  almost all cases a decent number of fds to close.
+  Very special thanks go out to Brennan Kinney, who clearly described
+  the issue to us on github and also provided ample ways to solve it.
+  What we did is just implement what we think is the best fit from
+  rsyslog's PoV.
+  (*) Some details below on the number of potentially to close fds.
+      This is directly from a github posting from Brennan Kinney.
+  Just to clarify, by default since systemd v240 (2018Q4), that
+  should be `1024:524288` limit. As in the soft limit is the expected
+  `1024`.
+  The problem is other software shipping misconfiguration in systemd
+  services that overrides this to something silly like
+  `LimitNOFILE=infinity`.
+  - Which will map to the sysctl `fs.nr_open` (_a value systemd
+    v240 also raises from `2^20` to 2^30`, some distro like Debian are
+    known to opt-out via patch for the `fs.nr_open` change_).
+  - With the biggest issue there being that the soft limit was also
+    set to `infinity` instead of their software requesting to raise
+    the soft limit to a higher value that the hard limit permits.
+    `infinity` isn't at all sane though.
+  - The known source of this misconfiguration is container software such
+    as Docker and `containerd` (_which would often sync with the
+    systemd `.service` config from the Docker daemon `dockerd.service`_).
+  closes https://github.com/rsyslog/rsyslog/issues/5158
 - 2023-09-13: Add the 'batchsize' parameter to imhiredis
   Parameter set to allow configuring the amount of entries imhiredis debatches at once.
   Default value of '10' has been kept to avoid any side effect on existing
