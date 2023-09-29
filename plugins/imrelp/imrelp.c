@@ -839,7 +839,7 @@ static void
 doSIGTTIN(int __attribute__((unused)) sig)
 {
 	const int bTerminate = ATOMIC_FETCH_32BIT(&bTerminateInputs, &mutTerminateInputs);
-	if(bTerminate) {
+	if(bTerminate && (pRelpEngine != NULL)) {
 		relpEngineSetStop(pRelpEngine);
 	}
 }
@@ -882,6 +882,12 @@ ENDafterRun
 
 BEGINmodExit
 CODESTARTmodExit
+	struct sigaction newAct;
+	memset(&newAct, 0, sizeof (newAct));
+	sigemptyset(&newAct.sa_mask);
+	newAct.sa_handler = SIG_IGN;
+	sigaction(SIGTTIN, &newAct, NULL);
+
 	if(pRelpEngine != NULL)
 		iRet = relpEngineDestruct(&pRelpEngine);
 
