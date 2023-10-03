@@ -126,7 +126,7 @@ Assign messages from this input to a specific Rsyslog ruleset.
 .. _imhiredis_batchsize:
 
 batchsize
-^^^^
+^^^^^^^^^
 
 .. csv-table::
    :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
