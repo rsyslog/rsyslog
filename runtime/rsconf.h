@@ -86,6 +86,7 @@ struct parsercnf_s {
 struct globals_s {
 #ifdef ENABLE_LIBCAPNG
 	int bAbortOnFailedLibcapngSetup;
+	int bCapabilityDropEnabled;
 #endif
 	int bDebugPrintTemplateList;
 	int bDebugPrintModuleList;

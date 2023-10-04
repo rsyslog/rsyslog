@@ -180,7 +180,8 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "shutdown.queue.doublesize", eCmdHdlrBinary, 0 },
 	{ "debug.files", eCmdHdlrArray, 0 },
 	{ "debug.whitelist", eCmdHdlrBinary, 0 },
-	{ "libcapng.default", eCmdHdlrBinary, 0 }
+	{ "libcapng.default", eCmdHdlrBinary, 0 },
+	{ "libcapng.enable", eCmdHdlrBinary, 0 },
 };
 static struct cnfparamblk paramblk =
 	{ CNFPARAMBLK_VERSION,
@@ -1211,6 +1212,13 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "libcapng.default")) {
 #ifdef ENABLE_LIBCAPNG
 			loadConf->globals.bAbortOnFailedLibcapngSetup = (int) cnfparamvals[i].val.d.n;
+#else
+			LogError(0, RS_RET_ERR, "rsyslog wasn't "
+				"compiled with libcap-ng support.");
+#endif
+		} else if(!strcmp(paramblk.descr[i].name, "libcapng.enable")) {
+#ifdef ENABLE_LIBCAPNG
+			loadConf->globals.bCapabilityDropEnabled = (int) cnfparamvals[i].val.d.n;
 #else
 			LogError(0, RS_RET_ERR, "rsyslog wasn't "
 				"compiled with libcap-ng support.");

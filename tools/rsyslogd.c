@@ -1636,85 +1636,89 @@ initAll(int argc, char **argv)
 	localRet = rsconf.Load(&ourConf, ConfFile);
 
 #ifdef ENABLE_LIBCAPNG
-	/*
-	 * Drop capabilities to the necessary set
-	 */
-	int capng_rc, capng_failed = 0;
-	typedef struct capabilities_s {
-		int capability; /* capability code */
-		const char *name; /* name of the capability to be displayed */
-		sbool present; /* is the capability present that is needed by rsyslog? if so we do not drop it */
-		capng_type_t type;
-	} capabilities_t;
-
-	capabilities_t capabilities[] = {
-		#define CAP_FIELD(code, type) { code, #code,  0 , type}
-		CAP_FIELD(CAP_BLOCK_SUSPEND, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
-		CAP_FIELD(CAP_CHOWN, CAPNG_EFFECTIVE | CAPNG_PERMITTED ),
-		CAP_FIELD(CAP_IPC_LOCK, CAPNG_EFFECTIVE | CAPNG_PERMITTED ),
-		CAP_FIELD(CAP_LEASE, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
-		CAP_FIELD(CAP_NET_ADMIN, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
-		CAP_FIELD(CAP_NET_BIND_SERVICE, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
-		CAP_FIELD(CAP_DAC_OVERRIDE, CAPNG_EFFECTIVE | CAPNG_PERMITTED | CAPNG_BOUNDING_SET),
-		CAP_FIELD(CAP_SETGID, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
-		CAP_FIELD(CAP_SETUID, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
-		CAP_FIELD(CAP_SYS_ADMIN, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
-		CAP_FIELD(CAP_SYS_CHROOT, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
-		CAP_FIELD(CAP_SYS_RESOURCE, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
-		CAP_FIELD(CAP_SYSLOG, CAPNG_EFFECTIVE | CAPNG_PERMITTED)
-		#undef CAP_FIELD
-	};
-
-	if (capng_have_capabilities(CAPNG_SELECT_CAPS) > CAPNG_NONE) {
-		/* Examine which capabilities are available to us, so we do not try to
-		   drop something that is not present. We need to do this in two steps,
-		   because capng_clear clears the capability set. In the second step,
-		   we add back those caps, which were present before clearing the selected
-		   posix capabilities set.
+	if (loadConf->globals.bCapabilityDropEnabled) {
+		/*
+		* Drop capabilities to the necessary set
 		*/
-		unsigned long caps_len = sizeof(capabilities) / sizeof(capabilities_t);
-		for (unsigned long i = 0; i < caps_len; i++) {
-			if (capng_have_capability(CAPNG_EFFECTIVE, capabilities[i].capability)) {
-				capabilities[i].present = 1;
+		int capng_rc, capng_failed = 0;
+		typedef struct capabilities_s {
+			int capability; /* capability code */
+			const char *name; /* name of the capability to be displayed */
+			/* is the capability present that is needed by rsyslog? if so we do not drop it */
+			sbool present;
+			capng_type_t type;
+		} capabilities_t;
+
+		capabilities_t capabilities[] = {
+			#define CAP_FIELD(code, type) { code, #code,  0 , type}
+			CAP_FIELD(CAP_BLOCK_SUSPEND, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+			CAP_FIELD(CAP_CHOWN, CAPNG_EFFECTIVE | CAPNG_PERMITTED ),
+			CAP_FIELD(CAP_IPC_LOCK, CAPNG_EFFECTIVE | CAPNG_PERMITTED ),
+			CAP_FIELD(CAP_LEASE, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+			CAP_FIELD(CAP_NET_ADMIN, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+			CAP_FIELD(CAP_NET_BIND_SERVICE, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+			CAP_FIELD(CAP_DAC_OVERRIDE, CAPNG_EFFECTIVE | CAPNG_PERMITTED | CAPNG_BOUNDING_SET),
+			CAP_FIELD(CAP_SETGID, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+			CAP_FIELD(CAP_SETUID, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+			CAP_FIELD(CAP_SYS_ADMIN, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+			CAP_FIELD(CAP_SYS_CHROOT, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+			CAP_FIELD(CAP_SYS_RESOURCE, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+			CAP_FIELD(CAP_SYSLOG, CAPNG_EFFECTIVE | CAPNG_PERMITTED)
+			#undef CAP_FIELD
+		};
+
+		if (capng_have_capabilities(CAPNG_SELECT_CAPS) > CAPNG_NONE) {
+			/* Examine which capabilities are available to us, so we do not try to
+				drop something that is not present. We need to do this in two steps,
+				because capng_clear clears the capability set. In the second step,
+				we add back those caps, which were present before clearing the selected
+				posix capabilities set.
+			*/
+			unsigned long caps_len = sizeof(capabilities) / sizeof(capabilities_t);
+			for (unsigned long i = 0; i < caps_len; i++) {
+				if (capng_have_capability(CAPNG_EFFECTIVE, capabilities[i].capability)) {
+					capabilities[i].present = 1;
+				}
 			}
-		}
 
-		capng_clear(CAPNG_SELECT_BOTH);
+			capng_clear(CAPNG_SELECT_BOTH);
 
-		for (unsigned long i = 0; i < caps_len; i++) {
-			if (capabilities[i].present) {
-				DBGPRINTF("The %s capability is present, "
-					"will try to preserve it.\n", capabilities[i].name);
-				if ((capng_rc = capng_update(CAPNG_ADD, capabilities[i].type,
-				capabilities[i].capability)) != 0) {
-					LogError(0, RS_RET_LIBCAPNG_ERR,
-							"could not update the internal posix capabilities settings "
-							"based on the options passed to it, capng_update=%d", capng_rc);
-					capng_failed = 1;
+			for (unsigned long i = 0; i < caps_len; i++) {
+				if (capabilities[i].present) {
+					DBGPRINTF("The %s capability is present, "
+						"will try to preserve it.\n", capabilities[i].name);
+					if ((capng_rc = capng_update(CAPNG_ADD, capabilities[i].type,
+					capabilities[i].capability)) != 0) {
+						LogError(0, RS_RET_LIBCAPNG_ERR,
+								"could not update the internal posix capabilities"
+								" settings based on the options passed to it,"
+								" capng_update=%d", capng_rc);
+						capng_failed = 1;
+					}
+				} else {
+					DBGPRINTF("The %s capability is not present, "
+						"will not try to preserve it.\n", capabilities[i].name);
+				}
+			}
+
+			if ((capng_rc = capng_apply(CAPNG_SELECT_BOTH)) != 0) {
+				LogError(0, RS_RET_LIBCAPNG_ERR,
+					"could not transfer the specified internal posix capabilities "
+					"settings to the kernel, capng_apply=%d", capng_rc);
+				capng_failed = 1;
+			}
+
+			if (capng_failed) {
+				DBGPRINTF("Capabilities were not dropped successfully.\n");
+				if (loadConf->globals.bAbortOnFailedLibcapngSetup) {
+					ABORT_FINALIZE(RS_RET_LIBCAPNG_ERR);
 				}
 			} else {
-				DBGPRINTF("The %s capability is not present, "
-					"will not try to preserve it.\n", capabilities[i].name);
-			}
-		}
-
-		if ((capng_rc = capng_apply(CAPNG_SELECT_BOTH)) != 0) {
-			LogError(0, RS_RET_LIBCAPNG_ERR,
-				"could not transfer the specified internal posix capabilities "
-				"settings to the kernel, capng_apply=%d", capng_rc);
-			capng_failed = 1;
-		}
-
-		if (capng_failed) {
-			DBGPRINTF("Capabilities were not dropped successfully.\n");
-			if (loadConf->globals.bAbortOnFailedLibcapngSetup) {
-				ABORT_FINALIZE(RS_RET_LIBCAPNG_ERR);
+				DBGPRINTF("Capabilities were dropped successfully\n");
 			}
 		} else {
-			DBGPRINTF("Capabilities were dropped successfully\n");
+			DBGPRINTF("No capabilities to drop\n");
 		}
-	} else {
-		DBGPRINTF("No capabilities to drop\n");
 	}
 #endif
 
