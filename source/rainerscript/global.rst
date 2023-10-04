@@ -792,3 +792,20 @@ The default value is "on", in which case rsyslog exits on a libcapng
 related error. If set to "off", an error message describing the problem
 appears at startup, nothing more. Default value is preserved for backwards
 compatibility.
+
+libcapng.enable
+^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "on", "no", "none"
+
+.. versionadded:: 8.2310.0
+
+The `libcapng.enable` global option defines whether rsyslog should
+drop capabilities at startup or not. By default, it is set to "on".
+Until this point, if the project was compiled with --enable-libcap-ng option,
+capabilities were automatically dropped. This is configurable now.
