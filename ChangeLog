@@ -1,5 +1,13 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2310.0 (aka 2023.10) 2023-10-??
+- 2023-10-04: tcp net subsystem: handle data race gracefully
+  It may happen that a socket file descriptor has been closed either
+  while setting up poll() et al or while being inside the system call.
+  This was previously treated as error and caused abort in debug
+  builds. However, it was essentially ignored in production builds.
+  This has now been fixed and now is always gracefully ignored. This
+  most importantly fixes some flakes in CI runs (which were caused
+  by this situation).
 - 2023-09-29: imrelp bufgifx: avoid crash on restart in imrelp SIGTTIN handler
   While existing, if at specific time rsyslog receives a SIGTTIN, it
   crashes due to 2 issues.
