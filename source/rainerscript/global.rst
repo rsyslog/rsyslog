@@ -794,7 +794,7 @@ appears at startup, nothing more. Default value is preserved for backwards
 compatibility.
 
 libcapng.enable
-^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^
 
 .. csv-table::
    :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
