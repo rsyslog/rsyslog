@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2310.0 (aka 2023.10) 2023-10-??
+Scheduled Release 8.2310.0 (aka 2023.10) 2023-10-10
 - 2023-10-04: Add CAP_NET_RAW capability due to the omudpspoof module
   The CAP_NET_RAW ensures the use of RAW and PACKET sockets,
   which is utilized by the omudpspoof module, more precisely
