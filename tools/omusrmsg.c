@@ -56,6 +56,10 @@
 #ifdef HAVE_PATHS_H
 #include <paths.h>
 #endif
+#ifdef HAVE_LIBSYSTEMD
+#include <systemd/sd-daemon.h>
+#include <systemd/sd-login.h>
+#endif
 #include "rsyslog.h"
 #include "srUtils.h"
 #include "stringbuf.h"
@@ -201,6 +205,42 @@ void endutent(void)
 #endif  /* #ifdef OS_BSD */
 
 
+static void sendwallmsg(const char *tty, uchar* pMsg)
+{
+	uchar szErr[512];
+	int errnoSave;
+	char p[sizeof(_PATH_DEV) + UNAMESZ];
+	int ttyf;
+	struct stat statb;
+	int wrRet;
+
+	/* compute the device name */
+	strcpy(p, _PATH_DEV);
+	strncat(p, tty, UNAMESZ);
+
+	/* we must be careful when writing to the terminal. A terminal may block
+	 * (for example, a user has pressed <ctl>-s). In that case, we can not
+	 * wait indefinitely. So we need to use non-blocking I/O. In case we would
+	 * block, we simply do not send the message, because that's the best we can
+	 * do. -- rgerhards, 2008-07-04
+	 */
+
+	/* open the terminal */
+	if((ttyf = open(p, O_WRONLY|O_NOCTTY|O_NONBLOCK)) >= 0) {
+	  if(fstat(ttyf, &statb) == 0 && (statb.st_mode & S_IWRITE)) {
+	    wrRet = write(ttyf, pMsg, strlen((char*)pMsg));
+	    if(Debug && wrRet == -1) {
+	      /* we record the state to the debug log */
+	      errnoSave = errno;
+	      rs_strerror_r(errno, (char*)szErr, sizeof(szErr));
+	      dbgprintf("write to terminal '%s' failed with [%d]:%s\n",
+			p, errnoSave, szErr);
+	    }
+	  }
+	  close(ttyf);
+	}
+}
+
 /*  WALLMSG -- Write a message to the world at large
  *
  *	Write the specified message to either the entire
@@ -215,19 +255,66 @@ void endutent(void)
  */
 static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 {
-
-	uchar szErr[512];
-	char p[sizeof(_PATH_DEV) + UNAMESZ];
 	register int i;
-	int errnoSave;
-	int ttyf;
-	int wrRet;
 	STRUCTUTMP ut;
 	STRUCTUTMP *uptr;
-	struct stat statb;
 	DEFiRet;
 
 	assert(pMsg != NULL);
+
+#ifdef HAVE_LIBSYSTEMD
+	if (sd_booted() > 0) {
+	        register int j;
+		int sdRet;
+		char **sessions_list;
+		int sessions = sd_get_sessions(&sessions_list);
+
+		for (j = 0; j < sessions; j++) {
+	                uchar szErr[512];
+			char *user, *tty;
+
+			if ((sdRet = sd_session_get_username(sessions_list[j], &user)) < 0) {
+		                /* we record the state to the debug log */
+		                rs_strerror_r(-sdRet, (char*)szErr, sizeof(szErr));
+				dbgprintf("get username for session '%s' failed with [%d]:%s\n",
+					  sessions_list[j], -sdRet, szErr);
+				continue; /* try next session */
+			} 
+			/* should we send the message to this user? */
+			if(pData->bIsWall == 0) {
+			        for(i = 0; i < MAXUNAMES; i++) {
+				        if(!pData->uname[i][0]) {
+					        i = MAXUNAMES;
+						break;
+					}
+					if(strncmp(pData->uname[i], user, UNAMESZ) == 0)
+					        break;
+				}
+				if(i == MAXUNAMES) { /* user not found? */
+				        free(user);
+					free(sessions_list[j]);
+					continue; /* on to next user! */
+				}
+			}
+			if ((sdRet = sd_session_get_tty(sessions_list[j], &tty)) < 0) {
+		                /* we record the state to the debug log */
+		                rs_strerror_r(-sdRet, (char*)szErr, sizeof(szErr));
+				dbgprintf("get tty for session '%s' failed with [%d]:%s\n",
+					  sessions_list[j], -sdRet, szErr);
+				free(user);
+				free(sessions_list[j]);
+				continue; /* try next session */
+			} 
+
+			sendwallmsg(tty, pMsg);
+
+			free(user);
+			free(tty);
+			free(sessions_list[j]);
+		}
+		free(sessions_list);
+	} else {
+#endif
 
 	/* open the user login file */
 	setutent();
@@ -259,35 +346,14 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 				continue; /* on to next user! */
 		}
 
-		/* compute the device name */
-		strcpy(p, _PATH_DEV);
-		strncat(p, ut.ut_line, UNAMESZ);
-
-		/* we must be careful when writing to the terminal. A terminal may block
-		 * (for example, a user has pressed <ctl>-s). In that case, we can not
-		 * wait indefinitely. So we need to use non-blocking I/O. In case we would
-		 * block, we simply do not send the message, because that's the best we can
-		 * do. -- rgerhards, 2008-07-04
-		 */
-
-		/* open the terminal */
-		if((ttyf = open(p, O_WRONLY|O_NOCTTY|O_NONBLOCK)) >= 0) {
-			if(fstat(ttyf, &statb) == 0 && (statb.st_mode & S_IWRITE)) {
-				wrRet = write(ttyf, pMsg, strlen((char*)pMsg));
-				if(Debug && wrRet == -1) {
-					/* we record the state to the debug log */
-					errnoSave = errno;
-					rs_strerror_r(errno, (char*)szErr, sizeof(szErr));
-					dbgprintf("write to terminal '%s' failed with [%d]:%s\n",
-						  p, errnoSave, szErr);
-				}
-			}
-			close(ttyf);
-		}
+		sendwallmsg(ut.ut_line, pMsg);
 	}
 
 	/* close the user login file */
 	endutent();
+#ifdef HAVE_LIBSYSTEMD
+	}
+#endif
 	RETiRet;
 }
 
