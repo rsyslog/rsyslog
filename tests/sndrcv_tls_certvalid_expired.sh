@@ -58,6 +58,6 @@ wait_shutdown 2
 shutdown_when_empty
 wait_shutdown
 
-content_check "not permitted to talk to peer, certificate invalid: certificate expired"
+content_check --regex "not permitted to talk to peer '.*', certificate invalid: certificate expired"
 
 exit_test

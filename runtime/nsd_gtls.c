@@ -1135,10 +1135,13 @@ gtlsChkPeerID(nsd_gtls_t *pThis)
 
 	if(list_size < 1) {
 		if(pThis->bReportAuthErr == 1) {
+			uchar *fromHost = NULL;
 			errno = 0;
-			LogError(0, RS_RET_TLS_NO_CERT, "error: peer did not provide a certificate, "
-					"not permitted to talk to it");
 			pThis->bReportAuthErr = 0;
+			nsd_ptcp.GetRemoteHName((nsd_t*)pThis->pTcp, &fromHost);
+			LogError(0, RS_RET_TLS_NO_CERT, "error: peer %s did not provide a certificate, "
+					"not permitted to talk to it", fromHost);
+			free(fromHost);
 		}
 		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
 	}
@@ -1195,8 +1198,12 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 	cert_list = gnutls_certificate_get_peers(pThis->sess, &cert_list_size);
 	if(cert_list_size < 1) {
 		errno = 0;
+		uchar *fromHost = NULL;
+		nsd_ptcp.GetRemoteHName((nsd_t*)pThis->pTcp, &fromHost);
 		LogError(0, RS_RET_TLS_NO_CERT,
-			"peer did not provide a certificate, not permitted to talk to it");
+			"peer %s did not provide a certificate, not permitted to talk to it",
+			fromHost);
+		free(fromHost);
 		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
 	}
 #ifdef EXTENDED_CERT_CHECK_AVAILABLE
@@ -1263,8 +1270,11 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 	}
 
 	if (bAbort == RSTRUE) {
-		LogError(0, NO_ERRCODE, "not permitted to talk to peer, certificate invalid: %s",
-				pszErrCause);
+		uchar *fromHost = NULL;
+		nsd_ptcp.GetRemoteHName((nsd_t*)pThis->pTcp, &fromHost);
+		LogError(0, NO_ERRCODE, "not permitted to talk to peer '%s', certificate invalid: %s",
+				fromHost, pszErrCause);
+		free(fromHost);
 		gtlsGetCertInfo(pThis, &pStr);
 		LogError(0, NO_ERRCODE, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
 		cstrDestruct(&pStr);
@@ -1286,8 +1296,11 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		if(ttCert == -1)
 			ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
 		else if(ttCert > ttNow) {
-			LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "not permitted to talk to peer: "
-					"certificate %d not yet active", i);
+			uchar *fromHost = NULL;
+			nsd_ptcp.GetRemoteHName((nsd_t*)pThis->pTcp, &fromHost);
+			LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "not permitted to talk to peer '%s': "
+					"certificate %d not yet active", fromHost, i);
+			free(fromHost);
 			gtlsGetCertInfo(pThis, &pStr);
 			LogError(0, RS_RET_CERT_NOT_YET_ACTIVE,
 				"invalid cert info: %s", cstrGetSzStrNoNULL(pStr));

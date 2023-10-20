@@ -1,6 +1,6 @@
 /* An implementation of the nsd interface for OpenSSL.
  *
- * Copyright 2018-2021 Adiscon GmbH.
+ * Copyright 2018-2023 Adiscon GmbH.
  * Author: Andre Lorbach
  *
  * This file is part of the rsyslog runtime library.
@@ -107,7 +107,8 @@ rsRetVal osslRecordRecv(nsd_ossl_t *pThis);
 rsRetVal osslHandshakeCheck(nsd_ossl_t *pNsd);
 
 /* some more prototypes to avoid warnings ... */
-void osslLastSSLErrorMsg(int ret, SSL *ssl, int severity, const char* pszCallSource, const char* pszOsslApi);
+void osslLastSSLErrorMsg(nsd_ossl_t const *pThis, const int ret, SSL *ssl, int severity,
+	const char* pszCallSource, const char* pszOsslApi);
 int verify_callback(int status, X509_STORE_CTX *store);
 rsRetVal osslPostHandshakeCheck(nsd_ossl_t *pNsd);
 

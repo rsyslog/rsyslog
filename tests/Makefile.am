@@ -1417,6 +1417,7 @@ TESTS +=  \
 	sndrcv_tls_certvalid_expired.sh \
 	sndrcv_tls_certvalid_expired_defaultmode.sh \
 	sndrcv_tls_certvalid_revoked.sh \
+	sndrcv_tls_client_missing_cert.sh \
 	imtcp-tls-no-lstn-startup.sh \
 	imtcp-tls-gtls-x509fingerprint-invld.sh \
 	imtcp-tls-gtls-x509fingerprint.sh \
@@ -2975,6 +2976,7 @@ EXTRA_DIST= \
 	sndrcv_tls_ossl_serveranon_gtls_clientanon.sh \
 	sndrcv_tls_gtls_servercert_ossl_clientanon.sh \
 	sndrcv_tls_gtls_serveranon_ossl_clientanon.sh \
+	sndrcv_tls_client_missing_cert.sh \
 	sndrcv_ossl_cert_chain.sh \
 	omtcl.sh \
 	omtcl.tcl \
