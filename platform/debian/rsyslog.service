@@ -2,6 +2,7 @@
 Description=System Logging Service
 Requires=syslog.socket
 Documentation=man:rsyslogd(8)
+Documentation=man:rsyslog.conf(5)
 Documentation=https://www.rsyslog.com/doc/
 
 [Service]
@@ -13,6 +14,21 @@ Restart=on-failure
 # Increase the default a bit in order to allow many simultaneous
 # files to be monitored, we might need a lot of fds.
 LimitNOFILE=16384
+
+CapabilityBoundingSet=CAP_BLOCK_SUSPEND CAP_CHOWN CAP_LEASE CAP_NET_ADMIN CAP_NET_BIND_SERVICE CAP_SYS_ADMIN CAP_SYS_RESOURCE CAP_SYSLOG
+SystemCallFilter=@system-service
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectHome=yes
+ProtectSystem=full
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectClock=yes
+ProtectControlGroups=yes
+ProtectHostname=yes
+BindPaths=-/dev/xconsole
 
 [Install]
 WantedBy=multi-user.target
