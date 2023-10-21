@@ -460,19 +460,24 @@ prepareBackground(const int parentPipeFD)
 		/* try MacOS, FreeBSD */
 		if(close_unneeded_open_files("/proc/fd", beginClose, parentPipeFD) != 0) {
 			/* did not work out, so let's close everything... */
-			const int endClose = getdtablesize();
-#		if defined(HAVE_CLOSE_RANGE)
-			if(close_range(beginClose, endClose, 0) != 0) {
-				dbgprintf("errno %d after close_range(), fallback to loop\n", errno);
-#		endif
-				for(int i = beginClose ; i <= endClose ; ++i) {
-					if((i != dbgGetDbglogFd()) && (i != parentPipeFD)) {
-						  aix_close_it(i); /* AIXPORT */
-					}
+			int endClose = (parentPipeFD > dbgGetDbglogFd()) ? parentPipeFD : dbgGetDbglogFd();
+			for(int i = beginClose ; i <= endClose ; ++i) {
+				if((i != dbgGetDbglogFd()) && (i != parentPipeFD)) {
+					aix_close_it(i); /* AIXPORT */
 				}
-#		if defined(HAVE_CLOSE_RANGE)
 			}
-#		endif
+			beginClose = endClose + 1;
+			endClose = getdtablesize();
+#if defined(HAVE_CLOSE_RANGE)
+			if(close_range(beginClose, endClose, 0) !=0) {
+				dbgprintf("errno %d after close_range(), fallback to loop\n", errno);
+#endif
+				for(int i = beginClose ; i <= endClose ; ++i) {
+					aix_close_it(i); /* AIXPORT */
+				}
+#if defined(HAVE_CLOSE_RANGE)
+			}
+#endif
 		}
 	}
 	seedRandomNumberForChild();
