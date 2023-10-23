@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2312.0 (aka 2023.12) 2023-12-??
+- 2023-10-23: testbench: bump zookeeper version to match current offering
+  Older version can no longer be downloaded. It also makes sense to
+  test with mainstream version.
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2310.0 (aka 2023.10) 2023-10-10
 - 2023-10-04: Add CAP_NET_RAW capability due to the omudpspoof module
