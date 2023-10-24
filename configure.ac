@@ -729,16 +729,6 @@ if test "$enable_unlimited_select" = "yes"; then
 fi
 
 
-# support for systemd unit files
-AC_ARG_WITH([systemdsystemunitdir],
-        AS_HELP_STRING([--with-systemdsystemunitdir=DIR], [Directory for systemd service files]),
-        [], [with_systemdsystemunitdir=$($PKG_CONFIG --variable=systemdsystemunitdir systemd)])
-if test "x$with_systemdsystemunitdir" != xno; then
-        AC_SUBST([systemdsystemunitdir], [$with_systemdsystemunitdir])
-fi
-AM_CONDITIONAL(HAVE_SYSTEMD, [test -n "$with_systemdsystemunitdir" -a "x$with_systemdsystemunitdir" != xno ])
-
-
 # debug
 AC_ARG_ENABLE(debug,
         [AS_HELP_STRING([--enable-debug],[Enable debug mode @<:@default=auto@:>@])],

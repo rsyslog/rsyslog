@@ -356,7 +356,6 @@ DISTCHECK_CONFIGURE_FLAGS=
 # in a make distcheck is so that we detect code that accidently was not updated
 # when some global update happened.
 DISTCHECK_CONFIGURE_FLAGS+= \
-	--with-systemdsystemunitdir=$$dc_install_base/$(systemdsystemunitdir) \
 	--enable-silent-rules \
 	--enable-rsyslogd \
 	--enable-omstdout \
