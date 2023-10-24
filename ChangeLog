@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2312.0 (aka 2023.12) 2023-12-??
+- 2023-10-24: imjournal: add the ability to run multiple journal inputs
+  This may be useful to de-couple journal processing.
+  Thanks to Willy Tu for the patch.
 - 2023-10-24: regression fix: forking rsyslogd on BSD did not work
   Actually, this was an issue for all platforms that do not provide open file handle
   detection via the /proc file system.
