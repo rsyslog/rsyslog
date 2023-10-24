@@ -310,6 +310,30 @@ remote sources.
 
 .. _imjournal-statistic-counter:
 
+Input Module Parameters
+=======================
+
+Parameters specific to the input module.
+
+Main
+^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+.. versionadded:: 8.2312.0
+
+When this option is turned on within the input module, imjournal will run the
+target ruleset in the main thread and will be stop taking input if the output
+module is not accepting data. If multiple input moduels set `main` to true, only
+the first one will be affected. The non `main` rulesets will run in the
+background thread and not affected by the output state.
+
+
 
 Statistic Counter
 =================
@@ -389,8 +413,8 @@ Build Requirements:
 Development headers for systemd, version >= 197.
 
 
-Example
-=======
+Example 1
+=========
 
 The following example shows pulling structured imjournal messages and
 saving them into /var/log/ceelog.
@@ -407,3 +431,20 @@ saving them into /var/log/ceelog.
   action(type="omfile" file="/var/log/ceelog" template="CEETemplate")
 
 
+Example 2
+=========
+
+The following example is the same as `Example 1`, but with the input module.
+
+.. code-block:: none
+
+  ruleset(name="imjournam-example" queue.type="direct"){
+   action(type="mmjsonparse")
+   action(type="omfile" file="/var/log/ceelog" template="CEETemplate")
+  }
+
+  input(
+   type="imjournal"
+   ruleset="imjournam-example"
+   main="on"
+  )
