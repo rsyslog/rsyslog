@@ -1,11 +1,20 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2312.0 (aka 2023.12) 2023-12-??
-- 2023-10-24:  omusrmsg: use logind instead of utmp for wall messages with systemd
+- 2023-10-24: regression fix: forking rsyslogd on BSD did not work
+  Actually, this was an issue for all platforms that do not provide open file handle
+  detection via the /proc file system.
+  Tech details: After fork if the child process uses close_range to close open file
+  descriptors it has no way to exempt the parentPipeFD causing a failure to signal
+  successful startup to the parent process. This causes failures on all systems that
+  aren't Linux that implement close_range.
+  Thanks to Nathan Huff for the patch.
+- 2023-10-24: omusrmsg: use logind instead of utmp for wall messages with systemd
   Future SUSE versions will get rid of utmp due to a 32bit time_t counter
   overflow in 2038.
   See details at:
   https://github.com/thkukuk/utmpx/blob/main/Y2038.md
   On systemd based systems logind is an alternative to utmp.
+  Thanks to github user tblume for the patch.
 - 2023-10-24: cleanup: rm no longer used --with-systemdsystemunitdir configure switch
   This is a clean up following the removal of the service unit in
   cfd07503ba055100a84d75d1a78a5c6cceb9fdab
