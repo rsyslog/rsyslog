@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2312.0 (aka 2023.12) 2023-12-??
+- 2023-10-24: cleanup: rm no longer used --with-systemdsystemunitdir configure switch
+  This is a clean up following the removal of the service unit in
+  cfd07503ba055100a84d75d1a78a5c6cceb9fdab
 - 2023-10-23: testbench: bump zookeeper version to match current offering
   Older version can no longer be downloaded. It also makes sense to
   test with mainstream version.
