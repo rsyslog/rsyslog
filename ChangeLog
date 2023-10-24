@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2312.0 (aka 2023.12) 2023-12-??
+- 2023-10-24:  omusrmsg: use logind instead of utmp for wall messages with systemd
+  Future SUSE versions will get rid of utmp due to a 32bit time_t counter
+  overflow in 2038.
+  See details at:
+  https://github.com/thkukuk/utmpx/blob/main/Y2038.md
+  On systemd based systems logind is an alternative to utmp.
 - 2023-10-24: cleanup: rm no longer used --with-systemdsystemunitdir configure switch
   This is a clean up following the removal of the service unit in
   cfd07503ba055100a84d75d1a78a5c6cceb9fdab
