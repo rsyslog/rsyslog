@@ -1,5 +1,15 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2312.0 (aka 2023.12) 2023-12-??
+- 2023-10-26: TLS subsystem: add remote hostname to error reporting
+  This provides richer and easier to process logs for error and warning
+  cases. One goal is to enable automatic operations without the need
+  to consolidate multiple message to a single information.
+  This improves one situation in gtls driver and provides a more
+  generic approach in ossl driver for OpenSSL error reporting.
+  There is probably still room for improvement, however this patch
+  is at least a good starting point for further work. Please
+  provide feedback if you need more!
+  closes https://github.com/rsyslog/rsyslog/issues/5244
 - 2023-10-24: imjournal: add the ability to run multiple journal inputs
   This may be useful to de-couple journal processing.
   Thanks to Willy Tu for the patch.
