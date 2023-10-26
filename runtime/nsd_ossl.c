@@ -188,10 +188,17 @@ int opensslh_THREAD_cleanup(void)
 /*-------------------------------------- MT OpenSSL helpers -----------------------------------------*/
 
 /*--------------------------------------OpenSSL helpers ------------------------------------------*/
-void osslLastSSLErrorMsg(int ret, SSL *ssl, int severity, const char* pszCallSource, const char* pszOsslApi)
+void osslLastSSLErrorMsg(nsd_ossl_t const *pThis, const int ret, SSL *ssl, int severity,
+	const char* pszCallSource, const char* pszOsslApi)
 {
 	unsigned long un_error = 0;
 	int iSSLErr = 0;
+	uchar *fromHost = NULL;
+
+	if(pThis != NULL) {
+		nsd_ptcp.GetRemoteHName((nsd_t*)pThis->pTcp, &fromHost);
+	}
+
 	if (ssl == NULL) {
 		/* Output Error Info*/
 		DBGPRINTF("osslLastSSLErrorMsg: Error in '%s' with ret=%d\n", pszCallSource, ret);
@@ -223,8 +230,10 @@ void osslLastSSLErrorMsg(int ret, SSL *ssl, int severity, const char* pszCallSou
 	/* Loop through ERR_get_error */
 	while ((un_error = ERR_get_error()) > 0){
 		LogMsg(0, RS_RET_NO_ERRCODE, severity,
-			"nsd_ossl:OpenSSL Error Stack: %s", ERR_error_string(un_error, NULL) );
+			"nsd_ossl:remote '%s' OpenSSL Error Stack: %s", fromHost, ERR_error_string(un_error, NULL) );
 	}
+
+	free(fromHost);
 }
 
 int verify_callback(int status, X509_STORE_CTX *store)
@@ -249,6 +258,9 @@ int verify_callback(int status, X509_STORE_CTX *store)
 		X509_NAME_oneline(X509_get_issuer_name(cert), szdbgdata1, sizeof(szdbgdata1));
 		X509_NAME_oneline(RSYSLOG_X509_NAME_oneline(cert), szdbgdata2, sizeof(szdbgdata2));
 
+		uchar *fromHost = NULL;
+		nsd_ptcp.GetRemoteHName((nsd_t*)pThis->pTcp, &fromHost);
+
 		if (iVerifyMode != SSL_VERIFY_NONE) {
 			/* Handle expired Certificates **/
 			if (err == X509_V_OK || err == X509_V_ERR_CERT_HAS_EXPIRED) {
@@ -267,9 +279,9 @@ int verify_callback(int status, X509_STORE_CTX *store)
 						"Certificate EXPIRED warning at depth: %d \n\t"
 						"issuer  = %s\n\t"
 						"subject = %s\n\t"
-						"err %d:%s",
+						"err %d:%s peer '%s'",
 						depth, szdbgdata1, szdbgdata2,
-						err, X509_verify_cert_error_string(err));
+						err, X509_verify_cert_error_string(err), fromHost);
 
 					/* Set Status to OK*/
 					status = 1;
@@ -280,10 +292,10 @@ int verify_callback(int status, X509_STORE_CTX *store)
 						"issuer  = %s\n\t"
 						"subject = %s\n\t"
 						"err %d:%s\n\t"
-						"not permitted to talk to peer, certificate invalid: "
+						"not permitted to talk to peer '%s', certificate invalid: "
 						"certificate expired",
 						depth, szdbgdata1, szdbgdata2,
-						err, X509_verify_cert_error_string(err));
+						err, X509_verify_cert_error_string(err), fromHost);
 				}
 			} else if (err == X509_V_ERR_CERT_REVOKED) {
 				LogMsg(0, RS_RET_CERT_REVOKED, LOG_ERR,
@@ -291,19 +303,19 @@ int verify_callback(int status, X509_STORE_CTX *store)
 					"issuer  = %s\n\t"
 					"subject = %s\n\t"
 					"err %d:%s\n\t"
-					"not permitted to talk to peer, certificate invalid: "
+					"not permitted to talk to peer '%s', certificate invalid: "
 					"certificate revoked",
 					depth, szdbgdata1, szdbgdata2,
-					err, X509_verify_cert_error_string(err));
+					err, X509_verify_cert_error_string(err), fromHost);
 			} else {
 				/* all other error codes cause failure */
 				LogMsg(0, RS_RET_NO_ERRCODE, LOG_ERR,
 					"Certificate error at depth: %d \n\t"
 					"issuer  = %s\n\t"
 					"subject = %s\n\t"
-					"err %d:%s",
+					"err %d:%s - peer '%s'",
 					depth, szdbgdata1, szdbgdata2,
-					err, X509_verify_cert_error_string(err));
+					err, X509_verify_cert_error_string(err), fromHost);
 			}
 		} else {
 			/* do not verify certs in ANON mode, just log into debug */
@@ -316,6 +328,7 @@ int verify_callback(int status, X509_STORE_CTX *store)
 			/* Set Status to OK*/
 			status = 1;
 		}
+		free(fromHost);
 	}
 
 	return status;
@@ -526,7 +539,7 @@ sslerr:
 		}
 		else if(err == SSL_ERROR_SYSCALL) {
 			/* Output error and abort */
-			osslLastSSLErrorMsg(lenRcvd, pThis->ssl, LOG_INFO, "osslRecordRecv", "SSL_read");
+			osslLastSSLErrorMsg(pThis, lenRcvd, pThis->ssl, LOG_INFO, "osslRecordRecv", "SSL_read");
 			iRet = RS_RET_NO_ERRCODE;
 			/* Check for underlaying socket errors **/
 			if (	errno == ECONNRESET) {
@@ -543,7 +556,7 @@ sslerr:
 			err != SSL_ERROR_WANT_WRITE) {
 			DBGPRINTF("osslRecordRecv: SSL_get_error #1 = %d, lenRcvd=%zd\n", err, lenRcvd);
 			/* Output OpenSSL error*/
-			osslLastSSLErrorMsg(lenRcvd, pThis->ssl, LOG_ERR, "osslRecordRecv", "SSL_read");
+			osslLastSSLErrorMsg(pThis, lenRcvd, pThis->ssl, LOG_ERR, "osslRecordRecv", "SSL_read");
 			ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 		} else {
 			DBGPRINTF("osslRecordRecv: SSL_get_error #2 = %d, lenRcvd=%zd\n", err, lenRcvd);
@@ -571,7 +584,7 @@ osslInitSession(nsd_ossl_t *pThis, osslSslState_t osslType) /* , nsd_ossl_t *pSe
 
 	if(!(pThis->ssl = SSL_new(pThis->ctx))) {
 		pThis->ssl = NULL;
-		osslLastSSLErrorMsg(0, pThis->ssl, LOG_ERR, "osslInitSession", "SSL_new");
+		osslLastSSLErrorMsg(pThis, 0, pThis->ssl, LOG_ERR, "osslInitSession", "SSL_new");
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 	}
 
@@ -646,7 +659,6 @@ osslChkPeerFingerprint(nsd_ossl_t *pThis, X509 *pCert)
 {
 	DEFiRet;
 	unsigned int n;
-	uchar *fromHostIP = NULL;
 	uchar fingerprint[20 /*EVP_MAX_MD_SIZE**/];
 	uchar fingerprintSha256[32 /*EVP_MAX_MD_SIZE**/];
 	size_t size;
@@ -697,21 +709,20 @@ osslChkPeerFingerprint(nsd_ossl_t *pThis, X509 *pCert)
 	if(!bFoundPositiveMatch) {
 		dbgprintf("osslChkPeerFingerprint: invalid peer fingerprint, not permitted to talk to it\n");
 		if(pThis->bReportAuthErr == 1) {
+			uchar *fromHostIP = NULL;
 			nsd_ptcp.GetRemoteHName((nsd_t*)pThis->pTcp, &fromHostIP);
 			errno = 0;
 			LogMsg(0, RS_RET_INVALID_FINGERPRINT, LOG_WARNING,
 				"nsd_ossl:TLS session terminated with remote syslog server '%s': "
 				"Fingerprint check failed, not permitted to talk to %s",
 				fromHostIP, cstrGetSzStrNoNULL(pstrFingerprint));
+			free(fromHostIP);
 			pThis->bReportAuthErr = 0;
 		}
 		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
 	}
 
 finalize_it:
-	if (fromHostIP != NULL) {
-		free(fromHostIP);
-	}
 	if(pstrFingerprint != NULL)
 		cstrDestruct(&pstrFingerprint);
 	RETiRet;
@@ -763,7 +774,7 @@ osslChkOnePeerName(nsd_ossl_t *pThis, X509 *pCert, uchar *pszPeerID, int *pbFoun
 				*pbFoundPositiveMatch = 1;
 				break;
 			} else if ( osslRet < 0 ) {
-				osslLastSSLErrorMsg(osslRet, pThis->ssl, LOG_ERR, "osslChkOnePeerName",
+				osslLastSSLErrorMsg(pThis, osslRet, pThis->ssl, LOG_ERR, "osslChkOnePeerName",
 					"X509_check_host");
 				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 			}
@@ -853,7 +864,7 @@ osslChkPeerID(nsd_ossl_t *pThis)
 	/* Get peer certificate from SSL */
 	certpeer = SSL_get_peer_certificate(pThis->ssl);
 	if ( certpeer == NULL ) {
-		if(pThis->bReportAuthErr == 1) {
+		if(pThis->bReportAuthErr == 1 && 1) {
 			errno = 0;
 			pThis->bReportAuthErr = 0;
 			nsd_ptcp.GetRemoteHName((nsd_t*)pThis->pTcp, &fromHostIP);
@@ -1016,7 +1027,7 @@ osslEndSess(nsd_ossl_t *pThis)
 					err != SSL_ERROR_WANT_READ &&
 					err != SSL_ERROR_WANT_WRITE) {
 				/* Output Warning only */
-				osslLastSSLErrorMsg(ret, pThis->ssl, LOG_WARNING, "osslEndSess", "SSL_shutdown");
+				osslLastSSLErrorMsg(pThis, ret, pThis->ssl, LOG_WARNING, "osslEndSess", "SSL_shutdown");
 			}
 			/* Shutdown not finished, call SSL_read to do a bidirectional shutdown, see doc for more:
 			*	https://www.openssl.org/docs/man1.1.1/man3/SSL_shutdown.html
@@ -1372,7 +1383,8 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 					"Check at least: 1) file path is correct, 2) file exist, "
 					"3) permissions are correct, 4) file content is correct. "
 					"OpenSSL error info may follow in next messages");
-				osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit", "SSL_CTX_load_verify_locations");
+				osslLastSSLErrorMsg(pThis, 0, NULL, LOG_ERR, "osslGlblInit",
+					"SSL_CTX_load_verify_locations");
 				ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
 			}
 		}
@@ -1382,7 +1394,7 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 				"Check at least: 1) file path is correct, 2) file exist, "
 				"3) permissions are correct, 4) file content is correct. "
 				"OpenSSL error info may follow in next messages");
-		osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit", "SSL_CTX_load_verify_locations");
+		osslLastSSLErrorMsg(pThis, 0, NULL, LOG_ERR, "osslGlblInit", "SSL_CTX_load_verify_locations");
 		ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
 	}
 	if(bHaveCRL == 1) {
@@ -1394,7 +1406,7 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 					"Check at least: 1) file path is correct, 2) file exist, "
 					"3) permissions are correct, 4) file content is correct. "
 					"OpenSSL error info may follow in next messages");
-			osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit", "X509_STORE_load_file");
+			osslLastSSLErrorMsg(pThis, 0, NULL, LOG_ERR, "osslGlblInit", "X509_STORE_load_file");
 			ABORT_FINALIZE(RS_RET_CRL_INVALID);
 		}
 		X509_STORE_set_flags(store, X509_V_FLAG_CRL_CHECK);
@@ -1409,7 +1421,7 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 					"Check at least: 1) file path is correct, 2) file exist, "
 					"3) permissions are correct, 4) file content is correct. "
 					"OpenSSL error info may follow in next messages");
-			osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit", "fopen");
+			osslLastSSLErrorMsg(pThis, 0, NULL, LOG_ERR, "osslGlblInit", "fopen");
 			ABORT_FINALIZE(RS_RET_CRL_MISSING);
 		}
 		X509_CRL *crl = PEM_read_X509_CRL(fp, NULL, NULL, NULL);
@@ -1417,14 +1429,14 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 		if(crl == NULL) {
 			LogError(0, RS_RET_CRL_INVALID, "Error: Unable to read CRL."
 					"OpenSSL error info may follow in next messages");
-			osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit", "PEM_read_X509_CRL");
+			osslLastSSLErrorMsg(pThis, 0, NULL, LOG_ERR, "osslGlblInit", "PEM_read_X509_CRL");
 			ABORT_FINALIZE(RS_RET_CRL_INVALID);
 		}
 		// Add the CRL to the X509_STORE
 		if(!X509_STORE_add_crl(store, crl)) {
 			LogError(0, RS_RET_CRL_INVALID, "Error: Unable to add CRL to store."
 					"OpenSSL error info may follow in next messages");
-			osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit", "X509_STORE_add_crl");
+			osslLastSSLErrorMsg(pThis, 0, NULL, LOG_ERR, "osslGlblInit", "X509_STORE_add_crl");
 			X509_CRL_free(crl);
 			ABORT_FINALIZE(RS_RET_CRL_INVALID);
 		}
@@ -1447,7 +1459,7 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 				"Check at least: 1) file path is correct, 2) file exist, "
 				"3) permissions are correct, 4) file content is correct. "
 				"OpenSSL error info may follow in next messages");
-		osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit", "SSL_CTX_use_certificate_chain_file");
+		osslLastSSLErrorMsg(pThis, 0, NULL, LOG_ERR, "osslGlblInit", "SSL_CTX_use_certificate_chain_file");
 		ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
 	}
 	if(bHaveKey == 1 && SSL_CTX_use_PrivateKey_file(pThis->ctx, keyFile, SSL_FILETYPE_PEM) != 1) {
@@ -1455,7 +1467,7 @@ osslInit_ctx(nsd_ossl_t *const pThis)
 				"Check at least: 1) file path is correct, 2) file exist, "
 				"3) permissions are correct, 4) file content is correct. "
 				"OpenSSL error info may follow in next messages");
-		osslLastSSLErrorMsg(0, NULL, LOG_ERR, "osslGlblInit", "SSL_CTX_use_PrivateKey_file");
+		osslLastSSLErrorMsg(pThis, 0, NULL, LOG_ERR, "osslGlblInit", "SSL_CTX_use_PrivateKey_file");
 		ABORT_FINALIZE(RS_RET_TLS_KEY_ERR);
 	}
 
@@ -1651,14 +1663,14 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 			} else if(resErr == SSL_ERROR_SYSCALL) {
 				dbgprintf("osslHandshakeCheck: OpenSSL Server handshake failed with SSL_ERROR_SYSCALL "
 					"- Aborting handshake.\n");
-				osslLastSSLErrorMsg(res, pNsd->ssl, LOG_WARNING, "osslHandshakeCheck Server",
+				osslLastSSLErrorMsg(pNsd, res, pNsd->ssl, LOG_WARNING, "osslHandshakeCheck Server",
 					"SSL_accept");
 				LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
 					"nsd_ossl:TLS session terminated with remote client '%s': "
 					"Handshake failed with SSL_ERROR_SYSCALL", fromHostIP);
 				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 			} else {
-				osslLastSSLErrorMsg(res, pNsd->ssl, LOG_ERR, "osslHandshakeCheck Server",
+				osslLastSSLErrorMsg(pNsd, res, pNsd->ssl, LOG_ERR, "osslHandshakeCheck Server",
 					"SSL_accept");
 				LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
 					"nsd_ossl:TLS session terminated with remote client '%s': "
@@ -1682,13 +1694,13 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 			} else if(resErr == SSL_ERROR_SYSCALL) {
 				dbgprintf("osslHandshakeCheck: OpenSSL Client handshake failed with SSL_ERROR_SYSCALL "
 					"- Aborting handshake.\n");
-				osslLastSSLErrorMsg(res, pNsd->ssl, LOG_WARNING, "osslHandshakeCheck Client",
+				osslLastSSLErrorMsg(pNsd, res, pNsd->ssl, LOG_WARNING, "osslHandshakeCheck Client",
 					"SSL_do_handshake");
 				ABORT_FINALIZE(RS_RET_NO_ERRCODE /*RS_RET_RETRY*/);
 			} else {
 				dbgprintf("osslHandshakeCheck: OpenSSL Client handshake failed with %d "
 					"- Aborting handshake.\n", resErr);
-				osslLastSSLErrorMsg(res, pNsd->ssl, LOG_ERR, "osslHandshakeCheck Client",
+				osslLastSSLErrorMsg(pNsd, res, pNsd->ssl, LOG_ERR, "osslHandshakeCheck Client",
 					"SSL_do_handshake");
 				LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
 					"nsd_ossl:TLS session terminated with remote syslog server '%s':"
@@ -1921,7 +1933,7 @@ Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 			}
 			else if(err == SSL_ERROR_SYSCALL) {
 				/* Output error and abort */
-				osslLastSSLErrorMsg(iSent, pThis->ssl, LOG_INFO, "Send", "SSL_write");
+				osslLastSSLErrorMsg(pThis, iSent, pThis->ssl, LOG_INFO, "Send", "SSL_write");
 				iRet = RS_RET_NO_ERRCODE;
 				/* Check for underlaying socket errors **/
 				if (	errno == ECONNRESET) {
@@ -1936,7 +1948,7 @@ Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 			else if(err != SSL_ERROR_WANT_READ &&
 				err != SSL_ERROR_WANT_WRITE) {
 				/* Output error and abort */
-				osslLastSSLErrorMsg(iSent, pThis->ssl, LOG_ERR, "Send", "SSL_write");
+				osslLastSSLErrorMsg(pThis, iSent, pThis->ssl, LOG_ERR, "Send", "SSL_write");
 				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 			} else {
 				/* Check for SSL Shutdown */
@@ -2129,7 +2141,8 @@ applyGnutlsPriorityString(nsd_ossl_t *const pThis)
 				LogError(0, RS_RET_SYS_ERR, "Error: setting openssl command parameters: %s"
 						"OpenSSL error info may follow in next messages",
 						pThis->gnutlsPriorityString);
-				osslLastSSLErrorMsg(0, NULL, LOG_ERR, "SetGnutlsPriorityString", "SSL_CONF_CTX_finish");
+				osslLastSSLErrorMsg(pThis, 0, NULL, LOG_ERR, "SetGnutlsPriorityString",
+					"SSL_CONF_CTX_finish");
 			}
 			SSL_CONF_CTX_free(cctx);
 		}
