@@ -294,7 +294,6 @@ rsRetVal Syslog(modConfData_t *pModConf, syslog_pri_t priority, uchar *pMsg, str
 	/* ignore non-kernel messages if not permitted */
 	if(pModConf->bPermitNonKernel == 0 && pri2fac(priority) != LOG_KERN)
 		FINALIZE; /* silently ignore */
-
 	iRet = enqMsg((uchar*)pMsg, (uchar*) "kernel:", priority, tp, pModConf->ratelimiter);
 
 finalize_it:
