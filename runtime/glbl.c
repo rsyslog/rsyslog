@@ -410,6 +410,7 @@ setDfltNetstrmDrvrCAF(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	DEFiRet;
 	FILE *fp;
 	free(loadConf->globals.pszDfltNetstrmDrvrCAF);
+	loadConf->globals.pszDfltNetstrmDrvrCAF = pNewVal;
 	fp = fopen((const char*)pNewVal, "r");
 	if(fp == NULL) {
 		LogError(errno, RS_RET_NO_FILE_ACCESS,
@@ -417,7 +418,6 @@ setDfltNetstrmDrvrCAF(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 			"could not be accessed", pNewVal);
 	} else {
 		fclose(fp);
-		loadConf->globals.pszDfltNetstrmDrvrCAF = pNewVal;
 	}
 
 	RETiRet;
@@ -458,6 +458,7 @@ setDfltNetstrmDrvrCRLF(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	DEFiRet;
 	FILE *fp;
 	free(loadConf->globals.pszDfltNetstrmDrvrCRLF);
+	loadConf->globals.pszDfltNetstrmDrvrCRLF = pNewVal;
 	fp = fopen((const char*)pNewVal, "r");
 	if(fp == NULL) {
 		LogError(errno, RS_RET_NO_FILE_ACCESS,
@@ -465,7 +466,6 @@ setDfltNetstrmDrvrCRLF(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 			"could not be accessed", pNewVal);
 	} else {
 		fclose(fp);
-		loadConf->globals.pszDfltNetstrmDrvrCRLF = pNewVal;
 	}
 
 	RETiRet;
@@ -478,6 +478,7 @@ setDfltNetstrmDrvrCertFile(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	FILE *fp;
 
 	free(loadConf->globals.pszDfltNetstrmDrvrCertFile);
+	loadConf->globals.pszDfltNetstrmDrvrCertFile = pNewVal;
 	fp = fopen((const char*)pNewVal, "r");
 	if(fp == NULL) {
 		LogError(errno, RS_RET_NO_FILE_ACCESS,
@@ -485,7 +486,6 @@ setDfltNetstrmDrvrCertFile(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 			"could not be accessed", pNewVal);
 	} else {
 		fclose(fp);
-		loadConf->globals.pszDfltNetstrmDrvrCertFile = pNewVal;
 	}
 
 	RETiRet;
@@ -497,6 +497,7 @@ setDfltNetstrmDrvrKeyFile(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	FILE *fp;
 
 	free(loadConf->globals.pszDfltNetstrmDrvrKeyFile);
+	loadConf->globals.pszDfltNetstrmDrvrKeyFile = pNewVal;
 	fp = fopen((const char*)pNewVal, "r");
 	if(fp == NULL) {
 		LogError(errno, RS_RET_NO_FILE_ACCESS,
@@ -504,7 +505,6 @@ setDfltNetstrmDrvrKeyFile(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 			"could not be accessed", pNewVal);
 	} else {
 		fclose(fp);
-		loadConf->globals.pszDfltNetstrmDrvrKeyFile = pNewVal;
 	}
 
 	RETiRet;
