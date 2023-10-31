@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2312.0 (aka 2023.12) 2023-12-??
+- 2023-10-31: imklog bugfix: keepKernelTimestamp=off config param did not work
+   ... at least not as expected. It was only honored for kernel-level
+   messages and only when parseKernelTimestamp was "on". Otherwise, the
+   kernel timestamp was always kept inside the message.
+   closes https://github.com/rsyslog/rsyslog/issues/5160
 - 2023-10-26: TLS subsystem: add remote hostname to error reporting
   This provides richer and easier to process logs for error and warning
   cases. One goal is to enable automatic operations without the need
