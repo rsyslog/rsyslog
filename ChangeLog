@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2312.0 (aka 2023.12) 2023-12-??
+- 2023-10-31: TLS subsystem: fix small memory leak on startup
+  This was a one-time leak of the file name that hapened if a certificate file
+  was not accessible. It had no operational issues, but could confuse automatted
+  testing. As not only a side-effect, certificate load failures are now somewhat
+  more verbosely reported, which we consider helpful to the user.
+  Thanks to Attila Lakatos for the patch.
 - 2023-10-31: imklog bugfix: keepKernelTimestamp=off config param did not work
    ... at least not as expected. It was only honored for kernel-level
    messages and only when parseKernelTimestamp was "on". Otherwise, the
