@@ -34,7 +34,7 @@ This mode should be preferred if the user wants to use Redis as a caching system
 .. Warning::
 	This mode was configured to provide optimal performances while not straining Redis, but as imhiredis has to poll the instance some trade-offs had to be made:
 
-	- imhiredis POPs entries by batches of 10 to improve performances (size of batch is configurable via the :ref:`_imhiredis_batchsize` parameter)
+	- imhiredis POPs entries by batches of 10 to improve performances (size of batch is configurable via the batchsize parameter)
 	- when no entries are left in the list, the module sleeps for 1 second before checking the list again. This means messages might be delayed by as much as 1 second between a push to the list and a pop by imhiredis (entries will still be POP'ed out as fast as possible while the list is not empty)
 
 
@@ -122,8 +122,6 @@ ruleset
 
 Assign messages from this input to a specific Rsyslog ruleset.
 
-
-.. _imhiredis_batchsize:
 
 batchsize
 ^^^^^^^^^
