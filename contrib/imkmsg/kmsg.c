@@ -4,7 +4,7 @@
  * For a general overview, see head comment in imkmsg.c.
  * This is heavily based on imklog bsd.c file.
  *
- * Copyright 2008-2014 Adiscon GmbH
+ * Copyright 2008-2023 Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -44,6 +44,18 @@
 
 /* globals */
 static int	fklog = -1;	/* kernel log fd */
+static int	bInInitialReading = 1; /* are we in the intial kmsg reading phase? */
+/* Note: There is a problem with kernel log time.
+ * See https://github.com/troglobit/sysklogd/commit/9f6fbb3301e571d8af95f8d771469291384e9e95
+ * We use the same work-around if bFixKernelStamp is on, and use the kernel log time
+ * only for past records, which we assume to be from recent boot. Later on, we do not
+ * use them but system time.
+ * UNFORTUNATELY, with /dev/kmsg, we always get old messages on startup. That means we
+ * may also pull old messages. We do not address this right now, as for 10 years "old
+ * messages" was pretty acceptable. So we wait until someone complains. Hint: we could
+ * do a seek to the end of kmsg if desired to not pull old messages.
+ * 2023-10-31 rgerhards
+ */
 
 #ifndef _PATH_KLOG
 #	define _PATH_KLOG "/dev/kmsg"
@@ -54,10 +66,11 @@ static int	fklog = -1;	/* kernel log fd */
  * from the rest.
  */
 static void
-submitSyslog(uchar *buf)
+submitSyslog(modConfData_t *const pModConf, const uchar *buf)
 {
 	long offs = 0;
 	struct timeval tv;
+	struct timeval *tp = NULL;
 	struct sysinfo info;
 	unsigned long int timestamp = 0;
 	char name[1024];
@@ -129,27 +142,32 @@ submitSyslog(uchar *buf)
 		json_object_object_add(json, name, jval);
 	}
 
-	/* calculate timestamp */
-	sysinfo(&info);
-	gettimeofday(&tv, NULL);
+	if(   (pModConf->parseKernelStamp == KMSG_PARSE_TS_ALWAYS)
+	   || ((pModConf->parseKernelStamp == KMSG_PARSE_TS_STARTUP_ONLY) && bInInitialReading) ) {
+		/* calculate timestamp */
+		sysinfo(&info);
+		gettimeofday(&tv, NULL);
 
-	/* get boot time */
-	tv.tv_sec -= info.uptime;
+		/* get boot time */
+		tv.tv_sec -= info.uptime;
 
-	tv.tv_sec += timestamp / 1000000;
-	tv.tv_usec += timestamp % 1000000;
+		tv.tv_sec += timestamp / 1000000;
+		tv.tv_usec += timestamp % 1000000;
 
-	while (tv.tv_usec < 0) {
-		tv.tv_sec--;
-		tv.tv_usec += 1000000;
+		while (tv.tv_usec < 0) {
+			tv.tv_sec--;
+			tv.tv_usec += 1000000;
+		}
+
+		while (tv.tv_usec >= 1000000) {
+			tv.tv_sec++;
+			tv.tv_usec -= 1000000;
+		}
+
+		tp = &tv;
 	}
 
-	while (tv.tv_usec >= 1000000) {
-		tv.tv_sec++;
-		tv.tv_usec -= 1000000;
-	}
-
-	Syslog(priority, (uchar *)msg, &tv, json);
+	Syslog(priority, (uchar *)msg, tp, json);
 }
 
 
@@ -161,7 +179,7 @@ klogWillRunPrePrivDrop(modConfData_t __attribute__((unused)) *pModConf)
 	char errmsg[2048];
 	DEFiRet;
 
-	fklog = open(_PATH_KLOG, O_RDONLY, 0);
+	fklog = open(_PATH_KLOG, O_RDONLY | O_NONBLOCK, 0);
 	if (fklog < 0) {
 		imkmsgLogIntMsg(LOG_ERR, "imkmsg: cannot open kernel log (%s): %s.",
 			_PATH_KLOG, rs_strerror_r(errno, errmsg, sizeof(errmsg)));
@@ -184,7 +202,7 @@ klogWillRunPostPrivDrop(modConfData_t __attribute__((unused)) *pModConf)
 	/* this normally returns EINVAL */
 	/* on an OpenVZ VM, we get EPERM */
 	r = read(fklog, NULL, 0);
-	if (r < 0 && errno != EINVAL) {
+	if (r < 0 && errno != EINVAL && errno != EAGAIN && errno != EWOULDBLOCK) {
 		imkmsgLogIntMsg(LOG_ERR, "imkmsg: cannot open kernel log (%s): %s.",
 			_PATH_KLOG, rs_strerror_r(errno, errmsg, sizeof(errmsg)));
 		fklog = -1;
@@ -195,11 +213,19 @@ finalize_it:
 	RETiRet;
 }
 
+
+static void
+change_reads_to_blocking(const int fd)
+{
+	const int flags = fcntl(fd, F_GETFL, 0);
+	fcntl(fd, F_SETFL, flags & ~O_NONBLOCK);
+}
+
 /* Read kernel log while data are available, each read() reads one
  * record of printk buffer.
  */
 static void
-readkmsg(void)
+readkmsg(modConfData_t *const pModConf)
 {
 	int i;
 	uchar pRcv[8192+1];
@@ -210,7 +236,6 @@ readkmsg(void)
 
 		/* every read() from the opened device node receives one record of the printk buffer */
 		i = read(fklog, pRcv, 8192);
-
 		if (i > 0) {
 			/* successful read of message of nonzero length */
 			pRcv[i] = '\0';
@@ -220,7 +245,13 @@ readkmsg(void)
 			continue;
 		} else {
 			/* something went wrong - error or zero length message */
-			if (i < 0 && errno != EINTR && errno != EAGAIN) {
+			if(i < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+				DBGPRINTF("imkmsg: initial read done, changing to blocking mode\n");
+				change_reads_to_blocking(fklog);
+				bInInitialReading = 0;
+				continue;
+			}
+			if(i < 0 && errno != EINTR && errno != EAGAIN) {
 				/* error occurred */
 				imkmsgLogIntMsg(LOG_ERR,
 				       "imkmsg: error reading kernel log - shutting down: %s",
@@ -230,7 +261,7 @@ readkmsg(void)
 			break;
 		}
 
-		submitSyslog(pRcv);
+		submitSyslog(pModConf, pRcv);
 	}
 }
 
@@ -254,10 +285,10 @@ rsRetVal klogAfterRun(modConfData_t *pModConf)
  * "message pull" mechanism.
  * rgerhards, 2008-04-09
  */
-rsRetVal klogLogKMsg(modConfData_t __attribute__((unused)) *pModConf)
+rsRetVal klogLogKMsg(modConfData_t *const pModConf)
 {
 	DEFiRet;
-	readkmsg();
+	readkmsg(pModConf);
 	RETiRet;
 }
 
