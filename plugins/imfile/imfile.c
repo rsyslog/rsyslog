@@ -1153,6 +1153,7 @@ fs_node_destroy(fs_node_t *const node)
 	DBGPRINTF("node destroy: %p edges:\n", node);
 
 	for(edge = node->edges ; edge != NULL ; ) {
+		detect_updates(edge);
 		fs_node_destroy(edge->node);
 		fs_edge_t *const toDel = edge;
 		edge = edge->next;
