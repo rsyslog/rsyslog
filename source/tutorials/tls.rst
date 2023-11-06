@@ -161,7 +161,7 @@ CA cert. 
 	global(DefaultNetstreamDriverCAFile="/path/to/contrib/gnutls/ca.pem")
 
         # set up the action for all messages
-	action(type="omfwd" protocol="tcp" port="6514"
+	action(type="omfwd" protocol="tcp" target="s.example.net" port="6514"
 	       StreamDriver="gtls" StreamDriverMode="1" StreamDriverAuthMode="anon")
 
 Note that we use the regular TCP forwarding action here. There is
