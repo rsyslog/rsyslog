@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2312.0 (aka 2023.12) 2023-12-??
+- 2023-11-07: imfile bugfix: remove state file on file delete
+  The state file would remain in the working directory
+  after shutdown, even though deleteStateOnfileDelete is
+  set to "on" and the monitored file was removed.
+  closes https://github.com/rsyslog/rsyslog/issues/5258
+  Thanks to Attila Lakatos for the patch.
 - 2023-10-31: TLS subsystem: fix small memory leak on startup
   This was a one-time leak of the file name that hapened if a certificate file
   was not accessible. It had no operational issues, but could confuse automatted
