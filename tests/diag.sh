@@ -1080,6 +1080,16 @@ wait_file_lines() {
 		count_function="$2"
 		shift 2
 	fi
+	interrupt_connection=NO
+	if [ "$1" == "--interrupt-connection" ]; then
+		interrupt_connection="YES"
+		interrupt_host="$2"
+		interrupt_port="$3"
+		interrupt_tick="$4"
+		shift 4
+		lastcurrent_time=0
+	fi
+
 	timeout=${3:-$TB_TEST_TIMEOUT}
 	timeoutbegin=$(date +%s)
 	timeoutend=$(( timeoutbegin + timeout ))
@@ -1121,6 +1131,15 @@ wait_file_lines() {
 				error_exit 1
 			else
 				echo $(date +%H:%M:%S) wait_file_lines waiting, expected $waitlines, current $count lines
+
+				current_time=$(date +%s)
+				if [ $interrupt_connection == "YES" ] && [ $current_time -gt $lastcurrent_time ] && [ $((current_time % $interrupt_tick)) -eq 0 ] && [ ${count} -gt 1 ]; then
+					# Interrupt Connection - requires root and linux kernel >= 4.9 in order to work!
+					echo wait_file_lines Interrupt Connection on ${interrupt_host}:${interrupt_port}
+					sudo ss -K dst ${interrupt_host} dport = ${interrupt_port}
+				fi
+				lastcurrent_time=$current_time
+
 				$TESTTOOL_DIR/msleep $delay
 			fi
 		fi

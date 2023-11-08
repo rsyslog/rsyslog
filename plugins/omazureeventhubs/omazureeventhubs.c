@@ -328,36 +328,19 @@ static pn_message_t* proton_encode_message(wrkrInstanceData_t *const pWrkrData, 
 	return message;
 }
 
-static sbool proton_check_condition(pn_event_t *event, pn_condition_t *cond, const char * pszReason) {
-	if (pn_condition_is_set(cond)) {
-		DBGPRINTF("proton_check_condition: %s %s: %s: %s",
-			pszReason,
-			pn_event_type_name(pn_event_type(event)),
-			pn_condition_get_name(cond),
-			pn_condition_get_description(cond));
-		LogError(0, RS_RET_ERR, "omazureeventhubs: %s %s: %s: %s",
-			pszReason,
-			pn_event_type_name(pn_event_type(event)),
-			pn_condition_get_name(cond),
-			pn_condition_get_description(cond));
-		pn_connection_close(pn_event_connection(event));
-		return 0;
-	} else {
-		return 1;
-	}
-}
-
 static rsRetVal
 closeProton(wrkrInstanceData_t *const __restrict__ pWrkrData)
 {
 	DEFiRet;
+	instanceData *const pData = (instanceData *const) pWrkrData->pData;
 #ifndef NDEBUG
 	DBGPRINTF("closeProton[%p]: ENTER\n", pWrkrData);
 #endif
 	if (pWrkrData->pnSender) {
 		pn_link_close(pWrkrData->pnSender);
+		DBGPRINTF("closeProton[%p]: pn_link_close\n", pWrkrData);
 		pn_session_close(pn_link_session(pWrkrData->pnSender));
-		DBGPRINTF("closeProton[%p]: pn_link_close/pn_session_close Session\n", pWrkrData);
+		DBGPRINTF("closeProton[%p]: pn_session_close\n", pWrkrData);
 	}
 	if (pWrkrData->pnConn) {
 		DBGPRINTF("closeProton[%p]: pn_connection_close connection\n", pWrkrData);
@@ -372,6 +355,23 @@ closeProton(wrkrInstanceData_t *const __restrict__ pWrkrData)
 	pWrkrData->pnConn = NULL;
 	pWrkrData->iMsgSeq = 0;
 	pWrkrData->iMaxMsgSeq = 0;
+
+	// Mark all remaining entries as REJECTED
+	if(pWrkrData->aProtonMsgs != NULL) {
+		for(unsigned int i = 0 ; i < pWrkrData->nProtonMsgs ; ++i) {
+			if (pWrkrData->aProtonMsgs[i] != NULL && (
+					pWrkrData->aProtonMsgs[i]->status == PROTON_UNSUBMITTED ||
+					pWrkrData->aProtonMsgs[i]->status == PROTON_SUBMITTED)
+				) {
+				pWrkrData->aProtonMsgs[i]->status = PROTON_REJECTED;
+				DBGPRINTF("closeProton[%p]: Setting ProtonMsg %s to PROTON_REJECTED \n",
+					pWrkrData, pWrkrData->aProtonMsgs[i]->MsgID);
+				// Increment Stats Counter
+				STATSCOUNTER_INC(ctrAzureFail, mutCtrAzureFail);
+				INST_STATSCOUNTER_INC(pData, pData->ctrAzureFail, pData->mutCtrAzureFail);
+			}
+		}
+	}
 
 	FINALIZE;
 finalize_it:
@@ -390,13 +390,14 @@ openProton(wrkrInstanceData_t *const __restrict__ pWrkrData)
 #ifndef NDEBUG
 	DBGPRINTF("openProton[%p]: ENTER\n", pWrkrData);
 #endif
-	if(pWrkrData->bIsConnecting || pWrkrData->bIsConnected)
+	if(pWrkrData->bIsConnecting == 1 || pWrkrData->bIsConnected == 1)
 		FINALIZE;
 	pWrkrData->pnStatus = PN_EVENT_NONE;
 
 	pn_proactor_addr(szAddr, sizeof(szAddr),
 		(const char *) pData->azurehost,
 		(const char *) pData->azureport);
+
 	// Configure a transport for SSL. The transport will be freed by the proactor.
 	pWrkrData->pnTransport = pn_transport();
 	DBGPRINTF("openProton[%p]: create transport to '%s:%s'\n",
@@ -441,11 +442,41 @@ openProton(wrkrInstanceData_t *const __restrict__ pWrkrData)
 
 	// Successfully connecting
 	pWrkrData->bIsConnecting = 1;
+	pWrkrData->bIsSuspended = 0;
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		closeProton(pWrkrData); // Make sure to free ressources
 	}
 	RETiRet;
+}
+
+static sbool
+proton_check_condition(	pn_event_t *event,
+			wrkrInstanceData_t *const __restrict__ pWrkrData,
+			pn_condition_t *cond,
+			const char * pszReason) {
+	if (pn_condition_is_set(cond)) {
+		DBGPRINTF("proton_check_condition: %s %s: %s: %s",
+			pszReason,
+			pn_event_type_name(pn_event_type(event)),
+			pn_condition_get_name(cond),
+			pn_condition_get_description(cond));
+		LogError(0, RS_RET_ERR, "omazureeventhubs: %s %s: %s: %s",
+			pszReason,
+			pn_event_type_name(pn_event_type(event)),
+			pn_condition_get_name(cond),
+			pn_condition_get_description(cond));
+
+		// Connection can be closed
+		closeProton(pWrkrData);
+
+		// Set Worker to suspended state!
+		pWrkrData->bIsSuspended = 1;
+
+		return 0;
+	} else {
+		return 1;
+	}
 }
 
 static rsRetVal
@@ -455,7 +486,8 @@ setupProtonHandle(wrkrInstanceData_t *const __restrict__ pWrkrData, int autoclos
 	DBGPRINTF("omazureeventhubs[%p]: setupProtonHandle ENTER\n", pWrkrData);
 
 	pthread_rwlock_wrlock(&pWrkrData->pnLock);
-	if (autoclose == SETUP_PROTON_AUTOCLOSE) {
+	if (autoclose == SETUP_PROTON_AUTOCLOSE && (pWrkrData->bIsConnected == 1)) {
+		DBGPRINTF("omazureeventhubs[%p]: setupProtonHandle closeProton\n", pWrkrData);
 		closeProton(pWrkrData);
 	}
 	CHKiRet(openProton(pWrkrData));
@@ -631,6 +663,7 @@ CODESTARTtryResume
 	DBGPRINTF("omazureeventhubs[%p]: tryResume ENTER\n", pWrkrData);
 #endif
 	if (pWrkrData->bIsConnecting == 0 && pWrkrData->bIsConnected == 0) {
+		DBGPRINTF("omazureeventhubs[%p]: tryResume setupProtonHandle\n", pWrkrData);
 		CHKiRet(setupProtonHandle(pWrkrData, SETUP_PROTON_AUTOCLOSE));
 	}
 finalize_it:
@@ -661,6 +694,7 @@ CODESTARTcommitTransaction
 #ifndef NDEBUG
 	DBGPRINTF("omazureeventhubs[%p]: commitTransaction [%d msgs] ENTER\n", pWrkrData, nParams);
 #endif
+
 	// Handle/Expand our proton helper array
 	if (nParams > pWrkrData->nMaxProtonMsgs) {
 		// Free old Array
@@ -712,12 +746,26 @@ CODESTARTcommitTransaction
 			}
 		}
 
-		if (	pWrkrData->bIsConnected == 1 &&
-			iNeedSubmission > 0 &&
-			pn_link_credit(pWrkrData->pnSender) > 0) {
-			pn_connection_wake(pWrkrData->pnConn);
-			/* Grant enough credit to bring it up to BATCH: */
-			// pn_link_flow(pWrkrData->pnSender, iToSubmit);
+		if (iNeedSubmission > 0) {
+			if (	pWrkrData->bIsConnected == 1) {
+				int credits = pn_link_credit(pWrkrData->pnSender);
+				if (pn_link_credit(pWrkrData->pnSender) > 0) {
+					DBGPRINTF("omazureeventhubs[%p]: trigger pn_connection_wake\n",
+						pWrkrData);
+					pn_connection_wake(pWrkrData->pnConn);
+				} else {
+					DBGPRINTF("omazureeventhubs[%p]: warning pn_link_credit returned %d\n",
+						pWrkrData, credits);
+				}
+			} else {
+				DBGPRINTF("omazureeventhubs[%p]: commitTransaction Suspended=%s Connecting=%s\n",
+					pWrkrData,
+					pWrkrData->bIsSuspended == 1 ? "YES" : "NO",
+					pWrkrData->bIsConnecting == 1 ? "YES" : "NO");
+				if (pWrkrData->bIsSuspended == 1 && pWrkrData->bIsConnecting == 0) {
+					ABORT_FINALIZE(RS_RET_SUSPENDED);
+				}
+			}
 		}
 	} while (bDone == 0);
 finalize_it:
@@ -733,7 +781,7 @@ finalize_it:
 	}
 
 	/* TODO: Suspend Action if broker problems were reported in error callback */
-	if (pWrkrData->bIsSuspended) {
+	if (pWrkrData->bIsSuspended == 1) {
 		DBGPRINTF("omazureeventhubs[%p]: commitTransaction failed to send messages, suspending action\n",
 			pWrkrData);
 		iRet = RS_RET_SUSPENDED;
@@ -1271,26 +1319,23 @@ handleProton(wrkrInstanceData_t *const pWrkrData, pn_event_t *event) {
 	}
 	case PN_TRANSPORT_CLOSED:
 		DBGPRINTF("handleProton: transport closed for %p:%s\n", pWrkrData, pData->azurehost);
-		proton_check_condition(event, pn_transport_condition(pn_event_transport(event)),
+		proton_check_condition(event, pWrkrData, pn_transport_condition(pn_event_transport(event)),
 			"transport closed");
-		// Disconnected
-		pWrkrData->bIsConnected = 0;
-		pWrkrData->bIsConnecting = 0;
 		break;
 	case PN_CONNECTION_REMOTE_CLOSE:
 		DBGPRINTF("handleProton: connection closed for %p:%s\n", pWrkrData, pData->azurehost);
-		proton_check_condition(event, pn_connection_remote_condition(pn_event_connection(event)),
+		proton_check_condition(event, pWrkrData, pn_connection_remote_condition(pn_event_connection(event)),
 			"connection closed");
 		break;
 	case PN_SESSION_REMOTE_CLOSE:
 		DBGPRINTF("handleProton: remote session closed for %p:%s\n", pWrkrData, pData->azurehost);
-		proton_check_condition(event, pn_session_remote_condition(pn_event_session(event)),
+		proton_check_condition(event, pWrkrData, pn_session_remote_condition(pn_event_session(event)),
 			"remote session closed");
 		break;
 	case PN_LINK_REMOTE_CLOSE:
 	case PN_LINK_REMOTE_DETACH:
 		DBGPRINTF("handleProton: remote link closed for %p:%s\n", pWrkrData, pData->azurehost);
-		proton_check_condition(event, pn_link_remote_condition(pn_event_link(event)),
+		proton_check_condition(event, pWrkrData, pn_link_remote_condition(pn_event_link(event)),
 			"remote link closed");
 		break;
 	case PN_PROACTOR_INACTIVE:
