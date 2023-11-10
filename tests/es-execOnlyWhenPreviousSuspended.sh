@@ -12,7 +12,7 @@ template(name="tpl" type="string" string="{\"msgnum\":\"%msg:F,58:2%\"}")
 template(name="tpl2" type="string" string="%msg:F,58:2%\n")
 
 module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
-6c04c0689247ae05104113e37dcb5e2e3e356865
+
 if $msg contains "msgnum:" then {
 	action(type="omelasticsearch"
 	       server="127.0.0.1"
