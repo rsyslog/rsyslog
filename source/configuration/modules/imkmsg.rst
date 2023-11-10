@@ -32,18 +32,93 @@ Configuration Parameters
 
    Parameter names are case-insensitive.
 
+Module Parameters
+-----------------
 
-This module has no configuration directives.
+Mode
+^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "parseKernelTimestamp", "no", "none"
+
+.. versionadded:: 8.2312.0
+
+This parameter configures which timestamps will be used. It is an advanced
+setting and most users should probably keep the default mode ("startup").
+
+The linux kernel message buffer contains a timestamp, which reflects the time
+the message was created. However, this is not the "normal" time one expects, but
+in a so-called monotonic time in seconds since kernel start. For a datacenter
+system which runs 24 hours by 7 days a week, kernel time and actual
+wall clock time is mostly the same. Problems may occur during daylight
+savings time switches.
+
+For desktops and laptops this is not necessarily the case. The reason is, as
+it looks, that during low power states (energy save mode, hibernation), kernel
+monotonic time **does not advance**. This is also **not** corrected when the
+system comes back to normal operations. As such, on systems using low power
+states from time to time, kernel time and wallclock time drift apart. We have
+been told cases where this is in the magnitude of days. Just think about
+desktops which are in hibernate during the night, missing several hours
+each day. So this is a real-world problem.
+
+To work around this, we usually do **not** use the kernel timstamp when
+we calculate the message time. Instead, we use wallclock time (obtained
+from the respective linux timer) of the instant when imkmsg reads the
+message from the kernel log. As message creation and imkmsg reading it
+is usually in very close time proximity, this approach works very well.
+
+**However**, this is not helpful for e.g. early boot messages. These
+were potentially generated some seconds to a minute or two before rsyslog
+startup. To provide a proper meaning of time for these events, we use
+the kernel timstamp instead of wallclock time during rsyslog startup.
+This is most probably correct, because it is extremely unlikely (close
+to impossible) that the system entered a low-power state before rsyslog
+startup.
+
+**Note well:** When rsyslog is restarted during normal system operations,
+existing imkmsg messages are re-read and this is done with the kernel
+timestamp. This causes message duplication, but is what imkmsg always
+did. It is planned to provide ehance the module to improve this
+behaviour. This documentation page here will be updated when changes are
+made.
+
+The *parseKernelTimestamp* parameter provides fine-grain control over
+the processing of kernel vs. wallclock time. Adjustments should only
+be needed rarely and if there is a dedicated use case for it. So use
+this parameter only if you have a good reason to do so.
+
+Supported modes are:
+
+* **startup** - This is the **DEFAULT setting**.
+
+  Uses the kernel time stamp during the initial read
+  loop of /dev/kmsg, but uses system wallclock time once the initial
+  read is completed. This behavior is described in the text above in
+  detail.
+
+* **on** - kernel timestamps are always used and wallclock time never
+
+* **off** - kernel timestamps are never used, system wallclock time is
+  always used
 
 
 Caveats/Known Bugs:
 ===================
 
-This module can't be used together with imklog module. When using one of
+This module cannot be used together with imklog module. When using one of
 them, make sure the other one is not enabled.
 
 This is Linux specific module and requires /dev/kmsg device with
 structured kernel logs.
+
+This module does not support rulesets. All messages are delivered to the
+default rulseset.
+
 
 
 Examples
@@ -56,6 +131,6 @@ is needed to start pulling messages.
 
 .. code-block:: none
 
-   $ModLoad imkmsg
+   module(load="imkmsg")
 
 
