@@ -1,5 +1,49 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2312.0 (aka 2023.12) 2023-12-??
+- 2023-11-10: imkmsg: add module param parseKernelTimestamp
+  The parameter permits to select whether or not and when kernel
+  timestamps shall parsed, that is be used as the actual time a
+  log message occurs.
+  This permits to work around problems with the way kernel
+  timestamps are represented. The reasoning is given in a sysklogd
+  commit by Joachim Wiberg, which we reproduce below ("QUOTE") to
+  have a stable reference.
+  The commit itself can be found for example at:
+  https://github.com/troglobit/sysklogd/commit/9f6fbb3301e571d8af95f8d771469291384e9e95
+  The new parameter parseKernelTimestamp has three possible modes:
+  "startup" - uses the kernel time stamp during the initial read
+  loop of /dev/kmsg, but replaced it later ignores it for later reads.
+  This is the DEFAULT setting.
+  "on" - kernel timestamps are always used and no correction is tried
+  "off" - kernel timestamps are never used, system time is used instead
+  Note that there this is a slightly breaking change. Previously, imkmsg
+  reported similar to "off" mode, now it reports by default in "startup"
+  mode. We consider this acceptable, as "off" mode timestamps are not
+  correct for startup. After startup, the behaviour is correct. All in
+  all, the new default is kind of a bugfix.
+  ============== QUOTE ===============
+  The spec[1] says the /dev/kmsg timestamp is a monotonic clock and in
+  microseconds.  After a while you realize it's also relative to the boot
+  of the system, that fact was probably too obvious to be put in the spec.
+  However, what's *not* in the spec, and what takes a while to realize, is
+  that this monotonic time is *not* adjusted for suspend/resume cycles ...
+  On a frequently used laptop this can manifest itself as follows.  The
+  kernel is stuck on Nov 15, and for the life of me I cannot find any to
+  adjust for this offset:
+      $ dmesg -T |tail -1; date
+      [Mon Nov 15 01:42:08 2021] wlan0: Limiting TX power to 23 (23 - 0) dBm as advertised by 18:e8:29:55:b0:62
+      Tue 23 Nov 2021 05:20:53 PM CET
+  Hence this patch.  After initial "emptying" of /dev/kmsg when syslogd
+  starts up, we raise a flag (denoting done with backlog), and after this
+  point we ignore the kernel's idea of time and replace it with the actual
+  time we have now, the same that userspace messages are logged with.
+  Sure, there will be occasions where there's a LOT of kernel messages to
+  read and we won't be able to keep track.  Yet, this patch is better than
+  the current state (where we log Nov 15).
+  [1]: https://www.kernel.org/doc/Documentation/ABI/testing/dev-kmsg
+  ===========END QUOTE ===============
+  closes https://github.com/rsyslog/rsyslog/issues/4561
+  closes https://github.com/rsyslog/rsyslog/issues/5161
 - 2023-11-07: imfile bugfix: remove state file on file delete
   The state file would remain in the working directory
   after shutdown, even though deleteStateOnfileDelete is
