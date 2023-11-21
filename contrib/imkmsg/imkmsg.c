@@ -72,7 +72,9 @@ static int bLegacyCnfModGlobalsPermitted;/* are legacy module-global config para
 
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
-	{ "parsekerneltimestamp", eCmdHdlrGetWord, 0 }
+	{ "parsekerneltimestamp", eCmdHdlrGetWord, 0 },
+	{ "readmode", eCmdHdlrGetWord, 0 },
+	{ "expectedbootcompleteseconds", eCmdHdlrPositiveInt, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -193,6 +195,8 @@ CODESTARTbeginCnfLoad
 	/* init our settings */
 	pModConf->iFacilIntMsg = klogFacilIntMsg();
 	pModConf->parseKernelStamp = KMSG_PARSE_TS_STARTUP_ONLY;
+	pModConf->readMode = KMSG_READMODE_FULL_BOOT;
+	pModConf->expected_boot_complete_secs = 90;
 	loadModConf->configSetViaV2Method = 0;
 	bLegacyCnfModGlobalsPermitted = 1;
 	/* init legacy config vars */
@@ -231,6 +235,21 @@ CODESTARTsetModCnf
 				const char *const cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
 				LogError(0, RS_RET_PARAM_ERROR, "imkmsg: unknown "
 					"parse mode '%s'", cstr);
+				free((void*)cstr);
+			}
+		} else if(!strcmp(modpblk.descr[i].name, "expectedbootcompleteseconds")) {
+				loadModConf->expected_boot_complete_secs = pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "readmode")) {
+			if(!es_strconstcmp(pvals[i].val.d.estr, "full-boot")) {
+				loadModConf->readMode = KMSG_READMODE_FULL_BOOT;
+			} else if(!es_strconstcmp(pvals[i].val.d.estr, "full-always")) {
+				loadModConf->readMode = KMSG_READMODE_FULL_ALWAYS;
+			} else if(!es_strconstcmp(pvals[i].val.d.estr, "new-only")) {
+				loadModConf->readMode = KMSG_READMODE_NEW_ONLY;
+			} else {
+				const char *const cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+				LogError(0, RS_RET_PARAM_ERROR, "imkmsg: unknown "
+					"read mode '%s', keeping default setting", cstr);
 				free((void*)cstr);
 			}
 		} else {

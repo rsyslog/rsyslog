@@ -31,14 +31,21 @@ typedef enum _kernel_ts_parse_mods {
 		KMSG_PARSE_TS_STARTUP_ONLY = 2
 	} t_kernel_ts_parse_mode;
 
+typedef enum _kernel_readmode {
+		KMSG_READMODE_FULL_BOOT = 0,
+		KMSG_READMODE_FULL_ALWAYS = 1,
+		KMSG_READMODE_NEW_ONLY = 2
+	} t_kernel_readmode;
+
 /* we need to have the modConf type present in all submodules */
 struct modConfData_s {
 	rsconf_t *pConf;
 	int iFacilIntMsg;
 	uchar *pszPath;
 	int console_log_level;
+	int expected_boot_complete_secs;
 	t_kernel_ts_parse_mode parseKernelStamp;
-	sbool bFixKernelStamp;
+	t_kernel_readmode readMode;
 	sbool configSetViaV2Method;
 };
 
