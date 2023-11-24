@@ -1,5 +1,24 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2312.0 (aka 2023.12) 2023-12-??
+- 2023-11-24: imkmsg: add params "readMode" and "expectedBootCompleteSeconds"
+  These parameters permit to control when imkmsg reads the full
+  kernel log upon startup.
+  Parameter "readMode" provides the following options:
+    * full-boot - (default) read full klog, but only "immediately" after
+      boot. "Immediately" is hereby meant in seconds of system
+      uptime given in "expectedBootCompleteSeconds"
+    * full-always - read full klog on every rsyslog startup. Most
+      probably causes messag duplication
+    * new-only - never emit existing kernel log message, read only
+      new ones.
+  Note that some message loss can happen if rsyslog is stopped
+  in "full-boot" and "new-only" read mode. The longer rsyslog is
+  inactive, the higher the message loss probability and potential
+  number of messages lost. For typical restart scenarios, this
+  should be minimal. On HUP, no message loss occurs as rsyslog
+  is not actually stopped.
+  The default value for "expectedBootCompleteSeconds" is 90.
+  see also https://github.com/rsyslog/rsyslog/issues/5161
 - 2023-11-10: imkmsg: add module param parseKernelTimestamp
   The parameter permits to select whether or not and when kernel
   timestamps shall parsed, that is be used as the actual time a
