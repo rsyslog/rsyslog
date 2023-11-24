@@ -228,8 +228,31 @@ static void
 readkmsg(modConfData_t *const pModConf)
 {
 	int i;
-	uchar pRcv[8192+1];
+	uchar pRcv[16*1024+1];
 	char errmsg[2048];
+	off_t seek_result = 0;
+
+	if(pModConf->readMode == KMSG_READMODE_FULL_BOOT) {
+		struct sysinfo info;
+		sysinfo(&info);
+		DBGPRINTF("imkmsg: system uptime is %lld, expected %d\n",
+			(long long) info.uptime, pModConf->expected_boot_complete_secs);
+		if(info.uptime > pModConf->expected_boot_complete_secs) {
+			seek_result = lseek(fklog, 0, SEEK_END);
+		}
+	} else if(pModConf->readMode == KMSG_READMODE_NEW_ONLY) {
+		seek_result = lseek(fklog, 0, SEEK_END);
+	} else if(pModConf->readMode != KMSG_READMODE_FULL_ALWAYS) {
+		imkmsgLogIntMsg(LOG_ERR, "imkmsg: internal program error, "
+				"unknown read mode %d, assuming 'full-always'",
+				pModConf->readMode);
+	}
+
+	if(seek_result == (off_t) -1) {
+		imkmsgLogIntMsg(LOG_WARNING,
+				"imkmsg: could not seek to requested klog entries - will"
+				"now potentially output all messages");
+	}
 
 	for (;;) {
 		dbgprintf("imkmsg waiting for kernel log line\n");
