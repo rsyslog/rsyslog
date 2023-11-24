@@ -107,6 +107,58 @@ Supported modes are:
   always used
 
 
+readMode
+^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "full-boot", "no", "none"
+
+.. versionadded:: 8.2312.0
+
+This parameter permits to control when imkmsg reads the full kernel.
+
+It provides the following options:
+
+* **full-boot** - (default) read full klog, but only "immediately" after
+  boot. "Immediately" is hereby meant in seconds of system uptime
+  given in "expectedBootCompleteSeconds"
+
+* **full-always** - read full klog on every rsyslog startup. Most probably
+  causes message duplication
+
+* **new-only** - never emit existing kernel log message, read only new ones.
+
+Note that some message loss can happen if rsyslog is stopped in "full-boot" and
+"new-only" read mode. The longer rsyslog is inactive, the higher the message
+loss probability and potential number of messages lost. For typical restart
+scenarios, this should be minimal. On HUP, no message loss occurs as rsyslog
+is not actually stopped.
+
+
+expectedBootCompleteSeconds
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "posisitve integer", "90", "no", "none"
+
+.. versionadded:: 8.2312.0
+
+This parameter works in conjunction with **readMode** and specifies how
+many seconds after startup the system should be considered to be
+"just booted", which means in **readMode** "full-boot" imkmsg reads and
+forwards to rsyslog processing all existing messages.
+
+In any other **readMode** the **expectedBootCompleteSettings** is
+ignored.
+
 Caveats/Known Bugs:
 ===================
 
