@@ -290,9 +290,15 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 		int is_sqlite2 = !strcmp((const char *)pData->drvrName, "sqlite");
 		int is_sqlite3 = !strcmp((const char *)pData->drvrName, "sqlite3");
 		if(is_sqlite2 || is_sqlite3) {
-			dbi_conn_set_option(pData->conn, is_sqlite3 ? "sqlite3_dbdir" : "sqlite_dbdir",
-							dirname((char *)pData->dbName));
-			dbi_conn_set_option(pData->conn, "dbname", basename((char *)pData->dbName ));
+			char *const dn_org = strdup((char*)pData->dbName);
+			char *const dn = dirname(dn_org);
+			dbi_conn_set_option(pData->conn, is_sqlite3 ? "sqlite3_dbdir" : "sqlite_dbdir",dn);
+			free(dn_org); /* Free original buffer - dirname may return different pointer */
+
+			char *tmp = strdup((char*)pData->dbName);
+			char *bn = basename(tmp);
+			free(tmp);
+			dbi_conn_set_option(pData->conn, "dbname", bn);
 		} else {
 			dbi_conn_set_option(pData->conn, "dbname",   (char*) pData->dbName);
 		}
