@@ -297,8 +297,8 @@ static rsRetVal initConn(instanceData *pData, int bSilent)
 
 			char *tmp = strdup((char*)pData->dbName);
 			char *bn = basename(tmp);
-			free(tmp);
 			dbi_conn_set_option(pData->conn, "dbname", bn);
+			free(tmp);
 		} else {
 			dbi_conn_set_option(pData->conn, "dbname",   (char*) pData->dbName);
 		}
