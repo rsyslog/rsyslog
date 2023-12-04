@@ -103,6 +103,7 @@ static struct configSettings_s {
 	int bWorkAroundJournalBug; /* deprecated, left for backwards compatibility only */
 	int bFsync;
 	int bRemote;
+	char *dfltTag;
 } cs;
 
 static rsRetVal facilityHdlr(uchar **pp, void *pVal);
@@ -122,7 +123,8 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "usepid", eCmdHdlrString, 0 },
 	{ "workaroundjournalbug", eCmdHdlrBinary, 0 },
 	{ "fsync", eCmdHdlrBinary, 0 },
-	{ "remote", eCmdHdlrBinary, 0 }
+	{ "remote", eCmdHdlrBinary, 0 },
+	{ "defaulttag", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -154,6 +156,7 @@ struct instanceConf_s {
 #define DFLT_persiststateinterval 10
 #define DFLT_SEVERITY pri2sev(LOG_NOTICE)
 #define DFLT_FACILITY pri2fac(LOG_USER)
+#define DFLT_TAG "journal"
 
 static int bLegacyCnfModGlobalsPermitted = 1;/* are legacy module-global config parameters permitted? */
 
@@ -510,7 +513,7 @@ readjournal(struct journalContext_s *journalContext, ruleset_t *pBindRuleset)
 	} else if (journalGetData(journalContext, "_COMM", &get, &length) >= 0) {
 		CHKiRet(sanitizeValue(((const char *)get) + 6, length - 6, &sys_iden));
 	} else {
-		CHKmalloc(sys_iden = strdup("journal"));
+		CHKmalloc(sys_iden = strdup(cs.dfltTag));
 	}
 
 	/* trying to get PID, default is "SYSLOG_PID" property */
@@ -899,6 +902,10 @@ doRun(journal_etry_t const* etry)
 		skipOldMessages(etry->journalContext);
 	}
 
+	if (cs.dfltTag == NULL) {
+		cs.dfltTag = strdup(DFLT_TAG);
+	}
+
 	if (cs.usePid && (strcmp(cs.usePid, "system") == 0)) {
 		pidFieldName = "_PID";
 		bPidFallBack = 0;
@@ -1075,6 +1082,7 @@ CODESTARTbeginCnfLoad
 	cs.bWorkAroundJournalBug = 1;
 	cs.bFsync = 0;
 	cs.bRemote = 0;
+	cs.dfltTag = NULL;
 ENDbeginCnfLoad
 
 
@@ -1224,6 +1232,7 @@ CODESTARTfreeCnf
 	}
 	free(cs.stateFile);
 	free(cs.usePid);
+	free(cs.dfltTag);
 	statsobj.Destruct(&(statsCounter.stats));
 ENDfreeCnf
 
@@ -1337,6 +1346,8 @@ CODESTARTsetModCnf
 			cs.bFsync = (int) pvals[i].val.d.n;
 		} else if (!strcmp(modpblk.descr[i].name, "remote")) {
 			cs.bRemote = (int) pvals[i].val.d.n;
+		} else if (!strcmp(modpblk.descr[i].name, "defaulttag")) {
+			cs.dfltTag = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("imjournal: program error, non-handled "
 				"param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
