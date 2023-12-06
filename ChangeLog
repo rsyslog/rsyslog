@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2312.0 (aka 2023.12) 2023-12-??
+- 2023-12-06: mazureeventhubs: Corrected handling of transport closed failures
+  - Added test for connection interrupts (requires root)
+  - Corrected handling of PN_TRANSPORT_CLOSED.
+  - Make sure Connection is being reestablished trough tryResume
+  - Enhanced Debug log output
+  closes: https://github.com/rsyslog/rsyslog/issues/5269
 - 2023-11-24: imkmsg: add params "readMode" and "expectedBootCompleteSeconds"
   These parameters permit to control when imkmsg reads the full
   kernel log upon startup.
