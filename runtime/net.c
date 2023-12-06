@@ -1160,7 +1160,7 @@ cvthname(struct sockaddr_storage *f, prop_t **localName, prop_t **fqdn, prop_t *
  */
 #define EMPTY_HOSTNAME_REPLACEMENT "localhost-empty-hostname"
 static rsRetVal
-getLocalHostname(uchar **ppName)
+getLocalHostname(rsconf_t *const pConf, uchar **ppName)
 {
 	DEFiRet;
 	char hnbuf[8192];
@@ -1183,7 +1183,7 @@ getLocalHostname(uchar **ppName)
 
 	char *dot = strstr(hnbuf, ".");
 	struct addrinfo *res = NULL;
-	if(!empty_hostname && dot == NULL && runConf != NULL && !glbl.GetDisableDNS(runConf)) {
+	if(!empty_hostname && dot == NULL && pConf != NULL && !glbl.GetDisableDNS(pConf)) {
 		/* we need to (try) to find the real name via resolver */
 		struct addrinfo flags;
 		memset(&flags, 0, sizeof(flags));

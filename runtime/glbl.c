@@ -7,7 +7,7 @@
  *
  * Module begun 2008-04-16 by Rainer Gerhards
  *
- * Copyright 2008-2022 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2023 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -1447,7 +1447,7 @@ finalize_it:
 	 * hostname. These messages are currently in iminternal queue. Once they
 	 * are taken from that queue, the hostname will be adapted.
 	 */
-	queryLocalHostname();
+	queryLocalHostname(loadConf);
 	RETiRet;
 }
 
