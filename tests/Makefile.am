@@ -991,10 +991,13 @@ if ENABLE_OMAZUREEVENTHUBS
 if ENABLE_OMAZUREEVENTHUBS_TESTS
 TESTS += \
 	omazureeventhubs-basic.sh \
-	omazureeventhubs-list.sh
+	omazureeventhubs-list.sh \
+	omazureeventhubs-stress.sh \
+	omazureeventhubs-interrupt.sh
 if HAVE_VALGRIND
 TESTS += \
-	omazureeventhubs-stress.sh
+	omazureeventhubs-basic-vg.sh \
+	omazureeventhubs-interrupt-vg.sh
 endif
 endif
 endif
@@ -2809,6 +2812,9 @@ EXTRA_DIST= \
 	omazureeventhubs-basic.sh \
 	omazureeventhubs-list.sh \
 	omazureeventhubs-stress.sh \
+	omazureeventhubs-interrupt.sh \
+	omazureeventhubs-basic-vg.sh \
+	omazureeventhubs-interrupt-vg.sh \
 	mmpstrucdata.sh \
 	mmpstrucdata-escaping.sh \
 	mmpstrucdata-case.sh \
