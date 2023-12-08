@@ -595,7 +595,7 @@ finalize_it:
 
 /* Replaces recv() for gssapi connections.
  */
-int TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len, ssize_t *piLenRcvd)
+rsRetVal TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len, ssize_t *piLenRcvd)
 {
 	DEFiRet;
 	gss_buffer_desc xmit_buf, msg_buf;
