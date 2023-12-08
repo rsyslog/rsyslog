@@ -253,15 +253,18 @@ get_bHadHUP(void)
 	return ret;
 }
 
+/* we need a pointer to the conf, because in early startup stage we
+ * need to use loadConf, later on runConf.
+ */
 rsRetVal
-queryLocalHostname(void)
+queryLocalHostname(rsconf_t *const pConf)
 {
 	uchar *LocalHostName = NULL;
 	uchar *LocalDomain = NULL;
 	uchar *LocalFQDNName;
 	DEFiRet;
 
-	CHKiRet(net.getLocalHostname(&LocalFQDNName));
+	CHKiRet(net.getLocalHostname(pConf, &LocalFQDNName));
 	uchar *dot = (uchar*) strstr((char*)LocalFQDNName, ".");
 	if(dot == NULL) {
 		CHKmalloc(LocalHostName = (uchar*) strdup((char*)LocalFQDNName));
@@ -1956,7 +1959,7 @@ doHUP(void)
 		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
 	}
 
-	queryLocalHostname(); /* re-read our name */
+	queryLocalHostname(runConf); /* re-read our name */
 	ruleset.IterateAllActions(ourConf, doHUPActions, NULL);
 	DBGPRINTF("doHUP: doing modules\n");
 	modDoHUP();

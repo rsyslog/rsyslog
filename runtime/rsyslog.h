@@ -3,7 +3,7 @@
  *
  * Begun 2005-09-15 RGerhards
  *
- * Copyright (C) 2005-2019 by Rainer Gerhards and Adiscon GmbH
+ * Copyright (C) 2005-2023 by Rainer Gerhards and Adiscon GmbH
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -782,7 +782,7 @@ rsRetVal rsrtExit(void);
 int rsrtIsInit(void);
 void rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar*));
 void dfltErrLogger(const int, const int, const uchar *errMsg);
-rsRetVal queryLocalHostname(void);
+rsRetVal queryLocalHostname(rsconf_t *const);
 
 
 /* this define below is (later) intended to be used to implement empty
