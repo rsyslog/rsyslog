@@ -1,5 +1,20 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2312.0 (aka 2023.12) 2023-12-??
+- 2023-12-08: core bugfix: rsyslog messages may not always have FQDN
+  Even if hostname FQDN is configured, rsyslog internal messages generated
+  after rsyslog startup and before the first HUP will not necessarily have
+  FQDN but instead only the shortname of the local host. This commit
+  fixes the situation.
+  Special thanks to github user eciii for doing a great bug analysis
+  and helping us considerably to fix the issue.
+  closes https://github.com/rsyslog/rsyslog/issues/5218
+- 2023-12-08: omlibdbi regression fix: database path was not properly used
+  Commit 4a072d6c93015a63716c49a6c7756df22750086a caused a regression that made
+  the database path unreliable to use. Depending on platform/libc version the
+  basename was improperly extracted, which made access to the database of sqllite
+  impossible.
+  Thanks to Flávio Tapajós for the patch.
+  closes: https://github.com/rsyslog/rsyslog/issues/5282
 - 2023-12-06: mazureeventhubs: Corrected handling of transport closed failures
   - Added test for connection interrupts (requires root)
   - Corrected handling of PN_TRANSPORT_CLOSED.
