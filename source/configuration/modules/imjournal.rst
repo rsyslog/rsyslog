@@ -44,7 +44,7 @@ plugin only if there is hard need to do so.**
 Notable Features
 ================
 
-- :ref:`imjournal-statistic-counter`
+- statistics counters
 
 
 Configuration Parameters

@@ -94,7 +94,7 @@ rst_epilog = """
 ###############################################################################
 version = '8.2312'
 #release = '8.2312.0'
-release = version + ' daily stable'
+release = '8.2312.0'
 
 # For this to be true, it means that we are not attempting to build from
 # a release tarball, as otherwise the values above would have been replaced
