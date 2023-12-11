@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2312.0 (aka 2023.12) 2023-12-??
+- 2023-12-11: imjournal: Add new input module parameter 'defaulttag'
+  The DefaultTag option specifies the default value for the tag field.
+  In imjournal, this can happen when one of the following is missing:
+   * identifier string provided by the application (SYSLOG_IDENTIFIER)
+   * name of the process the journal entry originates from (_COMM)
+  Thanks to Attila Lakatos for the patch.
 - 2023-12-08: core bugfix: rsyslog messages may not always have FQDN
   Even if hostname FQDN is configured, rsyslog internal messages generated
   after rsyslog startup and before the first HUP will not necessarily have
