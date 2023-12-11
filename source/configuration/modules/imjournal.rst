@@ -308,7 +308,29 @@ When this option is turned on, imjournal will pull not only all local journal
 files (default behavior), but also any journal files on machine originating from
 remote sources.
 
-.. _imjournal-statistic-counter:
+defaultTag
+^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+.. versionadded:: 8.2312.0
+
+The DefaultTag option specifies the default value for the tag field.
+In imjournal, this can happen when one of the following is missing:
+
+* identifier string provided by the application (SYSLOG_IDENTIFIER) or
+* name of the process the journal entry originates from (_COMM)
+
+Under normal circumstances, at least one of the previously mentioned fields
+is always part of the journal message. But there are some corner cases
+where this is not the case. This parameter provides the ability to alter
+the content of the tag field.
+
 
 Input Module Parameters
 =======================
@@ -323,7 +345,7 @@ Main
    :widths: auto
    :class: parameter-table
 
-   "binary", "off", "no", "none"
+   "word", "journal", "no", "none"
 
 .. versionadded:: 8.2312.0
 
@@ -337,6 +359,8 @@ background thread and not affected by the output state.
 
 Statistic Counter
 =================
+
+.. _imjournal-statistic-counter:
 
 This plugin maintains :doc:`statistics <../rsyslog_statistic_counter>` for each listener and for each worker thread. The listener statistic is named "imjournal".
 
