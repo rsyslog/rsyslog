@@ -8,7 +8,7 @@ There are stil a number of reasons to convert older formats:
 
 * existing simple constructs need to be enhanced and become more complex
 * aid future extensions
-* ensure no side-effects accidently occur
+* ensure no side-effects accidentally occur
 * unify rsyslog.conf language
 
 Do not overdo conversion

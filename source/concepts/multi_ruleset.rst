@@ -130,7 +130,7 @@ format, by specifying queue parameters on the ruleset directive, e.g.
 
    ruleset(name="whatever" queue.type="fixedArray" queue. ...)
 
-See :doc:`http://www.ryslog.com/doc/master/rainerscript/queue\_parameters.html <../rainerscript/queue_parameters>`
+See :doc:`http://www.rsyslog.com/doc/master/rainerscript/queue\_parameters.html <../rainerscript/queue_parameters>`
 for more details.
 
 Please note that when a ruleset uses its own queue, processing of the ruleset

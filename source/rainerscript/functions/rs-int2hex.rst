@@ -11,7 +11,7 @@ Returns a hexadecimal number string of a given positive integer num.
 
 .. note::
 
-   When a negativ integer is given the return value will be the
+   When a negative integer is given the return value will be the
    `Two's complement <https://en.wikipedia.org/wiki/Two%27s_complement>`_ of
    the input number.
 

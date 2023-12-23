@@ -552,7 +552,7 @@ actually increases by adding threads.
 A word of caution: just looking at thread CPU use is **not** a proper
 way to monitor imudp processing capabilities. With too many threads
 the overhead can increase, even strongly. This can result in a much higher
-CPU utlization but still overall less processing capability.
+CPU utilization but still overall less processing capability.
 
 Please also keep in your mind that additional input worker threads may
 cause more mutex contention when adding data to processing queues.
@@ -581,7 +581,7 @@ or knowledge of imudp, how many queue worker threads will be spawned by
 the queue in question.
 
 Note, however, that queue worker threads and imudp input worker threads
-compete for system ressources. As such the combined overall value should
+compete for system resources. As such the combined overall value should
 not overload the system. There is no strict rule to follow when sizing
 overall worker numbers: for queue workers it strongly depends on how
 compute-intense the workload is. For example, omfile actions need

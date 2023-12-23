@@ -114,7 +114,7 @@ Note: parameter names are case-insensitive.
    importantly the database write and the syslog message forwarder).
    Note, however, that a failed action may not immediately be detected.
    For more information, see the `rsyslog
-   execOnlyWhenPreviousIsSpuspended
+   execOnlyWhenPreviousIsSuspended
    preciseness <https://www.rsyslog.com/action-execonlywhenpreviousissuspended-preciseness/>`_
    FAQ article.
 
