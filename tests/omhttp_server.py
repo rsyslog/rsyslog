@@ -4,6 +4,8 @@ import json
 import os
 import zlib
 import base64
+import random
+import time
 
 try:
     from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer # Python 2
@@ -57,13 +59,27 @@ class MyHandler(BaseHTTPRequestHandler):
                 return
 
         if metadata['fail_with_400_after'] != -1 and metadata['posts'] > metadata['fail_with_400_after']:
+            if metadata['fail_with_delay_secs']:
+                print("sleeping for: {0}".format(metadata['fail_with_delay_secs']))
+                time.sleep(metadata['fail_with_delay_secs'])
             self.send_response(400)
             self.end_headers()
             self.wfile.write(b'BAD REQUEST')
             return
 
+        if metadata['fail_with_401_or_403_after'] != -1 and metadata['posts'] > metadata['fail_with_401_or_403_after']:
+            status = random.choice([401, 403])
+            self.send_response(status)
+            self.end_headers()
+            self.wfile.write(b'BAD REQUEST')
+            return
+
         if metadata['posts'] > 1 and metadata['fail_every'] != -1 and metadata['posts'] % metadata['fail_every'] == 0:
-            self.send_response(500)
+            if metadata['fail_with_delay_secs']:
+                print("sleeping for: {0}".format(metadata['fail_with_delay_secs']))
+                time.sleep(metadata['fail_with_delay_secs'])
+            code = metadata['fail_with'] if metadata['fail_with'] else 500
+            self.send_response(code)
             self.end_headers()
             self.wfile.write(b'INTERNAL ERROR')
             return
@@ -114,13 +130,19 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--interface', action='store', type=str, default='localhost', help='port')
     parser.add_argument('--fail-after', action='store', type=int, default=0, help='start failing after n posts')
     parser.add_argument('--fail-every', action='store', type=int, default=-1, help='fail every n posts')
+    parser.add_argument('--fail-with', action='store', type=int, default=500, help='on failure, fail with this code')
     parser.add_argument('--fail-with-400-after', action='store', type=int, default=-1, help='fail with 400 after n posts')
+    parser.add_argument('--fail-with-401-or-403-after', action='store', type=int, default=-1, help='fail with 401 or 403 after n posts')
+    parser.add_argument('--fail-with-delay-secs', action='store', type=int, default=0, help='fail with n secs of delay')
     parser.add_argument('--decompress', action='store_true', default=False, help='decompress posted data')
     parser.add_argument('--userpwd', action='store', default='', help='only accept this user:password combination')
     args = parser.parse_args()
     metadata['fail_after'] = args.fail_after
     metadata['fail_every'] = args.fail_every
+    metadata['fail_with'] = args.fail_with
     metadata['fail_with_400_after'] = args.fail_with_400_after
+    metadata['fail_with_401_or_403_after'] = args.fail_with_401_or_403_after
+    metadata['fail_with_delay_secs'] = args.fail_with_delay_secs
     metadata['decompress'] = args.decompress
     metadata['userpwd'] = args.userpwd
     server = HTTPServer((args.interface, args.port), MyHandler)

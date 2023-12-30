@@ -2476,6 +2476,20 @@ omhttp_get_data() {
         > ${RSYSLOG_OUT_LOG}
 }
 
+omhttp_validate_metadata_response() {
+	echo "starting to validate omhttp response metadata."
+    omhttp_response_validate_py=$srcdir/omhttp-validate-response.py
+    if [ ! -f $omhttp_response_validate_py ]; then
+        echo "Cannot find ${omhttp_response_validate_py} for omhttp test"
+        error_exit 1
+    fi
+
+	$PYTHON ${omhttp_response_validate_py} --error ${RSYSLOG_DYNNAME}/omhttp.error.log --response ${RSYSLOG_DYNNAME}/omhttp.response.log 2>&1
+	if [ $? -ne 0 ] ; then
+		printf 'omhttp_validate_metadata_response failed \n'
+		error_exit 1 
+	fi
+}
 
 # prepare MySQL for next test
 # each test receives its own database so that we also can run in parallel
