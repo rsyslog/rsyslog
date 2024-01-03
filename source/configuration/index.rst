@@ -1,9 +1,17 @@
 Configuration
 =============
 
-**Rsyslogd is configured via the rsyslog.conf file**, typically found in
-``/etc``. By default, rsyslogd reads the file ``/etc/rsyslog.conf``.
-This can be changed by a command line option.
+**Rsyslog Configuration Reference Manual Introduction**
+
+This document serves as a detailed guide to rsyslog configuration, offering extensive information on the setup and management of system logging using
+`rsyslog <https://www.rsyslog.com>`_
+It covers various aspects of rsyslog configuration, including constructs, statements, and key concepts, designed to assist users in customizing their logging infrastructure according to specific needs.
+
+The primary configuration file for rsyslog, located at `/etc/rsyslog.conf`, acts as the central point for establishing logging rules. This file is used to define input modules, filters, actions, and global directives, facilitating the processes of log collection, filtering, routing, and formatting.
+
+Please note that this documentation is currently in the process of being refined to improve its clarity, structure, and accessibility. We value your patience and understanding during this phase and are committed to delivering a comprehensive and easy-to-navigate guide to rsyslog.
+
+For further exploration of rsyslog's configuration intricacies, please refer to the links provided below. This manual is designed to be a valuable resource for both experienced system administrators and those new to the field, aiming to fully leverage the capabilities of rsyslog.
 
 Note that **configurations can be built interactively** via the online
 `rsyslog configuration builder <http://www.rsyslog.com/rsyslog-configuration-builder/>`_ tool.
