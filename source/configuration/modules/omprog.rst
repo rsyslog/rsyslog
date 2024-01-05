@@ -85,7 +85,9 @@ binary
    "string", "", "yes", "``$ActionOMProgBinary``"
 
 Full path and command line parameters of the external program to execute.
-
+Arbitrary external programs should be placed under the /usr/libexec/rsyslog directory.
+That is, the binaries put in this namespaced directory are meant for the consumption
+of rsyslog, and are not intended to be executed by users.
 In legacy config, it is **not possible** to specify command line parameters.
 
 
@@ -469,7 +471,7 @@ Example: command line arguments
 -------------------------------
 
 In the following example, logs will be sent to a program ``log.sh`` located
-in ``/path/to``. The program will receive the command line arguments
+in ``/usr/libexec/rsyslog``. The program will receive the command line arguments
 ``p1``, ``p2`` and ``--param3="value 3"``.
 
 .. code-block:: none
@@ -477,7 +479,7 @@ in ``/path/to``. The program will receive the command line arguments
    module(load="omprog")
 
    action(type="omprog"
-          binary="/path/to/log.sh p1 p2 --param3=\"value 3\""
+          binary="/usr/libexec/rsyslog/log.sh p1 p2 --param3=\"value 3\""
           template="RSYSLOG_TraditionalFileFormat")
 
 
@@ -507,7 +509,7 @@ rsyslog will kill and restart it.
 
    action(type="omprog"
           name="db_forward"
-          binary="/usr/share/logging/db_forward.py"
+          binary="/usr/libexec/rsyslog/db_forward.py"
           confirmMessages="on"
           confirmTimeout="30000"
           queue.type="LinkedList"
