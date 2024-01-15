@@ -8,7 +8,7 @@ CREATE TABLE SystemEvents
         DeviceReportedTime timestamp without time zone NULL,
         Facility smallint NULL,
         Priority smallint NULL,
-        FromHost varchar(60) NULL,
+        FromHost varchar(63) NULL,
         Message text,
         NTSeverity int NULL,
         Importance int NULL,
