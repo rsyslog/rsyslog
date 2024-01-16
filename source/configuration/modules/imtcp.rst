@@ -403,11 +403,16 @@ the part that is cut off after a truncation is discarded and not processed.
 gnutlsPriorityString
 ^^^^^^^^^^^^^^^^^^^^
 
-This parameter allows you to configure specific properties for the TLS driver,
-including handshake algorithms and options for GnuTLS and configuration
-commands for OpenSSL.
-Originally designed for the GnuTLS driver, it has been extended to support
-OpenSSL configuration commands from version v8.1905.0 onwards.
+The "gnutls priority string" parameter in rsyslog offers enhanced
+customization for secure communications, allowing detailed configuration
+of TLS driver properties. This includes specifying handshake algorithms
+and other settings for GnuTLS, as well as implementing OpenSSL
+configuration commands. Initially developed for GnuTLS, the "gnutls
+priority string" has evolved since version v8.1905.0 to also support
+OpenSSL, broadening its application and utility in network security
+configurations. This update signifies a key advancement in rsyslog's
+capabilities, making the "gnutls priority string" an essential
+feature for advanced TLS configuration.
 
 .. csv-table::
    :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
