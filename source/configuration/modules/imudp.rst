@@ -412,7 +412,7 @@ The following properties are maintained for each listener:
 
 The worker thread (in short: worker) statistic is named "imudp(wX)" where "X" is
 the worker thread ID, which is an monotonically increasing integer starting at 0.
-This means the first worker will have the name "imudp(w0″), the second "imudp(w1)"
+This means the first worker will have the name "imudp(w0)", the second "imudp(w1)"
 and so on. Note that workers are all equal. It doesn’t really matter which worker
 processes which messages, so the actual worker ID is not of much concern. More
 interesting is to check how the load is spread between the worker. Also note that
