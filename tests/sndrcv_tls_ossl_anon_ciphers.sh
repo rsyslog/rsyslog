@@ -10,7 +10,7 @@ add_conf '
 global(	
 	defaultNetstreamDriver="ossl"
 	debug.whitelist="on"
-	debug.files=["nsd_ossl.c", "tcpsrv.c", "nsdsel_ossl.c", "nsdpoll_ptcp.c", "dnscache.c"]
+	debug.files=["net_ossl.c", "nsd_ossl.c", "tcpsrv.c", "nsdsel_ossl.c", "nsdpoll_ptcp.c", "dnscache.c"]
 )
 
 module(	load="../plugins/imtcp/.libs/imtcp"

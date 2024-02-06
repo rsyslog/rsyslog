@@ -443,6 +443,7 @@ osslEndSess(nsd_ossl_t *pThis)
 
 /* Standard-Constructor */
 BEGINobjConstruct(nsd_ossl) /* be sure to specify the object type also in END macro! */
+	DBGPRINTF("nsd_ossl_construct: [%p]\n", pThis);
 	/* construct nsd_ptcp helper */
 	CHKiRet(nsd_ptcp.Construct(&pThis->pTcp));
 	/* construct net_ossl helper */
@@ -813,7 +814,7 @@ osslPostHandshakeCheck(nsd_ossl_t *pNsd)
 	if (sslCipher != NULL){
 		if(SSL_CIPHER_get_version(sslCipher) == NULL) {
 			LogError(0, RS_RET_NO_ERRCODE, "nsd_ossl:"
-		"TLS version mismatch between syslog client and server.");
+				"TLS version mismatch between syslog client and server.");
 		}
 		dbgprintf("osslPostHandshakeCheck: Debug Cipher Version: %s Name: %s\n",
 			SSL_CIPHER_get_version(sslCipher), SSL_CIPHER_get_name(sslCipher));
@@ -1505,6 +1506,7 @@ CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	/* Initialize all classes that are in our module - this includes ourselfs */
+	DBGPRINTF("modInit\n");
 	CHKiRet(net_osslClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 	CHKiRet(nsd_osslClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 	CHKiRet(nsdsel_osslClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
