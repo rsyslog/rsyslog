@@ -90,9 +90,13 @@ struct rsksictx_s {
 	KSI_HashAlgorithm hmacAlg;
 	uint8_t bKeepRecordHashes;
 	uint8_t bKeepTreeHashes;
+	uint64_t confInterval;
+	time_t tConfRequested;
 	uint64_t blockLevelLimit;
 	uint32_t blockTimeLimit;
+	uint32_t blockSigTimeout;
 	uint32_t effectiveBlockLevelLimit; /* level limit adjusted by gateway settings */
+	uint32_t threadSleepms;
 	uint8_t syncMode;
 	uid_t	fileUID;	/* IDs for creation */
 	uid_t	dirUID;
@@ -109,6 +113,10 @@ struct rsksictx_s {
 	pthread_mutex_t module_lock;
 	pthread_t signer_thread;
 	ProtectedQueue *signer_queue;
+#if KSI_SDK_VER_MAJOR == 3 && KSI_SDK_VER_MINOR < 22
+	size_t roundCount;	/* Count of signing requests in round. */
+	uint8_t bRoundLock;		/* A lock for async. signer. */
+#endif
 	int signer_state;
 	uint8_t disabled;	/* permits to disable the plugin --> set to 1 */
 
@@ -201,6 +209,8 @@ struct rsksistatefile {
 #define getIVLenKSI(bh) (hashOutputLengthOctetsKSI((bh)->hashID))
 #define rsksiSetBlockLevelLimit(ctx, limit) ((ctx)->blockLevelLimit = (ctx)->effectiveBlockLevelLimit = limit)
 #define rsksiSetBlockTimeLimit(ctx, limit) ((ctx)->blockTimeLimit = limit)
+#define rsksiSetBlockSigTimeout(ctx, val) ((ctx)->blockSigTimeout = val)
+#define rsksiSetConfInterval(ctx, val) ((ctx)->confInterval = val)
 #define rsksiSetKeepRecordHashes(ctx, val) ((ctx)->bKeepRecordHashes = val)
 #define rsksiSetKeepTreeHashes(ctx, val) ((ctx)->bKeepTreeHashes = val)
 #define rsksiSetFileFormat(ctx, val) ((ctx)->fileFormat = val)

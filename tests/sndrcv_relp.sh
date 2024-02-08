@@ -5,7 +5,7 @@
 export NUMMESSAGES=50000
 ########## receiver ##########
 #export RSYSLOG_DEBUG="debug nostdout"
-#export RSYSLOG_DEBUGLOG="log"
+#export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"
 generate_conf
 export PORT_RCVR="$(get_free_port)"
 add_conf '
@@ -19,7 +19,7 @@ startup
 printf "#### RECEIVER STARTED\n\n"
 
 ########## sender ##########
-#export RSYSLOG_DEBUGLOG="log2"
+#export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.sender.debuglog"
 generate_conf 2
 add_conf '
 module(load="../plugins/omrelp/.libs/omrelp")

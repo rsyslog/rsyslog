@@ -6,6 +6,7 @@ export IMFILEINPUTFILESSTEPS="5"
 #export IMFILEINPUTFILESALL=$(($IMFILEINPUTFILES * $IMFILEINPUTFILESSTEPS))
 export IMFILECHECKTIMEOUT="60"
 
+mkdir "$RSYSLOG_DYNNAME.work"
 generate_conf
 add_conf '
 $WorkDirectory '$RSYSLOG_DYNNAME'.spool
@@ -15,6 +16,8 @@ global(
 	debug.whitelist="off"
 	debug.files=["rainerscript.c", "ratelimit.c", "ruleset.c", "main Q", "msg.c", "../action.c"]
 )
+
+global(workDirectory="./'"$RSYSLOG_DYNNAME"'.work")
 
 module(	load="../plugins/imfile/.libs/imfile" 
 	mode="inotify" 

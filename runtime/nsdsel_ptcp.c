@@ -158,7 +158,10 @@ IsReady(nsdsel_t *const pNsdsel, nsd_t *const pNsd, const nsdsel_waitOp_t waitOp
 	}
 
 	const short revent = pThis->fds[idx].revents;
-	assert(!(revent & POLLNVAL));
+	if (revent & POLLNVAL) {
+		DBGPRINTF("ndssel_ptcp: revent & POLLNVAL is TRUE, we had a race, ignoring, revent = %d", revent);
+		*pbIsReady = 0;
+	}
 	switch(waitOp) {
 		case NSDSEL_RD:
 			*pbIsReady = revent & POLLIN;

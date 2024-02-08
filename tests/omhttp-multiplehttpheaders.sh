@@ -6,8 +6,7 @@
 
 export NUMMESSAGES=1000
 
-port="$(get_free_port)"
-omhttp_start_server $port
+omhttp_start_server 0
 
 generate_conf
 add_conf '
@@ -28,7 +27,7 @@ if $msg contains "msgnum:" then
 			"X-Event-Source: logs"
 		]
 		server="localhost"
-		serverport="'$port'"
+		serverport="'$omhttp_server_lstnport'"
 		restpath="my/endpoint"
 		batch="off"
 
@@ -40,7 +39,7 @@ startup
 injectmsg
 shutdown_when_empty
 wait_shutdown
-omhttp_get_data $port my/endpoint
+omhttp_get_data $omhttp_server_lstnport my/endpoint
 omhttp_stop_server
 seq_check
 exit_test

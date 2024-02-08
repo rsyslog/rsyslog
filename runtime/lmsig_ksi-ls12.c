@@ -49,6 +49,8 @@ static struct cnfparamdescr cnfpdescr[] = {
 	{ "sig.aggregator.hmacAlg", eCmdHdlrGetWord, 0 },
 	{ "sig.block.levelLimit", eCmdHdlrSize, CNFPARAM_REQUIRED},
 	{ "sig.block.timeLimit", eCmdHdlrInt, 0},
+	{ "sig.block.signtimeout", eCmdHdlrInt, 0},
+	{ "sig.confinterval", eCmdHdlrInt, 0},
 	{ "sig.keeprecordhashes", eCmdHdlrBinary, 0 },
 	{ "sig.keeptreehashes", eCmdHdlrBinary, 0},
 	{ "sig.fileformat", eCmdHdlrString, 0},
@@ -168,8 +170,24 @@ SetCnfParam(void *pT, struct nvlst *lst)
 			} else {
 				rsksiSetBlockTimeLimit(pThis->ctx, pvals[i].val.d.n);
 			}
+		} else if (!strcmp(pblk.descr[i].name, "sig.confinterval")) {
+			if (pvals[i].val.d.n < 0) {
+				LogError(0, RS_RET_ERR, "sig.confinterval "
+					"%llu invalid - signing disabled", pvals[i].val.d.n);
+				pThis->ctx->disabled = true;
+			} else {
+				rsksiSetConfInterval(pThis->ctx, pvals[i].val.d.n);
+			}
 		} else if (!strcmp(pblk.descr[i].name, "sig.keeprecordhashes")) {
 			rsksiSetKeepRecordHashes(pThis->ctx, pvals[i].val.d.n);
+		} else if (!strcmp(pblk.descr[i].name, "sig.block.signtimeout")) {
+			if (pvals[i].val.d.n < 0) {
+				LogError(0, RS_RET_ERR, "sig.block.signtimeout "
+					"%llu invalid - signing disabled", pvals[i].val.d.n);
+				pThis->ctx->disabled = true;
+			} else {
+				rsksiSetBlockSigTimeout(pThis->ctx, pvals[i].val.d.n);
+			}
 		} else if(!strcmp(pblk.descr[i].name, "sig.keeptreehashes")) {
 			rsksiSetKeepTreeHashes(pThis->ctx, pvals[i].val.d.n);
 		} else if (!strcmp(pblk.descr[i].name, "sig.syncmode")) {

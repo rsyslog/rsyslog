@@ -7,7 +7,7 @@
  * are very small, and so we use a single driver for both OS's with
  * a little help of conditional compilation.
  *
- * Copyright 2008-2018 Adiscon GmbH
+ * Copyright 2008-2023 Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -82,17 +82,18 @@ submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf)
 	struct timeval tv;
 	struct timeval *tp = NULL;
 
-	if(!pModConf->bParseKernelStamp)
-		goto done;
-
-	if(buf[3] != '[')
+	/* find end of pri */
+	int endpri = 1;
+	while(buf[endpri] != '>' && endpri < 5)
+		++endpri;
+	if(endpri > 4 || buf[endpri + 1] != '[')
 		goto done;
 	DBGPRINTF("imklog: kernel timestamp detected, extracting it\n");
 
 	/* we now try to parse the timestamp. iff it parses, we assume
 	 * it is a timestamp. Otherwise we know for sure it is no ts ;)
 	 */
-	i = 4; /* space or first digit after '[' */
+	i = endpri + 2; /* space or first digit after '[' */
 	while(buf[i] && isspace(buf[i]))
 		++i; /* skip space */
 	secs = 0;
@@ -121,7 +122,12 @@ submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf)
 	DBGPRINTF("kernel timestamp is %ld %ld\n", secs, usecs);
 	if(!pModConf->bKeepKernelStamp) {
 		bufsize= strlen((char*)buf);
-		memmove(buf+3, buf+i, bufsize - i + 1);
+		memmove(buf+endpri+1, buf+i, bufsize - i + 1);
+	}
+
+	if(!pModConf->bParseKernelStamp) {
+		DBGPRINTF("imklog/bsd: parseKernelStamp not set, ignoring kernel timestamp\n");
+		goto done;
 	}
 
 	clock_gettime(CLOCK_MONOTONIC, &monotonic);

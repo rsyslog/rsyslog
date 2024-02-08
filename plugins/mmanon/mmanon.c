@@ -22,6 +22,7 @@
 #include "config.h"
 #include "rsyslog.h"
 #include <stdio.h>
+#include <ctype.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -388,72 +389,76 @@ getHexVal(char c)
 }
 
 
-/* returns -1 if no integer found, else integer */
-static int64_t
-getPosInt(const uchar *const __restrict__ buf,
+/* returns 1 if valid IPv4 digit, 0 if not */
+static int
+isPosByte(const uchar *const __restrict__ buf,
 	const size_t buflen,
 	size_t *const __restrict__ nprocessed)
 {
-	int64_t val = 0;
+	int val = 0; /* Default means no byte found */
 	size_t i;
-	for(i = 0 ; i < buflen ; i++) {
-		if('0' <= buf[i] && buf[i] <= '9')
-			val = val*10 + buf[i]-'0';
-		else
+	for(i = 0 ; i < buflen; i++) {
+		if('0' <= buf[i] && buf[i] <= '9') {
+			/* Maximum 3 digits for single IPv4 Number, we only copy up to 4 numbers
+			 * but process forward to non digits */
+			if (i < 4) {
+				val = val*10 + buf[i]-'0';
+			}
+		} else
 			break;
 	}
 	*nprocessed = i;
-	if(i == 0)
-		val = -1;
-	return val;
+	/* Return 1 if more than 1 and less the 4 digits and between 0 and 255 */
+	if(	i > 0 &&
+		i < 4 &&
+		(val >= 0 && val <= 255)) {
+		return 1;
+	} else {
+		return 0;
+	}
 }
 
 /* 1 - is IPv4, 0 not */
-
 static int
 syntax_ipv4(const uchar *const __restrict__ buf,
 	const size_t buflen,
 	size_t *const __restrict__ nprocessed)
 {
-	int64_t val;
-	size_t nproc;
+	size_t nproc = 0;
 	size_t i;
 	int r = 0;
-
-	val = getPosInt(buf, buflen, &i);
-	if(val < 0 || val > 255)
+	if(isPosByte(buf, buflen, &i) == 0) {
 		goto done;
-
+	}
 	if(i >= buflen || buf[i] != '.') {
 		goto done;
 	}
 	i++;
-	val = getPosInt(buf+i, buflen-i, &nproc);
-	if(val < 0 || val > 255)
+	if(isdigit(buf[i]) == 0 || isPosByte(buf+i, buflen-i, &nproc) == 0) {
 		goto done;
+	}
 	i += nproc;
 
 	if(i >= buflen || buf[i] != '.') {
 		goto done;
 	}
 	i++;
-	val = getPosInt(buf+i, buflen-i, &nproc);
-	if(val < 0 || val > 255)
+	if(isdigit(buf[i]) == 0 || isPosByte(buf+i, buflen-i, &nproc) == 0) {
 		goto done;
+	}
 	i += nproc;
 
 	if(i >= buflen || buf[i] != '.') {
 		goto done;
 	}
 	i++;
-	val = getPosInt(buf+i, buflen-i, &nproc);
-	if(val < 0 || val > 255)
+	if(isdigit(buf[i]) == 0 || isPosByte(buf+i, buflen-i, &nproc) == 0) {
 		goto done;
+	}
 	i += nproc;
 
 	*nprocessed = i;
 	r = 1;
-
 done:
 	return r;
 }

@@ -17,18 +17,25 @@ tcpflood -m1 -M "\"<120> 2011-03-01T11:22:12Z host tag: this is a way too long m
 shutdown_when_empty
 wait_shutdown
 
-grep "imptcp: message received.*150 byte larger.*will be split.*\"ghijkl"  $RSYSLOG_OUT_LOG > /dev/null
-if [ $? -ne 0 ]; then
+if ! grep "imptcp: message received.*150 byte larger.*will be split.*\"ghijkl"  $RSYSLOG_OUT_LOG > /dev/null
+then
         echo
         echo "FAIL: expected error message from imptcp truncation not found.  $RSYSLOG_OUT_LOG is:"
         cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi
 
-grep "imptcp: message received.*22 byte larger.*will be split.*\"sstets"  $RSYSLOG_OUT_LOG > /dev/null
-if [ $? -ne 0 ]; then
+if ! grep "imptcp: message received.*22 byte larger.*will be split.*\"sstets"  $RSYSLOG_OUT_LOG > /dev/null
+then
         echo
         echo "FAIL: expected error message from imptcp truncation not found.  $RSYSLOG_OUT_LOG is:"
+        cat $RSYSLOG_OUT_LOG
+        error_exit 1
+fi
+if grep "imptcp: message received.*21 byte larger"  $RSYSLOG_OUT_LOG > /dev/null
+then
+        echo
+        echo "FAIL: UNEXPECTED error message from imptcp truncation found.  $RSYSLOG_OUT_LOG is:"
         cat $RSYSLOG_OUT_LOG
         error_exit 1
 fi

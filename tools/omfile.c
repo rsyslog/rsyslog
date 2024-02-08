@@ -17,7 +17,7 @@
  * pipes. These have been moved to ompipe, to reduced the entanglement
  * between the two different functionalities. -- rgerhards
  *
- * Copyright 2007-2018 Adiscon GmbH.
+ * Copyright 2007-2023 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -224,6 +224,8 @@ struct modConfData_s {
 	gid_t fileGID;
 	gid_t dirGID;
 	int bDynafileDoNotSuspend;
+	strm_compressionDriver_t compressionDriver;
+	int compressionDriver_workers;
 };
 
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
@@ -233,6 +235,8 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current ex
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
 	{ "template", eCmdHdlrGetWord, 0 },
+	{ "compression.driver", eCmdHdlrGetWord, 0 },
+	{ "compression.zstd.workers", eCmdHdlrPositiveInt, 0 },
 	{ "dircreatemode", eCmdHdlrFileCreateMode, 0 },
 	{ "filecreatemode", eCmdHdlrFileCreateMode, 0 },
 	{ "dirowner", eCmdHdlrUID, 0 },
@@ -278,6 +282,8 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "sig.provider", eCmdHdlrGetWord, 0 },
 	{ "cry.provider", eCmdHdlrGetWord, 0 },
 	{ "closetimeout", eCmdHdlrPositiveInt, 0 },
+	{ "rotation.sizelimit", eCmdHdlrSize, 0 },
+	{ "rotation.sizelimitcommand", eCmdHdlrString, 0 },
 	{ "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
@@ -630,6 +636,8 @@ prepareFile(instanceData *__restrict__ const pData, const uchar *__restrict__ co
 	CHKiRet(strm.SetsIOBufSize(pData->pStrm, (size_t) pData->iIOBufSize));
 	CHKiRet(strm.SettOperationsMode(pData->pStrm, STREAMMODE_WRITE_APPEND));
 	CHKiRet(strm.SettOpenMode(pData->pStrm, cs.fCreateMode));
+	CHKiRet(strm.SetcompressionDriver(pData->pStrm, runModConf->compressionDriver));
+	CHKiRet(strm.SetCompressionWorkers(pData->pStrm, runModConf->compressionDriver_workers));
 	CHKiRet(strm.SetbSync(pData->pStrm, pData->bSyncFile));
 	CHKiRet(strm.SetsType(pData->pStrm, STREAMTYPE_FILE_SINGLE));
 	CHKiRet(strm.SetiSizeLimit(pData->pStrm, pData->iSizeLimit));
@@ -897,6 +905,18 @@ CODESTARTsetModCnf
 					"set via legacy directive - may lead to inconsistent "
 					"results.");
 			}
+		} else if(!strcmp(modpblk.descr[i].name, "compression.driver")) {
+			if(!es_strcasebufcmp(pvals[i].val.d.estr, (const unsigned char*) "zlib", 4)) {
+				loadModConf->compressionDriver = STRM_COMPRESS_ZIP;
+			} else if(!es_strcasebufcmp(pvals[i].val.d.estr, (const unsigned char*) "zstd", 4)) {
+				loadModConf->compressionDriver = STRM_COMPRESS_ZSTD;
+			} else {
+				parser_errmsg("omfile: error: invalid compression.driver driver "
+					"name - noch applying setting. Valid drivers: 'zlib' and "
+					"'zstd'.");
+			}
+		} else if(!strcmp(modpblk.descr[i].name, "compression.zstd.workers")) {
+			loadModConf->compressionDriver_workers = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "dircreatemode")) {
 			loadModConf->fDirCreateMode = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "filecreatemode")) {
@@ -1114,6 +1134,8 @@ setInstParamDefaults(instanceData *__restrict__ const pData)
 	pData->useSigprov = 0;
 	pData->useCryprov = 0;
 	pData->iCloseTimeout = -1;
+	pData->iSizeLimit = 0;
+	pData->pszSizeLimitCmd = NULL;
 }
 
 
@@ -1327,6 +1349,10 @@ CODESTARTnewActInst
 			pData->cryprovName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "closetimeout")) {
 			pData->iCloseTimeout = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "rotation.sizelimit")) {
+			pData->iSizeLimit = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "rotation.sizelimitcommand")) {
+			pData->pszSizeLimitCmd = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
 			dbgprintf("omfile: program error, non-handled "
 			  "param '%s'\n", actpblk.descr[i].name);

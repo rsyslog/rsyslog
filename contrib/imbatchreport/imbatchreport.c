@@ -447,7 +447,7 @@ static void pollFile(instanceConf_t *pInst)
 				continue;
 			}
 
-			/* let's read the file and send it to ouput */
+			/* let's read the file and send it to output */
 			ret = readAndSendFile(pInst, filename, fpath, &fstat);
 			/* is the file to large to be sent */
 			toolargeOrFailure = ret == RS_RET_FILE_TOO_LARGE;

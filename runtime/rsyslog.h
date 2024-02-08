@@ -3,7 +3,7 @@
  *
  * Begun 2005-09-15 RGerhards
  *
- * Copyright (C) 2005-2019 by Rainer Gerhards and Adiscon GmbH
+ * Copyright (C) 2005-2023 by Rainer Gerhards and Adiscon GmbH
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -88,6 +88,15 @@
 #if defined(__GNUC__)
 	#define PRAGMA_INGORE_Wswitch_enum	_Pragma("GCC diagnostic ignored \"-Wswitch-enum\"")
 	#define PRAGMA_IGNORE_Wempty_body	_Pragma("GCC diagnostic ignored \"-Wempty-body\"")
+	#define PRAGMA_IGNORE_Wstrict_prototypes _Pragma("GCC diagnostic ignored \"-Wstrict-prototypes\"")
+	#define PRAGMA_IGNORE_Wold_style_definition \
+		_Pragma("GCC diagnostic ignored \"-Wold-style-definition\"")
+	#if defined(__clang_major__) && __clang_major__  >= 14
+		#define PRAGMA_IGNORE_Wvoid_pointer_to_enum_cast \
+			_Pragma("GCC diagnostic ignored \"-Wvoid-pointer-to-enum-cast\"")
+	#else
+		#define PRAGMA_IGNORE_Wvoid_pointer_to_enum_cast
+	#endif
 	#define PRAGMA_IGNORE_Wsign_compare	_Pragma("GCC diagnostic ignored \"-Wsign-compare\"")
 	#define PRAGMA_IGNORE_Wpragmas		_Pragma("GCC diagnostic ignored \"-Wpragmas\"")
 	#define PRAGMA_IGNORE_Wmissing_noreturn _Pragma("GCC diagnostic ignored \"-Wmissing-noreturn\"")
@@ -101,8 +110,15 @@
 						_Pragma("GCC diagnostic ignored \"-Wformat-nonliteral\"")
 	#define PRAGMA_IGNORE_Wdeprecated_declarations \
 						_Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
-	#define PRAGMA_DIAGNOSTIC_PUSH		_Pragma("GCC diagnostic push")
-	#define PRAGMA_DIAGNOSTIC_POP		_Pragma("GCC diagnostic pop")
+	#if  __GNUC__ >= 5
+		#define PRAGMA_DIAGNOSTIC_PUSH \
+			_Pragma("GCC diagnostic push")
+		#define PRAGMA_DIAGNOSTIC_POP \
+			_Pragma("GCC diagnostic pop")
+	#else
+		#define PRAGMA_DIAGNOSTIC_PUSH
+		#define PRAGMA_DIAGNOSTIC_POP
+	#endif
 #else
 	#define PRAGMA_INGORE_Wswitch_enum
 	#define PRAGMA_IGNORE_Wsign_compare
@@ -110,6 +126,9 @@
 	#define PRAGMA_IGNORE_Wpragmas
 	#define PRAGMA_IGNORE_Wmissing_noreturn
 	#define PRAGMA_IGNORE_Wempty_body
+	#define PRAGMA_IGNORE_Wstrict_prototypes
+	#define PRAGMA_IGNORE_Wold_style_definition
+	#define PRAGMA_IGNORE_Wvoid_pointer_to_enum_cast
 	#define PRAGMA_IGNORE_Wdeprecated_declarations
 	#define PRAGMA_IGNORE_Wexpansion_to_defined
 	#define PRAGMA_IGNORE_Wunknown_attribute
@@ -528,6 +547,9 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_CA_CERT_MISSING = -2329,/**< a CA cert is missing where one is required (e.g. TLS) */
 	RS_RET_CERT_MISSING = -2330,/**< a cert is missing where one is required (e.g. TLS) */
 	RS_RET_CERTKEY_MISSING = -2331,/**< a cert (private) key is missing where one is required (e.g. TLS) */
+	RS_RET_CRL_MISSING = -2332,/**< a CRL file is missing but not required (e.g. TLS) */
+	RS_RET_CRL_INVALID = -2333, /**< a CRL file PEM file failed validation */
+	RS_RET_CERT_REVOKED = -2334, /**< a certificate has been revoked */
 	RS_RET_STRUC_DATA_INVLD = -2349,/**< structured data is malformed */
 
 	/* up to 2350 reserved for 7.4 */
@@ -585,6 +607,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_REDIS_ERROR = -2452, /**< redis-specific error. See message foe details. */
 	RS_RET_REDIS_AUTH_FAILED = -2453, /**< redis authentication failure */
 	RS_RET_FAUP_INIT_OPTIONS_FAILED = -2454, /**< could not initialize faup options */
+	RS_RET_LIBCAPNG_ERR = -2455, /**< error during dropping the capabilities */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
@@ -758,8 +781,8 @@ rsRetVal rsrtInit(const char **ppErrObj, obj_if_t *pObjIF);
 rsRetVal rsrtExit(void);
 int rsrtIsInit(void);
 void rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar*));
-
 void dfltErrLogger(const int, const int, const uchar *errMsg);
+rsRetVal queryLocalHostname(rsconf_t *const);
 
 
 /* this define below is (later) intended to be used to implement empty

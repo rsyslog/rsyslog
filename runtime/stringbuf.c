@@ -474,7 +474,7 @@ finalize_it:
  * This is due to performance reasons.
  */
 #ifndef NDEBUG
-int cstrLen(cstr_t *pThis)
+size_t cstrLen(cstr_t *pThis)
 {
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	return(pThis->iStrLen);

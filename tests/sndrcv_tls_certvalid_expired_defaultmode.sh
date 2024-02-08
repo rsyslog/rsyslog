@@ -47,7 +47,7 @@ startup 2
 
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
-injectmsg
+injectmsg2
 
 # shut down sender when everything is sent, receiver continues to run concurrently
 shutdown_when_empty 2
@@ -56,6 +56,6 @@ wait_shutdown 2
 shutdown_when_empty
 wait_shutdown
 
-content_check "not permitted to talk to peer, certificate invalid: certificate expired"
+content_check --regex "not permitted to talk to peer '.*', certificate invalid: certificate expired"
 
 exit_test

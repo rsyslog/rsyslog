@@ -16,7 +16,7 @@
  * it turns out to be problematic. Then, we need to quasi-refcount the number of accesses
  * to the object.
  *
- * Copyright 2008-2018 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2022 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -62,6 +62,7 @@
 #include "unicode-helper.h"
 #include "module-template.h"
 #include "errmsg.h"
+#include "zstdw.h"
 #include "cryprov.h"
 #include "datetime.h"
 #include "rsconf.h"
@@ -77,6 +78,7 @@
 /* static data */
 DEFobjStaticHelpers
 DEFobjCurrIf(zlibw)
+DEFobjCurrIf(zstdw)
 
 /* forward definitions */
 static rsRetVal strmFlushInternal(strm_t *pThis, int bFlushZip);
@@ -92,6 +94,7 @@ static rsRetVal strmSeekCurrOffs(strm_t *pThis);
 
 
 /* methods */
+
 
 /* note: this may return NULL if not line segment is currently set  */
 // TODO: due to the cstrFinalize() this is not totally clean, albeit for our
@@ -584,47 +587,6 @@ finalize_it:
 }
 
 
-/* handle the eof case for monitored files.
- * If we are monitoring a file, someone may have rotated it. In this case, we
- * also need to close it and reopen it under the same name.
- * rgerhards, 2008-02-13
- * The previous code also did a check for file truncation, in which case the
- * file was considered rewritten. However, this potential border case turned
- * out to be a big trouble spot on busy systems. It caused massive message
- * duplication (I guess stat() can return a too-low number under some
- * circumstances). So starting as of now, we only check the inode number and
- * a file change is detected only if the inode changes. -- rgerhards, 2011-01-10
- */
-static rsRetVal ATTR_NONNULL()
-strmHandleEOFMonitor(strm_t *const pThis)
-{
-	DEFiRet;
-	struct stat statName;
-
-	ISOBJ_TYPE_assert(pThis, strm);
-	if(stat((char*) pThis->pszCurrFName, &statName) == -1)
-		ABORT_FINALIZE(RS_RET_IO_ERROR);
-	DBGPRINTF("strmHandleEOFMonitor: stream checking for file change on '%s', inode %u/%u size %llu/%llu\n",
-		pThis->pszCurrFName, (unsigned) pThis->inode, (unsigned) statName.st_ino,
-		(long long unsigned) pThis->iCurrOffs, (long long unsigned) statName.st_size);
-
-	/* Inode unchanged but file size on disk is less than current offset
-	 * means file was truncated, we also reopen if 'reopenOnTruncate' is on
-	 */
-	if (pThis->inode != statName.st_ino
-		  || (pThis->bReopenOnTruncate && statName.st_size < pThis->iCurrOffs)) {
-		DBGPRINTF("we had a file change on '%s'\n", pThis->pszCurrFName);
-		CHKiRet(strmCloseFile(pThis));
-		CHKiRet(strmOpenFile(pThis));
-	} else {
-		ABORT_FINALIZE(RS_RET_EOF);
-	}
-
-finalize_it:
-	RETiRet;
-}
-
-
 /* handle the EOF case of a stream
  * The EOF case is somewhat complicated, as the proper action depends on the
  * mode the stream is in. If there are multiple files (circular logs, most
@@ -652,11 +614,8 @@ strmHandleEOF(strm_t *const pThis)
 		case STREAMTYPE_FILE_MONITOR:
 			DBGOPRINT((obj_t*) pThis, "file '%s' (%d) EOF, rotationCheck %d\n",
 				pThis->pszCurrFName, pThis->fd, pThis->rotationCheck);
-			if(pThis->rotationCheck == STRM_ROTATION_DO_CHECK) {
-				CHKiRet(strmHandleEOFMonitor(pThis));
-			} else {
-				ABORT_FINALIZE(RS_RET_EOF);
-			}
+DBGPRINTF("RGER: EOF!\n");
+			ABORT_FINALIZE(RS_RET_EOF);
 			break;
 	}
 
@@ -773,6 +732,7 @@ strmReadBuf(strm_t *pThis, int *padBytes)
 		}
 		iLenRead = read(pThis->fd, pThis->pIOBuf, toRead);
 		DBGOPRINT((obj_t*) pThis, "file %d read %ld bytes\n", pThis->fd, iLenRead);
+		DBGOPRINT((obj_t*) pThis, "file %d read %*s\n", pThis->fd, (unsigned) iLenRead, (char*) pThis->pIOBuf);
 		/* end crypto */
 		if(iLenRead == 0) {
 			CHKiRet(strmHandleEOF(pThis));
@@ -1022,6 +982,7 @@ finalize_it:
 		}
 		pThis->strtOffs = pThis->iCurrOffs; /* we are at begin of next line */
 	} else {
+DBGPRINTF("RGER: strmReadLine iRet %d\n", iRet);
 		if(*ppCStr != NULL) {
 			if(cstrLen(*ppCStr) > 0) {
 			/* we may have an empty string in an unsuccesfull poll or after restart! */
@@ -1072,7 +1033,7 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *start_preg, regex_t *
 	cstr_t *thisLine = NULL;
 	rsRetVal readCharRet;
 	const time_t tCurr = pThis->readTimeout ? getTime(NULL) : 0;
-	int maxMsgSize = glblGetMaxLine(runConf);
+	size_t maxMsgSize = glblGetMaxLine(runConf);
 	DEFiRet;
 
 	do {
@@ -1133,9 +1094,9 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *start_preg, regex_t *
 					}
 
 
-					int currLineLen = cstrLen(thisLine);
+					size_t currLineLen = cstrLen(thisLine);
 					if(currLineLen > 0) {
-						int len;
+						size_t len;
 						if((len = cstrLen(pThis->prevMsgSegment) + currLineLen) <
 						maxMsgSize) {
 							CHKiRet(cstrAppendCStr(pThis->prevMsgSegment, thisLine));
@@ -1145,7 +1106,7 @@ strmReadMultiLine(strm_t *pThis, cstr_t **ppCStr, regex_t *start_preg, regex_t *
 								len = 0;
 							} else {
 								len = currLineLen-(len-maxMsgSize);
-								for(int z=0; z<len; z++) {
+								for(size_t z=0; z<len; z++) {
 									cstrAppendChar(pThis->prevMsgSegment,
 										thisLine->pBuf[z]);
 								}
@@ -1230,6 +1191,7 @@ BEGINobjConstruct(strm) /* be sure to specify the object type also in END macro!
 	pThis->sType = STREAMTYPE_FILE_SINGLE;
 	pThis->sIOBufSize = glblGetIOBufSize();
 	pThis->tOpenMode = 0600;
+	pThis->compressionDriver = STRM_COMPRESS_ZIP;
 	pThis->pszSizeLimitCmd = NULL;
 	pThis->prevLineSegment = NULL;
 	pThis->prevMsgSegment = NULL;
@@ -1256,18 +1218,27 @@ static rsRetVal strmConstructFinalize(strm_t *pThis)
 
 	pThis->iBufPtrMax = 0; /* results in immediate read request */
 	if(pThis->iZipLevel) { /* do we need a zip buf? */
-		localRet = objUse(zlibw, LM_ZLIBW_FILENAME);
-		if(localRet != RS_RET_OK) {
-			pThis->iZipLevel = 0;
-			DBGPRINTF("stream was requested with zip mode, but zlibw module unavailable (%d) - using "
-				  "without zip\n", localRet);
+		if(pThis->compressionDriver == STRM_COMPRESS_ZSTD) {
+			localRet = objUse(zstdw, LM_ZSTDW_FILENAME);
+			if(localRet != RS_RET_OK) {
+				pThis->iZipLevel = 0;
+				LogError(0, localRet, "stream was requested with zstd compression mode, "
+					 "but zstdw module unavailable - using without compression\n");
+			}
 		} else {
-			/* we use the same size as the original buf, as we would like
-			 * to make sure we can write out everything with a SINGLE api call!
-			 * We add another 128 bytes to take care of the gzip header and "all eventualities".
-			 */
-			CHKmalloc(pThis->pZipBuf = (Bytef*) malloc(pThis->sIOBufSize + 128));
+			assert(pThis->compressionDriver == STRM_COMPRESS_ZIP);
+			localRet = objUse(zlibw, LM_ZLIBW_FILENAME);
+			if(localRet != RS_RET_OK) {
+				pThis->iZipLevel = 0;
+				LogError(0, localRet, "stream was requested with zip mode, but zlibw "
+					 "module unavailable - using without zip\n");
+			}
 		}
+		/* we use the same size as the original buf, as we would like
+		 * to make sure we can write out everything with a SINGLE api call!
+		 * We add another 128 bytes to take care of the gzip header and "all eventualities".
+		 */
+		CHKmalloc(pThis->pZipBuf = (Bytef*) malloc(pThis->sIOBufSize + 128));
 	}
 
 	/* if we are set to sync, we must obtain a file handle to the directory for fsync() purposes */
@@ -1354,6 +1325,9 @@ CODESTARTobjDestruct(strm)
 	 * IMPORTANT: we MUST free this only AFTER the ansyncWriter has been stopped, else
 	 * we get random errors...
 	 */
+	if(pThis->compressionDriver == STRM_COMPRESS_ZSTD) {
+		zstdw.Destruct(pThis);
+	}
 	if(pThis->prevLineSegment)
 		cstrDestruct(&pThis->prevLineSegment);
 	if(pThis->prevMsgSegment)
@@ -1467,11 +1441,11 @@ doWriteCall(strm_t *pThis, uchar *pBuf, size_t *pLenBuf)
 			const int err = errno;
 			iWritten = 0; /* we have written NO bytes! */
 			if(err == EBADF) {
-				LogError(err, RS_RET_IO_ERROR, "file %s: fd %d no longer valid, recovery by "
+				DBGPRINTF("file %s: errno %d, fd %d no longer valid, recovery by "
 					"reopen; if you see this, consider reporting at "
 					"https://github.com/rsyslog/rsyslog/issues/3404 "
 					"so that we know when it happens. Include output of uname -a. "
-					"OS error reason", pThis->pszCurrFName, pThis->fd);
+					"OS error reason", pThis->pszCurrFName, err, pThis->fd);
 				pThis->fd = -1;
 				CHKiRet(doPhysOpen(pThis));
 			} else {
@@ -1802,53 +1776,11 @@ finalize_it:
 static rsRetVal
 doZipWrite(strm_t *pThis, uchar *pBuf, size_t lenBuf, const int bFlush)
 {
-	int zRet;	/* zlib return state */
-	DEFiRet;
-	unsigned outavail = 0;
-	assert(pThis != NULL);
-	assert(pBuf != NULL);
-
-	if(!pThis->bzInitDone) {
-		/* allocate deflate state */
-		pThis->zstrm.zalloc = Z_NULL;
-		pThis->zstrm.zfree = Z_NULL;
-		pThis->zstrm.opaque = Z_NULL;
-		/* see note in file header for the params we use with deflateInit2() */
-		zRet = zlibw.DeflateInit2(&pThis->zstrm, pThis->iZipLevel, Z_DEFLATED, 31, 9, Z_DEFAULT_STRATEGY);
-		if(zRet != Z_OK) {
-			LogError(0, RS_RET_ZLIB_ERR, "error %d returned from zlib/deflateInit2()", zRet);
-			ABORT_FINALIZE(RS_RET_ZLIB_ERR);
-		}
-		pThis->bzInitDone = RSTRUE;
+	if(pThis->compressionDriver == STRM_COMPRESS_ZSTD) {
+		return zstdw.doStrmWrite(pThis, pBuf, lenBuf, bFlush, strmPhysWrite);
+	} else {
+		return zlibw.doStrmWrite(pThis, pBuf, lenBuf, bFlush, strmPhysWrite);
 	}
-
-	/* now doing the compression */
-	pThis->zstrm.next_in = (Bytef*) pBuf;
-	pThis->zstrm.avail_in = lenBuf;
-	/* run deflate() on buffer until everything has been compressed */
-	do {
-		DBGPRINTF("in deflate() loop, avail_in %d, total_in %ld, bFlush %d\n",
-			pThis->zstrm.avail_in, pThis->zstrm.total_in, bFlush);
-		pThis->zstrm.avail_out = pThis->sIOBufSize;
-		pThis->zstrm.next_out = pThis->pZipBuf;
-		zRet = zlibw.Deflate(&pThis->zstrm, bFlush ? Z_SYNC_FLUSH : Z_NO_FLUSH);    /* no bad return value */
-		DBGPRINTF("after deflate, ret %d, avail_out %d, to write %d\n",
-			zRet, pThis->zstrm.avail_out, outavail);
-		if(zRet != Z_OK) {
-			LogError(0, RS_RET_ZLIB_ERR, "error %d returned from zlib/Deflate()", zRet);
-			ABORT_FINALIZE(RS_RET_ZLIB_ERR);
-		}
-		outavail = pThis->sIOBufSize - pThis->zstrm.avail_out;
-		if(outavail != 0) {
-			CHKiRet(strmPhysWrite(pThis, (uchar*)pThis->pZipBuf, outavail));
-		}
-	} while (pThis->zstrm.avail_out == 0);
-
-finalize_it:
-	if(pThis->bzInitDone && pThis->bVeryReliableZip) {
-		doZipFinish(pThis);
-	}
-	RETiRet;
 }
 
 
@@ -1859,37 +1791,11 @@ finalize_it:
 static rsRetVal
 doZipFinish(strm_t *pThis)
 {
-	int zRet;	/* zlib return state */
-	DEFiRet;
-	unsigned outavail;
-	assert(pThis != NULL);
-
-	if(!pThis->bzInitDone)
-		goto done;
-
-	pThis->zstrm.avail_in = 0;
-	/* run deflate() on buffer until everything has been compressed */
-	do {
-		DBGPRINTF("in deflate() loop, avail_in %d, total_in %ld\n", pThis->zstrm.avail_in,
-			pThis->zstrm.total_in);
-		pThis->zstrm.avail_out = pThis->sIOBufSize;
-		pThis->zstrm.next_out = pThis->pZipBuf;
-		zRet = zlibw.Deflate(&pThis->zstrm, Z_FINISH);    /* no bad return value */
-		DBGPRINTF("after deflate, ret %d, avail_out %d\n", zRet, pThis->zstrm.avail_out);
-		outavail = pThis->sIOBufSize - pThis->zstrm.avail_out;
-		if(outavail != 0) {
-			CHKiRet(strmPhysWrite(pThis, (uchar*)pThis->pZipBuf, outavail));
-		}
-	} while (pThis->zstrm.avail_out == 0);
-
-finalize_it:
-	zRet = zlibw.DeflateEnd(&pThis->zstrm);
-	if(zRet != Z_OK) {
-		LogError(0, RS_RET_ZLIB_ERR, "error %d returned from zlib/deflateEnd()", zRet);
+	if(pThis->compressionDriver == STRM_COMPRESS_ZSTD) {
+		return zstdw.doCompressFinish(pThis, strmPhysWrite);
+	} else {
+		return zlibw.doCompressFinish(pThis, strmPhysWrite);
 	}
-
-	pThis->bzInitDone = 0;
-done:	RETiRet;
 }
 
 /* flush stream output buffer to persistent storage. This can be called at any time
@@ -2192,6 +2098,7 @@ DEFpropSetMeth(strm, iMaxFileSize, int64)
 DEFpropSetMeth(strm, iFileNumDigits, int)
 DEFpropSetMeth(strm, tOperationsMode, int)
 DEFpropSetMeth(strm, tOpenMode, mode_t)
+DEFpropSetMeth(strm, compressionDriver, strm_compressionDriver_t)
 DEFpropSetMeth(strm, sType, strmType_t)
 DEFpropSetMeth(strm, iZipLevel, int)
 DEFpropSetMeth(strm, bVeryReliableZip, int)
@@ -2211,14 +2118,6 @@ strmSetReadTimeout(strm_t *const __restrict__ pThis, const int val)
 	ISOBJ_TYPE_assert(pThis, strm);
 	pThis->readTimeout = val;
 }
-
-void ATTR_NONNULL()
-strmSet_checkRotation(strm_t *const pThis, const int val) {
-	ISOBJ_TYPE_assert(pThis, strm);
-	assert(val == STRM_ROTATION_DO_CHECK || val == STRM_ROTATION_DO_NOT_CHECK);
-	pThis->rotationCheck = val;
-}
-
 
 static rsRetVal ATTR_NONNULL()
 strmSetbDeleteOnClose(strm_t *const pThis, const int val)
@@ -2438,6 +2337,7 @@ strmDup(strm_t *const pThis, strm_t **ppNew)
 	pNew->lenDir = pThis->lenDir;
 	pNew->tOperationsMode = pThis->tOperationsMode;
 	pNew->tOpenMode = pThis->tOpenMode;
+	pNew->compressionDriver = pThis->compressionDriver;
 	pNew->iMaxFileSize = pThis->iMaxFileSize;
 	pNew->iMaxFiles = pThis->iMaxFiles;
 	pNew->iFileNumDigits = pThis->iFileNumDigits;
@@ -2453,6 +2353,18 @@ finalize_it:
 
 	RETiRet;
 }
+
+
+static rsRetVal
+SetCompressionWorkers(strm_t *const pThis, int num_wrkrs)
+{
+	ISOBJ_TYPE_assert(pThis, strm);
+	if(num_wrkrs < 0)
+		num_wrkrs = 1;
+	pThis->zstd.num_wrkrs = num_wrkrs;
+	return RS_RET_OK;
+}
+
 
 /* set a user write-counter. This counter is initialized to zero and
  * receives the number of bytes written. It is accurate only after a
@@ -2582,6 +2494,7 @@ CODESTARTobjQueryInterface(strm)
 	pIf->Serialize = strmSerialize;
 	pIf->GetCurrOffset = strmGetCurrOffset;
 	pIf->Dup = strmDup;
+	pIf->SetCompressionWorkers = SetCompressionWorkers;
 	pIf->SetWCntr = strmSetWCntr;
 	pIf->CheckFileChange = CheckFileChange;
 	/* set methods */
@@ -2591,6 +2504,7 @@ CODESTARTobjQueryInterface(strm)
 	pIf->SetiFileNumDigits = strmSetiFileNumDigits;
 	pIf->SettOperationsMode = strmSettOperationsMode;
 	pIf->SettOpenMode = strmSettOpenMode;
+	pIf->SetcompressionDriver = strmSetcompressionDriver;
 	pIf->SetsType = strmSetsType;
 	pIf->SetiZipLevel = strmSetiZipLevel;
 	pIf->SetbVeryReliableZip = strmSetbVeryReliableZip;

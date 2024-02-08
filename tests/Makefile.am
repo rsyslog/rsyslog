@@ -175,7 +175,6 @@ TESTS +=  \
 	timestamp-mysql.sh \
 	timestamp-pgsql.sh \
 	timestamp-subseconds.sh \
-	hostname-getaddrinfo-fail.sh \
 	msleep_usage_output.sh \
 	mangle_qi_usage_output.sh \
 	minitcpsrv_usage_output.sh \
@@ -185,6 +184,10 @@ TESTS +=  \
 	hostname-with-slash-pmrfc5424.sh \
 	hostname-with-slash-pmrfc3164.sh \
 	hostname-with-slash-dflt-invld.sh \
+	func-substring-invld-startpos.sh \
+	func-substring-large-endpos.sh \
+	func-substring-large-neg-endpos.sh \
+	func-substring-relative-endpos.sh \
 	hostname-with-slash-dflt-slash-valid.sh \
 	empty-app-name.sh \
 	stop-localvar.sh \
@@ -231,6 +234,7 @@ TESTS +=  \
 	privdropabortonidfail.sh \
 	privdropabortonidfaillegacy.sh \
 	json-nonstring.sh \
+        json-onempty-at-end.sh \
 	template-json.sh \
 	template-pure-json.sh \
 	template-pos-from-to.sh \
@@ -239,6 +243,7 @@ TESTS +=  \
 	template-pos-from-to-oversize-lowercase.sh \
 	template-pos-from-to-missing-jsonvar.sh \
 	template-const-jsonf.sh \
+	template-topos-neg.sh \
 	fac_authpriv.sh \
 	fac_local0.sh \
 	fac_local7.sh \
@@ -475,6 +480,7 @@ TESTS +=  \
 	incltest_dir_empty_wildcard.sh \
 	linkedlistqueue.sh \
 	lookup_table.sh \
+	lookup_table-hup-backgrounded.sh \
 	lookup_table_no_hup_reload.sh \
 	key_dereference_on_uninitialized_variable_space.sh \
 	array_lookup_table.sh \
@@ -502,6 +508,15 @@ TESTS +=  \
 	parsertest-parse-nodate-udp.sh \
 	parsertest-snare_ccoff_udp.sh \
 	parsertest-snare_ccoff_udp2.sh
+
+if ENABLE_LIBZSTD
+TESTS +=  \
+	zstd.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	zstd-vg.sh
+endif # if HAVE_VALGRIND
+endif
 
 if ENABLE_LIBGCRYPT
 TESTS +=  \
@@ -567,6 +582,7 @@ TESTS +=  \
 	badqi.sh \
 	threadingmq.sh \
 	threadingmqaq.sh \
+	func-substring-invld-startpos-vg.sh \
 	rscript_trim-vg.sh
 if ENABLE_LIBGCRYPT
 TESTS +=  \
@@ -608,6 +624,7 @@ TESTS +=  \
 	mmanon_simple_12_ipv4.sh \
 	mmanon_simple_33_ipv4.sh \
 	mmanon_simple_8_ipv4.sh \
+	mmanon_simple_mallformed_ipv4.sh \
 	mmanon_random_128_ipv6.sh \
 	mmanon_zero_128_ipv6.sh \
 	mmanon_zero_96_ipv6.sh \
@@ -970,6 +987,21 @@ endif
 endif
 endif
 
+if ENABLE_OMAZUREEVENTHUBS
+if ENABLE_OMAZUREEVENTHUBS_TESTS
+TESTS += \
+	omazureeventhubs-basic.sh \
+	omazureeventhubs-list.sh \
+	omazureeventhubs-stress.sh \
+	omazureeventhubs-interrupt.sh
+if HAVE_VALGRIND
+TESTS += \
+	omazureeventhubs-basic-vg.sh \
+	omazureeventhubs-interrupt-vg.sh
+endif
+endif
+endif
+
 if ENABLE_IMDOCKER
 if ENABLE_IMDOCKER_TESTS
 TESTS += \
@@ -1166,6 +1198,7 @@ TESTS +=  \
 	rscript_hash32.sh \
 	rscript_hash64.sh \
 	rscript_replace.sh \
+	omfile-sizelimitcmd-many.sh \
 	omfile-outchannel-many.sh
 if HAVE_VALGRIND
 TESTS +=  \
@@ -1386,6 +1419,8 @@ TESTS +=  \
 	sndrcv_tls_certvalid_action_level.sh \
 	sndrcv_tls_certvalid_expired.sh \
 	sndrcv_tls_certvalid_expired_defaultmode.sh \
+	sndrcv_tls_certvalid_revoked.sh \
+	sndrcv_tls_client_missing_cert.sh \
 	imtcp-tls-no-lstn-startup.sh \
 	imtcp-tls-gtls-x509fingerprint-invld.sh \
 	imtcp-tls-gtls-x509fingerprint.sh \
@@ -1426,6 +1461,7 @@ TESTS +=  \
 	sndrcv_tls_ossl_certvalid_expired.sh \
 	sndrcv_tls_ossl_certvalid_tlscommand.sh \
 	sndrcv_tls_ossl_certvalid_ciphers.sh \
+	sndrcv_tls_ossl_certvalid_revoked.sh \
 	imtcp-tls-ossl-x509valid.sh \
 	imtcp-tls-ossl-x509name.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \
@@ -1496,7 +1532,9 @@ if HAVE_VALGRIND
 TESTS += \
 	 imrelp-basic-vg.sh \
 	 imrelp-sessionbreak-vg.sh \
-	 imrelp-manyconn-vg.sh
+	 imrelp-manyconn-vg.sh \
+	 sndrcv_relp-vg-rcvr.sh \
+	 sndrcv_relp-vg-sender.sh
 endif # HAVE_VALGRIND
 endif
 
@@ -1622,7 +1660,9 @@ TESTS += \
 	imfile-rename.sh \
 	imfile-symlink.sh \
 	imfile-symlink-multi.sh \
+	imfile-symlink-ext-tmp-dir-tree.sh \
 	imfile-logrotate.sh \
+	imfile-logrotate-async.sh \
 	imfile-logrotate-multiple.sh \
 	imfile-logrotate-copytruncate.sh \
 	imfile-logrotate-nocopytruncate.sh \
@@ -1737,10 +1777,6 @@ TESTS +=  \
 endif
 endif # ENABLE_OMAMQP1
 
-# test samples...
-#empty-hostname.log: hostname-getaddrinfo-fail.log
-#hostname-getaddrinfo-fail.log: empty-hostname.log
-
 endif # if ENABLE_TESTBENCH
 
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
@@ -1777,7 +1813,11 @@ EXTRA_DIST= \
 	config_enabled-off.sh \
 	empty-app-name.sh \
 	empty-hostname.sh \
-	hostname-getaddrinfo-fail.sh \
+	func-substring-invld-startpos.sh \
+	func-substring-invld-startpos-vg.sh \
+	func-substring-large-endpos.sh \
+	func-substring-large-neg-endpos.sh \
+	func-substring-relative-endpos.sh \
 	hostname-with-slash-pmrfc5424.sh \
 	hostname-with-slash-pmrfc3164.sh \
 	pmrfc3164-msgFirstSpace.sh \
@@ -1838,6 +1878,23 @@ EXTRA_DIST= \
 	tls-certs/ca-fail.pem \
 	tls-certs/cert-fail.pem \
 	tls-certs/key-fail.pem \
+	testsuites/x.509/ca.srl \
+	testsuites/x.509/client-cert-new.pem \
+	testsuites/x.509/client-new.csr \
+	testsuites/x.509/client-revoked-key.pem \
+	testsuites/x.509/client-revoked-valid.pem \
+	testsuites/x.509/client-revoked.csr \
+	testsuites/x.509/client-revoked.pem \
+	testsuites/x.509/crl.pem \
+	testsuites/x.509/index.txt \
+	testsuites/x.509/index.txt.attr \
+	testsuites/x.509/newcerts/01.pem \
+	testsuites/x.509/newcerts/02.pem \
+	testsuites/x.509/newcerts/03.pem \
+	testsuites/x.509/newcerts/04.pem \
+	testsuites/x.509/openssl-cmds.sh \
+	testsuites/x.509/openssl.cnf \
+	testsuites/x.509/serial \
 	testsuites/x.509/ca.pem \
 	testsuites/x.509/ca-key.pem \
 	testsuites/x.509/client-cert.pem \
@@ -2025,6 +2082,7 @@ EXTRA_DIST= \
 	mmanon_simple_12_ipv4.sh \
 	mmanon_simple_33_ipv4.sh \
 	mmanon_simple_8_ipv4.sh \
+	mmanon_simple_mallformed_ipv4.sh \
 	mmanon_random_128_ipv6.sh \
 	mmanon_zero_128_ipv6.sh \
 	mmanon_zero_96_ipv6.sh \
@@ -2047,6 +2105,8 @@ EXTRA_DIST= \
 	omfwd-keepalive.sh \
 	omfwd_fast_imuxsock.sh \
 	omfile_hup-vg.sh \
+	zstd.sh \
+	zstd-vg.sh \
 	gzipwr_hup-vg.sh \
 	omusrmsg-noabort-legacy.sh \
 	omusrmsg-errmsg-no-params.sh \
@@ -2058,6 +2118,7 @@ EXTRA_DIST= \
 	omfile-read-only.sh \
 	omfile-outchannel.sh \
 	omfile-outchannel-many.sh \
+	omfile-sizelimitcmd-many.sh \
 	omfile_both_files_set.sh \
 	omfile_hup.sh \
 	omrabbitmq_no_params.sh \
@@ -2125,6 +2186,7 @@ EXTRA_DIST= \
 	privdropabortonidfail.sh \
 	privdropabortonidfaillegacy.sh \
 	json-nonstring.sh \
+        json-onempty-at-end.sh \
 	template-json.sh \
 	template-pure-json.sh \
 	template-pos-from-to.sh \
@@ -2133,6 +2195,7 @@ EXTRA_DIST= \
 	template-pos-from-to-oversize-lowercase.sh \
 	template-pos-from-to-missing-jsonvar.sh \
 	template-const-jsonf.sh \
+	template-topos-neg.sh \
 	fac_authpriv.sh \
 	fac_local0.sh \
 	fac_local0-vg.sh \
@@ -2339,6 +2402,7 @@ EXTRA_DIST= \
 	sndrcv_tls_ossl_certvalid_expired.sh \
 	sndrcv_tls_ossl_certvalid_tlscommand.sh \
 	sndrcv_tls_ossl_certvalid_ciphers.sh \
+	sndrcv_tls_ossl_certvalid_revoked.sh \
 	imtcp-tls-ossl-x509valid.sh \
 	imtcp-tls-ossl-x509name.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \
@@ -2445,6 +2509,8 @@ EXTRA_DIST= \
 	sndrcv_relp_tls_chainedcert.sh \
 	sndrcv_relp_tls.sh \
 	sndrcv_relp_tls_certvalid.sh \
+	sndrcv_relp-vg-rcvr.sh \
+	sndrcv_relp-vg-sender.sh \
 	relp_tls_certificate_not_found.sh \
 	omrelp_wrong_authmode.sh \
 	imrelp-tls.sh \
@@ -2649,7 +2715,9 @@ EXTRA_DIST= \
 	imfile-rename.sh \
 	imfile-symlink.sh \
 	imfile-symlink-multi.sh \
+	imfile-symlink-ext-tmp-dir-tree.sh \
 	imfile-logrotate.sh \
+	imfile-logrotate-async.sh \
 	imfile-logrotate-copytruncate.sh \
 	imfile-logrotate-nocopytruncate.sh \
 	imfile-logrotate-multiple.sh \
@@ -2741,6 +2809,12 @@ EXTRA_DIST= \
 	testsuites/zoo.dep_wrk1.cfg \
 	testsuites/zoo.dep_wrk2.cfg \
 	testsuites/zoo.dep_wrk3.cfg \
+	omazureeventhubs-basic.sh \
+	omazureeventhubs-list.sh \
+	omazureeventhubs-stress.sh \
+	omazureeventhubs-interrupt.sh \
+	omazureeventhubs-basic-vg.sh \
+	omazureeventhubs-interrupt-vg.sh \
 	mmpstrucdata.sh \
 	mmpstrucdata-escaping.sh \
 	mmpstrucdata-case.sh \
@@ -2827,6 +2901,7 @@ EXTRA_DIST= \
 	rscript_re_match.sh \
 	rscript_re_match-dbl_quotes.sh \
 	lookup_table.sh \
+	lookup_table-hup-backgrounded.sh \
 	lookup_table_no_hup_reload.sh \
 	lookup_table_no_hup_reload-vg.sh \
 	lookup_table_rscript_reload.sh \
@@ -2896,6 +2971,7 @@ EXTRA_DIST= \
 	sndrcv_tls_certvalid_action_level.sh \
 	sndrcv_tls_certvalid_expired.sh \
 	sndrcv_tls_certvalid_expired_defaultmode.sh \
+	sndrcv_tls_certvalid_revoked.sh \
 	sndrcv_tls_certless_clientonly.sh \
 	sndrcv_tls_gtls_servercert_gtls_clientanon.sh \
 	sndrcv_tls_gtls_servercert_gtls_clientanon_legacy.sh \
@@ -2906,6 +2982,8 @@ EXTRA_DIST= \
 	sndrcv_tls_ossl_serveranon_gtls_clientanon.sh \
 	sndrcv_tls_gtls_servercert_ossl_clientanon.sh \
 	sndrcv_tls_gtls_serveranon_ossl_clientanon.sh \
+	sndrcv_tls_client_missing_cert.sh \
+	sndrcv_ossl_cert_chain.sh \
 	omtcl.sh \
 	omtcl.tcl \
 	pmsnare-default.sh \

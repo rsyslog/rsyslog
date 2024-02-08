@@ -24,6 +24,7 @@ printf 'a quick glimpse at journal content at rsyslog startup:\n'
 journalctl -n 20 --no-pager
 printf '\n\n'
 
+printf '++++++++++++++++++++++ Printing to the journal! +++++++++++++++++++++++++\n'
 # inject message into journal and check that it is recorded
 ./journal_print "$TESTMSG"
 journal_write_state=$?

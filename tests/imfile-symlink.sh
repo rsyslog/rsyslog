@@ -12,12 +12,14 @@ export IMFILECHECKTIMEOUT="60"
 
 # generate input files first. Note that rsyslog processes it as
 # soon as it start up (so the file should exist at that point).
+mkdir $RSYSLOG_DYNNAME.statefiles
 generate_conf
 add_conf '
 # comment out if you need more debug info:
 	global( debug.whitelist="on"
 		debug.files=["imfile.c"])
 module(load="../plugins/imfile/.libs/imfile"
+      statefile.directory="'${RSYSLOG_DYNNAME}'.statefiles"
        mode="inotify" normalizePath="off")
 input(type="imfile" File="./'$RSYSLOG_DYNNAME'.input-symlink.log" Tag="file:"
 	Severity="error" Facility="local7" addMetadata="on")

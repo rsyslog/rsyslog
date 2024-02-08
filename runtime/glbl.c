@@ -7,7 +7,7 @@
  *
  * Module begun 2008-04-16 by Rainer Gerhards
  *
- * Copyright 2008-2021 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2023 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -38,6 +38,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include <stdint.h>
+#include <string.h>
 #include <errno.h>
 
 #include "rsyslog.h"
@@ -114,9 +115,11 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "debug.gnutls", eCmdHdlrNonNegInt, 0 },
 	{ "debug.unloadmodules", eCmdHdlrBinary, 0 },
 	{ "defaultnetstreamdrivercafile", eCmdHdlrString, 0 },
+	{ "defaultnetstreamdrivercrlfile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdriverkeyfile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdrivercertfile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdriver", eCmdHdlrString, 0 },
+	{ "netstreamdrivercaextrafiles", eCmdHdlrString, 0 },
 	{ "maxmessagesize", eCmdHdlrSize, 0 },
 	{ "oversizemsg.errorfile", eCmdHdlrGetWord, 0 },
 	{ "oversizemsg.report", eCmdHdlrBinary, 0 },
@@ -151,6 +154,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "net.enabledns", eCmdHdlrBinary, 0 },
 	{ "net.permitACLwarning", eCmdHdlrBinary, 0 },
 	{ "abortonuncleanconfig", eCmdHdlrBinary, 0 },
+	{ "abortonfailedqueuestartup", eCmdHdlrBinary, 0 },
 	{ "variables.casesensitive", eCmdHdlrBinary, 0 },
 	{ "environment", eCmdHdlrArray, 0 },
 	{ "processinternalmessages", eCmdHdlrBinary, 0 },
@@ -175,7 +179,9 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "parser.supportcompressionextension", eCmdHdlrBinary, 0 },
 	{ "shutdown.queue.doublesize", eCmdHdlrBinary, 0 },
 	{ "debug.files", eCmdHdlrArray, 0 },
-	{ "debug.whitelist", eCmdHdlrBinary, 0 }
+	{ "debug.whitelist", eCmdHdlrBinary, 0 },
+	{ "libcapng.default", eCmdHdlrBinary, 0 },
+	{ "libcapng.enable", eCmdHdlrBinary, 0 },
 };
 static struct cnfparamblk paramblk =
 	{ CNFPARAMBLK_VERSION,
@@ -258,8 +264,10 @@ SIMP_PROP(ParseHOSTNAMEandTAG, parser.bParseHOSTNAMEandTAG, int)
 SIMP_PROP(OptionDisallowWarning, optionDisallowWarning, int)
 /* We omit setter on purpose, because we want to customize it */
 SIMP_PROP_GET(DfltNetstrmDrvrCAF, pszDfltNetstrmDrvrCAF, uchar*)
+SIMP_PROP_GET(DfltNetstrmDrvrCRLF, pszDfltNetstrmDrvrCRLF, uchar*)
 SIMP_PROP_GET(DfltNetstrmDrvrCertFile, pszDfltNetstrmDrvrCertFile, uchar*)
 SIMP_PROP_GET(DfltNetstrmDrvrKeyFile, pszDfltNetstrmDrvrKeyFile, uchar*)
+SIMP_PROP_GET(NetstrmDrvrCAExtraFiles, pszNetstrmDrvrCAExtraFiles, uchar*)
 SIMP_PROP_GET(ParserControlCharacterEscapePrefix, parser.cCCEscapeChar, uchar)
 SIMP_PROP_GET(ParserDropTrailingLFOnReception, parser.bDropTrailingLF, int)
 SIMP_PROP_GET(ParserEscapeControlCharactersOnReceive, parser.bEscapeCCOnRcv, int)
@@ -402,6 +410,7 @@ setDfltNetstrmDrvrCAF(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	DEFiRet;
 	FILE *fp;
 	free(loadConf->globals.pszDfltNetstrmDrvrCAF);
+	loadConf->globals.pszDfltNetstrmDrvrCAF = pNewVal;
 	fp = fopen((const char*)pNewVal, "r");
 	if(fp == NULL) {
 		LogError(errno, RS_RET_NO_FILE_ACCESS,
@@ -409,11 +418,59 @@ setDfltNetstrmDrvrCAF(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 			"could not be accessed", pNewVal);
 	} else {
 		fclose(fp);
-		loadConf->globals.pszDfltNetstrmDrvrCAF = pNewVal;
 	}
 
 	RETiRet;
 }
+
+static rsRetVal
+setNetstrmDrvrCAExtraFiles(void __attribute__((unused)) *pVal, uchar *pNewVal) {
+	DEFiRet;
+	FILE *fp;
+	char* token;
+	int error = 0;
+	free(loadConf->globals.pszNetstrmDrvrCAExtraFiles);
+
+	token = strtok((char*)pNewVal, ",");
+	// Here, fopen per strtok ...
+	while(token != NULL) {
+		fp = fopen((const char*)token, "r");
+		if(fp == NULL) {
+			LogError(errno, RS_RET_NO_FILE_ACCESS,
+				"error: netstreamdrivercaextrafiles file '%s' "
+				"could not be accessed", token);
+				error = 1;
+		} else {
+			fclose(fp);
+		}
+		token = strtok(NULL, ",");
+	}
+	if(!error) {
+		loadConf->globals.pszNetstrmDrvrCAExtraFiles = pNewVal;
+	} else {
+		loadConf->globals.pszNetstrmDrvrCAExtraFiles = NULL;
+	}
+	RETiRet;
+}
+
+static rsRetVal
+setDfltNetstrmDrvrCRLF(void __attribute__((unused)) *pVal, uchar *pNewVal) {
+	DEFiRet;
+	FILE *fp;
+	free(loadConf->globals.pszDfltNetstrmDrvrCRLF);
+	loadConf->globals.pszDfltNetstrmDrvrCRLF = pNewVal;
+	fp = fopen((const char*)pNewVal, "r");
+	if(fp == NULL) {
+		LogError(errno, RS_RET_NO_FILE_ACCESS,
+			"error: defaultnetstreamdrivercrlfile file '%s' "
+			"could not be accessed", pNewVal);
+	} else {
+		fclose(fp);
+	}
+
+	RETiRet;
+}
+
 
 static rsRetVal
 setDfltNetstrmDrvrCertFile(void __attribute__((unused)) *pVal, uchar *pNewVal) {
@@ -421,6 +478,7 @@ setDfltNetstrmDrvrCertFile(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	FILE *fp;
 
 	free(loadConf->globals.pszDfltNetstrmDrvrCertFile);
+	loadConf->globals.pszDfltNetstrmDrvrCertFile = pNewVal;
 	fp = fopen((const char*)pNewVal, "r");
 	if(fp == NULL) {
 		LogError(errno, RS_RET_NO_FILE_ACCESS,
@@ -428,7 +486,6 @@ setDfltNetstrmDrvrCertFile(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 			"could not be accessed", pNewVal);
 	} else {
 		fclose(fp);
-		loadConf->globals.pszDfltNetstrmDrvrCertFile = pNewVal;
 	}
 
 	RETiRet;
@@ -440,6 +497,7 @@ setDfltNetstrmDrvrKeyFile(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	FILE *fp;
 
 	free(loadConf->globals.pszDfltNetstrmDrvrKeyFile);
+	loadConf->globals.pszDfltNetstrmDrvrKeyFile = pNewVal;
 	fp = fopen((const char*)pNewVal, "r");
 	if(fp == NULL) {
 		LogError(errno, RS_RET_NO_FILE_ACCESS,
@@ -447,7 +505,6 @@ setDfltNetstrmDrvrKeyFile(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 			"could not be accessed", pNewVal);
 	} else {
 		fclose(fp);
-		loadConf->globals.pszDfltNetstrmDrvrKeyFile = pNewVal;
 	}
 
 	RETiRet;
@@ -629,8 +686,8 @@ SetLocalHostName(uchar *const newname)
 
 /* return our local hostname. if it is not set, "[localhost]" is returned
  */
-static uchar*
-GetLocalHostName(void)
+uchar*
+glblGetLocalHostName(void)
 {
 	uchar *pszRet;
 
@@ -891,15 +948,19 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetMaxLine = glblGetMaxLine;
 	pIf->GetOptionDisallowWarning = GetOptionDisallowWarning;
 	pIf->GetDfltNetstrmDrvrCAF = GetDfltNetstrmDrvrCAF;
+	pIf->GetDfltNetstrmDrvrCRLF = GetDfltNetstrmDrvrCRLF;
 	pIf->GetDfltNetstrmDrvrCertFile = GetDfltNetstrmDrvrCertFile;
 	pIf->GetDfltNetstrmDrvrKeyFile = GetDfltNetstrmDrvrKeyFile;
 	pIf->GetDfltNetstrmDrvr = GetDfltNetstrmDrvr;
+	pIf->GetNetstrmDrvrCAExtraFiles = GetNetstrmDrvrCAExtraFiles;
 	pIf->GetParserControlCharacterEscapePrefix = GetParserControlCharacterEscapePrefix;
 	pIf->GetParserDropTrailingLFOnReception = GetParserDropTrailingLFOnReception;
 	pIf->GetParserEscapeControlCharactersOnReceive = GetParserEscapeControlCharactersOnReceive;
 	pIf->GetParserSpaceLFOnReceive = GetParserSpaceLFOnReceive;
 	pIf->GetParserEscape8BitCharactersOnReceive = GetParserEscape8BitCharactersOnReceive;
 	pIf->GetParserEscapeControlCharacterTab = GetParserEscapeControlCharacterTab;
+	pIf->GetLocalHostName = glblGetLocalHostName;
+	pIf->SetLocalHostName = SetLocalHostName;
 #define SIMP_PROP(name) \
 	pIf->Get##name = Get##name; \
 	pIf->Set##name = Set##name;
@@ -907,7 +968,6 @@ CODESTARTobjQueryInterface(glbl)
 	SIMP_PROP(DropMalPTRMsgs);
 	SIMP_PROP(mainqCnfObj);
 	SIMP_PROP(LocalFQDNName)
-	SIMP_PROP(LocalHostName)
 	SIMP_PROP(LocalDomain)
 	SIMP_PROP(ParserEscapeControlCharactersCStyle)
 	SIMP_PROP(ParseHOSTNAMEandTAG)
@@ -927,6 +987,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	loadConf->globals.pszDfltNetstrmDrvr = NULL;
 	free(loadConf->globals.pszDfltNetstrmDrvrCAF);
 	loadConf->globals.pszDfltNetstrmDrvrCAF = NULL;
+	free(loadConf->globals.pszDfltNetstrmDrvrCRLF);
+	loadConf->globals.pszDfltNetstrmDrvrCRLF = NULL;
 	free(loadConf->globals.pszDfltNetstrmDrvrKeyFile);
 	loadConf->globals.pszDfltNetstrmDrvrKeyFile = NULL;
 	free(loadConf->globals.pszDfltNetstrmDrvrCertFile);
@@ -1147,6 +1209,20 @@ glblDoneLoadCnf(void)
 		if(!strcmp(paramblk.descr[i].name, "workdirectory")) {
 			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 			setWorkDir(NULL, cstr);
+		} else if(!strcmp(paramblk.descr[i].name, "libcapng.default")) {
+#ifdef ENABLE_LIBCAPNG
+			loadConf->globals.bAbortOnFailedLibcapngSetup = (int) cnfparamvals[i].val.d.n;
+#else
+			LogError(0, RS_RET_ERR, "rsyslog wasn't "
+				"compiled with libcap-ng support.");
+#endif
+		} else if(!strcmp(paramblk.descr[i].name, "libcapng.enable")) {
+#ifdef ENABLE_LIBCAPNG
+			loadConf->globals.bCapabilityDropEnabled = (int) cnfparamvals[i].val.d.n;
+#else
+			LogError(0, RS_RET_ERR, "rsyslog wasn't "
+				"compiled with libcap-ng support.");
+#endif
 		} else if(!strcmp(paramblk.descr[i].name, "variables.casesensitive")) {
 			const int val = (int) cnfparamvals[i].val.d.n;
 			fjson_global_do_case_sensitive_comparison(val);
@@ -1165,9 +1241,15 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdrivercafile")) {
 			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 			setDfltNetstrmDrvrCAF(NULL, cstr);
+		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdrivercrlfile")) {
+			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			setDfltNetstrmDrvrCRLF(NULL, cstr);
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdriver")) {
 			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 			setDfltNetstrmDrvr(NULL, cstr);
+		} else if(!strcmp(paramblk.descr[i].name, "netstreamdrivercaextrafiles")) {
+			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			setNetstrmDrvrCAExtraFiles(NULL, cstr);
 		} else if(!strcmp(paramblk.descr[i].name, "preservefqdn")) {
 			bPreserveFQDN = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name,
@@ -1287,6 +1369,8 @@ glblDoneLoadCnf(void)
 			SetOptionDisallowWarning(!((int) cnfparamvals[i].val.d.n));
 		} else if(!strcmp(paramblk.descr[i].name, "abortonuncleanconfig")) {
 			loadConf->globals.bAbortOnUncleanConfig = cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "abortonfailedqueuestartup")) {
+			loadConf->globals.bAbortOnFailedQueueStartup = cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "internalmsg.ratelimit.burst")) {
 			loadConf->globals.intMsgRateLimitBurst = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "internalmsg.ratelimit.interval")) {
@@ -1355,7 +1439,16 @@ glblDoneLoadCnf(void)
 		stddbg = -1;
 	}
 
-finalize_it:	RETiRet;
+finalize_it:
+	/* we have now read the config. We need to query the local host name now
+	 * as it was set by the config.
+	 *
+	 * Note: early messages are already emited, and have "[localhost]" as
+	 * hostname. These messages are currently in iminternal queue. Once they
+	 * are taken from that queue, the hostname will be adapted.
+	 */
+	queryLocalHostname(loadConf);
+	RETiRet;
 }
 
 
@@ -1380,12 +1473,16 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercafile", 0, eCmdHdlrGetWord,
 	setDfltNetstrmDrvrCAF, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercrlfile", 0, eCmdHdlrGetWord,
+	setDfltNetstrmDrvrCRLF, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriverkeyfile", 0, eCmdHdlrGetWord,
 	setDfltNetstrmDrvrKeyFile, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercertfile", 0, eCmdHdlrGetWord,
 	setDfltNetstrmDrvrCertFile, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"localhostname", 0, eCmdHdlrGetWord, NULL, &LocalHostNameOverride, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"localhostipif", 0, eCmdHdlrGetWord, setLocalHostIPIF, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"netstreamdrivercaextrafiles", 0, eCmdHdlrGetWord, setNetstrmDrvrCAExtraFiles,
+	NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"optimizeforuniprocessor", 0, eCmdHdlrGoneAway, NULL, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"preservefqdn", 0, eCmdHdlrBinary, NULL, &bPreserveFQDN, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize, legacySetMaxMessageSize, NULL, NULL));

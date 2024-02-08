@@ -36,7 +36,7 @@ assign_tcpflood_port $RSYSLOG_DYNNAME.tcpflood_port
 
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
-injectmsg
+injectmsg2
 # shut down sender when everything is sent, receiver continues to run concurrently
 shutdown_when_empty 2
 # now it is time to stop the receiver as well

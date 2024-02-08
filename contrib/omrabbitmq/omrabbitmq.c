@@ -4,6 +4,7 @@
  *
  * Copyright 2012-2013 Vaclav Tomec
  * Copyright 2014 Rainer Gerhards
+ * Copyright 2022 Hamid Maadani
  *
  * This program is free software: you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -21,6 +22,11 @@
  *
  * Author: Vaclav Tomec
  * <vaclav.tomec@gmail.com>
+ *
+ * TLS & AMQP heartbeat support added by:
+ * Hamid Maadani
+ * <hamid@dexo.tech>
+ *
  */
 #include "config.h"
 #include <pthread.h>
@@ -51,6 +57,7 @@
 #include "amqp.h"
 #include "amqp_framing.h"
 #include "amqp_tcp_socket.h"
+#include "amqp_ssl_socket.h"
 #if (AMQP_VERSION_MAJOR == 0) && (AMQP_VERSION_MINOR < 4)
 #error "rabbitmq-c version must be >= 0.4.0"
 #endif
@@ -130,6 +137,13 @@ typedef struct _instanceData {
 	char *user;                     /* rabbitmq username */
 	char *password;                 /* rabbitmq username's password */
 
+	int ssl;                        /* should amqp connection be made over TLS? */
+	int initOpenSSL;                /* should rabbitmq-c initialize OpenSSL? */
+	int verifyPeer;                 /* should peer be verified for TLS? */
+	int verifyHostname;             /* should hostname be verified for TLS? */
+	int heartbeat;                  /* AMQP heartbeat interval in seconds (0 means disabled, which is default) */
+	char *caCert;                   /* CA certificate to be used for TLS connection */
+
 	recover_t recover_policy;
 
 } instanceData;
@@ -174,8 +188,14 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "host", eCmdHdlrString, 0 },
 	{ "port", eCmdHdlrInt, 0 },
 	{ "virtual_host", eCmdHdlrGetWord, 0 },
+	{ "heartbeat_interval", eCmdHdlrNonNegInt, 0 },
 	{ "user", eCmdHdlrGetWord, 0 },
 	{ "password", eCmdHdlrGetWord, 0 },
+	{ "ssl", eCmdHdlrBinary, 0 },
+	{ "init_openssl", eCmdHdlrBinary, 0 },
+	{ "verify_peer", eCmdHdlrBinary, 0 },
+	{ "verify_hostname", eCmdHdlrBinary, 0 },
+	{ "ca_cert", eCmdHdlrGetWord, 0 },
 	{ "exchange", eCmdHdlrGetWord, 0 },
 	{ "routing_key", eCmdHdlrGetWord, 0 },
 	{ "routing_key_template", eCmdHdlrGetWord, 0 },
@@ -257,7 +277,7 @@ static int amqp_authenticate(wrkrInstanceData_t *self, amqp_connection_state_t a
 	int frame_size = (glbl.GetMaxLine(runConf)<130000) ? 131072 : (glbl.GetMaxLine(runConf)+1072);
 
 	/* authenticate */
-	ret = amqp_login(a_conn, (char const *)self->pData->vhost, 1, frame_size, 0,
+	ret = amqp_login(a_conn, (char const *)self->pData->vhost, 1, frame_size, self->pData->heartbeat,
 			AMQP_SASL_METHOD_PLAIN, self->pData->user, self->pData->password);
 
 	if (ret.reply_type != AMQP_RESPONSE_NORMAL)
@@ -343,12 +363,35 @@ static amqp_connection_state_t tryConnection(wrkrInstanceData_t *self, server_t 
 	struct timeval delay;
 	delay.tv_sec = 1;
 	delay.tv_usec = 0;
+	amqp_socket_t *sockfd = NULL;
 
 	amqp_connection_state_t a_conn = amqp_new_connection();
-	amqp_socket_t *sockfd = (a_conn) ? amqp_tcp_socket_new(a_conn) : NULL;
+	if (a_conn) {
+		if (self->pData->ssl) {
+			if (!self->pData->initOpenSSL) {
+				// prevent OpenSSL double initialization
+				amqp_set_initialize_ssl_library(0);
+			}
+			sockfd = amqp_ssl_socket_new(a_conn);
+		} else {
+			sockfd = amqp_tcp_socket_new(a_conn);
+		}
+	}
 
 	if (sockfd)
 	{
+		if (self->pData->ssl) {
+#if (AMQP_VERSION_MAJOR == 0) && (AMQP_VERSION_MINOR < 8)
+			amqp_ssl_socket_set_verify(sockfd, self->pData->verifyPeer);
+#else
+			amqp_ssl_socket_set_verify_peer(sockfd, self->pData->verifyPeer);
+			amqp_ssl_socket_set_verify_hostname(sockfd, self->pData->verifyHostname);
+#endif
+			if (self->pData->caCert) {
+				amqp_ssl_socket_set_cacert(sockfd, self->pData->caCert);
+			}
+		}
+
 		LogError(0, RS_RET_RABBITMQ_CHANNEL_ERR,
 		    "omrabbitmq module %d/%d: server %s port %d.", self->iidx, self->widx,
 		    server->host, server->port);
@@ -366,6 +409,11 @@ static amqp_connection_state_t tryConnection(wrkrInstanceData_t *self, server_t 
 	/* the connection failed so free it and return NULL */
 	amqp_connection_close(a_conn, 200);
 	amqp_destroy_connection(a_conn);
+#if ((AMQP_VERSION_MAJOR == 0) && (AMQP_VERSION_MINOR > 8)) || (AMQP_VERSION_MAJOR > 0)
+	if (self->pData->ssl && self->pData->initOpenSSL) {
+		amqp_uninitialize_ssl_library();
+	}
+#endif
 
 	return NULL;
 }
@@ -413,6 +461,11 @@ static int manage_connection(wrkrInstanceData_t *self, 	amqp_frame_t *pFrame)
 							self->iidx);
 				amqp_connection_close(old_conn, 200);
 				amqp_destroy_connection(old_conn);
+#if ((AMQP_VERSION_MAJOR == 0) && (AMQP_VERSION_MINOR > 8)) || (AMQP_VERSION_MAJOR > 0)
+				if (self->pData->ssl && self->pData->initOpenSSL) {
+					amqp_uninitialize_ssl_library();
+				}
+#endif
 			}
 
 		} else {
@@ -501,6 +554,11 @@ static void* run_connection_routine(void* arg)
 		{
 			amqp_connection_close(self->a_conn, 200);
 			amqp_destroy_connection(self->a_conn);
+#if ((AMQP_VERSION_MAJOR == 0) && (AMQP_VERSION_MINOR > 8)) || (AMQP_VERSION_MAJOR > 0)
+			if (self->pData->ssl && self->pData->initOpenSSL) {
+				amqp_uninitialize_ssl_library();
+			}
+#endif
 		}
 
 		self->a_conn = NULL;
@@ -671,6 +729,11 @@ static void* run_connection_routine(void* arg)
 			amqp_connection_close(self->a_conn, 200);
 		amqp_destroy_connection(self->a_conn);
 		self->a_conn = NULL;
+#if ((AMQP_VERSION_MAJOR == 0) && (AMQP_VERSION_MINOR > 8)) || (AMQP_VERSION_MAJOR > 0)
+		if (self->pData->ssl && self->pData->initOpenSSL) {
+			amqp_uninitialize_ssl_library();
+		}
+#endif
 	}
 
 	self->thread_running = 0;
@@ -908,6 +971,12 @@ CODESTARTcreateInstance
 	pData->exchange_type = NULL;
 	pData->durable = 0;
 	pData->auto_delete = 1;
+	pData->ssl = 0;
+	pData->initOpenSSL = 0;
+	pData->verifyPeer = 0;
+	pData->verifyHostname = 0;
+	pData->caCert = NULL;
+	pData->heartbeat = 0;
 ENDcreateInstance
 
 BEGINfreeInstance
@@ -927,6 +996,7 @@ CODESTARTfreeInstance
 	if (pData->password) free(pData->password);
 	if (pData->exchange_type) free(pData->exchange_type);
 	if (pData->server1.host) free(pData->server1.host);
+	if (pData->caCert) free(pData->caCert);
 ENDfreeInstance
 
 BEGINisCompatibleWithFeature
@@ -964,6 +1034,12 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\tvirtual_host='%s'\n", pData->vhost);
 	dbgprintf("\tuser='%s'\n",  pData->user == NULL ? "(not configured)" : pData->user);
 	dbgprintf("\tpassword=(%sconfigured)\n", pData->password == NULL ? "not " : "");
+	dbgprintf("\tssl=%d\n", pData->ssl);
+	dbgprintf("\tinit_openssl=%d\n", pData->initOpenSSL);
+	dbgprintf("\tverify_peer=%d\n", pData->verifyPeer);
+	dbgprintf("\tverify_hostname=%d\n", pData->verifyHostname);
+	dbgprintf("\tca_cert='%s'\n", pData->caCert);
+	dbgprintf("\theartbeat_interval=%d\n", pData->heartbeat);
 
 	dbgprintf("\texchange='%*s'\n", (int)pData->exchange.len,
 				(char*)pData->exchange.bytes);
@@ -1015,6 +1091,18 @@ CODESTARTnewActInst
 			user = (char*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if (!strcmp(actpblk.descr[i].name, "password")) {
 			password = (char*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(actpblk.descr[i].name, "ssl")) {
+			pData->ssl = (int) pvals[i].val.d.n;
+		} else if (!strcmp(actpblk.descr[i].name, "ca_cert")) {
+			pData->caCert = (char*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if (!strcmp(actpblk.descr[i].name, "heartbeat_interval")) {
+			pData->heartbeat = (int) pvals[i].val.d.n;
+		} else if (!strcmp(actpblk.descr[i].name, "init_openssl")) {
+			pData->initOpenSSL = (int) pvals[i].val.d.n;
+		} else if (!strcmp(actpblk.descr[i].name, "verify_peer")) {
+			pData->verifyPeer = (int) pvals[i].val.d.n;
+		} else if (!strcmp(actpblk.descr[i].name, "verify_hostname")) {
+			pData->verifyHostname = (int) pvals[i].val.d.n;
 		} else if (!strcmp(actpblk.descr[i].name, "exchange")) {
 			pData->exchange = cstring_bytes(es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if (!strcmp(actpblk.descr[i].name, "routing_key")) {

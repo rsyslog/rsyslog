@@ -770,8 +770,12 @@ static rsRetVal qDelLinkedList(qqueue_t *pThis)
 /* The following function is used to "save" ourself from being killed by
  * a fatally failed disk queue. A fatal failure is, for example, if no
  * data can be read or written. In that case, the disk support is disabled,
- * with all on-disk structures kept as-is as much as possible. Instead, the
- * queue is switched to direct mode, so that at least
+ * with all on-disk structures kept as-is as much as possible. However,
+ * we do not really stop or destruct the in-memory disk queue object.
+ * Practice has shown that this may cause races during destruction which
+ * themselfs can lead to segfault. So we prefer to was some ressources by
+ * keeping the queue active.
+ * Instead, the queue is switched to direct mode, so that at least
  * some processing can happen. Of course, this may still have lots of
  * undesired side-effects, but is probably better than aborting the
  * syslogd. Note that this function *must* succeed in one way or another, as
@@ -784,7 +788,6 @@ queueSwitchToEmergencyMode(qqueue_t *pThis, rsRetVal initiatingError)
 {
 	pThis->iQueueSize = 0;
 	pThis->nLogDeq = 0;
-	qDestructDisk(pThis); /* free disk structures */
 
 	pThis->qType = QUEUETYPE_DIRECT;
 	pThis->qConstruct = qConstructDirect;

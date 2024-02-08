@@ -15,17 +15,13 @@ startup
 tcpflood -B -I ${srcdir}/testsuites/imptcp_multi_line.testdata
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate
-echo 'NEWMSG: <133>Mar  1 01:00:00 172.20.245.8 tag test1
+export EXPECTED='NEWMSG: <133>Mar  1 01:00:00 172.20.245.8 tag test1
 NEWMSG: <133>Mar  1 01:00:00 172.20.245.8 tag test2
 NEWMSG: <133>Mar  1 01:00:00 172.20.245.8 tag multi#012line1
 NEWMSG: <133>Mar  1 01:00:00 172.20.245.8 tag multi#012l#012i#012n#012#012e2
 NEWMSG: <133>Mar  1 01:00:00 172.20.245.8 tag test3
 NEWMSG: <133>Mar  1 01:00:00 172.20.245.8 tag multi#012line3
 NEWMSG: <133>Mar  1 01:00:00 172.20.245.8 tag test4
-NEWMSG: <133>Mar  1 01:00:00 172.20.245.8 tag test end' | cmp - $RSYSLOG_OUT_LOG
-if [ ! $? -eq 0 ]; then
-  echo "invalid response generated, $RSYSLOG_OUT_LOG is:"
-  cat $RSYSLOG_OUT_LOG
-  error_exit  1
-fi;
+NEWMSG: <133>Mar  1 01:00:00 172.20.245.8 tag test end'
+cmp_exact
 exit_test

@@ -7,7 +7,7 @@
  * of the "old" message code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
- * Copyright 2007-2020 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2023 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -1618,13 +1618,22 @@ msgSetPRI(smsg_t *const __restrict__ pMsg, syslog_pri_t pri)
 /* note: libuuid seems not to be thread-safe, so we need
  * to get some safeguards in place.
  */
+static pthread_mutex_t mutUUID = PTHREAD_MUTEX_INITIALIZER;
+
+static void call_uuid_generate(uuid_t uuid)
+{
+	pthread_mutex_lock(&mutUUID);
+	pthread_cleanup_push(mutexCancelCleanup, &mutUUID);
+	uuid_generate(uuid);
+	pthread_cleanup_pop(1);
+}
+
 static void msgSetUUID(smsg_t * const pM)
 {
 	size_t lenRes = sizeof(uuid_t) * 2 + 1;
 	char hex_char [] = "0123456789ABCDEF";
 	unsigned int byte_nbr;
 	uuid_t uuid;
-	static pthread_mutex_t mutUUID = PTHREAD_MUTEX_INITIALIZER;
 
 	dbgprintf("[MsgSetUUID] START, lenRes %llu\n", (long long unsigned) lenRes);
 	assert(pM != NULL);
@@ -1632,9 +1641,7 @@ static void msgSetUUID(smsg_t * const pM)
 	if((pM->pszUUID = (uchar*) malloc(lenRes)) == NULL) {
 		pM->pszUUID = (uchar *)"";
 	} else {
-		pthread_mutex_lock(&mutUUID);
-		uuid_generate(uuid);
-		pthread_mutex_unlock(&mutUUID);
+		call_uuid_generate(uuid);
 		for (byte_nbr = 0; byte_nbr < sizeof (uuid_t); byte_nbr++) {
 			pM->pszUUID[byte_nbr * 2 + 0] = hex_char[uuid [byte_nbr] >> 4];
 			pM->pszUUID[byte_nbr * 2 + 1] = hex_char[uuid [byte_nbr] & 15];
@@ -2545,12 +2552,15 @@ tryEmulateTAG(smsg_t *const pM, const sbool bLockMutex)
 void ATTR_NONNULL(2,3)
 getTAG(smsg_t * const pM, uchar **const ppBuf, int *const piLen, const sbool bLockMutex)
 {
+	if(bLockMutex == LOCK_MUTEX)
+		MsgLock(pM);
+
 	if(pM == NULL) {
 		*ppBuf = UCHAR_CONSTANT("");
 		*piLen = 0;
 	} else {
 		if(pM->iLenTAG == 0)
-			tryEmulateTAG(pM, bLockMutex);
+			tryEmulateTAG(pM, MUTEX_ALREADY_LOCKED);
 		if(pM->iLenTAG == 0) {
 			*ppBuf = UCHAR_CONSTANT("");
 			*piLen = 0;
@@ -2559,6 +2569,9 @@ getTAG(smsg_t * const pM, uchar **const ppBuf, int *const piLen, const sbool bLo
 			*piLen = pM->iLenTAG;
 		}
 	}
+
+	if(bLockMutex == LOCK_MUTEX)
+		MsgUnlock(pM);
 }
 
 
@@ -3290,13 +3303,17 @@ finalize_it:
 }
 
 
-/* Encode a JSON value and add it to provided string. Note that
- * the string object may be NULL. In this case, it is created
- * if and only if escaping is needed. if escapeAll is false, previously
- * escaped strings are left as is
+/* Helper for jsonAddVal(), to be called onces we know there are actually
+ * json escapes inside the string. If so, this function takes over.
+ * Splitting the functions permits us to make some performance optimizations.
+ * For further details, see jsonAddVal().
  */
-static rsRetVal
-jsonAddVal(uchar *pSrc, unsigned buflen, es_str_t **dst, int escapeAll)
+static rsRetVal ATTR_NONNULL(1, 4)
+jsonAddVal_escaped(uchar *const pSrc,
+	const unsigned buflen,
+	const unsigned len_none_escaped_head,
+	es_str_t **dst,
+	const int escapeAll)
 {
 	unsigned char c;
 	es_size_t i;
@@ -3304,39 +3321,69 @@ jsonAddVal(uchar *pSrc, unsigned buflen, es_str_t **dst, int escapeAll)
 	unsigned ni;
 	unsigned char nc;
 	int j;
+	uchar wrkbuf[100000];
+	size_t dst_realloc_size;
+	size_t dst_size;
+	uchar *dst_base;
+	uchar *dst_w;
+	uchar *newbuf;
 	DEFiRet;
 
-	for(i = 0 ; i < buflen ; ++i) {
+	assert(len_none_escaped_head <= buflen);
+	/* first copy over unescaped head string */
+	if(len_none_escaped_head+10 > sizeof(wrkbuf)) {
+		dst_size = 2 * len_none_escaped_head;
+		CHKmalloc(dst_base = malloc(dst_size));
+	} else {
+		dst_size = sizeof(wrkbuf);
+		dst_base = wrkbuf;
+	}
+	dst_realloc_size = dst_size - 10; /* some buffer for escaping */
+	dst_w = dst_base;
+	memcpy(dst_w, pSrc, len_none_escaped_head);
+	dst_w += len_none_escaped_head;
+
+	/* now do the escaping */
+	for(i = len_none_escaped_head ; i < buflen ; ++i) {
+		const size_t dst_offset = dst_w - dst_base;
+		if(dst_offset >= dst_realloc_size) {
+			const size_t new_size = 2 * dst_size;
+			if(dst_base == wrkbuf) {
+				CHKmalloc(newbuf = malloc(new_size));
+				memcpy(newbuf, dst_base, dst_offset);
+			} else {
+				CHKmalloc(newbuf = realloc(dst_base, new_size));
+			}
+			dst_size = new_size;
+			dst_realloc_size = new_size - 10; /* some buffer for escaping */
+			dst_base = newbuf;
+			dst_w = dst_base + dst_offset;
+		}
 		c = pSrc[i];
-		if(   (c >= 0x23 && c <= 0x2e)
-		   || (c >= 0x30 && c <= 0x5b)
+		if(   (c >= 0x30 && c <= 0x5b)
+		   || (c >= 0x23 && c <= 0x2e)
 		   || (c >= 0x5d /* && c <= 0x10FFFF*/)
 		   || c == 0x20 || c == 0x21) {
 			/* no need to escape */
-			if(*dst != NULL)
-				es_addChar(dst, c);
+			*dst_w++ = c;
 		} else {
-			if(*dst == NULL) {
-				if(i == 0) {
-					/* we hope we have only few escapes... */
-					*dst = es_newStr(buflen+10);
-				} else {
-					*dst = es_newStrFromBuf((char*)pSrc, i);
-				}
-				if(*dst == NULL) {
-					ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-				}
-			}
 			/* we must escape, try RFC4627-defined special sequences first */
 			switch(c) {
 			case '\0':
-				es_addBuf(dst, "\\u0000", 6);
+				*dst_w++ = '\\';
+				*dst_w++ = 'u';
+				*dst_w++ = '0';
+				*dst_w++ = '0';
+				*dst_w++ = '0';
+				*dst_w++ = '0';
 				break;
 			case '\"':
-				es_addBuf(dst, "\\\"", 2);
+				*dst_w++ = '\\';
+				*dst_w++ = '"';
 				break;
 			case '/':
-				es_addBuf(dst, "\\/", 2);
+				*dst_w++ = '\\';
+				*dst_w++ = '/';
 				break;
 			case '\\':
 				if (escapeAll == RSFALSE) {
@@ -3347,31 +3394,35 @@ jsonAddVal(uchar *pSrc, unsigned buflen, es_str_t **dst, int escapeAll)
 						/* Attempt to not double encode */
 						if (   nc == '"' || nc == '/' || nc == '\\' || nc == 'b' || nc == 'f'
 							|| nc == 'n' || nc == 'r' || nc == 't' || nc == 'u') {
-
-							es_addChar(dst, c);
-							es_addChar(dst, nc);
+							*dst_w++ = c;
+							*dst_w++ = nc;
 							i = ni;
 							break;
 						}
 					}
 				}
-
-				es_addBuf(dst, "\\\\", 2);
+				*dst_w++ = '\\';
+				*dst_w++ = '\\';
 				break;
 			case '\010':
-				es_addBuf(dst, "\\b", 2);
+				*dst_w++ = '\\';
+				*dst_w++ = 'b';
 				break;
 			case '\014':
-				es_addBuf(dst, "\\f", 2);
+				*dst_w++ = '\\';
+				*dst_w++ = 'f';
 				break;
 			case '\n':
-				es_addBuf(dst, "\\n", 2);
+				*dst_w++ = '\\';
+				*dst_w++ = 'n';
 				break;
 			case '\r':
-				es_addBuf(dst, "\\r", 2);
+				*dst_w++ = '\\';
+				*dst_w++ = 'r';
 				break;
 			case '\t':
-				es_addBuf(dst, "\\t", 2);
+				*dst_w++ = '\\';
+				*dst_w++ = 't';
 				break;
 			default:
 				/* TODO : proper Unicode encoding (see header comment) */
@@ -3379,11 +3430,53 @@ jsonAddVal(uchar *pSrc, unsigned buflen, es_str_t **dst, int escapeAll)
 					numbuf[3-j] = hexdigit[c % 16];
 					c = c / 16;
 				}
-				es_addBuf(dst, "\\u", 2);
-				es_addBuf(dst, numbuf, 4);
+				*dst_w++ = '\\';
+				*dst_w++ = 'u';
+				*dst_w++ = numbuf[0];
+				*dst_w++ = numbuf[1];
+				*dst_w++ = numbuf[2];
+				*dst_w++ = numbuf[3];
 				break;
 			}
 		}
+	}
+	if(*dst == NULL) {
+		*dst = es_newStrFromBuf((char *) dst_base, dst_w - dst_base);
+	} else {
+		es_addBuf(dst, (const char *) dst_base, dst_w - dst_base);
+	}
+finalize_it:
+	if(dst_base != wrkbuf) {
+		free(dst_base);
+	}
+	RETiRet;
+}
+
+
+/* Encode a JSON value and add it to provided string. Note that
+ * the string object may be NULL. In this case, it is created
+ * if and only if escaping is needed. if escapeAll is false, previously
+ * escaped strings are left as is
+ */
+static rsRetVal ATTR_NONNULL(1, 3)
+jsonAddVal(uchar *const pSrc, const unsigned buflen, es_str_t **dst, const int escapeAll)
+{
+	es_size_t i;
+	DEFiRet;
+
+	for(i = 0 ; i < buflen ; ++i) {
+		const uchar c = pSrc[i];
+		if(! (   (c >= 0x30 && c <= 0x5b)
+		      || (c >= 0x23 && c <= 0x2e)
+		      || (c >= 0x5d /* && c <= 0x10FFFF*/)
+		      || c == 0x20 || c == 0x21)
+		     ) {
+			iRet = jsonAddVal_escaped(pSrc, buflen, i, dst, escapeAll);
+			FINALIZE;
+		}
+	}
+	if(*dst != NULL) {
+		es_addBuf(dst, (const char *) pSrc, buflen);
 	}
 finalize_it:
 	RETiRet;
@@ -4161,8 +4254,15 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg, struct templateEntry *__restr
 			/* need to zero-base to and from (they are 1-based!) */
 			if(iFrom > 0)
 				--iFrom;
-			if(iTo > 0)
+			if(iTo > 0) {
 				--iTo;
+			} else if(iTo < 0) {
+				/* note: we ADD negative value, 0-based (-1)! */
+				iTo = bufLen - 1 + iTo;
+				if(iTo < 0) {
+					iTo = 0;
+				}
+			}
 		}
 		if(iFrom >= bufLen) {
 			DBGPRINTF("msgGetProp: iFrom %d >= buflen %d, returning empty string\n",
@@ -5374,5 +5474,3 @@ BEGINObjClassInit(msg, 1, OBJ_IS_CORE_MODULE)
 	INIT_ATOMIC_HELPER_MUT(mutTrimCtr);
 #	endif
 ENDObjClassInit(msg)
-/* vim:set ai:
- */

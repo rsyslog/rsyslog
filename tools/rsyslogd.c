@@ -3,7 +3,7 @@
  * because it was either written from scratch by me (rgerhards) or
  * contributors who agreed to ASL 2.0.
  *
- * Copyright 2004-2019 Rainer Gerhards and Adiscon
+ * Copyright 2004-2023 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <dirent.h>
 #include <unistd.h>
 #include <errno.h>
 #ifdef ENABLE_LIBLOGGING_STDLOG
@@ -36,6 +37,12 @@
 #endif
 #ifdef HAVE_LIBSYSTEMD
 #	include <systemd/sd-daemon.h>
+#endif
+#ifdef ENABLE_LIBCAPNG
+	#include <cap-ng.h>
+#endif
+#if defined(HAVE_LINUX_CLOSE_RANGE_H)
+#	include <linux/close_range.h>
 #endif
 
 #include "rsyslog.h"
@@ -187,7 +194,7 @@ int bFinished = 0;	/* used by termination signal handler, read-only except there
 			 * is either 0 or the number of the signal that requested the
 			 * termination.
 			 */
-const char *PidFile;
+const char *PidFile = NULL;
 #define NO_PIDFILE "NONE"
 int iConfigVerify = 0;	/* is this just a config verify run? */
 rsconf_t *ourConf = NULL;	/* our config object */
@@ -229,16 +236,35 @@ setsid(void)
 }
 #endif
 
+/* helper for imdiag. Returns if HUP processing has been requested or
+ * is not yet finished. We know this is racy, but imdiag handles this
+ * part by repeating operations. The mutex look is primarily to force
+ * a memory barrier, so that we have a change to see changes already
+ * written, but not present in the core's cache.
+ * 2023-07-26 Rainer Gerhards
+ */
+int
+get_bHadHUP(void)
+{
+	pthread_mutex_lock(&mutHadHUP);
+	const int ret = bHadHUP;
+	pthread_mutex_unlock(&mutHadHUP);
+	/* note: at this point ret can already be invalid */
+	return ret;
+}
 
-static rsRetVal
-queryLocalHostname(void)
+/* we need a pointer to the conf, because in early startup stage we
+ * need to use loadConf, later on runConf.
+ */
+rsRetVal
+queryLocalHostname(rsconf_t *const pConf)
 {
 	uchar *LocalHostName = NULL;
 	uchar *LocalDomain = NULL;
 	uchar *LocalFQDNName;
 	DEFiRet;
 
-	CHKiRet(net.getLocalHostname(&LocalFQDNName));
+	CHKiRet(net.getLocalHostname(pConf, &LocalFQDNName));
 	uchar *dot = (uchar*) strstr((char*)LocalFQDNName, ".");
 	if(dot == NULL) {
 		CHKmalloc(LocalHostName = (uchar*) strdup((char*)LocalFQDNName));
@@ -297,6 +323,16 @@ finalize_it:
 	RETiRet;
 }
 
+static void
+clearPidFile(void)
+{
+	if(PidFile != NULL) {
+		if(strcmp(PidFile, NO_PIDFILE)) {
+			unlink(PidFile);
+		}
+	}
+}
+
 /* duplicate startup protection: check, based on pid file, if our instance
  * is already running. This MUST be called before we write our own pid file.
  */
@@ -337,6 +373,36 @@ finalize_it:
 	if(fp != NULL)
 		fclose(fp);
 	RETiRet;
+}
+
+
+
+/* note: this function is specific to OS'es which provide
+ * the ability to read open file descriptors via /proc.
+ * returns 0 - success, something else otherwise
+ */
+static int
+close_unneeded_open_files(const char *const procdir,
+	const int beginClose, const int parentPipeFD)
+{
+	DIR *dir;
+	struct dirent *entry;
+
+	dir = opendir(procdir);
+	if (dir == NULL) {
+		dbgprintf("closes unneeded files: opendir failed for %s\n", procdir);
+		return 1;
+	}
+
+	while ((entry = readdir(dir)) != NULL) {
+		const int fd = atoi(entry->d_name);
+		if(fd >= beginClose && (((fd != dbgGetDbglogFd()) && (fd != parentPipeFD)))) {
+			close(fd);
+		}
+	}
+
+	closedir(dir);
+	return 0;
 }
 
 /* prepares the background processes (if auto-backbrounding) for
@@ -384,12 +450,37 @@ prepareBackground(const int parentPipeFD)
 	}
 #endif
 
-	/* close unnecessary open files */
-	const int endClose = getdtablesize();
-	close(0);
-	for(int i = beginClose ; i <= endClose ; ++i) {
-		if((i != dbgGetDbglogFd()) && (i != parentPipeFD)) {
-			  aix_close_it(i); /* AIXPORT */
+	/* close unnecessary open files - first try to use /proc file system,
+	 * if that is not possible iterate through all potentially open file
+	 * descriptors. This can be lenghty, but in practice /proc should work
+	 * for almost all current systems, and the fallback is primarily for
+	 * Solaris and AIX, where we do expect a decent max numbers of fds.
+	 */
+	close(0); /* always close stdin, we do not need it */
+
+	/* try Linux, Cygwin, NetBSD */
+	if(close_unneeded_open_files("/proc/self/fd", beginClose, parentPipeFD) != 0) {
+		/* try MacOS, FreeBSD */
+		if(close_unneeded_open_files("/proc/fd", beginClose, parentPipeFD) != 0) {
+			/* did not work out, so let's close everything... */
+			int endClose = (parentPipeFD > dbgGetDbglogFd()) ? parentPipeFD : dbgGetDbglogFd();
+			for(int i = beginClose ; i <= endClose ; ++i) {
+				if((i != dbgGetDbglogFd()) && (i != parentPipeFD)) {
+					aix_close_it(i); /* AIXPORT */
+				}
+			}
+			beginClose = endClose + 1;
+			endClose = getdtablesize();
+#if defined(HAVE_CLOSE_RANGE)
+			if(close_range(beginClose, endClose, 0) !=0) {
+				dbgprintf("errno %d after close_range(), fallback to loop\n", errno);
+#endif
+				for(int i = beginClose ; i <= endClose ; ++i) {
+					aix_close_it(i); /* AIXPORT */
+				}
+#if defined(HAVE_CLOSE_RANGE)
+			}
+#endif
 		}
 	}
 	seedRandomNumberForChild();
@@ -818,6 +909,13 @@ startMainQueue(rsconf_t *cnf, qqueue_t *const pQueue)
 	CHKiRet_Hdlr(qqueueStart(cnf, pQueue)) {
 		/* no queue is fatal, we need to give up in that case... */
 		LogError(0, iRet, "could not start (ruleset) main message queue");
+		if(runConf->globals.bAbortOnFailedQueueStartup) {
+			fprintf(stderr, "rsyslogd: could not start (ruleset) main message queue, "
+				"abortOnFailedQueueStartup is set, so we abort rsyslog now.\n");
+			fflush(stderr);
+			clearPidFile();
+			exit(1); /* "good" exit, this is intended here */
+		}
 		pQueue->qType = QUEUETYPE_DIRECT;
 		CHKiRet_Hdlr(qqueueStart(cnf, pQueue)) {
 			/* no queue is fatal, we need to give up in that case... */
@@ -1385,12 +1483,6 @@ initAll(int argc, char **argv)
 		exit(1); /* "good" exit, leaving at init for fatal error */
 	}
 
-	/* get our host and domain names - we need to do this early as we may emit
-	 * error log messages, which need the correct hostname. -- rgerhards, 2008-04-04
-	 * But we need to have imInternal up first!
-	 */
-	queryLocalHostname();
-
 	/* we now can emit error messages "the regular way" */
 
 	if(getenv("TZ") == NULL) {
@@ -1550,6 +1642,94 @@ initAll(int argc, char **argv)
 
 	resetErrMsgsFlag();
 	localRet = rsconf.Load(&ourConf, ConfFile);
+
+#ifdef ENABLE_LIBCAPNG
+	if (loadConf->globals.bCapabilityDropEnabled) {
+		/*
+		* Drop capabilities to the necessary set
+		*/
+		int capng_rc, capng_failed = 0;
+		typedef struct capabilities_s {
+			int capability; /* capability code */
+			const char *name; /* name of the capability to be displayed */
+			/* is the capability present that is needed by rsyslog? if so we do not drop it */
+			sbool present;
+			capng_type_t type;
+		} capabilities_t;
+
+		capabilities_t capabilities[] = {
+			#define CAP_FIELD(code, type) { code, #code,  0 , type}
+			CAP_FIELD(CAP_BLOCK_SUSPEND, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+			CAP_FIELD(CAP_NET_RAW, CAPNG_EFFECTIVE | CAPNG_PERMITTED ),
+			CAP_FIELD(CAP_CHOWN, CAPNG_EFFECTIVE | CAPNG_PERMITTED ),
+			CAP_FIELD(CAP_IPC_LOCK, CAPNG_EFFECTIVE | CAPNG_PERMITTED ),
+			CAP_FIELD(CAP_LEASE, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+			CAP_FIELD(CAP_NET_ADMIN, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+			CAP_FIELD(CAP_NET_BIND_SERVICE, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+			CAP_FIELD(CAP_DAC_OVERRIDE, CAPNG_EFFECTIVE | CAPNG_PERMITTED | CAPNG_BOUNDING_SET),
+			CAP_FIELD(CAP_SETGID, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+			CAP_FIELD(CAP_SETUID, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+			CAP_FIELD(CAP_SYS_ADMIN, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+			CAP_FIELD(CAP_SYS_CHROOT, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+			CAP_FIELD(CAP_SYS_RESOURCE, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
+			CAP_FIELD(CAP_SYSLOG, CAPNG_EFFECTIVE | CAPNG_PERMITTED)
+			#undef CAP_FIELD
+		};
+
+		if (capng_have_capabilities(CAPNG_SELECT_CAPS) > CAPNG_NONE) {
+			/* Examine which capabilities are available to us, so we do not try to
+				drop something that is not present. We need to do this in two steps,
+				because capng_clear clears the capability set. In the second step,
+				we add back those caps, which were present before clearing the selected
+				posix capabilities set.
+			*/
+			unsigned long caps_len = sizeof(capabilities) / sizeof(capabilities_t);
+			for (unsigned long i = 0; i < caps_len; i++) {
+				if (capng_have_capability(CAPNG_EFFECTIVE, capabilities[i].capability)) {
+					capabilities[i].present = 1;
+				}
+			}
+
+			capng_clear(CAPNG_SELECT_BOTH);
+
+			for (unsigned long i = 0; i < caps_len; i++) {
+				if (capabilities[i].present) {
+					DBGPRINTF("The %s capability is present, "
+						"will try to preserve it.\n", capabilities[i].name);
+					if ((capng_rc = capng_update(CAPNG_ADD, capabilities[i].type,
+					capabilities[i].capability)) != 0) {
+						LogError(0, RS_RET_LIBCAPNG_ERR,
+								"could not update the internal posix capabilities"
+								" settings based on the options passed to it,"
+								" capng_update=%d", capng_rc);
+						capng_failed = 1;
+					}
+				} else {
+					DBGPRINTF("The %s capability is not present, "
+						"will not try to preserve it.\n", capabilities[i].name);
+				}
+			}
+
+			if ((capng_rc = capng_apply(CAPNG_SELECT_BOTH)) != 0) {
+				LogError(0, RS_RET_LIBCAPNG_ERR,
+					"could not transfer the specified internal posix capabilities "
+					"settings to the kernel, capng_apply=%d", capng_rc);
+				capng_failed = 1;
+			}
+
+			if (capng_failed) {
+				DBGPRINTF("Capabilities were not dropped successfully.\n");
+				if (loadConf->globals.bAbortOnFailedLibcapngSetup) {
+					ABORT_FINALIZE(RS_RET_LIBCAPNG_ERR);
+				}
+			} else {
+				DBGPRINTF("Capabilities were dropped successfully\n");
+			}
+		} else {
+			DBGPRINTF("No capabilities to drop\n");
+		}
+	}
+#endif
 
 	if(fp_rs_full_conf_output != NULL) {
 		if(fp_rs_full_conf_output != stdout) {
@@ -1749,7 +1929,6 @@ finalize_it:
  */
 DEFFUNC_llExecFunc(doHUPActions)
 {
-	dbgprintf("doHUP called\n");
 	actionCallHUPHdlr((action_t*) pData);
 	return RS_RET_OK; /* we ignore errors, we can not do anything either way */
 }
@@ -1770,6 +1949,7 @@ doHUP(void)
 {
 	char buf[512];
 
+	DBGPRINTF("doHUP: doing modules\n");
 	if(ourConf->globals.bLogStatusMsgs) {
 		snprintf(buf, sizeof(buf),
 			 "[origin software=\"rsyslogd\" " "swVersion=\"" VERSION
@@ -1779,10 +1959,13 @@ doHUP(void)
 		logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, (uchar*)buf, 0);
 	}
 
-	queryLocalHostname(); /* re-read our name */
+	queryLocalHostname(runConf); /* re-read our name */
 	ruleset.IterateAllActions(ourConf, doHUPActions, NULL);
+	DBGPRINTF("doHUP: doing modules\n");
 	modDoHUP();
+	DBGPRINTF("doHUP: doing lookup tables\n");
 	lookupDoHUP();
+	DBGPRINTF("doHUP: doing errmsgs\n");
 	errmsgDoHUP();
 }
 
@@ -1978,10 +2161,12 @@ mainloop(void)
 		pthread_mutex_lock(&mutHadHUP);
 		need_free_mutex = 1;
 		if(bHadHUP) {
-			bHadHUP = 0;
 			need_free_mutex = 0;
 			pthread_mutex_unlock(&mutHadHUP);
 			doHUP();
+			pthread_mutex_lock(&mutHadHUP);
+			bHadHUP = 0;
+			pthread_mutex_unlock(&mutHadHUP);
 		}
 		if(need_free_mutex) {
 			pthread_mutex_unlock(&mutHadHUP);
@@ -2100,9 +2285,7 @@ deinitAll(void)
 	dbgClassExit();
 
 	/* NO CODE HERE - dbgClassExit() must be the last thing before exit()! */
-	if(strcmp(PidFile, NO_PIDFILE)) {
-		unlink(PidFile);
-	}
+	clearPidFile();
 }
 
 /* This is the main entry point into rsyslogd. This must be a function in its own
@@ -2158,6 +2341,7 @@ main(int argc, char **argv)
 	fjson_global_do_case_sensitive_comparison(0);
 
 	dbgClassInit();
+
 	initAll(argc, argv);
 #ifdef HAVE_LIBSYSTEMD
 	sd_notify(0, "READY=1");

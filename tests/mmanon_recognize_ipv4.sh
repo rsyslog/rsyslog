@@ -2,6 +2,10 @@
 # add 2016-11-22 by Jan Gerhards, released under ASL 2.0
 
 . ${srcdir:=.}/diag.sh init
+
+#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
+#export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.debuglog"
+
 generate_conf
 add_conf '
 template(name="outfmt" type="string" string="%msg%\n")

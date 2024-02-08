@@ -98,3 +98,4 @@ tests/rstb_*
 clang_output_*
 tools/logctl
 tools/rscryutil
+/bin/

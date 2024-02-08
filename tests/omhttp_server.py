@@ -110,6 +110,7 @@ class MyHandler(BaseHTTPRequestHandler):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Archive and delete core app log files')
     parser.add_argument('-p', '--port', action='store', type=int, default=8080, help='port')
+    parser.add_argument('--port-file', action='store', type=str, default='', help='file to store listen port number')
     parser.add_argument('-i', '--interface', action='store', type=str, default='localhost', help='port')
     parser.add_argument('--fail-after', action='store', type=int, default=0, help='start failing after n posts')
     parser.add_argument('--fail-every', action='store', type=int, default=-1, help='fail every n posts')
@@ -123,7 +124,12 @@ if __name__ == '__main__':
     metadata['decompress'] = args.decompress
     metadata['userpwd'] = args.userpwd
     server = HTTPServer((args.interface, args.port), MyHandler)
+    lstn_port = server.server_address[1]
     pid = os.getpid()
     print('starting omhttp test server at {interface}:{port} with pid {pid}'
-          .format(interface=args.interface, port=args.port, pid=pid))
+          .format(interface=args.interface, port=lstn_port, pid=pid))
+    if args.port_file != '':
+        f = open(args.port_file, "w")
+        f.write(str(lstn_port))
+        f.close()
     server.serve_forever()

@@ -63,6 +63,7 @@
  * -z	private key file for TLS mode
  * -Z	cert (public key) file for TLS mode
  * -a	Authentication Mode for relp-tls
+ * -A	do NOT abort if an error occured during sending messages
  * -E	Permitted Peer for relp-tls
  * -L	loglevel to use for GnuTLS troubleshooting (0-off to 10-all, 0 default)
  * -j	format message in json, parameter is JSON cookie
@@ -107,6 +108,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <string.h>
+#include <strings.h>
 #include <netinet/in.h>
 #include <pthread.h>
 #ifdef ENABLE_RELP
@@ -207,6 +209,7 @@ static long long batchsize = 100000000ll;
 static int waittime = 0;
 static int runMultithreaded = 0; /* run tests in multithreaded mode */
 static int numThrds = 1;	/* number of threads to use */
+static int abortOnSendFail = 1;	/* abort run if sending fails? */
 static char *tlsCAFile = NULL;
 static char *tlsCertFile = NULL;
 static char *tlsKeyFile = NULL;
@@ -265,7 +268,7 @@ static enum { TP_UDP, TP_TCP, TP_TLS, TP_RELP_PLAIN, TP_RELP_TLS } transport = T
 
 /* forward definitions */
 static void initTLSSess(int);
-static int sendTLS(int i, char *buf, int lenBuf);
+static int sendTLS(int i, char *buf, size_t lenBuf);
 static void closeTLSSess(int __attribute__((unused)) i);
 
 #ifdef ENABLE_RELP
@@ -578,7 +581,7 @@ void closeConnections(void)
  * of constructing test messages. -- rgerhards, 2010-03-31
  */
 static void
-genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
+genMsg(char *buf, size_t maxBuf, size_t *pLenBuf, struct instdata *inst)
 {
 	int edLen; /* actual extra data length to use */
 	char extraData[MAX_EXTRADATA_LEN + 1];
@@ -649,7 +652,7 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 		*pLenBuf = snprintf(buf, maxBuf, "%s%c", MsgToSend, frameDelim);
 	}
 	if (octateCountFramed == 1) {
-		snprintf(payloadLen, sizeof(payloadLen), "%d ", *pLenBuf);
+		snprintf(payloadLen, sizeof(payloadLen), "%zd ", *pLenBuf);
 		payloadStringLen = strlen(payloadLen);
 		memmove(buf + payloadStringLen, buf, *pLenBuf);
 		memcpy(buf, payloadLen, payloadStringLen);
@@ -659,6 +662,29 @@ genMsg(char *buf, size_t maxBuf, int *pLenBuf, struct instdata *inst)
 
 finalize_it: /*EMPTY to keep the compiler happy */;
 }
+
+
+static int
+sendPlainTCP(const int socknum, const char *const buf, const size_t lenBuf, int *const ret_errno)
+{
+	size_t lenSent;
+	int r;
+
+	lenSent = 0;
+	while(lenSent != lenBuf) {
+		r = send(sockArray[socknum], buf + lenSent, lenBuf - lenSent, 0);
+		if(r > 0) {
+			lenSent += r;
+		} else {
+			*ret_errno = errno;
+			goto finalize_it;
+		}
+	}
+
+finalize_it:
+	return lenSent;
+}
+
 
 /* send messages to the tcp connections we keep open. We use
  * a very basic format that helps identify the message
@@ -672,8 +698,8 @@ int sendMessages(struct instdata *inst)
 {
 	unsigned i = 0;
 	int socknum;
-	int lenBuf;
-	int lenSend = 0;
+	size_t lenBuf;
+	size_t lenSend = 0;
 	char *statusText = "";
 	char buf[MAX_EXTRADATA_LEN + 1024];
 	char sendBuf[MAX_SENDBUF];
@@ -721,8 +747,7 @@ int sendMessages(struct instdata *inst)
 					exit(1);
 				}
 			}
-			lenSend = send(sockArray[socknum], buf, lenBuf, 0);
-			error_number = errno;
+			lenSend = sendPlainTCP(socknum, buf, lenBuf, &error_number);
 		} else if(transport == TP_UDP) {
 			lenSend = sendto(udpsock, buf, lenBuf, 0, &udpRcvr, sizeof(udpRcvr));
 			error_number = errno;
@@ -770,11 +795,21 @@ int sendMessages(struct instdata *inst)
 			printf("\r%5.5u\n", i);
 			fflush(stdout);
 			test_rs_strerror_r(error_number, errStr, sizeof(errStr));
-			printf("send() failed \"%s\" at socket %d, index %u, msgNum %lld\n",
-				   errStr, sockArray[socknum], i, inst->numSent);
+			if(lenSend == 0) {
+				printf("tcpflood: socket %d, index %u, msgNum %lld CLOSED REMOTELY\n",
+					sockArray[socknum], i, inst->numSent);
+			} else {
+				printf("tcpflood: send() failed \"%s\" at socket %d, index %u, "
+					"msgNum %lld, lenSend %zd, lenBuf %zd\n",
+					errStr, sockArray[socknum], i, inst->numSent, lenSend,
+					lenBuf);
+			}
 			fflush(stderr);
 
-			return(1);
+			if(abortOnSendFail) {
+				printf("tcpflood terminates due to send failure\n");
+				return(1);
+			}
 		}
 		if(i % show_progress_interval == 0) {
 			if(bShowProgress)
@@ -791,7 +826,7 @@ int sendMessages(struct instdata *inst)
 					lenSend = sendTLS(socknum, sendBuf, offsSendBuf);
 					if(lenSend != offsSendBuf) {
 						fprintf(stderr, "tcpflood: error in send function causes potential "
-						"data loss lenSend %d, offsSendBuf %d\n",
+						"data loss lenSend %zd, offsSendBuf %d\n",
 						lenSend, offsSendBuf);
 					}
 					offsSendBuf = 0;
@@ -1183,8 +1218,13 @@ static void
 initTLS(void)
 {
 
-	/* Setup OpenSSL library */
-	if( /*(opensslh_THREAD_setup() == 0) || */ !SSL_library_init()) {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
+	/* Setup OpenSSL library  < 1.1.0 */
+	if( !SSL_library_init()) {
+#else
+	/* Setup OpenSSL library >= 1.1.0 with system default settings */
+	if( OPENSSL_init_ssl(0, NULL) == 0) {
+#endif
 		printf("tcpflood: error openSSL initialization failed!\n");
 		exit(1);
 	}
@@ -1194,8 +1234,12 @@ initTLS(void)
 	ERR_load_BIO_strings();
 	ERR_load_crypto_strings();
 
-	/* Create main CTX Object */
+	/* Create main CTX Object. Use SSLv23_method for < Openssl 1.1.0 and TLS_method for all newer versions! */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	ctx = SSL_CTX_new(SSLv23_method());
+#else
+	ctx = SSL_CTX_new(TLS_method());
+#endif
 
 	if(tlsCAFile != NULL && SSL_CTX_load_verify_locations(ctx, tlsCAFile, NULL) != 1) {
 		printf("tcpflood: Error, Failed loading CA certificate"
@@ -1369,9 +1413,9 @@ initTLSSess(int i)
 
 
 static int
-sendTLS(int i, char *buf, int lenBuf)
+sendTLS(int i, char *buf, size_t lenBuf)
 {
-	int lenSent;
+	size_t lenSent;
 	int r, err;
 
 	lenSent = 0;
@@ -1519,7 +1563,7 @@ initTLSSess(int i)
 
 
 static int
-sendTLS(int i, char *buf, int lenBuf)
+sendTLS(int i, char *buf, size_t lenBuf)
 {
 	int lenSent;
 	int r;
@@ -1546,7 +1590,7 @@ static void initTLS(void) {}
 static void exitTLS(void) {}
 static void initTLSSess(int __attribute__((unused)) i) {}
 static int sendTLS(int __attribute__((unused)) i, char __attribute__((unused)) *buf,
-	int __attribute__((unused)) lenBuf) { return 0; }
+	size_t __attribute__((unused)) lenBuf) { return 0; }
 static void closeTLSSess(int __attribute__((unused)) i) {}
 #	endif
 
@@ -1595,7 +1639,7 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, buf, _IONBF, 48);
 
-	while((opt = getopt(argc, argv, "a:Bb:c:C:d:DeE:f:F:i:I:j:k:l:L:m:M:n:OP:p:rR:sS:t:T:u:vW:x:XyYz:Z:")) != -1) {
+	while((opt = getopt(argc, argv, "a:ABb:c:C:d:DeE:f:F:i:I:j:k:l:L:m:M:n:OP:p:rR:sS:t:T:u:vW:x:XyYz:Z:")) != -1) {
 		switch (opt) {
 		case 'b':	batchsize = atoll(optarg);
 				break;
@@ -1702,6 +1746,8 @@ int main(int argc, char *argv[])
 				}
 				break;
 		case 'a':	relpAuthMode = optarg;
+				break;
+		case 'A':	abortOnSendFail = 0;
 				break;
 		case 'E':	relpPermittedPeer = optarg;
 				break;

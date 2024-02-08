@@ -4,16 +4,16 @@
 export IMFILEINPUTFILES="8"
 export IMFILEINPUTFILESSTEPS="5"
 export IMFILECHECKTIMEOUT="15"
-# generate input files first. Note that rsyslog processes it as
-# soon as it start up (so the file should exist at that point).
 
-# Start rsyslog now before adding more files
+mkdir "$RSYSLOG_DYNNAME.work"
 generate_conf
 add_conf '
 global( debug.whitelist="on"
 	debug.files=["imfile.c", "stream.c"])
 #	debug.files=["rainerscript.c", "ratelimit.c", "ruleset.c", "main Q",
 #	"msg.c", "../action.c", "imdiag.c"])
+
+global(workDirectory="./'"$RSYSLOG_DYNNAME"'.work")
 
 module(load="../plugins/imfile/.libs/imfile" mode="polling" pollingInterval="1")
 

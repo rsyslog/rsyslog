@@ -152,7 +152,7 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
 		int ipfreebind, char *device);
 	void (*closeUDPListenSockets)(int *finet);
 	int (*isAllowedSender)(uchar *pszType, struct sockaddr *pFrom, const char *pszFromHost); /* deprecated! */
-	rsRetVal (*getLocalHostname)(uchar**);
+	rsRetVal (*getLocalHostname)(rsconf_t *const, uchar**);
 	int (*should_use_so_bsdcompat)(void);
 	/* permitted peer handling should be replaced by something better (see comments above) */
 	rsRetVal (*AddPermittedPeer)(permittedPeers_t **ppRootPeer, uchar *pszID);

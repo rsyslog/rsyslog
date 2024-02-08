@@ -1,6 +1,6 @@
 /* header for lookup.c
  *
- * Copyright 2013 Adiscon GmbH.
+ * Copyright 2013-2023 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -111,5 +111,6 @@ void lookupDoHUP(void);
 rsRetVal lookupReload(lookup_ref_t *pThis, const uchar *stub_value_if_reload_fails);
 uint lookupPendingReloadCount(void);
 rsRetVal lookupClassInit(void);
+void lookupActivateConf(void);
 
 #endif /* #ifndef INCLUDED_LOOKUP_H */

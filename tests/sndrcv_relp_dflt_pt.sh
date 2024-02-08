@@ -41,7 +41,7 @@ startup 2
 
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
-injectmsg 1 50000
+injectmsg2 1 50000
 
 # shut down sender
 shutdown_when_empty 2

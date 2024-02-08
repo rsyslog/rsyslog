@@ -207,6 +207,29 @@ all that priorities, either exact this one or this and any higher priority. If
 you use both extensions then the exclamation mark must occur before the equals
 sign, just use it intuitively.
 
+However, please note that there are some restrictions over the traditional
+BSD syslog behaviour. These restrictions stem back to sysklogd, exist
+probably since at least the 1990's and as such have always been in
+rsyslog.
+
+Namely, in BSD syslogd you can craft a selector like this:
+
+*.debug;local6.err
+
+The intent is to log all facilities at debug or higher, except for local6,
+which should only log at err or higher.
+
+Unfortunately, local6.err will permit error severity and higher, but will
+not exclude lower severity messages from facility local6.
+
+As an alternative, you can explicitly exclude all severities that you do
+not want to match. For the above case, this selector is equivalent to the
+BSD syslog selector:
+
+*.debug;local6.!=info;local6.!=notice;local6.!=warn
+
+An easier approach is probably to do if ... then based matching in script.
+
 .SH ACTIONS
 The action field of a rule describes what to do with the message. In general, message content 
 is written to a kind of "logfile". But also other actions might be done, like writing to a 

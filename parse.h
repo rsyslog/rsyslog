@@ -56,7 +56,7 @@ struct rsParsObject
 	rsObjID OID;			/**< object ID */
 #endif
 	cstr_t *pCStr;		/**< pointer to the string object we are parsing */
-	int iCurrPos;			/**< current parsing position (char offset) */
+	size_t iCurrPos;	/**< current parsing position (char offset) */
 };
 typedef struct rsParsObject rsParsObj;
 
@@ -100,10 +100,6 @@ rsRetVal rsParsDestruct(rsParsObj *pThis);
 int parsIsAtEndOfParseString(rsParsObj *pThis);
 int parsGetCurrentPosition(rsParsObj *pThis);
 char parsPeekAtCharAtParsPtr(rsParsObj *pThis);
-#ifdef SYSLOG_INET
 rsRetVal parsAddrWithBits(rsParsObj *pThis, netAddr_t **pIP, int *pBits);
-#endif
 
 #endif
-/* vim:set ai:
- */

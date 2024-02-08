@@ -1,6 +1,6 @@
 /* The rsconf object. It models a complete rsyslog configuration.
  *
- * Copyright 2011-2020 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2011-2023 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -84,6 +84,10 @@ struct parsercnf_s {
  * be re-set as often as the user likes).
  */
 struct globals_s {
+#ifdef ENABLE_LIBCAPNG
+	int bAbortOnFailedLibcapngSetup;
+	int bCapabilityDropEnabled;
+#endif
 	int bDebugPrintTemplateList;
 	int bDebugPrintModuleList;
 	int bDebugPrintCfSysLineHandlerList;
@@ -93,6 +97,8 @@ struct globals_s {
 	int maxErrMsgToStderr;	/* how many messages to forward at most to stderr? */
 	int bAbortOnUncleanConfig; /* abort run (rather than starting with partial
 				      config) if there was any issue in conf */
+	int bAbortOnFailedQueueStartup; /* similar to bAbortOnUncleanConfig, but abort if a queue
+					   startup fails. This is not exactly an unclan config. */
 	int uidDropPriv;	/* user-id to which priveleges should be dropped to */
 	int gidDropPriv;	/* group-id to which priveleges should be dropped to */
 	int gidDropPrivKeepSupplemental; /* keep supplemental groups when dropping? */
@@ -105,9 +111,11 @@ struct globals_s {
 	int debugOnShutdown; /* start debug log when we are shut down */
 	int iGnuTLSLoglevel;/* Sets GNUTLS Debug Level */
 	uchar *pszDfltNetstrmDrvrCAF; /* default CA file for the netstrm driver */
+	uchar *pszDfltNetstrmDrvrCRLF; /* default CRL file for the netstrm driver */
 	uchar *pszDfltNetstrmDrvrCertFile;/* default cert file for the netstrm driver (server) */
 	uchar *pszDfltNetstrmDrvrKeyFile; /* default key file for the netstrm driver (server) */
 	uchar *pszDfltNetstrmDrvr; /* module name of default netstream driver */
+	uchar *pszNetstrmDrvrCAExtraFiles; /* CA extra file for the netstrm driver */
 	uchar *oversizeMsgErrorFile; /* File where oversize messages are written to */
 	int reportOversizeMsg; /* shall error messages be generated for oversize messages? */
 	int oversizeMsgInputMode; /* Mode which oversize messages will be forwarded */

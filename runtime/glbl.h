@@ -8,7 +8,7 @@
  * Please note that there currently is no glbl.c file as we do not yet
  * have any implementations.
  *
- * Copyright 2008-2019 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2022 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -91,11 +91,13 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
 
 	SIMP_PROP(DropMalPTRMsgs, int)
 	SIMP_PROP(DfltNetstrmDrvrCAF, uchar*)
+	SIMP_PROP(DfltNetstrmDrvrCRLF, uchar*)
 	SIMP_PROP(DfltNetstrmDrvrCertFile, uchar*)
 	SIMP_PROP(DfltNetstrmDrvrKeyFile, uchar*)
 	SIMP_PROP(DfltNetstrmDrvr, uchar*)
 	SIMP_PROP(DefPFFamily, int)
 	SIMP_PROP(DisableDNS, int)
+	SIMP_PROP(NetstrmDrvrCAExtraFiles, uchar*)
 	SIMP_PROP(ParserControlCharacterEscapePrefix, uchar)
 	SIMP_PROP(ParserDropTrailingLFOnReception, int)
 	SIMP_PROP(ParserEscapeControlCharactersOnReceive, int)
@@ -152,5 +154,6 @@ const uchar* glblGetOperatingStateFile(rsconf_t *cnf);
 int glblGetOversizeMsgInputMode(rsconf_t *cnf);
 int glblReportOversizeMessage(rsconf_t *cnf);
 void glblReportChildProcessExit(rsconf_t *cnf, const uchar *name, pid_t pid, int status);
+uchar *glblGetLocalHostName(void);
 
 #endif /* #ifndef GLBL_H_INCLUDED */

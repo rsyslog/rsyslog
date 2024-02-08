@@ -250,7 +250,7 @@ r_dbgoprint( const char *srcname, obj_t *pObj, const char *fmt, ...)
 
 	if(!(Debug && debugging_on))
 		return;
-	
+
 	if(!checkDbgFile(srcname)) {
 		return;
 	}
@@ -435,7 +435,7 @@ rsRetVal dbgClassInit(void)
 {
 	rsRetVal iRet;	/* do not use DEFiRet, as this makes calls into the debug system! */
 
-	
+
 	(void) pthread_key_create(&keyThrdName, dbgThrdNameDestruct);
 
 	/* while we try not to use any of the real rsyslog code (to avoid infinite loops), we

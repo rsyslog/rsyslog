@@ -2,7 +2,7 @@
  *
  * Module begun 2011-04-19 by Rainer Gerhards
  *
- * Copyright 2011-2020 Adiscon GmbH.
+ * Copyright 2011-2023 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -159,7 +159,12 @@ int rsconfNeedDropPriv(rsconf_t *const cnf)
 
 static void cnfSetDefaults(rsconf_t *pThis)
 {
+#ifdef ENABLE_LIBCAPNG
+	pThis->globals.bAbortOnFailedLibcapngSetup = 1;
+	pThis->globals.bCapabilityDropEnabled = 1;
+#endif
 	pThis->globals.bAbortOnUncleanConfig = 0;
+	pThis->globals.bAbortOnFailedQueueStartup = 0;
 	pThis->globals.bReduceRepeatMsgs = 0;
 	pThis->globals.bDebugPrintTemplateList = 1;
 	pThis->globals.bDebugPrintModuleList = 0;
@@ -181,6 +186,7 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.iGnuTLSLoglevel = 0;
 	pThis->globals.debugOnShutdown = 0;
 	pThis->globals.pszDfltNetstrmDrvrCAF = NULL;
+	pThis->globals.pszDfltNetstrmDrvrCRLF = NULL;
 	pThis->globals.pszDfltNetstrmDrvrCertFile = NULL;
 	pThis->globals.pszDfltNetstrmDrvrKeyFile = NULL;
 	pThis->globals.pszDfltNetstrmDrvr = NULL;
@@ -335,6 +341,7 @@ CODESTARTobjDestruct(rsconf)
 	free(pThis->globals.pszWorkDir);
 	free(pThis->globals.operatingStateFile);
 	free(pThis->globals.pszDfltNetstrmDrvrCAF);
+	free(pThis->globals.pszDfltNetstrmDrvrCRLF);
 	free(pThis->globals.pszDfltNetstrmDrvrCertFile);
 	free(pThis->globals.pszDfltNetstrmDrvrKeyFile);
 	free(pThis->globals.pszDfltNetstrmDrvr);
@@ -667,9 +674,10 @@ rsRetVal doDropPrivGid(rsconf_t *cnf)
 	res = setgid(cnf->globals.gidDropPriv);
 	if(res) {
 		LogError(errno, RS_RET_ERR_DROP_PRIV,
-				"could not set requested group id %d", cnf->globals.gidDropPriv);
+				"could not set requested group id %d via setgid()", cnf->globals.gidDropPriv);
 		ABORT_FINALIZE(RS_RET_ERR_DROP_PRIV);
 	}
+
 	DBGPRINTF("setgid(%d): %d\n", cnf->globals.gidDropPriv, res);
 	snprintf((char*)szBuf, sizeof(szBuf), "rsyslogd's groupid changed to %d",
 		 cnf->globals.gidDropPriv);
@@ -710,6 +718,7 @@ static void doDropPrivUid(rsconf_t *cnf)
 		perror("could not set requested userid");
 		exit(1);
 	}
+
 	DBGPRINTF("setuid(%d): %d\n", cnf->globals.uidDropPriv, res);
 	snprintf((char*)szBuf, sizeof(szBuf), "rsyslogd's userid changed to %d", cnf->globals.uidDropPriv);
 	logmsgInternal(NO_ERRCODE, LOG_SYSLOG|LOG_INFO, szBuf, 0);
@@ -1030,6 +1039,7 @@ activate(rsconf_t *cnf)
 
 	CHKiRet(dropPrivileges(cnf));
 
+	lookupActivateConf();
 	tellModulesActivateConfig();
 	startInputModules();
 	CHKiRet(activateActions());

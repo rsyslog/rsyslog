@@ -130,6 +130,20 @@ skip_platform() {
 
 }
 
+# function to skip a test if TSAN is enabled
+# This is necessary as TSAN does not properly handle thread creation
+# after fork() - which happens regularly in rsyslog if backgrounding
+# is activated.
+# $1 is the reason why TSAN is not supported
+# note: we depend on CFLAGS to properly reflect build options (what
+#       usually is the case when the testbench is run)
+skip_TSAN() {
+	if [[ "$CFLAGS" == *"sanitize=thread"* ]]; then
+		printf 'test incompatible with TSAN because of %s\n' "$1"
+		exit 77
+	fi
+}
+
 
 # a consistent format to output testbench timestamps
 tb_timestamp() {
@@ -303,7 +317,7 @@ wait_startup_pid() {
 		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
 		   printf '%s ABORT! Timeout waiting on startup (pid file %s)\n' "$(tb_timestamp)" "$1"
 		   ls -l "$1"
-		   ps -fp $(cat "$1")
+		   ps -fp $($SUDO cat "$1")
 		   error_exit 1
 		fi
 	done
@@ -486,7 +500,7 @@ wait_startup() {
 	echo "$(tb_timestamp) rsyslogd$1 startup msg seen, pid " $(cat $RSYSLOG_PIDBASE$1.pid)
 	wait_file_exists $RSYSLOG_DYNNAME.imdiag$1.port
 	eval export IMDIAG_PORT$1=$(cat $RSYSLOG_DYNNAME.imdiag$1.port)
-	eval PORT=$IMDIAG_PORT$1
+	eval PORT='$IMDIAG_PORT'$1
 	echo "imdiag$1 port: $PORT"
 	if [ "$PORT" == "" ]; then
 		echo "TESTBENCH ERROR: imdiag port not found!"
@@ -596,7 +610,7 @@ startup_vg_waitpid_only() {
 	# add --keep-debuginfo=yes for hard to find cases; this cannot be used generally,
 	# because it is only supported by newer versions of valgrind (else CI will fail
 	# on older platforms).
-	LD_PRELOAD=$RSYSLOG_PRELOAD valgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --suppressions=$srcdir/known_issues.supp ${EXTRA_VALGRIND_SUPPRESSIONS:-} --gen-suppressions=all --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=$RS_TESTBENCH_LEAK_CHECK ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$2.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+	LD_PRELOAD=$RSYSLOG_PRELOAD valgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --suppressions=$srcdir/known_issues.supp ${EXTRA_VALGRIND_SUPPRESSIONS:-} --gen-suppressions=all --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=$RS_TESTBENCH_LEAK_CHECK ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$instance.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
 	wait_rsyslog_startup_pid $1
 }
 
@@ -604,7 +618,7 @@ startup_vg_waitpid_only() {
 # returns only after successful startup, $2 is the instance (blank or 2!)
 startup_vg() {
 		startup_vg_waitpid_only $1 $2
-		wait_startup $2
+		wait_startup $instance
 		reassign_ports
 }
 
@@ -649,8 +663,8 @@ injectmsg() {
 # inject messages in INSTANCE 2 via our inject interface (imdiag)
 injectmsg2() {
 	msgs=${2:-$NUMMESSAGES}
-	echo injecting $2 messages into instance 2
-	echo injectmsg "$1:-0" "$msgs" $3 $4 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
+	echo injecting $msgs messages into instance 2
+	echo injectmsg "${1:-0}" "$msgs" $3 $4 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
 	# TODO: some return state checking? (does it really make sense here?)
 }
 
@@ -893,6 +907,39 @@ check_journal_testmsg_received() {
 	fi;
 }
 
+# checks that among the open files found in /proc/<PID>/fd/*
+# there is or is not, depending on the calling mode,
+# a link with the specified suffix in the target name
+check_fd_for_pid() {
+  local pid="$1" mode="$2" suffix="$3" target seen
+  seen="false"
+  for fd in $(echo /proc/$pid/fd/*); do
+    target="$(readlink -m "$fd")"
+    if [[ "$target" != *$RSYSLOG_DYNNAME* ]]; then
+      continue
+    fi
+    if ((i % 10 == 0)); then
+      echo "INFO: check target='$target'"
+    fi
+    if [[ "$target" == *$suffix ]]; then
+      seen="true"
+      if [[ "$mode" == "exists" ]]; then
+        echo "PASS: check fd for pid=$pid mode='$mode' suffix='$suffix'"
+        return 0
+      fi
+    fi
+  done
+  if [[ "$seen" == "false" ]] && [[ "$mode" == "absent" ]]; then
+    echo "PASS: check fd for pid=$pid mode='$mode' suffix='$suffix'"
+    return 0
+  fi
+  echo "FAIL: check fd for pid=$pid mode='$mode' suffix='$suffix'"
+  if [[ "$mode" != "ignore" ]]; then
+    return 1
+  fi
+  return 0
+}
+
 # wait for main message queue to be empty. $1 is the instance.
 # we run in a loop to ensure rsyslog is *really* finished when a
 # function for the "finished predicate" is defined. This is done
@@ -986,6 +1033,19 @@ quit"
 }
 
 
+# wait for HUP to complete. $1 is the instance
+# note: there is a slight chance HUP was not completed. This can happen if it takes
+# the system very long (> 500ms) to receive the HUP and set the internal flag
+# variable. aka "very very low probability".
+await_HUP_processed() {
+	if [ "$1" == "2" ]; then
+		echo AwaitHUPComplete | $TESTTOOL_DIR/diagtalker -pIMDIAG_PORT2 || error_exit  $?
+	else
+		echo AwaitHUPComplete | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
+	fi
+}
+
+
 # wait for all pending lookup table reloads to complete $1 is the instance.
 await_lookup_table_reload() {
 	if [ "$1" == "2" ]; then
@@ -1020,6 +1080,16 @@ wait_file_lines() {
 		count_function="$2"
 		shift 2
 	fi
+	interrupt_connection=NO
+	if [ "$1" == "--interrupt-connection" ]; then
+		interrupt_connection="YES"
+		interrupt_host="$2"
+		interrupt_port="$3"
+		interrupt_tick="$4"
+		shift 4
+		lastcurrent_time=0
+	fi
+
 	timeout=${3:-$TB_TEST_TIMEOUT}
 	timeoutbegin=$(date +%s)
 	timeoutend=$(( timeoutbegin + timeout ))
@@ -1061,6 +1131,15 @@ wait_file_lines() {
 				error_exit 1
 			else
 				echo $(date +%H:%M:%S) wait_file_lines waiting, expected $waitlines, current $count lines
+
+				current_time=$(date +%s)
+				if [ $interrupt_connection == "YES" ] && [ $current_time -gt $lastcurrent_time ] && [ $((current_time % $interrupt_tick)) -eq 0 ] && [ ${count} -gt 1 ]; then
+					# Interrupt Connection - requires root and linux kernel >= 4.9 in order to work!
+					echo wait_file_lines Interrupt Connection on ${interrupt_host}:${interrupt_port}
+					sudo ss -K dst ${interrupt_host} dport = ${interrupt_port}
+				fi
+				lastcurrent_time=$current_time
+
 				$TESTTOOL_DIR/msleep $delay
 			fi
 		fi
@@ -1170,8 +1249,10 @@ issue_HUP() {
 		sleeptime=1000
 	fi
 	kill -HUP $(cat $RSYSLOG_PIDBASE$1.pid)
-	printf 'HUP issued to pid %d\n' $(cat $RSYSLOG_PIDBASE$1.pid)
-	$TESTTOOL_DIR/msleep $sleeptime
+	printf 'HUP issued to pid %d - waiting for it to become processed\n' \
+		$(cat $RSYSLOG_PIDBASE$1.pid)
+	await_HUP_processed
+	#$TESTTOOL_DIR/msleep $sleeptime
 }
 
 
@@ -1402,6 +1483,9 @@ seq_check() {
 	fi
 	if [ "${SEQ_CHECK_FILE##*.}" == "gz" ]; then
 		gunzip -c "${SEQ_CHECK_FILE}" | $RS_SORTCMD $RS_SORT_NUMERIC_OPT | ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7 $SEQ_CHECK_OPTIONS
+	elif [ "${SEQ_CHECK_FILE##*.}" == "zst" ]; then
+		ls -l "${SEQ_CHECK_FILE}"
+		unzstd < "${SEQ_CHECK_FILE}" | $RS_SORTCMD $RS_SORT_NUMERIC_OPT | ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7 $SEQ_CHECK_OPTIONS
 	else
 		$RS_SORTCMD $RS_SORT_NUMERIC_OPT < "${SEQ_CHECK_FILE}" | ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7 $SEQ_CHECK_OPTIONS
 	fi
@@ -1412,6 +1496,10 @@ seq_check() {
 	if [ $ret -ne 0 ]; then
 		if [ "${SEQ_CHECK_FILE##*.}" == "gz" ]; then
 			gunzip -c "${SEQ_CHECK_FILE}" | $RS_SORTCMD $RS_SORT_NUMERIC_OPT \
+				| ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7 $SEQ_CHECK_OPTIONS \
+				> $RSYSLOG_DYNNAME.error.log
+		elif [ "${SEQ_CHECK_FILE##*.}" == "zst" ]; then
+			unzstd < "${SEQ_CHECK_FILE}" | $RS_SORTCMD $RS_SORT_NUMERIC_OPT \
 				| ./chkseq -s$startnum -e$endnum $3 $4 $5 $6 $7 $SEQ_CHECK_OPTIONS \
 				> $RSYSLOG_DYNNAME.error.log
 		else
@@ -1630,9 +1718,9 @@ presort() {
 
 #START: ext kafka config
 #dep_cache_dir=$(readlink -f .dep_cache)
-export RS_ZK_DOWNLOAD=apache-zookeeper-3.6.3-bin.tar.gz
+export RS_ZK_DOWNLOAD=apache-zookeeper-3.9.1-bin.tar.gz
 dep_cache_dir=$(pwd)/.dep_cache
-dep_zk_url=https://downloads.apache.org/zookeeper/zookeeper-3.6.3/$RS_ZK_DOWNLOAD
+dep_zk_url=https://downloads.apache.org/zookeeper/zookeeper-3.9.1/$RS_ZK_DOWNLOAD
 dep_zk_cached_file=$dep_cache_dir/$RS_ZK_DOWNLOAD
 
 export RS_KAFKA_DOWNLOAD=kafka_2.13-2.8.0.tgz
@@ -1640,7 +1728,7 @@ dep_kafka_url="https://www.rsyslog.com/files/download/rsyslog/$RS_KAFKA_DOWNLOAD
 dep_kafka_cached_file=$dep_cache_dir/$RS_KAFKA_DOWNLOAD
 
 if [ -z "$ES_DOWNLOAD" ]; then
-	export ES_DOWNLOAD=elasticsearch-7.14.1-linux-x86_64.tar.gz #elasticsearch-5.6.9.tar.gz
+	export ES_DOWNLOAD=elasticsearch-7.14.1-linux-x86_64.tar.gz
 fi
 if [ -z "$ES_PORT" ]; then
 	export ES_PORT=19200
@@ -2312,7 +2400,7 @@ omhttp_start_server() {
     omhttp_server_logfile="${omhttp_work_dir}/omhttp_server.log"
     mkdir -p ${omhttp_work_dir}
 
-    server_args="-p $omhttp_server_port ${*:2}"
+    server_args="-p $omhttp_server_port ${*:2} --port-file $RSYSLOG_DYNNAME.omhttp_server_lstnport.file"
 
     timeout 30m $PYTHON ${omhttp_server_py} ${server_args} >> ${omhttp_server_logfile} 2>&1 &
     if [ ! $? -eq 0 ]; then
@@ -2320,10 +2408,12 @@ omhttp_start_server() {
         rm -rf $omhttp_work_dir
         error_exit 1
     fi
-
     omhttp_server_pid=$!
+
+    wait_file_exists "$RSYSLOG_DYNNAME.omhttp_server_lstnport.file"
+    omhttp_server_lstnport="$(cat $RSYSLOG_DYNNAME.omhttp_server_lstnport.file)"
     echo ${omhttp_server_pid} > ${omhttp_server_pidfile}
-    echo "Started omhttp test server with args ${server_args} with pid ${omhttp_server_pid}"
+    echo "Started omhttp test server with args ${server_args} with pid ${omhttp_server_pid}, port {$omhttp_server_lstnport}"
 }
 
 omhttp_stop_server() {

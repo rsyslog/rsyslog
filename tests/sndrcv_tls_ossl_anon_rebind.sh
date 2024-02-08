@@ -17,7 +17,6 @@ test_error_exit_handler() {
 #receiver
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"
 generate_conf
-export PORT_RCVR="$(get_free_port)"
 add_conf '
 global(	
 	defaultNetstreamDriverCAFile="'$srcdir/testsuites/x.509/ca.pem'"
@@ -45,24 +44,19 @@ startup
 #sender
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.sender.debuglog"
 #valgrind="valgrind"
-export PORT_RCVR=$TCPFLOOD_PORT
+export PORT_RCVR=$TCPFLOOD_PORT # save TCPFLOOD_PORT, generate_conf will overwrite it!
 generate_conf 2
-export TCPFLOOD_PORT="$(get_free_port)" # TODO: move to diag.sh
-echo TCPFLOOD_PORT new: $TCPFLOOD_PORT 
 add_conf '
 global(	
-	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
-	defaultNetstreamDriverCertFile="'$srcdir/tls-certs/cert.pem'"
-	defaultNetstreamDriverKeyFile="'$srcdir/tls-certs/key.pem'"
+	defaultNetstreamDriverCAFile="'$srcdir/testsuites/x.509/ca.pem'"
+	defaultNetstreamDriverCertFile="'$srcdir/testsuites/x.509/client-cert.pem'"
+	defaultNetstreamDriverKeyFile="'$srcdir/testsuites/x.509/client-key.pem'"
 	defaultNetstreamDriver="ossl"
-	debug.whitelist="on"
-	debug.files=["nsd_ossl.c", "tcpsrv.c", "nsdsel_ossl.c", "nsdpoll_ptcp.c", "dnscache.c"]
 )
 
-
 # set up the action
-$DefaultNetstreamDriver ossl # use gtls netstream driver
-$ActionSendStreamDriverMode 1 # require TLS for the connection
+$DefaultNetstreamDriver ossl
+$ActionSendStreamDriverMode 1
 $ActionSendStreamDriverAuthMode anon
 $ActionSendTCPRebindInterval 100
 *.*	@@127.0.0.1:'$PORT_RCVR'
@@ -71,7 +65,7 @@ startup 2
 
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
-injectmsg
+injectmsg2
 shutdown_when_empty 2
 wait_shutdown 2
 # now it is time to stop the receiver as well
@@ -81,5 +75,4 @@ wait_shutdown
 export SEQ_CHECK_OPTIONS=-d
 seq_check
 
-unset PORT_RCVR
 exit_test

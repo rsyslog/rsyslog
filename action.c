@@ -64,7 +64,7 @@
  * beast.
  * rgerhards, 2011-06-15
  *
- * Copyright 2007-2019 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2022 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -316,6 +316,20 @@ actionResetQueueParams(void)
 	RETiRet;
 }
 
+/* free action worker data table
+*/
+static void freeWrkrDataTable(action_t * const pThis)
+{
+	int freeSpot;
+	for(freeSpot = 0; freeSpot < pThis->wrkrDataTableSize; ++freeSpot) {
+		if(pThis->wrkrDataTable[freeSpot] != NULL) {
+			pThis->pMod->mod.om.freeWrkrInstance(pThis->wrkrDataTable[freeSpot]);
+			pThis->wrkrDataTable[freeSpot] = NULL;
+		}
+	}
+	free(pThis->wrkrDataTable);
+	return;
+}
 
 /* destructs an action descriptor object
  * rgerhards, 2007-08-01
@@ -353,7 +367,7 @@ rsRetVal actionDestruct(action_t * const pThis)
 	free(pThis->pszName);
 	free(pThis->ppTpl);
 	free(pThis->peParamPassing);
-	free(pThis->wrkrDataTable);
+	freeWrkrDataTable(pThis);
 
 finalize_it:
 	free(pThis);
@@ -1974,6 +1988,12 @@ DEFFUNC_llExecFunc(doActivateActions)
 	action_t * const pThis = (action_t*) pData;
 	localRet = qqueueStart(runConf, pThis->pQueue);
 	if(localRet != RS_RET_OK) {
+		if(runConf->globals.bAbortOnFailedQueueStartup) {
+			fprintf(stderr, "rsyslogd: error %d starting up action queue, "
+				"abortOnFailedQueueStartup is set, so we abort rsyslog now.", localRet);
+			fflush(stderr);
+			exit(1); /* "good" exit, this is intended here */
+		}
 		LogError(0, localRet, "error starting up action queue");
 		if(localRet == RS_RET_FILE_PREFIX_MISSING) {
 			LogError(0, localRet, "file prefix (work directory?) "
@@ -2090,7 +2110,7 @@ actionApplyCnfParam(action_t * const pAction, struct cnfparamvals * const pvals)
 			pAction->bCopyMsg = (int) pvals[i].val.d.n;
 		} else if(!strcmp(pblk.descr[i].name, "action.resumeinterval")) {
 			pAction->iResumeInterval = pvals[i].val.d.n;
-		} else if(!strcmp(pblk.descr[i].name, "action.resumeintervalMax")) {
+		} else if(!strcmp(pblk.descr[i].name, "action.resumeintervalmax")) {
 			pAction->iResumeIntervalMax = pvals[i].val.d.n;
 		} else {
 			dbgprintf("action: program error, non-handled "

@@ -5,13 +5,13 @@ export IMFILEINPUTFILES="8" #"8"
 export IMFILEINPUTFILESSTEPS="5" #"5"
 #export IMFILEINPUTFILESALL=$(($IMFILEINPUTFILES * $IMFILEINPUTFILESSTEPS))
 export IMFILECHECKTIMEOUT="60"
-# generate input files first. Note that rsyslog processes it as
-# soon as it start up (so the file should exist at that point).
 
 # Start rsyslog now before adding more files
+mkdir "$RSYSLOG_DYNNAME.work"
 generate_conf
 add_conf '
-global( debug.whitelist="on"
+global( workDirectory="./'"$RSYSLOG_DYNNAME"'.work"
+        debug.whitelist="on"
 	debug.files=["imfile.c"])
 
 module(load="../plugins/imfile/.libs/imfile" mode="inotify" pollingInterval="1")
@@ -80,8 +80,8 @@ do
 	./msleep 1000
 done
 
-shutdown_when_empty # shut down rsyslogd when done processing messages
-wait_shutdown	# we need to wait until rsyslogd is finished!
+shutdown_when_empty
+wait_shutdown
 #echo rsyslog.debug:
 #cat rsyslog.debug
 exit_test

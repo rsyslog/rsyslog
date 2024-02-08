@@ -2,7 +2,7 @@
  * purpose of this wrapper class is to enable rsyslogd core to be build without
  * zlib libraries.
  *
- * Copyright 2009-2012 Adiscon GmbH.
+ * Copyright 2009-2022 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -25,14 +25,21 @@
 
 #include <zlib.h>
 
+#include "errmsg.h"
+
 /* interfaces */
 BEGINinterface(zlibw) /* name must also be changed in ENDinterface macro! */
 	int (*DeflateInit)(z_streamp strm, int);
 	int (*DeflateInit2)(z_streamp strm, int level, int method, int windowBits, int memLevel, int strategy);
 	int (*Deflate)(z_streamp strm, int);
 	int (*DeflateEnd)(z_streamp strm);
+	rsRetVal (*doStrmWrite)(strm_t *pThis, uchar *const pBuf, const size_t lenBuf, const int bFlush,
+		rsRetVal (*strmPhysWrite)(strm_t *pThis, uchar *pBuf, size_t lenBuf) );
+	rsRetVal (*doCompressFinish)(strm_t *pThis,
+		rsRetVal (*Destruct)(strm_t *pThis, uchar *pBuf, size_t lenBuf) );
+	rsRetVal (*Destruct)(strm_t *pThis);
 ENDinterface(zlibw)
-#define zlibwCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define zlibwCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */

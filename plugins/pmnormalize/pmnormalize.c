@@ -234,10 +234,11 @@ CODESTARTparse2
 					"json: %s\n", r, fjson_object_to_json_string(json));
 		}
 		fjson_object_put(json);
+		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 	} else {
 		iRet = MsgSetPropsViaJSON_Object(pMsg, json);
 	}
-
+finalize_it:
 ENDparse2
 
 

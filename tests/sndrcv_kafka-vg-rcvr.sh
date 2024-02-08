@@ -84,7 +84,7 @@ local4.* action(	name="kafka-fwd"
 startup 2
 
 echo Inject messages into rsyslog sender instance
-injectmsg 1 $TESTMESSAGES
+injectmsg2 1 $TESTMESSAGES
 
 #echo Sleep to give rsyslog instances time to process data ...
 #sleep 5

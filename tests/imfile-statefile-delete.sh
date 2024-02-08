@@ -5,6 +5,11 @@
 export TESTMESSAGES=1000
 export TESTMESSAGESFULL=999 
 export RETRIES=50
+
+# Uncomment fdor debuglogs
+#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
+#export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.debuglog"
+
 generate_conf
 add_conf '
 global(workDirectory="'${RSYSLOG_DYNNAME}'.spool")
@@ -22,8 +27,11 @@ wait_file_lines $RSYSLOG_OUT_LOG $TESTMESSAGES $RETRIES
 rm $RSYSLOG_DYNNAME.input
 sleep_time_ms=0
 while ls $RSYSLOG_DYNNAME.spool/imfile-state:$inode:* 1> /dev/null 2>&1; do
-	./msleep 10
-	((sleep_time_ms+=10))
+	./msleep 100
+	((sleep_time_ms+=100))
+	if [ $sleep_time_ms -ge 6000 ]; then
+		touch $RSYSLOG_DYNNAME:.tmp
+	fi
 	if [ $sleep_time_ms -ge 30000 ]; then
 	        printf 'FAIL: state file still exists when it should have been deleted\nspool dir is:\n'
 	        ls -l $RSYSLOG_DYNNAME.spool

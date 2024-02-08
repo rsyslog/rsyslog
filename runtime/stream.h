@@ -65,6 +65,8 @@
 #ifndef STREAM_H_INCLUDED
 #define STREAM_H_INCLUDED
 
+typedef struct strm_s strm_t; /* forward reference because of zlib... */
+
 #include <regex.h> // TODO: fix via own module
 #include <pthread.h>
 #include <stdint.h>
@@ -90,14 +92,14 @@ typedef enum {				/* when extending, do NOT change existing modes! */
 	STREAMMODE_WRITE_TRUNC = 3,
 	STREAMMODE_WRITE_APPEND = 4
 } strmMode_t;
-
-/* settings for stream rotation (applies not to all processing modes!) */
-#define	STRM_ROTATION_DO_CHECK		0
-#define	STRM_ROTATION_DO_NOT_CHECK	1
+typedef enum {
+		STRM_COMPRESS_ZIP = 0,
+		STRM_COMPRESS_ZSTD = 1
+	} strm_compressionDriver_t;
 
 #define STREAM_ASYNC_NUMBUFS 2 /* must be a power of 2 -- TODO: make configurable */
 /* The strm_t data structure */
-typedef struct strm_s {
+struct strm_s {
 	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
 	strmType_t sType;
 	/* descriptive properties */
@@ -159,6 +161,10 @@ typedef struct strm_s {
 		uchar *pBuf;
 		size_t lenBuf;
 	} asyncBuf[STREAM_ASYNC_NUMBUFS];
+	struct {
+		int num_wrkrs;	/* nbr of worker threads */
+		void *cctx;
+	} zstd;		/* supporting per-instance data if zstd is used */
 	pthread_t writerThreadID;
 	/* support for omfile size-limiting commands, special counters, NOT persisted! */
 	off_t	iSizeLimit;	/* file size limit, 0 = no limit */
@@ -170,7 +176,8 @@ typedef struct strm_s {
 	int fileNotFoundError;	/* boolean; if set, report file not found errors, else silently ignore */
 	int noRepeatedErrorOutput; /* if a file is missing the Error is only given once */
 	int ignoringMsg;
-} strm_t;
+	strm_compressionDriver_t compressionDriver;
+};
 
 
 /* interfaces */
@@ -195,12 +202,14 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*GetCurrOffset)(strm_t *pThis, int64 *pOffs);
 	rsRetVal (*SetWCntr)(strm_t *pThis, number_t *pWCnt);
 	rsRetVal (*Dup)(strm_t *pThis, strm_t **ppNew);
+	rsRetVal (*SetCompressionWorkers)(strm_t *const pThis, int num_wrkrs);
 	INTERFACEpropSetMeth(strm, bDeleteOnClose, int);
 	INTERFACEpropSetMeth(strm, iMaxFileSize, int64);
 	INTERFACEpropSetMeth(strm, iMaxFiles, int);
 	INTERFACEpropSetMeth(strm, iFileNumDigits, int);
 	INTERFACEpropSetMeth(strm, tOperationsMode, int);
 	INTERFACEpropSetMeth(strm, tOpenMode, mode_t);
+	INTERFACEpropSetMeth(strm, compressionDriver, strm_compressionDriver_t);
 	INTERFACEpropSetMeth(strm, sType, strmType_t);
 	INTERFACEpropSetMeth(strm, iZipLevel, int);
 	INTERFACEpropSetMeth(strm, bSync, int);
@@ -241,6 +250,5 @@ void strmSetReadTimeout(strm_t *const __restrict__ pThis, const int val);
 const uchar * ATTR_NONNULL() strmGetPrevLineSegment(strm_t *const pThis);
 const uchar * ATTR_NONNULL() strmGetPrevMsgSegment(strm_t *const pThis);
 int ATTR_NONNULL() strmGetPrevWasNL(const strm_t *const pThis);
-void ATTR_NONNULL() strmSet_checkRotation(strm_t *const pThis, const int val);
 
 #endif /* #ifndef STREAM_H_INCLUDED */

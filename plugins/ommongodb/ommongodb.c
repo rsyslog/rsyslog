@@ -42,6 +42,8 @@ PRAGMA_IGNORE_Wpragmas
 PRAGMA_IGNORE_Wunknown_warning_option
 PRAGMA_IGNORE_Wunknown_attribute
 PRAGMA_IGNORE_Wexpansion_to_defined
+PRAGMA_IGNORE_Wstrict_prototypes
+PRAGMA_IGNORE_Wold_style_definition
 #include <mongoc.h>
 #include <bson.h>
 PRAGMA_DIAGNOSTIC_POP
@@ -141,7 +143,7 @@ static void closeMongoDB(instanceData *pData)
 		mongoc_client_destroy (pData->client);
 		pData->client = NULL;
 		mongoc_cleanup ();
-		DBGPRINTF("ommongodb: Mongodb connexion closed.");
+		DBGPRINTF("ommongodb: Mongodb connection closed.");
 	}
 }
 
@@ -196,6 +198,7 @@ reportMongoError(instanceData *pData)
 static rsRetVal initMongoDB(instanceData *pData, int bSilent)
 {
 	DEFiRet;
+	unsigned char retval;
 
 	DBGPRINTF("ommongodb: uristr is '%s'", pData->uristr);
 	mongoc_init ();
@@ -224,7 +227,7 @@ static rsRetVal initMongoDB(instanceData *pData, int bSilent)
 	bson_t *command, reply;
 	bson_error_t error;
 	command = BCON_NEW ("ping", BCON_INT32 (1));
-	unsigned char retval = mongoc_client_command_simple(pData->client, pData->db, command, NULL, &reply, &error);
+	retval = mongoc_client_command_simple(pData->client, pData->db, command, NULL, &reply, &error);
 	bson_destroy(&reply);
 	bson_destroy(command);
 	if( !retval ) {

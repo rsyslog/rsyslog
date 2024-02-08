@@ -53,6 +53,7 @@ jobs:
             libsystemd-dev \
             libtool \
             libtool-bin \
+            libzstd-dev \
             lsof \
             make \
             net-tools \
@@ -60,7 +61,8 @@ jobs:
             python-docutils  \
             software-properties-common \
             valgrind \
-            wget
+            wget \
+            zstd
 
       - name: git checkout project
         uses: actions/checkout@v1

@@ -4,10 +4,12 @@
 # endmsg.regex. It's kind of a base test for the regex functionality.
 echo ======================================================================
 echo [imfile-endregex-save-lf.sh]
-. $srcdir/diag.sh check-inotify
 . ${srcdir:=.}/diag.sh init
+. $srcdir/diag.sh check-inotify
+mkdir "$RSYSLOG_DYNNAME.work"
 generate_conf
 add_conf '
+global(workDirectory="./'"$RSYSLOG_DYNNAME"'.work")
 module(load="../plugins/imfile/.libs/imfile")
 input(type="imfile"
       File="./'$RSYSLOG_DYNNAME'.input"

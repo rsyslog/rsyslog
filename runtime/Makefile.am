@@ -160,16 +160,17 @@ lmzlibw_la_LDFLAGS += $(LIBLOGGING_STDLOG_LIBS)
 endif
 
 
-if ENABLE_INET
-pkglib_LTLIBRARIES += lmnet.la lmnetstrms.la
 #
-# network support
+# basic network support, needed for rsyslog startup (e.g. our own system name)
 #
+pkglib_LTLIBRARIES += lmnet.la
 lmnet_la_SOURCES = net.c net.h
 lmnet_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 lmnet_la_LDFLAGS = -module -avoid-version ../compat/compat_la-getifaddrs.lo
 lmnet_la_LIBADD =
 
+if ENABLE_INET
+pkglib_LTLIBRARIES += lmnetstrms.la
 if ENABLE_LIBLOGGING_STDLOG
 lmnet_la_CPPFLAGS += $(LIBLOGGING_STDLOG_CFLAGS)
 lmnet_la_LDFLAGS += $(LIBLOGGING_STDLOG_LIBS)
@@ -242,6 +243,17 @@ if ENABLE_LIBGCRYPT
    lmcry_gcry_la_CPPFLAGS = $(RSRT_CFLAGS) $(LIBGCRYPT_CFLAGS)
    lmcry_gcry_la_LDFLAGS = -module -avoid-version
    lmcry_gcry_la_LIBADD = libgcry.la $(LIBGCRYPT_LIBS)
+endif
+
+#
+# support library for zstd
+#
+if ENABLE_LIBZSTD
+pkglib_LTLIBRARIES += lmzstdw.la
+    lmzstdw_la_SOURCES = zstdw.c zstdw.h
+    lmzstdw_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
+    lmzstdw_la_LDFLAGS = -module -avoid-version $(ZSTD_LIBS)
+    lmzstdw_la_LIBADD = -lzstd
 endif
 
 

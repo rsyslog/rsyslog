@@ -21,7 +21,7 @@
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c[which was
  * licensed under BSD at the time of the rsyslog fork])
  *
- * Copyright 2007-2021 Adiscon GmbH.
+ * Copyright 2007-2022 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -441,7 +441,7 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 	int iSess = -1;
 	struct sockaddr_storage *addr;
 	uchar *fromHostFQDN = NULL;
-	prop_t *fromHostIP;
+	prop_t *fromHostIP = NULL;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	assert(pLstnInfo != NULL);
@@ -496,7 +496,7 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 		DBGPRINTF("%s is not an allowed sender\n", fromHostFQDN);
 		if(glbl.GetOptionDisallowWarning(runConf)) {
 			errno = 0;
-			LogError(0, RS_RET_HOST_NOT_PERMITTED, "TCP message from disallowed "
+			LogError(0, RS_RET_HOST_NOT_PERMITTED, "connection request from disallowed "
 					"sender %s discarded", fromHostFQDN);
 		}
 		ABORT_FINALIZE(RS_RET_HOST_NOT_PERMITTED);
@@ -523,8 +523,20 @@ SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, 
 		pThis->pSessions[iSess] = pSess;
 	pSess = NULL; /* this is now also handed over */
 
+	if(pThis->bEmitMsgOnOpen) {
+		LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO,
+			"imtcp: connection established with host: %s",
+			propGetSzStr(fromHostIP));
+	}
+
 finalize_it:
 	if(iRet != RS_RET_OK) {
+		if(iRet != RS_RET_HOST_NOT_PERMITTED && pThis->bEmitMsgOnOpen) {
+			LogError(0, NO_ERRCODE, "imtcp: connection could not be "
+				"established with host: %s",
+				fromHostIP == NULL ? "(IP unknown)"
+					: (const char*)propGetSzStr(fromHostIP));
+		}
 		if(pSess != NULL)
 			tcps_sess.Destruct(&pSess);
 		if(pNewStrm != NULL)
@@ -604,7 +616,6 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 	case RS_RET_CLOSED:
 		if(pThis->bEmitMsgOnClose) {
 			errno = 0;
-			// prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
 			LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p closed by remote "
 				"peer %s.\n", (*ppSess)->pStrm, pszPeer);
 		}
@@ -620,13 +631,11 @@ doReceive(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll)
 			/* in this case, something went awfully wrong.
 			 * We are instructed to terminate the session.
 			 */
-			// prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
 			LogError(oserr, localRet, "Tearing down TCP Session from %s", pszPeer);
 			CHKiRet(closeSess(pThis, ppSess, pPoll));
 		}
 		break;
 	default:
-		// prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
 		LogError(oserr, iRet, "netstream session %p from %s will be closed due to error",
 				(*ppSess)->pStrm, pszPeer);
 		CHKiRet(closeSess(pThis, ppSess, pPoll));
@@ -1049,6 +1058,7 @@ tcpsrvConstructFinalize(tcpsrv_t *pThis)
 	 * when param is NULL default handling for ExpiredCerts is set! */
 	CHKiRet(netstrms.SetDrvrPermitExpiredCerts(pThis->pNS, pThis->pszDrvrPermitExpiredCerts));
 	CHKiRet(netstrms.SetDrvrTlsCAFile(pThis->pNS, pThis->pszDrvrCAFile));
+	CHKiRet(netstrms.SetDrvrTlsCRLFile(pThis->pNS, pThis->pszDrvrCRLFile));
 	CHKiRet(netstrms.SetDrvrTlsKeyFile(pThis->pNS, pThis->pszDrvrKeyFile));
 	CHKiRet(netstrms.SetDrvrTlsCertFile(pThis->pNS, pThis->pszDrvrCertFile));
 	if(pThis->pPermPeers != NULL)
@@ -1087,6 +1097,7 @@ CODESTARTobjDestruct(tcpsrv)
 	free(pThis->pszDrvrAuthMode);
 	free(pThis->pszDrvrPermitExpiredCerts);
 	free(pThis->pszDrvrCAFile);
+	free(pThis->pszDrvrCRLFile);
 	free(pThis->pszDrvrKeyFile);
 	free(pThis->pszDrvrCertFile);
 	free(pThis->ppLstn);
@@ -1357,9 +1368,16 @@ SetLinuxLikeRatelimiters(tcpsrv_t *pThis, unsigned int ratelimitInterval, unsign
 }
 
 
+/* Set connection open notification */
+static rsRetVal
+SetNotificationOnRemoteOpen(tcpsrv_t *pThis, const int bNewVal)
+{
+	pThis->bEmitMsgOnOpen = bNewVal;
+	return RS_RET_OK;
+}
 /* Set connection close notification */
 static rsRetVal
-SetNotificationOnRemoteClose(tcpsrv_t *pThis, int bNewVal)
+SetNotificationOnRemoteClose(tcpsrv_t *pThis, const int bNewVal)
 {
 	DEFiRet;
 	pThis->bEmitMsgOnClose = bNewVal;
@@ -1425,6 +1443,18 @@ SetDrvrCAFile(tcpsrv_t *const pThis, uchar *const mode)
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	if (mode != NULL) {
 		CHKmalloc(pThis->pszDrvrCAFile = ustrdup(mode));
+	}
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+SetDrvrCRLFile(tcpsrv_t *const pThis, uchar *const mode)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	if (mode != NULL) {
+		CHKmalloc(pThis->pszDrvrCRLFile = ustrdup(mode));
 	}
 finalize_it:
 	RETiRet;
@@ -1594,6 +1624,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetDrvrAuthMode = SetDrvrAuthMode;
 	pIf->SetDrvrPermitExpiredCerts = SetDrvrPermitExpiredCerts;
 	pIf->SetDrvrCAFile = SetDrvrCAFile;
+	pIf->SetDrvrCRLFile = SetDrvrCRLFile;
 	pIf->SetDrvrKeyFile = SetDrvrKeyFile;
 	pIf->SetDrvrCertFile = SetDrvrCertFile;
 	pIf->SetDrvrName = SetDrvrName;
@@ -1611,6 +1642,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetOnMsgReceive = SetOnMsgReceive;
 	pIf->SetLinuxLikeRatelimiters = SetLinuxLikeRatelimiters;
 	pIf->SetNotificationOnRemoteClose = SetNotificationOnRemoteClose;
+	pIf->SetNotificationOnRemoteOpen = SetNotificationOnRemoteOpen;
 	pIf->SetPreserveCase = SetPreserveCase;
 	pIf->SetDrvrCheckExtendedKeyUsage = SetDrvrCheckExtendedKeyUsage;
 	pIf->SetDrvrPrioritizeSAN = SetDrvrPrioritizeSAN;

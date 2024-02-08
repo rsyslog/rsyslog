@@ -6,7 +6,7 @@
  *
  * File begun on 2007-08-03 by RGerhards
  *
- * Copyright 2007-2017 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2022 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -37,6 +37,7 @@
 #include "syslogd.h"
 #include "linkedlist.h"
 #include "iminternal.h"
+#include "unicode-helper.h"
 
 static linkedList_t llMsgs;
 static pthread_mutex_t mutList = PTHREAD_MUTEX_INITIALIZER;
@@ -137,6 +138,10 @@ rsRetVal iminternalRemoveMsg(smsg_t **ppMsg)
 
 	pthread_mutex_lock(&mutList);
 	CHKiRet(llGetNextElt(&llMsgs, &llCookie, (void*)&pThis));
+	if(!strcmp((char*)pThis->pMsg->pszHOSTNAME, "[localhost]")) {
+		/* early (pre-conf) startup message detected, need to set real hostname now */
+		MsgSetHOSTNAME(pThis->pMsg, glblGetLocalHostName(), ustrlen(glblGetLocalHostName()));
+	}
 	*ppMsg = pThis->pMsg;
 	pThis->pMsg = NULL; /* we do no longer own it - important for destructor */
 

@@ -55,10 +55,6 @@
 #include "unicode-helper.h"
 #include "rsconf.h"
 
-/* things to move to some better place/functionality - TODO */
-#define CRLFILE "crl.pem"
-
-
 #if GNUTLS_VERSION_NUMBER <= 0x020b00
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #endif
@@ -494,7 +490,7 @@ print_info(nsd_gtls_t *pThis)
  * rgerhards, 2008-05-08
  */
 static rsRetVal
-GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr)
+GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr, const char* prefix)
 {
 	cstr_t *pStr = NULL;
 	uchar buf[4];
@@ -502,7 +498,7 @@ GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr)
 	DEFiRet;
 
 	CHKiRet(rsCStrConstruct(&pStr));
-	CHKiRet(rsCStrAppendStrWithLen(pStr, (uchar*)"SHA1", 4));
+	CHKiRet(rsCStrAppendStrWithLen(pStr, (uchar*) prefix, strlen(prefix)));
 	for(i = 0 ; i < sizeFingerprint ; ++i) {
 		snprintf((char*)buf, sizeof(buf), ":%2.2X", pFingerprint[i]);
 		CHKiRet(rsCStrAppendStrWithLen(pStr, buf, 3));
@@ -707,11 +703,14 @@ static rsRetVal
 gtlsInitCred(nsd_gtls_t *const pThis )
 {
 	int gnuRet;
-	const uchar *cafile;
+	const uchar *cafile, *crlfile;
 	DEFiRet;
 
 	/* X509 stuff */
-	CHKgnutls(gnutls_certificate_allocate_credentials(&pThis->xcred));
+	if (pThis->xcred == NULL) {
+		/* Allocate only ONCE */
+		CHKgnutls(gnutls_certificate_allocate_credentials(&pThis->xcred));
+	}
 
 	/* sets the trusted cas file */
 	cafile = (pThis->pszCAFile == NULL) ? glbl.GetDfltNetstrmDrvrCAF(runConf) : pThis->pszCAFile;
@@ -729,13 +728,35 @@ gtlsInitCred(nsd_gtls_t *const pThis )
 		} else if(gnuRet < 0) {
 			/* TODO; a more generic error-tracking function (this one based on CHKgnutls()) */
 			uchar *pErr = gtlsStrerror(gnuRet);
-			LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n",
+			LogError(0, RS_RET_GNUTLS_ERR,
+				"unexpected GnuTLS error reading CA certificate file %d in %s:%d: %s\n",
 			gnuRet, __FILE__, __LINE__, pErr);
 			free(pErr);
 			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
 		}
 	}
 
+	crlfile = (pThis->pszCRLFile == NULL) ? glbl.GetDfltNetstrmDrvrCRLF(runConf) : pThis->pszCRLFile;
+	if(crlfile == NULL) {
+		dbgprintf("Certificate revocation list (CRL) file not set.");
+	} else {
+		dbgprintf("GTLS CRL file: '%s'\n", crlfile);
+		gnuRet = gnutls_certificate_set_x509_crl_file(pThis->xcred, (char*)crlfile, GNUTLS_X509_FMT_PEM);
+		if(gnuRet == GNUTLS_E_FILE_ERROR) {
+			LogError(0, RS_RET_GNUTLS_ERR,
+				"error reading Certificate revocation list (CRL) '%s' - a common cause is that the "
+				"file  does not exist", crlfile);
+			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+		} else if(gnuRet < 0) {
+			/* TODO; a more generic error-tracking function (this one based on CHKgnutls()) */
+			uchar *pErr = gtlsStrerror(gnuRet);
+			LogError(0, RS_RET_GNUTLS_ERR,
+				"unexpected GnuTLS error reading Certificate revocation list (CRL) %d in %s:%d: %s\n",
+			gnuRet, __FILE__, __LINE__, pErr);
+			free(pErr);
+			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+		}
+	}
 
 finalize_it:
 	RETiRet;
@@ -919,8 +940,11 @@ static rsRetVal
 gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 {
 	uchar fingerprint[20];
+	uchar fingerprintSha256[32];
 	size_t size;
+	size_t sizeSha256;
 	cstr_t *pstrFingerprint = NULL;
+	cstr_t *pstrFingerprintSha256 = NULL;
 	int bFoundPositiveMatch;
 	permittedPeers_t *pPeer;
 	int gnuRet;
@@ -930,17 +954,27 @@ gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 
 	/* obtain the SHA1 fingerprint */
 	size = sizeof(fingerprint);
+	sizeSha256 = sizeof(fingerprintSha256);
 	CHKgnutls(gnutls_x509_crt_get_fingerprint(*pCert, GNUTLS_DIG_SHA1, fingerprint, &size));
-	CHKiRet(GenFingerprintStr(fingerprint, size, &pstrFingerprint));
+	CHKgnutls(gnutls_x509_crt_get_fingerprint(*pCert, GNUTLS_DIG_SHA256, fingerprintSha256, &sizeSha256));
+	CHKiRet(GenFingerprintStr(fingerprint, size, &pstrFingerprint, "SHA1"));
+	CHKiRet(GenFingerprintStr(fingerprintSha256, sizeSha256, &pstrFingerprintSha256, "SHA256"));
 	dbgprintf("peer's certificate SHA1 fingerprint: %s\n", cstrGetSzStrNoNULL(pstrFingerprint));
+	dbgprintf("peer's certificate SHA256 fingerprint: %s\n", cstrGetSzStrNoNULL(pstrFingerprintSha256));
+
 
 	/* now search through the permitted peers to see if we can find a permitted one */
 	bFoundPositiveMatch = 0;
 	pPeer = pThis->pPermPeers;
 	while(pPeer != NULL && !bFoundPositiveMatch) {
 		if(!rsCStrSzStrCmp(pstrFingerprint, pPeer->pszID, strlen((char*) pPeer->pszID))) {
+			dbgprintf("gtlsChkPeerFingerprint: peer's certificate SHA1 MATCH found: %s\n", pPeer->pszID);
 			bFoundPositiveMatch = 1;
-		} else {
+		} else if(!rsCStrSzStrCmp(pstrFingerprintSha256 , pPeer->pszID, strlen((char*) pPeer->pszID))) {
+			dbgprintf("gtlsChkPeerFingerprint: peer's certificate SHA256 MATCH found: %s\n", pPeer->pszID);
+			bFoundPositiveMatch = 1;
+		}
+		else {
 			pPeer = pPeer->pNext;
 		}
 	}
@@ -1101,10 +1135,13 @@ gtlsChkPeerID(nsd_gtls_t *pThis)
 
 	if(list_size < 1) {
 		if(pThis->bReportAuthErr == 1) {
+			uchar *fromHost = NULL;
 			errno = 0;
-			LogError(0, RS_RET_TLS_NO_CERT, "error: peer did not provide a certificate, "
-					"not permitted to talk to it");
 			pThis->bReportAuthErr = 0;
+			nsd_ptcp.GetRemoteHName((nsd_t*)pThis->pTcp, &fromHost);
+			LogError(0, RS_RET_TLS_NO_CERT, "error: peer %s did not provide a certificate, "
+					"not permitted to talk to it", fromHost);
+			free(fromHost);
 		}
 		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
 	}
@@ -1161,8 +1198,12 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 	cert_list = gnutls_certificate_get_peers(pThis->sess, &cert_list_size);
 	if(cert_list_size < 1) {
 		errno = 0;
+		uchar *fromHost = NULL;
+		nsd_ptcp.GetRemoteHName((nsd_t*)pThis->pTcp, &fromHost);
 		LogError(0, RS_RET_TLS_NO_CERT,
-			"peer did not provide a certificate, not permitted to talk to it");
+			"peer %s did not provide a certificate, not permitted to talk to it",
+			fromHost);
+		free(fromHost);
 		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
 	}
 #ifdef EXTENDED_CERT_CHECK_AVAILABLE
@@ -1214,6 +1255,7 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		} else if(stateCert & GNUTLS_CERT_REVOKED) {
 			pszErrCause = "certificate revoked";
 			bAbort = RSTRUE;
+			iAbortCode = RS_RET_CERT_REVOKED;
 #ifdef EXTENDED_CERT_CHECK_AVAILABLE
 		} else if(stateCert & GNUTLS_CERT_PURPOSE_MISMATCH) {
 			pszErrCause = "key purpose OID does not match";
@@ -1228,8 +1270,11 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 	}
 
 	if (bAbort == RSTRUE) {
-		LogError(0, NO_ERRCODE, "not permitted to talk to peer, certificate invalid: %s",
-				pszErrCause);
+		uchar *fromHost = NULL;
+		nsd_ptcp.GetRemoteHName((nsd_t*)pThis->pTcp, &fromHost);
+		LogError(0, NO_ERRCODE, "not permitted to talk to peer '%s', certificate invalid: %s",
+				fromHost, pszErrCause);
+		free(fromHost);
 		gtlsGetCertInfo(pThis, &pStr);
 		LogError(0, NO_ERRCODE, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
 		cstrDestruct(&pStr);
@@ -1251,8 +1296,11 @@ gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
 		if(ttCert == -1)
 			ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
 		else if(ttCert > ttNow) {
-			LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "not permitted to talk to peer: "
-					"certificate %d not yet active", i);
+			uchar *fromHost = NULL;
+			nsd_ptcp.GetRemoteHName((nsd_t*)pThis->pTcp, &fromHost);
+			LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "not permitted to talk to peer '%s': "
+					"certificate %d not yet active", fromHost, i);
+			free(fromHost);
 			gtlsGetCertInfo(pThis, &pStr);
 			LogError(0, RS_RET_CERT_NOT_YET_ACTIVE,
 				"invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
@@ -1307,6 +1355,8 @@ static rsRetVal
 gtlsGlblExit(void)
 {
 	DEFiRet;
+	gnutls_anon_free_server_credentials(anoncredSrv);
+	gnutls_dh_params_deinit(dh_params);
 	gnutls_global_deinit();
 	RETiRet;
 }
@@ -1376,6 +1426,7 @@ CODESTARTobjDestruct(nsd_gtls)
 	free(pThis->pszConnectHost);
 	free(pThis->pszRcvBuf);
 	free((void*) pThis->pszCAFile);
+	free((void*) pThis->pszCRLFile);
 
 	if(pThis->bOurCertIsInit)
 		for(unsigned i=0; i<pThis->nOurCerts; ++i) {
@@ -1401,12 +1452,13 @@ ENDobjDestruct(nsd_gtls)
  * rgerhards, 2008-04-28
  */
 static rsRetVal
-SetMode(nsd_t *pNsd, int mode)
+SetMode(nsd_t *const pNsd, const int mode)
 {
 	DEFiRet;
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	dbgprintf("(tls) mode: %d\n", mode);
 	if(mode != 0 && mode != 1) {
 		LogError(0, RS_RET_INVALID_DRVR_MODE, "error: driver mode %d not supported by "
 				"gtls netstream driver", mode);
@@ -1612,6 +1664,23 @@ SetTlsCAFile(nsd_t *pNsd, const uchar *const caFile)
 		pThis->pszCAFile = NULL;
 	} else {
 		CHKmalloc(pThis->pszCAFile = (const uchar*) strdup((const char*) caFile));
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+SetTlsCRLFile(nsd_t *pNsd, const uchar *const crlFile)
+{
+	DEFiRet;
+	nsd_gtls_t *const pThis = (nsd_gtls_t*) pNsd;
+
+	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+	if(crlFile == NULL) {
+		pThis->pszCRLFile = NULL;
+	} else {
+		CHKmalloc(pThis->pszCRLFile = (const uchar*) strdup((const char*) crlFile));
 	}
 
 finalize_it:
@@ -2261,7 +2330,12 @@ finalize_it:
 		if(pThis->bHaveSess) {
 			gnutls_deinit(pThis->sess);
 			pThis->bHaveSess = 0;
+			/* Free memory using gnutls api first*/
+			gnutls_certificate_free_credentials(pThis->xcred);
 			pThis->xcred = NULL;
+			/* Free other memory */
+			free(pThis->pszConnectHost);
+			pThis->pszConnectHost = NULL;
 		}
 	}
 
@@ -2308,6 +2382,7 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->SetPrioritizeSAN = SetPrioritizeSAN;
 	pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
 	pIf->SetTlsCAFile = SetTlsCAFile;
+	pIf->SetTlsCRLFile = SetTlsCRLFile;
 	pIf->SetTlsKeyFile = SetTlsKeyFile;
 	pIf->SetTlsCertFile = SetTlsCertFile;
 finalize_it:
@@ -2373,3 +2448,4 @@ CODESTARTmodInit
 ENDmodInit
 /* vi:set ai:
  */
+

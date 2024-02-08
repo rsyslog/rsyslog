@@ -84,6 +84,9 @@ static rsRetVal SetString(prop_t *pThis, const uchar *psz, const int len)
 	if(len < CONF_PROP_BUFSIZE) {
 		memcpy(pThis->szVal.sz, psz, len + 1);
 	} else {
+		if(pThis->szVal.psz != NULL) {
+			free(pThis->szVal.psz);
+		}
 		CHKmalloc(pThis->szVal.psz = malloc(len + 1));
 		memcpy(pThis->szVal.psz, psz, len + 1);
 	}

@@ -1,7 +1,7 @@
 /* lookup.c
  * Support for lookup tables in RainerScript.
  *
- * Copyright 2013-2018 Adiscon GmbH.
+ * Copyright 2013-2023 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -75,6 +75,7 @@ lookupTableReloader(void *self);
 static void
 lookupStopReloader(lookup_ref_t *pThis);
 
+
 /* create a new lookup table object AND include it in our list of
  * lookup tables.
  */
@@ -83,24 +84,12 @@ lookupNew(lookup_ref_t **ppThis)
 {
 	lookup_ref_t *pThis = NULL;
 	lookup_t *t = NULL;
-	int initialized = 0;
 	DEFiRet;
 
 	CHKmalloc(pThis = calloc(1, sizeof(lookup_ref_t)));
 	CHKmalloc(t = calloc(1, sizeof(lookup_t)));
-	CHKiConcCtrl(pthread_rwlock_init(&pThis->rwlock, NULL));
-	initialized++; /*1*/
-	CHKiConcCtrl(pthread_mutex_init(&pThis->reloader_mut, NULL));
-	initialized++; /*2*/
-	CHKiConcCtrl(pthread_cond_init(&pThis->run_reloader, NULL));
-	initialized++; /*3*/
-	CHKiConcCtrl(pthread_attr_init(&pThis->reloader_thd_attr));
-	initialized++; /*4*/
 	pThis->do_reload = pThis->do_stop = 0;
 	pThis->reload_on_hup = 1; /*DO reload on HUP (default)*/
-	CHKiConcCtrl(pthread_create(&pThis->reloader, &pThis->reloader_thd_attr,
-		lookupTableReloader, pThis));
-	initialized++; /*5*/
 
 	pThis->next = NULL;
 	if(loadConf->lu_tabs.root == NULL) {
@@ -115,7 +104,38 @@ lookupNew(lookup_ref_t **ppThis)
 	*ppThis = pThis;
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		LogError(errno, iRet, "a lookup table could not be initialized: "
+		LogError(errno, iRet, "a lookup table could not be initialized");
+		free(t);
+		free(pThis);
+	}
+	RETiRet;
+}
+
+/* activate a lookup table entry once rsyslog is ready to do so */
+static rsRetVal
+lookupActivateTable(lookup_ref_t *pThis)
+{
+	DEFiRet;
+	int initialized = 0;
+
+	DBGPRINTF("lookupActivateTable called\n");
+	CHKiConcCtrl(pthread_rwlock_init(&pThis->rwlock, NULL));
+	initialized++; /*1*/
+	CHKiConcCtrl(pthread_mutex_init(&pThis->reloader_mut, NULL));
+	initialized++; /*2*/
+	CHKiConcCtrl(pthread_cond_init(&pThis->run_reloader, NULL));
+	initialized++; /*3*/
+	CHKiConcCtrl(pthread_attr_init(&pThis->reloader_thd_attr));
+	initialized++; /*4*/
+	pThis->do_reload = pThis->do_stop = 0;
+	CHKiConcCtrl(pthread_create(&pThis->reloader, &pThis->reloader_thd_attr,
+		lookupTableReloader, pThis));
+	initialized++; /*5*/
+
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		LogError(errno, iRet, "a lookup table could not be activated: "
 			"failed at init-step %d (please enable debug logs for details)",
 			initialized);
 		/* Can not happen with current code, but might occur in the future when
@@ -128,8 +148,6 @@ finalize_it:
 		if (initialized > 2) pthread_cond_destroy(&pThis->run_reloader);
 		if (initialized > 1) pthread_mutex_destroy(&pThis->reloader_mut);
 		if (initialized > 0) pthread_rwlock_destroy(&pThis->rwlock);
-		free(t);
-		free(pThis);
 	}
 	RETiRet;
 }
@@ -846,8 +864,8 @@ lookupTableReloader(void *self)
 		if (pThis->do_stop) {
 			break;
 		} else if (pThis->do_reload) {
-			pThis->do_reload = 0;
 			lookupDoReload(pThis);
+			pThis->do_reload = 0;
 		} else {
 			pthread_cond_wait(&pThis->run_reloader, &pThis->reloader_mut);
 		}
@@ -866,6 +884,22 @@ lookupDoHUP(void)
 			lookupReload(luref, NULL);
 		}
 	}
+}
+
+/* activate lookup table system config
+ * most importantly, this means tarting the lookup table reloader thread in the
+ * right process space - it is a difference if we fork or not!
+ */
+void
+lookupActivateConf(void)
+{
+	DBGPRINTF("lookup tables: activate config \n");
+	lookup_ref_t *luref;
+	for(luref = runConf->lu_tabs.root ; luref != NULL ; luref = luref->next) {
+		DBGPRINTF("lookup actiate: processing %p\n", luref);
+		lookupActivateTable(luref);
+	}
+	DBGPRINTF("lookup tables: activate done\n");
 }
 
 uint
@@ -1003,11 +1037,18 @@ lookupTableDefProcessCnf(struct cnfobj *o)
 			  "param '%s'\n", modpblk.descr[i].name);
 		}
 	}
+	const uchar *const lu_name = lu->name; /* we need a const to keep TSAN happy :-( */
+	const uchar *const lu_filename = lu->filename; /* we need a const to keep TSAN happy :-( */
+	if(lu_name == NULL || lu_filename == NULL) {
+		iRet = RS_RET_INTERNAL_ERROR;
+		LogError(0, iRet, "internal error: lookup table name not set albeit being mandatory");
+		ABORT_FINALIZE(iRet);
+	}
 #ifdef HAVE_PTHREAD_SETNAME_NP
-	thd_name_len = ustrlen(lu->name) + strlen(reloader_prefix) + 1;
+	thd_name_len = ustrlen(lu_name) + strlen(reloader_prefix) + 1;
 	CHKmalloc(reloader_thd_name = malloc(thd_name_len));
 	strcpy(reloader_thd_name, reloader_prefix);
-	strcpy(reloader_thd_name + strlen(reloader_prefix), (char*) lu->name);
+	strcpy(reloader_thd_name + strlen(reloader_prefix), (char*) lu_name);
 	reloader_thd_name[thd_name_len - 1] = '\0';
 #if defined(__NetBSD__)
 	pthread_setname_np(lu->reloader, "%s", reloader_thd_name);
@@ -1017,9 +1058,9 @@ lookupTableDefProcessCnf(struct cnfobj *o)
 	pthread_setname_np(lu->reloader, reloader_thd_name);
 #endif
 #endif
-	CHKiRet(lookupReadFile(lu->self, lu->name, lu->filename));
+	CHKiRet(lookupReadFile(lu->self, lu_name, lu_filename));
 	LogMsg(0, RS_RET_OK, LOG_INFO, "lookup table '%s' loaded from file '%s'",
-		lu->name, lu->filename);
+		lu_name, lu->filename);
 
 finalize_it:
 #ifdef HAVE_PTHREAD_SETNAME_NP

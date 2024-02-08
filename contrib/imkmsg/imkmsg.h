@@ -1,7 +1,7 @@
 /* imkmsg.h
  * These are the definitions for the kmsg message generation module.
  *
- * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2023 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -25,13 +25,27 @@
 #include "rsyslog.h"
 #include "dirty.h"
 
+typedef enum _kernel_ts_parse_mods {
+		KMSG_PARSE_TS_OFF = 0,
+		KMSG_PARSE_TS_ALWAYS = 1,
+		KMSG_PARSE_TS_STARTUP_ONLY = 2
+	} t_kernel_ts_parse_mode;
+
+typedef enum _kernel_readmode {
+		KMSG_READMODE_FULL_BOOT = 0,
+		KMSG_READMODE_FULL_ALWAYS = 1,
+		KMSG_READMODE_NEW_ONLY = 2
+	} t_kernel_readmode;
+
 /* we need to have the modConf type present in all submodules */
 struct modConfData_s {
 	rsconf_t *pConf;
 	int iFacilIntMsg;
 	uchar *pszPath;
 	int console_log_level;
-	sbool bPermitNonKernel;
+	int expected_boot_complete_secs;
+	t_kernel_ts_parse_mode parseKernelStamp;
+	t_kernel_readmode readMode;
 	sbool configSetViaV2Method;
 };
 
@@ -62,5 +76,3 @@ extern char * ExpandKadds(char *, char *);
 extern void SetParanoiaLevel(int);
 
 #endif /* #ifndef IMKLOG_H_INCLUDED */
-/* vi:set ai:
- */
