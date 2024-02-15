@@ -210,13 +210,14 @@ initAndAddPerctileMetrics(perctile_stat_t *pstat, perctile_bucket_t *bkt, uchar*
 
 	bytes = snprintf((char*)pstat->name, sizeof(pstat->name), "%s", key);
 	if (bytes < 0 || bytes >= (int) sizeof(pstat->name)) {
-		LogError(0, iRet, "statname '%s' truncated - too long for buffer size: %d\n", stat_name, stat_name_len);
+		LogError(0, iRet, "statname '%s' truncated - too long for buffer size: %d\n", key, bytes);
 		ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
 	}
 
 	int offset = snprintf(stat_name, stat_name_len, "%s%s", (char*)pstat->name, (char*)bkt->delim);
 	if (offset < 0 || offset >= stat_name_len) {
-		LogError(0, iRet, "statname '%s' truncated - too long for buffer size: %d\n", stat_name, stat_name_len);
+		LogError(0, iRet, "statname '%s' delim '%s' truncated - too long for buffer size: %d\n",
+			(char*)pstat->name, (char*)bkt->delim, offset);
 		ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
 	}
 
