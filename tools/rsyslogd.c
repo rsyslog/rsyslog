@@ -307,6 +307,7 @@ writePidFile(void)
 	DBGPRINTF("rsyslogd: writing pidfile '%s'.\n", tmpPidFile);
 	if((fp = fopen((char*) tmpPidFile, "w")) == NULL) {
 		perror("rsyslogd: error writing pid file (creation stage)\n");
+		free((char *)tmpPidFile);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	if(fprintf(fp, "%d", (int) glblGetOurPid()) < 0) {
