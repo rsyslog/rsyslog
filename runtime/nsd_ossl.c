@@ -725,6 +725,8 @@ osslChkPeerFingerprint(nsd_ossl_t *pThis, X509 *pCert)
 finalize_it:
 	if(pstrFingerprint != NULL)
 		cstrDestruct(&pstrFingerprint);
+	if(pstrFingerprintSha256 != NULL)
+		cstrDestruct(&pstrFingerprintSha256);
 	RETiRet;
 }
 
