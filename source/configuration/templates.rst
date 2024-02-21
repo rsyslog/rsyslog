@@ -229,7 +229,7 @@ property or modifying it. It supports the following parameters:
    them from the string.
 
 -  **securepath** - used for creating pathnames suitable for use in dynafile
-   templates
+   templates. Supported values are "drop" and "replace".
 
 -  **format** - specify format on a field basis. Supported values are:
 
