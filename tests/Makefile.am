@@ -209,7 +209,6 @@ TESTS +=  \
 	invalid_nested_include.sh \
 	omfwd-tls-invalid-permitExpiredCerts.sh \
 	omfwd-keepalive.sh \
-	omusrmsg-noabort-legacy.sh \
 	omusrmsg-errmsg-no-params.sh \
 	omusrmsg-noabort.sh \
 	omfile-module-params.sh \
@@ -527,6 +526,7 @@ TESTS +=  \
 endif # ENABLE_LIBGCRYPT
 if HAVE_VALGRIND
 TESTS +=  \
+	omusrmsg-noabort-vg.sh \
 	omfile_hup-vg.sh \
 	gzipwr_hup-vg.sh \
 	tcpflood_wrong_option_output.sh \
@@ -2108,9 +2108,9 @@ EXTRA_DIST= \
 	zstd.sh \
 	zstd-vg.sh \
 	gzipwr_hup-vg.sh \
-	omusrmsg-noabort-legacy.sh \
 	omusrmsg-errmsg-no-params.sh \
 	omusrmsg-noabort.sh \
+	omusrmsg-noabort-vg.sh \
 	omfile-module-params.sh \
 	omfile-read-only-errmsg.sh \
 	omfile-null-filename.sh \
