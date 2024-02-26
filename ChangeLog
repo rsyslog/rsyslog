@@ -1,5 +1,45 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2402.0 (aka 2024.02) 2024-02-??
+Scheduled Release 8.2402.0 (aka 2024.02) 2024-02-27
+- 2024-02-26: add DTLS support
+  This version comes with the initial implementation of imdtls and omdtls.
+  These modules permit secure message exchange over UDP.
+- 2024-02-26: testbench: make omusrmsg-noabort test more reliable
+  The previous test did not always detect an abort of rsyslog/omusrmsg.
+  The detection method has now been improved, so it is far more
+  probable that an abort is detected.
+  While doing this, we noticed that the omusrmsg-noabort-legacy test was
+  now a 100% duplicate. There is no need any longer to check pure legacy
+  syntax, and so that test has been removed.
+  We also added a valgrind-based test ofr omusrmsg-noabort, which furthers
+  strengthens bug detection. Most importantly, it helps us to detect
+  potentially new memory leaks on all CI platforms (in case the lib
+  behaves differently depending on os/distro).
+  see also https://github.com/rsyslog/rsyslog/issues/5294
+- 2024-02-26: omusrmsg bugfix: potential double free, which can cause segfault
+  omusrmsg frees a string which points to OS/system library memory. When
+  the os/libs clean up, it frees the memory as well. This results in a
+  double free. This bug interestingly seems to go unnoticed in many cases.
+  But it can cause a segfault or hard-to-trace memory corruptions which
+  could lead to other problems later on. The outcome of this bug most
+  probably depdns on os/library versions.
+  closes https://github.com/rsyslog/rsyslog/issues/5294
+- 2024-02-26: ommysql bugfix: potential segfault on database error
+  Due to an invalid code path, ommysql may cause a segfault if database
+  transactions fail into a specific way. The main trigger is a totally
+  irrecoverrable database error which can lead to premature connection
+  close, which is not checked for in all recover code.
+  This was detected in a setting where a stored procedure is called that
+  rolls back a transaction in itself.
+  This patch fixes the issue.
+  closes https://github.com/rsyslog/rsyslog/issues/5288
+- 2024-02-26: omfile: do not carry out actual action when writing to /dev/null
+  In some use cases omfile is configured to write to /dev/null. This seems
+  primarily be done because of statistics gathering but maybe some other
+  scenarios. We now add conditional logic to not do any actual omfile
+  action when the target file is /dev/null.
+  Note: this check only works on static file names. When /dev/null is
+  evaluated as part of dynafile, it will be handled just in the regular
+  case like before this patch.
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2312.0 (aka 2023.12) 2023-12-12
 - 2023-12-11: imjournal: Add new input module parameter 'defaulttag'
