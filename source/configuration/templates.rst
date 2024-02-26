@@ -124,7 +124,7 @@ literally. It is primarily intended for text-based output, so that some
 constant text can be included. For example, if a complex template is
 built for file output, one usually needs to finish it by a newline,
 which can be introduced by a constant statement. Here is an actual
-sample of that use case from the rsylsog testbench:
+sample of that use case from the rsyslog testbench:
 
 ::
 
@@ -229,7 +229,7 @@ property or modifying it. It supports the following parameters:
    them from the string.
 
 -  **securepath** - used for creating pathnames suitable for use in dynafile
-   templates
+   templates. Supported values are "drop" and "replace".
 
 -  **format** - specify format on a field basis. Supported values are:
 

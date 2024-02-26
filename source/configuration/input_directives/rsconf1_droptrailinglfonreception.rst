@@ -17,5 +17,5 @@ what sysklogd does.
 
 **Sample:**
 
-``$DropTrailingLFOnRecption on``
+``$DropTrailingLFOnReception on``
 

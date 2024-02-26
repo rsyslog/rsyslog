@@ -412,7 +412,7 @@ The following properties are maintained for each listener:
 
 The worker thread (in short: worker) statistic is named "imudp(wX)" where "X" is
 the worker thread ID, which is an monotonically increasing integer starting at 0.
-This means the first worker will have the name "imudp(w0″), the second "imudp(w1)"
+This means the first worker will have the name "imudp(w0)", the second "imudp(w1)"
 and so on. Note that workers are all equal. It doesn’t really matter which worker
 processes which messages, so the actual worker ID is not of much concern. More
 interesting is to check how the load is spread between the worker. Also note that
@@ -552,7 +552,7 @@ actually increases by adding threads.
 A word of caution: just looking at thread CPU use is **not** a proper
 way to monitor imudp processing capabilities. With too many threads
 the overhead can increase, even strongly. This can result in a much higher
-CPU utlization but still overall less processing capability.
+CPU utilization but still overall less processing capability.
 
 Please also keep in your mind that additional input worker threads may
 cause more mutex contention when adding data to processing queues.
@@ -581,7 +581,7 @@ or knowledge of imudp, how many queue worker threads will be spawned by
 the queue in question.
 
 Note, however, that queue worker threads and imudp input worker threads
-compete for system ressources. As such the combined overall value should
+compete for system resources. As such the combined overall value should
 not overload the system. There is no strict rule to follow when sizing
 overall worker numbers: for queue workers it strongly depends on how
 compute-intense the workload is. For example, omfile actions need

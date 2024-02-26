@@ -522,7 +522,7 @@ desired effect when intentionally trying to make it most unlikely that
 rsyslog needs to lose/discard messages, usually this is not what you want.
 
 General rule of thumb: **if you do not fully understand what this decription
-here talks about, leave the paramter at default value**.
+here talks about, leave the parameter at default value**.
 
 This part of the
 documentation is intentionally brief, as one needs to have deep understanding

@@ -286,7 +286,7 @@ The module can use two rabbitmq server in a fail-over mode. To configure this mo
 Each server can be optionally completed with the port (useful when they are different).
 One of the servers is chosen on startup as a preferred one. The module connects to this server with a fail-over policy which can be defined through the action parameter "recover_policy".
 
-The module launch a back-ground thread to monitor the connection. As soon as the connection fails, the thread retries to restablish the connection and switch to the back-up server if needed to recover the service. While connected to backup server, the thread tries to reconnect to the preferred server using a "recover_policy". This behaviour allow to load balance the client across the two rabbitmq servers on normal conditions, switch to the running server in case of failure and rebalanced on the two server as soon as the failed server is recovered without restarting clients.
+The module launch a back-ground thread to monitor the connection. As soon as the connection fails, the thread retries to reestablish the connection and switch to the back-up server if needed to recover the service. While connected to backup server, the thread tries to reconnect to the preferred server using a "recover_policy". This behaviour allow to load balance the client across the two rabbitmq servers on normal conditions, switch to the running server in case of failure and rebalanced on the two server as soon as the failed server is recovered without restarting clients.
 
 The recover policy is based on 4 parameters :
 
