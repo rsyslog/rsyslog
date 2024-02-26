@@ -20,7 +20,7 @@ This parameter allows to include other files into the main configuration
 file. As soon as an IncludeConfig parameter is found, the contents of
 the new file is processed. IncludeConfigs can be nested. Please note
 that from a logical point of view the files are merged. Thus, if the
-include modifies some parameters (e.g. $DynaFileChacheSize), these new
+include modifies some parameters (e.g. $DynaFileCacheSize), these new
 parameters are in place for the "calling" configuration file when the
 include is completed. To avoid any side effects, do a
 $ResetConfigVariables after the $IncludeConfig. It may also be a good

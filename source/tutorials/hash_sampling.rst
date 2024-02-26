@@ -28,7 +28,7 @@ Service A generated logs
     ::
 
     {"request_id": "reqid1", "datetime": "<time>", "Processing_state" : "A", "Exception" : "none"}
-    {"request_id": "reqid2", "datetime": "<time>", "Processing_state" : "A_prime", "Exception" : "Unknow flow"}
+    {"request_id": "reqid2", "datetime": "<time>", "Processing_state" : "A_prime", "Exception" : "Unknown flow"}
     {"request_id": "reqid3", "datetime": "<time>", "Processing_state" : "A_double_prime", "Exception" : "Parsing Failed"}
 
 Service B generated logs

@@ -127,7 +127,7 @@ To create this setup, you need to
    the local file system!)
 -  set RSYSLOG\_DEBUG at least to "DebugOnDeman NoStdOut"
 -  make sure these environment variables are set in the correct
-   (distro-specifc) startup script if you do not run rsyslogd
+   (distro-specific) startup script if you do not run rsyslogd
    interactively
 
 These settings enable the capability to react to SIGUSR1. The signal

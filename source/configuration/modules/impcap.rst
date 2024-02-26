@@ -77,7 +77,7 @@ Defines the maximum size of captured packets.
 If captured packets are longer than the defined value, they will be capped.
 Default value allows any type of packet to be captured entirely but can be much shorter if only metadata capture is
 desired (500 to 2000 should still be safe, depending on network protocols).
-Be warry though, as impcap won't be able to parse metadata correctly if the value is not high enough.
+Be wary though, as impcap won't be able to parse metadata correctly if the value is not high enough.
 
 
 Input Parameters

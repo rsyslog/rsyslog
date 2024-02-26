@@ -212,8 +212,8 @@ stream.ack
    "boolean", "off", "no", "none"
 
 | Only applicable with mode "stream".
-| If set, the module will send an aknowledgement to Redis, for the stream defined by :ref:`omhiredis_streamkeyack`, with the group defined by :ref:`omhiredis_streamgroupack` and the ID defined by :ref:`omhiredis_streamindexack`.
-| This is especially useful when used with the :ref:`imhiredis_stream_consumerack` deactivated, as it allows omhiredis to aknowledge the correct processing of the log once the job is effectively done.
+| If set, the module will send an acknowledgement to Redis, for the stream defined by :ref:`omhiredis_streamkeyack`, with the group defined by :ref:`omhiredis_streamgroupack` and the ID defined by :ref:`omhiredis_streamindexack`.
+| This is especially useful when used with the :ref:`imhiredis_stream_consumerack` deactivated, as it allows omhiredis to acknowledge the correct processing of the log once the job is effectively done.
 
 
 .. _omhiredis_streamdel:

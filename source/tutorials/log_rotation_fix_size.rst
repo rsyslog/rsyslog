@@ -35,7 +35,7 @@ this. Putting the following directive
     *.* :omfile:$log_rotation
     # end log rotation via outchannel
 
-to ryslog.conf instruct rsyslog to log everything to the destination
+to rsyslog.conf instruct rsyslog to log everything to the destination
 file '/var/log/log\_rotation.log' until the give file size of 50 MB is
 reached. If the max file size is reached it will perform an action. In
 our case it executes the script /home/me/log\_rotation\_script which

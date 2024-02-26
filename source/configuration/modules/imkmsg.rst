@@ -147,7 +147,7 @@ expectedBootCompleteSeconds
    :widths: auto
    :class: parameter-table
 
-   "posisitve integer", "90", "no", "none"
+   "positive integer", "90", "no", "none"
 
 .. versionadded:: 8.2312.0
 

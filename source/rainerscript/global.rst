@@ -295,7 +295,7 @@ The following parameters can be set:
 
   A list of active senders is kept. When a new sender is detected, an
   informational message is emitted. Senders are purged from the list
-  only after a timeout (see *senders.timoutAfter* parameter). Note
+  only after a timeout (see *senders.timeoutAfter* parameter). Note
   that we do not intentionally remove a sender when a connection is
   closed. The whole point of this sender-tracking is to have the ability
   to provide longer-duration data. As such, we would not like to drop
@@ -578,7 +578,7 @@ The following parameters can be set:
   *reverselookup.cache.default.ttl* is not in effect. Note that this is the
   **default**.
 
-- **security.abortOnIDResoultionFail** [boolean (on/off)], default "on", available 8.2002.0+
+- **security.abortOnIDResolutionFail** [boolean (on/off)], default "on", available 8.2002.0+
 
   This setting controls if rsyslog should error-terminate when an security ID cannot
   be resolved during config file processing at startup. If set to "on" and
@@ -672,7 +672,7 @@ The following parameters can be set:
   shutdown and also does not requiere any more storage. Except, of course, for
   re-enqueued message.
 
-  The situation addressed by this setting is unlikley to happen, but it could happen.
+  The situation addressed by this setting is unlikely to happen, but it could happen.
   To enable the funtionality, set it to "on".
 
 - **parser.supportCompressionExtension** [boolean (on/off)] available 8.2106.0+

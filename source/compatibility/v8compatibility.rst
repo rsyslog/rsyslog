@@ -132,7 +132,7 @@ Bottom line: string generators need to be changed or will abort.
 The BEGINstrgen() entry point has greatly changed. Instead of two
 parameters for the output buffers, they now receive a single ``iparam``
 pointer, which contains all data items needed. Also, the message pointer
-is now const to "prevent" (accidential) changes to the message via the
+is now const to "prevent" (accidental) changes to the message via the
 strgen interface.
 
 Note that strgen modules must now maintain the iparam->lenStr field,
