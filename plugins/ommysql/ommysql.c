@@ -335,10 +335,15 @@ CODESTARTcommitTransaction
 		if(iRet != RS_RET_OK
 			&& iRet != RS_RET_DEFER_COMMIT
 			&& iRet != RS_RET_PREVIOUS_COMMITTED) {
-			if(mysql_rollback(pWrkrData->hmysql) != 0) {
-				DBGPRINTF("ommysql: server error: transaction could not be rolled back\n");
+			if(pWrkrData->hmysql == NULL) {
+				DBGPRINTF("ommysql: server error: hmysql is closed, transaction rollback "
+					  "willl not be tried (it probably already happened)\n");
+			} else {
+				if(mysql_rollback(pWrkrData->hmysql) != 0) {
+					DBGPRINTF("ommysql: server error: transaction could not be rolled back\n");
+				}
+				closeMySQL(pWrkrData);
 			}
-			closeMySQL(pWrkrData);
 			FINALIZE;
 		}
 	}
