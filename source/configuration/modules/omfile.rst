@@ -316,10 +316,16 @@ For each message, the file name is generated based on the given
 template. Then, this file is opened. As with the *file* property,
 data is appended if the file already exists. If the file does not
 exist, a new file is created. The template given in "templateName"
-is just a regular :doc:`rsyslog template <../templates>`, so all
-you have full control over how to format the file name. Either file
-or dynaFile can be used, but not both. If both are given, dynaFile
-will be used.
+is just a regular :doc:`rsyslog template <../templates>`, so
+you have full control over how to format the file name.
+
+To avoid path traversal attacks, *you must make sure that the template
+used properly escapes file paths*. This is done by using the *securepath*
+parameter in the template's property statements, or the *secpath-drop*
+or *secpath-replace* property options with the property replacer.
+
+Either file or dynaFile can be used, but not both. If both are given,
+dynaFile will be used.
 
 A cache of recent files is kept. Note
 that this cache can consume quite some memory (especially if large
