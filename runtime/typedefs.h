@@ -55,6 +55,7 @@ typedef struct netstrm_s netstrm_t;
 typedef struct nssel_s nssel_t;
 typedef struct nspoll_s nspoll_t;
 typedef enum nsdsel_waitOp_e nsdsel_waitOp_t;
+typedef struct net_ossl_s net_ossl_t;
 typedef struct nsd_ptcp_s nsd_ptcp_t;
 typedef struct nsd_gtls_s nsd_gtls_t;
 typedef struct nsd_ossl_s nsd_ossl_t;

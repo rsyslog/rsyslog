@@ -6,6 +6,11 @@ export NUMMESSAGES=50000
 export QUEUE_EMPTY_CHECK_FUNC=wait_seq_check
 generate_conf
 add_conf '
+global(
+#	debug.whitelist="on"
+#	debug.files=["net_ossl.c", "nsd_ossl.c", "nsd_ptcp.c", "tcpsrv.c", "nsdsel_ossl.c", "nsdpoll_ptcp.c", "dnscache.c"]
+)
+
 module(load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.Name="ossl"
 	StreamDriver.Mode="1"
