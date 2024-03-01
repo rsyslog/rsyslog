@@ -303,13 +303,18 @@ BEGINdoAction_NoStrings
 	smsg_t *pMsg = ppMsg[0];
 	uchar *msg;
 	int lenMsg;
+	uchar *tag;
+	int lenTag;
 CODESTARTdoAction
 	lenMsg = getMSGLen(pMsg);
 	msg = getMSG(pMsg);
+	getTAG(pMsg, &tag, &lenTag, LOCK_MUTEX);
 	if(pWrkrData->pData->mode == MODE_CC) {
 		doCC(pWrkrData->pData, msg, lenMsg);
+		doCC(pWrkrData->pData, tag, lenTag);
 	} else {
 		doUTF8(pWrkrData->pData, msg, lenMsg);
+		doUTF8(pWrkrData->pData, tag, lenTag);
 	}
 ENDdoAction
 
