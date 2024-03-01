@@ -42,6 +42,8 @@ cp -f $srcdir/testsuites/xlate_sparse_array_more_with_duplicates_and_nomatch.lkp
 issue_HUP
 await_lookup_table_reload
 injectmsg  0 15
+injectmsg  2147483647 3
+injectmsg  2999999999 3
 echo doing shutdown
 shutdown_when_empty
 echo wait on shutdown
@@ -61,4 +63,10 @@ content_check "msgnum:00000011: baz_latest"
 content_check "msgnum:00000012: foo_latest"
 content_check "msgnum:00000013: foo_latest"
 content_check "msgnum:00000014: foo_latest"
+content_check "msgnum:2147483647: foo_latest"
+content_check "msgnum:2147483648: gte_int_max"
+content_check "msgnum:2147483649: gte_int_max"
+content_check "msgnum:2999999999: gte_int_max"
+content_check "msgnum:3000000000: gte_3B"
+content_check "msgnum:3000000001: gte_3B"
 exit_test
