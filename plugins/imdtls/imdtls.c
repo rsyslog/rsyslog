@@ -314,24 +314,24 @@ imdtls_verify_callback(int status, SSL* ssl)
 			switch(inst->pNetOssl->authMode) {
 				case OSSL_AUTH_CERTNAME:
 					/* if we check the name, we must ensure the cert is valid */
-					certpeer = net_ossl_getpeercert(inst->pNetOssl, ssl, NULL);
+					certpeer = net_ossl.osslGetpeercert(inst->pNetOssl, ssl, NULL);
 					dbgprintf("imdtls_verify_callback: Check peer certname[%p]=%s\n",
 						(void *)ssl, (certpeer != NULL ? "VALID" : "NULL"));
-					CHKiRet(net_ossl_chkpeercertvalidity(inst->pNetOssl, ssl, NULL));
-					CHKiRet(net_ossl_chkpeername(inst->pNetOssl, certpeer, NULL));
+					CHKiRet(net_ossl.osslChkpeercertvalidity(inst->pNetOssl, ssl, NULL));
+					CHKiRet(net_ossl.osslChkpeername(inst->pNetOssl, certpeer, NULL));
 					break;
 				case OSSL_AUTH_CERTFINGERPRINT:
-					certpeer = net_ossl_getpeercert(inst->pNetOssl, ssl, NULL);
+					certpeer = net_ossl.osslGetpeercert(inst->pNetOssl, ssl, NULL);
 					dbgprintf("imdtls_verify_callback: Check peer fingerprint[%p]=%s\n",
 						(void *)ssl, (certpeer != NULL ? "VALID" : "NULL"));
-					CHKiRet(net_ossl_chkpeercertvalidity(inst->pNetOssl, ssl, NULL));
-					CHKiRet(net_ossl_peerfingerprint(inst->pNetOssl, certpeer, NULL));
+					CHKiRet(net_ossl.osslChkpeercertvalidity(inst->pNetOssl, ssl, NULL));
+					CHKiRet(net_ossl.osslPeerfingerprint(inst->pNetOssl, certpeer, NULL));
 					break;
 				case OSSL_AUTH_CERTVALID:
-					certpeer = net_ossl_getpeercert(inst->pNetOssl, ssl, NULL);
+					certpeer = net_ossl.osslGetpeercert(inst->pNetOssl, ssl, NULL);
 					dbgprintf("imdtls_verify_callback: Check peer valid[%p]=%s\n",
 						(void *)ssl, (certpeer != NULL ? "VALID" : "NULL"));
-					CHKiRet(net_ossl_chkpeercertvalidity(inst->pNetOssl, ssl, NULL));
+					CHKiRet(net_ossl.osslChkpeercertvalidity(inst->pNetOssl, ssl, NULL));
 					break;
 				case OSSL_AUTH_CERTANON:
 					dbgprintf("imdtls_verify_callback: ANON[%p]\n", (void *)ssl);
@@ -401,7 +401,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 	CHKiRet(net_ossl.osslCtxInitCookie(inst->pNetOssl));
 #	endif
 	// Run openssl config commands in Context
-	CHKiRet(net_ossl_apply_tlscgfcmd(inst->pNetOssl, inst->tlscfgcmd));
+	CHKiRet(net_ossl.osslApplyTlscgfcmd(inst->pNetOssl, inst->tlscfgcmd));
 
 	// Init Socket
 	CHKiRet(DTLSCreateSocket(inst));
@@ -499,13 +499,13 @@ DTLSAcceptSession(instanceConf_t *inst, int idx) {
 			} else if(err == SSL_ERROR_SYSCALL) {
 				DBGPRINTF("imdtls: SSL_accept failed SSL_ERROR_SYSCALL idx (%d), removing client.\n",
 					idx);
-				net_ossl_lastOpenSSLErrorMsg(NULL, err, ssl, LOG_WARNING,
+				net_ossl.osslLastOpenSSLErrorMsg(NULL, err, ssl, LOG_WARNING,
 					"DTLSHandleSessions", "SSL_accept");
 				DTLScleanupSession(inst, idx);
 			} else {
 				// An actual error occurred
 				DBGPRINTF("imdtls: SSL_accept failed (%d) idx (%d), removing client.\n", err, idx);
-				net_ossl_lastOpenSSLErrorMsg(NULL, err, ssl, LOG_ERR,
+				net_ossl.osslLastOpenSSLErrorMsg(NULL, err, ssl, LOG_ERR,
 					"DTLSHandleSessions", "SSL_accept");
 				DTLScleanupSession(inst, idx);
 			}
@@ -570,7 +570,7 @@ DTLSReadClient(instanceConf_t *inst, int idx, short revents) {
 					break;
 				} else if (err == SSL_ERROR_SYSCALL) {
 					DBGPRINTF("imdtls: SSL_ERROR_SYSCALL on index %d ERRNO %d\n", idx, errno);
-					net_ossl_lastOpenSSLErrorMsg(NULL, err, ssl, LOG_ERR,
+					net_ossl.osslLastOpenSSLErrorMsg(NULL, err, ssl, LOG_ERR,
 						"DTLSReadClient", "SSL_read");
 					DTLScleanupSession(inst, idx);
 					break;
@@ -655,7 +655,7 @@ DTLSHandleSessions(instanceConf_t *inst) {
 		if (inst->pNetOssl->authMode != OSSL_AUTH_CERTANON) {
 			dbgprintf("imdtls: enable certificate checking (Mode=%d, VerifyDepth=%d)\n",
 				inst->pNetOssl->authMode, inst->CertVerifyDepth);
-			net_ossl_set_ssl_verify_callback(ssl,
+			net_ossl.osslSetSslVerifyCallback(ssl,
 				SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT);
 			if (inst->CertVerifyDepth != 0) {
 				SSL_set_verify_depth(ssl, inst->CertVerifyDepth);
@@ -668,7 +668,7 @@ DTLSHandleSessions(instanceConf_t *inst) {
 		SSL_set_ex_data(ssl, 2, inst); /* Used in imdtls */
 
 		// Debug Callback for conn sbio!
-		net_ossl_set_bio_callback(sbio);
+		net_ossl.osslSetBioCallback(sbio);
 
 		// Connect the new Client
 		BIO_ADDR *client_addr = BIO_ADDR_new();
@@ -711,7 +711,7 @@ DTLSHandleSessions(instanceConf_t *inst) {
 				if (ret == 0) {
 					err = SSL_get_error(ssl, ret);
 					DBGPRINTF("imdtls: DTLSHandleSessions BIO_connect ERROR %d\n", err);
-					net_ossl_lastOpenSSLErrorMsg(NULL, err, ssl, LOG_WARNING,
+					net_ossl.osslLastOpenSSLErrorMsg(NULL, err, ssl, LOG_WARNING,
 						"DTLSHandleSessions", "BIO_connect");
 					LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
 						"imdtls: BIO_connect failed for DTLS client");
@@ -744,7 +744,7 @@ DTLSHandleSessions(instanceConf_t *inst) {
 				} else {
 					DBGPRINTF("imdtls: DTLSv1_listen RET %d (ERR %d / ERRNO %d), abort\n",
 						ret, err, errno);
-					net_ossl_lastOpenSSLErrorMsg(NULL, err, ssl, LOG_WARNING,
+					net_ossl.osslLastOpenSSLErrorMsg(NULL, err, ssl, LOG_WARNING,
 						"DTLSHandleSessions", "DTLSv1_listen");
 					LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
 						"imdtls: DTLSv1_listen failed for DTLS client");

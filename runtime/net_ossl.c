@@ -52,6 +52,20 @@ DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 DEFobjCurrIf(nsd_ptcp)
 
+/* Prototypes for openssl helper functions */
+void net_ossl_lastOpenSSLErrorMsg
+	(uchar *fromHost, int ret, SSL *ssl, int severity, const char* pszCallSource, const char* pszOsslApi);
+void net_ossl_set_ssl_verify_callback(SSL *pSsl, int flags);
+void net_ossl_set_ctx_verify_callback(SSL_CTX *pCtx, int flags);
+void net_ossl_set_bio_callback(BIO *conn);
+int net_ossl_verify_callback(int status, X509_STORE_CTX *store);
+rsRetVal net_ossl_apply_tlscgfcmd(net_ossl_t *pThis, uchar *tlscfgcmd);
+rsRetVal net_ossl_chkpeercertvalidity(net_ossl_t *pThis, SSL *ssl, uchar *fromHostIP);
+X509* net_ossl_getpeercert(net_ossl_t *pThis, SSL *ssl, uchar *fromHostIP);
+rsRetVal net_ossl_peerfingerprint(net_ossl_t *pThis, X509* certpeer, uchar *fromHostIP);
+rsRetVal net_ossl_chkpeername(net_ossl_t *pThis, X509* certpeer, uchar *fromHostIP);
+
+
 /*--------------------------------------MT OpenSSL helpers ------------------------------------------*/
 static MUTEX_TYPE *mutex_buf = NULL;
 static sbool openssl_initialized = 0; // Avoid multiple initialization / deinitialization
@@ -1174,9 +1188,18 @@ CODESTARTobjQueryInterface(net_ossl)
 	if(pIf->ifVersion != net_osslCURR_IF_VERSION) {/* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
-	pIf->Construct		= (rsRetVal(*)(net_ossl_t**)) net_osslConstruct;
-	pIf->Destruct		= (rsRetVal(*)(net_ossl_t**)) net_osslDestruct;
-	pIf->osslCtxInit	= net_ossl_osslCtxInit;
+	pIf->Construct			= (rsRetVal(*)(net_ossl_t**)) net_osslConstruct;
+	pIf->Destruct			= (rsRetVal(*)(net_ossl_t**)) net_osslDestruct;
+	pIf->osslCtxInit		= net_ossl_osslCtxInit;
+	pIf->osslChkpeername		= net_ossl_chkpeername;
+	pIf->osslPeerfingerprint	= net_ossl_peerfingerprint;
+	pIf->osslGetpeercert		= net_ossl_getpeercert;
+	pIf->osslChkpeercertvalidity	= net_ossl_chkpeercertvalidity;
+	pIf->osslApplyTlscgfcmd		= net_ossl_apply_tlscgfcmd;
+	pIf->osslSetBioCallback		= net_ossl_set_bio_callback;
+	pIf->osslSetCtxVerifyCallback	= net_ossl_set_ctx_verify_callback;
+	pIf->osslSetSslVerifyCallback	= net_ossl_set_ssl_verify_callback;
+	pIf->osslLastOpenSSLErrorMsg	= net_ossl_lastOpenSSLErrorMsg;
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
 	pIf->osslCtxInitCookie	= net_ossl_ctx_init_cookie;
 #endif

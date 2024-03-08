@@ -80,7 +80,7 @@ void nsd_ossl_lastOpenSSLErrorMsg(nsd_ossl_t const *pThis, const int ret, SSL *s
 	}
 
 	// Call helper in net_ossl
-	net_ossl_lastOpenSSLErrorMsg(fromHost, ret, ssl, severity, pszCallSource, pszOsslApi);
+	net_ossl.osslLastOpenSSLErrorMsg(fromHost, ret, ssl, severity, pszCallSource, pszOsslApi);
 
 	free(fromHost);
 	errno = errno_store;
@@ -278,7 +278,8 @@ osslInitSession(nsd_ossl_t *pThis, osslSslState_t osslType) /* , nsd_ossl_t *pSe
 		dbgprintf("osslInitSession: enable certificate checking (Mode=%d, VerifyDepth=%d)\n",
 			pThis->pNetOssl->authMode, pThis->DrvrVerifyDepth);
 		/* Enable certificate valid checking */
-		net_ossl_set_ssl_verify_callback(pThis->pNetOssl->ssl, SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT);
+		net_ossl.osslSetSslVerifyCallback(pThis->pNetOssl->ssl,
+			SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT);
 		if (pThis->DrvrVerifyDepth != 0) {
 			SSL_set_verify_depth(pThis->pNetOssl->ssl, pThis->DrvrVerifyDepth);
 		}
@@ -305,7 +306,7 @@ osslInitSession(nsd_ossl_t *pThis, osslSslState_t osslType) /* , nsd_ossl_t *pSe
 	dbgprintf("osslInitSession: Init conn BIO[%p] done\n", (void *)conn);
 
 	/* Set debug Callback for conn BIO as well! */
-	net_ossl_set_bio_callback(conn);
+	net_ossl.osslSetBioCallback(conn);
 
 	/* TODO: still needed? Set to NON blocking ! */
 	BIO_set_nbio( conn, 1 );
@@ -347,25 +348,25 @@ osslChkPeerAuth(nsd_ossl_t *pThis)
 	switch(pThis->pNetOssl->authMode) {
 		case OSSL_AUTH_CERTNAME:
 			/* if we check the name, we must ensure the cert is valid */
-			certpeer = net_ossl_getpeercert(pThis->pNetOssl, pThis->pNetOssl->ssl, fromHostIP);
+			certpeer = net_ossl.osslGetpeercert(pThis->pNetOssl, pThis->pNetOssl->ssl, fromHostIP);
 			dbgprintf("osslChkPeerAuth: Check peer certname[%p]=%s\n",
 				(void *)pThis->pNetOssl->ssl, (certpeer != NULL ? "VALID" : "NULL"));
-			CHKiRet(net_ossl_chkpeercertvalidity(pThis->pNetOssl, pThis->pNetOssl->ssl, fromHostIP));
-			CHKiRet(net_ossl_chkpeername(pThis->pNetOssl, certpeer, fromHostIP));
+			CHKiRet(net_ossl.osslChkpeercertvalidity(pThis->pNetOssl, pThis->pNetOssl->ssl, fromHostIP));
+			CHKiRet(net_ossl.osslChkpeername(pThis->pNetOssl, certpeer, fromHostIP));
 			break;
 		case OSSL_AUTH_CERTFINGERPRINT:
-			certpeer = net_ossl_getpeercert(pThis->pNetOssl, pThis->pNetOssl->ssl, fromHostIP);
+			certpeer = net_ossl.osslGetpeercert(pThis->pNetOssl, pThis->pNetOssl->ssl, fromHostIP);
 			dbgprintf("osslChkPeerAuth: Check peer fingerprint[%p]=%s\n",
 				(void *)pThis->pNetOssl->ssl, (certpeer != NULL ? "VALID" : "NULL"));
-			CHKiRet(net_ossl_chkpeercertvalidity(pThis->pNetOssl, pThis->pNetOssl->ssl, fromHostIP));
-			CHKiRet(net_ossl_peerfingerprint(pThis->pNetOssl, certpeer, fromHostIP));
+			CHKiRet(net_ossl.osslChkpeercertvalidity(pThis->pNetOssl, pThis->pNetOssl->ssl, fromHostIP));
+			CHKiRet(net_ossl.osslPeerfingerprint(pThis->pNetOssl, certpeer, fromHostIP));
 
 			break;
 		case OSSL_AUTH_CERTVALID:
-			certpeer = net_ossl_getpeercert(pThis->pNetOssl, pThis->pNetOssl->ssl, fromHostIP);
+			certpeer = net_ossl.osslGetpeercert(pThis->pNetOssl, pThis->pNetOssl->ssl, fromHostIP);
 			dbgprintf("osslChkPeerAuth: Check peer valid[%p]=%s\n",
 				(void *)pThis->pNetOssl->ssl, (certpeer != NULL ? "VALID" : "NULL"));
-			CHKiRet(net_ossl_chkpeercertvalidity(pThis->pNetOssl, pThis->pNetOssl->ssl, fromHostIP));
+			CHKiRet(net_ossl.osslChkpeercertvalidity(pThis->pNetOssl, pThis->pNetOssl->ssl, fromHostIP));
 			break;
 		case OSSL_AUTH_CERTANON:
 			FINALIZE;
@@ -1277,7 +1278,7 @@ applyGnutlsPriorityString(nsd_ossl_t *const pThis)
 	if(pThis->gnutlsPriorityString == NULL || pThis->pNetOssl->ctx == NULL) {
 		FINALIZE;
 	} else {
-		CHKiRet(net_ossl_apply_tlscgfcmd(pThis->pNetOssl, pThis->gnutlsPriorityString));
+		CHKiRet(net_ossl.osslApplyTlscgfcmd(pThis->pNetOssl, pThis->gnutlsPriorityString));
 	}
 #endif
 

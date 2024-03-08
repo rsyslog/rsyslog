@@ -270,7 +270,7 @@ CODESTARTactivateCnfPrePrivDrop
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 		CHKiRet(net_ossl.osslCtxInit(inst->pNetOssl, DTLS_method()));
 		// Run openssl config commands in Context
-		CHKiRet(net_ossl_apply_tlscgfcmd(inst->pNetOssl, inst->tlscfgcmd));
+		CHKiRet(net_ossl.osslApplyTlscgfcmd(inst->pNetOssl, inst->tlscfgcmd));
 	}
 finalize_it:
 ENDactivateCnfPrePrivDrop
@@ -598,13 +598,13 @@ dtls_send(wrkrInstanceData_t *pWrkrData, const actWrkrIParams_t *__restrict__ co
 		if (sslerr == SSL_ERROR_SYSCALL) {
 			dbgprintf("dtls_send[%p]: SSL_write failed with SSL_ERROR_SYSCALL(%s)"
 				" - Aborting Connection.\n", pWrkrData, strerror(errno));
-			net_ossl_lastOpenSSLErrorMsg(pData->target, iErr, pWrkrData->sslClient, LOG_WARNING,
+			net_ossl.osslLastOpenSSLErrorMsg(pData->target, iErr, pWrkrData->sslClient, LOG_WARNING,
 				"omdtls", "SSL_write");
 			ABORT_FINALIZE(RS_RET_ERR);
 		} else {
 			dbgprintf("dtls_send[%p]: SSL_write failed with ERROR [%d]: %s"
 				" - Aborting Connection.\n", pWrkrData, sslerr, ERR_error_string(sslerr, NULL));
-			net_ossl_lastOpenSSLErrorMsg(pData->target, iErr, pWrkrData->sslClient, LOG_WARNING,
+			net_ossl.osslLastOpenSSLErrorMsg(pData->target, iErr, pWrkrData->sslClient, LOG_WARNING,
 				"omdtls", "SSL_write");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
@@ -639,7 +639,8 @@ dtls_connect(wrkrInstanceData_t *pWrkrData) {
 	pWrkrData->sslClient = SSL_new(pData->pNetOssl->ctx);
 	if(!pWrkrData->sslClient) {
 		dbgprintf("dtls_connect[%p]: SSL_new failed failed\n", pWrkrData);
-		net_ossl_lastOpenSSLErrorMsg(pData->target, 0, pWrkrData->sslClient, LOG_WARNING, "omdtls", "SSL_new");
+		net_ossl.osslLastOpenSSLErrorMsg(pData->target, 0, pWrkrData->sslClient,
+			LOG_WARNING, "omdtls", "SSL_new");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
@@ -648,19 +649,20 @@ dtls_connect(wrkrInstanceData_t *pWrkrData) {
 		dbgprintf("dtls_connect[%p]: enable certificate checking (Mode=%d, VerifyDepth=%d)\n",
 			pWrkrData, pData->pNetOssl->authMode, pData->CertVerifyDepth);
 		/* Enable certificate valid checking */
-		net_ossl_set_ssl_verify_callback(pWrkrData->sslClient, SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT);
+		net_ossl.osslSetSslVerifyCallback(pWrkrData->sslClient,
+			SSL_VERIFY_PEER|SSL_VERIFY_FAIL_IF_NO_PEER_CERT);
 		if (pData->CertVerifyDepth != 0) {
 			SSL_set_verify_depth(pWrkrData->sslClient, pData->CertVerifyDepth);
 		}
 	} else {
 		dbgprintf("dtls_connect[%p]: disable certificate checking\n", pWrkrData);
-		net_ossl_set_ssl_verify_callback(pWrkrData->sslClient, SSL_VERIFY_NONE);
+		net_ossl.osslSetSslVerifyCallback(pWrkrData->sslClient, SSL_VERIFY_NONE);
 	}
 
 	/* Create BIO from socket array! */
 	bio_client = BIO_new_dgram(pWrkrData->sockout, BIO_NOCLOSE);
 	if (!bio_client) {
-		net_ossl_lastOpenSSLErrorMsg(pData->target, 0, pWrkrData->sslClient, LOG_INFO,
+		net_ossl.osslLastOpenSSLErrorMsg(pData->target, 0, pWrkrData->sslClient, LOG_INFO,
 			"dtls_connect", "BIO_new_dgram");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
@@ -668,13 +670,13 @@ dtls_connect(wrkrInstanceData_t *pWrkrData) {
 	SSL_set_bio(pWrkrData->sslClient, bio_client, bio_client);
 
 	/* Set debug Callback for conn BIO as well! */
-	net_ossl_set_bio_callback(bio_client);
+	net_ossl.osslSetBioCallback(bio_client);
 
 	dbgprintf("dtls_connect[%p]: Starting DTLS session ...\n", pWrkrData);
 	/* Perform handshake */
 	iErr = SSL_connect(pWrkrData->sslClient);
 	if (iErr <= 0) {
-		net_ossl_lastOpenSSLErrorMsg(pData->target, iErr, pWrkrData->sslClient, LOG_INFO,
+		net_ossl.osslLastOpenSSLErrorMsg(pData->target, iErr, pWrkrData->sslClient, LOG_INFO,
 			"dtls_connect", "SSL_connect");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
