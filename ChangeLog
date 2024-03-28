@@ -1,5 +1,14 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2403.0 (aka 2024.04) 2024-04-??
+- 2024-03-28: TLS bugfix: TLS drivers did not properly load under some conditions
+  This was a regeression from the DTLS implementation
+- 2024-03-28: mmdblookup bugfix: do not suspend on incompatible IP lookup
+  Mmdblookup module used to suspend after erroring on an IPv6 IP lookup on IPv4-only
+  DBs. The suspension of the module is now replaced by a simple log message,
+  allowing it to keep working for future lookups.
+  Thanks to Théo Bertin (frikilax) for the patch.
+- 2024-03-28: tarball fix: dist tarball was missing a textbench file
+  This made the testbench fail.
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2402.0 (aka 2024.02) 2024-02-27
 - 2024-02-26: add DTLS support
