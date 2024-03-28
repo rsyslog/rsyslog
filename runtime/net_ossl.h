@@ -83,6 +83,17 @@ BEGINinterface(net_ossl) /* name must also be changed in ENDinterface macro! */
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
 	rsRetVal (*osslCtxInitCookie)(net_ossl_t *pThis);
 #endif // OPENSSL_VERSION_NUMBER >= 0x10100000L
+	// OpenSSL Helper function exports
+	rsRetVal (*osslChkpeername)(net_ossl_t *pThis, X509* certpeer, uchar *fromHostIP);
+	rsRetVal (*osslPeerfingerprint)(net_ossl_t *pThis, X509* certpeer, uchar *fromHostIP);
+	X509* (*osslGetpeercert)(net_ossl_t *pThis, SSL *ssl, uchar *fromHostIP);
+	rsRetVal (*osslChkpeercertvalidity)(net_ossl_t *pThis, SSL *ssl, uchar *fromHostIP);
+	rsRetVal (*osslApplyTlscgfcmd)(net_ossl_t *pThis, uchar *tlscfgcmd);
+	void (*osslSetBioCallback)(BIO *conn);
+	void (*osslSetCtxVerifyCallback)(SSL_CTX *pCtx, int flags);
+	void (*osslSetSslVerifyCallback)(SSL *pSsl, int flags);
+	void (*osslLastOpenSSLErrorMsg)(uchar *fromHost,
+		const int ret, SSL *ssl, int severity, const char* pszCallSource, const char* pszOsslApi);
 ENDinterface(net_ossl)
 
 #define net_osslCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
@@ -133,34 +144,6 @@ void osslGlblInit(void);
 void osslGlblExit(void);
 
 /*-----------------------------------------------------------------------------*/
-
-/* Prototypes for openssl helper functions */
-__attribute__((visibility("default"))) void net_ossl_lastOpenSSLErrorMsg
-	(uchar *fromHost, const int ret, SSL *ssl, int severity, const char* pszCallSource, const char* pszOsslApi);
-__attribute__((visibility("default"))) void net_ossl_set_ssl_verify_callback(SSL *pSsl, int flags);
-__attribute__((visibility("default"))) void net_ossl_set_ctx_verify_callback(SSL_CTX *pCtx, int flags);
-__attribute__((visibility("default"))) void net_ossl_set_bio_callback(BIO *conn);
-__attribute__((visibility("default"))) int net_ossl_verify_callback(int status, X509_STORE_CTX *store);
-__attribute__((visibility("default"))) rsRetVal net_ossl_apply_tlscgfcmd(net_ossl_t *pThis, uchar *tlscfgcmd);
-__attribute__((visibility("default"))) rsRetVal
-	net_ossl_chkpeercertvalidity(net_ossl_t *pThis, SSL *ssl, uchar *fromHostIP);
-__attribute__((visibility("default"))) X509*
-	net_ossl_getpeercert(net_ossl_t *pThis, SSL *ssl, uchar *fromHostIP);
-__attribute__((visibility("default"))) rsRetVal
-	net_ossl_peerfingerprint(net_ossl_t *pThis, X509* certpeer, uchar *fromHostIP);
-__attribute__((visibility("default"))) rsRetVal
-	net_ossl_chkpeername(net_ossl_t *pThis, X509* certpeer, uchar *fromHostIP);
-
-/*
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
-long RSYSLOG_BIO_debug_callback_ex(BIO *bio, int cmd, const char __attribute__((unused)) *argp,
-			   size_t __attribute__((unused)) len, int argi, long __attribute__((unused)) argl,
-			   int ret, size_t __attribute__((unused)) *processed);
-#else
-long RSYSLOG_BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *argp,
-			int argi, long __attribute__((unused)) argl, long ret);
-#endif
-*/
 
 /* prototypes */
 PROTOTYPEObj(net_ossl);
