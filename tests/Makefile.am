@@ -2558,7 +2558,7 @@ EXTRA_DIST= \
 	sndrcv_gzip.sh \
 	imdtls-basic.sh \
 	imdtls-basic-tlscommands.sh \
-	imdtls-basic-timeout \
+	imdtls-basic-timeout.sh \
 	imdtls-error-cert.sh \
 	imdtls-sessionbreak.sh \
 	imdtls-basic-vg.sh \
