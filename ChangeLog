@@ -1,5 +1,32 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2403.0 (aka 2024.04) 2024-04-??
+- 2024-04-02: omhttp patches and enhancement
+  New omhttp plugin configuration parameters added:
+  * restpathtimeout - configures a timeout value for an omhttp restpath, and retry again
+  * httpretrycodes (list) - configurable list of HTTP status codes that should be
+    retried by omhttp plugin. The default behavior is to retry any non 2xx status code.
+  * httpignorablecodes (list) that can specify HTTP status codes that should be ignored
+    (as failures). status codes specified as ignorable code will not be retried.
+  * proxyhost, proxyport - configures a proxy, for which omhttp can use to set up a 
+    HTTP proxy tunnel connection. Also works by reading environment variable if
+    configured HTTP_PROXY. For more details see libcurl docs on CURLOPT_PROXY
+    thanks to @erenwh for the contribution!
+  * retry.addmetadata - when this option is enabled, omhttp will add the
+    response metadata to: $!omhttp!response. There are 3 response metadata added:
+    code, body, batch_index.
+  More statistics omhttp curl statistic counters:
+  * requests.count
+  * requests.status.0xx
+  * requests.status.1xx
+  * requests.status.2xx
+  * requests.status.3xx
+  * requests.status.4xx
+  * requests.status.5xx
+  * requests.bytes
+  * requests.time_ms
+  No longer discard 3xx, 4xx errors
+  see also https://github.com/rsyslog/rsyslog/issues/4636
+  Thanks to github user n2yen for the patches.
 - 2024-04-02: remove CAP_IPC_LOCK capability
   Does not seem to be necessary.
   Thanks to Michael Biebl for the patch.
