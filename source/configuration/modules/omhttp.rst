@@ -149,6 +149,58 @@ An array of strings that defines a list of one or more HTTP headers to send with
     )
 
 
+httpretrycodes
+^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "array", "2xx status codes", "no", "none"
+
+An array of strings that defines a list of one or more HTTP status codes that are retriable by the omhttp plugin. By default non-2xx HTTP status codes are considered retriable.
+
+
+httpignorablecodes
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "array", "none", "no", "none"
+
+An array of strings that defines a list of one or more HTTP status codes that are not retriable by the omhttp plugin.
+
+
+proxyhost
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+Configures `CURLOPT_PROXY` option, for which omhttp can use for HTTP request. For more details see libcurl docs on CURLOPT_PROXY
+
+
+proxyport
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+Configures `CURLOPT_PROXYPORT` option, for which omhttp can use for HTTP request. For more details see libcurl docs on CURLOPT_PROXYPORT
+
+
 uid
 ^^^
 
@@ -201,6 +253,19 @@ dynrestpath
 When this parameter is set to "on" you can specify a template name in the parameter
 restpath instead of the actual path. This way you will be able to use dynamic rest
 paths for your messages based on the template you are using.
+
+
+restpathtimeout
+^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "none", "no", "none"
+
+Timeout value for the configured restpath. 
 
 
 checkpath
@@ -367,6 +432,21 @@ This retry ruleset can recursively call itself as its own retry.ruleset to retry
 Alternatively, the omhttp action in the retry ruleset could be configured to support action.resumeRetryCount as explained above in the retry parameter section. The benefit of this approach is that retried messages still hit the server in a batch format (though with a single message in it), and the ability to configure rsyslog to give up after some number of resume attempts so as to avoid resource exhaustion.
 
 Or, if some data loss or high latency is acceptable, do not configure retries with the retry ruleset itself. A single retry from the original ruleset might catch most failures, and errors from the retry ruleset could still be logged using the errorfile parameter and sent later on via some other process.
+
+
+retry.addmetadata
+^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+When this option is enabled, omhttp will add the response metadata to: `$!omhttp!response`. There are 3 response metadata added: code, body, batch_index.
+
+
 
 ratelimit.interval
 ^^^^^^^^^^^^^^^^^^
@@ -537,6 +617,28 @@ reloadonhup
 
 If this parameter is "on", the plugin will close and reopen any libcurl handles on a HUP signal. This option is primarily intended to enable reloading short-lived certificates without restarting rsyslog.
 
+
+.. _statsname_label:
+
+statsname
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+
+The name assigned to statistics specific to this action instance. The supported set of
+statistics tracked for this action instance are **submitted**, **acked**, **failures**.
+See the :ref:`_statistic_counter_label` section for more details.
+
+
+
+.. _statistic_counter_label:
+
 Statistic Counter
 =================
 
@@ -560,6 +662,29 @@ accumulates all action instances. The statistic origin is named "omhttp" with fo
 - **request.status.success** - Number of requests returning 1XX or 2XX HTTP status codes.
 
 - **request.status.fail** - Number of requests returning 3XX, 4XX, or 5XX HTTP status codes. If a requests fails (i.e. server not reachable) this counter will *not* be incremented.
+
+
+Additionally, the following statistics can also be configured for a specific action instances. See :ref:`_statsname_label` for more details.
+
+- **requests.count** - Number of requests 
+
+- **requests.status.0xx** - Number of failed requests. 0xx errors indicate request never reached destination.
+
+- **requests.status.1xx** - Number of HTTP requests returing 1xx status codes
+
+- **requests.status.2xx** - Number of HTTP requests returing 2xx status codes
+
+- **requests.status.3xx** - Number of HTTP requests returing 3xx status codes
+
+- **requests.status.4xx** - Number of HTTP requests returing 4xx status codes
+
+- **requests.status.5xx** - Number of HTTP requests returing 5xx status codes
+
+- **requests.bytes** - Total number of bytes sent - derived from CURLINFO_REQUEST_SIZE.
+
+- **requests.time_ms** - Total accumulated request time in milliseconds - derived from CURLINFO_TOTAL_TIME.
+
+
 
 Message Batching
 ================
