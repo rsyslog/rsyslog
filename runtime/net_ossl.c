@@ -59,7 +59,9 @@ void net_ossl_set_ssl_verify_callback(SSL *pSsl, int flags);
 void net_ossl_set_ctx_verify_callback(SSL_CTX *pCtx, int flags);
 void net_ossl_set_bio_callback(BIO *conn);
 int net_ossl_verify_callback(int status, X509_STORE_CTX *store);
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)
 rsRetVal net_ossl_apply_tlscgfcmd(net_ossl_t *pThis, uchar *tlscfgcmd);
+#endif // OPENSSL_VERSION_NUMBER >= 0x10002000L
 rsRetVal net_ossl_chkpeercertvalidity(net_ossl_t *pThis, SSL *ssl, uchar *fromHostIP);
 X509* net_ossl_getpeercert(net_ossl_t *pThis, SSL *ssl, uchar *fromHostIP);
 rsRetVal net_ossl_peerfingerprint(net_ossl_t *pThis, X509* certpeer, uchar *fromHostIP);
@@ -472,6 +474,7 @@ void net_ossl_lastOpenSSLErrorMsg
 	}
 }
 
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)
 /* initialize tls config commands in openssl context
  */
 rsRetVal net_ossl_apply_tlscgfcmd(net_ossl_t *pThis, uchar *tlscfgcmd)
@@ -557,7 +560,7 @@ rsRetVal net_ossl_apply_tlscgfcmd(net_ossl_t *pThis, uchar *tlscfgcmd)
 finalize_it:
 	RETiRet;
 }
-
+#endif // OPENSSL_VERSION_NUMBER >= 0x10002000L
 
 /* Convert a fingerprint to printable data. The  conversion is carried out
  * according IETF I-D syslog-transport-tls-12. The fingerprint string is
@@ -1195,7 +1198,9 @@ CODESTARTobjQueryInterface(net_ossl)
 	pIf->osslPeerfingerprint	= net_ossl_peerfingerprint;
 	pIf->osslGetpeercert		= net_ossl_getpeercert;
 	pIf->osslChkpeercertvalidity	= net_ossl_chkpeercertvalidity;
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)
 	pIf->osslApplyTlscgfcmd		= net_ossl_apply_tlscgfcmd;
+#endif // OPENSSL_VERSION_NUMBER >= 0x10002000L
 	pIf->osslSetBioCallback		= net_ossl_set_bio_callback;
 	pIf->osslSetCtxVerifyCallback	= net_ossl_set_ctx_verify_callback;
 	pIf->osslSetSslVerifyCallback	= net_ossl_set_ssl_verify_callback;

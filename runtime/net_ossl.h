@@ -88,7 +88,9 @@ BEGINinterface(net_ossl) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*osslPeerfingerprint)(net_ossl_t *pThis, X509* certpeer, uchar *fromHostIP);
 	X509* (*osslGetpeercert)(net_ossl_t *pThis, SSL *ssl, uchar *fromHostIP);
 	rsRetVal (*osslChkpeercertvalidity)(net_ossl_t *pThis, SSL *ssl, uchar *fromHostIP);
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)
 	rsRetVal (*osslApplyTlscgfcmd)(net_ossl_t *pThis, uchar *tlscfgcmd);
+#endif // OPENSSL_VERSION_NUMBER >= 0x10002000L
 	void (*osslSetBioCallback)(BIO *conn);
 	void (*osslSetCtxVerifyCallback)(SSL_CTX *pCtx, int flags);
 	void (*osslSetSslVerifyCallback)(SSL *pSsl, int flags);
