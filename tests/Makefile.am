@@ -2614,6 +2614,7 @@ EXTRA_DIST= \
 	testsuites/htpasswd \
 	omhttp-auth.sh \
 	omhttp-basic.sh \
+	omhttp-basic-ignorecodes.sh \
 	omhttp-batch-fail-with-400.sh \
 	omhttp-batch-jsonarray-compress.sh \
 	omhttp-batch-jsonarray-retry.sh \
@@ -2624,6 +2625,11 @@ EXTRA_DIST= \
 	omhttp-batch-lokirest.sh \
 	omhttp-batch-lokirest-vg.sh \
 	omhttp-batch-newline.sh \
+	omhttp-batch-retry-metadata.sh \
+	omhttp-retry-timeout.sh \
+	omhttp-basic-ignorecodes-vg.sh \
+	omhttp-batch-retry-metadata-vg.sh \
+	omhttp-retry-timeout-vg.sh \
 	omhttp-retry.sh \
 	omhttp-httpheaderkey.sh \
 	omhttp-multiplehttpheaders.sh \
