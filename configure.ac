@@ -2510,7 +2510,7 @@ AC_ARG_ENABLE(imdtls,
         [enable_imdtls=no]
 )
 if test "x$enable_imdtls" = "xyes"; then
-	PKG_CHECK_MODULES(OPENSSL, openssl)
+        PKG_CHECK_MODULES(OPENSSL, openssl >= 1.1.0)
 fi
 AM_CONDITIONAL(ENABLE_IMDTLS, test x$enable_imdtls = xyes)
 # END IMDTLS INPUT
@@ -2527,7 +2527,7 @@ AC_ARG_ENABLE(omdtls,
         [enable_omdtls=no]
 )
 if test "x$enable_omdtls" = "xyes"; then
-	PKG_CHECK_MODULES(OPENSSL, openssl)
+	PKG_CHECK_MODULES(OPENSSL, openssl >= 1.0.2)
 fi
 AM_CONDITIONAL(ENABLE_OMDTLS, test x$enable_omdtls = xyes)
 # END OMDTLS INPUT
