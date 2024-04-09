@@ -163,7 +163,7 @@ typedef struct instanceConf_s {
 	statsobj_t *stats;
 	STATSCOUNTER_DEF(ctrHttpRequestsCount, mutCtrHttpRequestsCount); // Number of attempted HTTP requests
 	STATSCOUNTER_DEF(httpRequestsBytes, mutHttpRequestsBytes);
-	STATSCOUNTER_DEF(httpRequestsTimeMs, muthttphttpRequestsTimeMs);
+	STATSCOUNTER_DEF(httpRequestsTimeMs, mutHttpRequestsTimeMs);
 	STATSCOUNTER_DEF(ctrHttpRequestsStatus0xx, mutCtrHttpRequestsStatus0xx); // HTTP requests returning 0xx
 	STATSCOUNTER_DEF(ctrHttpRequestsStatus1xx, mutCtrHttpRequestsStatus1xx); // HTTP requests returning 1xx
 	STATSCOUNTER_DEF(ctrHttpRequestsStatus2xx, mutCtrHttpRequestsStatus2xx); // HTTP requests returning 2xx
@@ -1287,7 +1287,7 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls
 	curlCode = curl_easy_perform(curl);
 	DBGPRINTF("omhttp: curlPost curl returned %lld\n", (long long) curlCode);
 	STATSCOUNTER_INC(ctrHttpRequestCount, mutCtrHttpRequestCount);
-	STATSCOUNTER_INC(pWrkrData->pData->ctrHttpRequestsCount, pWorkerData->pData->mutCtrHttpRequestsCount);
+	STATSCOUNTER_INC(pWrkrData->pData->ctrHttpRequestsCount, pWrkrData->pData->mutCtrHttpRequestsCount);
 
 	if (curlCode != CURLE_OK) {
 		STATSCOUNTER_INC(ctrHttpRequestFail, mutCtrHttpRequestFail);
