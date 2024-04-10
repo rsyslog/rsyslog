@@ -123,7 +123,7 @@ static struct cache_s {
 	struct hashtable *mdHt;
 	struct hashtable *nsHt;
 	pthread_mutex_t *cacheMtx;
-	int lastBusyTime; /* when we got the last busy response from kubernetes */
+	time_t lastBusyTime; /* when we got the last busy response from kubernetes */
 	time_t expirationTime; /* if cache expiration checking is enable, time to check for expiration */
 } **caches;
 
