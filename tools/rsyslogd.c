@@ -3,7 +3,7 @@
  * because it was either written from scratch by me (rgerhards) or
  * contributors who agreed to ASL 2.0.
  *
- * Copyright 2004-2023 Rainer Gerhards and Adiscon
+ * Copyright 2004-2024 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
@@ -995,6 +995,15 @@ logmsgInternalSubmit(const int iErr, const syslog_pri_t pri, const size_t lenMsg
 	smsg_t *pMsg;
 	DEFiRet;
 
+	if(glblAbortOnProgramError && iErr == RS_RET_PROGRAM_ERROR) {
+		fprintf(stderr, "\n\n\n========================================\n"
+			"rsyslog reports program error: %s\n"
+			"rsyslog is configured to abort in this case, "
+			"this will be done now\n", msg);
+		fflush(stdout);
+		abort();
+	}
+
 	CHKiRet(msgConstruct(&pMsg));
 	MsgSetInputName(pMsg, pInternalInputName);
 	MsgSetRawMsg(pMsg, (char*)msg, lenMsg);
@@ -1012,6 +1021,7 @@ logmsgInternalSubmit(const int iErr, const syslog_pri_t pri, const size_t lenMsg
 		pszTag[32] = '\0'; /* just to make sure... */
 		MsgSetTAG(pMsg, pszTag, len);
 	}
+
 	flags |= INTERNAL_MSG;
 	pMsg->msgFlags  = flags;
 	msgSetPRI(pMsg, pri);
@@ -1060,7 +1070,8 @@ logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int fla
 	 * permits us to process unmodified config files which otherwise contain a
 	 * supressor statement.
 	 */
-	int emit_to_stderr = (ourConf == NULL) ? 1 : ourConf->globals.bErrMsgToStderr;
+	int emit_to_stderr = (ourConf == NULL) ? 1
+		: (ourConf->globals.bErrMsgToStderr ||  ourConf->globals.bAllMsgToStderr);
 	int emit_supress_msg = 0;
 	if(Debug == DEBUG_FULL || !doFork) {
 		emit_to_stderr = 1;
@@ -1075,7 +1086,7 @@ logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int fla
 		}
 	}
 	if(emit_to_stderr || iConfigVerify) {
-		if(pri2sev(pri) == LOG_ERR)
+		if((ourConf != NULL && ourConf->globals.bAllMsgToStderr) || pri2sev(pri) == LOG_ERR)
 			fprintf(stderr, "rsyslogd: %s\n",
 				(bufModMsg == NULL) ? (char*)msg : bufModMsg);
 	}

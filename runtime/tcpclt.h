@@ -36,7 +36,6 @@ typedef struct tcpclt_s {
 	short bResendLastOnRecon; /* should the last message be resent on a successful reconnect? */
 	size_t lenPrevMsg;
 	/* session specific callbacks */
-	int iRebindInterval;	/* how often should the send socket be rebound? */
 	int iNumMsgs;		/* number of messages during current "rebind session" */
 	rsRetVal (*initFunc)(void*);
 	rsRetVal (*sendFunc)(void*, char*, size_t);
@@ -57,12 +56,10 @@ BEGINinterface(tcpclt) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetSendFrame)(tcpclt_t*, rsRetVal (*)(void*, char*, size_t));
 	rsRetVal (*SetSendPrepRetry)(tcpclt_t*, rsRetVal (*)(void*));
 	rsRetVal (*SetFraming)(tcpclt_t*, TCPFRAMINGMODE framing);
-	/* v3, 2009-07-14*/
-	rsRetVal (*SetRebindInterval)(tcpclt_t*, int iRebindInterval);
 	/* v4, 2017-06-10*/
 	rsRetVal (*SetFramingDelimiter)(tcpclt_t*, uchar tcp_framingDelimiter);
 ENDinterface(tcpclt)
-#define tcpcltCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
+#define tcpcltCURR_IF_VERSION 5 /* increment whenever you change the interface structure! */
 
 
 /* prototypes */
@@ -72,5 +69,3 @@ PROTOTYPEObj(tcpclt);
 #define LM_TCPCLT_FILENAME "lmtcpclt"
 
 #endif /* #ifndef TCPCLT_H_INCLUDED */
-/* vim:set ai:
- */

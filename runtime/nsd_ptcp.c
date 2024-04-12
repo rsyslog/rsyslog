@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for plain tcp sockets.
  *
- * Copyright 2007-2019 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2024 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -124,11 +124,11 @@ GetSock(nsd_t *pNsd, int *pSock)
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
 	DEFiRet;
 
-	ISOBJ_TYPE_assert((pThis), nsd_ptcp);
-	assert(pSock != NULL);
+	NULL_CHECK(pSock);
 
 	*pSock = pThis->sock;
 
+finalize_it:
 	RETiRet;
 }
 
@@ -470,14 +470,13 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	assert(ppNew != NULL);
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
 
-	iNewSock = accept(pThis->sock, (struct sockaddr*) &addr, &addrlen);
+	do {
+		iNewSock = accept(pThis->sock, (struct sockaddr*) &addr, &addrlen);
+	} while(iNewSock < 0 && (errno == EINTR || errno == EAGAIN));
+
 	if(iNewSock < 0) {
-		if(Debug) {
-			char errStr[1024];
-			rs_strerror_r(errno, errStr, sizeof(errStr));
-			dbgprintf("nds_ptcp: error accepting connection on socket %d, errno %d: %s\n",
-				  pThis->sock, errno, errStr);
-		}
+		LogMsg(errno, RS_RET_ACCEPT_ERR, LOG_WARNING,
+			"nds_ptcp: error accepting connection on socket %d", pThis->sock);
 		ABORT_FINALIZE(RS_RET_ACCEPT_ERR);
 	}
 
@@ -647,10 +646,7 @@ LstnInit(netstrms_t *const pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*
 		#endif
 		   ) {
 			/* TODO: check if *we* bound the socket - else we *have* an error! */
-			char errStr[1024];
-			rs_strerror_r(errno, errStr, sizeof(errStr));
 			LogError(errno, NO_ERRCODE, "Error while binding tcp socket");
-			dbgprintf("error %d while binding tcp socket: %s\n", errno, errStr);
 			close(sock);
 			sock = -1;
 			continue;
@@ -1017,13 +1013,19 @@ CheckConnection(nsd_t *pNsd)
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
 
 	rc = recv(pThis->sock, msgbuf, 1, MSG_DONTWAIT | MSG_PEEK);
+
 	if(rc == 0) {
-		dbgprintf("CheckConnection detected broken connection - closing it (rc %d, errno %d)\n", rc, errno);
-		/* in this case, the remote peer had shut down the connection and we
-		 * need to close our side, too.
-		 */
+		LogMsg(0, RS_RET_IO_ERROR, LOG_INFO,
+			"ptcp network driver: CheckConnection detected that peer closed connection.");
 		sockClose(&pThis->sock);
-		ABORT_FINALIZE(RS_RET_IO_ERROR);
+		ABORT_FINALIZE(RS_RET_PEER_CLOSED_CONN);
+	} else if(rc < 0) {
+		if(errno != EINTR && errno != EAGAIN && errno != EWOULDBLOCK) {
+			LogMsg(errno, RS_RET_IO_ERROR, LOG_ERR,
+				"ptcp network driver: CheckConnection detected broken connection");
+			sockClose(&pThis->sock);
+			ABORT_FINALIZE(RS_RET_IO_ERROR);
+		}
 	}
 finalize_it:
 	RETiRet;
