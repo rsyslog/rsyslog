@@ -1,4 +1,4 @@
-#!/bin/bash
+
 # 
 # this shell script provides commands to the common diag system. It enables
 # test scripts to wait for certain conditions and initiate certain actions.
@@ -599,6 +599,22 @@ assign_file_content() {
 	fi
 	eval export $1="$content"
 	printf 'exported: %s=%s\n' $1 "$content"
+}
+
+# start a minitcpsrvr with the regular parameters
+# $1 is the output file name
+# $2 is the instance name (1, 2)
+start_minitcpsrvr() {
+	instance=${2:-1}
+	./minitcpsrv -t127.0.0.1 -p 0 -P "$RSYSLOG_DYNNAME.minitcpsrvr_port$instance" -f "$1" &
+	BGPROCESS=$!
+	wait_file_exists "$RSYSLOG_DYNNAME.minitcpsrvr_port$instance"
+	if [ "$instance" == "1" ]; then
+		export MINITCPSRVR_PORT1="$(cat $RSYSLOG_DYNNAME.minitcpsrvr_port$instance)"
+	else
+		export MINITCPSRVR_PORT2="$(cat $RSYSLOG_DYNNAME.minitcpsrvr_port$instance)"
+	fi
+	echo "### background minitcpsrv process id is $BGPROCESS port $(cat $RSYSLOG_DYNNAME.minitcpsrvr_port$instance) ###"
 }
 
 # same as startup_vg, BUT we do NOT wait on the startup message!

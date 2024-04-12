@@ -25,12 +25,16 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
+#include <poll.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #if defined(__FreeBSD__)
 #include <netinet/in.h>
 #endif
+
+#define MAX_CONNECTIONS 10
+#define BUFFER_SIZE 1024
 
 static void
 errout(char *reason)
@@ -42,14 +46,13 @@ errout(char *reason)
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: minitcpsrvr -t ip-addr -p port -f outfile\n");
+	fprintf(stderr, "usage: minitcpsrvr -t ip-addr -p port -P portFile -f outfile\n");
 	exit (1);
 }
 
 int
 main(int argc, char *argv[])
 {
-	int fds;
 	int fdc;
 	int fdf = -1;
 	struct sockaddr_in srvAddr;
@@ -62,8 +65,17 @@ main(int argc, char *argv[])
 	int sleeptime = 0;
 	char *targetIP = NULL;
 	int targetPort = -1;
+	char *portFileName = NULL;
+	size_t totalWritten = 0;
+	int listen_fd, conn_fd, fd, file_fd, nfds, port = 8080;
+	struct sockaddr_in server_addr;
+	struct pollfd fds[MAX_CONNECTIONS + 1]; // +1 for the listen socket
+	char buffer[MAX_CONNECTIONS][BUFFER_SIZE];
+	int buffer_offs[MAX_CONNECTIONS];
+	memset(fds, 0, sizeof(fds));
+	memset(buffer_offs, 0, sizeof(buffer_offs));
 
-	while((opt = getopt(argc, argv, "t:p:f:s:")) != -1) {
+	while((opt = getopt(argc, argv, "t:p:P:f:s:")) != -1) {
 		switch (opt) {
 		case 's':
 			sleeptime = atoi(optarg);
@@ -74,10 +86,14 @@ main(int argc, char *argv[])
 		case 'p':
 			targetPort = atoi(optarg);
 			break;
+		case 'P':
+			portFileName = optarg;
+			break;
 		case 'f':
 			if(!strcmp(optarg, "-")) {
 				fdf = 1;
 			} else {
+				fprintf(stderr, "writing to file %s\n", optarg);
 				fdf = open(optarg, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR|S_IWUSR);
 				if(fdf == -1) errout(argv[3]);
 			}
@@ -108,6 +124,7 @@ main(int argc, char *argv[])
 		printf("minitcpsrv: end sleep\n");
 	}
 
+#if 0
 	fds = socket(AF_INET, SOCK_STREAM, 0);
 	srvAddr.sin_family = AF_INET;
 	srvAddr.sin_addr.s_addr = inet_addr(targetIP);
@@ -118,14 +135,175 @@ main(int argc, char *argv[])
 	if(listen(fds, 20) != 0) errout("listen");
 	cliAddrLen = sizeof(cliAddr);
 
+	if(portFileName != NULL) {
+		FILE *fp;
+		if (getsockname(fds, (struct sockaddr*)&srvAddr, &srvAddrLen) == -1) {
+			errout("getsockname");
+		}
+		if((fp = fopen(portFileName, "w+")) == NULL) {
+			errout(portFileName);
+		}
+		fprintf(fp, "%d", ntohs(srvAddr.sin_port));
+		fclose(fp);
+	}
+
 	fdc = accept(fds, (struct sockaddr *)&cliAddr, &cliAddrLen);
 	while(1) {
 		nRead = read(fdc, wrkBuf, sizeof(wrkBuf));
 		if(nRead == 0) break;
 		if(write(fdf, wrkBuf, nRead) != nRead)
 			errout("write");
+		totalWritten += nRead;
 	}
+#endif
+
+
+
+/* -------------------------------------------------- */
+	// Create listen socket
+	listen_fd = socket(AF_INET, SOCK_STREAM, 0);
+	if (listen_fd < 0) {
+		errout("Failed to create listen socket");
+	}
+
+	memset(&server_addr, 0, sizeof(server_addr));
+	server_addr.sin_family = AF_INET;
+	server_addr.sin_addr.s_addr = inet_addr(targetIP); //htonl(INADDR_ANY);
+	server_addr.sin_port = htons(targetPort);
+	srvAddrLen = sizeof(server_addr);
+
+	if (bind(listen_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+		errout("bind");
+	}
+
+	if (listen(listen_fd, MAX_CONNECTIONS) < 0) {
+		errout("Listen failed");
+	}
+
+	if(portFileName != NULL) {
+		FILE *fp;
+		if (getsockname(listen_fd, (struct sockaddr*)&srvAddr, &srvAddrLen) == -1) {
+			errout("getsockname");
+		}
+		if((fp = fopen(portFileName, "w+")) == NULL) {
+			errout(portFileName);
+		}
+		fprintf(fp, "%d", ntohs(srvAddr.sin_port));
+		fclose(fp);
+	}
+
+	fds[0].fd = listen_fd;
+	fds[0].events = POLLIN;
+
+	nfds = 1;
+
+	while (1) {
+		int poll_count = poll(fds, nfds, -1); // -1 means no timeout
+		if (poll_count < 0) {
+			errout("poll");
+		}
+
+		
+				//fprintf(stderr, "total written %zu\n", totalWritten);
+
+		for (int i = 0; i < nfds; i++) {
+			if (fds[i].revents == 0) continue;
+
+			if (fds[i].revents != POLLIN) {
+				fprintf(stderr, "Error! revents = %d\n", fds[i].revents);
+				exit(EXIT_FAILURE);
+			}
+
+			if (fds[i].fd == listen_fd) {
+				// Accept new connection
+				fprintf(stderr, "NEW CONNECT\n");
+				conn_fd = accept(listen_fd, (struct sockaddr *)NULL, NULL);
+				if (conn_fd < 0) {
+					perror("Accept failed");
+					continue;
+				}
+
+				fds[nfds].fd = conn_fd;
+				fds[nfds].events = POLLIN;
+				nfds++;
+			} else {
+				// Handle data from a client
+				fd = fds[i].fd;
+				const size_t bytes_to_read = sizeof(buffer[i]) - buffer_offs[i] - 1;
+				int read_bytes = read(fd, &(buffer[i][buffer_offs[i]]), bytes_to_read);
+				//buffer[i][buffer_offs[i] +read_bytes]='\0';fprintf(stderr, "bytes_to_read %zu, read_bytes %d, buffer_offs %d - data:\n%s\n", bytes_to_read, read_bytes, buffer_offs[i], buffer[i]);
+				if (read_bytes < 0) {
+					perror("Read error");
+					close(fd);
+					fds[i].fd = -1; // Remove from poll set
+				} else if (read_bytes == 0) {
+						// Connection closed
+						close(fd);
+						fds[i].fd = -1; // Remove from poll set
+					} else {
+						const int last_byte = read_bytes + buffer_offs[i] - 1; // last valid char in rcv buffer
+						int last_lf = last_byte;
+						while(last_lf > -1 && buffer[i][last_lf] != '\n') {
+							--last_lf;
+						}
+						if(last_lf == -1) { /* no LF found at all */
+							buffer_offs[i] = last_byte;
+						} else {
+							const int bytes_to_write = last_lf + 1;
+							//fprintf(stderr, "last_lf %d, bytes_to_write %d, read_bytes %d, last_byte: %d\n", last_lf, bytes_to_write, read_bytes, last_byte);
+
+							const int written_bytes = write(fdf, buffer[i], bytes_to_write);
+							if(written_bytes != bytes_to_write)
+								errout("write");
+							totalWritten += bytes_to_write;
+							if(bytes_to_write == last_byte + 1) {
+								buffer_offs[i] = 0;
+							} else {
+								/* keep data in buffer, move it to start
+								 * and adjust offset.
+								 */
+								int unfinished_bytes = last_byte - bytes_to_write + 1;
+								//fprintf(stderr, "mmemmove: unfinished bytes %d, bytes_to_write %d\n", unfinished_bytes, bytes_to_write);
+								memmove(buffer[i], &(buffer[i][bytes_to_write]),
+									unfinished_bytes);
+								buffer_offs[i] = unfinished_bytes;
+								//buffer[i][buffer_offs[i]] = '\0';fprintf(stderr, "have partial message left, connection %d, %d characters, offs now %d - data: %s\n", i, unfinished_bytes, buffer_offs[i], buffer[i]);
+							}
+						}
+						#if 0
+						buffer[read_bytes] = '\0';
+						char *line = strtok(buffer, "\n");
+						while (line != NULL) {
+							fprintf(stderr, "writing %d: %zu: %s\n", fdf, strlen(line), line);
+							const int r = write(fdf, line, strlen(line));
+							if(r != strlen(line))
+								errout("write");
+							fprintf(stderr, "writing done %d\n", r);
+							totalWritten += nRead;
+							//dprintf(file_fd, "%s\n", line);
+							line = strtok(NULL, "\n");
+						}
+						#endif
+					}
+				}
+			}
+
+		// Compact the array of monitored file descriptors
+		for (int i = 0; i < nfds; i++) {
+			if (fds[i].fd == -1) {
+				for (int j = i; j < nfds - 1; j++) {
+				fds[j] = fds[j + 1];
+				}
+			i--;
+			nfds--;
+			}
+		}
+		// terminate if all connections have been closed
+		if(nfds == 1)
+			break;
+	}
+/* -------------------------------------------------- */
 	/* let the OS do the cleanup */
-	fprintf(stderr, "minitcpsrv terminates itself\n");
+	fprintf(stderr, "minitcpsrv on port %d terminates itself, %zu bytes written\n", targetPort, totalWritten);
 	return 0;
 }

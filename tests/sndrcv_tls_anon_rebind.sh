@@ -3,6 +3,9 @@
 # rgerhards, 2011-04-04
 # This file is part of the rsyslog project, released  under GPLv3
 . ${srcdir:=.}/diag.sh init
+
+export NUMMESSAGES=25000 #25000
+
 # uncomment for debugging support:
 # start up the instances
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
@@ -31,6 +34,7 @@ $template dynfile,"'$RSYSLOG_OUT_LOG'" # trick to use relative path names!
 startup
 export PORT_RCVR=$TCPFLOOD_PORT # save this, will be rewritten with next config
 
+#export RSYSLOG_DEBUG="debug nostdout"
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2
@@ -52,7 +56,7 @@ startup 2
 
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
-injectmsg2 1 25000
+injectmsg2 1 $NUMMESSAGES
 # shut down sender when everything is sent, receiver continues to run concurrently
 shutdown_when_empty 2
 wait_shutdown 2
@@ -60,5 +64,5 @@ wait_shutdown 2
 shutdown_when_empty
 wait_shutdown
 
-seq_check 1 25000
+seq_check 1 $NUMMESSAGES
 exit_test

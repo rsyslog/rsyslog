@@ -207,6 +207,10 @@ TESTS +=  \
 	nested-call-shutdown.sh \
 	dnscache-TTL-0.sh \
 	invalid_nested_include.sh \
+	omfwd-lb-susp.sh \
+	omfwd-lb-2target-basic.sh \
+	omfwd-lb-2target-retry.sh \
+	omfwd-lb-2target-one_fail.sh \
 	omfwd-tls-invalid-permitExpiredCerts.sh \
 	omfwd-keepalive.sh \
 	omusrmsg-errmsg-no-params.sh \
@@ -1162,6 +1166,7 @@ TESTS +=  \
 	stats-json-es.sh \
 	dynstats_reset_without_pstats_reset.sh \
 	dynstats_prevent_premature_eviction.sh \
+	omfwd-lb-2target-impstats.sh \
 	omfwd_fast_imuxsock.sh \
 	omfwd_impstats-udp.sh \
 	omfwd_impstats-tcp.sh
@@ -2134,6 +2139,11 @@ EXTRA_DIST= \
 	rscript_set_modify.sh \
 	stop-localvar.sh \
 	stop-msgvar.sh \
+	omfwd-lb-susp.sh \
+	omfwd-lb-2target-basic.sh \
+	omfwd-lb-2target-impstats.sh \
+	omfwd-lb-2target-retry.sh \
+	omfwd-lb-2target-one_fail.sh \
 	omfwd-tls-invalid-permitExpiredCerts.sh \
 	omfwd-keepalive.sh \
 	omfwd_fast_imuxsock.sh \

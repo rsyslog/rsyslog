@@ -3,7 +3,7 @@
  * This is the implementation of TCP-based syslog clients (the counterpart
  * of the tcpsrv class).
  *
- * Copyright 2007-2018 Adiscon GmbH.
+ * Copyright 2007-2024 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -298,12 +298,6 @@ Send(tcpclt_t *pThis, void *pData, char *msg, size_t len)
 
 	CHKiRet(TCPSendBldFrame(pThis, &msg, &len, &bMsgMustBeFreed));
 
-	if(pThis->iRebindInterval > 0  && ++pThis->iNumMsgs == pThis->iRebindInterval) {
-		/* we need to rebind, and use the retry logic for this*/
-		CHKiRet(pThis->prepRetryFunc(pData)); /* try to recover */
-		pThis->iNumMsgs = 0;
-	}
-
 	while(!bDone) { /* loop is broken when send succeeds or error occurs */
 		CHKiRet(pThis->initFunc(pData));
 		iRet = pThis->sendFunc(pData, msg, len);
@@ -402,14 +396,6 @@ SetFramingDelimiter(tcpclt_t *pThis, uchar tcp_framingDelimiter)
 	pThis->tcp_framingDelimiter = tcp_framingDelimiter;
 	RETiRet;
 }
-static rsRetVal
-SetRebindInterval(tcpclt_t *pThis, int iRebindInterval)
-{
-	DEFiRet;
-	pThis->iRebindInterval = iRebindInterval;
-	RETiRet;
-}
-
 
 /* Standard-Constructor
  */
@@ -468,7 +454,6 @@ CODESTARTobjQueryInterface(tcpclt)
 	pIf->SetSendPrepRetry = SetSendPrepRetry;
 	pIf->SetFraming = SetFraming;
 	pIf->SetFramingDelimiter = SetFramingDelimiter;
-	pIf->SetRebindInterval = SetRebindInterval;
 
 finalize_it:
 ENDobjQueryInterface(tcpclt)
@@ -518,8 +503,3 @@ CODESTARTmodInit
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(tcpcltClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit
-
-
-/*
- * vi:set ai:
- */
