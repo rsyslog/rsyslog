@@ -123,7 +123,7 @@ static struct cache_s {
 	struct hashtable *mdHt;
 	struct hashtable *nsHt;
 	pthread_mutex_t *cacheMtx;
-	int lastBusyTime; /* when we got the last busy response from kubernetes */
+	time_t lastBusyTime; /* when we got the last busy response from kubernetes */
 	time_t expirationTime; /* if cache expiration checking is enable, time to check for expiration */
 } **caches;
 
@@ -1722,8 +1722,9 @@ queryKB(wrkrInstanceData_t *pWrkrData, char *url, time_t now, struct json_object
 		now -= pWrkrData->pData->cache->lastBusyTime;
 		if (now < pWrkrData->pData->busyRetryInterval) {
 			LogMsg(0, RS_RET_RETRY, LOG_DEBUG,
-				"mmkubernetes: Waited [%ld] of [%d] seconds for the requested url [%s]\n",
-				now, pWrkrData->pData->busyRetryInterval, url);
+				"mmkubernetes: Waited [%"PRId64"] of [%d] seconds for "
+				"the requested url [%s]\n",
+				(int64_t) now, pWrkrData->pData->busyRetryInterval, url);
 			ABORT_FINALIZE(RS_RET_RETRY);
 		} else {
 			LogMsg(0, RS_RET_OK, LOG_DEBUG,

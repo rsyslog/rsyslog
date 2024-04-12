@@ -857,13 +857,16 @@ detect_updates(fs_edge_t *const edge)
 				sbool is_file = act->edge->is_file;
 				if (!is_file || act->time_to_delete + FILE_DELETE_DELAY < ttNow) {
 				DBGPRINTF("detect_updates obj gone away, unlinking: "
-					"'%s', ttDelete: %lds, ttNow:%ld isFile: %d\n",
-					act->name, ttNow - (act->time_to_delete + FILE_DELETE_DELAY), ttNow, is_file);
+					"'%s', ttDelete: %"PRId64"s, ttNow:%"PRId64" isFile: %d\n",
+					act->name, (int64_t) ttNow - (act->time_to_delete + FILE_DELETE_DELAY),
+					(int64_t) ttNow, is_file);
 					act_obj_unlink(act);
 					restart = 1;
 				} else {
-				DBGPRINTF("detect_updates obj gone away, keep '%s' open: %ld/%ld/%lds!\n",
-					act->name, act->time_to_delete, ttNow, ttNow - act->time_to_delete);
+				DBGPRINTF("detect_updates obj gone away, keep '%s' "
+					"open: %"PRId64"/%"PRId64"/%"PRId64"s!\n",
+					act->name, (int64_t) act->time_to_delete, (int64_t) ttNow,
+						(int64_t) ttNow - act->time_to_delete);
 					pollFile(act);
 				}
 			}
