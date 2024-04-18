@@ -1,5 +1,24 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2406.0 (aka 2024.06) 2024-06-??
+- 2024-04-12: bugfixes related to time_t on 32 bit platforms (y38k isue)
+  Thanks to Michael Biebl for the patch.
+- 2024-04-18: [o|i]mprog/mmexternal bugfix: invalid command line parameter passing
+  Quoted command line parameters were incorrectly passed to the called program. This
+  resulted in unexpected behaviour. For example, in
+  bash -c "echo test"
+  bash got passed parameters '-c" and '"echo test"'. Note the double quotes in
+  '"echo test"'. These needed to be removed by Unix/Linux standards but were instead
+  passed to bash. That in turn resulted in invalid execution. With the fix, the
+  behaviour is now correct. Now, bash gets passed '-c' and 'echo test'.
+  This actually is a BREAKING CHANGE. However, it was outright wrong behaviour from
+  the beginning. We assume that people either never noticed it (because they did not
+  use quoted parameters) or used some workaroud, likely a "starter script", which
+  performed the right task. As such, we do expect that only a very limited set of
+  installations might be affected by the change.
+  Even more important, we would need to change the default behaviour in any case,
+  because the previous handling was obviosuly unacceptable. As such, there was no
+  way to keep rsyslog perform the previous action.
+  Thanks to Paul Fertser for the patch.
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2404.0 (aka 2024.04) 2024-04-02
 - 2024-04-02: omhttp patches and enhancement
