@@ -26,7 +26,8 @@ template(name="outfmt" type="string" string="%msg%\n")
 :msg, contains, "msgnum:" {
     action(
         type="omprog"
-	    binary=`echo $srcdir/testsuites/omprog-defaults-bin.sh p1 p2 p3`
+	    binary="'$srcdir'/testsuites/omprog-defaults-bin.sh \"p1 with spaces\"'\
+' p2 \"\" --p4=\"middle quote\" \"--p6=\"proper middle quote\"\" \"p7 is last\""
         template="outfmt"
         name="omprog_action"
     )
@@ -37,7 +38,14 @@ injectmsg 0 10
 shutdown_when_empty
 wait_shutdown
 
-export EXPECTED="Starting with parameters: p1 p2 p3
+export EXPECTED="Starting with parameters: p1 with spaces p2  --p4=\"middle quote\" --p6=\"proper middle quote\" p7 is last
+Next parameter is \"p1 with spaces\"
+Next parameter is \"p2\"
+Next parameter is \"\"
+Next parameter is \"--p4=\"middle\"
+Next parameter is \"quote\"\"
+Next parameter is \"--p6=\"proper middle quote\"\"
+Next parameter is \"p7 is last\"
 Received msgnum:00000000:
 Received msgnum:00000001:
 Received msgnum:00000002:
