@@ -219,7 +219,7 @@ finalize_it:
 
 void rsCStrDestruct(cstr_t **const ppThis)
 {
-	free((*ppThis)->pBuf);
+	if ((*ppThis)->pBuf) free((*ppThis)->pBuf);
 	RSFREEOBJ(*ppThis);
 	*ppThis = NULL;
 }
