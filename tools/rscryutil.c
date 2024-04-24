@@ -32,11 +32,19 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "rsyslog.h"
+#include "libcry_common.h"
+
 
 #ifdef ENABLE_LIBGCRYPT
 #	include <gcrypt.h>
 #	include "libgcry.h"
 #endif
+
+#ifdef ENABLE_OPENSSL_CRYPTO_PROVIDER
+	#include <openssl/evp.h>
+	#include "libossl.h"
+#endif
+
 
 #ifdef ENABLE_LIBGCRYPT
 typedef struct {
@@ -46,9 +54,10 @@ typedef struct {
 } gcry_data;
 #endif
 
-#ifdef ENABLE_OPENSSL
+#ifdef ENABLE_OPENSSL_CRYPTO_PROVIDER
 typedef struct {
-	int dummy;
+	const EVP_CIPHER* cipher;
+	EVP_CIPHER_CTX *chd;
 } ossl_data;
 #endif
 
@@ -71,7 +80,7 @@ typedef struct rscry_config {
 #ifdef ENABLE_LIBGCRYPT
 		gcry_data gcry;
 #endif
-#ifdef ENABLE_OPENSSL
+#ifdef ENABLE_OPENSSL_CRYPTO_PROVIDER
 		ossl_data ossl;
 #endif
 	} libData;
@@ -95,20 +104,27 @@ static int initConfig(const char *name)
 
 	if (name == NULL) { /* If no library is set, we are using the default value */
 #ifdef ENABLE_LIBGCRYPT
-		cnf.lib = LIB_GCRY;
-#elif ENABLE_OPENSSL
-		cnf.lib = LIB_OSSL
+		name = "gcry";
+#elif ENABLE_OPENSSL_CRYPTO_PROVIDER
+		name = "ossl";
 #endif
-	} else if (strcmp(name, "gcry") == 0) { /* Use the libgcrypt lib */
+	}
+
+	if (name && strcmp(name, "gcry") == 0) { /* Use the libgcrypt lib */
 #ifdef ENABLE_LIBGCRYPT
 		cnf.lib = LIB_GCRY;
+		cnf.libData.gcry.cry_algo = GCRY_CIPHER_AES128;
+		cnf.libData.gcry.cry_mode = GCRY_CIPHER_MODE_CBC;
+		cnf.libData.gcry.gcry_chd = NULL;
 #else
 		fprintf(stderr, "rsyslog was not compiled with libgcrypt support.\n");
 		return 1;
 #endif
-	} else if (strcmp(name, "ossl") == 0) { /* Use the openssl lib */
-#ifdef ENABLE_OPENSSL
+	} else if (name && strcmp(name, "ossl") == 0) { /* Use the openssl lib */
+#ifdef ENABLE_OPENSSL_CRYPTO_PROVIDER
 		cnf.lib = LIB_OSSL;
+		cnf.libData.ossl.cipher = EVP_aes_128_cbc();
+		cnf.libData.ossl.chd = NULL;
 #else
 		fprintf(stderr, "rsyslog was not compiled with libossl support.\n");
 		return 1;
@@ -116,14 +132,6 @@ static int initConfig(const char *name)
 	} else {
 		fprintf(stderr, "invalid option for lib: %s\n", name);
 		return 1;
-	}
-
-	/* we know what lib we use, we can set library specific internals */
-	if (cnf.lib == LIB_GCRY) {
-		cnf.libData.gcry.cry_algo = GCRY_CIPHER_AES128;
-		cnf.libData.gcry.cry_mode = GCRY_CIPHER_MODE_CBC;
-	} else if (cnf.lib == LIB_OSSL) {
-		// Not yet implemented
 	}
 
 	return 0;
@@ -400,11 +408,132 @@ done:	return r;
 
 #else
 // Dummy function definitions
-static int gcryDoDecrypt(FILE* logfp, FILE* eifp, __unused FILE* outfp) {return 0;}
+static int gcryDoDecrypt(FILE __attribute__((unused)) *logfp,
+	FILE __attribute__((unused)) *eifp, FILE __attribute__((unused))* outfp) { return 0; }
 static int rsgcryAlgoname2Algo() { return 0; }
 static int rsgcryModename2Mode() { return 0; }
 #endif
 /* LIBGCRYPT RELATED ENDS */
+
+#ifdef ENABLE_OPENSSL_CRYPTO_PROVIDER
+static int
+osslInit(FILE* eifp) {
+	int r = 0;
+	char iv[4096];
+	size_t keyLength;
+
+	if ((cnf.libData.ossl.chd = EVP_CIPHER_CTX_new()) == NULL) {
+		fprintf(stderr, "internal error[%s:%d]: EVP_CIPHER_CTX_new failed\n",
+			__FILE__, __LINE__);
+		r = 1; goto done;
+	}
+
+	cnf.blkLength = EVP_CIPHER_get_block_size(cnf.libData.ossl.cipher);
+	if (cnf.blkLength > sizeof(iv)) {
+		fprintf(stderr, "internal error[%s:%d]: block length %lld too large for "
+			"iv buffer\n", __FILE__, __LINE__, (long long)cnf.blkLength);
+		r = 1; goto done;
+	}
+	if ((r = eiGetIV(eifp, iv, cnf.blkLength)) != 0) goto done;
+
+	keyLength = EVP_CIPHER_get_key_length(cnf.libData.ossl.cipher);
+	assert(cnf.key != NULL); /* "fix" clang 10 static analyzer false positive */
+	if (strlen(cnf.key) != keyLength) {
+		fprintf(stderr, "invalid key length; key is %u characters, but "
+			"exactly %llu characters are required\n", cnf.keylen,
+			(long long unsigned) keyLength);
+		r = 1; goto done;
+	}
+
+	if ((r = EVP_DecryptInit_ex(cnf.libData.ossl.chd, cnf.libData.ossl.cipher, NULL, (uchar *)cnf.key, (uchar *)iv)) != 1) {
+		fprintf(stderr, "EVP_DecryptInit_ex failed:  %d\n", r);
+		goto done;
+	}
+
+	if ((r = EVP_CIPHER_CTX_set_padding(cnf.libData.ossl.chd, 0)) != 1) {
+		fprintf(stderr, "EVP_CIPHER_set_padding failed:  %d\n", r);
+		goto done;
+	}
+
+	r = 0;
+done:
+	return r;
+}
+
+static void
+osslDecryptBlock(FILE* fpin, FILE* fpout, off64_t blkEnd, off64_t* pCurrOffs) {
+	size_t nRead, nWritten;
+	size_t toRead;
+	size_t leftTillBlkEnd;
+	uchar buf[64 * 1024];
+	uchar outbuf[64 * 1024];
+	int r, tmplen, outlen;
+
+	leftTillBlkEnd = blkEnd - *pCurrOffs;
+	while (1) {
+		toRead = sizeof(buf) <= leftTillBlkEnd ? sizeof(buf) : leftTillBlkEnd;
+		toRead = toRead - toRead % cnf.blkLength;
+		nRead = fread(buf, 1, toRead, fpin);
+		if (nRead == 0)
+			break;
+		leftTillBlkEnd -= nRead, * pCurrOffs += nRead;
+
+		r = EVP_DecryptUpdate(cnf.libData.ossl.chd, outbuf, &tmplen, buf, nRead);
+		if (r != 1) {
+			fprintf(stderr, "EVP_DecryptUpdate failed: %d\n", r);
+			return;
+		}
+		outlen = tmplen;
+
+		nWritten = fwrite(outbuf, sizeof(unsigned char), (size_t)outlen, fpout);
+		if (nWritten != (size_t) outlen) {
+			perror("fpout");
+			return;
+		}
+	}
+
+	r = EVP_DecryptFinal_ex(cnf.libData.ossl.chd, outbuf + tmplen, &tmplen);
+	if (r != 1) {
+		fprintf(stderr, "EVP_DecryptFinal_ex failed: %d\n", r);
+		return;
+	}
+	outlen += tmplen;
+}
+
+static int
+osslDoDecrypt(FILE* logfp, FILE* eifp, FILE* outfp) {
+	off64_t blkEnd;
+	off64_t currOffs = 0;
+	int r = 1;
+	int fd;
+	struct stat buf;
+
+	while (1) {
+		/* process block */
+		if (osslInit(eifp) != 0)
+			goto done;
+		/* set blkEnd to size of logfp and proceed. */
+		if ((fd = fileno(logfp)) == -1) {
+			r = -1;
+			goto done;
+		}
+		if ((r = fstat(fd, &buf)) != 0) goto done;
+		blkEnd = buf.st_size;
+		r = eiGetEND(eifp, &blkEnd);
+		if (r != 0 && r != 1) goto done;
+		osslDecryptBlock(logfp, outfp, blkEnd, &currOffs);
+		EVP_CIPHER_CTX_free(cnf.libData.ossl.chd);
+	}
+	r = 0;
+done:	return r;
+}
+
+
+#else
+// Dummy function definitions
+static int osslDoDecrypt(FILE __attribute__((unused))* logfp,
+	FILE __attribute__((unused))* eifp, FILE __attribute__((unused))* outfp) { return 0; }
+#endif
 
 static void
 decrypt(const char *name)
@@ -432,11 +561,11 @@ decrypt(const char *name)
 	}
 
 	if (cnf.lib == LIB_GCRY) {
-		if((r = gcryDoDecrypt(logfp, eifp, stdout)) != 0)
+		if ((r = gcryDoDecrypt(logfp, eifp, stdout)) != 0)
 			goto err;
 	} else if (cnf.lib == LIB_OSSL) {
-		fprintf(stderr, "Support for the openssl crypto provider has not been implemented yet.\n");
-		goto err;
+		if ((r = osslDoDecrypt(logfp, eifp, stdout)) != 0)
+			goto err;
 	}
 
 	fclose(logfp); logfp = NULL;
@@ -481,7 +610,7 @@ write_keyfile(char *fn)
 static void
 getKeyFromFile(const char *fn)
 {
-	const int r = gcryGetKeyFromFile(fn, &cnf.key, &cnf.keylen);
+	const int r = cryGetKeyFromFile(fn, &cnf.key, &cnf.keylen);
 	if(r != 0) {
 		perror(fn);
 		exit(1);
@@ -518,7 +647,7 @@ setKey(void)
 	else if(cnf.keyfile != NULL)
 		getKeyFromFile(cnf.keyfile);
 	else if(cnf.keyprog != NULL)
-		gcryGetKeyFromProg(cnf.keyprog, &cnf.key, &cnf.keylen);
+		cryGetKeyFromProg(cnf.keyprog, &cnf.key, &cnf.keylen);
 	if(cnf.key == NULL) {
 		fprintf(stderr, "ERROR: key must be set via some method\n");
 		exit(1);
@@ -532,11 +661,12 @@ static void
 setAlgoMode(char *algo, char *mode)
 {
 	if (cnf.lib == LIB_GCRY) { /* Set algorithm and mode for gcrypt */
+#ifdef ENABLE_LIBGCRYPT
 		if (algo != NULL) {
 			cnf.libData.gcry.cry_algo = rsgcryAlgoname2Algo(algo);
 			if (cnf.libData.gcry.cry_algo == GCRY_CIPHER_NONE) {
 				fprintf(stderr, "ERROR: algorithm \"%s\" is not "
-				"kown/supported\n", algo);
+					"known/supported\n", algo);
 				exit(1);
 			}
 		}
@@ -544,12 +674,22 @@ setAlgoMode(char *algo, char *mode)
 			cnf.libData.gcry.cry_mode = rsgcryModename2Mode(mode);
 			if (cnf.libData.gcry.cry_mode == GCRY_CIPHER_MODE_NONE) {
 				fprintf(stderr, "ERROR: cipher mode \"%s\" is not "
-					"kown/supported\n", mode);
+					"known/supported\n", mode);
 				exit(1);
 			}
 		}
-	} else {
-		// Nothing else is yet implemented
+#endif
+	} else if (cnf.lib == LIB_OSSL) {
+#ifdef ENABLE_OPENSSL_CRYPTO_PROVIDER
+		if (algo != NULL) {
+			cnf.libData.ossl.cipher = EVP_CIPHER_fetch(NULL, algo, NULL);
+			if (cnf.libData.ossl.cipher == NULL) {
+				fprintf(stderr, "ERROR: cipher \"%s\" is not "
+					"known/supported\n", algo);
+				exit(1);
+			}
+		}
+#endif
 	}
 }
 
