@@ -1,7 +1,5 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2406.0 (aka 2024.06) 2024-06-??
-- 2024-04-12: bugfixes related to time_t on 32 bit platforms (y38k isue)
-  Thanks to Michael Biebl for the patch.
 - 2024-04-18: [o|i]mprog/mmexternal bugfix: invalid command line parameter passing
   Quoted command line parameters were incorrectly passed to the called program. This
   resulted in unexpected behaviour. For example, in
@@ -19,6 +17,8 @@ Scheduled Release 8.2406.0 (aka 2024.06) 2024-06-??
   because the previous handling was obviosuly unacceptable. As such, there was no
   way to keep rsyslog perform the previous action.
   Thanks to Paul Fertser for the patch.
+- 2024-04-12: bugfixes related to time_t on 32 bit platforms (y38k isue)
+  Thanks to Michael Biebl for the patch.
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2404.0 (aka 2024.04) 2024-04-02
 - 2024-04-02: omhttp patches and enhancement
