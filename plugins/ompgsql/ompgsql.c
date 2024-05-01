@@ -255,7 +255,8 @@ tryExec(uchar *pszCmd, wrkrInstanceData_t *pWrkrData)
 	pgRet = PQexec(pWrkrData->f_hpgsql, (char*)pszCmd);
 	execState = PQresultStatus(pgRet);
 	if (execState != PGRES_COMMAND_OK && execState != PGRES_TUPLES_OK) {
-		dbgprintf("postgres query execution failed: %s\n", PQresStatus(PQresultStatus(pgRet)));
+		// complain a lot in case any issues with DB communication
+		LogError(0, execState, "postgres query execution failed: %s", PQresStatus(PQresultStatus(pgRet)));
 		bHadError = 1;
 	}
 	PQclear(pgRet);
@@ -352,13 +353,22 @@ CODESTARTcommitTransaction
 		if (iRet != RS_RET_OK
 			&& iRet != RS_RET_DEFER_COMMIT
 			&& iRet != RS_RET_PREVIOUS_COMMITTED) {
-			/*if(mysql_rollback(pWrkrData->hmysql) != 0) {
-				DBGPRINTF("ommysql: server error: transaction could not be rolled back\n");
-			}*/
-			// closeMySQL(pWrkrData);
-			// FINALIZE;
+			// in case of any error lets retry, writePgSQL should return
+			// iRet = RS_RET_SUSPENDED and we need return it downstream, otherwise
+			// messages gonna be lost
+			LogError(0, iRet, "Failed too execute PG query. Message suspended.");
+
+			// since writePgSQL may close connection in case of errors
+			// no point to issue rollback on new connection
+			// writePgSQL((uchar*) "ROLLBACK", pWrkrData);
+
+			// To be on safe side lets kill connection similar to what
+			// ommysql plugin does.
+			closePgSQL(pWrkrData);
+			// signal mod.om.beginTransaction that we want retry
+			ABORT_FINALIZE(iRet);
+			}
 		}
-	}
 
 	CHKiRet(writePgSQL((uchar*) "COMMIT", pWrkrData)); /* TODO: make user-configurable */
 
