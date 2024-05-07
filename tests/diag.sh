@@ -606,7 +606,7 @@ assign_file_content() {
 # $2 is the instance name (1, 2)
 start_minitcpsrvr() {
 	instance=${2:-1}
-	./minitcpsrv -t127.0.0.1 -p 0 -P "$RSYSLOG_DYNNAME.minitcpsrvr_port$instance" -f "$1" &
+	./minitcpsrv -t127.0.0.1 -p 0 -P "$RSYSLOG_DYNNAME.minitcpsrvr_port$instance" -f "$1" $MINITCPSRV_EXTRA_OPTS &
 	BGPROCESS=$!
 	wait_file_exists "$RSYSLOG_DYNNAME.minitcpsrvr_port$instance"
 	if [ "$instance" == "1" ]; then

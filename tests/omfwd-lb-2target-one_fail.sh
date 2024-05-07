@@ -2,7 +2,7 @@
 # added 2024-02-24 by rgerhards. Released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 generate_conf
-export NUMMESSAGES=10  # MUST be an EQUAL number!
+export NUMMESSAGES=1000  # MUST be an EVEN number!
 
 # starting minitcpsrvr receives so that we can obtain their port
 # numbers

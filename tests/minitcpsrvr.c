@@ -1,6 +1,6 @@
 /* a very simplistic tcp receiver for the rsyslog testbench.
  *
- * Copyright 2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2016,2024 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog project.
  *
@@ -61,6 +61,8 @@ main(int argc, char *argv[])
 	unsigned int cliAddrLen;
 	char wrkBuf[4096];
 	ssize_t nRead;
+	int nRcv = 0;
+	int dropConnection_NbrRcv = 0;
 	int opt;
 	int sleeptime = 0;
 	char *targetIP = NULL;
@@ -75,10 +77,13 @@ main(int argc, char *argv[])
 	memset(fds, 0, sizeof(fds));
 	memset(buffer_offs, 0, sizeof(buffer_offs));
 
-	while((opt = getopt(argc, argv, "t:p:P:f:s:")) != -1) {
+	while((opt = getopt(argc, argv, "D:t:p:P:f:s:")) != -1) {
 		switch (opt) {
 		case 's':
 			sleeptime = atoi(optarg);
+			break;
+		case 'D':
+			dropConnection_NbrRcv = atoi(optarg);
 			break;
 		case 't':
 			targetIP = optarg;
@@ -124,42 +129,6 @@ main(int argc, char *argv[])
 		printf("minitcpsrv: end sleep\n");
 	}
 
-#if 0
-	fds = socket(AF_INET, SOCK_STREAM, 0);
-	srvAddr.sin_family = AF_INET;
-	srvAddr.sin_addr.s_addr = inet_addr(targetIP);
-	srvAddr.sin_port = htons(targetPort);
-	srvAddrLen = sizeof(srvAddr);
-	if(bind(fds, (struct sockaddr *)&srvAddr, srvAddrLen) != 0)
-		errout("bind");
-	if(listen(fds, 20) != 0) errout("listen");
-	cliAddrLen = sizeof(cliAddr);
-
-	if(portFileName != NULL) {
-		FILE *fp;
-		if (getsockname(fds, (struct sockaddr*)&srvAddr, &srvAddrLen) == -1) {
-			errout("getsockname");
-		}
-		if((fp = fopen(portFileName, "w+")) == NULL) {
-			errout(portFileName);
-		}
-		fprintf(fp, "%d", ntohs(srvAddr.sin_port));
-		fclose(fp);
-	}
-
-	fdc = accept(fds, (struct sockaddr *)&cliAddr, &cliAddrLen);
-	while(1) {
-		nRead = read(fdc, wrkBuf, sizeof(wrkBuf));
-		if(nRead == 0) break;
-		if(write(fdf, wrkBuf, nRead) != nRead)
-			errout("write");
-		totalWritten += nRead;
-	}
-#endif
-
-
-
-/* -------------------------------------------------- */
 	// Create listen socket
 	listen_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (listen_fd < 0) {
@@ -197,14 +166,14 @@ main(int argc, char *argv[])
 
 	nfds = 1;
 
+	int bKeepRunning;
 	while (1) {
 		int poll_count = poll(fds, nfds, -1); // -1 means no timeout
 		if (poll_count < 0) {
 			errout("poll");
 		}
 
-		
-				//fprintf(stderr, "total written %zu\n", totalWritten);
+		bKeepRunning = 0;	/* terminate on last connection close */
 
 		for (int i = 0; i < nfds; i++) {
 			if (fds[i].revents == 0) continue;
@@ -228,10 +197,10 @@ main(int argc, char *argv[])
 				nfds++;
 			} else {
 				// Handle data from a client
+				nRcv++;
 				fd = fds[i].fd;
 				const size_t bytes_to_read = sizeof(buffer[i]) - buffer_offs[i] - 1;
 				int read_bytes = read(fd, &(buffer[i][buffer_offs[i]]), bytes_to_read);
-				//buffer[i][buffer_offs[i] +read_bytes]='\0';fprintf(stderr, "bytes_to_read %zu, read_bytes %d, buffer_offs %d - data:\n%s\n", bytes_to_read, read_bytes, buffer_offs[i], buffer[i]);
 				if (read_bytes < 0) {
 					perror("Read error");
 					close(fd);
@@ -250,7 +219,6 @@ main(int argc, char *argv[])
 							buffer_offs[i] = last_byte;
 						} else {
 							const int bytes_to_write = last_lf + 1;
-							//fprintf(stderr, "last_lf %d, bytes_to_write %d, read_bytes %d, last_byte: %d\n", last_lf, bytes_to_write, read_bytes, last_byte);
 
 							const int written_bytes = write(fdf, buffer[i], bytes_to_write);
 							if(written_bytes != bytes_to_write)
@@ -267,23 +235,18 @@ main(int argc, char *argv[])
 								memmove(buffer[i], &(buffer[i][bytes_to_write]),
 									unfinished_bytes);
 								buffer_offs[i] = unfinished_bytes;
-								//buffer[i][buffer_offs[i]] = '\0';fprintf(stderr, "have partial message left, connection %d, %d characters, offs now %d - data: %s\n", i, unfinished_bytes, buffer_offs[i], buffer[i]);
 							}
 						}
-						#if 0
-						buffer[read_bytes] = '\0';
-						char *line = strtok(buffer, "\n");
-						while (line != NULL) {
-							fprintf(stderr, "writing %d: %zu: %s\n", fdf, strlen(line), line);
-							const int r = write(fdf, line, strlen(line));
-							if(r != strlen(line))
-								errout("write");
-							fprintf(stderr, "writing done %d\n", r);
-							totalWritten += nRead;
-							//dprintf(file_fd, "%s\n", line);
-							line = strtok(NULL, "\n");
-						}
-						#endif
+					}
+
+					/* simulate connection abort, if requested */
+					if(dropConnection_NbrRcv > 0 && nRcv > dropConnection_NbrRcv) {
+						fprintf(stderr, "## MINITCPSRVR: imulating connection abort after %d receive "
+							"calls, bytes written so far %zu\n", (int) nRcv, totalWritten);
+						nRcv = 0;
+						close(fd);
+						fds[i].fd = -1; // Remove from poll set
+						bKeepRunning = 1; /* do not abort if sole connection! */
 					}
 				}
 			}
@@ -299,7 +262,7 @@ main(int argc, char *argv[])
 			}
 		}
 		// terminate if all connections have been closed
-		if(nfds == 1)
+		if(nfds == 1 && !bKeepRunning)
 			break;
 	}
 /* -------------------------------------------------- */

@@ -494,10 +494,12 @@ CODESTARTfreeInstance
 	free(pData->pszStrmDrvrPermitExpiredCerts);
 	free(pData->gnutlsPriorityString);
 	free(pData->networkNamespace);
-	for(int j = 0 ; j <  pData->nPorts ; ++j) {
-		free(pData->ports[j]);
+	if(pData->ports != NULL) { /* could happen in error case (very unlikely) */
+		for(int j = 0 ; j <  pData->nPorts ; ++j) {
+			free(pData->ports[j]);
+		}
+		free(pData->ports);
 	}
-	free(pData->ports);
 	if(pData->target_stats != NULL) {
 		for(int j = 0 ; j <  pData->nTargets ; ++j) {
 			free(pData->target_name[j]);
@@ -1378,10 +1380,9 @@ CODESTARTcommitTransaction
 	}
 
 	for(int j = 0 ; j <  pWrkrData->pData->nTargets ; ++j) {
-DBGPRINTF("RGER: commit Transaction final target loop target %d, offs %u, conn %d\n", j,pWrkrData->target[j].offsSndBuf,pWrkrData->target[j].bIsConnected);
 		if(pWrkrData->target[j].bIsConnected && pWrkrData->target[j].offsSndBuf != 0) {
-DBGPRINTF("RGER: commit Transaction calling send in target %d, offs %u\n", j,pWrkrData->target[j].offsSndBuf);
-			iRet = TCPSendBuf(&(pWrkrData->target[j]), pWrkrData->target[j].sndBuf, pWrkrData->target[j].offsSndBuf, IS_FLUSH);
+			iRet = TCPSendBuf(&(pWrkrData->target[j]), pWrkrData->target[j].sndBuf,
+				pWrkrData->target[j].offsSndBuf, IS_FLUSH);
 			pWrkrData->target[j].offsSndBuf = 0;
 		}
 	}
@@ -1560,9 +1561,10 @@ CODESTARTnewActInst
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(actpblk.descr[i].name, "target")) {
-			pData->nTargets = pvals[i].val.d.ar->nmemb;
+			const int nTargets = pvals[i].val.d.ar->nmemb; /* keep static analyzer happy */
+			pData->nTargets = nTargets;
 			CHKmalloc(pData->target_name = (char**) calloc(pData->nTargets, sizeof(char*)));
-			for(int j = 0 ; j <  pData->nTargets ; ++j) {
+			for(int j = 0 ; j <  nTargets ; ++j) {
 				pData->target_name[j] = (char*) es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
 			}
 		} else if(!strcmp(actpblk.descr[i].name, "address")) {

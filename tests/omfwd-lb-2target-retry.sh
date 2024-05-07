@@ -4,14 +4,14 @@
 generate_conf
 export NUMMESSAGES=10000  # MUST be an EVEN number!
 
-# starting minitcpsrvr receives so that we can obtain their port
+# starting minitcpsrvr receivers so that we can obtain their port
 # numbers
 start_minitcpsrvr $RSYSLOG_OUT_LOG  1
 
 # regular startup
 add_conf '
 $MainMsgQueueTimeoutShutdown 10000
-$MainMsgQueueWorkerThreads 2 # minitcpsrvr does not handle concurrent connections
+$MainMsgQueueWorkerThreads 2
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 module(load="builtin:omfwd" template="outfmt")
