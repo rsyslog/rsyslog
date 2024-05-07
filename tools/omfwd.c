@@ -169,6 +169,7 @@ typedef struct wrkrInstanceData {
 	instanceData *pData;
 	targetData_t *target;
 	int nXmit;		/* number of transmissions since last (re-)bind */
+	unsigned actualTarget;
 } wrkrInstanceData_t;
 
 /* config data */
@@ -460,10 +461,9 @@ CODESTARTcreateWrkrInstance
 	ttNow--; /* make sure it is expired */
 
 	assert(pData->nTargets > 0);
-dbgprintf("RGERx: alloc target, nTargets %d\n", pData->nTargets);
+	pWrkrData->actualTarget = 0;
 	CHKmalloc(pWrkrData->target = (targetData_t *) calloc(pData->nTargets, sizeof(targetData_t)));
 	for(int i = 0 ; i <  pData->nTargets ; ++i) {
-dbgprintf("RGERx: alloc target %d %p\n", i, &(pWrkrData->target[i]));
 		pWrkrData->target[i].pData = pWrkrData->pData;
 		pWrkrData->target[i].pWrkrData = pWrkrData;
 		pWrkrData->target[i].target_name = pData->target_name[i];
@@ -1320,7 +1320,6 @@ finalize_it:
 
 BEGINcommitTransaction
 	unsigned i;
-	static int actualTarget = 0; // TODO-RG: implement!!!  (move to worker instance)
 	char namebuf[264]; /* 256 for FGDN, 5 for port and 3 for transport => 264 */
 CODESTARTcommitTransaction
 	CHKiRet(poolTryResume(pWrkrData));
@@ -1350,12 +1349,18 @@ CODESTARTcommitTransaction
 		int trynbr = 0;
 		int dotry = 1;
 		while(dotry && trynbr < pWrkrData->pData->nTargets) {
-
-			actualTarget = (actualTarget + 1) % pWrkrData->pData->nTargets; // TODO-RG: implement correctly, now always starts at 0
+			// TODO: consider if we would like to have targets on a per-worker or global
+			//       basis. We use worker because otherwise we have thread interdependence,
+			//       which hurts performance. But this can lead to uneven distribution of
+			//       messages when multiple workers run.
+			const unsigned actualTarget = (pWrkrData->actualTarget++) % pWrkrData->pData->nTargets;
 			targetData_t *pTarget = &(pWrkrData->target[actualTarget]);
-			DBGPRINTF("RGER: trying actualTarget %d: try %d\n", actualTarget, trynbr);
+			DBGPRINTF("load balancer: trying actualTarget %u [%u]: try %d, isConnected %d, wrkr %p\n",
+				actualTarget, (pWrkrData->actualTarget - 1), trynbr, pTarget->bIsConnected,
+				pWrkrData);
 			if(pTarget->bIsConnected) {
-				DBGPRINTF("RGER: sending to actualTarget %d: try %d\n", actualTarget, trynbr);
+				DBGPRINTF("RGER: sending to actualTarget %d: try %d\n", actualTarget,
+					  trynbr);
 				iRet = processMsg(pTarget, &actParam(pParams, 1, i, 0));
 				if(!(iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED)) {
 					dotry = 0;
