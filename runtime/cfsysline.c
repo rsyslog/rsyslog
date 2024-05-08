@@ -59,7 +59,7 @@ linkedList_t llCmdList; /* this is NOT a pointer - no typo here ;) */
  * HINT: check if char is ' and, if so, use 'c' where c may also be things
  * like \t etc.
  */
-static rsRetVal doGetChar(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *pVal)
+static rsRetVal doGetChar(uchar **pp, rsRetVal (*pSetHdlr)(void*, uchar*), void *pVal)
 {
 	DEFiRet;
 
@@ -78,7 +78,7 @@ static rsRetVal doGetChar(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *
 			*((uchar*)pVal) = **pp;
 		} else {
 			/* we set value via a set function */
-			CHKiRet(pSetHdlr(pVal, **pp));
+			CHKiRet(pSetHdlr(pVal, *pp));
 		}
 		++(*pp); /* eat processed char */
 	}
