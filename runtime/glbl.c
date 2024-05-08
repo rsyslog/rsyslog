@@ -519,9 +519,9 @@ setDfltNetstrmDrvr(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 }
 
 static rsRetVal
-setParserControlCharacterEscapePrefix(void __attribute__((unused)) *pVal, uchar *pNewVal) {
+setParserControlCharacterEscapePrefix(void __attribute__((unused)) *pVal, uid_t pNewVal) {
 	DEFiRet;
-	loadConf->globals.parser.cCCEscapeChar = *pNewVal;
+	loadConf->globals.parser.cCCEscapeChar = (uchar)pNewVal;
 	RETiRet;
 }
 
@@ -1283,7 +1283,7 @@ glblDoneLoadCnf(void)
 			glblUnloadModules = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "parser.controlcharacterescapeprefix")) {
 			uchar* tmp = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
-			setParserControlCharacterEscapePrefix(NULL, tmp);
+			setParserControlCharacterEscapePrefix(NULL, (uid_t)*tmp);
 			free(tmp);
 		} else if(!strcmp(paramblk.descr[i].name, "parser.droptrailinglfonreception")) {
 			const int tmp = (int) cnfparamvals[i].val.d.n;
