@@ -686,9 +686,9 @@ TCPSendBufUncompressed(targetData_t *const pTarget, uchar *const buf, const unsi
 
 	while(alreadySent != len) {
 		lenSend = len - alreadySent;
-dbgprintf("RGER: TCPSendBufuncompressed calling send()\n");
+dbgprintf("RGER: TCPSendBufuncompressed calling send() %u [%u]\n", len, alreadySent);
 		CHKiRet(netstrm.Send(pTarget->pNetstrm, buf+alreadySent, &lenSend));
-dbgprintf("RGER: sent %zd bytes: %*s\n", (size_t) lenSend, (int) lenSend, buf+alreadySent);
+dbgprintf("RGER: sent %zd [%u] bytes: %.*s\n", lenSend, alreadySent, (int) lenSend, buf+alreadySent);
 		DBGPRINTF("omfwd: TCP sent %ld bytes, requested %u\n", (long) lenSend, len - alreadySent);
 		alreadySent += lenSend;
 	}
@@ -867,7 +867,7 @@ finalize_it:
 	RETiRet;
 }
 
-#if 0 // TODO: remove?
+#if 1 // TODO: remove?
 
 /* This function is called immediately before a send retry is attempted.
  * It shall clean up whatever makes sense.
@@ -1439,7 +1439,7 @@ initTCP(wrkrInstanceData_t *pWrkrData)
 			/* and set callbacks */
 			CHKiRet(tcpclt.SetSendInit(pWrkrData->target[i].pTCPClt, TCPSendInitDummy));
 			CHKiRet(tcpclt.SetSendFrame(pWrkrData->target[i].pTCPClt, TCPSendFrame));
-			//CHKiRet(tcpclt.SetSendPrepRetry(pWrkrData->target[i].pTCPClt, TCPSendPrepRetry));
+			CHKiRet(tcpclt.SetSendPrepRetry(pWrkrData->target[i].pTCPClt, TCPSendPrepRetry));
 			CHKiRet(tcpclt.SetFraming(pWrkrData->target[i].pTCPClt, pData->tcp_framing));
 			CHKiRet(tcpclt.SetFramingDelimiter(pWrkrData->target[i].pTCPClt, pData->tcp_framingDelimiter));
 			//CHKiRet(tcpclt.SetRebindInterval(pWrkrData->target[i].pTCPClt, pData->iRebindInterval));
@@ -1501,6 +1501,17 @@ setupInstStatsCtrs(instanceData *const pData)
 {
 	uchar ctrName[512];
 	DEFiRet;
+
+	if(pData->target_name == NULL) {
+		/* This is primarily introduced to keep the static analyzer happy. We
+		 * do not understand how this situation could actually happen.
+		 */
+		LogError(0, RS_RET_INTERNAL_ERROR,
+			"internal error: target_name is NULL in setupInstStatsCtrs() -"
+			"statistics countes are disable. Report this error to the "
+			"rsyslog project please.");
+		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+	}
 
 	CHKmalloc(pData->target_stats = (targetStats_t *) calloc(pData->nTargets, sizeof(targetStats_t)));
 

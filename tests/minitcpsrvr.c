@@ -61,7 +61,7 @@ main(int argc, char *argv[])
 	unsigned int cliAddrLen;
 	char wrkBuf[4096];
 	ssize_t nRead;
-	int nRcv = 0;
+	size_t nRcv = 0;
 	int dropConnection_NbrRcv = 0;
 	int opt;
 	int sleeptime = 0;
@@ -197,10 +197,11 @@ main(int argc, char *argv[])
 				nfds++;
 			} else {
 				// Handle data from a client
-				nRcv++;
 				fd = fds[i].fd;
 				const size_t bytes_to_read = sizeof(buffer[i]) - buffer_offs[i] - 1;
 				int read_bytes = read(fd, &(buffer[i][buffer_offs[i]]), bytes_to_read);
+				nRcv += read_bytes;
+//fprintf(stderr, "read bytes %d: %.*s\n", read_bytes, read_bytes, buffer[i]);
 				if (read_bytes < 0) {
 					perror("Read error");
 					close(fd);
@@ -240,9 +241,12 @@ main(int argc, char *argv[])
 					}
 
 					/* simulate connection abort, if requested */
-					if(dropConnection_NbrRcv > 0 && nRcv > dropConnection_NbrRcv) {
-						fprintf(stderr, "## MINITCPSRVR: imulating connection abort after %d receive "
-							"calls, bytes written so far %zu\n", (int) nRcv, totalWritten);
+					//fprintf(stderr, "Rcv %zu, bytes written so far %zu\n", nRcv, totalWritten);
+					if((buffer_offs[i] == 0) && (dropConnection_NbrRcv > 0) && (nRcv >= dropConnection_NbrRcv)) {
+						/*
+						fprintf(stderr, "## MINITCPSRVR: simulating connection abort after %d received "
+							"bytes, bytes written so far %zu\n", (int) nRcv, totalWritten);
+						*/
 						nRcv = 0;
 						close(fd);
 						fds[i].fd = -1; // Remove from poll set
