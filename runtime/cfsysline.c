@@ -78,7 +78,7 @@ static rsRetVal doGetChar(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *
 			*((uchar*)pVal) = **pp;
 		} else {
 			/* we set value via a set function */
-			CHKiRet(pSetHdlr(pVal, **pp));
+			CHKiRet(pSetHdlr(pVal, (uid_t)**pp));
 		}
 		++(*pp); /* eat processed char */
 	}
