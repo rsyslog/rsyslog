@@ -31,26 +31,103 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <gcrypt.h>
-
 #include "rsyslog.h"
-#include "libgcry.h"
 
+#ifdef ENABLE_LIBGCRYPT
+#	include <gcrypt.h>
+#	include "libgcry.h"
+#endif
 
-static enum { MD_DECRYPT, MD_WRITE_KEYFILE
-} mode = MD_DECRYPT;
-static int verbose = 0;
-static gcry_cipher_hd_t gcry_chd;
-static size_t blkLength;
+#ifdef ENABLE_LIBGCRYPT
+typedef struct {
+	int cry_algo;
+	int cry_mode;
+	gcry_cipher_hd_t gcry_chd;
+} gcry_data;
+#endif
 
-static char *keyfile = NULL;
-static char *keyprog = NULL;
-static int randomKeyLen = -1;
-static char *cry_key = NULL;
-static unsigned cry_keylen = 0;
-static int cry_algo = GCRY_CIPHER_AES128;
-static int cry_mode = GCRY_CIPHER_MODE_CBC;
-static int optionForce = 0;
+#ifdef ENABLE_OPENSSL
+typedef struct {
+	int dummy;
+} ossl_data;
+#endif
+
+/* rscryutil related config parameters and internals */
+typedef struct rscry_config {
+	/* General parameters */
+	enum { MD_DECRYPT, MD_WRITE_KEYFILE } mode;
+	int verbose;
+	size_t blkLength;
+	char* keyfile;
+	char* keyprog;
+	int randomKeyLen;
+	char *key;
+	unsigned keylen;
+	int optionForce;
+
+	/* Library specific parameters */
+	enum { LIB_GCRY, LIB_OSSL } lib;
+	union {
+#ifdef ENABLE_LIBGCRYPT
+		gcry_data gcry;
+#endif
+#ifdef ENABLE_OPENSSL
+		ossl_data ossl;
+#endif
+	} libData;
+
+} rscry_config;
+
+rscry_config cnf;
+
+static int initConfig(const char *name)
+{
+	cnf.mode = MD_DECRYPT;
+	cnf.lib = LIB_GCRY;
+	cnf.verbose = 0;
+	cnf.blkLength = 0;
+	cnf.keyfile = NULL;
+	cnf.keyprog = NULL;
+	cnf.randomKeyLen = -1;
+	cnf.key = NULL;
+	cnf.keylen = 0;
+	cnf.optionForce = 0;
+
+	if (name == NULL) { /* If no library is set, we are using the default value */
+#ifdef ENABLE_LIBGCRYPT
+		cnf.lib = LIB_GCRY;
+#elif ENABLE_OPENSSL
+		cnf.lib = LIB_OSSL
+#endif
+	} else if (strcmp(name, "gcry") == 0) { /* Use the libgcrypt lib */
+#ifdef ENABLE_LIBGCRYPT
+		cnf.lib = LIB_GCRY;
+#else
+		fprintf(stderr, "rsyslog was not compiled with libgcrypt support.\n");
+		return 1;
+#endif
+	} else if (strcmp(name, "ossl") == 0) { /* Use the openssl lib */
+#ifdef ENABLE_OPENSSL
+		cnf.lib = LIB_OSSL;
+#else
+		fprintf(stderr, "rsyslog was not compiled with libossl support.\n");
+		return 1;
+#endif
+	} else {
+		fprintf(stderr, "invalid option for lib: %s\n", name);
+		return 1;
+	}
+
+	/* we know what lib we use, we can set library specific internals */
+	if (cnf.lib == LIB_GCRY) {
+		cnf.libData.gcry.cry_algo = GCRY_CIPHER_AES128;
+		cnf.libData.gcry.cry_mode = GCRY_CIPHER_MODE_CBC;
+	} else if (cnf.lib == LIB_OSSL) {
+		// Not yet implemented
+	}
+
+	return 0;
+}
 
 /* We use some common code which expects rsyslog runtime to be
  * present, most importantly for debug output. As a stand-alone
@@ -117,7 +194,8 @@ eiCheckFiletype(FILE *eifp)
 		r = 1; goto done;
 	}
 	r = 0;
-done:	return r;
+done:
+	return r;
 }
 
 static int
@@ -179,49 +257,51 @@ eiGetEND(FILE *eifp, off64_t *offs)
 done:	return r;
 }
 
+/* LIBGCRYPT RELATED STARTS */
+#ifdef ENABLE_LIBGCRYPT
 static int
-initCrypt(FILE *eifp)
+gcryInit(FILE *eifp)
 {
 	int r = 0;
 	gcry_error_t gcryError;
 	char iv[4096];
 
-	blkLength = gcry_cipher_get_algo_blklen(cry_algo);
-	if(blkLength > sizeof(iv)) {
+	cnf.blkLength = gcry_cipher_get_algo_blklen(cnf.libData.gcry.cry_algo); // EVP_CIPHER_CTX_get_block_size
+	if(cnf.blkLength > sizeof(iv)) {
 		fprintf(stderr, "internal error[%s:%d]: block length %lld too large for "
-			"iv buffer\n", __FILE__, __LINE__, (long long) blkLength);
+			"iv buffer\n", __FILE__, __LINE__, (long long) cnf.blkLength);
 		r = 1; goto done;
 	}
-	if((r = eiGetIV(eifp, iv, blkLength)) != 0) goto done;
+	if((r = eiGetIV(eifp, iv, cnf.blkLength)) != 0) goto done;
 
-	size_t keyLength = gcry_cipher_get_algo_keylen(cry_algo);
-	assert(cry_key != NULL); /* "fix" clang 10 static analyzer false positive */
-	if(strlen(cry_key) != keyLength) {
+	size_t keyLength = gcry_cipher_get_algo_keylen(cnf.libData.gcry.cry_algo); // EVP_CIPHER_get_key_length
+	assert(cnf.key != NULL); /* "fix" clang 10 static analyzer false positive */
+	if(strlen(cnf.key) != keyLength) {
 		fprintf(stderr, "invalid key length; key is %u characters, but "
-			"exactly %llu characters are required\n", cry_keylen,
+			"exactly %llu characters are required\n", cnf.keylen,
 			(long long unsigned) keyLength);
 		r = 1; goto done;
 	}
 
-	gcryError = gcry_cipher_open(&gcry_chd, cry_algo, cry_mode, 0);
+	gcryError = gcry_cipher_open(&cnf.libData.gcry.gcry_chd, cnf.libData.gcry.cry_algo, cnf.libData.gcry.cry_mode, 0);
 	if (gcryError) {
-		printf("gcry_cipher_open failed:  %s/%s\n",
+		fprintf(stderr, "gcry_cipher_open failed:  %s/%s\n",
 			gcry_strsource(gcryError),
 			gcry_strerror(gcryError));
 		r = 1; goto done;
 	}
 
-	gcryError = gcry_cipher_setkey(gcry_chd, cry_key, keyLength);
+	gcryError = gcry_cipher_setkey(cnf.libData.gcry.gcry_chd, cnf.key, keyLength);
 	if (gcryError) {
-		printf("gcry_cipher_setkey failed:  %s/%s\n",
+		fprintf(stderr, "gcry_cipher_setkey failed:  %s/%s\n",
 			gcry_strsource(gcryError),
 			gcry_strerror(gcryError));
 		r = 1; goto done;
 	}
 
-	gcryError = gcry_cipher_setiv(gcry_chd, iv, blkLength);
+	gcryError = gcry_cipher_setiv(cnf.libData.gcry.gcry_chd, iv, cnf.blkLength);
 	if (gcryError) {
-		printf("gcry_cipher_setiv failed:  %s/%s\n",
+		fprintf(stderr, "gcry_cipher_setiv failed:  %s/%s\n",
 			gcry_strsource(gcryError),
 			gcry_strerror(gcryError));
 		r = 1; goto done;
@@ -252,24 +332,24 @@ done:	return;
 }
 
 static void
-decryptBlock(FILE *fpin, FILE *fpout, off64_t blkEnd, off64_t *pCurrOffs)
+gcryDecryptBlock(FILE *fpin, FILE *fpout, off64_t blkEnd, off64_t *pCurrOffs)
 {
 	gcry_error_t gcryError;
 	size_t nRead, nWritten;
 	size_t toRead;
 	size_t leftTillBlkEnd;
 	char buf[64*1024];
-	
+
 	leftTillBlkEnd = blkEnd - *pCurrOffs;
 	while(1) {
 		toRead = sizeof(buf) <= leftTillBlkEnd ? sizeof(buf) : leftTillBlkEnd;
-		toRead = toRead - toRead % blkLength;
+		toRead = toRead - toRead % cnf.blkLength;
 		nRead = fread(buf, 1, toRead, fpin);
 		if(nRead == 0)
 			break;
 		leftTillBlkEnd -= nRead, *pCurrOffs += nRead;
 		gcryError = gcry_cipher_decrypt(
-				gcry_chd, // gcry_cipher_hd_t
+				cnf.libData.gcry.gcry_chd, // gcry_cipher_hd_t
 				buf,    // void *
 				nRead,    // size_t
 				NULL,    // const void *
@@ -289,9 +369,8 @@ decryptBlock(FILE *fpin, FILE *fpout, off64_t blkEnd, off64_t *pCurrOffs)
 	}
 }
 
-
 static int
-doDecrypt(FILE *logfp, FILE *eifp, FILE *outfp)
+gcryDoDecrypt(FILE *logfp, FILE *eifp, FILE *outfp)
 {
 	off64_t blkEnd;
 	off64_t currOffs = 0;
@@ -301,7 +380,7 @@ doDecrypt(FILE *logfp, FILE *eifp, FILE *outfp)
 
 	while(1) {
 		/* process block */
-		if(initCrypt(eifp) != 0)
+		if(gcryInit(eifp) != 0)
 			goto done;
 		/* set blkEnd to size of logfp and proceed. */
 		if((fd = fileno(logfp)) == -1) {
@@ -312,12 +391,20 @@ doDecrypt(FILE *logfp, FILE *eifp, FILE *outfp)
 		blkEnd = buf.st_size;
 		r = eiGetEND(eifp, &blkEnd);
 		if(r != 0 && r != 1) goto done;
-		decryptBlock(logfp, outfp, blkEnd, &currOffs);
-		gcry_cipher_close(gcry_chd);
+		gcryDecryptBlock(logfp, outfp, blkEnd, &currOffs);
+		gcry_cipher_close(cnf.libData.gcry.gcry_chd);
 	}
 	r = 0;
 done:	return r;
 }
+
+#else
+// Dummy function definitions
+static int gcryDoDecrypt(FILE* logfp, FILE* eifp, __unused FILE* outfp) {return 0;}
+static int rsgcryAlgoname2Algo() { return 0; }
+static int rsgcryModename2Mode() { return 0; }
+#endif
+/* LIBGCRYPT RELATED ENDS */
 
 static void
 decrypt(const char *name)
@@ -325,7 +412,7 @@ decrypt(const char *name)
 	FILE *logfp = NULL, *eifp = NULL;
 	int r = 0;
 	char eifname[4096];
-	
+
 	if(!strcmp(name, "-")) {
 		fprintf(stderr, "decrypt mode cannot work on stdin\n");
 		goto err;
@@ -344,8 +431,13 @@ decrypt(const char *name)
 			goto err;
 	}
 
-	if((r = doDecrypt(logfp, eifp, stdout)) != 0)
+	if (cnf.lib == LIB_GCRY) {
+		if((r = gcryDoDecrypt(logfp, eifp, stdout)) != 0)
+			goto err;
+	} else if (cnf.lib == LIB_OSSL) {
+		fprintf(stderr, "Support for the openssl crypto provider has not been implemented yet.\n");
 		goto err;
+	}
 
 	fclose(logfp); logfp = NULL;
 	fclose(eifp); eifp = NULL;
@@ -367,7 +459,7 @@ write_keyfile(char *fn)
 	mode_t fmode;
 
 	fmode = O_WRONLY|O_CREAT;
-	if(!optionForce)
+	if(!cnf.optionForce)
 		fmode |= O_EXCL;
 	if(fn == NULL) {
 		fprintf(stderr, "program error: keyfile is NULL");
@@ -378,7 +470,7 @@ write_keyfile(char *fn)
 		perror(fn);
 		exit(1);
 	}
-	if((r = write(fd, cry_key, cry_keylen)) != (ssize_t)cry_keylen) {
+	if((r = write(fd, cnf.key, cnf.keylen)) != (ssize_t)cnf.keylen) {
 		fprintf(stderr, "error writing keyfile (ret=%d) ", r);
 		perror(fn);
 		exit(1);
@@ -389,7 +481,7 @@ write_keyfile(char *fn)
 static void
 getKeyFromFile(const char *fn)
 {
-	const int r = gcryGetKeyFromFile(fn, &cry_key, &cry_keylen);
+	const int r = gcryGetKeyFromFile(fn, &cnf.key, &cnf.keylen);
 	if(r != 0) {
 		perror(fn);
 		exit(1);
@@ -400,8 +492,8 @@ static void
 getRandomKey(void)
 {
 	int fd;
-	cry_keylen = randomKeyLen;
-	cry_key = malloc(randomKeyLen); /* do NOT zero-out! */
+	cnf.keylen = cnf.randomKeyLen;
+	cnf.key = malloc(cnf.randomKeyLen); /* do NOT zero-out! */
 	/* if we cannot obtain data from /dev/urandom, we use whatever
 	 * is present at the current memory location as random data. Of
 	 * course, this is very weak and we should consider a different
@@ -410,7 +502,7 @@ getRandomKey(void)
 	 * will always work...).  -- TODO -- rgerhards, 2013-03-06
 	 */
 	if((fd = open("/dev/urandom", O_RDONLY)) >= 0) {
-		if(read(fd, cry_key, randomKeyLen) != randomKeyLen) {
+		if(read(fd, cnf.key, cnf.randomKeyLen) != cnf.randomKeyLen) {
 			fprintf(stderr, "warning: could not read sufficient data "
 				"from /dev/urandom - key may be weak\n");
 		};
@@ -418,19 +510,46 @@ getRandomKey(void)
 	}
 }
 
-
 static void
 setKey(void)
 {
-	if(randomKeyLen != -1)
+	if(cnf.randomKeyLen != -1)
 		getRandomKey();
-	else if(keyfile != NULL)
-		getKeyFromFile(keyfile);
-	else if(keyprog != NULL)
-		gcryGetKeyFromProg(keyprog, &cry_key, &cry_keylen);
-	if(cry_key == NULL) {
+	else if(cnf.keyfile != NULL)
+		getKeyFromFile(cnf.keyfile);
+	else if(cnf.keyprog != NULL)
+		gcryGetKeyFromProg(cnf.keyprog, &cnf.key, &cnf.keylen);
+	if(cnf.key == NULL) {
 		fprintf(stderr, "ERROR: key must be set via some method\n");
 		exit(1);
+	}
+}
+
+/* Retrieve algorithm and mode from the choosen library. In libgcrypt,
+this is done in two steps (AES128 + CBC). However, other libraries expect this to be
+expressed in a single step, e.g. AES-128-CBC in openssl */
+static void
+setAlgoMode(char *algo, char *mode)
+{
+	if (cnf.lib == LIB_GCRY) { /* Set algorithm and mode for gcrypt */
+		if (algo != NULL) {
+			cnf.libData.gcry.cry_algo = rsgcryAlgoname2Algo(algo);
+			if (cnf.libData.gcry.cry_algo == GCRY_CIPHER_NONE) {
+				fprintf(stderr, "ERROR: algorithm \"%s\" is not "
+				"kown/supported\n", algo);
+				exit(1);
+			}
+		}
+		if (mode != NULL) {
+			cnf.libData.gcry.cry_mode = rsgcryModename2Mode(mode);
+			if (cnf.libData.gcry.cry_mode == GCRY_CIPHER_MODE_NONE) {
+				fprintf(stderr, "ERROR: cipher mode \"%s\" is not "
+					"kown/supported\n", mode);
+				exit(1);
+			}
+		}
+	} else {
+		// Nothing else is yet implemented
 	}
 }
 
@@ -447,41 +566,57 @@ static struct option long_options[] =
 	{"key-program", required_argument, NULL, 'p'},
 	{"algo", required_argument, NULL, 'a'},
 	{"mode", required_argument, NULL, 'm'},
+	{"lib", required_argument, NULL, 'l'},
 	{NULL, 0, NULL, 0}
 };
+
+static const char* short_options = "a:dfk:K:m:p:r:vVW:l:";
 
 int
 main(int argc, char *argv[])
 {
-	int i;
 	int opt;
-	int temp;
 	char *newKeyFile = NULL;
+	char *lib = NULL;
+	char* algo = NULL, *mode = NULL;
 
-	while(1) {
-		opt = getopt_long(argc, argv, "a:dfk:K:m:p:r:vVW:", long_options, NULL);
-		if(opt == -1)
+	/* We need preprocessing to determine, which crypto library is going to be used */
+	while ((opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1 && lib == NULL) {
+		switch(opt) {
+		case 'l':
+			lib = optarg;
 			break;
+		default:
+			break;
+		}
+	}
+
+	/* Once we reach this point, we have library specific internals set */
+	if (initConfig(lib))
+		exit(1);
+
+	optind = 1;
+	while ((opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1) {
 		switch(opt) {
 		case 'd':
-			mode = MD_DECRYPT;
+			cnf.mode = MD_DECRYPT;
 			break;
 		case 'W':
-			mode = MD_WRITE_KEYFILE;
+			cnf.mode = MD_WRITE_KEYFILE;
 			newKeyFile = optarg;
 			break;
 		case 'k':
-			keyfile = optarg;
+			cnf.keyfile = optarg;
 			break;
 		case 'p':
-			keyprog = optarg;
+			cnf.keyprog = optarg;
 			break;
 		case 'f':
-			optionForce = 1;
+			cnf.optionForce = 1;
 			break;
 		case 'r':
-			randomKeyLen = atoi(optarg);
-			if(randomKeyLen > 64*1024) {
+			cnf.randomKeyLen = atoi(optarg);
+			if(cnf.randomKeyLen > 64*1024) {
 				fprintf(stderr, "ERROR: keys larger than 64KiB are "
 					"not supported\n");
 				exit(1);
@@ -491,33 +626,23 @@ main(int argc, char *argv[])
 			fprintf(stderr, "WARNING: specifying the actual key "
 				"via the command line is highly insecure\n"
 				"Do NOT use this for PRODUCTION use.\n");
-			cry_key = optarg;
-			cry_keylen = strlen(cry_key);
+			cnf.key = optarg;
+			cnf.keylen = strlen(cnf.key);
 			break;
 		case 'a':
-			temp = rsgcryAlgoname2Algo(optarg);
-			if(temp == GCRY_CIPHER_NONE) {
-				fprintf(stderr, "ERROR: algorithm \"%s\" is not "
-					"kown/supported\n", optarg);
-				exit(1);
-			}
-			cry_algo = temp;
+			algo = optarg;
 			break;
 		case 'm':
-			temp = rsgcryModename2Mode(optarg);
-			if(temp == GCRY_CIPHER_MODE_NONE) {
-				fprintf(stderr, "ERROR: cipher mode \"%s\" is not "
-					"kown/supported\n", optarg);
-				exit(1);
-			}
-			cry_mode = temp;
+			mode = optarg;
 			break;
 		case 'v':
-			verbose = 1;
+			cnf.verbose = 1;
 			break;
 		case 'V':
-			fprintf(stderr, "rsgtutil " VERSION "\n");
+			fprintf(stderr, "rscryutil " VERSION "\n");
 			exit(0);
+			break;
+		case 'l':
 			break;
 		case '?':
 			break;
@@ -527,9 +652,10 @@ main(int argc, char *argv[])
 	}
 
 	setKey();
-	assert(cry_key != NULL);
+	setAlgoMode(algo, mode);
+	assert(cnf.key != NULL);
 
-	if(mode == MD_WRITE_KEYFILE) {
+	if(cnf.mode == MD_WRITE_KEYFILE) {
 		if(optind != argc) {
 			fprintf(stderr, "ERROR: no file parameters permitted in "
 				"--write-keyfile mode\n");
@@ -540,13 +666,13 @@ main(int argc, char *argv[])
 		if(optind == argc)
 			decrypt("-");
 		else {
-			for(i = optind ; i < argc ; ++i)
+			for(int i = optind ; i < argc ; ++i)
 				decrypt(argv[i]);
 		}
 	}
 
-	assert(cry_key != NULL);
-	memset(cry_key, 0, cry_keylen); /* zero-out key store */
-	cry_keylen = 0;
+	assert(cnf.key != NULL);
+	memset(cnf.key, 0, cnf.keylen); /* zero-out key store */
+	cnf.keylen = 0;
 	return 0;
 }

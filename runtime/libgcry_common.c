@@ -25,7 +25,6 @@
 #include "config.h"
 #endif
 #include <stdio.h>
-#include <gcrypt.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
 #include <sys/types.h>
@@ -34,7 +33,6 @@
 #include <errno.h>
 
 #include "rsyslog.h" /* we need data typedefs */
-#include "libgcry.h"
 
 
 /* read a key from a key file
@@ -149,7 +147,7 @@ readProgLine(int fd, char *buf)
 	char c;
 	int r;
 	unsigned i;
-	
+
 	for(i = 0 ; i < 64*1024 ; ++i) {
 		if((r = readProgChar(fd, &c)) != 0) goto done;
 		if(c == '\n')
@@ -169,7 +167,7 @@ readProgKey(int fd, char *buf, unsigned keylen)
 	char c;
 	int r;
 	unsigned i;
-	
+
 	for(i = 0 ; i < keylen ; ++i) {
 		if((r = readProgChar(fd, &c)) != 0) goto done;
 		buf[i] = c;
