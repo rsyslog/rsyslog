@@ -102,11 +102,14 @@ static int initConfig(const char *name)
 	cnf.keylen = 0;
 	cnf.optionForce = 0;
 
-	if (name == NULL) { /* If no library is set, we are using the default value */
+	/* If no library is set, we are using the default value. gcry must be the last
+		so it remains backwards compatible. */
+	if (name == NULL) {
+#ifdef ENABLE_OPENSSL_CRYPTO_PROVIDER
+		name = "ossl";
+#endif
 #ifdef ENABLE_LIBGCRYPT
 		name = "gcry";
-#elif ENABLE_OPENSSL_CRYPTO_PROVIDER
-		name = "ossl";
 #endif
 	}
 

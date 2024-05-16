@@ -46,17 +46,12 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <openssl/evp.h>
+#include <string.h>
 
 #include "rsyslog.h"
 #include "srUtils.h"
 #include "debug.h"
 #include "libossl.h"
-
-
-#pragma GCC diagnostic push // TODO REMOVE
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#pragma GCC diagnostic ignored "-Wunused-variable"
-#pragma GCC diagnostic ignored "-Wunused-label"
 
 #define READBUF_SIZE 4096	/* size of the read buffer */
 static rsRetVal rsosslBlkBegin(osslfile gf);
@@ -738,5 +733,3 @@ rsosslEncrypt(osslfile pF, uchar* buf, size_t* len) {
 finalize_it:
 	RETiRet;
 }
-
-#pragma GCC diagnostic pop // TODO REMOVE
