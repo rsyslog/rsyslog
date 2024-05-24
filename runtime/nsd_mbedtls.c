@@ -365,8 +365,8 @@ SetPermPeers(nsd_t *pNsd, permittedPeers_t *pPermPeers)
 
 		if(pPermPeers->etryType != PERM_PEER_TYPE_UNDECIDED &&
 		   pPermPeers->etryType != PERM_PEER_TYPE_PLAIN) {
-			LogError(0, RS_RET_VALUE_NOT_IN_THIS_MODE, "SetPermPeers: only plain text peer authentication supported by "
-				 "mbedtls netstream driver");
+			LogError(0, RS_RET_VALUE_NOT_IN_THIS_MODE, "SetPermPeers: only plain text "
+				 "peer authentication supported by mbedtls netstream driver");
 			ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
 		}
 		if(pPermPeers->pNext != NULL) {
