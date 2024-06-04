@@ -41,8 +41,7 @@ Template
    :widths: auto
    :class: parameter-table
 
-   "word", "RSYSLOG_TraditionalForwardFormat", "no", 
-   "``$ActionForwardDefaultTemplateName``"
+   "word", "RSYSLOG_TraditionalForwardFormat", "no", "``$ActionForwardDefaultTemplate``"
 
 Sets a custom default template for this module.
 
