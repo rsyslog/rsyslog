@@ -727,7 +727,7 @@ CODESTARTcommitTransaction
 		}
 		bDone = 1;
 
-		// Wait 100 microseconds
+		// Wait 100 milliseconds
 		srSleep(0, 100000);
 
 		// Verify if messages have been submitted successfully
