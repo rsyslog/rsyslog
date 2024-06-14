@@ -1283,6 +1283,7 @@ handleProton(wrkrInstanceData_t *const pWrkrData, pn_event_t *event) {
 						iQueueNum,
 						pWrkrData->nMaxProtonMsgs,
 						pWrkrData, pData->azurehost, pData->azureport, pData->container);
+					pn_delivery_settle(pDeliveryStatus); // free the delivered message
 					pMsgEntry->status = PROTON_ACCEPTED;
 
 					// Increment Stats Counter
