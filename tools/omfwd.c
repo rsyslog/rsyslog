@@ -982,13 +982,13 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData)
 			hints.ai_family = res->ai_family;
 			hints.ai_flags |= AI_PASSIVE;
 			iErr = getaddrinfo(pData->address, pData->port, &hints, &addr);
-			freeaddrinfo(addr);
 			if(iErr != 0) {
 				LogError(0, RS_RET_SUSPENDED,
 					 "omfwd: cannot use bind address '%s' for host '%s': %s",
 					 pData->address, pData->target, gai_strerror(iErr));
 				ABORT_FINALIZE(RS_RET_SUSPENDED);
 			}
+			freeaddrinfo(addr);
 			bBindRequired = 1;
 			address = pData->address;
 		}
