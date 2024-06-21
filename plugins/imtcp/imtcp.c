@@ -257,6 +257,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "streamdriver.PrioritizeSAN", eCmdHdlrBinary, 0 },
 	{ "streamdriver.TlsVerifyDepth", eCmdHdlrPositiveInt, 0 },
 	{ "streamdriver.cafile", eCmdHdlrString, 0 },
+	{ "streamdriver.crlfile", eCmdHdlrString, 0 },
 	{ "streamdriver.keyfile", eCmdHdlrString, 0 },
 	{ "streamdriver.certfile", eCmdHdlrString, 0 },
 	{ "permittedpeer", eCmdHdlrArray, 0 },
