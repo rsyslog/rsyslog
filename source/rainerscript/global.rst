@@ -69,12 +69,42 @@ The following parameters can be set:
   small parameters to prevent that from happening.
   **This parameter only has an effect if general debugging is enabled.**
 
--  **netstreamDriverCaExtraFiles**
+- **netstreamDriverCaExtraFiles**
 
-   This directive allows to configure multiple additional extra CA files.
-   This is intended for SSL certificate chains to work appropriately,
-   as the different CA files in the chain need to be specified.
-   It must be remarked that this parameter only works with the OpenSSL driver.
+  This directive allows to configure multiple additional extra CA files.
+  This is intended for SSL certificate chains to work appropriately,
+  as the different CA files in the chain need to be specified.
+  It must be remarked that this parameter only works with the OpenSSL driver.
+
+- **defaultopensslengine** available 8.2406.0+
+
+  This parameter is used to specify a custom OpenSSL engine by its ID. If the
+  engine is not specified, the system will use the default engine provided by OpenSSL.
+
+  Note: Listing Available OpenSSL Engines
+  To determine the available OpenSSL engines on your system, use the following command:
+
+  .. code-block:: bash
+
+      openssl engine -t
+
+  This command will output a list of available engines along with their IDs and descriptions.
+  Use the engine ID from this list as the value for the defaultopensslengine parameter.
+
+  .. code-block:: text
+
+      (rdrand) Intel RDRAND engine
+      (dynamic) Dynamic engine loading support
+
+  Example configuration:
+
+  .. code-block:: text
+
+      global(
+        ...
+        defaultopensslengine="rdrand"
+        ...
+      )
 
 - **processInternalMessages** binary (on/off)
 
