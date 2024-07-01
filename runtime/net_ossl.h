@@ -33,6 +33,7 @@
 #endif
 #include <openssl/engine.h>
 #include <openssl/rand.h>
+#include <openssl/evp.h>
 
 /* Internal OpenSSL defined ENUMS */
 typedef enum {
@@ -83,6 +84,7 @@ BEGINinterface(net_ossl) /* name must also be changed in ENDinterface macro! */
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
 	rsRetVal (*osslCtxInitCookie)(net_ossl_t *pThis);
 #endif // OPENSSL_VERSION_NUMBER >= 0x10100000L
+	rsRetVal (*osslInitEngine)(net_ossl_t *pThis);
 	// OpenSSL Helper function exports
 	rsRetVal (*osslChkpeername)(net_ossl_t *pThis, X509* certpeer, uchar *fromHostIP);
 	rsRetVal (*osslPeerfingerprint)(net_ossl_t *pThis, X509* certpeer, uchar *fromHostIP);
@@ -144,7 +146,6 @@ int opensslh_THREAD_cleanup(void);
 
 void osslGlblInit(void);
 void osslGlblExit(void);
-
 /*-----------------------------------------------------------------------------*/
 
 /* prototypes */

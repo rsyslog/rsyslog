@@ -1525,6 +1525,7 @@ SetDrvrTlsVerifyDepth(tcpsrv_t *pThis, int verifyDepth)
 	RETiRet;
 }
 
+
 /* End of methods to shuffle autentication settings to the driver.;
 
  * -------------------------------------------------------------------------- */

@@ -190,7 +190,7 @@ int opensslh_THREAD_cleanup(void)
 void
 osslGlblInit(void)
 {
-	DBGPRINTF("openssl: entering osslGlblInit\n");
+	DBGPRINTF("osslGlblInit: ENTER\n");
 
 	if((opensslh_THREAD_setup() == 0) ||
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -219,6 +219,31 @@ osslGlblInit(void)
 	ERR_load_BIO_strings();
 	ERR_load_crypto_strings();
 #endif
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
+	// Initialize OpenSSL engine library
+	ENGINE_load_builtin_engines();
+	/* Register all of them for every algorithm they collectively implement */
+	ENGINE_register_all_complete();
+
+	// Iterate through all available engines
+	ENGINE *osslEngine = ENGINE_get_first();
+	const char *engine_id = NULL;
+	const char *engine_name = NULL;
+	while (osslEngine) {
+		// Print engine ID and name if the engine is loaded
+		if (ENGINE_get_init_function(osslEngine)) { // Check if engine is initialized
+			engine_id = ENGINE_get_id(osslEngine);
+			engine_name = ENGINE_get_name(osslEngine);
+			DBGPRINTF("osslGlblInit: Loaded Engine: ID = %s, Name = %s\n", engine_id, engine_name);
+		}
+		osslEngine = ENGINE_get_next(osslEngine);
+	}
+	// Free the engine reference when done
+	ENGINE_free(osslEngine);
+#pragma GCC diagnostic pop
 }
 
 /* globally de-initialize OpenSSL */
@@ -733,7 +758,7 @@ net_ossl_peerfingerprint(net_ossl_t *pThis, X509* certpeer, uchar *fromHostIP)
 		if(pThis->bReportAuthErr == 1) {
 			errno = 0;
 			LogMsg(0, RS_RET_INVALID_FINGERPRINT, LOG_WARNING,
-				"nsd_ossl:TLS session terminated with remote syslog server '%s': "
+				"net_ossl:TLS session terminated with remote syslog server '%s': "
 				"Fingerprint check failed, not permitted to talk to %s",
 				fromHostIP, cstrGetSzStrNoNULL(pstrFingerprint));
 			pThis->bReportAuthErr = 0;
@@ -778,7 +803,7 @@ net_ossl_chkpeername(net_ossl_t *pThis, X509* certpeer, uchar *fromHostIP)
 			cstrFinalize(pStr);
 			errno = 0;
 			LogMsg(0, RS_RET_INVALID_FINGERPRINT, LOG_WARNING,
-				"nsd_ossl:TLS session terminated with remote syslog server: "
+				"net_ossl:TLS session terminated with remote syslog server: "
 				"peer name not authorized, not permitted to talk to %s",
 				cstrGetSzStrNoNULL(pStr));
 			pThis->bReportAuthErr = 0;
@@ -816,7 +841,7 @@ net_ossl_getpeercert(net_ossl_t *pThis, SSL *ssl, uchar *fromHostIP)
 			errno = 0;
 			pThis->bReportAuthErr = 0;
 			LogMsg(0, RS_RET_TLS_NO_CERT, LOG_WARNING,
-				"nsd_ossl:TLS session terminated with remote syslog server '%s': "
+				"net_ossl:TLS session terminated with remote syslog server '%s': "
 				"Peer check failed, peer did not provide a certificate.", fromHostIP);
 		}
 	}
@@ -1118,6 +1143,58 @@ net_ossl_verify_cookie(SSL *ssl, const unsigned char *cookie, unsigned int cooki
 }
 
 static rsRetVal
+net_ossl_init_engine(__attribute__((unused)) net_ossl_t *pThis)
+{
+	DEFiRet;
+	const char *engine_id = NULL;
+	const char *engine_name = NULL;
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+	// Get the default RSA engine
+	ENGINE *default_engine = ENGINE_get_default_RSA();
+	if (default_engine) {
+		engine_id = ENGINE_get_id(default_engine);
+		engine_name = ENGINE_get_name(default_engine);
+		DBGPRINTF("net_ossl_init_engine: Default RSA Engine: ID = %s, Name = %s\n", engine_id, engine_name);
+
+		// Free the engine reference when done
+		ENGINE_free(default_engine);
+	} else {
+		DBGPRINTF("net_ossl_init_engine: No default RSA Engine set.\n");
+	}
+
+	/* Setting specific Engine */
+	if (runConf != NULL && glbl.GetDfltOpensslEngine(runConf) != NULL) {
+		default_engine = ENGINE_by_id((char *)glbl.GetDfltOpensslEngine(runConf));
+		if (default_engine && ENGINE_init(default_engine)) {
+			/* engine initialised */
+			ENGINE_set_default_DSA(default_engine);
+			ENGINE_set_default_ciphers(default_engine);
+
+			/* Switch to Engine */
+			DBGPRINTF("net_ossl_init_engine: Changed default Engine to %s\n",
+				glbl.GetDfltOpensslEngine(runConf));
+
+			/* Release the functional reference from ENGINE_init() */
+			ENGINE_finish(default_engine);
+		} else {
+			LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: ENGINE_init failed to load Engine '%s'"
+					"ossl netstream driver", glbl.GetDfltOpensslEngine(runConf));
+			net_ossl_lastOpenSSLErrorMsg(NULL, 0, NULL, LOG_ERR, "net_ossl_init_engine", "ENGINE_init");
+		}
+		// Free the engine reference when done
+		ENGINE_free(default_engine);
+	} else {
+		DBGPRINTF("net_ossl_init_engine: use openssl default Engine");
+	}
+#pragma GCC diagnostic pop
+
+	RETiRet;
+}
+
+
+static rsRetVal
 net_ossl_ctx_init_cookie(net_ossl_t *pThis)
 {
 	DEFiRet;
@@ -1162,6 +1239,10 @@ net_ossl_set_bio_callback(BIO *conn)
 BEGINobjConstruct(net_ossl) /* be sure to specify the object type also in END macro! */
 	DBGPRINTF("net_ossl_construct: [%p]\n", pThis);
 	pThis->bReportAuthErr = 1;
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	CHKiRet(net_ossl_init_engine(pThis));
+finalize_it:
+#endif
 ENDobjConstruct(net_ossl)
 
 /* destructor for the net_ossl object */
@@ -1207,6 +1288,7 @@ CODESTARTobjQueryInterface(net_ossl)
 	pIf->osslLastOpenSSLErrorMsg	= net_ossl_lastOpenSSLErrorMsg;
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
 	pIf->osslCtxInitCookie	= net_ossl_ctx_init_cookie;
+	pIf->osslInitEngine	= net_ossl_init_engine;
 #endif
 finalize_it:
 ENDobjQueryInterface(net_ossl)

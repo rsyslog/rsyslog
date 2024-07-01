@@ -1475,6 +1475,7 @@ TESTS +=  \
 	imtcp-tls-ossl-error-cert.sh \
 	imtcp-tls-ossl-error-key.sh \
 	imtcp-tls-ossl-error-key2.sh
+#	imtcp-tls-ossl-basic-stress.sh
 if HAVE_VALGRIND
 TESTS += \
 	imtcp-tls-ossl-basic-vg.sh \
@@ -2426,6 +2427,7 @@ EXTRA_DIST= \
 	imtcp-tls-ossl-basic-tlscommands.sh \
 	imtcp-tls-ossl-basic-verifydepth.sh \
 	imtcp-tls-ossl-invalid-verifydepth.sh \
+	imtcp-tls-ossl-basic-stress.sh \
 	sndrcv_tls_ossl_anon_ipv4.sh \
 	sndrcv_tls_ossl_anon_ipv6.sh \
 	sndrcv_tls_ossl_anon_rebind.sh \

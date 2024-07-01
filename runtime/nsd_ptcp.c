@@ -231,7 +231,7 @@ SetPermitExpiredCerts(nsd_t __attribute__((unused)) *pNsd, uchar *mode)
 {
 	DEFiRet;
 	if(mode != NULL) {
-		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: permitexpiredcerts settingnot supported by "
+		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: permitexpiredcerts setting not supported by "
 				"ptcp netstream driver");
 		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
 	}
