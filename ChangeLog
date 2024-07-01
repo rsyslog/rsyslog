@@ -1,5 +1,17 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2406.0 (aka 2024.06) 2024-06-??
+- 2024-07-01: ompgsql bugfix: unexpected and unnecessary message loss
+  In case of PG not available lets retry instead of dropping messages
+  Thanks to Nickolai Novik for the patch.
+- 2024-07-01: tls subsystem/ossl driver
+  Several small fixes/additions
+  * output all loaded ciphers and engines into debug log
+  * Add new global option "defaultopensslengine" to customize the default openssl
+    engine. If not defined, openssl will handle the default engine automatically.
+    Sample: global(defaultopensslengine="rdrand")
+  * Add simple openssl performance test (imtcp-tls-ossl-basic-stress.sh) with
+    defaultopensslengine set to rdrand (Intel).
+  * removed unneeded testcase files in runtime folder.
 - 2024-04-18: [o|i]mprog/mmexternal bugfix: invalid command line parameter passing
   Quoted command line parameters were incorrectly passed to the called program. This
   resulted in unexpected behaviour. For example, in
