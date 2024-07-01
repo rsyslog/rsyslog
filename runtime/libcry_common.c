@@ -25,17 +25,16 @@
 #include "config.h"
 #endif
 #include <stdio.h>
-#include <gcrypt.h>
 #include <sys/stat.h>
 #include <sys/uio.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <string.h>
 
 #include "rsyslog.h" /* we need data typedefs */
-#include "libgcry.h"
-
+#include "libcry_common.h"
 
 /* read a key from a key file
  * @param[out] key - key buffer, must be freed by caller
@@ -47,7 +46,7 @@
  * Note well: key is a blob, not a C string (NUL may be present!)
  */
 int
-gcryGetKeyFromFile(const char *const fn, char **const key, unsigned *const keylen)
+cryGetKeyFromFile(const char *const fn, char **const key, unsigned *const keylen)
 {
 	struct stat sb;
 	int r = -1;
@@ -149,7 +148,7 @@ readProgLine(int fd, char *buf)
 	char c;
 	int r;
 	unsigned i;
-	
+
 	for(i = 0 ; i < 64*1024 ; ++i) {
 		if((r = readProgChar(fd, &c)) != 0) goto done;
 		if(c == '\n')
@@ -169,7 +168,7 @@ readProgKey(int fd, char *buf, unsigned keylen)
 	char c;
 	int r;
 	unsigned i;
-	
+
 	for(i = 0 ; i < keylen ; ++i) {
 		if((r = readProgChar(fd, &c)) != 0) goto done;
 		buf[i] = c;
@@ -179,7 +178,7 @@ done:	return r;
 }
 
 int
-gcryGetKeyFromProg(char *cmd, char **key, unsigned *keylen)
+cryGetKeyFromProg(char *cmd, char **key, unsigned *keylen)
 {
 	int r;
 	int fd;

@@ -94,16 +94,29 @@ logctl_SOURCES = logctl.c
 logctl_CPPFLAGS = $(RSRT_CFLAGS) $(PTHREADS_CFLAGS) $(LIBMONGOC_CFLAGS)
 logctl_LDADD = $(LIBMONGOC_LIBS)
 endif
-if ENABLE_LIBGCRYPT
+
+if ENABLE_RSCRYUTIL
 bin_PROGRAMS += rscryutil
 rscryutil = rscryutil.c
-rscryutil_CPPFLAGS = -I../runtime $(RSRT_CFLAGS) $(LIBGCRYPT_CFLAGS)
-rscryutil_LDADD = ../runtime/libgcry.la $(LIBGCRYPT_LIBS)
+rscryutil_CPPFLAGS = -I../runtime $(RSRT_CFLAGS)
+rscryutil_LDADD =
+
+if ENABLE_LIBGCRYPT
+rscryutil_CPPFLAGS += $(LIBGCRYPT_CFLAGS)
+rscryutil_LDADD += ../runtime/libgcry.la $(LIBGCRYPT_LIBS)
+endif
+
+if ENABLE_OPENSSL_CRYPTO_PROVIDER
+rscryutil_CPPFLAGS += $(OPENSSL_CFLAGS)
+rscryutil_LDADD += ../runtime/libossl.la $(OPENSSL_LIBS)
+endif
+
 rscryutil_LDFLAGS = \
-	-Wl,--whole-archive,--no-whole-archive
+-Wl,--whole-archive,--no-whole-archive
+
 if ENABLE_GENERATE_MAN_PAGES
 RSTMANFILE = rscryutil.rst
-rscryutil.1: $(RSTMANFILE) 
+rscryutil.1: $(RSTMANFILE)
 	$(AM_V_GEN) $(RST2MAN) $(RSTMANFILE) $@
 man1_MANS += rscryutil.1
 CLEANFILES += rscryutil.1
