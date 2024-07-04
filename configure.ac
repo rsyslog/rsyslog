@@ -1239,22 +1239,43 @@ AC_ARG_ENABLE(libgcrypt,
         [enable_libgcrypt=yes]
 )
 if test "x$enable_libgcrypt" = "xyes"; then
-        AC_CHECK_LIB(
-               [gcrypt],
-               [gcry_cipher_open],
-               [LIBGCRYPT_CFLAGS="`pkg-config --cflags libgcrypt`"
-               LIBGCRYPT_LIBS="`pkg-config --libs libgcrypt`"
-               ],
-               [AC_MSG_FAILURE([libgcrypt is missing])],
-               [`pkg-config --libs --cflags libgcrypt`]
-               )
-	AC_DEFINE([ENABLE_LIBGCRYPT], [1], [Indicator that LIBGCRYPT is present])
+        # Check for the modern pkg-config method first
+        AC_CHECK_PROG([HAVE_PKG_CONFIG],[pkg-config],[no])
+        if test "x${HAVE_PKG_CONFIG}" = "xno"; then
+                # Fallback to the outdated libgcrypt-config approach
+                AC_PATH_PROG([LIBGCRYPT_CONFIG],[libgcrypt-config],[no])
+                if test "x${LIBGCRYPT_CONFIG}" = "xno"; then
+                        AC_MSG_FAILURE([libgcrypt-config not found in PATH and pkg-config is not available. libgcrypt is missing.])
+                fi
+                AC_CHECK_LIB(
+                        [gcrypt],
+                        [gcry_cipher_open],
+                        [LIBGCRYPT_CFLAGS="`${LIBGCRYPT_CONFIG} --cflags`"
+                        LIBGCRYPT_LIBS="`${LIBGCRYPT_CONFIG} --libs`"
+                        ],
+                        [AC_MSG_FAILURE([libgcrypt is missing])],
+                        [`${LIBGCRYPT_CONFIG} --libs --cflags`]
+                        )
+        else
+                # Use the preferred pkg-config approach
+                AC_CHECK_LIB(
+                        [gcrypt],
+                        [gcry_cipher_open],
+                        [LIBGCRYPT_CFLAGS="`pkg-config --cflags libgcrypt gpg-error`"
+                        LIBGCRYPT_LIBS="`pkg-config --libs libgcrypt gpg-error`"
+                        ],
+                        [AC_MSG_FAILURE([libgcrypt is missing])],
+                        [`pkg-config --libs --cflags libgcrypt gpg-error`]
+                        )
+        fi
+        AC_DEFINE([ENABLE_LIBGCRYPT], [1], [Indicator that LIBGCRYPT is present])
 fi
 AM_CONDITIONAL(ENABLE_LIBGCRYPT, test x$enable_libgcrypt = xyes)
 AM_CONDITIONAL(ENABLE_RSCRYUTIL, test x$enable_libgcrypt = xyes || test x$enable_openssl_crypto_provider = xyes)
 AM_CONDITIONAL(ENABLE_OPENSSL_CRYPTO_PROVIDER, test x$enable_openssl_crypto_provider = xyes)
 AC_SUBST(LIBGCRYPT_CFLAGS)
 AC_SUBST(LIBGCRYPT_LIBS)
+
 
 # libzstd support
 AC_ARG_ENABLE(libzstd,
