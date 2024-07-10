@@ -11,9 +11,11 @@ omfwd: syslog Forwarding Output Module
 Purpose
 =======
 
-The omfwd plug-in provides the core functionality of traditional message
-forwarding via UDP and plain TCP. It is a built-in module that does not
-need to be loaded.
+The `omfwd` plugin provides core functionality for traditional message forwarding 
+via UDP and TCP (including TLS). This built-in module does not require loading.
+
+.. note:: The RELP protocol is not supported by `omfwd`. Use :doc:`omrelp <omrelp>` 
+   to forward messages via RELP.
 
  
 Notable Features
@@ -30,6 +32,7 @@ Configuration Parameters
 Module Parameters
 -----------------
 
+
 Template
 ^^^^^^^^
 
@@ -38,10 +41,10 @@ Template
    :widths: auto
    :class: parameter-table
 
-   "word", "RSYSLOG_TraditionalForwardFormat", "no", "``$ActionForwardDefaultTemplateName``"
+   "word", "RSYSLOG_TraditionalForwardFormat", "no", 
+   "``$ActionForwardDefaultTemplateName``"
 
-Sets a non-standard default template for this module.
- 
+Sets a custom default template for this module.
 
 Action Parameters
 -----------------
@@ -56,8 +59,7 @@ Target
 
    "word", "none", "no", "none"
 
-Name or IP-Address of the system that shall receive messages. Any
-resolvable name is fine.
+Name or IP address of the system to receive messages. Any resolvable name is fine.
 
 
 Port
@@ -70,7 +72,7 @@ Port
 
    "word", "514", "no", "none"
 
-Name or numerical value of port to use when connecting to target.
+Name or numerical value of the port to use when connecting to the target.
 
 
 Protocol
@@ -83,10 +85,11 @@ Protocol
 
    "word", "udp", "no", "none"
 
-Type of protocol to use for forwarding. Note that \`\`tcp'' means
-both legacy plain tcp syslog as well as RFC5425-based TLS-encrypted
-syslog. Which one is selected depends on the StreamDriver parameter.
-If StreamDriver is set to "ossl" or "gtls" it will use TLS-encrypted syslog.
+Type of protocol to use for forwarding. Note that ``tcp`` includes both legacy 
+plain TCP syslog and 
+`RFC5425 <https://datatracker.ietf.org/doc/html/rfc5425>`_-based TLS-encrypted 
+syslog. The selection depends on the StreamDriver parameter. If StreamDriver is 
+set to "ossl" or "gtls", it will use TLS-encrypted syslog.
 
 
 NetworkNamespace
@@ -99,11 +102,11 @@ NetworkNamespace
 
    "word", "none", "no", "none"
 
-Name of a network namespace as in /var/run/netns/ to use for forwarding.
+Name of a network namespace in /var/run/netns/ to use for forwarding.
 
-If the setns() system call is not available on the system (e.g. BSD
-kernel, linux kernel before v2.6.24) the given namespace will be
-ignored.
+If the setns() system call is unavailable (e.g., BSD kernel, Linux kernel 
+before v2.6.24), the given namespace will be ignored.
+
 
 Address
 ^^^^^^^
@@ -117,8 +120,9 @@ Address
 
 .. versionadded:: 8.35.0
 
-Bind socket to a given local IP address. This option is only supported
-for UDP, not TCP.
+Bind socket to a specific local IP address. This option is supported for 
+UDP only, not TCP.
+
 
 IpFreeBind
 ^^^^^^^^^^
@@ -174,24 +178,25 @@ TCP_Framing
 
    "word", "traditional", "no", "none"
 
-Framing-Mode to be used for forwarding, either "traditional" or
-"octet-counted". This affects only TCP-based protocols, it is ignored for UDP.
-In protocol engineering, "framing" means how multiple messages over the same
-connection are separated. Usually, this is transparent to users. Unfortunately,
-the early syslog protocol evolved and so there are cases where users need to
-specify the framing. The "traditional" framing is nontransparent. With it,
-messages end when an LF (aka "line break", "return") is encountered, and the
-next message starts immediately after the LF. If multi-line messages are
-received, these are essentially broken up into multiple message, usually with
-all but the first message segment being incorrectly formatted. The
-"octet-counted" framing solves this issue. With it, each message is prefixed
-with the actual message length, so that a receiver knows exactly where the
-message ends. Multi-line messages cause no problem here. This mode is very
-close to the method described in RFC5425 for TLS-enabled syslog. Unfortunately,
-only few syslogd implementations support "octet-counted" framing. As such, the
-"traditional" framing is set as default, even though it has defects. If it is
-known that the receiver supports "octet-counted" framing, it is suggested to
-use that framing mode.
+Framing mode used for forwarding: either "traditional" or "octet-counted". This 
+applies only to TCP-based protocols and is ignored for UDP. In protocol 
+engineering, "framing" refers to how multiple messages over the same connection 
+are separated. Usually, this is transparent to users. However, the early syslog 
+protocol evolved in such a way that users sometimes need to specify the framing.
+
+"Traditional" framing is non-transparent, where messages end when an LF 
+(line feed) is encountered, and the next message starts immediately after the 
+LF. If multi-line messages are received, they are split into multiple messages, 
+with all but the first segment usually incorrectly formatted.
+
+"Octet-counted" framing addresses this issue. Each message is prefixed with its 
+length, so the receiver knows exactly where the message ends. Multi-line 
+messages are handled correctly. This mode is similar to the method described in 
+`RFC5425 <https://datatracker.ietf.org/doc/html/rfc5425>`_ for TLS-enabled 
+syslog. Unfortunately, few syslog implementations support "octet-counted" 
+framing. As such, "traditional" framing is the default, despite its defects. 
+If the receiver supports "octet-counted" framing, it is recommended to use 
+that mode.
 
 
 TCP_FrameDelimiter
