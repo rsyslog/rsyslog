@@ -137,6 +137,15 @@
 	#define PRAGMA_DIAGNOSTIC_POP
 #endif
 
+#define NULL_CHECK(ptr) \
+	do { \
+		if(ptr == NULL) { \
+			LogError(0, RS_RET_INTERNAL_ERROR, \
+				"%s:%d: prevented NULL pointer access", __FILE__, __LINE__); \
+			ABORT_FINALIZE(RS_RET_INTERNAL_ERROR); \
+		} \
+	} while(0);
+
 /* ############################################################# *
  * #                 Some constant values                      # *
  * ############################################################# */

@@ -78,8 +78,11 @@ ENDobjDestruct(netstrm)
 static rsRetVal
 netstrmConstructFinalize(netstrm_t *pThis)
 {
-	ISOBJ_TYPE_assert(pThis, netstrm);
-	return pThis->Drvr.Construct(&pThis->pDrvrData);
+	DEFiRet;
+	NULL_CHECK(pThis);
+	iRet = pThis->Drvr.Construct(&pThis->pDrvrData);
+finalize_it:
+	RETiRet;
 }
 
 /* abort a connection. This is much like Destruct(), but tries
@@ -89,13 +92,15 @@ static rsRetVal
 AbortDestruct(netstrm_t **ppThis)
 {
 	DEFiRet;
-	assert(ppThis != NULL);
-	ISOBJ_TYPE_assert((*ppThis), netstrm);
+	NULL_CHECK(ppThis);
+	NULL_CHECK(*ppThis);
 
 	/* we do NOT exit on error, because that would make things worse */
 	(*ppThis)->Drvr.Abort((*ppThis)->pDrvrData);
 	iRet = netstrmDestruct(ppThis);
 
+
+finalize_it:
 	RETiRet;
 }
 
@@ -113,7 +118,7 @@ AcceptConnReq(netstrm_t *pThis, netstrm_t **ppNew)
 	nsd_t *pNewNsd = NULL;
 	DEFiRet;
 
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	assert(ppNew != NULL);
 
 	/* accept the new connection */
@@ -170,8 +175,10 @@ static rsRetVal
 Rcv(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf, int *const oserr)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	iRet = pThis->Drvr.Rcv(pThis->pDrvrData, pBuf, pLenBuf, oserr);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -187,8 +194,10 @@ static rsRetVal
 SetDrvrMode(netstrm_t *pThis, int iMode)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	iRet = pThis->Drvr.SetMode(pThis->pDrvrData, iMode);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -199,8 +208,10 @@ static rsRetVal
 SetDrvrAuthMode(netstrm_t *pThis, uchar *mode)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	iRet = pThis->Drvr.SetAuthMode(pThis->pDrvrData, mode);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -211,8 +222,10 @@ static rsRetVal
 SetDrvrPermitExpiredCerts(netstrm_t *pThis, uchar *mode)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	iRet = pThis->Drvr.SetPermitExpiredCerts(pThis->pDrvrData, mode);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -221,8 +234,10 @@ static rsRetVal
 SetDrvrPermPeers(netstrm_t *pThis, permittedPeers_t *pPermPeers)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	iRet = pThis->Drvr.SetPermPeers(pThis->pDrvrData, pPermPeers);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -231,8 +246,10 @@ static rsRetVal
 SetDrvrCheckExtendedKeyUsage(netstrm_t *pThis, int ChkExtendedKeyUsage)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	iRet = pThis->Drvr.SetCheckExtendedKeyUsage(pThis->pDrvrData, ChkExtendedKeyUsage);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -241,8 +258,10 @@ static rsRetVal
 SetDrvrPrioritizeSAN(netstrm_t *pThis, int prioritizeSan)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	iRet = pThis->Drvr.SetPrioritizeSAN(pThis->pDrvrData, prioritizeSan);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -251,8 +270,10 @@ static rsRetVal
 SetDrvrTlsVerifyDepth(netstrm_t *pThis, int verifyDepth)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	iRet = pThis->Drvr.SetTlsVerifyDepth(pThis->pDrvrData, verifyDepth);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -260,8 +281,10 @@ static rsRetVal
 SetDrvrTlsCAFile(netstrm_t *const pThis, const uchar *const file)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	iRet = pThis->Drvr.SetTlsCAFile(pThis->pDrvrData, file);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -269,8 +292,10 @@ static rsRetVal
 SetDrvrTlsCRLFile(netstrm_t *const pThis, const uchar *const file)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	iRet = pThis->Drvr.SetTlsCRLFile(pThis->pDrvrData, file);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -278,8 +303,10 @@ static rsRetVal
 SetDrvrTlsKeyFile(netstrm_t *const pThis, const uchar *const file)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	iRet = pThis->Drvr.SetTlsKeyFile(pThis->pDrvrData, file);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -287,8 +314,10 @@ static rsRetVal
 SetDrvrTlsCertFile(netstrm_t *const pThis, const uchar *const file)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	iRet = pThis->Drvr.SetTlsCertFile(pThis->pDrvrData, file);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -306,8 +335,10 @@ static rsRetVal
 Send(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	iRet = pThis->Drvr.Send(pThis->pDrvrData, pBuf, pLenBuf);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -318,8 +349,10 @@ static rsRetVal
 EnableKeepAlive(netstrm_t *pThis)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	iRet = pThis->Drvr.EnableKeepAlive(pThis->pDrvrData);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -329,8 +362,10 @@ static rsRetVal
 SetKeepAliveProbes(netstrm_t *pThis, int keepAliveProbes)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	iRet = pThis->Drvr.SetKeepAliveProbes(pThis->pDrvrData, keepAliveProbes);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -340,8 +375,10 @@ static rsRetVal
 SetKeepAliveTime(netstrm_t *pThis, int keepAliveTime)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	iRet = pThis->Drvr.SetKeepAliveTime(pThis->pDrvrData, keepAliveTime);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -351,8 +388,10 @@ static rsRetVal
 SetKeepAliveIntvl(netstrm_t *pThis, int keepAliveIntvl)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	iRet = pThis->Drvr.SetKeepAliveIntvl(pThis->pDrvrData, keepAliveIntvl);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -361,8 +400,10 @@ static rsRetVal
 SetGnutlsPriorityString(netstrm_t *pThis, uchar *gnutlsPriorityString)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	iRet = pThis->Drvr.SetGnutlsPriorityString(pThis->pDrvrData, gnutlsPriorityString);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -370,8 +411,11 @@ SetGnutlsPriorityString(netstrm_t *pThis, uchar *gnutlsPriorityString)
 static rsRetVal
 CheckConnection(netstrm_t *pThis)
 {
-	ISOBJ_TYPE_assert(pThis, netstrm);
-	return pThis->Drvr.CheckConnection(pThis->pDrvrData);
+	DEFiRet;
+	NULL_CHECK(pThis);
+	iRet = pThis->Drvr.CheckConnection(pThis->pDrvrData);
+finalize_it:
+	RETiRet;
 }
 
 
@@ -380,8 +424,10 @@ static rsRetVal
 GetRemoteHName(netstrm_t *pThis, uchar **ppsz)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	iRet = pThis->Drvr.GetRemoteHName(pThis->pDrvrData, ppsz);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -391,8 +437,10 @@ static rsRetVal
 GetRemoteIP(netstrm_t *pThis, prop_t **ip)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	iRet = pThis->Drvr.GetRemoteIP(pThis->pDrvrData, ip);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -402,8 +450,10 @@ static rsRetVal
 GetRemAddr(netstrm_t *pThis, struct sockaddr_storage **ppAddr)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	iRet = pThis->Drvr.GetRemAddr(pThis->pDrvrData, ppAddr);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -415,10 +465,12 @@ static rsRetVal
 Connect(netstrm_t *pThis, int family, uchar *port, uchar *host, char *device)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
+	NULL_CHECK(pThis);
 	assert(port != NULL);
 	assert(host != NULL);
 	iRet = pThis->Drvr.Connect(pThis->pDrvrData, family, port, host, device);
+
+finalize_it:
 	RETiRet;
 }
 
@@ -432,9 +484,11 @@ static rsRetVal
 GetSock(netstrm_t *pThis, int *pSock)
 {
 	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrm);
-	assert(pSock != NULL);
+	NULL_CHECK(pThis);
+	NULL_CHECK(pSock);
 	iRet = pThis->Drvr.GetSock(pThis->pDrvrData, pSock);
+
+finalize_it:
 	RETiRet;
 }
 
