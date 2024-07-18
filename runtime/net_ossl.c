@@ -220,8 +220,8 @@ osslGlblInit(void)
 	ERR_load_crypto_strings();
 #endif
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+PRAGMA_DIAGNOSTIC_PUSH
+PRAGMA_IGNORE_Wdeprecated_declarations
 
 	// Initialize OpenSSL engine library
 	ENGINE_load_builtin_engines();
@@ -243,7 +243,7 @@ osslGlblInit(void)
 	}
 	// Free the engine reference when done
 	ENGINE_free(osslEngine);
-#pragma GCC diagnostic pop
+PRAGMA_DIAGNOSTIC_POP
 }
 
 /* globally de-initialize OpenSSL */
@@ -1094,8 +1094,8 @@ RSYSLOG_BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused))
 
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
 // Requires at least OpenSSL v1.1.1
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
+PRAGMA_DIAGNOSTIC_PUSH
+PRAGMA_IGNORE_Wunused_parameter
 static int
 net_ossl_generate_cookie(SSL *ssl, unsigned char *cookie, unsigned int *cookie_len)
 {
@@ -1118,7 +1118,7 @@ net_ossl_generate_cookie(SSL *ssl, unsigned char *cookie, unsigned int *cookie_l
 
 	return 1;
 }
-#pragma GCC diagnostic pop
+PRAGMA_DIAGNOSTIC_POP
 
 static int
 net_ossl_verify_cookie(SSL *ssl, const unsigned char *cookie, unsigned int cookie_len)
@@ -1149,8 +1149,8 @@ net_ossl_init_engine(__attribute__((unused)) net_ossl_t *pThis)
 	const char *engine_id = NULL;
 	const char *engine_name = NULL;
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+PRAGMA_DIAGNOSTIC_PUSH
+PRAGMA_IGNORE_Wdeprecated_declarations
 	// Get the default RSA engine
 	ENGINE *default_engine = ENGINE_get_default_RSA();
 	if (default_engine) {
@@ -1188,7 +1188,7 @@ net_ossl_init_engine(__attribute__((unused)) net_ossl_t *pThis)
 	} else {
 		DBGPRINTF("net_ossl_init_engine: use openssl default Engine");
 	}
-#pragma GCC diagnostic pop
+PRAGMA_DIAGNOSTIC_POP
 
 	RETiRet;
 }
