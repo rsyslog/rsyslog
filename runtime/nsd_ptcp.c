@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for plain tcp sockets.
  *
- * Copyright 2007-2019 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2024 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -124,11 +124,11 @@ GetSock(nsd_t *pNsd, int *pSock)
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
 	DEFiRet;
 
-	ISOBJ_TYPE_assert((pThis), nsd_ptcp);
-	assert(pSock != NULL);
+	NULL_CHECK(pSock);
 
 	*pSock = pThis->sock;
 
+finalize_it:
 	RETiRet;
 }
 
@@ -472,6 +472,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 
 	iNewSock = accept(pThis->sock, (struct sockaddr*) &addr, &addrlen);
 	if(iNewSock < 0) {
+		// TODO: Check errno EINTR, EAGAIN - also check rest of file
 		if(Debug) {
 			char errStr[1024];
 			rs_strerror_r(errno, errStr, sizeof(errStr));
@@ -1018,12 +1019,27 @@ CheckConnection(nsd_t *pNsd)
 
 	rc = recv(pThis->sock, msgbuf, 1, MSG_DONTWAIT | MSG_PEEK);
 	if(rc == 0) {
-		dbgprintf("CheckConnection detected broken connection - closing it (rc %d, errno %d)\n", rc, errno);
+		// TODO: change error state, but we do not want this at the moment
+		// because it would require review of upper layers - we do not want this risk
+		LogMsg(0, RS_RET_IO_ERROR, LOG_INFO,
+			"ptcp network driver: CheckConnection detected that peer closed connection "
+			"- closing it (rc %d)\n", rc);
 		/* in this case, the remote peer had shut down the connection and we
 		 * need to close our side, too.
 		 */
 		sockClose(&pThis->sock);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	} else if(rc < 0) {
+		if(errno != EINTR && errno != EAGAIN) {
+			LogMsg(errno, RS_RET_IO_ERROR, LOG_ERR,
+				"ptcp network driver: CheckConnection detected broken connection "
+				"- closing it (rc %d)\n", rc);
+			/* in this case, the remote peer had shut down the connection and we
+			 * need to close our side, too.
+			 */
+			sockClose(&pThis->sock);
+			ABORT_FINALIZE(RS_RET_IO_ERROR);
+		}
 	}
 finalize_it:
 	RETiRet;

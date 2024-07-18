@@ -16,6 +16,7 @@ $MainMsgQueueDequeueBatchSize 100
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 module(load="builtin:omfwd" template="outfmt")
 
+./all.tmp
 if $msg contains "msgnum:" then {
 	action(type="omfwd" target=["127.0.0.1"] port="'$MINITCPSRVR_PORT1'" protocol="tcp"
 		pool.resumeInterval="1"
