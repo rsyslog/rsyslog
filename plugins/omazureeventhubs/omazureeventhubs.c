@@ -208,10 +208,10 @@ static rsRetVal writeProton(wrkrInstanceData_t *__restrict__ const pWrkrData,
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-	{ "azurehost", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "azureport", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "azure_key_name", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "azure_key", eCmdHdlrString, CNFPARAM_REQUIRED },
+	{ "azurehost", eCmdHdlrString, 0 },
+	{ "azureport", eCmdHdlrString, 0 },
+	{ "azure_key_name", eCmdHdlrString, 0 },
+	{ "azure_key", eCmdHdlrString, 0 },
 	{ "amqp_address", eCmdHdlrString, 0 },
 	{ "container", eCmdHdlrString, 0 },
 	{ "eventproperties", eCmdHdlrArray, 0 },
@@ -872,20 +872,6 @@ CODESTARTnewActInst
 		}
 	}
 
-	if(pData->azure_key_name == NULL || pData->azure_key == NULL) {
-		LogError(0, RS_RET_CONFIG_ERROR,
-			"omazureeventhubs: azure_key_name and azure_key are requires to access azure eventhubs"
-			" - action definition invalid");
-		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-	}
-
-	if(pData->container == NULL) {
-		LogError(0, RS_RET_CONFIG_ERROR,
-			"omazureeventhubs: Event Hubs \"container\" parameter (which is instance) not specified "
-			" - action definition invalid");
-		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-	}
-
 	if(pData->amqp_address == NULL) {
 		if(pData->azurehost == NULL) {
 			LogMsg(0, NO_ERRCODE, LOG_INFO, "omazureeventhubs: \"azurehost\" parameter not specified "
@@ -895,6 +881,18 @@ CODESTARTnewActInst
 		if(pData->azureport== NULL) {
 			// Set default
 			CHKmalloc(pData->azureport = (uchar *) strdup("5671"));
+		}
+		if(pData->azure_key_name == NULL || pData->azure_key == NULL) {
+			LogError(0, RS_RET_CONFIG_ERROR,
+				"omazureeventhubs: azure_key_name and azure_key are requires to access azure eventhubs"
+				" - action definition invalid");
+			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+		}
+		if(pData->container == NULL) {
+			LogError(0, RS_RET_CONFIG_ERROR,
+				"omazureeventhubs: Event Hubs \"container\" parameter (which is instance) not specified"
+				" - action definition invalid");
+			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 		}
 
 		// Create amqps URL from parameters
@@ -906,6 +904,85 @@ CODESTARTnewActInst
 			pData->azureport,
 			pData->container);
 		CHKmalloc(pData->amqp_address = (uchar*) strdup(szAddress));
+	} else {
+		// Free if set first
+		pData->azurehost = NULL;
+		pData->azureport = NULL;
+		pData->azure_key_name = NULL;
+		pData->azure_key = NULL;
+		pData->container = NULL;
+
+		// Remove the protocol part
+		char* amqp_address_dup = strdup((char*)pData->amqp_address);
+		char* startstr 	= strstr(amqp_address_dup, "amqps://");
+		char* endstr	= NULL;
+		if (!startstr) {
+			LogError(0, RS_RET_CONFIG_ERROR,
+				"omazureeventhubs: \"amqp_address\" parameter (URL) invalid "
+				" - could not find prefix in URL");
+			free(amqp_address_dup);
+			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+		}
+		startstr += strlen("amqps://");
+
+		// Parse AccessKeyName
+		endstr = strchr(startstr, ':');
+		if (!endstr) {
+			LogError(0, RS_RET_CONFIG_ERROR,
+				"omazureeventhubs: \"amqp_address\" parameter (URL) invalid "
+				" - could not find azure_key_name in URL");
+			free(amqp_address_dup);
+			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+		}
+		*endstr = '\0';
+		pData->azure_key_name = (uchar*) strdup(startstr);
+
+		// Parse AccessKey
+		startstr = endstr + 1;
+		endstr = strchr(startstr, '@');
+		if (!endstr) {
+			LogError(0, RS_RET_CONFIG_ERROR,
+				"omazureeventhubs: \"amqp_address\" parameter (URL) invalid "
+				" - could not find azure_key in URL");
+			free(amqp_address_dup);
+			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+		}
+		*endstr = '\0';
+		pData->azure_key = (uchar*) strdup(startstr);
+
+		// Parse EventHubsNamespace and EventHubsInstance
+		startstr = endstr + 1;
+		endstr = strchr(startstr, '/');
+		if (!endstr) {
+			LogError(0, RS_RET_CONFIG_ERROR,
+				"omazureeventhubs: \"amqp_address\" parameter (URL) invalid "
+				" - could not find azurehost in URL");
+			free(amqp_address_dup);
+			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+		}
+		*endstr = '\0';
+		pData->azurehost = (uchar*) strdup(startstr);
+
+		// Set port to default 5671 (amqps)
+		pData->azureport = (uchar*) strdup("5671");
+
+		// Copy Rest into container (EventHubsInstance)
+		startstr = endstr + 1;
+		pData->container = (uchar*) strdup(startstr);
+
+		// Free dup memory
+		free(amqp_address_dup);
+
+		// Output Debug Information
+		DBGPRINTF(
+		"newActInst: parsed amqp_address parameters for %p@key_name=%s key=%s host=%s port=%s container=%s\n",
+			pData,
+			pData->azure_key_name,
+			pData->azure_key,
+			pData->azurehost,
+			pData->azureport,
+			pData->container
+			);
 	}
 
 	iNumTpls = 1;
