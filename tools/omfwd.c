@@ -159,9 +159,12 @@ typedef struct targetData {
 	tcpclt_t *pTCPClt;	/* our tcpclt object */
 	sbool bzInitDone; /* did we do an init of zstrm already? */
 	z_stream zstrm;	/* zip stream to use for tcp compression */
-	//uchar sndBuf[16*1024];	/* this is intensionally fixed -- see no good reason to make configurable */
-	uchar sndBuf[1];	/* this is intensionally fixed -- see no good reason to make configurable */
-	unsigned offsSndBuf;	/* next free spot in send buffer */
+	/* sndBuf buffer size is intensionally fixed -- see no good reason to make configurable */
+	#define SNDBUF_FIXED_BUFFER_SIZE (16*1024)
+	uchar sndBuf[SNDBUF_FIXED_BUFFER_SIZE];
+	/* we know int is sufficient, as we have the fixed buffer size above! so no need for size_t */
+	int maxLenSndBuf;	/* max usable length of sendbuf - primarily for testing */
+	int offsSndBuf;	/* next free spot in send buffer */
 	time_t ttResume;
 	targetStats_t *pTargetStats;
 } targetData_t;
@@ -196,7 +199,8 @@ static configSettings_t cs;
 /* tables for interfacing with the v6 config system */
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
-	{ "template", eCmdHdlrGetWord, 0 },
+	{ "iobuffer.maxsize", eCmdHdlrNonNegInt, 0 },
+	{ "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -255,6 +259,7 @@ static struct cnfparamblk actpblk =
 struct modConfData_s {
 	rsconf_t *pConf;	/* our overall config object */
 	uchar 	*tplName;	/* default template */
+	int maxLenSndBuf;	/* default max usable length of sendbuf - primarily for testing */
 };
 
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
@@ -380,6 +385,7 @@ CODESTARTbeginCnfLoad
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	pModConf->tplName = NULL;
+	pModConf->maxLenSndBuf = -1;
 ENDbeginCnfLoad
 
 BEGINsetModCnf
@@ -405,9 +411,22 @@ CODESTARTsetModCnf
 						"was already set via legacy directive - may lead to inconsistent "
 						"results.");
 			}
+		} else if(!strcmp(modpblk.descr[i].name, "iobuffer.maxsize")) {
+			const int newLen = (int) pvals[i].val.d.n;
+			if(newLen > SNDBUF_FIXED_BUFFER_SIZE) {
+				LogMsg(0, RS_RET_PARAM_ERROR, LOG_WARNING,
+					"omfwd: module parameter \"iobuffer.maxsize\" specified larger "
+					"than actual buffer size (%d bytes) - ignored",
+					SNDBUF_FIXED_BUFFER_SIZE);
+			} else {
+				if(newLen > 0) {
+					loadModConf->maxLenSndBuf = newLen;
+				}
+			}
 		} else {
-			dbgprintf("omfwd: program error, non-handled "
-			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
+			LogMsg(0, RS_RET_INTERNAL_ERROR, LOG_ERR,
+				"omfwd: internal error, non-handled param '%s' in beginCnfLoad",
+				modpblk.descr[i].name);
 		}
 	}
 finalize_it:
@@ -473,6 +492,10 @@ CODESTARTcreateWrkrInstance
 		 * missing ports.
 		 */
 		pWrkrData->target[i].port = pData->ports[(i < pData->nPorts) ? i : 0];
+		pWrkrData->target[i].maxLenSndBuf =
+			(runModConf->maxLenSndBuf == -1)
+				? SNDBUF_FIXED_BUFFER_SIZE
+				: runModConf->maxLenSndBuf;
 		pWrkrData->target[i].offsSndBuf = 0;
 		pWrkrData->target[i].ttResume = ttNow;
 	}
@@ -839,9 +862,9 @@ TCPSendFrame(void *pvData, char *msg, const size_t len)
 	DEFiRet;
 	targetData_t *pTarget = (targetData_t *) pvData;
 
-	DBGPRINTF("omfwd: add %zu bytes to send buffer (curr offs %u) msg: %*s\n",
-		len, pTarget->offsSndBuf, (int) len, msg);
-	if(pTarget->offsSndBuf != 0 && pTarget->offsSndBuf + len >= sizeof(pTarget->sndBuf)) {
+	DBGPRINTF("omfwd: add %zu bytes to send buffer (curr offs %u, max len %d) msg: %*s\n",
+		len, pTarget->offsSndBuf, pTarget->maxLenSndBuf, (int) len, msg);
+	if(pTarget->offsSndBuf != 0 && (pTarget->offsSndBuf + len) >= (size_t) pTarget->maxLenSndBuf) {
 		/* no buffer space left, need to commit previous records. With the
 		 * current API, there unfortunately is no way to signal this
 		 * state transition to the upper layer.

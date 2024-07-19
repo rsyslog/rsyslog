@@ -1,8 +1,11 @@
 #!/bin/bash
 # added 2024-02-19 by rgerhards. Released under ASL 2.0
+# This test is not meant to be executed independetly. It just permits
+# to be called by different drivers with different io buffer sizes.
+# This in turn is needed to test some edge cases.
 . ${srcdir:=.}/diag.sh init
 generate_conf
-export NUMMESSAGES=1000
+export NUMMESSAGES=10000
 
 # starting minitcpsrvr receivers so that we can obtain their port
 # numbers
@@ -14,9 +17,8 @@ $MainMsgQueueTimeoutShutdown 10000
 $MainMsgQueueDequeueBatchSize 100
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
-module(load="builtin:omfwd" template="outfmt")
+module(load="builtin:omfwd" template="outfmt" iobuffer.maxSize="'$OMFWD_IOBUF_SIZE'")
 
-./all.tmp
 if $msg contains "msgnum:" then {
 	action(type="omfwd" target=["127.0.0.1"] port="'$MINITCPSRVR_PORT1'" protocol="tcp"
 		pool.resumeInterval="1"

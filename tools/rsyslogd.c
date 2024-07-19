@@ -1012,6 +1012,7 @@ logmsgInternalSubmit(const int iErr, const syslog_pri_t pri, const size_t lenMsg
 		pszTag[32] = '\0'; /* just to make sure... */
 		MsgSetTAG(pMsg, pszTag, len);
 	}
+
 	flags |= INTERNAL_MSG;
 	pMsg->msgFlags  = flags;
 	msgSetPRI(pMsg, pri);

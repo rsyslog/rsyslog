@@ -207,6 +207,8 @@ TESTS +=  \
 	nested-call-shutdown.sh \
 	dnscache-TTL-0.sh \
 	invalid_nested_include.sh \
+	omfwd-lb-1target-retry-full_buf.sh \
+	omfwd-lb-1target-retry-1_byte_buf.sh \
 	omfwd-lb-susp.sh \
 	omfwd-lb-2target-basic.sh \
 	omfwd-lb-2target-retry.sh \
@@ -2139,6 +2141,9 @@ EXTRA_DIST= \
 	rscript_set_modify.sh \
 	stop-localvar.sh \
 	stop-msgvar.sh \
+	omfwd-lb-1target-retry-full_buf.sh \
+	omfwd-lb-1target-retry-1_byte_buf.sh \
+	omfwd-lb-1target-retry-test_skeleton.sh \
 	omfwd-lb-susp.sh \
 	omfwd-lb-2target-basic.sh \
 	omfwd-lb-2target-impstats.sh \
