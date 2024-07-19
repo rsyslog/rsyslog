@@ -8,7 +8,7 @@
  * Please note that there currently is no glbl.c file as we do not yet
  * have any implementations.
  *
- * Copyright 2008-2022 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2024 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -122,6 +122,7 @@ extern char** glblDbgFiles;
 extern size_t glblDbgFilesNum;
 extern int glblDbgWhitelist;
 extern int glblPermitCtlC;
+extern int glblAbortOnInternalError;
 extern int bTerminateInputs;
 #ifndef HAVE_ATOMIC_BUILTINS
 extern DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);
