@@ -199,3 +199,8 @@ under the account of "user" with password "pwd".
           db="syslog_db" uid="user" pwd="pwd")
 
 
+
+FAQ
+===
+
+* :doc:`How can I encrypt the rsyslog connection to mariadb/mysql? <../../faq/encrypt_mysql_traffic_ommysql>`
