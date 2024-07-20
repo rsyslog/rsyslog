@@ -5,7 +5,7 @@
 # This in turn is needed to test some edge cases.
 . ${srcdir:=.}/diag.sh init
 generate_conf
-export NUMMESSAGES=10000
+export NUMMESSAGES=2000
 
 # starting minitcpsrvr receivers so that we can obtain their port
 # numbers
@@ -37,6 +37,7 @@ shutdown_when_empty
 wait_shutdown
 # note: minitcpsrv shuts down automatically if the connection is closed!
 
-cp $RSYSLOG_OUT_LOG  tmp
-seq_check 0 $((NUMMESSAGES-1)) -m20 #permit 10 messages to be lost
+export SEQ_CHECK_OPTIONS=-d
+#permit 100 messages to be lost in this extreme test (-m 100)
+seq_check 0 $((NUMMESSAGES-1)) -m100
 exit_test

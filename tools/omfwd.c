@@ -891,24 +891,6 @@ finalize_it:
 	RETiRet;
 }
 
-#if 1 // TODO: remove?
-
-/* This function is called immediately before a send retry is attempted.
- * It shall clean up whatever makes sense.
- * rgerhards, 2007-12-28
- */
-static rsRetVal TCPSendPrepRetry(void *pvData)
-{
-	DEFiRet;
-	targetData_t *pTarget = (targetData_t *) pvData;
-	wrkrInstanceData_t *pWrkrData = pTarget->pWrkrData;
-
-	assert(pWrkrData != NULL);
-	DestructTCPInstanceData(pWrkrData);
-	RETiRet;
-}
-#endif
-
 
 /* initializes a TCP session to a single Target
  */
@@ -982,53 +964,30 @@ dbgprintf("TCPSendInitTarget exit state %d, target %s:%s, pNetstrm %p, connected
 }
 
 
-// TODO: TCPSendInit looks obsolete or should be converted itself to dummy
-// clean this up when close to being done
-#if 0
-
-/* initializes everything so that TCPSend can work.
+/* Callback to initialize the provided target.
  * rgerhards, 2007-12-28
  */
 static rsRetVal
 TCPSendInit(void *pvData)
 {
-	DEFiRet;
-	targetData_t *const pTarget = (targetData_t *) pvData;
-	wrkrInstanceData_t *const pWrkrData = (wrkrInstanceData_t *) pTarget->pWrkrData;
-	instanceData *const pData = pWrkrData->pData;
-	int oneTargetOK = 0;
-
-	/* we do not err out, as we need to process all targets.
-	 * The targets themself handle errors.
-	 */
-	for(int i = 0 ; i <  pData->nTargets ; ++i) {
-		const targetData_t *const pLoopTarget = &(pWrkrData->target[i]);;
-		if(pLoopTarget->bIsConnected == 0) {
-DBGPRINTF("TCPSendInit: loop target %i %s:%s conn %d\n", i, pLoopTarget->target_name, pLoopTarget->port, pLoopTarget->bIsConnected);
-			iRet = TCPSendInitTarget(&(pWrkrData->target[i]));
-DBGPRINTF("TCPSendInit: loop after TCPSendInitTraget target %i %s:%s conn %d\n", i, pLoopTarget->target_name, pLoopTarget->port, pLoopTarget->bIsConnected);
-			if(iRet == RS_RET_OK)
-				oneTargetOK = 1;
-		}
-	}
-
-DBGPRINTF("TCPSendInit: oneTargetOK: %d\n", oneTargetOK);
-	if(oneTargetOK) {
-		iRet = RS_RET_OK; /* one is sufficient! */
-	}
-
-	RETiRet;
+	return TCPSendInitTarget((targetData_t *) pvData);
 }
-#endif
 
-/* TODO: check validity of this experiment / CLEANUP
- * A dummy initFunc() for tcpclt, because we handle connection establishment ourselves
+/* This callback function is called immediately before a send retry is attempted.
+ * It shall clean up whatever makes sense.
+ * side-note: TCPSendInit() is called afterwards by the generic tcp client code.
  */
-static rsRetVal
-TCPSendInitDummy(void *pvData __attribute__((unused)))
+static rsRetVal TCPSendPrepRetry(void *pvData)
 {
+	DestructTCPTargetData((targetData_t *) pvData);
+	/* Even if the destruct fails, it does not help to provide this info to
+	 * the upper layer. Also, DestructTCPTargtData() does currently not
+	 * provide a return status.
+	 */
 	return RS_RET_OK;
 }
+
+
 
 /* change to network namespace pData->networkNamespace and keep the file
  * descriptor to the original namespace.
@@ -1461,7 +1420,7 @@ initTCP(wrkrInstanceData_t *pWrkrData)
 			CHKiRet(tcpclt.Construct(&pWrkrData->target[i].pTCPClt));
 			CHKiRet(tcpclt.SetResendLastOnRecon(pWrkrData->target[i].pTCPClt, pData->bResendLastOnRecon));
 			/* and set callbacks */
-			CHKiRet(tcpclt.SetSendInit(pWrkrData->target[i].pTCPClt, TCPSendInitDummy));
+			CHKiRet(tcpclt.SetSendInit(pWrkrData->target[i].pTCPClt, TCPSendInit));
 			CHKiRet(tcpclt.SetSendFrame(pWrkrData->target[i].pTCPClt, TCPSendFrame));
 			CHKiRet(tcpclt.SetSendPrepRetry(pWrkrData->target[i].pTCPClt, TCPSendPrepRetry));
 			CHKiRet(tcpclt.SetFraming(pWrkrData->target[i].pTCPClt, pData->tcp_framing));

@@ -558,5 +558,3 @@ BEGINAbstractObjClassInit(netstrm, 1, OBJ_IS_CORE_MODULE) /* class, version */
 
 	/* set our own handlers */
 ENDObjClassInit(netstrm)
-/* vi:set ai:
- */
