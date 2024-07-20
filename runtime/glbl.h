@@ -122,7 +122,7 @@ extern char** glblDbgFiles;
 extern size_t glblDbgFilesNum;
 extern int glblDbgWhitelist;
 extern int glblPermitCtlC;
-extern int glblAbortOnInternalError;
+extern int glblAbortOnProgramError;
 extern int bTerminateInputs;
 #ifndef HAVE_ATOMIC_BUILTINS
 extern DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);

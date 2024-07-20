@@ -140,9 +140,9 @@
 #define NULL_CHECK(ptr) \
 	do { \
 		if(unlikely(ptr == NULL)) { \
-			LogError(0, RS_RET_INTERNAL_ERROR, \
+			LogError(0, RS_RET_PROGRAM_ERROR, \
 				"%s:%d: prevented NULL pointer access", __FILE__, __LINE__); \
-			ABORT_FINALIZE(RS_RET_INTERNAL_ERROR); \
+			ABORT_FINALIZE(RS_RET_PROGRAM_ERROR); \
 		} \
 	} while(0);
 
@@ -618,6 +618,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_FAUP_INIT_OPTIONS_FAILED = -2454, /**< could not initialize faup options */
 	RS_RET_LIBCAPNG_ERR = -2455, /**< error during dropping the capabilities */
 	RS_RET_NET_CONN_ABORTED = -2456, /**< error during dropping the capabilities */
+	RS_RET_PROGRAM_ERROR = -2457, /**< rsyslogd internal error, like tried NULL-ptr access */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

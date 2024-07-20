@@ -232,7 +232,7 @@ generate_conf() {
 global(inputs.timeout.shutdown="'$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT'"
        default.action.queue.timeoutshutdown="'$RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN'"
        default.action.queue.timeoutEnqueue="'$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE'"
-       debug.abortOnInternalError="on")
+       debug.abortOnProgramError="on")
 # use legacy-style for the following settings so that we can override if needed
 $MainmsgQueueTimeoutEnqueue 20000
 $MainmsgQueueTimeoutShutdown '$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT'
