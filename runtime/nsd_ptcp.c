@@ -470,15 +470,13 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	assert(ppNew != NULL);
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
 
-	iNewSock = accept(pThis->sock, (struct sockaddr*) &addr, &addrlen);
+	do {
+		iNewSock = accept(pThis->sock, (struct sockaddr*) &addr, &addrlen);
+	} while(iNewSock < 0 && (errno == EINTR || errno == EAGAIN));
+
 	if(iNewSock < 0) {
-		// TODO: Check errno EINTR, EAGAIN - also check rest of file
-		if(Debug) {
-			char errStr[1024];
-			rs_strerror_r(errno, errStr, sizeof(errStr));
-			dbgprintf("nds_ptcp: error accepting connection on socket %d, errno %d: %s\n",
-				  pThis->sock, errno, errStr);
-		}
+		LogMsg(errno, RS_RET_ACCEPT_ERR, LOG_WARNING,
+			"nds_ptcp: error accepting connection on socket %d", pThis->sock);
 		ABORT_FINALIZE(RS_RET_ACCEPT_ERR);
 	}
 

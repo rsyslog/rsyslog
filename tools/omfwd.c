@@ -1281,9 +1281,7 @@ processMsg(targetData_t *__restrict__ const pTarget,
 		CHKiRet(UDPSend(pWrkrData, psz, l)); // TODO-RG: always add "actualTarget"!
 	} else {
 		/* forward via TCP */
-dbgprintf("RGER: processMSG calling send()\n");
 		iRet = tcpclt.Send(pTarget->pTCPClt, pTarget, (char *)psz, l);
-dbgprintf("RGER: processMSG called  send(), iRet %d\n", iRet);
 		if(iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED) {
 			/* error! */
 			LogError(0, iRet, "omfwd: error forwarding via tcp to %s:%s, suspending action",
@@ -1347,7 +1345,7 @@ CODESTARTcommitTransaction
 				DBGPRINTF("RGER: sending to actualTarget %d: try %d\n", actualTarget,
 					  trynbr);
 				iRet = processMsg(pTarget, &actParam(pParams, 1, i, 0));
-				if(!(iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED)) {
+				if(iRet == RS_RET_OK || iRet == RS_RET_DEFER_COMMIT || iRet == RS_RET_PREVIOUS_COMMITTED) {
 					dotry = 0;
 				}
 			}
@@ -1355,8 +1353,8 @@ CODESTARTcommitTransaction
 		}
 
 		if(dotry == 1) {
-			// TODO: preserve error state if we had one?
-			DBGPRINTF("omfwd: no working targets available\n");
+			LogMsg(0, RS_RET_PARAM_ERROR, LOG_WARNING,
+				"omfwd: no working targets available, suspending action");
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 		pWrkrData->nXmit++;
@@ -1376,10 +1374,9 @@ CODESTARTcommitTransaction
 			pWrkrData->nXmit, pWrkrData->pData->iRebindInterval);
 		pWrkrData->nXmit = 0;	/* else we have an addtl wrap at 2^31-1 */
 		DestructTCPInstanceData(pWrkrData);
-		dbgprintf("RGERx: destruct done\n");
 		initTCP(pWrkrData);
-		dbgprintf("RGERx: init done\n");
-		dbgprintf("DONE REBIND - omfwd dropping target connection (as configured)\n");
+		LogMsg(0, RS_RET_PARAM_ERROR, LOG_WARNING,
+			"omfwd: dropped connections due to configured rebind interval");
 	}
 
 	/* END - REBIND */
