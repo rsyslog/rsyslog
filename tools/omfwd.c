@@ -724,23 +724,28 @@ finalize_it:
 		if(iRet == RS_RET_IO_ERROR) {
 			static unsigned int conErrCnt = 0;
 			const int skipFactor = pWrkrData->pData->iConErrSkip;
+
+			const char *actualErrMsg;
+			if(iRet == RS_RET_PEER_CLOSED_CONN) {
+				actualErrMsg = "remote server closed connection";
+			} else {
+				actualErrMsg = "we had a generic or IO error with the remote server. "
+					"The actual error message should already have been provided. ";
+			}
 			if (skipFactor <= 1)  {
 				/* All the connection errors are printed. */
-				LogError(0, iRet, "omfwd: remote server at %s:%s seems to have closed connection. "
-					"This often happens when the remote peer (or an interim system like a load "
-					"balancer or firewall) shuts down or aborts a connection. Rsyslog will "
-					"re-open the connection if configured to do so (we saw a generic IO Error, "
-					"which usually goes along with that behaviour).",
-					pTarget->target_name, pTarget->port);
+				LogError(0, iRet, "omfwd: %s server is %s:%s. "
+					"This can be caused by the remote server or an interim system like a load "
+					"balancer or firewall. Rsyslog will re-open the connection if configured "
+					"to do so.", actualErrMsg, pTarget->target_name, pTarget->port);
 			} else if ((conErrCnt++ % skipFactor) == 0) {
 				/* Every N'th error message is printed where N is a skipFactor. */
-				LogError(0, iRet, "omfwd: remote server at %s:%s seems to have closed connection. "
-					"This often happens when the remote peer (or an interim system like a load "
-					"balancer or firewall) shuts down or aborts a connection. Rsyslog will "
-					"re-open the connection if configured to do so (we saw a generic IO Error, "
-					"which usually goes along with that behaviour). Note that the next %d "
-					"connection error messages will be skipped.",
-					pTarget->target_name, pTarget->port, skipFactor-1);
+				LogError(0, iRet, "omfwd: %s server is %s:%s. "
+					"This can be caused by the remote server or an interim system like a load "
+					"balancer or firewall. Rsyslog will re-open the connection if configured "
+					"to do so. Note that the next %d connection error messages will be "
+					"skipped.",
+					actualErrMsg, pTarget->target_name, pTarget->port, skipFactor - 1);
 			}
 		} else {
 			LogError(0, iRet, "omfwd: TCPSendBuf error %d, destruct TCP Connection to %s:%s",
@@ -1081,7 +1086,6 @@ poolTryResume(wrkrInstanceData_t *const pWrkrData)
 	DEFiRet;
 	int oneTargetOK = 0;
 	for(int j = 0 ; j <  pWrkrData->pData->nTargets ; ++j) {
-DBGPRINTF("RGER: poolTryResume iterating, j %d\n", j);
 		if(pWrkrData->target[j].bIsConnected) {
 			oneTargetOK = 1;
 		} else {
@@ -1353,8 +1357,8 @@ CODESTARTcommitTransaction
 		}
 
 		if(dotry == 1) {
-			LogMsg(0, RS_RET_PARAM_ERROR, LOG_WARNING,
-				"omfwd: no working targets available, suspending action");
+			LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
+				"omfwd: no working target servers in pool available, suspending action");
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 		pWrkrData->nXmit++;
