@@ -997,6 +997,7 @@ if ENABLE_OMAZUREEVENTHUBS
 if ENABLE_OMAZUREEVENTHUBS_TESTS
 TESTS += \
 	omazureeventhubs-basic.sh \
+	omazureeventhubs-basic-url.sh \
 	omazureeventhubs-list.sh \
 	omazureeventhubs-stress.sh \
 	omazureeventhubs-interrupt.sh
@@ -2866,6 +2867,7 @@ EXTRA_DIST= \
 	testsuites/zoo.dep_wrk2.cfg \
 	testsuites/zoo.dep_wrk3.cfg \
 	omazureeventhubs-basic.sh \
+	omazureeventhubs-basic-url.sh \
 	omazureeventhubs-list.sh \
 	omazureeventhubs-stress.sh \
 	omazureeventhubs-interrupt.sh \
