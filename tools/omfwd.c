@@ -159,14 +159,14 @@ typedef struct targetData {
 	tcpclt_t *pTCPClt;	/* our tcpclt object */
 	sbool bzInitDone; /* did we do an init of zstrm already? */
 	z_stream zstrm;	/* zip stream to use for tcp compression */
-	/* sndBuf buffer size is intensionally fixed -- see no good reason to make configurable */
-	#define SNDBUF_FIXED_BUFFER_SIZE (16*1024)
-	uchar sndBuf[SNDBUF_FIXED_BUFFER_SIZE];
 	/* we know int is sufficient, as we have the fixed buffer size above! so no need for size_t */
 	int maxLenSndBuf;	/* max usable length of sendbuf - primarily for testing */
 	int offsSndBuf;	/* next free spot in send buffer */
 	time_t ttResume;
 	targetStats_t *pTargetStats;
+	/* sndBuf buffer size is intensionally fixed -- see no good reason to make configurable */
+	#define SNDBUF_FIXED_BUFFER_SIZE (16*1024)
+	uchar sndBuf[SNDBUF_FIXED_BUFFER_SIZE];
 } targetData_t;
 
 typedef struct wrkrInstanceData {
@@ -571,9 +571,6 @@ ENDfreeWrkrInstance
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
 	dbgprintf("omfwd\n");
-	// TODO-RG re-enable dbgprintf("\ttarget='%s'\n", pData->target);
-	dbgprintf("\tratelimit.interval='%u'\n", pData->ratelimitInterval);
-	dbgprintf("\tratelimit.burst='%u'\n", pData->ratelimitBurst);
 ENDdbgPrintInstInfo
 
 
@@ -715,10 +712,8 @@ TCPSendBufUncompressed(targetData_t *const pTarget, uchar *const buf, const unsi
 
 	while(alreadySent != len) {
 		lenSend = len - alreadySent;
-dbgprintf("RGER: TCPSendBufuncompressed calling send() %u [%u]\n", len, alreadySent);
 		CHKiRet(netstrm.Send(pTarget->pNetstrm, buf+alreadySent, &lenSend));
-dbgprintf("RGER: sent %zd [%u] bytes: %.*s\n", lenSend, alreadySent, (int) lenSend, buf+alreadySent);
-		DBGPRINTF("omfwd: TCP sent %ld bytes, requested %u\n", (long) lenSend, len - alreadySent);
+		DBGPRINTF("omfwd: TCP sent %zd bytes, requested %u\n", lenSend, len - alreadySent);
 		alreadySent += lenSend;
 	}
 
@@ -949,10 +944,8 @@ TCPSendInitTarget(targetData_t *const pTarget)
 		if(pData->gnutlsPriorityString != NULL) {
 			CHKiRet(netstrm.SetGnutlsPriorityString(pTarget->pNetstrm, pData->gnutlsPriorityString));
 		}
-		dbgprintf("TCPSendInitTarget PRE  CONN %s:%s, conn %d\n", pTarget->target_name, pTarget->port, pTarget->bIsConnected);
 		CHKiRet(netstrm.Connect(pTarget->pNetstrm, glbl.GetDefPFFamily(runModConf->pConf),
 			(uchar*)pTarget->port, (uchar*)pTarget->target_name, pData->device));
-		dbgprintf("TCPSendInitTarget POST CONN %s:%s, conn %d\n", pTarget->target_name, pTarget->port, pTarget->bIsConnected);
 
 		/* set keep-alive if enabled */
 		if(pData->bKeepAlive) {
@@ -964,7 +957,6 @@ TCPSendInitTarget(targetData_t *const pTarget)
 	}
 
 finalize_it:
-dbgprintf("TCPSendInitTarget exit state %d, target %s:%s, pNetstrm %p, connected %d\n", iRet, pTarget->target_name, pTarget->port, pTarget->pNetstrm, pTarget->bIsConnected);
 	if(iRet != RS_RET_OK) {
 		dbgprintf("TCPSendInitTarget FAILED with %d.\n", iRet);
 		DestructTCPTargetData(pTarget);
@@ -1129,19 +1121,15 @@ doTryResume(targetData_t *pTarget)
 
 	if(pTarget->bIsConnected)
 		FINALIZE;
-DBGPRINTF("omfwd: doTryResume: check time to retry %p, ttResume %lld\n", &pTarget, (long long) pTarget->ttResume);
 	if(pTarget->ttResume > 0) {
 		time_t ttNow;
 		datetime.GetTime(&ttNow);
-DBGPRINTF("omfwd: doTryResume: GetTime() returned %lld\n", (long long) ttNow);
 		if(ttNow < pTarget->ttResume) {
 			DBGPRINTF("omfwd: doTryResume: %s not yet time to retry, time %lld, ttResume %lld\n",
 				pTarget->target_name, (long long) ttNow, (long long) pTarget->ttResume);
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 	}
-
-DBGPRINTF("doTryResume, %s:%s, NEED TO RUN - connected %d\n", pTarget->target_name, pTarget->port, pTarget->bIsConnected);
 
 	/* The remote address is not yet known and needs to be obtained */
 	if(pData->protocol == FORW_UDP) {
@@ -1744,6 +1732,12 @@ CODESTARTnewActInst
 				"omfwd: program error, non-handled parameter '%s'",
 				actpblk.descr[i].name);
 		}
+	}
+
+	if(pData->protocol == FORW_UDP && pData->nTargets > 1) {
+		parser_warnmsg("you have defined %d targets. Multiple targets are ONLY "
+			"supported in TCP mode ignoring all but the first target in UDP mode",
+			pData->nTargets);
 	}
 
 	/* check if no port is set. If so, we use the IANA-assigned port of 514 */
