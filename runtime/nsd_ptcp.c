@@ -1020,7 +1020,7 @@ CheckConnection(nsd_t *pNsd)
 		sockClose(&pThis->sock);
 		ABORT_FINALIZE(RS_RET_PEER_CLOSED_CONN);
 	} else if(rc < 0) {
-		if(errno != EINTR && errno != EAGAIN) {
+		if(errno != EINTR && errno != EAGAIN && errno != EWOULDBLOCK) {
 			LogMsg(errno, RS_RET_IO_ERROR, LOG_ERR,
 				"ptcp network driver: CheckConnection detected broken connection");
 			sockClose(&pThis->sock);

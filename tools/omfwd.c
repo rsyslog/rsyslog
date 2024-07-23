@@ -375,10 +375,9 @@ static void
 DestructTCPInstanceData(wrkrInstanceData_t *pWrkrData)
 {
 	LogMsg(0, RS_RET_DEBUG, LOG_DEBUG,
-		"omfwd: Destructing TCP target pool of %d targets (DestructTCPInstanceData",
+		"omfwd: Destructing TCP target pool of %d targets (DestructTCPInstanceData)",
 		pWrkrData->pData->nTargets);
 	for(int j = 0 ; j <  pWrkrData->pData->nTargets ; ++j) {
-DBGPRINTF("RGERx destruct: nTargets %d, target %d \n", pWrkrData->pData->nTargets, j);
 		DestructTCPTargetData(&(pWrkrData->target[j]));
 	}
 }
@@ -1300,7 +1299,7 @@ finalize_it:
 
 BEGINcommitTransaction
 	unsigned i;
-	char namebuf[264]; /* 256 for FGDN, 5 for port and 3 for transport => 264 */
+	char namebuf[264]; /* 256 for FQDN, 5 for port and 3 for transport => 264 */
 CODESTARTcommitTransaction
 	CHKiRet(poolTryResume(pWrkrData));
 
@@ -1361,7 +1360,16 @@ CODESTARTcommitTransaction
 		if(pWrkrData->target[j].bIsConnected && pWrkrData->target[j].offsSndBuf != 0) {
 			iRet = TCPSendBuf(&(pWrkrData->target[j]), pWrkrData->target[j].sndBuf,
 				pWrkrData->target[j].offsSndBuf, IS_FLUSH);
-			pWrkrData->target[j].offsSndBuf = 0;
+			if(iRet == RS_RET_OK || iRet == RS_RET_DEFER_COMMIT || iRet == RS_RET_PREVIOUS_COMMITTED) {
+				pWrkrData->target[j].offsSndBuf = 0;
+			} else {
+				LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
+					"omfwd: target %s:%s became unavailable during buffer flush. "
+					"Remaining messages will be sent when it is online again.",
+					pWrkrData->target[j].target_name, pWrkrData->target[j].port);
+				DestructTCPTargetData(&(pWrkrData->target[j]));
+				iRet = RS_RET_OK;
+			}
 		}
 	}
 
