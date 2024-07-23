@@ -554,6 +554,7 @@ ENDfreeInstance
 
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
+	LogMsg(0, RS_RET_DEBUG, LOG_DEBUG, "omfwd: Destructing worker instance");
 	DestructTCPInstanceData(pWrkrData);
 	closeUDPSockets(pWrkrData);
 
