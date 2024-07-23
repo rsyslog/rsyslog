@@ -355,6 +355,8 @@ DestructTCPTargetData(targetData_t *const pTarget)
 	datetime.GetTime(&pTarget->ttResume);
 	pTarget->ttResume += pTarget->pData->poolResumeInterval;
 	pTarget->bIsConnected = 0;
+	LogMsg(0, RS_RET_DEBUG, LOG_DEBUG, "omfwd: DestructTCPTargetData: %s:%s",
+		pTarget->target_name, pTarget->port);
 	DBGPRINTF("omfwd: DestructTCPTargetData: %p %s:%s, connected %d, ttResume %lld\n",
 				&pTarget, pTarget->target_name, pTarget->port,
 				pTarget->bIsConnected, (long long) pTarget->ttResume);
@@ -372,7 +374,9 @@ DestructTCPTargetData(targetData_t *const pTarget)
 static void
 DestructTCPInstanceData(wrkrInstanceData_t *pWrkrData)
 {
-DBGPRINTF("RGERx destruct: nTargets %d \n", pWrkrData->pData->nTargets);
+	LogMsg(0, RS_RET_DEBUG, LOG_DEBUG,
+		"omfwd: Destructing TCP target pool of %d targets (DestructTCPInstanceData",
+		pWrkrData->pData->nTargets);
 	for(int j = 0 ; j <  pWrkrData->pData->nTargets ; ++j) {
 DBGPRINTF("RGERx destruct: nTargets %d, target %d \n", pWrkrData->pData->nTargets, j);
 		DestructTCPTargetData(&(pWrkrData->target[j]));
@@ -721,7 +725,7 @@ dbgprintf("RGER: sent %zd [%u] bytes: %.*s\n", lenSend, alreadySent, (int) lenSe
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(iRet == RS_RET_IO_ERROR) {
+		if(iRet == RS_RET_IO_ERROR || iRet == RS_RET_PEER_CLOSED_CONN) {
 			static unsigned int conErrCnt = 0;
 			const int skipFactor = pWrkrData->pData->iConErrSkip;
 

@@ -646,10 +646,7 @@ LstnInit(netstrms_t *const pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*
 		#endif
 		   ) {
 			/* TODO: check if *we* bound the socket - else we *have* an error! */
-			char errStr[1024];
-			rs_strerror_r(errno, errStr, sizeof(errStr));
 			LogError(errno, NO_ERRCODE, "Error while binding tcp socket");
-			dbgprintf("error %d while binding tcp socket: %s\n", errno, errStr);
 			close(sock);
 			sock = -1;
 			continue;

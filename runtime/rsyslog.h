@@ -619,6 +619,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_LIBCAPNG_ERR = -2455, /**< error during dropping the capabilities */
 	RS_RET_NET_CONN_ABORTED = -2456, /**< error during dropping the capabilities */
 	RS_RET_PROGRAM_ERROR = -2457, /**< rsyslogd internal error, like tried NULL-ptr access */
+	RS_RET_DEBUG = -2458, /**< status messages primarily meant for debugging, no error */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
