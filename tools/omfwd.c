@@ -350,17 +350,21 @@ DestructTCPTargetData(targetData_t *const pTarget)
 {
 	// TODO: do we need to do a final send? if so, old bug!
 	doZipFinish(pTarget);
-	if(pTarget->pNetstrm != NULL)
+
+	if(pTarget->pNetstrm != NULL) {
 		netstrm.Destruct(&pTarget->pNetstrm);
-	if(pTarget->pNS != NULL)
+		/* we also use this as proxy for debug notification */
+		LogMsg(0, RS_RET_DEBUG, LOG_DEBUG, "omfwd: [wrkr %u] DestructTCPTargetData: %s:%s",
+			pTarget->pWrkrData->wrkrID, pTarget->target_name, pTarget->port);
+	}
+	if(pTarget->pNS != NULL) {
 		netstrms.Destruct(&pTarget->pNS);
+	}
 
 	/* set resume time for interal retries */
 	datetime.GetTime(&pTarget->ttResume);
 	pTarget->ttResume += pTarget->pData->poolResumeInterval;
 	pTarget->bIsConnected = 0;
-	LogMsg(0, RS_RET_DEBUG, LOG_DEBUG, "omfwd: [wrkr %u] DestructTCPTargetData: %s:%s",
-		pTarget->pWrkrData->wrkrID, pTarget->target_name, pTarget->port);
 	DBGPRINTF("omfwd: DestructTCPTargetData: %p %s:%s, connected %d, ttResume %lld\n",
 				&pTarget, pTarget->target_name, pTarget->port,
 				pTarget->bIsConnected, (long long) pTarget->ttResume);
@@ -703,6 +707,8 @@ finalize_it:
 
 /* CODE FOR SENDING TCP MESSAGES */
 
+
+
 static rsRetVal
 TCPSendBufUncompressed(targetData_t *const pTarget, uchar *const buf, const unsigned len)
 {
@@ -915,11 +921,11 @@ TCPSendInitTarget(targetData_t *const pTarget)
 	wrkrInstanceData_t *const pWrkrData = (wrkrInstanceData_t *) pTarget->pWrkrData;
 	instanceData *pData = pWrkrData->pData;
 
-	DBGPRINTF("TCPSendInitTarget %s:%s, conn %d, pNetstrm %p\n", pTarget->target_name, pTarget->port, pTarget->bIsConnected, pTarget->pNetstrm);
 
 	// TODO-RG: check error case - we need to make sure that we handle the situation correctly
 	//	    when SOME calls fails - else we may get into big trouble during de-init
 	if(pTarget->pNetstrm == NULL) {
+DBGPRINTF("TCPSendInitTarget %s:%s, conn %d, pNetstrm %p\n", pTarget->target_name, pTarget->port, pTarget->bIsConnected, pTarget->pNetstrm);
 		dbgprintf("TCPSendInitTarget CREATE %s:%s, conn %d\n", pTarget->target_name, pTarget->port, pTarget->bIsConnected);
 		CHKiRet(netstrms.Construct(&pTarget->pNS));
 		/* the stream driver must be set before the object is finalized! */
@@ -963,6 +969,10 @@ TCPSendInitTarget(targetData_t *const pTarget)
 			CHKiRet(netstrm.SetKeepAliveTime(pTarget->pNetstrm, pData->iKeepAliveTime));
 			CHKiRet(netstrm.EnableKeepAlive(pTarget->pNetstrm));
 		}
+
+		LogMsg(0, RS_RET_DEBUG, LOG_DEBUG,
+			"omfwd: [wrkr %u] TCPSendInitTarget established connection to %s:%s",
+			pTarget->pWrkrData->wrkrID, pTarget->target_name, pTarget->port);
 	}
 
 finalize_it:
