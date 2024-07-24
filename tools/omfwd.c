@@ -707,12 +707,73 @@ finalize_it:
 
 /* CODE FOR SENDING TCP MESSAGES */
 
+/* This is a common function so that we can emit consistent error
+ * messages whenever we have trouble with a connection, e.g. when
+ * sending or checking if it's broken.
+ */
+static void
+emitConnectionErrorMsg(const targetData_t *const pTarget, const rsRetVal iRet)
+{
+	wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t *) pTarget->pWrkrData;
+
+	if(iRet == RS_RET_IO_ERROR || iRet == RS_RET_PEER_CLOSED_CONN) {
+		static unsigned int conErrCnt = 0;
+		const int skipFactor = pWrkrData->pData->iConErrSkip;
+
+		const char *actualErrMsg;
+		if(iRet == RS_RET_PEER_CLOSED_CONN) {
+			actualErrMsg = "remote server closed connection. ";
+		} else {
+			actualErrMsg = "we had a generic or IO error with the remote server. "
+				"The actual error message should already have been provided. ";
+		}
+		if (skipFactor <= 1)  {
+			/* All the connection errors are printed. */
+			LogError(0, iRet, "omfwd: %s Server is %s:%s. "
+				"This can be caused by the remote server or an interim system like a load "
+				"balancer or firewall. Rsyslog will re-open the connection if configured "
+				"to do so. [wrkr %u]", actualErrMsg, pTarget->target_name,
+				pTarget->port, pTarget->pWrkrData->wrkrID);
+		} else if ((conErrCnt++ % skipFactor) == 0) {
+			/* Every N'th error message is printed where N is a skipFactor. */
+			LogError(0, iRet, "omfwd: %s Server is %s:%s. "
+				"This can be caused by the remote server or an interim system like a load "
+				"balancer or firewall. Rsyslog will re-open the connection if configured "
+				"to do so. Note that the next %d connection error messages will be "
+				"skipped. [wrkr %u]",
+				actualErrMsg, pTarget->target_name, pTarget->port, skipFactor - 1,
+				pTarget->pWrkrData->wrkrID);
+		}
+	} else {
+		LogError(0, iRet, "omfwd: TCPSendBuf error %d, destruct TCP Connection to %s:%s",
+			iRet, pTarget->target_name, pTarget->port);
+	}
+}
+
+
+/* hack to check connections for plain tcp syslog - see ptcp driver for details */
+static rsRetVal
+CheckConnection(targetData_t *const pTarget)
+{
+	DEFiRet;
+
+	if((pTarget->pData->protocol == FORW_TCP) && (pTarget->pData->bExtendedConnCheck)) {
+		CHKiRet(netstrm.CheckConnection(pTarget->pNetstrm));
+	}
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		emitConnectionErrorMsg(pTarget, iRet);
+		DestructTCPTargetData(pTarget);
+		iRet = RS_RET_SUSPENDED;
+	}
+	RETiRet;
+}
 
 
 static rsRetVal
 TCPSendBufUncompressed(targetData_t *const pTarget, uchar *const buf, const unsigned len)
 {
-	wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t *) pTarget->pWrkrData;
 	DEFiRet;
 	unsigned alreadySent;
 	ssize_t lenSend;
@@ -734,38 +795,7 @@ TCPSendBufUncompressed(targetData_t *const pTarget, uchar *const buf, const unsi
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if(iRet == RS_RET_IO_ERROR || iRet == RS_RET_PEER_CLOSED_CONN) {
-			static unsigned int conErrCnt = 0;
-			const int skipFactor = pWrkrData->pData->iConErrSkip;
-
-			const char *actualErrMsg;
-			if(iRet == RS_RET_PEER_CLOSED_CONN) {
-				actualErrMsg = "remote server closed connection";
-			} else {
-				actualErrMsg = "we had a generic or IO error with the remote server. "
-					"The actual error message should already have been provided. ";
-			}
-			if (skipFactor <= 1)  {
-				/* All the connection errors are printed. */
-				LogError(0, iRet, "omfwd: %s server is %s:%s. "
-					"This can be caused by the remote server or an interim system like a load "
-					"balancer or firewall. Rsyslog will re-open the connection if configured "
-					"to do so. [wrkr %u]", actualErrMsg, pTarget->target_name,
-					pTarget->port, pTarget->pWrkrData->wrkrID);
-			} else if ((conErrCnt++ % skipFactor) == 0) {
-				/* Every N'th error message is printed where N is a skipFactor. */
-				LogError(0, iRet, "omfwd: %s server is %s:%s. "
-					"This can be caused by the remote server or an interim system like a load "
-					"balancer or firewall. Rsyslog will re-open the connection if configured "
-					"to do so. Note that the next %d connection error messages will be "
-					"skipped. [wrkr %u]",
-					actualErrMsg, pTarget->target_name, pTarget->port, skipFactor - 1,
-					pTarget->pWrkrData->wrkrID);
-			}
-		} else {
-			LogError(0, iRet, "omfwd: TCPSendBuf error %d, destruct TCP Connection to %s:%s",
-				iRet, pTarget->target_name, pTarget->port);
-		}
+		emitConnectionErrorMsg(pTarget, iRet);
 		DestructTCPTargetData(pTarget);
 		iRet = RS_RET_SUSPENDED;
 	}
@@ -925,7 +955,6 @@ TCPSendInitTarget(targetData_t *const pTarget)
 	// TODO-RG: check error case - we need to make sure that we handle the situation correctly
 	//	    when SOME calls fails - else we may get into big trouble during de-init
 	if(pTarget->pNetstrm == NULL) {
-DBGPRINTF("TCPSendInitTarget %s:%s, conn %d, pNetstrm %p\n", pTarget->target_name, pTarget->port, pTarget->bIsConnected, pTarget->pNetstrm);
 		dbgprintf("TCPSendInitTarget CREATE %s:%s, conn %d\n", pTarget->target_name, pTarget->port, pTarget->bIsConnected);
 		CHKiRet(netstrms.Construct(&pTarget->pNS));
 		/* the stream driver must be set before the object is finalized! */
@@ -1103,7 +1132,9 @@ poolTryResume(wrkrInstanceData_t *const pWrkrData)
 	int oneTargetOK = 0;
 	for(int j = 0 ; j <  pWrkrData->pData->nTargets ; ++j) {
 		if(pWrkrData->target[j].bIsConnected) {
-			oneTargetOK = 1;
+			if(CheckConnection(&(pWrkrData->target[j])) == RS_RET_OK) {
+				oneTargetOK = 1;
+			}
 		} else {
 			DBGPRINTF("omfwd: poolTryResume, calling tryResume, target %d\n", j);
 			iRet = doTryResume(&(pWrkrData->target[j]));
@@ -1232,6 +1263,10 @@ ENDtryResume
 BEGINbeginTransaction
 CODESTARTbeginTransaction
 	dbgprintf("omfwd: beginTransaction\n");
+	/* note: we need to try resume so that we are at least at the start
+	 * of the transaction aware of target states. It is not useful to
+	 * start a transaction when we know it will most probably fail.
+	 */
 	iRet = poolTryResume(pWrkrData);
 ENDbeginTransaction
 
@@ -1491,7 +1526,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->strmCompFlushOnTxEnd = 1;
 	pData->compressionMode = COMPRESS_NEVER;
 	pData->ipfreebind = IPFREEBIND_ENABLED_WITH_LOG;
-	pData->poolResumeInterval = 0;
+	pData->poolResumeInterval = 30;
 	pData->ratelimiter = NULL;
 	pData->ratelimitInterval = 0;
 	pData->ratelimitBurst = 200;
