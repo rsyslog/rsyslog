@@ -69,5 +69,3 @@ PROTOTYPEObj(tcpclt);
 #define LM_TCPCLT_FILENAME "lmtcpclt"
 
 #endif /* #ifndef TCPCLT_H_INCLUDED */
-/* vim:set ai:
- */

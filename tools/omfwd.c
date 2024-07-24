@@ -132,6 +132,7 @@ typedef struct _instanceData {
 	TCPFRAMINGMODE tcp_framing;
 	uchar tcp_framingDelimiter;
 	int bResendLastOnRecon; /* should the last message be re-sent on a successful reconnect? */
+	int bExtendedConnCheck;	/* do extended connection checking? */
 #	define COMPRESS_NEVER 0
 #	define COMPRESS_SINGLE_MSG 1	/* old, single-message compression */
 	/* all other settings are for stream-compression */
@@ -174,7 +175,9 @@ typedef struct wrkrInstanceData {
 	targetData_t *target;
 	int nXmit;		/* number of transmissions since last (re-)bind */
 	unsigned actualTarget;
+	unsigned wrkrID;	/* an internal monotonically increasing id for correlating worker messages */
 } wrkrInstanceData_t;
+static unsigned wrkrID = 0;
 
 /* config data */
 typedef struct configSettings_s {
@@ -242,6 +245,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "streamdriver.keyfile", eCmdHdlrString, 0 },
 	{ "streamdriver.certfile", eCmdHdlrString, 0 },
 	{ "resendlastmsgonreconnect", eCmdHdlrBinary, 0 },
+	{ "extendedconnectioncheck", eCmdHdlrBinary, 0 },
 	{ "udp.sendtoall", eCmdHdlrBinary, 0 },
 	{ "udp.senddelay", eCmdHdlrInt, 0 },
 	{ "udp.sendbuf", eCmdHdlrSize, 0 },
@@ -355,8 +359,8 @@ DestructTCPTargetData(targetData_t *const pTarget)
 	datetime.GetTime(&pTarget->ttResume);
 	pTarget->ttResume += pTarget->pData->poolResumeInterval;
 	pTarget->bIsConnected = 0;
-	LogMsg(0, RS_RET_DEBUG, LOG_DEBUG, "omfwd: DestructTCPTargetData: %s:%s",
-		pTarget->target_name, pTarget->port);
+	LogMsg(0, RS_RET_DEBUG, LOG_DEBUG, "omfwd: [wrkr %u] DestructTCPTargetData: %s:%s",
+		pTarget->pWrkrData->wrkrID, pTarget->target_name, pTarget->port);
 	DBGPRINTF("omfwd: DestructTCPTargetData: %p %s:%s, connected %d, ttResume %lld\n",
 				&pTarget, pTarget->target_name, pTarget->port,
 				pTarget->bIsConnected, (long long) pTarget->ttResume);
@@ -485,6 +489,7 @@ CODESTARTcreateWrkrInstance
 
 	assert(pData->nTargets > 0);
 	pWrkrData->actualTarget = 0;
+	pWrkrData->wrkrID = wrkrID++;
 	CHKmalloc(pWrkrData->target = (targetData_t *) calloc(pData->nTargets, sizeof(targetData_t)));
 	for(int i = 0 ; i <  pData->nTargets ; ++i) {
 		pWrkrData->target[i].pData = pWrkrData->pData;
@@ -503,6 +508,7 @@ CODESTARTcreateWrkrInstance
 		pWrkrData->target[i].ttResume = ttNow;
 	}
 	iRet = initTCP(pWrkrData);
+	LogMsg(0, RS_RET_DEBUG, LOG_DEBUG, "omfwd: worker with id %u initialized", pWrkrData->wrkrID);
 finalize_it:
 ENDcreateWrkrInstance
 
@@ -706,8 +712,10 @@ TCPSendBufUncompressed(targetData_t *const pTarget, uchar *const buf, const unsi
 	ssize_t lenSend;
 
 	alreadySent = 0;
-	CHKiRet(netstrm.CheckConnection(pTarget->pNetstrm));
-	/* hack for plain tcp syslog - see ptcp driver for details */
+	if(pTarget->pData->bExtendedConnCheck) {
+		CHKiRet(netstrm.CheckConnection(pTarget->pNetstrm));
+		/* hack for plain tcp syslog - see ptcp driver for details */
+	}
 
 	while(alreadySent != len) {
 		lenSend = len - alreadySent;
@@ -736,15 +744,17 @@ finalize_it:
 				LogError(0, iRet, "omfwd: %s server is %s:%s. "
 					"This can be caused by the remote server or an interim system like a load "
 					"balancer or firewall. Rsyslog will re-open the connection if configured "
-					"to do so.", actualErrMsg, pTarget->target_name, pTarget->port);
+					"to do so. [wrkr %u]", actualErrMsg, pTarget->target_name,
+					pTarget->port, pTarget->pWrkrData->wrkrID);
 			} else if ((conErrCnt++ % skipFactor) == 0) {
 				/* Every N'th error message is printed where N is a skipFactor. */
 				LogError(0, iRet, "omfwd: %s server is %s:%s. "
 					"This can be caused by the remote server or an interim system like a load "
 					"balancer or firewall. Rsyslog will re-open the connection if configured "
 					"to do so. Note that the next %d connection error messages will be "
-					"skipped.",
-					actualErrMsg, pTarget->target_name, pTarget->port, skipFactor - 1);
+					"skipped. [wrkr %u]",
+					actualErrMsg, pTarget->target_name, pTarget->port, skipFactor - 1,
+					pTarget->pWrkrData->wrkrID);
 			}
 		} else {
 			LogError(0, iRet, "omfwd: TCPSendBuf error %d, destruct TCP Connection to %s:%s",
@@ -1421,13 +1431,12 @@ initTCP(wrkrInstanceData_t *pWrkrData)
 			/* create our tcpclt */
 			CHKiRet(tcpclt.Construct(&pWrkrData->target[i].pTCPClt));
 			CHKiRet(tcpclt.SetResendLastOnRecon(pWrkrData->target[i].pTCPClt, pData->bResendLastOnRecon));
+			CHKiRet(tcpclt.SetFraming(pWrkrData->target[i].pTCPClt, pData->tcp_framing));
+			CHKiRet(tcpclt.SetFramingDelimiter(pWrkrData->target[i].pTCPClt, pData->tcp_framingDelimiter));
 			/* and set callbacks */
 			CHKiRet(tcpclt.SetSendInit(pWrkrData->target[i].pTCPClt, TCPSendInit));
 			CHKiRet(tcpclt.SetSendFrame(pWrkrData->target[i].pTCPClt, TCPSendFrame));
 			CHKiRet(tcpclt.SetSendPrepRetry(pWrkrData->target[i].pTCPClt, TCPSendPrepRetry));
-			CHKiRet(tcpclt.SetFraming(pWrkrData->target[i].pTCPClt, pData->tcp_framing));
-			CHKiRet(tcpclt.SetFramingDelimiter(pWrkrData->target[i].pTCPClt, pData->tcp_framingDelimiter));
-			//CHKiRet(tcpclt.SetRebindInterval(pWrkrData->target[i].pTCPClt, pData->iRebindInterval));
 		}
 	}
 finalize_it:
@@ -1463,6 +1472,7 @@ setInstParamDefaults(instanceData *pData)
 	pData->iConErrSkip = 0;
 	pData->gnutlsPriorityString = NULL;
 	pData->bResendLastOnRecon = 0;
+	pData->bExtendedConnCheck = 1; /* traditionally enabled! */
 	pData->bSendToAll = -1;  /* unspecified */
 	pData->iUDPSendDelay = 0;
 	pData->UDPSendBuf = 0;
@@ -1702,6 +1712,8 @@ CODESTARTnewActInst
 			pData->tcp_framingDelimiter = (uchar) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "resendlastmsgonreconnect")) {
 			pData->bResendLastOnRecon = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "extendedconnectioncheck")) {
+			pData->bExtendedConnCheck = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "udp.sendtoall")) {
 			pData->bSendToAll = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "udp.senddelay")) {

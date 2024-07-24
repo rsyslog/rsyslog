@@ -355,11 +355,10 @@ finalize_it:
 
 /* set functions */
 static rsRetVal
-SetResendLastOnRecon(tcpclt_t *pThis, int bResendLastOnRecon)
+SetResendLastOnRecon(tcpclt_t *pThis, const int bResendLastOnRecon)
 {
-	DEFiRet;
 	pThis->bResendLastOnRecon = (short) bResendLastOnRecon;
-	RETiRet;
+	return RS_RET_OK;
 }
 static rsRetVal
 SetSendInit(tcpclt_t *pThis, rsRetVal (*pCB)(void*))
