@@ -1046,11 +1046,6 @@ actionTryResume(action_t * const pThis, wti_t * const pWti)
 		CHKiRet(actionDoRetry(pThis, pWti));
 	}
 
-// TODO: REMOVE 2024-07
-LogMsg(0, RS_RET_DEBUG, LOG_DEBUG,"actionTryResume: action[%s] state: %s, next retry (if applicable): %u [now %u]\n",
-	pThis->pszName, getActStateName(pThis, pWti),
-	(unsigned) pThis->ttResumeRtry, (unsigned) ttNow);
-
 	if(Debug && (getActionState(pWti, pThis) == ACT_STATE_RTRY ||
 		getActionState(pWti, pThis) == ACT_STATE_SUSP)) {
 		if(ttNow == NO_TIME_PROVIDED) /* use cached result if we have it */
