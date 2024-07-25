@@ -1257,8 +1257,18 @@ finalize_it:
 
 BEGINtryResume
 CODESTARTtryResume
-	dbgprintf("omfwd: BEGINtryResume: pWrkrData %p\n", pWrkrData);
 	iRet = poolTryResume(pWrkrData);
+
+	int activeTargets = 0;
+	for(int j = 0 ; j <  pWrkrData->pData->nTargets ; ++j) {
+		if(pWrkrData->target[j].bIsConnected) {
+			activeTargets++;
+		}
+	}
+	LogMsg(0, RS_RET_DEBUG, LOG_DEBUG,
+		"omfwd: [wrkr %u/%" PRIuPTR "] tryResume was called by rsyslog core: "
+		"active targets: %d, overall return state %d",
+		pWrkrData->wrkrID, (uintptr_t) pthread_self(), activeTargets, iRet);
 ENDtryResume
 
 
@@ -1270,6 +1280,13 @@ CODESTARTbeginTransaction
 	 * start a transaction when we know it will most probably fail.
 	 */
 	iRet = poolTryResume(pWrkrData);
+
+	if(iRet == RS_RET_SUSPENDED) {
+		LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
+			"omfwd: [wrkr %d/%" PRIuPTR "] no working target servers in "
+			"pool available, suspending action (state: beginTx)",
+			pWrkrData->wrkrID, (uintptr_t) pthread_self());
+	}
 ENDbeginTransaction
 
 
