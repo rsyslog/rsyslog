@@ -355,9 +355,10 @@ if(dbgTimeoutToStderr) {
 	DBGPRINTF("%s: Worker thread %lx, terminated, num workers now %d\n",
 		wtpGetDbgHdr(pThis), (unsigned long) pWti, numWorkersNow);
 	if(numWorkersNow > 0) {
+		// TODO: did the thread ID experiment (pthread_self) work out? rgerhards, 2024-07-25
 		LogMsg(0, RS_RET_OPERATION_STATUS, LOG_INFO,
-			"%s: worker thread %lx terminated, now %d active worker threads",
-			wtpGetDbgHdr(pThis), (unsigned long) pWti, numWorkersNow);
+			"%s: worker thread %lx (%" PRIuPTR ") terminated, now %d active worker threads",
+			wtpGetDbgHdr(pThis), (unsigned long) pWti, (uintptr_t) pthread_self(), numWorkersNow);
 	}
 }
 

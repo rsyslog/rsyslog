@@ -104,6 +104,7 @@ typedef struct _instanceData {
 	const uchar *pszStrmDrvrKeyFile;
 	const uchar *pszStrmDrvrCertFile;
 	int	nTargets;
+	int	activeTargets;
 	char	**target_name;
 	int	nPorts;
 	char	**ports;
@@ -563,7 +564,9 @@ ENDfreeInstance
 
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
-	LogMsg(0, RS_RET_DEBUG, LOG_DEBUG, "omfwd: Destructing worker instance");
+	LogMsg(0, RS_RET_DEBUG, LOG_DEBUG, "omfwd: [wrkr %u/%" PRIuPTR "] Destructing worker instance",
+		pWrkrData->wrkrID, (uintptr_t) pthread_self());
+
 	DestructTCPInstanceData(pWrkrData);
 	closeUDPSockets(pWrkrData);
 
@@ -729,20 +732,19 @@ emitConnectionErrorMsg(const targetData_t *const pTarget, const rsRetVal iRet)
 		}
 		if (skipFactor <= 1)  {
 			/* All the connection errors are printed. */
-			LogError(0, iRet, "omfwd: %s Server is %s:%s. "
+			LogError(0, iRet, "omfwd: [wrkr %u/%" PRIuPTR "] %s Server is %s:%s. "
 				"This can be caused by the remote server or an interim system like a load "
 				"balancer or firewall. Rsyslog will re-open the connection if configured "
-				"to do so. [wrkr %u]", actualErrMsg, pTarget->target_name,
-				pTarget->port, pTarget->pWrkrData->wrkrID);
+				"to do so.", pTarget->pWrkrData->wrkrID, (uintptr_t) pthread_self(),
+				actualErrMsg, pTarget->target_name, pTarget->port);
 		} else if ((conErrCnt++ % skipFactor) == 0) {
 			/* Every N'th error message is printed where N is a skipFactor. */
-			LogError(0, iRet, "omfwd: %s Server is %s:%s. "
+			LogError(0, iRet, "omfwd: [wrkr %u] %s Server is %s:%s. "
 				"This can be caused by the remote server or an interim system like a load "
 				"balancer or firewall. Rsyslog will re-open the connection if configured "
 				"to do so. Note that the next %d connection error messages will be "
-				"skipped. [wrkr %u]",
-				actualErrMsg, pTarget->target_name, pTarget->port, skipFactor - 1,
-				pTarget->pWrkrData->wrkrID);
+				"skipped.", pTarget->pWrkrData->wrkrID,
+				actualErrMsg, pTarget->target_name, pTarget->port, skipFactor - 1);
 		}
 	} else {
 		LogError(0, iRet, "omfwd: TCPSendBuf error %d, destruct TCP Connection to %s:%s",
@@ -1355,6 +1357,7 @@ finalize_it:
 BEGINcommitTransaction
 	unsigned i;
 	char namebuf[264]; /* 256 for FQDN, 5 for port and 3 for transport => 264 */
+	int activeTargets;
 CODESTARTcommitTransaction
 	CHKiRet(poolTryResume(pWrkrData));
 
@@ -1404,8 +1407,9 @@ CODESTARTcommitTransaction
 		}
 
 		if(dotry == 1) {
-			LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
-				"omfwd: no working target servers in pool available, suspending action");
+			LogMsg(0, RS_RET_SUSPENDED, LOG_INFO,
+				"omfwd: [wrkr %u] found no working target server when trying to send "
+				"messages (main loop)", pWrkrData->wrkrID);
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 		pWrkrData->nXmit++;
@@ -1419,14 +1423,16 @@ CODESTARTcommitTransaction
 				pWrkrData->target[j].offsSndBuf = 0;
 			} else {
 				LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
-					"omfwd: target %s:%s became unavailable during buffer flush. "
+					"omfwd: [wrkr %u] target %s:%s became unavailable during buffer flush. "
 					"Remaining messages will be sent when it is online again.",
-					pWrkrData->target[j].target_name, pWrkrData->target[j].port);
+					pWrkrData->wrkrID, pWrkrData->target[j].target_name,
+					pWrkrData->target[j].port);
 				DestructTCPTargetData(&(pWrkrData->target[j]));
 				iRet = RS_RET_OK;
 			}
 		}
 	}
+
 
 	/* NEW - REBIND! */
 	if(pWrkrData->pData->iRebindInterval && (pWrkrData->nXmit++ >= pWrkrData->pData->iRebindInterval)) {
@@ -1435,12 +1441,38 @@ CODESTARTcommitTransaction
 		pWrkrData->nXmit = 0;	/* else we have an addtl wrap at 2^31-1 */
 		DestructTCPInstanceData(pWrkrData);
 		initTCP(pWrkrData);
+		poolTryResume(pWrkrData);
 		LogMsg(0, RS_RET_PARAM_ERROR, LOG_WARNING,
 			"omfwd: dropped connections due to configured rebind interval");
 	}
-
 	/* END - REBIND */
+
+
 finalize_it:
+	/* do pool stats */
+
+	activeTargets = 0;
+	for(int j = 0 ; j <  pWrkrData->pData->nTargets ; ++j) {
+		if(pWrkrData->target[j].bIsConnected) {
+			activeTargets++;
+		}
+	}
+
+	if(activeTargets != pWrkrData->pData->nTargets) {
+		LogMsg(0, RS_RET_DEBUG, LOG_DEBUG,
+			"omfwd: [wrkr %u] number of active targets changed from %d to %d",
+			pWrkrData->wrkrID, pWrkrData->pData->nTargets, activeTargets);
+	}
+
+	if(activeTargets == 0) {
+		iRet= RS_RET_SUSPENDED;
+	}
+
+	if(iRet == RS_RET_SUSPENDED) {
+		LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
+			"omfwd: [wrkr %d/%" PRIuPTR "] no working target servers in pool available, suspending action",
+			pWrkrData->wrkrID, (uintptr_t) pthread_self());
+	}
 ENDcommitTransaction
 
 

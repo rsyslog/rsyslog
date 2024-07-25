@@ -850,10 +850,10 @@ EnableKeepAlive(ptcplstn_t *pLstn, int sock)
 		ret = 0;
 	}
 #	else
-	ret = -1;
+	ret = -2;
 #	endif
-	if(ret < 0) {
-		LogError(ret, NO_ERRCODE, "imptcp cannot set keepalive probes - ignored");
+	if(ret == -1) { // TODO: check if this properly works out. If so, use errno consistently 2024-07-25
+		LogError(errno, NO_ERRCODE, "imptcp cannot set keepalive probes - ignored");
 	}
 
 #	if defined(TCP_KEEPCNT)
@@ -1415,7 +1415,7 @@ addEPollSock(epolld_type_t typ, void *ptr, int sock, epolld_t **pEpd)
 	epd->ev.data.ptr = (void*) epd;
 
 	if(epoll_ctl(epollfd, EPOLL_CTL_ADD, sock, &(epd->ev)) != 0) {
-		LogError(errno, RS_RET_EPOLL_CTL_FAILED, "imptcp: os error during epoll ADD");
+		LogError(errno, RS_RET_EPOLL_CTL_FAILED, "imptcp: os error during epoll ADD for socket %d", sock);
 		ABORT_FINALIZE(RS_RET_EPOLL_CTL_FAILED);
 	}
 
@@ -1423,10 +1423,6 @@ addEPollSock(epolld_type_t typ, void *ptr, int sock, epolld_t **pEpd)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if (epd != NULL) {
-			LogError(0, RS_RET_INTERNAL_ERROR, "imptcp: error: could not initialize mutex for ptcp "
-			"connection for socket: %d", sock);
-		}
 		free(epd);
 	}
 	RETiRet;
@@ -1509,12 +1505,15 @@ finalize_it:
 /* add a session to the server
  */
 static rsRetVal
-addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
+addSess(ptcplstn_t *const pLstn, const int sock, prop_t *const peerName, prop_t *const peerIP)
 {
 	DEFiRet;
 	ptcpsess_t *pSess = NULL;
 	ptcpsrv_t *pSrv = pLstn->pSrv;
 	int pmsg_size_factor;
+
+	NULL_CHECK(peerName);
+	NULL_CHECK(peerIP);
 
 	CHKmalloc(pSess = malloc(sizeof(ptcpsess_t)));
 	pSess->next = NULL;
@@ -1565,6 +1564,10 @@ addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
+		LogError(0, iRet, "imptcp: failed to fully accept session from remote peer %s[%s]. "
+			"This can be caused by a peer that closed the session immediately after "
+			"connect, like during a security or health check port probe.",
+			propGetSzStr(peerName), propGetSzStr(peerIP));
 		if(pSess != NULL) {
 			if (pSess->next != NULL) {
 				unlinkSess(pSess);
