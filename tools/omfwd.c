@@ -1362,7 +1362,7 @@ processMsg(targetData_t *__restrict__ const pTarget,
 		iRet = tcpclt.Send(pTarget->pTCPClt, pTarget, (char *)psz, l);
 		if(iRet != RS_RET_OK && iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED) {
 			/* error! */
-			LogError(0, iRet, "omfwd: error forwarding via tcp to %s:%s, suspending action",
+			LogError(0, iRet, "omfwd: error forwarding via tcp to %s:%s, suspending target",
 				pTarget->target_name, pTarget->port);
 			DestructTCPTargetData(pTarget);
 			iRet = RS_RET_SUSPENDED;
