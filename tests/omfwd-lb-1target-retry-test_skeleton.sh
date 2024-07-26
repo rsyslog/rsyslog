@@ -9,7 +9,7 @@ export NUMMESSAGES=2000
 
 # starting minitcpsrvr receivers so that we can obtain their port
 # numbers
-export MINITCPSRV_EXTRA_OPTS="-D900"
+export MINITCPSRV_EXTRA_OPTS="-D900 -B2 -a -S3"
 start_minitcpsrvr $RSYSLOG_OUT_LOG  1
 
 add_conf '
