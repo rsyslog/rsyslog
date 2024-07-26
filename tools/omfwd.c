@@ -1173,9 +1173,15 @@ doTryResume(targetData_t *pTarget)
 	const char *address;
 	DEFiRet;
 
+	DBGPRINTF("doTryResume: isConnected: %d, ttResume %lld, LastActiveTargets: %d\n", 
+		pTarget->bIsConnected, (long long) pTarget->ttResume, pTarget->pData->nLastActiveTargets);
+
 	if(pTarget->bIsConnected)
 		FINALIZE;
-	if(pTarget->ttResume > 0) {
+	/* we look at the resume counter only if we have active targets at all - otherwise
+	 * rsyslog core handles the retry timing.
+	 */
+	if(pTarget->ttResume > 0 && pTarget->pData->nLastActiveTargets > 0) {
 		time_t ttNow;
 		datetime.GetTime(&ttNow);
 		if(ttNow < pTarget->ttResume) {
