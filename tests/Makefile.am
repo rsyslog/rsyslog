@@ -209,6 +209,7 @@ TESTS +=  \
 	invalid_nested_include.sh \
 	omfwd-lb-1target-retry-full_buf.sh \
 	omfwd-lb-1target-retry-1_byte_buf.sh \
+	omfwd-lb-1target-retry-1_byte_buf-TargetFail .sh \
 	omfwd-lb-susp.sh \
 	omfwd-lb-2target-basic.sh \
 	omfwd-lb-2target-retry.sh \
@@ -2144,6 +2145,8 @@ EXTRA_DIST= \
 	omfwd-lb-1target-retry-full_buf.sh \
 	omfwd-lb-1target-retry-1_byte_buf.sh \
 	omfwd-lb-1target-retry-test_skeleton.sh \
+	omfwd-lb-1target-retry-1_byte_buf-TargetFail .sh \
+	omfwd-lb-1target-retry-test_skeleton-TargetFail.sh \
 	omfwd-lb-susp.sh \
 	omfwd-lb-2target-basic.sh \
 	omfwd-lb-2target-impstats.sh \
