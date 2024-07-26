@@ -16,6 +16,8 @@ add_conf '
 $MainMsgQueueTimeoutShutdown 10000
 $MainMsgQueueDequeueBatchSize 100
 
+global(allMessagesToStderr="on")
+
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 module(load="builtin:omfwd" template="outfmt" iobuffer.maxSize="'$OMFWD_IOBUF_SIZE'")
 

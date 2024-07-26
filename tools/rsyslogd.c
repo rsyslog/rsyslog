@@ -1070,7 +1070,8 @@ logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int fla
 	 * permits us to process unmodified config files which otherwise contain a
 	 * supressor statement.
 	 */
-	int emit_to_stderr = (ourConf == NULL) ? 1 : ourConf->globals.bErrMsgToStderr;
+	int emit_to_stderr = (ourConf == NULL) ? 1
+		: (ourConf->globals.bErrMsgToStderr ||  ourConf->globals.bAllMsgToStderr);
 	int emit_supress_msg = 0;
 	if(Debug == DEBUG_FULL || !doFork) {
 		emit_to_stderr = 1;
@@ -1085,7 +1086,7 @@ logmsgInternal(int iErr, const syslog_pri_t pri, const uchar *const msg, int fla
 		}
 	}
 	if(emit_to_stderr || iConfigVerify) {
-		if(pri2sev(pri) == LOG_ERR)
+		if(ourConf->globals.bAllMsgToStderr || pri2sev(pri) == LOG_ERR)
 			fprintf(stderr, "rsyslogd: %s\n",
 				(bufModMsg == NULL) ? (char*)msg : bufModMsg);
 	}

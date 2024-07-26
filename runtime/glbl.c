@@ -166,6 +166,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "internalmsg.ratelimit.interval", eCmdHdlrPositiveInt, 0 },
 	{ "internalmsg.ratelimit.burst", eCmdHdlrPositiveInt, 0 },
 	{ "internalmsg.severity", eCmdHdlrSeverity, 0 },
+	{ "allmessagestostderr", eCmdHdlrBinary, 0 },
 	{ "errormessagestostderr.maxnumber", eCmdHdlrPositiveInt, 0 },
 	{ "shutdown.enable.ctlc", eCmdHdlrBinary, 0 },
 	{ "default.action.queue.timeoutshutdown", eCmdHdlrInt, 0 },
@@ -1394,6 +1395,8 @@ glblDoneLoadCnf(void)
 			}
 		} else if(!strcmp(paramblk.descr[i].name, "errormessagestostderr.maxnumber")) {
 			loadConf->globals.maxErrMsgToStderr = (int) cnfparamvals[i].val.d.n;
+		} else if(!strcmp(paramblk.descr[i].name, "allmessagestostderr")) {
+			loadConf->globals.bAllMsgToStderr = (int) cnfparamvals[i].val.d.n;
 		} else if(!strcmp(paramblk.descr[i].name, "debug.files")) {
 			free(glblDbgFiles); /* "fix" Coverity false positive */
 			glblDbgFilesNum = cnfparamvals[i].val.d.ar->nmemb;

@@ -104,6 +104,7 @@ typedef struct _instanceData {
 	const uchar *pszStrmDrvrKeyFile;
 	const uchar *pszStrmDrvrCertFile;
 	int	nTargets;
+	int	nLastActiveTargets; /* how many targets have been active the last time? */
 	int	activeTargets;
 	char	**target_name;
 	int	nPorts;
@@ -472,6 +473,7 @@ BEGINcreateInstance
 CODESTARTcreateInstance
 	/* We always have at least one target and port */
 	pData->nTargets = 1;
+	pData->nLastActiveTargets = 0;
 	pData->nPorts = 1;
 	pData->target_name = NULL;
 	if(cs.pszStrmDrvr != NULL)
@@ -1475,10 +1477,11 @@ finalize_it:
 		}
 	}
 
-	if(activeTargets != pWrkrData->pData->nTargets) {
+	if(activeTargets != pWrkrData->pData->nLastActiveTargets) {
 		LogMsg(0, RS_RET_DEBUG, LOG_DEBUG,
 			"omfwd: [wrkr %u] number of active targets changed from %d to %d",
-			pWrkrData->wrkrID, pWrkrData->pData->nTargets, activeTargets);
+			pWrkrData->wrkrID, pWrkrData->pData->nLastActiveTargets, activeTargets);
+		pWrkrData->pData->nLastActiveTargets = activeTargets;
 	}
 
 	if(activeTargets == 0) {

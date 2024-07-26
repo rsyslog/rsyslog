@@ -100,7 +100,6 @@ createListenSocket(void)
 	server_addr.sin_port = htons(targetPort);
 	srvAddrLen = sizeof(server_addr);
 
-	sleep(1);
 
 	int sockBound = 0;
 	int try = 0;
