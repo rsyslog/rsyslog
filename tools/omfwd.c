@@ -1384,6 +1384,20 @@ BEGINcommitTransaction
 	char namebuf[264]; /* 256 for FQDN, 5 for port and 3 for transport => 264 */
 	int activeTargets;
 CODESTARTcommitTransaction
+	/* if needed, rebind first. This ensure we can deliver to the rebound addresses. 
+	 * Note that rebind requires reconnect to the new targets. This is done by the
+	 * poolTryResume(), which needs to be made in any case.
+	 */
+	if(pWrkrData->pData->iRebindInterval && (pWrkrData->nXmit++ >= pWrkrData->pData->iRebindInterval)) {
+		dbgprintf("REBIND (sent %d, interval %d) - omfwd dropping target connection (as configured)\n",
+			pWrkrData->nXmit, pWrkrData->pData->iRebindInterval);
+		pWrkrData->nXmit = 0;	/* else we have an addtl wrap at 2^31-1 */
+		DestructTCPInstanceData(pWrkrData);
+		initTCP(pWrkrData);
+		LogMsg(0, RS_RET_PARAM_ERROR, LOG_WARNING,
+			"omfwd: dropped connections due to configured rebind interval");
+	}
+
 	CHKiRet(poolTryResume(pWrkrData));
 
 	DBGPRINTF(" %s:%s/%s\n", pWrkrData->pData->target_name[0], pWrkrData->pData->ports[0], // TODO-RG name for action?
@@ -1457,21 +1471,6 @@ CODESTARTcommitTransaction
 			}
 		}
 	}
-
-
-	/* NEW - REBIND! */
-	if(pWrkrData->pData->iRebindInterval && (pWrkrData->nXmit++ >= pWrkrData->pData->iRebindInterval)) {
-		dbgprintf("REBIND (sent %d, interval %d) - omfwd dropping target connection (as configured)\n",
-			pWrkrData->nXmit, pWrkrData->pData->iRebindInterval);
-		pWrkrData->nXmit = 0;	/* else we have an addtl wrap at 2^31-1 */
-		DestructTCPInstanceData(pWrkrData);
-		initTCP(pWrkrData);
-		poolTryResume(pWrkrData);
-		LogMsg(0, RS_RET_PARAM_ERROR, LOG_WARNING,
-			"omfwd: dropped connections due to configured rebind interval");
-	}
-	/* END - REBIND */
-
 
 finalize_it:
 	/* do pool stats */
