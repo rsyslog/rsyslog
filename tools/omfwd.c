@@ -104,8 +104,7 @@ typedef struct _instanceData {
 	const uchar *pszStrmDrvrKeyFile;
 	const uchar *pszStrmDrvrCertFile;
 	int	nTargets;
-	int	nLastActiveTargets; /* how many targets have been active the last time? */
-	int	activeTargets;
+	int	nActiveTargets; /* how many targets have been active the last time? */
 	char	**target_name;
 	int	nPorts;
 	char	**ports;
@@ -473,7 +472,7 @@ BEGINcreateInstance
 CODESTARTcreateInstance
 	/* We always have at least one target and port */
 	pData->nTargets = 1;
-	pData->nLastActiveTargets = 0;
+	pData->nActiveTargets = 0;
 	pData->nPorts = 1;
 	pData->target_name = NULL;
 	if(cs.pszStrmDrvr != NULL)
@@ -1126,6 +1125,26 @@ finalize_it:
 }
 
 
+/* count the actual number of active targets.
+*/
+static void
+countActiveTargets(const wrkrInstanceData_t *const pWrkrData) {
+	int activeTargets = 0;
+	for(int j = 0 ; j <  pWrkrData->pData->nTargets ; ++j) {
+		if(pWrkrData->target[j].bIsConnected) {
+			activeTargets++;
+		}
+	}
+
+	if(activeTargets != pWrkrData->pData->nActiveTargets) {
+		LogMsg(0, RS_RET_DEBUG, LOG_DEBUG,
+			"omfwd: [wrkr %u] number of active targets changed from %d to %d",
+			pWrkrData->wrkrID, pWrkrData->pData->nActiveTargets, activeTargets);
+		pWrkrData->pData->nActiveTargets = activeTargets;
+	}
+}
+
+
 /* check if the action as while is working (one target is OK) or suspended.
  * Try to resume initially not working targets along the way.
  */
@@ -1174,14 +1193,14 @@ doTryResume(targetData_t *pTarget)
 	DEFiRet;
 
 	DBGPRINTF("doTryResume: isConnected: %d, ttResume %lld, LastActiveTargets: %d\n", 
-		pTarget->bIsConnected, (long long) pTarget->ttResume, pTarget->pData->nLastActiveTargets);
+		pTarget->bIsConnected, (long long) pTarget->ttResume, pTarget->pData->nActiveTargets);
 
 	if(pTarget->bIsConnected)
 		FINALIZE;
 	/* we look at the resume counter only if we have active targets at all - otherwise
 	 * rsyslog core handles the retry timing.
 	 */
-	if(pTarget->ttResume > 0 && pTarget->pData->nLastActiveTargets > 0) {
+	if(pTarget->ttResume > 0 && pTarget->pData->nActiveTargets > 0) {
 		time_t ttNow;
 		datetime.GetTime(&ttNow);
 		if(ttNow < pTarget->ttResume) {
@@ -1266,17 +1285,12 @@ finalize_it:
 BEGINtryResume
 CODESTARTtryResume
 	iRet = poolTryResume(pWrkrData);
+	countActiveTargets(pWrkrData);
 
-	int activeTargets = 0;
-	for(int j = 0 ; j <  pWrkrData->pData->nTargets ; ++j) {
-		if(pWrkrData->target[j].bIsConnected) {
-			activeTargets++;
-		}
-	}
 	LogMsg(0, RS_RET_DEBUG, LOG_DEBUG,
 		"omfwd: [wrkr %u/%" PRIuPTR "] tryResume was called by rsyslog core: "
 		"active targets: %d, overall return state %d",
-		pWrkrData->wrkrID, (uintptr_t) pthread_self(), activeTargets, iRet);
+		pWrkrData->wrkrID, (uintptr_t) pthread_self(), pWrkrData->pData->nActiveTargets, iRet);
 ENDtryResume
 
 
@@ -1382,7 +1396,6 @@ finalize_it:
 BEGINcommitTransaction
 	unsigned i;
 	char namebuf[264]; /* 256 for FQDN, 5 for port and 3 for transport => 264 */
-	int activeTargets;
 CODESTARTcommitTransaction
 	/* if needed, rebind first. This ensure we can deliver to the rebound addresses. 
 	 * Note that rebind requires reconnect to the new targets. This is done by the
@@ -1399,6 +1412,7 @@ CODESTARTcommitTransaction
 	}
 
 	CHKiRet(poolTryResume(pWrkrData));
+	countActiveTargets(pWrkrData);
 
 	DBGPRINTF(" %s:%s/%s\n", pWrkrData->pData->target_name[0], pWrkrData->pData->ports[0], // TODO-RG name for action?
 		 pWrkrData->pData->protocol == FORW_UDP ? "udp" : "tcp");
@@ -1475,21 +1489,9 @@ CODESTARTcommitTransaction
 finalize_it:
 	/* do pool stats */
 
-	activeTargets = 0;
-	for(int j = 0 ; j <  pWrkrData->pData->nTargets ; ++j) {
-		if(pWrkrData->target[j].bIsConnected) {
-			activeTargets++;
-		}
-	}
+	countActiveTargets(pWrkrData);
 
-	if(activeTargets != pWrkrData->pData->nLastActiveTargets) {
-		LogMsg(0, RS_RET_DEBUG, LOG_DEBUG,
-			"omfwd: [wrkr %u] number of active targets changed from %d to %d",
-			pWrkrData->wrkrID, pWrkrData->pData->nLastActiveTargets, activeTargets);
-		pWrkrData->pData->nLastActiveTargets = activeTargets;
-	}
-
-	if(activeTargets == 0) {
+	if(pWrkrData->pData->nActiveTargets == 0) {
 		iRet= RS_RET_SUSPENDED;
 	}
 
