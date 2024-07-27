@@ -164,5 +164,6 @@ if [ $NEWFILESIZE != $OLDFILESIZE ]; then
 	error_exit 1
 fi
 # do the final check
+export SEQ_CHECK_OPTIONS=-d
 seq_check 1 21010 -m 100
 exit_test

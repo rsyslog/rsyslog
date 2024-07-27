@@ -170,6 +170,7 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.bDebugPrintModuleList = 0;
 	pThis->globals.bDebugPrintCfSysLineHandlerList = 0;
 	pThis->globals.bLogStatusMsgs = DFLT_bLogStatusMsgs;
+	pThis->globals.bAllMsgToStderr = 0;
 	pThis->globals.bErrMsgToStderr = 1;
 	pThis->globals.maxErrMsgToStderr = -1;
 	pThis->globals.umask = -1;

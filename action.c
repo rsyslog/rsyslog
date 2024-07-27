@@ -802,6 +802,7 @@ actionSuspend(action_t * const pThis, wti_t * const pWti)
 	int suspendDuration;
 	char timebuf[32];
 
+	DBGPRINTF("actionSuspend: enter\n");
 	setSuspendMessageConfVars(pThis);
 
 	/* note: we can NOT use a cached timestamp, as time may have evolved
@@ -896,6 +897,7 @@ actionDoRetry(action_t * const pThis, wti_t * const pWti)
 			} else {
 				++iRetries;
 				iSleepPeriod = pThis->iResumeInterval;
+				DBGPRINTF("actionDoRetry: sleeping now %d seconds\n", iSleepPeriod);
 				srSleep(iSleepPeriod, 0);
 				if(*pWti->pbShutdownImmediate) {
 					ABORT_FINALIZE(RS_RET_FORCE_TERM);
@@ -1028,6 +1030,8 @@ actionTryResume(action_t * const pThis, wti_t * const pWti)
 	DEFiRet;
 	time_t ttNow = NO_TIME_PROVIDED;
 
+	DBGPRINTF("actionTryResume: enter\n");
+
 	if(getActionState(pWti, pThis) == ACT_STATE_SUSP) {
 		/* if we are suspended, we need to check if the timeout expired.
 		 * for this handling, we must always obtain a fresh timestamp. We used
@@ -1043,6 +1047,7 @@ actionTryResume(action_t * const pThis, wti_t * const pWti)
 	}
 
 	if(getActionState(pWti, pThis) == ACT_STATE_RTRY) {
+DBGPRINTF("actionTryResume calls actionDoRetry\n");
 		CHKiRet(actionDoRetry(pThis, pWti));
 	}
 
@@ -1072,6 +1077,8 @@ actionPrepare(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti
 DBGPRINTF("actionPrepare[%s]: enter\n", pThis->pszName);
 	CHKiRet(actionCheckAndCreateWrkrInstance(pThis, pWti));
 	CHKiRet(actionTryResume(pThis, pWti));
+
+DBGPRINTF("actionPrepare[%s]: after calling actionTryResume\n", pThis->pszName);
 
 	/* if we are now ready, we initialize the transaction and advance
 	 * action state accordingly
@@ -1332,6 +1339,7 @@ doTransaction(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti
 	int i;
 	DEFiRet;
 
+	DBGPRINTF("doTransaction[%s] enter\n", pThis->pszName);
 	wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
 	if(pThis->pMod->mod.om.commitTransaction != NULL) {
 		DBGPRINTF("doTransaction: have commitTransaction IF, using that, pWrkrInfo %p\n", wrkrInfo);

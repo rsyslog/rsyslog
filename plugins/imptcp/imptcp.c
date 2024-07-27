@@ -646,7 +646,7 @@ startupSrv(ptcpsrv_t *pSrv)
 		if(net.should_use_so_bsdcompat()) {
 			if (setsockopt(sock, SOL_SOCKET, SO_BSDCOMPAT,
 					(char *) &on, sizeof(on)) < 0) {
-				LogError(errno, NO_ERRCODE, "TCP setsockopt(BSDCOMPAT)");
+				LogError(errno, NO_ERRCODE, "imptcp: TCP setsockopt(BSDCOMPAT)");
 				close(sock);
 				sock = -1;
 				continue;
@@ -660,7 +660,7 @@ startupSrv(ptcpsrv_t *pSrv)
 #endif
 	    ) {
 			/* TODO: check if *we* bound the socket - else we *have* an error! */
-			LogError(errno, NO_ERRCODE, "Error while binding tcp socket");
+			LogError(errno, NO_ERRCODE, "imptcp: Error while binding tcp socket");
 			close(sock);
 			sock = -1;
 			continue;
@@ -679,7 +679,7 @@ startupSrv(ptcpsrv_t *pSrv)
 		if(currport == 0) {
 			socklen_t socklen_r = r->ai_addrlen;
 			if(getsockname(sock, r->ai_addr, &socklen_r) == -1) {
-				LogError(errno, NO_ERRCODE, "nsd_ptcp: ListenPortFileName: getsockname:"
+				LogError(errno, NO_ERRCODE, "imptcp: ListenPortFileName: getsockname:"
 						"error while trying to get socket");
 			}
 			r->ai_addrlen = socklen_r;
@@ -850,10 +850,10 @@ EnableKeepAlive(ptcplstn_t *pLstn, int sock)
 		ret = 0;
 	}
 #	else
-	ret = -1;
+	ret = -2;
 #	endif
-	if(ret < 0) {
-		LogError(ret, NO_ERRCODE, "imptcp cannot set keepalive probes - ignored");
+	if(ret == -1) { // TODO: check if this properly works out. If so, use errno consistently 2024-07-25
+		LogError(errno, NO_ERRCODE, "imptcp cannot set keepalive probes - ignored");
 	}
 
 #	if defined(TCP_KEEPCNT)
@@ -911,12 +911,12 @@ AcceptConnReq(ptcplstn_t *const pLstn, int *const newSock, prop_t **peerName, pr
 	if(iNewSock < 0) {
 		if(CHK_EAGAIN_EWOULDBLOCK || errno == EMFILE)
 			ABORT_FINALIZE(RS_RET_NO_MORE_DATA);
-		LogError(errno, RS_RET_ACCEPT_ERR, "error accepting connection "
+		LogError(errno, RS_RET_ACCEPT_ERR, "imptcp: error accepting connection "
 			    "on listen socket %d", pLstn->sock);
 		ABORT_FINALIZE(RS_RET_ACCEPT_ERR);
 	}
 	if(addrlen == 0) {
-		LogError(errno, RS_RET_ACCEPT_ERR, "AcceptConnReq could not obtain "
+		LogError(errno, RS_RET_ACCEPT_ERR, "imptcp: AcceptConnReq could not obtain "
 			    "remote peer identification on listen socket %d", pLstn->sock);
 	}
 
@@ -926,17 +926,19 @@ AcceptConnReq(ptcplstn_t *const pLstn, int *const newSock, prop_t **peerName, pr
 	CHKiRet(getPeerNames(peerName, peerIP, (struct sockaddr *) &addr, pLstn->pSrv->bUnixSocket));
 
 	/* set the new socket to non-blocking IO */
+	const char *fcntl_operation = "F_GETFL";
 	if((sockflags = fcntl(iNewSock, F_GETFL)) != -1) {
 		sockflags |= O_NONBLOCK;
 		/* SETFL could fail too, so get it caught by the subsequent
 		 * error check.
 		 */
+		fcntl_operation = "F_SETFL";
 		sockflags = fcntl(iNewSock, F_SETFL, sockflags);
 	}
 
 	if(sockflags == -1) {
-		LogError(errno, RS_RET_IO_ERROR, "error setting fcntl(O_NONBLOCK) on "
-			"tcp socket %d", iNewSock);
+		LogError(errno, RS_RET_IO_ERROR, "imptcp: fcntl() error during %s on "
+			"tcp socket %d", fcntl_operation, iNewSock);
 		prop.Destruct(peerName);
 		prop.Destruct(peerIP);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
@@ -951,7 +953,6 @@ AcceptConnReq(ptcplstn_t *const pLstn, int *const newSock, prop_t **peerName, pr
 	*newSock = iNewSock;
 
 finalize_it:
-	DBGPRINTF("iRet: %d\n", iRet);
 	if(iRet != RS_RET_OK) {
 		if(iRet != RS_RET_NO_MORE_DATA && pLstn->pSrv->bEmitMsgOnOpen) {
 			LogError(0, NO_ERRCODE, "imptcp: connection could not be "
@@ -1131,13 +1132,13 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 			prop.GetString(pThis->peerName, &propPeerName, &lenPeerName);
 			prop.GetString(pThis->peerIP, &propPeerIP, &lenPeerIP);
 			if(c != ' ') {
-				LogError(0, NO_ERRCODE, "Framing Error in received TCP message "
+				LogError(0, NO_ERRCODE, "imptcp: Framing Error in received TCP message "
 						"from peer: (hostname) %s, (ip) %s: delimiter is not "
 						"SP but has ASCII value %d.", propPeerName, propPeerIP, c);
 			}
 			if(pThis->iOctetsRemain < 1) {
 				/* TODO: handle the case where the octet count is 0! */
-				LogError(0, NO_ERRCODE, "Framing Error in received TCP message"
+				LogError(0, NO_ERRCODE, "imptcp: Framing Error in received TCP message"
 						" from peer: (hostname) %s, (ip) %s: invalid octet count %d.",
 						propPeerName, propPeerIP, pThis->iOctetsRemain);
 				pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
@@ -1147,13 +1148,13 @@ processDataRcvd(ptcpsess_t *const __restrict__ pThis,
 				 */
 				DBGPRINTF("truncating message with %d octets - max msg size is %d\n",
 					  pThis->iOctetsRemain, iMaxLine);
-				LogError(0, NO_ERRCODE, "received oversize message from peer: "
+				LogError(0, NO_ERRCODE, "imptcp: received oversize message from peer: "
 						"(hostname) %s, (ip) %s: size is %d bytes, max msg "
 						"size is %d, truncating...", propPeerName, propPeerIP,
 						pThis->iOctetsRemain, iMaxLine);
 			}
 			if(pThis->iOctetsRemain > pThis->pLstn->pSrv->maxFrameSize) {
-				LogError(0, NO_ERRCODE, "Framing Error in received TCP message "
+				LogError(0, NO_ERRCODE, "imptcp: Framing Error in received TCP message "
 						"from peer: (hostname) %s, (ip) %s: frame too large: %d, "
 						"change to octet stuffing", propPeerName, propPeerIP,
 						pThis->iOctetsRemain);
@@ -1414,7 +1415,7 @@ addEPollSock(epolld_type_t typ, void *ptr, int sock, epolld_t **pEpd)
 	epd->ev.data.ptr = (void*) epd;
 
 	if(epoll_ctl(epollfd, EPOLL_CTL_ADD, sock, &(epd->ev)) != 0) {
-		LogError(errno, RS_RET_EPOLL_CTL_FAILED, "os error during epoll ADD");
+		LogError(errno, RS_RET_EPOLL_CTL_FAILED, "imptcp: os error during epoll ADD for socket %d", sock);
 		ABORT_FINALIZE(RS_RET_EPOLL_CTL_FAILED);
 	}
 
@@ -1422,10 +1423,6 @@ addEPollSock(epolld_type_t typ, void *ptr, int sock, epolld_t **pEpd)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		if (epd != NULL) {
-			LogError(0, RS_RET_INTERNAL_ERROR, "error: could not initialize mutex for ptcp "
-			"connection for socket: %d", sock);
-		}
 		free(epd);
 	}
 	RETiRet;
@@ -1508,12 +1505,15 @@ finalize_it:
 /* add a session to the server
  */
 static rsRetVal
-addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
+addSess(ptcplstn_t *const pLstn, const int sock, prop_t *const peerName, prop_t *const peerIP)
 {
 	DEFiRet;
 	ptcpsess_t *pSess = NULL;
 	ptcpsrv_t *pSrv = pLstn->pSrv;
 	int pmsg_size_factor;
+
+	NULL_CHECK(peerName);
+	NULL_CHECK(peerIP);
 
 	CHKmalloc(pSess = malloc(sizeof(ptcpsess_t)));
 	pSess->next = NULL;
@@ -1549,7 +1549,7 @@ addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
 	if (iTCPSessMax > 0 && pSrv->iTCPSessCnt >= iTCPSessMax) {
 		pthread_mutex_unlock(&pSrv->mutSessLst);
 		LogError(0, RS_RET_MAX_SESS_REACHED,
-			"too many tcp sessions - dropping incoming request");
+			"imptcp: too many tcp sessions - dropping incoming request");
 		ABORT_FINALIZE(RS_RET_MAX_SESS_REACHED);
 	}
 
@@ -1564,6 +1564,10 @@ addSess(ptcplstn_t *pLstn, int sock, prop_t *peerName, prop_t *peerIP)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
+		LogError(0, iRet, "imptcp: failed to fully accept session from remote peer %s[%s]. "
+			"This can be caused by a peer that closed the session immediately after "
+			"connect, like during a security or health check port probe.",
+			propGetSzStr(peerName), propGetSzStr(peerIP));
 		if(pSess != NULL) {
 			if (pSess->next != NULL) {
 				unlinkSess(pSess);
@@ -1830,7 +1834,7 @@ addListner(modConfData_t __attribute__((unused)) *modConf, instanceConf_t *inst)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-		LogError(0, NO_ERRCODE, "error %d trying to add listener", iRet);
+		LogError(0, NO_ERRCODE, "imptcp: error %d trying to add listener", iRet);
 		if(pSrv != NULL) {
 			destructSrv(pSrv);
 		}
@@ -2022,7 +2026,7 @@ processWorkItem(epolld_t *epd)
 		sessActivity((ptcpsess_t *) epd->ptr, &continue_polling);
 		break;
 	default:
-		LogError(0, RS_RET_INTERNAL_ERROR, "error: invalid epolld_type_t %d after epoll", epd->typ);
+		LogError(0, RS_RET_INTERNAL_ERROR, "imptcp: error: invalid epolld_type_t %d after epoll", epd->typ);
 		break;
 	}
 	if (continue_polling == 1) {
@@ -2447,7 +2451,7 @@ CODESTARTactivateCnfPrePrivDrop
 	}
 
 	if(epollfd < 0) {
-		LogError(0, RS_RET_EPOLL_CR_FAILED, "error: epoll_create() failed");
+		LogError(0, RS_RET_EPOLL_CR_FAILED, "imptcp: error: epoll_create() failed");
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 	}
 
