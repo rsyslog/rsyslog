@@ -354,9 +354,6 @@ DestructTCPTargetData(targetData_t *const pTarget)
 
 	if(pTarget->pNetstrm != NULL) {
 		netstrm.Destruct(&pTarget->pNetstrm);
-		/* we also use this as proxy for debug notification */
-		LogMsg(0, RS_RET_DEBUG, LOG_DEBUG, "omfwd: [wrkr %u] DestructTCPTargetData: %s:%s",
-			pTarget->pWrkrData->wrkrID, pTarget->target_name, pTarget->port);
 	}
 	if(pTarget->pNS != NULL) {
 		netstrms.Destruct(&pTarget->pNS);
