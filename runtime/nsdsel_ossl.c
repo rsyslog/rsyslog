@@ -28,13 +28,12 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/select.h>
-#include <openssl/ssl.h>
-#include <openssl/bio.h>
 
 #include "rsyslog.h"
 #include "module-template.h"
 #include "obj.h"
 #include "errmsg.h"
+#include "net_ossl.h"	// Include OpenSSL Helpers
 #include "nsd.h"
 #include "nsd_ossl.h"
 #include "nsd_ptcp.h"

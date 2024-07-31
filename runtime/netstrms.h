@@ -82,6 +82,7 @@ BEGINinterface(netstrms) /* name must also be changed in ENDinterface macro! */
 	/* v3 */
 	rsRetVal (*SetDrvrTlsCRLFile)(netstrms_t *pThis, const uchar *);
 	const uchar* (*GetDrvrTlsCRLFile)(netstrms_t *pThis);
+
 ENDinterface(netstrms)
 #define netstrmsCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
 

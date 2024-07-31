@@ -17,7 +17,7 @@
  * pipes. These have been moved to ompipe, to reduced the entanglement
  * between the two different functionalities. -- rgerhards
  *
- * Copyright 2007-2023 Adiscon GmbH.
+ * Copyright 2007-2024 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -139,6 +139,7 @@ typedef struct _instanceData {
 	strm_t	*pStrm;		/* our output stream */
 	short nInactive;	/* number of minutes not writen (STATIC files only) */
 	char	bDynamicName;	/* 0 - static name, 1 - dynamic name (with properties) */
+	int	isDevNull;	/* do we "write" to /dev/null? - if so, do nothing */
 	int	fCreateMode;	/* file creation mode for open() */
 	int	fDirCreateMode;	/* creation mode for mkdir() */
 	int	bCreateDirs;	/* auto-create directories? */
@@ -1081,6 +1082,11 @@ BEGINcommitTransaction
 	instanceData *__restrict__ const pData = pWrkrData->pData;
 	unsigned i;
 CODESTARTcommitTransaction
+
+	if(pData->isDevNull) {
+		goto terminate;
+	}
+
 	pthread_mutex_lock(&pData->mutWrite);
 
 	for(i = 0 ; i < nParams ; ++i) {
@@ -1105,6 +1111,8 @@ finalize_it:
 		iRet = (pData->bDynamicName && runModConf->bDynafileDoNotSuspend) ?
 			RS_RET_OK : RS_RET_SUSPENDED;
 	}
+
+terminate:
 ENDcommitTransaction
 
 
@@ -1135,6 +1143,7 @@ setInstParamDefaults(instanceData *__restrict__ const pData)
 	pData->useCryprov = 0;
 	pData->iCloseTimeout = -1;
 	pData->iSizeLimit = 0;
+	pData->isDevNull = 0;
 	pData->pszSizeLimitCmd = NULL;
 }
 
@@ -1376,6 +1385,10 @@ CODESTARTnewActInst
 		parser_errmsg("omfile: \"file\" or \"dynafile\" parameter "
 			"consist only of whitespace - this is not permitted");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+	}
+
+	if(!strcmp((const char*) pData->fname, "/dev/null")) {
+		pData->isDevNull = 1;
 	}
 
 	if(pData->sigprovName != NULL) {

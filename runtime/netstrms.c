@@ -289,7 +289,7 @@ finalize_it:
 }
 
 
-/* Set the priorityString for GnuTLS
+/* Set the priorityString
  * PascalWithopf 2017-08-16
  */
 static rsRetVal
@@ -303,7 +303,7 @@ finalize_it:
 }
 
 
-/* return the priorityString for GnuTLS
+/* return the priorityString
  * PascalWithopf, 2017-08-16
  */
 static uchar*

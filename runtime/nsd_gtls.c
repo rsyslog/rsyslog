@@ -2385,6 +2385,7 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->SetTlsCRLFile = SetTlsCRLFile;
 	pIf->SetTlsKeyFile = SetTlsKeyFile;
 	pIf->SetTlsCertFile = SetTlsCertFile;
+
 finalize_it:
 ENDobjQueryInterface(nsd_gtls)
 

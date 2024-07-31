@@ -412,6 +412,11 @@ CODESTARTdoAction
 		dbgprintf("Error from call to getaddrinfo for %s - %s\n", pszValue, gai_strerror(gai_err));
 		ABORT_FINALIZE(RS_RET_OK);
 	}
+	if (MMDB_IPV6_LOOKUP_IN_IPV4_DATABASE_ERROR == mmdb_err) {
+		LogMsg(0, NO_ERRCODE, LOG_INFO, "mmdblookup: Tried to search for an IPv6 address in an IPv4-only DB"
+		", ignoring");
+		ABORT_FINALIZE(RS_RET_OK);
+	}
 	if (MMDB_SUCCESS != mmdb_err) {
 		dbgprintf("Got an error from the maxminddb library: %s\n", MMDB_strerror(mmdb_err));
 		close_mmdb(&pWrkrData->mmdb);

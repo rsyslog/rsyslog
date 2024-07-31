@@ -1718,9 +1718,9 @@ presort() {
 
 #START: ext kafka config
 #dep_cache_dir=$(readlink -f .dep_cache)
-export RS_ZK_DOWNLOAD=apache-zookeeper-3.9.1-bin.tar.gz
+export RS_ZK_DOWNLOAD=apache-zookeeper-3.9.2-bin.tar.gz
 dep_cache_dir=$(pwd)/.dep_cache
-dep_zk_url=https://downloads.apache.org/zookeeper/zookeeper-3.9.1/$RS_ZK_DOWNLOAD
+dep_zk_url=https://downloads.apache.org/zookeeper/zookeeper-3.9.2/$RS_ZK_DOWNLOAD
 dep_zk_cached_file=$dep_cache_dir/$RS_ZK_DOWNLOAD
 
 export RS_KAFKA_DOWNLOAD=kafka_2.13-2.8.0.tgz
@@ -2476,6 +2476,20 @@ omhttp_get_data() {
         > ${RSYSLOG_OUT_LOG}
 }
 
+omhttp_validate_metadata_response() {
+	echo "starting to validate omhttp response metadata."
+    omhttp_response_validate_py=$srcdir/omhttp-validate-response.py
+    if [ ! -f $omhttp_response_validate_py ]; then
+        echo "Cannot find ${omhttp_response_validate_py} for omhttp test"
+        error_exit 1
+    fi
+
+	$PYTHON ${omhttp_response_validate_py} --error ${RSYSLOG_DYNNAME}/omhttp.error.log --response ${RSYSLOG_DYNNAME}/omhttp.response.log 2>&1
+	if [ $? -ne 0 ] ; then
+		printf 'omhttp_validate_metadata_response failed \n'
+		error_exit 1 
+	fi
+}
 
 # prepare MySQL for next test
 # each test receives its own database so that we also can run in parallel

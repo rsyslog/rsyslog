@@ -1,5 +1,6 @@
 sbin_PROGRAMS =
 man_MANS =
+noinst_LIBRARIES =
 noinst_LTLIBRARIES = librsyslog.la
 pkglib_LTLIBRARIES =
 #pkglib_LTLIBRARIES = librsyslog.la
@@ -209,14 +210,16 @@ endif
 endif # if ENABLE_INET
 
 #
-# openssl netstream driver
+# openssl base and netstream driver
 #
 if ENABLE_OPENSSL
+# noinst_LTLIBRARIES += lmnsd_ossl.la
 pkglib_LTLIBRARIES += lmnsd_ossl.la
-lmnsd_ossl_la_SOURCES = nsd_ossl.c nsd_ossl.h nsdsel_ossl.c  nsdsel_ossl.h
+lmnsd_ossl_la_SOURCES = net_ossl.c net_ossl.h nsd_ossl.c nsd_ossl.h nsdsel_ossl.c  nsdsel_ossl.h
 lmnsd_ossl_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(OPENSSL_CFLAGS)
 lmnsd_ossl_la_LDFLAGS = -module -avoid-version
 lmnsd_ossl_la_LIBADD = $(OPENSSL_LIBS)
+
 endif
 
 #

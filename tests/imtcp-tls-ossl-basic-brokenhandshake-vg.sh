@@ -14,7 +14,7 @@ global(	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
 	defaultNetstreamDriverCertFile="'$srcdir/tls-certs/cert.pem'"
 	defaultNetstreamDriverKeyFile="'$srcdir/tls-certs/key.pem'"
 #	debug.whitelist="on"
-#	debug.files=["nsd_ossl.c", "tcpsrv.c", "nsdsel_ossl.c", "nsdpoll_ptcp.c", "dnscache.c"]
+#	debug.files=["net_ossl.c", "nsd_ossl.c", "tcpsrv.c", "nsdsel_ossl.c", "nsdpoll_ptcp.c", "dnscache.c"]
 )
 
 module(	load="../plugins/imtcp/.libs/imtcp"

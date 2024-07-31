@@ -100,6 +100,7 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 
 	/* v16 - Tls CRL */
 	rsRetVal (*SetTlsCRLFile)(nsd_t *pThis, const uchar *);
+
 ENDinterface(nsd)
 #define nsdCURR_IF_VERSION 16 /* increment whenever you change the interface structure! */
 /* interface version 4 added GetRemAddr()

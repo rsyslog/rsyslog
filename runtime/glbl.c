@@ -119,6 +119,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
 	{ "defaultnetstreamdriverkeyfile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdrivercertfile", eCmdHdlrString, 0 },
 	{ "defaultnetstreamdriver", eCmdHdlrString, 0 },
+	{ "defaultopensslengine", eCmdHdlrString, 0 },
 	{ "netstreamdrivercaextrafiles", eCmdHdlrString, 0 },
 	{ "maxmessagesize", eCmdHdlrSize, 0 },
 	{ "oversizemsg.errorfile", eCmdHdlrGetWord, 0 },
@@ -519,6 +520,15 @@ setDfltNetstrmDrvr(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 }
 
 static rsRetVal
+setDfltOpensslEngine(void __attribute__((unused)) *pVal, uchar *pNewVal) {
+	DEFiRet;
+	free(loadConf->globals.pszDfltOpensslEngine);
+	loadConf->globals.pszDfltOpensslEngine = pNewVal;
+	RETiRet;
+}
+
+
+static rsRetVal
 setParserControlCharacterEscapePrefix(void __attribute__((unused)) *pVal, uchar *pNewVal) {
 	DEFiRet;
 	loadConf->globals.parser.cCCEscapeChar = *pNewVal;
@@ -904,6 +914,13 @@ GetDfltNetstrmDrvr(rsconf_t *cnf)
 	return(cnf->globals.pszDfltNetstrmDrvr == NULL ? DFLT_NETSTRM_DRVR : cnf->globals.pszDfltNetstrmDrvr);
 }
 
+/* return the current default openssl engine name */
+static uchar*
+GetDfltOpensslEngine(rsconf_t *cnf)
+{
+	return(cnf->globals.pszDfltOpensslEngine);
+}
+
 /* [ar] Source IP for local client to be used on multihomed host */
 static rsRetVal
 SetSourceIPofLocalClient(uchar *newname)
@@ -952,6 +969,7 @@ CODESTARTobjQueryInterface(glbl)
 	pIf->GetDfltNetstrmDrvrCertFile = GetDfltNetstrmDrvrCertFile;
 	pIf->GetDfltNetstrmDrvrKeyFile = GetDfltNetstrmDrvrKeyFile;
 	pIf->GetDfltNetstrmDrvr = GetDfltNetstrmDrvr;
+	pIf->GetDfltOpensslEngine = GetDfltOpensslEngine;
 	pIf->GetNetstrmDrvrCAExtraFiles = GetNetstrmDrvrCAExtraFiles;
 	pIf->GetParserControlCharacterEscapePrefix = GetParserControlCharacterEscapePrefix;
 	pIf->GetParserDropTrailingLFOnReception = GetParserDropTrailingLFOnReception;
@@ -993,6 +1011,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 	loadConf->globals.pszDfltNetstrmDrvrKeyFile = NULL;
 	free(loadConf->globals.pszDfltNetstrmDrvrCertFile);
 	loadConf->globals.pszDfltNetstrmDrvrCertFile = NULL;
+	free(loadConf->globals.pszDfltOpensslEngine);
+	loadConf->globals.pszDfltOpensslEngine = NULL;
 	free(LocalHostNameOverride);
 	LocalHostNameOverride = NULL;
 	free(loadConf->globals.oversizeMsgErrorFile);
@@ -1247,6 +1267,9 @@ glblDoneLoadCnf(void)
 		} else if(!strcmp(paramblk.descr[i].name, "defaultnetstreamdriver")) {
 			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 			setDfltNetstrmDrvr(NULL, cstr);
+		} else if(!strcmp(paramblk.descr[i].name, "defaultopensslengine")) {
+			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
+			setDfltOpensslEngine(NULL, cstr);
 		} else if(!strcmp(paramblk.descr[i].name, "netstreamdrivercaextrafiles")) {
 			cstr = (uchar*) es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
 			setNetstrmDrvrCAExtraFiles(NULL, cstr);
@@ -1470,6 +1493,8 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, SetDropMalPTRMsgs,
 	NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriver", 0, eCmdHdlrGetWord, setDfltNetstrmDrvr, NULL,
+	NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"defaultopensslengine", 0, eCmdHdlrGetWord, setDfltOpensslEngine, NULL,
 	NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercafile", 0, eCmdHdlrGetWord,
 	setDfltNetstrmDrvrCAF, NULL, NULL));

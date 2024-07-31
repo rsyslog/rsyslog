@@ -25,6 +25,9 @@ cat $RSYSLOG_DYNNAME.othermsg
 content_check 'must be terminated with \n' $RSYSLOG_DYNNAME.othermsg
 
 export EXPECTED="Starting with parameters: p1 p2 p3
+Next parameter is \"p1\"
+Next parameter is \"p2\"
+Next parameter is \"p3\"
 Received msgnum:00000000:
 Received msgnum:00000001:
 Received msgnum:00000002:

@@ -272,14 +272,15 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 
 		for (j = 0; j < sessions; j++) {
 	                uchar szErr[512];
-			char *user = NULL, *tty;
+			char *tty;
+			const char *user = NULL;
 			uid_t uid;
 			struct passwd *pws;
 
 			sdRet = sd_session_get_uid(sessions_list[j], &uid);
 			if (sdRet >= 0) {
 				pws = getpwuid(uid);
-				user = pws->pw_name;
+				user = pws->pw_name; /* DO NOT FREE, OS/LIB internal memory! */
 
 				if (user == NULL) {
 					dbgprintf("failed to get username for userid '%d'\n", uid);
@@ -303,7 +304,6 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 					        break;
 				}
 				if(i == MAXUNAMES) { /* user not found? */
-				        free(user);
 					free(sessions_list[j]);
 					continue; /* on to next user! */
 				}
@@ -313,14 +313,12 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 		                rs_strerror_r(-sdRet, (char*)szErr, sizeof(szErr));
 				dbgprintf("get tty for session '%s' failed with [%d]:%s\n",
 					  sessions_list[j], -sdRet, szErr);
-				free(user);
 				free(sessions_list[j]);
 				continue; /* try next session */
 			}
 
 			sendwallmsg(tty, pMsg);
 
-			free(user);
 			free(tty);
 			free(sessions_list[j]);
 		}

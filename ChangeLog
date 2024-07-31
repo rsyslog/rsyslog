@@ -1,4 +1,120 @@
 ----------------------------------------------------------------------------------------
+Scheduled Release 8.2406.0 (aka 2024.06) 2024-07-02
+- 2024-07-01: ompgsql bugfix: unexpected and unnecessary message loss
+  In case of PG not available lets retry instead of dropping messages
+  Thanks to Nickolai Novik for the patch.
+- 2024-07-01: tls subsystem/ossl driver
+  Several small fixes/additions
+  * output all loaded ciphers and engines into debug log
+  * Add new global option "defaultopensslengine" to customize the default openssl
+    engine. If not defined, openssl will handle the default engine automatically.
+    Sample: global(defaultopensslengine="rdrand")
+  * Add simple openssl performance test (imtcp-tls-ossl-basic-stress.sh) with
+    defaultopensslengine set to rdrand (Intel).
+  * removed unneeded testcase files in runtime folder.
+- 2024-04-18: [o|i]mprog/mmexternal bugfix: invalid command line parameter passing
+  Quoted command line parameters were incorrectly passed to the called program. This
+  resulted in unexpected behaviour. For example, in
+  bash -c "echo test"
+  bash got passed parameters '-c" and '"echo test"'. Note the double quotes in
+  '"echo test"'. These needed to be removed by Unix/Linux standards but were instead
+  passed to bash. That in turn resulted in invalid execution. With the fix, the
+  behaviour is now correct. Now, bash gets passed '-c' and 'echo test'.
+  This actually is a BREAKING CHANGE. However, it was outright wrong behaviour from
+  the beginning. We assume that people either never noticed it (because they did not
+  use quoted parameters) or used some workaroud, likely a "starter script", which
+  performed the right task. As such, we do expect that only a very limited set of
+  installations might be affected by the change.
+  Even more important, we would need to change the default behaviour in any case,
+  because the previous handling was obviosuly unacceptable. As such, there was no
+  way to keep rsyslog perform the previous action.
+  Thanks to Paul Fertser for the patch.
+- 2024-04-12: bugfixes related to time_t on 32 bit platforms (y38k isue)
+  Thanks to Michael Biebl for the patch.
+----------------------------------------------------------------------------------------
+Scheduled Release 8.2404.0 (aka 2024.04) 2024-04-02
+- 2024-04-02: omhttp patches and enhancement
+  New omhttp plugin configuration parameters added:
+  * restpathtimeout - configures a timeout value for an omhttp restpath, and retry again
+  * httpretrycodes (list) - configurable list of HTTP status codes that should be
+    retried by omhttp plugin. The default behavior is to retry any non 2xx status code.
+  * httpignorablecodes (list) that can specify HTTP status codes that should be ignored
+    (as failures). status codes specified as ignorable code will not be retried.
+  * proxyhost, proxyport - configures a proxy, for which omhttp can use to set up a 
+    HTTP proxy tunnel connection. Also works by reading environment variable if
+    configured HTTP_PROXY. For more details see libcurl docs on CURLOPT_PROXY
+    thanks to @erenwh for the contribution!
+  * retry.addmetadata - when this option is enabled, omhttp will add the
+    response metadata to: $!omhttp!response. There are 3 response metadata added:
+    code, body, batch_index.
+  More statistics omhttp curl statistic counters:
+  * requests.count
+  * requests.status.0xx
+  * requests.status.1xx
+  * requests.status.2xx
+  * requests.status.3xx
+  * requests.status.4xx
+  * requests.status.5xx
+  * requests.bytes
+  * requests.time_ms
+  No longer discard 3xx, 4xx errors
+  see also https://github.com/rsyslog/rsyslog/issues/4636
+  Thanks to github user n2yen for the patches.
+- 2024-04-02: remove CAP_IPC_LOCK capability
+  Does not seem to be necessary.
+  Thanks to Michael Biebl for the patch.
+- 2024-03-28: TLS bugfix: TLS drivers did not properly load under some conditions
+  This was a regeression from the DTLS implementation
+- 2024-03-28: mmdblookup bugfix: do not suspend on incompatible IP lookup
+  Mmdblookup module used to suspend after erroring on an IPv6 IP lookup on IPv4-only
+  DBs. The suspension of the module is now replaced by a simple log message,
+  allowing it to keep working for future lookups.
+  Thanks to Théo Bertin (frikilax) for the patch.
+- 2024-03-28: tarball fix: dist tarball was missing a textbench file
+  This made the testbench fail.
+----------------------------------------------------------------------------------------
+Scheduled Release 8.2402.0 (aka 2024.02) 2024-02-27
+- 2024-02-26: add DTLS support
+  This version comes with the initial implementation of imdtls and omdtls.
+  These modules permit secure message exchange over UDP.
+- 2024-02-26: testbench: make omusrmsg-noabort test more reliable
+  The previous test did not always detect an abort of rsyslog/omusrmsg.
+  The detection method has now been improved, so it is far more
+  probable that an abort is detected.
+  While doing this, we noticed that the omusrmsg-noabort-legacy test was
+  now a 100% duplicate. There is no need any longer to check pure legacy
+  syntax, and so that test has been removed.
+  We also added a valgrind-based test ofr omusrmsg-noabort, which furthers
+  strengthens bug detection. Most importantly, it helps us to detect
+  potentially new memory leaks on all CI platforms (in case the lib
+  behaves differently depending on os/distro).
+  see also https://github.com/rsyslog/rsyslog/issues/5294
+- 2024-02-26: omusrmsg bugfix: potential double free, which can cause segfault
+  omusrmsg frees a string which points to OS/system library memory. When
+  the os/libs clean up, it frees the memory as well. This results in a
+  double free. This bug interestingly seems to go unnoticed in many cases.
+  But it can cause a segfault or hard-to-trace memory corruptions which
+  could lead to other problems later on. The outcome of this bug most
+  probably depdns on os/library versions.
+  closes https://github.com/rsyslog/rsyslog/issues/5294
+- 2024-02-26: ommysql bugfix: potential segfault on database error
+  Due to an invalid code path, ommysql may cause a segfault if database
+  transactions fail into a specific way. The main trigger is a totally
+  irrecoverrable database error which can lead to premature connection
+  close, which is not checked for in all recover code.
+  This was detected in a setting where a stored procedure is called that
+  rolls back a transaction in itself.
+  This patch fixes the issue.
+  closes https://github.com/rsyslog/rsyslog/issues/5288
+- 2024-02-26: omfile: do not carry out actual action when writing to /dev/null
+  In some use cases omfile is configured to write to /dev/null. This seems
+  primarily be done because of statistics gathering but maybe some other
+  scenarios. We now add conditional logic to not do any actual omfile
+  action when the target file is /dev/null.
+  Note: this check only works on static file names. When /dev/null is
+  evaluated as part of dynafile, it will be handled just in the regular
+  case like before this patch.
+----------------------------------------------------------------------------------------
 Scheduled Release 8.2312.0 (aka 2023.12) 2023-12-12
 - 2023-12-11: imjournal: Add new input module parameter 'defaulttag'
   The DefaultTag option specifies the default value for the tag field.
