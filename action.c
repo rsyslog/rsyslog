@@ -691,6 +691,7 @@ actionSetState(action_t * const pThis, wti_t * const pWti, uint8_t newState)
  */
 static void actionCommitted(action_t * const pThis, wti_t * const pWti)
 {
+	DBGPRINTF("actionCommitted: going to set state to %d\n", ACT_STATE_RDY);
 	actionSetState(pThis, pWti, ACT_STATE_RDY);
 }
 
@@ -776,6 +777,7 @@ setSuspendMessageConfVars(action_t *__restrict__ const pThis)
 static void ATTR_NONNULL() actionRetry(action_t * const pThis, wti_t * const pWti)
 {
 	setSuspendMessageConfVars(pThis);
+	DBGPRINTF("actionRetry: going to set state to %d\n", ACT_STATE_RTRY);
 	actionSetState(pThis, pWti, ACT_STATE_RTRY);
 	if(pThis->bReportSuspension) {
 		LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
@@ -813,6 +815,7 @@ actionSuspend(action_t * const pThis, wti_t * const pWti)
 		suspendDuration = pThis->iResumeIntervalMax;
 	}
 	pThis->ttResumeRtry = ttNow + suspendDuration;
+	DBGPRINTF("actionSuspend: going to set state to %d\n", ACT_STATE_SUSP);
 	actionSetState(pThis, pWti, ACT_STATE_SUSP);
 	pThis->ctrSuspendDuration += suspendDuration;
 	if(getActionNbrResRtry(pWti, pThis) == 0) {
@@ -883,6 +886,7 @@ actionDoRetry(action_t * const pThis, wti_t * const pWti)
 					      "resumed (module '%s')",
 					      pThis->pszName, pThis->pMod->pszName);
 			}
+			DBGPRINTF("actionDoRetry: going to set state to %d\n", ACT_STATE_RDY);
 			actionSetState(pThis, pWti, ACT_STATE_RDY);
 		} else if(iRet == RS_RET_SUSPENDED || bTreatOKasSusp) {
 			/* max retries reached? */
@@ -942,6 +946,7 @@ actionDoRetry_extFile(action_t *const pThis, wti_t *const pWti)
 				      "resumed (module '%s') via external state file",
 				      pThis->pszName, pThis->pMod->pszName);
 			}
+			DBGPRINTF("actionDoRetry_extFile: going to set state to %d\n", ACT_STATE_RDY);
 			actionSetState(pThis, pWti, ACT_STATE_RDY);
 		} else if(iRet == RS_RET_SUSPENDED) {
 			/* max retries reached? */
@@ -1038,6 +1043,7 @@ actionTryResume(action_t * const pThis, wti_t * const pWti)
 		 */
 		datetime.GetTime(&ttNow); /* cache "now" */
 		if(ttNow >= pThis->ttResumeRtry) {
+			DBGPRINTF("actionTryResume: going to set state to %d\n", ACT_STATE_RTRY);
 			actionSetState(pThis, pWti, ACT_STATE_RTRY); /* back to retries */
 		}
 	}
@@ -1086,6 +1092,7 @@ DBGPRINTF("actionPrepare[%s]: enter\n", pThis->pszName);
 		iRet = pThis->pMod->mod.om.beginTransaction(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
 		switch(iRet) {
 			case RS_RET_OK:
+				DBGPRINTF("actionPrepare: going to set state to %d\n", ACT_STATE_ITX);
 				actionSetState(pThis, pWti, ACT_STATE_ITX);
 				break;
 			case RS_RET_SUSPENDED:
@@ -1242,6 +1249,7 @@ handleActionExecResult(action_t *__restrict__ const pThis,
 				"message lost, could not be processed. Check for "
 				"additional error messages before this one.",
 				pThis->pszName, pThis->pMod->pszName);
+			DBGPRINTF("handleActionExecResult: going to set state to %d\n", ACT_STATE_DATAFAIL);
 			actionSetState(pThis, pWti, ACT_STATE_DATAFAIL);
 			break;
 	}
