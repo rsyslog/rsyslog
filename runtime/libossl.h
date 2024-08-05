@@ -1,6 +1,4 @@
-/* libgcry.h - rsyslog's guardtime support library
- *
- * Copyright 2013 Adiscon GmbH.
+/* libossl.h - rsyslog's ossl crypto provider support library
  *
  * This file is part of rsyslog.
  *
@@ -18,28 +16,31 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef INCLUDED_LIBGCRY_H
-#define INCLUDED_LIBGCRY_H
+#ifndef INCLUDED_LIBOSSL_H
+#define INCLUDED_LIBOSSL_H
 #include <stdint.h>
-#include <gcrypt.h>
 
-struct gcryctx_s {
+#include <openssl/conf.h>
+#include <openssl/evp.h>
+#include <openssl/err.h>
+
+struct osslctx_s {
 	uchar *key;
 	size_t keyLen;
-	int algo;
-	int mode;
+	const EVP_CIPHER *cipher; /* container for algorithm + mode */
 };
-typedef struct gcryctx_s *gcryctx;
-typedef struct gcryfile_s *gcryfile;
+typedef struct osslctx_s* osslctx;
+typedef struct osslfile_s *osslfile;
 
 /* this describes a file, as far as libgcry is concerned */
-struct gcryfile_s {
-	gcry_cipher_hd_t chd; /* cypher handle */
+struct osslfile_s {
+	// gcry_cipher_hd_t chd; /* cypher handle */ TODO
+	EVP_CIPHER_CTX* chd;
 	size_t blkLength; /* size of low-level crypto block */
 	uchar *eiName; /* name of .encinfo file */
 	int fd; /* descriptor of .encinfo file (-1 if not open) */
 	char openMode; /* 'r': read, 'w': write */
-	gcryctx ctx;
+	osslctx ctx;
 	uchar *readBuf;
 	int16_t readBufIdx;
 	int16_t readBufMaxIdx;
@@ -49,37 +50,37 @@ struct gcryfile_s {
 				0 means -> end of block, new one must be started. */
 };
 
-int rsgcryInit(void);
-void rsgcryExit(void);
-int rsgcrySetKey(gcryctx ctx, unsigned char *key, uint16_t keyLen);
-rsRetVal rsgcrySetMode(gcryctx ctx, uchar *algoname);
-rsRetVal rsgcrySetAlgo(gcryctx ctx, uchar *modename);
-gcryctx gcryCtxNew(void);
-void rsgcryCtxDel(gcryctx ctx);
-int gcryfileDestruct(gcryfile gf, off64_t offsLogfile);
-rsRetVal rsgcryInitCrypt(gcryctx ctx, gcryfile *pgf, uchar *fname, char openMode);
-rsRetVal rsgcryEncrypt(gcryfile pF, uchar *buf, size_t *len);
-rsRetVal rsgcryDecrypt(gcryfile pF, uchar *buf, size_t *len);
-rsRetVal gcryfileDeleteState(uchar *fn);
-rsRetVal gcryfileGetBytesLeftInBlock(gcryfile gf, ssize_t *left);
-int rsgcryModename2Mode(char *const __restrict__ modename);
-int rsgcryAlgoname2Algo(char *const __restrict__ algoname);
 
 /* error states */
 #define RSGCRYE_EI_OPEN 1 	/* error opening .encinfo file */
 #define RSGCRYE_OOM 4	/* ran out of memory */
 
+// FIXME refactor
 #define EIF_MAX_RECTYPE_LEN 31 /* max length of record types */
 #define EIF_MAX_VALUE_LEN 1023 /* max length of value types */
 #define RSGCRY_FILETYPE_NAME "rsyslog-enrcyption-info"
 #define ENCINFO_SUFFIX ".encinfo"
 
-/* Note: gf may validly be NULL, e.g. if file has not yet been opened! */
+osslctx osslCtxNew(void);
+void rsosslCtxDel(osslctx ctx);
+rsRetVal rsosslSetAlgoMode(osslctx ctx, uchar* algorithm);
+int osslGetKeyFromFile(const char* const fn, char** const key, unsigned* const keylen);
+int rsosslSetKey(osslctx ctx, unsigned char* key, uint16_t keyLen);
+rsRetVal osslfileGetBytesLeftInBlock(osslfile gf, ssize_t* left);
+rsRetVal osslfileDeleteState(uchar* logfn);
+rsRetVal rsosslInitCrypt(osslctx ctx, osslfile* pgf, uchar* fname, char openMode);
+rsRetVal rsosslDecrypt(osslfile pF, uchar* buf, size_t* len);
+rsRetVal rsosslEncrypt(osslfile pF, uchar* buf, size_t* len);
+int osslfileDestruct(osslfile gf, off64_t offsLogfile);
+int rsosslInit(void);
+void rsosslExit(void);
+
+
+// FIXME refactor
 static inline void __attribute__((unused))
-gcryfileSetDeleteOnClose(gcryfile gf, const int val)
-{
-	if(gf != NULL)
+osslfileSetDeleteOnClose(osslfile gf, const int val) {
+	if (gf != NULL)
 		gf->bDeleteOnClose = val;
 }
 
-#endif  /* #ifndef INCLUDED_LIBGCRY_H */
+#endif  /* #ifndef INCLUDED_LIBOSSL_H */

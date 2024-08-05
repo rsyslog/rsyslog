@@ -1,6 +1,6 @@
-/* lmcry_gcry.c
+/* lmcry_ossl.c
  *
- * An implementation of the cryprov interface for libgcrypt.
+ * An implementation of the cryprov interface for openssl.
  *
  * Copyright 2013-2017 Rainer Gerhards and Adiscon GmbH.
  *
@@ -33,9 +33,13 @@
 #include "errmsg.h"
 #include "cryprov.h"
 #include "parserif.h"
-#include "libgcry.h"
-#include "lmcry_gcry.h"
-#include "libcry_common.h"
+#include "libossl.h"
+#include "lmcry_ossl.h"
+
+#pragma GCC diagnostic push // TODO REMOVE
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wunused-label"
 
 MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP
@@ -48,8 +52,7 @@ DEFobjCurrIf(glbl)
 static struct cnfparamdescr cnfpdescrRegular[] = {
 	{ "cry.key", eCmdHdlrGetWord, 0 },
 	{ "cry.keyfile", eCmdHdlrGetWord, 0 },
-	{ "cry.keyprogram", eCmdHdlrGetWord, 0 },
-	{ "cry.mode", eCmdHdlrGetWord, 0 }, /* CBC, ECB, etc */
+	{ "cry.mode", eCmdHdlrGetWord, 0 },
 	{ "cry.algo", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk pblkRegular =
@@ -61,8 +64,7 @@ static struct cnfparamblk pblkRegular =
 static struct cnfparamdescr cnfpdescrQueue[] = {
 	{ "queue.cry.key", eCmdHdlrGetWord, 0 },
 	{ "queue.cry.keyfile", eCmdHdlrGetWord, 0 },
-	{ "queue.cry.keyprogram", eCmdHdlrGetWord, 0 },
-	{ "queue.cry.mode", eCmdHdlrGetWord, 0 }, /* CBC, ECB, etc */
+	{ "queue.cry.mode", eCmdHdlrGetWord, 0 },
 	{ "queue.cry.algo", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk pblkQueue =
@@ -72,28 +74,19 @@ static struct cnfparamblk pblkQueue =
 	};
 
 
-#if 0
-static void
-errfunc(__attribute__((unused)) void *usrptr, uchar *emsg)
-{
-	LogError(0, RS_RET_CRYPROV_ERR, "Crypto Provider"
-		"Error: %s - disabling encryption", emsg);
-}
-#endif
-
 /* Standard-Constructor
  */
-BEGINobjConstruct(lmcry_gcry)
-	CHKmalloc(pThis->ctx = gcryCtxNew());
+BEGINobjConstruct(lmcry_ossl)
+	CHKmalloc(pThis->ctx = osslCtxNew());
 finalize_it:
-ENDobjConstruct(lmcry_gcry)
+ENDobjConstruct(lmcry_ossl)
 
 
-/* destructor for the lmcry_gcry object */
-BEGINobjDestruct(lmcry_gcry) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(lmcry_gcry)
-	rsgcryCtxDel(pThis->ctx);
-ENDobjDestruct(lmcry_gcry)
+/* destructor for the lmcry_ossl object */
+BEGINobjDestruct(lmcry_ossl) /* be sure to specify the object type also in END and CODESTART macros! */
+CODESTARTobjDestruct(lmcry_ossl)
+	rsosslCtxDel(pThis->ctx);
+ENDobjDestruct(lmcry_ossl)
 
 
 /* apply all params from param block to us. This must be called
@@ -103,14 +96,12 @@ ENDobjDestruct(lmcry_gcry)
 static rsRetVal
 SetCnfParam(void *pT, struct nvlst *lst, int paramType)
 {
-	lmcry_gcry_t *pThis = (lmcry_gcry_t*) pT;
+	lmcry_ossl_t *pThis = (lmcry_ossl_t*) pT;
 	int i, r;
 	unsigned keylen = 0;
 	uchar *key = NULL;
 	uchar *keyfile = NULL;
-	uchar *keyprogram = NULL;
-	uchar *algo = NULL;
-	uchar *mode = NULL;
+	uchar *algomode = NULL;
 	int nKeys; /* number of keys (actually methods) specified */
 	struct cnfparamvals *pvals;
 	struct cnfparamblk *pblk;
@@ -120,11 +111,11 @@ SetCnfParam(void *pT, struct nvlst *lst, int paramType)
 	nKeys = 0;
 	pvals = nvlstGetParams(lst, pblk, NULL);
 	if(pvals == NULL) {
-		parser_errmsg("error crypto provider gcryconfig parameters]");
+		parser_errmsg("error crypto provider ossl config parameters");
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 	if(Debug) {
-		dbgprintf("param blk in lmcry_gcry:\n");
+		dbgprintf("param blk in lmcry_ossl:\n");
 		cnfparamsPrint(pblk, pvals);
 	}
 
@@ -139,65 +130,45 @@ SetCnfParam(void *pT, struct nvlst *lst, int paramType)
 		          !strcmp(pblk->descr[i].name, "queue.cry.keyfile")) {
 			keyfile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 			++nKeys;
-		} else if(!strcmp(pblk->descr[i].name, "cry.keyprogram") ||
-		          !strcmp(pblk->descr[i].name, "queue.cry.keyprogram")) {
-			keyprogram = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-			++nKeys;
-		} else if(!strcmp(pblk->descr[i].name, "cry.mode") ||
-		          !strcmp(pblk->descr[i].name, "queue.cry.mode")) {
-			mode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(pblk->descr[i].name, "cry.algo") ||
 		          !strcmp(pblk->descr[i].name, "queue.cry.algo")) {
-			algo = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			algomode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
-			DBGPRINTF("lmcry_gcry: program error, non-handled "
+			DBGPRINTF("lmcry_ossl: program error, non-handled "
 			  "param '%s'\n", pblk->descr[i].name);
 		}
 	}
-	if(algo != NULL) {
-		iRet = rsgcrySetAlgo(pThis->ctx, algo);
+	if (algomode != NULL) {
+		iRet = rsosslSetAlgoMode(pThis->ctx, algomode);
 		if(iRet != RS_RET_OK) {
-			LogError(0, iRet, "cry.algo '%s' is not know/supported", algo);
+			LogError(0, iRet, "cry.algo '%s' is not know/supported", algomode);
 			FINALIZE;
 		}
 	}
-	if(mode != NULL) {
-		iRet = rsgcrySetMode(pThis->ctx, mode);
-		if(iRet != RS_RET_OK) {
-			LogError(0, iRet, "cry.mode '%s' is not know/supported", mode);
-			FINALIZE;
-		}
-	}
+
 	/* note: key must be set AFTER algo/mode is set (as it depends on them) */
 	if(nKeys != 1) {
 		LogError(0, RS_RET_INVALID_PARAMS, "excactly one of the following "
-			"parameters can be specified: cry.key, cry.keyfile, cry.keyprogram\n");
+			"parameters can be specified: cry.key, cry.keyfile\n");
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 	}
+
 	if(key != NULL) {
 		LogError(0, RS_RET_ERR, "Note: specifying an actual key directly from the "
 			"config file is highly insecure - DO NOT USE FOR PRODUCTION");
 		keylen = strlen((char*)key);
 	}
 	if(keyfile != NULL) {
-		r = cryGetKeyFromFile((char*)keyfile, (char**)&key, &keylen);
+		r = osslGetKeyFromFile((char*)keyfile, (char**)&key, &keylen);
 		if(r != 0) {
 			LogError(errno, RS_RET_ERR, "error reading keyfile %s",
 				keyfile);
 			ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
 		}
 	}
-	if(keyprogram != NULL) {
-		r = cryGetKeyFromProg((char*)keyprogram, (char**)&key, &keylen);
-		if(r != 0) {
-			LogError(0, RS_RET_ERR, "error %d obtaining key from program %s\n",
-				r, keyprogram);
-			ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
-		}
-	}
 
 	/* if we reach this point, we have a valid key */
-	r = rsgcrySetKey(pThis->ctx, key, keylen);
+	r = rsosslSetKey(pThis->ctx, key, keylen);
 	if(r > 0) {
 		LogError(0, RS_RET_INVALID_PARAMS, "Key length %d expected, but "
 			"key of length %d given", r, keylen);
@@ -207,9 +178,7 @@ SetCnfParam(void *pT, struct nvlst *lst, int paramType)
 finalize_it:
 	free(key);
 	free(keyfile);
-	free(algo);
-	free(keyprogram);
-	free(mode);
+	free(algomode);
 	if(pvals != NULL)
 		cnfparamvalsDestruct(pvals, pblk);
 	RETiRet;
@@ -218,31 +187,31 @@ finalize_it:
 static void
 SetDeleteOnClose(void *pF, int val)
 {
-	gcryfileSetDeleteOnClose(pF, val);
+	osslfileSetDeleteOnClose(pF, val);
 }
 
 static rsRetVal
 GetBytesLeftInBlock(void *pF, ssize_t *left)
 {
-	return gcryfileGetBytesLeftInBlock((gcryfile) pF, left);
+	return osslfileGetBytesLeftInBlock((osslfile) pF, left);
 }
 
 static rsRetVal
 DeleteStateFiles(uchar *logfn)
 {
-	return gcryfileDeleteState(logfn);
+	return osslfileDeleteState(logfn);
 }
 
 static rsRetVal
 OnFileOpen(void *pT, uchar *fn, void *pGF, char openMode)
 {
-	lmcry_gcry_t *pThis = (lmcry_gcry_t*) pT;
-	gcryfile *pgf = (gcryfile*) pGF;
+	lmcry_ossl_t* pThis = (lmcry_ossl_t*)pT;
+	osslfile* pgf = (osslfile*)pGF;
 	DEFiRet;
-	DBGPRINTF("lmcry_gcry: open file '%s', mode '%c'\n", fn, openMode);
+	DBGPRINTF("lmcry_ossl: open file '%s', mode '%c'\n", fn, openMode);
 
-	iRet = rsgcryInitCrypt(pThis->ctx, pgf, fn, openMode);
-	if(iRet != RS_RET_OK) {
+	iRet = rsosslInitCrypt(pThis->ctx, pgf, fn, openMode);
+	if (iRet != RS_RET_OK) {
 		LogError(0, iRet, "Encryption Provider"
 			"Error: cannot open .encinfo file - disabling log file");
 	}
@@ -253,8 +222,7 @@ static rsRetVal
 Decrypt(void *pF, uchar *rec, size_t *lenRec)
 {
 	DEFiRet;
-	iRet = rsgcryDecrypt(pF, rec, lenRec);
-
+	iRet = rsosslDecrypt(pF, rec, lenRec);
 	RETiRet;
 }
 
@@ -263,8 +231,7 @@ static rsRetVal
 Encrypt(void *pF, uchar *rec, size_t *lenRec)
 {
 	DEFiRet;
-	iRet = rsgcryEncrypt(pF, rec, lenRec);
-
+	iRet = rsosslEncrypt(pF, rec, lenRec);
 	RETiRet;
 }
 
@@ -272,20 +239,19 @@ static rsRetVal
 OnFileClose(void *pF, off64_t offsLogfile)
 {
 	DEFiRet;
-	gcryfileDestruct(pF, offsLogfile);
-
+	osslfileDestruct(pF, offsLogfile);
 	RETiRet;
 }
 
-BEGINobjQueryInterface(lmcry_gcry)
-CODESTARTobjQueryInterface(lmcry_gcry)
+BEGINobjQueryInterface(lmcry_ossl)
+CODESTARTobjQueryInterface(lmcry_ossl)
 	 if(pIf->ifVersion != cryprovCURR_IF_VERSION) {/* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
-	pIf->Construct = (rsRetVal(*)(void*)) lmcry_gcryConstruct;
+	pIf->Construct = (rsRetVal(*)(void*)) lmcry_osslConstruct;
 	pIf->SetCnfParam = SetCnfParam;
 	pIf->SetDeleteOnClose = SetDeleteOnClose;
-	pIf->Destruct = (rsRetVal(*)(void*)) lmcry_gcryDestruct;
+	pIf->Destruct = (rsRetVal(*)(void*)) lmcry_osslDestruct;
 	pIf->OnFileOpen = OnFileOpen;
 	pIf->Encrypt = Encrypt;
 	pIf->Decrypt = Decrypt;
@@ -293,28 +259,26 @@ CODESTARTobjQueryInterface(lmcry_gcry)
 	pIf->DeleteStateFiles = DeleteStateFiles;
 	pIf->GetBytesLeftInBlock = GetBytesLeftInBlock;
 finalize_it:
-ENDobjQueryInterface(lmcry_gcry)
+ENDobjQueryInterface(lmcry_ossl)
 
 
-BEGINObjClassExit(lmcry_gcry, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(lmcry_gcry)
+BEGINObjClassExit(lmcry_ossl, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
+CODESTARTObjClassExit(lmcry_ossl)
 	/* release objects we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
+	rsosslExit();
+ENDObjClassExit(lmcry_ossl)
 
-	rsgcryExit();
-ENDObjClassExit(lmcry_gcry)
 
-
-BEGINObjClassInit(lmcry_gcry, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
+BEGINObjClassInit(lmcry_ossl, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-
-	if(rsgcryInit() != 0) {
+	if (rsosslInit() != 0) {
 		LogError(0, RS_RET_CRYPROV_ERR, "error initializing "
-			"crypto provider - cannot encrypt");
+			"ossl crypto provider - cannot encrypt");
 		ABORT_FINALIZE(RS_RET_CRYPROV_ERR);
 	}
-ENDObjClassInit(lmcry_gcry)
+ENDObjClassInit(lmcry_ossl)
 
 
 /* --------------- here now comes the plumbing that makes as a library module --------------- */
@@ -322,7 +286,7 @@ ENDObjClassInit(lmcry_gcry)
 
 BEGINmodExit
 CODESTARTmodExit
-	lmcry_gcryClassExit();
+	lmcry_osslClassExit();
 ENDmodExit
 
 
@@ -336,5 +300,7 @@ BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 	/* Initialize all classes that are in our module - this includes ourselfs */
-	CHKiRet(lmcry_gcryClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
+	CHKiRet(lmcry_osslClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit
+
+#pragma GCC diagnostic pop // TODO REMOVE
