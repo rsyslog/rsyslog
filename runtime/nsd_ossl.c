@@ -793,8 +793,13 @@ rsRetVal
 osslPostHandshakeCheck(nsd_ossl_t *pNsd)
 {
 	DEFiRet;
+	uchar *fromHostIP = NULL;
 	char szDbg[255];
 	const SSL_CIPHER* sslCipher;
+
+	
+	nsd_ptcp.GetRemoteHName((nsd_t*)pNsd->pTcp, &fromHostIP);
+
 
 	/* Some extra output for debugging openssl */
 	if (SSL_get_shared_ciphers(pNsd->pNetOssl->ssl,szDbg, sizeof szDbg) != NULL)
@@ -804,7 +809,7 @@ osslPostHandshakeCheck(nsd_ossl_t *pNsd)
 	if(SSL_get_shared_curve(pNsd->pNetOssl->ssl, -1) == 0) {
 		// This is not a failure
 		LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO, "nsd_ossl: "
-		"Information, no shared curve between syslog client and server");
+		"Information, no shared curve between syslog client '%s' and server", fromHostIP);
 	}
 	#endif
 	dbgprintf("osslPostHandshakeCheck: Debug Protocol Version: %s\n",
@@ -814,17 +819,21 @@ osslPostHandshakeCheck(nsd_ossl_t *pNsd)
 	if (sslCipher != NULL){
 		if(SSL_CIPHER_get_version(sslCipher) == NULL) {
 			LogError(0, RS_RET_NO_ERRCODE, "nsd_ossl:"
-				"TLS version mismatch between syslog client and server.");
+				"TLS version mismatch between syslog client '%s' and server.", fromHostIP);
 		}
 		dbgprintf("osslPostHandshakeCheck: Debug Cipher Version: %s Name: %s\n",
 			SSL_CIPHER_get_version(sslCipher), SSL_CIPHER_get_name(sslCipher));
 	}else {
-		LogError(0, RS_RET_NO_ERRCODE, "nsd_ossl:No shared ciphers between syslog client and server.");
+		LogError(0, RS_RET_NO_ERRCODE, "nsd_ossl:No shared ciphers between syslog client '%s' and server.",
+			fromHostIP);
 	}
 
 	FINALIZE;
 
 finalize_it:
+	if (fromHostIP != NULL) {
+		free(fromHostIP);
+	}
 	RETiRet;
 }
 
@@ -1180,6 +1189,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	DEFiRet;
 	DBGPRINTF("openssl: entering Connect family=%d, device=%s\n", family, device);
 	nsd_ossl_t* pThis = (nsd_ossl_t*) pNsd;
+	uchar *fromHostIP = NULL;
 
 	ISOBJ_TYPE_assert(pThis, nsd_ossl);
 	assert(port != NULL);
@@ -1203,8 +1213,11 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 		FINALIZE;
 	}
 
+	nsd_ptcp.GetRemoteHName((nsd_t*)pThis->pTcp, &fromHostIP);
+
+
 	LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO, "nsd_ossl: "
-		"TLS Connection initiated with remote syslog server.");
+		"TLS Connection initiated with remote syslog server '%s'.", fromHostIP);
 	/*if we reach this point we are in tls mode */
 	DBGPRINTF("Connect: TLS Mode\n");
 
@@ -1218,6 +1231,9 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	/* We now do the handshake */
 	iRet = osslHandshakeCheck(pThis);
 finalize_it:
+	if (fromHostIP != NULL) {
+		free(fromHostIP);
+	}
 	/* Connect appears to be done here */
 	dbgprintf("Connect: END iRet = %d, pThis=[%p], pNsd->rtryCall=%d\n",
 		iRet, pThis, pThis->rtryCall);
