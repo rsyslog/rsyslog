@@ -61,6 +61,7 @@ DEF_OMOD_STATIC_DATA
  * via pData */
 typedef struct _instanceData {
 	uchar *server; /* redis server address */
+	uchar *socketPath; /* redis server UDS address (This option only takes effect if the server is not set) */
 	int port; /* redis port */
 	uchar *serverpassword; /* redis password */
 	uchar *tplName; /* template name */
@@ -160,6 +161,9 @@ CODESTARTfreeInstance
 	if (pData->server != NULL) {
 		free(pData->server);
 	}
+	if (pData->socketPath != NULL) {
+		free(pData->socketPath);
+	}
 	free(pData->key);
 	free(pData->modeDescription);
 	free(pData->serverpassword);
@@ -184,21 +188,40 @@ ENDdbgPrintInstInfo
 static rsRetVal initHiredis(wrkrInstanceData_t *pWrkrData, int bSilent)
 {
 	char *server;
+	uint8_t udsAddr = 0;
 	redisReply *reply = NULL;
 	DEFiRet;
-
-	server = (pWrkrData->pData->server == NULL) ? (char *)"127.0.0.1" :
-			(char*) pWrkrData->pData->server;
+	if (pWrkrData->pData->server == NULL) {
+		if (pWrkrData->pData->socketPath == NULL) {
+			server = (char *)"127.0.0.1";
+		} else {
+			udsAddr = 1;
+			server = (char *) pWrkrData->pData->socketPath;
+		}
+	} else {
+		server = (char *) pWrkrData->pData->server;
+	}
 	DBGPRINTF("omhiredis: trying connect to '%s' at port %d\n", server,
 			pWrkrData->pData->port);
 
 	struct timeval timeout = { 1, 500000 }; /* 1.5 seconds */
-	pWrkrData->conn = redisConnectWithTimeout(server, pWrkrData->pData->port,
-			timeout);
+	if (udsAddr) {
+		pWrkrData->conn = redisConnectUnixWithTimeout(server, timeout);
+	} else {
+		pWrkrData->conn = redisConnectWithTimeout(server,pWrkrData->pData->port,
+				timeout);
+	}
+	if (pWrkrData->conn == NULL) {
+		if (!bSilent)
+			LogError(0, RS_RET_REDIS_ERROR, "omhiredis: can not connect to redis server '%s' : port %d"
+				"-> could not allocate context!\n", server, udsAddr ? 0 : pWrkrData->pData->port);
+		ABORT_FINALIZE(RS_RET_SUSPENDED);
+	}
 	if (pWrkrData->conn->err) {
 		if(!bSilent)
-			LogError(0, RS_RET_SUSPENDED,
-				"can not initialize redis handle");
+			LogError(0, RS_RET_REDIS_ERROR, "omhiredis: can not connect to redis server '%s', "
+				"port %d -> %s\n", server, udsAddr ? 0 : pWrkrData->pData->port,
+				pWrkrData->conn->errstr);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
@@ -451,6 +474,7 @@ static void
 setInstParamDefaults(instanceData *pData)
 {
 	pData->server = NULL;
+	pData->socketPath = NULL;
 	pData->port = 6379;
 	pData->serverpassword = NULL;
 	pData->tplName = NULL;
@@ -496,6 +520,8 @@ CODESTARTnewActInst
 			pData->server = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "serverport")) {
 			pData->port = (int) pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "socketpath")) {
+			pData->socketPath = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "serverpassword")) {
 			pData->serverpassword = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
