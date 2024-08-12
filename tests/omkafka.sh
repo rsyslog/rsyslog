@@ -54,6 +54,7 @@ local4.* {
 			"message.send.max.retries=1"]
 	topicConfParam=["message.timeout.ms=10000"]
 	partitions.auto="on"
+	errorFile="'$RSYSLOG_OUT_LOG'-kafka_errors.log"
 	closeTimeout="60000"
 	resubmitOnFailure="on"
 	keepFailedMessages="on"
