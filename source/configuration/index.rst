@@ -40,6 +40,7 @@ Note that **configurations can be built interactively** via the online
    droppriv
    ipv6
    cryprov_gcry
+   cryprov_ossl
    dyn_stats
    lookup_tables
    percentile_stats

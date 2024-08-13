@@ -788,7 +788,7 @@ cry.Provider
 Selects a crypto provider for log encryption. By selecting a provider,
 the encryption feature is turned on.
 
-Currently, there only is one provider called ":doc:`gcry <../cryprov_gcry>`".
+Currently, there are two providers called ":doc:`gcry <../cryprov_gcry>`" and ":doc:`ossl <../cryprov_ossl>`".
 
 
 rotation.sizeLimit
