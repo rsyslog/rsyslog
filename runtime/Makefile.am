@@ -238,7 +238,7 @@ endif
 #
 if ENABLE_LIBGCRYPT
    noinst_LTLIBRARIES += libgcry.la
-   libgcry_la_SOURCES = libgcry.c libgcry_common.c libgcry.h
+   libgcry_la_SOURCES = libgcry.c libcry_common.c libcry_common.h libgcry.h
    libgcry_la_CPPFLAGS =  $(RSRT_CFLAGS) $(LIBGCRYPT_CFLAGS)
    pkglib_LTLIBRARIES += lmcry_gcry.la
    lmcry_gcry_la_DEPENDENCIES = libgcry.la
@@ -246,6 +246,23 @@ if ENABLE_LIBGCRYPT
    lmcry_gcry_la_CPPFLAGS = $(RSRT_CFLAGS) $(LIBGCRYPT_CFLAGS)
    lmcry_gcry_la_LDFLAGS = -module -avoid-version
    lmcry_gcry_la_LIBADD = libgcry.la $(LIBGCRYPT_LIBS)
+endif
+
+#
+# support library for openssl crypto provider
+#
+if ENABLE_OPENSSL_CRYPTO_PROVIDER
+   # Helper
+   noinst_LTLIBRARIES += libossl.la
+   libossl_la_SOURCES = libossl.c libossl.h libcry_common.c libcry_common.h
+   libossl_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(OPENSSL_CFLAGS)
+
+   pkglib_LTLIBRARIES += lmcry_ossl.la
+   lmcry_ossl_la_DEPENDENCIES = libossl.la
+   lmcry_ossl_la_SOURCES = lmcry_ossl.c lmcry_ossl.h
+   lmcry_ossl_la_CPPFLAGS = $(RSRT_CFLAGS) $(OPENSSL_FLAGS)
+   lmcry_ossl_la_LDFLAGS = -module -avoid-version
+   lmcry_ossl_la_LIBADD = libossl.la $(OPENSSL_LIBS)
 endif
 
 #
