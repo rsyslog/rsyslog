@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2408.0 (aka 2024.08) 2024-0?-??
+Scheduled Release 8.2408.0 (aka 2024.08) 2024-08-20
+- 2024-08-05: imtcp: improve connection error messages
+  They now contain remote peer information whereever possible.
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2406.0 (aka 2024.06) 2024-07-02
 - 2024-07-01: ompgsql bugfix: unexpected and unnecessary message loss
