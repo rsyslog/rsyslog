@@ -1131,7 +1131,9 @@ if test "x$enable_openssl" = "xyes"; then
 	AC_CHECK_LIB(
 		[crypto],
 		[EVP_CIPHER_get_block_size],
-		[enable_openssl_crypto_provider="yes"],
+		[enable_openssl_crypto_provider="yes"
+		AC_DEFINE([ENABLE_OPENSSL_CRYPTO_PROVIDER], [1], [Indicator that openssl(EVP_CIPHER_get_block_size) is present])
+		],
 		[AC_MSG_WARN([The ossl encryption provider will not be enabled (EVP_CIPHER_get_block_size is missing)])]
 	)
 fi

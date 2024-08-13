@@ -36,11 +36,6 @@
 #include "libossl.h"
 #include "lmcry_ossl.h"
 
-#pragma GCC diagnostic push // TODO REMOVE
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-#pragma GCC diagnostic ignored "-Wunused-variable"
-#pragma GCC diagnostic ignored "-Wunused-label"
-
 MODULE_TYPE_LIB
 MODULE_TYPE_NOKEEP
 
@@ -303,4 +298,3 @@ CODESTARTmodInit
 	CHKiRet(lmcry_osslClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit
 
-#pragma GCC diagnostic pop // TODO REMOVE
