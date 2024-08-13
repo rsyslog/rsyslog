@@ -35,6 +35,10 @@ OPTIONS
   Utility function to write a key to a keyfile. The key can be obtained
   via any method.
 
+-l, --lib <library>
+  Select the crypto library to be used. Either "ossl" or "gcry". Defaults to
+  "gcry" or whatever is currently available.
+
 -v, --verbose
   Select verbose mode.
 
@@ -60,12 +64,16 @@ OPTIONS
   steps. This option may be removed in the future.
 
 -a, --algo <algo>
-  Sets the encryption algorightm (cipher) to be used. See below
-  for supported algorithms. The default is "AES128".
+  Sets the encryption algorightm (cipher) to be used. Refer to the
+  list of supported algorithms below for the "gcry" library. The
+  default algorithm for "gcry" is "AES128". For the "ossl" library,
+  both the algorithm and mode are specified using this option,
+  with "AES-128-CBC" as the default.
 
 -m, --mode <mode>
   Sets the ciphermode to be used. See below for supported modes.
-  The default is "CBC".
+  The default is "CBC". In case of "ossl" library, this options is
+  ignored.
 
 -r, --generate-random-key <bytes>
   Generates a random key of length <bytes>. This option is
@@ -77,8 +85,8 @@ OPERATION MODES
 
 The operation mode specifies what exactly the tool does with the provided
 files. The default operation mode is "dump", but this may change in the future.
-Thus, it is recommended to always set the operations mode explicitely. If 
-multiple operations mode are set on the command line, results are 
+Thus, it is recommended to always set the operations mode explicitely. If
+multiple operations mode are set on the command line, results are
 unpredictable.
 
 decrypt
@@ -107,14 +115,15 @@ the user. An exception is when an existing file is overwritten via the
 EXIT CODES
 ==========
 
-The command returns an exit code of 0 if everything went fine, and some 
+The command returns an exit code of 0 if everything went fine, and some
 other code in case of failures.
 
 
 SUPPORTED ALGORITHMS
 ====================
 
-We basically support what libgcrypt supports. This is:
+In case of "ossl", see "ALGORITHM FETCHING" in crypto(7) for further information.
+In case of "gcry" we basically support what libgcrypt supports and that is:
 
 	3DES
 	CAST5
@@ -136,12 +145,13 @@ We basically support what libgcrypt supports. This is:
 	CAMELLIA256
 
 
+
 SUPPORTED CIPHER MODES
 ======================
 
-We basically support what libgcrypt supports. This is:
+In case of "gcry", we basically support what libgcrypt supports. This is:
 
-  	ECB
+	ECB
 	CFB
 	CBC
 	STREAM
@@ -157,6 +167,14 @@ EXAMPLES
 Decrypts "logfile" and sends data to stdout.
 
 
+**rscryutil -k keyfile -l ossl -a AES-256-CBC encryptedfile**
+
+Decrypts encryptedfile using ossl library with AES256 algorithm and CBC mode
+
+**rscryutil -k keyfile -l gcry -a AES256 -m CBC encryptedfile**
+
+Decrypts encryptedfile using gcry library with AES256 algorithm and CBC mode
+
 **rscryutil --generate-random-key 16 --keyfile /some/secured/path/keyfile**
 
 Generates random key and stores it in the specified keyfile.
@@ -171,7 +189,7 @@ run on the decrypted file.
 SECURITY CONSIDERATIONS
 =======================
 
-Specifying keys directly on the command line (*--key* option) is very 
+Specifying keys directly on the command line (*--key* option) is very
 insecure and should
 not be done, except for testing purposes with test keys. Even then it is
 recommended to use keyfiles, which are also easy to handle during testing.
