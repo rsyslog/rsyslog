@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2408.0 (aka 2024.08) 2024-08-20
+- 2024-08-13: new "ossl" crypto provider
+  Thanks to Attila Lakatos for the patch.
 - 2024-08-05: imtcp: improve connection error messages
   They now contain remote peer information whereever possible.
 ----------------------------------------------------------------------------------------
