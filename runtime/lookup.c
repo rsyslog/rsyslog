@@ -437,8 +437,8 @@ build_StringTable(lookup_t *pThis, struct json_object *jtab, const uchar* name) 
 
 		for(i = 0; i < pThis->nmemb; i++) {
 			jrow = json_object_array_get_idx(jtab, i);
-			jindex = json_object_object_get(jrow, "index");
-			jvalue = json_object_object_get(jrow, "value");
+			fjson_object_object_get_ex(jrow, "index", &jindex);
+			fjson_object_object_get_ex(jrow, "value", &jvalue);
 			if (jindex == NULL || json_object_is_type(jindex, json_type_null)) {
 				NO_INDEX_ERROR("string", name);
 			}
@@ -492,8 +492,8 @@ build_ArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar *name) {
 
 		for(i = 0; i < pThis->nmemb; i++) {
 			jrow = json_object_array_get_idx(jtab, i);
-			jindex = json_object_object_get(jrow, "index");
-			jvalue = json_object_object_get(jrow, "value");
+			fjson_object_object_get_ex(jrow, "index", &jindex);
+			fjson_object_object_get_ex(jrow, "value", &jvalue);
 			if (jindex == NULL || json_object_is_type(jindex, json_type_null)) {
 				NO_INDEX_ERROR("array", name);
 			}
@@ -550,8 +550,8 @@ build_SparseArrayTable(lookup_t *pThis, struct json_object *jtab, const uchar* n
 
 		for(i = 0; i < pThis->nmemb; i++) {
 			jrow = json_object_array_get_idx(jtab, i);
-			jindex = json_object_object_get(jrow, "index");
-			jvalue = json_object_object_get(jrow, "value");
+			fjson_object_object_get_ex(jrow, "index", &jindex);
+			fjson_object_object_get_ex(jrow, "value", &jvalue);
 			if (jindex == NULL || json_object_is_type(jindex, json_type_null)) {
 				NO_INDEX_ERROR("sparseArray", name);
 			}
@@ -605,9 +605,9 @@ lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* nam
 	DEFiRet;
 	all_values = NULL;
 
-	jnomatch = json_object_object_get(jroot, "nomatch");
-	jtype = json_object_object_get(jroot, "type");
-	jtab = json_object_object_get(jroot, "table");
+	fjson_object_object_get_ex(jroot, "nomatch", &jnomatch);
+	fjson_object_object_get_ex(jroot, "type", &jtype);
+	fjson_object_object_get_ex(jroot, "table", &jtab);
 	if (jtab == NULL || !json_object_is_type(jtab, json_type_array)) {
 		LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' has invalid table definition", name);
 		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
@@ -623,7 +623,7 @@ lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* nam
 	/* before actual table can be loaded, prepare all-value list and remove duplicates*/
 	for(i = 0; i < pThis->nmemb; i++) {
 		jrow = json_object_array_get_idx(jtab, i);
-		jvalue = json_object_object_get(jrow, "value");
+		fjson_object_object_get_ex(jrow, "value", &jvalue);
 		if (jvalue == NULL || json_object_is_type(jvalue, json_type_null)) {
 			LogError(0, RS_RET_INVALID_VALUE, "'%s' lookup table named: '%s' has record(s) "
 			"without 'value' field", table_type, name);
@@ -688,7 +688,7 @@ lookupBuildTable(lookup_t *pThis, struct json_object *jroot, const uchar* name)
 
 	DEFiRet;
 
-	jversion = json_object_object_get(jroot, "version");
+	fjson_object_object_get_ex(jroot, "version", &jversion);
 	if (jversion != NULL && !json_object_is_type(jversion, json_type_null)) {
 		version = json_object_get_int(jversion);
 	} else {
