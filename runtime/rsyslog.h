@@ -108,7 +108,7 @@
 						_Pragma("GCC diagnostic ignored \"-Wunknown-attribute\"")
 	#define PRAGMA_IGNORE_Wformat_nonliteral \
 						_Pragma("GCC diagnostic ignored \"-Wformat-nonliteral\"")
-	#if  __GNUC__ >= 5
+	#if (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2) || defined(__clang__)
 		#define PRAGMA_IGNORE_Wdeprecated_declarations \
 			_Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
 		#define PRAGMA_IGNORE_Wunused_parameter \
