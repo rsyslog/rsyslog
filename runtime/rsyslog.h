@@ -54,6 +54,11 @@
 		#pragma GCC diagnostic ignored "-Wjump-misses-init"
 	#endif /* if __GNUC__ >= 8 */
 
+	#if defined(__clang__)
+		#define ATTR_NO_SANITIZE_UNDEFINED __attribute__((no_sanitize("undefined")))
+	#else
+		#define ATTR_NO_SANITIZE_UNDEFINED
+	#endif
 	/* define a couple of attributes to improve cross-platform builds */
 	#if __GNUC__ > 6
 		#define CASE_FALLTHROUGH __attribute__((fallthrough));
@@ -104,8 +109,12 @@
 						_Pragma("GCC diagnostic ignored \"-Wexpansion-to-defined\"")
 	#define PRAGMA_IGNORE_Wunknown_warning_option \
 						_Pragma("GCC diagnostic ignored \"-Wunknown-warning-option\"")
-	#define PRAGMA_IGNORE_Wunknown_attribute \
+	#if !defined(__clang__)
+		#define PRAGMA_IGNORE_Wunknown_attribute \
 						_Pragma("GCC diagnostic ignored \"-Wunknown-attribute\"")
+	#else
+		#define PRAGMA_IGNORE_Wunknown_attribute
+	#endif
 	#define PRAGMA_IGNORE_Wformat_nonliteral \
 						_Pragma("GCC diagnostic ignored \"-Wformat-nonliteral\"")
 	#if (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2) || defined(__clang__)

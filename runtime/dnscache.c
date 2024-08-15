@@ -97,8 +97,13 @@ hash_from_key_fn(void *k)
 			len = 0;
 			rkey = NULL;
 	}
-	while(len--)
-		hashval = hashval * 33 + *rkey++;
+	while(len--) {
+		/* the casts are done in order to prevent undefined behavior sanitizer
+		 * from triggering warnings. Actually, it would be OK if we have just
+		 * "random" truncation.
+		 */
+		hashval = (unsigned) (hashval * (unsigned long long) 33) + *rkey++;
+	}
 
 	return hashval;
 }
