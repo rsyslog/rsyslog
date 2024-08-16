@@ -1,5 +1,15 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2408.0 (aka 2024.08) 2024-08-20
+- 2024-08-16: omkafka enhance: write Kafka log with level ERROR or higher into errorfile
+  closes: https://github.com/rsyslog/rsyslog/issues/5425
+- 2024-08-16: net subsusytem bugfix: some config statemens were not accepted
+  The following parameters were not always excepted, even though they were documented
+  and the supporting code was also present. This has been corrected:
+  * streamdriver.cafile
+  * streamdriver.crlfile
+  * streamdriver.keyfile
+  * streamdriver.certfile
+  Thanks to Qiumiao Zhang for the fix.
 - 2024-08-13: new "ossl" crypto provider
   Thanks to Attila Lakatos for the patch.
 - 2024-08-05: imtcp: improve connection error messages
