@@ -52,6 +52,7 @@
 #include "srUtils.h"
 #include "debug.h"
 #include "libgcry.h"
+#include "libcry_common.h"
 
 #define READBUF_SIZE 4096	/* size of the read buffer */
 
@@ -703,7 +704,7 @@ rsgcryEncrypt(gcryfile pF, uchar *buf, size_t *len)
 {
 	int gcryError;
 	DEFiRet;
-	
+
 	if(*len == 0)
 		FINALIZE;
 
@@ -729,7 +730,7 @@ rsgcryDecrypt(gcryfile pF, uchar *buf, size_t *len)
 {
 	gcry_error_t gcryError;
 	DEFiRet;
-	
+
 	if(pF->bytesToBlkEnd != -1)
 		pF->bytesToBlkEnd -= *len;
 	gcryError = gcry_cipher_decrypt(pF->chd, buf, *len, NULL, 0);

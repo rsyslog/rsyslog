@@ -22,6 +22,15 @@
 #define INCLUDED_LIBCRY_COMMON_H
 #include <stdint.h>
 
+/* error states */
+#define RSGCRYE_EI_OPEN 1 /* error opening .encinfo file */
+#define RSGCRYE_OOM 4 /* ran out of memory */
+
+#define EIF_MAX_RECTYPE_LEN 31 /* max length of record types */
+#define EIF_MAX_VALUE_LEN 1023 /* max length of value types */
+#define RSGCRY_FILETYPE_NAME "rsyslog-enrcyption-info"
+#define ENCINFO_SUFFIX ".encinfo"
+
 int cryGetKeyFromFile(const char* const fn, char** const key, unsigned* const keylen);
 
 int cryGetKeyFromProg(char* cmd, char** key, unsigned* keylen);

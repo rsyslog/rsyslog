@@ -65,15 +65,6 @@ rsRetVal gcryfileGetBytesLeftInBlock(gcryfile gf, ssize_t *left);
 int rsgcryModename2Mode(char *const __restrict__ modename);
 int rsgcryAlgoname2Algo(char *const __restrict__ algoname);
 
-/* error states */
-#define RSGCRYE_EI_OPEN 1 	/* error opening .encinfo file */
-#define RSGCRYE_OOM 4	/* ran out of memory */
-
-#define EIF_MAX_RECTYPE_LEN 31 /* max length of record types */
-#define EIF_MAX_VALUE_LEN 1023 /* max length of value types */
-#define RSGCRY_FILETYPE_NAME "rsyslog-enrcyption-info"
-#define ENCINFO_SUFFIX ".encinfo"
-
 /* Note: gf may validly be NULL, e.g. if file has not yet been opened! */
 static inline void __attribute__((unused))
 gcryfileSetDeleteOnClose(gcryfile gf, const int val)

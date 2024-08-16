@@ -50,17 +50,6 @@ struct osslfile_s {
 				0 means -> end of block, new one must be started. */
 };
 
-
-/* error states */
-#define RSGCRYE_EI_OPEN 1 	/* error opening .encinfo file */
-#define RSGCRYE_OOM 4	/* ran out of memory */
-
-// FIXME refactor
-#define EIF_MAX_RECTYPE_LEN 31 /* max length of record types */
-#define EIF_MAX_VALUE_LEN 1023 /* max length of value types */
-#define RSGCRY_FILETYPE_NAME "rsyslog-enrcyption-info"
-#define ENCINFO_SUFFIX ".encinfo"
-
 osslctx osslCtxNew(void);
 void rsosslCtxDel(osslctx ctx);
 rsRetVal rsosslSetAlgoMode(osslctx ctx, uchar* algorithm);

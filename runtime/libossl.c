@@ -52,6 +52,7 @@
 #include "srUtils.h"
 #include "debug.h"
 #include "libossl.h"
+#include "libcry_common.h"
 
 #define READBUF_SIZE 4096	/* size of the read buffer */
 static rsRetVal rsosslBlkBegin(osslfile gf);
