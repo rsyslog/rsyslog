@@ -619,6 +619,79 @@ finalize_it:
  * needs to be closed, HUP must be sent.
  */
 static rsRetVal
+writeLogError(instanceData *const pData,
+	int level,
+	const char *fac,
+	const char *buf)
+{
+	int bLocked = 0;
+	struct json_object *json = NULL;
+	DEFiRet;
+
+	if(pData->errorFile == NULL) {
+		FINALIZE;
+	}
+
+	// only log errors
+	if (level > LOG_ERR) {
+		FINALIZE;
+	}
+
+	json = json_object_new_object();
+	if(json == NULL) {
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	struct json_object *jval;
+	jval = json_object_new_int(level);
+	json_object_object_add(json, "loglevel", jval);
+	jval = json_object_new_string(fac);
+	json_object_object_add(json, "logfacility", jval);
+	jval = json_object_new_string(buf);
+	json_object_object_add(json, "msg", jval);
+
+	struct iovec iov[2];
+	iov[0].iov_base = (void*) json_object_get_string(json);
+	iov[0].iov_len = strlen(iov[0].iov_base);
+	iov[1].iov_base = (char *) "\n";
+	iov[1].iov_len = 1;
+
+	/* we must protect the file write do operations due to other wrks & HUP */
+	pthread_mutex_lock(&pData->mutErrFile);
+	bLocked = 1;
+	if(pData->fdErrFile == -1) {
+		pData->fdErrFile = open((char*)pData->errorFile,
+					O_WRONLY|O_CREAT|O_APPEND|O_LARGEFILE|O_CLOEXEC,
+					S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
+		if(pData->fdErrFile == -1) {
+			LogError(errno, RS_RET_ERR, "omkafka: error opening error file %s",
+				pData->errorFile);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	}
+
+	/* Note: we do not do real error-handling on the err file, as this
+	 * complicates things way to much.
+	 */
+	const ssize_t nwritten = writev(pData->fdErrFile, iov, sizeof(iov)/sizeof(struct iovec));
+	if(nwritten != (ssize_t) iov[0].iov_len + 1) {
+		LogError(errno, RS_RET_ERR,
+			"omkafka: error writing error file, write returns %lld\n",
+			(long long) nwritten);
+	}
+
+finalize_it:
+	if(bLocked)
+		pthread_mutex_unlock(&pData->mutErrFile);
+	if(json != NULL)
+		json_object_put(json);
+	RETiRet;
+}
+
+/* write data error request/replies to separate error file
+ * Note: we open the file but never close it before exit. If it
+ * needs to be closed, HUP must be sent.
+ */
+static rsRetVal
 writeDataError(instanceData *const pData,
 	const char *const __restrict__ data,
 	const size_t lenData,
@@ -1094,8 +1167,16 @@ static void
 kafkaLogger(const rd_kafka_t __attribute__((unused)) *rk, int level,
 	    const char *fac, const char *buf)
 {
-	DBGPRINTF("omkafka: kafka log message [%d,%s]: %s\n",
-		  level, fac, buf);
+	// Get InstanceData pointer from opaque
+	instanceData *const pData = rd_kafka_opaque(rk);
+
+	DBGPRINTF("omkafka: pData[%p] kafka log message [%d,%s]: %s\n",
+		pData, level, fac, buf);
+
+	// write log messages to error file if pData is not NULL
+	if (pData != NULL) {
+		writeLogError(pData, level, fac, buf);
+	}
 }
 
 /* should be called with write(rkLock) */
