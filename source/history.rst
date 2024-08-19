@@ -2,7 +2,7 @@ RSyslog - History
 =================
 
 Rsyslog is a GPL-ed, enhanced syslogd. Among others, it offers support
-for reliable syslog over TCP, writing to MySQL databases and fully
+for reliable syslog over TCP, writing to MariaDB/MySQL databases and fully
 configurable output formats (including great timestamps).
 
 Rsyslog was initiated by `Rainer Gerhards <https://rainer.gerhards.net/>`_,

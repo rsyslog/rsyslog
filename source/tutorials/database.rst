@@ -1,5 +1,5 @@
-Writing syslog messages to MySQL, PostgreSQL or any other supported Database
-============================================================================
+Writing syslog messages to MariaDB, MySQL, PostgreSQL or any other supported Database
+=====================================================================================
 
 *Written by* \ `Rainer Gerhards <https://rainer.gerhards.net>`_\ *with
 some additions by Marc Schiffbauer (2008-02-28)*
@@ -10,7 +10,8 @@ Abstract
 ***In this paper, I describe how to
 write***\ `syslog <http://www.monitorware.com/en/topics/syslog/>`_\ ***messages
 to
-a***\ `MySQL <http://www.mysql.com/>`_\ ***or***\ `PostgreSQL <http://www.postgresql.org/>`_\ ***database.***\ *Having
+a***\ `MariaDB <http://www.mariadb.org/>`)_/`MySQL <http://www.mysql.com/>`_ \
+***or***\ `PostgreSQL <http://www.postgresql.org/>`_\ ***database.***\ *Having
 syslog messages in a database is often handy, especially when you intend
 to set up a front-end for viewing them. This paper describes an approach
 with*\ `rsyslogd <http://www.rsyslog.com/>`_\ *, an alternative enhanced

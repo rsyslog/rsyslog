@@ -13,8 +13,8 @@ multithreading support. In this mode, receiver and output modules are
 de-coupled via an in-memory queue. This queue buffers messages when the
 output modules are not capable to process them as fast as they are
 received. Once the queue size is exhausted, messages will be dropped.
-The slower the output (e.g. MySQL), the larger the queue should be.
-Buffer space for the actual queue entries is allocated on an as-needed
+The slower the output (e.g. MariaDB/MySQL), the larger the queue should 
+be. Buffer space for the actual queue entries is allocated on an as-needed
 basis. Please keep in mind that a very large queue may exhaust available
 system memory and swap space. Keep this in mind when configuring the max
 size. The actual size of a message depends largely on its content and

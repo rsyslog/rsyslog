@@ -34,13 +34,13 @@ create a new subdirectory rsyslog-version in the current working
 directory. cd into that.
 
 Depending on your system configuration, you also need to install some
-build tools, most importantly make, the gcc compiler and the MySQL
-development system (if you intend to use MySQL - the package is often
-named "mysql-dev"). On many systems, these things should already be
-present. If you don't know exactly, simply skip this step for now and
-see if nice error messages pop up during the compile process. If they
-do, you can still install the missing build environment tools. So this
-is nothing that you need to look at very carefully.
+build tools, most importantly make, the gcc compiler and the MariaDB/
+MySQL development system (if you intend to use MySQL - the package is 
+often named "mysql-dev"). On many systems, these things should already 
+be present. If you don't know exactly, simply skip this step for now 
+and see if nice error messages pop up during the compile process. If 
+they do, you can still install the missing build environment tools. So 
+this is nothing that you need to look at very carefully.
 
 
 Build Requirements
@@ -99,11 +99,11 @@ Step 2 - Run ./configure
 
 Run ./configure to adopt rsyslog to your environment. While doing so,
 you can also enable options. Configure will display selected options
-when it is finished. For example, to enable MySQL support, run::
+when it is finished. For example, to enable MariaDB/MySQL support, run::
 
  ./configure --enable-mysql
 
-Please note that MySQL support by default is NOT disabled.
+Please note that MariaDB/MySQL support by default is NOT disabled.
 
 To learn which ./configure options are available and what their
 default values are, use
@@ -153,7 +153,7 @@ rsyslog.conf:
 
 Change rsyslog.conf for any further enhancements you would like to see.
 For example, you can add database writing as outlined in the paper
-:doc:`/tutorials/database` (remember you need to enable MySQL
+:doc:`/tutorials/database` (remember you need to enable MariaDB/MySQL
 support during step 2 if you want to do that!).
 
 Step 6 - Disable stock syslogd
@@ -197,10 +197,10 @@ S10rsyslogd". Please note that the S10 prefix tells the system to start
 rsyslogd at the same time stock sysklogd was started.
 
 **Important:** if you use the database functionality, you should make
-sure that MySQL starts before rsyslogd. If it starts later, you will
+sure that MariaDB/MySQL starts before rsyslogd. If it starts later, you will
 receive an error message during each restart (this might be acceptable
-to you). To do so, either move MySQL's start order before rsyslogd or
-rsyslogd's after MySQL.
+to you). To do so, either move MariaDB/MySQL's start order before rsyslogd or
+rsyslogd's after MariaDB/MySQL.
 
 Step 8 - Check daily cron scripts
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

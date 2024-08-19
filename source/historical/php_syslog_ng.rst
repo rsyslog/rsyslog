@@ -40,8 +40,9 @@ Setting up the system
 
 For php-syslog-ng, you can follow its usual setup instructions. Just
 skip any steps referring to configure syslog-ng. Make sure you create the
-database schema in `MySQL <http://www.mysql.com/>`_. As of this writing,
-the expected schema can be created via this script:
+database schema in `MariaDB <http://www.mariadb.org/>`_/
+`MySQL <http://www.mysql.com/>`_. As of this writing, the expected schema
+can be created via this script:
 
 ::
 
@@ -101,11 +102,11 @@ see the `rsyslogd property replacer manual <property_replacer.html>`_) .
 We could have extracted just the date and time parts of the respective
 properties. However, this is more complicated and also adds processing
 time to rsyslogd's processing (substrings must be extracted). So we take
-a full mysql-formatted timestamp and supply it to MySQL. The sql engine
-in turn discards the unneeded part. It works pretty well. As of my
-understanding, the inefficiency of discarding the unneeded part in MySQL
-is lower than the efficiency gain from using the full timestamp in
-rsyslogd. So it is most probably the best solution.
+a full MariaDB/MySQL-formatted timestamp and supply it to MariaDB/MySQL.
+The sql engine in turn discards the unneeded part. It works pretty well.
+As of my understanding, the inefficiency of discarding the unneeded part
+in MariaDB/MySQL is lower than the efficiency gain from using the full
+timestamp in rsyslogd. So it is most probably the best solution.
 
 Please note that rsyslogd knows two different timestamp properties: one
 is timereported, used here. It is the timestamp from the message itself.
@@ -120,7 +121,7 @@ use it ;)
 The line in red tells rsyslogd which messages to log and where to store
 it. The "\*.\*" selects all messages. You can use standard syslog
 selector line filters here if you do not like to see everything in your
-database. The ">" tells rsyslogd that a MySQL connection must be
+database. The ">" tells rsyslogd that a MariaDB/MySQL connection must be
 established. Then, "mysql-server" is the name or IP address of the
 server machine, "syslog" is the database name (default from the schema)
 and "user" and "pass" are the logon credentials. Use a user with low

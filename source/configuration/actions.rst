@@ -503,8 +503,8 @@ Database Table
 ~~~~~~~~~~~~~~
 
 This allows logging of the message to a database table. Currently, only
-MySQL databases are supported. However, other database drivers will most
-probably be developed as plugins. By default, a
+MariaDB/MySQL databases are supported. However, other database drivers 
+will most probably be developed as plugins. By default, a
 `MonitorWare <https://www.mwagent.com/>`_-compatible schema is
 required for this to work. You can create that schema with the
 createDB.SQL file that came with the rsyslog package. You can also
@@ -518,8 +518,8 @@ If a specific template is to be used, a semicolon followed by the
 template name can follow the connect information. This is as follows:
 >dbhost,dbname,dbuser,dbpassword;dbtemplate
 
-**Important: to use the database functionality, the MySQL output module
-must be loaded in the config file** BEFORE the first database table
+**Important: to use the database functionality, the MariaDB/MySQL output 
+module must be loaded in the config file** BEFORE the first database table
 action is used. This is done by placing the
 
 ::

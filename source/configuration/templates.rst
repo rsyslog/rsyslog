@@ -437,8 +437,8 @@ the latter ones are processed by the property replacer and apply to a
 SINGLE property, only (and not the whole template).
 Template options are case-insensitive. Currently defined are:
 
-**option.sql** - format the string suitable for a SQL statement in MySQL
-format. This will replace single quotes ("'") and the backslash
+**option.sql** - format the string suitable for a SQL statement in MariaDB/
+MySQL format. This will replace single quotes ("'") and the backslash
 character by their backslash-escaped counterpart ("\\'" and "\\\\")
 inside each field. Please note that in MySQL configuration, the
 ``NO_BACKSLASH_ESCAPES`` mode must be turned off for this format to work
@@ -489,10 +489,10 @@ toll on the processing time. Not much, but on a really busy system you
 might notice it.
 
 The default template for the write to database action has the sql option
-set. As we currently support only MySQL and the sql option matches the
-default MySQL configuration, this is a good choice. However, if you have
-turned on ``NO_BACKSLASH_ESCAPES`` in your MySQL config, you need to
-supply a template with the stdsql option. Otherwise you will become
+set. As we currently support only MariaDB/MySQL and the sql option matches 
+the default MariaDB/MySQL configuration, this is a good choice. However, 
+if you  have turned on ``NO_BACKSLASH_ESCAPES`` in your MySQL config, you 
+need to supply a template with the stdsql option. Otherwise you will become
 vulnerable to SQL injection.
 
 .. code-block:: none
@@ -565,8 +565,8 @@ The equivalent string template looks like this:
    The template string itself must be on a single line.
 
 
-Standard Template for writing to the MySQL database
----------------------------------------------------
+Standard Template for writing to the MariaDB/MySQL database
+-----------------------------------------------------------
 
 .. code-block:: none
 
@@ -806,7 +806,7 @@ message was generated and at the end the syslogtag and message itself.
         string=" %syslogtag%%msg%\n\r")
 
 **RSYSLOG_StdDBFmt** - Generates a insert command with the message
-properties, into table SystemEvents for a mysql database.
+properties, into table SystemEvents for a MariaDB/MySQL database.
 
 .. code-block:: none
 

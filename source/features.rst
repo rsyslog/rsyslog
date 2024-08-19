@@ -15,7 +15,7 @@ will replace this one in the future.
 Current Features
 ----------------
 
--  native support for `writing to MySQL databases <rsyslog_mysql.html>`_
+-  native support for `writing to MariaDB/MySQL databases <rsyslog_mysql.html>`_
 -  native support for writing to Postgres databases
 -  direct support for Firebird/Interbase, OpenTDS (MS SQL, Sybase),
    SQLite, Ingres, Oracle, and mSQL via libdbi, a database abstraction
@@ -81,7 +81,7 @@ Current Features
    from directories. Includes are specified in the main configuration
    file
 -  supports multiple actions per selector/filter condition
--  MySQL and Postgres SQL functionality as a dynamically loadable
+-  MariaDB/MySQL and Postgres SQL functionality as a dynamically loadable
    plug-in
 -  modular design for inputs and outputs - easily extensible via custom
    plugins

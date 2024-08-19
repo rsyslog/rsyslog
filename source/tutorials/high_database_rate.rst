@@ -19,8 +19,8 @@ Database updates are inherently slow when it comes to storing syslog
 messages. However, there are a number of applications where it is handy
 to have the message inside a database. Rsyslog supports native database
 writing via output plugins. As of this writing, there are plugins
-available for MySQL an PostgreSQL. Maybe additional plugins have become
-available by the time you read this. Be sure to check.
+available for MariaDB/MySQL and PostgreSQL. Maybe additional plugins have 
+become available by the time you read this. Be sure to check.
 
 In order to successfully write messages to a database backend, the
 backend must be capable to record messages at the expected average
@@ -73,7 +73,7 @@ How To Setup
 Frankly, it's quite easy. You just need to do is instruct rsyslog to use
 a disk queue and then configure your action. There is nothing else to
 do. With the following simple config file, you log anything you receive
-to a MySQL database and have buffering applied automatically.
+to a MariaDB/MySQL database and have buffering applied automatically.
 
 ::
 

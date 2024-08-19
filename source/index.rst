@@ -12,7 +12,7 @@ While it started as a regular syslogd, rsyslog has evolved into a kind of
 
 Rsyslog has a strong enterprise focus but also scales down to small
 systems.
-It supports, among others, :doc:`MySQL <tutorials/database>`,
+It supports, among others, :doc:`MariaDB/MySQL <tutorials/database>`,
 :doc:`PostgreSQL <tutorials/database>`,
 :doc:`failover log destinations <tutorials/failover_syslog_server>`,
 ElasticSearch, syslog/tcp transport, fine grain output format control,

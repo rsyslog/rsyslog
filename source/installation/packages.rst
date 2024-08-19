@@ -38,7 +38,7 @@ Package Structure
 Almost all distributions package rsyslog in multiple packages. This is also
 the way Adiscon packages are created. The reason is that rsyslog has so many
 input and output plugins that enable it to connect to different systems
-like MariaDB/mysql, Kafka, ElasticSearch and so on. If everything were provided in a
+like MariaDB/MySQL, Kafka, ElasticSearch and so on. If everything were provided in a
 single gigantic package, you would need to install all of these dependencies,
 even though they are mostly not needed.
 
@@ -52,7 +52,7 @@ For that reason, rsyslog comes with multiple packages:
   multiple of these packages. What exactly is available and how it is
   named depends on the distro. This unfortunately is a bit inconsistent.
   Usually, it is a good guess that the package is intuitively named,
-  e.g. "rsyslog-mysql" for the MySQL component and "rsyslog-elasticsearch"
+  e.g. "rsyslog-mysql" for the MariaDB/MySQL component and "rsyslog-elasticsearch"
   for ElasticSearch support. If in doubt, it is suggested to use the
   distro's package manager and search for "rsyslog*".
 

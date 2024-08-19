@@ -214,7 +214,7 @@ options are defined:
   convert data to UTC prior to outputting it (available since 8.18.0)
 
 **date-mysql**
-  format as mysql date
+  format as MariaDB/MySQL date
 
 **date-rfc3164**
   format as RFC 3164 date

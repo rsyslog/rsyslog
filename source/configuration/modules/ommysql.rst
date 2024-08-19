@@ -1,6 +1,6 @@
-*************************************
-ommysql: MySQL Database Output Module
-*************************************
+*********************************************
+ommysql: MariaDB/MySQL Database Output Module
+*********************************************
 
 ===========================  ===========================================================================
 **Module Name:**             **ommysql**
@@ -11,8 +11,8 @@ ommysql: MySQL Database Output Module
 Purpose
 =======
 
-This module provides native support for logging to MySQL databases. It
-offers superior performance over the more generic
+This module provides native support for logging to MariaDB/MySQL 
+databases. It offers superior performance over the more generic
 `omlibdbi <omlibdbi.html>`_ module.
 
 
@@ -37,7 +37,7 @@ Server
 
    "word", "none", "yes", "none"
 
-This is the address of the MySQL-Server.
+This is the address of the MariaDB/MySQL-Server.
 
 
 Socket
@@ -50,10 +50,10 @@ Socket
 
    "word", "none", "no", "none"
 
-This is the unix socket path of the MySQL-Server. When the server
-address is set localhost, the mysql client library connects using
+This is the unix socket path of the MariaDB/MySQL-Server. When the server
+address is set localhost, the MariaDB/MySQL client library connects using
 the default unix socket specified at build time.
-If you run mysql server and run the unix socket path differently
+If you run MariaDB/MySQL server and run the unix socket path differently
 than the default, you can set the socket path with this option.
 
 
@@ -106,7 +106,7 @@ ServerPort
 
    "integer", "none", "no", "``$ActionOmmysqlServerPort``"
 
-Permits to select a non-standard port for the MySQL server. The
+Permits to select a non-standard port for the MariaDB/MySQL server. The
 default is 0, which means the system default port is used. There is
 no need to specify this parameter unless you know the server is
 running on a non-standard listen port.
@@ -122,7 +122,7 @@ MySQLConfig.File
 
    "word", "none", "no", "``$OmMySQLConfigFile``"
 
-Permits the selection of an optional MySQL Client Library
+Permits the selection of an optional MariaDB/MySQL Client Library
 configuration file (my.cnf) for extended configuration functionality.
 The use of this configuration parameter is necessary only if you have
 a non-standard environment or if fine-grained control over the
@@ -145,7 +145,7 @@ This will likely only be used where the database administrator
 provides a single configuration file with multiple profiles.
 This configuration parameter is ignored unless **$OmMySQLConfigFile**
 is also used in the rsyslog configuration file.
-If omitted, the MySQL Client Library default of "client" will be
+If omitted, the MariaDB/MySQL Client Library default of "client" will be
 used.
 
 
@@ -159,7 +159,7 @@ Template
 
    "word", "StdDBFmt", "no", "none"
 
-Rsyslog contains a canned default template to write to the MySQL
+Rsyslog contains a canned default template to write to the MariaDB/MySQL
 database. It works on the MonitorWare schema. This template is:
 
 .. code-block:: none
@@ -174,8 +174,8 @@ database. It works on the MonitorWare schema. This template is:
 As you can see, the template is an actual SQL statement. Note the ",SQL"
 option: it tells the template processor that the template is used for
 SQL processing, thus quote characters are quoted to prevent security
-issues. You can not assign a template without ",SQL" to a MySQL output
-action.
+issues. You can not assign a template without ",SQL" to a MariaDB/MySQL 
+output action.
 
 If you would like to change fields contents or add or delete your own
 fields, you can simply do so by modifying the schema (if required) and
@@ -203,4 +203,4 @@ under the account of "user" with password "pwd".
 FAQ
 ===
 
-* :doc:`How can I encrypt the rsyslog connection to mariadb/mysql? <../../faq/encrypt_mysql_traffic_ommysql>`
+* :doc:`How can I encrypt the rsyslog connection to MariaDB/MySQL? <../../faq/encrypt_mysql_traffic_ommysql>`

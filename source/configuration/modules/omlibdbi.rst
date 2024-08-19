@@ -22,8 +22,8 @@ of this writing, the following drivers are available:
 -  `FreeTDS <http://www.freetds.org/>`_ (provides access to `MS SQL
    Server <http://www.microsoft.com/sql>`_ and
    `Sybase <http://www.sybase.com/products/informationmanagement/adaptiveserverenterprise>`_)
--  `MySQL <http://www.mysql.com/>`_ (also supported via the native
-   `ommysql <ommysql.html>`_ plugin in rsyslog)
+-  `MariaDB <http://www.mariadb.org/>`_/`MySQL <http://www.mysql.com/>`_ 
+    (also supported via the `ommysql <ommysql.html>`_ plugin in rsyslog)
 -  `PostgreSQL <http://www.postgresql.org/>`_\ (also supported via the
    native `ommysql <ommysql.html>`_ plugin in rsyslog)
 -  `SQLite/SQLite3 <http://www.sqlite.org/>`_
@@ -204,8 +204,8 @@ security reasons. However, omlibdbi does not detect if you used the
 right option for your backend. Future versions of rsyslog (with
 full expression  support) will provide advanced ways of handling this
 situation. So far, you must be careful. The default template provided by
-rsyslog is suitable for MySQL, but not necessarily for your database
-backend. Be careful!
+rsyslog is suitable for MariaDB/MySQL, but not necessarily for your 
+database backend. Be careful!
 
 If you receive the rsyslog error message "libdbi or libdbi drivers not
 present on this system" you may either not have libdbi and its drivers
@@ -226,8 +226,8 @@ Example 1
 ---------
 
 The following sample writes all syslog messages to the database
-"syslog_db" on mysqlserver.example.com. The server is MySQL and being
-accessed under the account of "user" with password "pwd".
+"syslog_db" on mysqlserver.example.com. The server is MariaDB/MySQL and 
+being accessed under the account of "user" with password "pwd".
 
 .. code-block:: none
 
