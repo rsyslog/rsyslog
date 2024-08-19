@@ -96,10 +96,24 @@ Target
    :widths: auto
    :class: parameter-table
 
-   "word", "none", "no", "none"
+   "array/word", "none", "no", "none"
 
 Name or IP address of the system to receive messages. Any resolvable name is fine.
+Here either a single target or an array of targets can be provided.
 
+If an array is provided, rsyslog forms a "target pool". Inside the pool, it
+performs equal load-balancing among them. Targets are changed for
+each message being sent. If targets become unreachable, they will temporarily not
+participate in load balancing. If all targets become offline (then and only then)
+the action itself is suspended. Unreachable targets are automatically retried
+by omfwd.
+
+NOTE: target pools are ONLY avaiable for TCP transport. If UDP is selected, an
+error message is emitted and only the first target used.
+
+Single target: Target="syslog.example.net"
+
+Array of targets: Target=["syslog1.example.net", "syslog2.example.net", "syslog3.example.net"]
 
 Port
 ^^^^
@@ -109,10 +123,40 @@ Port
    :widths: auto
    :class: parameter-table
 
-   "word", "514", "no", "none"
+   "array/word", "514", "no", "none"
 
 Name or numerical value of the port to use when connecting to the target.
+If multiple targes are defined, different ports can be defined for each target.
+To do so, use array mode. The first port will be used for the first target, the
+second for the second target and so on. If fewer ports than targets are defined,
+the remaining targets will use the first port configured. This also means that you
+also need to define a single port, if all targets should use the same port.
 
+Note: if more ports than targets are defined, the remaining ports are ignored and
+an error message is emitted.
+
+
+pool.resumeinterval
+^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "30 seconds", "no", "none"
+
+If a targt pool exists, "pool.resumeinterval" configures how often an unavailable
+target is tried to be activated. A new connection request will be made in roughly
+"pool.resumeinterval" seconds until connection is reestablished or the action become
+completely suspenden (in which case the action settings take control).
+
+Please note the word "roughly": the interval may be some seconds earlier or later
+on a try-by-try basis because of other ongoing activity inside rsyslog.
+
+Warning: we do NOT recommend to set this interval below 10 seconds, as it can lead
+DoS-like reconnection behaviour. Actually, the default of 30 seconds is quite short
+and should be extended if the use case permits.
 
 Protocol
 ^^^^^^^^
@@ -790,6 +834,32 @@ It will also set the minimum protocol to TLSv1.2
 
    gnutlsPriorityString="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1
    MinProtocol=TLSv1.2"
+
+
+
+extendedConnectionCheck
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "boolean", "true", "no", "none"
+
+This setting permits to control if rsyslog should try to detect if the remote
+syslog server has broken the current TCP connection. It is has no meaning when
+UDP protocol is used.
+
+Generally, broken connections are not easily detectable. That setting does additional
+API calls to check for them. This causes some extra overhead, but is traditionally
+enabled.
+
+Especially in very busy systems it is probably worth to disable it. The extra overhead
+is unlikely to bring real benefits in such scenarios.
+
+Note: If you need reliable delivery, do NOT use plain TCP syslog transport.
+Use RELP instead.
 
 
 Statistic Counter
