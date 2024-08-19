@@ -351,7 +351,7 @@ Main
 
 When this option is turned on within the input module, imjournal will run the
 target ruleset in the main thread and will be stop taking input if the output
-module is not accepting data. If multiple input moduels set `main` to true, only
+module is not accepting data. If multiple input modules set `main` to true, only
 the first one will be affected. The non `main` rulesets will run in the
 background thread and not affected by the output state.
 

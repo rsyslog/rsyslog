@@ -39,7 +39,7 @@ informationally described in RFC3164, Section 4. But it demands it only
 for the scope of RFC3195, which is syslog over BEEP - and NOT syslog
 over UDP. So one may argue whether or not the RFC3164 format could be
 considered a standard for any non-BEEP (including UDP) syslog, too. In
-the strict view I tend to have, it does not. Refering to the RFC3195
+the strict view I tend to have, it does not. Referring to the RFC3195
 context usually does not help, because there are virtually no RFC3195
 implementations available (at this time, I would consider this RFC a
 failure).
@@ -161,7 +161,7 @@ but don't expect me to program a parser that is smarter than me.
 To the best of my knowledge, these vendor's device's syslog format can
 be configured, so it would probably be a good idea to include a
 (sufficiently well-formed) timestamp, the sending hostname and (maybe?)
-a tag to make this message well parseable. I will also once again take
+a tag to make this message well parsable. I will also once again take
 this sample and see if we can apply some guesswork. For example, "[" can
 not be part of a well-formed TIMESTAMP, so logic can conclude there is
 not TIMESTAMP. Also, "[" can not be used inside a valid hostname, so

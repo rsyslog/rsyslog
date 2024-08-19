@@ -116,7 +116,7 @@ The file must respect the `pcap file format specification <https://www.tcpdump.o
 for the module to run.**
 
 .. Warning::
-    This functionality is not intended for production environnments,
+    This functionality is not intended for production environments,
     it is designed for development/tests. 
 
 
@@ -174,7 +174,7 @@ ruleset
 
    "word", "none", "no", "none"
 
-Assign messages from thi simput to a specific Rsyslog ruleset.
+Assign messages from this input to a specific Rsyslog ruleset.
 
 
 .. _no_buffer:

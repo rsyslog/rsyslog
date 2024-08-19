@@ -14,7 +14,7 @@ on unset does also not exist.
 The function accepts a single argument, which needs to be a variable.
 It returns 0 if the variable does not exist and 1 otherwise. The
 function can be combined with any other expression to form more
-complec expressions.
+complex expressions.
 
 .. versionadded:: 8.2010.10
 

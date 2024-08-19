@@ -261,7 +261,7 @@ basicAuthFile
    "string", "no", "none", "none"
 
 Configures a `htpasswd <https://httpd.apache.org/docs/2.4/programs/htpasswd.html>`_ file and enables `basic authentication <https://en.wikipedia.org/wiki/Basic_access_authentication>`_ on http request received on this input.
-If this option is not set, basic authentation will not be enabled.
+If this option is not set, basic authentication will not be enabled.
 
 
 Statistic Counter

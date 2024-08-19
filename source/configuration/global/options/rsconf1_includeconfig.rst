@@ -3,7 +3,7 @@ $IncludeConfig
 
 .. warning::
 
-   This legacy directive has been superseeded by the rsyslog
+   This legacy directive has been superseded by the rsyslog
    :doc:`include() <../../../rainerscript/include>`
    configuration object.
    While it is save to use the legacy statement, we highly

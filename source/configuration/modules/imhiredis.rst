@@ -315,7 +315,7 @@ stream.autoclaimIdleTime
 
    "positive number", "0", "no", "none"
 
-| When using :ref:`imhiredis_stream_mode` with :ref:`imhiredis_stream_consumergroup` and :ref:`imhiredis_stream_consumername`, determines if the module should check for pending IDs that exceed this time (**in milliseconds**) to assume the original consumer failed to acknowledge the log and claim them for their own (see `the redis ducumentation <https://redis.io/docs/data-types/streams-tutorial/#automatic-claiming>`_ on this subject for more details on how that works).
+| When using :ref:`imhiredis_stream_mode` with :ref:`imhiredis_stream_consumergroup` and :ref:`imhiredis_stream_consumername`, determines if the module should check for pending IDs that exceed this time (**in milliseconds**) to assume the original consumer failed to acknowledge the log and claim them for their own (see `the redis documentation <https://redis.io/docs/data-types/streams-tutorial/#automatic-claiming>`_ on this subject for more details on how that works).
 | Has no influence in the other modes (queue or channel) and will be ignored.
 
 .. note::

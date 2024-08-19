@@ -60,7 +60,7 @@ The next sample defines some common timezones:
 
   timezone(id="CET" offset="+01:00")
   timezone(id="CEST" offset="+02:00")
-  timezone(id="METDST" offset="+02:00") # duplicate to support differnt formats
+  timezone(id="METDST" offset="+02:00") # duplicate to support different formats
   timezone(id="EST" offset="-05:00")
   timezone(id="EDT" offset="-04:00")
   timezone(id="PST" offset="-08:00")

@@ -380,7 +380,7 @@ dynaFileCacheSize
    "integer", "10", "no", "``$DynaFileCacheSize``"
 
 This parameter specifies the maximum size of the cache for
-dynamically-generated file names (dynafile= parmeter).
+dynamically-generated file names (dynafile= parameter).
 This setting specifies how many open file handles should
 be cached. If, for example, the file name is generated with the hostname
 in it and you have 100 different hosts, a cache size of 100 would ensure

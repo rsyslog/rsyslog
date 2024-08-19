@@ -4,7 +4,7 @@ Converting older formats to |FmtAdvancedName|
 First of all, converting of older formats is not strictly necessary. All
 formats can be mixed and matched and play well together.
 
-There are stil a number of reasons to convert older formats:
+There are still a number of reasons to convert older formats:
 
 * existing simple constructs need to be enhanced and become more complex
 * aid future extensions
@@ -15,7 +15,7 @@ Do not overdo conversion
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 Note: simple facility and severity based filters which trigger writing to
-files can actually be very well expressd in |FmtBasicName|. So if you have
+files can actually be very well expressed in |FmtBasicName|. So if you have
 something like::
 
     mail.info   /var/log/maillog
@@ -170,7 +170,7 @@ The latter is much easier to understand and less error-prone when extended.
 
 A common construct is to send messages to a remote host based on some message
 content and then not further process it. This involves the ``stop`` statement
-(or it's very old-time equivalent tilde ('``~``'). It may be specfied as such::
+(or it's very old-time equivalent tilde ('``~``'). It may be specified as such::
 
    :msg, contains, "error" @remote
    & ~

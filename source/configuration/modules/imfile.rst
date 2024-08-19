@@ -462,7 +462,7 @@ This parameter works in conjunction with `escapeLF`. It is only
 honored if `escapeLF="on"`.
 
 It permits to replace the default escape sequence by a different character
-sequence. The default historically is inconsistent and denpends on which
+sequence. The default historically is inconsistent and depends on which
 functionality is used to read the file. It can be either "#012" or "\\n". If
 you want to retain that default, do not configure this parameter.
 
@@ -697,7 +697,7 @@ rsyslog's initial processing of the file monitors.
    Depending on the number and location of existing files, this initial
    startup processing may take some time as well. If another process
    creates a new file at exactly the time of startup processing and writes
-   data to it, rsyslog might detect this file and it's data as prexisting
+   data to it, rsyslog might detect this file and it's data as preexisting
    and may skip it. This race is inevitable. So when freshStartTail is used,
    some risk of data loss exists. The same holds true if between the last
    shutdown of rsyslog and its restart log file content has been added.

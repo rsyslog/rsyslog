@@ -241,8 +241,8 @@ The following sample does the following:
    action(type="omdtls" name="omdtls" target="192.168.2.1" port="4433")
 
 
-Example 2: Message throttleling
-------------------------------------
+Example 2: Message throttling
+-----------------------------
 
 The following sample does the following:
 

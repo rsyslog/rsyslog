@@ -719,8 +719,8 @@ Example 9: Ensuring streams don't grow indefinitely
 ---------------------------------------------------
 
 | While using Redis streams, index entries are not automatically evicted, even if you acknowledge entries.
-| You have several options to ensure your streams stays under reasonable memoyr usage, while making sure your data is
- not evicted before behing processed.
+| You have several options to ensure your streams stays under reasonable memory usage, while making sure your data is
+ not evicted before being processed.
 | To do that, you have 2 available options, that can be used independently from each other
  (as they don't apply to the same source):
 

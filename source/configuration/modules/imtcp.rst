@@ -475,7 +475,7 @@ PreserveCase
 
 .. versionadded:: 8.37.0
 
-This parameter is for controlling the case in fromhost.  If preservecase is set to "off", the case in fromhost is not preserved.  E.g., 'host1.example.org' the message was received from 'Host1.Example.Org'.  Default to "on" for the backword compatibility.
+This parameter is for controlling the case in fromhost.  If preservecase is set to "off", the case in fromhost is not preserved.  E.g., 'host1.example.org' the message was received from 'Host1.Example.Org'.  Default to "on" for the backward compatibility.
 
 
 Input Parameters
@@ -492,7 +492,7 @@ Port
    "string", "none", "yes", "``$InputTCPServerRun``"
 
 Starts a TCP server on selected port. If port zero is selected, the OS automatically
-assigens a free port. Use `listenPortFileName` in this case to obtain the information
+assigns a free port. Use `listenPortFileName` in this case to obtain the information
 of which port was assigned.
 
 

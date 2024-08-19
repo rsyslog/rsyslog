@@ -106,7 +106,7 @@ Parameters
 
    Defines the name of lookup table for further reference inside the
    configuration. Names must be unique. Note that it is possible, though
-   not advisible, to have different names for the same file.
+   not advisable, to have different names for the same file.
 -  **file** (mandatory)
 
    Specifies the full path for the lookup table file. This file must be

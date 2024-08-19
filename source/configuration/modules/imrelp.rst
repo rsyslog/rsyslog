@@ -420,7 +420,7 @@ KeepAlive
    "binary", "off", "no", "none"
 
 Enable or disable keep-alive packets at the TCP socket layer. By 
-defauly keep-alives are disabled.
+default keep-alives are disabled.
 
 
 KeepAlive.Probes
@@ -521,7 +521,7 @@ unresponsive if you change flowcontrol to "full"**. While this may be a
 desired effect when intentionally trying to make it most unlikely that 
 rsyslog needs to lose/discard messages, usually this is not what you want.
 
-General rule of thumb: **if you do not fully understand what this decription
+General rule of thumb: **if you do not fully understand what this description
 here talks about, leave the parameter at default value**.
 
 This part of the

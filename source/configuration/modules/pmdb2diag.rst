@@ -15,7 +15,7 @@ The objective of this module is to extract timestamp, procid and appname form th
 lines without altering it
 
 The parser is acting after an imfile input. This implies that imfile must be configured
-with needParse to setted to on.
+with needParse to set to on.
 
 Compile
 =======

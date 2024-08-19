@@ -1,7 +1,7 @@
 
 ..
   This file is included by the common header file, which is itself
-  included by means of the rst_prolog Sphinx build confiugration
+  included by means of the rst_prolog Sphinx build configuration
   file (source/conf.py). Add substitutions here instead of directly to
   the rst_prolog configuration option.
 

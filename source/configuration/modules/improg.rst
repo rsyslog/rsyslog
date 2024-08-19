@@ -17,7 +17,7 @@ from pipe(s) (stdout of the external process).
 **Limitation:** `select()` seems not to support usage of `printf(...)` or
 `fprintf(stdout,...)`. Only `write(STDOUT_FILENO,...)` seems to be efficient.
 
-The imput module consume pipes form all external programs in a mono-threaded
+The input module consume pipes form all external programs in a mono-threaded
 `runInput` method. This means that data treatments will be serialized.
 
 Optionally, the module manage the external program through keyword sent to

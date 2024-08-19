@@ -27,5 +27,5 @@ we strongly advise to use numerical IDs instead of user or group
 names when configuring privilege drop.
 
 Privilege drop is configured via the
-:doc:`global configuraton object<../rainerscript/global>` under the
+:doc:`global configuration object<../rainerscript/global>` under the
 "`privilege.`" set of parameters.

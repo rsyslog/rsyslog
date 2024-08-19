@@ -21,7 +21,7 @@ reason is that some processing overhead is involved in processing these
 messages (they must be recognized) and we would not like to place this
 toll on every user but only on those actually in need of the feature.
 Note that the performance toll is not large -- but if you expect a very
-high message rate with tenthousands of messages per second, you will
+high message rate with ten thousands of messages per second, you will
 notice a difference.
 
 This module should be loaded first inside :doc:`rsyslog's parser

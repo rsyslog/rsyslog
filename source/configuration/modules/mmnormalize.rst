@@ -88,7 +88,7 @@ Note: parameter names are case-insensitive.
 
    *(Available since: 8.5.1)*
 
-   Specifies if a variable insteed of property 'msg' should be used for
+   Specifies if a variable instead of property 'msg' should be used for
    normalization. A variable can be property, local variable, json-path etc.
    Please note that **useRawMsg** overrides this parameter, so if **useRawMsg**
    is set, **variable** will be ignored and raw message will be used.

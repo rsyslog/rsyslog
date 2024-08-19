@@ -126,7 +126,7 @@ DeduplicateSpaces
   "binary", "no", "", "on"
 
 The parameter modify the way consecutive spaces like chars are managed.
-When it is setted to "on", consecutive spaces like chars are reduced to a single one
+When it is set to "on", consecutive spaces like chars are reduced to a single one
 and trailing space like chars are suppressed. 
 
 Delete

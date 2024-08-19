@@ -74,7 +74,7 @@ Sample
 ======
 
 In this sample, the message received is parsed by RFC5424 parser and then 
-the HOSTNAME is overwritten and a tag is setted. 
+the HOSTNAME is overwritten and a tag is set. 
 
 .. code-block:: none
 

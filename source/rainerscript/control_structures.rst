@@ -95,7 +95,7 @@ Here is an example of a nested foreach statement:
       }
    }
 
-Again, the itereted items must have been created by parsing JSON.
+Again, the iterated items must have been created by parsing JSON.
 
 Please note that asynchronous-action calls in foreach-statement body should
 almost always set ``action.copyMsg`` to ``on``. This is because action calls

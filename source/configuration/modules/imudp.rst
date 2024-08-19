@@ -161,7 +161,7 @@ PreserveCase
 
 .. versionadded:: 8.37.0
 
-This parameter is for controlling the case in fromhost.  If preservecase is set to "on", the case in fromhost is preserved.  E.g., 'Host1.Example.Org' when the message was received from 'Host1.Example.Org'.  Default to "off" for the backword compatibility.
+This parameter is for controlling the case in fromhost.  If preservecase is set to "on", the case in fromhost is preserved.  E.g., 'Host1.Example.Org' when the message was received from 'Host1.Example.Org'.  Default to "off" for the backward compatibility.
 
 
 .. index:: imudp; input parameters
@@ -402,7 +402,7 @@ listener IP, a colon and port in parenthesis. For example, the counter for a
 listener on port 514 (on all IPs) with no set name is called "imudp(\*:514)".
 
 If an "inputname" is defined for a listener, that inputname is used instead of
-"imudp" as statistic name. For example, if the inputname is set to "myudpinut",
+"imudp" as statistic name. For example, if the inputname is set to "myudpinput",
 that corresponding statistic name in above case would be "myudpinput(\*:514)".
 This has been introduced in 7.5.3.
 

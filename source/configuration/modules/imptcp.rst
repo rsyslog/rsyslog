@@ -12,7 +12,7 @@ Purpose
 =======
 
 Provides the ability to receive syslog messages via plain TCP syslog.
-This is a specialised input plugin tailored for high performance on
+This is a specialized input plugin tailored for high performance on
 Linux. It will probably not run on any other platform. Also, it does not
 provide TLS services. Encryption can be provided by using
 `stunnel <rsyslog_stunnel.html>`_.
@@ -550,7 +550,7 @@ MultiLine
 
    "binary", "off", "no", "none"
 
-Experimental parameter which causes rsyslog to recognise a new message
+Experimental parameter which causes rsyslog to recognize a new message
 only if the line feed is followed by a '<' or if there are no more characters.
 
 

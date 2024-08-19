@@ -23,7 +23,7 @@ will be created and the "msg" field will be the only field and it will
 contain the message. Note that in this case, mmjsonparse will
 nonetheless return that the JSON parsing has failed.
 
-The "CEE cookie" is the character squence "@cee:" which must prepend the
+The "CEE cookie" is the character sequence "@cee:" which must prepend the
 actual JSON. Note that the JSON must be valid and MUST NOT be followed
 by any non-JSON message. If either of these conditions is not true,
 mmjsonparse will **not** parse the associated JSON. This is based on the

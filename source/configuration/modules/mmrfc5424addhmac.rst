@@ -33,7 +33,7 @@ Currently none.
 
  
 
-**Action Confguration Parameters**:
+**Action Configuration Parameters**:
 
 Note: parameter names are case-insensitive.
 

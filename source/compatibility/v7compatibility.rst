@@ -125,8 +125,8 @@ from the same
 processing. It is now also integrated in to the more generic rate-limiting
 processing.
 
-User-Noticable Changes
-......................
+User-Noticeable Changes
+.......................
 The code works almost as before, with two exceptions:
 
 * The suppression amount can be different, as the new algorithm

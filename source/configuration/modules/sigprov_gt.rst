@@ -62,8 +62,8 @@ both in order to prove integrity.
 -  **sig.keepTreeHashes** <on/**off**>
    Controls if tree (intermediate) hashes are written to the .gtsig
    file. This enhances the ability to spot the location of a signature
-   breach, but costs considerable disk space (a bit mire than the amount
-   sig.keepRecordHashes requries). Note that both Tree and Record hashes
+   breach, but costs considerable disk space (a bit more than the amount
+   sig.keepRecordHashes requires). Note that both Tree and Record hashes
    can be kept inside the signature file.
 
 **See Also**

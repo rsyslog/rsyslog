@@ -552,7 +552,7 @@ The following parameters can be set:
 
 - **abortOnFailedQueueStartup** [boolean (on/off)] available 8.2210.0+
 
-  This parameter is similiar to *abortOnUncleanConfig* but makes rsyslog
+  This parameter is similar to *abortOnUncleanConfig* but makes rsyslog
   abort when there are any problems with queue startup. This is usually
   caused by disk queue settings or disk queue file corruption. Normally,
   rsyslog ignores disk queue definitions in this case and switches the
@@ -615,7 +615,7 @@ The following parameters can be set:
   a name ID lookup fails (for user and group names) rsyslog does not start but
   terminate with an error message. This is necessary as a security
   measure, as otherwise the wrong permissions can be assigned or privileges
-  are not dropped. This setting is applied whereever security IDs are resolved,
+  are not dropped. This setting is applied wherever security IDs are resolved,
   e.g. when dropping privileges or assigning file permissions or owners.
 
   The setting should be at the top of the configuration parameters to make sure its
@@ -699,7 +699,7 @@ The following parameters can be set:
   re-enqueue messages stems back to some failed operations. Note that the maximum
   permitted queue size is doubled, as this ensures in all cases that re-enqueuing
   can be completed. Note also that the increase of the max size is temporary during
-  shutdown and also does not requiere any more storage. Except, of course, for
+  shutdown and also does not require any more storage. Except, of course, for
   re-enqueued message.
 
   The situation addressed by this setting is unlikely to happen, but it could happen.

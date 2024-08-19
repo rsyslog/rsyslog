@@ -205,7 +205,7 @@ property or modifying it. It supports the following parameters:
    that inside string templates, the option must include what it applies
    to whereas with the explicit format that is part of the parameter name.
 
-   To create a customised format you can use multiple property options
+   To create a customized format you can use multiple property options
    together. The following example would result in **YYYY-MM-DD**:
 
 .. code-block:: none

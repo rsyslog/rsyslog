@@ -64,7 +64,7 @@ transparently by rsyslog.
 With our above scenario, the disk buffer would build up during the day
 and rsyslog would use the night to drain it. Obviously, this is an
 extreme example, but it shows what can be done. Please note that queue
-content survies rsyslogd restarts, so even a reboot of the system will
+content survives rsyslogd restarts, so even a reboot of the system will
 not cause any message loss.
 
 How To Setup
@@ -83,7 +83,7 @@ to a MariaDB/MySQL database and have buffering applied automatically.
     module(load="imudp")
     input(type="imudp" port="514")
     
-    # Make sure this path exists and the user of the deamon has read/write/execute access
+    # Make sure this path exists and the user of the daemon has read/write/execute access
     global(WorkDirectory="/var/spool/rsyslog") # default location for work (spool) files
     main_queue(queue.fileName="mainq")
 
@@ -119,7 +119,7 @@ more commands:
     module(load="imudp")
     input(type="imudp" port="514")
     
-    # Make sure this path exists and the user of the deamon has read/write/execute access
+    # Make sure this path exists and the user of the daemon has read/write/execute access
     global(WorkDirectory="/var/spool/rsyslog") # default location for work (spool) files
     
     module (load="ommysql")

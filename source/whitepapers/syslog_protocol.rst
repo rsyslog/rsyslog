@@ -192,8 +192,8 @@ This lists what has been found during implementation:
 
  
 
-Conlusions/Suggestions
-----------------------
+Conclusions/Suggestions
+-----------------------
 
 These are my personal conclusions and suggestions. Obviously, they must
 be discussed ;)

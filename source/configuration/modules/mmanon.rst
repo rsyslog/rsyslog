@@ -111,7 +111,7 @@ the right, so lower bits are anonymized first). This setting permits
 to save network information while still anonymizing user-specific
 data. The more bits you discard, the better the anonymization
 obviously is. The default of 16 bits reflects what German data
-privacy rules consider as being sufficinetly anonymized. We assume,
+privacy rules consider as being sufficiently anonymized. We assume,
 this can also be used as a rough but conservative guideline for other
 countries.
 Note: when in simple mode, only bits on a byte boundary can be
@@ -173,7 +173,7 @@ The default "zero" mode will do full anonymization of any number
 of bits and it will also normalize the address, so that no information
 about the original IP address is available.
 
-Also note that an anonymmized IPv6 address will be normalized, meaning
+Also note that an anonymized IPv6 address will be normalized, meaning
 there will be no abbreviations, leading zeros will **not** be displayed,
 and capital letters in the hex numerals will be lowercase.
 
@@ -193,7 +193,7 @@ the right, so lower bits are anonymized first). This setting permits
 to save network information while still anonymizing user-specific
 data. The more bits you discard, the better the anonymization
 obviously is. The default of 96 bits reflects what German data
-privacy rules consider as being sufficinetly anonymized. We assume,
+privacy rules consider as being sufficiently anonymized. We assume,
 this can also be used as a rough but conservative guideline for other
 countries.
 
@@ -234,7 +234,7 @@ The default "zero" mode will do full anonymization of any number
 of bits and it will also normalize the address, so that no information
 about the original IP address is available.
 
-Also note that an anonymmized IPv6 address will be normalized, meaning
+Also note that an anonymized IPv6 address will be normalized, meaning
 there will be no abbreviations, leading zeros will **not** be displayed,
 and capital letters in the hex numerals will be lowercase.
 
@@ -254,7 +254,7 @@ the right, so lower bits are anonymized first). This setting permits
 to save network information while still anonymizing user-specific
 data. The more bits you discard, the better the anonymization
 obviously is. The default of 96 bits reflects what German data
-privacy rules consider as being sufficinetly anonymized. We assume,
+privacy rules consider as being sufficiently anonymized. We assume,
 this can also be used as a rough but conservative guideline for other
 countries.
 
@@ -358,7 +358,7 @@ Anonymizing only ipv6 addresses
 -------------------------------
 
 Another option is to only anonymize IPv6 addresses. When doing this you have to
-disable IPv4 aonymization. This example will lead to only IPv6 addresses anonymized
+disable IPv4 anonymization. This example will lead to only IPv6 addresses anonymized
 (using the random-consistent mode).
 
 .. code-block:: none

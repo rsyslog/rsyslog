@@ -241,7 +241,7 @@ populate\_properties
 
   "binary", "no", , "off"
 
-fill timestamp, appid, msgid, hostname (custom header) with message informations
+fill timestamp, appid, msgid, hostname (custom header) with message information
 
 content\_type
 ^^^^^^^^^^^^^

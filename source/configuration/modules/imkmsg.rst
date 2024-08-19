@@ -169,7 +169,7 @@ This is Linux specific module and requires /dev/kmsg device with
 structured kernel logs.
 
 This module does not support rulesets. All messages are delivered to the
-default rulseset.
+default ruleset.
 
 
 
