@@ -1126,8 +1126,16 @@ if test "x$enable_openssl" = "xyes"; then
 fi
 AM_CONDITIONAL(ENABLE_OPENSSL, test x$enable_openssl = xyes)
 
-enable_openssl_crypto_provider="no";
-if test "x$enable_openssl" = "xyes"; then
+AC_ARG_ENABLE(openssl_crypto_provider,
+        [AS_HELP_STRING([--enable-opensslcrypto],[Enable openssl crypto provider @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_openssl_crypto_provider="yes" ;;
+          no) enable_openssl_crypto_provider="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-openssl) ;;
+         esac],
+        [enable_openssl_crypto_provider=no]
+)
+if test "x$enable_openssl" = "xyes" && test "x$enable_openssl_crypto_provider" = "xyes"; then
 	AC_CHECK_LIB(
 		[crypto],
 		[EVP_CIPHER_get_block_size],
