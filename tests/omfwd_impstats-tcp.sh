@@ -33,6 +33,7 @@ shutdown_when_empty
 wait_shutdown
 # note: minitcpsrv shuts down automatically if the connection is closed!
 
+cat -n $STATSFILE
 # check pstats - that's our prime test target
 content_check --regex "TCP-.*origin=omfwd .*bytes.sent=[1-9][0-9][0-9]" "$STATSFILE"
 

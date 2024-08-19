@@ -92,6 +92,7 @@ struct globals_s {
 	int bDebugPrintModuleList;
 	int bDebugPrintCfSysLineHandlerList;
 	int bLogStatusMsgs;	/* log rsyslog start/stop/HUP messages? */
+	int bAllMsgToStderr;	/* print all internal messages to stderr */
 	int bErrMsgToStderr;	/* print error messages to stderr
 				  (in addition to everything else)? */
 	int maxErrMsgToStderr;	/* how many messages to forward at most to stderr? */
