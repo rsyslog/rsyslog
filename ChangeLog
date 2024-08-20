@@ -1,4 +1,6 @@
 ----------------------------------------------------------------------------------------
+Scheduled Release 8.2410.0 (aka 2024.10) 2024-10-??
+----------------------------------------------------------------------------------------
 Scheduled Release 8.2408.0 (aka 2024.08) 2024-08-20
 - 2024-08-16: omkafka enhance: write Kafka log with level ERROR or higher into errorfile
   closes: https://github.com/rsyslog/rsyslog/issues/5425
