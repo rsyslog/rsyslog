@@ -19,7 +19,7 @@ obtained. Note that anonymization will break digital signatures on the
 message, if they exist.
 
 Please note that log files can also be anonymized via
-`SLFA <http://jan.gerhards.net/p/slfa.html>`_ after they
+`SLFA <https://jan.gerhards.net/2017/10/12/slfa-release/>`_ after they
 have been created.
 
 *How are IP-Addresses defined?*

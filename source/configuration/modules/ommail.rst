@@ -301,6 +301,6 @@ Additional Resources
 A more advanced example plus a discussion on using the email feature
 inside a reliable system can be found in Rainer's blogpost "`Why is
 native email capability an advantage for a
-syslogd? <http://rgerhards.blogspot.com/2008/04/why-is-native-email-capability.html>`_\ "
+syslogd? <https://rainer.gerhards.net/2008/04/why-is-native-email-capability-an-advantage-for-a-syslogd.html>`_\ "
 
 

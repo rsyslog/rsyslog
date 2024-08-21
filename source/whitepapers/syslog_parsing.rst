@@ -20,7 +20,7 @@ The syslog protocol has not been standardized until relatively
 recently. The first document "smelling" a bit like a standard is
 :rfc:`3164`, which dates back to August
 2001. The problem is that this document is no real standard. It has
-assigned "informational" status by the `IETF <http://www.ietf.org>`_
+assigned "informational" status by the `IETF <https://www.ietf.org/>`_
 which means it provides some hopefully useful information but does not
 demand anything. It is impossible to "comply" to an informational
 document. This, of course, doesn't stop marketing guys from telling they

@@ -35,7 +35,7 @@ Notable Features
 - `Message Batching`_, supports several formats.
     - Newline concatenation, like the Elasticsearch bulk format.
     - JSON Array as a generic batching strategy.
-    - Kafka REST Proxy format, to support sending data through the `Confluent Kafka REST API <https://docs.confluent.io/current/kafka-rest/docs/index.html>`_ to a Kafka cluster.
+    - Kafka REST Proxy format, to support sending data through the `Confluent Kafka REST API <https://docs.confluent.io/platform/current/kafka-rest/index.html>`_ to a Kafka cluster.
 
 Configuration Parameters
 ========================
@@ -333,14 +333,14 @@ Each message on the "Inputs" line is the templated log line that is fed into the
     Inputs: {"msg": "message 1"} {"msg"": "message 2"} {"msg": "message 3"}
     Output: [{"msg": "message 1"}, {"msg"": "message 2"}, {"msg": "message 3"}]
 
-3. *kafkarest* - Builds a JSON object that conforms to the `Kafka Rest Proxy specification <https://docs.confluent.io/current/kafka-rest/docs/quickstart.html>`_. This mode requires that each message is parsable JSON, since the plugin parses each message as JSON while building the batch object.
+3. *kafkarest* - Builds a JSON object that conforms to the `Kafka Rest Proxy specification <https://docs.confluent.io/platform/current/kafka-rest/quickstart.html>`_. This mode requires that each message is parsable JSON, since the plugin parses each message as JSON while building the batch object.
 
 .. code-block:: text
 
     Inputs: {"msg": "message 1"} {"msg"": "message 2"} {"msg": "message 3"}
     Output: {"records": [{"value": {"msg": "message 1"}}, {"value": {"msg": "message 2"}}, {"value": {"msg": "message 3"}}]}
 
-4. *lokirest* - Builds a JSON object that conforms to the `Loki Rest specification <https://github.com/grafana/loki/blob/master/docs/api.md#post-lokiapiv1push>`_. This mode requires that each message is parsable JSON, since the plugin parses each message as JSON while building the batch object. Additionally, the operator is responsible for providing index keys, and message values.
+4. *lokirest* - Builds a JSON object that conforms to the `Loki Rest specification <https://github.com/grafana/loki/blob/main/docs/sources/reference/loki-http-api.md#ingest-logs>`_. This mode requires that each message is parsable JSON, since the plugin parses each message as JSON while building the batch object. Additionally, the operator is responsible for providing index keys, and message values.
 
 .. code-block:: text
 
@@ -489,7 +489,7 @@ Here you can set the name of a file where all errors will be written to. Any req
 
     {
         "request": {
-            "url": "https://url.com:443/path",
+            "url": "https://example.com:443/path",
             "postdata": "mypayload"
         },
         "response" : {

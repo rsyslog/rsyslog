@@ -1,7 +1,7 @@
 Using php-syslog-ng with rsyslog
 ================================
 
-*Written by* `Rainer Gerhards <https://rainer.gerhards.net>`_ *(2005-08-04)*
+*Written by* `Rainer Gerhards <https://rainer.gerhards.net/>`_ *(2005-08-04)*
 
 Note: it has been reported that this guide is somewhat outdated. Most
 importantly, this guide is for the **original** php-syslog-ng and

@@ -59,7 +59,7 @@ solved (but Rainer likes the idea of a new format), so we need to live
 with it for the time being. It is planned to be reconsidered in the 3.x
 release time frame.
 
-If you are interested in the `IHE <http://en.wikipedia.org/wiki/IHE>`_
+If you are interested in the `IHE <https://en.wikipedia.org/wiki/Integrating_the_Healthcare_Enterprise>`_
 environment, you might be interested to hear that rsyslog supports
 message with sizes of 32k and more. This feature has been tested, but by
 default is turned off (as it has some memory footprint that we didn't
@@ -96,7 +96,7 @@ contributions, we set up a `wiki <http://wiki.rsyslog.com/>`_ on August
 deemed to be quite close to the final 2.0.0 release. With its
 appearance, the pace of changes was deliberately reduced, in order to
 allow it to mature (see Rainers's `blog
-post <http://rgerhards.blogspot.com/2007/07/pace-of-changes-in-rsyslog.html>`_
+post <https://rainer.gerhards.net/2007/07/pace-of-changes-in-rsyslog.html>`_
 on this topic, written a bit early, but covering the essence).
 
 In **November 2007**, rsyslog became the default syslogd in Fedora 8.

@@ -39,5 +39,5 @@ finished in time or if it won't be stable enough to be included in the current
 final release.
 
 
-.. _Semantic Versioning: http://semver.org/
+.. _Semantic Versioning: https://semver.org/
 .. _Git repository: https://github.com/rsyslog/rsyslog

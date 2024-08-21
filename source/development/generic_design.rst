@@ -1,7 +1,7 @@
 Generic design of a syslogd
 ---------------------------
 
-Written 2007-04-10 by `Rainer Gerhards <https://rainer.gerhards.net>`_
+Written 2007-04-10 by `Rainer Gerhards <https://rainer.gerhards.net/>`_
 
 The text below describes a generic approach on how a syslogd can be
 implemented. I created this description for some other project, where it

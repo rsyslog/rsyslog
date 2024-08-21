@@ -43,7 +43,7 @@ steps in this document.
 1. Review the [`README.md`](README.md) file for instructions that cover
    installing `pip`, setting up the virtual environment and installing
    the latest version of the Sphinx package.
-1. Clone the https://github.com/rsyslog-doc.git repo
+1. Clone the https://github.com/rsyslog/rsyslog-doc.git repo
 1. Merge `master` into the current stable branch (e.g., `v8-stable`)
 1. Tag the stable branch
 1. Push all changes to the remote
@@ -105,7 +105,7 @@ is not already installed and known to your installation of Python.
 1. Review the [`README.md`](README.md) file for instructions that cover
    installing `pip`, setting up the virtual environment and installing
    the latest version of the Sphinx package.
-1. Run `git clone https://github.com/rsyslog-doc.git`
+1. Run `git clone https://github.com/rsyslog/rsyslog-doc.git`
 1. Run `git checkout v8.33.0`
 1. Run `sphinx -D version="8.33" release="8.33.0" -b html source build`
 
@@ -156,7 +156,7 @@ and is useful to identify a dev build from a release set of documentation.
 1. Review the [`README.md`](README.md) file for instructions that cover
    installing `pip`, setting up the virtual environment and installing
    the latest version of the Sphinx package.
-1. Run `git clone https://github.com/rsyslog-doc.git`
+1. Run `git clone https://github.com/rsyslog/rsyslog-doc.git`
 1. Run `git checkout master`
 1. Run `sphinx -b html source build` to generate HTML format and
    `sphinx -b epub source build` to build an epub file.

@@ -1,7 +1,7 @@
 SSL Encrypting Syslog with Stunnel
 ==================================
 
-*Written by* `Rainer Gerhards <https://rainer.gerhards.net>`_ *(2005-07-22)*
+*Written by* `Rainer Gerhards <https://rainer.gerhards.net/>`_ *(2005-07-22)*
 
 **HISTORICAL DOCUMENT**
 
@@ -53,7 +53,7 @@ Log forwarding). Plain tcp syslog offers reliability, but it does not
 offer encryption in itself. However, since it operates on a tcp stream,
 it is now easy to add encryption. There are various ways to do that. In
 this paper, I will describe how it is done with stunnel (an other
-alternative would be `IPSec <http://en.wikipedia.org/wiki/IPSec>`_, for
+alternative would be `IPsec <https://en.wikipedia.org/wiki/IPsec>`_, for
 example).
 
 Stunnel is open source and it is available both for Unix/Linux and
@@ -77,10 +77,10 @@ what the protocol designers had on their mind ;)
 
 In the rest of this document, I assume that you use rsyslog on both the
 client and the server. For the samples, I use
-`Debian <http://www.debian.org/>`_. Interestingly, there are some
+`Debian <https://www.debian.org/>`_. Interestingly, there are some
 annoying differences between stunnel implementations. For example, on
 Debian a comment line starts with a semicolon (';'). On `Red
-Hat <http://www.redhat.com>`_, it starts with a hash sign ('#'). So you
+Hat <https://www.redhat.com/en>`_, it starts with a hash sign ('#'). So you
 need to watch out for subtle issues when setting up your system.
 
 Overall System Setup

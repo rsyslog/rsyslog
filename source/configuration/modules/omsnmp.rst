@@ -122,9 +122,9 @@ In order to decode this OID, you will need to have the
 ADISCON-MONITORWARE-MIB and ADISCON-MIB mibs installed on the
 receiver side. Downloads of these mib files can be found here:
 
-`http://www.adiscon.org/download/ADISCON-MIB.txt <http://www.adiscon.org/download/ADISCON-MIB.txt>`_
+`https://www.adiscon.org/download/ADISCON-MIB.txt <https://www.adiscon.org/download/ADISCON-MIB.txt>`_
 
-`http://www.adiscon.org/download/ADISCON-MONITORWARE-MIB.txt <http://www.adiscon.org/download/ADISCON-MONITORWARE-MIB.txt>`_
+`https://www.adiscon.org/download/ADISCON-MONITORWARE-MIB.txt <https://www.adiscon.org/download/ADISCON-MONITORWARE-MIB.txt>`_
 Thanks to the net-snmp mailinglist for the help and the
 recommendations ;).
 

@@ -1,7 +1,7 @@
 Handling a massive syslog database insert rate with Rsyslog
 ===========================================================
 
-*Written by* `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+*Written by* `Rainer Gerhards <https://rainer.gerhards.net/>`_
 *(2008-01-31)*
 
 Abstract

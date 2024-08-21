@@ -9,5 +9,5 @@ if [ -e /rsyslog-doc/source ]; then
 	exit 1
 fi
 cd /
-git clone https://github.com/rsyslog/rsyslog-doc
+git clone https://github.com/rsyslog/rsyslog-doc.git
 (cd /rsyslog-doc; git checkout $BRANCH)

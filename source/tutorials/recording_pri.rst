@@ -1,7 +1,7 @@
 Recording the Priority of Syslog Messages
 =========================================
 
-*Written by* `Rainer Gerhards <https://rainer.gerhards.net>`_ *(2007-06-18)*
+*Written by* `Rainer Gerhards <https://rainer.gerhards.net/>`_ *(2007-06-18)*
 
 Abstract
 --------

@@ -59,11 +59,11 @@ Extra
 
 Some resources worth taking a look.
 
-    * https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/System_Administrators_Guide/ch-Viewing_and_Managing_Log_Files.html
+    * https://docs.redhat.com/en/documentation/Red_Hat_Enterprise_Linux/7/html/system_administrators_guide/ch-viewing_and_managing_log_files
 	* https://www.usenix.org/system/files/login/articles/06_lang-online.pdf
-	* https://media.readthedocs.org/pdf/rsyslog/latest/rsyslog.pdf
+	* https://rsyslog.readthedocs.io/_/downloads/en/latest/pdf/
 	* http://download.rsyslog.com/rainerscript2_rsyslog.conf
-	* http://people.redhat.com/pvrabec/rpms/rsyslog/rsyslog-example.conf
+	* https://people.redhat.com/pvrabec/rpms/rsyslog/rsyslog-example.conf
 	* http://www.rsyslog.com/doc/syslog_parsing.html
 
 

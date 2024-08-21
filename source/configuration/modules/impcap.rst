@@ -112,7 +112,7 @@ file
    "word", "none", "no", "none"
 
 This parameter specifies a pcap file to read.
-The file must respect the `pcap file format specification <https://www.tcpdump.org/pcap/pcap.html>`_. **If 'file' is not specified, 'interface' must be in order
+The file must respect the `pcap file format specification <https://www.tcpdump.org/manpages/pcap-savefile.5.html>`_. **If 'file' is not specified, 'interface' must be in order
 for the module to run.**
 
 .. Warning::

@@ -142,7 +142,7 @@ customers to your business!**
    applications. You may also read my blog post on the future of
    liblogging, which contains interesting information about the `future
    of RFC 3195 in
-   rsyslog <http://rgerhards.blogspot.com/2007/09/where-is-liblogging-heading-to.html>`_.
+   rsyslog <https://rainer.gerhards.net/2007/09/where-is-liblogging-heading-to.html>`_.
 
 To see when each feature was added, see the `rsyslog change
 log <http://www.rsyslog.com/Topic4.phtml>`_ (online only).

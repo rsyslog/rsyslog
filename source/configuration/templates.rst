@@ -30,7 +30,7 @@ Template processing
 ===================
 
 Due to lack of standardization regarding logs formats, when a template is
-specified it's supposed to include HEADER, as defined in `RFC5424 <https://tools.ietf.org/html/rfc5424>`_
+specified it's supposed to include HEADER, as defined in `RFC5424 <https://datatracker.ietf.org/doc/html/rfc5424>`_
 
 It's very important to have this in mind, and also to understand how
 `rsyslog parsing <http://www.rsyslog.com/doc/syslog_parsing.html>`_ works.
@@ -734,7 +734,7 @@ messages to rsyslog 3.12.5 or above.
 
 **RSYSLOG_SyslogProtocol23Format** - the format specified in IETF's
 internet-draft ietf-syslog-protocol-23, which is very close to the actual
-syslog standard `RFC5424 <https://tools.ietf.org/html/rfc5424>`_ (we couldn't
+syslog standard `RFC5424 <https://datatracker.ietf.org/doc/html/rfc5424>`_ (we couldn't
 update this template as things were in production for quite some time when
 RFC5424 was finally approved). This format includes several improvements.
 You may use this format with all relatively recent versions of rsyslog or syslogd.

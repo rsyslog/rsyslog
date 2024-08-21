@@ -1,7 +1,7 @@
 Writing syslog messages to MariaDB, MySQL, PostgreSQL or any other supported Database
 =====================================================================================
 
-*Written by* \ `Rainer Gerhards <https://rainer.gerhards.net>`_\ *with
+*Written by* \ `Rainer Gerhards <https://rainer.gerhards.net/>`_\ *with
 some additions by Marc Schiffbauer (2008-02-28)*
 
 Abstract
