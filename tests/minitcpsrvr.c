@@ -89,7 +89,12 @@ createListenSocket(void)
 	}
 	// Set SO_REUSEADDR and SO_REUSEPORT options
 	int opt = 1;
-	if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
+	int flags = SO_REUSEADDR;
+#ifdef SO_REUSEPORT
+	// If SO_REUSEPORT is available (Solaris 10 does not have SO_REUSEPORT)
+	flags |= SO_REUSEPORT;
+#endif
+	if (setsockopt(listen_fd, SOL_SOCKET, flags, &opt, sizeof(opt)) < 0) {
 		errout("setsockopt failed");
 	}
 
