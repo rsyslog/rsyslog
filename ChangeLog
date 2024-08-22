@@ -2,6 +2,68 @@
 Scheduled Release 8.2410.0 (aka 2024.10) 2024-10-??
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2408.0 (aka 2024.08) 2024-08-20
+- 2024-08-16: omfwd: implement native load balancing - phase 1
+  This patch implements a simple round-robin load balancer
+  for omfwd. It provides equal distribution of load to a pool
+  of target servers.
+  The code currently has no different modes and no special tuning
+  for the load balancer. However, it works very well in the most
+  common use cases. Furthermore, it provides a solid base on which
+  more elaborate functionality can be build if there is need to.
+  The new functionality is fully backwards compatible with previous
+  configuration settings.
+  New action() config params:
+  * pool.resumeinterval
+  New/"changed" rstats counters
+  Each target receives its own set of pstats counters. Most
+  importantly this is the case for byte counts. That counter retains
+  the same naming, but there may now be multiple of these counters,
+  one for each target ip, port tuple.
+  New pstats message count to target
+  Among others, this can be used for checking that the load balancer
+  works as intended. The so-far byte count emitted does not provide
+  a clear indication of how many messages the targets had actually
+  processed.
+  For obvious reasons, this message count makes most sense in
+  advanced load balancing scenarios, but also provides additional
+  insight into round-robin. Non-matches indicate that targets
+  went offline, and we can now evaluate the impact this had
+  on processing.
+  - re-design rebind functionality
+  This now works at the transaction level. It causes a rebind of all
+  pool members. Previous code did not work 100% correct since for a
+  couple of years now (after output batching integration).
+  As cleanup, rebindInterval support has been removed from tcpClt,
+  because omfwd is the only user. This permits a cleaner code path.
+  We also noticed a bug with rebindInterval:  it caused some mild
+  message duplication for quite some time. This went unnoticed.
+  To address that efficiently, rebindInterval in the future will
+  be considered once per batch. That means up to (maxBatchSize - 1)
+  messages may be transmitted more than the rebindinterval is.
+  That's the cleanest mode of operation and should not make any
+  difference for real deployments.
+  Some additional work done in this commit:
+  - netstream: harden component against upper-layer logic errors
+  - network subsystem: better handle API errors and provide more info
+  - omfwd: add new parameter "iobuffer.maxsize"
+  - add new global parameter debug.abortoninternalerror and use it
+  - This parameter permits to make test runs fail when an internal error
+  - is detected and gracefully handled by rsyslog. While it is great to
+    have it gracefully handled in practice, we should not accept this
+    during testing. The new parameter permits to abort in this case and
+    emits the related error message beforehand. It is turned on by
+    default in our regular tests.
+  - add dedicated error code for "hard" program errors
+  - omfwd: some cleanup + error message fix + new debug level messages
+  - imptcp: improve error messages
+  - add omfwd option to NOT do extended connection check
+  - also output wrkr id in some omfwd messages (primarily debugging aid)
+  - better debug info via LogMsg() interface
+  - improve messages regarding imptcp and omfwd suspension / thread IDs
+  - refactor and enchance minitcpsrvr for mimicing died servers
+  - new global (debugging) option, correction of an informational msg
+  - add global option allmessagestostderr
+  - add new tests
 - 2024-08-16: omkafka enhance: write Kafka log with level ERROR or higher into errorfile
   closes: https://github.com/rsyslog/rsyslog/issues/5425
 - 2024-08-16: net subsusytem bugfix: some config statemens were not accepted
