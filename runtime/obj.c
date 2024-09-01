@@ -518,7 +518,11 @@ static rsRetVal objDeserializeStr(cstr_t **ppCStr, int iLen, strm_t *pStrm)
 	cstrFinalize(pCStr);
 
 	/* check terminator */
-	if(c != ':') ABORT_FINALIZE(RS_RET_INVALID_DELIMITER);
+	if(c != ':') {
+		/* Initialized to NULL */
+		*ppCStr = NULL;
+		ABORT_FINALIZE(RS_RET_INVALID_DELIMITER);
+	}
 
 	*ppCStr = pCStr;
 
