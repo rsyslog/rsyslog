@@ -1508,9 +1508,7 @@ CODESTARTnewActInst
 		pData->cache = caches[i];
 	} else {
 		CHKmalloc(pData->cache = cacheNew(pData));
-		struct cache_s **new_caches = realloc(caches, (i + 2) * sizeof(struct cache_s *));
-		CHKmalloc(new_caches);
-		caches = new_caches;
+		caches = realloc(caches, (i + 2) * sizeof(struct cache_s *));
 		caches[i] = pData->cache;
 		caches[i + 1] = NULL;
 	}
