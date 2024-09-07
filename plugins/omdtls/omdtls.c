@@ -43,6 +43,7 @@
 #endif
 #include <sys/time.h>
 #include <time.h>
+#include <unistd.h>
 
 // --- Include openssl headers as well
 #include <openssl/ssl.h>
