@@ -2013,7 +2013,7 @@ rsyslogdDoDie(int sig)
 		abort();
 	}
 	bFinished = sig;
-	if(runConf->globals.debugOnShutdown) {
+	if(runConf && runConf->globals.debugOnShutdown) {
 		/* kind of hackish - set to 0, so that debug_swith will enable
 		 * and AND emit the "start debug log" message.
 		 */
