@@ -2901,11 +2901,6 @@ doFuncCall(struct cnffunc *__restrict__ const func, struct svar *__restrict__ co
 		free(fname);
 	}
 	if(func->fPtr == NULL) {
-		char *fname = es_str2cstr(func->fname, NULL);
-		LogError(0, RS_RET_INTERNAL_ERROR,
-			"rainerscript: internal error: NULL pointer for function named '%s'\n",
-			fname);
-		free(fname);
 		ret->datatype = 'N';
 		ret->d.n = 0;
 	} else {
@@ -3802,7 +3797,7 @@ cnffuncDestruct(struct cnffunc *func)
 	char *cstr = es_str2cstr(func->fname, NULL);
 	struct scriptFunct *foundFunc = searchModList(cstr);
 	free(cstr);
-	if(foundFunc->destruct != NULL) {
+	if(foundFunc && foundFunc->destruct != NULL) {
 		foundFunc->destruct(func);
 	}
 
@@ -5300,7 +5295,7 @@ cnffuncNew(es_str_t *fname, struct cnffparamlst* paramlst)
 		}
 		/* some functions require special initialization */
 		struct scriptFunct *foundFunc = searchModList(cstr);
-		if(foundFunc->initFunc != NULL) {
+		if(foundFunc && foundFunc->initFunc != NULL) {
 			foundFunc->initFunc(func);
 		}
 		free(cstr);
