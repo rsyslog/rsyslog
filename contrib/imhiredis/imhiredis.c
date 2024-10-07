@@ -143,7 +143,7 @@ static struct imhiredisWrkrInfo_s {
 pthread_attr_t wrkrThrdAttr;	/* Attribute for worker threads ; read only after startup */
 
 static int activeHiredisworkers = 0;
-static char *REDIS_REPLIES[] = {
+static const char *REDIS_REPLIES[] = {
 	"unknown", // 0
 	"string", // 1
 	"array", // 2
@@ -210,6 +210,7 @@ struct timeval glblRedisConnectTimeout = { 3, 0 }; /* 3 seconds */
 static void redisAsyncRecvCallback (redisAsyncContext __attribute__((unused)) *c, void *reply, void *inst_obj);
 static void redisAsyncConnectCallback (const redisAsyncContext *c, int status);
 static void redisAsyncDisconnectCallback (const redisAsyncContext *c, int status);
+redisReply *getRole(redisContext *c);
 static struct json_object* _redisParseIntegerReply(const redisReply *reply);
 static struct json_object* _redisParseStringReply(const redisReply *reply);
 static struct json_object* _redisParseArrayReply(const redisReply *reply);
