@@ -89,8 +89,11 @@ createListenSocket(void)
 	}
 	// Set SO_REUSEADDR and SO_REUSEPORT options
 	int opt = 1;
-	if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
-		errout("setsockopt failed");
+	if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+		errout("setsockopt failed for SO_REUSEADDR");
+	}
+	if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
+		errout("setsockopt failed for SO_REUSEPORT");
 	}
 
 	fprintf(stderr, "listen on target port %d\n", targetPort);
