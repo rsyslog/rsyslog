@@ -87,14 +87,19 @@ createListenSocket(void)
 	if (listen_fd < 0) {
 		errout("Failed to create listen socket");
 	}
-	// Set SO_REUSEADDR and SO_REUSEPORT options
+	/* Set SO_REUSEADDR and SO_REUSEPORT options - these are vital for some
+	 * Tests. If not both are supported by the OS (e.g. Solaris 10), some tests
+	 * will fail. Those need to be excluded.
+	 */
 	int opt = 1;
 	if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
 		errout("setsockopt failed for SO_REUSEADDR");
 	}
+	#ifdef SO_REUSEPORT
 	if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt)) < 0) {
 		errout("setsockopt failed for SO_REUSEPORT");
 	}
+	#endif
 
 	fprintf(stderr, "listen on target port %d\n", targetPort);
 	memset(&server_addr, 0, sizeof(server_addr));
