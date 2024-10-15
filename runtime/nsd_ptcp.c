@@ -37,6 +37,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <netinet/tcp.h>
+#include <sys/time.h>
 
 #include "rsyslog.h"
 #include "syslogd-types.h"
@@ -73,6 +74,7 @@ DEFobjCurrIf(prop)
 static void
 sockClose(int *pSock)
 {
+	fprintf(stderr, "nsd_ptcp: closing socket %d\n", *pSock);
 	if(*pSock >= 0) {
 		close(*pSock);
 		*pSock = -1;
@@ -956,9 +958,15 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 		}
 	}
 
+	struct timeval start, end;
+	long seconds, useconds;
+	gettimeofday(&start, NULL);
 	if(connect(pThis->sock, res->ai_addr, res->ai_addrlen) != 0) {
-		LogError(errno, RS_RET_IO_ERROR, "cannot connect to %s:%s",
-			host, port);
+		gettimeofday(&end, NULL);
+		seconds  = end.tv_sec  - start.tv_sec;
+		useconds = end.tv_usec - start.tv_usec;
+		LogError(errno, RS_RET_IO_ERROR, "cannot connect to %s:%s (took %ld.%ld seconds)",
+			host, port, seconds, useconds / 10000);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
