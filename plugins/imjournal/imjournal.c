@@ -1381,6 +1381,7 @@ createInstance(instanceConf_t **const pinst)
 	inst->next = NULL;
 	inst->pBindRuleset = NULL;
 	inst->pszBindRuleset = NULL;
+	inst->stateFile = NULL;
 
 	/* node created, let's add to config */
 	if(loadModConf->tail == NULL) {
