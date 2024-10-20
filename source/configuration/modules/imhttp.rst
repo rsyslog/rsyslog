@@ -161,7 +161,7 @@ SupportOctetCountedFraming
 
    "binary", "no", "", "off"
 
-Useful to send data using syslog style message framing, disabled by default. Message framing is described by `RFC 6587 <https://tools.ietf.org/html/rfc6587#section-3.4.1>`_ .
+Useful to send data using syslog style message framing, disabled by default. Message framing is described by `RFC 6587 <https://datatracker.ietf.org/doc/html/rfc6587#section-3.4.1>`_ .
 
 
 RateLimit.Interval

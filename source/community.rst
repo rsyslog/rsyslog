@@ -23,7 +23,7 @@ interested in the "backstage", you may find
 `Rainer <https://rainer.gerhards.net/>`_'s
 `blog <https://rainer.gerhards.net/>`_ an interesting read (filter on
 syslog and rsyslog tags). Or meet `Rainer Gerhards at
-Facebook <http://www.facebook.com/people/Rainer-Gerhards/1349393098>`_.
+Facebook <https://www.facebook.com/rainer.gerhards.1/>`_.
 If you would like to use rsyslog source code inside your open source
 project, you can do that without any restriction as long as your license
 is GPLv3 compatible. If your license is incompatible to GPLv3, you may

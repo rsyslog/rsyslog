@@ -1,7 +1,7 @@
 Installing rsyslog from Source
 ==============================
 
-*Written by* `Rainer Gerhards <https://rainer.gerhards.net>`_
+*Written by* `Rainer Gerhards <https://rainer.gerhards.net/>`_
 
 **In this paper, I describe how to install**
 `rsyslog <http://www.rsyslog.com/>`_. It is intentionally a brief
@@ -170,7 +170,7 @@ both it and rsyslogd listen to the same sockets, they can NOT be run
 concurrently. So you need to disable the stock syslogd. To do this, you
 typically must change your rc.d startup scripts.
 
-For example, under `Debian <http://www.debian.org/>`_ this must be done
+For example, under `Debian <https://www.debian.org/>`_ this must be done
 as follows: The default runlevel is 2. We modify the init scripts for
 runlevel 2 - in practice, you need to do this for all run levels you
 will ever use (which probably means all). Under /etc/rc2.d there is a

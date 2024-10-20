@@ -205,7 +205,7 @@ be discussed ;)
    be used but UTF-8 is preferred. To detect UTF-8, the MSG should start
    with the UTF-8 byte order mask of "EF BB BF" if it is UTF-8 encoded
    (see section 155.9 of
-   `http://www.unicode.org/versions/Unicode4.0.0/ch15.pdf <http://www.unicode.org/versions/Unicode4.0.0/ch15.pdf>`_)
+   `https://www.unicode.org/versions/Unicode4.0.0/ch15.pdf <https://www.unicode.org/versions/Unicode4.0.0/ch15.pdf>`_)
 -  Requirements to drop messages should be reconsidered. I guess I would
    not be the only implementor ignoring them.
 -  Logging requirements should be reconsidered and probably be removed.

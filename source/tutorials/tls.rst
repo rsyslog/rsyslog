@@ -1,7 +1,7 @@
 Encrypting Syslog Traffic with TLS (SSL) [short version]
 ========================================================
 
-*Written by* `Rainer Gerhards  <http://www.gerhards.net/rainer>`_
+*Written by* `Rainer Gerhards  <https://rainer.gerhards.net/>`_
 *(2008-05-06)*
 
 Abstract
@@ -40,13 +40,13 @@ mailing list thread that describes `total loss of syslog messages due to
 stunnel
 mode <http://lists.adiscon.net/pipermail/rsyslog/2008-March/000580.html>`_
 and the `unreliability of TCP
-syslog <http://rgerhards.blogspot.com/2008/04/on-unreliability-of-plain-tcp-syslog.html>`_).
+syslog <https://rainer.gerhards.net/2008/04/on-unreliability-of-plain-tcp-syslog.html>`_).
 
 `Rsyslog supports syslog via GSSAP <gssapi.html>`_\ I since long to
 overcome these limitations. However, syslog via GSSAPI is a
 rsyslog-exclusive transfer mode and it requires a proper Kerberos
 environment. As such, it isn't a really universal solution. The
-`IETF <http://www.ietf.org/>`_ has begun standardizing syslog over plain
+`IETF <https://www.ietf.org/>`_ has begun standardizing syslog over plain
 tcp over TLS for a while now. While I am not fully satisfied with the
 results so far, this obviously has the  potential to become the
 long-term solution. The Internet Draft in question, syslog-transport-tls

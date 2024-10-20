@@ -1,7 +1,7 @@
 Message parsers in rsyslog
 ==========================
 
-Written by `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+Written by `Rainer Gerhards <https://rainer.gerhards.net/>`_
 (2009-11-06)
 
 Intro
@@ -30,7 +30,7 @@ contributing something back to the project.
 But that doesn't answer what a message parser really is. What does it
 mean to "parse a message" and, maybe more importantly, what is a
 message? To answer these questions correctly, we need to dig down into
-the relevant standards. `RFC5424 <http://tools.ietf.org/html/rfc5424>`_
+the relevant standards. `RFC5424 <https://datatracker.ietf.org/doc/html/rfc5424>`_
 specifies a layered architecture for the syslog protocol:
 
 .. figure:: rfc5424layers.png
@@ -53,7 +53,7 @@ no two messages can travel within a single UDP packet). In "plain tcp
 syslog", the industry standard, LF is used as a frame delimiter (which
 also means that no multi-line message can properly be transmitted, a
 "design" flaw in plain tcp syslog). In
-`RFC5425 <http://tools.ietf.org/html/rfc5425>`_ there is a header in
+`RFC5425 <https://datatracker.ietf.org/doc/html/rfc5425>`_ there is a header in
 front of each frame that contains the size of the message. With this
 framing, any message content can properly be transferred.
 
@@ -263,7 +263,7 @@ Which message parsers are available
 
 As of this writing, there exist only two message parsers, one for
 RFC5424 format and one for legacy syslog (loosely described in
-`RFC3164 <http://tools.ietf.org/html/rfc3164>`_). These parsers are
+`RFC3164 <https://datatracker.ietf.org/doc/html/rfc3164>`_). These parsers are
 built-in and must not be explicitly loaded. However, message parsers can
 be added with relative ease by anyone knowing to code in C. Then, they
 can be loaded via $ModLoad just like any other loadable module. It is

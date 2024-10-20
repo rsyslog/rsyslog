@@ -1,7 +1,7 @@
 Compatibility Notes for rsyslog v4
 ==================================
 
-*Written by* `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+*Written by* `Rainer Gerhards <https://rainer.gerhards.net/>`_
 *(2009-07-15)*
 
 The changes introduced in rsyslog v4 are numerous, but not very

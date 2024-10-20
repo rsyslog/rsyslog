@@ -4,7 +4,7 @@ imuxsock: Unix Socket Input Module
 
 ===========================  ===========================================================================
 **Module Name:**             **imuxsock**
-**Author:**                  `Rainer Gerhards <http://www.gerhards.net/rainer>`_ <rgerhards@adiscon.com>
+**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
 ===========================  ===========================================================================
 
 

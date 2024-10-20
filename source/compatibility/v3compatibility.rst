@@ -1,7 +1,7 @@
 Compatibility Notes for rsyslog v3
 ==================================
 
-*Written by* `Rainer Gerhards <http://www.gerhards.net/rainer>`_
+*Written by* `Rainer Gerhards <https://rainer.gerhards.net/>`_
 *(2008-03-28)*
 
 Rsyslog aims to be a drop-in replacement for sysklogd. However, version

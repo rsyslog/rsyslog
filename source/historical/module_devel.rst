@@ -1,7 +1,7 @@
 Developing rsyslog modules (outdated)
 =====================================
 
-*Written by `Rainer Gerhards* <https://rainer.gerhards.net>`_ *(2007-07-28)*
+*Written by `Rainer Gerhards* <https://rainer.gerhards.net/>`_ *(2007-07-28)*
 
 **This document is outdated and primarily contains historical
 information. Do not trust it to build code. It currently is under

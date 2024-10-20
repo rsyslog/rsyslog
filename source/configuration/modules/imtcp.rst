@@ -355,7 +355,7 @@ Specifies the allowed maximum depth for the certificate chain verification.
 Support added in v8.2001.0, supported by GTLS and OpenSSL driver.
 If not set, the API default will be used. 
 For OpenSSL, the default is 100 - see the doc for more:
-https://www.openssl.org/docs/man1.1.1/man3/SSL_set_verify_depth.html
+https://docs.openssl.org/1.1.1/man3/SSL_CTX_set_verify/
 For GnuTLS, the default is 5 - see the doc for more:
 https://www.gnutls.org/manual/gnutls.html
 
@@ -434,7 +434,7 @@ In GNUTLS, this setting determines the handshake algorithms and options for the 
 
 **OpenSSL Configuration**
 
-This feature is compatible with OpenSSL Version 1.0.2 and above. It enables the passing of configuration commands to the OpenSSL library. You can find a comprehensive list of commands and their acceptable values in the OpenSSL Documentation, accessible at [OpenSSL Documentation](https://www.openssl.org/docs/man1.0.2/man3/SSL_CONF_cmd.html).
+This feature is compatible with OpenSSL Version 1.0.2 and above. It enables the passing of configuration commands to the OpenSSL library. You can find a comprehensive list of commands and their acceptable values in the OpenSSL Documentation, accessible at [OpenSSL Documentation](https://docs.openssl.org/1.0.2/man3/SSL_CONF_cmd/).
 
 **General Configuration Guidelines**
 
