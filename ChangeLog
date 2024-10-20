@@ -1,4 +1,6 @@
 ----------------------------------------------------------------------------------------
+Scheduled Release 8.2412.0 (aka 2024.12) 2024-12-xx
+----------------------------------------------------------------------------------------
 Scheduled Release 8.2410.0 (aka 2024.10) 2024-10-22
 - network subsystem: improve connection failure error message
   If we try to connect via TCP and the connections fails, we now
