@@ -9,12 +9,6 @@ omhttp: HTTP Output Module
 Original Author:             `Christian Tramnitz <https://github.com/ctramnitz/>`_
 ===========================  ===========================================================================
 
-.. warning::
-
-   This page is incomplete, if you want to contribute you can do this on
-   github in the `rsyslog-doc repository <https://github.com/rsyslog/rsyslog-doc>`_.
-
-
 
 Purpose
 =======
@@ -618,8 +612,6 @@ reloadonhup
 If this parameter is "on", the plugin will close and reopen any libcurl handles on a HUP signal. This option is primarily intended to enable reloading short-lived certificates without restarting rsyslog.
 
 
-.. _statsname_label:
-
 statsname
 ^^^^^^^^^
 
@@ -633,11 +625,8 @@ statsname
 
 The name assigned to statistics specific to this action instance. The supported set of
 statistics tracked for this action instance are **submitted**, **acked**, **failures**.
-See the :ref:`_statistic_counter_label` section for more details.
+See the `Statistic Counter`_ section for more details.
 
-
-
-.. _statistic_counter_label:
 
 Statistic Counter
 =================
@@ -664,7 +653,7 @@ accumulates all action instances. The statistic origin is named "omhttp" with fo
 - **request.status.fail** - Number of requests returning 3XX, 4XX, or 5XX HTTP status codes. If a requests fails (i.e. server not reachable) this counter will *not* be incremented.
 
 
-Additionally, the following statistics can also be configured for a specific action instances. See :ref:`_statsname_label` for more details.
+Additionally, the following statistics can also be configured for a specific action instances. See `statsname`_ for more details.
 
 - **requests.count** - Number of requests 
 
