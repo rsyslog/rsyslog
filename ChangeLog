@@ -1,5 +1,23 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2410.0 (aka 2024.10) 2024-10-??
+Scheduled Release 8.2410.0 (aka 2024.10) 2024-10-22
+- network subsystem: improve connection failure error message
+  If we try to connect via TCP and the connections fails, we now
+  tell inside the error message how long the connection attempt
+  took. This is useful to find out if targets connect very
+  slowly.
+- regression fix: build issue on Solaris 10
+  Solaris 10 does not support SO_REUSEPORT, which we need for some
+  tests. It is used in minitcpsrvr.c, and will now not be used if
+  not available.
+  Note that tests requiring that option will also need to be disabled
+  for that platform.
+  commit which introduced regression: 1c0f9bb
+- testbench: correctly apply socket options in minitcpsrvr
+  The option name in setsockopts is not a bitmask, so SO_REUSEADDR and
+  SO_REUSEPORT can't be ORed together. Instead apply the options via
+  separate calls.
+  Fixes: #5456
+  Thanks: Chris Hofstaedtler <zeha@debian.org> and Michael Biebl
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2408.0 (aka 2024.08) 2024-08-20
 - 2024-08-16: omfwd: implement native load balancing - phase 1
