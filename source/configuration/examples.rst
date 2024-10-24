@@ -210,5 +210,5 @@ template (which contains the insert statement). The template is called
 
 This rule forwards all messages that contain the word "error" in the msg
 part to the server "errorServer". Forwarding is via UDP. Please note the
-colon in fron
+colon in front
 

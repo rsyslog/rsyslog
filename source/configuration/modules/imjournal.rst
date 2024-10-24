@@ -462,13 +462,13 @@ The following example is the same as `Example 1`, but with the input module.
 
 .. code-block:: none
 
-  ruleset(name="imjournam-example" queue.type="direct"){
+  ruleset(name="imjournal-example" queue.type="direct"){
    action(type="mmjsonparse")
    action(type="omfile" file="/var/log/ceelog" template="CEETemplate")
   }
 
   input(
    type="imjournal"
-   ruleset="imjournam-example"
+   ruleset="imjournal-example"
    main="on"
   )

@@ -49,7 +49,7 @@ Ports
    "string", "no", "ports", "8080"
 
 Configures "listening_ports" in the civetweb library. This option may also be configured using the
-liboptions_ (below) however, this option will take precendence.
+liboptions_ (below) however, this option will take precedence.
 
 - `Civetweb listening_ports <https://github.com/civetweb/civetweb/blob/master/docs/UserManual.md#listening_ports-8080>`_
 

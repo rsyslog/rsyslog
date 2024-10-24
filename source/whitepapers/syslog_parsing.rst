@@ -31,9 +31,9 @@ fault".
 Then, there is :rfc:`3195`, which
 is a real standard. In it's section 3 it makes (a somewhat questionable)
 reference to (informational) RFC 3164 which may be interpreted in a way
-that RFC3195 standardizes the format layed out in RFC 3164 by virtue of
+that RFC3195 standardizes the format laid out in RFC 3164 by virtue of
 referencing them. So RFC3195 seems to extend its standardization domain
-to the concepts layed out in RFC 3164 (which is why I tend to find that
+to the concepts laid out in RFC 3164 (which is why I tend to find that
 reference questionable). In that sense, RFC3195 standardizes the format
 informationally described in RFC3164, Section 4. But it demands it only
 for the scope of RFC3195, which is syslog over BEEP - and NOT syslog
@@ -82,7 +82,7 @@ RFC3164 is an informational document: it provides useful information,
 but does not precisely specify anything.
 
 After all of this bashing, I now have to admit that RFC3164 has some
-format recommendations layed out in section 4. The format described has
+format recommendations laid out in section 4. The format described has
 quite some value in it and implementors recently try to follow it. This
 format is usually meant when someone tells you that a software is
 "RFC3164 compliant" or expects "RFC3164 compliant messages". I also have
@@ -237,7 +237,7 @@ look:
 
 ::
 
-    $template, MalfromedMsgFormater,"%timegenerated% %fromhost% %rawmsg:::drop-last-lf%\n"
+    $template, MalformedMsgFormater,"%timegenerated% %fromhost% %rawmsg:::drop-last-lf%\n"
     *.* /var/log/somefile;MalformedMsgFormatter
 
 This will make your log much nicer, but not look perfect. Experiment a

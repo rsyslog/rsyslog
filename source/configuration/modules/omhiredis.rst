@@ -594,7 +594,7 @@ Example 7: "Simple" stream mode
 -------------------------------
 
 | By using the **stream mode**, the template-formatted log is inserted in a stream using the :ref:`omhiredis_streamoutfield` parameter as key (or *msg* as default).
-| The output template can be explicitely set with the :ref:`omhiredis_template` option (or the default *RSYSLOG_ForwardFormat* template will be used).
+| The output template can be explicitly set with the :ref:`omhiredis_template` option (or the default *RSYSLOG_ForwardFormat* template will be used).
 
 .. code-block:: none
 

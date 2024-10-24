@@ -179,7 +179,7 @@ This is the config:
     $RuleSet remote10516
     mail.*  /var/log/mail10516
     &       ~
-    # note that the discard-action will prevent this messag from 
+    # note that the discard-action will prevent this message from
     # being written to the remote10516 file - as usual...
     *.*     /var/log/remote10516
 

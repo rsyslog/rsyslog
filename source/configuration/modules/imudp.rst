@@ -397,7 +397,7 @@ Statistic Counter
 
 This plugin maintains :doc:`statistics <../rsyslog_statistic_counter>` for each listener and for each worker thread.
 
-The listener statistic is named starting with "imudp", followed followed by the
+The listener statistic is named starting with "imudp", followed by the
 listener IP, a colon and port in parenthesis. For example, the counter for a
 listener on port 514 (on all IPs) with no set name is called "imudp(\*:514)".
 
@@ -576,7 +576,7 @@ imudp threads and queue worker threads
 --------------------------------------
 There is no direct relationship between these two entities. Imudp submits
 messages to the configured rulesets and places them into the respective
-queues. It is then up the the queue config, and outside of the scope
+queues. It is then up to the queue config, and outside of the scope
 or knowledge of imudp, how many queue worker threads will be spawned by
 the queue in question.
 

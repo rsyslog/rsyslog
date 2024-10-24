@@ -55,7 +55,7 @@ This lists what has been found during implementation:
    Modifying the code to "cleanly" support NUL characters is
    non-trivial, even though rsyslogd already has some byte-counted
    string library (but this is new and not yet available everywhere).
--  **character encoding in MSG**: is is problematic to do the right
+-  **character encoding in MSG**: it is problematic to do the right
    UTF-8 encoding. The reason is that we pick up the MSG from the local
    domain socket (which got it from the syslog(3) API). The text
    obtained does not include any encoding information, but it does

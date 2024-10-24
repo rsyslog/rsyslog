@@ -174,7 +174,7 @@ FileOwnerNum
    "integer", "system default", "no", "none"
 
 Set the file owner for the domain socket. The
-parameter is a numerical ID, which which is used regardless of
+parameter is a numerical ID, which is used regardless of
 whether the user actually exists. This can be useful if the user
 mapping is not available to rsyslog during startup.
 

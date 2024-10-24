@@ -38,7 +38,7 @@ So ideally, /var/log/localbuffer will never receive a message. If one of the
 servers resumes operation, it automatically takes over processing again.
 
 **Important:** Failover will **not** work when you define queues on the actions.
-This is because a queue explicitely tells rsyslog that the action shall be
+This is because a queue explicitly tells rsyslog that the action shall be
 processed asynchronously. With asynchronous processing you do not have any
 feedback capability. As such, the action will never fail.
 

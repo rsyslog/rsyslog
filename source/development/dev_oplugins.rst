@@ -329,7 +329,7 @@ release. What the means is if a rsyslog core can not provide this query
 interface, it is a core that was build before batching support was
 available. So the absence of a query interface indicates that the
 transactional interface is not available. One might now be tempted to
-think there is no need to do the actual check, but is is recommended to
+think there is no need to do the actual check, but it is recommended to
 ask the rsyslog engine explicitly if the transactional interface is
 present and will be honored. This enables us to create versions in the
 future which have, for whatever reason we do not yet know, no support

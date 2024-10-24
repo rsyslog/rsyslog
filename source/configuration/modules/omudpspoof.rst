@@ -87,7 +87,7 @@ SourceTemplate
    :widths: auto
    :class: parameter-table
 
-   "word", "RSYSLOG_omudpspoofDfltSourceTpl", "no", "``$ActionOMOMUDPSpoofSourceNameTemplate``"
+   "word", "RSYSLOG_omudpspoofDfltSourceTpl", "no", "``$ActionOMUDPSpoofSourceNameTemplate``"
 
 This is the name of the template that contains a numerical IP
 address that is to be used as the source system IP address. While it

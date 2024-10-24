@@ -83,7 +83,7 @@ Some additional documentation contributed by Ronny Egner:
 
     - Oracle Instantclient 10g (NOT 11g) Base + Devel
       (if you´re on 64-bit linux you should choose the 64-bit libs!) 
-    - JDK 1.6 (not necessary for oracle plugin but "make" didd not finsished successfully without it)
+    - JDK 1.6 (not necessary for oracle plugin but "make" did not finished successfully without it)
 
     - "oracle-instantclient-config" script 
       (seems to shipped with instantclient 10g Release 1 but i was unable to find it for 10g Release 2 so here it is)

@@ -28,8 +28,8 @@ branch, you need to do a "git checkout --track -b branch origin/branch".
 For example, the command to check out the beta branch is "git checkout
 --track -b beta origin/beta".
 
-Prequisites
------------
+Prerequisites
+-------------
 
 .. include:: /includes/container_dev_env.inc.rst
 
