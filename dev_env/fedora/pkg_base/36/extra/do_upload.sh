@@ -20,4 +20,7 @@ fi
 echo "Uploading Branch '$szYumRepoDir/$szSubRepo/' to $REPOUSERNAME@$REPOURL/$szSubRepo/
 "
 
-rsync -au -e "ssh -i /private-files/.ssh/id_rsa" --progress $szYumRepoDir/$szSubRepo/* $REPOUSERNAME@$REPOURL/$szSubRepo/
+# Set default SSH port to 22 if REPOSSHPORT is not set
+REPOSSHPORT=${REPOSSHPORT:-22}
+
+rsync -au -e "ssh -i /private-files/.ssh/id_rsa -p $REPOSSHPORT" --progress $szYumRepoDir/$szSubRepo/* $REPOUSERNAME@$REPOURL/$szSubRepo/
