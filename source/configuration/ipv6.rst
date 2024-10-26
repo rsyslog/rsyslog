@@ -4,7 +4,7 @@ Notes on IPv6 Handling in Rsyslog
 **Rsyslog fully\* supports sending and receiving syslog messages via
 both IPv4 and IPv6.** IPv6 is natively supported for both UDP and TCP.
 However, there are some options that control handling of IPv6
-operations. I thought it is is a good idea to elaborate a little about
+operations. I thought it is a good idea to elaborate a little about
 them, so that you can probably find your way somewhat easier.
 
 First of all, you can restrict rsyslog to using IPv4 or IPv6 addresses

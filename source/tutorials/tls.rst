@@ -76,7 +76,7 @@ and receiver are the upper layer. The driver layer currently consists of
 the "ptcp" and "gtls" library plugins. "ptcp" stands for "plain tcp" and
 is used for unencrypted message transfer. It is also used internally by
 the gtls driver, so it must always be present on a system. The "gtls"
-driver is for GnutTLS, a TLS library. It is used for encrypted message
+driver is for GnuTLS, a TLS library. It is used for encrypted message
 transfer. In the future, additional drivers will become available (most
 importantly, we would like to include a driver for NSS).
 

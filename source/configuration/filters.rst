@@ -87,7 +87,7 @@ which should only log at err or higher.
 Unfortunately, local6.err will permit error severity and higher, but will
 *not* exclude lower severity messages from facility local6.
 
-As an alternative, you can explicitely exclude all severities that you do
+As an alternative, you can explicitly exclude all severities that you do
 not want to match. For the above case, this selector is equivalent to the
 BSD syslog selector:
 

@@ -164,7 +164,7 @@ load\_lookup\_table Statement
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Note: in the final implementation, this MAY be implemented as an
-action. This is a low-level decesion that must be made during the detail
+action. This is a low-level decision that must be made during the detail
 development process. Parameters and semantics will remain the same of
 this happens.**
 

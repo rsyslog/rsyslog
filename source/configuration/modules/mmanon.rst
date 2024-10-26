@@ -27,7 +27,7 @@ have been created.
 We assume that an IPv4 address consists of four octets in dotted notation,
 where each of the octets has a value between 0 and 255, inclusively.
 
-An IPv6 is defined by being bewtween zero and eight hex values between 0
+An IPv6 is defined by being between zero and eight hex values between 0
 and ffff. These are separated by ':'. Leading zeros in blocks can be omitted
 and blocks full of zeros can be abbreviated by using '::'. However, this
 can ony happen once in an IP address.
@@ -280,7 +280,7 @@ Anonymizing messages
 
 In this snippet, we write one file without anonymization and another one
 with the message anonymized. Note that once mmanon has run, access to
-the original message is no longer possible (execept if stored in user
+the original message is no longer possible (except if stored in user
 variables before anonymization).
 
 .. code-block:: none

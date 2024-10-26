@@ -63,7 +63,7 @@ The **stream** mode uses `Redis Streams system <https://redis.io/docs/data-types
 This mode is especially useful to define pools of workers that do various processing along the way, while ensuring not a single log is lost during processing by a worker.
 
 .. note::
-    As Redis streams do not insert simple values in keys, but rather fleid/value pairs, this mode can also be useful when handling structured data. This is better shown with the examples for the parameter :ref:`imhiredis_fields`.
+    As Redis streams do not insert simple values in keys, but rather field/value pairs, this mode can also be useful when handling structured data. This is better shown with the examples for the parameter :ref:`imhiredis_fields`.
 
    This mode also adds additional internal metadata to the message, it won't be included in json data or regular fields, but
 

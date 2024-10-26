@@ -35,7 +35,7 @@ As a special case, sending a HUP signal to rsyslog also activate the
 janitor process. This can lead to too-frequent wakeups of janitor-related
 services. However, we don't expect this to cause any issues. If it does,
 it could be solved by creating a separate thread for the janitor. But as
-this takes up some system resources and is not not considered useful, we
+this takes up some system resources and is not considered useful, we
 have not implemented it that way. If the HUP/janitor interaction causes
 problems, let the rsyslog team know and we can change the implementation.
 

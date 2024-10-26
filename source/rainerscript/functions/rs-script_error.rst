@@ -11,7 +11,7 @@ Returns the error state of functions that support it. C-Developers note that thi
 is similar to ``errno`` under Linux. The error state corresponds to the function
 immediately called before. The next function call overrides it.
 
-Right now, the value 0 means that that the previous functions succeeded, any other
+Right now, the value 0 means that the previous functions succeeded, any other
 value that it failed. In the future, we may have more fine-grain error codes.
 
 Function descriptions mention if a function supports error state information. If not,

@@ -239,7 +239,7 @@ template). To specify a template, write a semicolon after the action
 value immediately followed by the template name.
 Beware: templates MUST be defined BEFORE they are used. It is OK to
 define some templates, then use them in selector lines, define more
-templates and use use them in the following selector lines. But it is
+templates and use them in the following selector lines. But it is
 NOT permitted to use a template in a selector line that is above its
 definition. If you do this, the action will be ignored.
 
@@ -567,7 +567,7 @@ Binds an output channel definition (see there for details) to this
 action. Output channel actions must start with a $-sign, e.g. if you
 would like to bind your output channel definition "mychannel" to the
 action, use "$mychannel". Output channels support template definitions
-like all all other actions.
+like all other actions.
 
 Shell Execute
 ~~~~~~~~~~~~~

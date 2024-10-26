@@ -107,7 +107,7 @@ participate in load balancing. If all targets become offline (then and only then
 the action itself is suspended. Unreachable targets are automatically retried
 by omfwd.
 
-NOTE: target pools are ONLY avaiable for TCP transport. If UDP is selected, an
+NOTE: target pools are ONLY available for TCP transport. If UDP is selected, an
 error message is emitted and only the first target used.
 
 Single target: Target="syslog.example.net"
@@ -125,7 +125,7 @@ Port
    "array/word", "514", "no", "none"
 
 Name or numerical value of the port to use when connecting to the target.
-If multiple targes are defined, different ports can be defined for each target.
+If multiple targets are defined, different ports can be defined for each target.
 To do so, use array mode. The first port will be used for the first target, the
 second for the second target and so on. If fewer ports than targets are defined,
 the remaining targets will use the first port configured. This also means that you
@@ -145,7 +145,7 @@ pool.resumeinterval
 
    "integer", "30 seconds", "no", "none"
 
-If a targt pool exists, "pool.resumeinterval" configures how often an unavailable
+If a target pool exists, "pool.resumeinterval" configures how often an unavailable
 target is tried to be activated. A new connection request will be made in roughly
 "pool.resumeinterval" seconds until connection is reestablished or the action become
 completely suspenden (in which case the action settings take control).

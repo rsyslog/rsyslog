@@ -63,7 +63,7 @@ Below you can find a structured data part of a random message which has three pa
 
 In this snippet, we parse the message and emit all json variable to a
 file with the message anonymized. Note that once mmpstrucdata has run,
-access to the original message is no longer possible (execept if stored
+access to the original message is no longer possible (except if stored
 in user variables before anonymization).
 
 ::

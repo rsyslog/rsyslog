@@ -175,7 +175,7 @@ content and then not further process it. This involves the ``stop`` statement
    :msg, contains, "error" @remote
    & ~
 
-which is equavalent to::
+which is equivalent to::
 
    :msg, contains, "error" @remote
    & stop

@@ -437,7 +437,7 @@ Sending msgs with omrelp
 ------------------------
 
 The following sample sends all messages to the central server
-"centralserv" at port 2514 (note that that server must run imrelp on
+"centralserv" at port 2514 (note that the server must run imrelp on
 port 2514).
 
 .. code-block:: none

@@ -423,7 +423,7 @@ accumulate all action instances. The statistic origin is named "omafka" with fol
   all brokers. This is also part of window statistics and average excludes brokers with zero internal latency.
 
 Note that three window statics counters are not safe with multiple clients. When statistics callback is
-enabled, for example, by using statics.callback.ms=60000, omkafa will generate an internal log message every
+enabled, for example, by using statics.callback.ms=60000, omkafka will generate an internal log message every
 minute for the corresponding omkafka action:
 
 .. code-block:: none

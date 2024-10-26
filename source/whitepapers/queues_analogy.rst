@@ -65,7 +65,7 @@ the passively waiting Parser and Filter Engine with those messages. So
 the main message queue is the active part, the Parser and Filter Engine
 is passive.
 
-Let's now try an analogy analogy for this part: Think about a TV show.
+Let's now try an analogy for this part: Think about a TV show.
 The show is produced in some TV studio, from there sent (actively) to a
 radio tower. The radio tower passively receives from the studio and then
 actively sends out a signal, which is passively received by your TV set.

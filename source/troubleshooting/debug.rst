@@ -125,7 +125,7 @@ To create this setup, you need to
 -  point the RSYSLOG\_DEBUGLOG environment variable to a file that is
    accessible during the while runtime (we strongly suggest a file in
    the local file system!)
--  set RSYSLOG\_DEBUG at least to "DebugOnDeman NoStdOut"
+-  set RSYSLOG\_DEBUG at least to "DebugOnDemand NoStdOut"
 -  make sure these environment variables are set in the correct
    (distro-specific) startup script if you do not run rsyslogd
    interactively

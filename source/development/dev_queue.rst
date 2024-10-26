@@ -249,7 +249,7 @@ of that, **queue parameters are changed for DA-enabled queues:** the
 high water mark is to 1 and the low water mark to 0 on the primary
 queue. The DA queue is commanded to run in enqueue-only mode. If the
 primary queue is *configured to persist messages to disk before it is
-terminated*, its SHUTDOWN timeout is changed to to eternal. These
+terminated*, its SHUTDOWN timeout is changed to eternal. These
 parameters will cause the queue to drain as much as possible to disk
 (and they may cause a case 3 DA run mode initiation). Please note that
 once the primary queue has been drained, the DA queue's worker will

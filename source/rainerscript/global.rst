@@ -50,7 +50,7 @@ The following parameters can be set:
 - **defaultNetstreamDriverCRLFile**
 
   For `TLS syslog <http://www.rsyslog.com/doc/rsyslog_secure_tls.html>`_,
-  the CRL File contains a List contains a list of revoked certrificates.
+  the CRL File contains a List contains a list of revoked certificates.
 
 - **defaultNetstreamDriverKeyFile**
 
@@ -703,7 +703,7 @@ The following parameters can be set:
   re-enqueued message.
 
   The situation addressed by this setting is unlikely to happen, but it could happen.
-  To enable the funtionality, set it to "on".
+  To enable the functionality, set it to "on".
 
 - **parser.supportCompressionExtension** [boolean (on/off)] available 8.2106.0+
 

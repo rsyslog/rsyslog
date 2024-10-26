@@ -64,7 +64,7 @@ True Global Directives
    analyzers. If set to off, no such status messages are logged, what
    may be useful for other scenarios. [available since 4.7.0 and 5.3.0]
 -  **$DefaultRuleset** [name] - changes the default ruleset for unbound
-   inputs to the provided *name* (the default default ruleset is named
+   inputs to the provided *name* (the default ruleset is named
    "RSYSLOG\_DefaultRuleset"). It is advised to also read our paper on
    :doc:`using multiple rule sets in rsyslog <../../concepts/multi_ruleset>`.
 - **$DefaultNetstreamDriver** <drivername>, the default

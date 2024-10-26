@@ -626,7 +626,7 @@ fileOwnerNum
 
 Set the file owner for files newly created. Please note that this
 setting does not affect the owner of files already existing. The
-parameter is a numerical ID, which which is used regardless of
+parameter is a numerical ID, which is used regardless of
 whether the user actually exists. This can be useful if the user
 mapping is not available to rsyslog during startup.
 
@@ -810,7 +810,7 @@ to prevent messages from being split across two files. Also, a full batch of
 messages is not terminated in between. As such, in practice, the size of the
 output file can grow some KiB larger than configured.
 
-Also avoid to configer a too-low limit, especially for busy files. Calling the
+Also avoid to configure a too-low limit, especially for busy files. Calling the
 rotation script is relatively performance intense. As such, it could negatively
 affect overall rsyslog performance.
 

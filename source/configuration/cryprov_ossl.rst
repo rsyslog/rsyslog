@@ -38,7 +38,7 @@ only if rsyslog is compiled with --enable-openssl option.
    compiled into openssl. The cipher implementation is retrieved using the
    EVP_CIPHER_fetch() function. See "ALGORITHM FETCHING" in crypto(7) for
    further information. Algorithms are not hardcoded, we provide everything
-   that can be fetched using the aformentioned function.
+   that can be fetched using the aforementioned function.
    Note: Always check carefully when you change the algorithm if it's available.
 
 -  **cry.key** <encryption key>

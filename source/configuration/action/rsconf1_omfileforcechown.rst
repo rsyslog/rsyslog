@@ -8,7 +8,7 @@ $omfileForceChown
 **Available:** 4.7.0+, 5.3.0-5.8.x, **NOT** available in 5.9.x or higher
 
 **Note: this parameter has been removed and is no longer available. The
-documentation is currently being retained for historical reaons.**
+documentation is currently being retained for historical reasons.**
 Expect it to go away at some later stage as well.
 
 **Default:** off
