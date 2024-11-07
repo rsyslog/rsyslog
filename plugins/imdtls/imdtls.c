@@ -24,6 +24,7 @@
 #include "config.h"
 
 #include <stdio.h>
+#include <signal.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <unistd.h>
