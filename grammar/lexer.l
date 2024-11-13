@@ -150,7 +150,7 @@ expand_backticks(char *const param)
 		const char *val = read_file(param+4);
 		if(val == NULL) {
 			parser_errmsg("file could not be accessed for `%s`", param);
-			const char *errmsg = "/* file cound not be accessed - see"
+			const char *errmsg = "/* file could not be accessed - see "
 				"error messages */";
 			estr = es_newStrFromCStr(errmsg, strlen(errmsg));
 		} else {
