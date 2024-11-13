@@ -74,7 +74,6 @@ DEFobjCurrIf(prop)
 static void
 sockClose(int *pSock)
 {
-	fprintf(stderr, "nsd_ptcp: closing socket %d\n", *pSock);
 	if(*pSock >= 0) {
 		close(*pSock);
 		*pSock = -1;
