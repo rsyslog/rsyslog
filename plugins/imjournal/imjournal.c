@@ -676,16 +676,9 @@ static rsRetVal
 handleRotation(struct journalContext_s *journalContext, char* stateFile)
 {
 	DEFiRet;
-	int r;
 
 	LogMsg(0, RS_RET_OK, LOG_NOTICE, "imjournal: journal files changed, reloading...\n");
 	STATSCOUNTER_INC(statsCounter.ctrRotations, statsCounter.mutCtrRotations);
-	closeJournal(journalContext);
-
-	iRet = openJournal(journalContext);
-	if (iRet != RS_RET_OK) {
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
 
 	/* outside error scenarios we should always have a cursor available at this point */
 	if (!journalContext->cursor)
@@ -706,14 +699,8 @@ handleRotation(struct journalContext_s *journalContext, char* stateFile)
 		iRet = RS_RET_ERR;
 	}
 	journalContext->atHead = 0;
-	/* Need to advance because cursor points at last processed message */
-	if ((r = sd_journal_next(journalContext->j)) < 0) {
-		LogError(-r, RS_RET_ERR, "imjournal: sd_journal_next() failed");
-		iRet = RS_RET_ERR;
-	}
 
 finalize_it:
-	journalContext->reloaded = 1;
 	RETiRet;
 }
 
@@ -726,11 +713,8 @@ pollJournal(struct journalContext_s *journalContext, char* stateFile)
 	int err;
 
 	err = sd_journal_wait(journalContext->j, POLL_TIMEOUT);
-	if (err == SD_JOURNAL_INVALIDATE && !journalContext->reloaded) {
+	if (err == SD_JOURNAL_INVALIDATE) {
 		CHKiRet(handleRotation(journalContext, stateFile));
-	}
-	else {
-		journalContext->reloaded = 0;
 	}
 
 finalize_it:
@@ -927,47 +911,65 @@ doRun(journal_etry_t const* etry)
 	while (glbl.GetGlobalInputTermState() == 0) {
 		int r;
 
-		r = sd_journal_next(etry->journalContext->j);
-		if (r < 0) {
+		/* read journal entries until we are at the end of the journal */
+		while ((r = sd_journal_next(etry->journalContext->j)) > 0 &&
+			   glbl.GetGlobalInputTermState() == 0) {
+
+			/* We use sd_journal_next to move the read pointer forward by one entry.
+			 * However, this does not always ensure that the cursor advances to the next
+			 * entry, particularly after a journal rotation. If sd_journal_test_cursor()
+			 * returns 1, indicating the current entry matches the specified cursor,
+			 * we need to manually advance the cursor. This is because, after calling sd_journal_next,
+			 * the cursor should point to a new entry; otherwise, we read the same entry twice.
+			 */
+			int test = sd_journal_test_cursor(etry->journalContext->j, etry->journalContext->cursor);
+			if (test == 1) {
+				DBGPRINTF("sd_journal_next did not move cursor, skipping message\n");
+				continue;
+			}
+
+			/*
+			 * update journal disk usage before reading the new message.
+			 */
+			const int e = sd_journal_get_usage(etry->journalContext->j,
+				(uint64_t *)&statsCounter.diskUsageBytes);
+			if (e < 0) {
+				LogError(-e, RS_RET_ERR, "imjournal: sd_get_usage() failed");
+			}
+
+			if (readjournal(etry->journalContext, etry->pBindRuleset) != RS_RET_OK) {
+				tryRecover(etry->journalContext);
+				continue;
+			}
+
+			count++;
+			etry->journalContext->atHead = 0;
+			if (stateFile) {
+				/* TODO: This could use some finer metric. */
+				if ((count % cs.iPersistStateInterval) == 0) {
+					persistJournalState(etry->journalContext, stateFile);
+				}
+			}
+		}
+
+		if (r < 0)
+		{
 			LogError(-r, RS_RET_ERR, "imjournal: sd_journal_next() failed");
 			tryRecover(etry->journalContext);
 			continue;
 		}
 
-		if (r == 0) {
-			if (etry->journalContext->atHead) {
-				LogMsg(0, RS_RET_OK, LOG_WARNING, "imjournal: "
-						"Journal indicates no msgs when positioned at head.\n");
-			}
-			/* No new messages, wait for activity. */
-			if (pollJournal(etry->journalContext, stateFile) != RS_RET_OK &&
-				!etry->journalContext->reloaded) {
-				tryRecover(etry->journalContext);
-			}
-			continue;
+		/* At this point r == 0, which means no new messages are available. */
+		if (etry->journalContext->atHead) {
+			LogMsg(0, RS_RET_OK, LOG_WARNING, "imjournal: "
+				"Journal indicates no msgs when positioned at head.\n");
 		}
 
-		/*
-		 * update journal disk usage before reading the new message.
-		 */
-		const int e = sd_journal_get_usage(etry->journalContext->j, (uint64_t *)&statsCounter.diskUsageBytes);
-		if (e < 0) {
-			LogError(-e, RS_RET_ERR, "imjournal: sd_get_usage() failed");
-		}
-
-		if (readjournal(etry->journalContext, etry->pBindRuleset) != RS_RET_OK) {
+		/* No new messages, wait for activity. */
+		if (pollJournal(etry->journalContext, stateFile) != RS_RET_OK) {
 			tryRecover(etry->journalContext);
-			continue;
 		}
 
-		count++;
-		etry->journalContext->atHead = 0;
-		if (stateFile) { /* can't persist without a state file */
-			/* TODO: This could use some finer metric. */
-			if ((count % cs.iPersistStateInterval) == 0) {
-				persistJournalState(etry->journalContext, stateFile);
-			}
-		}
 	}
 finalize_it:
 	RETiRet;
