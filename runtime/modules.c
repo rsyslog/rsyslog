@@ -1095,7 +1095,6 @@ Load(uchar *const pModName, const sbool bConfLoad, struct nvlst *const lst)
 	cfgmodules_etry_t *pNew = NULL;
 	cfgmodules_etry_t *pLast = NULL;
 	uchar *pModDirCurr, *pModDirNext;
-	int iLoadCnt;
 	struct dlhandle_s *pHandle = NULL;
 	uchar pathBuf[PATH_MAX+1];
 	uchar *pPathBuf = pathBuf;
@@ -1156,7 +1155,6 @@ Load(uchar *const pModName, const sbool bConfLoad, struct nvlst *const lst)
 	pModDirCurr = (uchar *)((pModDir == NULL) ? _PATH_MODDIR : (char *)pModDir);
 	pModDirNext = NULL;
 	pModHdlr    = NULL;
-	iLoadCnt    = 0;
 	do {	/* now build our load module name */
 		if(*pModName == '/' || *pModName == '.') {
 			if(lenPathBuf < PATHBUF_OVERHEAD) {
@@ -1240,8 +1238,6 @@ Load(uchar *const pModName, const sbool bConfLoad, struct nvlst *const lst)
 				rsCStrAppendStr(load_err_msg, (uchar*)errmsg);
 			}
 		}
-
-		iLoadCnt++;
 
 	} while(pModHdlr == NULL && *pModName != '/' && pModDirNext);
 

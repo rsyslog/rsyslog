@@ -214,7 +214,6 @@ rsRetVal parsSkipAfterChar(rsParsObj *pThis, char c)
 rsRetVal parsSkipWhitespace(rsParsObj *pThis)
 {
 	register unsigned char *pC;
-	int numSkipped;
 	DEFiRet;
 
 
@@ -222,12 +221,10 @@ rsRetVal parsSkipWhitespace(rsParsObj *pThis)
 
 	pC = rsCStrGetBufBeg(pThis->pCStr);
 
-	numSkipped = 0;
 	while(pThis->iCurrPos < rsCStrLen(pThis->pCStr)) {
 		if(!isspace((int)*(pC+pThis->iCurrPos)))
 			break;
 		++pThis->iCurrPos;
-		++numSkipped;
 	}
 
 	RETiRet;
