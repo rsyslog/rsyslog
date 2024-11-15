@@ -597,7 +597,7 @@ rsRetVal rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz, int iType, void *rc)
 
 	if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
 		if (*cache == NULL) {
-			*cache = calloc(sizeof(regex_t), 1);
+			*cache = calloc(1, sizeof(regex_t));
 			int errcode;
 			if((errcode = regexp.regcomp(*cache, (char*) rsCStrGetSzStrNoNULL(pCS1),
 				(iType == 1 ? REG_EXTENDED : 0) | REG_NOSUB))) {

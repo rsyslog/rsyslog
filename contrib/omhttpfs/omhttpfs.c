@@ -255,7 +255,7 @@ static void httpfs_curl_set_put(CURL* curl)
 	curl_easy_setopt(curl, CURLOPT_HTTPGET, 0L);
 	curl_easy_setopt(curl, CURLOPT_NOBODY, 0L);
 	curl_easy_setopt(curl, CURLOPT_POST, 0L);
-	curl_easy_setopt(curl, CURLOPT_PUT, 0L);
+	curl_easy_setopt(curl, CURLOPT_UPLOAD, 0L);
 	curl_easy_setopt(curl, CURLOPT_UPLOAD, 0L);
 
 	curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "PUT");
@@ -270,7 +270,7 @@ static void httpfs_curl_set_post(CURL* curl)
 {
 	curl_easy_setopt(curl, CURLOPT_HTTPGET, 0L);
 	curl_easy_setopt(curl, CURLOPT_NOBODY, 0L);
-	curl_easy_setopt(curl, CURLOPT_PUT, 0L);
+	curl_easy_setopt(curl, CURLOPT_UPLOAD, 0L);
 	curl_easy_setopt(curl, CURLOPT_UPLOAD, 0L);
 	curl_easy_setopt(curl, CURLOPT_POST, 1L);
 
