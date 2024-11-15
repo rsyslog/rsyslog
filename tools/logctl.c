@@ -52,20 +52,18 @@
 #include <getopt.h>
 #include <unistd.h>
 
+#include "rsyslog.h"
 /* we need this to avoid issues with older versions of libbson */
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpragmas"
-#pragma GCC diagnostic ignored "-Wunknown-attributes"
-#pragma GCC diagnostic ignored "-Wexpansion-to-defined"
-#pragma GCC diagnostic ignored "-Wstrict-prototypes"
-#pragma GCC diagnostic ignored "-Wold-style-definition"
-#endif
+PRAGMA_DIAGNOSTIC_PUSH
+PRAGMA_IGNORE_Wpragmas
+PRAGMA_IGNORE_Wunknown_warning_option
+PRAGMA_IGNORE_Wunknown_attribute
+PRAGMA_IGNORE_Wexpansion_to_defined
+PRAGMA_IGNORE_Wstrict_prototypes
+PRAGMA_IGNORE_Wold_style_definition
 #include <mongoc.h>
 #include <bson.h>
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
+PRAGMA_DIAGNOSTIC_POP
 
 #define N 80
 
