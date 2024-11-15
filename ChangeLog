@@ -1,5 +1,31 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2412.0 (aka 2024.12) 2024-12-xx
+- 2024-11-14: core bugfix: rsyslog could segfault if immediately stopped during startup
+  systemd restart rsyslog in the early start of OS will let rsyslog segmentation
+  fault. This cmd will send sigTerm to rsylogd, and rsyslogd will handle the
+  signal in rsyslogdDoDie. If the rsyslogd havn't parse the conf, the runConf
+  will be NULL So check the pointer before reference it.
+  see also: https://github.com/rsyslog/rsyslog/issues/5453
+  thanks to Wang Haitao for the patch.
+- 2024-11-14: imhiredis cleanup: fix incorrect variable definitions and missing prototype
+  Thanks to Théo Bertin for the patch.
+- 2024-11-14: config processing bugfix: typo and missing space when file can't be accessed
+  When using the backtick feature with cat and a file that does not exist,
+  an error message is placed where the file content would be. This error
+  message contained a typo in could as well as a missing space between
+  see and error, which have now been fixed.
+  Thanks to Tobias Kantusch for the patch.
+- 2024-11-14: build fix: resolved issue when building on musl
+  Thanks to Quincy Fleming for the patch.
+- 2024-11-14: testbench bugfix: typo caused invalid test file to be used
+  ... which went unnoticed during regular make check runs, but lead to
+  "left-over files after distclean" after make distcheck.
+  This could also potentially be responsible for some flakes that were
+  not fully explainable.
+- 2024-11-14: nsd_ptcp regression fix: remove debugging messages emited to stderr
+  fix regression introduced by 9ac56b286. This spits out a debug message
+  to stderr. That message is removed by this patch here.
+  closes https://github.com/rsyslog/rsyslog/issues/5485
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2410.0 (aka 2024.10) 2024-10-22
 - network subsystem: improve connection failure error message
