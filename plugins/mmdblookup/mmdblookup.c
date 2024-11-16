@@ -460,12 +460,11 @@ CODESTARTdoAction
 
 		json_object *temp_json = total_json;
 		json_object *sub_obj   = temp_json;
-		int j = 0;
 		const char *SEP = "!";
 
 		/* find lowest level JSON object */
 		char *s = strtok_r(buf, SEP, &strtok_save);
-		for (; s != NULL; j++) {
+		while(s != NULL) {
 			json_object_object_get_ex(temp_json, s, &sub_obj);
 			temp_json = sub_obj;
 			s = strtok_r(NULL, SEP, &strtok_save);
