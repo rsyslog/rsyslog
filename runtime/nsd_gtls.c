@@ -2204,6 +2204,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	int sock;
 	int gnuRet;
+	int flags;
 	const char *error_position;
 #	ifdef HAVE_GNUTLS_CERTIFICATE_TYPE_SET_PRIORITY
 	static const int cert_type_priority[2] = { GNUTLS_CRT_X509, 0 };
@@ -2305,9 +2306,16 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 		gnutls_dh_set_prime_bits(pThis->sess, dhMinBits);
 	}
 
-	/* assign the socket to GnuTls */
 	CHKiRet(nsd_ptcp.GetSock(pThis->pTcp, &sock));
+	/* Set the socket to non-blocking mode */
+	flags = fcntl(sock, F_GETFL, 0);
+	if (flags != -1) {
+		fcntl(sock, F_SETFL, flags | O_NONBLOCK);
+	}
+
+	/* assign the socket to GnuTls */
 	gtlsSetTransportPtr(pThis, sock);
+
 
 	/* we need to store the hostname as an alternate mean of authentication if no
 	 * permitted peer names are given. Using the hostname is quite useful. It permits
