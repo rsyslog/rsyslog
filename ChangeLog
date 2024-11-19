@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2412.0 (aka 2024.12) 2024-12-xx
+- 2024-11-19: core bugfix: potential stability issue with corrupt queue file resolved
+  Thanks to Flos Lonicerae for the patch.
+- 2024-11-19: core bugfix: prevent segfault on use of $ControlCharacterEscapePrefix
+  When this obsolete legacy directive was used, rsyslog most probably segfaulted during
+  startup. This did not affect it's modern counterpart.
+  Thanks to Flos Lonicerae for the patch.
 - 2024-11-14: core bugfix: rsyslog could segfault if immediately stopped during startup
   systemd restart rsyslog in the early start of OS will let rsyslog segmentation
   fault. This cmd will send sigTerm to rsylogd, and rsyslogd will handle the
