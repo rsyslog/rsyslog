@@ -1,4 +1,4 @@
-# Copyright 2020 Rainer Gerhards and Others
+# Copyright 2024 Rainer Gerhards and Others
 #
 # https://github.com/rsyslog/rsyslog-pkg-ubuntu
 #
@@ -30,7 +30,7 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 30
     strategy:
       # When set to true, cancel all in-progress jobs if any matrix job fails.
       fail-fast: false
@@ -38,7 +38,7 @@ jobs:
         # note: we compile only with oldest and newest support compiler to
         # save ressources. Other important ones are used during the rest of
         # the check runs (most importantly the distro-default ones).
-        config: [clang9, clang-14-ndebug, gcc-11-ndebug, gcc8-ndebug, gcc8-debug]
+        config: [clang9, clang18-ndebug, gcc8-ndebug, gcc14-debug]
 
     steps:
       - name: git checkout project
@@ -54,25 +54,25 @@ jobs:
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
               export CC='clang-9'
               ;;
-          'clang14-ndebug')
+          'clang18-ndebug')
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=no'
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
-              export CC='clang-14'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
+              export CC='clang-18'
               ;;
           'gcc8-ndebug')
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=no'
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
               export CC='gcc-8'
               ;;
-          'gcc8-debug')
+          'gcc14-debug')
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=yes'
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
-              export CC='gcc-8'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
+              export CC='gcc-14'
               ;;
-          'gcc11-ndebug')
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=no'
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
-              export CC='gcc-11'
+          *)
+              echo "unknown configuration "
+              echo "error-terminating this check run"
+              exit 1
               ;;
           esac
           devtools/devcontainer.sh --rm devtools/run-configure.sh

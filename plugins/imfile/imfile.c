@@ -762,7 +762,7 @@ act_obj_add(fs_edge_t *const edge, const char *const name, const int is_file,
 		ABORT_FINALIZE(RS_RET_NO_FILE_ACCESS);
 	}
 	DBGPRINTF("add new active object '%s' in '%s'\n", name, edge->path);
-	CHKmalloc(act = calloc(sizeof(act_obj_t), 1));
+	CHKmalloc(act = calloc(1, sizeof(act_obj_t)));
 	CHKmalloc(act->name = strdup(name));
 	if (-1 == getBasename((uchar*)basename, (uchar*)name)) {
 		CHKmalloc(act->basename = strdup(name)); /* assume basename is same as name */
@@ -1242,11 +1242,11 @@ fs_node_add(fs_node_t *const node,
 	/* could not find node --> add it */
 	DBGPRINTF("fs_node_add(%p, '%s') did not find '%s' - adding it\n",
 		node, toFind, name);
-	CHKmalloc(newchld = calloc(sizeof(fs_edge_t), 1));
+	CHKmalloc(newchld = calloc(1, sizeof(fs_edge_t)));
 	CHKmalloc(newchld->name = ustrdup(name));
-	CHKmalloc(newchld->node = calloc(sizeof(fs_node_t), 1));
+	CHKmalloc(newchld->node = calloc(1, sizeof(fs_node_t)));
 	CHKmalloc(newchld->path = ustrdup(ourPath));
-	CHKmalloc(newchld->instarr = calloc(sizeof(instanceConf_t*), 1));
+	CHKmalloc(newchld->instarr = calloc(1, sizeof(instanceConf_t*)));
 	newchld->instarr[0] = inst;
 	newchld->is_file = isFile;
 	newchld->ninst = 1;
@@ -2096,7 +2096,7 @@ CODESTARTbeginCnfLoad
 	loadModConf->normalizePath = 1;
 	loadModConf->sortFiles = GLOB_NOSORT;
 	loadModConf->stateFileDirectory = NULL;
-	loadModConf->conf_tree = calloc(sizeof(fs_node_t), 1);
+	loadModConf->conf_tree = calloc(1, sizeof(fs_node_t));
 	loadModConf->conf_tree->edges = NULL;
 	bLegacyCnfModGlobalsPermitted = 1;
 	/* init legacy config vars */

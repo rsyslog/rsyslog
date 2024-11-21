@@ -30,7 +30,7 @@ processQI(FILE *const __restrict__ qi)
 	int queuesize;
 	int i;
 	int c;
-	fgets(lnbuf, sizeof(lnbuf), qi);
+	(void) fgets(lnbuf, sizeof(lnbuf), qi);
 	fputs(lnbuf, stdout);
 	/* we now read the queue size line */
 	/* note: this is quick and dirty, no error checks

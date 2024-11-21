@@ -27,8 +27,7 @@ hash_from_string(void *k)
 int main(int argc, char *argv[])
 {
 	struct timeval tv;
-	struct timezone tz;
-	gettimeofday(&tv, &tz);
+	gettimeofday(&tv, NULL);
 	if(argc != 2) {
 		fprintf(stderr, "usage: test_id test-file-name\n");
 		exit(1);
