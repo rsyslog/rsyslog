@@ -9,9 +9,6 @@
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
-module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
-
 $template outfmt,"%msg:F,58:3%\n"
 $template dynfile,"%msg:F,58:2%.log" # complete name is in message
 $OMFileFlushOnTXEnd on
@@ -22,18 +19,18 @@ local0.* ?dynfile;outfmt
 startup
 # we send handcrafted message. We have a dynafile cache of 4, and now send one message
 # each to fill up the cache.
-tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.0.log:0\""
-tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.1.log:1\""
-tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.2.log:2\""
-tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.3.log:3\""
+injectmsg_literal "<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.0.log:0"
+injectmsg_literal "<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.1.log:1"
+injectmsg_literal "<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.2.log:2"
+injectmsg_literal "<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.3.log:3"
 # the next one has caused a segfault in practice
 # note that /proc/rsyslog.error.file must not be creatable
-tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag msg:/proc/rsyslog.error.file:boom\""
+injectmsg_literal "<129>Mar 10 01:00:00 172.20.245.8 tag msg:/proc/rsyslog.error.file:boom"
 # some more writes
-tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.0.log:4\""
-tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.1.log:5\""
-tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.2.log:6\""
-tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.3.log:7\""
+injectmsg_literal "<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.0.log:4"
+injectmsg_literal "<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.1.log:5"
+injectmsg_literal "<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.2.log:6"
+injectmsg_literal "<129>Mar 10 01:00:00 172.20.245.8 tag msg:$RSYSLOG_DYNNAME.out.3.log:7"
 # done message generation
 shutdown_when_empty # shut down rsyslogd when done processing messages
 wait_shutdown       # and wait for it to terminate

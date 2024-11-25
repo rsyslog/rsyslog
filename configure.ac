@@ -233,7 +233,7 @@ AC_TYPE_SIGNAL
 AC_FUNC_STAT
 AC_FUNC_STRERROR_R
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([flock recvmmsg basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setsid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r getline malloc_trim prctl epoll_create epoll_create1 fdatasync syscall lseek64 asprintf close_range])
+AC_CHECK_FUNCS([flock recvmmsg basename alarm clock_gettime gethostbyname gethostname gettimeofday localtime_r memset mkdir regcomp select setsid socket strcasecmp strchr strdup strerror strndup strnlen strrchr strstr strtol strtoul uname ttyname_r getline malloc_trim prctl epoll_create epoll_create1 fdatasync syscall lseek64 asprintf close_range pthread_setname_np])
 AC_CHECK_FUNC([setns], [AC_DEFINE([HAVE_SETNS], [1], [Define if setns exists.])])
 AC_CHECK_TYPES([off64_t])
 
@@ -1792,8 +1792,6 @@ AM_CONDITIONAL(ENABLE_LIBFAKETIME, test "x${enable_libfaketime}" = "xyes")
 # are those tests that do not need a special configure option. There are
 # some situations where we really want to turn them of so that we can
 # run tests only for a specific component (e.g. ElasticSearch).
-# This also enables us to do some parallel testing even while the
-# testbench is not yet able to support make -j check
 AC_ARG_ENABLE(default-tests,
         [AS_HELP_STRING([--enable-default-tests],[default-tests enabled @<:@default=yes@:>@])],
         [case "${enableval}" in
@@ -1810,6 +1808,17 @@ if test "x${IP}" = "xno"; then
 	AC_MSG_NOTICE([Will not check network namespace functionality as 'ip' (part of iproute2) is not available.])
 fi
 AM_CONDITIONAL(ENABLE_IP, test "x${IP}" = "xyes")
+
+AC_ARG_ENABLE(imtcp-tests,
+        [AS_HELP_STRING([--enable-imtcp-tests],[imtcp-tests enabled @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_imtcp_tests="yes" ;;
+          no) enable_imtcp_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imtcp-tests) ;;
+         esac],
+        [enable_imtcp_tests=yes]
+)
+AM_CONDITIONAL(ENABLE_IMTCP_TESTS, test "x${enable_imtcp_tests}" = "xyes")
 
 
 # valgrind-testbench
@@ -2016,6 +2025,58 @@ AC_ARG_ENABLE(imsolaris,
         [enable_imsolaris=no]
 )
 AM_CONDITIONAL(ENABLE_IMSOLARIS, test x$enable_imsolaris = xyes)
+
+
+# settings for the imtcp input module
+AC_ARG_ENABLE(imtcp_epoll,
+        [AS_HELP_STRING([--disable-imtcp-epoll],[Disable epoll mode in the TCP input module (for testing purposes)])],
+        [case "${enableval}" in
+         yes) enable_imtcp_epoll="yes" ;;
+          no) enable_imtcp_epoll="no" ;;
+           *) AC_MSG_ERROR([bad value ${enableval} for --disable-imtcp-epoll]) ;;
+         esac],
+        [enable_imtcp_epoll=auto]
+)
+
+# Default: Enable imtcp_epoll if epoll is available, unless explicitly disabled
+if test "x$enable_imtcp_epoll" = "xauto"; then
+    if test "x$ac_cv_header_sys_epoll_h" = "xyes" && test "x$ac_cv_func_epoll_create" = "xyes"; then
+        enable_imtcp_epoll="yes"
+    else
+        enable_imtcp_epoll="no"
+    fi
+fi
+
+# Define ENABLE_IMTCP_EPOLL in config.h if epoll is enabled
+if test "x$enable_imtcp_epoll" = "xyes"; then
+    AC_DEFINE([ENABLE_IMTCP_EPOLL], [1], [Enable epoll mode for the imtcp input module])
+fi
+
+# Automake conditional
+AM_CONDITIONAL(ENABLE_IMTCP_EPOLL, test x$enable_imtcp_epoll = xyes)
+
+ Print result
+echo "    TCP input module epoll mode: $enable_imtcp_epoll"
+
+
+
+
+# settings for the imtcp input module
+AC_ARG_ENABLE(imtcp_epoll,
+        [AS_HELP_STRING([--enable-imtcp-epoll],[tcp input module epoll mode permitted @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_imtcp_epoll="yes" ;;
+          no) enable_imtcp_epoll="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imptcp-epoll) ;;
+         esac],
+        [enable_imptcp_epoll=yes]
+)
+AM_CONDITIONAL(ENABLE_IMPTCP_EPOLL, test x$enable_imptcp_epoll = xyes)
+# Define a preprocessor macro if enabled
+if test "x$enable_imtcp_epoll" = "xyes"; then
+    AC_DEFINE([ENABLE_IMTCP_EPOLL], [1], [Enable epoll mode for the imtcp input module])
+fi
+
 
 # settings for the ptcp input module
 AC_ARG_ENABLE(imptcp,
@@ -3010,6 +3071,7 @@ if test "$unamestr" != "AIX"; then
 echo "    Klog functionality enabled:               $enable_klog ($os_type)"
 fi
 echo "    /dev/kmsg functionality enabled:          $enable_kmsg"
+echo "    tcp input module epoll permitted:         $enable_imtcp_epoll"
 echo "    plain tcp input module enabled:           $enable_imptcp"
 echo "    DTLS udp input module enabled:            $enable_imdtls"
 echo "    imdiag enabled:                           $enable_imdiag"
@@ -3124,6 +3186,7 @@ echo "    Kafka Tests enabled:                      $enable_kafka_tests"
 echo "    Redis Tests enabled:                      $enable_redis_tests"
 echo "    Omazureeventhubs Tests enabled:           $enable_omazureeventhubs_tests"
 echo "    Imdocker Tests enabled:                   $enable_imdocker_tests"
+echo "    imtcp tests enabled:                      $enable_imtcp_tests"
 echo "    gnutls tests enabled:                     $enable_gnutls_tests"
 echo "    imfile tests enabled:                     $enable_imfile_tests"
 echo "    systemd journal tests enabled:            $enable_journal_tests"
