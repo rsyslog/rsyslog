@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd epoll() interface for plain tcp sockets.
  *
- * Copyright 2009-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2025 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -39,6 +39,7 @@
 #include "obj.h"
 #include "errmsg.h"
 #include "srUtils.h"
+#include "netstrm.h"
 #include "nspoll.h"
 #include "nsd_ptcp.h"
 #include "nsdpoll_ptcp.h"
@@ -48,8 +49,8 @@ DEFobjStaticHelpers
 DEFobjCurrIf(glbl)
 
 
-/* -START------------------------- helpers for event list ------------------------------------ */
 
+// TODO: update comment
 /* add new entry to list. We assume that the fd is not already present and DO NOT check this!
  * Returns newly created entry in pEvtLst.
  * Note that we currently need to use level-triggered mode, because the upper layers do not work
@@ -61,78 +62,23 @@ DEFobjCurrIf(glbl)
  * rgerhards, 2009-11-18
  */
 static rsRetVal
-addEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, int mode, nsd_ptcp_t *pSock, nsdpoll_epollevt_lst_t **pEvtLst)
+addEvent(struct epoll_event *const event, tcpsrv_io_descr_t *pioDescr, const int mode)
 {
-	nsdpoll_epollevt_lst_t *pNew;
 	DEFiRet;
 
-	CHKmalloc(pNew = (nsdpoll_epollevt_lst_t*) calloc(1, sizeof(nsdpoll_epollevt_lst_t)));
-	pNew->id = id;
-	pNew->pUsr = pUsr;
-	pNew->pSock = pSock;
-	pNew->event.events = 0; /* TODO: at some time we should be able to use EPOLLET */
-	if(mode & NSDPOLL_IN)
-		pNew->event.events |= EPOLLIN;
-	if(mode & NSDPOLL_OUT)
-		pNew->event.events |= EPOLLOUT;
-	pNew->event.data.ptr = pNew;
-	pthread_mutex_lock(&pThis->mutEvtLst);
-	pNew->pNext = pThis->pRoot;
-	pThis->pRoot = pNew;
-	pthread_mutex_unlock(&pThis->mutEvtLst);
-	*pEvtLst = pNew;
-
-finalize_it:
-	RETiRet;
-}
-
-
-/* find and unlink the entry identified by id/pUsr from the list.
- * rgerhards, 2009-11-23
- */
-static rsRetVal
-unlinkEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, nsdpoll_epollevt_lst_t **ppEvtLst)
-{
-	nsdpoll_epollevt_lst_t *pEvtLst;
-	nsdpoll_epollevt_lst_t *pPrev = NULL;
-	DEFiRet;
-
-	pthread_mutex_lock(&pThis->mutEvtLst);
-	pEvtLst = pThis->pRoot;
-	while(pEvtLst != NULL && !(pEvtLst->id == id && pEvtLst->pUsr == pUsr)) {
-		pPrev = pEvtLst;
-		pEvtLst = pEvtLst->pNext;
+	event->events = 0; /* TODO: at some time we should be able to use EPOLLET */
+	if(!(mode & NSDPOLL_IN_LSTN))  {
+		/* right now, we refactor only regular data sessions in edge triggered mode */
+		event->events = EPOLLET; /* TODO: at some time we should be able to use EPOLLET */
 	}
-	if(pEvtLst == NULL)
-		ABORT_FINALIZE(RS_RET_NOT_FOUND);
+	if((mode & NSDPOLL_IN) || (mode & NSDPOLL_IN_LSTN))
+		event->events |= EPOLLIN;
+	if(mode & NSDPOLL_OUT)
+		event->events |= EPOLLOUT;
+	event->data.ptr = (void*) pioDescr;
 
-	*ppEvtLst = pEvtLst;
-
-	/* unlink */
-	if(pPrev == NULL)
-		pThis->pRoot = pEvtLst->pNext;
-	else
-		pPrev->pNext = pEvtLst->pNext;
-
-finalize_it:
-	pthread_mutex_unlock(&pThis->mutEvtLst);
 	RETiRet;
 }
-
-
-/* destruct the provided element. It must already be unlinked from the list.
- * rgerhards, 2009-11-23
- */
-static rsRetVal
-delEvent(nsdpoll_epollevt_lst_t **ppEvtLst) {
-	DEFiRet;
-	free(*ppEvtLst);
-	*ppEvtLst = NULL;
-	RETiRet;
-}
-
-
-/* -END--------------------------- helpers for event list ------------------------------------ */
 
 
 /* Standard-Constructor
@@ -152,62 +98,48 @@ BEGINobjConstruct(nsdpoll_ptcp) /* be sure to specify the object type also in EN
 		DBGPRINTF("epoll_create1() could not create fd\n");
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
-	pthread_mutex_init(&pThis->mutEvtLst, NULL);
 finalize_it:
 ENDobjConstruct(nsdpoll_ptcp)
 
 
 /* destructor for the nsdpoll_ptcp object */
 BEGINobjDestruct(nsdpoll_ptcp) /* be sure to specify the object type also in END and CODESTART macros! */
-	nsdpoll_epollevt_lst_t *node;
-	nsdpoll_epollevt_lst_t *nextnode;
 CODESTARTobjDestruct(nsdpoll_ptcp)
-	/* we check if the epoll list still holds entries. This may happen, but
-	 * is a bit unusual.
-	 */
-	if(pThis->pRoot != NULL) {
-		for(node = pThis->pRoot ; node != NULL ; node = nextnode) {
-			nextnode = node->pNext;
-			dbgprintf("nsdpoll_ptcp destruct, need to destruct node %p\n", node);
-			delEvent(&node);
-		}
-	}
-	pthread_mutex_destroy(&pThis->mutEvtLst);
 ENDobjDestruct(nsdpoll_ptcp)
 
 
 /* Modify socket set */
 static rsRetVal
-Ctl(nsdpoll_t *pNsdpoll, nsd_t *pNsd, int id, void *pUsr, int mode, int op) {
-	nsdpoll_ptcp_t *pThis = (nsdpoll_ptcp_t*) pNsdpoll;
-	nsd_ptcp_t *pSock = (nsd_ptcp_t*) pNsd;
-	nsdpoll_epollevt_lst_t *pEventLst;
-	int errSave;
-	char errStr[512];
+Ctl(nsdpoll_t *const pNsdpoll, tcpsrv_io_descr_t *const pioDescr, const int mode, const int op)
+{
+	nsdpoll_ptcp_t *const pThis = (nsdpoll_ptcp_t*) pNsdpoll;
+	nsd_ptcp_t *pNsd;
+	struct epoll_event event;
 	DEFiRet;
 
+	if(pioDescr->ptrType == NSD_PTR_TYPE_LSTN) {
+		pNsd =  (nsd_ptcp_t *) pioDescr->ptr.ppLstn[pioDescr->id]->pDrvrData;
+	} else {
+		pNsd =  (nsd_ptcp_t *) pioDescr->ptr.pSess->pStrm->pDrvrData;
+	}
+	const int id = pioDescr->id;
+
 	if(op == NSDPOLL_ADD) {
-		dbgprintf("adding nsdpoll entry %d/%p, sock %d\n", id, pUsr, pSock->sock);
-		CHKiRet(addEvent(pThis, id, pUsr, mode, pSock, &pEventLst));
-		if(epoll_ctl(pThis->efd, EPOLL_CTL_ADD,  pSock->sock, &pEventLst->event) < 0) {
-			errSave = errno;
-			rs_strerror_r(errSave, errStr, sizeof(errStr));
-			LogError(errSave, RS_RET_ERR_EPOLL_CTL,
-				"epoll_ctl failed on fd %d, id %d/%p, op %d with %s\n",
-				pSock->sock, id, pUsr, mode, errStr);
+		dbgprintf("adding nsdpoll entry %d, sock %d\n", id, pNsd->sock);
+		CHKiRet(addEvent(&event, pioDescr, mode));
+		if(epoll_ctl(pThis->efd, EPOLL_CTL_ADD,  pNsd->sock, &event) < 0) {
+			LogError(errno, RS_RET_ERR_EPOLL_CTL,
+				"epoll_ctl failed on fd %d, id %d, op %d\n",
+				pNsd->sock, id, mode);
 		}
 	} else if(op == NSDPOLL_DEL) {
-		dbgprintf("removing nsdpoll entry %d/%p, sock %d\n", id, pUsr, pSock->sock);
-		CHKiRet(unlinkEvent(pThis, id, pUsr, &pEventLst));
-		if(epoll_ctl(pThis->efd, EPOLL_CTL_DEL, pSock->sock, &pEventLst->event) < 0) {
-			errSave = errno;
-			rs_strerror_r(errSave, errStr, sizeof(errStr));
-			LogError(errSave, RS_RET_ERR_EPOLL_CTL,
-				"epoll_ctl failed on fd %d, id %d/%p, op %d with %s\n",
-				pSock->sock, id, pUsr, mode, errStr);
+		dbgprintf("removing nsdpoll entry %d, sock %d\n", id, pNsd->sock);
+		if(epoll_ctl(pThis->efd, EPOLL_CTL_DEL, pNsd->sock, NULL) < 0) {
+			LogError(errno, RS_RET_ERR_EPOLL_CTL,
+				"epoll_ctl failed on fd %d, id %d, op %d\n",
+				pNsd->sock, id, mode);
 			ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
 		}
-		CHKiRet(delEvent(&pEventLst));
 	} else {
 		dbgprintf("program error: invalid NSDPOLL_mode %d - ignoring request\n", op);
 		ABORT_FINALIZE(RS_RET_ERR);
@@ -226,19 +158,18 @@ finalize_it:
  * rgerhards, 2009-11-18
  */
 static rsRetVal
-Wait(nsdpoll_t *pNsdpoll, int timeout, int *numEntries, nsd_epworkset_t workset[])
+Wait(nsdpoll_t *const pNsdpoll, const int timeout, int *const numEntries, tcpsrv_io_descr_t *pWorkset[])
 {
 	nsdpoll_ptcp_t *pThis = (nsdpoll_ptcp_t*) pNsdpoll;
-	nsdpoll_epollevt_lst_t *pOurEvt;
-	struct epoll_event event[128];
+	struct epoll_event event[NSPOLL_MAX_EVENTS_PER_WAIT];
 	int nfds;
 	int i;
 	DEFiRet;
 
-	assert(workset != NULL);
+	assert(pWorkset != NULL);
 
-	if(*numEntries > 128)
-		*numEntries = 128;
+	if(*numEntries > NSPOLL_MAX_EVENTS_PER_WAIT)
+		*numEntries = NSPOLL_MAX_EVENTS_PER_WAIT;
 	DBGPRINTF("doing epoll_wait for max %d events\n", *numEntries);
 	nfds = epoll_wait(pThis->efd, event, *numEntries, timeout);
 	if(nfds == -1) {
@@ -255,9 +186,7 @@ Wait(nsdpoll_t *pNsdpoll, int timeout, int *numEntries, nsd_epworkset_t workset[
 	/* we got valid events, so tell the caller... */
 	DBGPRINTF("epoll returned %d entries\n", nfds);
 	for(i = 0 ; i < nfds ; ++i) {
-		pOurEvt = (nsdpoll_epollevt_lst_t*) event[i].data.ptr;
-		workset[i].id = pOurEvt->id;
-		workset[i].pUsr = pOurEvt->pUsr;
+		pWorkset[i] = event[i].data.ptr;
 	}
 	*numEntries = nfds;
 
@@ -315,6 +244,3 @@ static void dummy(void) {}
 #endif
 
 #endif /* #ifdef HAVE_EPOLL_CREATE this module requires epoll! */
-
-/* vi:set ai:
- */

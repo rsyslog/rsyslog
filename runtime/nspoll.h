@@ -1,6 +1,6 @@
 /* Definitions for the nspoll io activity waiter
  *
- * Copyright 2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2025 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -24,6 +24,9 @@
 
 #include "netstrms.h"
 
+/* limits - TODO: think if this shall be configurable */
+#define NSPOLL_MAX_EVENTS_PER_WAIT 128
+
 /* some operations to be portable when we do not have epoll() available */
 #define NSDPOLL_ADD	1
 #define NSDPOLL_DEL	2
@@ -31,6 +34,15 @@
 /* and some mode specifiers for waiting on input/output */
 #define NSDPOLL_IN	1	/* EPOLLIN */
 #define NSDPOLL_OUT	2	/* EPOLLOUT */
+
+/* the NSDPOLL_IN_LSTN is just a temporary work-around: it enables us to
+ * use listeners in level-triggered mode while we migrate toward edge-triggered
+ * mode. Once the refactoring is finish and everything works with edge triggered,
+ * we can AND SHALL remove it! <-- TODO
+ */
+#define NSDPOLL_IN_LSTN	128	/* EPOLLIN for listeners! */
+
+
 /* next is 4, 8, 16, ... - must be bit values, as they are ored! */
 
 /* the nspoll object */
@@ -48,13 +60,13 @@ BEGINinterface(nspoll) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(nspoll_t **ppThis);
 	rsRetVal (*ConstructFinalize)(nspoll_t *pThis);
 	rsRetVal (*Destruct)(nspoll_t **ppThis);
-	rsRetVal (*Wait)(nspoll_t *pNsdpoll, int timeout, int *numEntries, nsd_epworkset_t workset[]);
-	rsRetVal (*Ctl)(nspoll_t *pNsdpoll, netstrm_t *pStrm, int id, void *pUsr, int mode, int op);
+	rsRetVal (*Wait)(nspoll_t *pNsdpoll, int timeout, int *numEntries, tcpsrv_io_descr_t *workset[]);
+	rsRetVal (*Ctl)(nspoll_t *pNsdpoll, tcpsrv_io_descr_t *ioDescr, int mode, int op);
 	rsRetVal (*IsEPollSupported)(void); /* static method */
 	/* v3 - 2013-09-17 by rgerhards */
 	rsRetVal (*SetDrvrName)(nspoll_t *pThis, uchar *name);
 ENDinterface(nspoll)
-#define nspollCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
+#define nspollCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
 /* interface change in v2 is that wait supports multiple return objects */
 
 /* prototypes */

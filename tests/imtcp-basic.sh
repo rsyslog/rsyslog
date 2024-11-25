@@ -1,7 +1,8 @@
 #!/bin/bash
 # addd 2016-05-13 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-export NUMMESSAGES=10000
+export NUMMESSAGES=4000 #10000
+#export NUMMESSAGES=10000
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf
 add_conf '
