@@ -60,6 +60,18 @@ struct tcpLstnPortList_s {
 	tcpLstnPortList_t *pNext;	/**< next port or NULL */
 };
 
+struct tcpsrv_wrkrInfo_s {
+	pthread_t tid;	/* the worker's thread ID */
+	pthread_cond_t run;
+	int idx;
+	tcpsrv_t *pSrv; /* pSrv == NULL -> idle */
+	nspoll_t *pPoll;
+	void *pUsr;
+	sbool enabled;
+	long long unsigned numCalled;	/* how often was this called */
+	tcpsrv_t *mySrv;
+};
+
 #define TCPSRV_NO_ADDTL_DELIMITER -1 /* specifies that no additional delimiter is to be used in TCP framing */
 
 /* the tcpsrv object */
@@ -123,7 +135,17 @@ struct tcpsrv_s {
 	rsRetVal (*pOnSessAccept)(tcpsrv_t *, tcps_sess_t*);
 	rsRetVal (*OnSessConstructFinalize)(void*);
 	rsRetVal (*pOnSessDestruct)(void*);
+	pthread_t tid;	/* the worker's thread ID */
 	rsRetVal (*OnMsgReceive)(tcps_sess_t *, uchar *pszMsg, int iLenMsg); /* submit message callback */
+
+	/* support for multiple workers */
+	pthread_t main_tid;	/* thread ID of module main worker thread */
+	sbool bWrkrRunning; /* are the worker threads running? */
+	pthread_mutex_t wrkrMut;
+	pthread_cond_t wrkrIdle;
+	int wrkrMax;
+	int wrkrRunning;
+	struct tcpsrv_wrkrInfo_s wrkrInfo[4];
 };
 
 
