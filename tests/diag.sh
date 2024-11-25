@@ -67,7 +67,7 @@ export TB_ERR_TIMEOUT=101
 # CONFIG
 export ZOOPIDFILE="$(pwd)/zookeeper.pid"
 
-#valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
+valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 #valgrind="valgrind --tool=callgrind" # for kcachegrind profiling
 
 # **** use the line below for very hard to find leaks! *****
@@ -77,8 +77,8 @@ export ZOOPIDFILE="$(pwd)/zookeeper.pid"
 #valgrind="valgrind --tool=helgrind --log-fd=1 --suppressions=$srcdir/linux_localtime_r.supp --gen-suppressions=all"
 #valgrind="valgrind --tool=exp-ptrcheck --log-fd=1"
 #set -o xtrace
-#export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
-#export RSYSLOG_DEBUGLOG="log"
+export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
+export RSYSLOG_DEBUGLOG="log"
 TB_TIMEOUT_STARTSTOP=400 # timeout for start/stop rsyslogd in tenths (!) of a second 400 => 40 sec
 # note that 40sec for the startup should be sufficient even on very slow machines. we changed this from 2min on 2017-12-12
 TB_TEST_TIMEOUT=90  # number of seconds after which test checks timeout (eg. waits)
