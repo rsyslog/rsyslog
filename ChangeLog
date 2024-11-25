@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2412.0 (aka 2024.12) 2024-12-xx
+- 2024-11-25: improvements in CI system
+  added some support for Ubuntu 24.04 - stil more work to do
+- 2024-11-25: small nitfixes
+  mostly to address nits detected by newer compilers due to CI-system modernization
 - 2024-11-19: core bugfix: potential stability issue with corrupt queue file resolved
   Thanks to Flos Lonicerae for the patch.
 - 2024-11-19: core bugfix: prevent segfault on use of $ControlCharacterEscapePrefix
