@@ -1,4 +1,4 @@
-# Copyright 2022 Rainer Gerhards and Others
+# Copyright 2024 Rainer Gerhards and Others
 #
 # https://github.com/rsyslog/rsyslog-pkg-ubuntu
 #
@@ -38,7 +38,7 @@ jobs:
         config: [centos_7, centos_8, debian_10, debian_11,
                  fedora_35, fedora_36,
                  ubuntu_18, ubuntu_20, ubuntu_22,
-                 ubuntu_22_san, ubuntu_22_tsan, ubuntu_22_distcheck, ubuntu_22_codecov,
+                 ubuntu_22_san, ubuntu_22_tsan, ubuntu_22_codecov, ubuntu_22_distcheck,
                  kafka_codecov, elasticsearch]
 
     steps:
@@ -110,7 +110,6 @@ jobs:
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
               export CI_CHECK_CMD='distcheck'
               export ABORT_ALL_ON_TEST_FAIL='YES'
-              # DO WE NEED THIS? export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-omkafka --disable-imkafka --disable-kafka-tests"
               ;;
           'ubuntu_22_san')
               export CI_SANITIZE_BLACKLIST='tests/asan.supp'
