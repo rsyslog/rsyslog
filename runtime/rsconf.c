@@ -246,7 +246,7 @@ static void cnfSetDefaults(rsconf_t *pThis)
 	pThis->globals.mainQ.iMainMsgQueueSize = 100000;
 	pThis->globals.mainQ.iMainMsgQHighWtrMark = 80000;
 	pThis->globals.mainQ.iMainMsgQLowWtrMark = 20000;
-	pThis->globals.mainQ.iMainMsgQDiscardMark = 98000;
+	pThis->globals.mainQ.iMainMsgQDiscardMark = -1;
 	pThis->globals.mainQ.iMainMsgQDiscardSeverity = 8;
 	pThis->globals.mainQ.iMainMsgQueueNumWorkers = 2;
 	pThis->globals.mainQ.MainMsgQueType = QUEUETYPE_FIXED_ARRAY;
