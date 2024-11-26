@@ -98,7 +98,7 @@ DEFobjCurrIf(nspoll)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(statsobj)
 
-static void startWorkerPool(tcpsrv_t *pThis);
+static void startWorkerPool(tcpsrv_t *const pThis);
 static void stopWorkerPool(tcpsrv_t *const pThis);
 
 
@@ -198,7 +198,7 @@ finalize_it:
  * returns 0 if OK, somewhat else otherwise
  */
 static rsRetVal
-TCPSessTblInit(tcpsrv_t *pThis)
+TCPSessTblInit(tcpsrv_t *const pThis)
 {
 	DEFiRet;
 
@@ -221,7 +221,7 @@ finalize_it:
  * entry (0 or higher).
  */
 static int
-TCPSessTblFindFreeSpot(tcpsrv_t *pThis)
+TCPSessTblFindFreeSpot(tcpsrv_t *const pThis)
 {
 	register int i;
 
@@ -318,7 +318,7 @@ deinit_tcp_listener(tcpsrv_t *const pThis)
  * invoked from the netstrm class. -- rgerhards, 2008-04-23
  */
 static rsRetVal
-addTcpLstn(void *pUsr, netstrm_t *pLstn)
+addTcpLstn(void *pUsr, netstrm_t *const pLstn)
 {
 	tcpLstnPortList_t *pPortList = (tcpLstnPortList_t *) pUsr;
 	tcpsrv_t *pThis = pPortList->pSrv;
@@ -363,7 +363,7 @@ finalize_it:
 
 /* Initialize TCP sockets (for listener) and listens on them */
 static rsRetVal
-create_tcp_socket(tcpsrv_t *pThis)
+create_tcp_socket(tcpsrv_t *const pThis)
 {
 	DEFiRet;
 	rsRetVal localRet;
@@ -415,7 +415,7 @@ finalize_it:
  * rgerhards, 2008-03-02
  */
 static rsRetVal
-SessAccept(tcpsrv_t *pThis, tcpLstnPortList_t *pLstnInfo, tcps_sess_t **ppSess, netstrm_t *pStrm)
+SessAccept(tcpsrv_t *const pThis, tcpLstnPortList_t *const pLstnInfo, tcps_sess_t **ppSess, netstrm_t *pStrm)
 {
 	DEFiRet;
 	tcps_sess_t *pSess = NULL;
@@ -568,7 +568,7 @@ RunSelectCancelCleanup(void *arg)
  * rgerhards, 2009-11-25
  */
 static rsRetVal
-closeSess(tcpsrv_t *pThis, tcps_sess_t **ppSess, nspoll_t *pPoll) {
+closeSess(tcpsrv_t *const pThis, tcps_sess_t **ppSess, nspoll_t *const pPoll) {
 	DEFiRet;
 	if(pPoll != NULL) {
 		CHKiRet(nspoll.Ctl(pPoll, (*ppSess)->pStrm, 0, *ppSess, NSDPOLL_IN, NSDPOLL_DEL));
@@ -635,6 +635,7 @@ finalize_it:
 	RETiRet;
 }
 
+
 static rsRetVal ATTR_NONNULL(1)
 doAccept(tcpsrv_t *const pThis, nspoll_t *const pPoll, const int idx)
 {
@@ -670,44 +671,18 @@ static rsRetVal ATTR_NONNULL(1)
 processWorksetItem(tcpsrv_t *const pThis, nspoll_t *pPoll, const int idx, void *pUsr)
 {
 	tcps_sess_t *pNewSess = NULL;
-
 	DEFiRet;
 
 	DBGPRINTF("tcpsrv: processing item %d, pUsr %p, bAbortConn\n", idx, pUsr);
 	if(pUsr == pThis->ppLstn) {
-		#if 1
 		doAccept(pThis, pPoll, idx);
-		#else
-		DBGPRINTF("New connect on NSD %p.\n", pThis->ppLstn[idx]);
-		iRet = SessAccept(pThis, pThis->ppLstnPort[idx], &pNewSess, pThis->ppLstn[idx]);
-		cnf_params = pThis->ppLstnPort[idx]->cnf_params;
-		if(iRet == RS_RET_OK) {
-			if(pPoll != NULL) {
-				CHKiRet(nspoll.Ctl(pPoll, pNewSess->pStrm, 0, pNewSess, NSDPOLL_IN, NSDPOLL_ADD));
-			}
-			DBGPRINTF("New session created with NSD %p.\n", pNewSess);
-		} else {
-			DBGPRINTF("tcpsrv: error %d during accept\n", iRet);
-		}
-		#endif
 	} else {
 		pNewSess = (tcps_sess_t*) pUsr;
-		//cnf_params = pNewSess->pLstnInfo->cnf_params;
 		doReceive(pThis, &pNewSess, pPoll);
 		if(pPoll == NULL && pNewSess == NULL) {
 			pThis->pSessions[idx] = NULL;
 		}
 	}
-	#if 0
-
-finalize_it:
-	if(iRet != RS_RET_OK) {
-		LogError(0, iRet, "tcpsrv listener (inputname: '%s') failed "
-			"to process incoming connection with error %d",
-			(cnf_params->pszInputName == NULL) ? (uchar*)"*UNSET*" : cnf_params->pszInputName, iRet);
-		srSleep(0,20000); /* Sleep 20ms */
-	}
-	#endif
 	RETiRet;
 }
 
@@ -770,7 +745,7 @@ waitForWorkers(tcpsrv_t *const pThis)
  * as much as possible.
  */
 static rsRetVal
-processWorkset(tcpsrv_t *pThis, nspoll_t *pPoll, int numEntries, nsd_epworkset_t workset[])
+processWorkset(tcpsrv_t *const pThis, nspoll_t *const pPoll, int numEntries, nsd_epworkset_t workset[])
 {
 	int i;
 	int origEntries = numEntries;
@@ -838,7 +813,7 @@ finalize_it:
 PRAGMA_DIAGNOSTIC_PUSH
 PRAGMA_IGNORE_Wempty_body
 static rsRetVal
-RunSelect(tcpsrv_t *pThis, nsd_epworkset_t workset[], size_t sizeWorkset)
+RunSelect(tcpsrv_t *const pThis, nsd_epworkset_t workset[], const size_t sizeWorkset)
 {
 	DEFiRet;
 	int nfds;
@@ -941,7 +916,7 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 PRAGMA_DIAGNOSTIC_POP
 
 static rsRetVal
-DoRun(tcpsrv_t *pThis, nspoll_t **ppPoll)
+DoRun(tcpsrv_t *const pThis, nspoll_t **ppPoll)
 {
 	DEFiRet;
 	int i;
@@ -1008,14 +983,12 @@ finalize_it:
  * rgerhards, 2009-11-18
  */
 static rsRetVal
-Run(tcpsrv_t *pThis)
+Run(tcpsrv_t *const pThis)
 {
 	DEFiRet;
 	nspoll_t *pPoll = NULL;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
-
-	pThis->main_tid = pthread_self(); /* store our tid for sync wakeups */
 
 	if(pThis->iLstnCurr == 0) {
 		dbgprintf("tcpsrv: no listeneres at all (probably init error), terminating\n");
@@ -1789,6 +1762,7 @@ startWorkerPool(tcpsrv_t *const pThis)
 	pthread_attr_destroy(&sessThrdAttr);
 	pthread_sigmask(SIG_SETMASK, &sigSetSave, NULL);
 }
+
 
 /* destroy worker pool structures and wait for workers to terminate
  */

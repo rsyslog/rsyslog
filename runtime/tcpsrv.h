@@ -135,11 +135,9 @@ struct tcpsrv_s {
 	rsRetVal (*pOnSessAccept)(tcpsrv_t *, tcps_sess_t*);
 	rsRetVal (*OnSessConstructFinalize)(void*);
 	rsRetVal (*pOnSessDestruct)(void*);
-	pthread_t tid;	/* the worker's thread ID */
 	rsRetVal (*OnMsgReceive)(tcps_sess_t *, uchar *pszMsg, int iLenMsg); /* submit message callback */
 
 	/* support for multiple workers */
-	pthread_t main_tid;	/* thread ID of module main worker thread */
 	sbool bWrkrRunning; /* are the worker threads running? */
 	pthread_mutex_t wrkrMut;
 	pthread_cond_t wrkrIdle;
