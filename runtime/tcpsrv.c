@@ -595,43 +595,56 @@ doReceive(tcpsrv_t *const pThis, tcps_sess_t **ppSess, nspoll_t *const pPoll)
 	uchar *pszPeer;
 	int lenPeer;
 	int oserr = 0;
+	int do_run = 1;
+	int loop_ctr = 0;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	prop.GetString((*ppSess)->fromHostIP, &pszPeer, &lenPeer);
 	DBGPRINTF("netstream %p with new data from remote peer %s\n", (*ppSess)->pStrm, pszPeer);
-	/* Receive message */
-	iRet = pThis->pRcvData(*ppSess, buf, sizeof(buf), &iRcvd, &oserr);
-	switch(iRet) {
-	case RS_RET_CLOSED:
-		if(pThis->bEmitMsgOnClose) {
-			errno = 0;
-			LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p closed by remote "
-				"peer %s.\n", (*ppSess)->pStrm, pszPeer);
-		}
-		CHKiRet(closeSess(pThis, ppSess, pPoll));
-		break;
-	case RS_RET_RETRY:
-		/* we simply ignore retry - this is not an error, but we also have not received anything */
-		break;
-	case RS_RET_OK:
-		/* valid data received, process it! */
-		localRet = tcps_sess.DataRcvd(*ppSess, buf, iRcvd);
-		if(localRet != RS_RET_OK && localRet != RS_RET_QUEUE_FULL) {
-			/* in this case, something went awfully wrong.
-			 * We are instructed to terminate the session.
-			 */
-			LogError(oserr, localRet, "Tearing down TCP Session from %s", pszPeer);
+	while(do_run && loop_ctr < 500) {	/*  break happens in switch below! */
+		dbgprintf("RGER: doReceive loop iteration %d\n", loop_ctr++);
+
+		// TODO: STARVATION needs URGENTLY be considered!!! loop_ctr is one step into
+		// this direction, but we need to consider that in regard to edge triggered epoll
+
+		/* Receive message */
+		iRet = pThis->pRcvData(*ppSess, buf, sizeof(buf), &iRcvd, &oserr);
+		switch(iRet) {
+		case RS_RET_CLOSED:
+			if(pThis->bEmitMsgOnClose) {
+				errno = 0;
+				LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p closed by remote "
+					"peer %s.\n", (*ppSess)->pStrm, pszPeer);
+			}
 			CHKiRet(closeSess(pThis, ppSess, pPoll));
+			do_run = 0;
+			break;
+		case RS_RET_RETRY:
+			/* we simply ignore retry - this is not an error, but we also have not received anything */
+			do_run = 0;
+			break;
+		case RS_RET_OK:
+			/* valid data received, process it! */
+			localRet = tcps_sess.DataRcvd(*ppSess, buf, iRcvd);
+			if(localRet != RS_RET_OK && localRet != RS_RET_QUEUE_FULL) {
+				/* in this case, something went awfully wrong.
+				 * We are instructed to terminate the session.
+				 */
+				LogError(oserr, localRet, "Tearing down TCP Session from %s", pszPeer);
+				CHKiRet(closeSess(pThis, ppSess, pPoll));
+			}
+			break;
+		default:
+			LogError(oserr, iRet, "netstream session %p from %s will be closed due to error",
+					(*ppSess)->pStrm, pszPeer);
+			CHKiRet(closeSess(pThis, ppSess, pPoll));
+			do_run = 0;
+			break;
 		}
-		break;
-	default:
-		LogError(oserr, iRet, "netstream session %p from %s will be closed due to error",
-				(*ppSess)->pStrm, pszPeer);
-		CHKiRet(closeSess(pThis, ppSess, pPoll));
-		break;
 	}
 
 finalize_it:
+	dbgprintf("RGER: doReceive exit, iRet %d\n", iRet);
 	RETiRet;
 }
 
@@ -931,7 +944,6 @@ DoRun(tcpsrv_t *const pThis, nspoll_t **ppPoll)
 			CHKiRet(nspoll.SetDrvrName(pPoll, pThis->pszDrvrName));
 		localRet = nspoll.ConstructFinalize(pPoll);
 	}
-localRet = RS_RET_ERR;
 	if(localRet != RS_RET_OK) {
 		/* fall back to select */
 		DBGPRINTF("tcpsrv could not use epoll() interface, iRet=%d, using select()\n", localRet);
@@ -947,7 +959,7 @@ localRet = RS_RET_ERR;
 	/* Add the TCP listen sockets to the list of sockets to monitor */
 	for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
 		DBGPRINTF("Trying to add listener %d, pUsr=%p\n", i, pThis->ppLstn);
-		CHKiRet(nspoll.Ctl(pPoll, pThis->ppLstn[i], i, pThis->ppLstn, NSDPOLL_IN, NSDPOLL_ADD));
+		CHKiRet(nspoll.Ctl(pPoll, pThis->ppLstn[i], i, pThis->ppLstn, NSDPOLL_IN_LSTN, NSDPOLL_ADD));
 		DBGPRINTF("Added listener %d\n", i);
 	}
 

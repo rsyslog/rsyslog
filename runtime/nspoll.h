@@ -31,6 +31,14 @@
 /* and some mode specifiers for waiting on input/output */
 #define NSDPOLL_IN	1	/* EPOLLIN */
 #define NSDPOLL_OUT	2	/* EPOLLOUT */
+
+/* the NSDPOLL_IN_LSTN is just a temporary work-around: it enables us to
+ * use listeners in level-triggered mode while we migrate toward edge-triggered
+ * mode. Once the refactoring is finish and everything works with edge triggered,
+ * we can AND SHALL remove it! <-- TODO
+ */
+#define NSDPOLL_IN_LSTN	128	/* EPOLLIN for listeners! */
+
 /* next is 4, 8, 16, ... - must be bit values, as they are ored! */
 
 /* the nspoll object */

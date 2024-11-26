@@ -793,9 +793,13 @@ Rcv(nsd_t *pNsd, uchar *pRcvBuf, ssize_t *pLenBuf, int *const oserr)
 	if(*pLenBuf == 0) {
 		ABORT_FINALIZE(RS_RET_CLOSED);
 	} else if (*pLenBuf < 0) {
-		rs_strerror_r(errno, errStr, sizeof(errStr));
-		dbgprintf("error during recv on NSD %p: %s\n", pNsd, errStr);
-		ABORT_FINALIZE(RS_RET_RCV_ERR);
+		if(*oserr == EINTR || *oserr == EAGAIN) {
+			ABORT_FINALIZE(RS_RET_RETRY);
+		} else {
+			rs_strerror_r(errno, errStr, sizeof(errStr));
+			dbgprintf("error during recv on NSD %p: %s\n", pNsd, errStr);
+			ABORT_FINALIZE(RS_RET_RCV_ERR);
+		}
 	}
 
 finalize_it:
