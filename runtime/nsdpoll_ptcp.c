@@ -61,7 +61,8 @@ DEFobjCurrIf(glbl)
  * rgerhards, 2009-11-18
  */
 static rsRetVal
-addEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, int mode, nsd_ptcp_t *pSock, nsdpoll_epollevt_lst_t **pEvtLst)
+addEvent(nsdpoll_ptcp_t *const pThis, const int id, void *const pUsr, const int mode,
+	nsd_ptcp_t *const pSock, nsdpoll_epollevt_lst_t **pEvtLst)
 {
 	nsdpoll_epollevt_lst_t *pNew;
 	DEFiRet;
@@ -71,7 +72,11 @@ addEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, int mode, nsd_ptcp_t *pSock,
 	pNew->pUsr = pUsr;
 	pNew->pSock = pSock;
 	pNew->event.events = 0; /* TODO: at some time we should be able to use EPOLLET */
-	if(mode & NSDPOLL_IN)
+	if(!(mode & NSDPOLL_IN_LSTN))  {
+		/* right now, we refactor only regular data sessions in edge triggered mode */
+		pNew->event.events = EPOLLET; /* TODO: at some time we should be able to use EPOLLET */
+	}
+	if((mode & NSDPOLL_IN) || (mode & NSDPOLL_IN_LSTN))
 		pNew->event.events |= EPOLLIN;
 	if(mode & NSDPOLL_OUT)
 		pNew->event.events |= EPOLLOUT;
@@ -178,7 +183,9 @@ ENDobjDestruct(nsdpoll_ptcp)
 
 /* Modify socket set */
 static rsRetVal
-Ctl(nsdpoll_t *pNsdpoll, nsd_t *pNsd, int id, void *pUsr, int mode, int op) {
+Ctl(nsdpoll_t *const pNsdpoll, nsd_t *const pNsd, const int id, void *const pUsr,
+	const int mode, const int op)
+{
 	nsdpoll_ptcp_t *pThis = (nsdpoll_ptcp_t*) pNsdpoll;
 	nsd_ptcp_t *pSock = (nsd_ptcp_t*) pNsd;
 	nsdpoll_epollevt_lst_t *pEventLst;
@@ -315,6 +322,3 @@ static void dummy(void) {}
 #endif
 
 #endif /* #ifdef HAVE_EPOLL_CREATE this module requires epoll! */
-
-/* vi:set ai:
- */
