@@ -623,6 +623,7 @@ addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	CHKiRet(tcpsrv.SetCBOpenLstnSocks(pOurTcpsrv, doOpenLstnSocks));
 	CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
 	CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
+	CHKiRet(tcpsrv.SetDrvrName(pOurTcpsrv, (uchar*) "ptcp")); /* imdiag always uses plain tcp */
 	CHKiRet(tcpsrv.SetDrvrMode(pOurTcpsrv, iStrmDrvrMode));
 	CHKiRet(tcpsrv.SetOnMsgReceive(pOurTcpsrv, OnMsgReceived));
 	/* now set optional params, but only if they were actually configured */
