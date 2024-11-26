@@ -189,29 +189,23 @@ Ctl(nsdpoll_t *const pNsdpoll, nsd_t *const pNsd, const int id, void *const pUsr
 	nsdpoll_ptcp_t *pThis = (nsdpoll_ptcp_t*) pNsdpoll;
 	nsd_ptcp_t *pSock = (nsd_ptcp_t*) pNsd;
 	nsdpoll_epollevt_lst_t *pEventLst;
-	int errSave;
-	char errStr[512];
 	DEFiRet;
 
 	if(op == NSDPOLL_ADD) {
 		dbgprintf("adding nsdpoll entry %d/%p, sock %d\n", id, pUsr, pSock->sock);
 		CHKiRet(addEvent(pThis, id, pUsr, mode, pSock, &pEventLst));
 		if(epoll_ctl(pThis->efd, EPOLL_CTL_ADD,  pSock->sock, &pEventLst->event) < 0) {
-			errSave = errno;
-			rs_strerror_r(errSave, errStr, sizeof(errStr));
-			LogError(errSave, RS_RET_ERR_EPOLL_CTL,
-				"epoll_ctl failed on fd %d, id %d/%p, op %d with %s\n",
-				pSock->sock, id, pUsr, mode, errStr);
+			LogError(errno, RS_RET_ERR_EPOLL_CTL,
+				"epoll_ctl failed on fd %d, id %d/%p, op %d\n",
+				pSock->sock, id, pUsr, mode);
 		}
 	} else if(op == NSDPOLL_DEL) {
 		dbgprintf("removing nsdpoll entry %d/%p, sock %d\n", id, pUsr, pSock->sock);
 		CHKiRet(unlinkEvent(pThis, id, pUsr, &pEventLst));
 		if(epoll_ctl(pThis->efd, EPOLL_CTL_DEL, pSock->sock, &pEventLst->event) < 0) {
-			errSave = errno;
-			rs_strerror_r(errSave, errStr, sizeof(errStr));
-			LogError(errSave, RS_RET_ERR_EPOLL_CTL,
-				"epoll_ctl failed on fd %d, id %d/%p, op %d with %s\n",
-				pSock->sock, id, pUsr, mode, errStr);
+			LogError(errno, RS_RET_ERR_EPOLL_CTL,
+				"epoll_ctl failed on fd %d, id %d/%p, op %d\n",
+				pSock->sock, id, pUsr, mode);
 			ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
 		}
 		CHKiRet(delEvent(&pEventLst));
