@@ -4,7 +4,7 @@
  * implemented by concrete classes. As such, no nsd data type itself
  * is defined.
  *
- * Copyright 2008-2012 Adiscon GmbH.
+ * Copyright 2008-2024 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -127,9 +127,9 @@ ENDinterface(nsdsel)
 BEGINinterface(nsdpoll) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(nsdpoll_t **ppThis);
 	rsRetVal (*Destruct)(nsdpoll_t **ppThis);
-	rsRetVal (*Ctl)(nsdpoll_t *pNsdpoll, nsd_t *pNsd, int id, void *pUsr, int mode, int op);
-	rsRetVal (*Wait)(nsdpoll_t *pNsdpoll, int timeout, int *numReady, nsd_epworkset_t workset[]);
+	rsRetVal (*Ctl)(nsdpoll_t *pNsdpoll, nsd_t *pNsd, int id, void *pUsr, int mode, int op,nsd_epworkset_t **);
+	rsRetVal (*Wait)(nsdpoll_t *pNsdpoll, int timeout, int *numReady, nsd_epworkset_t *workset[]);
 ENDinterface(nsdpoll)
-#define nsdpollCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
+#define nsdpollCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
 
 #endif /* #ifndef INCLUDED_NSD_H */
