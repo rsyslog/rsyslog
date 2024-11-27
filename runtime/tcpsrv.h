@@ -65,6 +65,7 @@ struct tcpsrv_wrkrInfo_s {
 	pthread_cond_t run;
 	int idx;
 	tcpsrv_t *pSrv; /* pSrv == NULL -> idle */
+	struct nsd_epworkset_s *pWorksetItem;
 	nspoll_t *pPoll;
 	void *pUsr;
 	sbool enabled;
@@ -107,6 +108,7 @@ struct tcpsrv_s {
 	int iLstnCurr;		/**< max nbr of listeners currently supported */
 	netstrm_t **ppLstn;	/**< our netstream listeners */
 	tcpLstnPortList_t **ppLstnPort; /**< pointer to relevant listen port description */
+	nsd_epworkset_t  **ppLstnWorksetPtr; /**< pointer to workset item that needs to be freed on termination */
 	int iLstnMax;		/**< max number of listeners supported */
 	int iSessMax;		/**< max number of sessions supported */
 	uchar dfltTZ[8];	/**< default TZ if none in timestamp; '\0' =No Default */
