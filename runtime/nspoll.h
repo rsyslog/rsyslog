@@ -56,13 +56,13 @@ BEGINinterface(nspoll) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(nspoll_t **ppThis);
 	rsRetVal (*ConstructFinalize)(nspoll_t *pThis);
 	rsRetVal (*Destruct)(nspoll_t **ppThis);
-	rsRetVal (*Wait)(nspoll_t *pNsdpoll, int timeout, int *numEntries, nsd_epworkset_t workset[]);
-	rsRetVal (*Ctl)(nspoll_t *pNsdpoll, netstrm_t *pStrm, int id, void *pUsr, int mode, int op);
+	rsRetVal (*Wait)(nspoll_t *pNsdpoll, int timeout, int *numEntries, nsd_epworkset_t *workset[]);
+	rsRetVal (*Ctl)(nspoll_t *pNsdpoll, netstrm_t *pStrm, int id, void *pUsr, int mode, int op, nsd_epworkset_t **ppWorksetStore);
 	rsRetVal (*IsEPollSupported)(void); /* static method */
 	/* v3 - 2013-09-17 by rgerhards */
 	rsRetVal (*SetDrvrName)(nspoll_t *pThis, uchar *name);
 ENDinterface(nspoll)
-#define nspollCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
+#define nspollCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
 /* interface change in v2 is that wait supports multiple return objects */
 
 /* prototypes */
