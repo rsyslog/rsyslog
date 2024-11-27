@@ -128,7 +128,7 @@ finalize_it:
 /* Carries out the actual wait (all done in lower layers)
  */
 static rsRetVal
-Wait(nspoll_t *pThis, int timeout, int *numEntries, nsd_epworkset_t workset[]) {
+Wait(nspoll_t *pThis, int timeout, int *numEntries, nsd_epworkset_t *workset[]) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nspoll);
 	assert(workset != NULL);
@@ -164,10 +164,10 @@ finalize_it:
  * rgerhards, 2009-11-18
  */
 static rsRetVal
-Ctl(nspoll_t *pThis, netstrm_t *pStrm, int id, void *pUsr, int mode, int op) {
+Ctl(nspoll_t *pThis, netstrm_t *pStrm, int id, void *pUsr, int mode, int op, nsd_epworkset_t **ppWorksetStore) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nspoll);
-	iRet = pThis->Drvr.Ctl(pThis->pDrvrData, pStrm->pDrvrData, id, pUsr, mode, op);
+	iRet = pThis->Drvr.Ctl(pThis->pDrvrData, pStrm->pDrvrData, id, pUsr, mode, op, ppWorksetStore);
 	RETiRet;
 }
 

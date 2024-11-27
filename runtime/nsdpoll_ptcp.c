@@ -61,6 +61,34 @@ DEFobjCurrIf(glbl)
  * rgerhards, 2009-11-18
  */
 static rsRetVal
+addEvent(struct epoll_event *const event, const int id, void *const pUsr, const int mode,
+	nsd_epworkset_t **ppWorksetStore)
+{
+	nsd_epworkset_t *pWorksetItem;
+	DEFiRet;
+
+	CHKmalloc(pWorksetItem = (nsd_epworkset_t*) calloc(1, sizeof(nsd_epworkset_t)));
+	pWorksetItem->id = id;
+	pWorksetItem->pUsr = pUsr;
+	event->events = 0; /* TODO: at some time we should be able to use EPOLLET */
+	if(!(mode & NSDPOLL_IN_LSTN))  {
+		/* right now, we refactor only regular data sessions in edge triggered mode */
+		event->events = EPOLLET; /* TODO: at some time we should be able to use EPOLLET */
+	}
+	if((mode & NSDPOLL_IN) || (mode & NSDPOLL_IN_LSTN))
+		event->events |= EPOLLIN;
+	if(mode & NSDPOLL_OUT)
+		event->events |= EPOLLOUT;
+	event->data.ptr = (void*) pWorksetItem;
+	if(ppWorksetStore != NULL) {
+		*ppWorksetStore = (void*) pWorksetItem;
+	}
+
+finalize_it:
+	RETiRet;
+}
+#if 0
+static rsRetVal
 addEvent(nsdpoll_ptcp_t *const pThis, const int id, void *const pUsr, const int mode,
 	nsd_ptcp_t *const pSock, nsdpoll_epollevt_lst_t **pEvtLst)
 {
@@ -90,8 +118,10 @@ addEvent(nsdpoll_ptcp_t *const pThis, const int id, void *const pUsr, const int 
 finalize_it:
 	RETiRet;
 }
+#endif
 
 
+#if 0
 /* find and unlink the entry identified by id/pUsr from the list.
  * rgerhards, 2009-11-23
  */
@@ -135,6 +165,7 @@ delEvent(nsdpoll_epollevt_lst_t **ppEvtLst) {
 	*ppEvtLst = NULL;
 	RETiRet;
 }
+#endif
 
 
 /* -END--------------------------- helpers for event list ------------------------------------ */
@@ -174,7 +205,7 @@ CODESTARTobjDestruct(nsdpoll_ptcp)
 		for(node = pThis->pRoot ; node != NULL ; node = nextnode) {
 			nextnode = node->pNext;
 			dbgprintf("nsdpoll_ptcp destruct, need to destruct node %p\n", node);
-			delEvent(&node);
+			//delEvent(&node);
 		}
 	}
 	pthread_mutex_destroy(&pThis->mutEvtLst);
@@ -184,31 +215,32 @@ ENDobjDestruct(nsdpoll_ptcp)
 /* Modify socket set */
 static rsRetVal
 Ctl(nsdpoll_t *const pNsdpoll, nsd_t *const pNsd, const int id, void *const pUsr,
-	const int mode, const int op)
+	const int mode, const int op, nsd_epworkset_t **ppWorksetStore)
 {
 	nsdpoll_ptcp_t *pThis = (nsdpoll_ptcp_t*) pNsdpoll;
 	nsd_ptcp_t *pSock = (nsd_ptcp_t*) pNsd;
-	nsdpoll_epollevt_lst_t *pEventLst;
+	//nsdpoll_epollevt_lst_t *pEventLst;
+	struct epoll_event event;
 	DEFiRet;
 
 	if(op == NSDPOLL_ADD) {
 		dbgprintf("adding nsdpoll entry %d/%p, sock %d\n", id, pUsr, pSock->sock);
-		CHKiRet(addEvent(pThis, id, pUsr, mode, pSock, &pEventLst));
-		if(epoll_ctl(pThis->efd, EPOLL_CTL_ADD,  pSock->sock, &pEventLst->event) < 0) {
+		CHKiRet(addEvent(&event, id, pUsr, mode, ppWorksetStore));
+		if(epoll_ctl(pThis->efd, EPOLL_CTL_ADD,  pSock->sock, &event) < 0) {
 			LogError(errno, RS_RET_ERR_EPOLL_CTL,
 				"epoll_ctl failed on fd %d, id %d/%p, op %d\n",
 				pSock->sock, id, pUsr, mode);
 		}
 	} else if(op == NSDPOLL_DEL) {
 		dbgprintf("removing nsdpoll entry %d/%p, sock %d\n", id, pUsr, pSock->sock);
-		CHKiRet(unlinkEvent(pThis, id, pUsr, &pEventLst));
-		if(epoll_ctl(pThis->efd, EPOLL_CTL_DEL, pSock->sock, &pEventLst->event) < 0) {
+		//CHKiRet(unlinkEvent(pThis, id, pUsr, &pEventLst));
+		if(epoll_ctl(pThis->efd, EPOLL_CTL_DEL, pSock->sock, NULL) < 0) {
 			LogError(errno, RS_RET_ERR_EPOLL_CTL,
 				"epoll_ctl failed on fd %d, id %d/%p, op %d\n",
 				pSock->sock, id, pUsr, mode);
 			ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
 		}
-		CHKiRet(delEvent(&pEventLst));
+		//CHKiRet(delEvent(&pEventLst));
 	} else {
 		dbgprintf("program error: invalid NSDPOLL_mode %d - ignoring request\n", op);
 		ABORT_FINALIZE(RS_RET_ERR);
@@ -227,16 +259,16 @@ finalize_it:
  * rgerhards, 2009-11-18
  */
 static rsRetVal
-Wait(nsdpoll_t *pNsdpoll, int timeout, int *numEntries, nsd_epworkset_t workset[])
+Wait(nsdpoll_t *pNsdpoll, int timeout, int *numEntries, nsd_epworkset_t *pWorkset[])
 {
 	nsdpoll_ptcp_t *pThis = (nsdpoll_ptcp_t*) pNsdpoll;
-	nsdpoll_epollevt_lst_t *pOurEvt;
+	//nsdpoll_epollevt_lst_t *pOurEvt;
 	struct epoll_event event[128];
 	int nfds;
 	int i;
 	DEFiRet;
 
-	assert(workset != NULL);
+	assert(pWorkset != NULL);
 
 	if(*numEntries > 128)
 		*numEntries = 128;
@@ -255,10 +287,11 @@ Wait(nsdpoll_t *pNsdpoll, int timeout, int *numEntries, nsd_epworkset_t workset[
 
 	/* we got valid events, so tell the caller... */
 	DBGPRINTF("epoll returned %d entries\n", nfds);
+	//nsd_epworkset_t *pWorksetItem;
 	for(i = 0 ; i < nfds ; ++i) {
-		pOurEvt = (nsdpoll_epollevt_lst_t*) event[i].data.ptr;
-		workset[i].id = pOurEvt->id;
-		workset[i].pUsr = pOurEvt->pUsr;
+		pWorkset[i] = (nsd_epworkset_t*) event[i].data.ptr;
+		//workset[i].id = pWorksetItem->id;
+		//workset[i].pUsr = pWorksetItem->pUsr;
 	}
 	*numEntries = nfds;
 
