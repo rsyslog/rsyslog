@@ -5,7 +5,7 @@
  * that loop somehow and I've done that by moving the typedefs
  * into this file here.
  *
- * Copyright 2008-2019 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2024 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -74,7 +74,7 @@ struct objInfo_s {
 	size_t lenID; /* length of the ID string */
 	int iObjVers;
 	uchar *pszName;
-	rsRetVal (*objMethods[OBJ_NUM_METHODS])();
+	rsRetVal (*objMethods[OBJ_NUM_METHODS])(void*, ...);
 	rsRetVal (*QueryIF)(interface_t*);
 	struct modInfo_s *pModInfo;
 };

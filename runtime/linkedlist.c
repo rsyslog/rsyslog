@@ -43,7 +43,7 @@
  * pKey destructor may be zero to take care of non-keyed lists.
  */
 rsRetVal llInit(linkedList_t *pThis, rsRetVal (*pEltDestructor)(void*), rsRetVal (*pKeyDestructor)(void*),
-int (*pCmpOp)(void*,void*))
+	int (*pCmpOp)(void*,void*))
 {
 	assert(pThis != NULL);
 	assert(pEltDestructor != NULL);

@@ -888,7 +888,7 @@ destructAllActions(rsconf_t *conf)
 
 	CHKiRet(llDestroy(&(conf->rulesets.llRulesets)));
 	CHKiRet(llInit(&(conf->rulesets.llRulesets), rulesetDestructForLinkedList,
-		rulesetKeyDestruct, strcasecmp));
+		rulesetKeyDestruct, (int (*)(void*, void*)) strcasecmp));
 	conf->rulesets.pDflt = NULL;
 
 finalize_it:

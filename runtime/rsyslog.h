@@ -52,7 +52,9 @@
 		 * being emitted where nobody knows what the mean and why they appear :-(
 		 */
 		#pragma GCC diagnostic ignored "-Wjump-misses-init"
-	#endif /* if __GNUC__ >= 8 */
+		#pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
+		#pragma GCC diagnostic ignored "-Wcast-function-type"
+	#endif
 
 	#if defined(__clang__)
 		#define ATTR_NO_SANITIZE_UNDEFINED __attribute__((no_sanitize("undefined")))
