@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2412.0 (aka 2024.12) 2024-12-xx
+Scheduled Release 8.2412.0 (aka 2024.12) 2024-12-03
 - 2024-12-02: rainerscript bugfix: do not try to call a function if it does not exist
   This could previously cause a segfault when the function was called.
   Thanks to Attila Lakatos for the patch.
