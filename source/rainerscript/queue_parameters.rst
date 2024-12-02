@@ -259,7 +259,7 @@ queue.discardMark
    :widths: auto
    :class: parameter-table
 
-   "integer", "80% of queue.size", "no", "``$ActionQueueDiscardMark``"
+   "integer", "98% of queue.size", "no", "``$ActionQueueDiscardMark``"
 
 Specifies the threshold at which rsyslog begins to discard less important
 messages. To define which messages should be discarded use the
