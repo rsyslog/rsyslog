@@ -1,6 +1,6 @@
 /* Definitions for tcpsrv class.
  *
- * Copyright 2008-2022 Adiscon GmbH.
+ * Copyright 2008-2024 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -60,6 +60,19 @@ struct tcpLstnPortList_s {
 	tcpLstnPortList_t *pNext;	/**< next port or NULL */
 };
 
+struct tcpsrv_wrkrInfo_s {
+	pthread_t tid;	/* the worker's thread ID */
+	pthread_cond_t run;
+	int idx;
+	tcpsrv_t *pSrv; /* pSrv == NULL -> idle */
+	struct nsd_epworkset_s *pWorksetItem;
+	nspoll_t *pPoll;
+	void *pUsr;
+	sbool enabled;
+	long long unsigned numCalled;	/* how often was this called */
+	tcpsrv_t *mySrv;
+};
+
 #define TCPSRV_NO_ADDTL_DELIMITER -1 /* specifies that no additional delimiter is to be used in TCP framing */
 
 /* the tcpsrv object */
@@ -95,6 +108,7 @@ struct tcpsrv_s {
 	int iLstnCurr;		/**< max nbr of listeners currently supported */
 	netstrm_t **ppLstn;	/**< our netstream listeners */
 	tcpLstnPortList_t **ppLstnPort; /**< pointer to relevant listen port description */
+	nsd_epworkset_t  **ppLstnWorksetPtr; /**< pointer to workset item that needs to be freed on termination */
 	int iLstnMax;		/**< max number of listeners supported */
 	int iSessMax;		/**< max number of sessions supported */
 	uchar dfltTZ[8];	/**< default TZ if none in timestamp; '\0' =No Default */
@@ -123,6 +137,14 @@ struct tcpsrv_s {
 	rsRetVal (*OnSessConstructFinalize)(void*);
 	rsRetVal (*pOnSessDestruct)(void*);
 	rsRetVal (*OnMsgReceive)(tcps_sess_t *, uchar *pszMsg, int iLenMsg); /* submit message callback */
+
+	/* support for multiple workers */
+	sbool bWrkrRunning; /* are the worker threads running? */
+	pthread_mutex_t wrkrMut;
+	pthread_cond_t wrkrIdle;
+	int wrkrMax;
+	int wrkrRunning;
+	struct tcpsrv_wrkrInfo_s wrkrInfo[4];
 };
 
 
