@@ -1,5 +1,17 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2412.0 (aka 2024.12) 2024-12-xx
+- 2024-12-02: rainerscript bugfix: do not try to call a function if it does not exist
+  This could previously cause a segfault when the function was called.
+  Thanks to Attila Lakatos for the patch.
+- 2024-12-02: Fix legacy $ActionQueueDiscardMark parameter
+  If the $ActionQueueSize legacy parameter was configured
+  with a much value higher than the default, the queueDiscardMark
+  option was not automatically adjusted to represent 98% of
+  the actual queue size. This caused a misalignment issue,
+  which does not occur when using the RainerScript syntax.
+  Thanks to Attila Lakatos for the patch.
+  Note: We usually do NOT change legacy parameters, but in this case it makes
+  sense to adjust to recent developments.
 - 2024-11-25: improvements in CI system
   added some support for Ubuntu 24.04 - stil more work to do
 - 2024-11-25: small nitfixes
