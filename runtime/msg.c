@@ -5468,7 +5468,7 @@ BEGINObjClassInit(msg, 1, OBJ_IS_CORE_MODULE)
 	CHKiRet(objUse(var, CORE_COMPONENT));
 
 	/* set our own handlers */
-	OBJSetMethodHandler(objMethod_SERIALIZE, MsgSerialize);
+	OBJSetMethodHandler(objMethod_SERIALIZE, (rsRetVal (*)(void*)) MsgSerialize);
 	/* some more inits */
 #	ifdef HAVE_MALLOC_TRIM
 	INIT_ATOMIC_HELPER_MUT(mutTrimCtr);

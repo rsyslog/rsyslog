@@ -116,7 +116,7 @@ static rsRetVal FindObjInfo(const char *szObjName, objInfo_t **ppInfo);
  * jump table without any NULL pointer checks - which gains quite
  * some performance. -- rgerhards, 2008-01-04
  */
-static rsRetVal objInfoNotImplementedDummy(void __attribute__((unused)) *pThis)
+static rsRetVal objInfoNotImplementedDummy(obj_t __attribute__((unused)) *pThis)
 {
 	return RS_RET_NOT_IMPLEMENTED;
 }
@@ -125,7 +125,7 @@ static rsRetVal objInfoNotImplementedDummy(void __attribute__((unused)) *pThis)
  * must be provided an objInfo_t pointer.
  */
 #define objInfoIsImplemented(pThis, method) \
-	(pThis->objMethods[method] != objInfoNotImplementedDummy)
+	(pThis->objMethods[method] != (cslCmdHdlr_func_t) objInfoNotImplementedDummy)
 
 /* construct an object Info object. Each class shall do this on init. The
  * resulting object shall be cached during the lifetime of the class and each
@@ -154,10 +154,10 @@ InfoConstruct(objInfo_t **ppThis, uchar *pszID, int iObjVers,
 	pThis->QueryIF = pQueryIF;
 	pThis->pModInfo = pModInfo;
 
-	pThis->objMethods[0] = pConstruct;
-	pThis->objMethods[1] = pDestruct;
+	pThis->objMethods[0] = (rsRetVal (*)()) pConstruct;
+	pThis->objMethods[1] = (rsRetVal (*)()) pDestruct;
 	for(i = 2 ; i < OBJ_NUM_METHODS ; ++i) {
-		pThis->objMethods[i] = objInfoNotImplementedDummy;
+		pThis->objMethods[i] = (rsRetVal (*)()) objInfoNotImplementedDummy;
 	}
 
 	*ppThis = pThis;
@@ -192,7 +192,7 @@ InfoDestruct(objInfo_t **ppThis)
 static rsRetVal
 InfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pHandler)(void*))
 {
-	pThis->objMethods[objMethod] = pHandler;
+	pThis->objMethods[objMethod] = (rsRetVal (*)()) pHandler;
 	return RS_RET_OK;
 }
 
@@ -786,7 +786,7 @@ finalize_it:
  * of the trailer. Header must already have been processed.
  * rgerhards, 2008-01-11
  */
-static rsRetVal objDeserializeProperties(obj_t *pObj, rsRetVal (*objSetProperty)(), strm_t *pStrm)
+static rsRetVal objDeserializeProperties(obj_t *pObj, rsRetVal (*objSetProperty)(obj_t*, var_t*), strm_t *pStrm)
 {
 	DEFiRet;
 	var_t *pVar = NULL;
@@ -867,7 +867,8 @@ Deserialize(void *ppObj, uchar *pszTypeExpected, strm_t *pStrm, rsRetVal (*fFixu
 	CHKiRet(pObjInfo->objMethods[objMethod_CONSTRUCT](&pObj));
 
 	/* we got the object, now we need to fill the properties */
-	CHKiRet(objDeserializeProperties(pObj, pObjInfo->objMethods[objMethod_SETPROPERTY], pStrm));
+	CHKiRet(objDeserializeProperties(pObj,
+		(rsRetVal (*)(obj_t*, var_t*)) pObjInfo->objMethods[objMethod_SETPROPERTY], pStrm));
 
 	/* check if we need to call a fixup function that modifies the object
 	 * before it is finalized. -- rgerhards, 2008-01-13
@@ -898,8 +899,8 @@ finalize_it:
  */
 rsRetVal
 objDeserializeWithMethods(void *ppObj, uchar *pszTypeExpected, int lenTypeExpected, strm_t *pStrm,
-rsRetVal (*fFixup)(obj_t*,void*), void *pUsr, rsRetVal (*objConstruct)(), rsRetVal (*objConstructFinalize)(),
-rsRetVal (*objDeserialize)())
+	rsRetVal (*fFixup)(obj_t*,void*), void *pUsr, rsRetVal (*objConstruct)(obj_t**), rsRetVal (*objConstructFinalize)(obj_t*),
+	rsRetVal (*objDeserialize)(obj_t*, strm_t*))
 {
 	DEFiRet;
 	rsRetVal iRetLocal;
@@ -1007,7 +1008,8 @@ DeserializePropBag(obj_t *pObj, strm_t *pStrm)
 	CHKiRet(FindObjInfo((char*)cstrGetSzStrNoNULL(pstrID), &pObjInfo));
 
 	/* we got the object, now we need to fill the properties */
-	CHKiRet(objDeserializeProperties(pObj, pObjInfo->objMethods[objMethod_SETPROPERTY], pStrm));
+	CHKiRet(objDeserializeProperties(pObj,
+		(rsRetVal (*)(obj_t*, var_t*)) pObjInfo->objMethods[objMethod_SETPROPERTY], pStrm));
 
 finalize_it:
 	if(pstrID != NULL)

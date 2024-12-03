@@ -660,7 +660,7 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 
 /* the following block is to be added for modules that support v2
- * module global parameters [module(...)]
+ * module global parameters [module()]
  */
 #define CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES \
 	  else if(!strcmp((char*) name, "setModCnf")) {\
@@ -791,11 +791,11 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
  */
 #define BEGINmodInit(uniqName) \
 rsRetVal __attribute__((unused)) modInit##uniqName(int iIFVersRequested __attribute__((unused)), \
-int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), \
-modInfo_t __attribute__((unused)) *pModInfo);\
+	int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)(void*, ...)), \
+	modInfo_t __attribute__((unused)) *pModInfo);\
 rsRetVal __attribute__((unused)) modInit##uniqName(int iIFVersRequested __attribute__((unused)), \
-int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), \
-modInfo_t __attribute__((unused)) *pModInfo)\
+	int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)(void*, ...)), \
+	modInfo_t __attribute__((unused)) *pModInfo)\
 {\
 	DEFiRet; \
 	rsRetVal (*pObjGetObjInterface)(obj_if_t *pIf);

@@ -26,7 +26,7 @@
 
 /* prototypes */
 rsRetVal modInitFile(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(),
-	rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), modInfo_t*);
+	rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)(void*, ...)), modInfo_t*);
 
 /* the define below is dirty, but we need it for ompipe integration. There is no
  * other way to have the functionality (well, one way would be to go through the
@@ -34,5 +34,3 @@ rsRetVal modInitFile(int iIFVersRequested __attribute__((unused)), int *ipIFVers
  */
 extern uchar	*pszFileDfltTplName;
 #endif /* #ifndef OMFILE_H_INCLUDED */
-/* vi:set ai:
- */
