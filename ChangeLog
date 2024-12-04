@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2502.0 (aka 2024.12) 2025-02-??
+- 2024-12-04: omazureeventhubs bugfix: URL escaping
+  Some characters were not properly escaped, leading to malfunction on submission.
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2412.0 (aka 2024.12) 2024-12-03
 - 2024-12-02: rainerscript bugfix: do not try to call a function if it does not exist
