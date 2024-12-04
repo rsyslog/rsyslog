@@ -228,6 +228,29 @@ BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars
 ENDinitConfVars
 
+/* Helper function to URL encode a string */
+static char* url_encode(const char *str) {
+	if(str == NULL) return NULL;
+
+	char *encoded = malloc(strlen(str) * 3 + 1); // Worst case: each char needs %XX
+	if(encoded == NULL) return NULL;
+
+	char *p = encoded;
+	while(*str) {
+		// Manually check if the character is alphanumeric
+		if((*str >= 'a' && *str <= 'z') || (*str >= 'A' && *str <= 'Z') || (*str >= '0' && *str <= '9') ||
+			*str == '-' || *str == '_' || *str == '.' || *str == '~') {
+			*p++ = *str;
+		} else {
+			sprintf(p, "%%%02X", (unsigned char)*str);
+			p += 3;
+		}
+		str++;
+	}
+	*p = '\0';
+	return encoded;
+}
+
 static void ATTR_NONNULL(1)
 protonmsg_entry_destruct(protonmsg_entry *const __restrict__ fmsgEntry) {
 	free(fmsgEntry->MsgID);
@@ -895,14 +918,29 @@ CODESTARTnewActInst
 			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 		}
 
+		// URL encode the key name and key
+		char *encoded_key_name = url_encode((char*)pData->azure_key_name);
+		char *encoded_key = url_encode((char*)pData->azure_key);
+		if(encoded_key_name == NULL || encoded_key == NULL) {
+			free(encoded_key_name);
+			free(encoded_key);
+			LogError(0, RS_RET_ERR, "omazureeventhubs: failed to encode credentials");
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+
 		// Create amqps URL from parameters
 		char szAddress[1024];
-		sprintf(szAddress, "amqps://%s:%s@%s:%s/%s",
-			pData->azure_key_name,
-			pData->azure_key,
+		snprintf(szAddress, sizeof(szAddress), "amqps://%s:%s@%s:%s/%s",
+			encoded_key_name,
+			encoded_key,
 			pData->azurehost,
 			pData->azureport,
 			pData->container);
+
+		// Free encoded strings
+		free(encoded_key_name);
+		free(encoded_key);
+
 		CHKmalloc(pData->amqp_address = (uchar*) strdup(szAddress));
 	} else {
 		// Free if set first
