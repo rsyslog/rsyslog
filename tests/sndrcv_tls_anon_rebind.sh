@@ -3,6 +3,7 @@
 # rgerhards, 2011-04-04
 # This file is part of the rsyslog project, released  under GPLv3
 . ${srcdir:=.}/diag.sh init
+skip_platform "SunOS"  "Test fails with environment-induced errors, which we cannot solve"
 
 export NUMMESSAGES=25000 #25000
 
