@@ -305,8 +305,8 @@ static int init_annotationmatch(annotation_match_t *match, struct cnfarray *ar) 
 	DEFiRet;
 
 	match->nmemb = ar->nmemb;
-	CHKmalloc(match->patterns = calloc(sizeof(uchar*), match->nmemb));
-	CHKmalloc(match->regexps = calloc(sizeof(regex_t), match->nmemb));
+	CHKmalloc(match->patterns = calloc(match->nmemb, sizeof(uchar*)));
+	CHKmalloc(match->regexps = calloc(match->nmemb, sizeof(regex_t)));
 	for(int jj = 0; jj < ar->nmemb; ++jj) {
 		int rexret = 0;
 		match->patterns[jj] = (uchar*)es_str2cstr(ar->arr[jj], NULL);
@@ -334,7 +334,7 @@ static int copy_annotationmatch(annotation_match_t *src, annotation_match_t *des
 
 	dest->nmemb = src->nmemb;
 	CHKmalloc(dest->patterns = malloc(sizeof(uchar*) * dest->nmemb));
-	CHKmalloc(dest->regexps = calloc(sizeof(regex_t), dest->nmemb));
+	CHKmalloc(dest->regexps = calloc(dest->nmemb, sizeof(regex_t)));
 	for(int jj = 0 ; jj < src->nmemb ; ++jj) {
 		CHKmalloc(dest->patterns[jj] = (uchar*)strdup((char *)src->patterns[jj]));
 		/* assumes was already successfully compiled */
