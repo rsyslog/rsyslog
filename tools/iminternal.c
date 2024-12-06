@@ -163,7 +163,7 @@ finalize_it:
 rsRetVal modInitIminternal(void)
 {
 	DEFiRet;
-	iRet = llInit(&llMsgs, iminternalDestruct, NULL, NULL);
+	iRet = llInit(&llMsgs, (rsRetVal (*)(void*)) iminternalDestruct, NULL, NULL);
 	RETiRet;
 }
 

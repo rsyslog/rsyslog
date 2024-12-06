@@ -723,46 +723,46 @@ int *permitted)
 static rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine)
 {
 	DEFiRet;
-	rsRetVal (*pHdlr)() = NULL;
+	rsRetVal (*pHdlr)(void *, ...) = NULL;
 	assert(pThis != NULL);
 	assert(ppConfLine != NULL);
 
 	switch(pThis->eType) {
 	case eCmdHdlrCustomHandler:
-		pHdlr = doCustomHdlr;
+		pHdlr = (rsRetVal (*)(void *, ...)) doCustomHdlr;
 		break;
 	case eCmdHdlrUID:
-		pHdlr = doGetUID;
+		pHdlr = (rsRetVal (*)(void *, ...)) doGetUID;
 		break;
 	case eCmdHdlrGID:
-		pHdlr = doGetGID;
+		pHdlr = (rsRetVal (*)(void *, ...)) doGetGID;
 		break;
 	case eCmdHdlrBinary:
-		pHdlr = doBinaryOptionLine;
+		pHdlr = (rsRetVal (*)(void *, ...)) doBinaryOptionLine;
 		break;
 	case eCmdHdlrFileCreateMode:
-		pHdlr = doFileCreateMode;
+		pHdlr = (rsRetVal (*)(void *, ...)) doFileCreateMode;
 		break;
 	case eCmdHdlrInt:
-		pHdlr = doGetInt;
+		pHdlr = (rsRetVal (*)(void *, ...)) doGetInt;
 		break;
 	case eCmdHdlrSize:
-		pHdlr = doGetSize;
+		pHdlr = (rsRetVal (*)(void *, ...)) doGetSize;
 		break;
 	case eCmdHdlrGetChar:
-		pHdlr = doGetChar;
+		pHdlr = (rsRetVal (*)(void *, ...)) doGetChar;
 		break;
 	case eCmdHdlrFacility:
-		pHdlr = doFacility;
+		pHdlr = (rsRetVal (*)(void *, ...)) doFacility;
 		break;
 	case eCmdHdlrSeverity:
-		pHdlr = doSeverity;
+		pHdlr = (rsRetVal (*)(void *, ...)) doSeverity;
 		break;
 	case eCmdHdlrGetWord:
-		pHdlr = doGetWord;
+		pHdlr = (rsRetVal (*)(void *, ...)) doGetWord;
 		break;
 	case eCmdHdlrGoneAway:
-		pHdlr = doGoneAway;
+		pHdlr = (rsRetVal (*)(void *, ...)) doGoneAway;
 		break;
 	/* some non-legacy handler (used in v6+ solely) */
 	case eCmdHdlrInvalid:
@@ -827,7 +827,7 @@ static rsRetVal cslcConstruct(cslCmd_t **ppThis, int bChainingPermitted)
 
 	pThis->bChainingPermitted = bChainingPermitted;
 
-	CHKiRet(llInit(&pThis->llCmdHdlrs, cslchDestruct, cslchKeyDestruct, cslchKeyCompare));
+	CHKiRet(llInit(&pThis->llCmdHdlrs, cslchDestruct, cslchKeyDestruct, (int (*) (void*, void*)) cslchKeyCompare));
 
 finalize_it:
 	*ppThis = pThis;
@@ -1074,7 +1074,7 @@ cfsyslineInit(void)
 	DEFiRet;
 	CHKiRet(objGetObjInterface(&obj));
 
-	CHKiRet(llInit(&llCmdList, cslcDestruct, cslcKeyDestruct, strcasecmp));
+	CHKiRet(llInit(&llCmdList, cslcDestruct, cslcKeyDestruct, (int (*)(void*, void*)) strcasecmp));
 
 finalize_it:
 	RETiRet;

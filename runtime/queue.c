@@ -1063,7 +1063,8 @@ qDeqDisk(qqueue_t *pThis, smsg_t **ppMsg)
 	DEFiRet;
 	iRet = objDeserializeWithMethods(ppMsg, (uchar*) "msg", 3,
 		pThis->tVars.disk.pReadDeq, NULL,
-		NULL, msgConstructForDeserializer, NULL, MsgDeserialize);
+		NULL, (rsRetVal (*)(void *, ...)) msgConstructForDeserializer, NULL,
+		(rsRetVal (*)(void *, ...)) MsgDeserialize);
 	if(iRet != RS_RET_OK) {
 		LogError(0, iRet, "%s: qDeqDisk error happened at around offset %lld",
 			obj.GetName((obj_t*)pThis),

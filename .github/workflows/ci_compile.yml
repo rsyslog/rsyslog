@@ -38,7 +38,7 @@ jobs:
         # note: we compile only with oldest and newest support compiler to
         # save ressources. Other important ones are used during the rest of
         # the check runs (most importantly the distro-default ones).
-        config: [clang9, clang18-ndebug, gcc8-debug, gcc-11-ndebug]
+        config: [clang9, clang18-ndebug, gcc8-debug, gcc-11-ndebug, gcc14-gnu23-debug]
 
     steps:
       - name: git checkout project
@@ -68,6 +68,14 @@ jobs:
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=no'
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
               export CC='gcc-11'
+              ;;
+          'gcc14-gnu23-debug')
+              # omamqp1 seems to have an issue with the build system - exclude it for now
+              # rgerhards, 2024-12-06
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=yes --disable-omamqp1'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
+              export CFLAGS="-g -std=gnu23"
+              export CC='gcc-14'
               ;;
           *)
               echo "unknown configuration "
