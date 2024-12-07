@@ -26,8 +26,6 @@
 
 /* prototypes */
 rsRetVal modInitDiscard(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided,
-	rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), modInfo_t*);
+	rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)(void*, ...)), modInfo_t*);
 
 #endif /* #ifndef OMDISCARD_H_INCLUDED */
-/* vi:set ai:
- */

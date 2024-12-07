@@ -290,7 +290,7 @@ BEGINobjConstruct(rsconf) /* be sure to specify the object type also in END macr
 	CHKiRet(dynstats_initCnf(&pThis->dynstats_buckets));
 	CHKiRet(perctile_initCnf(&pThis->perctile_buckets));
 	CHKiRet(llInit(&pThis->rulesets.llRulesets, rulesetDestructForLinkedList,
-			rulesetKeyDestruct, strcasecmp));
+			rulesetKeyDestruct, (int (*)(void*, void*)) strcasecmp));
 finalize_it:
 ENDobjConstruct(rsconf)
 
@@ -1203,7 +1203,7 @@ setModDir(void __attribute__((unused)) *pVal, uchar* pszNewVal)
 
 /* "load" a build in module and register it for the current load config */
 static rsRetVal
-regBuildInModule(rsRetVal (*modInit)(), uchar *name, void *pModHdlr)
+regBuildInModule(rsRetVal (*modInit)(void*, ...), uchar *name, void *pModHdlr)
 {
 	cfgmodules_etry_t *pNew;
 	cfgmodules_etry_t *pLast;
@@ -1225,12 +1225,12 @@ loadBuildInModules(void)
 {
 	DEFiRet;
 
-	CHKiRet(regBuildInModule(modInitFile, UCHAR_CONSTANT("builtin:omfile"), NULL));
-	CHKiRet(regBuildInModule(modInitPipe, UCHAR_CONSTANT("builtin:ompipe"), NULL));
-	CHKiRet(regBuildInModule(modInitShell, UCHAR_CONSTANT("builtin-shell"), NULL));
-	CHKiRet(regBuildInModule(modInitDiscard, UCHAR_CONSTANT("builtin:omdiscard"), NULL));
+	CHKiRet(regBuildInModule((rsRetVal(*)(void*, ...)) modInitFile, UCHAR_CONSTANT("builtin:omfile"), NULL));
+	CHKiRet(regBuildInModule((rsRetVal(*)(void*, ...)) modInitPipe, UCHAR_CONSTANT("builtin:ompipe"), NULL));
+	CHKiRet(regBuildInModule((rsRetVal(*)(void*, ...)) modInitShell, UCHAR_CONSTANT("builtin-shell"), NULL));
+	CHKiRet(regBuildInModule((rsRetVal(*)(void*, ...)) modInitDiscard, UCHAR_CONSTANT("builtin:omdiscard"), NULL));
 #	ifdef SYSLOG_INET
-	CHKiRet(regBuildInModule(modInitFwd, UCHAR_CONSTANT("builtin:omfwd"), NULL));
+	CHKiRet(regBuildInModule((rsRetVal(*)(void*, ...)) modInitFwd, UCHAR_CONSTANT("builtin:omfwd"), NULL));
 #	endif
 
 	/* dirty, but this must be for the time being: the usrmsg module must always be
@@ -1242,11 +1242,11 @@ loadBuildInModules(void)
 	 * User names now must begin with:
 	 *   [a-zA-Z0-9_.]
 	 */
-	CHKiRet(regBuildInModule(modInitUsrMsg, (uchar*) "builtin:omusrmsg", NULL));
+	CHKiRet(regBuildInModule((rsRetVal(*)(void*, ...)) modInitUsrMsg, (uchar*) "builtin:omusrmsg", NULL));
 
 	/* load build-in parser modules */
-	CHKiRet(regBuildInModule(modInitpmrfc5424, UCHAR_CONSTANT("builtin:pmrfc5424"), NULL));
-	CHKiRet(regBuildInModule(modInitpmrfc3164, UCHAR_CONSTANT("builtin:pmrfc3164"), NULL));
+	CHKiRet(regBuildInModule((rsRetVal(*)(void*, ...)) modInitpmrfc5424, UCHAR_CONSTANT("builtin:pmrfc5424"), NULL));
+	CHKiRet(regBuildInModule((rsRetVal(*)(void*, ...)) modInitpmrfc3164, UCHAR_CONSTANT("builtin:pmrfc3164"), NULL));
 
 	/* and set default parser modules. Order is *very* important, legacy
 	 * (3164) parser needs to go last! */
@@ -1254,10 +1254,10 @@ loadBuildInModules(void)
 	CHKiRet(parser.AddDfltParser(UCHAR_CONSTANT("rsyslog.rfc3164")));
 
 	/* load build-in strgen modules */
-	CHKiRet(regBuildInModule(modInitsmfile, UCHAR_CONSTANT("builtin:smfile"), NULL));
-	CHKiRet(regBuildInModule(modInitsmtradfile, UCHAR_CONSTANT("builtin:smtradfile"), NULL));
-	CHKiRet(regBuildInModule(modInitsmfwd, UCHAR_CONSTANT("builtin:smfwd"), NULL));
-	CHKiRet(regBuildInModule(modInitsmtradfwd, UCHAR_CONSTANT("builtin:smtradfwd"), NULL));
+	CHKiRet(regBuildInModule((rsRetVal(*)(void*, ...)) modInitsmfile, UCHAR_CONSTANT("builtin:smfile"), NULL));
+	CHKiRet(regBuildInModule((rsRetVal(*)(void*, ...)) modInitsmtradfile, UCHAR_CONSTANT("builtin:smtradfile"), NULL));
+	CHKiRet(regBuildInModule((rsRetVal(*)(void*, ...)) modInitsmfwd, UCHAR_CONSTANT("builtin:smfwd"), NULL));
+	CHKiRet(regBuildInModule((rsRetVal(*)(void*, ...)) modInitsmtradfwd, UCHAR_CONSTANT("builtin:smtradfwd"), NULL));
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
@@ -1316,24 +1316,24 @@ initLegacyConf(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"umask", 0, eCmdHdlrFileCreateMode,
 		NULL, &loadConf->globals.umask, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"maxopenfiles", 0, eCmdHdlrInt,
-		setMaxFiles, NULL, NULL));
+		(rsRetVal(*)(void*, ...)) setMaxFiles, NULL, NULL));
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"actionresumeinterval", 0, eCmdHdlrInt,
-		setActionResumeInterval, NULL, NULL));
+		(rsRetVal(*)(void*, ...)) setActionResumeInterval, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"modload", 0, eCmdHdlrCustomHandler,
-		conf.doModLoad, NULL, NULL));
+		(rsRetVal(*)(void*, ...)) conf.doModLoad, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultruleset", 0, eCmdHdlrGetWord,
-		setDefaultRuleset, NULL, NULL));
+		(rsRetVal(*)(void*, ...)) setDefaultRuleset, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"ruleset", 0, eCmdHdlrGetWord,
-		setCurrRuleset, NULL, NULL));
+		(rsRetVal(*)(void*, ...)) setCurrRuleset, NULL, NULL));
 
 	/* handler for "larger" config statements (tie into legacy conf system) */
 	CHKiRet(regCfSysLineHdlr((uchar *)"template", 0, eCmdHdlrCustomHandler,
-		conf.doNameLine, (void*)DIR_TEMPLATE, NULL));
+		(rsRetVal(*)(void*, ...)) conf.doNameLine, (void*)DIR_TEMPLATE, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"outchannel", 0, eCmdHdlrCustomHandler,
-		conf.doNameLine, (void*)DIR_OUTCHANNEL, NULL));
+		(rsRetVal(*)(void*, ...)) conf.doNameLine, (void*)DIR_OUTCHANNEL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"allowedsender", 0, eCmdHdlrCustomHandler,
-		conf.doNameLine, (void*)DIR_ALLOWEDSENDER, NULL));
+		(rsRetVal(*)(void*, ...)) conf.doNameLine, (void*)DIR_ALLOWEDSENDER, NULL));
 
 	/* the following are parameters for the main message queue. I have the
 	 * strong feeling that this needs to go to a different space, but that
@@ -1357,7 +1357,7 @@ initLegacyConf(void)
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuesyncqueuefiles", 0, eCmdHdlrBinary,
 		NULL, &loadConf->globals.mainQ.bMainMsgQSyncQeueFiles, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetype", 0, eCmdHdlrGetWord,
-		setMainMsgQueType, NULL, NULL));
+		(rsRetVal(*)(void*, ...)) setMainMsgQueType, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueueworkerthreads", 0, eCmdHdlrInt,
 		NULL, &loadConf->globals.mainQ.iMainMsgQueueNumWorkers, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"mainmsgqueuetimeoutshutdown", 0, eCmdHdlrInt,
@@ -1392,11 +1392,11 @@ initLegacyConf(void)
 	 * TODO: think about a clean solution
 	 */
 	CHKiRet(regCfSysLineHdlr((uchar *)"moddir", 0, eCmdHdlrGetWord,
-		setModDir, NULL, NULL));
+		(rsRetVal(*)(void*, ...)) setModDir, NULL, NULL));
 
 	/* finally, the reset handler */
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-		resetConfigVariables, NULL, NULL));
+		(rsRetVal(*)(void*, ...)) resetConfigVariables, NULL, NULL));
 
 	/* initialize the build-in templates */
 	pTmp = template_DebugFormat;

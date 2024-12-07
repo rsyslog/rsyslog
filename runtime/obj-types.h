@@ -74,7 +74,7 @@ struct objInfo_s {
 	size_t lenID; /* length of the ID string */
 	int iObjVers;
 	uchar *pszName;
-	rsRetVal (*objMethods[OBJ_NUM_METHODS])();
+	rsRetVal (*objMethods[OBJ_NUM_METHODS])(void *, ...);
 	rsRetVal (*QueryIF)(interface_t*);
 	struct modInfo_s *pModInfo;
 };

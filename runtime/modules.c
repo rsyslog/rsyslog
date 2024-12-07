@@ -286,7 +286,7 @@ finalize_it:
  * ... but often it better not to use a new interface. So we now add core
  * functions here that a plugin may request. -- rgerhards, 2009-04-22
  */
-static rsRetVal queryHostEtryPt(uchar *name, rsRetVal (**pEtryPoint)())
+static rsRetVal queryHostEtryPt(uchar *name, rsRetVal (**pEtryPoint)(void*, ...))
 {
 	DEFiRet;
 

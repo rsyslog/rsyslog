@@ -703,7 +703,7 @@ static int cslchKeyCompare(void *pKey1, void *pKey2)
 
 /* set data members for this object
  */
-static rsRetVal cslchSetEntry(cslCmdHdlr_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData,
+static rsRetVal cslchSetEntry(cslCmdHdlr_t *pThis, ecslCmdHdrlType eType, cslCmdHdlr_func_t const pHdlr, void *pData,
 int *permitted)
 {
 	assert(pThis != NULL);
@@ -723,7 +723,7 @@ int *permitted)
 static rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine)
 {
 	DEFiRet;
-	rsRetVal (*pHdlr)() = NULL;
+	cslCmdHdlr_func_t pHdlr;
 	assert(pThis != NULL);
 	assert(ppConfLine != NULL);
 
@@ -837,8 +837,9 @@ finalize_it:
 
 /* add a handler entry to a known command
  */
-static rsRetVal cslcAddHdlr(cslCmd_t *pThis, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData,
-void *pOwnerCookie, int *permitted)
+static rsRetVal
+cslcAddHdlr(cslCmd_t *pThis, ecslCmdHdrlType eType, cslCmdHdlr_func_t pHdlr, void *pData,
+	void *pOwnerCookie, int *permitted)
 {
 	DEFiRet;
 	cslCmdHdlr_t *pCmdHdlr = NULL;
@@ -873,7 +874,7 @@ finalize_it:
  * v2 function and supplies a "don't care (NULL)" pointer as this argument.
  * rgerhards, 2012-06-26
  */
-rsRetVal regCfSysLineHdlr2(const uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(),
+rsRetVal regCfSysLineHdlr2(const uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, cslCmdHdlr_func_t const pHdlr,
 void *pData, void *pOwnerCookie, int *permitted)
 {
 	DEFiRet;
@@ -914,7 +915,7 @@ finalize_it:
 	RETiRet;
 }
 
-rsRetVal regCfSysLineHdlr(const uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, rsRetVal (*pHdlr)(),
+rsRetVal regCfSysLineHdlr(const uchar *pCmdName, int bChainingPermitted, ecslCmdHdrlType eType, cslCmdHdlr_func_t pHdlr,
 void *pData, void *pOwnerCookie)
 {
 	DEFiRet;

@@ -1494,47 +1494,47 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	storeLocalHostIPIF((uchar*)"127.0.0.1");
 
 	/* config handlers are never unregistered and need not be - we are always loaded ;) */
-	CHKiRet(regCfSysLineHdlr((uchar *)"debugfile", 0, eCmdHdlrGetWord, setDebugFile, NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"debuglevel", 0, eCmdHdlrInt, setDebugLevel, NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, setWorkDir, NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, SetDropMalPTRMsgs,
+	CHKiRet(regCfSysLineHdlr((uchar *)"debugfile", 0, eCmdHdlrGetWord, (cslCmdHdlr_func_t) setDebugFile, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"debuglevel", 0, eCmdHdlrInt, (cslCmdHdlr_func_t) setDebugLevel, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"workdirectory", 0, eCmdHdlrGetWord, (cslCmdHdlr_func_t) setWorkDir, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"dropmsgswithmaliciousdnsptrrecords", 0, eCmdHdlrBinary, (cslCmdHdlr_func_t) SetDropMalPTRMsgs,
 	NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriver", 0, eCmdHdlrGetWord, setDfltNetstrmDrvr, NULL,
+	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriver", 0, eCmdHdlrGetWord, (cslCmdHdlr_func_t) setDfltNetstrmDrvr, NULL,
 	NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"defaultopensslengine", 0, eCmdHdlrGetWord, setDfltOpensslEngine, NULL,
+	CHKiRet(regCfSysLineHdlr((uchar *)"defaultopensslengine", 0, eCmdHdlrGetWord, (cslCmdHdlr_func_t) setDfltOpensslEngine, NULL,
 	NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercafile", 0, eCmdHdlrGetWord,
-	setDfltNetstrmDrvrCAF, NULL, NULL));
+	(cslCmdHdlr_func_t) setDfltNetstrmDrvrCAF, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercrlfile", 0, eCmdHdlrGetWord,
-	setDfltNetstrmDrvrCRLF, NULL, NULL));
+	(cslCmdHdlr_func_t) setDfltNetstrmDrvrCRLF, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdriverkeyfile", 0, eCmdHdlrGetWord,
-	setDfltNetstrmDrvrKeyFile, NULL, NULL));
+	(cslCmdHdlr_func_t) setDfltNetstrmDrvrKeyFile, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"defaultnetstreamdrivercertfile", 0, eCmdHdlrGetWord,
-	setDfltNetstrmDrvrCertFile, NULL, NULL));
+	(cslCmdHdlr_func_t) setDfltNetstrmDrvrCertFile, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"localhostname", 0, eCmdHdlrGetWord, NULL, &LocalHostNameOverride, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"localhostipif", 0, eCmdHdlrGetWord, setLocalHostIPIF, NULL, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"netstreamdrivercaextrafiles", 0, eCmdHdlrGetWord, setNetstrmDrvrCAExtraFiles,
+	CHKiRet(regCfSysLineHdlr((uchar *)"localhostipif", 0, eCmdHdlrGetWord, (cslCmdHdlr_func_t) setLocalHostIPIF, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"netstreamdrivercaextrafiles", 0, eCmdHdlrGetWord, (cslCmdHdlr_func_t) setNetstrmDrvrCAExtraFiles,
 	NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"optimizeforuniprocessor", 0, eCmdHdlrGoneAway, NULL, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"preservefqdn", 0, eCmdHdlrBinary, NULL, &bPreserveFQDN, NULL));
-	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize, legacySetMaxMessageSize, NULL, NULL));
+	CHKiRet(regCfSysLineHdlr((uchar *)"maxmessagesize", 0, eCmdHdlrSize, (cslCmdHdlr_func_t) legacySetMaxMessageSize, NULL, NULL));
 
 	/* Deprecated parser config options */
 	CHKiRet(regCfSysLineHdlr((uchar *)"controlcharacterescapeprefix", 0, eCmdHdlrGetChar,
-	setParserControlCharacterEscapePrefix, NULL, NULL));
+	(cslCmdHdlr_func_t) setParserControlCharacterEscapePrefix, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary,
-	setParserDropTrailingLFOnReception, NULL, NULL));
+	(cslCmdHdlr_func_t) setParserDropTrailingLFOnReception, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary,
-	setParserEscapeControlCharactersOnReceive, NULL, NULL));
+	(cslCmdHdlr_func_t) setParserEscapeControlCharactersOnReceive, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"spacelfonreceive", 0, eCmdHdlrBinary,
-	setParserSpaceLFOnReceive, NULL, NULL));
+	(cslCmdHdlr_func_t) setParserSpaceLFOnReceive, NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escape8bitcharactersonreceive", 0, eCmdHdlrBinary,
-	setParserEscape8BitCharactersOnReceive,	NULL, NULL));
+	(cslCmdHdlr_func_t) setParserEscape8BitCharactersOnReceive,	NULL, NULL));
 	CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactertab", 0, eCmdHdlrBinary,
-	setParserEscapeControlCharacterTab, NULL, NULL));
+	(cslCmdHdlr_func_t) setParserEscapeControlCharacterTab, NULL, NULL));
 
 	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-	resetConfigVariables, NULL, NULL));
+	(cslCmdHdlr_func_t) resetConfigVariables, NULL, NULL));
 
 	INIT_ATOMIC_HELPER_MUT(mutTerminateInputs);
 ENDObjClassInit(glbl)

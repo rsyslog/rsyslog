@@ -182,7 +182,7 @@ BEGINinterface(module) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Release)(const char *srcFile, modInfo_t **ppThis);	/**< release a module (ref counting) */
 	void (*PrintList)(void);
 	rsRetVal (*UnloadAndDestructAll)(eModLinkType_t modLinkTypesToUnload);
-	rsRetVal (*doModInit)(rsRetVal (*modInit)(), uchar *name, void *pModHdlr, modInfo_t **pNew);
+	rsRetVal (*doModInit)(rsRetVal (*modInit)(void*, ...), uchar *name, void *pModHdlr, modInfo_t **pNew);
 	rsRetVal (*Load)(uchar *name, sbool bConfLoad, struct nvlst *lst);
 	rsRetVal (*SetModDir)(uchar *name);
 	modInfo_t *(*FindWithCnfName)(rsconf_t *cnf, uchar *name, eModType_t rqtdType); /* added v3, 2011-07-19 */

@@ -21,7 +21,7 @@
  *
  * pThis always references to a pointer of the object.
  *
- * Copyright 2008-2018 Adiscon GmbH.
+ * Copyright 2008-2024 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -86,7 +86,7 @@
 #define objSerialize(pThis) (((obj_t*) (pThis))->pObjInfo->objMethods[objMethod_SERIALIZE])
 
 #define OBJSetMethodHandler(methodID, pHdlr) \
-	CHKiRet(obj.InfoSetMethod(pObjInfoOBJ, methodID, (rsRetVal (*)()) pHdlr))
+	CHKiRet(obj.InfoSetMethod(pObjInfoOBJ, methodID, (rsRetVal (*)(void*)) pHdlr))
 
 /* interfaces */
 BEGINinterface(obj) /* name must also be changed in ENDinterface macro! */
@@ -120,8 +120,8 @@ rsRetVal objGetObjInterface(obj_if_t *pIf);
 PROTOTYPEObjClassInit(obj);
 PROTOTYPEObjClassExit(obj);
 rsRetVal objDeserializeWithMethods(void *ppObj, uchar *pszTypeExpected, int lenTypeExpected, strm_t *pStrm,
-rsRetVal (*fFixup)(obj_t*,void*), void *pUsr, rsRetVal (*objConstruct)(), rsRetVal (*objConstructFinalize)(),
-rsRetVal (*objDeserialize)());
+	rsRetVal (*)(obj_t*,void*), void *pUsr, rsRetVal (*objConstruct)(obj_t**),
+	rsRetVal (*objConstructFinalize)(obj_t*), rsRetVal (*objDeserialize)(obj_t*, strm_t*));
 rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm);
 uchar *objGetName(obj_t *pThis);
 
