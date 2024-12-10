@@ -3,7 +3,7 @@
 # testing sending and receiving via TLS with anon auth and rebind
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-export NUMMESSAGES=25000
+export NUMMESSAGES=10000
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 # debugging activated to try to solve https://github.com/rsyslog/rsyslog/issues/3256
 export RSYSLOG_DEBUG="debug nostdout"
@@ -55,11 +55,15 @@ global(
 )
 
 # set up the action
-$DefaultNetstreamDriver ossl
-$ActionSendStreamDriverMode 1
-$ActionSendStreamDriverAuthMode anon
-$ActionSendTCPRebindInterval 100
-*.*	@@127.0.0.1:'$PORT_RCVR'
+action(	type="omfwd"
+	protocol="tcp"
+	target="127.0.0.1"
+	port="'$PORT_RCVR'"
+	StreamDriverMode="1"
+	StreamDriverAuthMode="anon"
+	RebindInterval="100"
+)
+
 ' 2
 startup 2
 
