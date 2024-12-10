@@ -19,8 +19,6 @@ global(
 	defaultNetstreamDriverCertFile="'$srcdir/testsuites/x.509/client-cert.pem'"
 	defaultNetstreamDriverKeyFile="'$srcdir/testsuites/x.509/client-key.pem'"
 	defaultNetstreamDriver="ossl"
-#	debug.whitelist="on"
-#	debug.files=["net_ossl.c", "nsd_ossl.c", "tcpsrv.c", "nsdsel_ossl.c", "nsdpoll_ptcp.c", "dnscache.c"]
 )
 
 module(	load="../plugins/imtcp/.libs/imtcp"
@@ -46,9 +44,14 @@ global(
 )
 
 # set up the action
-$ActionSendStreamDriverMode 1 # require TLS for the connection
-$ActionSendStreamDriverAuthMode anon
-*.*	@@'${TARGET}':'$PORT_RCVR'
+action(	type="omfwd"
+	protocol="tcp"
+	target="'$TARGET'"
+	port="'$PORT_RCVR'"
+	StreamDriver="ossl"
+	StreamDriverMode="1"
+	StreamDriverAuthMode="anon"
+)
 ' 2
 startup 2
 
