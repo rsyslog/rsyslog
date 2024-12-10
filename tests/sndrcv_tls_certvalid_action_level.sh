@@ -39,8 +39,11 @@ global(
 	defaultNetstreamDriver="'$RS_TLS_DRIVER'"
 )
 
-action(type="omfwd" target="127.0.0.1" port="'$PORT_RCVR'" protocol="tcp"
-     	streamDriverMode="1"
+action(	type="omfwd"
+	target="127.0.0.1"
+	port="'$PORT_RCVR'"
+	protocol="tcp"
+    streamDriverMode="1"
 	streamDriverAuthMode="x509/certvalid"
 	streamdriver.cafile="'$srcdir'/tls-certs/ca.pem"
 	streamdriver.keyfile="'$srcdir'/tls-certs/key.pem"

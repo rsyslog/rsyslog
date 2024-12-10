@@ -40,9 +40,14 @@ global(
 )
 
 # set up the action
-$ActionSendStreamDriverMode 1 # require TLS for the connection
-$ActionSendStreamDriverAuthMode x509/certvalid
-*.*	@@127.0.0.1:'$PORT_RCVR'
+action(	type="omfwd"
+	protocol="tcp"
+	target="127.0.0.1"
+	port="'$PORT_RCVR'"
+	StreamDriverMode="1"
+	StreamDriverAuthMode="x509/certvalid"
+)
+
 ' 2
 startup 2
 

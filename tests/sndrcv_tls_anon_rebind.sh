@@ -12,13 +12,14 @@ export NUMMESSAGES=25000 #25000
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
-export PORT_RCVR="$(get_free_port)"
 add_conf '
 global(	
 	defaultNetstreamDriverCAFile="'$srcdir/testsuites/x.509/ca.pem'"
 	defaultNetstreamDriverCertFile="'$srcdir/testsuites/x.509/client-cert.pem'"
 	defaultNetstreamDriverKeyFile="'$srcdir/testsuites/x.509/client-key.pem'"
 	defaultNetstreamDriver="gtls"
+	debug.whitelist="on"
+	debug.files=["net_ossl.c", "nsd_ossl.c", "tcpsrv.c", "nsdsel_ossl.c", "nsdpoll_ptcp.c", "dnscache.c"]
 )
 
 module(	load="../plugins/imtcp/.libs/imtcp"
@@ -28,30 +29,33 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 # then SENDER sends to this port (not tcpflood!)
 input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
-$template outfmt,"%msg:F,58:2%\n"
-$template dynfile,"'$RSYSLOG_OUT_LOG'" # trick to use relative path names!
-:msg, contains, "msgnum:" ?dynfile;outfmt
+template(name="outfmt" type="string" string="%msg:F,58:2%\n")
+:msg, contains, "msgnum:" action(	type="omfile" 
+					template="outfmt"
+					file="'$RSYSLOG_OUT_LOG'")
 '
 startup
-export PORT_RCVR=$TCPFLOOD_PORT # save this, will be rewritten with next config
-
-#export RSYSLOG_DEBUG="debug nostdout"
+export PORT_RCVR=$TCPFLOOD_PORT # save TCPFLOOD_PORT, generate_conf will overwrite it!
 export RSYSLOG_DEBUGLOG="log2"
 #valgrind="valgrind"
 generate_conf 2
 add_conf '
-global(
-	defaultNetstreamDriverCAFile="'$srcdir/tls-certs/ca.pem'"
-	defaultNetstreamDriverCertFile="'$srcdir/tls-certs/cert.pem'"
-	defaultNetstreamDriverKeyFile="'$srcdir/tls-certs/key.pem'"
+global(	
+	defaultNetstreamDriverCAFile="'$srcdir/testsuites/x.509/ca.pem'"
+	defaultNetstreamDriverCertFile="'$srcdir/testsuites/x.509/client-cert.pem'"
+	defaultNetstreamDriverKeyFile="'$srcdir/testsuites/x.509/client-key.pem'"
 	defaultNetstreamDriver="gtls"
 )
 
 # set up the action
-$ActionSendStreamDriverMode 1 # require TLS for the connection
-$ActionSendStreamDriverAuthMode anon
-$ActionSendTCPRebindInterval 50
-*.*	@@127.0.0.1:'$PORT_RCVR'
+action(	type="omfwd"
+	protocol="tcp"
+	target="127.0.0.1"
+	port="'$PORT_RCVR'"
+	StreamDriverMode="1"
+	StreamDriverAuthMode="anon"
+	RebindInterval="500"
+)
 ' 2
 startup 2
 
