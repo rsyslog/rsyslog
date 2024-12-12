@@ -43,6 +43,7 @@ struct tcpLstnParams_s {
 	sbool bSPFramingFix;	/**< support work-around for broken Cisco ASA framing? */
 	sbool bPreserveCase;			/**< preserve case in fromhost */
 	const uchar *pszLstnPortFileName;	/**< File in which the dynamic port is written */
+	uchar *pszNetworkNamespace;		/**< network namespace to use */
 	uchar *pszStrmDrvrName;			/**< stream driver to use */
 	uchar *pszInputName;			/**< value to be used as input name */
 	prop_t *pInputName;
@@ -213,14 +214,19 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetDrvrCertFile)(tcpsrv_t *pThis, uchar *pszMode);
 	/* added v26 -- Options for TLS CRL file */
 	rsRetVal (*SetDrvrCRLFile)(tcpsrv_t *pThis, uchar *pszMode);
+	/* added v27 -- Options for Network Namespace */
+	rsRetVal(* SetNetworkNamespace)(tcpsrv_t *pThis, tcpLstnParams_t *const cnf_params,
+		const uchar *const networkNamespace);
+
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 26 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 27 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
  * change for v5 and up: see above
  * for v12: param bSuppOctetFram added to configureTCPListen
  * for v20: add oserr to setCBRcvData signature -- rgerhards, 2017-09-04
+ * for v27: SetNetworkNamespace() added -- cisco, 2024-12-12
  */
 
 
