@@ -48,14 +48,11 @@ global(
 )
 
 # set up the action
-action(	type="omfwd"
-	protocol="tcp"
-	target="127.0.0.1"
-	port="'$PORT_RCVR'"
-	StreamDriverMode="1"
-	StreamDriverAuthMode="anon"
-	RebindInterval="500"
-)
+$DefaultNetstreamDriver ossl
+$ActionSendStreamDriverMode 1
+$ActionSendStreamDriverAuthMode anon
+$ActionSendTCPRebindInterval 100
+*.*	@@127.0.0.1:'$PORT_RCVR'
 ' 2
 startup 2
 

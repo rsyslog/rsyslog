@@ -7,7 +7,7 @@ exit 77
 printf 'using TLS driver: %s\n' ${RS_TLS_DRIVER:=gtls}
 
 # start up the instances
-# export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
+# export RSYSLOG_DEBUG="nologfuncflow noprintmutexaction nostdout"
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"
 generate_conf
 add_conf '
@@ -69,12 +69,17 @@ startup 2
 injectmsg2 0 1
 
 # shut down sender when everything is sent, receiver continues to run concurrently
-shutdown_when_empty 2
+shutdown_immediate 2
 wait_shutdown 2
 # now it is time to stop the receiver as well
 shutdown_when_empty
 wait_shutdown
 
-content_check --regex "peer .* did not provide a certificate,"
+content_check --check-only --regex "peer .* did not provide a certificate,"
+ret=$?
+if [ $ret != 0 ]; then
+	# Second Content for OSSL error msg
+	content_check "peer did not return a certificate"
+fi
 
 exit_test
