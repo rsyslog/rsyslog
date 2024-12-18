@@ -139,6 +139,7 @@ struct instanceConf_s {
 	int bEmitMsgOnClose;
 	int bEmitMsgOnOpen;
 	int bPreserveCase;
+	uchar *pszNetworkNamespace;
 	uchar *pszStrmDrvrName; /* stream driver to use */
 	int iStrmDrvrMode;
 	uchar *pszStrmDrvrAuthMode;
@@ -182,6 +183,7 @@ struct modConfData_s {
 	sbool bEmitMsgOnClose; /* emit an informational message on close by remote peer */
 	sbool bEmitMsgOnOpen; /* emit an informational message on close by remote peer */
 	uchar *gnutlsPriorityString;
+	uchar *pszNetworkNamespace;
 	uchar *pszStrmDrvrName; /* stream driver to use */
 	uchar *pszStrmDrvrAuthMode; /* authentication mode to use */
 	uchar *pszStrmDrvrPermitExpiredCerts; /* control how to handly expired certificates */
@@ -227,7 +229,8 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "keepalive.time", eCmdHdlrNonNegInt, 0 },
 	{ "keepalive.interval", eCmdHdlrNonNegInt, 0 },
 	{ "gnutlsprioritystring", eCmdHdlrString, 0 },
-	{ "preservecase", eCmdHdlrBinary, 0 }
+	{ "preservecase", eCmdHdlrBinary, 0 },
+	{ "networknamespace", eCmdHdlrString, 0 }
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -273,7 +276,8 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "supportoctetcountedframing", eCmdHdlrBinary, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "framingfix.cisco.asa", eCmdHdlrBinary, 0 },
-	{ "ratelimit.burst", eCmdHdlrInt, 0 }
+	{ "ratelimit.burst", eCmdHdlrInt, 0 },
+	{ "networknamespace", eCmdHdlrString, 0 }
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
@@ -373,6 +377,7 @@ createInstance(instanceConf_t **pinst)
 	inst->ratelimitInterval = 0;
 	inst->ratelimitBurst = 10000;
 
+	inst->pszNetworkNamespace = NULL;
 	inst->pszStrmDrvrName = NULL;
 	inst->pszStrmDrvrAuthMode = NULL;
 	inst->pszStrmDrvrPermitExpiredCerts = NULL;
@@ -421,7 +426,7 @@ finalize_it:
 }
 
 
-/* This function is called when a new listener instace shall be added to
+/* This function is called when a new listener instance shall be added to
  * the current config object via the legacy config system. It just shuffles
  * all parameters to the listener in-memory instance.
  * rgerhards, 2011-05-04
@@ -555,6 +560,8 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 	/* initialized, now add socket and listener params */
 	DBGPRINTF("imtcp: trying to add port *:%s\n", inst->cnf_params->pszPort);
 	inst->cnf_params->pRuleset = inst->pBindRuleset;
+	CHKiRet(tcpsrv.SetNetworkNamespace(pOurTcpsrv, inst->cnf_params, inst->pszNetworkNamespace == NULL ?
+			modConf->pszNetworkNamespace : inst->pszNetworkNamespace));
 	CHKiRet(tcpsrv.SetInputName(pOurTcpsrv, inst->cnf_params, inst->pszInputName == NULL ?
 						UCHAR_CONSTANT("imtcp") : inst->pszInputName));
 	CHKiRet(tcpsrv.SetOrigin(pOurTcpsrv, (uchar*)"imtcp"));
@@ -611,6 +618,8 @@ CODESTARTnewInpInst
 			continue;
 		if(!strcmp(inppblk.descr[i].name, "port")) {
 			inst->cnf_params->pszPort = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "networknamespace")) {
+			inst->pszNetworkNamespace = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "address")) {
 			inst->cnf_params->pszAddr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "name")) {
@@ -734,6 +743,7 @@ CODESTARTbeginCnfLoad
 	loadModConf->bDisableLFDelim = 0;
 	loadModConf->discardTruncatedMsg = 0;
 	loadModConf->gnutlsPriorityString = NULL;
+	loadModConf->pszNetworkNamespace = NULL;
 	loadModConf->pszStrmDrvrName = NULL;
 	loadModConf->pszStrmDrvrAuthMode = NULL;
 	loadModConf->pszStrmDrvrPermitExpiredCerts = NULL;
@@ -807,6 +817,8 @@ CODESTARTsetModCnf
 			loadModConf->iKeepAliveIntvl = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "gnutlsprioritystring")) {
 			loadModConf->gnutlsPriorityString = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(modpblk.descr[i].name, "networknamespace")) {
+			loadModConf->pszNetworkNamespace = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.mode")) {
 			loadModConf->iStrmDrvrMode = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.CheckExtendedKeyPurpose")) {
@@ -950,6 +962,7 @@ BEGINfreeCnf
 	instanceConf_t *inst, *del;
 CODESTARTfreeCnf
 	free(pModConf->gnutlsPriorityString);
+	free(pModConf->pszNetworkNamespace);
 	free(pModConf->pszStrmDrvrName);
 	free(pModConf->pszStrmDrvrAuthMode);
 	free(pModConf->pszStrmDrvrPermitExpiredCerts);
@@ -964,6 +977,7 @@ CODESTARTfreeCnf
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free((void*)inst->pszBindRuleset);
 		free((void*)inst->pszStrmDrvrAuthMode);
+		free((void*)inst->pszNetworkNamespace);
 		free((void*)inst->pszStrmDrvrName);
 		free((void*)inst->pszStrmDrvrPermitExpiredCerts);
 		free((void*)inst->pszStrmDrvrCAFile);
