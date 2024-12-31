@@ -1,5 +1,27 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2502.0 (aka 2024.12) 2025-02-??
+- 2024-12-31: build: support for compile with -std=gnu23 gcc option
+  Note: The upcoming gnu23 C standard is overdoing it with type-safety. Inside
+  rsyslog, we historically have method tables for generic calls, which
+  keeps the code small and easy to understand. This would not decently be
+  possible with the new type-safety requirements.
+  So this commit works around these warning in a way that pretends to
+  provide more type safety. We have done this in the least intrusive
+  way to reduce the risk for regressions in code that works well in
+  since decades. Also note that the code already does parameter
+  validation.
+  There would have been more elaborate ways to make gnu23 compile happy,
+  e.g. by using a union of structs to provide the data element. Some folks
+  consider this type safe. In reality, it is not a bit better than
+  traditional C without types at all. Because the caller still needs to
+  ensure it picks the right struct from the union. As this approach
+  would also have larger regeression potential, we have not used it.
+  Right now, we have suppressed some of the new warnings, as working
+  around them would have required an even larger time budget and
+  potentially larger regression potential. In the long term we may
+  want to look into enabling them, as they would potentially be
+  beneficial for new code not involving method tables.
+  Some nits, however, were detected and have been fixed.
 - 2024-12-04: omazureeventhubs bugfix: URL escaping
   Some characters were not properly escaped, leading to malfunction on submission.
 ----------------------------------------------------------------------------------------
