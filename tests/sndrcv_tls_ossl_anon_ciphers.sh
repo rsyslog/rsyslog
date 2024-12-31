@@ -1,10 +1,10 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+
 # start up the instances
-# uncomment for debugging support:
-#export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
-#export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"
+# export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
+export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"
 generate_conf
 add_conf '
 global(	
@@ -22,7 +22,10 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 	)
 input(	type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
-action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
+action(	type="omfile"
+	name="omfile"
+	file="'$RSYSLOG_OUT_LOG'"
+)
 '
 
 startup
@@ -41,6 +44,10 @@ action(	type="omfwd"
 	StreamDriverMode="1"
 	StreamDriverAuthMode="anon"
 	gnutlsPriorityString="CipherString=ECDHE-RSA-AES256-SHA384;Ciphersuites=TLS_AES_128_GCM_SHA256"
+    action.resumeRetryCount="1"
+    queue.type="FixedArray"
+    queue.discardmark="5"
+    queue.discardseverity="0"
 )
 ' 2
 startup 2
@@ -48,7 +55,9 @@ startup 2
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
 injectmsg 0 1
-shutdown_when_empty 2
+
+# shut down sender when everything is sent, receiver continues to run concurrently
+shutdown_immediate 2
 wait_shutdown 2
 # now it is time to stop the receiver as well
 shutdown_when_empty

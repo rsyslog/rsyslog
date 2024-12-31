@@ -921,7 +921,7 @@ finalize_it:
 		free(fromHostIP);
 	}
 	if(iRet == RS_RET_OK) {
-		/* If no error occurred, set socket to SSL mode */
+		/* If no error occurred, set session to SSL mode */
 		pNsd->iMode = 1;
 	}
 
