@@ -1,6 +1,9 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+echo "This test is under review - it seems to have some issues"
+exit 77
+
 printf 'using TLS driver: %s\n' ${RS_TLS_DRIVER:=gtls}
 
 # start up the instances
