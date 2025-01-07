@@ -1,6 +1,6 @@
 # container for rsyslog development
 # creates the build environment
-FROM	ubuntu:18.04
+FROM	ubuntu:20.04
 ENV	DEBIAN_FRONTEND=noninteractive
 RUN 	apt-get update && \
 	apt-get upgrade -y && \
@@ -19,12 +19,14 @@ RUN 	apt-get update && \
 	flex \
 	gcc \
 	gcc-8 \
+	gcc-10 \
 	gdb \
 	git \
+	libaprutil1-dev \
 	libbson-dev \
 	libcurl4-gnutls-dev \
 	libdbi-dev \
-	libgcrypt11-dev \
+	libgcrypt20-dev \
 	libglib2.0-dev \
 	libgnutls28-dev \
 	libgrok1 libgrok-dev \
@@ -35,42 +37,53 @@ RUN 	apt-get update && \
 	libmongoc-dev \
 	libmysqlclient-dev \
 	libnet1-dev \
+	libpcap-dev \
+	librabbitmq-dev \
 	libsnmp-dev \
 	libssl-dev libsasl2-dev \
 	libsystemd-dev \
 	libtokyocabinet-dev \
 	libtool \
 	libtool-bin \
+	libzstd-dev \
+	logrotate \
 	lsof \
 	make \
 	mysql-server \
 	net-tools \
 	pkg-config \
 	postgresql-client libpq-dev \
-	python-docutils  \
-	python-pip \
+	python3-docutils  \
+	python3-pip \
+	python3-pysnmp4 \
 	software-properties-common \
 	sudo \
 	uuid-dev \
 	valgrind \
 	vim \
 	wget \
-	zlib1g-dev
+	zlib1g-dev \
+	zstd
 ENV	REBUILD=1
-RUN	echo "deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_18.04/ ./" > /etc/apt/sources.list.d/0mq.list && \
-	wget -nv -O - http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_18.04/Release.key | apt-key add - && \
- 	add-apt-repository ppa:adiscon/v8-stable -y && \
+# Adiscon/rsyslog components
+RUN	echo 'deb http://download.opensuse.org/repositories/home:/rgerhards/xUbuntu_20.04/ /' > /etc/apt/sources.list.d/home:rgerhards.list && \
+	wget -nv https://download.opensuse.org/repositories/home:rgerhards/xUbuntu_20.04/Release.key -O Release.key && \
+	apt-key add - < Release.key && \
 	apt-get update -y && \
 	apt-get install -y  \
-	libczmq-dev \
-	libqpid-proton8-dev \
-	tcl-dev \
-	libsodium-dev \
 	libestr-dev \
+	liblogging-stdlog-dev \
 	librelp-dev \
 	libfastjson-dev \
 	liblogging-stdlog-dev \
 	liblognorm-dev
+RUN	apt-get update -y && \
+	apt-get install -y  \
+	libczmq-dev \
+	libqpid-proton11-dev \
+	tcl-dev \
+	libsodium-dev
+
 WORKDIR	/home/devel
 VOLUME	/rsyslog
 RUN	groupadd rsyslog \
@@ -81,7 +94,7 @@ RUN	groupadd rsyslog \
 # mysql needs a little help:
 RUN	mkdir -p /var/run/mysqld && \
 	chown mysql:mysql /var/run/mysqld
-ENV	MYSQLD_START_CMD="sudo mysqld_safe" \
+ENV	MYSQLD_START_CMD="sudo mysqld_safe --pid-file=/var/run/mysqld/mysqld.pid" \
         MYSQLD_STOP_CMD="sudo kill $(sudo cat /var/run/mysqld/mysqld.pid)"
 
 ADD	setup-system.sh setup-system.sh
@@ -98,7 +111,7 @@ RUN	./setup-system.sh
 RUN	cd helper-projects \
 	&& git clone https://github.com/edenhill/kafkacat \
 	&& cd kafkacat \
-	&& (unset CFLAGS; ./configure --prefix=/usr --CFLAGS="-g" ; make -j2) \
+	&& (unset CFLAGS; ./configure --prefix=/usr --CFLAGS="-g" ; make -j) \
 	&& make install \
 	&& cd .. \
 	&& cd ..
@@ -117,9 +130,11 @@ ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
 
 # next ENV is specifically for running scan-build - so we do not need to
 # change scripts if at a later time we can move on to a newer version
-ENV	SCAN_BUILD=scan-build \
-	SCAN_BUILD_CC=clang-6.0 \
-	ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-6.0/bin/llvm-symbolizer
+ENV	SCAN_BUILD=scan-build-9 \
+	SCAN_BUILD_CC=clang-9 \
+	ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-9/bin/llvm-symbolizer
+
+RUN	chmod o+rx /var/run/mysqld && ls -ld /var/run/mysqld
 
 ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-elasticsearch \
@@ -138,6 +153,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-libdbi \
 	--enable-libfaketime \
 	--enable-libgcrypt \
+	--enable-libzstd \
 	--enable-mail \
 	--enable-mmanon \
 	--enable-mmaudit \
@@ -187,6 +203,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-testbench
 
 # module needs fixes: --enable-kmsg
+RUN	printf '\n' > /var/log/mysql/error.log
 VOLUME	/var/lib/mysql
 WORKDIR	/rsyslog
 USER	rsyslog
