@@ -6,7 +6,7 @@
 . ${srcdir:=.}/diag.sh init
 skip_platform "SunOS" "This test is currently not supported on solaris due to too-different timing"
 generate_conf
-export NUMMESSAGES=2000
+export NUMMESSAGES=20000
 
 # starting minitcpsrvr receivers so that we can obtain their port
 # numbers
@@ -42,6 +42,6 @@ wait_shutdown
 # note: minitcpsrv shuts down automatically if the connection is closed!
 
 export SEQ_CHECK_OPTIONS=-d
-#permit 100 messages to be lost in this extreme test (-m 100)
-seq_check 0 $((NUMMESSAGES-1)) -m100
+#permit 500 messages to be lost in this extreme test (-m 100)
+seq_check 0 $((NUMMESSAGES-1)) -m500
 exit_test
