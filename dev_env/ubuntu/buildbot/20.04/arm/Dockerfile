@@ -2,7 +2,8 @@ FROM rsyslog/rsyslog_dev_base_ubuntu-arm:20.04
 USER root
 RUN apt-get update && apt-get install -y \
    python3-dev \
-   python3-pip
+   python3-pip \
+   cargo
 RUN pip install buildbot-worker buildbot-slave
 RUN groupadd -r buildbot && useradd -r -g buildbot buildbot
 RUN mkdir /worker && chown buildbot:buildbot /worker
