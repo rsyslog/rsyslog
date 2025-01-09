@@ -150,10 +150,6 @@ struct tcpsrv_s {
 
 
 /**
- * The following structure is a set of descriptors that need to be processed.
- * This set will be the result of the epoll or select call and be used
- * in the actual request processing stage. It serves as a basis
- * to run multiple request by concurrent threads. -- rgerhards, 2011-01-24
  */
 struct tcpsrv_workset_s {
 	int idx;	/**< index into session table (or -1 if listener) */
