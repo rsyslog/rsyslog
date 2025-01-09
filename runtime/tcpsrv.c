@@ -571,7 +571,6 @@ static rsRetVal
 closeSess(tcpsrv_t *const pThis, nsd_epworkset_t *const pWorksetItem, nspoll_t *const pPoll) {
 	DEFiRet;
 	tcps_sess_t *pSess = (tcps_sess_t *) pWorksetItem->pUsr;
-	fprintf(stderr, "free: %p, ess %p\n", pWorksetItem, pSess);
 	if(pPoll != NULL) {
 		CHKiRet(nspoll.Ctl(pPoll, pSess->pStrm, 0, pSess, NSDPOLL_IN, NSDPOLL_DEL, NULL));
 	}

@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd epoll() interface for plain tcp sockets.
  *
- * Copyright 2009-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2025 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -48,8 +48,8 @@ DEFobjStaticHelpers
 DEFobjCurrIf(glbl)
 
 
-/* -START------------------------- helpers for event list ------------------------------------ */
 
+// TODO: update comment
 /* add new entry to list. We assume that the fd is not already present and DO NOT check this!
  * Returns newly created entry in pEvtLst.
  * Note that we currently need to use level-triggered mode, because the upper layers do not work
@@ -87,85 +87,6 @@ addEvent(struct epoll_event *const event, const int id, void *const pUsr, const 
 finalize_it:
 	RETiRet;
 }
-#if 0
-static rsRetVal
-addEvent(nsdpoll_ptcp_t *const pThis, const int id, void *const pUsr, const int mode,
-	nsd_ptcp_t *const pSock, nsdpoll_epollevt_lst_t **pEvtLst)
-{
-	nsdpoll_epollevt_lst_t *pNew;
-	DEFiRet;
-
-	CHKmalloc(pNew = (nsdpoll_epollevt_lst_t*) calloc(1, sizeof(nsdpoll_epollevt_lst_t)));
-	pNew->id = id;
-	pNew->pUsr = pUsr;
-	pNew->pSock = pSock;
-	pNew->event.events = 0; /* TODO: at some time we should be able to use EPOLLET */
-	if(!(mode & NSDPOLL_IN_LSTN))  {
-		/* right now, we refactor only regular data sessions in edge triggered mode */
-		pNew->event.events = EPOLLET; /* TODO: at some time we should be able to use EPOLLET */
-	}
-	if((mode & NSDPOLL_IN) || (mode & NSDPOLL_IN_LSTN))
-		pNew->event.events |= EPOLLIN;
-	if(mode & NSDPOLL_OUT)
-		pNew->event.events |= EPOLLOUT;
-	pNew->event.data.ptr = pNew;
-	pthread_mutex_lock(&pThis->mutEvtLst);
-	pNew->pNext = pThis->pRoot;
-	pThis->pRoot = pNew;
-	pthread_mutex_unlock(&pThis->mutEvtLst);
-	*pEvtLst = pNew;
-
-finalize_it:
-	RETiRet;
-}
-#endif
-
-
-#if 0
-/* find and unlink the entry identified by id/pUsr from the list.
- * rgerhards, 2009-11-23
- */
-static rsRetVal
-unlinkEvent(nsdpoll_ptcp_t *pThis, int id, void *pUsr, nsdpoll_epollevt_lst_t **ppEvtLst)
-{
-	nsdpoll_epollevt_lst_t *pEvtLst;
-	nsdpoll_epollevt_lst_t *pPrev = NULL;
-	DEFiRet;
-
-	pthread_mutex_lock(&pThis->mutEvtLst);
-	pEvtLst = pThis->pRoot;
-	while(pEvtLst != NULL && !(pEvtLst->id == id && pEvtLst->pUsr == pUsr)) {
-		pPrev = pEvtLst;
-		pEvtLst = pEvtLst->pNext;
-	}
-	if(pEvtLst == NULL)
-		ABORT_FINALIZE(RS_RET_NOT_FOUND);
-
-	*ppEvtLst = pEvtLst;
-
-	/* unlink */
-	if(pPrev == NULL)
-		pThis->pRoot = pEvtLst->pNext;
-	else
-		pPrev->pNext = pEvtLst->pNext;
-
-finalize_it:
-	pthread_mutex_unlock(&pThis->mutEvtLst);
-	RETiRet;
-}
-
-
-/* destruct the provided element. It must already be unlinked from the list.
- * rgerhards, 2009-11-23
- */
-static rsRetVal
-delEvent(nsdpoll_epollevt_lst_t **ppEvtLst) {
-	DEFiRet;
-	free(*ppEvtLst);
-	*ppEvtLst = NULL;
-	RETiRet;
-}
-#endif
 
 
 /* -END--------------------------- helpers for event list ------------------------------------ */
@@ -201,6 +122,7 @@ CODESTARTobjDestruct(nsdpoll_ptcp)
 	/* we check if the epoll list still holds entries. This may happen, but
 	 * is a bit unusual.
 	 */
+	// TODO 25: pRoot is no longer set, so this code needs to be replaced
 	if(pThis->pRoot != NULL) {
 		for(node = pThis->pRoot ; node != NULL ; node = nextnode) {
 			nextnode = node->pNext;
@@ -259,7 +181,7 @@ finalize_it:
  * rgerhards, 2009-11-18
  */
 static rsRetVal
-Wait(nsdpoll_t *pNsdpoll, int timeout, int *numEntries, nsd_epworkset_t *pWorkset[])
+Wait(nsdpoll_t *const pNsdpoll, const int timeout, int *const numEntries, nsd_epworkset_t *pWorkset[])
 {
 	nsdpoll_ptcp_t *pThis = (nsdpoll_ptcp_t*) pNsdpoll;
 	//nsdpoll_epollevt_lst_t *pOurEvt;
@@ -287,11 +209,8 @@ Wait(nsdpoll_t *pNsdpoll, int timeout, int *numEntries, nsd_epworkset_t *pWorkse
 
 	/* we got valid events, so tell the caller... */
 	DBGPRINTF("epoll returned %d entries\n", nfds);
-	//nsd_epworkset_t *pWorksetItem;
 	for(i = 0 ; i < nfds ; ++i) {
 		pWorkset[i] = (nsd_epworkset_t*) event[i].data.ptr;
-		//workset[i].id = pWorksetItem->id;
-		//workset[i].pUsr = pWorksetItem->pUsr;
 	}
 	*numEntries = nfds;
 
