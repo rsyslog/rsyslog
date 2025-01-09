@@ -109,28 +109,13 @@ BEGINobjConstruct(nsdpoll_ptcp) /* be sure to specify the object type also in EN
 		DBGPRINTF("epoll_create1() could not create fd\n");
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
-	pthread_mutex_init(&pThis->mutEvtLst, NULL);
 finalize_it:
 ENDobjConstruct(nsdpoll_ptcp)
 
 
 /* destructor for the nsdpoll_ptcp object */
 BEGINobjDestruct(nsdpoll_ptcp) /* be sure to specify the object type also in END and CODESTART macros! */
-	nsdpoll_epollevt_lst_t *node;
-	nsdpoll_epollevt_lst_t *nextnode;
 CODESTARTobjDestruct(nsdpoll_ptcp)
-	/* we check if the epoll list still holds entries. This may happen, but
-	 * is a bit unusual.
-	 */
-	// TODO 25: pRoot is no longer set, so this code needs to be replaced
-	if(pThis->pRoot != NULL) {
-		for(node = pThis->pRoot ; node != NULL ; node = nextnode) {
-			nextnode = node->pNext;
-			dbgprintf("nsdpoll_ptcp destruct, need to destruct node %p\n", node);
-			//delEvent(&node);
-		}
-	}
-	pthread_mutex_destroy(&pThis->mutEvtLst);
 ENDobjDestruct(nsdpoll_ptcp)
 
 
@@ -141,7 +126,6 @@ Ctl(nsdpoll_t *const pNsdpoll, nsd_t *const pNsd, const int id, void *const pUsr
 {
 	nsdpoll_ptcp_t *pThis = (nsdpoll_ptcp_t*) pNsdpoll;
 	nsd_ptcp_t *pSock = (nsd_ptcp_t*) pNsd;
-	//nsdpoll_epollevt_lst_t *pEventLst;
 	struct epoll_event event;
 	DEFiRet;
 
@@ -155,14 +139,12 @@ Ctl(nsdpoll_t *const pNsdpoll, nsd_t *const pNsd, const int id, void *const pUsr
 		}
 	} else if(op == NSDPOLL_DEL) {
 		dbgprintf("removing nsdpoll entry %d/%p, sock %d\n", id, pUsr, pSock->sock);
-		//CHKiRet(unlinkEvent(pThis, id, pUsr, &pEventLst));
 		if(epoll_ctl(pThis->efd, EPOLL_CTL_DEL, pSock->sock, NULL) < 0) {
 			LogError(errno, RS_RET_ERR_EPOLL_CTL,
 				"epoll_ctl failed on fd %d, id %d/%p, op %d\n",
 				pSock->sock, id, pUsr, mode);
 			ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
 		}
-		//CHKiRet(delEvent(&pEventLst));
 	} else {
 		dbgprintf("program error: invalid NSDPOLL_mode %d - ignoring request\n", op);
 		ABORT_FINALIZE(RS_RET_ERR);
@@ -184,7 +166,6 @@ static rsRetVal
 Wait(nsdpoll_t *const pNsdpoll, const int timeout, int *const numEntries, nsd_epworkset_t *pWorkset[])
 {
 	nsdpoll_ptcp_t *pThis = (nsdpoll_ptcp_t*) pNsdpoll;
-	//nsdpoll_epollevt_lst_t *pOurEvt;
 	struct epoll_event event[128];
 	int nfds;
 	int i;
