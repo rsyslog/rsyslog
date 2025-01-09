@@ -288,7 +288,7 @@ set. A conservative assumption is that a single syslog messages takes up
 difference).
 
 Disk assisted queues are special in that they do **not** have any size
-limit. The enqueue an unlimited amount of elements. To prevent running
+limit. They enqueue an unlimited amount of elements. To prevent running
 out of space, disk and disk-assisted queues can be size-limited via the
 "*$<object>QueueMaxDiskSpace*\ " configuration parameter. If it is not
 set, the limit is only available free space (and reaching this limit is

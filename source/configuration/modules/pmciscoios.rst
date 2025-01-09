@@ -132,8 +132,8 @@ to do the same thing in a somewhat condensed way, but if and only if the date
 stamp immediately follows the origin. In that case, the parser has a chance to
 detect if the origin is present or not. The key point here is to make sure
 the parser checking for the origin is given before the default one, in which
-case the first on will detect it does not match an pass on to the next
-one inside the parser chain. However, this comes at the expense of additional
+case the first one will detect that it does not match and pass it on to the
+next one in the parser chain. However, this comes at the expense of additional
 runtime overhead. The example below is **not** good practice -- it is given
 as a purely educational sample to show some fine details of how parser
 definitions interact. In this case, we can use a single listener.

@@ -12,7 +12,7 @@ Abstract
 **messages on the network.**
 Encryption is vital to keep the confidential content of
 syslog messages secure. I describe the overall approach and provide a
-HOWTO do it with `rsyslog's <http://www.rsyslog.com>`_ TLS features. 
+HOWTO using `rsyslog's <http://www.rsyslog.com>`_ TLS features. 
 
 Please note that TLS is the more secure successor of SSL. While people
 often talk about "SSL encryption" they actually mean "TLS encryption".
