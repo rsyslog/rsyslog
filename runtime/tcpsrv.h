@@ -65,12 +65,26 @@ struct tcpsrv_wrkrInfo_s {
 	pthread_cond_t run;
 	int idx;
 	tcpsrv_t *pSrv; /* pSrv == NULL -> idle */
-	struct nsd_epworkset_s *pWorksetItem;
+	tcpsrv_io_descr_t *pioDescr;
 	nspoll_t *pPoll;
 	void *pUsr;
 	sbool enabled;
 	long long unsigned numCalled;	/* how often was this called */
 	tcpsrv_t *mySrv;
+};
+
+
+/**
+ * The following structure is a descriptor for tcpsrv i/o. It is
+ * primarily used together with epoll at the moment.
+ */
+struct tcpsrv_io_descr_s {
+	int id; // TODO: remove
+	enum {NSD_PTR_TYPE_LSTN, NSD_PTR_TYPE_SESS} ptrType;
+	union {
+		tcps_sess_t *pSess;
+		netstrm_t **ppLstn;	/**<  accept listener's netstream */
+	} ptr;
 };
 
 #define TCPSRV_NO_ADDTL_DELIMITER -1 /* specifies that no additional delimiter is to be used in TCP framing */
@@ -108,7 +122,8 @@ struct tcpsrv_s {
 	int iLstnCurr;		/**< max nbr of listeners currently supported */
 	netstrm_t **ppLstn;	/**< our netstream listeners */
 	tcpLstnPortList_t **ppLstnPort; /**< pointer to relevant listen port description */
-	nsd_epworkset_t  **ppLstnWorksetPtr; /**< pointer to workset item that needs to be freed on termination */
+//	nsd_epworkset_t  **ppLstnWorksetPtr; /**< pointer to workset item that needs to be freed on termination */ // TODO REMOVE
+	tcpsrv_io_descr_t **ppioDescrPtr; /**< pointer to i/o descriptor object */ // TODO REMOVE
 	int iLstnMax;		/**< max number of listeners supported */
 	int iSessMax;		/**< max number of sessions supported */
 	uchar dfltTZ[8];	/**< default TZ if none in timestamp; '\0' =No Default */

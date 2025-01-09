@@ -1,6 +1,6 @@
 /* Definitions for the nspoll io activity waiter
  *
- * Copyright 2009 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2025 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -24,6 +24,9 @@
 
 #include "netstrms.h"
 
+/* limits - TODO: think if this shall be configurable */
+#define NSPOLL_MAX_EVENTS_PER_WAIT 128
+
 /* some operations to be portable when we do not have epoll() available */
 #define NSDPOLL_ADD	1
 #define NSDPOLL_DEL	2
@@ -38,6 +41,7 @@
  * we can AND SHALL remove it! <-- TODO
  */
 #define NSDPOLL_IN_LSTN	128	/* EPOLLIN for listeners! */
+
 
 /* next is 4, 8, 16, ... - must be bit values, as they are ored! */
 
@@ -56,8 +60,8 @@ BEGINinterface(nspoll) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(nspoll_t **ppThis);
 	rsRetVal (*ConstructFinalize)(nspoll_t *pThis);
 	rsRetVal (*Destruct)(nspoll_t **ppThis);
-	rsRetVal (*Wait)(nspoll_t *pNsdpoll, int timeout, int *numEntries, nsd_epworkset_t *workset[]);
-	rsRetVal (*Ctl)(nspoll_t *pNsdpoll, netstrm_t *pStrm, int id, void *pUsr, int mode, int op, nsd_epworkset_t **ppWorksetStore);
+	rsRetVal (*Wait)(nspoll_t *pNsdpoll, int timeout, int *numEntries, tcpsrv_io_descr_t *workset[]);
+	rsRetVal (*Ctl)(nspoll_t *pNsdpoll, tcpsrv_io_descr_t *ioDescr, int mode, int op);
 	rsRetVal (*IsEPollSupported)(void); /* static method */
 	/* v3 - 2013-09-17 by rgerhards */
 	rsRetVal (*SetDrvrName)(nspoll_t *pThis, uchar *name);
