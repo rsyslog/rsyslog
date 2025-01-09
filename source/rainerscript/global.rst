@@ -545,7 +545,7 @@ The following parameters can be set:
   configuration file is not clean. "Not Clean" means there are errors or
   some other annoyances that rsyslogd reports on startup. This is a
   user-requested feature to have a strict startup mode. Note that with the
-  current code base it is not always possible to differentiate between an
+  current code base it is not always possible to differentiate between a
   real error and a warning-like condition. As such, the startup will also
   prevented if warnings are present. I consider this a good thing in being
   "strict", but I admit there also currently is no other way of doing it.
@@ -610,7 +610,7 @@ The following parameters can be set:
 
 - **security.abortOnIDResolutionFail** [boolean (on/off)], default "on", available 8.2002.0+
 
-  This setting controls if rsyslog should error-terminate when an security ID cannot
+  This setting controls if rsyslog should error-terminate when a security ID cannot
   be resolved during config file processing at startup. If set to "on" and
   a name ID lookup fails (for user and group names) rsyslog does not start but
   terminate with an error message. This is necessary as a security

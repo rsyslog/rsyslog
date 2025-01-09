@@ -226,7 +226,7 @@ uselpop
 
    "boolean", "no", "no", "none"
 
-| When using the :ref:`imhiredis_queue_mode`, defines if imhiredis should use a LPOP instruction instead of a RPOP (the default).
+| When using the :ref:`imhiredis_queue_mode`, defines if imhiredis should use an LPOP instruction instead of an RPOP (the default).
 | Has no influence on the :ref:`imhiredis_channel_mode` and will be ignored if set with this mode.
 
 

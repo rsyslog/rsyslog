@@ -466,7 +466,7 @@ sequence. The default historically is inconsistent and depends on which
 functionality is used to read the file. It can be either "#012" or "\\n". If
 you want to retain that default, do not configure this parameter.
 
-If it is configured, any sequence may be used. For example, to replace a LF
+If it is configured, any sequence may be used. For example, to replace an LF
 with a simple space, use::
 
    escapeLF.replacement=" "

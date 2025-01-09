@@ -77,7 +77,7 @@ benefit from knowing the generic architecture.
 -  A "PLOrig" is a payload originator residing within the syslog
    application itself. Typically, this PLOrig emits syslog application
    startup, shutdown, error and status log messages.
--  A "GWI" is a inbound gateway. For example, a SNMP-to-syslog gateway
+-  A "GWI" is a inbound gateway. For example, an SNMP-to-syslog gateway
    may receive SNMP messages and translate them into syslog.
 -  The ellipsis after "GWI" indicates that there are potentially a
    variety of different other ways to originally generate payload.

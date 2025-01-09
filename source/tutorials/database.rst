@@ -110,7 +110,7 @@ Replacer <http://www.rsyslog.com/doc-property_replacer.html>`_\ ".
 Simply said, you access properties by including their name between
 percent signs inside the template. For example, if the syslog message is
 "Test", the template "%msg%" would be expanded to "Test". Rsyslogd
-supports sending template text as a SQL statement to the database. As
+supports sending template text as an SQL statement to the database. As
 such, the template must be a valid SQL statement. There is no limit in
 what the statement might be, but there are some obvious and not so
 obvious choices. For example, a template "drop table xxx" is possible,

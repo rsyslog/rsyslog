@@ -39,7 +39,7 @@ there are no special symbols (like 1k, 1m,...) at this point of
 development.
 Keep in mind that $outchannel just defines a channel with "name". It
 does not activate it. To do so, you must use a selector line (see
-below). That selector line includes the channel name plus an $ sign in
+below). That selector line includes the channel name plus a $ sign in
 front of it. A sample might be:
 \*.\* :omfile:$mychannel
 In its current form, output channels primarily provide the ability to

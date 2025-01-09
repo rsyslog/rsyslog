@@ -165,7 +165,7 @@ In-memory queue mode is what most people have on their mind when they
 think about computing queues. Here, the enqueued data elements are held
 in memory. Consequently, in-memory queues are very fast. But of course,
 they do not survive any program or operating system abort (what usually
-is tolerable and unlikely). Be sure to use an UPS if you use in-memory
+is tolerable and unlikely). Be sure to use a UPS if you use in-memory
 mode and your log data is important to you. Note that even in-memory
 queues may hold data for an infinite amount of time when e.g. an output
 destination system is down and there is no reason to move the data out

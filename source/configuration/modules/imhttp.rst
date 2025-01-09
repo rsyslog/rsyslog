@@ -238,7 +238,7 @@ basicAuthFile
    "string", "no", "none", ""
 
 Enables access control to this endpoint using http basic authentication. Option is disabled by default.
-To enable it, set this option to a `htpasswd file`, which can be generated using a standard `htpasswd` tool.
+To enable it, set this option to an `htpasswd file`, which can be generated using a standard `htpasswd` tool.
 
 See also:
 
@@ -260,7 +260,7 @@ basicAuthFile
 
    "string", "no", "none", "none"
 
-Configures a `htpasswd <https://httpd.apache.org/docs/2.4/programs/htpasswd.html>`_ file and enables `basic authentication <https://en.wikipedia.org/wiki/Basic_access_authentication>`_ on http request received on this input.
+Configures an `htpasswd <https://httpd.apache.org/docs/2.4/programs/htpasswd.html>`_ file and enables `basic authentication <https://en.wikipedia.org/wiki/Basic_access_authentication>`_ on http request received on this input.
 If this option is not set, basic authentication will not be enabled.
 
 
@@ -296,7 +296,7 @@ Examples
 Example 1
 ---------
 
-This sets up a http server instance on port 8080 with two inputs.
+This sets up an http server instance on port 8080 with two inputs.
 One input path at '/postrequest', and another at '/postrequest2':
 
 .. code-block:: none
@@ -337,7 +337,7 @@ One input path at '/postrequest', and another at '/postrequest2':
 Example 2
 ---------
 
-This sets up a http server instance on ports 80 and 443s (use 's' to indicate ssl) with an input path at '/postrequest':
+This sets up an http server instance on ports 80 and 443s (use 's' to indicate ssl) with an input path at '/postrequest':
 
 .. code-block:: none
 

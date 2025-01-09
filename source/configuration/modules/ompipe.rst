@@ -20,7 +20,7 @@ Note: parameter names are case-insensitive.
 Note: parameter names are case-insensitive.
 
 -  Pipe: string a fifo or named pipe can be used as a destination for log messages.
--  tryResumeReopen: Sometimes we need to reopen a pipe after an ompipe action gets suspended. Sending an HUP signal does the job but requires an interaction with rsyslog. When set to "on" and a resume action fails, the file descriptor is closed, causing a new open in the next resume. Default: "off" to preserve existing behavior before introduction of this option.
+-  tryResumeReopen: Sometimes we need to reopen a pipe after an ompipe action gets suspended. Sending a HUP signal does the job but requires an interaction with rsyslog. When set to "on" and a resume action fails, the file descriptor is closed, causing a new open in the next resume. Default: "off" to preserve existing behavior before introduction of this option.
 
 **Caveats/Known Bugs:**
 None

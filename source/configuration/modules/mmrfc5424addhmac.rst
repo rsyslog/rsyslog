@@ -84,7 +84,7 @@ development of a verification tool, please simply email
 
 **See Also**
 
--  `How to add a HMAC to RFC5424
+-  `How to add an HMAC to RFC5424
    messages <http://www.rsyslog.com/how-to-add-a-hmac-to-rfc5424-structured-data-messages/>`_
 
 **Caveats/Known Bugs:**

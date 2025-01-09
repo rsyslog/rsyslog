@@ -411,7 +411,7 @@ The following properties are maintained for each listener:
 -  **submitted** - total number of messages submitted for processing since startup
 
 The worker thread (in short: worker) statistic is named "imudp(wX)" where "X" is
-the worker thread ID, which is an monotonically increasing integer starting at 0.
+the worker thread ID, which is a monotonically increasing integer starting at 0.
 This means the first worker will have the name "imudp(w0)", the second "imudp(w1)"
 and so on. Note that workers are all equal. It doesn’t really matter which worker
 processes which messages, so the actual worker ID is not of much concern. More
@@ -424,7 +424,7 @@ Note: worker thread statistics are available starting with rsyslog 7.5.5.
 -  **disallowed** - total number of messages discarded due to disallowed sender
 
 This counts the number of messages that have been discarded because they have
-been received by an disallowed sender. Note that if no allowed senders are
+been received by a disallowed sender. Note that if no allowed senders are
 configured (the default), this counter will always be zero.
 
 This counter was introduced by rsyslog 8.35.0.
@@ -453,7 +453,7 @@ Examples
 Example 1
 ---------
 
-This sets up an UDP server on port 514:
+This sets up a UDP server on port 514:
 
 .. code-block:: none
 

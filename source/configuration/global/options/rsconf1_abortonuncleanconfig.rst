@@ -17,7 +17,7 @@ This parameter permits to prevent rsyslog from running when the
 configuration file is not clean. "Not Clean" means there are errors or
 some other annoyances that rsyslogd reports on startup. This is a
 user-requested feature to have a strict startup mode. Note that with the
-current code base it is not always possible to differentiate between an
+current code base it is not always possible to differentiate between a
 real error and a warning-like condition. As such, the startup will also
 prevented if warnings are present. I consider this a good thing in being
 "strict", but I admit there also currently is no other way of doing it.

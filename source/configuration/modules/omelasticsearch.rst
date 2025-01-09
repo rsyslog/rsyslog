@@ -799,7 +799,7 @@ Parameters are:
 -  **submitted** - number of messages submitted for processing (with both
    success and error result)
 
--  **fail.httprequests** - the number of times a http request failed. Note
+-  **fail.httprequests** - the number of times an http request failed. Note
    that a single http request may be used to submit multiple messages, so this
    number may be (much) lower than fail.http.
 
