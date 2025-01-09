@@ -75,6 +75,7 @@
 #include "ruleset.h"
 #include "ratelimit.h"
 #include "unicode-helper.h"
+#include "nsd_ptcp.h"
 
 PRAGMA_INGORE_Wswitch_enum
 MODULE_TYPE_LIB
@@ -568,20 +569,20 @@ RunSelectCancelCleanup(void *arg)
  * rgerhards, 2009-11-25
  */
 static rsRetVal
-closeSess(tcpsrv_t *const pThis, nsd_epworkset_t *const pWorksetItem, nspoll_t *const pPoll) {
+closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr, nspoll_t *const pPoll) {
 	DEFiRet;
-	tcps_sess_t *pSess = (tcps_sess_t *) pWorksetItem->pUsr;
+	tcps_sess_t *pSess = pioDescr->ptr.pSess;
 	if(pPoll != NULL) {
-		CHKiRet(nspoll.Ctl(pPoll, pSess->pStrm, 0, pSess, NSDPOLL_IN, NSDPOLL_DEL, NULL));
+		CHKiRet(nspoll.Ctl(pPoll, pioDescr, NSDPOLL_IN, NSDPOLL_DEL));
 	}
 	pThis->pOnRegularClose(pSess);
 	tcps_sess.Destruct(&pSess);
 finalize_it:
 	if(pPoll == NULL) {
-		pThis->pSessions[pWorksetItem->id] = NULL;
+		pThis->pSessions[pioDescr->id] = NULL;
 	} else {
-		/* in epoll mode, workset is dynamically allocated */
-		free(pWorksetItem);
+		/* in epoll mode, ioDescr is dynamically allocated */
+		free(pioDescr);
 	}
 	RETiRet;
 }
@@ -593,7 +594,7 @@ finalize_it:
  * rgerhards, 2009-07-020
  */
 static rsRetVal
-doReceive(tcpsrv_t *const pThis, nsd_epworkset_t *const pWorksetItem, nspoll_t *const pPoll)
+doReceive(tcpsrv_t *const pThis, nspoll_t *const pPoll, tcpsrv_io_descr_t *const pioDescr)
 {
 	char buf[128*1024]; /* reception buffer - may hold a partial or multiple messages */
 	ssize_t iRcvd;
@@ -604,7 +605,7 @@ doReceive(tcpsrv_t *const pThis, nsd_epworkset_t *const pWorksetItem, nspoll_t *
 	int oserr = 0;
 	int do_run = 1;
 	int loop_ctr = 0;
-	tcps_sess_t *pSess = (tcps_sess_t *) pWorksetItem->pUsr;
+	tcps_sess_t *pSess = pioDescr->ptr.pSess;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	prop.GetString((pSess)->fromHostIP, &pszPeer, &lenPeer);
@@ -624,7 +625,7 @@ doReceive(tcpsrv_t *const pThis, nsd_epworkset_t *const pWorksetItem, nspoll_t *
 				LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p closed by remote "
 					"peer %s.\n", (pSess)->pStrm, pszPeer);
 			}
-			CHKiRet(closeSess(pThis, pWorksetItem, pPoll));
+			CHKiRet(closeSess(pThis, pioDescr, pPoll));
 			do_run = 0;
 			break;
 		case RS_RET_RETRY:
@@ -639,13 +640,13 @@ doReceive(tcpsrv_t *const pThis, nsd_epworkset_t *const pWorksetItem, nspoll_t *
 				 * We are instructed to terminate the session.
 				 */
 				LogError(oserr, localRet, "Tearing down TCP Session from %s", pszPeer);
-				CHKiRet(closeSess(pThis, pWorksetItem, pPoll));
+				CHKiRet(closeSess(pThis, pioDescr, pPoll));
 			}
 			break;
 		default:
 			LogError(oserr, iRet, "netstream session %p from %s will be closed due to error",
 					pSess->pStrm, pszPeer);
-			CHKiRet(closeSess(pThis, pWorksetItem, pPoll));
+			CHKiRet(closeSess(pThis, pioDescr, pPoll));
 			do_run = 0;
 			break;
 		}
@@ -662,6 +663,7 @@ doAccept(tcpsrv_t *const pThis, nspoll_t *const pPoll, const int idx)
 {
 	tcpLstnParams_t *cnf_params;
 	tcps_sess_t *pNewSess = NULL;
+	tcpsrv_io_descr_t *pDescr = NULL;
 	DEFiRet;
 
 	DBGPRINTF("New connect on NSD %p.\n", pThis->ppLstn[idx]);
@@ -669,7 +671,12 @@ doAccept(tcpsrv_t *const pThis, nspoll_t *const pPoll, const int idx)
 	cnf_params = pThis->ppLstnPort[idx]->cnf_params;
 	if(iRet == RS_RET_OK) {
 		if(pPoll != NULL) {
-			CHKiRet(nspoll.Ctl(pPoll, pNewSess->pStrm, 0, pNewSess, NSDPOLL_IN, NSDPOLL_ADD, NULL));
+			/* pDescr is only dyn allocated in epoll mode! */
+			CHKmalloc(pDescr = (tcpsrv_io_descr_t*) calloc(1, sizeof(tcpsrv_io_descr_t)));
+			pDescr->id = idx; // TODO: remove if session handling is refactored to dyn max sessions
+			pDescr->ptrType = NSD_PTR_TYPE_SESS;
+			pDescr->ptr.pSess = pNewSess;
+			CHKiRet(nspoll.Ctl(pPoll, pDescr, NSDPOLL_IN, NSDPOLL_ADD));
 		}
 		DBGPRINTF("New session created with NSD %p.\n", pNewSess);
 	} else {
@@ -681,6 +688,7 @@ finalize_it:
 		LogError(0, iRet, "tcpsrv listener (inputname: '%s') failed "
 			"to process incoming connection with error %d",
 			(cnf_params->pszInputName == NULL) ? (uchar*)"*UNSET*" : cnf_params->pszInputName, iRet);
+		free(pDescr);
 		srSleep(0,20000); /* Sleep 20ms */
 	}
 	RETiRet;
@@ -689,15 +697,15 @@ finalize_it:
 /* process a single workset item
  */
 static rsRetVal ATTR_NONNULL(1)
-processWorksetItem(tcpsrv_t *const pThis, nspoll_t *pPoll, nsd_epworkset_t *const pWorksetItem)
+processWorksetItem(tcpsrv_t *const pThis, nspoll_t *pPoll, tcpsrv_io_descr_t *const pioDescr)
 {
 	DEFiRet;
 
-	DBGPRINTF("tcpsrv: processing item %d, pUsr %p, bAbortConn\n", pWorksetItem->id, pWorksetItem->pUsr);
-	if(pWorksetItem->pUsr == pThis->ppLstn) {
-		doAccept(pThis, pPoll, pWorksetItem->id);
+	DBGPRINTF("tcpsrv: processing item %d\n", pioDescr->id);
+	if(pioDescr->ptrType == NSD_PTR_TYPE_LSTN) {
+		doAccept(pThis, pPoll, pioDescr->id);
 	} else {
-		doReceive(pThis, pWorksetItem, pPoll);
+		doReceive(pThis, pPoll, pioDescr);
 	}
 	RETiRet;
 }
@@ -727,7 +735,7 @@ wrkr(void *const myself)
 		pthread_mutex_unlock(&pThis->wrkrMut);
 
 		++me->numCalled;
-		processWorksetItem(me->pSrv, me->pPoll, me->pWorksetItem);
+		processWorksetItem(me->pSrv, me->pPoll, me->pioDescr);
 
 		pthread_mutex_lock(&pThis->wrkrMut);
 		me->pSrv = NULL;	/* indicate we are free again */
@@ -761,7 +769,7 @@ waitForWorkers(tcpsrv_t *const pThis)
  * as much as possible.
  */
 static rsRetVal
-processWorkset(tcpsrv_t *const pThis, nspoll_t *const pPoll, int numEntries, nsd_epworkset_t *pWorkset[])
+processWorkset(tcpsrv_t *const pThis, nspoll_t *const pPoll, int numEntries, tcpsrv_io_descr_t *const pioDescr[])
 {
 	int i;
 	int origEntries = numEntries;
@@ -774,7 +782,7 @@ processWorkset(tcpsrv_t *const pThis, nspoll_t *const pPoll, int numEntries, nsd
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
 		if(numEntries == 1) {
 			/* process self, save context switch */
-			iRet = processWorksetItem(pThis, pPoll, pWorkset[0]);
+			iRet = processWorksetItem(pThis, pPoll, pioDescr[0]);
 		} else {
 			/* No cancel handler needed here, since no cancellation
 			 * points are executed while pThis->wrkrMut is locked.
@@ -789,9 +797,7 @@ processWorkset(tcpsrv_t *const pThis, nspoll_t *const pPoll, int numEntries, nsd
 				/* worker free -> use it! */
 				pThis->wrkrInfo[i].pSrv = pThis;
 				pThis->wrkrInfo[i].pPoll = pPoll;
-				//pThis->wrkrInfo[i].idx = workset[numEntries -1].id;
-				//pThis->wrkrInfo[i].pUsr = workset[numEntries -1].pUsr;
-				pThis->wrkrInfo[i].pWorksetItem = pWorkset[numEntries - 1];
+				pThis->wrkrInfo[i].pioDescr = pioDescr[numEntries - 1];
 				/* Note: we must increment pThis->wrkrRunning HERE and not inside the worker's
 				 * code. This is because a worker may actually never start, and thus
 				 * increment pThis->wrkrRunning, before we finish and check the running worker
@@ -803,7 +809,7 @@ processWorkset(tcpsrv_t *const pThis, nspoll_t *const pPoll, int numEntries, nsd
 			} else {
 				pthread_mutex_unlock(&pThis->wrkrMut);
 				/* no free worker, so we process this one ourselfs */
-				iRet = processWorksetItem(pThis, pPoll, pWorkset[numEntries-1]);
+				iRet = processWorksetItem(pThis, pPoll, pioDescr[numEntries-1]);
 			}
 		}
 		--numEntries;
@@ -837,9 +843,9 @@ RunSelect(tcpsrv_t *const pThis)
 	int iWorkset;
 	int iTCPSess;
 	int bIsReady;
-	nsd_epworkset_t *pWorkset[128]; /* 128 is currently fixed num of concurrent requests */
-	nsd_epworkset_t workset[128]; /* 128 is currently fixed num of concurrent requests */
-	const int sizeWorkset = sizeof(workset)/sizeof(nsd_epworkset_t);
+	tcpsrv_io_descr_t *pWorkset[NSPOLL_MAX_EVENTS_PER_WAIT];
+	tcpsrv_io_descr_t workset[NSPOLL_MAX_EVENTS_PER_WAIT];
+	const int sizeWorkset = sizeof(workset)/sizeof(tcpsrv_io_descr_t);
 	nssel_t *pSel = NULL;
 	rsRetVal localRet;
 
@@ -885,7 +891,10 @@ RunSelect(tcpsrv_t *const pThis)
 			CHKiRet(nssel.IsReady(pSel, pThis->ppLstn[i], NSDSEL_RD, &bIsReady, &nfds));
 			if(bIsReady) {
 				workset[iWorkset].id = i;
-				workset[iWorkset].pUsr = (void*) pThis->ppLstn;
+
+				workset[iWorkset].ptrType = NSD_PTR_TYPE_LSTN;
+				workset[iWorkset].id = i;
+				workset[iWorkset].ptr.ppLstn = pThis->ppLstn;
 				/* this is a flag to indicate listen sock */
 				++iWorkset;
 				if(iWorkset >= (int) sizeWorkset) {
@@ -905,7 +914,9 @@ RunSelect(tcpsrv_t *const pThis)
 				&bIsReady, &nfds);
 			if(bIsReady || localRet != RS_RET_OK) {
 				workset[iWorkset].id = iTCPSess;
-				workset[iWorkset].pUsr = (void*) pThis->pSessions[iTCPSess];
+
+				workset[iWorkset].ptrType = NSD_PTR_TYPE_SESS;
+				workset[iWorkset].ptr.pSess = pThis->pSessions[iTCPSess];
 				++iWorkset;
 				if(iWorkset >= (int) sizeWorkset) {
 					processWorkset(pThis, NULL, iWorkset, pWorkset);
@@ -944,7 +955,7 @@ DoRun(tcpsrv_t *const pThis, nspoll_t **ppPoll)
 {
 	DEFiRet;
 	int i;
-	nsd_epworkset_t *workset[128]; /* 128 is currently fixed num of concurrent requests */
+	tcpsrv_io_descr_t *workset[NSPOLL_MAX_EVENTS_PER_WAIT];
 	int numEntries;
 	nspoll_t *pPoll = NULL;
 	rsRetVal localRet;
@@ -970,13 +981,16 @@ DoRun(tcpsrv_t *const pThis, nspoll_t **ppPoll)
 	/* Add the TCP listen sockets to the list of sockets to monitor */
 	for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
 		DBGPRINTF("Trying to add listener %d, pUsr=%p\n", i, pThis->ppLstn);
-		CHKiRet(nspoll.Ctl(pPoll, pThis->ppLstn[i], i, pThis->ppLstn, NSDPOLL_IN_LSTN, NSDPOLL_ADD,
-			&pThis->ppLstnWorksetPtr[i]));
+		CHKmalloc(pThis->ppioDescrPtr[i] = (tcpsrv_io_descr_t*) calloc(1, sizeof(tcpsrv_io_descr_t)));
+		pThis->ppioDescrPtr[i]->id = i; // TODO: remove if session handling is refactored to dyn max sessions
+		pThis->ppioDescrPtr[i]->ptrType = NSD_PTR_TYPE_LSTN;
+		pThis->ppioDescrPtr[i]->ptr.ppLstn = pThis->ppLstn;
+		CHKiRet(nspoll.Ctl(pPoll, pThis->ppioDescrPtr[i], NSDPOLL_IN_LSTN, NSDPOLL_ADD));
 		DBGPRINTF("Added listener %d\n", i);
 	}
 
 	while(glbl.GetGlobalInputTermState() == 0) {
-		numEntries = sizeof(workset)/sizeof(nsd_epworkset_t*);
+		numEntries = sizeof(workset)/sizeof(tcpsrv_io_descr_t *);
 		localRet = nspoll.Wait(pPoll, -1, &numEntries, workset);
 		if(glbl.GetGlobalInputTermState() == 1)
 			break; /* terminate input! */
@@ -993,8 +1007,8 @@ DoRun(tcpsrv_t *const pThis, nspoll_t **ppPoll)
 
 	/* remove the tcp listen sockets from the epoll set */
 	for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
-		CHKiRet(nspoll.Ctl(pPoll, pThis->ppLstn[i], i, pThis->ppLstn, NSDPOLL_IN, NSDPOLL_DEL, NULL));
-		free(pThis->ppLstnWorksetPtr[i]);
+		CHKiRet(nspoll.Ctl(pPoll, pThis->ppioDescrPtr[i], NSDPOLL_IN_LSTN, NSDPOLL_DEL));
+		free(pThis->ppioDescrPtr[i]);
 	}
 
 finalize_it:
@@ -1106,7 +1120,7 @@ tcpsrvConstructFinalize(tcpsrv_t *pThis)
 	/* set up listeners */
 	CHKmalloc(pThis->ppLstn = calloc(pThis->iLstnMax, sizeof(netstrm_t*)));
 	CHKmalloc(pThis->ppLstnPort = calloc(pThis->iLstnMax, sizeof(tcpLstnPortList_t*)));
-	CHKmalloc(pThis->ppLstnWorksetPtr = calloc(pThis->iLstnMax, sizeof(nsd_epworkset_t*)));
+	CHKmalloc(pThis->ppioDescrPtr = calloc(pThis->iLstnMax, sizeof(tcpsrv_io_descr_t*)));
 	iRet = pThis->OpenLstnSocks(pThis);
 
 finalize_it:
@@ -1145,7 +1159,7 @@ CODESTARTobjDestruct(tcpsrv)
 	free(pThis->pszDrvrCertFile);
 	free(pThis->ppLstn);
 	free(pThis->ppLstnPort);
-	free(pThis->ppLstnWorksetPtr);
+	free(pThis->ppioDescrPtr);
 	free(pThis->pszInputName);
 	free(pThis->pszOrigin);
 ENDobjDestruct(tcpsrv)

@@ -6,7 +6,7 @@
  *
  * Work on this module begun 2009-11-18 by Rainer Gerhards.
  *
- * Copyright 2009-2014 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2025 Rainer Gerhards and Adiscon GmbH.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -128,7 +128,7 @@ finalize_it:
 /* Carries out the actual wait (all done in lower layers)
  */
 static rsRetVal
-Wait(nspoll_t *pThis, int timeout, int *numEntries, nsd_epworkset_t *workset[]) {
+Wait(nspoll_t *pThis, int timeout, int *numEntries, tcpsrv_io_descr_t *workset[]) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nspoll);
 	assert(workset != NULL);
@@ -164,10 +164,10 @@ finalize_it:
  * rgerhards, 2009-11-18
  */
 static rsRetVal
-Ctl(nspoll_t *pThis, netstrm_t *pStrm, int id, void *pUsr, int mode, int op, nsd_epworkset_t **ppWorksetStore) {
+Ctl(nspoll_t *pThis, tcpsrv_io_descr_t *pioDescr,  int mode, int op) {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nspoll);
-	iRet = pThis->Drvr.Ctl(pThis->pDrvrData, pStrm->pDrvrData, id, pUsr, mode, op, ppWorksetStore);
+	iRet = pThis->Drvr.Ctl(pThis->pDrvrData, pioDescr, mode, op);
 	RETiRet;
 }
 
