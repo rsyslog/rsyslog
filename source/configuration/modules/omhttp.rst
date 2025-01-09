@@ -532,7 +532,7 @@ useHttps
 
    "binary", "off", "no", "none"
 
-When switched to "on" you will use https instead of http.
+When switched to "on" you will use `https` instead of `http`.
 
 
 tls.cacert
@@ -691,7 +691,7 @@ Here's the pseudocode of the batching algorithm used by omhttp. This section of 
 
     def submit(Q):                      # function to submit
         batch = serialize(Q)            # serialize according to configured batch.format
-        result = post(batch)            # http post serialized batch to server
+        result = post(batch)            # HTTP post serialized batch to server
         checkFailureAndRetry(Q, result) # check if post failed and pushed failed messages to configured retry.ruleset
         Q.empty()                       # reset for next batch
 

@@ -799,8 +799,8 @@ Parameters are:
 -  **submitted** - number of messages submitted for processing (with both
    success and error result)
 
--  **fail.httprequests** - the number of times an http request failed. Note
-   that a single http request may be used to submit multiple messages, so this
+-  **fail.httprequests** - the number of times an HTTP request failed. Note
+   that a single HTTP request may be used to submit multiple messages, so this
    number may be (much) lower than fail.http.
 
 -  **fail.http** - number of message failures due to connection like-problems
@@ -839,7 +839,7 @@ The following counters are available when `retryfailures="on"` is used:
 
 -  **response.other** - number of times omelasticsearch received a
    response not recognized as one of the above responses, typically some other
-   `4xx` or `5xx` http status.
+   `4xx` or `5xx` HTTP status.
 
 -  **rebinds** - if using `rebindinterval` this will be the number of
    times omelasticsearch has reconnected to Elasticsearch

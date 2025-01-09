@@ -1,5 +1,5 @@
 *************************
-imhttp: http input module
+imhttp: HTTP input module
 *************************
 
 ===========================  ===========
@@ -11,8 +11,8 @@ imhttp: http input module
 Purpose
 =======
 
-Provides the ability to receive adhoc and plaintext syslog messages via http. The format of messages accepted,
-depends on configuration. imhttp exposes the capabilities and the underlying options of the http library
+Provides the ability to receive adhoc and plaintext syslog messages via HTTP. The format of messages accepted,
+depends on configuration. imhttp exposes the capabilities and the underlying options of the HTTP library
 used, which currently is civetweb.
 
 Civetweb documentation:
@@ -104,7 +104,7 @@ Endpoint
 
    "string", "yes", "path that begins with '/' ", "none"
 
-Sets a request path for an http input. Path should always start with a '/'.
+Sets a request path for an HTTP input. Path should always start with a '/'.
 
 
 DisableLFDelimiter
@@ -220,10 +220,10 @@ addmetadata
 Enables metadata injection into `$!metadata` property. Currently, only header data is supported.
 The following metadata will be injected into the following properties:
 
-- `$!metadata!httpheaders`: http header data will be injected here as key-value pairs. All header names will automatically be lowercased
+- `$!metadata!httpheaders`: HTTP header data will be injected here as key-value pairs. All header names will automatically be lowercased
   for case-insensitive access.
 
-- `$!metadata!queryparams`: query parameters from the http request will be injected here as key-value pairs. All header names will automatically be lowercased
+- `$!metadata!queryparams`: query parameters from the HTTP request will be injected here as key-value pairs. All header names will automatically be lowercased
   for case-insensitive access.
 
 
@@ -237,7 +237,7 @@ basicAuthFile
 
    "string", "no", "none", ""
 
-Enables access control to this endpoint using http basic authentication. Option is disabled by default.
+Enables access control to this endpoint using HTTP basic authentication. Option is disabled by default.
 To enable it, set this option to an `htpasswd file`, which can be generated using a standard `htpasswd` tool.
 
 See also:
@@ -260,7 +260,7 @@ basicAuthFile
 
    "string", "no", "none", "none"
 
-Configures an `htpasswd <https://httpd.apache.org/docs/2.4/programs/htpasswd.html>`_ file and enables `basic authentication <https://en.wikipedia.org/wiki/Basic_access_authentication>`_ on http request received on this input.
+Configures an `htpasswd <https://httpd.apache.org/docs/2.4/programs/htpasswd.html>`_ file and enables `basic authentication <https://en.wikipedia.org/wiki/Basic_access_authentication>`_ on HTTP request received on this input.
 If this option is not set, basic authentication will not be enabled.
 
 
@@ -287,7 +287,7 @@ When a message is to long it will be truncated and an error will show the remain
 Caveats/Known Bugs
 ==================
 
--  module currently only a single http instance, however multiple ports may be bound.
+-  module currently only a single HTTP instance, however multiple ports may be bound.
 
 
 Examples
@@ -296,7 +296,7 @@ Examples
 Example 1
 ---------
 
-This sets up an http server instance on port 8080 with two inputs.
+This sets up an HTTP server instance on port 8080 with two inputs.
 One input path at '/postrequest', and another at '/postrequest2':
 
 .. code-block:: none
@@ -306,7 +306,7 @@ One input path at '/postrequest', and another at '/postrequest2':
    module(load="imhttp") # needs to be done just once
 
    # Input using default LF delimited framing
-   # For example, the following http request, with data body "Msg0001\nMsg0002\nMsg0003"
+   # For example, the following HTTP request, with data body "Msg0001\nMsg0002\nMsg0003"
    ##
    # - curl -si http://localhost:$IMHTTP_PORT/postrequest -d $'Msg0001\nMsg0002\nMsg0003'
    ##
@@ -337,7 +337,7 @@ One input path at '/postrequest', and another at '/postrequest2':
 Example 2
 ---------
 
-This sets up an http server instance on ports 80 and 443s (use 's' to indicate ssl) with an input path at '/postrequest':
+This sets up an HTTP server instance on ports 80 and 443s (use 's' to indicate ssl) with an input path at '/postrequest':
 
 .. code-block:: none
 
