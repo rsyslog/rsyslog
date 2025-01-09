@@ -1,6 +1,6 @@
 /* An implementation of the nsd poll interface for plain tcp sockets.
  *
- * Copyright 2009-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2025 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
