@@ -610,6 +610,20 @@ doReceive(tcpsrv_t *const pThis, nspoll_t *const pPoll, tcpsrv_io_descr_t *const
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	prop.GetString((pSess)->fromHostIP, &pszPeer, &lenPeer);
 	DBGPRINTF("netstream %p with new data from remote peer %s\n", (pSess)->pStrm, pszPeer);
+
+	/* if we had EPOLLERR, give information. The other processing continues. This
+	 * seems to be best practice and may cause better error information.
+	 */
+	if(pioDescr->isInError) {
+		int error = 0;
+		socklen_t len = sizeof(error);
+		const int sock = ((nsd_ptcp_t *) pSess->pStrm->pDrvrData)->sock;
+		if (getsockopt(sock, SOL_SOCKET, SO_ERROR, &error, &len) == 0) {
+			LogError(error, RS_RET_IO_ERROR, "epoll subsystem signalled state EPOLLERR "
+				"for stream %p, peer %s  ", (pSess)->pStrm, pszPeer);
+		} /* no else - if this fails, we have nothing to report... */
+	}
+
 	while(do_run && loop_ctr < 500) {	/*  break happens in switch below! */
 		dbgprintf("RGER: doReceive loop iteration %d\n", loop_ctr++);
 
@@ -674,6 +688,7 @@ doAccept(tcpsrv_t *const pThis, nspoll_t *const pPoll, const int idx)
 			/* pDescr is only dyn allocated in epoll mode! */
 			CHKmalloc(pDescr = (tcpsrv_io_descr_t*) calloc(1, sizeof(tcpsrv_io_descr_t)));
 			pDescr->id = idx; // TODO: remove if session handling is refactored to dyn max sessions
+			pDescr->isInError = 0;
 			pDescr->ptrType = NSD_PTR_TYPE_SESS;
 			pDescr->ptr.pSess = pNewSess;
 			CHKiRet(nspoll.Ctl(pPoll, pDescr, NSDPOLL_IN, NSDPOLL_ADD));
@@ -894,6 +909,7 @@ RunSelect(tcpsrv_t *const pThis)
 
 				workset[iWorkset].ptrType = NSD_PTR_TYPE_LSTN;
 				workset[iWorkset].id = i;
+				workset[iWorkset].isInError = 0;
 				workset[iWorkset].ptr.ppLstn = pThis->ppLstn;
 				/* this is a flag to indicate listen sock */
 				++iWorkset;
@@ -913,9 +929,8 @@ RunSelect(tcpsrv_t *const pThis)
 			localRet = nssel.IsReady(pSel, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD,
 				&bIsReady, &nfds);
 			if(bIsReady || localRet != RS_RET_OK) {
-				workset[iWorkset].id = iTCPSess;
-
 				workset[iWorkset].ptrType = NSD_PTR_TYPE_SESS;
+				workset[iWorkset].id = iTCPSess;
 				workset[iWorkset].ptr.pSess = pThis->pSessions[iTCPSess];
 				++iWorkset;
 				if(iWorkset >= (int) sizeWorkset) {
@@ -983,6 +998,7 @@ DoRun(tcpsrv_t *const pThis, nspoll_t **ppPoll)
 		DBGPRINTF("Trying to add listener %d, pUsr=%p\n", i, pThis->ppLstn);
 		CHKmalloc(pThis->ppioDescrPtr[i] = (tcpsrv_io_descr_t*) calloc(1, sizeof(tcpsrv_io_descr_t)));
 		pThis->ppioDescrPtr[i]->id = i; // TODO: remove if session handling is refactored to dyn max sessions
+		pThis->ppioDescrPtr[i]->isInError = 0;
 		pThis->ppioDescrPtr[i]->ptrType = NSD_PTR_TYPE_LSTN;
 		pThis->ppioDescrPtr[i]->ptr.ppLstn = pThis->ppLstn;
 		CHKiRet(nspoll.Ctl(pPoll, pThis->ppioDescrPtr[i], NSDPOLL_IN_LSTN, NSDPOLL_ADD));
