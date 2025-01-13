@@ -146,6 +146,7 @@ Ctl(nsdpoll_t *const pNsdpoll, tcpsrv_io_descr_t *const pioDescr, const int mode
 	}
 
 finalize_it:
+	DBGPRINTF("Done adding nsdpoll entry %d, iRet %d\n", id, iRet);
 	RETiRet;
 }
 

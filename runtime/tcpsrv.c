@@ -808,7 +808,8 @@ processWorkset(tcpsrv_t *const pThis, nspoll_t *const pPoll, int numEntries, tcp
 			/* check if there is a free worker */
 			for(i = 0 ; (i < pThis->wrkrMax) && ((pThis->wrkrInfo[i].pSrv != NULL) || (pThis->wrkrInfo[i].enabled == 0)) ; ++i)
 				/*do search*/;
-			if(i < pThis->wrkrMax) {
+			//if(i < pThis->wrkrMax) {
+			if(i < 0) {
 				/* worker free -> use it! */
 				pThis->wrkrInfo[i].pSrv = pThis;
 				pThis->wrkrInfo[i].pPoll = pPoll;
@@ -931,6 +932,7 @@ RunSelect(tcpsrv_t *const pThis)
 			if(bIsReady || localRet != RS_RET_OK) {
 				workset[iWorkset].ptrType = NSD_PTR_TYPE_SESS;
 				workset[iWorkset].id = iTCPSess;
+				workset[iWorkset].isInError = 0;
 				workset[iWorkset].ptr.pSess = pThis->pSessions[iTCPSess];
 				++iWorkset;
 				if(iWorkset >= (int) sizeWorkset) {
@@ -983,6 +985,7 @@ DoRun(tcpsrv_t *const pThis, nspoll_t **ppPoll)
 	}
 	if(localRet != RS_RET_OK) {
 		/* fall back to select */
+fprintf(stderr, "WARNING_ Falling back to select(), iRet was %d, driver '%s'\n", localRet, pThis->pszDrvrName);
 		DBGPRINTF("tcpsrv could not use epoll() interface, iRet=%d, using select()\n", localRet);
 		iRet = RunSelect(pThis);
 		FINALIZE;
