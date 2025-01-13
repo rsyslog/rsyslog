@@ -65,7 +65,8 @@ loadDrvr(nspoll_t *pThis)
 	pBaseDrvrName = pThis->pBaseDrvrName;
 	if(pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
 		pBaseDrvrName = glbl.GetDfltNetstrmDrvr(runConf);
-	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsdpoll_%s", pBaseDrvrName) == sizeof(szDrvrName))
+	// TODO: Original, think about it! if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsdpoll_%s", pBaseDrvrName) == sizeof(szDrvrName))
+	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsdpoll_ptcp") == sizeof(szDrvrName))
 		ABORT_FINALIZE(RS_RET_DRVRNAME_TOO_LONG);
 	CHKmalloc(pThis->pDrvrName = (uchar*) strdup((char*)szDrvrName));
 
