@@ -187,6 +187,7 @@ Wait(nsdpoll_t *const pNsdpoll, const int timeout, int *const numEntries, tcpsrv
 	DBGPRINTF("epoll returned %d entries\n", nfds);
 	for(i = 0 ; i < nfds ; ++i) {
 		pWorkset[i] = event[i].data.ptr;
+		pWorkset[i]->isInError = event[i].events & EPOLLERR;
 	}
 	*numEntries = nfds;
 
