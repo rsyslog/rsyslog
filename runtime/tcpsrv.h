@@ -79,12 +79,14 @@ struct tcpsrv_wrkrInfo_s {
  * primarily used together with epoll at the moment.
  */
 struct tcpsrv_io_descr_s {
-	int id; // TODO: remove
+	int id; // TODO: remove? (when we have dynamic session nbr)
 	enum {NSD_PTR_TYPE_LSTN, NSD_PTR_TYPE_SESS} ptrType;
 	union {
 		tcps_sess_t *pSess;
 		netstrm_t **ppLstn;	/**<  accept listener's netstream */
 	} ptr;
+	int isInError; /* boolean, if set, subsystem indicates we need to close because we had an
+			* unrecoverable error at the network layer. */
 };
 
 #define TCPSRV_NO_ADDTL_DELIMITER -1 /* specifies that no additional delimiter is to be used in TCP framing */
