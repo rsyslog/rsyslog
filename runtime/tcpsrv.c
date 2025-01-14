@@ -690,6 +690,7 @@ doAccept(tcpsrv_t *const pThis, nspoll_t *const pPoll, const int idx)
 			pDescr->id = idx; // TODO: remove if session handling is refactored to dyn max sessions
 			pDescr->isInError = 0;
 			pDescr->ptrType = NSD_PTR_TYPE_SESS;
+			CHKiRet(netstrm.GetSock(pNewSess->pStrm, &pDescr->sock));
 			pDescr->ptr.pSess = pNewSess;
 			CHKiRet(nspoll.Ctl(pPoll, pDescr, NSDPOLL_IN, NSDPOLL_ADD));
 		}
@@ -911,6 +912,7 @@ RunSelect(tcpsrv_t *const pThis)
 				workset[iWorkset].ptrType = NSD_PTR_TYPE_LSTN;
 				workset[iWorkset].id = i;
 				workset[iWorkset].isInError = 0;
+				CHKiRet(netstrm.GetSock(pThis->ppLstn[i], &(pThis->ppioDescrPtr[i]->sock)));
 				workset[iWorkset].ptr.ppLstn = pThis->ppLstn;
 				/* this is a flag to indicate listen sock */
 				++iWorkset;
@@ -933,6 +935,7 @@ RunSelect(tcpsrv_t *const pThis)
 				workset[iWorkset].ptrType = NSD_PTR_TYPE_SESS;
 				workset[iWorkset].id = iTCPSess;
 				workset[iWorkset].isInError = 0;
+				CHKiRet(netstrm.GetSock(pThis->pSessions[iTCPSess]->pStrm, &(workset[iWorkset].sock)));
 				workset[iWorkset].ptr.pSess = pThis->pSessions[iTCPSess];
 				++iWorkset;
 				if(iWorkset >= (int) sizeWorkset) {
@@ -1002,6 +1005,7 @@ fprintf(stderr, "WARNING_ Falling back to select(), iRet was %d, driver '%s'\n",
 		CHKmalloc(pThis->ppioDescrPtr[i] = (tcpsrv_io_descr_t*) calloc(1, sizeof(tcpsrv_io_descr_t)));
 		pThis->ppioDescrPtr[i]->id = i; // TODO: remove if session handling is refactored to dyn max sessions
 		pThis->ppioDescrPtr[i]->isInError = 0;
+		CHKiRet(netstrm.GetSock(pThis->ppLstn[i], &(pThis->ppioDescrPtr[i]->sock)));
 		pThis->ppioDescrPtr[i]->ptrType = NSD_PTR_TYPE_LSTN;
 		pThis->ppioDescrPtr[i]->ptr.ppLstn = pThis->ppLstn;
 		CHKiRet(nspoll.Ctl(pPoll, pThis->ppioDescrPtr[i], NSDPOLL_IN_LSTN, NSDPOLL_ADD));

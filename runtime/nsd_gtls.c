@@ -1919,6 +1919,16 @@ CheckConnection(nsd_t __attribute__((unused)) *pNsd)
 }
 
 
+/* Provide access to the underlying OS socket.
+ */
+static rsRetVal
+GetSock(nsd_t *pNsd, int *pSock)
+{
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+	return nsd_ptcp.GetSock(pThis->pTcp, pSock);
+}
+
+
 /* get the remote hostname. The returned hostname must be freed by the caller.
  * rgerhards, 2008-04-25
  */
@@ -2432,6 +2442,7 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->Rcv = Rcv;
 	pIf->Send = Send;
 	pIf->Connect = Connect;
+	pIf->GetSock = GetSock;
 	pIf->SetSock = SetSock;
 	pIf->SetMode = SetMode;
 	pIf->SetAuthMode = SetAuthMode;
