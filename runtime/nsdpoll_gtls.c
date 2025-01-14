@@ -1,26 +1,24 @@
-/* nsdpoll_ptcp.c
+/* nsdpoll_gtls.c
  *
  * An implementation of the nsd epoll() interface for plain tcp sockets.
  *
- * Copyright 2009-2025 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2025 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
- * The rsyslog runtime library is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * The rsyslog runtime library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ *       -or-
+ *       see COPYING.ASL20 in the source distribution
  *
- * You should have received a copy of the GNU Lesser General Public License
- * along with the rsyslog runtime library.  If not, see <http://www.gnu.org/licenses/>.
- *
- * A copy of the GPL can be found in the file "COPYING" in this distribution.
- * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 #include "config.h"
 
@@ -42,7 +40,7 @@
 #include "netstrm.h"
 #include "nspoll.h"
 #include "nsd_ptcp.h"
-#include "nsdpoll_ptcp.h"
+#include "nsdpoll_gtls.h"
 
 /* static data */
 DEFobjStaticHelpers
@@ -50,17 +48,6 @@ DEFobjCurrIf(glbl)
 
 
 
-// TODO: update comment
-/* add new entry to list. We assume that the fd is not already present and DO NOT check this!
- * Returns newly created entry in pEvtLst.
- * Note that we currently need to use level-triggered mode, because the upper layers do not work
- * in parallel. As such, in edge-triggered mode we may not get notified, because new data comes
- * in after we have read everything that was present. To use ET mode, we need to change the upper
- * peers so that they immediately start a new wait before processing the data read. That obviously
- * requires more elaborate redesign and we postpone this until the current more simplictic mode has
- * been proven OK in practice.
- * rgerhards, 2009-11-18
- */
 static rsRetVal
 addEvent(struct epoll_event *const event, tcpsrv_io_descr_t *pioDescr, const int mode)
 {
@@ -72,8 +59,7 @@ addEvent(struct epoll_event *const event, tcpsrv_io_descr_t *pioDescr, const int
 		event->events = EPOLLET; /* TODO: at some time we should be able to use EPOLLET */
 	}
 	if((mode & NSDPOLL_IN) || (mode & NSDPOLL_IN_LSTN))
-		//event->events |= EPOLLIN;
-		event->events |= EPOLLIN | EPOLLOUT;
+		event->events |= EPOLLIN;
 	if(mode & NSDPOLL_OUT)
 		event->events |= EPOLLOUT;
 	event->data.ptr = (void*) pioDescr;
@@ -84,14 +70,14 @@ addEvent(struct epoll_event *const event, tcpsrv_io_descr_t *pioDescr, const int
 
 /* Standard-Constructor
  */
-BEGINobjConstruct(nsdpoll_ptcp) /* be sure to specify the object type also in END macro! */
+BEGINobjConstruct(nsdpoll_gtls) /* be sure to specify the object type also in END macro! */
 #if defined(EPOLL_CLOEXEC) && defined(HAVE_EPOLL_CREATE1)
-	DBGPRINTF("nsdpoll_ptcp uses epoll_create1()\n");
+	DBGPRINTF("nsdpoll_gtls uses epoll_create1()\n");
 	pThis->efd = epoll_create1(EPOLL_CLOEXEC);
 	if(pThis->efd < 0 && errno == ENOSYS)
 #endif
 	{
-		DBGPRINTF("nsdpoll_ptcp uses epoll_create()\n");
+		DBGPRINTF("nsdpoll_gtls uses epoll_create()\n");
 		pThis->efd = epoll_create(100); /* size is ignored in newer kernels, but 100 is not bad... */
 	}
 
@@ -100,20 +86,20 @@ BEGINobjConstruct(nsdpoll_ptcp) /* be sure to specify the object type also in EN
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 finalize_it:
-ENDobjConstruct(nsdpoll_ptcp)
+ENDobjConstruct(nsdpoll_gtls)
 
 
-/* destructor for the nsdpoll_ptcp object */
-BEGINobjDestruct(nsdpoll_ptcp) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(nsdpoll_ptcp)
-ENDobjDestruct(nsdpoll_ptcp)
+/* destructor for the nsdpoll_gtls object */
+BEGINobjDestruct(nsdpoll_gtls) /* be sure to specify the object type also in END and CODESTART macros! */
+CODESTARTobjDestruct(nsdpoll_gtls)
+ENDobjDestruct(nsdpoll_gtls)
 
 
 /* Modify socket set */
 static rsRetVal
 Ctl(nsdpoll_t *const pNsdpoll, tcpsrv_io_descr_t *const pioDescr, const int mode, const int op)
 {
-	nsdpoll_ptcp_t *const pThis = (nsdpoll_ptcp_t*) pNsdpoll;
+	nsdpoll_gtls_t *const pThis = (nsdpoll_gtls_t*) pNsdpoll;
 	struct epoll_event event;
 	DEFiRet;
 
@@ -122,7 +108,7 @@ Ctl(nsdpoll_t *const pNsdpoll, tcpsrv_io_descr_t *const pioDescr, const int mode
 	assert(sock != 0);
 
 	if(op == NSDPOLL_ADD) {
-		dbgprintf("adding nsdpoll entry %d, socket %d\n", id, sock);
+		dbgprintf("adding nsdpoll entry %d, sock %d\n", id, sock);
 		CHKiRet(addEvent(&event, pioDescr, mode));
 		if(epoll_ctl(pThis->efd, EPOLL_CTL_ADD,  sock, &event) < 0) {
 			LogError(errno, RS_RET_ERR_EPOLL_CTL,
@@ -130,7 +116,7 @@ Ctl(nsdpoll_t *const pNsdpoll, tcpsrv_io_descr_t *const pioDescr, const int mode
 				sock, id, mode);
 		}
 	} else if(op == NSDPOLL_DEL) {
-		dbgprintf("removing nsdpoll entry %d, socket %d\n", id, sock);
+		dbgprintf("removing nsdpoll entry %d, sock %d\n", id, sock);
 		if(epoll_ctl(pThis->efd, EPOLL_CTL_DEL, sock, NULL) < 0) {
 			LogError(errno, RS_RET_ERR_EPOLL_CTL,
 				"epoll_ctl failed on fd %d, id %d, op %d\n",
@@ -158,7 +144,7 @@ finalize_it:
 static rsRetVal
 Wait(nsdpoll_t *const pNsdpoll, const int timeout, int *const numEntries, tcpsrv_io_descr_t *pWorkset[])
 {
-	nsdpoll_ptcp_t *pThis = (nsdpoll_ptcp_t*) pNsdpoll;
+	nsdpoll_gtls_t *pThis = (nsdpoll_gtls_t*) pNsdpoll;
 	struct epoll_event event[NSPOLL_MAX_EVENTS_PER_WAIT];
 	int nfds;
 	int i;
@@ -170,11 +156,8 @@ Wait(nsdpoll_t *const pNsdpoll, const int timeout, int *const numEntries, tcpsrv
 		*numEntries = NSPOLL_MAX_EVENTS_PER_WAIT;
 	DBGPRINTF("doing epoll_wait for max %d events\n", *numEntries);
 	nfds = epoll_wait(pThis->efd, event, *numEntries, timeout);
-	int en = errno;
-	DBGPRINTF("done  epoll_wait for nfds %d, %s\n", nfds, strerror(en));
 	if(nfds == -1) {
-		//if(errno == EINTR) {
-		if(en == EINTR) {
+		if(errno == EINTR) {
 			ABORT_FINALIZE(RS_RET_EINTR);
 		} else {
 			DBGPRINTF("epoll() returned with error code %d\n", errno);
@@ -187,7 +170,6 @@ Wait(nsdpoll_t *const pNsdpoll, const int timeout, int *const numEntries, tcpsrv
 	/* we got valid events, so tell the caller... */
 	DBGPRINTF("epoll returned %d entries\n", nfds);
 	for(i = 0 ; i < nfds ; ++i) {
-dbgprintf("epoll entry %d: EPOLLHUP %d, EPOLLERR %d\n", i, event[i].events & EPOLLHUP, event[i].events & EPOLLERR);
 		pWorkset[i] = event[i].data.ptr;
 		pWorkset[i]->isInError = event[i].events & EPOLLERR;
 	}
@@ -202,8 +184,8 @@ finalize_it:
 
 
 /* queryInterface function */
-BEGINobjQueryInterface(nsdpoll_ptcp)
-CODESTARTobjQueryInterface(nsdpoll_ptcp)
+BEGINobjQueryInterface(nsdpoll_gtls)
+CODESTARTobjQueryInterface(nsdpoll_gtls)
 	if(pIf->ifVersion != nsdCURR_IF_VERSION) {/* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
@@ -213,37 +195,25 @@ CODESTARTobjQueryInterface(nsdpoll_ptcp)
 	 * work here (if we can support an older interface version - that,
 	 * of course, also affects the "if" above).
 	 */
-	pIf->Construct = (rsRetVal(*)(nsdpoll_t**)) nsdpoll_ptcpConstruct;
-	pIf->Destruct = (rsRetVal(*)(nsdpoll_t**)) nsdpoll_ptcpDestruct;
+	pIf->Construct = (rsRetVal(*)(nsdpoll_t**)) nsdpoll_gtlsConstruct;
+	pIf->Destruct = (rsRetVal(*)(nsdpoll_t**)) nsdpoll_gtlsDestruct;
 	pIf->Ctl = Ctl;
 	pIf->Wait = Wait;
 finalize_it:
-ENDobjQueryInterface(nsdpoll_ptcp)
+ENDobjQueryInterface(nsdpoll_gtls)
 
 
-/* exit our class
- */
-BEGINObjClassExit(nsdpoll_ptcp, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(nsdpoll_ptcp)
+BEGINObjClassExit(nsdpoll_gtls, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
+CODESTARTObjClassExit(nsdpoll_gtls)
 	/* release objects we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
-ENDObjClassExit(nsdpoll_ptcp)
+ENDObjClassExit(nsdpoll_gtls)
 
 
-/* Initialize the nsdpoll_ptcp class. Must be called as the very first method
- * before anything else is called inside this class.
- * rgerhards, 2008-02-19
- */
-BEGINObjClassInit(nsdpoll_ptcp, 1, OBJ_IS_CORE_MODULE) /* class, version */
+BEGINObjClassInit(nsdpoll_gtls, 1, OBJ_IS_CORE_MODULE) /* class, version */
 	/* request objects we use */
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
-
-	/* set our own handlers */
-ENDObjClassInit(nsdpoll_ptcp)
+ENDObjClassInit(nsdpoll_gtls)
 #else
-
-#ifdef __xlc__ /* Xlc require some code, even unused, in source file*/
-static void dummy(void) {}
-#endif
 
 #endif /* #ifdef HAVE_EPOLL_CREATE this module requires epoll! */
