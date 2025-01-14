@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for GnuTLS.
  *
- * Copyright (C) 2007-2021 Rainer Gerhards and Adiscon GmbH.
+ * Copyright (C) 2007-2025 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -104,6 +104,69 @@ static gnutls_dh_params_t dh_params; /**< server DH parameters for anon mode */
 
 
 /* ------------------------------ GnuTLS specifics ------------------------------ */
+static rsRetVal
+doRetry(nsd_gtls_t *pNsd)
+{
+	DEFiRet;
+	int gnuRet;
+
+	dbgprintf("doRetry: GnuTLS requested retry of operation %d - executing\n", pNsd->rtryCall);
+
+	/* We follow a common scheme here: first, we do the systen call and
+	 * then we check the result. So far, the result is checked after the
+	 * switch, because the result check is the same for all calls. Note that
+	 * this may change once we deal with the read and write calls (but
+	 * probably this becomes an issue only when we begin to work on TLS
+	 * for relp). -- rgerhards, 2008-04-30
+	 */
+	switch(pNsd->rtryCall) {
+		case gtlsRtry_handshake:
+			gnuRet = gnutls_handshake(pNsd->sess);
+			if(gnuRet == GNUTLS_E_AGAIN || gnuRet == GNUTLS_E_INTERRUPTED) {
+				dbgprintf("doRetry: GnuTLS handshake retry did not finish - "
+					"setting to retry (this is OK and can happen)\n");
+				FINALIZE;
+			} else if(gnuRet == 0) {
+				pNsd->rtryCall = gtlsRtry_None; /* we are done */
+				/* we got a handshake, now check authorization */
+				CHKiRet(gtlsChkPeerAuth(pNsd));
+			} else {
+				uchar *pGnuErr = gtlsStrerror(gnuRet);
+				LogError(0, RS_RET_TLS_HANDSHAKE_ERR,
+					"GnuTLS handshake retry returned error: %s\n", pGnuErr);
+				free(pGnuErr);
+				ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
+			}
+			break;
+		case gtlsRtry_recv:
+		case gtlsRtry_None:
+		default:
+			assert(0); /* this shall not happen! */
+			dbgprintf("ERROR: pNsd->rtryCall %d invalid in nsdsel_gtls.c:%d\n",
+				pNsd->rtryCall, __LINE__);
+			gnuRet = 0; /* if it happens, we have at least a defined behaviour... ;) */
+			break;
+	}
+
+	if(gnuRet == 0) {
+		pNsd->rtryCall = gtlsRtry_None; /* we are done */
+	} else if(gnuRet != GNUTLS_E_AGAIN && gnuRet != GNUTLS_E_INTERRUPTED) {
+		uchar *pErr = gtlsStrerror(gnuRet);
+		LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n",
+		gnuRet, __FILE__, __LINE__, pErr); \
+		free(pErr);
+		pNsd->rtryCall = gtlsRtry_None; /* we are also done... ;) */
+		ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+	}
+	/* if we are interrupted once again (else case), we do not need to
+	 * change our status because we are already setup for retries.
+	 */
+
+finalize_it:
+	if(iRet != RS_RET_OK && iRet != RS_RET_CLOSED && iRet != RS_RET_RETRY)
+		pNsd->bAbortConn = 1; /* request abort */
+	RETiRet;
+}
 
 /* This defines a log function to be provided to GnuTLS. It hopefully
  * helps us track down hard to find problems.
@@ -2053,6 +2116,12 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr)
 	}
 
 	/* --- in TLS mode now --- */
+	if(pThis->rtryCall == gtlsRtry_handshake) {
+		/* note: we are in receive, so we acually will retry receive in any case */
+		DBGPRINTF("need to do retry handshake\n");
+		CHKiRet(doRetry(pThis));
+		ABORT_FINALIZE(RS_RET_RETRY);
+	}
 
 	/* Buffer logic applies only if we are in TLS mode. Here we
 	 * assume that we will switch from plain to TLS, but never back. This
@@ -2131,7 +2200,6 @@ Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 		FINALIZE;
 	}
 
-	/* in TLS mode now */
 	while(1) { /* loop broken inside */
 		iSent = gnutls_record_send(pThis->sess, pBuf, *pLenBuf);
 		if(iSent >= 0) {
@@ -2447,6 +2515,3 @@ CODESTARTmodInit
 
 	pthread_mutex_init(&mutGtlsStrerror, NULL);
 ENDmodInit
-/* vi:set ai:
- */
-

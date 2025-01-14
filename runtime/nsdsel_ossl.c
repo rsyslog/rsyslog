@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd select() interface for OpenSSL.
  *
- * Copyright (C) 2018-2018 Adiscon GmbH.
+ * Copyright (C) 2018-2025 Adiscon GmbH.
  * Author: Andre Lorbach
  *
  * This file is part of the rsyslog runtime library.
@@ -83,8 +83,6 @@ Add(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp)
 	ISOBJ_TYPE_assert(pThis, nsdsel_ossl);
 	ISOBJ_TYPE_assert(pNsdOSSL, nsd_ossl);
 
-DBGPRINTF("Add on nsd %p:\n", pNsdOSSL);
-
 	if(pNsdOSSL->iMode == 1) {
 		if(waitOp == NSDSEL_RD && osslHasRcvInBuffer(pNsdOSSL)) {
 			++pThis->iBufferRcvReady;
@@ -146,49 +144,6 @@ Select(nsdsel_t *pNsdsel, int *piNumReady)
 }
 
 
-/* retry an interrupted OSSL operation
- * rgerhards, 2008-04-30
- */
-static rsRetVal
-doRetry(nsd_ossl_t *pNsd)
-{
-	DEFiRet;
-	nsd_ossl_t *pNsdOSSL = (nsd_ossl_t*) pNsd;
-
-	dbgprintf("doRetry: requested retry of %d operation - executing\n", pNsd->rtryCall);
-
-	/* We follow a common scheme here: first, we do the systen call and
-	 * then we check the result. So far, the result is checked after the
-	 * switch, because the result check is the same for all calls. Note that
-	 * this may change once we deal with the read and write calls (but
-	 * probably this becomes an issue only when we begin to work on TLS
-	 * for relp). -- rgerhards, 2008-04-30
-	 */
-	switch(pNsd->rtryCall) {
-		case osslRtry_handshake:
-			dbgprintf("doRetry: start osslHandshakeCheck, nsd: %p\n", pNsd);
-			/* Do the handshake again*/
-			CHKiRet(osslHandshakeCheck(pNsdOSSL));
-			pNsd->rtryCall = osslRtry_None; /* we are done */
-			break;
-		case osslRtry_recv:
-			dbgprintf("doRetry: retrying ossl recv, nsd: %p\n", pNsd);
-			CHKiRet(osslRecordRecv(pNsd));
-			pNsd->rtryCall = osslRtry_None; /* we are done */
-			break;
-		case osslRtry_None:
-		default:
-			assert(0); /* this shall not happen! */
-			dbgprintf("doRetry: ERROR, pNsd->rtryCall invalid in nsdsel_ossl.c:%d\n", __LINE__);
-			break;
-	}
-finalize_it:
-	if(iRet != RS_RET_OK && iRet != RS_RET_CLOSED && iRet != RS_RET_RETRY)
-		pNsd->bAbortConn = 1; /* request abort */
-	RETiRet;
-}
-
-
 /* check if a socket is ready for IO */
 static rsRetVal
 IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
@@ -200,27 +155,11 @@ IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
 	ISOBJ_TYPE_assert(pThis, nsdsel_ossl);
 	ISOBJ_TYPE_assert(pNsdOSSL, nsd_ossl);
 
-DBGPRINTF("nsdsel_ossl IsReady EINTR\n");
 	if(pNsdOSSL->iMode == 1) {
 		if(waitOp == NSDSEL_RD && osslHasRcvInBuffer(pNsdOSSL)) {
 			*pbIsReady = 1;
 			--pThis->iBufferRcvReady; /* one "pseudo-read" less */
 			FINALIZE;
-		}
-		if(pNsdOSSL->rtryCall == osslRtry_handshake) {
-			CHKiRet(doRetry(pNsdOSSL));
-			/* we used this up for our own internal processing, so the socket
-			 * is not ready from the upper layer point of view.
-			 */
-			*pbIsReady = 0;
-			FINALIZE;
-		}
-		else if(pNsdOSSL->rtryCall == osslRtry_recv) {
-			iRet = doRetry(pNsdOSSL);
-			if(iRet == RS_RET_OK) {
-				*pbIsReady = 0;
-				FINALIZE;
-			}
 		}
 
 		/* now we must ensure that we do not fall back to PTCP if we have
@@ -265,8 +204,7 @@ finalize_it:
 ENDobjQueryInterface(nsdsel_ossl)
 
 
-/* exit our class
- */
+/* exit our class */
 BEGINObjClassExit(nsdsel_ossl, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(nsdsel_ossl)
 	/* release objects we no longer need */
@@ -286,5 +224,3 @@ BEGINObjClassInit(nsdsel_ossl, 1, OBJ_IS_CORE_MODULE) /* class, version */
 
 	/* set our own handlers */
 ENDObjClassInit(nsdsel_ossl)
-/* vi:set ai:
- */
