@@ -113,31 +113,27 @@ static rsRetVal
 Ctl(nsdpoll_t *const pNsdpoll, tcpsrv_io_descr_t *const pioDescr, const int mode, const int op)
 {
 	nsdpoll_ptcp_t *const pThis = (nsdpoll_ptcp_t*) pNsdpoll;
-	nsd_ptcp_t *pNsd;
 	struct epoll_event event;
 	DEFiRet;
 
-	if(pioDescr->ptrType == NSD_PTR_TYPE_LSTN) {
-		pNsd =  (nsd_ptcp_t *) pioDescr->ptr.ppLstn[pioDescr->id]->pDrvrData;
-	} else {
-		pNsd =  (nsd_ptcp_t *) pioDescr->ptr.pSess->pStrm->pDrvrData;
-	}
 	const int id = pioDescr->id;
+	const int sock = pioDescr->sock;
+	assert(sock != 0);
 
 	if(op == NSDPOLL_ADD) {
-		dbgprintf("adding nsdpoll entry %d, sock %d\n", id, pNsd->sock);
+		dbgprintf("adding nsdpoll entry %d, sock %d\n", id, sock);
 		CHKiRet(addEvent(&event, pioDescr, mode));
-		if(epoll_ctl(pThis->efd, EPOLL_CTL_ADD,  pNsd->sock, &event) < 0) {
+		if(epoll_ctl(pThis->efd, EPOLL_CTL_ADD,  sock, &event) < 0) {
 			LogError(errno, RS_RET_ERR_EPOLL_CTL,
 				"epoll_ctl failed on fd %d, id %d, op %d\n",
-				pNsd->sock, id, mode);
+				sock, id, mode);
 		}
 	} else if(op == NSDPOLL_DEL) {
-		dbgprintf("removing nsdpoll entry %d, sock %d\n", id, pNsd->sock);
-		if(epoll_ctl(pThis->efd, EPOLL_CTL_DEL, pNsd->sock, NULL) < 0) {
+		dbgprintf("removing nsdpoll entry %d, sock %d\n", id, sock);
+		if(epoll_ctl(pThis->efd, EPOLL_CTL_DEL, sock, NULL) < 0) {
 			LogError(errno, RS_RET_ERR_EPOLL_CTL,
 				"epoll_ctl failed on fd %d, id %d, op %d\n",
-				pNsd->sock, id, mode);
+				sock, id, mode);
 			ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
 		}
 	} else {
