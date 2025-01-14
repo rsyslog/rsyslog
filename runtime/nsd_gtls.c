@@ -597,7 +597,7 @@ uchar *gtlsStrerror(int error)
 
 /* try to receive a record from the remote peer. This works with
  * our own abstraction and handles local buffering and EAGAIN.
- * See details on local buffering in Rcv(9 header-comment.
+ * See details on local buffering in Rcv() header-comment.
  * This function MUST only be called when the local buffer is
  * empty. Calling it otherwise will cause losss of current buffer
  * data.
@@ -2117,6 +2117,7 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
+DBGPRINTF("in gtls Rcv, bAbortConn %d\n", pThis->bAbortConn);
 	if(pThis->bAbortConn)
 		ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
 
@@ -2202,6 +2203,10 @@ Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
+	if(pThis->rtryCall == gtlsRtry_recv) {
+		CHKiRet(doRetry(pThis));
+		FINALIZE;
+	}
 	if(pThis->bAbortConn)
 		ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
 
