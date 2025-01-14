@@ -632,6 +632,7 @@ doReceive(tcpsrv_t *const pThis, nspoll_t *const pPoll, tcpsrv_io_descr_t *const
 
 		/* Receive message */
 		iRet = pThis->pRcvData(pSess, buf, sizeof(buf), &iRcvd, &oserr);
+dbgprintf("RGER: doReceive loop rcv iRet %d\n", iRet);
 		switch(iRet) {
 		case RS_RET_CLOSED:
 			if(pThis->bEmitMsgOnClose) {
@@ -693,7 +694,9 @@ doAccept(tcpsrv_t *const pThis, nspoll_t *const pPoll, const int idx)
 			CHKiRet(netstrm.GetSock(pNewSess->pStrm, &pDescr->sock));
 			pDescr->ptr.pSess = pNewSess;
 			CHKiRet(nspoll.Ctl(pPoll, pDescr, NSDPOLL_IN, NSDPOLL_ADD));
+dbgprintf("doAccept, new socket %d\n", pDescr->sock);
 		}
+
 		DBGPRINTF("New session created with NSD %p.\n", pNewSess);
 	} else {
 		DBGPRINTF("tcpsrv: error %d during accept\n", iRet);
@@ -717,7 +720,7 @@ processWorksetItem(tcpsrv_t *const pThis, nspoll_t *pPoll, tcpsrv_io_descr_t *co
 {
 	DEFiRet;
 
-	DBGPRINTF("tcpsrv: processing item %d\n", pioDescr->id);
+	DBGPRINTF("tcpsrv: processing item %d, socket %d\n", pioDescr->id, pioDescr->sock);
 	if(pioDescr->ptrType == NSD_PTR_TYPE_LSTN) {
 		doAccept(pThis, pPoll, pioDescr->id);
 	} else {
