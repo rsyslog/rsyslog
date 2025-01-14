@@ -80,6 +80,7 @@ struct tcpsrv_wrkrInfo_s {
  */
 struct tcpsrv_io_descr_s {
 	int id; // TODO: remove? (when we have dynamic session nbr)
+	int sock;	/* socket descriptor we need to "monitor" */
 	enum {NSD_PTR_TYPE_LSTN, NSD_PTR_TYPE_SESS} ptrType;
 	union {
 		tcps_sess_t *pSess;
