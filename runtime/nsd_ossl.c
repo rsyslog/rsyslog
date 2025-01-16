@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for OpenSSL.
  *
- * Copyright 2018-2023 Adiscon GmbH.
+ * Copyright 2018-2025 Adiscon GmbH.
  * Author: Andre Lorbach
  *
  * This file is part of the rsyslog runtime library.
@@ -67,6 +67,43 @@ DEFobjCurrIf(net_ossl)
 
 /* Some prototypes for helper functions used inside openssl driver */
 static rsRetVal applyGnutlsPriorityString(nsd_ossl_t *const pNsd);
+
+
+/* retry an interrupted OSSL operation */
+static rsRetVal
+doRetry(nsd_ossl_t *pNsd)
+{
+	DEFiRet;
+	nsd_ossl_t *pNsdOSSL = (nsd_ossl_t*) pNsd;
+
+	dbgprintf("doRetry: requested retry of %d operation - executing\n", pNsd->rtryCall);
+
+	/* We follow a common scheme here: first, we do the systen call and
+	 * then we check the result. So far, the result is checked after the
+	 * switch, because the result check is the same for all calls. Note that
+	 * this may change once we deal with the read and write calls (but
+	 * probably this becomes an issue only when we begin to work on TLS
+	 * for relp). -- rgerhards, 2008-04-30
+	 */
+	switch(pNsd->rtryCall) {
+		case osslRtry_handshake:
+			dbgprintf("doRetry: start osslHandshakeCheck, nsd: %p\n", pNsd);
+			/* Do the handshake again*/
+			CHKiRet(osslHandshakeCheck(pNsdOSSL));
+			pNsd->rtryCall = osslRtry_None; /* we are done */
+			break;
+		case osslRtry_recv:
+		case osslRtry_None:
+		default:
+			assert(0); /* this shall not happen! */
+			dbgprintf("doRetry: ERROR, pNsd->rtryCall invalid in nsdsel_ossl.c:%d\n", __LINE__);
+			break;
+	}
+finalize_it:
+	if(iRet != RS_RET_OK && iRet != RS_RET_CLOSED && iRet != RS_RET_RETRY)
+		pNsd->bAbortConn = 1; /* request abort */
+	RETiRet;
+}
 
 /*--------------------------------------OpenSSL helpers ------------------------------------------*/
 void nsd_ossl_lastOpenSSLErrorMsg(nsd_ossl_t const *pThis, const int ret, SSL *ssl, int severity,
@@ -1026,6 +1063,11 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr)
 	}
 
 	/* --- in TLS mode now --- */
+	if(pThis->rtryCall == osslRtry_handshake) {
+		/* note: we are in receive, so we acually will retry receive in any case */
+		CHKiRet(doRetry(pThis));
+		ABORT_FINALIZE(RS_RET_RETRY);
+	}
 
 	/* Buffer logic applies only if we are in TLS mode. Here we
 	 * assume that we will switch from plain to TLS, but never back. This

@@ -132,89 +132,6 @@ Select(nsdsel_t *pNsdsel, int *piNumReady)
 }
 
 
-/* retry an interrupted GTLS operation
- * rgerhards, 2008-04-30
- */
-static rsRetVal
-doRetry(nsd_gtls_t *pNsd)
-{
-	DEFiRet;
-	int gnuRet;
-
-	dbgprintf("doRetry: GnuTLS requested retry of %d operation - executing\n", pNsd->rtryCall);
-
-	/* We follow a common scheme here: first, we do the systen call and
-	 * then we check the result. So far, the result is checked after the
-	 * switch, because the result check is the same for all calls. Note that
-	 * this may change once we deal with the read and write calls (but
-	 * probably this becomes an issue only when we begin to work on TLS
-	 * for relp). -- rgerhards, 2008-04-30
-	 */
-	switch(pNsd->rtryCall) {
-		case gtlsRtry_handshake:
-			gnuRet = gnutls_handshake(pNsd->sess);
-			if(gnuRet == GNUTLS_E_AGAIN || gnuRet == GNUTLS_E_INTERRUPTED) {
-				dbgprintf("doRetry: GnuTLS handshake retry did not finish - "
-					"setting to retry (this is OK and can happen)\n");
-				FINALIZE;
-			} else if(gnuRet == 0) {
-				pNsd->rtryCall = gtlsRtry_None; /* we are done */
-				/* we got a handshake, now check authorization */
-				CHKiRet(gtlsChkPeerAuth(pNsd));
-			} else {
-				uchar *pGnuErr = gtlsStrerror(gnuRet);
-				LogError(0, RS_RET_TLS_HANDSHAKE_ERR,
-					"GnuTLS handshake retry returned error: %s\n", pGnuErr);
-				free(pGnuErr);
-				ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
-			}
-			break;
-		case gtlsRtry_recv:
-			dbgprintf("doRetry: retrying gtls recv, nsd: %p\n", pNsd);
-			iRet = gtlsRecordRecv(pNsd);
-			if (iRet == RS_RET_RETRY) {
-				// Check if there is pending data
-				size_t stBytesLeft = gnutls_record_check_pending(pNsd->sess);
-				if (stBytesLeft > 0) {
-					// We are in retry and more data waiting, finalize it
-					goto finalize_it;
-				} else {
-					dbgprintf("doRetry: gtlsRecordRecv returned RETRY, but there is no pending"
-						"data on nsd: %p\n", pNsd);
-				}
-			}
-			pNsd->rtryCall = gtlsRtry_None; /* no more data, we are done */
-			gnuRet = 0;
-			break;
-		case gtlsRtry_None:
-		default:
-			assert(0); /* this shall not happen! */
-			dbgprintf("ERROR: pNsd->rtryCall invalid in nsdsel_gtls.c:%d\n", __LINE__);
-			gnuRet = 0; /* if it happens, we have at least a defined behaviour... ;) */
-			break;
-	}
-
-	if(gnuRet == 0) {
-		pNsd->rtryCall = gtlsRtry_None; /* we are done */
-	} else if(gnuRet != GNUTLS_E_AGAIN && gnuRet != GNUTLS_E_INTERRUPTED) {
-		uchar *pErr = gtlsStrerror(gnuRet);
-		LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n",
-		gnuRet, __FILE__, __LINE__, pErr); \
-		free(pErr);
-		pNsd->rtryCall = gtlsRtry_None; /* we are also done... ;) */
-		ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
-	}
-	/* if we are interrupted once again (else case), we do not need to
-	 * change our status because we are already setup for retries.
-	 */
-
-finalize_it:
-	if(iRet != RS_RET_OK && iRet != RS_RET_CLOSED && iRet != RS_RET_RETRY)
-		pNsd->bAbortConn = 1; /* request abort */
-	RETiRet;
-}
-
-
 /* check if a socket is ready for IO */
 static rsRetVal
 IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
@@ -232,21 +149,6 @@ IsReady(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady)
 			dbgprintf("nsdl_gtls: dummy read, decermenting %p->iBufRcvReady, now %d\n",
 				   pThis, pThis->iBufferRcvReady);
 			FINALIZE;
-		}
-		if(pNsdGTLS->rtryCall == gtlsRtry_handshake) {
-			CHKiRet(doRetry(pNsdGTLS));
-			/* we used this up for our own internal processing, so the socket
-			 * is not ready from the upper layer point of view.
-			 */
-			*pbIsReady = 0;
-			FINALIZE;
-		}
-		else if(pNsdGTLS->rtryCall == gtlsRtry_recv) {
-			iRet = doRetry(pNsdGTLS);
-			if(iRet == RS_RET_OK) {
-				*pbIsReady = 0;
-				FINALIZE;
-			}
 		}
 
 		/* now we must ensure that we do not fall back to PTCP if we have
@@ -313,5 +215,3 @@ BEGINObjClassInit(nsdsel_gtls, 1, OBJ_IS_CORE_MODULE) /* class, version */
 
 	/* set our own handlers */
 ENDObjClassInit(nsdsel_gtls)
-/* vi:set ai:
- */
