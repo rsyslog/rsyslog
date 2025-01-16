@@ -50,6 +50,7 @@ DEFobjCurrIf(glbl)
 
 
 
+#if 0
 // TODO: update comment
 /* add new entry to list. We assume that the fd is not already present and DO NOT check this!
  * Returns newly created entry in pEvtLst.
@@ -66,7 +67,7 @@ addEvent(struct epoll_event *const event, tcpsrv_io_descr_t *pioDescr, const int
 {
 	DEFiRet;
 
-	event->events = 0; /* TODO: at some time we should be able to use EPOLLET */
+	event->events = EPOLLET | EPOLLIN | EPOLLOUT;
 	if(!(mode & NSDPOLL_IN_LSTN))  {
 		/* right now, we refactor only regular data sessions in edge triggered mode */
 		event->events = EPOLLET; /* TODO: at some time we should be able to use EPOLLET */
@@ -80,6 +81,7 @@ addEvent(struct epoll_event *const event, tcpsrv_io_descr_t *pioDescr, const int
 
 	RETiRet;
 }
+#endif
 
 
 /* Standard-Constructor
@@ -123,7 +125,12 @@ Ctl(nsdpoll_t *const pNsdpoll, tcpsrv_io_descr_t *const pioDescr, const int mode
 
 	if(op == NSDPOLL_ADD) {
 		dbgprintf("adding nsdpoll entry %d, socket %d\n", id, sock);
-		CHKiRet(addEvent(&event, pioDescr, mode));
+		event.events = EPOLLIN | EPOLLOUT;
+		if(!(mode & NSDPOLL_IN_LSTN))  {
+			event.events |= EPOLLET; // TODO: remove when accept is also epoll capable (looping!)
+		}
+		event.data.ptr = (void*) pioDescr;
+		//CHKiRet(addEvent(&event, pioDescr, mode));
 		if(epoll_ctl(pThis->efd, EPOLL_CTL_ADD,  sock, &event) < 0) {
 			LogError(errno, RS_RET_ERR_EPOLL_CTL,
 				"epoll_ctl failed on fd %d, id %d, op %d\n",
