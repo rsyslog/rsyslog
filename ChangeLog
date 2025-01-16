@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2502.0 (aka 2024.12) 2025-02-??
+- 2025-01-16: netstrm TLS driver: move TLS retry handling to main driver
+  This simplifies the driver interface. It is also kind of prep-work
+  for implementing real multi-threading support for imtcp (to be done
+  in a separate set of commits).
+  see also https://github.com/rsyslog/rsyslog/issues/5532
 - 2024-12-31: build: support for compile with -std=gnu23 gcc option
   Note: The upcoming gnu23 C standard is overdoing it with type-safety. Inside
   rsyslog, we historically have method tables for generic calls, which
