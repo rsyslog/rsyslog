@@ -180,8 +180,7 @@ endif
 # network stream master class and stream factory
 lmnetstrms_la_SOURCES = netstrms.c netstrms.h \
 			netstrm.c netstrm.h \
-			nssel.c nssel.h \
-			nspoll.c nspoll.h
+			nssel.c nssel.h
 lmnetstrms_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 lmnetstrms_la_LDFLAGS = -module -avoid-version
 lmnetstrms_la_LIBADD =
@@ -196,8 +195,7 @@ endif
 # plain tcp driver - main driver
 pkglib_LTLIBRARIES += lmnsd_ptcp.la
 lmnsd_ptcp_la_SOURCES = nsd_ptcp.c nsd_ptcp.h \
-		  	nsdsel_ptcp.c nsdsel_ptcp.h \
-			nsdpoll_ptcp.c nsdpoll_ptcp.h
+		  	nsdsel_ptcp.c nsdsel_ptcp.h
 lmnsd_ptcp_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 lmnsd_ptcp_la_LDFLAGS = -module -avoid-version
 lmnsd_ptcp_la_LIBADD =

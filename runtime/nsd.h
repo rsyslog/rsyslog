@@ -131,13 +131,5 @@ BEGINinterface(nsdsel) /* name must also be changed in ENDinterface macro! */
 ENDinterface(nsdsel)
 #define nsdselCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
-/* interface  for the epoll call */
-BEGINinterface(nsdpoll) /* name must also be changed in ENDinterface macro! */
-	rsRetVal (*Construct)(nsdpoll_t **ppThis);
-	rsRetVal (*Destruct)(nsdpoll_t **ppThis);
-	rsRetVal (*Ctl)(nsdpoll_t *pNsdpoll, tcpsrv_io_descr_t *ioDescr, int modem, int op);
-	rsRetVal (*Wait)(nsdpoll_t *pNsdpoll, int timeout, int *numReady, tcpsrv_io_descr_t *workset[]);
-ENDinterface(nsdpoll)
-#define nsdpollCURR_IF_VERSION 2 /* increment whenever you change the interface structure! */
 
 #endif /* #ifndef INCLUDED_NSD_H */

@@ -53,7 +53,6 @@ typedef struct NetAddr netAddr_t;
 typedef struct netstrms_s netstrms_t;
 typedef struct netstrm_s netstrm_t;
 typedef struct nssel_s nssel_t;
-typedef struct nspoll_s nspoll_t;
 typedef enum nsdsel_waitOp_e nsdsel_waitOp_t;
 typedef struct net_ossl_s net_ossl_t;
 typedef struct nsd_ptcp_s nsd_ptcp_t;
@@ -64,7 +63,6 @@ typedef struct nsd_nss_s nsd_nss_t;
 typedef struct nsdsel_ptcp_s nsdsel_ptcp_t;
 typedef struct nsdsel_gtls_s nsdsel_gtls_t;
 typedef struct nsdsel_ossl_s nsdsel_ossl_t;
-typedef struct nsdpoll_ptcp_s nsdpoll_ptcp_t;
 typedef struct wti_s wti_t;
 typedef struct msgPropDescr_s msgPropDescr_t;
 typedef struct msg smsg_t;
@@ -145,12 +143,10 @@ typedef struct dynstats_ctr_s dynstats_ctr_t;
 	typedef void * obj_t_ptr;
 	typedef void nsd_t;
 	typedef void nsdsel_t;
-	typedef void nsdpoll_t;
 #else
 	typedef obj_t *obj_t_ptr;
 	typedef obj_t nsd_t;
 	typedef obj_t nsdsel_t;
-	typedef obj_t nsdpoll_t;
 #endif
 
 

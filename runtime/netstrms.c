@@ -35,7 +35,6 @@
 #include "nsd.h"
 #include "netstrm.h"
 #include "nssel.h"
-#include "nspoll.h"
 #include "netstrms.h"
 #include "rsconf.h"
 
@@ -529,7 +528,6 @@ ENDObjClassInit(netstrms)
 BEGINmodExit
 CODESTARTmodExit
 	nsselClassExit();
-	nspollClassExit();
 	netstrmsClassExit();
 	netstrmClassExit(); /* we use this object, so we must exit it after we are finished */
 ENDmodExit
@@ -548,6 +546,5 @@ CODESTARTmodInit
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(netstrmClassInit(pModInfo));
 	CHKiRet(nsselClassInit(pModInfo));
-	CHKiRet(nspollClassInit(pModInfo));
 	CHKiRet(netstrmsClassInit(pModInfo));
 ENDmodInit
