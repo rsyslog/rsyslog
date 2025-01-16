@@ -50,7 +50,6 @@
 #include "netstrm.h"
 #include "netstrms.h"
 #include "nsd_ptcp.h"
-#include "nsdsel_gtls.h"
 #include "nsd_gtls.h"
 #include "unicode-helper.h"
 #include "rsconf.h"
@@ -142,7 +141,7 @@ doRetry(nsd_gtls_t *pNsd)
 		case gtlsRtry_None:
 		default:
 			assert(0); /* this shall not happen! */
-			dbgprintf("ERROR: pNsd->rtryCall %d invalid in nsdsel_gtls.c:%d\n",
+			dbgprintf("ERROR: pNsd->rtryCall %d invalid in nsd_gtls.c:%d\n",
 				pNsd->rtryCall, __LINE__);
 			gnuRet = 0; /* if it happens, we have at least a defined behaviour... ;) */
 			break;
@@ -2512,7 +2511,6 @@ ENDObjClassInit(nsd_gtls)
 
 BEGINmodExit
 CODESTARTmodExit
-	nsdsel_gtlsClassExit();
 	nsd_gtlsClassExit();
 	pthread_mutex_destroy(&mutGtlsStrerror);
 ENDmodExit
@@ -2530,7 +2528,6 @@ CODESTARTmodInit
 
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(nsd_gtlsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
-	CHKiRet(nsdsel_gtlsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 
 	pthread_mutex_init(&mutGtlsStrerror, NULL);
 ENDmodInit
