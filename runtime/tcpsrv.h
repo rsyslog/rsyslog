@@ -66,7 +66,6 @@ struct tcpsrv_wrkrInfo_s {
 	int idx;
 	tcpsrv_t *pSrv; /* pSrv == NULL -> idle */
 	tcpsrv_io_descr_t *pioDescr;
-	nspoll_t *pPoll;
 	void *pUsr;
 	sbool enabled;
 	long long unsigned numCalled;	/* how often was this called */
@@ -124,8 +123,18 @@ struct tcpsrv_s {
 	sbool bSPFramingFix;	/**< support work-around for broken Cisco ASA framing? */
 	int iLstnCurr;		/**< max nbr of listeners currently supported */
 	netstrm_t **ppLstn;	/**< our netstream listeners */
+	/* We could use conditional compilation, but that causes more complexity and is (proofen causing errors) */
+	union {
+		struct {
+			int efd;
+		} epoll;
+		struct {
+			uint32_t maxfds;
+			uint32_t currfds;
+			struct pollfd *fds;
+		} poll;
+	} evtdata;
 	tcpLstnPortList_t **ppLstnPort; /**< pointer to relevant listen port description */
-//	nsd_epworkset_t  **ppLstnWorksetPtr; /**< pointer to workset item that needs to be freed on termination */ // TODO REMOVE
 	tcpsrv_io_descr_t **ppioDescrPtr; /**< pointer to i/o descriptor object */ // TODO REMOVE
 	int iLstnMax;		/**< max number of listeners supported */
 	int iSessMax;		/**< max number of sessions supported */
