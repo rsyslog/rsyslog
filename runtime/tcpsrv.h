@@ -123,8 +123,12 @@ struct tcpsrv_s {
 	sbool bSPFramingFix;	/**< support work-around for broken Cisco ASA framing? */
 	int iLstnCurr;		/**< max nbr of listeners currently supported */
 	netstrm_t **ppLstn;	/**< our netstream listeners */
-	#if HAVE_EPOLL_CREATE
+	#if defined(HAVE_EPOLL_CREATE)
 		int efd;
+	#else
+		uint32_t maxfds;
+		uint32_t currfds;
+		struct pollfd *fds;
 	#endif
 	tcpLstnPortList_t **ppLstnPort; /**< pointer to relevant listen port description */
 	tcpsrv_io_descr_t **ppioDescrPtr; /**< pointer to i/o descriptor object */ // TODO REMOVE
