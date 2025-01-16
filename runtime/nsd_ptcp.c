@@ -2,7 +2,7 @@
  *
  * An implementation of the nsd interface for plain tcp sockets.
  *
- * Copyright 2007-2024 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2025 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -49,8 +49,6 @@
 #include "net.h"
 #include "netstrms.h"
 #include "netstrm.h"
-#include "nsdsel_ptcp.h"
-#include "nsdpoll_ptcp.h"
 #include "nsd_ptcp.h"
 #include "prop.h"
 #include "dnscache.h"
@@ -1138,10 +1136,6 @@ ENDObjClassInit(nsd_ptcp)
 
 BEGINmodExit
 CODESTARTmodExit
-#	ifdef HAVE_EPOLL_CREATE /* module only available if epoll() is supported! */
-	nsdpoll_ptcpClassExit();
-#	endif
-	nsdsel_ptcpClassExit();
 	nsd_ptcpClassExit();
 ENDmodExit
 
@@ -1158,10 +1152,4 @@ CODESTARTmodInit
 
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(nsd_ptcpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
-	CHKiRet(nsdsel_ptcpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
-#	ifdef HAVE_EPOLL_CREATE /* module only available if epoll() is supported! */
-	CHKiRet(nsdpoll_ptcpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
-#	endif
 ENDmodInit
-/* vi:set ai:
- */

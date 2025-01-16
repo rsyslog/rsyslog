@@ -550,7 +550,7 @@ static rsRetVal wtiQueryInterface(interface_t __attribute__((unused)) *i) { retu
 /* exit our class
  */
 BEGINObjClassExit(wti, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(nsdsel_gtls)
+CODESTARTObjClassExit(wti)
 	/* release objects we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
 	pthread_key_delete(thrd_wti_key);

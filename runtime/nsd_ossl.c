@@ -49,7 +49,6 @@
 #include "datetime.h"
 #include "net_ossl.h"	// Include OpenSSL Helpers
 #include "nsd_ptcp.h"
-#include "nsdsel_ossl.h"
 #include "nsd_ossl.h"
 #include "unicode-helper.h"
 #include "rsconf.h"
@@ -1557,7 +1556,6 @@ ENDObjClassInit(nsd_ossl)
 
 BEGINmodExit
 CODESTARTmodExit
-	nsdsel_osslClassExit();
 	nsd_osslClassExit();
 	net_osslClassExit();
 ENDmodExit
@@ -1577,5 +1575,4 @@ CODESTARTmodInit
 	DBGPRINTF("modInit\n");
 	CHKiRet(net_osslClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 	CHKiRet(nsd_osslClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
-	CHKiRet(nsdsel_osslClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit
