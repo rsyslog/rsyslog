@@ -121,15 +121,4 @@ ENDinterface(nsd)
  * interface version 11 added oserr to Rcv() signature -- rgerhards, 2017-09-04
  */
 
-/* interface  for the select call */
-BEGINinterface(nsdsel) /* name must also be changed in ENDinterface macro! */
-	rsRetVal (*Construct)(nsdsel_t **ppThis);
-	rsRetVal (*Destruct)(nsdsel_t **ppThis);
-	rsRetVal (*Add)(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp);
-	rsRetVal (*Select)(nsdsel_t *pNsdsel, int *piNumReady);
-	rsRetVal (*IsReady)(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady);
-ENDinterface(nsdsel)
-#define nsdselCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
-
-
 #endif /* #ifndef INCLUDED_NSD_H */

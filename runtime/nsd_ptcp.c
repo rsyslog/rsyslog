@@ -49,7 +49,6 @@
 #include "net.h"
 #include "netstrms.h"
 #include "netstrm.h"
-#include "nsdsel_ptcp.h"
 #include "nsd_ptcp.h"
 #include "prop.h"
 #include "dnscache.h"
@@ -1136,7 +1135,6 @@ ENDObjClassInit(nsd_ptcp)
 
 BEGINmodExit
 CODESTARTmodExit
-	nsdsel_ptcpClassExit();
 	nsd_ptcpClassExit();
 ENDmodExit
 
@@ -1153,7 +1151,4 @@ CODESTARTmodInit
 
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(nsd_ptcpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
-	CHKiRet(nsdsel_ptcpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
-#	ifdef HAVE_EPOLL_CREATE /* module only available if epoll() is supported! */
-#	endif
 ENDmodInit

@@ -77,7 +77,6 @@
 #include "glbl.h"
 #include "netstrms.h"
 #include "netstrm.h"
-#include "nssel.h"
 #include "errmsg.h"
 #include "ruleset.h"
 #include "ratelimit.h"
@@ -319,7 +318,7 @@ select_Poll(tcpsrv_t *const pThis, int *const piNumReady)
 	*piNumReady = poll(pThis->evtdata.poll.fds, pThis->evtdata.poll.currfds, -1);
 	if(*piNumReady < 0) {
 		if(errno == EINTR) {
-			DBGPRINTF("nsdsel_ptcp received EINTR\n");
+			DBGPRINTF("tcpsrv received EINTR\n");
 		} else {
 			LogMsg(errno, RS_RET_POLL_ERR, LOG_WARNING,
 				"ndssel_ptcp: poll system call failed, may cause further troubles");

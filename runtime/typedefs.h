@@ -60,9 +60,6 @@ typedef struct nsd_gtls_s nsd_gtls_t;
 typedef struct nsd_ossl_s nsd_ossl_t;
 typedef struct nsd_gsspi_s nsd_gsspi_t;
 typedef struct nsd_nss_s nsd_nss_t;
-typedef struct nsdsel_ptcp_s nsdsel_ptcp_t;
-typedef struct nsdsel_gtls_s nsdsel_gtls_t;
-typedef struct nsdsel_ossl_s nsdsel_ossl_t;
 typedef struct wti_s wti_t;
 typedef struct msgPropDescr_s msgPropDescr_t;
 typedef struct msg smsg_t;
@@ -142,11 +139,9 @@ typedef struct dynstats_ctr_s dynstats_ctr_t;
 #ifdef OS_SOLARIS
 	typedef void * obj_t_ptr;
 	typedef void nsd_t;
-	typedef void nsdsel_t;
 #else
 	typedef obj_t *obj_t_ptr;
 	typedef obj_t nsd_t;
-	typedef obj_t nsdsel_t;
 #endif
 
 
