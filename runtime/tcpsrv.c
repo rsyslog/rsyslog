@@ -126,15 +126,15 @@ eventNotify_init(tcpsrv_t *const pThis)
 	DEFiRet;
 #if defined(EPOLL_CLOEXEC) && defined(HAVE_EPOLL_CREATE1)
 	DBGPRINTF("tcpsrv uses epoll_create1()\n");
-	pThis->efd = epoll_create1(EPOLL_CLOEXEC);
-	if(pThis->efd < 0 && errno == ENOSYS)
+	pThis->evtdata->epoll.efd = epoll_create1(EPOLL_CLOEXEC);
+	if(pThis->evtdata->epoll.efd < 0 && errno == ENOSYS)
 #endif
 	{
 		DBGPRINTF("tcpsrv uses epoll_create()\n");
-		pThis->efd = epoll_create(100); /* size is ignored in newer kernels, but 100 is not bad... */
+		pThis->evtdata->epoll.efd = epoll_create(100); /* size is ignored in newer kernels, but 100 is not bad... */
 	}
 
-	if(pThis->efd < 0) {
+	if(pThis->evtdata->epoll.efd < 0) {
 		DBGPRINTF("epoll_create1() could not create fd\n");
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
@@ -147,7 +147,7 @@ static rsRetVal
 eventNotify_exit(tcpsrv_t *const pThis)
 {
 	DEFiRet;
-	close(pThis->efd);
+	close(pThis->evtdata->epoll.efd);
 	RETiRet;
 }
 
@@ -170,14 +170,14 @@ epoll_Ctl(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr, const int is
 			event.events |= EPOLLET; // TODO: remove and add above when accept is also epoll capable (looping!)
 		}
 		event.data.ptr = (void*) pioDescr;
-		if(epoll_ctl(pThis->efd, EPOLL_CTL_ADD,  sock, &event) < 0) {
+		if(epoll_ctl(pThis->evtdata->epoll.efd, EPOLL_CTL_ADD,  sock, &event) < 0) {
 			LogError(errno, RS_RET_ERR_EPOLL_CTL,
 				"epoll_ctl failed on fd %d, isLstn %d\n",
 				sock, isLstn);
 		}
 	} else if(op == EPOLL_CTL_DEL) {
 		dbgprintf("removing epoll entry %d, socket %d\n", id, sock);
-		if(epoll_ctl(pThis->efd, EPOLL_CTL_DEL, sock, NULL) < 0) {
+		if(epoll_ctl(pThis->eventdata->epoll.efd, EPOLL_CTL_DEL, sock, NULL) < 0) {
 			LogError(errno, RS_RET_ERR_EPOLL_CTL,
 				"epoll_ctl failed on fd %d, isLstn %d\n",
 				sock, isLstn);
@@ -214,7 +214,7 @@ epoll_Wait(tcpsrv_t *const pThis, const int timeout, int *const numEntries, tcps
 	if(*numEntries > NSPOLL_MAX_EVENTS_PER_WAIT)
 		*numEntries = NSPOLL_MAX_EVENTS_PER_WAIT;
 	DBGPRINTF("doing epoll_wait for max %d events\n", *numEntries);
-	nfds = epoll_wait(pThis->efd, event, *numEntries, timeout);
+	nfds = epoll_wait(pThis->eventdata->epoll.efd, event, *numEntries, timeout);
 	if(nfds == -1) {
 		if(errno == EINTR) {
 			ABORT_FINALIZE(RS_RET_EINTR);
@@ -255,7 +255,7 @@ static rsRetVal
 eventNotify_exit(tcpsrv_t *const pThis)
 {
 	DEFiRet;
-	free(pThis->fds);
+	free(pThis->evtdata.poll.fds);
 	RETiRet;
 }
 
@@ -269,27 +269,27 @@ select_Add(tcpsrv_t *const pThis, netstrm_t *const pStrm, const nsdsel_waitOp_t 
 
 	CHKiRet(netstrm.GetSock(pStrm, &sock));
 
-	if(pThis->currfds == pThis->maxfds) {
+	if(pThis->evtdata.poll.currfds == pThis->evtdata.poll.maxfds) {
 		struct pollfd *newfds;
-		CHKmalloc(newfds = realloc(pThis->fds,
-			sizeof(struct pollfd) * (pThis->maxfds + FDSET_INCREMENT)));
-		pThis->maxfds += FDSET_INCREMENT;
-		pThis->fds = newfds;
+		CHKmalloc(newfds = realloc(pThis->evtdata.poll.fds,
+			sizeof(struct pollfd) * (pThis->evtdata.poll.maxfds + FDSET_INCREMENT)));
+		pThis->evtdata.poll.maxfds += FDSET_INCREMENT;
+		pThis->evtdata.poll.fds = newfds;
 	}
 
 	switch(waitOp) {
 		case NSDSEL_RD:
-			pThis->fds[pThis->currfds].events = POLLIN;
+			pThis->evtdata.poll.fds[pThis->evtdata.poll.currfds].events = POLLIN;
 			break;
 		case NSDSEL_WR:
-			pThis->fds[pThis->currfds].events = POLLOUT;
+			pThis->evtdata.poll.fds[pThis->evtdata.poll.currfds].events = POLLOUT;
 			break;
 		case NSDSEL_RDWR:
-			pThis->fds[pThis->currfds].events = POLLIN | POLLOUT;
+			pThis->evtdata.poll.fds[pThis->evtdata.poll.currfds].events = POLLIN | POLLOUT;
 			break;
 	}
-	pThis->fds[pThis->currfds].fd = sock;
-	++pThis->currfds;
+	pThis->evtdata.poll.fds[pThis->evtdata.poll.currfds].fd = sock;
+	++pThis->evtdata.poll.currfds;
 
 finalize_it:
 	RETiRet;
@@ -308,15 +308,15 @@ select_Poll(tcpsrv_t *const pThis, int *const piNumReady)
 
 	/* Output debug first*/
 	if(Debug) {
-		dbgprintf("calling poll, active fds (%d): ", pThis->currfds);
-		for(uint32_t i = 0; i <= pThis->currfds; ++i)
-			dbgprintf("%d ", pThis->fds[i].fd);
+		dbgprintf("calling poll, active fds (%d): ", pThis->evtdata.poll.currfds);
+		for(uint32_t i = 0; i <= pThis->evtdata.poll.currfds; ++i)
+			dbgprintf("%d ", pThis->evtdata.poll.fds[i].fd);
 		dbgprintf("\n");
 	}
-	assert(pThis->currfds >= 1);
+	assert(pThis->evtdata.poll.currfds >= 1);
 
 	/* now do the select */
-	*piNumReady = poll(pThis->fds, pThis->currfds, -1);
+	*piNumReady = poll(pThis->evtdata.poll.fds, pThis->evtdata.poll.currfds, -1);
 	if(*piNumReady < 0) {
 		if(errno == EINTR) {
 			DBGPRINTF("nsdsel_ptcp received EINTR\n");
@@ -343,17 +343,17 @@ select_IsReady(tcpsrv_t *const pThis, netstrm_t *const pStrm, const nsdsel_waitO
 	// TODO: consider doing a binary search
 
 	uint32_t idx;
-	for(idx = 0 ; idx < pThis->currfds ; ++idx) {
-		if(pThis->fds[idx].fd == sock)
+	for(idx = 0 ; idx < pThis->evtdata.poll.currfds ; ++idx) {
+		if(pThis->evtdata.poll.fds[idx].fd == sock)
 			break;
 	}
-	if(idx >= pThis->currfds) {
+	if(idx >= pThis->evtdata.poll.currfds) {
 		LogMsg(0, RS_RET_INTERNAL_ERROR, LOG_ERR,
 			"ndssel_ptcp: could not find socket %d which should be present", sock);
 		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
 	}
 
-	const short revent = pThis->fds[idx].revents;
+	const short revent = pThis->evtdata.poll.fds[idx].revents;
 	if (revent & POLLNVAL) {
 		DBGPRINTF("ndssel_ptcp: revent & POLLNVAL is TRUE, we had a race, ignoring, revent = %d", revent);
 		*pbIsReady = 0;
@@ -1140,10 +1140,10 @@ RunSelect(tcpsrv_t *const pThis)
 
 	while(1) {
 		// TODO: think about more efficient use of malloc/free
-		pThis->currfds = 0;
-		pThis->maxfds = FDSET_INCREMENT;
+		pThis->evtdata.poll.currfds = 0;
+		pThis->evtdata.poll.maxfds = FDSET_INCREMENT;
 		/* we need to alloc one pollfd more, because the list must be 0-terminated! */
-		CHKmalloc(pThis->fds = calloc(FDSET_INCREMENT + 1, sizeof(struct pollfd)));
+		CHKmalloc(pThis->evtdata.poll.fds = calloc(FDSET_INCREMENT + 1, sizeof(struct pollfd)));
 
 		/* Add the TCP listen sockets to the list of read descriptors. */
 		for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
@@ -1221,7 +1221,7 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 	      * crashed, which made sense (the rest of the engine was not prepared for
 	      * that) -- rgerhards, 2008-05-19
 	      */
-		free(pThis->fds);
+		free(pThis->evtdata.poll.fds);
 		continue; /* keep compiler happy, block end after label is non-standard */
 	}
 
