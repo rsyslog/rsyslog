@@ -4,7 +4,7 @@
  * implemented by concrete classes. As such, no nsd data type itself
  * is defined.
  *
- * Copyright 2008-2012 Adiscon GmbH.
+ * Copyright 2008-2025 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -27,15 +27,23 @@
 
 #include <sys/socket.h>
 
+#if 0
 /**
- * The following structure is a set of descriptors that need to be processed.
- * This set will be the result of the epoll call and be used
- * in the actual request processing stage. -- rgerhards, 2011-01-24
+ * The following structure is a descriptor for tcpsrv i/o. It is
+ * primarily used together with epoll at the moment.
  */
 struct nsd_epworkset_s {
-	int id;
-	void *pUsr;
+	int id; // TODO: remove
+	//void *pUsr; // TODO: remove
+	enum {NSD_PTR_TYPE_LSTN, NSD_PTR_TYPE_SESS} ptrType;
+	union {
+		tcps_sess_t *pSess;
+		struct {
+			netstrm_t **ppLstn;	/**<  accept listener's netstream */
+		} lstn;
+	} ptr;
 };
+#endif
 
 enum nsdsel_waitOp_e {
 	NSDSEL_RD = 1,
@@ -112,24 +120,5 @@ ENDinterface(nsd)
  * interface version 10 added SetGnutlsPriorityString() -- PascalWithopf, 2017-08-08
  * interface version 11 added oserr to Rcv() signature -- rgerhards, 2017-09-04
  */
-
-/* interface  for the select call */
-BEGINinterface(nsdsel) /* name must also be changed in ENDinterface macro! */
-	rsRetVal (*Construct)(nsdsel_t **ppThis);
-	rsRetVal (*Destruct)(nsdsel_t **ppThis);
-	rsRetVal (*Add)(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp);
-	rsRetVal (*Select)(nsdsel_t *pNsdsel, int *piNumReady);
-	rsRetVal (*IsReady)(nsdsel_t *pNsdsel, nsd_t *pNsd, nsdsel_waitOp_t waitOp, int *pbIsReady);
-ENDinterface(nsdsel)
-#define nsdselCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
-
-/* interface  for the epoll call */
-BEGINinterface(nsdpoll) /* name must also be changed in ENDinterface macro! */
-	rsRetVal (*Construct)(nsdpoll_t **ppThis);
-	rsRetVal (*Destruct)(nsdpoll_t **ppThis);
-	rsRetVal (*Ctl)(nsdpoll_t *pNsdpoll, nsd_t *pNsd, int id, void *pUsr, int mode, int op);
-	rsRetVal (*Wait)(nsdpoll_t *pNsdpoll, int timeout, int *numReady, nsd_epworkset_t workset[]);
-ENDinterface(nsdpoll)
-#define nsdpollCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
 #endif /* #ifndef INCLUDED_NSD_H */
