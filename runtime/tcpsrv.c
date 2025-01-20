@@ -229,7 +229,6 @@ epoll_Wait(tcpsrv_t *const pThis, const int timeout, int *const numEntries, tcps
 	/* we got valid events, so tell the caller... */
 	DBGPRINTF("epoll_wait returned %d entries\n", nfds);
 	for(i = 0 ; i < nfds ; ++i) {
-dbgprintf("epoll entry %d: EPOLLHUP %d, EPOLLERR %d\n", i, event[i].events & EPOLLHUP, event[i].events & EPOLLERR);
 		pWorkset[i] = event[i].data.ptr;
 		pWorkset[i]->isInError = event[i].events & EPOLLERR;
 	}
@@ -245,10 +244,9 @@ finalize_it:
 
 
 static rsRetVal
-eventNotify_init(tcpsrv_t *const pThis)
+eventNotify_init(tcpsrv_t *const pThis ATTR_UNUSED)
 {
 	DEFiRet;
-//finalize_it:
 	RETiRet;
 }
 
@@ -310,7 +308,7 @@ select_Poll(tcpsrv_t *const pThis, int *const piNumReady)
 
 	/* Output debug first*/
 	if(Debug) {
-		dbgprintf("--------<NSDSEL_PTCP> calling poll, active fds (%d): ", pThis->currfds);
+		dbgprintf("calling poll, active fds (%d): ", pThis->currfds);
 		for(uint32_t i = 0; i <= pThis->currfds; ++i)
 			dbgprintf("%d ", pThis->fds[i].fd);
 		dbgprintf("\n");
@@ -896,7 +894,6 @@ doReceive(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
 
 		/* Receive message */
 		iRet = pThis->pRcvData(pSess, buf, sizeof(buf), &iRcvd, &oserr);
-dbgprintf("RGER: doReceive loop rcv iRet %d\n", iRet);
 		switch(iRet) {
 		case RS_RET_CLOSED:
 			if(pThis->bEmitMsgOnClose) {
@@ -958,7 +955,6 @@ doAccept(tcpsrv_t *const pThis, const int idx)
 			CHKiRet(netstrm.GetSock(pNewSess->pStrm, &pDescr->sock));
 			pDescr->ptr.pSess = pNewSess;
 			CHKiRet(epoll_Ctl(pThis, pDescr, 0, EPOLL_CTL_ADD));
-dbgprintf("doAccept, new socket %d\n", pDescr->sock);
 		#endif
 
 		DBGPRINTF("New session created with NSD %p.\n", pNewSess);
@@ -1143,11 +1139,11 @@ RunSelect(tcpsrv_t *const pThis)
 	}
 
 	while(1) {
-		/* re-init fds for next poll() */
 		// TODO: think about more efficient use of malloc/free
 		pThis->currfds = 0;
 		pThis->maxfds = FDSET_INCREMENT;
-		CHKmalloc(pThis->fds = calloc(FDSET_INCREMENT, sizeof(struct pollfd)));
+		/* we need to alloc one pollfd more, because the list must be 0-terminated! */
+		CHKmalloc(pThis->fds = calloc(FDSET_INCREMENT + 1, sizeof(struct pollfd)));
 
 		/* Add the TCP listen sockets to the list of read descriptors. */
 		for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
@@ -1176,13 +1172,10 @@ RunSelect(tcpsrv_t *const pThis)
 				ABORT_FINALIZE(RS_RET_FORCE_TERM);
 			CHKiRet(select_IsReady(pThis, pThis->ppLstn[i], NSDSEL_RD, &bIsReady));
 			if(bIsReady) {
-dbgprintf("IsReady! i %d ptr %p, ioDescr ptr %p\n", i, pThis->ppLstn[i], pThis->ppioDescrPtr[i]);
 				workset[iWorkset].id = i;
 				workset[iWorkset].ptrType = NSD_PTR_TYPE_LSTN;
 				workset[iWorkset].id = i;
 				workset[iWorkset].isInError = 0;
-int sock; CHKiRet(netstrm.GetSock(pThis->ppLstn[i], &sock));
-dbgprintf("sock %d\n", sock);
 				CHKiRet(netstrm.GetSock(pThis->ppLstn[i], &(workset[iWorkset].sock)));
 				workset[iWorkset].ptr.ppLstn = pThis->ppLstn;
 				/* this is a flag to indicate listen sock */
@@ -1195,7 +1188,6 @@ dbgprintf("sock %d\n", sock);
 			}
 		}
 
-dbgprintf("now in sessions\n");
 		/* now check the sessions */
 		iTCPSess = TCPSessGetNxtSess(pThis, -1);
 		while(nfds && iTCPSess != -1) {
@@ -1350,7 +1342,7 @@ Run(tcpsrv_t *const pThis)
 	eventNotify_exit(pThis);
 	pthread_cleanup_pop(1);
 
-finalize_it:
+//finalize_it:
 	RETiRet;
 }
 
