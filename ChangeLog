@@ -1153,12 +1153,12 @@ Scheduled Release 8.2206.0 (aka 2022.06) 2022-06-14
   - support '}' characters in MMDB entry, when in a field
   Thanks to Théo Bertin for the patch.
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2204.1 (aka 2022.04) 2021-05-05
+Scheduled Release 8.2204.1 (aka 2022.04) 2022-05-05
 - security bugfix: potential buffer overrun in imptcp, imtcp, imgssapi and others
   This addresses CVE-2022-24903
   see also https://github.com/rsyslog/rsyslog/security/advisories/GHSA-ggw7-xr6h-mmr8
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2204.0 (aka 2022.04) 2021-04-19
+Scheduled Release 8.2204.0 (aka 2022.04) 2022-04-19
 - 2022-04-18: gnutls bugfix: possibility of infinite loop
   There was a rare possibility that the E_AGAIN/E_INTERRUPT handling
   could cause an infinite loop (100% CPU Usage), for example when a TLS
