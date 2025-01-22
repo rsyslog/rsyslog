@@ -67,7 +67,8 @@
  * -E	Permitted Peer for relp-tls
  * -L	loglevel to use for GnuTLS troubleshooting (0-off to 10-all, 0 default)
  * -j	format message in json, parameter is JSON cookie
- * -O	Use octate-count framing
+ * -o   number of threads to use for connection establishment (default: 25)
+ * -O	Use octet-count framing
  * -v   verbose output, possibly useful for troubleshooting. Most importantly,
  *      this gives insight into librelp actions (if relp is selected as protocol).
  * -k	Custom Configuration string passwed through the TLS library.
@@ -78,7 +79,7 @@
  *
  * Part of the testbench for rsyslog.
  *
- * Copyright 2009-2019 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2025 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -173,6 +174,7 @@ char *test_rs_strerror_r(int errnum, char *buf, size_t buflen) {
 #define MAX_SENDBUF 2 * MAX_EXTRADATA_LEN
 #define MAX_RCVBUF 16 * 1024 + 1/* TLS RFC 8449: max size of buffer for message reception */
 
+static int nThreadsConnOpen = 25;	/* Number for threads for openeing the connections */
 static char *targetIP = "127.0.0.1";
 static char *msgPRI = "167";
 static int targetPort[5] = {13514};
@@ -383,7 +385,7 @@ setupDTLS(void)
 
 /* open a single tcp connection
  */
-int openConn(int *fd, const int connIdx)
+int openConn(const int connIdx)
 {
 	int sock;
 	struct sockaddr_in addr;
@@ -452,11 +454,10 @@ int openConn(int *fd, const int connIdx)
 			fprintf(stderr, "relp connect failed with return %d\n", relp_r);
 			return(1);
 		}
-		*fd = 1; /* mimic "all ok" state */
+		sockArray[connIdx] = 1; /* mimic "all ok" state TODO: this looks invalid! */
 		#endif
 	} else { /* TCP, with or without TLS */
 		if((sock=socket(AF_INET, SOCK_STREAM, 0))==-1) {
-			perror("\nsocket()");
 			return(1);
 		}
 		memset((char *) &addr, 0, sizeof(addr));
@@ -470,6 +471,7 @@ int openConn(int *fd, const int connIdx)
 			if(connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0) {
 				break;
 			} else {
+				fprintf(stderr, "warning: connect failed, retrying... %s\n", strerror(errno));
 				if(retries++ == 50) {
 					perror("connect()");
 					fprintf(stderr, "connect(%d) failed\n", port);
@@ -480,9 +482,48 @@ int openConn(int *fd, const int connIdx)
 			}
 		}
 
-		*fd = sock;
+		sockArray[connIdx] = sock;
+
+		if(transport == TP_TLS) {
+			initTLSSess(connIdx);
+		}
 	}
 	return 0;
+}
+
+static int progressCounter = 0;
+static pthread_mutex_t counterLock = PTHREAD_MUTEX_INITIALIZER;
+typedef struct {
+	int startIdx;
+	int endIdx;
+} ThreadArgsOpen;
+
+/* Thread function to handle a range of connections */
+void *connectionWorker(void *arg)
+{
+	ThreadArgsOpen *args = (ThreadArgsOpen *)arg;
+	int i;
+	static int reportedConnOpenErr = 0; // TODO: mutex!
+
+	for(i = args->startIdx; i <= args->endIdx; i++) {
+		if(openConn(i) != 0) {
+			if(reportedConnOpenErr++ == 0) {
+				fprintf(stderr, "Error opening connection %d; %s\n", i, strerror(errno));
+			}
+
+			pthread_exit(NULL);
+		}
+
+		/* Update progress counter */
+		pthread_mutex_lock(&counterLock);
+		const int ctr_fixed = progressCounter++;
+		pthread_mutex_unlock(&counterLock);
+		if (bShowProgress && i % 10 == 0) {
+			printf("\r%5.5d", ctr_fixed);
+		}
+	}
+
+	pthread_exit(NULL);
 }
 
 
@@ -494,12 +535,13 @@ int openConnections(void)
 	int i;
 	char msgBuf[128];
 	size_t lenMsg;
+	pthread_t threads[nThreadsConnOpen];
+	ThreadArgsOpen threadArgs[nThreadsConnOpen];
+	int threadCount = nThreadsConnOpen;
 
 	if(transport == TP_UDP)
 		return setupUDP();
 
-	if(bShowProgress)
-		if(write(1, "      open connections", sizeof("      open connections")-1)){}
 #	if defined(ENABLE_OPENSSL)
 	sslArray = calloc(numConnections, sizeof(SSL *));
 #	elif defined(ENABLE_GNUTLS)
@@ -517,53 +559,39 @@ int openConnections(void)
 	if(transport == TP_RELP_PLAIN || transport == TP_RELP_TLS)
 		relpCltArray = calloc(numConnections, sizeof(relpClt_t*));
 	#endif
-	for(i = 0 ; i < numConnections ; ++i) {
-		if(i % 10 == 0) {
-			if(bShowProgress)
-				printf("\r%5.5d", i);
-		}
-		if(openConn(&(sockArray[i]), i) != 0) {
-			printf("error in trying to open connection i=%d\n", i);
-			if(softLimitConnections) {
-				printf("Connection limit is soft, continuing with fewer connections\n");
-				numConnections = i - 1;
-				int close_conn = 10;
-				for(i -= 1 ; close_conn > 0 && i > 1 ; --i, --close_conn) {
-					printf("closing connection %d to make some room\n", i);
-					/* close at least some connections so that
-					 * other functionality has a chance to do
-					 * at least something.
-					 */
-					if(transport == TP_RELP_PLAIN || transport == TP_RELP_TLS) {
-						#ifdef ENABLE_RELP
-						CHKRELP(relpEngineCltDestruct(pRelpEngine,
-							relpCltArray+i));
-						#endif
-					} else { /* TCP and TLS modes */
-						if(transport == TP_TLS)
-							closeTLSSess(i);
-						close(sockArray[i]);
-					}
-					sockArray[i] = -1;
-				}
-				numConnections = i;
-				printf("continuing with %d connections.\n", numConnections);
-				if(numConnections < 1) {
-					fprintf(stderr, "tcpflood could not open at least one "
-						"connection, error-terminating\n");
-					exit(1);
-				}
-				break;
-			}
+
+	// Adjust the number of threads if there are fewer connections
+	if (numConnections < threadCount) {
+		threadCount = numConnections;
+	}
+
+	if(bShowProgress)
+		if(write(1, "      open connections", sizeof("      open connections")-1)){}
+
+	// Divide connections among threads
+	int connectionsPerThread = numConnections / threadCount;
+	int remainder = numConnections % threadCount;
+	int startIdx = 0;
+
+	for (i = 0; i < threadCount; i++) {
+		int endIdx = startIdx + connectionsPerThread - 1;
+		endIdx += remainder;
+		remainder = 0;
+
+		threadArgs[i].startIdx = startIdx;
+		threadArgs[i].endIdx = endIdx;
+
+		if (pthread_create(&threads[i], NULL, connectionWorker, &threadArgs[i]) != 0) {
+			fprintf(stderr, "Error creating thread: %s\n", strerror(errno));
 			return 1;
 		}
-		if(transport == TP_TLS) {
-			initTLSSess(i);
-		}
+
+		startIdx = endIdx + 1;
 	}
-	if(bShowProgress) {
-		lenMsg = sprintf(msgBuf, "\r%5.5d open connections\n", i);
-		if(write(1, msgBuf, lenMsg)) {}
+
+	/* Wait for all connection open threads to finish */
+	for (i = 0; i < threadCount; i++) {
+		pthread_join(threads[i], NULL);
 	}
 
 	return 0;
@@ -801,7 +829,7 @@ int sendMessages(struct instdata *inst)
 		if(transport == TP_TCP) {
 			if(sockArray[socknum] == -1) {
 				/* connection was dropped, need to re-establish */
-				if(openConn(&(sockArray[socknum]), socknum) != 0) {
+				if(openConn(socknum) != 0) {
 					printf("error in trying to re-open connection %d\n", socknum);
 					exit(1);
 				}
@@ -813,11 +841,10 @@ int sendMessages(struct instdata *inst)
 		} else if(transport == TP_TLS) {
 			if(sockArray[socknum] == -1) {
 				/* connection was dropped, need to re-establish */
-				if(openConn(&(sockArray[socknum]), socknum) != 0) {
+				if(openConn(socknum) != 0) {
 					printf("error in trying to re-open connection %d\n", socknum);
 					exit(1);
 				}
-				initTLSSess(socknum);
 			}
 			if(offsSendBuf + lenBuf < MAX_SENDBUF) {
 				memcpy(sendBuf+offsSendBuf, buf, lenBuf);
@@ -842,7 +869,7 @@ int sendMessages(struct instdata *inst)
 			relpRetVal relp_ret;
 			if(sockArray[socknum] == -1) {
 				/* connection was dropped, need to re-establish */
-				if(openConn(&(sockArray[socknum]), socknum) != 0) {
+				if(openConn(socknum) != 0) {
 					printf("error in trying to re-open connection %d\n", socknum);
 					exit(1);
 				}
@@ -863,14 +890,14 @@ int sendMessages(struct instdata *inst)
 			fflush(stdout);
 			test_rs_strerror_r(error_number, errStr, sizeof(errStr));
 			if(lenSend == 0) {
-				printf("tcpflood: socket %d, index %u, msgNum %lld CLOSED REMOTELY\n",
-					sockArray[socknum], i, inst->numSent);
+				printf("tcpflood: socket %d, index %u, msgNum %lld CLOSED REMOTELY (%s)\n",
+					sockArray[socknum], i, inst->numSent, errStr);
 			} else {
 				printf("tcpflood: send() failed \"%s\" at socket %d, index %u, "
-					"msgNum %lld, lenSend %zd, lenBuf %zd\n",
-					errStr, sockArray[socknum], i, inst->numSent, lenSend,
-					lenBuf);
-			}
+						"msgNum %lld, lenSend %zd, lenBuf %zd\n",
+						errStr, sockArray[socknum], i, inst->numSent, lenSend,
+						lenBuf);
+				}
 			fflush(stderr);
 
 			if(abortOnSendFail) {
@@ -887,18 +914,17 @@ int sendMessages(struct instdata *inst)
 			 * are a victim
 			 */
 			if(rand() > (int) (RAND_MAX * dbRandConnDrop)) {
-#if 1
 				if(transport == TP_TLS && offsSendBuf != 0) {
 					/* send remaining buffer */
 					lenSend = sendTLS(socknum, sendBuf, offsSendBuf);
 					if(lenSend != offsSendBuf) {
-						fprintf(stderr, "tcpflood: error in send function causes potential "
-						"data loss lenSend %zd, offsSendBuf %d\n",
-						lenSend, offsSendBuf);
+						fprintf(stderr, "tcpflood: error in send function for conn %d "
+							"causes potential data loss lenSend %zd, "
+							"offsSendBuf %d\n",
+							sockArray[socknum], lenSend, offsSendBuf);
 					}
 					offsSendBuf = 0;
 				}
-#endif
 				++nConnDrops;
 				close(sockArray[socknum]);
 				sockArray[socknum] = -1;
@@ -1434,7 +1460,7 @@ exitTLS(void)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 static void
-initTLSSess(int i)
+initTLSSess(const int i)
 {
 	int res;
 	BIO *bio_client;
@@ -1724,7 +1750,7 @@ initTLS(void)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 static void
-initTLSSess(int i)
+initTLSSess(const int i)
 {
 	int r;
 	gnutls_init(sessArray + i, GNUTLS_CLIENT);
@@ -1824,7 +1850,15 @@ int main(int argc, char *argv[])
 	struct sigaction sigAct;
 	struct rlimit maxFiles;
 	static char buf[1024];
+	struct rlimit limit;
+	int os_max_fds;
 
+	if (getrlimit(RLIMIT_NOFILE, &limit) != 0) {
+		perror("Failed to get RLIMIT_NOFILE");
+		exit(1);
+	}
+
+	os_max_fds = limit.rlim_cur; // Soft limit
 	srand(time(NULL));	/* seed is good enough for our needs */
 
 	/* on Solaris, we do not HAVE MSG_NOSIGNAL, so for this reason
@@ -1837,7 +1871,8 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, buf, _IONBF, 48);
 
-	while((opt = getopt(argc, argv, "a:ABb:c:C:d:DeE:f:F:i:I:j:k:l:L:m:M:n:OP:p:rR:sS:t:T:u:vW:x:XyYz:Z:")) != -1) {
+	while((opt = getopt(argc, argv, "a:ABb:c:C:d:DeE:f:F:i:I:j:k:l:L:m:M:n:o:OP:p:rR:"
+				        "sS:t:T:u:vW:x:XyYz:Z:")) != -1) {
 		switch (opt) {
 		case 'b':	batchsize = atoll(optarg);
 				break;
@@ -1872,9 +1907,8 @@ int main(int argc, char *argv[])
 				break;
 		case 'D':	bRandConnDrop = 1;
 				break;
-		case 'l':
-					dbRandConnDrop = atof(optarg);
-					printf("RandConnDrop Level: '%lf' \n", dbRandConnDrop);
+		case 'l':	dbRandConnDrop = atof(optarg);
+				printf("RandConnDrop Level: '%lf' \n", dbRandConnDrop);
 				break;
 		case 'r':	bRandomizeExtraData = 1;
 				break;
@@ -1974,6 +2008,8 @@ int main(int argc, char *argv[])
 				break;
 		case 'Z':	tlsCertFile = optarg;
 				break;
+		case 'o':	nThreadsConnOpen = atoi(optarg);
+				break;
 		case 'O':	octateCountFramed = 1;
 				break;
 		case 'v':	verbose = 1;
@@ -1989,6 +2025,22 @@ int main(int argc, char *argv[])
 	const char *const ci_env = getenv("CI");
 	if(ci_env != NULL && !strcmp(ci_env, "true")) {
 		bSilent = 1;	/* auto-apply silent option during CI runs */
+	}
+
+	if(numConnections >= (os_max_fds - 20)) {
+		fprintf(stderr, "We are asked to use %d connections, but the OS permits only %d "
+			"open file descriptors.\n", numConnections, os_max_fds);
+		if(softLimitConnections) {
+			numConnections = os_max_fds - 20;
+			fprintf(stderr, "We reduced the actual number of connections to %d. "
+				"This leaves some room for opening files.\n",
+				numConnections);
+		} else {
+			fprintf(stderr, "Connection count is hard requirement, so we "
+				"error-terminate\n");
+			exit(1);
+		}
+
 	}
 
 	if(tlsCAFile != NULL && transport != TP_RELP_TLS) {
