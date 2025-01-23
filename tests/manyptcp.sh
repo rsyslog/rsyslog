@@ -9,7 +9,7 @@ generate_conf
 add_conf '
 $MaxOpenFiles 2000
 module(load="../plugins/imptcp/.libs/imptcp")
-input(type="imptcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+input(type="imptcp" SocketBacklog="1000" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 :msg, contains, "msgnum:" action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
