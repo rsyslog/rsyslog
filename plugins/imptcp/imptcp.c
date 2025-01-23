@@ -1695,7 +1695,7 @@ createInstance(instanceConf_t **pinst)
 	inst->ratelimitInterval = 0; /* off */
 	inst->compressionMode = COMPRESS_SINGLE_MSG;
 	inst->multiLine = 0;
-	inst->socketBacklog = 5;
+	inst->socketBacklog = 64;
 	inst->pszLstnPortFileName = NULL;
 	inst->iTCPSessMax = -1;
 
