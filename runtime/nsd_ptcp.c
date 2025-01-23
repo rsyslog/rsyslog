@@ -688,7 +688,8 @@ LstnInit(netstrms_t *const pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*
 			}
 		}
 
-		if(listen(sock, iSessMax / 10 + 5) < 0) {
+		const int iSynBacklog = (pNS->iSynBacklog == 0) ? iSessMax / 10 + 5 : pNS->iSynBacklog;
+		if(listen(sock, iSynBacklog) < 0) {
 			/* If the listen fails, it most probably fails because we ask
 			 * for a too-large backlog. So in this case we first set back
 			 * to a fixed, reasonable, limit that should work. Only if

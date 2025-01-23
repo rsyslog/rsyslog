@@ -1,8 +1,8 @@
 /* netstrms.c
  *
- * Work on this module begung 2008-04-23 by Rainer Gerhards.
+ * Work on this module begun 2008-04-23 by Rainer Gerhards.
  *
- * Copyright 2008-2021 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2025 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -140,6 +140,16 @@ netstrmsConstructFinalize(netstrms_t *pThis)
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, netstrms);
 	iRet = loadDrvr(pThis);
+	RETiRet;
+}
+
+
+static rsRetVal
+SetSynBacklog(netstrms_t *pThis, const int iSynBacklog)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, netstrms);
+	pThis->iSynBacklog = iSynBacklog;
 	RETiRet;
 }
 
@@ -473,6 +483,7 @@ CODESTARTobjQueryInterface(netstrms)
 	pIf->ConstructFinalize = netstrmsConstructFinalize;
 	pIf->Destruct = netstrmsDestruct;
 	pIf->CreateStrm = CreateStrm;
+	pIf->SetSynBacklog = SetSynBacklog;
 	pIf->SetDrvrName = SetDrvrName;
 	pIf->SetDrvrMode = SetDrvrMode;
 	pIf->GetDrvrMode = GetDrvrMode;

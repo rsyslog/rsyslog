@@ -4,7 +4,7 @@
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c,
  * which at the time of the rsyslog fork was BSD-licensed)
  *
- * Copyright 2007-2022 Adiscon GmbH.
+ * Copyright 2007-2025 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -139,6 +139,7 @@ struct instanceConf_s {
 	int bEmitMsgOnClose;
 	int bEmitMsgOnOpen;
 	int bPreserveCase;
+	int iSynBacklog;
 	uchar *pszStrmDrvrName; /* stream driver to use */
 	int iStrmDrvrMode;
 	uchar *pszStrmDrvrAuthMode;
@@ -273,7 +274,8 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "supportoctetcountedframing", eCmdHdlrBinary, 0 },
 	{ "ratelimit.interval", eCmdHdlrInt, 0 },
 	{ "framingfix.cisco.asa", eCmdHdlrBinary, 0 },
-	{ "ratelimit.burst", eCmdHdlrInt, 0 }
+	{ "ratelimit.burst", eCmdHdlrInt, 0 },
+	{ "socketbacklog", eCmdHdlrNonNegInt, 0 }
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
@@ -398,6 +400,7 @@ createInstance(instanceConf_t **pinst)
 	inst->bEmitMsgOnClose = loadModConf->bEmitMsgOnClose;
 	inst->bEmitMsgOnOpen = loadModConf->bEmitMsgOnOpen;
 	inst->bPreserveCase = loadModConf->bPreserveCase;
+	inst->iSynBacklog = 0; /* default: unset */
 	inst->iTCPLstnMax = loadModConf->iTCPLstnMax;
 	inst->iTCPSessMax = loadModConf->iTCPSessMax;
 
@@ -512,6 +515,7 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 	CHKiRet(tcpsrv.SetNotificationOnRemoteClose(pOurTcpsrv, inst->bEmitMsgOnClose));
 	CHKiRet(tcpsrv.SetNotificationOnRemoteOpen(pOurTcpsrv, inst->bEmitMsgOnOpen));
 	CHKiRet(tcpsrv.SetPreserveCase(pOurTcpsrv, inst->bPreserveCase));
+	CHKiRet(tcpsrv.SetSynBacklog(pOurTcpsrv, inst->iSynBacklog));
 	/* now set optional params, but only if they were actually configured */
 	psz = (inst->pszStrmDrvrName == NULL) ? modConf->pszStrmDrvrName : inst->pszStrmDrvrName;
 	if(psz != NULL) {
@@ -697,6 +701,8 @@ CODESTARTnewInpInst
 			inst->ratelimitInterval = (unsigned int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "preservecase")) {
 			inst->bPreserveCase = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "socketbacklog")) {
+			inst->iSynBacklog = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "listenportfilename")) {
 			inst->cnf_params->pszLstnPortFileName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {

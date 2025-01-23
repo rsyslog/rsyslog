@@ -1,6 +1,6 @@
-/* Definitions for the stream-based netstrmsworking class.
+/* Definitions for the stream-based netstrm sworking class.
  *
- * Copyright 2007-2021 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2025 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -42,6 +42,7 @@ struct netstrms_s {
 	const uchar *pszDrvrKeyFile;
 	const uchar *pszDrvrCertFile;
 	uchar *gnutlsPriorityString; /**< priorityString for connection */
+	int iSynBacklog;	/**< socket layer syn backlog for listen() */
 	permittedPeers_t *pPermPeers;/**< current driver's permitted peers */
 	rsRetVal(*fLstnInitDrvr)(netstrm_t*); /**< "late" driver-specific lstn init function NULL if none */
 
@@ -83,8 +84,11 @@ BEGINinterface(netstrms) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetDrvrTlsCRLFile)(netstrms_t *pThis, const uchar *);
 	const uchar* (*GetDrvrTlsCRLFile)(netstrms_t *pThis);
 
+	/* v4 */
+	rsRetVal (*SetSynBacklog)(netstrms_t *pThis, const int);
+
 ENDinterface(netstrms)
-#define netstrmsCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
+#define netstrmsCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(netstrms);
