@@ -1,6 +1,6 @@
 /* Definitions for tcpsrv class.
  *
- * Copyright 2008-2022 Adiscon GmbH.
+ * Copyright 2008-2025 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -106,6 +106,7 @@ struct tcpsrv_s {
 	int bDisableLFDelim;	/**< if 1, standard LF frame delimiter is disabled (*very dangerous*) */
 	int discardTruncatedMsg;/**< discard msg part that has been truncated*/
 	sbool bPreserveCase;	/**< preserve case in fromhost */
+	int iSynBacklog;
 	unsigned int ratelimitInterval;
 	unsigned int ratelimitBurst;
 	tcps_sess_t **pSessions;/**< array of all of our sessions */
@@ -213,8 +214,10 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetDrvrCertFile)(tcpsrv_t *pThis, uchar *pszMode);
 	/* added v26 -- Options for TLS CRL file */
 	rsRetVal (*SetDrvrCRLFile)(tcpsrv_t *pThis, uchar *pszMode);
+	/* added v27 -- sync backlog for listen() */
+	rsRetVal (*SetSynBacklog)(tcpsrv_t *pThis, int);
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 26 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 27 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

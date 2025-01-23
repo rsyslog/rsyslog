@@ -2467,6 +2467,8 @@ EXTRA_DIST= \
 	imtcp-tls-ossl-error-key.sh \
 	imtcp-tls-ossl-error-key2.sh \
 	manytcp.sh \
+	imtcp-tls-gtls-manycon.sh \
+	imtcp-tls-ossl-manycon.sh \
 	manyptcp.sh \
 	imptcp-basic-hup.sh \
 	imptcp-NUL.sh \

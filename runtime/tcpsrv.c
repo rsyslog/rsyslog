@@ -21,7 +21,7 @@
  * File begun on 2007-12-21 by RGerhards (extracted from syslogd.c[which was
  * licensed under BSD at the time of the rsyslog fork])
  *
- * Copyright 2007-2022 Adiscon GmbH.
+ * Copyright 2007-2025 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -1033,6 +1033,7 @@ BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macr
 	pThis->bUseFlowControl = 1;
 	pThis->pszDrvrName = NULL;
 	pThis->bPreserveCase = 1; /* preserve case in fromhost; default to true. */
+	pThis->iSynBacklog = 0; /* default: unset */
 	pThis->DrvrTlsVerifyDepth = 0;
 ENDobjConstruct(tcpsrv)
 
@@ -1046,6 +1047,7 @@ tcpsrvConstructFinalize(tcpsrv_t *pThis)
 
 	/* prepare network stream subsystem */
 	CHKiRet(netstrms.Construct(&pThis->pNS));
+	CHKiRet(netstrms.SetSynBacklog(pThis->pNS, pThis->iSynBacklog));
 	if(pThis->pszDrvrName != NULL)
 		CHKiRet(netstrms.SetDrvrName(pThis->pNS, pThis->pszDrvrName));
 	CHKiRet(netstrms.SetDrvrMode(pThis->pNS, pThis->iDrvrMode));
@@ -1581,6 +1583,14 @@ SetPreserveCase(tcpsrv_t *pThis, int bPreserveCase)
 }
 
 
+static rsRetVal
+SetSynBacklog(tcpsrv_t *pThis, const int iSynBacklog)
+{
+	pThis->iSynBacklog = iSynBacklog;
+	return RS_RET_OK;
+}
+
+
 /* queryInterface function
  * rgerhards, 2008-02-29
  */
@@ -1648,6 +1658,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetDrvrCheckExtendedKeyUsage = SetDrvrCheckExtendedKeyUsage;
 	pIf->SetDrvrPrioritizeSAN = SetDrvrPrioritizeSAN;
 	pIf->SetDrvrTlsVerifyDepth = SetDrvrTlsVerifyDepth;
+	pIf->SetSynBacklog = SetSynBacklog;
 
 finalize_it:
 ENDobjQueryInterface(tcpsrv)
