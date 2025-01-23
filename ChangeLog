@@ -1,5 +1,25 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2502.0 (aka 2024.12) 2025-02-??
+- 2025-01-23: imtcp: add "socketBacklog" parameter to configure TCP backlog size
+  A new "socketBacklog" parameter has been added to the imtcp module, allowing
+  users to override the default TCP SYN backlog size. Previously, the backlog
+  was set to roughly 10% of the configured max sessions, which remains the
+  default if the parameter is not specified. This enhancement enables better
+  configuration for high-performance servers. The parameter name aligns with
+  the "socketBacklog" parameter in imptcp for consistency.
+  The "socketBacklog" parameter should be set based on the anticipated connection
+  rate and the server's ability to handle incoming connections. For high-performance
+  environments with heavy traffic, a larger value may be needed to avoid dropped
+  connections during bursts. If unsure, leave the parameter unset to use the default
+    (10% of max sessions), which is suitable for typical workloads.
+- 2025-01-23: testbench: add new and adapt imtcp tests for large connection counts
+  Updated the imtcp test suite to set the "SocketBacklog" parameter to a higher
+  value to accommodate tests with a large number of concurrent connections.
+  This change addresses potential CI flakes caused by SYN queue overflows during
+  test runs and significantly reduces test runtime by avoiding delays during
+  session setup.
+  The adjusted SocketBacklog parameter ensures smoother handling of high
+  connection counts, improving test reliability and performance.
 - 2025-01-23: imptcp: Increase default SYN backlog for imptcp server to 64
   Increased the default TCP SYN backlog for the imptcp server from 5 to 64 to
   address potential connection instability and performance issues under high
