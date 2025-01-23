@@ -587,13 +587,23 @@ SocketBacklog
    :widths: auto
    :class: parameter-table
 
-   "integer", "5", "no", "none"
+   "integer", "64", "no", "none"
 
-Specifies the backlog parameter sent to the listen() function.
-It defines the maximum length to which the queue of pending connections may grow.
-See man page of listen(2) for more information.
-The parameter controls both TCP and UNIX sockets backlog parameter.
-Default value is arbitrary set to 5.
+Specifies the backlog parameter passed to the `listen()` system call. This parameter
+defines the maximum length of the queue for pending connections, which includes
+partially established connections (those in the SYN-ACK handshake phase) and fully
+established connections waiting to be accepted by the application.
+
+For more details, refer to the `listen(2)` man page.
+
+By default, the value is set to 64 to accommodate modern workloads. It can
+be adjusted to suit specific requirements, such as:
+
+- **High rates of concurrent connection attempts**: Increasing this value helps handle bursts of incoming connections without dropping them.
+- **Test environments with connection flooding**: Larger values are recommended to prevent SYN queue overflow.
+- **Servers with low traffic**: Lower values may be used to reduce memory usage.
+
+The effective backlog size is influenced by system-wide kernel settings, particularly `net.core.somaxconn` and `net.ipv4.tcp_max_syn_backlog`. The smaller value between this parameter and the kernel limits is used as the actual backlog.
 
 
 Defaulttz
