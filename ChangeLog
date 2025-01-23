@@ -1,5 +1,26 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2502.0 (aka 2024.12) 2025-02-??
+- 2025-01-23: imptcp: Increase default SYN backlog for imptcp server to 64
+  Increased the default TCP SYN backlog for the imptcp server from 5 to 64 to
+  address potential connection instability and performance issues under high
+  connection load scenarios. The previous default of 5 was too low for many
+  workloads, particularly in scenarios involving a rapid influx of client
+  connections. This could lead to SYN queue overflow, delayed connection
+  establishment, and eventual RSTs or retransmissions during subsequent phases
+  of the connection lifecycle.
+  The new default of 64 provides better handling of typical workloads while
+  allowing further customization via the "SocketBacklog" configuration option.
+  Note: The "SocketBacklog" configuration option can be adjusted to handle
+  specific workloads such as high rates of concurrent connection openings, burst
+  traffic, or other resource-intensive scenarios.
+- 2025-01-23: testbench: adapt imptcp tests for large connection counts
+  Updated the imptcp test suite to set the "SocketBacklog" parameter to a higher
+  value to accommodate tests with a large number of concurrent connections.
+  This change addresses potential CI flakes caused by SYN queue overflows during
+  test runs and significantly reduces test runtime by avoiding delays during
+  session setup.
+  The adjusted SocketBacklog parameter ensures smoother handling of high
+  connection counts, improving test reliability and performance.
 - 2025-01-16: netstrm TLS driver: move TLS retry handling to main driver
   This simplifies the driver interface. It is also kind of prep-work
   for implementing real multi-threading support for imtcp (to be done
