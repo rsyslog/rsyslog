@@ -304,18 +304,17 @@ static rsRetVal omsnmp_sendsnmp(wrkrInstanceData_t *pWrkrData, uchar *psz, uchar
 
 		/* Set PDU SOurce property if available */
 		if (pszSource != NULL) {
-			if (inet_aton((const char *)pszSource, &srcAddr.sin_addr) != 0) {
-				pdu->agent_addr[0] = (srcAddr.sin_addr.s_addr) & 0xFF;
-				pdu->agent_addr[1] = (srcAddr.sin_addr.s_addr >> 8) & 0xFF;
-				pdu->agent_addr[2] = (srcAddr.sin_addr.s_addr >> 16) & 0xFF;
-				pdu->agent_addr[3] = (srcAddr.sin_addr.s_addr >> 24) & 0xFF;
-				dbgprintf( "omsnmp_sendsnmp: SNMPv1 Source Property set to %d.%d.%d.%d\n",
-					(srcAddr.sin_addr.s_addr) & 0xFF,
-					(srcAddr.sin_addr.s_addr >> 8) & 0xFF,
-					(srcAddr.sin_addr.s_addr >> 16) & 0xFF,
-					(srcAddr.sin_addr.s_addr >> 24) & 0xFF);
+			if (inet_pton(AF_INET, (const char *)pszSource, &srcAddr.sin_addr) == 1) {
+				uint32_t s_addr = ntohl(srcAddr.sin_addr.s_addr);
+				pdu->agent_addr[0] = (s_addr) & 0xFF;
+				pdu->agent_addr[1] = (s_addr >> 8) & 0xFF;
+				pdu->agent_addr[2] = (s_addr >> 16) & 0xFF;
+				pdu->agent_addr[3] = (s_addr >> 24) & 0xFF;
+
+				dbgprintf("omsnmp_sendsnmp: SNMPv1 Source Property set to %d.%d.%d.%d\n",
+					pdu->agent_addr[0], pdu->agent_addr[1], pdu->agent_addr[2], pdu->agent_addr[3]);
 			} else {
-				LogError(0, NO_ERRCODE, "omsnmp_sendsnmp: Failed to convert '%s' into a valid IPv4"
+				LogError(0, NO_ERRCODE, "omsnmp_sendsnmp: Failed to convert '%s' into a valid IPv4 "
 					"address\n", pszSource);
 			}
 		}
