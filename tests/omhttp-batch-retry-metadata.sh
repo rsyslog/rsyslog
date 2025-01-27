@@ -85,5 +85,6 @@ wait_shutdown
 omhttp_get_data $port my/endpoint kafkarest
 omhttp_stop_server
 seq_check
+cat -n ${RSYSLOG_DYNNAME}/omhttp.response.log
 omhttp_validate_metadata_response
 exit_test
