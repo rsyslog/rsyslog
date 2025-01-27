@@ -469,11 +469,13 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	assert(ppNew != NULL);
 	ISOBJ_TYPE_assert(pThis, nsd_ptcp);
 
-	do {
-		iNewSock = accept(pThis->sock, (struct sockaddr*) &addr, &addrlen);
-	} while(iNewSock < 0 && (errno == EINTR || errno == EAGAIN));
+	iNewSock = accept(pThis->sock, (struct sockaddr*) &addr, &addrlen);
 
 	if(iNewSock < 0) {
+		if(errno == EINTR || errno == EAGAIN) {
+			ABORT_FINALIZE(RS_RET_NO_MORE_DATA);
+		}
+
 		LogMsg(errno, RS_RET_ACCEPT_ERR, LOG_WARNING,
 			"nds_ptcp: error accepting connection on socket %d", pThis->sock);
 		ABORT_FINALIZE(RS_RET_ACCEPT_ERR);

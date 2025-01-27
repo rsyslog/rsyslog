@@ -319,7 +319,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_NOT_FOUND = -3003, /**< some requested value not found */
 	RS_RET_MISSING_TRAIL_QUOTE = -3004, /**< an expected trailing quote is missing */
 	RS_RET_NO_DIGIT = -3005,	/**< an digit was expected, but none found (mostly parsing) */
-	RS_RET_NO_MORE_DATA = -3006,	/**< insufficient data, e.g. end of string during parsing */
+	RS_RET_NO_MORE_DATA = -3006,	/**< end of data, e.g. end of string during parsing or EAGAIN API state */
 	RS_RET_INVALID_IP = -3007,	/**< invalid ip found where valid was expected */
 	RS_RET_OBJ_CREATION_FAILED = - 3008, /**< the creation of an object failed (no details available) */
 	RS_RET_INOTIFY_INIT_FAILED = - 3009,
