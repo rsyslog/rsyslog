@@ -1,5 +1,18 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2502.0 (aka 2024.12) 2025-02-??
+- 2025-01-27: omfwd: align some parameters with imtcp names
+  Parameter names have historically evolved and are sometimes
+  inconsistent between modules (while still having the same
+  semantics and similiar name).
+  This commit creates three aliases in omfwd to keep stream
+  driver parameter names consistent with the names used in
+  imtcp. Note that we do not create an alias for
+  "streamdriverpermittedpeers" because the name differ more
+  considerably and we would also need to create an alias
+  in imtcp as well. We will do this only on request.
+  Note: aliases help, but are not a great solution. They may
+  cause confusion if both names are used together in a single
+  config. So care must be taken when using an alias.
 - 2025-01-27: testbench: remove ElasticSearch 6.0 based tests
   EleasticSearch 6 is heavily outdated. Testing against that
   platform is no longer needed.
