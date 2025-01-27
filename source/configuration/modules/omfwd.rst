@@ -529,8 +529,14 @@ StreamDriver
 
    "word", "none", "no", "``$ActionSendStreamDriver``"
 
+The recommended alias, compatible with imtcp, is "StreamDriver.Name".
+
 Choose the stream driver to be used. Default is plain tcp, but
 you can also choose "ossl" or "gtls" for TLS encryption.
+
+Note: aliases help, but are not a great solution. They may
+cause confusion if both names are used together in a single
+config. So care must be taken when using an alias.
 
 
 StreamDriverMode
@@ -543,7 +549,13 @@ StreamDriverMode
 
    "integer", "0", "no", "``$ActionSendStreamDriverMode``"
 
+The recommended alias, compatible with imtcp, is "StreamDriver.Mode".
+
 Mode to use with the stream driver (driver-specific)
+
+Note: aliases help, but are not a great solution. They may
+cause confusion if both names are used together in a single
+config. So care must be taken when using an alias.
 
 
 StreamDriverAuthMode
@@ -556,9 +568,15 @@ StreamDriverAuthMode
 
    "string", "none", "no", "``$ActionSendStreamDriverAuthMode``"
 
+The recommended alias, compatible with imtcp, is "StreamDriver.AuthMode".
+
 Authentication mode to use with the stream driver. Note that this
 parameter requires TLS netstream drivers. For all others, it will be
 ignored. (driver-specific).
+
+Note: aliases help, but are not a great solution. They may
+cause confusion if both names are used together in a single
+config. So care must be taken when using an alias.
 
 
 StreamDriver.PermitExpiredCerts
