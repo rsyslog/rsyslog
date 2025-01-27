@@ -235,8 +235,11 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "conerrskip", eCmdHdlrNonNegInt, 0 },
 	{ "gnutlsprioritystring", eCmdHdlrString, 0 },
 	{ "streamdriver", eCmdHdlrGetWord, 0 },
+	{ "streamdriver.name", eCmdHdlrGetWord, 0 }, /* alias for streamdriver */
 	{ "streamdrivermode", eCmdHdlrInt, 0 },
+	{ "streamdriver.mode", eCmdHdlrInt, 0 },  /* alias for streamdrivermode */
 	{ "streamdriverauthmode", eCmdHdlrGetWord, 0 },
+	{ "streamdriver.authmode", eCmdHdlrGetWord, 0 }, /* alias for streamdriverauthmode */
 	{ "streamdriverpermittedpeers", eCmdHdlrGetWord, 0 },
 	{ "streamdriver.permitexpiredcerts", eCmdHdlrGetWord, 0 },
 	{ "streamdriver.CheckExtendedKeyPurpose", eCmdHdlrBinary, 0 },
@@ -1739,9 +1742,11 @@ CODESTARTnewActInst
 			pData->iConErrSkip = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "gnutlsprioritystring")) {
 			pData->gnutlsPriorityString = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "streamdriver")) {
+		} else if(   !strcmp(actpblk.descr[i].name, "streamdriver")
+			  || !strcmp(actpblk.descr[i].name, "streamdriver.name")) {
 			pData->pszStrmDrvr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "streamdrivermode")) {
+		} else if(   !strcmp(actpblk.descr[i].name, "streamdrivermode")
+			  || !strcmp(actpblk.descr[i].name, "streamdrivermode")) {
 			pData->iStrmDrvrMode = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "streamdriver.CheckExtendedKeyPurpose")) {
 			pData->iStrmDrvrExtendedCertCheck = pvals[i].val.d.n;
@@ -1754,7 +1759,8 @@ CODESTARTnewActInst
 				parser_errmsg("streamdriver.TlsVerifyDepth must be 2 or higher but is %d",
 									(int) pvals[i].val.d.n);
 			}
-		} else if(!strcmp(actpblk.descr[i].name, "streamdriverauthmode")) {
+		} else if(   !strcmp(actpblk.descr[i].name, "streamdriverauthmode")
+			  || !strcmp(actpblk.descr[i].name, "streamdriverauthmode")) {
 			pData->pszStrmDrvrAuthMode = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "streamdriver.permitexpiredcerts")) {
 			uchar *val = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
