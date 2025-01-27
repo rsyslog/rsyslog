@@ -62,11 +62,9 @@ TESTS +=  \
 	es-duplicated-ruleset.sh
 # the following test need to be serialized:
 TESTS +=  \
-	es-basic-es6.0.sh \
 	es-basic-es7.14.sh \
 	es-basic.sh \
 	es-basic-bulk.sh
-es-basic-es7.14.log: es-basic-es6.0.log
 es-basic.log: es-basic-es7.14.log
 es-basic-bulk.log: es-basic.log
 es-basic-server.log: es-basic-bulk.log
@@ -2373,7 +2371,6 @@ EXTRA_DIST= \
 	elasticsearch-error-format-check.py \
 	es-duplicated-ruleset.sh \
 	es-duplicated-ruleset-vg.sh \
-	es-basic-es6.0.sh \
 	es-basic-es7.14.sh \
 	es-basic.sh \
 	es-basic-vgthread.sh \
