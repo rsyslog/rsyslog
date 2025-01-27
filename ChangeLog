@@ -1,5 +1,18 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2502.0 (aka 2024.12) 2025-02-??
+- 2025-01-27: tcpflood test tool: enable multi threaded connection open
+  Connections were originally opened sequentially. This commit adds the
+  capability to open them via multiple threads in parallel.
+  This is needed at least for cases where we need to test multiple
+  pending connection requests, which can be accepted with an
+  "accept() loop".
+  It can also be useful for speeding up parts of the testbench.
+  However, the additional concurrency makes it potentially harder
+  to debug if bugs are detected. So tests may use multiple threads
+  for connect during regular operations but should also offer the
+  option (by editing) to revert to a single thread for easier
+  debugging.
+  closes https://github.com/rsyslog/rsyslog/issues/5535
 - 2025-01-23: imtcp: add "socketBacklog" parameter to configure TCP backlog size
   A new "socketBacklog" parameter has been added to the imtcp module, allowing
   users to override the default TCP SYN backlog size. Previously, the backlog
