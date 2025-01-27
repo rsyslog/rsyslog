@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2502.0 (aka 2024.12) 2025-02-??
+- 2025-01-27: omsnmp: replaced inet_aton with inet_pton for IPv4 address conversion
+  inet_pton is part of POSIX, whilst inet_aton is not. Moreover the
+  function is marked as forbidden according to rpmlint:
+  Forbidden function symbols found: inet_aton
+  Thanks to Attila Lakatos for the patch.
 - 2025-01-27: tcpflood test tool: enable multi threaded connection open
   Connections were originally opened sequentially. This commit adds the
   capability to open them via multiple threads in parallel.
