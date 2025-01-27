@@ -164,10 +164,7 @@ epoll_Ctl(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr, const int is
 
 	if(op == EPOLL_CTL_ADD) {
 		dbgprintf("adding epoll entry %d, socket %d\n", id, sock);
-		event.events = EPOLLIN | EPOLLOUT;
-		if(!isLstn)  {
-			event.events |= EPOLLET; // TODO: remove and add above when accept is also epoll capable (looping!)
-		}
+		event.events = EPOLLIN | EPOLLOUT | EPOLLET;
 		event.data.ptr = (void*) pioDescr;
 		if(epoll_ctl(pThis->evtdata.epoll.efd, EPOLL_CTL_ADD,  sock, &event) < 0) {
 			LogError(errno, RS_RET_ERR_EPOLL_CTL,
@@ -886,8 +883,6 @@ doReceive(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
 	}
 
 	while(do_run && loop_ctr < 500) {	/*  break happens in switch below! */
-		dbgprintf("RGER: doReceive loop iteration %d\n", loop_ctr++);
-
 		// TODO: STARVATION needs URGENTLY be considered!!! loop_ctr is one step into
 		// this direction, but we need to consider that in regard to edge triggered epoll
 
@@ -928,22 +923,24 @@ doReceive(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
 	}
 
 finalize_it:
-	dbgprintf("RGER: doReceive exit, iRet %d\n", iRet);
 	RETiRet;
 }
 
 
+/* This function processes a single incoming connection */
 static rsRetVal ATTR_NONNULL(1)
-doAccept(tcpsrv_t *const pThis, const int idx)
+doSingleAccept(tcpsrv_t *const pThis, const int idx)
 {
-	tcpLstnParams_t *cnf_params;
 	tcps_sess_t *pNewSess = NULL;
 	tcpsrv_io_descr_t *pDescr = NULL;
 	DEFiRet;
 
 	DBGPRINTF("New connect on NSD %p.\n", pThis->ppLstn[idx]);
 	iRet = SessAccept(pThis, pThis->ppLstnPort[idx], &pNewSess, pThis->ppLstn[idx]);
-	cnf_params = pThis->ppLstnPort[idx]->cnf_params;
+	if(iRet == RS_RET_NO_MORE_DATA) {
+		goto no_more_data;
+	}
+
 	if(iRet == RS_RET_OK) {
 		#if defined(HAVE_EPOLL_CREATE)
 			/* pDescr is only dyn allocated in epoll mode! */
@@ -965,14 +962,37 @@ doAccept(tcpsrv_t *const pThis, const int idx)
 finalize_it:
 #endif
 	if(iRet != RS_RET_OK) {
+		const tcpLstnParams_t *cnf_params = pThis->ppLstnPort[idx]->cnf_params;
 		LogError(0, iRet, "tcpsrv listener (inputname: '%s') failed "
 			"to process incoming connection with error %d",
 			(cnf_params->pszInputName == NULL) ? (uchar*)"*UNSET*" : cnf_params->pszInputName, iRet);
 		free(pDescr);
 		srSleep(0,20000); /* Sleep 20ms */
 	}
+no_more_data:
 	RETiRet;
 }
+
+
+/* This function processes all pending accepts on this fd */
+static rsRetVal ATTR_NONNULL(1, 2)
+doAccept(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
+{
+	DEFiRet;
+	int bRun = 1;
+
+	while(bRun) {
+dbgprintf("\n\nRGER: new accept loop iteration\n");
+		iRet = doSingleAccept(pThis, pioDescr->id);
+dbgprintf("RGER: doAccept returned with %d\n", iRet);
+
+		if(iRet != RS_RET_OK) {
+			bRun = 0;
+		}
+	}
+	RETiRet;
+}
+
 
 /* process a single workset item
  */
@@ -983,7 +1003,7 @@ processWorksetItem(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
 
 	DBGPRINTF("tcpsrv: processing item %d, socket %d\n", pioDescr->id, pioDescr->sock);
 	if(pioDescr->ptrType == NSD_PTR_TYPE_LSTN) {
-		doAccept(pThis, pioDescr->id);
+		doAccept(pThis, pioDescr);
 	} else {
 		doReceive(pThis, pioDescr);
 	}
