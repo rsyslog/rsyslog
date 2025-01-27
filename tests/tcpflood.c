@@ -1153,13 +1153,21 @@ runTests(void)
  * alorbach, 2018-06-11
  */
 
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+long BIO_debug_callback_ex(BIO *bio, int cmd, const char __attribute__((unused)) *argp,
+			size_t __attribute__((unused)) len, int argi, long __attribute__((unused)) argl,
+			int ret, size_t __attribute__((unused)) *processed)
+#else
 long BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *argp,
 			int argi, long __attribute__((unused)) argl, long ret)
+#endif
 {
 	long r = 1;
 
-	if (BIO_CB_RETURN & cmd)
-	r = ret;
+	if (BIO_CB_RETURN & cmd) {
+		r = ret;
+	}
 
 	printf("tcpflood: openssl debugmsg: BIO[%p]: ", (void *)bio);
 
@@ -1170,22 +1178,24 @@ long BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *a
 /* Disabled due API changes for OpenSSL 1.1.0+ */
 #if OPENSSL_VERSION_NUMBER < 0x10100000L
 	case BIO_CB_READ:
-		if (bio->method->type & BIO_TYPE_DESCRIPTOR)
+		if (bio->method->type & BIO_TYPE_DESCRIPTOR) {
 			printf("read(%d,%lu) - %s fd=%d\n",
 				RSYSLOG_BIO_number_read(bio), (unsigned long)argi,
 				RSYSLOG_BIO_method_name(bio), RSYSLOG_BIO_number_read(bio));
-		else
+		} else {
 			printf("read(%d,%lu) - %s\n",
 				RSYSLOG_BIO_number_read(bio), (unsigned long)argi, RSYSLOG_BIO_method_name(bio));
+		}
 		break;
 	case BIO_CB_WRITE:
-		if (bio->method->type & BIO_TYPE_DESCRIPTOR)
+		if (bio->method->type & BIO_TYPE_DESCRIPTOR) {
 			printf("write(%d,%lu) - %s fd=%d\n",
 				RSYSLOG_BIO_number_written(bio), (unsigned long)argi,
 				RSYSLOG_BIO_method_name(bio), RSYSLOG_BIO_number_written(bio));
-		else
+		} else {
 			printf("write(%d,%lu) - %s\n",
 				RSYSLOG_BIO_number_written(bio), (unsigned long)argi, RSYSLOG_BIO_method_name(bio));
+		}
 		break;
 #else
 	case BIO_CB_READ:
@@ -1207,26 +1217,26 @@ long BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *a
 			RSYSLOG_BIO_method_name(bio));
 		break;
 	case BIO_CB_RETURN | BIO_CB_READ:
-		printf("read return %ld\n", ret);
+		printf("read return %d\n", (int)ret);
 		break;
 	case BIO_CB_RETURN | BIO_CB_WRITE:
-		printf("write return %ld\n", ret);
+		printf("write return %d\n", (int)ret);
 		break;
 	case BIO_CB_RETURN | BIO_CB_GETS:
-		printf("gets return %ld\n", ret);
+		printf("gets return %d\n", (int)ret);
 		break;
 	case BIO_CB_RETURN | BIO_CB_PUTS:
-		printf("puts return %ld\n", ret);
+		printf("puts return %d\n", (int)ret);
 		break;
 	case BIO_CB_RETURN | BIO_CB_CTRL:
-		printf("ctrl return %ld\n", ret);
+		printf("ctrl return %d\n", (int)ret);
 		break;
 	default:
 		printf("bio callback - unknown type (%d)\n", cmd);
 		break;
 	}
 
-	return (r);
+	return r;
 }
 
 void osslLastSSLErrorMsg(int ret, SSL *ssl, const char* pszCallSource)
@@ -1324,8 +1334,20 @@ initTLS(const SSL_METHOD *method)
 	/* Load readable error strings */
 	SSL_load_error_strings();
 	OpenSSL_add_ssl_algorithms();
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+	/*
+	* ERR_load_*(), ERR_func_error_string(), ERR_get_error_line(), ERR_get_error_line_data(), ERR_get_state()
+	* OpenSSL now loads error strings automatically so these functions are not needed.
+	* SEE FOR MORE:
+	*	https://www.openssl.org/docs/manmaster/man7/migration_guide.html
+	*
+	*/
+#else
+	/* Load error strings into mem*/
 	ERR_load_BIO_strings();
 	ERR_load_crypto_strings();
+#endif
+
 
 	// Create OpenSSL Context
 	ctx = SSL_CTX_new(method);
@@ -1485,7 +1507,11 @@ initTLSSess(const int i)
 
 	if(tlsLogLevel > 0) {
 		/* Set debug Callback for client BIO as well! */
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+		BIO_set_callback_ex(bio_client, BIO_debug_callback_ex);
+#else
 		BIO_set_callback(bio_client, BIO_debug_callback);
+#endif // OPENSSL_VERSION_NUMBER >= 0x10100000L
 	}
 
 	/* Blocking socket */
@@ -1592,7 +1618,11 @@ initDTLSSess()
 
 	if(tlsLogLevel > 0) {
 		/* Set debug Callback for client BIO as well! */
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+		BIO_set_callback_ex(bio_client, BIO_debug_callback_ex);
+#else
 		BIO_set_callback(bio_client, BIO_debug_callback);
+#endif // OPENSSL_VERSION_NUMBER >= 0x10100000L
 	}
 
 	/* Blocking socket */
