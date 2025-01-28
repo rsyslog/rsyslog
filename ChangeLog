@@ -1,5 +1,19 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2502.0 (aka 2024.12) 2025-02-??
+- 2025-01-28: testbench: reduce flakiness for omhttp-batch-retry-metadata.sh test
+  The test results were not deterministic. Sometimes it passed, sometimes
+  it failed. The omhttp-validate-response.py script tried to parse the
+  json input line by line, but sometimes the message and response fields
+  are on separate lines, thus it failed to parse. This is the case
+  for both files used to control the checking.
+  This patch updates the check program so that it reads in complete
+  lines when parsing fails, thus removing this condition for flakiness.
+  HOWEVER, after doing so the test still sometimes fails. This may
+  point into a problem with the contributed omhttp module. Unfortunately,
+  I do not have enough insight into that module (nor time) to try to
+  address the root cause.
+  closes https://github.com/rsyslog/rsyslog/issues/5439
+- 2025-01-27: testbench fix: OpenSSL 3.x depreceated warnings in tcpflood
 - 2025-01-27: omfwd: align some parameters with imtcp names
   Parameter names have historically evolved and are sometimes
   inconsistent between modules (while still having the same
