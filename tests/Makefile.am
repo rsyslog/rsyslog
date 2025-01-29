@@ -837,6 +837,20 @@ TESTS +=  \
 endif
 endif
 
+# see comments in configure.ac on flaky tests for important details!!!
+if ENABLE_FLAKY_TESTS
+#TESTS += 
+#
+if ENABLE_OMHTTP
+TESTS +=  \
+	omhttp-batch-retry-metadata.sh
+if HAVE_VALGRIND
+TESTS +=  \
+	omhttp-batch-retry-metadata-vg.sh
+endif # end if HAVE_VALGRIND
+endif # end if ENABLE_OMHTTP
+endif # end if ENABLE_FLAKY_TESTS
+
 if ENABLE_JOURNAL_TESTS
 if ENABLE_IMJOURNAL
 TESTS +=  \
@@ -924,7 +938,6 @@ TESTS +=  \
 	omhttp-batch-jsonarray.sh \
 	omhttp-batch-kafkarest-retry.sh \
 	omhttp-batch-kafkarest.sh \
-	omhttp-batch-retry-metadata.sh \
 	omhttp-batch-lokirest-retry.sh \
 	omhttp-batch-lokirest.sh \
 	omhttp-batch-newline.sh \
@@ -943,7 +956,6 @@ TESTS +=  \
 	omhttp-batch-jsonarray-retry-vg.sh \
 	omhttp-batch-jsonarray-vg.sh \
 	omhttp-batch-kafkarest-retry-vg.sh \
-	omhttp-batch-retry-metadata-vg.sh \
 	omhttp-batch-lokirest-retry-vg.sh \
 	omhttp-retry-vg.sh \
 	omhttp-retry-timeout-vg.sh \

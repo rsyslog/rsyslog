@@ -983,7 +983,7 @@ wait_queueempty() {
 
 # shut rsyslogd down when main queue is empty. $1 is the instance.
 shutdown_when_empty() {
-	echo Shutting down instance ${1:-1}
+	printf '%s Shutting down instance %s\n' "$(date +%H:%M:%S)" ${1:-1}
 	wait_queueempty $1
 	if [ "$RSYSLOG_PIDBASE" == "" ]; then
 		echo "RSYSLOG_PIDBASE is EMPTY! - bug in test? (instance $1)"
@@ -2280,6 +2280,7 @@ ensure_elasticsearch_ready() {
 	then
 		printf 'Elasticsearch already running, NOT restarting it\n'
 	else
+		printf '%s Elasticsearch not yet running, starting it\n' "$(date +%H:%M:%S)"
 		cat elasticsearch.running
 		cleanup_elasticsearch
 		dep_es_cached_file="$dep_cache_dir/$ES_DOWNLOAD"
@@ -2294,6 +2295,7 @@ ensure_elasticsearch_ready() {
 		printf 'running elasticsearch instance: %s\n' "$(cat elasticsearch.running)"
 		init_elasticsearch
 	fi
+	printf '\n%s Elasticsearch readied for use as requested\n' "$(date +%H:%M:%S)"
 }
 
 
@@ -2318,6 +2320,7 @@ start_elasticsearch() {
 	timeseconds=0
 	# Loop until elasticsearch port is reachable or until
 	# timeout is reached!
+	curl --silent --show-error --connect-timeout 1 http://localhost:${ES_PORT:-19200}
 	until [ "$(curl --silent --show-error --connect-timeout 1 http://localhost:${ES_PORT:-19200} | grep 'rsyslog-testbench')" != "" ]; do
 		echo "--- waiting for ES startup: $timeseconds seconds"
 		$TESTTOOL_DIR/msleep 1000
@@ -2346,10 +2349,12 @@ start_elasticsearch() {
 # $1 - number of records (ES does not return all records unless you tell it explicitly).
 # $2 - ES port
 es_getdata() {
+	printf '%s getting data from ElasticSearch\n' "$(date +%H:%M:%S)"
 	curl --silent -XPUT --show-error -H 'Content-Type: application/json' "http://localhost:${2:-$ES_PORT}/rsyslog_testbench/_settings" -d '{ "index" : { "max_result_window" : '${1:-$NUMMESSAGES}' } }'
 	# refresh to ensure we get the latest data
 	curl --silent localhost:${2:-$ES_PORT}/rsyslog_testbench/_refresh
 	curl --silent localhost:${2:-$ES_PORT}/rsyslog_testbench/_search?size=${1:-$NUMMESSAGES} > $RSYSLOG_DYNNAME.work
+	printf '\n'
 	$PYTHON $srcdir/es_response_get_msgnum.py > ${RSYSLOG_OUT_LOG}
 }
 
@@ -2371,7 +2376,7 @@ es_shutdown_empty_check() {
 stop_elasticsearch() {
 	dep_work_dir=$(readlink -f $srcdir)
 	dep_work_es_pidfile="es.pid"
-	rm elasticsearch.running
+	rm -f elasticsearch.running
 	if [ -e $dep_work_es_pidfile ]; then
 		es_pid=$(cat $dep_work_es_pidfile)
 		printf 'stopping ES with pid %d\n' $es_pid
@@ -2735,6 +2740,8 @@ snmp_stop_trapreceiver() {
         echo "Stopping snmptrapreceiver server"
         kill -9 $(cat ${snmp_work_dir}/snmp_server.pid) > /dev/null 2>&1
         # Done at testexit already!: rm -rf ${snmp_work_dir}
+	echo "SNMP Trap Receiver log:"
+	cat ${snmp_work_dir}//snmp_server.log
     fi
 }
 
