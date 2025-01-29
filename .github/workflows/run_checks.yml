@@ -37,8 +37,8 @@ jobs:
       matrix:
         config: [centos_7, centos_8, debian_10, debian_11,
                  fedora_35, fedora_36,
-                 ubuntu_18, ubuntu_20, ubuntu_22,
-                 ubuntu_22_san, ubuntu_22_tsan, ubuntu_22_codecov, ubuntu_22_distcheck,
+                 ubuntu_18, ubuntu_20, ubuntu_24,
+                 ubuntu_22_san, ubuntu_24_tsan, ubuntu_22_codecov, ubuntu_22_distcheck,
                  kafka_codecov, elasticsearch]
 
     steps:
@@ -100,10 +100,13 @@ jobs:
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_suse:tumbleweed'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests"
               ;;
-          'ubuntu_22')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
+          'ubuntu_24')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--enable-imdtls --enable-omdtls"
+              # TODO: enable disabled components when the issues are fixed
+              # It is better to run at least the majority of checks than to postpone that
+              # any longer. 2025-01-31 RGerhards
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--enable-imdtls --enable-omdtls --disable-omamqp1 --disable-snmp --disable-elasticsearch-tests"
               ;;
           'ubuntu_22_distcheck')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
@@ -125,8 +128,8 @@ jobs:
               export LSAN_OPTIONS='detect_leaks=0'
               export UBSAN_OPTIONS='print_stacktrace=1'
               ;;
-          'ubuntu_22_tsan')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
+          'ubuntu_24_tsan')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
               export CI_SANITIZE_BLACKLIST='tests/tsan.supp'
               export CC='clang'
