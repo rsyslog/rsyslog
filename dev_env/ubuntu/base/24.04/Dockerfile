@@ -89,6 +89,7 @@ RUN	echo 'deb http://download.opensuse.org/repositories/home:/rgerhards/xUbuntu_
 RUN	apt-get update -y && \
 	apt-get install -y  \
 	libczmq-dev \
+	libqpid-proton11 \
 	libqpid-proton11-dev \
 	tcl-dev \
 	libsodium-dev
