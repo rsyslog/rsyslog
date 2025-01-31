@@ -2373,9 +2373,11 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 		gnutls_dh_set_prime_bits(pThis->sess, dhMinBits);
 	}
 
-	/* assign the socket to GnuTls */
 	CHKiRet(nsd_ptcp.GetSock(pThis->pTcp, &sock));
+
+	/* assign the socket to GnuTls */
 	gtlsSetTransportPtr(pThis, sock);
+
 
 	/* we need to store the hostname as an alternate mean of authentication if no
 	 * permitted peer names are given. Using the hostname is quite useful. It permits
@@ -2384,6 +2386,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	CHKmalloc(pThis->pszConnectHost = (uchar*)strdup((char*)host));
 
 	/* and perform the handshake */
+	gnutls_handshake_set_timeout(pThis->sess, 3000);
 	CHKgnutls(gnutls_handshake(pThis->sess));
 	dbgprintf("GnuTLS handshake succeeded\n");
 
