@@ -435,6 +435,11 @@ net_ossl_osslCtxInit(net_ossl_t *pThis, const SSL_METHOD *method)
 	SSL_CTX_set_timeout(pThis->ctx, 30);	/* Default Session Timeout, TODO: Make configureable */
 	SSL_CTX_set_mode(pThis->ctx, SSL_MODE_AUTO_RETRY);
 
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+	/* Enable Support for automatic ephemeral/temporary DH parameter selection. */
+	SSL_CTX_set_dh_auto(pThis->ctx, 1);
+#endif
+
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
 #	if OPENSSL_VERSION_NUMBER <= 0x101010FFL
 	/* Enable Support for automatic EC temporary key parameter selection. */
@@ -638,7 +643,7 @@ net_ossl_chkonepeername(net_ossl_t *pThis, X509 *certpeer, uchar *pszPeerID, int
 #endif
 	char *x509name = NULL;
 	DEFiRet;
-	
+
 	if (certpeer == NULL) {
 		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
 	}
