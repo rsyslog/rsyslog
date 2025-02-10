@@ -1,5 +1,13 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2502.0 (aka 2024.12) 2025-02-??
+- 2025-02-10: ossl netstream driver: allow ephemeral Diffie-Hellman key exchange
+  Use well known DH parameters that have built-in support in OpenSSL.
+  From the man page: If "auto" DH parameters are switched on then
+  the parameters will be selected to be consistent with the size of
+  the key associated with the server's certificate.  If there is no
+  certificate (e.g. for PSK ciphersuites), then it it will be
+  consistent with the size of the negotiated symmetric cipher key.
+  Thanks to Attila Lakatos for the patch.
 - 2025-01-28: testbench: reduce flakiness for omhttp-batch-retry-metadata.sh test
   The test results were not deterministic. Sometimes it passed, sometimes
   it failed. The omhttp-validate-response.py script tried to parse the
