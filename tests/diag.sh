@@ -2651,9 +2651,17 @@ first_column_sum_check() {
 # Helper functions to start/stop python snmp trap receiver
 #
 snmp_start_trapreceiver() {
+	SNMP_PYTHON=${SNMP_PYTHON:-$PYTHON}
     # Args: 1=port 2=outputfilename
     # Args 2 and up are passed along as is to snmptrapreceiver.py
-    snmptrapreceiver=$srcdir/snmptrapreceiver.py
+    echo "Checking Python version..."
+    if $SNMP_PYTHON -c 'import sys; print("Python version:", sys.version_info); exit(0 if sys.version_info >= (3,11) else 1)' 2>/dev/null; then
+        echo "Python version > 3.10, using snmptrapreceiverv2.py"
+        snmptrapreceiver=$srcdir/snmptrapreceiverv2.py
+    else
+        echo "Python version < 3.10, using snmptrapreceiver.py"
+        snmptrapreceiver=$srcdir/snmptrapreceiver.py
+    fi
     if [ ! -f ${snmptrapreceiver} ]; then
         echo "Cannot find ${snmptrapreceiver} for omsnmp test"
         error_exit 1
@@ -2679,16 +2687,28 @@ snmp_start_trapreceiver() {
     mkdir -p ${snmp_work_dir}
 
     server_args="${snmp_server_port} 127.0.0.1 ${output_file}"
-
-    $PYTHON ${snmptrapreceiver} ${server_args} ${snmp_server_logfile} >> ${snmp_server_logfile} 2>&1 &
-    if [ ! $? -eq 0 ]; then
-        echo "Failed to start snmptrapreceiver."
-        rm -rf ${snmp_work_dir}
-        error_exit 1
-    fi
-
+    echo "RUN SNMP SERVER WITH: $SNMP_PYTHON ${snmptrapreceiver} ${server_args} ${snmp_server_logfile} >> ${snmp_server_logfile} 2>&1"
+    $SNMP_PYTHON ${snmptrapreceiver} ${server_args} ${snmp_server_logfile} >> ${snmp_server_logfile} 2>&1 &
     snmp_server_pid=$!
+    if ! ps -p $snmp_server_pid > /dev/null 2>&1; then
+        echo "Failed to start snmptrapreceiver wiht $SNMP_PYTHON."
+        if [ "$SNMP_PYTHON" = "/usr/bin/python" ]; then
+            SNMP_PYTHON="/usr/bin/python3"
+			rm -rf ${snmp_work_dir}
+		    mkdir -p ${snmp_work_dir}
+            echo "Retrying with python3..."
+		    echo "RUN SNMP SERVER WITH: $SNMP_PYTHON ${snmptrapreceiver} ${server_args} ${snmp_server_logfile} >> ${snmp_server_logfile} 2>&1"
+            $SNMP_PYTHON ${snmptrapreceiver} ${server_args} ${snmp_server_logfile} >> ${snmp_server_logfile} 2>&1 &
+			snmp_server_pid=$!
+			if ! ps -p $snmp_server_pid > /dev/null 2>&1; then
+                echo "Failed to start snmptrapreceiver with $SNMP_PYTHON."
+				rm -rf ${snmp_work_dir}
+                error_exit 1
+            fi
+        fi
+    fi
     echo ${snmp_server_pid} > ${snmp_server_pidfile}
+	echo "Started snmptrapreceiver with ${SNMP_PYTHON} PID ${snmp_server_pid}."
 
     while test ! -s "${snmp_server_logfile}"; do
 	$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
