@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2502.0 (aka 2024.12) 2025-02-??
+- 2025-02-11: testbench: Add new version of snmptrapreceiver.py for python 3.11+
+  The system packages on Ubuntu 24 appear to be broken for python3-pysnmp4.
+  And when we update the package using
+          pip install pyasn1 pysnmp --break-system-packages --upgrade
+  We need adapt the code, so a new version snmptrapreceiverv2.py
+  has been added which will automatically been chosen if Python is >3.10
+  closes: https://github.com/rsyslog/rsyslog/issues/5554
 - 2025-02-10: ossl netstream driver: allow ephemeral Diffie-Hellman key exchange
   Use well known DH parameters that have built-in support in OpenSSL.
   From the man page: If "auto" DH parameters are switched on then
