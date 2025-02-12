@@ -508,6 +508,23 @@ AC_ARG_ENABLE(root_tests,
 )
 AM_CONDITIONAL(ENABLE_ROOT_TESTS, test x$enable_root_tests = xyes)
 
+# shall the testbench try to run test that are known flaky?
+# The core idea is to still include these tests, but do not run them on the
+# majority of platforms as long as the known flakes could not be fixed.
+# Note that some tests are inherently flaky, due to hard-to-get-right
+# timing conditions inside the test environment.
+# Nevertheless, as few as possible tests should be flagged as flaky.
+AC_ARG_ENABLE(flaky_tests,
+        [AS_HELP_STRING([--enable-flaky-tests],[enable flaky tests in testbench @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_flaky_tests="yes" ;;
+          no) enable_flaky_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-flaky-tests) ;;
+         esac],
+        [enable_flaky_tests=no]
+)
+AM_CONDITIONAL(ENABLE_FLAKY_TESTS, test x$enable_flaky_tests = xyes)
+
 # multithreading via pthreads
 if test "$os_type" != "solaris"
 then
@@ -3111,6 +3128,7 @@ echo "    gnutls tests enabled:                     $enable_gnutls_tests"
 echo "    imfile tests enabled:                     $enable_imfile_tests"
 echo "    systemd journal tests enabled:            $enable_journal_tests"
 echo "    SNMP Tests enabled:                       $enable_snmp_tests"
+echo "    Flaky Tests enabled:                      $enable_flaky_tests"
 echo "    Debug mode enabled:                       $enable_debug"
 echo "    (total) debugless mode enabled:           $enable_debugless"
 echo "    Diagnostic tools enabled:                 $enable_diagtools"
