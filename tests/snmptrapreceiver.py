@@ -58,6 +58,11 @@ print("Started SNMP Trap Receiver: %s, %s, Output: %s" % (snmpport, snmpip, szOu
 logFile.write("Started SNMP Trap Receiver: %s, %s, Output: %s" % (snmpport, snmpip, szOutputfile))
 logFile.flush()
 
+# Add PID file creation after startup message
+import os
+with open(szSnmpLogfile + ".started", "w") as f:
+    f.write(str(os.getpid()))
+
 # Callback function for receiving notifications
 # noinspection PyUnusedLocal,PyUnusedLocal,PyUnusedLocal
 def cbReceiverSnmp(snmpEngine, stateReference, contextEngineId, contextName, varBinds, cbCtx):
@@ -98,7 +103,8 @@ snmpEngine.transportDispatcher.jobStarted(1)
 
 # Run I/O dispatcher which would receive queries and send confirmations
 try:
-	snmpEngine.transportDispatcher.runDispatcher()
+    snmpEngine.transportDispatcher.runDispatcher()
 except:
-	snmpEngine.transportDispatcher.closeDispatcher()
-	raise
+    os.remove(szOutputfile + ".started")  # Remove PID file on shutdown
+    snmpEngine.transportDispatcher.closeDispatcher()
+    raise
