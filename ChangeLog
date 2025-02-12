@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2502.0 (aka 2024.12) 2025-02-??
+- 2025-02-12: CI: add Testruns under Ubuntu 24.04
+  Note: we temporarily disable omamqp1 testing while we search for
+  the missing dependency.
+  We also add a special setting that permits us to control if
+  known-(very)-flaky test shall be run.
+  closes https://github.com/rsyslog/rsyslog/issues/5546
 - 2025-02-11: testbench: Add new version of snmptrapreceiver.py for python 3.11+
   The system packages on Ubuntu 24 appear to be broken for python3-pysnmp4.
   And when we update the package using
