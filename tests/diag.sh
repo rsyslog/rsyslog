@@ -2713,22 +2713,24 @@ snmp_start_trapreceiver() {
         fi
     fi
     echo ${snmp_server_pid} > ${snmp_server_pidfile}
-	echo "Started snmptrapreceiver with ${SNMP_PYTHON} PID ${snmp_server_pid}."
+
+	while test ! -f ${snmp_server_logfile}.started; do
+		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
+		printf "."
+	done
 
     while test ! -s "${snmp_server_logfile}"; do
-	$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-	if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
-	   printf '%s ABORT! Timeout waiting on startup (pid file %s)\n' "$(tb_timestamp)" "$1"
-	   ls -l "$1"
-	   ps -fp $(cat "$1")
-	   snmp_stop_trapreceiver
-	   error_exit 1
-#	else 
-#	   echo "waiting...${snmp_server_logfile}..."
-	fi
+		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
+		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
+		printf '%s ABORT! Timeout waiting on startup (pid file %s)\n' "$(tb_timestamp)" "$1"
+		ls -l "$1"
+		ps -fp $(cat "$1")
+		snmp_stop_trapreceiver
+		error_exit 1
+		fi
     done
 
-    echo "Started snmptrapreceiver with args ${server_args} with pid ${snmp_server_pid}"
+    echo "Started snmptrapreceiver with ${SNMP_PYTHON} args ${server_args} with pid ${snmp_server_pid}"
 }
 
 snmp_stop_trapreceiver() {
