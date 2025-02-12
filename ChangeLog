@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2502.0 (aka 2024.12) 2025-02-??
+- 2025-02-12: testbench: prevent flake by better sync of snmp test tool startup
+  In order to prevent flakes on some environments, we have enhanced the SNMP trap
+  receiver testing tool so that it indicates successful startup via a pid file, which
+  now can be used to hold rsyslog start until the test tool is fully up and running.
 - 2025-02-12: CI: add Testruns under Ubuntu 24.04
   Note: we temporarily disable omamqp1 testing while we search for
   the missing dependency.
