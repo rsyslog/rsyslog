@@ -104,6 +104,7 @@ RUN	apt-get update -y && \
 
 # create dependency cache
 RUN	mkdir /local_dep_cache
+RUN	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz
 RUN	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.8.23.tar.gz -O /local_dep_cache/elasticsearch-6.8.23.tar.gz
 RUN	wget -nv https://www.rsyslog.com/files/download/rsyslog/elasticsearch-7.14.1-linux-x86_64.tar.gz -O /local_dep_cache/elasticsearch-7.14.1-linux-x86_64.tar.gz
 RUN	wget -nv https://dlcdn.apache.org/zookeeper/zookeeper-3.9.3/apache-zookeeper-3.9.3-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.9.3-bin.tar.gz
@@ -279,6 +280,8 @@ RUN	cd helper-projects && \
 	&& cd .. \
 	&& rm -rf civetweb \
 	&& cd ..
+
+RUN	pip install pyasn1 pysnmp --break-system-packages --upgrade
 
 # next ENV is specifically for running scan-build - so we do not need to
 # change scripts if at a later time we can move on to a newer version
