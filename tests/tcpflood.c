@@ -1473,7 +1473,9 @@ static void
 exitTLS(void)
 {
 	SSL_CTX_free(ctx);
+#ifndef OPENSSL_NO_ENGINE
 	ENGINE_cleanup();
+#endif
 	ERR_free_strings();
 	EVP_cleanup();
 	CRYPTO_cleanup_all_ex_data();

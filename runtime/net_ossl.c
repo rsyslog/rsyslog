@@ -223,6 +223,7 @@ osslGlblInit(void)
 PRAGMA_DIAGNOSTIC_PUSH
 PRAGMA_IGNORE_Wdeprecated_declarations
 
+#ifndef OPENSSL_NO_ENGINE
 	// Initialize OpenSSL engine library
 	ENGINE_load_builtin_engines();
 	/* Register all of them for every algorithm they collectively implement */
@@ -243,6 +244,10 @@ PRAGMA_IGNORE_Wdeprecated_declarations
 	}
 	// Free the engine reference when done
 	ENGINE_free(osslEngine);
+#else
+	DBGPRINTF("osslGlblInit: OpenSSL compiled without ENGINE support - ENGINE support disabled\n");
+#endif /* OPENSSL_NO_ENGINE */
+
 PRAGMA_DIAGNOSTIC_POP
 }
 
@@ -251,7 +256,9 @@ void
 osslGlblExit(void)
 {
 	DBGPRINTF("openssl: entering osslGlblExit\n");
+#ifndef OPENSSL_NO_ENGINE
 	ENGINE_cleanup();
+#endif
 	ERR_free_strings();
 	EVP_cleanup();
 	CRYPTO_cleanup_all_ex_data();
@@ -1150,7 +1157,10 @@ net_ossl_verify_cookie(SSL *ssl, const unsigned char *cookie, unsigned int cooki
 static rsRetVal
 net_ossl_init_engine(__attribute__((unused)) net_ossl_t *pThis)
 {
+	// OpenSSL Engine Support feature relies on an outdated version of OpenSSL and is
+	// strictly experimental. No support or guarantees are provided. Use at your own risk.
 	DEFiRet;
+#ifndef OPENSSL_NO_ENGINE
 	const char *engine_id = NULL;
 	const char *engine_name = NULL;
 
@@ -1194,6 +1204,9 @@ PRAGMA_IGNORE_Wdeprecated_declarations
 		DBGPRINTF("net_ossl_init_engine: use openssl default Engine");
 	}
 PRAGMA_DIAGNOSTIC_POP
+#else
+	DBGPRINTF("net_ossl_init_engine: OpenSSL compiled without ENGINE support - ENGINE support disabled\n");
+#endif /* OPENSSL_NO_ENGINE */
 
 	RETiRet;
 }
