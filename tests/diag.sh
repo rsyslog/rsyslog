@@ -138,6 +138,7 @@ skip_platform() {
 # note: we depend on CFLAGS to properly reflect build options (what
 #       usually is the case when the testbench is run)
 skip_TSAN() {
+	echo skip:_TSAN, CFLAGS $CFLAGS
 	if [[ "$CFLAGS" == *"sanitize=thread"* ]]; then
 		printf 'test incompatible with TSAN because of %s\n' "$1"
 		exit 77

@@ -105,6 +105,7 @@ typedef struct _instanceData {
 	const uchar *pszStrmDrvrCertFile;
 	int	nTargets;
 	int	nActiveTargets; /* how many targets have been active the last time? */
+	DEF_ATOMIC_HELPER_MUT(mut_nActiveTargets);
 	char	**target_name;
 	int	nPorts;
 	char	**ports;
@@ -474,6 +475,7 @@ CODESTARTcreateInstance
 	/* We always have at least one target and port */
 	pData->nTargets = 1;
 	pData->nActiveTargets = 0;
+	INIT_ATOMIC_HELPER_MUT64(pData->mut_nActiveTargets);
 	pData->nPorts = 1;
 	pData->target_name = NULL;
 	if(cs.pszStrmDrvr != NULL)
@@ -560,6 +562,7 @@ CODESTARTfreeInstance
 		ratelimitDestruct(pData->ratelimiter);
 		pData->ratelimiter = NULL;
 	}
+	DESTROY_ATOMIC_HELPER_MUT(pData->mut_nActiveTargets);
 
 ENDfreeInstance
 
@@ -1137,12 +1140,21 @@ countActiveTargets(const wrkrInstanceData_t *const pWrkrData) {
 		}
 	}
 
-	if(activeTargets != pWrkrData->pData->nActiveTargets) {
-		LogMsg(0, RS_RET_DEBUG, LOG_DEBUG,
-			"omfwd: [wrkr %u] number of active targets changed from %d to %d",
-			pWrkrData->wrkrID, pWrkrData->pData->nActiveTargets, activeTargets);
-		pWrkrData->pData->nActiveTargets = activeTargets;
-	}
+	/* Use atomic CAS to update the value safely */
+	int oldVal, newVal;
+	do {
+		oldVal = ATOMIC_FETCH_32BIT(&pWrkrData->pData->nActiveTargets,
+			&pWrkrData->pData->mut_nActiveTargets);
+		if (oldVal == activeTargets) {
+			break;  // No change needed
+		}
+		newVal = activeTargets;
+	} while (!ATOMIC_CAS(&pWrkrData->pData->nActiveTargets, oldVal, newVal,
+			&pWrkrData->pData->mut_nActiveTargets));
+
+	LogMsg(0, RS_RET_DEBUG, LOG_DEBUG,
+		"omfwd: [wrkr %u] number of active targets changed from %d to %d",
+		pWrkrData->wrkrID, oldVal, activeTargets);
 }
 
 
@@ -1193,15 +1205,19 @@ doTryResume(targetData_t *pTarget)
 	const char *address;
 	DEFiRet;
 
+	const int nActiveTargets = ATOMIC_FETCH_32BIT(&pTarget->pData->nActiveTargets,
+		&pTarget->pData->mut_nActiveTargets);
+
 	DBGPRINTF("doTryResume: isConnected: %d, ttResume %lld, LastActiveTargets: %d\n",
-		pTarget->bIsConnected, (long long) pTarget->ttResume, pTarget->pData->nActiveTargets);
+		pTarget->bIsConnected, (long long) pTarget->ttResume, nActiveTargets);
 
 	if(pTarget->bIsConnected)
 		FINALIZE;
+
 	/* we look at the resume counter only if we have active targets at all - otherwise
 	 * rsyslog core handles the retry timing.
 	 */
-	if(pTarget->ttResume > 0 && pTarget->pData->nActiveTargets > 0) {
+	if(pTarget->ttResume > 0 && nActiveTargets > 0) {
 		time_t ttNow;
 		datetime.GetTime(&ttNow);
 		if(ttNow < pTarget->ttResume) {
@@ -1287,11 +1303,13 @@ BEGINtryResume
 CODESTARTtryResume
 	iRet = poolTryResume(pWrkrData);
 	countActiveTargets(pWrkrData);
+	const int nActiveTargets = ATOMIC_FETCH_32BIT(&pWrkrData->pData->nActiveTargets,
+		&pWrkrData->pData->mut_nActiveTargets);
 
 	LogMsg(0, RS_RET_DEBUG, LOG_DEBUG,
 		"omfwd: [wrkr %u/%" PRIuPTR "] tryResume was called by rsyslog core: "
 		"active targets: %d, overall return state %d",
-		pWrkrData->wrkrID, (uintptr_t) pthread_self(), pWrkrData->pData->nActiveTargets, iRet);
+		pWrkrData->wrkrID, (uintptr_t) pthread_self(), nActiveTargets, iRet);
 ENDtryResume
 
 
@@ -1497,8 +1515,10 @@ finalize_it:
 	/* do pool stats */
 
 	countActiveTargets(pWrkrData);
+	const int nActiveTargets = ATOMIC_FETCH_32BIT(&pWrkrData->pData->nActiveTargets,
+		&pWrkrData->pData->mut_nActiveTargets);
 
-	if(pWrkrData->pData->nActiveTargets == 0) {
+	if(nActiveTargets == 0) {
 		iRet= RS_RET_SUSPENDED;
 	}
 
