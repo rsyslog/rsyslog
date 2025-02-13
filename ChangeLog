@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2502.0 (aka 2024.12) 2025-02-??
+- 2025-02-13: omfwd bugfix: variable was not properly synced across threads
+  While this could lead to some inefficiency, it should not have caused
+  any real harm. But with data races it is never sure if more severe
+  issues occur. However, here only very strange use cases can be
+  envisioned where this might be the case.
+  In any case, the issue is now solved.
+  This also fixes some TSAN CI "flakes".
 - 2025-02-12: testbench: prevent flake by better sync of snmp test tool startup
   In order to prevent flakes on some environments, we have enhanced the SNMP trap
   receiver testing tool so that it indicates successful startup via a pid file, which
