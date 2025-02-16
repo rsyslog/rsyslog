@@ -29,7 +29,7 @@ on:
 
 jobs:
   CI:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     timeout-minutes: 50
     strategy:
       # When set to true, cancel all in-progress jobs if any matrix job fails.
