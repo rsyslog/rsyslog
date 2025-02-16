@@ -795,7 +795,7 @@ processWorkset(tcpsrv_t *pThis, nspoll_t *pPoll, int numEntries, nsd_epworkset_t
 		--numEntries;
 	}
 
-	if(origEntries > 1) {
+	if(1 || origEntries > 1) {
 		/* we now need to wait until all workers finish. This is because the
 		 * rest of this module can not handle the concurrency introduced
 		 * by workers running during the epoll call.
