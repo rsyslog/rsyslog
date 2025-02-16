@@ -929,10 +929,13 @@ finalize_it:
 
 /* This function processes a single incoming connection */
 static rsRetVal ATTR_NONNULL(1)
+//doSingleAccept(workItem_t *const workItem)
 doSingleAccept(tcpsrv_t *const pThis, const int idx)
 {
 	tcps_sess_t *pNewSess = NULL;
 	tcpsrv_io_descr_t *pDescr = NULL;
+	//tcpsrv_t *const pThis = workItem->pSrv;
+	//const int idx = workItem->idx;
 	DEFiRet;
 
 	DBGPRINTF("New connect on NSD %p.\n", pThis->ppLstn[idx]);
@@ -975,8 +978,9 @@ no_more_data:
 
 
 /* This function processes all pending accepts on this fd */
-static rsRetVal ATTR_NONNULL(1, 2)
+static rsRetVal ATTR_NONNULL(1)
 doAccept(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
+//doAccept(workItem_t *const workItem)
 {
 	DEFiRet;
 	int bRun = 1;
@@ -984,6 +988,8 @@ doAccept(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
 	while(bRun) {
 dbgprintf("\n\nRGER: new accept loop iteration\n");
 		iRet = doSingleAccept(pThis, pioDescr->id);
+		//iRet = doSingleAccept(workItem->pSrv, workItem->idx);
+		//iRet = doSingleAccept(workItem);
 dbgprintf("RGER: doAccept returned with %d\n", iRet);
 
 		if(iRet != RS_RET_OK) {
@@ -997,15 +1003,16 @@ dbgprintf("RGER: doAccept returned with %d\n", iRet);
 /* process a single workset item
  */
 static rsRetVal ATTR_NONNULL(1)
-processWorksetItem(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
+processWorksetItem(workItem_t *const pWorkItem)
+//processWorksetItem(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
 {
 	DEFiRet;
 
-	DBGPRINTF("tcpsrv: processing item %d, socket %d\n", pioDescr->id, pioDescr->sock);
-	if(pioDescr->ptrType == NSD_PTR_TYPE_LSTN) {
-		doAccept(pThis, pioDescr);
+	DBGPRINTF("tcpsrv: processing item %d, socket %d\n", pWorkItem->pioDescr->id, pWorkItem->pioDescr->sock);
+	if(pWorkItem->pioDescr->ptrType == NSD_PTR_TYPE_LSTN) {
+		doAccept(pWorkItem->pSrv, pWorkItem->pioDescr);
 	} else {
-		doReceive(pThis, pioDescr);
+		doReceive(pWorkItem->pSrv, pWorkItem->pioDescr);
 	}
 	RETiRet;
 }
@@ -1021,13 +1028,13 @@ wrkr(void *const myself)
 
 	pthread_mutex_lock(&pThis->wrkrMut);
 	while(1) {
-		// wait for work, in which case pSrv will be populated
-		while(me->pSrv == NULL && glbl.GetGlobalInputTermState() == 0) {
+		// wait for work, in which case workItem.pSrv will be populated
+		while(me->workItem.pSrv == NULL && glbl.GetGlobalInputTermState() == 0) {
 			pthread_cond_wait(&me->run, &pThis->wrkrMut);
 		}
-		if(me->pSrv == NULL) {
+		if(me->workItem.pSrv == NULL) {
 			// only possible if glbl.GetGlobalInputTermState() == 1
-			// we need to query me->opSrv to avoid clang static
+			// we need to query me->oworkItem.pSrv to avoid clang static
 			// analyzer false positive! -- rgerhards, 2017-10-23
 			assert(glbl.GetGlobalInputTermState() == 1);
 			break;
@@ -1035,10 +1042,10 @@ wrkr(void *const myself)
 		pthread_mutex_unlock(&pThis->wrkrMut);
 
 		++me->numCalled;
-		processWorksetItem(me->pSrv, me->pioDescr);
+		processWorksetItem(&me->workItem);
 
 		pthread_mutex_lock(&pThis->wrkrMut);
-		me->pSrv = NULL;	/* indicate we are free again */
+		me->workItem.pSrv = NULL;	/* indicate we are free again */
 		--pThis->wrkrRunning;
 		pthread_cond_broadcast(&pThis->wrkrIdle);
 	}
@@ -1073,16 +1080,21 @@ processWorkset(tcpsrv_t *const pThis, int numEntries, tcpsrv_io_descr_t *const p
 {
 	int i;
 	int origEntries = numEntries;
+	workItem_t workItem; // TODO: remove once we get full fledged implementation
 	DEFiRet;
 
 	DBGPRINTF("tcpsrv: ready to process %d event entries\n", numEntries);
+
+	// TODO: remove
+	workItem.pSrv = pThis;
+	workItem.pioDescr = pioDescr[numEntries - 1];
 
 	while(numEntries > 0) {
 		if(glbl.GetGlobalInputTermState() == 1)
 			ABORT_FINALIZE(RS_RET_FORCE_TERM);
 		if(numEntries == 1) {
 			/* process self, save context switch */
-			iRet = processWorksetItem(pThis, pioDescr[0]);
+			iRet = processWorksetItem(&workItem);
 		} else {
 			/* No cancel handler needed here, since no cancellation
 			 * points are executed while pThis->wrkrMut is locked.
@@ -1091,13 +1103,13 @@ processWorkset(tcpsrv_t *const pThis, int numEntries, tcpsrv_io_descr_t *const p
 			 */
 			pthread_mutex_lock(&pThis->wrkrMut);
 			/* check if there is a free worker */
-			for(i = 0 ; (i < pThis->wrkrMax) && ((pThis->wrkrInfo[i].pSrv != NULL) || (pThis->wrkrInfo[i].enabled == 0)) ; ++i)
+			for(i = 0 ; (i < pThis->wrkrMax) && ((pThis->wrkrInfo[i].workItem.pSrv != NULL) || (pThis->wrkrInfo[i].enabled == 0)) ; ++i)
 				/*do search*/;
 			if(i < pThis->wrkrMax) {
 			//if(i < 0) { // TODO: remove this testing aid. Can be used to run on a single thread (easy debug)
 				/* worker free -> use it! */
-				pThis->wrkrInfo[i].pSrv = pThis;
-				pThis->wrkrInfo[i].pioDescr = pioDescr[numEntries - 1];
+				pThis->wrkrInfo[i].workItem.pSrv = pThis;
+				pThis->wrkrInfo[i].workItem.pioDescr = pioDescr[numEntries - 1];
 				/* Note: we must increment pThis->wrkrRunning HERE and not inside the worker's
 				 * code. This is because a worker may actually never start, and thus
 				 * increment pThis->wrkrRunning, before we finish and check the running worker
@@ -1109,7 +1121,7 @@ processWorkset(tcpsrv_t *const pThis, int numEntries, tcpsrv_io_descr_t *const p
 			} else {
 				pthread_mutex_unlock(&pThis->wrkrMut);
 				/* no free worker, so we process this one ourselfs */
-				iRet = processWorksetItem(pThis, pioDescr[numEntries-1]);
+				iRet = processWorksetItem(&workItem);
 			}
 		}
 		--numEntries;
@@ -2096,7 +2108,7 @@ startWorkerPool(tcpsrv_t *const pThis)
 	for(i = 0 ; i < pThis->wrkrMax ; ++i) {
 		/* init worker info structure! */
 		pthread_cond_init(&pThis->wrkrInfo[i].run, NULL);
-		pThis->wrkrInfo[i].pSrv = NULL;
+		pThis->wrkrInfo[i].workItem.pSrv = NULL;
 		pThis->wrkrInfo[i].numCalled = 0;
 		r = pthread_create(&pThis->wrkrInfo[i].tid, &sessThrdAttr, wrkr, &(pThis->wrkrInfo[i]));
 		if(r == 0) {

@@ -60,13 +60,23 @@ struct tcpLstnPortList_s {
 	tcpLstnPortList_t *pNext;	/**< next port or NULL */
 };
 
-struct tcpsrv_wrkrInfo_s {
-	pthread_t tid;	/* the worker's thread ID */
-	pthread_cond_t run;
+typedef struct workItem_s {
 	int idx;
 	tcpsrv_t *pSrv; /* pSrv == NULL -> idle */
 	tcpsrv_io_descr_t *pioDescr;
 	void *pUsr;
+} workItem_t;
+
+struct tcpsrv_wrkrInfo_s {
+	pthread_t tid;	/* the worker's thread ID */
+	pthread_cond_t run;
+	#if 0
+	int idx;
+	tcpsrv_t *pSrv; /* pSrv == NULL -> idle */
+	tcpsrv_io_descr_t *pioDescr;
+	void *pUsr;
+	#endif
+	workItem_t workItem;
 	sbool enabled;
 	long long unsigned numCalled;	/* how often was this called */
 	tcpsrv_t *mySrv;
