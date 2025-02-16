@@ -1,5 +1,13 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2502.0 (aka 2024.12) 2025-02-??
+- 2025-02-16: gnutls bugfix: Avoid blocking sockets during TLS handshake
+  When forwarding logs to a TLS server, using a blocking socket
+  can lead to indefinite waiting during the gnutls_handshake()
+  call if the server does not respond as expected.
+  This commit modifies the behavior to use non-blocking sockets,
+  ensuring that the rsyslog client does not hang indefinitely
+  waiting for a response.
+  Thanks to Attila Lakatos for the patch.
 - 2025-02-13: CI: add compile check with atomic operations disabled
   The platforms that do not have support for atomic operations become
   more and more exoctic. Even more so, only Solaris builders now test
