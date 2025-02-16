@@ -12,7 +12,9 @@ Purpose
 =======
 
 The `omfwd` plugin provides core functionality for traditional message forwarding 
-via UDP and TCP (including TLS). This built-in module does not require loading.
+via UDP and TCP (including TLS). This built-in module does neither require loading
+nor can be loaded. If you need to "load" in order to set defaults, use "builtin:omfwd"
+as the module name.
 
 .. note:: The RELP protocol is not supported by `omfwd`. Use :doc:`omrelp <omrelp>` 
    to forward messages via RELP.
@@ -76,12 +78,16 @@ Example
 
 .. code-block:: none
 
-  module(load="omfwd" iobuffer.maxSize="8")
+  module(load="builtin:omfwd" iobuffer.maxSize="8")
 
 In this example, a very small buffer size is used. This setting helps
 force rsyslog to execute code paths that are rarely used in normal
 operations. It allows testing edge cases that typically cannot be
 tested automatically.
+
+**Note that contrary to most other modules, omfwd is a built-in module. As such,
+you cannot "normally" load it just by name but need to prefix it with
+"builtin:" as can be seen above!**
 
 
 Action Parameters
