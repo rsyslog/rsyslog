@@ -2751,7 +2751,7 @@ AC_ARG_ENABLE(omamqp1,
         [enable_omamqp1=no]
 )
 if test "x$enable_omamqp1" = "xyes"; then
-        PKG_CHECK_MODULES(PROTON, libqpid-proton >= 0.9)
+        PKG_CHECK_MODULES(PROTON, libqpid-proton >= 0.13)
         AC_SUBST(PROTON_CFLAGS)
         AC_SUBST(PROTON_LIBS)
 fi
