@@ -929,13 +929,12 @@ finalize_it:
 
 /* This function processes a single incoming connection */
 static rsRetVal ATTR_NONNULL(1)
-//doSingleAccept(workItem_t *const workItem)
-doSingleAccept(tcpsrv_t *const pThis, const int idx)
+doSingleAccept(workItem_t *const workItem)
 {
 	tcps_sess_t *pNewSess = NULL;
 	tcpsrv_io_descr_t *pDescr = NULL;
-	//tcpsrv_t *const pThis = workItem->pSrv;
-	//const int idx = workItem->idx;
+	tcpsrv_t *const pThis = workItem->pSrv;
+	const int idx = workItem->pioDescr->id;
 	DEFiRet;
 
 	DBGPRINTF("New connect on NSD %p.\n", pThis->ppLstn[idx]);
@@ -979,18 +978,14 @@ no_more_data:
 
 /* This function processes all pending accepts on this fd */
 static rsRetVal ATTR_NONNULL(1)
-doAccept(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
-//doAccept(workItem_t *const workItem)
+//doAccept(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
+doAccept(workItem_t *workItem)
 {
 	DEFiRet;
 	int bRun = 1;
 
 	while(bRun) {
-dbgprintf("\n\nRGER: new accept loop iteration\n");
-		iRet = doSingleAccept(pThis, pioDescr->id);
-		//iRet = doSingleAccept(workItem->pSrv, workItem->idx);
-		//iRet = doSingleAccept(workItem);
-dbgprintf("RGER: doAccept returned with %d\n", iRet);
+		iRet = doSingleAccept(workItem);
 
 		if(iRet != RS_RET_OK) {
 			bRun = 0;
@@ -1004,13 +999,13 @@ dbgprintf("RGER: doAccept returned with %d\n", iRet);
  */
 static rsRetVal ATTR_NONNULL(1)
 processWorksetItem(workItem_t *const pWorkItem)
-//processWorksetItem(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
 {
 	DEFiRet;
 
 	DBGPRINTF("tcpsrv: processing item %d, socket %d\n", pWorkItem->pioDescr->id, pWorkItem->pioDescr->sock);
 	if(pWorkItem->pioDescr->ptrType == NSD_PTR_TYPE_LSTN) {
-		doAccept(pWorkItem->pSrv, pWorkItem->pioDescr);
+		//doAccept(pWorkItem->pSrv, pWorkItem->pioDescr);
+		doAccept(pWorkItem);
 	} else {
 		doReceive(pWorkItem->pSrv, pWorkItem->pioDescr);
 	}
@@ -1080,7 +1075,7 @@ processWorkset(tcpsrv_t *const pThis, int numEntries, tcpsrv_io_descr_t *const p
 {
 	int i;
 	int origEntries = numEntries;
-	workItem_t workItem; // TODO: remove once we get full fledged implementation
+	workItem_t workItem = {0, NULL, NULL, NULL}; // TODO: remove once we get full fledged implementation
 	DEFiRet;
 
 	DBGPRINTF("tcpsrv: ready to process %d event entries\n", numEntries);
