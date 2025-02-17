@@ -1,4 +1,3 @@
-
 # 
 # this shell script provides commands to the common diag system. It enables
 # test scripts to wait for certain conditions and initiate certain actions.
