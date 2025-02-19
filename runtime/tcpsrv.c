@@ -106,8 +106,6 @@ DEFobjCurrIf(statsobj)
 
 #define NSPOLL_MAX_EVENTS_PER_WAIT 128
 
-static void startWorkerPool(tcpsrv_t *const pThis);
-static void stopWorkerPool(tcpsrv_t *const pThis);
 
 
 /* We check which event notification mechanism we have and use the best available one.
@@ -802,25 +800,6 @@ finalize_it:
 }
 
 
-struct runCancelCleanupData_s {
-	tcpsrv_t *pThis;
-};
-static void
-RunCancelCleanup(void *arg)
-{
-	struct runCancelCleanupData_s *const mydata = (struct runCancelCleanupData_s *) arg;
-	tcpsrv_t *const pThis = mydata->pThis;
-
-	/* Wait for any running workers to finish */
-	pthread_mutex_lock(&pThis->wrkrMut);
-	DBGPRINTF("tcpsrv terminating, waiting for %d workers\n", pThis->wrkrRunning);
-	while(pThis->wrkrRunning > 0) {
-		pthread_cond_wait(&pThis->wrkrIdle, &pThis->wrkrMut);
-	}
-	pthread_mutex_unlock(&pThis->wrkrMut);
-}
-
-
 /* helper to close a session. Takes status of poll vs. select into consideration.
  * rgerhards, 2009-11-25
  */
@@ -1011,57 +990,6 @@ processWorksetItem(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
 }
 
 
-/* worker to process incoming requests
- */
-static void * ATTR_NONNULL(1)
-wrkr(void *const myself)
-{
-	struct tcpsrv_wrkrInfo_s *const me = (struct tcpsrv_wrkrInfo_s*) myself;
-	tcpsrv_t *const pThis = me->mySrv;
-
-	pthread_mutex_lock(&pThis->wrkrMut);
-	while(1) {
-		// wait for work, in which case pSrv will be populated
-		while(me->pSrv == NULL && glbl.GetGlobalInputTermState() == 0) {
-			pthread_cond_wait(&me->run, &pThis->wrkrMut);
-		}
-		if(me->pSrv == NULL) {
-			// only possible if glbl.GetGlobalInputTermState() == 1
-			// we need to query me->opSrv to avoid clang static
-			// analyzer false positive! -- rgerhards, 2017-10-23
-			assert(glbl.GetGlobalInputTermState() == 1);
-			break;
-		}
-		pthread_mutex_unlock(&pThis->wrkrMut);
-
-		++me->numCalled;
-		processWorksetItem(me->pSrv, me->pioDescr);
-
-		pthread_mutex_lock(&pThis->wrkrMut);
-		me->pSrv = NULL;	/* indicate we are free again */
-		--pThis->wrkrRunning;
-		pthread_cond_broadcast(&pThis->wrkrIdle);
-	}
-	me->enabled = 0; /* indicate we are no longer available */
-	pthread_mutex_unlock(&pThis->wrkrMut);
-
-	return NULL;
-}
-
-/* This has been factored out from processWorkset() because
- * pthread_cleanup_push() invokes setjmp() and this triggers the -Wclobbered
- * warning for the iRet variable.
- */
-static void
-waitForWorkers(tcpsrv_t *const pThis)
-{
-	pthread_mutex_lock(&pThis->wrkrMut);
-	pthread_cleanup_push(mutexCancelCleanup, &pThis->wrkrMut);
-	while(pThis->wrkrRunning > 0) {
-		pthread_cond_wait(&pThis->wrkrIdle, &pThis->wrkrMut);
-	}
-	pthread_cleanup_pop(1);
-}
 
 /* Process a workset, that is handle io. We become activated
  * from either select or epoll handler. We split the workload
@@ -1072,58 +1000,13 @@ static rsRetVal
 processWorkset(tcpsrv_t *const pThis, int numEntries, tcpsrv_io_descr_t *const pioDescr[])
 {
 	int i;
-	int origEntries = numEntries;
 	DEFiRet;
 
 	DBGPRINTF("tcpsrv: ready to process %d event entries\n", numEntries);
 
-	while(numEntries > 0) {
-		if(glbl.GetGlobalInputTermState() == 1)
-			ABORT_FINALIZE(RS_RET_FORCE_TERM);
-		if(numEntries == 1) {
-			/* process self, save context switch */
-			iRet = processWorksetItem(pThis, pioDescr[0]);
-		} else {
-			/* No cancel handler needed here, since no cancellation
-			 * points are executed while pThis->wrkrMut is locked.
-			 *
-			 * Re-evaluate this if you add a DBGPRINTF or something!
-			 */
-			pthread_mutex_lock(&pThis->wrkrMut);
-			/* check if there is a free worker */
-			for(i = 0 ; (i < pThis->wrkrMax) && ((pThis->wrkrInfo[i].pSrv != NULL) || (pThis->wrkrInfo[i].enabled == 0)) ; ++i)
-				/*do search*/;
-			if(i < pThis->wrkrMax) {
-			//if(i < 0) { // TODO: remove this testing aid. Can be used to run on a single thread (easy debug)
-				/* worker free -> use it! */
-				pThis->wrkrInfo[i].pSrv = pThis;
-				pThis->wrkrInfo[i].pioDescr = pioDescr[numEntries - 1];
-				/* Note: we must increment pThis->wrkrRunning HERE and not inside the worker's
-				 * code. This is because a worker may actually never start, and thus
-				 * increment pThis->wrkrRunning, before we finish and check the running worker
-				 * count. We can only avoid this by incrementing it here.
-				 */
-				++pThis->wrkrRunning;
-				pthread_cond_signal(&pThis->wrkrInfo[i].run);
-				pthread_mutex_unlock(&pThis->wrkrMut);
-			} else {
-				pthread_mutex_unlock(&pThis->wrkrMut);
-				/* no free worker, so we process this one ourselfs */
-				iRet = processWorksetItem(pThis, pioDescr[numEntries-1]);
-			}
-		}
-		--numEntries;
+	for(i = 0 ; i < numEntries ; ++i) {
+		iRet = processWorksetItem(pThis, pioDescr[i]);
 	}
-
-	if(origEntries > 1) {
-		/* we now need to wait until all workers finish. This is because the
-		 * rest of this module can not handle the concurrency introduced
-		 * by workers running during the epoll call.
-		 */
-		waitForWorkers(pThis);
-	}
-
-finalize_it:
 	RETiRet;
 }
 
@@ -1322,35 +1205,6 @@ Run(tcpsrv_t *const pThis)
 		RETiRet; /* somewhat "dirty" exit to avoid issue with cancel handler */
 	}
 
-	/* check if we need to start the worker pool. Once it is running, all is
-	 * well. Shutdown is done on modExit.
-	 */
-	d_pthread_mutex_lock(&pThis->wrkrMut);
-	if(!pThis->bWrkrRunning) {
-		pThis->bWrkrRunning = 1;
-		startWorkerPool(pThis);
-	}
-	d_pthread_mutex_unlock(&pThis->wrkrMut);
-
-	/* We try to terminate cleanly, but install a cancellation clean-up
-	 * handler in case we are cancelled.
-	 */
-	struct runCancelCleanupData_s cleanup_data;
-	cleanup_data.pThis = pThis;
-	pthread_cleanup_push(RunCancelCleanup, (void*) &cleanup_data);
-
-	#if 0
-	/* create server i/o descriptors */
-	for(int i = 0 ; i < pThis->iLstnCurr ; ++i) {
-		CHKmalloc(pThis->ppioDescrPtr[i] = (tcpsrv_io_descr_t*) calloc(1, sizeof(tcpsrv_io_descr_t)));
-		pThis->ppioDescrPtr[i]->id = i; // TODO: remove if session handling is refactored to dyn max sessions
-		pThis->ppioDescrPtr[i]->isInError = 0;
-		CHKiRet(netstrm.GetSock(pThis->ppLstn[i], &(pThis->ppioDescrPtr[i]->sock)));
-		pThis->ppioDescrPtr[i]->ptrType = NSD_PTR_TYPE_LSTN;
-		pThis->ppioDescrPtr[i]->ptr.ppLstn = pThis->ppLstn;
-	}
-	#endif
-
 	eventNotify_init(pThis);
 	#if defined(HAVE_EPOLL_CREATE)
 		iRet = RunEpoll(pThis);
@@ -1359,7 +1213,6 @@ Run(tcpsrv_t *const pThis)
 		iRet = RunSelect(pThis);
 	#endif
 	eventNotify_exit(pThis);
-	pthread_cleanup_pop(1);
 
 //finalize_it:
 	RETiRet;
@@ -1384,13 +1237,6 @@ BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macr
 	pThis->bPreserveCase = 1; /* preserve case in fromhost; default to true. */
 	pThis->iSynBacklog = 0; /* default: unset */
 	pThis->DrvrTlsVerifyDepth = 0;
-
-	pThis->wrkrMax = 4; // TODO: do not hardcode!
-	for(int i = 0 ; i < 4 ; ++i) {
-		pThis->wrkrInfo[i].mySrv = pThis;
-	}
-	pthread_mutex_init(&pThis->wrkrMut, NULL);
-	pThis->bWrkrRunning = 0;
 ENDobjConstruct(tcpsrv)
 
 
@@ -1450,11 +1296,6 @@ CODESTARTobjDestruct(tcpsrv)
 
 	deinit_tcp_listener(pThis);
 
-	if(pThis->bWrkrRunning) {
-		stopWorkerPool(pThis);
-		pThis->bWrkrRunning = 0;
-	}
-	pthread_mutex_destroy(&pThis->wrkrMut);
 
 	if(pThis->pNS != NULL)
 		netstrms.Destruct(&pThis->pNS);
@@ -2066,67 +1907,6 @@ BEGINObjClassInit(tcpsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE 
 	OBJSetMethodHandler(objMethod_DEBUGPRINT, tcpsrvDebugPrint);
 	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, tcpsrvConstructFinalize);
 ENDObjClassInit(tcpsrv)
-
-
-/* start worker threads
- * Important: if we fork, this MUST be done AFTER forking
- */
-static void
-startWorkerPool(tcpsrv_t *const pThis)
-{
-	int i;
-	int r;
-	pthread_attr_t sessThrdAttr;
-
-	/* We need to temporarily block all signals because the new thread
-	 * inherits our signal mask. There is a race if we do not block them
-	 * now, and we have seen in practice that this race causes grief.
-	 * So we 1. save the current set, 2. block evertyhing, 3. start
-	 * threads, and 4 reset the current set to saved state.
-	 * rgerhards, 2019-08-16
-	 */
-	sigset_t sigSet, sigSetSave;
-	sigfillset(&sigSet);
-	pthread_sigmask(SIG_SETMASK, &sigSet, &sigSetSave);
-
-	pThis->wrkrRunning = 0;
-	pthread_cond_init(&pThis->wrkrIdle, NULL);
-	pthread_attr_init(&sessThrdAttr);
-	pthread_attr_setstacksize(&sessThrdAttr, 4096*1024);
-	for(i = 0 ; i < pThis->wrkrMax ; ++i) {
-		/* init worker info structure! */
-		pthread_cond_init(&pThis->wrkrInfo[i].run, NULL);
-		pThis->wrkrInfo[i].pSrv = NULL;
-		pThis->wrkrInfo[i].numCalled = 0;
-		r = pthread_create(&pThis->wrkrInfo[i].tid, &sessThrdAttr, wrkr, &(pThis->wrkrInfo[i]));
-		if(r == 0) {
-			pThis->wrkrInfo[i].enabled = 1;
-		} else {
-			LogError(r, NO_ERRCODE, "tcpsrv error creating thread");
-		}
-	}
-	pthread_attr_destroy(&sessThrdAttr);
-	pthread_sigmask(SIG_SETMASK, &sigSetSave, NULL);
-}
-
-
-/* destroy worker pool structures and wait for workers to terminate
- */
-static void
-stopWorkerPool(tcpsrv_t *const pThis)
-{
-	int i;
-
-	for(i = 0 ; i < pThis->wrkrMax ; ++i) {
-		pthread_mutex_lock(&pThis->wrkrMut);
-		pthread_cond_signal(&pThis->wrkrInfo[i].run); /* awake wrkr if not running */
-		pthread_mutex_unlock(&pThis->wrkrMut);
-		pthread_join(pThis->wrkrInfo[i].tid, NULL);
-		DBGPRINTF("tcpsrv: info: worker %d was called %llu times\n", i, pThis->wrkrInfo[i].numCalled);
-		pthread_cond_destroy(&pThis->wrkrInfo[i].run);
-	}
-	pthread_cond_destroy(&pThis->wrkrIdle);
-}
 
 
 /* --------------- here now comes the plumbing that makes as a library module --------------- */
