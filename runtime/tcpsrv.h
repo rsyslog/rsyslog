@@ -87,6 +87,7 @@ struct tcpsrv_io_descr_s {
 	} ptr;
 	int isInError; /* boolean, if set, subsystem indicates we need to close because we had an
 			* unrecoverable error at the network layer. */
+	tcpsrv_t *pSrv;	/* our server object */
 };
 
 #define TCPSRV_NO_ADDTL_DELIMITER -1 /* specifies that no additional delimiter is to be used in TCP framing */

@@ -830,8 +830,8 @@ finalize_it:
  * If in epoll mode, we need to remove any descriptor we close from the epoll set.
  * rgerhards, 2009-07-020
  */
-static rsRetVal
-doReceive(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
+static rsRetVal ATTR_NONNULL(1)
+doReceive(tcpsrv_io_descr_t *const pioDescr)
 {
 	char buf[128*1024]; /* reception buffer - may hold a partial or multiple messages */
 	ssize_t iRcvd;
@@ -842,7 +842,8 @@ doReceive(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
 	int oserr = 0;
 	int do_run = 1;
 	int loop_ctr = 0;
-	tcps_sess_t *pSess = pioDescr->ptr.pSess;
+	tcps_sess_t *const pSess = pioDescr->ptr.pSess;
+	tcpsrv_t *const pThis = pioDescr->pSrv;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	prop.GetString((pSess)->fromHostIP, &pszPeer, &lenPeer);
@@ -924,6 +925,7 @@ doSingleAccept(tcpsrv_t *const pThis, const int idx)
 		#if defined(HAVE_EPOLL_CREATE)
 			/* pDescr is only dyn allocated in epoll mode! */
 			CHKmalloc(pDescr = (tcpsrv_io_descr_t*) calloc(1, sizeof(tcpsrv_io_descr_t)));
+			pDescr->pSrv = pThis;
 			pDescr->id = idx; // TODO: remove if session handling is refactored to dyn max sessions
 			pDescr->isInError = 0;
 			pDescr->ptrType = NSD_PTR_TYPE_SESS;
@@ -954,15 +956,15 @@ no_more_data:
 
 
 /* This function processes all pending accepts on this fd */
-static rsRetVal ATTR_NONNULL(1, 2)
-doAccept(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
+static rsRetVal ATTR_NONNULL(1)
+doAccept(tcpsrv_io_descr_t *const pioDescr)
 {
 	DEFiRet;
 	int bRun = 1;
 
 	while(bRun) {
 dbgprintf("\n\nRGER: new accept loop iteration\n");
-		iRet = doSingleAccept(pThis, pioDescr->id);
+		iRet = doSingleAccept(pioDescr->pSrv, pioDescr->id);
 dbgprintf("RGER: doAccept returned with %d\n", iRet);
 
 		if(iRet != RS_RET_OK) {
@@ -976,15 +978,15 @@ dbgprintf("RGER: doAccept returned with %d\n", iRet);
 /* process a single workset item
  */
 static rsRetVal ATTR_NONNULL(1)
-processWorksetItem(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
+processWorksetItem(tcpsrv_io_descr_t *const pioDescr)
 {
 	DEFiRet;
 
 	DBGPRINTF("tcpsrv: processing item %d, socket %d\n", pioDescr->id, pioDescr->sock);
 	if(pioDescr->ptrType == NSD_PTR_TYPE_LSTN) {
-		doAccept(pThis, pioDescr);
+		doAccept(pioDescr);
 	} else {
-		doReceive(pThis, pioDescr);
+		doReceive(pioDescr);
 	}
 	RETiRet;
 }
@@ -997,7 +999,8 @@ processWorksetItem(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
  * as much as possible.
  */
 static rsRetVal
-processWorkset(tcpsrv_t *const pThis, int numEntries, tcpsrv_io_descr_t *const pioDescr[])
+processWorkset(const int numEntries, tcpsrv_io_descr_t *const pioDescr[])
+//processWorkset(tcpsrv_t *const pThis, int numEntries, tcpsrv_io_descr_t *const pioDescr[])
 {
 	int i;
 	DEFiRet;
@@ -1005,7 +1008,7 @@ processWorkset(tcpsrv_t *const pThis, int numEntries, tcpsrv_io_descr_t *const p
 	DBGPRINTF("tcpsrv: ready to process %d event entries\n", numEntries);
 
 	for(i = 0 ; i < numEntries ; ++i) {
-		iRet = processWorksetItem(pThis, pioDescr[i]);
+		iRet = processWorksetItem(pioDescr[i]);
 	}
 	RETiRet;
 }
@@ -1074,6 +1077,7 @@ RunSelect(tcpsrv_t *const pThis)
 				ABORT_FINALIZE(RS_RET_FORCE_TERM);
 			CHKiRet(select_IsReady(pThis, pThis->ppLstn[i], NSDSEL_RD, &bIsReady));
 			if(bIsReady) {
+				workset[iWorkset].pSrv = pThis;
 				workset[iWorkset].id = i;
 				workset[iWorkset].ptrType = NSD_PTR_TYPE_LSTN;
 				workset[iWorkset].id = i;
@@ -1083,7 +1087,7 @@ RunSelect(tcpsrv_t *const pThis)
 				/* this is a flag to indicate listen sock */
 				++iWorkset;
 				if(iWorkset >= (int) sizeWorkset) {
-					processWorkset(pThis, iWorkset, pWorkset);
+					processWorkset(iWorkset, pWorkset);
 					iWorkset = 0;
 				}
 				--nfds; /* indicate we have processed one */
@@ -1097,6 +1101,7 @@ RunSelect(tcpsrv_t *const pThis)
 				ABORT_FINALIZE(RS_RET_FORCE_TERM);
 			localRet = select_IsReady(pThis, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD, &bIsReady);
 			if(bIsReady || localRet != RS_RET_OK) {
+				workset[iWorkset].pSrv = pThis;
 				workset[iWorkset].ptrType = NSD_PTR_TYPE_SESS;
 				workset[iWorkset].id = iTCPSess;
 				workset[iWorkset].isInError = 0;
@@ -1104,7 +1109,7 @@ RunSelect(tcpsrv_t *const pThis)
 				workset[iWorkset].ptr.pSess = pThis->pSessions[iTCPSess];
 				++iWorkset;
 				if(iWorkset >= (int) sizeWorkset) {
-					processWorkset(pThis, iWorkset, pWorkset);
+					processWorkset(iWorkset, pWorkset);
 					iWorkset = 0;
 				}
 				if(bIsReady)
@@ -1114,7 +1119,7 @@ RunSelect(tcpsrv_t *const pThis)
 		}
 
 		if(iWorkset > 0)
-			processWorkset(pThis, iWorkset, pWorkset);
+			processWorkset(iWorkset, pWorkset);
 
 		/* we need to copy back close descriptors */
 finalize_it: /* this is a very special case - this time only we do not exit the function,
@@ -1152,6 +1157,7 @@ RunEpoll(tcpsrv_t *const pThis)
 	for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
 		DBGPRINTF("Trying to add listener %d, pUsr=%p\n", i, pThis->ppLstn);
 		CHKmalloc(pThis->ppioDescrPtr[i] = (tcpsrv_io_descr_t*) calloc(1, sizeof(tcpsrv_io_descr_t)));
+		pThis->ppioDescrPtr[i]->pSrv = pThis; // TODO: really needed?
 		pThis->ppioDescrPtr[i]->id = i; // TODO: remove if session handling is refactored to dyn max sessions
 		pThis->ppioDescrPtr[i]->isInError = 0;
 		CHKiRet(netstrm.GetSock(pThis->ppLstn[i], &(pThis->ppioDescrPtr[i]->sock)));
@@ -1174,7 +1180,7 @@ RunEpoll(tcpsrv_t *const pThis)
 		if(localRet != RS_RET_OK)
 			continue;
 
-		processWorkset(pThis, numEntries, workset);
+		processWorkset(numEntries, workset);
 	}
 
 	/* remove the tcp listen sockets from the epoll set */
