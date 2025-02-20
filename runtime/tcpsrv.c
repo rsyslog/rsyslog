@@ -992,6 +992,33 @@ processWorksetItem(tcpsrv_io_descr_t *const pioDescr)
 }
 
 
+static tcpsrv_io_descr_t *queue = NULL;
+
+static tcpsrv_io_descr_t *
+dequeueWork(void)
+{	
+	tcpsrv_io_descr_t *ret = queue;
+	queue = NULL;
+	return ret;
+}
+
+static rsRetVal
+enqueueWork(tcpsrv_io_descr_t *const pioDescr)
+{	
+	DEFiRet;
+	queue = pioDescr;
+	RETiRet;
+}
+
+
+static int
+wrkr(void) {
+
+	tcpsrv_io_descr_t *pioDescr = dequeueWork();
+	processWorksetItem(pioDescr);
+	return 0;
+}
+
 
 /* Process a workset, that is handle io. We become activated
  * from either select or epoll handler. We split the workload
@@ -1007,7 +1034,8 @@ processWorkset(const int numEntries, tcpsrv_io_descr_t *const pioDescr[])
 	DBGPRINTF("tcpsrv: ready to process %d event entries\n", numEntries);
 
 	for(i = 0 ; i < numEntries ; ++i) {
-		iRet = processWorksetItem(pioDescr[i]);
+		iRet = enqueueWork(pioDescr[i]);
+		wrkr();
 	}
 	RETiRet;
 }
@@ -1136,6 +1164,7 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 }
 PRAGMA_DIAGNOSTIC_POP
 #endif /* conditional exclude when epoll is available */
+
 
 #if defined(HAVE_EPOLL_CREATE)
 static rsRetVal
