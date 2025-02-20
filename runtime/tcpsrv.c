@@ -992,13 +992,62 @@ processWorksetItem(tcpsrv_io_descr_t *const pioDescr)
 }
 
 
-static tcpsrv_io_descr_t *queue = NULL;
+static tcpsrv_io_descr_t *dummyqueue = NULL;
+
+/* Worker thread function */ // TODO replace!
+static void *
+worker_thread(void *arg) {
+	tcpsrv_t *const pThis = (tcpsrv_t *) arg;
+	workQueue_t *const queue = &pThis->workQueue;
+
+
+	pthread_mutex_lock(&queue->mut);
+	const int wrkrIdx = pThis->currWrkrs++;
+	pthread_mutex_unlock(&queue->mut);
+	uchar thrdName[32];
+	snprintf((char*)thrdName, sizeof(thrdName), "tcpsrv/w%d", wrkrIdx);
+#	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
+	/* set thread name - we ignore if the call fails, has no harsh consequences... */
+	if(prctl(PR_SET_NAME, thrdName, 0, 0, 0) != 0) {
+		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", thrdName);
+	}
+#	endif
+
+	return NULL;
+}
+
+static void
+startWrkrPool(tcpsrv_t *const pThis)
+{
+	pThis->currWrkrs = 0;
+	workQueue_t *const queue = &pThis->workQueue;
+	pthread_mutex_init(&queue->mut, NULL);
+	pthread_cond_init(&queue->workRdy, NULL);
+	for(unsigned i = 0; i < queue->numWrkr; i++) {
+		pthread_create(&queue->wrkr_tid[i], NULL, worker_thread, pThis);
+	}
+}
+
+static void
+stopWrkrPool(tcpsrv_t *const pThis)
+{
+	workQueue_t *const queue = &pThis->workQueue;
+
+	pthread_mutex_lock(&queue->mut);
+	//queue->stop = true;
+	pthread_cond_broadcast(&queue->workRdy);
+	pthread_mutex_unlock(&queue->mut);
+
+	for(unsigned i = 0; i < queue->numWrkr; i++) {
+		pthread_join(queue->wrkr_tid[i], NULL);
+	}
+}
 
 static tcpsrv_io_descr_t *
 dequeueWork(void)
 {	
-	tcpsrv_io_descr_t *ret = queue;
-	queue = NULL;
+	tcpsrv_io_descr_t *ret = dummyqueue;
+	dummyqueue = NULL;
 	return ret;
 }
 
@@ -1006,7 +1055,7 @@ static rsRetVal
 enqueueWork(tcpsrv_io_descr_t *const pioDescr)
 {	
 	DEFiRet;
-	queue = pioDescr;
+	dummyqueue = pioDescr;
 	RETiRet;
 }
 
@@ -1029,7 +1078,7 @@ static rsRetVal
 processWorkset(const int numEntries, tcpsrv_io_descr_t *const pioDescr[])
 {
 	int i;
-	const unsigned numWrkr = pioDescr[0]->pSrv->numWrkr; /* pSrv is always the same! */
+	const unsigned numWrkr = pioDescr[0]->pSrv->workQueue.numWrkr; /* pSrv is always the same! */
 	DEFiRet;
 
 	DBGPRINTF("tcpsrv: ready to process %d event entries\n", numEntries);
@@ -1246,12 +1295,14 @@ Run(tcpsrv_t *const pThis)
 	}
 
 	eventNotify_init(pThis);
+	startWrkrPool(pThis);
 	#if defined(HAVE_EPOLL_CREATE)
 		iRet = RunEpoll(pThis);
 	#else
 		/* fall back to select */
 		iRet = RunSelect(pThis);
 	#endif
+	stopWrkrPool(pThis);
 	eventNotify_exit(pThis);
 
 //finalize_it:
@@ -1839,7 +1890,7 @@ SetSynBacklog(tcpsrv_t *pThis, const int iSynBacklog)
 static rsRetVal
 SetNumWrkr(tcpsrv_t *pThis, const int numWrkr)
 {
-	pThis->numWrkr = numWrkr;
+	pThis->workQueue.numWrkr = numWrkr;
 	return RS_RET_OK;
 }
 
@@ -1977,19 +2028,6 @@ ENDqueryEtryPt
 BEGINmodInit()
 CODESTARTmodInit
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-	/* we just init the worker mutex, but do not start the workers themselves. This is deferred
-	 * to the first call of Run(). Reasons for this:
-	 * 1. depending on load order, tcpsrv gets loaded during rsyslog startup BEFORE
-	 *    it forks, in which case the workers would be running in the then-killed parent,
-	 *    leading to a defuncnt child (we actually had this bug).
-	 * 2. depending on circumstances, Run() would possibly never be called, in which case
-	 *    the worker threads would be totally useless.
-	 * Note that in order to guarantee a non-racy worker start, we need to guard the
-	 * startup sequence by a mutex, which is why we init it here (no problem with fork()
-	 * in this case as the mutex is a pure-memory structure).
-	 * rgerhards, 2012-05-18
-	 */
-
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(tcps_sessClassInit(pModInfo));
 	CHKiRet(tcpsrvClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */

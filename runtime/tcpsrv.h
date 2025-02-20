@@ -78,6 +78,15 @@ struct tcpsrv_io_descr_s {
 	tcpsrv_t *pSrv;	/* our server object */
 };
 
+typedef struct workQueue_s {
+    tcpsrv_io_descr_t *head;
+    tcpsrv_io_descr_t *tail;
+    pthread_mutex_t mut;
+    pthread_cond_t workRdy;
+    unsigned numWrkr;		/* how many workers to spawn */
+    pthread_t wrkr_tid[2]; // TODO: make dynamic / use ptr
+} workQueue_t;
+
 #define TCPSRV_NO_ADDTL_DELIMITER -1 /* specifies that no additional delimiter is to be used in TCP framing */
 
 /* the tcpsrv object */
@@ -155,7 +164,8 @@ struct tcpsrv_s {
 	rsRetVal (*pOnSessDestruct)(void*);
 	rsRetVal (*OnMsgReceive)(tcps_sess_t *, uchar *pszMsg, int iLenMsg); /* submit message callback */
 	/* work queue */
-	unsigned numWrkr;
+	workQueue_t workQueue;
+	int currWrkrs;
 };
 
 
