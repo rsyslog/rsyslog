@@ -909,10 +909,12 @@ finalize_it:
 
 /* This function processes a single incoming connection */
 static rsRetVal ATTR_NONNULL(1)
-doSingleAccept(tcpsrv_t *const pThis, const int idx)
+doSingleAccept(tcpsrv_io_descr_t *const pioDescr)
 {
 	tcps_sess_t *pNewSess = NULL;
-	tcpsrv_io_descr_t *pDescr = NULL;
+	tcpsrv_io_descr_t *pDescrNew = NULL;
+	const int idx = pioDescr->id;
+	tcpsrv_t *const pThis = pioDescr->pSrv;
 	DEFiRet;
 
 	DBGPRINTF("New connect on NSD %p.\n", pThis->ppLstn[idx]);
@@ -923,15 +925,15 @@ doSingleAccept(tcpsrv_t *const pThis, const int idx)
 
 	if(iRet == RS_RET_OK) {
 		#if defined(HAVE_EPOLL_CREATE)
-			/* pDescr is only dyn allocated in epoll mode! */
-			CHKmalloc(pDescr = (tcpsrv_io_descr_t*) calloc(1, sizeof(tcpsrv_io_descr_t)));
-			pDescr->pSrv = pThis;
-			pDescr->id = idx; // TODO: remove if session handling is refactored to dyn max sessions
-			pDescr->isInError = 0;
-			pDescr->ptrType = NSD_PTR_TYPE_SESS;
-			CHKiRet(netstrm.GetSock(pNewSess->pStrm, &pDescr->sock));
-			pDescr->ptr.pSess = pNewSess;
-			CHKiRet(epoll_Ctl(pThis, pDescr, 0, EPOLL_CTL_ADD));
+			/* pDescrNew is only dyn allocated in epoll mode! */
+			CHKmalloc(pDescrNew = (tcpsrv_io_descr_t*) calloc(1, sizeof(tcpsrv_io_descr_t)));
+			pDescrNew->pSrv = pThis;
+			pDescrNew->id = idx; // TODO: remove if session handling is refactored to dyn max sessions
+			pDescrNew->isInError = 0;
+			pDescrNew->ptrType = NSD_PTR_TYPE_SESS;
+			CHKiRet(netstrm.GetSock(pNewSess->pStrm, &pDescrNew->sock));
+			pDescrNew->ptr.pSess = pNewSess;
+			CHKiRet(epoll_Ctl(pThis, pDescrNew, 0, EPOLL_CTL_ADD));
 		#endif
 
 		DBGPRINTF("New session created with NSD %p.\n", pNewSess);
@@ -947,7 +949,7 @@ finalize_it:
 		LogError(0, iRet, "tcpsrv listener (inputname: '%s') failed "
 			"to process incoming connection with error %d",
 			(cnf_params->pszInputName == NULL) ? (uchar*)"*UNSET*" : cnf_params->pszInputName, iRet);
-		free(pDescr);
+		free(pDescrNew);
 		srSleep(0,20000); /* Sleep 20ms */
 	}
 no_more_data:
@@ -963,10 +965,8 @@ doAccept(tcpsrv_io_descr_t *const pioDescr)
 	int bRun = 1;
 
 	while(bRun) {
-dbgprintf("\n\nRGER: new accept loop iteration\n");
-		iRet = doSingleAccept(pioDescr->pSrv, pioDescr->id);
+		iRet = doSingleAccept(pioDescr);
 dbgprintf("RGER: doAccept returned with %d\n", iRet);
-
 		if(iRet != RS_RET_OK) {
 			bRun = 0;
 		}
@@ -1000,7 +1000,6 @@ processWorksetItem(tcpsrv_io_descr_t *const pioDescr)
  */
 static rsRetVal
 processWorkset(const int numEntries, tcpsrv_io_descr_t *const pioDescr[])
-//processWorkset(tcpsrv_t *const pThis, int numEntries, tcpsrv_io_descr_t *const pioDescr[])
 {
 	int i;
 	DEFiRet;
