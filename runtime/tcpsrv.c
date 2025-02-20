@@ -992,29 +992,9 @@ processWorksetItem(tcpsrv_io_descr_t *const pioDescr)
 }
 
 
-static tcpsrv_io_descr_t *dummyqueue = NULL;
+/* work queue functions */
 
-/* Worker thread function */ // TODO replace!
-static void *
-worker_thread(void *arg) {
-	tcpsrv_t *const pThis = (tcpsrv_t *) arg;
-	workQueue_t *const queue = &pThis->workQueue;
-
-
-	pthread_mutex_lock(&queue->mut);
-	const int wrkrIdx = pThis->currWrkrs++;
-	pthread_mutex_unlock(&queue->mut);
-	uchar thrdName[32];
-	snprintf((char*)thrdName, sizeof(thrdName), "tcpsrv/w%d", wrkrIdx);
-#	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
-	/* set thread name - we ignore if the call fails, has no harsh consequences... */
-	if(prctl(PR_SET_NAME, thrdName, 0, 0, 0) != 0) {
-		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", thrdName);
-	}
-#	endif
-
-	return NULL;
-}
+static void * wrkr(void *arg); /* forward-def of wrkr */
 
 static void
 startWrkrPool(tcpsrv_t *const pThis)
@@ -1024,7 +1004,7 @@ startWrkrPool(tcpsrv_t *const pThis)
 	pthread_mutex_init(&queue->mut, NULL);
 	pthread_cond_init(&queue->workRdy, NULL);
 	for(unsigned i = 0; i < queue->numWrkr; i++) {
-		pthread_create(&queue->wrkr_tid[i], NULL, worker_thread, pThis);
+		pthread_create(&queue->wrkr_tid[i], NULL, wrkr, pThis);
 	}
 }
 
@@ -1044,28 +1024,95 @@ stopWrkrPool(tcpsrv_t *const pThis)
 }
 
 static tcpsrv_io_descr_t *
-dequeueWork(void)
+dequeueWork(tcpsrv_t *pSrv)
 {	
-	tcpsrv_io_descr_t *ret = dummyqueue;
-	dummyqueue = NULL;
-	return ret;
+	workQueue_t *const queue = &pSrv->workQueue;
+	tcpsrv_io_descr_t *pioDescr;
+
+	pthread_mutex_lock(&queue->mut);
+	while((queue->head == NULL) && !glbl.GetGlobalInputTermState()) {
+		pthread_cond_wait(&queue->workRdy, &queue->mut);
+	}
+
+	if(queue->head == NULL) {
+		pioDescr = NULL;
+		goto finalize_it;
+	}
+
+	pioDescr = queue->head;
+	queue->head = pioDescr->next;
+	if(queue->head == NULL) {
+		queue->tail = NULL;
+	}
+	pthread_mutex_unlock(&queue->mut);
+DBGPRINTF("RGER: DEqueuWork done, sock %d\n", pioDescr->sock);
+
+finalize_it:
+	return pioDescr;
 }
 
 static rsRetVal
 enqueueWork(tcpsrv_io_descr_t *const pioDescr)
 {	
+	workQueue_t *const queue = &pioDescr->pSrv->workQueue;
+	tcpsrv_io_descr_t *pioDescr_copy;
 	DEFiRet;
-	dummyqueue = pioDescr;
+
+	CHKmalloc(pioDescr_copy = (tcpsrv_io_descr_t*) calloc(1, sizeof(tcpsrv_io_descr_t)));
+	memcpy(pioDescr_copy, pioDescr, sizeof(tcpsrv_io_descr_t));
+	pioDescr_copy->next = NULL;
+
+	pthread_mutex_lock(&queue->mut);
+	if(queue->tail == NULL) {
+		assert(queue->head == NULL);
+		queue->head = pioDescr_copy;
+	} else {
+		queue->tail->next = pioDescr_copy;
+	}
+	queue->tail = pioDescr_copy;
+
+	pthread_cond_signal(&queue->workRdy);
+	pthread_mutex_unlock(&queue->mut);
+
+DBGPRINTF("RGER: enqueuWork done, sock %d\n", pioDescr->sock);
+
+finalize_it:
 	RETiRet;
 }
 
 
-static int
-wrkr(void) {
+/* Worker thread function */ // TODO replace!
+static void *
+wrkr(void *arg) {
+	tcpsrv_t *const pThis = (tcpsrv_t *) arg;
+	workQueue_t *const queue = &pThis->workQueue;
+	tcpsrv_io_descr_t *pioDescr;
 
-	tcpsrv_io_descr_t *pioDescr = dequeueWork();
-	processWorksetItem(pioDescr);
-	return 0;
+	pthread_mutex_lock(&queue->mut);
+	const int wrkrIdx = pThis->currWrkrs++;
+	pthread_mutex_unlock(&queue->mut);
+	uchar thrdName[32];
+	snprintf((char*)thrdName, sizeof(thrdName), "tcpsrv/w%d", wrkrIdx);
+	dbgSetThrdName(thrdName);
+#	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
+	/* set thread name - we ignore if the call fails, has no harsh consequences... */
+	if(prctl(PR_SET_NAME, thrdName, 0, 0, 0) != 0) {
+		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", thrdName);
+	}
+#	endif
+	
+	while(1) {
+		pioDescr = dequeueWork(pThis);
+		if(pioDescr == NULL) {
+			break;
+		}
+
+		processWorksetItem(pioDescr);
+
+		free((void*) pioDescr);
+	}
+
+	return NULL;
 }
 
 
@@ -1089,7 +1136,6 @@ processWorkset(const int numEntries, tcpsrv_io_descr_t *const pioDescr[])
 			processWorksetItem(pioDescr[i]);
 		} else {
 			iRet = enqueueWork(pioDescr[i]);
-			wrkr();
 		}
 	}
 	RETiRet;
