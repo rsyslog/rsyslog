@@ -337,7 +337,7 @@ CODESTARTcommitTransaction
 			&& iRet != RS_RET_PREVIOUS_COMMITTED) {
 			if(pWrkrData->hmysql == NULL) {
 				DBGPRINTF("ommysql: server error: hmysql is closed, transaction rollback "
-					  "willl not be tried (it probably already happened)\n");
+					  "will not be tried (it probably already happened)\n");
 			} else {
 				if(mysql_rollback(pWrkrData->hmysql) != 0) {
 					DBGPRINTF("ommysql: server error: transaction could not be rolled back\n");
