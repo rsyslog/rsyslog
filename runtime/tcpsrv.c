@@ -825,6 +825,24 @@ finalize_it:
 }
 
 
+
+static rsRetVal
+notifyReArm(tcpsrv_io_descr_t *const pioDescr)
+{
+	DEFiRet;
+
+DBGPRINTF("RGER: sock %d re-armING\n", pioDescr->sock);
+	if(epoll_ctl(pioDescr->pSrv->evtdata.epoll.efd, EPOLL_CTL_MOD, pioDescr->sock, &pioDescr->event) < 0) {
+		// TODO: BETTER handling!
+		LogError(errno, RS_RET_ERR_EPOLL_CTL, "epoll_ctl failed re-armed socket %d", pioDescr->sock);
+		ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
+	}
+DBGPRINTF("RGER: sock %d re-armed\n", pioDescr->sock);
+
+finalize_it:
+	RETiRet;
+}
+
 /* process a receive request on one of the streams
  * If in epoll mode, we need to remove any descriptor we close from the epoll set.
  * rgerhards, 2009-07-020
@@ -841,6 +859,7 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 	int oserr = 0;
 	int do_run = 1;
 	int loop_ctr = 0;
+	int needReArm = 1;
 	tcps_sess_t *const pSess = pioDescr->ptr.pSess;
 	tcpsrv_t *const pThis = pioDescr->pSrv;
 
@@ -874,11 +893,13 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 				LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p closed by remote "
 					"peer %s.\n", (pSess)->pStrm, pszPeer);
 			}
-			CHKiRet(closeSess(pThis, pioDescr));
+			needReArm = 0;
+			closeSess(pThis, pioDescr);
 			do_run = 0;
 			break;
 		case RS_RET_RETRY:
 			/* we simply ignore retry - this is not an error, but we also have not received anything */
+			needReArm = 0;
 			do_run = 0;
 			break;
 		case RS_RET_OK:
@@ -889,19 +910,24 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 				 * We are instructed to terminate the session.
 				 */
 				LogError(oserr, localRet, "Tearing down TCP Session from %s", pszPeer);
+				needReArm = 0;
 				CHKiRet(closeSess(pThis, pioDescr));
 			}
 			break;
 		default:
 			LogError(oserr, iRet, "netstream session %p from %s will be closed due to error",
 					pSess->pStrm, pszPeer);
-			CHKiRet(closeSess(pThis, pioDescr));
+			needReArm = 0;
+			closeSess(pThis, pioDescr);
 			do_run = 0;
 			break;
 		}
 	}
 
 finalize_it:
+	if(needReArm) {
+		//notifyReArm(pioDescr);
+	}
 	RETiRet;
 }
 
@@ -982,10 +1008,11 @@ processWorksetItem(tcpsrv_io_descr_t *const pioDescr)
 
 	DBGPRINTF("tcpsrv: processing item %d, socket %d\n", pioDescr->id, pioDescr->sock);
 	if(pioDescr->ptrType == NSD_PTR_TYPE_LSTN) {
-		doAccept(pioDescr);
+		iRet = doAccept(pioDescr);
 	} else {
-		doReceive(pioDescr);
+		iRet = doReceive(pioDescr);
 	}
+DBGPRINTF("RGER: processWorksetItem returns %d\n", iRet);
 	RETiRet;
 }
 
@@ -1082,25 +1109,11 @@ finalize_it:
 	RETiRet;
 }
 
-static rsRetVal
-wrkrDone(tcpsrv_io_descr_t *const pioDescr)
-{
-	DEFiRet;
-
-	if(epoll_ctl(pioDescr->pSrv->evtdata.epoll.efd, EPOLL_CTL_MOD, pioDescr->sock, &pioDescr->event) < 0) {
-		// TODO: BETTER handling!
-		LogError(errno, RS_RET_ERR_EPOLL_CTL, "epoll_ctl failed re-armed socket %d", pioDescr->sock);
-		ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
-	}
-DBGPRINTF("RGER: sock %d re-armed\n", pioDescr->sock);
-
-finalize_it:
-	RETiRet;
-}
-
 /* Worker thread function */ // TODO replace!
 static void *
-wrkr(void *arg) {
+wrkr(void *arg)
+{
+	rsRetVal localRet;
 	tcpsrv_t *const pThis = (tcpsrv_t *) arg;
 	workQueue_t *const queue = &pThis->workQueue;
 	tcpsrv_io_descr_t *pioDescr;
@@ -1124,10 +1137,14 @@ wrkr(void *arg) {
 			break;
 		}
 
-		processWorksetItem(pioDescr);
-		wrkrDone(pioDescr);
+		localRet = processWorksetItem(pioDescr);
+		// TODO: more granular check (at least think about it, esp. in regard to free() */
+		if(localRet == RS_RET_OK) {
+			//wrkrDone(pioDescr);
+			notifyReArm(pioDescr);
+			free((void*) pioDescr);
+		}
 
-		free((void*) pioDescr);
 	}
 
 	return NULL;

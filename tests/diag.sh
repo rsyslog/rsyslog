@@ -66,7 +66,7 @@ export TB_ERR_TIMEOUT=101
 # CONFIG
 export ZOOPIDFILE="$(pwd)/zookeeper.pid"
 
-valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
+#valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 #valgrind="valgrind --tool=callgrind" # for kcachegrind profiling
 
 # **** use the line below for very hard to find leaks! *****
