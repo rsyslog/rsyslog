@@ -182,7 +182,7 @@ epoll_Ctl(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr, const int is
 	}
 
 finalize_it:
-	DBGPRINTF("Done adding epoll entry %d, iRet %d\n", id, iRet);
+	DBGPRINTF("Done processing epoll entry %d, iRet %d\n", id, iRet);
 	RETiRet;
 }
 
@@ -831,7 +831,6 @@ notifyReArm(tcpsrv_io_descr_t *const pioDescr)
 {
 	DEFiRet;
 
-DBGPRINTF("RGER: sock %d re-armING\n", pioDescr->sock);
 	if(epoll_ctl(pioDescr->pSrv->evtdata.epoll.efd, EPOLL_CTL_MOD, pioDescr->sock, &pioDescr->event) < 0) {
 		// TODO: BETTER handling!
 		LogError(errno, RS_RET_ERR_EPOLL_CTL, "epoll_ctl failed re-armed socket %d", pioDescr->sock);
@@ -1012,6 +1011,10 @@ processWorksetItem(tcpsrv_io_descr_t *const pioDescr)
 	} else {
 		iRet = doReceive(pioDescr);
 	}
+
+	if(iRet == RS_RET_RETRY || iRet == RS_RET_NO_MORE_DATA || iRet == RS_RET_OK) {
+		notifyReArm(pioDescr);
+	}
 DBGPRINTF("RGER: processWorksetItem returns %d\n", iRet);
 	RETiRet;
 }
@@ -1021,19 +1024,26 @@ DBGPRINTF("RGER: processWorksetItem returns %d\n", iRet);
 
 static void * wrkr(void *arg); /* forward-def of wrkr */
 
-static void
+static rsRetVal
 startWrkrPool(tcpsrv_t *const pThis)
 {
+
+	// TODO: make sure caller checks return value
+	DEFiRet;
 	workQueue_t *const queue = &pThis->workQueue;
 
+
+	CHKmalloc(pThis->workQueue.wrkr_tids = calloc(queue->numWrkr, sizeof(pthread_t)));
 	pThis->currWrkrs = 0;
 	pthread_mutex_init(&queue->mut, NULL);
 	pthread_cond_init(&queue->workRdy, NULL);
-	//for(unsigned i = 0; i < queue->numWrkr; i++) {
-	for(unsigned i = 0; i < 1;  i++) {// DEBUGGING ONLY - TODO: remove
-		pthread_create(&queue->wrkr_tid[i], NULL, wrkr, pThis);
+	for(unsigned i = 0; i < queue->numWrkr; i++) {
+	//for(unsigned i = 0; i < 1;  i++) {// DEBUGGING ONLY - TODO: remove
+		pthread_create(&queue->wrkr_tids[i], NULL, wrkr, pThis);
 dbgprintf("RGER: wrkr %u created\n", i);
 	}
+finalize_it:
+	RETiRet;
 }
 
 static void
@@ -1041,15 +1051,19 @@ stopWrkrPool(tcpsrv_t *const pThis)
 {
 	workQueue_t *const queue = &pThis->workQueue;
 
+DBGPRINTF("RGER: stopWrkrPool\n");
 	pthread_mutex_lock(&queue->mut);
 	//queue->stop = true;
 	pthread_cond_broadcast(&queue->workRdy);
+DBGPRINTF("RGER: stopWrkrPool broadcasted\n");
 	pthread_mutex_unlock(&queue->mut);
 
-	//for(unsigned i = 0; i < queue->numWrkr; i++) {
-	for(unsigned i = 0; i < 1;  i++) {// DEBUGGING ONLY - TODO: remove
-		pthread_join(queue->wrkr_tid[i], NULL);
+	for(unsigned i = 0; i < queue->numWrkr; i++) {
+	//for(unsigned i = 0; i < 1;  i++) {// DEBUGGING ONLY - TODO: remove
+		pthread_join(queue->wrkr_tids[i], NULL);
 	}
+	free(pThis->workQueue.wrkr_tids);
+DBGPRINTF("RGER: done stopWrkrPool\n");
 }
 
 static tcpsrv_io_descr_t *
@@ -1060,6 +1074,7 @@ dequeueWork(tcpsrv_t *pSrv)
 
 	pthread_mutex_lock(&queue->mut);
 	while((queue->head == NULL) && !glbl.GetGlobalInputTermState()) {
+dbgprintf("RGER: waiting on condition\n");
 		pthread_cond_wait(&queue->workRdy, &queue->mut);
 	}
 
@@ -1073,10 +1088,10 @@ dequeueWork(tcpsrv_t *pSrv)
 	if(queue->head == NULL) {
 		queue->tail = NULL;
 	}
-	pthread_mutex_unlock(&queue->mut);
 DBGPRINTF("RGER: DEqueuWork done, sock %d\n", pioDescr->sock);
 
 finalize_it:
+	pthread_mutex_unlock(&queue->mut);
 	return pioDescr;
 }
 
@@ -1129,6 +1144,9 @@ wrkr(void *arg)
 	if(prctl(PR_SET_NAME, thrdName, 0, 0, 0) != 0) {
 		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", thrdName);
 	}
+#	else
+	int r = pthread_setname_np(pthread_self(), (char*) thrdName);
+	dbgprintf("queueWork: thread name %s, return %d: %s\n", thrdName,r, strerror(r));
 #	endif
 	
 	while(1) {
@@ -1139,9 +1157,7 @@ wrkr(void *arg)
 
 		localRet = processWorksetItem(pioDescr);
 		// TODO: more granular check (at least think about it, esp. in regard to free() */
-		if(localRet == RS_RET_OK) {
-			//wrkrDone(pioDescr);
-			notifyReArm(pioDescr);
+		if(localRet == RS_RET_RETRY || localRet == RS_RET_NO_MORE_DATA || localRet == RS_RET_OK) {
 			free((void*) pioDescr);
 		}
 
