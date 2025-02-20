@@ -60,18 +60,6 @@ struct tcpLstnPortList_s {
 	tcpLstnPortList_t *pNext;	/**< next port or NULL */
 };
 
-struct tcpsrv_wrkrInfo_s {
-	pthread_t tid;	/* the worker's thread ID */
-	pthread_cond_t run;
-	int idx;
-	tcpsrv_t *pSrv; /* pSrv == NULL -> idle */
-	tcpsrv_io_descr_t *pioDescr;
-	void *pUsr;
-	sbool enabled;
-	long long unsigned numCalled;	/* how often was this called */
-	tcpsrv_t *mySrv;
-};
-
 
 /**
  * The following structure is a descriptor for tcpsrv i/o. It is
@@ -166,6 +154,8 @@ struct tcpsrv_s {
 	rsRetVal (*OnSessConstructFinalize)(void*);
 	rsRetVal (*pOnSessDestruct)(void*);
 	rsRetVal (*OnMsgReceive)(tcps_sess_t *, uchar *pszMsg, int iLenMsg); /* submit message callback */
+	/* work queue */
+	unsigned numWrkr;
 };
 
 
@@ -254,8 +244,10 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetDrvrCRLFile)(tcpsrv_t *pThis, uchar *pszMode);
 	/* added v27 -- sync backlog for listen() */
 	rsRetVal (*SetSynBacklog)(tcpsrv_t *pThis, int);
+	/* added v28 */
+	rsRetVal (*SetNumWrkr)(tcpsrv_t *pThis, int);
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 27 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 28 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
