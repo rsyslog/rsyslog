@@ -61,6 +61,15 @@ struct tcpLstnPortList_s {
 };
 
 
+typedef struct workQueue_s {
+    tcpsrv_io_descr_t *head;
+    tcpsrv_io_descr_t *tail;
+    pthread_mutex_t mut;
+    pthread_cond_t workRdy;
+    unsigned numWrkr;		/* how many workers to spawn */
+    pthread_t wrkr_tid[2]; // TODO: make dynamic / use ptr
+} workQueue_t;
+
 /**
  * The following structure is a descriptor for tcpsrv i/o. It is
  * primarily used together with epoll at the moment.
@@ -76,16 +85,8 @@ struct tcpsrv_io_descr_s {
 	int isInError; /* boolean, if set, subsystem indicates we need to close because we had an
 			* unrecoverable error at the network layer. */
 	tcpsrv_t *pSrv;	/* our server object */
+	tcpsrv_io_descr_t *next; /* for use in workQueue_t */
 };
-
-typedef struct workQueue_s {
-    tcpsrv_io_descr_t *head;
-    tcpsrv_io_descr_t *tail;
-    pthread_mutex_t mut;
-    pthread_cond_t workRdy;
-    unsigned numWrkr;		/* how many workers to spawn */
-    pthread_t wrkr_tid[2]; // TODO: make dynamic / use ptr
-} workQueue_t;
 
 #define TCPSRV_NO_ADDTL_DELIMITER -1 /* specifies that no additional delimiter is to be used in TCP framing */
 
