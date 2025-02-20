@@ -153,7 +153,6 @@ eventNotify_exit(tcpsrv_t *const pThis)
 static rsRetVal
 epoll_Ctl(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr, const int isLstn, const int op)
 {
-	struct epoll_event event;
 	DEFiRet;
 
 	const int id = pioDescr->id;
@@ -162,9 +161,9 @@ epoll_Ctl(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr, const int is
 
 	if(op == EPOLL_CTL_ADD) {
 		dbgprintf("adding epoll entry %d, socket %d\n", id, sock);
-		event.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLONESHOT;
-		event.data.ptr = (void*) pioDescr;
-		if(epoll_ctl(pThis->evtdata.epoll.efd, EPOLL_CTL_ADD,  sock, &event) < 0) {
+		pioDescr->event.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLONESHOT;
+		pioDescr->event.data.ptr = (void*) pioDescr;
+		if(epoll_ctl(pThis->evtdata.epoll.efd, EPOLL_CTL_ADD,  sock, &pioDescr->event) < 0) {
 			LogError(errno, RS_RET_ERR_EPOLL_CTL,
 				"epoll_ctl failed on fd %d, isLstn %d\n",
 				sock, isLstn);
@@ -966,7 +965,6 @@ doAccept(tcpsrv_io_descr_t *const pioDescr)
 
 	while(bRun) {
 		iRet = doSingleAccept(pioDescr);
-dbgprintf("RGER: doAccept returned with %d\n", iRet);
 		if(iRet != RS_RET_OK) {
 			bRun = 0;
 		}
@@ -999,12 +997,15 @@ static void * wrkr(void *arg); /* forward-def of wrkr */
 static void
 startWrkrPool(tcpsrv_t *const pThis)
 {
-	pThis->currWrkrs = 0;
 	workQueue_t *const queue = &pThis->workQueue;
+
+	pThis->currWrkrs = 0;
 	pthread_mutex_init(&queue->mut, NULL);
 	pthread_cond_init(&queue->workRdy, NULL);
-	for(unsigned i = 0; i < queue->numWrkr; i++) {
+	//for(unsigned i = 0; i < queue->numWrkr; i++) {
+	for(unsigned i = 0; i < 1;  i++) {// DEBUGGING ONLY - TODO: remove
 		pthread_create(&queue->wrkr_tid[i], NULL, wrkr, pThis);
+dbgprintf("RGER: wrkr %u created\n", i);
 	}
 }
 
@@ -1018,7 +1019,8 @@ stopWrkrPool(tcpsrv_t *const pThis)
 	pthread_cond_broadcast(&queue->workRdy);
 	pthread_mutex_unlock(&queue->mut);
 
-	for(unsigned i = 0; i < queue->numWrkr; i++) {
+	//for(unsigned i = 0; i < queue->numWrkr; i++) {
+	for(unsigned i = 0; i < 1;  i++) {// DEBUGGING ONLY - TODO: remove
 		pthread_join(queue->wrkr_tid[i], NULL);
 	}
 }
@@ -1080,6 +1082,21 @@ finalize_it:
 	RETiRet;
 }
 
+static rsRetVal
+wrkrDone(tcpsrv_io_descr_t *const pioDescr)
+{
+	DEFiRet;
+
+	if(epoll_ctl(pioDescr->pSrv->evtdata.epoll.efd, EPOLL_CTL_MOD, pioDescr->sock, &pioDescr->event) < 0) {
+		// TODO: BETTER handling!
+		LogError(errno, RS_RET_ERR_EPOLL_CTL, "epoll_ctl failed re-armed socket %d", pioDescr->sock);
+		ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
+	}
+DBGPRINTF("RGER: sock %d re-armed\n", pioDescr->sock);
+
+finalize_it:
+	RETiRet;
+}
 
 /* Worker thread function */ // TODO replace!
 static void *
@@ -1108,6 +1125,7 @@ wrkr(void *arg) {
 		}
 
 		processWorksetItem(pioDescr);
+		wrkrDone(pioDescr);
 
 		free((void*) pioDescr);
 	}
@@ -1341,14 +1359,19 @@ Run(tcpsrv_t *const pThis)
 	}
 
 	eventNotify_init(pThis);
-	startWrkrPool(pThis);
+	if(pThis->workQueue.numWrkr > 1) {
+		startWrkrPool(pThis);
+	}
 	#if defined(HAVE_EPOLL_CREATE)
 		iRet = RunEpoll(pThis);
 	#else
 		/* fall back to select */
 		iRet = RunSelect(pThis);
 	#endif
-	stopWrkrPool(pThis);
+
+	if(pThis->workQueue.numWrkr > 1) {
+		stopWrkrPool(pThis);
+	}
 	eventNotify_exit(pThis);
 
 //finalize_it:
