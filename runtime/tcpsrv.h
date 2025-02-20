@@ -21,6 +21,10 @@
 #ifndef INCLUDED_TCPSRV_H
 #define INCLUDED_TCPSRV_H
 
+#if defined(HAVE_SYS_EPOLL_H)
+#	include <sys/epoll.h>
+#endif
+
 #include "obj.h"
 #include "prop.h"
 #include "net.h"
@@ -86,6 +90,9 @@ struct tcpsrv_io_descr_s {
 			* unrecoverable error at the network layer. */
 	tcpsrv_t *pSrv;	/* our server object */
 	tcpsrv_io_descr_t *next; /* for use in workQueue_t */
+	#if defined(HAVE_SYS_EPOLL_H)
+	struct epoll_event event; /* to re-enable EPOLLONESHOT */
+	#endif
 };
 
 #define TCPSRV_NO_ADDTL_DELIMITER -1 /* specifies that no additional delimiter is to be used in TCP framing */
