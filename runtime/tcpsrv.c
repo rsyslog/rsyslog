@@ -1029,13 +1029,19 @@ static rsRetVal
 processWorkset(const int numEntries, tcpsrv_io_descr_t *const pioDescr[])
 {
 	int i;
+	const unsigned numWrkr = pioDescr[0]->pSrv->numWrkr; /* pSrv is always the same! */
 	DEFiRet;
 
 	DBGPRINTF("tcpsrv: ready to process %d event entries\n", numEntries);
 
 	for(i = 0 ; i < numEntries ; ++i) {
-		iRet = enqueueWork(pioDescr[i]);
-		wrkr();
+		if(numWrkr == 1) {
+			/* we process all on this thread, no need for context switch */
+			processWorksetItem(pioDescr[i]);
+		} else {
+			iRet = enqueueWork(pioDescr[i]);
+			wrkr();
+		}
 	}
 	RETiRet;
 }
@@ -1830,6 +1836,14 @@ SetSynBacklog(tcpsrv_t *pThis, const int iSynBacklog)
 }
 
 
+static rsRetVal
+SetNumWrkr(tcpsrv_t *pThis, const int numWrkr)
+{
+	pThis->numWrkr = numWrkr;
+	return RS_RET_OK;
+}
+
+
 /* queryInterface function
  * rgerhards, 2008-02-29
  */
@@ -1898,6 +1912,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetDrvrPrioritizeSAN = SetDrvrPrioritizeSAN;
 	pIf->SetDrvrTlsVerifyDepth = SetDrvrTlsVerifyDepth;
 	pIf->SetSynBacklog = SetSynBacklog;
+	pIf->SetNumWrkr = SetNumWrkr;
 
 finalize_it:
 ENDobjQueryInterface(tcpsrv)

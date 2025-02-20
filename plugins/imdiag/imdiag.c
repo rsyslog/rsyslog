@@ -617,6 +617,7 @@ addTCPListener(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	}
 	CHKmalloc(cnf_params = (tcpLstnParams_t*) calloc(1, sizeof(tcpLstnParams_t)));
 	CHKiRet(tcpsrv.Construct(&pOurTcpsrv));
+	CHKiRet(tcpsrv.SetNumWrkr(pOurTcpsrv, 1)); // We always need only one worker for this diag module!
 	CHKiRet(tcpsrv.SetSessMax(pOurTcpsrv, iTCPSessMax));
 	CHKiRet(tcpsrv.SetCBIsPermittedHost(pOurTcpsrv, isPermittedHost));
 	CHKiRet(tcpsrv.SetCBRcvData(pOurTcpsrv, doRcvData));

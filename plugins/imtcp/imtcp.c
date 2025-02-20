@@ -497,6 +497,7 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 	CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
 	CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
 	/* params */
+	CHKiRet(tcpsrv.SetNumWrkr(pOurTcpsrv, 2)); // TODO: make configurable!
 	CHKiRet(tcpsrv.SetKeepAlive(pOurTcpsrv, inst->bKeepAlive));
 	CHKiRet(tcpsrv.SetKeepAliveIntvl(pOurTcpsrv, inst->iKeepAliveIntvl));
 	CHKiRet(tcpsrv.SetKeepAliveProbes(pOurTcpsrv, inst->iKeepAliveProbes));
