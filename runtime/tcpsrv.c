@@ -162,7 +162,7 @@ epoll_Ctl(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr, const int is
 
 	if(op == EPOLL_CTL_ADD) {
 		dbgprintf("adding epoll entry %d, socket %d\n", id, sock);
-		event.events = EPOLLIN | EPOLLOUT | EPOLLET;
+		event.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLONESHOT;
 		event.data.ptr = (void*) pioDescr;
 		if(epoll_ctl(pThis->evtdata.epoll.efd, EPOLL_CTL_ADD,  sock, &event) < 0) {
 			LogError(errno, RS_RET_ERR_EPOLL_CTL,
