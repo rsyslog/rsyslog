@@ -71,7 +71,7 @@ typedef struct workQueue_s {
     pthread_mutex_t mut;
     pthread_cond_t workRdy;
     unsigned numWrkr;		/* how many workers to spawn */
-    pthread_t wrkr_tid[2]; // TODO: make dynamic / use ptr
+    pthread_t *wrkr_tids;	/* array of thread IDs */
 } workQueue_t;
 
 /**
