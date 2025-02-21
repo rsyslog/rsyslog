@@ -1124,9 +1124,9 @@ dbgprintf("RGER: iodescr copy %p := %p\n", pioDescr_copy, pioDescr);
 	queue->tail = pioDescr_copy;
 #else
 dbgprintf("RGER: iodescr %p used in enqueuWork\n", pioDescr);
-	pioDescr->next = NULL;
 
 	pthread_mutex_lock(&queue->mut);
+	pioDescr->next = NULL;
 	if(queue->tail == NULL) {
 		assert(queue->head == NULL);
 		queue->head = pioDescr;
