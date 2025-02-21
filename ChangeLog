@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2502.0 (aka 2024.12) 2025-02-??
+Scheduled Release 8.2502.0 (aka 2025.02) 2025-02-18
 - 2025-02-16: gnutls bugfix: Avoid blocking sockets during TLS handshake
   When forwarding logs to a TLS server, using a blocking socket
   can lead to indefinite waiting during the gnutls_handshake()
