@@ -223,7 +223,10 @@ epoll_Wait(tcpsrv_t *const pThis, const int timeout, int *const numEntries, tcps
 	DBGPRINTF("epoll_wait returned %d entries\n", nfds);
 	for(i = 0 ; i < nfds ; ++i) {
 		pWorkset[i] = event[i].data.ptr;
-		pWorkset[i]->isInError = event[i].events & EPOLLERR;
+		/* default is no error, on error we terminate, so we need only to set in error case! */
+		if(event[i].events & EPOLLERR) {
+			ATOMIC_STORE_1_TO_INT(&pWorkset[i]->isInError, NULL); // TODO: helper mutex!
+		}
 	}
 	*numEntries = nfds;
 
@@ -871,7 +874,7 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 	/* if we had EPOLLERR, give information. The other processing continues. This
 	 * seems to be best practice and may cause better error information.
 	 */
-	if(pioDescr->isInError) {
+	if(ATOMIC_FETCH_32BIT(&pioDescr->isInError, NULL)) { // TODO: helper mutex!
 		int error = 0;
 		socklen_t len = sizeof(error);
 		const int sock = ((nsd_ptcp_t *) pSess->pStrm->pDrvrData)->sock;
