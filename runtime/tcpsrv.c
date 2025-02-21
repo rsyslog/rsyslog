@@ -806,6 +806,8 @@ static rsRetVal
 closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
 {
 	DEFiRet;
+	assert(pioDescr->ptrType == NSD_PTR_TYPE_SESS);
+dbgprintf("RGER: iodescr %p destructed via closeSess\n", pioDescr);
 	tcps_sess_t *pSess = pioDescr->ptr.pSess;
 	#if defined(HAVE_EPOLL_CREATE)
 		CHKiRet(epoll_Ctl(pThis, pioDescr, 0, EPOLL_CTL_DEL));
@@ -951,6 +953,7 @@ doSingleAccept(tcpsrv_io_descr_t *const pioDescr)
 		#if defined(HAVE_EPOLL_CREATE)
 			/* pDescrNew is only dyn allocated in epoll mode! */
 			CHKmalloc(pDescrNew = (tcpsrv_io_descr_t*) calloc(1, sizeof(tcpsrv_io_descr_t)));
+dbgprintf("RGER: iodescr %p created\n", pDescrNew);
 			pDescrNew->pSrv = pThis;
 			pDescrNew->id = idx; // TODO: remove if session handling is refactored to dyn max sessions
 			pDescrNew->isInError = 0;
@@ -1099,10 +1102,12 @@ static rsRetVal
 enqueueWork(tcpsrv_io_descr_t *const pioDescr)
 {	
 	workQueue_t *const queue = &pioDescr->pSrv->workQueue;
-	tcpsrv_io_descr_t *pioDescr_copy;
+	//tcpsrv_io_descr_t *pioDescr_copy;
 	DEFiRet;
 
+	#if 0
 	CHKmalloc(pioDescr_copy = (tcpsrv_io_descr_t*) calloc(1, sizeof(tcpsrv_io_descr_t)));
+dbgprintf("RGER: iodescr copy %p := %p\n", pioDescr_copy, pioDescr);
 	memcpy(pioDescr_copy, pioDescr, sizeof(tcpsrv_io_descr_t));
 	pioDescr_copy->next = NULL;
 
@@ -1114,13 +1119,26 @@ enqueueWork(tcpsrv_io_descr_t *const pioDescr)
 		queue->tail->next = pioDescr_copy;
 	}
 	queue->tail = pioDescr_copy;
+#else
+dbgprintf("RGER: iodescr %p used in enqueuWork\n", pioDescr);
+	pioDescr->next = NULL;
+
+	pthread_mutex_lock(&queue->mut);
+	if(queue->tail == NULL) {
+		assert(queue->head == NULL);
+		queue->head = pioDescr;
+	} else {
+		queue->tail->next = pioDescr;
+	}
+	queue->tail = pioDescr;
+	#endif
 
 	pthread_cond_signal(&queue->workRdy);
 	pthread_mutex_unlock(&queue->mut);
 
 DBGPRINTF("RGER: enqueuWork done, sock %d\n", pioDescr->sock);
 
-finalize_it:
+//finalize_it:
 	RETiRet;
 }
 
@@ -1128,7 +1146,7 @@ finalize_it:
 static void *
 wrkr(void *arg)
 {
-	rsRetVal localRet;
+	//rsRetVal localRet;
 	tcpsrv_t *const pThis = (tcpsrv_t *) arg;
 	workQueue_t *const queue = &pThis->workQueue;
 	tcpsrv_io_descr_t *pioDescr;
@@ -1154,12 +1172,19 @@ wrkr(void *arg)
 		if(pioDescr == NULL) {
 			break;
 		}
+		#if 1
+		processWorksetItem(pioDescr); // TODO check result?
+		#else
+		int isSess_ioDescr = (pioDescr->ptrType == NSD_PTR_TYPE_SESS);
 
-		localRet = processWorksetItem(pioDescr);
 		// TODO: more granular check (at least think about it, esp. in regard to free() */
 		if(localRet == RS_RET_RETRY || localRet == RS_RET_NO_MORE_DATA || localRet == RS_RET_OK) {
-			free((void*) pioDescr);
+			if(isSess_ioDescr) {
+			//	free((void*) pioDescr);
+			}
 		}
+		else { dbgprintf("RGER: iodescr no free because iRet %d\n", localRet); }
+		#endif
 
 	}
 
