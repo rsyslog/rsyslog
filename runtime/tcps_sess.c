@@ -9,7 +9,7 @@
  * File begun on 2008-03-01 by RGerhards (extracted from tcpsrv.c, which
  * based on the BSD-licensed syslogd.c)
  *
- * Copyright 2007-2012 Adiscon GmbH.
+ * Copyright 2007-2025 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -70,6 +70,7 @@ BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END m
 		pThis->iMaxLine = glbl.GetMaxLine(runConf);
 		pThis->inputState = eAtStrtFram; /* indicate frame header expected */
 		pThis->eFraming = TCP_FRAMING_OCTET_STUFFING; /* just make sure... */
+		pthread_mutex_init(&pThis->mut, NULL);
 		/* now allocate the message reception buffer */
 		CHKmalloc(pThis->pMsg = (uchar*) malloc(pThis->iMaxLine + 1));
 finalize_it:
@@ -101,6 +102,7 @@ CODESTARTobjDestruct(tcps_sess)
 	if(pThis->pSrv->pOnSessDestruct != NULL) {
 		pThis->pSrv->pOnSessDestruct(&pThis->pUsr);
 	}
+	pthread_mutex_destroy(&pThis->mut);
 	/* now destruct our own properties */
 	if(pThis->fromHost != NULL)
 		CHKiRet(prop.Destruct(&pThis->fromHost));
