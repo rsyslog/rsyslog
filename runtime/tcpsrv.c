@@ -816,6 +816,8 @@ dbgprintf("RGER: iodescr %p destructed via closeSess\n", pioDescr);
 		CHKiRet(epoll_Ctl(pThis, pioDescr, 0, EPOLL_CTL_DEL));
 	#endif
 	pThis->pOnRegularClose(pSess);
+	pthread_mutex_unlock(&pSess->mut);
+
 	tcps_sess.Destruct(&pSess);
 #if defined(HAVE_EPOLL_CREATE)
 finalize_it:
@@ -866,10 +868,14 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 	int needReArm = 1;
 	tcps_sess_t *const pSess = pioDescr->ptr.pSess;
 	tcpsrv_t *const pThis = pioDescr->pSrv;
+	int freeMutex = 0;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	prop.GetString((pSess)->fromHostIP, &pszPeer, &lenPeer);
 	DBGPRINTF("netstream %p with new data from remote peer %s\n", (pSess)->pStrm, pszPeer);
+
+	pthread_mutex_lock(&pSess->mut);
+	freeMutex = 1;
 
 	/* if we had EPOLLERR, give information. The other processing continues. This
 	 * seems to be best practice and may cause better error information.
@@ -898,6 +904,7 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 					"peer %s.\n", (pSess)->pStrm, pszPeer);
 			}
 			needReArm = 0;
+			freeMutex = 0;
 			closeSess(pThis, pioDescr);
 			do_run = 0;
 			break;
@@ -915,6 +922,7 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 				 */
 				LogError(oserr, localRet, "Tearing down TCP Session from %s", pszPeer);
 				needReArm = 0;
+				freeMutex = 0;
 				CHKiRet(closeSess(pThis, pioDescr));
 			}
 			break;
@@ -922,6 +930,7 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 			LogError(oserr, iRet, "netstream session %p from %s will be closed due to error",
 					pSess->pStrm, pszPeer);
 			needReArm = 0;
+				freeMutex = 0;
 			closeSess(pThis, pioDescr);
 			do_run = 0;
 			break;
@@ -929,6 +938,10 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 	}
 
 finalize_it:
+	if(freeMutex) {
+		pthread_mutex_unlock(&pSess->mut);
+	}
+
 	if(needReArm) {
 		//notifyReArm(pioDescr);
 	}
