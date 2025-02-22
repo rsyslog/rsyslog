@@ -854,7 +854,7 @@ finalize_it:
  * rgerhards, 2009-07-020
  */
 static rsRetVal ATTR_NONNULL(1)
-doReceive(tcpsrv_io_descr_t *const pioDescr)
+doReceive(tcpsrv_io_descr_t *const pioDescr, int *const pNeedReArm)
 {
 	char buf[128*1024]; /* reception buffer - may hold a partial or multiple messages */
 	ssize_t iRcvd;
@@ -910,7 +910,7 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 			break;
 		case RS_RET_RETRY:
 			/* we simply ignore retry - this is not an error, but we also have not received anything */
-			needReArm = 0;
+			needReArm = 1;
 			do_run = 0;
 			break;
 		case RS_RET_OK:
@@ -942,16 +942,14 @@ finalize_it:
 		pthread_mutex_unlock(&pSess->mut);
 	}
 
-	if(needReArm) {
-		//notifyReArm(pioDescr);
-	}
+	*pNeedReArm = needReArm;
 	RETiRet;
 }
 
 
 /* This function processes a single incoming connection */
 static rsRetVal ATTR_NONNULL(1)
-doSingleAccept(tcpsrv_io_descr_t *const pioDescr)
+doSingleAccept(tcpsrv_io_descr_t *const pioDescr, int *const pNeedReArm)
 {
 	tcps_sess_t *pNewSess = NULL;
 	tcpsrv_io_descr_t *pDescrNew = NULL;
@@ -996,19 +994,20 @@ finalize_it:
 		srSleep(0,20000); /* Sleep 20ms */
 	}
 no_more_data:
+	*pNeedReArm = 1; /* listeners must always be re-aremd */
 	RETiRet;
 }
 
 
 /* This function processes all pending accepts on this fd */
 static rsRetVal ATTR_NONNULL(1)
-doAccept(tcpsrv_io_descr_t *const pioDescr)
+doAccept(tcpsrv_io_descr_t *const pioDescr, int *const pNeedReArm)
 {
 	DEFiRet;
 	int bRun = 1;
 
 	while(bRun) {
-		iRet = doSingleAccept(pioDescr);
+		iRet = doSingleAccept(pioDescr, pNeedReArm);
 		if(iRet != RS_RET_OK) {
 			bRun = 0;
 		}
@@ -1023,15 +1022,16 @@ static rsRetVal ATTR_NONNULL(1)
 processWorksetItem(tcpsrv_io_descr_t *const pioDescr)
 {
 	DEFiRet;
+	int needReArm;
 
 	DBGPRINTF("tcpsrv: processing item %d, socket %d\n", pioDescr->id, pioDescr->sock);
 	if(pioDescr->ptrType == NSD_PTR_TYPE_LSTN) {
-		iRet = doAccept(pioDescr);
+		iRet = doAccept(pioDescr, &needReArm);
 	} else {
-		iRet = doReceive(pioDescr);
+		iRet = doReceive(pioDescr, &needReArm);
 	}
 
-	if(iRet == RS_RET_RETRY || iRet == RS_RET_NO_MORE_DATA || iRet == RS_RET_OK) {
+	if(needReArm) {
 		notifyReArm(pioDescr);
 	}
 DBGPRINTF("RGER: processWorksetItem returns %d\n", iRet);
