@@ -21,9 +21,10 @@ tcpflood -m1 -M "\"<112> debian tag2: is no longer listening on 255.255.255.255 
 tcpflood -m1 -M "\"<177> centos tag3: is no longer listening on 192.168.0.9 test\""
 shutdown_when_empty
 wait_shutdown
-export EXPECTED='host: ubuntu, ip: 127.0.0.1, tag: tag1, pri: 189, syslogfacility: 23, syslogseverity: 5 msg: test
+sort < $RSYSLOG_OUT_LOG > ${RSYSLOG_OUT_LOG}.sorted
+export EXPECTED='host: centos, ip: 192.168.0.9, tag: tag3, pri: 177, syslogfacility: 22, syslogseverity: 1 msg: test
 host: debian, ip: 255.255.255.255, tag: tag2, pri: 112, syslogfacility: 14, syslogseverity: 0 msg: test
-host: centos, ip: 192.168.0.9, tag: tag3, pri: 177, syslogfacility: 22, syslogseverity: 1 msg: test'
-cmp_exact
+host: ubuntu, ip: 127.0.0.1, tag: tag1, pri: 189, syslogfacility: 23, syslogseverity: 5 msg: test'
+cmp_exact ${RSYSLOG_OUT_LOG}.sorted
 
 exit_test
