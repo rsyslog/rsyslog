@@ -98,9 +98,9 @@ RUN	apt-get update -y && \
 
 # create dependency cache
 RUN	mkdir /local_dep_cache
-RUN	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz
+RUN	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.8.23.tar.gz -O /local_dep_cache/elasticsearch-6.8.23.tar.gz
 RUN	wget -nv https://www.rsyslog.com/files/download/rsyslog/elasticsearch-7.14.1-linux-x86_64.tar.gz -O /local_dep_cache/elasticsearch-7.14.1-linux-x86_64.tar.gz
-RUN	wget -nv https://dlcdn.apache.org/zookeeper/zookeeper-3.6.3/apache-zookeeper-3.6.3-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.6.2-bin.tar.gz
+RUN	wget -nv https://dlcdn.apache.org/zookeeper/zookeeper-3.9.3/apache-zookeeper-3.9.3-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.9.3-bin.tar.gz
 RUN	wget -nv https://www.apache.org/dyn/closer.cgi?path=/kafka/2.8.0/kafka_2.13-2.8.0.tgz -O /local_dep_cache/kafka_2.13-2.8.0.tgz
 # tell tests which are the newester versions, so they can be checked without the need
 # to adjust test sources.
@@ -277,7 +277,7 @@ RUN	cd helper-projects && \
 # change scripts if at a later time we can move on to a newer version
 ENV	SCAN_BUILD=scan-build-9 \
 	SCAN_BUILD_CC=clang-9 \
-	ASAN_SYMBOLIZER_PATH=/usr/lib/llvm-9/bin/llvm-symbolizer
+	ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer-14
 
 RUN	chmod o+rx /var/run/mysqld && ls -ld /var/run/mysqld
 
