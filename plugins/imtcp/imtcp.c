@@ -91,6 +91,11 @@ static int n_tcpsrv = 0;
 
 static permittedPeers_t *pPermPeersRoot = NULL;
 
+/* default number of workes to configure. We choose 2, as this is probably good for
+ * many installations. High-Volume ones may need much higher number!
+ */
+#define DEFAULT_NUMWRKR 2
+
 #define FRAMING_UNSET -1
 
 /* config settings */
@@ -123,6 +128,7 @@ static struct configSettings_s {
 struct instanceConf_s {
 	int iTCPSessMax;
 	int iTCPLstnMax;
+	unsigned numWrkr;
 	tcpLstnParams_t *cnf_params;	/**< listener config parameters */
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
 	ruleset_t *pBindRuleset;	/* ruleset to bind listener to (use system default if unspecified) */
@@ -166,6 +172,7 @@ struct modConfData_s {
 	instanceConf_t *root, *tail;
 	int iTCPSessMax; /* max number of sessions */
 	int iTCPLstnMax; /* max number of sessions */
+	unsigned numWrkr;
 	int iStrmDrvrMode; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
 	int iStrmDrvrExtendedCertCheck; /* verify also purpose OID in certificate extended field */
 	int iStrmDrvrSANPreference; /* ignore CN when any SAN set */
@@ -211,6 +218,7 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "maxsessions", eCmdHdlrPositiveInt, 0 },
 	{ "maxlistners", eCmdHdlrPositiveInt, 0 },
 	{ "maxlisteners", eCmdHdlrPositiveInt, 0 },
+	{ "workerthreads", eCmdHdlrPositiveInt, 0 },
 	{ "streamdriver.mode", eCmdHdlrNonNegInt, 0 },
 	{ "streamdriver.authmode", eCmdHdlrString, 0 },
 	{ "streamdriver.permitexpiredcerts", eCmdHdlrString, 0 },
@@ -241,6 +249,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "port", eCmdHdlrString, CNFPARAM_REQUIRED }, /* legacy: InputTCPServerRun */
 	{ "maxsessions", eCmdHdlrPositiveInt, 0 },
 	{ "maxlisteners", eCmdHdlrPositiveInt, 0 },
+	{ "workerthreads", eCmdHdlrPositiveInt, 0 },
 	{ "flowcontrol", eCmdHdlrBinary, 0 },
 	{ "disablelfdelimiter", eCmdHdlrBinary, 0 },
 	{ "discardtruncatedmsg", eCmdHdlrBinary, 0 },
@@ -403,6 +412,7 @@ createInstance(instanceConf_t **pinst)
 	inst->iSynBacklog = 0; /* default: unset */
 	inst->iTCPLstnMax = loadModConf->iTCPLstnMax;
 	inst->iTCPSessMax = loadModConf->iTCPSessMax;
+	inst->numWrkr = loadModConf->numWrkr;
 
 	inst->cnf_params->pszLstnPortFileName = NULL;
 
@@ -473,6 +483,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->iAddtlFrameDelim = cs.iAddtlFrameDelim;
 	inst->iTCPLstnMax = cs.iTCPLstnMax;
 	inst->iTCPSessMax = cs.iTCPSessMax;
+	inst->numWrkr = DEFAULT_NUMWRKR;
 	inst->iStrmDrvrMode = cs.iStrmDrvrMode;
 
 finalize_it:
@@ -497,7 +508,7 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 	CHKiRet(tcpsrv.SetCBOnRegularClose(pOurTcpsrv, onRegularClose));
 	CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
 	/* params */
-	CHKiRet(tcpsrv.SetNumWrkr(pOurTcpsrv, 2)); // TODO: make configurable!
+	CHKiRet(tcpsrv.SetNumWrkr(pOurTcpsrv, inst->numWrkr));
 	CHKiRet(tcpsrv.SetKeepAlive(pOurTcpsrv, inst->bKeepAlive));
 	CHKiRet(tcpsrv.SetKeepAliveIntvl(pOurTcpsrv, inst->iKeepAliveIntvl));
 	CHKiRet(tcpsrv.SetKeepAliveProbes(pOurTcpsrv, inst->iKeepAliveProbes));
@@ -686,6 +697,8 @@ CODESTARTnewInpInst
 			inst->iTCPSessMax = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "maxlisteners")) {
 			inst->iTCPLstnMax = (int) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "workerthreads")) {
+			inst->numWrkr = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "supportoctetcountedframing")) {
 			inst->cnf_params->bSuppOctetFram = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "keepalive")) {
@@ -724,6 +737,7 @@ CODESTARTbeginCnfLoad
 	/* init our settings */
 	loadModConf->iTCPSessMax = 200;
 	loadModConf->iTCPLstnMax = 20;
+	loadModConf->numWrkr = DEFAULT_NUMWRKR;
 	loadModConf->bSuppOctetFram = 1;
 	loadModConf->iStrmDrvrMode = 0;
 	loadModConf->iStrmDrvrExtendedCertCheck = 0;
@@ -804,6 +818,8 @@ CODESTARTsetModCnf
 		} else if(!strcmp(modpblk.descr[i].name, "maxlisteners") ||
 			  !strcmp(modpblk.descr[i].name, "maxlistners")) { /* keep old name for a while */
 			loadModConf->iTCPLstnMax = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "workerthreads")) {
+			loadModConf->numWrkr = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "keepalive")) {
 			loadModConf->bKeepAlive = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "keepalive.probes")) {
