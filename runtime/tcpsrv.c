@@ -855,7 +855,7 @@ finalize_it:
  * rgerhards, 2009-07-020
  */
 static rsRetVal ATTR_NONNULL(1)
-doReceive(tcpsrv_io_descr_t *const pioDescr, int *const pNeedReArm)
+doReceive(tcpsrv_io_descr_t *const pioDescr)
 {
 	char buf[128*1024]; /* reception buffer - may hold a partial or multiple messages */
 	ssize_t iRcvd;
@@ -911,7 +911,6 @@ doReceive(tcpsrv_io_descr_t *const pioDescr, int *const pNeedReArm)
 			break;
 		case RS_RET_RETRY:
 			/* we simply ignore retry - this is not an error, but we also have not received anything */
-			needReArm = 1;
 			do_run = 0;
 			break;
 		case RS_RET_OK:
@@ -931,7 +930,7 @@ doReceive(tcpsrv_io_descr_t *const pioDescr, int *const pNeedReArm)
 			LogError(oserr, iRet, "netstream session %p from %s will be closed due to error",
 					pSess->pStrm, pszPeer);
 			needReArm = 0;
-				freeMutex = 0;
+			freeMutex = 0;
 			closeSess(pThis, pioDescr);
 			do_run = 0;
 			break;
@@ -939,18 +938,21 @@ doReceive(tcpsrv_io_descr_t *const pioDescr, int *const pNeedReArm)
 	}
 
 finalize_it:
+	if(needReArm) {
+		notifyReArm(pioDescr);
+	}
+
 	if(freeMutex) {
 		pthread_mutex_unlock(&pSess->mut);
 	}
 
-	*pNeedReArm = needReArm;
 	RETiRet;
 }
 
 
 /* This function processes a single incoming connection */
 static rsRetVal ATTR_NONNULL(1)
-doSingleAccept(tcpsrv_io_descr_t *const pioDescr, int *const pNeedReArm)
+doSingleAccept(tcpsrv_io_descr_t *const pioDescr)
 {
 	tcps_sess_t *pNewSess = NULL;
 	tcpsrv_io_descr_t *pDescrNew = NULL;
@@ -999,24 +1001,24 @@ finalize_it:
 		srSleep(0,20000); /* Sleep 20ms */
 	}
 no_more_data:
-	*pNeedReArm = 1; /* listeners must always be re-aremd */
 	RETiRet;
 }
 
 
 /* This function processes all pending accepts on this fd */
 static rsRetVal ATTR_NONNULL(1)
-doAccept(tcpsrv_io_descr_t *const pioDescr, int *const pNeedReArm)
+doAccept(tcpsrv_io_descr_t *const pioDescr)
 {
 	DEFiRet;
 	int bRun = 1;
 
 	while(bRun) {
-		iRet = doSingleAccept(pioDescr, pNeedReArm);
+		iRet = doSingleAccept(pioDescr);
 		if(iRet != RS_RET_OK) {
 			bRun = 0;
 		}
 	}
+	notifyReArm(pioDescr); /* listeners must ALWAYS be re-armed */
 	RETiRet;
 }
 
@@ -1027,18 +1029,14 @@ static rsRetVal ATTR_NONNULL(1)
 processWorksetItem(tcpsrv_io_descr_t *const pioDescr)
 {
 	DEFiRet;
-	int needReArm;
 
 	DBGPRINTF("tcpsrv: processing item %d, socket %d\n", pioDescr->id, pioDescr->sock);
 	if(pioDescr->ptrType == NSD_PTR_TYPE_LSTN) {
-		iRet = doAccept(pioDescr, &needReArm);
+		iRet = doAccept(pioDescr);
 	} else {
-		iRet = doReceive(pioDescr, &needReArm);
+		iRet = doReceive(pioDescr);
 	}
 
-	if(needReArm) {
-		notifyReArm(pioDescr);
-	}
 DBGPRINTF("RGER: processWorksetItem returns %d\n", iRet);
 	RETiRet;
 }
@@ -1076,9 +1074,7 @@ stopWrkrPool(tcpsrv_t *const pThis)
 
 DBGPRINTF("RGER: stopWrkrPool\n");
 	pthread_mutex_lock(&queue->mut);
-	//queue->stop = true;
 	pthread_cond_broadcast(&queue->workRdy);
-DBGPRINTF("RGER: stopWrkrPool broadcasted\n");
 	pthread_mutex_unlock(&queue->mut);
 
 	for(unsigned i = 0; i < queue->numWrkr; i++) {
@@ -1121,10 +1117,7 @@ static rsRetVal
 enqueueWork(tcpsrv_io_descr_t *const pioDescr)
 {	
 	workQueue_t *const queue = &pioDescr->pSrv->workQueue;
-	//tcpsrv_io_descr_t *pioDescr_copy;
 	DEFiRet;
-
-dbgprintf("RGER: iodescr %p used in enqueuWork\n", pioDescr);
 
 	pthread_mutex_lock(&queue->mut);
 	pioDescr->next = NULL;
@@ -1136,12 +1129,10 @@ dbgprintf("RGER: iodescr %p used in enqueuWork\n", pioDescr);
 	}
 	queue->tail = pioDescr;
 
+DBGPRINTF("RGER: enqueuWork done, sock %d\n", pioDescr->sock);
 	pthread_cond_signal(&queue->workRdy);
 	pthread_mutex_unlock(&queue->mut);
 
-DBGPRINTF("RGER: enqueuWork done, sock %d\n", pioDescr->sock);
-
-//finalize_it:
 	RETiRet;
 }
 
