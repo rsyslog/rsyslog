@@ -1126,21 +1126,6 @@ enqueueWork(tcpsrv_io_descr_t *const pioDescr)
 	//tcpsrv_io_descr_t *pioDescr_copy;
 	DEFiRet;
 
-	#if 0
-	CHKmalloc(pioDescr_copy = (tcpsrv_io_descr_t*) calloc(1, sizeof(tcpsrv_io_descr_t)));
-dbgprintf("RGER: iodescr copy %p := %p\n", pioDescr_copy, pioDescr);
-	memcpy(pioDescr_copy, pioDescr, sizeof(tcpsrv_io_descr_t));
-	pioDescr_copy->next = NULL;
-
-	pthread_mutex_lock(&queue->mut);
-	if(queue->tail == NULL) {
-		assert(queue->head == NULL);
-		queue->head = pioDescr_copy;
-	} else {
-		queue->tail->next = pioDescr_copy;
-	}
-	queue->tail = pioDescr_copy;
-#else
 dbgprintf("RGER: iodescr %p used in enqueuWork\n", pioDescr);
 
 	pthread_mutex_lock(&queue->mut);
@@ -1152,7 +1137,6 @@ dbgprintf("RGER: iodescr %p used in enqueuWork\n", pioDescr);
 		queue->tail->next = pioDescr;
 	}
 	queue->tail = pioDescr;
-	#endif
 
 	pthread_cond_signal(&queue->workRdy);
 	pthread_mutex_unlock(&queue->mut);
