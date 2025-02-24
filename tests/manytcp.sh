@@ -9,7 +9,7 @@ generate_conf
 add_conf '
 $MaxOpenFiles 2100
 module(load="../plugins/imtcp/.libs/imtcp" maxSessions="2100")
-input(type="imtcp" socketBacklog="2000" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
+input(type="imtcp" socketBacklog="2000" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" workerthreads="8")
 
 $template outfmt,"%msg:F,58:2%\n"
 template(name="dynfile" type="string" string=`echo $RSYSLOG_OUT_LOG`) # trick to use relative path names!
