@@ -993,7 +993,7 @@ finalize_it:
 			"to process incoming connection with error %d",
 			(cnf_params->pszInputName == NULL) ? (uchar*)"*UNSET*" : cnf_params->pszInputName, iRet);
 		if(pDescrNew != NULL) {
-			DESTROY_ATOMIC_HELPER_MUT(pioDescrNew->mut_isInError);
+			DESTROY_ATOMIC_HELPER_MUT(&pioDescrNew->mut_isInError);
 			free(pDescrNew);
 		}
 		srSleep(0,20000); /* Sleep 20ms */
@@ -1062,7 +1062,6 @@ startWrkrPool(tcpsrv_t *const pThis)
 	pthread_mutex_init(&queue->mut, NULL);
 	pthread_cond_init(&queue->workRdy, NULL);
 	for(unsigned i = 0; i < queue->numWrkr; i++) {
-	//for(unsigned i = 0; i < 1;  i++) {// DEBUGGING ONLY - TODO: remove
 		pthread_create(&queue->wrkr_tids[i], NULL, wrkr, pThis);
 dbgprintf("RGER: wrkr %u created\n", i);
 	}
@@ -1083,7 +1082,6 @@ DBGPRINTF("RGER: stopWrkrPool broadcasted\n");
 	pthread_mutex_unlock(&queue->mut);
 
 	for(unsigned i = 0; i < queue->numWrkr; i++) {
-	//for(unsigned i = 0; i < 1;  i++) {// DEBUGGING ONLY - TODO: remove
 		pthread_join(queue->wrkr_tids[i], NULL);
 	}
 	free(pThis->workQueue.wrkr_tids);
@@ -1370,7 +1368,7 @@ RunEpoll(tcpsrv_t *const pThis)
 		pThis->ppioDescrPtr[i]->pSrv = pThis; // TODO: really needed?
 		pThis->ppioDescrPtr[i]->id = i; // TODO: remove if session handling is refactored to dyn max sessions
 		pThis->ppioDescrPtr[i]->isInError = 0;
-		INIT_ATOMIC_HELPER_MUT(pThis->ppioDescrPtr[i]->isInError);
+		INIT_ATOMIC_HELPER_MUT(&(pThis->ppioDescrPtr[i]->isInError));
 		CHKiRet(netstrm.GetSock(pThis->ppLstn[i], &(pThis->ppioDescrPtr[i]->sock)));
 		pThis->ppioDescrPtr[i]->ptrType = NSD_PTR_TYPE_LSTN;
 		pThis->ppioDescrPtr[i]->ptr.ppLstn = pThis->ppLstn;
