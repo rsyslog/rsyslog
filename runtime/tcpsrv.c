@@ -1074,9 +1074,7 @@ stopWrkrPool(tcpsrv_t *const pThis)
 
 DBGPRINTF("RGER: stopWrkrPool\n");
 	pthread_mutex_lock(&queue->mut);
-	//queue->stop = true;
 	pthread_cond_broadcast(&queue->workRdy);
-DBGPRINTF("RGER: stopWrkrPool broadcasted\n");
 	pthread_mutex_unlock(&queue->mut);
 
 	for(unsigned i = 0; i < queue->numWrkr; i++) {
@@ -1119,10 +1117,7 @@ static rsRetVal
 enqueueWork(tcpsrv_io_descr_t *const pioDescr)
 {	
 	workQueue_t *const queue = &pioDescr->pSrv->workQueue;
-	//tcpsrv_io_descr_t *pioDescr_copy;
 	DEFiRet;
-
-dbgprintf("RGER: iodescr %p used in enqueuWork\n", pioDescr);
 
 	pthread_mutex_lock(&queue->mut);
 	pioDescr->next = NULL;
@@ -1138,8 +1133,6 @@ DBGPRINTF("RGER: enqueuWork done, sock %d\n", pioDescr->sock);
 	pthread_cond_signal(&queue->workRdy);
 	pthread_mutex_unlock(&queue->mut);
 
-
-//finalize_it:
 	RETiRet;
 }
 
