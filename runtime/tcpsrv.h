@@ -93,6 +93,7 @@ struct tcpsrv_io_descr_s {
 	#if defined(HAVE_SYS_EPOLL_H)
 	struct epoll_event event; /* to re-enable EPOLLONESHOT */
 	#endif
+	DEF_ATOMIC_HELPER_MUT(mut_isInError);
 };
 
 #define TCPSRV_NO_ADDTL_DELIMITER -1 /* specifies that no additional delimiter is to be used in TCP framing */

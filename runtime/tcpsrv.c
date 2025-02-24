@@ -225,7 +225,7 @@ epoll_Wait(tcpsrv_t *const pThis, const int timeout, int *const numEntries, tcps
 		pWorkset[i] = event[i].data.ptr;
 		/* default is no error, on error we terminate, so we need only to set in error case! */
 		if(event[i].events & EPOLLERR) {
-			ATOMIC_STORE_1_TO_INT(&pWorkset[i]->isInError, NULL); // TODO: helper mutex!
+			ATOMIC_STORE_1_TO_INT(&pWorkset[i]->isInError, &pWorkset[i]->mut_isInError);
 		}
 	}
 	*numEntries = nfds;
@@ -824,6 +824,7 @@ finalize_it:
 #endif
 	#if defined(HAVE_EPOLL_CREATE)
 		/* in epoll mode, ioDescr is dynamically allocated */
+		DESTROY_ATOMIC_HELPER_MUT(pioDescr->mut_isInError);
 		free(pioDescr);
 	#else
 		pThis->pSessions[pioDescr->id] = NULL;
@@ -880,7 +881,7 @@ doReceive(tcpsrv_io_descr_t *const pioDescr, int *const pNeedReArm)
 	/* if we had EPOLLERR, give information. The other processing continues. This
 	 * seems to be best practice and may cause better error information.
 	 */
-	if(ATOMIC_FETCH_32BIT(&pioDescr->isInError, NULL)) { // TODO: helper mutex!
+	if(ATOMIC_FETCH_32BIT(&pioDescr->isInError, &pioDescr->mut_isInError)) {
 		int error = 0;
 		socklen_t len = sizeof(error);
 		const int sock = ((nsd_ptcp_t *) pSess->pStrm->pDrvrData)->sock;
@@ -971,6 +972,7 @@ dbgprintf("RGER: iodescr %p created\n", pDescrNew);
 			pDescrNew->pSrv = pThis;
 			pDescrNew->id = idx; // TODO: remove if session handling is refactored to dyn max sessions
 			pDescrNew->isInError = 0;
+			INIT_ATOMIC_HELPER_MUT(pDescrNew->mut_isInError);
 			pDescrNew->ptrType = NSD_PTR_TYPE_SESS;
 			CHKiRet(netstrm.GetSock(pNewSess->pStrm, &pDescrNew->sock));
 			pDescrNew->ptr.pSess = pNewSess;
@@ -990,7 +992,10 @@ finalize_it:
 		LogError(0, iRet, "tcpsrv listener (inputname: '%s') failed "
 			"to process incoming connection with error %d",
 			(cnf_params->pszInputName == NULL) ? (uchar*)"*UNSET*" : cnf_params->pszInputName, iRet);
-		free(pDescrNew);
+		if(pDescrNew != NULL) {
+			DESTROY_ATOMIC_HELPER_MUT(pioDescrNew->mut_isInError);
+			free(pDescrNew);
+		}
 		srSleep(0,20000); /* Sleep 20ms */
 	}
 no_more_data:
@@ -1381,6 +1386,7 @@ RunEpoll(tcpsrv_t *const pThis)
 		pThis->ppioDescrPtr[i]->pSrv = pThis; // TODO: really needed?
 		pThis->ppioDescrPtr[i]->id = i; // TODO: remove if session handling is refactored to dyn max sessions
 		pThis->ppioDescrPtr[i]->isInError = 0;
+		INIT_ATOMIC_HELPER_MUT(pThis->ppioDescrPtr[i]->isInError);
 		CHKiRet(netstrm.GetSock(pThis->ppLstn[i], &(pThis->ppioDescrPtr[i]->sock)));
 		pThis->ppioDescrPtr[i]->ptrType = NSD_PTR_TYPE_LSTN;
 		pThis->ppioDescrPtr[i]->ptr.ppLstn = pThis->ppLstn;
@@ -1407,6 +1413,7 @@ RunEpoll(tcpsrv_t *const pThis)
 	/* remove the tcp listen sockets from the epoll set */
 	for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
 		CHKiRet(epoll_Ctl(pThis, pThis->ppioDescrPtr[i], 1, EPOLL_CTL_DEL));
+		DESTROY_ATOMIC_HELPER_MUT(pThis->ppioDescrPtr[i]->mut_isInError);
 		free(pThis->ppioDescrPtr[i]);
 	}
 
