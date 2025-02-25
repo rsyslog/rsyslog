@@ -1243,17 +1243,22 @@ RunPoll(tcpsrv_t *const pThis)
 		pWorkset[i] = workset + i;
 	}
 
-	while(1) {
-		// TODO: think about more efficient use of malloc/free
-		pThis->evtdata.poll.currfds = 0;
-		pThis->evtdata.poll.maxfds = FDSET_INCREMENT;
-		/* we need to alloc one pollfd more, because the list must be 0-terminated! */
-		CHKmalloc(pThis->evtdata.poll.fds = calloc(FDSET_INCREMENT + 1, sizeof(struct pollfd)));
+	/* we init the fd set with "constant" data and only later on add the sessions.
+	 * Note: further optimization would be to keep the sessions as long as possible,
+	 * but this is currently not considered worth the effort as non-epoll platforms
+	 * become really rare. 2025-02-25 RGerhards
+	 */
+	pThis->evtdata.poll.maxfds = FDSET_INCREMENT;
 
-		/* Add the TCP listen sockets to the list of read descriptors. */
-		for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
-			CHKiRet(select_Add(pThis, pThis->ppLstn[i], NSDSEL_RD));
-		}
+	/* we need to alloc one pollfd more, because the list must be 0-terminated! */
+	CHKmalloc(pThis->evtdata.poll.fds = calloc(FDSET_INCREMENT + 1, sizeof(struct pollfd)));
+	/* Add the TCP listen sockets to the list of read descriptors. */
+	for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
+		CHKiRet(select_Add(pThis, pThis->ppLstn[i], NSDSEL_RD));
+	}
+
+	while(1) {
+		pThis->evtdata.poll.currfds = pThis->iLstnCurr; /* listeners are "fixed" */
 
 		/* do the sessions */
 		iTCPSess = TCPSessGetNxtSess(pThis, -1);
@@ -1328,10 +1333,8 @@ finalize_it: /* this is a very special case - this time only we do not exit the 
 	      * crashed, which made sense (the rest of the engine was not prepared for
 	      * that) -- rgerhards, 2008-05-19
 	      */
-		free(pThis->evtdata.poll.fds);
 		continue; /* keep compiler happy, block end after label is non-standard */
 	}
-
 
 	RETiRet;
 }
