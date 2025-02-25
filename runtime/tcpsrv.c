@@ -839,6 +839,7 @@ notifyReArm(tcpsrv_io_descr_t *const pioDescr)
 {
 	DEFiRet;
 
+#if defined(HAVE_EPOLL_CREATE)
 	if(epoll_ctl(pioDescr->pSrv->evtdata.epoll.efd, EPOLL_CTL_MOD, pioDescr->sock, &pioDescr->event) < 0) {
 		// TODO: BETTER handling!
 		LogError(errno, RS_RET_ERR_EPOLL_CTL, "epoll_ctl failed re-armed socket %d", pioDescr->sock);
@@ -847,6 +848,7 @@ notifyReArm(tcpsrv_io_descr_t *const pioDescr)
 DBGPRINTF("RGER: sock %d re-armed\n", pioDescr->sock);
 
 finalize_it:
+#endif
 	RETiRet;
 }
 
@@ -1157,8 +1159,9 @@ wrkr(void *arg)
 		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", thrdName);
 	}
 #	else
-	int r = pthread_setname_np(pthread_self(), (char*) thrdName);
-	dbgprintf("queueWork: thread name %s, return %d: %s\n", thrdName,r, strerror(r));
+	// TODO re-enable if pthread_setname_np is available
+	//int r = pthread_setname_np(pthread_self(), (char*) thrdName);
+	//dbgprintf("queueWork: thread name %s, return %d: %s\n", thrdName,r, strerror(r));
 #	endif
 	
 	while(1) {
@@ -1411,6 +1414,11 @@ Run(tcpsrv_t *const pThis)
 		dbgprintf("tcpsrv: no listeneres at all (probably init error), terminating\n");
 		RETiRet; /* somewhat "dirty" exit to avoid issue with cancel handler */
 	}
+
+	#if !defined(HAVE_EPOLL_CREATE)
+		/* if we do not have epoll(), we (currently) need to run single-threaded */
+		pThis->workQueue.numWrkr = 1;
+	#endif
 
 	eventNotify_init(pThis);
 	if(pThis->workQueue.numWrkr > 1) {
