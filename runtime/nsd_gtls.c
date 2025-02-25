@@ -50,7 +50,6 @@
 #include "netstrm.h"
 #include "netstrms.h"
 #include "nsd_ptcp.h"
-#include "nsdsel_gtls.h"
 #include "nsd_gtls.h"
 #include "unicode-helper.h"
 #include "rsconf.h"
@@ -142,7 +141,7 @@ doRetry(nsd_gtls_t *pNsd)
 		case gtlsRtry_None:
 		default:
 			assert(0); /* this shall not happen! */
-			dbgprintf("ERROR: pNsd->rtryCall %d invalid in nsdsel_gtls.c:%d\n",
+			dbgprintf("ERROR: pNsd->rtryCall %d invalid in nsd_gtls.c:%d\n",
 				pNsd->rtryCall, __LINE__);
 			gnuRet = 0; /* if it happens, we have at least a defined behaviour... ;) */
 			break;
@@ -597,7 +596,7 @@ uchar *gtlsStrerror(int error)
 
 /* try to receive a record from the remote peer. This works with
  * our own abstraction and handles local buffering and EAGAIN.
- * See details on local buffering in Rcv(9 header-comment.
+ * See details on local buffering in Rcv() header-comment.
  * This function MUST only be called when the local buffer is
  * empty. Calling it otherwise will cause losss of current buffer
  * data.
@@ -1919,6 +1918,16 @@ CheckConnection(nsd_t __attribute__((unused)) *pNsd)
 }
 
 
+/* Provide access to the underlying OS socket.
+ */
+static rsRetVal
+GetSock(nsd_t *pNsd, int *pSock)
+{
+	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+	return nsd_ptcp.GetSock(pThis->pTcp, pSock);
+}
+
+
 /* get the remote hostname. The returned hostname must be freed by the caller.
  * rgerhards, 2008-04-25
  */
@@ -2107,6 +2116,7 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
+DBGPRINTF("in gtls Rcv, bAbortConn %d\n", pThis->bAbortConn);
 	if(pThis->bAbortConn)
 		ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
 
@@ -2192,6 +2202,10 @@ Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
+	if(pThis->rtryCall == gtlsRtry_recv) {
+		CHKiRet(doRetry(pThis));
+		FINALIZE;
+	}
 	if(pThis->bAbortConn)
 		ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
 
@@ -2435,6 +2449,7 @@ CODESTARTobjQueryInterface(nsd_gtls)
 	pIf->Rcv = Rcv;
 	pIf->Send = Send;
 	pIf->Connect = Connect;
+	pIf->GetSock = GetSock;
 	pIf->SetSock = SetSock;
 	pIf->SetMode = SetMode;
 	pIf->SetAuthMode = SetAuthMode;
@@ -2496,7 +2511,6 @@ ENDObjClassInit(nsd_gtls)
 
 BEGINmodExit
 CODESTARTmodExit
-	nsdsel_gtlsClassExit();
 	nsd_gtlsClassExit();
 	pthread_mutex_destroy(&mutGtlsStrerror);
 ENDmodExit
@@ -2514,7 +2528,6 @@ CODESTARTmodInit
 
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(nsd_gtlsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
-	CHKiRet(nsdsel_gtlsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 
 	pthread_mutex_init(&mutGtlsStrerror, NULL);
 ENDmodInit
