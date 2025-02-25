@@ -288,7 +288,6 @@ finalize_it:
 
 
 /* perform the poll()  piNumReady returns how many descriptors are ready for IO
- * TODO: add timeout!
  */
 static rsRetVal ATTR_NONNULL()
 select_Poll(tcpsrv_t *const pThis, int *const piNumReady)
@@ -330,8 +329,6 @@ select_IsReady(tcpsrv_t *const pThis, netstrm_t *const pStrm, const nsdsel_waitO
 	int sock;
 
 	CHKiRet(netstrm.GetSock(pStrm, &sock));
-
-	// TODO: consider doing a binary search
 
 	uint32_t idx;
 	for(idx = 0 ; idx < pThis->evtdata.poll.currfds ; ++idx) {
@@ -1139,7 +1136,7 @@ DBGPRINTF("RGER: enqueuWork done, sock %d\n", pioDescr->sock);
 	RETiRet;
 }
 
-/* Worker thread function */ // TODO replace!
+/* Worker thread function */
 static void *
 wrkr(void *arg)
 {
@@ -1170,20 +1167,7 @@ wrkr(void *arg)
 		if(pioDescr == NULL) {
 			break;
 		}
-		#if 1
 		processWorksetItem(pioDescr); // TODO check result?
-		#else
-		int isSess_ioDescr = (pioDescr->ptrType == NSD_PTR_TYPE_SESS);
-
-		// TODO: more granular check (at least think about it, esp. in regard to free() */
-		if(localRet == RS_RET_RETRY || localRet == RS_RET_NO_MORE_DATA || localRet == RS_RET_OK) {
-			if(isSess_ioDescr) {
-			//	free((void*) pioDescr);
-			}
-		}
-		else { dbgprintf("RGER: iodescr no free because iRet %d\n", localRet); }
-		#endif
-
 	}
 
 	return NULL;
