@@ -816,7 +816,9 @@ dbgprintf("RGER: iodescr %p destructed via closeSess\n", pioDescr);
 		CHKiRet(epoll_Ctl(pThis, pioDescr, 0, EPOLL_CTL_DEL));
 	#endif
 	pThis->pOnRegularClose(pSess);
-	pthread_mutex_unlock(&pSess->mut);
+	if(pThis->workQueue.numWrkr > 1) {
+		pthread_mutex_unlock(&pSess->mut);
+	}
 
 	tcps_sess.Destruct(&pSess);
 #if defined(HAVE_EPOLL_CREATE)
@@ -877,7 +879,9 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 	prop.GetString((pSess)->fromHostIP, &pszPeer, &lenPeer);
 	DBGPRINTF("netstream %p with new data from remote peer %s\n", (pSess)->pStrm, pszPeer);
 
-	pthread_mutex_lock(&pSess->mut);
+	if(pThis->workQueue.numWrkr > 1) {
+		pthread_mutex_lock(&pSess->mut);
+	}
 	freeMutex = 1;
 
 	/* if we had EPOLLERR, give information. The other processing continues. This
@@ -944,7 +948,7 @@ finalize_it:
 		notifyReArm(pioDescr);
 	}
 
-	if(freeMutex) {
+	if(freeMutex && pThis->workQueue.numWrkr > 1) {
 		pthread_mutex_unlock(&pSess->mut);
 	}
 
