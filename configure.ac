@@ -1792,8 +1792,6 @@ AM_CONDITIONAL(ENABLE_LIBFAKETIME, test "x${enable_libfaketime}" = "xyes")
 # are those tests that do not need a special configure option. There are
 # some situations where we really want to turn them of so that we can
 # run tests only for a specific component (e.g. ElasticSearch).
-# This also enables us to do some parallel testing even while the
-# testbench is not yet able to support make -j check
 AC_ARG_ENABLE(default-tests,
         [AS_HELP_STRING([--enable-default-tests],[default-tests enabled @<:@default=yes@:>@])],
         [case "${enableval}" in
@@ -1810,6 +1808,17 @@ if test "x${IP}" = "xno"; then
 	AC_MSG_NOTICE([Will not check network namespace functionality as 'ip' (part of iproute2) is not available.])
 fi
 AM_CONDITIONAL(ENABLE_IP, test "x${IP}" = "xyes")
+
+AC_ARG_ENABLE(imtcp-tests,
+        [AS_HELP_STRING([--enable-imtcp-tests],[imtcp-tests enabled @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_imtcp_tests="yes" ;;
+          no) enable_imtcp_tests="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-imtcp-tests) ;;
+         esac],
+        [enable_imtcp_tests=yes]
+)
+AM_CONDITIONAL(ENABLE_IMTCP_TESTS, test "x${enable_imtcp_tests}" = "xyes")
 
 
 # valgrind-testbench
@@ -3177,6 +3186,7 @@ echo "    Kafka Tests enabled:                      $enable_kafka_tests"
 echo "    Redis Tests enabled:                      $enable_redis_tests"
 echo "    Omazureeventhubs Tests enabled:           $enable_omazureeventhubs_tests"
 echo "    Imdocker Tests enabled:                   $enable_imdocker_tests"
+echo "    imtcp tests enabled:                      $enable_imtcp_tests"
 echo "    gnutls tests enabled:                     $enable_gnutls_tests"
 echo "    imfile tests enabled:                     $enable_imfile_tests"
 echo "    systemd journal tests enabled:            $enable_journal_tests"
