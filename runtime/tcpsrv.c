@@ -58,7 +58,6 @@
 #include <fcntl.h>
 #endif
 #if !defined(ENABLE_IMTCP_EPOLL)
-//#include <sys/select.h>
 #include <sys/poll.h>
 #endif
 #include "rsyslog.h"
@@ -231,7 +230,7 @@ finalize_it:
 }
 
 
-#else /* no epoll, let's use select  ------------------------------------------------------------ */
+#else /* no epoll, let's use poll()  ------------------------------------------------------------ */
 #define FDSET_INCREMENT 1024 /* increment for struct pollfds array allocation */
 
 
@@ -288,7 +287,7 @@ finalize_it:
 }
 
 
-/* perform the select()  piNumReady returns how many descriptors are ready for IO
+/* perform the poll()  piNumReady returns how many descriptors are ready for IO
  * TODO: add timeout!
  */
 static rsRetVal ATTR_NONNULL()
@@ -1192,7 +1191,7 @@ wrkr(void *arg)
 
 
 /* Process a workset, that is handle io. We become activated
- * from either select or epoll handler. We split the workload
+ * from either poll or epoll handler. We split the workload
  * out to a pool of threads, but try to avoid context switches
  * as much as possible.
  */
@@ -1219,13 +1218,11 @@ processWorkset(const int numEntries, tcpsrv_io_descr_t *const pioDescr[])
 
 #if !defined(ENABLE_IMTCP_EPOLL)
 /* This function is called to gather input.
- * This variant here is only used if we need to work with a netstream driver
- * that does not support epoll().
  */
 PRAGMA_DIAGNOSTIC_PUSH
 PRAGMA_IGNORE_Wempty_body
 static rsRetVal
-RunSelect(tcpsrv_t *const pThis)
+RunPoll(tcpsrv_t *const pThis)
 {
 	DEFiRet;
 	int nfds;
@@ -1239,7 +1236,7 @@ RunSelect(tcpsrv_t *const pThis)
 	rsRetVal localRet;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
-	DBGPRINTF("tcpsrv uses select() interface\n");
+	DBGPRINTF("tcpsrv uses poll() [ex-select()] interface\n");
 
 	/* init the workset pointers, they will remain fixed */
 	for(i = 0 ; i < sizeWorkset ; ++i) {
@@ -1275,7 +1272,7 @@ RunSelect(tcpsrv_t *const pThis)
 			break; /* terminate input! */
 
 		iWorkset = 0;
-		for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
+		for(i = 0 ; i < pThis->iLstnCurr && nfds ; ++i) {
 			if(glbl.GetGlobalInputTermState() == 1)
 				ABORT_FINALIZE(RS_RET_FORCE_TERM);
 			CHKiRet(select_IsReady(pThis, pThis->ppLstn[i], NSDSEL_RD, &bIsReady));
@@ -1430,7 +1427,7 @@ Run(tcpsrv_t *const pThis)
 		iRet = RunEpoll(pThis);
 	#else
 		/* fall back to select */
-		iRet = RunSelect(pThis);
+		iRet = RunPoll(pThis);
 	#endif
 
 	if(pThis->workQueue.numWrkr > 1) {
