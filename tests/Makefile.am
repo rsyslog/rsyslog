@@ -596,6 +596,47 @@ endif # ENABLE_LIBGCRYPT
 endif # HAVE_VALGRIND
 endif # ENABLE_DEFAULT_TESTS
 
+
+
+if ENABLE_IMTCP_TESTS
+TESTS +=  \
+	imtcp-listen-port-file-2.sh \
+	allowed-sender-tcp-ok.sh \
+	allowed-sender-tcp-fail.sh \
+	allowed-sender-tcp-hostname-ok.sh \
+	allowed-sender-tcp-hostname-fail.sh \
+	imtcp-discard-truncated-msg.sh \
+	imtcp-basic.sh \
+	imtcp-basic-hup.sh \
+	imtcp-maxFrameSize.sh \
+	imtcp-msg-truncation-on-number.sh \
+	imtcp-msg-truncation-on-number2.sh \
+	imtcp-NUL.sh \
+	imtcp-NUL-rawmsg.sh \
+	imtcp_incomplete_frame_at_end.sh \
+	imtcp-multiport.sh \
+	imtcp-bigmessage-octetcounting.sh \
+	imtcp-bigmessage-octetstuffing.sh \
+	manytcp.sh \
+	imtcp_conndrop.sh \
+	imtcp_addtlframedelim.sh \
+	imtcp_no_octet_counted.sh \
+	imtcp_addtlframedelim_on_input.sh \
+	imtcp_spframingfix.sh \
+	imtcp-connection-msg-recieved.sh \
+	sndrcv.sh \
+	sndrcv_failover.sh \
+	sndrcv_gzip.sh \
+	sndrcv_udp_nonstdpt.sh \
+	sndrcv_udp_nonstdpt_v6.sh \
+	sndrcv_udp_nonstdpt_v6.sh
+
+if HAVE_VALGRIND
+TESTS +=  \
+	imtcp-octet-framing-too-long-vg.sh
+endif # HAVE_VALGRIND
+endif # ENABLE_IMTCP_TESTS
+
 if ENABLE_SNMP
 TESTS +=  \
 	omsnmp_errmsg_no_params.sh

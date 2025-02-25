@@ -80,6 +80,21 @@ jobs:
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
                             --without-valgrind-testbench --enable-imdtls --enable-omdtls"
               ;;
+          'ubuntu_24_imtcp_no_epoll')
+              # This check tests if imtcp runs in poll (select) mode. We have only slow CI runners for
+              # platforms where this is the case, thus we do a quick run on ubuntu where we also have all
+              # thread and memory debuggers available.
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
+              export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
+              # Note: we completely override the container configure options here!
+              export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
+                     --enable-imdiag --disable-imtcp-epoll --enable-imtcp-tests\
+                     --disable-impstats --disable-imfile --disable-imfile-tests \
+                     --disable-fmhttp --enable-valgrind --enable-valgrind-testbench \
+                     --disable-helgrind --disable-default-tests --disable-kafka-tests \
+                     --disable-omkafka --disable-imkafka \
+                     --enable-gnutls --enable-openssl --enable-gnutls-tests"
+              ;;
           'fedora_35')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:35'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
@@ -100,20 +115,6 @@ jobs:
           'tumbleweed')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_suse:tumbleweed'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests"
-              ;;
-          'ubuntu_24_imtcp_no_epoll')
-              # This check tests if imtcp runs in poll (select) mode. We have only slow CI runners for
-              # platforms where this is the case, thus we do a quick run on ubuntu where we also have all
-              # thread and memory debuggers available.
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
-              export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
-              # Note: we completely override the container configure options here!
-              export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
-                     --enable-imdiag --disable-imtcp-epoll \
-                     --disable-impstats --disable-imfile --disable-imfile-tests \
-                     --disable-fmhttp --enable-valgrind --enable-valgrind-testbench \
-                     --disable-helgrind --enable-default-tests --disable-kafka-tests \
-                     --disable-omkafka --enable-gnutls --enable-gnutls-tests --disable-imkafka"
               ;;
           'ubuntu_24')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
@@ -184,7 +185,7 @@ jobs:
               export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
                      --enable-imdiag --disable-impstats --enable-imfile --disable-imfile-tests \
                      --disable-fmhttp --enable-valgrind --enable-valgrind-testbench \
-                     --disable-helgrind --disable-default-tests --enable-kafka-tests \
+                     --disable-helgrind --disable-default-tests --disable-imtcp-tests --enable-kafka-tests \
                      --enable-omkafka --enable-gnutls --disable-gnutls-tests --enable-imkafka"
               ;;
           'elasticsearch')
@@ -195,7 +196,7 @@ jobs:
               export ABORT_ALL_ON_TEST_FAIL='NO'
               export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
                      --enable-imdiag --enable-impstats --enable-imfile --disable-imfile-tests \
-                     --disable-fmhttp --enable-valgrind --disable-default-tests \
+                     --disable-fmhttp --enable-valgrind --disable-default-tests --disable-imtcp-tests \
                      --enable-elasticsearch-tests --enable-elasticsearch"
               export CI_MAKE_OPT='-j20'
               export CI_MAKE_CHECK_OPT='-j8'
