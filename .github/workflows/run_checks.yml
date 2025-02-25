@@ -36,6 +36,7 @@ jobs:
       fail-fast: false
       matrix:
         config: [centos_7, centos_8, debian_10, debian_11,
+                 ubuntu_24_imtcp_no_epoll,
                  fedora_35, fedora_36,
                  ubuntu_18, ubuntu_20, ubuntu_24,
                  ubuntu_22_san, ubuntu_24_tsan, ubuntu_22_codecov, ubuntu_22_distcheck,
@@ -99,6 +100,20 @@ jobs:
           'tumbleweed')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_suse:tumbleweed'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests"
+              ;;
+          'ubuntu_24_imtcp_no_epoll')
+              # This check tests if imtcp runs in poll (select) mode. We have only slow CI runners for
+              # platforms where this is the case, thus we do a quick run on ubuntu where we also have all
+              # thread and memory debuggers available.
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
+              export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
+              # Note: we completely override the container configure options here!
+              export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
+                     --enable-imdiag --disable-imtcp-epoll \
+                     --disable-impstats --disable-imfile --disable-imfile-tests \
+                     --disable-fmhttp --enable-valgrind --enable-valgrind-testbench \
+                     --disable-helgrind --enable-default-tests --disable-kafka-tests \
+                     --disable-omkafka --enable-gnutls --enable-gnutls-tests --disable-imkafka"
               ;;
           'ubuntu_24')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
