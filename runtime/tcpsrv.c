@@ -40,7 +40,6 @@
  * limitations under the License.
  */
 #include "config.h"
-//#undef HAVE_EPOLL_CREATE // TODO: remove, testing aid!
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -58,11 +57,8 @@
 #if HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
-#if defined(HAVE_SYS_EPOLL_H)
-#	include <sys/epoll.h>
-#endif
-#if !defined(HAVE_EPOLL_CREATE)
-#include <sys/select.h>
+#if !defined(ENABLE_IMTCP_EPOLL)
+//#include <sys/select.h>
 #include <sys/poll.h>
 #endif
 #include "rsyslog.h"
@@ -115,13 +111,13 @@ DEFobjCurrIf(statsobj)
  * abstraction of the event notification mechanism.
  * rgerhards, 2025-01-16
  */
-#if defined(HAVE_EPOLL_CREATE)
+#if defined(ENABLE_IMTCP_EPOLL)
 
 static rsRetVal
 eventNotify_init(tcpsrv_t *const pThis)
 {
 	DEFiRet;
-#if defined(EPOLL_CLOEXEC) && defined(HAVE_EPOLL_CREATE1)
+#if defined(ENABLE_IMTCP_EPOLL) && defined(EPOLL_CLOEXEC) && defined(HAVE_EPOLL_CREATE1)
 	DBGPRINTF("tcpsrv uses epoll_create1()\n");
 	pThis->evtdata.epoll.efd = epoll_create1(EPOLL_CLOEXEC);
 	if(pThis->evtdata.epoll.efd < 0 && errno == ENOSYS)
@@ -812,7 +808,7 @@ closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
 	assert(pioDescr->ptrType == NSD_PTR_TYPE_SESS);
 dbgprintf("RGER: iodescr %p destructed via closeSess\n", pioDescr);
 	tcps_sess_t *pSess = pioDescr->ptr.pSess;
-	#if defined(HAVE_EPOLL_CREATE)
+	#if defined(ENABLE_IMTCP_EPOLL)
 		CHKiRet(epoll_Ctl(pThis, pioDescr, 0, EPOLL_CTL_DEL));
 	#endif
 	pThis->pOnRegularClose(pSess);
@@ -821,10 +817,10 @@ dbgprintf("RGER: iodescr %p destructed via closeSess\n", pioDescr);
 	}
 
 	tcps_sess.Destruct(&pSess);
-#if defined(HAVE_EPOLL_CREATE)
+#if defined(ENABLE_IMTCP_EPOLL)
 finalize_it:
 #endif
-	#if defined(HAVE_EPOLL_CREATE)
+	#if defined(ENABLE_IMTCP_EPOLL)
 		/* in epoll mode, ioDescr is dynamically allocated */
 		DESTROY_ATOMIC_HELPER_MUT(pioDescr->mut_isInError);
 		free(pioDescr);
@@ -841,14 +837,16 @@ notifyReArm(tcpsrv_io_descr_t *const pioDescr)
 {
 	DEFiRet;
 
-#if defined(HAVE_EPOLL_CREATE)
+#if defined(ENABLE_IMTCP_EPOLL)
 	if(epoll_ctl(pioDescr->pSrv->evtdata.epoll.efd, EPOLL_CTL_MOD, pioDescr->sock, &pioDescr->event) < 0) {
 		// TODO: BETTER handling!
 		LogError(errno, RS_RET_ERR_EPOLL_CTL, "epoll_ctl failed re-armed socket %d", pioDescr->sock);
 		ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
 	}
+#endif
 DBGPRINTF("RGER: sock %d re-armed\n", pioDescr->sock);
 
+#if defined(ENABLE_IMTCP_EPOLL)
 finalize_it:
 #endif
 	RETiRet;
@@ -973,7 +971,7 @@ doSingleAccept(tcpsrv_io_descr_t *const pioDescr)
 	}
 
 	if(iRet == RS_RET_OK) {
-		#if defined(HAVE_EPOLL_CREATE)
+		#if defined(ENABLE_IMTCP_EPOLL)
 			/* pDescrNew is only dyn allocated in epoll mode! */
 			CHKmalloc(pDescrNew = (tcpsrv_io_descr_t*) calloc(1, sizeof(tcpsrv_io_descr_t)));
 dbgprintf("RGER: iodescr %p created\n", pDescrNew);
@@ -992,7 +990,7 @@ dbgprintf("RGER: iodescr %p created\n", pDescrNew);
 		DBGPRINTF("tcpsrv: error %d during accept\n", iRet);
 	}
 
-#if defined(HAVE_EPOLL_CREATE)
+#if defined(ENABLE_IMTCP_EPOLL)
 finalize_it:
 #endif
 	if(iRet != RS_RET_OK) {
@@ -1219,7 +1217,7 @@ processWorkset(const int numEntries, tcpsrv_io_descr_t *const pioDescr[])
 }
 
 
-#if !defined(HAVE_EPOLL_CREATE)
+#if !defined(ENABLE_IMTCP_EPOLL)
 /* This function is called to gather input.
  * This variant here is only used if we need to work with a netstream driver
  * that does not support epoll().
@@ -1344,7 +1342,7 @@ PRAGMA_DIAGNOSTIC_POP
 #endif /* conditional exclude when epoll is available */
 
 
-#if defined(HAVE_EPOLL_CREATE)
+#if defined(ENABLE_IMTCP_EPOLL)
 static rsRetVal
 RunEpoll(tcpsrv_t *const pThis)
 {
@@ -1419,7 +1417,7 @@ Run(tcpsrv_t *const pThis)
 		RETiRet; /* somewhat "dirty" exit to avoid issue with cancel handler */
 	}
 
-	#if !defined(HAVE_EPOLL_CREATE)
+	#if !defined(ENABLE_IMTCP_EPOLL)
 		/* if we do not have epoll(), we (currently) need to run single-threaded */
 		pThis->workQueue.numWrkr = 1;
 	#endif
@@ -1428,7 +1426,7 @@ Run(tcpsrv_t *const pThis)
 	if(pThis->workQueue.numWrkr > 1) {
 		startWrkrPool(pThis);
 	}
-	#if defined(HAVE_EPOLL_CREATE)
+	#if defined(ENABLE_IMTCP_EPOLL)
 		iRet = RunEpoll(pThis);
 	#else
 		/* fall back to select */

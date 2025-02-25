@@ -21,7 +21,7 @@
 #ifndef INCLUDED_TCPSRV_H
 #define INCLUDED_TCPSRV_H
 
-#if defined(HAVE_SYS_EPOLL_H)
+#if defined(ENABLE_IMTCP_EPOLL) && defined(HAVE_SYS_EPOLL_H)
 #	include <sys/epoll.h>
 #endif
 
@@ -90,7 +90,7 @@ struct tcpsrv_io_descr_s {
 			* unrecoverable error at the network layer. */
 	tcpsrv_t *pSrv;	/* our server object */
 	tcpsrv_io_descr_t *next; /* for use in workQueue_t */
-	#if defined(HAVE_SYS_EPOLL_H)
+	#if defined(ENABLE_IMTCP_EPOLL)
 	struct epoll_event event; /* to re-enable EPOLLONESHOT */
 	#endif
 	DEF_ATOMIC_HELPER_MUT(mut_isInError);
