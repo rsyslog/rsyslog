@@ -35,7 +35,7 @@ jobs:
       # When set to true, cancel all in-progress jobs if any matrix job fails.
       fail-fast: false
       matrix:
-        config: [centos_6, centos_7, centos_8, debian_10, ubuntu_16, ubuntu_18_san, ubuntu_18_tsan, suse_tumbleweed]
+        config: [centos_6, centos_7, centos_8, debian_10, ubuntu_16, ubuntu_24_san, ubuntu_24_tsan, suse_tumbleweed]
 
     steps:
       - name: git checkout project
@@ -85,9 +85,9 @@ jobs:
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
                         --disable-omrabbitmq"
               ;;
-          'ubuntu_18_san')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
-              export CC='clang'
+          'ubuntu_24_san')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
+              export CC='clang-18'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --enable-imfile-tests\
                       --disable-libfaketime --without-valgrind-testbench --disable-valgrind"
               export CFLAGS="-fstack-protector -D_FORTIFY_SOURCE=2 \
@@ -97,9 +97,9 @@ jobs:
               export LSAN_OPTIONS='detect_leaks=0'
               export UBSAN_OPTIONS='print_stacktrace=1'
               ;;
-          'ubuntu_18_tsan')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
-              export CC='clang-8'
+          'ubuntu_24_tsan')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
+              export CC='clang-18'
               export CFLAGS="-g -fstack-protector -D_FORTIFY_SOURCE=2 -fsanitize=thread \
                         -O0 -fno-omit-frame-pointer -fno-color-diagnostics"
               export CI_SANITIZE_BLACKLIST='tests/tsan.supp'
