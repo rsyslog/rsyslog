@@ -57,15 +57,18 @@ Example 1
 The following sample writes all syslog messages to the journal with a
 custom EVENT_TYPE field.
 
-.. code-block:: none
+.. code-block:: shell
 
    module(load="omjournal")
 
    template(name="journal" type="list") {
-     constant(value="Something happened" outname="MESSAGE")
-     property(name="$!event-type" outname="EVENT_TYPE")
+     # Emulate default journal fields
+     property(name="msg" outname="MESSAGE")
+     property(name="timestamp" outname="SYSLOG_TIMESTAMP")
+     property(name="syslogfacility" outname="SYSLOG_FACILITY")
+     property(name="syslogseverity" outname="PRIORITY")
+
+     constant(value="strange" outname="EVENT_TYPE")
    }
 
    action(type="omjournal" template="journal")
-
-
