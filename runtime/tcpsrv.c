@@ -1056,19 +1056,24 @@ static rsRetVal
 startWrkrPool(tcpsrv_t *const pThis)
 {
 
-	// TODO: make sure caller checks return value
 	DEFiRet;
 	workQueue_t *const queue = &pThis->workQueue;
-
 
 	CHKmalloc(pThis->workQueue.wrkr_tids = calloc(queue->numWrkr, sizeof(pthread_t)));
 	pThis->currWrkrs = 0;
 	pthread_mutex_init(&queue->mut, NULL);
 	pthread_cond_init(&queue->workRdy, NULL);
 	for(unsigned i = 0; i < queue->numWrkr; i++) {
-		pthread_create(&queue->wrkr_tids[i], NULL, wrkr, pThis);
+		if(pthread_create(&queue->wrkr_tids[i], NULL, wrkr, pThis) != 0) {
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
 	}
+
 finalize_it:
+	if(iRet != RS_RET_OK) {
+		free(pThis->workQueue.wrkr_tids);
+		pThis->workQueue.wrkr_tids = NULL;
+	}
 	RETiRet;
 }
 
@@ -1412,7 +1417,13 @@ Run(tcpsrv_t *const pThis)
 
 	eventNotify_init(pThis);
 	if(pThis->workQueue.numWrkr > 1) {
-		startWrkrPool(pThis);
+		iRet = startWrkrPool(pThis);
+		if(iRet != RS_RET_OK) {
+			LogError(errno, iRet, "tcpsrv could not start worker pool "
+					"- now running single threaded '%s')",
+					(pThis->pszInputName == NULL) ? (uchar*)"*UNSET*" : pThis->pszInputName);
+			pThis->workQueue.numWrkr = 1;
+		}
 	}
 	#if defined(ENABLE_IMTCP_EPOLL)
 		iRet = RunEpoll(pThis);
