@@ -66,12 +66,12 @@ struct tcpLstnPortList_s {
 
 
 typedef struct workQueue_s {
-    tcpsrv_io_descr_t *head;
-    tcpsrv_io_descr_t *tail;
-    pthread_mutex_t mut;
-    pthread_cond_t workRdy;
-    unsigned numWrkr;		/* how many workers to spawn */
-    pthread_t *wrkr_tids;	/* array of thread IDs */
+	tcpsrv_io_descr_t *head;
+	tcpsrv_io_descr_t *tail;
+	pthread_mutex_t mut;
+	pthread_cond_t workRdy;
+	unsigned numWrkr;		/* how many workers to spawn */
+	pthread_t *wrkr_tids;	/* array of thread IDs */
 } workQueue_t;
 
 /**
@@ -125,7 +125,6 @@ struct tcpsrv_s {
 	permittedPeers_t *pPermPeers;/**< driver's permitted peers */
 	sbool bEmitMsgOnClose;	/**< emit an informational message when the remote peer closes connection */
 	sbool bEmitMsgOnOpen;
-	sbool bUsingEPoll;	/**< are we in epoll mode (means we do not need to keep track of sessions!) */
 	sbool bUseFlowControl;	/**< use flow control (make light delayable) */
 	sbool bSPFramingFix;	/**< support work-around for broken Cisco ASA framing? */
 	int iLstnCurr;		/**< max nbr of listeners currently supported */

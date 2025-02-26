@@ -123,7 +123,8 @@ eventNotify_init(tcpsrv_t *const pThis)
 #endif
 	{
 		DBGPRINTF("tcpsrv uses epoll_create()\n");
-		pThis->evtdata.epoll.efd = epoll_create(100); /* size is ignored in newer kernels, but 100 is not bad... */
+		pThis->evtdata.epoll.efd = epoll_create(100);
+		/* size is ignored in newer kernels, but 100 is not bad... */
 	}
 
 	if(pThis->evtdata.epoll.efd < 0) {
@@ -499,6 +500,7 @@ TCPSessTblFindFreeSpot(tcpsrv_t *const pThis)
 }
 
 
+#if !defined(ENABLE_IMTCP_EPOLL)
 /* Get the next session index. Free session tables entries are
  * skipped. This function is provided the index of the last
  * session entry, or -1 if no previous entry was obtained. It
@@ -521,6 +523,7 @@ TCPSessGetNxtSess(tcpsrv_t *pThis, int iCurr)
 
 	return((i < pThis->iSessMax) ? i : -1);
 }
+#endif
 
 
 /* De-Initialize TCP listner sockets.
@@ -539,15 +542,15 @@ deinit_tcp_listener(tcpsrv_t *const pThis)
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
 	if(pThis->pSessions != NULL) {
+#		if !defined(ENABLE_IMTCP_EPOLL)
 		/* close all TCP connections! */
-		if(!pThis->bUsingEPoll) {
-			i = TCPSessGetNxtSess(pThis, -1);
-			while(i != -1) {
-				tcps_sess.Destruct(&pThis->pSessions[i]);
-				/* now get next... */
-				i = TCPSessGetNxtSess(pThis, i);
-			}
+		i = TCPSessGetNxtSess(pThis, -1);
+		while(i != -1) {
+			tcps_sess.Destruct(&pThis->pSessions[i]);
+			/* now get next... */
+			i = TCPSessGetNxtSess(pThis, i);
 		}
+#		endif
 
 		/* we are done with the session table - so get rid of it...  */
 		free(pThis->pSessions);
@@ -765,8 +768,9 @@ SessAccept(tcpsrv_t *const pThis, tcpLstnPortList_t *const pLstnInfo, tcps_sess_
 	}
 
 	*ppSess = pSess;
-	if(!pThis->bUsingEPoll)
+#	if !defined(ENABLE_IMTCP_EPOLL)
 		pThis->pSessions[iSess] = pSess;
+#	endif
 	pSess = NULL; /* this is now also handed over */
 
 	if(pThis->bEmitMsgOnOpen) {
@@ -828,25 +832,23 @@ finalize_it:
 
 
 
+#if defined(ENABLE_IMTCP_EPOLL)
 static rsRetVal
 notifyReArm(tcpsrv_io_descr_t *const pioDescr)
 {
 	DEFiRet;
 
-#if defined(ENABLE_IMTCP_EPOLL)
 	if(epoll_ctl(pioDescr->pSrv->evtdata.epoll.efd, EPOLL_CTL_MOD, pioDescr->sock, &pioDescr->event) < 0) {
 		// TODO: BETTER handling!
 		LogError(errno, RS_RET_ERR_EPOLL_CTL, "epoll_ctl failed re-armed socket %d", pioDescr->sock);
 		ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
 	}
-#endif
 DBGPRINTF("RGER: sock %d re-armed\n", pioDescr->sock);
 
-#if defined(ENABLE_IMTCP_EPOLL)
 finalize_it:
-#endif
 	RETiRet;
 }
+#endif
 
 /* process a receive request on one of the streams
  * If in epoll mode, we need to remove any descriptor we close from the epoll set.
@@ -939,7 +941,9 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 
 finalize_it:
 	if(needReArm) {
+#		if defined(ENABLE_IMTCP_EPOLL)
 		notifyReArm(pioDescr);
+#		endif
 	}
 
 	if(freeMutex && pThis->workQueue.numWrkr > 1) {
@@ -1018,7 +1022,9 @@ doAccept(tcpsrv_io_descr_t *const pioDescr)
 			bRun = 0;
 		}
 	}
+#	if defined(ENABLE_IMTCP_EPOLL)
 	notifyReArm(pioDescr); /* listeners must ALWAYS be re-armed */
+#	endif
 	RETiRet;
 }
 
@@ -1085,7 +1091,7 @@ DBGPRINTF("RGER: done stopWrkrPool\n");
 
 static tcpsrv_io_descr_t *
 dequeueWork(tcpsrv_t *pSrv)
-{	
+{
 	workQueue_t *const queue = &pSrv->workQueue;
 	tcpsrv_io_descr_t *pioDescr;
 
@@ -1114,7 +1120,7 @@ finalize_it:
 
 static rsRetVal
 enqueueWork(tcpsrv_io_descr_t *const pioDescr)
-{	
+{
 	workQueue_t *const queue = &pioDescr->pSrv->workQueue;
 	DEFiRet;
 
@@ -1338,9 +1344,6 @@ RunEpoll(tcpsrv_t *const pThis)
 	rsRetVal localRet;
 
 	DBGPRINTF("tcpsrv uses epoll() interface\n");
-
-	/* flag that we are in epoll mode */ // TODO: check if we still need this (and why!)
-	pThis->bUsingEPoll = RSTRUE;
 
 	/* Add the TCP listen sockets to the list of sockets to monitor */
 	for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
