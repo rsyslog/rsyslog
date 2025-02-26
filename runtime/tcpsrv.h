@@ -157,6 +157,7 @@ struct tcpsrv_s {
 	unsigned int ratelimitInterval;
 	unsigned int ratelimitBurst;
 	tcps_sess_t **pSessions;/**< array of all of our sessions */
+	unsigned int starvationMaxReads;
 	void *pUsr;		/**< a user-settable pointer (provides extensibility for "derived classes")*/
 	/* callbacks */
 	int      (*pIsPermittedHost)(struct sockaddr *addr, char *fromHostFQDN, void*pUsrSrv, void*pUsrSess);
@@ -264,6 +265,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetSynBacklog)(tcpsrv_t *pThis, int);
 	/* added v28 */
 	rsRetVal (*SetNumWrkr)(tcpsrv_t *pThis, int);
+	rsRetVal (*SetStarvationMaxReads)(tcpsrv_t *pThis, unsigned int);
 ENDinterface(tcpsrv)
 #define tcpsrvCURR_IF_VERSION 28 /* increment whenever you change the interface structure! */
 /* change for v4:

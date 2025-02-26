@@ -95,6 +95,7 @@ static permittedPeers_t *pPermPeersRoot = NULL;
  * many installations. High-Volume ones may need much higher number!
  */
 #define DEFAULT_NUMWRKR 2
+#define DEFAULT_STARVATIONMAXREADS 500
 
 #define FRAMING_UNSET -1
 
@@ -163,6 +164,7 @@ struct instanceConf_s {
 	int iKeepAliveIntvl;
 	int iKeepAliveProbes;
 	int iKeepAliveTime;
+	unsigned starvationMaxReads;
 	struct instanceConf_s *next;
 };
 
@@ -200,6 +202,7 @@ struct modConfData_s {
 	permittedPeers_t *pPermPeersRoot;
 	sbool configSetViaV2Method;
 	sbool bPreserveCase; /* preserve case of fromhost; true by default */
+	unsigned starvationMaxReads;
 };
 
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
@@ -219,6 +222,7 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "maxlistners", eCmdHdlrPositiveInt, 0 },
 	{ "maxlisteners", eCmdHdlrPositiveInt, 0 },
 	{ "workerthreads", eCmdHdlrPositiveInt, 0 },
+	{ "starvationprotection.maxreads", eCmdHdlrNonNegInt, 0 },
 	{ "streamdriver.mode", eCmdHdlrNonNegInt, 0 },
 	{ "streamdriver.authmode", eCmdHdlrString, 0 },
 	{ "streamdriver.permitexpiredcerts", eCmdHdlrString, 0 },
@@ -263,6 +267,7 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "name", eCmdHdlrString, 0 },
 	{ "defaulttz", eCmdHdlrString, 0 },
 	{ "ruleset", eCmdHdlrString, 0 },
+	{ "starvationprotection.maxreads", eCmdHdlrNonNegInt, 0 },
 	{ "streamdriver.mode", eCmdHdlrNonNegInt, 0 },
 	{ "streamdriver.authmode", eCmdHdlrString, 0 },
 	{ "streamdriver.permitexpiredcerts", eCmdHdlrString, 0 },
@@ -413,6 +418,7 @@ createInstance(instanceConf_t **pinst)
 	inst->iTCPLstnMax = loadModConf->iTCPLstnMax;
 	inst->iTCPSessMax = loadModConf->iTCPSessMax;
 	inst->numWrkr = loadModConf->numWrkr;
+	inst->starvationMaxReads = loadModConf->starvationMaxReads;
 
 	inst->cnf_params->pszLstnPortFileName = NULL;
 
@@ -484,6 +490,7 @@ static rsRetVal addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->iTCPLstnMax = cs.iTCPLstnMax;
 	inst->iTCPSessMax = cs.iTCPSessMax;
 	inst->numWrkr = DEFAULT_NUMWRKR;
+	inst->starvationMaxReads = DEFAULT_STARVATIONMAXREADS;
 	inst->iStrmDrvrMode = cs.iStrmDrvrMode;
 
 finalize_it:
@@ -509,6 +516,7 @@ addListner(modConfData_t *modConf, instanceConf_t *inst)
 	CHKiRet(tcpsrv.SetCBOnErrClose(pOurTcpsrv, onErrClose));
 	/* params */
 	CHKiRet(tcpsrv.SetNumWrkr(pOurTcpsrv, inst->numWrkr));
+	CHKiRet(tcpsrv.SetStarvationMaxReads(pOurTcpsrv, inst->starvationMaxReads));
 	CHKiRet(tcpsrv.SetKeepAlive(pOurTcpsrv, inst->bKeepAlive));
 	CHKiRet(tcpsrv.SetKeepAliveIntvl(pOurTcpsrv, inst->iKeepAliveIntvl));
 	CHKiRet(tcpsrv.SetKeepAliveProbes(pOurTcpsrv, inst->iKeepAliveProbes));
@@ -664,6 +672,8 @@ CODESTARTnewInpInst
 			inst->pszStrmDrvrCertFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "streamdriver.name")) {
 			inst->pszStrmDrvrName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(inppblk.descr[i].name, "starvationprotection.maxreads")) {
+			inst->starvationMaxReads = (unsigned) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "gnutlsprioritystring")) {
 			inst->gnutlsPriorityString = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "permittedpeer")) {
@@ -738,6 +748,7 @@ CODESTARTbeginCnfLoad
 	loadModConf->iTCPSessMax = 200;
 	loadModConf->iTCPLstnMax = 20;
 	loadModConf->numWrkr = DEFAULT_NUMWRKR;
+	loadModConf->starvationMaxReads = DEFAULT_STARVATIONMAXREADS;
 	loadModConf->bSuppOctetFram = 1;
 	loadModConf->iStrmDrvrMode = 0;
 	loadModConf->iStrmDrvrExtendedCertCheck = 0;
@@ -815,6 +826,8 @@ CODESTARTsetModCnf
 			}
 		} else if(!strcmp(modpblk.descr[i].name, "maxsessions")) {
 			loadModConf->iTCPSessMax = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "starvationprotection.maxreads")) {
+			loadModConf->starvationMaxReads = (unsigned) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "maxlisteners") ||
 			  !strcmp(modpblk.descr[i].name, "maxlistners")) { /* keep old name for a while */
 			loadModConf->iTCPLstnMax = (int) pvals[i].val.d.n;
@@ -1095,7 +1108,6 @@ CODESTARTafterRun
 	tcpsrv_etry_t *del;
 	while(etry != NULL) {
 		iRet = tcpsrv.Destruct(&etry->tcpsrv);
-		// TODO: check iRet, reprot error
 		del = etry;
 		etry = etry->next;
 		free(del);

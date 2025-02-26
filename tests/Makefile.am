@@ -295,17 +295,6 @@ TESTS +=  \
 	allowed-sender-tcp-hostname-ok.sh \
 	allowed-sender-tcp-hostname-fail.sh \
 	imtcp-discard-truncated-msg.sh \
-	imtcp-basic.sh \
-	imtcp-basic-hup.sh \
-	imtcp-maxFrameSize.sh \
-	imtcp-msg-truncation-on-number.sh \
-	imtcp-msg-truncation-on-number2.sh \
-	imtcp-NUL.sh \
-	imtcp-NUL-rawmsg.sh \
-	imtcp_incomplete_frame_at_end.sh \
-	imtcp-multiport.sh \
-	imtcp-bigmessage-octetcounting.sh \
-	imtcp-bigmessage-octetstuffing.sh \
 	da-queue-persist.sh \
 	daqueue-persist.sh \
 	daqueue-invld-qi.sh \
@@ -321,12 +310,6 @@ TESTS +=  \
 	manytcp.sh \
 	rsf_getenv.sh \
 	msg-deadlock-headerless-noappname.sh \
-	imtcp_conndrop.sh \
-	imtcp_addtlframedelim.sh \
-	imtcp_no_octet_counted.sh \
-	imtcp_addtlframedelim_on_input.sh \
-	imtcp_spframingfix.sh \
-	imtcp-connection-msg-recieved.sh \
 	sndrcv.sh \
 	sndrcv_failover.sh \
 	sndrcv_gzip.sh \
@@ -608,6 +591,8 @@ TESTS +=  \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
 	imtcp-basic-hup.sh \
+	imtcp-starvation-0.sh \
+	imtcp-starvation-1.sh \
 	imtcp-maxFrameSize.sh \
 	imtcp-msg-truncation-on-number.sh \
 	imtcp-msg-truncation-on-number2.sh \
@@ -2463,6 +2448,8 @@ EXTRA_DIST= \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
 	imtcp-basic-hup.sh \
+	imtcp-starvation-0.sh \
+	imtcp-starvation-1.sh \
 	imtcp-maxFrameSize.sh \
 	imtcp-msg-truncation-on-number.sh \
 	imtcp-msg-truncation-on-number2.sh \

@@ -736,8 +736,6 @@ SessAccept(tcpsrv_t *const pThis, tcpLstnPortList_t *const pLstnInfo, tcps_sess_
 	}
 	CHKiRet(netstrm.GetRemoteIP(pNewStrm, &fromHostIP));
 	CHKiRet(netstrm.GetRemAddr(pNewStrm, &addr));
-	/* TODO: check if we need to strip the domain name here -- rgerhards, 2008-04-24 */
-
 	/* Here we check if a host is permitted to send us messages. If it isn't, we do not further
 	 * process the message but log a warning (if we are configured to do this).
 	 * rgerhards, 2005-09-26
@@ -866,11 +864,12 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 	int lenPeer;
 	int oserr = 0;
 	int do_run = 1;
-	int loop_ctr = 0;
+	unsigned loop_ctr = 0;
 	int needReArm = 1;
 	tcps_sess_t *const pSess = pioDescr->ptr.pSess;
 	tcpsrv_t *const pThis = pioDescr->pSrv;
 	int freeMutex = 0;
+	const unsigned maxReads = pThis->starvationMaxReads;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	prop.GetString((pSess)->fromHostIP, &pszPeer, &lenPeer);
@@ -895,10 +894,7 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 	}
 
 	while(do_run) {	/*  outer loop as "backup" if starvation protection does not properly work */
-		while(do_run && loop_ctr < 1000) {	/*  break happens in switch below! */
-			// TODO: STARVATION needs URGENTLY be considered!!! loop_ctr is one step into
-			// this direction, but we need to consider that in regard to edge triggered epoll
-
+		while(do_run && (maxReads == 0 || loop_ctr < maxReads)) { /*  break in switch below! */
 			/* Receive message */
 			iRet = pThis->pRcvData(pSess, buf, sizeof(buf), &iRcvd, &oserr);
 			switch(iRet) {
@@ -944,7 +940,7 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 		}
 
 		if(do_run) { /* we did not finish, just exited loop for starvation avoidance */
-dbgprintf("RGER: starvation avoidance triggered, ctr=%d\n", loop_ctr);
+dbgprintf("RGER: starvation avoidance triggered, ctr=%d, maxReads=%u\n", loop_ctr, maxReads);
 			// TODO: add stats counter
 			iRet = enqueueWork(pioDescr);
 			if(iRet == RS_RET_OK) {
@@ -1169,7 +1165,6 @@ DBGPRINTF("RGER: enqueuWork done, sock %d\n", pioDescr->sock);
 static void *
 wrkr(void *arg)
 {
-	//rsRetVal localRet;
 	tcpsrv_t *const pThis = (tcpsrv_t *) arg;
 	workQueue_t *const queue = &pThis->workQueue;
 	tcpsrv_io_descr_t *pioDescr;
@@ -1198,7 +1193,10 @@ wrkr(void *arg)
 		if(pioDescr == NULL) {
 			break;
 		}
-		processWorksetItem(pioDescr); // TODO check result?
+		/* note: we ignore the result as we cannot do anything against errors in any
+		 * case. Also, errors are reported inside processWorksetItem().
+		 */
+		processWorksetItem(pioDescr);
 	}
 
 	return NULL;
@@ -2037,6 +2035,14 @@ SetSynBacklog(tcpsrv_t *pThis, const int iSynBacklog)
 
 
 static rsRetVal
+SetStarvationMaxReads(tcpsrv_t *pThis, const unsigned int maxReads)
+{
+	pThis->starvationMaxReads = maxReads;
+	return RS_RET_OK;
+}
+
+
+static rsRetVal
 SetNumWrkr(tcpsrv_t *pThis, const int numWrkr)
 {
 	pThis->workQueue.numWrkr = numWrkr;
@@ -2113,6 +2119,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->SetDrvrTlsVerifyDepth = SetDrvrTlsVerifyDepth;
 	pIf->SetSynBacklog = SetSynBacklog;
 	pIf->SetNumWrkr = SetNumWrkr;
+	pIf->SetStarvationMaxReads = SetStarvationMaxReads;
 
 finalize_it:
 ENDobjQueryInterface(tcpsrv)
