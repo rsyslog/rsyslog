@@ -1767,7 +1767,7 @@ SetOrigin(tcpsrv_t *pThis, uchar *origin)
 
 /* Set the input name to use -- rgerhards, 2008-12-10 */
 static rsRetVal
-SetInputName(tcpsrv_t *const pThis,tcpLstnParams_t *const cnf_params, const uchar *const name)
+SetInputName(tcpsrv_t *const pThis ATTR_UNUSED, tcpLstnParams_t *const cnf_params, const uchar *const name)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
@@ -1775,8 +1775,6 @@ SetInputName(tcpsrv_t *const pThis,tcpLstnParams_t *const cnf_params, const ucha
 		cnf_params->pszInputName = NULL;
 	else
 		CHKmalloc(cnf_params->pszInputName = ustrdup(name));
-	free(pThis->pszInputName); // TODO: REMOVE ME
-	pThis->pszInputName = ustrdup("imtcp"); // TODO: REMOVE ME
 
 	/* we need to create a property */
 	CHKiRet(prop.Construct(&cnf_params->pInputName));
