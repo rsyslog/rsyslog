@@ -55,7 +55,7 @@ Example 1
 ---------
 
 The following sample writes all syslog messages to the journal with a
-custom EVENT_TYPE field.
+custom EVENT_TYPE field and to override journal's default *identifier* (which by default will be ``rsyslogd``):
 
 .. code-block:: shell
 
@@ -68,7 +68,9 @@ custom EVENT_TYPE field.
      property(name="syslogfacility" outname="SYSLOG_FACILITY")
      property(name="syslogseverity" outname="PRIORITY")
 
+     # Custom fields
      constant(value="strange" outname="EVENT_TYPE")
+     constant(value="router" outname="SYSLOG_IDENTIFIER")
    }
 
    action(type="omjournal" template="journal")
