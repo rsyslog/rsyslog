@@ -878,8 +878,8 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 
 	if(pThis->workQueue.numWrkr > 1) {
 		pthread_mutex_lock(&pSess->mut);
+		freeMutex = 1;
 	}
-	freeMutex = 1;
 
 	/* if we had EPOLLERR, give information. The other processing continues. This
 	 * seems to be best practice and may cause better error information.
@@ -894,62 +894,67 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 		} /* no else - if this fails, we have nothing to report... */
 	}
 
-	while(do_run && loop_ctr < 1000) {	/*  break happens in switch below! */
-		// TODO: STARVATION needs URGENTLY be considered!!! loop_ctr is one step into
-		// this direction, but we need to consider that in regard to edge triggered epoll
+	while(do_run) {	/*  outer loop as "backup" if starvation protection does not properly work */
+		while(do_run && loop_ctr < 1000) {	/*  break happens in switch below! */
+			// TODO: STARVATION needs URGENTLY be considered!!! loop_ctr is one step into
+			// this direction, but we need to consider that in regard to edge triggered epoll
 
-		/* Receive message */
-		iRet = pThis->pRcvData(pSess, buf, sizeof(buf), &iRcvd, &oserr);
-		switch(iRet) {
-		case RS_RET_CLOSED:
-			if(pThis->bEmitMsgOnClose) {
-				errno = 0;
-				LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p closed by remote "
-					"peer %s.\n", (pSess)->pStrm, pszPeer);
-			}
-dbgprintf("RGER: sock %d closes, ctr %d\n", pioDescr->sock, loop_ctr);
-			needReArm = 0;
-			freeMutex = 0;
-			closeSess(pThis, pioDescr);
-			do_run = 0;
-			break;
-		case RS_RET_RETRY:
-			/* we simply ignore retry - this is not an error, but we also have not received anything */
-			do_run = 0;
-			break;
-		case RS_RET_OK:
-			/* valid data received, process it! */
-			localRet = tcps_sess.DataRcvd(pSess, buf, iRcvd);
-			if(localRet != RS_RET_OK && localRet != RS_RET_QUEUE_FULL) {
-				/* in this case, something went awfully wrong.
-				 * We are instructed to terminate the session.
-				 */
-				LogError(oserr, localRet, "Tearing down TCP Session from %s", pszPeer);
+			/* Receive message */
+			iRet = pThis->pRcvData(pSess, buf, sizeof(buf), &iRcvd, &oserr);
+			switch(iRet) {
+			case RS_RET_CLOSED:
+				if(pThis->bEmitMsgOnClose) {
+					errno = 0;
+					LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p "
+						"closed by remote peer %s.\n", (pSess)->pStrm, pszPeer);
+				}
 				needReArm = 0;
 				freeMutex = 0;
-				CHKiRet(closeSess(pThis, pioDescr));
+				closeSess(pThis, pioDescr);
+				do_run = 0;
+				break;
+			case RS_RET_RETRY:
+				do_run = 0;
+				break;
+			case RS_RET_OK:
+				/* valid data received, process it! */
+				localRet = tcps_sess.DataRcvd(pSess, buf, iRcvd);
+				if(localRet != RS_RET_OK && localRet != RS_RET_QUEUE_FULL) {
+					/* in this case, something went awfully wrong.
+					 * We are instructed to terminate the session.
+					 */
+					LogError(oserr, localRet, "Tearing down TCP Session from %s", pszPeer);
+					needReArm = 0;
+					freeMutex = 0;
+					CHKiRet(closeSess(pThis, pioDescr));
+				}
+				break;
+			default:
+				LogError(oserr, iRet, "netstream session %p from %s will be closed due to error",
+						pSess->pStrm, pszPeer);
+				needReArm = 0;
+				freeMutex = 0;
+				closeSess(pThis, pioDescr);
+				do_run = 0;
+				break;
 			}
-			break;
-		default:
-			LogError(oserr, iRet, "netstream session %p from %s will be closed due to error",
-					pSess->pStrm, pszPeer);
-			needReArm = 0;
-			freeMutex = 0;
-			closeSess(pThis, pioDescr);
-			do_run = 0;
-			break;
+			if(pThis->workQueue.numWrkr > 1) {
+				++loop_ctr;
+			}
 		}
-		if(pThis->workQueue.numWrkr > 1) {
-			++loop_ctr;
-		}
-	}
 
-	if(do_run) { /* we did not finish, just exited loop for starvation avoidance */
+		if(do_run) { /* we did not finish, just exited loop for starvation avoidance */
 dbgprintf("RGER: starvation avoidance triggered, ctr=%d\n", loop_ctr);
-		iRet = enqueueWork(pioDescr);
-		// TODO: handle error (continue!)
-		needReArm = 0;
-		// TODO: add stats counter
+			// TODO: add stats counter
+			iRet = enqueueWork(pioDescr);
+			if(iRet == RS_RET_OK) {
+				do_run = 0;
+				needReArm = 0;
+			} else {
+				LogError(errno, iRet, "error during starvation avoidance processing, "
+					"continuing reading from %s", pszPeer);
+			}
+		}
 	}
 
 finalize_it:
@@ -959,7 +964,7 @@ finalize_it:
 #		endif
 	}
 
-	if(freeMutex && pThis->workQueue.numWrkr > 1) {
+	if(freeMutex) { /* in case of single worker, freeMutex is set to 0 right from the begining */
 		pthread_mutex_unlock(&pSess->mut);
 	}
 
@@ -1072,6 +1077,7 @@ startWrkrPool(tcpsrv_t *const pThis)
 	DEFiRet;
 	workQueue_t *const queue = &pThis->workQueue;
 
+	assert(queue->numWrkr > 1);
 	CHKmalloc(pThis->workQueue.wrkr_tids = calloc(queue->numWrkr, sizeof(pthread_t)));
 	pThis->currWrkrs = 0;
 	pthread_mutex_init(&queue->mut, NULL);
@@ -1420,11 +1426,11 @@ Run(tcpsrv_t *const pThis)
 
 	if(pThis->iLstnCurr == 0) {
 		dbgprintf("tcpsrv: no listeneres at all (probably init error), terminating\n");
-		RETiRet; /* somewhat "dirty" exit to avoid issue with cancel handler */
+		FINALIZE;
 	}
 
 	#if !defined(ENABLE_IMTCP_EPOLL)
-		/* if we do not have epoll(), we (currently) need to run single-threaded */
+		/* if we do not have epoll(), we need to run single-threaded */
 		pThis->workQueue.numWrkr = 1;
 	#endif
 
@@ -1450,7 +1456,7 @@ Run(tcpsrv_t *const pThis)
 	}
 	eventNotify_exit(pThis);
 
-//finalize_it:
+finalize_it:
 	RETiRet;
 }
 
