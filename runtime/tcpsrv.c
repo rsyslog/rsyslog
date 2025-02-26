@@ -102,6 +102,7 @@ DEFobjCurrIf(statsobj)
 #define NSPOLL_MAX_EVENTS_PER_WAIT 128
 
 
+static rsRetVal enqueueWork(tcpsrv_io_descr_t *const pioDescr);
 
 /* We check which event notification mechanism we have and use the best available one.
  * We switch back from library-specific drivers, because event notification always works
@@ -893,7 +894,7 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 		} /* no else - if this fails, we have nothing to report... */
 	}
 
-	while(do_run && loop_ctr < 500) {	/*  break happens in switch below! */
+	while(do_run && loop_ctr < 1000) {	/*  break happens in switch below! */
 		// TODO: STARVATION needs URGENTLY be considered!!! loop_ctr is one step into
 		// this direction, but we need to consider that in regard to edge triggered epoll
 
@@ -906,6 +907,7 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 				LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p closed by remote "
 					"peer %s.\n", (pSess)->pStrm, pszPeer);
 			}
+dbgprintf("RGER: sock %d closes, ctr %d\n", pioDescr->sock, loop_ctr);
 			needReArm = 0;
 			freeMutex = 0;
 			closeSess(pThis, pioDescr);
@@ -937,6 +939,17 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 			do_run = 0;
 			break;
 		}
+		if(pThis->workQueue.numWrkr > 1) {
+			++loop_ctr;
+		}
+	}
+
+	if(do_run) { /* we did not finish, just exited loop for starvation avoidance */
+dbgprintf("RGER: starvation avoidance triggered, ctr=%d\n", loop_ctr);
+		iRet = enqueueWork(pioDescr);
+		// TODO: handle error (continue!)
+		needReArm = 0;
+		// TODO: add stats counter
 	}
 
 finalize_it:
@@ -974,7 +987,6 @@ doSingleAccept(tcpsrv_io_descr_t *const pioDescr)
 		#if defined(ENABLE_IMTCP_EPOLL)
 			/* pDescrNew is only dyn allocated in epoll mode! */
 			CHKmalloc(pDescrNew = (tcpsrv_io_descr_t*) calloc(1, sizeof(tcpsrv_io_descr_t)));
-dbgprintf("RGER: iodescr %p created\n", pDescrNew);
 			pDescrNew->pSrv = pThis;
 			pDescrNew->id = idx; // TODO: remove if session handling is refactored to dyn max sessions
 			pDescrNew->isInError = 0;
@@ -982,6 +994,7 @@ dbgprintf("RGER: iodescr %p created\n", pDescrNew);
 			pDescrNew->ptrType = NSD_PTR_TYPE_SESS;
 			CHKiRet(netstrm.GetSock(pNewSess->pStrm, &pDescrNew->sock));
 			pDescrNew->ptr.pSess = pNewSess;
+dbgprintf("RGER: iodescr %p created for sock %d\n", pDescrNew, pDescrNew->sock);
 			CHKiRet(epoll_Ctl(pThis, pDescrNew, 0, EPOLL_CTL_ADD));
 		#endif
 
