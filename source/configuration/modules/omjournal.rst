@@ -74,3 +74,30 @@ custom EVENT_TYPE field and to override journal's default *identifier* (which by
    }
 
    action(type="omjournal" template="journal")
+
+
+Example 2
+---------
+
+The :doc:`subtree` template is a better fit for structured outputs like this, allowing arbitrary expressions for the destination journal fields using :doc:`set` & :doc:`reset` directives in *rulsets*.  For instance, here the captured *tags* are translated with :doc:`Lookup Tables`
+(to facilitae filtering with ``journalctl -t <TAG>``):
+
+.. code-block:: shell
+
+   module(load="omjournal")
+
+   template(name="journal-subtree" type="subtree" subtree="$!")
+
+   lookup_table("tags", ...)
+
+   ruleset(name="journal") {
+     # Emulate default journal fields
+     set $!MESSAGE = $msg;
+     set $!SYSLOG_TIMESTAMP = $timestamp;
+     set $!SYSLOG_FACILITY = $syslogfacility;
+     set $!PRIORITY = $syslogseverity
+
+     set $!SYSLOG_IDENTIFIER = lookup("tags", $hostname-ip);
+
+     action(type="omjournal" template="journal-subtree")
+   }
