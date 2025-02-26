@@ -1061,7 +1061,6 @@ startWrkrPool(tcpsrv_t *const pThis)
 	pthread_cond_init(&queue->workRdy, NULL);
 	for(unsigned i = 0; i < queue->numWrkr; i++) {
 		pthread_create(&queue->wrkr_tids[i], NULL, wrkr, pThis);
-dbgprintf("RGER: wrkr %u created\n", i);
 	}
 finalize_it:
 	RETiRet;
@@ -1151,15 +1150,17 @@ wrkr(void *arg)
 	uchar thrdName[32];
 	snprintf((char*)thrdName, sizeof(thrdName), "tcpsrv/w%d", wrkrIdx);
 	dbgSetThrdName(thrdName);
+
+	/* set thread name - we ignore if it fails, has no harsh consequences... */
 #	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
-	/* set thread name - we ignore if the call fails, has no harsh consequences... */
 	if(prctl(PR_SET_NAME, thrdName, 0, 0, 0) != 0) {
 		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", thrdName);
 	}
-#	else
-	// TODO re-enable if pthread_setname_np is available
-	//int r = pthread_setname_np(pthread_self(), (char*) thrdName);
-	//dbgprintf("queueWork: thread name %s, return %d: %s\n", thrdName,r, strerror(r));
+#	elif defined(HAVE_PTHREAD_SETNAME_NP)
+	int r = pthread_setname_np(pthread_self(), (char*) thrdName);
+	if(r != 0) {
+		DBGPRINTF("pthread_setname_np failed, not setting thread name for '%s'\n", thrdName);
+	}
 #	endif
 	
 	while(1) {
