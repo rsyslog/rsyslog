@@ -949,7 +949,7 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 				read_calls, maxReads);
 #			if defined(ENABLE_IMTCP_EPOLL)
 			assert(pThis->workQueue.numWrkr > 1);
-			STATSCOUNTER_INC(wrkrData->ctrStarvation, wrkrData->mutctrStarvation);
+			STATSCOUNTER_INC(wrkrData->ctrStarvation, wrkrData->mutCtrStarvation);
 #			endif
 
 			iRet = enqueueWork(pioDescr);
@@ -966,7 +966,7 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 finalize_it:
 #	if defined(ENABLE_IMTCP_EPOLL)
 	if(pThis->workQueue.numWrkr > 1) {
-		STATSCOUNTER_ADD(wrkrData->ctrRead, wrkrData->mutctrRead, read_calls);
+		STATSCOUNTER_ADD(wrkrData->ctrRead, wrkrData->mutCtrRead, read_calls);
 	}
 	if(needReArm) {
 		notifyReArm(pioDescr);
@@ -1054,7 +1054,7 @@ doAccept(tcpsrv_io_descr_t *const pioDescr)
 	dbgprintf("doAccept did %d accept()'s\n", nAccept);
 #	if defined(ENABLE_IMTCP_EPOLL)
 	if(pioDescr->pSrv->workQueue.numWrkr > 1) {
-		STATSCOUNTER_ADD(pioDescr->wrkrData->ctrAccept, pioDescr->wrkrData->mutctrRead, nAccept);
+		STATSCOUNTER_ADD(pioDescr->wrkrData->ctrAccept, pioDescr->wrkrData->mutCtrRead, nAccept);
 	}
 	notifyReArm(pioDescr); /* listeners must ALWAYS be re-armed */
 #	endif
@@ -1250,7 +1250,7 @@ wrkr(void *arg)
 
 #		if defined(ENABLE_IMTCP_EPOLL)
 		if(queue->numWrkr > 1) {
-			STATSCOUNTER_INC(wrkrData->ctrRuns, wrkrData->mutctrRuns);
+			STATSCOUNTER_INC(wrkrData->ctrRuns, wrkrData->mutCtrRuns);
 			pioDescr->wrkrData = wrkrData;
 		}
 #		endif
@@ -1333,14 +1333,14 @@ RunPoll(tcpsrv_t *const pThis)
 	/* we need to alloc one pollfd more, because the list must be 0-terminated! */
 	CHKmalloc(pThis->evtdata.poll.fds = calloc(FDSET_INCREMENT + 1, sizeof(struct pollfd)));
 	/* Add the TCP listen sockets to the list of read descriptors. */
-#if 1
+#if 0
 	for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
 		CHKiRet(select_Add(pThis, pThis->ppLstn[i], NSDSEL_RD));
 	}
 #endif
 
 	while(1) {
-#if 1
+#if 0
 		pThis->evtdata.poll.currfds = pThis->iLstnCurr; /* listeners are "fixed" */
 #else		
 	pThis->evtdata.poll.currfds = 0;
