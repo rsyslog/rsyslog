@@ -65,13 +65,22 @@ struct tcpLstnPortList_s {
 };
 
 
+typedef struct tcpsrvWrkrData_s {
+	statsobj_t *stats;
+	STATSCOUNTER_DEF(ctrRuns, mutCtrRuns);
+	STATSCOUNTER_DEF(ctrRead, mutCtrRead);
+	STATSCOUNTER_DEF(ctrStarvation, mutCtrStarvation);
+	STATSCOUNTER_DEF(ctrAccept, mutCtrAccept);
+} tcpsrvWrkrData_t;
+
 typedef struct workQueue_s {
 	tcpsrv_io_descr_t *head;
 	tcpsrv_io_descr_t *tail;
 	pthread_mutex_t mut;
 	pthread_cond_t workRdy;
-	unsigned numWrkr;		/* how many workers to spawn */
+	unsigned numWrkr;	/* how many workers to spawn */
 	pthread_t *wrkr_tids;	/* array of thread IDs */
+	tcpsrvWrkrData_t *wrkr_data;
 } workQueue_t;
 
 /**
@@ -79,7 +88,7 @@ typedef struct workQueue_s {
  * primarily used together with epoll at the moment.
  */
 struct tcpsrv_io_descr_s {
-	int id; // TODO: remove? (when we have dynamic session nbr)
+	int id;		/* index into listener or session table, depending on ptrType */
 	int sock;	/* socket descriptor we need to "monitor" */
 	enum {NSD_PTR_TYPE_LSTN, NSD_PTR_TYPE_SESS} ptrType;
 	union {
@@ -92,6 +101,7 @@ struct tcpsrv_io_descr_s {
 	tcpsrv_io_descr_t *next; /* for use in workQueue_t */
 	#if defined(ENABLE_IMTCP_EPOLL)
 	struct epoll_event event; /* to re-enable EPOLLONESHOT */
+	tcpsrvWrkrData_t *wrkrData; /* for MT: current thread's worker data. Invalid in single threading. */
 	#endif
 	DEF_ATOMIC_HELPER_MUT(mut_isInError);
 };

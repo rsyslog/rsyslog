@@ -591,6 +591,7 @@ TESTS +=  \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
 	imtcp-basic-hup.sh \
+	imtcp-impstats-single-thread.sh \
 	imtcp-starvation-0.sh \
 	imtcp-starvation-1.sh \
 	imtcp-maxFrameSize.sh \
@@ -620,6 +621,10 @@ if HAVE_VALGRIND
 TESTS +=  \
 	imtcp-octet-framing-too-long-vg.sh
 endif # HAVE_VALGRIND
+if ENABLE_IMTCP_EPOLL
+TESTS +=  \
+	imtcp-impstats.sh
+endif # ENABLE_IMTCP_EPOLL
 endif # ENABLE_IMTCP_TESTS
 
 if ENABLE_SNMP
@@ -2448,6 +2453,8 @@ EXTRA_DIST= \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
 	imtcp-basic-hup.sh \
+	imtcp-impstats.sh \
+	imtcp-impstats-single-thread.sh \
 	imtcp-starvation-0.sh \
 	imtcp-starvation-1.sh \
 	imtcp-maxFrameSize.sh \

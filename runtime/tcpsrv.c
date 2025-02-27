@@ -864,12 +864,18 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 	int lenPeer;
 	int oserr = 0;
 	int do_run = 1;
-	unsigned loop_ctr = 0;
-	int needReArm = 1;
+	unsigned read_calls = 0;
 	tcps_sess_t *const pSess = pioDescr->ptr.pSess;
 	tcpsrv_t *const pThis = pioDescr->pSrv;
 	int freeMutex = 0;
 	const unsigned maxReads = pThis->starvationMaxReads;
+#	if defined(ENABLE_IMTCP_EPOLL)
+#	define SET_REARM(x) (needReArm = (x))
+	tcpsrvWrkrData_t *const wrkrData = pioDescr->wrkrData;
+	int needReArm = 1;
+#	else
+#	define SET_REARM(x) /* not needed when ENABLE_IMTCP_EPOLL is not defined */
+#	endif
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	prop.GetString((pSess)->fromHostIP, &pszPeer, &lenPeer);
@@ -894,8 +900,7 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 	}
 
 	while(do_run) {	/*  outer loop as "backup" if starvation protection does not properly work */
-		while(do_run && (maxReads == 0 || loop_ctr < maxReads)) { /*  break in switch below! */
-			/* Receive message */
+		while(do_run && (maxReads == 0 || read_calls < maxReads)) { /*  break in switch below! */
 			iRet = pThis->pRcvData(pSess, buf, sizeof(buf), &iRcvd, &oserr);
 			switch(iRet) {
 			case RS_RET_CLOSED:
@@ -904,7 +909,7 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 					LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p "
 						"closed by remote peer %s.\n", (pSess)->pStrm, pszPeer);
 				}
-				needReArm = 0;
+				SET_REARM(0);
 				freeMutex = 0;
 				closeSess(pThis, pioDescr);
 				do_run = 0;
@@ -920,7 +925,7 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 					 * We are instructed to terminate the session.
 					 */
 					LogError(oserr, localRet, "Tearing down TCP Session from %s", pszPeer);
-					needReArm = 0;
+					SET_REARM(0);
 					freeMutex = 0;
 					CHKiRet(closeSess(pThis, pioDescr));
 				}
@@ -928,24 +933,29 @@ doReceive(tcpsrv_io_descr_t *const pioDescr)
 			default:
 				LogError(oserr, iRet, "netstream session %p from %s will be closed due to error",
 						pSess->pStrm, pszPeer);
-				needReArm = 0;
+				SET_REARM(0);
 				freeMutex = 0;
 				closeSess(pThis, pioDescr);
 				do_run = 0;
 				break;
 			}
 			if(pThis->workQueue.numWrkr > 1) {
-				++loop_ctr;
+				++read_calls;
 			}
 		}
 
 		if(do_run) { /* we did not finish, just exited loop for starvation avoidance */
-dbgprintf("RGER: starvation avoidance triggered, ctr=%d, maxReads=%u\n", loop_ctr, maxReads);
-			// TODO: add stats counter
+			dbgprintf("starvation avoidance triggered, ctr=%d, maxReads=%u\n",
+				read_calls, maxReads);
+#			if defined(ENABLE_IMTCP_EPOLL)
+			assert(pThis->workQueue.numWrkr > 1);
+			STATSCOUNTER_INC(wrkrData->ctrStarvation, wrkrData->mutctrStarvation);
+#			endif
+
 			iRet = enqueueWork(pioDescr);
 			if(iRet == RS_RET_OK) {
 				do_run = 0;
-				needReArm = 0;
+				SET_REARM(0);
 			} else {
 				LogError(errno, iRet, "error during starvation avoidance processing, "
 					"continuing reading from %s", pszPeer);
@@ -954,11 +964,14 @@ dbgprintf("RGER: starvation avoidance triggered, ctr=%d, maxReads=%u\n", loop_ct
 	}
 
 finalize_it:
-	if(needReArm) {
-#		if defined(ENABLE_IMTCP_EPOLL)
-		notifyReArm(pioDescr);
-#		endif
+#	if defined(ENABLE_IMTCP_EPOLL)
+	if(pThis->workQueue.numWrkr > 1) {
+		STATSCOUNTER_ADD(wrkrData->ctrRead, wrkrData->mutctrRead, read_calls);
 	}
+	if(needReArm) {
+		notifyReArm(pioDescr);
+	}
+#	endif
 
 	if(freeMutex) { /* in case of single worker, freeMutex is set to 0 right from the begining */
 		pthread_mutex_unlock(&pSess->mut);
@@ -1029,16 +1042,23 @@ doAccept(tcpsrv_io_descr_t *const pioDescr)
 {
 	DEFiRet;
 	int bRun = 1;
+	int nAccept = 0;
 
 	while(bRun) {
 		iRet = doSingleAccept(pioDescr);
 		if(iRet != RS_RET_OK) {
 			bRun = 0;
 		}
+		++nAccept;
 	}
+	dbgprintf("doAccept did %d accept()'s\n", nAccept);
 #	if defined(ENABLE_IMTCP_EPOLL)
+	if(pioDescr->pSrv->workQueue.numWrkr > 1) {
+		STATSCOUNTER_ADD(pioDescr->wrkrData->ctrAccept, pioDescr->wrkrData->mutctrRead, nAccept);
+	}
 	notifyReArm(pioDescr); /* listeners must ALWAYS be re-armed */
 #	endif
+
 	RETiRet;
 }
 
@@ -1075,6 +1095,7 @@ startWrkrPool(tcpsrv_t *const pThis)
 
 	assert(queue->numWrkr > 1);
 	CHKmalloc(pThis->workQueue.wrkr_tids = calloc(queue->numWrkr, sizeof(pthread_t)));
+	CHKmalloc(pThis->workQueue.wrkr_data = calloc(queue->numWrkr, sizeof(tcpsrvWrkrData_t)));
 	pThis->currWrkrs = 0;
 	pthread_mutex_init(&queue->mut, NULL);
 	pthread_cond_init(&queue->workRdy, NULL);
@@ -1088,6 +1109,8 @@ finalize_it:
 	if(iRet != RS_RET_OK) {
 		free(pThis->workQueue.wrkr_tids);
 		pThis->workQueue.wrkr_tids = NULL;
+		free(pThis->workQueue.wrkr_data);
+		pThis->workQueue.wrkr_data = NULL;
 	}
 	RETiRet;
 }
@@ -1097,7 +1120,6 @@ stopWrkrPool(tcpsrv_t *const pThis)
 {
 	workQueue_t *const queue = &pThis->workQueue;
 
-DBGPRINTF("RGER: stopWrkrPool\n");
 	pthread_mutex_lock(&queue->mut);
 	pthread_cond_broadcast(&queue->workRdy);
 	pthread_mutex_unlock(&queue->mut);
@@ -1106,6 +1128,7 @@ DBGPRINTF("RGER: stopWrkrPool\n");
 		pthread_join(queue->wrkr_tids[i], NULL);
 	}
 	free(pThis->workQueue.wrkr_tids);
+	free(pThis->workQueue.wrkr_data);
 DBGPRINTF("RGER: done stopWrkrPool\n");
 }
 
@@ -1172,6 +1195,10 @@ wrkr(void *arg)
 	pthread_mutex_lock(&queue->mut);
 	const int wrkrIdx = pThis->currWrkrs++;
 	pthread_mutex_unlock(&queue->mut);
+	int deinit_stats = 0;
+
+	tcpsrvWrkrData_t *const wrkrData = &(queue->wrkr_data[wrkrIdx]);
+
 	uchar thrdName[32];
 	snprintf((char*)thrdName, sizeof(thrdName), "tcpsrv/w%d", wrkrIdx);
 	dbgSetThrdName(thrdName);
@@ -1188,15 +1215,55 @@ wrkr(void *arg)
 	}
 #	endif
 	
+	if(statsobj.Construct(&wrkrData->stats) == RS_RET_OK) {
+		statsobj.SetName(wrkrData->stats, thrdName);
+		statsobj.SetOrigin(wrkrData->stats, (uchar*)"imtcp");
+
+		STATSCOUNTER_INIT(wrkrData->ctrRuns, wrkrData->mutCtrRuns);
+		statsobj.AddCounter(wrkrData->stats, UCHAR_CONSTANT("runs"),
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(wrkrData->ctrRuns));
+
+		STATSCOUNTER_INIT(wrkrData->ctrRead, wrkrData->mutCtrRead);
+		statsobj.AddCounter(wrkrData->stats, UCHAR_CONSTANT("read"),
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(wrkrData->ctrRead));
+
+		STATSCOUNTER_INIT(wrkrData->ctrStarvation, wrkrData->mutCtrStarvation);
+		statsobj.AddCounter(wrkrData->stats, UCHAR_CONSTANT("starvation_protect"),
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(wrkrData->ctrStarvation));
+
+		STATSCOUNTER_INIT(wrkrData->ctrAccept, wrkrData->mutCtrAccept);
+		statsobj.AddCounter(wrkrData->stats, UCHAR_CONSTANT("accept"),
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(wrkrData->ctrAccept));
+
+		statsobj.ConstructFinalize(wrkrData->stats);
+		deinit_stats = 1;
+	} else {
+	// TODO: error message
+	}
+
+	/**** main loop ****/
 	while(1) {
 		pioDescr = dequeueWork(pThis);
 		if(pioDescr == NULL) {
 			break;
 		}
+
+#		if defined(ENABLE_IMTCP_EPOLL)
+		if(queue->numWrkr > 1) {
+			STATSCOUNTER_INC(wrkrData->ctrRuns, wrkrData->mutctrRuns);
+			pioDescr->wrkrData = wrkrData;
+		}
+#		endif
+
 		/* note: we ignore the result as we cannot do anything against errors in any
 		 * case. Also, errors are reported inside processWorksetItem().
 		 */
 		processWorksetItem(pioDescr);
+	}
+
+	/**** de-init ****/
+	if(deinit_stats) {
+		statsobj.Destruct(&wrkrData->stats);
 	}
 
 	return NULL;
@@ -1296,7 +1363,6 @@ RunPoll(tcpsrv_t *const pThis)
 			CHKiRet(select_IsReady(pThis, pThis->ppLstn[i], NSDSEL_RD, &bIsReady));
 			if(bIsReady) {
 				workset[iWorkset].pSrv = pThis;
-				workset[iWorkset].id = i;
 				workset[iWorkset].ptrType = NSD_PTR_TYPE_LSTN;
 				workset[iWorkset].id = i;
 				workset[iWorkset].isInError = 0;
@@ -1372,7 +1438,7 @@ RunEpoll(tcpsrv_t *const pThis)
 		DBGPRINTF("Trying to add listener %d, pUsr=%p\n", i, pThis->ppLstn);
 		CHKmalloc(pThis->ppioDescrPtr[i] = (tcpsrv_io_descr_t*) calloc(1, sizeof(tcpsrv_io_descr_t)));
 		pThis->ppioDescrPtr[i]->pSrv = pThis; // TODO: really needed?
-		pThis->ppioDescrPtr[i]->id = i; // TODO: remove if session handling is refactored to dyn max sessions
+		pThis->ppioDescrPtr[i]->id = i;
 		pThis->ppioDescrPtr[i]->isInError = 0;
 		INIT_ATOMIC_HELPER_MUT(pThis->ppioDescrPtr[i]->mut_isInError);
 		CHKiRet(netstrm.GetSock(pThis->ppLstn[i], &(pThis->ppioDescrPtr[i]->sock)));
