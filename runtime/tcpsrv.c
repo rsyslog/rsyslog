@@ -1333,13 +1333,23 @@ RunPoll(tcpsrv_t *const pThis)
 	/* we need to alloc one pollfd more, because the list must be 0-terminated! */
 	CHKmalloc(pThis->evtdata.poll.fds = calloc(FDSET_INCREMENT + 1, sizeof(struct pollfd)));
 	/* Add the TCP listen sockets to the list of read descriptors. */
+#if 1
 	for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
 		CHKiRet(select_Add(pThis, pThis->ppLstn[i], NSDSEL_RD));
 	}
+#endif
 
 	while(1) {
+#if 1
 		pThis->evtdata.poll.currfds = pThis->iLstnCurr; /* listeners are "fixed" */
+#else		
+	pThis->evtdata.poll.currfds = 0;
 
+	for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
+		CHKiRet(select_Add(pThis, pThis->ppLstn[i], NSDSEL_RD));
+	}
+#endif
+fprintf(stderr, "after listener, currfds %d\n", pThis->evtdata.poll.currfds);
 		/* do the sessions */
 		iTCPSess = TCPSessGetNxtSess(pThis, -1);
 		while(iTCPSess != -1) {
@@ -1350,7 +1360,11 @@ RunPoll(tcpsrv_t *const pThis)
 			/* now get next... */
 			iTCPSess = TCPSessGetNxtSess(pThis, iTCPSess);
 		}
+fprintf(stderr, "after sessions, currfds %d\n", pThis->evtdata.poll.currfds);
 
+		/* zero-out the last fd - space for it is always reserved! */
+		assert(pThis->evtdata.poll.maxfds != pThis->evtdata.poll.currfds);
+		pThis->evtdata.poll.fds[pThis->evtdata.poll.currfds].fd = 0;
 		/* wait for io to become ready */
 		CHKiRet(select_Poll(pThis, &nfds));
 		if(glbl.GetGlobalInputTermState() == 1)
