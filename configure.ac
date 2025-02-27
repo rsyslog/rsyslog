@@ -2048,15 +2048,15 @@ if test "x$enable_imtcp_epoll" = "xauto"; then
 fi
 
 # Define ENABLE_IMTCP_EPOLL in config.h if epoll is enabled
-#if test "x$enable_imtcp_epoll" = "xyes"; then
-    #AC_DEFINE([ENABLE_IMTCP_EPOLL], [1], [Enable epoll mode for the imtcp input module])
-#fi
+if test "x$enable_imtcp_epoll" = "xyes"; then
+    AC_DEFINE([ENABLE_IMTCP_EPOLL], [1], [Enable epoll mode for the imtcp input module])
+fi
 
 # Automake conditional
-#AM_CONDITIONAL(ENABLE_IMTCP_EPOLL, test x$enable_imtcp_epoll = xyes)
+AM_CONDITIONAL(ENABLE_IMTCP_EPOLL, test x$enable_imtcp_epoll = xyes)
 
-# Print result
-#echo "    TCP input module epoll mode: $enable_imtcp_epoll"
+ Print result
+echo "    TCP input module epoll mode: $enable_imtcp_epoll"
 
 
 
