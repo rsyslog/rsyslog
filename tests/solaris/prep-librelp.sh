@@ -11,7 +11,7 @@ git log -2
 env | grep FLAGS
 autoreconf -fvi
 ./configure --prefix=$PWD_HOME/local_env/install
-gmake V=1
+gmake -j2 V=1
 gmake install
 pwd
 ls ../install
