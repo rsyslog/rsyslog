@@ -271,7 +271,7 @@
  * cannot work around this in pri2fac, as we would otherwise need to evaluate
  * pri more than once.
  */
-static inline syslog_pri_t __attribute__((unused))
+static inline syslog_pri_t ATTR_UNUSED //__attribute__((unused))
 pri2fac(const syslog_pri_t pri)
 {
 	unsigned fac = pri >> 3;
