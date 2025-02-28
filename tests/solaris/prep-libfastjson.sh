@@ -10,7 +10,7 @@ cd libfastjson
 git log -2
 autoreconf -fvi
 ./configure --prefix=$PWD_HOME/local_env/install
-gmake
+gmake -j2
 gmake install
 pwd
 ls ../install
