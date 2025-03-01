@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2504.0 (aka 2025.04) 2025-04-??
+- 2025-03-01: "fixed" clang static analyzer false positives
+- 2025-03-01: fixed clang static analyzer detected very unlikely but possible bugs
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2502.0 (aka 2025.02) 2025-02-18
 - 2025-02-16: gnutls bugfix: Avoid blocking sockets during TLS handshake
