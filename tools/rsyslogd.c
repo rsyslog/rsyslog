@@ -1961,7 +1961,7 @@ doHUP(void)
 	char buf[512];
 
 	DBGPRINTF("doHUP: doing modules\n");
-	if(ourConf->globals.bLogStatusMsgs) {
+	if(ourConf != NULL && ourConf->globals.bLogStatusMsgs) {
 		snprintf(buf, sizeof(buf),
 			 "[origin software=\"rsyslogd\" " "swVersion=\"" VERSION
 			 "\" x-pid=\"%d\" x-info=\"https://www.rsyslog.com\"] rsyslogd was HUPed",
