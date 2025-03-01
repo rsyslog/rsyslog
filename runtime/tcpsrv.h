@@ -21,6 +21,10 @@
 #ifndef INCLUDED_TCPSRV_H
 #define INCLUDED_TCPSRV_H
 
+#if defined(ENABLE_IMTCP_EPOLL) && defined(HAVE_SYS_EPOLL_H)
+#	include <sys/epoll.h>
+#endif
+
 #include "obj.h"
 #include "prop.h"
 #include "net.h"
@@ -60,6 +64,47 @@ struct tcpLstnPortList_s {
 	tcpLstnPortList_t *pNext;	/**< next port or NULL */
 };
 
+
+typedef struct tcpsrvWrkrData_s {
+	statsobj_t *stats;
+	STATSCOUNTER_DEF(ctrRuns, mutCtrRuns);
+	STATSCOUNTER_DEF(ctrRead, mutCtrRead);
+	STATSCOUNTER_DEF(ctrStarvation, mutCtrStarvation);
+	STATSCOUNTER_DEF(ctrAccept, mutCtrAccept);
+} tcpsrvWrkrData_t;
+
+typedef struct workQueue_s {
+	tcpsrv_io_descr_t *head;
+	tcpsrv_io_descr_t *tail;
+	pthread_mutex_t mut;
+	pthread_cond_t workRdy;
+	unsigned numWrkr;	/* how many workers to spawn */
+	pthread_t *wrkr_tids;	/* array of thread IDs */
+	tcpsrvWrkrData_t *wrkr_data;
+} workQueue_t;
+
+/**
+ * The following structure is a descriptor for tcpsrv i/o. It is
+ * primarily used together with epoll at the moment.
+ */
+struct tcpsrv_io_descr_s {
+	int id;		/* index into listener or session table, depending on ptrType */
+	int sock;	/* socket descriptor we need to "monitor" */
+	enum {NSD_PTR_TYPE_LSTN, NSD_PTR_TYPE_SESS} ptrType;
+	union {
+		tcps_sess_t *pSess;
+		netstrm_t **ppLstn;	/**<  accept listener's netstream */
+	} ptr;
+	int isInError; /* boolean, if set, subsystem indicates we need to close because we had an
+			* unrecoverable error at the network layer. */
+	tcpsrv_t *pSrv;	/* our server object */
+	tcpsrv_io_descr_t *next; /* for use in workQueue_t */
+	#if defined(ENABLE_IMTCP_EPOLL)
+	struct epoll_event event; /* to re-enable EPOLLONESHOT */
+	#endif
+	DEF_ATOMIC_HELPER_MUT(mut_isInError);
+};
+
 #define TCPSRV_NO_ADDTL_DELIMITER -1 /* specifies that no additional delimiter is to be used in TCP framing */
 
 /* the tcpsrv object */
@@ -83,18 +128,29 @@ struct tcpsrv_s {
 	uchar *pszDrvrKeyFile;
 	uchar *pszDrvrCertFile;
 	uchar *pszDrvrName;	/**< name of stream driver to use */
-	uchar *pszInputName;	/**< value to be used as input name */ // TODO: REMOVE ME!!!!
+	uchar *pszInputName;	/**< value to be used as input name */
 	uchar *pszOrigin;		/**< module to be used as "origin" (e.g. for pstats) */
 	ruleset_t *pRuleset;	/**< ruleset to bind to */
 	permittedPeers_t *pPermPeers;/**< driver's permitted peers */
 	sbool bEmitMsgOnClose;	/**< emit an informational message when the remote peer closes connection */
 	sbool bEmitMsgOnOpen;
-	sbool bUsingEPoll;	/**< are we in epoll mode (means we do not need to keep track of sessions!) */
 	sbool bUseFlowControl;	/**< use flow control (make light delayable) */
 	sbool bSPFramingFix;	/**< support work-around for broken Cisco ASA framing? */
 	int iLstnCurr;		/**< max nbr of listeners currently supported */
 	netstrm_t **ppLstn;	/**< our netstream listeners */
+	/* We could use conditional compilation, but that causes more complexity and is (proofen causing errors) */
+	union {
+		struct {
+			int efd;
+		} epoll;
+		struct {
+			uint32_t maxfds;
+			uint32_t currfds;
+			struct pollfd *fds;
+		} poll;
+	} evtdata;
 	tcpLstnPortList_t **ppLstnPort; /**< pointer to relevant listen port description */
+	tcpsrv_io_descr_t **ppioDescrPtr; /**< pointer to i/o descriptor object */
 	int iLstnMax;		/**< max number of listeners supported */
 	int iSessMax;		/**< max number of sessions supported */
 	uchar dfltTZ[8];	/**< default TZ if none in timestamp; '\0' =No Default */
@@ -110,6 +166,7 @@ struct tcpsrv_s {
 	unsigned int ratelimitInterval;
 	unsigned int ratelimitBurst;
 	tcps_sess_t **pSessions;/**< array of all of our sessions */
+	unsigned int starvationMaxReads;
 	void *pUsr;		/**< a user-settable pointer (provides extensibility for "derived classes")*/
 	/* callbacks */
 	int      (*pIsPermittedHost)(struct sockaddr *addr, char *fromHostFQDN, void*pUsrSrv, void*pUsrSess);
@@ -124,14 +181,13 @@ struct tcpsrv_s {
 	rsRetVal (*OnSessConstructFinalize)(void*);
 	rsRetVal (*pOnSessDestruct)(void*);
 	rsRetVal (*OnMsgReceive)(tcps_sess_t *, uchar *pszMsg, int iLenMsg); /* submit message callback */
+	/* work queue */
+	workQueue_t workQueue;
+	int currWrkrs;
 };
 
 
 /**
- * The following structure is a set of descriptors that need to be processed.
- * This set will be the result of the epoll or select call and be used
- * in the actual request processing stage. It serves as a basis
- * to run multiple request by concurrent threads. -- rgerhards, 2011-01-24
  */
 struct tcpsrv_workset_s {
 	int idx;	/**< index into session table (or -1 if listener) */
@@ -216,8 +272,11 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetDrvrCRLFile)(tcpsrv_t *pThis, uchar *pszMode);
 	/* added v27 -- sync backlog for listen() */
 	rsRetVal (*SetSynBacklog)(tcpsrv_t *pThis, int);
+	/* added v28 */
+	rsRetVal (*SetNumWrkr)(tcpsrv_t *pThis, int);
+	rsRetVal (*SetStarvationMaxReads)(tcpsrv_t *pThis, unsigned int);
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 27 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 28 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

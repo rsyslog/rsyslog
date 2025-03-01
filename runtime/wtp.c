@@ -635,7 +635,7 @@ static rsRetVal wtpQueryInterface(interface_t __attribute__((unused)) *i) { retu
 /* exit our class
  */
 BEGINObjClassExit(wtp, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(nsdsel_gtls)
+CODESTARTObjClassExit(wtp)
 	/* release objects we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
 ENDObjClassExit(wtp)

@@ -179,9 +179,7 @@ endif
 
 # network stream master class and stream factory
 lmnetstrms_la_SOURCES = netstrms.c netstrms.h \
-			netstrm.c netstrm.h \
-			nssel.c nssel.h \
-			nspoll.c nspoll.h
+			netstrm.c netstrm.h
 lmnetstrms_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 lmnetstrms_la_LDFLAGS = -module -avoid-version
 lmnetstrms_la_LIBADD =
@@ -195,9 +193,7 @@ endif
 
 # plain tcp driver - main driver
 pkglib_LTLIBRARIES += lmnsd_ptcp.la
-lmnsd_ptcp_la_SOURCES = nsd_ptcp.c nsd_ptcp.h \
-		  	nsdsel_ptcp.c nsdsel_ptcp.h \
-			nsdpoll_ptcp.c nsdpoll_ptcp.h
+lmnsd_ptcp_la_SOURCES = nsd_ptcp.c nsd_ptcp.h
 lmnsd_ptcp_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 lmnsd_ptcp_la_LDFLAGS = -module -avoid-version
 lmnsd_ptcp_la_LIBADD =
@@ -215,7 +211,7 @@ endif # if ENABLE_INET
 if ENABLE_OPENSSL
 # noinst_LTLIBRARIES += lmnsd_ossl.la
 pkglib_LTLIBRARIES += lmnsd_ossl.la
-lmnsd_ossl_la_SOURCES = net_ossl.c net_ossl.h nsd_ossl.c nsd_ossl.h nsdsel_ossl.c  nsdsel_ossl.h
+lmnsd_ossl_la_SOURCES = net_ossl.c net_ossl.h nsd_ossl.c nsd_ossl.h
 lmnsd_ossl_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(OPENSSL_CFLAGS)
 lmnsd_ossl_la_LDFLAGS = -module -avoid-version
 lmnsd_ossl_la_LIBADD = $(OPENSSL_LIBS)
@@ -227,7 +223,7 @@ endif
 #
 if ENABLE_GNUTLS
 pkglib_LTLIBRARIES += lmnsd_gtls.la
-lmnsd_gtls_la_SOURCES = nsd_gtls.c nsd_gtls.h nsdsel_gtls.c  nsdsel_gtls.h
+lmnsd_gtls_la_SOURCES = nsd_gtls.c nsd_gtls.h
 lmnsd_gtls_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(GNUTLS_CFLAGS)
 lmnsd_gtls_la_LDFLAGS = -module -avoid-version
 lmnsd_gtls_la_LIBADD = $(GNUTLS_LIBS)
