@@ -1,5 +1,91 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2504.0 (aka 2025.04) 2025-04-??
+- 2025-03-01: imtcp: major multithreading and performance improvements
+  This commit significantly enhances imtcp by introducing a fully
+  functional worker thread pool, enabling true multi-threaded
+  processing for better scalability under high loads. This is
+  particularly beneficial when using TLS connections.
+  
+  Notable changes:
+  - Implemented a complete worker pool for imtcp.
+  - Introduced the `workerthreads` config parameter for tuning
+    concurrency.
+  - Improved epoll efficiency by enabling edge-triggered mode.
+  - Added starvation handling via `starvationProtection.maxReads`.
+  - Refactored session accept logic and optimized network object
+    handling.
+  - Removed an obsolete network driver layer for event notification.
+  - Fixed multiple issues related to message timing, EPOLLERR
+    handling, and tests.
+  - Improved performance in poll() mode by reducing redundant
+    allocations.
+  - Introduced new CI tests for imtcp without epoll.
+  - Allowed disabling imtcp tests via a new configure switch.
+  - Added new impstats counters for worker thread pool statistics.
+ 
+  Details:
+  - The worker pool replaces an outdated experimental
+    implementation.
+  - If `workerthreads=1`, no worker pool is created to minimize
+    context switches.
+  - Moves worker pool variables inside `tcpsrv` instance to
+    prevent conflicts.
+  - Extracts session `accept()` logic into a dedicated function
+    for clarity.
+  - Fixes message ordering inconsistencies in multi-threaded
+    scenarios.
+  - Properly handles `EPOLLERR` notifications to improve error
+    resilience.
+  - Optimizes poll() mode by avoiding unnecessary reallocation
+    of file descriptors.
+  - Replaces the old network driver layer for event notification
+    with a streamlined solution.
+    - Now uses **conditional compilation** to select the best
+      method (epoll or poll) at build time.
+    - This significantly reduces code complexity, improves
+      maintainability, and boosts performance.
+  - The previous "thread pool" was a rough experiment that did
+    not perform significantly better than single-threaded mode.
+    - The **new implementation** allows multiple worker threads
+      on platforms with `epoll`.
+    - On non-epoll systems, an optimized **poll() based
+      single-threaded approach** is used, which is expected to
+      perform better than the old "thread pool."
+  - Adds `pthread_setname_np` only when available to improve
+    portability.
+  - Fixes test cases that assumed strict message timing, which
+    was unreliable.
+  - Reduces test parallelism for TSAN CI runs to prevent
+    resource exhaustion.
+  - Moves a test case to `imdiag` to ensure stable execution.
+  - Provides a new CI environment to verify `imtcp` behavior
+    without epoll.
+  - Introduces `--enable-imtcp-tests` configure switch for test
+    flexibility.
+  - Improves debug logging and adds better error handling for
+    worker pool startup.
+  
+  New configuration parameters:
+  - `workerthreads`: Defines the number of worker threads for
+    imtcp. If set to 1, no worker pool is created.
+  - `starvationProtection.maxReads`: Defines the maximum number
+    of consecutive reads a worker can perform before being
+    interrupted to allow other sessions to be processed.
+  
+  New impstats counters (emitted only when `workerthreads > 1`):
+  - `runs`: Number of times the worker thread has been invoked.
+  - `read`: Number of read calls performed by the worker.
+    For TLS, this includes read/write calls.
+  - `accept`: Number of `accept()` calls handled by the worker.
+  - `starvation_protect`: Number of times a socket was sent
+    back to the queue due to reaching the maximum number of
+    consecutive requests, ensuring fair scheduling of sessions.
+  
+  These changes significantly enhance rsyslog’s TCP handling
+  performance and stability, particularly in high-volume
+  environments.
+  
+  Closes #5529, #5532, #5578, #5580.
 - 2025-03-01: "fixed" clang static analyzer false positives
 - 2025-03-01: fixed clang static analyzer detected very unlikely but possible bugs
 ----------------------------------------------------------------------------------------
