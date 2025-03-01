@@ -1190,6 +1190,7 @@ submitMsg2(smsg_t *pMsg)
 	}
 
 	pRuleset = MsgGetRuleset(pMsg);
+	assert(ruleset.GetRulesetQueue != NULL); /* This is only to keep clang static analyzer happy */
 	pQueue = (pRuleset == NULL) ? runConf->pMsgQueue : ruleset.GetRulesetQueue(pRuleset);
 
 	/* if a plugin logs a message during shutdown, the queue may no longer exist */
@@ -2192,6 +2193,7 @@ mainloop(void)
 
 		janitorRun();
 
+		assert(datetime.GetTime != NULL); /* This is only to keep clang static analyzer happy */
 		datetime.GetTime(&tTime);
 		checkGoneAwaySenders(tTime);
 
