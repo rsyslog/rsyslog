@@ -22,6 +22,47 @@ Notable Features
 
 - :ref:`imtcp-statistic-counter`
 
+The ``imtcp`` module runs on all platforms but is **optimized for Linux** and other systems that 
+support **epoll in edge-triggered mode**. While earlier versions of imtcp operated exclusively 
+in **single-threaded** mode, starting with **version 8.2504.0**, a **worker pool** is used on 
+**epoll-enabled systems**, significantly improving performance.
+
+The **number of worker threads** can be configured to match system requirements.
+
+Starvation Protection
+---------------------
+
+A common issue in high-volume logging environments is **starvation**, where a few high-traffic 
+sources overwhelm the system. Without protection, a worker may become stuck processing a single 
+connection continuously, preventing other clients from being served.
+
+For example, if two worker threads are available and one machine floods the system with data, 
+**only one worker remains** to handle all other connections. If multiple sources send large 
+amounts of data, **all workers could become monopolized**, preventing other connections from 
+being processed.
+
+To mitigate this, **imtcp allows limiting the number of consecutive requests a worker can handle 
+per session**. Once the limit is reached, the worker temporarily stops processing that session 
+and switches to other active connections. This ensures **fair resource distribution** while 
+preventing any single sender from **monopolizing rsyslog’s processing power**.
+
+Even in **single-threaded mode**, a high-volume sender may consume significant resources, but it 
+will no longer block all other connections.
+
+Configurable Behavior
+---------------------
+
+- The **maximum number of requests per session** before switching to another connection can be 
+  adjusted.
+- In **epoll mode**, the **number of worker threads** can also be configured. More workers 
+  provide better protection against single senders dominating processing.
+
+Monitoring and Performance Insights
+-----------------------------------
+
+**Statistics counters** provide insights into key metrics, including starvation prevention. 
+These counters are **critical for monitoring system health**, especially in **high-volume 
+datacenter deployments**.
 
 Configuration Parameters
 ========================
@@ -261,6 +302,106 @@ StreamDriver.Name
 Selects :doc:`network stream driver <../../concepts/netstrm_drvr>`
 for all inputs using this module.
 
+
+WorkerThreads
+^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "2", "no", "none"
+
+Introduced in version 8.2504.0.
+
+The ``WorkerThreads`` parameter defines the **default number of worker threads** for all ``imtcp``  
+listeners. This setting applies only on **epoll-enabled systems**. If ``epoll`` is unavailable,  
+``imtcp`` will always run in **single-threaded mode**, regardless of this setting.
+
+**Default value:** ``2``  
+**Allowed values:** ``1`` (single-threaded) to any reasonable number (should not exceed CPU cores).  
+
+**Behavior and Recommendations**
+
+- If set to ``1``, ``imtcp`` operates in **single-threaded mode**, using the main event loop  
+  for processing.
+- If set to ``2`` or more, a **worker pool** is created, allowing multiple connections to be  
+  processed in parallel.
+- Setting this too high **can degrade performance** due to excessive thread switching.
+- A reasonable upper limit is **the number of available CPU cores**.
+
+**Scope and Overrides**
+- This is a **module-level parameter**, meaning it **sets the default** for all ``imtcp`` listeners.
+- Each listener instance can override this by setting the ``workerthreads`` **listener parameter**.
+
+**Example Configuration**
+The following sets a default of **4** worker threads for all listeners, while overriding it to  
+**8** for a specific listener:
+
+.. code-block:: none
+
+    module(load="imtcp" WorkerThreads="4")  # Default for all listeners
+
+    input(type="imtcp" port="514" workerthreads="8")  # Overrides default, using 8 workers
+
+If ``WorkerThreads`` is not explicitly set, the default of ``2`` will be used.
+
+
+.. _imtcp-StarvationProtection-MaxReads:
+
+StarvationProtection.MaxReads
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "500", "no", "none"
+
+
+Introduced in version 8.2504.0.
+
+The ``StarvationProtection.MaxReads`` parameter defines the **maximum number of consecutive  
+requests** a worker can process for a single connection before switching to another session.  
+This mechanism prevents any single sender from **monopolizing imtcp's processing capacity**.
+
+**Default value:** ``500``  
+
+**Allowed values:**  
+
+- ``0`` → Disables starvation protection (a single sender may dominate worker time).  
+- Any positive integer → Specifies the maximum number of consecutive reads before switching.  
+
+**Behavior and Use Cases**
+
+- When a connection continuously sends data, a worker will process it **up to MaxReads times**  
+  before returning it to the processing queue.
+- This ensures that **other active connections** get a chance to be processed.
+- Particularly useful in **high-volume environments** where a few senders might otherwise  
+  consume all resources.
+- In **single-threaded mode**, this still provides fairness but cannot fully prevent resource  
+  exhaustion.
+
+**Scope and Overrides**
+
+- This is a **module-level parameter**, meaning it **sets the default** for all ``imtcp`` listeners.
+- Each listener instance can override this by setting the  
+  ``starvationProtection.maxReads`` **listener parameter**.
+
+**Example Configuration**
+
+The following sets a **default of 300** reads per session before switching to another connection,  
+while overriding it to **1000** for a specific listener:
+
+.. code-block:: none
+
+    module(load="imtcp" StarvationProtection.MaxReads="300")  # Default for all listeners
+
+    input(type="imtcp" port="514" starvationProtection.MaxReads="1000")  # Overrides default
+
+If ``StarvationProtection.MaxReads`` is not explicitly set, the default of ``500`` will be used.
 
 StreamDriver.Mode
 ^^^^^^^^^^^^^^^^^
@@ -1080,6 +1221,63 @@ on port 514 with no set name is called "imtcp(514)".
 The following properties are maintained for each listener:
 
 -  **submitted** - total number of messages submitted for processing since startup
+
+
+.. _imtcp-worker-statistics:
+
+Worker Statistics Counters
+--------------------------
+
+When ``imtcp`` operates with **multiple worker threads** (``workerthreads > 1``),  
+it **automatically generates statistics counters** to provide insight into worker  
+activity and system health. These counters are part of the ``impstats`` module and  
+can be used to monitor system performance, detect bottlenecks, and analyze load  
+distribution among worker threads.
+
+**Note:** These counters **do not exist** if ``workerthreads`` is set to ``1``,  
+as ``imtcp`` runs in single-threaded mode in that case.
+
+**Statistics Counters**
+
+Each worker thread reports its statistics using the format ``tcpsrv/wX``,  
+where ``X`` is the worker thread number (e.g., ``tcpsrv/w0`` for the first worker).  
+The following counters are available:
+
+- **runs** → Number of times the worker thread has been invoked.
+- **read** → Number of read calls performed by the worker.  
+  - For TLS connections, this includes both **read** and **write** calls.
+- **accept** → Number of times this worker has processed a new connection via ``accept()``.
+- **starvation_protect** → Number of times a socket was placed back into the queue  
+  due to reaching the ``StarvationProtection.MaxReads`` limit.
+
+**Example Output**
+An example of ``impstats`` output with three worker threads:
+
+.. code-block:: none
+
+    10 Thu Feb 27 16:40:02 2025: tcpsrv/w0: origin=imtcp runs=72 read=2662 starvation_protect=1 accept=2
+    11 Thu Feb 27 16:40:02 2025: tcpsrv/w1: origin=imtcp runs=74 read=2676 starvation_protect=2 accept=0
+    12 Thu Feb 27 16:40:02 2025: tcpsrv/w2: origin=imtcp runs=72 read=1610 starvation_protect=0 accept=0
+
+In this case:
+
+- Worker ``w0`` was invoked **72 times**, performed **2662 reads**,  
+  applied **starvation protection once**, and accepted **2 connections**.
+- Worker ``w1`` handled more reads but did not process any ``accept()`` calls.
+- Worker ``w2`` processed fewer reads and did not trigger starvation protection.
+
+**Usage and Monitoring**
+
+- These counters help analyze how load is distributed across worker threads.
+- High ``starvation_protect`` values indicate that some connections are consuming  
+  too many reads, potentially impacting fairness.
+- If a single worker handles **most** of the ``accept()`` calls, this may  
+  indicate an imbalance in connection handling.
+- Regular monitoring can help optimize the ``workerthreads`` and  
+  ``StarvationProtection.MaxReads`` parameters for better system efficiency.
+
+By using these statistics, administrators can fine-tune ``imtcp`` to ensure  
+**fair resource distribution and optimal performance** in high-traffic environments.
 
 
 Caveats/Known Bugs
