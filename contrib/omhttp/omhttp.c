@@ -411,7 +411,7 @@ CODESTARTdbgPrintInstInfo
 	dbgprintf("\trest path='%s'\n", pData->restPath);
 	dbgprintf("\tcheck path='%s'\n", pData->checkPath);
 	dbgprintf("\tdynamic rest path=%d\n", pData->dynRestPath);
-	dbgprintf("\tproxy host='%s'\n", pData->proxyHost);
+	dbgprintf("\tproxy host='%s'\n", (pData->proxyHost == NULL) ? "unset" : (char*) pData->proxyHost);
 	dbgprintf("\tproxy port='%d'\n", pData->proxyPort);
 	dbgprintf("\tuse https=%d\n", pData->useHttps);
 	dbgprintf("\tbatch=%d\n", pData->batchMode);
@@ -2180,10 +2180,12 @@ CODESTARTnewActInst
 	}
 
 	if (pData->proxyHost == NULL) {
-		if (getenv("http_proxy") != NULL) {
-			pData->proxyHost = ustrdup(getenv("http_proxy"));
-		} else if (getenv("HTTP_PROXY") != NULL) {
-			pData->proxyHost = ustrdup(getenv("HTTP_PROXY"));
+		const char *http_proxy;
+		if((http_proxy = getenv("http_proxy")) == NULL) {
+			http_proxy = getenv("HTTP_PROXY");
+		}
+		if(http_proxy != NULL) {
+			pData->proxyHost = ustrdup(http_proxy);
 		}
 	}
 
