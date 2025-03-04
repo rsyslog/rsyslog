@@ -30,6 +30,8 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #ifdef ENABLE_LIBLOGGING_STDLOG
 #  include <liblogging/stdlog.h>
 #else
@@ -288,38 +290,56 @@ finalize_it:
 	RETiRet;
 }
 
+static int
+lock_file(int fd, short type)
+{
+	struct flock lk;
+	lk.l_type = type;
+	lk.l_start = 0;
+	lk.l_whence = SEEK_SET;
+	lk.l_len = 0;
+
+	return (fcntl(fd, F_SETLK, &lk));
+}
+
 static rsRetVal
 writePidFile(void)
 {
-	FILE *fp;
+	FILE *fp = NULL;
 	DEFiRet;
-
-	const char *tmpPidFile;
+	int fd = -1;
 
 	if(!strcmp(PidFile, NO_PIDFILE)) {
 		FINALIZE;
 	}
-	if(asprintf((char **)&tmpPidFile, "%s.tmp", PidFile) == -1) {
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
-	if(tmpPidFile == NULL)
-		tmpPidFile = PidFile;
-	DBGPRINTF("rsyslogd: writing pidfile '%s'.\n", tmpPidFile);
-	if((fp = fopen((char*) tmpPidFile, "w")) == NULL) {
+
+	fd = open(PidFile, O_RDWR | O_CREAT, 0644);
+	if (fd == -1) {
 		perror("rsyslogd: error writing pid file (creation stage)\n");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
+
+	if (lock_file(fd, F_WRLCK) != 0) {
+		perror("rsyslogd: error getting pid file lock (lock file stage)\n");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	if((fp = fdopen(fd, "w")) == NULL) {
+		perror("rsyslogd: error opening pid file (creation stage)\n");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	DBGPRINTF("rsyslogd: writing pidfile '%s'.\n", PidFile);
+
 	if(fprintf(fp, "%d", (int) glblGetOurPid()) < 0) {
 		LogError(errno, iRet, "rsyslog: error writing pid file");
 	}
-	fclose(fp);
-	if(tmpPidFile != PidFile) {
-		if(rename(tmpPidFile, PidFile) != 0) {
-			perror("rsyslogd: error writing pid file (rename stage)");
-		}
-		free((void*)tmpPidFile);
-	}
+
 finalize_it:
+	if (fp != NULL)
+		fclose(fp);
+	if (fd != -1)
+		close(fd);
 	RETiRet;
 }
 
@@ -341,6 +361,7 @@ checkStartupOK(void)
 {
 	FILE *fp = NULL;
 	DEFiRet;
+	int fd = -1;
 
 	DBGPRINTF("rsyslogd: checking if startup is ok, pidfile '%s'.\n", PidFile);
 
@@ -349,8 +370,24 @@ checkStartupOK(void)
 		FINALIZE;
 	}
 
-	if((fp = fopen((char*) PidFile, "r")) == NULL)
+	fd = open(PidFile, O_RDONLY);
+	if (fd == -1)
 		FINALIZE; /* all well, no pid file yet */
+
+	if (lock_file(fd, F_RDLCK) != 0) {
+		fprintf(stderr, "rsyslogd: error getting pid file lock, maybe there is another rsyslogd running.\n"
+			"rsyslogd: pidfile '%s' already exist.\n"
+			"If you want to run multiple instances of rsyslog, you need "
+			"to specify\n"
+			"different pid files for them (-i option).\n",
+			PidFile);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	if((fp = fdopen(fd, "r")) == NULL) {
+		perror("rsyslogd: error opening pid file in check state\n");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
 
 	int pf_pid;
 	if(fscanf(fp, "%d", &pf_pid) != 1) {
@@ -372,6 +409,8 @@ checkStartupOK(void)
 finalize_it:
 	if(fp != NULL)
 		fclose(fp);
+	if (fd != -1)
+		close(fd);
 	RETiRet;
 }
 
