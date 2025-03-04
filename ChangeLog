@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2504.0 (aka 2025.04) 2025-04-??
+- 2025-03-04: perctile_stats: do not use uninitialized values on error
+  Thanks to Attila Lakatos for the patch.
+- 2025-03-04: omfwd bufgix: potential segfault in UDP forwarding
+  A segfault could occur if the configured port could not be bound to the interface.
+  Thanks to Markel Azpeitia Loiti for the patch.
 - 2025-03-01: imtcp: major multithreading and performance improvements
   This commit significantly enhances imtcp by introducing a fully
   functional worker thread pool, enabling true multi-threaded
