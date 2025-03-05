@@ -234,7 +234,7 @@ endif
 #
 if ENABLE_MBEDTLS
 pkglib_LTLIBRARIES += lmnsd_mbedtls.la
-lmnsd_mbedtls_la_SOURCES = nsd_mbedtls.c nsd_mbedtls.h nsdsel_mbedtls.c nsdsel_mbedtls.h
+lmnsd_mbedtls_la_SOURCES = nsd_mbedtls.c nsd_mbedtls.h
 lmnsd_mbedtls_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(MBEDTLS_CFLAGS)
 lmnsd_mbedtls_la_LDFLAGS = -module -avoid-version
 lmnsd_mbedtls_la_LIBADD = $(MBEDTLS_LIBS)

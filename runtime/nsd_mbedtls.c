@@ -41,7 +41,6 @@
 #include "module-template.h"
 #include "obj.h"
 #include "nsd_ptcp.h"
-#include "nsdsel_mbedtls.h"
 #include "nsd_mbedtls.h"
 #include "rsconf.h"
 
@@ -1075,7 +1074,6 @@ ENDObjClassInit(nsd_mbedtls)
 
 BEGINmodExit
 CODESTARTmodExit
-	nsdsel_mbedtlsClassExit();
 	nsd_mbedtlsClassExit();
 ENDmodExit
 
@@ -1090,5 +1088,4 @@ CODESTARTmodInit
 
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(nsd_mbedtlsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
-	CHKiRet(nsdsel_mbedtlsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit
