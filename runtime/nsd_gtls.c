@@ -1055,6 +1055,8 @@ gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
 finalize_it:
 	if(pstrFingerprint != NULL)
 		cstrDestruct(&pstrFingerprint);
+	if(pstrFingerprintSha256 != NULL)
+		cstrDestruct(&pstrFingerprintSha256);
 	RETiRet;
 }
 
