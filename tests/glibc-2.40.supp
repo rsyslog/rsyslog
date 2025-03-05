@@ -1,0 +1,19 @@
+{
+   <glibc 2.40 failures for fc41.aarch64>
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:UnknownInlinedFun
+   fun:_dl_map_object_deps
+   fun:dl_open_worker_begin
+   fun:_dl_catch_exception
+   fun:dl_open_worker
+   fun:_dl_catch_exception
+   fun:_dl_open
+   fun:do_dlopen
+   fun:_dl_catch_exception
+   fun:_dl_catch_error
+   fun:dlerror_run
+   fun:__libc_dlopen_mode
+}
+
