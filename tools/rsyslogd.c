@@ -294,7 +294,7 @@ writePidFile(void)
 	FILE *fp;
 	DEFiRet;
 
-	const char *tmpPidFile;
+	const char *tmpPidFile = NULL;
 
 	if(!strcmp(PidFile, NO_PIDFILE)) {
 		FINALIZE;
@@ -304,6 +304,7 @@ writePidFile(void)
 	}
 	if(tmpPidFile == NULL)
 		tmpPidFile = PidFile;
+
 	DBGPRINTF("rsyslogd: writing pidfile '%s'.\n", tmpPidFile);
 	if((fp = fopen((char*) tmpPidFile, "w")) == NULL) {
 		perror("rsyslogd: error writing pid file (creation stage)\n");
@@ -317,9 +318,12 @@ writePidFile(void)
 		if(rename(tmpPidFile, PidFile) != 0) {
 			perror("rsyslogd: error writing pid file (rename stage)");
 		}
+	}
+
+finalize_it:
+	if(tmpPidFile != PidFile) {
 		free((void*)tmpPidFile);
 	}
-finalize_it:
 	RETiRet;
 }
 
