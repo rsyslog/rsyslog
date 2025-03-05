@@ -2160,6 +2160,7 @@ mainloop(void)
 	sigaddset(&sigblockset, SIGHUP);
 
 	do {
+		sigemptyset(&origmask);
 		pthread_sigmask(SIG_BLOCK, &sigblockset, &origmask);
 		pthread_mutex_lock(&mutChildDied);
 		need_free_mutex = 1;
