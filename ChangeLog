@@ -1,5 +1,19 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2504.0 (aka 2025.04) 2025-04-??
+- 2025-03-06: rsyslog core fix: buffer overflow when the argument to replace() is empty
+  This fixes the following situation:
+  We have these expressions in rsyslogd.conf:
+      set $!rsyslog_FileFormat = exec_template("RSYSLOG_FileFormat")
+      set $!localheader = re_extract($!rsyslog_FileFormat, "[^ ]+.* +port[0-9]", 0, 0, "");
+      set $!localpattern = re_extract($!rsyslog_FileFormat, " [^ ]+ +[^ ]+ +port[0-9]", 0, 0, "");
+      set $!localheader = replace($!localheader, $!localpattern, " ");
+  We have a message like this arriving.
+      <30>Feb 24 22:08:21 hostname port03 'label' RXDATA: \n
+  It was observed that when 2 of these messages arrive in a row, rsyslogd
+  crashes. This is clearly due to memory corruption, as the crash comes
+  from within calloc.
+  Thanks to Lincoln Ramsay for the patch.
+- 2025-03-05: several small to cosmetic leak fixes based on Coverity Scan
 - 2025-03-04: perctile_stats: do not use uninitialized values on error
   Thanks to Attila Lakatos for the patch.
 - 2025-03-04: omfwd bufgix: potential segfault in UDP forwarding
