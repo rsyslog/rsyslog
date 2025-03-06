@@ -513,11 +513,19 @@ TESTS +=  \
 	queue-encryption-da.sh
 endif # ENABLE_LIBGCRYPT
 if HAVE_VALGRIND
+# note if the same test is added multiple times, it still is only executed once!
+if ENABLE_GNUTLS_TESTS
+TESTS +=  \
+	tcpflood_wrong_option_output.sh
+endif # ENABLE_GNUTLS_TESTS
+if ENABLE_OPENSSL
+TESTS +=  \
+	tcpflood_wrong_option_output.sh
+endif # ENABLE_OPENSSL
 TESTS +=  \
 	omusrmsg-noabort-vg.sh \
 	omfile_hup-vg.sh \
 	gzipwr_hup-vg.sh \
-	tcpflood_wrong_option_output.sh \
 	imtcp-octet-framing-too-long-vg.sh \
 	smtradfile-vg.sh \
 	dnscache-TTL-0-vg.sh \
