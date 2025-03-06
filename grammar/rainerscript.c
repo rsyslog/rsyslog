@@ -1755,6 +1755,7 @@ doFuncReplace(struct svar *__restrict__ const operandVal, struct svar *__restric
 		if (j == lfind) {
 			lDst = lDst - lfind + lReplaceWith;
 			j = 0;
+			if (lfind == 0) break;
 		}
 		if (i == lSrc) break;
 		if (src_buff[i] == find[j]) {
@@ -1770,9 +1771,10 @@ doFuncReplace(struct svar *__restrict__ const operandVal, struct svar *__restric
 	uint k, s;
 	for(i = j = s = 0; i <= lSrc; i++, s++) {
 		if (j == lfind) {
-		s -= j;
-		for (k = 0; k < lReplaceWith; k++, s++) dest[s] = replaceWith[k];
+			s -= j;
+			for (k = 0; k < lReplaceWith; k++, s++) dest[s] = replaceWith[k];
 			j = 0;
+			if (lfind == 0) break;
 		}
 		if (i == lSrc) break;
 		if (src_buff[i] == find[j]) {
