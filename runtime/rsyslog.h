@@ -637,6 +637,7 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 	RS_RET_DEBUG = -2458, /**< status messages primarily meant for debugging, no error */
 	RS_RET_TLS_BASEINIT_FAIL = -2459, /**< Basic TLS initialization step failed */
 	RS_RET_TLS_ERR_SYSCALL = -2460, /**< TLS lib had problem with syscall */
+	RS_RET_WARN_NO_SENDER_STATS = -2461, /**< TLS lib had problem with syscall */
 
 	/* RainerScript error messages (range 1000.. 1999) */
 	RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

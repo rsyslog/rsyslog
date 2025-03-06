@@ -6,6 +6,7 @@
  * is written here, it should be considered a bug.
  *
  * Params
+ * -h	hostname to use inside message
  * -t	target address (default 127.0.0.1)
  * -p	target port(s) (default 13514), multiple via port1:port2:port3...
  * -n	number of target ports (all target ports must be given in -p!)
@@ -197,6 +198,7 @@ static int bSilent = 0; /* completely silent operation */
 static int bRandConnDrop = 0; /* randomly drop connections? */
 static double dbRandConnDrop = 0.95; /* random drop probability */
 static char *MsgToSend = NULL; /* if non-null, this is the actual message to send */
+static char *hostname = "172.20.245.8"; /* this is the "tratditional" default, as bad is it is... */
 static int bBinaryFile = 0;	/* is -I file binary */
 static char *dataFile = NULL;	/* name of data file, if NULL, generate own data */
 static int numFileIterations = 1;/* how often is file data to be sent? */
@@ -699,8 +701,8 @@ genMsg(char *buf, size_t maxBuf, size_t *pLenBuf, struct instdata *inst)
 						"=\"%8.8d\"] %s{\"msgnum\":%d}%c", msgPRI, msgNum,
 						jsonCookie, msgNum, frameDelim);
 		} else {
-			*pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 172.20.245.8 tag %s{\"msgnum\":%d}%c",
-					       msgPRI, jsonCookie, msgNum, frameDelim);
+			*pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 %s tag %s{\"msgnum\":%d}%c",
+					       msgPRI, hostname, jsonCookie, msgNum, frameDelim);
 		}
 	} else if(MsgToSend == NULL) {
 		if(dynFileIDs > 0) {
@@ -713,8 +715,9 @@ genMsg(char *buf, size_t maxBuf, size_t *pLenBuf, struct instdata *inst)
 						"MSGNUM=\"%8.8d\"] msgnum:%s%8.8d:%c",
 						msgPRI, msgNum, dynFileIDBuf, msgNum, frameDelim);
 			} else {
-				*pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 172.20.245.8 tag "
-						"msgnum:%s%8.8d:%c", msgPRI, dynFileIDBuf, msgNum, frameDelim);
+				*pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 %s tag "
+						"msgnum:%s%8.8d:%c", msgPRI, hostname, dynFileIDBuf,
+						msgNum, frameDelim);
 			}
 		} else {
 			if(bRandomizeExtraData)
@@ -729,8 +732,8 @@ genMsg(char *buf, size_t maxBuf, size_t *pLenBuf, struct instdata *inst)
 						"MSGNUM=\"%8.8d\"] msgnum:%s%8.8d:%c",
 						msgPRI, msgNum, dynFileIDBuf, msgNum, frameDelim);
 			} else {
-				*pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 172.20.245.8 tag msgnum"
-						":%s%8.8d:%d:%s%c", msgPRI, dynFileIDBuf, msgNum, edLen,
+				*pLenBuf = snprintf(buf, maxBuf, "<%s>Mar  1 01:00:00 %s tag msgnum"
+						":%s%8.8d:%d:%s%c", msgPRI, hostname, dynFileIDBuf, msgNum, edLen,
 						extraData, frameDelim);
 			}
 		}
@@ -1903,7 +1906,7 @@ int main(int argc, char *argv[])
 
 	setvbuf(stdout, buf, _IONBF, 48);
 
-	while((opt = getopt(argc, argv, "a:ABb:c:C:d:DeE:f:F:i:I:j:k:l:L:m:M:n:o:OP:p:rR:"
+	while((opt = getopt(argc, argv, "a:ABb:c:C:d:DeE:f:F:h:i:I:j:k:l:L:m:M:n:o:OP:p:rR:"
 				        "sS:t:T:u:vW:x:XyYz:Z:")) != -1) {
 		switch (opt) {
 		case 'b':	batchsize = atoll(optarg);
@@ -1947,6 +1950,8 @@ int main(int argc, char *argv[])
 		case 'f':	dynFileIDs = atoi(optarg);
 				break;
 		case 'F':	frameDelim = atoi(optarg);
+				break;
+		case 'h':	hostname = optarg;
 				break;
 		case 'L':	tlsLogLevel = atoi(optarg);
 				break;

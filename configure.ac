@@ -2165,6 +2165,18 @@ AC_SUBST(UDPSPOOF_CFLAGS)
 AC_SUBST(UDPSPOOF_LIBS)
 
 
+# settings for omsendertrack
+AC_ARG_ENABLE(omsendertrack,
+        [AS_HELP_STRING([--enable-omsendertrack],[Compiles omsendertrack module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omsendertrack="yes" ;;
+          no) enable_omsendertrack="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omsendertrack) ;;
+         esac],
+        [enable_omsendertrack=no]
+)
+AM_CONDITIONAL(ENABLE_OMSENDERTRACK, test x$enable_omsendertrack = xyes)
+
 # settings for omstdout
 AC_ARG_ENABLE(omstdout,
         [AS_HELP_STRING([--enable-omstdout],[Compiles stdout module @<:@default=no@:>@])],
@@ -2965,6 +2977,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omprog/Makefile \
 		plugins/mmexternal/Makefile \
 		plugins/omstdout/Makefile \
+		plugins/omsendertrack/Makefile \
 		plugins/omjournal/Makefile \
 		plugins/pmciscoios/Makefile \
 		plugins/pmnull/Makefile \
@@ -3100,6 +3113,7 @@ echo "    Mail support enabled:                     $enable_mail"
 echo "    omfile-hardened module will be compiled:  $enable_omfile_hardened"
 echo "    omprog module will be compiled:           $enable_omprog"
 echo "    omstdout module will be compiled:         $enable_omstdout"
+echo "    omsendertrack module will be compiled:    $enable_omsendertrack"
 echo "    omjournal module will be compiled:        $enable_omjournal"
 echo "    omhdfs module will be compiled:           $enable_omhdfs"
 echo "    omelasticsearch module will be compiled:  $enable_elasticsearch"
