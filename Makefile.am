@@ -74,6 +74,10 @@ if ENABLE_OMSTDOUT
 SUBDIRS += plugins/omstdout
 endif
 
+if ENABLE_OMSENDERTRACK
+SUBDIRS += plugins/omsendertrack
+endif
+
 if ENABLE_PMCISCONAMES
 SUBDIRS += contrib/pmcisconames
 endif
@@ -367,6 +371,7 @@ DISTCHECK_CONFIGURE_FLAGS+= \
 	--enable-silent-rules \
 	--enable-rsyslogd \
 	--enable-omstdout \
+	--enable-omsendertrack \
 	--enable-imdiag \
 	--enable-testbench \
 	--enable-valgrind
