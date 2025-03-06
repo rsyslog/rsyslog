@@ -2940,7 +2940,7 @@ evalVar(struct cnfvar *__restrict__ const var, void *__restrict__ const usrptr,
 	unsigned short bMustBeFreed = 0;
 	rsRetVal localRet;
 	struct json_object *json;
-	uchar *cstr;
+	uchar *cstr = NULL;
 
 	if(var->prop.id == PROP_CEE        ||
 	   var->prop.id == PROP_LOCAL_VAR  ||
@@ -2959,8 +2959,8 @@ evalVar(struct cnfvar *__restrict__ const var, void *__restrict__ const usrptr,
 			ret->d.estr = (localRet != RS_RET_OK || cstr == NULL) ?
 					  es_newStr(1)
 					: es_newStrFromCStr((char*) cstr, strlen((char*) cstr));
-			free(cstr);
 		}
+		free(cstr);
 	} else {
 		ret->datatype = 'S';
 		pszProp = (uchar*) MsgGetProp((smsg_t*)usrptr, NULL, &var->prop, &propLen, &bMustBeFreed, NULL);
