@@ -496,6 +496,15 @@ TESTS +=  \
 	parsertest-snare_ccoff_udp.sh \
 	parsertest-snare_ccoff_udp2.sh
 
+if ENABLE_OMSENDERTRACK
+TESTS +=  \
+	omsendertrack-baic.sh
+#if HAVE_VALGRIND
+#TESTS +=
+#endif # if HAVE_VALGRIND
+endif
+
+
 if ENABLE_LIBZSTD
 TESTS +=  \
 	zstd.sh
@@ -2209,6 +2218,7 @@ EXTRA_DIST= \
 	omfwd-keepalive.sh \
 	omfwd_fast_imuxsock.sh \
 	omfile_hup-vg.sh \
+	omsendertrack-basic.sh \
 	zstd.sh \
 	zstd-vg.sh \
 	gzipwr_hup-vg.sh \
