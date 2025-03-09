@@ -34,10 +34,12 @@
 #include "template.h"
 #include "module-template.h"
 #include "errmsg.h"
-#include "cfsysline.h"
+#include "hashtable.h"
+#include "hashtable_itr.h"
+//#include "cfsysline.h"
 
 MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_NOKEEP // TODO: Retain?
 MODULE_CNFNAME("omsendertrack")
 
 //static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
@@ -49,6 +51,20 @@ MODULE_CNFNAME("omsendertrack")
 DEF_OMOD_STATIC_DATA
 
 #define DEFAULT_INTERVAL 60 /* seconds */
+
+/* module data structures */
+
+static pthread_mutex_t mutSenders;
+
+static struct hashtable *stats_senders = NULL;
+
+typedef struct {
+	const uchar *sender;
+	uint64_t nMsgs;
+	time_t lastSeen;
+	time_t firstSeen;
+} sender_stats_t;
+
 
 /* config variables */
 
@@ -91,6 +107,92 @@ static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current l
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
 
 
+
+/* this function obtains all sender stats. hlper to getAllStatsLines()
+ * We need to keep this looked to avoid resizing of the hash table
+ * (what could otherwise cause a segfault).
+ */
+static void
+getSenderStats(rsRetVal(*cb)(void*, const char*),
+	void *usrptr,
+	statsFmtType_t fmt,
+	const int8_t bResetCtrs)
+{
+	struct hashtable_itr *itr = NULL;
+	sender_stats_t*stat;
+	char fmtbuf[2048];
+
+	pthread_mutex_lock(&mutSenders);
+
+	/* Iterator constructor only returns a valid iterator if
+	 * the hashtable is not empty
+	 */
+	if(hashtable_count(stats_senders) > 0) {
+		itr = hashtable_iterator(stats_senders);
+		do {
+			stat = (sender_stats_t*)hashtable_iterator_value(itr);
+			if(fmt == statsFmt_Legacy) {
+				snprintf(fmtbuf, sizeof(fmtbuf),
+					"_sender_stat: sender=%s messages=%"
+					PRIu64,
+					stat->sender, stat->nMsgs);
+			} else {
+				snprintf(fmtbuf, sizeof(fmtbuf),
+					"{ \"name\":\"_sender_stat\", "
+					"\"origin\":\"impstats\", "
+					"\"sender\":\"%s\", \"messages\":%"
+					PRIu64 "}",
+					stat->sender, stat->nMsgs);
+			}
+			fmtbuf[sizeof(fmtbuf)-1] = '\0';
+			cb(usrptr, fmtbuf);
+			if(bResetCtrs)
+				stat->nMsgs = 0;
+		} while (hashtable_iterator_advance(itr));
+	}
+
+	free(itr);
+	pthread_mutex_unlock(&mutSenders);
+}
+
+
+
+static rsRetVal
+recordSender(const uchar *const sender, const time_t lastSeen)
+{
+	sender_stats_t* stat;
+	int mustUnlock = 0;
+	DEFiRet;
+
+	assert(stats_senders != NULL);
+
+	pthread_mutex_lock(&mutSenders);
+	mustUnlock = 1;
+	stat = hashtable_search(stats_senders, (void*)sender);
+	if(stat == NULL) {
+		DBGPRINTF("recordSender: sender '%s' not found, adding\n", sender);
+		CHKmalloc(stat = calloc(1, sizeof(sender_stats_t)));
+		stat->sender = (const uchar*)strdup((const char*)sender);
+		stat->nMsgs = 0;
+		stat->firstSeen = lastSeen;
+		if(hashtable_insert(stats_senders, (void*)stat->sender, (void*)stat) == 0) {
+			LogError(errno, RS_RET_INTERNAL_ERROR,
+				"omsendertrack error inserting sender '%s' into sender "
+				"hash table", sender);
+			ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+		}
+	}
+
+	stat->nMsgs++; // TODO: later atomic?
+	stat->lastSeen = lastSeen;
+	DBGPRINTF("omsendertrack: recordSender: '%s', nmsgs now %llu, lastSeen %llu\n", sender,
+		(long long unsigned) stat->nMsgs, (long long unsigned) lastSeen);
+
+finalize_it:
+	if(mustUnlock)
+		pthread_mutex_unlock(&mutSenders);
+	RETiRet;
+}
 
 BEGINinitConfVars		/* (re)set config variables to default values */
 CODESTARTinitConfVars
@@ -160,9 +262,18 @@ BEGINtryResume
 CODESTARTtryResume
 ENDtryResume
 
-BEGINdoAction
-CODESTARTdoAction
-ENDdoAction
+BEGINbeginTransaction
+CODESTARTbeginTransaction
+ENDbeginTransaction
+
+BEGINcommitTransaction
+CODESTARTcommitTransaction
+	const time_t lastSeen = time(NULL); /* do only query once per TX - it's sufficiently precise */
+	for(unsigned i = 0 ; i < nParams ; ++i) {
+		recordSender(actParam(pParams, 1, i, 0).param, lastSeen);
+	}
+ENDcommitTransaction
+
 
 static void
 setInstParamDefaults(instanceData *pData)
@@ -248,12 +359,14 @@ ENDparseSelectorAct
 
 BEGINmodExit
 CODESTARTmodExit
+	pthread_mutex_destroy(&mutSenders);
+	hashtable_destroy(stats_senders, 1);
 ENDmodExit
 
 
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMODTX_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
@@ -267,4 +380,11 @@ INITLegCnfVars
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	/* old-style system not supported */
+	pthread_mutex_init(&mutSenders, NULL);
+
+	if((stats_senders = create_hashtable(100, hash_from_string, key_equals_string, NULL)) == NULL) {
+		LogError(0, RS_RET_INTERNAL_ERROR, "error trying to initialize hash-table "
+			"for sender table. Sender statistics and warnings are disabled.");
+		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR); // TODO: check status!
+	}
 ENDmodInit
