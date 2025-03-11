@@ -1,4 +1,11 @@
 FROM	fedora:36
+# Workarround for a bug affecting buildkit with yum when ulimit is unlimited
+# https://github.com/docker/buildx/issues/379#issuecomment-1196517905
+RUN echo "* soft nofile 1024000" >> /etc/security/limits.conf && \
+    echo "* hard nofile 1024000" >> /etc/security/limits.conf && \
+    echo "session required pam_limits.so" >> /etc/pam.d/common-session && \
+    echo "ulimit -n 1024000" >> /etc/profile.d/ulimit.sh
+# Install packages
 RUN	dnf -y update
 RUN	dnf -y install wget mock git sudo mc vim screen rsync createrepo rpm-sign yum crypto-policies-scripts.noarch
 RUN	update-crypto-policies --set LEGACY
