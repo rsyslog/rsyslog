@@ -26,6 +26,7 @@
 #include <string.h>
 #include <assert.h>
 #include <signal.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <unistd.h>
 #include "conf.h"
@@ -72,6 +73,8 @@ typedef struct _instanceData {
 	uchar *templateName; // TODO: keep this as "template" or "sender-id"?
 	pthread_mutex_t mutSenders;
 	struct hashtable *stats_senders;
+	int bShutdownBackgroundWriter;
+	pthread_t bgw_tid;	/* thread ID of background writer */
 } instanceData;
 
 typedef struct wrkrInstanceData { // TODO: we probably want multiple workers, but then we need atomic updates!
@@ -145,6 +148,84 @@ getSenderStats(instanceData *const pData,
 }
 #endif
 
+static rsRetVal
+writeSenderInfo(const char *const fname, const char *data)
+{
+
+	DEFiRet;
+	char tmpname[1024]; // TODO: size!
+	snprintf(tmpname, sizeof(tmpname), "%s.tmp", fname);
+
+	int fd = open(tmpname, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	if(fd < 0) {
+		LogError(errno, RS_RET_IO_ERROR,
+			"omsendertrack could not create new temp sender file");
+		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	}
+
+	size_t len = strlen(data);
+	ssize_t written = write(fd, data, len);
+	if (written != (ssize_t)len) {
+		unlink(tmpname); // Remove partial file
+		LogError(errno, RS_RET_IO_ERROR,
+			"omsendertrack write to temp sender file failed");
+		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	}
+
+	close(fd);
+	fd = -1;
+
+	// Atomically replace the old file with the new one
+	if (rename(tmpname, fname) != 0) {
+		unlink(tmpname);
+		LogError(errno, RS_RET_IO_ERROR,
+			"omsendertrack rename to configure file name failed");
+		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	}
+
+finalize_it:
+	if(iRet != RS_RET_OK) {
+		close(fd);
+	}
+	RETiRet;
+}
+
+/* background writing thread for sender stats */
+static void *
+bgWriter(void *arg)
+{
+	instanceData *pData = (instanceData *) arg;
+
+
+	uchar thrdName[32];
+	snprintf((char*)thrdName, sizeof(thrdName), "omsendertrack/bgw"); // TODO: instanceientifier?
+	dbgSetThrdName(thrdName);
+	dbgprintf("bgWriter started\n");
+
+	/* set thread name - we ignore if it fails, has no harsh consequences... */
+#	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
+	if(prctl(PR_SET_NAME, thrdName, 0, 0, 0) != 0) {
+		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", thrdName);
+	}
+#	elif defined(HAVE_PTHREAD_SETNAME_NP)
+	int r = pthread_setname_np(pthread_self(), (char*) thrdName);
+	if(r != 0) {
+		DBGPRINTF("pthread_setname_np failed, not setting thread name for '%s'\n", thrdName);
+	}
+#	endif
+
+	while(pData->bShutdownBackgroundWriter == 0) {
+		srSleep(1, 0);
+		if(pData->bShutdownBackgroundWriter == 1) {
+			break;
+		}
+		// TODO: add call to do actual write
+dbgprintf("bgwriter writing report file\n");
+	}
+
+	dbgprintf("bgWriter finished\n");
+	return NULL;
+}
 
 static rsRetVal
 recordSender(instanceData *const pData, const uchar *const sender, const time_t lastSeen)
@@ -196,6 +277,17 @@ CODESTARTcreateInstance
 			"for sender table. Sender statistics and warnings are disabled.");
 		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR); // TODO: check status!
 	}
+
+	/* read existing data */
+	// TODO: implement
+
+	/* background writer */
+	pthread_mutex_init(&pData->mutSenders, NULL);
+	if(pthread_create(&pData->bgw_tid, NULL, bgWriter, pData) != 0) {
+		LogError(0, RS_RET_ERR, "omsendertrack: cannot create background writing thread. "
+				"No interim files will be written!");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
 finalize_it:
 ENDcreateInstance
 
@@ -240,6 +332,17 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
+	/* stop bgWriter */
+	pData->bShutdownBackgroundWriter = 1;
+	// TODO: implement this and the following. We need a wakeup, e.g. via SIGTTIN
+
+	/* wait until stopped */
+	dbgprintf("waiting for bgWriter to finish\n");
+	pthread_join(pData->bgw_tid, NULL);
+
+	/* do final write */
+
+	/* destroy data structs */
 	pthread_mutex_destroy(&pData->mutSenders);
 	hashtable_destroy(pData->stats_senders, 1);
 ENDfreeInstance
