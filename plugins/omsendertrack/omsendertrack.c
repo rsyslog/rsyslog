@@ -71,7 +71,7 @@ typedef struct _instanceData {
 	uchar *statefile;
 	uchar *cmdfile;
 	uchar *templateName; // TODO: keep this as "template" or "sender-id"?
-	pthread_mutex_t mutSenders;
+	pthread_rwlock_t mutSenders;
 	struct hashtable *stats_senders;
 	int bShutdownBackgroundWriter;
 	pthread_t bgw_tid;	/* thread ID of background writer */
@@ -110,19 +110,18 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current ex
 
 
 
-#if 0
-/* this function obtains all sender stats. 
- */
-static void
-getSenderStats(instanceData *const pData,
-	rsRetVal(*cb)(void*, const char*),
-	void *usrptr)
+/* this function writes the actual sender stats. */
+static rsRetVal
+writeSenderStats(instanceData *const pData, FILE *const fp)
 {
 	struct hashtable_itr *itr = NULL;
 	sender_stats_t *stat;
-	char fmtbuf[2048];
+	int bNeedEOL = 0;
+	DEFiRet;
 
-	pthread_mutex_lock(&pData->mutSenders);
+	fprintf(fp, "[\n"); /* begin JSON array */
+
+	pthread_rwlock_rdlock(&pData->mutSenders);
 
 	/* Iterator constructor only returns a valid iterator if
 	 * the hashtable is not empty
@@ -131,64 +130,60 @@ getSenderStats(instanceData *const pData,
 		itr = hashtable_iterator(pData->stats_senders);
 		do {
 			stat = (sender_stats_t*)hashtable_iterator_value(itr);
-			// TODO: add proper content
-			snprintf(fmtbuf, sizeof(fmtbuf),
-				"{ \"name\":\"_sender_stat\", "
-				"\"origin\":\"impstats\", "
-				"\"sender\":\"%s\", \"messages\":%"
-				PRIu64 "}",
-				stat->sender, stat->nMsgs);
-			fmtbuf[sizeof(fmtbuf)-1] = '\0';
-			cb(usrptr, fmtbuf);
+			fprintf(fp, "%s{"
+				"\"sender\":\"%s\""
+				",\"messages\":%" PRIu64
+				",\"firstseen\":%" PRIdMAX
+				",\"lastseen\":%" PRIdMAX
+				"}",
+				(bNeedEOL ? ",\n" : ""),
+				stat->sender, stat->nMsgs,
+				(intmax_t) stat->firstSeen, (intmax_t) stat->lastSeen);
+			bNeedEOL = 1;
 		} while (hashtable_iterator_advance(itr));
 	}
 
 	free(itr);
-	pthread_mutex_unlock(&pData->mutSenders);
+	pthread_rwlock_unlock(&pData->mutSenders);
+
+	fprintf(fp, "%s]\n", bNeedEOL ? "\n" : ""); /* end JSON array */
+	RETiRet;
 }
-#endif
 
 static rsRetVal
-writeSenderInfo(const char *const fname, const char *data)
+writeSenderInfo(instanceData *const pData)
 {
 
 	DEFiRet;
+	FILE *fp = NULL;
 	char tmpname[1024]; // TODO: size!
-	snprintf(tmpname, sizeof(tmpname), "%s.tmp", fname);
 
-	int fd = open(tmpname, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-	if(fd < 0) {
+	dbgprintf("writeSenderInfo\n");
+	snprintf(tmpname, sizeof(tmpname), "%s.tmp", pData->statefile);
+
+	if((fp = fopen(tmpname, "w")) == NULL) {
 		LogError(errno, RS_RET_IO_ERROR,
 			"omsendertrack could not create new temp sender file");
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
-	size_t len = strlen(data);
-	ssize_t written = write(fd, data, len);
-	if (written != (ssize_t)len) {
-		unlink(tmpname); // Remove partial file
-		LogError(errno, RS_RET_IO_ERROR,
-			"omsendertrack write to temp sender file failed");
-		ABORT_FINALIZE(RS_RET_IO_ERROR);
-	}
+	CHKiRet(writeSenderStats(pData, fp));
 
-	close(fd);
-	fd = -1;
-
-	// Atomically replace the old file with the new one
-	if (rename(tmpname, fname) != 0) {
-		unlink(tmpname);
+	/* Atomically replace the old file with the new one */
+	if(rename(tmpname, (const char*) pData->statefile) != 0) {
 		LogError(errno, RS_RET_IO_ERROR,
-			"omsendertrack rename to configure file name failed");
+			"omsendertrack rename '%s' to configured file name '%s' failed - "
+			"left temp file intact", tmpname, pData->statefile);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		close(fd);
+	if(fp != NULL) {
+		fclose(fp);
 	}
 	RETiRet;
 }
+
 
 /* background writing thread for sender stats */
 static void *
@@ -198,7 +193,7 @@ bgWriter(void *arg)
 
 
 	uchar thrdName[32];
-	snprintf((char*)thrdName, sizeof(thrdName), "omsendertrack/bgw"); // TODO: instanceientifier?
+	snprintf((char*)thrdName, sizeof(thrdName), "omsendertrack/bgw"); // TODO: instance-identifier?
 	dbgSetThrdName(thrdName);
 	dbgprintf("bgWriter started\n");
 
@@ -219,8 +214,8 @@ bgWriter(void *arg)
 		if(pData->bShutdownBackgroundWriter == 1) {
 			break;
 		}
-		// TODO: add call to do actual write
-dbgprintf("bgwriter writing report file\n");
+		dbgprintf("bgwriter writing report file\n");
+		writeSenderInfo(pData);
 	}
 
 	dbgprintf("bgWriter finished\n");
@@ -236,31 +231,43 @@ recordSender(instanceData *const pData, const uchar *const sender, const time_t 
 
 	assert(pData->stats_senders != NULL);
 
-	pthread_mutex_lock(&pData->mutSenders);
+	pthread_rwlock_rdlock(&pData->mutSenders);
 	mustUnlock = 1;
 	stat = hashtable_search(pData->stats_senders, (void*)sender);
 	if(stat == NULL) {
-		DBGPRINTF("recordSender: sender '%s' not found, adding\n", sender);
-		CHKmalloc(stat = calloc(1, sizeof(sender_stats_t)));
-		stat->sender = (const uchar*)strdup((const char*)sender);
-		stat->nMsgs = 0;
-		stat->firstSeen = lastSeen;
-		if(hashtable_insert(pData->stats_senders, (void*)stat->sender, (void*)stat) == 0) {
-			LogError(errno, RS_RET_INTERNAL_ERROR,
-				"omsendertrack error inserting sender '%s' into sender "
-				"hash table", sender);
-			ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+		/* we now need to write to the hash table */
+		pthread_rwlock_unlock(&pData->mutSenders);
+		pthread_rwlock_wrlock(&pData->mutSenders);
+
+		// Re-check in case another writer added it
+		stat = hashtable_search(pData->stats_senders, (void*)sender);
+		if (stat == NULL) {
+			DBGPRINTF("recordSender: sender '%s' not found, adding\n", sender);
+			CHKmalloc(stat = calloc(1, sizeof(sender_stats_t)));
+			stat->sender = (const uchar*)strdup((const char*)sender);
+			stat->nMsgs = 0;
+			stat->firstSeen = lastSeen;
+			if(hashtable_insert(pData->stats_senders, (void*)stat->sender, (void*)stat) == 0) {
+				LogError(errno, RS_RET_INTERNAL_ERROR,
+					"omsendertrack error inserting sender '%s' into sender "
+					"hash table", sender);
+				free(stat);
+				ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+			}
 		}
 	}
 
 	stat->nMsgs++; // TODO: later atomic?
 	stat->lastSeen = lastSeen;
-	DBGPRINTF("omsendertrack: recordSender: '%s', nmsgs now %llu, lastSeen %llu\n", sender,
-		(long long unsigned) stat->nMsgs, (long long unsigned) lastSeen);
+
+	DBGPRINTF("omsendertrack: recordSender: '%s', nmsgs now %llu, firstSeen %llu, lastSeen %llu\n",
+		sender, (long long unsigned) stat->nMsgs,
+		(long long unsigned) stat->firstSeen, (long long unsigned) stat->lastSeen);
 
 finalize_it:
-	if(mustUnlock)
-		pthread_mutex_unlock(&pData->mutSenders);
+	if(mustUnlock) {
+		pthread_rwlock_unlock(&pData->mutSenders);
+	}
 	RETiRet;
 }
 
@@ -270,8 +277,6 @@ ENDinitConfVars
 
 BEGINcreateInstance
 CODESTARTcreateInstance
-	pthread_mutex_init(&pData->mutSenders, NULL);
-
 	if((pData->stats_senders = create_hashtable(100, hash_from_string, key_equals_string, NULL)) == NULL) {
 		LogError(0, RS_RET_INTERNAL_ERROR, "error trying to initialize hash-table "
 			"for sender table. Sender statistics and warnings are disabled.");
@@ -282,7 +287,7 @@ CODESTARTcreateInstance
 	// TODO: implement
 
 	/* background writer */
-	pthread_mutex_init(&pData->mutSenders, NULL);
+	pthread_rwlock_init(&pData->mutSenders, NULL);
 	if(pthread_create(&pData->bgw_tid, NULL, bgWriter, pData) != 0) {
 		LogError(0, RS_RET_ERR, "omsendertrack: cannot create background writing thread. "
 				"No interim files will be written!");
@@ -341,9 +346,10 @@ CODESTARTfreeInstance
 	pthread_join(pData->bgw_tid, NULL);
 
 	/* do final write */
+	writeSenderInfo(pData);
 
 	/* destroy data structs */
-	pthread_mutex_destroy(&pData->mutSenders);
+	pthread_rwlock_destroy(&pData->mutSenders);
 	hashtable_destroy(pData->stats_senders, 1);
 ENDfreeInstance
 
@@ -416,6 +422,8 @@ CODESTARTnewActInst
 		} else if(!strcmp(actpblk.descr[i].name, "interval")) {
 			pData->interval = (int) pvals[i].val.d.n;
 		// TODO: add statefile, cmdfile
+		} else if(!strcmp(actpblk.descr[i].name, "statefile")) {
+			pData->statefile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->templateName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else {
