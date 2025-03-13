@@ -61,6 +61,7 @@ typedef struct {
 	uint64_t nMsgs;
 	time_t lastSeen;
 	time_t firstSeen;
+	pthread_mutex_t mut;
 } sender_stats_t;
 
 
@@ -119,6 +120,7 @@ writeSenderStats(instanceData *const pData, FILE *const fp)
 	int bNeedEOL = 0;
 	DEFiRet;
 
+	dbgprintf("writeSenderStats() called, hashtable_count %d\n", hashtable_count(pData->stats_senders));
 	fprintf(fp, "[\n"); /* begin JSON array */
 
 	pthread_rwlock_rdlock(&pData->mutSenders);
@@ -158,7 +160,7 @@ writeSenderInfo(instanceData *const pData)
 	FILE *fp = NULL;
 	char tmpname[1024]; // TODO: size!
 
-	dbgprintf("writeSenderInfo\n");
+	dbgprintf("writeSenderInfo, file %s\n", pData->statefile);
 	snprintf(tmpname, sizeof(tmpname), "%s.tmp", pData->statefile);
 
 	if((fp = fopen(tmpname, "w")) == NULL) {
@@ -191,6 +193,12 @@ bgWriter(void *arg)
 {
 	instanceData *pData = (instanceData *) arg;
 
+	/* block all signals except SIGTTIN and SIGSEGV */
+	sigset_t sigSet;
+	sigfillset(&sigSet);
+	sigdelset(&sigSet, SIGTTIN);
+	sigdelset(&sigSet, SIGSEGV);
+	pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
 
 	uchar thrdName[32];
 	snprintf((char*)thrdName, sizeof(thrdName), "omsendertrack/bgw"); // TODO: instance-identifier?
@@ -210,7 +218,7 @@ bgWriter(void *arg)
 #	endif
 
 	while(pData->bShutdownBackgroundWriter == 0) {
-		srSleep(1, 0);
+		srSleep(60, 0);
 		if(pData->bShutdownBackgroundWriter == 1) {
 			break;
 		}
@@ -226,13 +234,11 @@ static rsRetVal
 recordSender(instanceData *const pData, const uchar *const sender, const time_t lastSeen)
 {
 	sender_stats_t* stat;
-	int mustUnlock = 0;
 	DEFiRet;
 
 	assert(pData->stats_senders != NULL);
 
 	pthread_rwlock_rdlock(&pData->mutSenders);
-	mustUnlock = 1;
 	stat = hashtable_search(pData->stats_senders, (void*)sender);
 	if(stat == NULL) {
 		/* we now need to write to the hash table */
@@ -245,8 +251,9 @@ recordSender(instanceData *const pData, const uchar *const sender, const time_t 
 			DBGPRINTF("recordSender: sender '%s' not found, adding\n", sender);
 			CHKmalloc(stat = calloc(1, sizeof(sender_stats_t)));
 			stat->sender = (const uchar*)strdup((const char*)sender);
-			stat->nMsgs = 0;
+			stat->nMsgs = 1;
 			stat->firstSeen = lastSeen;
+			pthread_mutex_init(&stat->mut, NULL);
 			if(hashtable_insert(pData->stats_senders, (void*)stat->sender, (void*)stat) == 0) {
 				LogError(errno, RS_RET_INTERNAL_ERROR,
 					"omsendertrack error inserting sender '%s' into sender "
@@ -255,19 +262,22 @@ recordSender(instanceData *const pData, const uchar *const sender, const time_t 
 				ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
 			}
 		}
+	} else {
+		/* this mutex is for the atomic update of a single sender record. We do NOT
+		 * expect much contention on it.
+		 */
+		pthread_mutex_lock(&stat->mut);
+		stat->nMsgs++;
+		stat->lastSeen = lastSeen;
+		pthread_mutex_unlock(&stat->mut);
 	}
-
-	stat->nMsgs++; // TODO: later atomic?
-	stat->lastSeen = lastSeen;
 
 	DBGPRINTF("omsendertrack: recordSender: '%s', nmsgs now %llu, firstSeen %llu, lastSeen %llu\n",
 		sender, (long long unsigned) stat->nMsgs,
 		(long long unsigned) stat->firstSeen, (long long unsigned) stat->lastSeen);
 
 finalize_it:
-	if(mustUnlock) {
-		pthread_rwlock_unlock(&pData->mutSenders);
-	}
+	pthread_rwlock_unlock(&pData->mutSenders);
 	RETiRet;
 }
 
@@ -339,7 +349,7 @@ BEGINfreeInstance
 CODESTARTfreeInstance
 	/* stop bgWriter */
 	pData->bShutdownBackgroundWriter = 1;
-	// TODO: implement this and the following. We need a wakeup, e.g. via SIGTTIN
+	pthread_kill(pData->bgw_tid, SIGTTIN);
 
 	/* wait until stopped */
 	dbgprintf("waiting for bgWriter to finish\n");
@@ -350,7 +360,7 @@ CODESTARTfreeInstance
 
 	/* destroy data structs */
 	pthread_rwlock_destroy(&pData->mutSenders);
-	hashtable_destroy(pData->stats_senders, 1);
+	hashtable_destroy(pData->stats_senders, 1); /* 1 => free all values automatically */
 ENDfreeInstance
 
 

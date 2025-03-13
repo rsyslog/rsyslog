@@ -24,6 +24,7 @@ sleep 2
 tcpflood -h sender2.example.net -m $(( NUMMESSAGES / 2 )) -i $(( NUMMESSAGES / 2 ))
 ./msleep 20
 shutdown_when_empty
+sleep 1
 echo
 cat ${RSYSLOG_DYNNAME}.sendertrack
 echo
