@@ -10,7 +10,8 @@ module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 template(name="hostname" type="string" string="%hostname%")
-action(type="omsendertrack" template="hostname" statefile="'$RSYSLOG_DYNNAME'.sendertrack")
+action(type="omsendertrack" template="hostname" statefile="testfile.sendertrack")
+#action(type="omsendertrack" template="hostname" statefile="'$RSYSLOG_DYNNAME'.sendertrack")
 
 # The following is just to find a terminating condition for message injection
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
@@ -26,7 +27,8 @@ tcpflood -h sender2.example.net -m $(( NUMMESSAGES / 2 )) -i $(( NUMMESSAGES / 2
 shutdown_when_empty
 sleep 1
 echo
-cat ${RSYSLOG_DYNNAME}.sendertrack
+#cat ${RSYSLOG_DYNNAME}.sendertrack
+cat -n testfile.sendertrack
 echo
 wait_shutdown
 seq_check
