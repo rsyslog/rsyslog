@@ -44,6 +44,7 @@ MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("omsendertrack")
 
 // TODO CI: a) more tests, multiple hosts, b) make current tests really check the counted stats, not just abort ;-)
+// TODO: HUP processing
 
 /* static data */
 
@@ -78,15 +79,10 @@ typedef struct _instanceData {
 	pthread_t bgw_tid;	/* thread ID of background writer */
 } instanceData;
 
-typedef struct wrkrInstanceData { // TODO: we probably want multiple workers, but then we need atomic updates!
+typedef struct wrkrInstanceData {
 	instanceData *pData;
 } wrkrInstanceData_t;
 
-#if 0
-typedef struct configSettings_s { // TODO: remove
-} configSettings_t;
-static configSettings_t cs;
-#endif
 
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
@@ -153,6 +149,7 @@ readSenderStats(instanceData *const pData, json_object **jsontree)
 	*jsontree = NULL;
 	FILE *fp = fopen((const char*) pData->statefile, "r");
 	// TODO: in case of read errors, shall we set the sender info file to a different, configurable, name?
+		// TODO: handle this type of "input file error, starting w/o state" in a generic function
 	// TODO: check error codes returned!
 	if(!fp) {
 		LogMsg(errno, RS_RET_OK_WARN, LOG_ERR, "error opening sender info file '%s' - "
@@ -202,7 +199,9 @@ jsonToHashtable(instanceData *const pData, json_object *const jsonTree)
 	DEFiRet;
 
 	if (!json_object_is_type(jsonTree, json_type_array)) {
-		fprintf(stderr, "Error: Expected a JSON array.\n");
+		LogError(0, RS_RET_ERR, "current sender file does not contain proper JSON "
+			"object, array as first-level element excpected. Starting without "
+			"any previous data");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
