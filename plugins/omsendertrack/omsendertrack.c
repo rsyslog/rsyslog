@@ -43,7 +43,7 @@ MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("omsendertrack")
 
-//static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
+// TODO CI: a) more tests, multiple hosts, b) make current tests really check the counted stats, not just abort ;-)
 
 /* static data */
 
@@ -109,6 +109,200 @@ struct modConfData_s {
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
 
+/* forward references */
+static rsRetVal initHashtable(instanceData *const pData);
+static void * bgWriter(void *arg);
+
+
+static rsRetVal
+addSender(instanceData *const pData,
+	const char *const sender, const uint64_t nMsgs,
+	const time_t firstSeen, const time_t lastSeen)
+{
+	sender_stats_t* stat;
+	DEFiRet;
+
+	DBGPRINTF("addSender: Sender: %s, Messages: %" PRIu64 ", FirstSeen: %ld, LastSeen: %ld\n",
+		sender, nMsgs, firstSeen, lastSeen);
+
+	CHKmalloc(stat = calloc(1, sizeof(sender_stats_t)));
+	stat->sender = (const uchar*)strdup((const char*)sender);
+	stat->nMsgs = nMsgs;
+	stat->firstSeen = firstSeen;
+	stat->lastSeen = lastSeen;
+	pthread_mutex_init(&stat->mut, NULL);
+	if(hashtable_insert(pData->stats_senders, (void*)stat->sender, (void*)stat) == 0) {
+		LogError(errno, RS_RET_INTERNAL_ERROR,
+			"omsendertrack error inserting sender '%s' into sender "
+			"hash table - entry lost", sender);
+		free(stat);
+		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+#define CHUNK_SIZE 16*1024  // Read file in 16KiB chunks
+static rsRetVal ATTR_NONNULL()
+readSenderStats(instanceData *const pData, json_object **jsontree)
+{
+	DEFiRet;
+
+	*jsontree = NULL;
+	FILE *fp = fopen((const char*) pData->statefile, "r");
+	// TODO: in case of read errors, shall we set the sender info file to a different, configurable, name?
+	// TODO: check error codes returned!
+	if(!fp) {
+		LogMsg(errno, RS_RET_OK_WARN, LOG_ERR, "error opening sender info file '%s' - "
+			"starting without any previous data", pData->statefile);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	json_tokener *tok = json_tokener_new();
+	if (!tok) {
+		LogMsg(errno, RS_RET_OK_WARN, LOG_ERR, "error creating json_tokener - "
+			"starting without any previous data");
+		fclose(fp);
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	char buffer[CHUNK_SIZE];
+	json_object *parsed_json = NULL;
+	enum json_tokener_error jerr;
+
+	while (fgets(buffer, sizeof(buffer), fp)) {
+		parsed_json = json_tokener_parse_ex(tok, buffer, strlen(buffer));
+		jerr = fjson_tokener_get_error(tok);
+
+		if (jerr == json_tokener_continue) {
+			continue;  // Need more data, keep reading
+		} else if (jerr != fjson_tokener_success) {
+			LogMsg(errno, RS_RET_OK_WARN, LOG_ERR, "error processing input json - "
+				"starting without any previous data, error: %s",
+				json_tokener_error_desc(jerr));
+			json_object_put(parsed_json);
+			parsed_json = NULL;
+			break;
+		}
+	}
+
+	json_tokener_free(tok);
+	fclose(fp);
+
+	*jsontree = parsed_json;
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+jsonToHashtable(instanceData *const pData, json_object *const jsonTree)
+{
+	DEFiRet;
+
+	if (!json_object_is_type(jsonTree, json_type_array)) {
+		fprintf(stderr, "Error: Expected a JSON array.\n");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	size_t array_len = json_object_array_length(jsonTree);
+	for (size_t i = 0; i < array_len; i++) {
+		json_object *entry = json_object_array_get_idx(jsonTree, i);
+
+		// Extract fields from each object
+		json_object *j_sender, *j_messages, *j_firstseen, *j_lastseen;
+		if (json_object_object_get_ex(entry, "sender", &j_sender) &&
+		json_object_object_get_ex(entry, "messages", &j_messages) &&
+		json_object_object_get_ex(entry, "firstseen", &j_firstseen) &&
+		json_object_object_get_ex(entry, "lastseen", &j_lastseen)) {
+			// Convert to C types
+			const char *sender = json_object_get_string(j_sender);
+			int messages = json_object_get_int(j_messages);
+			long firstseen = json_object_get_int64(j_firstseen);
+			long lastseen = json_object_get_int64(j_lastseen);
+			CHKiRet(addSender(pData, sender, messages, firstseen, lastseen));
+
+		}
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+static rsRetVal
+initHashtable(instanceData *const pData)
+{
+	DEFiRet;
+
+	if((pData->stats_senders = create_hashtable(100, hash_from_string, key_equals_string, NULL)) == NULL) {
+		LogError(0, RS_RET_INTERNAL_ERROR, "error trying to initialize hash-table "
+			"for sender table. Sender statistics and warnings are disabled.");
+		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR); // TODO: check status!
+	}
+
+	/* read existing data */
+	json_object *jsonTree;
+	CHKiRet(readSenderStats(pData, &jsonTree));
+	CHKiRet(jsonToHashtable(pData, jsonTree));
+
+	/* start background writer */
+	pthread_rwlock_init(&pData->mutSenders, NULL);
+	if(pthread_create(&pData->bgw_tid, NULL, bgWriter, pData) != 0) {
+		LogError(0, RS_RET_ERR, "omsendertrack: cannot create background writing thread. "
+				"No interim files will be written!");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+#if 0
+static void ATTR_NONNULL()
+doFunc_parse_json(struct cnffunc *__restrict__ const func,
+	struct svar *__restrict__ const ret,
+	void *const usrptr,
+	wti_t *const pWti)
+{
+	int bMustFree;
+	int bMustFree2;
+	smsg_t *const pMsg = (smsg_t*)usrptr;
+	struct json_object *json;
+
+	int retVal;
+	assert(jsontext != NULL);
+	assert(container != NULL);
+	assert(pMsg != NULL);
+
+	struct json_tokener *const tokener = json_tokener_new();
+	if(tokener == NULL) {
+		retVal = 1;
+		goto finalize_it;
+	}
+	json = json_tokener_parse_ex(tokener, jsontext, strlen(jsontext));
+	if(json == NULL) {
+		retVal = RS_SCRIPT_EINVAL;
+	} else {
+		size_t off = (*container == '$') ? 1 : 0;
+		msgAddJSON(pMsg, (uchar*)container+off, json, 0, 0);
+		retVal = RS_SCRIPT_EOK;
+	}
+	wtiSetScriptErrno(pWti, retVal);
+	json_tokener_free(tokener);
+
+
+finalize_it:
+
+	if(bMustFree) {
+		free(jsontext);
+	}
+	if(bMustFree2) {
+		free(container);
+	}
+}
+#endif
 
 
 /* this function writes the actual sender stats. */
@@ -230,11 +424,13 @@ bgWriter(void *arg)
 	return NULL;
 }
 
+
 static rsRetVal
 recordSender(instanceData *const pData, const uchar *const sender, const time_t lastSeen)
 {
 	sender_stats_t* stat;
 	DEFiRet;
+	int needUpdate = 1;
 
 	assert(pData->stats_senders != NULL);
 
@@ -247,22 +443,14 @@ recordSender(instanceData *const pData, const uchar *const sender, const time_t 
 
 		// Re-check in case another writer added it
 		stat = hashtable_search(pData->stats_senders, (void*)sender);
-		if (stat == NULL) {
+		if(stat == NULL) {
 			DBGPRINTF("recordSender: sender '%s' not found, adding\n", sender);
-			CHKmalloc(stat = calloc(1, sizeof(sender_stats_t)));
-			stat->sender = (const uchar*)strdup((const char*)sender);
-			stat->nMsgs = 1;
-			stat->firstSeen = lastSeen;
-			pthread_mutex_init(&stat->mut, NULL);
-			if(hashtable_insert(pData->stats_senders, (void*)stat->sender, (void*)stat) == 0) {
-				LogError(errno, RS_RET_INTERNAL_ERROR,
-					"omsendertrack error inserting sender '%s' into sender "
-					"hash table", sender);
-				free(stat);
-				ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
-			}
+			CHKiRet(addSender(pData, (const char *) sender, 1, lastSeen, lastSeen));
+			needUpdate = 0;
 		}
-	} else {
+	}
+
+	if(needUpdate) {
 		/* this mutex is for the atomic update of a single sender record. We do NOT
 		 * expect much contention on it.
 		 */
@@ -272,9 +460,8 @@ recordSender(instanceData *const pData, const uchar *const sender, const time_t 
 		pthread_mutex_unlock(&stat->mut);
 	}
 
-	DBGPRINTF("omsendertrack: recordSender: '%s', nmsgs now %llu, firstSeen %llu, lastSeen %llu\n",
-		sender, (long long unsigned) stat->nMsgs,
-		(long long unsigned) stat->firstSeen, (long long unsigned) stat->lastSeen);
+	DBGPRINTF("omsendertrack: recordSender: '%s', lastSeen %llu\n",
+		sender, (long long unsigned) lastSeen);
 
 finalize_it:
 	pthread_rwlock_unlock(&pData->mutSenders);
@@ -287,23 +474,6 @@ ENDinitConfVars
 
 BEGINcreateInstance
 CODESTARTcreateInstance
-	if((pData->stats_senders = create_hashtable(100, hash_from_string, key_equals_string, NULL)) == NULL) {
-		LogError(0, RS_RET_INTERNAL_ERROR, "error trying to initialize hash-table "
-			"for sender table. Sender statistics and warnings are disabled.");
-		ABORT_FINALIZE(RS_RET_INTERNAL_ERROR); // TODO: check status!
-	}
-
-	/* read existing data */
-	// TODO: implement
-
-	/* background writer */
-	pthread_rwlock_init(&pData->mutSenders, NULL);
-	if(pthread_create(&pData->bgw_tid, NULL, bgWriter, pData) != 0) {
-		LogError(0, RS_RET_ERR, "omsendertrack: cannot create background writing thread. "
-				"No interim files will be written!");
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-finalize_it:
 ENDcreateInstance
 
 
@@ -442,11 +612,12 @@ CODESTARTnewActInst
 		}
 	}
 
-
 	CODE_STD_STRING_REQUESTnewActInst(1)
 	//TODO: make the template a parameter
 	tplToUse = (uchar*) strdup((pData->templateName == NULL) ? "RSYSLOG_FileFormat" : (char *)pData->templateName);
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_NO_RQD_TPL_OPTS));
+
+	initHashtable(pData);
 CODE_STD_FINALIZERnewActInst
 	if(bDestructPValsOnExit)
 		cnfparamvalsDestruct(pvals, &actpblk);
@@ -458,7 +629,6 @@ BEGINparseSelectorAct
 	int iTplOpts;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	// TODO: check if we can opt out of legacy support at all
 	/* first check if this config line is actually for us */
 	if(strncmp((char*) p, ":omsendertrack:", sizeof(":omsendertrack:") - 1)) {
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);

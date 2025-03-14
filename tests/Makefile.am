@@ -498,9 +498,10 @@ TESTS +=  \
 
 if ENABLE_OMSENDERTRACK
 TESTS +=  \
-	omsendertrack-baic.sh
+	omsendertrack-basic.sh
 #if HAVE_VALGRIND
-#TESTS +=
+TESTS +=
+	omsendertrack-basic-vg.sh
 #endif # if HAVE_VALGRIND
 endif
 
@@ -2219,6 +2220,7 @@ EXTRA_DIST= \
 	omfwd_fast_imuxsock.sh \
 	omfile_hup-vg.sh \
 	omsendertrack-basic.sh \
+	omsendertrack-basic-vg.sh \
 	zstd.sh \
 	zstd-vg.sh \
 	gzipwr_hup-vg.sh \
