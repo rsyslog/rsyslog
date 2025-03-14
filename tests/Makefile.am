@@ -499,10 +499,10 @@ TESTS +=  \
 if ENABLE_OMSENDERTRACK
 TESTS +=  \
 	omsendertrack-basic.sh
-#if HAVE_VALGRIND
+if HAVE_VALGRIND
 TESTS +=
 	omsendertrack-basic-vg.sh
-#endif # if HAVE_VALGRIND
+endif # if HAVE_VALGRIND
 endif
 
 
