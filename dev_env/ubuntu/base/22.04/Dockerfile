@@ -281,7 +281,7 @@ ENV	SCAN_BUILD=scan-build-9 \
 
 RUN	chmod o+rx /var/run/mysqld && ls -ld /var/run/mysqld
 
-ENV RSYSLOG_CONFIGURE_OPTIONS \
+ENV RSYSLOG_CONFIGURE_OPTIONS=" \
 	--enable-compile-warning=error \
 	--enable-clickhouse \
 	--enable-clickhouse-tests=no \
@@ -340,6 +340,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-omrabbitmq \
 	--enable-omrelp-default-port=13515 \
 	--enable-omruleset \
+	--enable-omsendertrack \
 	--enable-omstdout \
 	--enable-omtcl \
 	--enable-omudpspoof \
@@ -359,7 +360,8 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-usertools \
 	--enable-valgrind \
 	\
-	--enable-testbench
+	--enable-testbench \
+	"
 
 # Note: imdocker-tests cannot be run inside container, as they need to talk
 # to a docker instance.
@@ -367,7 +369,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 RUN	printf '\n' > /var/log/mysql/error.log
 # fix up llvm symbolizer - not correct for some reason
 RUN	ln -s /usr/bin/asan_symbolize /usr/bin/llvm-symb
-ENV	export ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer
+ENV	ASAN_SYMBOLIZER_PATH=/usr/bin/llvm-symbolizer
 VOLUME	/var/lib/mysql
 ENV	C_INCLUDE_PATH="/usr/include/tirpc/"
 WORKDIR	/rsyslog

@@ -347,6 +347,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS=" \
 	--enable-omrabbitmq \
 	--enable-omrelp-default-port=13515 \
 	--enable-omruleset \
+	--enable-omsendertracking \
 	--enable-omstdout \
 	--enable-omtcl \
 	--enable-omudpspoof \
