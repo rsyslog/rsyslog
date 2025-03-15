@@ -500,7 +500,7 @@ if ENABLE_OMSENDERTRACK
 TESTS +=  \
 	omsendertrack-basic.sh
 if HAVE_VALGRIND
-TESTS +=
+TESTS += \
 	omsendertrack-basic-vg.sh
 endif # if HAVE_VALGRIND
 endif
