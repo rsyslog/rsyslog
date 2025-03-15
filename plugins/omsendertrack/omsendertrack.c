@@ -411,7 +411,7 @@ bgWriter(void *arg)
 #	endif
 
 	while(pData->bShutdownBackgroundWriter == 0) {
-		srSleep(60, 0);
+		srSleep(pData->interval, 0);
 		if(pData->bShutdownBackgroundWriter == 1) {
 			break;
 		}
