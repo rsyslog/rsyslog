@@ -727,6 +727,7 @@ enum rsRetVal_ {
     RS_RET_WARN_NO_SENDER_STATS = -2461, /**< TLS lib had problem with syscall */
     RS_RET_UNSUPP_SOCK_AF = -2462, /**< unsupported socket address family, use if code cannot process
                       address family or does not expect it (may be handled locally) */
+    RS_RET_SYSTEMD_VERSION_ERR = -2463, /**< systemd version doesn't support journal namespacing */
 
     /* RainerScript error messages (range 1000.. 1999) */
     RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */
