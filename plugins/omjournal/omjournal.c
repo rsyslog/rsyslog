@@ -263,7 +263,7 @@ send_non_template_message(smsg_t *const __restrict__ pMsg)
 	* is some real user interest. We can always add later...
 	*/
 	sd_journal_send("MESSAGE=%s", getMSG(pMsg),
-		"PRIORITY=%d", sev,
+		"PRIORITY=%d", (pMsg->iFacility * 8) | sev,
 		"SYSLOG_FACILITY=%d", pMsg->iFacility,
 		"SYSLOG_IDENTIFIER=%s", tag,
 		NULL);
