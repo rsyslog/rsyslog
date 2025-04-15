@@ -1050,7 +1050,7 @@ doAccept(tcpsrv_io_descr_t *const pioDescr, tcpsrvWrkrData_t *const wrkrData ATT
 	}
 #	if defined(ENABLE_IMTCP_EPOLL)
 	if(pioDescr->pSrv->workQueue.numWrkr > 1) {
-		STATSCOUNTER_ADD(wrkrData->ctrAccept, wrkrData->mutCtrRead, nAccept);
+		STATSCOUNTER_ADD(wrkrData->ctrAccept, wrkrData->mutCtrAccept, nAccept);
 	}
 	notifyReArm(pioDescr); /* listeners must ALWAYS be re-armed */
 #	endif
@@ -1249,6 +1249,7 @@ wrkr(void *arg)
 		 * case. Also, errors are reported inside processWorksetItem().
 		 */
 		processWorksetItem(pioDescr, wrkrData);
+		STATSCOUNTER_ADD(wrkrData->ctrRuns, wrkrData->mutCtrRuns, 1);
 	}
 
 	/**** de-init ****/
