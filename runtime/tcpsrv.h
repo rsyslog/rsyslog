@@ -69,6 +69,7 @@ typedef struct tcpsrvWrkrData_s {
 	statsobj_t *stats;
 	STATSCOUNTER_DEF(ctrRuns, mutCtrRuns);
 	STATSCOUNTER_DEF(ctrRead, mutCtrRead);
+	STATSCOUNTER_DEF(ctrEmptyRead, mutCtrEmptyRead);
 	STATSCOUNTER_DEF(ctrStarvation, mutCtrStarvation);
 	STATSCOUNTER_DEF(ctrAccept, mutCtrAccept);
 } tcpsrvWrkrData_t;

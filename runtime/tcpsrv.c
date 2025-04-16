@@ -913,6 +913,11 @@ doReceive(tcpsrv_io_descr_t *const pioDescr, tcpsrvWrkrData_t *const wrkrData AT
 				do_run = 0;
 				break;
 			case RS_RET_RETRY:
+#	if defined(ENABLE_IMTCP_EPOLL)
+	if(pThis->workQueue.numWrkr > 1 && read_calls == 0) {
+		STATSCOUNTER_ADD(wrkrData->ctrEmptyRead, wrkrData->mutCtrEmptyRead, 1);
+	}
+#	endif
 				do_run = 0;
 				break;
 			case RS_RET_OK:
@@ -1222,6 +1227,10 @@ wrkr(void *arg)
 		STATSCOUNTER_INIT(wrkrData->ctrRead, wrkrData->mutCtrRead);
 		statsobj.AddCounter(wrkrData->stats, UCHAR_CONSTANT("read"),
 			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(wrkrData->ctrRead));
+
+		STATSCOUNTER_INIT(wrkrData->ctrEmptyRead, wrkrData->mutCtrEmptyRead);
+		statsobj.AddCounter(wrkrData->stats, UCHAR_CONSTANT("emptyread"),
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(wrkrData->ctrEmptyRead));
 
 		STATSCOUNTER_INIT(wrkrData->ctrStarvation, wrkrData->mutCtrStarvation);
 		statsobj.AddCounter(wrkrData->stats, UCHAR_CONSTANT("starvation_protect"),
