@@ -1195,7 +1195,8 @@ wrkr(void *arg)
 	tcpsrvWrkrData_t *const wrkrData = &(queue->wrkr_data[wrkrIdx]);
 
 	uchar thrdName[32];
-	snprintf((char*)thrdName, sizeof(thrdName), "tcpsrv/w%d", wrkrIdx);
+	snprintf((char*)thrdName, sizeof(thrdName), "w%d/%s", wrkrIdx,
+		(pThis->pszInputName == NULL) ? (uchar*)"tcpsrv" : pThis->pszInputName);
 	dbgSetThrdName(thrdName);
 
 	/* set thread name - we ignore if it fails, has no harsh consequences... */
@@ -1613,7 +1614,6 @@ CODESTARTobjDestruct(tcpsrv)
 	free(pThis->ppLstn);
 	free(pThis->ppLstnPort);
 	free(pThis->ppioDescrPtr);
-	free(pThis->pszInputName);
 	free(pThis->pszOrigin);
 ENDobjDestruct(tcpsrv)
 
@@ -1848,14 +1848,16 @@ SetOrigin(tcpsrv_t *pThis, uchar *origin)
 
 /* Set the input name to use -- rgerhards, 2008-12-10 */
 static rsRetVal
-SetInputName(tcpsrv_t *const pThis ATTR_UNUSED, tcpLstnParams_t *const cnf_params, const uchar *const name)
+SetInputName(tcpsrv_t *const pThis, tcpLstnParams_t *const cnf_params, const uchar *const name)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
-	if(name == NULL)
+	if(name == NULL) {
 		cnf_params->pszInputName = NULL;
-	else
+	} else {
 		CHKmalloc(cnf_params->pszInputName = ustrdup(name));
+		pThis->pszInputName = cnf_params->pszInputName;
+	}
 
 	/* we need to create a property */
 	CHKiRet(prop.Construct(&cnf_params->pInputName));
