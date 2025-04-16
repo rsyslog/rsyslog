@@ -3,14 +3,17 @@
 # all data to an output file, then a rsyslog instance is started which generates
 # messages and sends them to the unix socket. Datagram sockets are being used.
 # added 2010-08-06 by Rgerhards
+# Updated 2025-04-16 for abstract sockets
 . ${srcdir:=.}/diag.sh init
 check_command_available timeout
 
 uname
-if [ $(uname) = "FreeBSD" ] ; then
-   echo "This test currently does not work on FreeBSD."
-   exit 77
+if [ $(uname) != "Linux" ] ; then
+    echo "This test requires Linux (AF_UNIX abstract addresses)"
+    exit 77
 fi
+
+SOCKET_NAME="$RSYSLOG_DYNNAME-testbench-dgram-uxsock-abstract"
 
 # create the pipe and start a background process that copies data from
 # it to the "regular" work file
@@ -18,12 +21,20 @@ generate_conf
 add_conf '
 $MainMsgQueueTimeoutShutdown 10000
 
-$ModLoad ../plugins/omuxsock/.libs/omuxsock
 $template outfmt,"%msg:F,58:2%\n"
-$OMUXSockSocket '$RSYSLOG_DYNNAME'-testbench-dgram-uxsock
-:msg, contains, "msgnum:" :omuxsock:;outfmt
+
+module(
+    load = "../plugins/omuxsock/.libs/omuxsock"
+    template = "outfmt"
+)
+
+:msg, contains, "msgnum:" action(
+    type = "omuxsock"
+    SocketName = "'$SOCKET_NAME'"
+    abstract = "1"
+)
 '
-timeout 30s ./uxsockrcvr -s$RSYSLOG_DYNNAME-testbench-dgram-uxsock -o $RSYSLOG_OUT_LOG -t 60 &
+timeout 30s ./uxsockrcvr -a -s$SOCKET_NAME -o $RSYSLOG_OUT_LOG -t 60 &
 BGPROCESS=$!
 echo background uxsockrcvr process id is $BGPROCESS
 
