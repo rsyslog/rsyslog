@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2504.0 (aka 2025.04) 2025-04-??
+- 2025-04-16: tcpsrv bugfix: input name was not properly propagated
+  As a result, it did not show up in pstats. Alos, we now use the input name
+  in worker thread to easily identify where they belong to. As thread names
+  have very limited length, the thread naming now is
+  "w<worker-number>/<input-name>".
+  Note: this bug was introduced 2025-03-01 (daily stable build)
 - 2025-03-06: rsyslog core fix: buffer overflow when the argument to replace() is empty
   This fixes the following situation:
   We have these expressions in rsyslogd.conf:
