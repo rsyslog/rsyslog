@@ -26,6 +26,7 @@
 #include "rsyslog.h"
 #include <stdio.h>
 #include <stdarg.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -43,6 +44,7 @@
 #include "glbl.h"
 #include "errmsg.h"
 #include "unicode-helper.h"
+#include "net.h"
 
 MODULE_TYPE_OUTPUT;
 MODULE_TYPE_NOKEEP;
@@ -51,14 +53,20 @@ MODULE_CNFNAME("omuxsock")
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA;
-DEFobjCurrIf(glbl)
+DEFobjCurrIf(glbl) DEFobjCurrIf(net)
 #define INVLD_SOCK -1
 
     typedef struct _instanceData {
     permittedPeers_t *pPermPeers;
+    uchar *tplName;
     uchar *sockName;
+    char *namespace;
+    int sockType;
+    int bAbstract;
+    int bConnected;
     int sock;
     struct sockaddr_un addr;
+    socklen_t addrLen;
 } instanceData;
 
 
@@ -69,31 +77,91 @@ typedef struct wrkrInstanceData {
 /* config data */
 typedef struct configSettings_s {
     uchar *tplName; /* name of the default template to use */
-    uchar *sockName; /* name of the default template to use */
+    uchar *sockName; /* name of the default socket to use */
+    char *namespace; /* linux namespace for abstract addresses */
+    int sockType; /* DGRAM, STREAM, SEQPACKET */
+    int bAbstract; /* 1 if default socket is abstract socket */
+    int bConnected; /* 1 if connection oriented */
 } configSettings_t;
 static configSettings_t cs;
 
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
-    {"template", eCmdHdlrGetWord, 0},
+    {"template", eCmdHdlrGetWord, 0},        {"abstract", eCmdHdlrInt, 0},
+    {"socketname", eCmdHdlrString, 0},       {"sockettype", eCmdHdlrString, 0},
+    {"networknamespace", eCmdHdlrString, 0},
 };
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
+
+/* tables for interfacing with the v6 config system */
+/* action (instance) parameters */
+static struct cnfparamdescr actpdescr[] = {
+    {"template", eCmdHdlrGetWord, 0},        {"abstract", eCmdHdlrInt, 0},
+    {"socketname", eCmdHdlrString, 0},       {"sockettype", eCmdHdlrString, 0},
+    {"networknamespace", eCmdHdlrString, 0},
+};
+static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 struct modConfData_s {
     rsconf_t *pConf; /* our overall config object */
     uchar *tplName; /* default template */
+    uchar *sockName; /* socket name */
+    char *namespace; /* namespace for abstract addresses */
+    int sockType; /* DGRAM, STREAM, SEQPACKET */
+    int bAbstract; /* socket name is abstract */
+    int bConnected; /* socket is connection oriented */
 };
 
 static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current exec process */
 
-
 static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
+
+static struct {
+    const char *id;
+    int value;
+    int connected;
+} socketType_map[] = {
+    {"DGRAM", SOCK_DGRAM, 0},
+    {"STREAM", SOCK_STREAM, 1},
+#ifdef SOCK_SEQPACKET
+    {"SEQPACKET", SOCK_SEQPACKET, 1},
+#endif /* def SOCK_SEQPACKET */
+};
+#define ARRAY_SIZE(n) (sizeof(n) / sizeof((n)[0]))
+
+static rsRetVal _decodeSockType(es_str_t *estr, int *type, int *connected) {
+    DEFiRet;
+    char *cstr = es_str2cstr(estr, NULL);
+    size_t index;
+
+    if (!cstr) {
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
+
+    for (index = 0; index < ARRAY_SIZE(socketType_map); ++index) {
+        if (!strcasecmp(cstr, socketType_map[index].id)) {
+            *type = socketType_map[index].value;
+            *connected = socketType_map[index].connected;
+            FINALIZE
+        }
+    }
+    LogError(0, RS_RET_ERR, "omuxsock: bad socket type %s", cstr);
+    ABORT_FINALIZE(RS_RET_ERR);
+
+finalize_it:
+    free(cstr);
+    RETiRet;
+}
 
 BEGINinitConfVars /* (re)set config variables to default values */
     CODESTARTinitConfVars;
     cs.tplName = NULL;
     cs.sockName = NULL;
+    cs.namespace = NULL;
+    cs.sockType = SOCK_DGRAM;
+    cs.bAbstract = 0;
+    cs.bConnected = 0;
 ENDinitConfVars
 
 
@@ -150,6 +218,11 @@ BEGINbeginCnfLoad
     loadModConf = pModConf;
     pModConf->pConf = pConf;
     pModConf->tplName = NULL;
+    pModConf->sockName = NULL;
+    pModConf->namespace = NULL;
+    pModConf->sockType = SOCK_DGRAM;
+    pModConf->bAbstract = 0;
+    pModConf->bConnected = 0;
 ENDbeginCnfLoad
 
 BEGINsetModCnf
@@ -179,6 +252,14 @@ BEGINsetModCnf
                          "was already set via legacy directive - may lead to inconsistent "
                          "results.");
             }
+        } else if (!strcmp(modpblk.descr[i].name, "abstract")) {
+            loadModConf->bAbstract = !!(int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "socketname")) {
+            loadModConf->sockName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(modpblk.descr[i].name, "sockettype")) {
+            CHKiRet(_decodeSockType(pvals[i].val.d.estr, &loadModConf->sockType, &loadModConf->bConnected));
+        } else if (!strcmp(modpblk.descr[i].name, "networknamespace")) {
+            loadModConf->namespace = es_str2cstr(pvals[i].val.d.estr, NULL);
         } else {
             dbgprintf(
                 "omuxsock: program error, non-handled "
@@ -196,6 +277,10 @@ BEGINendCnfLoad
     /* free legacy config vars */
     free(cs.tplName);
     cs.tplName = NULL;
+    free(cs.sockName);
+    cs.sockName = NULL;
+    free(cs.namespace);
+    cs.namespace = NULL;
 ENDendCnfLoad
 
 BEGINcheckCnf
@@ -210,11 +295,14 @@ ENDactivateCnf
 BEGINfreeCnf
     CODESTARTfreeCnf;
     free(pModConf->tplName);
+    free(pModConf->sockName);
+    free(pModConf->namespace);
 ENDfreeCnf
 
 BEGINcreateInstance
     CODESTARTcreateInstance;
     pData->sock = INVLD_SOCK;
+    pData->sockType = SOCK_DGRAM;
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
@@ -232,8 +320,79 @@ BEGINfreeInstance
     CODESTARTfreeInstance;
     /* final cleanup */
     closeSocket(pData);
+    free(pData->tplName);
     free(pData->sockName);
+    free(pData->namespace);
 ENDfreeInstance
+
+BEGINnewActInst
+    struct cnfparamvals *pvals = NULL;
+    int i;
+    int bHaveAbstract = 0;
+    int bHaveSocketType = 0;
+    uchar *tplToUse;
+    CODESTARTnewActInst;
+    CODE_STD_STRING_REQUESTnewActInst(1);
+    if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
+    CHKiRet(createInstance(&pData));
+
+    for (i = 0; i < actpblk.nParams; ++i) {
+        if (!pvals[i].bUsed) continue;
+        if (!strcmp(actpblk.descr[i].name, "template")) {
+            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "abstract")) {
+            pData->bAbstract = !!(int)pvals[i].val.d.n;
+            bHaveAbstract = 1;
+        } else if (!strcmp(actpblk.descr[i].name, "socketname")) {
+            pData->sockName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "sockettype")) {
+            CHKiRet(_decodeSockType(pvals[i].val.d.estr, &pData->sockType, &pData->bConnected));
+            bHaveSocketType = 1;
+        } else if (!strcmp(actpblk.descr[i].name, "networknamespace")) {
+            pData->namespace = es_str2cstr(pvals[i].val.d.estr, NULL);
+        }
+    }
+
+    if (!pData->namespace && loadModConf->namespace) {
+        pData->namespace = strdup(loadModConf->namespace);
+    }
+    if (!pData->sockName) {
+        if (bHaveAbstract) {
+            LogError(0, RS_RET_NO_SOCK_CONFIGURED, "omuxsock: abstract configured without socket name\n");
+            ABORT_FINALIZE(RS_RET_NO_SOCK_CONFIGURED);
+        }
+        if (bHaveSocketType) {
+            LogError(0, RS_RET_NO_SOCK_CONFIGURED, "omuxsock: socket type configured without socket name\n");
+            ABORT_FINALIZE(RS_RET_NO_SOCK_CONFIGURED);
+        }
+        if (loadModConf != NULL && loadModConf->sockName != NULL) {
+            pData->sockName = ustrdup(loadModConf->sockName);
+            pData->bAbstract = loadModConf->bAbstract;
+            pData->sockType = loadModConf->sockType;
+            pData->bConnected = loadModConf->bConnected;
+        } else if (cs.sockName == NULL) {
+            LogError(0, RS_RET_NO_SOCK_CONFIGURED, "No output socket configured for omuxsock\n");
+            ABORT_FINALIZE(RS_RET_NO_SOCK_CONFIGURED);
+        } else {
+            /*
+             * Should we really transfer ownership, or should we allow it to be the default
+             * by calling ustrdup?
+             */
+            pData->sockName = cs.sockName;
+            pData->bAbstract = cs.bAbstract;
+            pData->sockType = cs.sockType;
+            pData->bConnected = cs.bConnected;
+            cs.sockName = NULL; /* pData is now owner and will free it */
+        }
+    }
+
+    tplToUse = ustrdup((pData->tplName == NULL) ? getDfltTpl() : pData->tplName);
+    CHKiRet(OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_NO_RQD_TPL_OPTS));
+
+    CODE_STD_FINALIZERnewActInst cnfparamvalsDestruct(pvals, &actpblk);
+ENDnewActInst
 
 BEGINfreeWrkrInstance
     CODESTARTfreeWrkrInstance;
@@ -246,7 +405,7 @@ BEGINdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
-/* Send a message via UDP
+/* Send a message
  * rgehards, 2007-12-20
  */
 static rsRetVal sendMsg(instanceData *pData, char *msg, size_t len) {
@@ -258,12 +417,16 @@ static rsRetVal sendMsg(instanceData *pData, char *msg, size_t len) {
     }
 
     if (pData->sock != INVLD_SOCK) {
-        lenSent = sendto(pData->sock, msg, len, 0, (const struct sockaddr *)&pData->addr, sizeof(pData->addr));
+        if (pData->bConnected) {
+            lenSent = send(pData->sock, msg, len, 0);
+        } else {
+            lenSent = sendto(pData->sock, msg, len, 0, (const struct sockaddr *)&pData->addr, pData->addrLen);
+        }
         if (lenSent != len) {
             int eno = errno;
             char errStr[1024];
-            DBGPRINTF("omuxsock suspending: sendto(), socket %d, error: %d = %s.\n", pData->sock, eno,
-                      rs_strerror_r(eno, errStr, sizeof(errStr)));
+            DBGPRINTF("omuxsock suspending: send%s(), socket %d, error: %d = %s.\n", pData->bConnected ? "" : "to",
+                      pData->sock, eno, rs_strerror_r(eno, errStr, sizeof(errStr)));
         }
     }
 
@@ -278,19 +441,32 @@ static rsRetVal openSocket(instanceData *pData) {
     DEFiRet;
     assert(pData->sock == INVLD_SOCK);
 
-    if ((pData->sock = socket(AF_UNIX, SOCK_DGRAM, 0)) < 0) {
-        char errStr[1024];
-        int eno = errno;
-        DBGPRINTF("error %d creating AF_UNIX/SOCK_DGRAM: %s.\n", eno, rs_strerror_r(eno, errStr, sizeof(errStr)));
-        pData->sock = INVLD_SOCK;
-        ABORT_FINALIZE(RS_RET_NO_SOCKET);
-    }
+    CHKiRet(net.netns_socket(&pData->sock, AF_UNIX, pData->sockType, 0, pData->namespace));
 
     /* set up server address structure */
     memset(&pData->addr, 0, sizeof(pData->addr));
+    /*
+     * For pathname addresses, the +1 is the terminating \0.
+     * For abstract addresses, the +1 is the leading \0.
+     */
+    pData->addrLen = offsetof(struct sockaddr_un, sun_path) + 1 + strlen((char *)pData->sockName);
     pData->addr.sun_family = AF_UNIX;
-    strncpy(pData->addr.sun_path, (char *)pData->sockName, sizeof(pData->addr.sun_path));
-    pData->addr.sun_path[sizeof(pData->addr.sun_path) - 1] = '\0';
+    strncpy(pData->addr.sun_path + pData->bAbstract, (char *)pData->sockName,
+            sizeof(pData->addr.sun_path) - pData->bAbstract);
+    if (pData->addr.sun_path[sizeof(pData->addr.sun_path) - 1]) {
+        pData->addr.sun_path[sizeof(pData->addr.sun_path) - 1] = '\0';
+        LogError(0, RS_TRUNCAT_TOO_LARGE, "Unix socket path truncated to %s", pData->addr.sun_path + pData->bAbstract);
+        ABORT_FINALIZE(RS_TRUNCAT_TOO_LARGE);
+    }
+
+    if (pData->bConnected && connect(pData->sock, (struct sockaddr *)&pData->addr, pData->addrLen) == -1) {
+        char errStr[1024];
+        int eno = errno;
+
+        LogError(0, RS_RET_NO_SOCKET, "Error %d connecting to %ssocket %s: %s.", eno,
+                 pData->bAbstract ? "abstract " : "", pData->sockName, rs_strerror_r(eno, errStr, sizeof(errStr)));
+        ABORT_FINALIZE(RS_RET_NO_SOCKET);
+    }
 
 finalize_it:
     if (iRet != RS_RET_OK) {
@@ -305,12 +481,13 @@ finalize_it:
 static rsRetVal doTryResume(instanceData *pData) {
     DEFiRet;
 
-    DBGPRINTF("omuxsock trying to resume\n");
-    closeSocket(pData);
-    iRet = openSocket(pData);
+    if (pData->sock == INVLD_SOCK) {
+        DBGPRINTF("omuxsock trying to resume\n");
+        iRet = openSocket(pData);
 
-    if (iRet != RS_RET_OK) {
-        iRet = RS_RET_SUSPENDED;
+        if (iRet != RS_RET_OK) {
+            iRet = RS_RET_SUSPENDED;
+        }
     }
 
     RETiRet;
@@ -355,11 +532,10 @@ BEGINparseSelectorAct
     }
 
     /* ok, if we reach this point, we have something for us */
-    p += sizeof(":omuxsock:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
+    p += sizeof(":omuxsock:") - 1; /* eat indicator sequence (-1 because of '\0'!) */
     CHKiRet(createInstance(&pData));
 
     /* check if a non-standard template is to be applied */
-    if (*(p - 1) == ';') --p;
     CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, 0, getDfltTpl()));
 
     if (cs.sockName == NULL) {
@@ -368,7 +544,10 @@ BEGINparseSelectorAct
     }
 
     pData->sockName = cs.sockName;
-    cs.sockName = NULL; /* pData is now owner and will fee it */
+    pData->sockType = cs.sockType;
+    pData->bAbstract = cs.bAbstract;
+    pData->bConnected = cs.bConnected;
+    cs.sockName = NULL; /* pData is now owner and will free it */
 
     CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
@@ -389,6 +568,7 @@ BEGINmodExit
     CODESTARTmodExit;
     /* release what we no longer need */
     objRelease(glbl, CORE_COMPONENT);
+    objRelease(net, LM_NET_FILENAME);
 
     freeConfigVars();
 ENDmodExit
@@ -400,6 +580,7 @@ BEGINqueryEtryPt
     CODEqueryEtryPt_STD_OMOD8_QUERIES;
     CODEqueryEtryPt_STD_CONF2_QUERIES;
     CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+    CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
@@ -416,7 +597,9 @@ BEGINmodInit()
     CODESTARTmodInit;
     INITLegCnfVars;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-    CODEmodInit_QueryRegCFSLineHdlr CHKiRet(objUse(glbl, CORE_COMPONENT));
+    CODEmodInit_QueryRegCFSLineHdlr;
+    CHKiRet(objUse(glbl, CORE_COMPONENT));
+    CHKiRet(objUse(net, LM_NET_FILENAME));
 
     CHKiRet(regCfSysLineHdlr((uchar *)"omuxsockdefaulttemplate", 0, eCmdHdlrGetWord, setLegacyDfltTpl, NULL, NULL));
     CHKiRet(regCfSysLineHdlr((uchar *)"omuxsocksocket", 0, eCmdHdlrGetWord, NULL, &cs.sockName, NULL));
