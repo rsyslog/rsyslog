@@ -775,7 +775,7 @@ finalize_it:
  * rgerhards, 2008-03-17
  */
 static rsRetVal
-Rcv(nsd_t *pNsd, uchar *pRcvBuf, ssize_t *pLenBuf, int *const oserr)
+Rcv(nsd_t *pNsd, uchar *pRcvBuf, ssize_t *pLenBuf, int *const oserr, unsigned *const nextIODirection)
 {
 	char errStr[1024];
 	DEFiRet;
@@ -789,6 +789,7 @@ Rcv(nsd_t *pNsd, uchar *pRcvBuf, ssize_t *pLenBuf, int *const oserr)
 
 	*pLenBuf = recv(pThis->sock, pRcvBuf, *pLenBuf, MSG_DONTWAIT);
 	*oserr = errno;
+	*nextIODirection = NSDSEL_RD;
 
 	if(*pLenBuf == 0) {
 		ABORT_FINALIZE(RS_RET_CLOSED);

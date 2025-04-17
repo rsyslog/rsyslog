@@ -91,6 +91,7 @@ typedef struct workQueue_s {
 struct tcpsrv_io_descr_s {
 	int id;		/* index into listener or session table, depending on ptrType */
 	int sock;	/* socket descriptor we need to "monitor" */
+	unsigned ioDirection;
 	enum {NSD_PTR_TYPE_LSTN, NSD_PTR_TYPE_SESS} ptrType;
 	union {
 		tcps_sess_t *pSess;
@@ -171,7 +172,7 @@ struct tcpsrv_s {
 	void *pUsr;		/**< a user-settable pointer (provides extensibility for "derived classes")*/
 	/* callbacks */
 	int      (*pIsPermittedHost)(struct sockaddr *addr, char *fromHostFQDN, void*pUsrSrv, void*pUsrSess);
-	rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t *, int*);
+	rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t *, int*, unsigned*);
 	rsRetVal (*OpenLstnSocks)(struct tcpsrv_s*);
 	rsRetVal (*pOnListenDeinit)(void*);
 	rsRetVal (*OnDestruct)(void*);
@@ -212,7 +213,8 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetUsrP)(tcpsrv_t*, void*);
 	rsRetVal (*SetCBIsPermittedHost)(tcpsrv_t*, int (*) (struct sockaddr *addr, char*, void*, void*));
 	rsRetVal (*SetCBOpenLstnSocks)(tcpsrv_t *, rsRetVal (*)(tcpsrv_t*));
-	rsRetVal (*SetCBRcvData)(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t*, int*));
+	rsRetVal (*SetCBRcvData)(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t*,
+		int*, unsigned*));
 	rsRetVal (*SetCBOnListenDeinit)(tcpsrv_t*, rsRetVal (*)(void*));
 	rsRetVal (*SetCBOnDestruct)(tcpsrv_t*, rsRetVal (*) (void*));
 	rsRetVal (*SetCBOnRegularClose)(tcpsrv_t*, rsRetVal (*) (tcps_sess_t*));
