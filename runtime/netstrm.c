@@ -172,11 +172,11 @@ finalize_it:
  * rgerhards, 2008-03-17
  */
 static rsRetVal
-Rcv(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf, int *const oserr)
+Rcv(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf, int *const oserr, unsigned *nextIODirection)
 {
 	DEFiRet;
 	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.Rcv(pThis->pDrvrData, pBuf, pLenBuf, oserr);
+	iRet = pThis->Drvr.Rcv(pThis->pDrvrData, pBuf, pLenBuf, oserr, nextIODirection);
 
 finalize_it:
 	RETiRet;

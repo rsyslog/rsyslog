@@ -2111,7 +2111,7 @@ if (error_position != NULL) {
  * buffer. -- rgerhards, 2008-06-23
  */
 static rsRetVal
-Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr)
+Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr, unsigned *const nextIODirection)
 {
 	DEFiRet;
 	ssize_t iBytesCopy; /* how many bytes are to be copied to the client buffer? */
@@ -2123,7 +2123,7 @@ DBGPRINTF("in gtls Rcv, bAbortConn %d\n", pThis->bAbortConn);
 		ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
 
 	if(pThis->iMode == 0) {
-		CHKiRet(nsd_ptcp.Rcv(pThis->pTcp, pBuf, pLenBuf, oserr));
+		CHKiRet(nsd_ptcp.Rcv(pThis->pTcp, pBuf, pLenBuf, oserr, nextIODirection));
 		FINALIZE;
 	}
 
@@ -2183,6 +2183,7 @@ finalize_it:
 		free(pThis->pszRcvBuf);
 		pThis->pszRcvBuf = NULL;
 	}
+	*nextIODirection = (gnutls_record_get_direction(pThis->sess) == 0) ? NSDSEL_RD : NSDSEL_WR;
 	dbgprintf("gtlsRcv return. nsd %p, iRet %d, lenRcvBuf %d, ptrRcvBuf %d\n", pThis,
 	iRet, pThis->lenRcvBuf, pThis->ptrRcvBuf);
 	RETiRet;
