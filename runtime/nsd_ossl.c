@@ -213,7 +213,7 @@ long BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *a
  * rgerhards, 2008-06-24
  */
 rsRetVal
-osslRecordRecv(nsd_ossl_t *pThis)
+osslRecordRecv(nsd_ossl_t *pThis, unsigned *const nextIODirection)
 {
 	ssize_t lenRcvd;
 	DEFiRet;
@@ -285,9 +285,13 @@ sslerr:
 		}
 	}
 
-// TODO: Check if MORE retry logic needed?
 
 finalize_it:
+	if(pThis->rtryCall != osslRtry_None && pThis->rtryOsslErr == SSL_ERROR_WANT_WRITE) {
+		*nextIODirection = NSDSEL_WR;
+	} else {
+		*nextIODirection = NSDSEL_RD;
+	}
 	dbgprintf("osslRecordRecv return. nsd %p, iRet %d, lenRcvd %zd, lenRcvBuf %d, ptrRcvBuf %d\n",
 	pThis, iRet, lenRcvd, pThis->lenRcvBuf, pThis->ptrRcvBuf);
 	RETiRet;
@@ -1054,7 +1058,7 @@ finalize_it:
  * buffer. -- rgerhards, 2008-06-23
  */
 static rsRetVal
-Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr)
+Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr, unsigned *const nextIODirection)
 {
 	DEFiRet;
 	ssize_t iBytesCopy; /* how many bytes are to be copied to the client buffer? */
@@ -1066,7 +1070,7 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr)
 		ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
 
 	if(pThis->iMode == 0) {
-		CHKiRet(nsd_ptcp.Rcv(pThis->pTcp, pBuf, pLenBuf, oserr));
+		CHKiRet(nsd_ptcp.Rcv(pThis->pTcp, pBuf, pLenBuf, oserr, nextIODirection));
 		FINALIZE;
 	}
 
@@ -1095,7 +1099,7 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr)
 	 * the request from buffer contents.
 	 */
 	if(pThis->lenRcvBuf == -1) { /* no data present, must read */
-		CHKiRet(osslRecordRecv(pThis));
+		CHKiRet(osslRecordRecv(pThis, nextIODirection));
 	}
 
 	if(pThis->lenRcvBuf == 0) { /* EOS */

@@ -158,7 +158,8 @@ epoll_Ctl(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr, const int is
 
 	if(op == EPOLL_CTL_ADD) {
 		dbgprintf("adding epoll entry %d, socket %d\n", id, sock);
-		pioDescr->event.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLONESHOT;
+		//pioDescr->event.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLONESHOT; // TODO: remove
+		pioDescr->event.events = EPOLLIN | EPOLLET | EPOLLONESHOT;
 		pioDescr->event.data.ptr = (void*) pioDescr;
 		if(epoll_ctl(pThis->evtdata.epoll.efd, EPOLL_CTL_ADD,  sock, &pioDescr->event) < 0) {
 			LogError(errno, RS_RET_ERR_EPOLL_CTL,
@@ -836,6 +837,9 @@ notifyReArm(tcpsrv_io_descr_t *const pioDescr)
 {
 	DEFiRet;
 
+dbgprintf("ReArm socket %d with %s\n", pioDescr->sock, (pioDescr->ioDirection == NSDSEL_RD) ? "EPOLLIN" : "EPOLLOUT");
+	const unsigned waitIOEvent = (pioDescr->ioDirection == NSDSEL_WR) ? EPOLLOUT : EPOLLIN;
+	pioDescr->event.events = waitIOEvent | EPOLLET | EPOLLONESHOT;
 	if(epoll_ctl(pioDescr->pSrv->evtdata.epoll.efd, EPOLL_CTL_MOD, pioDescr->sock, &pioDescr->event) < 0) {
 		LogError(errno, RS_RET_ERR_EPOLL_CTL, "epoll_ctl failed re-armed socket %d", pioDescr->sock);
 		ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
@@ -899,7 +903,7 @@ doReceive(tcpsrv_io_descr_t *const pioDescr, tcpsrvWrkrData_t *const wrkrData AT
 
 	while(do_run) {	/*  outer loop as "backup" if starvation protection does not properly work */
 		while(do_run && (maxReads == 0 || read_calls < maxReads)) { /*  break in switch below! */
-			iRet = pThis->pRcvData(pSess, buf, sizeof(buf), &iRcvd, &oserr);
+			iRet = pThis->pRcvData(pSess, buf, sizeof(buf), &iRcvd, &oserr, &pioDescr->ioDirection);
 			switch(iRet) {
 			case RS_RET_CLOSED:
 				if(pThis->bEmitMsgOnClose) {
@@ -1009,6 +1013,7 @@ doSingleAccept(tcpsrv_io_descr_t *const pioDescr)
 			pDescrNew->isInError = 0;
 			INIT_ATOMIC_HELPER_MUT(pDescrNew->mut_isInError);
 			pDescrNew->ptrType = NSD_PTR_TYPE_SESS;
+			pDescrNew->ioDirection = NSDSEL_RD;
 			CHKiRet(netstrm.GetSock(pNewSess->pStrm, &pDescrNew->sock));
 			pDescrNew->ptr.pSess = pNewSess;
 			CHKiRet(epoll_Ctl(pThis, pDescrNew, 0, EPOLL_CTL_ADD));
@@ -1642,7 +1647,7 @@ SetCBIsPermittedHost(tcpsrv_t *pThis, int (*pCB)(struct sockaddr *addr, char *fr
 }
 
 static rsRetVal
-SetCBRcvData(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t*, int*))
+SetCBRcvData(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t*, int*, unsigned*))
 {
 	DEFiRet;
 	pThis->pRcvData = pRcvData;
