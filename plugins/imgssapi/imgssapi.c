@@ -288,7 +288,8 @@ finalize_it:
 
 
 static rsRetVal
-doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd, int *const oserr)
+doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd, int *const oserr,
+	unsigned *const nextIODirection)
 {
 	DEFiRet;
 	int allowedMethods;
@@ -304,7 +305,7 @@ doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd, int 
 		CHKiRet(TCPSessGSSRecv(pSess, buf, lenBuf, piLenRcvd));
 	} else {
 		*piLenRcvd = lenBuf;
-		CHKiRet(netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd, oserr));
+		CHKiRet(netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd, oserr, nextIODirection));
 	}
 
 finalize_it:

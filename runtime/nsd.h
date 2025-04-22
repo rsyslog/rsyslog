@@ -27,24 +27,6 @@
 
 #include <sys/socket.h>
 
-#if 0
-/**
- * The following structure is a descriptor for tcpsrv i/o. It is
- * primarily used together with epoll at the moment.
- */
-struct nsd_epworkset_s {
-	int id; // TODO: remove
-	//void *pUsr; // TODO: remove
-	enum {NSD_PTR_TYPE_LSTN, NSD_PTR_TYPE_SESS} ptrType;
-	union {
-		tcps_sess_t *pSess;
-		struct {
-			netstrm_t **ppLstn;	/**<  accept listener's netstream */
-		} lstn;
-	} ptr;
-};
-#endif
-
 enum nsdsel_waitOp_e {
 	NSDSEL_RD = 1,
 	NSDSEL_WR = 2,
@@ -60,7 +42,7 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Construct)(nsd_t **ppThis);
 	rsRetVal (*Destruct)(nsd_t **ppThis);
 	rsRetVal (*Abort)(nsd_t *pThis);
-	rsRetVal (*Rcv)(nsd_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf, int *oserr);
+	rsRetVal (*Rcv)(nsd_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf, int *oserr, unsigned *nextIODirection);
 	rsRetVal (*Send)(nsd_t *pThis, uchar *pBuf, ssize_t *pLenBuf);
 	rsRetVal (*Connect)(nsd_t *pThis, int family, unsigned char *port, unsigned char *host, char *device);
 	rsRetVal (*AcceptConnReq)(nsd_t *pThis, nsd_t **ppThis);

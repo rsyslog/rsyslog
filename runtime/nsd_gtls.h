@@ -103,7 +103,7 @@ PROTOTYPEObj(nsd_gtls);
 /* some prototypes for things used by our nsdsel_gtls helper class */
 uchar *gtlsStrerror(int error);
 rsRetVal gtlsChkPeerAuth(nsd_gtls_t *pThis);
-rsRetVal gtlsRecordRecv(nsd_gtls_t *pThis);
+rsRetVal gtlsRecordRecv(nsd_gtls_t *pThis, unsigned *);
 
 /* the name of our library binary */
 #define LM_NSD_GTLS_FILENAME "lmnsd_gtls"
