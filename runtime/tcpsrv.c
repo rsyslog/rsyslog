@@ -805,7 +805,6 @@ closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
 {
 	DEFiRet;
 	assert(pioDescr->ptrType == NSD_PTR_TYPE_SESS);
-dbgprintf("RGER: iodescr %p destructed via closeSess\n", pioDescr);
 	tcps_sess_t *pSess = pioDescr->ptr.pSess;
 	#if defined(ENABLE_IMTCP_EPOLL)
 		CHKiRet(epoll_Ctl(pThis, pioDescr, 0, EPOLL_CTL_DEL));
@@ -837,7 +836,6 @@ notifyReArm(tcpsrv_io_descr_t *const pioDescr)
 {
 	DEFiRet;
 
-dbgprintf("ReArm socket %d with %s\n", pioDescr->sock, (pioDescr->ioDirection == NSDSEL_RD) ? "EPOLLIN" : "EPOLLOUT");
 	const unsigned waitIOEvent = (pioDescr->ioDirection == NSDSEL_WR) ? EPOLLOUT : EPOLLIN;
 	pioDescr->event.events = waitIOEvent | EPOLLET | EPOLLONESHOT;
 	if(epoll_ctl(pioDescr->pSrv->evtdata.epoll.efd, EPOLL_CTL_MOD, pioDescr->sock, &pioDescr->event) < 0) {
@@ -1082,7 +1080,6 @@ processWorksetItem(tcpsrv_io_descr_t *const pioDescr, tcpsrvWrkrData_t *const wr
 		iRet = doReceive(pioDescr, wrkrData);
 	}
 
-DBGPRINTF("RGER: processWorksetItem returns %d\n", iRet);
 	RETiRet;
 }
 
@@ -1144,7 +1141,6 @@ dequeueWork(tcpsrv_t *pSrv)
 
 	pthread_mutex_lock(&queue->mut);
 	while((queue->head == NULL) && !glbl.GetGlobalInputTermState()) {
-dbgprintf("RGER: waiting on condition\n");
 		pthread_cond_wait(&queue->workRdy, &queue->mut);
 	}
 
@@ -1158,7 +1154,6 @@ dbgprintf("RGER: waiting on condition\n");
 	if(queue->head == NULL) {
 		queue->tail = NULL;
 	}
-DBGPRINTF("RGER: DEqueuWork done, sock %d\n", pioDescr->sock);
 
 finalize_it:
 	pthread_mutex_unlock(&queue->mut);
@@ -1181,7 +1176,6 @@ enqueueWork(tcpsrv_io_descr_t *const pioDescr)
 	}
 	queue->tail = pioDescr;
 
-DBGPRINTF("RGER: enqueuWork done, sock %d\n", pioDescr->sock);
 	pthread_cond_signal(&queue->workRdy);
 	pthread_mutex_unlock(&queue->mut);
 
