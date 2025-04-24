@@ -258,7 +258,7 @@ sslerr:
 			/* Output error and abort */
 			nsd_ossl_lastOpenSSLErrorMsg(pThis, lenRcvd, pThis->pNetOssl->ssl, LOG_INFO,
 				"osslRecordRecv", "SSL_read 1");
-			iRet = RS_RET_NO_ERRCODE;
+			iRet = RS_RET_TLS_ERR_SYSCALL;
 			/* Check for underlaying socket errors **/
 			if (	errno == ECONNRESET) {
 				DBGPRINTF("osslRecordRecv: SSL_ERROR_SYSCALL Errno %d, connection reset by peer\n",
@@ -308,7 +308,7 @@ osslInitSession(nsd_ossl_t *pThis, osslSslState_t osslType) /* , nsd_ossl_t *pSe
 	if(!(pThis->pNetOssl->ssl = SSL_new(pThis->pNetOssl->ctx))) {
 		pThis->pNetOssl->ssl = NULL;
 		nsd_ossl_lastOpenSSLErrorMsg(pThis, 0, pThis->pNetOssl->ssl, LOG_ERR, "osslInitSession", "SSL_new");
-		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
+		ABORT_FINALIZE(RS_RET_TLS_BASEINIT_FAIL);
 	}
 
 	// Set SSL_MODE_AUTO_RETRY to SSL obj
@@ -1191,7 +1191,7 @@ Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 				/* Output error and abort */
 				nsd_ossl_lastOpenSSLErrorMsg(pThis, iSent, pThis->pNetOssl->ssl, LOG_INFO,
 					"Send", "SSL_write");
-				iRet = RS_RET_NO_ERRCODE;
+				iRet = RS_RET_TLS_ERR_SYSCALL;
 				/* Check for underlaying socket errors **/
 				if (	errno == ECONNRESET) {
 					dbgprintf("Send: SSL_ERROR_SYSCALL Connection was reset by remote\n");
