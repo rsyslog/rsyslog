@@ -1198,6 +1198,9 @@ wrkr(void *arg)
 
 	tcpsrvWrkrData_t *const wrkrData = &(queue->wrkr_data[wrkrIdx]);
 
+	uchar shortThrdName[16];
+	snprintf((char*)shortThrdName, sizeof(shortThrdName), "w%d/%s", wrkrIdx,
+		(pThis->pszInputName == NULL) ? (uchar*)"tcpsrv" : pThis->pszInputName);
 	uchar thrdName[32];
 	snprintf((char*)thrdName, sizeof(thrdName), "w%d/%s", wrkrIdx,
 		(pThis->pszInputName == NULL) ? (uchar*)"tcpsrv" : pThis->pszInputName);
@@ -1209,7 +1212,7 @@ wrkr(void *arg)
 		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", thrdName);
 	}
 #	elif defined(HAVE_PTHREAD_SETNAME_NP)
-	int r = pthread_setname_np(pthread_self(), (char*) thrdName);
+	int r = pthread_setname_np(pthread_self(), (char*) shortThrdName);
 	if(r != 0) {
 		DBGPRINTF("pthread_setname_np failed, not setting thread name for '%s'\n", thrdName);
 	}
