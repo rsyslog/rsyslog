@@ -63,6 +63,8 @@ DEFobjCurrIf(ruleset)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(statsobj)
 
+int confFreed=0;
+
 /* forward definitions */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 
@@ -204,9 +206,16 @@ static void
 onErr(void *pUsr, char *objinfo, char* errmesg, __attribute__((unused)) relpRetVal errcode)
 {
 	instanceConf_t *inst = (instanceConf_t*) pUsr;
-	LogError(0, RS_RET_RELP_AUTH_FAIL, "imrelp[%s]: error '%s', object "
-			" '%s' - input may not work as intended",
-			inst->pszBindPort, errmesg, objinfo);
+	if(!confFreed) {
+		LogError(0, RS_RET_RELP_AUTH_FAIL, "imrelp[%s]: error '%s', object "
+				" '%s' - input may not work as intended",
+				inst->pszBindPort, errmesg, objinfo);
+	}
+	else {
+	        LogError(0, RS_RET_RELP_AUTH_FAIL, "imrelp[]: error '%s', object "
+        	                " '%s' - input may not work as intended",
+                	        errmesg, objinfo);
+	}
 }
 
 static void
@@ -827,6 +836,7 @@ CODESTARTfreeCnf
 		inst = inst->next;
 		free(del);
 	}
+	confFreed=1;
 	free(pModConf->pszBindRuleset);
 ENDfreeCnf
 
