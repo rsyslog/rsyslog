@@ -1,5 +1,28 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2504.0 (aka 2025.04) 2025-04-??
+- 2025-04-25: ossl tls driver: better error reporting
+  Replace some generic error codes with more specific counterparts.
+  There is still some more work to do, but this covers important
+  spots.
+- 2025-04-25: gnutls netstrm drvr fix: handle write retry correctly in recv call
+  When receiving, gnutls internally may need to write (e.g. for session key
+  changes), so we need to support that. This is a long-standing issue
+  that can have caused invalid error message and session closure.
+  The erorr message was:
+  GnuTLS receive error <nbr> has wrong read direction(wants write) -
+  this could be caused by a broken connection. GnuTLS reports: <text>
+- 2025-04-25: tcpsrv bugfix: do not busy wait on io events
+  Depending on circumstances, tcpsrv worker threads did effectively
+  busy-wait on io events to handle. Not always, but often. This was
+  caused be improperly re-arming the inotify subsystem.
+  This effected overall system performance, but not general rsyslog
+  stability. The bug was introduced on March 1st 2025 into the
+  daily stable build.
+  closes: https://github.com/rsyslog/rsyslog/issues/5623
+- 2025-04-23:  tcpsrv: add experimental stats
+  This is a stats for worker awaking via event notification. Could be useful
+  under some cirumstances. it's called "emptyReads".
+  It needs to be decided if this is a useful setting or not.
 - 2025-04-16: tcpsrv bugfix: input name was not properly propagated
   As a result, it did not show up in pstats. Alos, we now use the input name
   in worker thread to easily identify where they belong to. As thread names
