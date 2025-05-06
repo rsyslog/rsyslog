@@ -2,7 +2,7 @@
 # rgerhards, 2011-04-04
 # This file is part of the rsyslog project, released  under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-export NUMMESSAGES=25000
+export NUMMESSAGES=10000
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 # start up the instances
 # uncomment for debugging support:
@@ -42,9 +42,14 @@ global(
 )
 
 # set up the action
-$ActionSendStreamDriverMode 1 # require TLS for the connection
-$ActionSendStreamDriverAuthMode anon
-*.*	@@localhost:'$RCVR_PORT'
+action(	type="omfwd"
+	protocol="tcp"
+	target="localhost"
+	port="'$RCVR_PORT'"
+	StreamDriverMode="1"
+	StreamDriverAuthMode="anon"
+)
+
 ' 2
 startup 2
 

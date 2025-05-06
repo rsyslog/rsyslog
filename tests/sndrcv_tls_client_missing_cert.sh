@@ -7,7 +7,7 @@ exit 77
 printf 'using TLS driver: %s\n' ${RS_TLS_DRIVER:=gtls}
 
 # start up the instances
-# export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
+# export RSYSLOG_DEBUG="nologfuncflow noprintmutexaction nostdout"
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"
 generate_conf
 add_conf '
@@ -28,7 +28,10 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 	)
 input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
-action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
+action(	type="omfile"
+	name="omfile"
+	file="'$RSYSLOG_OUT_LOG'"
+)
 '
 startup
 export PORT_RCVR=$TCPFLOOD_PORT
@@ -46,23 +49,37 @@ global(
 )
 
 # set up the action
-$ActionSendStreamDriverMode 1 # require TLS for the connection
-$ActionSendStreamDriverAuthMode anon
-*.*	@@127.0.0.1:'$PORT_RCVR'
+action(	type="omfwd"
+	protocol="tcp"
+	target="127.0.0.1"
+	port="'$PORT_RCVR'"
+	StreamDriverMode="1"
+	StreamDriverAuthMode="anon"
+    action.resumeRetryCount="1"
+    queue.type="FixedArray"
+    queue.discardmark="5"
+    queue.discardseverity="0"
+)
+
 ' 2
 startup 2
 
 # now inject the messages into instance 2. It will connect to instance 1,
 # and that instance will record the data.
-injectmsg2
+injectmsg2 0 1
 
 # shut down sender when everything is sent, receiver continues to run concurrently
-shutdown_when_empty 2
+shutdown_immediate 2
 wait_shutdown 2
 # now it is time to stop the receiver as well
 shutdown_when_empty
 wait_shutdown
 
-content_check --regex "peer .* did not provide a certificate,"
+content_check --check-only --regex "peer .* did not provide a certificate,"
+ret=$?
+if [ $ret != 0 ]; then
+	# Second Content for OSSL error msg
+	content_check "peer did not return a certificate"
+fi
 
 exit_test

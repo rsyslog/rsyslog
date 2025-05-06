@@ -68,7 +68,7 @@ DEFobjCurrIf(datetime)
 DEFobjCurrIf(nsd_ptcp)
 
 /* Static Helper variables for certless communication */
-static gnutls_anon_client_credentials_t anoncred;	/**< client anon credentials */
+static gnutls_anon_client_credentials_t anoncred;		/**< client anon credentials */
 static gnutls_anon_server_credentials_t anoncredSrv;	/**< server anon credentials */
 static int dhBits = 2048;	/**< number of bits for Diffie-Hellman key */
 static int dhMinBits = 512;	/**< minimum number of bits for Diffie-Hellman key */
@@ -77,6 +77,7 @@ static pthread_mutex_t mutGtlsStrerror;
 /*< a mutex protecting the potentially non-reentrant gtlStrerror() function */
 
 static gnutls_dh_params_t dh_params; /**< server DH parameters for anon mode */
+static int dhInitiated = 0; /**< flag indicating that DH parameters have been initiated */
 
 /* a macro to abort if GnuTLS error is not acceptable. We split this off from
  * CHKgnutls() to avoid some Coverity report in cases where we know GnuTLS
@@ -174,6 +175,43 @@ finalize_it:
 static void logFunction(int level, const char *msg)
 {
 	dbgprintf("GnuTLS log msg, level %d: %s\n", level, msg);
+}
+
+// Better approach for DH params
+static rsRetVal
+gnutls_initDHParams(void)
+{
+	DEFiRet;
+	int gnuRet;
+	dbgprintf("gnutls_initDHParams: Initiated=%s\n", dhInitiated ? "yes" : "no");
+
+	// Check if DH params are already initiated
+	if (dhInitiated)
+		FINALIZE;
+
+	// Add timeout/interrupt handling
+	CHKgnutls(gnutls_dh_params_init(&dh_params));
+
+	// Consider using pre-generated params or lower bits
+	CHKgnutls(gnutls_dh_params_generate2(dh_params, dhBits));
+	dhInitiated = 1; // Set flag to indicate DH params are initiated
+
+	/* Allocate ANON Server Cred */
+	CHKgnutls(gnutls_anon_allocate_server_credentials(&anoncredSrv));
+	gnutls_anon_set_server_dh_params(anoncredSrv, dh_params);
+finalize_it:
+	RETiRet;
+}
+
+static void
+gnutls_deinitDHParams(void)
+{
+	dbgprintf("gnutls_deinitDHParams: Initiated=%s\n", dhInitiated ? "yes" : "no");
+	if (dhInitiated) {
+		gnutls_anon_free_server_credentials(anoncredSrv);
+		gnutls_dh_params_deinit(dh_params);
+		dhInitiated = 0;
+	}
 }
 
 /* read in the whole content of a file. The caller is responsible for
@@ -838,17 +876,8 @@ gtlsGlblInit(void)
 		/* 0 (no) to 9 (most), 10 everything */
 	}
 
-	/* Init Anon cipher helpers */
-	CHKgnutls(gnutls_dh_params_init(&dh_params));
-	CHKgnutls(gnutls_dh_params_generate2(dh_params, dhBits));
-
 	/* Allocate ANON Client Cred */
 	CHKgnutls(gnutls_anon_allocate_client_credentials(&anoncred));
-
-	/* Allocate ANON Server Cred */
-	CHKgnutls(gnutls_anon_allocate_server_credentials(&anoncredSrv));
-	gnutls_anon_set_server_dh_params(anoncredSrv, dh_params);
-
 finalize_it:
 	RETiRet;
 }
@@ -1411,8 +1440,7 @@ static rsRetVal
 gtlsGlblExit(void)
 {
 	DEFiRet;
-	gnutls_anon_free_server_credentials(anoncredSrv);
-	gnutls_dh_params_deinit(dh_params);
+	gnutls_deinitDHParams();
 	gnutls_global_deinit();
 	RETiRet;
 }
@@ -1890,9 +1918,11 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
 	 const int iSessMax, const tcpLstnParams_t *const cnf_params)
 {
 	DEFiRet;
+	dbgprintf("LstnInit for %p\n", pNS);
 	pNS->fLstnInitDrvr = LstnInitDrvr;
-	iRet = nsd_ptcp.LstnInit(pNS, pUsr, fAddLstn, iSessMax, cnf_params);
-//finalize_it:
+	CHKiRet(nsd_ptcp.LstnInit(pNS, pUsr, fAddLstn, iSessMax, cnf_params));
+	CHKiRet(gnutls_initDHParams()); /* Init Anon cipher params only needed once per process for Server! */
+finalize_it:
 	RETiRet;
 }
 
@@ -2069,10 +2099,9 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-if (error_position != NULL) {
-	dbgprintf("AcceptConnReq error_position=%s\n", error_position);
-}
-
+		if (error_position != NULL) {
+			dbgprintf("AcceptConnReq error_position=%s\n", error_position);
+		}
 		if(pNew != NULL)
 			nsd_gtlsDestruct(&pNew);
 	}

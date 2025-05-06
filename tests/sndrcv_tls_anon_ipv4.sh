@@ -3,14 +3,16 @@
 # testing sending and receiving via TLS with anon auth using bare ipv4, no SNI
 # This file is part of the rsyslog project, released  under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-export NUMMESSAGES=25000
+if [ "${TARGET:=127.0.0.1}" == "::1" ]; then
+. $srcdir/diag.sh check-ipv6-available
+fi
+export NUMMESSAGES=10000
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 # uncomment for debugging support:
 # start up the instances
 #export RSYSLOG_DEBUG="debug nostdout noprintmutexaction"
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
-export PORT_RCVR="$(get_free_port)"
 add_conf '
 global(
 	defaultNetstreamDriverCAFile="'$srcdir/testsuites/x.509/ca.pem'"
@@ -23,12 +25,10 @@ module(	load="../plugins/imtcp/.libs/imtcp"
 	StreamDriver.Name="gtls"
 	StreamDriver.Mode="1"
 	StreamDriver.AuthMode="anon" )
-# then SENDER sends to this port (not tcpflood!)
 input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port" )
 
-$template outfmt,"%msg:F,58:2%\n"
-$template dynfile,"'$RSYSLOG_OUT_LOG'" # trick to use relative path names!
-:msg, contains, "msgnum:" ?dynfile;outfmt
+template(name="outfmt" type="string" string="%msg:F,58:2%\n")
+:msg, contains, "msgnum:" action(type="omfile" template="outfmt" file="'$RSYSLOG_OUT_LOG'")
 '
 startup
 export RCVR_PORT=$TCPFLOOD_PORT
@@ -44,10 +44,15 @@ global(
 )
 
 # set up the action
-$DefaultNetstreamDriver gtls # use gtls netstream driver
-$ActionSendStreamDriverMode 1 # require TLS for the connection
-$ActionSendStreamDriverAuthMode anon
-*.*	@@127.0.0.1:'$RCVR_PORT'
+action(	type="omfwd"
+	protocol="tcp"
+	target="'$TARGET'"
+	port="'$RCVR_PORT'"
+	StreamDriver="gtls"
+	StreamDriverMode="1"
+	StreamDriverAuthMode="anon"
+)
+
 ' 2
 startup 2
 
