@@ -1962,6 +1962,42 @@ GetRemoteIP(nsd_t *pNsd, prop_t **ip)
 }
 
 
+/**** TEMP for ehanced error message until better solution is found *****/
+static int get_socket_info(int sockfd, char *src_ip_str, int *src_port, char *dest_ip_str, int *dest_port) {
+    struct sockaddr_in local_addr;
+    socklen_t local_addr_len = sizeof(local_addr);
+
+    struct sockaddr_in remote_addr;
+    socklen_t remote_addr_len = sizeof(remote_addr);
+
+    // Get local socket information
+    if (getsockname(sockfd, (struct sockaddr *)&local_addr, &local_addr_len) == -1) {
+        perror("getsockname in get_socket_info");
+        return -1;
+    }
+
+    if (inet_ntop(AF_INET, &local_addr.sin_addr, src_ip_str, INET_ADDRSTRLEN) == NULL) {
+        perror("inet_ntop (local IP) in get_socket_info");
+        return -1;
+    }
+    *src_port = ntohs(local_addr.sin_port);
+
+    // Get remote peer information
+    if (getpeername(sockfd, (struct sockaddr *)&remote_addr, &remote_addr_len) == -1) {
+        perror("getpeername in get_socket_info");
+        return -1;
+    }
+
+    if (inet_ntop(AF_INET, &remote_addr.sin_addr, dest_ip_str, INET_ADDRSTRLEN) == NULL) {
+        perror("inet_ntop (remote IP) in get_socket_info");
+        return -1;
+    }
+    *dest_port = ntohs(remote_addr.sin_port);
+
+    return 0; // Success
+}
+/**** END TEMP for ehanced error message until better solution is found *****/
+
 /* accept an incoming connection request - here, we do the usual accept
  * handling. TLS specific handling is done thereafter (and if we run in TLS
  * mode at this time).
@@ -1976,10 +2012,18 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	const char *error_position = NULL;
 
+int have_ip = 0;
+char src_ip_str[INET_ADDRSTRLEN]; // Buffer to hold the IP address string
+int  src_port;
+char dest_ip_str[INET_ADDRSTRLEN]; // Buffer to hold the IP address string
+int  dest_port;
+
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
 	CHKiRet(nsd_gtlsConstruct(&pNew)); // TODO: prevent construct/destruct!
 	CHKiRet(nsd_ptcp.Destruct(&pNew->pTcp));
 	CHKiRet(nsd_ptcp.AcceptConnReq(pThis->pTcp, &pNew->pTcp));
+
+have_ip = !get_socket_info(((nsd_ptcp_t*) pNew->pTcp)->sock, src_ip_str, &src_port, dest_ip_str, &dest_port);
 
 	if(pThis->iMode == 0) {
 		/* we are in non-TLS mode, so we are done */
@@ -2071,6 +2115,11 @@ finalize_it:
 	if(iRet != RS_RET_OK) {
 if (error_position != NULL) {
 	dbgprintf("AcceptConnReq error_position=%s\n", error_position);
+}
+if(have_ip) {
+	LogError(0, iRet, "nsd_gtls failed "
+		"to process incoming connection from remote peer %s:%d to %s:%d with error %d",
+		dest_ip_str, dest_port, src_ip_str, src_port, iRet);
 }
 
 		if(pNew != NULL)
