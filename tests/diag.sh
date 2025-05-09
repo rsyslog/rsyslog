@@ -541,6 +541,26 @@ startup() {
 		n_option="-n"
 	fi
 	eval LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C $n_option -i$RSYSLOG_PIDBASE$instance.pid -M../runtime/.libs:../.libs -f$CONF_FILE $RS_REDIR &
+	# Check if rsyslogd process started successfully
+	if ! ps -p $(cat $RSYSLOG_PIDBASE$instance.pid 2>/dev/null) &> /dev/null; then
+		echo "ABORT! rsyslogd process failed to start!"
+		
+		# Check for core files
+		if [ "$(ls core* 2>/dev/null)" != "" ]; then
+			echo "Found core file, trying to obtain crash location info"
+			CORE=$(ls core*)
+			echo "bt" > gdb.in
+			echo "thread apply all bt full" >> gdb.in
+			echo "q" >> gdb.in
+			$SUDO gdb ../tools/rsyslogd $CORE -batch -x gdb.in
+			rm gdb.in
+			echo "Core file analysis complete"
+		else
+			echo "No core file found"
+		fi
+		
+		error_exit 1 stacktrace
+	fi
 	wait_startup $instance
 	reassign_ports
 }
