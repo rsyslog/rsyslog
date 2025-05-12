@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2504.0 (aka 2025.04) 2025-04-??
+Scheduled Release 8.2504.0 (aka 2025.04) 2025-04-29
 - 2025-04-25: ossl tls driver: better error reporting
   Replace some generic error codes with more specific counterparts.
   There is still some more work to do, but this covers important
