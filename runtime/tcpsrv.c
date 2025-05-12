@@ -682,7 +682,8 @@ finalize_it:
  * rgerhards, 2008-03-02
  */
 static rsRetVal
-SessAccept(tcpsrv_t *const pThis, tcpLstnPortList_t *const pLstnInfo, tcps_sess_t **ppSess, netstrm_t *pStrm)
+SessAccept(tcpsrv_t *const pThis, tcpLstnPortList_t *const pLstnInfo, tcps_sess_t **ppSess,
+	netstrm_t *pStrm, char *const connInfo)
 {
 	DEFiRet;
 	tcps_sess_t *pSess = NULL;
@@ -696,7 +697,7 @@ SessAccept(tcpsrv_t *const pThis, tcpLstnPortList_t *const pLstnInfo, tcps_sess_
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	assert(pLstnInfo != NULL);
 
-	CHKiRet(netstrm.AcceptConnReq(pStrm, &pNewStrm));
+	CHKiRet(netstrm.AcceptConnReq(pStrm, &pNewStrm, connInfo));
 
 	/* Add to session list */
 	iSess = TCPSessTblFindFreeSpot(pThis);
@@ -763,7 +764,7 @@ SessAccept(tcpsrv_t *const pThis, tcpLstnPortList_t *const pLstnInfo, tcps_sess_
 
 	/* check if we need to call our callback */
 	if(pThis->pOnSessAccept != NULL) {
-		CHKiRet(pThis->pOnSessAccept(pThis, pSess));
+		CHKiRet(pThis->pOnSessAccept(pThis, pSess, connInfo));
 	}
 
 	*ppSess = pSess;
@@ -994,10 +995,11 @@ doSingleAccept(tcpsrv_io_descr_t *const pioDescr)
 	tcpsrv_io_descr_t *pDescrNew = NULL;
 	const int idx = pioDescr->id;
 	tcpsrv_t *const pThis = pioDescr->pSrv;
+	char connInfo[TCPSRV_CONNINFO_SIZE] = "\0";
 	DEFiRet;
 
 	DBGPRINTF("New connect on NSD %p.\n", pThis->ppLstn[idx]);
-	iRet = SessAccept(pThis, pThis->ppLstnPort[idx], &pNewSess, pThis->ppLstn[idx]);
+	iRet = SessAccept(pThis, pThis->ppLstnPort[idx], &pNewSess, pThis->ppLstn[idx], connInfo);
 	if(iRet == RS_RET_NO_MORE_DATA) {
 		goto no_more_data;
 	}
@@ -1028,8 +1030,9 @@ finalize_it:
 	if(iRet != RS_RET_OK) {
 		const tcpLstnParams_t *cnf_params = pThis->ppLstnPort[idx]->cnf_params;
 		LogError(0, iRet, "tcpsrv listener (inputname: '%s') failed "
-			"to process incoming connection with error %d",
-			(cnf_params->pszInputName == NULL) ? (uchar*)"*UNSET*" : cnf_params->pszInputName, iRet);
+			"to process incoming connection %s with error %d",
+			(cnf_params->pszInputName == NULL) ? (uchar*)"*UNSET*" : cnf_params->pszInputName,
+			connInfo, iRet);
 		if(pDescrNew != NULL) {
 			DESTROY_ATOMIC_HELPER_MUT(pDescrNew->mut_isInError);
 			free(pDescrNew);
@@ -1660,7 +1663,7 @@ SetCBOnListenDeinit(tcpsrv_t *pThis, rsRetVal (*pCB)(void*))
 }
 
 static rsRetVal
-SetCBOnSessAccept(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t*, tcps_sess_t*))
+SetCBOnSessAccept(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t*, tcps_sess_t*, char*))
 {
 	DEFiRet;
 	pThis->pOnSessAccept = pCB;

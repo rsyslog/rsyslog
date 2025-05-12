@@ -452,11 +452,66 @@ finalize_it:
 }
 
 
+/* obtain connection info as soon as we are connected */
+static void
+get_socket_info(const int sockfd, char *const connInfo)
+{
+	char local_ip_str[INET_ADDRSTRLEN]; // Buffer to hold the IP address string
+	int  local_port = -1;
+	char local_port_str[8];
+	char remote_ip_str[INET_ADDRSTRLEN]; // Buffer to hold the IP address string
+	int  remote_port = -1;
+	char remote_port_str[8];
+	struct sockaddr_in local_addr;
+	socklen_t local_addr_len = sizeof(local_addr);
+
+	struct sockaddr_in remote_addr;
+	socklen_t remote_addr_len = sizeof(remote_addr);
+
+	/* local system info */
+	local_addr.sin_port = 0; /* just to keep clang static analyzer happy */
+	if(getsockname(sockfd, (struct sockaddr *)&local_addr, &local_addr_len) == -1) {
+		strcpy(local_ip_str, "?");
+	} else {
+		if (inet_ntop(AF_INET, &local_addr.sin_addr, local_ip_str, INET_ADDRSTRLEN) == NULL) {
+			strcpy(local_ip_str, "?");
+		}
+		local_port = ntohs(local_addr.sin_port);
+	}
+
+	/* remote system info */
+	remote_addr.sin_port = 0; /* just to keep clang static analyzer happy */
+	if(getpeername(sockfd, (struct sockaddr *)&remote_addr, &remote_addr_len) == -1) {
+		strcpy(remote_ip_str, "?");
+	} else {
+		if (inet_ntop(AF_INET, &remote_addr.sin_addr, remote_ip_str, INET_ADDRSTRLEN) == NULL) {
+			strcpy(remote_ip_str, "?");
+		}
+		remote_port = ntohs(remote_addr.sin_port);
+	}
+	
+	if(local_port == -1) {
+		strcpy(local_port_str, "?");
+	} else {
+		snprintf(local_port_str, 7, "%d", local_port);
+		local_port_str[7] = '\0'; /* be on safe side */
+	}
+	if(remote_port == -1) {
+		strcpy(remote_port_str, "?");
+	} else {
+		snprintf(remote_port_str, 7, "%d", remote_port);
+		remote_port_str[7] = '\0'; /* be on safe side */
+	}
+	snprintf(connInfo, TCPSRV_CONNINFO_SIZE, "from %s:%s to %s:%s",
+		remote_ip_str, remote_port_str, local_ip_str, local_port_str);
+}
+
+
 /* accept an incoming connection request
  * rgerhards, 2008-04-22
  */
 static rsRetVal
-AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
+AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo)
 {
 	int sockflags;
 	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
@@ -480,6 +535,8 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 			"nds_ptcp: error accepting connection on socket %d", pThis->sock);
 		ABORT_FINALIZE(RS_RET_ACCEPT_ERR);
 	}
+
+	get_socket_info(iNewSock, connInfo);
 
 	/* construct our object so that we can use it... */
 	CHKiRet(nsd_ptcpConstruct(&pNew));
