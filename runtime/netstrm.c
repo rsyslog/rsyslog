@@ -113,7 +113,7 @@ finalize_it:
  * rgerhards, 2008-04-21
  */
 static rsRetVal
-AcceptConnReq(netstrm_t *pThis, netstrm_t **ppNew)
+AcceptConnReq(netstrm_t *pThis, netstrm_t **ppNew, char *const connInfo)
 {
 	nsd_t *pNewNsd = NULL;
 	DEFiRet;
@@ -122,7 +122,7 @@ AcceptConnReq(netstrm_t *pThis, netstrm_t **ppNew)
 	assert(ppNew != NULL);
 
 	/* accept the new connection */
-	CHKiRet(pThis->Drvr.AcceptConnReq(pThis->pDrvrData, &pNewNsd));
+	CHKiRet(pThis->Drvr.AcceptConnReq(pThis->pDrvrData, &pNewNsd, connInfo));
 	/* construct our object so that we can use it... */
 	CHKiRet(objUse(netstrms, DONT_LOAD_LIB)); /* use netstrms obj if not already done so */
 	CHKiRet(netstrms.CreateStrm(pThis->pNS, ppNew));

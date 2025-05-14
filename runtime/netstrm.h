@@ -44,7 +44,7 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*ConstructFinalize)(netstrm_t *pThis);
 	rsRetVal (*Destruct)(netstrm_t **ppThis);
 	rsRetVal (*AbortDestruct)(netstrm_t **ppThis);
-	rsRetVal (*AcceptConnReq)(netstrm_t *pThis, netstrm_t **ppNew);
+	rsRetVal (*AcceptConnReq)(netstrm_t *pThis, netstrm_t **ppNew, char *connInfo);
 	rsRetVal (*Rcv)(netstrm_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf, int *oserr, unsigned *nextIODirection);
 	rsRetVal (*Send)(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf);
 	rsRetVal (*Connect)(netstrm_t *pThis, int family, unsigned char *port, unsigned char *host, char *device);

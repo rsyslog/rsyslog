@@ -977,41 +977,6 @@ finalize_it:
 	RETiRet;
 }
 
-/**** TEMP for ehanced error message until better solution is found *****/
-static int get_socket_info(int sockfd, char *src_ip_str, int *src_port, char *dest_ip_str, int *dest_port) {
-    struct sockaddr_in local_addr;
-    socklen_t local_addr_len = sizeof(local_addr);
-
-    struct sockaddr_in remote_addr;
-    socklen_t remote_addr_len = sizeof(remote_addr);
-
-    // Get local socket information
-    if (getsockname(sockfd, (struct sockaddr *)&local_addr, &local_addr_len) == -1) {
-        perror("getsockname in get_socket_info");
-        return -1;
-    }
-
-    if (inet_ntop(AF_INET, &local_addr.sin_addr, src_ip_str, INET_ADDRSTRLEN) == NULL) {
-        perror("inet_ntop (local IP) in get_socket_info");
-        return -1;
-    }
-    *src_port = ntohs(local_addr.sin_port);
-
-    // Get remote peer information
-    if (getpeername(sockfd, (struct sockaddr *)&remote_addr, &remote_addr_len) == -1) {
-        perror("getpeername in get_socket_info");
-        return -1;
-    }
-
-    if (inet_ntop(AF_INET, &remote_addr.sin_addr, dest_ip_str, INET_ADDRSTRLEN) == NULL) {
-        perror("inet_ntop (remote IP) in get_socket_info");
-        return -1;
-    }
-    *dest_port = ntohs(remote_addr.sin_port);
-
-    return 0; // Success
-}
-/**** END TEMP for ehanced error message until better solution is found *****/
 
 /* accept an incoming connection request - here, we do the usual accept
  * handling. TLS specific handling is done thereafter (and if we run in TLS
@@ -1019,26 +984,17 @@ static int get_socket_info(int sockfd, char *src_ip_str, int *src_port, char *de
  * rgerhards, 2008-04-25
  */
 static rsRetVal
-AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
+AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo)
 {
 	DEFiRet;
 	nsd_ossl_t *pNew = NULL;
 	nsd_ossl_t *pThis = (nsd_ossl_t*) pNsd;
 
-int have_ip = 0;
-char src_ip_str[INET_ADDRSTRLEN]; // Buffer to hold the IP address string
-int  src_port;
-char dest_ip_str[INET_ADDRSTRLEN]; // Buffer to hold the IP address string
-int  dest_port;
-
 	ISOBJ_TYPE_assert((pThis), nsd_ossl);
 	CHKiRet(nsd_osslConstruct(&pNew));
 	CHKiRet(nsd_ptcp.Destruct(&pNew->pTcp));
 	dbgprintf("AcceptConnReq for [%p]: Accepting connection ... \n", (void *)pThis);
-	CHKiRet(nsd_ptcp.AcceptConnReq(pThis->pTcp, &pNew->pTcp));
-
-
-have_ip = !get_socket_info(((nsd_ptcp_t*) pNew->pTcp)->sock, src_ip_str, &src_port, dest_ip_str, &dest_port);
+	CHKiRet(nsd_ptcp.AcceptConnReq(pThis->pTcp, &pNew->pTcp, connInfo));
 
 	if(pThis->iMode == 0) {
 		/*we are in non-TLS mode, so we are done */
@@ -1072,11 +1028,6 @@ finalize_it:
 			iRet, pNew, pNew->rtryCall);
 	}
 	if(iRet != RS_RET_OK) {
-if(have_ip) {
-	LogError(0, iRet, "nsd_ossl failed "
-		"to process incoming connection from remote peer %s:%d to %s:%d with error %d",
-		dest_ip_str, dest_port, src_ip_str, src_port, iRet);
-}
 		if(pNew != NULL) {
 			nsd_osslDestruct(&pNew);
 		}

@@ -45,7 +45,7 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*Rcv)(nsd_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf, int *oserr, unsigned *nextIODirection);
 	rsRetVal (*Send)(nsd_t *pThis, uchar *pBuf, ssize_t *pLenBuf);
 	rsRetVal (*Connect)(nsd_t *pThis, int family, unsigned char *port, unsigned char *host, char *device);
-	rsRetVal (*AcceptConnReq)(nsd_t *pThis, nsd_t **ppThis);
+	rsRetVal (*AcceptConnReq)(nsd_t *pThis, nsd_t **ppThis, char *connInfo);
 	rsRetVal (*GetRemoteHName)(nsd_t *pThis, uchar **pszName);
 	rsRetVal (*GetRemoteIP)(nsd_t *pThis, prop_t **ip);
 	rsRetVal (*SetMode)(nsd_t *pThis, int mode); /* sets a driver specific mode - see driver doc for details */

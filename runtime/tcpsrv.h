@@ -179,7 +179,8 @@ struct tcpsrv_s {
 	rsRetVal (*pOnRegularClose)(tcps_sess_t *pSess);
 	rsRetVal (*pOnErrClose)(tcps_sess_t *pSess);
 	/* session specific callbacks */
-	rsRetVal (*pOnSessAccept)(tcpsrv_t *, tcps_sess_t*);
+	rsRetVal (*pOnSessAccept)(tcpsrv_t *, tcps_sess_t*, char *connInfo);
+	#define TCPSRV_CONNINFO_SIZE (2 * (INET_ADDRSTRLEN + 20))
 	rsRetVal (*OnSessConstructFinalize)(void*);
 	rsRetVal (*pOnSessDestruct)(void*);
 	rsRetVal (*OnMsgReceive)(tcps_sess_t *, uchar *pszMsg, int iLenMsg); /* submit message callback */
@@ -224,7 +225,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	rsRetVal (*SetDrvrPermitExpiredCerts)(tcpsrv_t *pThis, uchar *pszMode);
 	rsRetVal (*SetDrvrPermPeers)(tcpsrv_t *pThis, permittedPeers_t*);
 	/* session specifics */
-	rsRetVal (*SetCBOnSessAccept)(tcpsrv_t*, rsRetVal (*) (tcpsrv_t*, tcps_sess_t*));
+	rsRetVal (*SetCBOnSessAccept)(tcpsrv_t*, rsRetVal (*) (tcpsrv_t*, tcps_sess_t*, char*));
 	rsRetVal (*SetCBOnSessDestruct)(tcpsrv_t*, rsRetVal (*) (void*));
 	rsRetVal (*SetCBOnSessConstructFinalize)(tcpsrv_t*, rsRetVal (*) (void*));
 	/* added v5 */
