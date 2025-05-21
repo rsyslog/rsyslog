@@ -375,9 +375,10 @@ rsRetVal objName##ClassExit(void) \
  * present in all objects.
  */
 #define BEGINobjQueryInterface(obj) \
-	rsRetVal obj##QueryInterface(obj##_if_t *pIf);\
-	rsRetVal obj##QueryInterface(obj##_if_t *pIf) \
+	rsRetVal obj##QueryInterface(void *ptrIf);\
+	rsRetVal obj##QueryInterface(void *ptrIf) \
 	{ \
+		obj##_if_t *const pIf = (obj##_if_t *) ptrIf; \
 		DEFiRet; \
 
 #define CODESTARTobjQueryInterface(obj) \
@@ -387,7 +388,7 @@ rsRetVal objName##ClassExit(void) \
 		RETiRet; \
 	}
 
-#define PROTOTYPEObjQueryInterface(obj) rsRetVal obj##QueryInterface(obj##_if_t *pIf)
+#define PROTOTYPEObjQueryInterface(obj) rsRetVal obj##QueryInterface(void *)
 
 
 /* the following macros should be used to define interfaces inside the
