@@ -1,10 +1,16 @@
-/* a dummy module to be loaded if we cannot build this module, but
- * configure required it to be "optional".
+/* omsplunkhec.c
+ * This module is a middleware that is used to send logs received by Rsyslog to a HEC Splunk server
+ * This method of collect is a alternative to the module UF of Splunk
+ * 
+ * THANKS :
+ * I would like to thanks the creator of the OMHTTP module first.
+ * I take a lots of function of his code to adapt this code for HEC Splunk
+ * This module is more like "a fork" of the OMHTTP module
+ * Thanks to Nathan Scott, Rainer Gerhards and Adiscon GmbH, Christian Tramnitz !
  *
- * Copyright 2020 Rainer Gerhards and Adiscon GmbH.
- *
- * This file is part of rsyslog.
- *
+ * 
+ * Copyright 2025 Adrien GANDARIAS.
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
