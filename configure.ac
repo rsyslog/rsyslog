@@ -1093,6 +1093,22 @@ if test "x$enable_omhttp" = "xyes"; then
 fi
 AM_CONDITIONAL(ENABLE_OMHTTP, test x$enable_omhttp = xyes)
 
+# omsplunkhec support
+AC_ARG_ENABLE(omsplunkhec,
+        [AS_HELP_STRING([--enable-omsplunkhec],[Enable http output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omsplunkhec="yes" ;;
+          no) enable_omsplunkhec="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omsplunkhec) ;;
+         esac],
+        [enable_omsplunkhec=no]
+)
+if test "x$enable_omsplunkhec" = "xyes"; then
+        PKG_CHECK_MODULES([CURL], [libcurl])
+        LT_LIB_M
+fi
+AM_CONDITIONAL(ENABLE_OMSPLUNKHEC, test x$enable_omsplunkhec = xyes)
+
 
 # capability to enable elasticsearch testbench tests. This requries that an ES test
 # environment is present on the local (127.0.0.1) machine.
@@ -3007,6 +3023,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omdtls/Makefile \
 		contrib/mmdarwin/Makefile \
 		contrib/omhttp/Makefile \
+		contrib/omsplunkhec/Makefile \
 		contrib/fmhash/Makefile \
 		contrib/fmunflatten/Makefile \
 		contrib/ffaup/Makefile \
@@ -3105,6 +3122,7 @@ echo "    omhdfs module will be compiled:           $enable_omhdfs"
 echo "    omelasticsearch module will be compiled:  $enable_elasticsearch"
 echo "    omclickhouse module will be compiled:     $enable_clickhouse"
 echo "    omhttp module will be compiled:           $enable_omhttp"
+echo "    omsplunkhec module will be compiled:      $enable_omsplunkhec"
 echo "    omruleset module will be compiled:        $enable_omruleset"
 echo "    omudpspoof module will be compiled:       $enable_omudpspoof"
 echo "    omuxsock module will be compiled:         $enable_omuxsock"
