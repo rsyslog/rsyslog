@@ -534,7 +534,7 @@ int *pbIsPermitted)
 		}
 		nelem = recvmmsg(lstn->sock, pWrkr->recvmsg_mmh, runModConf->batchSize, 0, NULL);
 		STATSCOUNTER_INC(pWrkr->ctrCall_recvmmsg, pWrkr->mutCtrCall_recvmmsg);
-		DBGPRINTF("imudp: recvmmsg returned %d\n", nelem);
+		DBGPRINTF("imudp: recvmmsg returned %d (errno %d)\n", nelem, errno);
 		if(nelem < 0 && errno == ENOSYS) {
 			/* be careful: some versions of valgrind do not support recvmmsg()! */
 			DBGPRINTF("imudp: error ENOSYS on call to recvmmsg() - fall back to recvmsg\n");
