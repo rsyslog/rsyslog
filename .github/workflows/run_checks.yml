@@ -1,0 +1,214 @@
+# Copyright 2024 Rainer Gerhards and Others
+#
+# https://github.com/rsyslog/rsyslog-pkg-ubuntu
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# References:
+#
+# https://help.github.com/en/github/managing-subscriptions-and-notifications-on-github/configuring-notifications#github-actions-notification-options
+# https://github.com/settings/notifications
+# https://software.opensuse.org//download.html?project=home%3Argerhards&package=rsyslog
+
+
+---
+name: check
+
+on:
+  pull_request:
+
+jobs:
+  CI:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      # When set to true, cancel all in-progress jobs if any matrix job fails.
+      fail-fast: false
+      matrix:
+        config: [centos_7, centos_8, debian_10, debian_11,
+                 ubuntu_24_imtcp_no_epoll,
+                 fedora_35, fedora_36,
+                 ubuntu_18, ubuntu_20, ubuntu_24,
+                 ubuntu_22_san, ubuntu_24_tsan, ubuntu_22_codecov, ubuntu_22_distcheck,
+                 kafka_codecov, elasticsearch]
+
+    steps:
+      - name: git checkout project
+        uses: actions/checkout@v1
+
+      - name: run container CI pipeline
+        run: |
+          chmod -R go+rw .
+          export RSYSLOG_CONTAINER_UID="" # use default
+          export RSYSLOG_STATSURL='http://build.rsyslog.com/testbench-failedtest.php'
+          export CFLAGS='-g'
+          export CC='gcc'
+          export USE_AUTO_DEBUG='off'
+          export CI_MAKE_OPT='-j20'
+          export CI_MAKE_CHECK_OPT='-j4'
+          export CI_CHECK_CMD='check'
+          case "${{ matrix.config }}" in
+          'centos_7')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_centos:7'
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--disable-elasticsearch-tests --disable-kafka-tests --disable-snmp-tests'
+              export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
+              ;;
+          'centos_8')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_centos:8'
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
+                            --disable-snmp-tests --enable-imdtls --enable-omdtls"
+              ;;
+          'debian_10')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_debian:10'
+              export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
+                            --without-valgrind-testbench"
+              ;;
+          'debian_11')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_debian:11'
+              export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
+                            --without-valgrind-testbench --enable-imdtls --enable-omdtls"
+              ;;
+          'ubuntu_24_imtcp_no_epoll')
+              # This check tests if imtcp runs in poll (select) mode. We have only slow CI runners for
+              # platforms where this is the case, thus we do a quick run on ubuntu where we also have all
+              # thread and memory debuggers available.
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
+              export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
+              # Note: we completely override the container configure options here!
+              export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
+                     --enable-imdiag --disable-imtcp-epoll --enable-imtcp-tests\
+                     --disable-impstats --disable-imfile --disable-imfile-tests \
+                     --disable-fmhttp --enable-valgrind --enable-valgrind-testbench \
+                     --disable-helgrind --disable-default-tests --disable-kafka-tests \
+                     --disable-omkafka --disable-imkafka \
+                     --enable-gnutls --enable-openssl --enable-gnutls-tests"
+              ;;
+          'fedora_35')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:35'
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
+                     --disable-kafka-tests --enable-debug"
+              ;;
+          'fedora_36')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:36'
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
+                     --disable-kafka-tests --enable-debug --enable-imdtls --enable-omdtls"
+              ;;
+          'ubuntu_18')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
+              ;;
+          'ubuntu_20')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
+              export CI_VALGRIND_SUPPRESSIONS="ubuntu20.04.supp"
+              ;;
+          'tumbleweed')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_suse:tumbleweed'
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests"
+              ;;
+          'ubuntu_24')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
+              export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
+              # TODO: enable disabled components when the issues are fixed
+              # It is better to run at least the majority of checks than to postpone that
+              # any longer. 2025-01-31 RGerhards
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--enable-imdtls --enable-omdtls --disable-omamqp1 --disable-snmp --disable-elasticsearch-tests"
+              ;;
+          'ubuntu_22_distcheck')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
+              export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
+              export CI_CHECK_CMD='distcheck'
+              export ABORT_ALL_ON_TEST_FAIL='YES'
+              ;;
+          'ubuntu_22_san')
+              export CI_SANITIZE_BLACKLIST='tests/asan.supp'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
+              export CC='clang'
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
+                      --disable-libfaketime --without-valgrind-testbench --disable-valgrind \
+                      --disable-kafka-tests --enable-imdtls --enable-omdtls"
+              export CFLAGS="-fstack-protector -D_FORTIFY_SOURCE=2 \
+                     -fsanitize=address,undefined,nullability,unsigned-integer-overflow \
+                     -fno-sanitize-recover=undefined,nullability,unsigned-integer-overflow \
+                     -g -O3 -fno-omit-frame-pointer -fno-color-diagnostics"
+              export LSAN_OPTIONS='detect_leaks=0'
+              export UBSAN_OPTIONS='print_stacktrace=1'
+              ;;
+          'ubuntu_24_tsan')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
+              export CI_MAKE_CHECK_OPT='-j2' # This is CPU-heavy due to tsan, so we need less concurrency to prevent flakes
+              export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
+              export CI_SANITIZE_BLACKLIST='tests/tsan.supp'
+              export CC='clang'
+              # impstats has known and OK races
+              # mmpstrucdata TEMPORARILY disabled because of a threading hang on shutdown
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --enable-imfile-tests \
+                    --disable-impstats --disable-kafka-tests --disable-mmpstrucdata \
+                    --disable-clickhouse --disable-clickhouse-tests --disable-kafka-tests \
+                    --disable-libfaketime --without-valgrind-testbench --disable-valgrind"
+              export CFLAGS="-g -fstack-protector -D_FORTIFY_SOURCE=2 -fsanitize=thread \
+                    -O0 -fno-omit-frame-pointer -fno-color-diagnostics"
+              # note: we need pathes in container, thus /rsyslog vs. $(pwd) in TSAN_OPTIONS
+              export TSAN_OPTIONS="halt_on_error=1 suppressions=/rsyslog/tests/tsan-rt.supp"
+              export ABORT_ALL_ON_TEST_FAIL='YES'
+              ;;
+          'ubuntu_22_codecov')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
+              export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
+              export CFLAGS='-g -O0 -coverage'
+              export LDFLAGS='-lgcov'
+              export USE_AUTO_DEBUG='off'
+              export CI_CODECOV_TOKEN='9958eda4-50ae-4f2c-b6b6-567d3e6a2e81'
+              export ABORT_ALL_ON_TEST_FAIL='NO'
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-kafka-tests --disable-imkafka \
+                            --disable-omkafka --enable-debug --disable-elasticsearch \
+                            --disable-elasticsearch-tests"
+              ;;
+          'kafka_codecov')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
+              export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
+              export CFLAGS='-g -O0 -coverage'
+              export LDFLAGS='-lgcov'
+              export CI_CODECOV_TOKEN='9958eda4-50ae-4f2c-b6b6-567d3e6a2e81'
+              export ABORT_ALL_ON_TEST_FAIL='NO'
+              # Note: we completely override the container configure options here!
+              export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
+                     --enable-imdiag --disable-impstats --enable-imfile --disable-imfile-tests \
+                     --disable-fmhttp --enable-valgrind --enable-valgrind-testbench \
+                     --disable-helgrind --disable-default-tests --disable-imtcp-tests --enable-kafka-tests \
+                     --enable-omkafka --enable-gnutls --disable-gnutls-tests --enable-imkafka"
+              ;;
+          'elasticsearch')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
+              export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
+              export CI_CODECOV_TOKEN='9958eda4-50ae-4f2c-b6b6-567d3e6a2e81'
+              export CI_MAKE_CHECK_OPT='-j1'
+              export ABORT_ALL_ON_TEST_FAIL='NO'
+              export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
+                     --enable-imdiag --enable-impstats --enable-imfile --disable-imfile-tests \
+                     --disable-fmhttp --enable-valgrind --disable-default-tests --disable-imtcp-tests \
+                     --enable-elasticsearch-tests --enable-elasticsearch"
+              export CI_MAKE_OPT='-j20'
+              export CI_MAKE_CHECK_OPT='-j8'
+              export CI_CHECK_CMD='check'
+              export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp" # they are still valid
+              devtools/devcontainer.sh --rm devtools/run-ci.sh
+              ;;
+          esac
+          devtools/devcontainer.sh --rm devtools/run-ci.sh
+
+      - name: show error logs (if we errored)
+        if:  ${{ failure() || cancelled() }}
+        run: |
+          devtools/gather-check-logs.sh
+          cat failed-tests.log

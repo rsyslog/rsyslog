@@ -1,0 +1,38 @@
+-- *****************************************************************
+-- ADISCON-RSYSLOG-MIB.txt:  Adiscon RSyslog message MIB file
+--
+-- March 2008, Andre Lorbach
+--
+-- Copyright (c) 2008 by Adiscon GmbH
+-- All rights reserved.
+-- *****************************************************************
+--
+-- This is a basic MIB which defines our main enterprise OID
+
+ADISCON-MIB DEFINITIONS ::= BEGIN
+
+--
+-- Top-level infrastructure for the Adiscon enterprise MIB tree
+--
+
+IMPORTS
+    MODULE-IDENTITY, enterprises FROM SNMPv2-SMI;
+
+adiscon MODULE-IDENTITY
+    LAST-UPDATED "200803040000Z"
+    ORGANIZATION "www.adiscon.com"
+    CONTACT-INFO    
+	 "postal:	Adiscon GmbH
+			Mozartstrasse 21
+			D-97950 Groﬂrinderfeld
+			Deutschland
+
+          email:    info@adiscon.com"
+    DESCRIPTION
+	"Top-level infrastructure for the Adiscon enterprise MIB tree"
+    REVISION     "200803040000Z"
+    DESCRIPTION
+	"First draft"
+    ::= { enterprises 19406}
+
+END

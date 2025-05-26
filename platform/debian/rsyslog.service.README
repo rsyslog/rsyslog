@@ -1,0 +1,12 @@
+The sample service file is as of 2023-10-23 no longer provided by
+the rsyslog project because service settings strongly depend on
+distribution policies.
+
+For Debian, the distro current version can be found at
+
+https://salsa.debian.org/debian/rsyslog/-/blob/debian/master/debian/rsyslog.service
+
+Note: We provided a sample service files in the early days of systemd,
+when almost nobody was using systemd. That made sense because it eased
+transition for those trying out systemd. Now that systemd is mainstream,
+there is no real need any longer for a sample.

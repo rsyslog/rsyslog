@@ -1,0 +1,121 @@
+# Copyright 2020 Rainer Gerhards and Others
+#
+# https://github.com/rsyslog/rsyslog-pkg-ubuntu
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# References:
+#
+# https://help.github.com/en/github/managing-subscriptions-and-notifications-on-github/configuring-notifications#github-actions-notification-options
+# https://github.com/settings/notifications
+# https://software.opensuse.org//download.html?project=home%3Argerhards&package=rsyslog
+
+
+---
+name: CI PR runner
+
+on:
+  pull_request:
+
+jobs:
+  container_checks:
+    runs-on: ubuntu-18.04
+    timeout-minutes: 50
+    strategy:
+      # When set to true, cancel all in-progress jobs if any matrix job fails.
+      fail-fast: false
+      matrix:
+        config: [centos_6, centos_7, centos_8, debian_10, ubuntu_16, ubuntu_18_san, ubuntu_18_tsan, suse_tumbleweed]
+
+    steps:
+      - name: git checkout project
+        uses: actions/checkout@v1
+
+      - name: run container CI pipeline
+        run: |
+          chmod -R go+rw .
+          export RSYSLOG_CONTAINER_UID="" # use default
+          export RSYSLOG_STATSURL='http://build.rsyslog.com/testbench-failedtest.php'
+          export CFLAGS='-g'
+          export CC='gcc'
+          export USE_AUTO_DEBUG='off'
+          export CI_MAKE_OPT='-j20'
+          export CI_MAKE_CHECK_OPT='-j8'
+          export CI_CHECK_CMD='check'
+          case "${{ matrix.config }}" in
+          'centos_6')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_centos:6'
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests --disable-snmp-tests \
+                        --disable-gnutls --disable-ax-compiler-flags --disable-mmdblookup  \
+                        --disable-mmexternal"
+              export CI_VALGRIND_SUPPRESSIONS='centos6-9.supp'
+              export CI_MAKE_CHECK_OPT='-j1' # this has the old non-parallel test harness
+              ;;
+          'centos_7')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_centos:7'
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--disable-elasticsearch-tests --disable-kafka-tests --disable-snmp-tests'
+              export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
+              ;;
+          'centos_8')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_centos:8'
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--disable-elasticsearch-tests --disable-kafka-tests --disable-snmp-tests'
+              ;;
+          'debian_10')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_debian:10'
+              export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
+                            --without-valgrind-testbench"
+              ;;
+          'suse_tumbleweed')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_suse:tumbleweed'
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests"
+              ;;
+          'ubuntu_16')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:16.04'
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
+                        --disable-omrabbitmq"
+              ;;
+          'ubuntu_18_san')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
+              export CC='clang'
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --enable-imfile-tests\
+                      --disable-libfaketime --without-valgrind-testbench --disable-valgrind"
+              export CFLAGS="-fstack-protector -D_FORTIFY_SOURCE=2 \
+                     -fsanitize=address,undefined,nullability,unsigned-integer-overflow \
+                     -fno-sanitize-recover=undefined,nullability,unsigned-integer-overflow \
+                     -g -O3 -fno-omit-frame-pointer -fno-color-diagnostics"
+              export LSAN_OPTIONS='detect_leaks=0'
+              export UBSAN_OPTIONS='print_stacktrace=1'
+              ;;
+          'ubuntu_18_tsan')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
+              export CC='clang-8'
+              export CFLAGS="-g -fstack-protector -D_FORTIFY_SOURCE=2 -fsanitize=thread \
+                        -O0 -fno-omit-frame-pointer -fno-color-diagnostics"
+              export CI_SANITIZE_BLACKLIST='tests/tsan.supp'
+              export TSAN_OPTIONS='halt_on_error=1'
+              export ABORT_ALL_ON_TEST_FAIL='YES'
+              # impstats has known and OK races
+              # mmpstrucdata TEMPORARILY disabled because of a threading hang on shutdown
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --enable-imfile-tests \
+                        --disable-impstats --disable-kafka-tests --disable-mmpstrucdata \
+                        --disable-libfaketime --without-valgrind-testbench --disable-valgrind"
+              ;;
+          esac
+          devtools/devcontainer.sh --rm devtools/run-ci.sh
+
+      - name: show error logs (if we errored)
+        if:  ${{ failure() || cancelled() }}
+        run: |
+          devtools/gather-check-logs.sh
+          cat failed-tests.log

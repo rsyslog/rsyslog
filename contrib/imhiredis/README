@@ -1,0 +1,81 @@
+Redis Input Plugin using hiredis library
+
+REQUIREMENTS:
+
+* hiredis ( https://github.com/redis/hiredis.git )
+
+USAGE:
+
+This plugin has two current "modes" that it supports:
+
+1. "queue"
+The queue mode will LPOP or RPOP your message from a redis list.
+Following parameters are required:
+ - mode: Set mode to "queue" to enable the queue mode
+ - key: The key to xPOP on
+ - server: The name or IP address of the redis server
+ - port: The redis listening port
+
+Following parameters are optional:
+ - password: If set, the plugin will issue an "AUTH" command before calling xPOP
+ - uselpop: If set to "1", LPOP will be used instead of default RPOP
+
+Redis pipelining is used inside the worker thread. The dequeue batch size is configured with the "batchsize" parameter (default is 10).
+
+Imhiredis will query Redis every second to see if entries are in the list, if that's the case they will be dequeued
+continuously by batches of "batchsize elements" until none remains.
+
+Due to its balance between polling interval and pipelining and its use of lists, this mode is quite performant and reliable.
+However, due to the 1 second polling frequency, one may consider using the `subscribe` mode instead if very low latency is required.
+
+```
+module(load="imhiredis")
+
+input(
+    type="imhiredis"
+    mode="queue"
+    key="vulture"
+    server="127.0.0.1"
+    port="6379"
+    uselpop="1"
+    password="foobar"
+    batchsize="10"
+)
+```
+
+
+
+2. "subscribe"
+The subscribe mode will SUBSCRIBE to a redis channel. The "key"
+parameter is required and will be used for the subscribe channel.
+
+Following parameters are required:
+ - mode: Set mode to "subscribe" to enable the subscribe mode
+ - key: The key to subscribe to (aka the "channel")
+ - server: The name or IP address of the redis server
+ - port: The redis listening port
+
+Following parameters are optional:
+ - password: If set, the plugin will issue an "AUTH" command before listening to a channel
+ - uselpop: If set to "1", LPOP will be used instead of default RPOP
+
+
+```
+module(load="imhiredis")
+
+input(
+    type="imhiredis"
+    mode="subscribe"
+    key="vulture"
+    server="127.0.0.1"
+    port="6379"
+    password="foobar"
+    batchsize="10"
+)
+```
+
+
+TODO
+* TLS support
+
+

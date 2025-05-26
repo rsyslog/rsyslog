@@ -1,0 +1,68 @@
+extraction:
+  cpp:
+    prepare:
+      packages:
+        - python-docutils
+        - tcl-dev
+
+    configure:
+      command:
+        - autoreconf -fvi
+        - ./configure --enable-imfile
+          --enable-mysql
+          --enable-usertools
+          --enable-pgsql
+          --enable-libdbi
+          --enable-snmp
+          --enable-elasticsearch
+          --enable-gnutls
+          --enable-mail
+          --enable-imdiag
+          --enable-mmjsonparse
+          --enable-mmaudit
+          --enable-mmanon
+          --enable-mmrm1stspace
+          --enable-mmutf8fix
+          --enable-mmcount
+          --enable-mmdblookup
+          --enable-mmfields
+          --enable-mmpstrucdata
+          --enable-imptcp
+          --enable-impstats
+          --enable-omprog
+          --enable-omudpspoof
+          --enable-omstdout
+          --enable-omjournal
+          --enable-pmlastmsg
+          --enable-pmcisconames
+          --enable-pmciscoios
+          --enable-pmnull
+          --enable-pmaixforwardedfrom
+          --enable-pmsnare
+          --enable-pmpanngfw
+          --enable-omuxsock
+          --enable-omkafka
+          --enable-imkafka
+          --enable-ommongodb
+          --enable-omhiredis
+          --enable-omhttpfs
+          --enable-gssapi-krb5
+          --enable-mmkubernetes
+          --enable-relp
+          --enable-mmnormalize
+          --enable-pmnormalize
+          --enable-openssl
+          --enable-mmgrok
+          --enable-omtcl
+          --enable-omhttp
+          --enable-improg
+          --enable-imtuxedoulog
+          --enable-mmtaghostname
+          --enable-imbatchreport
+          --enable-imdocker
+          --enable-mmdarwin
+          --enable-pmdb2diag
+          --enable-omrabbitmq
+
+queries:
+  - include: cpp/commented-out-code
