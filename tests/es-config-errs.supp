@@ -1,0 +1,11 @@
+{
+   rsyslog does not clean up properly when hitting a config error
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:nvlstNewStr
+   fun:yyparse
+   fun:load
+   fun:initAll
+   fun:main
+}

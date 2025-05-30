@@ -1,0 +1,6 @@
+This lists known issue with dependencies and such.
+
+Libfaketime 0.99.7 has a bug that can cause segfaults during testbench
+runs. If you experience them, either use --disable-libfaketime configure
+switch or go back to an older version.
+see also: https://github.com/rsyslog/rsyslog/issues/2099

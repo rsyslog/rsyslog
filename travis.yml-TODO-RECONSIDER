@@ -1,0 +1,99 @@
+sudo: required
+
+os:
+ - osx
+ - linux
+
+language: c
+
+compiler:
+  - gcc
+
+
+env:
+  global:
+    - secure: DsTuVAZg5omWT652Xnz/ZG20nJ5ShdTDXPQA01HscUhjAzcuMYsCPp889QoLip+3O5yYH6/oH2WprQA6ZQQMt+7idNRo6ennu7tPQiHEBm/lK2Yq1W6r6tOb1zmSalbIVWV2cGTdKOOuHAatgmp/L70WjOlCrtLvPT+JQ9AkzLU=
+    - RSYSLOG_STATSURL="http://build.rsyslog.com/testbench-failedtest.php"
+    - SUDO=sudo
+
+addons:
+  apt:
+    update: true
+
+matrix:
+  allow_failures:
+    # the following is left in commented out to provide a sample of how
+    # this feature is used for multiple build matrix entries
+    #- env: RUN="docker-alpine.sh"
+    #- env: RUN="docker-ubuntu-devel.sh"
+    #- env: RUN="run-osx.sh", CFLAGS="-g"
+
+  exclude:
+     - compiler: "gcc"
+  include:
+     - os: linux
+       language: minimal
+       services: docker
+       env: RUN="travis-run-compile-tests.sh"
+
+# right now does not work, so keep commented out
+#     - os: linux
+#       services: docker
+#       env: RUN="docker-ubuntu-devel.sh"
+
+     - os: linux
+       compiler: "clang"
+       services:
+         - mysql
+         - postgresql
+       env: RUN="run.sh",CHECK="YES", ESTEST="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics"
+
+     - os: linux
+       dist: xenial
+       compiler: "gcc"
+       services:
+         - docker
+       env: RUN="run.sh",CHECK="YES", IMDOCKER="YES", MINIMAL_BUILD="YES", EXTRA_CONFIGURE="--disable-default-tests --disable-elasticsearch --disable-impstats --disable-imfile --disable-imptcp --disable-gnutls -disable-openssl --disable-relp --disable-pmsnare --disable-pmlastmsg --disable-ommongodb"
+
+#     - os: linux
+#       compiler: "clang"
+#       services:
+#         - mysql
+#         - postgresql
+#       env: RUN="run.sh",CFLAGS="-fsanitize=undefined,nullability,unsigned-integer-overflow -fno-sanitize-recover=undefined,nullability,unsigned-integer-overflow -g -O3 -fno-omit-frame-pointer -fno-color-diagnostics", UBSAN_OPTIONS="print_stacktrace=1", CHECK="YES", ESTEST="YES", KAFKA="YES"
+
+     - os: linux
+       compiler: "clang"
+       # we run this test without assert() enabled, so that we get "production timing"
+       services:
+         - mysql
+         - postgresql
+       env: RUN="run.sh",AD_PPA="v8-devel", CHECK="YES", CFLAGS="-g -O1 -fsanitize=address -fno-color-diagnostics", CONFIGURE_FLAGS="--disable-debug"
+
+     - os: linux
+       compiler: "gcc"
+       services:
+         - mysql
+         - postgresql
+       env: RUN="run.sh",BUILD_FROM_TARBALL="YES", GROK="YES", IMHTTP="YES", CHECK="YES", CFLAGS="-g -O2", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--gen-suppressions=all", EXTRA_CONFIGURE="--disable-default-tests --disable-elasticsearch --disable-impstats --disable-imfile --disable-imptcp --disable-gnutls -disable-openssl --disable-relp --disable-pmsnare --disable-pmlastmsg"
+
+#     - os: linux
+#       compiler: "gcc"
+#       services:
+#         - mysql
+#         - postgresql
+#       env: RUN="run.sh",BUILD_FROM_TARBALL="YES", CHECK="YES", CFLAGS="-g -O2", RS_TESTBENCH_VALGRIND_EXTRA_OPTS="--suppressions=travis/trusty.supp --gen-suppressions=all", EXTRA_CONFIGURE="--disable-default-tests"
+#       dist: trusty
+
+     - os: osx
+       compiler: "clang"
+       env: RUN="run-osx.sh", CFLAGS="-g"
+
+     - os: linux
+       # CRON/Coverity entry!
+       compiler: "gcc"
+       env: RUN="run-cron.sh",DO_COVERITY="YES",DO_CRON="YES", KAFKA="YES", GROK="YES", IMHTTP="YES"
+
+
+script:
+   - devtools/ci/travis/do-run.sh

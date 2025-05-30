@@ -1,0 +1,52 @@
+This file was thankfully provided by IBM in 2018. We could not yet use it
+to try a build (see README.AIX).
+
+................................................................................
+
+- Run yum.sh(attached). This will setup yum on AIX.
+
+- Install AIX xlc compiler.
+
+- Install various packages required for setting up build environment:
+   yum install automake autoconf bash gettext gettext-devel libtool m4 make pkg-config zlib zlib-devel git gnutls gnutls-devel info flex nettle nettle-devel p11-kit-devel libffi libffi-devel gmp gmp-devel
+
+- Update all the packages using 'yum update'.
+
+- Install following rpm's from http://www.bullfreeware.com:
+  flex-2.5.35-2, libiconv-1.14-1, byacc-1.9.20121003-1
+
+- All the required packages are installed. We can now use git clone to get all the source code:
+  git clone https://github.com/rsyslog/liblogging.git
+  git clone https://github.com/rsyslog/libfastjson.git
+  git clone https://github.com/rsyslog/libestr.git
+  git clone https://github.com/rsyslog/rsyslog.git
+
+- To build rsyslog, we first build liblogging, libfastjson, libestr and then build rsyslog:
+	-> Export following environment variables:
+
+	   export M4=/opt/freeware/bin/m4
+	   export PATH=$PATH:/usr/vac/bin:/opt/freeware/bin
+	   export PKG_CONFIG_PATH=/usr/lib/pkgconfig:/opt/freeware/lib/pkgconfig
+
+	-> First build dependent libraries json-c-0.12, libestr-0.1.9, liblogging-1.0.4 as follows:
+	  # cd libfastjson
+	  # ./configure
+	  # make
+	  # make install
+	  # cd ../libestr
+	  # ./configure
+	  # make
+	  # make install
+	  # cd ../liblogging
+	  # ./configure --disable-man-pages
+	  # make
+	  # make install
+
+	  Note that you should use --disable-man-pages with configure for liblogging.
+
+	-> Now build rsyslog using following commands:
+	   # cd rsyslog
+	   # ./configure --enable-imfile --disable-uuid --disable-generate-man-pages --enable-imdiag --enable-omruleset
+	   # make
+	   # make install
+
