@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2506.0 (aka 2025.06) 2025-06-??
+- 2025-05-29: omjournal: Fix priority value
+  Thanks to Bougrine Anis for the patch.
 - 2025-05-14: tls subsystem: generate better error message on accept failure
   Right now, the remote peer is not reported, even in cases where
   this would be possible. This patch provides a method to emit a
