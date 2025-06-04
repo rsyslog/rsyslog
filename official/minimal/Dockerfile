@@ -32,7 +32,8 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         software-properties-common \
         ca-certificates \
-    && add-apt-repository -y ppa:adiscon/v8-stable \
+        vim-tiny \
+    && add-apt-repository -y ppa:adiscon/daily-stable \
     && apt-get update && \
     apt-get install -y --no-install-recommends rsyslog rsyslog-omstdout \
     && apt-get purge -y --auto-remove software-properties-common \
@@ -48,6 +49,10 @@ RUN apt-get update && \
 # For Docker best practices, consider directing logs to stdout/stderr in your rsyslog.conf.
 COPY rsyslog.conf /etc/rsyslog.conf
 COPY 01-main-queue.conf /etc/rsyslog.d/
+COPY start.sh /usr/local/bin/start.sh
+RUN chmod +x /usr/local/bin/start.sh
+# Set the entrypoint (this will run the script when the container starts)
+ENTRYPOINT ["/usr/local/bin/start.sh"]
 
 # Set the default command to run rsyslog in the foreground.
 # -n: Prevents rsyslog from forking (essential for Docker containers).
