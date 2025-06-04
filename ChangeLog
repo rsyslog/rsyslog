@@ -1,5 +1,14 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2506.0 (aka 2025.06) 2025-06-??
+- 2025-06-04: omsendertrack: new module
+  The omsendertrack module is designed to track and report statistics for
+  message senders across all inputs in Rsyslog. It periodically outputs a
+  JSON file containing information about each sender.
+  Note: This commit provides minimalistic basic functionality as a PoC.
+  We will check it's usefulness in practice and expect follow-up PRs
+  to enhance functionality and include feedback from early testing.
+  However, this module is solid, just feature limited.
+  see also: https://github.com/rsyslog/rsyslog/issues/5599
 - 2025-05-29: omjournal: Fix priority value
   Thanks to Bougrine Anis for the patch.
 - 2025-05-14: tls subsystem: generate better error message on accept failure
