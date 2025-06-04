@@ -1103,7 +1103,9 @@ TESTS += \
 	imhttp-post-payload-multi.sh \
 	imhttp-post-payload-multi-lf.sh \
 	imhttp-post-payload-compress.sh \
-	imhttp-getrequest-file.sh
+	imhttp-getrequest-file.sh \
+	imhttp-healthcheck.sh \
+	imhttp-metrics.sh
 if HAVE_VALGRIND
 TESTS +=  \
 	imhttp-post-payload-vg.sh \
@@ -2699,6 +2701,8 @@ EXTRA_DIST= \
 	imhttp-post-payload-multi-lf-vg.sh \
 	imhttp-post-payload-compress.sh \
 	imhttp-post-payload-compress-vg.sh \
+	imhttp-healthcheck.sh \
+	imhttp-metrics.sh \
 	testsuites/docroot/file.txt \
 	testsuites/htpasswd \
 	omhttp-auth.sh \
