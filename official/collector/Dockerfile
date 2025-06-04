@@ -27,20 +27,16 @@ LABEL com.adiscon.rsyslog.base.image="${BASE_IMAGE_TAG}"
 # Set DEBIAN_FRONTEND to noninteractive to prevent interactive prompts during package installation.
 ENV DEBIAN_FRONTEND=noninteractive
 
-# --- Optional: Install additional rsyslog modules/packages for collector functionality ---
+# Install additional rsyslog modules/packages for collector functionality ---
 # This section is for adding packages specific to the collector's role (e.g., database outputs, specific inputs).
 # It's good practice to run 'apt-get update' before installing new packages in a new layer
 # to ensure you get the latest available versions from the repositories/PPA.
-#
-# RUN apt-get update && \
-#     apt-get install -y --no-install-recommends \
-#         rsyslog-elasticsearch \
-#         rsyslog-mmnormalize \
-#         # Add other collector-specific rsyslog modules or general packages here.
-#         # Example: a database client if logs are sent to a DB, or specific network tools.
-#     && apt-get clean && \
-#     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-# ---------------------------------------------------------------------------------------
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        rsyslog-elasticsearch \
+        rsyslog-omhttp \
+    && apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Copy the collector-specific rsyslog configuration snippet.
 # This file will be automatically included by the main /etc/rsyslog.conf
@@ -53,6 +49,12 @@ COPY 10-collector.conf 80-file-output.conf  /etc/rsyslog.d/
 # These ports will be exposed by default for UDP and TCP syslog reception.
 EXPOSE 514/udp
 EXPOSE 514/tcp
+
+# Default config toggles
+ENV ENABLE_UDP=on
+ENV ENABLE_TCP=on
+ENV WRITE_ALL_FILE=on
+ENV WRITE_JSON_FILE=on
 
 # Inherit CMD from base image:
 # The CMD from the base rsyslog/official-minimal container will be automatically inherited.
