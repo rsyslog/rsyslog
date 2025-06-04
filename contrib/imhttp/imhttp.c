@@ -1,7 +1,9 @@
 /* imhttp.c
  * This is an input module for receiving http input.
  *
- * This file is contribution of rsyslog.
+ * This file is originally contribution to rsyslog.
+ *
+ * Copyright 2025 Adiscon GmbH and Others
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +19,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
 #include "config.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -64,6 +64,8 @@ DEFobjCurrIf(statsobj)
 #define INIT_SCRATCH_BUF_SIZE 4096
 /* General purpose buffer size. */
 #define IMHTTP_MAX_BUF_LEN (8192)
+#define DEFAULT_HEALTH_CHECK_PATH "/healthz"
+#define DEFAULT_PROM_METRICS_PATH  "/metrics"
 
 struct option {
 	const char *name;
@@ -102,6 +104,8 @@ struct modConfData_s {
 	struct option docroot;
 	struct option *options;
 	int nOptions;
+	char *pszHealthCheckPath;
+	char *pszMetricsPath;
 };
 
 struct instanceConf_s {
@@ -148,6 +152,8 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "ports", eCmdHdlrString, 0 },
 	{ "documentroot", eCmdHdlrString, 0 },
 	{ "liboptions", eCmdHdlrArray, 0 },
+	{ "healthcheckpath", eCmdHdlrString, 0 },
+	{ "metricspath", eCmdHdlrString, 0 }
 };
 
 static struct cnfparamblk modpblk = {
@@ -278,14 +284,6 @@ static sbool valid_civetweb_option(const struct mg_option *valid_opts, const cha
 	return FALSE;
 }
 
-#if 0
-static int
-log_message(__attribute__((unused)) const struct mg_connection *conn, const char *message)
-{
-	puts(message);
-	return 1;
-}
-#endif
 /*
 	*   thread_type:
 	*     0 indicates the master thread
@@ -293,7 +291,7 @@ log_message(__attribute__((unused)) const struct mg_connection *conn, const char
 	*     2 indicates an internal helper thread (timer thread)
 */
 static void*
-init_thread(__attribute__((unused)) const struct mg_context *ctx, int thread_type)
+init_thread(ATTR_UNUSED const struct mg_context *ctx, int thread_type)
 {
 	DEFiRet;
 	struct conn_wrkr_s *data = NULL;
@@ -332,8 +330,8 @@ finalize_it:
 }
 
 static void
-exit_thread(__attribute__((unused)) const struct mg_context *ctx,
-	__attribute__((unused)) int thread_type, void *thread_pointer)
+exit_thread(ATTR_UNUSED const struct mg_context *ctx,
+	ATTR_UNUSED int thread_type, void *thread_pointer)
 {
 	if (thread_type == 1) {
 		struct conn_wrkr_s *data = (struct conn_wrkr_s *) thread_pointer;
@@ -954,7 +952,42 @@ finalize_it:
 	return rc;
 }
 
-static int runloop(void)
+
+/* Health Check Handler */
+static int
+health_check_handler(struct mg_connection *conn, ATTR_UNUSED void *cbdata)
+{
+	const char *body = "OK\n";
+	mg_send_http_ok(conn, "text/plain; charset=utf-8", strlen(body));
+	mg_write(conn, body, strlen(body));
+	return 200; // CivetWeb expects handler to return HTTP status or specific flags
+}
+
+
+/*
+ * prometheus_metrics_handler
+ * Responds with a single, constant Prometheus metric indicating the module is up.
+ */
+static int
+prometheus_metrics_handler(struct mg_connection *conn, ATTR_UNUSED void *cbdata) {
+	// Prometheus text exposition format
+	const char *metrics_body =
+	"# HELP imhttp_up Indicates if the imhttp module is operational (1 for up, 0 for down).\n"
+	"# TYPE imhttp_up gauge\n"
+	"imhttp_up 1\n";
+
+	// Send HTTP OK with Prometheus content type
+	mg_send_http_ok(conn, "text/plain; version=0.0.4; charset=utf-8", strlen(metrics_body));
+
+	// Write the metrics body
+	mg_write(conn, metrics_body, strlen(metrics_body));
+
+	return 200; // HTTP 200 OK (signals to CivetWeb that the request was handled)
+}
+
+
+static int
+runloop(void)
 {
 	dbgprintf("imhttp started.\n");
 
@@ -968,6 +1001,19 @@ static int runloop(void)
 				mg_set_auth_handler(s_httpserv->ctx, (char *)inst->pszEndpoint, basicAuthHandler, inst);
 			}
 		}
+	}
+
+	if (runModConf->pszHealthCheckPath && runModConf->pszHealthCheckPath[0] != '\0') {
+		dbgprintf("imhttp: setting request handler for global health check: '%s'\n",
+			runModConf->pszHealthCheckPath);
+		mg_set_request_handler(s_httpserv->ctx, runModConf->pszHealthCheckPath, health_check_handler, NULL);
+	}
+
+	if (runModConf->pszMetricsPath && runModConf->pszMetricsPath[0] != '\0') {
+		dbgprintf("imhttp: setting request handler for Prometheus metrics: '%s'\n",
+			runModConf->pszMetricsPath);
+		mg_set_request_handler(s_httpserv->ctx, runModConf->pszMetricsPath, prometheus_metrics_handler,
+			NULL /* cbdata, not used */);
 	}
 
 	/* Wait until the server should be closed */
@@ -1053,6 +1099,7 @@ ENDbeginCnfLoad
 
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
+	char *val_str = NULL;
 CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
@@ -1089,10 +1136,31 @@ CODESTARTsetModCnf;
 					&loadModConf->options[j].val));
 				free(cstr);
 			}
+		} else if(!strcmp(modpblk.descr[i].name, "healthcheckpath")) {
+			val_str = es_str2cstr(pvals[i].val.d.estr, NULL);
+			free(loadModConf->pszHealthCheckPath);
+			loadModConf->pszHealthCheckPath = strdup(val_str);
+			free(val_str);
+		} else if(!strcmp(modpblk.descr[i].name, "metricspath")) {
+			val_str = es_str2cstr(pvals[i].val.d.estr, NULL);
+			free(loadModConf->pszMetricsPath); // Free previous if any
+			loadModConf->pszMetricsPath = strdup(val_str);
+			free(val_str);
 		} else {
 			dbgprintf("imhttp: program error, non-handled "
 			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
 		}
+	}
+
+	/* Set defaults if not configured but enabled */
+	// TODO: add ability to disable functionality, especially important if we
+	// use this solely for health checking etc
+	if (loadModConf->pszHealthCheckPath == NULL) {
+	    CHKmalloc(loadModConf->pszHealthCheckPath = strdup(DEFAULT_HEALTH_CHECK_PATH));
+	}
+
+	if (loadModConf->pszMetricsPath == NULL) {
+		CHKmalloc(loadModConf->pszMetricsPath = strdup(DEFAULT_PROM_METRICS_PATH));
 	}
 
 finalize_it:
@@ -1108,7 +1176,7 @@ ENDendCnfLoad
 
 /* function to generate error message if framework does not find requested ruleset */
 static inline void
-std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *inst)
+std_checkRuleset_genErrMsg(ATTR_UNUSED modConfData_t *modConf, instanceConf_t *inst)
 {
 	LogError(0, NO_ERRCODE, "imhttp: ruleset '%s' for %s not found - "
 			"using default ruleset instead", inst->pszBindRuleset,
@@ -1130,6 +1198,25 @@ CODESTARTcheckCnf;
 			iRet = RS_RET_CONF_PARSE_WARNING;
 		}
 	}
+
+	if (pModConf->pszHealthCheckPath == NULL || pModConf->pszHealthCheckPath[0] != '/') {
+		LogError(0, RS_RET_CONF_PARSE_WARNING,
+			"imhttp: healthCheckPath '%s' is invalid, must start with '/'. Using default '%s'.",
+			pModConf->pszHealthCheckPath ? pModConf->pszHealthCheckPath : "(null)",
+			DEFAULT_HEALTH_CHECK_PATH);
+		free(pModConf->pszHealthCheckPath);
+		pModConf->pszHealthCheckPath = strdup(DEFAULT_HEALTH_CHECK_PATH);
+	}
+
+	if (pModConf->pszMetricsPath == NULL || pModConf->pszMetricsPath [0] != '/') {
+		LogError(0, RS_RET_CONF_PARSE_WARNING,
+			"imhttp: metricsPath '%s' is invalid, must start with '/'. Using default '%s'.",
+			pModConf->pszMetricsPath ? pModConf->pszMetricsPath : "(null)",
+			DEFAULT_PROM_METRICS_PATH);
+		free(pModConf->pszMetricsPath);
+		pModConf->pszMetricsPath = strdup(DEFAULT_PROM_METRICS_PATH);
+	}
+
 ENDcheckCnf
 
 
@@ -1250,6 +1337,8 @@ CODESTARTfreeCnf;
 	free((void*)pModConf->ports.val);
 	free((void*)pModConf->docroot.name);
 	free((void*)pModConf->docroot.val);
+	free((void*)pModConf->pszHealthCheckPath);
+	free((void*)pModConf->pszMetricsPath);
 
 	if (statsCounter.stats) {
 		statsobj.Destruct(&statsCounter.stats);
