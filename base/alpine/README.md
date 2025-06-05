@@ -1,12 +1,7 @@
 ## rsyslog base container for Alpine
 
-This container just provides a fresh rsyslog with frequently used
-modules on top of Alpine.
+**Deprecated**
 
-Use this, if you
+This image provides rsyslog with a small set of frequently used modules on top of Alpine Linux and was originally meant as a building block for custom containers.
 
-a) want to build your own container based on current rsyslog
-b) want to run rsyslog with a custom config by you
-
-note that in case b) you need to make sure that you use volumes
-etc properly. No specific support for this has been added.
+Development has moved to Ubuntu-based images to better integrate with our daily stable packages. Alpine files are kept only for historical reference.

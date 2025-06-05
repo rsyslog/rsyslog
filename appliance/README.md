@@ -1,20 +1,12 @@
-**EXPERIMENTAL** docker containter to run rsyslog
+**DEPRECATED**
 
-This aims at providing a full-functional docker container with ample features.
-Right now, it is under development. We welcome checking out and commenting it,
-but **do not use it in production**.
+This directory contains an early experiment to provide a full-featured rsyslog
+logging appliance. The approach ultimately did not work out and the resulting
+images are heavily outdated. The files are kept for reference only and are
+**not** recommended for production use.
 
-This provides two containers:
-- alpine based, this is what you want in production
-- ubuntu based, this is primarily for rsyslog developers
+The experiment provided two Dockerfiles:
+- Alpine based
+- Ubuntu based
 
-more info:
-- https://github.com/rsyslog/rsyslog/issues/2368
-- https://github.com/rsyslog/rsyslog/projects/5
-
-## projects that provide docker containers:
-
-- https://github.com/deoren/rsyslog-docker (based on @halfer provided files)
-- https://github.com/megastef/rsyslog-logsene (logsene-enabled)
-- https://github.com/camptocamp/docker-rsyslog-bin/blob/master/Dockerfile (Ubunut xenial)
-- https://github.com/jumanjihouse/docker-rsyslog (Alpine Linux)
+For current container efforts please refer to the project root README.
