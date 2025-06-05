@@ -395,6 +395,8 @@ CODESTARTsetModCnf
 				loadModConf->statsFmt = statsFmt_CEE;
 			} else if(!strcasecmp(mode, "legacy")) {
 				loadModConf->statsFmt = statsFmt_Legacy;
+			} else if(!strcasecmp(mode, "prometheus")) {
+				loadModConf->statsFmt = statsFmt_Prometheus;
 			} else {
 				LogError(0, RS_RET_ERR, "impstats: invalid format %s",
 						mode);
