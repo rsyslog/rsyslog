@@ -54,6 +54,9 @@ RUN chmod +x /usr/local/bin/start.sh
 # Set the entrypoint (this will run the script when the container starts)
 ENTRYPOINT ["/usr/local/bin/start.sh"]
 
+# Define the container role for the entrypoint script
+ENV RSYSLOG_ROLE=minimal
+
 # Set the default command to run rsyslog in the foreground.
 # -n: Prevents rsyslog from forking (essential for Docker containers).
 # -f /etc/rsyslog.conf: Specifies the configuration file to use.

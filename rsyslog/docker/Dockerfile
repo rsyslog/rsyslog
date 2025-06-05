@@ -35,6 +35,16 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends rsyslog-imhttp && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends rsyslog-omhttp && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
 # Copy the Docker-specific rsyslog configuration snippet.
 # This snippet will typically configure imdocker to listen on the Docker socket
 # and forward logs to your central collector.
@@ -42,8 +52,7 @@ RUN apt-get update && \
 COPY 30-docker.conf /etc/rsyslog.d/30-docker.conf
 
 
-# Inherit CMD from base image:
-# The CMD from the base rsyslog/official-minimal container will be automatically inherited.
-# This is ideal as the base already provides the correct command to run rsyslogd in the foreground
-# using the main rsyslog.conf, which in turn includes files from /etc/rsyslog.d/.
-# No explicit CMD instruction is needed here.
+# Define the container role for the entrypoint script
+ENV RSYSLOG_ROLE=docker
+
+# Inherit CMD from base image, no need to set
