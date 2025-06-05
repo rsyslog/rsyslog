@@ -72,14 +72,25 @@ DEFobjCurrIf(prop)
 DEFobjCurrIf(statsobj)
 
 
-/* Stats Object */
-statsobj_t *httpStats;
-STATSCOUNTER_DEF(ctrSplkRequestsSubmitted, mutCtrSplkRequestsSubmitted);
-STATSCOUNTER_DEF(splkRequestsSuccess, mutSplkRequestsSuccess);
-STATSCOUNTER_DEF(splkRequestsFailed, mutSplkRequestsFailed);
-STATSCOUNTER_DEF(ctrSplkRequestsCount, mutCtrSplkRequestsCount);
-STATSCOUNTER_DEF(splkRequestsBytes, mutSplkRequestsBytes);
-STATSCOUNTER_DEF(splkRequestsTimeMs, mutSplkRequestsTimeMs);
+typedef struct _targetStats {
+	statsobj_t *defaultstats;
+
+	intctr_t requestSumitted;
+	intctr_t requestSuccess;
+	intctr_t requestFailed;
+	intctr_t requestCount;
+	intctr_t requestBytes;
+	intctr_t requestTimeMs;
+	intctr_t requestFailedSerialize;
+	
+	DEF_ATOMIC_HELPER_MUT64(mut_requestSumitted)
+	DEF_ATOMIC_HELPER_MUT64(mut_requestSuccess)
+	DEF_ATOMIC_HELPER_MUT64(mut_requestFailed)
+	DEF_ATOMIC_HELPER_MUT64(mut_requestCount)
+	DEF_ATOMIC_HELPER_MUT64(mut_requestBytes)
+	DEF_ATOMIC_HELPER_MUT64(mut_requestTimeMs)
+	DEF_ATOMIC_HELPER_MUT64(mut_requestFailedSerialize)
+} targetStats_t;
 
 
 
@@ -143,14 +154,8 @@ typedef struct instanceConf_s {
 	//unsigned int ratelimitBurst;
 
 	/* Stats Counter */
-	statsobj_t *stats;
+	targetStats_t *listObjStats;
 	uchar *statsName;
-	STATSCOUNTER_DEF(ctrSplkRequestsSubmitted, mutCtrSplkRequestsSubmitted);
-	STATSCOUNTER_DEF(splkRequestsSuccess, mutSplkRequestsSuccess);
-	STATSCOUNTER_DEF(splkRequestsFailed, mutSplkRequestsFailed);
-	STATSCOUNTER_DEF(ctrSplkRequestsCount, mutCtrSplkRequestsCount);
-	STATSCOUNTER_DEF(splkRequestsBytes, mutSplkRequestsBytes);
-	STATSCOUNTER_DEF(splkRequestsTimeMs, mutSplkRequestsTimeMs);
 
 	struct instanceConf_s *next;
 } instanceData;
@@ -266,12 +271,16 @@ submitBatch(wrkrInstanceData_t *pWrkrData, uchar **tp)
 	/* Serialize the data into JSON */
 	iRet = serializeBatchJsonArray(pWrkrData, &batchBuf);
 
-	if (iRet != RS_RET_OK || batchBuf == NULL)
+	if (iRet != RS_RET_OK || batchBuf == NULL){
+		LogError(0, iRet, "omsplunkhec: submitBatch, batch: NULL in serialize");
+		ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestFailedSerialize,
+						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestFailedSerialize);
+		DBGPRINTF("omsplunkhec: submitBatch, batch: NULL || iRet : %d\n",  iRet);
 		ABORT_FINALIZE(iRet);
-
-	DBGPRINTF("omsplunkhec: submitBatch, batch: '%s' tpls: '%p'\n", batchBuf, tp);
-
-	CHKiRet(curlPost(pWrkrData, (uchar*) batchBuf, strlen(batchBuf), pWrkrData->batch.nmemb));
+	} else {
+		DBGPRINTF("omsplunkhec: submitBatch, batch: '%s' tpls: '%p'\n", batchBuf, tp);
+		CHKiRet(curlPost(pWrkrData, (uchar*) batchBuf, strlen(batchBuf), pWrkrData->batch.nmemb));
+	}
 
 finalize_it:
 	if (batchBuf != NULL)
@@ -510,6 +519,13 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen,
 	if(pWrkrData->pData->numListServerName > 1) {
 		CHKiRet(checkConn(pWrkrData));
 	}
+
+	// Here Counter SUBMIT
+	ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestSumitted,
+						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestSumitted);
+
+
+
 	CHKiRet(setPostURL(pWrkrData));
 
 	pWrkrData->reply = NULL;
@@ -528,18 +544,22 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen,
 
 	curlCode = curl_easy_perform(curl);
 	DBGPRINTF("omsplunkhec: curlPost curl returned %lld\n", (long long) curlCode);
-	STATSCOUNTER_INC(ctrSplkRequestsCount, mutCtrSplkRequestsCount);
-	STATSCOUNTER_INC(pWrkrData->pData->ctrSplkRequestsCount, pWrkrData->pData->mutCtrSplkRequestsCount);
+	ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestCount,
+						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestCount);
 
 	if (curlCode != CURLE_OK) {
 		LogError(0, RS_RET_SUSPENDED,
 			"omsplunkhec: suspending ourselves due to server failure %lld: %s",
 			(long long) curlCode, errbuf);
-		STATSCOUNTER_INC(splkRequestsFailed, mutSplkRequestsFailed);
+		ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestFailed,
+						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestFailed);
+		LogMsg(0, iRet, LOG_ERR, "omsplunkhec: curlPost error : postData : %s || postLen : %d ",
+			postData, postLen);
 		checkResult(pWrkrData, message);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	} else {
-		STATSCOUNTER_INC(splkRequestsSuccess, mutSplkRequestsSuccess);
+			ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestSuccess,
+						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestSuccess);
 	}
 
 	curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &pWrkrData->httpStatusCode);
@@ -552,7 +572,6 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen,
 			pWrkrData->reply[pWrkrData->replyLen] = '\0';
 			/* Append 0 Byte if replyLen is above 0 - byte has been reserved in malloc */
 		}
-		//TODO: replyLen++? because 0 Byte is appended
 		DBGPRINTF("omsplunkhec: curlPost pWrkrData reply: '%s'\n", pWrkrData->reply);
 	}
 	CHKiRet(checkResult(pWrkrData, message));
@@ -645,21 +664,26 @@ checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 	}
 
 	if (statusCode == 0) {
-		STATSCOUNTER_ADD(splkRequestsFailed, mutCtrMessagesFail, numMessages);
+		ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestFailed,
+						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestFailed);
 		// request failed, suspend or retry
 		iRet = RS_RET_SUSPENDED;
 	} else if (statusCode >= 500) {
-		STATSCOUNTER_ADD(splkRequestsFailed, mutCtrMessagesFail, numMessages);
+		ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestFailed,
+						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestFailed);
 		// server error, suspend or retry
 		iRet = RS_RET_SUSPENDED;
 	} else if (statusCode >= 300) {
-		STATSCOUNTER_ADD(splkRequestsFailed, mutCtrMessagesFail, numMessages);
+		ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestFailed,
+						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestFailed);
 		// redirection or client error, NO suspend nor retry
 		iRet = RS_RET_SUSPENDED;
 	} else {
 		// success, normal state
-		STATSCOUNTER_INC(splkRequestsSuccess, mutCtrMessagesSuccess);
-		STATSCOUNTER_ADD(splkRequestsSuccess, mutCtrMessagesSuccess, numMessages);
+		ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestSuccess,
+						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestSuccess);
+		ATOMIC_ADD_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestSuccess,
+						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestSuccess, numMessages);
 		iRet = RS_RET_OK;
 	}
 
@@ -668,16 +692,14 @@ checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 	/* record total bytes */
 	resCurl = curl_easy_getinfo(pWrkrData->curlPostHandle, CURLINFO_REQUEST_SIZE, &req);
 	if (!resCurl) {
-		STATSCOUNTER_ADD(pWrkrData->pData->splkRequestsBytes,
-			pWrkrData->pData->mutSplkRequestsBytes,
-			(uint64_t)req);
+		ATOMIC_ADD_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestBytes,
+						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestBytes,(uint64_t)req);
 	}
 	resCurl = curl_easy_getinfo(pWrkrData->curlPostHandle, CURLINFO_TOTAL_TIME, &total);
 	if(CURLE_OK == resCurl) {
 		long total_time_ms = (long)(total*1000);
-		STATSCOUNTER_ADD(pWrkrData->pData->splkRequestsTimeMs,
-			pWrkrData->pData->mutSplkRequestsTimeMs,
-			(uint64_t)total_time_ms);
+		ATOMIC_ADD_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestTimeMs,
+						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestTimeMs,(uint64_t)total_time_ms);
 	}
 
 	if (iRet != RS_RET_OK) {
@@ -1065,6 +1087,9 @@ CODESTARTcreateWrkrInstance
 			pWrkrData->batch.restPath = NULL;
 		}
 	}
+
+
+
 	iRet = curlSetup(pWrkrData);
 ENDcreateWrkrInstance
 
@@ -1091,8 +1116,12 @@ CODESTARTfreeInstance
 	free(pData->caCertFile);
 	free(pData->myCertFile);
 	free(pData->myPrivKeyFile);
-	if (pData->stats) {
-		statsobj.Destruct(&pData->stats);
+	if(pData->listObjStats != NULL) {
+		for(int j = 0 ; j <  pData->numListServerName ; ++j) {
+			if(pData->listObjStats[j].defaultstats != NULL)
+				statsobj.Destruct(&(pData->listObjStats[j].defaultstats));
+		}
+		free(pData->listObjStats);
 	}
 	free(pData->statsName);
 ENDfreeInstance
@@ -1124,6 +1153,7 @@ BEGINnewActInst
 	int iNumTpls;
 	FILE *fp;
 	char errStr[1024];
+	uchar ctrName[256];
 CODESTARTnewActInst
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -1248,6 +1278,7 @@ CODESTARTnewActInst
 					"for http server configuration.");
 			ABORT_FINALIZE(RS_RET_ERR);
 		}
+		pData->listObjStats = malloc(servers->nmemb * sizeof(targetStats_t));
 
 		for(i = 0 ; i < servers->nmemb ; ++i) {
 			serverParam = es_str2cstr(servers->arr[i], NULL);
@@ -1261,10 +1292,51 @@ CODESTARTnewActInst
 			if (serverParam[serverParamLastChar] == '/') {
 				serverParam[serverParamLastChar] = '\0';
 			}
+
+
+			/* Create StatsObject */
+			snprintf((char*)ctrName, sizeof(ctrName), "%s", serverParam);
+			ctrName[sizeof(ctrName)-1] = '\0'; 
+
+			CHKiRet(statsobj.Construct(&(pData->listObjStats[i].defaultstats)));
+			CHKiRet(statsobj.SetName(pData->listObjStats[i].defaultstats, ctrName));
+			CHKiRet(statsobj.SetOrigin(pData->listObjStats[i].defaultstats, (uchar *)"omsplunkhec"));
+
+			INIT_ATOMIC_HELPER_MUT64(pData->listObjStats[i].mut_requestSumitted);
+			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats, UCHAR_CONSTANT("request_submitted"),
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->listObjStats[i].requestSumitted)));
+
+			INIT_ATOMIC_HELPER_MUT64(pData->listObjStats[i].mut_requestSuccess);
+			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats, UCHAR_CONSTANT("request_successed"),
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->listObjStats[i].requestSuccess)));
+
+			INIT_ATOMIC_HELPER_MUT64(pData->listObjStats[i].mut_requestFailed);
+			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats, UCHAR_CONSTANT("request_failed"),
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->listObjStats[i].requestFailed)));
+
+			INIT_ATOMIC_HELPER_MUT64(pData->listObjStats[i].mut_requestCount);
+			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats, UCHAR_CONSTANT("request_count"),
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->listObjStats[i].requestCount)));
+
+			INIT_ATOMIC_HELPER_MUT64(pData->listObjStats[i].mut_requestBytes);
+			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats, UCHAR_CONSTANT("request_byte"),
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->listObjStats[i].requestBytes)));
+
+			INIT_ATOMIC_HELPER_MUT64(pData->listObjStats[i].mut_requestTimeMs);
+			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats, UCHAR_CONSTANT("request_time_ms"),
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->listObjStats[i].requestTimeMs)));
+
+			INIT_ATOMIC_HELPER_MUT64(pData->listObjStats[i].mut_requestFailedSerialize);
+			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats, UCHAR_CONSTANT("request_fail_serialized"),
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->listObjStats[i].requestFailedSerialize)));
+
+			CHKiRet(statsobj.ConstructFinalize(pData->listObjStats[i].defaultstats));
+
 			CHKiRet(createBaseUrl(serverParam, pData->port, pData->useTLS,
 				pData->serverList + i));
 			free(serverParam);
 			serverParam = NULL;
+
 		}
 	} else {
 		LogError(0, RS_RET_UID_MISSING,
@@ -1273,6 +1345,7 @@ CODESTARTnewActInst
 		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 
+	/* If no name set up */
 	if(!pData->statsName) {
 		uchar pszAName[64];
 		snprintf((char*) pszAName, sizeof(pszAName), "omsplunkhec-%d", omSplunkHecInstancesCnt);
@@ -1281,37 +1354,6 @@ CODESTARTnewActInst
 
 	/* Creation header buf (Same header for each server) */
 	CHKiRet(createApiHeader((char*) pData->token, &pData->bufHeaderContentType));
-
-	/* Stats object */
-	CHKiRet(statsobj.Construct(&pData->stats));
-	CHKiRet(statsobj.SetName(pData->stats, (uchar *)pData->statsName));
-	CHKiRet(statsobj.SetOrigin(pData->stats, (uchar *)"omsplunkhec"));
-
-	STATSCOUNTER_INIT(pData->ctrSplkRequestsSubmitted, pData->mutCtrSplkRequestsSubmitted);
-	CHKiRet(statsobj.AddCounter(pData->stats, (uchar *)"requests_submitted",
-			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pData->ctrSplkRequestsSubmitted));
-
-	STATSCOUNTER_INIT(pData->splkRequestsSuccess, pData->mutSplkRequestsSuccess);
-	CHKiRet(statsobj.AddCounter(pData->stats, (uchar *)"requests_success",
-			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pData->splkRequestsSuccess));
-
-	STATSCOUNTER_INIT(pData->splkRequestsFailed, pData->mutSplkRequestsFailed);
-	CHKiRet(statsobj.AddCounter(pData->stats, (uchar *)"requests_fail",
-			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pData->splkRequestsFailed));
-
-	STATSCOUNTER_INIT(pData->ctrSplkRequestsCount, pData->mutCtrSplkRequestsCount);
-	CHKiRet(statsobj.AddCounter(pData->stats, (uchar *)"requests_count",
-			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pData->ctrSplkRequestsCount));
-
-	STATSCOUNTER_INIT(pData->splkRequestsBytes, pData->mutSplkRequestsBytes);
-	CHKiRet(statsobj.AddCounter(pData->stats, (uchar *)"requests_bytes",
-			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pData->splkRequestsBytes));
-
-	STATSCOUNTER_INIT(pData->splkRequestsTimeMs, pData->mutSplkRequestsTimeMs);
-	CHKiRet(statsobj.AddCounter(pData->stats, (uchar *)"requests_time_ms",
-			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pData->splkRequestsTimeMs));
-
-	CHKiRet(statsobj.ConstructFinalize(pData->stats));
 
 	/* node created */
 	if(loadModConf->tail == NULL) {
@@ -1404,7 +1446,7 @@ size_t nBytes;
 sbool submit;
 CODESTARTdoAction
 
-	STATSCOUNTER_INC(ctrSplkRequestsSubmitted, mutCtrMessagesSubmitted);
+
 
 	if (pWrkrData->pData->batch) {
 		/* If the batchMaxBatchSize is 1, then build and immediately post a batch with 1 element.
@@ -1436,8 +1478,6 @@ CODESTARTdoAction
 			DBGPRINTF("omsplunkhec: maxbytes limit reached submitting partial batch of %zd elements.\n",
 				pWrkrData->batch.nmemb);
 		}
-
-		DBGPRINTF("omsplunkhec: doAction, submit = %d\n", (int)submit);
 
 		if (submit) {
 			CHKiRet(submitBatch(pWrkrData, ppString));
@@ -1479,42 +1519,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(prop, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 
-	CHKiRet(statsobj.Construct(&httpStats));
-	CHKiRet(statsobj.SetName(httpStats, (uchar *)"omsplunkhec"));
-	CHKiRet(statsobj.SetOrigin(httpStats, (uchar*)"omsplunkhec"));
-
-	STATSCOUNTER_INIT(ctrSplkRequestsSubmitted, mutCtrSplkRequestsSubmitted);
-	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"requests_submitted",
-			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrSplkRequestsSubmitted));
-
-	STATSCOUNTER_INIT(splkRequestsSuccess, mutSplkRequestsSuccess);
-	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"requests_success",
-			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &splkRequestsSuccess));
-
-	STATSCOUNTER_INIT(splkRequestsFailed, mutSplkRequestsFailed);
-	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"requests_fail",
-			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &splkRequestsFailed));
-
-	STATSCOUNTER_INIT(ctrSplkRequestsCount, mutCtrSplkRequestsCount);
-	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"requests_count",
-			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrSplkRequestsCount));
-
-	STATSCOUNTER_INIT(splkRequestsBytes, mutSplkRequestsBytes);
-	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"requests_bytes",
-			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &splkRequestsBytes));
-
-	STATSCOUNTER_INIT(splkRequestsTimeMs, mutSplkRequestsTimeMs);
-	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"requests_time_ms",
-			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &splkRequestsTimeMs));
-
-	CHKiRet(statsobj.ConstructFinalize(httpStats));
-
 	if (curl_global_init(CURL_GLOBAL_ALL) != 0) {
 		LogError(0, RS_RET_OBJ_CREATION_FAILED, "CURL fail. -http disabled");
 		ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
 	}
-
-	CHKiRet(prop.Construct(&pInputName));
-	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("omsplunkhec"), sizeof("omsplunkhec") - 1));
-	CHKiRet(prop.ConstructFinalize(pInputName));
 ENDmodInit
