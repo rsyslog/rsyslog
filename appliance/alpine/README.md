@@ -1,3 +1,5 @@
+**Deprecated** - This directory contains the original Alpine-based appliance and is kept for reference only.
+
 ## Configuring the syslog appliance
 
 ### Files
