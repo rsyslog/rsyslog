@@ -1,16 +1,16 @@
 # docker/Dockerfile
-# Dockerfile for rsyslog/official-docker
+# Dockerfile for rsyslog/rsyslog-docker
 # This container specializes in gathering logs from the Docker daemon via imdocker
-# and forwarding them to a central collector.
+# and forwarding them. It is based on the rsyslog/rsyslog (standard) image.
 
 # Build arguments passed from the Makefile.
-# BASE_IMAGE_TAG will be the full tag of the minimal image (e.g., rsyslog/official-minimal:2025-04).
-ARG BASE_IMAGE_TAG
+# BASE_IMAGE_TAG will be the full tag of the standard image (e.g., rsyslog/rsyslog:2025-04).
+ARG BASE_IMAGE_TAG="rsyslog/rsyslog:latest"
 ARG UBUNTU_VERSION="24.04" # Inherited from base, but good to keep for consistency/labels
 ARG RSYSLOG_IMG_VERSION="unset" # Version passed from Makefile for image metadata
 
-# Use the rsyslog/official-minimal image as the base.
-# This ensures all the core rsyslog setup (PPA, basic install, permissions) is inherited.
+# Use the rsyslog/rsyslog (standard) image as the base.
+# This ensures common modules and core rsyslog setup is inherited.
 FROM ${BASE_IMAGE_TAG}
 
 # Re-declare ARGs after FROM to make them available to subsequent instructions like LABEL.
@@ -19,7 +19,7 @@ ARG RSYSLOG_IMG_VERSION
 ARG BASE_IMAGE_TAG
 
 LABEL maintainer="Rainer Gerhards <rgerhards@adiscon.com>"
-LABEL description="Rsyslog official Docker log collector container based on minimal. Gathers logs via imdocker."
+LABEL description="Rsyslog container specialized for Docker log collection using imdocker, based on the rsyslog/rsyslog (standard) image."
 LABEL com.adiscon.rsyslog.image.version="${RSYSLOG_IMG_VERSION}"
 # Explicitly label the base image used for traceability.
 LABEL com.adiscon.rsyslog.base.image="${BASE_IMAGE_TAG}"
@@ -35,24 +35,14 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends rsyslog-imhttp && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends rsyslog-omhttp && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
 # Copy the Docker-specific rsyslog configuration snippet.
 # This snippet will typically configure imdocker to listen on the Docker socket
-# and forward logs to your central collector.
-# Using a numerical prefix (e.g., 10-) ensures load order if multiple snippets are added.
+# and define how to process/forward these logs.
+# Using a numerical prefix (e.g., 30-) helps control load order.
 COPY 30-docker.conf /etc/rsyslog.d/30-docker.conf
 
 
 # Define the container role for the entrypoint script
 ENV RSYSLOG_ROLE=docker
 
-# Inherit CMD from base image, no need to set
+# Inherit CMD from base image, no need to set.

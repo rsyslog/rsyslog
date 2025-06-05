@@ -1,4 +1,4 @@
-# Dockerfile for rsyslog/official-minimal based on Ubuntu 24.04 LTS
+# Dockerfile for rsyslog/rsyslog-minimal based on Ubuntu 24.04 LTS
 # Using Adiscon PPA for the latest rsyslog version
 # Optimized to perform cleanup in the same RUN step as installations
 
