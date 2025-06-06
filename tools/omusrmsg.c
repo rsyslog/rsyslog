@@ -208,16 +208,20 @@ void endutent(void)
 
 static void sendwallmsg(const char *tty, uchar* pMsg)
 {
-	uchar szErr[512];
-	int errnoSave;
-	char p[sizeof(_PATH_DEV) + UNAMESZ];
-	int ttyf;
-	struct stat statb;
-	int wrRet;
+       uchar szErr[512];
+       int errnoSave;
+       char p[sizeof(_PATH_DEV) + UT_LINESIZE];
+       int ttyf;
+       struct stat statb;
+       int wrRet;
 
-	/* compute the device name */
-	strcpy(p, _PATH_DEV);
-	strncat(p, tty, UNAMESZ);
+       /* compute the device name */
+       strcpy(p, _PATH_DEV);
+       size_t base_len = strlen(p);
+       size_t avail = sizeof(p) - base_len - 1;
+       size_t ttylen = strnlen(tty, avail);
+       memcpy(p + base_len, tty, ttylen);
+       p[base_len + ttylen] = '\0';
 
 	/* we must be careful when writing to the terminal. A terminal may block
 	 * (for example, a user has pressed <ctl>-s). In that case, we can not
