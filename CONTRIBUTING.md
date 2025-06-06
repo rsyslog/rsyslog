@@ -15,6 +15,7 @@ Rsyslog is a real open source project, welcoming contributions of all kinds—fr
   - Help maintain [rsyslog.com/doc](http://rsyslog.com/doc)
 - **Maintain infrastructure**: Help with project websites, CI, or packaging.
 - **Develop code**: Implement new features, improve existing ones, or fix bugs.
+- AI-assisted contributions should follow [AGENTS.md](AGENTS.md) for setup and workflow guidance.
 
 ---
 
@@ -31,8 +32,10 @@ Rsyslog is a real open source project, welcoming contributions of all kinds—fr
 ---
 
 ## Commit Guidelines for AI Agents
-
-If you use an AI agent (e.g. GitHub Copilot, ChatGPT, Codex), prefix your commit message with `AI:`.
+If you use an AI agent (e.g. GitHub Copilot, ChatGPT, Codex), include a commit footer tag:
+```
+AI-Agent: Codex 2025-06
+```
 This helps us track and evaluate contributions and agent capabilities.
 
 ---

@@ -160,6 +160,7 @@ If you are an AI agent contributing code or documentation:
   ```
   AI-Agent: Codex 2025-06
   ```
+- Do not prefix commit messages with `AI:`; use the footer tag only.
 - PR descriptions should clearly identify that they were generated or co-authored by an AI tool.
 - Avoid generating multiple PRs for retries — reuse and update the original PR when possible.
 - Follow the same **commit message policy** as human contributors: describe what changed, why, and how it was validated.
