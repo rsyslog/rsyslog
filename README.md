@@ -12,7 +12,7 @@ Rsyslog can deliver over one million messages per second to local destinations u
 ---
 
 ## Getting Help
-- **Mailing List:** [rsyslog mailing list](http://lists.adiscon.net/mailman/listinfo/rsyslog)
+- **Mailing List:** [rsyslog mailing list](https://lists.adiscon.net/mailman/listinfo/rsyslog)
 - **GitHub Issues:** [Open an issue](https://github.com/rsyslog/rsyslog/issues)
 
 ---
@@ -41,6 +41,9 @@ Build support libraries from source if you're working with the latest git master
 
 #### OS-specific Build Instructions
 Refer to the respective section in the original README for required packages on CentOS, Ubuntu, Debian, SUSE, etc.
+
+#### Development Containers & Testing
+For a ready-to-use environment, use the images from [rsyslog-docker](https://github.com/rsyslog/rsyslog-docker). They contain all build dependencies. Run the test suite with `make check` (limit to `-j4`).
 
 ---
 
