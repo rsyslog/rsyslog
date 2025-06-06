@@ -43,7 +43,7 @@ Input3195ListenPort
 
    "integer", "601", "no", "``$Input3195ListenPort``"
 
-The port on which imklog listens for RFC 3195 messages. The default
+The port on which im3195 listens for RFC 3195 messages. The default
 port is 601 (the IANA-assigned port)
 
 
