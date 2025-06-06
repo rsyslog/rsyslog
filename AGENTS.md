@@ -83,7 +83,13 @@ Use prebuilt container environments provided by [`rsyslog-docker`](https://githu
 > **If only a single test run is planned**, the best container to use is:  
 > `rsyslog/rsyslog_dev_base_ubuntu:24.04`
 
-GitHub Actions and other CI systems use these containers. Test execution typically takes 10–40 minutes per runner depending on the suite.
+To start from this container in Codex or other agents, run the `devtools/devcontainer.sh` script.
+Note to Codex: containers cannot be run inthe codex sandbox. so you need to rely on devtools/codex-setup.sh script.
+
+> **Important for agents**:
+> - Always run `./autogen.sh` before attempting to build.
+> - This initializes the autotools build system.
+> - `devtools/codex-setup.sh` may have already configured the environment; verify or re-run if unsure.
 
 ---
 
@@ -163,6 +169,11 @@ If you are an AI agent contributing code or documentation:
 - PR descriptions should clearly identify that they were generated or co-authored by an AI tool.
 - Avoid generating multiple PRs for retries — reuse and update the original PR when possible.
 - Follow the same **commit message policy** as human contributors: describe what changed, why, and how it was validated.
+- When fixing compiler warnings like `stringop-overread`, explain in the commit message:
+  - Why the warning occurred
+  - What part of the code was changed
+  - How the fix prevents undefined behavior or aligns with compiler expectations
+  - Optionally link: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wstringop-overread
 
 ---
 
