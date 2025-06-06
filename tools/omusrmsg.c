@@ -317,7 +317,7 @@ static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 				continue; /* try next session */
 			}
 
-			sendwallmsg(tty, pMsg);
+			sendwallmsg(tty, (char *) pMsg);
 
 			free(tty);
 			free(sessions_list[j]);
