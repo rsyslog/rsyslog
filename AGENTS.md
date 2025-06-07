@@ -159,6 +159,10 @@ This ensures Codex can build core components even in constrained environments. S
 - Buildable: Yes
 - Testable: No. Requires journald-related libraries and a systemd journal service context not present in the Codex container
 
+### `fmpcre`
+- Buildable: Yes when `libpcre3-dev` (or equivalent) is installed
+- Testable: Yes, simple regression test `ffmpcre-basic.sh` exercises `pcre_match()`
+
 ---
 
 ## Documentation
