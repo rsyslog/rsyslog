@@ -1353,6 +1353,11 @@ endif # HAVE_VALGRIND
 endif # ENABLE_FFAUP
 endif
 
+if ENABLE_FMPCRE
+TESTS +=  \
+	ffmpcre-basic.sh
+endif
+
 if ENABLE_MMPSTRUCDATA
 TESTS +=  \
 	mmpstrucdata.sh \

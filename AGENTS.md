@@ -213,6 +213,10 @@ This ensures Codex can build core components even in constrained environments. S
 ### `imkafka` and `omkafka`
 - Depends on: `librdkafka` (plus `liblz4` when linking statically)
 
+### `fmpcre`
+- Buildable: Yes when `libpcre3-dev` (or equivalent) is installed
+- Testable: Yes, simple regression test `ffmpcre-basic.sh` exercises `pcre_match()`
+
 ### `omhiredis` and `imhiredis`
 - Depends on: `hiredis`; `imhiredis` also needs `libevent`
 
