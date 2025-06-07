@@ -4,11 +4,12 @@ This file defines guidelines and instructions for AI assistants (e.g., Codex, Gi
 
 ---
 
-## 🧭 Repository Overview
+## Repository Overview
 
 - **Primary Language**: C  
 - **Build System**: autotools (`autogen.sh`, `configure`, `make`)  
 - **Modules**: Dynamically loaded from `modules/`  
+- **Contributions**: Additional modules and features are placed in `contrib/`, which contains community-contributed plugins not actively maintained by the core rsyslog team. These are retained in `contrib/` even if adopted later, to avoid disruptions in dependent software.  
 - **Documentation**: Maintained in a separate repository ([rsyslog-doc](https://github.com/rsyslog/rsyslog-doc))  
 - **Child Projects**:
   - [`rsyslog-docker`](https://github.com/rsyslog/rsyslog-docker): Provides prebuilt container environments for development and CI
@@ -16,11 +17,11 @@ This file defines guidelines and instructions for AI assistants (e.g., Codex, Gi
   - [`liblognorm`](https://github.com/rsyslog/liblognorm)
   - [`librelp`](https://github.com/rsyslog/librelp)
   - [`libestr`](https://github.com/rsyslog/libestr)
-  - [`libfastjson`](https://github.com/rsyslog/libfastjson)
+  - [`libfastjson`](https://github.com/rsyslog/libfastjson): A fork of libfastjson by the rsyslog project, optimized for speed. This library is used by multiple external projects.
 
 ---
 
-## 🔄 Development Workflow
+## Development Workflow
 
 ### Base Repository
 - URL: https://github.com/rsyslog/rsyslog
@@ -37,7 +38,7 @@ This file defines guidelines and instructions for AI assistants (e.g., Codex, Gi
 
 ---
 
-## 🏷️ Branch Naming Conventions
+## Branch Naming Conventions
 
 There are no strict naming rules, but these conventions are used frequently:
 
@@ -48,31 +49,55 @@ There are no strict naming rules, but these conventions are used frequently:
 
 ---
 
-## ✅ Coding Standards
+## Coding Standards
 
 - **Use tabs, not spaces** for indentation — enforced via CI
 - Commit messages **must include all relevant information**, not just in the PR
+- Commit message titles **must not exceed 70 characters**
+- When referencing GitHub issues, use the **full GitHub URL** to assist in `git log`-based reviews
 - Favor **self-documenting code** over excessive inline comments
 - Public functions should use Doxygen-style comments
 - Modules must implement and register `modInit()` and `modExit()`
 
+When fixing compiler warnings like `stringop-overread`, explain in the commit message:
+- Why the warning occurred
+- What part of the code was changed
+- How the fix prevents undefined behavior or aligns with compiler expectations
+- Optionally link: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wstringop-overread
+
+### Code Style Rules Enforced by `devtools/check-whitespace`:
+
+- Lines **must end with a single LF** (no missing or extra newlines)
+- **Maximum line length**: 120 columns (tab width = 8 spaces)
+- **No leading space** at beginning of line (except for ` *` in comments)
+- **No trailing whitespace** at line end
+- **DOS CRLF format is not permitted**
+
 ---
 
-## 🧪 Testing & Validation
+## Testing & Validation
 
 rsyslog uses a custom test driver and has complex build dependencies.
 
-### 🧰 Test Framework
+### Test Framework
 
 - All test definitions are located in the `/tests` directory.
 - The test execution framework is implemented in `tests/diag.sh`.
 - Tests are driven via `make check`, which wraps around `diag.sh`.
 
-> ⚠️ Test execution is resource-intensive. Limit concurrency (`make check -j4` or less) to avoid unreliable results.
+Each test file in `tests/` is a standalone bash script that is executed independently. These scripts typically begin by sourcing `tests/diag.sh`, which provides a shared library of functions and utilities for test execution and validation.
+
+> Test execution is resource-intensive. Limit concurrency (`make check -j4` or less) to avoid unreliable results.
+
+To run `make check`, you **must configure with `--enable-testbench`**. The test suite includes many test cases and may run for 10+ minutes. To save time, prefer targeting individual tests by name. Tests with filenames containing "basic" are typically good candidates for quick validation.
+
+Some extended tests involving external components (e.g., daemons or network services) may be flaky due to timing conditions. When a test fails but passes on re-run, it's usually a nondeterministic issue. Such behavior should be reviewed but does not always indicate a defect.
+
+The `imdiag` module exists specifically to support the test framework and is used for command and information passing during tests.
 
 ---
 
-### ✅ Recommended Test Environment
+### Recommended Test Environment
 
 Use prebuilt container environments provided by [`rsyslog-docker`](https://github.com/rsyslog/rsyslog-docker):
 
@@ -80,20 +105,14 @@ Use prebuilt container environments provided by [`rsyslog-docker`](https://githu
 - CI-like workflows can be reproduced locally
 - Support full configuration flexibility (Valgrind, tsan, sanitizers, etc.)
 
-> **If only a single test run is planned**, the best container to use is:  
+> If only a single test run is planned, the best container to use is:  
 > `rsyslog/rsyslog_dev_base_ubuntu:24.04`
 
-To start from this container in Codex or other agents, run the `devtools/devcontainer.sh` script.
-Note to Codex: containers cannot be run inthe codex sandbox. so you need to rely on devtools/codex-setup.sh script.
-
-> **Important for agents**:
-> - Always run `./autogen.sh` before attempting to build.
-> - This initializes the autotools build system.
-> - `devtools/codex-setup.sh` may have already configured the environment; verify or re-run if unsure.
+GitHub Actions and other CI systems use these containers. Test execution typically takes 10–40 minutes per runner depending on the suite.
 
 ---
 
-### ❗ Manual Setup (discouraged)
+### Manual Setup (discouraged)
 
 Minimum setup requires:
 
@@ -104,7 +123,7 @@ Example commands:
 
 ```bash
 ./autogen.sh
-./configure --enable-debug
+./configure --enable-debug --enable-testbench
 make -j$(nproc)
 make check
 ```
@@ -113,10 +132,39 @@ Use `make check -j2` or `-j4` max for reliability.
 
 ---
 
-## 📚 Documentation
+### Codex Build Environment Setup
+
+Codex-based agents must only perform this setup **if a compile or test is required** (e.g., not for review-only tasks):
+
+- Run this setup script to install core dependencies:
+  ```bash
+  ./devtools/codex-setup.sh
+  ```
+- Then, always run:
+  ```bash
+  ./autogen.sh
+  ```
+
+This ensures Codex can build core components even in constrained environments. Skipping setup when not needed (e.g., code review) saves significant execution time.
+
+---
+
+## Module-Specific Capabilities
+
+### `omelasticsearch`
+- Buildable: Yes, even in minimal environments
+- Testable: No. Tests require a running Elasticsearch instance and are skipped in Codex or constrained environments
+
+### `imjournal`
+- Buildable: Yes
+- Testable: No. Requires journald-related libraries and a systemd journal service context not present in the Codex container
+
+---
+
+## Documentation
 
 Main documentation is in a separate repo:  
-🔗 https://github.com/rsyslog/rsyslog-doc
+https://github.com/rsyslog/rsyslog-doc
 
 To build locally:
 
@@ -132,19 +180,21 @@ If a feature changes user-facing behavior or configuration:
 
 ---
 
-## 📋 Pull Request & Commit Guidelines
+## Pull Request & Commit Guidelines
 
 - PR title should be concise and informative  
 - PR body should describe what changed, why, how it was tested, and any caveats
 - **Commit messages must be complete** — assume the reader only has the git log
-- Link relevant GitHub issues (e.g., `Closes #1234`)
+- **Commit title must not exceed 70 characters**
+- Link relevant GitHub issues using the full URL (e.g., `https://github.com/rsyslog/rsyslog/issues/1234`)
 - Use a single logical commit unless there's a clear need to split
 
 ---
 
-## 💡 AI-Specific Hints
+## AI-Specific Hints
 
 - The `modules/` directory contains dynamically loaded input/output plugins  
+- `contrib/` contains external contributions (e.g. plugins) that are not core-maintained  
 - `statsobj.c` implements the statistics interface  
 - `imhttp` provides HTTP input and optionally Prometheus metrics  
 - Use `doc/` only for legacy inline docs — modern documentation lives in `rsyslog-doc`
@@ -158,7 +208,7 @@ When generating or editing code, prefer:
 
 ---
 
-## 🤖 AI Agent Commit Convention
+## AI Agent Commit Convention
 
 If you are an AI agent contributing code or documentation:
 
@@ -166,19 +216,13 @@ If you are an AI agent contributing code or documentation:
   ```
   AI-Agent: Codex 2025-06
   ```
-- Do not prefix commit messages with `AI:`; use the footer tag only.
 - PR descriptions should clearly identify that they were generated or co-authored by an AI tool.
 - Avoid generating multiple PRs for retries — reuse and update the original PR when possible.
 - Follow the same **commit message policy** as human contributors: describe what changed, why, and how it was validated.
-- When fixing compiler warnings like `stringop-overread`, explain in the commit message:
-  - Why the warning occurred
-  - What part of the code was changed
-  - How the fix prevents undefined behavior or aligns with compiler expectations
-  - Optionally link: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wstringop-overread
 
 ---
 
-## 🔐 Privacy, Trust & Permissions
+## Privacy, Trust & Permissions
 
 - AI agents **must not** push changes directly to user forks — always open PRs against `rsyslog/rsyslog`
 - Do not install third-party dependencies unless explicitly approved
