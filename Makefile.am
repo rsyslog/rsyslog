@@ -206,6 +206,10 @@ if ENABLE_FMUNFLATTEN
 SUBDIRS += contrib/fmunflatten
 endif
 
+if ENABLE_FMPCRE
+SUBDIRS += plugins/fmpcre
+endif
+
 if ENABLE_FFAUP
 SUBDIRS += contrib/ffaup
 endif
