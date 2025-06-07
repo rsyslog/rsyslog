@@ -73,6 +73,17 @@ When fixing compiler warnings like `stringop-overread`, explain in the commit me
 - **No trailing whitespace** at line end
 - **DOS CRLF format is not permitted**
 
+### Structured Error Handling Convention
+
+- Use `ABORT_FINALIZE(code);` to both set `iRet = code` and jump to `finalize`.
+- Use `FINALIZE;` when exiting with the current `iRet` value.
+- Use `DEFiRet` at the beginning of a function to define `iRet`.
+- Use the label `finalize_it:` to mark the exception return point.
+- Return using `RETiRet`.
+- Use `CHKiRet()` to check a function's return and jump to `finalize_it` on failure.
+- Use `CHKmalloc()` and similar macros to verify allocations or calls.
+- `localRet` is a temporary `rsRetVal` for intermediate error evaluation.
+
 ---
 
 ## Testing & Validation
@@ -94,6 +105,8 @@ To run `make check`, you **must configure with `--enable-testbench`**. The test 
 Some extended tests involving external components (e.g., daemons or network services) may be flaky due to timing conditions. When a test fails but passes on re-run, it's usually a nondeterministic issue. Such behavior should be reviewed but does not always indicate a defect.
 
 The `imdiag` module exists specifically to support the test framework and is used for command and information passing during tests.
+
+When a test fails, **read the referenced `tests/test-suite.log`** file to analyze failure details.
 
 ---
 
