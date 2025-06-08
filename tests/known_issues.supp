@@ -22,8 +22,18 @@
    fun:main
 }
 
-{
+{ 
    <pselect() sometimes reports pointing to unadressable byte when all selectors are empty>
+   Memcheck:Param
+   pselect6(sig)
+   fun:pselect64_syscall
+   fun:pselect
+   fun:wait_timeout
+   fun:mainloop
+   fun:main
+}
+{
+   <pselect wait call with valid sigset misreported>
    Memcheck:Param
    pselect6(sig)
    fun:pselect
@@ -31,6 +41,7 @@
    fun:mainloop
    fun:main
 }
+
 {
    <librdkafka mem leak - we cannot work around it>
    Memcheck:Leak
