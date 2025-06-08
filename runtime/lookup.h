@@ -58,18 +58,18 @@ struct lookup_string_tab_entry_s {
 };
 
 struct lookup_string_tab_s {
-        lookup_string_tab_entry_t *entries;
+	lookup_string_tab_entry_t *entries;
 };
 
 struct lookup_regex_tab_entry_s {
-       regex_t regex;
-       uchar *regex_str;
-       uchar *interned_val_ref;
-       uint8_t is_compiled;
+	regex_t regex;
+	uchar *regex_str;
+	uchar *interned_val_ref;
+	uint8_t is_compiled;
 };
 
 struct lookup_regex_tab_s {
-       lookup_regex_tab_entry_t *entries;
+	lookup_regex_tab_entry_t *entries;
 };
 
 struct lookup_ref_s {
@@ -97,12 +97,12 @@ struct lookup_s {
 	uint32_t nmemb;
 	uint8_t type;
 	uint8_t key_type;
-       union {
-               lookup_string_tab_t *str;
-               lookup_array_tab_t *arr;
-               lookup_sparseArray_tab_t *sprsArr;
-               lookup_regex_tab_t *regex;
-       } table;
+	union {
+		lookup_string_tab_t *str;
+		lookup_array_tab_t *arr;
+		lookup_sparseArray_tab_t *sprsArr;
+		lookup_regex_tab_t *regex;
+	} table;
 	uint32_t interned_val_count;
 	uchar **interned_vals;
 	uchar *nomatch;
