@@ -862,14 +862,14 @@ CODESTARTsetModCnf
 		} else if(!strcmp(modpblk.descr[i].name, "listcontainersoptions")) {
 			loadModConf->listContainersOptions = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "getcontainerlogoptions")) {
-			loadModConf->getContainerLogOptions = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			CHKmalloc(loadModConf->getContainerLogOptions
+				= (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 			/* also intialize the non-tail version */
 			size_t offset = 0;
-			char buf[256];
-			size_t buf_size = sizeof(buf);
-			strncpy(buf, (char*)loadModConf->getContainerLogOptions, buf_size-1);
 			size_t option_str_len = strlen((char*)loadModConf->getContainerLogOptions);
-			uchar *option_str = calloc(1, option_str_len);
+			char *buf = strdup((char*)loadModConf->getContainerLogOptions);
+			CHKmalloc(buf);
+			uchar *option_str = calloc(1, option_str_len + 1);
 			CHKmalloc(option_str);
 
 			const char *search_str = "tail=";
@@ -881,19 +881,20 @@ CODESTARTsetModCnf
 					token = strtok(NULL, "&");
 					continue;
 				}
-				int len = strlen(token);
-				if (offset + len + 1 >= option_str_len) {
-					break;
-				}
-				int bytes = snprintf((char*)option_str + offset,
-						(option_str_len - offset), "%s&", token);
-				if (bytes <= 0) {
-					break;
-				}
-				offset += bytes;
-				token = strtok(NULL, "&");
+			int len = strlen(token);
+			if (offset + len + 1 >= option_str_len + 1) {
+			break;
+			}
+			int bytes = snprintf((char*)option_str + offset,
+			(option_str_len + 1 - offset), "%s&", token);
+			if (bytes <= 0) {
+			break;
+			}
+			offset += bytes;
+			token = strtok(NULL, "&");
 			}
 			loadModConf->getContainerLogOptionsWithoutTail = option_str;
+			free(buf);
 		} else if(!strcmp(modpblk.descr[i].name, "dockerapiunixsockaddr")) {
 			loadModConf->dockerApiUnixSockAddr = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(modpblk.descr[i].name, "dockerapiaddr")) {
