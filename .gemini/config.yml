@@ -27,7 +27,7 @@ review_comments:
   # Enable all categories of comments for when a manual review is requested.
   security: true
   performance: true
-  style: true
+  style: false
   code_understanding: true
   test_coverage: true
   custom_instructions: true # This allows you to provide extra instructions in a PR comment if needed.
