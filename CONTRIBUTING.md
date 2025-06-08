@@ -31,11 +31,26 @@ Rsyslog is a real open source project, welcoming contributions of all kinds—fr
 
 ---
 
+## AI-Based Code Review (Experimental)
+
+We are currently testing AI-based code review for pull requests. At this time, we use **Google Gemini** to automatically analyze code and provide comments on new PRs.
+
+- These reviews are **informational only**.
+- Every contribution is still **manually reviewed** by human experts.
+- The goal is to evaluate how AI can support contributor feedback and code quality assurance.
+
+Please report any issues, false positives, or suggestions about the AI review process.
+
+---
+
 ## Commit Guidelines for AI Agents
+
 If you use an AI agent (e.g. GitHub Copilot, ChatGPT, Codex), include a commit footer tag:
+
 ```
 AI-Agent: Codex 2025-06
 ```
+
 This helps us track and evaluate contributions and agent capabilities.
 
 ---
@@ -61,13 +76,16 @@ All submissions must:
 - Test concurrency is limited due to resource load.
 
 ### Compiler Warnings
+
 False positives must be resolved, not ignored. Only in extreme cases use:
+
 ```c
 #pragma diagnostic push
 #pragma GCC diagnostic ignored "..."
 // ... function
 #pragma diagnostic pop
 ```
+
 Apply to **single functions only**.
 
 See: [Why static analysis matters](https://rainer.gerhards.net/2018/06/why-static-code-analysis.html)
@@ -100,5 +118,3 @@ If you use your real identity, note:
 - We cannot delete commits retroactively without damaging project history.
 - Identity data is used only to maintain copyright tracking and audit trails.
 - Public commits may be copied by third parties and redistributed without control.
-
----

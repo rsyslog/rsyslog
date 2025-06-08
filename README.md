@@ -57,6 +57,18 @@ If you're working with AI coding agents (e.g. GitHub Copilot, OpenAI Codex), not
 
 ---
 
+### AI-Based Code Review (Experimental)
+
+We are currently testing AI-based code review for pull requests. At this time, we use **Google Gemini** to automatically analyze code and provide comments on new PRs.
+
+- These reviews are **informational only**.
+- Every contribution is still **manually reviewed** by human experts.
+- The goal is to evaluate how AI can support contributor feedback and code quality assurance.
+
+Please report any issues, false positives, or suggestions about the AI review process.
+
+---
+
 ## Documentation
 The complete and current documentation is maintained in the separate [`rsyslog-doc`](https://github.com/rsyslog/rsyslog-doc) project.
 
