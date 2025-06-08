@@ -1,5 +1,29 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2506.0 (aka 2025.06) 2025-06-??
+- 2025-06-08: docs: restructure contributor docs for clarity and AI agent readiness
+  This updated all contributor-facing documentation:
+  - **README.md**: Modernized structure; clarified installation/build.
+    Removed obsolete local doc references, linked to rsyslog-doc.
+  - **CONTRIBUTING.md**: Refactored for clarity; added AI code guidance
+    (e.g., commit prefix `AI:`). Formalized draft PRs for experiments.
+    Removed outdated "testing new releases" advice. Added rationale
+    for `master` branch due to ecosystem dependencies.
+  - **AGENTS.md** (new): Introduces clear guidelines for AI agents
+    contributing to rsyslog. Includes commit formatting, PR branch
+    expectations, testing environment, and behavioral rules.
+  **Why now?**
+  Over two years, we've evaluated evolving AI dev agent capabilities.
+  We now consider them mature enough for rsyslog dev workflow—under
+  careful human review. This update provides the foundation to onboard
+  agents in a controlled, auditable, high-quality manner.
+  All changes prioritize traceability and developer clarity—both human
+  and AI.
+  closes: https://github.com/rsyslog/rsyslog/issues/5657
+- 2025-06-08: improved CI workflow
+- 2025-06-08: omazureeventhubs bugfix: wrong content-type used
+  This was detected during a code review. No report from practice is known. There was
+  a type in the content type definition when encoding the message. This can potentially
+  lead to malfunction.
 - 2025-06-06: omusrmsg: fixed a potentially unsafe string builder
   While not expected to be problematic in practice, there still was some security
   issue potential AND it prevented clean build in some environments.
