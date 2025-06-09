@@ -105,7 +105,7 @@ submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf)
 		DBGPRINTF("no dot --> no kernel timestamp\n");
 		goto done; /* no TS! */
 	}
-	
+
 	++i; /* skip dot */
 	usecs = 0;
 	while(buf[i] && isdigit(buf[i])) {
@@ -138,7 +138,7 @@ submitSyslog(modConfData_t *pModConf, syslog_pri_t pri, uchar *buf)
 		secOffs--;
 		usecOffs += 1000000l;
 	}
-	
+
 	usecs += usecOffs;
 	if(usecs > 999999l) {
 		secs++;

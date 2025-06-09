@@ -122,7 +122,7 @@ typedef struct _instanceData {
 /* Struct for module workerInstanceData */
 typedef struct wrkrInstanceData {
 	instanceData *pData;
-	
+
 	enum DTLSState ConnectState;		/* DTLS Connection State Status */
 	pthread_rwlock_t pnLock;
 
@@ -418,7 +418,7 @@ CODESTARTnewActInst
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
-	
+
 	// Create new instance and set default params
 	CHKiRet(createInstance(&pData));
 
@@ -782,7 +782,7 @@ dtls_init(wrkrInstanceData_t *pWrkrData)
 			pWrkrData, pData->target, pData->port, gai_strerror(iErr));
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
-	
+
 	// Socket Connect successfull, no continue with TLS
 	CHKiRet(dtls_connect(pWrkrData));
 
