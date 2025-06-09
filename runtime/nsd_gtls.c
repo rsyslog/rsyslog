@@ -603,7 +603,7 @@ uchar *gtlsStrerror(int error)
  * rgerhards, 2008-06-24
  */
 rsRetVal
-gtlsRecordRecv(nsd_gtls_t *pThis)
+gtlsRecordRecv(nsd_gtls_t *const pThis, unsigned int* nextIODirection)
 {
 	ssize_t lenRcvd;
 	DEFiRet;
@@ -647,18 +647,10 @@ gtlsRecordRecv(nsd_gtls_t *pThis)
 	} else if(lenRcvd == GNUTLS_E_AGAIN || lenRcvd == GNUTLS_E_INTERRUPTED) {
 sslerragain:
 		/* Check if the underlaying file descriptor needs to read or write data!*/
-		if (gnutls_record_get_direction(pThis->sess) == gtlsDir_READ) {
-			pThis->rtryCall = gtlsRtry_recv;
-			dbgprintf("GnuTLS receive requires a retry, this most probably is OK and no error condition\n");
-			ABORT_FINALIZE(RS_RET_RETRY);
-		} else {
-			uchar *pErr = gtlsStrerror(lenRcvd);
-			LogError(0, RS_RET_GNUTLS_ERR, "GnuTLS receive error %zd has wrong read direction(wants write) "
-				"- this could be caused by a broken connection. GnuTLS reports: %s\n",
-				lenRcvd, pErr);
-			free(pErr);
-			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
-		}
+		pThis->rtryCall = gtlsRtry_recv; /* _recv refers to the gnutls call, not socket layer! */
+		dbgprintf("GnuTLS receive requires a retry, this most probably is OK and no error condition\n");
+		*nextIODirection = (gnutls_record_get_direction(pThis->sess) == 0) ? NSDSEL_RD : NSDSEL_WR;
+		ABORT_FINALIZE(RS_RET_RETRY);
 	} else {
 		int gnuRet = lenRcvd;
 		ABORTgnutls;
@@ -1976,7 +1968,7 @@ GetRemoteIP(nsd_t *pNsd, prop_t **ip)
  * rgerhards, 2008-04-25
  */
 static rsRetVal
-AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
+AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo)
 {
 	DEFiRet;
 	int gnuRet;
@@ -1987,7 +1979,8 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	ISOBJ_TYPE_assert((pThis), nsd_gtls);
 	CHKiRet(nsd_gtlsConstruct(&pNew)); // TODO: prevent construct/destruct!
 	CHKiRet(nsd_ptcp.Destruct(&pNew->pTcp));
-	CHKiRet(nsd_ptcp.AcceptConnReq(pThis->pTcp, &pNew->pTcp));
+	CHKiRet(nsd_ptcp.AcceptConnReq(pThis->pTcp, &pNew->pTcp, connInfo));
+
 
 	if(pThis->iMode == 0) {
 		/* we are in non-TLS mode, so we are done */
@@ -2077,9 +2070,9 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 
 finalize_it:
 	if(iRet != RS_RET_OK) {
-if (error_position != NULL) {
-	dbgprintf("AcceptConnReq error_position=%s\n", error_position);
-}
+		if (error_position != NULL) {
+			dbgprintf("AcceptConnReq error_position=%s\n", error_position);
+		}
 
 		if(pNew != NULL)
 			nsd_gtlsDestruct(&pNew);
@@ -2111,19 +2104,18 @@ if (error_position != NULL) {
  * buffer. -- rgerhards, 2008-06-23
  */
 static rsRetVal
-Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr)
+Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr, unsigned *const nextIODirection)
 {
 	DEFiRet;
 	ssize_t iBytesCopy; /* how many bytes are to be copied to the client buffer? */
 	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
 	ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-DBGPRINTF("in gtls Rcv, bAbortConn %d\n", pThis->bAbortConn);
 	if(pThis->bAbortConn)
 		ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
 
 	if(pThis->iMode == 0) {
-		CHKiRet(nsd_ptcp.Rcv(pThis->pTcp, pBuf, pLenBuf, oserr));
+		CHKiRet(nsd_ptcp.Rcv(pThis->pTcp, pBuf, pLenBuf, oserr, nextIODirection));
 		FINALIZE;
 	}
 
@@ -2153,7 +2145,7 @@ DBGPRINTF("in gtls Rcv, bAbortConn %d\n", pThis->bAbortConn);
 	 * the request from buffer contents.
 	 */
 	if(pThis->lenRcvBuf == -1) { /* no data present, must read */
-		CHKiRet(gtlsRecordRecv(pThis));
+		CHKiRet(gtlsRecordRecv(pThis, nextIODirection));
 	}
 
 	if(pThis->lenRcvBuf == 0) { /* EOS */
@@ -2174,8 +2166,7 @@ DBGPRINTF("in gtls Rcv, bAbortConn %d\n", pThis->bAbortConn);
 	*pLenBuf = iBytesCopy;
 
 finalize_it:
-	if (iRet != RS_RET_OK &&
-		iRet != RS_RET_RETRY) {
+	if (iRet != RS_RET_OK && iRet != RS_RET_RETRY) {
 		/* We need to free the receive buffer in error error case unless a retry is wanted. , if we
 		 * allocated one. -- rgerhards, 2008-12-03 -- moved here by alorbach, 2015-12-01
 		 */

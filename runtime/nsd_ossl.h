@@ -73,7 +73,7 @@ PROTOTYPEObj(nsd_ossl);
 /* some prototypes for things used by our nsdsel_ossl helper class */
 uchar *osslStrerror(int error);
 rsRetVal osslChkPeerAuth(nsd_ossl_t *pThis);
-rsRetVal osslRecordRecv(nsd_ossl_t *pThis);
+rsRetVal osslRecordRecv(nsd_ossl_t *pThis, unsigned*);
 rsRetVal osslHandshakeCheck(nsd_ossl_t *pNsd);
 void nsd_ossl_lastOpenSSLErrorMsg(nsd_ossl_t const *pThis, const int ret, SSL *ssl, int severity,
 	const char* pszCallSource, const char* pszOsslApi);

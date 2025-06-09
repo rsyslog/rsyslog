@@ -158,7 +158,8 @@ epoll_Ctl(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr, const int is
 
 	if(op == EPOLL_CTL_ADD) {
 		dbgprintf("adding epoll entry %d, socket %d\n", id, sock);
-		pioDescr->event.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLONESHOT;
+		//pioDescr->event.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLONESHOT; // TODO: remove
+		pioDescr->event.events = EPOLLIN | EPOLLET | EPOLLONESHOT;
 		pioDescr->event.data.ptr = (void*) pioDescr;
 		if(epoll_ctl(pThis->evtdata.epoll.efd, EPOLL_CTL_ADD,  sock, &pioDescr->event) < 0) {
 			LogError(errno, RS_RET_ERR_EPOLL_CTL,
@@ -681,7 +682,8 @@ finalize_it:
  * rgerhards, 2008-03-02
  */
 static rsRetVal
-SessAccept(tcpsrv_t *const pThis, tcpLstnPortList_t *const pLstnInfo, tcps_sess_t **ppSess, netstrm_t *pStrm)
+SessAccept(tcpsrv_t *const pThis, tcpLstnPortList_t *const pLstnInfo, tcps_sess_t **ppSess,
+	netstrm_t *pStrm, char *const connInfo)
 {
 	DEFiRet;
 	tcps_sess_t *pSess = NULL;
@@ -695,7 +697,7 @@ SessAccept(tcpsrv_t *const pThis, tcpLstnPortList_t *const pLstnInfo, tcps_sess_
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 	assert(pLstnInfo != NULL);
 
-	CHKiRet(netstrm.AcceptConnReq(pStrm, &pNewStrm));
+	CHKiRet(netstrm.AcceptConnReq(pStrm, &pNewStrm, connInfo));
 
 	/* Add to session list */
 	iSess = TCPSessTblFindFreeSpot(pThis);
@@ -762,7 +764,7 @@ SessAccept(tcpsrv_t *const pThis, tcpLstnPortList_t *const pLstnInfo, tcps_sess_
 
 	/* check if we need to call our callback */
 	if(pThis->pOnSessAccept != NULL) {
-		CHKiRet(pThis->pOnSessAccept(pThis, pSess));
+		CHKiRet(pThis->pOnSessAccept(pThis, pSess, connInfo));
 	}
 
 	*ppSess = pSess;
@@ -804,7 +806,6 @@ closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
 {
 	DEFiRet;
 	assert(pioDescr->ptrType == NSD_PTR_TYPE_SESS);
-dbgprintf("RGER: iodescr %p destructed via closeSess\n", pioDescr);
 	tcps_sess_t *pSess = pioDescr->ptr.pSess;
 	#if defined(ENABLE_IMTCP_EPOLL)
 		CHKiRet(epoll_Ctl(pThis, pioDescr, 0, EPOLL_CTL_DEL));
@@ -836,6 +837,8 @@ notifyReArm(tcpsrv_io_descr_t *const pioDescr)
 {
 	DEFiRet;
 
+	const unsigned waitIOEvent = (pioDescr->ioDirection == NSDSEL_WR) ? EPOLLOUT : EPOLLIN;
+	pioDescr->event.events = waitIOEvent | EPOLLET | EPOLLONESHOT;
 	if(epoll_ctl(pioDescr->pSrv->evtdata.epoll.efd, EPOLL_CTL_MOD, pioDescr->sock, &pioDescr->event) < 0) {
 		LogError(errno, RS_RET_ERR_EPOLL_CTL, "epoll_ctl failed re-armed socket %d", pioDescr->sock);
 		ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
@@ -899,7 +902,7 @@ doReceive(tcpsrv_io_descr_t *const pioDescr, tcpsrvWrkrData_t *const wrkrData AT
 
 	while(do_run) {	/*  outer loop as "backup" if starvation protection does not properly work */
 		while(do_run && (maxReads == 0 || read_calls < maxReads)) { /*  break in switch below! */
-			iRet = pThis->pRcvData(pSess, buf, sizeof(buf), &iRcvd, &oserr);
+			iRet = pThis->pRcvData(pSess, buf, sizeof(buf), &iRcvd, &oserr, &pioDescr->ioDirection);
 			switch(iRet) {
 			case RS_RET_CLOSED:
 				if(pThis->bEmitMsgOnClose) {
@@ -913,6 +916,11 @@ doReceive(tcpsrv_io_descr_t *const pioDescr, tcpsrvWrkrData_t *const wrkrData AT
 				do_run = 0;
 				break;
 			case RS_RET_RETRY:
+#	if defined(ENABLE_IMTCP_EPOLL)
+	if(pThis->workQueue.numWrkr > 1 && read_calls == 0) {
+		STATSCOUNTER_ADD(wrkrData->ctrEmptyRead, wrkrData->mutCtrEmptyRead, 1);
+	}
+#	endif
 				do_run = 0;
 				break;
 			case RS_RET_OK:
@@ -987,10 +995,11 @@ doSingleAccept(tcpsrv_io_descr_t *const pioDescr)
 	tcpsrv_io_descr_t *pDescrNew = NULL;
 	const int idx = pioDescr->id;
 	tcpsrv_t *const pThis = pioDescr->pSrv;
+	char connInfo[TCPSRV_CONNINFO_SIZE] = "\0";
 	DEFiRet;
 
 	DBGPRINTF("New connect on NSD %p.\n", pThis->ppLstn[idx]);
-	iRet = SessAccept(pThis, pThis->ppLstnPort[idx], &pNewSess, pThis->ppLstn[idx]);
+	iRet = SessAccept(pThis, pThis->ppLstnPort[idx], &pNewSess, pThis->ppLstn[idx], connInfo);
 	if(iRet == RS_RET_NO_MORE_DATA) {
 		goto no_more_data;
 	}
@@ -1004,6 +1013,7 @@ doSingleAccept(tcpsrv_io_descr_t *const pioDescr)
 			pDescrNew->isInError = 0;
 			INIT_ATOMIC_HELPER_MUT(pDescrNew->mut_isInError);
 			pDescrNew->ptrType = NSD_PTR_TYPE_SESS;
+			pDescrNew->ioDirection = NSDSEL_RD;
 			CHKiRet(netstrm.GetSock(pNewSess->pStrm, &pDescrNew->sock));
 			pDescrNew->ptr.pSess = pNewSess;
 			CHKiRet(epoll_Ctl(pThis, pDescrNew, 0, EPOLL_CTL_ADD));
@@ -1020,8 +1030,9 @@ finalize_it:
 	if(iRet != RS_RET_OK) {
 		const tcpLstnParams_t *cnf_params = pThis->ppLstnPort[idx]->cnf_params;
 		LogError(0, iRet, "tcpsrv listener (inputname: '%s') failed "
-			"to process incoming connection with error %d",
-			(cnf_params->pszInputName == NULL) ? (uchar*)"*UNSET*" : cnf_params->pszInputName, iRet);
+			"to process incoming connection %s with error %d",
+			(cnf_params->pszInputName == NULL) ? (uchar*)"*UNSET*" : cnf_params->pszInputName,
+			connInfo, iRet);
 		if(pDescrNew != NULL) {
 			DESTROY_ATOMIC_HELPER_MUT(pDescrNew->mut_isInError);
 			free(pDescrNew);
@@ -1050,7 +1061,7 @@ doAccept(tcpsrv_io_descr_t *const pioDescr, tcpsrvWrkrData_t *const wrkrData ATT
 	}
 #	if defined(ENABLE_IMTCP_EPOLL)
 	if(pioDescr->pSrv->workQueue.numWrkr > 1) {
-		STATSCOUNTER_ADD(wrkrData->ctrAccept, wrkrData->mutCtrRead, nAccept);
+		STATSCOUNTER_ADD(wrkrData->ctrAccept, wrkrData->mutCtrAccept, nAccept);
 	}
 	notifyReArm(pioDescr); /* listeners must ALWAYS be re-armed */
 #	endif
@@ -1072,7 +1083,6 @@ processWorksetItem(tcpsrv_io_descr_t *const pioDescr, tcpsrvWrkrData_t *const wr
 		iRet = doReceive(pioDescr, wrkrData);
 	}
 
-DBGPRINTF("RGER: processWorksetItem returns %d\n", iRet);
 	RETiRet;
 }
 
@@ -1134,7 +1144,6 @@ dequeueWork(tcpsrv_t *pSrv)
 
 	pthread_mutex_lock(&queue->mut);
 	while((queue->head == NULL) && !glbl.GetGlobalInputTermState()) {
-dbgprintf("RGER: waiting on condition\n");
 		pthread_cond_wait(&queue->workRdy, &queue->mut);
 	}
 
@@ -1148,7 +1157,6 @@ dbgprintf("RGER: waiting on condition\n");
 	if(queue->head == NULL) {
 		queue->tail = NULL;
 	}
-DBGPRINTF("RGER: DEqueuWork done, sock %d\n", pioDescr->sock);
 
 finalize_it:
 	pthread_mutex_unlock(&queue->mut);
@@ -1171,7 +1179,6 @@ enqueueWork(tcpsrv_io_descr_t *const pioDescr)
 	}
 	queue->tail = pioDescr;
 
-DBGPRINTF("RGER: enqueuWork done, sock %d\n", pioDescr->sock);
 	pthread_cond_signal(&queue->workRdy);
 	pthread_mutex_unlock(&queue->mut);
 
@@ -1194,8 +1201,12 @@ wrkr(void *arg)
 
 	tcpsrvWrkrData_t *const wrkrData = &(queue->wrkr_data[wrkrIdx]);
 
+	uchar shortThrdName[16];
+	snprintf((char*)shortThrdName, sizeof(shortThrdName), "w%d/%s", wrkrIdx,
+		(pThis->pszInputName == NULL) ? (uchar*)"tcpsrv" : pThis->pszInputName);
 	uchar thrdName[32];
-	snprintf((char*)thrdName, sizeof(thrdName), "tcpsrv/w%d", wrkrIdx);
+	snprintf((char*)thrdName, sizeof(thrdName), "w%d/%s", wrkrIdx,
+		(pThis->pszInputName == NULL) ? (uchar*)"tcpsrv" : pThis->pszInputName);
 	dbgSetThrdName(thrdName);
 
 	/* set thread name - we ignore if it fails, has no harsh consequences... */
@@ -1204,7 +1215,7 @@ wrkr(void *arg)
 		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", thrdName);
 	}
 #	elif defined(HAVE_PTHREAD_SETNAME_NP)
-	int r = pthread_setname_np(pthread_self(), (char*) thrdName);
+	int r = pthread_setname_np(pthread_self(), (char*) shortThrdName);
 	if(r != 0) {
 		DBGPRINTF("pthread_setname_np failed, not setting thread name for '%s'\n", thrdName);
 	}
@@ -1221,6 +1232,10 @@ wrkr(void *arg)
 		STATSCOUNTER_INIT(wrkrData->ctrRead, wrkrData->mutCtrRead);
 		statsobj.AddCounter(wrkrData->stats, UCHAR_CONSTANT("read"),
 			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(wrkrData->ctrRead));
+
+		STATSCOUNTER_INIT(wrkrData->ctrEmptyRead, wrkrData->mutCtrEmptyRead);
+		statsobj.AddCounter(wrkrData->stats, UCHAR_CONSTANT("emptyread"),
+			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(wrkrData->ctrEmptyRead));
 
 		STATSCOUNTER_INIT(wrkrData->ctrStarvation, wrkrData->mutCtrStarvation);
 		statsobj.AddCounter(wrkrData->stats, UCHAR_CONSTANT("starvation_protect"),
@@ -1249,6 +1264,7 @@ wrkr(void *arg)
 		 * case. Also, errors are reported inside processWorksetItem().
 		 */
 		processWorksetItem(pioDescr, wrkrData);
+		STATSCOUNTER_ADD(wrkrData->ctrRuns, wrkrData->mutCtrRuns, 1);
 	}
 
 	/**** de-init ****/
@@ -1612,7 +1628,6 @@ CODESTARTobjDestruct(tcpsrv)
 	free(pThis->ppLstn);
 	free(pThis->ppLstnPort);
 	free(pThis->ppioDescrPtr);
-	free(pThis->pszInputName);
 	free(pThis->pszOrigin);
 ENDobjDestruct(tcpsrv)
 
@@ -1632,7 +1647,7 @@ SetCBIsPermittedHost(tcpsrv_t *pThis, int (*pCB)(struct sockaddr *addr, char *fr
 }
 
 static rsRetVal
-SetCBRcvData(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t*, int*))
+SetCBRcvData(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t*, char*, size_t, ssize_t*, int*, unsigned*))
 {
 	DEFiRet;
 	pThis->pRcvData = pRcvData;
@@ -1648,7 +1663,7 @@ SetCBOnListenDeinit(tcpsrv_t *pThis, rsRetVal (*pCB)(void*))
 }
 
 static rsRetVal
-SetCBOnSessAccept(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t*, tcps_sess_t*))
+SetCBOnSessAccept(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t*, tcps_sess_t*, char*))
 {
 	DEFiRet;
 	pThis->pOnSessAccept = pCB;
@@ -1847,14 +1862,16 @@ SetOrigin(tcpsrv_t *pThis, uchar *origin)
 
 /* Set the input name to use -- rgerhards, 2008-12-10 */
 static rsRetVal
-SetInputName(tcpsrv_t *const pThis ATTR_UNUSED, tcpLstnParams_t *const cnf_params, const uchar *const name)
+SetInputName(tcpsrv_t *const pThis, tcpLstnParams_t *const cnf_params, const uchar *const name)
 {
 	DEFiRet;
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
-	if(name == NULL)
+	if(name == NULL) {
 		cnf_params->pszInputName = NULL;
-	else
+	} else {
 		CHKmalloc(cnf_params->pszInputName = ustrdup(name));
+		pThis->pszInputName = cnf_params->pszInputName;
+	}
 
 	/* we need to create a property */
 	CHKiRet(prop.Construct(&cnf_params->pInputName));

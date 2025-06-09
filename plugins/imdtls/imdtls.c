@@ -23,6 +23,7 @@
  */
 #include "config.h"
 
+#include <signal.h>
 #include <stdio.h>
 #include <signal.h>
 #include <arpa/inet.h>

@@ -339,7 +339,6 @@ CODESTARTbeginCnfLoad
 	pModConf->bParseKernelStamp = 0;
 	pModConf->bKeepKernelStamp = 0;
 	pModConf->console_log_level = -1;
-	pModConf->bKeepKernelStamp = 0;
 	pModConf->iFacilIntMsg = klogFacilIntMsg();
 	loadModConf->configSetViaV2Method = 0;
 	pModConf->ratelimiter = NULL;

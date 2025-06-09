@@ -67,19 +67,19 @@ struct outchannel* ochConstruct(void)
 /* skips the next comma and any whitespace
  * in front and after it.
  */
-static void skip_Comma(char **pp)
+static void skip_Comma(uchar **pp)
 {
-	register char *p;
+	register uchar *p;
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
 
 	p = *pp;
-	while(isspace((int)*p))
+	while(isspace(*p))
 		++p;
 	if(*p == ',')
 		++p;
-	while(isspace((int)*p))
+	while(isspace(*p))
 		++p;
 	*pp = p;
 }
@@ -98,7 +98,7 @@ static rsRetVal get_Field(uchar **pp, uchar **pField)
 	assert(*pp != NULL);
 	assert(pField != NULL);
 
-	skip_Comma((char**)pp);
+	skip_Comma(pp);
 	p = *pp;
 
 	CHKiRet(cstrConstruct(&pStrB));
@@ -135,7 +135,7 @@ static int get_off_t(uchar **pp, off_t *pOff_t)
 	assert(*pp != NULL);
 	assert(pOff_t != NULL);
 
-	skip_Comma((char**)pp);
+	skip_Comma(pp);
 	p = *pp;
 
 	val = 0;
@@ -166,7 +166,7 @@ static rsRetVal get_restOfLine(uchar **pp, uchar **pBuf)
 	assert(*pp != NULL);
 	assert(pBuf != NULL);
 
-	skip_Comma((char**)pp);
+	skip_Comma(pp);
 	p = *pp;
 
 	CHKiRet(cstrConstruct(&pStrB));

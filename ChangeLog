@@ -1,5 +1,97 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2504.0 (aka 2025.04) 2025-04-??
+Scheduled Release 8.2506.0 (aka 2025.06) 2025-06-??
+- 2025-06-09: imuxsock: Add statistics counter for discarded messages
+  This patch introduces a counter to track the number of discarded messages.
+  Additionally, it fixes a bug where the submitted message count was incremented
+  even when the message was discarded due to exceeding the allowed message rate
+  within a given interval.
+  Thanks to Attila Lakatos for the patch.
+- 2025-06-08: lookup tables: add new table type for regex-matches
+  While we do not like rexeg-matches for performance reasons, they are
+  well known and appreciated by users. With the new table type, we
+  add a lookup capability for partial matches, but at the price
+  of much higher ressource use. It still is useful, e.g. to classify
+  events as "noise" events in a simple manner.
+- 2025-06-08: docs: restructure contributor docs for clarity and AI agent readiness
+  This updated all contributor-facing documentation:
+  - **README.md**: Modernized structure; clarified installation/build.
+    Removed obsolete local doc references, linked to rsyslog-doc.
+  - **CONTRIBUTING.md**: Refactored for clarity; added AI code guidance
+    (e.g., commit prefix `AI:`). Formalized draft PRs for experiments.
+    Removed outdated "testing new releases" advice. Added rationale
+    for `master` branch due to ecosystem dependencies.
+  - **AGENTS.md** (new): Introduces clear guidelines for AI agents
+    contributing to rsyslog. Includes commit formatting, PR branch
+    expectations, testing environment, and behavioral rules.
+  **Why now?**
+  Over two years, we've evaluated evolving AI dev agent capabilities.
+  We now consider them mature enough for rsyslog dev workflow—under
+  careful human review. This update provides the foundation to onboard
+  agents in a controlled, auditable, high-quality manner.
+  All changes prioritize traceability and developer clarity—both human
+  and AI.
+  closes: https://github.com/rsyslog/rsyslog/issues/5657
+- 2025-06-08: improved CI workflow
+- 2025-06-08: omazureeventhubs bugfix: wrong content-type used
+  This was detected during a code review. No report from practice is known. There was
+  a type in the content type definition when encoding the message. This can potentially
+  lead to malfunction.
+- 2025-06-06: omusrmsg: fixed a potentially unsafe string builder
+  While not expected to be problematic in practice, there still was some security
+  issue potential AND it prevented clean build in some environments.
+- 2025-06-05: impstats: add prometheus format to set of supported output formats
+  This can be used eg. to use node_exporter file scraping capability
+- 2025-06-04: omsendertrack: new module
+  The omsendertrack module is designed to track and report statistics for
+  message senders across all inputs in Rsyslog. It periodically outputs a
+  JSON file containing information about each sender.
+  Note: This commit provides minimalistic basic functionality as a PoC.
+  We will check it's usefulness in practice and expect follow-up PRs
+  to enhance functionality and include feedback from early testing.
+  However, this module is solid, just feature limited.
+  see also: https://github.com/rsyslog/rsyslog/issues/5599
+- 2025-05-29: omjournal: Fix priority value
+  Thanks to Bougrine Anis for the patch.
+- 2025-05-14: tls subsystem: generate better error message on accept failure
+  Right now, the remote peer is not reported, even in cases where
+  this would be possible. This patch provides a method to emit a
+  second message with remote peer information in cases where it
+  is possible. This is the case when the remote peer connects via
+  plain tcp but TLS cannot be negotiated, especially because the
+  connection breaks immediately. Most probably this behaviour can
+  be created by load balancer and other tools healt checks.
+  This patch improves debugging network issues. So it is useful.
+----------------------------------------------------------------------------------------
+Scheduled Release 8.2504.0 (aka 2025.04) 2025-04-29
+- 2025-04-25: ossl tls driver: better error reporting
+  Replace some generic error codes with more specific counterparts.
+  There is still some more work to do, but this covers important
+  spots.
+- 2025-04-25: gnutls netstrm drvr fix: handle write retry correctly in recv call
+  When receiving, gnutls internally may need to write (e.g. for session key
+  changes), so we need to support that. This is a long-standing issue
+  that can have caused invalid error message and session closure.
+  The erorr message was:
+  GnuTLS receive error <nbr> has wrong read direction(wants write) -
+  this could be caused by a broken connection. GnuTLS reports: <text>
+- 2025-04-25: tcpsrv bugfix: do not busy wait on io events
+  Depending on circumstances, tcpsrv worker threads did effectively
+  busy-wait on io events to handle. Not always, but often. This was
+  caused be improperly re-arming the inotify subsystem.
+  This effected overall system performance, but not general rsyslog
+  stability. The bug was introduced on March 1st 2025 into the
+  daily stable build.
+  closes: https://github.com/rsyslog/rsyslog/issues/5623
+- 2025-04-23:  tcpsrv: add experimental stats
+  This is a stats for worker awaking via event notification. Could be useful
+  under some cirumstances. it's called "emptyReads".
+  It needs to be decided if this is a useful setting or not.
+- 2025-04-16: tcpsrv bugfix: input name was not properly propagated
+  As a result, it did not show up in pstats. Alos, we now use the input name
+  in worker thread to easily identify where they belong to. As thread names
+  have very limited length, the thread naming now is
+  "w<worker-number>/<input-name>".
+  Note: this bug was introduced 2025-03-01 (daily stable build)
 - 2025-03-06: rsyslog core fix: buffer overflow when the argument to replace() is empty
   This fixes the following situation:
   We have these expressions in rsyslogd.conf:

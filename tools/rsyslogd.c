@@ -264,6 +264,7 @@ queryLocalHostname(rsconf_t *const pConf)
 	uchar *LocalFQDNName;
 	DEFiRet;
 
+	assert(net.getLocalHostname != NULL); /* keep clang static analyzer silent - this IS the case */
 	CHKiRet(net.getLocalHostname(pConf, &LocalFQDNName));
 	uchar *dot = (uchar*) strstr((char*)LocalFQDNName, ".");
 	if(dot == NULL) {

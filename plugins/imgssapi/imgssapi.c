@@ -75,7 +75,7 @@ static rsRetVal actGSSListener(uchar *port);
 static int TCPSessGSSInit(void);
 static void TCPSessGSSClose(tcps_sess_t* pSess);
 static rsRetVal TCPSessGSSRecv(tcps_sess_t *pSess, void *buf, size_t buf_len, ssize_t *);
-static rsRetVal onSessAccept(tcpsrv_t *pThis, tcps_sess_t *ppSess);
+static rsRetVal onSessAccept(tcpsrv_t *pThis, tcps_sess_t *pSess, ATTR_UNUSED char *connInfo);
 static rsRetVal OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *ppSess);
 
 /* static data */
@@ -199,7 +199,7 @@ isPermittedHost(struct sockaddr *addr, char *fromHostFQDN, void *pUsrSrv, void*p
 
 
 static rsRetVal
-onSessAccept(tcpsrv_t *pThis, tcps_sess_t *pSess)
+onSessAccept(tcpsrv_t *pThis, tcps_sess_t *pSess, ATTR_UNUSED char *connInfo)
 {
 	DEFiRet;
 	gsssrv_t *pGSrv;
@@ -288,7 +288,8 @@ finalize_it:
 
 
 static rsRetVal
-doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd, int *const oserr)
+doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd, int *const oserr,
+	unsigned *const nextIODirection)
 {
 	DEFiRet;
 	int allowedMethods;
@@ -304,7 +305,7 @@ doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd, int 
 		CHKiRet(TCPSessGSSRecv(pSess, buf, lenBuf, piLenRcvd));
 	} else {
 		*piLenRcvd = lenBuf;
-		CHKiRet(netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd, oserr));
+		CHKiRet(netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd, oserr, nextIODirection));
 	}
 
 finalize_it:

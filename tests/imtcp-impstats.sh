@@ -12,7 +12,7 @@ add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
 module(load="../plugins/impstats/.libs/impstats" log.file="'$STATSFILE'" interval="1")
 
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port"
+input(type="imtcp" name="pstats-test" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port"
 	workerthreads="'$NUM_WORKERS'")
 
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
@@ -26,8 +26,8 @@ sleep 2
 shutdown_when_empty
 wait_shutdown
 
-cat -n $STATSFILE | grep 'tcpsrv/w'
-NUM_STATS=$(grep 'tcpsrv/w' "$STATSFILE" | wc -l)
+cat -n $STATSFILE | grep 'w./pstats-test'
+NUM_STATS=$(grep 'w./pstats-test' "$STATSFILE" | wc -l)
 if [ "$NUM_WORKERS" -gt 1 ]; then
     EXPECTED_COUNT=$NUM_WORKERS
 else

@@ -48,7 +48,15 @@ typedef enum statsFmtType_e {
 	statsFmt_Legacy,
 	statsFmt_JSON,
 	statsFmt_JSON_ES,
-	statsFmt_CEE
+	statsFmt_CEE,
+	/**
+	* Prometheus text‐exposition format:
+	* For each counter, emit:
+	*   # HELP <obj>_<ctr> (optional generic text)
+	*   # TYPE <obj>_<ctr> counter
+	*   <obj>_<ctr> <value>
+	*/
+	statsFmt_Prometheus
 } statsFmtType_t;
 
 /* counter flags */

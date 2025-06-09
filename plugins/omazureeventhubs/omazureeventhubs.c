@@ -309,7 +309,7 @@ static pn_message_t* proton_encode_message(wrkrInstanceData_t *const pWrkrData, 
 	// pn_message_set_address(message, (char *) pWrkrData->amqp_address);
 
 	// Send in BINARY MODE ( as Stream )
-	pn_message_set_content_type(message, (char*) "application/octect-stream");
+       pn_message_set_content_type(message, (char*) "application/octet-stream");
 	pn_message_set_creation_time(message, time_now());
 	pn_message_set_inferred(message, true);
 	// Set message ID

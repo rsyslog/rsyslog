@@ -213,7 +213,7 @@ long BIO_debug_callback(BIO *bio, int cmd, const char __attribute__((unused)) *a
  * rgerhards, 2008-06-24
  */
 rsRetVal
-osslRecordRecv(nsd_ossl_t *pThis)
+osslRecordRecv(nsd_ossl_t *pThis, unsigned *const nextIODirection)
 {
 	ssize_t lenRcvd;
 	DEFiRet;
@@ -258,7 +258,7 @@ sslerr:
 			/* Output error and abort */
 			nsd_ossl_lastOpenSSLErrorMsg(pThis, lenRcvd, pThis->pNetOssl->ssl, LOG_INFO,
 				"osslRecordRecv", "SSL_read 1");
-			iRet = RS_RET_NO_ERRCODE;
+			iRet = RS_RET_TLS_ERR_SYSCALL;
 			/* Check for underlaying socket errors **/
 			if (	errno == ECONNRESET) {
 				DBGPRINTF("osslRecordRecv: SSL_ERROR_SYSCALL Errno %d, connection reset by peer\n",
@@ -285,9 +285,13 @@ sslerr:
 		}
 	}
 
-// TODO: Check if MORE retry logic needed?
 
 finalize_it:
+	if(pThis->rtryCall != osslRtry_None && pThis->rtryOsslErr == SSL_ERROR_WANT_WRITE) {
+		*nextIODirection = NSDSEL_WR;
+	} else {
+		*nextIODirection = NSDSEL_RD;
+	}
 	dbgprintf("osslRecordRecv return. nsd %p, iRet %d, lenRcvd %zd, lenRcvBuf %d, ptrRcvBuf %d\n",
 	pThis, iRet, lenRcvd, pThis->lenRcvBuf, pThis->ptrRcvBuf);
 	RETiRet;
@@ -304,7 +308,7 @@ osslInitSession(nsd_ossl_t *pThis, osslSslState_t osslType) /* , nsd_ossl_t *pSe
 	if(!(pThis->pNetOssl->ssl = SSL_new(pThis->pNetOssl->ctx))) {
 		pThis->pNetOssl->ssl = NULL;
 		nsd_ossl_lastOpenSSLErrorMsg(pThis, 0, pThis->pNetOssl->ssl, LOG_ERR, "osslInitSession", "SSL_new");
-		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
+		ABORT_FINALIZE(RS_RET_TLS_BASEINIT_FAIL);
 	}
 
 	// Set SSL_MODE_AUTO_RETRY to SSL obj
@@ -973,13 +977,14 @@ finalize_it:
 	RETiRet;
 }
 
+
 /* accept an incoming connection request - here, we do the usual accept
  * handling. TLS specific handling is done thereafter (and if we run in TLS
  * mode at this time).
  * rgerhards, 2008-04-25
  */
 static rsRetVal
-AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
+AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo)
 {
 	DEFiRet;
 	nsd_ossl_t *pNew = NULL;
@@ -989,7 +994,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	CHKiRet(nsd_osslConstruct(&pNew));
 	CHKiRet(nsd_ptcp.Destruct(&pNew->pTcp));
 	dbgprintf("AcceptConnReq for [%p]: Accepting connection ... \n", (void *)pThis);
-	CHKiRet(nsd_ptcp.AcceptConnReq(pThis->pTcp, &pNew->pTcp));
+	CHKiRet(nsd_ptcp.AcceptConnReq(pThis->pTcp, &pNew->pTcp, connInfo));
 
 	if(pThis->iMode == 0) {
 		/*we are in non-TLS mode, so we are done */
@@ -1054,7 +1059,7 @@ finalize_it:
  * buffer. -- rgerhards, 2008-06-23
  */
 static rsRetVal
-Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr)
+Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr, unsigned *const nextIODirection)
 {
 	DEFiRet;
 	ssize_t iBytesCopy; /* how many bytes are to be copied to the client buffer? */
@@ -1066,7 +1071,7 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr)
 		ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
 
 	if(pThis->iMode == 0) {
-		CHKiRet(nsd_ptcp.Rcv(pThis->pTcp, pBuf, pLenBuf, oserr));
+		CHKiRet(nsd_ptcp.Rcv(pThis->pTcp, pBuf, pLenBuf, oserr, nextIODirection));
 		FINALIZE;
 	}
 
@@ -1095,7 +1100,7 @@ Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr)
 	 * the request from buffer contents.
 	 */
 	if(pThis->lenRcvBuf == -1) { /* no data present, must read */
-		CHKiRet(osslRecordRecv(pThis));
+		CHKiRet(osslRecordRecv(pThis, nextIODirection));
 	}
 
 	if(pThis->lenRcvBuf == 0) { /* EOS */
@@ -1187,7 +1192,7 @@ Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
 				/* Output error and abort */
 				nsd_ossl_lastOpenSSLErrorMsg(pThis, iSent, pThis->pNetOssl->ssl, LOG_INFO,
 					"Send", "SSL_write");
-				iRet = RS_RET_NO_ERRCODE;
+				iRet = RS_RET_TLS_ERR_SYSCALL;
 				/* Check for underlaying socket errors **/
 				if (	errno == ECONNRESET) {
 					dbgprintf("Send: SSL_ERROR_SYSCALL Connection was reset by remote\n");

@@ -321,12 +321,12 @@ doOpenLstnSocks(tcpsrv_t *pSrv)
 
 
 static rsRetVal
-doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd, int *const oserr)
+doRcvData(tcps_sess_t *pSess, char *buf, size_t lenBuf, ssize_t *piLenRcvd, int *const oserr, unsigned *nextIODirection)
 {
 	assert(pSess != NULL);
 	assert(piLenRcvd != NULL);
 	*piLenRcvd = lenBuf;
-	return netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd, oserr);
+	return netstrm.Rcv(pSess->pStrm, (uchar*) buf, piLenRcvd, oserr, nextIODirection);
 }
 
 static rsRetVal
