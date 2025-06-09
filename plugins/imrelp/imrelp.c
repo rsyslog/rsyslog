@@ -815,6 +815,7 @@ ENDactivateCnf
 BEGINfreeCnf
 	instanceConf_t *inst, *del;
 	int i;
+	confFreed=1;
 CODESTARTfreeCnf
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free(inst->pszBindPort);
@@ -836,7 +837,6 @@ CODESTARTfreeCnf
 		inst = inst->next;
 		free(del);
 	}
-	confFreed=1;
 	free(pModConf->pszBindRuleset);
 ENDfreeCnf
 
