@@ -212,40 +212,40 @@ destructTable_arr(lookup_t *pThis) {
 
 static void
 destructTable_sparseArr(lookup_t *pThis) {
-       free(pThis->table.sprsArr->entries);
-       free(pThis->table.sprsArr);
+	free(pThis->table.sprsArr->entries);
+	free(pThis->table.sprsArr);
 }
 
 #ifdef FEATURE_REGEXP
 static void
 destructTable_regex(lookup_t *pThis) {
-       uint32_t i;
-       int regfree_available = 0;
-       lookup_regex_tab_entry_t *entries;
+	uint32_t i;
+	int regfree_available = 0;
+	lookup_regex_tab_entry_t *entries;
 
-       if(pThis == NULL || pThis->table.regex == NULL)
-               return;
+	if(pThis == NULL || pThis->table.regex == NULL)
+		return;
 
-       entries = pThis->table.regex->entries;
-       if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK)
-               regfree_available = 1;
+	entries = pThis->table.regex->entries;
+	if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK)
+		regfree_available = 1;
 
-       if(entries != NULL) {
-               for(i = 0; i < pThis->nmemb; ++i) {
-                       if(entries[i].is_compiled) {
-                               if(regfree_available) {
-                                       regexp.regfree(&entries[i].regex);
-                               } else {
-                                       LogError(0, RS_RET_INTERNAL_ERROR,
-                                               "regexp module missing; compiled regex cannot be freed");
-                               }
-                       }
-                       free(entries[i].regex_str);
-                       entries[i].regex_str = NULL;
-               }
-       }
-       free(entries);
-       free(pThis->table.regex);
+	if(entries != NULL) {
+		for(i = 0; i < pThis->nmemb; ++i) {
+			if(entries[i].is_compiled) {
+				if(regfree_available) {
+					regexp.regfree(&entries[i].regex);
+				} else {
+					LogError(0, RS_RET_INTERNAL_ERROR,
+						"regexp module missing; compiled regex cannot be freed");
+				}
+			}
+			free(entries[i].regex_str);
+			entries[i].regex_str = NULL;
+		}
+	}
+	free(entries);
+	free(pThis->table.regex);
 }
 #endif
 
@@ -255,19 +255,19 @@ lookupDestruct(lookup_t *pThis) {
 
 	if (pThis == NULL) return;
 
-       if (pThis->type == STRING_LOOKUP_TABLE) {
-               destructTable_str(pThis);
-       } else if (pThis->type == ARRAY_LOOKUP_TABLE) {
-               destructTable_arr(pThis);
-       } else if (pThis->type == SPARSE_ARRAY_LOOKUP_TABLE) {
-               destructTable_sparseArr(pThis);
-#ifdef FEATURE_REGEXP
-       } else if (pThis->type == REGEX_LOOKUP_TABLE) {
-               destructTable_regex(pThis);
-#endif
-       } else if (pThis->type == STUBBED_LOOKUP_TABLE) {
-               /*nothing to be done*/
-       }
+	if (pThis->type == STRING_LOOKUP_TABLE) {
+		destructTable_str(pThis);
+	} else if (pThis->type == ARRAY_LOOKUP_TABLE) {
+		destructTable_arr(pThis);
+	} else if (pThis->type == SPARSE_ARRAY_LOOKUP_TABLE) {
+		destructTable_sparseArr(pThis);
+	#ifdef FEATURE_REGEXP
+	} else if (pThis->type == REGEX_LOOKUP_TABLE) {
+		destructTable_regex(pThis);
+	#endif
+	} else if (pThis->type == STUBBED_LOOKUP_TABLE) {
+		/*nothing to be done*/
+	}
 
 	for (i = 0; i < pThis->interned_val_count; i++) {
 		free(pThis->interned_vals[i]);
@@ -460,15 +460,16 @@ lookupKey_sprsArr(lookup_t *pThis, lookup_key_t key) {
 #ifdef FEATURE_REGEXP
 static es_str_t*
 lookupKey_regex(lookup_t *pThis, lookup_key_t key) {
-       const char *r = defaultVal(pThis);
-       for (uint32_t i = 0; i < pThis->nmemb; ++i) {
-               if (regexp.regexec(&pThis->table.regex->entries[i].regex,
-                                       (char*)key.k_str, 0, NULL, 0) == 0) {
-                       r = (const char*)pThis->table.regex->entries[i].interned_val_ref;
-                       break;
-               }
-       }
-       return es_newStrFromCStr(r, strlen(r));
+	const char *r = defaultVal(pThis);
+
+	for (uint32_t i = 0; i < pThis->nmemb; ++i) {
+		if (regexp.regexec(&pThis->table.regex->entries[i].regex,
+			(char*)key.k_str, 0, NULL, 0) == 0) {
+			r = (const char*)pThis->table.regex->entries[i].interned_val_ref;
+			break;
+		}
+	}
+	return es_newStrFromCStr(r, strlen(r));
 }
 #endif
 
@@ -638,61 +639,69 @@ finalize_it:
 #ifdef FEATURE_REGEXP
 static rsRetVal
 build_RegexTable(lookup_t *pThis, struct json_object *jtab, const uchar* name) {
-       uint32_t i;
-       struct json_object *jrow, *jregex, *jtag;
-       uchar *value, *canonicalValueRef;
-       const char *regex_str;
-       DEFiRet;
+	uint32_t i;
+	struct json_object *jrow, *jregex, *jtag;
+	uchar *value, *canonicalValueRef;
+	const char *regex_str;
+	DEFiRet;
 
-       pThis->table.regex = NULL;
-       CHKmalloc(pThis->table.regex = calloc(1, sizeof(lookup_regex_tab_t)));
-       if (pThis->nmemb > 0) {
-               CHKmalloc(pThis->table.regex->entries = calloc(pThis->nmemb, sizeof(lookup_regex_tab_entry_t)));
+	pThis->table.regex = NULL;
+	CHKmalloc(pThis->table.regex = calloc(1, sizeof(lookup_regex_tab_t)));
+	if (pThis->nmemb > 0) {
+		CHKmalloc(pThis->table.regex->entries = calloc(pThis->nmemb, sizeof(lookup_regex_tab_entry_t)));
 
-               for(i = 0; i < pThis->nmemb; i++) {
-                       jrow = json_object_array_get_idx(jtab, i);
-                       fjson_object_object_get_ex(jrow, "regex", &jregex);
-                       fjson_object_object_get_ex(jrow, "tag", &jtag);
-                       if (jregex == NULL || jtag == NULL || json_object_is_type(jregex, json_type_null) ||
-                                       json_object_is_type(jtag, json_type_null)) {
-                               LogError(0, RS_RET_INVALID_VALUE, "'regex' lookup table named: '%s' has record(s) without required fields", name);
-                               ABORT_FINALIZE(RS_RET_INVALID_VALUE);
-                       }
-                       regex_str = json_object_get_string(jregex);
-                       CHKmalloc(pThis->table.regex->entries[i].regex_str = ustrdup((const uchar*) regex_str));
-                       value = (uchar*) json_object_get_string(jtag);
-                       uchar *const *const canonicalValueRef_ptr = bsearch(value, pThis->interned_vals,
-                               pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
-                       if(canonicalValueRef_ptr == NULL) {
-                               LogError(0, RS_RET_ERR, "BUG: canonicalValueRef not found in build_RegexTable(), %s:%d", __FILE__, __LINE__);
-                               ABORT_FINALIZE(RS_RET_ERR);
-                       }
-                       canonicalValueRef = *canonicalValueRef_ptr;
-                       assert(canonicalValueRef != NULL);
-                       pThis->table.regex->entries[i].interned_val_ref = canonicalValueRef;
+		for(i = 0; i < pThis->nmemb; i++) {
+			jrow = json_object_array_get_idx(jtab, i);
+			fjson_object_object_get_ex(jrow, "regex", &jregex);
+			fjson_object_object_get_ex(jrow, "tag", &jtag);
+			if (jregex == NULL || jtag == NULL || json_object_is_type(jregex, json_type_null) ||
+				json_object_is_type(jtag, json_type_null)) {
+					LogError(0, RS_RET_INVALID_VALUE,
+						"'regex' lookup table named: '%s' has record(s) without required "
+						"fields", name);
+				ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+			}
+			regex_str = json_object_get_string(jregex);
+			CHKmalloc(pThis->table.regex->entries[i].regex_str = ustrdup((const uchar*) regex_str));
+			value = (uchar*) json_object_get_string(jtag);
+			uchar *const *const canonicalValueRef_ptr = bsearch(value, pThis->interned_vals,
+			pThis->interned_val_count, sizeof(uchar*), bs_arrcmp_str);
+			if(canonicalValueRef_ptr == NULL) {
+				LogError(0, RS_RET_ERR,
+					"BUG: canonicalValueRef not found in build_RegexTable(), %s:%d",
+					__FILE__, __LINE__);
+				ABORT_FINALIZE(RS_RET_ERR);
+			}
+			canonicalValueRef = *canonicalValueRef_ptr;
+			assert(canonicalValueRef != NULL);
+			pThis->table.regex->entries[i].interned_val_ref = canonicalValueRef;
 
-                       int err;
-                       if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
-                               if((err = regexp.regcomp(&pThis->table.regex->entries[i].regex, regex_str, REG_EXTENDED | REG_NOSUB)) != 0) {
-                                       char errbuf[256];
-                                       regexp.regerror(err, &pThis->table.regex->entries[i].regex, errbuf, sizeof(errbuf));
-                                       LogError(0, RS_RET_INVALID_VALUE, "error compiling regex '%s' in lookup table '%s': %s", regex_str, name, errbuf);
-                                       ABORT_FINALIZE(RS_RET_INVALID_VALUE);
-                               } else {
-                                       pThis->table.regex->entries[i].is_compiled = 1;
-                               }
-                       } else {
-                               LogError(0, RS_RET_INTERNAL_ERROR, "regex library could not be loaded");
-                               ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
-                       }
-               }
-       }
+			int err;
+			if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
+				if((err = regexp.regcomp(&pThis->table.regex->entries[i].regex,
+					regex_str, REG_EXTENDED | REG_NOSUB)) != 0) {
+					char errbuf[256];
+					regexp.regerror(err, &pThis->table.regex->entries[i].regex, errbuf,
+						sizeof(errbuf));
+					LogError(0, RS_RET_INVALID_VALUE,
+						"error compiling regex '%s' in lookup table '%s': %s",
+						regex_str, name, errbuf);
+					ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+				} else {
+					pThis->table.regex->entries[i].is_compiled = 1;
+				}
+			} else {
+				LogError(0, RS_RET_INTERNAL_ERROR, "regex library could not be loaded");
+				ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+			}
+		}
+	}
 
-       pThis->lookup = lookupKey_regex;
-       pThis->key_type = LOOKUP_KEY_TYPE_STRING;
+	pThis->lookup = lookupKey_regex;
+	pThis->key_type = LOOKUP_KEY_TYPE_STRING;
 
-finalize_it:
-       RETiRet;
+	finalize_it:
+	RETiRet;
 }
 #endif
 
@@ -712,10 +721,10 @@ finalize_it:
 static rsRetVal
 lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* name) {
 	struct json_object *jnomatch, *jtype, *jtab;
-       struct json_object *jrow, *jvalue;
-       const char *table_type, *nomatch_value;
-       const char *value_key;
-       const uchar **all_values;
+	struct json_object *jrow, *jvalue;
+	const char *table_type, *nomatch_value;
+	const char *value_key;
+	const uchar **all_values;
 	const uchar *curr, *prev;
 	uint32_t i, j;
 	uint32_t uniq_values;
@@ -731,21 +740,21 @@ lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* nam
 		ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 	}
 	pThis->nmemb = json_object_array_length(jtab);
-       table_type = json_object_get_string(jtype);
-       if (table_type == NULL) {
-               table_type = "string";
-       }
-       value_key = (strcmp(table_type, "regex") == 0) ? "tag" : "value";
+	table_type = json_object_get_string(jtype);
+	if (table_type == NULL) {
+		table_type = "string";
+	}
+	value_key = (strcmp(table_type, "regex") == 0) ? "tag" : "value";
 
 	CHKmalloc(all_values = malloc(pThis->nmemb * sizeof(uchar*)));
 
 	/* before actual table can be loaded, prepare all-value list and remove duplicates*/
-       for(i = 0; i < pThis->nmemb; i++) {
-               jrow = json_object_array_get_idx(jtab, i);
-               fjson_object_object_get_ex(jrow, value_key, &jvalue);
-               if (jvalue == NULL || json_object_is_type(jvalue, json_type_null)) {
-                        LogError(0, RS_RET_INVALID_VALUE, "'%s' lookup table named: '%s' has record(s) "
-                        "without '%s' field", table_type, name, value_key);
+	for(i = 0; i < pThis->nmemb; i++) {
+	       jrow = json_object_array_get_idx(jtab, i);
+	       fjson_object_object_get_ex(jrow, value_key, &jvalue);
+	       if (jvalue == NULL || json_object_is_type(jvalue, json_type_null)) {
+			LogError(0, RS_RET_INVALID_VALUE, "'%s' lookup table named: '%s' has record(s) "
+			"without '%s' field", table_type, name, value_key);
 			ABORT_FINALIZE(RS_RET_INVALID_VALUE);
 		}
 		all_values[i] = (const uchar*) json_object_get_string(jvalue);
@@ -780,21 +789,21 @@ lookupBuildTable_v1(lookup_t *pThis, struct json_object *jroot, const uchar* nam
 		CHKmalloc(pThis->nomatch = (uchar*) strdup(nomatch_value));
 	}
 
-       if (strcmp(table_type, "array") == 0) {
-               pThis->type = ARRAY_LOOKUP_TABLE;
-               CHKiRet(build_ArrayTable(pThis, jtab, name));
-       } else if (strcmp(table_type, "sparseArray") == 0) {
-               pThis->type = SPARSE_ARRAY_LOOKUP_TABLE;
-               CHKiRet(build_SparseArrayTable(pThis, jtab, name));
-#ifdef FEATURE_REGEXP
-       } else if (strcmp(table_type, "regex") == 0) {
-               pThis->type = REGEX_LOOKUP_TABLE;
-               CHKiRet(build_RegexTable(pThis, jtab, name));
-#endif
-       } else if (strcmp(table_type, "string") == 0) {
-               pThis->type = STRING_LOOKUP_TABLE;
-               CHKiRet(build_StringTable(pThis, jtab, name));
-       } else {
+	if (strcmp(table_type, "array") == 0) {
+		pThis->type = ARRAY_LOOKUP_TABLE;
+		CHKiRet(build_ArrayTable(pThis, jtab, name));
+	} else if (strcmp(table_type, "sparseArray") == 0) {
+		pThis->type = SPARSE_ARRAY_LOOKUP_TABLE;
+		CHKiRet(build_SparseArrayTable(pThis, jtab, name));
+	#ifdef FEATURE_REGEXP
+	} else if (strcmp(table_type, "regex") == 0) {
+		pThis->type = REGEX_LOOKUP_TABLE;
+		CHKiRet(build_RegexTable(pThis, jtab, name));
+	#endif
+	} else if (strcmp(table_type, "string") == 0) {
+		pThis->type = STRING_LOOKUP_TABLE;
+		CHKiRet(build_StringTable(pThis, jtab, name));
+	} else {
 		LogError(0, RS_RET_INVALID_VALUE, "lookup table named: '%s' uses unupported "
 				"type: '%s'", name, table_type);
 		ABORT_FINALIZE(RS_RET_INVALID_VALUE);

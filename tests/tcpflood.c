@@ -1687,7 +1687,7 @@ sendDTLS(char *buf, size_t lenBuf)
 	if(r > 0) {
 		lenSent += r;
 	} else {
-               err = SSL_get_error(sslArray[0], r);
+		err = SSL_get_error(sslArray[0], r);
 		switch(err) {
 			case SSL_ERROR_SYSCALL:
 				printf("[ERROR] SSL_write (SSL_ERROR_SYSCALL): %s\n", strerror(errno));
