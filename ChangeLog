@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2506.0 (aka 2025.06) 2025-06-??
+- 2025-06-09: imuxsock: Add statistics counter for discarded messages
+  This patch introduces a counter to track the number of discarded messages.
+  Additionally, it fixes a bug where the submitted message count was incremented
+  even when the message was discarded due to exceeding the allowed message rate
+  within a given interval.
+  Thanks to Attila Lakatos for the patch.
 - 2025-06-08: lookup tables: add new table type for regex-matches
   While we do not like rexeg-matches for performance reasons, they are
   well known and appreciated by users. With the new table type, we
