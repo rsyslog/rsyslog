@@ -100,7 +100,7 @@ Each test file in `tests/` is a standalone bash script that is executed independ
 
 > Test execution is resource-intensive. Limit concurrency (`make check -j4` or less) to avoid unreliable results.
 
-To run `make check`, you **must configure with `--enable-testbench`**. The test suite includes many test cases and may run for 10+ minutes. To save time, prefer targeting individual tests by name. Tests with filenames containing "basic" are typically good candidates for quick validation.
+To run `make check`, you **must configure with `--enable-imdiag --enable-testbench`**. The test suite includes many test cases and may run for 10+ minutes. To save time, prefer targeting individual tests by name. Tests with filenames containing "basic" are typically good candidates for quick validation.
 
 Some extended tests involving external components (e.g., daemons or network services) may be flaky due to timing conditions. When a test fails but passes on re-run, it's usually a nondeterministic issue. Such behavior should be reviewed but does not always indicate a defect.
 
