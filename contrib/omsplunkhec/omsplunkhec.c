@@ -272,7 +272,7 @@ submitBatch(wrkrInstanceData_t *pWrkrData, uchar **tp)
 	if (iRet != RS_RET_OK || batchBuf == NULL || countMsg == 0){
 		LogError(0, iRet, "omsplunkhec: submitBatch, batch: NULL in serialize");
 		ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestFailedSerialize,
-						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestFailedSerialize);
+			&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestFailedSerialize);
 		DBGPRINTF("omsplunkhec: submitBatch, batch: NULL || iRet : %d\n",  iRet);
 		ABORT_FINALIZE(iRet);
 	} else {
@@ -401,7 +401,7 @@ setInstDefaultParams(instanceData *const pData)
 	pData->token = NULL;
 	pData->template = NULL;
 	pData->restpath = NULL;
-	pData->restPathTimeout = 3600; // Time in milliseconds 
+	pData->restPathTimeout = 3600; // Time in milliseconds
 	pData->port = 8088;
 	
 	pData->batch = 0;
@@ -541,21 +541,21 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen,
 	curlCode = curl_easy_perform(curl);
 	DBGPRINTF("omsplunkhec: curlPost curl returned %lld\n", (long long) curlCode);
 	ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestCount,
-						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestCount);
+		&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestCount);
 
 	if (curlCode != CURLE_OK) {
 		LogError(0, RS_RET_SUSPENDED,
 			"omsplunkhec: suspending ourselves due to server failure %lld: %s",
 			(long long) curlCode, errbuf);
 		ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestFailed,
-						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestFailed);
+			&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestFailed);
 		checkResult(pWrkrData, message);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	} else {
 			ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestSuccess,
-						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestSuccess);
+				&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestSuccess);
 			ATOMIC_ADD_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestNbMsg,
-						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestNbMsg, nmsgs);
+				&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestNbMsg, nmsgs);
 	}
 
 	curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &pWrkrData->httpStatusCode);
@@ -644,23 +644,23 @@ checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 
 	if (statusCode == 0) {
 		ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestFailed,
-						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestFailed);
+			&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestFailed);
 		// request failed, suspend or retry
 		iRet = RS_RET_SUSPENDED;
 	} else if (statusCode >= 500) {
 		ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestFailed,
-						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestFailed);
+			&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestFailed);
 		// server error, suspend or retry
 		iRet = RS_RET_DATAFAIL;
 	} else if (statusCode >= 300) {
 		ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestFailed,
-						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestFailed);
+			&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestFailed);
 		// redirection or client error, NO suspend nor retry
 		iRet = RS_RET_DATAFAIL;
 	} else {
 		// success, normal state
 		ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestSuccess,
-						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestSuccess);
+			&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestSuccess);
 		/*ATOMIC_ADD_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestNbMsg,
 						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestNbMsg, numMessages);*/
 		iRet = RS_RET_OK;
@@ -672,13 +672,15 @@ checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 	resCurl = curl_easy_getinfo(pWrkrData->curlPostHandle, CURLINFO_REQUEST_SIZE, &req);
 	if (!resCurl) {
 		ATOMIC_ADD_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestBytes,
-						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestBytes,(uint64_t)req);
+		&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestBytes,
+		(uint64_t)req);
 	}
 	resCurl = curl_easy_getinfo(pWrkrData->curlPostHandle, CURLINFO_TOTAL_TIME, &total);
 	if(CURLE_OK == resCurl) {
 		long total_time_ms = (long)(total*1000);
 		ATOMIC_ADD_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestTimeMs,
-						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestTimeMs,(uint64_t)total_time_ms);
+		&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestTimeMs,
+		(uint64_t)total_time_ms);
 	}
 
 	if (iRet != RS_RET_OK) {
@@ -748,15 +750,15 @@ generateCurlHeader(wrkrInstanceData_t *pWrkrData)
 
 	snprintf(auth_header_str, sizeof(auth_header_str), "Authorization: Splunk %s", pWrkrData->pData->token);
 
-	slist = curl_slist_append(slist, HTTP_HEADER_CONTENT_JSON); // "Content-Type: application/json; charset=utf-8"
-	if (slist == NULL) { 
+	slist = curl_slist_append(slist, HTTP_HEADER_CONTENT_JSON);
+	if (slist == NULL) {
 		 curl_slist_free_all(slist);
 		 LogError(0, RS_RET_OUT_OF_MEMORY,
 			"omsplunkhec: error adding Content type to curl Header");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	slist = curl_slist_append(slist, auth_header_str);
-	if (slist == NULL) { 
+	if (slist == NULL) {
 		curl_slist_free_all(slist);
 		LogError(0, RS_RET_OUT_OF_MEMORY,
 			"omsplunkhec: error adding Authorization Token to curl Header");
@@ -768,7 +770,7 @@ generateCurlHeader(wrkrInstanceData_t *pWrkrData)
 	 * and will wait 1s for a response, could make this configurable but for now disable
 	 */
 	slist = curl_slist_append(slist, HTTP_HEADER_EXPECT_EMPTY);
-	if (slist == NULL && HTTP_HEADER_EXPECT_EMPTY[0] != '\0') { 
+	if (slist == NULL && HTTP_HEADER_EXPECT_EMPTY[0] != '\0') {
 		curl_slist_free_all(slist);
 		LogError(0, RS_RET_OUT_OF_MEMORY,
 			"omsplunkhec: error adding HTTP_HEADER_EXPECT_EMPTY to curl Header");
@@ -1257,7 +1259,7 @@ CODESTARTnewActInst
 
 			/* Create StatsObject */
 			snprintf((char*)ctrName, sizeof(ctrName), "HEC : %s", serverParam);
-			ctrName[sizeof(ctrName)-1] = '\0'; 
+			ctrName[sizeof(ctrName)-1] = '\0';
 
 			CHKiRet(statsobj.Construct(&(pData->listObjStats[i].defaultstats)));
 			CHKiRet(statsobj.SetName(pData->listObjStats[i].defaultstats, ctrName));
@@ -1265,42 +1267,50 @@ CODESTARTnewActInst
 
 			pData->listObjStats[i].requestSumitted = 0;
 			INIT_ATOMIC_HELPER_MUT64(pData->listObjStats[i].mut_requestSumitted);
-			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats, UCHAR_CONSTANT("request_submitted"),
+			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+			UCHAR_CONSTANT("request_submitted"),
 			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->listObjStats[i].requestSumitted)));
 
 			pData->listObjStats[i].requestSuccess = 0;
 			INIT_ATOMIC_HELPER_MUT64(pData->listObjStats[i].mut_requestSuccess);
-			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats, UCHAR_CONSTANT("request_successed"),
+			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+			UCHAR_CONSTANT("request_successed"),
 			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->listObjStats[i].requestSuccess)));
 
 			pData->listObjStats[i].requestFailed = 0;
 			INIT_ATOMIC_HELPER_MUT64(pData->listObjStats[i].mut_requestFailed);
-			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats, UCHAR_CONSTANT("request_failed"),
+			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+			UCHAR_CONSTANT("request_failed"),
 			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->listObjStats[i].requestFailed)));
 
 			pData->listObjStats[i].requestCount = 0;
 			INIT_ATOMIC_HELPER_MUT64(pData->listObjStats[i].mut_requestCount);
-			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats, UCHAR_CONSTANT("request_count"),
+			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+			UCHAR_CONSTANT("request_count"),
 			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->listObjStats[i].requestCount)));
 
 			pData->listObjStats[i].requestBytes = 0;
 			INIT_ATOMIC_HELPER_MUT64(pData->listObjStats[i].mut_requestBytes);
-			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats, UCHAR_CONSTANT("request_byte"),
+			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+			UCHAR_CONSTANT("request_byte"),
 			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->listObjStats[i].requestBytes)));
 
 			pData->listObjStats[i].requestTimeMs = 0;
 			INIT_ATOMIC_HELPER_MUT64(pData->listObjStats[i].mut_requestTimeMs);
-			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats, UCHAR_CONSTANT("request_time_ms"),
+			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+			UCHAR_CONSTANT("request_time_ms"),
 			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->listObjStats[i].requestTimeMs)));
 
 			pData->listObjStats[i].requestFailedSerialize = 0;
 			INIT_ATOMIC_HELPER_MUT64(pData->listObjStats[i].mut_requestFailedSerialize);
-			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats, UCHAR_CONSTANT("request_fail_serialized"),
+			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+			UCHAR_CONSTANT("request_fail_serialized"),
 			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->listObjStats[i].requestFailedSerialize)));
 
 			pData->listObjStats[i].requestNbMsg = 0;
 			INIT_ATOMIC_HELPER_MUT64(pData->listObjStats[i].mut_requestNbMsg);
-			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats, UCHAR_CONSTANT("request_nb_msg"),
+			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+			UCHAR_CONSTANT("request_nb_msg"),
 			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->listObjStats[i].requestNbMsg)));
 
 			CHKiRet(statsobj.ConstructFinalize(pData->listObjStats[i].defaultstats));
@@ -1496,6 +1506,6 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 	if (curl_global_init(CURL_GLOBAL_ALL) != 0) {
 		LogError(0, RS_RET_OBJ_CREATION_FAILED, "CURL fail. -http disabled");
-		ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
+		ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED); 
 	}
 ENDmodInit
