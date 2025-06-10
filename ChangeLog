@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2506.0 (aka 2025.06) 2025-06-??
+- 2025-06-10: CI: new python-based codestyle checker
+  Easier to maintain than the off-project C source. The checks
+  are pretty trivial.
+  closes https://github.com/rsyslog/rsyslog/issues/5631
 - 2025-06-09: omfwd regression fix: avoid false active target change log message
   Commit ffaf6dc added proper variable sync, but dropped the check
   if active count had actually changed. As such, the output was always
