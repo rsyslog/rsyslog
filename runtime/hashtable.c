@@ -129,7 +129,8 @@ hashtable_expand(struct hashtable *h)
 		realloc(h->table, newsize * sizeof(struct entry *));
 		if (NULL == newtable) { (h->primeindex)--; return 0; }
 		h->table = newtable;
-		memset(newtable[h->tablelength], 0, newsize - h->tablelength);
+		memset(&newtable[h->tablelength], 0,
+		       (newsize - h->tablelength) * sizeof(struct entry *));
 		for (i = 0; i < h->tablelength; i++) {
 			for (pE = &(newtable[i]), e = *pE; e != NULL; e = *pE) {
 				idx = indexFor(newsize,e->h);
