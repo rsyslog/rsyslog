@@ -1,0 +1,104 @@
+name: Auto-label Issues with Gemini
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  label_issue:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write # Grant write permission for issues to this job
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Install Google Generative AI client library
+      run: pip install google-generativeai
+
+    - name: Get issue details and call Gemini API
+      id: gemini_call
+      env:
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        ISSUE_TITLE: ${{ github.event.issue.title }}
+        ISSUE_BODY: ${{ github.event.issue.body }}
+        # Define your available labels here, separated by commas
+        AVAILABLE_LABELS: "bug,feature,documentation,question,enhancement,performance,security,configuration" 
+      run: |
+        python <<EOF
+        import google.generativeai as genai
+        import os
+        import json
+
+        genai.configure(api_key=os.environ['GEMINI_API_KEY'])
+        model = genai.GenerativeModel('gemini-2.0-flash') # default was "gemini-pro"
+
+        issue_title = os.environ['ISSUE_TITLE']
+        issue_body = os.environ['ISSUE_BODY']
+        available_labels = os.environ['AVAILABLE_LABELS'].split(',')
+
+        prompt = f"""
+        You are an automated issue labeling bot for the rsyslog open source project.
+        Based on the following GitHub issue, suggest the single most appropriate label from the list provided.
+        Only output the label name, with no additional text or explanation.
+        If no label seems appropriate, output "no label".
+
+        Available labels: {', '.join(available_labels)}
+
+        Issue Title: {issue_title}
+        Issue Body:
+        {issue_body}
+        """
+
+        try:
+            response = model.generate_content(prompt)
+            suggested_label = response.text.strip().lower()
+
+            # Clean the suggested label to match your actual labels
+            # This step is important if Gemini outputs variations or slight mismatches
+            cleaned_label = "no label"
+            for label in available_labels:
+                if suggested_label == label.lower():
+                    cleaned_label = label
+                    break
+            
+            # If Gemini still doesn't find a good match, default to "no label"
+            if cleaned_label == "no label" and suggested_label != "no label":
+                print(f"Warning: Suggested label '{suggested_label}' not found in available labels. Defaulting to 'no label'.")
+
+
+            print(f"Suggested Label: {cleaned_label}")
+            print(f"##vso[task.setvariable variable=SUGGESTED_LABEL;]{cleaned_label}")
+
+        except Exception as e:
+            print(f"Error calling Gemini API: {e}")
+            print("##vso[task.setvariable variable=SUGGESTED_LABEL;]no label") # Fallback
+        EOF
+
+    - name: Add label to issue
+      if: steps.gemini_call.outputs.SUGGESTED_LABEL != 'no label'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const label = process.env.SUGGESTED_LABEL;
+          const issue_number = context.issue.number;
+          console.log(`Attempting to add label "${label}" to issue #${issue_number}`);
+          try {
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue_number,
+              labels: [label]
+            });
+            console.log(`Successfully added label "${label}" to issue #${issue_number}`);
+          } catch (error) {
+            console.error(`Failed to add label "${label}" to issue #${issue_number}: ${error.message}`);
+          }
+      env:
+        SUGGESTED_LABEL: ${{ steps.gemini_call.outputs.SUGGESTED_LABEL }}
