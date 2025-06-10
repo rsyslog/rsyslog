@@ -1,5 +1,18 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2506.0 (aka 2025.06) 2025-06-??
+- 2025-06-10: core fix: hastable object did not init memory properly on extend
+  When a hash table was expanded, the newly allocated memory segment was not
+  cleared correctly. This was caused by providing an incorrect destination
+  address and byte-count to the memory-clearing function.
+  This could lead to instability or incorrect behavior when the hash table
+  grew. The new memory is now properly zero-initialized, ensuring stable
+  operation.
+- 2025-06-10: queue fix: spammy queue size message do to incorrect commit
+  Reverted commit 525a6f1bbf that tried to provide better diagnostics for
+  queues being potentially misconfigured that was invalid and created queue warning
+  messages on startup.  The functionality will be re-implemented properly later.
+  JThis is no loss of
+  functionality.
 - 2025-06-10: CI: new python-based codestyle checker
   Easier to maintain than the off-project C source. The checks
   are pretty trivial.
