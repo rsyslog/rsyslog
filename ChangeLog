@@ -1,4 +1,6 @@
 ----------------------------------------------------------------------------------------
+Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+----------------------------------------------------------------------------------------
 Scheduled Release 8.2506.0 (aka 2025.06) 2025-06-10
 - 2025-06-10: core fix: hastable object did not init memory properly on extend
   When a hash table was expanded, the newly allocated memory segment was not
