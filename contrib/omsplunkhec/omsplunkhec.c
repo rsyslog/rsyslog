@@ -103,7 +103,6 @@ static int omSplunkHecInstancesCnt = 0;
 #define ERR_MSG_NULL "NULL: curl request failed or no response"
 #define HTTP_HEADER_CONTENT_JSON "Content-Type: application/json; charset=utf-8"
 #define HTTP_HEADER_CONTENT_TEXT "Content-Type: text/plain"
-#define HTTP_HEADER_AUTHORIZATION "Authorization: Splunk "
 #define HTTP_HEADER_EXPECT_EMPTY "Expect:"
 #define HTTPS "https://"
 #define HTTP "http://"
@@ -125,9 +124,6 @@ typedef struct instanceConf_s {
 	uchar *restpath;
 	int restPathTimeout;
 	int port;
-
-	/* Buffer */
-	uchar *bufHeaderContentType;
 
 	/* Batch */
 	sbool batch;
@@ -239,7 +235,6 @@ static size_t curlResponse(void *ptr, size_t size, size_t nmemb, void *userdata)
 static void ATTR_NONNULL() curlSetupProxySSL(wrkrInstanceData_t *const pWrkrData, CURL *const handle);
 static void ATTR_NONNULL() curlCheckConnSetup(wrkrInstanceData_t *const pWrkrData);
 static rsRetVal ATTR_NONNULL() checkConn(wrkrInstanceData_t *const pWrkrData);
-static rsRetVal createApiHeader(char* token, uchar** headerBuf);
 static rsRetVal createBaseUrl(const char*const serverParam, const int defaultPort,
 const sbool useHttps, uchar **baseUrl);
 
@@ -406,10 +401,8 @@ setInstDefaultParams(instanceData *const pData)
 	pData->token = NULL;
 	pData->template = NULL;
 	pData->restpath = NULL;
-	pData->restPathTimeout = 3600;
+	pData->restPathTimeout = 3600; // Time in milliseconds 
 	pData->port = 8088;
-
-	pData->bufHeaderContentType = NULL;
 	
 	pData->batch = 0;
 	pData->batchMaxBatchBytes = 10485760; // around 10 MB
@@ -556,8 +549,6 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen,
 			(long long) curlCode, errbuf);
 		ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestFailed,
 						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestFailed);
-		LogMsg(0, iRet, LOG_ERR, "omsplunkhec: curlPost error : postData : %s || postLen : %d ",
-			postData, postLen);
 		checkResult(pWrkrData, message);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	} else {
@@ -623,21 +614,10 @@ checkConnSetupCurl(wrkrInstanceData_t *const pWrkrData)
 static rsRetVal ATTR_NONNULL()
 curlSetup(wrkrInstanceData_t *const pWrkrData)
 {
-	struct curl_slist *slist = NULL;
-
 	DEFiRet;
-
-	if (pWrkrData->pData->bufHeaderContentType != NULL) {
-		slist = curl_slist_append(slist, (char *)pWrkrData->pData->bufHeaderContentType);
-		CHKmalloc(slist);
-	}
-	/*
-	 * Thanks OMHTTP for this "bug"
-	 * When sending more than 1Kb, libcurl automatically sends an Except: 100-Continue header
-	 * and will wait 1s for a response, could make this configurable but for now disable
-	 */
-	slist = curl_slist_append(slist, HTTP_HEADER_EXPECT_EMPTY);
-	pWrkrData->curlHeader = slist;
+	
+	generateCurlHeader(pWrkrData);
+	
 	CHKmalloc(pWrkrData->curlPostHandle = curl_easy_init());
 	curlPostMethod(pWrkrData);
 
@@ -662,12 +642,6 @@ checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 
 	statusCode = pWrkrData->httpStatusCode;
 
-	/*if (pWrkrData->pData->batch) {
-		numMessages = pWrkrData->batch.nmemb;
-	} else {
-		numMessages = 1;
-	}*/
-
 	if (statusCode == 0) {
 		ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestFailed,
 						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestFailed);
@@ -677,12 +651,12 @@ checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 		ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestFailed,
 						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestFailed);
 		// server error, suspend or retry
-		iRet = RS_RET_SUSPENDED;
+		iRet = RS_RET_DATAFAIL;
 	} else if (statusCode >= 300) {
 		ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestFailed,
 						&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestFailed);
 		// redirection or client error, NO suspend nor retry
-		iRet = RS_RET_SUSPENDED;
+		iRet = RS_RET_DATAFAIL;
 	} else {
 		// success, normal state
 		ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestSuccess,
@@ -770,19 +744,38 @@ generateCurlHeader(wrkrInstanceData_t *pWrkrData)
 
 	DEFiRet;
 
-	slist = curl_slist_append(slist, (char *)pWrkrData->pData->bufHeaderContentType);
+	char auth_header_str[256];
 
-	CHKmalloc(slist);
+	snprintf(auth_header_str, sizeof(auth_header_str), "Authorization: Splunk %s", pWrkrData->pData->token);
 
-	/* When sending more than 1Kb, libcurl automatically sends an Except: 100-Continue header
+	slist = curl_slist_append(slist, HTTP_HEADER_CONTENT_JSON); // "Content-Type: application/json; charset=utf-8"
+	if (slist == NULL) { 
+		 curl_slist_free_all(slist);
+		 LogError(0, RS_RET_OUT_OF_MEMORY,
+			"omsplunkhec: error adding Content type to curl Header");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	slist = curl_slist_append(slist, auth_header_str);
+	if (slist == NULL) { 
+		curl_slist_free_all(slist);
+		LogError(0, RS_RET_OUT_OF_MEMORY,
+			"omsplunkhec: error adding Authorization Token to curl Header");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+	/*
+	 * Thanks OMHTTP for this "bug"
+	 * When sending more than 1Kb, libcurl automatically sends an Except: 100-Continue header
 	 * and will wait 1s for a response, could make this configurable but for now disable
 	 */
 	slist = curl_slist_append(slist, HTTP_HEADER_EXPECT_EMPTY);
+	if (slist == NULL && HTTP_HEADER_EXPECT_EMPTY[0] != '\0') { 
+		curl_slist_free_all(slist);
+		LogError(0, RS_RET_OUT_OF_MEMORY,
+			"omsplunkhec: error adding HTTP_HEADER_EXPECT_EMPTY to curl Header");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
 	CHKmalloc(slist);
-
-	if (pWrkrData->curlHeader != NULL)
-		curl_slist_free_all(pWrkrData->curlHeader);
-
 	pWrkrData->curlHeader = slist;
 
 finalize_it:
@@ -932,40 +925,6 @@ finalize_it:
 /********************** END CURL *****************************************/
 
 /********************** TOOLS *****************************************/
-static rsRetVal
-createApiHeader(char* token, uchar** headerBuf)
-{
-	int answer;
-	DEFiRet;
-
-	es_str_t* header = es_newStr(20480);
-	if (header == NULL) {
-		LogError(0, RS_RET_OUT_OF_MEMORY,
-		"omsplunkhec: failed to allocate es_str api header");
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-
-	answer = es_addBuf(&header, (char *) HTTP_HEADER_CONTENT_JSON,
-						strlen( (char *) HTTP_HEADER_CONTENT_JSON));
-	if(answer == 0) answer = es_addChar(&header, ',');
-	if(answer == 0) answer = es_addChar(&header, '\n');
-	if(answer == 0) {
-		answer = es_addBuf(&header, (char *) HTTP_HEADER_AUTHORIZATION,
-							strlen((char *) HTTP_HEADER_AUTHORIZATION));
-	}
-	if(answer == 0 && token != NULL) answer = es_addBuf(&header, token, strlen(token));
-	if(answer == 0) *headerBuf = (uchar*) es_str2cstr(header, NULL);
-
-	if (answer != 0 || *headerBuf == NULL) {
-		LogError(0, RS_RET_ERR, "omsplunkhec: failed to build http header\n");
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-
-finalize_it:
-	if (header != NULL)
-		es_deleteStr(header);
-	RETiRet;
-}
 
 static rsRetVal
 createBaseUrl(const char*const serverParam,
@@ -1114,7 +1073,6 @@ CODESTARTfreeInstance
 	for(i = 0 ; i < pData->numListServerName ; ++i)
 		free(pData->serverList[i]);
 	free(pData->serverList);
-	free(pData->bufHeaderContentType);
 	free(pData->proxyHost);
 	free(pData->caCertFile);
 	free(pData->myCertFile);
@@ -1367,9 +1325,6 @@ CODESTARTnewActInst
 		pData->statsName = ustrdup(pszAName);
 	}
 
-	/* Creation header buf (Same header for each server) */
-	CHKiRet(createApiHeader((char*) pData->token, &pData->bufHeaderContentType));
-
 	/* node created */
 	if(loadModConf->tail == NULL) {
 		loadModConf->tail = loadModConf->root = pData;
@@ -1478,9 +1433,14 @@ CODESTARTdoAction
 		 * - Total batch size > pWrkrData->pData->batchMaxBatchSize
 		 * - Total bytes > pWrkrData->pData->batchMaxBatchBytes
 		 */
-		nBytes = ustrlen((char *)ppString[0]) - 1 ;
+		nBytes = ustrlen((char *)ppString[0]); 
 		submit = 0;
 
+
+		// Check the case of ppString got len of 0
+		if (nBytes > 0){
+			nBytes--;
+		}
 		size_t extraBytes = pWrkrData->batch.nmemb > 0 ? pWrkrData->batch.nmemb + 1 : 2;
 		size_t batch_size = pWrkrData->batch.sizeBytes + extraBytes + 1;
 
