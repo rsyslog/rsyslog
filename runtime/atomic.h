@@ -208,9 +208,9 @@
 		(*data) -= val;
 		pthread_mutex_unlock(phlpmut);
 	}
-#	define DEF_ATOMIC_HELPER_MUT(x)  pthread_mutex_t x;
-#	define INIT_ATOMIC_HELPER_MUT(x) pthread_mutex_init(&(x), NULL);
-#	define DESTROY_ATOMIC_HELPER_MUT(x) pthread_mutex_destroy(&(x));
+#	define DEF_ATOMIC_HELPER_MUT(x)  pthread_mutex_t x
+#	define INIT_ATOMIC_HELPER_MUT(x) pthread_mutex_init(&(x), NULL)
+#	define DESTROY_ATOMIC_HELPER_MUT(x) pthread_mutex_destroy(&(x))
 
 #	define PREFER_ATOMIC_INC(data) ((void) ++data)
 #	define PREFER_FETCH_32BIT(data) ((unsigned) (data))
