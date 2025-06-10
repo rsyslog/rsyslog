@@ -3,6 +3,20 @@ name: Auto-label Issues with Gemini
 on:
   issues:
     types: [opened]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue Number (for manual testing of existing issue)'
+        required: false
+        type: number
+      issue_title:
+        description: 'Issue Title (for manual testing)'
+        required: false
+        default: ''
+      issue_body:
+        description: 'Issue Body (for manual testing)'
+        required: false
+        default: ''
 
 jobs:
   label_issue:
@@ -22,32 +36,81 @@ jobs:
     - name: Install Google Generative AI client library
       run: pip install google-generativeai
 
-    - name: Get issue details and call Gemini API
+    - name: Determine Issue Content and Number
+      id: get_issue_context
+      shell: bash # Explicitly set shell to bash for robust string handling
+      env:
+        # Define your available labels here, separated by commas
+        AVAILABLE_LABELS: "bug,feature,documentation,question,enhancement,performance,security,configuration"
+      run: |
+        # Initialize variables
+        ISSUE_NUMBER=""
+        ISSUE_TITLE=""
+        ISSUE_BODY=""
+
+        # Determine context based on trigger event
+        if [[ "${{ github.event_name }}" == "issues" ]]; then
+          ISSUE_NUMBER="${{ github.event.issue.number }}"
+          ISSUE_TITLE="${{ github.event.issue.title }}"
+          ISSUE_BODY="${{ github.event.issue.body }}"
+          echo "Triggered by issue creation event."
+        elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+          # For manual dispatch, use inputs
+          ISSUE_NUMBER="${{ github.event.inputs.issue_number }}"
+          ISSUE_TITLE="${{ github.event.inputs.issue_title }}"
+          ISSUE_BODY="${{ github.event.inputs.issue_body }}"
+          echo "Triggered by manual workflow_dispatch."
+        fi
+
+        # Set output variables for use in subsequent steps using GITHUB_OUTPUT file
+        echo "ISSUE_NUMBER=${ISSUE_NUMBER}" >> "$GITHUB_OUTPUT"
+        echo "ISSUE_TITLE=${ISSUE_TITLE}" >> "$GITHUB_OUTPUT"
+        
+        # --- FIX for multiline ISSUE_BODY using EOF delimiter ---
+        echo "ISSUE_BODY<<EOF_BODY_TEXT" >> "$GITHUB_OUTPUT"
+        echo "${ISSUE_BODY}" >> "$GITHUB_OUTPUT"
+        echo "EOF_BODY_TEXT" >> "$GITHUB_OUTPUT"
+        # --------------------------------------------------------
+
+        echo "AVAILABLE_LABELS=${{ env.AVAILABLE_LABELS }}" >> "$GITHUB_OUTPUT"
+
+    - name: Call Gemini API to suggest label
       id: gemini_call
       env:
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        ISSUE_TITLE: ${{ github.event.issue.title }}
-        ISSUE_BODY: ${{ github.event.issue.body }}
-        # Define your available labels here, separated by commas
-        AVAILABLE_LABELS: "bug,feature,documentation,question,enhancement,performance,security,configuration" 
+        # Use outputs from the previous step as environment variables for the Python script
+        ISSUE_TITLE: ${{ steps.get_issue_context.outputs.ISSUE_TITLE }}
+        ISSUE_BODY: ${{ steps.get_issue_context.outputs.ISSUE_BODY }}
+        AVAILABLE_LABELS: ${{ steps.get_issue_context.outputs.AVAILABLE_LABELS }}
+        GITHUB_OUTPUT: ${{ github.output }} # Ensure GITHUB_OUTPUT path is available to Python
       run: |
         python <<EOF
         import google.generativeai as genai
         import os
         import json
 
-        genai.configure(api_key=os.environ['GEMINI_API_KEY'])
-        model = genai.GenerativeModel('gemini-2.0-flash') # default was "gemini-pro"
+        api_key = os.environ.get('GEMINI_API_KEY')
+        if not api_key:
+            print("Error: GEMINI_API_KEY not found in environment variables. Exiting.")
+            # Ensure fallback also writes to GITHUB_OUTPUT
+            with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                f.write("SUGGESTED_LABEL=no label\n")
+            exit(1) # Exit with an error code
+
+        genai.configure(api_key=api_key)
+        # Using gemini-2.0-flash as per your modification
+        model = genai.GenerativeModel('gemini-2.0-flash') 
 
         issue_title = os.environ['ISSUE_TITLE']
         issue_body = os.environ['ISSUE_BODY']
         available_labels = os.environ['AVAILABLE_LABELS'].split(',')
 
+        # Construct a robust prompt. Instruct it to only output the label name and choose from the list.
         prompt = f"""
         You are an automated issue labeling bot for the rsyslog open source project.
         Based on the following GitHub issue, suggest the single most appropriate label from the list provided.
-        Only output the label name, with no additional text or explanation.
-        If no label seems appropriate, output "no label".
+        Only output the label name. Do NOT output any additional text or explanation.
+        You MUST choose one label from the 'Available labels' list.
 
         Available labels: {', '.join(available_labels)}
 
@@ -56,49 +119,67 @@ jobs:
         {issue_body}
         """
 
-        try:
-            response = model.generate_content(prompt)
-            suggested_label = response.text.strip().lower()
+        suggested_label_raw = "no label" # Default fallback for API errors or unexpected responses
 
-            # Clean the suggested label to match your actual labels
-            # This step is important if Gemini outputs variations or slight mismatches
-            cleaned_label = "no label"
+        try:
+            # Add generation_config to ensure the model responds with only plain text.
+            response = model.generate_content(prompt, generation_config=genai.types.GenerationConfig(
+                response_mime_type='text/plain' # Ensure plain text output
+            ))
+            suggested_label_raw = response.text.strip().lower()
+
+            # Clean and validate the suggested label against available labels (case-insensitive check)
+            cleaned_label = "no label" # Default if no valid match found in the list
             for label in available_labels:
-                if suggested_label == label.lower():
+                if suggested_label_raw == label.lower():
                     cleaned_label = label
                     break
             
-            # If Gemini still doesn't find a good match, default to "no label"
-            if cleaned_label == "no label" and suggested_label != "no label":
-                print(f"Warning: Suggested label '{suggested_label}' not found in available labels. Defaulting to 'no label'.")
+            # If Gemini suggested something not in our exact list (despite prompt instructions)
+            if cleaned_label == "no label":
+                print(f"Warning: Gemini suggested '{suggested_label_raw}', which was not an exact match in the available labels list. Defaulting to 'no label'.")
 
 
             print(f"Suggested Label: {cleaned_label}")
-            print(f"##vso[task.setvariable variable=SUGGESTED_LABEL;]{cleaned_label}")
+            # --- CRITICAL FIX: Write to GITHUB_OUTPUT file instead of using ##vso[task.setvariable] ---
+            with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                f.write(f"SUGGESTED_LABEL={cleaned_label}\n")
+            # -----------------------------------------------------------------------------------------
 
         except Exception as e:
             print(f"Error calling Gemini API: {e}")
-            print("##vso[task.setvariable variable=SUGGESTED_LABEL;]no label") # Fallback
+            # Ensure fallback also writes to GITHUB_OUTPUT
+            with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                f.write("SUGGESTED_LABEL=no label\n")
         EOF
 
     - name: Add label to issue
-      if: steps.gemini_call.outputs.SUGGESTED_LABEL != 'no label'
+      # Only attempt to add label if a valid one was suggested AND an issue number is available
+      if: steps.gemini_call.outputs.SUGGESTED_LABEL != 'no label' && steps.get_issue_context.outputs.ISSUE_NUMBER != ''
       uses: actions/github-script@v6
       with:
         script: |
+          // Access variables directly from process.env, as they are passed in the 'env' block
           const label = process.env.SUGGESTED_LABEL;
-          const issue_number = context.issue.number;
+          const issue_number = process.env.ISSUE_NUMBER; 
+
+          // These debug lines should now show the correct 'feature' label
+          console.log(`DEBUG: Value of label (from process.env.SUGGESTED_LABEL): "${label}"`);
+          console.log(`DEBUG: Value of issue_number (from process.env.ISSUE_NUMBER): "${issue_number}"`);
+
           console.log(`Attempting to add label "${label}" to issue #${issue_number}`);
           try {
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: issue_number,
+              issue_number: parseInt(issue_number), // Ensure issue_number is an integer for the API call
               labels: [label]
             });
             console.log(`Successfully added label "${label}" to issue #${issue_number}`);
           } catch (error) {
             console.error(`Failed to add label "${label}" to issue #${issue_number}: ${error.message}`);
           }
+      # Pass variables as environment variables for the script to access
       env:
         SUGGESTED_LABEL: ${{ steps.gemini_call.outputs.SUGGESTED_LABEL }}
+        ISSUE_NUMBER: ${{ steps.get_issue_context.outputs.ISSUE_NUMBER }} # Pass the determined issue number
