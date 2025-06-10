@@ -509,7 +509,7 @@ CODE_STD_STRING_REQUESTparseSelectorAct(1)
 			 *       is clean enough for the time being -- rgerhards, 2007-07-30
 			 */
 	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*) " StdDBFmt"));
-	
+
 	/* If we detect invalid properties, we disable logging,
 	 * because right properties are vital at this place.
 	 * Retries make no sense.

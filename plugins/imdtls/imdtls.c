@@ -251,7 +251,7 @@ DTLSCreateSocket(instanceConf_t *inst) {
 
 	struct in_addr ip_struct;
 	DBGPRINTF("imdtls: DTLSCreateSocket for %s:%d\n", inst->pszBindAddr, inst->port);
-	
+
 	// Create UDP Socket
 	inst->sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (inst->sockfd < 0) {
@@ -452,7 +452,7 @@ processMsg(instanceConf_t *inst, dtlsClient_t *dtlsClient, char *msg, size_t len
 		DBGPRINTF("imdtls: processMsg Received message from UNKNOWN: %s\n", msg);
 	}
 	BIO_ADDR_free(peer_addr);
-	
+
 	// Update Activity
 	dtlsClient->lastActivityTime = time(NULL);
 
@@ -624,13 +624,13 @@ DTLSHandleSessions(instanceConf_t *inst) {
 		DBGPRINTF("imdtls: DTLSHandleSessions ERROR poll failed %d with err %d\n", ret , errno);
 		return;
 	}
-	
+
 	// Process pending Client Data first!
 	DBGPRINTF("imdtls: DTLSHandleSessions handle client sockets (%d) \n", fdcount);
 	for (int i = 1; i <= fdcount; ++i) {
 		DTLSReadClient(inst, fdToIndex[fds[i].fd], fds[i].revents);
 	}
-	
+
 	// Check session timeouts
 	for (int i = 0; i < MAX_DTLS_CLIENTS; ++i) {
 		if (inst->dtlsClients[i]->sslClient != NULL) {
@@ -890,7 +890,7 @@ CODESTARTnewInpInst
 			  "param '%s'\n", inppblk.descr[i].name);
 		}
 	}
-	
+
 	/* check if no port is set. If not, we use DEFAULT of 4433 */
 	if(inst->pszBindPort == NULL) {
 		CHKmalloc(inst->pszBindPort = (uchar*)strdup("4433"));
