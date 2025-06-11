@@ -88,9 +88,6 @@ When fixing compiler warnings like `stringop-overread`, explain in the commit me
 
 ## Testing & Validation
 
-rsyslog uses a custom test driver and has complex build dependencies.
-
-### Test Framework
 
 - All test definitions are located in the `/tests` directory.
 - The test execution framework is implemented in `tests/diag.sh`.
@@ -101,6 +98,13 @@ Each test file in `tests/` is a standalone bash script that is executed independ
 > Test execution is resource-intensive. Limit concurrency (`make check -j4` or less) to avoid unreliable results.
 
 To run `make check`, you **must configure with `--enable-imdiag --enable-testbench`**. The test suite includes many test cases and may run for 10+ minutes. To save time, prefer targeting individual tests by name. Tests with filenames containing "basic" are typically good candidates for quick validation.
+
+- **Best Practice**: When specifying individual tests, use the test basename only (no directory prefix and omit the `.sh` suffix). For example:
+  ```bash
+  make check TESTS=rscript_re_extract
+  ```
+
+### Test Framework
 
 Some extended tests involving external components (e.g., daemons or network services) may be flaky due to timing conditions. When a test fails but passes on re-run, it's usually a nondeterministic issue. Such behavior should be reviewed but does not always indicate a defect.
 
