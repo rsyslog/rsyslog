@@ -1935,7 +1935,12 @@ lstnActivity(ptcplstn_t *const pLstn)
 	while(glbl.GetGlobalInputTermState() == 0) {
 		localRet = AcceptConnReq(pLstn, &newSock, &peerName, &peerIP);
 		DBGPRINTF("imptcp: AcceptConnReq on listen socket %d returned %d\n", pLstn->sock, localRet);
-		if(localRet == RS_RET_NO_MORE_DATA || glbl.GetGlobalInputTermState() == 1) {
+		if(glbl.GetGlobalInputTermState() == 1) {
+			if(newSock != -1) {
+				close(newSock);
+			}
+			break;
+		} else if(localRet == RS_RET_NO_MORE_DATA) {
 			break;
 		}
 		CHKiRet(localRet);
