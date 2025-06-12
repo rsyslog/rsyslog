@@ -106,6 +106,7 @@ typedef struct wrkrInstanceData {
 static struct cnfparamdescr actpdescr[] = {
 	{ "server", eCmdHdlrGetWord, 0 },
 	{ "serverport", eCmdHdlrInt, 0 },
+	{ "socketpath", eCmdHdlrGetWord, 0 },
 	{ "serverpassword", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "mode", eCmdHdlrGetWord, 0 },
