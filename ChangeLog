@@ -1,5 +1,13 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-06-12: build: Removed the redundant *_la_LDFLAGS
+  Whilst this did not cause issues when building the project, it produced
+  warnings.
+  Thanks to Attila Lakatos for the patch.
+- 2025-06-12: ossl netstream driver: do not import engines if not available
+  Avoid including openssl/engine.h when OPENSSL_NO_ENGINE is set. Adjust dependent
+  modules and test accordingly.
+  Thanks to Attila Lakatos for the patch.
 - 2025-06-12: tcpsrv bugfix: fix potential data race issue
   When re-arming epoll descriptors, we used a non-thread safe way to do this. However,
   it is hard to envison this could have caused any real issue because of the way the
