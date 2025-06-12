@@ -31,7 +31,9 @@
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
 #	include <openssl/bioerr.h>
 #endif
-#include <openssl/engine.h>
+#ifndef OPENSSL_NO_ENGINE
+#       include <openssl/engine.h>
+#endif
 #include <openssl/rand.h>
 #include <openssl/evp.h>
 

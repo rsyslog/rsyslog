@@ -129,8 +129,10 @@
 #ifdef ENABLE_OPENSSL
 	#include <openssl/ssl.h>
 	#include <openssl/x509v3.h>
-	#include <openssl/err.h>
-	#include <openssl/engine.h>
+       #include <openssl/err.h>
+#       ifndef OPENSSL_NO_ENGINE
+#               include <openssl/engine.h>
+#       endif
 
 	/* OpenSSL API differences */
 	#if OPENSSL_VERSION_NUMBER >= 0x10100000L
