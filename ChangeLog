@@ -1,5 +1,13 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-06-12: tcpsrv bugfix: fix potential data race issue
+  When re-arming epoll descriptors, we used a non-thread safe way to do this. However,
+  it is hard to envison this could have caused any real issue because of the way the
+  logic accesses the data elements. But at least in theory on a system with very many
+  tcpsrv threads, many cores and very high load re-arm could probably done incorrectly
+  what could have lead to stalling of that connection.
+  This was detected during CI runs by LLVM thread analyzer. We never receive any report
+  of this from practice.
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2506.0 (aka 2025.06) 2025-06-10
 - 2025-06-10: core fix: hastable object did not init memory properly on extend
