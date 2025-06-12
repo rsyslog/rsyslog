@@ -242,7 +242,8 @@ static char* url_encode(const char *str) {
 			*str == '-' || *str == '_' || *str == '.' || *str == '~') {
 			*p++ = *str;
 		} else {
-			sprintf(p, "%%%02X", (unsigned char)*str);
+			/* use snprintf to avoid potential buffer overruns */
+			snprintf(p, 4, "%%%02X", (unsigned char)*str);
 			p += 3;
 		}
 		str++;
