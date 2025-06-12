@@ -836,12 +836,14 @@ static rsRetVal
 notifyReArm(tcpsrv_io_descr_t *const pioDescr)
 {
 	DEFiRet;
-
 	const unsigned waitIOEvent = (pioDescr->ioDirection == NSDSEL_WR) ? EPOLLOUT : EPOLLIN;
-	pioDescr->event.events = waitIOEvent | EPOLLET | EPOLLONESHOT;
-	if(epoll_ctl(pioDescr->pSrv->evtdata.epoll.efd, EPOLL_CTL_MOD, pioDescr->sock, &pioDescr->event) < 0) {
-		LogError(errno, RS_RET_ERR_EPOLL_CTL, "epoll_ctl failed re-armed socket %d", pioDescr->sock);
-		ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
+	struct epoll_event event = {
+	.events = waitIOEvent | EPOLLET | EPOLLONESHOT,
+	.data   = { .ptr = pioDescr }
+	};
+	if(epoll_ctl(pioDescr->pSrv->evtdata.epoll.efd, EPOLL_CTL_MOD, pioDescr->sock, &event) < 0) {
+	LogError(errno, RS_RET_ERR_EPOLL_CTL, "epoll_ctl failed re-armed socket %d", pioDescr->sock);
+	ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
 	}
 
 finalize_it:
