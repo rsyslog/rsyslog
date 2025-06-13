@@ -690,12 +690,14 @@ CODESTARTnewInpInst
                        CHKmalloc(inst->gnutlsPriorityString =
                                (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(inppblk.descr[i].name, "permittedpeer")) {
-			for(int j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
-                               uchar *const peer =
-                                       (uchar*) es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+                       for(int j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
+                               uchar *peer;
+                               CHKmalloc(peer =
+                                       (uchar*) es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
+                               /* ensure no NULL is passed to AddPermittedPeer */
                                CHKiRet(net.AddPermittedPeer(&inst->pPermPeersRoot, peer));
                                free(peer);
-			}
+                       }
 		} else if(!strcmp(inppblk.descr[i].name, "flowcontrol")) {
 			inst->bUseFlowControl = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "disablelfdelimiter")) {
@@ -894,12 +896,14 @@ CODESTARTsetModCnf
                     CHKmalloc(loadModConf->pszStrmDrvrName =
                                (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(modpblk.descr[i].name, "permittedpeer")) {
-			for(int j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
-                            uchar *const peer =
-                                    (uchar*) es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-				CHKiRet(net.AddPermittedPeer(&loadModConf->pPermPeersRoot, peer));
-				free(peer);
-			}
+                        for(int j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
+                            uchar *peer;
+                            CHKmalloc(peer =
+                                    (uchar*) es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
+                                /* ensure no NULL is passed to AddPermittedPeer */
+                                CHKiRet(net.AddPermittedPeer(&loadModConf->pPermPeersRoot, peer));
+                                free(peer);
+                        }
 		} else if(!strcmp(modpblk.descr[i].name, "preservecase")) {
 			loadModConf->bPreserveCase = (int) pvals[i].val.d.n;
 		} else {
