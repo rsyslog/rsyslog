@@ -229,26 +229,33 @@ CODESTARTinitConfVars
 ENDinitConfVars
 
 /* Helper function to URL encode a string */
-static char* url_encode(const char *str) {
-	if(str == NULL) return NULL;
+static char* url_encode(const char *str)
+{
+        if(str == NULL)
+                return NULL;
 
-	char *encoded = malloc(strlen(str) * 3 + 1); // Worst case: each char needs %XX
-	if(encoded == NULL) return NULL;
+        /* compute worst-case length and allocate */
+        size_t len = 0;
+        for(const char *s = str; *s; ++s)
+                len += (isalnum((unsigned char)*s) || *s == '-' || *s == '_' ||
+                        *s == '.' || *s == '~') ? 1 : 3;
 
-	char *p = encoded;
-	while(*str) {
-		// Manually check if the character is alphanumeric
-		if((*str >= 'a' && *str <= 'z') || (*str >= 'A' && *str <= 'Z') || (*str >= '0' && *str <= '9') ||
-			*str == '-' || *str == '_' || *str == '.' || *str == '~') {
-			*p++ = *str;
-		} else {
-			sprintf(p, "%%%02X", (unsigned char)*str);
-			p += 3;
-		}
-		str++;
-	}
-	*p = '\0';
-	return encoded;
+        char *encoded = malloc(len + 1);
+        if(encoded == NULL)
+                return NULL;
+
+        char *p = encoded;
+        for(const char *s = str; *s; ++s) {
+                if(isalnum((unsigned char)*s) || *s == '-' || *s == '_' ||
+                   *s == '.' || *s == '~') {
+                        *p++ = *s;
+                } else {
+                        snprintf(p, 4, "%%%02X", (unsigned char)*s);
+                        p += 3;
+                }
+        }
+        *p = '\0';
+        return encoded;
 }
 
 static void ATTR_NONNULL(1)
