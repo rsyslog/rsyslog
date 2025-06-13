@@ -384,9 +384,9 @@ addNewLstnPort(tcpsrv_t *const pThis, tcpLstnParams_t *const cnf_params)
 	CHKmalloc(pEntry = (tcpLstnPortList_t*)calloc(1, sizeof(tcpLstnPortList_t)));
 	pEntry->cnf_params = cnf_params;
 
-       strncpy((char*)pEntry->cnf_params->dfltTZ, (char*)pThis->dfltTZ,
-               sizeof(pEntry->cnf_params->dfltTZ));
-       pEntry->cnf_params->dfltTZ[sizeof(pEntry->cnf_params->dfltTZ)-1] = '\0';
+	strncpy((char*)pEntry->cnf_params->dfltTZ, (char*)pThis->dfltTZ,
+	sizeof(pEntry->cnf_params->dfltTZ));
+	pEntry->cnf_params->dfltTZ[sizeof(pEntry->cnf_params->dfltTZ)-1] = '\0';
 	pEntry->cnf_params->bSPFramingFix = pThis->bSPFramingFix;
 	pEntry->cnf_params->bPreserveCase = pThis->bPreserveCase;
 	pEntry->pSrv = pThis;

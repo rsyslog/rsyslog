@@ -634,22 +634,22 @@ CODESTARTnewInpInst
 		if(!pvals[i].bUsed)
 			continue;
 		if(!strcmp(inppblk.descr[i].name, "port")) {
-                       CHKmalloc(inst->cnf_params->pszPort =
-                               (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(inst->cnf_params->pszPort =
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(inppblk.descr[i].name, "address")) {
-                       CHKmalloc(inst->cnf_params->pszAddr =
-                               (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(inst->cnf_params->pszAddr =
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(inppblk.descr[i].name, "name")) {
-                       CHKmalloc(inst->pszInputName =
-                               (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(inst->pszInputName =
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(inppblk.descr[i].name, "defaulttz")) {
-                       CHKmalloc(inst->dfltTZ =
-                               (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(inst->dfltTZ =
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(inppblk.descr[i].name, "framingfix.cisco.asa")) {
 			inst->bSPFramingFix = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
-                       CHKmalloc(inst->pszBindRuleset =
-                               (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(inst->pszBindRuleset =
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(inppblk.descr[i].name, "streamdriver.mode")) {
 			inst->iStrmDrvrMode = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "streamdriver.CheckExtendedKeyPurpose")) {
@@ -664,40 +664,40 @@ CODESTARTnewInpInst
 									(int) pvals[i].val.d.n);
 			}
 		} else if(!strcmp(inppblk.descr[i].name, "streamdriver.authmode")) {
-                       CHKmalloc(inst->pszStrmDrvrAuthMode =
-                               (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(inst->pszStrmDrvrAuthMode =
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(inppblk.descr[i].name, "streamdriver.permitexpiredcerts")) {
-                       CHKmalloc(inst->pszStrmDrvrPermitExpiredCerts =
-                               (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(inst->pszStrmDrvrPermitExpiredCerts =
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(inppblk.descr[i].name, "streamdriver.cafile")) {
-                       CHKmalloc(inst->pszStrmDrvrCAFile =
-                               (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(inst->pszStrmDrvrCAFile =
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(inppblk.descr[i].name, "streamdriver.crlfile")) {
-                       CHKmalloc(inst->pszStrmDrvrCRLFile =
-                               (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(inst->pszStrmDrvrCRLFile =
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(inppblk.descr[i].name, "streamdriver.keyfile")) {
-                       CHKmalloc(inst->pszStrmDrvrKeyFile =
-                               (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(inst->pszStrmDrvrKeyFile =
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(inppblk.descr[i].name, "streamdriver.certfile")) {
-                       CHKmalloc(inst->pszStrmDrvrCertFile =
-                               (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(inst->pszStrmDrvrCertFile =
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(inppblk.descr[i].name, "streamdriver.name")) {
-                       CHKmalloc(inst->pszStrmDrvrName =
-                               (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(inst->pszStrmDrvrName =
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(inppblk.descr[i].name, "starvationprotection.maxreads")) {
 			inst->starvationMaxReads = (unsigned) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "gnutlsprioritystring")) {
-                       CHKmalloc(inst->gnutlsPriorityString =
-                               (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(inst->gnutlsPriorityString =
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(inppblk.descr[i].name, "permittedpeer")) {
-                       for(int j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
-                               uchar *peer;
-                               CHKmalloc(peer =
-                                       (uchar*) es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
-                               /* ensure no NULL is passed to AddPermittedPeer */
-                               CHKiRet(net.AddPermittedPeer(&inst->pPermPeersRoot, peer));
-                               free(peer);
-                       }
+			for(int j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
+				uchar *peer;
+			CHKmalloc(peer =
+				(uchar*) es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
+			/* ensure no NULL is passed to AddPermittedPeer */
+			CHKiRet(net.AddPermittedPeer(&inst->pPermPeersRoot, peer));
+			free(peer);
+			}
 		} else if(!strcmp(inppblk.descr[i].name, "flowcontrol")) {
 			inst->bUseFlowControl = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "disablelfdelimiter")) {
@@ -744,8 +744,8 @@ CODESTARTnewInpInst
 		} else if(!strcmp(inppblk.descr[i].name, "socketbacklog")) {
 			inst->iSynBacklog = (int) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "listenportfilename")) {
-                       CHKmalloc(inst->cnf_params->pszLstnPortFileName =
-                               (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(inst->cnf_params->pszLstnPortFileName =
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else {
 			dbgprintf("imtcp: program error, non-handled "
 			  "param '%s'\n", inppblk.descr[i].name);
@@ -859,8 +859,8 @@ CODESTARTsetModCnf
 		} else if(!strcmp(modpblk.descr[i].name, "keepalive.interval")) {
 			loadModConf->iKeepAliveIntvl = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "gnutlsprioritystring")) {
-                    CHKmalloc(loadModConf->gnutlsPriorityString =
-                               (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(loadModConf->gnutlsPriorityString =
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.mode")) {
 			loadModConf->iStrmDrvrMode = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.CheckExtendedKeyPurpose")) {
@@ -875,35 +875,35 @@ CODESTARTsetModCnf
 									(int) pvals[i].val.d.n);
 			}
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.authmode")) {
-                    CHKmalloc(loadModConf->pszStrmDrvrAuthMode =
-                               (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(loadModConf->pszStrmDrvrAuthMode =
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.permitexpiredcerts")) {
-                    CHKmalloc(loadModConf->pszStrmDrvrPermitExpiredCerts =
-                               (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(loadModConf->pszStrmDrvrPermitExpiredCerts =
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.cafile")) {
-                    CHKmalloc(loadModConf->pszStrmDrvrCAFile =
-                               (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(loadModConf->pszStrmDrvrCAFile =
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.crlfile")) {
-                    CHKmalloc(loadModConf->pszStrmDrvrCRLFile =
-                               (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(loadModConf->pszStrmDrvrCRLFile =
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.keyfile")) {
-                    CHKmalloc(loadModConf->pszStrmDrvrKeyFile =
-                               (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(loadModConf->pszStrmDrvrKeyFile =
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.certfile")) {
-                    CHKmalloc(loadModConf->pszStrmDrvrCertFile =
-                               (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(loadModConf->pszStrmDrvrCertFile =
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(modpblk.descr[i].name, "streamdriver.name")) {
-                    CHKmalloc(loadModConf->pszStrmDrvrName =
-                               (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
+			CHKmalloc(loadModConf->pszStrmDrvrName =
+				(uchar*)es_str2cstr(pvals[i].val.d.estr, NULL));
 		} else if(!strcmp(modpblk.descr[i].name, "permittedpeer")) {
-                        for(int j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
-                            uchar *peer;
-                            CHKmalloc(peer =
-                                    (uchar*) es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
-                                /* ensure no NULL is passed to AddPermittedPeer */
-                                CHKiRet(net.AddPermittedPeer(&loadModConf->pPermPeersRoot, peer));
-                                free(peer);
-                        }
+			for(int j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
+				uchar *peer;
+			CHKmalloc(peer =
+				(uchar*) es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
+			/* ensure no NULL is passed to AddPermittedPeer */
+			CHKiRet(net.AddPermittedPeer(&loadModConf->pPermPeersRoot, peer));
+			free(peer);
+			}
 		} else if(!strcmp(modpblk.descr[i].name, "preservecase")) {
 			loadModConf->bPreserveCase = (int) pvals[i].val.d.n;
 		} else {
