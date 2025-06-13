@@ -36,6 +36,7 @@
 #include <sys/types.h>
 #include <libestr.h>
 #include <time.h>
+#include <assert.h>
 
 #include "rsyslog.h"
 #include "rainerscript.h"
@@ -1746,52 +1747,97 @@ doFuncReplace(struct svar *__restrict__ const operandVal, struct svar *__restric
 	uchar *find = es_getBufAddr(findStr);
 	uchar *replaceWith = es_getBufAddr(replaceWithStr);
 	uint lfind = es_strlen(findStr);
+
+	if (lfind == 0) {
+	    if(freeOperand) es_deleteStr(str);
+	    if(freeFind) es_deleteStr(findStr);
+	    if(freeReplacement) es_deleteStr(replaceWithStr);
+	    return es_strdup(str);
+	}
+
 	uint lReplaceWith = es_strlen(replaceWithStr);
 	uint lSrc = es_strlen(str);
-	uint lDst = 0;
 	uchar* src_buff = es_getBufAddr(str);
 	uint i, j;
-	for(i = j = 0; i <= lSrc; i++, lDst++) {
+	uint num_matches = 0;
+
+	// First loop: count occurrences of findStr in str
+	for(i = 0, j = 0; i < lSrc; i++) {
 		if (j == lfind) {
-			lDst = lDst - lfind + lReplaceWith;
+			num_matches++;
 			j = 0;
-			if (lfind == 0) break;
 		}
-		if (i == lSrc) break;
 		if (src_buff[i] == find[j]) {
 			j++;
 		} else if (j > 0) {
-			i -= (j - 1);
-			lDst -= (j - 1);
+			i -= j;
 			j = 0;
 		}
 	}
+	if (j == lfind) {
+		num_matches++;
+	}
+
+	uint lDst;
+	if (lfind == 0) { // Should be caught by earlier check, but for safety
+	    lDst = lSrc;
+	} else {
+	    lDst = lSrc - (num_matches * lfind) + (num_matches * lReplaceWith);
+	}
+
 	es_str_t *res = es_newStr(lDst);
 	unsigned char* dest = es_getBufAddr(res);
-	uint k, s;
-	for(i = j = s = 0; i <= lSrc; i++, s++) {
-		if (j == lfind) {
-			s -= j;
-			for (k = 0; k < lReplaceWith; k++, s++) dest[s] = replaceWith[k];
-			j = 0;
-			if (lfind == 0) break;
+	uint s; // Write cursor for 'dest'
+
+	// Second loop: construct the destination string
+	// i = current read index in src_buff
+	// j = length of current partial match against find_str (chars matched are src_buff[i-j] to src_buff[i-1])
+	// s = current write index in dest
+	for (i = 0, j = 0, s = 0; ; ) { // Loop broken by i >= lSrc check inside
+		if (j == lfind) { // A full match of find_str was completed (match ended at src_buff[i-1])
+			memcpy(dest + s, replaceWith, lReplaceWith);
+			s += lReplaceWith;
+			j = 0; // Reset for the next find.
+			// `i` is already at the character after the match. Loop continues from current `i`.
 		}
-		if (i == lSrc) break;
+
+		if (i >= lSrc) { // All of source string has been processed or considered
+			break;
+		}
+
+		// Try to match find_str[j] with src_buff[i]
+		// (i < lSrc is guaranteed here by the check above)
 		if (src_buff[i] == find[j]) {
-			j++;
-		} else {
-			if (j > 0) {
-				i -= j;
-				s -= j;
-				j = 0;
+			j++; // Extend current partial match
+			i++; // Consume current char from src_buff
+		} else { // Mismatch: src_buff[i] != find[j]
+			if (j > 0) { // There was a partial match (src_buff[i-j] to src_buff[i-1]) which has now failed
+				memcpy(dest + s, src_buff + (i - j), j); // Copy the failed partial match
+				s += j; // Advance write cursor
+				// `i` is NOT advanced here. src_buff[i] is the mismatching character.
+				// The loop will re-evaluate src_buff[i] against find[0] in the next iteration (after j is reset).
+				j = 0; // Reset partial match counter
+			} else { // No partial match was in progress (j was 0), and src_buff[i] != find[0]
+				dest[s] = src_buff[i]; // Copy the non-matching char
+				s++; // Advance write cursor
+				i++; // Advance read cursor
 			}
-			dest[s] = src_buff[i];
 		}
 	}
-	if (j > 0) {
-		for (k = 1; k <= j; k++) dest[s - k] = src_buff[i - k];
+
+	// After the main loop, if j == lfind, it means the string ENDED with a full match.
+	// This case is handled: the loop would have made one more iteration,
+	// the (j == lfind) block would execute, and then (i >= lSrc) would break.
+	// If j > 0 but j < lfind, it means string ENDED with a partial match.
+	// These are the last `j` characters: `src_buff[lSrc-j]` to `src_buff[lSrc-1]`.
+	if (j > 0 && j < lfind) {
+		memcpy(dest + s, src_buff + (lSrc - j), j);
+		s += j;
 	}
+
+	assert(s == lDst); // Verify that the constructed length matches the calculated length
 	res->lenStr = lDst;
+
 	if(freeOperand) es_deleteStr(str);
 	if(freeFind) es_deleteStr(findStr);
 	if(freeReplacement) es_deleteStr(replaceWithStr);
@@ -5801,3 +5847,5 @@ tokenval2str(const int tok)
 	default: return "UNKNOWN TOKEN";
 	}
 }
+
+[end of grammar/rainerscript.c]
