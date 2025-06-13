@@ -235,18 +235,22 @@ static char* url_encode(const char *str) {
 	char *encoded = malloc(strlen(str) * 3 + 1); // Worst case: each char needs %XX
 	if(encoded == NULL) return NULL;
 
-	char *p = encoded;
+char *p = encoded;
+/* each char may expand to %XX; convert manually to avoid overruns */
+static const char hex[] = "0123456789ABCDEF";
 	while(*str) {
-		// Manually check if the character is alphanumeric
-		if((*str >= 'a' && *str <= 'z') || (*str >= 'A' && *str <= 'Z') || (*str >= '0' && *str <= '9') ||
-			*str == '-' || *str == '_' || *str == '.' || *str == '~') {
-			*p++ = *str;
-		} else {
-			/* use snprintf to avoid potential buffer overruns */
-			snprintf(p, 4, "%%%02X", (unsigned char)*str);
-			p += 3;
-		}
-		str++;
+	 if((*str >= 'a' && *str <= 'z') ||
+	    (*str >= 'A' && *str <= 'Z') ||
+	    (*str >= '0' && *str <= '9') ||
+	    *str == '-' || *str == '_' || *str == '.' || *str == '~') {
+	         *p++ = *str;
+	 } else {
+	         unsigned char c = (unsigned char)*str;
+	         *p++ = '%';
+	         *p++ = hex[c >> 4];
+	         *p++ = hex[c & 0xF];
+	 }
+	 str++;
 	}
 	*p = '\0';
 	return encoded;
