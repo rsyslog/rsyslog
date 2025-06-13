@@ -7,3 +7,4 @@ FAQ
    faq_overall
    difference_queues
    encrypt_mysql_traffic_ommysql.rst
+   imudp-packet-loss.rst
