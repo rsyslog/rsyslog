@@ -235,9 +235,9 @@ static char* url_encode(const char *str) {
 	char *encoded = malloc(strlen(str) * 3 + 1); // Worst case: each char needs %XX
 	if(encoded == NULL) return NULL;
 
-char *p = encoded;
-/* each char may expand to %XX; convert manually to avoid overruns */
-static const char hex[] = "0123456789ABCDEF";
+	char *p = encoded;
+	/* each char may expand to %XX; convert manually to avoid overruns */
+	static const char hex[] = "0123456789ABCDEF";
 	while(*str) {
 	 if((*str >= 'a' && *str <= 'z') ||
 	    (*str >= 'A' && *str <= 'Z') ||
