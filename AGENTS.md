@@ -57,6 +57,7 @@ There are no strict naming rules, but these conventions are used frequently:
 - When referencing GitHub issues, use the **full GitHub URL** to assist in `git log`-based reviews
 - Favor **self-documenting code** over excessive inline comments
 - Public functions should use Doxygen-style comments
+- See `COMMENTING_STYLE.md` for detailed Doxygen guidelines
 - Modules must implement and register `modInit()` and `modExit()`
 
 When fixing compiler warnings like `stringop-overread`, explain in the commit message:
