@@ -1,9 +1,14 @@
-/* omusrmsg.c
- * These are the definitions for the build-in user message output module.
+/**
+ * @file omusrmsg.h
+ * @brief Interface for the built-in user message output module.
  *
- * File begun on 2007-07-13 by RGerhards
+ * This header exposes the initialization routine for the `omusrmsg`
+ * module.  The module implements delivery of log messages directly to
+ * logged-in users (either individually or via "wall" style broadcast).
  *
- * Copyright 20072-2012 Adiscon GmbH.
+ * File begun on 2007-07-13 by Rainer Gerhards.
+ *
+ * Copyright 2007-2012 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -25,8 +30,21 @@
 #define	OMUSRMSG_H_INCLUDED 1
 
 /* prototypes */
-rsRetVal modInitUsrMsg(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided,
-	rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), modInfo_t*);
+/**
+ * Initialize the omusrmsg module.
+ *
+ * @param[in]  iIFVersRequested  interface version requested by the core
+ * @param[out] ipIFVersProvided  the interface version actually provided
+ * @param[out] pQueryEtryPt      receives module entry points
+ * @param[in]  pHostQueryEtryPt  callback used to query host entry points
+ * @param[in]  pModInfo          pointer to the module information block
+ *
+ * @return rsRetVal              standard return code
+ */
+rsRetVal modInitUsrMsg(int iIFVersRequested __attribute__((unused)),
+	int *ipIFVersProvided,
+	rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()),
+	modInfo_t *pModInfo);
 
 #endif /* #ifndef OMUSRMSG_H_INCLUDED */
 /* vi:set ai:
