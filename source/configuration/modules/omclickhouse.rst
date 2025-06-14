@@ -255,8 +255,8 @@ Parameters are:
 -  **submitted** - number of messages submitted for processing (with both
    success and error result)
 
--  **fail.httprequests** - the number of times an http request failed. Note
-   that a single http request may be used to submit multiple messages, so this
+-  **fail.httprequests** - the number of times an HTTP request failed. Note
+   that a single HTTP request may be used to submit multiple messages, so this
    number may be (much) lower than failed.http.
 
 -  **failed.http** - number of message failures due to connection like-problems
@@ -300,7 +300,7 @@ The following sample does the following:
 Example 2
 ---------
 
-In this example the URL will use http and the specified parameters to create
+In this example the URL will use `http` and the specified parameters to create
 the REST URL.
 
 .. code-block:: none

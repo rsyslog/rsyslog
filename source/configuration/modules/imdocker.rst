@@ -94,7 +94,7 @@ ListContainersOptions
 
    "string", "", "no", "none"
 
-Specifies the http query component of the a 'List Containers' HTTP API request.
+Specifies the HTTP query component of the a 'List Containers' HTTP API request.
 See Docker API for more information about available options.
 **Note**: It is not necessary to prepend the string with '?'.
 
@@ -109,7 +109,7 @@ GetContainerLogOptions
 
    "string", "timestamp=0&follow=1&stdout=1&stderr=1&tail=1", "no", "none"
 
-Specifies the http query component of the a 'Get container logs' HTTP API request.
+Specifies the HTTP query component of the a 'Get container logs' HTTP API request.
 See Docker API for more information about available options.
 **Note**: It is not necessary to prepend the string with '?'.
 
