@@ -36,6 +36,7 @@ ruleset(name="rs_q_default" queue.type="LinkedList" queue.size="1500") {
 		server="localhost"
 		serverport="'$omhttp_server_lstnport'"
 		restpath="my/endpoint"
+		useHttps="off"
 
 		batch="on"
 		batch.format="kafkarest"
@@ -63,6 +64,7 @@ ruleset(name="rs_q_retry" queue.type="LinkedList" queue.size="200" queue.lightde
 		server="localhost"
 		serverport="'$omhttp_server_lstnport'"
 		restpath="my/endpoint"
+		useHttps="off"
 
 		batch="on"
 		batch.format="kafkarest"
