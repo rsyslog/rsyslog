@@ -1,0 +1,28 @@
+echo 'docker run -v /your/local/path:/rsyslog-doc <container-name> command
+where command is one of:
+build-doc    - generate documentation (currently HTML only)
+help         - display this help message
+bash         - start an interactive shell (<CTL>-d terminates)
+version-info - outputs some information of component used in container
+git-clone    - clone the official rsyslog-doc project into /rsyslog mount
+               this is a quick way to populate /rsyslog, which must be empty before
+
+Environment variables (set with -eVAR=val on docker run):
+FORMAT       - html (default) or another builder format
+STRICT       - options to cause strict sphinx mode (default "-n -W")
+DEBUG        - set to "on" to turn on some minimal container debugging
+SPHINX_EXTRA_OPTS - provides any option to sphinx the user wishes, e.g. -q for quiet builds
+
+bind mounts (mount with -v/local/path:/container on docker run):
+/output      - output files will be placed here. If not mounted, output will be under
+               /rsyslog-doc/output
+/rsyslog-doc - checked-out rsyslog doc project; if not mounted but /output is, an
+               automatic git clone is done to a temporary volume
+
+An alternate way to specify extra options is by adding them, one per line, to the
+SPHINX_EXTRA_OPTS file. The name must be exactly as given, and it must be stored in
+the doc project home directory. This method is especially useful for complex options
+which otherwise might be hard to escape so that the shell does not misinterpret them.
+If both the file SPHINX_EXTRA_OPTS and the environment variable SPHINX_EXTRA_OPTS are
+given, both are used.
+'

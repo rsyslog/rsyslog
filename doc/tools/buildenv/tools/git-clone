@@ -1,0 +1,13 @@
+if [ ! -e /rsyslog-doc ]; then
+	echo "ERROR: /rsyslog-doc is either not mounted or does not point to correct path"
+	source tools/help
+	exit 1
+fi
+if [ -e /rsyslog-doc/source ]; then
+	echo "ERROR: /rsyslog-doc contains a source directory, so we cannot clone into it"
+	source tools/help
+	exit 1
+fi
+cd /
+git clone https://github.com/rsyslog/rsyslog-doc.git
+(cd /rsyslog-doc; git checkout $BRANCH)
