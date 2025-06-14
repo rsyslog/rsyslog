@@ -104,6 +104,9 @@ To run `make check`, you **must configure with `--enable-imdiag --enable-testben
   ```bash
   make check TESTS=rscript_re_extract
   ```
+  Bad example (fails always):
+  ```bash
+  make check TESTS=test/rscript_re_extract
 
 ### Test Framework
 
