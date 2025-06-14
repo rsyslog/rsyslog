@@ -1,27 +1,11 @@
-/* This is the header file for the rsyslog runtime. It must be included
- * if someone intends to use the runtime.
+/**
+ * @file rsyslog.h
+ * @brief Public interface for the rsyslog runtime library.
  *
- * Begun 2005-09-15 RGerhards
- *
- * Copyright (C) 2005-2023 by Rainer Gerhards and Adiscon GmbH
- *
- * This file is part of the rsyslog runtime library.
- *
- * The rsyslog runtime library is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * The rsyslog runtime library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with the rsyslog runtime library.  If not, see <http://www.gnu.org/licenses/>.
- *
- * A copy of the GPL can be found in the file "COPYING" in this distribution.
- * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
+ * This header provides the public API and data structures required by
+ * modules interacting with the rsyslog runtime.  It is part of the
+ * rsyslog runtime library, which is licensed under the GNU Lesser General
+ * Public License version 3 or later.
  */
 #ifndef INCLUDED_RSYSLOG_H
 #define INCLUDED_RSYSLOG_H
@@ -292,11 +276,14 @@ pri2fac(const syslog_pri_t pri)
 #endif
 
 
-/* The error codes below are orginally "borrowed" from
- * liblogging. As such, we reserve values up to -2999
- * just in case we need to borrow something more ;)
-*/
-enum rsRetVal_				/** return value. All methods return this if not specified otherwise */
+/**
+ * @enum rsRetVal_
+ * @brief Return values used throughout the runtime API.
+ *
+ * The error codes below are originally borrowed from liblogging. Values up to
+ * -2999 are reserved for future expansion.
+ */
+enum rsRetVal_
 {
 	/* the first two define are for errmsg.logError(), so that we can use the rsRetVal
 	 * as an rsyslog error code. -- rgerhards, 20080-06-27
@@ -691,12 +678,12 @@ enum rsRetVal_				/** return value. All methods return this if not specified oth
 		goto finalize_it;		\
 	} while (0)
 
-/** Object ID. These are for internal checking. Each
- * object is assigned a specific ID. This is contained in
- * all Object structs (just like C++ RTTI). We can use
- * this field to see if we have been passed a correct ID.
- * Other than that, there is currently no other use for
- * the object id.
+/**
+ * @enum rsObjectID
+ * @brief Internal object identifiers used for sanity checks.
+ *
+ * Each object carries one of these IDs to verify that pointers refer
+ * to the expected type.
  */
 enum rsObjectID
 {
@@ -734,28 +721,20 @@ typedef enum rsObjectID rsObjID;
 #define RSFREEOBJ(x) {(x)->OID = OIDrsFreed; free(x);}
 #endif
 
+/** Default thread attributes used for internal worker threads. */
 extern pthread_attr_t default_thread_attr;
 #ifdef HAVE_PTHREAD_SETSCHEDPARAM
+/** Scheduling parameters for worker threads. */
 extern struct sched_param default_sched_param;
 extern int default_thr_sched_policy;
 #endif
-
-/* The following structure defines immutable parameters which need to
- * be passed as action parameters.
+/**
+ * @struct actWrkrIParams
+ * @brief Immutable parameters passed to output workers.
  *
- * Note that output plugins may request multiple templates. Let's say
- * an output requests n templates. Than the overall table must hold
- * n*nbrMsgs records, and each messages begins on a n-boundary. There
- * is a macro defined below to access the proper element.
- *
- * WARNING: THIS STRUCTURE IS PART OF THE ***OUTPUT MODULE INTERFACE***
- * It is passed into the doCommit() function. Do NOT modify it until
- * absolutely necessary - all output plugins need to be changed!
- *
- * If a change is "just" for internal working, consider adding a
- * separate parameter outside of this structure. Of course, it is
- * best to avoid this as well ;-)
- * rgerhards, 2013-12-04
+ * Each output plugin may request multiple templates. The overall table
+ * therefore holds one entry per template per message. Modifying this
+ * structure requires adjusting all output modules.
  */
 struct actWrkrIParams {
 	uchar *param;
@@ -802,16 +781,25 @@ struct actWrkrIParams {
  * in providing object access functions. If you don't like that, feel free to
  * add them. -- rgerhards, 2008-04-17
  */
-extern uchar *glblModPath; /* module load path */
+/** Path where modules are searched when loading dynamically. */
+extern uchar *glblModPath;
+/** Optional callback used for runtime error logging. */
 extern void (*glblErrLogger)(const int, const int, const uchar*);
 
 /* some runtime prototypes */
+/** Process messages from iminternal. */
 void processImInternal(void);
+/** Initialize the runtime environment. */
 rsRetVal rsrtInit(const char **ppErrObj, obj_if_t *pObjIF);
+/** Shut down the runtime environment. */
 rsRetVal rsrtExit(void);
+/** Check if the runtime system has been initialized. */
 int rsrtIsInit(void);
+/** Specify an alternative error logger. */
 void rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar*));
+/** Default error logger used by the runtime. */
 void dfltErrLogger(const int, const int, const uchar *errMsg);
+/** Determine the local host name and store it in the configuration. */
 rsRetVal queryLocalHostname(rsconf_t *const);
 
 
@@ -827,9 +815,8 @@ rsRetVal queryLocalHostname(rsconf_t *const);
 #endif
 
 /* TODO: remove this -- this is only for transition of the config system */
-extern rsconf_t *ourConf; /* defined by syslogd.c, a hack for functions that do not
-			     yet receive a copy, so that we can incrementially
-			     compile and change... -- rgerhars, 2011-04-19 */
+/** Global pointer to the active configuration object. */
+extern rsconf_t *ourConf; /* defined by syslogd.c */
 
 
 /* here we add some stuff from the compatibility layer. A separate include
