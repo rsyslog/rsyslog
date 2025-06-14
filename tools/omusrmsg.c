@@ -1,12 +1,15 @@
-/* omusrmsg.c
- * This is the implementation of the build-in output module for sending
- * user messages.
+/**
+ * @file omusrmsg.c
+ * @brief Implementation of the built-in user message output module.
  *
- * NOTE: read comments in module-template.h to understand how this file
- *       works!
+ * This module provides message delivery to logged-in users.  Depending on
+ * configuration it can either send messages to specific user terminals or
+ * broadcast them using a "wall" style interface.
  *
- * File begun on 2007-07-20 by RGerhards (extracted from syslogd.c, which at the
- * time of the fork from sysklogd was under BSD license)
+ * NOTE: read comments in module-template.h to understand how this file works!
+ *
+ * File begun on 2007-07-20 by Rainer Gerhards (extracted from syslogd.c,
+ * which at the time of the fork from sysklogd was under BSD license).
  *
  * Copyright 2007-2025 Adiscon GmbH.
  *
@@ -225,6 +228,16 @@ void endutent(void)
 #endif  /* #ifdef OS_BSD */
 
 
+/**
+ * Send a message to a specific terminal device.
+ *
+ * The function builds the full device path from the supplied tty name
+ * and writes the message using non-blocking I/O so that a blocked
+ * terminal does not stall the caller.
+ *
+ * @param tty  terminal name (e.g. "pts/0")
+ * @param pMsg message text to send
+ */
 static void sendwallmsg(const char *tty, uchar* pMsg)
 {
 	uchar szErr[512];
@@ -265,17 +278,17 @@ static void sendwallmsg(const char *tty, uchar* pMsg)
 	}
 }
 
-/*  WALLMSG -- Write a message to the world at large
+/**
+ * Write a message to the world at large.
  *
- *	Write the specified message to either the entire
- *	world, or a list of approved users.
+ * The message can either be broadcast to all logged-in users or sent only
+ * to the set configured in @a pData. The implementation avoids forking a
+ * helper process and instead performs delivery on the caller's thread.
  *
- * rgerhards, 2005-10-19: applying the following sysklogd patch:
- * Tue May  4 16:52:01 CEST 2004: Solar Designer <solar@openwall.com>
- *	Adjust the size of a variable to prevent a buffer overflow
- *	should _PATH_DEV ever contain something different than "/dev/".
- * rgerhards, 2008-07-04: changing the function to no longer use fork() but
- * 	continue run on its thread instead.
+ * @param[in] pMsg   message text to deliver
+ * @param[in] pData  per-action configuration
+ *
+ * @return rsRetVal
  */
 static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 {
@@ -403,6 +416,16 @@ ENDdoAction
 
 
 static void
+/**
+ * Parse a comma separated list of usernames.
+ *
+ * The user list is copied into the instance data. Whitespace is skipped
+ * and overly long names are reported via the error log. If more than
+ * MAXUNAMES users are specified, excess entries are ignored.
+ *
+ * @param[in] pData Instance configuration to populate
+ * @param[in] usrs  comma separated list of users
+ */
 populateUsers(instanceData *pData, es_str_t *usrs)
 {
 	int i;
