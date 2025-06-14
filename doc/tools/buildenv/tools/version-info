@@ -1,0 +1,3 @@
+echo "Versions used inside this container app:"
+
+sphinx-build --version

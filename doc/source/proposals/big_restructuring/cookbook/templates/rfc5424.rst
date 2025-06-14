@@ -1,0 +1,3 @@
+Configuring an RFC 5424 Template with Json message
+==================================================
+

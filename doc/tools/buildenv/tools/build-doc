@@ -1,0 +1,25 @@
+if [ ! -e /rsyslog-doc/source ]; then
+	if [ -e /output ]; then
+		source tools/git-clone
+	else
+		echo "ERROR: /rsyslog-doc is either not mounted or does not point to correct path"
+		echo "       and /output is also not present, so we do not know what to do"
+		source tools/help
+		exit 1
+	fi
+fi
+if [ -e /output ]; then
+	export OUTPUT=/output
+else
+	export OUTPUT=build
+fi
+cd /rsyslog-doc
+if [ -e SPHINX_EXTRA_OPTS ]; then
+	export SPHINX_EXTRA_OPTS="$SPHINX_EXTRA_OPTS `cat SPHINX_EXTRA_OPTS`"
+fi
+eval sphinx-build $STRICT -b $FORMAT $SPHINX_EXTRA_OPTS source $OUTPUT
+RESULT=$?
+# we need to do the chown as we currently cannot select the right user
+# inside the Dockerfile. Once this is solved, this can go away.
+# chown -R rsyslog:rsyslog $OUTPUT - need to do this differently...
+exit $RESULT

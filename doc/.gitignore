@@ -1,0 +1,7 @@
+build
+source/_build
+.project
+.vscode
+*.pyc
+*.sw?
+.idea/
