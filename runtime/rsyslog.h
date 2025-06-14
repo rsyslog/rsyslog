@@ -31,7 +31,7 @@
 	 * legacy interface preservation, not an oversight.
 	 */
 	#pragma GCC diagnostic ignored "-Wstrict-prototypes"
-	#pragma GCC diagnostic ignored "-Wredundant-decls" // FIXME: https://github.com/rsyslog/rsyslog/issues/5700
+	//#pragma GCC diagnostic ignored "-Wredundant-decls" // FIXME: https://github.com/rsyslog/rsyslog/issues/5700
 	#pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
 	#if __GNUC__ >= 8
 		/* GCC, starting at least with version 8, is now really overdoing with it's
