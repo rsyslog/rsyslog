@@ -90,7 +90,7 @@ fully initialized. If not, it initializes it, what most importantly
 means construction of the queue.
 
 Then, regular worker processing is carried out. That is, the queue
-worker will wait on empty queue and terminate after an timeout. However,
+worker will wait on empty queue and terminate after a timeout. However,
 If any message is received, the DA consumer is executed. That consumer
 checks the low water mark. If the low water mark is reached, it stops
 processing until either the high water mark is reached again or the DA

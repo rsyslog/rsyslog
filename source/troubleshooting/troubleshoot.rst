@@ -372,7 +372,7 @@ better, and thus be able to quicker craft a fix.
 
 In order to get useful information, we need some backtrace of the abort.
 First, you need to make sure that a core file is created. Under Fedora,
-for example, that means you need to have an "ulimit -c unlimited" in
+for example, that means you need to have a "ulimit -c unlimited" in
 place.
 
 Now let's assume you got a core file (e.g. in /core.1234). So what to do

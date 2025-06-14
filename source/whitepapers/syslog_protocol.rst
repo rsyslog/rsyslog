@@ -170,7 +170,7 @@ This lists what has been found during implementation:
 -  As an architectural side-effect, syslog-protocol formatted messages
    can also be transmitted over non-standard syslog/raw tcp. This
    implementation uses the industry-standard LF termination of tcp
-   syslog records. As such, syslog-protocol messages containing a LF
+   syslog records. As such, syslog-protocol messages containing an LF
    will be broken invalidly. There is nothing that can be done against
    this without specifying a TCP transport. This issue might be more
    important than one thinks on first thought. The reason is the wide

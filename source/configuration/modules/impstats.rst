@@ -200,7 +200,7 @@ robustness, this should be a local file. The file format cannot be
 customized, it consists of a date header, followed by a colon,
 followed by the actual statistics record, all on one line. Only very
 limited error handling is done, so if things go wrong stats records
-will probably be lost. Logging to file an be a useful alternative if
+will probably be lost. Logging to file can be a useful alternative if
 for some reasons (e.g. full queues) the regular syslog stream method
 shall not be used solely. Note that turning on file logging does NOT
 turn off syslog logging. If that is desired log.syslog="off" must be

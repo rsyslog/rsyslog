@@ -568,7 +568,7 @@ Experimental parameter. It is similar to "MultiLine", but provides greater
 control of when a log message ends. You can specify a regular expression that
 characterizes the header to expect at the start of the next message. As such,
 it indicates the end of the current message. For example, one can use this
-setting to use a RFC3164 header as frame delimiter::
+setting to use an RFC3164 header as frame delimiter::
 
     framing.delimiter.regex="^<[0-9]{1,3}>(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)"
 

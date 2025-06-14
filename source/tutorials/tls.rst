@@ -11,8 +11,8 @@ Abstract
 `syslog <http://www.monitorware.com/en/topics/syslog/>`_ 
 **messages on the network.**
 Encryption is vital to keep the confidential content of
-syslog messages secure. I describe the overall approach and provide an
-HOWTO do it with `rsyslog's <http://www.rsyslog.com>`_ TLS features. 
+syslog messages secure. I describe the overall approach and provide a
+HOWTO using `rsyslog's <http://www.rsyslog.com>`_ TLS features. 
 
 Please note that TLS is the more secure successor of SSL. While people
 often talk about "SSL encryption" they actually mean "TLS encryption".
@@ -51,7 +51,7 @@ tcp over TLS for a while now. While I am not fully satisfied with the
 results so far, this obviously has the  potential to become the
 long-term solution. The Internet Draft in question, syslog-transport-tls
 has been dormant for some time but is now (May of 2008) again being
-worked on. I expect it to turn into a RFC within the next 12 month (but
+worked on. I expect it to turn into an RFC within the next 12 month (but
 don't take this for granted ;)). I didn't want to wait for it, because
 there obviously is need for TLS syslog right now (and, honestly, I have
 waited long enough...). Consequently, I have implemented the current

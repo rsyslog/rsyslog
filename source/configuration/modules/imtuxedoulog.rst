@@ -12,7 +12,7 @@ Purpose
 =======
 
 This module allows rsyslog to process Tuxedo ULOG files.
-Tuxedo create an ULOG file each new log of the day this file is defined
+Tuxedo create a ULOG file each new log of the day this file is defined
 
 - a prefix configured in the tuxedo configuration
 

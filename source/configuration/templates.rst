@@ -437,14 +437,14 @@ the latter ones are processed by the property replacer and apply to a
 SINGLE property, only (and not the whole template).
 Template options are case-insensitive. Currently defined are:
 
-**option.sql** - format the string suitable for a SQL statement in MariaDB/
+**option.sql** - format the string suitable for an SQL statement in MariaDB/
 MySQL format. This will replace single quotes ("'") and the backslash
 character by their backslash-escaped counterpart ("\\'" and "\\\\")
 inside each field. Please note that in MySQL configuration, the
 ``NO_BACKSLASH_ESCAPES`` mode must be turned off for this format to work
 (this is the default).
 
-**option.stdsql** - format the string suitable for a SQL statement that
+**option.stdsql** - format the string suitable for an SQL statement that
 is to be sent to a standards-compliant sql server. This will replace
 single quotes ("'") by two single quotes ("''") inside each field. You
 must use stdsql together with MySQL if in MySQL configuration the

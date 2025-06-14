@@ -7,7 +7,7 @@ Purpose
 
 http_request(str)
 
-Performs a http request to target and returns the result of said request.
+Performs an http request to target and returns the result of said request.
 
 .. note::
 
@@ -18,7 +18,7 @@ Performs a http request to target and returns the result of said request.
 Example
 =======
 
-The following example performs a http request and writes the returned value
+The following example performs an http request and writes the returned value
 to a file.
 
 

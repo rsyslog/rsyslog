@@ -15,8 +15,8 @@ Abstract
 **In this paper, I describe how to encrypt**
 `syslog <http://www.monitorware.com/en/topics/syslog/>`_ **messages on the
 network.** Encryption is vital to keep the confidential content of
-syslog messages secure. I describe the overall approach and provide an
-HOWTO do it with the help of `rsyslogd <http://www.rsyslog.com>`_ and
+syslog messages secure. I describe the overall approach and provide a
+HOWTO with the help of `rsyslogd <http://www.rsyslog.com>`_ and
 `stunnel <http://www.stunnel.org>`_.*
 
 Please note that starting with rsyslog 3.19.0, `rsyslog provides native
