@@ -204,6 +204,9 @@ CODESTARTtryResume
 			break;
 		case MD_ALWAYS_SUSPEND:
 			iRet = RS_RET_SUSPENDED;
+		default:
+			// No action needed for other cases
+			break;
 	}
 	pthread_mutex_unlock(&pWrkrData->pData->mut);
 	dbgprintf("omtesting tryResume() returns iRet %d\n", iRet);
@@ -228,6 +231,9 @@ CODESTARTdoAction
 			break;
 		case MD_ALWAYS_SUSPEND:
 			iRet = RS_RET_SUSPENDED;
+			break;
+		default:
+			// No action needed for other cases
 			break;
 	}
 

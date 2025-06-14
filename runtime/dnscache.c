@@ -126,6 +126,9 @@ key_equals_fn(void *key1, void *key2)
 			RetVal = !memcmp(&((struct sockaddr_in6 *)key1)->sin6_addr,
 				&((struct sockaddr_in6 *)key2)->sin6_addr, sizeof (struct in6_addr));
 			break;
+		default:
+			// No action needed for other cases
+			break;
 	}
 
 	return RetVal;

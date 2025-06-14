@@ -799,6 +799,9 @@ doModInit(pModInit_t modInit, uchar *name, void *pModHdlr, modInfo_t **pNewModul
 			DBGPRINTF("PROGRAM ERROR: eMOD_ANY set as module type\n");
 			assert(0);
 			break;
+		default:
+			// No action needed for other cases
+			break;
 	}
 
 	pNew->pszName = (uchar*) strdup((char*)name); /* we do not care if strdup() fails, we can accept that */
@@ -884,6 +887,9 @@ static void modPrintList(void)
 			DBGPRINTF("PROGRAM ERROR: eMOD_ANY set as module type\n");
 			assert(0);
 			break;
+		default:
+			// No action needed for other cases
+			break;
 		}
 		dbgprintf(" module.\n");
 		dbgprintf("Entry points:\n");
@@ -931,6 +937,9 @@ static void modPrintList(void)
 			dbgprintf("\tgetFunctArray:     0x%lx\n", (unsigned long) pMod->mod.fm.getFunctArray);
 			break;
 		case eMOD_ANY: /* this is mostly to keep the compiler happy! */
+			break;
+		default:
+			// No action needed for other cases
 			break;
 		}
 		dbgprintf("\n");

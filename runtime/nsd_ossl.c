@@ -409,7 +409,7 @@ osslChkPeerAuth(nsd_ossl_t *pThis)
 			CHKiRet(net_ossl.osslChkpeercertvalidity(pThis->pNetOssl, pThis->pNetOssl->ssl, fromHostIP));
 			break;
 		case OSSL_AUTH_CERTANON:
-			FINALIZE;
+		default:
 			break;
 	}
 finalize_it:

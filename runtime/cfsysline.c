@@ -193,6 +193,9 @@ static rsRetVal doGetSize(uchar **pp, rsRetVal (*pSetHdlr)(void*, int64), void *
 		case 'T': i *= (int64) 1000       * 1000000000; ++(*pp); break; /* tera */
 		case 'P': i *= (int64) 1000000    * 1000000000; ++(*pp); break; /* peta */
 		case 'E': i *= (int64) 1000000000 * 1000000000; ++(*pp); break; /* exa */
+		default:
+			// No action needed for other cases
+			break;
 	}
 
 	/* done */

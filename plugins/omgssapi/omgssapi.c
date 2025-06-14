@@ -149,6 +149,8 @@ CODESTARTfreeInstance
 			if(pData->port != NULL)
 				free(pData->port);
 			break;
+		default:
+			break;
 	}
 
 	if (pData->gss_context != GSS_C_NO_CONTEXT) {
@@ -380,6 +382,7 @@ static rsRetVal doTryResume(instanceData *pData)
 	case eDestFORW:
 		/* NOOP */
 		break;
+	default:break;
 	}
 
 	RETiRet;
@@ -469,6 +472,7 @@ CODESTARTdoAction
 			ABORT_FINALIZE(RS_RET_SUSPENDED);
 		}
 		break;
+	default:break;
 	}
 finalize_it:
 	if((psz != NULL) && (psz != (char*) ppString[0]))  {

@@ -2400,6 +2400,9 @@ qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the ConstructionFinalizer
 			pThis->MultiEnq = qqueueMultiEnqObjDirect;
 			pThis->qDel = NULL;
 			break;
+		default:
+			// We need to satisfy compiler which does not properly handle enum
+			break;
 	}
 
 	/* finalize some initializations that could not yet be done because it is
