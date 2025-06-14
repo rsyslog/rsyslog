@@ -1,6 +1,6 @@
 /* rsyslog rainerscript definitions
  *
- * Copyright 2011-2018 Rainer Gerhards
+ * Copyright 2011-2025 Rainer Gerhards
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -294,22 +294,56 @@ struct x {
 */
 
 
-/* the following defines describe the parameter block for puling
- * config parameters. Note that the focus is on ease and saveness of
- * use, not performance. For example, we address parameters by name
+/* the following defines describe the parameter block used to describe
+ * configuration parameters.
+ *
+ * All modules use this parameter block to describe their parameters.
+ * There are two classes of parameter blocks implemented by the same
+ * structure:
+ *
+ * - module paramters
+ *   - configure the module itself
+ *   - set defaults
+ *   - configure module operation modes, if that mode can only
+ *     be used for all its instances (e.g. actions, inputs)
+ *   - modules which by function cannot have several instances may
+ *     configure instance-type parameters via module parameters
+ *   - some older modules also intermix module and instance parameters
+ *   - modules should support setting default values via module parameters
+ *   - if not set, the parameter defaults to hardcoded value
+ *   - the variable has a fixed name inside the code and is defined
+ *     as follows: struct cnfparamblk modpblk
+ *
+ * - instance parameter
+ *   - provide config for the instance, e.g. an input or action
+ *   - if not set, defaults to module default parameter
+ *   - the variable has a fixed name inside the code and is defined
+ *     as follows: struct cnfparamblk <type-prefix>pblk, with <type-perefix>
+ *     - important uses (name: config statement it is used for)
+ *     - inppblk: input()
+ *     - actpblk: action()
+ *     - parserpblk: parser()
+ *     - some few definitions are different for historical or technical reasons
+ *
+ * Implementation Note: the focus of algorithms using  this block is
+ * - simple, robust code
+ * - secure code
+ * - performance is uncritical, as only used during startup phase
+ *
+ * For example, we address parameters by name
  * instead of index, because the former is less error-prone. The (severe)
  * performance hit does not matter, as it is a one-time hit during config
  * load but never during actual processing. So there is really no reason
  * to care.
  */
 struct cnfparamdescr { /* first the param description */
-	const char *name;/**< not a es_str_t to ease definition in code */
-	ecslCmdHdrlType type;
-	unsigned flags;
+	const char *name;/**< configuration parameter name, e.g. "port" */
+	ecslCmdHdrlType type; /**< parameter type as defined by  enum cslCmdHdlrType */
+	unsigned flags; /**< flags describing important properties, e.g. if optional or mandatory */
 };
-/* flags for cnfparamdescr: */
-#define CNFPARAM_REQUIRED	0x0001
-#define CNFPARAM_DEPRECATED	0x0002
+/* flags for cnfparamdescr. if no flag is given parameter is optional.*/
+#define CNFPARAM_REQUIRED	0x0001 /**< signifies a mandatory parameter */
+#define CNFPARAM_DEPRECATED	0x0002 /**< signifies a deprecated parameter */
 
 struct cnfparamblk { /* now the actual param block use in API calls */
 	unsigned short version;
