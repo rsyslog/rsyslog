@@ -226,6 +226,9 @@ ctr_t **entryRef, int8_t linked)
 	case ctrType_Int:
 		ctr->val.pInt = (int*) pCtr;
 		break;
+	default:
+		// No action needed for other cases
+		break;
 	}
 	if (linked) {
 		addCtrToList(pThis, ctr);
@@ -297,6 +300,9 @@ resetResettableCtr(ctr_t *pCtr, int8_t bResetCtrs)
 		case ctrType_Int:
 			*(pCtr->val.pInt) = 0;
 			break;
+		default:
+			// No action needed for other cases
+			break;
 		}
 	}
 }
@@ -338,6 +344,9 @@ accumulatedValue(ctr_t *pCtr) {
 		return *(pCtr->val.pIntCtr);
 	case ctrType_Int:
 		return *(pCtr->val.pInt);
+	default:
+		// No action needed for other cases
+		break;
 	}
 	return -1;
 }
@@ -453,6 +462,9 @@ getStatsLine(statsobj_t *pThis, cstr_t **ppcstr, int8_t bResetCtrs)
 			break;
 		case ctrType_Int:
 			rsCStrAppendInt(pcstr, *(pCtr->val.pInt));
+			break;
+		default:
+			// No action needed for other cases
 			break;
 		}
 		cstrAppendChar(pcstr, ' ');
@@ -647,6 +659,9 @@ getAllStatsLines(rsRetVal(*cb)(void*, const char*), void *const usrptr, statsFmt
 			 * e.g. emit "rsyslog_sender_<sender> <nMsgs>" lines.
 			 * For simplicity, we skip this, or you can extend similarly. */
 			 break;
+		default:
+			// No action needed for other cases
+			break;
 		}
 		CHKiRet(cb(usrptr, (const char*)cstrGetSzStrNoNULL(cstr)));
 		rsCStrDestruct(&cstr);

@@ -423,7 +423,6 @@ static int getAPPNAMELen(smsg_t * const pM, sbool bLockMutex);
 static rsRetVal jsonPathFindParent(struct json_object *jroot, uchar *name, uchar *leaf,
 	struct json_object **parent, int bCreate);
 static uchar * jsonPathGetLeaf(uchar *name, int lenName);
-struct json_object *jsonDeepCopy(struct json_object *src);
 static json_bool jsonVarExtract(struct json_object* root, const char *key, struct json_object **value);
 void getRawMsgAfterPRI(smsg_t * const pM, uchar **pBuf, int *piLen);
 
@@ -1907,8 +1906,9 @@ getTimeReported(smsg_t * const pM, enum tplFormatTypes eFmt)
 	case tplFmtISOWeek:
 	case tplFmtISOWeekYear:
 		return formatISOWeekOrYear(eFmt, &pM->tTIMESTAMP);
+	default:
+		return "INVALID eFmt OPTION!";
 	}
-	return "INVALID eFmt OPTION!";
 }
 
 
@@ -2005,6 +2005,10 @@ static const char *getTimeUTC(struct syslogTime *const __restrict__ pTmIn,
 	case tplFmtISOWeek:
 	case tplFmtISOWeekYear:
 		retbuf = strdup(formatISOWeekOrYear(eFmt, pTm));
+		break;
+	default:
+		// Required to prevent compiler warning C4062 (unhandled enum value).
+		// Unhandled eFmt values are correctly managed by the subsequent if(retbuf == NULL) check.
 		break;
 	}
 
@@ -2132,8 +2136,9 @@ getTimeGenerated(smsg_t *const __restrict__ pM,
 	case tplFmtISOWeek:
 	case tplFmtISOWeekYear:
 		return formatISOWeekOrYear(eFmt, pTm);
+	default:
+		return "INVALID eFmt OPTION!";
 	}
-	return "INVALID eFmt OPTION!";
 }
 
 
@@ -3086,6 +3091,9 @@ static uchar *getNOW(eNOWType eNow, struct syslogTime *t, const int inUTC)
 		break;
 	case NOW_WDAY:
 		memcpy(pBuf, one_digit[(int)t->wday], 2);
+		break;
+	default:
+		// We need to satisfy compiler which does not properly handle enum
 		break;
 	}
 

@@ -10,10 +10,29 @@
 #ifndef INCLUDED_RSYSLOG_H
 #define INCLUDED_RSYSLOG_H
 #ifdef __GNUC__
+
+	/**
+	 * @brief Suppress -Wstrict-prototypes for plugin interface compatibility.
+	 *
+	 * This suppression is required because rsyslog's plugin interface API,
+	 * designed over 20 years ago, uses traditional C-style function declarations
+	 * like `int func()` instead of `int func(void)`.
+	 *
+	 * While this style triggers `-Wstrict-prototypes` in modern GCC, it remains
+	 * intentional and necessary: the plugin interface must stay ABI-compatible
+	 * with numerous out-of-tree and third-party plugins, many of which are
+	 * unknown and beyond our control.
+	 *
+	 * Internally, function declarations are correctly overridden and type-checked
+	 * where possible, and care is taken not to introduce mismatches. However,
+	 * the original form must be preserved to maintain binary compatibility.
+	 *
+	 * AI note: Do not "modernize" these declarations automatically. This is
+	 * legacy interface preservation, not an oversight.
+	 */
+	#pragma GCC diagnostic ignored "-Wstrict-prototypes"
+	#pragma GCC diagnostic ignored "-Wredundant-decls" // FIXME: https://github.com/rsyslog/rsyslog/issues/5700
 	#pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
-	#pragma GCC diagnostic ignored "-Wredundant-decls" // TODO: remove!
-	#pragma GCC diagnostic ignored "-Wstrict-prototypes" // TODO: remove!
-	#pragma GCC diagnostic ignored "-Wswitch-default" // TODO: remove!
 	#if __GNUC__ >= 8
 		/* GCC, starting at least with version 8, is now really overdoing with it's
 		 * warning messages. We turn those off that either cause an enormous amount
@@ -759,11 +778,6 @@ struct actWrkrIParams {
 #  define  __attribute__(x)  /*NOTHING*/
 #endif
 
-#if !defined(O_CLOEXEC) && !defined(_AIX)
-/* of course, this limits the functionality... */
-#  define O_CLOEXEC 0
-#endif
-
 /* some constants */
 #define MUTEX_ALREADY_LOCKED	0
 #define LOCK_MUTEX		1
@@ -803,10 +817,11 @@ void dfltErrLogger(const int, const int, const uchar *errMsg);
 rsRetVal queryLocalHostname(rsconf_t *const);
 
 
-/* this define below is (later) intended to be used to implement empty
- * structs. TODO: check if compilers supports this and, if not, define
- * a dummy variable. This requires review of where in code empty structs
- * are already defined. -- rgerhards, 2010-07-26
+/* this define below is intended to be used to implement empty
+ * structs on platforms where at least on struct member is.
+ * absolutely necessary. We need to do this, as our runtime
+ * expects several definitions to be present, even if in
+ * rare cases the code in question does not really need it.
  */
 #ifdef OS_SOLARIS
 #define EMPTY_STRUCT  int remove_me_when_first_real_member_is_added;
@@ -814,18 +829,18 @@ rsRetVal queryLocalHostname(rsconf_t *const);
 #define EMPTY_STRUCT
 #endif
 
-/* TODO: remove this -- this is only for transition of the config system */
 /** Global pointer to the active configuration object. */
 extern rsconf_t *ourConf; /* defined by syslogd.c */
 
 
-/* here we add some stuff from the compatibility layer. A separate include
- * would be cleaner, but would potentially require changes all over the
- * place. So doing it here is better. The respective replacement
- * functions should usually be found under ./compat -- rgerhards, 2015-05-20
- */
+/** add compatibility layer for old platforms that miss essential functions */
 #ifndef HAVE_STRNDUP
 char * strndup(const char *s, size_t n);
 #endif
+#if !defined(O_CLOEXEC) && !defined(_AIX)
+/* of course, this limits the functionality... */
+#  define O_CLOEXEC 0
+#endif
+
 
 #endif /* multi-include protection */

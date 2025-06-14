@@ -207,6 +207,7 @@ static rsRetVal addListener(instanceConf_t* iconf){
 #endif
 			iconf->serverish = true;
 			break;
+		default:break;
 	}
 
 	if(iconf->topics) {

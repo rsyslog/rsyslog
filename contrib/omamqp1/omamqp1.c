@@ -534,6 +534,9 @@ static void _abort_command(protocolState_t *ps)
 	case COMMAND_SHUTDOWN: // cannot be aborted
 	case COMMAND_DONE:
 	  break;
+	default:
+		// No action needed for other cases
+		break;
 	}
 	pthread_mutex_unlock(&ipc->lock);
 }
@@ -787,6 +790,9 @@ static void _poll_command(protocolState_t *ps)
 
 	case COMMAND_DONE:
 	    break;
+	default:
+		// No action needed for other cases
+		break;
 	}
 
 	pthread_mutex_unlock(&ipc->lock);

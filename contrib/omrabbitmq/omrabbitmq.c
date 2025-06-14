@@ -715,6 +715,9 @@ static void* run_connection_routine(void* arg)
 					} /* switch (frm.payload.method.id) */
 				} /* if (frm.frame_type == AMQP_FRAME_METHOD) */
 				break;
+			default:
+				// No action needed for other cases
+				break;
 			} /* switch (result) */
 		}
 	}

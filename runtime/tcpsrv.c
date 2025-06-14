@@ -281,6 +281,7 @@ select_Add(tcpsrv_t *const pThis, netstrm_t *const pStrm, const nsdsel_waitOp_t 
 		case NSDSEL_RDWR:
 			pThis->evtdata.poll.fds[pThis->evtdata.poll.currfds].events = POLLIN | POLLOUT;
 			break;
+		default:break;
 	}
 	pThis->evtdata.poll.fds[pThis->evtdata.poll.currfds].fd = sock;
 	++pThis->evtdata.poll.currfds;
@@ -359,6 +360,7 @@ select_IsReady(tcpsrv_t *const pThis, netstrm_t *const pStrm, const nsdsel_waitO
 		case NSDSEL_RDWR:
 			*pbIsReady = revent & (POLLIN | POLLOUT);
 			break;
+		default:break;
 	}
 
 finalize_it:

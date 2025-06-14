@@ -1193,8 +1193,7 @@ releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ 
 				pWrkrInfo->p.nontx.actParams[j].lenBuf = 0;
 				pWrkrInfo->p.nontx.actParams[j].lenStr = 0;
 				break;
-			case ACT_STRING_PASSING:
-			case ACT_MSG_PASSING:
+			default:
 				/* no need to do anything with these */
 				break;
 			}

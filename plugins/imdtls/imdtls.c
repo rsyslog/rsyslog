@@ -341,6 +341,7 @@ imdtls_verify_callback(int status, SSL* ssl)
 					dbgprintf("imdtls_verify_callback: ANON[%p]\n", (void *)ssl);
 					FINALIZE;
 					break;
+				default:break;
 			}
 		} else {
 			LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING, "imdtls_verify_callback: MISSING ssl or inst!");

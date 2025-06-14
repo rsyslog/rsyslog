@@ -461,6 +461,9 @@ PermittedPeerWildcardMatch(permittedPeers_t *const pPeer,
 					FINALIZE;
 				}
 				break;
+			default:
+				// We need to satisfy compiler which does not properly handle enum
+				break;
 		}
 		pWildcard =  pWildcard->pNext; /* we processed this entry */
 
@@ -760,6 +763,9 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot, struct AllowedS
 							FINALIZE;
 						}
 					}
+					break;
+				default:
+					// We need to satisfy compiler which does not properly handle enum
 					break;
 				}
 			}

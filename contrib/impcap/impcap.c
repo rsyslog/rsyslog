@@ -450,6 +450,9 @@ CODESTARTactivateCnf
 				case PCAP_ERROR:
 					LogError(0, RS_RET_LOAD_ERROR, "pcap: %s", pcap_geterr(dev));
 					ABORT_FINALIZE(RS_RET_LOAD_ERROR);
+				default:
+					// No action needed for other cases
+					break;
 			}
 
 			if (inst->filter != NULL) {

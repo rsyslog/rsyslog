@@ -632,6 +632,9 @@ ipv42num(const char *str)
 		case '.':
 			cyc++;
 			break;
+		default:
+			// No action needed for other cases
+			break;
 		}
 	}
 
