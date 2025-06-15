@@ -11,7 +11,7 @@ Rsyslog is a real open source project, welcoming contributions of all kinds—fr
   - On GitHub: [rsyslog repository](https://github.com/rsyslog/rsyslog)
   - On the mailing list: [mailing list signup](http://lists.adiscon.net/mailman/listinfo/rsyslog)
 - **Improve documentation**:
-  - Contribute to [rsyslog-doc](https://github.com/rsyslog/rsyslog-doc)
+  - Contributions to documentation should be made to the `doc/` directory of this repository.
   - Help maintain [rsyslog.com/doc](http://rsyslog.com/doc)
 - **Maintain infrastructure**: Help with project websites, CI, or packaging.
 - **Develop code**: Implement new features, improve existing ones, or fix bugs.
