@@ -9,6 +9,10 @@
  * implemented yet -- for example support for reading a command file on HUP
  * is still missing.
  *
+ * Note: there are TODO items in this module which will remain until the end
+ *       of the PoC phase. This is expected and intended. However, they should
+ *       no longer be present in the year 2026 or later.
+ *
  * Copyright 2025 Adiscon GmbH.
  *
  * This file is part of rsyslog.
@@ -80,20 +84,20 @@ typedef struct {
  * @brief Configuration and runtime data for an action instance.
  */
 typedef struct _instanceData {
-int interval;                     /**< write interval in seconds */
-uchar *statefile;                 /**< path to the JSON state file */
-uchar *cmdfile;                   /**< path to command file (unused) */
-uchar *templateName;              /**< template that defines sender ID */
-pthread_rwlock_t mutSenders;      /**< protects the sender hash table */
-struct hashtable *stats_senders;  /**< hash table of sender_stats_t */
-int bShutdownBackgroundWriter;    /**< tells bgwriter to terminate */
-pthread_t bgw_tid;      /* thread ID of background writer */
-int bgw_initialized;              /**< indicates thread started */
+	int interval;                     /**< write interval in seconds */
+	uchar *statefile;                 /**< path to the JSON state file */
+	uchar *cmdfile;                   /**< path to command file (unused) */
+	uchar *templateName;              /**< template that defines sender ID */
+	pthread_rwlock_t mutSenders;      /**< protects the sender hash table */
+	struct hashtable *stats_senders;  /**< hash table of sender_stats_t */
+	int bShutdownBackgroundWriter;    /**< tells bgwriter to terminate */
+	pthread_t bgw_tid;                /**< thread ID of background writer */
+	int bgw_initialized;              /**< indicates thread started */
 } instanceData;
 
 /** Worker context passed to modules API functions. */
 typedef struct wrkrInstanceData {
-instanceData *pData; /**< pointer back to action instance */
+	instanceData *pData; /**< pointer back to action instance */
 } wrkrInstanceData_t;
 
 
@@ -442,7 +446,6 @@ finalize_it:
 }
 
 
-/* background writing thread for sender stats */
 /**
  * Background thread periodically persisting sender statistics.
  *
@@ -492,7 +495,6 @@ bgWriter(void *arg)
 }
 
 
-static rsRetVal
 /**
  * Update statistics for a message sender.
  *
@@ -503,6 +505,7 @@ static rsRetVal
  * @param sender  identifier of the sender
  * @param lastSeen timestamp of the current message
  */
+static rsRetVal
 recordSender(instanceData *const pData, const uchar *const sender, const time_t lastSeen)
 {
 	sender_stats_t* stat;
@@ -545,7 +548,7 @@ finalize_it:
 	RETiRet;
 }
 
-BEGINinitConfVars		/* (re)set config variables to default values */
+BEGINinitConfVars
 CODESTARTinitConfVars
 ENDinitConfVars
 
