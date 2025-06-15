@@ -1,7 +1,9 @@
-Rsyslog FAQ: Troubleshooting UDP Packet Loss
-============================================
+FAQ: Troubleshooting UDP Packet Loss
+====================================
 
 This document addresses common questions related to diagnosing and resolving UDP packet loss when using the ``imudp`` input module. While UDP is fast, it is inherently unreliable. These entries will help you understand why loss occurs and how to mitigate it.
+
+.. _faq-imudp-q1:
 
 Q1: I see packet loss in my OS statistics for ``imudp``. What are the potential causes, troubleshooting steps, and probable fixes?
 ----------------------------------------------------------------------------------------------------------------------------------
@@ -52,7 +54,7 @@ Probable Fixes
 
 3. **Switch to a Reliable Protocol:** If packet loss is unacceptable, the ultimate fix is to stop using UDP. Migrate your clients and server to use **TCP (``imtcp``)** or, even better, **RELP (``imrelp``)**, which is designed for guaranteed log delivery.
 
----
+.. _faq-imudp-q2:
 
 Q2: How can I definitively check if the OS kernel is dropping UDP packets due to full receive buffers?
 ------------------------------------------------------------------------------------------------------
@@ -81,7 +83,7 @@ Use one of the following commands:
 
 To troubleshoot, check the value before and after a period of high traffic. If the counter increases, you have confirmed the cause of the packet loss.
 
----
+----
 
 Q3: Why does ``tcpdump`` show traffic as "ip-proto-17" without a port number?
 -----------------------------------------------------------------------------
@@ -97,7 +99,7 @@ When a device sends a UDP datagram that is larger than the network's Maximum Tra
 
 The presence of many such packets means a device on your network is sending very large log messages or other UDP data. The solution is to identify the source device and, if possible, configure it to send smaller messages.
 
----
+----
 
 Q4: My OS stats show "packets to unknown port". How do I find out which port is being used?
 -------------------------------------------------------------------------------------------
@@ -114,7 +116,7 @@ This command will show all UDP traffic that is *not* going to your standard, kno
 
 The output will show you the destination IP and port of the unexpected traffic, allowing you to identify the misconfigured client. For example, ``10.1.1.5.4321 > 10.1.1.1.9999`` shows a packet destined for port ``9999``.
 
----
+----
 
 Q5: How does rsyslog set the UDP receive buffer? Does it use ``SO_RCVBUFFORCE``?
 --------------------------------------------------------------------------------
