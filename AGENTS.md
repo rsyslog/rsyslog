@@ -10,7 +10,7 @@ This file defines guidelines and instructions for AI assistants (e.g., Codex, Gi
 - **Build System**: autotools (`autogen.sh`, `configure`, `make`)  
 - **Modules**: Dynamically loaded from `modules/`  
 - **Contributions**: Additional modules and features are placed in `contrib/`, which contains community-contributed plugins not actively maintained by the core rsyslog team. These are retained in `contrib/` even if adopted later, to avoid disruptions in dependent software.  
-- **Documentation**: Maintained in a separate repository ([rsyslog-doc](https://github.com/rsyslog/rsyslog-doc))  
+- **Documentation**: Maintained in the doc/ subdirectory
 - **Child Projects**:
   - [`rsyslog-docker`](https://github.com/rsyslog/rsyslog-docker): Provides prebuilt container environments for development and CI
 - **Side Libraries** (each in its own repo within the rsyslog GitHub org):
