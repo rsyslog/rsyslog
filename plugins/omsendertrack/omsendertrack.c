@@ -1,4 +1,17 @@
-/* omsendertrack
+/**
+ * @file omsendertrack.c
+ * @brief Track and persist statistics for message senders.
+ *
+ * The omsendertrack module maintains a table of message senders and
+ * periodically writes the collected statistics to a JSON file.  It is
+ * currently a proof-of-concept as described in
+ * <https://github.com/rsyslog/rsyslog/issues/5599>.  Not all functionality is
+ * implemented yet -- for example support for reading a command file on HUP
+ * is still missing.
+ *
+ * Note: there are TODO items in this module which will remain until the end
+ *       of the PoC phase. This is expected and intended. However, they should
+ *       no longer be present in the year 2026 or later.
  *
  * Copyright 2025 Adiscon GmbH.
  *
@@ -68,29 +81,49 @@ typedef struct {
 
 /* config variables */
 
+/**
+ * @brief Configuration and runtime data for an action instance.
+ */
 typedef struct _instanceData {
-	int interval;
-	uchar *statefile;
-	uchar *cmdfile;
-	uchar *templateName; // TODO: keep this as "template" or "sender-id"?
-	pthread_rwlock_t mutSenders;
-	struct hashtable *stats_senders;
-	int bShutdownBackgroundWriter;
-	pthread_t bgw_tid;	/* thread ID of background writer */
-	int bgw_initialized;
+	int interval;                     /**< write interval in seconds */
+	uchar *statefile;                 /**< path to the JSON state file */
+	uchar *cmdfile;                   /**< path to command file (unused) */
+	uchar *templateName;              /**< template that defines sender ID */
+	pthread_rwlock_t mutSenders;      /**< protects the sender hash table */
+	struct hashtable *stats_senders;  /**< hash table of sender_stats_t */
+	int bShutdownBackgroundWriter;    /**< tells bgwriter to terminate */
+	pthread_t bgw_tid;                /**< thread ID of background writer */
+	int bgw_initialized;              /**< indicates thread started */
 } instanceData;
 
+/** Worker context passed to modules API functions. */
 typedef struct wrkrInstanceData {
-	instanceData *pData;
+	instanceData *pData; /**< pointer back to action instance */
 } wrkrInstanceData_t;
 
-
-/* tables for interfacing with the v6 config system */
-/* action (instance) parameters */
+/**
+ * @brief Defines the configuration parameters for an action() object instance.
+ *
+ * This structure is the standard interface for rsyslog action modules to
+ * declare their supported configuration parameters. The rsyslog core
+ * configuration engine uses this information to parse and apply directives
+ * from `rsyslog.conf` to an instance of this action.
+ *
+ * Each entry maps a configuration directive string to its handler and properties.
+ * Note that other module types (like inputs) use a similar, separate structure
+ * for their specific parameters.
+ */
 static struct cnfparamdescr actpdescr[] = {
+	/** @param interval at which the sender state file is written. */
 	{ "interval", eCmdHdlrPositiveInt, 0 },
+	/** @param statefile State file for the statistics object. */
 	{ "statefile", eCmdHdlrString, 0 },
+	/**
+	 * @param cmdfile Specifies the full path to the command file that omsendertrack will periodically poll for
+	 * new commands. Supported commands are "delete" and "GET". Not implemented in the current PoC.
+	 */
 	{ "cmdfile", eCmdHdlrString, 0 },
+	/** @param template Template to use for the output format. */
 	{ "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
@@ -111,6 +144,16 @@ static rsRetVal initHashtable(instanceData *const pData);
 static void * bgWriter(void *arg);
 
 
+/**
+ * Add a new sender statistics entry.
+ *
+ * @param pData      module instance data
+ * @param sender     identifier of the sender
+ * @param nMsgs      number of messages already seen
+ * @param firstSeen  timestamp of the first message
+ * @param lastSeen   timestamp of the last message
+ * @retval RS_RET_OK on success
+ */
 static rsRetVal
 addSender(instanceData *const pData,
 	const char *const sender, const uint64_t nMsgs,
@@ -142,6 +185,13 @@ finalize_it:
 
 
 #define CHUNK_SIZE 16*1024  // Read file in 16KiB chunks
+/**
+ * Read sender statistics from the configured state file.
+ *
+ * @param pData     module instance data
+ * @param[out] jsontree  parsed JSON tree or NULL on failure
+ * @retval RS_RET_OK on success
+ */
 static rsRetVal ATTR_NONNULL()
 readSenderStats(instanceData *const pData, json_object **jsontree)
 {
@@ -195,6 +245,13 @@ finalize_it:
 }
 
 static rsRetVal
+/**
+ * Convert a JSON tree into the sender hash table.
+ *
+ * @param pData     module instance data
+ * @param jsonTree  JSON array of sender information
+ * @retval RS_RET_OK on success
+ */
 jsonToHashtable(instanceData *const pData, json_object *const jsonTree)
 {
 	DEFiRet;
@@ -231,6 +288,12 @@ finalize_it:
 }
 
 static rsRetVal
+/**
+ * Initialize the sender hash table and start the background writer.
+ *
+ * @param pData module instance data
+ * @retval RS_RET_OK on success
+ */
 initHashtable(instanceData *const pData)
 {
 	DEFiRet;
@@ -312,6 +375,13 @@ finalize_it:
 
 
 /* this function writes the actual sender stats. */
+/**
+ * Write all sender statistics to the FILE pointer.
+ *
+ * @param pData module instance data
+ * @param fp    open FILE pointer to write JSON to
+ * @retval RS_RET_OK on success
+ */
 static rsRetVal
 writeSenderStats(instanceData *const pData, FILE *const fp)
 {
@@ -353,6 +423,12 @@ writeSenderStats(instanceData *const pData, FILE *const fp)
 }
 
 static rsRetVal
+/**
+ * Persist sender statistics to disk.
+ *
+ * @param pData module instance data
+ * @retval RS_RET_OK on success
+ */
 writeSenderInfo(instanceData *const pData)
 {
 
@@ -387,7 +463,12 @@ finalize_it:
 }
 
 
-/* background writing thread for sender stats */
+/**
+ * Background thread periodically persisting sender statistics.
+ *
+ * @param arg pointer to instanceData
+ * @return always NULL
+ */
 static void *
 bgWriter(void *arg)
 {
@@ -431,6 +512,16 @@ bgWriter(void *arg)
 }
 
 
+/**
+ * Update statistics for a message sender.
+ *
+ * This function updates an existing entry or creates a new one
+ * if the sender is seen for the first time.
+ *
+ * @param pData   module instance data
+ * @param sender  identifier of the sender
+ * @param lastSeen timestamp of the current message
+ */
 static rsRetVal
 recordSender(instanceData *const pData, const uchar *const sender, const time_t lastSeen)
 {
@@ -474,7 +565,7 @@ finalize_it:
 	RETiRet;
 }
 
-BEGINinitConfVars		/* (re)set config variables to default values */
+BEGINinitConfVars
 CODESTARTinitConfVars
 ENDinitConfVars
 
