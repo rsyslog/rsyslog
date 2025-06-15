@@ -869,24 +869,20 @@ the rsyslog process.
 WildCards
 =========
 
-**Before Version: 8.25.0**
-  Wildcards are only supported in the filename part, not in directory names.
+As of rsyslog version 8.25.0 and later, wildcards are fully supported in both directory names and filenames. This allows for flexible file monitoring configurations.
 
-* /var/log/\*.log **works**. *
-* /var/log/\*/syslog.log does **not work**. *
+Examples of supported wildcard usage:
 
+*   `/var/log/*.log` (all .log files in /var/log)
+*   `/var/log/*/*.log` (all .log files in immediate subdirectories of /var/log)
+*   `/var/log/app*/*/*.log` (all .log files in subdirectories of directories starting with "app" in /var/log)
 
-**Since Version: 8.25.0**
-  Wildcards are supported in filename and paths which means these samples will work:
+All matching files in all matching subfolders will be monitored.
 
-* /var/log/\*.log **works**. *
-* /var/log/\*/syslog.log **works**. *
-* /var/log/\*/\*.log **works**. *
+.. note::
+   Using complex wildcard patterns, especially those that match many directories and files, may have an impact on performance. It's advisable to use the most specific patterns possible.
 
-
-  All matching files in all matching subfolders will work.
-  Note that this may decrease performance in imfile depending on how
-  many directories and files are being watched dynamically.
+Historically, versions prior to 8.25.0 had limitations, supporting wildcards only in the filename part and not in directory paths.
 
 
 

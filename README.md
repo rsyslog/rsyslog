@@ -70,7 +70,7 @@ Please report any issues, false positives, or suggestions about the AI review pr
 ---
 
 ## Documentation
-The complete and current documentation is maintained in the separate [`rsyslog-doc`](https://github.com/rsyslog/rsyslog-doc) project.
+Documentation is located in the `doc/` directory of this repository. Contributions to the documentation should be made there.
 
 Visit the latest version online:
 - [rsyslog.com/doc](https://www.rsyslog.com/doc/)

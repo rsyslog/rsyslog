@@ -79,9 +79,7 @@ to Stack Exchange](https://serverfault.com/questions/ask?tags=rsyslog).
 
 ## Building the documentation
 
-These directions assume default installs of Python for Windows and Linux.
-Since the [Sphinx project recommends using Python 2.7](http://www.sphinx-doc.org/en/stable/install.html),
-that's what we'll show here.
+These directions assume a modern Python 3 environment (Python 3.6 or newer is recommended).
 
 ### Assumptions
 
@@ -110,10 +108,10 @@ later steps are identical, so we've covered those steps in one place.
 
 1.  Download the pip installer from https://bootstrap.pypa.io/get-pip.py.
 2.  Install `pip` locally instead of system-wide:
-    1.  `python ./get-pip.py --user`
+        1.  `python3 ./get-pip.py --user`
 3.  Install the `virtualenv` package and create a new virtual environment:
-    1.  `python -m pip install virtualenv --user`
-    1.  `python -m virtualenv rsyslog-docs-build`
+        1.  `python3 -m pip install virtualenv --user`
+        1.  `python3 -m virtualenv rsyslog-docs-build`
     1.  `source rsyslog-docs-build/bin/activate`
 4.  Install `git` for your distro. Since distros name the package differently,
     you may need to substitute the package name from the examples
@@ -137,17 +135,17 @@ later steps are identical, so we've covered those steps in one place.
 1.  Download the pip installer from https://bootstrap.pypa.io/get-pip.py.
 2.  Download and install Git for Windows from https://git-scm.com/download/win.
 3.  Install `pip` locally instead of system-wide:
-    1.  `c:\python27\python get-pip.py --user`
+        1.  `python get-pip.py --user`
 4.  Install the `virtualenv` package and create a new virtual environment:
-    1.  `c:\python27\python -m pip install virtualenv --user`
-    1.  `c:\python27\python -m virtualenv rsyslog-docs-build`
+        1.  `python -m pip install virtualenv --user`
+        1.  `python -m virtualenv rsyslog-docs-build`
     1.  `rsyslog-docs-build\Scripts\activate.bat`
 
 #### Windows and Linux
 
 1.  Install the `sphinx` package and any other project dependencies in our
     new virtual environment instead of system-wide:
-    1.  `pip install -r requirements.txt`
+        1.  `python -m pip install -r requirements.txt`
 2.  Clone the official Git repo:
     1.  `git clone https://github.com/rsyslog/rsyslog.git`
 3.  Check out either the current stable or development (aka, "master") branch:
