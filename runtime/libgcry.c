@@ -145,7 +145,7 @@ eiRead(gcryfile gf)
 	}
 
 	nRead = read(gf->fd, gf->readBuf, READBUF_SIZE);
-	if(nRead <= 0) { /* TODO: provide specific EOF case? */
+	if(nRead <= 0) {
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	gf->readBufMaxIdx = (int16_t) nRead;
@@ -390,8 +390,6 @@ gcryfileGetBytesLeftInBlock(gcryfile gf, ssize_t *left)
 	}
 	*left = gf->bytesToBlkEnd;
 finalize_it:
-	// TODO: remove once this code is sufficiently well-proven
-	DBGPRINTF("gcryfileGetBytesLeftInBlock returns %lld, iRet %d\n", (long long) *left, iRet);
 	RETiRet;
 }
 
@@ -720,8 +718,7 @@ finalize_it:
 	RETiRet;
 }
 
-/* TODO: handle multiple blocks
- * test-read END record; if present, store offset, else unbounded (current active block)
+/* test-read END record; if present, store offset, else unbounded (current active block)
  * when decrypting, check if bound is reached. If yes, split into two blocks, get new IV for
  * second one.
  */
@@ -741,9 +738,6 @@ rsgcryDecrypt(gcryfile pF, uchar *buf, size_t *len)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	removePadding(buf, len);
-	// TODO: remove dbgprintf once things are sufficently stable -- rgerhards, 2013-05-16
-	dbgprintf("libgcry: decrypted, bytesToBlkEnd %lld, buffer is now '%50.50s'\n",
-		(long long) pF->bytesToBlkEnd, buf);
 
 finalize_it:
 	RETiRet;

@@ -63,8 +63,7 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
 	/* getRemAddr() is an aid needed by the legacy ACL system. It exposes the remote
 	 * peer's socket addr structure, so that the legacy matching functions can work on
 	 * it. Note that this ties netstream drivers to things that can be implemented over
-	 * sockets - not really desirable, but not the end of the world... TODO: should be
-	 * reconsidered when a new ACL system is build. -- rgerhards, 2008-12-01
+	 * sockets - not really desirable, but not the end of the world...
 	 */
 	/* v5 */
 	rsRetVal (*EnableKeepAlive)(nsd_t *pThis);
