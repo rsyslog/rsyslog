@@ -842,12 +842,11 @@ seedIVKSI(ksifile ksi)
 
 	hashlen = KSI_getHashLength(ksi->hashAlg);
 	ksi->IV = malloc(hashlen); /* do NOT zero-out! */
-	/* if we cannot obtain data from /dev/urandom, we use whatever
-	 * is present at the current memory location as random data. Of
-	 * course, this is very weak and we should consider a different
-	 * option, especially when not running under Linux (for Linux,
-	 * unavailability of /dev/urandom is just a theoretic thing, it
-	 * will always work...).  -- TODO -- rgerhards, 2013-03-06
+	/*
+	 * If /dev/urandom is unavailable, the current memory content is used as a
+	 * weak fallback for random data. This is a theoretical case, as this
+	 * library only supports Linux, where /dev/urandom is expected to be
+	 * reliably available.
 	 */
 	if ((fd = open(rnd_device, O_RDONLY)) >= 0) {
 		if(read(fd, ksi->IV, hashlen) == hashlen) {}; /* keep compiler happy */
@@ -1231,7 +1230,7 @@ sigblkInitKSI(ksifile ksi)
 	ksi->nRoots = 0;
 	ksi->nRecords = 0;
 	ksi->bInBlk = 1;
-	ksi->blockStarted = time(NULL); //TODO: maybe milli/nanoseconds should be used
+	ksi->blockStarted = time(NULL);
 	ksi->blockSizeLimit = 1 << (ksi->ctx->effectiveBlockLevelLimit - 1);
 
 	/* flush the optional debug file when starting a new block */
@@ -1941,7 +1940,6 @@ process_requests_async(rsksictx ctx, KSI_CTX *ksi_ctx, KSI_AsyncService *as) {
 		save_response(ctx, item->file, item);
 		fflush(item->file);
 		/* the main thread has to be locked when the hash is freed to avoid a race condition */
-		/* TODO: this need more elegant solution, hash should be detached from creation context*/
 		pthread_mutex_lock(&ctx->module_lock);
 		KSI_DataHash_free(item->root);
 		KSI_AsyncHandle_free(item->respHandle);

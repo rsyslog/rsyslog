@@ -1069,8 +1069,6 @@ void dbgPrintCfSysLineHandlers(void)
 }
 
 
-/* our init function. TODO: remove once converted to a class
- */
 rsRetVal
 cfsyslineInit(void)
 {

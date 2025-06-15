@@ -543,8 +543,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo)
 
 	/* for the legacy ACL code, we need to preserve addr. While this is far from
 	 * begin perfect (from an abstract design perspective), we need this to prevent
-	 * breaking everything. TODO: we need to implement a new ACL module to get rid
-	 * of this function. -- rgerhards, 2008-12-01
+	 * breaking everything.
 	 */
 	memcpy(&pNew->remAddr, &addr, sizeof(struct sockaddr_storage));
 	CHKiRet(FillRemHost(pNew, &addr));

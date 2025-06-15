@@ -50,9 +50,6 @@ DEFobjCurrIf(netstrm)
  * driver-specific functions (allmost all...) can be carried
  * out. Note that the driver's .ifIsLoaded is correctly
  * initialized by calloc() and we depend on that.
- * WARNING: this code is mostly identical to similar code in
- * nssel.c - TODO: abstract it and move it to some common place.
- * rgerhards, 2008-04-18
  */
 static rsRetVal
 loadDrvr(netstrms_t *pThis)

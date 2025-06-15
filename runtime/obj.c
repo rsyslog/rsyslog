@@ -78,7 +78,7 @@
 #define DEV_DEBUG 0	/* set to 1 to enable very verbose developer debugging messages */
 
 /* how many objects are supported by rsyslogd? */
-#define OBJ_NUM_IDS 100 /* TODO change to a linked list?  info: 16 were currently in use 2008-02-29 */
+#define OBJ_NUM_IDS 100
 
 #include "rsyslog.h"
 #include "syslogd-types.h"

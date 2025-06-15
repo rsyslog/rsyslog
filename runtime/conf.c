@@ -9,7 +9,7 @@
  * Please note that the original syslogd.c source was under BSD license
  * at the time of the rsyslog fork from sysklogd.
  *
- * Copyright 2008-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2025 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -288,8 +288,7 @@ rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEn
 
 	if(*p == '\0' || *p == '#') {
 		/* no template specified, use the default */
-		/* TODO: check NULL ptr */
-		tplName = (uchar*) strdup((char*)dfltTplName);
+		CHKmalloc(tplName = (uchar*) strdup((char*)dfltTplName));
 	} else {
 		/* template specified, pick it up */
 		CHKiRet(cstrConstruct(&pStrB));
