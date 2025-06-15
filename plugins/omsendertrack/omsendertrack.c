@@ -35,6 +35,7 @@
 #include "rsyslog.h"
 #include <stdio.h>
 #include <stdarg.h>
+#include <stdlib.h>
 #include <string.h>
 #include <assert.h>
 #include <signal.h>
@@ -100,13 +101,29 @@ typedef struct wrkrInstanceData {
 	instanceData *pData; /**< pointer back to action instance */
 } wrkrInstanceData_t;
 
-
-/* tables for interfacing with the v6 config system */
-/* action (instance) parameters */
+/**
+ * @brief Defines the configuration parameters for an action() object instance.
+ *
+ * This structure is the standard interface for rsyslog action modules to
+ * declare their supported configuration parameters. The rsyslog core
+ * configuration engine uses this information to parse and apply directives
+ * from `rsyslog.conf` to an instance of this action.
+ *
+ * Each entry maps a configuration directive string to its handler and properties.
+ * Note that other module types (like inputs) use a similar, separate structure
+ * for their specific parameters.
+ */
 static struct cnfparamdescr actpdescr[] = {
+	/** @param interval at which the sender state file is written. */
 	{ "interval", eCmdHdlrPositiveInt, 0 },
+	/** @param statefile State file for the statistics object. */
 	{ "statefile", eCmdHdlrString, 0 },
+	/**
+	 * @param cmdfile Specifies the full path to the command file that omsendertrack will periodically poll for
+	 * new commands. Supported commands are "delete" and "GET". Not implemented in the current PoC.
+	 */
 	{ "cmdfile", eCmdHdlrString, 0 },
+	/** @param template Template to use for the output format. */
 	{ "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
@@ -127,7 +144,6 @@ static rsRetVal initHashtable(instanceData *const pData);
 static void * bgWriter(void *arg);
 
 
-static rsRetVal
 /**
  * Add a new sender statistics entry.
  *
@@ -138,6 +154,7 @@ static rsRetVal
  * @param lastSeen   timestamp of the last message
  * @retval RS_RET_OK on success
  */
+static rsRetVal
 addSender(instanceData *const pData,
 	const char *const sender, const uint64_t nMsgs,
 	const time_t firstSeen, const time_t lastSeen)
@@ -168,7 +185,6 @@ finalize_it:
 
 
 #define CHUNK_SIZE 16*1024  // Read file in 16KiB chunks
-static rsRetVal ATTR_NONNULL()
 /**
  * Read sender statistics from the configured state file.
  *
@@ -176,6 +192,7 @@ static rsRetVal ATTR_NONNULL()
  * @param[out] jsontree  parsed JSON tree or NULL on failure
  * @retval RS_RET_OK on success
  */
+static rsRetVal ATTR_NONNULL()
 readSenderStats(instanceData *const pData, json_object **jsontree)
 {
 	DEFiRet;
