@@ -545,8 +545,8 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen,
 
 	if (curlCode != CURLE_OK) {
 		LogError(0, RS_RET_SUSPENDED,
-			"omsplunkhec: suspending ourselves due to server failure %lld: %s",
-			(long long) curlCode, errbuf);
+			"omsplunkhec: suspending ourselves due to server failure %lld: %s on server %s",
+			(long long) curlCode, errbuf,pWrkrData->pData->serverList[pWrkrData->serverIndex]);
 		ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestFailed,
 			&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestFailed);
 		checkResult(pWrkrData, message);
@@ -659,8 +659,6 @@ checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 		iRet = RS_RET_DATAFAIL;
 	} else {
 		// success, normal state
-		ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestSuccess,
-			&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestSuccess);
 		iRet = RS_RET_OK;
 	}
 

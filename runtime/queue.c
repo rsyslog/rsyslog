@@ -2400,6 +2400,9 @@ qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the ConstructionFinalizer
 			pThis->MultiEnq = qqueueMultiEnqObjDirect;
 			pThis->qDel = NULL;
 			break;
+		default:
+			// We need to satisfy compiler which does not properly handle enum
+			break;
 	}
 
 	/* finalize some initializations that could not yet be done because it is
@@ -3296,13 +3299,6 @@ qqueueCorrectParams(qqueue_t *pThis)
 		if(pThis->iHighWtrMrk == 0) { /* guard against very low max queue sizes! */
 			pThis->iHighWtrMrk = pThis->iMaxQueueSize;
 		}
-		LogMsg(0, RS_RET_CONF_PARSE_WARNING, LOG_WARNING,
-				"queue \"%s\": queue.highWaterMark "
-				"is set below queue size. It has been automatically been "
-				"adjusted to %d. In any case, we strongly recommend to review the "
-				"queue definition and resolve inconsistencies to guarantee "
-				"the config really matches your intent.",
-				obj.GetName((obj_t*) pThis), pThis->iHighWtrMrk);
 	}
 	if(   pThis->iLowWtrMrk < 2
 	   || pThis->iLowWtrMrk > pThis->iMaxQueueSize
@@ -3311,13 +3307,6 @@ qqueueCorrectParams(qqueue_t *pThis)
 		if(pThis->iLowWtrMrk == 0) {
 			pThis->iLowWtrMrk = 1;
 		}
-		LogMsg(0, RS_RET_CONF_PARSE_WARNING, LOG_WARNING,
-				"queue \"%s\": queue.lowWaterMark "
-				"is set below queue size or highWaterMark. It has been automatically been "
-				"adjusted to %d. In any case, we strongly recommend to review the "
-				"queue definition and resolve inconsistencies to guarantee "
-				"the config really matches your intent.",
-				obj.GetName((obj_t*) pThis), pThis->iHighWtrMrk);
 	}
 
 	if((pThis->iMinMsgsPerWrkr < 1

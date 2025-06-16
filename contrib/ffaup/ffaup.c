@@ -224,6 +224,7 @@ do_faup_parse(struct cnffunc *__restrict__ const func, struct svar *__restrict__
 			ret->d.estr = es_newStrFromCStr(
 				url + faup_get_fragment_pos(&fh), faup_get_fragment_size(&fh));
 			break;
+		default:break;
 	}
 
 finalize_it:

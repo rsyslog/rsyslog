@@ -1,17 +1,11 @@
 #!/bin/bash
-# this checks the rsyslog codestyle. It expects that
-# rsyslog_stylecheck
-# is already installed inside the system
-# if in doubt, run it on one of the development containers
-doc="https://www.rsyslog.com/doc/master/development/dev_codestyle.html"
+#
+# A simple wrapper to execute the rsyslog style checker python script.
+# It passes all command-line arguments directly to the script.
+#
 
-find -name "*.[ch]" | xargs rsyslog_stylecheck -l 120
-if [ $? -ne 0 ]; then
-	printf '\n\n====================================================================\n'
-	printf 'Codestyle Error:\n'
-	printf 'Your code is not compliant with the rsyslog codestyle policies\n'
-	printf 'See here for more information: %s\n' "$doc"
-	exit 1
-else
-	printf 'Codestyle check was successful!\n'
-fi
+# Find the directory this script is in, to robustly locate the .py file
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+# Execute the python script, passing along all arguments (e.g., a path)
+"$SCRIPT_DIR/rsyslog_stylecheck.py"  --permit-empty-tab-line "$@"

@@ -1,0 +1,33 @@
+# Gemini Code Assist for GitHub Configuration File
+#
+# This configuration disables all automatic actions from the Gemini bot.
+# The bot will only be activated when manually called in a pull request comment.
+#
+# For documentation, see: https://developers.google.com/gemini-code-assist/docs/customize-gemini-behavior-github
+
+version: 1
+
+# Disable all automatic review triggers.
+review_triggers:
+  # Do not trigger a review when a pull request is opened.
+  pull_request_opened: true
+  # Do not trigger a review when a new commit is pushed to the PR branch.
+  pull_request_commit_added: false
+  # Do trigger a review when the bot is added as a reviewer.
+  reviewer_added: true
+
+# Disable automatic summary generation.
+# This prevents the bot from posting a summary of changes when a PR is opened.
+summarize_on_pull_request_open: false
+
+# You can leave 'review_comments' enabled. This section controls WHAT the bot
+# comments on (e.g., security, code style) when it's called, not WHEN it's called.
+# Disabling triggers above is sufficient to control its activation.
+review_comments:
+  # Enable all categories of comments for when a manual review is requested.
+  security: true
+  performance: true
+  style: false
+  code_understanding: true
+  test_coverage: true
+  custom_instructions: true # This allows you to provide extra instructions in a PR comment if needed.

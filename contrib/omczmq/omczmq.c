@@ -192,6 +192,7 @@ static rsRetVal initCZMQ(instanceData* pData) {
 #endif
 			pData->serverish = false;
 			break;
+		default:break;
 	}
 
 	rc = zsock_attach(pData->sock, pData->sockEndpoints, pData->serverish);

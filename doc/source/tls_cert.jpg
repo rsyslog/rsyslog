@@ -1,0 +1,12 @@
+--2014-01-22 12:49:25--  http://www.rsyslog.com/doc/tls_cert.jpg
+Resolving www.rsyslog.com (www.rsyslog.com)... 176.9.39.152
+Connecting to www.rsyslog.com (www.rsyslog.com)|176.9.39.152|:80... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: unspecified [image/jpg]
+Saving to: ‘tls_cert.jpg’
+
+     0K .......... .......... .......... .......... ..........  141K
+    50K .......... ......                                       146K=0.5s
+
+2014-01-22 12:49:26 (143 KB/s) - ‘tls_cert.jpg’ saved [68335]
+

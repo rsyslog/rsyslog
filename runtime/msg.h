@@ -199,9 +199,8 @@ void MsgSetMSGoffs(smsg_t *pMsg, int offs);
 void MsgSetRawMsgWOSize(smsg_t *pMsg, char* pszRawMsg);
 void ATTR_NONNULL() MsgSetRawMsg(smsg_t *const pThis, const char*const pszRawMsg, const size_t lenMsg);
 rsRetVal MsgReplaceMSG(smsg_t *pThis, const uchar* pszMSG, int lenMSG);
-uchar *MsgGetProp(smsg_t *pMsg, struct templateEntry *pTpe, msgPropDescr_t *pProp,
-		  rs_size_t *pPropLen, unsigned short *pbMustBeFreed, struct syslogTime *ttNow);
-uchar *getRcvFrom(smsg_t *pM);
+uchar *MsgGetProp(smsg_t *pMsg, struct templateEntry *pTpe, msgPropDescr_t *pProp, rs_size_t *pPropLen,
+	unsigned short *pbMustBeFreed, struct syslogTime *ttNow);
 void getTAG(smsg_t *pM, uchar **ppBuf, int *piLen, sbool);
 const char *getTimeReported(smsg_t *pM, enum tplFormatTypes eFmt);
 const char *getPRI(smsg_t *pMsg);

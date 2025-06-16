@@ -125,8 +125,6 @@ done:	return r;
 
 
 /* Read a character from the program's output. */
-// TODO: highly unoptimized version, should be used in buffered
-// mode
 static int
 readProgChar(int fd, char *c)
 {

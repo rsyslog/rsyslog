@@ -35,7 +35,7 @@
 #include "rsyslog.h"
 #include "janitor.h"
 
-static struct janitorEtry *janitorRoot = NULL; /* TODO: move to runConf? */
+static struct janitorEtry *janitorRoot = NULL;
 static pthread_mutex_t janitorMut = PTHREAD_MUTEX_INITIALIZER;
 
 rsRetVal

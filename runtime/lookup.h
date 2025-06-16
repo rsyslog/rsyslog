@@ -21,11 +21,13 @@
 #ifndef INCLUDED_LOOKUP_H
 #define INCLUDED_LOOKUP_H
 #include <libestr.h>
+#include <regex.h>
 
 #define STRING_LOOKUP_TABLE 1
 #define ARRAY_LOOKUP_TABLE 2
 #define SPARSE_ARRAY_LOOKUP_TABLE 3
 #define STUBBED_LOOKUP_TABLE 4
+#define REGEX_LOOKUP_TABLE 5
 
 #define LOOKUP_KEY_TYPE_STRING 1
 #define LOOKUP_KEY_TYPE_UINT 2
@@ -59,6 +61,17 @@ struct lookup_string_tab_s {
 	lookup_string_tab_entry_t *entries;
 };
 
+struct lookup_regex_tab_entry_s {
+	regex_t regex;
+	uchar *regex_str;
+	uchar *interned_val_ref;
+	uint8_t is_compiled;
+};
+
+struct lookup_regex_tab_s {
+	lookup_regex_tab_entry_t *entries;
+};
+
 struct lookup_ref_s {
 	pthread_rwlock_t rwlock;	/* protect us in case of dynamic reloads */
 	uchar *name;
@@ -88,6 +101,7 @@ struct lookup_s {
 		lookup_string_tab_t *str;
 		lookup_array_tab_t *arr;
 		lookup_sparseArray_tab_t *sprsArr;
+		lookup_regex_tab_t *regex;
 	} table;
 	uint32_t interned_val_count;
 	uchar **interned_vals;

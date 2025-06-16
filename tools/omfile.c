@@ -2,7 +2,7 @@
  * This is the implementation of the build-in file output module.
  *
  * NOTE: read comments in module-template.h to understand how this file
- *       works!
+ * works!
  *
  * File begun on 2007-07-21 by RGerhards (extracted from syslogd.c, which
  * at the time of the fork from sysklogd was under BSD license)
@@ -25,9 +25,9 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *       -or-
- *       see COPYING.ASL20 in the source distribution
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * -or-
+ * see COPYING.ASL20 in the source distribution
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -85,24 +85,35 @@ DEF_OMOD_STATIC_DATA
 DEFobjCurrIf(strm)
 DEFobjCurrIf(statsobj)
 
-/* for our current LRU mechanism, we need a monotonically increasing counters. We use
- * it much like a "Lamport logical clock": we do not need the actual time, we just need
- * to know the sequence in which files were accessed. So we use a simple counter to
- * create that sequence. We use an unsigned 64 bit value which is extremely unlike to
- * wrap within the lifetime of a process. If we process 1,000,000 file writes per
- * second, the process could still exist over 500,000 years before a wrap to 0 happens.
- * That should be sufficient (and even than, there would no really bad effect ;)).
- * The variable below is the global counter/clock.
+/**
+ * @brief Global counter/clock for file access timestamping.
+ *
+ * This counter is used as a "Lamport logical clock" for the LRU mechanism
+ * of the dynamic file cache. It provides a monotonically increasing sequence
+ * number to track the access order of files, rather than actual time.
+ * It is highly unlikely to wrap within the lifetime of a process.
  */
 #ifdef HAVE_ATOMIC_BUILTINS64
 static uint64 clockFileAccess = 0;
 #else
 static unsigned clockFileAccess = 0;
 #endif
-/* and the "tick" function */
+
+/**
+ * @brief Mutex for protecting clockFileAccess in non-atomic builtins environments.
+ */
 #ifndef HAVE_ATOMIC_BUILTINS
 static pthread_mutex_t mutClock;
 #endif
+
+/**
+ * @brief Retrieves and increments the global file access clock.
+ *
+ * This function provides a monotonically increasing counter used for the LRU
+ * mechanism in the dynamic file cache. It is thread-safe.
+ *
+ * @return The incremented value of the file access clock.
+ */
 static uint64
 getClockFileAccess(void)
 {
@@ -114,113 +125,137 @@ getClockFileAccess(void)
 }
 
 
-/* The following structure is a dynafile name cache entry.
+/**
+ * @brief Structure for a dynamic file name cache entry.
+ *
+ * This structure holds information about a dynamically opened file,
+ * including its name, the associated stream, signature provider data,
+ * and access timestamp for LRU management.
  */
 struct s_dynaFileCacheEntry {
-	uchar *pName;		/* name currently open, if dynamic name */
-	strm_t	*pStrm;		/* our output stream */
-	void	*sigprovFileData;	/* opaque data ptr for provider use */
-	uint64	clkTickAccessed;/* for LRU - based on clockFileAccess */
-	short nInactive;	/* number of minutes not writen - for close timeout */
+	uchar *pName;		/**< name currently open, if dynamic name */
+	strm_t	*pStrm;		/**< our output stream */
+	void	*sigprovFileData;	/**< opaque data ptr for provider use */
+	uint64	clkTickAccessed;/**< for LRU - based on clockFileAccess */
+	short nInactive;	/**< number of minutes not writen - for close timeout */
 };
 typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
 
 
-#define IOBUF_DFLT_SIZE 4096	/* default size for io buffers */
-#define FLUSH_INTRVL_DFLT 1 	/* default buffer flush interval (in seconds) */
-#define USE_ASYNCWRITER_DFLT 0 	/* default buffer use async writer */
-#define FLUSHONTX_DFLT 1 	/* default for flush on TX end */
+#define IOBUF_DFLT_SIZE 4096	/**< default size for io buffers */
+#define FLUSH_INTRVL_DFLT 1 	/**< default buffer flush interval (in seconds) */
+#define USE_ASYNCWRITER_DFLT 0 	/**< default buffer use async writer */
+#define FLUSHONTX_DFLT 1 	/**< default for flush on TX end */
 
-
+/**
+ * @brief Instance data for the omfile module.
+ *
+ * This structure holds the configuration and runtime state for each
+ * file output action.
+ */
 typedef struct _instanceData {
-	pthread_mutex_t mutWrite; /* guard against multiple instances writing to single file */
-	uchar	*fname;	/* file or template name (display only) */
-	uchar 	*tplName;	/* name of assigned template */
-	strm_t	*pStrm;		/* our output stream */
-	short nInactive;	/* number of minutes not writen (STATIC files only) */
-	char	bDynamicName;	/* 0 - static name, 1 - dynamic name (with properties) */
-	int	isDevNull;	/* do we "write" to /dev/null? - if so, do nothing */
-	int	fCreateMode;	/* file creation mode for open() */
-	int	fDirCreateMode;	/* creation mode for mkdir() */
-	int	bCreateDirs;	/* auto-create directories? */
-	int	bSyncFile;	/* should the file by sync()'ed? 1- yes, 0- no */
-	uint8_t iNumTpls;	/* number of tpls we use */
-	uid_t	fileUID;	/* IDs for creation */
+	pthread_mutex_t mutWrite; /**< guard against multiple instances writing to single file */
+	uchar	*fname;	/**< file or template name (display only) */
+	uchar 	*tplName;	/**< name of assigned template */
+	strm_t	*pStrm;		/**< our output stream */
+	short nInactive;	/**< number of minutes not writen (STATIC files only) */
+	char	bDynamicName;	/**< 0 - static name, 1 - dynamic name (with properties) */
+	int	isDevNull;	/**< do we "write" to /dev/null? - if so, do nothing */
+	int	fCreateMode;	/**< file creation mode for open() */
+	int	fDirCreateMode;	/**< creation mode for mkdir() */
+	int	bCreateDirs;	/**< auto-create directories? */
+	int	bSyncFile;	/**< should the file by sync()'ed? 1- yes, 0- no */
+	uint8_t iNumTpls;	/**< number of tpls we use */
+	uid_t	fileUID;	/**< IDs for creation */
 	uid_t	dirUID;
 	gid_t	fileGID;
 	gid_t	dirGID;
-	int	bFailOnChown;	/* fail creation if chown fails? */
-	uchar 	*sigprovName;	/* signature provider */
-	uchar 	*sigprovNameFull;/* full internal signature provider name */
-	sigprov_if_t sigprov;	/* ptr to signature provider interface */
-	void	*sigprovData;	/* opaque data ptr for provider use */
-	void 	*sigprovFileData;/* opaque data ptr for file instance */
-	sbool	useSigprov;	/* quicker than checkig ptr (1 vs 8 bytes!) */
-	uchar 	*cryprovName;	/* crypto provider */
-	uchar 	*cryprovNameFull;/* full internal crypto provider name */
-	void	*cryprovData;	/* opaque data ptr for provider use */
-	cryprov_if_t cryprov;	/* ptr to crypto provider interface */
-	sbool	useCryprov;	/* quicker than checkig ptr (1 vs 8 bytes!) */
-	int	iCurrElt;	/* currently active cache element (-1 = none) */
-	int	iCurrCacheSize;	/* currently cache size (1-based) */
-	int	iDynaFileCacheSize; /* size of file handle cache */
-	/* The cache is implemented as an array. An empty element is indicated
+	int	bFailOnChown;	/**< fail creation if chown fails? */
+	uchar 	*sigprovName;	/**< signature provider */
+	uchar 	*sigprovNameFull;/**< full internal signature provider name */
+	sigprov_if_t sigprov;	/**< ptr to signature provider interface */
+	void	*sigprovData;	/**< opaque data ptr for provider use */
+	void 	*sigprovFileData;/**< opaque data ptr for file instance */
+	sbool	useSigprov;	/**< quicker than checkig ptr (1 vs 8 bytes!) */
+	uchar 	*cryprovName;	/**< crypto provider */
+	uchar 	*cryprovNameFull;/**< full internal crypto provider name */
+	void	*cryprovData;	/**< opaque data ptr for provider use */
+	cryprov_if_t cryprov;	/**< ptr to crypto provider interface */
+	sbool	useCryprov;	/**< quicker than checkig ptr (1 vs 8 bytes!) */
+	int	iCurrElt;	/**< currently active cache element (-1 = none) */
+	int	iCurrCacheSize;	/**< currently cache size (1-based) */
+	int	iDynaFileCacheSize; /**< size of file handle cache */
+	/**
+	 * The cache is implemented as an array. An empty element is indicated
 	 * by a NULL pointer. Memory is allocated as needed. The following
 	 * pointer points to the overall structure.
 	 */
 	dynaFileCacheEntry **dynCache;
-	off_t	iSizeLimit;		/* file size limit, 0 = no limit */
-	uchar	*pszSizeLimitCmd;	/* command to carry out when size limit is reached */
-	int 	iZipLevel;		/* zip mode to use for this selector */
-	int	iIOBufSize;		/* size of associated io buffer */
-	int	iFlushInterval;		/* how fast flush buffer on inactivity? */
-	short	iCloseTimeout;		/* after how many *minutes* shall the file be closed if inactive? */
-	sbool	bFlushOnTXEnd;		/* flush write buffers when transaction has ended? */
-	sbool	bUseAsyncWriter;	/* use async stream writer? */
+	off_t	iSizeLimit;		/**< file size limit, 0 = no limit */
+	uchar	*pszSizeLimitCmd;	/**< command to carry out when size limit is reached */
+	int 	iZipLevel;		/**< zip mode to use for this selector */
+	int	iIOBufSize;		/**< size of associated io buffer */
+	int	iFlushInterval;		/**< how fast flush buffer on inactivity? */
+	short	iCloseTimeout;		/**< after how many *minutes* shall the file be closed if inactive? */
+	sbool	bFlushOnTXEnd;		/**< flush write buffers when transaction has ended? */
+	sbool	bUseAsyncWriter;	/**< use async stream writer? */
 	sbool	bVeryRobustZip;
-	statsobj_t *stats;		/* dynafile, primarily cache stats */
+	statsobj_t *stats;		/**< dynafile, primarily cache stats */
 	STATSCOUNTER_DEF(ctrRequests, mutCtrRequests);
 	STATSCOUNTER_DEF(ctrLevel0, mutCtrLevel0);
 	STATSCOUNTER_DEF(ctrEvict, mutCtrEvict);
 	STATSCOUNTER_DEF(ctrMiss, mutCtrMiss);
 	STATSCOUNTER_DEF(ctrMax, mutCtrMax);
 	STATSCOUNTER_DEF(ctrCloseTimeouts, mutCtrCloseTimeouts);
-	char janitorID[128];		/* holds ID for janitor calls */
+	char janitorID[128];		/**< holds ID for janitor calls */
 } instanceData;
 
-
+/**
+ * @brief Worker instance data for the omfile module.
+ *
+ * This structure holds a pointer to the main instance data for use
+ * by worker threads.
+ */
 typedef struct wrkrInstanceData {
 	instanceData *pData;
 } wrkrInstanceData_t;
 
-
+/**
+ * @brief Module-global configuration settings.
+ *
+ * This structure holds the configuration settings that apply globally
+ * to the omfile module.
+ */
 typedef struct configSettings_s {
-	int iDynaFileCacheSize; /* max cache for dynamic files */
-	int fCreateMode; /* mode to use when creating files */
-	int fDirCreateMode; /* mode to use when creating files */
-	int	bFailOnChown;	/* fail if chown fails? */
-	uid_t	fileUID;	/* UID to be used for newly created files */
-	uid_t	fileGID;	/* GID to be used for newly created files */
-	uid_t	dirUID;		/* UID to be used for newly created directories */
-	uid_t	dirGID;		/* GID to be used for newly created directories */
-	int	bCreateDirs;/* auto-create directories for dynaFiles: 0 - no, 1 - yes */
-	int	bEnableSync;/* enable syncing of files (no dash in front of pathname in conf): 0 - no, 1 - yes */
-	int	iZipLevel;	/* zip compression mode (0..9 as usual) */
-	sbool	bFlushOnTXEnd;/* flush write buffers when transaction has ended? */
-	int64	iIOBufSize;	/* size of an io buffer */
-	int	iFlushInterval; 	/* how often flush the output buffer on inactivity? */
-	int	bUseAsyncWriter;	/* should we enable asynchronous writing? */
+	int iDynaFileCacheSize; /**< max cache for dynamic files */
+	int fCreateMode; /**< mode to use when creating files */
+	int fDirCreateMode; /**< mode to use when creating files */
+	int	bFailOnChown;	/**< fail if chown fails? */
+	uid_t	fileUID;	/**< UID to be used for newly created files */
+	uid_t	fileGID;	/**< GID to be used for newly created files */
+	uid_t	dirUID;		/**< UID to be used for newly created directories */
+	uid_t	dirGID;		/**< GID to be used for newly created directories */
+	int	bCreateDirs;/**< auto-create directories for dynaFiles: 0 - no, 1 - yes */
+	int	bEnableSync;/**< enable syncing of files (no dash in front of pathname in conf): 0 - no, 1 - yes */
+	int	iZipLevel;	/**< zip compression mode (0..9 as usual) */
+	sbool	bFlushOnTXEnd;/**< flush write buffers when transaction has ended? */
+	int64	iIOBufSize;	/**< size of an io buffer */
+	int	iFlushInterval; 	/**< how often flush the output buffer on inactivity? */
+	int	bUseAsyncWriter;	/**< should we enable asynchronous writing? */
 	EMPTY_STRUCT
 } configSettings_t;
 static configSettings_t cs;
-uchar	*pszFileDfltTplName; /* name of the default template to use */
+uchar	*pszFileDfltTplName; /**< name of the default template to use */
 
+/**
+ * @brief Module configuration data for the v6 config system.
+ */
 struct modConfData_s {
-	rsconf_t *pConf;	/* our overall config object */
-	uchar 	*tplName;	/* default template */
-	int fCreateMode; /* default mode to use when creating files */
-	int fDirCreateMode; /* default mode to use when creating files */
-	uid_t fileUID;	/* default IDs for creation */
+	rsconf_t *pConf;	/**< our overall config object */
+	uchar 	*tplName;	/**< default template */
+	int fCreateMode; /**< default mode to use when creating files */
+	int fDirCreateMode; /**< default mode to use when creating files */
+	uid_t fileUID;	/**< default IDs for creation */
 	uid_t dirUID;
 	gid_t fileGID;
 	gid_t dirGID;
@@ -229,8 +264,8 @@ struct modConfData_s {
 	int compressionDriver_workers;
 };
 
-static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
-static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
+static modConfData_t *loadModConf = NULL;/**< modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL;/**< modConf ptr to use for the current exec process */
 
 /* tables for interfacing with the v6 config system */
 /* module-global parameters */
@@ -294,8 +329,13 @@ static struct cnfparamblk actpblk =
 	};
 
 
-/* this function gets the default template. It coordinates action between
- * old-style and new-style configuration parts.
+/**
+ * @brief Gets the default template name to be used.
+ *
+ * This function coordinates the default template name between old-style
+ * and new-style configuration parts.
+ *
+ * @return A pointer to the default template name string.
  */
 static uchar*
 getDfltTpl(void)
@@ -346,12 +386,16 @@ CODESTARTdbgPrintInstInfo
 ENDdbgPrintInstInfo
 
 
-
-/* set the default template to be used
- * This is a module-global parameter, and as such needs special handling. It needs to
- * be coordinated with values set via the v2 config system (rsyslog v6+). What we do
- * is we do not permit this directive after the v2 config system has been used to set
- * the parameter.
+/**
+ * @brief Sets the default template to be used for output files (legacy method).
+ *
+ * This is a module-global parameter and needs special handling to coordinate
+ * with values set via the v2 config system (rsyslog v6+). This directive is
+ * not permitted after the v2 config system has been used to set the parameter.
+ *
+ * @param pVal Unused pointer, kept for compatibility with command handler signature.
+ * @param newVal The new default template name. Ownership is transferred to this function.
+ * @return RS_RET_OK on success, RS_RET_ERR if already set by new config system.
  */
 static rsRetVal
 setLegacyDfltTpl(void __attribute__((unused)) *pVal, uchar* newVal)
@@ -371,8 +415,16 @@ finalize_it:
 }
 
 
-/* set the dynaFile cache size. Does some limit checking.
- * rgerhards, 2007-07-31
+/**
+ * @brief Sets the dynamic file cache size.
+ *
+ * Performs limit checking to ensure the new value is valid and logs warnings
+ * for unusually large values.
+ *
+ * @param pVal Unused pointer, kept for compatibility with command handler signature.
+ * @param iNewVal The new size for the dynamic file cache.
+ * @return RS_RET_OK on success, RS_RET_VAL_OUT_OF_RANGE if the value was invalid
+ * (the value will be adjusted to a valid range in this case).
  */
 static rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNewVal)
 {
@@ -397,13 +449,21 @@ static rsRetVal setDynaFileCacheSize(void __attribute__((unused)) *pVal, int iNe
 }
 
 
-/* Helper to cfline(). Parses a output channel name up until the first
- * comma and then looks for the template specifier. Tries
- * to find that template. Maps the output channel to the
- * proper filed structure settings. Everything is stored in the
- * filed struct. Over time, the dependency on filed might be
- * removed.
- * rgerhards 2005-06-21
+/**
+ * @brief Parses an output channel name and associates it with the action.
+ *
+ * This is a helper function to `cfline()`. It parses an output channel name
+ * from the configuration line, looks up the channel, and extracts its
+ * associated file template and size limit settings, storing them in the
+ * provided `instanceData` structure.
+ *
+ * @param pData Pointer to the instance data structure to populate.
+ * @param p Pointer to the current position in the configuration line.
+ * @param pOMSR Pointer to the OMOD String Request structure.
+ * @param iEntry Index for the OMOD String Request.
+ * @param iTplOpts Template options.
+ * @return RS_RET_OK on success, or an error code if the output channel
+ * is not found or has no valid file name template.
  */
 static rsRetVal cflineParseOutchannel(instanceData *pData, uchar* p, omodStringRequest_t *pOMSR,
 	int iEntry, int iTplOpts)
@@ -455,12 +515,18 @@ finalize_it:
 }
 
 
-/* This function deletes an entry from the dynamic file name
- * cache. A pointer to the cache must be passed in as well
- * as the index of the to-be-deleted entry. This index may
- * point to an unallocated entry, in whcih case the
- * function immediately returns. Parameter bFreeEntry is 1
- * if the entry should be free()ed and 0 if not.
+/**
+ * @brief Deletes an entry from the dynamic file name cache.
+ *
+ * This function closes the associated file stream, frees memory for the
+ * file name, and optionally frees the cache entry structure itself.
+ *
+ * @param pData Pointer to the instance data containing the dynamic file cache.
+ * @param iEntry The index of the entry to be deleted in the cache array.
+ * @param bFreeEntry If 1, the cache entry structure itself is free()ed;
+ * if 0, only its contents are freed (e.g., if it's being
+ * reused for a new entry).
+ * @return RS_RET_OK on success.
  */
 static rsRetVal
 dynaFileDelCacheEntry(instanceData *__restrict__ const pData, const int iEntry, const int bFreeEntry)
@@ -502,9 +568,13 @@ finalize_it:
 }
 
 
-/* This function frees all dynamic file name cache entries and closes the
- * relevant files. Part of Shutdown and HUP processing.
- * rgerhards, 2008-10-23
+/**
+ * @brief Frees all dynamic file name cache entries and closes relevant files.
+ *
+ * This function is typically called during module shutdown or HUP processing
+ * to release all resources held by the dynamic file cache.
+ *
+ * @param pData Pointer to the instance data containing the dynamic file cache.
  */
 static void
 dynaFileFreeCacheEntries(instanceData *__restrict__ const pData)
@@ -521,7 +591,13 @@ dynaFileFreeCacheEntries(instanceData *__restrict__ const pData)
 }
 
 
-/* This function frees the dynamic file name cache.
+/**
+ * @brief Frees the dynamic file name cache structure.
+ *
+ * This function first frees all entries within the cache and then
+ * deallocates the cache array itself.
+ *
+ * @param pData Pointer to the instance data containing the dynamic file cache.
  */
 static void dynaFileFreeCache(instanceData *__restrict__ const pData)
 {
@@ -533,7 +609,14 @@ static void dynaFileFreeCache(instanceData *__restrict__ const pData)
 }
 
 
-/* close current file */
+/**
+ * @brief Closes the currently open file stream for a given instance.
+ *
+ * If a signature provider is in use, its `OnFileClose` method is also called.
+ *
+ * @param pData Pointer to the instance data whose file stream is to be closed.
+ * @return RS_RET_OK on success.
+ */
 static rsRetVal
 closeFile(instanceData *__restrict__ const pData)
 {
@@ -547,7 +630,17 @@ closeFile(instanceData *__restrict__ const pData)
 }
 
 
-/* This prepares the signature provider to process a file */
+/**
+ * @brief Prepares the signature provider for processing a file.
+ *
+ * This function calls the `OnFileOpen` method of the configured signature
+ * provider, passing the file name and obtaining an opaque data pointer for
+ * file-specific signature operations.
+ *
+ * @param pData Pointer to the instance data containing the signature provider.
+ * @param fn The name of the file to be processed.
+ * @return RS_RET_OK on success.
+ */
 static rsRetVal
 sigprovPrepare(instanceData *__restrict__ const pData, uchar *__restrict__ const fn)
 {
@@ -556,11 +649,19 @@ sigprovPrepare(instanceData *__restrict__ const pData, uchar *__restrict__ const
 	RETiRet;
 }
 
-/* This is now shared code for all types of files. It simply prepares
- * file access, which, among others, means the the file wil be opened
- * and any directories in between will be created (based on config, of
- * course). -- rgerhards, 2008-10-22
- * changed to iRet interface - 2009-03-19
+/**
+ * @brief Prepares file access for a given file name.
+ *
+ * This function handles the creation of parent directories (if configured),
+ * creates the file itself (if it doesn't exist), sets its ownership and
+ * permissions, and then constructs and finalizes the rsyslog stream object
+ * for writing to the file. It also initializes signature and crypto providers
+ * if enabled.
+ *
+ * @param pData Pointer to the instance data for the file output action.
+ * @param newFileName The name of the file to prepare access for.
+ * @return RS_RET_OK on success, or an error code if file creation,
+ * directory creation, or stream construction fails.
  */
 static rsRetVal
 prepareFile(instanceData *__restrict__ const pData, const uchar *__restrict__ const newFileName)
@@ -669,13 +770,18 @@ finalize_it:
 }
 
 
-/* This function handles dynamic file names. It checks if the
- * requested file name is already open and, if not, does everything
- * needed to switch to the it.
- * Function returns 0 if all went well and non-zero otherwise.
- * On successful return pData->fd must point to the correct file to
- * be written.
- * This is a helper to writeFile(). rgerhards, 2007-07-03
+/**
+ * @brief Handles dynamic file names, ensuring the correct file is open for writing.
+ *
+ * This function checks if the requested dynamic file name is already present
+ * in the cache. If so, it reuses the existing file handle. If not, it attempts
+ * to open the new file, potentially evicting an older entry from the LRU cache
+ * if the cache is full.
+ *
+ * @param pData Pointer to the instance data for the file output action.
+ * @param newFileName The new dynamic file name to prepare.
+ * @return RS_RET_OK on success, or an error code if the file cannot be opened
+ * or memory allocation fails.
  */
 static rsRetVal ATTR_NONNULL()
 prepareDynFile(instanceData *__restrict__ const pData, const uchar *__restrict__ const newFileName)
@@ -803,10 +909,17 @@ finalize_it:
 }
 
 
-/* do the actual write process. This function is to be called once we are ready for writing.
- * It will do buffered writes and persist data only when the buffer is full. Note that we must
- * be careful to detect when the file handle changed.
- * rgerhards, 2009-06-03
+/**
+ * @brief Performs the actual buffered write operation to the file stream.
+ *
+ * This function writes the provided buffer to the stream associated with
+ * the instance data. It also calls the signature provider's `OnRecordWrite`
+ * method if a signature provider is in use.
+ *
+ * @param pData Pointer to the instance data containing the stream and provider info.
+ * @param pszBuf Pointer to the buffer containing the data to write.
+ * @param lenBuf The length of the data in the buffer.
+ * @return RS_RET_OK on success, or an error code from the stream write operation.
  */
 static  rsRetVal
 doWrite(instanceData *__restrict__ const pData, uchar *__restrict__ const pszBuf, const int lenBuf)
@@ -829,7 +942,19 @@ finalize_it:
 }
 
 
-/* rgerhards 2004-11-11: write to a file output.  */
+/**
+ * @brief Writes a message to the configured file.
+ *
+ * This function determines whether the output is to a static file or a
+ * dynamic file. If dynamic, it calls `prepareDynFile` to ensure the correct
+ * file is open. It then calls `doWrite` to perform the actual write operation.
+ *
+ * @param pData Pointer to the instance data for the file output action.
+ * @param pParam Pointer to the action worker instance parameters.
+ * @param iMsg The index of the message within the batch to process.
+ * @return RS_RET_OK on success, or an error code if file preparation
+ * or writing fails.
+ */
 static rsRetVal
 writeFile(instanceData *__restrict__ const pData,
 	  const actWrkrIParams_t *__restrict__ const pParam,
@@ -950,7 +1075,15 @@ finalize_it:
 		cnfparamvalsDestruct(pvals, &modpblk);
 ENDsetModCnf
 
-/* This function checks dynafile cache for janitor action */
+/**
+ * @brief Checks the dynamic file cache for entries exceeding their close timeout.
+ *
+ * This function iterates through the dynamic file cache and closes/deletes
+ * entries that have been inactive for longer than their configured
+ * `iCloseTimeout`. It is typically called by the janitor.
+ *
+ * @param pData Pointer to the instance data containing the dynamic file cache.
+ */
 static void
 janitorChkDynaFiles(instanceData *__restrict__ const pData)
 {
@@ -974,7 +1107,15 @@ janitorChkDynaFiles(instanceData *__restrict__ const pData)
 	}
 }
 
-/* callback for the janitor. This cleans out files (if so configured) */
+/**
+ * @brief Callback function for the janitor.
+ *
+ * This function is called periodically by the rsyslog janitor to clean out
+ * inactive files (both static and dynamic) based on their configured
+ * `iCloseTimeout`. It acquires a mutex to protect access to the file data.
+ *
+ * @param pUsr A pointer to the `instanceData` structure for the file action.
+ */
 static void
 janitorCB(void *pUsr)
 {
@@ -1115,7 +1256,15 @@ finalize_it:
 terminate:
 ENDcommitTransaction
 
-
+/**
+ * @brief Sets default parameter values for a new omfile action instance.
+ *
+ * This function initializes various fields of the `instanceData` structure
+ * with their default values, some of which are derived from module-global
+ * configuration settings.
+ *
+ * @param pData Pointer to the `instanceData` structure to be initialized.
+ */
 static void
 setInstParamDefaults(instanceData *__restrict__ const pData)
 {
@@ -1147,7 +1296,16 @@ setInstParamDefaults(instanceData *__restrict__ const pData)
 	pData->pszSizeLimitCmd = NULL;
 }
 
-
+/**
+ * @brief Sets up statistics counters for a new omfile instance.
+ *
+ * This function initializes and registers statistics counters for dynamic
+ * file actions, including requests, cache hits/misses, evictions, and
+ * close timeouts.
+ *
+ * @param pData Pointer to the `instanceData` structure for which to set up stats.
+ * @return RS_RET_OK on success, or an error code if statsobj construction fails.
+ */
 static rsRetVal
 setupInstStatsCtrs(instanceData *__restrict__ const pData)
 {
@@ -1188,6 +1346,16 @@ finalize_it:
 	RETiRet;
 }
 
+/**
+ * @brief Initializes the signature provider for an omfile instance.
+ *
+ * This function loads the specified signature provider module, constructs
+ * its data instance, and sets its configuration parameters. If any step
+ * fails, signatures are disabled for this instance.
+ *
+ * @param pData Pointer to the `instanceData` structure.
+ * @param lst List of configuration parameters for the signature provider.
+ */
 static void
 initSigprov(instanceData *__restrict__ const pData, struct nvlst *lst)
 {
@@ -1230,6 +1398,17 @@ initSigprov(instanceData *__restrict__ const pData, struct nvlst *lst)
 done:	return;
 }
 
+/**
+ * @brief Initializes the crypto provider for an omfile instance.
+ *
+ * This function loads the specified crypto provider module, constructs
+ * its data instance, and sets its configuration parameters. If any step
+ * fails, encryption is disabled for this instance.
+ *
+ * @param pData Pointer to the `instanceData` structure.
+ * @param lst List of configuration parameters for the crypto provider.
+ * @return RS_RET_OK on success, or an error code if loading or construction fails.
+ */
 static rsRetVal
 initCryprov(instanceData *__restrict__ const pData, struct nvlst *lst)
 {
@@ -1526,8 +1705,15 @@ CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 
-/* Reset config variables for this module to default values.
- * rgerhards, 2007-07-17
+/**
+ * @brief Resets configuration variables for the omfile module to default values.
+ *
+ * This function is used to revert module-global configuration settings
+ * to their initial states, typically during `resetconfigvariables` processing.
+ *
+ * @param pp Unused pointer, kept for compatibility.
+ * @param pVal Unused pointer, kept for compatibility.
+ * @return RS_RET_OK always.
  */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {

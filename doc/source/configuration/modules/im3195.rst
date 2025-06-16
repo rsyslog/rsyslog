@@ -1,0 +1,75 @@
+****************************
+im3195: RFC3195 Input Module
+****************************
+
+===========================  ===========================================================================
+**Module Name:**             **im3195**
+**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+===========================  ===========================================================================
+
+
+Purpose
+=======
+
+Receives syslog messages via RFC 3195. The RAW profile is fully
+implemented and the COOKED profile is provided in an experimental state.
+This module uses `liblogging <http://www.liblogging.org>`_ for the
+actual protocol handling.
+
+
+Configuration Parameters
+========================
+
+.. note::
+
+   Parameter names are case-insensitive.
+
+
+Input Parameter
+---------------
+
+Input3195ListenPort
+^^^^^^^^^^^^^^^^^^^
+
+.. note::
+
+   Parameter is only available in Legacy Format.
+
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "601", "no", "``$Input3195ListenPort``"
+
+The port on which im3195 listens for RFC 3195 messages. The default
+port is 601 (the IANA-assigned port)
+
+
+Caveats/Known Bugs
+==================
+
+Due to no demand at all for RFC3195, we have converted rfc3195d to this
+input module, but we have NOT conducted any testing. Also, the module
+does not yet properly handle the recovery case. If someone intends to
+put this module into production, good testing should be conducted. It
+also is a good idea to notify the rsyslog project that you intend to use
+it in production. In this case, we'll probably give the module another
+cleanup. We don't do this now because so far it looks just like a big
+waste of time.
+
+Currently only a single listener can be defined. That one binds to all
+interfaces.
+
+Example
+=======
+
+The following sample accepts syslog messages via RFC 3195 on port 1601.
+
+.. code-block:: none
+
+   $ModLoad im3195
+   $Input3195ListenPort 1601
+
+

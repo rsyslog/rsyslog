@@ -1399,6 +1399,9 @@ gtlsChkPeerAuth(nsd_gtls_t *pThis)
 		case GTLS_AUTH_CERTANON:
 			FINALIZE;
 			break;
+		default:
+			// No action needed for other cases
+			break;
 	}
 
 finalize_it:

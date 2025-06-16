@@ -1,5 +1,96 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2506.0 (aka 2025.06) 2025-06-??
+Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-06-12: build: Removed the redundant *_la_LDFLAGS
+  Whilst this did not cause issues when building the project, it produced
+  warnings.
+  Thanks to Attila Lakatos for the patch.
+- 2025-06-12: ossl netstream driver: do not import engines if not available
+  Avoid including openssl/engine.h when OPENSSL_NO_ENGINE is set. Adjust dependent
+  modules and test accordingly.
+  Thanks to Attila Lakatos for the patch.
+- 2025-06-12: tcpsrv bugfix: fix potential data race issue
+  When re-arming epoll descriptors, we used a non-thread safe way to do this. However,
+  it is hard to envison this could have caused any real issue because of the way the
+  logic accesses the data elements. But at least in theory on a system with very many
+  tcpsrv threads, many cores and very high load re-arm could probably done incorrectly
+  what could have lead to stalling of that connection.
+  This was detected during CI runs by LLVM thread analyzer. We never receive any report
+  of this from practice.
+----------------------------------------------------------------------------------------
+Scheduled Release 8.2506.0 (aka 2025.06) 2025-06-10
+- 2025-06-10: core fix: hastable object did not init memory properly on extend
+  When a hash table was expanded, the newly allocated memory segment was not
+  cleared correctly. This was caused by providing an incorrect destination
+  address and byte-count to the memory-clearing function.
+  This could lead to instability or incorrect behavior when the hash table
+  grew. The new memory is now properly zero-initialized, ensuring stable
+  operation.
+- 2025-06-10: queue fix: spammy queue size message do to incorrect commit
+  Reverted commit 525a6f1bbf that tried to provide better diagnostics for
+  queues being potentially misconfigured that was invalid and created queue warning
+  messages on startup.  The functionality will be re-implemented properly later.
+  JThis is no loss of
+  functionality.
+- 2025-06-10: CI: new python-based codestyle checker
+  Easier to maintain than the off-project C source. The checks
+  are pretty trivial.
+  closes https://github.com/rsyslog/rsyslog/issues/5631
+- 2025-06-09: omfwd regression fix: avoid false active target change log message
+  Commit ffaf6dc added proper variable sync, but dropped the check
+  if active count had actually changed. As such, the output was always
+  generated, which could pollute the log heavily.
+- 2025-06-09: imuxsock: Add statistics counter for discarded messages
+  This patch introduces a counter to track the number of discarded messages.
+  Additionally, it fixes a bug where the submitted message count was incremented
+  even when the message was discarded due to exceeding the allowed message rate
+  within a given interval.
+  Thanks to Attila Lakatos for the patch.
+- 2025-06-08: lookup tables: add new table type for regex-matches
+  While we do not like rexeg-matches for performance reasons, they are
+  well known and appreciated by users. With the new table type, we
+  add a lookup capability for partial matches, but at the price
+  of much higher ressource use. It still is useful, e.g. to classify
+  events as "noise" events in a simple manner.
+- 2025-06-08: docs: restructure contributor docs for clarity and AI agent readiness
+  This updated all contributor-facing documentation:
+  - **README.md**: Modernized structure; clarified installation/build.
+    Removed obsolete local doc references, linked to rsyslog-doc.
+  - **CONTRIBUTING.md**: Refactored for clarity; added AI code guidance
+    (e.g., commit prefix `AI:`). Formalized draft PRs for experiments.
+    Removed outdated "testing new releases" advice. Added rationale
+    for `master` branch due to ecosystem dependencies.
+  - **AGENTS.md** (new): Introduces clear guidelines for AI agents
+    contributing to rsyslog. Includes commit formatting, PR branch
+    expectations, testing environment, and behavioral rules.
+  **Why now?**
+  Over two years, we've evaluated evolving AI dev agent capabilities.
+  We now consider them mature enough for rsyslog dev workflow—under
+  careful human review. This update provides the foundation to onboard
+  agents in a controlled, auditable, high-quality manner.
+  All changes prioritize traceability and developer clarity—both human
+  and AI.
+  closes: https://github.com/rsyslog/rsyslog/issues/5657
+- 2025-06-08: improved CI workflow
+- 2025-06-08: omazureeventhubs bugfix: wrong content-type used
+  This was detected during a code review. No report from practice is known. There was
+  a type in the content type definition when encoding the message. This can potentially
+  lead to malfunction.
+- 2025-06-06: omusrmsg: fixed a potentially unsafe string builder
+  While not expected to be problematic in practice, there still was some security
+  issue potential AND it prevented clean build in some environments.
+- 2025-06-05: impstats: add prometheus format to set of supported output formats
+  This can be used eg. to use node_exporter file scraping capability
+- 2025-06-04: omsendertrack: new module
+  The omsendertrack module is designed to track and report statistics for
+  message senders across all inputs in Rsyslog. It periodically outputs a
+  JSON file containing information about each sender.
+  Note: This commit provides minimalistic basic functionality as a PoC.
+  We will check it's usefulness in practice and expect follow-up PRs
+  to enhance functionality and include feedback from early testing.
+  However, this module is solid, just feature limited.
+  see also: https://github.com/rsyslog/rsyslog/issues/5599
+- 2025-05-29: omjournal: Fix priority value
+  Thanks to Bougrine Anis for the patch.
 - 2025-05-14: tls subsystem: generate better error message on accept failure
   Right now, the remote peer is not reported, even in cases where
   this would be possible. This patch provides a method to emit a

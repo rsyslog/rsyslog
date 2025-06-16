@@ -196,7 +196,8 @@ static struct cnfparamblk paramblk =
 static struct cnfparamvals *cnfparamvals = NULL;
 /* we need to support multiple calls into our param block, so we need
  * to persist the current settings. Note that this must be re-set
- * each time a new config load begins (TODO: create interface?)
+ * each time a new config load begins. This is a hint if we will
+ * ever implement multi-config support, which is just an idea right now.
  */
 
 int
@@ -885,7 +886,6 @@ SetLocalFQDNName(uchar *newname)
 }
 
 /* return the current localhost name as FQDN (requires FQDN to be set)
- * TODO: we should set the FQDN ourselfs in here!
  */
 static uchar*
 GetLocalFQDNName(void)

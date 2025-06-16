@@ -208,8 +208,6 @@ rsRetVal parsSkipAfterChar(rsParsObj *pThis, char c)
 /* Skip whitespace. Often used to trim parsable entries.
  * Returns with ParsePointer set to first non-whitespace
  * character (or at end of string).
- * If bRequireOne is set to true, at least one whitespace
- * must exist, else an error is returned.
  */
 rsRetVal parsSkipWhitespace(rsParsObj *pThis)
 {
