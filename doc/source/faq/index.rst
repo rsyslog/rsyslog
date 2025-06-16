@@ -2,9 +2,9 @@ FAQ
 ===
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    faq_overall
    difference_queues
-   encrypt_mysql_traffic_ommysql.rst
-   imudp-packet-loss.rst
+   encrypt_mysql_traffic_ommysql
+   imudp-packet-loss
