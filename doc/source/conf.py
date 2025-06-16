@@ -18,12 +18,12 @@ import sys
 sys.path.append(os.getcwd())
 import conf_helpers
 
-
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('_ext'))
+
+from rsyslog_lexer import RainerScriptLexer
 
 # -- General configuration -----------------------------------------------------
 
@@ -421,3 +421,4 @@ epub_description = u'Documentation for the rsyslog project'
 # Include our custom stylesheet in addition to specified theme
 def setup(app):
     app.add_css_file('rsyslog.css')
+    app.add_lexer('rsyslog', RainerScriptLexer)
