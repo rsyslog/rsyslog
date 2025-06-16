@@ -26,6 +26,10 @@ name: compile check
 
 on:
   pull_request:
+    paths-ignore:
+      - 'ChangeLog'
+      - '**/*.md'
+      - '**/*.txt'
 
 jobs:
   run:

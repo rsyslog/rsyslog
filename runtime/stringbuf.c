@@ -406,7 +406,6 @@ rsRetVal rsCStrSetSzStr(cstr_t *const __restrict__ pThis,
 uchar*
 cstrGetSzStrNoNULL(cstr_t *const __restrict__ pThis)
 {
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	assert(pThis->isFinalized);
 	return (pThis->pBuf == NULL) ? (uchar*) "" : pThis->pBuf;
 }

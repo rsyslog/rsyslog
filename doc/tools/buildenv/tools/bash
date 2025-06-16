@@ -1,0 +1,2 @@
+echo "You are now in Alpine's ash"
+/bin/ash

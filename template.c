@@ -1791,6 +1791,9 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	case F_JSONFR:
 		pTpe->data.field.options.bJSONfr = 1;
 		break;
+	default:
+		// No action needed for other cases
+		break;
 	}
 	switch(controlchr) {
 	case CC_NONE:
@@ -1805,6 +1808,9 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 	case CC_DROP:
 		pTpe->data.field.options.bDropCC = 1;
 		break;
+	default:
+		// No action needed for other cases
+		break;
 	}
 	switch(secpath) {
 	case SP_NONE:
@@ -1815,6 +1821,9 @@ createPropertyTpe(struct template *pTpl, struct cnfobj *o)
 		break;
 	case SP_REPLACE:
 		pTpe->data.field.options.bSecPathReplace = 1;
+		break;
+	default:
+		// No action needed for other cases
 		break;
 	}
 	pTpe->fieldName = outname;
@@ -2095,6 +2104,9 @@ tplProcessCnf(struct cnfobj *o)
 	case T_SUBTREE:	memcpy(&pTpl->subtree, &subtree, sizeof(msgPropDescr_t));
 			pTpl->bHaveSubtree = 1;
 			break;
+	default:
+		// No action needed for other cases
+		break;
 	}
 	
 	pTpl->optFormatEscape = NO_ESCAPE;
@@ -2188,6 +2200,9 @@ void tplDeleteAll(rsconf_t *conf)
 #endif
 				msgPropDescrDestruct(&pTpeDel->data.field.msgProp);
 				break;
+			default:
+				// No action needed for other cases
+				break;
 			}
 			free(pTpeDel->fieldName);
 			free(pTpeDel);
@@ -2238,6 +2253,9 @@ void tplDeleteNew(rsconf_t *conf)
 				}
 #endif
 				msgPropDescrDestruct(&pTpeDel->data.field.msgProp);
+				break;
+			default:
+				// No action needed for other cases
 				break;
 			}
 			free(pTpeDel);
@@ -2372,6 +2390,9 @@ void tplPrintList(rsconf_t *conf)
 				case tplCaseConvUpper:
 					dbgprintf("[Converted to Upper Case] ");
 					break;
+				default:
+					// No action needed for other cases
+					break;
 				}
 				if(pTpe->data.field.options.bEscapeCC) {
 				  	dbgprintf("[escape control-characters] ");
@@ -2421,6 +2442,9 @@ void tplPrintList(rsconf_t *conf)
 						pTpe->data.field.iFromPos,
 						pTpe->data.field.iToPos);
 				}
+				break;
+			default:
+				// No action needed for other cases
 				break;
 			}
 			if(pTpe->bComplexProcessing)

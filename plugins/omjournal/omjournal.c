@@ -170,7 +170,7 @@ CODESTARTnewActInst
 		CHKiRet(OMSRsetEntry(*ppOMSR, 0, ustrdup(pData->tplName),
 				     OMSR_TPL_AS_JSON));
 	}
-	
+
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst

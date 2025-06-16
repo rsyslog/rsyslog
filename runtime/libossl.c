@@ -170,7 +170,7 @@ eiRead(osslfile gf)
 	}
 
 	nRead = read(gf->fd, gf->readBuf, READBUF_SIZE);
-	if(nRead <= 0) { /* TODO: provide specific EOF case? */
+	if(nRead <= 0) {
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	gf->readBufMaxIdx = (int16_t) nRead;
@@ -415,8 +415,6 @@ osslfileGetBytesLeftInBlock(osslfile gf, ssize_t* left)
 	}
 	*left = gf->bytesToBlkEnd;
 finalize_it:
-	// TODO: remove once this code is sufficiently well-proven
-	DBGPRINTF("osslfileGetBytesLeftInBlock returns %lld, iRet %d\n", (long long) *left, iRet);
 	RETiRet;
 }
 

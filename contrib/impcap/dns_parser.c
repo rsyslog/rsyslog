@@ -203,6 +203,9 @@ static const char *get_class(uint16_t x) {
 			return "QCLASS NONE";
 		case 255:
 			return "QCLASS *";
+		default:
+			// No action needed for other cases
+			break;
 	}
 	return "UNKNOWN";
 }

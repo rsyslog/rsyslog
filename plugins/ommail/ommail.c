@@ -390,7 +390,7 @@ serverConnect(wrkrInstanceData_t *pWrkrData)
 		DBGPRINTF("error %d in getaddrinfo\n", errno);
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
 	}
-	
+
 	if((pWrkrData->md.smtp.sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1) {
 		DBGPRINTF("couldn't create send socket, reason %s", rs_strerror_r(errno, errStr, sizeof(errStr)));
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
@@ -507,10 +507,10 @@ readResponseLn(wrkrInstanceData_t *pWrkrData, char *pLn, size_t lenLn, size_t *c
 	DEFiRet;
 	size_t i = 0;
 	char c;
-	
+
 	assert(pWrkrData != NULL);
 	assert(pLn != NULL);
-	
+
 	do {
 		CHKiRet(getRcvChar(pWrkrData, &c));
 		if(c == '\n')
@@ -539,10 +539,10 @@ readResponse(wrkrInstanceData_t *pWrkrData, int *piState, int iExpected)
 	int bCont;
 	char buf[128];
 	size_t respLen;
-	
+
 	assert(pWrkrData != NULL);
 	assert(piState != NULL);
-	
+
 	bCont = 1;
 	do {
 		CHKiRet(readResponseLn(pWrkrData, buf, sizeof(buf), &respLen));
@@ -557,7 +557,7 @@ readResponse(wrkrInstanceData_t *pWrkrData, int *piState, int iExpected)
 				ABORT_FINALIZE(RS_RET_SMTP_ERROR);
 		}
 	} while(bCont);
-	
+
 finalize_it:
 	RETiRet;
 }
@@ -593,7 +593,7 @@ sendSMTP(wrkrInstanceData_t *pWrkrData, uchar *body, uchar *subject)
 	int iState; /* SMTP state */
 	instanceData *pData;
 	uchar szDateBuf[64];
-	
+
 	pData = pWrkrData->pData;
 
 	CHKiRet(serverConnect(pWrkrData));
@@ -648,7 +648,7 @@ sendSMTP(wrkrInstanceData_t *pWrkrData, uchar *body, uchar *subject)
 
 	/* we are finished, a new connection is created for each request, so let's close it now */
 	CHKiRet(serverDisconnect(pWrkrData));
-	
+
 finalize_it:
 	RETiRet;
 }
@@ -838,7 +838,7 @@ static rsRetVal freeConfigVariables(void)
 	cs.pszFrom = NULL;
 	lstRcptDestruct(cs.lstRcpt);
 	cs.lstRcpt = NULL;
-	
+
 	RETiRet;
 }
 

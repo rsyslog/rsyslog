@@ -226,6 +226,9 @@ ctr_t **entryRef, int8_t linked)
 	case ctrType_Int:
 		ctr->val.pInt = (int*) pCtr;
 		break;
+	default:
+		// No action needed for other cases
+		break;
 	}
 	if (linked) {
 		addCtrToList(pThis, ctr);
@@ -297,6 +300,9 @@ resetResettableCtr(ctr_t *pCtr, int8_t bResetCtrs)
 		case ctrType_Int:
 			*(pCtr->val.pInt) = 0;
 			break;
+		default:
+			// No action needed for other cases
+			break;
 		}
 	}
 }
@@ -338,6 +344,9 @@ accumulatedValue(ctr_t *pCtr) {
 		return *(pCtr->val.pIntCtr);
 	case ctrType_Int:
 		return *(pCtr->val.pInt);
+	default:
+		// No action needed for other cases
+		break;
 	}
 	return -1;
 }
@@ -454,6 +463,9 @@ getStatsLine(statsobj_t *pThis, cstr_t **ppcstr, int8_t bResetCtrs)
 		case ctrType_Int:
 			rsCStrAppendInt(pcstr, *(pCtr->val.pInt));
 			break;
+		default:
+			// No action needed for other cases
+			break;
 		}
 		cstrAppendChar(pcstr, ' ');
 		resetResettableCtr(pCtr, bResetCtrs);
@@ -517,6 +529,82 @@ getSenderStats(rsRetVal(*cb)(void*, const char*),
 }
 
 
+/**
+ * Helper: For a single statsobj_t (named o->name), iterate its counters
+ * and emit Prometheus lines via cb.  We generate, for each counter:
+ *   # HELP <obj>_<ctr> Generic help: "<origin> object, counter <ctr>"
+ *   # TYPE <obj>_<ctr> counter
+ *   <obj>_<ctr> <value>
+ *
+ * If bResetCtrs=TRUE and the counter has CTR_FLAG_RESETTABLE, zero it after reading.
+ */
+static rsRetVal
+emitPrometheusForObject(statsobj_t *o, rsRetVal (*cb)(void*, const char*), void *usrptr, int8_t bResetCtrs)
+{
+	ctr_t *pCtr;
+	char linebuf[512];
+	int len;
+	uint64_t value;
+	const char *objName = (const char*)o->name;
+	const char *origin  = o->origin ? (const char*)o->origin : "";
+
+	/* Iterate each counter in o->ctrRoot.  Lock while walking the linked list. */
+	pthread_mutex_lock(&o->mutCtr);
+	for(pCtr = o->ctrRoot; pCtr != NULL; pCtr = pCtr->next) {
+		/* 1) Read the current accumulated value.  Might be IntCtr or Int. */
+		switch(pCtr->ctrType) {
+		case ctrType_IntCtr:
+			value = *(pCtr->val.pIntCtr);
+		break;
+		case ctrType_Int:
+			value = (uint64_t)(*(pCtr->val.pInt));
+			break;
+		default:
+			value = 0;
+			break;
+		}
+
+		/* 2) Optionally reset if requested and allowed. */
+		if ((bResetCtrs && (pCtr->flags & CTR_FLAG_RESETTABLE)) ||
+			(pCtr->flags & CTR_FLAG_MUST_RESET)) {
+			switch(pCtr->ctrType) {
+			case ctrType_IntCtr:
+				*(pCtr->val.pIntCtr) = 0;
+				break;
+			case ctrType_Int:
+				*(pCtr->val.pInt) = 0;
+				break;
+			default:
+				break;
+			}
+		}
+		pthread_mutex_unlock(&o->mutCtr);
+
+		/* 3) Build the metric name: "<object>_<counter>_total" */
+		/*    It is conventional in Prometheus to append "_total" to counters. */
+		len = snprintf(linebuf, sizeof(linebuf),
+		"# HELP %s_%s_total rsyslog stats: origin=\"%s\" object=\"%s\", counter=\"%s\"\n"
+		"# TYPE %s_%s_total counter\n"
+		"%s_%s_total %llu\n",
+		/* HELP */ objName, pCtr->name, origin, objName, pCtr->name,
+		/* TYPE */ objName, pCtr->name,
+		/* VALUE */ objName, pCtr->name, (unsigned long long)value
+		);
+		if (len < 0 || len >= (int)sizeof(linebuf)) {
+			/* In case our buffer is too small, just skip emitting this counter. */
+		} else {
+			/* Emit this chunk (all three lines) in one callback */
+			cb(usrptr, linebuf);
+		}
+
+		/* Acquire the lock again before advancing to the next counter */
+		pthread_mutex_lock(&o->mutCtr);
+	}
+	pthread_mutex_unlock(&o->mutCtr);
+	return RS_RET_OK;
+}
+
+
 /* this function can be used to obtain all stats lines. In this case,
  * a callback must be provided. This module than iterates over all objects and
  * submits each stats line to the callback. The callback has two parameters:
@@ -530,6 +618,23 @@ getAllStatsLines(rsRetVal(*cb)(void*, const char*), void *const usrptr, statsFmt
 	cstr_t *cstr = NULL;
 	DEFiRet;
 
+
+	if(fmt == statsFmt_Prometheus) {
+		// TODO: move to function
+		/* For each statsobj in our linked list, emit Prometheus lines. */
+		for(o = objRoot; o != NULL; o = o->next) {
+		    emitPrometheusForObject(o, cb, usrptr, bResetCtrs);
+		    /* If the object has a read_notifier, call it now */
+		    if (o->read_notifier != NULL) {
+			o->read_notifier(o, o->read_notifier_ctx);
+		    }
+		}
+		/* Optionally, handle sender stats as additional metrics:
+		 * e.g. emit "rsyslog_sender_<sender> <nMsgs>" lines.
+		 * For simplicity, we skip this, or you can extend similarly. */
+		FINALIZE;
+	}
+
 	for(o = objRoot ; o != NULL ; o = o->next) {
 		switch(fmt) {
 		case statsFmt_Legacy:
@@ -539,6 +644,23 @@ getAllStatsLines(rsRetVal(*cb)(void*, const char*), void *const usrptr, statsFmt
 		case statsFmt_JSON:
 		case statsFmt_JSON_ES:
 			CHKiRet(getStatsLineCEE(o, &cstr, fmt, bResetCtrs));
+			break;
+		case statsFmt_Prometheus:
+			// TODO: move to function
+			/* For each statsobj in our linked list, emit Prometheus lines. */
+			for(o = objRoot; o != NULL; o = o->next) {
+			    emitPrometheusForObject(o, cb, usrptr, bResetCtrs);
+			    /* If the object has a read_notifier, call it now */
+			    if (o->read_notifier != NULL) {
+				o->read_notifier(o, o->read_notifier_ctx);
+			    }
+			}
+			/* Optionally, handle sender stats as additional metrics:
+			 * e.g. emit "rsyslog_sender_<sender> <nMsgs>" lines.
+			 * For simplicity, we skip this, or you can extend similarly. */
+			 break;
+		default:
+			// No action needed for other cases
 			break;
 		}
 		CHKiRet(cb(usrptr, (const char*)cstrGetSzStrNoNULL(cstr)));
