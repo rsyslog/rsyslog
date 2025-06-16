@@ -7,12 +7,14 @@ on:
       - 'ChangeLog'
       - '**/*.md'
       - '**/*.txt'
+      - 'doc/**'
   pull_request:
     branches: [ "master" ]
     paths-ignore:
       - 'ChangeLog'
       - '**/*.md'
       - '**/*.txt'
+      - 'doc/**'
   schedule:
     - cron: "38 1 * * 3"
 

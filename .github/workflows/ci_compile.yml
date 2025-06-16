@@ -1,4 +1,4 @@
-# Copyright 2024 Rainer Gerhards and Others
+# Copyright 2025 Rainer Gerhards and Others
 #
 # https://github.com/rsyslog/rsyslog-pkg-ubuntu
 #
@@ -30,6 +30,7 @@ on:
       - 'ChangeLog'
       - '**/*.md'
       - '**/*.txt'
+      - 'doc/**'
 
 jobs:
   run:
