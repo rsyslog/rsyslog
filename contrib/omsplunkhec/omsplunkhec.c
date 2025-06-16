@@ -401,7 +401,7 @@ setInstDefaultParams(instanceData *const pData)
 	pData->token = NULL;
 	pData->template = NULL;
 	pData->restpath = NULL;
-	pData->restPathTimeout = 3600; // Time in milliseconds
+	pData->restPathTimeout = 30000; // Time in milliseconds (30 seconds as Splunk Hec Timeout)
 	pData->port = 8088;
 	
 	pData->batch = 0;
