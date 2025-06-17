@@ -497,11 +497,15 @@ TESTS +=  \
 	parsertest-snare_ccoff_udp2.sh
 
 if ENABLE_OMSENDERTRACK
-TESTS +=  \
+TESTS += \
 	omsendertrack-basic.sh
+TESTS += \
+	omsendertrack-statefile.sh
 if HAVE_VALGRIND
 TESTS += \
 	omsendertrack-basic-vg.sh
+TESTS += \
+	omsendertrack-statefile-vg.sh
 endif # if HAVE_VALGRIND
 endif
 
@@ -2221,6 +2225,8 @@ EXTRA_DIST= \
 	omfile_hup-vg.sh \
 	omsendertrack-basic.sh \
 	omsendertrack-basic-vg.sh \
+	omsendertrack-statefile.sh \
+	omsendertrack-statefile-vg.sh \
 	zstd.sh \
 	zstd-vg.sh \
 	gzipwr_hup-vg.sh \
