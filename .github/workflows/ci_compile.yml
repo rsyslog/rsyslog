@@ -60,7 +60,7 @@ jobs:
 
       - name: Get changed files (excluding specified documentation/ignored paths)
         id: check_files
-        uses: tj-actions/changed-files@v4
+        uses: tj-actions/changed-files@v46
         with:
           # These are the patterns that, if *only* they change, should skip compilation.
           files_ignore: |
