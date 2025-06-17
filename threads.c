@@ -48,6 +48,8 @@
 /* linked list of currently-known threads */
 static linkedList_t llThrds;
 
+int a = 0; // Dummy Code Change
+
 /* methods */
 
 /* Construct a new thread object

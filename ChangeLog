@@ -1,4 +1,6 @@
 ----------------------------------------------------------------------------------------
+- 2025-06-16: Dummy Entry, nothing changed!
+----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
 - 2025-06-12: build: Removed the redundant *_la_LDFLAGS
   Whilst this did not cause issues when building the project, it produced
