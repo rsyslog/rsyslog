@@ -99,8 +99,37 @@ Each test file in `tests/` is a standalone bash script that is executed independ
 > Test execution is resource-intensive. Limit concurrency (`make check -j4` or less) to avoid unreliable results.
 
 To run `make check`, you **must configure with `--enable-imdiag --enable-testbench`**. The test suite includes many test cases and may run for 10+ minutes. To save time, prefer targeting individual tests by name. Tests with filenames containing "basic" are typically good candidates for quick validation.
+ 
+### Running Individual Tests (Recommended for Agents)
 
-- **Best Practice**: When specifying individual tests, use the test basename only (no directory prefix and omit the `.sh` suffix). For example:
+For AI agents or when focusing on a single test, directly executing the test script is the preferred method as it provides immediate, unfiltered output to stdout, which is ideal for agent analysis.
+
+1.  **Configure the project**:
+    ```bash
+    ./configure --enable-imdiag --enable-testbench
+    ```
+2.  **Navigate to the `tests/` directory**:
+    ```bash
+    cd tests/
+    ```
+3.  **Execute the desired test script directly**:
+    ```bash
+    ./test-name.sh
+    ```
+    For example, to run `rscript_re_extract.sh`:
+    ```bash
+    ./rscript_re_extract.sh
+    ```
+4.  **Return to the project root**:
+    ```bash
+    cd ..
+    ```
+
+This method is superior for individual test runs as it bypasses the `make check` harness which suppresses direct output on failure, instead requiring parsing of `.log` files (`test-suite.log`) for detailed analysis.
+
+### Running the Full Test Suite (`make check`)
+
+- When specifying individual tests, use the test basename only (no directory prefix and omit the `.sh` suffix). For example:
   ```bash
   make check TESTS=rscript_re_extract
   ```
