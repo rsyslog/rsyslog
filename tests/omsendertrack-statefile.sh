@@ -12,8 +12,6 @@ JSON
 generate_conf
 add_conf '
 module(load="../plugins/omsendertrack/.libs/omsendertrack")
-module(load="../plugins/imtcp/.libs/imtcp")
-input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 template(name="hostname" type="string" string="%hostname%")
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
@@ -22,7 +20,8 @@ action(type="omsendertrack" template="hostname" statefile="'$RSYSLOG_DYNNAME'.se
 '
 
 startup
-tcpflood -h sender1.example.net -m $NUMMESSAGES
+injectmsg_literal '<167>Mar  1 01:00:00 sender1.example.net tag msgnum:00000000:'
+injectmsg_literal '<167>Mar  1 01:00:00 sender1.example.net tag msgnum:00000001:'
 shutdown_when_empty
 wait_shutdown
 
