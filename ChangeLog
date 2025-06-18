@@ -1,5 +1,23 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-06-18: net_ossl: Fix memleak in net_ossl_peerfingerprint
+  Fix memory leak where pstrFingerprintSha256 was not being freed
+  in the finalize_it section. This could cause memory accumulation
+  during TLS certificate fingerprint verification when the function
+  exits.
+  Thanks to Attila Lakatos for the patch.
+- 2025-06-18: Support for AI Agents has been added
+  This is an ongoing effort which aligns with the projects "AI-first" approach.
+  The date this was added is just the date of "initial maturity". As AI field
+  is quickly evolving, we need to update this support in any case.
+- 2025-06-15: doc: Documentation repository moved into main rsyslog repo
+  The rsyslog-doc repository content has been integrated into the
+  main rsyslog repository under the 'doc/' directory. This change
+  simplifies maintenance, improves discoverability, and resolves
+  issues with external tools locating documentation. It also
+  streamlines build pipelines and reduces external dependencies.
+  The commit history of rsyslog-doc has been preserved via a Git
+  subtree merge.
 - 2025-06-12: build: Removed the redundant *_la_LDFLAGS
   Whilst this did not cause issues when building the project, it produced
   warnings.
