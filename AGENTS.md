@@ -108,11 +108,15 @@ For AI agents or when focusing on a single test, directly executing the test scr
     ```bash
     ./configure --enable-imdiag --enable-testbench
     ```
-2.  **Navigate to the `tests/` directory**:
+2.  **build testbench toolset**:
+    ```bash
+    make check TESTS=
+    ```
+3.  **Navigate to the `tests/` directory**:
     ```bash
     cd tests/
     ```
-3.  **Execute the desired test script directly**:
+4.  **Execute the desired test script directly**:
     ```bash
     ./test-name.sh
     ```
@@ -120,7 +124,7 @@ For AI agents or when focusing on a single test, directly executing the test scr
     ```bash
     ./rscript_re_extract.sh
     ```
-4.  **Return to the project root**:
+5.  **Return to the project root**:
     ```bash
     cd ..
     ```
