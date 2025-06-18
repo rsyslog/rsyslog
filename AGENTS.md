@@ -109,8 +109,9 @@ For AI agents or when focusing on a single test, directly executing the test scr
     ./configure --enable-imdiag --enable-testbench
     ```
 2.  **build testbench toolset**:
+    Intent is to cause build of toolset, **not** to execute tests. Do **not** add a test in this stage.
     ```bash
-    make check TESTS=
+    make check TESTS=""
     ```
 3.  **Navigate to the `tests/` directory**:
     ```bash
