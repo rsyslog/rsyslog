@@ -1807,15 +1807,16 @@ download_kafka() {
 			wget -q $dep_zk_url -O $dep_zk_cached_file
 			if [ $? -ne 0 ]
 			then
-				echo error during wget, retry:
-				wget $dep_zk_url -O $dep_zk_cached_file
-				if [ $? -ne 0 ]
-				then
-					error_exit 1
-				fi
-			fi
-		fi
-	fi
+                                echo error during wget, retry:
+                                wget $dep_zk_url -O $dep_zk_cached_file
+                                if [ $? -ne 0 ]
+                                then
+                                        echo "Skipping test - unable to download zookeeper"
+                                        error_exit 77
+                                fi
+                        fi
+                fi
+        fi
 	if [ ! -f $dep_kafka_cached_file ]; then
 		if [ -f /local_dep_cache/$RS_KAFKA_DOWNLOAD ]; then
 			printf 'Kafka: satisfying dependency %s from system cache.\n' "$RS_KAFKA_DOWNLOAD"
@@ -1826,15 +1827,16 @@ download_kafka() {
 			if [ $? -ne 0 ]
 			then
 				echo error during wget, retry:
-				wget $dep_kafka_url -O $dep_kafka_cached_file
-				if [ $? -ne 0 ]
-				then
-					rm $dep_kafka_cached_file # a 0-size file may be left over
-					error_exit 1
-				fi
-			fi
-		fi
-	fi
+                                wget $dep_kafka_url -O $dep_kafka_cached_file
+                                if [ $? -ne 0 ]
+                                then
+                                        rm $dep_kafka_cached_file # a 0-size file may be left over
+                                        echo "Skipping test - unable to download kafka"
+                                        error_exit 77
+                                fi
+                        fi
+                fi
+        fi
 }
 
 stop_kafka() {
