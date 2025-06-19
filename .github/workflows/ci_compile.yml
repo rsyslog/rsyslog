@@ -50,28 +50,33 @@ jobs:
   determine_changes_type:
     runs-on: ubuntu-latest
     outputs:
-      # 'true' if no files *outside* the ignored list have changed
-      only_documentation_or_ignored: ${{ steps.check_files.outputs.any_changed == 'false' }}
+      # 'true' if no files *outside* the ignored list (i.e., no code files) have changed
+      only_documentation_or_ignored: ${{ steps.check_non_doc_files.outputs.any_changed == 'false' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4 # Recommended to use v4 for security and features
         with:
           fetch-depth: 2 # Essential for 'tj-actions/changed-files' to accurately compare branches
 
-      - name: Get changed files (excluding specified documentation/ignored paths)
-        id: check_files
+      - name: Get changed non-documentation/source files
+        id: check_non_doc_files
         uses: tj-actions/changed-files@v46
         with:
-          # These are the patterns that, if *only* they change, should skip compilation.
-          files_ignore: |
-            ChangeLog
-            AGENTS.md
-            **/*.md
-            **/*.txt
-            doc/**
-          # This 'files' pattern ensures we look for changes in anything else
+          # Define patterns for files that, if changed, should *NOT* result in skipping compilation.
+          # These are primarily source code files and critical build system files.
+          # If any of these change, 'any_changed' will be true, indicating a code change.
           files: |
-            *
+            **/*.c
+            **/*.h
+            **/Makefile.am
+            grammar/*.l
+            grammar/*.y
+            configure.ac
+            autogen.sh
+            .github/workflows/*.yml
+            # Add other critical build or configuration files here that should trigger a compile
+            # if they change. Avoid including documentation files here.
+
 
   # This job runs and succeeds ONLY if the 'determine_changes_type' job
   # indicated that only documentation or ignored files were modified.
