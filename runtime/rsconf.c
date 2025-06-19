@@ -326,7 +326,6 @@ freeCnf(rsconf_t *pThis)
 }
 
 /* destructor for the rsconf object */
-PROTOTYPEobjDestruct(rsconf);
 BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(rsconf)
 	freeCnf(pThis);
@@ -357,7 +356,6 @@ ENDobjDestruct(rsconf)
 
 
 /* DebugPrint support for the rsconf object */
-PROTOTYPEObjDebugPrint(rsconf);
 BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and CODESTART macros! */
 	cfgmodules_etry_t *modNode;
 
