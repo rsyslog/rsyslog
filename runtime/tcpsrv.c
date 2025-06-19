@@ -169,10 +169,15 @@ epoll_Ctl(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr, const int is
 	} else if(op == EPOLL_CTL_DEL) {
 		dbgprintf("removing epoll entry %d, socket %d\n", id, sock);
 		if(epoll_ctl(pThis->evtdata.epoll.efd, EPOLL_CTL_DEL, sock, NULL) < 0) {
-			LogError(errno, RS_RET_ERR_EPOLL_CTL,
-				"epoll_ctl failed on fd %d, isLstn %d\n",
-				sock, isLstn);
-			ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
+			if(errno == EBADF || errno == ENOENT) {
+				/* already gone-away, everything is well */
+				DBGPRINTF("epoll_ctl: fd %d already removed, isLstn %d", sock, isLstn);
+			} else {
+				LogError(errno, RS_RET_ERR_EPOLL_CTL,
+					"epoll_ctl failed on fd %d, isLstn %d\n",
+					sock, isLstn);
+				ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
+			}
 		}
 	} else {
 		dbgprintf("program error: invalid NSDPOLL_mode %d - ignoring request\n", op);
