@@ -1,5 +1,6 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-06-19: added doc for omsendertrack
 - 2025-06-18: net_ossl: Fix memleak in net_ossl_peerfingerprint
   Fix memory leak where pstrFingerprintSha256 was not being freed
   in the finalize_it section. This could cause memory accumulation
