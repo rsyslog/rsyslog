@@ -158,7 +158,6 @@ epoll_Ctl(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr, const int is
 
 	if(op == EPOLL_CTL_ADD) {
 		dbgprintf("adding epoll entry %d, socket %d\n", id, sock);
-		//pioDescr->event.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLONESHOT; // TODO: remove
 		pioDescr->event.events = EPOLLIN | EPOLLET | EPOLLONESHOT;
 		pioDescr->event.data.ptr = (void*) pioDescr;
 		if(epoll_ctl(pThis->evtdata.epoll.efd, EPOLL_CTL_ADD,  sock, &pioDescr->event) < 0) {
