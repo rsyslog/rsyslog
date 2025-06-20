@@ -458,7 +458,7 @@ getStatsLine(statsobj_t *pThis, cstr_t **ppcstr, int8_t bResetCtrs)
 		cstrAppendChar(pcstr, '=');
 		switch(pCtr->ctrType) {
 		case ctrType_IntCtr:
-			rsCStrAppendInt(pcstr, *(pCtr->val.pIntCtr)); // TODO: OK?????
+			rsCStrAppendInt(pcstr, *(pCtr->val.pIntCtr));
 			break;
 		case ctrType_Int:
 			rsCStrAppendInt(pcstr, *(pCtr->val.pInt));
