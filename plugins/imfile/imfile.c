@@ -191,7 +191,6 @@ struct act_obj_s {
 	char *name;		/* full path name of active object */
 	char *basename;		/* only basename */ //TODO: remove when refactoring rename support
 	char *source_name;	/* if this object is target of a symlink, source_name is its name (else NULL) */
-	//char *statefile;	/* base name of state file (for move operations) */
 	int wd;
 #if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE)
 	struct fileinfo *pfinf;
@@ -336,10 +335,10 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "maxlinesatonce", eCmdHdlrInt, 0 },
 	{ "trimlineoverbytes", eCmdHdlrInt, 0 },
 	{ "maxsubmitatonce", eCmdHdlrInt, 0 },
-	{ "removestateondelete", eCmdHdlrBinary, 0 },
+	{ "deletestateonfiledelete", eCmdHdlrBinary, 0 },
+	{ "removestateondelete", eCmdHdlrBinary, 0 }, // Alias for deletestateonfiledelete for backw compatibility
 	{ "persiststateinterval", eCmdHdlrInt, 0 },
 	{ "persiststateaftersubmission", eCmdHdlrBinary, 0 },
-	{ "deletestateonfiledelete", eCmdHdlrBinary, 0 },
 	{ "delay.message", eCmdHdlrNonNegInt, 0 },
 	{ "addmetadata", eCmdHdlrBinary, 0 },
 	{ "addceetag", eCmdHdlrBinary, 0 },
@@ -465,22 +464,6 @@ finalize_it:
 }
 #endif /* #ifdef ENABLE_V1_STATE_FILE_FORMAT_SUPPORT */
 
-
-
-#if 0 // Code we can potentially use for new functionality // TODO: use or remove
-//TODO add a kind of portable asprintf:
-static const char * ATTR_NONNULL()
-gen_full_name(const char *const dirname, const char *const name)
-{
-	const size_t len_full_name = strlen(dirname) + 1 + strlen(name) + 1;
-	char *const full_name = malloc(len_full_name);
-	if(full_name == NULL)
-		return NULL;
-
-	snprintf(full_name, len_full_name, "%s/%s", dirname, name);
-	return full_name;
-}
-#endif
 
 
 #ifdef HAVE_INOTIFY_INIT
@@ -1973,8 +1956,9 @@ CODESTARTnewInpInst
 			inst->pszFileName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "statefile")) {
 			inst->pszStateFile = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(inppblk.descr[i].name, "removestateondelete")) {
-			inst->bRMStateOnDel = (uint8_t) pvals[i].val.d.n; // TODO: duplicate!
+		} else if(   !strcmp(inppblk.descr[i].name, "removestateondelete")
+			  || !strcmp(inppblk.descr[i].name, "deletestateonfiledelete")) {
+			inst->bRMStateOnDel = (uint8_t) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "tag")) {
 			inst->pszTag = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
@@ -1993,8 +1977,6 @@ CODESTARTnewInpInst
 			inst->discardTruncatedMsg = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "msgdiscardingerror")) {
 			inst->msgDiscardingError = (sbool) pvals[i].val.d.n;
-		} else if(!strcmp(inppblk.descr[i].name, "deletestateonfiledelete")) {
-			inst->bRMStateOnDel = (sbool) pvals[i].val.d.n; // TODO: duplicate!
 		} else if(!strcmp(inppblk.descr[i].name, "addmetadata")) {
 			inst->addMetadata = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "delay.message")) {
