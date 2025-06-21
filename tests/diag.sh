@@ -2832,9 +2832,19 @@ case $1 in
 		export RSYSLOG_OUT_LOG="${RSYSLOG_DYNNAME}.out.log"
 		export RSYSLOG2_OUT_LOG="${RSYSLOG_DYNNAME}_2.out.log"
 		export RSYSLOG_PIDBASE="${RSYSLOG_DYNNAME}:" # also used by instance 2!
-		#export IMDIAG_PORT=13500 DELETE ME
-		#export IMDIAG_PORT2=13501 DELETE ME
-		#export TCPFLOOD_PORT=13514 DELETE ME
+
+		# ensure test tools exist when running tests directly
+		if [ ! -x "${TESTTOOL_DIR}/tcpflood" ]; then
+			echo 'Building test tools...'
+			(	cd "${TESTTOOL_DIR}" \
+				&& make && \
+				make -j$(nproc) ourtail tcpflood chkseq msleep randomgen diagtalker uxsockrcvr \
+					syslog_caller inputfilegen minitcpsrv omrelp_dflt_port mangle_qi  \
+					have_relpSrvSetOversizeMode have_relpEngineSetTLSLibByName \
+					have_relpSrvSetTlsConfigCmd check_relpEngineVersion test_id \
+					miniamqpsrvr \
+			) || error_exit 100
+		fi
 
 		# Extra Variables for Test statistic reporting
 		export RSYSLOG_TESTNAME=$(basename $0)
