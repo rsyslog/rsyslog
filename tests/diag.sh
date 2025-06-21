@@ -2836,14 +2836,11 @@ case $1 in
 		# ensure test tools exist when running tests directly
 		if [ ! -x "${TESTTOOL_DIR}/tcpflood" ]; then
 			echo 'Building test tools...'
-			(	cd "${TESTTOOL_DIR}" \
-				&& make && \
-				make -j$(nproc) ourtail tcpflood chkseq msleep randomgen diagtalker uxsockrcvr \
-					syslog_caller inputfilegen minitcpsrv omrelp_dflt_port mangle_qi  \
-					have_relpSrvSetOversizeMode have_relpEngineSetTLSLibByName \
-					have_relpSrvSetTlsConfigCmd check_relpEngineVersion test_id \
-					miniamqpsrvr \
-			) || error_exit 100
+			# build all test tools via "make check" - configure knows which tools
+			# to enable based on detected libraries, and TESTS="" ensures only
+			# compilation (no test execution). This is more robust than ad hoc
+			# builds because it honors configure-time feature detection.
+			make -j$(nproc) check TESTS="" || error_exit 100
 		fi
 
 		# Extra Variables for Test statistic reporting
