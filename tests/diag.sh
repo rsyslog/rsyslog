@@ -2840,7 +2840,7 @@ case $1 in
 			# to enable based on detected libraries, and TESTS="" ensures only
 			# compilation (no test execution). This is more robust than ad hoc
 			# builds because it honors configure-time feature detection.
-			make -j$(nproc) check TESTS="" || error_exit 100
+make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 		fi
 
 		# Extra Variables for Test statistic reporting
