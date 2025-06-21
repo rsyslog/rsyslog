@@ -89,82 +89,63 @@ When fixing compiler warnings like `stringop-overread`, explain in the commit me
 
 ## Testing & Validation
 
+All test definitions live under the `tests/` directory and are driven by the `tests/diag.sh` framework. In CI, `make check` remains the canonical way to run the full suite; **AI agents should avoid invoking `make check` by default**, because:
 
-- All test definitions are located in the `/tests` directory.
-- The test execution framework is implemented in `tests/diag.sh`.
-- Tests are driven via `make check`, which wraps around `diag.sh`.
+- It wraps all tests in a harness that hides stdout/stderr on failure  
+- It requires parsing `tests/test-suite.log` for details  
+- It can take 10+ minutes and consume significant resources  
 
-Each test file in `tests/` is a standalone bash script that is executed independently. These scripts typically begin by sourcing `tests/diag.sh`, which provides a shared library of functions and utilities for test execution and validation.
-
-> Test execution is resource-intensive. Limit concurrency (`make check -j4` or less) to avoid unreliable results.
-
-To run `make check`, you **must configure with `--enable-imdiag --enable-testbench`**. The test suite includes many test cases and may run for 10+ minutes. To save time, prefer targeting individual tests by name. Tests with filenames containing "basic" are typically good candidates for quick validation.
- 
-### Running Individual Tests (Recommended for Agents)
-
-For AI agents or when focusing on a single test, directly executing the test script is the preferred method as it provides immediate, unfiltered output to stdout, which is ideal for agent analysis.
-
-1.  **Configure the project**:
-    ```bash
-    ./configure --enable-imdiag --enable-testbench
-    ```
-2.  **build testbench toolset**:
-    Intent is to cause build of toolset, **not** to execute tests. Do **not** add a test in this stage.
-    ```bash
-    make check TESTS=""
-    ```
-3.  **Navigate to the `tests/` directory**:
-    ```bash
-    cd tests/
-    ```
-4.  **Execute the desired test script directly**:
-    ```bash
-    ./test-name.sh
-    ```
-    For example, to run `rscript_re_extract.sh`:
-    ```bash
-    ./rscript_re_extract.sh
-    ```
-5.  **Return to the project root**:
-    ```bash
-    cd ..
-    ```
-
-This method is superior for individual test runs as it bypasses the `make check` harness which suppresses direct output on failure, instead requiring parsing of `.log` files (`test-suite.log`) for detailed analysis.
-
-### Running the Full Test Suite (`make check`)
-
-- When specifying individual tests, use the test basename only (no directory prefix and omit the `.sh` suffix). For example:
-  ```bash
-  make check TESTS=rscript_re_extract
-  ```
-  Bad example (fails always):
-  ```bash
-  make check TESTS=test/rscript_re_extract
-
-### Test Framework
-
-Some extended tests involving external components (e.g., daemons or network services) may be flaky due to timing conditions. When a test fails but passes on re-run, it's usually a nondeterministic issue. Such behavior should be reviewed but does not always indicate a defect.
-
-The `imdiag` module exists specifically to support the test framework and is used for command and information passing during tests.
-
-When a test fails, **read the referenced `tests/test-suite.log`** file to analyze failure details.
+Instead, AI agents should invoke individual test scripts directly. This yields unfiltered output and immediate feedback, without the CI harness. The `diag.sh` framework now builds any required test support automatically, so there is **no longer** a need for a separate “build core components” step.
 
 ---
 
-### Recommended Test Environment
+### Running Individual Tests (AI‐Agent Best Practice)
 
-Use prebuilt container environments provided by [`rsyslog-docker`](https://github.com/rsyslog/rsyslog-docker):
+1. **Configure the project** (once per session):  
+   ```bash
+   ./configure --enable-imdiag --enable-testbench
+   ```
+2. **Enter the tests directory**:  
+   ```bash
+   cd tests/
+   ```
+3. **Run a specific test script**:  
+   ```bash
+   ./rscript_re_extract.sh
+   ```
+   _Include the `.sh` suffix for direct execution; omit it when using `make check TESTS=`._  
+4. **Return to the project root**:  
+   ```bash
+   cd ..
+   ```
 
-- They contain all required libraries and tools
-- CI-like workflows can be reproduced locally
-- Support full configuration flexibility (Valgrind, tsan, sanitizers, etc.)
+> **Why direct invocation?**  
+> - Prints failures and debug messages straight to stdout  
+> - No need to open or grep through `tests/test-suite.log`  
+> - Faster turnaround for focused test work  
 
-> If only a single test run is planned, the best container to use is:  
-> `rsyslog/rsyslog_dev_base_ubuntu:24.04`
+> **Note for Docker-based agents**  
+> Agents such as Codex run inside their own Docker containers and cannot invoke the official CI Docker image. They should rely on the local `./configure` + direct script execution workflow within their container, rather than trying to spin up `rsyslog/rsyslog_dev_base_*` images.
 
-GitHub Actions and other CI systems use these containers. Test execution typically takes 10–40 minutes per runner depending on the suite.
+---
 
+### Full Test Suite (CI-Only)
+
+For continuous-integration pipelines or when you need to validate the entire suite, use the autotools harness:
+
+```bash
+./configure --enable-imdiag --enable-testbench
+make check
+```
+
+- To limit parallelism (avoid flaky failures), pass `-j2` or `-j4` to `make`.  
+- If a failure occurs, inspect `tests/test-suite.log` for detailed diagnostics.
+
+---
+
+### Test Environment
+
+Human developers may reproduce CI conditions using the official container images from [`rsyslog/rsyslog-docker`](https://github.com/rsyslog/rsyslog-docker). For single-test runs, `rsyslog/rsyslog_dev_base_ubuntu:24.04` is recommended—but **AI agents should not attempt to pull or run these images**. They must use the standard configure + direct-test workflow inside their existing container.
 ---
 
 ### Manual Setup (discouraged)
