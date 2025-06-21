@@ -99,30 +99,26 @@ Instead, AI agents should invoke individual test scripts directly. This yields u
 
 ---
 
-### Running Individual Tests (AI‐Agent Best Practice)
+### Running Individual Tests (AI-Agent Best Practice)
 
 1. **Configure the project** (once per session):  
    ```bash
    ./configure --enable-imdiag --enable-testbench
    ```
-2. **Enter the tests directory**:  
+
+2. **Invoke your test**:  
    ```bash
-   cd tests/
+   ./tests/<test-script>.sh
    ```
-3. **Run a specific test script**:  
+   For example:
    ```bash
-   ./rscript_re_extract.sh
-   ```
-   _Include the `.sh` suffix for direct execution; omit it when using `make check TESTS=`._  
-4. **Return to the project root**:  
-   ```bash
-   cd ..
+   ./tests/manytcp-too-few-tls-vg.sh > /tmp/test.log && tail -n20 /tmp/test.log
    ```
 
-> **Why direct invocation?**  
-> - Prints failures and debug messages straight to stdout  
-> - No need to open or grep through `tests/test-suite.log`  
-> - Faster turnaround for focused test work  
+3. **Why this works**  
+   - Each test script transparently finds and loads the test harness  
+   - You get unfiltered stdout/stderr without any CI wrapper  
+   - No manual `cd` or log-file parsing required
 
 > **Note for Docker-based agents**  
 > Agents such as Codex run inside their own Docker containers and cannot invoke the official CI Docker image. They should rely on the local `./configure` + direct script execution workflow within their container, rather than trying to spin up `rsyslog/rsyslog_dev_base_*` images.
