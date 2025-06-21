@@ -1,5 +1,12 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-06-21: fix off-by-one buffer "overflow" when forking rsyslog
+  parent and child communicate over a very basic protocol during the fork process.
+  In theroy, there could be a buffer overrun during that period. In practice, this
+  is not possible due to the protocol. It would only be possible if the rsyslog
+  binary would be compromised itself on disk- or in-memory. Nevertheless, this
+  possibility should be closed, as slim as it may be.
+  Thanks to Maks Maltsev for the patch.
 - 2025-06-19: added doc for omsendertrack
 - 2025-06-18: net_ossl: Fix memleak in net_ossl_peerfingerprint
   Fix memory leak where pstrFingerprintSha256 was not being freed
