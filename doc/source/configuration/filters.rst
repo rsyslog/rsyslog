@@ -145,6 +145,15 @@ The following **compare-operations** are currently supported:
   implemented, it can make very much sense (performance-wise) to use
   "startswith".
 
+**endswith**
+  Checks if the value is found exactly at the end of the property
+  value. For example, if you search for "val" with
+
+  ``:msg, endswith, "val"``
+
+  it will be a match if msg contains "a message val" but it won't match
+  if the msg contains "val in the middle".
+
 **regex**
   Compares the property against the provided POSIX BRE regular expression.
 

@@ -321,6 +321,8 @@ int fileno(FILE *stream);
 <EXPR>"contains_i"		{ cnfPrintToken(yytext); return CMP_CONTAINSI; }
 <EXPR>"startswith"		{ cnfPrintToken(yytext); return CMP_STARTSWITH; }
 <EXPR>"startswith_i"		{ cnfPrintToken(yytext); return CMP_STARTSWITHI; }
+<EXPR>"endswith"                { cnfPrintToken(yytext); return CMP_ENDSWITH; }
+<EXPR>"endswith_i"              { cnfPrintToken(yytext); return CMP_ENDSWITHI; }
 <EXPR>0[0-7]+ |			/* octal number */
 <EXPR>0x[0-9a-f]+ |		/* hex number, following rule is dec; strtoll handles all! */
 <EXPR>([1-9][0-9]*|0)		{ cnfPrintToken(yytext); yylval.n = strtoll(yytext, NULL, 0); return NUMBER; }

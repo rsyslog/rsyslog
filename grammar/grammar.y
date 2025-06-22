@@ -107,6 +107,8 @@ extern int yyerror(const char*);
 %token CMP_CONTAINSI
 %token CMP_STARTSWITH
 %token CMP_STARTSWITHI
+%token CMP_ENDSWITH
+%token CMP_ENDSWITHI
 
 %type <nvlst> nv nvlst value
 %type <obj> obj property constant
@@ -118,7 +120,7 @@ extern int yyerror(const char*);
 %type <arr> array arrayelt
 
 %left AND OR
-%left CMP_EQ CMP_NE CMP_LE CMP_GE CMP_LT CMP_GT CMP_CONTAINS CMP_CONTAINSI CMP_STARTSWITH CMP_STARTSWITHI
+%left CMP_EQ CMP_NE CMP_LE CMP_GE CMP_LT CMP_GT CMP_CONTAINS CMP_CONTAINSI CMP_STARTSWITH CMP_STARTSWITHI CMP_ENDSWITH CMP_ENDSWITHI
 %left '+' '-' '&'
 %left '*' '/' '%'
 %nonassoc UMINUS NOT
@@ -211,6 +213,8 @@ expr:	  expr AND expr			{ $$ = cnfexprNew(AND, $1, $3); }
 	| expr CMP_CONTAINSI expr	{ $$ = cnfexprNew(CMP_CONTAINSI, $1, $3); }
 	| expr CMP_STARTSWITH expr	{ $$ = cnfexprNew(CMP_STARTSWITH, $1, $3); }
 	| expr CMP_STARTSWITHI expr	{ $$ = cnfexprNew(CMP_STARTSWITHI, $1, $3); }
+        | expr CMP_ENDSWITH expr        { $$ = cnfexprNew(CMP_ENDSWITH, $1, $3); }
+        | expr CMP_ENDSWITHI expr       { $$ = cnfexprNew(CMP_ENDSWITHI, $1, $3); }
 	| expr '&' expr			{ $$ = cnfexprNew('&', $1, $3); }
 	| expr '+' expr			{ $$ = cnfexprNew('+', $1, $3); }
 	| expr '-' expr			{ $$ = cnfexprNew('-', $1, $3); }

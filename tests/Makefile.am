@@ -388,6 +388,7 @@ TESTS +=  \
 	externalstate-failed-rcvr.sh \
 	rcvr_fail_restore.sh \
 	rscript_contains.sh \
+        endswith-operator.sh \
 	rscript_bare_var_root.sh \
 	rscript_bare_var_root-empty.sh \
 	rscript_ipv42num.sh \
@@ -2083,6 +2084,7 @@ EXTRA_DIST= \
 	rscript_bare_var_root.sh \
 	rscript_bare_var_root-empty.sh \
 	rscript_contains.sh \
+  endswith-operator.sh \
 	rscript_ipv42num.sh \
 	rscript_field.sh \
 	rscript_field-vg.sh \

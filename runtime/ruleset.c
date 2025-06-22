@@ -3,7 +3,7 @@
  * We have a two-way structure of linked lists: one config-specifc linked list
  * (conf->rulesets.llRulesets) hold alls rule sets that we know. Included in each
  * list is a list of rules (which contain a list of actions, but that's
- * a different story).
+	 * a different story).
  *
  * Usually, only a single rule set is executed. However, there exist some
  * situations where all rules must be iterated over, for example on HUP. Thus,
@@ -474,9 +474,17 @@ evalPROPFILT(struct cnfstmt *stmt, smsg_t *pMsg)
 		break;
 	case FIOP_STARTSWITH:
 		if(rsCStrSzStrStartsWithCStr(stmt->d.s_propfilt.pCSCompValue,
-				  pszPropVal, propLen) == 0)
+				 pszPropVal, propLen) == 0)
 			bRet = 1; /* process message! */
 		break;
+	case FIOP_ENDSWITH:
+		if((size_t) propLen >= rsCStrLen(stmt->d.s_propfilt.pCSCompValue) &&
+			   memcmp(pszPropVal + propLen -
+			   (rs_size_t) rsCStrLen(stmt->d.s_propfilt.pCSCompValue),
+			   rsCStrGetBufBeg(stmt->d.s_propfilt.pCSCompValue),
+			   rsCStrLen(stmt->d.s_propfilt.pCSCompValue)) == 0)
+		bRet = 1;
+break;
 	case FIOP_REGEX:
 		if(rsCStrSzStrMatchRegex(stmt->d.s_propfilt.pCSCompValue,
 				(unsigned char*) pszPropVal, 0, &stmt->d.s_propfilt.regex_cache) == RS_RET_OK)
