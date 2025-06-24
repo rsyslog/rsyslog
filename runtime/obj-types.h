@@ -299,7 +299,6 @@ rsRetVal objName##ClassExit(void) \
  * warnings.
  */
 #define BEGINobjDestruct(OBJ) \
-	rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) **ppThis);\
 	rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) **ppThis) \
 	{ \
 		DEFiRet; \
@@ -340,7 +339,6 @@ rsRetVal objName##ClassExit(void) \
 #define PROTOTYPEObjDebugPrint(obj) rsRetVal obj##DebugPrint(obj##_t *pThis)
 #define INTERFACEObjDebugPrint(obj) rsRetVal (*DebugPrint)(obj##_t *pThis)
 #define BEGINobjDebugPrint(obj) \
-	rsRetVal obj##DebugPrint(obj##_t __attribute__((unused)) *pThis);\
 	rsRetVal obj##DebugPrint(obj##_t __attribute__((unused)) *pThis) \
 	{ \
 		DEFiRet; \
@@ -375,7 +373,6 @@ rsRetVal objName##ClassExit(void) \
  * present in all objects.
  */
 #define BEGINobjQueryInterface(obj) \
-	rsRetVal obj##QueryInterface(obj##_if_t *pIf);\
 	rsRetVal obj##QueryInterface(obj##_if_t *pIf) \
 	{ \
 		DEFiRet; \
