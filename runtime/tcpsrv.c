@@ -54,6 +54,7 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <sys/socket.h>
+#include <stdbool.h>
 #if HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
@@ -634,6 +635,140 @@ finalize_it:
 }
 
 
+/* Change to network namespace pData->pszNetworkNamespace.
+ * This function based on tools/omfwd.c function changeToNs.
+ */
+static rsRetVal
+changeToNs(tcpLstnParams_t *const pData, int startup_ns_fd)
+{
+	DEFiRet;
+	int ns_fd = -1;
+	char *nsPath = NULL;
+
+#ifdef HAVE_SETNS
+	if (pData->pszNetworkNamespace) {
+		/* Build network namespace path */
+		if (asprintf(&nsPath, "/var/run/netns/%s", pData->pszNetworkNamespace) == -1) {
+			LogError(0, RS_RET_OUT_OF_MEMORY, "tcpsrv: asprintf failed");
+			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+		}
+
+		/* Open file descriptor of destination network namespace */
+		ns_fd = open(nsPath, 0);
+		if (ns_fd < 0) {
+			LogError(0, RS_RET_IO_ERROR, "tcpsrv: could not change to namespace '%s': %s",
+						pData->pszNetworkNamespace, strerror(errno));
+			ABORT_FINALIZE(RS_RET_IO_ERROR);
+		}
+		/* Change to the destination network namespace */
+		if (setns(ns_fd, CLONE_NEWNET) != 0) {
+			LogError(0, RS_RET_IO_ERROR, "could not change to namespace '%s': %s",
+						pData->pszNetworkNamespace, strerror(errno));
+			ABORT_FINALIZE(RS_RET_IO_ERROR);
+		}
+		dbgprintf("tcpsrv: changed to network namespace '%s'\n", pData->pszNetworkNamespace);
+	} else if (startup_ns_fd >= 0) {
+		if (setns(startup_ns_fd, CLONE_NEWNET) != 0) {
+			LogError(0, RS_RET_IO_ERROR, "could not change to startup namespace: %s",
+						strerror(errno));
+			ABORT_FINALIZE(RS_RET_IO_ERROR);
+		}
+		dbgprintf("tcpsrv: changed to startup network namespace\n");
+	}
+#else /* ndef HAVE_SETNS */
+	if (pData->pszNetworkNamespace) {
+		dbgprintf("tcpsrv: network namespaces are not supported\n");
+		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+	}
+	assert(startup_ns_fd < 0);
+#endif /* ndef HAVE_SETNS */
+finalize_it:
+	free(nsPath);
+	if ((ns_fd >= 0) && (close(ns_fd) != 0)) {
+		LogError(0, RS_RET_IO_ERROR, "failed to close namespace '%s': %s",
+					pData->pszNetworkNamespace, strerror(errno));
+	}
+	RETiRet;
+}
+
+
+/* Return to the startup network namespace.
+ * This function based on code in tools/omfwd.c
+ */
+static rsRetVal
+ns_pop(int *fd)
+{
+	DEFiRet;
+
+#ifdef HAVE_SETNS
+	if (*fd >= 0) {
+		if (setns(*fd, CLONE_NEWNET) != 0) {
+			LogError(0, RS_RET_IO_ERROR, "could not return to startup namespace: %s",
+						strerror(errno));
+			ABORT_FINALIZE(RS_RET_IO_ERROR);
+		}
+		dbgprintf("tcpsrv: returned to startup network namespace\n");
+	}
+
+finalize_it:
+	if (*fd >= 0) {
+		if (close(*fd) != 0) {
+			LogError(0, RS_RET_IO_ERROR, "could not close startup namespace fd: %s",
+						strerror(errno));
+		}
+		*fd = -1;
+	}
+#else /* ndef HAVE_SETNS */
+	assert(*fd < 0);
+#endif /* ndef HAVE_SETNS */
+	RETiRet;
+}
+
+/* Save the current network namespace fd
+ */
+static rsRetVal
+ns_push(int *fd)
+{
+	DEFiRet;
+
+#ifdef HAVE_SETNS
+	/*
+	 * Avoid a descriptor leak if called incorrectly.
+	 */
+	if (*fd >= 0) {
+		if (close(*fd) != 0) {
+			LogError(0, RS_RET_IO_ERROR, "could not close previous namespace: %s",
+					strerror(errno));
+		}
+	}
+	*fd = open("/proc/self/ns/net", O_RDONLY);
+	if (*fd == -1) {
+		LogError(0, RS_RET_IO_ERROR, "could not access startup namespace: %s",
+				strerror(errno));
+		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	}
+	dbgprintf("tcpsrv: pushed startup network namespace\n");
+finalize_it:
+#else /* ndef HAVE_SETNS */
+	assert(*fd < 0);
+#endif /* ndef HAVE_SETNS */
+	RETiRet;
+}
+
+/* Check for a netns configuration
+ */
+static bool
+_check_netns_config(tcpLstnPortList_t *pEntry)
+{
+	while (pEntry != NULL) {
+		if (pEntry->cnf_params->pszNetworkNamespace) {
+			return true;
+		}
+		pEntry = pEntry->pNext;
+	}
+	return false;
+}
+
 /* Initialize TCP sockets (for listener) and listens on them */
 static rsRetVal
 create_tcp_socket(tcpsrv_t *const pThis)
@@ -641,23 +776,36 @@ create_tcp_socket(tcpsrv_t *const pThis)
 	DEFiRet;
 	rsRetVal localRet;
 	tcpLstnPortList_t *pEntry;
+	int startup_netns_fd = -1;
 
 	ISOBJ_TYPE_assert(pThis, tcpsrv);
 
+	if (_check_netns_config(pThis->pLstnPorts)) {
+		CHKiRet(ns_push(&startup_netns_fd));
+	}
 	/* init all configured ports */
 	pEntry = pThis->pLstnPorts;
 	while(pEntry != NULL) {
-		localRet = initTCPListener(pThis, pEntry);
-		if(localRet != RS_RET_OK) {
+		localRet = changeToNs(pEntry->cnf_params, startup_netns_fd);
+		if (localRet == RS_RET_OK) {
+			localRet = initTCPListener(pThis, pEntry);
+		}
+		if (localRet != RS_RET_OK) {
 			LogError(0, localRet, "Could not create tcp listener, ignoring port "
-			"%s bind-address %s.",
+			"%s bind-address %s%s%s.",
 			(pEntry->cnf_params->pszPort == NULL) ? "**UNSPECIFIED**"
 				: (const char*) pEntry->cnf_params->pszPort,
 			(pEntry->cnf_params->pszAddr == NULL) ? "**UNSPECIFIED**"
-				: (const char*)pEntry->cnf_params->pszAddr);
+				: (const char*)pEntry->cnf_params->pszAddr,
+			(pEntry->cnf_params->pszNetworkNamespace == NULL) ? ""
+				: " namespace ",
+			(pEntry->cnf_params->pszNetworkNamespace == NULL) ? ""
+				: (const char*)pEntry->cnf_params->pszNetworkNamespace);
+
 		}
 		pEntry = pEntry->pNext;
 	}
+	CHKiRet(ns_pop(&startup_netns_fd));
 
 	/* OK, we had success. Now it is also time to
 	 * initialize our connections
@@ -1868,6 +2016,25 @@ SetOrigin(tcpsrv_t *pThis, uchar *origin)
 	RETiRet;
 }
 
+static rsRetVal
+SetNetworkNamespace(
+	tcpsrv_t *pThis __attribute__((unused)),
+	tcpLstnParams_t *const cnf_params,
+	const uchar *const networkNamespace
+)
+{
+	DEFiRet;
+	ISOBJ_TYPE_assert(pThis, tcpsrv);
+	free(cnf_params->pszNetworkNamespace);
+	if (!networkNamespace || !*networkNamespace) {
+		cnf_params->pszNetworkNamespace = NULL;
+	} else {
+		CHKmalloc(cnf_params->pszNetworkNamespace = ustrdup(networkNamespace));
+	}
+finalize_it:
+	RETiRet;
+}
+
 /* Set the input name to use -- rgerhards, 2008-12-10 */
 static rsRetVal
 SetInputName(tcpsrv_t *const pThis, tcpLstnParams_t *const cnf_params, const uchar *const name)
@@ -2161,6 +2328,7 @@ CODESTARTobjQueryInterface(tcpsrv)
 	pIf->create_tcp_socket = create_tcp_socket;
 	pIf->Run = Run;
 
+	pIf->SetNetworkNamespace = SetNetworkNamespace;
 	pIf->SetKeepAlive = SetKeepAlive;
 	pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
 	pIf->SetKeepAliveProbes = SetKeepAliveProbes;

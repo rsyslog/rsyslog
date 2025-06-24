@@ -47,6 +47,7 @@ struct tcpLstnParams_s {
 	sbool bSPFramingFix;	/**< support work-around for broken Cisco ASA framing? */
 	sbool bPreserveCase;			/**< preserve case in fromhost */
 	const uchar *pszLstnPortFileName;	/**< File in which the dynamic port is written */
+	uchar *pszNetworkNamespace;		/**< network namespace to use */
 	uchar *pszStrmDrvrName;			/**< stream driver to use */
 	uchar *pszInputName;			/**< value to be used as input name */
 	prop_t *pInputName;
@@ -279,8 +280,13 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
 	/* added v28 */
 	rsRetVal (*SetNumWrkr)(tcpsrv_t *pThis, int);
 	rsRetVal (*SetStarvationMaxReads)(tcpsrv_t *pThis, unsigned int);
+	/* added v29 */
+	rsRetVal (*SetNetworkNamespace)(tcpsrv_t *pThis,
+	    tcpLstnParams_t * const cnf_params,
+		const uchar * const networkNamespace);
+
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 28 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 29 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
