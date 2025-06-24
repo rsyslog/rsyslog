@@ -1,4 +1,6 @@
 ----------------------------------------------------------------------------------------
+- 2025-06-16: Dummy Entry, nothing changed!
+----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
 - 2025-06-21: fix off-by-one buffer "overflow" when forking rsyslog
   parent and child communicate over a very basic protocol during the fork process.
