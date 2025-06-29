@@ -1885,6 +1885,11 @@ TESTS +=  \
 endif
 endif # ENABLE_OMAMQP1
 
+if ENABLE_FMPANSANITIZER
+TESTS += \
+	rscript_maskpan.sh
+endif
+
 endif # if ENABLE_TESTBENCH
 
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
