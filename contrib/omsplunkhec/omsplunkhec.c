@@ -298,8 +298,9 @@ renderJsonErrorMessage(wrkrInstanceData_t *pWrkrData, uchar *reqmsg, char **rend
 
 	if ((req = fjson_object_new_object()) == NULL)
 		ABORT_FINALIZE(RS_RET_ERR);
-	fjson_object_object_add(req, "server", 
-							fjson_object_new_string((char *)pWrkrData->pData->serverList[pWrkrData->serverIndex]));
+	fjson_object_object_add(req, "server",
+			fjson_object_new_string((char *)pWrkrData->pData->serverList[pWrkrData->serverIndex]));
+	
 	fjson_object_object_add(req, "url", fjson_object_new_string((char *)pWrkrData->restURL));
 	fjson_object_object_add(req, "postdata", fjson_object_new_string((char *)reqmsg));
 
