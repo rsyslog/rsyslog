@@ -194,7 +194,6 @@ audit_parse(uchar *buf, struct json_object **jsonRoot)
 		jval = json_object_new_string(val);
 		json_object_object_add(json, name, jval);
 	}
-	
 
 finalize_it:
 	RETiRet;
@@ -331,7 +330,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 	} else if(localRet != RS_RET_ENTRY_POINT_NOT_FOUND) {
 		ABORT_FINALIZE(localRet); /* Something else went wrong, not acceptable */
 	}
-	
+
 	if(!bMsgPassingSupported) {
 		DBGPRINTF("mmaudit: msg-passing is not supported by rsyslog core, "
 			  "can not continue.\n");
@@ -339,6 +338,3 @@ CODEmodInit_QueryRegCFSLineHdlr
 	}
 
 ENDmodInit
-
-/* vi:set ai:
- */

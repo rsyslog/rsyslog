@@ -555,7 +555,7 @@ forkRsyslog(void)
 		exit(1);
 	}
 
-	int nRead = read(pipefd[0], msgBuf, sizeof(msgBuf));
+	int nRead = read(pipefd[0], msgBuf, sizeof(msgBuf)-1);
 	if(nRead > 0) {
 		msgBuf[nRead] = '\0';
 	} else {

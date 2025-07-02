@@ -3008,6 +3008,9 @@ evalStrArrayCmp(es_str_t *const estr_l,
 			case CMP_CONTAINSI:
 				r = es_strCaseContains(estr_l, ar->arr[i]) != -1;
 				break;
+			default:
+				// We need to satisfy compiler which does not properly handle enum
+				break;
 			}
 		}
 	}

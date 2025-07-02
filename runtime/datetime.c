@@ -204,8 +204,10 @@ static void getCurrTime(struct syslogTime *t, time_t *ttSeconds, const int inUTC
 
 	assert(t != NULL);
 #if defined(__hpux) || defined(_AIX)
-		/* TODO: check this: under HP UX, the tz information is actually valid
-		 * data. So we need to obtain and process it there.
+		/* NOTE: under HP UX, the tz information might actually be
+		 * valid data. So we need to obtain and process it there.
+		 * As HP UX is not a supported platform, this is left to
+		 * explore by someone with interest in this platform.
 		 */
 		gettimeofday(&tp, &tz);
 #	else

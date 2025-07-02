@@ -40,7 +40,6 @@
 	#define DFLT_INT_MSGS_SEV_FILTER 6	/* Warning level and more important */
 #endif
 
-/* queue config parameters. TODO: move to queue.c? */
 struct queuecnf_s {
 	int iMainMsgQueueSize;		/* size of the main message queue above */
 	int iMainMsgQHighWtrMark;	/* high water mark for disk-assisted queues */

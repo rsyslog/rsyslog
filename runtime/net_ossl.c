@@ -781,6 +781,8 @@ net_ossl_peerfingerprint(net_ossl_t *pThis, X509* certpeer, uchar *fromHostIP)
 finalize_it:
 	if(pstrFingerprint != NULL)
 		cstrDestruct(&pstrFingerprint);
+	if(pstrFingerprintSha256 != NULL)
+		cstrDestruct(&pstrFingerprintSha256);
 	RETiRet;
 }
 

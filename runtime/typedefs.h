@@ -112,7 +112,9 @@ typedef struct lookup_string_tab_s lookup_string_tab_t;
 typedef struct lookup_array_tab_s lookup_array_tab_t;
 typedef struct lookup_sparseArray_tab_s lookup_sparseArray_tab_t;
 typedef struct lookup_sparseArray_tab_entry_s lookup_sparseArray_tab_entry_t;
+typedef struct lookup_regex_tab_entry_s lookup_regex_tab_entry_t;
 typedef struct lookup_tables_s lookup_tables_t;
+typedef struct lookup_regex_tab_s lookup_regex_tab_t;
 typedef union lookup_key_u lookup_key_t;
 
 typedef struct lookup_s lookup_t;
@@ -242,7 +244,7 @@ typedef uintTiny	propid_t;
 #define PROP_GLOBAL_VAR			203
 #define PROP_CEE_ALL_JSON_PLAIN		204
 
-/* types of configuration handlers
+/* types of configuration handlers. These are used in rainerscript.h
  */
 typedef enum cslCmdHdlrType {
 	eCmdHdlrInvalid = 0,		/* invalid handler type - indicates a coding error */

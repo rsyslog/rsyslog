@@ -78,7 +78,7 @@
 #define DEV_DEBUG 0	/* set to 1 to enable very verbose developer debugging messages */
 
 /* how many objects are supported by rsyslogd? */
-#define OBJ_NUM_IDS 100 /* TODO change to a linked list?  info: 16 were currently in use 2008-02-29 */
+#define OBJ_NUM_IDS 100
 
 #include "rsyslog.h"
 #include "syslogd-types.h"
@@ -859,7 +859,6 @@ Deserialize(void *ppObj, uchar *pszTypeExpected, strm_t *pStrm, rsRetVal (*fFixu
 	} while(iRetLocal != RS_RET_OK);
 
 	if(rsCStrSzStrCmp(pstrID, pszTypeExpected, ustrlen(pszTypeExpected)))
-	/* TODO: optimize strlen() - caller shall provide */
 		ABORT_FINALIZE(RS_RET_INVALID_OID);
 
 	CHKiRet(FindObjInfo((char*)cstrGetSzStrNoNULL(pstrID), &pObjInfo));

@@ -1030,10 +1030,12 @@ SubmitMsg(uchar *pRcv, int lenRcv, lstn_t *pLstn, struct ucred *cred, struct tim
 	MsgSetRcvFrom(pMsg, pLstn->hostName == NULL ? glbl.GetLocalHostNameProp() : pLstn->hostName);
 	CHKiRet(MsgSetRcvFromIP(pMsg, pLocalHostIP));
 	MsgSetRuleset(pMsg, pLstn->pRuleset);
-	ratelimitAddMsg(ratelimiter, NULL, pMsg);
+	CHKiRet(ratelimitAddMsg(ratelimiter, NULL, pMsg));
 	STATSCOUNTER_INC(ctrSubmit, mutCtrSubmit);
 finalize_it:
-	if(iRet != RS_RET_OK) {
+	if (iRet == RS_RET_DISCARDMSG) {
+		STATSCOUNTER_INC(ctrLostRatelimit, mutCtrLostRatelimit);
+	} else if(iRet != RS_RET_OK) {
 		if(pMsg != NULL)
 			msgDestruct(&pMsg);
 	}

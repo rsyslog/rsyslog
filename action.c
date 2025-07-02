@@ -792,7 +792,7 @@ static void ATTR_NONNULL() actionRetry(action_t * const pThis, wti_t * const pWt
  * if we have more than 10 retries, we prolong the
  * retry interval. If something is really stalled, it will
  * get re-tried only very, very seldom - but that saves
- * CPU time. TODO: maybe a config option for that?
+ * CPU time.
  * rgerhards, 2007-08-02
  */
 static void ATTR_NONNULL()
@@ -1193,8 +1193,7 @@ releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ 
 				pWrkrInfo->p.nontx.actParams[j].lenBuf = 0;
 				pWrkrInfo->p.nontx.actParams[j].lenStr = 0;
 				break;
-			case ACT_STRING_PASSING:
-			case ACT_MSG_PASSING:
+			default:
 				/* no need to do anything with these */
 				break;
 			}

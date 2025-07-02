@@ -2,7 +2,7 @@
  * This is the implementation of the build-in forwarding output module.
  *
  * NOTE: read comments in module-template.h to understand how this file
- *       works!
+ *	 works!
  *
  * Copyright 2007-2024 Adiscon GmbH.
  *
@@ -12,9 +12,9 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *       -or-
- *       see COPYING.ASL20 in the source distribution
+ *	 http://www.apache.org/licenses/LICENSE-2.0
+ *	 -or-
+ *	 see COPYING.ASL20 in the source distribution
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -90,7 +90,7 @@ typedef struct _targetStats {
 } targetStats_t;
 
 typedef struct _instanceData {
-	uchar 	*tplName;	/* name of assigned template */
+	uchar	*tplName;	/* name of assigned template */
 	uchar *pszStrmDrvr;
 	uchar *pszStrmDrvrAuthMode;
 	uchar *pszStrmDrvrPermitExpiredCerts;
@@ -268,7 +268,7 @@ static struct cnfparamblk actpblk =
 
 struct modConfData_s {
 	rsconf_t *pConf;	/* our overall config object */
-	uchar 	*tplName;	/* default template */
+	uchar	*tplName;	/* default template */
 	int maxLenSndBuf;	/* default max usable length of sendbuf - primarily for testing */
 };
 
@@ -845,7 +845,7 @@ TCPSendBufCompressed(targetData_t *pTarget, uchar *const buf, unsigned len, sboo
 			pTarget->zstrm.avail_in, pTarget->zstrm.total_in, bIsFlush);
 		pTarget->zstrm.avail_out = sizeof(zipBuf);
 		pTarget->zstrm.next_out = zipBuf;
-		zRet = deflate(&pTarget->zstrm, op);    /* no bad return value */
+		zRet = deflate(&pTarget->zstrm, op);	/* no bad return value */
 		DBGPRINTF("after deflate, ret %d, avail_out %d\n", zRet, pTarget->zstrm.avail_out);
 		outavail = sizeof(zipBuf) - pTarget->zstrm.avail_out;
 		if(outavail != 0) {
@@ -1144,17 +1144,19 @@ countActiveTargets(const wrkrInstanceData_t *const pWrkrData) {
 	int oldVal, newVal;
 	do {
 		oldVal = ATOMIC_FETCH_32BIT(&pWrkrData->pData->nActiveTargets,
-			&pWrkrData->pData->mut_nActiveTargets);
+		&pWrkrData->pData->mut_nActiveTargets);
 		if (oldVal == activeTargets) {
-			break;  // No change needed
+			break;  /* no change, so no log message either */
 		}
 		newVal = activeTargets;
 	} while (!ATOMIC_CAS(&pWrkrData->pData->nActiveTargets, oldVal, newVal,
 			&pWrkrData->pData->mut_nActiveTargets));
 
-	LogMsg(0, RS_RET_DEBUG, LOG_DEBUG,
-		"omfwd: [wrkr %u] number of active targets changed from %d to %d",
-		pWrkrData->wrkrID, oldVal, activeTargets);
+	if(oldVal != activeTargets) {
+		LogMsg(0, RS_RET_DEBUG, LOG_DEBUG,
+			"omfwd: [wrkr %u] number of active targets changed from %d to %d",
+			pWrkrData->wrkrID, oldVal, activeTargets);
+	}
 }
 
 
@@ -1174,7 +1176,7 @@ poolTryResume(wrkrInstanceData_t *const pWrkrData)
 		} else {
 			DBGPRINTF("omfwd: poolTryResume, calling tryResume, target %d\n", j);
 			iRet = doTryResume(&(pWrkrData->target[j]));
-			DBGPRINTF("omfwd: poolTryResume, done    tryResume, target %d, iRet %d\n", j, iRet);
+			DBGPRINTF("omfwd: poolTryResume, done	 tryResume, target %d, iRet %d\n", j, iRet);
 			if(iRet == RS_RET_OK) {
 				oneTargetOK = 1;
 			}

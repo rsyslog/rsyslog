@@ -26,6 +26,11 @@ name: check kafka distcheck
 
 on:
   pull_request:
+    paths-ignore:
+      - 'ChangeLog'
+      - '**/*.md'
+      - '**/*.txt'
+      - 'doc/**'
 
 jobs:
   check_run:

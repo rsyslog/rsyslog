@@ -26,6 +26,11 @@ name: check
 
 on:
   pull_request:
+    paths-ignore:
+      - 'ChangeLog'
+      - '**/*.md'
+      - '**/*.txt'
+      - 'doc/**'
 
 jobs:
   CI:

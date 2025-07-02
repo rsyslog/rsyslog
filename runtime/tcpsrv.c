@@ -158,7 +158,6 @@ epoll_Ctl(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr, const int is
 
 	if(op == EPOLL_CTL_ADD) {
 		dbgprintf("adding epoll entry %d, socket %d\n", id, sock);
-		//pioDescr->event.events = EPOLLIN | EPOLLOUT | EPOLLET | EPOLLONESHOT; // TODO: remove
 		pioDescr->event.events = EPOLLIN | EPOLLET | EPOLLONESHOT;
 		pioDescr->event.data.ptr = (void*) pioDescr;
 		if(epoll_ctl(pThis->evtdata.epoll.efd, EPOLL_CTL_ADD,  sock, &pioDescr->event) < 0) {
@@ -169,10 +168,15 @@ epoll_Ctl(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr, const int is
 	} else if(op == EPOLL_CTL_DEL) {
 		dbgprintf("removing epoll entry %d, socket %d\n", id, sock);
 		if(epoll_ctl(pThis->evtdata.epoll.efd, EPOLL_CTL_DEL, sock, NULL) < 0) {
-			LogError(errno, RS_RET_ERR_EPOLL_CTL,
-				"epoll_ctl failed on fd %d, isLstn %d\n",
-				sock, isLstn);
-			ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
+			if(errno == EBADF || errno == ENOENT) {
+				/* already gone-away, everything is well */
+				DBGPRINTF("epoll_ctl: fd %d already removed, isLstn %d", sock, isLstn);
+			} else {
+				LogError(errno, RS_RET_ERR_EPOLL_CTL,
+					"epoll_ctl failed on fd %d, isLstn %d\n",
+					sock, isLstn);
+				ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
+			}
 		}
 	} else {
 		dbgprintf("program error: invalid NSDPOLL_mode %d - ignoring request\n", op);
@@ -281,6 +285,7 @@ select_Add(tcpsrv_t *const pThis, netstrm_t *const pStrm, const nsdsel_waitOp_t 
 		case NSDSEL_RDWR:
 			pThis->evtdata.poll.fds[pThis->evtdata.poll.currfds].events = POLLIN | POLLOUT;
 			break;
+		default:break;
 	}
 	pThis->evtdata.poll.fds[pThis->evtdata.poll.currfds].fd = sock;
 	++pThis->evtdata.poll.currfds;
@@ -359,6 +364,7 @@ select_IsReady(tcpsrv_t *const pThis, netstrm_t *const pStrm, const nsdsel_waitO
 		case NSDSEL_RDWR:
 			*pbIsReady = revent & (POLLIN | POLLOUT);
 			break;
+		default:break;
 	}
 
 finalize_it:
@@ -836,12 +842,14 @@ static rsRetVal
 notifyReArm(tcpsrv_io_descr_t *const pioDescr)
 {
 	DEFiRet;
-
 	const unsigned waitIOEvent = (pioDescr->ioDirection == NSDSEL_WR) ? EPOLLOUT : EPOLLIN;
-	pioDescr->event.events = waitIOEvent | EPOLLET | EPOLLONESHOT;
-	if(epoll_ctl(pioDescr->pSrv->evtdata.epoll.efd, EPOLL_CTL_MOD, pioDescr->sock, &pioDescr->event) < 0) {
-		LogError(errno, RS_RET_ERR_EPOLL_CTL, "epoll_ctl failed re-armed socket %d", pioDescr->sock);
-		ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
+	struct epoll_event event = {
+	.events = waitIOEvent | EPOLLET | EPOLLONESHOT,
+	.data   = { .ptr = pioDescr }
+	};
+	if(epoll_ctl(pioDescr->pSrv->evtdata.epoll.efd, EPOLL_CTL_MOD, pioDescr->sock, &event) < 0) {
+	LogError(errno, RS_RET_ERR_EPOLL_CTL, "epoll_ctl failed re-armed socket %d", pioDescr->sock);
+	ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
 	}
 
 finalize_it:

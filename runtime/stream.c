@@ -617,6 +617,9 @@ strmHandleEOF(strm_t *const pThis)
 DBGPRINTF("RGER: EOF!\n");
 			ABORT_FINALIZE(RS_RET_EOF);
 			break;
+		default:
+			// No action needed for other cases
+			break;
 	}
 
 finalize_it:

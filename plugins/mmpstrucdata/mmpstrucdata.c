@@ -259,7 +259,7 @@ parseSD_PARAM(instanceData *const pData, uchar *sdbuf, int lenbuf, int *curridx,
 	uchar pVal[32*1024];
 	struct json_object *jval;
 	DEFiRet;
-	
+
 	i = *curridx;
 	CHKiRet(parseSD_NAME(pData, sdbuf, lenbuf, &i, pName));
 	if(sdbuf[i] != '=') {
@@ -292,7 +292,7 @@ parseSD_ELEMENT(instanceData *const pData, uchar *sdbuf, int lenbuf, int *currid
 	uchar sd_id[33];
 	struct json_object *json = NULL;
 	DEFiRet;
-	
+
 	i = *curridx;
 	if(sdbuf[i] != '[') {
 		ABORT_FINALIZE(RS_RET_STRUC_DATA_INVLD);
