@@ -298,6 +298,8 @@ renderJsonErrorMessage(wrkrInstanceData_t *pWrkrData, uchar *reqmsg, char **rend
 
 	if ((req = fjson_object_new_object()) == NULL)
 		ABORT_FINALIZE(RS_RET_ERR);
+	fjson_object_object_add(req, "server", 
+							fjson_object_new_string((char *)pWrkrData->pData->serverList[pWrkrData->serverIndex]));
 	fjson_object_object_add(req, "url", fjson_object_new_string((char *)pWrkrData->restURL));
 	fjson_object_object_add(req, "postdata", fjson_object_new_string((char *)reqmsg));
 
@@ -680,8 +682,9 @@ checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 	}
 
 	if (iRet != RS_RET_OK) {
-		LogMsg(0, iRet, LOG_ERR, "omsplunkhec: checkResult error http status code: %ld reply: %s",
-			statusCode, pWrkrData->reply != NULL ? pWrkrData->reply : "NULL");
+		LogMsg(0, iRet, LOG_ERR, "omsplunkhec: server %s checkResult error http status code: %ld reply: %s",
+			pWrkrData->pData->serverList[pWrkrData->serverIndex], statusCode,
+			pWrkrData->reply != NULL ? pWrkrData->reply : "NULL");
 
 		writeDataError(pWrkrData, pWrkrData->pData, reqmsg);
 

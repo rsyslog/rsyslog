@@ -6,10 +6,10 @@ This file defines guidelines and instructions for AI assistants (e.g., Codex, Gi
 
 ## Repository Overview
 
-- **Primary Language**: C  
-- **Build System**: autotools (`autogen.sh`, `configure`, `make`)  
-- **Modules**: Dynamically loaded from `modules/`  
-- **Contributions**: Additional modules and features are placed in `contrib/`, which contains community-contributed plugins not actively maintained by the core rsyslog team. These are retained in `contrib/` even if adopted later, to avoid disruptions in dependent software.  
+- **Primary Language**: C
+- **Build System**: autotools (`autogen.sh`, `configure`, `make`)
+- **Modules**: Dynamically loaded from `modules/`
+- **Contributions**: Additional modules and features are placed in `contrib/`, which contains community-contributed plugins not actively maintained by the core rsyslog team. These are retained in `contrib/` even if adopted later, to avoid disruptions in dependent software.
 - **Documentation**: Maintained in the doc/ subdirectory
 - **Child Projects**:
   - [`rsyslog-docker`](https://github.com/rsyslog/rsyslog-docker): Provides prebuilt container environments for development and CI
@@ -25,7 +25,7 @@ This file defines guidelines and instructions for AI assistants (e.g., Codex, Gi
 
 ### Base Repository
 - URL: https://github.com/rsyslog/rsyslog
-- **Default base branch: `master`**  
+- **Default base branch: `master`**
   > For technical reasons, `master` is still the default branch. Numerous scripts and CI workflows rely on this name.
 
 ### Contributor Workflow
@@ -44,7 +44,7 @@ There are no strict naming rules, but these conventions are used frequently:
 
 - For issue-based work: `i-<issue-number>` (e.g., `i-2245`)
 - For features or refactoring: free-form is acceptable
-- For AI-generated work: prefix the branch name with the AI tool name  
+- For AI-generated work: prefix the branch name with the AI tool name
   (e.g., `gpt-i-2245-json-stats-export`)
 
 ---
@@ -54,6 +54,7 @@ There are no strict naming rules, but these conventions are used frequently:
 - **Use tabs, not spaces** for indentation — enforced via CI
 - Commit messages **must include all relevant information**, not just in the PR
 - Commit message titles **must not exceed 70 characters**
+- commit message text must be plain US ASCII, line length must not exceed 86 characters
 - When referencing GitHub issues, use the **full GitHub URL** to assist in `git log`-based reviews
 - Favor **self-documenting code** over excessive inline comments
 - Public functions should use Doxygen-style comments
@@ -89,51 +90,58 @@ When fixing compiler warnings like `stringop-overread`, explain in the commit me
 
 ## Testing & Validation
 
+All test definitions live under the `tests/` directory and are driven by the `tests/diag.sh` framework. In CI, `make check` remains the canonical way to run the full suite; **AI agents should avoid invoking `make check` by default**, because:
 
-- All test definitions are located in the `/tests` directory.
-- The test execution framework is implemented in `tests/diag.sh`.
-- Tests are driven via `make check`, which wraps around `diag.sh`.
+- It wraps all tests in a harness that hides stdout/stderr on failure
+- It requires parsing `tests/test-suite.log` for details
+- It can take 10+ minutes and consume significant resources
 
-Each test file in `tests/` is a standalone bash script that is executed independently. These scripts typically begin by sourcing `tests/diag.sh`, which provides a shared library of functions and utilities for test execution and validation.
-
-> Test execution is resource-intensive. Limit concurrency (`make check -j4` or less) to avoid unreliable results.
-
-To run `make check`, you **must configure with `--enable-imdiag --enable-testbench`**. The test suite includes many test cases and may run for 10+ minutes. To save time, prefer targeting individual tests by name. Tests with filenames containing "basic" are typically good candidates for quick validation.
-
-- **Best Practice**: When specifying individual tests, use the test basename only (no directory prefix and omit the `.sh` suffix). For example:
-  ```bash
-  make check TESTS=rscript_re_extract
-  ```
-  Bad example (fails always):
-  ```bash
-  make check TESTS=test/rscript_re_extract
-
-### Test Framework
-
-Some extended tests involving external components (e.g., daemons or network services) may be flaky due to timing conditions. When a test fails but passes on re-run, it's usually a nondeterministic issue. Such behavior should be reviewed but does not always indicate a defect.
-
-The `imdiag` module exists specifically to support the test framework and is used for command and information passing during tests.
-
-When a test fails, **read the referenced `tests/test-suite.log`** file to analyze failure details.
+Instead, AI agents should invoke individual test scripts directly. This yields unfiltered output and immediate feedback, without the CI harness. The `diag.sh` framework now builds any required test support automatically, so there is **no longer** a need for a separate “build core components” step.
 
 ---
 
-### Recommended Test Environment
+### Running Individual Tests (AI-Agent Best Practice)
 
-Use prebuilt container environments provided by [`rsyslog-docker`](https://github.com/rsyslog/rsyslog-docker):
-
-- They contain all required libraries and tools
-- CI-like workflows can be reproduced locally
-- Support full configuration flexibility (Valgrind, tsan, sanitizers, etc.)
-
-> If only a single test run is planned, the best container to use is:  
-> `rsyslog/rsyslog_dev_base_ubuntu:24.04`
-
-GitHub Actions and other CI systems use these containers. Test execution typically takes 10–40 minutes per runner depending on the suite.
+1. **Configure the project** (once per session):
+   ```bash
+   ./configure --enable-imdiag --enable-testbench
+   ```
+2. **Invoke your test**:
+   ```bash
+   ./tests/<test-script>.sh
+   ```
+   For example:
+   ```bash
+   ./tests/manytcp-too-few-tls-vg.sh > /tmp/test.log && tail -n20 /tmp/test.log
+   ```
+3. **Why this works**
+   - Each test script transparently finds and loads the test harness
+   - You get unfiltered stdout/stderr without any CI wrapper
+   - No manual `cd` or log-file parsing required
 
 ---
 
-### Manual Setup (discouraged)
+### Full Test Suite (CI-Only)
+
+For continuous-integration pipelines or when you need to validate the entire suite, use the autotools harness:
+
+```bash
+./configure --enable-imdiag --enable-testbench
+make check
+```
+
+- To limit parallelism (avoid flaky failures), pass `-j2` or `-j4` to `make`.
+- If a failure occurs, inspect `tests/test-suite.log` for detailed diagnostics.
+
+---
+
+### Test Environment
+
+Human developers may reproduce CI conditions using the official container images from [`rsyslog/rsyslog-docker`](https://github.com/rsyslog/rsyslog-docker). For single-test runs, `rsyslog/rsyslog_dev_base_ubuntu:24.04` is recommended—but **AI agents should not attempt to pull or run these images**. They must use the standard configure + direct-test workflow inside their existing container.
+
+---
+
+## Manual Setup (discouraged)
 
 Minimum setup requires:
 
@@ -247,50 +255,25 @@ This ensures Codex can build core components even in constrained environments. S
 
 ---
 
-## Documentation
-
-Main documentation is in a separate repo:  
-https://github.com/rsyslog/rsyslog-doc
-
-To build locally:
-
-```bash
-cd rsyslog-doc
-pip install -r requirements.txt
-make html
-```
-
-If a feature changes user-facing behavior or configuration:
-- Update the appropriate section in `rsyslog-doc`
-- Link it in your PR and commit message
-
----
-
-## Pull Request & Commit Guidelines
-
-- PR title should be concise and informative  
-- PR body should describe what changed, why, how it was tested, and any caveats
-- **Commit messages must be complete** — assume the reader only has the git log
-- **Commit title must not exceed 70 characters**
-- Link relevant GitHub issues using the full URL (e.g., `https://github.com/rsyslog/rsyslog/issues/1234`)
-- Use a single logical commit unless there's a clear need to split
-
----
-
 ## AI-Specific Hints
 
-- The `modules/` directory contains dynamically loaded input/output plugins  
-- `contrib/` contains external contributions (e.g. plugins) that are not core-maintained  
-- `statsobj.c` implements the statistics interface  
-- `imhttp` provides HTTP input and optionally Prometheus metrics  
-- Use `doc/` only for legacy inline docs — modern documentation lives in `rsyslog-doc`
+- The `modules/` directory contains dynamically loaded input/output plugins
+- `contrib/` contains external contributions (e.g., plugins) that are not core-maintained
+- `statsobj.c` implements the statistics interface
+- Documentation resides in the monorepo’s doc/ directory
 - You may reference `rsyslog-docker` for dev/test environment setup
 - Side libraries are external GitHub repos, not subdirectories
 
+- **Shell Script Documentation**
+  Use shdoc-style comments (`##`, `###`) in new and updated Bash scripts to enable automatic Markdown extraction. Many existing scripts lack these; it's **strongly recommended** to add them when modifying or creating scripts.
+
+- **Final Style Check**
+  Always run `python3 devtools/rsyslog_stylecheck.py` before committing. Fix any style errors and re-run until it passes.
+
 When generating or editing code, prefer:
-- Clean modular design  
-- Compatibility and backward safety  
-- Updating structured comments (e.g., Doxygen)
+- Clean modular design
+- Compatibility and backward safety
+- Updating structured comments (e.g., Doxygen for C code)
 
 ---
 
@@ -298,13 +281,13 @@ When generating or editing code, prefer:
 
 If you are an AI agent contributing code or documentation:
 
-- Include a **commit footer tag** like:
-  ```
-  AI-Agent: Codex 2025-06
-  ```
-- PR descriptions should clearly identify that they were generated or co-authored by an AI tool.
+- Use the same rich commit message text as your PR description.
 - Avoid generating multiple PRs for retries — reuse and update the original PR when possible.
-- Follow the same **commit message policy** as human contributors: describe what changed, why, and how it was validated.
+- Follow the same **commit message policy** as human contributors:
+  - Describe **what changed** and **why** (as far as known to the agent).
+  - Note any impact on existing versions or behaviors (especially for bug fixes).
+- Commit message descriptions should clearly identify that they were generated or co-authored by an AI tool.
+- Include a **commit footer tag** like "AI-Agent: Codex"
 
 ---
 
@@ -314,7 +297,3 @@ If you are an AI agent contributing code or documentation:
 - Do not install third-party dependencies unless explicitly approved
 - PRs must pass standard CI and review checks
 - All code **must be reviewed manually**; AI output is subject to full review
-
----
-
-End of `AGENTS.md`

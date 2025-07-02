@@ -30,6 +30,7 @@ on:
       - 'ChangeLog'
       - '**/*.md'
       - '**/*.txt'
+      - 'doc/**'
 
 jobs:
   check_run:

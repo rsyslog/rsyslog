@@ -312,6 +312,9 @@ initHashtable(instanceData *const pData)
 		ABORT_FINALIZE(localRet);
 	}
 	CHKiRet(jsonToHashtable(pData, jsonTree));
+	if(jsonTree != NULL) {
+		json_object_put(jsonTree);
+	}
 
 	/* start background writer */
 	pData->bgw_initialized = 0;

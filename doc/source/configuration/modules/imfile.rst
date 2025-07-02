@@ -556,6 +556,9 @@ cases.
 In general, this parameter should only by set if the users
 knows exactly why this is required.
 
+For historical reasons, this parameter has an alias called
+`removeStateOnDelete`. This is to provide backward compatibility.
+Newer installations should use `deleteStateOnFileDelete` only.
 
 Ruleset
 ^^^^^^^

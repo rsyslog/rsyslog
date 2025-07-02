@@ -1807,15 +1807,16 @@ download_kafka() {
 			wget -q $dep_zk_url -O $dep_zk_cached_file
 			if [ $? -ne 0 ]
 			then
-				echo error during wget, retry:
-				wget $dep_zk_url -O $dep_zk_cached_file
-				if [ $? -ne 0 ]
-				then
-					error_exit 1
-				fi
-			fi
-		fi
-	fi
+                                echo error during wget, retry:
+                                wget $dep_zk_url -O $dep_zk_cached_file
+                                if [ $? -ne 0 ]
+                                then
+                                        echo "Skipping test - unable to download zookeeper"
+                                        error_exit 77
+                                fi
+                        fi
+                fi
+        fi
 	if [ ! -f $dep_kafka_cached_file ]; then
 		if [ -f /local_dep_cache/$RS_KAFKA_DOWNLOAD ]; then
 			printf 'Kafka: satisfying dependency %s from system cache.\n' "$RS_KAFKA_DOWNLOAD"
@@ -1826,15 +1827,16 @@ download_kafka() {
 			if [ $? -ne 0 ]
 			then
 				echo error during wget, retry:
-				wget $dep_kafka_url -O $dep_kafka_cached_file
-				if [ $? -ne 0 ]
-				then
-					rm $dep_kafka_cached_file # a 0-size file may be left over
-					error_exit 1
-				fi
-			fi
-		fi
-	fi
+                                wget $dep_kafka_url -O $dep_kafka_cached_file
+                                if [ $? -ne 0 ]
+                                then
+                                        rm $dep_kafka_cached_file # a 0-size file may be left over
+                                        echo "Skipping test - unable to download kafka"
+                                        error_exit 77
+                                fi
+                        fi
+                fi
+        fi
 }
 
 stop_kafka() {
@@ -2830,9 +2832,16 @@ case $1 in
 		export RSYSLOG_OUT_LOG="${RSYSLOG_DYNNAME}.out.log"
 		export RSYSLOG2_OUT_LOG="${RSYSLOG_DYNNAME}_2.out.log"
 		export RSYSLOG_PIDBASE="${RSYSLOG_DYNNAME}:" # also used by instance 2!
-		#export IMDIAG_PORT=13500 DELETE ME
-		#export IMDIAG_PORT2=13501 DELETE ME
-		#export TCPFLOOD_PORT=13514 DELETE ME
+
+		# ensure test tools exist when running tests directly
+		if [ ! -x "${TESTTOOL_DIR}/tcpflood" ]; then
+			echo 'Building test tools...'
+			# build all test tools via "make check" - configure knows which tools
+			# to enable based on detected libraries, and TESTS="" ensures only
+			# compilation (no test execution). This is more robust than ad hoc
+			# builds because it honors configure-time feature detection.
+make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
+		fi
 
 		# Extra Variables for Test statistic reporting
 		export RSYSLOG_TESTNAME=$(basename $0)

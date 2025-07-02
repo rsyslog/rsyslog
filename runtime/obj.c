@@ -859,7 +859,6 @@ Deserialize(void *ppObj, uchar *pszTypeExpected, strm_t *pStrm, rsRetVal (*fFixu
 	} while(iRetLocal != RS_RET_OK);
 
 	if(rsCStrSzStrCmp(pstrID, pszTypeExpected, ustrlen(pszTypeExpected)))
-	/* TODO: optimize strlen() - caller shall provide */
 		ABORT_FINALIZE(RS_RET_INVALID_OID);
 
 	CHKiRet(FindObjInfo((char*)cstrGetSzStrNoNULL(pstrID), &pObjInfo));

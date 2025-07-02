@@ -792,7 +792,7 @@ static void ATTR_NONNULL() actionRetry(action_t * const pThis, wti_t * const pWt
  * if we have more than 10 retries, we prolong the
  * retry interval. If something is really stalled, it will
  * get re-tried only very, very seldom - but that saves
- * CPU time. TODO: maybe a config option for that?
+ * CPU time.
  * rgerhards, 2007-08-02
  */
 static void ATTR_NONNULL()
