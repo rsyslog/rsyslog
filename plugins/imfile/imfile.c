@@ -252,6 +252,7 @@ struct modConfData_s {
 	instanceConf_t *root, *tail;
 	fs_node_t *conf_tree;
 	uint8_t opMode;
+	sbool deleteStateOnFileMove;
 	sbool configSetViaV2Method;
 	uchar *stateFileDirectory;
 	sbool sortFiles;
@@ -309,7 +310,8 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "sortfiles", eCmdHdlrBinary, 0 },
 	{ "statefile.directory", eCmdHdlrString, 0 },
 	{ "normalizepath", eCmdHdlrBinary, 0 },
-	{ "mode", eCmdHdlrGetWord, 0 }
+	{ "mode", eCmdHdlrGetWord, 0 },
+	{ "deletestateonfilemove", eCmdHdlrBinary, 0 },
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -839,7 +841,7 @@ detect_updates(fs_edge_t *const edge)
 				*/
 				sbool is_file = act->edge->is_file;
 				if (!is_file || act->time_to_delete + FILE_DELETE_DELAY < ttNow) {
-				DBGPRINTF("detect_updates obj gone away, unlinking: "
+					DBGPRINTF("detect_updates obj gone away, unlinking: "
 					"'%s', ttDelete: %"PRId64"s, ttNow:%"PRId64" isFile: %d\n",
 					act->name, (int64_t) ttNow - (act->time_to_delete + FILE_DELETE_DELAY),
 					(int64_t) ttNow, is_file);
@@ -1044,8 +1046,18 @@ act_obj_destroy(act_obj_t *const act, const int is_deleted)
 		}
 		persistStrmState(act);
 		strm.Destruct(&act->pStrm);
-		/* we delete state file after destruct in case strm obj initiated a write */
-		if(is_deleted && !act->in_move && inst->bRMStateOnDel) {
+
+		/*
+		 * We delete the state file after the destruct operation to ensure that any pending
+		 * writes initiated by the stream object are completed before removal. The state file
+		 * is deleted in the following scenarios:
+		 *   - If the file has not been moved and we are configured to delete the state file
+		 *     when the original file is removed.
+		 *   - If the configuration specifies not to preserve the state file after the file
+		 *     has been renamed.
+		 * The second one ensures proper cleanup and prevents orphaned state files.
+		 */
+		if(is_deleted && ((!act->in_move && inst->bRMStateOnDel) || runModConf->deleteStateOnFileMove)) {
 			DBGPRINTF("act_obj_destroy: deleting state file %s\n", statefn);
 			unlink((char*)statefn);
 		}
@@ -1914,7 +1926,7 @@ addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->reopenOnTruncate = 0;
 	inst->addMetadata = 0;
 	inst->addCeeTag = 0;
-	inst->bRMStateOnDel = 0;
+	inst->bRMStateOnDel = 1;
 	inst->readTimeout = loadModConf->readTimeout;
 	inst->msgFlag = 0;
 
@@ -2071,6 +2083,7 @@ CODESTARTbeginCnfLoad
 	/* init our settings */
 	loadModConf->opMode = OPMODE_POLLING;
 	loadModConf->iPollInterval = DFLT_PollInterval;
+	loadModConf->deleteStateOnFileMove = 0;
 	loadModConf->configSetViaV2Method = 0;
 	loadModConf->readTimeout = 0; /* default: no timeout */
 	loadModConf->timeoutGranularity = 1000; /* default: 1 second */
@@ -2124,6 +2137,8 @@ CODESTARTsetModCnf
 			continue;
 		if(!strcmp(modpblk.descr[i].name, "pollinginterval")) {
 			loadModConf->iPollInterval = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "deletestateonfilemove")) {
+			loadModConf->deleteStateOnFileMove = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "readtimeout")) {
 			loadModConf->readTimeout = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "timeoutgranularity")) {
@@ -2791,7 +2806,8 @@ persistStrmState(act_obj_t *const act)
 	uchar *const statefn = getStateFileName(act, statefile, sizeof(statefile));
 	getFileID(act);
 	getFullStateFileName(statefn, act->file_id, statefname, sizeof(statefname));
-	DBGPRINTF("persisting state for '%s', state file '%s'\n", act->name, statefname);
+	DBGPRINTF("persisting state for '%s', state file '%s', file-id: '%s', file_id_prev: '%s', ino: %lu\n",
+		act->name, statefname, act->file_id, act->file_id_prev, act->ino);
 
 	struct json_object *jval = NULL;
 	struct json_object *json = NULL;
