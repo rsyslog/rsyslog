@@ -103,6 +103,7 @@ static int omSplunkHecInstancesCnt = 0;
 #define ERR_MSG_NULL "NULL: curl request failed or no response"
 #define HTTP_HEADER_CONTENT_JSON "Content-Type: application/json; charset=utf-8"
 #define HTTP_HEADER_CONTENT_TEXT "Content-Type: text/plain"
+#define HEC_HEALTHCHECK_URL "/health"
 #define HTTP_HEADER_EXPECT_EMPTY "Expect:"
 #define HTTPS "https://"
 #define HTTP "http://"
@@ -339,19 +340,16 @@ finalize_it:
 static rsRetVal
 serializeBatchJsonArray(wrkrInstanceData_t *pWrkrData, char **batchBuf, int *countMsg)
 {
-	fjson_object *batchArray = NULL;
+
 	fjson_object *msgObj = NULL;
 	size_t numMessages = pWrkrData->batch.nmemb;
 	size_t sizeTotal = pWrkrData->batch.sizeBytes + numMessages + 1;
 	DBGPRINTF("omsplunkhec: serializeBatchJsonArray numMessages=%zd sizeTotal=%zd\n", numMessages, sizeTotal);
 
-	DEFiRet;
+	char *buff = NULL;
+	size_t index = 0;
 
-	batchArray = fjson_object_new_array();
-	if (batchArray == NULL) {
-		LogError(0, RS_RET_ERR, "omsplunkhec: serializeBatchJsonArray failed to create array");
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
+	DEFiRet;
 
 	for (size_t i = 0; i < numMessages; i++) {
 		msgObj = fjson_tokener_parse((char *) pWrkrData->batch.data[i]);
@@ -363,17 +361,25 @@ serializeBatchJsonArray(wrkrInstanceData_t *pWrkrData, char **batchBuf, int *cou
 		}
 		/* Count message serialized to avoid sending empty batch */
 		(*countMsg)++;
-		fjson_object_array_add(batchArray, msgObj);
-	}
 
-	const char *batchString = fjson_object_to_json_string_ext(batchArray, FJSON_TO_STRING_PLAIN);
-	*batchBuf = strndup(batchString, strlen(batchString));
+		const char *tmp = fjson_object_to_json_string_ext(msgObj, FJSON_TO_STRING_PLAIN);
+		if (buff == NULL) {
+			index = strlen(tmp) +1;
+			buff = (char *) malloc(index);
+			strcpy(buff, tmp);
+		}
+		else {
+			index = strlen(tmp) + strlen(buff) + 1;
+			char *a = (char *) malloc(index);
+			memcpy(a, buff, strlen(buff) + 1);
+			free(buff);
+			buff = a;
+			strcat(buff, tmp);
+		}
 
-finalize_it:
-	if (batchArray != NULL) {
-		fjson_object_put(batchArray);
-		batchArray = NULL;
 	}
+	*batchBuf = strndup(buff, strlen(buff));
+	free(buff);
 	RETiRet;
 }
 /********************** END JSON *****************************************/
@@ -743,11 +749,18 @@ static rsRetVal ATTR_NONNULL()
 generateCurlHeader(wrkrInstanceData_t *pWrkrData)
 {
 	struct curl_slist *slist = NULL;
+	char auth_header_str[256];
 
 	DEFiRet;
 
-	char auth_header_str[256];
-
+	/*
+	 * Check if the curlHeader is set, free if exists
+	 */
+	if (pWrkrData->curlHeader != NULL) {
+		curl_slist_free_all(pWrkrData->curlHeader);
+		pWrkrData->curlHeader = NULL;
+	}
+	
 	snprintf(auth_header_str, sizeof(auth_header_str), "Authorization: Splunk %s", pWrkrData->pData->token);
 
 	slist = curl_slist_append(slist, HTTP_HEADER_CONTENT_JSON);
@@ -777,7 +790,6 @@ generateCurlHeader(wrkrInstanceData_t *pWrkrData)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
-	CHKmalloc(slist);
 	pWrkrData->curlHeader = slist;
 
 finalize_it:
@@ -886,6 +898,8 @@ checkConn(wrkrInstanceData_t *const pWrkrData)
 		answer = es_addBuf(&urlBuf, serverUrl, strlen(serverUrl));
 		if(answer == 0 && checkPath != NULL)
 			answer = es_addBuf(&urlBuf, checkPath, strlen(checkPath));
+		if(answer == 0)
+			answer = es_addBuf(&urlBuf, HEC_HEALTHCHECK_URL, strlen(HEC_HEALTHCHECK_URL));
 		if(answer == 0)
 			healthUrl = es_str2cstr(urlBuf, NULL);
 		if(answer != 0 || healthUrl == NULL) {
@@ -1274,7 +1288,7 @@ CODESTARTnewActInst
 			pData->listObjStats[i].requestSuccess = 0;
 			INIT_ATOMIC_HELPER_MUT64(pData->listObjStats[i].mut_requestSuccess);
 			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
-			UCHAR_CONSTANT("request_successed"),
+			UCHAR_CONSTANT("request_succeeded"),
 			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->listObjStats[i].requestSuccess)));
 
 			pData->listObjStats[i].requestFailed = 0;
