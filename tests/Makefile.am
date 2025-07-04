@@ -1774,6 +1774,7 @@ TESTS += \
 	imfile-logrotate-multiple.sh \
 	imfile-logrotate-copytruncate.sh \
 	imfile-logrotate-nocopytruncate.sh \
+	imfile-logrotate-state-files.sh \
 	imfile-growing-file-id.sh \
 	imfile-ignore-old-file-1.sh \
 	imfile-ignore-old-file-2.sh \
@@ -2870,6 +2871,7 @@ EXTRA_DIST= \
 	imfile-logrotate-copytruncate.sh \
 	imfile-logrotate-nocopytruncate.sh \
 	imfile-logrotate-multiple.sh \
+	imfile-logrotate-state-files.sh \
 	imfile-growing-file-id.sh \
 	imfile-ignore-old-file-1.sh \
 	imfile-ignore-old-file-2.sh \
