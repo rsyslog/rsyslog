@@ -157,6 +157,7 @@ struct instanceConf_s {
 	int readTimeout;
 	unsigned delay_perMsg;
 	sbool bRMStateOnDel;
+	sbool bRMStateOnMove;
 	uint8_t readMode;
 	uchar *startRegex;
 	uchar *endRegex;
@@ -252,6 +253,7 @@ struct modConfData_s {
 	instanceConf_t *root, *tail;
 	fs_node_t *conf_tree;
 	uint8_t opMode;
+	sbool bRMStateOnMove;
 	sbool configSetViaV2Method;
 	uchar *stateFileDirectory;
 	sbool sortFiles;
@@ -309,7 +311,8 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "sortfiles", eCmdHdlrBinary, 0 },
 	{ "statefile.directory", eCmdHdlrString, 0 },
 	{ "normalizepath", eCmdHdlrBinary, 0 },
-	{ "mode", eCmdHdlrGetWord, 0 }
+	{ "mode", eCmdHdlrGetWord, 0 },
+	{ "deletestateonfilemove", eCmdHdlrBinary, 0 },
 };
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
@@ -349,7 +352,8 @@ static struct cnfparamdescr inppdescr[] = {
 	{ "needparse", eCmdHdlrBinary, 0},
 	{ "ignoreolderthan", eCmdHdlrInt, 0},
 	{ "maxbytesperminute", eCmdHdlrInt, 0},
-	{ "maxlinesperminute", eCmdHdlrInt, 0}
+	{ "maxlinesperminute", eCmdHdlrInt, 0},
+	{ "deletestateonfilemove", eCmdHdlrBinary, 0}
 };
 static struct cnfparamblk inppblk =
 	{ CNFPARAMBLK_VERSION,
@@ -839,7 +843,7 @@ detect_updates(fs_edge_t *const edge)
 				*/
 				sbool is_file = act->edge->is_file;
 				if (!is_file || act->time_to_delete + FILE_DELETE_DELAY < ttNow) {
-				DBGPRINTF("detect_updates obj gone away, unlinking: "
+					DBGPRINTF("detect_updates obj gone away, unlinking: "
 					"'%s', ttDelete: %"PRId64"s, ttNow:%"PRId64" isFile: %d\n",
 					act->name, (int64_t) ttNow - (act->time_to_delete + FILE_DELETE_DELAY),
 					(int64_t) ttNow, is_file);
@@ -1044,8 +1048,17 @@ act_obj_destroy(act_obj_t *const act, const int is_deleted)
 		}
 		persistStrmState(act);
 		strm.Destruct(&act->pStrm);
-		/* we delete state file after destruct in case strm obj initiated a write */
-		if(is_deleted && !act->in_move && inst->bRMStateOnDel) {
+
+		/*
+		 * We delete the state file after the destruct operation to ensure that any pending
+		 * writes initiated by the stream object are completed before removal. The state file
+		 * is deleted in the following scenarios:
+		 *   - If the file has not been moved and we are configured to delete the state file
+		 *     when the original file is removed.
+		 *   - If the configuration specifies not to preserve the state file after the file
+		 *     has been renamed. This prevents orphaned state files.
+		 */
+		if(is_deleted && ((!act->in_move && inst->bRMStateOnDel) || inst->bRMStateOnMove)) {
 			DBGPRINTF("act_obj_destroy: deleting state file %s\n", statefn);
 			unlink((char*)statefn);
 		}
@@ -1756,6 +1769,7 @@ createInstance(instanceConf_t **const pinst)
 	inst->discardTruncatedMsg = 0;
 	inst->msgDiscardingError = 1;
 	inst->bRMStateOnDel = 1;
+	inst->bRMStateOnMove = loadModConf->bRMStateOnMove;
 	inst->escapeLF = 1;
 	inst->escapeLFString = NULL;
 	inst->reopenOnTruncate = 0;
@@ -1915,6 +1929,7 @@ addInstance(void __attribute__((unused)) *pVal, uchar *pNewVal)
 	inst->addMetadata = 0;
 	inst->addCeeTag = 0;
 	inst->bRMStateOnDel = 0;
+	inst->bRMStateOnMove = loadModConf->bRMStateOnMove;
 	inst->readTimeout = loadModConf->readTimeout;
 	inst->msgFlag = 0;
 
@@ -1959,6 +1974,8 @@ CODESTARTnewInpInst
 		} else if(   !strcmp(inppblk.descr[i].name, "removestateondelete")
 			  || !strcmp(inppblk.descr[i].name, "deletestateonfiledelete")) {
 			inst->bRMStateOnDel = (uint8_t) pvals[i].val.d.n;
+		} else if(!strcmp(inppblk.descr[i].name, "deletestateonfilemove")) {
+			inst->bRMStateOnMove = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(inppblk.descr[i].name, "tag")) {
 			inst->pszTag = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
@@ -2071,6 +2088,7 @@ CODESTARTbeginCnfLoad
 	/* init our settings */
 	loadModConf->opMode = OPMODE_POLLING;
 	loadModConf->iPollInterval = DFLT_PollInterval;
+	loadModConf->bRMStateOnMove = 0;
 	loadModConf->configSetViaV2Method = 0;
 	loadModConf->readTimeout = 0; /* default: no timeout */
 	loadModConf->timeoutGranularity = 1000; /* default: 1 second */
@@ -2124,6 +2142,8 @@ CODESTARTsetModCnf
 			continue;
 		if(!strcmp(modpblk.descr[i].name, "pollinginterval")) {
 			loadModConf->iPollInterval = (int) pvals[i].val.d.n;
+		} else if(!strcmp(modpblk.descr[i].name, "deletestateonfilemove")) {
+			loadModConf->bRMStateOnMove = (sbool) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "readtimeout")) {
 			loadModConf->readTimeout = (int) pvals[i].val.d.n;
 		} else if(!strcmp(modpblk.descr[i].name, "timeoutgranularity")) {
