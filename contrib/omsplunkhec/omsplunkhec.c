@@ -103,6 +103,7 @@ static int omSplunkHecInstancesCnt = 0;
 #define ERR_MSG_NULL "NULL: curl request failed or no response"
 #define HTTP_HEADER_CONTENT_JSON "Content-Type: application/json; charset=utf-8"
 #define HTTP_HEADER_CONTENT_TEXT "Content-Type: text/plain"
+#define HEC_HEALTHCHECK_URL "/health"
 #define HTTP_HEADER_EXPECT_EMPTY "Expect:"
 #define HTTPS "https://"
 #define HTTP "http://"
@@ -898,6 +899,8 @@ checkConn(wrkrInstanceData_t *const pWrkrData)
 		if(answer == 0 && checkPath != NULL)
 			answer = es_addBuf(&urlBuf, checkPath, strlen(checkPath));
 		if(answer == 0)
+			answer = es_addBuf(&urlBuf, HEC_HEALTHCHECK_URL, strlen(HEC_HEALTHCHECK_URL));
+		if(answer == 0)
 			healthUrl = es_str2cstr(urlBuf, NULL);
 		if(answer != 0 || healthUrl == NULL) {
 			LogError(0, RS_RET_OUT_OF_MEMORY,
@@ -1285,7 +1288,7 @@ CODESTARTnewActInst
 			pData->listObjStats[i].requestSuccess = 0;
 			INIT_ATOMIC_HELPER_MUT64(pData->listObjStats[i].mut_requestSuccess);
 			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
-			UCHAR_CONSTANT("request_successed"),
+			UCHAR_CONSTANT("request_succeeded"),
 			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->listObjStats[i].requestSuccess)));
 
 			pData->listObjStats[i].requestFailed = 0;

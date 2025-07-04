@@ -1,4 +1,4 @@
-pkglib_LTLIBRARIES = libomsplunkhec.la
+pkglib_LTLIBRARIES = omsplunkhec.la
 
 omsplunkhec_la_SOURCES = omsplunkhec.c
 omsplunkhec_la_CPPFLAGS = $(RSRT_CFLAGS) $(PTHREADS_CFLAGS) $(CURL_CFLAGS)
