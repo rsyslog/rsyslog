@@ -11,7 +11,8 @@ Usage::
 
 When no file is specified the script recursively scans the current
 working directory.  The ``--max-errors`` option controls how many errors
-are displayed.  The default is 100 while ``all`` disables the limit.
+are displayed.  Use a number to limit the output or ``all`` to disable
+the limit.  The default is 100.
 
 The checker reports trailing whitespace, invalid indentation and lines
 that exceed the allowed length.  It exits with a non-zero status when

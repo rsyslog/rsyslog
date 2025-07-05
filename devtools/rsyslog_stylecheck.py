@@ -2,7 +2,8 @@
 """rsyslog_stylecheck.py - verify rsyslog source style
 
 This helper is used by developers and the CI system to ensure that
-all source files comply with the project's coding guidelines.
+all source files comply with the project's coding guidelines.  It
+relies only on the Python standard library and requires Python 3.
 """
 
 import argparse
@@ -12,7 +13,10 @@ import errno
 
 def check_file(filename, trailing, firstspace, maxlen,
                permit_empty_tab_line, max_msgs):
-    """Check a single file for style issues."""
+    """Check a single file for style issues.
+
+    Returns ``True`` if any problems were found.
+    """
     had_err = False
     msgs = 0
     try:
@@ -47,17 +51,13 @@ def check_file(filename, trailing, firstspace, maxlen,
                     had_err = True
                     msgs += 1
 
-                # Trailing whitespace and space check
+                # Trailing whitespace check
                 if trailing:
-                    is_problematic_trailing_space = line_content and line_content[-1].isspace()
+                    is_problematic = line_content and line_content[-1].isspace()
                     is_allowed_single_tab = permit_empty_tab_line and line_content == '\t'
-
-                    if line_content.endswith(' '):
-                        print(f"error: {filename}:{ln_nbr}: trailing space at end of line:\n{line}", file=sys.stderr)
-                        had_err = True
-                        msgs += 1
-                    elif is_problematic_trailing_space and not is_allowed_single_tab:
-                        print(f"error: {filename}:{ln_nbr}: trailing whitespace at end of line:\n{line}", file=sys.stderr)
+                    if is_problematic and not is_allowed_single_tab:
+                        msg = 'trailing space' if line_content.endswith(' ') else 'trailing whitespace'
+                        print(f"error: {filename}:{ln_nbr}: {msg} at end of line:\n{line}", file=sys.stderr)
                         had_err = True
                         msgs += 1
 
@@ -98,7 +98,14 @@ def main():
     parser.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS)
     args = parser.parse_args()
 
-    max_errors = None if args.max_errors.lower() == 'all' else int(args.max_errors)
+    if args.max_errors.lower() == 'all':
+        max_errors = None
+    else:
+        try:
+            max_errors = int(args.max_errors)
+        except ValueError:
+            print(f"error: invalid --max-errors value '{args.max_errors}'", file=sys.stderr)
+            sys.exit(2)
 
     excluded_dirs = {os.path.normpath("tests/zstd")}
     excluded_files = {"grammar.c", "grammar.h", "lexer.c", "lexer.h", "config.h"}
@@ -106,7 +113,12 @@ def main():
 
     for target in args.targets:
         if os.path.isfile(target):
-            if args.ignore and os.path.basename(target) == args.ignore:
+            filename = os.path.basename(target)
+            if not filename.endswith(('.c', '.h')):
+                continue
+            if filename in excluded_files:
+                continue
+            if args.ignore and filename == args.ignore:
                 continue
             if check_file(
                 target,
