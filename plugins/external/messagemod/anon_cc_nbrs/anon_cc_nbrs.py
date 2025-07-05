@@ -39,7 +39,7 @@ def onInit():
     patterns = {'(^|[^A-Za-z0-9.])(34|37)[0-9]{13}([^A-Za-z0-9]|$)': 'XXXX-Amex-XXXX',           # Amex
                 '(^|[^A-Za-z0-9.])(5020|5038|6759)[0-9]{12}([^A-Za-z0-9]|$)': 'XXXX-Maes-XXXX',  # Maes
                 '(^|[^A-Za-z0-9.])4([0-9]{12}|[0-9]{15})([^A-Za-z0-9]|$)': 'XXXX-Visa-XXXX'      # Visa
-                   }
+               }
     rc = re.compile("("+")|(".join(patterns.keys())+")")
 
 
@@ -62,7 +62,6 @@ def onReceive(msg):
             res = re.match(pat, match.group(0))
             if res:
                 return str(res.group(1))+patterns[pat]+str(res.group(res.lastindex))
-                break
 
     res_msg = rc.sub(lambda m: lookup(m), msg)
     if res_msg == msg:

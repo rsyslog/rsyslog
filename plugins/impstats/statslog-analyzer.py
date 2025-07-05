@@ -312,7 +312,9 @@ else:
             for szProblemID in aProblemFound:
                 if aProblemFound[szProblemID]['type'].find('omfile') != -1:
                     # Only add if exceeds percentage    | FORCE FLOAT CALC
-                    if aProblemFound[szProblemID]['requests'] > 0 and (aProblemFound[szProblemID]['evicted'] / (float(aProblemFound[szProblemID]['requests'])/100)) >= nEvictedAlarm:
+                    if aProblemFound[szProblemID]['requests'] > 0 and
+                       (aProblemFound[szProblemID]['evicted']
+                         / (float(aProblemFound[szProblemID]['requests'])/100)) >= nEvictedAlarm:
                         aPossibleProblems[szSingleStatsID].append( aProblemFound[szProblemID] )
                 elif aProblemFound[szProblemID]['type'].find('failed') != -1:
                     # Only add if exceeds Alarm Level

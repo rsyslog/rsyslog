@@ -63,7 +63,7 @@ def onReceive(msgs):
     solrConnection.request("POST", solrUpdatePath, msgs, {"Content-type": "application/json"})
     response = solrConnection.getresponse()
     response.read()  # apparently we have to read the whole reply to reuse the connection
-    if (response.status <> 200):
+    if (response.status != 200):
         # if there's something wrong with the payload, like a schema mismatch
         # write batch to error file and move on. Normally there's no point in retrying here
         errorFile.write("%s\n" % msgs)
@@ -81,7 +81,7 @@ keepRunning = 1
 while keepRunning == 1:
     while keepRunning and sys.stdin in select.select([sys.stdin], [], [], pollPeriod)[0]:
         msgs = "["
-            msgsInBatch = 0
+        msgsInBatch = 0
         while keepRunning and sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
             line = sys.stdin.readline()
             if line:
@@ -92,7 +92,7 @@ while keepRunning == 1:
                 keepRunning = 0
             msgsInBatch = msgsInBatch + 1
             if msgsInBatch >= maxAtOnce:
-                break;
+                break
         if len(msgs) > 0:
             retries = 0
             while (retries < numberOfRetries):

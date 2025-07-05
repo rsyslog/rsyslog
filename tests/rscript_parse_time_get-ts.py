@@ -67,7 +67,7 @@ def estimate_year(cy, cm, im):
     if (im - cm) > 13:
         return cy - 1
 
-    return cy;
+    return cy
 
 # A quick and dirty unit test to validate that our
 # estimate_year() function is working as it should.
