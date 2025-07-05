@@ -110,6 +110,20 @@ This sets the default value for input *timeout* parameters. See there
 for exact meaning. Parameter value is the number of seconds.
 
 
+deleteStateOnFileMove
+^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+If set to **on**, the state file for a monitored file is removed when that file
+is moved or rotated away. By default the state file is kept.
+
+
 timeoutGranularity
 ^^^^^^^^^^^^^^^^^^
 
