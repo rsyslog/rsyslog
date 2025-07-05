@@ -18,13 +18,13 @@ bDebug = False
 
 # Read command line params
 if len(sys.argv) > 1:
-	snmpport = int(sys.argv[1])
+    snmpport = int(sys.argv[1])
 if len(sys.argv) > 2:
-	snmpip = sys.argv[2]
+    snmpip = sys.argv[2]
 if len(sys.argv) > 3:
-	szOutputfile = sys.argv[3]
+    szOutputfile = sys.argv[3]
 if len(sys.argv) > 4:
-	szSnmpLogfile = sys.argv[4]
+    szSnmpLogfile = sys.argv[4]
 
 # Create output files
 outputFile = open(szOutputfile,"w+")
@@ -36,9 +36,9 @@ compiler.addMibCompiler(mibBuilder, sources=['file:///usr/share/snmp/mibs', 'fil
 mibViewController = view.MibViewController(mibBuilder)
 # Pre-load MIB modules we expect to work with
 try:
-	mibBuilder.loadModules('SNMPv2-MIB', 'SNMP-COMMUNITY-MIB', 'SYSLOG-MSG-MIB')
+    mibBuilder.loadModules('SNMPv2-MIB', 'SNMP-COMMUNITY-MIB', 'SYSLOG-MSG-MIB')
 except Exception:
-	print("Failed loading MIBs")
+    print("Failed loading MIBs")
 
 # Create SNMP engine with autogenernated engineID and pre-bound to socket transport dispatcher
 snmpEngine = engine.SnmpEngine()
@@ -46,9 +46,9 @@ snmpEngine = engine.SnmpEngine()
 # Transport setup
 # UDP over IPv4, add listening interface/port
 config.addTransport(
-	snmpEngine,
-	udp.domainName + (1,),
-	udp.UdpTransport().openServerMode((snmpip, snmpport))
+    snmpEngine,
+    udp.domainName + (1,),
+    udp.UdpTransport().openServerMode((snmpip, snmpport))
 )
 
 # SNMPv1/2c setup
@@ -76,7 +76,7 @@ def cbReceiverSnmp(snmpEngine, stateReference, contextEngineId, contextName, var
         logFile.write(szDebug)
         logFile.flush()
 
-	# Create output String
+    # Create output String
     szOut = "Trap Source{}, Trap OID {}".format(transportAddress, transportDomain)
 
     varBinds = [rfc1902.ObjectType(rfc1902.ObjectIdentity(x[0]), x[1]).resolveWithMib(mibViewController) for x in varBinds]
