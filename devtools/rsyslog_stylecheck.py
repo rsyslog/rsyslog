@@ -70,20 +70,24 @@ def check_file(filename, trailing, firstspace, maxlen,
         return True
     return had_err
 
-
 def collect_files(targets, excluded_dirs, excluded_files, ignore):
     """Gather all source files from *targets* respecting filters."""
     collected = []
+
+    def is_valid_file(filename):
+        """Check if a file should be style-checked."""
+        if not filename.endswith(('.c', '.h')):
+            return False
+        if filename in excluded_files:
+            return False
+        if ignore and filename == ignore:
+            return False
+        return True
+
     for target in targets:
         if os.path.isfile(target):
-            filename = os.path.basename(target)
-            if not filename.endswith(('.c', '.h')):
-                continue
-            if filename in excluded_files:
-                continue
-            if ignore and filename == ignore:
-                continue
-            collected.append(target)
+            if is_valid_file(os.path.basename(target)):
+                collected.append(target)
             continue
 
         for dirpath, dirnames, filenames in os.walk(target):
@@ -93,13 +97,8 @@ def collect_files(targets, excluded_dirs, excluded_files, ignore):
                 dirnames[:] = []
                 continue
             for filename in filenames:
-                if not filename.endswith(('.c', '.h')):
-                    continue
-                if filename in excluded_files:
-                    continue
-                if ignore and filename == ignore:
-                    continue
-                collected.append(os.path.join(dirpath, filename))
+                if is_valid_file(filename):
+                    collected.append(os.path.join(dirpath, filename))
     return collected
 
 def main():
