@@ -9,9 +9,9 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *       -or-
- *       see COPYING.ASL20 in the source distribution
+ *	 http://www.apache.org/licenses/LICENSE-2.0
+ *	 -or-
+ *	 see COPYING.ASL20 in the source distribution
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -229,23 +229,30 @@ CODESTARTinitConfVars
 ENDinitConfVars
 
 /* Helper function to URL encode a string */
-static char* url_encode(const char *str) {
-	if(str == NULL) return NULL;
+static char* url_encode(const char *str)
+{
+	if(str == NULL)
+		return NULL;
 
-	char *encoded = malloc(strlen(str) * 3 + 1); // Worst case: each char needs %XX
-	if(encoded == NULL) return NULL;
+	/* compute worst-case length and allocate */
+	size_t len = 0;
+	for(const char *s = str; *s; ++s)
+		len += (isalnum((unsigned char)*s) || *s == '-' || *s == '_' ||
+			*s == '.' || *s == '~') ? 1 : 3;
+
+	char *encoded = malloc(len + 1);
+	if(encoded == NULL)
+		return NULL;
 
 	char *p = encoded;
-	while(*str) {
-		// Manually check if the character is alphanumeric
-		if((*str >= 'a' && *str <= 'z') || (*str >= 'A' && *str <= 'Z') || (*str >= '0' && *str <= '9') ||
-			*str == '-' || *str == '_' || *str == '.' || *str == '~') {
-			*p++ = *str;
+	for(const char *s = str; *s; ++s) {
+		if(isalnum((unsigned char)*s) || *s == '-' || *s == '_' ||
+		   *s == '.' || *s == '~') {
+			*p++ = *s;
 		} else {
-			sprintf(p, "%%%02X", (unsigned char)*str);
+			snprintf(p, 4, "%%%02X", (unsigned char)*s);
 			p += 3;
 		}
-		str++;
 	}
 	*p = '\0';
 	return encoded;
@@ -429,7 +436,7 @@ openProton(wrkrInstanceData_t *const __restrict__ pWrkrData)
 	if (pnSsl != NULL) {
 		pn_ssl_domain_t* pnDomain = pn_ssl_domain(PN_SSL_MODE_CLIENT);
 		if (pData->azure_key_name != NULL && pData->azure_key != NULL) {
-			pnErr =  pn_ssl_init(pnSsl, pnDomain, NULL);
+			pnErr =	 pn_ssl_init(pnSsl, pnDomain, NULL);
 			if (pnErr) {
 				DBGPRINTF("openProton[%p]: pn_ssl_init failed for '%s:%s' with error %d: %s\n",
 					pWrkrData, pData->azurehost, pData->azureport,
@@ -878,7 +885,7 @@ CODESTARTnewActInst
 		} else if(!strcmp(actpblk.descr[i].name, "eventproperties")) {
 			pData->nEventProperties = pvals[i].val.d.ar->nmemb;
 			CHKmalloc(pData->eventProperties = malloc(sizeof(struct event_property) *
-			                                      pvals[i].val.d.ar->nmemb ));
+							      pvals[i].val.d.ar->nmemb ));
 			for(int j = 0 ; j <  pvals[i].val.d.ar->nmemb ; ++j) {
 				char *cstr = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
 				CHKiRet(processEventProperty(cstr, &pData->eventProperties[j].key,
@@ -952,7 +959,7 @@ CODESTARTnewActInst
 
 		// Remove the protocol part
 		char* amqp_address_dup = strdup((char*)pData->amqp_address);
-		char* startstr 	= strstr(amqp_address_dup, "amqps://");
+		char* startstr	= strstr(amqp_address_dup, "amqps://");
 		char* endstr	= NULL;
 		if (!startstr) {
 			LogError(0, RS_RET_CONFIG_ERROR,
@@ -1092,7 +1099,7 @@ CODEmodInit_QueryRegCFSLineHdlr
 
 //	INIT_ATOMIC_HELPER_MUT(mutClock);
 	DBGPRINTF("omazureeventhubs %s using qpid-proton library %d.%d.%d\n",
-	          VERSION, PN_VERSION_MAJOR, PN_VERSION_MINOR, PN_VERSION_POINT);
+		  VERSION, PN_VERSION_MAJOR, PN_VERSION_MINOR, PN_VERSION_POINT);
 
 	CHKiRet(statsobj.Construct(&azureStats));
 	CHKiRet(statsobj.SetName(azureStats, (uchar *)"omazureeventhubs"));
