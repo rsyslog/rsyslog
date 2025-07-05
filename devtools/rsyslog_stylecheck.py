@@ -1,20 +1,24 @@
 #!/usr/bin/env python3
+"""rsyslog_stylecheck.py - verify rsyslog source style
+
+This helper is used by developers and the CI system to ensure that
+all source files comply with the project's coding guidelines.
+"""
+
 import argparse
 import os
 import sys
 import errno
 
-def check_file(filename, trailing, firstspace, maxlen, permit_empty_tab_line):
-    """
-    Checks a single file for various style issues.
-    """
+def check_file(filename, trailing, firstspace, maxlen,
+               permit_empty_tab_line, max_msgs):
+    """Check a single file for style issues."""
     had_err = False
     msgs = 0
-    max_msgs = 20
     try:
         with open(filename, 'r', newline='', encoding='latin-1') as fp:
             for ln_nbr, line in enumerate(fp, 1):
-                if msgs >= max_msgs:
+                if max_msgs is not None and msgs >= max_msgs:
                     print(f"Reached max {max_msgs} messages, not reporting more", file=sys.stderr)
                     return had_err
                 if not line.endswith('\n'):
@@ -43,12 +47,16 @@ def check_file(filename, trailing, firstspace, maxlen, permit_empty_tab_line):
                     had_err = True
                     msgs += 1
 
-                # Trailing whitespace check
+                # Trailing whitespace and space check
                 if trailing:
-                    is_problematic_trailing_space = (line_content and line_content[-1].isspace())
-                    is_allowed_single_tab = (permit_empty_tab_line and line_content == '\t')
+                    is_problematic_trailing_space = line_content and line_content[-1].isspace()
+                    is_allowed_single_tab = permit_empty_tab_line and line_content == '\t'
 
-                    if is_problematic_trailing_space and not is_allowed_single_tab:
+                    if line_content.endswith(' '):
+                        print(f"error: {filename}:{ln_nbr}: trailing space at end of line:\n{line}", file=sys.stderr)
+                        had_err = True
+                        msgs += 1
+                    elif is_problematic_trailing_space and not is_allowed_single_tab:
                         print(f"error: {filename}:{ln_nbr}: trailing whitespace at end of line:\n{line}", file=sys.stderr)
                         had_err = True
                         msgs += 1
@@ -67,13 +75,21 @@ def main():
     Parses arguments, walks the directory tree, and checks files.
     """
     parser = argparse.ArgumentParser(
-        description="Check rsyslog source files for style issues.", add_help=False
+        description="Check rsyslog source files for style issues.",
+        add_help=False,
     )
-    parser.add_argument('path', nargs='?', default='.', help="Directory to check (default: current directory).")
+    parser.add_argument(
+        'targets', nargs='*', default=['.'],
+        help="Files or directories to check (default: current directory).",
+    )
     parser.add_argument('-i', '--ignore', help="File name to ignore.")
     parser.add_argument('-w', '--disable-trailing-whitespace', action='store_false', dest='trailing')
     parser.add_argument('-f', '--disable-first-space', action='store_false', dest='firstspace')
     parser.add_argument('-l', '--set-maxlength', type=int, default=120, metavar='length')
+    parser.add_argument(
+        '-m', '--max-errors', default='100',
+        help="Number of errors to display (default: 100, 'all' for no limit).",
+    )
     parser.add_argument(
         '--permit-empty-tab-line',
         action='store_true',
@@ -82,29 +98,51 @@ def main():
     parser.add_argument('-h', '--help', action='help', default=argparse.SUPPRESS)
     args = parser.parse_args()
 
+    max_errors = None if args.max_errors.lower() == 'all' else int(args.max_errors)
+
     excluded_dirs = {os.path.normpath("tests/zstd")}
     excluded_files = {"grammar.c", "grammar.h", "lexer.c", "lexer.h", "config.h"}
     had_err_global = False
 
-    for dirpath, dirnames, filenames in os.walk(args.path):
-        dirnames[:] = [d for d in dirnames if not d.startswith('.')]
-        normalized_dirpath = os.path.normpath(dirpath)
-        if normalized_dirpath in excluded_dirs:
-            dirnames[:] = []
-            continue
-        for filename in filenames:
-            if not filename.endswith(('.c', '.h')):
+    for target in args.targets:
+        if os.path.isfile(target):
+            if args.ignore and os.path.basename(target) == args.ignore:
                 continue
-            if filename in excluded_files:
-                continue
-            if args.ignore and filename == args.ignore:
-                continue
-
-            full_path = os.path.join(dirpath, filename)
-            # Removed 'dos' argument from the call
-            if check_file(full_path, args.trailing, args.firstspace,
-                          args.set_maxlength, args.permit_empty_tab_line):
+            if check_file(
+                target,
+                args.trailing,
+                args.firstspace,
+                args.set_maxlength,
+                args.permit_empty_tab_line,
+                max_errors,
+            ):
                 had_err_global = True
+            continue
+
+        for dirpath, dirnames, filenames in os.walk(target):
+            dirnames[:] = [d for d in dirnames if not d.startswith('.')]
+            normalized_dirpath = os.path.normpath(dirpath)
+            if normalized_dirpath in excluded_dirs:
+                dirnames[:] = []
+                continue
+            for filename in filenames:
+                if not filename.endswith(('.c', '.h')):
+                    continue
+                if filename in excluded_files:
+                    continue
+                if args.ignore and filename == args.ignore:
+                    continue
+
+                full_path = os.path.join(dirpath, filename)
+                if check_file(
+                    full_path,
+                    args.trailing,
+                    args.firstspace,
+                    args.set_maxlength,
+                    args.permit_empty_tab_line,
+                    max_errors,
+                ):
+                    had_err_global = True
 
     if had_err_global:
         doc_url = "https://www.rsyslog.com/doc/master/development/dev_codestyle.html"
