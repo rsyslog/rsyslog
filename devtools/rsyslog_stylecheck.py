@@ -70,6 +70,38 @@ def check_file(filename, trailing, firstspace, maxlen,
         return True
     return had_err
 
+
+def collect_files(targets, excluded_dirs, excluded_files, ignore):
+    """Gather all source files from *targets* respecting filters."""
+    collected = []
+    for target in targets:
+        if os.path.isfile(target):
+            filename = os.path.basename(target)
+            if not filename.endswith(('.c', '.h')):
+                continue
+            if filename in excluded_files:
+                continue
+            if ignore and filename == ignore:
+                continue
+            collected.append(target)
+            continue
+
+        for dirpath, dirnames, filenames in os.walk(target):
+            dirnames[:] = [d for d in dirnames if not d.startswith('.')]
+            normalized_dirpath = os.path.normpath(dirpath)
+            if normalized_dirpath in excluded_dirs:
+                dirnames[:] = []
+                continue
+            for filename in filenames:
+                if not filename.endswith(('.c', '.h')):
+                    continue
+                if filename in excluded_files:
+                    continue
+                if ignore and filename == ignore:
+                    continue
+                collected.append(os.path.join(dirpath, filename))
+    return collected
+
 def main():
     """
     Parses arguments, walks the directory tree, and checks files.
@@ -109,52 +141,22 @@ def main():
 
     excluded_dirs = {os.path.normpath("tests/zstd")}
     excluded_files = {"grammar.c", "grammar.h", "lexer.c", "lexer.h", "config.h"}
+
+    files_to_check = collect_files(
+        args.targets, excluded_dirs, excluded_files, args.ignore
+    )
+
     had_err_global = False
-
-    for target in args.targets:
-        if os.path.isfile(target):
-            filename = os.path.basename(target)
-            if not filename.endswith(('.c', '.h')):
-                continue
-            if filename in excluded_files:
-                continue
-            if args.ignore and filename == args.ignore:
-                continue
-            if check_file(
-                target,
-                args.trailing,
-                args.firstspace,
-                args.set_maxlength,
-                args.permit_empty_tab_line,
-                max_errors,
-            ):
-                had_err_global = True
-            continue
-
-        for dirpath, dirnames, filenames in os.walk(target):
-            dirnames[:] = [d for d in dirnames if not d.startswith('.')]
-            normalized_dirpath = os.path.normpath(dirpath)
-            if normalized_dirpath in excluded_dirs:
-                dirnames[:] = []
-                continue
-            for filename in filenames:
-                if not filename.endswith(('.c', '.h')):
-                    continue
-                if filename in excluded_files:
-                    continue
-                if args.ignore and filename == args.ignore:
-                    continue
-
-                full_path = os.path.join(dirpath, filename)
-                if check_file(
-                    full_path,
-                    args.trailing,
-                    args.firstspace,
-                    args.set_maxlength,
-                    args.permit_empty_tab_line,
-                    max_errors,
-                ):
-                    had_err_global = True
+    for path in files_to_check:
+        if check_file(
+            path,
+            args.trailing,
+            args.firstspace,
+            args.set_maxlength,
+            args.permit_empty_tab_line,
+            max_errors,
+        ):
+            had_err_global = True
 
     if had_err_global:
         doc_url = "https://www.rsyslog.com/doc/master/development/dev_codestyle.html"
