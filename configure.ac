@@ -2,9 +2,9 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.2508.0.master],[rsyslog@lists.adiscon.com])   # UPDATE on release
+AC_INIT([rsyslog],[8.2506.0.master],[rsyslog@lists.adiscon.com])   # UPDATE on release
 AC_DEFINE(VERSION_YEAR,  25, [year part of real rsyslog version])  # UPDATE on release
-AC_DEFINE(VERSION_MONTH,  8, [month part of real rsyslog version]) # UPDATE on release
+AC_DEFINE(VERSION_MONTH,  4, [month part of real rsyslog version]) # UPDATE on release
 
 AM_INIT_AUTOMAKE([subdir-objects])
 
@@ -110,6 +110,10 @@ case "${host}" in
   ;;
   *-apple-*)
     AC_DEFINE([OS_APPLE], [1], [Indicator for APPLE OS])
+    EXTRA_LDFLAGS="-L/usr/local/lib -L/opt/homebrew/lib"
+    CFLAGS="$CFLAGS -I/usr/local/include -I/opt/homebrew/include"
+    CXXFLAGS="$CXXFLAGS -I/usr/local/include -I/opt/homebrew/include"
+    CPPFLAGS="$CPPFLAGS -I/usr/local/include -I/opt/homebrew/include"
     os_type="apple"
   ;;
   *-*-kfreebsd*)
@@ -463,6 +467,30 @@ AC_ARG_ENABLE(fmunflatten,
 	[enable_fmunflatten=no]
 )
 AM_CONDITIONAL(ENABLE_FMUNFLATTEN, test x$enable_fmunflatten = xyes)
+
+# function module to masks a Primary Account Number (PAN) according to PCI DSS standards.
+AC_ARG_ENABLE(fmpansanitizer,
+       [AS_HELP_STRING([--enable-fmpansanitizer],[Enable PAN masking function according to PCI-DSS standards @<:@default=no@:>@])],
+       [case "${enableval}" in
+        yes) enable_fmpansanitizer="yes" ;;
+         no) enable_fmpansanitizer="no" ;;
+          *) AC_MSG_ERROR(bad value ${enableval} for --enable-fmpansanitizer) ;;
+        esac],
+       [enable_fmpansanitizer=no]
+)
+if test "x$enable_fmpansanitizer" = "xyes"; then
+       AC_CHECK_LIB([pcre2-8], [pcre2_compile_8], [
+               AC_CHECK_HEADER([pcre2.h], [
+                       PCRE2_LIBS="-lpcre2-8"
+                       PCRE2_CFLAGS=""
+                       AC_SUBST(PCRE2_LIBS)
+                       AC_SUBST(PCRE2_CFLAGS)
+               ],
+	       [AC_MSG_ERROR([pcre2 headers not found])],
+       	       [#define PCRE2_CODE_UNIT_WIDTH 8])
+       ], [AC_MSG_ERROR([libpcre2-8 not found])])
+fi
+AM_CONDITIONAL(ENABLE_FMPANSANITIZER, test x$enable_fmpansanitizer = xyes)
 
 
 #gssapi
@@ -1217,19 +1245,15 @@ AC_ARG_ENABLE(libgcrypt,
         [enable_libgcrypt=yes]
 )
 if test "x$enable_libgcrypt" = "xyes"; then
-	AC_PATH_PROG([LIBGCRYPT_CONFIG],[libgcrypt-config],[no])
-        if test "x${LIBGCRYPT_CONFIG}" = "xno"; then
-           AC_MSG_FAILURE([libgcrypt-config not found in PATH])
-        fi
         AC_CHECK_LIB(
-		[gcrypt],
-        	[gcry_cipher_open],
-        	[LIBGCRYPT_CFLAGS="`${LIBGCRYPT_CONFIG} --cflags`"
-        	LIBGCRYPT_LIBS="`${LIBGCRYPT_CONFIG} --libs`"
-        	],
-        	[AC_MSG_FAILURE([libgcrypt is missing])],
-        	[`${LIBGCRYPT_CONFIG} --libs --cflags`]
-        	)
+	       [gcrypt],
+               [gcry_cipher_open],
+               [LIBGCRYPT_CFLAGS="`pkg-config --cflags libgcrypt`"
+               LIBGCRYPT_LIBS="`pkg-config --libs libgcrypt`"
+               ],
+               [AC_MSG_FAILURE([libgcrypt is missing])],
+               [`pkg-config --libs --cflags libgcrypt`]
+               )	     
 	AC_DEFINE([ENABLE_LIBGCRYPT], [1], [Indicator that LIBGCRYPT is present])
 fi
 AM_CONDITIONAL(ENABLE_LIBGCRYPT, test x$enable_libgcrypt = xyes)
@@ -3020,9 +3044,10 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omdtls/Makefile \
 		contrib/mmdarwin/Makefile \
 		contrib/omhttp/Makefile \
-		contrib/fmhash/Makefile \
-		contrib/fmunflatten/Makefile \
-		contrib/ffaup/Makefile \
+                contrib/fmhash/Makefile \
+                contrib/fmunflatten/Makefile \
+                contrib/fmpansanitizer/Makefile \
+                contrib/ffaup/Makefile \
 		contrib/pmsnare/Makefile \
 		contrib/pmpanngfw/Makefile \
 		contrib/pmaixforwardedfrom/Makefile \
@@ -3182,6 +3207,7 @@ echo "    fmhttp enabled:                           $enable_fmhttp"
 echo "    fmhash enabled:                           $enable_fmhash"
 echo "    fmhash with xxhash enabled:               $enable_fmhash_xxhash"
 echo "    fmunflatten enabled:                      $enable_fmunflatten"
+echo "    fmpansanitizer enabled:                   $enable_fmpansanitizer"
 echo "    ffaup enabled:                            $enable_ffaup"
 echo
 echo "---{ debugging support }---"
