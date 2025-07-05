@@ -31,33 +31,33 @@ maxAtOnce = 1024  # max nbr of messages that are processed within one batch
 outfile = "" # "define" global var that the app code needs
 
 def onInit():
-	""" Do everything that is needed to initialize processing (e.g.
-	    open files, create handles, connect to systems...)
-	"""
-	global outfile
-	outfile = open("/tmp/logfile", "a+")
+    """ Do everything that is needed to initialize processing (e.g.
+        open files, create handles, connect to systems...)
+    """
+    global outfile
+    outfile = open("/tmp/logfile", "a+")
 
 
 def onReceive(msgs):
-	"""This is the entry point where actual work needs to be done. It receives
-	   a list with all messages pulled from rsyslog. The list is of variable
-	   length, but contains all messages that are currently available. It is
-	   suggest NOT to use any further buffering, as we do not know when the
-	   next message will arrive. It may be in a nanosecond from now, but it
-	   may also be in three hours...
-	"""
-	global outfile
-	for msg in msgs:
-		outfile.write(msg)
+    """This is the entry point where actual work needs to be done. It receives
+       a list with all messages pulled from rsyslog. The list is of variable
+       length, but contains all messages that are currently available. It is
+       suggest NOT to use any further buffering, as we do not know when the
+       next message will arrive. It may be in a nanosecond from now, but it
+       may also be in three hours...
+    """
+    global outfile
+    for msg in msgs:
+        outfile.write(msg)
 
 
 def onExit():
-	""" Do everything that is needed to finish processing (e.g.
-	    close files, handles, disconnect from systems...). This is
-	    being called immediately before exiting.
-	"""
-	global outfile
-	outfile.close()
+    """ Do everything that is needed to finish processing (e.g.
+        close files, handles, disconnect from systems...). This is
+        being called immediately before exiting.
+    """
+    global outfile
+    outfile.close()
 
 
 """
@@ -76,19 +76,19 @@ See also: https://github.com/rsyslog/rsyslog/issues/22
 onInit()
 keepRunning = 1
 while keepRunning == 1:
-	while keepRunning and sys.stdin in select.select([sys.stdin], [], [], pollPeriod)[0]:
-		msgs = []
-	        msgsInBatch = 0
-		while keepRunning and sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
-			line = sys.stdin.readline()
-			if line:
-				msgs.append(line)
-			else: # an empty line means stdin has been closed
-				keepRunning = 0
-			msgsInBatch = msgsInBatch + 1
-			if msgsInBatch >= maxAtOnce:
-				break
-		if len(msgs) > 0:
-			onReceive(msgs)
-			sys.stdout.flush() # very important, Python buffers far too much!
+    while keepRunning and sys.stdin in select.select([sys.stdin], [], [], pollPeriod)[0]:
+        msgs = []
+            msgsInBatch = 0
+        while keepRunning and sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+            line = sys.stdin.readline()
+            if line:
+                msgs.append(line)
+            else: # an empty line means stdin has been closed
+                keepRunning = 0
+            msgsInBatch = msgsInBatch + 1
+            if msgsInBatch >= maxAtOnce:
+                break
+        if len(msgs) > 0:
+            onReceive(msgs)
+            sys.stdout.flush() # very important, Python buffers far too much!
 onExit()

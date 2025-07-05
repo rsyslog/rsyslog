@@ -58,16 +58,16 @@ def do_test(expr, val):
 # cm - Current Month
 # im - Incoming Month
 def estimate_year(cy, cm, im):
-	im += 12
+    im += 12
 
-	if (im - cm) == 1:
-		if cm == 12 and im == 13:
-			return cy + 1
+    if (im - cm) == 1:
+        if cm == 12 and im == 13:
+            return cy + 1
 
-	if (im - cm) > 13:
-		return cy - 1
+    if (im - cm) > 13:
+        return cy - 1
 
-	return cy;
+    return cy;
 
 # A quick and dirty unit test to validate that our
 # estimate_year() function is working as it should.

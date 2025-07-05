@@ -29,32 +29,32 @@ import json
 # App logic global variables
 
 def onInit():
-	""" Do everything that is needed to initialize processing (e.g.
-	    open files, create handles, connect to systems...)
-	"""
-	# most often, nothing to do here
+    """ Do everything that is needed to initialize processing (e.g.
+        open files, create handles, connect to systems...)
+    """
+    # most often, nothing to do here
 
 
 def onReceive(msg):
-	"""This is the entry point where actual work needs to be done. It receives
-	   the messge from rsyslog and now needs to examine it, do any processing
-	   necessary. The to-be-modified properties (one or many) need to be pushed
-	   back to stdout, in JSON format, with no interim line breaks and a line
-	   break at the end of the JSON. If no field is to be modified, empty
-	   json ("{}") needs to be emitted.
-	   Note that no batching takes place (contrary to the output module skeleton)
-	   and so each message needs to be fully processed (rsyslog will wait for the
-	   reply before the next message is pushed to this module).
-	"""
-	data = json.loads(msg)
-	print(json.dumps({"$!": {"sometag": "somevalue"}}))
+    """This is the entry point where actual work needs to be done. It receives
+       the messge from rsyslog and now needs to examine it, do any processing
+       necessary. The to-be-modified properties (one or many) need to be pushed
+       back to stdout, in JSON format, with no interim line breaks and a line
+       break at the end of the JSON. If no field is to be modified, empty
+       json ("{}") needs to be emitted.
+       Note that no batching takes place (contrary to the output module skeleton)
+       and so each message needs to be fully processed (rsyslog will wait for the
+       reply before the next message is pushed to this module).
+    """
+    data = json.loads(msg)
+    print(json.dumps({"$!": {"sometag": "somevalue"}}))
 
 def onExit():
-	""" Do everything that is needed to finish processing (e.g.
-	    close files, handles, disconnect from systems...). This is
-	    being called immediately before exiting.
-	"""
-	# most often, nothing to do here
+    """ Do everything that is needed to finish processing (e.g.
+        close files, handles, disconnect from systems...). This is
+        being called immediately before exiting.
+    """
+    # most often, nothing to do here
 
 
 """
@@ -73,12 +73,12 @@ See also: https://github.com/rsyslog/rsyslog/issues/22
 onInit()
 keepRunning = 1
 while keepRunning == 1:
-	msg = sys.stdin.readline()
-	if msg:
-		msg = msg[:-1] # remove LF
-		onReceive(msg)
-		sys.stdout.flush() # very important, Python buffers far too much!
-	else: # an empty line means stdin has been closed
-		keepRunning = 0
+    msg = sys.stdin.readline()
+    if msg:
+        msg = msg[:-1] # remove LF
+        onReceive(msg)
+        sys.stdout.flush() # very important, Python buffers far too much!
+    else: # an empty line means stdin has been closed
+        keepRunning = 0
 onExit()
 sys.stdout.flush() # very important, Python buffers far too much!
