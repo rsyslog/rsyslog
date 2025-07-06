@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "usage: test_id test-file-name\n");
 		exit(1);
 	}
-	printf("%06ld_%04.4x", tv.tv_usec, hash_from_string(argv[1]));
+	printf("%06ld_%4.4x", tv.tv_usec, hash_from_string(argv[1]));
 
 	return 0;
 }
