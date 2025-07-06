@@ -54,7 +54,7 @@ class RainerScriptLexer(RegexLexer):
             # Legacy syslog selectors at the start of a line
             (r'^\s*([a-zA-Z0-9\.\*]+;)?([a-zA-Z0-9\.\*]+)\.(=|!=|=,!=)?([a-zA-Z0-9\*]+)\s+',
              bygroups(Keyword.Namespace, Keyword.Namespace, Operator, Keyword.Namespace), 'legacy_action'),
-            (r'^\s*:([a-zA-Z0-9_-]+),\s*(==|!=|<>|contains|startswith|re_match|re_extract)\s*"[^"]*"\s+',
+            (r'^\s*:([a-zA-Z0-9_-]+),\s*(==|!=|<>|contains|startswith|endswith|re_match|re_extract)\s*"[^"]*"\s+',
              bygroups(Name.Tag, Operator.Word, String.Double), 'legacy_action'),
             
             # RainerScript Keywords
@@ -64,7 +64,7 @@ class RainerScriptLexer(RegexLexer):
             
             # Operators
             (r'(&&|\|\||and|or|not)\b', Operator.Word),
-            (r'(=|==|!=|<>|<=|>=|<|>|:=|contains_i|startswith_i|contains|startswith)', Operator),
+            (r'(=|==|!=|<>|<=|>=|<|>|:=|contains_i|startswith_i|contains|startswith|endswith)', Operator),
 
             # Variables and Properties
             (r'\$[a-zA-Z0-9_.-]+', Name.Variable),

@@ -135,6 +135,7 @@ int rsCStrOffsetSzStrCmp(cstr_t *pCS1, size_t iOffset, uchar *psz, size_t iLenSz
 int rsCStrLocateSzStr(cstr_t *pCStr, uchar *sz);
 int rsCStrLocateInSzStr(cstr_t *pThis, uchar *sz);
 int rsCStrSzStrStartsWithCStr(cstr_t *pCS1, uchar *psz, size_t iLenSz);
+int rsCStrSzStrEndsWithCStr(cstr_t *pCS1, uchar *psz, size_t iLenSz);
 rsRetVal rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz, int iType, void *cache);
 void rsCStrRegexDestruct(void *rc);
 

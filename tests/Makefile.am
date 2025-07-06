@@ -188,6 +188,7 @@ TESTS +=  \
 	func-substring-relative-endpos.sh \
 	hostname-with-slash-dflt-slash-valid.sh \
 	empty-app-name.sh \
+	endswith-basic.sh \
 	stop-localvar.sh \
 	stop-msgvar.sh \
 	glbl-ruleset-queue-defaults.sh \
@@ -1921,6 +1922,7 @@ EXTRA_DIST= \
 	config_enabled-off.sh \
 	empty-app-name.sh \
 	empty-hostname.sh \
+	endswith-basic.sh \
 	func-substring-invld-startpos.sh \
 	func-substring-invld-startpos-vg.sh \
 	func-substring-large-endpos.sh \

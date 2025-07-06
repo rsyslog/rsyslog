@@ -10,7 +10,7 @@ in the list, e.g. multiplications are done before additions.
 -  not, unary minus
 -  \*, /, % (modulus, as in C)
 -  +, -, & (string concatenation)
--  ==, !=, <>, <, >, <=, >=, contains (strings!), startswith (strings!)
+-  ==, !=, <>, <, >, <=, >=, contains (strings!), startswith (strings!), endswith (strings!)
 -  and
 -  or
 
