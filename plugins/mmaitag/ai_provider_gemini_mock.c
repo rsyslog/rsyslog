@@ -1,3 +1,11 @@
+/**
+ * @file ai_provider_gemini_mock.c
+ * @brief Mock provider used for mmaitag tests.
+ *
+ * This provider does not contact any external service. It returns
+ * predefined labels from the environment variable
+ * `GEMINI_MOCK_RESPONSE` so that test runs are deterministic.
+ */
 #include "config.h"
 #include "ai_provider.h"
 #include <stdlib.h>

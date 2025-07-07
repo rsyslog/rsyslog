@@ -1,7 +1,24 @@
-/* mmaitag.c
-	* AI-based message classification plugin.
-	* Stores classification tag in a message variable.
-	*/
+/**
+ * @file mmaitag.c
+ * @brief AI-based message classification plugin.
+ *
+ * This module contacts an external AI service to classify log
+ * messages. The result of the classification is stored in a
+ * message variable (defaults to `$.aitag`). Messages are processed
+ * in batches and passed to a pluggable provider interface. The
+ * initial implementation contains a Gemini provider as well as a
+ * mock backend used for testing.
+ *
+ * Copyright 2025 Adiscon GmbH.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *     -or-
+ *     see COPYING.ASL20 in the source distribution
+ */
 #include "config.h"
 #include "rsyslog.h"
 #include <stdlib.h>

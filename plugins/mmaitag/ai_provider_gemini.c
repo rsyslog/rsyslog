@@ -1,3 +1,10 @@
+/**
+ * @file ai_provider_gemini.c
+ * @brief Google Gemini provider for mmaitag.
+ *
+ * Sends batches of log messages to the Gemini REST API and returns
+ * the array of labels that the service responds with.
+ */
 #include "config.h"
 #include "ai_provider.h"
 #include <stdlib.h>
