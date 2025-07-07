@@ -665,8 +665,14 @@ endif # if ENABLE_SNMP
 
 if ENABLE_MMUTF8FIX
 TESTS +=  \
-	mmutf8fix_no_error.sh
+        mmutf8fix_no_error.sh
 endif # if ENABLE_MAIL
+
+if ENABLE_MMAITAG
+TESTS +=  \
+        mmaitag-basic.sh \
+        mmaitag-invalid-key.sh
+endif
 
 if ENABLE_MAIL
 TESTS +=  \
@@ -2365,9 +2371,11 @@ EXTRA_DIST= \
 	timegenerated-utc-legacy.sh \
 	timereported-utc.sh \
 	timereported-utc-legacy.sh \
-	timereported-utc-vg.sh \
-	mmrm1stspace-basic.sh \
-	mmnormalize_parsesuccess.sh \
+        timereported-utc-vg.sh \
+        mmrm1stspace-basic.sh \
+        mmaitag-basic.sh \
+        mmaitag-invalid-key.sh \
+        mmnormalize_parsesuccess.sh \
 	mmnormalize_parsesuccess-vg.sh \
 	mmnormalize_rule_from_string.sh \
 	mmnormalize_rule_from_array.sh \
