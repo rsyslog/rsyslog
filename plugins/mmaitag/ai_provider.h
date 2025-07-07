@@ -11,10 +11,13 @@ const char **messages, size_t n, char ***tags);
 typedef void (*ai_provider_cleanup_t)(ai_provider_t *prov);
 
 struct ai_provider_s {
-void *data;
-ai_provider_init_t init;
-ai_provider_classify_t classify;
-ai_provider_cleanup_t cleanup;
+       void *data;
+       ai_provider_init_t init;
+       ai_provider_classify_t classify;
+       ai_provider_cleanup_t cleanup;
 };
+
+extern ai_provider_t gemini_provider;
+extern ai_provider_t gemini_mock_provider;
 
 #endif /* AI_PROVIDER_H */

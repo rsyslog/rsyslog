@@ -30,7 +30,7 @@ gemini_init(ai_provider_t *prov, const char *model, const char *apikey,
 {
 	gemini_data_t *data;
 	DEFiRet;
-	CHKiRet(rsCAlloc((void**)&data, sizeof(*data)));
+       CHKmalloc(data = calloc(1, sizeof(*data)));
 	if(model)
 		data->model = strdup(model);
 	if(apikey)
@@ -38,15 +38,18 @@ gemini_init(ai_provider_t *prov, const char *model, const char *apikey,
 	if(prompt)
 		data->prompt = strdup(prompt);
 	prov->data = data;
-	prov->cleanup = gemini_cleanup;
-	RETiRet;
+       prov->cleanup = gemini_cleanup;
+finalize_it:
+       RETiRet;
 }
 
 static rsRetVal
 gemini_classify_batch(ai_provider_t *prov, const char **messages, size_t n,
-	char ***tags)
+       char ***tags)
 {
-	const char *mock = getenv("GEMINI_MOCK_RESPONSE");
+       const char *mock = getenv("GEMINI_MOCK_RESPONSE");
+       (void)prov;
+       (void)messages;
 	char *tmp;
 	   char *tok;
 	   char *saveptr = NULL;
@@ -56,7 +59,7 @@ gemini_classify_batch(ai_provider_t *prov, const char **messages, size_t n,
 	if(mock == NULL)
 		return RS_RET_ERR;
 	CHKmalloc(tmp = strdup(mock));
-	CHKiRet(rsCAlloc((void**)&out, n * sizeof(char*)));
+       CHKmalloc(out = calloc(n, sizeof(char*)));
 	   tok = strtok_r(tmp, ",", &saveptr);
 	   while(tok != NULL && idx < n) {
 	       out[idx++] = strdup(tok);
