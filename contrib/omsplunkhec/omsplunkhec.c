@@ -939,16 +939,17 @@ checkConn(wrkrInstanceData_t *const pWrkrData)
 		curlCheckConnSetup(pWrkrData);
 		curl_easy_setopt(curl, CURLOPT_URL, healthUrl);
 		res = curl_easy_perform(curl);
-		free(healthUrl);
 
 		if (res == CURLE_OK) {
 			DBGPRINTF("omsplunkhec: checkConn %s completed with success "
 				"on attempt %d\n", healthUrl, i);
+			free(healthUrl);
 			ABORT_FINALIZE(RS_RET_OK);
 		}
 
 		DBGPRINTF("omsplunkhec: checkConn %s failed on attempt %d: %s\n",
 			healthUrl, i, curl_easy_strerror(res));
+		free(healthUrl);
 		incrementServerIndex(pWrkrData);
 	}
 
@@ -1317,8 +1318,8 @@ CODESTARTnewActInst
 
 			pData->listObjStats[i].requestSuccess = 0;
 			INIT_ATOMIC_HELPER_MUT64(pData->listObjStats[i].mut_requestSuccess);
-			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats, 
-			UCHAR_CONSTANT("request_successed"),
+			CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+			UCHAR_CONSTANT("request_succeeded"),
 			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &(pData->listObjStats[i].requestSuccess)));
 
 			pData->listObjStats[i].requestFailed = 0;
