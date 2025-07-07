@@ -1629,14 +1629,17 @@ AM_CONDITIONAL(ENABLE_MMPSTRUCDATA, test x$enable_mmpstrucdata = xyes)
 
 # mmaitag
 AC_ARG_ENABLE(mmaitag,
-        [AS_HELP_STRING([--enable-mmaitag],[Enable AI tagging module @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-mmaitag],[Enable AI tagging module @<:@default=yes@:>@])],
         [case "${enableval}" in
          yes) enable_mmaitag="yes" ;;
           no) enable_mmaitag="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmaitag) ;;
          esac],
-        [enable_mmaitag=no]
+        [enable_mmaitag=yes]
 )
+if test "x$enable_mmaitag" = "xyes"; then
+        PKG_CHECK_MODULES([CURL], [libcurl])
+fi
 AM_CONDITIONAL(ENABLE_MMAITAG, test x$enable_mmaitag = xyes)
 
 

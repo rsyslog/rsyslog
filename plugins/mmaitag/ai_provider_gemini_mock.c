@@ -48,7 +48,8 @@ gemini_classify_batch(ai_provider_t *prov, const char **messages, size_t n,
 {
 	const char *mock = getenv("GEMINI_MOCK_RESPONSE");
 	char *tmp;
-	char *tok;
+	   char *tok;
+	   char *saveptr = NULL;
 	char **out;
 	size_t idx = 0;
 	DEFiRet;
@@ -56,11 +57,11 @@ gemini_classify_batch(ai_provider_t *prov, const char **messages, size_t n,
 		return RS_RET_ERR;
 	CHKmalloc(tmp = strdup(mock));
 	CHKiRet(rsCAlloc((void**)&out, n * sizeof(char*)));
-	tok = strtok(tmp, ",");
-	while(tok != NULL && idx < n) {
-		out[idx++] = strdup(tok);
-		tok = strtok(NULL, ",");
-	}
+	   tok = strtok_r(tmp, ",", &saveptr);
+	   while(tok != NULL && idx < n) {
+	       out[idx++] = strdup(tok);
+	       tok = strtok_r(NULL, ",", &saveptr);
+	   }
 	while(idx < n)
 	out[idx++] = strdup("REGULAR");
 	free(tmp);

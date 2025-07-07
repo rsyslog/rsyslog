@@ -110,19 +110,23 @@ gemini_classify_batch(ai_provider_t *prov, const char **msgs, size_t n, char ***
 	json_object_object_get_ex(first, "content", &content);
 	struct json_object *p;
 	json_object_object_get_ex(content, "parts", &p);
-	const char *raw = json_object_get_string(json_object_array_get_idx(p,0));
-	char *tmp = strdup(raw);
-	char *tok = strtok(tmp, ",");
-	CHKiRet(rsCAlloc((void**)&*tags, n * sizeof(char*)));
-	size_t i=0;
-	while(tok!=NULL && i<n){ (*tags)[i++] = strdup(tok); tok=strtok(NULL, ","); }
-	while(i<n) (*tags)[i++] = strdup("REGULAR");
+	   const char *raw = json_object_get_string(json_object_array_get_idx(p,0));
+	   struct json_object *arr = json_tokener_parse(raw);
+	   CHKiRet(rsCAlloc((void**)&*tags, n * sizeof(char*)));
+	   size_t i = 0;
+	   if(arr && json_object_is_type(arr, json_type_array)) {
+	       size_t alen = json_object_array_length(arr);
+	       for(i = 0 ; i < n && i < alen ; ++i)
+	               (*tags)[i] = strdup(json_object_get_string(json_object_array_get_idx(arr, i)));
+	   }
+	   while(i < n)
+	       (*tags)[i++] = strdup("REGULAR");
+	   json_object_put(arr);
 finalize_it:
-	free(tmp);
-	free(url);
-	free(resp.buf);
-	json_object_put(req);
-	RETiRet;
+	   free(url);
+	   free(resp.buf);
+	   json_object_put(req);
+	   RETiRet;
 }
 
 ai_provider_t gemini_provider = {

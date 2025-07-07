@@ -1,7 +1,7 @@
 /* mmaitag.c
- * AI-based message classification plugin.
- * Stores classification tag in a message variable.
- */
+	* AI-based message classification plugin.
+	* Stores classification tag in a message variable.
+	*/
 #include "config.h"
 #include "rsyslog.h"
 #include <stdlib.h>
@@ -24,7 +24,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "provider", eCmdHdlrString, 0 },
 	{ "tag", eCmdHdlrString, 0 },
 	{ "model", eCmdHdlrString, 0 },
-	{ "prompt", eCmdHdlrString, 0 },
+	{ "expert.initial_prompt", eCmdHdlrString, 0 },
 	{ "inputproperty", eCmdHdlrString, 0 },
 	{ "apikey", eCmdHdlrString, 0 },
 	{ "apikey_file", eCmdHdlrString, 0 }
@@ -51,7 +51,7 @@ typedef struct wrkrInstanceData {
 } wrkrInstanceData_t;
 
 static ai_provider_t *get_provider(const char *name)
-{
+	{
 	if(!strcmp(name, "gemini"))
 			return &gemini_provider;
 	if(!strcmp(name, "gemini_mock"))
@@ -97,55 +97,69 @@ ENDtryResume
 
 static void
 setInstParamDefaults(instanceData *pData)
-{
+	{
 	pData->provider_name = strdup("gemini");
 	pData->tag = strdup(".aitag");
 	pData->model = strdup("gemini-1.5-pro");
-	pData->prompt = strdup(
-	"You are a tool that classifies log messages. In the next prompts, "
-	"log messages are given one by one. Classify them with a single word "
-	"whichever fits best. No other output. Classifications are 'NOISE', "
-	"'REGULAR', 'IMPORTANT', 'CRITICAL'.");
+	   pData->prompt = strdup(
+	   "You are a tool that classifies log messages. "
+	   "Given an array of log messages, respond with a JSON array of labels: "
+	   "'NOISE', 'REGULAR', 'IMPORTANT', or 'CRITICAL' — one per message, in order. "
+	   "Do not include explanations or additional formatting.");
 	pData->inputProp = NULL;
 	pData->apikey = NULL;
 	pData->apikey_file = NULL;
 	pData->provider = NULL;
 }
 
-BEGINdoAction_NoStrings
-	smsg_t **ppMsg = (smsg_t **) pMsgData;
-	smsg_t *pMsg = ppMsg[0];
-	instanceData *const pData = pWrkrData->pData;
-	uchar *val;
-	rs_size_t len;
-	unsigned short freeBuf = 0;
-	char *text;
-	char **tags = NULL;
-	DEFiRet;
-CODESTARTdoAction
-	if(pData->inputProp == NULL) {
-	getRawMsg(pMsg, &val, &len);
-	} else {
-	val = MsgGetProp(pMsg, NULL, pData->inputProp, &len, &freeBuf, NULL);
-	}
-	text = strndup((char*)val, len);
-	if(freeBuf)
-	free(val);
-	if(pData->provider == NULL) {
-	pData->provider = get_provider(pData->provider_name);
-	if(pData->provider && pData->provider->init)
-	    pData->provider->init(pData->provider, pData->model, pData->apikey, pData->prompt);
-	}
-	if(pData->provider && pData->provider->classify)
-	pData->provider->classify(pData->provider, (const char**)&text, 1, &tags);
-	if(tags && tags[0]) {
-	struct json_object *j = json_object_new_string(tags[0]);
-	msgAddJSON(pMsg, (uchar*)pData->tag, j, 0, 0);
-	free(tags[0]);
-	}
-	free(tags);
-	free(text);
-ENDdoAction
+BEGINbeginTransaction
+CODESTARTbeginTransaction
+ENDbeginTransaction
+
+BEGINcommitTransaction
+	    instanceData *const pData = pWrkrData->pData;
+	    char **msgs = NULL;
+	    char **tags = NULL;
+	    unsigned i;
+	    DEFiRet;
+CODESTARTcommitTransaction
+	    CHKiRet(rsCAlloc((void**)&msgs, nParams * sizeof(char*)));
+	    for(i = 0 ; i < nParams ; ++i) {
+	            smsg_t *pMsg = (smsg_t*)actParam(pParams, 1, i, 0).param;
+	            uchar *val;
+	            rs_size_t len;
+	            unsigned short freeBuf = 0;
+	            if(pData->inputProp == NULL)
+	                    getRawMsg(pMsg, &val, &len);
+	            else
+	                    val = MsgGetProp(pMsg, NULL, pData->inputProp, &len, &freeBuf, NULL);
+	            msgs[i] = strndup((char*)val, len);
+	            if(freeBuf)
+	                    free(val);
+	    }
+	    if(pData->provider == NULL) {
+	            pData->provider = get_provider(pData->provider_name);
+	            if(pData->provider && pData->provider->init)
+	                    pData->provider->init(pData->provider, pData->model, pData->apikey, pData->prompt);
+	    }
+	    if(pData->provider && pData->provider->classify)
+	            CHKiRet(pData->provider->classify(pData->provider, (const char**)msgs, nParams, &tags));
+	    for(i = 0 ; i < nParams ; ++i) {
+	            smsg_t *pMsg = (smsg_t*)actParam(pParams, 1, i, 0).param;
+	            const char *tg = (tags && tags[i]) ? tags[i] : "REGULAR";
+	            struct json_object *j = json_object_new_string(tg);
+	            msgAddJSON(pMsg, (uchar*)pData->tag, j, 0, 0);
+	            free(msgs[i]);
+	            if(tags && tags[i])
+	                    free(tags[i]);
+	    }
+	    free(msgs);
+	    free(tags);
+ENDcommitTransaction
+
+BEGINendTransaction
+CODESTARTendTransaction
+ENDendTransaction
 
 BEGINnewActInst
 	struct cnfparamvals *pvals;
@@ -172,9 +186,9 @@ CODESTARTnewActInst
 	} else if(!strcmp(actpblk.descr[i].name, "model")) {
 	    free(pData->model);
 	    pData->model = es_str2cstr(pvals[i].val.d.estr, NULL);
-	} else if(!strcmp(actpblk.descr[i].name, "prompt")) {
-	    free(pData->prompt);
-	    pData->prompt = es_str2cstr(pvals[i].val.d.estr, NULL);
+	   } else if(!strcmp(actpblk.descr[i].name, "expert.initial_prompt")) {
+	       free(pData->prompt);
+	       pData->prompt = es_str2cstr(pvals[i].val.d.estr, NULL);
 	} else if(!strcmp(actpblk.descr[i].name, "inputproperty")) {
 	    char *c = es_str2cstr(pvals[i].val.d.estr, NULL);
 	    CHKmalloc(pData->inputProp = malloc(sizeof(msgPropDescr_t)));
@@ -183,11 +197,22 @@ CODESTARTnewActInst
 	} else if(!strcmp(actpblk.descr[i].name, "apikey")) {
 	    free(pData->apikey);
 	    pData->apikey = es_str2cstr(pvals[i].val.d.estr, NULL);
-	} else if(!strcmp(actpblk.descr[i].name, "apikey_file")) {
-	    free(pData->apikey_file);
-	    pData->apikey_file = es_str2cstr(pvals[i].val.d.estr, NULL);
-	}
-	}
+	   } else if(!strcmp(actpblk.descr[i].name, "apikey_file")) {
+	       free(pData->apikey_file);
+	       pData->apikey_file = es_str2cstr(pvals[i].val.d.estr, NULL);
+	   }
+	   }
+	   if(pData->apikey == NULL && pData->apikey_file != NULL) {
+	       FILE *fp = fopen(pData->apikey_file, "r");
+	       if(fp != NULL) {
+	               char buf[256];
+	               if(fgets(buf, sizeof(buf), fp) != NULL) {
+	                       buf[strcspn(buf, "\r\n")] = '\0';
+	                       pData->apikey = strdup(buf);
+	               }
+	               fclose(fp);
+	       }
+	   }
 CODE_STD_FINALIZERnewActInst
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
@@ -196,7 +221,7 @@ NO_LEGACY_CONF_parseSelectorAct
 
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
+CODEqueryEtryPt_STD_OMODTX_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 CODEqueryEtryPt_STD_CONF2_QUERIES
