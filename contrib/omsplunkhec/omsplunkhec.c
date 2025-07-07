@@ -199,7 +199,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "batch", eCmdHdlrBinary, 0 },
 	{ "batch.maxsize", eCmdHdlrInt, 0 },
-	{ "batch.maxbyte", eCmdHdlrInt, 0 },
+	{ "batch.maxbytes", eCmdHdlrInt, 0 },
 	{ "useTls", eCmdHdlrBinary, 0 },
 	{ "proxyhost", eCmdHdlrString, 0 },
 	{ "proxyport", eCmdHdlrInt, 0 },
@@ -379,6 +379,7 @@ serializeBatchJsonArray(wrkrInstanceData_t *pWrkrData, char **batchBuf, int *cou
 
 		const char *tmp = fjson_object_to_json_string_ext(msgObj, FJSON_TO_STRING_PLAIN);
 		es_addBuf(&buff, (char*)tmp, strlen(tmp));
+		es_addChar(&buff, '\n');
 		fjson_object_put(msgObj); // free json object
 		msgObj = NULL;
 	}
@@ -1294,9 +1295,9 @@ CODESTARTnewActInst
 				ABORT_FINALIZE(RS_RET_ERR);
 			}
 			/* Remove a trailing slash if it exists */
-			const size_t serverParamLastChar = strlen(serverParam)-1;
-			if (serverParam[serverParamLastChar] == '/') {
-				serverParam[serverParamLastChar] = '\0';
+			const size_t serverLength = strlen(serverParam);
+			if (serverLength > 0 && serverParam[serverLength - 1] == '/') {
+				serverParam[serverLength - 1] = '\0';
 			}
 
 
