@@ -1,0 +1,12 @@
+ignored:
+  - SC2181 # we need support for old Solaris 10
+  - SC2016 # shellcheck does not properly understand our intent, the issue
+           # is raised e.g. here in config file creation:
+	   #  binary="'$RSYSLOG_DYNNAME'.omprog-restart-terminated-bin.sh"
+	   # we cannot explicitely permit this on each occurrence.
+
+  # things we do not (currently) care about
+  - SC2046
+  - SC2086
+  - SC2155
+  - SC2164

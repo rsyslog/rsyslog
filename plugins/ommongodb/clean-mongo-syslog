@@ -1,0 +1,55 @@
+#!/usr/bin/python
+#
+# Copyright (C) 2014 Daniel Pocock, http://danielpocock.com
+#
+# This file is part of rsyslog.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#       -or-
+#       see COPYING.ASL20 in the source distribution
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+import syslog
+import datetime
+
+# for older pymongo versions:
+#from pymongo import Connection
+# for more recent pymongo
+from pymongo import MongoClient
+
+# This is a very basic but functional sample
+#
+# It assumes we use the default database name 'logs' and collection 'syslog'
+# in the rsyslog configuration.
+#
+# It can be run from cron on a daily or weekly basis as required.
+#
+# TODO:
+# - log what it is doing to syslog
+# - use indexes for better performance
+
+with MongoClient() as client:
+    db = client.logs
+    table = db.syslog
+    #print "Initial count: %d" % table.count()
+    today = datetime.datetime.today()
+
+    # remove ANY record older than 5 weeks except mail.info
+    t = today - datetime.timedelta(weeks=5)
+    table.remove({"time":{ "$lt": t }, "syslog_fac": { "$ne" : syslog.LOG_MAIL }})
+
+    # remove any debug record older than 7 days
+    t = today - datetime.timedelta(days=7)
+    table.remove({"time":{ "$lt": t }, "syslog_sever": syslog.LOG_DEBUG})
+
+    #print "Final count: %d" % table.count()

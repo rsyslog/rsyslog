@@ -1,0 +1,156 @@
+# Copyright 2024-2025 Rainer Gerhards and Others
+#
+# https://github.com/rsyslog/rsyslog-pkg-ubuntu
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# References:
+#
+# https://help.github.com/en/github/managing-subscriptions-and-notifications-on-github/configuring-notifications#github-actions-notification-options
+# https://github.com/settings/notifications
+# https://software.opensuse.org//download.html?project=home%3Argerhards&package=rsyslog
+
+# ---
+# This GitHub Actions workflow performs a compile check of the project across
+# various compiler configurations. It's designed to ensure code quality and
+# compatibility.
+#
+# The workflow features intelligent skipping for Pull Requests that *only*
+# involve documentation or other non-source code changes (e.g., ChangeLog,
+# .md, .txt files, or files within the 'doc/' directory).
+#
+# How it works:
+# 1. A preliminary job checks the changed files in the Pull Request.
+# 2. If *only* documentation or designated ignored files are modified, a quick,
+#    succeeding job runs to satisfy branch protection rules. The main
+#    compilation job is then skipped.
+# 3. If any source code changes are detected, the full compilation matrix
+#    executes to thoroughly test the changes.
+# This approach ensures efficient CI resource usage while maintaining robust
+# code quality gates.
+---
+name: compile check
+
+on:
+  pull_request:
+
+jobs:
+  # This job identifies if the PR only contains changes to documentation or other ignored files.
+  # It will output 'true' if only such files were modified, and 'false' otherwise.
+  determine_changes_type:
+    runs-on: ubuntu-latest
+    outputs:
+      # 'true' if no files *outside* the ignored list (i.e., no code files) have changed
+      only_documentation_or_ignored: ${{ steps.check_non_doc_files.outputs.any_changed == 'false' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4 # Recommended to use v4 for security and features
+        with:
+          fetch-depth: 2 # Essential for 'tj-actions/changed-files' to accurately compare branches
+
+      - name: Get changed non-documentation/source files
+        id: check_non_doc_files
+        uses: tj-actions/changed-files@v46
+        with:
+          # Define patterns for files that, if changed, should *NOT* result in skipping compilation.
+          # These are primarily source code files and critical build system files.
+          # If any of these change, 'any_changed' will be true, indicating a code change.
+          files: |
+            **/*.c
+            **/*.h
+            **/Makefile.am
+            grammar/*.l
+            grammar/*.y
+            configure.ac
+            autogen.sh
+            .github/workflows/*.yml
+            # Add other critical build or configuration files here that should trigger a compile
+            # if they change. Avoid including documentation files here.
+
+
+  # This job runs and succeeds ONLY if the 'determine_changes_type' job
+  # indicated that only documentation or ignored files were modified.
+  # This job will fulfill the branch protection requirement for doc-only PRs.
+  doc_only_success_check:
+    needs: determine_changes_type
+    if: ${{ needs.determine_changes_type.outputs.only_documentation_or_ignored == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirm documentation-only changes
+        run: echo "No relevant source code changes detected. Skipping full compilation checks."
+
+  # This job will ONLY execute if 'determine_changes_type' found that actual source code or
+  # other non-ignored files were part of the PR.
+  run:
+    needs: determine_changes_type # Ensure this job waits for the change detection to complete
+    # This 'if' condition ensures the compilation only runs for actual code changes.
+    # If 'only_documentation_or_ignored' is 'true', this job will be skipped,
+    # and GitHub Actions treats skipped jobs (due to 'if') as successful for branch protection.
+    if: ${{ needs.determine_changes_type.outputs.only_documentation_or_ignored == 'false' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [clang9, clang18-noatomics, clang18-ndebug, gcc8-debug, gcc-11-ndebug, gcc14-gnu23-debug]
+
+    steps:
+      - name: git checkout project
+        uses: actions/checkout@v4 # Recommended to use v4 for security and features
+
+      - name: run compile check (container)
+        run: |
+          chmod -R go+rw .
+          export RSYSLOG_CONTAINER_UID="" # use default
+          export CFLAGS='-g'
+          case "${{ matrix.config }}" in
+          'clang9')
+            export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
+            export CC='clang-9'
+            ;;
+          'clang18-ndebug')
+            export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=no'
+            export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
+            export CC='clang-18'
+            ;;
+          'clang18-noatomics')
+            export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-atomic-operations=no'
+            export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
+            export CC='clang-18'
+            ;;
+          'gcc8-debug')
+            export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=yes'
+            export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
+            export CC='gcc-8'
+            ;;
+          'gcc-11-ndebug')
+            export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=no'
+            export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
+            export CC='gcc-11'
+            ;;
+          'gcc14-gnu23-debug')
+            # omamqp1 seems to have an issue with the build system - exclude it for now
+            # rgerhards, 2024-12-06
+            export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=yes --disable-omamqp1'
+            export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
+            export CFLAGS="-g -std=gnu23"
+            export CC='gcc-14'
+            ;;
+          *)
+            echo "unknown configuration "
+            echo "error-terminating this check run"
+            exit 1
+            ;;
+          esac
+          devtools/devcontainer.sh --rm devtools/run-configure.sh
+          devtools/devcontainer.sh --rm make -j20

@@ -1,0 +1,87 @@
+**AIX is NOT a supported platform**
+
+Nevertheless, we try to make it at least "best effort supported
+platform", but so far we have many issues towards that goal.
+
+Full details are tracked in this github issue:
+    https://github.com/rsyslog/rsyslog/issues/2597
+
+The rest of this document contains some information that we found so
+far and that helps us, and may help you, getting rsyslog to compile
+on AIX.
+
+Note: as said in the issue tracke, we do currently NOT have a compile
+environment, which is the major stumbling spot on the way to make
+rsyslog reliably compile and run under AIX.
+
+Getting an environment
+----------------------
+IBM provides time-limited virtual boxes via the PDP program after
+a company registered as a business partner. Not sure how long they
+can actually be used for open source projects.
+
+Setting up an environment
+-------------------------
+As it looks, AIX supports software installation via a (special?) version
+of yum. At the base, it seems to support RPM, which seems to be
+preinstalled with the OS.
+
+In theory the script yum.sh from
+https://public.dhe.ibm.com/aix/freeSoftware/aixtoolbox/ezinstall/ppc/
+should install a version of yum. In practice, this does at least not
+work on PDP virtual boxes as they seem to have insufficient disk space
+and connectivity.
+
+Manual installation should be possible, but on our first try disk space
+was far too low to even unpack the tarballs (support request opened, will
+update doc once I know better).
+
+See README.AIX.IBM for some build instructions from IBM once you
+managed to install yum.
+
+Additional packages are required. We use
+   http://www.bullfreeware.com/
+to get them.
+
+Note: you need to
+* manually search for the RPM via the search box
+* manually download the RPM
+  we used only the core rpm without dependencies, this worked
+  on a system that was current after yum install
+* manually install the downloaded rpm vi "rpm -i pkg.rpm"
+* we needed these packages:
+  - flex
+  - bison
+
+
+AIX HELP
+--------
+* extend a FS assuming there is still physical disk space:
+  # actual commands used in PDP box
+  chfs -s size=200M /tmp
+  chfs -a size=4G /home
+  chfs -a size=3G /opt
+  chfs -a size=1500M /var
+
+* install yum:
+  - some step missing....
+  - have 
+  - do
+       rpm -i *.rpm
+       # may bring up already installed packages, if so delete rpm file
+    until install works
+
+* if something goes wrong with yum update (libintl!), re-install expansion pack
+  mkdir pkg
+  cp ../rpm.rte.xxxx .
+  inutoc .
+  installp -acFNXYd . rpm.rte
+
+* use "gmake" instead of "make"
+
+TO BE MERGED CONTENT
+download rpm base files: https://www.ibm.com/developerworks/community/forums/html/topic?id=595f661f-d7bf-4e07-a296-1202751d30e2
+
+rm .toc 
+inutoc . 
+installp -acgXYd . rpm.rte 

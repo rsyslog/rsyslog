@@ -1,0 +1,117 @@
+# Copyright 2020 Rainer Gerhards and Others
+#
+# https://github.com/rsyslog/rsyslog-pkg-ubuntu
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# References:
+#
+# https://help.github.com/en/github/managing-subscriptions-and-notifications-on-github/configuring-notifications#github-actions-notification-options
+# https://github.com/settings/notifications
+# https://software.opensuse.org//download.html?project=home%3Argerhards&package=rsyslog
+
+
+---
+name: check systemd journal
+
+on:
+  pull_request:
+    paths-ignore:
+      - 'ChangeLog'
+      - '**/*.md'
+      - '**/*.txt'
+      - 'doc/**'
+
+jobs:
+  check_run:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: add extra dependencies
+        run: |
+          echo 'deb http://download.opensuse.org/repositories/home:/rgerhards/xUbuntu_20.04/ /' \
+              | sudo tee /etc/apt/sources.list.d/home:rgerhards.list
+          curl -fsSL https://download.opensuse.org/repositories/home:rgerhards/xUbuntu_20.04/Release.key \
+              | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home:rgerhards.gpg > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y \
+            libestr-dev \
+            libgcrypt20-dev \
+            libglib2.0-dev \
+            libgnutls28-dev \
+            liblognorm-dev \
+            liblz4-dev \
+            libnet1-dev \
+            librelp-dev \
+            libssl-dev \
+            libsystemd-dev \
+            libtool \
+            libtool-bin \
+            libzstd-dev \
+            lsof \
+            make \
+            net-tools \
+            pkg-config \
+            python3-docutils  \
+            software-properties-common \
+            valgrind \
+            wget \
+            zstd
+
+      - name: git checkout project
+        uses: actions/checkout@v1
+
+      - name: build dependencies which require that
+        run: |
+             mkdir helper-projects && \
+             cd helper-projects && \
+             git clone https://github.com/rsyslog/libfastjson.git && \
+             cd libfastjson && \
+             autoreconf -fi && \
+             ./configure --prefix=/usr --enable-compile-warnings=yes --libdir=/usr/lib/x86_64-linux-gnu --includedir=/usr/include && \
+             make -j && \
+             sudo make install && \
+             cd .. && \
+             rm -r libfastjson && \
+             cd ..
+
+      - name: prepare for build
+        run: |
+          autoreconf -fvi
+          ./configure --enable-silent-rules --enable-testbench \
+             --enable-imdiag --disable-imdocker --disable-imfile --disable-default-tests\
+             --disable-impstats --disable-imptcp --disable-mmanon --disable-mmaudit --disable-mmfields \
+             --disable-mmjsonparse --disable-mmpstrucdata --disable-mmsequence --disable-mmutf8fix \
+             --disable-mail --disable-omprog --disable-improg --disable-omruleset --enable-omstdout \
+             --disable-omuxsock --disable-pmaixforwardedfrom --disable-pmciscoios --disable-pmcisconames \
+             --disable-pmlastmsg --disable-pmsnare --disable-libgcrypt --disable-mmnormalize \
+             --disable-omudpspoof --disable-relp --disable-mmsnmptrapd --disable-gnutls --enable-usertools \
+             --disable-mysql --enable-valgrind --enable-omjournal --enable-libsystemd=yes \
+             --disable-mmkubernetes --enable-imjournal --disable-omkafka --disable-imkafka \
+             --disable-ommongodb --disable-omrabbitmq --enable-journal-tests --disable-mmdarwin \
+             --enable-compile-warnings=error --disable-helgrind --disable-uuid --disable-fmhttp
+
+      - name: build
+        run: |
+          make -j
+
+      - name: make check
+        run: |
+          make -j8 check
+
+      - name: show error logs (if we errored)
+        if:  ${{ failure() || cancelled() }}
+        run: |
+          devtools/gather-check-logs.sh
+          cat failed-tests.log

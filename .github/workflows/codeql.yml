@@ -1,0 +1,112 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches: [ "master" ]
+    paths-ignore:
+      - 'ChangeLog'
+      - '**/*.md'
+      - '**/*.txt'
+      - 'doc/**'
+
+  pull_request:
+    branches: [ "master" ]
+    paths-ignore:
+      - 'ChangeLog'
+      - '**/*.md'
+      - '**/*.txt'
+      - 'doc/**'
+  schedule:
+    - cron: "38 1 * * 3"
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ python, cpp ]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Packages (cpp)
+        if: ${{ matrix.language == 'cpp' }}
+        run: |
+          sudo apt-get update
+          #sudo apt-get install --yes python-docutils tcl-dev
+          sudo apt-get install --yes \
+              libestr-dev \
+              libfastjson-dev \
+              librelp-dev \
+              liblognorm-dev \
+              librdkafka-dev \
+              libzstd-dev \
+              autoconf \
+              autoconf-archive \
+              automake \
+              autotools-dev \
+              bison \
+              default-jdk \
+              default-jre \
+              faketime libdbd-mysql \
+              flex \
+              libaprutil1-dev \
+              libbson-dev \
+              libcurl4-gnutls-dev \
+              libdbi-dev \
+              libgcrypt20-dev \
+              libglib2.0-dev \
+              libgnutls28-dev \
+              libhiredis-dev \
+              libkrb5-dev \
+              liblz4-dev \
+              libmaxminddb-dev libmongoc-dev \
+              libmongoc-dev \
+              libmysqlclient-dev \
+              libnet1-dev \
+              libpcap-dev \
+              librabbitmq-dev \
+              libsnmp-dev \
+              libssl-dev libsasl2-dev \
+              libsystemd-dev \
+              libtirpc-dev \
+              libtokyocabinet-dev \
+              libtool \
+              libtool-bin \
+              logrotate \
+              net-tools \
+              postgresql-client libpq-dev \
+              python3-docutils  \
+              python3-pip \
+              software-properties-common \
+              uuid-dev \
+              zlib1g-dev
+
+      - name: Configure (cpp)
+        if: ${{ matrix.language == 'cpp' }}
+        run: |
+          autoreconf -fvi
+          ./configure --enable-imfile --enable-mysql --enable-usertools --enable-pgsql --enable-libdbi --enable-snmp --enable-elasticsearch --enable-gnutls --enable-mail --enable-imdiag --enable-mmjsonparse --enable-mmaudit --enable-mmanon --enable-mmrm1stspace --enable-mmutf8fix --enable-mmcount --enable-mmdblookup --enable-mmfields --enable-mmpstrucdata --enable-imptcp --enable-impstats --enable-omprog --enable-omudpspoof --enable-omstdout --enable-omjournal --enable-pmlastmsg --enable-pmcisconames --enable-pmciscoios --enable-pmnull --enable-pmaixforwardedfrom --enable-pmsnare --enable-pmpanngfw --enable-omuxsock --enable-omkafka --enable-imkafka --enable-ommongodb --enable-omhiredis --enable-omhttpfs --enable-gssapi-krb5 --enable-mmkubernetes --enable-relp --enable-mmnormalize --enable-pmnormalize --enable-openssl --disable-mmgrok --enable-omtcl --enable-omhttp --enable-improg --enable-imtuxedoulog --enable-mmtaghostname --enable-imbatchreport --enable-imdocker --enable-mmdarwin --enable-pmdb2diag --enable-omrabbitmq --enable-libzstd
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v2
+        with:
+          languages: ${{ matrix.language }}
+          config-file: ./.github/codeql.yml
+          queries: +security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v2
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v2
+        with:
+          category: "/language:${{ matrix.language }}"
