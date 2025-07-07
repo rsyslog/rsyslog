@@ -1,7 +1,7 @@
 #!/bin/bash
 ## basic test for mmaitag plugin
 . ${srcdir:=.}/diag.sh init
-export GEMINI_MOCK_RESPONSE="NOISE,REGULAR"
+export GEMINI_MOCK_RESPONSE="NOISE,NOISE,REGULAR"
 
 generate_conf
 add_conf '
@@ -18,6 +18,6 @@ startup
 tcpflood -m 2
 shutdown_when_empty
 wait_shutdown
-content_check "testmsg NOISE"
-content_check "testmsg REGULAR"
+content_check "msgnum:00000000: NOISE"
+content_check "msgnum:00000001: REGULAR"
 exit_test

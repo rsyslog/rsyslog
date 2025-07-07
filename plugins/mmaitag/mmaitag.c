@@ -69,14 +69,14 @@ CODESTARTfreeInstance
 	free(pData->tag);
 	free(pData->model);
 	free(pData->prompt);
-        free(pData->apikey);
-        free(pData->apikey_file);
-        if(pData->inputProp) {
-        msgPropDescrDestruct(pData->inputProp);
-        free(pData->inputProp);
-        }
-        if(pData->provider && pData->provider->cleanup)
-                pData->provider->cleanup(pData->provider);
+	free(pData->apikey);
+	free(pData->apikey_file);
+	if(pData->inputProp) {
+	msgPropDescrDestruct(pData->inputProp);
+	free(pData->inputProp);
+	}
+	if(pData->provider && pData->provider->cleanup)
+		pData->provider->cleanup(pData->provider);
 ENDfreeInstance
 
 BEGINcreateWrkrInstance
@@ -99,8 +99,8 @@ ENDtryResume
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-       if(eFeat == sFEATURERepeatedMsgReduction)
-               iRet = RS_RET_OK;
+	if(eFeat == sFEATURERepeatedMsgReduction)
+	       iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 static void
@@ -120,53 +120,41 @@ setInstParamDefaults(instanceData *pData)
 	pData->provider = NULL;
 }
 
-BEGINbeginTransaction
-CODESTARTbeginTransaction
-ENDbeginTransaction
-
-BEGINcommitTransaction
-            instanceData *const pData = pWrkrData->pData;
-            char **msgs = NULL;
-            char **tags = NULL;
-            unsigned i;
-CODESTARTcommitTransaction
-            CHKmalloc(msgs = calloc(nParams, sizeof(char*)));
-            for(i = 0 ; i < nParams ; ++i) {
-	            smsg_t *pMsg = (smsg_t*)actParam(pParams, 1, i, 0).param;
-	            uchar *val;
-	            rs_size_t len;
-	            unsigned short freeBuf = 0;
-	            if(pData->inputProp == NULL)
-	                    getRawMsg(pMsg, &val, &len);
-	            else
-	                    val = MsgGetProp(pMsg, NULL, pData->inputProp, &len, &freeBuf, NULL);
-	            msgs[i] = strndup((char*)val, len);
-	            if(freeBuf)
-	                    free(val);
+BEGINdoAction_NoStrings
+	    smsg_t **ppMsg = (smsg_t**)pMsgData;
+	    smsg_t *pMsg = ppMsg[0];
+	    const char *msgs[1];
+	    char **tags = NULL;
+	    uchar *val;
+	    rs_size_t len;
+	    unsigned short freeBuf = 0;
+	    instanceData *const pData = pWrkrData->pData;
+CODESTARTdoAction
+	    if(pData->inputProp == NULL)
+		    getRawMsg(pMsg, &val, &len);
+	    else
+		    val = MsgGetProp(pMsg, NULL, pData->inputProp, &len, &freeBuf, NULL);
+	    msgs[0] = strndup((char*)val, len);
+	    if(freeBuf)
+		    free(val);
+	    if(pData->provider == NULL) {
+		    pData->provider = get_provider(pData->provider_name);
+		    if(pData->provider && pData->provider->init)
+			    CHKiRet(pData->provider->init(pData->provider, pData->model, pData->apikey, pData->prompt));
 	    }
-            if(pData->provider == NULL) {
-                    pData->provider = get_provider(pData->provider_name);
-                    if(pData->provider && pData->provider->init)
-                            CHKiRet(pData->provider->init(pData->provider, pData->model, pData->apikey, pData->prompt));
-            }
 	    if(pData->provider && pData->provider->classify)
-	            CHKiRet(pData->provider->classify(pData->provider, (const char**)msgs, nParams, &tags));
-            for(i = 0 ; i < nParams ; ++i) {
-                    smsg_t *pMsg = (smsg_t*)actParam(pParams, 1, i, 0).param;
-                    const char *tg = (tags && tags[i]) ? tags[i] : "REGULAR";
-                    struct json_object *j = json_object_new_string(tg);
-                    msgAddJSON(pMsg, (uchar*)pData->tag, j, 0, 0);
-            }
+		    CHKiRet(pData->provider->classify(pData->provider, msgs, 1, &tags));
+	    if(tags && tags[0]) {
+		    struct json_object *j = json_object_new_string(tags[0]);
+		    msgAddJSON(pMsg, (uchar*)pData->tag, j, 0, 0);
+	    }
 finalize_it:
-            for(i = 0 ; i < nParams ; ++i) {
-                    if(msgs && msgs[i])
-                            free(msgs[i]);
-                    if(tags && tags[i])
-                            free(tags[i]);
-            }
-            free(msgs);
-            free(tags);
-ENDcommitTransaction
+	    if(msgs[0])
+		    free((void*)msgs[0]);
+	    if(tags && tags[0])
+		    free(tags[0]);
+	    free(tags);
+ENDdoAction
 
 
 BEGINnewActInst
@@ -190,7 +178,7 @@ CODESTARTnewActInst
 	    free(pData->tag);
 	    pData->tag = es_str2cstr(pvals[i].val.d.estr, NULL);
 	    if(pData->tag[0] == '$')
-	        memmove(pData->tag, pData->tag+1, strlen(pData->tag));
+		memmove(pData->tag, pData->tag+1, strlen(pData->tag));
 	} else if(!strcmp(actpblk.descr[i].name, "model")) {
 	    free(pData->model);
 	    pData->model = es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -213,12 +201,12 @@ CODESTARTnewActInst
 	   if(pData->apikey == NULL && pData->apikey_file != NULL) {
 	       FILE *fp = fopen(pData->apikey_file, "r");
 	       if(fp != NULL) {
-	               char buf[256];
-	               if(fgets(buf, sizeof(buf), fp) != NULL) {
-	                       buf[strcspn(buf, "\r\n")] = '\0';
-	                       pData->apikey = strdup(buf);
-	               }
-	               fclose(fp);
+		       char buf[256];
+		       if(fgets(buf, sizeof(buf), fp) != NULL) {
+			       buf[strcspn(buf, "\r\n")] = '\0';
+			       pData->apikey = strdup(buf);
+		       }
+		       fclose(fp);
 	       }
 	   }
 CODE_STD_FINALIZERnewActInst
@@ -233,13 +221,13 @@ ENDmodExit
 
 BEGINqueryEtryPt
 CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMODTX_QUERIES
+CODEqueryEtryPt_STD_OMOD_QUERIES
 CODEqueryEtryPt_STD_OMOD8_QUERIES
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
 ENDqueryEtryPt
 
 BEGINmodInit()
 CODESTARTmodInit
-        *ipIFVersProvided = CURR_MOD_IF_VERSION;
+	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit

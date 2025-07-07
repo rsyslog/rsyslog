@@ -28,7 +28,7 @@ write_cb(char *ptr, size_t size, size_t nmemb, void *data)
 	r->buf = tmp;
 	memcpy(r->buf + r->len, ptr, tot);
 	r->len += tot;
-        r->buf[r->len] = '\0';
+	r->buf[r->len] = '\0';
 	return tot;
 }
 
@@ -49,17 +49,17 @@ static rsRetVal
 gemini_init(ai_provider_t *prov, const char *model, const char *key, const char *prompt)
 {
 	gemini_data_t *d;
-        DEFiRet;
-        d = calloc(1, sizeof(*d));
-        if(d == NULL)
-                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	DEFiRet;
+	d = calloc(1, sizeof(*d));
+	if(d == NULL)
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	if(model) d->model = strdup(model);
 	if(key) d->apikey = strdup(key);
 	if(prompt) d->prompt = strdup(prompt);
-        prov->data = d;
-        prov->cleanup = gemini_cleanup;
+	prov->data = d;
+	prov->cleanup = gemini_cleanup;
 finalize_it:
-        RETiRet;
+	RETiRet;
 }
 
 static rsRetVal
@@ -76,10 +76,10 @@ gemini_classify_batch(ai_provider_t *prov, const char **msgs, size_t n, char ***
 	curl = curl_easy_init();
 	if(curl == NULL)
 		ABORT_FINALIZE(RS_RET_ERR);
-        if(asprintf(&url,
-                "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
-                d->model?d->model:"gemini-1.5-pro", d->apikey) == -1)
-                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+	if(asprintf(&url,
+		"https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s",
+		d->model?d->model:"gemini-1.5-pro", d->apikey) == -1)
+		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	req = json_object_new_object();
 	struct json_object *contents = json_object_new_array();
 	struct json_object *prompt = json_object_new_object();
@@ -88,14 +88,14 @@ gemini_classify_batch(ai_provider_t *prov, const char **msgs, size_t n, char ***
 	json_object_array_add(pa, json_object_new_string(d->prompt?d->prompt:""));
 	json_object_object_add(prompt, "parts", pa);
 	json_object_array_add(contents, prompt);
-        struct json_object *msgobj = json_object_new_object();
-        json_object_object_add(msgobj, "role", json_object_new_string("user"));
+	struct json_object *msgobj = json_object_new_object();
+	json_object_object_add(msgobj, "role", json_object_new_string("user"));
 	struct json_object *parts = json_object_new_array();
 	struct json_object *msgsArr = json_object_new_array();
 	for(size_t i=0;i<n;++i) json_object_array_add(msgsArr, json_object_new_string(msgs[i]));
-        json_object_array_add(parts, msgsArr);
-        json_object_object_add(msgobj, "parts", parts);
-        json_object_array_add(contents, msgobj);
+	json_object_array_add(parts, msgsArr);
+	json_object_object_add(msgobj, "parts", parts);
+	json_object_array_add(contents, msgobj);
 	json_object_object_add(req, "contents", contents);
 	const char *body = json_object_to_json_string(req);
 	curl_easy_setopt(curl, CURLOPT_URL, url);
@@ -106,34 +106,34 @@ gemini_classify_batch(ai_provider_t *prov, const char **msgs, size_t n, char ***
 	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
 	if(curl_easy_perform(curl) != CURLE_OK)
 		ABORT_FINALIZE(RS_RET_IO_ERROR);
-        struct json_object *parsed = json_tokener_parse(resp.buf);
-        struct json_object *candidates;
+	struct json_object *parsed = json_tokener_parse(resp.buf);
+	struct json_object *candidates;
 	if(parsed == NULL || !json_object_object_get_ex(parsed, "candidates", &candidates))
 		ABORT_FINALIZE(RS_RET_ERR);
 	struct json_object *first = json_object_array_get_idx(candidates, 0);
 	struct json_object *content;
 	json_object_object_get_ex(first, "content", &content);
-        struct json_object *p;
-        json_object_object_get_ex(content, "parts", &p);
-        const char *raw = json_object_get_string(json_object_array_get_idx(p, 0));
-        struct json_object *arrParsed = json_tokener_parse(raw);
-        CHKmalloc(*tags = calloc(n, sizeof(char*)));
-        size_t i = 0;
-        if(arrParsed && json_object_is_type(arrParsed, json_type_array)) {
-                size_t alen = json_object_array_length(arrParsed);
-                for(i = 0; i < n && i < alen; ++i)
-                        (*tags)[i] = strdup(json_object_get_string(json_object_array_get_idx(arrParsed, i)));
-        }
-        while(i < n)
-                (*tags)[i++] = strdup("REGULAR");
-        json_object_put(arrParsed);
-        json_object_put(parsed);
-        curl_easy_cleanup(curl);
+	struct json_object *p;
+	json_object_object_get_ex(content, "parts", &p);
+	const char *raw = json_object_get_string(json_object_array_get_idx(p, 0));
+	struct json_object *arrParsed = json_tokener_parse(raw);
+	CHKmalloc(*tags = calloc(n, sizeof(char*)));
+	size_t i = 0;
+	if(arrParsed && json_object_is_type(arrParsed, json_type_array)) {
+		size_t alen = json_object_array_length(arrParsed);
+		for(i = 0; i < n && i < alen; ++i)
+			(*tags)[i] = strdup(json_object_get_string(json_object_array_get_idx(arrParsed, i)));
+	}
+	while(i < n)
+		(*tags)[i++] = strdup("REGULAR");
+	json_object_put(arrParsed);
+	json_object_put(parsed);
+	curl_easy_cleanup(curl);
 finalize_it:
-        free(url);
-        free(resp.buf);
-        json_object_put(req);
-        RETiRet;
+	free(url);
+	free(resp.buf);
+	json_object_put(req);
+	RETiRet;
 }
 
 ai_provider_t gemini_provider = {

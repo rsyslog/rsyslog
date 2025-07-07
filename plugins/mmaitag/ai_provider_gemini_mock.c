@@ -30,7 +30,7 @@ gemini_init(ai_provider_t *prov, const char *model, const char *apikey,
 {
 	gemini_data_t *data;
 	DEFiRet;
-       CHKmalloc(data = calloc(1, sizeof(*data)));
+	CHKmalloc(data = calloc(1, sizeof(*data)));
 	if(model)
 		data->model = strdup(model);
 	if(apikey)
@@ -38,39 +38,45 @@ gemini_init(ai_provider_t *prov, const char *model, const char *apikey,
 	if(prompt)
 		data->prompt = strdup(prompt);
 	prov->data = data;
-       prov->cleanup = gemini_cleanup;
+	prov->cleanup = gemini_cleanup;
 finalize_it:
-       RETiRet;
+	RETiRet;
 }
 
 static rsRetVal
 gemini_classify_batch(ai_provider_t *prov, const char **messages, size_t n,
-       char ***tags)
+char ***tags)
 {
-       const char *mock = getenv("GEMINI_MOCK_RESPONSE");
-       (void)prov;
-       (void)messages;
-	char *tmp;
-	   char *tok;
-	   char *saveptr = NULL;
-	char **out;
-	size_t idx = 0;
-	DEFiRet;
-	if(mock == NULL)
-		return RS_RET_ERR;
-	CHKmalloc(tmp = strdup(mock));
-       CHKmalloc(out = calloc(n, sizeof(char*)));
-	   tok = strtok_r(tmp, ",", &saveptr);
-	   while(tok != NULL && idx < n) {
-	       out[idx++] = strdup(tok);
-	       tok = strtok_r(NULL, ",", &saveptr);
-	   }
-	while(idx < n)
-	out[idx++] = strdup("REGULAR");
-	free(tmp);
-	*tags = out;
+static size_t next = 0;
+const char *mock = getenv("GEMINI_MOCK_RESPONSE");
+(void)prov;
+(void)messages;
+char *tmp;
+char *tok;
+char *saveptr = NULL;
+char **out;
+size_t idx = 0;
+DEFiRet;
+if(mock == NULL)
+return RS_RET_ERR;
+CHKmalloc(tmp = strdup(mock));
+tok = strtok_r(tmp, ",", &saveptr);
+for(size_t i = 0; i < next && tok != NULL; ++i)
+tok = strtok_r(NULL, ",", &saveptr);
+CHKmalloc(out = calloc(n, sizeof(char*)));
+for(idx = 0 ; idx < n ; ++idx) {
+if(tok != NULL) {
+out[idx] = strdup(tok);
+tok = strtok_r(NULL, ",", &saveptr);
+} else {
+out[idx] = strdup("REGULAR");
+}
+}
+next += n;
+free(tmp);
+*tags = out;
 finalize_it:
-	RETiRet;
+RETiRet;
 }
 
 ai_provider_t gemini_mock_provider = {
