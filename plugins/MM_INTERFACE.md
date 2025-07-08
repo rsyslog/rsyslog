@@ -90,8 +90,8 @@ ENDparseSelectorAct
 
 BEGINnewActInst
 CODESTARTnewActInst
-CHKiRet(createInstance(&pData));
 CODE_STD_STRING_REQUESTnewActInst(1)
+CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 CODE_STD_FINALIZERnewActInst
 ENDnewActInst
 
