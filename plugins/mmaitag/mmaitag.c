@@ -5,7 +5,7 @@
  * This module contacts an external AI service to classify log
  * messages. The result of the classification is stored in a
  * message variable (defaults to `$.aitag`). Messages are processed
- * in batches and passed to a pluggable provider interface. The
+ * one by one through a pluggable provider interface. The
  * initial implementation contains a Gemini provider as well as a
  * mock backend used for testing.
  *

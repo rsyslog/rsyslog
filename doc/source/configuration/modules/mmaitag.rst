@@ -15,7 +15,7 @@ Purpose
 
 The **mmaitag** module enriches log messages with classification tags
 obtained from an external AI service. Each message is sent to the provider
-in batches and the resulting tag is stored in a custom variable.
+individually and the resulting tag is stored in a custom variable.
 
 Default labels
 --------------
