@@ -51,7 +51,6 @@ There are no strict naming rules, but these conventions are used frequently:
 
 ## Coding Standards
 
-- **Use tabs, not spaces** for indentation — enforced via CI
 - Commit messages **must include all relevant information**, not just in the PR
 - Commit message titles **must not exceed 70 characters**
 - commit message text must be plain US ASCII, line length must not exceed 86 characters
@@ -66,6 +65,27 @@ When fixing compiler warnings like `stringop-overread`, explain in the commit me
 - What part of the code was changed
 - How the fix prevents undefined behavior or aligns with compiler expectations
 - Optionally link: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wstringop-overread
+
+### Indentation Rules (Language-Specific)
+
+- **C / Header / Makefiles**:
+  - Use **tabs only** for indentation (`\t`) (1 tab = 1 indent level)
+  - Do **not** use spaces for indentation or alignment
+  - The **only allowed space at column 1** is for multiline comments starting with ` *`, e.g.:
+    ```c
+    /*
+     * This is a valid Doxygen or traditional comment.
+     */
+    ```
+  - This rule is strictly enforced by CI and `devtools/rsyslog_stylecheck.py`
+
+- **Python**:
+  - Follow [PEP 8](https://peps.python.org/pep-0008/): **4 spaces per indent level**
+  - Do **not** use tabs in `.py` files
+
+> AI Agent Note:
+> Mixed indentation styles (e.g., spaces in C files, tabs in Python) will be **rejected automatically** by style checks.
+> When generating C code, always simulate a tab width of 8 spaces for proper alignment of tabbed content.
 
 ### Code Style Rules Enforced by `devtools/check-whitespace`:
 
