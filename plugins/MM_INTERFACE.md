@@ -81,7 +81,7 @@ BEGINparseSelectorAct
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 if(strncmp((char*)p, ":mmskeleton:", sizeof(":mmskeleton:") - 1))
-ALIZE(RS_RET_CONFLINE_UNPROCESSED);
+ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 p += sizeof(":mmskeleton:") - 1;
 CHKiRet(createInstance(&pData));
 CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_TPL_AS_MSG, (uchar*)"RSYSLOG_FileFormat"));
