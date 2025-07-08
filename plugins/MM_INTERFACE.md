@@ -19,8 +19,7 @@ processing and do **not** implement the transaction interface.
 
 ## Calling Convention
 
-A worker instance receives a single `smsg_t *` via `doAction()`.  The
-function is declared using `BEGINdoAction_NoStrings`:
+A worker instance receives a pointer to an array of `smsg_t*` pointers via `doAction()`. For message modification modules, this array contains a single message. The function is declared using `BEGINdoAction_NoStrings`
 
 ```c
 BEGINdoAction_NoStrings
