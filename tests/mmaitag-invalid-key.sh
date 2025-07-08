@@ -10,8 +10,10 @@ input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port
 
 template(name="outfmt" type="string" string="%msg% [%$.aitag%]\n")
 
-action(type="mmaitag" provider="gemini" apikey="dummy")
-action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
+if($msg contains "msgnum:00") then {
+	action(type="mmaitag" provider="gemini" apikey="dummy")
+	action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
+}
 '
 startup
 tcpflood -m 2

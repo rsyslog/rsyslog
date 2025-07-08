@@ -2,9 +2,9 @@
  * @file ai_provider_gemini_mock.c
  * @brief Mock provider used for mmaitag tests.
  *
- * This provider does not contact any external service. It returns
- * predefined labels from the environment variable
- * `GEMINI_MOCK_RESPONSE` so that test runs are deterministic.
+ * This provider implements the ai_provider.h interface but does not
+ * contact any external service. It is designed to make test runs
+ * deterministic by returning predefined labels.
  */
 #include "config.h"
 #include "ai_provider.h"
@@ -13,12 +13,22 @@
 #include <curl/curl.h>
 #include <json.h>
 
+/**
+ * @brief Fulfills the private data requirement for the provider interface.
+ *
+ * While the mock classification logic does not use this state, it is
+ * allocated and freed to ensure the provider interface is correctly
+ * exercised during tests.
+ */
 typedef struct gemini_data_s {
 	char *model;
 	char *apikey;
 	char *prompt;
 } gemini_data_t;
 
+/**
+ * @brief Implements the standard cleanup function for the mock provider.
+ */
 static void
 gemini_cleanup(ai_provider_t *prov)
 {
@@ -32,6 +42,9 @@ gemini_cleanup(ai_provider_t *prov)
 	prov->data = NULL;
 }
 
+/**
+ * @brief Implements the standard init function for the mock provider.
+ */
 static rsRetVal
 gemini_init(ai_provider_t *prov, const char *model, const char *apikey,
 	const char *prompt)
@@ -51,42 +64,74 @@ finalize_it:
 	RETiRet;
 }
 
+/**
+ * @brief Mock implementation of the ai_provider_classify_t function.
+ *
+ * @note This function simulates an API call by parsing a comma-separated
+ * string from the `GEMINI_MOCK_RESPONSE` environment variable
+ * (e.g., "NOISE,CRITICAL,REGULAR").
+ *
+ * @note It is stateful across calls within a single test run. It uses a
+ * static counter to return subsequent tags from the list on
+ * subsequent calls, allowing for testing of sequential message
+ * processing.
+ *
+ * @note If the environment variable is not set or runs out of tags, it
+ * returns "REGULAR" as a default fallback value.
+ */
 static rsRetVal
 gemini_classify_batch(ai_provider_t *prov, const char **messages, size_t n,
 char ***tags)
 {
-static size_t next = 0;
-const char *mock = getenv("GEMINI_MOCK_RESPONSE");
-(void)prov;
-(void)messages;
-char *tmp;
-char *tok;
-char *saveptr = NULL;
-char **out;
-size_t idx = 0;
-DEFiRet;
-if(mock == NULL)
-return RS_RET_ERR;
-CHKmalloc(tmp = strdup(mock));
-tok = strtok_r(tmp, ",", &saveptr);
-for(size_t i = 0; i < next && tok != NULL; ++i)
-tok = strtok_r(NULL, ",", &saveptr);
-CHKmalloc(out = calloc(n, sizeof(char*)));
-for(idx = 0 ; idx < n ; ++idx) {
-if(tok != NULL) {
-out[idx] = strdup(tok);
-tok = strtok_r(NULL, ",", &saveptr);
-} else {
-out[idx] = strdup("REGULAR");
-}
-}
-next += n;
-free(tmp);
-*tags = out;
+	static size_t next = 0;
+	const char *mock = getenv("GEMINI_MOCK_RESPONSE");
+	(void)prov;
+	(void)messages;
+	char *tmp;
+	char *tok;
+	char *saveptr = NULL;
+	char **out;
+	size_t idx = 0;
+	DEFiRet;
+
+	if(mock == NULL) {
+		LogError(0, RS_RET_ERR, "mmaitag: mock provider requires "
+		"GEMINI_MOCK_RESPONSE environment variable to be set.");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	CHKmalloc(tmp = strdup(mock));
+
+	// Advance to the correct starting position in the token list
+	tok = strtok_r(tmp, ",", &saveptr);
+	for(size_t i = 0; i < next && tok != NULL; ++i)
+		tok = strtok_r(NULL, ",", &saveptr);
+
+	CHKmalloc(out = calloc(n, sizeof(char*)));
+	for(idx = 0 ; idx < n ; ++idx) {
+		if(tok != NULL) {
+			out[idx] = strdup(tok);
+			tok = strtok_r(NULL, ",", &saveptr);
+		} else {
+			// Fallback if we run out of mock tags
+			out[idx] = strdup("REGULAR");
+		}
+	}
+	next += n; // Update state for the next call
+
+	free(tmp);
+	*tags = out;
+
 finalize_it:
-RETiRet;
+	RETiRet;
 }
 
+/**
+ * @brief The global instance of the mock Gemini provider.
+ *
+ * This struct plugs the mock functions into the ai_provider.h interface
+ * for use in testing environments.
+ */
 ai_provider_t gemini_mock_provider = {
 	.data = NULL,
 	.init = gemini_init,
