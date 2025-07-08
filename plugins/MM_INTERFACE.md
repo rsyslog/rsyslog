@@ -29,7 +29,6 @@ smsg_t *pMsg = ppMsg[0];
 CODESTARTdoAction
 ENDdoAction
 ```
-```
 This interface processes one message at a time. Existing modules such as
 `mmjsonparse` and `mmnormalize` all use this form.
 
