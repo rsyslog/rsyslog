@@ -98,9 +98,13 @@ ENDnewActInst
 BEGINdoAction_NoStrings
 smsg_t **ppMsg = (smsg_t **)pMsgData;
 smsg_t *pMsg = ppMsg[0];
-(void)pWrkrData;
-(void)pMsg; /* modify message here */
 CODESTARTdoAction
+	/* modify pMsg as needed */
+
+	/* The following lines are to prevent compiler warnings for unused variables.
+	 * Remove them if you use the variables in your code. */
+	(void)pWrkrData;
+	(void)pMsg;
 ENDdoAction
 
 NO_LEGACY_CONF_parseSelectorAct
