@@ -1,7 +1,6 @@
 # AI and Machine Learning Tooling for rsyslog
 
-This directory holds future **AI and Machine Learning (ML) tools** that
-run externally to the main rsyslog process.
+This directory contains AI and Machine Learning (ML) tools that
 
 ---
 ## Purpose
