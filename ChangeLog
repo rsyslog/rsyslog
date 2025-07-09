@@ -1,5 +1,55 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-07-09: imtcp: prevent double-enqueue of descriptors via inQueue flag
+  This patch adds an inQueue flag with its own mutex to each
+  tcpsrv_io_descr_t structure. The flag prevents multiple worker threads
+  from processing the same descriptor at the same time.
+  The change was motivated by segmentation faults reported in production
+  systems after commit ad1fd21, which introduced a worker thread pool to
+  imtcp. We could not reproduce the faults ourselves, but code analysis
+  suggests several race conditions may exist.
+  In particular:
+  - epoll_wait may return the same descriptor multiple times. This is not
+  expected, as we use EPOLLONESHOT. However, if a thread does not clear
+  or re-arm the event quickly enough, or in edge cases involving race
+  conditions and rapid I/O activity, duplicate delivery may still occur.
+  - If a descriptor is enqueued more than once, multiple threads may
+  process and free it in parallel, causing use-after-free errors.
+  - closeSess releases the session mutex before destroying the session and
+  descriptor. A second thread might still be waiting to acquire the
+  mutex and access the now-freed memory.
+  - shutdown is unordered: stopWrkrPool waits for threads to join, but the
+  work queue may still contain descriptors that will be processed after
+  their memory has been freed.
+  - pending epoll events for a socket may still be processed after
+  epoll_ctl(..., DEL) was called, leading to access to invalid memory.
+  The patch:
+  - Adds an inQueue flag to each descriptor and a mutex to protect it.
+  - Prevents enqueueWork from queuing a descriptor already in queue.
+  - Clears the flag when dequeueing the descriptor.
+  - Initializes and destroys the new mutex at listener startup/cleanup.
+  While unverified, we believe this patch is a safe and helpful change.
+  It may fix the reported crashes and in general improves correctness.
+  The analysis and draft of this patch were created with help from a
+  Codex-based AI agent. Final review and edits were done by a human.
+- 2025-07-09: imkmsg fix: Handle EAGAIN/EWOULDBLOCK check portably
+  On some systems, EAGAIN and EWOULDBLOCK are defined to the same
+  value, causing a `-Wlogical-op` warning for the redundant logical
+  'or' in the errno check.
+  While portable code must check for both cases, this warning is
+  unwanted.
+  This change uses a preprocessor directive to conditionally compile
+  the check for `errno == EWOULDBLOCK` only on platforms where its value
+  differs from EAGAIN. This silences the warning without affecting
+  portability.
+- 2025-07-09: AI tools: Add directory for future AI/ML tooling (#5758)
+  Establish a new top-level directory, `ai/`, to serve as a consistent
+  location for future Artificial Intelligence and Machine Learning tools
+  that will work alongside rsyslog.
+  These tools are intended to run as separate processes, external to the
+  rsyslog daemon, to ensure the core remains stable and performant.
+  This commit contains only the empty directory and a README.md file
+  describing the vision and purpose.
 - 2025-06-21: fix off-by-one buffer "overflow" when forking rsyslog
   parent and child communicate over a very basic protocol during the fork process.
   In theroy, there could be a buffer overrun during that period. In practice, this
