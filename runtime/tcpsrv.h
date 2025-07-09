@@ -99,12 +99,14 @@ struct tcpsrv_io_descr_s {
 	} ptr;
 	int isInError; /* boolean, if set, subsystem indicates we need to close because we had an
 			* unrecoverable error at the network layer. */
+	int inQueue;	/**< flag: descriptor queued */
 	tcpsrv_t *pSrv;	/* our server object */
 	tcpsrv_io_descr_t *next; /* for use in workQueue_t */
 	#if defined(ENABLE_IMTCP_EPOLL)
 	struct epoll_event event; /* to re-enable EPOLLONESHOT */
 	#endif
 	DEF_ATOMIC_HELPER_MUT(mut_isInError);
+	DEF_ATOMIC_HELPER_MUT(mut_inQueue);
 };
 
 #define TCPSRV_NO_ADDTL_DELIMITER -1 /* specifies that no additional delimiter is to be used in TCP framing */

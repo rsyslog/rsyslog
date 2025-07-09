@@ -828,6 +828,7 @@ finalize_it:
 	#if defined(ENABLE_IMTCP_EPOLL)
 		/* in epoll mode, ioDescr is dynamically allocated */
 		DESTROY_ATOMIC_HELPER_MUT(pioDescr->mut_isInError);
+		DESTROY_ATOMIC_HELPER_MUT(pioDescr->mut_inQueue);
 		free(pioDescr);
 	#else
 		pThis->pSessions[pioDescr->id] = NULL;
@@ -1020,6 +1021,9 @@ doSingleAccept(tcpsrv_io_descr_t *const pioDescr)
 			pDescrNew->id = idx;
 			pDescrNew->isInError = 0;
 			INIT_ATOMIC_HELPER_MUT(pDescrNew->mut_isInError);
+			/* track if descriptor is already queued */
+			pDescrNew->inQueue = 0;
+		INIT_ATOMIC_HELPER_MUT(pDescrNew->mut_inQueue);
 			pDescrNew->ptrType = NSD_PTR_TYPE_SESS;
 			pDescrNew->ioDirection = NSDSEL_RD;
 			CHKiRet(netstrm.GetSock(pNewSess->pStrm, &pDescrNew->sock));
@@ -1110,6 +1114,8 @@ startWrkrPool(tcpsrv_t *const pThis)
 	CHKmalloc(pThis->workQueue.wrkr_tids = calloc(queue->numWrkr, sizeof(pthread_t)));
 	CHKmalloc(pThis->workQueue.wrkr_data = calloc(queue->numWrkr, sizeof(tcpsrvWrkrData_t)));
 	pThis->currWrkrs = 0;
+	queue->head = NULL;
+	queue->tail = NULL;
 	pthread_mutex_init(&queue->mut, NULL);
 	pthread_cond_init(&queue->workRdy, NULL);
 	for(unsigned i = 0; i < queue->numWrkr; i++) {
@@ -1165,6 +1171,7 @@ dequeueWork(tcpsrv_t *pSrv)
 	if(queue->head == NULL) {
 		queue->tail = NULL;
 	}
+	ATOMIC_STORE_0_TO_INT(&pioDescr->inQueue, &pioDescr->mut_inQueue);
 
 finalize_it:
 	pthread_mutex_unlock(&queue->mut);
@@ -1177,18 +1184,20 @@ enqueueWork(tcpsrv_io_descr_t *const pioDescr)
 	workQueue_t *const queue = &pioDescr->pSrv->workQueue;
 	DEFiRet;
 
-	pthread_mutex_lock(&queue->mut);
-	pioDescr->next = NULL;
-	if(queue->tail == NULL) {
-		assert(queue->head == NULL);
-		queue->head = pioDescr;
-	} else {
-		queue->tail->next = pioDescr;
-	}
-	queue->tail = pioDescr;
+	if(ATOMIC_CAS(&pioDescr->inQueue, 0, 1, &pioDescr->mut_inQueue)) {
+		pthread_mutex_lock(&queue->mut);
+		pioDescr->next = NULL;
+		if(queue->tail == NULL) {
+			assert(queue->head == NULL);
+			queue->head = pioDescr;
+		} else {
+			queue->tail->next = pioDescr;
+		}
+		queue->tail = pioDescr;
 
-	pthread_cond_signal(&queue->workRdy);
-	pthread_mutex_unlock(&queue->mut);
+		pthread_cond_signal(&queue->workRdy);
+		pthread_mutex_unlock(&queue->mut);
+	}
 
 	RETiRet;
 }
@@ -1228,7 +1237,7 @@ wrkr(void *arg)
 		DBGPRINTF("pthread_setname_np failed, not setting thread name for '%s'\n", thrdName);
 	}
 #	endif
-	
+
 	if((localRet = statsobj.Construct(&wrkrData->stats)) == RS_RET_OK) {
 		statsobj.SetName(wrkrData->stats, thrdName);
 		statsobj.SetOrigin(wrkrData->stats, (uchar*)"imtcp");
@@ -1458,7 +1467,9 @@ RunEpoll(tcpsrv_t *const pThis)
 		pThis->ppioDescrPtr[i]->pSrv = pThis;
 		pThis->ppioDescrPtr[i]->id = i;
 		pThis->ppioDescrPtr[i]->isInError = 0;
+		pThis->ppioDescrPtr[i]->inQueue = 0;
 		INIT_ATOMIC_HELPER_MUT(pThis->ppioDescrPtr[i]->mut_isInError);
+		INIT_ATOMIC_HELPER_MUT(pThis->ppioDescrPtr[i]->mut_inQueue);
 		CHKiRet(netstrm.GetSock(pThis->ppLstn[i], &(pThis->ppioDescrPtr[i]->sock)));
 		pThis->ppioDescrPtr[i]->ptrType = NSD_PTR_TYPE_LSTN;
 		pThis->ppioDescrPtr[i]->ptr.ppLstn = pThis->ppLstn;
@@ -1489,6 +1500,7 @@ RunEpoll(tcpsrv_t *const pThis)
 	for(i = 0 ; i < pThis->iLstnCurr ; ++i) {
 		CHKiRet(epoll_Ctl(pThis, pThis->ppioDescrPtr[i], 1, EPOLL_CTL_DEL));
 		DESTROY_ATOMIC_HELPER_MUT(pThis->ppioDescrPtr[i]->mut_isInError);
+		DESTROY_ATOMIC_HELPER_MUT(pThis->ppioDescrPtr[i]->mut_inQueue);
 		free(pThis->ppioDescrPtr[i]);
 	}
 
