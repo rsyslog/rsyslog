@@ -4,7 +4,7 @@
  * For a general overview, see head comment in imkmsg.c.
  * This is heavily based on imklog bsd.c file.
  *
- * Copyright 2008-2023 Adiscon GmbH
+ * Copyright 2008-2025 Adiscon GmbH
  *
  * This file is part of rsyslog.
  *
@@ -268,11 +268,17 @@ readkmsg(modConfData_t *const pModConf)
 			continue;
 		} else {
 			/* something went wrong - error or zero length message */
-			if(i < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
-				DBGPRINTF("imkmsg: initial read done, changing to blocking mode\n");
-				change_reads_to_blocking(fklog);
-				bInInitialReading = 0;
-				continue;
+			if(i < 0) {
+			#if EAGAIN != EWOULDBLOCK
+				if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			#else
+				if (errno == EAGAIN) {
+			#endif
+					DBGPRINTF("imkmsg: initial read done, changing to blocking mode\n");
+					change_reads_to_blocking(fklog);
+					bInInitialReading = 0;
+					continue;
+				}
 			}
 			if(i < 0 && errno != EINTR && errno != EAGAIN) {
 				/* error occurred */
