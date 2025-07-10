@@ -67,6 +67,30 @@ DEFobjCurrIf(net)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(nsd_ptcp)
 
+/**
+ * getRemotePort - return peer TCP port number for improved diagnostics
+ */
+static int
+getRemotePort(nsd_gtls_t *const pNsd)
+{
+    int sock = -1;
+    struct sockaddr_storage addr;
+    socklen_t addrlen = sizeof(addr);
+    int port = -1;
+
+    if(nsd_ptcp.GetSock((nsd_t*)pNsd->pTcp, &sock) == RS_RET_OK && sock >= 0) {
+        if(getpeername(sock, (struct sockaddr *)&addr, &addrlen) == 0) {
+            if(addr.ss_family == AF_INET6) {
+                port = ntohs(((struct sockaddr_in6 *)&addr)->sin6_port);
+            } else {
+                port = ntohs(((struct sockaddr_in *)&addr)->sin_port);
+            }
+        }
+    }
+
+    return port;
+}
+
 /* Static Helper variables for certless communication */
 static gnutls_anon_client_credentials_t anoncred;	/**< client anon credentials */
 static gnutls_anon_server_credentials_t anoncredSrv;	/**< server anon credentials */
@@ -130,11 +154,24 @@ doRetry(nsd_gtls_t *pNsd)
 				/* we got a handshake, now check authorization */
 				CHKiRet(gtlsChkPeerAuth(pNsd));
 			} else {
-				uchar *pGnuErr = gtlsStrerror(gnuRet);
-				LogError(0, RS_RET_TLS_HANDSHAKE_ERR,
-					"GnuTLS handshake retry returned error: %s\n", pGnuErr);
-				free(pGnuErr);
-				ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
+                       uchar *pGnuErr = gtlsStrerror(gnuRet);
+                       uchar *fromHostIP = NULL;
+                       int remotePort = getRemotePort(pNsd);
+                       char remotePortStr[8];
+                       nsd_ptcp.GetRemoteHName((nsd_t*)pNsd->pTcp, &fromHostIP);
+                       if(remotePort == -1) {
+                               strcpy(remotePortStr, "?");
+                       } else {
+                               snprintf(remotePortStr, 7, "%d", remotePort);
+                               remotePortStr[7] = '\0';
+                       }
+                       LogError(0, RS_RET_TLS_HANDSHAKE_ERR,
+                               "nsd_gtls:TLS session terminated with remote client '%s:%s': "
+                               "GnuTLS handshake retry returned error: %s",
+                               fromHostIP, remotePortStr, pGnuErr);
+                       free(fromHostIP);
+                       free(pGnuErr);
+                       ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
 			}
 			break;
 		case gtlsRtry_recv:
@@ -2060,11 +2097,24 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo)
 		/* we got a handshake, now check authorization */
 		CHKiRet(gtlsChkPeerAuth(pNew));
 	} else {
-		uchar *pGnuErr = gtlsStrerror(gnuRet);
-		LogError(0, RS_RET_TLS_HANDSHAKE_ERR,
-			"gnutls returned error on handshake: %s\n", pGnuErr);
-		free(pGnuErr);
-		ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
+               uchar *pGnuErr = gtlsStrerror(gnuRet);
+               uchar *fromHostIP = NULL;
+               int remotePort = getRemotePort(pNew);
+               char remotePortStr[8];
+               nsd_ptcp.GetRemoteHName((nsd_t*)pNew->pTcp, &fromHostIP);
+               if(remotePort == -1) {
+                       strcpy(remotePortStr, "?");
+               } else {
+                       snprintf(remotePortStr, 7, "%d", remotePort);
+                       remotePortStr[7] = '\0';
+               }
+               LogError(0, RS_RET_TLS_HANDSHAKE_ERR,
+                       "nsd_gtls:TLS session terminated with remote client '%s:%s': "
+                       "gnutls returned error on handshake: %s",
+                       fromHostIP, remotePortStr, pGnuErr);
+               free(fromHostIP);
+               free(pGnuErr);
+               ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
 	}
 
 	pNew->iMode = 1; /* this session is now in TLS mode! */
