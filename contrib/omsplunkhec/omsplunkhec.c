@@ -107,6 +107,8 @@ static int omSplunkHecInstancesCnt = 0;
 #define HTTP_HEADER_EXPECT_EMPTY "Expect:"
 
 #define HEC_RESTPATH_URL "/services/collector"
+#define HEC_RESTPATH_ENDPOINT_EVENT "/event"
+#define HEC_RESTPATH_ENDPOINT_RAW "/raw"
 #define HEC_HEALTHCHECK_URL "/health"
 
 #define HTTPS "https://"
@@ -124,7 +126,6 @@ typedef struct instanceConf_s {
 	/* Splunk */
 	uchar **serverList; // List of all HEC Splunk
 	int numListServerName; // Number of server HEC Splunk
-	int lastServerUsed;
 	uchar *token;
 	uchar *template;
 	uchar *restpath;
@@ -260,6 +261,8 @@ buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message)
 	}
 	pWrkrData->batch.data[pWrkrData->batch.nmemb] = message;
 	pWrkrData->batch.sizeBytes += strlen((char *)message);
+	// Add one to the size for "\n"
+	pWrkrData->batch.sizeBytes += 1;
 	pWrkrData->batch.nmemb++;
 
 finalize_it:
@@ -431,11 +434,12 @@ setInstDefaultParams(instanceData *const pData)
 
 	es_str_t *urlBuf = es_newStr(strlen(HEC_RESTPATH_URL));
 
+	pData->restpath = NULL;
+
 	int answer = es_addBuf(&urlBuf, HEC_RESTPATH_URL, strlen(HEC_RESTPATH_URL));
-	if(answer == 0)
+	if (answer == 0) {
 		pData->restpath = (uchar*) es_str2cstr(urlBuf, NULL);
-	else
-		pData->restpath = NULL;
+	}
 
 	if(urlBuf != NULL)
 		es_deleteStr(urlBuf);
@@ -556,9 +560,7 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen,
 	PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_HEC_SPLK);
 
 	/* Check what server is available */
-	if(pWrkrData->pData->numListServerName > 1) {
-		CHKiRet(checkConn(pWrkrData));
-	}
+	CHKiRet(checkConn(pWrkrData));
 
 	// Here Counter SUBMIT
 	ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestSumitted,
@@ -752,8 +754,12 @@ setPostURL(wrkrInstanceData_t *const pWrkrData)
 	restPath = pData->restpath;
 
 	answer = 0;
-	if (restPath != NULL)
+	if (restPath != NULL) {
 		answer = es_addBuf(&url, (char*)restPath, ustrlen(restPath));
+		if (answer == 0) {
+			answer = es_addBuf(&url, HEC_RESTPATH_ENDPOINT_EVENT, strlen(HEC_RESTPATH_ENDPOINT_EVENT));
+		}
+	}
 	if(answer != 0) {
 		LogError(0, RS_RET_ERR, "omsplunkhec: failure in creating restURL, "
 				"error code: %d", answer);
