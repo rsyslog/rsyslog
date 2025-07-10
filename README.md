@@ -11,9 +11,26 @@ Rsyslog can deliver over one million messages per second to local destinations u
 
 ---
 
-## Getting Help
-- **Mailing List:** [rsyslog mailing list](https://lists.adiscon.net/mailman/listinfo/rsyslog)
-- **GitHub Issues:** [Open an issue](https://github.com/rsyslog/rsyslog/issues)
+
+## 🤖 rsyslog Assistant (Experimental AI Help)
+
+Need help with rsyslog configuration or troubleshooting?
+Try the **[rsyslog Assistant](https://chatgpt.com/g/g-686f63c947688191abcbdd8d5d494626-rsyslog-assistant)** — your AI-powered support tool, built by the rsyslog team.
+
+> ⚠️ *Experimental.* May occasionally generate incorrect config examples — always review before applying.
+
+✅ Trained on official docs and changelogs
+✅ Covers both Linux rsyslog and Windows Agent
+✅ Version-aware and best-practice focused
+
+👉 Try it now: [chatgpt.com/g/g-686f63c947688191abcbdd8d5d494626-rsyslog-assistant](https://chatgpt.com/g/g-686f63c947688191abcbdd8d5d494626-rsyslog-assistant)
+
+
+## Getting Help (Other Sources)
+
+* **💬 GitHub Discussions:** [Ask questions or start a conversation](https://github.com/rsyslog/rsyslog/discussions)
+* **📧 Mailing List:** [rsyslog mailing list](https://lists.adiscon.net/mailman/listinfo/rsyslog)
+* **🐛 GitHub Issues:** [Open an issue](https://github.com/rsyslog/rsyslog/issues)
 
 ---
 
