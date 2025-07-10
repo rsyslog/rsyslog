@@ -78,7 +78,7 @@ getRemotePort(nsd_gtls_t *const pNsd)
     socklen_t addrlen = sizeof(addr);
     int port = -1;
 
-    if(nsd_ptcp.GetSock((nsd_t*)pNsd->pTcp, &sock) == RS_RET_OK && sock >= 0) {
+    if(nsd_ptcp.GetSock(pNsd->pTcp, &sock) == RS_RET_OK && sock >= 0) {
         if(getpeername(sock, (struct sockaddr *)&addr, &addrlen) == 0) {
             if(addr.ss_family == AF_INET6) {
                 port = ntohs(((struct sockaddr_in6 *)&addr)->sin6_port);
@@ -89,6 +89,19 @@ getRemotePort(nsd_gtls_t *const pNsd)
     }
 
     return port;
+}
+
+/**
+ * fmtRemotePortStr - convert port to string for diagnostics
+ */
+static void
+fmtRemotePortStr(const int port, char *const buf, const size_t len)
+{
+    if(port == -1)
+        snprintf(buf, len, "?");
+    else
+        snprintf(buf, len, "%d", port);
+    buf[len - 1] = '\0';
 }
 
 /* Static Helper variables for certless communication */
@@ -159,12 +172,7 @@ doRetry(nsd_gtls_t *pNsd)
                        int remotePort = getRemotePort(pNsd);
                        char remotePortStr[8];
                        nsd_ptcp.GetRemoteHName((nsd_t*)pNsd->pTcp, &fromHostIP);
-                       if(remotePort == -1) {
-                               strcpy(remotePortStr, "?");
-                       } else {
-                               snprintf(remotePortStr, 7, "%d", remotePort);
-                               remotePortStr[7] = '\0';
-                       }
+                       fmtRemotePortStr(remotePort, remotePortStr, sizeof(remotePortStr));
                        LogError(0, RS_RET_TLS_HANDSHAKE_ERR,
                                "nsd_gtls:TLS session terminated with remote client '%s:%s': "
                                "GnuTLS handshake retry returned error: %s",
@@ -2102,12 +2110,7 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo)
                int remotePort = getRemotePort(pNew);
                char remotePortStr[8];
                nsd_ptcp.GetRemoteHName((nsd_t*)pNew->pTcp, &fromHostIP);
-               if(remotePort == -1) {
-                       strcpy(remotePortStr, "?");
-               } else {
-                       snprintf(remotePortStr, 7, "%d", remotePort);
-                       remotePortStr[7] = '\0';
-               }
+               fmtRemotePortStr(remotePort, remotePortStr, sizeof(remotePortStr));
                LogError(0, RS_RET_TLS_HANDSHAKE_ERR,
                        "nsd_gtls:TLS session terminated with remote client '%s:%s': "
                        "gnutls returned error on handshake: %s",
