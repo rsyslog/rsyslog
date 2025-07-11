@@ -932,7 +932,7 @@ EnableKeepAlive(nsd_t *pNsd)
 	ret = -1;
 #	endif
 	if(ret < 0) {
-		LogError(ret, NO_ERRCODE, "imptcp cannot set keepalive probes - ignored");
+		LogError(ret, NO_ERRCODE, "nsd_ptcp cannot set keepalive probes - ignored");
 	}
 
 #	if defined(IPPROTO_TCP) && defined(TCP_KEEPIDLE)
@@ -947,7 +947,7 @@ EnableKeepAlive(nsd_t *pNsd)
 	ret = -1;
 #	endif
 	if(ret < 0) {
-		LogError(ret, NO_ERRCODE, "imptcp cannot set keepalive time - ignored");
+		LogError(ret, NO_ERRCODE, "nsd_ptcp cannot set keepalive time - ignored");
 	}
 
 #	if defined(IPPROTO_TCP) && defined(TCP_KEEPCNT)
@@ -962,7 +962,7 @@ EnableKeepAlive(nsd_t *pNsd)
 	ret = -1;
 #	endif
 	if(ret < 0) {
-		LogError(errno, NO_ERRCODE, "imptcp cannot set keepalive intvl - ignored");
+		LogError(errno, NO_ERRCODE, "nsd_ptcp cannot set keepalive intvl - ignored");
 	}
 
 	dbgprintf("KEEPALIVE enabled for socket %d\n", pThis->sock);
