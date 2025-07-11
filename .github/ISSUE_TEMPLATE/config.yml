@@ -12,7 +12,7 @@ contact_links:
       For general questions, ideas, and troubleshooting help —
       start here before filing an issue.
 issue_templates:
-  - name: 🙋 Support Question (not a bug)
+  - name: 📌 Support Question (not a bug)
     description: >
       You’re not sure it’s a bug, but something doesn’t work — ask here.
     labels: [support, needs-triage]
