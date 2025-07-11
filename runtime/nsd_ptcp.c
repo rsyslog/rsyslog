@@ -1063,6 +1063,74 @@ finalize_it:
 }
 
 
+/**
+ * getRemotePort - return peer TCP port number for improved diagnostics
+ * @pThis: nsd_t object representing the network stream driver.
+ * @port: Pointer to an integer where the port number will be stored.
+ * It will be set to -1 on error or if no port information is available.
+ * @return: standard rsRetVal error code
+ */
+static rsRetVal
+GetRemotePort(nsd_t *pNsd, int* port)
+{
+	DEFiRet;
+	nsd_ptcp_t *pThis = (nsd_ptcp_t*) pNsd;
+	struct sockaddr_storage addr;
+	socklen_t addrlen = sizeof(addr);
+
+	assert(pThis != NULL);
+	assert(port != NULL);
+
+	*port = -1; /* Initialize port to -1, indicating no port found initially or on error */
+
+	if(getpeername(pThis->sock, (struct sockaddr *)&addr, &addrlen) == 0) {
+		if(addr.ss_family == AF_INET6) {
+			*port = ntohs(((struct sockaddr_in6 *)&addr)->sin6_port);
+		} else if(addr.ss_family == AF_INET) {
+			*port = ntohs(((struct sockaddr_in *)&addr)->sin_port);
+		} else {
+			/* Unsupported address family */
+			ABORT_FINALIZE(RS_RET_UNSUPP_SOCK_AF);
+		}
+	} else {
+		/* getpeername failed */
+		ABORT_FINALIZE(RS_RET_IO_ERROR);
+	}
+
+finalize_it:
+	RETiRet;
+}
+
+
+static rsRetVal
+FmtRemotePortStr(const int port, uchar *const buf, const size_t len)
+{
+	int r;
+
+	if(len == 0) {
+		return RS_RET_INVALID_PARAMS; /* can't do anything with zero-sized buffer */
+	}
+
+	if(port == -1) {
+		r = snprintf((char*)buf, len, "?");
+	} else {
+		r = snprintf((char*)buf, len, "%d", port);
+	}
+
+	if(r < 0) {
+		/* An encoding error occurred. */
+		return RS_RET_ERR;
+	} else if((size_t)r >= len) {
+		/* The buffer was too small, truncation occurred. */
+		return RS_RET_PROVIDED_BUFFER_TOO_SMALL;
+	}
+
+	/* Ensure null termination, though snprintf usually does this unless truncated. */
+	buf[len - 1] = '\0';
+	return RS_RET_OK;
+}
+
+
 /* This function checks if the connection is still alive - well, kind of... It
  * is primarily being used for plain TCP syslog and it is quite a hack. However,
  * as it seems to work, it is worth supporting it. The bottom line is that it
@@ -1145,6 +1213,8 @@ CODESTARTobjQueryInterface(nsd_ptcp)
 	pIf->Connect = Connect;
 	pIf->GetRemoteHName = GetRemoteHName;
 	pIf->GetRemoteIP = GetRemoteIP;
+	pIf->GetRemotePort = GetRemotePort;
+	pIf->FmtRemotePortStr = FmtRemotePortStr;
 	pIf->CheckConnection = CheckConnection;
 	pIf->EnableKeepAlive = EnableKeepAlive;
 	pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;

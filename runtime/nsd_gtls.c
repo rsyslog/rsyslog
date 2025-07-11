@@ -67,43 +67,6 @@ DEFobjCurrIf(net)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(nsd_ptcp)
 
-/**
- * getRemotePort - return peer TCP port number for improved diagnostics
- */
-static int
-getRemotePort(nsd_gtls_t *const pNsd)
-{
-	int sock = -1;
-	struct sockaddr_storage addr;
-	socklen_t addrlen = sizeof(addr);
-	int port = -1;
-
-	if(nsd_ptcp.GetSock(pNsd->pTcp, &sock) == RS_RET_OK && sock >= 0) {
-		if(getpeername(sock, (struct sockaddr *)&addr, &addrlen) == 0) {
-			if(addr.ss_family == AF_INET6) {
-				port = ntohs(((struct sockaddr_in6 *)&addr)->sin6_port);
-			} else {
-				port = ntohs(((struct sockaddr_in *)&addr)->sin_port);
-			}
-		}
-	}
-
-	return port;
-}
-
-/**
- * fmtRemotePortStr - convert port to string for diagnostics
- */
-static void
-fmtRemotePortStr(const int port, char *const buf, const size_t len)
-{
-	if(port == -1) {
-		snprintf(buf, len, "?");
-	} else {
-		snprintf(buf, len, "%d", port);
-	}
-	buf[len - 1] = '\0';
-}
 
 /* Static Helper variables for certless communication */
 static gnutls_anon_client_credentials_t anoncred;	/**< client anon credentials */
@@ -170,10 +133,11 @@ doRetry(nsd_gtls_t *pNsd)
 			} else {
 				uchar *pGnuErr = gtlsStrerror(gnuRet);
 				uchar *fromHostIP = NULL;
-				int remotePort = getRemotePort(pNsd);
-				char remotePortStr[8];
-				nsd_ptcp.GetRemoteHName((nsd_t*)pNsd->pTcp, &fromHostIP);
-				fmtRemotePortStr(remotePort, remotePortStr, sizeof(remotePortStr));
+				int remotePort;
+				uchar remotePortStr[8];
+				nsd_ptcp.GetRemoteHName(pNsd->pTcp, &fromHostIP);
+				nsd_ptcp.GetRemotePort(pNsd->pTcp, &remotePort);
+				nsd_ptcp.FmtRemotePortStr(remotePort, remotePortStr, sizeof(remotePortStr));
 				LogError(0, RS_RET_TLS_HANDSHAKE_ERR,
 					"nsd_gtls:TLS session terminated with remote client '%s:%s': "
 				"	GnuTLS handshake retry returned error: %s",
@@ -2108,10 +2072,11 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo)
 	} else {
 		uchar *pGnuErr = gtlsStrerror(gnuRet);
 		uchar *fromHostIP = NULL;
-		int remotePort = getRemotePort(pNew);
-		char remotePortStr[8];
+		int remotePort;
+		uchar remotePortStr[8];
 		nsd_ptcp.GetRemoteHName((nsd_t*)pNew->pTcp, &fromHostIP);
-		fmtRemotePortStr(remotePort, remotePortStr, sizeof(remotePortStr));
+		nsd_ptcp.GetRemotePort((nsd_t*)pNew->pTcp, &remotePort);
+		nsd_ptcp.FmtRemotePortStr(remotePort, remotePortStr, sizeof(remotePortStr));
 		LogError(0, RS_RET_TLS_HANDSHAKE_ERR,
 			"nsd_gtls:TLS session terminated with remote client '%s:%s': "
 			"gnutls returned error on handshake: %s",
