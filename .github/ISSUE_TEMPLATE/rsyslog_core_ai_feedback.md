@@ -8,27 +8,87 @@ assignees: ''
 
 **📣 Important Note:**
 
-This template is for feedback on **AI features built directly into rsyslog itself**, as part of our new AI-first strategy.
-If your feedback is about the **external rsyslog Assistant AI website**, please use the "🤖 Rsyslog Assistant Feedback" template instead.
+This form is for feedback on **AI functionality built into rsyslog itself** — such as automated classification, anonymization, tagging, or other AI-based logic inside the core engine.
 
-Your insights are crucial as we actively develop and refine these groundbreaking AI capabilities within rsyslog!
+> If your feedback is about the **external rsyslog Assistant AI** at [rsyslog.ai](https://rsyslog.ai), please use the separate "🤖 Rsyslog Assistant Feedback" form.
+
+Your insights help us improve and shape these experimental features.
 
 ---
 
 ### 📝 Type of Feedback:
-(Please select one or more that apply by marking with an `x` in the brackets: `[x]`)
+(Mark all that apply by placing an `x` in the appropriate boxes.)
 
-- [ ] **Bug Report:** An AI feature in rsyslog is behaving incorrectly, leading to errors, crashes, or unexpected output.
-- [ ] **Performance Issue:** The AI feature is causing unexpected resource consumption (CPU, memory) or slowdowns.
-- [ ] **Positive Experience:** An AI feature worked well or was particularly useful.
-- [ ] **Suggestion/Enhancement:** An idea for improving an existing AI feature or proposing a new one within rsyslog.
-- [ ] **General Feedback:** Any other comments or observations regarding rsyslog's internal AI.
+- [ ] **Bug Report:** An AI feature causes errors, misbehavior, or incorrect output.
+- [ ] **Performance Issue:** Excessive CPU, memory use, or delays caused by an AI feature.
+- [ ] **Positive Experience:** The feature worked well or exceeded expectations.
+- [ ] **Suggestion / Enhancement:** You have an idea for improvement or a new AI-based capability.
+- [ ] **General Feedback:** Other comments, observations, or conceptual thoughts.
 
 ---
 
-### 🔍 Which Rsyslog AI Feature/Component?
-(If your feedback relates to a specific AI component or module, please specify. E.g., "AI-powered log anonymization," "Smart parsing," etc. If unsure, describe the functionality.)
+### 🔍 Which AI Feature / Component?
+(Which part of rsyslog is involved? E.g. “log anonymization”, “drain clustering”, “aiTag”, etc. Be as specific as possible.)
 
+```
+# e.g., mmaitag, mmabstract, drain3 integration
+```
 
-### 💬 Scenario / Your Input Data (for bugs/unexpected behavior):
-(Describe the specific scenario or type of log data rsyslog was processing when the AI issue occurred. Provide sanitized examples of input logs or relevant configuration snippets.)
+---
+
+### 💬 Scenario or Sample Input:
+(What kind of log data was rsyslog processing? What conditions triggered the issue or feedback? Include relevant, sanitized config snippets or input data.)
+
+```text
+<Insert relevant input or configuration here>
+```
+
+---
+
+### 🤖 Actual Behavior:
+(What did rsyslog do that was incorrect, unexpected, or surprising? For positive experiences, describe what went well.)
+
+```text
+<Describe what you observed>
+```
+
+---
+
+### 🎯 Expected Behavior / Desired Outcome:
+(What did you expect to happen instead? What would be a better outcome?)
+
+```text
+<Describe the correct or improved behavior>
+```
+
+---
+
+### 💡 Suggested Improvement:
+(If you have ideas for improving the feature or behavior, please share them here. Even partial thoughts are helpful.)
+
+```text
+<Optional suggestions>
+```
+
+---
+
+### 💻 Environment:
+(Please provide context to help us reproduce or understand the scenario.)
+
+* **Rsyslog Version:** `<!-- e.g. 8.2506.0 -->`
+* **Platform & Distro:** `<!-- e.g. Ubuntu 24.04, CentOS 7, etc. -->`
+* **Deployment Method:** `<!-- apt, yum, Docker, from source, etc. -->`
+
+---
+
+### ➕ Additional Context:
+(Include any other relevant notes, links, screenshots, logs, or experiments. Everything helps.)
+
+```text
+<Optional>
+```
+
+---
+
+**Thanks for helping shape the future of AI in rsyslog!** 🧠🚀
+

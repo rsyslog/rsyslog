@@ -36,7 +36,7 @@ The rsyslog Assistant is an **experimental AI tool** and operates independently 
 
 ```
 
-# Paste the Assistant's response here
+<Your Query>
 
 ```
 

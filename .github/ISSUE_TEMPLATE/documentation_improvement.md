@@ -15,8 +15,6 @@ Our documentation uses **Sphinx** and resides in the **`/doc` folder** of this r
 ### 🔗 Link to Documentation Page:
 (Please provide the exact URL of the page you are referring to, if applicable.)
 
-``
-
 
 ### 🎯 Specific Section or Text (Optional):
 (If your suggestion is about a specific part of a page, copy/paste the relevant text or section heading here.)
