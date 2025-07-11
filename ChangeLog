@@ -1,5 +1,28 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-07-11: scripting: add endswith operator to property filters and RainerScript
+  This Implements suffix comparison similar to startswith. Note that we
+  do intentionally not use libestr functions in order to speed up adaption.
+  It would otherwise probably take years for distros to upgrade libestr.
+  With some help of the Codex and Gemini AI Agents.
+  closes https://github.com/rsyslog/rsyslog/issues/1255
+- 2025-07-11: nsd_ptcp fix: misleading error messages (regression from ad1fd21)
+  We received reports of log messages incorrectly referring to "imptcp" even
+  though the imptcp module was not loaded on the system. This caused confusion
+  during troubleshooting.
+  One such message was:
+    rsyslogd: imptcp cannot set keepalive intvl - ignored: Bad file descriptor
+  This message originated from the nsd_ptcp module, but the LogError() calls
+  in EnableKeepAlive() still used "imptcp" as the source name.
+  This is a regression introduced in commit ad1fd21, which restructured
+  TCP input handling and moved responsibility for keepalive setup to nsd_ptcp,
+  but did not update the associated log messages.
+  This patch corrects the affected log strings to use "nsd_ptcp", accurately
+  reflecting the code path that emits them.
+  There is no functional change; the patch improves clarity of log output and
+  prevents misleading diagnostics.
+  The actual error shown could be related to a different issue,
+  see also https://github.com/rsyslog/rsyslog/pull/5749
 - 2025-07-11: omazureventhubs bugfix: unsafe sprintf use in module
   we now use snprintf for url encoding; this was under very exotic conditions
 - 2025-07-09: imtcp: prevent double-enqueue of descriptors via inQueue flag
