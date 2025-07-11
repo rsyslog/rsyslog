@@ -73,22 +73,22 @@ static rsRetVal applyGnutlsPriorityString(nsd_ossl_t *const pNsd);
 static int
 getRemotePort(nsd_ossl_t *const pNsd)
 {
-    int sock = -1;
-    struct sockaddr_storage addr;
-    socklen_t addrlen = sizeof(addr);
-    int port = -1;
+	int sock = -1;
+	struct sockaddr_storage addr;
+	socklen_t addrlen = sizeof(addr);
+	int port = -1;
 
-    if(nsd_ptcp.GetSock(pNsd->pTcp, &sock) == RS_RET_OK && sock >= 0) {
-        if(getpeername(sock, (struct sockaddr *)&addr, &addrlen) == 0) {
-            if(addr.ss_family == AF_INET6) {
-                port = ntohs(((struct sockaddr_in6 *)&addr)->sin6_port);
-            } else {
-                port = ntohs(((struct sockaddr_in *)&addr)->sin_port);
-            }
-        }
-    }
+	if(nsd_ptcp.GetSock(pNsd->pTcp, &sock) == RS_RET_OK && sock >= 0) {
+		if(getpeername(sock, (struct sockaddr *)&addr, &addrlen) == 0) {
+			if(addr.ss_family == AF_INET6) {
+				port = ntohs(((struct sockaddr_in6 *)&addr)->sin6_port);
+			} else {
+				port = ntohs(((struct sockaddr_in *)&addr)->sin_port);
+			}
+		}
+	}
 
-    return port;
+	return port;
 }
 
 /**
@@ -97,11 +97,12 @@ getRemotePort(nsd_ossl_t *const pNsd)
 static void
 fmtRemotePortStr(const int port, char *const buf, const size_t len)
 {
-    if(port == -1)
-        snprintf(buf, len, "?");
-    else
-        snprintf(buf, len, "%d", port);
-    buf[len - 1] = '\0';
+	if(port == -1) {
+		snprintf(buf, len, "?");
+	} else {
+		snprintf(buf, len, "%d", port);
+	}
+	buf[len - 1] = '\0';
 }
 
 
@@ -883,7 +884,7 @@ osslPostHandshakeCheck(nsd_ossl_t *pNsd)
 	char szDbg[255];
 	const SSL_CIPHER* sslCipher;
 
-        nsd_ptcp.GetRemoteHName((nsd_t*)pNsd->pTcp, &fromHostIP);
+	nsd_ptcp.GetRemoteHName((nsd_t*)pNsd->pTcp, &fromHostIP);
 
 	/* Some extra output for debugging openssl */
 	if (SSL_get_shared_ciphers(pNsd->pNetOssl->ssl,szDbg, sizeof szDbg) != NULL)
@@ -927,20 +928,20 @@ finalize_it:
 rsRetVal
 osslHandshakeCheck(nsd_ossl_t *pNsd)
 {
-        DEFiRet;
-       uchar *fromHostIP = NULL;
-       int remotePort = -1;
-       char remotePortStr[8];
-       int res, resErr;
+	DEFiRet;
+	uchar *fromHostIP = NULL;
+	int remotePort = -1;
+	char remotePortStr[8];
+	int res, resErr;
 	dbgprintf("osslHandshakeCheck: Starting TLS Handshake for ssl[%p]\n", (void *)pNsd->pNetOssl->ssl);
 
 	if (pNsd->pNetOssl->sslState == osslServer) {
 		/* Handle Server SSL Object */
 		if((res = SSL_accept(pNsd->pNetOssl->ssl)) <= 0) {
 			/* Obtain SSL Error code */
-                        nsd_ptcp.GetRemoteHName((nsd_t*)pNsd->pTcp, &fromHostIP);
-                        remotePort = getRemotePort(pNsd);
-                        resErr = SSL_get_error(pNsd->pNetOssl->ssl, res);
+			nsd_ptcp.GetRemoteHName((nsd_t*)pNsd->pTcp, &fromHostIP);
+			remotePort = getRemotePort(pNsd);
+			resErr = SSL_get_error(pNsd->pNetOssl->ssl, res);
 			if(	resErr == SSL_ERROR_WANT_READ ||
 				resErr == SSL_ERROR_WANT_WRITE) {
 				pNsd->rtryCall = osslRtry_handshake;
@@ -953,20 +954,20 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 					"- Aborting handshake.\n");
 				nsd_ossl_lastOpenSSLErrorMsg(pNsd, res, pNsd->pNetOssl->ssl, LOG_WARNING,
 					"osslHandshakeCheck Server", "SSL_accept");
-                               fmtRemotePortStr(remotePort, remotePortStr, sizeof(remotePortStr));
-                               LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
-                                       "nsd_ossl:TLS session terminated with remote client '%s:%s': "
-                                       "Handshake failed with SSL_ERROR_SYSCALL",
-                                       fromHostIP, remotePortStr);
+				fmtRemotePortStr(remotePort, remotePortStr, sizeof(remotePortStr));
+				LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
+					"nsd_ossl:TLS session terminated with remote client '%s:%s': "
+					"Handshake failed with SSL_ERROR_SYSCALL",
+					fromHostIP, remotePortStr);
 				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 			} else {
 				nsd_ossl_lastOpenSSLErrorMsg(pNsd, res, pNsd->pNetOssl->ssl, LOG_ERR,
 					"osslHandshakeCheck Server", "SSL_accept");
-                               fmtRemotePortStr(remotePort, remotePortStr, sizeof(remotePortStr));
-                               LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
-                                       "nsd_ossl:TLS session terminated with remote client '%s:%s': "
-                                       "Handshake failed with error code: %d",
-                                       fromHostIP, remotePortStr, resErr);
+				fmtRemotePortStr(remotePort, remotePortStr, sizeof(remotePortStr));
+				LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
+					"nsd_ossl:TLS session terminated with remote client '%s:%s': "
+					"Handshake failed with error code: %d",
+					fromHostIP, remotePortStr, resErr);
 				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 			}
 		}
@@ -974,9 +975,9 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 		/* Handle Client SSL Object */
 		if((res = SSL_do_handshake(pNsd->pNetOssl->ssl)) <= 0) {
 			/* Obtain SSL Error code */
-                        nsd_ptcp.GetRemoteHName((nsd_t*)pNsd->pTcp, &fromHostIP);
-                        remotePort = getRemotePort(pNsd);
-                        resErr = SSL_get_error(pNsd->pNetOssl->ssl, res);
+			nsd_ptcp.GetRemoteHName((nsd_t*)pNsd->pTcp, &fromHostIP);
+			remotePort = getRemotePort(pNsd);
+			resErr = SSL_get_error(pNsd->pNetOssl->ssl, res);
 			if(	resErr == SSL_ERROR_WANT_READ ||
 				resErr == SSL_ERROR_WANT_WRITE) {
 				pNsd->rtryCall = osslRtry_handshake;
@@ -995,11 +996,11 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 					"- Aborting handshake.\n", resErr);
 				nsd_ossl_lastOpenSSLErrorMsg(pNsd, res, pNsd->pNetOssl->ssl, LOG_ERR,
 					"osslHandshakeCheck Client", "SSL_do_handshake");
-                               fmtRemotePortStr(remotePort, remotePortStr, sizeof(remotePortStr));
-                               LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
-                                       "nsd_ossl:TLS session terminated with remote syslog server '%s:%s':"
-                                       "Handshake failed with error code: %d",
-                                       fromHostIP, remotePortStr, resErr);
+				fmtRemotePortStr(remotePort, remotePortStr, sizeof(remotePortStr));
+				LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
+					"nsd_ossl:TLS session terminated with remote syslog server '%s:%s':"
+					"Handshake failed with error code: %d",
+				fromHostIP, remotePortStr, resErr);
 				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 			}
 		}
