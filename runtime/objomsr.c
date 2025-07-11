@@ -49,7 +49,7 @@ rsRetVal OMSRdestruct(omodStringRequest_t *pThis)
 	if(pThis->piTplOpts != NULL)
 		free(pThis->piTplOpts);
 	free(pThis);
-	
+
 	return RS_RET_OK;
 }
 
@@ -79,7 +79,7 @@ rsRetVal OMSRconstruct(omodStringRequest_t **ppThis, int iNumEntries)
 	/* allocate the template options array. */
 		CHKmalloc(pThis->piTplOpts = calloc(iNumEntries, sizeof(int)));
 	}
-	
+
 finalize_it:
 	if(iRet != RS_RET_OK) {
 		if(pThis != NULL) {

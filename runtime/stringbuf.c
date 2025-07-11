@@ -489,7 +489,7 @@ rsRetVal rsCStrTruncate(cstr_t *pThis, size_t nTrunc)
 
 	if(pThis->iStrLen < nTrunc)
 		return RS_TRUNCAT_TOO_LARGE;
-	
+
 	pThis->iStrLen -= nTrunc;
 
 	return RS_RET_OK;
@@ -625,7 +625,7 @@ finalize_it:
 void rsCStrRegexDestruct(void *rc)
 {
 	regex_t **cache = rc;
-	
+
 	assert(cache != NULL);
 	assert(*cache != NULL);
 
@@ -724,10 +724,10 @@ rsCStrLocateInSzStr(cstr_t *const pThis, uchar *const sz)
 	int bFound;
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	assert(sz != NULL);
-	
+
 	if(pThis->iStrLen == 0)
 		return 0;
-	
+
 	/* compute the largest index where a match could occur - after all,
 	 * the to-be-located string must be able to be present in the
 	 * searched string (it needs its size ;)).

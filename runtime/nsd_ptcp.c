@@ -489,7 +489,7 @@ get_socket_info(const int sockfd, char *const connInfo)
 		}
 		remote_port = ntohs(remote_addr.sin_port);
 	}
-	
+
 	if(local_port == -1) {
 		strcpy(local_port_str, "?");
 	} else {

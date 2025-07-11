@@ -371,7 +371,7 @@ setupDTLS(void)
 		fprintf(stderr, "inet_aton() failed\n");
 		return(1);
 	}
-	
+
 	// Init Socket Connection (Which technically does not connect but prepares socket for DTLS)
 	printf("[DEBUG] Init Session to %s:%d ...\n", targetIP, targetPort[0]);
 	udpsockout = socket(AF_INET, SOCK_DGRAM, 0);

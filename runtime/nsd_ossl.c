@@ -846,7 +846,7 @@ osslPostHandshakeCheck(nsd_ossl_t *pNsd)
 	char szDbg[255];
 	const SSL_CIPHER* sslCipher;
 
-	
+
 	nsd_ptcp.GetRemoteHName((nsd_t*)pNsd->pTcp, &fromHostIP);
 
 

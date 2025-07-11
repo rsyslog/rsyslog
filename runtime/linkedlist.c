@@ -58,7 +58,7 @@ rsRetVal llInit(linkedList_t *pThis, rsRetVal (*pEltDestructor)(void*), rsRetVal
 
 	return RS_RET_OK;
 };
-	
+
 
 /* llDestroyEltData - destroys a list element
  * It is a separate function as the
@@ -120,7 +120,7 @@ rsRetVal llDestroyRootElt(linkedList_t *pThis)
 {
 	DEFiRet;
 	llElt_t *pPrev;
-	
+
 	if(pThis->pRoot == NULL) {
 		ABORT_FINALIZE(RS_RET_EMPTY_LIST);
 	}
@@ -219,7 +219,7 @@ rsRetVal llAppend(linkedList_t *pThis, void *pKey, void *pData)
 {
 	llElt_t *pElt;
 	DEFiRet;
-	
+
 	CHKiRet(llEltConstruct(&pElt, pKey, pData));
 
 	pThis->iNumElts++; /* one more */

@@ -128,7 +128,7 @@ FindStrgen(strgen_t **ppStrgen, uchar *pName)
 {
 	strgenList_t *pThis;
 	DEFiRet;
-	
+
 	for(pThis = pStrgenLstRoot ; pThis != NULL ; pThis = pThis->pNext) {
 		if(ustrcmp(pThis->pStrgen->pName, pName) == 0) {
 			*ppStrgen = pThis->pStrgen;
