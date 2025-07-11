@@ -1,0 +1,28 @@
+blank_issues_enabled: false
+contact_links: []
+
+issue_templates:
+  - name: General Issue
+    description: For bugs or general-purpose problems.
+    file: general_issue.md
+
+  - name: Feature Request
+    description: Suggest a new feature or enhancement.
+    file: feature_request.md
+
+  - name: Documentation Improvement
+    description: Propose changes or additions to documentation.
+    file: documentation_improvement.md
+
+  - name: Rsyslog AI Assistant Feedback
+    description: Feedback on the rsyslog Assistant (ChatGPT).
+    file: rsyslog_ai_assistant_feedback.md
+
+  - name: Rsyslog Core AI Feedback
+    description: Feedback on AI components inside rsyslog itself.
+    file: rsyslog_core_ai_feedback.md
+
+  - name: Support Question
+    description: Need help with configuration, behavior, or usage.
+    file: support_question.md
+
