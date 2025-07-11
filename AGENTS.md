@@ -87,7 +87,7 @@ When fixing compiler warnings like `stringop-overread`, explain in the commit me
 > Mixed indentation styles (e.g., spaces in C files, tabs in Python) will be **rejected automatically** by style checks.
 > When generating C code, always simulate a tab width of 8 spaces for proper alignment of tabbed content.
 
-### Code Style Rules Enforced by `devtools/check-whitespace`:
+### Code Style Rules Enforced by `devtools/rsyslog_stylecheck.py`
 
 - Lines **must end with a single LF** (no missing or extra newlines)
 - **Maximum line length**: 120 columns (tab width = 8 spaces)
