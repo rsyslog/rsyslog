@@ -1,5 +1,5 @@
 ---
-name: ❓ Support Question
+name: 📌 Support Question
 about: Ask a question about rsyslog configuration, behavior, or general usage.
 title: "[Question]: "
 labels: ['question', 'needs-triage']
