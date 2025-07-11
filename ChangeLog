@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-07-11: omazureventhubs bugfix: unsafe sprintf use in module
+  we now use snprintf for url encoding; this was under very exotic conditions
 - 2025-07-09: imtcp: prevent double-enqueue of descriptors via inQueue flag
   This patch adds an inQueue flag with its own mutex to each
   tcpsrv_io_descr_t structure. The flag prevents multiple worker threads
