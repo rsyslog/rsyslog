@@ -57,7 +57,7 @@ CreateSocket(struct addrinfo *addrDest)
 {
 	int fd;
 	struct addrinfo *r;
-	
+
 	r = addrDest;
 
 	while(r != NULL) {

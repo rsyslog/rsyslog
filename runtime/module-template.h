@@ -517,7 +517,7 @@ static rsRetVal initConfVars(void)\
 #define ENDinitConfVars \
 	RETiRet;\
 }
-	
+
 
 /* queryEtryPt()
  */

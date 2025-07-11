@@ -70,7 +70,7 @@ processQI(FILE *const __restrict__ qi)
 		fprintf(stderr, "queuesize: %d\n", queuesize);
 		fprintf(stderr, "maxval_for_length: %d\n", maxval_for_length);
 	}
-	
+
 	queuesize += 1; /* fake invalid queue size */
 	if(queuesize > maxval_for_length)
 		++length;

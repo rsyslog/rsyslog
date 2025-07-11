@@ -256,14 +256,14 @@ BeginSerialize(strm_t *pStrm, obj_t *pObj)
 
 	ISOBJ_TYPE_assert(pStrm, strm);
 	ISOBJ_assert(pObj);
-	
+
 	CHKiRet(strm.RecordBegin(pStrm));
 	CHKiRet(objSerializeHeader(pStrm, pObj, (uchar*) "Obj"));
 
 finalize_it:
 	RETiRet;
 }
-	
+
 
 /* begin serialization of an object's property bag
  * Note: a property bag is used to serialize some of an objects
@@ -281,7 +281,7 @@ BeginSerializePropBag(strm_t *pStrm, obj_t *pObj)
 
 	ISOBJ_TYPE_assert(pStrm, strm);
 	ISOBJ_assert(pObj);
-	
+
 	CHKiRet(strm.RecordBegin(pStrm));
 	CHKiRet(objSerializeHeader(pStrm, pObj, (uchar*) "OPB"));
 
@@ -1383,7 +1383,7 @@ objClassInit(modInfo_t *pModInfo)
 	pthread_mutexattr_t mutAttr;
 	int i;
 	DEFiRet;
-	
+
 	/* first, initialize the object system itself. This must be done
 	 * before any other object is created.
 	 */

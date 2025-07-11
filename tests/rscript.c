@@ -97,7 +97,7 @@ PerformTest(cstr_t *pstrIn, rsRetVal iRetExpected, cstr_t *pstrOut)
 
 	if(iRetExpected != RS_RET_OK)
 		FINALIZE; /* if we tested an error case, we are done */
-	
+
 	/* OK, we got a compiled program, so now let's compare that */
 
 	CHKiRet(rsCStrConstruct(&pstrPrg));

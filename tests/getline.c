@@ -46,7 +46,7 @@ ssize_t getline(char **lineptr, size_t *n, FILE *fp)
 	}
 	if(c != EOF) /* need to add NL? */
 		(*lineptr)[len++] = c;
-	
+
 	(*lineptr)[len] = '\0';
 
 	*n = len;

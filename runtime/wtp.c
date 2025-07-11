@@ -135,7 +135,7 @@ wtpConstructFinalize(wtp_t *pThis)
 	 * not know the max number of workers
 	 */
 	CHKmalloc(pThis->pWrkr = malloc(sizeof(wti_t*) * pThis->iNumWorkerThreads));
-	
+
 	for(i = 0 ; i < pThis->iNumWorkerThreads ; ++i) {
 		CHKiRet(wtiConstruct(&pThis->pWrkr[i]));
 		pWti = pThis->pWrkr[i];
@@ -300,7 +300,7 @@ wtpShutdownAll(wtp_t *pThis, wtpState_t tShutdownCmd, struct timespec *ptTimeout
 
 	if(bTimedOut)
 		iRet = RS_RET_TIMED_OUT;
-	
+
 	RETiRet;
 }
 PRAGMA_DIAGNOSTIC_POP
@@ -580,7 +580,7 @@ wtpAdviseMaxWorkers(wtp_t *const pThis, int nMaxWrkr, const int permit_during_sh
 		}
 	}
 
-	
+
 finalize_it:
 	RETiRet;
 }
@@ -611,7 +611,7 @@ wtpSetDbgHdr(wtp_t *pThis, uchar *pszMsg, size_t lenMsg)
 
 	ISOBJ_TYPE_assert(pThis, wtp);
 	assert(pszMsg != NULL);
-	
+
 	if(lenMsg < 1)
 		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
 
