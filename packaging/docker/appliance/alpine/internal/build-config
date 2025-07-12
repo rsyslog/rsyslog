@@ -1,0 +1,25 @@
+#!/bin/ash
+# This reads the meta config (environment variables) and prepares environment
+# variables used by rsyslog.conf so that we can finally startup rsyslog.
+# Errors are detected and will lead to abort of the startup.
+
+export CNF_CALL_LOG_TO_LOGFILES=
+if [ "$ENABLE_LOGFILES" == "on" ]; then
+	if [ -z $LOGFILES_STORE ]; then
+		echo "Error: ENABLE_LOGFILES set, but LOGFILES_STORE not set - please correct"
+		exit 1
+	fi
+	export CNF_CALL_LOG_TO_LOGFILES="call log_to_files"
+fi # end LOGFILES
+
+export CNF_CALL_LOG_TO_LOGSENE=
+export ENABLE_LOGSENE=off
+if [ "$LOGSENE_TOKEN" != "" ]; then
+	if [ -z $LOGSENE_URL ]; then
+		echo "Error: LOGSENE_TOKEN set, but LOGSENE_URL not set - please correct"
+		exit 1
+	fi
+	export ENABLE_LOGSENE=on
+	export CNF_CALL_LOG_TO_LOGSENE="call log_to_logsene"
+fi # end LOGSENE
+env

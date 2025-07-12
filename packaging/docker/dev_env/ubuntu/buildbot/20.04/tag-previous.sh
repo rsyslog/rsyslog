@@ -1,0 +1,1 @@
+docker tag rsyslog/rsyslog_dev_buildbot_ubuntu:20.04 rsyslog/rsyslog_dev_buildbot_ubuntu:20.04_previous
