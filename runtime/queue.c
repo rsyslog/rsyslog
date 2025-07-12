@@ -12,7 +12,7 @@
  * function names - this makes it really hard to read and does not provide much
  * benefit, at least I (now) think so...
  *
- * Copyright 2008-2019 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2025 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -31,6 +31,151 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
+ */
+
+/**
+ * @file queue.c
+ * @brief This file implements the rsyslog queueing subsystem.
+ *
+ * @section queue_maintenance Important Note on Maintenance
+ *
+ * This header comment contains critical information on the system's
+ * architecture and design philosophy. It is essential that this comment, and
+ * all other relevant documentation, be **updated whenever architectural or
+ * other significant changes are made to the queueing subsystem.**
+ *
+ * Maintaining synchronization between code and documentation is vital for
+ * long-term project health, developer onboarding, and to enable automated
+ * tools and AI agents to accurately analyze the codebase and detect potential
+ * issues arising from undocumented changes. This documentation reflects the
+ * state of the system as of mid-2025, based on a battle-proven design that
+ * originated circa 2004.
+ *
+ * @section queue_architecture Architectural Overview and Design Philosophy
+ *
+ * The rsyslog queueing system is a fundamental component for providing both
+ * performance and reliability. It is built on a powerful abstraction: a queue
+ * can be placed at two key points in the message processing pipeline:
+ *
+ * 1.  **Ruleset Queue (Main Message Queue):** Each ruleset has a single queue
+ * that buffers messages received from inputs *before* they are processed
+ * by the ruleset's filters. This decouples message ingestion from filter
+ * processing, allowing rsyslog to handle massive input bursts without
+ * losing messages. The queue for the default ruleset is often referred
+ * to by its historical name, the "main message queue".
+ *
+ * 2.  **Action Queue:** Each action within a ruleset can have its own dedicated
+ * queue. This decouples the filter engine from the output action (e.g.,
+ * writing to a file or sending over the network).
+ *
+ * This system's design is a testament to operator-centric control, providing
+ * a sophisticated toolkit of compromises. This contrasts sharply with modern
+ * "WAL-only" log shippers, making rsyslog uniquely versatile.
+ *
+ *
+ * @subsection queue_types The Four Queue Types
+ *
+ * Rsyslog offers four queue types, each with a specific performance and
+ * reliability profile. They are listed here from most lightweight to most
+ * robust.
+ *
+ * 1.  **Direct (The "No-Queue" Queue)**
+ * - **Behavior:** The default for all **action queues**. No buffering occurs. The
+ * worker thread from the parent queue (usually the ruleset's queue)
+ * executes the action's logic directly.
+ * - **Use Case:** For fast, non-blocking, local actions (e.g., `omfile`).
+ * - **Warning:** If a Direct-queued action blocks, it stalls the worker
+ * thread, potentially halting all processing for that worker.
+ *
+ * 2.  **In-Memory (LinkedList and FixedArray)**
+ * - **Behavior:** Buffers messages in RAM. Extremely fast but offers no
+ * persistence across restarts.
+ * - **Sub-Types:**
+ * - `LinkedList`: The recommended default for most in-memory queues. It is
+ * memory-efficient, allocating space only for messages it holds.
+ * - `FixedArray`: A legacy option that pre-allocates a static array of
+ * pointers. It can be slightly faster under constant load but is
+ * less memory-efficient. It remains the default for ruleset queues.
+ * - **Use Case:** High-performance buffering where a potential loss of
+ * in-flight messages on crash is acceptable.
+ *
+ * 3.  **Disk (The "Pure-Disk" Queue)**
+ * - **Behavior:** Writes every single message to a disk-based queue structure
+ * before acknowledging the enqueue operation. This queue provides a
+ * **"Limited Duplication"** guarantee, not a simple "at-least-once".
+ * - **The `.qi` Checkpoint File:** The queue's state (read/write pointers)
+ * is persisted in a `.qi` file. The `queue.checkpointInterval` parameter
+ * dictates how often this file is updated, allowing the user to tune
+ * the trade-off between I/O performance and duplication risk. A value
+ * of `1` provides near-exactly-once delivery, essential for "dumb"
+ * (non-deduplicating) receivers.
+ * - **Use Case:** For audit-grade logging chains where no message loss can
+ * be tolerated, even in the case of a power failure or ungraceful shutdown.
+ *
+ * 4.  **Disk-Assisted (DA) (The Hybrid "Best-of-Both-Worlds" Queue)**
+ * - **Behavior:** This is the most sophisticated queue type. It acts as a
+ * multi-stage defense system against data loss.
+ * - **Stage 1: In-Memory First:** By default, it operates as a high-speed
+ * `LinkedList` queue with zero disk I/O.
+ * - **Stage 2: Disk Spooling:** If the in-memory queue exceeds its
+ * `highwatermark` (e.g., due to downstream backpressure), it seamlessly
+ * activates its internal **Disk Queue** and begins spooling messages
+ * to disk. This provides resilience to transient failures without the
+ * constant performance penalty of a pure Disk queue. The disk portion
+ * operates with its own "Limited Duplication" guarantee.
+ * - **Stage 3: Load Shedding:** If all buffers (memory and disk) are full,
+ * the queue hits the `queue.discardMark`. It can then begin to discard
+ * messages based on severity (`queue.discardSeverity`), preserving
+ * critical logs during a total system overload.
+ * - **Use Case:** The recommended choice for any potentially unreliable or
+ * slow action, or for a ruleset queue that needs to survive downstream
+ * outages.
+ *
+ *
+ * @subsection comparison_to_wal Rsyslog's "Bounded Queue" vs. a WAL's "Unbounded Stream"
+ *
+ * It is critical to understand that rsyslog's disk-based queues implement a
+ * **Bounded FIFO Queue**, which is architecturally different from the
+ * **Unbounded Stream** model of a Write-Ahead Log (WAL) found in tools like
+ * Fluent Bit or Vector.
+ *
+ * - **Rsyslog's Model:** The `.qi` file checkpoints the queue's *structure*,
+ * containing two primary tuples: `write_ptr = (segment, offset)` and
+ * `read_ptr = (segment, offset)`. This defines the queue's boundaries.
+ * Consumption is a destructive action that advances the `read_ptr`. On a
+ * graceful restart (e.g., K8s `SIGTERM`), DA queues flush memory to disk,
+ * ensuring **zero data loss**. On a crash, only the `checkpointInterval`-worth
+ * of messages are at risk of replay. This fine-grained control makes it safe
+ * for both smart and dumb receivers. **Note:** A known operational risk is
+ * that the current implementation does not gracefully handle a missing or
+ * corrupt `.qi` file in conjunction with pre-existing queue segment files.
+ * This can lead to startup failures or inconsistent state and is a top
+ * priority for future reliability enhancements.
+ *
+ *
+ * - **WAL Model:** A WAL is a simple, append-only log. The checkpoint is just
+ * a consumer's *offset*. On restart, a WAL-based shipper replays *all data*
+ * from the last offset, which can be massive. This model mandates a smart,
+ * idempotent receiver and is fundamentally unsafe for dumb endpoints.*
+ * @subsection naming_convention Historical Naming: queue vs. qqueue
+ *
+ * Throughout the code, you will see types and variables prefixed with `qqueue`
+ * (e.g., `qqueue_t`). This is the result of a historical name change.
+ * Originally, these were named `queue`, but this caused symbol clashes on some
+ * platforms (e.g., AIX) where `queue` is a reserved name in system libraries.
+ * The name was changed to `qqueue` ("queue object for the queueing subsystem")
+ * to ensure portability.
+ *
+ *
+ * @section conclusion Summary for Developers
+ *
+ * When working with this code, remember that you are not dealing with a simple
+ * log appender. You are maintaining a transactional, persistent FIFO queue.
+ * The logic surrounding the `.qi` file, segment files, and the read/write
+ * pointers is designed to provide robust, tunable delivery guarantees that are
+ * a core feature of rsyslog. This makes it more versatile than pure WAL-based
+ * log shippers.
+ *
  */
 #include "config.h"
 
