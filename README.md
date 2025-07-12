@@ -60,7 +60,7 @@ Build support libraries from source if you're working with the latest git master
 Refer to the respective section in the original README for required packages on CentOS, Ubuntu, Debian, SUSE, etc.
 
 #### Development Containers & Testing
-For a ready-to-use environment, use the images from [rsyslog-docker](https://github.com/rsyslog/rsyslog-docker). They contain all build dependencies. Run the test suite with `make check` (limit to `-j4`).
+Ready-to-use build environments are provided in `packaging/docker/dev_env`. These images were previously built in the separate [rsyslog-docker](https://github.com/rsyslog/rsyslog-docker) repository and are now maintained here. See `packaging/docker/README.md` for details. Runtime container definitions are in `packaging/docker/rsyslog`. Run the test suite inside the container with `make check` (limit to `-j4`).
 
 ---
 
