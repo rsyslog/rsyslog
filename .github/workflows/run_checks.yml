@@ -44,7 +44,7 @@ jobs:
                  ubuntu_24_imtcp_no_epoll,
                  fedora_35, fedora_36,
                  ubuntu_18, ubuntu_20, ubuntu_24,
-                 ubuntu_22_san, ubuntu_24_tsan, ubuntu_22_codecov, ubuntu_22_distcheck,
+                 ubuntu_24_san, ubuntu_24_tsan, ubuntu_22_codecov, ubuntu_22_distcheck,
                  kafka_codecov, elasticsearch]
 
     steps:
@@ -135,9 +135,9 @@ jobs:
               export CI_CHECK_CMD='distcheck'
               export ABORT_ALL_ON_TEST_FAIL='YES'
               ;;
-          'ubuntu_22_san')
+          'ubuntu_24_san')
               export CI_SANITIZE_BLACKLIST='tests/asan.supp'
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
               export CC='clang'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
                       --disable-libfaketime --without-valgrind-testbench --disable-valgrind \
