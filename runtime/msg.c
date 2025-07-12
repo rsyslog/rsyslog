@@ -2967,7 +2967,9 @@ MsgTruncateToMaxSize(smsg_t *const pThis)
 
 /* set raw message in message object. Size of message is provided.
  * The function makes sure that the stored rawmsg is properly
- * terminated by '\0'.
+ * terminated by '\0'. When a message is replaced, we try to keep
+ * the existing MSG offset valid so that modules modifying only the
+ * raw text do not need to recompute it.
  * rgerhards, 2009-06-16
  */
 void ATTR_NONNULL()
@@ -2991,7 +2993,12 @@ MsgSetRawMsg(smsg_t *const pThis, const char*const pszRawMsg, const size_t lenMs
 
 	memcpy(pThis->pszRawMsg, pszRawMsg, pThis->iLenRawMsg);
 	pThis->pszRawMsg[pThis->iLenRawMsg] = '\0'; /* this also works with truncation! */
-	/* correct other information */
+	/*
+	 * Update cached MSG length. When offMSG already points into the
+	 * message (e.g. after initial parsing) adjusting iLenMSG avoids the
+	 * need for a costly re-parse in modules like mmexternal which may
+	 * replace the raw message text.
+	 */
 	if(pThis->iLenRawMsg > pThis->offMSG)
 		pThis->iLenMSG += deltaSize;
 	else
