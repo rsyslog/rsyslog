@@ -21,6 +21,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/**
+ * @file statsobj.c
+ * @brief Implementation of the rsyslog statistics object
+ *
+ * Each statsobj_t instance maintains a name, origin and a set of counters.
+ * All instances are linked together so that GetAllStatsLines() can iterate
+ * through them and emit their values. Counters may be 64 bit integers or
+ * plain ints and are modified with atomic helpers when required.
+ *
+ * The module can output collected counters in several formats:
+ *  - legacy key=value lines
+ *  - JSON or JSON-ES (Elasticsearch compatible)
+ *  - CEE / lumberjack records
+ *  - Prometheus text exposition
+ *
+ * Statistics gathering is controlled by the ::GatherStats flag and can be
+ * enabled via EnableStats().
+ */
 
 #include "config.h"
 #include <stdio.h>
