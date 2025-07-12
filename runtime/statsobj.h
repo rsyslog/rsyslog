@@ -18,6 +18,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+/**
+ * @file statsobj.h
+ * @brief Interface of the rsyslog statistics object
+ *
+ * A statistics object (statsobj_t) represents a set of counters that
+ * describe activity within a subsystem. Each object keeps a doubly
+ * linked list of counters and all objects are maintained in a global
+ * list protected by a mutex. The counters are either 64 bit integers
+ * (ctrType_IntCtr) or plain int values (ctrType_Int) and can be marked
+ * resettable. Statistics are only gathered while the global
+ * ::GatherStats flag is non-zero.
+ *
+ * Counters can be reported in multiple formats via the GetAllStatsLines()
+ * interface:
+ *  - ::statsFmt_Legacy     classic key=value pairs
+ *  - ::statsFmt_JSON       valid JSON structures
+ *  - ::statsFmt_JSON_ES    JSON with dot replacement for Elasticsearch
+ *  - ::statsFmt_CEE        Project Lumberjack / CEE format
+ *  - ::statsFmt_Prometheus Prometheus text exposition format
+ *
+ * The caller supplies a callback that receives each generated line.
+ * After emission counters flagged with CTR_FLAG_RESETTABLE may be
+ * cleared if requested.
+ */
 #ifndef INCLUDED_STATSOBJ_H
 #define INCLUDED_STATSOBJ_H
 
