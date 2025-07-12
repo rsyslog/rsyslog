@@ -1,0 +1,19 @@
+echo 'docker run --read-only <container-name> command
+where command is one of:
+rsyslog     - run rsyslog (default)
+help        - display this help message
+show-work   - list the /work area
+show-config - display the current container config
+edit-config - edit container config (with vi editor, press <ESC>ZZ to quit)
+bash        - start an interactive shell (<CTL>-d terminates)
+
+volumes:
+/logs       - log file store (if used)
+/work       - rsyslog work files; do not share with multiple instances
+/config     - configuration files, can be mounted read-only once finalized
+
+listening ports:
+514/udp     - syslog (udp)
+514/tcp     - syslog (plain tcp)
+1601/tcp    - RELP
+'

@@ -1,0 +1,11 @@
+#!/bin/ash
+touch /Are-we-Writable
+if [ ! -f /Are-we-Writable ]; then
+	echo "ERROR: we need to install valgrind, so the container must"
+	echo "       NOT be read-only for this debug session."
+	exit 1
+fi
+rm /Are-we-Writable
+echo installing valgrind for debugging -- need to access Alpine repositories
+apk update
+apk add --no-cache rsyslog-dbg musl-dbg valgrind
