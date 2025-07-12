@@ -69,42 +69,37 @@ When fixing compiler warnings like `stringop-overread`, explain in the commit me
 ### Indentation Rules (Language-Specific)
 
 - **C / Header / Makefiles**:
-  - Use **tabs only** for indentation (`\t`) (1 tab = 1 indent level)
-  - Do **not** use spaces for indentation or alignment
+  - Preferred: **tabs only** for indentation (`\t`)
+  - Acceptable: **spaces** may be used if required by the generation tool
+  - Do **not** mix tabs and spaces in the same block
   - The **only allowed space at column 1** is for multiline comments starting with ` *`, e.g.:
     ```c
     /*
      * This is a valid Doxygen or traditional comment.
      */
     ```
-  - This rule is strictly enforced by CI and `devtools/rsyslog_stylecheck.py`
 
 - **Python**:
   - Follow [PEP 8](https://peps.python.org/pep-0008/): **4 spaces per indent level**
   - Do **not** use tabs in `.py` files
 
 > AI Agent Note:
-> Mixed indentation styles (e.g., spaces in C files, tabs in Python) will be **rejected automatically** by style checks.
-> When generating C code, always simulate a tab width of 8 spaces for proper alignment of tabbed content.
+> When generating C code, tabs are preferred. If your environment requires spaces,
+> simulate tab width of 8 spaces for proper alignment.
 
-### Code Style Rules Enforced by `devtools/rsyslog_stylecheck.py`
+---
 
-- Lines **must end with a single LF** (no missing or extra newlines)
-- **Maximum line length**: 120 columns (tab width = 8 spaces)
-- **No leading space** at beginning of line (except for ` *` in comments)
-- **No trailing whitespace** at line end
-- **DOS CRLF format is not permitted**
+## Build & Test Expectations
 
-### Structured Error Handling Convention
+Whenever `.c` or `.h` files are modified, a build should be performed using `make`.
+If new functionality is introduced, at least a basic test should be created and run.
 
-- Use `ABORT_FINALIZE(code);` to both set `iRet = code` and jump to `finalize`.
-- Use `FINALIZE;` when exiting with the current `iRet` value.
-- Use `DEFiRet` at the beginning of a function to define `iRet`.
-- Use the label `finalize_it:` to mark the exception return point.
-- Return using `RETiRet`.
-- Use `CHKiRet()` to check a function's return and jump to `finalize_it` on failure.
-- Use `CHKmalloc()` and similar macros to verify allocations or calls.
-- `localRet` is a temporary `rsRetVal` for intermediate error evaluation.
+If possible, agents should:
+- Build the project using `./configure` and `make`
+- Run an individual test using the instructions below
+
+> In restricted environments, a build may not be possible. In such cases, ensure the
+> generated code is clear and well-commented to aid review.
 
 ---
 
