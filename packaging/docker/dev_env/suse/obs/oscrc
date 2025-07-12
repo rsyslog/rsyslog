@@ -1,0 +1,126 @@
+[general]
+# URL to access API server, e.g. https://api.opensuse.org
+# you also need a section [https://api.opensuse.org] with the credentials
+apiurl = https://api.opensuse.org
+# Downloaded packages are cached here. Must be writable by you.
+packagecachedir = /host/osbuild-packagecache
+# Wrapper to call build as root (sudo, su -, ...)
+#su-wrapper = sudo
+# rootdir to setup the chroot environment
+# can contain %(repo)s, %(arch)s, %(project)s, %(package)s and %(apihost)s (apihost is the hostname
+# extracted from currently used apiurl) for replacement, e.g.
+# /srv/oscbuild/%(repo)s-%(arch)s or
+# /srv/oscbuild/%(repo)s-%(arch)s-%(project)s-%(package)s
+build-root = /host/build-root/%(repo)s-%(arch)s
+# compile with N jobs (default: "getconf _NPROCESSORS_ONLN")
+build-jobs = 4
+# build-type to use - values can be (depending on the capabilities of the 'build' script)
+# empty    -  chroot build
+# kvm      -  kvm VM build  (needs build-device, build-swap, build-memory)
+# xen      -  xen VM build  (needs build-device, build-swap, build-memory)
+#   experimental:
+#     qemu -  qemu VM build
+#     lxc  -  lxc build
+#build-type =
+# build-device is the disk-image file to use as root for VM builds
+# e.g. /var/tmp/FILE.root
+#build-device = /var/tmp/FILE.root
+# build-swap is the disk-image to use as swap for VM builds
+# e.g. /var/tmp/FILE.swap
+#build-swap = /var/tmp/FILE.swap
+# build-kernel is the boot kernel used for VM builds
+#build-kernel = /boot/vmlinuz
+# build-initrd is the boot initrd used for VM builds
+#build-initrd = /boot/initrd
+# build-memory is the amount of memory used in the VM
+# value in MB - e.g. 512
+#build-memory = 512
+# build-vmdisk-rootsize is the size of the disk-image used as root in a VM build
+# values in MB - e.g. 4096
+#build-vmdisk-rootsize = 4096
+# build-vmdisk-swapsize is the size of the disk-image used as swap in a VM build
+# values in MB - e.g. 1024
+#build-vmdisk-swapsize = 1024
+# build-vmdisk-filesystem is the file system type of the disk-image used in a VM build
+# values are ext3(default) ext4 xfs reiserfs btrfs
+#build-vmdisk-filesystem = ext4
+# Numeric uid:gid to assign to the "abuild" user in the build-root
+# or "caller" to use the current users uid:gid
+# This is convenient when sharing the buildroot with ordinary userids
+# on the host.
+# This should not be 0
+# build-uid =
+# strip leading build time information from the build log
+# buildlog_strip_time = 1
+# Enable ccache in build roots.
+# ccache = 1
+# extra packages to install when building packages locally (osc build)
+# this corresponds to osc build's -x option and can be overridden with that
+# -x '' can also be given on the command line to override this setting, or
+# you can have an empty setting here. This global setting may leads to 
+# dependency problems when the base distro is not providing the package.
+# => using server side definition via cli_debug_packages substitute rule is
+#    recommended therefore.
+#extra-pkgs = 
+# build platform is used if the platform argument is omitted to osc build
+#build_repository = openSUSE_Factory
+# default project for getpac or bco
+#getpac_default_project = openSUSE:Factory
+# alternate filesystem layout: have multiple subdirs, where colons were.
+#checkout_no_colon = 0
+# change filesystem layout: avoid checkout within a project or package dir.
+#checkout_rooted = 0
+# local files to ignore with status, addremove, ....
+#exclude_glob = .osc CVS .svn .* _linkerror *~ #*# *.orig *.bak *.changes.vctmp.*
+# limit the age of requests shown with 'osc req list'.
+# this is a default only, can be overridden by 'osc req list -D NNN'
+# Use 0 for unlimted.
+#request_list_days = 0
+# show info useful for debugging
+#debug = 1
+# show HTTP traffic useful for debugging
+#http_debug = 1
+# number of retries on HTTP transfer
+#http_retries = 3
+# Skip signature verification of packages used for build.
+#no_verify = 1
+# jump into the debugger in case of errors
+#post_mortem = 1
+# print call traces in case of errors
+#traceback = 1
+# check for unversioned/removed files before commit
+#check_filelist = 1
+# check for pending requests after executing an action (e.g. checkout, update, commit)
+#check_for_request_on_action = 1
+# what to do with the source package if the submitrequest has been accepted. If
+# nothing is specified the API default is used
+#submitrequest_on_accept_action = cleanup|update|noupdate
+# template for an accepted submitrequest
+#submitrequest_accepted_template = Hi %(who)s,\n
+# thanks for working on:\t%(tgt_project)s/%(tgt_package)s.
+# SR %(reqid)s has been accepted.\n\nYour maintainers
+# template for a declined submitrequest
+#submitrequest_declined_template = Hi %(who)s,\n
+# sorry your SR %(reqid)s (request type: %(type)s) for
+# %(tgt_project)s/%(tgt_package)s has been declined because...
+#review requests interactively (default: off)
+#request_show_review = 1
+# if a review is accepted in interactive mode and a group
+# was specified the review will be accepted for this group (default: off)
+#review_inherit_group = 1
+
+[https://api.opensuse.org]
+# set aliases for this apiurl
+# aliases = foo, bar
+# real name used in .changes, unless the one from osc meta prj <user> will be used
+# realname =
+# email used in .changes, unless the one from osc meta prj <user> will be used
+# email =
+# additional headers to pass to a request, e.g. for special authentication
+#http_headers = Host: foofoobar,
+#       User: mumblegack
+# Plain text password
+#pass =
+user=rsyslog-obs-ci
+pass=VIQT8RNKWO675NQuCqKq
+credentials_mgr_class=osc.credentials.PlaintextConfigFileCredentialsManager
