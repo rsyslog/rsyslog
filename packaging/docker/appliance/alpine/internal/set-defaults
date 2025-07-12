@@ -1,0 +1,8 @@
+# set defaults if not present. This enables us to pre-populate bind
+# mounts, which makes sense in our case.
+if [ ! -f /config/container_config ]; then
+	cp internal/container_config /config
+fi
+if [ ! -f /config/droprules.conf ]; then
+	cp internal/droprules.conf /config
+fi

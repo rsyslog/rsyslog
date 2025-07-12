@@ -1,0 +1,4 @@
+*.sw?
+tmp*
+work*
+run

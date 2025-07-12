@@ -1,0 +1,31 @@
+name: Build User Containers
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [minimal, standard, collector, dockerlogs]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build ${{ matrix.variant }} image
+        working-directory: rsyslog
+        run: make ${{ matrix.variant }}
+
+      - name: List images
+        run: docker images
