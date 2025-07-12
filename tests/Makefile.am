@@ -1230,8 +1230,9 @@ TESTS +=  \
 	dynstats_nometric.sh \
 	no-dynstats-json.sh \
 	no-dynstats.sh \
-	stats-json.sh \
-	dynstats-json.sh \
+        stats-json.sh \
+        stats-prometheus.sh \
+        dynstats-json.sh \
 	stats-cee.sh \
 	stats-json-es.sh \
 	dynstats_reset_without_pstats_reset.sh \
@@ -2999,9 +3000,10 @@ EXTRA_DIST= \
 	omfwd_impstats-tcp.sh \
 	perctile-simple.sh \
 	perctile-simple-vg.sh \
-	stats-json.sh \
-	stats-json-vg.sh \
-	stats-cee.sh \
+        stats-json.sh \
+        stats-json-vg.sh \
+        stats-prometheus.sh \
+        stats-cee.sh \
 	stats-cee-vg.sh \
 	stats-json-es.sh \
 	dynstats-json.sh \

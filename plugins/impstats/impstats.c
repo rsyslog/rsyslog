@@ -75,7 +75,8 @@ typedef struct configSettings_s {
 	int iSeverity;
 	int bJSON;
 	int bCEE;
-} configSettings_t;
+	int bPrometheus;
+	} configSettings_t;
 
 struct modConfData_s {
 	rsconf_t *pConf; /* our overall config object */
@@ -91,7 +92,7 @@ struct modConfData_s {
 	char *logfile;
 	sbool configSetViaV2Method;
 	uchar *pszBindRuleset;		/* name of ruleset to bind to */
-};
+	};
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current load process */
 
@@ -110,7 +111,7 @@ static struct cnfparamdescr modpdescr[] = {
 	{ "log.file", eCmdHdlrGetWord, 0 },
 	{ "format", eCmdHdlrGetWord, 0 },
 	{ "ruleset", eCmdHdlrString, 0 }
-};
+	};
 static struct cnfparamblk modpblk =
 	{ CNFPARAMBLK_VERSION,
 	  sizeof(modpdescr)/sizeof(struct cnfparamdescr),
@@ -177,7 +178,7 @@ countOpenFiles(void)
 
 done:
 	return;
-}
+	}
 #endif
 
 
@@ -189,7 +190,8 @@ initConfigSettings(void)
 	cs.iSeverity = DEFAULT_SEVERITY;
 	cs.bJSON = 0;
 	cs.bCEE = 0;
-}
+	cs.bPrometheus = 0;
+	}
 
 
 /* actually submit a message to the rsyslog core
@@ -220,7 +222,7 @@ doSubmitMsg(uchar *line)
 
 finalize_it:
 	return;
-}
+	}
 
 
 /* log stats message to file; limited error handling done */
@@ -271,7 +273,7 @@ doLogToFile(const char *ln, const size_t lenLn)
 done:
 	pthread_mutex_unlock(&hup_mutex);
 	return;
-}
+	}
 
 
 /* submit a line to our log destinations. Line must be fully formatted as
@@ -286,7 +288,7 @@ submitLine(const char *const ln, const size_t lenLn)
 	if(runModConf->logfile != NULL)
 		doLogToFile(ln, lenLn);
 	RETiRet;
-}
+	}
 
 /* callback for statsobj
  * Note: usrptr exists only to satisfy requirements of statsobj callback interface!
@@ -297,7 +299,7 @@ doStatsLine(void __attribute__((unused)) *usrptr, const char *const str)
 	DEFiRet;
 	iRet = submitLine(str, strlen(str));
 	RETiRet;
-}
+	}
 
 
 /* the function to generate the actual statistics messages
@@ -326,7 +328,7 @@ generateStatsMsgs(void)
 	st_ru_nvcsw = ru.ru_nvcsw;
 	st_ru_nivcsw = ru.ru_nivcsw;
 	statsobj.GetAllStatsLines(doStatsLine, NULL, runModConf->statsFmt, runModConf->bResetCtrs);
-}
+	}
 
 
 BEGINbeginCnfLoad
@@ -434,13 +436,15 @@ CODESTARTendCnfLoad
 		loadModConf->iStatsInterval = cs.iStatsInterval;
 		loadModConf->iFacility = cs.iFacility;
 		loadModConf->iSeverity = cs.iSeverity;
-		if (cs.bCEE == 1) {
-			loadModConf->statsFmt = statsFmt_CEE;
-		} else if (cs.bJSON == 1) {
-			loadModConf->statsFmt = statsFmt_JSON;
-		} else {
-			loadModConf->statsFmt = statsFmt_Legacy;
-		}
+	if(cs.bPrometheus == 1) {
+		loadModConf->statsFmt = statsFmt_Prometheus;
+	} else if(cs.bCEE == 1) {
+		loadModConf->statsFmt = statsFmt_CEE;
+	} else if(cs.bJSON == 1) {
+		loadModConf->statsFmt = statsFmt_JSON;
+	} else {
+		loadModConf->statsFmt = statsFmt_Legacy;
+	}
 	}
 ENDendCnfLoad
 
@@ -467,7 +471,7 @@ checkRuleset(modConfData_t *modConf)
 	modConf->pBindRuleset = pRuleset;
 finalize_it:
 	RETiRet;
-}
+	}
 
 
 /* to use HUP, we need to have an instanceData type, as this was
@@ -476,7 +480,7 @@ finalize_it:
  */
 typedef struct _instanceData {
 	int dummy;
-} instanceData;
+	} instanceData;
 BEGINdoHUP
 CODESTARTdoHUP
 	DBGPRINTF("impstats: received HUP\n")
@@ -600,7 +604,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 {
 	initConfigSettings();
 	return RS_RET_OK;
-}
+	}
 
 
 BEGINmodInit()
@@ -625,6 +629,8 @@ CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(regCfSysLineHdlr2((uchar *)"pstatjson", 0, eCmdHdlrBinary, NULL, &cs.bJSON,
 	STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(regCfSysLineHdlr2((uchar *)"pstatcee", 0, eCmdHdlrBinary, NULL, &cs.bCEE,
+	STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
+	CHKiRet(regCfSysLineHdlr2((uchar *)"pstatprometheus", 0, eCmdHdlrBinary, NULL, &cs.bPrometheus,
 	STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables,
 	NULL, STD_LOADABLE_MODULE_ID));
