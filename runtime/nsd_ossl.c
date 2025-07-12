@@ -67,7 +67,6 @@ DEFobjCurrIf(net_ossl)
 /* Some prototypes for helper functions used inside openssl driver */
 static rsRetVal applyGnutlsPriorityString(nsd_ossl_t *const pNsd);
 
-
 /* retry an interrupted OSSL operation */
 static rsRetVal
 doRetry(nsd_ossl_t *pNsd)
@@ -846,9 +845,7 @@ osslPostHandshakeCheck(nsd_ossl_t *pNsd)
 	char szDbg[255];
 	const SSL_CIPHER* sslCipher;
 
-
 	nsd_ptcp.GetRemoteHName((nsd_t*)pNsd->pTcp, &fromHostIP);
-
 
 	/* Some extra output for debugging openssl */
 	if (SSL_get_shared_ciphers(pNsd->pNetOssl->ssl,szDbg, sizeof szDbg) != NULL)
@@ -894,6 +891,8 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 {
 	DEFiRet;
 	uchar *fromHostIP = NULL;
+	int remotePort = -1;
+	uchar remotePortStr[8];
 	int res, resErr;
 	dbgprintf("osslHandshakeCheck: Starting TLS Handshake for ssl[%p]\n", (void *)pNsd->pNetOssl->ssl);
 
@@ -901,7 +900,8 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 		/* Handle Server SSL Object */
 		if((res = SSL_accept(pNsd->pNetOssl->ssl)) <= 0) {
 			/* Obtain SSL Error code */
-			nsd_ptcp.GetRemoteHName((nsd_t*)pNsd->pTcp, &fromHostIP);
+			nsd_ptcp.GetRemoteHName(pNsd->pTcp, &fromHostIP);
+			nsd_ptcp.GetRemotePort(pNsd->pTcp, &remotePort);
 			resErr = SSL_get_error(pNsd->pNetOssl->ssl, res);
 			if(	resErr == SSL_ERROR_WANT_READ ||
 				resErr == SSL_ERROR_WANT_WRITE) {
@@ -910,29 +910,34 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 				dbgprintf("osslHandshakeCheck: OpenSSL Server handshake does not complete "
 					"immediately - setting to retry (this is OK and normal)\n");
 				FINALIZE;
-			} else if(resErr == SSL_ERROR_SYSCALL) {
-				dbgprintf("osslHandshakeCheck: OpenSSL Server handshake failed with SSL_ERROR_SYSCALL "
-					"- Aborting handshake.\n");
-				nsd_ossl_lastOpenSSLErrorMsg(pNsd, res, pNsd->pNetOssl->ssl, LOG_WARNING,
-					"osslHandshakeCheck Server", "SSL_accept");
-				LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
-					"nsd_ossl:TLS session terminated with remote client '%s': "
-					"Handshake failed with SSL_ERROR_SYSCALL", fromHostIP);
-				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 			} else {
-				nsd_ossl_lastOpenSSLErrorMsg(pNsd, res, pNsd->pNetOssl->ssl, LOG_ERR,
-					"osslHandshakeCheck Server", "SSL_accept");
-				LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
-					"nsd_ossl:TLS session terminated with remote client '%s': "
-					"Handshake failed with error code: %d", fromHostIP, resErr);
-				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
+				nsd_ptcp.FmtRemotePortStr(remotePort, remotePortStr, sizeof(remotePortStr));
+				if(resErr == SSL_ERROR_SYSCALL) {
+					dbgprintf("osslHandshakeCheck: OpenSSL Server handshake failed with "
+						"SSL_ERROR_SYSCALL - Aborting handshake.\n");
+					nsd_ossl_lastOpenSSLErrorMsg(pNsd, res, pNsd->pNetOssl->ssl, LOG_WARNING,
+						"osslHandshakeCheck Server", "SSL_accept");
+					LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
+						"nsd_ossl:TLS session terminated with remote client '%s:%s': "
+						"Handshake failed with SSL_ERROR_SYSCALL",
+						fromHostIP, remotePortStr);
+					ABORT_FINALIZE(RS_RET_NO_ERRCODE);
+				} else {
+					nsd_ossl_lastOpenSSLErrorMsg(pNsd, res, pNsd->pNetOssl->ssl, LOG_ERR,
+						"osslHandshakeCheck Server", "SSL_accept");
+					LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
+						"nsd_ossl:TLS session terminated with remote client '%s:%s': "
+						"Handshake failed with error code: %d",
+						fromHostIP, remotePortStr, resErr);
+					ABORT_FINALIZE(RS_RET_NO_ERRCODE);
+				}
 			}
 		}
 	} else {
 		/* Handle Client SSL Object */
 		if((res = SSL_do_handshake(pNsd->pNetOssl->ssl)) <= 0) {
 			/* Obtain SSL Error code */
-			nsd_ptcp.GetRemoteHName((nsd_t*)pNsd->pTcp, &fromHostIP);
+			nsd_ptcp.GetRemoteHName(pNsd->pTcp, &fromHostIP);
 			resErr = SSL_get_error(pNsd->pNetOssl->ssl, res);
 			if(	resErr == SSL_ERROR_WANT_READ ||
 				resErr == SSL_ERROR_WANT_WRITE) {
@@ -952,9 +957,12 @@ osslHandshakeCheck(nsd_ossl_t *pNsd)
 					"- Aborting handshake.\n", resErr);
 				nsd_ossl_lastOpenSSLErrorMsg(pNsd, res, pNsd->pNetOssl->ssl, LOG_ERR,
 					"osslHandshakeCheck Client", "SSL_do_handshake");
+				nsd_ptcp.GetRemotePort(pNsd->pTcp, &remotePort);
+				nsd_ptcp.FmtRemotePortStr(remotePort, remotePortStr, sizeof(remotePortStr));
 				LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
-					"nsd_ossl:TLS session terminated with remote syslog server '%s':"
-					"Handshake failed with error code: %d", fromHostIP, resErr);
+					"nsd_ossl:TLS session terminated with remote syslog server '%s:%s':"
+					"Handshake failed with error code: %d",
+				fromHostIP, remotePortStr, resErr);
 				ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 			}
 		}
