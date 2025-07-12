@@ -1,8 +1,12 @@
+> **📦 This directory contains the full history of the former
+> [`rsyslog/rsyslog-docker`](https://github.com/rsyslog/rsyslog-docker) repository.**  
+> It was merged into this monorepo on 2025-07-12 to consolidate related components
+> and simplify development. All Docker-related build and image definitions
+> are now maintained here as part of rsyslog’s unified repository structure.
+
 # Rsyslog Docker Images
 
 This repository contains the Dockerfiles and build configurations for creating official Docker images for rsyslog. Our goal is to provide robust, flexible, and easy-to-use containerized rsyslog solutions for various logging needs.
-
-See also the [rsyslog project board for Docker tasks](https://github.com/rsyslog/rsyslog/projects/5).
 
 ---
 ## User-Focused Docker Images (Ubuntu Based)
