@@ -1,7 +1,7 @@
 /* impstats.c
  * A module to periodically output statistics gathered by rsyslog.
  *
- * Copyright 2010-2018 Adiscon GmbH.
+ * Copyright 2010-2025 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -75,6 +75,7 @@ typedef struct configSettings_s {
 	int iSeverity;
 	int bJSON;
 	int bCEE;
+	int bPrometheus;
 } configSettings_t;
 
 struct modConfData_s {
@@ -189,6 +190,7 @@ initConfigSettings(void)
 	cs.iSeverity = DEFAULT_SEVERITY;
 	cs.bJSON = 0;
 	cs.bCEE = 0;
+	cs.bPrometheus = 0;
 }
 
 
@@ -476,7 +478,7 @@ finalize_it:
  */
 typedef struct _instanceData {
 	int dummy;
-} instanceData;
+	} instanceData;
 BEGINdoHUP
 CODESTARTdoHUP
 	DBGPRINTF("impstats: received HUP\n")

@@ -1231,6 +1231,7 @@ TESTS +=  \
 	no-dynstats-json.sh \
 	no-dynstats.sh \
 	stats-json.sh \
+	stats-prometheus.sh \
 	dynstats-json.sh \
 	stats-cee.sh \
 	stats-json-es.sh \
@@ -3001,6 +3002,7 @@ EXTRA_DIST= \
 	perctile-simple-vg.sh \
 	stats-json.sh \
 	stats-json-vg.sh \
+	stats-prometheus.sh \
 	stats-cee.sh \
 	stats-cee-vg.sh \
 	stats-json-es.sh \
