@@ -54,42 +54,42 @@ ENDobjConstruct(var)
 static rsRetVal
 varConstructFinalize(var_t __attribute__((unused)) *pThis)
 {
-	DEFiRet;
+    DEFiRet;
 
-	ISOBJ_TYPE_assert(pThis, var);
+    ISOBJ_TYPE_assert(pThis, var);
 
-	RETiRet;
+    RETiRet;
 }
 
 
 /* destructor for the var object */
 BEGINobjDestruct(var) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(var)
-	if(pThis->pcsName != NULL)
-		rsCStrDestruct(&pThis->pcsName);
-	if(pThis->varType == VARTYPE_STR) {
-		if(pThis->val.pStr != NULL)
-			rsCStrDestruct(&pThis->val.pStr);
-	}
+    if(pThis->pcsName != NULL)
+        rsCStrDestruct(&pThis->pcsName);
+    if(pThis->varType == VARTYPE_STR) {
+        if(pThis->val.pStr != NULL)
+            rsCStrDestruct(&pThis->val.pStr);
+    }
 ENDobjDestruct(var)
 
 
 /* DebugPrint support for the var object */
 BEGINobjDebugPrint(var) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDebugPrint(var)
-	switch(pThis->varType) {
-		case VARTYPE_STR:
-			dbgoprint((obj_t*) pThis, "type: cstr, val '%s'\n", rsCStrGetSzStrNoNULL(pThis->val.pStr));
-			break;
-		case VARTYPE_NUMBER:
-			dbgoprint((obj_t*) pThis, "type: number, val %lld\n", pThis->val.num);
-			break;
-		case VARTYPE_SYSLOGTIME:
-		case VARTYPE_NONE:
-		default:
-			dbgoprint((obj_t*) pThis, "type %d currently not supported in debug output\n", pThis->varType);
-			break;
-	}
+    switch(pThis->varType) {
+        case VARTYPE_STR:
+            dbgoprint((obj_t*) pThis, "type: cstr, val '%s'\n", rsCStrGetSzStrNoNULL(pThis->val.pStr));
+            break;
+        case VARTYPE_NUMBER:
+            dbgoprint((obj_t*) pThis, "type: number, val %lld\n", pThis->val.num);
+            break;
+        case VARTYPE_SYSLOGTIME:
+        case VARTYPE_NONE:
+        default:
+            dbgoprint((obj_t*) pThis, "type %d currently not supported in debug output\n", pThis->varType);
+            break;
+    }
 ENDobjDebugPrint(var)
 
 
@@ -98,19 +98,19 @@ ENDobjDebugPrint(var)
  */
 BEGINobjQueryInterface(var)
 CODESTARTobjQueryInterface(var)
-	if(pIf->ifVersion != varCURR_IF_VERSION) { /* check for current version, increment on each change */
-		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
-	}
+    if(pIf->ifVersion != varCURR_IF_VERSION) { /* check for current version, increment on each change */
+        ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+    }
 
-	/* ok, we have the right interface, so let's fill it
-	 * Please note that we may also do some backwards-compatibility
-	 * work here (if we can support an older interface version - that,
-	 * of course, also affects the "if" above).
-	 */
-	pIf->Construct = varConstruct;
-	pIf->ConstructFinalize = varConstructFinalize;
-	pIf->Destruct = varDestruct;
-	pIf->DebugPrint = varDebugPrint;
+    /* ok, we have the right interface, so let's fill it
+     * Please note that we may also do some backwards-compatibility
+     * work here (if we can support an older interface version - that,
+     * of course, also affects the "if" above).
+     */
+    pIf->Construct = varConstruct;
+    pIf->ConstructFinalize = varConstructFinalize;
+    pIf->Destruct = varDestruct;
+    pIf->DebugPrint = varDebugPrint;
 finalize_it:
 ENDobjQueryInterface(var)
 
@@ -120,11 +120,11 @@ ENDobjQueryInterface(var)
  * rgerhards, 2008-02-19
  */
 BEGINObjClassInit(var, 1, OBJ_IS_CORE_MODULE) /* class, version */
-	/* request objects we use */
+    /* request objects we use */
 
-	/* now set our own handlers */
-	OBJSetMethodHandler(objMethod_DEBUGPRINT, varDebugPrint);
-	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, varConstructFinalize);
+    /* now set our own handlers */
+    OBJSetMethodHandler(objMethod_DEBUGPRINT, varDebugPrint);
+    OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, varConstructFinalize);
 ENDObjClassInit(var)
 
 /* vi:set ai:

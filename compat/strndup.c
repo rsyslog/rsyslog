@@ -30,16 +30,16 @@ extern char *strndup(const char *s, size_t n);
 char *
 strndup(const char *s, size_t n)
 {
-	const size_t len = strlen(s);
-	char *new_s;
-	if(len <= n)
-		return strdup(s);
-	new_s = malloc(n+1);
-	if(new_s == NULL)
-		return NULL;
-	memcpy(new_s, s, n);
-	new_s[n] = '\0';
-	return new_s;
+    const size_t len = strlen(s);
+    char *new_s;
+    if(len <= n)
+        return strdup(s);
+    new_s = malloc(n+1);
+    if(new_s == NULL)
+        return NULL;
+    memcpy(new_s, s, n);
+    new_s[n] = '\0';
+    return new_s;
 }
 #else
 /* XLC needs at least one method in source file even static to compile */

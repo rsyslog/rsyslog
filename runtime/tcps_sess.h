@@ -30,49 +30,49 @@ struct tcpsrv_s;
 
 /* the tcps_sess object */
 struct tcps_sess_s {
-	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	tcpsrv_t *pSrv;	/* pointer back to my server (e.g. for callbacks) */
-	tcpLstnPortList_t *pLstnInfo;	/* pointer back to listener info */
-	netstrm_t *pStrm;
-	int iMsg;		 /* index of next char to store in msg */
-	sbool bSuppOctetFram;	/**< copy from listener, to speed up access */
-	sbool bSPFramingFix;
-	enum {
-		eAtStrtFram,
-		eInOctetCnt,
-		eInMsg,
-		eInMsgTruncating
-	} inputState;		/* our current state */
-	int iOctetsRemain;	/* Number of Octets remaining in message */
-	TCPFRAMINGMODE eFraming;
-	uchar *pMsg;		/* message (fragment) received */
-	prop_t *fromHost;	/* host name we received messages from */
-	prop_t *fromHostIP;
-	void *pUsr;		/* a user-pointer */
-	rsRetVal (*DoSubmitMessage)(tcps_sess_t*, uchar*, int); /* submit message callback */
-	int iMaxLine;		/* fast lookup buffer for config property */
-	pthread_mutex_t mut;
+    BEGINobjInstance;   /* Data to implement generic object - MUST be the first data element! */
+    tcpsrv_t *pSrv; /* pointer back to my server (e.g. for callbacks) */
+    tcpLstnPortList_t *pLstnInfo;   /* pointer back to listener info */
+    netstrm_t *pStrm;
+    int iMsg;        /* index of next char to store in msg */
+    sbool bSuppOctetFram;   /**< copy from listener, to speed up access */
+    sbool bSPFramingFix;
+    enum {
+        eAtStrtFram,
+        eInOctetCnt,
+        eInMsg,
+        eInMsgTruncating
+    } inputState;       /* our current state */
+    int iOctetsRemain;  /* Number of Octets remaining in message */
+    TCPFRAMINGMODE eFraming;
+    uchar *pMsg;        /* message (fragment) received */
+    prop_t *fromHost;   /* host name we received messages from */
+    prop_t *fromHostIP;
+    void *pUsr;     /* a user-pointer */
+    rsRetVal (*DoSubmitMessage)(tcps_sess_t*, uchar*, int); /* submit message callback */
+    int iMaxLine;       /* fast lookup buffer for config property */
+    pthread_mutex_t mut;
 };
 
 
 /* interfaces */
 BEGINinterface(tcps_sess) /* name must also be changed in ENDinterface macro! */
-	INTERFACEObjDebugPrint(tcps_sess);
-	rsRetVal (*Construct)(tcps_sess_t **ppThis);
-	rsRetVal (*ConstructFinalize)(tcps_sess_t __attribute__((unused)) *pThis);
-	rsRetVal (*Destruct)(tcps_sess_t **ppThis);
-	rsRetVal (*PrepareClose)(tcps_sess_t *pThis);
-	rsRetVal (*Close)(tcps_sess_t *pThis);
-	rsRetVal (*DataRcvd)(tcps_sess_t *pThis, char *pData, size_t iLen);
-	/* set methods */
-	rsRetVal (*SetTcpsrv)(tcps_sess_t *pThis, struct tcpsrv_s *pSrv);
-	rsRetVal (*SetLstnInfo)(tcps_sess_t *pThis, tcpLstnPortList_t *pLstnInfo);
-	rsRetVal (*SetUsrP)(tcps_sess_t*, void*);
-	rsRetVal (*SetHost)(tcps_sess_t *pThis, uchar*);
-	rsRetVal (*SetHostIP)(tcps_sess_t *pThis, prop_t*);
-	rsRetVal (*SetStrm)(tcps_sess_t *pThis, netstrm_t*);
-	rsRetVal (*SetMsgIdx)(tcps_sess_t *pThis, int);
-	rsRetVal (*SetOnMsgReceive)(tcps_sess_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar*, int));
+    INTERFACEObjDebugPrint(tcps_sess);
+    rsRetVal (*Construct)(tcps_sess_t **ppThis);
+    rsRetVal (*ConstructFinalize)(tcps_sess_t __attribute__((unused)) *pThis);
+    rsRetVal (*Destruct)(tcps_sess_t **ppThis);
+    rsRetVal (*PrepareClose)(tcps_sess_t *pThis);
+    rsRetVal (*Close)(tcps_sess_t *pThis);
+    rsRetVal (*DataRcvd)(tcps_sess_t *pThis, char *pData, size_t iLen);
+    /* set methods */
+    rsRetVal (*SetTcpsrv)(tcps_sess_t *pThis, struct tcpsrv_s *pSrv);
+    rsRetVal (*SetLstnInfo)(tcps_sess_t *pThis, tcpLstnPortList_t *pLstnInfo);
+    rsRetVal (*SetUsrP)(tcps_sess_t*, void*);
+    rsRetVal (*SetHost)(tcps_sess_t *pThis, uchar*);
+    rsRetVal (*SetHostIP)(tcps_sess_t *pThis, prop_t*);
+    rsRetVal (*SetStrm)(tcps_sess_t *pThis, netstrm_t*);
+    rsRetVal (*SetMsgIdx)(tcps_sess_t *pThis, int);
+    rsRetVal (*SetOnMsgReceive)(tcps_sess_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t*, uchar*, int));
 ENDinterface(tcps_sess)
 #define tcps_sessCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
 /* interface changes

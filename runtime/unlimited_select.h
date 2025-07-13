@@ -21,7 +21,7 @@
  * limitations under the License.
  */
 
-#ifndef	UNLIMITED_SELECT_H_INCLUDED
+#ifndef UNLIMITED_SELECT_H_INCLUDED
 #define UNLIMITED_SELECT_H_INCLUDED
 
 #include <string.h>
@@ -36,10 +36,10 @@
 
 #ifdef USE_UNLIMITED_SELECT
 static inline void freeFdSet(fd_set *p) {
-	free(p);
+    free(p);
 }
 #else
-#	define freeFdSet(x)
+#   define freeFdSet(x)
 #endif
 
 #endif /* #ifndef UNLIMITED_SELECT_H_INCLUDED */

@@ -25,11 +25,11 @@
 
 /* interfaces */
 BEGINinterface(zstdw) /* name must also be changed in ENDinterface macro! */
-	rsRetVal (*doStrmWrite)(strm_t *pThis, uchar *const pBuf, const size_t lenBuf, const int bFlush,
-		rsRetVal (*strmPhysWrite)(strm_t *pThis, uchar *pBuf, size_t lenBuf) );
-	rsRetVal (*doCompressFinish)(strm_t *pThis,
-		rsRetVal (*Destruct)(strm_t *pThis, uchar *pBuf, size_t lenBuf) );
-	rsRetVal (*Destruct)(strm_t *pThis);
+    rsRetVal (*doStrmWrite)(strm_t *pThis, uchar *const pBuf, const size_t lenBuf, const int bFlush,
+        rsRetVal (*strmPhysWrite)(strm_t *pThis, uchar *pBuf, size_t lenBuf) );
+    rsRetVal (*doCompressFinish)(strm_t *pThis,
+        rsRetVal (*Destruct)(strm_t *pThis, uchar *pBuf, size_t lenBuf) );
+    rsRetVal (*Destruct)(strm_t *pThis);
 ENDinterface(zstdw)
 #define zstdwCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

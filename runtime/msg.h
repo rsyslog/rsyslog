@@ -25,8 +25,8 @@
  */
 #include "template.h" /* this is a quirk, but these two are too interdependant... */
 
-#ifndef	MSG_H_INCLUDED
-#define	MSG_H_INCLUDED 1
+#ifndef MSG_H_INCLUDED
+#define MSG_H_INCLUDED 1
 
 #include <pthread.h>
 #include <libestr.h>
@@ -58,105 +58,105 @@
  * why this is the case.
  */
 struct msg {
-	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	flowControl_t flowCtlType;
-	/**< type of flow control we can apply, for enqueueing, needs not to be persisted because
-				        once data has entered the queue, this property is no longer needed. */
-	pthread_mutex_t mut;
-	int	iRefCount;	/* reference counter (0 = unused) */
-	sbool	bParseSuccess;	/* set to reflect state of last executed higher level parser */
-	unsigned short	iSeverity;/* the severity  */
-	unsigned short	iFacility;/* Facility code */
-	int offAfterPRI;	/* offset, at which raw message WITHOUT PRI part starts in pszRawMsg */
-	int offMSG;		/* offset at which the MSG part starts in pszRawMsg */
-	short	iProtocolVersion;/* protocol version of message received 0 - legacy, 1 syslog-protocol) */
-	int	msgFlags;	/* flags associated with this message */
-	int	iLenRawMsg;	/* length of raw message */
-	int	iLenMSG;	/* Length of the MSG part */
-	int	iLenTAG;	/* Length of the TAG part */
-	int	iLenHOSTNAME;	/* Length of HOSTNAME */
-	int	iLenPROGNAME;	/* Length of PROGNAME (-1 = not yet set) */
-	uchar	*pszRawMsg;	/* message as it was received on the wire. This is important in case we
-				 * need to preserve cryptographic verifiers.  */
-	uchar	*pszHOSTNAME;	/* HOSTNAME from syslog message */
-	char *pszRcvdAt3164;	/* time as RFC3164 formatted string (always 15 characters) */
-	char *pszRcvdAt3339;	/* time as RFC3164 formatted string (32 characters at most) */
-	char *pszRcvdAt_MySQL;	/* rcvdAt as MySQL formatted string (always 14 characters) */
-	char *pszRcvdAt_PgSQL;  /* rcvdAt as PgSQL formatted string (always 21 characters) */
-	char *pszTIMESTAMP3164;	/* TIMESTAMP as RFC3164 formatted string (always 15 characters) */
-	char *pszTIMESTAMP3339;	/* TIMESTAMP as RFC3339 formatted string (32 characters at most) */
-	char *pszTIMESTAMP_MySQL;/* TIMESTAMP as MySQL formatted string (always 14 characters) */
-	char *pszTIMESTAMP_PgSQL;/* TIMESTAMP as PgSQL formatted string (always 21 characters) */
-	uchar *pszStrucData;    /* STRUCTURED-DATA */
-	uint16_t lenStrucData;	/* (cached) length of STRUCTURED-DATA */
-	cstr_t *pCSAPPNAME;	/* APP-NAME */
-	cstr_t *pCSPROCID;	/* PROCID */
-	cstr_t *pCSMSGID;	/* MSGID */
-	prop_t *pInputName;	/* input name property */
-	prop_t *pRcvFromIP;	/* IP of system message was received from */
-	union {
-		prop_t *pRcvFrom;/* name of system message was received from */
-		struct sockaddr_storage *pfrominet; /* unresolved name */
-	} rcvFrom;
+    BEGINobjInstance;   /* Data to implement generic object - MUST be the first data element! */
+    flowControl_t flowCtlType;
+    /**< type of flow control we can apply, for enqueueing, needs not to be persisted because
+                        once data has entered the queue, this property is no longer needed. */
+    pthread_mutex_t mut;
+    int iRefCount;  /* reference counter (0 = unused) */
+    sbool   bParseSuccess;  /* set to reflect state of last executed higher level parser */
+    unsigned short  iSeverity;/* the severity  */
+    unsigned short  iFacility;/* Facility code */
+    int offAfterPRI;    /* offset, at which raw message WITHOUT PRI part starts in pszRawMsg */
+    int offMSG;     /* offset at which the MSG part starts in pszRawMsg */
+    short   iProtocolVersion;/* protocol version of message received 0 - legacy, 1 syslog-protocol) */
+    int msgFlags;   /* flags associated with this message */
+    int iLenRawMsg; /* length of raw message */
+    int iLenMSG;    /* Length of the MSG part */
+    int iLenTAG;    /* Length of the TAG part */
+    int iLenHOSTNAME;   /* Length of HOSTNAME */
+    int iLenPROGNAME;   /* Length of PROGNAME (-1 = not yet set) */
+    uchar   *pszRawMsg; /* message as it was received on the wire. This is important in case we
+                 * need to preserve cryptographic verifiers.  */
+    uchar   *pszHOSTNAME;   /* HOSTNAME from syslog message */
+    char *pszRcvdAt3164;    /* time as RFC3164 formatted string (always 15 characters) */
+    char *pszRcvdAt3339;    /* time as RFC3164 formatted string (32 characters at most) */
+    char *pszRcvdAt_MySQL;  /* rcvdAt as MySQL formatted string (always 14 characters) */
+    char *pszRcvdAt_PgSQL;  /* rcvdAt as PgSQL formatted string (always 21 characters) */
+    char *pszTIMESTAMP3164; /* TIMESTAMP as RFC3164 formatted string (always 15 characters) */
+    char *pszTIMESTAMP3339; /* TIMESTAMP as RFC3339 formatted string (32 characters at most) */
+    char *pszTIMESTAMP_MySQL;/* TIMESTAMP as MySQL formatted string (always 14 characters) */
+    char *pszTIMESTAMP_PgSQL;/* TIMESTAMP as PgSQL formatted string (always 21 characters) */
+    uchar *pszStrucData;    /* STRUCTURED-DATA */
+    uint16_t lenStrucData;  /* (cached) length of STRUCTURED-DATA */
+    cstr_t *pCSAPPNAME; /* APP-NAME */
+    cstr_t *pCSPROCID;  /* PROCID */
+    cstr_t *pCSMSGID;   /* MSGID */
+    prop_t *pInputName; /* input name property */
+    prop_t *pRcvFromIP; /* IP of system message was received from */
+    union {
+        prop_t *pRcvFrom;/* name of system message was received from */
+        struct sockaddr_storage *pfrominet; /* unresolved name */
+    } rcvFrom;
 
-	ruleset_t *pRuleset;	/* ruleset to be used for processing this message */
-	time_t ttGenTime;	/* time msg object was generated, same as tRcvdAt, but a Unix timestamp.
-				   While this field looks redundant, it is required because a Unix timestamp
-				   is used at later processing stages (namely in the output arena). Thanks to
-				   the subleties of how time is defined, there is no reliable way to reconstruct
-				   the Unix timestamp from the syslogTime fields (in practice, we may be close
-				   enough to reliable, but I prefer to leave the subtle things to the OS, where
-				   it obviously is solved in way or another...). */
-	struct syslogTime tRcvdAt;/* time the message entered this program */
-	struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
-	struct json_object *json;
-	struct json_object *localvars;
-	/* some fixed-size buffers to save malloc()/free() for frequently used fields (from the default templates) */
-	uchar szRawMsg[CONF_RAWMSG_BUFSIZE];
-	/* most messages are small, and these are stored here (without malloc/free!) */
-	uchar szHOSTNAME[CONF_HOSTNAME_BUFSIZE];
-	union {
-		uchar	*ptr;	/* pointer to progname value */
-		uchar	szBuf[CONF_PROGNAME_BUFSIZE];
-	} PROGNAME;
-	union {
-		uchar	*pszTAG;	/* pointer to tag value */
-		uchar	szBuf[CONF_TAG_BUFSIZE];
-	} TAG;
-	char pszTimestamp3164[CONST_LEN_TIMESTAMP_3164 + 1];
-	char pszTimestamp3339[CONST_LEN_TIMESTAMP_3339 + 1];
-	char pszTIMESTAMP_SecFrac[7];
-	/* Note: a pointer is 64 bits/8 char, so this is actually fewer than a pointer! */
-	char pszRcvdAt_SecFrac[7];
-	/* same as above. Both are fractional seconds for their respective timestamp */
-	char pszTIMESTAMP_Unix[12]; /* almost as small as a pointer! */
-	char pszRcvdAt_Unix[12];
-	char dfltTZ[8];	    /* 7 chars max, less overhead than ptr! */
-	uchar *pszUUID; /* The message's UUID */
+    ruleset_t *pRuleset;    /* ruleset to be used for processing this message */
+    time_t ttGenTime;   /* time msg object was generated, same as tRcvdAt, but a Unix timestamp.
+                   While this field looks redundant, it is required because a Unix timestamp
+                   is used at later processing stages (namely in the output arena). Thanks to
+                   the subleties of how time is defined, there is no reliable way to reconstruct
+                   the Unix timestamp from the syslogTime fields (in practice, we may be close
+                   enough to reliable, but I prefer to leave the subtle things to the OS, where
+                   it obviously is solved in way or another...). */
+    struct syslogTime tRcvdAt;/* time the message entered this program */
+    struct syslogTime tTIMESTAMP;/* (parsed) value of the timestamp */
+    struct json_object *json;
+    struct json_object *localvars;
+    /* some fixed-size buffers to save malloc()/free() for frequently used fields (from the default templates) */
+    uchar szRawMsg[CONF_RAWMSG_BUFSIZE];
+    /* most messages are small, and these are stored here (without malloc/free!) */
+    uchar szHOSTNAME[CONF_HOSTNAME_BUFSIZE];
+    union {
+        uchar   *ptr;   /* pointer to progname value */
+        uchar   szBuf[CONF_PROGNAME_BUFSIZE];
+    } PROGNAME;
+    union {
+        uchar   *pszTAG;    /* pointer to tag value */
+        uchar   szBuf[CONF_TAG_BUFSIZE];
+    } TAG;
+    char pszTimestamp3164[CONST_LEN_TIMESTAMP_3164 + 1];
+    char pszTimestamp3339[CONST_LEN_TIMESTAMP_3339 + 1];
+    char pszTIMESTAMP_SecFrac[7];
+    /* Note: a pointer is 64 bits/8 char, so this is actually fewer than a pointer! */
+    char pszRcvdAt_SecFrac[7];
+    /* same as above. Both are fractional seconds for their respective timestamp */
+    char pszTIMESTAMP_Unix[12]; /* almost as small as a pointer! */
+    char pszRcvdAt_Unix[12];
+    char dfltTZ[8];     /* 7 chars max, less overhead than ptr! */
+    uchar *pszUUID; /* The message's UUID */
 };
 
 
 /* message flags (msgFlags), not an enum for historical reasons */
-#define NOFLAG		0x000
+#define NOFLAG      0x000
 /* no flag is set (to be used when a flag must be specified and none is required) */
-#define INTERNAL_MSG	0x001
+#define INTERNAL_MSG    0x001
 /* msg generated by logmsgInternal() --> special handling */
 /* 0x002 not used because it was previously a known value - rgerhards, 2008-10-09 */
-#define IGNDATE		0x004
+#define IGNDATE     0x004
 /* ignore, if given, date in message and use date of reception as msg date */
-#define MARK		0x008
+#define MARK        0x008
 /* this message is a mark */
-#define NEEDS_PARSING	0x010
+#define NEEDS_PARSING   0x010
 /* raw message, must be parsed before processing can be done */
-#define PARSE_HOSTNAME	0x020
+#define PARSE_HOSTNAME  0x020
 /* parse the hostname during message parsing */
-#define NEEDS_DNSRESOL	0x040
+#define NEEDS_DNSRESOL  0x040
 /* fromhost address is unresolved and must be locked up via DNS reverse lookup first */
-#define NEEDS_ACLCHK_U	0x080
+#define NEEDS_ACLCHK_U  0x080
 /* check UDP ACLs after DNS resolution has been done in main queue consumer */
-#define NO_PRI_IN_RAW	0x100
+#define NO_PRI_IN_RAW   0x100
 /* rawmsg does not include a PRI (Solaris!), but PRI is already set correctly in the msg object */
-#define PRESERVE_CASE	0x200
+#define PRESERVE_CASE   0x200
 /* preserve case in fromhost */
 
 /* (syslog) protocol types */
@@ -200,7 +200,7 @@ void MsgSetRawMsgWOSize(smsg_t *pMsg, char* pszRawMsg);
 void ATTR_NONNULL() MsgSetRawMsg(smsg_t *const pThis, const char*const pszRawMsg, const size_t lenMsg);
 rsRetVal MsgReplaceMSG(smsg_t *pThis, const uchar* pszMSG, int lenMSG);
 uchar *MsgGetProp(smsg_t *pMsg, struct templateEntry *pTpe, msgPropDescr_t *pProp, rs_size_t *pPropLen,
-	unsigned short *pbMustBeFreed, struct syslogTime *ttNow);
+    unsigned short *pbMustBeFreed, struct syslogTime *ttNow);
 void getTAG(smsg_t *pM, uchar **ppBuf, int *piLen, sbool);
 const char *getTimeReported(smsg_t *pM, enum tplFormatTypes eFmt);
 const char *getPRI(smsg_t *pMsg);
@@ -267,9 +267,9 @@ void msgSetPRI(smsg_t *const __restrict__ pMsg, syslog_pri_t pri);
 static inline void __attribute__((unused))
 MsgSetRawMsgSize(smsg_t *const __restrict__ pMsg, const size_t newLen)
 {
-	assert(newLen <= (size_t) pMsg->iLenRawMsg);
-	pMsg->iLenRawMsg = newLen;
-	pMsg->pszRawMsg[newLen] = '\0';
+    assert(newLen <= (size_t) pMsg->iLenRawMsg);
+    pMsg->iLenRawMsg = newLen;
+    pMsg->pszRawMsg[newLen] = '\0';
 }
 
 /* get the ruleset that is associated with the ruleset.

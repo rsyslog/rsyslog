@@ -24,9 +24,9 @@
  * Copyright (c) 2010, Oracle and/or its affiliates. All rights reserved.
  */
 #ifndef _IFADDRS_H
-#define	_IFADDRS_H
+#define _IFADDRS_H
 
-#ifdef	__cplusplus
+#ifdef  __cplusplus
 extern "C" {
 #endif
 
@@ -38,35 +38,35 @@ extern "C" {
  */
 #if defined(_AIX)
 struct ifaddrs_rsys {
-	struct ifaddrs_rsys	*ifa_next;	/* Pointer to the next structure. */
+    struct ifaddrs_rsys *ifa_next;  /* Pointer to the next structure. */
 #else
 struct ifaddrs {
-	struct ifaddrs	*ifa_next;	/* Pointer to the next structure. */
+    struct ifaddrs  *ifa_next;  /* Pointer to the next structure. */
 #endif
-	char		*ifa_name;	/* Name of this network interface. */
-	uint64_t	ifa_flags;	/* Flags as from SIOCGLIFFLAGS ioctl. */
-	struct sockaddr	*ifa_addr;	/* Network address of this interface. */
-	struct sockaddr	*ifa_netmask;	/* Netmask of this interface. */
-	union {
-		/*
-		 * At most one of the following two is valid.  If the
-		 * IFF_BROADCAST bit is set in `ifa_flags', then
-		 * `ifa_broadaddr' is valid.  If the IFF_POINTOPOINT bit is
-		 * set, then `ifa_dstaddr' is valid. It is never the case that
-		 * both these bits are set at once.
-		 */
-		struct sockaddr	*ifu_broadaddr;
-		struct sockaddr	*ifu_dstaddr;
-	} ifa_ifu;
-	void		*ifa_data; /* Address-specific data (may be unused). */
+    char        *ifa_name;  /* Name of this network interface. */
+    uint64_t    ifa_flags;  /* Flags as from SIOCGLIFFLAGS ioctl. */
+    struct sockaddr *ifa_addr;  /* Network address of this interface. */
+    struct sockaddr *ifa_netmask;   /* Netmask of this interface. */
+    union {
+        /*
+         * At most one of the following two is valid.  If the
+         * IFF_BROADCAST bit is set in `ifa_flags', then
+         * `ifa_broadaddr' is valid.  If the IFF_POINTOPOINT bit is
+         * set, then `ifa_dstaddr' is valid. It is never the case that
+         * both these bits are set at once.
+         */
+        struct sockaddr *ifu_broadaddr;
+        struct sockaddr *ifu_dstaddr;
+    } ifa_ifu;
+    void        *ifa_data; /* Address-specific data (may be unused). */
 /*
  * This may have been defined in <net/if.h>.
  */
 #ifndef ifa_broadaddr
-#define	ifa_broadaddr	ifa_ifu.ifu_broadaddr	/* broadcast address */
+#define ifa_broadaddr   ifa_ifu.ifu_broadaddr   /* broadcast address */
 #endif
 #ifndef ifa_dstaddr
-#define	ifa_dstaddr	ifa_ifu.ifu_dstaddr	/* other end of p-to-p link */
+#define ifa_dstaddr ifa_ifu.ifu_dstaddr /* other end of p-to-p link */
 #endif
 };
 
@@ -92,9 +92,9 @@ extern void freeifaddrs(struct ifaddrs *);
 #endif
 
 
-#ifdef	__cplusplus
+#ifdef  __cplusplus
 }
 #endif
 
-#endif	/* _IFADDRS_H */
+#endif  /* _IFADDRS_H */
 #endif /* HAVE_GETIFADDRS */

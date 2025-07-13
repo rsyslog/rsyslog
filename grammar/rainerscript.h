@@ -28,26 +28,26 @@
 
 #define LOG_NFACILITIES 24+1 /* we copy&paste this as including rsyslog.h gets us in off64_t trouble... :-( */
 #define CNFFUNC_MAX_ARGS 32
-	/**< maximum number of arguments that any function can have (among
-	 *   others, this is used to size data structures).
-	 */
+    /**< maximum number of arguments that any function can have (among
+     *   others, this is used to size data structures).
+     */
 
 enum cnfobjType {
-	CNFOBJ_ACTION,
-	CNFOBJ_RULESET,
-	CNFOBJ_GLOBAL,
-	CNFOBJ_INPUT,
-	CNFOBJ_MODULE,
-	CNFOBJ_TPL,
-	CNFOBJ_PROPERTY,
-	CNFOBJ_CONSTANT,
-	CNFOBJ_MAINQ,
-	CNFOBJ_LOOKUP_TABLE,
-	CNFOBJ_PARSER,
-	CNFOBJ_TIMEZONE,
-	CNFOBJ_DYN_STATS,
-	CNFOBJ_PERCTILE_STATS,
-	CNFOBJ_INVALID = 0
+    CNFOBJ_ACTION,
+    CNFOBJ_RULESET,
+    CNFOBJ_GLOBAL,
+    CNFOBJ_INPUT,
+    CNFOBJ_MODULE,
+    CNFOBJ_TPL,
+    CNFOBJ_PROPERTY,
+    CNFOBJ_CONSTANT,
+    CNFOBJ_MAINQ,
+    CNFOBJ_LOOKUP_TABLE,
+    CNFOBJ_PARSER,
+    CNFOBJ_TIMEZONE,
+    CNFOBJ_DYN_STATS,
+    CNFOBJ_PERCTILE_STATS,
+    CNFOBJ_INVALID = 0
 };
 
 const char* cnfobjType2str(enum cnfobjType ot);
@@ -60,38 +60,38 @@ const char* cnfobjType2str(enum cnfobjType ot);
  * term, var shall be replaced by struct svar.
  */
 struct svar{
-	union {
-		es_str_t *estr;
-		struct cnfarray *ar;
-		long long n;
-		struct json_object *json;
-	} d;
-	char datatype; /* 'N' number, 'S' string, 'J' JSON, 'A' array
-			* Note: 'A' is only supported during config phase
-			*/
+    union {
+        es_str_t *estr;
+        struct cnfarray *ar;
+        long long n;
+        struct json_object *json;
+    } d;
+    char datatype; /* 'N' number, 'S' string, 'J' JSON, 'A' array
+            * Note: 'A' is only supported during config phase
+            */
 };
 
 struct cnfobj {
-	enum cnfobjType objType;
-	struct nvlst *nvlst;
-	struct objlst *subobjs;
-	struct cnfstmt *script;
+    enum cnfobjType objType;
+    struct nvlst *nvlst;
+    struct objlst *subobjs;
+    struct cnfstmt *script;
 };
 
 struct objlst {
-	struct objlst *next;
-	struct cnfobj *obj;
+    struct objlst *next;
+    struct cnfobj *obj;
 };
 
 struct nvlst {
-	struct nvlst *next;
-	es_str_t *name;
-	struct svar val;
-	unsigned char bUsed;
-	/**< was this node used during config processing? If not, this
-	 *   indicates an error. After all, the user specified a setting
-	 *   that the software does not know.
-	 */
+    struct nvlst *next;
+    es_str_t *name;
+    struct svar val;
+    unsigned char bUsed;
+    /**< was this node used during config processing? If not, this
+     *   indicates an error. After all, the user specified a setting
+     *   that the software does not know.
+     */
 };
 
 /* the following structures support expressions, and may (very much later
@@ -112,7 +112,7 @@ struct nvlst {
 #define S_PROPFILT 4002
 #define S_IF 4003
 #define S_ACT 4004
-#define S_NOP 4005	/* usually used to disable some statement */
+#define S_NOP 4005  /* usually used to disable some statement */
 #define S_SET 4006
 #define S_UNSET 4007
 #define S_CALL 4008
@@ -126,169 +126,169 @@ const char* cnfFiltType2str(const enum cnfFiltType filttype);
 
 
 struct cnfstmt {
-	unsigned nodetype;
-	struct cnfstmt *next;
-	uchar *printable; /* printable text for debugging */
-	union {
-		struct {
-			struct cnfexpr *expr;
-			struct cnfstmt *t_then;
-			struct cnfstmt *t_else;
-		} s_if;
-		struct {
-			uchar *varname;
-			struct cnfexpr *expr;
-			int force_reset;
-		} s_set;
-		struct {
-			uchar *varname;
-		} s_unset;
-		struct {
-			es_str_t *name;
-			struct cnfstmt *stmt;
-			ruleset_t *ruleset;	/* non-NULL if the ruleset has a queue assigned */
-		} s_call;
-		struct {
-			struct cnfexpr *expr;
-		} s_call_ind;
-		struct {
-			uchar pmask[LOG_NFACILITIES+1];	/* priority mask */
-			struct cnfstmt *t_then;
-			struct cnfstmt *t_else;
-		} s_prifilt;
-		struct {
-			fiop_t operation;
-			regex_t *regex_cache;/* cache for compiled REs, if used */
-			struct cstr_s *pCSCompValue;/* value to "compare" against */
-			sbool isNegated;
-			msgPropDescr_t prop; /* requested property */
-			struct cnfstmt *t_then;
-			struct cnfstmt *t_else;
-		} s_propfilt;
-		struct action_s *act;
-	struct {
-			struct cnfitr *iter;
-			struct cnfstmt *body;
-		} s_foreach;
-	struct {
-			lookup_ref_t *table;
-			uchar *table_name;
-			uchar *stub_value;
-		} s_reload_lookup_table;
-	} d;
+    unsigned nodetype;
+    struct cnfstmt *next;
+    uchar *printable; /* printable text for debugging */
+    union {
+        struct {
+            struct cnfexpr *expr;
+            struct cnfstmt *t_then;
+            struct cnfstmt *t_else;
+        } s_if;
+        struct {
+            uchar *varname;
+            struct cnfexpr *expr;
+            int force_reset;
+        } s_set;
+        struct {
+            uchar *varname;
+        } s_unset;
+        struct {
+            es_str_t *name;
+            struct cnfstmt *stmt;
+            ruleset_t *ruleset; /* non-NULL if the ruleset has a queue assigned */
+        } s_call;
+        struct {
+            struct cnfexpr *expr;
+        } s_call_ind;
+        struct {
+            uchar pmask[LOG_NFACILITIES+1]; /* priority mask */
+            struct cnfstmt *t_then;
+            struct cnfstmt *t_else;
+        } s_prifilt;
+        struct {
+            fiop_t operation;
+            regex_t *regex_cache;/* cache for compiled REs, if used */
+            struct cstr_s *pCSCompValue;/* value to "compare" against */
+            sbool isNegated;
+            msgPropDescr_t prop; /* requested property */
+            struct cnfstmt *t_then;
+            struct cnfstmt *t_else;
+        } s_propfilt;
+        struct action_s *act;
+    struct {
+            struct cnfitr *iter;
+            struct cnfstmt *body;
+        } s_foreach;
+    struct {
+            lookup_ref_t *table;
+            uchar *table_name;
+            uchar *stub_value;
+        } s_reload_lookup_table;
+    } d;
 };
 
 struct cnfexpr {
-	unsigned nodetype;
-	struct cnfexpr *l;
-	struct cnfexpr *r;
+    unsigned nodetype;
+    struct cnfexpr *l;
+    struct cnfexpr *r;
 } __attribute__((aligned (8)));
 
 struct cnfitr {
-	char* var;
-	struct cnfexpr* collection;
+    char* var;
+    struct cnfexpr* collection;
 } __attribute__((aligned (8)));
 
 struct cnfnumval {
-	unsigned nodetype;
-	long long val;
+    unsigned nodetype;
+    long long val;
 } __attribute__((aligned (8)));
 
 struct cnfstringval {
-	unsigned nodetype;
-	es_str_t *estr;
+    unsigned nodetype;
+    es_str_t *estr;
 } __attribute__((aligned (8)));
 
 struct cnfvar {
-	unsigned nodetype;
-	char *name;
-	msgPropDescr_t prop;
+    unsigned nodetype;
+    char *name;
+    msgPropDescr_t prop;
 } __attribute__((aligned (8)));
 
 struct cnfarray {
-	unsigned nodetype;
-	int nmemb;
-	es_str_t **arr;
+    unsigned nodetype;
+    int nmemb;
+    es_str_t **arr;
 } __attribute__((aligned (8)));
 
 struct cnffparamlst {
-	unsigned nodetype; /* P */
-	struct cnffparamlst *next;
-	struct cnfexpr *expr;
+    unsigned nodetype; /* P */
+    struct cnffparamlst *next;
+    struct cnfexpr *expr;
 } __attribute__((aligned (8)));
 
 enum cnffuncid {
-	CNFFUNC_INVALID = 0, /**< defunct entry, do not use (should normally not be present) */
-	CNFFUNC_NAME = 1,   /**< use name to call function (for future use) */
-	CNFFUNC_STRLEN,
-	CNFFUNC_SUBSTRING,
-	CNFFUNC_GETENV,
-	CNFFUNC_TOLOWER,
-	CNFFUNC_CSTR,
-	CNFFUNC_CNUM,
-	CNFFUNC_RE_MATCH,
-	CNFFUNC_RE_EXTRACT,
-	CNFFUNC_FIELD,
-	CNFFUNC_PRIFILT,
-	CNFFUNC_LOOKUP,
-	CNFFUNC_EXEC_TEMPLATE,
-	CNFFUNC_REPLACE,
-	CNFFUNC_WRAP,
-	CNFFUNC_RANDOM,
-	CNFFUNC_DYN_INC,
-	CNFFUNC_IPV42NUM,
-	CNFFUNC_NUM2IPV4,
-	CNFFUNC_INT2HEX,
-	CNFFUNC_LTRIM,
-	CNFFUNC_RTRIM,
-	CNFFUNC_FORMAT_TIME,
-	CNFFUNC_PARSE_TIME,
-	CNFFUNC_PARSE_JSON,
-	CNFFUNC_GET_PROPERTY,
-	CNFFUNC_PREVIOUS_ACTION_SUSPENDED,
-	CNFFUNC_SCRIPT_ERROR,
-	CNFFUNC_HTTP_REQUEST,
-	CNFFUNC_IS_TIME
+    CNFFUNC_INVALID = 0, /**< defunct entry, do not use (should normally not be present) */
+    CNFFUNC_NAME = 1,   /**< use name to call function (for future use) */
+    CNFFUNC_STRLEN,
+    CNFFUNC_SUBSTRING,
+    CNFFUNC_GETENV,
+    CNFFUNC_TOLOWER,
+    CNFFUNC_CSTR,
+    CNFFUNC_CNUM,
+    CNFFUNC_RE_MATCH,
+    CNFFUNC_RE_EXTRACT,
+    CNFFUNC_FIELD,
+    CNFFUNC_PRIFILT,
+    CNFFUNC_LOOKUP,
+    CNFFUNC_EXEC_TEMPLATE,
+    CNFFUNC_REPLACE,
+    CNFFUNC_WRAP,
+    CNFFUNC_RANDOM,
+    CNFFUNC_DYN_INC,
+    CNFFUNC_IPV42NUM,
+    CNFFUNC_NUM2IPV4,
+    CNFFUNC_INT2HEX,
+    CNFFUNC_LTRIM,
+    CNFFUNC_RTRIM,
+    CNFFUNC_FORMAT_TIME,
+    CNFFUNC_PARSE_TIME,
+    CNFFUNC_PARSE_JSON,
+    CNFFUNC_GET_PROPERTY,
+    CNFFUNC_PREVIOUS_ACTION_SUSPENDED,
+    CNFFUNC_SCRIPT_ERROR,
+    CNFFUNC_HTTP_REQUEST,
+    CNFFUNC_IS_TIME
 };
 
 typedef struct cnffunc cnffunc_t;
 typedef void (*rscriptFuncPtr) (cnffunc_t *, struct svar *, void *, wti_t *);
 
 struct cnffunc {
-	unsigned nodetype;
-	es_str_t *fname;
-	unsigned short nParams;
-	rscriptFuncPtr fPtr;
-	void *funcdata;	/* global data for function-specific use (e.g. compiled regex) */
-	uint8_t destructable_funcdata;
-	struct cnfexpr *expr[];
+    unsigned nodetype;
+    es_str_t *fname;
+    unsigned short nParams;
+    rscriptFuncPtr fPtr;
+    void *funcdata; /* global data for function-specific use (e.g. compiled regex) */
+    uint8_t destructable_funcdata;
+    struct cnfexpr *expr[];
 } __attribute__((aligned (8)));
 
 
 struct cnffuncexists {
-	unsigned nodetype;
-	const char *varname;
-	msgPropDescr_t prop;
+    unsigned nodetype;
+    const char *varname;
+    msgPropDescr_t prop;
 } __attribute__((aligned (8)));
 
 struct scriptFunct {
-	const char *fname;
-	unsigned short minParams;
-	unsigned short maxParams;
-	rscriptFuncPtr fPtr;
-	rsRetVal (*initFunc) (struct cnffunc *);
-	void (*destruct) (struct cnffunc *);
-	/* currently no optimizer entrypoint, may be added later.
-	 * Since the optimizer needs metadata about functions, it does
-	 * not seem practical to add such a function at the current state
-	 */
+    const char *fname;
+    unsigned short minParams;
+    unsigned short maxParams;
+    rscriptFuncPtr fPtr;
+    rsRetVal (*initFunc) (struct cnffunc *);
+    void (*destruct) (struct cnffunc *);
+    /* currently no optimizer entrypoint, may be added later.
+     * Since the optimizer needs metadata about functions, it does
+     * not seem practical to add such a function at the current state
+     */
 };
 
 
 /* future extensions
 <code>
 struct x {
-	int nodetype;
+    int nodetype;
 };
 </code>
 */
@@ -337,37 +337,37 @@ struct x {
  * to care.
  */
 struct cnfparamdescr { /* first the param description */
-	const char *name;/**< configuration parameter name, e.g. "port" */
-	ecslCmdHdrlType type; /**< parameter type as defined by  enum cslCmdHdlrType */
-	unsigned flags; /**< flags describing important properties, e.g. if optional or mandatory */
+    const char *name;/**< configuration parameter name, e.g. "port" */
+    ecslCmdHdrlType type; /**< parameter type as defined by  enum cslCmdHdlrType */
+    unsigned flags; /**< flags describing important properties, e.g. if optional or mandatory */
 };
 /* flags for cnfparamdescr. if no flag is given parameter is optional.*/
-#define CNFPARAM_REQUIRED	0x0001 /**< signifies a mandatory parameter */
-#define CNFPARAM_DEPRECATED	0x0002 /**< signifies a deprecated parameter */
+#define CNFPARAM_REQUIRED   0x0001 /**< signifies a mandatory parameter */
+#define CNFPARAM_DEPRECATED 0x0002 /**< signifies a deprecated parameter */
 
 struct cnfparamblk { /* now the actual param block use in API calls */
-	unsigned short version;
-	unsigned short nParams;
-	struct cnfparamdescr *descr;
+    unsigned short version;
+    unsigned short nParams;
+    struct cnfparamdescr *descr;
 };
 #define CNFPARAMBLK_VERSION 1
-	/**< caller must have same version as engine -- else things may
-	 * be messed up. But note that we may support multiple versions
-	 * inside the engine, if at some later stage we want to do
-	 * that. -- rgerhards, 2011-07-15
-	 */
+    /**< caller must have same version as engine -- else things may
+     * be messed up. But note that we may support multiple versions
+     * inside the engine, if at some later stage we want to do
+     * that. -- rgerhards, 2011-07-15
+     */
 struct cnfparamvals { /* the values we obtained for param descr. */
-	struct svar val;
-	unsigned char bUsed;
+    struct svar val;
+    unsigned char bUsed;
 };
 
 struct funcData_prifilt {
-	uchar pmask[LOG_NFACILITIES+1];	/* priority mask */
+    uchar pmask[LOG_NFACILITIES+1]; /* priority mask */
 };
 
 /* script errno-like interface error codes: */
-#define RS_SCRIPT_EOK		0
-#define RS_SCRIPT_EINVAL	1
+#define RS_SCRIPT_EOK       0
+#define RS_SCRIPT_EINVAL    1
 
 void varFreeMembers(const struct svar *r);
 rsRetVal addMod2List(const int version, struct scriptFunct *functArray);
@@ -402,7 +402,7 @@ struct cnffparamlst * cnffparamlstNew(struct cnfexpr *expr, struct cnffparamlst 
 int cnfDoInclude(const char *name, const int optional);
 int cnfparamGetIdx(struct cnfparamblk *params, const char *name);
 struct cnfparamvals* nvlstGetParams(struct nvlst *lst, struct cnfparamblk *params,
-	       struct cnfparamvals *vals);
+           struct cnfparamvals *vals);
 void cnfparamsPrint(const struct cnfparamblk *params, const struct cnfparamvals *vals);
 int cnfparamvalsIsSet(struct cnfparamblk *params, struct cnfparamvals *vals);
 void varDelete(const struct svar *v);

@@ -54,27 +54,27 @@ DEF_OMOD_STATIC_DATA
 
 /* config variables */
 typedef struct _instanceData {
-	char *pszKey;
-	char *pszMmdbFile;
-	struct {
-		int     nmemb;
-		char **name;
-		char **varname;
-	} fieldList;
-	sbool reloadOnHup;
+    char *pszKey;
+    char *pszMmdbFile;
+    struct {
+        int     nmemb;
+        char **name;
+        char **varname;
+    } fieldList;
+    sbool reloadOnHup;
 } instanceData;
 
 typedef struct wrkrInstanceData {
-	instanceData *pData;
-	MMDB_s        mmdb;
-	pthread_mutex_t mmdbMutex;
-	sbool mmdb_is_open;
+    instanceData *pData;
+    MMDB_s        mmdb;
+    pthread_mutex_t mmdbMutex;
+    sbool mmdb_is_open;
 } wrkrInstanceData_t;
 
 struct modConfData_s {
-	/* our overall config object */
-	rsconf_t *pConf;
-	const char *container;
+    /* our overall config object */
+    rsconf_t *pConf;
+    const char *container;
 };
 
 /* modConf ptr to use for the current load process */
@@ -85,26 +85,26 @@ static modConfData_t *runModConf  = NULL;
 
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
-	{ "container", eCmdHdlrGetWord, 0 },
+    { "container", eCmdHdlrGetWord, 0 },
 };
 static struct cnfparamblk modpblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(modpdescr)/sizeof(struct cnfparamdescr),
-	  modpdescr
-	};
+    { CNFPARAMBLK_VERSION,
+      sizeof(modpdescr)/sizeof(struct cnfparamdescr),
+      modpdescr
+    };
 
 /* tables for interfacing with the v6 config system
  * action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-	{ "key",      eCmdHdlrGetWord, CNFPARAM_REQUIRED },
-	{ "mmdbfile", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
-	{ "fields",   eCmdHdlrArray,   CNFPARAM_REQUIRED },
-	{ "reloadonhup", eCmdHdlrBinary, 0 },
+    { "key",      eCmdHdlrGetWord, CNFPARAM_REQUIRED },
+    { "mmdbfile", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
+    { "fields",   eCmdHdlrArray,   CNFPARAM_REQUIRED },
+    { "reloadonhup", eCmdHdlrBinary, 0 },
 };
 static struct cnfparamblk actpblk = {
-	CNFPARAMBLK_VERSION,
-	sizeof(actpdescr)/sizeof(struct cnfparamdescr),
-	actpdescr
+    CNFPARAMBLK_VERSION,
+    sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+    actpdescr
 };
 
 
@@ -116,41 +116,41 @@ void close_mmdb(MMDB_s *mmdb);
 
 
 int open_mmdb(const char *file, MMDB_s *mmdb) {
-	int status = MMDB_open(file, MMDB_MODE_MMAP, mmdb);
-	if (MMDB_SUCCESS != status) {
-		dbgprintf("Can't open %s - %s\n", file, MMDB_strerror(status));
-		if (MMDB_IO_ERROR == status) {
-			dbgprintf("  IO error: %s\n", strerror(errno));
-		}
-		LogError(0, RS_RET_SUSPENDED, "maxminddb error: cannot open database file");
-		return RS_RET_SUSPENDED;
-	}
+    int status = MMDB_open(file, MMDB_MODE_MMAP, mmdb);
+    if (MMDB_SUCCESS != status) {
+        dbgprintf("Can't open %s - %s\n", file, MMDB_strerror(status));
+        if (MMDB_IO_ERROR == status) {
+            dbgprintf("  IO error: %s\n", strerror(errno));
+        }
+        LogError(0, RS_RET_SUSPENDED, "maxminddb error: cannot open database file");
+        return RS_RET_SUSPENDED;
+    }
 
-	return RS_RET_OK;
+    return RS_RET_OK;
 }
 
 void close_mmdb(MMDB_s *mmdb) {
-	MMDB_close(mmdb);
+    MMDB_close(mmdb);
 }
 
 static rsRetVal wrkr_reopen_mmdb(wrkrInstanceData_t *pWrkrData) {
-	DEFiRet;
-	pthread_mutex_lock(&pWrkrData->mmdbMutex);
-	LogMsg(0, NO_ERRCODE, LOG_INFO, "mmdblookup: reopening MMDB file");
-	if (pWrkrData->mmdb_is_open) close_mmdb(&pWrkrData->mmdb);
-	pWrkrData->mmdb_is_open = 0;
-	CHKiRet(open_mmdb(pWrkrData->pData->pszMmdbFile, &pWrkrData->mmdb));
-	pWrkrData->mmdb_is_open = 1;
+    DEFiRet;
+    pthread_mutex_lock(&pWrkrData->mmdbMutex);
+    LogMsg(0, NO_ERRCODE, LOG_INFO, "mmdblookup: reopening MMDB file");
+    if (pWrkrData->mmdb_is_open) close_mmdb(&pWrkrData->mmdb);
+    pWrkrData->mmdb_is_open = 0;
+    CHKiRet(open_mmdb(pWrkrData->pData->pszMmdbFile, &pWrkrData->mmdb));
+    pWrkrData->mmdb_is_open = 1;
 
 finalize_it:
-	pthread_mutex_unlock(&pWrkrData->mmdbMutex);
-	RETiRet;
+    pthread_mutex_unlock(&pWrkrData->mmdbMutex);
+    RETiRet;
 }
 
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
-	loadModConf = pModConf;
-	pModConf->pConf = pConf;
+    loadModConf = pModConf;
+    pModConf->pConf = pConf;
 ENDbeginCnfLoad
 
 BEGINendCnfLoad
@@ -163,12 +163,12 @@ ENDcheckCnf
 
 BEGINactivateCnf
 CODESTARTactivateCnf
-	runModConf = pModConf;
+    runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
 CODESTARTfreeCnf
-	free((void*)runModConf->container);
+    free((void*)runModConf->container);
 ENDfreeCnf
 
 
@@ -178,9 +178,9 @@ ENDcreateInstance
 
 BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
-	CHKiRet(open_mmdb(pData->pszMmdbFile, &pWrkrData->mmdb));
-	pWrkrData->mmdb_is_open = 1;
-	CHKiConcCtrl(pthread_mutex_init(&pWrkrData->mmdbMutex, NULL));
+    CHKiRet(open_mmdb(pData->pszMmdbFile, &pWrkrData->mmdb));
+    pWrkrData->mmdb_is_open = 1;
+    CHKiConcCtrl(pthread_mutex_init(&pWrkrData->mmdbMutex, NULL));
 finalize_it:
 ENDcreateWrkrInstance
 
@@ -192,134 +192,134 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	if(pData->fieldList.name != NULL) {
-		for(int i = 0 ; i < pData->fieldList.nmemb ; ++i) {
-			free(pData->fieldList.name[i]);
-			free(pData->fieldList.varname[i]);
-		}
-		free(pData->fieldList.name);
-		free(pData->fieldList.varname);
-	}
-	free(pData->pszKey);
-	free(pData->pszMmdbFile);
+    if(pData->fieldList.name != NULL) {
+        for(int i = 0 ; i < pData->fieldList.nmemb ; ++i) {
+            free(pData->fieldList.name[i]);
+            free(pData->fieldList.varname[i]);
+        }
+        free(pData->fieldList.name);
+        free(pData->fieldList.varname);
+    }
+    free(pData->pszKey);
+    free(pData->pszMmdbFile);
 ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
-	if (pWrkrData->mmdb_is_open) close_mmdb(&pWrkrData->mmdb);
-	pWrkrData->mmdb_is_open = 0;
-	pthread_mutex_destroy(&pWrkrData->mmdbMutex);
+    if (pWrkrData->mmdb_is_open) close_mmdb(&pWrkrData->mmdb);
+    pWrkrData->mmdb_is_open = 0;
+    pthread_mutex_destroy(&pWrkrData->mmdbMutex);
 ENDfreeWrkrInstance
 
 
 BEGINsetModCnf
-	struct cnfparamvals *pvals = NULL;
-	int i;
+    struct cnfparamvals *pvals = NULL;
+    int i;
 CODESTARTsetModCnf
-	loadModConf->container = NULL;
-	pvals = nvlstGetParams(lst, &modpblk, NULL);
-	if(pvals == NULL) {
-		LogError(0, RS_RET_MISSING_CNFPARAMS, "mmdblookup: error processing module "
-						"config parameters missing [module(...)]");
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-	}
+    loadModConf->container = NULL;
+    pvals = nvlstGetParams(lst, &modpblk, NULL);
+    if(pvals == NULL) {
+        LogError(0, RS_RET_MISSING_CNFPARAMS, "mmdblookup: error processing module "
+                        "config parameters missing [module(...)]");
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
 
-	if(Debug) {
-		dbgprintf("module (global) param blk for mmdblookup:\n");
-		cnfparamsPrint(&modpblk, pvals);
-	}
+    if(Debug) {
+        dbgprintf("module (global) param blk for mmdblookup:\n");
+        cnfparamsPrint(&modpblk, pvals);
+    }
 
-	for(i = 0 ; i < modpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
-			continue;
-		if(!strcmp(modpblk.descr[i].name, "container")) {
-			loadModConf->container = es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else {
-			dbgprintf("mmdblookup: program error, non-handled "
-					  "param '%s' in setModCnf\n", modpblk.descr[i].name);
-		}
-	}
+    for(i = 0 ; i < modpblk.nParams ; ++i) {
+        if(!pvals[i].bUsed)
+            continue;
+        if(!strcmp(modpblk.descr[i].name, "container")) {
+            loadModConf->container = es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else {
+            dbgprintf("mmdblookup: program error, non-handled "
+                      "param '%s' in setModCnf\n", modpblk.descr[i].name);
+        }
+    }
 
-	if(loadModConf->container == NULL) {
-		CHKmalloc(loadModConf->container = strdup(JSON_IPLOOKUP_NAME));
-	}
+    if(loadModConf->container == NULL) {
+        CHKmalloc(loadModConf->container = strdup(JSON_IPLOOKUP_NAME));
+    }
 
 finalize_it:
-	if(pvals != NULL)
-		cnfparamvalsDestruct(pvals, &modpblk);
+    if(pvals != NULL)
+        cnfparamvalsDestruct(pvals, &modpblk);
 ENDsetModCnf
 
 static inline void
 setInstParamDefaults(instanceData *pData)
 {
-	pData->pszKey = NULL;
-	pData->pszMmdbFile = NULL;
-	pData->fieldList.nmemb = 0;
-	pData->reloadOnHup = 1;
+    pData->pszKey = NULL;
+    pData->pszMmdbFile = NULL;
+    pData->fieldList.nmemb = 0;
+    pData->reloadOnHup = 1;
 }
 
 BEGINnewActInst
-	struct cnfparamvals *pvals;
-	int i;
+    struct cnfparamvals *pvals;
+    int i;
 CODESTARTnewActInst
-	dbgprintf("newActInst (mmdblookup)\n");
-	if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-	}
+    dbgprintf("newActInst (mmdblookup)\n");
+    if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
 
-	CODE_STD_STRING_REQUESTnewActInst(1)
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
-	CHKiRet(createInstance(&pData));
-	setInstParamDefaults(pData);
+    CODE_STD_STRING_REQUESTnewActInst(1)
+    CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
+    CHKiRet(createInstance(&pData));
+    setInstParamDefaults(pData);
 
-	for (i = 0; i < actpblk.nParams; ++i) {
-		if (!pvals[i].bUsed)
-			continue;
-		if (!strcmp(actpblk.descr[i].name, "key")) {
-			pData->pszKey = es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if (!strcmp(actpblk.descr[i].name, "mmdbfile")) {
-			pData->pszMmdbFile = es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if (!strcmp(actpblk.descr[i].name, "fields")) {
-			pData->fieldList.nmemb = pvals[i].val.d.ar->nmemb;
-			CHKmalloc(pData->fieldList.name = calloc(pData->fieldList.nmemb, sizeof(char *)));
-			CHKmalloc(pData->fieldList.varname = calloc(pData->fieldList.nmemb, sizeof(char *)));
-			for (int j = 0; j <  pvals[i].val.d.ar->nmemb; ++j) {
-				char *const param = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
-				char *varname = NULL;
-				char *name;
-				if(*param == ':') {
-					char *b = strchr(param+1, ':');
-					if(b == NULL) {
-						parser_errmsg("mmdblookup: missing closing colon: '%s'", param);
-						ABORT_FINALIZE(RS_RET_ERR);
-					}
-					*b = '\0'; /* split name & varname */
-					varname = param+1;
-					name = b+1;
-				} else {
-					name = param;
-				}
-				if(*name == '!')
-					++name;
-				CHKmalloc(pData->fieldList.name[j] = strdup(name));
-				char vnamebuf[1024];
-				snprintf(vnamebuf, sizeof(vnamebuf),
-					"%s!%s", loadModConf->container,
-					(varname == NULL) ? name : varname);
-				CHKmalloc(pData->fieldList.varname[j] = strdup(vnamebuf));
-				free(param);
-			}
-		} else if(!strcmp(actpblk.descr[i].name, "reloadonhup")) {
-			pData->reloadOnHup = pvals[i].val.d.n;
-		} else {
-			dbgprintf("mmdblookup: program error, non-handled"
-				" param '%s'\n", actpblk.descr[i].name);
-		}
-	}
+    for (i = 0; i < actpblk.nParams; ++i) {
+        if (!pvals[i].bUsed)
+            continue;
+        if (!strcmp(actpblk.descr[i].name, "key")) {
+            pData->pszKey = es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "mmdbfile")) {
+            pData->pszMmdbFile = es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "fields")) {
+            pData->fieldList.nmemb = pvals[i].val.d.ar->nmemb;
+            CHKmalloc(pData->fieldList.name = calloc(pData->fieldList.nmemb, sizeof(char *)));
+            CHKmalloc(pData->fieldList.varname = calloc(pData->fieldList.nmemb, sizeof(char *)));
+            for (int j = 0; j <  pvals[i].val.d.ar->nmemb; ++j) {
+                char *const param = es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
+                char *varname = NULL;
+                char *name;
+                if(*param == ':') {
+                    char *b = strchr(param+1, ':');
+                    if(b == NULL) {
+                        parser_errmsg("mmdblookup: missing closing colon: '%s'", param);
+                        ABORT_FINALIZE(RS_RET_ERR);
+                    }
+                    *b = '\0'; /* split name & varname */
+                    varname = param+1;
+                    name = b+1;
+                } else {
+                    name = param;
+                }
+                if(*name == '!')
+                    ++name;
+                CHKmalloc(pData->fieldList.name[j] = strdup(name));
+                char vnamebuf[1024];
+                snprintf(vnamebuf, sizeof(vnamebuf),
+                    "%s!%s", loadModConf->container,
+                    (varname == NULL) ? name : varname);
+                CHKmalloc(pData->fieldList.varname[j] = strdup(vnamebuf));
+                free(param);
+            }
+        } else if(!strcmp(actpblk.descr[i].name, "reloadonhup")) {
+            pData->reloadOnHup = pvals[i].val.d.n;
+        } else {
+            dbgprintf("mmdblookup: program error, non-handled"
+                " param '%s'\n", actpblk.descr[i].name);
+        }
+    }
 
 CODE_STD_FINALIZERnewActInst
-	cnfparamvalsDestruct(pvals, &actpblk);
+    cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
@@ -330,166 +330,166 @@ ENDdbgPrintInstInfo
 
 BEGINtryResume
 CODESTARTtryResume
-	iRet = wrkr_reopen_mmdb(pWrkrData);
+    iRet = wrkr_reopen_mmdb(pWrkrData);
 ENDtryResume
 
 
 void
 str_split(char **membuf)
 {
-	int in_quotes = 0;
-	char *buf  = *membuf;
-	char tempbuf[strlen(buf)];
-	memset(tempbuf, 0, strlen(buf));
+    int in_quotes = 0;
+    char *buf  = *membuf;
+    char tempbuf[strlen(buf)];
+    memset(tempbuf, 0, strlen(buf));
 
-	while (*buf++ != '\0') {
-		if (in_quotes) {
-			if (*buf == '"' && *(buf - 1) != '\\') {
-				in_quotes = !in_quotes;
-				strncat(tempbuf, buf, 1);
-			} else {
-				strncat(tempbuf, buf, 1);
-			}
-		} else {
-			if (*buf == '\n' || *buf == '\t' || *buf == ' ')
-				continue;
-			if (*buf == '<') {
-				char *p = strchr(buf, '>');
-				buf = buf + (int)(p - buf);
-				strcat(tempbuf, ",");
-			} else if (*buf == '}') {
-				strcat(tempbuf, "},");
-			} else if (*buf == ']') {
-				strcat(tempbuf, "],");
-			} else if (*buf == '"' && *(buf - 1) != '\\') {
-				in_quotes = !in_quotes;
-				strncat(tempbuf, buf, 1);
-			} else {
-				strncat(tempbuf, buf, 1);
-			}
-		}
-	}
+    while (*buf++ != '\0') {
+        if (in_quotes) {
+            if (*buf == '"' && *(buf - 1) != '\\') {
+                in_quotes = !in_quotes;
+                strncat(tempbuf, buf, 1);
+            } else {
+                strncat(tempbuf, buf, 1);
+            }
+        } else {
+            if (*buf == '\n' || *buf == '\t' || *buf == ' ')
+                continue;
+            if (*buf == '<') {
+                char *p = strchr(buf, '>');
+                buf = buf + (int)(p - buf);
+                strcat(tempbuf, ",");
+            } else if (*buf == '}') {
+                strcat(tempbuf, "},");
+            } else if (*buf == ']') {
+                strcat(tempbuf, "],");
+            } else if (*buf == '"' && *(buf - 1) != '\\') {
+                in_quotes = !in_quotes;
+                strncat(tempbuf, buf, 1);
+            } else {
+                strncat(tempbuf, buf, 1);
+            }
+        }
+    }
 
-	memcpy(*membuf, tempbuf, strlen(tempbuf)+1);
+    memcpy(*membuf, tempbuf, strlen(tempbuf)+1);
 }
 
 
 BEGINdoAction_NoStrings
-	smsg_t **ppMsg = (smsg_t **) pMsgData;
-	smsg_t *pMsg   = ppMsg[0];
-	struct json_object *keyjson = NULL;
-	const char *pszValue;
-	instanceData *const pData = pWrkrData->pData;
-	json_object *total_json = NULL;
-	MMDB_entry_data_list_s *entry_data_list = NULL;
+    smsg_t **ppMsg = (smsg_t **) pMsgData;
+    smsg_t *pMsg   = ppMsg[0];
+    struct json_object *keyjson = NULL;
+    const char *pszValue;
+    instanceData *const pData = pWrkrData->pData;
+    json_object *total_json = NULL;
+    MMDB_entry_data_list_s *entry_data_list = NULL;
 CODESTARTdoAction
-	/* ensure file is open before beginning */
-	if (!pWrkrData->mmdb_is_open) {
-		CHKiRet(wrkr_reopen_mmdb(pWrkrData));
-	}
+    /* ensure file is open before beginning */
+    if (!pWrkrData->mmdb_is_open) {
+        CHKiRet(wrkr_reopen_mmdb(pWrkrData));
+    }
 
-	/* key is given, so get the property json */
-	msgPropDescr_t pProp;
-	msgPropDescrFill(&pProp, (uchar*)pData->pszKey, strlen(pData->pszKey));
-	rsRetVal localRet = msgGetJSONPropJSON(pMsg, &pProp, &keyjson);
-	msgPropDescrDestruct(&pProp);
+    /* key is given, so get the property json */
+    msgPropDescr_t pProp;
+    msgPropDescrFill(&pProp, (uchar*)pData->pszKey, strlen(pData->pszKey));
+    rsRetVal localRet = msgGetJSONPropJSON(pMsg, &pProp, &keyjson);
+    msgPropDescrDestruct(&pProp);
 
-	pthread_mutex_lock(&pWrkrData->mmdbMutex);
-	if (localRet != RS_RET_OK) {
-		/* key not found in the message. nothing to do */
-		ABORT_FINALIZE(RS_RET_OK);
-	}
-	/* key found, so get the value */
-	pszValue = (char*)json_object_get_string(keyjson);
-	if(pszValue == NULL) { /* json null object returns NULL! */
-		pszValue = "";
-	}
+    pthread_mutex_lock(&pWrkrData->mmdbMutex);
+    if (localRet != RS_RET_OK) {
+        /* key not found in the message. nothing to do */
+        ABORT_FINALIZE(RS_RET_OK);
+    }
+    /* key found, so get the value */
+    pszValue = (char*)json_object_get_string(keyjson);
+    if(pszValue == NULL) { /* json null object returns NULL! */
+        pszValue = "";
+    }
 
-	int gai_err, mmdb_err;
-	MMDB_lookup_result_s result = MMDB_lookup_string(&pWrkrData->mmdb, pszValue, &gai_err, &mmdb_err);
+    int gai_err, mmdb_err;
+    MMDB_lookup_result_s result = MMDB_lookup_string(&pWrkrData->mmdb, pszValue, &gai_err, &mmdb_err);
 
-	if (0 != gai_err) {
-		dbgprintf("Error from call to getaddrinfo for %s - %s\n", pszValue, gai_strerror(gai_err));
-		ABORT_FINALIZE(RS_RET_OK);
-	}
-	if (MMDB_IPV6_LOOKUP_IN_IPV4_DATABASE_ERROR == mmdb_err) {
-		LogMsg(0, NO_ERRCODE, LOG_INFO, "mmdblookup: Tried to search for an IPv6 address in an IPv4-only DB"
-		", ignoring");
-		ABORT_FINALIZE(RS_RET_OK);
-	}
-	if (MMDB_SUCCESS != mmdb_err) {
-		dbgprintf("Got an error from the maxminddb library: %s\n", MMDB_strerror(mmdb_err));
-		close_mmdb(&pWrkrData->mmdb);
-		pWrkrData->mmdb_is_open = 0;
-		ABORT_FINALIZE(RS_RET_IO_ERROR);
-	}
-	if (!result.found_entry) {
-		dbgprintf("No entry found in database for '%s'\n", pszValue);
-		ABORT_FINALIZE(RS_RET_OK);
-	}
+    if (0 != gai_err) {
+        dbgprintf("Error from call to getaddrinfo for %s - %s\n", pszValue, gai_strerror(gai_err));
+        ABORT_FINALIZE(RS_RET_OK);
+    }
+    if (MMDB_IPV6_LOOKUP_IN_IPV4_DATABASE_ERROR == mmdb_err) {
+        LogMsg(0, NO_ERRCODE, LOG_INFO, "mmdblookup: Tried to search for an IPv6 address in an IPv4-only DB"
+        ", ignoring");
+        ABORT_FINALIZE(RS_RET_OK);
+    }
+    if (MMDB_SUCCESS != mmdb_err) {
+        dbgprintf("Got an error from the maxminddb library: %s\n", MMDB_strerror(mmdb_err));
+        close_mmdb(&pWrkrData->mmdb);
+        pWrkrData->mmdb_is_open = 0;
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    if (!result.found_entry) {
+        dbgprintf("No entry found in database for '%s'\n", pszValue);
+        ABORT_FINALIZE(RS_RET_OK);
+    }
 
 
-	int status  = MMDB_get_entry_data_list(&result.entry, &entry_data_list);
+    int status  = MMDB_get_entry_data_list(&result.entry, &entry_data_list);
 
-	if (MMDB_SUCCESS != status) {
-		dbgprintf("Got an error looking up the entry data - %s\n", MMDB_strerror(status));
-		ABORT_FINALIZE(RS_RET_OK);
-	}
+    if (MMDB_SUCCESS != status) {
+        dbgprintf("Got an error looking up the entry data - %s\n", MMDB_strerror(status));
+        ABORT_FINALIZE(RS_RET_OK);
+    }
 
-	size_t  memlen;
-	char   *membuf;
-	FILE   *memstream;
-	CHKmalloc(memstream = open_memstream(&membuf, &memlen));
+    size_t  memlen;
+    char   *membuf;
+    FILE   *memstream;
+    CHKmalloc(memstream = open_memstream(&membuf, &memlen));
 
-	if (entry_data_list != NULL && memstream != NULL) {
-		MMDB_dump_entry_data_list(memstream, entry_data_list, 2);
-		fflush(memstream);
-		str_split(&membuf);
-	}
+    if (entry_data_list != NULL && memstream != NULL) {
+        MMDB_dump_entry_data_list(memstream, entry_data_list, 2);
+        fflush(memstream);
+        str_split(&membuf);
+    }
 
-	DBGPRINTF("maxmindb returns: '%s'\n", membuf);
-	total_json = json_tokener_parse(membuf);
-	fclose(memstream);
-	free(membuf);
+    DBGPRINTF("maxmindb returns: '%s'\n", membuf);
+    total_json = json_tokener_parse(membuf);
+    fclose(memstream);
+    free(membuf);
 
-	/* extract and amend fields (to message) as configured */
-	for (int i = 0 ; i <  pData->fieldList.nmemb; ++i) {
-		char *strtok_save;
-		char buf[(strlen((char *)(pData->fieldList.name[i])))+1];
-		strcpy(buf, (char *)pData->fieldList.name[i]);
+    /* extract and amend fields (to message) as configured */
+    for (int i = 0 ; i <  pData->fieldList.nmemb; ++i) {
+        char *strtok_save;
+        char buf[(strlen((char *)(pData->fieldList.name[i])))+1];
+        strcpy(buf, (char *)pData->fieldList.name[i]);
 
-		json_object *temp_json = total_json;
-		json_object *sub_obj   = temp_json;
-		const char *SEP = "!";
+        json_object *temp_json = total_json;
+        json_object *sub_obj   = temp_json;
+        const char *SEP = "!";
 
-		/* find lowest level JSON object */
-		char *s = strtok_r(buf, SEP, &strtok_save);
-		while(s != NULL) {
-			json_object_object_get_ex(temp_json, s, &sub_obj);
-			temp_json = sub_obj;
-			s = strtok_r(NULL, SEP, &strtok_save);
-		}
-		/* temp_json now contains the value we want to have, so set it */
-		json_object_get(temp_json);
-		msgAddJSON(pMsg, (uchar *)pData->fieldList.varname[i], temp_json, 0, 0);
-	}
+        /* find lowest level JSON object */
+        char *s = strtok_r(buf, SEP, &strtok_save);
+        while(s != NULL) {
+            json_object_object_get_ex(temp_json, s, &sub_obj);
+            temp_json = sub_obj;
+            s = strtok_r(NULL, SEP, &strtok_save);
+        }
+        /* temp_json now contains the value we want to have, so set it */
+        json_object_get(temp_json);
+        msgAddJSON(pMsg, (uchar *)pData->fieldList.varname[i], temp_json, 0, 0);
+    }
 
 finalize_it:
-	pthread_mutex_unlock(&pWrkrData->mmdbMutex);
-	if(entry_data_list != NULL)
-		MMDB_free_entry_data_list(entry_data_list);
-	json_object_put(keyjson);
-	if(total_json != NULL)
-		json_object_put(total_json);
+    pthread_mutex_unlock(&pWrkrData->mmdbMutex);
+    if(entry_data_list != NULL)
+        MMDB_free_entry_data_list(entry_data_list);
+    json_object_put(keyjson);
+    if(total_json != NULL)
+        json_object_put(total_json);
 ENDdoAction
 
 // HUP handling for the worker...
 BEGINdoHUPWrkr
 CODESTARTdoHUPWrkr
-	dbgprintf("mmdblookup: HUP received\n");
-	if (pWrkrData->pData->reloadOnHup) {
-		iRet = wrkr_reopen_mmdb(pWrkrData);
-	}
+    dbgprintf("mmdblookup: HUP received\n");
+    if (pWrkrData->pData->reloadOnHup) {
+        iRet = wrkr_reopen_mmdb(pWrkrData);
+    }
 ENDdoHUPWrkr
 
 
@@ -514,8 +514,8 @@ ENDqueryEtryPt
 
 BEGINmodInit()
 CODESTARTmodInit
-	/* we only support the current interface specification */
-	*ipIFVersProvided = CURR_MOD_IF_VERSION;
+    /* we only support the current interface specification */
+    *ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
-	dbgprintf("mmdblookup: module compiled with rsyslog version %s.\n", VERSION);
+    dbgprintf("mmdblookup: module compiled with rsyslog version %s.\n", VERSION);
 ENDmodInit

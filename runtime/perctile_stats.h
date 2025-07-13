@@ -23,55 +23,55 @@
 #include "statsobj.h"
 
 struct perctile_ctr_s {
-	// percentile [0,100]
-	uint8_t percentile;
-	size_t index;
-	intctr_t ctr_perctile_stat;
-	ctr_t *ref_ctr_percentile_stat;
+    // percentile [0,100]
+    uint8_t percentile;
+    size_t index;
+    intctr_t ctr_perctile_stat;
+    ctr_t *ref_ctr_percentile_stat;
 };
 
 struct perctile_stat_s {
-	uchar name[128];
-	sbool bReported;
-	struct ringbuf_s *rb_observed_stats;
-	// array of requested perctile to track
-	struct perctile_ctr_s *ctrs;
-	size_t perctile_ctrs_count;
+    uchar name[128];
+    sbool bReported;
+    struct ringbuf_s *rb_observed_stats;
+    // array of requested perctile to track
+    struct perctile_ctr_s *ctrs;
+    size_t perctile_ctrs_count;
 
-	pthread_rwlock_t stats_lock;
-	intctr_t ctrWindowCount;
-	ctr_t *refCtrWindowCount;
-	intctr_t ctrWindowMin;
-	ctr_t *refCtrWindowMin;
-	intctr_t ctrWindowMax;
-	ctr_t *refCtrWindowMax;
-	intctr_t ctrWindowSum;
-	ctr_t *refCtrWindowSum;
+    pthread_rwlock_t stats_lock;
+    intctr_t ctrWindowCount;
+    ctr_t *refCtrWindowCount;
+    intctr_t ctrWindowMin;
+    ctr_t *refCtrWindowMin;
+    intctr_t ctrWindowMax;
+    ctr_t *refCtrWindowMax;
+    intctr_t ctrWindowSum;
+    ctr_t *refCtrWindowSum;
 };
 
 struct perctile_bucket_s {
-	uchar *name;
-	uchar *delim;
-	// lock for entire bucket
-	pthread_rwlock_t lock;
-	struct hashtable *htable;
-	struct perctile_bucket_s *next;
-	statsobj_t *statsobj;
-	STATSCOUNTER_DEF(ctrNewKeyAdd, mutCtrNewKeyAdd);
-	ctr_t *pNewKeyAddCtr;
-	STATSCOUNTER_DEF(ctrOpsOverflow, mutCtrOpsOverflow);
-	ctr_t *pOpsOverflowCtr;
-	uint32_t window_size;
-	// These percentile values apply to all perctile stats in this bucket.
-	uint8_t *perctile_values;
-	size_t perctile_values_count;
+    uchar *name;
+    uchar *delim;
+    // lock for entire bucket
+    pthread_rwlock_t lock;
+    struct hashtable *htable;
+    struct perctile_bucket_s *next;
+    statsobj_t *statsobj;
+    STATSCOUNTER_DEF(ctrNewKeyAdd, mutCtrNewKeyAdd);
+    ctr_t *pNewKeyAddCtr;
+    STATSCOUNTER_DEF(ctrOpsOverflow, mutCtrOpsOverflow);
+    ctr_t *pOpsOverflowCtr;
+    uint32_t window_size;
+    // These percentile values apply to all perctile stats in this bucket.
+    uint8_t *perctile_values;
+    size_t perctile_values_count;
 };
 
 struct perctile_buckets_s {
-	uint8_t initialized;
-	statsobj_t *global_stats;
-	pthread_rwlock_t lock;
-	struct perctile_bucket_s *listBuckets;
+    uint8_t initialized;
+    statsobj_t *global_stats;
+    pthread_rwlock_t lock;
+    struct perctile_bucket_s *listBuckets;
 };
 
 // keep these local for now.

@@ -53,10 +53,10 @@
 struct rsParsObject
 {
 #ifndef NDEBUG
-	rsObjID OID;			/**< object ID */
+    rsObjID OID;            /**< object ID */
 #endif
-	cstr_t *pCStr;		/**< pointer to the string object we are parsing */
-	size_t iCurrPos;	/**< current parsing position (char offset) */
+    cstr_t *pCStr;      /**< pointer to the string object we are parsing */
+    size_t iCurrPos;    /**< current parsing position (char offset) */
 };
 typedef struct rsParsObject rsParsObj;
 

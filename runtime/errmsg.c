@@ -53,8 +53,8 @@
 #endif
 
 static int bHadErrMsgs; /* indicates if we had error messages since reset of this flag
-			 * This is used to abort a run if the config is unclean.
-			 */
+             * This is used to abort a run if the config is unclean.
+             */
 
 static int fdOversizeMsgLog = -1;
 static pthread_mutex_t oversizeMsgLogMut = PTHREAD_MUTEX_INITIALIZER;
@@ -67,13 +67,13 @@ static pthread_mutex_t oversizeMsgLogMut = PTHREAD_MUTEX_INITIALIZER;
 void
 resetErrMsgsFlag(void)
 {
-	bHadErrMsgs = 0;
+    bHadErrMsgs = 0;
 }
 
 int
 hadErrMsgs(void)
 {
-	return bHadErrMsgs;
+    return bHadErrMsgs;
 }
 
 /* We now receive three parameters: one is the internal error code
@@ -89,47 +89,47 @@ hadErrMsgs(void)
 static void
 doLogMsg(const int iErrno, const int iErrCode,  const int severity, const char *msg)
 {
-	char buf[2048];
-	char errStr[1024];
+    char buf[2048];
+    char errStr[1024];
 
-	dbgprintf("Called LogMsg, msg: %s\n", msg);
-	osf_write(OSF_TAG_MSG, msg);
+    dbgprintf("Called LogMsg, msg: %s\n", msg);
+    osf_write(OSF_TAG_MSG, msg);
 
-	if(iErrno != 0) {
-		rs_strerror_r(iErrno, errStr, sizeof(errStr));
-		if(iErrCode == NO_ERRCODE || iErrCode == RS_RET_ERR) {
-			snprintf(buf, sizeof(buf), "%s: %s [v%s]", msg, errStr, VERSION);
-		} else {
-			snprintf(buf, sizeof(buf), "%s: %s [v%s try https://www.rsyslog.com/e/%d ]",
-				msg, errStr, VERSION, iErrCode * -1);
-		}
-	} else {
-		if(iErrCode == NO_ERRCODE || iErrCode == RS_RET_ERR) {
-			snprintf(buf, sizeof(buf), "%s [v%s]", msg, VERSION);
-		} else {
-			snprintf(buf, sizeof(buf), "%s [v%s try https://www.rsyslog.com/e/%d ]", msg,
-				VERSION, iErrCode * -1);
-		}
-	}
-	buf[sizeof(buf) - 1] = '\0'; /* just to be on the safe side... */
-	errno = 0;
+    if(iErrno != 0) {
+        rs_strerror_r(iErrno, errStr, sizeof(errStr));
+        if(iErrCode == NO_ERRCODE || iErrCode == RS_RET_ERR) {
+            snprintf(buf, sizeof(buf), "%s: %s [v%s]", msg, errStr, VERSION);
+        } else {
+            snprintf(buf, sizeof(buf), "%s: %s [v%s try https://www.rsyslog.com/e/%d ]",
+                msg, errStr, VERSION, iErrCode * -1);
+        }
+    } else {
+        if(iErrCode == NO_ERRCODE || iErrCode == RS_RET_ERR) {
+            snprintf(buf, sizeof(buf), "%s [v%s]", msg, VERSION);
+        } else {
+            snprintf(buf, sizeof(buf), "%s [v%s try https://www.rsyslog.com/e/%d ]", msg,
+                VERSION, iErrCode * -1);
+        }
+    }
+    buf[sizeof(buf) - 1] = '\0'; /* just to be on the safe side... */
+    errno = 0;
 
-	const int msglen = (int) strlen(buf);
-	if(msglen > glblGetMaxLine(ourConf)) {
-		/* in extreme cases, our error messages may be longer than the configured
-		 * max message size. If so, we just truncate without further indication, as
-		 * anything else would probably lead to a death loop on error messages.
-		 * Note that we do not split, as we really do not anticipate there is
-		 * much value in supporting extremely short max message sizes - we assume
-		 * it's just a testbench thing. -- rgerhards, 2018-05-11
-		 */
-		 buf[glblGetMaxLine(ourConf)] = '\0'; /* space must be available! */
-	}
+    const int msglen = (int) strlen(buf);
+    if(msglen > glblGetMaxLine(ourConf)) {
+        /* in extreme cases, our error messages may be longer than the configured
+         * max message size. If so, we just truncate without further indication, as
+         * anything else would probably lead to a death loop on error messages.
+         * Note that we do not split, as we really do not anticipate there is
+         * much value in supporting extremely short max message sizes - we assume
+         * it's just a testbench thing. -- rgerhards, 2018-05-11
+         */
+         buf[glblGetMaxLine(ourConf)] = '\0'; /* space must be available! */
+    }
 
-	glblErrLogger(severity, iErrCode, (uchar*)buf);
+    glblErrLogger(severity, iErrCode, (uchar*)buf);
 
-	if(severity == LOG_ERR)
-		bHadErrMsgs = 1;
+    if(severity == LOG_ERR)
+        bHadErrMsgs = 1;
 }
 
 /* We now receive three parameters: one is the internal error code
@@ -145,19 +145,19 @@ doLogMsg(const int iErrno, const int iErrCode,  const int severity, const char *
 void __attribute__((format(printf, 3, 4)))
 LogError(const int iErrno, const int iErrCode, const char *fmt, ... )
 {
-	va_list ap;
-	char buf[2048];
-	int lenBuf;
+    va_list ap;
+    char buf[2048];
+    int lenBuf;
 
-	va_start(ap, fmt);
-	lenBuf = vsnprintf(buf, sizeof(buf), fmt, ap);
-	if(lenBuf < 0) {
-		strncpy(buf, "error message lost due to problem with vsnprintf", sizeof(buf));
-	}
-	va_end(ap);
-	buf[sizeof(buf) - 1] = '\0'; /* just to be on the safe side... */
+    va_start(ap, fmt);
+    lenBuf = vsnprintf(buf, sizeof(buf), fmt, ap);
+    if(lenBuf < 0) {
+        strncpy(buf, "error message lost due to problem with vsnprintf", sizeof(buf));
+    }
+    va_end(ap);
+    buf[sizeof(buf) - 1] = '\0'; /* just to be on the safe side... */
 
-	doLogMsg(iErrno, iErrCode, LOG_ERR, buf);
+    doLogMsg(iErrno, iErrCode, LOG_ERR, buf);
 }
 
 /* We now receive three parameters: one is the internal error code
@@ -173,19 +173,19 @@ LogError(const int iErrno, const int iErrCode, const char *fmt, ... )
 void __attribute__((format(printf, 4, 5)))
 LogMsg(const int iErrno, const int iErrCode, const int severity, const char *fmt, ... )
 {
-	va_list ap;
-	char buf[2048];
-	int lenBuf;
+    va_list ap;
+    char buf[2048];
+    int lenBuf;
 
-	va_start(ap, fmt);
-	lenBuf = vsnprintf(buf, sizeof(buf), fmt, ap);
-	if(lenBuf < 0) {
-		strncpy(buf, "error message lost due to problem with vsnprintf", sizeof(buf));
-	}
-	va_end(ap);
-	buf[sizeof(buf) - 1] = '\0'; /* just to be on the safe side... */
+    va_start(ap, fmt);
+    lenBuf = vsnprintf(buf, sizeof(buf), fmt, ap);
+    if(lenBuf < 0) {
+        strncpy(buf, "error message lost due to problem with vsnprintf", sizeof(buf));
+    }
+    va_end(ap);
+    buf[sizeof(buf) - 1] = '\0'; /* just to be on the safe side... */
 
-	doLogMsg(iErrno, iErrCode, severity, buf);
+    doLogMsg(iErrno, iErrCode, severity, buf);
 }
 
 
@@ -198,91 +198,91 @@ LogMsg(const int iErrno, const int iErrCode, const int severity, const char *fmt
 rsRetVal ATTR_NONNULL()
 writeOversizeMessageLog(const smsg_t *const pMsg)
 {
-	struct json_object *json = NULL;
-	char *rendered = NULL;
-	struct json_object *jval;
-	uchar *buf;
-	size_t toWrite;
-	ssize_t wrRet;
-	int dummy;
-	int mutexLocked = 0;
-	DEFiRet;
-	ISOBJ_TYPE_assert(pMsg, msg);
+    struct json_object *json = NULL;
+    char *rendered = NULL;
+    struct json_object *jval;
+    uchar *buf;
+    size_t toWrite;
+    ssize_t wrRet;
+    int dummy;
+    int mutexLocked = 0;
+    DEFiRet;
+    ISOBJ_TYPE_assert(pMsg, msg);
 
-	if(glblGetOversizeMsgErrorFile(runConf) == NULL) {
-		FINALIZE;
-	}
+    if(glblGetOversizeMsgErrorFile(runConf) == NULL) {
+        FINALIZE;
+    }
 
-	pthread_mutex_lock(&oversizeMsgLogMut);
-	mutexLocked = 1;
+    pthread_mutex_lock(&oversizeMsgLogMut);
+    mutexLocked = 1;
 
-	if(fdOversizeMsgLog == -1) {
-		fdOversizeMsgLog = open((char*)glblGetOversizeMsgErrorFile(runConf),
-					O_WRONLY|O_CREAT|O_APPEND|O_LARGEFILE|O_CLOEXEC,
-					S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
-		if(fdOversizeMsgLog == -1) {
-			LogError(errno, RS_RET_ERR, "error opening oversize message log file %s",
-				glblGetOversizeMsgErrorFile(runConf));
-			FINALIZE;
-		}
-	}
+    if(fdOversizeMsgLog == -1) {
+        fdOversizeMsgLog = open((char*)glblGetOversizeMsgErrorFile(runConf),
+                    O_WRONLY|O_CREAT|O_APPEND|O_LARGEFILE|O_CLOEXEC,
+                    S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP);
+        if(fdOversizeMsgLog == -1) {
+            LogError(errno, RS_RET_ERR, "error opening oversize message log file %s",
+                glblGetOversizeMsgErrorFile(runConf));
+            FINALIZE;
+        }
+    }
 
-	assert(fdOversizeMsgLog != -1);
-	json = json_object_new_object();
-	if(json == NULL) {
-		FINALIZE;
-	}
+    assert(fdOversizeMsgLog != -1);
+    json = json_object_new_object();
+    if(json == NULL) {
+        FINALIZE;
+    }
 
-	getRawMsg(pMsg, &buf, &dummy);
-	jval = json_object_new_string((char*)buf);
-	json_object_object_add(json, "rawmsg", jval);
+    getRawMsg(pMsg, &buf, &dummy);
+    jval = json_object_new_string((char*)buf);
+    json_object_object_add(json, "rawmsg", jval);
 
-	getInputName(pMsg, &buf, &dummy);
-	jval = json_object_new_string((char*)buf);
-	json_object_object_add(json, "input", jval);
+    getInputName(pMsg, &buf, &dummy);
+    jval = json_object_new_string((char*)buf);
+    json_object_object_add(json, "input", jval);
 
-	CHKmalloc(rendered = strdup((char*)fjson_object_to_json_string(json)));
+    CHKmalloc(rendered = strdup((char*)fjson_object_to_json_string(json)));
 
-	toWrite = strlen(rendered) + 1;
-	/* Note: we overwrite the '\0' terminator with '\n' -- so we avoid
-	 * calling malloc() -- write() does NOT need '\0'!
-	 */
-	rendered[toWrite-1] = '\n'; /* NO LONGER A STRING! */
-	wrRet = write(fdOversizeMsgLog, rendered, toWrite);
-	if(wrRet != (ssize_t) toWrite) {
-		LogError(errno, RS_RET_IO_ERROR,
-			"error writing oversize message log file %s, write returned %lld",
-			glblGetOversizeMsgErrorFile(runConf), (long long) wrRet);
-	}
+    toWrite = strlen(rendered) + 1;
+    /* Note: we overwrite the '\0' terminator with '\n' -- so we avoid
+     * calling malloc() -- write() does NOT need '\0'!
+     */
+    rendered[toWrite-1] = '\n'; /* NO LONGER A STRING! */
+    wrRet = write(fdOversizeMsgLog, rendered, toWrite);
+    if(wrRet != (ssize_t) toWrite) {
+        LogError(errno, RS_RET_IO_ERROR,
+            "error writing oversize message log file %s, write returned %lld",
+            glblGetOversizeMsgErrorFile(runConf), (long long) wrRet);
+    }
 
 finalize_it:
-	free(rendered);
-	if(mutexLocked) {
-		pthread_mutex_unlock(&oversizeMsgLogMut);
-	}
-	if(json != NULL) {
-		fjson_object_put(json);
-	}
-	RETiRet;
+    free(rendered);
+    if(mutexLocked) {
+        pthread_mutex_unlock(&oversizeMsgLogMut);
+    }
+    if(json != NULL) {
+        fjson_object_put(json);
+    }
+    RETiRet;
 }
 
 
 void
 errmsgDoHUP(void)
 {
-	pthread_mutex_lock(&oversizeMsgLogMut);
-	if(fdOversizeMsgLog != -1) {
-		close(fdOversizeMsgLog);
-		fdOversizeMsgLog = -1;
-	}
-	pthread_mutex_unlock(&oversizeMsgLogMut);
+    pthread_mutex_lock(&oversizeMsgLogMut);
+    if(fdOversizeMsgLog != -1) {
+        close(fdOversizeMsgLog);
+        fdOversizeMsgLog = -1;
+    }
+    pthread_mutex_unlock(&oversizeMsgLogMut);
 }
 
 
 void
 errmsgExit(void)
 {
-	if(fdOversizeMsgLog != -1) {
-		close(fdOversizeMsgLog);
-	}
+    if(fdOversizeMsgLog != -1) {
+        close(fdOversizeMsgLog);
+    }
 }

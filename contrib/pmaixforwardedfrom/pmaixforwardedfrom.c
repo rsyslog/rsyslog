@@ -54,97 +54,97 @@ DEFobjCurrIf(datetime)
 
 
 /* static data */
-static int bParseHOSTNAMEandTAG;	/* cache for the equally-named global param - performance enhancement */
+static int bParseHOSTNAMEandTAG;    /* cache for the equally-named global param - performance enhancement */
 
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATUREAutomaticSanitazion)
-		iRet = RS_RET_OK;
-	if(eFeat == sFEATUREAutomaticPRIParsing)
-		iRet = RS_RET_OK;
+    if(eFeat == sFEATUREAutomaticSanitazion)
+        iRet = RS_RET_OK;
+    if(eFeat == sFEATUREAutomaticPRIParsing)
+        iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINparse
-	uchar *p2parse;
-	int lenMsg;
-	int skipLen = 0;
+    uchar *p2parse;
+    int lenMsg;
+    int skipLen = 0;
 #define OpeningText "Message forwarded from "
 #define OpeningText2 "From "
 CODESTARTparse
-	dbgprintf("Message will now be parsed by fix AIX Forwarded From parser.\n");
-	assert(pMsg != NULL);
-	assert(pMsg->pszRawMsg != NULL);
-	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
-	/* note: offAfterPRI is already the number of PRI chars (do not add one!) */
-	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
+    dbgprintf("Message will now be parsed by fix AIX Forwarded From parser.\n");
+    assert(pMsg != NULL);
+    assert(pMsg->pszRawMsg != NULL);
+    lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
+    /* note: offAfterPRI is already the number of PRI chars (do not add one!) */
+    p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 
-	/* check if this message is of the type we handle in this (very limited) parser */
-	/* first, we permit SP */
-	while(lenMsg && *p2parse == ' ') {
-		--lenMsg;
-		++p2parse;
-	}
-	if((unsigned) lenMsg < 24) {
-		/* too short, can not be "our" message */
-		/* minimum message, 16 character timestamp, 'From ", 1 character name, ': '*/
-		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-	}
+    /* check if this message is of the type we handle in this (very limited) parser */
+    /* first, we permit SP */
+    while(lenMsg && *p2parse == ' ') {
+        --lenMsg;
+        ++p2parse;
+    }
+    if((unsigned) lenMsg < 24) {
+        /* too short, can not be "our" message */
+        /* minimum message, 16 character timestamp, 'From ", 1 character name, ': '*/
+        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+    }
 
-	/* skip over timestamp */
-	lenMsg -=16;
-	p2parse +=16;
-	/* if there is the string "Message forwarded from " were the hostname should be */
-	if(!strncasecmp((char*) p2parse, OpeningText, sizeof(OpeningText)-1))
-		skipLen = 23;
-	/* or "From " */
-	if(!strncasecmp((char*) p2parse, OpeningText2, sizeof(OpeningText2)-1))
-		skipLen = 5;
-	DBGPRINTF("pmaixforwardedfrom: skipLen %d\n", skipLen);
-	if(!skipLen) {
-		/* wrong opening text */
-	DBGPRINTF("not a AIX message forwarded from mangled log!\n");
-		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-	}
-	/* bump the message portion up by skipLen(23 or 5) characters to overwrite the "Message forwarded from
+    /* skip over timestamp */
+    lenMsg -=16;
+    p2parse +=16;
+    /* if there is the string "Message forwarded from " were the hostname should be */
+    if(!strncasecmp((char*) p2parse, OpeningText, sizeof(OpeningText)-1))
+        skipLen = 23;
+    /* or "From " */
+    if(!strncasecmp((char*) p2parse, OpeningText2, sizeof(OpeningText2)-1))
+        skipLen = 5;
+    DBGPRINTF("pmaixforwardedfrom: skipLen %d\n", skipLen);
+    if(!skipLen) {
+        /* wrong opening text */
+    DBGPRINTF("not a AIX message forwarded from mangled log!\n");
+        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+    }
+    /* bump the message portion up by skipLen(23 or 5) characters to overwrite the "Message forwarded from
 " or "From " with the hostname */
-	lenMsg -=skipLen;
-	if(lenMsg < 2) {
-		dbgprintf("not a AIX message forwarded from message has nothing after header\n");
-		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-	}
-	memmove(p2parse, p2parse + skipLen, lenMsg);
-	*(p2parse + lenMsg) = '\n';
-	*(p2parse + lenMsg + 1)  = '\0';
-	pMsg->iLenRawMsg -=skipLen;
-	pMsg->iLenMSG -=skipLen;
-	/* now look for the : after the hostname to walk past the hostname, also watch for a space in case this isn't
+    lenMsg -=skipLen;
+    if(lenMsg < 2) {
+        dbgprintf("not a AIX message forwarded from message has nothing after header\n");
+        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+    }
+    memmove(p2parse, p2parse + skipLen, lenMsg);
+    *(p2parse + lenMsg) = '\n';
+    *(p2parse + lenMsg + 1)  = '\0';
+    pMsg->iLenRawMsg -=skipLen;
+    pMsg->iLenMSG -=skipLen;
+    /* now look for the : after the hostname to walk past the hostname, also watch for a space in case this isn't
 really an AIX log, but has a similar preamble */
-	while(lenMsg && *p2parse != ' ' && *p2parse != ':') {
-		--lenMsg;
-		++p2parse;
-	}
-	if (lenMsg < 1) {
-		dbgprintf("not a AIX message forwarded from message has nothing after colon "
-			"or no colon at all\n");
-		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-	}
-	if (lenMsg && *p2parse != ':') {
-	DBGPRINTF("not a AIX message forwarded from mangled log but similar enough that the preamble has "
-		"been removed\n");
-		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-	}
-	/* bump the message portion up by one character to overwrite the extra : */
-	lenMsg -=1;
-	memmove(p2parse, p2parse + 1, lenMsg);
-	*(p2parse + lenMsg) = '\n';
-	*(p2parse + lenMsg + 1)  = '\0';
-	pMsg->iLenRawMsg -=1;
-	pMsg->iLenMSG -=1;
-	/* now, claim to abort so that something else can parse the now modified message */
-	DBGPRINTF("pmaixforwardedfrom: new message: [%d]'%s'\n", lenMsg, pMsg->pszRawMsg + pMsg->offAfterPRI);
-	ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+    while(lenMsg && *p2parse != ' ' && *p2parse != ':') {
+        --lenMsg;
+        ++p2parse;
+    }
+    if (lenMsg < 1) {
+        dbgprintf("not a AIX message forwarded from message has nothing after colon "
+            "or no colon at all\n");
+        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+    }
+    if (lenMsg && *p2parse != ':') {
+    DBGPRINTF("not a AIX message forwarded from mangled log but similar enough that the preamble has "
+        "been removed\n");
+        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+    }
+    /* bump the message portion up by one character to overwrite the extra : */
+    lenMsg -=1;
+    memmove(p2parse, p2parse + 1, lenMsg);
+    *(p2parse + lenMsg) = '\n';
+    *(p2parse + lenMsg + 1)  = '\0';
+    pMsg->iLenRawMsg -=1;
+    pMsg->iLenMSG -=1;
+    /* now, claim to abort so that something else can parse the now modified message */
+    DBGPRINTF("pmaixforwardedfrom: new message: [%d]'%s'\n", lenMsg, pMsg->pszRawMsg + pMsg->offAfterPRI);
+    ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
 
 finalize_it:
 ENDparse
@@ -152,10 +152,10 @@ ENDparse
 
 BEGINmodExit
 CODESTARTmodExit
-	/* release what we no longer need */
-	objRelease(glbl, CORE_COMPONENT);
-	objRelease(parser, CORE_COMPONENT);
-	objRelease(datetime, CORE_COMPONENT);
+    /* release what we no longer need */
+    objRelease(glbl, CORE_COMPONENT);
+    objRelease(parser, CORE_COMPONENT);
+    objRelease(datetime, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -168,15 +168,15 @@ ENDqueryEtryPt
 
 BEGINmodInit()
 CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(parser, CORE_COMPONENT));
-	CHKiRet(objUse(datetime, CORE_COMPONENT));
+    CHKiRet(objUse(glbl, CORE_COMPONENT));
+    CHKiRet(objUse(parser, CORE_COMPONENT));
+    CHKiRet(objUse(datetime, CORE_COMPONENT));
 
-	DBGPRINTF("aixforwardedfrom parser init called, compiled with version %s\n", VERSION);
-	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG(loadConf);
-	/* cache value, is set only during rsyslogd option processing */
+    DBGPRINTF("aixforwardedfrom parser init called, compiled with version %s\n", VERSION);
+    bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG(loadConf);
+    /* cache value, is set only during rsyslogd option processing */
 
 
 ENDmodInit

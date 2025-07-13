@@ -15,24 +15,24 @@ __attribute__((no_sanitize("unsigned-integer-overflow")))
 #endif
 hash_from_string(void *k)
 {
-	char *rkey = (char*) k;
-	unsigned hashval = 1;
+    char *rkey = (char*) k;
+    unsigned hashval = 1;
 
-	while (*rkey)
-		hashval = hashval * 33 + *rkey++;
+    while (*rkey)
+        hashval = hashval * 33 + *rkey++;
 
-	return hashval;
+    return hashval;
 }
 
 int main(int argc, char *argv[])
 {
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	if(argc != 2) {
-		fprintf(stderr, "usage: test_id test-file-name\n");
-		exit(1);
-	}
-	printf("%06ld_%4.4x", tv.tv_usec, hash_from_string(argv[1]));
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    if(argc != 2) {
+        fprintf(stderr, "usage: test_id test-file-name\n");
+        exit(1);
+    }
+    printf("%06ld_%4.4x", tv.tv_usec, hash_from_string(argv[1]));
 
-	return 0;
+    return 0;
 }

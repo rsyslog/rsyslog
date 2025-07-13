@@ -24,13 +24,13 @@
 
 int main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
 {
-	int i;
+    int i;
 
-	openlog("msggen", 0 , LOG_LOCAL0);
+    openlog("msggen", 0 , LOG_LOCAL0);
 
-	for(i = 0 ; i < 10 ; ++i)
-		syslog(LOG_NOTICE, "This is message number %d", i);
+    for(i = 0 ; i < 10 ; ++i)
+        syslog(LOG_NOTICE, "This is message number %d", i);
 
-	closelog();
-	return 0;
+    closelog();
+    return 0;
 }

@@ -28,8 +28,8 @@ typedef cryprov_if_t lmcry_gcry_if_t;
 
 /* the lmcry_gcry object */
 struct lmcry_gcry_s {
-	BEGINobjInstance; /* Data to implement generic object - MUST be the first data element! */
-	gcryctx ctx;
+    BEGINobjInstance; /* Data to implement generic object - MUST be the first data element! */
+    gcryctx ctx;
 };
 typedef struct lmcry_gcry_s lmcry_gcry_t;
 

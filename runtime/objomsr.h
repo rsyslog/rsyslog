@@ -23,20 +23,20 @@
 #define OBJOMSR_H_INCLUDED
 
 /* define flags for required template options */
-#define OMSR_NO_RQD_TPL_OPTS	0
-#define OMSR_RQD_TPL_OPT_SQL	1
+#define OMSR_NO_RQD_TPL_OPTS    0
+#define OMSR_RQD_TPL_OPT_SQL    1
 /* only one of OMSR_TPL_AS_ARRAY, _AS_MSG, or _AS_JSON  must be specified,
  * if all are given results are unpredictable.
  */
-#define OMSR_TPL_AS_ARRAY	2	 /* introduced in 4.1.6, 2009-04-03 */
-#define OMSR_TPL_AS_MSG		4	 /* introduced in 5.3.4, 2009-11-02 */
-#define OMSR_TPL_AS_JSON	8	 /* introduced in 6.5.1, 2012-09-02 */
+#define OMSR_TPL_AS_ARRAY   2    /* introduced in 4.1.6, 2009-04-03 */
+#define OMSR_TPL_AS_MSG     4    /* introduced in 5.3.4, 2009-11-02 */
+#define OMSR_TPL_AS_JSON    8    /* introduced in 6.5.1, 2012-09-02 */
 /* next option is 16, 32, 64, ... */
 
-struct omodStringRequest_s {	/* strings requested by output module for doAction() */
-	int iNumEntries;	/* number of array entries for data elements below */
-	uchar **ppTplName;	/* pointer to array of template names */
-	int *piTplOpts;/* pointer to array of check-options when pulling template */
+struct omodStringRequest_s {    /* strings requested by output module for doAction() */
+    int iNumEntries;    /* number of array entries for data elements below */
+    uchar **ppTplName;  /* pointer to array of template names */
+    int *piTplOpts;/* pointer to array of check-options when pulling template */
 };
 typedef struct omodStringRequest_s omodStringRequest_t;
 

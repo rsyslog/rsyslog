@@ -65,49 +65,49 @@ DEF_OMOD_STATIC_DATA
 
 
 typedef struct _instanceData {
-	uchar	*pipe;	/* pipe or template name (display only) */
-	uchar	*tplName;       /* format template to use */
-	short	fd;		/* pipe descriptor for (current) pipe */
-	pthread_mutex_t mutWrite; /* guard against multiple instances writing to same pipe */
-	sbool	bHadError;	/* did we already have/report an error on this pipe? */
-	sbool	bTryResumeReopen;	/* should we attempt to reopen the pipe on action resume? */
+    uchar   *pipe;  /* pipe or template name (display only) */
+    uchar   *tplName;       /* format template to use */
+    short   fd;     /* pipe descriptor for (current) pipe */
+    pthread_mutex_t mutWrite; /* guard against multiple instances writing to same pipe */
+    sbool   bHadError;  /* did we already have/report an error on this pipe? */
+    sbool   bTryResumeReopen;   /* should we attempt to reopen the pipe on action resume? */
 } instanceData;
 
 typedef struct wrkrInstanceData {
-	instanceData *pData;
+    instanceData *pData;
 } wrkrInstanceData_t;
 
 typedef struct configSettings_s {
-	EMPTY_STRUCT
+    EMPTY_STRUCT
 } configSettings_t;
 static configSettings_t __attribute__((unused)) cs;
 
 /* tables for interfacing with the v6 config system */
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
-	{ "template", eCmdHdlrGetWord, 0 },
+    { "template", eCmdHdlrGetWord, 0 },
 };
 static struct cnfparamblk modpblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(modpdescr)/sizeof(struct cnfparamdescr),
-	  modpdescr
-	};
+    { CNFPARAMBLK_VERSION,
+      sizeof(modpdescr)/sizeof(struct cnfparamdescr),
+      modpdescr
+    };
 
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-	{ "pipe", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "template", eCmdHdlrGetWord, 0 },
-	{ "tryResumeReopen", eCmdHdlrBinary, 0 },
+    { "pipe", eCmdHdlrString, CNFPARAM_REQUIRED },
+    { "template", eCmdHdlrGetWord, 0 },
+    { "tryResumeReopen", eCmdHdlrBinary, 0 },
 };
 static struct cnfparamblk actpblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
-	  actpdescr
-	};
+    { CNFPARAMBLK_VERSION,
+      sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+      actpdescr
+    };
 
 struct modConfData_s {
-	rsconf_t *pConf;	/* our overall config object */
-	uchar 	*tplName;	/* default template */
+    rsconf_t *pConf;    /* our overall config object */
+    uchar   *tplName;   /* default template */
 };
 
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
@@ -117,30 +117,30 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current ex
 static uchar*
 getDfltTpl(void)
 {
-	if(loadModConf != NULL && loadModConf->tplName != NULL)
-		return loadModConf->tplName;
-	else
-		return (uchar*)"RSYSLOG_FileFormat";
+    if(loadModConf != NULL && loadModConf->tplName != NULL)
+        return loadModConf->tplName;
+    else
+        return (uchar*)"RSYSLOG_FileFormat";
 }
 
 
-BEGINinitConfVars		/* (re)set config variables to default values */
+BEGINinitConfVars       /* (re)set config variables to default values */
 CODESTARTinitConfVars
 ENDinitConfVars
 
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
-		iRet = RS_RET_OK;
+    if(eFeat == sFEATURERepeatedMsgReduction)
+        iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-	dbgprintf("pipe %s", pData->pipe);
-	if (pData->fd == -1)
-		dbgprintf(" (unused)");
+    dbgprintf("pipe %s", pData->pipe);
+    if (pData->fd == -1)
+        dbgprintf(" (unused)");
 ENDdbgPrintInstInfo
 
 
@@ -153,18 +153,18 @@ ENDdbgPrintInstInfo
 static rsRetVal
 preparePipe(instanceData *pData)
 {
-	DEFiRet;
-	pData->fd = open((char*) pData->pipe, O_RDWR|O_NONBLOCK|O_CLOEXEC);
-	if(pData->fd < 0 ) {
-		pData->fd = -1;
-		if(!pData->bHadError) {
-			LogError(errno, RS_RET_NO_FILE_ACCESS, "Could not open output pipe '%s':",
-				        pData->pipe);
-			pData->bHadError = 1;
-		}
-		DBGPRINTF("Error opening log pipe: %s\n", pData->pipe);
-	}
-	RETiRet;
+    DEFiRet;
+    pData->fd = open((char*) pData->pipe, O_RDWR|O_NONBLOCK|O_CLOEXEC);
+    if(pData->fd < 0 ) {
+        pData->fd = -1;
+        if(!pData->bHadError) {
+            LogError(errno, RS_RET_NO_FILE_ACCESS, "Could not open output pipe '%s':",
+                        pData->pipe);
+            pData->bHadError = 1;
+        }
+        DBGPRINTF("Error opening log pipe: %s\n", pData->pipe);
+    }
+    RETiRet;
 }
 
 
@@ -174,86 +174,86 @@ preparePipe(instanceData *pData)
  */
 static rsRetVal writePipe(uchar **ppString, instanceData *pData)
 {
-	int iLenWritten;
-	DEFiRet;
+    int iLenWritten;
+    DEFiRet;
 
-	assert(pData != NULL);
+    assert(pData != NULL);
 
-	if(pData->fd == -1) {
-		rsRetVal iRetLocal;
-		iRetLocal = preparePipe(pData);
-		if((iRetLocal != RS_RET_OK) || (pData->fd == -1))
-			ABORT_FINALIZE(RS_RET_SUSPENDED); /* whatever the failure was, we need to retry */
-	}
+    if(pData->fd == -1) {
+        rsRetVal iRetLocal;
+        iRetLocal = preparePipe(pData);
+        if((iRetLocal != RS_RET_OK) || (pData->fd == -1))
+            ABORT_FINALIZE(RS_RET_SUSPENDED); /* whatever the failure was, we need to retry */
+    }
 
-	/* create the message based on format specified */
-	iLenWritten = write(pData->fd, ppString[0], strlen((char*)ppString[0]));
-	if(iLenWritten < 0) {
-		const int e = errno;
-		/* If a named pipe is full, we suspend this action for a while */
-		if(e == EAGAIN)
-			ABORT_FINALIZE(RS_RET_SUSPENDED);
+    /* create the message based on format specified */
+    iLenWritten = write(pData->fd, ppString[0], strlen((char*)ppString[0]));
+    if(iLenWritten < 0) {
+        const int e = errno;
+        /* If a named pipe is full, we suspend this action for a while */
+        if(e == EAGAIN)
+            ABORT_FINALIZE(RS_RET_SUSPENDED);
 
-		close(pData->fd);
-		pData->fd = -1; /* tell that fd is no longer open! */
-		iRet = RS_RET_SUSPENDED;
-		LogError(e, NO_ERRCODE, "write error on pipe %s", pData->pipe);
-	}
+        close(pData->fd);
+        pData->fd = -1; /* tell that fd is no longer open! */
+        iRet = RS_RET_SUSPENDED;
+        LogError(e, NO_ERRCODE, "write error on pipe %s", pData->pipe);
+    }
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
-	loadModConf = pModConf;
-	pModConf->pConf = pConf;
-	pModConf->tplName = NULL;
+    loadModConf = pModConf;
+    pModConf->pConf = pConf;
+    pModConf->tplName = NULL;
 ENDbeginCnfLoad
 
 BEGINsetModCnf
-	struct cnfparamvals *pvals = NULL;
-	int i;
+    struct cnfparamvals *pvals = NULL;
+    int i;
 CODESTARTsetModCnf
-	pvals = nvlstGetParams(lst, &modpblk, NULL);
-	if(pvals == NULL) {
-		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
-				"config parameters [module(...)]");
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-	}
+    pvals = nvlstGetParams(lst, &modpblk, NULL);
+    if(pvals == NULL) {
+        LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
+                "config parameters [module(...)]");
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
 
-	if(Debug) {
-		dbgprintf("module (global) param blk for ompipe:\n");
-		cnfparamsPrint(&modpblk, pvals);
-	}
+    if(Debug) {
+        dbgprintf("module (global) param blk for ompipe:\n");
+        cnfparamsPrint(&modpblk, pvals);
+    }
 
-	for(i = 0 ; i < modpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
-			continue;
-		if(!strcmp(modpblk.descr[i].name, "template")) {
-			loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-			if(pszFileDfltTplName != NULL) {
-				LogError(0, RS_RET_DUP_PARAM, "ompipe: warning: default template "
-						"was already set via legacy directive - may lead to inconsistent "
-						"results.");
-			}
-		} else {
-			dbgprintf("ompipe: program error, non-handled "
-			  "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
-		}
-	}
+    for(i = 0 ; i < modpblk.nParams ; ++i) {
+        if(!pvals[i].bUsed)
+            continue;
+        if(!strcmp(modpblk.descr[i].name, "template")) {
+            loadModConf->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+            if(pszFileDfltTplName != NULL) {
+                LogError(0, RS_RET_DUP_PARAM, "ompipe: warning: default template "
+                        "was already set via legacy directive - may lead to inconsistent "
+                        "results.");
+            }
+        } else {
+            dbgprintf("ompipe: program error, non-handled "
+              "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
+        }
+    }
 finalize_it:
-	if(pvals != NULL)
-		cnfparamvalsDestruct(pvals, &modpblk);
+    if(pvals != NULL)
+        cnfparamvalsDestruct(pvals, &modpblk);
 ENDsetModCnf
 
 BEGINendCnfLoad
 CODESTARTendCnfLoad
-	loadModConf = NULL; /* done loading */
-	/* free legacy config vars */
-	free(pszFileDfltTplName);
-	pszFileDfltTplName = NULL;
+    loadModConf = NULL; /* done loading */
+    /* free legacy config vars */
+    free(pszFileDfltTplName);
+    pszFileDfltTplName = NULL;
 ENDendCnfLoad
 
 BEGINcheckCnf
@@ -262,21 +262,21 @@ ENDcheckCnf
 
 BEGINactivateCnf
 CODESTARTactivateCnf
-	runModConf = pModConf;
+    runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
 CODESTARTfreeCnf
-	free(pModConf->tplName);
+    free(pModConf->tplName);
 ENDfreeCnf
 
 BEGINcreateInstance
 CODESTARTcreateInstance
-	pData->pipe = NULL;
-	pData->fd = -1;
-	pData->bHadError = 0;
-	pData->bTryResumeReopen = 0;
-	pthread_mutex_init(&pData->mutWrite, NULL);
+    pData->pipe = NULL;
+    pData->fd = -1;
+    pData->bHadError = 0;
+    pData->bTryResumeReopen = 0;
+    pthread_mutex_init(&pData->mutWrite, NULL);
 ENDcreateInstance
 
 
@@ -287,10 +287,10 @@ ENDcreateWrkrInstance
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	pthread_mutex_destroy(&pData->mutWrite);
-	free(pData->pipe);
-	if(pData->fd != -1)
-		close(pData->fd);
+    pthread_mutex_destroy(&pData->mutWrite);
+    free(pData->pipe);
+    if(pData->fd != -1)
+        close(pData->fd);
 ENDfreeInstance
 
 
@@ -300,111 +300,111 @@ ENDfreeWrkrInstance
 
 
 BEGINtryResume
-	instanceData *__restrict__ const pData = pWrkrData->pData;
-	fd_set wrds;
-	struct timeval tv;
-	int ready;
+    instanceData *__restrict__ const pData = pWrkrData->pData;
+    fd_set wrds;
+    struct timeval tv;
+    int ready;
 CODESTARTtryResume
-	if(pData->fd == -1) {
-		rsRetVal iRetLocal;
-		iRetLocal = preparePipe(pData);
-		if((iRetLocal != RS_RET_OK) || (pData->fd == -1))
-			ABORT_FINALIZE(RS_RET_SUSPENDED);
-	} else {
-		/* we can reach this if the pipe is full, so we need
-		 * to check if we can write again. /dev/xconsole is the
-		 * ugly example of why this is necessary.
-		 */
-		FD_ZERO(&wrds);
-		FD_SET(pData->fd, &wrds);
-		tv.tv_sec = 0;
-		tv.tv_usec = 0;
-		ready = select(pData->fd+1, NULL, &wrds, NULL, &tv);
-		DBGPRINTF("ompipe: tryResume: ready to write fd %d: %d\n", pData->fd, ready);
-		if(ready != 1) {
-			if(pData->bTryResumeReopen && pData->fd != -1) {
-				close(pData->fd);
-				pData->fd = -1;
-			}
-			ABORT_FINALIZE(RS_RET_SUSPENDED);
-		}
-	}
+    if(pData->fd == -1) {
+        rsRetVal iRetLocal;
+        iRetLocal = preparePipe(pData);
+        if((iRetLocal != RS_RET_OK) || (pData->fd == -1))
+            ABORT_FINALIZE(RS_RET_SUSPENDED);
+    } else {
+        /* we can reach this if the pipe is full, so we need
+         * to check if we can write again. /dev/xconsole is the
+         * ugly example of why this is necessary.
+         */
+        FD_ZERO(&wrds);
+        FD_SET(pData->fd, &wrds);
+        tv.tv_sec = 0;
+        tv.tv_usec = 0;
+        ready = select(pData->fd+1, NULL, &wrds, NULL, &tv);
+        DBGPRINTF("ompipe: tryResume: ready to write fd %d: %d\n", pData->fd, ready);
+        if(ready != 1) {
+            if(pData->bTryResumeReopen && pData->fd != -1) {
+                close(pData->fd);
+                pData->fd = -1;
+            }
+            ABORT_FINALIZE(RS_RET_SUSPENDED);
+        }
+    }
 finalize_it:
 ENDtryResume
 
 BEGINdoAction
-	instanceData *pData;
+    instanceData *pData;
 CODESTARTdoAction
-	pData = pWrkrData->pData;
-	DBGPRINTF("ompipe: writing to %s\n", pData->pipe);
-	/* this module is single-threaded by nature */
-	pthread_mutex_lock(&pData->mutWrite);
-	iRet = writePipe(ppString, pData);
-	pthread_mutex_unlock(&pData->mutWrite);
+    pData = pWrkrData->pData;
+    DBGPRINTF("ompipe: writing to %s\n", pData->pipe);
+    /* this module is single-threaded by nature */
+    pthread_mutex_lock(&pData->mutWrite);
+    iRet = writePipe(ppString, pData);
+    pthread_mutex_unlock(&pData->mutWrite);
 ENDdoAction
 
 
 static inline void
 setInstParamDefaults(instanceData *pData)
 {
-	pData->tplName = NULL;
+    pData->tplName = NULL;
 }
 
 BEGINnewActInst
-	struct cnfparamvals *pvals;
-	int i;
+    struct cnfparamvals *pvals;
+    int i;
 CODESTARTnewActInst
-	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-	}
+    if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
 
-	CHKiRet(createInstance(&pData));
-	setInstParamDefaults(pData);
+    CHKiRet(createInstance(&pData));
+    setInstParamDefaults(pData);
 
-	CODE_STD_STRING_REQUESTnewActInst(1)
-	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
-			continue;
-		if(!strcmp(actpblk.descr[i].name, "pipe")) {
-			pData->pipe = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "template")) {
-			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "tryResumeReopen")) {
-			pData->bTryResumeReopen = (int) pvals[i].val.d.n;
-		} else {
-			dbgprintf("ompipe: program error, non-handled "
-			  "param '%s'\n", actpblk.descr[i].name);
-		}
-	}
+    CODE_STD_STRING_REQUESTnewActInst(1)
+    for(i = 0 ; i < actpblk.nParams ; ++i) {
+        if(!pvals[i].bUsed)
+            continue;
+        if(!strcmp(actpblk.descr[i].name, "pipe")) {
+            pData->pipe = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if(!strcmp(actpblk.descr[i].name, "template")) {
+            pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if(!strcmp(actpblk.descr[i].name, "tryResumeReopen")) {
+            pData->bTryResumeReopen = (int) pvals[i].val.d.n;
+        } else {
+            dbgprintf("ompipe: program error, non-handled "
+              "param '%s'\n", actpblk.descr[i].name);
+        }
+    }
 
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ?
-						"RSYSLOG_FileFormat" : (char*)pData->tplName),
-						OMSR_NO_RQD_TPL_OPTS));
+    CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ?
+                        "RSYSLOG_FileFormat" : (char*)pData->tplName),
+                        OMSR_NO_RQD_TPL_OPTS));
 CODE_STD_FINALIZERnewActInst
-	cnfparamvalsDestruct(pvals, &actpblk);
+    cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
-	/* yes, the if below is redundant, but I need it now. Will go away as
-	 * the code further changes.  -- rgerhards, 2007-07-25
-	 */
-	if(*p == '|') {
-		if((iRet = createInstance(&pData)) != RS_RET_OK) {
-			return iRet; /* this can not use RET_iRet! */
-		}
-	} else {
-		/* this is not clean, but we need it for the time being
-		 * TODO: remove when cleaning up modularization
-		 */
-		return RS_RET_CONFLINE_UNPROCESSED;
-	}
+    /* yes, the if below is redundant, but I need it now. Will go away as
+     * the code further changes.  -- rgerhards, 2007-07-25
+     */
+    if(*p == '|') {
+        if((iRet = createInstance(&pData)) != RS_RET_OK) {
+            return iRet; /* this can not use RET_iRet! */
+        }
+    } else {
+        /* this is not clean, but we need it for the time being
+         * TODO: remove when cleaning up modularization
+         */
+        return RS_RET_CONFLINE_UNPROCESSED;
+    }
 
-	CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	CHKmalloc(pData->pipe = malloc(512));
-	++p;
-	CHKiRet(cflineParseFileName(p, (uchar*) pData->pipe, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
-				       getDfltTpl()));
+    CODE_STD_STRING_REQUESTparseSelectorAct(1)
+    CHKmalloc(pData->pipe = malloc(512));
+    ++p;
+    CHKiRet(cflineParseFileName(p, (uchar*) pData->pipe, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
+                       getDfltTpl()));
 
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
@@ -412,12 +412,12 @@ ENDparseSelectorAct
 
 BEGINdoHUP
 CODESTARTdoHUP
-	pthread_mutex_lock(&pData->mutWrite);
-	if(pData->fd != -1) {
-		close(pData->fd);
-		pData->fd = -1;
-	}
-	pthread_mutex_unlock(&pData->mutWrite);
+    pthread_mutex_lock(&pData->mutWrite);
+    if(pData->fd != -1) {
+        close(pData->fd);
+        pData->fd = -1;
+    }
+    pthread_mutex_unlock(&pData->mutWrite);
 ENDdoHUP
 
 
@@ -441,7 +441,7 @@ ENDqueryEtryPt
 BEGINmodInit(Pipe)
 CODESTARTmodInit
 INITLegCnfVars
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit
 /* vi:set ai:

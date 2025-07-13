@@ -44,9 +44,9 @@ typedef struct __attribute__ ((__packed__)) ipv6_header_s {
 #ifndef IPV6_FLOW_MASK
 #define IPV6_FLOW_MASK        0x000FFFFF
 #endif
-	uint32_t vtf;
-	uint16_t dataLength;
-	uint8_t nextHeader;
+    uint32_t vtf;
+    uint16_t dataLength;
+    uint8_t nextHeader;
 #define IPV6_NHDR_HBH     0
 #define IPV6_NHDR_TCP     6
 #define IPV6_NHDR_UDP     17
@@ -60,9 +60,9 @@ typedef struct __attribute__ ((__packed__)) ipv6_header_s {
 #define IPV6_NHDR_NONHDR  59
 #define IPV6_NHDR_DOPTS   60
 
-	uint8_t hopLimit;
-	uint8_t addrSrc[16];
-	uint8_t addrDst[16];
+    uint8_t hopLimit;
+    uint8_t addrSrc[16];
+    uint8_t addrDst[16];
 } ipv6_header_t;
 #pragma GCC diagnostic pop
 
@@ -78,142 +78,142 @@ typedef struct __attribute__ ((__packed__)) ipv6_header_s {
 
 /* extension headers */
 typedef struct hbh_header_s {
-	uint8_t nextHeader;
-	uint8_t hLength;
-	uint8_t *pOptions;
+    uint8_t nextHeader;
+    uint8_t hLength;
+    uint8_t *pOptions;
 } hbh_header_t;
 
 typedef struct dest_header_s {
-	uint8_t nextHeader;
-	uint8_t hLength;
-	uint8_t *pOptions;
+    uint8_t nextHeader;
+    uint8_t hLength;
+    uint8_t *pOptions;
 } dest_header_t;
 
 typedef struct route_header_s {
-	uint8_t nextHeader;
-	uint8_t hLength;
-	uint8_t rType;
-	uint8_t segsLeft;
-	uint32_t reserved;
-	uint8_t addrs[16];
+    uint8_t nextHeader;
+    uint8_t hLength;
+    uint8_t rType;
+    uint8_t segsLeft;
+    uint32_t reserved;
+    uint8_t addrs[16];
 } route_header_t;
 
 typedef struct frag_header_s {
-	uint8_t nextHeader;
-	uint8_t reserved;
-	uint16_t offsetFlags;
-	uint32_t id;
+    uint8_t nextHeader;
+    uint8_t reserved;
+    uint16_t offsetFlags;
+    uint32_t id;
 } frag_header_t;
 
 static inline uint8_t hbh_header_parse(const uchar **packet, int *pktSize) {
-	DBGPRINTF("hbh_header_parse\n");
+    DBGPRINTF("hbh_header_parse\n");
 
-	/* Union to prevent cast from uchar to hbh_header_t */
-	union {
-		const uchar *pck;
-		hbh_header_t *hdr;
-	} hbh_header_to_char;
+    /* Union to prevent cast from uchar to hbh_header_t */
+    union {
+        const uchar *pck;
+        hbh_header_t *hdr;
+    } hbh_header_to_char;
 
-	hbh_header_to_char.pck = *packet;
-	hbh_header_t *hbh_header = hbh_header_to_char.hdr;
+    hbh_header_to_char.pck = *packet;
+    hbh_header_t *hbh_header = hbh_header_to_char.hdr;
 
-	/* hbh_header->hLength is the number of octets of header in 8-octet units minus 1
-	* the header length SHOULD be a multiple of 8 */
-	uint8_t hByteLength = hbh_header->hLength * 8 + 8;
-	DBGPRINTF("hByteLength: %d\n", hByteLength);
-	*pktSize -= hByteLength;
-	*packet += hByteLength;
+    /* hbh_header->hLength is the number of octets of header in 8-octet units minus 1
+    * the header length SHOULD be a multiple of 8 */
+    uint8_t hByteLength = hbh_header->hLength * 8 + 8;
+    DBGPRINTF("hByteLength: %d\n", hByteLength);
+    *pktSize -= hByteLength;
+    *packet += hByteLength;
 
-	return hbh_header->nextHeader;
+    return hbh_header->nextHeader;
 }
 
 static inline uint8_t dest_header_parse(const uchar **packet, int *pktSize) {
-	DBGPRINTF("dest_header_parse\n");
+    DBGPRINTF("dest_header_parse\n");
 
-	/* Union to prevent cast from uchar to dest_header_t */
-	union {
-		const uchar *pck;
-		dest_header_t *hdr;
-	} dest_header_to_char;
+    /* Union to prevent cast from uchar to dest_header_t */
+    union {
+        const uchar *pck;
+        dest_header_t *hdr;
+    } dest_header_to_char;
 
-	dest_header_to_char.pck = *packet;
-	dest_header_t *dest_header = dest_header_to_char.hdr;
+    dest_header_to_char.pck = *packet;
+    dest_header_t *dest_header = dest_header_to_char.hdr;
 
-	/* dest_header->hLength is the number of octets of header in 8-octet units minus 1
-	 * the header length SHOULD be a multiple of 8 */
-	uint8_t hByteLength = dest_header->hLength * 8 + 8;
-	DBGPRINTF("hByteLength: %d\n", hByteLength);
-	*pktSize -= hByteLength;
-	*packet += hByteLength;
+    /* dest_header->hLength is the number of octets of header in 8-octet units minus 1
+     * the header length SHOULD be a multiple of 8 */
+    uint8_t hByteLength = dest_header->hLength * 8 + 8;
+    DBGPRINTF("hByteLength: %d\n", hByteLength);
+    *pktSize -= hByteLength;
+    *packet += hByteLength;
 
-	return dest_header->nextHeader;
+    return dest_header->nextHeader;
 }
 
 static inline uint8_t route_header_parse(const uchar **packet, int *pktSize, struct json_object *jparent) {
-	DBGPRINTF("route_header_parse\n");
+    DBGPRINTF("route_header_parse\n");
 
-	/* Union to prevent cast from uchar to route_header_t */
-	union {
-		const uchar *pck;
-		route_header_t *hdr;
-	} route_header_to_char;
+    /* Union to prevent cast from uchar to route_header_t */
+    union {
+        const uchar *pck;
+        route_header_t *hdr;
+    } route_header_to_char;
 
-	route_header_to_char.pck = *packet;
-	route_header_t *route_header = route_header_to_char.hdr;
+    route_header_to_char.pck = *packet;
+    route_header_t *route_header = route_header_to_char.hdr;
 
-	/* route_header->hLength is the number of octets of header in 8-octet units minus 1
-	* the header length (in bytes) SHOULD be a multiple of 8 */
-	uint8_t hByteLength = route_header->hLength * 8 + 8;
-	*pktSize -= hByteLength;
-	*packet += hByteLength;
+    /* route_header->hLength is the number of octets of header in 8-octet units minus 1
+    * the header length (in bytes) SHOULD be a multiple of 8 */
+    uint8_t hByteLength = route_header->hLength * 8 + 8;
+    *pktSize -= hByteLength;
+    *packet += hByteLength;
 
-	if (route_header->rType == 0) {
-		json_object_object_add(jparent, "IP6_route_seg_left", json_object_new_int(route_header->segsLeft));
+    if (route_header->rType == 0) {
+        json_object_object_add(jparent, "IP6_route_seg_left", json_object_new_int(route_header->segsLeft));
 
-		hByteLength -= 8;   //leave only length of routing addresses
+        hByteLength -= 8;   //leave only length of routing addresses
 
-		char addrStr[40], routeFieldName[20];
-		int addrNum = 1;
-		uint8_t *addr = &(route_header->addrs[0]);
+        char addrStr[40], routeFieldName[20];
+        int addrNum = 1;
+        uint8_t *addr = &(route_header->addrs[0]);
 
-		//while there is enough space for an IPv6 address
-		while (hByteLength >= 16) {
-			inet_ntop(AF_INET6, (void *)addr, addrStr, 40);
-			snprintf(routeFieldName, 20, "IP6_route_%d", addrNum++);
-			json_object_object_add(jparent, routeFieldName, json_object_new_string((char *)addrStr));
+        //while there is enough space for an IPv6 address
+        while (hByteLength >= 16) {
+            inet_ntop(AF_INET6, (void *)addr, addrStr, 40);
+            snprintf(routeFieldName, 20, "IP6_route_%d", addrNum++);
+            json_object_object_add(jparent, routeFieldName, json_object_new_string((char *)addrStr));
 
-			addr += 16;
-			hByteLength -= 16;
-		}
-	}
+            addr += 16;
+            hByteLength -= 16;
+        }
+    }
 
-	return route_header->nextHeader;
+    return route_header->nextHeader;
 }
 
 #define FRAG_OFFSET_MASK    0xFFF8
 #define MFLAG_MASK          0x0001
 static inline uint8_t frag_header_parse(const uchar **packet, int *pktSize, struct json_object *jparent) {
-	DBGPRINTF("frag_header_parse\n");
+    DBGPRINTF("frag_header_parse\n");
 
-	/* Union to prevent cast from uchar to frag_header_t */
-	union {
-		const uchar *pck;
-		frag_header_t *hdr;
-	} frag_header_to_char;
+    /* Union to prevent cast from uchar to frag_header_t */
+    union {
+        const uchar *pck;
+        frag_header_t *hdr;
+    } frag_header_to_char;
 
-	frag_header_to_char.pck = *packet;
-	frag_header_t *frag_header = frag_header_to_char.hdr;
+    frag_header_to_char.pck = *packet;
+    frag_header_t *frag_header = frag_header_to_char.hdr;
 
-	uint16_t flags = ntohs(frag_header->offsetFlags);
+    uint16_t flags = ntohs(frag_header->offsetFlags);
 
-	json_object_object_add(jparent, "IP6_frag_offset", json_object_new_int((flags & FRAG_OFFSET_MASK) >> 3));
-	json_object_object_add(jparent, "IP6_frag_more", json_object_new_boolean(flags & MFLAG_MASK));
-	json_object_object_add(jparent, "IP6_frag_id", json_object_new_int64(frag_header->id));
+    json_object_object_add(jparent, "IP6_frag_offset", json_object_new_int((flags & FRAG_OFFSET_MASK) >> 3));
+    json_object_object_add(jparent, "IP6_frag_more", json_object_new_boolean(flags & MFLAG_MASK));
+    json_object_object_add(jparent, "IP6_frag_id", json_object_new_int64(frag_header->id));
 
-	*pktSize -= 8;
-	*packet += 8;
+    *pktSize -= 8;
+    *packet += 8;
 
-	return frag_header->nextHeader;
+    return frag_header->nextHeader;
 }
 
 /*
@@ -230,76 +230,76 @@ static inline uint8_t frag_header_parse(const uchar **packet, int *pktSize, stru
  *  or the ones after (as a list of bytes), and the length of this data.
 */
 data_ret_t *ipv6_parse(const uchar *packet, int pktSize, struct json_object *jparent) {
-	DBGPRINTF("ipv6_parse\n");
-	DBGPRINTF("packet size %d\n", pktSize);
+    DBGPRINTF("ipv6_parse\n");
+    DBGPRINTF("packet size %d\n", pktSize);
 
-	if (pktSize < 40) { /* too small for IPv6 header + data (header might be longer)*/
-		DBGPRINTF("IPv6 packet too small : %d\n", pktSize);
-		RETURN_DATA_AFTER(0)
-	}
+    if (pktSize < 40) { /* too small for IPv6 header + data (header might be longer)*/
+        DBGPRINTF("IPv6 packet too small : %d\n", pktSize);
+        RETURN_DATA_AFTER(0)
+    }
 
-	ipv6_header_t *ipv6_header = (ipv6_header_t *)packet;
+    ipv6_header_t *ipv6_header = (ipv6_header_t *)packet;
 
-	char addrSrc[40], addrDst[40];
+    char addrSrc[40], addrDst[40];
 
-	inet_ntop(AF_INET6, (void *)&ipv6_header->addrSrc, addrSrc, 40);
-	inet_ntop(AF_INET6, (void *)&ipv6_header->addrDst, addrDst, 40);
+    inet_ntop(AF_INET6, (void *)&ipv6_header->addrSrc, addrSrc, 40);
+    inet_ntop(AF_INET6, (void *)&ipv6_header->addrDst, addrDst, 40);
 
-	json_object_object_add(jparent, "net_dst_ip", json_object_new_string((char *)addrDst));
-	json_object_object_add(jparent, "net_src_ip", json_object_new_string((char *)addrSrc));
-	json_object_object_add(jparent, "net_ttl", json_object_new_int(ipv6_header->hopLimit));
+    json_object_object_add(jparent, "net_dst_ip", json_object_new_string((char *)addrDst));
+    json_object_object_add(jparent, "net_src_ip", json_object_new_string((char *)addrSrc));
+    json_object_object_add(jparent, "net_ttl", json_object_new_int(ipv6_header->hopLimit));
 
-	uint8_t nextHeader = ipv6_header->nextHeader;
+    uint8_t nextHeader = ipv6_header->nextHeader;
 
-	packet += sizeof(ipv6_header_t);
-	pktSize -= sizeof(ipv6_header_t);
+    packet += sizeof(ipv6_header_t);
+    pktSize -= sizeof(ipv6_header_t);
 
-	DBGPRINTF("beginning ext headers scan\n");
-	uint8_t hasNext = 1;
-	do {
-		switch (nextHeader) {
-			case IPV6_NHDR_HBH:
-				nextHeader = hbh_header_parse(&packet, &pktSize);
-				break;
-			case IPV6_NHDR_TCP:
-				json_object_object_add(jparent, "IP_proto", json_object_new_int(nextHeader));
-				return tcp_parse(packet, pktSize, jparent);
-			case IPV6_NHDR_UDP:
-				json_object_object_add(jparent, "IP_proto", json_object_new_int(nextHeader));
-				return udp_parse(packet, pktSize, jparent);
-			case IPV6_NHDR_ENCIP6:
-				hasNext = 0;
-				break;
-			case IPV6_NHDR_ROUT:
-				nextHeader = route_header_parse(&packet, &pktSize, jparent);
-				break;
-			case IPV6_NHDR_FRAG:
-				nextHeader = frag_header_parse(&packet, &pktSize, jparent);
-				break;
-			case IPV6_NHDR_RRSV:
-				hasNext = 0;
-				break;
-			case IPV6_NHDR_SEC:
-				hasNext = 0;
-				break;
-			case IPV6_NHDR_AUTH:
-				hasNext = 0;
-				break;
-			case IPV6_NHDR_ICMP6:
-				json_object_object_add(jparent, "IP_proto", json_object_new_int(nextHeader));
-				return icmp_parse(packet, pktSize, jparent);
-			case IPV6_NHDR_NONHDR:
-				hasNext = 0;
-				break;
-			case IPV6_NHDR_DOPTS:
-				nextHeader = dest_header_parse(&packet, &pktSize);
-				break;
-			default:
-				hasNext = 0;
-				break;
-		}
-	} while (hasNext);
+    DBGPRINTF("beginning ext headers scan\n");
+    uint8_t hasNext = 1;
+    do {
+        switch (nextHeader) {
+            case IPV6_NHDR_HBH:
+                nextHeader = hbh_header_parse(&packet, &pktSize);
+                break;
+            case IPV6_NHDR_TCP:
+                json_object_object_add(jparent, "IP_proto", json_object_new_int(nextHeader));
+                return tcp_parse(packet, pktSize, jparent);
+            case IPV6_NHDR_UDP:
+                json_object_object_add(jparent, "IP_proto", json_object_new_int(nextHeader));
+                return udp_parse(packet, pktSize, jparent);
+            case IPV6_NHDR_ENCIP6:
+                hasNext = 0;
+                break;
+            case IPV6_NHDR_ROUT:
+                nextHeader = route_header_parse(&packet, &pktSize, jparent);
+                break;
+            case IPV6_NHDR_FRAG:
+                nextHeader = frag_header_parse(&packet, &pktSize, jparent);
+                break;
+            case IPV6_NHDR_RRSV:
+                hasNext = 0;
+                break;
+            case IPV6_NHDR_SEC:
+                hasNext = 0;
+                break;
+            case IPV6_NHDR_AUTH:
+                hasNext = 0;
+                break;
+            case IPV6_NHDR_ICMP6:
+                json_object_object_add(jparent, "IP_proto", json_object_new_int(nextHeader));
+                return icmp_parse(packet, pktSize, jparent);
+            case IPV6_NHDR_NONHDR:
+                hasNext = 0;
+                break;
+            case IPV6_NHDR_DOPTS:
+                nextHeader = dest_header_parse(&packet, &pktSize);
+                break;
+            default:
+                hasNext = 0;
+                break;
+        }
+    } while (hasNext);
 
-	json_object_object_add(jparent, "IP_proto", json_object_new_int(nextHeader));
-	RETURN_DATA_AFTER(0)
+    json_object_object_add(jparent, "IP_proto", json_object_new_int(nextHeader));
+    RETURN_DATA_AFTER(0)
 }

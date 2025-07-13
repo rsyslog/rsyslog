@@ -25,8 +25,8 @@
 
 /* timezone specific parameters*/
 struct timezones_s {
-	tzinfo_t *tzinfos;
-	int ntzinfos;
+    tzinfo_t *tzinfos;
+    int ntzinfos;
 };
 
 void displayTimezones(rsconf_t *cnf);

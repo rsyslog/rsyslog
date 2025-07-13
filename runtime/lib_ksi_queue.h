@@ -8,11 +8,11 @@
 #define RB_GROW_FACTOR 2
 
 typedef struct RingBuffer_st {
-	void **buffer;
-	size_t size;
-	size_t count;
-	size_t head;
-	size_t tail;
+    void **buffer;
+    size_t size;
+    size_t count;
+    size_t head;
+    size_t tail;
 } RingBuffer;
 
 RingBuffer* RingBuffer_new(size_t size);
@@ -24,10 +24,10 @@ bool RingBuffer_getItem(RingBuffer* this, size_t index, void** item);
 size_t RingBuffer_count(RingBuffer* this);
 
 typedef struct ProtectedQueue_st {
-	bool bStop;
-	RingBuffer *workItems;
-	pthread_mutex_t mutex;
-	pthread_cond_t condition;
+    bool bStop;
+    RingBuffer *workItems;
+    pthread_mutex_t mutex;
+    pthread_cond_t condition;
 } ProtectedQueue;
 
 ProtectedQueue* ProtectedQueue_new(size_t queueSize);
@@ -42,10 +42,10 @@ size_t ProtectedQueue_count(ProtectedQueue* this);
 bool ProtectedQueue_getItem(ProtectedQueue* this, size_t index, void** item);
 
 typedef struct WorkerThreadContext_st {
-	bool (*workerFunc)(void*);
-	bool (*timeoutFunc)(void);
-	ProtectedQueue* queue;
-	unsigned timeout;
+    bool (*workerFunc)(void*);
+    bool (*timeoutFunc)(void);
+    ProtectedQueue* queue;
+    unsigned timeout;
 } WorkerThreadContext;
 
 void *worker_thread_main(void *arg);

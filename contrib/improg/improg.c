@@ -71,32 +71,32 @@ MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("improg")
 
 struct instanceConf_s {
-	uchar *pszBinary;    /* name of external program to call */
-	char **aParams;     /* optional parameters to pass to external program */
-	int iParams;      /* holds the count of parameters if set */
-	uchar *pszTag;
-	size_t lenTag;
-	int iFacility;
-	int iSeverity;
-	int bConfirmMessages; /* does the program provide feedback via stdout? */
-	int bSignalOnClose;   /* should send SIGTERM to program before closing pipe? */
-	long lCloseTimeout;   /* how long to wait for program to terminate after closing pipe (ms) */
-	int bKillUnresponsive;  /* should send SIGKILL if closeTimeout is reached? */
-	cstr_t *ppCStr;
-	int bIsRunning;   /* is program currently running? 0-no, 1-yes */
-	pid_t pid;      /* pid of currently running child process */
-	int fdPipeToChild;    /* fd for sending data to the program */
-	int fdPipeFromChild;   /* fd for receiving messages from the program, or -1 */
-	uchar *pszBindRuleset;
-	ruleset_t *pBindRuleset;  /* ruleset to bind listener to (use system default if unspecified) */
-	ratelimit_t *ratelimiter;
-	struct instanceConf_s *next;
-	struct instanceConf_s *prev;
+    uchar *pszBinary;    /* name of external program to call */
+    char **aParams;     /* optional parameters to pass to external program */
+    int iParams;      /* holds the count of parameters if set */
+    uchar *pszTag;
+    size_t lenTag;
+    int iFacility;
+    int iSeverity;
+    int bConfirmMessages; /* does the program provide feedback via stdout? */
+    int bSignalOnClose;   /* should send SIGTERM to program before closing pipe? */
+    long lCloseTimeout;   /* how long to wait for program to terminate after closing pipe (ms) */
+    int bKillUnresponsive;  /* should send SIGKILL if closeTimeout is reached? */
+    cstr_t *ppCStr;
+    int bIsRunning;   /* is program currently running? 0-no, 1-yes */
+    pid_t pid;      /* pid of currently running child process */
+    int fdPipeToChild;    /* fd for sending data to the program */
+    int fdPipeFromChild;   /* fd for receiving messages from the program, or -1 */
+    uchar *pszBindRuleset;
+    ruleset_t *pBindRuleset;  /* ruleset to bind listener to (use system default if unspecified) */
+    ratelimit_t *ratelimiter;
+    struct instanceConf_s *next;
+    struct instanceConf_s *prev;
 };
 
 /* config variables */
 struct modConfData_s {
-	rsconf_t *pConf;  /* our overall config object */
+    rsconf_t *pConf;  /* our overall config object */
 
 };
 
@@ -125,9 +125,9 @@ extern char **environ; /* POSIX environment ptr, by std not in a header... (see 
 static inline void
 std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *pInst)
 {
-	LogError(0, NO_ERRCODE, "improg: ruleset '%s' for binary %s not found - "
-			"using default ruleset instead", pInst->pszBindRuleset,
-			pInst->pszBinary);
+    LogError(0, NO_ERRCODE, "improg: ruleset '%s' for binary %s not found - "
+            "using default ruleset instead", pInst->pszBindRuleset,
+            pInst->pszBinary);
 }
 
 #include "im-helper.h" /* must be included AFTER the type definitions! */
@@ -135,94 +135,94 @@ std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, insta
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr inppdescr[] = {
-	{ "binary", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "tag", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "severity", eCmdHdlrSeverity, 0 },
-	{ "facility", eCmdHdlrFacility, 0 },
-	{ "ruleset", eCmdHdlrString, 0 },
-	{ "confirmmessages", eCmdHdlrBinary, 0 },
-	{ "signalonclose", eCmdHdlrBinary, 0 },
-	{ "closetimeout", eCmdHdlrInt, 0 },
-	{ "killunresponsive", eCmdHdlrBinary, 0 }
+    { "binary", eCmdHdlrString, CNFPARAM_REQUIRED },
+    { "tag", eCmdHdlrString, CNFPARAM_REQUIRED },
+    { "severity", eCmdHdlrSeverity, 0 },
+    { "facility", eCmdHdlrFacility, 0 },
+    { "ruleset", eCmdHdlrString, 0 },
+    { "confirmmessages", eCmdHdlrBinary, 0 },
+    { "signalonclose", eCmdHdlrBinary, 0 },
+    { "closetimeout", eCmdHdlrInt, 0 },
+    { "killunresponsive", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk inppblk =
-	{ CNFPARAMBLK_VERSION,
-		sizeof(inppdescr)/sizeof(struct cnfparamdescr),
-		inppdescr
-	};
+    { CNFPARAMBLK_VERSION,
+        sizeof(inppdescr)/sizeof(struct cnfparamdescr),
+        inppdescr
+    };
 
 /* execute the external program (must be called in child context after fork).
  */
 static __attribute__((noreturn)) void execBinary(const instanceConf_t *pInst, int pipeToParent, int pipeFromParent)
 {
-	int maxFd, fd, sigNum;
-	struct sigaction sigAct;
-	sigset_t sigSet;
-	char errStr[1024];
+    int maxFd, fd, sigNum;
+    struct sigaction sigAct;
+    sigset_t sigSet;
+    char errStr[1024];
 
-	if(dup2(pipeToParent, STDOUT_FILENO) == -1) {
-		goto failed;
-	}
+    if(dup2(pipeToParent, STDOUT_FILENO) == -1) {
+        goto failed;
+    }
 
-	if(pipeFromParent != -1) {
-		if(dup2(pipeFromParent, STDIN_FILENO) == -1) {
-			goto failed;
-		}
-	}
+    if(pipeFromParent != -1) {
+        if(dup2(pipeFromParent, STDIN_FILENO) == -1) {
+            goto failed;
+        }
+    }
 
-	/* close the file handles the child process doesn't need (all above STDERR).
-	 * The following way is simple and portable, though not perfect.
-	 * See https://stackoverflow.com/a/918469 for alternatives.
-	 */
-	maxFd = sysconf(_SC_OPEN_MAX);
-	if(maxFd < 0 || maxFd > MAX_FD_TO_CLOSE) {
-		maxFd = MAX_FD_TO_CLOSE;
-	}
-	# ifdef VALGRIND
-	else {
-		maxFd -= 10;
-	}
-	# endif
-	for(fd = STDERR_FILENO + 1 ; fd <= maxFd ; ++fd) {
-		close(fd);
-	}
+    /* close the file handles the child process doesn't need (all above STDERR).
+     * The following way is simple and portable, though not perfect.
+     * See https://stackoverflow.com/a/918469 for alternatives.
+     */
+    maxFd = sysconf(_SC_OPEN_MAX);
+    if(maxFd < 0 || maxFd > MAX_FD_TO_CLOSE) {
+        maxFd = MAX_FD_TO_CLOSE;
+    }
+    # ifdef VALGRIND
+    else {
+        maxFd -= 10;
+    }
+    # endif
+    for(fd = STDERR_FILENO + 1 ; fd <= maxFd ; ++fd) {
+        close(fd);
+    }
 
-	/* reset signal handlers to default */
-	memset(&sigAct, 0, sizeof(sigAct));
-	sigemptyset(&sigAct.sa_mask);
-	sigAct.sa_handler = SIG_DFL;
-	for(sigNum = 1 ; sigNum < NSIG ; ++sigNum) {
-		sigaction(sigNum, &sigAct, NULL);
-	}
+    /* reset signal handlers to default */
+    memset(&sigAct, 0, sizeof(sigAct));
+    sigemptyset(&sigAct.sa_mask);
+    sigAct.sa_handler = SIG_DFL;
+    for(sigNum = 1 ; sigNum < NSIG ; ++sigNum) {
+        sigaction(sigNum, &sigAct, NULL);
+    }
 
-	/* we need to block SIGINT, otherwise our program is cancelled when we are
-	 * stopped in debug mode.
-	 */
-	sigAct.sa_handler = SIG_IGN;
-	sigaction(SIGINT, &sigAct, NULL);
-	sigemptyset(&sigSet);
-	sigprocmask(SIG_SETMASK, &sigSet, NULL);
+    /* we need to block SIGINT, otherwise our program is cancelled when we are
+     * stopped in debug mode.
+     */
+    sigAct.sa_handler = SIG_IGN;
+    sigaction(SIGINT, &sigAct, NULL);
+    sigemptyset(&sigSet);
+    sigprocmask(SIG_SETMASK, &sigSet, NULL);
 
-	alarm(0);
+    alarm(0);
 
-	/* finally exec program */
-	execve((char*)pInst->pszBinary, pInst->aParams, environ);
+    /* finally exec program */
+    execve((char*)pInst->pszBinary, pInst->aParams, environ);
 
 failed:
-	/* an error occurred: log it and exit the child process. We use the
-	 * 'syslog' system call to log the error (we cannot use LogMsg/LogError,
-	 * since these functions add directly to the rsyslog input queue).
-	 */
-	rs_strerror_r(errno, errStr, sizeof(errStr));
-	DBGPRINTF("improg: failed to execute program '%s': %s\n",
-			pInst->pszBinary, errStr);
-	openlog("rsyslogd", 0, LOG_SYSLOG);
-	syslog(LOG_ERR, "improg: failed to execute program '%s': %s\n",
-			pInst->pszBinary, errStr);
-	/* let's print the error to stderr for test bench purposes */
-	fprintf(stderr, "improg: failed to execute program '%s': %s\n",
-			pInst->pszBinary, errStr);
-	exit(1);
+    /* an error occurred: log it and exit the child process. We use the
+     * 'syslog' system call to log the error (we cannot use LogMsg/LogError,
+     * since these functions add directly to the rsyslog input queue).
+     */
+    rs_strerror_r(errno, errStr, sizeof(errStr));
+    DBGPRINTF("improg: failed to execute program '%s': %s\n",
+            pInst->pszBinary, errStr);
+    openlog("rsyslogd", 0, LOG_SYSLOG);
+    syslog(LOG_ERR, "improg: failed to execute program '%s': %s\n",
+            pInst->pszBinary, errStr);
+    /* let's print the error to stderr for test bench purposes */
+    fprintf(stderr, "improg: failed to execute program '%s': %s\n",
+            pInst->pszBinary, errStr);
+    exit(1);
 }
 
 /* creates a pipe and starts program, uses pipe as stdin for program.
@@ -230,108 +230,108 @@ failed:
  */
 static rsRetVal openPipe(instanceConf_t *pInst)
 {
-	int pipeFromChild[2] = { -1, -1 };
-	int pipeToChild[2] = { -1, -1 };
-	pid_t cpid;
-	DEFiRet;
+    int pipeFromChild[2] = { -1, -1 };
+    int pipeToChild[2] = { -1, -1 };
+    pid_t cpid;
+    DEFiRet;
 
-	/* if the 'confirmMessages' setting is enabled, open a pipe to send
-		 message confirmations to the program */
-	if(pInst->bConfirmMessages && pipe(pipeToChild) == -1) {
-		ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
-	}
+    /* if the 'confirmMessages' setting is enabled, open a pipe to send
+         message confirmations to the program */
+    if(pInst->bConfirmMessages && pipe(pipeToChild) == -1) {
+        ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
+    }
 
-	/* open a pipe to receive messages to the program */
-	if(pipe(pipeFromChild) == -1) {
-		ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
-	}
+    /* open a pipe to receive messages to the program */
+    if(pipe(pipeFromChild) == -1) {
+        ABORT_FINALIZE(RS_RET_ERR_CREAT_PIPE);
+    }
 
-	DBGPRINTF("improg: executing program '%s' with '%d' parameters\n",
-						pInst->pszBinary, pInst->iParams);
+    DBGPRINTF("improg: executing program '%s' with '%d' parameters\n",
+                        pInst->pszBinary, pInst->iParams);
 
-	cpid = fork();
-	if(cpid == -1) {
-		ABORT_FINALIZE(RS_RET_ERR_FORK);
-	}
+    cpid = fork();
+    if(cpid == -1) {
+        ABORT_FINALIZE(RS_RET_ERR_FORK);
+    }
 
-	if(cpid == 0) {  /* we are now the child process: execute the program */
-		/* close the pipe ends that the child doesn't need */
-		close(pipeFromChild[0]);
-		if(pipeToChild[1] != -1) {
-			close(pipeToChild[1]);
-		}
+    if(cpid == 0) {  /* we are now the child process: execute the program */
+        /* close the pipe ends that the child doesn't need */
+        close(pipeFromChild[0]);
+        if(pipeToChild[1] != -1) {
+            close(pipeToChild[1]);
+        }
 
-		execBinary(pInst, pipeFromChild[1], pipeToChild[0]);
-		/* NO CODE HERE - WILL NEVER BE REACHED! */
-	}
+        execBinary(pInst, pipeFromChild[1], pipeToChild[0]);
+        /* NO CODE HERE - WILL NEVER BE REACHED! */
+    }
 
-	DBGPRINTF("improg: child has pid %ld\n", (long int) cpid);
+    DBGPRINTF("improg: child has pid %ld\n", (long int) cpid);
 
-	/* close the pipe ends that the parent doesn't need */
-	close(pipeFromChild[1]);
-	if(pipeToChild[0] != -1) {
-		close(pipeToChild[0]);
-	}
+    /* close the pipe ends that the parent doesn't need */
+    close(pipeFromChild[1]);
+    if(pipeToChild[0] != -1) {
+        close(pipeToChild[0]);
+    }
 
-	pInst->fdPipeToChild = pipeToChild[1];  /* we'll send messages confirmations to the program via this fd */
-	pInst->fdPipeFromChild = pipeFromChild[0];  /* we'll receive message via this fd */
+    pInst->fdPipeToChild = pipeToChild[1];  /* we'll send messages confirmations to the program via this fd */
+    pInst->fdPipeFromChild = pipeFromChild[0];  /* we'll receive message via this fd */
 
-	FD_SET(pInst->fdPipeFromChild, &rfds); /* manage select read fd set */
-	nfds = (nfds > pInst->fdPipeFromChild) ? nfds : pInst->fdPipeFromChild+1;
+    FD_SET(pInst->fdPipeFromChild, &rfds); /* manage select read fd set */
+    nfds = (nfds > pInst->fdPipeFromChild) ? nfds : pInst->fdPipeFromChild+1;
 
-	pInst->pid = cpid;
-	pInst->bIsRunning = 1;
+    pInst->pid = cpid;
+    pInst->bIsRunning = 1;
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pipeFromChild[0] != -1) {
-			close(pipeFromChild[0]);
-			close(pipeFromChild[1]);
-		}
-		if(pipeToChild[0] != -1) {
-			close(pipeToChild[0]);
-			close(pipeToChild[1]);
-		}
-	}
-	RETiRet;
+    if(iRet != RS_RET_OK) {
+        if(pipeFromChild[0] != -1) {
+            close(pipeFromChild[0]);
+            close(pipeFromChild[1]);
+        }
+        if(pipeToChild[0] != -1) {
+            close(pipeToChild[0]);
+            close(pipeToChild[1]);
+        }
+    }
+    RETiRet;
 }
 
 static void waitForChild(instanceConf_t *pInst)
 {
-	int status;
-	int ret;
-	long counter;
+    int status;
+    int ret;
+    long counter;
 
-	counter = pInst->lCloseTimeout / 10;
-	while ((ret = waitpid(pInst->pid, &status, WNOHANG)) == 0 && counter > 0) {
-		srSleep(0, 10000);  /* 0 seconds, 10 milliseconds */
-		--counter;
-	}
+    counter = pInst->lCloseTimeout / 10;
+    while ((ret = waitpid(pInst->pid, &status, WNOHANG)) == 0 && counter > 0) {
+        srSleep(0, 10000);  /* 0 seconds, 10 milliseconds */
+        --counter;
+    }
 
-	if (ret == 0) {  /* timeout reached */
-		if (!pInst->bKillUnresponsive) {
-			LogMsg(0, NO_ERRCODE, LOG_WARNING, "improg: program '%s' (pid %ld) did not terminate "
-					"within timeout (%ld ms); ignoring it", pInst->pszBinary, (long int)pInst->pid,
-					pInst->lCloseTimeout);
-			return;
-		}
+    if (ret == 0) {  /* timeout reached */
+        if (!pInst->bKillUnresponsive) {
+            LogMsg(0, NO_ERRCODE, LOG_WARNING, "improg: program '%s' (pid %ld) did not terminate "
+                    "within timeout (%ld ms); ignoring it", pInst->pszBinary, (long int)pInst->pid,
+                    pInst->lCloseTimeout);
+            return;
+        }
 
-		LogMsg(0, NO_ERRCODE, LOG_WARNING, "improg: program '%s' (pid %ld) did not terminate "
-				"within timeout (%ld ms); killing it", pInst->pszBinary, (long int)pInst->pid,
-				pInst->lCloseTimeout);
-		if (kill(pInst->pid, SIGKILL) == -1) {
-			LogError(errno, RS_RET_SYS_ERR, "improg: could not send SIGKILL to child process");
-			return;
-		}
+        LogMsg(0, NO_ERRCODE, LOG_WARNING, "improg: program '%s' (pid %ld) did not terminate "
+                "within timeout (%ld ms); killing it", pInst->pszBinary, (long int)pInst->pid,
+                pInst->lCloseTimeout);
+        if (kill(pInst->pid, SIGKILL) == -1) {
+            LogError(errno, RS_RET_SYS_ERR, "improg: could not send SIGKILL to child process");
+            return;
+        }
 
-		ret = waitpid(pInst->pid, &status, 0);
-	}
+        ret = waitpid(pInst->pid, &status, 0);
+    }
 
-	/* waitpid will fail with errno == ECHILD if the child process has already
-		 been reaped by the rsyslogd main loop (see rsyslogd.c) */
-	if(ret == pInst->pid) {
-		glblReportChildProcessExit(runConf, pInst->pszBinary, pInst->pid, status);
-	}
+    /* waitpid will fail with errno == ECHILD if the child process has already
+         been reaped by the rsyslogd main loop (see rsyslogd.c) */
+    if(ret == pInst->pid) {
+        glblReportChildProcessExit(runConf, pInst->pszBinary, pInst->pid, status);
+    }
 }
 
 /* Send SIGTERM to child process if configured to do so, close pipe
@@ -339,89 +339,89 @@ static void waitForChild(instanceConf_t *pInst)
  */
 static void terminateChild(instanceConf_t *pInst)
 {
-	if(pInst->bIsRunning) {
+    if(pInst->bIsRunning) {
 
-		if(pInst->fdPipeFromChild != -1) {
-			close(pInst->fdPipeFromChild);
-			FD_CLR(pInst->fdPipeFromChild, &rfds);
-			pInst->fdPipeFromChild = -1;
+        if(pInst->fdPipeFromChild != -1) {
+            close(pInst->fdPipeFromChild);
+            FD_CLR(pInst->fdPipeFromChild, &rfds);
+            pInst->fdPipeFromChild = -1;
 
-		}
+        }
 
-		if(pInst->fdPipeToChild != -1) {
-			close(pInst->fdPipeToChild);
-			pInst->fdPipeToChild = -1;
-		}
+        if(pInst->fdPipeToChild != -1) {
+            close(pInst->fdPipeToChild);
+            pInst->fdPipeToChild = -1;
+        }
 
-		/* wait for the child AFTER closing the pipe, so it receives EOF */
-		waitForChild(pInst);
+        /* wait for the child AFTER closing the pipe, so it receives EOF */
+        waitForChild(pInst);
 
-		pInst->bIsRunning = 0;
-	}
+        pInst->bIsRunning = 0;
+    }
 }
 
 static rsRetVal startChild(instanceConf_t *pInst)
 {
-	DEFiRet;
+    DEFiRet;
 
-	if (!pInst->bIsRunning)
+    if (!pInst->bIsRunning)
 
-	CHKiRet(openPipe(pInst));
+    CHKiRet(openPipe(pInst));
 
 finalize_it:
-	if(iRet != RS_RET_OK && pInst->bIsRunning) {
-		/* if initialization has failed, terminate program */
-		terminateChild(pInst);
-	}
-	RETiRet;
+    if(iRet != RS_RET_OK && pInst->bIsRunning) {
+        /* if initialization has failed, terminate program */
+        terminateChild(pInst);
+    }
+    RETiRet;
 }
 
 static rsRetVal enqLine(instanceConf_t *const __restrict__ pInst)
 {
-	DEFiRet;
-	smsg_t *pMsg;
+    DEFiRet;
+    smsg_t *pMsg;
 
-	if(cstrLen(pInst->ppCStr) == 0) {
-		/* we do not process empty lines */
-		FINALIZE;
-	}
+    if(cstrLen(pInst->ppCStr) == 0) {
+        /* we do not process empty lines */
+        FINALIZE;
+    }
 
-	CHKiRet(msgConstruct(&pMsg));
+    CHKiRet(msgConstruct(&pMsg));
 
-	MsgSetMSGoffs(pMsg, 0);
-	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
-	MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
-	MsgSetInputName(pMsg, pInputName);
-	MsgSetAPPNAME(pMsg, (const char*)pInst->pszTag);
-	MsgSetTAG(pMsg, pInst->pszTag, pInst->lenTag);
-	msgSetPRI(pMsg, pInst->iFacility | pInst->iSeverity);
-	MsgSetRawMsg(pMsg, (const char*)rsCStrGetBufBeg(pInst->ppCStr), cstrLen(pInst->ppCStr));
-	MsgSetRuleset(pMsg, pInst->pBindRuleset);
+    MsgSetMSGoffs(pMsg, 0);
+    MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
+    MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
+    MsgSetInputName(pMsg, pInputName);
+    MsgSetAPPNAME(pMsg, (const char*)pInst->pszTag);
+    MsgSetTAG(pMsg, pInst->pszTag, pInst->lenTag);
+    msgSetPRI(pMsg, pInst->iFacility | pInst->iSeverity);
+    MsgSetRawMsg(pMsg, (const char*)rsCStrGetBufBeg(pInst->ppCStr), cstrLen(pInst->ppCStr));
+    MsgSetRuleset(pMsg, pInst->pBindRuleset);
 
-	ratelimitAddMsg(pInst->ratelimiter, NULL, pMsg);
+    ratelimitAddMsg(pInst->ratelimiter, NULL, pMsg);
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* read line(s) from the external program and sent them when they are complete */
 static rsRetVal readChild(instanceConf_t *const pInst){
-	char c;
-	int retval;
+    char c;
+    int retval;
 
-	while ((retval = read(pInst->fdPipeFromChild, &c, 1)) == 1) {
-		if (c=='\n'){
-			enqLine(pInst);
-			/* if confirm required then send an ACK to the program */
-			if (pInst->bConfirmMessages) {
-				if (write(pInst->fdPipeToChild,"ACK\n",sizeof("ACK\n")-1) <= 0)
-					LogMsg(0, NO_ERRCODE, LOG_WARNING, "improg: pipe to child seems to be closed.");
-			}
-			rsCStrTruncate(pInst->ppCStr, rsCStrLen(pInst->ppCStr));
-		} else {
-			cstrAppendChar(pInst->ppCStr, c);
-		}
-	}
-	return (retval == 0) ? RS_RET_OK : RS_RET_IO_ERROR;
+    while ((retval = read(pInst->fdPipeFromChild, &c, 1)) == 1) {
+        if (c=='\n'){
+            enqLine(pInst);
+            /* if confirm required then send an ACK to the program */
+            if (pInst->bConfirmMessages) {
+                if (write(pInst->fdPipeToChild,"ACK\n",sizeof("ACK\n")-1) <= 0)
+                    LogMsg(0, NO_ERRCODE, LOG_WARNING, "improg: pipe to child seems to be closed.");
+            }
+            rsCStrTruncate(pInst->ppCStr, rsCStrLen(pInst->ppCStr));
+        } else {
+            cstrAppendChar(pInst->ppCStr, c);
+        }
+    }
+    return (retval == 0) ? RS_RET_OK : RS_RET_IO_ERROR;
 }
 
 /* create input instance, set default parameters, and
@@ -429,36 +429,36 @@ static rsRetVal readChild(instanceConf_t *const pInst){
  */
 static rsRetVal ATTR_NONNULL(1) createInstance(instanceConf_t **const ppInst)
 {
-	instanceConf_t *pInst;
-	DEFiRet;
-	CHKmalloc(pInst = malloc(sizeof(instanceConf_t)));
-	pInst->next = NULL;
-	pInst->pszBindRuleset = NULL;
-	pInst->pBindRuleset = NULL;
-	pInst->ratelimiter = NULL;
-	pInst->iSeverity = 5;
-	pInst->iFacility = 128;
+    instanceConf_t *pInst;
+    DEFiRet;
+    CHKmalloc(pInst = malloc(sizeof(instanceConf_t)));
+    pInst->next = NULL;
+    pInst->pszBindRuleset = NULL;
+    pInst->pBindRuleset = NULL;
+    pInst->ratelimiter = NULL;
+    pInst->iSeverity = 5;
+    pInst->iFacility = 128;
 
-	pInst->pszTag = NULL;
-	pInst->lenTag = 0;
+    pInst->pszTag = NULL;
+    pInst->lenTag = 0;
 
-	pInst->bIsRunning = 0;
-	pInst->pid = -1;
-	pInst->fdPipeToChild = -1;
-	pInst->fdPipeFromChild = -1;
+    pInst->bIsRunning = 0;
+    pInst->pid = -1;
+    pInst->fdPipeToChild = -1;
+    pInst->fdPipeFromChild = -1;
 
-	pInst->pszBinary = NULL;
-	pInst->aParams = NULL;
-	pInst->iParams = 0;
+    pInst->pszBinary = NULL;
+    pInst->aParams = NULL;
+    pInst->iParams = 0;
 
-	pInst->bConfirmMessages = 1;
-	pInst->bSignalOnClose = 0;
-	pInst->lCloseTimeout = 200;
-	pInst->bKillUnresponsive = 1;
+    pInst->bConfirmMessages = 1;
+    pInst->bSignalOnClose = 0;
+    pInst->lCloseTimeout = 200;
+    pInst->bKillUnresponsive = 1;
 
-	*ppInst = pInst;
+    *ppInst = pInst;
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* This adds a new listener object to the bottom of the list, but
@@ -467,164 +467,164 @@ finalize_it:
  */
 static rsRetVal ATTR_NONNULL() lstnAdd(instanceConf_t *pInst)
 {
-	DEFiRet;
-	CHKiRet(ratelimitNew(&pInst->ratelimiter, "improg", (char*)pInst->pszBinary));
+    DEFiRet;
+    CHKiRet(ratelimitNew(&pInst->ratelimiter, "improg", (char*)pInst->pszBinary));
 
-	/* insert it at the begin of the list */
-	pInst->prev = NULL;
-	pInst->next = confRoot;
+    /* insert it at the begin of the list */
+    pInst->prev = NULL;
+    pInst->next = confRoot;
 
-	if (confRoot != NULL)
-		confRoot->prev = pInst;
+    if (confRoot != NULL)
+        confRoot->prev = pInst;
 
-	confRoot = pInst;
+    confRoot = pInst;
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* delete a listener object */
 static void ATTR_NONNULL(1) lstnFree(instanceConf_t *pInst)
 {
-	DBGPRINTF("lstnFree called for %s\n", pInst->pszBinary);
-	if (pInst->ratelimiter != NULL)
-		ratelimitDestruct(pInst->ratelimiter);
-	if(pInst->pszBinary != NULL)
-		free(pInst->pszBinary);
-	if (pInst->pszTag)
-		free(pInst->pszTag);
-	if (pInst->pszBindRuleset != NULL)
-		free(pInst->pszBindRuleset);
-	if (pInst->aParams) {
-		int i;
-		for (i = 0;pInst->aParams[i]; i++)
-			free(pInst->aParams[i]);
-		free(pInst->aParams);
-	}
-	if (pInst->ppCStr)
-		rsCStrDestruct(&pInst->ppCStr);
-	free(pInst);
+    DBGPRINTF("lstnFree called for %s\n", pInst->pszBinary);
+    if (pInst->ratelimiter != NULL)
+        ratelimitDestruct(pInst->ratelimiter);
+    if(pInst->pszBinary != NULL)
+        free(pInst->pszBinary);
+    if (pInst->pszTag)
+        free(pInst->pszTag);
+    if (pInst->pszBindRuleset != NULL)
+        free(pInst->pszBindRuleset);
+    if (pInst->aParams) {
+        int i;
+        for (i = 0;pInst->aParams[i]; i++)
+            free(pInst->aParams[i]);
+        free(pInst->aParams);
+    }
+    if (pInst->ppCStr)
+        rsCStrDestruct(&pInst->ppCStr);
+    free(pInst);
 }
 
 /* read  */
 BEGINnewInpInst
-	struct cnfparamvals *pvals;
-	instanceConf_t *pInst = NULL;
-	int i;
+    struct cnfparamvals *pvals;
+    instanceConf_t *pInst = NULL;
+    int i;
 CODESTARTnewInpInst
-	DBGPRINTF("newInpInst (improg)\n");
+    DBGPRINTF("newInpInst (improg)\n");
 
-	pvals = nvlstGetParams(lst, &inppblk, NULL);
-	if(pvals == NULL) {
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-	}
+    pvals = nvlstGetParams(lst, &inppblk, NULL);
+    if(pvals == NULL) {
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
 
-	if(Debug) {
-		DBGPRINTF("input param blk in improg:\n");
-		cnfparamsPrint(&inppblk, pvals);
-	}
+    if(Debug) {
+        DBGPRINTF("input param blk in improg:\n");
+        cnfparamsPrint(&inppblk, pvals);
+    }
 
-	CHKiRet(createInstance(&pInst));
+    CHKiRet(createInstance(&pInst));
 
-	for(i = 0 ; i < inppblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
-			continue;
-		if(!strcmp(inppblk.descr[i].name, "binary")) {
-			CHKiRet(split_binary_parameters(&pInst->pszBinary, &pInst->aParams, &pInst->iParams,
-				pvals[i].val.d.estr));
-		} else if(!strcmp(inppblk.descr[i].name, "tag")) {
-			pInst->pszTag = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-			pInst->lenTag = es_strlen(pvals[i].val.d.estr);
-		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
-			pInst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(inppblk.descr[i].name, "severity")) {
-			pInst->iSeverity = pvals[i].val.d.n;
-		} else if(!strcmp(inppblk.descr[i].name, "facility")) {
-			pInst->iFacility = pvals[i].val.d.n;
-		} else if(!strcmp(inppblk.descr[i].name, "confirmmessages")) {
-			pInst->bConfirmMessages = pvals[i].val.d.n;
-		} else if(!strcmp(inppblk.descr[i].name, "signalonclose")) {
-			pInst->bSignalOnClose = pvals[i].val.d.n;
-		} else if(!strcmp(inppblk.descr[i].name, "closetimeout")) {
-			pInst->lCloseTimeout = pvals[i].val.d.n;
-		} else if(!strcmp(inppblk.descr[i].name, "killunresponsive")) {
-			pInst->bKillUnresponsive = pvals[i].val.d.n;
-		} else {
-			DBGPRINTF("program error, non-handled "
-				"param '%s'\n", inppblk.descr[i].name);
-		}
-	}
-	if(pInst->pszBinary == NULL) {
-		LogError(0, RS_RET_FILE_NOT_SPECIFIED,
-			"ulogbase is not configured - no input will be gathered");
-		ABORT_FINALIZE(RS_RET_FILE_NOT_SPECIFIED);
-	}
+    for(i = 0 ; i < inppblk.nParams ; ++i) {
+        if(!pvals[i].bUsed)
+            continue;
+        if(!strcmp(inppblk.descr[i].name, "binary")) {
+            CHKiRet(split_binary_parameters(&pInst->pszBinary, &pInst->aParams, &pInst->iParams,
+                pvals[i].val.d.estr));
+        } else if(!strcmp(inppblk.descr[i].name, "tag")) {
+            pInst->pszTag = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+            pInst->lenTag = es_strlen(pvals[i].val.d.estr);
+        } else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
+            pInst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if(!strcmp(inppblk.descr[i].name, "severity")) {
+            pInst->iSeverity = pvals[i].val.d.n;
+        } else if(!strcmp(inppblk.descr[i].name, "facility")) {
+            pInst->iFacility = pvals[i].val.d.n;
+        } else if(!strcmp(inppblk.descr[i].name, "confirmmessages")) {
+            pInst->bConfirmMessages = pvals[i].val.d.n;
+        } else if(!strcmp(inppblk.descr[i].name, "signalonclose")) {
+            pInst->bSignalOnClose = pvals[i].val.d.n;
+        } else if(!strcmp(inppblk.descr[i].name, "closetimeout")) {
+            pInst->lCloseTimeout = pvals[i].val.d.n;
+        } else if(!strcmp(inppblk.descr[i].name, "killunresponsive")) {
+            pInst->bKillUnresponsive = pvals[i].val.d.n;
+        } else {
+            DBGPRINTF("program error, non-handled "
+                "param '%s'\n", inppblk.descr[i].name);
+        }
+    }
+    if(pInst->pszBinary == NULL) {
+        LogError(0, RS_RET_FILE_NOT_SPECIFIED,
+            "ulogbase is not configured - no input will be gathered");
+        ABORT_FINALIZE(RS_RET_FILE_NOT_SPECIFIED);
+    }
 
-	CHKiRet(cstrConstruct(&pInst->ppCStr));
+    CHKiRet(cstrConstruct(&pInst->ppCStr));
 
-	if ((iRet = lstnAdd(pInst)) != RS_RET_OK) {
-		ABORT_FINALIZE(iRet);
-	}
+    if ((iRet = lstnAdd(pInst)) != RS_RET_OK) {
+        ABORT_FINALIZE(iRet);
+    }
 
 finalize_it:
 CODE_STD_FINALIZERnewInpInst
-	if (pInst && iRet != RS_RET_OK)
-		lstnFree(pInst);
-	cnfparamvalsDestruct(pvals, &inppblk);
+    if (pInst && iRet != RS_RET_OK)
+        lstnFree(pInst);
+    cnfparamvalsDestruct(pvals, &inppblk);
 ENDnewInpInst
 
 BEGINwillRun
 CODESTARTwillRun
-	/* we need to create the inputName property (only once during our lifetime) */
-	CHKiRet(prop.Construct(&pInputName));
-	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("improg"), sizeof("improg") - 1));
-	CHKiRet(prop.ConstructFinalize(pInputName));
+    /* we need to create the inputName property (only once during our lifetime) */
+    CHKiRet(prop.Construct(&pInputName));
+    CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("improg"), sizeof("improg") - 1));
+    CHKiRet(prop.ConstructFinalize(pInputName));
 finalize_it:
 ENDwillRun
 
 BEGINrunInput
-	struct timeval tv;
-	int retval;
-	instanceConf_t *pInst;
+    struct timeval tv;
+    int retval;
+    instanceConf_t *pInst;
 CODESTARTrunInput
-	FD_ZERO(&rfds);
+    FD_ZERO(&rfds);
 
-	for(pInst = confRoot ; pInst != NULL ; pInst = pInst->next) {
-		startChild(pInst);
-	}
+    for(pInst = confRoot ; pInst != NULL ; pInst = pInst->next) {
+        startChild(pInst);
+    }
 
-	for(pInst = confRoot ; pInst != NULL ; pInst = pInst->next) {
-		if (pInst->bIsRunning && pInst->fdPipeToChild > 0){
-			if (write(pInst->fdPipeToChild, "START\n", sizeof("START\n")-1)  <= 0)
-				LogMsg(0, NO_ERRCODE, LOG_WARNING, "improg: pipe to child seems to be closed.");
-			DBGPRINTF("Sending START to %s\n", pInst->pszBinary);
-		}
-	}
+    for(pInst = confRoot ; pInst != NULL ; pInst = pInst->next) {
+        if (pInst->bIsRunning && pInst->fdPipeToChild > 0){
+            if (write(pInst->fdPipeToChild, "START\n", sizeof("START\n")-1)  <= 0)
+                LogMsg(0, NO_ERRCODE, LOG_WARNING, "improg: pipe to child seems to be closed.");
+            DBGPRINTF("Sending START to %s\n", pInst->pszBinary);
+        }
+    }
 
-	/* main module loop */
-	tv.tv_usec = 1000;
-	while (glbl.GetGlobalInputTermState() == 0)
-	{
-		fd_set temp;
-		memcpy(&temp, &rfds, sizeof(fd_set));
-		tv.tv_sec = 0;
+    /* main module loop */
+    tv.tv_usec = 1000;
+    while (glbl.GetGlobalInputTermState() == 0)
+    {
+        fd_set temp;
+        memcpy(&temp, &rfds, sizeof(fd_set));
+        tv.tv_sec = 0;
 
-		/* wait for external data or 0.1 second */
-		retval = select(nfds, &temp, NULL, NULL, &tv);
+        /* wait for external data or 0.1 second */
+        retval = select(nfds, &temp, NULL, NULL, &tv);
 
-		/* retval is the number of fd with data to read */
-		while (retval>0) {
-			for (pInst = confRoot; pInst != NULL; pInst = pInst->next) {
-				if (FD_ISSET(pInst->fdPipeFromChild, &temp)) {
-					DBGPRINTF("read child %s\n",pInst->pszBinary);
-					readChild(pInst);
-					retval--;
-				}
-			}
-		}
-		tv.tv_usec = 100000;
-	}
-	DBGPRINTF("terminating upon request of rsyslog core\n");
+        /* retval is the number of fd with data to read */
+        while (retval>0) {
+            for (pInst = confRoot; pInst != NULL; pInst = pInst->next) {
+                if (FD_ISSET(pInst->fdPipeFromChild, &temp)) {
+                    DBGPRINTF("read child %s\n",pInst->pszBinary);
+                    readChild(pInst);
+                    retval--;
+                }
+            }
+        }
+        tv.tv_usec = 100000;
+    }
+    DBGPRINTF("terminating upon request of rsyslog core\n");
 ENDrunInput
 
 /* This function is called by the framework after runInput() has been terminated. It
@@ -633,47 +633,47 @@ ENDrunInput
  */
 BEGINafterRun
 CODESTARTafterRun
-	instanceConf_t *pInst = confRoot, *nextInst;
-	confRoot = NULL;
+    instanceConf_t *pInst = confRoot, *nextInst;
+    confRoot = NULL;
 
-	DBGPRINTF("afterRun\n");
+    DBGPRINTF("afterRun\n");
 
-	while(pInst != NULL) {
-		nextInst = pInst->next;
+    while(pInst != NULL) {
+        nextInst = pInst->next;
 
-		if (pInst->bIsRunning) {
-			if (pInst->bSignalOnClose) {
-				kill(pInst->pid, SIGTERM);
-				LogMsg(0, NO_ERRCODE, LOG_INFO, "%s SIGTERM signaled.", pInst->aParams[0]);
-			}
-			if (pInst->fdPipeToChild > 0){
-				if (write(pInst->fdPipeToChild, "STOP\n", strlen("STOP\n")) <= 0 &&
-						!pInst->bSignalOnClose)
-					LogMsg(0, NO_ERRCODE, LOG_WARNING,
-							"improg: pipe to child seems to be closed.");
-			}
-			terminateChild(pInst);
-		}
+        if (pInst->bIsRunning) {
+            if (pInst->bSignalOnClose) {
+                kill(pInst->pid, SIGTERM);
+                LogMsg(0, NO_ERRCODE, LOG_INFO, "%s SIGTERM signaled.", pInst->aParams[0]);
+            }
+            if (pInst->fdPipeToChild > 0){
+                if (write(pInst->fdPipeToChild, "STOP\n", strlen("STOP\n")) <= 0 &&
+                        !pInst->bSignalOnClose)
+                    LogMsg(0, NO_ERRCODE, LOG_WARNING,
+                            "improg: pipe to child seems to be closed.");
+            }
+            terminateChild(pInst);
+        }
 
-		lstnFree(pInst);
+        lstnFree(pInst);
 
-		pInst = nextInst;
-	}
+        pInst = nextInst;
+    }
 
-	if(pInputName != NULL)
-		prop.Destruct(&pInputName);
+    if(pInputName != NULL)
+        prop.Destruct(&pInputName);
 ENDafterRun
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction) {
-		iRet = RS_RET_OK;
-	}
+    if(eFeat == sFEATURERepeatedMsgReduction) {
+        iRet = RS_RET_OK;
+    }
 ENDisCompatibleWithFeature
 
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
-	pModConf->pConf = pConf;
+    pModConf->pConf = pConf;
 ENDbeginCnfLoad
 
 BEGINendCnfLoad
@@ -683,9 +683,9 @@ ENDendCnfLoad
 BEGINcheckCnf
 instanceConf_t *pInst;
 CODESTARTcheckCnf
-	for(pInst = confRoot ; pInst != NULL ; pInst = pInst->next) {
-		std_checkRuleset(pModConf , pInst);
-	}
+    for(pInst = confRoot ; pInst != NULL ; pInst = pInst->next) {
+        std_checkRuleset(pModConf , pInst);
+    }
 ENDcheckCnf
 
 BEGINactivateCnf
@@ -699,9 +699,9 @@ ENDfreeCnf
 
 BEGINmodExit
 CODESTARTmodExit
-	objRelease(ruleset, CORE_COMPONENT);
-	objRelease(glbl, CORE_COMPONENT);
-	objRelease(prop, CORE_COMPONENT);
+    objRelease(ruleset, CORE_COMPONENT);
+    objRelease(glbl, CORE_COMPONENT);
+    objRelease(prop, CORE_COMPONENT);
 ENDmodExit
 
 BEGINqueryEtryPt
@@ -714,9 +714,9 @@ ENDqueryEtryPt
 
 BEGINmodInit()
 CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(ruleset, CORE_COMPONENT));
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(prop, CORE_COMPONENT));
+    CHKiRet(objUse(ruleset, CORE_COMPONENT));
+    CHKiRet(objUse(glbl, CORE_COMPONENT));
+    CHKiRet(objUse(prop, CORE_COMPONENT));
 ENDmodInit

@@ -68,76 +68,76 @@ DEFobjCurrIf(datetime)
  */
 typedef struct toRcpt_s toRcpt_t;
 struct toRcpt_s {
-	uchar *pszTo;
-	toRcpt_t *pNext;
+    uchar *pszTo;
+    toRcpt_t *pNext;
 };
 
 typedef struct _instanceData {
-	uchar *tplName;	/* format template to use */
-	uchar *constSubject; /* if non-NULL, constant string to be used as subject */
-	int8_t iMode;	/* 0 - smtp, 1 - sendmail */
-	sbool bHaveSubject; /* is a subject configured? (if so, it is the second string provided by rsyslog core) */
-	sbool bEnableBody; /* is a body configured? (if so, it is the second string provided by rsyslog core) */
-	union {
-		struct {
-			uchar *pszSrv;
-			uchar *pszSrvPort;
-			uchar *pszFrom;
-			toRcpt_t *lstRcpt;
-			} smtp;
-	} md;	/* mode-specific data */
+    uchar *tplName; /* format template to use */
+    uchar *constSubject; /* if non-NULL, constant string to be used as subject */
+    int8_t iMode;   /* 0 - smtp, 1 - sendmail */
+    sbool bHaveSubject; /* is a subject configured? (if so, it is the second string provided by rsyslog core) */
+    sbool bEnableBody; /* is a body configured? (if so, it is the second string provided by rsyslog core) */
+    union {
+        struct {
+            uchar *pszSrv;
+            uchar *pszSrvPort;
+            uchar *pszFrom;
+            toRcpt_t *lstRcpt;
+            } smtp;
+    } md;   /* mode-specific data */
 } instanceData;
 
 typedef struct wrkrInstanceData {
-	instanceData *pData;
-	union {
-		struct {
-			char RcvBuf[1024]; /* buffer for receiving server responses */
-			size_t lenRcvBuf;
-			size_t iRcvBuf;	/* current index into the rcvBuf (buf empty if iRcvBuf == lenRcvBuf) */
-			int sock;	/* socket to this server (most important when we do multiple msgs per mail) */
-			} smtp;
-	} md;	/* mode-specific data */
+    instanceData *pData;
+    union {
+        struct {
+            char RcvBuf[1024]; /* buffer for receiving server responses */
+            size_t lenRcvBuf;
+            size_t iRcvBuf; /* current index into the rcvBuf (buf empty if iRcvBuf == lenRcvBuf) */
+            int sock;   /* socket to this server (most important when we do multiple msgs per mail) */
+            } smtp;
+    } md;   /* mode-specific data */
 } wrkrInstanceData_t;
 
 typedef struct configSettings_s {
-	toRcpt_t *lstRcpt;
-	uchar *pszSrv;
-	uchar *pszSrvPort;
-	uchar *pszFrom;
-	uchar *pszSubject;
-	int bEnableBody; /* should a mail body be generated? (set to 0 eg for SMS gateways) */
+    toRcpt_t *lstRcpt;
+    uchar *pszSrv;
+    uchar *pszSrvPort;
+    uchar *pszFrom;
+    uchar *pszSubject;
+    int bEnableBody; /* should a mail body be generated? (set to 0 eg for SMS gateways) */
 } configSettings_t;
 static configSettings_t cs;
 
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-	{ "server", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
-	{ "port", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
-	{ "mailfrom", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
-	{ "mailto", eCmdHdlrArray, CNFPARAM_REQUIRED },
-	{ "subject.template", eCmdHdlrGetWord, 0 },
-	{ "subject.text", eCmdHdlrString, 0 },
-	{ "body.enable", eCmdHdlrBinary, 0 },
-	{ "template", eCmdHdlrGetWord, 0 }
+    { "server", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
+    { "port", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
+    { "mailfrom", eCmdHdlrGetWord, CNFPARAM_REQUIRED },
+    { "mailto", eCmdHdlrArray, CNFPARAM_REQUIRED },
+    { "subject.template", eCmdHdlrGetWord, 0 },
+    { "subject.text", eCmdHdlrString, 0 },
+    { "body.enable", eCmdHdlrBinary, 0 },
+    { "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
-	  actpdescr
-	};
+    { CNFPARAMBLK_VERSION,
+      sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+      actpdescr
+    };
 
 
 
-BEGINinitConfVars		/* (re)set config variables to default values */
+BEGINinitConfVars       /* (re)set config variables to default values */
 CODESTARTinitConfVars
-	cs.lstRcpt = NULL;
-	cs.pszSrv = NULL;
-	cs.pszSrvPort = NULL;
-	cs.pszFrom = NULL;
-	cs.pszSubject = NULL;
-	cs.bEnableBody = 1; /* should a mail body be generated? (set to 0 eg for SMS gateways) */
+    cs.lstRcpt = NULL;
+    cs.pszSrv = NULL;
+    cs.pszSrvPort = NULL;
+    cs.pszFrom = NULL;
+    cs.pszSubject = NULL;
+    cs.bEnableBody = 1; /* should a mail body be generated? (set to 0 eg for SMS gateways) */
 ENDinitConfVars
 
 /* forward definitions (as few as possible) */
@@ -150,15 +150,15 @@ static rsRetVal readResponse(wrkrInstanceData_t *pWrkrData, int *piState, int iE
 /* destroy a complete recipient list */
 static void lstRcptDestruct(toRcpt_t *pRoot)
 {
-	toRcpt_t *pDel;
+    toRcpt_t *pDel;
 
-	while(pRoot != NULL) {
-		pDel = pRoot;
-		pRoot = pRoot->pNext;
-		/* ready to disalloc */
-		free(pDel->pszTo);
-		free(pDel);
-	}
+    while(pRoot != NULL) {
+        pDel = pRoot;
+        pRoot = pRoot->pNext;
+        /* ready to disalloc */
+        free(pDel->pszTo);
+        free(pDel);
+    }
 }
 
 
@@ -168,24 +168,24 @@ static void lstRcptDestruct(toRcpt_t *pRoot)
 static rsRetVal
 addRcpt(toRcpt_t **ppLstRcpt, uchar *newRcpt)
 {
-	DEFiRet;
-	toRcpt_t *pNew = NULL;
+    DEFiRet;
+    toRcpt_t *pNew = NULL;
 
-	CHKmalloc(pNew = calloc(1, sizeof(toRcpt_t)));
+    CHKmalloc(pNew = calloc(1, sizeof(toRcpt_t)));
 
-	pNew->pszTo = newRcpt;
-	pNew->pNext = *ppLstRcpt;
-	*ppLstRcpt = pNew;
+    pNew->pszTo = newRcpt;
+    pNew->pNext = *ppLstRcpt;
+    *ppLstRcpt = pNew;
 
-	DBGPRINTF("ommail::addRcpt adds recipient %s\n", newRcpt);
+    DBGPRINTF("ommail::addRcpt adds recipient %s\n", newRcpt);
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		free(pNew);
-		free(newRcpt); /* in any case, this is no longer needed */
-	}
+    if(iRet != RS_RET_OK) {
+        free(pNew);
+        free(newRcpt); /* in any case, this is no longer needed */
+    }
 
-	RETiRet;
+    RETiRet;
 }
 
 /* This function is called when a new recipient email address is to be
@@ -194,7 +194,7 @@ finalize_it:
 static rsRetVal
 legacyConfAddRcpt(void __attribute__((unused)) *pVal, uchar *pNewVal)
 {
-	return addRcpt(&cs.lstRcpt, pNewVal);
+    return addRcpt(&cs.lstRcpt, pNewVal);
 }
 
 
@@ -204,24 +204,24 @@ legacyConfAddRcpt(void __attribute__((unused)) *pVal, uchar *pNewVal)
 static rsRetVal
 WriteRcpts(wrkrInstanceData_t *pWrkrData, uchar *pszOp, size_t lenOp, int iStatusToCheck)
 {
-	toRcpt_t *pRcpt;
-	int iState;
-	DEFiRet;
+    toRcpt_t *pRcpt;
+    int iState;
+    DEFiRet;
 
-	assert(lenOp != 0);
+    assert(lenOp != 0);
 
-	for(pRcpt = pWrkrData->pData->md.smtp.lstRcpt ; pRcpt != NULL ; pRcpt = pRcpt->pNext) {
-		DBGPRINTF("Sending '%s: <%s>'\n", pszOp, pRcpt->pszTo);
-		CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)pszOp, lenOp));
-		CHKiRet(Send(pWrkrData->md.smtp.sock, ":<", sizeof(":<") - 1));
-		CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)pRcpt->pszTo, strlen((char*)pRcpt->pszTo)));
-		CHKiRet(Send(pWrkrData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
-		if(iStatusToCheck >= 0)
-			CHKiRet(readResponse(pWrkrData, &iState, iStatusToCheck));
-	}
+    for(pRcpt = pWrkrData->pData->md.smtp.lstRcpt ; pRcpt != NULL ; pRcpt = pRcpt->pNext) {
+        DBGPRINTF("Sending '%s: <%s>'\n", pszOp, pRcpt->pszTo);
+        CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)pszOp, lenOp));
+        CHKiRet(Send(pWrkrData->md.smtp.sock, ":<", sizeof(":<") - 1));
+        CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)pRcpt->pszTo, strlen((char*)pRcpt->pszTo)));
+        CHKiRet(Send(pWrkrData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
+        if(iStatusToCheck >= 0)
+            CHKiRet(readResponse(pWrkrData, &iState, iStatusToCheck));
+    }
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -230,35 +230,35 @@ finalize_it:
 static rsRetVal
 WriteTos(wrkrInstanceData_t *pWrkrData, uchar *pszOp, size_t lenOp)
 {
-	toRcpt_t *pRcpt;
-	int iTos;
-	DEFiRet;
+    toRcpt_t *pRcpt;
+    int iTos;
+    DEFiRet;
 
-	assert(lenOp != 0);
+    assert(lenOp != 0);
 
-	CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)pszOp, lenOp));
-	CHKiRet(Send(pWrkrData->md.smtp.sock, ": ", sizeof(": ") - 1));
+    CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)pszOp, lenOp));
+    CHKiRet(Send(pWrkrData->md.smtp.sock, ": ", sizeof(": ") - 1));
 
-	for(pRcpt = pWrkrData->pData->md.smtp.lstRcpt, iTos = 0; pRcpt != NULL ; pRcpt = pRcpt->pNext, iTos++) {
-		DBGPRINTF("Sending '%s: <%s>'\n", pszOp, pRcpt->pszTo);
-		if(iTos)
-			CHKiRet(Send(pWrkrData->md.smtp.sock, ", ", sizeof(", ") - 1));
-		CHKiRet(Send(pWrkrData->md.smtp.sock, "<", sizeof("<") - 1));
-		CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)pRcpt->pszTo, strlen((char*)pRcpt->pszTo)));
-		CHKiRet(Send(pWrkrData->md.smtp.sock, ">", sizeof(">") - 1));
-	}
+    for(pRcpt = pWrkrData->pData->md.smtp.lstRcpt, iTos = 0; pRcpt != NULL ; pRcpt = pRcpt->pNext, iTos++) {
+        DBGPRINTF("Sending '%s: <%s>'\n", pszOp, pRcpt->pszTo);
+        if(iTos)
+            CHKiRet(Send(pWrkrData->md.smtp.sock, ", ", sizeof(", ") - 1));
+        CHKiRet(Send(pWrkrData->md.smtp.sock, "<", sizeof("<") - 1));
+        CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)pRcpt->pszTo, strlen((char*)pRcpt->pszTo)));
+        CHKiRet(Send(pWrkrData->md.smtp.sock, ">", sizeof(">") - 1));
+    }
 
-	CHKiRet(Send(pWrkrData->md.smtp.sock, "\r\n", sizeof("\r\n") - 1));
+    CHKiRet(Send(pWrkrData->md.smtp.sock, "\r\n", sizeof("\r\n") - 1));
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 /* end helpers for handling the recipient lists */
 
 BEGINcreateInstance
 CODESTARTcreateInstance
-	pData->constSubject = NULL;
-	pData->bEnableBody = 1;
+    pData->constSubject = NULL;
+    pData->bEnableBody = 1;
 ENDcreateInstance
 
 
@@ -269,20 +269,20 @@ ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
-		iRet = RS_RET_OK;
+    if(eFeat == sFEATURERepeatedMsgReduction)
+        iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	free(pData->tplName);
-	if(pData->iMode == 0) {
-		free(pData->md.smtp.pszSrv);
-		free(pData->md.smtp.pszSrvPort);
-		free(pData->md.smtp.pszFrom);
-		lstRcptDestruct(pData->md.smtp.lstRcpt);
-	}
+    free(pData->tplName);
+    if(pData->iMode == 0) {
+        free(pData->md.smtp.pszSrv);
+        free(pData->md.smtp.pszSrvPort);
+        free(pData->md.smtp.pszFrom);
+        lstRcptDestruct(pData->md.smtp.lstRcpt);
+    }
 ENDfreeInstance
 
 
@@ -293,7 +293,7 @@ ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-	printf("mail"); /* TODO: extend! */
+    printf("mail"); /* TODO: extend! */
 ENDdbgPrintInstInfo
 
 
@@ -308,34 +308,34 @@ ENDdbgPrintInstInfo
 static rsRetVal
 getRcvChar(wrkrInstanceData_t *pWrkrData, char *pC)
 {
-	DEFiRet;
-	ssize_t lenBuf;
+    DEFiRet;
+    ssize_t lenBuf;
 
-	if(pWrkrData->md.smtp.iRcvBuf == pWrkrData->md.smtp.lenRcvBuf) { /* buffer empty? */
-		/* yes, we need to read the next server response */
-		do {
-			lenBuf = recv(pWrkrData->md.smtp.sock, pWrkrData->md.smtp.RcvBuf,
-			              sizeof(pWrkrData->md.smtp.RcvBuf), 0);
-			if(lenBuf == 0) {
-				ABORT_FINALIZE(RS_RET_NO_MORE_DATA);
-			} else if(lenBuf < 0) {
-				if(errno != EAGAIN) {
-					ABORT_FINALIZE(RS_RET_IO_ERROR);
-				}
-			} else {
-				/* good read */
-				pWrkrData->md.smtp.iRcvBuf = 0;
-				pWrkrData->md.smtp.lenRcvBuf = lenBuf;
-			}
+    if(pWrkrData->md.smtp.iRcvBuf == pWrkrData->md.smtp.lenRcvBuf) { /* buffer empty? */
+        /* yes, we need to read the next server response */
+        do {
+            lenBuf = recv(pWrkrData->md.smtp.sock, pWrkrData->md.smtp.RcvBuf,
+                          sizeof(pWrkrData->md.smtp.RcvBuf), 0);
+            if(lenBuf == 0) {
+                ABORT_FINALIZE(RS_RET_NO_MORE_DATA);
+            } else if(lenBuf < 0) {
+                if(errno != EAGAIN) {
+                    ABORT_FINALIZE(RS_RET_IO_ERROR);
+                }
+            } else {
+                /* good read */
+                pWrkrData->md.smtp.iRcvBuf = 0;
+                pWrkrData->md.smtp.lenRcvBuf = lenBuf;
+            }
 
-		} while(lenBuf < 1);
-	}
+        } while(lenBuf < 1);
+    }
 
-	/* when we reach this point, we have a non-empty buffer */
-	*pC = pWrkrData->md.smtp.RcvBuf[pWrkrData->md.smtp.iRcvBuf++];
+    /* when we reach this point, we have a non-empty buffer */
+    *pC = pWrkrData->md.smtp.RcvBuf[pWrkrData->md.smtp.iRcvBuf++];
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -345,15 +345,15 @@ finalize_it:
 static rsRetVal
 serverDisconnect(wrkrInstanceData_t *pWrkrData)
 {
-	DEFiRet;
-	assert(pWrkrData != NULL);
+    DEFiRet;
+    assert(pWrkrData != NULL);
 
-	if(pWrkrData->md.smtp.sock != -1) {
-		close(pWrkrData->md.smtp.sock);
-		pWrkrData->md.smtp.sock = -1;
-	}
+    if(pWrkrData->md.smtp.sock != -1) {
+        close(pWrkrData->md.smtp.sock);
+        pWrkrData->md.smtp.sock = -1;
+    }
 
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -363,56 +363,56 @@ serverDisconnect(wrkrInstanceData_t *pWrkrData)
 static rsRetVal
 serverConnect(wrkrInstanceData_t *pWrkrData)
 {
-	struct addrinfo *res = NULL;
-	struct addrinfo hints;
-	const char *smtpPort;
-	const char *smtpSrv;
-	char errStr[1024];
-	instanceData *pData;
-	DEFiRet;
+    struct addrinfo *res = NULL;
+    struct addrinfo hints;
+    const char *smtpPort;
+    const char *smtpSrv;
+    char errStr[1024];
+    instanceData *pData;
+    DEFiRet;
 
-	pData = pWrkrData->pData;
+    pData = pWrkrData->pData;
 
-	if(pData->md.smtp.pszSrv == NULL)
-		smtpSrv = "127.0.0.1";
-	else
-		smtpSrv = (char*)pData->md.smtp.pszSrv;
+    if(pData->md.smtp.pszSrv == NULL)
+        smtpSrv = "127.0.0.1";
+    else
+        smtpSrv = (char*)pData->md.smtp.pszSrv;
 
-	if(pData->md.smtp.pszSrvPort == NULL)
-		smtpPort = "25";
-	else
-		smtpPort = (char*)pData->md.smtp.pszSrvPort;
+    if(pData->md.smtp.pszSrvPort == NULL)
+        smtpPort = "25";
+    else
+        smtpPort = (char*)pData->md.smtp.pszSrvPort;
 
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_UNSPEC; /* TODO: make configurable! */
-	hints.ai_socktype = SOCK_STREAM;
-	if(getaddrinfo(smtpSrv, smtpPort, &hints, &res) != 0) {
-		DBGPRINTF("error %d in getaddrinfo\n", errno);
-		ABORT_FINALIZE(RS_RET_IO_ERROR);
-	}
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC; /* TODO: make configurable! */
+    hints.ai_socktype = SOCK_STREAM;
+    if(getaddrinfo(smtpSrv, smtpPort, &hints, &res) != 0) {
+        DBGPRINTF("error %d in getaddrinfo\n", errno);
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
 
-	if((pWrkrData->md.smtp.sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1) {
-		DBGPRINTF("couldn't create send socket, reason %s", rs_strerror_r(errno, errStr, sizeof(errStr)));
-		ABORT_FINALIZE(RS_RET_IO_ERROR);
-	}
+    if((pWrkrData->md.smtp.sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1) {
+        DBGPRINTF("couldn't create send socket, reason %s", rs_strerror_r(errno, errStr, sizeof(errStr)));
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
 
-	if(connect(pWrkrData->md.smtp.sock, res->ai_addr, res->ai_addrlen) != 0) {
-		DBGPRINTF("create tcp connection failed, reason %s", rs_strerror_r(errno, errStr, sizeof(errStr)));
-		ABORT_FINALIZE(RS_RET_IO_ERROR);
-	}
+    if(connect(pWrkrData->md.smtp.sock, res->ai_addr, res->ai_addrlen) != 0) {
+        DBGPRINTF("create tcp connection failed, reason %s", rs_strerror_r(errno, errStr, sizeof(errStr)));
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
 
 finalize_it:
-	if(res != NULL)
-		freeaddrinfo(res);
+    if(res != NULL)
+        freeaddrinfo(res);
 
-	if(iRet != RS_RET_OK) {
-		if(pWrkrData->md.smtp.sock != -1) {
-			close(pWrkrData->md.smtp.sock);
-			pWrkrData->md.smtp.sock = -1;
-		}
-	}
+    if(iRet != RS_RET_OK) {
+        if(pWrkrData->md.smtp.sock != -1) {
+            close(pWrkrData->md.smtp.sock);
+            pWrkrData->md.smtp.sock = -1;
+        }
+    }
 
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -420,31 +420,31 @@ finalize_it:
 static rsRetVal
 Send(const int sock, const char *const __restrict__ msg, const size_t len)
 {
-	DEFiRet;
-	size_t offsBuf = 0;
-	ssize_t lenSend;
+    DEFiRet;
+    size_t offsBuf = 0;
+    ssize_t lenSend;
 
-	assert(msg != NULL);
+    assert(msg != NULL);
 
-	if(len == 0) /* it's valid, but does not make much sense ;) */
-		FINALIZE;
+    if(len == 0) /* it's valid, but does not make much sense ;) */
+        FINALIZE;
 
-	do {
-		lenSend = send(sock, msg + offsBuf, len - offsBuf, 0);
-		if(lenSend == -1) {
-			if(errno != EAGAIN) {
-				DBGPRINTF("message not (smtp/tcp)send, errno %d", errno);
-				ABORT_FINALIZE(RS_RET_TCP_SEND_ERROR);
-			}
-		} else if(lenSend != (ssize_t) (len - offsBuf)) {
-			offsBuf += lenSend; /* on to next round... */
-		} else {
-			FINALIZE;
-		}
-	} while(1);
+    do {
+        lenSend = send(sock, msg + offsBuf, len - offsBuf, 0);
+        if(lenSend == -1) {
+            if(errno != EAGAIN) {
+                DBGPRINTF("message not (smtp/tcp)send, errno %d", errno);
+                ABORT_FINALIZE(RS_RET_TCP_SEND_ERROR);
+            }
+        } else if(lenSend != (ssize_t) (len - offsBuf)) {
+            offsBuf += lenSend; /* on to next round... */
+        } else {
+            FINALIZE;
+        }
+    } while(1);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -454,48 +454,48 @@ finalize_it:
 static rsRetVal
 bodySend(wrkrInstanceData_t *pWrkrData, char *msg, size_t len)
 {
-	DEFiRet;
-	char szBuf[2048];
-	size_t iSrc;
-	size_t iBuf = 0;
-	int bHadCR = 0;
-	int bInStartOfLine = 1;
+    DEFiRet;
+    char szBuf[2048];
+    size_t iSrc;
+    size_t iBuf = 0;
+    int bHadCR = 0;
+    int bInStartOfLine = 1;
 
-	assert(pWrkrData != NULL);
-	assert(msg != NULL);
+    assert(pWrkrData != NULL);
+    assert(msg != NULL);
 
-	for(iSrc = 0 ; iSrc < len ; ++iSrc) {
-		if(iBuf >= sizeof(szBuf) - 1) { /* one is reserved for our extra dot */
-			CHKiRet(Send(pWrkrData->md.smtp.sock, szBuf, iBuf));
-			iBuf = 0;
-		}
-		szBuf[iBuf++] = msg[iSrc];
-		switch(msg[iSrc]) {
-			case '\r':
-				bHadCR = 1;
-				break;
-			case '\n':
-				if(bHadCR)
-					bInStartOfLine = 1;
-				bHadCR = 0;
-				break;
-			case '.':
-				if(bInStartOfLine)
-					szBuf[iBuf++] = '.'; /* space is always reserved for this! */
-				/*FALLTHROUGH*/
-			default:
-				bInStartOfLine = 0;
-				bHadCR = 0;
-				break;
-		}
-	}
+    for(iSrc = 0 ; iSrc < len ; ++iSrc) {
+        if(iBuf >= sizeof(szBuf) - 1) { /* one is reserved for our extra dot */
+            CHKiRet(Send(pWrkrData->md.smtp.sock, szBuf, iBuf));
+            iBuf = 0;
+        }
+        szBuf[iBuf++] = msg[iSrc];
+        switch(msg[iSrc]) {
+            case '\r':
+                bHadCR = 1;
+                break;
+            case '\n':
+                if(bHadCR)
+                    bInStartOfLine = 1;
+                bHadCR = 0;
+                break;
+            case '.':
+                if(bInStartOfLine)
+                    szBuf[iBuf++] = '.'; /* space is always reserved for this! */
+                /*FALLTHROUGH*/
+            default:
+                bInStartOfLine = 0;
+                bHadCR = 0;
+                break;
+        }
+    }
 
-	if(iBuf > 0) { /* incomplete buffer to send (the *usual* case)? */
-		CHKiRet(Send(pWrkrData->md.smtp.sock, szBuf, iBuf));
-	}
+    if(iBuf > 0) { /* incomplete buffer to send (the *usual* case)? */
+        CHKiRet(Send(pWrkrData->md.smtp.sock, szBuf, iBuf));
+    }
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -504,27 +504,27 @@ finalize_it:
 static rsRetVal
 readResponseLn(wrkrInstanceData_t *pWrkrData, char *pLn, size_t lenLn, size_t *const __restrict__ respLen)
 {
-	DEFiRet;
-	size_t i = 0;
-	char c;
+    DEFiRet;
+    size_t i = 0;
+    char c;
 
-	assert(pWrkrData != NULL);
-	assert(pLn != NULL);
+    assert(pWrkrData != NULL);
+    assert(pLn != NULL);
 
-	do {
-		CHKiRet(getRcvChar(pWrkrData, &c));
-		if(c == '\n')
-			break;
-		if(i < (lenLn - 1)) /* if line is too long, we simply discard the rest */
-			pLn[i++] = c;
-	} while(1);
-	DBGPRINTF("smtp server response: %s\n", pLn);
-	/* do not remove, this is helpful in troubleshooting SMTP probs! */
+    do {
+        CHKiRet(getRcvChar(pWrkrData, &c));
+        if(c == '\n')
+            break;
+        if(i < (lenLn - 1)) /* if line is too long, we simply discard the rest */
+            pLn[i++] = c;
+    } while(1);
+    DBGPRINTF("smtp server response: %s\n", pLn);
+    /* do not remove, this is helpful in troubleshooting SMTP probs! */
 
 finalize_it:
-	pLn[i] = '\0';
-	*respLen = i;
-	RETiRet;
+    pLn[i] = '\0';
+    *respLen = i;
+    RETiRet;
 }
 
 
@@ -535,31 +535,31 @@ finalize_it:
 static rsRetVal
 readResponse(wrkrInstanceData_t *pWrkrData, int *piState, int iExpected)
 {
-	DEFiRet;
-	int bCont;
-	char buf[128];
-	size_t respLen;
+    DEFiRet;
+    int bCont;
+    char buf[128];
+    size_t respLen;
 
-	assert(pWrkrData != NULL);
-	assert(piState != NULL);
+    assert(pWrkrData != NULL);
+    assert(piState != NULL);
 
-	bCont = 1;
-	do {
-		CHKiRet(readResponseLn(pWrkrData, buf, sizeof(buf), &respLen));
-		if(respLen < 4) /* we treat too-short responses as error */
-			ABORT_FINALIZE(RS_RET_SMTP_ERROR);
-		if(buf[3] != '-') { /* last or only response line? */
-			bCont = 0;
-			*piState = buf[0] - '0';
-			*piState = *piState * 10 + buf[1] - '0';
-			*piState = *piState * 10 + buf[2] - '0';
-			if(*piState != iExpected)
-				ABORT_FINALIZE(RS_RET_SMTP_ERROR);
-		}
-	} while(bCont);
+    bCont = 1;
+    do {
+        CHKiRet(readResponseLn(pWrkrData, buf, sizeof(buf), &respLen));
+        if(respLen < 4) /* we treat too-short responses as error */
+            ABORT_FINALIZE(RS_RET_SMTP_ERROR);
+        if(buf[3] != '-') { /* last or only response line? */
+            bCont = 0;
+            *piState = buf[0] - '0';
+            *piState = *piState * 10 + buf[1] - '0';
+            *piState = *piState * 10 + buf[2] - '0';
+            if(*piState != iExpected)
+                ABORT_FINALIZE(RS_RET_SMTP_ERROR);
+        }
+    } while(bCont);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -569,17 +569,17 @@ finalize_it:
 static void
 mkSMTPTimestamp(uchar *pszBuf, size_t lenBuf)
 {
-	time_t tCurr;
-	struct tm tmCurr;
-	static const char szDay[][4] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-	static const char szMonth[][4] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep",
-	"Oct", "Nov", "Dec"};
+    time_t tCurr;
+    struct tm tmCurr;
+    static const char szDay[][4] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+    static const char szMonth[][4] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep",
+    "Oct", "Nov", "Dec"};
 
-	datetime.GetTime(&tCurr);
-	gmtime_r(&tCurr, &tmCurr);
-	snprintf((char*)pszBuf, lenBuf, "Date: %s, %2d %s %4d %02d:%02d:%02d +0000\r\n", szDay[tmCurr.tm_wday],
-	tmCurr.tm_mday,
-		 szMonth[tmCurr.tm_mon], 1900 + tmCurr.tm_year, tmCurr.tm_hour, tmCurr.tm_min, tmCurr.tm_sec);
+    datetime.GetTime(&tCurr);
+    gmtime_r(&tCurr, &tmCurr);
+    snprintf((char*)pszBuf, lenBuf, "Date: %s, %2d %s %4d %02d:%02d:%02d +0000\r\n", szDay[tmCurr.tm_wday],
+    tmCurr.tm_mday,
+         szMonth[tmCurr.tm_mon], 1900 + tmCurr.tm_year, tmCurr.tm_hour, tmCurr.tm_min, tmCurr.tm_sec);
 }
 
 
@@ -589,68 +589,68 @@ mkSMTPTimestamp(uchar *pszBuf, size_t lenBuf)
 static rsRetVal
 sendSMTP(wrkrInstanceData_t *pWrkrData, uchar *body, uchar *subject)
 {
-	DEFiRet;
-	int iState; /* SMTP state */
-	instanceData *pData;
-	uchar szDateBuf[64];
+    DEFiRet;
+    int iState; /* SMTP state */
+    instanceData *pData;
+    uchar szDateBuf[64];
 
-	pData = pWrkrData->pData;
+    pData = pWrkrData->pData;
 
-	CHKiRet(serverConnect(pWrkrData));
-	CHKiRet(readResponse(pWrkrData, &iState, 220));
+    CHKiRet(serverConnect(pWrkrData));
+    CHKiRet(readResponse(pWrkrData, &iState, 220));
 
-	CHKiRet(Send(pWrkrData->md.smtp.sock, "HELO ", 5));
-	CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)glbl.GetLocalHostName(),
-		strlen((char*)glbl.GetLocalHostName())));
-	CHKiRet(Send(pWrkrData->md.smtp.sock, "\r\n", sizeof("\r\n") - 1));
-	CHKiRet(readResponse(pWrkrData, &iState, 250));
+    CHKiRet(Send(pWrkrData->md.smtp.sock, "HELO ", 5));
+    CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)glbl.GetLocalHostName(),
+        strlen((char*)glbl.GetLocalHostName())));
+    CHKiRet(Send(pWrkrData->md.smtp.sock, "\r\n", sizeof("\r\n") - 1));
+    CHKiRet(readResponse(pWrkrData, &iState, 250));
 
-	CHKiRet(Send(pWrkrData->md.smtp.sock, "MAIL FROM:<", sizeof("MAIL FROM:<") - 1));
-	CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)pData->md.smtp.pszFrom, strlen((char*)pData->md.smtp.pszFrom)));
-	CHKiRet(Send(pWrkrData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
-	CHKiRet(readResponse(pWrkrData, &iState, 250));
+    CHKiRet(Send(pWrkrData->md.smtp.sock, "MAIL FROM:<", sizeof("MAIL FROM:<") - 1));
+    CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)pData->md.smtp.pszFrom, strlen((char*)pData->md.smtp.pszFrom)));
+    CHKiRet(Send(pWrkrData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
+    CHKiRet(readResponse(pWrkrData, &iState, 250));
 
-	CHKiRet(WriteRcpts(pWrkrData, (uchar*)"RCPT TO", sizeof("RCPT TO") - 1, 250));
+    CHKiRet(WriteRcpts(pWrkrData, (uchar*)"RCPT TO", sizeof("RCPT TO") - 1, 250));
 
-	CHKiRet(Send(pWrkrData->md.smtp.sock, "DATA\r\n",   sizeof("DATA\r\n") - 1));
-	CHKiRet(readResponse(pWrkrData, &iState, 354));
+    CHKiRet(Send(pWrkrData->md.smtp.sock, "DATA\r\n",   sizeof("DATA\r\n") - 1));
+    CHKiRet(readResponse(pWrkrData, &iState, 354));
 
-	/* now come the data part */
-	/* header */
-	mkSMTPTimestamp(szDateBuf, sizeof(szDateBuf));
-	CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)szDateBuf, strlen((char*)szDateBuf)));
+    /* now come the data part */
+    /* header */
+    mkSMTPTimestamp(szDateBuf, sizeof(szDateBuf));
+    CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)szDateBuf, strlen((char*)szDateBuf)));
 
-	CHKiRet(Send(pWrkrData->md.smtp.sock, "From: <", sizeof("From: <") - 1));
-	CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)pData->md.smtp.pszFrom, strlen((char*)pData->md.smtp.pszFrom)));
-	CHKiRet(Send(pWrkrData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
+    CHKiRet(Send(pWrkrData->md.smtp.sock, "From: <", sizeof("From: <") - 1));
+    CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)pData->md.smtp.pszFrom, strlen((char*)pData->md.smtp.pszFrom)));
+    CHKiRet(Send(pWrkrData->md.smtp.sock, ">\r\n", sizeof(">\r\n") - 1));
 
-	CHKiRet(WriteTos(pWrkrData, (uchar*)"To", sizeof("To") - 1));
+    CHKiRet(WriteTos(pWrkrData, (uchar*)"To", sizeof("To") - 1));
 
-	CHKiRet(Send(pWrkrData->md.smtp.sock, "Subject: ",   sizeof("Subject: ") - 1));
-	CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)subject, strlen((char*)subject)));
-	CHKiRet(Send(pWrkrData->md.smtp.sock, "\r\n", sizeof("\r\n") - 1));
+    CHKiRet(Send(pWrkrData->md.smtp.sock, "Subject: ",   sizeof("Subject: ") - 1));
+    CHKiRet(Send(pWrkrData->md.smtp.sock, (char*)subject, strlen((char*)subject)));
+    CHKiRet(Send(pWrkrData->md.smtp.sock, "\r\n", sizeof("\r\n") - 1));
 
-	CHKiRet(Send(pWrkrData->md.smtp.sock, "X-Mailer: rsyslog-ommail\r\n",
-		sizeof("x-mailer: rsyslog-ommail\r\n") - 1));
+    CHKiRet(Send(pWrkrData->md.smtp.sock, "X-Mailer: rsyslog-ommail\r\n",
+        sizeof("x-mailer: rsyslog-ommail\r\n") - 1));
 
-	CHKiRet(Send(pWrkrData->md.smtp.sock, "\r\n",   sizeof("\r\n") - 1)); /* indicate end of header */
+    CHKiRet(Send(pWrkrData->md.smtp.sock, "\r\n",   sizeof("\r\n") - 1)); /* indicate end of header */
 
-	/* body */
-	if(pData->bEnableBody)
-		CHKiRet(bodySend(pWrkrData, (char*)body, strlen((char*) body)));
+    /* body */
+    if(pData->bEnableBody)
+        CHKiRet(bodySend(pWrkrData, (char*)body, strlen((char*) body)));
 
-	/* end of data, back to envelope transaction */
-	CHKiRet(Send(pWrkrData->md.smtp.sock, "\r\n.\r\n",   sizeof("\r\n.\r\n") - 1));
-	CHKiRet(readResponse(pWrkrData, &iState, 250));
+    /* end of data, back to envelope transaction */
+    CHKiRet(Send(pWrkrData->md.smtp.sock, "\r\n.\r\n",   sizeof("\r\n.\r\n") - 1));
+    CHKiRet(readResponse(pWrkrData, &iState, 250));
 
-	CHKiRet(Send(pWrkrData->md.smtp.sock, "QUIT\r\n",   sizeof("QUIT\r\n") - 1));
-	CHKiRet(readResponse(pWrkrData, &iState, 221));
+    CHKiRet(Send(pWrkrData->md.smtp.sock, "QUIT\r\n",   sizeof("QUIT\r\n") - 1));
+    CHKiRet(readResponse(pWrkrData, &iState, 221));
 
-	/* we are finished, a new connection is created for each request, so let's close it now */
-	CHKiRet(serverDisconnect(pWrkrData));
+    /* we are finished, a new connection is created for each request, so let's close it now */
+    CHKiRet(serverDisconnect(pWrkrData));
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -667,32 +667,32 @@ finalize_it:
  */
 BEGINtryResume
 CODESTARTtryResume
-	CHKiRet(serverConnect(pWrkrData));
-	CHKiRet(serverDisconnect(pWrkrData)); /* if we fail, we will never reach this line */
+    CHKiRet(serverConnect(pWrkrData));
+    CHKiRet(serverDisconnect(pWrkrData)); /* if we fail, we will never reach this line */
 finalize_it:
-	if(iRet == RS_RET_IO_ERROR)
-		iRet = RS_RET_SUSPENDED;
+    if(iRet == RS_RET_IO_ERROR)
+        iRet = RS_RET_SUSPENDED;
 ENDtryResume
 
 
 BEGINdoAction
-	uchar *subject;
-	const instanceData *const __restrict__ pData = pWrkrData->pData;
+    uchar *subject;
+    const instanceData *const __restrict__ pData = pWrkrData->pData;
 CODESTARTdoAction
-	DBGPRINTF("ommail doAction()\n");
+    DBGPRINTF("ommail doAction()\n");
 
-	if(pData->constSubject != NULL)
-		subject = pData->constSubject;
-	else if(pData->bHaveSubject)
-		subject = ppString[1];
-	else
-		subject = (uchar*)"message from rsyslog";
+    if(pData->constSubject != NULL)
+        subject = pData->constSubject;
+    else if(pData->bHaveSubject)
+        subject = ppString[1];
+    else
+        subject = (uchar*)"message from rsyslog";
 
-	iRet = sendSMTP(pWrkrData, ppString[0], subject);
-	if(iRet != RS_RET_OK) {
-		DBGPRINTF("error sending mail, suspending\n");
-		iRet = RS_RET_SUSPENDED;
-	}
+    iRet = sendSMTP(pWrkrData, ppString[0], subject);
+    if(iRet != RS_RET_OK) {
+        DBGPRINTF("error sending mail, suspending\n");
+        iRet = RS_RET_SUSPENDED;
+    }
 ENDdoAction
 
 
@@ -700,127 +700,127 @@ ENDdoAction
 static inline void
 setInstParamDefaults(instanceData *pData)
 {
-	pData->tplName = NULL;
-	pData->constSubject = NULL;
+    pData->tplName = NULL;
+    pData->constSubject = NULL;
 }
 
 
 BEGINnewActInst
-	struct cnfparamvals *pvals;
-	uchar *tplSubject = NULL;
-	int i, j;
+    struct cnfparamvals *pvals;
+    uchar *tplSubject = NULL;
+    int i, j;
 CODESTARTnewActInst
-	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-	}
+    if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
 
-	CHKiRet(createInstance(&pData));
-	setInstParamDefaults(pData);
+    CHKiRet(createInstance(&pData));
+    setInstParamDefaults(pData);
 
-	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
-			continue;
-		if(!strcmp(actpblk.descr[i].name, "server")) {
-			pData->md.smtp.pszSrv = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "port")) {
-			pData->md.smtp.pszSrvPort =  (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "mailfrom")) {
-			pData->md.smtp.pszFrom = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "mailto")) {
-			for(j = 0 ; j < pvals[i].val.d.ar->nmemb ; ++j) {
-				addRcpt(&(pData->md.smtp.lstRcpt),
-					(uchar*)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
-			}
-		} else if(!strcmp(actpblk.descr[i].name, "subject.template")) {
-			if(pData->constSubject != NULL) {
-				parser_errmsg("ommail: only one of subject.template, subject.text "
-					      "can be set");
-				ABORT_FINALIZE(RS_RET_DUP_PARAM);
-			}
-			tplSubject = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "subject.text")) {
-			if(tplSubject != NULL) {
-				parser_errmsg("ommail: only one of subject.template, subject.text "
-					      "can be set");
-				ABORT_FINALIZE(RS_RET_DUP_PARAM);
-			}
-			pData->constSubject = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "body.enable")) {
-			pData->bEnableBody =  (int) pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "template")) {
-			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else {
-			DBGPRINTF("ommail: program error, non-handled "
-			  "param '%s'\n", actpblk.descr[i].name);
-		}
-	}
+    for(i = 0 ; i < actpblk.nParams ; ++i) {
+        if(!pvals[i].bUsed)
+            continue;
+        if(!strcmp(actpblk.descr[i].name, "server")) {
+            pData->md.smtp.pszSrv = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if(!strcmp(actpblk.descr[i].name, "port")) {
+            pData->md.smtp.pszSrvPort =  (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if(!strcmp(actpblk.descr[i].name, "mailfrom")) {
+            pData->md.smtp.pszFrom = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if(!strcmp(actpblk.descr[i].name, "mailto")) {
+            for(j = 0 ; j < pvals[i].val.d.ar->nmemb ; ++j) {
+                addRcpt(&(pData->md.smtp.lstRcpt),
+                    (uchar*)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL));
+            }
+        } else if(!strcmp(actpblk.descr[i].name, "subject.template")) {
+            if(pData->constSubject != NULL) {
+                parser_errmsg("ommail: only one of subject.template, subject.text "
+                          "can be set");
+                ABORT_FINALIZE(RS_RET_DUP_PARAM);
+            }
+            tplSubject = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if(!strcmp(actpblk.descr[i].name, "subject.text")) {
+            if(tplSubject != NULL) {
+                parser_errmsg("ommail: only one of subject.template, subject.text "
+                          "can be set");
+                ABORT_FINALIZE(RS_RET_DUP_PARAM);
+            }
+            pData->constSubject = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if(!strcmp(actpblk.descr[i].name, "body.enable")) {
+            pData->bEnableBody =  (int) pvals[i].val.d.n;
+        } else if(!strcmp(actpblk.descr[i].name, "template")) {
+            pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else {
+            DBGPRINTF("ommail: program error, non-handled "
+              "param '%s'\n", actpblk.descr[i].name);
+        }
+    }
 
-	if(tplSubject == NULL) {
-		/* if no subject is configured, we need just one template string */
-		CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	} else {
-		CODE_STD_STRING_REQUESTparseSelectorAct(2)
-		pData->bHaveSubject = 1;
-		/* NOTE: tplSubject memory is *handed over* down here below - do NOT free() */
-		CHKiRet(OMSRsetEntry(*ppOMSR, 1, tplSubject, OMSR_NO_RQD_TPL_OPTS));
-	}
+    if(tplSubject == NULL) {
+        /* if no subject is configured, we need just one template string */
+        CODE_STD_STRING_REQUESTparseSelectorAct(1)
+    } else {
+        CODE_STD_STRING_REQUESTparseSelectorAct(2)
+        pData->bHaveSubject = 1;
+        /* NOTE: tplSubject memory is *handed over* down here below - do NOT free() */
+        CHKiRet(OMSRsetEntry(*ppOMSR, 1, tplSubject, OMSR_NO_RQD_TPL_OPTS));
+    }
 
-	if(pData->tplName == NULL) {
-		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) strdup("RSYSLOG_FileFormat"),
-			OMSR_NO_RQD_TPL_OPTS));
-	} else {
-		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
-			(uchar*) strdup((char*) pData->tplName),
-			OMSR_NO_RQD_TPL_OPTS));
-	}
+    if(pData->tplName == NULL) {
+        CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) strdup("RSYSLOG_FileFormat"),
+            OMSR_NO_RQD_TPL_OPTS));
+    } else {
+        CHKiRet(OMSRsetEntry(*ppOMSR, 0,
+            (uchar*) strdup((char*) pData->tplName),
+            OMSR_NO_RQD_TPL_OPTS));
+    }
 CODE_STD_FINALIZERnewActInst
-	cnfparamvalsDestruct(pvals, &actpblk);
+    cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
-	if(!strncmp((char*) p, ":ommail:", sizeof(":ommail:") - 1)) {
-		p += sizeof(":ommail:") - 1; /* eat indicator sequence (-1 because of '\0'!) */
-	} else {
-		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-	}
+    if(!strncmp((char*) p, ":ommail:", sizeof(":ommail:") - 1)) {
+        p += sizeof(":ommail:") - 1; /* eat indicator sequence (-1 because of '\0'!) */
+    } else {
+        ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
+    }
 
-	/* ok, if we reach this point, we have something for us */
-	if((iRet = createInstance(&pData)) != RS_RET_OK)
-		FINALIZE;
+    /* ok, if we reach this point, we have something for us */
+    if((iRet = createInstance(&pData)) != RS_RET_OK)
+        FINALIZE;
 
-	/* TODO: check strdup() result */
+    /* TODO: check strdup() result */
 
-	if(cs.pszFrom == NULL) {
-		LogError(0, RS_RET_MAIL_NO_FROM, "no sender address given - specify $ActionMailFrom");
-		ABORT_FINALIZE(RS_RET_MAIL_NO_FROM);
-	}
-	if(cs.lstRcpt == NULL) {
-		LogError(0, RS_RET_MAIL_NO_TO, "no recipient address given - specify $ActionMailTo");
-		ABORT_FINALIZE(RS_RET_MAIL_NO_TO);
-	}
+    if(cs.pszFrom == NULL) {
+        LogError(0, RS_RET_MAIL_NO_FROM, "no sender address given - specify $ActionMailFrom");
+        ABORT_FINALIZE(RS_RET_MAIL_NO_FROM);
+    }
+    if(cs.lstRcpt == NULL) {
+        LogError(0, RS_RET_MAIL_NO_TO, "no recipient address given - specify $ActionMailTo");
+        ABORT_FINALIZE(RS_RET_MAIL_NO_TO);
+    }
 
-	pData->md.smtp.pszFrom = (uchar*) strdup((char*)cs.pszFrom);
-	pData->md.smtp.lstRcpt = cs.lstRcpt; /* we "hand over" this memory */
-	cs.lstRcpt = NULL; /* note: this is different from pre-3.21.2 versions! */
+    pData->md.smtp.pszFrom = (uchar*) strdup((char*)cs.pszFrom);
+    pData->md.smtp.lstRcpt = cs.lstRcpt; /* we "hand over" this memory */
+    cs.lstRcpt = NULL; /* note: this is different from pre-3.21.2 versions! */
 
-	if(cs.pszSubject == NULL) {
-		/* if no subject is configured, we need just one template string */
-		CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	} else {
-		CODE_STD_STRING_REQUESTparseSelectorAct(2)
-		pData->bHaveSubject = 1;
-		CHKiRet(OMSRsetEntry(*ppOMSR, 1, (uchar*)strdup((char*) cs.pszSubject), OMSR_NO_RQD_TPL_OPTS));
-	}
-	if(cs.pszSrv != NULL)
-		pData->md.smtp.pszSrv = (uchar*) strdup((char*)cs.pszSrv);
-	if(cs.pszSrvPort != NULL)
-		pData->md.smtp.pszSrvPort = (uchar*) strdup((char*)cs.pszSrvPort);
-	pData->bEnableBody = cs.bEnableBody;
+    if(cs.pszSubject == NULL) {
+        /* if no subject is configured, we need just one template string */
+        CODE_STD_STRING_REQUESTparseSelectorAct(1)
+    } else {
+        CODE_STD_STRING_REQUESTparseSelectorAct(2)
+        pData->bHaveSubject = 1;
+        CHKiRet(OMSRsetEntry(*ppOMSR, 1, (uchar*)strdup((char*) cs.pszSubject), OMSR_NO_RQD_TPL_OPTS));
+    }
+    if(cs.pszSrv != NULL)
+        pData->md.smtp.pszSrv = (uchar*) strdup((char*)cs.pszSrv);
+    if(cs.pszSrvPort != NULL)
+        pData->md.smtp.pszSrvPort = (uchar*) strdup((char*)cs.pszSrvPort);
+    pData->bEnableBody = cs.bEnableBody;
 
-	/* process template */
-	iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) "RSYSLOG_FileFormat");
+    /* process template */
+    iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) "RSYSLOG_FileFormat");
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -828,29 +828,29 @@ ENDparseSelectorAct
 /* Free string config variables and reset them to NULL (not necessarily the default!) */
 static rsRetVal freeConfigVariables(void)
 {
-	DEFiRet;
+    DEFiRet;
 
-	free(cs.pszSrv);
-	cs.pszSrv = NULL;
-	free(cs.pszSrvPort);
-	cs.pszSrvPort = NULL;
-	free(cs.pszFrom);
-	cs.pszFrom = NULL;
-	lstRcptDestruct(cs.lstRcpt);
-	cs.lstRcpt = NULL;
+    free(cs.pszSrv);
+    cs.pszSrv = NULL;
+    free(cs.pszSrvPort);
+    cs.pszSrvPort = NULL;
+    free(cs.pszFrom);
+    cs.pszFrom = NULL;
+    lstRcptDestruct(cs.lstRcpt);
+    cs.lstRcpt = NULL;
 
-	RETiRet;
+    RETiRet;
 }
 
 
 BEGINmodExit
 CODESTARTmodExit
-	/* cleanup our allocations */
-	freeConfigVariables();
+    /* cleanup our allocations */
+    freeConfigVariables();
 
-	/* release what we no longer need */
-	objRelease(datetime, CORE_COMPONENT);
-	objRelease(glbl, CORE_COMPONENT);
+    /* release what we no longer need */
+    objRelease(datetime, CORE_COMPONENT);
+    objRelease(glbl, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -867,36 +867,36 @@ ENDqueryEtryPt
  */
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	DEFiRet;
-	cs.bEnableBody = 1;
-	iRet = freeConfigVariables();
-	RETiRet;
+    DEFiRet;
+    cs.bEnableBody = 1;
+    iRet = freeConfigVariables();
+    RETiRet;
 }
 
 
 BEGINmodInit()
 CODESTARTmodInit
 INITLegCnfVars
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	/* tell which objects we need */
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(datetime, CORE_COMPONENT));
+    /* tell which objects we need */
+    CHKiRet(objUse(glbl, CORE_COMPONENT));
+    CHKiRet(objUse(datetime, CORE_COMPONENT));
 
-	DBGPRINTF("ommail version %s initializing\n", VERSION);
+    DBGPRINTF("ommail version %s initializing\n", VERSION);
 
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsmtpserver", 0, eCmdHdlrGetWord, NULL, &cs.pszSrv,
-	STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsmtpport", 0, eCmdHdlrGetWord, NULL, &cs.pszSrvPort,
-	STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailfrom", 0, eCmdHdlrGetWord, NULL, &cs.pszFrom,
-	STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailto", 0, eCmdHdlrGetWord, legacyConfAddRcpt, NULL,
-	STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailsubject", 0, eCmdHdlrGetWord, NULL, &cs.pszSubject,
-	STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"actionmailenablebody", 0, eCmdHdlrBinary, NULL, &cs.bEnableBody,
-	STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr(	(uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-	resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+    CHKiRet(omsdRegCFSLineHdlr( (uchar *)"actionmailsmtpserver", 0, eCmdHdlrGetWord, NULL, &cs.pszSrv,
+    STD_LOADABLE_MODULE_ID));
+    CHKiRet(omsdRegCFSLineHdlr( (uchar *)"actionmailsmtpport", 0, eCmdHdlrGetWord, NULL, &cs.pszSrvPort,
+    STD_LOADABLE_MODULE_ID));
+    CHKiRet(omsdRegCFSLineHdlr( (uchar *)"actionmailfrom", 0, eCmdHdlrGetWord, NULL, &cs.pszFrom,
+    STD_LOADABLE_MODULE_ID));
+    CHKiRet(omsdRegCFSLineHdlr( (uchar *)"actionmailto", 0, eCmdHdlrGetWord, legacyConfAddRcpt, NULL,
+    STD_LOADABLE_MODULE_ID));
+    CHKiRet(omsdRegCFSLineHdlr( (uchar *)"actionmailsubject", 0, eCmdHdlrGetWord, NULL, &cs.pszSubject,
+    STD_LOADABLE_MODULE_ID));
+    CHKiRet(omsdRegCFSLineHdlr( (uchar *)"actionmailenablebody", 0, eCmdHdlrBinary, NULL, &cs.bEnableBody,
+    STD_LOADABLE_MODULE_ID));
+    CHKiRet(omsdRegCFSLineHdlr( (uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
+    resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
 ENDmodInit

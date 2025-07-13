@@ -23,8 +23,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef	IMKLOG_H_INCLUDED
-#define	IMKLOG_H_INCLUDED 1
+#ifndef IMKLOG_H_INCLUDED
+#define IMKLOG_H_INCLUDED 1
 
 #include "rsyslog.h"
 #include "dirty.h"
@@ -32,19 +32,19 @@
 
 /* we need to have the modConf type present in all submodules */
 struct modConfData_s {
-	rsconf_t *pConf;
-	int iFacilIntMsg;
-	uchar *pszPath;
-	int console_log_level;
-	sbool bParseKernelStamp;
-	sbool bKeepKernelStamp;
-	sbool bPermitNonKernel;
-	sbool configSetViaV2Method;
-	ratelimit_t *ratelimiter;
-	int ratelimitInterval;
-	int ratelimitBurst;
-	ruleset_t *pBindRuleset;	/* ruleset to bind (use system default if unspecified) */
-	uchar *pszBindRuleset;
+    rsconf_t *pConf;
+    int iFacilIntMsg;
+    uchar *pszPath;
+    int console_log_level;
+    sbool bParseKernelStamp;
+    sbool bKeepKernelStamp;
+    sbool bPermitNonKernel;
+    sbool configSetViaV2Method;
+    ratelimit_t *ratelimiter;
+    int ratelimitInterval;
+    int ratelimitBurst;
+    ruleset_t *pBindRuleset;    /* ruleset to bind (use system default if unspecified) */
+    uchar *pszBindRuleset;
 };
 
 /* interface to "drivers"

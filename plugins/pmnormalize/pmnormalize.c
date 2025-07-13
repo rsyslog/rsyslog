@@ -55,30 +55,30 @@ DEFobjCurrIf(datetime)
 
 /* parser instance parameters */
 static struct cnfparamdescr parserpdescr[] = {
-	{ "rulebase", eCmdHdlrGetWord, 0 },
-	{ "rule", eCmdHdlrArray, 0 },
-	{ "undefinedpropertyerror", eCmdHdlrBinary, 0 }
+    { "rulebase", eCmdHdlrGetWord, 0 },
+    { "rule", eCmdHdlrArray, 0 },
+    { "undefinedpropertyerror", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk parserpblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(parserpdescr)/sizeof(struct cnfparamdescr),
-	  parserpdescr
-	};
+    { CNFPARAMBLK_VERSION,
+      sizeof(parserpdescr)/sizeof(struct cnfparamdescr),
+      parserpdescr
+    };
 
 struct instanceConf_s {
-	sbool undefPropErr;
-	char *rulebase;
-	char *rule;
-	ln_ctx ctxln;		/*context to be used for liblognorm*/
-	char *pszPath;		/*path of normalized data*/
+    sbool undefPropErr;
+    char *rulebase;
+    char *rule;
+    ln_ctx ctxln;       /*context to be used for liblognorm*/
+    char *pszPath;      /*path of normalized data*/
 };
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATUREAutomaticSanitazion)
-		iRet = RS_RET_OK;
-	if(eFeat == sFEATUREAutomaticPRIParsing)
-		iRet = RS_RET_OK;
+    if(eFeat == sFEATUREAutomaticSanitazion)
+        iRet = RS_RET_OK;
+    if(eFeat == sFEATUREAutomaticPRIParsing)
+        iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 /* create input instance, set default parameters, and
@@ -87,24 +87,24 @@ ENDisCompatibleWithFeature
 static rsRetVal
 createInstance(instanceConf_t **pinst)
 {
-	instanceConf_t *inst;
-	DEFiRet;
-	CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
-	inst->undefPropErr = 0;
-	inst->rulebase = NULL;
-	inst->rule = NULL;
-	inst->ctxln = NULL;
-	*pinst = inst;
+    instanceConf_t *inst;
+    DEFiRet;
+    CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
+    inst->undefPropErr = 0;
+    inst->rulebase = NULL;
+    inst->rule = NULL;
+    inst->ctxln = NULL;
+    *pinst = inst;
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* callback for liblognorm error messages */
 static void
 errCallBack(void __attribute__((unused)) *cookie, const char *msg,
-	    size_t __attribute__((unused)) lenMsg)
+        size_t __attribute__((unused)) lenMsg)
 {
-	LogError(0, RS_RET_ERR_LIBLOGNORM, "liblognorm error: %s", msg);
+    LogError(0, RS_RET_ERR_LIBLOGNORM, "liblognorm error: %s", msg);
 }
 
 /* to be called to build the liblognorm part of the instance ONCE ALL PARAMETERS ARE CORRECT
@@ -113,141 +113,141 @@ errCallBack(void __attribute__((unused)) *cookie, const char *msg,
 static rsRetVal
 buildInstance(instanceConf_t *inst)
 {
-	DEFiRet;
-	if((inst->ctxln = ln_initCtx()) == NULL) {
-		LogError(0, RS_RET_ERR_LIBLOGNORM_INIT, "error: could not initialize "
-				"liblognorm ctx, cannot activate action");
-		ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_INIT);
-	}
-	ln_setErrMsgCB(inst->ctxln, errCallBack, NULL);
+    DEFiRet;
+    if((inst->ctxln = ln_initCtx()) == NULL) {
+        LogError(0, RS_RET_ERR_LIBLOGNORM_INIT, "error: could not initialize "
+                "liblognorm ctx, cannot activate action");
+        ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_INIT);
+    }
+    ln_setErrMsgCB(inst->ctxln, errCallBack, NULL);
 
-	if(inst->rule != NULL && inst->rulebase == NULL) {
-		if(ln_loadSamplesFromString(inst->ctxln, inst->rule) !=0) {
-			LogError(0, RS_RET_NO_RULEBASE, "error: normalization rules '%s' "
-					"could not be loaded, cannot activate action", inst->rule);
-			ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
-		}
-	} else if(inst->rulebase != NULL && inst->rule == NULL) {
-		if(ln_loadSamples(inst->ctxln, (char*) inst->rulebase) != 0) {
-			LogError(0, RS_RET_NO_RULEBASE, "error: normalization rulebase '%s' "
-					"could not be loaded, cannot activate action", inst->rulebase);
-			ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
-		}
-	}
+    if(inst->rule != NULL && inst->rulebase == NULL) {
+        if(ln_loadSamplesFromString(inst->ctxln, inst->rule) !=0) {
+            LogError(0, RS_RET_NO_RULEBASE, "error: normalization rules '%s' "
+                    "could not be loaded, cannot activate action", inst->rule);
+            ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
+        }
+    } else if(inst->rulebase != NULL && inst->rule == NULL) {
+        if(ln_loadSamples(inst->ctxln, (char*) inst->rulebase) != 0) {
+            LogError(0, RS_RET_NO_RULEBASE, "error: normalization rulebase '%s' "
+                    "could not be loaded, cannot activate action", inst->rulebase);
+            ABORT_FINALIZE(RS_RET_ERR_LIBLOGNORM_SAMPDB_LOAD);
+        }
+    }
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
 BEGINfreeParserInst
 CODESTARTfreeParserInst
-	dbgprintf("pmnormalize: free parser instance %p\n", pInst);
-	free(pInst->rulebase);
-	free(pInst->rule);
-	if(pInst->ctxln != NULL) {
-		ln_exitCtx(pInst->ctxln);
-	}
+    dbgprintf("pmnormalize: free parser instance %p\n", pInst);
+    free(pInst->rulebase);
+    free(pInst->rule);
+    if(pInst->ctxln != NULL) {
+        ln_exitCtx(pInst->ctxln);
+    }
 ENDfreeParserInst
 
 
 BEGINnewParserInst
-	struct cnfparamvals *pvals = NULL;
-	int i;
+    struct cnfparamvals *pvals = NULL;
+    int i;
 CODESTARTnewParserInst
-	DBGPRINTF("newParserInst (pmnormalize)\n");
+    DBGPRINTF("newParserInst (pmnormalize)\n");
 
-	inst = NULL;
-	CHKiRet(createInstance(&inst));
+    inst = NULL;
+    CHKiRet(createInstance(&inst));
 
-	if(lst == NULL)
-		FINALIZE;  /* just set defaults, no param block! */
+    if(lst == NULL)
+        FINALIZE;  /* just set defaults, no param block! */
 
-	if((pvals = nvlstGetParams(lst, &parserpblk, NULL)) == NULL) {
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-	}
+    if((pvals = nvlstGetParams(lst, &parserpblk, NULL)) == NULL) {
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
 
-	if(Debug) {
-		dbgprintf("parser param blk in pmnormalize:\n");
-		cnfparamsPrint(&parserpblk, pvals);
-	}
+    if(Debug) {
+        dbgprintf("parser param blk in pmnormalize:\n");
+        cnfparamsPrint(&parserpblk, pvals);
+    }
 
-	for(i = 0 ; i < parserpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
-			continue;
-		if(!strcmp(parserpblk.descr[i].name, "undefinedpropertyerror")) {
-			inst->undefPropErr = (int) pvals[i].val.d.n;
-		} else if(!strcmp(parserpblk.descr[i].name, "rulebase")) {
-			inst->rulebase = (char *) es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(parserpblk.descr[i].name, "rule")) {
-			es_str_t *rules;
-			CHKmalloc(rules = es_newStr(128));
-			for(int j=0; j < pvals[i].val.d.ar->nmemb; ++j) {
-				CHKiRet(es_addStr(&rules, pvals[i].val.d.ar->arr[j]));
-				CHKiRet(es_addChar(&rules, '\n'));
-			}
-			inst->rule = (char*)es_str2cstr(rules, NULL);
-			if(rules != NULL)
-				es_deleteStr(rules);
-		} else {
-			LogError(0, RS_RET_INTERNAL_ERROR ,
-				"pmnormalize: program error, non-handled param '%s'",
-				parserpblk.descr[i].name);
-		}
-	}
-	if(!inst->rulebase && !inst->rule) {
-		LogError(0, RS_RET_CONFIG_ERROR, "pmnormalize: you need to specify "
-				"either parameter 'rule' or 'rulebase'.");
-		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-	}
-	if(inst->rulebase && inst->rule) {
-		LogError(0, RS_RET_CONFIG_ERROR, "pmnormalize: you need to specify "
-				"one of the parameters 'rule' and 'rulebase', but not both");
-		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-	}
+    for(i = 0 ; i < parserpblk.nParams ; ++i) {
+        if(!pvals[i].bUsed)
+            continue;
+        if(!strcmp(parserpblk.descr[i].name, "undefinedpropertyerror")) {
+            inst->undefPropErr = (int) pvals[i].val.d.n;
+        } else if(!strcmp(parserpblk.descr[i].name, "rulebase")) {
+            inst->rulebase = (char *) es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if(!strcmp(parserpblk.descr[i].name, "rule")) {
+            es_str_t *rules;
+            CHKmalloc(rules = es_newStr(128));
+            for(int j=0; j < pvals[i].val.d.ar->nmemb; ++j) {
+                CHKiRet(es_addStr(&rules, pvals[i].val.d.ar->arr[j]));
+                CHKiRet(es_addChar(&rules, '\n'));
+            }
+            inst->rule = (char*)es_str2cstr(rules, NULL);
+            if(rules != NULL)
+                es_deleteStr(rules);
+        } else {
+            LogError(0, RS_RET_INTERNAL_ERROR ,
+                "pmnormalize: program error, non-handled param '%s'",
+                parserpblk.descr[i].name);
+        }
+    }
+    if(!inst->rulebase && !inst->rule) {
+        LogError(0, RS_RET_CONFIG_ERROR, "pmnormalize: you need to specify "
+                "either parameter 'rule' or 'rulebase'.");
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+    if(inst->rulebase && inst->rule) {
+        LogError(0, RS_RET_CONFIG_ERROR, "pmnormalize: you need to specify "
+                "one of the parameters 'rule' and 'rulebase', but not both");
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
 
-	iRet = buildInstance(inst);
+    iRet = buildInstance(inst);
 finalize_it:
 CODE_STD_FINALIZERnewParserInst
-	if(lst != NULL)
-		cnfparamvalsDestruct(pvals, &parserpblk);
-	if(iRet != RS_RET_OK && inst != NULL)
-		freeParserInst(inst);
+    if(lst != NULL)
+        cnfparamvalsDestruct(pvals, &parserpblk);
+    if(iRet != RS_RET_OK && inst != NULL)
+        freeParserInst(inst);
 ENDnewParserInst
 
 
 BEGINparse2
-	uchar *buf;
-	rs_size_t len;
-	int r;
-	struct json_object *json = NULL;
+    uchar *buf;
+    rs_size_t len;
+    int r;
+    struct json_object *json = NULL;
 CODESTARTparse2
-	DBGPRINTF("Message will now be parsed by pmnormalize\n");
-	/*Msg OffSet needs to be set*/
-	MsgSetMSGoffs(pMsg, 0);
+    DBGPRINTF("Message will now be parsed by pmnormalize\n");
+    /*Msg OffSet needs to be set*/
+    MsgSetMSGoffs(pMsg, 0);
 
-	getRawMsg(pMsg, &buf, &len);
-	r = ln_normalize(pInst->ctxln, (char*)buf, len, &json);
-	if(r != 0) {
-		DBGPRINTF("error %d during ln_normalize\n", r);
-		if(pInst->undefPropErr) {
-			LogError(0, RS_RET_ERR, "error %d during ln_normalize; "
-					"json: %s\n", r, fjson_object_to_json_string(json));
-		}
-		fjson_object_put(json);
-		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-	} else {
-		iRet = MsgSetPropsViaJSON_Object(pMsg, json);
-	}
+    getRawMsg(pMsg, &buf, &len);
+    r = ln_normalize(pInst->ctxln, (char*)buf, len, &json);
+    if(r != 0) {
+        DBGPRINTF("error %d during ln_normalize\n", r);
+        if(pInst->undefPropErr) {
+            LogError(0, RS_RET_ERR, "error %d during ln_normalize; "
+                    "json: %s\n", r, fjson_object_to_json_string(json));
+        }
+        fjson_object_put(json);
+        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+    } else {
+        iRet = MsgSetPropsViaJSON_Object(pMsg, json);
+    }
 finalize_it:
 ENDparse2
 
 
 BEGINmodExit
 CODESTARTmodExit
-	/* release what we no longer need */
-	objRelease(glbl, CORE_COMPONENT);
-	objRelease(parser, CORE_COMPONENT);
-	objRelease(datetime, CORE_COMPONENT);
+    /* release what we no longer need */
+    objRelease(glbl, CORE_COMPONENT);
+    objRelease(parser, CORE_COMPONENT);
+    objRelease(datetime, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -260,11 +260,11 @@ ENDqueryEtryPt
 
 BEGINmodInit()
 CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(parser, CORE_COMPONENT));
-	CHKiRet(objUse(datetime, CORE_COMPONENT));
+    CHKiRet(objUse(glbl, CORE_COMPONENT));
+    CHKiRet(objUse(parser, CORE_COMPONENT));
+    CHKiRet(objUse(datetime, CORE_COMPONENT));
 
-	DBGPRINTF("pmnormalize parser init called\n");
+    DBGPRINTF("pmnormalize parser init called\n");
 ENDmodInit

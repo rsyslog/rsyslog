@@ -4,6 +4,6 @@
 int
 main(int __attribute__((unused)) argc, char * __attribute__((unused)) argv[])
 {
-	printf("%s", RELP_DFLT_PT);
-	return 0;
+    printf("%s", RELP_DFLT_PT);
+    return 0;
 }

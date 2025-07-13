@@ -26,36 +26,36 @@
 
 /* the datetime object */
 typedef struct datetime_s {
-	char dummy;
+    char dummy;
 } datetime_t;
 
 typedef enum {
-	DATE_INVALID = -1,
-	DATE_RFC3164 =  0,
-	DATE_RFC3339 =  1,
-	DATE_UNIX    =  2,
+    DATE_INVALID = -1,
+    DATE_RFC3164 =  0,
+    DATE_RFC3339 =  1,
+    DATE_UNIX    =  2,
 } dateTimeFormat_t;
 
 /* interfaces */
 BEGINinterface(datetime) /* name must also be changed in ENDinterface macro! */
-	void (*getCurrTime)(struct syslogTime *t, time_t *ttSeconds, const int inUTC);
-	rsRetVal (*ParseTIMESTAMP3339)(struct syslogTime *pTime, uchar** ppszTS, int*);
-	rsRetVal (*ParseTIMESTAMP3164)(struct syslogTime *pTime, uchar** pszTS, int*, const int bParseTZ,
-		const int bDetectYearAfterTime);
-	int (*formatTimestampToMySQL)(struct syslogTime *ts, char* pDst);
-	int (*formatTimestampToPgSQL)(struct syslogTime *ts, char *pDst);
-	int (*formatTimestamp3339)(struct syslogTime *ts, char* pBuf);
-	int (*formatTimestamp3164)(struct syslogTime *ts, char* pBuf, int);
-	int (*formatTimestampSecFrac)(struct syslogTime *ts, char* pBuf);
-	/* v3, 2009-11-12 */
-	time_t (*GetTime)(time_t *ttSeconds);
-	/* v6, 2011-06-20 , v10, 2016-01-12*/
-	void (*timeval2syslogTime)(struct timeval *tp, struct syslogTime *t, const int inUTC);
-	/* v7, 2012-03-29 */
-	int (*formatTimestampUnix)(struct syslogTime *ts, char*pBuf);
-	time_t (*syslogTime2time_t)(const struct syslogTime *ts);
-	/* v11, 2017-10-05 */
-	int (*formatUnixTimeFromTime_t)(time_t time, const char *format, char *pBuf, uint pBufMax);
+    void (*getCurrTime)(struct syslogTime *t, time_t *ttSeconds, const int inUTC);
+    rsRetVal (*ParseTIMESTAMP3339)(struct syslogTime *pTime, uchar** ppszTS, int*);
+    rsRetVal (*ParseTIMESTAMP3164)(struct syslogTime *pTime, uchar** pszTS, int*, const int bParseTZ,
+        const int bDetectYearAfterTime);
+    int (*formatTimestampToMySQL)(struct syslogTime *ts, char* pDst);
+    int (*formatTimestampToPgSQL)(struct syslogTime *ts, char *pDst);
+    int (*formatTimestamp3339)(struct syslogTime *ts, char* pBuf);
+    int (*formatTimestamp3164)(struct syslogTime *ts, char* pBuf, int);
+    int (*formatTimestampSecFrac)(struct syslogTime *ts, char* pBuf);
+    /* v3, 2009-11-12 */
+    time_t (*GetTime)(time_t *ttSeconds);
+    /* v6, 2011-06-20 , v10, 2016-01-12*/
+    void (*timeval2syslogTime)(struct timeval *tp, struct syslogTime *t, const int inUTC);
+    /* v7, 2012-03-29 */
+    int (*formatTimestampUnix)(struct syslogTime *ts, char*pBuf);
+    time_t (*syslogTime2time_t)(const struct syslogTime *ts);
+    /* v11, 2017-10-05 */
+    int (*formatUnixTimeFromTime_t)(time_t time, const char *format, char *pBuf, uint pBufMax);
 ENDinterface(datetime)
 #define datetimeCURR_IF_VERSION 11 /* increment whenever you change the interface structure! */
 /* interface changes:

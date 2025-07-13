@@ -32,7 +32,7 @@
  * The short name is cslch (Configfile SysLine CommandHandler)
  */
 struct iminternal_s { /* config file sysline parse entry */
-	smsg_t *pMsg;	/* the message (in all its glory) */
+    smsg_t *pMsg;   /* the message (in all its glory) */
 };
 typedef struct iminternal_s iminternal_t;
 

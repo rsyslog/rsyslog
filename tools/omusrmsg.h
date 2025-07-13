@@ -26,8 +26,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef	OMUSRMSG_H_INCLUDED
-#define	OMUSRMSG_H_INCLUDED 1
+#ifndef OMUSRMSG_H_INCLUDED
+#define OMUSRMSG_H_INCLUDED 1
 
 /* prototypes */
 /**
@@ -42,9 +42,9 @@
  * @return rsRetVal              standard return code
  */
 rsRetVal modInitUsrMsg(int iIFVersRequested __attribute__((unused)),
-	int *ipIFVersProvided,
-	rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()),
-	modInfo_t *pModInfo);
+    int *ipIFVersProvided,
+    rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()),
+    modInfo_t *pModInfo);
 
 #endif /* #ifndef OMUSRMSG_H_INCLUDED */
 /* vi:set ai:

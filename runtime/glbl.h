@@ -46,70 +46,70 @@ extern pid_t glbl_ourpid;
 
 /* interfaces */
 BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
-	uchar* (*GetWorkDir)(rsconf_t *cnf);
-	int (*GetMaxLine)(rsconf_t *cnf);
+    uchar* (*GetWorkDir)(rsconf_t *cnf);
+    int (*GetMaxLine)(rsconf_t *cnf);
 #define SIMP_PROP(name, dataType) \
-	dataType (*Get##name)(void); \
-	rsRetVal (*Set##name)(dataType);
-	SIMP_PROP(OptimizeUniProc, int)
-	SIMP_PROP(PreserveFQDN, int)
-	SIMP_PROP(LocalFQDNName, uchar*)
-	SIMP_PROP(mainqCnfObj, struct cnfobj*)
-	SIMP_PROP(LocalHostName, uchar*)
-	SIMP_PROP(LocalDomain, uchar*)
-	/* added v3, 2009-06-30 */
-	rsRetVal (*GenerateLocalHostNameProperty)(void);
-	prop_t* (*GetLocalHostNameProp)(void);
-	/* added v4, 2009-07-20 */
-	int (*GetGlobalInputTermState)(void);
-	void (*SetGlobalInputTermination)(void);
-	/* added v5, 2009-11-03 */
-	/* note: v4, v5 are already used by more recent versions, so we need to skip them! */
-	/* added v6, 2009-11-16 as part of varmojfekoj's "unlimited select()" patch
-	 * Note that it must be always present, otherwise the interface would have different
-	 * versions depending on compile settings, what is not acceptable.
-	 * Use this property with care, it is only truly available if UNLIMITED_SELECT is enabled
-	 * (I did not yet further investigate the details, because that code hopefully can be removed
-	 * at some later stage).
-	 */
-	SIMP_PROP(FdSetSize, int)
-	/* v7: was neeeded to mean v5+v6 - do NOT add anything else for that version! */
-	/* next change is v9! */
-	/* v8 - 2012-03-21 */
-	prop_t* (*GetLocalHostIP)(void);
-	uchar* (*GetSourceIPofLocalClient)(void);		/* [ar] */
-	rsRetVal (*SetSourceIPofLocalClient)(uchar*);		/* [ar] */
-	/* v9 - 2015-01-12  SetMaxLine method removed */
-	/* v10 - global variables should be moved to the rsconf_t data structure, so
-	 *     dynamic configuration reload can be introduced. This is why each getter needs additional
-	 *     parameter specifying a configuration it belongs to(either loadConf or runConf)
-	 */
+    dataType (*Get##name)(void); \
+    rsRetVal (*Set##name)(dataType);
+    SIMP_PROP(OptimizeUniProc, int)
+    SIMP_PROP(PreserveFQDN, int)
+    SIMP_PROP(LocalFQDNName, uchar*)
+    SIMP_PROP(mainqCnfObj, struct cnfobj*)
+    SIMP_PROP(LocalHostName, uchar*)
+    SIMP_PROP(LocalDomain, uchar*)
+    /* added v3, 2009-06-30 */
+    rsRetVal (*GenerateLocalHostNameProperty)(void);
+    prop_t* (*GetLocalHostNameProp)(void);
+    /* added v4, 2009-07-20 */
+    int (*GetGlobalInputTermState)(void);
+    void (*SetGlobalInputTermination)(void);
+    /* added v5, 2009-11-03 */
+    /* note: v4, v5 are already used by more recent versions, so we need to skip them! */
+    /* added v6, 2009-11-16 as part of varmojfekoj's "unlimited select()" patch
+     * Note that it must be always present, otherwise the interface would have different
+     * versions depending on compile settings, what is not acceptable.
+     * Use this property with care, it is only truly available if UNLIMITED_SELECT is enabled
+     * (I did not yet further investigate the details, because that code hopefully can be removed
+     * at some later stage).
+     */
+    SIMP_PROP(FdSetSize, int)
+    /* v7: was neeeded to mean v5+v6 - do NOT add anything else for that version! */
+    /* next change is v9! */
+    /* v8 - 2012-03-21 */
+    prop_t* (*GetLocalHostIP)(void);
+    uchar* (*GetSourceIPofLocalClient)(void);       /* [ar] */
+    rsRetVal (*SetSourceIPofLocalClient)(uchar*);       /* [ar] */
+    /* v9 - 2015-01-12  SetMaxLine method removed */
+    /* v10 - global variables should be moved to the rsconf_t data structure, so
+     *     dynamic configuration reload can be introduced. This is why each getter needs additional
+     *     parameter specifying a configuration it belongs to(either loadConf or runConf)
+     */
 #undef SIMP_PROP
 #define SIMP_PROP(name, dataType) \
-	dataType (*Get##name)(rsconf_t *cnf); \
-	rsRetVal (*Set##name)(dataType);
+    dataType (*Get##name)(rsconf_t *cnf); \
+    rsRetVal (*Set##name)(dataType);
 
-	SIMP_PROP(DropMalPTRMsgs, int)
-	SIMP_PROP(DfltNetstrmDrvrCAF, uchar*)
-	SIMP_PROP(DfltNetstrmDrvrCRLF, uchar*)
-	SIMP_PROP(DfltNetstrmDrvrCertFile, uchar*)
-	SIMP_PROP(DfltNetstrmDrvrKeyFile, uchar*)
-	SIMP_PROP(DfltNetstrmDrvr, uchar*)
-	SIMP_PROP(DfltOpensslEngine, uchar*)
-	SIMP_PROP(DefPFFamily, int)
-	SIMP_PROP(DisableDNS, int)
-	SIMP_PROP(NetstrmDrvrCAExtraFiles, uchar*)
-	SIMP_PROP(ParserControlCharacterEscapePrefix, uchar)
-	SIMP_PROP(ParserDropTrailingLFOnReception, int)
-	SIMP_PROP(ParserEscapeControlCharactersOnReceive, int)
-	SIMP_PROP(ParserSpaceLFOnReceive, int)
-	SIMP_PROP(ParserEscape8BitCharactersOnReceive, int)
-	SIMP_PROP(ParserEscapeControlCharacterTab, int)
-	SIMP_PROP(ParserEscapeControlCharactersCStyle, int)
-	SIMP_PROP(ParseHOSTNAMEandTAG, int)
-	SIMP_PROP(OptionDisallowWarning, int)
+    SIMP_PROP(DropMalPTRMsgs, int)
+    SIMP_PROP(DfltNetstrmDrvrCAF, uchar*)
+    SIMP_PROP(DfltNetstrmDrvrCRLF, uchar*)
+    SIMP_PROP(DfltNetstrmDrvrCertFile, uchar*)
+    SIMP_PROP(DfltNetstrmDrvrKeyFile, uchar*)
+    SIMP_PROP(DfltNetstrmDrvr, uchar*)
+    SIMP_PROP(DfltOpensslEngine, uchar*)
+    SIMP_PROP(DefPFFamily, int)
+    SIMP_PROP(DisableDNS, int)
+    SIMP_PROP(NetstrmDrvrCAExtraFiles, uchar*)
+    SIMP_PROP(ParserControlCharacterEscapePrefix, uchar)
+    SIMP_PROP(ParserDropTrailingLFOnReception, int)
+    SIMP_PROP(ParserEscapeControlCharactersOnReceive, int)
+    SIMP_PROP(ParserSpaceLFOnReceive, int)
+    SIMP_PROP(ParserEscape8BitCharactersOnReceive, int)
+    SIMP_PROP(ParserEscapeControlCharacterTab, int)
+    SIMP_PROP(ParserEscapeControlCharactersCStyle, int)
+    SIMP_PROP(ParseHOSTNAMEandTAG, int)
+    SIMP_PROP(OptionDisallowWarning, int)
 
-#undef	SIMP_PROP
+#undef  SIMP_PROP
 ENDinterface(glbl)
 #define glblCURR_IF_VERSION 10 /* increment whenever you change the interface structure! */
 /* version 2 had PreserveFQDN added - rgerhards, 2008-12-08 */

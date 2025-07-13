@@ -42,77 +42,77 @@ DEFobjCurrIf(glbl)
 
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfpdescr[] = {
-	{ "sig.hashfunction", eCmdHdlrGetWord, 0 },
-	{ "sig.aggregator.url", eCmdHdlrGetWord, CNFPARAM_REQUIRED},
-	{ "sig.aggregator.user", eCmdHdlrGetWord, 0},
-	{ "sig.aggregator.key", eCmdHdlrGetWord, 0},
-	{ "sig.aggregator.hmacAlg", eCmdHdlrGetWord, 0 },
-	{ "sig.block.levelLimit", eCmdHdlrSize, CNFPARAM_REQUIRED},
-	{ "sig.block.timeLimit", eCmdHdlrInt, 0},
-	{ "sig.block.signtimeout", eCmdHdlrInt, 0},
-	{ "sig.confinterval", eCmdHdlrInt, 0},
-	{ "sig.keeprecordhashes", eCmdHdlrBinary, 0 },
-	{ "sig.keeptreehashes", eCmdHdlrBinary, 0},
-	{ "sig.fileformat", eCmdHdlrString, 0},
-	{ "sig.syncmode", eCmdHdlrString, 0},
-	{ "sig.randomsource", eCmdHdlrString, 0},
-	{ "sig.debugfile", eCmdHdlrString, 0},
-	{ "sig.debuglevel", eCmdHdlrInt, 0},
-	{ "dirowner", eCmdHdlrUID, 0}, /* legacy: dirowner */
-	{ "dirownernum", eCmdHdlrInt, 0 }, /* legacy: dirownernum */
-	{ "dirgroup", eCmdHdlrGID, 0 }, /* legacy: dirgroup */
-	{ "dirgroupnum", eCmdHdlrInt, 0 }, /* legacy: dirgroupnum */
-	{ "fileowner", eCmdHdlrUID, 0 }, /* legacy: fileowner */
-	{ "fileownernum", eCmdHdlrInt, 0 }, /* legacy: fileownernum */
-	{ "filegroup", eCmdHdlrGID, 0 }, /* legacy: filegroup */
-	{ "filegroupnum", eCmdHdlrInt, 0 }, /* legacy: filegroupnum */
-	{ "dircreatemode", eCmdHdlrFileCreateMode, 0 }, /* legacy: dircreatemode */
-	{ "filecreatemode", eCmdHdlrFileCreateMode, 0 } /* legacy: filecreatemode */
+    { "sig.hashfunction", eCmdHdlrGetWord, 0 },
+    { "sig.aggregator.url", eCmdHdlrGetWord, CNFPARAM_REQUIRED},
+    { "sig.aggregator.user", eCmdHdlrGetWord, 0},
+    { "sig.aggregator.key", eCmdHdlrGetWord, 0},
+    { "sig.aggregator.hmacAlg", eCmdHdlrGetWord, 0 },
+    { "sig.block.levelLimit", eCmdHdlrSize, CNFPARAM_REQUIRED},
+    { "sig.block.timeLimit", eCmdHdlrInt, 0},
+    { "sig.block.signtimeout", eCmdHdlrInt, 0},
+    { "sig.confinterval", eCmdHdlrInt, 0},
+    { "sig.keeprecordhashes", eCmdHdlrBinary, 0 },
+    { "sig.keeptreehashes", eCmdHdlrBinary, 0},
+    { "sig.fileformat", eCmdHdlrString, 0},
+    { "sig.syncmode", eCmdHdlrString, 0},
+    { "sig.randomsource", eCmdHdlrString, 0},
+    { "sig.debugfile", eCmdHdlrString, 0},
+    { "sig.debuglevel", eCmdHdlrInt, 0},
+    { "dirowner", eCmdHdlrUID, 0}, /* legacy: dirowner */
+    { "dirownernum", eCmdHdlrInt, 0 }, /* legacy: dirownernum */
+    { "dirgroup", eCmdHdlrGID, 0 }, /* legacy: dirgroup */
+    { "dirgroupnum", eCmdHdlrInt, 0 }, /* legacy: dirgroupnum */
+    { "fileowner", eCmdHdlrUID, 0 }, /* legacy: fileowner */
+    { "fileownernum", eCmdHdlrInt, 0 }, /* legacy: fileownernum */
+    { "filegroup", eCmdHdlrGID, 0 }, /* legacy: filegroup */
+    { "filegroupnum", eCmdHdlrInt, 0 }, /* legacy: filegroupnum */
+    { "dircreatemode", eCmdHdlrFileCreateMode, 0 }, /* legacy: dircreatemode */
+    { "filecreatemode", eCmdHdlrFileCreateMode, 0 } /* legacy: filecreatemode */
 };
 static struct cnfparamblk pblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(cnfpdescr)/sizeof(struct cnfparamdescr),
-	  cnfpdescr
-	};
+    { CNFPARAMBLK_VERSION,
+      sizeof(cnfpdescr)/sizeof(struct cnfparamdescr),
+      cnfpdescr
+    };
 
 
 static void
 errfunc(__attribute__((unused)) void *usrptr, uchar *emsg)
 {
-	LogError(0, RS_RET_SIGPROV_ERR, "KSI Signature Provider"
-		"Error: %s", emsg);
+    LogError(0, RS_RET_SIGPROV_ERR, "KSI Signature Provider"
+        "Error: %s", emsg);
 }
 
 static void
 logfunc(__attribute__((unused)) void *usrptr, uchar *emsg)
 {
-	LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO,
-		"KSI/LS12 Signature Provider: %s", emsg);
+    LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO,
+        "KSI/LS12 Signature Provider: %s", emsg);
 }
 
 
 /* Standard-Constructor
  */
 BEGINobjConstruct(lmsig_ksi_ls12)
-	pThis->ctx = rsksiCtxNew();
-	rsksisetErrFunc(pThis->ctx, errfunc, NULL);
-	rsksisetLogFunc(pThis->ctx, logfunc, NULL);
+    pThis->ctx = rsksiCtxNew();
+    rsksisetErrFunc(pThis->ctx, errfunc, NULL);
+    rsksisetLogFunc(pThis->ctx, logfunc, NULL);
 ENDobjConstruct(lmsig_ksi_ls12)
 
 
 /* destructor for the lmsig_ksi object */
 BEGINobjDestruct(lmsig_ksi_ls12) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(lmsig_ksi_ls12)
-	rsksiCtxDel(pThis->ctx);
+    rsksiCtxDel(pThis->ctx);
 ENDobjDestruct(lmsig_ksi_ls12)
 
 #define REPORT_PARAM_MISSING(param) \
-	do { \
-		pThis->ctx->disabled = true; \
-		LogError(0, RS_RET_ERR, "%s missing - signing disabled", param); \
-		/* TODO: ABORT_FINALIZE actually is useless because the return value is not checked by the caller*/ \
-		ABORT_FINALIZE(RS_RET_KSI_ERR); \
-	} while(0)
+    do { \
+        pThis->ctx->disabled = true; \
+        LogError(0, RS_RET_ERR, "%s missing - signing disabled", param); \
+        /* TODO: ABORT_FINALIZE actually is useless because the return value is not checked by the caller*/ \
+        ABORT_FINALIZE(RS_RET_KSI_ERR); \
+    } while(0)
 
 
 
@@ -123,149 +123,149 @@ ENDobjDestruct(lmsig_ksi_ls12)
 static rsRetVal
 SetCnfParam(void *pT, struct nvlst *lst)
 {
-	char *ag_uri = NULL, *ag_loginid = NULL, *ag_key = NULL;
-	char *hash=NULL, *hmac = NULL;
-	lmsig_ksi_ls12_t *pThis = (lmsig_ksi_ls12_t*) pT;
-	int i;
-	uchar *cstr;
-	struct cnfparamvals *pvals;
-	DEFiRet;
-	pvals = nvlstGetParams(lst, &pblk, NULL);
-	if(pvals == NULL) {
-		LogError(0, RS_RET_ERR, "Failed to load configuration - signing disabled");
-		pThis->ctx->disabled=true;
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-	}
-	if(Debug) {
-		dbgprintf("sig param blk in lmsig_ksi:\n");
-		cnfparamsPrint(&pblk, pvals);
-	}
+    char *ag_uri = NULL, *ag_loginid = NULL, *ag_key = NULL;
+    char *hash=NULL, *hmac = NULL;
+    lmsig_ksi_ls12_t *pThis = (lmsig_ksi_ls12_t*) pT;
+    int i;
+    uchar *cstr;
+    struct cnfparamvals *pvals;
+    DEFiRet;
+    pvals = nvlstGetParams(lst, &pblk, NULL);
+    if(pvals == NULL) {
+        LogError(0, RS_RET_ERR, "Failed to load configuration - signing disabled");
+        pThis->ctx->disabled=true;
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
+    if(Debug) {
+        dbgprintf("sig param blk in lmsig_ksi:\n");
+        cnfparamsPrint(&pblk, pvals);
+    }
 
-	for(i = 0 ; i < pblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
-			continue;
-		if(!strcmp(pblk.descr[i].name, "sig.hashfunction")) {
-			hash = (char*) es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if (!strcmp(pblk.descr[i].name, "sig.aggregator.url")) {
-			ag_uri = es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(pblk.descr[i].name, "sig.aggregator.user")) {
-			ag_loginid = es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if (!strcmp(pblk.descr[i].name, "sig.aggregator.key")) {
-			ag_key = es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(pblk.descr[i].name, "sig.aggregator.hmacAlg")) {
-			hmac = (char*) es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if (!strcmp(pblk.descr[i].name, "sig.block.levelLimit")) {
-			if (pvals[i].val.d.n < 2) {
-				LogError(0, RS_RET_ERR, "sig.block.levelLimit "
-					"%llu invalid - signing disabled", pvals[i].val.d.n);
-				pThis->ctx->disabled = true;
-			} else {
-				rsksiSetBlockLevelLimit(pThis->ctx, pvals[i].val.d.n);
-			}
-		} else if (!strcmp(pblk.descr[i].name, "sig.block.timeLimit")) {
-			if (pvals[i].val.d.n < 0) {
-				LogError(0, RS_RET_ERR, "sig.block.timeLimit "
-					"%llu invalid - signing disabled", pvals[i].val.d.n);
-				pThis->ctx->disabled = true;
-			} else {
-				rsksiSetBlockTimeLimit(pThis->ctx, pvals[i].val.d.n);
-			}
-		} else if (!strcmp(pblk.descr[i].name, "sig.confinterval")) {
-			if (pvals[i].val.d.n < 0) {
-				LogError(0, RS_RET_ERR, "sig.confinterval "
-					"%llu invalid - signing disabled", pvals[i].val.d.n);
-				pThis->ctx->disabled = true;
-			} else {
-				rsksiSetConfInterval(pThis->ctx, pvals[i].val.d.n);
-			}
-		} else if (!strcmp(pblk.descr[i].name, "sig.keeprecordhashes")) {
-			rsksiSetKeepRecordHashes(pThis->ctx, pvals[i].val.d.n);
-		} else if (!strcmp(pblk.descr[i].name, "sig.block.signtimeout")) {
-			if (pvals[i].val.d.n < 0) {
-				LogError(0, RS_RET_ERR, "sig.block.signtimeout "
-					"%llu invalid - signing disabled", pvals[i].val.d.n);
-				pThis->ctx->disabled = true;
-			} else {
-				rsksiSetBlockSigTimeout(pThis->ctx, pvals[i].val.d.n);
-			}
-		} else if(!strcmp(pblk.descr[i].name, "sig.keeptreehashes")) {
-			rsksiSetKeepTreeHashes(pThis->ctx, pvals[i].val.d.n);
-		} else if (!strcmp(pblk.descr[i].name, "sig.syncmode")) {
-			cstr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
-			if (!strcasecmp((char*) cstr, "sync")) rsksiSetSyncMode(pThis->ctx, LOGSIG_SYNCHRONOUS);
-			else if (!strcasecmp((char*) cstr, "async")) rsksiSetSyncMode(pThis->ctx, LOGSIG_ASYNCHRONOUS);
-			else LogError(0, RS_RET_ERR, "sig.syncmode '%s' unknown - using default", cstr);
-			free(cstr);
-		} else if (!strcmp(pblk.descr[i].name, "sig.randomsource")) {
-			cstr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
-			rsksiSetRandomSource(pThis->ctx, (char*) cstr);
-			free(cstr);
-		} else if (!strcmp(pblk.descr[i].name, "sig.debugfile")) {
-			cstr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
-			rsksiSetDebugFile(pThis->ctx, (char*) cstr);
-			free(cstr);
-		} else if (!strcmp(pblk.descr[i].name, "sig.debuglevel")) {
-			rsksiSetDebugLevel(pThis->ctx, pvals[i].val.d.n);
-		} else if (!strcmp(pblk.descr[i].name, "dirowner")) {
-			rsksiSetDirUID(pThis->ctx, pvals[i].val.d.n);
-		} else if (!strcmp(pblk.descr[i].name, "dirownernum")) {
-			rsksiSetDirUID(pThis->ctx, pvals[i].val.d.n);
-		} else if (!strcmp(pblk.descr[i].name, "dirgroup")) {
-			rsksiSetDirGID(pThis->ctx, pvals[i].val.d.n);
-		} else if (!strcmp(pblk.descr[i].name, "dirgroupnum")) {
-			rsksiSetDirGID(pThis->ctx, pvals[i].val.d.n);
-		} else if (!strcmp(pblk.descr[i].name, "fileowner")) {
-			rsksiSetFileUID(pThis->ctx, pvals[i].val.d.n);
-		} else if (!strcmp(pblk.descr[i].name, "fileownernum")) {
-			rsksiSetFileUID(pThis->ctx, pvals[i].val.d.n);
-		} else if (!strcmp(pblk.descr[i].name, "filegroup")) {
-			rsksiSetFileGID(pThis->ctx, pvals[i].val.d.n);
-		} else if (!strcmp(pblk.descr[i].name, "filegroupnum")) {
-			rsksiSetFileGID(pThis->ctx, pvals[i].val.d.n);
-		} else if (!strcmp(pblk.descr[i].name, "dircreatemode")) {
-			rsksiSetDirCreateMode(pThis->ctx, pvals[i].val.d.n);
-		} else if (!strcmp(pblk.descr[i].name, "filecreatemode")) {
-			rsksiSetCreateMode(pThis->ctx, pvals[i].val.d.n);
-		} else {
-			DBGPRINTF("lmsig_ksi: program error, non-handled "
-			  "param '%s'\n", pblk.descr[i].name);
-		}
-	}
+    for(i = 0 ; i < pblk.nParams ; ++i) {
+        if(!pvals[i].bUsed)
+            continue;
+        if(!strcmp(pblk.descr[i].name, "sig.hashfunction")) {
+            hash = (char*) es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(pblk.descr[i].name, "sig.aggregator.url")) {
+            ag_uri = es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if(!strcmp(pblk.descr[i].name, "sig.aggregator.user")) {
+            ag_loginid = es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(pblk.descr[i].name, "sig.aggregator.key")) {
+            ag_key = es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if(!strcmp(pblk.descr[i].name, "sig.aggregator.hmacAlg")) {
+            hmac = (char*) es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(pblk.descr[i].name, "sig.block.levelLimit")) {
+            if (pvals[i].val.d.n < 2) {
+                LogError(0, RS_RET_ERR, "sig.block.levelLimit "
+                    "%llu invalid - signing disabled", pvals[i].val.d.n);
+                pThis->ctx->disabled = true;
+            } else {
+                rsksiSetBlockLevelLimit(pThis->ctx, pvals[i].val.d.n);
+            }
+        } else if (!strcmp(pblk.descr[i].name, "sig.block.timeLimit")) {
+            if (pvals[i].val.d.n < 0) {
+                LogError(0, RS_RET_ERR, "sig.block.timeLimit "
+                    "%llu invalid - signing disabled", pvals[i].val.d.n);
+                pThis->ctx->disabled = true;
+            } else {
+                rsksiSetBlockTimeLimit(pThis->ctx, pvals[i].val.d.n);
+            }
+        } else if (!strcmp(pblk.descr[i].name, "sig.confinterval")) {
+            if (pvals[i].val.d.n < 0) {
+                LogError(0, RS_RET_ERR, "sig.confinterval "
+                    "%llu invalid - signing disabled", pvals[i].val.d.n);
+                pThis->ctx->disabled = true;
+            } else {
+                rsksiSetConfInterval(pThis->ctx, pvals[i].val.d.n);
+            }
+        } else if (!strcmp(pblk.descr[i].name, "sig.keeprecordhashes")) {
+            rsksiSetKeepRecordHashes(pThis->ctx, pvals[i].val.d.n);
+        } else if (!strcmp(pblk.descr[i].name, "sig.block.signtimeout")) {
+            if (pvals[i].val.d.n < 0) {
+                LogError(0, RS_RET_ERR, "sig.block.signtimeout "
+                    "%llu invalid - signing disabled", pvals[i].val.d.n);
+                pThis->ctx->disabled = true;
+            } else {
+                rsksiSetBlockSigTimeout(pThis->ctx, pvals[i].val.d.n);
+            }
+        } else if(!strcmp(pblk.descr[i].name, "sig.keeptreehashes")) {
+            rsksiSetKeepTreeHashes(pThis->ctx, pvals[i].val.d.n);
+        } else if (!strcmp(pblk.descr[i].name, "sig.syncmode")) {
+            cstr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+            if (!strcasecmp((char*) cstr, "sync")) rsksiSetSyncMode(pThis->ctx, LOGSIG_SYNCHRONOUS);
+            else if (!strcasecmp((char*) cstr, "async")) rsksiSetSyncMode(pThis->ctx, LOGSIG_ASYNCHRONOUS);
+            else LogError(0, RS_RET_ERR, "sig.syncmode '%s' unknown - using default", cstr);
+            free(cstr);
+        } else if (!strcmp(pblk.descr[i].name, "sig.randomsource")) {
+            cstr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+            rsksiSetRandomSource(pThis->ctx, (char*) cstr);
+            free(cstr);
+        } else if (!strcmp(pblk.descr[i].name, "sig.debugfile")) {
+            cstr = (uchar*) es_str2cstr(pvals[i].val.d.estr, NULL);
+            rsksiSetDebugFile(pThis->ctx, (char*) cstr);
+            free(cstr);
+        } else if (!strcmp(pblk.descr[i].name, "sig.debuglevel")) {
+            rsksiSetDebugLevel(pThis->ctx, pvals[i].val.d.n);
+        } else if (!strcmp(pblk.descr[i].name, "dirowner")) {
+            rsksiSetDirUID(pThis->ctx, pvals[i].val.d.n);
+        } else if (!strcmp(pblk.descr[i].name, "dirownernum")) {
+            rsksiSetDirUID(pThis->ctx, pvals[i].val.d.n);
+        } else if (!strcmp(pblk.descr[i].name, "dirgroup")) {
+            rsksiSetDirGID(pThis->ctx, pvals[i].val.d.n);
+        } else if (!strcmp(pblk.descr[i].name, "dirgroupnum")) {
+            rsksiSetDirGID(pThis->ctx, pvals[i].val.d.n);
+        } else if (!strcmp(pblk.descr[i].name, "fileowner")) {
+            rsksiSetFileUID(pThis->ctx, pvals[i].val.d.n);
+        } else if (!strcmp(pblk.descr[i].name, "fileownernum")) {
+            rsksiSetFileUID(pThis->ctx, pvals[i].val.d.n);
+        } else if (!strcmp(pblk.descr[i].name, "filegroup")) {
+            rsksiSetFileGID(pThis->ctx, pvals[i].val.d.n);
+        } else if (!strcmp(pblk.descr[i].name, "filegroupnum")) {
+            rsksiSetFileGID(pThis->ctx, pvals[i].val.d.n);
+        } else if (!strcmp(pblk.descr[i].name, "dircreatemode")) {
+            rsksiSetDirCreateMode(pThis->ctx, pvals[i].val.d.n);
+        } else if (!strcmp(pblk.descr[i].name, "filecreatemode")) {
+            rsksiSetCreateMode(pThis->ctx, pvals[i].val.d.n);
+        } else {
+            DBGPRINTF("lmsig_ksi: program error, non-handled "
+              "param '%s'\n", pblk.descr[i].name);
+        }
+    }
 
-	if(rsksiSetHashFunction(pThis->ctx, hash ? hash : (char*) "default") != KSI_OK) {
-		ABORT_FINALIZE(RS_RET_KSI_ERR);
-	}
+    if(rsksiSetHashFunction(pThis->ctx, hash ? hash : (char*) "default") != KSI_OK) {
+        ABORT_FINALIZE(RS_RET_KSI_ERR);
+    }
 
-	if(rsksiSetHmacFunction(pThis->ctx, hmac ? hmac : (char*) "default") != KSI_OK) {
-		ABORT_FINALIZE(RS_RET_KSI_ERR);
-	}
+    if(rsksiSetHmacFunction(pThis->ctx, hmac ? hmac : (char*) "default") != KSI_OK) {
+        ABORT_FINALIZE(RS_RET_KSI_ERR);
+    }
 
-	if(rsksiSetAggregator(pThis->ctx, ag_uri, ag_loginid, ag_key) != KSI_OK) {
-		ABORT_FINALIZE(RS_RET_KSI_ERR);
-	}
+    if(rsksiSetAggregator(pThis->ctx, ag_uri, ag_loginid, ag_key) != KSI_OK) {
+        ABORT_FINALIZE(RS_RET_KSI_ERR);
+    }
 
 finalize_it:
-	free(ag_uri);
-	free(ag_loginid);
-	free(ag_key);
-	free(hash);
-	free(hmac);
+    free(ag_uri);
+    free(ag_loginid);
+    free(ag_key);
+    free(hash);
+    free(hmac);
 
-	if(pvals != NULL)
-		cnfparamvalsDestruct(pvals, &pblk);
-	RETiRet;
+    if(pvals != NULL)
+        cnfparamvalsDestruct(pvals, &pblk);
+    RETiRet;
 }
 
 
 static rsRetVal
 OnFileOpen(void *pT, uchar *fn, void *pGF) {
-	lmsig_ksi_ls12_t *pThis = (lmsig_ksi_ls12_t*) pT;
-	ksifile *pgf = (ksifile*) pGF;
-	DEFiRet;
-	/* note: if *pgf is set to NULL, this auto-disables GT functions */
-	*pgf = rsksiCtxOpenFile(pThis->ctx, fn);
-	sigblkInitKSI(*pgf);
-	RETiRet;
+    lmsig_ksi_ls12_t *pThis = (lmsig_ksi_ls12_t*) pT;
+    ksifile *pgf = (ksifile*) pGF;
+    DEFiRet;
+    /* note: if *pgf is set to NULL, this auto-disables GT functions */
+    *pgf = rsksiCtxOpenFile(pThis->ctx, fn);
+    sigblkInitKSI(*pgf);
+    RETiRet;
 }
 
 /* Note: we assume that the record is terminated by a \n.
@@ -279,48 +279,48 @@ OnFileOpen(void *pT, uchar *fn, void *pGF) {
 static rsRetVal
 OnRecordWrite(void *pF, uchar *rec, rs_size_t lenRec)
 {
-	DEFiRet;
-	DBGPRINTF("lmsig_ksi-ls12: onRecordWrite (%d): %s\n", lenRec - 1, rec);
-	sigblkAddRecordKSI(pF, rec, lenRec - 1);
+    DEFiRet;
+    DBGPRINTF("lmsig_ksi-ls12: onRecordWrite (%d): %s\n", lenRec - 1, rec);
+    sigblkAddRecordKSI(pF, rec, lenRec - 1);
 
-	RETiRet;
+    RETiRet;
 }
 
 static rsRetVal
 OnFileClose(void *pF)
 {
-	DEFiRet;
-	DBGPRINTF("lmsig_ksi_ls12: onFileClose\n");
-	rsksifileDestruct(pF);
+    DEFiRet;
+    DBGPRINTF("lmsig_ksi_ls12: onFileClose\n");
+    rsksifileDestruct(pF);
 
-	RETiRet;
+    RETiRet;
 }
 
 BEGINobjQueryInterface(lmsig_ksi_ls12)
 CODESTARTobjQueryInterface(lmsig_ksi_ls12)
-	if (pIf->ifVersion != sigprovCURR_IF_VERSION) {/* check for current version, increment on each change */
-		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
-	}
-	pIf->Construct = (rsRetVal(*)(void*)) lmsig_ksi_ls12Construct;
-	pIf->SetCnfParam = SetCnfParam;
-	pIf->Destruct = (rsRetVal(*)(void*)) lmsig_ksi_ls12Destruct;
-	pIf->OnFileOpen = OnFileOpen;
-	pIf->OnRecordWrite = OnRecordWrite;
-	pIf->OnFileClose = OnFileClose;
+    if (pIf->ifVersion != sigprovCURR_IF_VERSION) {/* check for current version, increment on each change */
+        ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+    }
+    pIf->Construct = (rsRetVal(*)(void*)) lmsig_ksi_ls12Construct;
+    pIf->SetCnfParam = SetCnfParam;
+    pIf->Destruct = (rsRetVal(*)(void*)) lmsig_ksi_ls12Destruct;
+    pIf->OnFileOpen = OnFileOpen;
+    pIf->OnRecordWrite = OnRecordWrite;
+    pIf->OnFileClose = OnFileClose;
 finalize_it:
 ENDobjQueryInterface(lmsig_ksi_ls12)
 
 
 BEGINObjClassExit(lmsig_ksi_ls12, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(lmsig_ksi_ls12)
-	/* release objects we no longer need */
-	objRelease(glbl, CORE_COMPONENT);
+    /* release objects we no longer need */
+    objRelease(glbl, CORE_COMPONENT);
 ENDObjClassExit(lmsig_ksi_ls12)
 
 
 BEGINObjClassInit(lmsig_ksi_ls12, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
-	/* request objects we use */
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
+    /* request objects we use */
+    CHKiRet(objUse(glbl, CORE_COMPONENT));
 ENDObjClassInit(lmsig_ksi_ls12)
 
 
@@ -341,6 +341,6 @@ ENDqueryEtryPt
 
 BEGINmodInit()
 CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION;
+    *ipIFVersProvided = CURR_MOD_IF_VERSION;
 CHKiRet(lmsig_ksi_ls12ClassInit(pModInfo));
 ENDmodInit

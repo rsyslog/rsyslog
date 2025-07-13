@@ -4,14 +4,14 @@
 typedef int64_t ITEM;
 
 struct circ_buf {
-	ITEM *buf;
-	int head;
-	int tail;
+    ITEM *buf;
+    int head;
+    int tail;
 };
 
 struct ringbuf_s {
-	struct circ_buf cb;
-	size_t size;
+    struct circ_buf cb;
+    size_t size;
 };
 typedef struct ringbuf_s ringbuf_t;
 

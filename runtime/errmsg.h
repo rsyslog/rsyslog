@@ -32,7 +32,7 @@ void resetErrMsgsFlag(void);
 int hadErrMsgs(void);
 void __attribute__((format(printf, 3, 4))) LogError(const int iErrno, const int iErrCode, const char *fmt, ... );
 void __attribute__((format(printf, 4, 5)))
-	LogMsg(const int iErrno, const int iErrCode, const int severity, const char *fmt, ... );
+    LogMsg(const int iErrno, const int iErrCode, const int severity, const char *fmt, ... );
 rsRetVal ATTR_NONNULL() writeOversizeMessageLog(const smsg_t *const pMsg);
 
 #endif /* #ifndef INCLUDED_ERRMSG_H */

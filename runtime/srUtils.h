@@ -31,16 +31,16 @@
 
 /* syslog names */
 #ifndef LOG_MAKEPRI
-#	define	LOG_MAKEPRI(fac, pri)	(((fac) << 3) | (pri))
+#   define  LOG_MAKEPRI(fac, pri)   (((fac) << 3) | (pri))
 #endif
-#define INTERNAL_NOPRI	0x10	/* the "no priority" priority */
-#define TABLE_NOPRI	0	/* Value to indicate no priority in f_pmask */
+#define INTERNAL_NOPRI  0x10    /* the "no priority" priority */
+#define TABLE_NOPRI 0   /* Value to indicate no priority in f_pmask */
 #define TABLE_ALLPRI    0xFF    /* Value to indicate all priorities in f_pmask */
-#define	LOG_MARK	LOG_MAKEPRI(LOG_NFACILITIES, 0) /* mark "facility" */
+#define LOG_MARK    LOG_MAKEPRI(LOG_NFACILITIES, 0) /* mark "facility" */
 
 typedef struct syslogName_s {
-	const char	*c_name;
-	int	c_val;
+    const char  *c_name;
+    int c_val;
 } syslogName_t;
 
 extern syslogName_t syslogPriNames[];
@@ -80,11 +80,11 @@ unsigned char *srUtilStrDup(unsigned char *pOld, size_t len);
  * added 2007-07-17 by rgerhards
  */
 int makeFileParentDirs(const uchar *const szFile, const size_t lenFile, const mode_t mode,
-	const uid_t uid, const gid_t gid, const int bFailOnChown);
+    const uid_t uid, const gid_t gid, const int bFailOnChown);
 int execProg(uchar *program, int bWait, uchar *arg);
 void skipWhiteSpace(uchar **pp);
 rsRetVal genFileName(uchar **ppName, uchar *pDirName, size_t lenDirName, uchar *pFName,
-		     size_t lenFName, int64_t lNum, int lNumDigits);
+             size_t lenFName, int64_t lNum, int lNumDigits);
 int getNumberDigits(long lNum);
 rsRetVal timeoutComp(struct timespec *pt, long iTimeout);
 long timeoutVal(struct timespec *pt);
@@ -101,6 +101,6 @@ void seedRandomNumberForChild(void);
 long int randomNumber(void);
 long long currentTimeMills(void);
 rsRetVal ATTR_NONNULL() split_binary_parameters(uchar **const szBinary,
-	char ***const aParams, int *const iParams, es_str_t *const param_binary);
+    char ***const aParams, int *const iParams, es_str_t *const param_binary);
 
 #endif /* #ifndef __SRUTILS_H_INCLUDED__ */

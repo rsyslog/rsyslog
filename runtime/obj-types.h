@@ -32,60 +32,60 @@
 
 /* property types for obj[De]Serialize() */
 typedef enum {
-	PROPTYPE_NONE = 0, /* currently no value set */
-	PROPTYPE_PSZ = 1,
-	PROPTYPE_SHORT = 2,
-	PROPTYPE_INT = 3,
-	PROPTYPE_LONG = 4,
-	PROPTYPE_INT64 = 5,
-	PROPTYPE_CSTR = 6,
-	PROPTYPE_SYSLOGTIME = 7
+    PROPTYPE_NONE = 0, /* currently no value set */
+    PROPTYPE_PSZ = 1,
+    PROPTYPE_SHORT = 2,
+    PROPTYPE_INT = 3,
+    PROPTYPE_LONG = 4,
+    PROPTYPE_INT64 = 5,
+    PROPTYPE_CSTR = 6,
+    PROPTYPE_SYSLOGTIME = 7
 } propType_t;
 
 typedef unsigned objID_t;
 
-typedef enum {	/* IDs of base methods supported by all objects - used for jump table, so
-		 * they must start at zero and be incremented. -- rgerhards, 2008-01-04
-		 */
-	objMethod_CONSTRUCT = 0,
-	objMethod_DESTRUCT = 1,
-	objMethod_SERIALIZE = 2,
-	objMethod_DESERIALIZE = 3,
-	objMethod_SETPROPERTY = 4,
-	objMethod_CONSTRUCTION_FINALIZER = 5,
-	objMethod_GETSEVERITY = 6,
-	objMethod_DEBUGPRINT = 7
+typedef enum {  /* IDs of base methods supported by all objects - used for jump table, so
+         * they must start at zero and be incremented. -- rgerhards, 2008-01-04
+         */
+    objMethod_CONSTRUCT = 0,
+    objMethod_DESTRUCT = 1,
+    objMethod_SERIALIZE = 2,
+    objMethod_DESERIALIZE = 3,
+    objMethod_SETPROPERTY = 4,
+    objMethod_CONSTRUCTION_FINALIZER = 5,
+    objMethod_GETSEVERITY = 6,
+    objMethod_DEBUGPRINT = 7
 } objMethod_t;
-#define OBJ_NUM_METHODS 8	/* must be updated to contain the max number of methods supported */
+#define OBJ_NUM_METHODS 8   /* must be updated to contain the max number of methods supported */
 
 
 /* the base data type for interfaces
  * This MUST be in sync with the ifBEGIN macro
  */
 struct interface_s {
-	int ifVersion;	/* must be set to version requested */
-	int ifIsLoaded;
-	/* is the interface loaded? (0-no, 1-yes, 2-load failed; if not 1, functions can NOT be called! */
+    int ifVersion;  /* must be set to version requested */
+    int ifIsLoaded;
+    /* is the interface loaded? (0-no, 1-yes, 2-load failed; if not 1, functions can NOT be called! */
 };
 
 
 struct objInfo_s {
-	uchar *pszID; /* the object ID as a string */
-	size_t lenID; /* length of the ID string */
-	int iObjVers;
-	uchar *pszName;
-	rsRetVal (*objMethods[OBJ_NUM_METHODS])(void*, ...);
-	rsRetVal (*QueryIF)(interface_t*);
-	struct modInfo_s *pModInfo;
+    uchar *pszID; /* the object ID as a string */
+    size_t lenID; /* length of the ID string */
+    int iObjVers;
+    uchar *pszName;
+    rsRetVal (*objMethods[OBJ_NUM_METHODS])(void*, ...);
+    rsRetVal (*QueryIF)(interface_t*);
+    struct modInfo_s *pModInfo;
 };
 
 
-struct obj_s {	/* the dummy struct that each derived class can be casted to */
-	objInfo_t *pObjInfo;
+struct obj_s {  /* the dummy struct that each derived class can be casted to */
+    objInfo_t *pObjInfo;
 #ifndef NDEBUG /* this means if debug... */
-	unsigned int iObjCooCKiE; /* must always be 0xBADEFEE for a valid object */
+    unsigned int iObjCooCKiE; /* must always be 0xBADEFEE for a valid object */
 #endif
-	uchar *pszName;		/* the name of *this* specific object instance */
+    uchar *pszName;     /* the name of *this* specific object instance */
 };
 
 
@@ -94,49 +94,49 @@ struct obj_s {	/* the dummy struct that each derived class can be casted to */
  */
 #ifndef NDEBUG /* this means if debug... */
 #include <string.h>
-#	define BEGINobjInstance \
-		obj_t objData
-#	define ISOBJ_assert(pObj) \
-		do { \
-		assert((pObj) != NULL); \
-		assert((unsigned) ((obj_t*)(pObj))->iObjCooCKiE == (unsigned) 0xBADEFEE); \
-		} while(0);
-#	define ISOBJ_TYPE_assert(pObj, objType) \
-		do { \
-		assert(pObj != NULL); \
-		if(strcmp((char*)(((obj_t*)pObj)->pObjInfo->pszID), #objType)) { \
-			dbgprintf("%s:%d ISOBJ assert failure: invalid object type, expected '%s' " \
-				  "actual '%s', cookie: %X\n", __FILE__, __LINE__, #objType, \
-				  (((obj_t*)pObj)->pObjInfo->pszID), ((obj_t*)(pObj))->iObjCooCKiE); \
-			fprintf(stderr, "%s:%d ISOBJ assert failure: invalid object type, expected '%s' " \
-				  "actual '%s', cookie: %X\n", __FILE__, __LINE__, #objType, \
-				  (((obj_t*)pObj)->pObjInfo->pszID), ((obj_t*)(pObj))->iObjCooCKiE); \
-			fflush(stderr); \
-			assert(!strcmp((char*)(((obj_t*)pObj)->pObjInfo->pszID), #objType)); \
-		} \
-		assert((unsigned) ((obj_t*)(pObj))->iObjCooCKiE == (unsigned) 0xBADEFEE); \
-		} while(0)
-	/* now the same for pointers to "regular" objects (like wrkrInstanceData) */
-#	define PTR_ASSERT_DEF unsigned int _Assert_type;
-#	define PTR_ASSERT_SET_TYPE(_ptr, _type) _ptr->_Assert_type = _type
-#	define PTR_ASSERT_CHK(_ptr, _type) do { \
-		assert(_ptr != NULL); \
-		if(_ptr->_Assert_type != _type) {\
-			dbgprintf("%s:%d PTR_ASSERT_CHECK failure: invalid pointer type %x, " \
-				"expected %x\n", __FILE__, __LINE__, _ptr->_Assert_type, _type); \
-			fprintf(stderr, "%s:%d PTR_ASSERT_CHECK failure: invalid pointer type %x, " \
-				"expected %x\n", __FILE__, __LINE__, _ptr->_Assert_type, _type); \
-			assert(_ptr->_Assert_type == _type); \
-		} \
-	} while(0)
+#   define BEGINobjInstance \
+        obj_t objData
+#   define ISOBJ_assert(pObj) \
+        do { \
+        assert((pObj) != NULL); \
+        assert((unsigned) ((obj_t*)(pObj))->iObjCooCKiE == (unsigned) 0xBADEFEE); \
+        } while(0);
+#   define ISOBJ_TYPE_assert(pObj, objType) \
+        do { \
+        assert(pObj != NULL); \
+        if(strcmp((char*)(((obj_t*)pObj)->pObjInfo->pszID), #objType)) { \
+            dbgprintf("%s:%d ISOBJ assert failure: invalid object type, expected '%s' " \
+                  "actual '%s', cookie: %X\n", __FILE__, __LINE__, #objType, \
+                  (((obj_t*)pObj)->pObjInfo->pszID), ((obj_t*)(pObj))->iObjCooCKiE); \
+            fprintf(stderr, "%s:%d ISOBJ assert failure: invalid object type, expected '%s' " \
+                  "actual '%s', cookie: %X\n", __FILE__, __LINE__, #objType, \
+                  (((obj_t*)pObj)->pObjInfo->pszID), ((obj_t*)(pObj))->iObjCooCKiE); \
+            fflush(stderr); \
+            assert(!strcmp((char*)(((obj_t*)pObj)->pObjInfo->pszID), #objType)); \
+        } \
+        assert((unsigned) ((obj_t*)(pObj))->iObjCooCKiE == (unsigned) 0xBADEFEE); \
+        } while(0)
+    /* now the same for pointers to "regular" objects (like wrkrInstanceData) */
+#   define PTR_ASSERT_DEF unsigned int _Assert_type;
+#   define PTR_ASSERT_SET_TYPE(_ptr, _type) _ptr->_Assert_type = _type
+#   define PTR_ASSERT_CHK(_ptr, _type) do { \
+        assert(_ptr != NULL); \
+        if(_ptr->_Assert_type != _type) {\
+            dbgprintf("%s:%d PTR_ASSERT_CHECK failure: invalid pointer type %x, " \
+                "expected %x\n", __FILE__, __LINE__, _ptr->_Assert_type, _type); \
+            fprintf(stderr, "%s:%d PTR_ASSERT_CHECK failure: invalid pointer type %x, " \
+                "expected %x\n", __FILE__, __LINE__, _ptr->_Assert_type, _type); \
+            assert(_ptr->_Assert_type == _type); \
+        } \
+    } while(0)
 #else /* non-debug mode, no checks but much faster */
-#	define BEGINobjInstance obj_t objData
-#	define ISOBJ_TYPE_assert(pObj, objType)
-#	define ISOBJ_assert(pObj)
+#   define BEGINobjInstance obj_t objData
+#   define ISOBJ_TYPE_assert(pObj, objType)
+#   define ISOBJ_assert(pObj)
 
-#	define PTR_ASSERT_DEF
-#	define PTR_ASSERT_SET_TYPE(_ptr, _type)
-#	define PTR_ASSERT_CHK(_ptr, _type)
+#   define PTR_ASSERT_DEF
+#   define PTR_ASSERT_SET_TYPE(_ptr, _type)
+#   define PTR_ASSERT_CHK(_ptr, _type)
 #endif
 
 /* a set method for *very simple* object accesses. Note that this does
@@ -144,38 +144,38 @@ struct obj_s {	/* the dummy struct that each derived class can be casted to */
  * used only if actually nothing can go wrong! -- rgerhards, 2008-04-17
  */
 #define DEFpropGetMeth(obj, prop, dataType)\
-	dataType obj##Get##prop(void)\
-	{ \
-		return pThis->prop = pVal; \
-	}
+    dataType obj##Get##prop(void)\
+    { \
+        return pThis->prop = pVal; \
+    }
 
 #define DEFpropSetMethPTR(obj, prop, dataType)\
-	rsRetVal obj##Set##prop(obj##_t *pThis, dataType *pVal)\
-	{ \
-		pThis->prop = pVal; \
-		return RS_RET_OK; \
-	}
+    rsRetVal obj##Set##prop(obj##_t *pThis, dataType *pVal)\
+    { \
+        pThis->prop = pVal; \
+        return RS_RET_OK; \
+    }
 #define PROTOTYPEpropSetMethPTR(obj, prop, dataType)\
-	rsRetVal obj##Set##prop(obj##_t *pThis, dataType*)
+    rsRetVal obj##Set##prop(obj##_t *pThis, dataType*)
 #define DEFpropSetMethFP(obj, prop, dataType)\
-	rsRetVal obj##Set##prop(obj##_t *pThis, dataType)\
-	{ \
-		pThis->prop = pVal; \
-		return RS_RET_OK; \
-	}
+    rsRetVal obj##Set##prop(obj##_t *pThis, dataType)\
+    { \
+        pThis->prop = pVal; \
+        return RS_RET_OK; \
+    }
 #define PROTOTYPEpropSetMethFP(obj, prop, dataType)\
-	rsRetVal obj##Set##prop(obj##_t *pThis, dataType)
+    rsRetVal obj##Set##prop(obj##_t *pThis, dataType)
 #define DEFpropSetMeth(obj, prop, dataType)\
-	rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal);\
-	rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal)\
-	{ \
-		pThis->prop = pVal; \
-		return RS_RET_OK; \
-	}
+    rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal);\
+    rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal)\
+    { \
+        pThis->prop = pVal; \
+        return RS_RET_OK; \
+    }
 #define PROTOTYPEpropSetMeth(obj, prop, dataType)\
-	rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal)
+    rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal)
 #define INTERFACEpropSetMeth(obj, prop, dataType)\
-	rsRetVal (*Set##prop)(obj##_t *pThis, dataType)
+    rsRetVal (*Set##prop)(obj##_t *pThis, dataType)
 /* class initializer */
 #define PROTOTYPEObjClassInit(objName) rsRetVal objName##ClassInit(struct modInfo_s*)
 /* below: objName must be the object name (e.g. vm, strm, ...) and ISCORE must be
@@ -187,19 +187,19 @@ struct obj_s {	/* the dummy struct that each derived class can be casted to */
 #define BEGINObjClassInit(objName, objVers, objType) \
 rsRetVal objName##ClassInit(struct modInfo_s *pModInfo) \
 { \
-	DEFiRet; \
-	if(objType == OBJ_IS_CORE_MODULE) { /* are we a core module? */ \
-		CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */ \
-	} \
-	CHKiRet(obj.InfoConstruct(&pObjInfoOBJ, (uchar*) #objName, objVers, \
-	                         (rsRetVal (*)(void*))objName##Construct,\
-				 (rsRetVal (*)(void*))objName##Destruct,\
-				 (rsRetVal (*)(interface_t*))objName##QueryInterface, pModInfo)); \
+    DEFiRet; \
+    if(objType == OBJ_IS_CORE_MODULE) { /* are we a core module? */ \
+        CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */ \
+    } \
+    CHKiRet(obj.InfoConstruct(&pObjInfoOBJ, (uchar*) #objName, objVers, \
+                             (rsRetVal (*)(void*))objName##Construct,\
+                 (rsRetVal (*)(void*))objName##Destruct,\
+                 (rsRetVal (*)(interface_t*))objName##QueryInterface, pModInfo)); \
 
 #define ENDObjClassInit(objName) \
-	iRet = obj.RegisterObj((uchar*)#objName, pObjInfoOBJ); \
+    iRet = obj.RegisterObj((uchar*)#objName, pObjInfoOBJ); \
 finalize_it: \
-	RETiRet; \
+    RETiRet; \
 }
 
 /* ... and now the same for abstract classes.
@@ -208,19 +208,19 @@ finalize_it: \
 #define BEGINAbstractObjClassInit(objName, objVers, objType) \
 rsRetVal objName##ClassInit(struct modInfo_s *pModInfo) \
 { \
-	DEFiRet; \
-	if(objType == OBJ_IS_CORE_MODULE) { /* are we a core module? */ \
-		CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */ \
-	} \
-	CHKiRet(obj.InfoConstruct(&pObjInfoOBJ, (uchar*) #objName, objVers, \
-	                         NULL,\
-				 NULL,\
-				 (rsRetVal (*)(interface_t*))objName##QueryInterface, pModInfo));
+    DEFiRet; \
+    if(objType == OBJ_IS_CORE_MODULE) { /* are we a core module? */ \
+        CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */ \
+    } \
+    CHKiRet(obj.InfoConstruct(&pObjInfoOBJ, (uchar*) #objName, objVers, \
+                             NULL,\
+                 NULL,\
+                 (rsRetVal (*)(interface_t*))objName##QueryInterface, pModInfo));
 
 #define ENDObjClassInit(objName) \
-	iRet = obj.RegisterObj((uchar*)#objName, pObjInfoOBJ); \
+    iRet = obj.RegisterObj((uchar*)#objName, pObjInfoOBJ); \
 finalize_it: \
-	RETiRet; \
+    RETiRet; \
 }
 
 
@@ -232,46 +232,46 @@ finalize_it: \
 #define BEGINObjClassExit(objName, objType) \
 rsRetVal objName##ClassExit(void) \
 { \
-	DEFiRet;
+    DEFiRet;
 
 #define CODESTARTObjClassExit(objName)
 
 #define ENDObjClassExit(objName) \
-	iRet = obj.UnregisterObj((uchar*)#objName); \
-	RETiRet; \
+    iRet = obj.UnregisterObj((uchar*)#objName); \
+    RETiRet; \
 }
 
 /* this defines both the constructor and initializer
  * rgerhards, 2008-01-10
  */
 #define BEGINobjConstruct(obj) \
-	static rsRetVal obj##Initialize(obj##_t __attribute__((unused)) *pThis) \
-	{ \
-		DEFiRet;
+    static rsRetVal obj##Initialize(obj##_t __attribute__((unused)) *pThis) \
+    { \
+        DEFiRet;
 
 #define ENDobjConstruct(obj) \
-		/* use finalize_it: before calling the macro (if you need it)! */ \
-		RETiRet; \
-	} \
-	rsRetVal obj##Construct(obj##_t **ppThis); \
-	rsRetVal obj##Construct(obj##_t **ppThis) \
-	{ \
-		DEFiRet; \
-		obj##_t *pThis; \
-	 \
-		assert(ppThis != NULL); \
-	 \
-		if((pThis = (obj##_t *)calloc(1, sizeof(obj##_t))) == NULL) { \
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY); \
-		} \
-		objConstructSetObjInfo(pThis); \
-	 \
-		obj##Initialize(pThis); \
-	\
-	finalize_it: \
-		OBJCONSTRUCT_CHECK_SUCCESS_AND_CLEANUP \
-		RETiRet; \
-	}
+        /* use finalize_it: before calling the macro (if you need it)! */ \
+        RETiRet; \
+    } \
+    rsRetVal obj##Construct(obj##_t **ppThis); \
+    rsRetVal obj##Construct(obj##_t **ppThis) \
+    { \
+        DEFiRet; \
+        obj##_t *pThis; \
+     \
+        assert(ppThis != NULL); \
+     \
+        if((pThis = (obj##_t *)calloc(1, sizeof(obj##_t))) == NULL) { \
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY); \
+        } \
+        objConstructSetObjInfo(pThis); \
+     \
+        obj##Initialize(pThis); \
+    \
+    finalize_it: \
+        OBJCONSTRUCT_CHECK_SUCCESS_AND_CLEANUP \
+        RETiRet; \
+    }
 
 
 /* this defines the destructor. The important point is that the base object
@@ -293,22 +293,22 @@ rsRetVal objName##ClassExit(void) \
  * rgerhards, 2008-01-30
  */
 #define PROTOTYPEobjDestruct(OBJ) \
-	rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) **ppThis)
+    rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) **ppThis)
 /* note: we generate a prototype in any case, as this does not hurt but
  * many modules otherwise seem to miss one, which generates compiler
  * warnings.
  */
 #define BEGINobjDestruct(OBJ) \
-	rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) **ppThis);\
-	rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) **ppThis) \
-	{ \
-		DEFiRet; \
-		OBJ##_t *pThis;
+    rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) **ppThis);\
+    rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) **ppThis) \
+    { \
+        DEFiRet; \
+        OBJ##_t *pThis;
 
 #define CODESTARTobjDestruct(OBJ) \
-		assert(ppThis != NULL); \
-		pThis = *ppThis; \
-		ISOBJ_TYPE_assert(pThis, OBJ);
+        assert(ppThis != NULL); \
+        pThis = *ppThis; \
+        ISOBJ_TYPE_assert(pThis, OBJ);
 
 /* note: there was a long-time bug in the macro below that lead to *ppThis = NULL
  * only when the object was actually destructed. I discovered this issue during
@@ -320,16 +320,16 @@ rsRetVal objName##ClassExit(void) \
  * rgerhards, 2009-06-30
  */
 #define ENDobjDestruct(OBJ) \
-	 	goto finalize_it; /* prevent compiler warning ;) */ \
-	 	/* no more code here! */ \
-	finalize_it: \
-		if(pThis != NULL) { \
-			obj.DestructObjSelf((obj_t*) pThis); \
-			free(pThis); \
-		} \
-		*ppThis = NULL; \
-		RETiRet; \
-	}
+        goto finalize_it; /* prevent compiler warning ;) */ \
+        /* no more code here! */ \
+    finalize_it: \
+        if(pThis != NULL) { \
+            obj.DestructObjSelf((obj_t*) pThis); \
+            free(pThis); \
+        } \
+        *ppThis = NULL; \
+        RETiRet; \
+    }
 
 
 /* this defines the debug print entry point. DebugPrint is optional. If
@@ -340,18 +340,18 @@ rsRetVal objName##ClassExit(void) \
 #define PROTOTYPEObjDebugPrint(obj) rsRetVal obj##DebugPrint(obj##_t *pThis)
 #define INTERFACEObjDebugPrint(obj) rsRetVal (*DebugPrint)(obj##_t *pThis)
 #define BEGINobjDebugPrint(obj) \
-	rsRetVal obj##DebugPrint(obj##_t __attribute__((unused)) *pThis);\
-	rsRetVal obj##DebugPrint(obj##_t __attribute__((unused)) *pThis) \
-	{ \
-		DEFiRet; \
+    rsRetVal obj##DebugPrint(obj##_t __attribute__((unused)) *pThis);\
+    rsRetVal obj##DebugPrint(obj##_t __attribute__((unused)) *pThis) \
+    { \
+        DEFiRet; \
 
 #define CODESTARTobjDebugPrint(obj) \
-		assert(pThis != NULL); \
-		ISOBJ_TYPE_assert(pThis, obj); \
+        assert(pThis != NULL); \
+        ISOBJ_TYPE_assert(pThis, obj); \
 
 #define ENDobjDebugPrint(obj) \
-		RETiRet; \
-	}
+        RETiRet; \
+    }
 
 /* ------------------------------ object loader system ------------------------------ *
  * The following code builds a dynamic object loader system. The
@@ -375,17 +375,17 @@ rsRetVal objName##ClassExit(void) \
  * present in all objects.
  */
 #define BEGINobjQueryInterface(obj) \
-	rsRetVal obj##QueryInterface(obj##_if_t *pIf);\
-	rsRetVal obj##QueryInterface(obj##_if_t *pIf) \
-	{ \
-		DEFiRet; \
+    rsRetVal obj##QueryInterface(obj##_if_t *pIf);\
+    rsRetVal obj##QueryInterface(obj##_if_t *pIf) \
+    { \
+        DEFiRet; \
 
 #define CODESTARTobjQueryInterface(obj) \
-		assert(pIf != NULL);
+        assert(pIf != NULL);
 
 #define ENDobjQueryInterface(obj) \
-		RETiRet; \
-	}
+        RETiRet; \
+    }
 
 #define PROTOTYPEObjQueryInterface(obj) rsRetVal obj##QueryInterface(obj##_if_t *pIf)
 
@@ -394,10 +394,10 @@ rsRetVal objName##ClassExit(void) \
  * header files.
  */
 #define BEGINinterface(obj) \
-	typedef struct obj##_if_s {\
-		ifBEGIN		/* This MUST always be the first interface member */
+    typedef struct obj##_if_s {\
+        ifBEGIN     /* This MUST always be the first interface member */
 #define ENDinterface(obj) \
-	} obj##_if_t;
+    } obj##_if_t;
 
 /* the following macro is used to get access to an object (not an instance,
  * just the class itself!). It must be called before any of the object's
@@ -412,29 +412,29 @@ rsRetVal objName##ClassExit(void) \
 #define CORE_COMPONENT NULL /* use this to indicate this is a core component */
 #define DONT_LOAD_LIB NULL /* do not load a library to obtain object interface (currently same as CORE_COMPONENT) */
 #define objUse(objName, FILENAME) \
-	obj.UseObj(__FILE__, (uchar*)#objName, (uchar*)FILENAME, (void*) &objName)
+    obj.UseObj(__FILE__, (uchar*)#objName, (uchar*)FILENAME, (void*) &objName)
 #define objRelease(objName, FILENAME) \
-	obj.ReleaseObj(__FILE__, (uchar*)#objName, (uchar*) FILENAME, (void*) &objName)
+    obj.ReleaseObj(__FILE__, (uchar*)#objName, (uchar*) FILENAME, (void*) &objName)
 
 /* defines data that must always be present at the very begin of the interface structure */
 #define ifBEGIN \
-	int ifVersion;	/* must be set to version requested */ \
-	int ifIsLoaded; /* is the interface loaded? (0-no, 1-yes; if no, functions can NOT be called! */
+    int ifVersion;  /* must be set to version requested */ \
+    int ifIsLoaded; /* is the interface loaded? (0-no, 1-yes; if no, functions can NOT be called! */
 
 
 /* use the following define some place in your static data (suggested right at
  * the beginning
  */
 #define DEFobjCurrIf(obj) \
-		static obj##_if_t obj = { .ifVersion = obj##CURR_IF_VERSION, .ifIsLoaded = 0 };
+        static obj##_if_t obj = { .ifVersion = obj##CURR_IF_VERSION, .ifIsLoaded = 0 };
 
 /* define the prototypes for a class - when we use interfaces, we just have few
  * functions that actually need to be non-static.
  */
 #define PROTOTYPEObj(obj) \
-	PROTOTYPEObjClassInit(obj); \
-	PROTOTYPEObjClassExit(obj); \
-	PROTOTYPEObjQueryInterface(obj)
+    PROTOTYPEObjClassInit(obj); \
+    PROTOTYPEObjClassExit(obj); \
+    PROTOTYPEObjQueryInterface(obj)
 
 /* ------------------------------ end object loader system ------------------------------ */
 

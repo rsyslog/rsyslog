@@ -48,15 +48,15 @@ DEF_OMOD_STATIC_DATA
 
 /* define operation modes we have */
 typedef struct _instanceData {
-	int dummy;
+    int dummy;
 } instanceData;
 
 typedef struct wrkrInstanceData {
-	instanceData *pData;
+    instanceData *pData;
 } wrkrInstanceData_t;
 
 struct modConfData_s {
-	rsconf_t *pConf;	/* our overall config object */
+    rsconf_t *pConf;    /* our overall config object */
 };
 static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
@@ -64,8 +64,8 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current ex
 
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
-	loadModConf = pModConf;
-	pModConf->pConf = pConf;
+    loadModConf = pModConf;
+    pModConf->pConf = pConf;
 ENDbeginCnfLoad
 
 BEGINendCnfLoad
@@ -78,7 +78,7 @@ ENDcheckCnf
 
 BEGINactivateCnf
 CODESTARTactivateCnf
-	runModConf = pModConf;
+    runModConf = pModConf;
 ENDactivateCnf
 
 
@@ -108,9 +108,9 @@ ENDfreeInstance
 
 BEGINnewActInst
 CODESTARTnewActInst
-	CODE_STD_STRING_REQUESTnewActInst(1)
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
-	CHKiRet(createInstance(&pData));
+    CODE_STD_STRING_REQUESTnewActInst(1)
+    CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
+    CHKiRet(createInstance(&pData));
 CODE_STD_FINALIZERnewActInst
 ENDnewActInst
 
@@ -131,25 +131,25 @@ ENDtryResume
 
 
 BEGINdoAction_NoStrings
-	smsg_t **ppMsg = (smsg_t **) pMsgData;
-	smsg_t *pMsg = ppMsg[0];
-	uchar *msg;
-	int lenMsg;
-	int i;
+    smsg_t **ppMsg = (smsg_t **) pMsgData;
+    smsg_t *pMsg = ppMsg[0];
+    uchar *msg;
+    int lenMsg;
+    int i;
 CODESTARTdoAction
-	lenMsg = getMSGLen(pMsg);
-	if(lenMsg > 0) {
-		msg = getMSG(pMsg);
-		if(msg[0]==' ') {
-			for(i = 1; i < lenMsg; i++) {
-				msg[i-1] = msg[i];
-			}
-			msg[i-1] = '\0';
-			lenMsg -= 1;
-		}
-	}
-	if(lenMsg != getMSGLen(pMsg))
-		setMSGLen(pMsg, lenMsg);
+    lenMsg = getMSGLen(pMsg);
+    if(lenMsg > 0) {
+        msg = getMSG(pMsg);
+        if(msg[0]==' ') {
+            for(i = 1; i < lenMsg; i++) {
+                msg[i-1] = msg[i];
+            }
+            msg[i-1] = '\0';
+            lenMsg -= 1;
+        }
+    }
+    if(lenMsg != getMSGLen(pMsg))
+        setMSGLen(pMsg, lenMsg);
 ENDdoAction
 
 
@@ -172,7 +172,7 @@ ENDqueryEtryPt
 
 BEGINmodInit()
 CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	DBGPRINTF("mmrm1stspace: module compiled with rsyslog version %s.\n", VERSION);
+    DBGPRINTF("mmrm1stspace: module compiled with rsyslog version %s.\n", VERSION);
 ENDmodInit

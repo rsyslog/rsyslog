@@ -27,8 +27,8 @@ typedef cryprov_if_t lmcry_ossl_if_t;
 
 /* the lmcry_ossl object */
 struct lmcry_ossl_s {
-	BEGINobjInstance; /* Data to implement generic object - MUST be the first data element! */
-	osslctx ctx;
+    BEGINobjInstance; /* Data to implement generic object - MUST be the first data element! */
+    osslctx ctx;
 };
 typedef struct lmcry_ossl_s lmcry_ossl_t;
 

@@ -29,33 +29,33 @@ struct strmsrv_s;
 
 /* the strms_sess object */
 struct strms_sess_s {
-	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	strmsrv_t *pSrv;	/* pointer back to my server (e.g. for callbacks) */
-	strmLstnPortList_t *pLstnInfo;	/* pointer back to listener info */
-	netstrm_t *pStrm;
-	uchar *fromHost;
-	prop_t *fromHostIP;
-	void *pUsr;		/* a user-pointer */
+    BEGINobjInstance;   /* Data to implement generic object - MUST be the first data element! */
+    strmsrv_t *pSrv;    /* pointer back to my server (e.g. for callbacks) */
+    strmLstnPortList_t *pLstnInfo;  /* pointer back to listener info */
+    netstrm_t *pStrm;
+    uchar *fromHost;
+    prop_t *fromHostIP;
+    void *pUsr;     /* a user-pointer */
 };
 
 
 /* interfaces */
 BEGINinterface(strms_sess) /* name must also be changed in ENDinterface macro! */
-	INTERFACEObjDebugPrint(strms_sess);
-	rsRetVal (*Construct)(strms_sess_t **ppThis);
-	rsRetVal (*ConstructFinalize)(strms_sess_t __attribute__((unused)) *pThis);
-	rsRetVal (*Destruct)(strms_sess_t **ppThis);
-	rsRetVal (*Close)(strms_sess_t *pThis);
-	rsRetVal (*DataRcvd)(strms_sess_t *pThis, char *pData, size_t iLen);
-	/* set methods */
-	rsRetVal (*SetStrmsrv)(strms_sess_t *pThis, struct strmsrv_s *pSrv);
-	rsRetVal (*SetLstnInfo)(strms_sess_t *pThis, strmLstnPortList_t *pLstnInfo);
-	rsRetVal (*SetUsrP)(strms_sess_t*, void*);
-	void*    (*GetUsrP)(strms_sess_t*);
-	rsRetVal (*SetHost)(strms_sess_t *pThis, uchar*);
-	rsRetVal (*SetHostIP)(strms_sess_t *pThis, prop_t*);
-	rsRetVal (*SetStrm)(strms_sess_t *pThis, netstrm_t*);
-	rsRetVal (*SetOnMsgReceive)(strms_sess_t *pThis, rsRetVal (*OnMsgReceive)(strms_sess_t*, uchar*, int));
+    INTERFACEObjDebugPrint(strms_sess);
+    rsRetVal (*Construct)(strms_sess_t **ppThis);
+    rsRetVal (*ConstructFinalize)(strms_sess_t __attribute__((unused)) *pThis);
+    rsRetVal (*Destruct)(strms_sess_t **ppThis);
+    rsRetVal (*Close)(strms_sess_t *pThis);
+    rsRetVal (*DataRcvd)(strms_sess_t *pThis, char *pData, size_t iLen);
+    /* set methods */
+    rsRetVal (*SetStrmsrv)(strms_sess_t *pThis, struct strmsrv_s *pSrv);
+    rsRetVal (*SetLstnInfo)(strms_sess_t *pThis, strmLstnPortList_t *pLstnInfo);
+    rsRetVal (*SetUsrP)(strms_sess_t*, void*);
+    void*    (*GetUsrP)(strms_sess_t*);
+    rsRetVal (*SetHost)(strms_sess_t *pThis, uchar*);
+    rsRetVal (*SetHostIP)(strms_sess_t *pThis, prop_t*);
+    rsRetVal (*SetStrm)(strms_sess_t *pThis, netstrm_t*);
+    rsRetVal (*SetOnMsgReceive)(strms_sess_t *pThis, rsRetVal (*OnMsgReceive)(strms_sess_t*, uchar*, int));
 ENDinterface(strms_sess)
 #define strms_sessCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
 /* interface changes

@@ -59,11 +59,11 @@ MODULE_TYPE_NOKEEP
 DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
-	uchar	progName[MAXFNAME]; /* program  to execute */
+    uchar   progName[MAXFNAME]; /* program  to execute */
 } instanceData;
 
 typedef struct wrkrInstanceData {
-	instanceData *pData;
+    instanceData *pData;
 } wrkrInstanceData_t;
 
 BEGINcreateInstance
@@ -78,8 +78,8 @@ ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
-		iRet = RS_RET_OK;
+    if(eFeat == sFEATURERepeatedMsgReduction)
+        iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
@@ -95,7 +95,7 @@ ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-	printf("%s", pData->progName);
+    printf("%s", pData->progName);
 ENDdbgPrintInstInfo
 
 
@@ -105,36 +105,36 @@ ENDtryResume
 
 BEGINdoAction
 CODESTARTdoAction
-	dbgprintf("\n");
-	if(execProg((uchar*) pWrkrData->pData->progName, 1, ppString[0]) == 0)
-	 	LogError(0, NO_ERRCODE, "Executing program '%s' failed", (char*)pWrkrData->pData->progName);
+    dbgprintf("\n");
+    if(execProg((uchar*) pWrkrData->pData->progName, 1, ppString[0]) == 0)
+        LogError(0, NO_ERRCODE, "Executing program '%s' failed", (char*)pWrkrData->pData->progName);
 ENDdoAction
 
 
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	/* yes, the if below is redundant, but I need it now. Will go away as
-	 * the code further changes.  -- rgerhards, 2007-07-25
-	 */
-	if(*p == '^') {
-		if((iRet = createInstance(&pData)) != RS_RET_OK)
-			goto finalize_it;
-	}
+    /* yes, the if below is redundant, but I need it now. Will go away as
+     * the code further changes.  -- rgerhards, 2007-07-25
+     */
+    if(*p == '^') {
+        if((iRet = createInstance(&pData)) != RS_RET_OK)
+            goto finalize_it;
+    }
 
 
-	switch (*p)
-	{
-	case '^': /* bkalkbrenner 2005-09-20: execute shell command */
-		dbgprintf("exec\n");
-		++p;
-		iRet = cflineParseFileName(p, (uchar*) pData->progName, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
-			                   (uchar*)"RSYSLOG_TraditionalFileFormat");
-		break;
-	default:
-		iRet = RS_RET_CONFLINE_UNPROCESSED;
-		break;
-	}
+    switch (*p)
+    {
+    case '^': /* bkalkbrenner 2005-09-20: execute shell command */
+        dbgprintf("exec\n");
+        ++p;
+        iRet = cflineParseFileName(p, (uchar*) pData->progName, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS,
+                               (uchar*)"RSYSLOG_TraditionalFileFormat");
+        break;
+    default:
+        iRet = RS_RET_CONFLINE_UNPROCESSED;
+        break;
+    }
 
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
@@ -154,7 +154,7 @@ ENDqueryEtryPt
 
 BEGINmodInit(Shell)
 CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit
 

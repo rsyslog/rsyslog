@@ -41,63 +41,63 @@ static pthread_mutex_t janitorMut = PTHREAD_MUTEX_INITIALIZER;
 rsRetVal
 janitorAddEtry(void (*cb)(void*), const char *id, void *pUsr)
 {
-	struct janitorEtry *etry = NULL;
-	DEFiRet;
-	CHKmalloc(etry = malloc(sizeof(struct janitorEtry)));
-	CHKmalloc(etry->id = strdup(id));
-	etry->pUsr = pUsr;
-	etry->cb = cb;
-	etry->next = janitorRoot;
-	pthread_mutex_lock(&janitorMut);
-	janitorRoot = etry;
-	pthread_mutex_unlock(&janitorMut);
-	DBGPRINTF("janitor: entry %p, id '%s' added\n", etry, id);
+    struct janitorEtry *etry = NULL;
+    DEFiRet;
+    CHKmalloc(etry = malloc(sizeof(struct janitorEtry)));
+    CHKmalloc(etry->id = strdup(id));
+    etry->pUsr = pUsr;
+    etry->cb = cb;
+    etry->next = janitorRoot;
+    pthread_mutex_lock(&janitorMut);
+    janitorRoot = etry;
+    pthread_mutex_unlock(&janitorMut);
+    DBGPRINTF("janitor: entry %p, id '%s' added\n", etry, id);
 finalize_it:
-	if(iRet != RS_RET_OK && etry != NULL)
-		free(etry);
-	RETiRet;
+    if(iRet != RS_RET_OK && etry != NULL)
+        free(etry);
+    RETiRet;
 }
 
 rsRetVal
 janitorDelEtry(const char *__restrict__ const id)
 {
-	struct janitorEtry *curr, *prev = NULL;
-	DEFiRet;
+    struct janitorEtry *curr, *prev = NULL;
+    DEFiRet;
 
-	pthread_mutex_lock(&janitorMut);
-	for(curr = janitorRoot ; curr != NULL ; curr = curr->next) {
-		if(!strcmp(curr->id, id)) {
-			if(prev == NULL) {
-				janitorRoot = curr->next;
-			} else {
-				prev->next = curr->next;
-			}
-			free(curr->id);
-			free(curr);
-			DBGPRINTF("janitor: deleted entry '%s'\n", id);
-			ABORT_FINALIZE(RS_RET_OK);
-		}
-		prev = curr;
-	}
-	DBGPRINTF("janitor: to be deleted entry '%s' not found\n", id);
-	iRet = RS_RET_NOT_FOUND;
+    pthread_mutex_lock(&janitorMut);
+    for(curr = janitorRoot ; curr != NULL ; curr = curr->next) {
+        if(!strcmp(curr->id, id)) {
+            if(prev == NULL) {
+                janitorRoot = curr->next;
+            } else {
+                prev->next = curr->next;
+            }
+            free(curr->id);
+            free(curr);
+            DBGPRINTF("janitor: deleted entry '%s'\n", id);
+            ABORT_FINALIZE(RS_RET_OK);
+        }
+        prev = curr;
+    }
+    DBGPRINTF("janitor: to be deleted entry '%s' not found\n", id);
+    iRet = RS_RET_NOT_FOUND;
 finalize_it:
-	pthread_mutex_unlock(&janitorMut);
-	RETiRet;
+    pthread_mutex_unlock(&janitorMut);
+    RETiRet;
 }
 
 /* run the janitor; all entries are processed */
 void
 janitorRun(void)
 {
-	struct janitorEtry *curr;
+    struct janitorEtry *curr;
 
-	dbgprintf("janitorRun() called\n");
-	pthread_mutex_lock(&janitorMut);
-	for(curr = janitorRoot ; curr != NULL ; curr = curr->next) {
-		DBGPRINTF("janitor: processing entry %p, id '%s'\n",
-			  curr, curr->id);
-		curr->cb(curr->pUsr);
-	}
-	pthread_mutex_unlock(&janitorMut);
+    dbgprintf("janitorRun() called\n");
+    pthread_mutex_lock(&janitorMut);
+    for(curr = janitorRoot ; curr != NULL ; curr = curr->next) {
+        DBGPRINTF("janitor: processing entry %p, id '%s'\n",
+              curr, curr->id);
+        curr->cb(curr->pUsr);
+    }
+    pthread_mutex_unlock(&janitorMut);
 }

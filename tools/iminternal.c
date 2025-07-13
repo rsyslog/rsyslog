@@ -47,14 +47,14 @@ static pthread_mutex_t mutList = PTHREAD_MUTEX_INITIALIZER;
  */
 static rsRetVal iminternalDestruct(iminternal_t *pThis)
 {
-	DEFiRet;
+    DEFiRet;
 
-	if(pThis->pMsg != NULL)
-		msgDestruct(&pThis->pMsg);
+    if(pThis->pMsg != NULL)
+        msgDestruct(&pThis->pMsg);
 
-	free(pThis);
+    free(pThis);
 
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -62,11 +62,11 @@ static rsRetVal iminternalDestruct(iminternal_t *pThis)
  */
 static rsRetVal iminternalConstruct(iminternal_t **ppThis)
 {
-	DEFiRet;
-	if((*ppThis = (iminternal_t*) calloc(1, sizeof(iminternal_t))) == NULL) {
-		iRet = RS_RET_OUT_OF_MEMORY;
-	}
-	RETiRet;
+    DEFiRet;
+    if((*ppThis = (iminternal_t*) calloc(1, sizeof(iminternal_t))) == NULL) {
+        iRet = RS_RET_OUT_OF_MEMORY;
+    }
+    RETiRet;
 }
 
 
@@ -77,52 +77,52 @@ static rsRetVal iminternalConstruct(iminternal_t **ppThis)
  */
 rsRetVal iminternalAddMsg(smsg_t *pMsg)
 {
-	DEFiRet;
-	iminternal_t *pThis = NULL;
-	struct timespec to;
-	int r;
-	int is_locked = 0;
+    DEFiRet;
+    iminternal_t *pThis = NULL;
+    struct timespec to;
+    int r;
+    int is_locked = 0;
 
-	/* we guard against deadlock, so we can guarantee rsyslog will never
-	 * block due to internal messages. The 1 second timeout should be
-	 * sufficient under all circumstances.
-	 */
-	to.tv_sec = time(NULL) + 1;
-	to.tv_nsec = 0;
-	#if !defined(__APPLE__)
-	r = pthread_mutex_timedlock(&mutList, &to);
-	#else
-	r = pthread_mutex_trylock(&mutList); // must check
-	#endif
-	if(r != 0) {
-		dbgprintf("iminternalAddMsg: timedlock for mutex failed with %d, msg %s\n",
-			r, getMSG(pMsg));
-		/* the message is lost, nothing we can do against this! */
-		msgDestruct(&pMsg);
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-	is_locked = 1;
-	CHKiRet(iminternalConstruct(&pThis));
-	pThis->pMsg = pMsg;
-	CHKiRet(llAppend(&llMsgs,  NULL, (void*) pThis));
+    /* we guard against deadlock, so we can guarantee rsyslog will never
+     * block due to internal messages. The 1 second timeout should be
+     * sufficient under all circumstances.
+     */
+    to.tv_sec = time(NULL) + 1;
+    to.tv_nsec = 0;
+    #if !defined(__APPLE__)
+    r = pthread_mutex_timedlock(&mutList, &to);
+    #else
+    r = pthread_mutex_trylock(&mutList); // must check
+    #endif
+    if(r != 0) {
+        dbgprintf("iminternalAddMsg: timedlock for mutex failed with %d, msg %s\n",
+            r, getMSG(pMsg));
+        /* the message is lost, nothing we can do against this! */
+        msgDestruct(&pMsg);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    is_locked = 1;
+    CHKiRet(iminternalConstruct(&pThis));
+    pThis->pMsg = pMsg;
+    CHKiRet(llAppend(&llMsgs,  NULL, (void*) pThis));
 
-	if(PREFER_FETCH_32BIT(bHaveMainQueue)) {
-		DBGPRINTF("signaling new internal message via SIGTTOU: '%s'\n",
-			pThis->pMsg->pszRawMsg);
-		kill(glblGetOurPid(), SIGTTOU);
-	}
+    if(PREFER_FETCH_32BIT(bHaveMainQueue)) {
+        DBGPRINTF("signaling new internal message via SIGTTOU: '%s'\n",
+            pThis->pMsg->pszRawMsg);
+        kill(glblGetOurPid(), SIGTTOU);
+    }
 
 finalize_it:
-	if(is_locked) {
-		pthread_mutex_unlock(&mutList);
-	}
-	if(iRet != RS_RET_OK) {
-		dbgprintf("iminternalAddMsg() error %d - can not otherwise report this error, message lost\n", iRet);
-		if(pThis != NULL)
-			iminternalDestruct(pThis);
-	}
+    if(is_locked) {
+        pthread_mutex_unlock(&mutList);
+    }
+    if(iRet != RS_RET_OK) {
+        dbgprintf("iminternalAddMsg() error %d - can not otherwise report this error, message lost\n", iRet);
+        if(pThis != NULL)
+            iminternalDestruct(pThis);
+    }
 
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -132,28 +132,28 @@ finalize_it:
  */
 rsRetVal iminternalRemoveMsg(smsg_t **ppMsg)
 {
-	DEFiRet;
-	iminternal_t *pThis;
-	linkedListCookie_t llCookie = NULL;
+    DEFiRet;
+    iminternal_t *pThis;
+    linkedListCookie_t llCookie = NULL;
 
-	pthread_mutex_lock(&mutList);
-	CHKiRet(llGetNextElt(&llMsgs, &llCookie, (void*)&pThis));
-	if(!strcmp((char*)pThis->pMsg->pszHOSTNAME, "[localhost]")) {
-		/* early (pre-conf) startup message detected, need to set real hostname now */
-		MsgSetHOSTNAME(pThis->pMsg, glblGetLocalHostName(), ustrlen(glblGetLocalHostName()));
-	}
-	*ppMsg = pThis->pMsg;
-	pThis->pMsg = NULL; /* we do no longer own it - important for destructor */
+    pthread_mutex_lock(&mutList);
+    CHKiRet(llGetNextElt(&llMsgs, &llCookie, (void*)&pThis));
+    if(!strcmp((char*)pThis->pMsg->pszHOSTNAME, "[localhost]")) {
+        /* early (pre-conf) startup message detected, need to set real hostname now */
+        MsgSetHOSTNAME(pThis->pMsg, glblGetLocalHostName(), ustrlen(glblGetLocalHostName()));
+    }
+    *ppMsg = pThis->pMsg;
+    pThis->pMsg = NULL; /* we do no longer own it - important for destructor */
 
-	if(llDestroyRootElt(&llMsgs) != RS_RET_OK) {
-		dbgprintf("Root element of iminternal linked list could not be destroyed - there is "
-			"nothing we can do against it, we ignore it for now. Things may go wild "
-			"from here on. This is most probably a program logic error.\n");
-	}
+    if(llDestroyRootElt(&llMsgs) != RS_RET_OK) {
+        dbgprintf("Root element of iminternal linked list could not be destroyed - there is "
+            "nothing we can do against it, we ignore it for now. Things may go wild "
+            "from here on. This is most probably a program logic error.\n");
+    }
 
 finalize_it:
-	pthread_mutex_unlock(&mutList);
-	RETiRet;
+    pthread_mutex_unlock(&mutList);
+    RETiRet;
 }
 
 
@@ -162,9 +162,9 @@ finalize_it:
  */
 rsRetVal modInitIminternal(void)
 {
-	DEFiRet;
-	iRet = llInit(&llMsgs, (rsRetVal (*)(void*)) iminternalDestruct, NULL, NULL);
-	RETiRet;
+    DEFiRet;
+    iRet = llInit(&llMsgs, (rsRetVal (*)(void*)) iminternalDestruct, NULL, NULL);
+    RETiRet;
 }
 
 
@@ -176,7 +176,7 @@ rsRetVal modInitIminternal(void)
  */
 rsRetVal modExitIminternal(void)
 {
-	DEFiRet;
-	iRet = llDestroy(&llMsgs);
-	RETiRet;
+    DEFiRet;
+    iRet = llDestroy(&llMsgs);
+    RETiRet;
 }

@@ -35,18 +35,18 @@
  * main message queue. But over time, it could potentially be useful to split the two.
  * rgerhad, 2009-05-12
  */
-#define BATCH_STATE_RDY  0	/* object ready for processing */
-#define BATCH_STATE_BAD  1	/* unrecoverable failure while processing, do NOT resubmit to same action */
-#define BATCH_STATE_SUB  2	/* message submitted for processing, outcome yet unknown */
-#define BATCH_STATE_COMM 3	/* message successfully commited */
-#define BATCH_STATE_DISC 4 	/* discarded - processed OK, but do not submit to any other action */
+#define BATCH_STATE_RDY  0  /* object ready for processing */
+#define BATCH_STATE_BAD  1  /* unrecoverable failure while processing, do NOT resubmit to same action */
+#define BATCH_STATE_SUB  2  /* message submitted for processing, outcome yet unknown */
+#define BATCH_STATE_COMM 3  /* message successfully commited */
+#define BATCH_STATE_DISC 4  /* discarded - processed OK, but do not submit to any other action */
 typedef unsigned char batch_state_t;
 
 
 /* an object inside a batch, including any information (state!) needed for it to "life".
  */
 struct batch_obj_s {
-	smsg_t *pMsg;
+    smsg_t *pMsg;
 };
 
 /* the batch
@@ -64,18 +64,18 @@ struct batch_obj_s {
  * is completed (else, the whole process does not work correctly).
  */
 struct batch_s {
-	int maxElem;		/* maximum number of elements that this batch supports */
-	int nElem;		/* actual number of element in this entry */
-	int nElemDeq;		/* actual number of elements dequeued (and thus to be deleted) - see comment above! */
-	qDeqID	deqID;		/* ID of dequeue operation that generated this batch */
-	batch_obj_t *pElem;	/* batch elements */
-	batch_state_t *eltState;/* state (array!) for individual objects.
-	   			   NOTE: we have moved this out of batch_obj_t because we
-				         get a *much* better cache hit ratio this way. So do not
-					 move it back into this structure! Note that this is really
-					 a HUGE saving, even if it doesn't look so (both profiler
-					 data as well as practical tests indicate that!).
-				*/
+    int maxElem;        /* maximum number of elements that this batch supports */
+    int nElem;      /* actual number of element in this entry */
+    int nElemDeq;       /* actual number of elements dequeued (and thus to be deleted) - see comment above! */
+    qDeqID  deqID;      /* ID of dequeue operation that generated this batch */
+    batch_obj_t *pElem; /* batch elements */
+    batch_state_t *eltState;/* state (array!) for individual objects.
+                   NOTE: we have moved this out of batch_obj_t because we
+                         get a *much* better cache hit ratio this way. So do not
+                     move it back into this structure! Note that this is really
+                     a HUGE saving, even if it doesn't look so (both profiler
+                     data as well as practical tests indicate that!).
+                */
 };
 
 
@@ -89,8 +89,8 @@ struct batch_s {
  */
 static inline void __attribute__((unused))
 batchSetElemState(batch_t * const pBatch, const int i, const batch_state_t newState) {
-	if(pBatch->eltState[i] != BATCH_STATE_DISC)
-		pBatch->eltState[i] = newState;
+    if(pBatch->eltState[i] != BATCH_STATE_DISC)
+        pBatch->eltState[i] = newState;
 }
 
 
@@ -106,8 +106,8 @@ batchSetElemState(batch_t * const pBatch, const int i, const batch_state_t newSt
  */
 static inline void __attribute__((unused))
 batchFree(batch_t * const pBatch) {
-	free(pBatch->pElem);
-	free(pBatch->eltState);
+    free(pBatch->pElem);
+    free(pBatch->eltState);
 }
 
 
@@ -118,12 +118,12 @@ batchFree(batch_t * const pBatch) {
 static inline rsRetVal __attribute__((unused))
 batchInit(batch_t *const pBatch, const int maxElem)
 {
-	DEFiRet;
-	pBatch->maxElem = maxElem;
-	CHKmalloc(pBatch->pElem = calloc((size_t)maxElem, sizeof(batch_obj_t)));
-	CHKmalloc(pBatch->eltState = calloc((size_t)maxElem, sizeof(batch_state_t)));
+    DEFiRet;
+    pBatch->maxElem = maxElem;
+    CHKmalloc(pBatch->pElem = calloc((size_t)maxElem, sizeof(batch_obj_t)));
+    CHKmalloc(pBatch->eltState = calloc((size_t)maxElem, sizeof(batch_state_t)));
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 #endif /* #ifndef BATCH_H_INCLUDED */

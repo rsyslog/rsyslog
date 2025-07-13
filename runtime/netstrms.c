@@ -54,34 +54,34 @@ DEFobjCurrIf(netstrm)
 static rsRetVal
 loadDrvr(netstrms_t *pThis)
 {
-	DEFiRet;
-	uchar *pBaseDrvrName;
-	uchar szDrvrName[48]; /* 48 shall be large enough */
+    DEFiRet;
+    uchar *pBaseDrvrName;
+    uchar szDrvrName[48]; /* 48 shall be large enough */
 
-	pBaseDrvrName = pThis->pBaseDrvrName;
-	if(pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
-		pBaseDrvrName = glbl.GetDfltNetstrmDrvr(runConf);
-	if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsd_%s", pBaseDrvrName) == sizeof(szDrvrName))
-		ABORT_FINALIZE(RS_RET_DRVRNAME_TOO_LONG);
-	CHKmalloc(pThis->pDrvrName = (uchar*) strdup((char*)szDrvrName));
+    pBaseDrvrName = pThis->pBaseDrvrName;
+    if(pBaseDrvrName == NULL) /* if no drvr name is set, use system default */
+        pBaseDrvrName = glbl.GetDfltNetstrmDrvr(runConf);
+    if(snprintf((char*)szDrvrName, sizeof(szDrvrName), "lmnsd_%s", pBaseDrvrName) == sizeof(szDrvrName))
+        ABORT_FINALIZE(RS_RET_DRVRNAME_TOO_LONG);
+    CHKmalloc(pThis->pDrvrName = (uchar*) strdup((char*)szDrvrName));
 
-	pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
-	/* The pDrvrName+2 below is a hack to obtain the object name. It
-	 * safes us to have yet another variable with the name without "lm" in
-	 * front of it. If we change the module load interface, we may re-think
-	 * about this hack, but for the time being it is efficient and clean
-	 * enough. -- rgerhards, 2008-04-18
-	 */
-	CHKiRet(obj.UseObj(__FILE__, szDrvrName+2, szDrvrName, (void*) &pThis->Drvr));
+    pThis->Drvr.ifVersion = nsdCURR_IF_VERSION;
+    /* The pDrvrName+2 below is a hack to obtain the object name. It
+     * safes us to have yet another variable with the name without "lm" in
+     * front of it. If we change the module load interface, we may re-think
+     * about this hack, but for the time being it is efficient and clean
+     * enough. -- rgerhards, 2008-04-18
+     */
+    CHKiRet(obj.UseObj(__FILE__, szDrvrName+2, szDrvrName, (void*) &pThis->Drvr));
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pThis->pDrvrName != NULL) {
-			free(pThis->pDrvrName);
-			pThis->pDrvrName = NULL;
-		}
-	}
-	RETiRet;
+    if(iRet != RS_RET_OK) {
+        if(pThis->pDrvrName != NULL) {
+            free(pThis->pDrvrName);
+            pThis->pDrvrName = NULL;
+        }
+    }
+    RETiRet;
 }
 
 
@@ -93,38 +93,38 @@ ENDobjConstruct(netstrms)
 /* destructor for the netstrms object */
 BEGINobjDestruct(netstrms) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(netstrms)
-	/* and now we must release our driver, if we got one. We use the presence of
-	 * a driver name string as load indicator (because we also need that string
-	 * to release the driver
-	 */
-	if(pThis->pDrvrName != NULL) {
-		obj.ReleaseObj(__FILE__, pThis->pDrvrName+2, pThis->pDrvrName, (void*) &pThis->Drvr);
-		free(pThis->pDrvrName);
-	}
-	if(pThis->pszDrvrAuthMode != NULL) {
-		free(pThis->pszDrvrAuthMode);
-		pThis->pszDrvrAuthMode = NULL;
-	}
-	if(pThis->pszDrvrPermitExpiredCerts != NULL) {
-		free(pThis->pszDrvrPermitExpiredCerts);
-		pThis->pszDrvrPermitExpiredCerts = NULL;
-	}
-	free((void*)pThis->pszDrvrCAFile);
-	pThis->pszDrvrCAFile = NULL;
-	free((void*)pThis->pszDrvrCRLFile);
-	pThis->pszDrvrCRLFile = NULL;
-	free((void*)pThis->pszDrvrKeyFile);
-	pThis->pszDrvrKeyFile = NULL;
-	free((void*)pThis->pszDrvrCertFile);
-	pThis->pszDrvrCertFile = NULL;
-	if(pThis->pBaseDrvrName != NULL) {
-		free(pThis->pBaseDrvrName);
-		pThis->pBaseDrvrName = NULL;
-	}
-	if(pThis->gnutlsPriorityString != NULL) {
-		free(pThis->gnutlsPriorityString);
-		pThis->gnutlsPriorityString = NULL;
-	}
+    /* and now we must release our driver, if we got one. We use the presence of
+     * a driver name string as load indicator (because we also need that string
+     * to release the driver
+     */
+    if(pThis->pDrvrName != NULL) {
+        obj.ReleaseObj(__FILE__, pThis->pDrvrName+2, pThis->pDrvrName, (void*) &pThis->Drvr);
+        free(pThis->pDrvrName);
+    }
+    if(pThis->pszDrvrAuthMode != NULL) {
+        free(pThis->pszDrvrAuthMode);
+        pThis->pszDrvrAuthMode = NULL;
+    }
+    if(pThis->pszDrvrPermitExpiredCerts != NULL) {
+        free(pThis->pszDrvrPermitExpiredCerts);
+        pThis->pszDrvrPermitExpiredCerts = NULL;
+    }
+    free((void*)pThis->pszDrvrCAFile);
+    pThis->pszDrvrCAFile = NULL;
+    free((void*)pThis->pszDrvrCRLFile);
+    pThis->pszDrvrCRLFile = NULL;
+    free((void*)pThis->pszDrvrKeyFile);
+    pThis->pszDrvrKeyFile = NULL;
+    free((void*)pThis->pszDrvrCertFile);
+    pThis->pszDrvrCertFile = NULL;
+    if(pThis->pBaseDrvrName != NULL) {
+        free(pThis->pBaseDrvrName);
+        pThis->pBaseDrvrName = NULL;
+    }
+    if(pThis->gnutlsPriorityString != NULL) {
+        free(pThis->gnutlsPriorityString);
+        pThis->gnutlsPriorityString = NULL;
+    }
 ENDobjDestruct(netstrms)
 
 
@@ -132,20 +132,20 @@ ENDobjDestruct(netstrms)
 static rsRetVal
 netstrmsConstructFinalize(netstrms_t *pThis)
 {
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	iRet = loadDrvr(pThis);
-	RETiRet;
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    iRet = loadDrvr(pThis);
+    RETiRet;
 }
 
 
 static rsRetVal
 SetSynBacklog(netstrms_t *pThis, const int iSynBacklog)
 {
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	pThis->iSynBacklog = iSynBacklog;
-	RETiRet;
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    pThis->iSynBacklog = iSynBacklog;
+    RETiRet;
 }
 
 
@@ -157,18 +157,18 @@ SetSynBacklog(netstrms_t *pThis, const int iSynBacklog)
 static rsRetVal
 SetDrvrName(netstrms_t *pThis, uchar *pszName)
 {
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	if(pThis->pBaseDrvrName != NULL) {
-		free(pThis->pBaseDrvrName);
-		pThis->pBaseDrvrName = NULL;
-	}
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    if(pThis->pBaseDrvrName != NULL) {
+        free(pThis->pBaseDrvrName);
+        pThis->pBaseDrvrName = NULL;
+    }
 
-	if(pszName != NULL) {
-		CHKmalloc(pThis->pBaseDrvrName = (uchar*) strdup((char*) pszName));
-	}
+    if(pszName != NULL) {
+        CHKmalloc(pThis->pBaseDrvrName = (uchar*) strdup((char*) pszName));
+    }
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -176,10 +176,10 @@ finalize_it:
 static rsRetVal
 SetDrvrPermPeers(netstrms_t *pThis, permittedPeers_t *pPermPeers)
 {
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	pThis->pPermPeers = pPermPeers;
-	RETiRet;
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    pThis->pPermPeers = pPermPeers;
+    RETiRet;
 }
 /* return the driver's permitted peers
  * We use non-standard calling conventions because it makes an awful lot
@@ -189,8 +189,8 @@ SetDrvrPermPeers(netstrms_t *pThis, permittedPeers_t *pPermPeers)
 static permittedPeers_t*
 GetDrvrPermPeers(netstrms_t *pThis)
 {
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	return pThis->pPermPeers;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    return pThis->pPermPeers;
 }
 
 
@@ -198,11 +198,11 @@ GetDrvrPermPeers(netstrms_t *pThis)
 static rsRetVal
 SetDrvrAuthMode(netstrms_t *pThis, uchar *mode)
 {
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	CHKmalloc(pThis->pszDrvrAuthMode = (uchar*)strdup((char*)mode));
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    CHKmalloc(pThis->pszDrvrAuthMode = (uchar*)strdup((char*)mode));
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -214,8 +214,8 @@ finalize_it:
 static uchar*
 GetDrvrAuthMode(netstrms_t *pThis)
 {
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	return pThis->pszDrvrAuthMode;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    return pThis->pszDrvrAuthMode;
 }
 
 
@@ -227,8 +227,8 @@ GetDrvrAuthMode(netstrms_t *pThis)
 static uchar*
 GetDrvrPermitExpiredCerts(netstrms_t *pThis)
 {
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	return pThis->pszDrvrPermitExpiredCerts;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    return pThis->pszDrvrPermitExpiredCerts;
 }
 
 /* set the driver permitexpiredcerts mode -- alorbach, 2018-12-20
@@ -236,61 +236,61 @@ GetDrvrPermitExpiredCerts(netstrms_t *pThis)
 static rsRetVal
 SetDrvrPermitExpiredCerts(netstrms_t *pThis, uchar *mode)
 {
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	if (mode != NULL) {
-		CHKmalloc(pThis->pszDrvrPermitExpiredCerts = (uchar*) strdup((char*)mode));
-	}
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    if (mode != NULL) {
+        CHKmalloc(pThis->pszDrvrPermitExpiredCerts = (uchar*) strdup((char*)mode));
+    }
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 static rsRetVal
 SetDrvrTlsCAFile(netstrms_t *pThis, const uchar *mode)
 {
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	if (mode != NULL) {
-		CHKmalloc(pThis->pszDrvrCAFile = (uchar*) strdup((char*)mode));
-	}
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    if (mode != NULL) {
+        CHKmalloc(pThis->pszDrvrCAFile = (uchar*) strdup((char*)mode));
+    }
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 static rsRetVal
 SetDrvrTlsCRLFile(netstrms_t *pThis, const uchar *mode)
 {
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	if (mode != NULL) {
-		CHKmalloc(pThis->pszDrvrCRLFile = (uchar*) strdup((char*)mode));
-	}
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    if (mode != NULL) {
+        CHKmalloc(pThis->pszDrvrCRLFile = (uchar*) strdup((char*)mode));
+    }
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 static rsRetVal
 SetDrvrTlsKeyFile(netstrms_t *pThis, const uchar *mode)
 {
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	if (mode != NULL) {
-		CHKmalloc(pThis->pszDrvrKeyFile = (uchar*) strdup((char*)mode));
-	}
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    if (mode != NULL) {
+        CHKmalloc(pThis->pszDrvrKeyFile = (uchar*) strdup((char*)mode));
+    }
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 static rsRetVal
 SetDrvrTlsCertFile(netstrms_t *pThis, const uchar *mode)
 {
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	if (mode != NULL) {
-		CHKmalloc(pThis->pszDrvrCertFile = (uchar*) strdup((char*)mode));
-	}
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    if (mode != NULL) {
+        CHKmalloc(pThis->pszDrvrCertFile = (uchar*) strdup((char*)mode));
+    }
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -300,11 +300,11 @@ finalize_it:
 static rsRetVal
 SetDrvrGnutlsPriorityString(netstrms_t *pThis, uchar *iVal)
 {
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	CHKmalloc(pThis->gnutlsPriorityString = (uchar*)strdup((char*)iVal));
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    CHKmalloc(pThis->gnutlsPriorityString = (uchar*)strdup((char*)iVal));
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -314,8 +314,8 @@ finalize_it:
 static uchar*
 GetDrvrGnutlsPriorityString(netstrms_t *pThis)
 {
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	return pThis->gnutlsPriorityString;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    return pThis->gnutlsPriorityString;
 }
 
 
@@ -323,10 +323,10 @@ GetDrvrGnutlsPriorityString(netstrms_t *pThis)
 static rsRetVal
 SetDrvrMode(netstrms_t *pThis, int iMode)
 {
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	pThis->iDrvrMode = iMode;
-	RETiRet;
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    pThis->iDrvrMode = iMode;
+    RETiRet;
 }
 
 
@@ -338,8 +338,8 @@ SetDrvrMode(netstrms_t *pThis, int iMode)
 static int
 GetDrvrMode(netstrms_t *pThis)
 {
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	return pThis->iDrvrMode;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    return pThis->iDrvrMode;
 }
 
 
@@ -347,10 +347,10 @@ GetDrvrMode(netstrms_t *pThis)
 static rsRetVal
 SetDrvrCheckExtendedKeyUsage(netstrms_t *pThis, int ChkExtendedKeyUsage)
 {
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	pThis->DrvrChkExtendedKeyUsage = ChkExtendedKeyUsage;
-	RETiRet;
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    pThis->DrvrChkExtendedKeyUsage = ChkExtendedKeyUsage;
+    RETiRet;
 }
 
 
@@ -360,8 +360,8 @@ SetDrvrCheckExtendedKeyUsage(netstrms_t *pThis, int ChkExtendedKeyUsage)
 static int
 GetDrvrCheckExtendedKeyUsage(netstrms_t *pThis)
 {
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	return pThis->DrvrChkExtendedKeyUsage;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    return pThis->DrvrChkExtendedKeyUsage;
 }
 
 
@@ -369,10 +369,10 @@ GetDrvrCheckExtendedKeyUsage(netstrms_t *pThis)
 static rsRetVal
 SetDrvrPrioritizeSAN(netstrms_t *pThis, int prioritizeSan)
 {
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	pThis->DrvrPrioritizeSan = prioritizeSan;
-	RETiRet;
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    pThis->DrvrPrioritizeSan = prioritizeSan;
+    RETiRet;
 }
 
 
@@ -382,18 +382,18 @@ SetDrvrPrioritizeSAN(netstrms_t *pThis, int prioritizeSan)
 static int
 GetDrvrPrioritizeSAN(netstrms_t *pThis)
 {
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	return pThis->DrvrPrioritizeSan;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    return pThis->DrvrPrioritizeSan;
 }
 
 /* set the driver TlsVerifyDepth -- alorbach, 2019-12-20 */
 static rsRetVal
 SetDrvrTlsVerifyDepth(netstrms_t *pThis, int verifyDepth)
 {
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	pThis->DrvrVerifyDepth = verifyDepth;
-	RETiRet;
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    pThis->DrvrVerifyDepth = verifyDepth;
+    RETiRet;
 }
 
 /* return the driver TlsVerifyDepth
@@ -402,33 +402,33 @@ SetDrvrTlsVerifyDepth(netstrms_t *pThis, int verifyDepth)
 static int
 GetDrvrTlsVerifyDepth(netstrms_t *pThis)
 {
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	return pThis->DrvrVerifyDepth;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    return pThis->DrvrVerifyDepth;
 }
 
 static const uchar *
 GetDrvrTlsCAFile(netstrms_t *pThis)
 {
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	return pThis->pszDrvrCAFile;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    return pThis->pszDrvrCAFile;
 }
 static const uchar *
 GetDrvrTlsCRLFile(netstrms_t *pThis)
 {
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	return pThis->pszDrvrCRLFile;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    return pThis->pszDrvrCRLFile;
 }
 static const uchar *
 GetDrvrTlsKeyFile(netstrms_t *pThis)
 {
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	return pThis->pszDrvrKeyFile;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    return pThis->pszDrvrKeyFile;
 }
 static const uchar *
 GetDrvrTlsCertFile(netstrms_t *pThis)
 {
-	ISOBJ_TYPE_assert(pThis, netstrms);
-	return pThis->pszDrvrCertFile;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    return pThis->pszDrvrCertFile;
 }
 
 /* create an instance of a netstrm object. It is initialized with default
@@ -438,72 +438,72 @@ GetDrvrTlsCertFile(netstrms_t *pThis)
 static rsRetVal
 CreateStrm(netstrms_t *pThis, netstrm_t **ppStrm)
 {
-	netstrm_t *pStrm = NULL;
-	DEFiRet;
+    netstrm_t *pStrm = NULL;
+    DEFiRet;
 
-	CHKiRet(objUse(netstrm, DONT_LOAD_LIB));
-	CHKiRet(netstrm.Construct(&pStrm));
-	/* we copy over our driver structure. We could provide a pointer to
-	 * ourselves, but that costs some performance on each driver invocation.
-	 * As we already have hefty indirection (and thus performance toll), I
-	 * prefer to copy over the function pointers here. -- rgerhards, 2008-04-23
-	 */
-	memcpy(&pStrm->Drvr, &pThis->Drvr, sizeof(pThis->Drvr));
-	pStrm->pNS = pThis;
+    CHKiRet(objUse(netstrm, DONT_LOAD_LIB));
+    CHKiRet(netstrm.Construct(&pStrm));
+    /* we copy over our driver structure. We could provide a pointer to
+     * ourselves, but that costs some performance on each driver invocation.
+     * As we already have hefty indirection (and thus performance toll), I
+     * prefer to copy over the function pointers here. -- rgerhards, 2008-04-23
+     */
+    memcpy(&pStrm->Drvr, &pThis->Drvr, sizeof(pThis->Drvr));
+    pStrm->pNS = pThis;
 
-	*ppStrm = pStrm;
+    *ppStrm = pStrm;
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pStrm != NULL)
-			netstrm.Destruct(&pStrm);
-	}
-	RETiRet;
+    if(iRet != RS_RET_OK) {
+        if(pStrm != NULL)
+            netstrm.Destruct(&pStrm);
+    }
+    RETiRet;
 }
 
 
 /* queryInterface function */
 BEGINobjQueryInterface(netstrms)
 CODESTARTobjQueryInterface(netstrms)
-	if(pIf->ifVersion != netstrmsCURR_IF_VERSION) {/* check for current version, increment on each change */
-		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
-	}
+    if(pIf->ifVersion != netstrmsCURR_IF_VERSION) {/* check for current version, increment on each change */
+        ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+    }
 
-	/* ok, we have the right interface, so let's fill it
-	 * Please note that we may also do some backwards-compatibility
-	 * work here (if we can support an older interface version - that,
-	 * of course, also affects the "if" above).
-	 */
-	pIf->Construct = netstrmsConstruct;
-	pIf->ConstructFinalize = netstrmsConstructFinalize;
-	pIf->Destruct = netstrmsDestruct;
-	pIf->CreateStrm = CreateStrm;
-	pIf->SetSynBacklog = SetSynBacklog;
-	pIf->SetDrvrName = SetDrvrName;
-	pIf->SetDrvrMode = SetDrvrMode;
-	pIf->GetDrvrMode = GetDrvrMode;
-	pIf->SetDrvrAuthMode = SetDrvrAuthMode;
-	pIf->GetDrvrAuthMode = GetDrvrAuthMode;
-	pIf->SetDrvrPermitExpiredCerts = SetDrvrPermitExpiredCerts;
-	pIf->GetDrvrPermitExpiredCerts = GetDrvrPermitExpiredCerts;
-	pIf->SetDrvrGnutlsPriorityString = SetDrvrGnutlsPriorityString;
-	pIf->GetDrvrGnutlsPriorityString = GetDrvrGnutlsPriorityString;
-	pIf->SetDrvrPermPeers = SetDrvrPermPeers;
-	pIf->GetDrvrPermPeers = GetDrvrPermPeers;
-	pIf->SetDrvrCheckExtendedKeyUsage = SetDrvrCheckExtendedKeyUsage;
-	pIf->GetDrvrCheckExtendedKeyUsage = GetDrvrCheckExtendedKeyUsage;
-	pIf->SetDrvrPrioritizeSAN = SetDrvrPrioritizeSAN;
-	pIf->GetDrvrPrioritizeSAN = GetDrvrPrioritizeSAN;
-	pIf->SetDrvrTlsVerifyDepth = SetDrvrTlsVerifyDepth;
-	pIf->GetDrvrTlsVerifyDepth = GetDrvrTlsVerifyDepth;
-	pIf->GetDrvrTlsCAFile = GetDrvrTlsCAFile;
-	pIf->GetDrvrTlsCRLFile = GetDrvrTlsCRLFile;
-	pIf->GetDrvrTlsKeyFile = GetDrvrTlsKeyFile;
-	pIf->GetDrvrTlsCertFile = GetDrvrTlsCertFile;
-	pIf->SetDrvrTlsCAFile = SetDrvrTlsCAFile;
-	pIf->SetDrvrTlsCRLFile = SetDrvrTlsCRLFile;
-	pIf->SetDrvrTlsKeyFile = SetDrvrTlsKeyFile;
-	pIf->SetDrvrTlsCertFile = SetDrvrTlsCertFile;
+    /* ok, we have the right interface, so let's fill it
+     * Please note that we may also do some backwards-compatibility
+     * work here (if we can support an older interface version - that,
+     * of course, also affects the "if" above).
+     */
+    pIf->Construct = netstrmsConstruct;
+    pIf->ConstructFinalize = netstrmsConstructFinalize;
+    pIf->Destruct = netstrmsDestruct;
+    pIf->CreateStrm = CreateStrm;
+    pIf->SetSynBacklog = SetSynBacklog;
+    pIf->SetDrvrName = SetDrvrName;
+    pIf->SetDrvrMode = SetDrvrMode;
+    pIf->GetDrvrMode = GetDrvrMode;
+    pIf->SetDrvrAuthMode = SetDrvrAuthMode;
+    pIf->GetDrvrAuthMode = GetDrvrAuthMode;
+    pIf->SetDrvrPermitExpiredCerts = SetDrvrPermitExpiredCerts;
+    pIf->GetDrvrPermitExpiredCerts = GetDrvrPermitExpiredCerts;
+    pIf->SetDrvrGnutlsPriorityString = SetDrvrGnutlsPriorityString;
+    pIf->GetDrvrGnutlsPriorityString = GetDrvrGnutlsPriorityString;
+    pIf->SetDrvrPermPeers = SetDrvrPermPeers;
+    pIf->GetDrvrPermPeers = GetDrvrPermPeers;
+    pIf->SetDrvrCheckExtendedKeyUsage = SetDrvrCheckExtendedKeyUsage;
+    pIf->GetDrvrCheckExtendedKeyUsage = GetDrvrCheckExtendedKeyUsage;
+    pIf->SetDrvrPrioritizeSAN = SetDrvrPrioritizeSAN;
+    pIf->GetDrvrPrioritizeSAN = GetDrvrPrioritizeSAN;
+    pIf->SetDrvrTlsVerifyDepth = SetDrvrTlsVerifyDepth;
+    pIf->GetDrvrTlsVerifyDepth = GetDrvrTlsVerifyDepth;
+    pIf->GetDrvrTlsCAFile = GetDrvrTlsCAFile;
+    pIf->GetDrvrTlsCRLFile = GetDrvrTlsCRLFile;
+    pIf->GetDrvrTlsKeyFile = GetDrvrTlsKeyFile;
+    pIf->GetDrvrTlsCertFile = GetDrvrTlsCertFile;
+    pIf->SetDrvrTlsCAFile = SetDrvrTlsCAFile;
+    pIf->SetDrvrTlsCRLFile = SetDrvrTlsCRLFile;
+    pIf->SetDrvrTlsKeyFile = SetDrvrTlsKeyFile;
+    pIf->SetDrvrTlsCertFile = SetDrvrTlsCertFile;
 finalize_it:
 ENDobjQueryInterface(netstrms)
 
@@ -511,9 +511,9 @@ ENDobjQueryInterface(netstrms)
 /* exit our class */
 BEGINObjClassExit(netstrms, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(netstrms)
-	/* release objects we no longer need */
-	objRelease(glbl, CORE_COMPONENT);
-	objRelease(netstrm, DONT_LOAD_LIB);
+    /* release objects we no longer need */
+    objRelease(glbl, CORE_COMPONENT);
+    objRelease(netstrm, DONT_LOAD_LIB);
 ENDObjClassExit(netstrms)
 
 
@@ -522,10 +522,10 @@ ENDObjClassExit(netstrms)
  * rgerhards, 2008-02-19
  */
 BEGINAbstractObjClassInit(netstrms, 1, OBJ_IS_CORE_MODULE) /* class, version */
-	/* request objects we use */
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
+    /* request objects we use */
+    CHKiRet(objUse(glbl, CORE_COMPONENT));
 
-	/* set our own handlers */
+    /* set our own handlers */
 ENDObjClassInit(netstrms)
 
 
@@ -534,8 +534,8 @@ ENDObjClassInit(netstrms)
 
 BEGINmodExit
 CODESTARTmodExit
-	netstrmsClassExit();
-	netstrmClassExit(); /* we use this object, so we must exit it after we are finished */
+    netstrmsClassExit();
+    netstrmClassExit(); /* we use this object, so we must exit it after we are finished */
 ENDmodExit
 
 
@@ -547,9 +547,9 @@ ENDqueryEtryPt
 
 BEGINmodInit()
 CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
-	/* Initialize all classes that are in our module - this includes ourselfs */
-	CHKiRet(netstrmClassInit(pModInfo));
-	CHKiRet(netstrmsClassInit(pModInfo));
+    /* Initialize all classes that are in our module - this includes ourselfs */
+    CHKiRet(netstrmClassInit(pModInfo));
+    CHKiRet(netstrmsClassInit(pModInfo));
 ENDmodInit

@@ -18,55 +18,55 @@ static char *stmt[128];
 
 void output(int n)
 {
-	int i;
+    int i;
 
-	printf("name:");
-	for(i = 0 ; i < n ; ++i) {
-		if(arr[i]) {
-			printf("-%s", name[i]);
-		}
-	}
-	printf("\n");
+    printf("name:");
+    for(i = 0 ; i < n ; ++i) {
+        if(arr[i]) {
+            printf("-%s", name[i]);
+        }
+    }
+    printf("\n");
 }
 
 void pows(int n, int i)
 {
-	if(i == 0) {
-		output(n);
-	} else {
-		--i;
-		arr[i] = 0;
-		pows(n, i);
-		arr[i] = 1;
-		pows(n, i);
-	}
+    if(i == 0) {
+        output(n);
+    } else {
+        --i;
+        arr[i] = 0;
+        pows(n, i);
+        arr[i] = 1;
+        pows(n, i);
+    }
 }
 
 
 int main(int argc, char *argv[])
 {
-	int n;
-	char iname[512];
-	char istmt[2048];
-	int nscanned;
+    int n;
+    char iname[512];
+    char istmt[2048];
+    int nscanned;
 
-	n = 0;
-	while(!feof(stdin)) {
-		nscanned = scanf("%s %[^\n]s\n", iname, istmt);
-		if(nscanned == EOF)
-			break;
-		else if(nscanned != 2) {
-			fprintf(stderr, "problem scanning entry %d, scanned %d\n",
-				n, nscanned);
-			exit(1);
-		}
-		name[n] = strdup(iname);
-		stmt[n] = strdup(istmt);
-		n++;
-		printf("name: %s, stmt: %s\n", iname, istmt);
-	}
-	/* n is on to high for an index, but just right as the actual number! */
+    n = 0;
+    while(!feof(stdin)) {
+        nscanned = scanf("%s %[^\n]s\n", iname, istmt);
+        if(nscanned == EOF)
+            break;
+        else if(nscanned != 2) {
+            fprintf(stderr, "problem scanning entry %d, scanned %d\n",
+                n, nscanned);
+            exit(1);
+        }
+        name[n] = strdup(iname);
+        stmt[n] = strdup(istmt);
+        n++;
+        printf("name: %s, stmt: %s\n", iname, istmt);
+    }
+    /* n is on to high for an index, but just right as the actual number! */
 
-	printf("read %d entries\n", n);
-	pows(n, n);
+    printf("read %d entries\n", n);
+    pows(n, n);
 }

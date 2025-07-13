@@ -32,47 +32,47 @@
 #include "parsers.h"
 
 static const char *keywords[] = {
-		"OPTIONS",
-		"GET",
-		"HEAD",
-		"POST",
-		"PUT",
-		"DELETE",
-		"TRACE",
-		"CONNECT",
-		"HTTP",
-		NULL
+        "OPTIONS",
+        "GET",
+        "HEAD",
+        "POST",
+        "PUT",
+        "DELETE",
+        "TRACE",
+        "CONNECT",
+        "HTTP",
+        NULL
 };
 
 static inline char *string_split(char **initString, const char *delimiterString) {
-	char *ret = *initString;
+    char *ret = *initString;
 
-	if (*initString) {
-		char *pos = strstr(*initString, delimiterString);
-		if (pos) {
-			*initString = pos;
-			**initString = '\0';
-			*initString += strlen(delimiterString);
-		} else {
-			*initString = NULL;
-		}
-	}
+    if (*initString) {
+        char *pos = strstr(*initString, delimiterString);
+        if (pos) {
+            *initString = pos;
+            **initString = '\0';
+            *initString += strlen(delimiterString);
+        } else {
+            *initString = NULL;
+        }
+    }
 
-	return ret;
+    return ret;
 }
 
 static inline int has_status_keyword(char *http) {
-	const char *found;
-	int i;
+    const char *found;
+    int i;
 
-	for (i = 0; keywords[i] != NULL; i++) {
-		found = strstr(http, keywords[i]);
-		if (found && (found - http) < 20) {
-			return 1;
-		}
-	}
+    for (i = 0; keywords[i] != NULL; i++) {
+        found = strstr(http, keywords[i]);
+        if (found && (found - http) < 20) {
+            return 1;
+        }
+    }
 
-	return 0;
+    return 0;
 }
 
 /*
@@ -80,44 +80,44 @@ static inline int has_status_keyword(char *http) {
  *  and adds them to the provided json object
 */
 static inline void catch_status_and_fields(char *header, struct json_object *jparent) {
-	DBGPRINTF("catch_status_and_fields\n");
+    DBGPRINTF("catch_status_and_fields\n");
 
-	struct json_object *fields = json_object_new_object();
+    struct json_object *fields = json_object_new_object();
 
-	char *statusLine = string_split(&header, "\r\n");
-	char *firstPart, *secondPart, *thirdPart;
-	firstPart = string_split(&statusLine, " ");
-	secondPart = string_split(&statusLine, " ");
-	thirdPart = statusLine;
-	if (firstPart && secondPart && thirdPart) {
-		if (strstr(firstPart, "HTTP")) {
-			json_object_object_add(jparent, "HTTP_version", json_object_new_string(firstPart));
-			json_object_object_add(jparent, "HTTP_status_code", json_object_new_string(secondPart));
-			json_object_object_add(jparent, "HTTP_reason", json_object_new_string(thirdPart));
-		} else {
-			json_object_object_add(jparent, "HTTP_method", json_object_new_string(firstPart));
-			json_object_object_add(jparent, "HTTP_request_URI", json_object_new_string(secondPart));
-			json_object_object_add(jparent, "HTTP_version", json_object_new_string(thirdPart));
-		}
-	}
+    char *statusLine = string_split(&header, "\r\n");
+    char *firstPart, *secondPart, *thirdPart;
+    firstPart = string_split(&statusLine, " ");
+    secondPart = string_split(&statusLine, " ");
+    thirdPart = statusLine;
+    if (firstPart && secondPart && thirdPart) {
+        if (strstr(firstPart, "HTTP")) {
+            json_object_object_add(jparent, "HTTP_version", json_object_new_string(firstPart));
+            json_object_object_add(jparent, "HTTP_status_code", json_object_new_string(secondPart));
+            json_object_object_add(jparent, "HTTP_reason", json_object_new_string(thirdPart));
+        } else {
+            json_object_object_add(jparent, "HTTP_method", json_object_new_string(firstPart));
+            json_object_object_add(jparent, "HTTP_request_URI", json_object_new_string(secondPart));
+            json_object_object_add(jparent, "HTTP_version", json_object_new_string(thirdPart));
+        }
+    }
 
-	char *fieldValue = string_split(&header, "\r\n");
-	char *field, *value;
-	while (fieldValue) {
-		field = string_split(&fieldValue, ":");
-		value = fieldValue;
-		if (value) {
-			while (*value == ' ') { value++; }
-			DBGPRINTF("got header field -> '%s': '%s'\n", field, value);
-			json_object_object_add(fields, field, json_object_new_string(value));
-		}
+    char *fieldValue = string_split(&header, "\r\n");
+    char *field, *value;
+    while (fieldValue) {
+        field = string_split(&fieldValue, ":");
+        value = fieldValue;
+        if (value) {
+            while (*value == ' ') { value++; }
+            DBGPRINTF("got header field -> '%s': '%s'\n", field, value);
+            json_object_object_add(fields, field, json_object_new_string(value));
+        }
 
-		fieldValue = string_split(&header, "\r\n");
-	}
+        fieldValue = string_split(&header, "\r\n");
+    }
 
-	json_object_object_add(jparent, "HTTP_header_fields", fields);
+    json_object_object_add(jparent, "HTTP_header_fields", fields);
 
-	return;
+    return;
 }
 
 /*
@@ -134,26 +134,26 @@ static inline void catch_status_and_fields(char *header, struct json_object *jpa
  *  or the ones after (as a list of bytes), and the length of this data.
 */
 data_ret_t *http_parse(const uchar *packet, int pktSize, struct json_object *jparent) {
-	DBGPRINTF("http_parse\n");
-	DBGPRINTF("packet size %d\n", pktSize);
-	if (pktSize < 6) {
-		RETURN_DATA_AFTER(0)
-	}
+    DBGPRINTF("http_parse\n");
+    DBGPRINTF("packet size %d\n", pktSize);
+    if (pktSize < 6) {
+        RETURN_DATA_AFTER(0)
+    }
 
-	char *pHttp = malloc(pktSize + 1);
-	char *http = pHttp;
-	memcpy(http, packet, pktSize);
-	*(http + pktSize) = '\0';
+    char *pHttp = malloc(pktSize + 1);
+    char *http = pHttp;
+    memcpy(http, packet, pktSize);
+    *(http + pktSize) = '\0';
 
-	if (!has_status_keyword(http)) {
-		free(pHttp);
-		RETURN_DATA_AFTER(0)
-	}
+    if (!has_status_keyword(http)) {
+        free(pHttp);
+        RETURN_DATA_AFTER(0)
+    }
 
-	char *header = string_split(&http, "\r\n\r\n");
+    char *header = string_split(&http, "\r\n\r\n");
 
-	catch_status_and_fields(header, jparent);
+    catch_status_and_fields(header, jparent);
 
-	free(pHttp);
-	RETURN_DATA_AFTER(0)
+    free(pHttp);
+    RETURN_DATA_AFTER(0)
 }

@@ -29,68 +29,68 @@
 
 /* the netstrm object */
 struct netstrm_s {
-	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	nsd_t *pDrvrData;	/**< the driver's data elements (at most other places, this is called pNsd) */
-	nsd_if_t Drvr;		/**< our stream driver */
-	uchar *pszDrvrAuthMode;	/**< auth mode of the stream driver to use */
-	void *pUsr;		/**< pointer to user-provided data structure */
-	netstrms_t *pNS;	/**< pointer to our netstream subsystem object */
+    BEGINobjInstance;   /* Data to implement generic object - MUST be the first data element! */
+    nsd_t *pDrvrData;   /**< the driver's data elements (at most other places, this is called pNsd) */
+    nsd_if_t Drvr;      /**< our stream driver */
+    uchar *pszDrvrAuthMode; /**< auth mode of the stream driver to use */
+    void *pUsr;     /**< pointer to user-provided data structure */
+    netstrms_t *pNS;    /**< pointer to our netstream subsystem object */
 };
 
 
 /* interface */
 BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
-	rsRetVal (*Construct)(netstrm_t **ppThis);
-	rsRetVal (*ConstructFinalize)(netstrm_t *pThis);
-	rsRetVal (*Destruct)(netstrm_t **ppThis);
-	rsRetVal (*AbortDestruct)(netstrm_t **ppThis);
-	rsRetVal (*AcceptConnReq)(netstrm_t *pThis, netstrm_t **ppNew, char *connInfo);
-	rsRetVal (*Rcv)(netstrm_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf, int *oserr, unsigned *nextIODirection);
-	rsRetVal (*Send)(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf);
-	rsRetVal (*Connect)(netstrm_t *pThis, int family, unsigned char *port, unsigned char *host, char *device);
-	rsRetVal (*GetRemoteHName)(netstrm_t *pThis, uchar **pszName);
-	rsRetVal (*GetRemoteIP)(netstrm_t *pThis, prop_t **ip);
-	rsRetVal (*SetDrvrMode)(netstrm_t *pThis, int iMode);
-	rsRetVal (*SetDrvrAuthMode)(netstrm_t *pThis, uchar*);
-	rsRetVal (*SetDrvrPermitExpiredCerts)(netstrm_t *pThis, uchar*);
-	rsRetVal (*SetDrvrPermPeers)(netstrm_t *pThis, permittedPeers_t*);
-	rsRetVal (*CheckConnection)(netstrm_t *pThis);	/* This is a trick mostly for plain tcp syslog */
-	/* the GetSock() below is a hack to make imgssapi work. In the long term,
-	 * we should migrate imgssapi to a stream driver, which will relieve us of
-	 * this problem. Please note that nobody else should use GetSock(). Using it
-	 * will also tie the caller to nsd_ptcp, because other drivers may not support
-	 * it at all. Once the imgssapi problem is solved, GetSock should be removed from
-	 * this interface. -- rgerhards, 2008-05-05
-	 */
-	rsRetVal (*GetSock)(netstrm_t *pThis, int *pSock);
-	rsRetVal (*GetRemAddr)(netstrm_t *pThis, struct sockaddr_storage **ppAddr);
-	/* getRemAddr() is an aid needed by the legacy ACL system. It exposes the remote
-	 * peer's socket addr structure, so that the legacy matching functions can work on
-	 * it. Note that this ties netstream drivers to things that can be implemented over
-	 * sockets - not really desirable, but not the end of the world...
-	 */
-	/* v4 */
-	rsRetVal (*EnableKeepAlive)(netstrm_t *pThis);
-	/* v7 */
-	rsRetVal (*SetKeepAliveProbes)(netstrm_t *pThis, int keepAliveProbes);
-	rsRetVal (*SetKeepAliveTime)(netstrm_t *pThis, int keepAliveTime);
-	rsRetVal (*SetKeepAliveIntvl)(netstrm_t *pThis, int keepAliveIntvl);
-	rsRetVal (*SetGnutlsPriorityString)(netstrm_t *pThis, uchar *priorityString);
-	/* v11 -- Parameter pszLstnFileName added to LstnInit*/
-	rsRetVal (ATTR_NONNULL(1,3,5) *LstnInit)(netstrms_t *pNS, void *pUsr, rsRetVal(*)(void*,netstrm_t*),
-			 const int iSessMax, const tcpLstnParams_t *const cnf_params);
-	/* v12 -- two new binary flags added to gtls driver enabling stricter operation */
-	rsRetVal (*SetDrvrCheckExtendedKeyUsage)(netstrm_t *pThis, int ChkExtendedKeyUsage);
-	rsRetVal (*SetDrvrPrioritizeSAN)(netstrm_t *pThis, int prioritizeSan);
+    rsRetVal (*Construct)(netstrm_t **ppThis);
+    rsRetVal (*ConstructFinalize)(netstrm_t *pThis);
+    rsRetVal (*Destruct)(netstrm_t **ppThis);
+    rsRetVal (*AbortDestruct)(netstrm_t **ppThis);
+    rsRetVal (*AcceptConnReq)(netstrm_t *pThis, netstrm_t **ppNew, char *connInfo);
+    rsRetVal (*Rcv)(netstrm_t *pThis, uchar *pRcvBuf, ssize_t *pLenBuf, int *oserr, unsigned *nextIODirection);
+    rsRetVal (*Send)(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf);
+    rsRetVal (*Connect)(netstrm_t *pThis, int family, unsigned char *port, unsigned char *host, char *device);
+    rsRetVal (*GetRemoteHName)(netstrm_t *pThis, uchar **pszName);
+    rsRetVal (*GetRemoteIP)(netstrm_t *pThis, prop_t **ip);
+    rsRetVal (*SetDrvrMode)(netstrm_t *pThis, int iMode);
+    rsRetVal (*SetDrvrAuthMode)(netstrm_t *pThis, uchar*);
+    rsRetVal (*SetDrvrPermitExpiredCerts)(netstrm_t *pThis, uchar*);
+    rsRetVal (*SetDrvrPermPeers)(netstrm_t *pThis, permittedPeers_t*);
+    rsRetVal (*CheckConnection)(netstrm_t *pThis);  /* This is a trick mostly for plain tcp syslog */
+    /* the GetSock() below is a hack to make imgssapi work. In the long term,
+     * we should migrate imgssapi to a stream driver, which will relieve us of
+     * this problem. Please note that nobody else should use GetSock(). Using it
+     * will also tie the caller to nsd_ptcp, because other drivers may not support
+     * it at all. Once the imgssapi problem is solved, GetSock should be removed from
+     * this interface. -- rgerhards, 2008-05-05
+     */
+    rsRetVal (*GetSock)(netstrm_t *pThis, int *pSock);
+    rsRetVal (*GetRemAddr)(netstrm_t *pThis, struct sockaddr_storage **ppAddr);
+    /* getRemAddr() is an aid needed by the legacy ACL system. It exposes the remote
+     * peer's socket addr structure, so that the legacy matching functions can work on
+     * it. Note that this ties netstream drivers to things that can be implemented over
+     * sockets - not really desirable, but not the end of the world...
+     */
+    /* v4 */
+    rsRetVal (*EnableKeepAlive)(netstrm_t *pThis);
+    /* v7 */
+    rsRetVal (*SetKeepAliveProbes)(netstrm_t *pThis, int keepAliveProbes);
+    rsRetVal (*SetKeepAliveTime)(netstrm_t *pThis, int keepAliveTime);
+    rsRetVal (*SetKeepAliveIntvl)(netstrm_t *pThis, int keepAliveIntvl);
+    rsRetVal (*SetGnutlsPriorityString)(netstrm_t *pThis, uchar *priorityString);
+    /* v11 -- Parameter pszLstnFileName added to LstnInit*/
+    rsRetVal (ATTR_NONNULL(1,3,5) *LstnInit)(netstrms_t *pNS, void *pUsr, rsRetVal(*)(void*,netstrm_t*),
+             const int iSessMax, const tcpLstnParams_t *const cnf_params);
+    /* v12 -- two new binary flags added to gtls driver enabling stricter operation */
+    rsRetVal (*SetDrvrCheckExtendedKeyUsage)(netstrm_t *pThis, int ChkExtendedKeyUsage);
+    rsRetVal (*SetDrvrPrioritizeSAN)(netstrm_t *pThis, int prioritizeSan);
 
-	/* v14 -- Tls functions */
-	rsRetVal (*SetDrvrTlsVerifyDepth)(netstrm_t *pThis, int verifyDepth);
+    /* v14 -- Tls functions */
+    rsRetVal (*SetDrvrTlsVerifyDepth)(netstrm_t *pThis, int verifyDepth);
 
-	/* v15 -- Tls cert functions */
-	rsRetVal (*SetDrvrTlsCAFile)(netstrm_t *pThis, const uchar* file);
-	rsRetVal (*SetDrvrTlsCRLFile)(netstrm_t *pThis, const uchar* file);
-	rsRetVal (*SetDrvrTlsKeyFile)(netstrm_t *pThis, const uchar* file);
-	rsRetVal (*SetDrvrTlsCertFile)(netstrm_t *pThis, const uchar* file);
+    /* v15 -- Tls cert functions */
+    rsRetVal (*SetDrvrTlsCAFile)(netstrm_t *pThis, const uchar* file);
+    rsRetVal (*SetDrvrTlsCRLFile)(netstrm_t *pThis, const uchar* file);
+    rsRetVal (*SetDrvrTlsKeyFile)(netstrm_t *pThis, const uchar* file);
+    rsRetVal (*SetDrvrTlsCertFile)(netstrm_t *pThis, const uchar* file);
 ENDinterface(netstrm)
 #define netstrmCURR_IF_VERSION 17 /* increment whenever you change the interface structure! */
 /* interface version 3 added GetRemAddr()

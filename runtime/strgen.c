@@ -62,8 +62,8 @@ strgenList_t *pStrgenLstRoot = NULL;
 static rsRetVal
 InitStrgenList(strgenList_t **pListRoot)
 {
-	*pListRoot = NULL;
-	return RS_RET_OK;
+    *pListRoot = NULL;
+    return RS_RET_OK;
 }
 
 
@@ -74,17 +74,17 @@ InitStrgenList(strgenList_t **pListRoot)
 static rsRetVal
 DestructStrgenList(strgenList_t **ppListRoot)
 {
-	strgenList_t *pStrgenLst;
-	strgenList_t *pStrgenLstDel;
+    strgenList_t *pStrgenLst;
+    strgenList_t *pStrgenLstDel;
 
-	pStrgenLst = *ppListRoot;
-	while(pStrgenLst != NULL) {
-		pStrgenLstDel = pStrgenLst;
-		pStrgenLst = pStrgenLst->pNext;
-		free(pStrgenLstDel);
-	}
-	*ppListRoot = NULL;
-	return RS_RET_OK;
+    pStrgenLst = *ppListRoot;
+    while(pStrgenLst != NULL) {
+        pStrgenLstDel = pStrgenLst;
+        pStrgenLst = pStrgenLst->pNext;
+        free(pStrgenLstDel);
+    }
+    *ppListRoot = NULL;
+    return RS_RET_OK;
 }
 
 
@@ -98,27 +98,27 @@ DestructStrgenList(strgenList_t **ppListRoot)
 static rsRetVal
 AddStrgenToList(strgenList_t **ppListRoot, strgen_t *pStrgen)
 {
-	strgenList_t *pThis;
-	strgenList_t *pTail;
-	DEFiRet;
+    strgenList_t *pThis;
+    strgenList_t *pTail;
+    DEFiRet;
 
-	CHKmalloc(pThis = malloc(sizeof(strgenList_t)));
-	pThis->pStrgen = pStrgen;
-	pThis->pNext = NULL;
+    CHKmalloc(pThis = malloc(sizeof(strgenList_t)));
+    pThis->pStrgen = pStrgen;
+    pThis->pNext = NULL;
 
-	if(*ppListRoot == NULL) {
-		pThis->pNext = *ppListRoot;
-		*ppListRoot = pThis;
-	} else {
-		/* find tail first */
-		for(pTail = *ppListRoot ; pTail->pNext != NULL ; pTail = pTail->pNext)
-			/* just search, do nothing else */;
-		/* add at tail */
-		pTail->pNext = pThis;
-	}
+    if(*ppListRoot == NULL) {
+        pThis->pNext = *ppListRoot;
+        *ppListRoot = pThis;
+    } else {
+        /* find tail first */
+        for(pTail = *ppListRoot ; pTail->pNext != NULL ; pTail = pTail->pNext)
+            /* just search, do nothing else */;
+        /* add at tail */
+        pTail->pNext = pThis;
+    }
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -126,20 +126,20 @@ finalize_it:
 static rsRetVal
 FindStrgen(strgen_t **ppStrgen, uchar *pName)
 {
-	strgenList_t *pThis;
-	DEFiRet;
+    strgenList_t *pThis;
+    DEFiRet;
 
-	for(pThis = pStrgenLstRoot ; pThis != NULL ; pThis = pThis->pNext) {
-		if(ustrcmp(pThis->pStrgen->pName, pName) == 0) {
-			*ppStrgen = pThis->pStrgen;
-			FINALIZE;	/* found it, iRet still eq. OK! */
-		}
-	}
+    for(pThis = pStrgenLstRoot ; pThis != NULL ; pThis = pThis->pNext) {
+        if(ustrcmp(pThis->pStrgen->pName, pName) == 0) {
+            *ppStrgen = pThis->pStrgen;
+            FINALIZE;   /* found it, iRet still eq. OK! */
+        }
+    }
 
-	iRet = RS_RET_PARSER_NOT_FOUND;
+    iRet = RS_RET_PARSER_NOT_FOUND;
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -156,21 +156,21 @@ ENDobjConstruct(strgen)
 static rsRetVal
 strgenConstructFinalize(strgen_t *pThis)
 {
-	DEFiRet;
+    DEFiRet;
 
-	ISOBJ_TYPE_assert(pThis, strgen);
-	CHKiRet(AddStrgenToList(&pStrgenLstRoot, pThis));
-	DBGPRINTF("Strgen '%s' added to list of available strgens.\n", pThis->pName);
+    ISOBJ_TYPE_assert(pThis, strgen);
+    CHKiRet(AddStrgenToList(&pStrgenLstRoot, pThis));
+    DBGPRINTF("Strgen '%s' added to list of available strgens.\n", pThis->pName);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 PROTOTYPEobjDestruct(strgen);
 BEGINobjDestruct(strgen) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(strgen)
-	dbgprintf("destructing strgen '%s'\n", pThis->pName);
-	free(pThis->pName);
+    dbgprintf("destructing strgen '%s'\n", pThis->pName);
+    free(pThis->pName);
 ENDobjDestruct(strgen)
 
 /* set the strgen name - string is copied over, call can continue to use it,
@@ -179,20 +179,20 @@ ENDobjDestruct(strgen)
 static rsRetVal
 SetName(strgen_t *pThis, uchar *name)
 {
-	DEFiRet;
+    DEFiRet;
 
-	ISOBJ_TYPE_assert(pThis, strgen);
-	assert(name != NULL);
+    ISOBJ_TYPE_assert(pThis, strgen);
+    assert(name != NULL);
 
-	if(pThis->pName != NULL) {
-		free(pThis->pName);
-		pThis->pName = NULL;
-	}
+    if(pThis->pName != NULL) {
+        free(pThis->pName);
+        pThis->pName = NULL;
+    }
 
-	CHKmalloc(pThis->pName = ustrdup(name));
+    CHKmalloc(pThis->pName = ustrdup(name));
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -202,11 +202,11 @@ finalize_it:
 static rsRetVal
 SetModPtr(strgen_t *pThis, modInfo_t *pMod)
 {
-	ISOBJ_TYPE_assert(pThis, strgen);
-	assert(pMod != NULL);
-	assert(pThis->pModule == NULL);
-	pThis->pModule = pMod;
-	return RS_RET_OK;
+    ISOBJ_TYPE_assert(pThis, strgen);
+    assert(pMod != NULL);
+    assert(pThis->pModule == NULL);
+    pThis->pModule = pMod;
+    return RS_RET_OK;
 }
 
 
@@ -214,24 +214,24 @@ SetModPtr(strgen_t *pThis, modInfo_t *pMod)
  */
 BEGINobjQueryInterface(strgen)
 CODESTARTobjQueryInterface(strgen)
-	if(pIf->ifVersion != strgenCURR_IF_VERSION) { /* check for current version, increment on each change */
-		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
-	}
+    if(pIf->ifVersion != strgenCURR_IF_VERSION) { /* check for current version, increment on each change */
+        ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+    }
 
-	/* ok, we have the right interface, so let's fill it
-	 * Please note that we may also do some backwards-compatibility
-	 * work here (if we can support an older interface version - that,
-	 * of course, also affects the "if" above).
-	 */
-	pIf->Construct = strgenConstruct;
-	pIf->ConstructFinalize = strgenConstructFinalize;
-	pIf->Destruct = strgenDestruct;
-	pIf->SetName = SetName;
-	pIf->SetModPtr = SetModPtr;
-	pIf->InitStrgenList = InitStrgenList;
-	pIf->DestructStrgenList = DestructStrgenList;
-	pIf->AddStrgenToList = AddStrgenToList;
-	pIf->FindStrgen = FindStrgen;
+    /* ok, we have the right interface, so let's fill it
+     * Please note that we may also do some backwards-compatibility
+     * work here (if we can support an older interface version - that,
+     * of course, also affects the "if" above).
+     */
+    pIf->Construct = strgenConstruct;
+    pIf->ConstructFinalize = strgenConstructFinalize;
+    pIf->Destruct = strgenDestruct;
+    pIf->SetName = SetName;
+    pIf->SetModPtr = SetModPtr;
+    pIf->InitStrgenList = InitStrgenList;
+    pIf->DestructStrgenList = DestructStrgenList;
+    pIf->AddStrgenToList = AddStrgenToList;
+    pIf->FindStrgen = FindStrgen;
 finalize_it:
 ENDobjQueryInterface(strgen)
 
@@ -243,25 +243,25 @@ ENDobjQueryInterface(strgen)
 static void
 destroyMasterStrgenList(void)
 {
-	strgenList_t *pStrgenLst;
-	strgenList_t *pStrgenLstDel;
+    strgenList_t *pStrgenLst;
+    strgenList_t *pStrgenLstDel;
 
-	pStrgenLst = pStrgenLstRoot;
-	while(pStrgenLst != NULL) {
-		strgenDestruct(&pStrgenLst->pStrgen);
-		pStrgenLstDel = pStrgenLst;
-		pStrgenLst = pStrgenLst->pNext;
-		free(pStrgenLstDel);
-	}
+    pStrgenLst = pStrgenLstRoot;
+    while(pStrgenLst != NULL) {
+        strgenDestruct(&pStrgenLst->pStrgen);
+        pStrgenLstDel = pStrgenLst;
+        pStrgenLst = pStrgenLst->pNext;
+        free(pStrgenLstDel);
+    }
 }
 
 /* Exit our class.
  * rgerhards, 2009-11-04
  */
 BEGINObjClassExit(strgen, OBJ_IS_CORE_MODULE) /* class, version */
-	destroyMasterStrgenList();
-	objRelease(glbl, CORE_COMPONENT);
-	objRelease(ruleset, CORE_COMPONENT);
+    destroyMasterStrgenList();
+    objRelease(glbl, CORE_COMPONENT);
+    objRelease(ruleset, CORE_COMPONENT);
 ENDObjClassExit(strgen)
 
 
@@ -270,9 +270,9 @@ ENDObjClassExit(strgen)
  * rgerhards, 2009-11-02
  */
 BEGINObjClassInit(strgen, 1, OBJ_IS_CORE_MODULE) /* class, version */
-	/* request objects we use */
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(ruleset, CORE_COMPONENT));
-	InitStrgenList(&pStrgenLstRoot);
+    /* request objects we use */
+    CHKiRet(objUse(glbl, CORE_COMPONENT));
+    CHKiRet(objUse(ruleset, CORE_COMPONENT));
+    InitStrgenList(&pStrgenLstRoot);
 ENDObjClassInit(strgen)
 

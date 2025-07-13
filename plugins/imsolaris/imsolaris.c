@@ -91,7 +91,7 @@ MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("imsolaris")
 
 /* defines */
-#define PATH_LOG	"/dev/log"
+#define PATH_LOG    "/dev/log"
 
 
 /* Module static data */
@@ -103,11 +103,11 @@ DEFobjCurrIf(datetime)
 
 /* config settings */
 struct modConfData_s {
-	EMPTY_STRUCT;
+    EMPTY_STRUCT;
 };
 
-static prop_t *pInputName = NULL;	/* our inputName currently is always "imuxsock", and this will hold it */
-static char *LogName = NULL;	/* the log socket name TODO: make configurable! */
+static prop_t *pInputName = NULL;   /* our inputName currently is always "imuxsock", and this will hold it */
+static char *LogName = NULL;    /* the log socket name TODO: make configurable! */
 
 
 /* a function to replace the sun logerror() function.
@@ -119,7 +119,7 @@ static char *LogName = NULL;	/* the log socket name TODO: make configurable! */
 void
 imsolaris_logerror(int err, char *errStr)
 {
-	LogError(err, RS_RET_ERR_DOOR, "%s", errStr);
+    LogError(err, RS_RET_ERR_DOOR, "%s", errStr);
 }
 
 
@@ -133,39 +133,39 @@ imsolaris_logerror(int err, char *errStr)
 static void
 tryRecover(void)
 {
-	int tryNum = 1;
-	int waitsecs;
-	int waitusecs;
-	rsRetVal iRet;
+    int tryNum = 1;
+    int waitsecs;
+    int waitusecs;
+    rsRetVal iRet;
 
-	close(sun_Pfd.fd);
-	sun_Pfd.fd = -1;
+    close(sun_Pfd.fd);
+    sun_Pfd.fd = -1;
 
-	while(1) { /* loop broken inside */
-		iRet = sun_openklog((LogName == NULL) ? PATH_LOG : LogName);
-		if(iRet == RS_RET_OK) {
-			if(tryNum > 1) {
-				LogError(0, iRet, "failure on system log socket recovered.");
-			}
-			break;
-		}
-		/* failure, so sleep a bit. We wait try*10 ms, with a max of 15 seconds */
-		if(tryNum == 1) {
-			LogError(0, iRet, "failure on system log socket, trying to recover...");
-		}
-		waitusecs = tryNum * 10000;
-		waitsecs = waitusecs / 1000000;
-		DBGPRINTF("imsolaris: try %d to recover system log socket in %d.%d seconds\n",
-			  tryNum, waitsecs, waitusecs);
-		if(waitsecs > 15) {
-			waitsecs = 15;
-			waitusecs = 0;
-		} else  {
-			waitusecs = waitusecs % 1000000;
-		}
-		srSleep(waitsecs, waitusecs);
-		++tryNum;
-	}
+    while(1) { /* loop broken inside */
+        iRet = sun_openklog((LogName == NULL) ? PATH_LOG : LogName);
+        if(iRet == RS_RET_OK) {
+            if(tryNum > 1) {
+                LogError(0, iRet, "failure on system log socket recovered.");
+            }
+            break;
+        }
+        /* failure, so sleep a bit. We wait try*10 ms, with a max of 15 seconds */
+        if(tryNum == 1) {
+            LogError(0, iRet, "failure on system log socket, trying to recover...");
+        }
+        waitusecs = tryNum * 10000;
+        waitsecs = waitusecs / 1000000;
+        DBGPRINTF("imsolaris: try %d to recover system log socket in %d.%d seconds\n",
+              tryNum, waitsecs, waitusecs);
+        if(waitsecs > 15) {
+            waitsecs = 15;
+            waitusecs = 0;
+        } else  {
+            waitusecs = waitusecs % 1000000;
+        }
+        srSleep(waitsecs, waitusecs);
+        ++tryNum;
+    }
 }
 
 
@@ -179,51 +179,51 @@ tryRecover(void)
 static rsRetVal
 readLog(int fd, uchar *pRcv, int iMaxLine)
 {
-	DEFiRet;
-	struct strbuf data;
-	struct strbuf ctl;
-	struct log_ctl hdr;
-	struct timeval tim;
-	int flags;
-	smsg_t *pMsg;
-	int ret;
-	char errStr[1024];
+    DEFiRet;
+    struct strbuf data;
+    struct strbuf ctl;
+    struct log_ctl hdr;
+    struct timeval tim;
+    int flags;
+    smsg_t *pMsg;
+    int ret;
+    char errStr[1024];
 
-	data.buf = (char*)pRcv;
-	data.maxlen = iMaxLine;
-	ctl.maxlen = sizeof (struct log_ctl);
-	ctl.buf = (caddr_t)&hdr;
-	flags = 0;
-	ret = getmsg(fd, &ctl, &data, &flags);
-	if(ret < 0) {
-		if(errno == EINTR) {
-			FINALIZE;
-		} else 	{
-			int en = errno;
-			rs_strerror_r(errno, errStr, sizeof(errStr));
-			DBGPRINTF("imsolaris: stream input error on fd %d: %s.\n", fd, errStr);
-			LogError(en, NO_ERRCODE, "imsolaris: stream input error: %s", errStr);
-			tryRecover();
-		}
-	} else {
-		DBGPRINTF("imsolaris: message from log stream %d: %s\n", fd, pRcv);
-		pRcv[data.len] = '\0'; /* make sure it is a valid C-String */
-		CHKiRet(msgConstruct(&pMsg));
-		MsgSetInputName(pMsg, pInputName);
-		MsgSetRawMsg(pMsg, (char*)pRcv, strlen((char*)pRcv));
-		MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
-		msgSetPRI(pMsg, hdr.pri);
-		pMsg->msgFlags = NEEDS_PARSING | NO_PRI_IN_RAW | IGNDATE;
+    data.buf = (char*)pRcv;
+    data.maxlen = iMaxLine;
+    ctl.maxlen = sizeof (struct log_ctl);
+    ctl.buf = (caddr_t)&hdr;
+    flags = 0;
+    ret = getmsg(fd, &ctl, &data, &flags);
+    if(ret < 0) {
+        if(errno == EINTR) {
+            FINALIZE;
+        } else  {
+            int en = errno;
+            rs_strerror_r(errno, errStr, sizeof(errStr));
+            DBGPRINTF("imsolaris: stream input error on fd %d: %s.\n", fd, errStr);
+            LogError(en, NO_ERRCODE, "imsolaris: stream input error: %s", errStr);
+            tryRecover();
+        }
+    } else {
+        DBGPRINTF("imsolaris: message from log stream %d: %s\n", fd, pRcv);
+        pRcv[data.len] = '\0'; /* make sure it is a valid C-String */
+        CHKiRet(msgConstruct(&pMsg));
+        MsgSetInputName(pMsg, pInputName);
+        MsgSetRawMsg(pMsg, (char*)pRcv, strlen((char*)pRcv));
+        MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
+        msgSetPRI(pMsg, hdr.pri);
+        pMsg->msgFlags = NEEDS_PARSING | NO_PRI_IN_RAW | IGNDATE;
 
-		/* Construct timestamp from msg ctl struct */
-		tim.tv_usec = 0;
-		tim.tv_sec = hdr.ttime;
-		datetime.timeval2syslogTime(&tim, &pMsg->tRcvdAt, TIME_IN_LOCALTIME);
-		CHKiRet(submitMsg(pMsg));
-	}
+        /* Construct timestamp from msg ctl struct */
+        tim.tv_usec = 0;
+        tim.tv_sec = hdr.ttime;
+        datetime.timeval2syslogTime(&tim, &pMsg->tRcvdAt, TIME_IN_LOCALTIME);
+        CHKiRet(submitMsg(pMsg));
+    }
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -238,79 +238,79 @@ finalize_it:
 static rsRetVal
 getMsgs(thrdInfo_t *pThrd, int timeout)
 {
-	DEFiRet;
-	int nfds;
-	int iMaxLine;
-	uchar *pRcv = NULL; /* receive buffer */
-	uchar bufRcv[4096+1];
-	char errStr[1024];
+    DEFiRet;
+    int nfds;
+    int iMaxLine;
+    uchar *pRcv = NULL; /* receive buffer */
+    uchar bufRcv[4096+1];
+    char errStr[1024];
 
-	iMaxLine = glbl.GetMaxLine(runConf);
+    iMaxLine = glbl.GetMaxLine(runConf);
 
-	/* we optimize performance: if iMaxLine is below 4K (which it is in almost all
-	 * cases, we use a fixed buffer on the stack. Only if it is higher, heap memory
-	 * is used. We could use alloca() to achive a similar aspect, but there are so
-	 * many issues with alloca() that I do not want to take that route.
-	 * rgerhards, 2008-09-02
-	 */
-	if((size_t) iMaxLine < sizeof(bufRcv) - 1) {
-		pRcv = bufRcv;
-	} else {
-		CHKmalloc(pRcv = (uchar*) malloc(iMaxLine + 1));
-	}
+    /* we optimize performance: if iMaxLine is below 4K (which it is in almost all
+     * cases, we use a fixed buffer on the stack. Only if it is higher, heap memory
+     * is used. We could use alloca() to achive a similar aspect, but there are so
+     * many issues with alloca() that I do not want to take that route.
+     * rgerhards, 2008-09-02
+     */
+    if((size_t) iMaxLine < sizeof(bufRcv) - 1) {
+        pRcv = bufRcv;
+    } else {
+        CHKmalloc(pRcv = (uchar*) malloc(iMaxLine + 1));
+    }
 
-	 while(pThrd->bShallStop != RSTRUE) {
-		DBGPRINTF("imsolaris: waiting for next message (timeout %d)...\n", timeout);
-		if(timeout == 0) {
-			nfds = poll(&sun_Pfd, 1, timeout); /* wait without timeout */
+     while(pThrd->bShallStop != RSTRUE) {
+        DBGPRINTF("imsolaris: waiting for next message (timeout %d)...\n", timeout);
+        if(timeout == 0) {
+            nfds = poll(&sun_Pfd, 1, timeout); /* wait without timeout */
 
-			if(pThrd->bShallStop == RSTRUE) {
-				break;
-			}
+            if(pThrd->bShallStop == RSTRUE) {
+                break;
+            }
 
-			if(nfds == 0) {
-				if(timeout == 0) {
-					DBGPRINTF("imsolaris: no more messages, getMsgs() terminates\n");
-					FINALIZE;
-				} else {
-					continue;
-				}
-			}
+            if(nfds == 0) {
+                if(timeout == 0) {
+                    DBGPRINTF("imsolaris: no more messages, getMsgs() terminates\n");
+                    FINALIZE;
+                } else {
+                    continue;
+                }
+            }
 
-			if(nfds < 0) {
-				if(errno != EINTR) {
-					int en = errno;
-					rs_strerror_r(en, errStr, sizeof(errStr));
-					DBGPRINTF("imsolaris: poll error: %d = %s.\n", errno, errStr);
-					LogError(en, NO_ERRCODE, "imsolaris: poll error: %s",
-							errStr);
-				}
-				continue;
-			}
-			if(sun_Pfd.revents & POLLIN) {
-				readLog(sun_Pfd.fd, pRcv, iMaxLine);
-			} else if(sun_Pfd.revents & (POLLNVAL|POLLHUP|POLLERR)) {
-				tryRecover();
-			}
-		} else {
-			/* if we have an infinite wait, we do not use poll at all
-			 * I'd consider this a waste of time. However, I do not totally
-			 * remove the code, as it may be useful if we decide at some
-			 * point to provide a capability to support multiple input streams
-			 * at once (this may be useful for a jail). In that case, the poll()
-			 * loop would be needed, and so it doesn't make much sense to change
-			 * the code to not support it. -- rgerhards, 2010-04-20
-			 */
-			readLog(sun_Pfd.fd, pRcv, iMaxLine);
-		}
+            if(nfds < 0) {
+                if(errno != EINTR) {
+                    int en = errno;
+                    rs_strerror_r(en, errStr, sizeof(errStr));
+                    DBGPRINTF("imsolaris: poll error: %d = %s.\n", errno, errStr);
+                    LogError(en, NO_ERRCODE, "imsolaris: poll error: %s",
+                            errStr);
+                }
+                continue;
+            }
+            if(sun_Pfd.revents & POLLIN) {
+                readLog(sun_Pfd.fd, pRcv, iMaxLine);
+            } else if(sun_Pfd.revents & (POLLNVAL|POLLHUP|POLLERR)) {
+                tryRecover();
+            }
+        } else {
+            /* if we have an infinite wait, we do not use poll at all
+             * I'd consider this a waste of time. However, I do not totally
+             * remove the code, as it may be useful if we decide at some
+             * point to provide a capability to support multiple input streams
+             * at once (this may be useful for a jail). In that case, the poll()
+             * loop would be needed, and so it doesn't make much sense to change
+             * the code to not support it. -- rgerhards, 2010-04-20
+             */
+            readLog(sun_Pfd.fd, pRcv, iMaxLine);
+        }
 
-	}
+    }
 
 finalize_it:
-	if(pRcv != NULL && (size_t) iMaxLine >= sizeof(bufRcv) - 1)
-		free(pRcv);
+    if(pRcv != NULL && (size_t) iMaxLine >= sizeof(bufRcv) - 1)
+        free(pRcv);
 
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -342,65 +342,65 @@ ENDfreeCnf
 /* This function is called to gather input. */
 BEGINrunInput
 CODESTARTrunInput
-	/* this is an endless loop - it is terminated when the thread is
-	 * signalled to do so. This, however, is handled by the framework,
-	 * right into the sleep below.
-	 */
+    /* this is an endless loop - it is terminated when the thread is
+     * signalled to do so. This, however, is handled by the framework,
+     * right into the sleep below.
+     */
 
-	DBGPRINTF("imsolaris: doing startup poll before openeing door()\n");
-	CHKiRet(getMsgs(pThrd, 0));
+    DBGPRINTF("imsolaris: doing startup poll before openeing door()\n");
+    CHKiRet(getMsgs(pThrd, 0));
 
-	/* note: sun's syslogd code claims that the door should only
-	 * be opened when the log stream has been polled. So file header
-	 * comment of this file for more details.
-	 */
-	sun_open_door();
-	DBGPRINTF("imsolaris: starting regular poll loop\n");
-	iRet = getMsgs(pThrd, -1); /* this is the primary poll loop, infinite timeout */
+    /* note: sun's syslogd code claims that the door should only
+     * be opened when the log stream has been polled. So file header
+     * comment of this file for more details.
+     */
+    sun_open_door();
+    DBGPRINTF("imsolaris: starting regular poll loop\n");
+    iRet = getMsgs(pThrd, -1); /* this is the primary poll loop, infinite timeout */
 
-	DBGPRINTF("imsolaris: terminating (bShallStop=%d)\n", pThrd->bShallStop);
+    DBGPRINTF("imsolaris: terminating (bShallStop=%d)\n", pThrd->bShallStop);
 finalize_it:
-	RETiRet;
+    RETiRet;
 ENDrunInput
 
 
 BEGINwillRun
 CODESTARTwillRun
-	/* we need to create the inputName property (only once during our lifetime) */
-	CHKiRet(prop.Construct(&pInputName));
-	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imsolaris"), sizeof("imsolaris") - 1));
-	CHKiRet(prop.ConstructFinalize(pInputName));
+    /* we need to create the inputName property (only once during our lifetime) */
+    CHKiRet(prop.Construct(&pInputName));
+    CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imsolaris"), sizeof("imsolaris") - 1));
+    CHKiRet(prop.ConstructFinalize(pInputName));
 
-	iRet = sun_openklog((LogName == NULL) ? PATH_LOG : LogName);
-	if(iRet != RS_RET_OK) {
-		LogError(0, iRet, "error opening system log socket");
-	}
+    iRet = sun_openklog((LogName == NULL) ? PATH_LOG : LogName);
+    if(iRet != RS_RET_OK) {
+        LogError(0, iRet, "error opening system log socket");
+    }
 finalize_it:
 ENDwillRun
 
 
 BEGINafterRun
 CODESTARTafterRun
-	/* do cleanup here */
-	if(pInputName != NULL)
-		prop.Destruct(&pInputName);
-	free(LogName);
+    /* do cleanup here */
+    if(pInputName != NULL)
+        prop.Destruct(&pInputName);
+    free(LogName);
 ENDafterRun
 
 
 BEGINmodExit
 CODESTARTmodExit
-	sun_delete_doorfiles();
-	objRelease(glbl, CORE_COMPONENT);
-	objRelease(prop, CORE_COMPONENT);
-	objRelease(datetime, CORE_COMPONENT);
+    sun_delete_doorfiles();
+    objRelease(glbl, CORE_COMPONENT);
+    objRelease(prop, CORE_COMPONENT);
+    objRelease(datetime, CORE_COMPONENT);
 ENDmodExit
 
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURENonCancelInputTermination)
-		iRet = RS_RET_OK;
+    if(eFeat == sFEATURENonCancelInputTermination)
+        iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
@@ -411,27 +411,27 @@ CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
 ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp,
-				     void __attribute__((unused)) *pVal)
+                     void __attribute__((unused)) *pVal)
 {
-	return RS_RET_OK;
+    return RS_RET_OK;
 }
 
 
 BEGINmodInit()
 CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(prop, CORE_COMPONENT));
-	CHKiRet(objUse(datetime, CORE_COMPONENT));
+    CHKiRet(objUse(glbl, CORE_COMPONENT));
+    CHKiRet(objUse(prop, CORE_COMPONENT));
+    CHKiRet(objUse(datetime, CORE_COMPONENT));
 
-	DBGPRINTF("imsolaris version %s initializing\n", PACKAGE_VERSION);
+    DBGPRINTF("imsolaris version %s initializing\n", PACKAGE_VERSION);
 
-	/* register config file handlers */
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
-		resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
-	CHKiRet(omsdRegCFSLineHdlr((uchar *)"imsolarislogsocketname", 0, eCmdHdlrGetWord,
-		NULL, &LogName, STD_LOADABLE_MODULE_ID));
+    /* register config file handlers */
+    CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler,
+        resetConfigVariables, NULL, STD_LOADABLE_MODULE_ID));
+    CHKiRet(omsdRegCFSLineHdlr((uchar *)"imsolarislogsocketname", 0, eCmdHdlrGetWord,
+        NULL, &LogName, STD_LOADABLE_MODULE_ID));
 ENDmodInit
 /* vim:set ai:
  */

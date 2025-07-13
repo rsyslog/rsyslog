@@ -42,13 +42,13 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <pthread.h>		/* do NOT remove: will soon be done by the module generation macros */
+#include <pthread.h>        /* do NOT remove: will soon be done by the module generation macros */
 #include <sys/types.h>
 #include <unistd.h>
 #include <glob.h>
 #include <fnmatch.h>
 #ifdef HAVE_SYS_STAT_H
-#	include <sys/stat.h>
+#   include <sys/stat.h>
 #endif
 #include "rsyslog.h"  /* error codes etc... */
 #include "dirty.h"
@@ -93,70 +93,70 @@ DEFobjCurrIf(prop)
 #define ADD_METADATA_UNSPECIFIED -1
 
 typedef enum action_batchreport_t {
-	action_nothing,
-	action_rename,
-	action_delete
+    action_nothing,
+    action_rename,
+    action_delete
 } action_batchreport_t;
 
 struct instanceConf_s {
-	uchar *pszFollow_glob;
-	uchar *pszDirName;
-	uchar *pszFileBaseName;
-	uchar *pszTag;
-	int lenTag;
-	uchar *pszTSk;
-	int lenTSk;
-	uchar *pszProgk;
-	int lenProgk;
-	int must_stop;
-	uchar *pszBindRuleset;
-	int bDedupSpace;
-	int iFacility;
-	int iSeverity;
-	char *ff_regex;
-		/* Full treatment : this should contain a regex applied on filename. The matching
-		part is then replaced with ff_replace to put the file out of scan criteria */
-	regex_t ff_preg;
+    uchar *pszFollow_glob;
+    uchar *pszDirName;
+    uchar *pszFileBaseName;
+    uchar *pszTag;
+    int lenTag;
+    uchar *pszTSk;
+    int lenTSk;
+    uchar *pszProgk;
+    int lenProgk;
+    int must_stop;
+    uchar *pszBindRuleset;
+    int bDedupSpace;
+    int iFacility;
+    int iSeverity;
+    char *ff_regex;
+        /* Full treatment : this should contain a regex applied on filename. The matching
+        part is then replaced with ff_replace to put the file out of scan criteria */
+    regex_t ff_preg;
 
-	char *ff_rename;
-	int len_rename;
+    char *ff_rename;
+    int len_rename;
 
-	char *ff_reject;
-	int len_reject;
+    char *ff_reject;
+    int len_reject;
 
-	int filename_oversize;
-	ruleset_t *pBindRuleset;
-		/* ruleset to bind listener to (use system default if unspecified) */
+    int filename_oversize;
+    ruleset_t *pBindRuleset;
+        /* ruleset to bind listener to (use system default if unspecified) */
 
-	ratelimit_t *ratelimiter;
+    ratelimit_t *ratelimiter;
 
-	struct instanceConf_s *next;
+    struct instanceConf_s *next;
 
-	action_batchreport_t action;
+    action_batchreport_t action;
 
-	char *pszNewFName;
-	int fd;
+    char *pszNewFName;
+    int fd;
 
-	sbool goon;
+    sbool goon;
 };
 
 /* global configuration variables */
 static struct {
-	uchar *hostname;
-	size_t lhostname;
+    uchar *hostname;
+    size_t lhostname;
 
-	char *msg_buffer;
-	size_t max_msg_size;
+    char *msg_buffer;
+    size_t max_msg_size;
 
-	instanceConf_t *root;
+    instanceConf_t *root;
 
-	/* number of seconds to sleep when there was no file activity */
-	int iPollInterval;
+    /* number of seconds to sleep when there was no file activity */
+    int iPollInterval;
 } fixedModConf;
 
 /* config variables */
 struct modConfData_s {
-	rsconf_t *pConf; /* our overall config object */
+    rsconf_t *pConf; /* our overall config object */
 };
 
 static prop_t *pInputName = NULL;
@@ -164,32 +164,32 @@ static prop_t *pInputName = NULL;
 
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
-	{ "pollinginterval", eCmdHdlrPositiveInt, 0 },
+    { "pollinginterval", eCmdHdlrPositiveInt, 0 },
 };
 static struct cnfparamblk modpblk =
-	{ CNFPARAMBLK_VERSION,
-		sizeof(modpdescr)/sizeof(struct cnfparamdescr),
-		modpdescr
-	};
+    { CNFPARAMBLK_VERSION,
+        sizeof(modpdescr)/sizeof(struct cnfparamdescr),
+        modpdescr
+    };
 
 /* input instance parameters */
 static struct cnfparamdescr inppdescr[] = {
-	{ "reports", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "tag", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "programkey", eCmdHdlrString, 0 },
-	{ "timestampkey", eCmdHdlrString, 0 },
-	{ "deduplicatespace", eCmdHdlrBinary, 0},
-	{ "rename", eCmdHdlrString, 0 },
-	{ "delete", eCmdHdlrString, 0 },
-	{ "severity", eCmdHdlrSeverity, 0 },
-	{ "facility", eCmdHdlrFacility, 0 },
-	{ "ruleset", eCmdHdlrString, 0 },
+    { "reports", eCmdHdlrString, CNFPARAM_REQUIRED },
+    { "tag", eCmdHdlrString, CNFPARAM_REQUIRED },
+    { "programkey", eCmdHdlrString, 0 },
+    { "timestampkey", eCmdHdlrString, 0 },
+    { "deduplicatespace", eCmdHdlrBinary, 0},
+    { "rename", eCmdHdlrString, 0 },
+    { "delete", eCmdHdlrString, 0 },
+    { "severity", eCmdHdlrSeverity, 0 },
+    { "facility", eCmdHdlrFacility, 0 },
+    { "ruleset", eCmdHdlrString, 0 },
 };
 static struct cnfparamblk inppblk =
-	{ CNFPARAMBLK_VERSION,
-		sizeof(inppdescr)/sizeof(struct cnfparamdescr),
-		inppdescr
-	};
+    { CNFPARAMBLK_VERSION,
+        sizeof(inppdescr)/sizeof(struct cnfparamdescr),
+        inppdescr
+    };
 
 #include "im-helper.h" /* must be included AFTER the type definitions! */
 
@@ -198,24 +198,24 @@ static struct cnfparamblk inppblk =
  */
 static rsRetVal enqMsg(instanceConf_t *pInst, smsg_t *pMsg)
 {
-	DEFiRet;
+    DEFiRet;
 
-	MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
-	MsgSetInputName(pMsg, pInputName);
-	MsgSetHOSTNAME(pMsg, fixedModConf.hostname, (const int) fixedModConf.lhostname);
-	MsgSetTAG(pMsg, pInst->pszTag, pInst->lenTag);
-	MsgSetPROCID(pMsg, "-");
-	MsgSetMSGID(pMsg, "-");
+    MsgSetFlowControlType(pMsg, eFLOWCTL_FULL_DELAY);
+    MsgSetInputName(pMsg, pInputName);
+    MsgSetHOSTNAME(pMsg, fixedModConf.hostname, (const int) fixedModConf.lhostname);
+    MsgSetTAG(pMsg, pInst->pszTag, pInst->lenTag);
+    MsgSetPROCID(pMsg, "-");
+    MsgSetMSGID(pMsg, "-");
 
-	pMsg->iFacility = pInst->iFacility >> 3;
-	pMsg->iSeverity = pInst->iSeverity;
+    pMsg->iFacility = pInst->iFacility >> 3;
+    pMsg->iSeverity = pInst->iSeverity;
 
-	MsgSetRuleset(pMsg, pInst->pBindRuleset);
+    MsgSetRuleset(pMsg, pInst->pBindRuleset);
 
-	CHKiRet(ratelimitAddMsg(pInst->ratelimiter, NULL, pMsg));
+    CHKiRet(ratelimitAddMsg(pInst->ratelimiter, NULL, pMsg));
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* The following is a cancel cleanup handler for strmReadLine(). It is necessary in case
@@ -223,11 +223,11 @@ finalize_it:
  */
 static void pollFileCancelCleanup(void *pArg)
 {
-	instanceConf_t *ppInst = (instanceConf_t*) pArg;
-	if (ppInst->fd > 0)
-		close(ppInst->fd);
-	if (ppInst->pszNewFName)
-		free(ppInst->pszNewFName);
+    instanceConf_t *ppInst = (instanceConf_t*) pArg;
+    if (ppInst->fd > 0)
+        close(ppInst->fd);
+    if (ppInst->pszNewFName)
+        free(ppInst->pszNewFName);
 }
 
 /* readAndSendFile try to read the file and send the message.
@@ -237,279 +237,279 @@ static void pollFileCancelCleanup(void *pArg)
  */
 static rsRetVal readAndSendFile(instanceConf_t *pInst, char *filename, char *fpath, struct stat *fstat)
 {
-	smsg_t *pMsg = NULL;
-	size_t file_len, read_len = 0, sd_buf_l, msg_len = 0, idx = 0;
-	int last_is_space = 0;
-	struct timeval tvm;
-	uchar sd_buffer[SRUCTDATA_BUFFER_LEN];
-	uchar read_buffer[READ_BUFFER_LEN];
+    smsg_t *pMsg = NULL;
+    size_t file_len, read_len = 0, sd_buf_l, msg_len = 0, idx = 0;
+    int last_is_space = 0;
+    struct timeval tvm;
+    uchar sd_buffer[SRUCTDATA_BUFFER_LEN];
+    uchar read_buffer[READ_BUFFER_LEN];
 
-	DEFiRet;
+    DEFiRet;
 
-	CHKiRet(msgConstruct(&pMsg));
+    CHKiRet(msgConstruct(&pMsg));
 
-	msgAddMetadata(pMsg, (uchar*)"filename", (uchar*)filename);
+    msgAddMetadata(pMsg, (uchar*)"filename", (uchar*)filename);
 
-	/* get the file modification time : end of the batch*/
-	tvm.tv_sec = fstat->st_mtime;
-	tvm.tv_usec = 0;
+    /* get the file modification time : end of the batch*/
+    tvm.tv_sec = fstat->st_mtime;
+    tvm.tv_usec = 0;
 
-	file_len = lseek(pInst->fd, 0, SEEK_END);
+    file_len = lseek(pInst->fd, 0, SEEK_END);
 
-	MsgSetStructuredData(pMsg, "-");
+    MsgSetStructuredData(pMsg, "-");
 
-	/* Let's read the end of the file first and put it in the buffer for structuredData
-	 * This will help to find the real end of the message
-	 */
-	sd_buf_l = (file_len < SRUCTDATA_BUFFER_LEN) ? file_len : SRUCTDATA_BUFFER_LEN;
+    /* Let's read the end of the file first and put it in the buffer for structuredData
+     * This will help to find the real end of the message
+     */
+    sd_buf_l = (file_len < SRUCTDATA_BUFFER_LEN) ? file_len : SRUCTDATA_BUFFER_LEN;
 
-	if (lseek(pInst->fd, file_len - sd_buf_l, SEEK_SET) >= 0) {
-		uchar	*sdp = sd_buffer+sd_buf_l-1;
-		int nb_rm = 0; /* number of space chars removed */
-		size_t stdata_len = 0, t;
-		char *tmp;
+    if (lseek(pInst->fd, file_len - sd_buf_l, SEEK_SET) >= 0) {
+        uchar   *sdp = sd_buffer+sd_buf_l-1;
+        int nb_rm = 0; /* number of space chars removed */
+        size_t stdata_len = 0, t;
+        char *tmp;
 
-		if ((t=read(pInst->fd, sd_buffer, sd_buf_l)) != sd_buf_l) {
-			LogError(0, RS_RET_READ_ERR, "read end of file for structured data failed (%zu / %zu)",
-			         t, sd_buf_l);
-			return RS_RET_READ_ERR;
-		}
+        if ((t=read(pInst->fd, sd_buffer, sd_buf_l)) != sd_buf_l) {
+            LogError(0, RS_RET_READ_ERR, "read end of file for structured data failed (%zu / %zu)",
+                     t, sd_buf_l);
+            return RS_RET_READ_ERR;
+        }
 
-		/* let's trim the end */
-		for (; sdp > sd_buffer && (*sdp=='\n' || *sdp=='\t' || *sdp==' '); sdp--, sd_buf_l--)
-			file_len--;
+        /* let's trim the end */
+        for (; sdp > sd_buffer && (*sdp=='\n' || *sdp=='\t' || *sdp==' '); sdp--, sd_buf_l--)
+            file_len--;
 
-		if (sd_buf_l > 1 && *sdp == ']') {
-			stdata_len = 1;
-			/* it seems that we have structured data let find the begin */
-			for (; sdp > sd_buffer && *sdp!='['; sdp--, stdata_len++) {
-				if (*sdp == '\n') {
-					/* line feed not supported in structured data */
-					stdata_len--;
-					memmove(sdp, sdp+1, stdata_len);
-					nb_rm++;
-				}
-			}
-			if (*sdp == '[') {
-				/* we got a structured data */
-				DBGPRINTF("structured data : %.*s\n", (int)stdata_len, sdp);
-				MsgAddToStructuredData(pMsg, sdp, stdata_len);
+        if (sd_buf_l > 1 && *sdp == ']') {
+            stdata_len = 1;
+            /* it seems that we have structured data let find the begin */
+            for (; sdp > sd_buffer && *sdp!='['; sdp--, stdata_len++) {
+                if (*sdp == '\n') {
+                    /* line feed not supported in structured data */
+                    stdata_len--;
+                    memmove(sdp, sdp+1, stdata_len);
+                    nb_rm++;
+                }
+            }
+            if (*sdp == '[') {
+                /* we got a structured data */
+                DBGPRINTF("structured data : %.*s\n", (int)stdata_len, sdp);
+                MsgAddToStructuredData(pMsg, sdp, stdata_len);
 
-				/* extracting timestamp from structured data overwrite the file creation time */
-				if (pInst->pszTSk) {
-					uchar *field = (uchar*)strstr((char*)sdp, (char*)pInst->pszTSk), v;
-					if (field != NULL)
-					{
-						tvm.tv_sec = 0;
-						tvm.tv_usec = 0;
-						for (field += pInst->lenTSk; (v = *field ^ 0x30) <= 9; field++)
-							tvm.tv_sec = tvm.tv_sec*10 + v;
-					}
-				}
+                /* extracting timestamp from structured data overwrite the file creation time */
+                if (pInst->pszTSk) {
+                    uchar *field = (uchar*)strstr((char*)sdp, (char*)pInst->pszTSk), v;
+                    if (field != NULL)
+                    {
+                        tvm.tv_sec = 0;
+                        tvm.tv_usec = 0;
+                        for (field += pInst->lenTSk; (v = *field ^ 0x30) <= 9; field++)
+                            tvm.tv_sec = tvm.tv_sec*10 + v;
+                    }
+                }
 
-				/* extracting program from structured data */
-				if (pInst->pszProgk) {
-					char *field = strstr((char*)sdp, (char*)pInst->pszProgk);
-					if (field != NULL)
-					{
-						tmp = field + pInst->lenProgk;
-						if ((field = strchr(tmp, '\"')) != NULL) {
-							*field = '\0';
-							MsgSetAPPNAME(pMsg, tmp);
-						}
-					}
-				}
+                /* extracting program from structured data */
+                if (pInst->pszProgk) {
+                    char *field = strstr((char*)sdp, (char*)pInst->pszProgk);
+                    if (field != NULL)
+                    {
+                        tmp = field + pInst->lenProgk;
+                        if ((field = strchr(tmp, '\"')) != NULL) {
+                            *field = '\0';
+                            MsgSetAPPNAME(pMsg, tmp);
+                        }
+                    }
+                }
 
-				/* let's trim until useful message end */
-				for (sdp--; sdp > sd_buffer && (*sdp=='\n' || *sdp=='\t' || *sdp==' '); sdp--)
-					nb_rm++;
-			}
-		}
-		/* computing the new file_len */
-		file_len -= nb_rm + stdata_len;
-	}
+                /* let's trim until useful message end */
+                for (sdp--; sdp > sd_buffer && (*sdp=='\n' || *sdp=='\t' || *sdp==' '); sdp--)
+                    nb_rm++;
+            }
+        }
+        /* computing the new file_len */
+        file_len -= nb_rm + stdata_len;
+    }
 
-	datetime.timeval2syslogTime(&tvm, &pMsg->tTIMESTAMP, TIME_IN_UTC);
-	pMsg->ttGenTime = tvm.tv_sec;
+    datetime.timeval2syslogTime(&tvm, &pMsg->tTIMESTAMP, TIME_IN_UTC);
+    pMsg->ttGenTime = tvm.tv_sec;
 
-	/* go back to beginning */
-	if (lseek(pInst->fd, 0, SEEK_SET) < 0)  {
-		LogError(0, RS_RET_READ_ERR, "readAndSendFile : error while seeking to beginning.");
-		return RS_RET_READ_ERR;
-	}
+    /* go back to beginning */
+    if (lseek(pInst->fd, 0, SEEK_SET) < 0)  {
+        LogError(0, RS_RET_READ_ERR, "readAndSendFile : error while seeking to beginning.");
+        return RS_RET_READ_ERR;
+    }
 
-	/* Now read the file */
-	msg_len = 0;
-	while (msg_len < fixedModConf.max_msg_size && (read_len = read(pInst->fd, read_buffer,
-	      (file_len > READ_BUFFER_LEN) ? READ_BUFFER_LEN : file_len)) > 0) {
-		file_len -= read_len;
-		idx = 0;
-		while (read_len > 0 && msg_len < fixedModConf.max_msg_size) {
-			switch (read_buffer[idx]){
-			case '\t':
-			case ' ':
-				/* this is to reduce consecutive spaces to only one */
-				if (!last_is_space)
-					fixedModConf.msg_buffer[msg_len++] = ' ';
-				/* if pInst->bDedupSpace is off last_is_space will never be true */
-				last_is_space = pInst->bDedupSpace;
-				break;
-			case '\n':
-				/* this is for trailing spaces */
-				if (last_is_space) msg_len--;
-				fixedModConf.msg_buffer[msg_len++] = '\\';
-				/* risk of overflow is managed by making buffer one char longer
-				 * than fixedModConf.max_msg_size */
-				fixedModConf.msg_buffer[msg_len++] = 'n';
-				break;
-			default:
-				fixedModConf.msg_buffer[msg_len++] = read_buffer[idx];
-				last_is_space = 0;
-			}
-			idx++;
-			read_len--;
-		}
-	}
+    /* Now read the file */
+    msg_len = 0;
+    while (msg_len < fixedModConf.max_msg_size && (read_len = read(pInst->fd, read_buffer,
+          (file_len > READ_BUFFER_LEN) ? READ_BUFFER_LEN : file_len)) > 0) {
+        file_len -= read_len;
+        idx = 0;
+        while (read_len > 0 && msg_len < fixedModConf.max_msg_size) {
+            switch (read_buffer[idx]){
+            case '\t':
+            case ' ':
+                /* this is to reduce consecutive spaces to only one */
+                if (!last_is_space)
+                    fixedModConf.msg_buffer[msg_len++] = ' ';
+                /* if pInst->bDedupSpace is off last_is_space will never be true */
+                last_is_space = pInst->bDedupSpace;
+                break;
+            case '\n':
+                /* this is for trailing spaces */
+                if (last_is_space) msg_len--;
+                fixedModConf.msg_buffer[msg_len++] = '\\';
+                /* risk of overflow is managed by making buffer one char longer
+                 * than fixedModConf.max_msg_size */
+                fixedModConf.msg_buffer[msg_len++] = 'n';
+                break;
+            default:
+                fixedModConf.msg_buffer[msg_len++] = read_buffer[idx];
+                last_is_space = 0;
+            }
+            idx++;
+            read_len--;
+        }
+    }
 
-	close(pInst->fd);
-	pInst->fd = 0;
+    close(pInst->fd);
+    pInst->fd = 0;
 
-	if (file_len > 0 || read_len > 0) {
-		/* file is too large to be stored in one message */
-		memcpy(fixedModConf.msg_buffer, FILE_TOO_LARGE, FILE_TOO_LARGE_LEN);
-		msg_len = strlen(fpath);
-		memcpy(fixedModConf.msg_buffer + FILE_TOO_LARGE_LEN, fpath, msg_len);
-		msg_len += FILE_TOO_LARGE_LEN;
-	}
+    if (file_len > 0 || read_len > 0) {
+        /* file is too large to be stored in one message */
+        memcpy(fixedModConf.msg_buffer, FILE_TOO_LARGE, FILE_TOO_LARGE_LEN);
+        msg_len = strlen(fpath);
+        memcpy(fixedModConf.msg_buffer + FILE_TOO_LARGE_LEN, fpath, msg_len);
+        msg_len += FILE_TOO_LARGE_LEN;
+    }
 
-	/* file is stored in the message */
-	MsgSetRawMsg(pMsg, fixedModConf.msg_buffer, msg_len);
+    /* file is stored in the message */
+    MsgSetRawMsg(pMsg, fixedModConf.msg_buffer, msg_len);
 
-	MsgSetMSGoffs(pMsg, 0);
-	if ((iRet = enqMsg(pInst, pMsg)) == RS_RET_OK && (file_len > 0 || read_len > 0))
-	iRet = RS_RET_FILE_TOO_LARGE;
+    MsgSetMSGoffs(pMsg, 0);
+    if ((iRet = enqMsg(pInst, pMsg)) == RS_RET_OK && (file_len > 0 || read_len > 0))
+    iRet = RS_RET_FILE_TOO_LARGE;
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* poll a glob */
 static void pollFile(instanceConf_t *pInst)
 {
-	pInst->fd = 0;
-	glob_t glob_res;
+    pInst->fd = 0;
+    glob_t glob_res;
 
-	pthread_cleanup_push(pollFileCancelCleanup, pInst);
+    pthread_cleanup_push(pollFileCancelCleanup, pInst);
 
-	DBGPRINTF("polling files : %s\n", pInst->pszFollow_glob);
+    DBGPRINTF("polling files : %s\n", pInst->pszFollow_glob);
 
-	/* We "glob" to find candidate regular file (or other) */
-	if (glob((char*)pInst->pszFollow_glob, GLOB_NOSORT, 0, &glob_res) != 0)
-		FINALIZE;
+    /* We "glob" to find candidate regular file (or other) */
+    if (glob((char*)pInst->pszFollow_glob, GLOB_NOSORT, 0, &glob_res) != 0)
+        FINALIZE;
 
-	for (size_t i = 0; i < glob_res.gl_pathc && glbl.GetGlobalInputTermState() == 0; i++)
-	{
-		struct stat fstat;
-		rsRetVal ret;
-		char *filename = strrchr(glob_res.gl_pathv[i], '/');
-		if (filename)
-			filename++;
-		else
-			filename = glob_res.gl_pathv[i];
-		char *fpath = glob_res.gl_pathv[i];
+    for (size_t i = 0; i < glob_res.gl_pathc && glbl.GetGlobalInputTermState() == 0; i++)
+    {
+        struct stat fstat;
+        rsRetVal ret;
+        char *filename = strrchr(glob_res.gl_pathv[i], '/');
+        if (filename)
+            filename++;
+        else
+            filename = glob_res.gl_pathv[i];
+        char *fpath = glob_res.gl_pathv[i];
 
-		/*  let's verify that the file is a regular one */
-		if (!stat(fpath, &fstat) && S_ISREG(fstat.st_mode) )
-		{
-			regmatch_t matches[1];
-			int toolargeOrFailure = 0;
+        /*  let's verify that the file is a regular one */
+        if (!stat(fpath, &fstat) && S_ISREG(fstat.st_mode) )
+        {
+            regmatch_t matches[1];
+            int toolargeOrFailure = 0;
 
-			DBGPRINTF("Regular file found '%s')\n", fpath);
+            DBGPRINTF("Regular file found '%s')\n", fpath);
 
-			/* With this test we verify that we have conditions to remove the
-			 * file from glob scope. If the regular expression not apply we
-			 * can not rename it */
-			if (regexec(&pInst->ff_preg, fpath, 1, matches, 0)) {
-				pInst->must_stop = 1;
-				FINALIZE;
-			}
+            /* With this test we verify that we have conditions to remove the
+             * file from glob scope. If the regular expression not apply we
+             * can not rename it */
+            if (regexec(&pInst->ff_preg, fpath, 1, matches, 0)) {
+                pInst->must_stop = 1;
+                FINALIZE;
+            }
 
-			pInst->fd = open(fpath,
-					 O_NOCTTY | O_RDONLY | O_NONBLOCK | O_LARGEFILE, 0);
+            pInst->fd = open(fpath,
+                     O_NOCTTY | O_RDONLY | O_NONBLOCK | O_LARGEFILE, 0);
 
-			if (pInst->fd <= 0)
-			{
-				/* file could be open unfortunately we will try each polling */
-				char errStr[512];
-				int eno = errno;
-				rs_strerror_r(eno, errStr, sizeof(errStr));
-				LogError(0, RS_RET_READ_ERR,"open the file %s failed with error %s", fpath, errStr);
-				continue;
-			}
+            if (pInst->fd <= 0)
+            {
+                /* file could be open unfortunately we will try each polling */
+                char errStr[512];
+                int eno = errno;
+                rs_strerror_r(eno, errStr, sizeof(errStr));
+                LogError(0, RS_RET_READ_ERR,"open the file %s failed with error %s", fpath, errStr);
+                continue;
+            }
 
-			/* let's read the file and send it to output */
-			ret = readAndSendFile(pInst, filename, fpath, &fstat);
-			/* is the file to large to be sent */
-			toolargeOrFailure = ret == RS_RET_FILE_TOO_LARGE;
+            /* let's read the file and send it to output */
+            ret = readAndSendFile(pInst, filename, fpath, &fstat);
+            /* is the file to large to be sent */
+            toolargeOrFailure = ret == RS_RET_FILE_TOO_LARGE;
 
-			if (ret != RS_RET_OK && ret != RS_RET_FILE_TOO_LARGE) {
-				LogError(0, ret, "The module could not manage the file %s", fpath);
-				toolargeOrFailure = 1;
-			}
+            if (ret != RS_RET_OK && ret != RS_RET_FILE_TOO_LARGE) {
+                LogError(0, ret, "The module could not manage the file %s", fpath);
+                toolargeOrFailure = 1;
+            }
 
-			if (pInst->action == action_rename || toolargeOrFailure)
-			{
-				pInst->pszNewFName = (char*)malloc(strlen(fpath)+
-							pInst->filename_oversize);
-				memcpy(pInst->pszNewFName, fpath, matches[0].rm_so);
-				strcpy((char*)pInst->pszNewFName + matches[0].rm_so,
-					(toolargeOrFailure) ? pInst->ff_reject : pInst->ff_rename);
+            if (pInst->action == action_rename || toolargeOrFailure)
+            {
+                pInst->pszNewFName = (char*)malloc(strlen(fpath)+
+                            pInst->filename_oversize);
+                memcpy(pInst->pszNewFName, fpath, matches[0].rm_so);
+                strcpy((char*)pInst->pszNewFName + matches[0].rm_so,
+                    (toolargeOrFailure) ? pInst->ff_reject : pInst->ff_rename);
 
-				if (rename(fpath, pInst->pszNewFName))
-				{
-					/* if the module can not rename the file, it must stop to avoid flooding
-					 * but it keep chance to manage max files as possible
-					 */
-					LogError(0, RS_RET_STREAM_DISABLED, "module stopped : was unable"
-						" to rename form %s to %s.", fpath , pInst->pszNewFName);
-					pInst->must_stop = 1;
-				}
-				else
-					DBGPRINTF("file %s sent and renamed to %s.\n", fpath, pInst->pszNewFName);
-				free(pInst->pszNewFName);
-				pInst->pszNewFName = NULL;
-			}
-			else
-			{
-				if (unlink(fpath))
-				{
-					/* if the module can not remove the file, it must stop to avoid flooding
-					 * but it keep chance to manage max files as possible
-					 */
-					LogError(0, RS_RET_STREAM_DISABLED, "module stopped : unable to delete %s.",
-					         fpath);
-					pInst->must_stop = 1;
-				}
-				else
-					DBGPRINTF("file %s sent and deleted\n", fpath);
-			}
-		} /* if stat */
-	} /* for */
+                if (rename(fpath, pInst->pszNewFName))
+                {
+                    /* if the module can not rename the file, it must stop to avoid flooding
+                     * but it keep chance to manage max files as possible
+                     */
+                    LogError(0, RS_RET_STREAM_DISABLED, "module stopped : was unable"
+                        " to rename form %s to %s.", fpath , pInst->pszNewFName);
+                    pInst->must_stop = 1;
+                }
+                else
+                    DBGPRINTF("file %s sent and renamed to %s.\n", fpath, pInst->pszNewFName);
+                free(pInst->pszNewFName);
+                pInst->pszNewFName = NULL;
+            }
+            else
+            {
+                if (unlink(fpath))
+                {
+                    /* if the module can not remove the file, it must stop to avoid flooding
+                     * but it keep chance to manage max files as possible
+                     */
+                    LogError(0, RS_RET_STREAM_DISABLED, "module stopped : unable to delete %s.",
+                             fpath);
+                    pInst->must_stop = 1;
+                }
+                else
+                    DBGPRINTF("file %s sent and deleted\n", fpath);
+            }
+        } /* if stat */
+    } /* for */
 
 finalize_it:
-	globfree(&glob_res);
+    globfree(&glob_res);
 
-	pthread_cleanup_pop(0);
+    pthread_cleanup_pop(0);
 }
 
 static void addInstance(instanceConf_t *inst) {
 
-	if(fixedModConf.root == NULL) {
-		fixedModConf.root = inst;
-	} else {
-		fixedModConf.root->next = inst;
-		fixedModConf.root = inst;
-	}
+    if(fixedModConf.root == NULL) {
+        fixedModConf.root = inst;
+    } else {
+        fixedModConf.root->next = inst;
+        fixedModConf.root = inst;
+    }
 }
 
 /* create input instance, set default parameters, and
@@ -518,42 +518,42 @@ static void addInstance(instanceConf_t *inst) {
 static rsRetVal
 createInstance(instanceConf_t **pinst)
 {
-	instanceConf_t *inst;
-	DEFiRet;
+    instanceConf_t *inst;
+    DEFiRet;
 
-	*pinst = NULL;
+    *pinst = NULL;
 
-	CHKmalloc(inst = (instanceConf_t*)malloc(sizeof(instanceConf_t)));
+    CHKmalloc(inst = (instanceConf_t*)malloc(sizeof(instanceConf_t)));
 
-	inst->next = NULL;
-	inst->pBindRuleset = NULL;
+    inst->next = NULL;
+    inst->pBindRuleset = NULL;
 
-	inst->pszBindRuleset = NULL;
-	inst->pszFollow_glob = NULL;
-	inst->pszDirName = NULL;
-	inst->pszFileBaseName = NULL;
-	inst->pszTag = NULL;
-	inst->pszTSk = NULL;
-	inst->pszProgk = NULL;
-	inst->ff_regex = NULL;
-	inst->ff_rename = NULL;
-	inst->ff_reject = NULL;
+    inst->pszBindRuleset = NULL;
+    inst->pszFollow_glob = NULL;
+    inst->pszDirName = NULL;
+    inst->pszFileBaseName = NULL;
+    inst->pszTag = NULL;
+    inst->pszTSk = NULL;
+    inst->pszProgk = NULL;
+    inst->ff_regex = NULL;
+    inst->ff_rename = NULL;
+    inst->ff_reject = NULL;
 
-	inst->iSeverity = LOG_NOTICE;
-	inst->iFacility = LOG_LOCAL0;
-	inst->len_rename = 0;
-	inst->len_reject = 0;
-	inst->bDedupSpace = 1;
-	inst->goon = 0;
-	inst->ratelimiter = NULL;
+    inst->iSeverity = LOG_NOTICE;
+    inst->iFacility = LOG_LOCAL0;
+    inst->len_rename = 0;
+    inst->len_reject = 0;
+    inst->bDedupSpace = 1;
+    inst->goon = 0;
+    inst->ratelimiter = NULL;
 
-	inst->action = action_nothing;
+    inst->action = action_nothing;
 
-	inst->must_stop = 0;
+    inst->must_stop = 0;
 
-	*pinst = inst;
+    *pinst = inst;
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* the basen(ame) buffer must be of size MAXFNAME
@@ -561,24 +561,24 @@ finalize_it:
  */
 static int getBasename(uchar *const __restrict__ basen, uchar *const __restrict__ path)
 {
-	int i;
-	const int lenName = ustrlen(path);
-	for(i = lenName ; i >= 0 ; --i) {
-		if(path[i] == '/') {
+    int i;
+    const int lenName = ustrlen(path);
+    for(i = lenName ; i >= 0 ; --i) {
+        if(path[i] == '/') {
 
-			if(i == lenName)
-				basen[0] = '\0';
-			else {
-				memcpy(basen, path+i+1, lenName-i);
-			}
-			break;
-		}
-	}
-	if (i == -1) {
-		memcpy(basen, path, lenName);
-		i = 0;
-	}
-	return i;
+            if(i == lenName)
+                basen[0] = '\0';
+            else {
+                memcpy(basen, path+i+1, lenName-i);
+            }
+            break;
+        }
+    }
+    if (i == -1) {
+        memcpy(basen, path, lenName);
+        i = 0;
+    }
+    return i;
 }
 
 /* this function checks instance parameters and does some required pre-processing
@@ -587,326 +587,326 @@ static int getBasename(uchar *const __restrict__ basen, uchar *const __restrict_
  */
 static rsRetVal checkInstance(instanceConf_t *inst)
 {
-	char dirn[MAXFNAME];
-	uchar basen[MAXFNAME];
-	int i;
-	struct stat sb;
-	int r;
-	int eno;
-	char errStr[512], *s, *d;
-	regmatch_t matches[1];
-	DEFiRet;
+    char dirn[MAXFNAME];
+    uchar basen[MAXFNAME];
+    int i;
+    struct stat sb;
+    int r;
+    int eno;
+    char errStr[512], *s, *d;
+    regmatch_t matches[1];
+    DEFiRet;
 
-	i = getBasename(basen, inst->pszFollow_glob);
-	memcpy(dirn, inst->pszFollow_glob, i);
-	dirn[i] = '\0';
-	CHKmalloc(inst->pszFileBaseName = (uchar*) strdup((char*)basen));
-	CHKmalloc(inst->pszDirName = (uchar*) strdup(dirn));
+    i = getBasename(basen, inst->pszFollow_glob);
+    memcpy(dirn, inst->pszFollow_glob, i);
+    dirn[i] = '\0';
+    CHKmalloc(inst->pszFileBaseName = (uchar*) strdup((char*)basen));
+    CHKmalloc(inst->pszDirName = (uchar*) strdup(dirn));
 
-	if(dirn[0] == '\0') {
-		dirn[0] = '.';
-		dirn[1] = '\0';
-	}
-	r = stat(dirn, &sb);
-	if(r != 0)  {
-		eno = errno;
-		rs_strerror_r(eno, errStr, sizeof(errStr));
-		LogError(0, RS_RET_CONFIG_ERROR, "Configured directory can not be stated '%s': %s",
-				dirn, errStr);
-		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-	}
-	if(!S_ISDIR(sb.st_mode)) {
-		LogError(0, RS_RET_CONFIG_ERROR, "Configured directory is NOT a directory : '%s'", dirn);
-		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-	}
+    if(dirn[0] == '\0') {
+        dirn[0] = '.';
+        dirn[1] = '\0';
+    }
+    r = stat(dirn, &sb);
+    if(r != 0)  {
+        eno = errno;
+        rs_strerror_r(eno, errStr, sizeof(errStr));
+        LogError(0, RS_RET_CONFIG_ERROR, "Configured directory can not be stated '%s': %s",
+                dirn, errStr);
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+    if(!S_ISDIR(sb.st_mode)) {
+        LogError(0, RS_RET_CONFIG_ERROR, "Configured directory is NOT a directory : '%s'", dirn);
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
 
-	if (stat((char*)inst->pszFollow_glob, &sb) == 0 && !S_ISREG(sb.st_mode)) {
-		LogError(0, RS_RET_CONFIG_ERROR, "Configured report is not a glob or a regular file.");
-		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-	}
+    if (stat((char*)inst->pszFollow_glob, &sb) == 0 && !S_ISREG(sb.st_mode)) {
+        LogError(0, RS_RET_CONFIG_ERROR, "Configured report is not a glob or a regular file.");
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
 
-	for (s=(char*)inst->pszFollow_glob, d = dirn; *s; s++, d++)
-		*d = (*s != '*' && *s != '?') ? *s : '~';
-	*d = '\0';
+    for (s=(char*)inst->pszFollow_glob, d = dirn; *s; s++, d++)
+        *d = (*s != '*' && *s != '?') ? *s : '~';
+    *d = '\0';
 
-	if (regexec(&inst->ff_preg, dirn, 1, matches, 0)) {
-		LogError(0, RS_RET_CONFIG_ERROR,
-			"Regex does not match globed filenames: Instance ignored to avoid loops.");
-		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-	}
-	if (inst->action == action_rename) {
-		strcpy(dirn + matches[0].rm_so, inst->ff_rename);
-		if (fnmatch((char*)inst->pszFollow_glob, dirn, FNM_PATHNAME) == 0)
-		{
-			LogError(0, RS_RET_INVALID_PARAMS,
-				"Normal renaming leaves files in glob scope: Instance ignored to avoid loops.");
-			ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-		}
-	}
-	strcpy(dirn + matches[0].rm_so, inst->ff_reject);
-	if (fnmatch((char*)inst->pszFollow_glob, dirn, FNM_PATHNAME) == 0)
-	{
-		LogError(0, RS_RET_INVALID_PARAMS,
-			"Reject renaming leaves files in glob scope: Instance ignored to avoid loops.");
-		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-	}
-	dbgprintf("instance checked");
+    if (regexec(&inst->ff_preg, dirn, 1, matches, 0)) {
+        LogError(0, RS_RET_CONFIG_ERROR,
+            "Regex does not match globed filenames: Instance ignored to avoid loops.");
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+    if (inst->action == action_rename) {
+        strcpy(dirn + matches[0].rm_so, inst->ff_rename);
+        if (fnmatch((char*)inst->pszFollow_glob, dirn, FNM_PATHNAME) == 0)
+        {
+            LogError(0, RS_RET_INVALID_PARAMS,
+                "Normal renaming leaves files in glob scope: Instance ignored to avoid loops.");
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+    }
+    strcpy(dirn + matches[0].rm_so, inst->ff_reject);
+    if (fnmatch((char*)inst->pszFollow_glob, dirn, FNM_PATHNAME) == 0)
+    {
+        LogError(0, RS_RET_INVALID_PARAMS,
+            "Reject renaming leaves files in glob scope: Instance ignored to avoid loops.");
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+    dbgprintf("instance checked");
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 static void freeInstance(instanceConf_t *inst) {
-	if (inst ==  NULL)
-		return;
+    if (inst ==  NULL)
+        return;
 
-	if (inst->pszBindRuleset) free(inst->pszBindRuleset);
-	if (inst->pszFollow_glob) free(inst->pszFollow_glob);
-	if (inst->pszDirName) free(inst->pszDirName);
-	if (inst->pszFileBaseName) free(inst->pszFileBaseName);
-	if (inst->pszTag) free(inst->pszTag);
-	if (inst->pszTSk) free(inst->pszTSk);
-	if (inst->pszProgk) free(inst->pszProgk);
+    if (inst->pszBindRuleset) free(inst->pszBindRuleset);
+    if (inst->pszFollow_glob) free(inst->pszFollow_glob);
+    if (inst->pszDirName) free(inst->pszDirName);
+    if (inst->pszFileBaseName) free(inst->pszFileBaseName);
+    if (inst->pszTag) free(inst->pszTag);
+    if (inst->pszTSk) free(inst->pszTSk);
+    if (inst->pszProgk) free(inst->pszProgk);
 
-	if (inst->len_reject) regfree(&inst->ff_preg);
+    if (inst->len_reject) regfree(&inst->ff_preg);
 
-	if (inst->ff_regex) free(inst->ff_regex);
-	if (inst->ff_rename) free(inst->ff_rename);
-	if (inst->ff_reject) free(inst->ff_reject);
+    if (inst->ff_regex) free(inst->ff_regex);
+    if (inst->ff_rename) free(inst->ff_rename);
+    if (inst->ff_reject) free(inst->ff_reject);
 
-	if (inst->ratelimiter) ratelimitDestruct(inst->ratelimiter);
-	free(inst);
+    if (inst->ratelimiter) ratelimitDestruct(inst->ratelimiter);
+    free(inst);
 }
 
 BEGINnewInpInst
-	struct cnfparamvals *pvals;
-	instanceConf_t *inst = NULL;
-	int i;
-	char *temp;
+    struct cnfparamvals *pvals;
+    instanceConf_t *inst = NULL;
+    int i;
+    char *temp;
 CODESTARTnewInpInst
-	DBGPRINTF("newInpInst (imbatchreport)\n");
+    DBGPRINTF("newInpInst (imbatchreport)\n");
 
-	pvals = nvlstGetParams(lst, &inppblk, NULL);
-	if(pvals == NULL) {
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-	}
+    pvals = nvlstGetParams(lst, &inppblk, NULL);
+    if(pvals == NULL) {
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
 
-	DBGPRINTF("input param blk in imbatchreport:\n");
-	if(Debug)	cnfparamsPrint(&inppblk, pvals);
+    DBGPRINTF("input param blk in imbatchreport:\n");
+    if(Debug)   cnfparamsPrint(&inppblk, pvals);
 
-	CHKiRet(createInstance(&inst));
+    CHKiRet(createInstance(&inst));
 
-	for(i = 0 ; i < inppblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
-			continue;
-		if(!strcmp(inppblk.descr[i].name, "reports")) {
-			inst->pszFollow_glob = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(inppblk.descr[i].name, "tag")) {
-			inst->pszTag = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-			inst->lenTag = ustrlen(inst->pszTag);
-		} else if(!strcmp(inppblk.descr[i].name, "programkey")) {
-			inst->pszProgk = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-			inst->lenProgk = ustrlen(inst->pszProgk) + 2;
-		} else if(!strcmp(inppblk.descr[i].name, "timestampkey")) {
-			inst->pszTSk = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-			inst->lenTSk = ustrlen(inst->pszTSk) + 1;
-		} else if(!strcmp(inppblk.descr[i].name, "deduplicatespace")) {
-			inst->bDedupSpace = pvals[i].val.d.n;
-		} else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
-			inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(inppblk.descr[i].name, "severity")) {
-			inst->iSeverity = pvals[i].val.d.n;
-		} else if(!strcmp(inppblk.descr[i].name, "facility")) {
-			inst->iFacility = pvals[i].val.d.n;
-		} else if(!strcmp(inppblk.descr[i].name, "rename")) {
-			if (inst->action == action_delete)
-			{
-				LogError(0, RS_RET_PARAM_ERROR, "'rename' and 'delete' are exclusive !");
-				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
-			}
+    for(i = 0 ; i < inppblk.nParams ; ++i) {
+        if(!pvals[i].bUsed)
+            continue;
+        if(!strcmp(inppblk.descr[i].name, "reports")) {
+            inst->pszFollow_glob = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if(!strcmp(inppblk.descr[i].name, "tag")) {
+            inst->pszTag = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+            inst->lenTag = ustrlen(inst->pszTag);
+        } else if(!strcmp(inppblk.descr[i].name, "programkey")) {
+            inst->pszProgk = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+            inst->lenProgk = ustrlen(inst->pszProgk) + 2;
+        } else if(!strcmp(inppblk.descr[i].name, "timestampkey")) {
+            inst->pszTSk = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+            inst->lenTSk = ustrlen(inst->pszTSk) + 1;
+        } else if(!strcmp(inppblk.descr[i].name, "deduplicatespace")) {
+            inst->bDedupSpace = pvals[i].val.d.n;
+        } else if(!strcmp(inppblk.descr[i].name, "ruleset")) {
+            inst->pszBindRuleset = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if(!strcmp(inppblk.descr[i].name, "severity")) {
+            inst->iSeverity = pvals[i].val.d.n;
+        } else if(!strcmp(inppblk.descr[i].name, "facility")) {
+            inst->iFacility = pvals[i].val.d.n;
+        } else if(!strcmp(inppblk.descr[i].name, "rename")) {
+            if (inst->action == action_delete)
+            {
+                LogError(0, RS_RET_PARAM_ERROR, "'rename' and 'delete' are exclusive !");
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+            }
 
-			inst->ff_regex = es_str2cstr(pvals[i].val.d.estr, NULL);
+            inst->ff_regex = es_str2cstr(pvals[i].val.d.estr, NULL);
 
-			while ((temp = strchr(inst->ff_regex, '\t')) != NULL)
-				*temp = ' ';
+            while ((temp = strchr(inst->ff_regex, '\t')) != NULL)
+                *temp = ' ';
 
-			inst->len_reject = 0;
+            inst->len_reject = 0;
 
-			if ((inst->ff_rename = strchr(inst->ff_regex, ' ')) != NULL ) {
-				*inst->ff_rename++ = '\0';
+            if ((inst->ff_rename = strchr(inst->ff_regex, ' ')) != NULL ) {
+                *inst->ff_rename++ = '\0';
 
-				while (*inst->ff_rename == ' ') inst->ff_rename++;
-				if ((inst->ff_reject = strchr(inst->ff_rename, ' ')) != NULL ) {
+                while (*inst->ff_rename == ' ') inst->ff_rename++;
+                if ((inst->ff_reject = strchr(inst->ff_rename, ' ')) != NULL ) {
 
-					*inst->ff_reject++ = '\0';
-					while (*inst->ff_reject == ' ') inst->ff_reject++;
+                    *inst->ff_reject++ = '\0';
+                    while (*inst->ff_reject == ' ') inst->ff_reject++;
 
-					temp = strchr(inst->ff_reject, ' ');
-					if (temp) *temp = '\0';
+                    temp = strchr(inst->ff_reject, ' ');
+                    if (temp) *temp = '\0';
 
-					if (strcmp(inst->ff_rename, "-")){
-						inst->ff_rename = strdup(inst->ff_rename);
-						inst->len_rename = strlen(inst->ff_rename);
-					}else{
-						inst->ff_rename = strdup("");
-						inst->len_rename = 0;
-					}
+                    if (strcmp(inst->ff_rename, "-")){
+                        inst->ff_rename = strdup(inst->ff_rename);
+                        inst->len_rename = strlen(inst->ff_rename);
+                    }else{
+                        inst->ff_rename = strdup("");
+                        inst->len_rename = 0;
+                    }
 
-					inst->ff_reject = strdup(inst->ff_reject);
-					inst->len_reject = strlen(inst->ff_reject);
+                    inst->ff_reject = strdup(inst->ff_reject);
+                    inst->len_reject = strlen(inst->ff_reject);
 
-					if (inst->len_reject && regcomp(&inst->ff_preg,
-							(char*)inst->ff_regex,
-							REG_EXTENDED))
-					{
-						inst->len_reject = 0;
-						LogError(0, RS_RET_SYNTAX_ERROR, "The first part of 'rename' "
-							"parameter does not contain a valid regex");
-						ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
-					}
-				}
-			}
-			if (inst->len_reject == 0)
-			{
-				LogError(0, RS_RET_PARAM_ERROR, "'rename' must specify THREE "
-					"parameters separated by spaces or tabs ! The second "
-					"parameter can be a null string to get this use a '-'.");
-				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
-			}
+                    if (inst->len_reject && regcomp(&inst->ff_preg,
+                            (char*)inst->ff_regex,
+                            REG_EXTENDED))
+                    {
+                        inst->len_reject = 0;
+                        LogError(0, RS_RET_SYNTAX_ERROR, "The first part of 'rename' "
+                            "parameter does not contain a valid regex");
+                        ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
+                    }
+                }
+            }
+            if (inst->len_reject == 0)
+            {
+                LogError(0, RS_RET_PARAM_ERROR, "'rename' must specify THREE "
+                    "parameters separated by spaces or tabs ! The second "
+                    "parameter can be a null string to get this use a '-'.");
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+            }
 
-			inst->action = action_rename;
+            inst->action = action_rename;
 
-		} else if(!strcmp(inppblk.descr[i].name, "delete")) {
-			if (inst->action == action_rename)
-			{
-				LogError(0, RS_RET_PARAM_ERROR, "'rename' and 'delete' are exclusive !");
-				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
-			}
+        } else if(!strcmp(inppblk.descr[i].name, "delete")) {
+            if (inst->action == action_rename)
+            {
+                LogError(0, RS_RET_PARAM_ERROR, "'rename' and 'delete' are exclusive !");
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+            }
 
-			inst->ff_regex = es_str2cstr(pvals[i].val.d.estr, NULL);
+            inst->ff_regex = es_str2cstr(pvals[i].val.d.estr, NULL);
 
-			while ((temp = strchr(inst->ff_regex, '\t')) != NULL)
-				*temp = ' ';
+            while ((temp = strchr(inst->ff_regex, '\t')) != NULL)
+                *temp = ' ';
 
-			inst->len_reject = 0;
+            inst->len_reject = 0;
 
-			if ((inst->ff_reject = strchr(inst->ff_regex, ' ')) != NULL ) {
-				*inst->ff_reject++ = '\0';
+            if ((inst->ff_reject = strchr(inst->ff_regex, ' ')) != NULL ) {
+                *inst->ff_reject++ = '\0';
 
-				while (*inst->ff_reject == ' ') inst->ff_reject++;
+                while (*inst->ff_reject == ' ') inst->ff_reject++;
 
-				temp = strchr(inst->ff_reject, ' ');
-				if (temp) *temp = '\0';
+                temp = strchr(inst->ff_reject, ' ');
+                if (temp) *temp = '\0';
 
-				inst->ff_reject = strdup(inst->ff_reject);
-				inst->len_reject = strlen(inst->ff_reject);
+                inst->ff_reject = strdup(inst->ff_reject);
+                inst->len_reject = strlen(inst->ff_reject);
 
-				if (regcomp(&inst->ff_preg, (char*)inst->ff_regex, REG_EXTENDED))
-				{
-					inst->len_reject = 0;
-					LogError(0, RS_RET_SYNTAX_ERROR,
-						"The first part of 'delete' parameter does not contain a valid regex");
-					ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
-				}
+                if (regcomp(&inst->ff_preg, (char*)inst->ff_regex, REG_EXTENDED))
+                {
+                    inst->len_reject = 0;
+                    LogError(0, RS_RET_SYNTAX_ERROR,
+                        "The first part of 'delete' parameter does not contain a valid regex");
+                    ABORT_FINALIZE(RS_RET_SYNTAX_ERROR);
+                }
 
-			}
+            }
 
-			if (inst->len_reject == 0)
-			{
-				LogError(0, RS_RET_PARAM_ERROR,
-					"'delete' must specify TWO parameters separated by spaces or tabs !");
-				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
-			}
-			inst->action = action_delete;
+            if (inst->len_reject == 0)
+            {
+                LogError(0, RS_RET_PARAM_ERROR,
+                    "'delete' must specify TWO parameters separated by spaces or tabs !");
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+            }
+            inst->action = action_delete;
 
-		} else {
-			dbgprintf("Configuration param '%s' non-handled\n", inppblk.descr[i].name);
-		}
-	}
+        } else {
+            dbgprintf("Configuration param '%s' non-handled\n", inppblk.descr[i].name);
+        }
+    }
 
-	if(inst->action == action_nothing) {
-		LogError(0, RS_RET_PARAM_NOT_PERMITTED, "either 'rename' or 'delete' must be set");
-		ABORT_FINALIZE(RS_RET_PARAM_NOT_PERMITTED);
-	}
+    if(inst->action == action_nothing) {
+        LogError(0, RS_RET_PARAM_NOT_PERMITTED, "either 'rename' or 'delete' must be set");
+        ABORT_FINALIZE(RS_RET_PARAM_NOT_PERMITTED);
+    }
 
-	inst->filename_oversize = (inst->len_rename > inst->len_reject) ? inst->len_rename : inst->len_reject;
+    inst->filename_oversize = (inst->len_rename > inst->len_reject) ? inst->len_rename : inst->len_reject;
 
-	CHKiRet(ratelimitNew(&inst->ratelimiter, "imbatchreport", (char*)inst->pszFollow_glob));
+    CHKiRet(ratelimitNew(&inst->ratelimiter, "imbatchreport", (char*)inst->pszFollow_glob));
 
-	inst->goon = 1;
+    inst->goon = 1;
 
-	CHKiRet(checkInstance(inst));
+    CHKiRet(checkInstance(inst));
 
 finalize_it:
 CODE_STD_FINALIZERnewInpInst
 
-	if (iRet == RS_RET_OK)
-		addInstance(inst);
-	else
-		freeInstance(inst);
+    if (iRet == RS_RET_OK)
+        addInstance(inst);
+    else
+        freeInstance(inst);
 
-	cnfparamvalsDestruct(pvals, &inppblk);
+    cnfparamvalsDestruct(pvals, &inppblk);
 ENDnewInpInst
 
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
-	pModConf->pConf = pConf;
-	fixedModConf.iPollInterval = DFLT_PollInterval;
+    pModConf->pConf = pConf;
+    fixedModConf.iPollInterval = DFLT_PollInterval;
 
-	fixedModConf.msg_buffer = NULL;
-	fixedModConf.root = NULL;
+    fixedModConf.msg_buffer = NULL;
+    fixedModConf.root = NULL;
 ENDbeginCnfLoad
 
 
 BEGINsetModCnf
-	struct cnfparamvals *pvals = NULL;
-	int i;
+    struct cnfparamvals *pvals = NULL;
+    int i;
 CODESTARTsetModCnf
-	pvals = nvlstGetParams(lst, &modpblk, NULL);
-	if(pvals == NULL) {
-		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module config parameters [module(...)]");
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-	}
+    pvals = nvlstGetParams(lst, &modpblk, NULL);
+    if(pvals == NULL) {
+        LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module config parameters [module(...)]");
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
 
-	if(Debug) {
-		dbgprintf("module (global) param blk for imbatchreport:\n");
-		cnfparamsPrint(&modpblk, pvals);
-	}
+    if(Debug) {
+        dbgprintf("module (global) param blk for imbatchreport:\n");
+        cnfparamsPrint(&modpblk, pvals);
+    }
 
-	for(i = 0 ; i < modpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
-			continue;
-		if(!strcmp(modpblk.descr[i].name, "pollinginterval")) {
-			fixedModConf.iPollInterval = (int) pvals[i].val.d.n;
-		} else {
-			dbgprintf("program error, non-handled "
-				"param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
-		}
-	}
+    for(i = 0 ; i < modpblk.nParams ; ++i) {
+        if(!pvals[i].bUsed)
+            continue;
+        if(!strcmp(modpblk.descr[i].name, "pollinginterval")) {
+            fixedModConf.iPollInterval = (int) pvals[i].val.d.n;
+        } else {
+            dbgprintf("program error, non-handled "
+                "param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
+        }
+    }
 finalize_it:
-	if(pvals != NULL)
-		cnfparamvalsDestruct(pvals, &modpblk);
+    if(pvals != NULL)
+        cnfparamvalsDestruct(pvals, &modpblk);
 ENDsetModCnf
 
 
 BEGINendCnfLoad
 CODESTARTendCnfLoad
-	dbgprintf("polling interval is %d\n",
-			fixedModConf.iPollInterval);
+    dbgprintf("polling interval is %d\n",
+            fixedModConf.iPollInterval);
 ENDendCnfLoad
 
 
 BEGINcheckCnf
-	instanceConf_t *inst;
+    instanceConf_t *inst;
 CODESTARTcheckCnf
-	for(inst = fixedModConf.root ; inst != NULL ; inst = inst->next) {
-		std_checkRuleset(pModConf, inst);
-	}
-	if(fixedModConf.root == NULL) {
-		LogError(0, RS_RET_NO_LISTNERS,
-			"no files configured to be monitored - no input will be gathered");
-		iRet = RS_RET_NO_LISTNERS;
-	}
+    for(inst = fixedModConf.root ; inst != NULL ; inst = inst->next) {
+        std_checkRuleset(pModConf, inst);
+    }
+    if(fixedModConf.root == NULL) {
+        LogError(0, RS_RET_NO_LISTNERS,
+            "no files configured to be monitored - no input will be gathered");
+        iRet = RS_RET_NO_LISTNERS;
+    }
 ENDcheckCnf
 
 BEGINactivateCnf
@@ -914,50 +914,50 @@ CODESTARTactivateCnf
 ENDactivateCnf
 
 BEGINfreeCnf
-	instanceConf_t *inst, *del;
+    instanceConf_t *inst, *del;
 CODESTARTfreeCnf
-	for(inst = fixedModConf.root ; inst != NULL ; ) {
-		del = inst;
-		inst = inst->next;
-		freeInstance(del);
-	}
+    for(inst = fixedModConf.root ; inst != NULL ; ) {
+        del = inst;
+        inst = inst->next;
+        freeInstance(del);
+    }
 ENDfreeCnf
 
 BEGINwillRun
 CODESTARTwillRun
-	CHKiRet(prop.Construct(&pInputName));
-	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imbatchreport"),
-		sizeof("imbatchreport") - 1));
-	CHKiRet(prop.ConstructFinalize(pInputName));
+    CHKiRet(prop.Construct(&pInputName));
+    CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imbatchreport"),
+        sizeof("imbatchreport") - 1));
+    CHKiRet(prop.ConstructFinalize(pInputName));
 
-	fixedModConf.max_msg_size = glbl.GetMaxLine(runConf);
-	DBGPRINTF("Max message len %zu\n", fixedModConf.max_msg_size);
-	CHKmalloc(fixedModConf.msg_buffer = (char*)malloc(fixedModConf.max_msg_size + 1));
+    fixedModConf.max_msg_size = glbl.GetMaxLine(runConf);
+    DBGPRINTF("Max message len %zu\n", fixedModConf.max_msg_size);
+    CHKmalloc(fixedModConf.msg_buffer = (char*)malloc(fixedModConf.max_msg_size + 1));
 finalize_it:
 ENDwillRun
 
 BEGINrunInput
 CODESTARTrunInput
-	fixedModConf.hostname = glbl.GetLocalHostName();
-	fixedModConf.lhostname = ustrlen(fixedModConf.hostname);
+    fixedModConf.hostname = glbl.GetLocalHostName();
+    fixedModConf.lhostname = ustrlen(fixedModConf.hostname);
 
-	while(glbl.GetGlobalInputTermState() == 0) {
-		instanceConf_t *pInst;
-		for(pInst = fixedModConf.root ; pInst != NULL ; pInst = pInst->next) {
-			if (pInst->goon) {
-				if(glbl.GetGlobalInputTermState() == 1)
-					break;
-				pollFile(pInst);
-				/* We got a major problem so */
-				pInst->goon = !pInst->must_stop;
-			}
-		}
+    while(glbl.GetGlobalInputTermState() == 0) {
+        instanceConf_t *pInst;
+        for(pInst = fixedModConf.root ; pInst != NULL ; pInst = pInst->next) {
+            if (pInst->goon) {
+                if(glbl.GetGlobalInputTermState() == 1)
+                    break;
+                pollFile(pInst);
+                /* We got a major problem so */
+                pInst->goon = !pInst->must_stop;
+            }
+        }
 
-		if(glbl.GetGlobalInputTermState() == 0)
-		srSleep(fixedModConf.iPollInterval, 10);
-	}
-	DBGPRINTF("terminating upon request of rsyslog core\n");
-	RETiRet;
+        if(glbl.GetGlobalInputTermState() == 0)
+        srSleep(fixedModConf.iPollInterval, 10);
+    }
+    DBGPRINTF("terminating upon request of rsyslog core\n");
+    RETiRet;
 ENDrunInput
 
 /* This function is called by the framework after runInput() has been terminated. It
@@ -965,17 +965,17 @@ ENDrunInput
  */
 BEGINafterRun
 CODESTARTafterRun
-	if (fixedModConf.msg_buffer)
-		free(fixedModConf.msg_buffer);
-	if(pInputName != NULL)
-		prop.Destruct(&pInputName);
+    if (fixedModConf.msg_buffer)
+        free(fixedModConf.msg_buffer);
+    if(pInputName != NULL)
+        prop.Destruct(&pInputName);
 ENDafterRun
 
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURENonCancelInputTermination)
-		iRet = RS_RET_OK;
+    if(eFeat == sFEATURENonCancelInputTermination)
+        iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
@@ -986,10 +986,10 @@ ENDisCompatibleWithFeature
 BEGINmodExit
 CODESTARTmodExit
 
-	objRelease(datetime, CORE_COMPONENT);
-	objRelease(glbl, CORE_COMPONENT);
-	objRelease(prop, CORE_COMPONENT);
-	objRelease(ruleset, CORE_COMPONENT);
+    objRelease(datetime, CORE_COMPONENT);
+    objRelease(glbl, CORE_COMPONENT);
+    objRelease(prop, CORE_COMPONENT);
+    objRelease(ruleset, CORE_COMPONENT);
 
 ENDmodExit
 
@@ -1014,20 +1014,20 @@ ENDqueryEtryPt
  */
 BEGINmodInit()
 CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION;
+    *ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(datetime, CORE_COMPONENT));
-	CHKiRet(objUse(ruleset, CORE_COMPONENT));
-	CHKiRet(objUse(prop, CORE_COMPONENT));
+    CHKiRet(objUse(glbl, CORE_COMPONENT));
+    CHKiRet(objUse(datetime, CORE_COMPONENT));
+    CHKiRet(objUse(ruleset, CORE_COMPONENT));
+    CHKiRet(objUse(prop, CORE_COMPONENT));
 ENDmodInit
 
 
 static inline void
 std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf,
-			instanceConf_t *inst)
+            instanceConf_t *inst)
 {
-	LogError(0, NO_ERRCODE, "ruleset '%s' for %s not found - "
-			"using default ruleset instead", inst->pszBindRuleset,
-			inst->pszFollow_glob);
+    LogError(0, NO_ERRCODE, "ruleset '%s' for %s not found - "
+            "using default ruleset instead", inst->pszBindRuleset,
+            inst->pszFollow_glob);
 }

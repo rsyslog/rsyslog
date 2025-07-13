@@ -5,12 +5,12 @@
  * Max input line size is 10K.
  *
  * command line options:
- * -i	file to be used for input (else stdin)
- * -o	file to be used for output (else stdout)
- * -c	number of times the file is to be copied
- * -n	add line numbers (default: off)
+ * -i   file to be used for input (else stdin)
+ * -o   file to be used for output (else stdout)
+ * -c   number of times the file is to be copied
+ * -n   add line numbers (default: off)
  * -w   wait nbr of microsecs between batches
- * -W	number of file lines to generate in a batch
+ * -W   number of file lines to generate in a batch
  *      This is useful only if -w is specified as well,
  *      default is 1000.
  *
@@ -40,8 +40,8 @@
 
 /* input file is stored in a single-linked list */
 struct line {
-	struct line *next;
-	char *ln;
+    struct line *next;
+    char *ln;
 } *root, *tail;
 
 static FILE *fpIn;
@@ -57,102 +57,102 @@ static int batchsize = 1000;
 static void
 readFile()
 {
-	char *r;
-	char lnBuf[10240];
-	struct line *node;
+    char *r;
+    char lnBuf[10240];
+    struct line *node;
 
-	root = tail = NULL;
-	r = fgets(lnBuf, sizeof(lnBuf), fpIn);
-	while(r != NULL) {
-		node = malloc(sizeof(struct line));
-		if(node == NULL) {
-			perror("malloc node");
-			exit(1);
-		}
-		node->next = NULL;
-		node->ln = strdup(lnBuf);
-		if(node->ln == NULL) {
-			perror("malloc node");
-			exit(1);
-		}
-		if(tail == NULL) {
-			tail = root = node;
-		} else {
-			tail->next = node;
-			tail = node;
-		}
-		r = fgets(lnBuf, sizeof(lnBuf), fpIn);
-	}
-	if(!feof(fpIn)) {
-		perror("fgets");
-		fprintf(stderr, "end of read loop, but not end of file!");
-		exit(1);
-	}
+    root = tail = NULL;
+    r = fgets(lnBuf, sizeof(lnBuf), fpIn);
+    while(r != NULL) {
+        node = malloc(sizeof(struct line));
+        if(node == NULL) {
+            perror("malloc node");
+            exit(1);
+        }
+        node->next = NULL;
+        node->ln = strdup(lnBuf);
+        if(node->ln == NULL) {
+            perror("malloc node");
+            exit(1);
+        }
+        if(tail == NULL) {
+            tail = root = node;
+        } else {
+            tail->next = node;
+            tail = node;
+        }
+        r = fgets(lnBuf, sizeof(lnBuf), fpIn);
+    }
+    if(!feof(fpIn)) {
+        perror("fgets");
+        fprintf(stderr, "end of read loop, but not end of file!");
+        exit(1);
+    }
 }
 
 
 static void
 genCopies()
 {
-	long long i;
-	long long unsigned lnnbr;
-	struct line *node;
+    long long i;
+    long long unsigned lnnbr;
+    struct line *node;
 
-	lnnbr = 1;
-	for(i = 0 ; i < nCopies ; ++i) {
-		if(i % 10000 == 0)
-			fprintf(stderr, "copyrun %lld\n", i);
-		if(waitusecs && (i % batchsize == 0)) {
-			usleep(waitusecs);
-		}
-		for(node = root ; node != NULL ; node = node->next) {
-			if(linenbrs)
-				fprintf(fpOut, "%12.12llu:%s", lnnbr, node->ln);
-			else
-				fprintf(fpOut, "%s", node->ln);
-			++lnnbr;
-		}
-	}
+    lnnbr = 1;
+    for(i = 0 ; i < nCopies ; ++i) {
+        if(i % 10000 == 0)
+            fprintf(stderr, "copyrun %lld\n", i);
+        if(waitusecs && (i % batchsize == 0)) {
+            usleep(waitusecs);
+        }
+        for(node = root ; node != NULL ; node = node->next) {
+            if(linenbrs)
+                fprintf(fpOut, "%12.12llu:%s", lnnbr, node->ln);
+            else
+                fprintf(fpOut, "%s", node->ln);
+            ++lnnbr;
+        }
+    }
 }
 
 void main(int argc, char *argv[])
 {
-	int opt;
-	fpIn = stdin;
-	fpOut = stdout;
+    int opt;
+    fpIn = stdin;
+    fpOut = stdout;
 
-	while((opt = getopt(argc, argv, "i:o:c:nw:W:")) != -1) {
-		switch (opt) {
-		case 'i': /* input file */
-			if((fpIn = fopen(optarg, "r")) == NULL) {
-				perror(optarg);
-				exit(1);
-			}
-			break;
-		case 'o': /* output file */
-			if((fpOut = fopen(optarg, "w")) == NULL) {
-				perror(optarg);
-				exit(1);
-			}
-			break;
-		case 'c':
-			nCopies = atoll(optarg);
-			break;
-		case 'n':
-			linenbrs = 1;
-			break;
-		case 'w':
-			waitusecs = atoi(optarg);
-			break;
-		case 'W':
-			batchsize = atoi(optarg);
-			break;
-		default:	printf("invalid option '%c' or value missing - terminating...\n", opt);
-				exit (1);
-				break;
-		}
-	}
+    while((opt = getopt(argc, argv, "i:o:c:nw:W:")) != -1) {
+        switch (opt) {
+        case 'i': /* input file */
+            if((fpIn = fopen(optarg, "r")) == NULL) {
+                perror(optarg);
+                exit(1);
+            }
+            break;
+        case 'o': /* output file */
+            if((fpOut = fopen(optarg, "w")) == NULL) {
+                perror(optarg);
+                exit(1);
+            }
+            break;
+        case 'c':
+            nCopies = atoll(optarg);
+            break;
+        case 'n':
+            linenbrs = 1;
+            break;
+        case 'w':
+            waitusecs = atoi(optarg);
+            break;
+        case 'W':
+            batchsize = atoi(optarg);
+            break;
+        default:    printf("invalid option '%c' or value missing - terminating...\n", opt);
+                exit (1);
+                break;
+        }
+    }
 
-	readFile();
-	genCopies();
+    readFile();
+    genCopies();
 }

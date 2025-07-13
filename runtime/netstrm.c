@@ -69,8 +69,8 @@ ENDobjConstruct(netstrm)
 /* destructor for the netstrm object */
 BEGINobjDestruct(netstrm) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(netstrm)
-	if(pThis->pDrvrData != NULL)
-		iRet = pThis->Drvr.Destruct(&pThis->pDrvrData);
+    if(pThis->pDrvrData != NULL)
+        iRet = pThis->Drvr.Destruct(&pThis->pDrvrData);
 ENDobjDestruct(netstrm)
 
 
@@ -78,11 +78,11 @@ ENDobjDestruct(netstrm)
 static rsRetVal
 netstrmConstructFinalize(netstrm_t *pThis)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.Construct(&pThis->pDrvrData);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.Construct(&pThis->pDrvrData);
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* abort a connection. This is much like Destruct(), but tries
@@ -91,17 +91,17 @@ finalize_it:
 static rsRetVal
 AbortDestruct(netstrm_t **ppThis)
 {
-	DEFiRet;
-	NULL_CHECK(ppThis);
-	NULL_CHECK(*ppThis);
+    DEFiRet;
+    NULL_CHECK(ppThis);
+    NULL_CHECK(*ppThis);
 
-	/* we do NOT exit on error, because that would make things worse */
-	(*ppThis)->Drvr.Abort((*ppThis)->pDrvrData);
-	iRet = netstrmDestruct(ppThis);
+    /* we do NOT exit on error, because that would make things worse */
+    (*ppThis)->Drvr.Abort((*ppThis)->pDrvrData);
+    iRet = netstrmDestruct(ppThis);
 
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -115,27 +115,27 @@ finalize_it:
 static rsRetVal
 AcceptConnReq(netstrm_t *pThis, netstrm_t **ppNew, char *const connInfo)
 {
-	nsd_t *pNewNsd = NULL;
-	DEFiRet;
+    nsd_t *pNewNsd = NULL;
+    DEFiRet;
 
-	NULL_CHECK(pThis);
-	assert(ppNew != NULL);
+    NULL_CHECK(pThis);
+    assert(ppNew != NULL);
 
-	/* accept the new connection */
-	CHKiRet(pThis->Drvr.AcceptConnReq(pThis->pDrvrData, &pNewNsd, connInfo));
-	/* construct our object so that we can use it... */
-	CHKiRet(objUse(netstrms, DONT_LOAD_LIB)); /* use netstrms obj if not already done so */
-	CHKiRet(netstrms.CreateStrm(pThis->pNS, ppNew));
-	(*ppNew)->pDrvrData = pNewNsd;
+    /* accept the new connection */
+    CHKiRet(pThis->Drvr.AcceptConnReq(pThis->pDrvrData, &pNewNsd, connInfo));
+    /* construct our object so that we can use it... */
+    CHKiRet(objUse(netstrms, DONT_LOAD_LIB)); /* use netstrms obj if not already done so */
+    CHKiRet(netstrms.CreateStrm(pThis->pNS, ppNew));
+    (*ppNew)->pDrvrData = pNewNsd;
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		/* the close may be redundant, but that doesn't hurt... */
-		if(pNewNsd != NULL)
-			pThis->Drvr.Destruct(&pNewNsd);
-	}
+    if(iRet != RS_RET_OK) {
+        /* the close may be redundant, but that doesn't hurt... */
+        if(pNewNsd != NULL)
+            pThis->Drvr.Destruct(&pNewNsd);
+    }
 
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -147,18 +147,18 @@ finalize_it:
  */
 static rsRetVal ATTR_NONNULL(1,3,5)
 LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
-	 const int iSessMax, const tcpLstnParams_t *const cnf_params)
+     const int iSessMax, const tcpLstnParams_t *const cnf_params)
 {
-	DEFiRet;
+    DEFiRet;
 
-	ISOBJ_TYPE_assert(pNS, netstrms);
-	assert(fAddLstn != NULL);
-	assert(cnf_params->pszPort != NULL);
+    ISOBJ_TYPE_assert(pNS, netstrms);
+    assert(fAddLstn != NULL);
+    assert(cnf_params->pszPort != NULL);
 
-	CHKiRet(pNS->Drvr.LstnInit(pNS, pUsr, fAddLstn, iSessMax, cnf_params));
+    CHKiRet(pNS->Drvr.LstnInit(pNS, pUsr, fAddLstn, iSessMax, cnf_params));
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -174,12 +174,12 @@ finalize_it:
 static rsRetVal
 Rcv(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf, int *const oserr, unsigned *nextIODirection)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.Rcv(pThis->pDrvrData, pBuf, pLenBuf, oserr, nextIODirection);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.Rcv(pThis->pDrvrData, pBuf, pLenBuf, oserr, nextIODirection);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* here follows a number of methods that shuffle authentication settings down
@@ -193,12 +193,12 @@ finalize_it:
 static rsRetVal
 SetDrvrMode(netstrm_t *pThis, int iMode)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.SetMode(pThis->pDrvrData, iMode);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.SetMode(pThis->pDrvrData, iMode);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -207,12 +207,12 @@ finalize_it:
 static rsRetVal
 SetDrvrAuthMode(netstrm_t *pThis, uchar *mode)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.SetAuthMode(pThis->pDrvrData, mode);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.SetAuthMode(pThis->pDrvrData, mode);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -221,104 +221,104 @@ finalize_it:
 static rsRetVal
 SetDrvrPermitExpiredCerts(netstrm_t *pThis, uchar *mode)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.SetPermitExpiredCerts(pThis->pDrvrData, mode);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.SetPermitExpiredCerts(pThis->pDrvrData, mode);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* set the driver's permitted peers -- rgerhards, 2008-05-19 */
 static rsRetVal
 SetDrvrPermPeers(netstrm_t *pThis, permittedPeers_t *pPermPeers)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.SetPermPeers(pThis->pDrvrData, pPermPeers);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.SetPermPeers(pThis->pDrvrData, pPermPeers);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* Mandate also verification of Extended key usage / purpose field */
 static rsRetVal
 SetDrvrCheckExtendedKeyUsage(netstrm_t *pThis, int ChkExtendedKeyUsage)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.SetCheckExtendedKeyUsage(pThis->pDrvrData, ChkExtendedKeyUsage);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.SetCheckExtendedKeyUsage(pThis->pDrvrData, ChkExtendedKeyUsage);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* Mandate stricter name checking per RFC 6125 - ignoce CN if any SAN present */
 static rsRetVal
 SetDrvrPrioritizeSAN(netstrm_t *pThis, int prioritizeSan)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.SetPrioritizeSAN(pThis->pDrvrData, prioritizeSan);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.SetPrioritizeSAN(pThis->pDrvrData, prioritizeSan);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* tls verify depth */
 static rsRetVal
 SetDrvrTlsVerifyDepth(netstrm_t *pThis, int verifyDepth)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.SetTlsVerifyDepth(pThis->pDrvrData, verifyDepth);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.SetTlsVerifyDepth(pThis->pDrvrData, verifyDepth);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 static rsRetVal
 SetDrvrTlsCAFile(netstrm_t *const pThis, const uchar *const file)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.SetTlsCAFile(pThis->pDrvrData, file);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.SetTlsCAFile(pThis->pDrvrData, file);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 static rsRetVal
 SetDrvrTlsCRLFile(netstrm_t *const pThis, const uchar *const file)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.SetTlsCRLFile(pThis->pDrvrData, file);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.SetTlsCRLFile(pThis->pDrvrData, file);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 static rsRetVal
 SetDrvrTlsKeyFile(netstrm_t *const pThis, const uchar *const file)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.SetTlsKeyFile(pThis->pDrvrData, file);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.SetTlsKeyFile(pThis->pDrvrData, file);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 static rsRetVal
 SetDrvrTlsCertFile(netstrm_t *const pThis, const uchar *const file)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.SetTlsCertFile(pThis->pDrvrData, file);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.SetTlsCertFile(pThis->pDrvrData, file);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* End of methods to shuffle autentication settings to the driver.
@@ -334,12 +334,12 @@ finalize_it:
 static rsRetVal
 Send(netstrm_t *pThis, uchar *pBuf, ssize_t *pLenBuf)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.Send(pThis->pDrvrData, pBuf, pLenBuf);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.Send(pThis->pDrvrData, pBuf, pLenBuf);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* Enable Keep-Alive handling for those drivers that support it.
@@ -348,12 +348,12 @@ finalize_it:
 static rsRetVal
 EnableKeepAlive(netstrm_t *pThis)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.EnableKeepAlive(pThis->pDrvrData);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.EnableKeepAlive(pThis->pDrvrData);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* Keep-Alive options
@@ -361,12 +361,12 @@ finalize_it:
 static rsRetVal
 SetKeepAliveProbes(netstrm_t *pThis, int keepAliveProbes)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.SetKeepAliveProbes(pThis->pDrvrData, keepAliveProbes);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.SetKeepAliveProbes(pThis->pDrvrData, keepAliveProbes);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* Keep-Alive options
@@ -374,12 +374,12 @@ finalize_it:
 static rsRetVal
 SetKeepAliveTime(netstrm_t *pThis, int keepAliveTime)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.SetKeepAliveTime(pThis->pDrvrData, keepAliveTime);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.SetKeepAliveTime(pThis->pDrvrData, keepAliveTime);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* Keep-Alive options
@@ -387,35 +387,35 @@ finalize_it:
 static rsRetVal
 SetKeepAliveIntvl(netstrm_t *pThis, int keepAliveIntvl)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.SetKeepAliveIntvl(pThis->pDrvrData, keepAliveIntvl);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.SetKeepAliveIntvl(pThis->pDrvrData, keepAliveIntvl);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* gnutls priority string */
 static rsRetVal
 SetGnutlsPriorityString(netstrm_t *pThis, uchar *gnutlsPriorityString)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.SetGnutlsPriorityString(pThis->pDrvrData, gnutlsPriorityString);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.SetGnutlsPriorityString(pThis->pDrvrData, gnutlsPriorityString);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* check connection - slim wrapper for NSD driver function */
 static rsRetVal
 CheckConnection(netstrm_t *pThis)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.CheckConnection(pThis->pDrvrData);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.CheckConnection(pThis->pDrvrData);
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -423,12 +423,12 @@ finalize_it:
 static rsRetVal
 GetRemoteHName(netstrm_t *pThis, uchar **ppsz)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.GetRemoteHName(pThis->pDrvrData, ppsz);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.GetRemoteHName(pThis->pDrvrData, ppsz);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -436,12 +436,12 @@ finalize_it:
 static rsRetVal
 GetRemoteIP(netstrm_t *pThis, prop_t **ip)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.GetRemoteIP(pThis->pDrvrData, ip);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.GetRemoteIP(pThis->pDrvrData, ip);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -449,12 +449,12 @@ finalize_it:
 static rsRetVal
 GetRemAddr(netstrm_t *pThis, struct sockaddr_storage **ppAddr)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	iRet = pThis->Drvr.GetRemAddr(pThis->pDrvrData, ppAddr);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.GetRemAddr(pThis->pDrvrData, ppAddr);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -464,14 +464,14 @@ finalize_it:
 static rsRetVal
 Connect(netstrm_t *pThis, int family, uchar *port, uchar *host, char *device)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	assert(port != NULL);
-	assert(host != NULL);
-	iRet = pThis->Drvr.Connect(pThis->pDrvrData, family, port, host, device);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    assert(port != NULL);
+    assert(host != NULL);
+    iRet = pThis->Drvr.Connect(pThis->pDrvrData, family, port, host, device);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -483,13 +483,13 @@ finalize_it:
 static rsRetVal
 GetSock(netstrm_t *pThis, int *pSock)
 {
-	DEFiRet;
-	NULL_CHECK(pThis);
-	NULL_CHECK(pSock);
-	iRet = pThis->Drvr.GetSock(pThis->pDrvrData, pSock);
+    DEFiRet;
+    NULL_CHECK(pThis);
+    NULL_CHECK(pSock);
+    iRet = pThis->Drvr.GetSock(pThis->pDrvrData, pSock);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -497,45 +497,45 @@ finalize_it:
  */
 BEGINobjQueryInterface(netstrm)
 CODESTARTobjQueryInterface(netstrm)
-	if(pIf->ifVersion != netstrmCURR_IF_VERSION) {/* check for current version, increment on each change */
-		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
-	}
+    if(pIf->ifVersion != netstrmCURR_IF_VERSION) {/* check for current version, increment on each change */
+        ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+    }
 
-	/* ok, we have the right interface, so let's fill it
-	 * Please note that we may also do some backwards-compatibility
-	 * work here (if we can support an older interface version - that,
-	 * of course, also affects the "if" above).
-	 */
-	pIf->Construct = netstrmConstruct;
-	pIf->ConstructFinalize = netstrmConstructFinalize;
-	pIf->Destruct = netstrmDestruct;
-	pIf->AbortDestruct = AbortDestruct;
-	pIf->Rcv = Rcv;
-	pIf->Send = Send;
-	pIf->Connect = Connect;
-	pIf->LstnInit = LstnInit;
-	pIf->AcceptConnReq = AcceptConnReq;
-	pIf->GetRemoteHName = GetRemoteHName;
-	pIf->GetRemoteIP = GetRemoteIP;
-	pIf->GetRemAddr = GetRemAddr;
-	pIf->SetDrvrMode = SetDrvrMode;
-	pIf->SetDrvrAuthMode = SetDrvrAuthMode;
-	pIf->SetDrvrPermitExpiredCerts = SetDrvrPermitExpiredCerts;
-	pIf->SetDrvrPermPeers = SetDrvrPermPeers;
-	pIf->CheckConnection = CheckConnection;
-	pIf->GetSock = GetSock;
-	pIf->EnableKeepAlive = EnableKeepAlive;
-	pIf->SetKeepAliveProbes = SetKeepAliveProbes;
-	pIf->SetKeepAliveTime = SetKeepAliveTime;
-	pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
-	pIf->SetGnutlsPriorityString = SetGnutlsPriorityString;
-	pIf->SetDrvrCheckExtendedKeyUsage = SetDrvrCheckExtendedKeyUsage;
-	pIf->SetDrvrPrioritizeSAN = SetDrvrPrioritizeSAN;
-	pIf->SetDrvrTlsVerifyDepth = SetDrvrTlsVerifyDepth;
-	pIf->SetDrvrTlsCAFile = SetDrvrTlsCAFile;
-	pIf->SetDrvrTlsCRLFile = SetDrvrTlsCRLFile;
-	pIf->SetDrvrTlsKeyFile = SetDrvrTlsKeyFile;
-	pIf->SetDrvrTlsCertFile = SetDrvrTlsCertFile;
+    /* ok, we have the right interface, so let's fill it
+     * Please note that we may also do some backwards-compatibility
+     * work here (if we can support an older interface version - that,
+     * of course, also affects the "if" above).
+     */
+    pIf->Construct = netstrmConstruct;
+    pIf->ConstructFinalize = netstrmConstructFinalize;
+    pIf->Destruct = netstrmDestruct;
+    pIf->AbortDestruct = AbortDestruct;
+    pIf->Rcv = Rcv;
+    pIf->Send = Send;
+    pIf->Connect = Connect;
+    pIf->LstnInit = LstnInit;
+    pIf->AcceptConnReq = AcceptConnReq;
+    pIf->GetRemoteHName = GetRemoteHName;
+    pIf->GetRemoteIP = GetRemoteIP;
+    pIf->GetRemAddr = GetRemAddr;
+    pIf->SetDrvrMode = SetDrvrMode;
+    pIf->SetDrvrAuthMode = SetDrvrAuthMode;
+    pIf->SetDrvrPermitExpiredCerts = SetDrvrPermitExpiredCerts;
+    pIf->SetDrvrPermPeers = SetDrvrPermPeers;
+    pIf->CheckConnection = CheckConnection;
+    pIf->GetSock = GetSock;
+    pIf->EnableKeepAlive = EnableKeepAlive;
+    pIf->SetKeepAliveProbes = SetKeepAliveProbes;
+    pIf->SetKeepAliveTime = SetKeepAliveTime;
+    pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
+    pIf->SetGnutlsPriorityString = SetGnutlsPriorityString;
+    pIf->SetDrvrCheckExtendedKeyUsage = SetDrvrCheckExtendedKeyUsage;
+    pIf->SetDrvrPrioritizeSAN = SetDrvrPrioritizeSAN;
+    pIf->SetDrvrTlsVerifyDepth = SetDrvrTlsVerifyDepth;
+    pIf->SetDrvrTlsCAFile = SetDrvrTlsCAFile;
+    pIf->SetDrvrTlsCRLFile = SetDrvrTlsCRLFile;
+    pIf->SetDrvrTlsKeyFile = SetDrvrTlsKeyFile;
+    pIf->SetDrvrTlsCertFile = SetDrvrTlsCertFile;
 finalize_it:
 ENDobjQueryInterface(netstrm)
 
@@ -544,8 +544,8 @@ ENDobjQueryInterface(netstrm)
  */
 BEGINObjClassExit(netstrm, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(netstrm)
-	/* release objects we no longer need */
-	objRelease(netstrms, DONT_LOAD_LIB);
+    /* release objects we no longer need */
+    objRelease(netstrms, DONT_LOAD_LIB);
 ENDObjClassExit(netstrm)
 
 
@@ -554,7 +554,7 @@ ENDObjClassExit(netstrm)
  * rgerhards, 2008-02-19
  */
 BEGINAbstractObjClassInit(netstrm, 1, OBJ_IS_CORE_MODULE) /* class, version */
-	/* request objects we use */
+    /* request objects we use */
 
-	/* set our own handlers */
+    /* set our own handlers */
 ENDObjClassInit(netstrm)

@@ -37,36 +37,36 @@
 
 /* check the return value of a ksi api call and log a message in case of error */
 #define CHECK_KSI_API(code, context, msg) if((res = code) != 0) do { \
-	reportKSIAPIErr(context, NULL, msg, res); \
-	goto cleanup; \
-	} while (0)
+    reportKSIAPIErr(context, NULL, msg, res); \
+    goto cleanup; \
+    } while (0)
 
 
 typedef enum LOGSIG_SyncMode_en {
-	/** The block hashes and ksi signatures in one file */
-	LOGSIG_ASYNCHRONOUS = 0x00,
-	/** The block hashes and ksi signatures split into separate files */
-	LOGSIG_SYNCHRONOUS = 0x01
+    /** The block hashes and ksi signatures in one file */
+    LOGSIG_ASYNCHRONOUS = 0x00,
+    /** The block hashes and ksi signatures split into separate files */
+    LOGSIG_SYNCHRONOUS = 0x01
 } LOGSIG_SyncMode;
 
 enum {
-	/* Signer state assigned before the signer thread is initialized. State remains
-	 * until thread initialization begins. In case of system failure to create new
-	 * thread state remains the same.
-	 */
-	SIGNER_IDLE = 0x01,
+    /* Signer state assigned before the signer thread is initialized. State remains
+     * until thread initialization begins. In case of system failure to create new
+     * thread state remains the same.
+     */
+    SIGNER_IDLE = 0x01,
 
-	/* Signer state assigned while signer thread initialization is in progress.
-	 */
-	SIGNER_INIT = 0x02,
+    /* Signer state assigned while signer thread initialization is in progress.
+     */
+    SIGNER_INIT = 0x02,
 
-	/* Signer state assigned when signer thread is initialized and ready to work.
-	 */
-	SIGNER_STARTED = 0x04,
+    /* Signer state assigned when signer thread is initialized and ready to work.
+     */
+    SIGNER_STARTED = 0x04,
 
-	/* Thread state assigned when signer thread is being closed (signer thread returns).
-	 */
-	SIGNER_STOPPED = 0x08
+    /* Thread state assigned when signer thread is being closed (signer thread returns).
+     */
+    SIGNER_STOPPED = 0x08
 };
 
 /* Max number of roots inside the forest. This permits blocks of up to
@@ -84,109 +84,109 @@ typedef struct ksierrctx_s ksierrctx_t;
  * config settings. The actual file-specific data is kept in ksifile.
  */
 struct rsksictx_s {
-	KSI_CTX *ksi_ctx;	/* libksi's context object */
-	KSI_DataHasher *hasher;
-	KSI_HashAlgorithm hashAlg;
-	KSI_HashAlgorithm hmacAlg;
-	uint8_t bKeepRecordHashes;
-	uint8_t bKeepTreeHashes;
-	uint64_t confInterval;
-	time_t tConfRequested;
-	uint64_t blockLevelLimit;
-	uint32_t blockTimeLimit;
-	uint32_t blockSigTimeout;
-	uint32_t effectiveBlockLevelLimit; /* level limit adjusted by gateway settings */
-	uint32_t threadSleepms;
-	uint8_t syncMode;
-	uid_t	fileUID;	/* IDs for creation */
-	uid_t	dirUID;
-	gid_t	fileGID;
-	gid_t	dirGID;
-	int fCreateMode; /* mode to use when creating files */
-	int fDirCreateMode; /* mode to use when creating files */
-	char* aggregatorUri;
-	char* aggregatorId;
-	char* aggregatorKey;
-	char* aggregatorEndpoints[KSI_CTX_HA_MAX_SUBSERVICES];
-	int aggregatorEndpointCount;
-	char* random_source;
-	pthread_mutex_t module_lock;
-	pthread_t signer_thread;
-	ProtectedQueue *signer_queue;
+    KSI_CTX *ksi_ctx;   /* libksi's context object */
+    KSI_DataHasher *hasher;
+    KSI_HashAlgorithm hashAlg;
+    KSI_HashAlgorithm hmacAlg;
+    uint8_t bKeepRecordHashes;
+    uint8_t bKeepTreeHashes;
+    uint64_t confInterval;
+    time_t tConfRequested;
+    uint64_t blockLevelLimit;
+    uint32_t blockTimeLimit;
+    uint32_t blockSigTimeout;
+    uint32_t effectiveBlockLevelLimit; /* level limit adjusted by gateway settings */
+    uint32_t threadSleepms;
+    uint8_t syncMode;
+    uid_t   fileUID;    /* IDs for creation */
+    uid_t   dirUID;
+    gid_t   fileGID;
+    gid_t   dirGID;
+    int fCreateMode; /* mode to use when creating files */
+    int fDirCreateMode; /* mode to use when creating files */
+    char* aggregatorUri;
+    char* aggregatorId;
+    char* aggregatorKey;
+    char* aggregatorEndpoints[KSI_CTX_HA_MAX_SUBSERVICES];
+    int aggregatorEndpointCount;
+    char* random_source;
+    pthread_mutex_t module_lock;
+    pthread_t signer_thread;
+    ProtectedQueue *signer_queue;
 #if KSI_SDK_VER_MAJOR == 3 && KSI_SDK_VER_MINOR < 22
-	size_t roundCount;	/* Count of signing requests in round. */
-	uint8_t bRoundLock;		/* A lock for async. signer. */
+    size_t roundCount;  /* Count of signing requests in round. */
+    uint8_t bRoundLock;     /* A lock for async. signer. */
 #endif
-	int signer_state;
-	uint8_t disabled;	/* permits to disable the plugin --> set to 1 */
+    int signer_state;
+    uint8_t disabled;   /* permits to disable the plugin --> set to 1 */
 
-	ksifile *ksi;		/* List of signature files for keeping track of block timeouts. */
-	size_t ksiCapacity;
-	size_t ksiCount;
+    ksifile *ksi;       /* List of signature files for keeping track of block timeouts. */
+    size_t ksiCapacity;
+    size_t ksiCount;
 
-	char *debugFileName;
-	int debugLevel;
-	FILE *debugFile;
-	uint64_t max_requests;
-	void (*errFunc)(void *, unsigned char*);
-	void (*logFunc)(void *, unsigned char*);
-	void *usrptr; /* for error function */
+    char *debugFileName;
+    int debugLevel;
+    FILE *debugFile;
+    uint64_t max_requests;
+    void (*errFunc)(void *, unsigned char*);
+    void (*logFunc)(void *, unsigned char*);
+    void *usrptr; /* for error function */
 };
 
 /* this describes a file, as far as librsksi is concerned */
 struct ksifile_s {
-	/* the following data items are mirrored from rsksictx to
-	 * increase cache hit ratio (they are frequently accesed).
-	 */
-	KSI_HashAlgorithm hashAlg;
-	uint8_t bKeepRecordHashes;
-	uint8_t bKeepTreeHashes;
-	uint64_t blockSizeLimit;
-	uint32_t blockTimeLimit;
-	/* end mirrored properties */
-	uint8_t disabled; /* permits to disable this file --> set to 1 */
-	uint8_t *IV; /* initial value for blinding masks */
-	unsigned char lastLeaf[KSI_MAX_IMPRINT_LEN]; /* last leaf hash (maybe of previous block)
-							--> preserve on term */
-	unsigned char *blockfilename;
-	unsigned char *ksifilename;
-	unsigned char *statefilename;
-	uint64_t nRecords;  /* current number of records in current block */
-	uint64_t bInBlk;    /* are we currently inside a blk --> need to finish on close */
-	time_t blockStarted;
-	int8_t nRoots;
-	/* algo engineering: roots structure is split into two arrays
-	 * in order to improve cache hits.
-	 */
-	KSI_DataHash *roots[MAX_ROOTS];
-	/* data members for the associated TLV file */
-	FILE *blockFile;
-	FILE *sigFile;	/* Note that this may only be closed by signer thread or when signer thread has terminated. */
-	rsksictx ctx;
+    /* the following data items are mirrored from rsksictx to
+     * increase cache hit ratio (they are frequently accesed).
+     */
+    KSI_HashAlgorithm hashAlg;
+    uint8_t bKeepRecordHashes;
+    uint8_t bKeepTreeHashes;
+    uint64_t blockSizeLimit;
+    uint32_t blockTimeLimit;
+    /* end mirrored properties */
+    uint8_t disabled; /* permits to disable this file --> set to 1 */
+    uint8_t *IV; /* initial value for blinding masks */
+    unsigned char lastLeaf[KSI_MAX_IMPRINT_LEN]; /* last leaf hash (maybe of previous block)
+                            --> preserve on term */
+    unsigned char *blockfilename;
+    unsigned char *ksifilename;
+    unsigned char *statefilename;
+    uint64_t nRecords;  /* current number of records in current block */
+    uint64_t bInBlk;    /* are we currently inside a blk --> need to finish on close */
+    time_t blockStarted;
+    int8_t nRoots;
+    /* algo engineering: roots structure is split into two arrays
+     * in order to improve cache hits.
+     */
+    KSI_DataHash *roots[MAX_ROOTS];
+    /* data members for the associated TLV file */
+    FILE *blockFile;
+    FILE *sigFile;  /* Note that this may only be closed by signer thread or when signer thread has terminated. */
+    rsksictx ctx;
 };
 
 /* the following defines the ksistate file record. Currently, this record
  * is fixed, we may change that over time.
  */
 struct rsksistatefile {
-	char hdr[9];	/* must be "KSISTAT10" */
-	uint8_t hashID;
-	uint8_t lenHash;
-	/* after that, the hash value is contained within the file */
+    char hdr[9];    /* must be "KSISTAT10" */
+    uint8_t hashID;
+    uint8_t lenHash;
+    /* after that, the hash value is contained within the file */
 };
 
 /* error states */
 #define RSGTE_SUCCESS 0 /* Success state */
-#define RSGTE_IO 1 	/* any kind of io error */
-#define RSGTE_FMT 2	/* data fromat error */
-#define RSGTE_INVLTYP 3	/* invalid TLV type record (unexcpected at this point) */
-#define RSGTE_OOM 4	/* ran out of memory */
-#define RSGTE_LEN 5	/* error related to length records */
+#define RSGTE_IO 1  /* any kind of io error */
+#define RSGTE_FMT 2 /* data fromat error */
+#define RSGTE_INVLTYP 3 /* invalid TLV type record (unexcpected at this point) */
+#define RSGTE_OOM 4 /* ran out of memory */
+#define RSGTE_LEN 5 /* error related to length records */
 #define RSGTE_SIG_EXTEND 6/* error extending signature */
 #define RSGTE_INVLD_RECCNT 7/* mismatch between actual records and records
-				given in block-sig record */
+                given in block-sig record */
 #define RSGTE_INVLHDR 8/* invalid file header */
-#define RSGTE_EOF 9 	/* specific EOF */
+#define RSGTE_EOF 9     /* specific EOF */
 #define RSGTE_MISS_REC_HASH 10 /* record hash missing when expected */
 #define RSGTE_MISS_TREE_HASH 11 /* tree hash missing when expected */
 #define RSGTE_INVLD_REC_HASH 12 /* invalid record hash (failed verification) */
@@ -216,7 +216,7 @@ struct rsksistatefile {
 #define rsksiSetFileFormat(ctx, val) ((ctx)->fileFormat = val)
 #define rsksiSetSyncMode(ctx, val) ((ctx)->syncMode = val)
 #define rsksiSetRandomSource(ctx, val) ((ctx)->random_source = strdup(val))
-#define rsksiSetFileUID(ctx, val) ((ctx)->fileUID = val)	/* IDs for creation */
+#define rsksiSetFileUID(ctx, val) ((ctx)->fileUID = val)    /* IDs for creation */
 #define rsksiSetDirUID(ctx, val) ((ctx)->dirUID = val)
 #define rsksiSetFileGID(ctx, val) ((ctx)->fileGID= val)
 #define rsksiSetDirGID(ctx, val) ((ctx)->dirGID = val)

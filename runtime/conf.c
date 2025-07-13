@@ -42,9 +42,9 @@
 #include <glob.h>
 #include <sys/types.h>
 #ifdef HAVE_LIBGEN_H
-#	ifndef OS_SOLARIS
-#		include <libgen.h>
-#	endif
+#   ifndef OS_SOLARIS
+#       include <libgen.h>
+#   endif
 #endif
 
 #include "rsyslog.h"
@@ -67,7 +67,7 @@
 #include "rainerscript.h"
 
 #ifdef OS_SOLARIS
-#	define NAME_MAX MAXNAMELEN
+#   define NAME_MAX MAXNAMELEN
 #endif
 
 /* forward definitions */
@@ -79,7 +79,7 @@ DEFobjCurrIf(module)
 DEFobjCurrIf(net)
 DEFobjCurrIf(ruleset)
 
-int bConfStrictScoping = 0;	/* force strict scoping during config processing? */
+int bConfStrictScoping = 0; /* force strict scoping during config processing? */
 
 
 /* The following module-global variables are used for building
@@ -98,33 +98,33 @@ cstr_t *pDfltProgNameCmp = NULL;
 static rsRetVal
 doModLoad(uchar **pp, __attribute__((unused)) void* pVal)
 {
-	DEFiRet;
-	uchar szName[512];
-	uchar *pModName;
+    DEFiRet;
+    uchar szName[512];
+    uchar *pModName;
 
-	assert(pp != NULL);
-	assert(*pp != NULL);
+    assert(pp != NULL);
+    assert(*pp != NULL);
 
-	skipWhiteSpace(pp); /* skip over any whitespace */
-	if(getSubString(pp, (char*) szName, sizeof(szName), ' ')  != 0) {
-		LogError(0, RS_RET_NOT_FOUND, "could not extract module name");
-		ABORT_FINALIZE(RS_RET_NOT_FOUND);
-	}
-	skipWhiteSpace(pp); /* skip over any whitespace */
+    skipWhiteSpace(pp); /* skip over any whitespace */
+    if(getSubString(pp, (char*) szName, sizeof(szName), ' ')  != 0) {
+        LogError(0, RS_RET_NOT_FOUND, "could not extract module name");
+        ABORT_FINALIZE(RS_RET_NOT_FOUND);
+    }
+    skipWhiteSpace(pp); /* skip over any whitespace */
 
-	/* this below is a quick and dirty hack to provide compatibility with the
-	 * $ModLoad MySQL forward compatibility statement. This needs to be supported
-	 * for legacy format.
-	 */
-	if(!strcmp((char*) szName, "MySQL"))
-		pModName = (uchar*) "ommysql.so";
-	else
-		pModName = szName;
+    /* this below is a quick and dirty hack to provide compatibility with the
+     * $ModLoad MySQL forward compatibility statement. This needs to be supported
+     * for legacy format.
+     */
+    if(!strcmp((char*) szName, "MySQL"))
+        pModName = (uchar*) "ommysql.so";
+    else
+        pModName = szName;
 
-	CHKiRet(module.Load(pModName, 1, NULL));
+    CHKiRet(module.Load(pModName, 1, NULL));
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -135,14 +135,14 @@ finalize_it:
 static void
 ltrim(char *src)
 {
-	char *dst = src;
-	while(isspace(*src))
-		++src; /*SKIP*/;
-	if(dst != src) {
-		while(*src != '\0')
-			*dst++ = *src++;
-		*dst = '\0';
-	}
+    char *dst = src;
+    while(isspace(*src))
+        ++src; /*SKIP*/;
+    if(dst != src) {
+        while(*src != '\0')
+            *dst++ = *src++;
+        *dst = '\0';
+    }
 }
 
 /* parse and interpret a $-config line that starts with
@@ -156,61 +156,61 @@ ltrim(char *src)
 static rsRetVal
 doNameLine(uchar **pp, void* pVal)
 {
-	DEFiRet;
-	uchar *p;
-	enum eDirective eDir;
-	char szName[128];
+    DEFiRet;
+    uchar *p;
+    enum eDirective eDir;
+    char szName[128];
 
-	assert(pp != NULL);
-	p = *pp;
-	assert(p != NULL);
+    assert(pp != NULL);
+    p = *pp;
+    assert(p != NULL);
 
-	PRAGMA_DIAGNOSTIC_PUSH
-	PRAGMA_IGNORE_Wvoid_pointer_to_enum_cast;
-	/* this time, pVal actually is NOT a pointer! It is save to case, as
-	 * the enum was written to it, so there can be no loss of bits (ptr is larger).
-	 */
-	eDir = (enum eDirective) pVal;
-	PRAGMA_DIAGNOSTIC_POP
+    PRAGMA_DIAGNOSTIC_PUSH
+    PRAGMA_IGNORE_Wvoid_pointer_to_enum_cast;
+    /* this time, pVal actually is NOT a pointer! It is save to case, as
+     * the enum was written to it, so there can be no loss of bits (ptr is larger).
+     */
+    eDir = (enum eDirective) pVal;
+    PRAGMA_DIAGNOSTIC_POP
 
-	if(getSubString(&p, szName, sizeof(szName), ',')  != 0) {
-		LogError(0, RS_RET_NOT_FOUND, "Invalid config line: could not extract name - line ignored");
-		ABORT_FINALIZE(RS_RET_NOT_FOUND);
-	}
-	ltrim(szName);
-	if(*p == ',')
-		++p; /* comma was eaten */
+    if(getSubString(&p, szName, sizeof(szName), ',')  != 0) {
+        LogError(0, RS_RET_NOT_FOUND, "Invalid config line: could not extract name - line ignored");
+        ABORT_FINALIZE(RS_RET_NOT_FOUND);
+    }
+    ltrim(szName);
+    if(*p == ',')
+        ++p; /* comma was eaten */
 
-	/* we got the name - now we pass name & the rest of the string
-	 * to the subfunction. It makes no sense to do further
-	 * parsing here, as this is in close interaction with the
-	 * respective subsystem. rgerhards 2004-11-17
-	 */
+    /* we got the name - now we pass name & the rest of the string
+     * to the subfunction. It makes no sense to do further
+     * parsing here, as this is in close interaction with the
+     * respective subsystem. rgerhards 2004-11-17
+     */
 
-	switch(eDir) {
-		case DIR_TEMPLATE:
-			tplAddLine(loadConf, szName, &p);
-			break;
-		case DIR_OUTCHANNEL:
-			ochAddLine(szName, &p);
-			break;
-		case DIR_ALLOWEDSENDER:
-			net.addAllowedSenderLine(szName, &p);
-			break;
-		default:/* we do this to avoid compiler warning - not all
-			 * enum values call this function, so an incomplete list
-			 * is quite ok (but then we should not run into this code,
-			 * so at least we log a debug warning).
-			 */
-			dbgprintf("INTERNAL ERROR: doNameLine() called with invalid eDir %d.\n",
-				eDir);
-			break;
-	}
+    switch(eDir) {
+        case DIR_TEMPLATE:
+            tplAddLine(loadConf, szName, &p);
+            break;
+        case DIR_OUTCHANNEL:
+            ochAddLine(szName, &p);
+            break;
+        case DIR_ALLOWEDSENDER:
+            net.addAllowedSenderLine(szName, &p);
+            break;
+        default:/* we do this to avoid compiler warning - not all
+             * enum values call this function, so an incomplete list
+             * is quite ok (but then we should not run into this code,
+             * so at least we log a debug warning).
+             */
+            dbgprintf("INTERNAL ERROR: doNameLine() called with invalid eDir %d.\n",
+                eDir);
+            break;
+    }
 
-	*pp = p;
+    *pp = p;
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -222,37 +222,37 @@ finalize_it:
 static rsRetVal
 cfsysline(uchar *p)
 {
-	DEFiRet;
-	uchar szCmd[64];
+    DEFiRet;
+    uchar szCmd[64];
 
-	assert(p != NULL);
-	errno = 0;
-	if(getSubString(&p, (char*) szCmd, sizeof(szCmd), ' ')  != 0) {
-		LogError(0, RS_RET_NOT_FOUND, "Invalid $-configline "
-			"- could not extract command - line ignored\n");
-		ABORT_FINALIZE(RS_RET_NOT_FOUND);
-	}
+    assert(p != NULL);
+    errno = 0;
+    if(getSubString(&p, (char*) szCmd, sizeof(szCmd), ' ')  != 0) {
+        LogError(0, RS_RET_NOT_FOUND, "Invalid $-configline "
+            "- could not extract command - line ignored\n");
+        ABORT_FINALIZE(RS_RET_NOT_FOUND);
+    }
 
-	/* we now try and see if we can find the command in the registered
-	 * list of cfsysline handlers. -- rgerhards, 2007-07-31
-	 */
-	CHKiRet(processCfSysLineCommand(szCmd, &p));
+    /* we now try and see if we can find the command in the registered
+     * list of cfsysline handlers. -- rgerhards, 2007-07-31
+     */
+    CHKiRet(processCfSysLineCommand(szCmd, &p));
 
-	/* now check if we have some extra characters left on the line - that
-	 * should not be the case. Whitespace is OK, but everything else should
-	 * trigger a warning (that may be an indication of undesired behaviour).
-	 * An exception, of course, are comments (starting with '#').
-	 * rgerhards, 2007-07-04
-	 */
-	skipWhiteSpace(&p);
+    /* now check if we have some extra characters left on the line - that
+     * should not be the case. Whitespace is OK, but everything else should
+     * trigger a warning (that may be an indication of undesired behaviour).
+     * An exception, of course, are comments (starting with '#').
+     * rgerhards, 2007-07-04
+     */
+    skipWhiteSpace(&p);
 
-	if(*p && *p != '#') { /* we have a non-whitespace, so let's complain */
-		LogError(0, NO_ERRCODE,
-		         "error: extra characters in config line ignored: '%s'", p);
-	}
+    if(*p && *p != '#') { /* we have a non-whitespace, so let's complain */
+        LogError(0, NO_ERRCODE,
+                 "error: extra characters in config line ignored: '%s'", p);
+    }
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -265,55 +265,55 @@ finalize_it:
  */
 rsRetVal cflineParseTemplateName(uchar** pp, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *dfltTplName)
 {
-	uchar *p;
-	uchar *tplName = NULL;
-	cstr_t *pStrB = NULL;
-	DEFiRet;
+    uchar *p;
+    uchar *tplName = NULL;
+    cstr_t *pStrB = NULL;
+    DEFiRet;
 
-	assert(pp != NULL);
-	assert(*pp != NULL);
-	assert(pOMSR != NULL);
+    assert(pp != NULL);
+    assert(*pp != NULL);
+    assert(pOMSR != NULL);
 
-	p =*pp;
-	/* a template must follow - search it and complain, if not found */
-	skipWhiteSpace(&p);
-	if(*p == ';')
-		++p; /* eat it */
-	else if(*p != '\0' && *p != '#') {
-		LogError(0, RS_RET_ERR, "invalid character in selector line - ';template' expected");
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
+    p =*pp;
+    /* a template must follow - search it and complain, if not found */
+    skipWhiteSpace(&p);
+    if(*p == ';')
+        ++p; /* eat it */
+    else if(*p != '\0' && *p != '#') {
+        LogError(0, RS_RET_ERR, "invalid character in selector line - ';template' expected");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
 
-	skipWhiteSpace(&p); /* go to begin of template name */
+    skipWhiteSpace(&p); /* go to begin of template name */
 
-	if(*p == '\0' || *p == '#') {
-		/* no template specified, use the default */
-		CHKmalloc(tplName = (uchar*) strdup((char*)dfltTplName));
-	} else {
-		/* template specified, pick it up */
-		CHKiRet(cstrConstruct(&pStrB));
+    if(*p == '\0' || *p == '#') {
+        /* no template specified, use the default */
+        CHKmalloc(tplName = (uchar*) strdup((char*)dfltTplName));
+    } else {
+        /* template specified, pick it up */
+        CHKiRet(cstrConstruct(&pStrB));
 
-		/* now copy the string */
-		while(*p && *p != '#' && !isspace((int) *p)) {
-			CHKiRet(cstrAppendChar(pStrB, *p));
-			++p;
-		}
-		cstrFinalize(pStrB);
-		CHKiRet(cstrConvSzStrAndDestruct(&pStrB, &tplName, 0));
-	}
+        /* now copy the string */
+        while(*p && *p != '#' && !isspace((int) *p)) {
+            CHKiRet(cstrAppendChar(pStrB, *p));
+            ++p;
+        }
+        cstrFinalize(pStrB);
+        CHKiRet(cstrConvSzStrAndDestruct(&pStrB, &tplName, 0));
+    }
 
-	CHKiRet(OMSRsetEntry(pOMSR, iEntry, tplName, iTplOpts));
+    CHKiRet(OMSRsetEntry(pOMSR, iEntry, tplName, iTplOpts));
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		free(tplName);
-		if(pStrB != NULL)
-			cstrDestruct(&pStrB);
-	}
+    if(iRet != RS_RET_OK) {
+        free(tplName);
+        if(pStrB != NULL)
+            cstrDestruct(&pStrB);
+    }
 
-	*pp = p;
+    *pp = p;
 
-	RETiRet;
+    RETiRet;
 }
 
 /* Helper to cfline(). Parses a file name up until the first
@@ -330,23 +330,23 @@ finalize_it:
 rsRetVal
 cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int iEntry, int iTplOpts, uchar *pszTpl)
 {
-	register uchar *pName;
-	int i;
-	DEFiRet;
+    register uchar *pName;
+    int i;
+    DEFiRet;
 
-	assert(pOMSR != NULL);
+    assert(pOMSR != NULL);
 
-	pName = pFileName;
-	i = 1; /* we start at 1 so that we reseve space for the '\0'! */
-	while(*p && *p != ';' && *p != ' ' && i < MAXFNAME) {
-		*pName++ = *p++;
-		++i;
-	}
-	*pName = '\0';
+    pName = pFileName;
+    i = 1; /* we start at 1 so that we reseve space for the '\0'! */
+    while(*p && *p != ';' && *p != ' ' && i < MAXFNAME) {
+        *pName++ = *p++;
+        ++i;
+    }
+    *pName = '\0';
 
-	iRet = cflineParseTemplateName(&p, pOMSR, iEntry, iTplOpts, pszTpl);
+    iRet = cflineParseTemplateName(&p, pOMSR, iEntry, iTplOpts, pszTpl);
 
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -354,143 +354,143 @@ cflineParseFileName(uchar* p, uchar *pFileName, omodStringRequest_t *pOMSR, int 
 /* GPLv3 - stems back to sysklogd */
 rsRetVal DecodePRIFilter(uchar *pline, uchar pmask[])
 {
-	uchar *p;
-	register uchar *q;
-	register int i, i2;
-	uchar *bp;
-	int pri; /* this MUST be int, as -1 is used to convey an error state */
-	int singlpri = 0;
-	int ignorepri = 0;
-	uchar buf[2048]; /* buffer for facility and priority names */
-	uchar xbuf[200];
-	DEFiRet;
+    uchar *p;
+    register uchar *q;
+    register int i, i2;
+    uchar *bp;
+    int pri; /* this MUST be int, as -1 is used to convey an error state */
+    int singlpri = 0;
+    int ignorepri = 0;
+    uchar buf[2048]; /* buffer for facility and priority names */
+    uchar xbuf[200];
+    DEFiRet;
 
-	assert(pline != NULL);
+    assert(pline != NULL);
 
-	dbgprintf("Decoding traditional PRI filter '%s'\n", pline);
+    dbgprintf("Decoding traditional PRI filter '%s'\n", pline);
 
-	for (i = 0; i <= LOG_NFACILITIES; i++) {
-		pmask[i] = TABLE_NOPRI;
-	}
+    for (i = 0; i <= LOG_NFACILITIES; i++) {
+        pmask[i] = TABLE_NOPRI;
+    }
 
-	/* scan through the list of selectors */
-	for (p = pline; *p && *p != '\t' && *p != ' ';) {
-		/* find the end of this facility name list */
-		for (q = p; *q && *q != '\t' && *q++ != '.'; )
-			continue;
+    /* scan through the list of selectors */
+    for (p = pline; *p && *p != '\t' && *p != ' ';) {
+        /* find the end of this facility name list */
+        for (q = p; *q && *q != '\t' && *q++ != '.'; )
+            continue;
 
-		/* collect priority name */
-		for (bp = buf; *q && !strchr("\t ,;", *q) && bp < buf+sizeof(buf)-1 ; )
-			*bp++ = *q++;
-		*bp = '\0';
+        /* collect priority name */
+        for (bp = buf; *q && !strchr("\t ,;", *q) && bp < buf+sizeof(buf)-1 ; )
+            *bp++ = *q++;
+        *bp = '\0';
 
-		/* skip cruft */
-		if(*q) {
-			while (strchr(",;", *q))
-				q++;
-		}
+        /* skip cruft */
+        if(*q) {
+            while (strchr(",;", *q))
+                q++;
+        }
 
-		/* decode priority name */
-		if ( *buf == '!' ) {
-			ignorepri = 1;
-			/* copy below is ok, we can NOT go off the allocated area */
-			for (bp=buf; *(bp+1); bp++)
-				*bp=*(bp+1);
-			*bp='\0';
-		} else {
-			ignorepri = 0;
-		}
-		if ( *buf == '=' ) {
-			singlpri = 1;
-			pri = decodeSyslogName(&buf[1], syslogPriNames);
-		}
-		else { singlpri = 0;
-			pri = decodeSyslogName(buf, syslogPriNames);
-		}
+        /* decode priority name */
+        if ( *buf == '!' ) {
+            ignorepri = 1;
+            /* copy below is ok, we can NOT go off the allocated area */
+            for (bp=buf; *(bp+1); bp++)
+                *bp=*(bp+1);
+            *bp='\0';
+        } else {
+            ignorepri = 0;
+        }
+        if ( *buf == '=' ) {
+            singlpri = 1;
+            pri = decodeSyslogName(&buf[1], syslogPriNames);
+        }
+        else { singlpri = 0;
+            pri = decodeSyslogName(buf, syslogPriNames);
+        }
 
-		if (pri < 0) {
-			snprintf((char*) xbuf, sizeof(xbuf), "unknown priority name \"%s\"", buf);
-			LogError(0, RS_RET_ERR, "%s", xbuf);
-			return RS_RET_ERR;
-		}
+        if (pri < 0) {
+            snprintf((char*) xbuf, sizeof(xbuf), "unknown priority name \"%s\"", buf);
+            LogError(0, RS_RET_ERR, "%s", xbuf);
+            return RS_RET_ERR;
+        }
 
-		/* scan facilities */
-		while (*p && !strchr("\t .;", *p)) {
-			for (bp = buf; *p && !strchr("\t ,;.", *p) && bp < buf+sizeof(buf)-1 ; )
-				*bp++ = *p++;
-			*bp = '\0';
-			if (*buf == '*') {
-				for (i = 0; i <= LOG_NFACILITIES; i++) {
-					if ( pri == INTERNAL_NOPRI ) {
-						if ( ignorepri )
-							pmask[i] = TABLE_ALLPRI;
-						else
-							pmask[i] = TABLE_NOPRI;
-					}
-					else if ( singlpri ) {
-						if ( ignorepri )
-				  			pmask[i] &= ~(1<<pri);
-						else
-				  			pmask[i] |= (1<<pri);
-					} else {
-						if ( pri == TABLE_ALLPRI ) {
-							if ( ignorepri )
-								pmask[i] = TABLE_NOPRI;
-							else
-								pmask[i] = TABLE_ALLPRI;
-						} else {
-							if ( ignorepri )
-								for (i2= 0; i2 <= pri; ++i2)
-									pmask[i] &= ~(1<<i2);
-							else
-								for (i2= 0; i2 <= pri; ++i2)
-									pmask[i] |= (1<<i2);
-						}
-					}
-				}
-			} else {
-				i = decodeSyslogName(buf, syslogFacNames);
-				if (i < 0) {
+        /* scan facilities */
+        while (*p && !strchr("\t .;", *p)) {
+            for (bp = buf; *p && !strchr("\t ,;.", *p) && bp < buf+sizeof(buf)-1 ; )
+                *bp++ = *p++;
+            *bp = '\0';
+            if (*buf == '*') {
+                for (i = 0; i <= LOG_NFACILITIES; i++) {
+                    if ( pri == INTERNAL_NOPRI ) {
+                        if ( ignorepri )
+                            pmask[i] = TABLE_ALLPRI;
+                        else
+                            pmask[i] = TABLE_NOPRI;
+                    }
+                    else if ( singlpri ) {
+                        if ( ignorepri )
+                            pmask[i] &= ~(1<<pri);
+                        else
+                            pmask[i] |= (1<<pri);
+                    } else {
+                        if ( pri == TABLE_ALLPRI ) {
+                            if ( ignorepri )
+                                pmask[i] = TABLE_NOPRI;
+                            else
+                                pmask[i] = TABLE_ALLPRI;
+                        } else {
+                            if ( ignorepri )
+                                for (i2= 0; i2 <= pri; ++i2)
+                                    pmask[i] &= ~(1<<i2);
+                            else
+                                for (i2= 0; i2 <= pri; ++i2)
+                                    pmask[i] |= (1<<i2);
+                        }
+                    }
+                }
+            } else {
+                i = decodeSyslogName(buf, syslogFacNames);
+                if (i < 0) {
 
-					snprintf((char*) xbuf, sizeof(xbuf), "unknown facility name \"%s\"", buf);
-					LogError(0, RS_RET_ERR, "%s", xbuf);
-					return RS_RET_ERR;
-				}
+                    snprintf((char*) xbuf, sizeof(xbuf), "unknown facility name \"%s\"", buf);
+                    LogError(0, RS_RET_ERR, "%s", xbuf);
+                    return RS_RET_ERR;
+                }
 
-				if ( pri == INTERNAL_NOPRI ) {
-					if ( ignorepri )
-						pmask[i >> 3] = TABLE_ALLPRI;
-					else
-						pmask[i >> 3] = TABLE_NOPRI;
-				} else if ( singlpri ) {
-					if ( ignorepri )
-						pmask[i >> 3] &= ~(1<<pri);
-					else
-						pmask[i >> 3] |= (1<<pri);
-				} else {
-					if ( pri == TABLE_ALLPRI ) {
-						if ( ignorepri )
-							pmask[i >> 3] = TABLE_NOPRI;
-						else
-							pmask[i >> 3] = TABLE_ALLPRI;
-					} else {
-						if ( ignorepri )
-							for (i2= 0; i2 <= pri; ++i2)
-								pmask[i >> 3] &= ~(1<<i2);
-						else
-							for (i2= 0; i2 <= pri; ++i2)
-								pmask[i >> 3] |= (1<<i2);
-					}
-				}
-			}
-			while (*p == ',' || *p == ' ')
-				p++;
-		}
+                if ( pri == INTERNAL_NOPRI ) {
+                    if ( ignorepri )
+                        pmask[i >> 3] = TABLE_ALLPRI;
+                    else
+                        pmask[i >> 3] = TABLE_NOPRI;
+                } else if ( singlpri ) {
+                    if ( ignorepri )
+                        pmask[i >> 3] &= ~(1<<pri);
+                    else
+                        pmask[i >> 3] |= (1<<pri);
+                } else {
+                    if ( pri == TABLE_ALLPRI ) {
+                        if ( ignorepri )
+                            pmask[i >> 3] = TABLE_NOPRI;
+                        else
+                            pmask[i >> 3] = TABLE_ALLPRI;
+                    } else {
+                        if ( ignorepri )
+                            for (i2= 0; i2 <= pri; ++i2)
+                                pmask[i >> 3] &= ~(1<<i2);
+                        else
+                            for (i2= 0; i2 <= pri; ++i2)
+                                pmask[i >> 3] |= (1<<i2);
+                    }
+                }
+            }
+            while (*p == ',' || *p == ' ')
+                p++;
+        }
 
-		p = q;
-	}
+        p = q;
+    }
 
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -499,57 +499,57 @@ rsRetVal DecodePRIFilter(uchar *pline, uchar pmask[])
  */
 rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 {
-	modInfo_t *pMod;
-	cfgmodules_etry_t *node;
-	omodStringRequest_t *pOMSR;
-	int bHadWarning = 0;
-	action_t *pAction = NULL;
-	void *pModData;
-	DEFiRet;
+    modInfo_t *pMod;
+    cfgmodules_etry_t *node;
+    omodStringRequest_t *pOMSR;
+    int bHadWarning = 0;
+    action_t *pAction = NULL;
+    void *pModData;
+    DEFiRet;
 
-	assert(p != NULL);
-	assert(ppAction != NULL);
+    assert(p != NULL);
+    assert(ppAction != NULL);
 
-	/* loop through all modules and see if one picks up the line */
-	node = module.GetNxtCnfType(conf, NULL, eMOD_OUT);
-	/* Note: clang static analyzer reports that node maybe == NULL. However, this is
-	 * not possible, because we have the built-in output modules which are always
-	 * present. Anyhow, we guard this by an assert. -- rgerhards, 2010-12-16
-	 */
-	assert(node != NULL);
-	while(node != NULL) {
-		pOMSR = NULL;
-		pMod = node->pMod;
-		iRet = pMod->mod.om.parseSelectorAct(p, &pModData, &pOMSR);
-		dbgprintf("tried selector action for %s: %d\n", module.GetName(pMod), iRet);
-		if(iRet == RS_RET_OK_WARN) {
-			bHadWarning = 1;
-			iRet = RS_RET_OK;
-		}
-		if(iRet == RS_RET_OK) {
-			if((iRet = addAction(&pAction, pMod, pModData, pOMSR, NULL, NULL)) == RS_RET_OK) {
-				/* here check if the module is compatible with select features
-				 * (currently, we have no such features!) */
-				conf->actions.nbrActions++;	/* one more active action! */
-			}
-			break;
-		} else if(iRet != RS_RET_CONFLINE_UNPROCESSED) {
-			/* In this case, the module would have handled the config
-			 * line, but some error occurred while doing so. This error should
-			 * already by reported by the module. We do not try any other
-			 * modules on this line, because we found the right one.
-			 * rgerhards, 2007-07-24
-			 */
-			dbgprintf("error %d parsing config line\n", (int) iRet);
-			break;
-		}
-		node = module.GetNxtCnfType(conf, node, eMOD_OUT);
-	}
+    /* loop through all modules and see if one picks up the line */
+    node = module.GetNxtCnfType(conf, NULL, eMOD_OUT);
+    /* Note: clang static analyzer reports that node maybe == NULL. However, this is
+     * not possible, because we have the built-in output modules which are always
+     * present. Anyhow, we guard this by an assert. -- rgerhards, 2010-12-16
+     */
+    assert(node != NULL);
+    while(node != NULL) {
+        pOMSR = NULL;
+        pMod = node->pMod;
+        iRet = pMod->mod.om.parseSelectorAct(p, &pModData, &pOMSR);
+        dbgprintf("tried selector action for %s: %d\n", module.GetName(pMod), iRet);
+        if(iRet == RS_RET_OK_WARN) {
+            bHadWarning = 1;
+            iRet = RS_RET_OK;
+        }
+        if(iRet == RS_RET_OK) {
+            if((iRet = addAction(&pAction, pMod, pModData, pOMSR, NULL, NULL)) == RS_RET_OK) {
+                /* here check if the module is compatible with select features
+                 * (currently, we have no such features!) */
+                conf->actions.nbrActions++; /* one more active action! */
+            }
+            break;
+        } else if(iRet != RS_RET_CONFLINE_UNPROCESSED) {
+            /* In this case, the module would have handled the config
+             * line, but some error occurred while doing so. This error should
+             * already by reported by the module. We do not try any other
+             * modules on this line, because we found the right one.
+             * rgerhards, 2007-07-24
+             */
+            dbgprintf("error %d parsing config line\n", (int) iRet);
+            break;
+        }
+        node = module.GetNxtCnfType(conf, node, eMOD_OUT);
+    }
 
-	*ppAction = pAction;
-	if(iRet == RS_RET_OK && bHadWarning)
-		iRet = RS_RET_OK_WARN;
-	RETiRet;
+    *ppAction = pAction;
+    if(iRet == RS_RET_OK && bHadWarning)
+        iRet = RS_RET_OK_WARN;
+    RETiRet;
 }
 
 
@@ -559,10 +559,10 @@ rsRetVal cflineDoAction(rsconf_t *conf, uchar **p, action_t **ppAction)
 static rsRetVal
 GetNbrActActions(rsconf_t *conf, int *piNbrActions)
 {
-	DEFiRet;
-	assert(piNbrActions != NULL);
-	*piNbrActions = conf->actions.nbrActions;
-	RETiRet;
+    DEFiRet;
+    assert(piNbrActions != NULL);
+    *piNbrActions = conf->actions.nbrActions;
+    RETiRet;
 }
 
 
@@ -571,19 +571,19 @@ GetNbrActActions(rsconf_t *conf, int *piNbrActions)
  */
 BEGINobjQueryInterface(conf)
 CODESTARTobjQueryInterface(conf)
-	if(pIf->ifVersion != confCURR_IF_VERSION) { /* check for current version, increment on each change */
-		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
-	}
+    if(pIf->ifVersion != confCURR_IF_VERSION) { /* check for current version, increment on each change */
+        ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+    }
 
-	/* ok, we have the right interface, so let's fill it
-	 * Please note that we may also do some backwards-compatibility
-	 * work here (if we can support an older interface version - that,
-	 * of course, also affects the "if" above).
-	 */
-	pIf->doNameLine = doNameLine;
-	pIf->cfsysline = cfsysline;
-	pIf->doModLoad = doModLoad;
-	pIf->GetNbrActActions = GetNbrActActions;
+    /* ok, we have the right interface, so let's fill it
+     * Please note that we may also do some backwards-compatibility
+     * work here (if we can support an older interface version - that,
+     * of course, also affects the "if" above).
+     */
+    pIf->doNameLine = doNameLine;
+    pIf->cfsysline = cfsysline;
+    pIf->doModLoad = doModLoad;
+    pIf->GetNbrActActions = GetNbrActActions;
 
 finalize_it:
 ENDobjQueryInterface(conf)
@@ -595,8 +595,8 @@ ENDobjQueryInterface(conf)
 static rsRetVal
 resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
 {
-	bConfStrictScoping = 0;
-	return RS_RET_OK;
+    bConfStrictScoping = 0;
+    return RS_RET_OK;
 }
 
 
@@ -605,19 +605,19 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
  */
 BEGINObjClassExit(conf, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(conf)
-	/* free no-longer needed module-global variables */
-	if(pDfltHostnameCmp != NULL) {
-		rsCStrDestruct(&pDfltHostnameCmp);
-	}
+    /* free no-longer needed module-global variables */
+    if(pDfltHostnameCmp != NULL) {
+        rsCStrDestruct(&pDfltHostnameCmp);
+    }
 
-	if(pDfltProgNameCmp != NULL) {
-		rsCStrDestruct(&pDfltProgNameCmp);
-	}
+    if(pDfltProgNameCmp != NULL) {
+        rsCStrDestruct(&pDfltProgNameCmp);
+    }
 
-	/* release objects we no longer need */
-	objRelease(module, CORE_COMPONENT);
-	objRelease(net, LM_NET_FILENAME);
-	objRelease(ruleset, CORE_COMPONENT);
+    /* release objects we no longer need */
+    objRelease(module, CORE_COMPONENT);
+    objRelease(net, LM_NET_FILENAME);
+    objRelease(ruleset, CORE_COMPONENT);
 ENDObjClassExit(conf)
 
 
@@ -626,14 +626,14 @@ ENDObjClassExit(conf)
  * rgerhards, 2008-02-29
  */
 BEGINAbstractObjClassInit(conf, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE class also in END MACRO! */
-	/* request objects we use */
-	CHKiRet(objUse(module, CORE_COMPONENT));
-	CHKiRet(objUse(net, LM_NET_FILENAME));
-	CHKiRet(objUse(ruleset, CORE_COMPONENT));
+    /* request objects we use */
+    CHKiRet(objUse(module, CORE_COMPONENT));
+    CHKiRet(objUse(net, LM_NET_FILENAME));
+    CHKiRet(objUse(ruleset, CORE_COMPONENT));
 
-	/* These commands will NOT be supported -- the new v6.3 config system provides
-	 * far better methods. We will remove the related code soon. -- rgerhards, 2012-01-09
-	 */
-	CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables,
+    /* These commands will NOT be supported -- the new v6.3 config system provides
+     * far better methods. We will remove the related code soon. -- rgerhards, 2012-01-09
+     */
+    CHKiRet(regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables,
 NULL, NULL));
 ENDObjClassInit(conf)

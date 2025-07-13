@@ -50,11 +50,11 @@ DEF_OMOD_STATIC_DATA
 
 /* config variables */
 typedef struct _instanceData {
-	char *dummy;
+    char *dummy;
 } instanceData;
 
 typedef struct wrkrInstanceData {
-	instanceData *pData;
+    instanceData *pData;
 } wrkrInstanceData_t;
 
 struct modConfData_s {
@@ -70,7 +70,7 @@ static modConfData_t *runModConf  = NULL;
 
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
-	loadModConf = pModConf;
+    loadModConf = pModConf;
 ENDbeginCnfLoad
 
 BEGINendCnfLoad
@@ -83,7 +83,7 @@ ENDcheckCnf
 
 BEGINactivateCnf
 CODESTARTactivateCnf
-	runModConf = pModConf;
+    runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
@@ -113,18 +113,18 @@ ENDfreeWrkrInstance
 
 BEGINsetModCnf
 CODESTARTsetModCnf
-	(void) lst;
-	parser_errmsg("%s is an optional module which could not be built on your platform "
-		"please remove it from the configuration or upgrade your platform", MODULE_NAME(MODNAME));
+    (void) lst;
+    parser_errmsg("%s is an optional module which could not be built on your platform "
+        "please remove it from the configuration or upgrade your platform", MODULE_NAME(MODNAME));
 ENDsetModCnf
 
 
 BEGINnewActInst
 CODESTARTnewActInst
-	(void) pData;
-	(void) ppModData;
-	parser_errmsg("%s is an optional module which could not be built on your platform "
-		"please remove it from the configuration or upgrade your platform", MODULE_NAME(MODNAME));
+    (void) pData;
+    (void) ppModData;
+    parser_errmsg("%s is an optional module which could not be built on your platform "
+        "please remove it from the configuration or upgrade your platform", MODULE_NAME(MODNAME));
 ENDnewActInst
 
 
@@ -140,7 +140,7 @@ ENDtryResume
 
 BEGINdoAction_NoStrings
 CODESTARTdoAction
-	(void) pMsgData;
+    (void) pMsgData;
 ENDdoAction
 
 
@@ -164,8 +164,8 @@ ENDqueryEtryPt
 
 BEGINmodInit()
 CODESTARTmodInit
-	/* we only support the current interface specification */
-	*ipIFVersProvided = CURR_MOD_IF_VERSION;
+    /* we only support the current interface specification */
+    *ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
-	dbgprintf("dummy module compiled with rsyslog version %s.\n", VERSION);
+    dbgprintf("dummy module compiled with rsyslog version %s.\n", VERSION);
 ENDmodInit

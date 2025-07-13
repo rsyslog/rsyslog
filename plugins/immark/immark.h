@@ -22,8 +22,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef	IMMARK_H_INCLUDED
-#define	IMMARK_H_INCLUDED 1
+#ifndef IMMARK_H_INCLUDED
+#define IMMARK_H_INCLUDED 1
 
 /* prototypes */
 rsRetVal immark_runInput(void);

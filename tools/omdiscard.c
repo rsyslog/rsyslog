@@ -45,11 +45,11 @@ MODULE_TYPE_NOKEEP
 DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
-	EMPTY_STRUCT
+    EMPTY_STRUCT
 } instanceData;
 
 typedef struct wrkrInstanceData {
-	instanceData *pData;
+    instanceData *pData;
 } wrkrInstanceData_t;
 
 /* we do not need a createInstance()!
@@ -66,13 +66,13 @@ ENDcreateWrkrInstance
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-	/* do nothing */
+    /* do nothing */
 ENDdbgPrintInstInfo
 
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	/* we are not compatible with repeated msg reduction feature, so do not allow it */
+    /* we are not compatible with repeated msg reduction feature, so do not allow it */
 ENDisCompatibleWithFeature
 
 
@@ -82,17 +82,17 @@ ENDtryResume
 
 BEGINdoAction_NoStrings
 CODESTARTdoAction
-	(void)pMsgData; /* Suppress compiler warning on unused var */
-	dbgprintf("\n");
-	iRet = RS_RET_DISCARDMSG;
+    (void)pMsgData; /* Suppress compiler warning on unused var */
+    dbgprintf("\n");
+    iRet = RS_RET_DISCARDMSG;
 ENDdoAction
 
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	/* we do not have instance data, so we do not need to
-	 * do anything here. -- rgerhards, 2007-07-25
-	 */
+    /* we do not have instance data, so we do not need to
+     * do anything here. -- rgerhards, 2007-07-25
+     */
 ENDfreeInstance
 
 
@@ -104,17 +104,17 @@ ENDfreeWrkrInstance
 BEGINparseSelectorAct
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(0)
-	pData = NULL; /* this action does not have any instance data */
-	p = *pp;
+    pData = NULL; /* this action does not have any instance data */
+    p = *pp;
 
-	if(*p == '~') {
-		dbgprintf("discard\n");
-		LogMsg(0, RS_RET_DEPRECATED, LOG_WARNING,
-			"warning: ~ action is deprecated, consider "
-			"using the 'stop' statement instead");
-	} else {
-		iRet = RS_RET_CONFLINE_UNPROCESSED;
-	}
+    if(*p == '~') {
+        dbgprintf("discard\n");
+        LogMsg(0, RS_RET_DEPRECATED, LOG_WARNING,
+            "warning: ~ action is deprecated, consider "
+            "using the 'stop' statement instead");
+    } else {
+        iRet = RS_RET_CONFLINE_UNPROCESSED;
+    }
 /* we do not use the macro
  * CODE_STD_FINALIZERparseSelectorAct
  * here as this causes a Coverity ID "false positive" (CID 185431).
@@ -122,16 +122,16 @@ CODE_STD_STRING_REQUESTparseSelectorAct(0)
  * to change for this (outdated) module.
  */
 finalize_it: ATTR_UNUSED; /* semi-colon needed according to gcc doc! */
-	if(iRet == RS_RET_OK || iRet == RS_RET_OK_WARN || iRet == RS_RET_SUSPENDED) {
-		*ppModData = pData;
-		*pp = p;
-	} else {
-		/* cleanup, we failed */
-		if(*ppOMSR != NULL) {
-			OMSRdestruct(*ppOMSR);
-			*ppOMSR = NULL;
-		}
-	}
+    if(iRet == RS_RET_OK || iRet == RS_RET_OK_WARN || iRet == RS_RET_SUSPENDED) {
+        *ppModData = pData;
+        *pp = p;
+    } else {
+        /* cleanup, we failed */
+        if(*ppOMSR != NULL) {
+            OMSRdestruct(*ppOMSR);
+            *ppOMSR = NULL;
+        }
+    }
 /* END modified macro text */
 ENDparseSelectorAct
 
@@ -150,7 +150,7 @@ ENDqueryEtryPt
 
 BEGINmodInit(Discard)
 CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit
 /*

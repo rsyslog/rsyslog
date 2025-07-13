@@ -30,62 +30,62 @@
 #include "action.h"
 
 
-#define ACT_STATE_RDY  0	/* action ready, waiting for new transaction */
-#define ACT_STATE_ITX  1	/* transaction active, waiting for new data or commit */
+#define ACT_STATE_RDY  0    /* action ready, waiting for new transaction */
+#define ACT_STATE_ITX  1    /* transaction active, waiting for new data or commit */
 /* 2 currently not being used */
-#define ACT_STATE_RTRY 3	/* failure occurred, trying to restablish ready state */
-#define ACT_STATE_SUSP 4	/* suspended due to failure (return fail until timeout expired) */
-#define ACT_STATE_DATAFAIL 5	/* suspended due to failure in data, which means the message in
-				   questions needs to be dropped as it will always fail. The
-				   action must still do a "normal" retry in order to bring
-				   it back to regular state. */
+#define ACT_STATE_RTRY 3    /* failure occurred, trying to restablish ready state */
+#define ACT_STATE_SUSP 4    /* suspended due to failure (return fail until timeout expired) */
+#define ACT_STATE_DATAFAIL 5    /* suspended due to failure in data, which means the message in
+                   questions needs to be dropped as it will always fail. The
+                   action must still do a "normal" retry in order to bring
+                   it back to regular state. */
 /* note: 3 bit bit field --> highest value is 7! */
 
 typedef struct actWrkrInfo {
-	action_t *pAction;
-	void *actWrkrData;
-	uint16_t uResumeOKinRow;/* number of times in a row that resume said OK with an
-				   immediate failure following */
-	int	iNbrResRtry;	/* number of retries since last suspend */
-	sbool	bHadAutoCommit;	/* did an auto-commit happen during doAction()? */
-	struct {
-		unsigned actState : 3;
-	} flags;
-	union {
-		struct {
-			actWrkrIParams_t *iparams;/* dynamically sized array for transactional outputs */
-			int currIParam;
-			int maxIParams;	/* current max */
-		} tx;
-		struct {
-			actWrkrIParams_t actParams[CONF_OMOD_NUMSTRINGS_MAXSIZE];
-		} nontx;
-	} p; /* short name for "parameters" */
+    action_t *pAction;
+    void *actWrkrData;
+    uint16_t uResumeOKinRow;/* number of times in a row that resume said OK with an
+                   immediate failure following */
+    int iNbrResRtry;    /* number of retries since last suspend */
+    sbool   bHadAutoCommit; /* did an auto-commit happen during doAction()? */
+    struct {
+        unsigned actState : 3;
+    } flags;
+    union {
+        struct {
+            actWrkrIParams_t *iparams;/* dynamically sized array for transactional outputs */
+            int currIParam;
+            int maxIParams; /* current max */
+        } tx;
+        struct {
+            actWrkrIParams_t actParams[CONF_OMOD_NUMSTRINGS_MAXSIZE];
+        } nontx;
+    } p; /* short name for "parameters" */
 } actWrkrInfo_t;
 
 /* the worker thread instance class */
 struct wti_s {
-	BEGINobjInstance;
-	pthread_t thrdID; 	/* thread ID */
-	int bIsRunning;	/* is this thread currently running? (must be int for atomic op!) */
-	sbool bAlwaysRunning;	/* should this thread always run? */
-	int *pbShutdownImmediate;/* end processing of this batch immediately if set to 1 */
-	wtp_t *pWtp; /* my worker thread pool (important if only the work thread instance is passed! */
-	batch_t batch; /* pointer to an object array meaningful for current user
-			  pointer (e.g. queue pUsr data elemt) */
-	uchar *pszDbgHdr;	/* header string for debug messages */
-	actWrkrInfo_t *actWrkrInfo; /* *array* of action wrkr infos for all actions
-				      (sized for max nbr of actions in config!) */
-	pthread_cond_t pcondBusy; /* condition to wake up the worker, protected by pmutUsr in wtp */
-	DEF_ATOMIC_HELPER_MUT(mutIsRunning)
-	struct {
-		uint8_t	script_errno; /* errno-type interface for RainerScript functions */
-		uint8_t bPrevWasSuspended;
-		uint8_t bDoAutoCommit; /* do a commit after each message
-		                        * this is usually set for batches with 0 element, but may
-					* also be added as a user-selectable option (not implemented yet)
-					*/
-	} execState;	/* state for the execution engine */
+    BEGINobjInstance;
+    pthread_t thrdID;   /* thread ID */
+    int bIsRunning; /* is this thread currently running? (must be int for atomic op!) */
+    sbool bAlwaysRunning;   /* should this thread always run? */
+    int *pbShutdownImmediate;/* end processing of this batch immediately if set to 1 */
+    wtp_t *pWtp; /* my worker thread pool (important if only the work thread instance is passed! */
+    batch_t batch; /* pointer to an object array meaningful for current user
+              pointer (e.g. queue pUsr data elemt) */
+    uchar *pszDbgHdr;   /* header string for debug messages */
+    actWrkrInfo_t *actWrkrInfo; /* *array* of action wrkr infos for all actions
+                      (sized for max nbr of actions in config!) */
+    pthread_cond_t pcondBusy; /* condition to wake up the worker, protected by pmutUsr in wtp */
+    DEF_ATOMIC_HELPER_MUT(mutIsRunning)
+    struct {
+        uint8_t script_errno; /* errno-type interface for RainerScript functions */
+        uint8_t bPrevWasSuspended;
+        uint8_t bDoAutoCommit; /* do a commit after each message
+                                * this is usually set for batches with 0 element, but may
+                    * also be added as a user-selectable option (not implemented yet)
+                    */
+    } execState;    /* state for the execution engine */
 };
 
 
@@ -127,16 +127,16 @@ PROTOTYPEpropSetMeth(wti, pWtp, wtp_t*);
 static inline uint8_t ATTR_UNUSED ATTR_NONNULL(1)
 wtiGetPrevWasSuspended(const wti_t * const pWti)
 {
-	assert(pWti != NULL);
-	return pWti->execState.bPrevWasSuspended;
+    assert(pWti != NULL);
+    return pWti->execState.bPrevWasSuspended;
 }
 
 static inline void __attribute__((unused))
 wtiResetExecState(wti_t * const pWti, batch_t * const pBatch)
 {
-	wtiSetScriptErrno(pWti, 0);
-	pWti->execState.bPrevWasSuspended = 0;
-	pWti->execState.bDoAutoCommit = (batchNumMsgs(pBatch) == 1);
+    wtiSetScriptErrno(pWti, 0);
+    pWti->execState.bPrevWasSuspended = 0;
+    pWti->execState.bDoAutoCommit = (batchNumMsgs(pBatch) == 1);
 }
 
 

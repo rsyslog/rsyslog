@@ -51,11 +51,11 @@ DEF_OMOD_STATIC_DATA
 
 /* config variables */
 typedef struct _instanceData {
-	char *dummy;
+    char *dummy;
 } instanceData;
 
 typedef struct wrkrInstanceData {
-	instanceData *pData ATTR_UNUSED;
+    instanceData *pData ATTR_UNUSED;
 } wrkrInstanceData_t;
 
 struct modConfData_s {
@@ -71,7 +71,7 @@ static modConfData_t *runModConf  = NULL;
 
 BEGINbeginCnfLoad
 CODESTARTbeginCnfLoad
-	loadModConf = pModConf;
+    loadModConf = pModConf;
 ENDbeginCnfLoad
 
 BEGINendCnfLoad
@@ -84,7 +84,7 @@ ENDcheckCnf
 
 BEGINactivateCnf
 CODESTARTactivateCnf
-	runModConf = pModConf;
+    runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
@@ -114,18 +114,18 @@ ENDfreeWrkrInstance
 
 BEGINsetModCnf
 CODESTARTsetModCnf
-	(void) lst;
-	parser_errmsg("%s is an optional module which could not be built on your platform "
-		"please remove it from the configuration or upgrade your platform", MODULE_NAME);
+    (void) lst;
+    parser_errmsg("%s is an optional module which could not be built on your platform "
+        "please remove it from the configuration or upgrade your platform", MODULE_NAME);
 ENDsetModCnf
 
 
 BEGINnewActInst
 CODESTARTnewActInst
-	(void) pData;
-	(void) ppModData;
-	parser_errmsg("%s is an optional module which could not be built on your platform "
-		"please remove it from the configuration or upgrade your platform", MODULE_NAME);
+    (void) pData;
+    (void) ppModData;
+    parser_errmsg("%s is an optional module which could not be built on your platform "
+        "please remove it from the configuration or upgrade your platform", MODULE_NAME);
 ENDnewActInst
 
 
@@ -141,7 +141,7 @@ ENDtryResume
 
 BEGINdoAction_NoStrings
 CODESTARTdoAction
-	(void) pMsgData;
+    (void) pMsgData;
 ENDdoAction
 
 
@@ -165,8 +165,8 @@ ENDqueryEtryPt
 
 BEGINmodInit()
 CODESTARTmodInit
-	/* we only support the current interface specification */
-	*ipIFVersProvided = CURR_MOD_IF_VERSION;
+    /* we only support the current interface specification */
+    *ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
-	dbgprintf("mmdblookup: module compiled with rsyslog version %s.\n", VERSION);
+    dbgprintf("mmdblookup: module compiled with rsyslog version %s.\n", VERSION);
 ENDmodInit

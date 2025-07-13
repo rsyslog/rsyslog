@@ -35,14 +35,14 @@ static rsRetVal doExit(void); \
 /* Below is the driver, which is always the same */ \
 int main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[]) \
 { \
-	DEFiRet; \
-	CHKiRet(doInit()); \
-	CHKiRet(doTest()); \
-	CHKiRet(doExit()); \
+    DEFiRet; \
+    CHKiRet(doInit()); \
+    CHKiRet(doTest()); \
+    CHKiRet(doExit()); \
 finalize_it: \
-	if(iRet != RS_RET_OK) \
-		printf("test returns iRet %d\n", iRet); \
-	RETiRet; \
+    if(iRet != RS_RET_OK) \
+        printf("test returns iRet %d\n", iRet); \
+    RETiRet; \
 }
 
 
@@ -52,24 +52,24 @@ finalize_it: \
 #define BEGINInit \
 static rsRetVal doInit(void) \
 { \
-	DEFiRet; \
-	char *pErrObj; /* tells us which object failed if that happens */ \
-	putenv("RSYSLOG_MODDIR=../runtime/.libs/"); /* this is a bit hackish... */ \
+    DEFiRet; \
+    char *pErrObj; /* tells us which object failed if that happens */ \
+    putenv("RSYSLOG_MODDIR=../runtime/.libs/"); /* this is a bit hackish... */ \
 \
-	dbgClassInit(); \
-	/* Intialize the runtime system */ \
-	pErrObj = "rsyslog runtime"; /* set in case the runtime errors before setting an object */ \
-	CHKiRet(rsrtInit(&pErrObj, &obj)); \
+    dbgClassInit(); \
+    /* Intialize the runtime system */ \
+    pErrObj = "rsyslog runtime"; /* set in case the runtime errors before setting an object */ \
+    CHKiRet(rsrtInit(&pErrObj, &obj)); \
 
 #define CODESTARTInit
 
 #define ENDInit \
 finalize_it: \
-	if(iRet != RS_RET_OK) { \
-		printf("failure occurred during init of object '%s'\n", pErrObj); \
-	} \
+    if(iRet != RS_RET_OK) { \
+        printf("failure occurred during init of object '%s'\n", pErrObj); \
+    } \
 \
-	RETiRet; \
+    RETiRet; \
 }
 
 
@@ -79,12 +79,12 @@ finalize_it: \
 #define BEGINTest \
 rsRetVal doTest(void) \
 { \
-	DEFiRet;
+    DEFiRet;
 
 #define CODESTARTTest
 
 #define ENDTest \
-	RETiRet; \
+    RETiRet; \
 }
 
 
@@ -92,12 +92,12 @@ rsRetVal doTest(void) \
 #define BEGINExit \
 rsRetVal doExit(void) \
 { \
-	DEFiRet; \
-	CHKiRet(rsrtExit());
+    DEFiRet; \
+    CHKiRet(rsrtExit());
 
 #define CODESTARTExit
 
 #define ENDExit \
 finalize_it: \
-	RETiRet; \
+    RETiRet; \
 }

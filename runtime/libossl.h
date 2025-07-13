@@ -25,29 +25,29 @@
 #include <openssl/err.h>
 
 struct osslctx_s {
-	uchar *key;
-	size_t keyLen;
-	const EVP_CIPHER *cipher; /* container for algorithm + mode */
+    uchar *key;
+    size_t keyLen;
+    const EVP_CIPHER *cipher; /* container for algorithm + mode */
 };
 typedef struct osslctx_s* osslctx;
 typedef struct osslfile_s *osslfile;
 
 /* this describes a file, as far as libgcry is concerned */
 struct osslfile_s {
-	// gcry_cipher_hd_t chd; /* cypher handle */ TODO
-	EVP_CIPHER_CTX* chd;
-	size_t blkLength; /* size of low-level crypto block */
-	uchar *eiName; /* name of .encinfo file */
-	int fd; /* descriptor of .encinfo file (-1 if not open) */
-	char openMode; /* 'r': read, 'w': write */
-	osslctx ctx;
-	uchar *readBuf;
-	int16_t readBufIdx;
-	int16_t readBufMaxIdx;
-	int8_t bDeleteOnClose; /* for queue support, similar to stream subsys */
-	ssize_t bytesToBlkEnd; /* number of bytes remaining in current crypto block
-				-1 means -> no end (still being writen to, queue files),
-				0 means -> end of block, new one must be started. */
+    // gcry_cipher_hd_t chd; /* cypher handle */ TODO
+    EVP_CIPHER_CTX* chd;
+    size_t blkLength; /* size of low-level crypto block */
+    uchar *eiName; /* name of .encinfo file */
+    int fd; /* descriptor of .encinfo file (-1 if not open) */
+    char openMode; /* 'r': read, 'w': write */
+    osslctx ctx;
+    uchar *readBuf;
+    int16_t readBufIdx;
+    int16_t readBufMaxIdx;
+    int8_t bDeleteOnClose; /* for queue support, similar to stream subsys */
+    ssize_t bytesToBlkEnd; /* number of bytes remaining in current crypto block
+                -1 means -> no end (still being writen to, queue files),
+                0 means -> end of block, new one must be started. */
 };
 
 osslctx osslCtxNew(void);
@@ -68,8 +68,8 @@ void rsosslExit(void);
 // FIXME refactor
 static inline void __attribute__((unused))
 osslfileSetDeleteOnClose(osslfile gf, const int val) {
-	if (gf != NULL)
-		gf->bDeleteOnClose = val;
+    if (gf != NULL)
+        gf->bDeleteOnClose = val;
 }
 
 #endif  /* #ifndef INCLUDED_LIBOSSL_H */

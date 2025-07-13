@@ -89,15 +89,15 @@
 
 /* portability: */
 #ifndef _PATH_DEV
-#	define _PATH_DEV	"/dev/"
+#   define _PATH_DEV    "/dev/"
 #endif
 
 #ifdef UT_NAMESIZE
-# define UNAMESZ	UT_NAMESIZE	/* length of a login name */
+# define UNAMESZ    UT_NAMESIZE /* length of a login name */
 #else
-# define UNAMESZ	32	/* length of a login name, 32 seems current (2018) good bet */
+# define UNAMESZ    32  /* length of a login name, 32 seems current (2018) good bet */
 #endif
-#define MAXUNAMES	20	/* maximum number of user names */
+#define MAXUNAMES   20  /* maximum number of user names */
 
 #ifdef OS_SOLARIS
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
@@ -112,17 +112,17 @@ MODULE_CNFNAME("omusrmsg")
 DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
-	int bIsWall; /* 1- is wall, 0 - individual users */
-	char uname[MAXUNAMES][UNAMESZ+1];
-	uchar *tplName;
+    int bIsWall; /* 1- is wall, 0 - individual users */
+    char uname[MAXUNAMES][UNAMESZ+1];
+    uchar *tplName;
 } instanceData;
 
 typedef struct wrkrInstanceData {
-	instanceData *pData;
+    instanceData *pData;
 } wrkrInstanceData_t;
 
 typedef struct configSettings_s {
-	EMPTY_STRUCT
+    EMPTY_STRUCT
 } configSettings_t;
 static configSettings_t __attribute__((unused)) cs;
 
@@ -130,16 +130,16 @@ static configSettings_t __attribute__((unused)) cs;
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-	{ "users", eCmdHdlrString, CNFPARAM_REQUIRED },
-	{ "template", eCmdHdlrGetWord, 0 }
+    { "users", eCmdHdlrString, CNFPARAM_REQUIRED },
+    { "template", eCmdHdlrGetWord, 0 }
 };
 static struct cnfparamblk actpblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
-	  actpdescr
-	};
+    { CNFPARAMBLK_VERSION,
+      sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+      actpdescr
+    };
 
-BEGINinitConfVars		/* (re)set config variables to default values */
+BEGINinitConfVars       /* (re)set config variables to default values */
 CODESTARTinitConfVars
 ENDinitConfVars
 
@@ -156,14 +156,14 @@ ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATURERepeatedMsgReduction)
-		iRet = RS_RET_OK;
+    if(eFeat == sFEATURERepeatedMsgReduction)
+        iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	free(pData->tplName);
+    free(pData->tplName);
 ENDfreeInstance
 
 
@@ -173,10 +173,10 @@ ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
-	register int i;
+    register int i;
 CODESTARTdbgPrintInstInfo
-	for (i = 0; i < MAXUNAMES && *pData->uname[i]; i++)
-		dbgprintf("%s, ", pData->uname[i]);
+    for (i = 0; i < MAXUNAMES && *pData->uname[i]; i++)
+        dbgprintf("%s, ", pData->uname[i]);
 ENDdbgPrintInstInfo
 
 
@@ -202,27 +202,27 @@ ENDdbgPrintInstInfo
 static FILE *BSD_uf = NULL;
 void setutent(void)
 {
-	assert(BSD_uf == NULL);
-	if ((BSD_uf = fopen(_PATH_UTMP, "r")) == NULL) {
-		LogError(errno, NO_ERRCODE, "error opening utmp %s", _PATH_UTMP);
-		return;
-	}
+    assert(BSD_uf == NULL);
+    if ((BSD_uf = fopen(_PATH_UTMP, "r")) == NULL) {
+        LogError(errno, NO_ERRCODE, "error opening utmp %s", _PATH_UTMP);
+        return;
+    }
 }
 
 STRUCTUTMP* getutent(void)
 {
-	static STRUCTUTMP st_utmp;
+    static STRUCTUTMP st_utmp;
 
-	if(fread((char *)&st_utmp, sizeof(st_utmp), 1, BSD_uf) != 1)
-		return NULL;
+    if(fread((char *)&st_utmp, sizeof(st_utmp), 1, BSD_uf) != 1)
+        return NULL;
 
-	return(&st_utmp);
+    return(&st_utmp);
 }
 
 void endutent(void)
 {
-	fclose(BSD_uf);
-	BSD_uf = NULL;
+    fclose(BSD_uf);
+    BSD_uf = NULL;
 }
 #endif /* if defined(__FreeBSD__) */
 #endif  /* #ifdef OS_BSD */
@@ -240,42 +240,42 @@ void endutent(void)
  */
 static void sendwallmsg(const char *tty, uchar* pMsg)
 {
-	uchar szErr[512];
-	int errnoSave;
-	char p[sizeof(_PATH_DEV) + UT_LINESIZE];
-	int ttyf;
-	struct stat statb;
-	int wrRet;
+    uchar szErr[512];
+    int errnoSave;
+    char p[sizeof(_PATH_DEV) + UT_LINESIZE];
+    int ttyf;
+    struct stat statb;
+    int wrRet;
 
-	/* compute the device name */
-	strcpy(p, _PATH_DEV);
-	size_t base_len = strlen(p);
-	size_t avail = sizeof(p) - base_len - 1;
-	size_t ttylen = strnlen(tty, avail);
-	memcpy(p + base_len, tty, ttylen);
-	p[base_len + ttylen] = '\0';
+    /* compute the device name */
+    strcpy(p, _PATH_DEV);
+    size_t base_len = strlen(p);
+    size_t avail = sizeof(p) - base_len - 1;
+    size_t ttylen = strnlen(tty, avail);
+    memcpy(p + base_len, tty, ttylen);
+    p[base_len + ttylen] = '\0';
 
-	/* we must be careful when writing to the terminal. A terminal may block
-	 * (for example, a user has pressed <ctl>-s). In that case, we can not
-	 * wait indefinitely. So we need to use non-blocking I/O. In case we would
-	 * block, we simply do not send the message, because that's the best we can
-	 * do. -- rgerhards, 2008-07-04
-	 */
+    /* we must be careful when writing to the terminal. A terminal may block
+     * (for example, a user has pressed <ctl>-s). In that case, we can not
+     * wait indefinitely. So we need to use non-blocking I/O. In case we would
+     * block, we simply do not send the message, because that's the best we can
+     * do. -- rgerhards, 2008-07-04
+     */
 
-	/* open the terminal */
-	if((ttyf = open(p, O_WRONLY|O_NOCTTY|O_NONBLOCK)) >= 0) {
-	  if(fstat(ttyf, &statb) == 0 && (statb.st_mode & S_IWRITE)) {
-	    wrRet = write(ttyf, pMsg, strlen((char*)pMsg));
-	    if(Debug && wrRet == -1) {
-	      /* we record the state to the debug log */
-	      errnoSave = errno;
-	      rs_strerror_r(errno, (char*)szErr, sizeof(szErr));
-	      dbgprintf("write to terminal '%s' failed with [%d]:%s\n",
-			p, errnoSave, szErr);
-	    }
-	  }
-	  close(ttyf);
-	}
+    /* open the terminal */
+    if((ttyf = open(p, O_WRONLY|O_NOCTTY|O_NONBLOCK)) >= 0) {
+      if(fstat(ttyf, &statb) == 0 && (statb.st_mode & S_IWRITE)) {
+        wrRet = write(ttyf, pMsg, strlen((char*)pMsg));
+        if(Debug && wrRet == -1) {
+          /* we record the state to the debug log */
+          errnoSave = errno;
+          rs_strerror_r(errno, (char*)szErr, sizeof(szErr));
+          dbgprintf("write to terminal '%s' failed with [%d]:%s\n",
+            p, errnoSave, szErr);
+        }
+      }
+      close(ttyf);
+    }
 }
 
 /**
@@ -292,115 +292,115 @@ static void sendwallmsg(const char *tty, uchar* pMsg)
  */
 static rsRetVal wallmsg(uchar* pMsg, instanceData *pData)
 {
-	register int i;
-	STRUCTUTMP ut;
-	STRUCTUTMP *uptr;
-	DEFiRet;
+    register int i;
+    STRUCTUTMP ut;
+    STRUCTUTMP *uptr;
+    DEFiRet;
 
-	assert(pMsg != NULL);
+    assert(pMsg != NULL);
 
 #ifdef HAVE_LIBSYSTEMD
-	if (sd_booted() > 0) {
-	        register int j;
-		int sdRet;
-		char **sessions_list;
-		int sessions = sd_get_sessions(&sessions_list);
+    if (sd_booted() > 0) {
+            register int j;
+        int sdRet;
+        char **sessions_list;
+        int sessions = sd_get_sessions(&sessions_list);
 
-		for (j = 0; j < sessions; j++) {
-	                uchar szErr[512];
-			char *tty;
-			const char *user = NULL;
-			uid_t uid;
-			struct passwd *pws;
+        for (j = 0; j < sessions; j++) {
+                    uchar szErr[512];
+            char *tty;
+            const char *user = NULL;
+            uid_t uid;
+            struct passwd *pws;
 
-			sdRet = sd_session_get_uid(sessions_list[j], &uid);
-			if (sdRet >= 0) {
-				pws = getpwuid(uid);
-				user = pws->pw_name; /* DO NOT FREE, OS/LIB internal memory! */
+            sdRet = sd_session_get_uid(sessions_list[j], &uid);
+            if (sdRet >= 0) {
+                pws = getpwuid(uid);
+                user = pws->pw_name; /* DO NOT FREE, OS/LIB internal memory! */
 
-				if (user == NULL) {
-					dbgprintf("failed to get username for userid '%d'\n", uid);
-					continue;
-				}
-			} else {
-		                /* we record the state to the debug log */
-		                rs_strerror_r(-sdRet, (char*)szErr, sizeof(szErr));
-				dbgprintf("get userid for session '%s' failed with [%d]:%s\n",
-					  sessions_list[j], -sdRet, szErr);
-				continue; /* try next session */
-			}
-			/* should we send the message to this user? */
-			if(pData->bIsWall == 0) {
-			        for(i = 0; i < MAXUNAMES; i++) {
-				        if(!pData->uname[i][0]) {
-					        i = MAXUNAMES;
-						break;
-					}
-					if(strncmp(pData->uname[i], user, UNAMESZ) == 0)
-					        break;
-				}
-				if(i == MAXUNAMES) { /* user not found? */
-					free(sessions_list[j]);
-					continue; /* on to next user! */
-				}
-			}
-			if ((sdRet = sd_session_get_tty(sessions_list[j], &tty)) < 0) {
-		                /* we record the state to the debug log */
-		                rs_strerror_r(-sdRet, (char*)szErr, sizeof(szErr));
-				dbgprintf("get tty for session '%s' failed with [%d]:%s\n",
-					  sessions_list[j], -sdRet, szErr);
-				free(sessions_list[j]);
-				continue; /* try next session */
-			}
+                if (user == NULL) {
+                    dbgprintf("failed to get username for userid '%d'\n", uid);
+                    continue;
+                }
+            } else {
+                        /* we record the state to the debug log */
+                        rs_strerror_r(-sdRet, (char*)szErr, sizeof(szErr));
+                dbgprintf("get userid for session '%s' failed with [%d]:%s\n",
+                      sessions_list[j], -sdRet, szErr);
+                continue; /* try next session */
+            }
+            /* should we send the message to this user? */
+            if(pData->bIsWall == 0) {
+                    for(i = 0; i < MAXUNAMES; i++) {
+                        if(!pData->uname[i][0]) {
+                            i = MAXUNAMES;
+                        break;
+                    }
+                    if(strncmp(pData->uname[i], user, UNAMESZ) == 0)
+                            break;
+                }
+                if(i == MAXUNAMES) { /* user not found? */
+                    free(sessions_list[j]);
+                    continue; /* on to next user! */
+                }
+            }
+            if ((sdRet = sd_session_get_tty(sessions_list[j], &tty)) < 0) {
+                        /* we record the state to the debug log */
+                        rs_strerror_r(-sdRet, (char*)szErr, sizeof(szErr));
+                dbgprintf("get tty for session '%s' failed with [%d]:%s\n",
+                      sessions_list[j], -sdRet, szErr);
+                free(sessions_list[j]);
+                continue; /* try next session */
+            }
 
-			sendwallmsg(tty, pMsg);
+            sendwallmsg(tty, pMsg);
 
-			free(tty);
-			free(sessions_list[j]);
-		}
-		free(sessions_list);
-	} else {
+            free(tty);
+            free(sessions_list[j]);
+        }
+        free(sessions_list);
+    } else {
 #endif
 
-	/* open the user login file */
-	setutent();
+    /* open the user login file */
+    setutent();
 
-	/* scan the user login file */
-	while((uptr = getutent())) {
-		memcpy(&ut, uptr, sizeof(ut));
-		/* is this slot used? */
-		if(ut.UTNAME[0] == '\0')
-			continue;
+    /* scan the user login file */
+    while((uptr = getutent())) {
+        memcpy(&ut, uptr, sizeof(ut));
+        /* is this slot used? */
+        if(ut.UTNAME[0] == '\0')
+            continue;
 #ifndef OS_BSD
-		if(ut.ut_type != USER_PROCESS)
-			continue;
+        if(ut.ut_type != USER_PROCESS)
+            continue;
 #endif
-		if(!(memcmp (ut.UTNAME,"LOGIN", 6))) /* paranoia */
-			continue;
+        if(!(memcmp (ut.UTNAME,"LOGIN", 6))) /* paranoia */
+            continue;
 
-		/* should we send the message to this user? */
-		if(pData->bIsWall == 0) {
-			for(i = 0; i < MAXUNAMES; i++) {
-				if(!pData->uname[i][0]) {
-					i = MAXUNAMES;
-					break;
-				}
-				if(strncmp(pData->uname[i], ut.UTNAME, UNAMESZ) == 0)
-					break;
-			}
-			if(i == MAXUNAMES) /* user not found? */
-				continue; /* on to next user! */
-		}
+        /* should we send the message to this user? */
+        if(pData->bIsWall == 0) {
+            for(i = 0; i < MAXUNAMES; i++) {
+                if(!pData->uname[i][0]) {
+                    i = MAXUNAMES;
+                    break;
+                }
+                if(strncmp(pData->uname[i], ut.UTNAME, UNAMESZ) == 0)
+                    break;
+            }
+            if(i == MAXUNAMES) /* user not found? */
+                continue; /* on to next user! */
+        }
 
-		sendwallmsg(ut.ut_line, pMsg);
-	}
+        sendwallmsg(ut.ut_line, pMsg);
+    }
 
-	/* close the user login file */
-	endutent();
+    /* close the user login file */
+    endutent();
 #ifdef HAVE_LIBSYSTEMD
-	}
+    }
 #endif
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -410,8 +410,8 @@ ENDtryResume
 
 BEGINdoAction
 CODESTARTdoAction
-	dbgprintf("\n");
-	iRet = wallmsg(ppString[0], pWrkrData->pData);
+    dbgprintf("\n");
+    iRet = wallmsg(ppString[0], pWrkrData->pData);
 ENDdoAction
 
 
@@ -428,147 +428,147 @@ static void
  */
 populateUsers(instanceData *pData, es_str_t *usrs)
 {
-	int i;
-	int iDst;
-	es_size_t iUsr;
-	es_size_t len;
-	uchar *c;
+    int i;
+    int iDst;
+    es_size_t iUsr;
+    es_size_t len;
+    uchar *c;
 
-	len = es_strlen(usrs);
-	c = es_getBufAddr(usrs);
-	pData->bIsWall = 0; /* write to individual users */
-	iUsr = 0;
-	for(i = 0 ; i < MAXUNAMES && iUsr < len ; ++i) {
-		for(  iDst = 0
-		    ; iDst < UNAMESZ && iUsr < len && c[iUsr] != ','
-		    ; ++iDst, ++iUsr) {
-			pData->uname[i][iDst] = c[iUsr];
-		}
-		pData->uname[i][iDst] = '\0';
-		DBGPRINTF("omusrmsg: send to user '%s'\n", pData->uname[i]);
-		if(iUsr < len && c[iUsr] != ',') {
-			LogError(0, RS_RET_ERR, "user name '%s...' too long - "
-				"ignored", pData->uname[i]);
-			--i;
-			++iUsr;
-			while(iUsr < len && c[iUsr] != ',')
-				++iUsr; /* skip to next name */
-		} else if(iDst == 0) {
-			LogError(0, RS_RET_ERR, "no user name given - "
-				"ignored");
-			--i;
-			++iUsr;
-			while(iUsr < len && c[iUsr] != ',')
-				++iUsr; /* skip to next name */
-		}
-		if(iUsr < len) {
-			++iUsr; /* skip "," */
-			while(iUsr < len && isspace(c[iUsr]))
-				++iUsr; /* skip whitespace */
-		}
-	}
-	if(i == MAXUNAMES && iUsr != len) {
-		LogError(0, RS_RET_ERR, "omusrmsg supports only up to %d "
-			"user names in a single action - all others have been ignored",
-			MAXUNAMES);
-	}
+    len = es_strlen(usrs);
+    c = es_getBufAddr(usrs);
+    pData->bIsWall = 0; /* write to individual users */
+    iUsr = 0;
+    for(i = 0 ; i < MAXUNAMES && iUsr < len ; ++i) {
+        for(  iDst = 0
+            ; iDst < UNAMESZ && iUsr < len && c[iUsr] != ','
+            ; ++iDst, ++iUsr) {
+            pData->uname[i][iDst] = c[iUsr];
+        }
+        pData->uname[i][iDst] = '\0';
+        DBGPRINTF("omusrmsg: send to user '%s'\n", pData->uname[i]);
+        if(iUsr < len && c[iUsr] != ',') {
+            LogError(0, RS_RET_ERR, "user name '%s...' too long - "
+                "ignored", pData->uname[i]);
+            --i;
+            ++iUsr;
+            while(iUsr < len && c[iUsr] != ',')
+                ++iUsr; /* skip to next name */
+        } else if(iDst == 0) {
+            LogError(0, RS_RET_ERR, "no user name given - "
+                "ignored");
+            --i;
+            ++iUsr;
+            while(iUsr < len && c[iUsr] != ',')
+                ++iUsr; /* skip to next name */
+        }
+        if(iUsr < len) {
+            ++iUsr; /* skip "," */
+            while(iUsr < len && isspace(c[iUsr]))
+                ++iUsr; /* skip whitespace */
+        }
+    }
+    if(i == MAXUNAMES && iUsr != len) {
+        LogError(0, RS_RET_ERR, "omusrmsg supports only up to %d "
+            "user names in a single action - all others have been ignored",
+            MAXUNAMES);
+    }
 }
 
 
 static inline void
 setInstParamDefaults(instanceData *pData)
 {
-	pData->bIsWall = 0;
-	pData->tplName = NULL;
+    pData->bIsWall = 0;
+    pData->tplName = NULL;
 }
 
 BEGINnewActInst
-	struct cnfparamvals *pvals;
-	int i;
+    struct cnfparamvals *pvals;
+    int i;
 CODESTARTnewActInst
-	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-	}
+    if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
 
-	CHKiRet(createInstance(&pData));
-	setInstParamDefaults(pData);
+    CHKiRet(createInstance(&pData));
+    setInstParamDefaults(pData);
 
-	CODE_STD_STRING_REQUESTnewActInst(1)
-	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
-			continue;
-		if(!strcmp(actpblk.descr[i].name, "users")) {
-			if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"*", 1)) {
-				pData->bIsWall = 1;
-			} else {
-				populateUsers(pData, pvals[i].val.d.estr);
-			}
-		} else if(!strcmp(actpblk.descr[i].name, "template")) {
-			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else {
-			dbgprintf("omusrmsg: program error, non-handled "
-			  "param '%s'\n", actpblk.descr[i].name);
-		}
-	}
+    CODE_STD_STRING_REQUESTnewActInst(1)
+    for(i = 0 ; i < actpblk.nParams ; ++i) {
+        if(!pvals[i].bUsed)
+            continue;
+        if(!strcmp(actpblk.descr[i].name, "users")) {
+            if(!es_strbufcmp(pvals[i].val.d.estr, (uchar*)"*", 1)) {
+                pData->bIsWall = 1;
+            } else {
+                populateUsers(pData, pvals[i].val.d.estr);
+            }
+        } else if(!strcmp(actpblk.descr[i].name, "template")) {
+            pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else {
+            dbgprintf("omusrmsg: program error, non-handled "
+              "param '%s'\n", actpblk.descr[i].name);
+        }
+    }
 
-	if(pData->tplName == NULL) {
-		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
-			(uchar*) strdup(pData->bIsWall ? " WallFmt" : " StdUsrMsgFmt"),
-			OMSR_NO_RQD_TPL_OPTS));
-	} else {
-		CHKiRet(OMSRsetEntry(*ppOMSR, 0,
-			(uchar*) strdup((char*) pData->tplName),
-			OMSR_NO_RQD_TPL_OPTS));
-	}
+    if(pData->tplName == NULL) {
+        CHKiRet(OMSRsetEntry(*ppOMSR, 0,
+            (uchar*) strdup(pData->bIsWall ? " WallFmt" : " StdUsrMsgFmt"),
+            OMSR_NO_RQD_TPL_OPTS));
+    } else {
+        CHKiRet(OMSRsetEntry(*ppOMSR, 0,
+            (uchar*) strdup((char*) pData->tplName),
+            OMSR_NO_RQD_TPL_OPTS));
+    }
 CODE_STD_FINALIZERnewActInst
-	cnfparamvalsDestruct(pvals, &actpblk);
+    cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINparseSelectorAct
-	es_str_t *usrs;
-	int bHadWarning;
+    es_str_t *usrs;
+    int bHadWarning;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	bHadWarning = 0;
-	if(!strncmp((char*) p, ":omusrmsg:", sizeof(":omusrmsg:") - 1)) {
-		p += sizeof(":omusrmsg:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
-	} else {
-		if(!*p || !((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z')
-	   || (*p >= '0' && *p <= '9') || *p == '_' || *p == '.' || *p == '*')) {
-			ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-		} else {
-			LogMsg(0, RS_RET_OUTDATED_STMT, LOG_WARNING,
-				"action '%s' treated as ':omusrmsg:%s' - please "
-				"use ':omusrmsg:%s' syntax instead, '%s' will "
-				"not be supported in the future",
-				p, p, p, p);
-			bHadWarning = 1;
-		}
-	}
+    bHadWarning = 0;
+    if(!strncmp((char*) p, ":omusrmsg:", sizeof(":omusrmsg:") - 1)) {
+        p += sizeof(":omusrmsg:") - 1; /* eat indicator sequence  (-1 because of '\0'!) */
+    } else {
+        if(!*p || !((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z')
+       || (*p >= '0' && *p <= '9') || *p == '_' || *p == '.' || *p == '*')) {
+            ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
+        } else {
+            LogMsg(0, RS_RET_OUTDATED_STMT, LOG_WARNING,
+                "action '%s' treated as ':omusrmsg:%s' - please "
+                "use ':omusrmsg:%s' syntax instead, '%s' will "
+                "not be supported in the future",
+                p, p, p, p);
+            bHadWarning = 1;
+        }
+    }
 
-	CHKiRet(createInstance(&pData));
+    CHKiRet(createInstance(&pData));
 
-	if(*p == '*') { /* wall */
-		dbgprintf("write-all");
-		++p; /* eat '*' */
-		pData->bIsWall = 1; /* write to all users */
-		CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) " WallFmt"));
-	} else {
-		/* everything else is currently treated as a user name */
-		usrs = es_newStr(128);
-		while(*p && *p != ';') {
-			es_addChar(&usrs, *p);
-			++p;
-		}
-		populateUsers(pData, usrs);
-		es_deleteStr(usrs);
-		if((iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*)" StdUsrMsgFmt"))
-			!= RS_RET_OK)
-			goto finalize_it;
-	}
-	if(iRet == RS_RET_OK && bHadWarning)
-		iRet = RS_RET_OK_WARN;
+    if(*p == '*') { /* wall */
+        dbgprintf("write-all");
+        ++p; /* eat '*' */
+        pData->bIsWall = 1; /* write to all users */
+        CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*) " WallFmt"));
+    } else {
+        /* everything else is currently treated as a user name */
+        usrs = es_newStr(128);
+        while(*p && *p != ';') {
+            es_addChar(&usrs, *p);
+            ++p;
+        }
+        populateUsers(pData, usrs);
+        es_deleteStr(usrs);
+        if((iRet = cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar*)" StdUsrMsgFmt"))
+            != RS_RET_OK)
+            goto finalize_it;
+    }
+    if(iRet == RS_RET_OK && bHadWarning)
+        iRet = RS_RET_OK_WARN;
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
@@ -589,7 +589,7 @@ ENDqueryEtryPt
 BEGINmodInit(UsrMsg)
 CODESTARTmodInit
 INITLegCnfVars
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit
 

@@ -53,26 +53,26 @@ DEFobjCurrIf(datetime)
 
 /* parser instance parameters */
 static struct cnfparamdescr parserpdescr[] = {
-	{ "present.origin", eCmdHdlrBinary, 0 },
-	{ "present.xr", eCmdHdlrBinary, 0 }
+    { "present.origin", eCmdHdlrBinary, 0 },
+    { "present.xr", eCmdHdlrBinary, 0 }
 };
 static struct cnfparamblk parserpblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(parserpdescr)/sizeof(struct cnfparamdescr),
-	  parserpdescr
-	};
+    { CNFPARAMBLK_VERSION,
+      sizeof(parserpdescr)/sizeof(struct cnfparamdescr),
+      parserpdescr
+    };
 
 struct instanceConf_s {
-	int bOriginPresent; /* is ORIGIN field present? */
-	int bXrPresent; /* is XR? */
+    int bOriginPresent; /* is ORIGIN field present? */
+    int bXrPresent; /* is XR? */
 };
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if(eFeat == sFEATUREAutomaticSanitazion)
-		iRet = RS_RET_OK;
-	if(eFeat == sFEATUREAutomaticPRIParsing)
-		iRet = RS_RET_OK;
+    if(eFeat == sFEATUREAutomaticSanitazion)
+        iRet = RS_RET_OK;
+    if(eFeat == sFEATUREAutomaticPRIParsing)
+        iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
@@ -82,196 +82,196 @@ ENDisCompatibleWithFeature
 static rsRetVal
 createInstance(instanceConf_t **pinst)
 {
-	instanceConf_t *inst;
-	DEFiRet;
-	CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
-	inst->bOriginPresent = 0;
-	inst->bXrPresent = 0;
-	*pinst = inst;
+    instanceConf_t *inst;
+    DEFiRet;
+    CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
+    inst->bOriginPresent = 0;
+    inst->bXrPresent = 0;
+    *pinst = inst;
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
 BEGINfreeParserInst
 CODESTARTfreeParserInst
-	dbgprintf("pmciscoios: free parser instance %p\n", pInst);
+    dbgprintf("pmciscoios: free parser instance %p\n", pInst);
 ENDfreeParserInst
 
 
 BEGINnewParserInst
-	struct cnfparamvals *pvals = NULL;
-	int i;
+    struct cnfparamvals *pvals = NULL;
+    int i;
 CODESTARTnewParserInst
-	DBGPRINTF("newParserInst (pmciscoios)\n");
+    DBGPRINTF("newParserInst (pmciscoios)\n");
 
-	inst = NULL;
-	CHKiRet(createInstance(&inst));
+    inst = NULL;
+    CHKiRet(createInstance(&inst));
 
-	if(lst == NULL)
-		FINALIZE;  /* just set defaults, no param block! */
+    if(lst == NULL)
+        FINALIZE;  /* just set defaults, no param block! */
 
-	if((pvals = nvlstGetParams(lst, &parserpblk, NULL)) == NULL) {
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-	}
+    if((pvals = nvlstGetParams(lst, &parserpblk, NULL)) == NULL) {
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
 
-	if(Debug) {
-		dbgprintf("parser param blk in pmciscoios:\n");
-		cnfparamsPrint(&parserpblk, pvals);
-	}
+    if(Debug) {
+        dbgprintf("parser param blk in pmciscoios:\n");
+        cnfparamsPrint(&parserpblk, pvals);
+    }
 
-	for(i = 0 ; i < parserpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
-			continue;
-		if(!strcmp(parserpblk.descr[i].name, "present.origin")) {
-			inst->bOriginPresent = (int) pvals[i].val.d.n;
-		} else if(!strcmp(parserpblk.descr[i].name, "present.xr")) {
-			inst->bXrPresent = (int) pvals[i].val.d.n;
-		} else {
-			dbgprintf("pmciscoios: program error, non-handled "
-				"param '%s'\n", parserpblk.descr[i].name);
-		}
-	}
+    for(i = 0 ; i < parserpblk.nParams ; ++i) {
+        if(!pvals[i].bUsed)
+            continue;
+        if(!strcmp(parserpblk.descr[i].name, "present.origin")) {
+            inst->bOriginPresent = (int) pvals[i].val.d.n;
+        } else if(!strcmp(parserpblk.descr[i].name, "present.xr")) {
+            inst->bXrPresent = (int) pvals[i].val.d.n;
+        } else {
+            dbgprintf("pmciscoios: program error, non-handled "
+                "param '%s'\n", parserpblk.descr[i].name);
+        }
+    }
 finalize_it:
 CODE_STD_FINALIZERnewParserInst
-	if(lst != NULL)
-		cnfparamvalsDestruct(pvals, &parserpblk);
-	if(iRet != RS_RET_OK)
-		freeParserInst(inst);
+    if(lst != NULL)
+        cnfparamvalsDestruct(pvals, &parserpblk);
+    if(iRet != RS_RET_OK)
+        freeParserInst(inst);
 ENDnewParserInst
 
 
 BEGINparse2
-	uchar *p2parse;
-	long long msgcounter;
-	int lenMsg;
-	int i;
-	int iHostname = 0;
-	uchar bufParseTAG[512];
-	uchar bufParseHOSTNAME[CONF_HOSTNAME_MAXSIZE]; /* used by origin */
+    uchar *p2parse;
+    long long msgcounter;
+    int lenMsg;
+    int i;
+    int iHostname = 0;
+    uchar bufParseTAG[512];
+    uchar bufParseHOSTNAME[CONF_HOSTNAME_MAXSIZE]; /* used by origin */
 CODESTARTparse2
-	DBGPRINTF("Message will now be parsed by pmciscoios\n");
-	assert(pMsg != NULL);
-	assert(pMsg->pszRawMsg != NULL);
-	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
-	/* note: offAfterPRI is already the number of PRI chars (do not add one!) */
-	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
+    DBGPRINTF("Message will now be parsed by pmciscoios\n");
+    assert(pMsg != NULL);
+    assert(pMsg->pszRawMsg != NULL);
+    lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
+    /* note: offAfterPRI is already the number of PRI chars (do not add one!) */
+    p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 
-	/* first obtain the MESSAGE COUNTER. It must be numeric up until
-	 * the ": " terminator sequence
-	 */
-	msgcounter = 0;
-	while(lenMsg > 0 && (*p2parse >= '0' && *p2parse <= '9') ) {
-		msgcounter = msgcounter * 10 + *p2parse - '0';
-		++p2parse, --lenMsg;
-	}
-	DBGPRINTF("pmciscoios: msgcntr %lld\n", msgcounter);
+    /* first obtain the MESSAGE COUNTER. It must be numeric up until
+     * the ": " terminator sequence
+     */
+    msgcounter = 0;
+    while(lenMsg > 0 && (*p2parse >= '0' && *p2parse <= '9') ) {
+        msgcounter = msgcounter * 10 + *p2parse - '0';
+        ++p2parse, --lenMsg;
+    }
+    DBGPRINTF("pmciscoios: msgcntr %lld\n", msgcounter);
 
-	/* delimiter check */
-	if(lenMsg < 2 || *p2parse != ':' || *(p2parse+1) != ' ') {
-		DBGPRINTF("pmciscoios: fail after seqno: '%s'\n", p2parse);
-		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-	}
-	p2parse += 2;
+    /* delimiter check */
+    if(lenMsg < 2 || *p2parse != ':' || *(p2parse+1) != ' ') {
+        DBGPRINTF("pmciscoios: fail after seqno: '%s'\n", p2parse);
+        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+    }
+    p2parse += 2;
 
-	/* ORIGIN (optional) */
-	if(pInst->bOriginPresent) {
-		iHostname = 0;
-		while(   lenMsg > 1
-		      && !(*p2parse == ':' && *(p2parse+1) == ' ')  /* IPv6 is e.g. "::1" (loopback) */
-		      && iHostname < (int) sizeof(bufParseHOSTNAME) - 1 ) {
-			bufParseHOSTNAME[iHostname++] = *p2parse++;
-			--lenMsg;
-		}
-		bufParseHOSTNAME[iHostname] = '\0';
-		/* delimiter check */
-		if(lenMsg < 2 || *(p2parse+1) != ' ') {
-			DBGPRINTF("pmciscoios: fail after origin: '%s'\n", p2parse);
-			ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-		}
-		p2parse += 2;
-	}
+    /* ORIGIN (optional) */
+    if(pInst->bOriginPresent) {
+        iHostname = 0;
+        while(   lenMsg > 1
+              && !(*p2parse == ':' && *(p2parse+1) == ' ')  /* IPv6 is e.g. "::1" (loopback) */
+              && iHostname < (int) sizeof(bufParseHOSTNAME) - 1 ) {
+            bufParseHOSTNAME[iHostname++] = *p2parse++;
+            --lenMsg;
+        }
+        bufParseHOSTNAME[iHostname] = '\0';
+        /* delimiter check */
+        if(lenMsg < 2 || *(p2parse+1) != ' ') {
+            DBGPRINTF("pmciscoios: fail after origin: '%s'\n", p2parse);
+            ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+        }
+        p2parse += 2;
+    }
 
-	/* XR RSP (optional) */
-	if(pInst->bXrPresent) {
-		while(   lenMsg > 1
-			&& !(*p2parse == ':')) {
-			--lenMsg;
-			++p2parse;
-		}
-		/* delimiter check */
-		if(lenMsg < 2) {
-			DBGPRINTF("pmciscoios: fail after XR: '%s'\n", p2parse);
-			ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-		}
-		p2parse += 1;
-	}
+    /* XR RSP (optional) */
+    if(pInst->bXrPresent) {
+        while(   lenMsg > 1
+            && !(*p2parse == ':')) {
+            --lenMsg;
+            ++p2parse;
+        }
+        /* delimiter check */
+        if(lenMsg < 2) {
+            DBGPRINTF("pmciscoios: fail after XR: '%s'\n", p2parse);
+            ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+        }
+        p2parse += 1;
+    }
 
-	/* TIMESTAMP */
-	if(p2parse[0] == '*' || p2parse[0] == '.') p2parse++;
-	if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg, PARSE3164_TZSTRING,
-	NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
-		if(pMsg->dfltTZ[0] != '\0')
-			applyDfltTZ(&pMsg->tTIMESTAMP, pMsg->dfltTZ);
-	} else {
-		DBGPRINTF("pmciscoios: fail at timestamp: '%s'\n", p2parse);
-		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-	}
-	/* Note: date parser strips ": ", so we cannot do the delimiter check here */
+    /* TIMESTAMP */
+    if(p2parse[0] == '*' || p2parse[0] == '.') p2parse++;
+    if(datetime.ParseTIMESTAMP3164(&(pMsg->tTIMESTAMP), &p2parse, &lenMsg, PARSE3164_TZSTRING,
+    NO_PERMIT_YEAR_AFTER_TIME) == RS_RET_OK) {
+        if(pMsg->dfltTZ[0] != '\0')
+            applyDfltTZ(&pMsg->tTIMESTAMP, pMsg->dfltTZ);
+    } else {
+        DBGPRINTF("pmciscoios: fail at timestamp: '%s'\n", p2parse);
+        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+    }
+    /* Note: date parser strips ": ", so we cannot do the delimiter check here */
 
-	/* XR RSP (optional) */
-	if(pInst->bXrPresent) {
-		while(   lenMsg > 1
-			&& !(*p2parse == '%')) {
-			--lenMsg;
-			p2parse++;
-		}
-		/* delimiter check */
-		if(lenMsg < 2) {
-			DBGPRINTF("pmciscoios: fail after XR tag search: '%s'\n", p2parse);
-			ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-		}
-	}
+    /* XR RSP (optional) */
+    if(pInst->bXrPresent) {
+        while(   lenMsg > 1
+            && !(*p2parse == '%')) {
+            --lenMsg;
+            p2parse++;
+        }
+        /* delimiter check */
+        if(lenMsg < 2) {
+            DBGPRINTF("pmciscoios: fail after XR tag search: '%s'\n", p2parse);
+            ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+        }
+    }
 
-	/* parse SYSLOG TAG. must always start with '%', else we have a field mismatch */
-	if(lenMsg < 1 || *p2parse != '%') {
-		DBGPRINTF("pmciscoios: fail at tag begin (no '%%'): '%s'\n", p2parse);
-		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-	}
+    /* parse SYSLOG TAG. must always start with '%', else we have a field mismatch */
+    if(lenMsg < 1 || *p2parse != '%') {
+        DBGPRINTF("pmciscoios: fail at tag begin (no '%%'): '%s'\n", p2parse);
+        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+    }
 
-	i = 0;
-	while(lenMsg > 0 && *p2parse != ':' && *p2parse != ' ' && i < (int) sizeof(bufParseTAG) - 2) {
-		bufParseTAG[i++] = *p2parse++;
-		--lenMsg;
-	}
-	/* delimiter check */
-	if(pInst->bXrPresent) p2parse++;
-	if(lenMsg < 2 || *p2parse != ':' || *(p2parse+1) != ' ') {
-		DBGPRINTF("pmciscoios: fail after tag: '%s'\n", p2parse);
-		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-	}
+    i = 0;
+    while(lenMsg > 0 && *p2parse != ':' && *p2parse != ' ' && i < (int) sizeof(bufParseTAG) - 2) {
+        bufParseTAG[i++] = *p2parse++;
+        --lenMsg;
+    }
+    /* delimiter check */
+    if(pInst->bXrPresent) p2parse++;
+    if(lenMsg < 2 || *p2parse != ':' || *(p2parse+1) != ' ') {
+        DBGPRINTF("pmciscoios: fail after tag: '%s'\n", p2parse);
+        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+    }
 
-	++p2parse;
-	bufParseTAG[i++] = ':';
-	bufParseTAG[i] = '\0';	/* terminate string */
+    ++p2parse;
+    bufParseTAG[i++] = ':';
+    bufParseTAG[i] = '\0';  /* terminate string */
 
-	/* if we reach this point, we have a wellformed message and can persist the values */
-	MsgSetTAG(pMsg, bufParseTAG, i);
-	/* if bOriginPresent !=0 iHostname gets initialized */
-	if(pInst->bOriginPresent)
-		MsgSetHOSTNAME(pMsg, bufParseHOSTNAME, iHostname);
-	MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);
-	setProtocolVersion(pMsg, MSG_LEGACY_PROTOCOL);
+    /* if we reach this point, we have a wellformed message and can persist the values */
+    MsgSetTAG(pMsg, bufParseTAG, i);
+    /* if bOriginPresent !=0 iHostname gets initialized */
+    if(pInst->bOriginPresent)
+        MsgSetHOSTNAME(pMsg, bufParseHOSTNAME, iHostname);
+    MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);
+    setProtocolVersion(pMsg, MSG_LEGACY_PROTOCOL);
 finalize_it:
 ENDparse2
 
 
 BEGINmodExit
 CODESTARTmodExit
-	/* release what we no longer need */
-	objRelease(glbl, CORE_COMPONENT);
-	objRelease(parser, CORE_COMPONENT);
-	objRelease(datetime, CORE_COMPONENT);
+    /* release what we no longer need */
+    objRelease(glbl, CORE_COMPONENT);
+    objRelease(parser, CORE_COMPONENT);
+    objRelease(datetime, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -284,11 +284,11 @@ ENDqueryEtryPt
 
 BEGINmodInit()
 CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(parser, CORE_COMPONENT));
-	CHKiRet(objUse(datetime, CORE_COMPONENT));
+    CHKiRet(objUse(glbl, CORE_COMPONENT));
+    CHKiRet(objUse(parser, CORE_COMPONENT));
+    CHKiRet(objUse(datetime, CORE_COMPONENT));
 
-	DBGPRINTF("pmciscoios parser init called\n");
+    DBGPRINTF("pmciscoios parser init called\n");
 ENDmodInit

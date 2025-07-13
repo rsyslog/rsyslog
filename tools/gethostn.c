@@ -30,17 +30,17 @@
 
 int main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
 {
-	char hostname[4096]; /* this should always be sufficient ;) */
-	int err;
+    char hostname[4096]; /* this should always be sufficient ;) */
+    int err;
 
-	err = gethostname(hostname, sizeof(hostname));
+    err = gethostname(hostname, sizeof(hostname));
 
-	if(err) {
-		perror("gethostname failed");
-		exit(1);
-	}
+    if(err) {
+        perror("gethostname failed");
+        exit(1);
+    }
 
-	printf("hostname of this system is '%s'.\n", hostname);
+    printf("hostname of this system is '%s'.\n", hostname);
 
-	return 0;
+    return 0;
 }

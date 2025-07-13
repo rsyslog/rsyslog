@@ -31,16 +31,16 @@
 
 int main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[])
 {
-	int c;
+    int c;
 
-	for(c = getchar() ; c != EOF && c != '\n' ; c = getchar())
-		/*skip to newline*/;
+    for(c = getchar() ; c != EOF && c != '\n' ; c = getchar())
+        /*skip to newline*/;
 
-	if(c == '\n')
-		c = getchar();
+    if(c == '\n')
+        c = getchar();
 
-	for( ; c != EOF ; c = getchar())
-		putchar(c);
+    for( ; c != EOF ; c = getchar())
+        putchar(c);
 
-	return 0;
+    return 0;
 }

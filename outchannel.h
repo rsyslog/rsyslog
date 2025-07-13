@@ -22,12 +22,12 @@
 #ifndef OUTCHANNEL_H
 #define OUTCHANNEL_H
 struct outchannel {
-	struct outchannel *pNext;
-	char *pszName;
-	int iLenName;
-	uchar *pszFileTemplate;
-	off_t	uSizeLimit;
-	uchar *cmdOnSizeLimit;
+    struct outchannel *pNext;
+    char *pszName;
+    int iLenName;
+    uchar *pszFileTemplate;
+    off_t   uSizeLimit;
+    uchar *cmdOnSizeLimit;
 };
 
 struct outchannel* ochConstruct(void);

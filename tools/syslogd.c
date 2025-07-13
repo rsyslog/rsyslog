@@ -60,12 +60,12 @@
 #include <errno.h>
 
 #ifdef OS_SOLARIS
-#	include <fcntl.h>
-#	include <stropts.h>
-#	include <sys/termios.h>
-#	include <sys/types.h>
+#   include <fcntl.h>
+#   include <stropts.h>
+#   include <sys/termios.h>
+#   include <sys/types.h>
 #else
-#	include <libgen.h>
+#   include <libgen.h>
 #endif
 
 #include <sys/ioctl.h>
@@ -79,7 +79,7 @@
 #endif
 
 #ifdef HAVE_SYS_STAT_H
-#	include <sys/stat.h>
+#   include <sys/stat.h>
 #endif
 
 #include <signal.h>
@@ -107,30 +107,30 @@
 /* stems back to sysklogd in whole */
 void untty(void)
 {
-	int i;
-	pid_t pid;
+    int i;
+    pid_t pid;
 
-	if(!Debug) {
-		/* Peng Haitao <penght@cn.fujitsu.com> contribution */
-		pid = getpid();
-		if (setpgid(pid, pid) < 0) {
-			perror("setpgid");
-			exit(1);
-		}
-		/* end Peng Haitao <penght@cn.fujitsu.com> contribution */
+    if(!Debug) {
+        /* Peng Haitao <penght@cn.fujitsu.com> contribution */
+        pid = getpid();
+        if (setpgid(pid, pid) < 0) {
+            perror("setpgid");
+            exit(1);
+        }
+        /* end Peng Haitao <penght@cn.fujitsu.com> contribution */
 
-		i = open(_PATH_TTY, O_RDWR|O_CLOEXEC);
-		if (i >= 0) {
-#			if !defined(__hpux)
-				(void) ioctl(i, (int) TIOCNOTTY, NULL);
-#			else
-				/* TODO: we need to implement something for HP UX! -- rgerhards, 2008-03-04 */
-				/* actually, HP UX should have setsid, so the code directly above should
-				 * trigger. So the actual question is why it doesn't do that...
-				 */
-#			endif
-			close(i);
-		}
-	}
+        i = open(_PATH_TTY, O_RDWR|O_CLOEXEC);
+        if (i >= 0) {
+#           if !defined(__hpux)
+                (void) ioctl(i, (int) TIOCNOTTY, NULL);
+#           else
+                /* TODO: we need to implement something for HP UX! -- rgerhards, 2008-03-04 */
+                /* actually, HP UX should have setsid, so the code directly above should
+                 * trigger. So the actual question is why it doesn't do that...
+                 */
+#           endif
+            close(i);
+        }
+    }
 }
 #endif

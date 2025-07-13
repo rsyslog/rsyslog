@@ -29,7 +29,7 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#	include "config.h"
+#   include "config.h"
 #endif
 #include <stdlib.h>
 #include <unistd.h>
@@ -49,13 +49,13 @@
 /* globals */
 static int fklog; // TODO: remove
 #ifndef _PATH_KLOG
-#	define _PATH_KLOG "/dev/log"
+#   define _PATH_KLOG "/dev/log"
 #endif
 
 
 static uchar *GetPath(void)
 {
-	return pszPath ? pszPath : UCHAR_CONSTANT(_PATH_KLOG);
+    return pszPath ? pszPath : UCHAR_CONSTANT(_PATH_KLOG);
 }
 
 /* open the kernel log - will be called inside the willRun() imklog
@@ -64,19 +64,19 @@ static uchar *GetPath(void)
 rsRetVal
 klogWillRun(void)
 {
-	DEFiRet;
+    DEFiRet;
 
-	fklog = sun_openklog((char*) GetPath(), O_RDONLY);
-	if (fklog < 0) {
-		char errStr[1024];
-		int err = errno;
-		rs_strerror_r(err, errStr, sizeof(errStr));
-		DBGPRINTF("error %s opening log socket: %s\n",
-				   errStr, GetPath());
-		iRet = RS_RET_ERR; // TODO: better error code
-	}
+    fklog = sun_openklog((char*) GetPath(), O_RDONLY);
+    if (fklog < 0) {
+        char errStr[1024];
+        int err = errno;
+        rs_strerror_r(err, errStr, sizeof(errStr));
+        DBGPRINTF("error %s opening log socket: %s\n",
+                   errStr, GetPath());
+        iRet = RS_RET_ERR; // TODO: better error code
+    }
 
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -85,10 +85,10 @@ klogWillRun(void)
  */
 rsRetVal klogAfterRun(void)
 {
-	DEFiRet;
-	if(fklog != -1)
-		close(fklog);
-	RETiRet;
+    DEFiRet;
+    if(fklog != -1)
+        close(fklog);
+    RETiRet;
 }
 
 
@@ -99,9 +99,9 @@ rsRetVal klogAfterRun(void)
  */
 rsRetVal klogLogKMsg(void)
 {
-	DEFiRet;
-	sun_sys_poll();
-	RETiRet;
+    DEFiRet;
+    sun_sys_poll();
+    RETiRet;
 }
 
 
@@ -111,6 +111,6 @@ rsRetVal klogLogKMsg(void)
 int
 klogFacilIntMsg(void)
 {
-	return LOG_SYSLOG;
+    return LOG_SYSLOG;
 }
 

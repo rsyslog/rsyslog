@@ -22,8 +22,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef	MODULE_TEMPLATE_H_INCLUDED
-#define	MODULE_TEMPLATE_H_INCLUDED 1
+#ifndef MODULE_TEMPLATE_H_INCLUDED
+#define MODULE_TEMPLATE_H_INCLUDED 1
 
 #include "modules.h"
 #include "obj.h"
@@ -33,27 +33,27 @@
 /* macro to define standard output-module static data members
  */
 #define DEF_MOD_STATIC_DATA \
-	static __attribute__((unused)) rsRetVal (*omsdRegCFSLineHdlr)(uchar *pCmdName, int bChainingPermitted, \
-	ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie);
+    static __attribute__((unused)) rsRetVal (*omsdRegCFSLineHdlr)(uchar *pCmdName, int bChainingPermitted, \
+    ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie);
 
 #define DEF_OMOD_STATIC_DATA \
-	DEF_MOD_STATIC_DATA \
-	DEFobjCurrIf(obj) \
-	static __attribute__((unused)) int bCoreSupportsBatching;
+    DEF_MOD_STATIC_DATA \
+    DEFobjCurrIf(obj) \
+    static __attribute__((unused)) int bCoreSupportsBatching;
 #define DEF_IMOD_STATIC_DATA \
-	DEF_MOD_STATIC_DATA \
-	DEFobjCurrIf(obj)
+    DEF_MOD_STATIC_DATA \
+    DEFobjCurrIf(obj)
 #define DEF_LMOD_STATIC_DATA \
-	DEF_MOD_STATIC_DATA
+    DEF_MOD_STATIC_DATA
 #define DEF_PMOD_STATIC_DATA \
-	DEFobjCurrIf(obj) \
-	DEF_MOD_STATIC_DATA
+    DEFobjCurrIf(obj) \
+    DEF_MOD_STATIC_DATA
 #define DEF_SMOD_STATIC_DATA \
-	DEFobjCurrIf(obj) \
-	DEF_MOD_STATIC_DATA
+    DEFobjCurrIf(obj) \
+    DEF_MOD_STATIC_DATA
 #define DEF_FMOD_STATIC_DATA \
-	DEFobjCurrIf(obj) \
-	DEF_MOD_STATIC_DATA
+    DEFobjCurrIf(obj) \
+    DEF_MOD_STATIC_DATA
 
 
 /* Macro to define the module type. Each module can only have a single type. If
@@ -66,10 +66,10 @@
  */
 #define MODULE_TYPE(x)\
 static rsRetVal modGetType(eModType_t *modType) \
-	{ \
-		*modType = x; \
-		return RS_RET_OK;\
-	}
+    { \
+        *modType = x; \
+        return RS_RET_OK;\
+    }
 
 #define MODULE_TYPE_INPUT MODULE_TYPE(eMOD_IN)
 #define MODULE_TYPE_OUTPUT MODULE_TYPE(eMOD_OUT)
@@ -77,17 +77,17 @@ static rsRetVal modGetType(eModType_t *modType) \
 #define MODULE_TYPE_STRGEN MODULE_TYPE(eMOD_STRGEN)
 #define MODULE_TYPE_FUNCTION MODULE_TYPE(eMOD_FUNCTION)
 #define MODULE_TYPE_LIB \
-	DEF_LMOD_STATIC_DATA \
-	MODULE_TYPE(eMOD_LIB)
+    DEF_LMOD_STATIC_DATA \
+    MODULE_TYPE(eMOD_LIB)
 
 /* Macro to define whether the module should be kept dynamically linked.
  */
 #define MODULE_KEEP_TYPE(x)\
 static rsRetVal modGetKeepType(eModKeepType_t *modKeepType) \
-	{ \
-		*modKeepType = x; \
-		return RS_RET_OK;\
-	}
+    { \
+        *modKeepType = x; \
+        return RS_RET_OK;\
+    }
 #define MODULE_TYPE_NOKEEP MODULE_KEEP_TYPE(eMOD_NOKEEP)
 #define MODULE_TYPE_KEEP MODULE_KEEP_TYPE(eMOD_KEEP)
 
@@ -108,19 +108,19 @@ static rsRetVal modGetKeepType(eModKeepType_t *modKeepType) \
  */
 #define DEFmodGetID \
 static rsRetVal modGetID(void **pID) \
-	{ \
-		*pID = STD_LOADABLE_MODULE_ID;\
-		return RS_RET_OK;\
-	}
+    { \
+        *pID = STD_LOADABLE_MODULE_ID;\
+        return RS_RET_OK;\
+    }
 
 /* macro to provide the v6 config system module name
  */
 #define MODULE_CNFNAME(name) \
 static rsRetVal modGetCnfName(uchar **cnfName) \
-	{ \
-		*cnfName = (uchar*) name; \
-		return RS_RET_OK;\
-	}
+    { \
+        *cnfName = (uchar*) name; \
+        return RS_RET_OK;\
+    }
 
 
 /* to following macros are used to generate function headers and standard
@@ -138,19 +138,19 @@ static rsRetVal modGetCnfName(uchar **cnfName) \
  */
 #define BEGINcreateInstance \
 static rsRetVal createInstance(instanceData **ppData)\
-	{\
-	DEFiRet; /* store error code here */\
-	instanceData *pData; /* use this to point to data elements */
+    {\
+    DEFiRet; /* store error code here */\
+    instanceData *pData; /* use this to point to data elements */
 
 #define CODESTARTcreateInstance \
-	if((pData = calloc(1, sizeof(instanceData))) == NULL) {\
-		*ppData = NULL;\
-		return RS_RET_OUT_OF_MEMORY;\
-	}
+    if((pData = calloc(1, sizeof(instanceData))) == NULL) {\
+        *ppData = NULL;\
+        return RS_RET_OUT_OF_MEMORY;\
+    }
 
 #define ENDcreateInstance \
-	*ppData = pData;\
-	RETiRet;\
+    *ppData = pData;\
+    RETiRet;\
 }
 
 /* freeInstance()
@@ -165,52 +165,52 @@ static rsRetVal createInstance(instanceData **ppData)\
 #define BEGINfreeInstance \
 static rsRetVal freeInstance(void* pModData)\
 {\
-	DEFiRet;\
-	instanceData *pData;
+    DEFiRet;\
+    instanceData *pData;
 
 #define CODESTARTfreeInstance \
-	pData = (instanceData*) pModData;
+    pData = (instanceData*) pModData;
 
 #define ENDfreeInstance \
-	if(pData != NULL)\
-		free(pData); /* we need to free this in any case */\
-	RETiRet;\
+    if(pData != NULL)\
+        free(pData); /* we need to free this in any case */\
+    RETiRet;\
 }
 
 /* createWrkrInstance()
  */
 #define BEGINcreateWrkrInstance \
 static rsRetVal createWrkrInstance(wrkrInstanceData_t **ppWrkrData, instanceData *pData)\
-	{\
-	DEFiRet; /* store error code here */\
-	wrkrInstanceData_t *pWrkrData; /* use this to point to data elements */
+    {\
+    DEFiRet; /* store error code here */\
+    wrkrInstanceData_t *pWrkrData; /* use this to point to data elements */
 
 #define CODESTARTcreateWrkrInstance \
-	if((pWrkrData = calloc(1, sizeof(wrkrInstanceData_t))) == NULL) {\
-		*ppWrkrData = NULL;\
-		return RS_RET_OUT_OF_MEMORY;\
-	} \
-	pWrkrData->pData = pData;
+    if((pWrkrData = calloc(1, sizeof(wrkrInstanceData_t))) == NULL) {\
+        *ppWrkrData = NULL;\
+        return RS_RET_OUT_OF_MEMORY;\
+    } \
+    pWrkrData->pData = pData;
 
 #define ENDcreateWrkrInstance \
-	*ppWrkrData = pWrkrData;\
-	RETiRet;\
+    *ppWrkrData = pWrkrData;\
+    RETiRet;\
 }
 
 /* freeWrkrInstance */
 #define BEGINfreeWrkrInstance \
 static rsRetVal freeWrkrInstance(void* pd)\
 {\
-	DEFiRet;\
-	wrkrInstanceData_t *pWrkrData;
+    DEFiRet;\
+    wrkrInstanceData_t *pWrkrData;
 
 #define CODESTARTfreeWrkrInstance \
-	pWrkrData = (wrkrInstanceData_t*) pd;
+    pWrkrData = (wrkrInstanceData_t*) pd;
 
 #define ENDfreeWrkrInstance \
-	if(pWrkrData != NULL)\
-		free(pWrkrData); /* we need to free this in any case */\
-	RETiRet;\
+    if(pWrkrData != NULL)\
+        free(pWrkrData); /* we need to free this in any case */\
+    RETiRet;\
 }
 
 
@@ -219,12 +219,12 @@ static rsRetVal freeWrkrInstance(void* pd)\
 #define BEGINisCompatibleWithFeature \
 static rsRetVal isCompatibleWithFeature(syslogFeature __attribute__((unused)) eFeat)\
 {\
-	rsRetVal iRet = RS_RET_INCOMPATIBLE; \
+    rsRetVal iRet = RS_RET_INCOMPATIBLE; \
 
 #define CODESTARTisCompatibleWithFeature
 
 #define ENDisCompatibleWithFeature \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -234,12 +234,12 @@ static rsRetVal isCompatibleWithFeature(syslogFeature __attribute__((unused)) eF
 #define BEGINbeginTransaction \
 static rsRetVal beginTransaction(wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
 {\
-	DEFiRet;
+    DEFiRet;
 
 #define CODESTARTbeginTransaction /* currently empty, but may be extended */
 
 #define ENDbeginTransaction \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -251,14 +251,14 @@ static rsRetVal beginTransaction(wrkrInstanceData_t __attribute__((unused)) *pWr
  */
 #define BEGINcommitTransaction \
 static rsRetVal commitTransaction(wrkrInstanceData_t __attribute__((unused)) *const pWrkrData, \
-	actWrkrIParams_t *const pParams, const unsigned nParams)\
+    actWrkrIParams_t *const pParams, const unsigned nParams)\
 {\
-	DEFiRet;
+    DEFiRet;
 
 #define CODESTARTcommitTransaction /* currently empty, but may be extended */
 
 #define ENDcommitTransaction \
-	RETiRet;\
+    RETiRet;\
 }
 
 /* endTransaction()
@@ -267,12 +267,12 @@ static rsRetVal commitTransaction(wrkrInstanceData_t __attribute__((unused)) *co
 #define BEGINendTransaction \
 static rsRetVal endTransaction(wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
 {\
-	DEFiRet;
+    DEFiRet;
 
 #define CODESTARTendTransaction /* currently empty, but may be extended */
 
 #define ENDendTransaction \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -281,14 +281,14 @@ static rsRetVal endTransaction(wrkrInstanceData_t __attribute__((unused)) *pWrkr
 #define BEGINdoAction \
 static rsRetVal doAction(void * pMsgData, wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
 {\
-	uchar **ppString = (uchar **) pMsgData; \
-	DEFiRet;
+    uchar **ppString = (uchar **) pMsgData; \
+    DEFiRet;
 
 #define CODESTARTdoAction \
-	/* ppString may be NULL if the output module requested no strings */
+    /* ppString may be NULL if the output module requested no strings */
 
 #define ENDdoAction \
-	RETiRet;\
+    RETiRet;\
 }
 
 /* below is a variant of doAction where the passed-in data is not the common
@@ -297,7 +297,7 @@ static rsRetVal doAction(void * pMsgData, wrkrInstanceData_t __attribute__((unus
 #define BEGINdoAction_NoStrings \
 static rsRetVal doAction(void * pMsgData, wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
 {\
-	DEFiRet;
+    DEFiRet;
 
 
 /* dbgPrintInstInfo()
@@ -307,15 +307,15 @@ static rsRetVal doAction(void * pMsgData, wrkrInstanceData_t __attribute__((unus
 #define BEGINdbgPrintInstInfo \
 static rsRetVal dbgPrintInstInfo(void *pModData)\
 {\
-	DEFiRet;\
-	instanceData *pData = NULL;
+    DEFiRet;\
+    instanceData *pData = NULL;
 
 #define CODESTARTdbgPrintInstInfo \
-	pData = (instanceData*) pModData; \
-	(void)pData; /* prevent compiler warning if unused! */
+    pData = (instanceData*) pModData; \
+    (void)pData; /* prevent compiler warning if unused! */
 
 #define ENDdbgPrintInstInfo \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -336,45 +336,45 @@ static rsRetVal dbgPrintInstInfo(void *pModData)\
 #define BEGINparseSelectorAct \
 static rsRetVal parseSelectorAct(uchar **pp, void **ppModData, omodStringRequest_t **ppOMSR)\
 {\
-	DEFiRet;\
-	uchar *p;\
-	instanceData *pData = NULL;
+    DEFiRet;\
+    uchar *p;\
+    instanceData *pData = NULL;
 
 #define CODESTARTparseSelectorAct \
-	assert(pp != NULL);\
-	assert(ppModData != NULL);\
-	assert(ppOMSR != NULL);\
-	p = *pp;
+    assert(pp != NULL);\
+    assert(ppModData != NULL);\
+    assert(ppOMSR != NULL);\
+    p = *pp;
 
 #define CODE_STD_STRING_REQUESTparseSelectorAct(NumStrReqEntries) \
-	CHKiRet(OMSRconstruct(ppOMSR, NumStrReqEntries));
+    CHKiRet(OMSRconstruct(ppOMSR, NumStrReqEntries));
 
 #define CODE_STD_FINALIZERparseSelectorAct \
 finalize_it: ATTR_UNUSED; /* semi-colon needed according to gcc doc! */\
-	if(iRet == RS_RET_OK || iRet == RS_RET_OK_WARN || iRet == RS_RET_SUSPENDED) {\
-		*ppModData = pData;\
-		*pp = p;\
-	} else {\
-		/* cleanup, we failed */\
-		if(*ppOMSR != NULL) {\
-			OMSRdestruct(*ppOMSR);\
-			*ppOMSR = NULL;\
-		}\
-		if(pData != NULL) {\
-			freeInstance(pData);\
-		} \
-	}
+    if(iRet == RS_RET_OK || iRet == RS_RET_OK_WARN || iRet == RS_RET_SUSPENDED) {\
+        *ppModData = pData;\
+        *pp = p;\
+    } else {\
+        /* cleanup, we failed */\
+        if(*ppOMSR != NULL) {\
+            OMSRdestruct(*ppOMSR);\
+            *ppOMSR = NULL;\
+        }\
+        if(pData != NULL) {\
+            freeInstance(pData);\
+        } \
+    }
 
 #define ENDparseSelectorAct \
-	RETiRet;\
+    RETiRet;\
 }
 
 /* a special replacement macro for modules that do not support legacy config at all */
 #define NO_LEGACY_CONF_parseSelectorAct \
 static rsRetVal parseSelectorAct(uchar **pp ATTR_UNUSED, void **ppModData ATTR_UNUSED, \
-	omodStringRequest_t **ppOMSR ATTR_UNUSED)\
+    omodStringRequest_t **ppOMSR ATTR_UNUSED)\
 {\
-	return RS_RET_LEGA_ACT_NOT_SUPPORTED;\
+    return RS_RET_LEGA_ACT_NOT_SUPPORTED;\
 }
 
 /* newActInst()
@@ -395,35 +395,35 @@ static rsRetVal parseSelectorAct(uchar **pp ATTR_UNUSED, void **ppModData ATTR_U
  */
 #define BEGINnewActInst \
 static rsRetVal newActInst(uchar __attribute__((unused)) *modName, \
-	struct nvlst __attribute__((unused)) *lst, void **ppModData, \
-	omodStringRequest_t **ppOMSR)\
+    struct nvlst __attribute__((unused)) *lst, void **ppModData, \
+    omodStringRequest_t **ppOMSR)\
 {\
-	DEFiRet;\
-	instanceData *pData = NULL; \
-	*ppOMSR = NULL;
+    DEFiRet;\
+    instanceData *pData = NULL; \
+    *ppOMSR = NULL;
 
 #define CODESTARTnewActInst \
 
 #define CODE_STD_STRING_REQUESTnewActInst(NumStrReqEntries) \
-	CHKiRet(OMSRconstruct(ppOMSR, NumStrReqEntries));
+    CHKiRet(OMSRconstruct(ppOMSR, NumStrReqEntries));
 
 #define CODE_STD_FINALIZERnewActInst \
 finalize_it:\
-	if(iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED) {\
-		*ppModData = pData;\
-	} else {\
-		/* cleanup, we failed */\
-		if(*ppOMSR != NULL) {\
-			OMSRdestruct(*ppOMSR);\
-			*ppOMSR = NULL;\
-		}\
-		if(pData != NULL) {\
-			freeInstance(pData);\
-		} \
-	}
+    if(iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED) {\
+        *ppModData = pData;\
+    } else {\
+        /* cleanup, we failed */\
+        if(*ppOMSR != NULL) {\
+            OMSRdestruct(*ppOMSR);\
+            *ppOMSR = NULL;\
+        }\
+        if(pData != NULL) {\
+            freeInstance(pData);\
+        } \
+    }
 
 #define ENDnewActInst \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -434,14 +434,14 @@ finalize_it:\
 #define BEGINnewInpInst \
 static rsRetVal newInpInst(struct nvlst *lst)\
 {\
-	DEFiRet;
+    DEFiRet;
 
 #define CODESTARTnewInpInst \
 
 #define CODE_STD_FINALIZERnewInpInst
 
 #define ENDnewInpInst \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -453,17 +453,17 @@ static rsRetVal newInpInst(struct nvlst *lst)\
 #define BEGINnewParserInst \
 static rsRetVal newParserInst(struct nvlst *lst, void *pinst)\
 {\
-	instanceConf_t *inst; \
-	DEFiRet;
+    instanceConf_t *inst; \
+    DEFiRet;
 
 #define CODESTARTnewParserInst \
 
 #define CODE_STD_FINALIZERnewParserInst
 
 #define ENDnewParserInst \
-	if(iRet == RS_RET_OK) \
-		*((instanceConf_t**)pinst) = inst; \
-	RETiRet;\
+    if(iRet == RS_RET_OK) \
+        *((instanceConf_t**)pinst) = inst; \
+    RETiRet;\
 }
 
 
@@ -471,16 +471,16 @@ static rsRetVal newParserInst(struct nvlst *lst, void *pinst)\
 #define BEGINfreeParserInst \
 static rsRetVal freeParserInst(void* pi)\
 {\
-	DEFiRet;\
-	instanceConf_t *pInst;
+    DEFiRet;\
+    instanceConf_t *pInst;
 
 #define CODESTARTfreeParserInst\
-	pInst = (instanceConf_t*) pi;
+    pInst = (instanceConf_t*) pi;
 
 #define ENDfreeParserInst\
-	if(pInst != NULL)\
-		free(pInst);\
-	RETiRet;\
+    if(pInst != NULL)\
+        free(pInst);\
+    RETiRet;\
 }
 
 /* tryResume()
@@ -495,13 +495,13 @@ static rsRetVal freeParserInst(void* pi)\
 #define BEGINtryResume \
 static rsRetVal tryResume(wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
 {\
-	DEFiRet;
+    DEFiRet;
 
 #define CODESTARTtryResume \
-	assert(pWrkrData != NULL);
+    assert(pWrkrData != NULL);
 
 #define ENDtryResume \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -510,12 +510,12 @@ static rsRetVal tryResume(wrkrInstanceData_t __attribute__((unused)) *pWrkrData)
 #define BEGINinitConfVars \
 static rsRetVal initConfVars(void)\
 {\
-	DEFiRet;
+    DEFiRet;
 
 #define CODESTARTinitConfVars
 
 #define ENDinitConfVars \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -525,21 +525,21 @@ static rsRetVal initConfVars(void)\
 DEFmodGetID \
 static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 {\
-	DEFiRet;
+    DEFiRet;
 
 #define CODESTARTqueryEtryPt \
-	if((name == NULL) || (pEtryPoint == NULL)) {\
-		return RS_RET_PARAM_ERROR;\
-	} \
-	*pEtryPoint = NULL;
+    if((name == NULL) || (pEtryPoint == NULL)) {\
+        return RS_RET_PARAM_ERROR;\
+    } \
+    *pEtryPoint = NULL;
 
 #define ENDqueryEtryPt \
-	if(iRet == RS_RET_OK)\
-		if(*pEtryPoint == NULL) { \
-			dbgprintf("entry point '%s' not present in module\n", name); \
-			iRet = RS_RET_MODULE_ENTRY_POINT_NOT_FOUND;\
-		} \
-	RETiRet;\
+    if(iRet == RS_RET_OK)\
+        if(*pEtryPoint == NULL) { \
+            dbgprintf("entry point '%s' not present in module\n", name); \
+            iRet = RS_RET_MODULE_ENTRY_POINT_NOT_FOUND;\
+        } \
+    RETiRet;\
 }
 
 /* the following definition is the standard block for queryEtryPt for all types
@@ -547,74 +547,74 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
  * the module-type specific macros.
  */
 #define CODEqueryEtryPt_STD_MOD_QUERIES \
-	if(!strcmp((char*) name, "modExit")) {\
-		*pEtryPoint = modExit;\
-	} else if(!strcmp((char*) name, "modGetID")) {\
-		*pEtryPoint = modGetID;\
-	} else if(!strcmp((char*) name, "getType")) {\
-		*pEtryPoint = modGetType;\
-	} else if(!strcmp((char*) name, "getKeepType")) {\
-		*pEtryPoint = modGetKeepType;\
-	}
+    if(!strcmp((char*) name, "modExit")) {\
+        *pEtryPoint = modExit;\
+    } else if(!strcmp((char*) name, "modGetID")) {\
+        *pEtryPoint = modGetID;\
+    } else if(!strcmp((char*) name, "getType")) {\
+        *pEtryPoint = modGetType;\
+    } else if(!strcmp((char*) name, "getKeepType")) {\
+        *pEtryPoint = modGetKeepType;\
+    }
 
 /* the following definition is the standard block for queryEtryPt for output
  * modules WHICH DO NOT SUPPORT TRANSACTIONS.
  */
 #define CODEqueryEtryPt_STD_OMOD_QUERIES \
-	CODEqueryEtryPt_STD_MOD_QUERIES \
-	else if(!strcmp((char*) name, "doAction")) {\
-		*pEtryPoint = doAction;\
-	} else if(!strcmp((char*) name, "dbgPrintInstInfo")) {\
-		*pEtryPoint = dbgPrintInstInfo;\
-	} else if(!strcmp((char*) name, "freeInstance")) {\
-		*pEtryPoint = freeInstance;\
-	} else if(!strcmp((char*) name, "parseSelectorAct")) {\
-		*pEtryPoint = parseSelectorAct;\
-	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {\
-		*pEtryPoint = isCompatibleWithFeature;\
-	} else if(!strcmp((char*) name, "tryResume")) {\
-		*pEtryPoint = tryResume;\
-	}
+    CODEqueryEtryPt_STD_MOD_QUERIES \
+    else if(!strcmp((char*) name, "doAction")) {\
+        *pEtryPoint = doAction;\
+    } else if(!strcmp((char*) name, "dbgPrintInstInfo")) {\
+        *pEtryPoint = dbgPrintInstInfo;\
+    } else if(!strcmp((char*) name, "freeInstance")) {\
+        *pEtryPoint = freeInstance;\
+    } else if(!strcmp((char*) name, "parseSelectorAct")) {\
+        *pEtryPoint = parseSelectorAct;\
+    } else if(!strcmp((char*) name, "isCompatibleWithFeature")) {\
+        *pEtryPoint = isCompatibleWithFeature;\
+    } else if(!strcmp((char*) name, "tryResume")) {\
+        *pEtryPoint = tryResume;\
+    }
 
 /* the following definition is the standard block for queryEtryPt for output
  * modules using the transaction interface.
  */
 #define CODEqueryEtryPt_STD_OMODTX_QUERIES \
-	CODEqueryEtryPt_STD_MOD_QUERIES \
-	else if(!strcmp((char*) name, "beginTransaction")) {\
-		*pEtryPoint = beginTransaction;\
-	} else if(!strcmp((char*) name, "commitTransaction")) {\
-		*pEtryPoint = commitTransaction;\
-	} else if(!strcmp((char*) name, "dbgPrintInstInfo")) {\
-		*pEtryPoint = dbgPrintInstInfo;\
-	} else if(!strcmp((char*) name, "freeInstance")) {\
-		*pEtryPoint = freeInstance;\
-	} else if(!strcmp((char*) name, "parseSelectorAct")) {\
-		*pEtryPoint = parseSelectorAct;\
-	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {\
-		*pEtryPoint = isCompatibleWithFeature;\
-	} else if(!strcmp((char*) name, "tryResume")) {\
-		*pEtryPoint = tryResume;\
-	}
+    CODEqueryEtryPt_STD_MOD_QUERIES \
+    else if(!strcmp((char*) name, "beginTransaction")) {\
+        *pEtryPoint = beginTransaction;\
+    } else if(!strcmp((char*) name, "commitTransaction")) {\
+        *pEtryPoint = commitTransaction;\
+    } else if(!strcmp((char*) name, "dbgPrintInstInfo")) {\
+        *pEtryPoint = dbgPrintInstInfo;\
+    } else if(!strcmp((char*) name, "freeInstance")) {\
+        *pEtryPoint = freeInstance;\
+    } else if(!strcmp((char*) name, "parseSelectorAct")) {\
+        *pEtryPoint = parseSelectorAct;\
+    } else if(!strcmp((char*) name, "isCompatibleWithFeature")) {\
+        *pEtryPoint = isCompatibleWithFeature;\
+    } else if(!strcmp((char*) name, "tryResume")) {\
+        *pEtryPoint = tryResume;\
+    }
 
 /* standard queries for output module interface in rsyslog v8+ */
 #define CODEqueryEtryPt_STD_OMOD8_QUERIES \
-	else if(!strcmp((char*) name, "createWrkrInstance")) {\
-		*pEtryPoint = createWrkrInstance;\
-	} else if(!strcmp((char*) name, "freeWrkrInstance")) {\
-		*pEtryPoint = freeWrkrInstance;\
-	}
+    else if(!strcmp((char*) name, "createWrkrInstance")) {\
+        *pEtryPoint = createWrkrInstance;\
+    } else if(!strcmp((char*) name, "freeWrkrInstance")) {\
+        *pEtryPoint = freeWrkrInstance;\
+    }
 
 /* the following definition is queryEtryPt block that must be added
  * if an output module supports the transactional interface.
  * rgerhards, 2009-04-27
  */
 #define CODEqueryEtryPt_TXIF_OMOD_QUERIES \
-	  else if(!strcmp((char*) name, "beginTransaction")) {\
-		*pEtryPoint = beginTransaction;\
-	} else if(!strcmp((char*) name, "endTransaction")) {\
-		*pEtryPoint = endTransaction;\
-	}
+      else if(!strcmp((char*) name, "beginTransaction")) {\
+        *pEtryPoint = beginTransaction;\
+    } else if(!strcmp((char*) name, "endTransaction")) {\
+        *pEtryPoint = endTransaction;\
+    }
 
 
 /* the following definition is a queryEtryPt block that must be added
@@ -622,9 +622,9 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
  * rgerhards, 2009-07-20
  */
 #define CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES \
-	  else if(!strcmp((char*) name, "isCompatibleWithFeature")) {\
-		*pEtryPoint = isCompatibleWithFeature;\
-	}
+      else if(!strcmp((char*) name, "isCompatibleWithFeature")) {\
+        *pEtryPoint = isCompatibleWithFeature;\
+    }
 
 
 /* the following definition is the standard block for queryEtryPt for INPUT
@@ -632,68 +632,68 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
  * differences) is needed.
  */
 #define CODEqueryEtryPt_STD_IMOD_QUERIES \
-	CODEqueryEtryPt_STD_MOD_QUERIES \
-	else if(!strcmp((char*) name, "runInput")) {\
-		*pEtryPoint = runInput;\
-	} else if(!strcmp((char*) name, "willRun")) {\
-		*pEtryPoint = willRun;\
-	} else if(!strcmp((char*) name, "afterRun")) {\
-		*pEtryPoint = afterRun;\
-	}
+    CODEqueryEtryPt_STD_MOD_QUERIES \
+    else if(!strcmp((char*) name, "runInput")) {\
+        *pEtryPoint = runInput;\
+    } else if(!strcmp((char*) name, "willRun")) {\
+        *pEtryPoint = willRun;\
+    } else if(!strcmp((char*) name, "afterRun")) {\
+        *pEtryPoint = afterRun;\
+    }
 
 
 /* the following block is to be added for modules that support the v2
  * config system. The config name is also provided.
  */
 #define CODEqueryEtryPt_STD_CONF2_QUERIES \
-	  else if(!strcmp((char*) name, "beginCnfLoad")) {\
-		*pEtryPoint = beginCnfLoad;\
-	} else if(!strcmp((char*) name, "endCnfLoad")) {\
-		*pEtryPoint = endCnfLoad;\
-	} else if(!strcmp((char*) name, "checkCnf")) {\
-		*pEtryPoint = checkCnf;\
-	} else if(!strcmp((char*) name, "activateCnf")) {\
-		*pEtryPoint = activateCnf;\
-	} else if(!strcmp((char*) name, "freeCnf")) {\
-		*pEtryPoint = freeCnf;\
-	} \
-	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
+      else if(!strcmp((char*) name, "beginCnfLoad")) {\
+        *pEtryPoint = beginCnfLoad;\
+    } else if(!strcmp((char*) name, "endCnfLoad")) {\
+        *pEtryPoint = endCnfLoad;\
+    } else if(!strcmp((char*) name, "checkCnf")) {\
+        *pEtryPoint = checkCnf;\
+    } else if(!strcmp((char*) name, "activateCnf")) {\
+        *pEtryPoint = activateCnf;\
+    } else if(!strcmp((char*) name, "freeCnf")) {\
+        *pEtryPoint = freeCnf;\
+    } \
+    CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 
 /* the following block is to be added for modules that support v2
  * module global parameters [module(...)]
  */
 #define CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES \
-	  else if(!strcmp((char*) name, "setModCnf")) {\
-		*pEtryPoint = setModCnf;\
-	} \
+      else if(!strcmp((char*) name, "setModCnf")) {\
+        *pEtryPoint = setModCnf;\
+    } \
 
 /* the following block is to be added for output modules that support the v2
  * config system. The config name is also provided.
  */
 #define CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES \
-	  else if(!strcmp((char*) name, "newActInst")) {\
-		*pEtryPoint = newActInst;\
-	} \
-	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
+      else if(!strcmp((char*) name, "newActInst")) {\
+        *pEtryPoint = newActInst;\
+    } \
+    CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 
 
 /* the following block is to be added for input modules that support the v2
  * config system. The config name is also provided.
  */
 #define CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES \
-	  else if(!strcmp((char*) name, "newInpInst")) {\
-		*pEtryPoint = newInpInst;\
-	} \
-	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
+      else if(!strcmp((char*) name, "newInpInst")) {\
+        *pEtryPoint = newInpInst;\
+    } \
+    CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 
 
 /* the following block is to be added for modules that require
  * pre priv drop activation support.
  */
 #define CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES \
-	  else if(!strcmp((char*) name, "activateCnfPrePrivDrop")) {\
-		*pEtryPoint = activateCnfPrePrivDrop;\
-	}
+      else if(!strcmp((char*) name, "activateCnfPrePrivDrop")) {\
+        *pEtryPoint = activateCnfPrePrivDrop;\
+    }
 
 /* the following block is to be added for modules that support
  * their config name. This is required for the rsyslog v6 config
@@ -701,44 +701,44 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
  * the new set of begin/end config settings.
  */
 #define CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES \
-	  else if(!strcmp((char*) name, "getModCnfName")) {\
-		*pEtryPoint = modGetCnfName;\
-	}
+      else if(!strcmp((char*) name, "getModCnfName")) {\
+        *pEtryPoint = modGetCnfName;\
+    }
 
 /* the following definition is the standard block for queryEtryPt for LIBRARY
  * modules. This can be used if no specific handling (e.g. to cover version
  * differences) is needed.
  */
 #define CODEqueryEtryPt_STD_LIB_QUERIES \
-	CODEqueryEtryPt_STD_MOD_QUERIES
+    CODEqueryEtryPt_STD_MOD_QUERIES
 
 /* the following definition is the standard block for queryEtryPt for PARSER
  * modules. This can be used if no specific handling (e.g. to cover version
  * differences) is needed.
  */
 #define CODEqueryEtryPt_STD_PMOD_QUERIES \
-	CODEqueryEtryPt_STD_MOD_QUERIES \
-	else if(!strcmp((char*) name, "parse")) {\
-		*pEtryPoint = parse;\
-	} else if(!strcmp((char*) name, "GetParserName")) {\
-		*pEtryPoint = GetParserName;\
-	}
+    CODEqueryEtryPt_STD_MOD_QUERIES \
+    else if(!strcmp((char*) name, "parse")) {\
+        *pEtryPoint = parse;\
+    } else if(!strcmp((char*) name, "GetParserName")) {\
+        *pEtryPoint = GetParserName;\
+    }
 
 /* the following definition is the standard block for queryEtryPt for PARSER
  * modules obeying the v2+ config interface.
  */
 #define CODEqueryEtryPt_STD_PMOD2_QUERIES \
-	CODEqueryEtryPt_STD_MOD_QUERIES \
-	else if(!strcmp((char*) name, "parse2")) {\
-		*pEtryPoint = parse2;\
-	} else if(!strcmp((char*) name, "GetParserName")) {\
-		*pEtryPoint = GetParserName;\
-	} else if(!strcmp((char*) name, "newParserInst")) {\
-		*pEtryPoint = newParserInst;\
-	} else if(!strcmp((char*) name, "freeParserInst")) {\
-		*pEtryPoint = freeParserInst;\
-	} \
-	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
+    CODEqueryEtryPt_STD_MOD_QUERIES \
+    else if(!strcmp((char*) name, "parse2")) {\
+        *pEtryPoint = parse2;\
+    } else if(!strcmp((char*) name, "GetParserName")) {\
+        *pEtryPoint = GetParserName;\
+    } else if(!strcmp((char*) name, "newParserInst")) {\
+        *pEtryPoint = newParserInst;\
+    } else if(!strcmp((char*) name, "freeParserInst")) {\
+        *pEtryPoint = freeParserInst;\
+    } \
+    CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 
 
 
@@ -747,22 +747,22 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
  * differences) is needed.
  */
 #define CODEqueryEtryPt_STD_FMOD_QUERIES \
-	CODEqueryEtryPt_STD_MOD_QUERIES \
-	else if(!strcmp((char*) name, "getFunctArray")) {\
-		*pEtryPoint = getFunctArray;\
-	}
+    CODEqueryEtryPt_STD_MOD_QUERIES \
+    else if(!strcmp((char*) name, "getFunctArray")) {\
+        *pEtryPoint = getFunctArray;\
+    }
 
 /* the following definition is the standard block for queryEtryPt for Strgen
  * modules. This can be used if no specific handling (e.g. to cover version
  * differences) is needed.
  */
 #define CODEqueryEtryPt_STD_SMOD_QUERIES \
-	CODEqueryEtryPt_STD_MOD_QUERIES \
-	else if(!strcmp((char*) name, "strgen")) {\
-		*pEtryPoint = strgen;\
-	} else if(!strcmp((char*) name, "GetName")) {\
-		*pEtryPoint = GetStrgenName;\
-	}
+    CODEqueryEtryPt_STD_MOD_QUERIES \
+    else if(!strcmp((char*) name, "strgen")) {\
+        *pEtryPoint = strgen;\
+    } else if(!strcmp((char*) name, "GetName")) {\
+        *pEtryPoint = GetStrgenName;\
+    }
 
 /* modInit()
  * This has an extra parameter, which is the specific name of the modInit
@@ -797,27 +797,27 @@ rsRetVal __attribute__((unused)) modInit##uniqName(int iIFVersRequested __attrib
 int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), \
 modInfo_t __attribute__((unused)) *pModInfo)\
 {\
-	DEFiRet; \
-	rsRetVal (*pObjGetObjInterface)(obj_if_t *pIf);
+    DEFiRet; \
+    rsRetVal (*pObjGetObjInterface)(obj_if_t *pIf);
 
 #define CODESTARTmodInit \
-	assert(pHostQueryEtryPt != NULL);\
-	iRet = pHostQueryEtryPt((uchar*)"objGetObjInterface", &pObjGetObjInterface); \
-	if((iRet != RS_RET_OK) || (pQueryEtryPt == NULL) || (ipIFVersProvided == NULL) || \
-		(pObjGetObjInterface == NULL)) { \
-		return (iRet == RS_RET_OK) ? RS_RET_PARAM_ERROR : iRet; \
-	} \
-	/* now get the obj interface so that we can access other objects */ \
-	CHKiRet(pObjGetObjInterface(&obj));
+    assert(pHostQueryEtryPt != NULL);\
+    iRet = pHostQueryEtryPt((uchar*)"objGetObjInterface", &pObjGetObjInterface); \
+    if((iRet != RS_RET_OK) || (pQueryEtryPt == NULL) || (ipIFVersProvided == NULL) || \
+        (pObjGetObjInterface == NULL)) { \
+        return (iRet == RS_RET_OK) ? RS_RET_PARAM_ERROR : iRet; \
+    } \
+    /* now get the obj interface so that we can access other objects */ \
+    CHKiRet(pObjGetObjInterface(&obj));
 
 /* do those initializations necessary for legacy config variables */
 #define INITLegCnfVars \
-	initConfVars();
+    initConfVars();
 
 #define ENDmodInit \
 finalize_it:\
-	*pQueryEtryPt = queryEtryPt;\
-	RETiRet;\
+    *pQueryEtryPt = queryEtryPt;\
+    RETiRet;\
 }
 
 
@@ -830,26 +830,26 @@ finalize_it:\
  */
 #define INITChkCoreFeature(featVar, feat) \
 { \
-	rsRetVal MACRO_Ret; \
-	rsRetVal (*pQueryCoreFeatureSupport)(int*, unsigned); \
-	int bSupportsIt; \
-	featVar = 0; \
-	MACRO_Ret = pHostQueryEtryPt((uchar*)"queryCoreFeatureSupport", &pQueryCoreFeatureSupport); \
-	if(MACRO_Ret == RS_RET_OK) { \
-		/* found entry point, so let's see if core supports it */ \
-		CHKiRet((*pQueryCoreFeatureSupport)(&bSupportsIt, feat)); \
-		if(bSupportsIt) \
-			featVar = 1; \
-	} else if(MACRO_Ret != RS_RET_ENTRY_POINT_NOT_FOUND) { \
-		ABORT_FINALIZE(MACRO_Ret); /* Something else went wrong, what is not acceptable */ \
-	} \
+    rsRetVal MACRO_Ret; \
+    rsRetVal (*pQueryCoreFeatureSupport)(int*, unsigned); \
+    int bSupportsIt; \
+    featVar = 0; \
+    MACRO_Ret = pHostQueryEtryPt((uchar*)"queryCoreFeatureSupport", &pQueryCoreFeatureSupport); \
+    if(MACRO_Ret == RS_RET_OK) { \
+        /* found entry point, so let's see if core supports it */ \
+        CHKiRet((*pQueryCoreFeatureSupport)(&bSupportsIt, feat)); \
+        if(bSupportsIt) \
+            featVar = 1; \
+    } else if(MACRO_Ret != RS_RET_ENTRY_POINT_NOT_FOUND) { \
+        ABORT_FINALIZE(MACRO_Ret); /* Something else went wrong, what is not acceptable */ \
+    } \
 }
 
 
 
 /* definitions for host API queries */
 #define CODEmodInit_QueryRegCFSLineHdlr \
-	CHKiRet(pHostQueryEtryPt((uchar*)"regCfSysLineHdlr", &omsdRegCFSLineHdlr));
+    CHKiRet(pHostQueryEtryPt((uchar*)"regCfSysLineHdlr", &omsdRegCFSLineHdlr));
 
 
 /* modExit()
@@ -867,12 +867,12 @@ finalize_it:\
 #define BEGINmodExit \
 static rsRetVal modExit(void)\
 {\
-	DEFiRet;
+    DEFiRet;
 
 #define CODESTARTmodExit
 
 #define ENDmodExit \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -884,18 +884,18 @@ static rsRetVal modExit(void)\
 #define BEGINbeginCnfLoad \
 static rsRetVal beginCnfLoad(modConfData_t **ptr, __attribute__((unused)) rsconf_t *pConf)\
 {\
-	modConfData_t *pModConf; \
-	DEFiRet;
+    modConfData_t *pModConf; \
+    DEFiRet;
 
 #define CODESTARTbeginCnfLoad \
-	if((pModConf = calloc(1, sizeof(modConfData_t))) == NULL) {\
-		*ptr = NULL;\
-		return RS_RET_OUT_OF_MEMORY;\
-	}
+    if((pModConf = calloc(1, sizeof(modConfData_t))) == NULL) {\
+        *ptr = NULL;\
+        return RS_RET_OUT_OF_MEMORY;\
+    }
 
 #define ENDbeginCnfLoad \
-	*ptr = pModConf;\
-	RETiRet;\
+    *ptr = pModConf;\
+    RETiRet;\
 }
 
 
@@ -912,12 +912,12 @@ static rsRetVal beginCnfLoad(modConfData_t **ptr, __attribute__((unused)) rsconf
 #define BEGINsetModCnf \
 static rsRetVal setModCnf(struct nvlst *lst)\
 {\
-	DEFiRet;
+    DEFiRet;
 
 #define CODESTARTsetModCnf
 
 #define ENDsetModCnf \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -931,13 +931,13 @@ static rsRetVal setModCnf(struct nvlst *lst)\
 #define BEGINendCnfLoad \
 static rsRetVal endCnfLoad(modConfData_t *ptr)\
 {\
-	modConfData_t __attribute__((unused)) *pModConf = (modConfData_t*) ptr; \
-	DEFiRet;
+    modConfData_t __attribute__((unused)) *pModConf = (modConfData_t*) ptr; \
+    DEFiRet;
 
 #define CODESTARTendCnfLoad
 
 #define ENDendCnfLoad \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -953,13 +953,13 @@ static rsRetVal endCnfLoad(modConfData_t *ptr)\
 #define BEGINcheckCnf \
 static rsRetVal checkCnf(modConfData_t *ptr)\
 {\
-	modConfData_t __attribute__((unused)) *pModConf = (modConfData_t*) ptr; \
-	DEFiRet;
+    modConfData_t __attribute__((unused)) *pModConf = (modConfData_t*) ptr; \
+    DEFiRet;
 
 #define CODESTARTcheckCnf
 
 #define ENDcheckCnf \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -973,13 +973,13 @@ static rsRetVal checkCnf(modConfData_t *ptr)\
 #define BEGINactivateCnfPrePrivDrop \
 static rsRetVal activateCnfPrePrivDrop(modConfData_t *ptr)\
 {\
-	modConfData_t *pModConf = (modConfData_t*) ptr; \
-	DEFiRet;
+    modConfData_t *pModConf = (modConfData_t*) ptr; \
+    DEFiRet;
 
 #define CODESTARTactivateCnfPrePrivDrop
 
 #define ENDactivateCnfPrePrivDrop \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -991,13 +991,13 @@ static rsRetVal activateCnfPrePrivDrop(modConfData_t *ptr)\
 #define BEGINactivateCnf \
 static rsRetVal activateCnf(modConfData_t *ptr)\
 {\
-	modConfData_t __attribute__((unused)) *pModConf = (modConfData_t*) ptr; \
-	DEFiRet;
+    modConfData_t __attribute__((unused)) *pModConf = (modConfData_t*) ptr; \
+    DEFiRet;
 
 #define CODESTARTactivateCnf
 
 #define ENDactivateCnf \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -1009,15 +1009,15 @@ static rsRetVal activateCnf(modConfData_t *ptr)\
 #define BEGINfreeCnf \
 static rsRetVal freeCnf(void *ptr)\
 {\
-	modConfData_t *pModConf = (modConfData_t*) ptr; \
-	DEFiRet;
+    modConfData_t *pModConf = (modConfData_t*) ptr; \
+    DEFiRet;
 
 #define CODESTARTfreeCnf
 
 #define ENDfreeCnf \
-	if(pModConf != NULL)\
-		free(pModConf); /* we need to free this in any case */\
-	RETiRet;\
+    if(pModConf != NULL)\
+        free(pModConf); /* we need to free this in any case */\
+    RETiRet;\
 }
 
 
@@ -1030,13 +1030,13 @@ static rsRetVal freeCnf(void *ptr)\
 #define BEGINrunInput \
 static rsRetVal runInput(thrdInfo_t __attribute__((unused)) *pThrd)\
 {\
-	DEFiRet;
+    DEFiRet;
 
 #define CODESTARTrunInput \
-	dbgSetThrdName((uchar*)__FILE__); /* we need to provide something better later */
+    dbgSetThrdName((uchar*)__FILE__); /* we need to provide something better later */
 
 #define ENDrunInput \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -1051,12 +1051,12 @@ static rsRetVal runInput(thrdInfo_t __attribute__((unused)) *pThrd)\
 #define BEGINwillRun \
 static rsRetVal willRun(void)\
 {\
-	DEFiRet;
+    DEFiRet;
 
 #define CODESTARTwillRun
 
 #define ENDwillRun \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -1070,12 +1070,12 @@ static rsRetVal willRun(void)\
 #define BEGINafterRun \
 static rsRetVal afterRun(void)\
 {\
-	DEFiRet;
+    DEFiRet;
 
 #define CODESTARTafterRun
 
 #define ENDafterRun \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -1092,18 +1092,18 @@ static rsRetVal afterRun(void)\
  * rgerhards, 2008-10-22
  */
 #define CODEqueryEtryPt_doHUP \
-	else if(!strcmp((char*) name, "doHUP")) {\
-		*pEtryPoint = doHUP;\
-	}
+    else if(!strcmp((char*) name, "doHUP")) {\
+        *pEtryPoint = doHUP;\
+    }
 #define BEGINdoHUP \
 static rsRetVal doHUP(instanceData __attribute__((unused)) *pData)\
 {\
-	DEFiRet;
+    DEFiRet;
 
 #define CODESTARTdoHUP
 
 #define ENDdoHUP \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -1112,18 +1112,18 @@ static rsRetVal doHUP(instanceData __attribute__((unused)) *pData)\
  * rgerhards, 2015-03-25
  */
 #define CODEqueryEtryPt_doHUPWrkr \
-	else if(!strcmp((char*) name, "doHUPWrkr")) {\
-		*pEtryPoint = doHUPWrkr;\
-	}
+    else if(!strcmp((char*) name, "doHUPWrkr")) {\
+        *pEtryPoint = doHUPWrkr;\
+    }
 #define BEGINdoHUPWrkr \
 static rsRetVal doHUPWrkr(wrkrInstanceData_t __attribute__((unused)) *pWrkrData)\
 {\
-	DEFiRet;
+    DEFiRet;
 
 #define CODESTARTdoHUPWrkr
 
 #define ENDdoHUPWrkr \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -1134,18 +1134,18 @@ static rsRetVal doHUPWrkr(wrkrInstanceData_t __attribute__((unused)) *pWrkrData)
  * as quickly as possible.
  */
 #define CODEqueryEtryPt_SetShutdownImmdtPtr \
-	else if(!strcmp((char*) name, "SetShutdownImmdtPtr")) {\
-		*pEtryPoint = SetShutdownImmdtPtr;\
-	}
+    else if(!strcmp((char*) name, "SetShutdownImmdtPtr")) {\
+        *pEtryPoint = SetShutdownImmdtPtr;\
+    }
 #define BEGINSetShutdownImmdtPtr \
 static rsRetVal SetShutdownImmdtPtr(instanceData __attribute__((unused)) *pData, int *pPtr)\
 {\
-	DEFiRet;
+    DEFiRet;
 
 #define CODESTARTSetShutdownImmdtPtr
 
 #define ENDSetShutdownImmdtPtr \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -1154,13 +1154,13 @@ static rsRetVal SetShutdownImmdtPtr(instanceData __attribute__((unused)) *pData,
 #define BEGINparse \
 static rsRetVal parse(smsg_t *pMsg)\
 {\
-	DEFiRet;
+    DEFiRet;
 
 #define CODESTARTparse \
-	assert(pMsg != NULL);
+    assert(pMsg != NULL);
 
 #define ENDparse \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -1169,14 +1169,14 @@ static rsRetVal parse(smsg_t *pMsg)\
 #define BEGINparse2 \
 static rsRetVal parse2(instanceConf_t *const pInst, smsg_t *pMsg)\
 {\
-	DEFiRet;
+    DEFiRet;
 
 #define CODESTARTparse2 \
-	assert(pInst != NULL);\
-	assert(pMsg != NULL);
+    assert(pInst != NULL);\
+    assert(pMsg != NULL);
 
 #define ENDparse2 \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -1191,13 +1191,13 @@ static rsRetVal parse2(instanceConf_t *const pInst, smsg_t *pMsg)\
 #define BEGINstrgen \
 static rsRetVal strgen(smsg_t *const pMsg, actWrkrIParams_t *const iparam) \
 {\
-	DEFiRet;
+    DEFiRet;
 
 #define CODESTARTstrgen \
-	assert(pMsg != NULL);
+    assert(pMsg != NULL);
 
 #define ENDstrgen \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -1213,12 +1213,12 @@ static rsRetVal strgen(smsg_t *const pMsg, actWrkrIParams_t *const iparam) \
 #define BEGINgetFunctArray \
 static rsRetVal getFunctArray(int *const version, const struct scriptFunct**const functArray) \
 {\
-	DEFiRet;
+    DEFiRet;
 
 #define CODESTARTgetFunctArray
 
 #define ENDgetFunctArray \
-	RETiRet;\
+    RETiRet;\
 }
 
 
@@ -1228,8 +1228,8 @@ static rsRetVal getFunctArray(int *const version, const struct scriptFunct**cons
 #define PARSER_NAME(x) \
 static rsRetVal GetParserName(uchar **ppSz)\
 {\
-	*ppSz = UCHAR_CONSTANT(x);\
-	return RS_RET_OK;\
+    *ppSz = UCHAR_CONSTANT(x);\
+    return RS_RET_OK;\
 }
 
 
@@ -1240,8 +1240,8 @@ static rsRetVal GetParserName(uchar **ppSz)\
 #define STRGEN_NAME(x) \
 static rsRetVal GetStrgenName(uchar **ppSz)\
 {\
-	*ppSz = UCHAR_CONSTANT(x);\
-	return RS_RET_OK;\
+    *ppSz = UCHAR_CONSTANT(x);\
+    return RS_RET_OK;\
 }
 
 #endif /* #ifndef MODULE_TEMPLATE_H_INCLUDED */

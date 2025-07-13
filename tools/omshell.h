@@ -21,12 +21,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef	ACTSHELL_H_INCLUDED
-#define	ACTSHELL_H_INCLUDED 1
+#ifndef ACTSHELL_H_INCLUDED
+#define ACTSHELL_H_INCLUDED 1
 
 /* prototypes */
 rsRetVal modInitShell(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided,
-	rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), modInfo_t*);
+    rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), modInfo_t*);
 
 #endif /* #ifndef ACTSHELL_H_INCLUDED */
 /*

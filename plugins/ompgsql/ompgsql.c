@@ -59,47 +59,47 @@ MODULE_CNFNAME("ompgsql")
 DEF_OMOD_STATIC_DATA
 
 typedef struct _instanceData {
-	char            srv[MAXHOSTNAMELEN+1];          /* IP or hostname of DB server*/
-	char            dbname[_DB_MAXDBLEN+1];         /* DB name */
-	char            user[_DB_MAXUNAMELEN+1];        /* DB user */
-	char            pass[_DB_MAXPWDLEN+1];          /* DB user's password */
-	char            conninfo[_DB_MAXCONNINFOLEN+1]; /* Connection parameters or URI */
-	unsigned int    trans_age;
-	unsigned int    trans_commit;
-	unsigned short  multi_row;
-	int             port;
-	uchar          *tpl;                      /* format template to use */
+    char            srv[MAXHOSTNAMELEN+1];          /* IP or hostname of DB server*/
+    char            dbname[_DB_MAXDBLEN+1];         /* DB name */
+    char            user[_DB_MAXUNAMELEN+1];        /* DB user */
+    char            pass[_DB_MAXPWDLEN+1];          /* DB user's password */
+    char            conninfo[_DB_MAXCONNINFOLEN+1]; /* Connection parameters or URI */
+    unsigned int    trans_age;
+    unsigned int    trans_commit;
+    unsigned short  multi_row;
+    int             port;
+    uchar          *tpl;                      /* format template to use */
 } instanceData;
 
 typedef struct wrkrInstanceData {
-	instanceData   *pData;
-	PGconn         *f_hpgsql;                /* handle to PgSQL */
-	ConnStatusType  eLastPgSQLStatus;        /* last status from postgres */
+    instanceData   *pData;
+    PGconn         *f_hpgsql;                /* handle to PgSQL */
+    ConnStatusType  eLastPgSQLStatus;        /* last status from postgres */
 } wrkrInstanceData_t;
 
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-	{ "server",     eCmdHdlrGetWord, 0 },
-	{ "db",         eCmdHdlrGetWord, 0 },
-	{ "user",       eCmdHdlrGetWord, 0 },
-	{ "uid",        eCmdHdlrGetWord, 0 },
-	{ "pass",       eCmdHdlrGetWord, 0 },
-	{ "pwd",        eCmdHdlrGetWord, 0 },
-	{ "multirows",  eCmdHdlrInt,     0 },
-	{ "trans_size", eCmdHdlrInt,     0 },
-	{ "trans_age",  eCmdHdlrInt,     0 },
-	{ "serverport", eCmdHdlrInt,     0 },
-	{ "port",       eCmdHdlrInt,     0 },
-	{ "template",   eCmdHdlrGetWord, 0 },
-	{ "conninfo",   eCmdHdlrGetWord, 0 }
+    { "server",     eCmdHdlrGetWord, 0 },
+    { "db",         eCmdHdlrGetWord, 0 },
+    { "user",       eCmdHdlrGetWord, 0 },
+    { "uid",        eCmdHdlrGetWord, 0 },
+    { "pass",       eCmdHdlrGetWord, 0 },
+    { "pwd",        eCmdHdlrGetWord, 0 },
+    { "multirows",  eCmdHdlrInt,     0 },
+    { "trans_size", eCmdHdlrInt,     0 },
+    { "trans_age",  eCmdHdlrInt,     0 },
+    { "serverport", eCmdHdlrInt,     0 },
+    { "port",       eCmdHdlrInt,     0 },
+    { "template",   eCmdHdlrGetWord, 0 },
+    { "conninfo",   eCmdHdlrGetWord, 0 }
 };
 
 
 static struct cnfparamblk actpblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
-	  actpdescr
-	};
+    { CNFPARAMBLK_VERSION,
+      sizeof(actpdescr)/sizeof(struct cnfparamdescr),
+      actpdescr
+    };
 
 
 BEGINinitConfVars     /* (re)set config variables to default values */
@@ -115,14 +115,14 @@ ENDcreateInstance
 
 BEGINcreateWrkrInstance
 CODESTARTcreateWrkrInstance
-	pWrkrData->f_hpgsql = NULL;
+    pWrkrData->f_hpgsql = NULL;
 ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
 CODESTARTisCompatibleWithFeature
-	if (eFeat == sFEATURERepeatedMsgReduction)
-		iRet = RS_RET_OK;
+    if (eFeat == sFEATURERepeatedMsgReduction)
+        iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
@@ -131,27 +131,27 @@ ENDisCompatibleWithFeature
  */
 static void closePgSQL(wrkrInstanceData_t *pWrkrData)
 {
-	assert(pWrkrData != NULL);
+    assert(pWrkrData != NULL);
 
-	if (pWrkrData->f_hpgsql != NULL) {  /* just to be on the safe side... */
-		PQfinish(pWrkrData->f_hpgsql);
-		pWrkrData->f_hpgsql = NULL;
-	}
+    if (pWrkrData->f_hpgsql != NULL) {  /* just to be on the safe side... */
+        PQfinish(pWrkrData->f_hpgsql);
+        pWrkrData->f_hpgsql = NULL;
+    }
 }
 
 BEGINfreeInstance
 CODESTARTfreeInstance
-	free(pData->tpl);
+    free(pData->tpl);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
 CODESTARTfreeWrkrInstance
-	closePgSQL(pWrkrData);
+    closePgSQL(pWrkrData);
 ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
 CODESTARTdbgPrintInstInfo
-	/* nothing special here */
+    /* nothing special here */
 ENDdbgPrintInstInfo
 
 
@@ -161,29 +161,29 @@ ENDdbgPrintInstInfo
  */
 static void reportDBError(wrkrInstanceData_t *pWrkrData, int bSilent)
 {
-	char errMsg[512];
-	ConnStatusType ePgSQLStatus;
+    char errMsg[512];
+    ConnStatusType ePgSQLStatus;
 
-	assert(pWrkrData != NULL);
-	bSilent = 0;
+    assert(pWrkrData != NULL);
+    bSilent = 0;
 
-	/* output log message */
-	errno = 0;
-	if (pWrkrData->f_hpgsql == NULL) {
-		LogError(0, NO_ERRCODE, "unknown DB error occurred - could not obtain PgSQL handle");
-	} else { /* we can ask pgsql for the error description... */
-		ePgSQLStatus = PQstatus(pWrkrData->f_hpgsql);
-		snprintf(errMsg, sizeof(errMsg), "db error (%d): %s\n", ePgSQLStatus,
-				PQerrorMessage(pWrkrData->f_hpgsql));
-		if (bSilent || ePgSQLStatus == pWrkrData->eLastPgSQLStatus)
-			dbgprintf("pgsql, DBError(silent): %s\n", errMsg);
-		else {
-			pWrkrData->eLastPgSQLStatus = ePgSQLStatus;
-			LogError(0, NO_ERRCODE, "%s", errMsg);
-		}
-	}
+    /* output log message */
+    errno = 0;
+    if (pWrkrData->f_hpgsql == NULL) {
+        LogError(0, NO_ERRCODE, "unknown DB error occurred - could not obtain PgSQL handle");
+    } else { /* we can ask pgsql for the error description... */
+        ePgSQLStatus = PQstatus(pWrkrData->f_hpgsql);
+        snprintf(errMsg, sizeof(errMsg), "db error (%d): %s\n", ePgSQLStatus,
+                PQerrorMessage(pWrkrData->f_hpgsql));
+        if (bSilent || ePgSQLStatus == pWrkrData->eLastPgSQLStatus)
+            dbgprintf("pgsql, DBError(silent): %s\n", errMsg);
+        else {
+            pWrkrData->eLastPgSQLStatus = ePgSQLStatus;
+            LogError(0, NO_ERRCODE, "%s", errMsg);
+        }
+    }
 
-	return;
+    return;
 }
 
 
@@ -192,51 +192,51 @@ static void reportDBError(wrkrInstanceData_t *pWrkrData, int bSilent)
  */
 static rsRetVal initPgSQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 {
-	int sslStatus;
-	instanceData *pData;
-	DEFiRet;
+    int sslStatus;
+    instanceData *pData;
+    DEFiRet;
 
-	pData = pWrkrData->pData;
-	assert(pData != NULL);
-	assert(pWrkrData->f_hpgsql == NULL);
+    pData = pWrkrData->pData;
+    assert(pData != NULL);
+    assert(pWrkrData->f_hpgsql == NULL);
 
-	if (strlen(pData->conninfo) > 0) {
-		/* Don't log the whole connection string, because it contains the DB password */
-		dbgprintf("initPgSQL: using connection string provided by conninfo\n");
-		pWrkrData->f_hpgsql = PQconnectdb(pData->conninfo);
-	} else {
-		dbgprintf("initPgSQL: host=%s port=%d dbname=%s uid=%s\n", pData->srv, pData->port,
-		                                                           pData->dbname, pData->user);
+    if (strlen(pData->conninfo) > 0) {
+        /* Don't log the whole connection string, because it contains the DB password */
+        dbgprintf("initPgSQL: using connection string provided by conninfo\n");
+        pWrkrData->f_hpgsql = PQconnectdb(pData->conninfo);
+    } else {
+        dbgprintf("initPgSQL: host=%s port=%d dbname=%s uid=%s\n", pData->srv, pData->port,
+                                                                   pData->dbname, pData->user);
 
-		/* Force PostgreSQL to use ANSI-SQL conforming strings, otherwise we may
-		 * get all sorts of side effects (e.g.: backslash escapes) and warnings
-		 *
-		 * Note: PostgreSQL versions since 9.3 have this already on by default.
-		 */
-		const char *PgConnectionOptions = "-c standard_conforming_strings=on";
+        /* Force PostgreSQL to use ANSI-SQL conforming strings, otherwise we may
+         * get all sorts of side effects (e.g.: backslash escapes) and warnings
+         *
+         * Note: PostgreSQL versions since 9.3 have this already on by default.
+         */
+        const char *PgConnectionOptions = "-c standard_conforming_strings=on";
 
-		/* Connect to database */
-		char port[6];
-		snprintf(port, sizeof(port), "%d", pData->port);
+        /* Connect to database */
+        char port[6];
+        snprintf(port, sizeof(port), "%d", pData->port);
 
-		pWrkrData->f_hpgsql = PQsetdbLogin(pData->srv, port, PgConnectionOptions, NULL,
-		                                   pData->dbname, pData->user, pData->pass);
-	}
+        pWrkrData->f_hpgsql = PQsetdbLogin(pData->srv, port, PgConnectionOptions, NULL,
+                                           pData->dbname, pData->user, pData->pass);
+    }
 
-	if (pWrkrData->f_hpgsql == NULL) {
-		reportDBError(pWrkrData, bSilent);
-		closePgSQL(pWrkrData); /* ignore any error we may get */
-		iRet = RS_RET_SUSPENDED;
-	}
+    if (pWrkrData->f_hpgsql == NULL) {
+        reportDBError(pWrkrData, bSilent);
+        closePgSQL(pWrkrData); /* ignore any error we may get */
+        iRet = RS_RET_SUSPENDED;
+    }
 
 #ifdef HAVE_PGSSLINUSE
-	sslStatus = PQsslInUse(pWrkrData->f_hpgsql);
+    sslStatus = PQsslInUse(pWrkrData->f_hpgsql);
 #else
-	sslStatus = PQgetssl(pWrkrData->f_hpgsql) == NULL ? 0 : 1;
+    sslStatus = PQgetssl(pWrkrData->f_hpgsql) == NULL ? 0 : 1;
 #endif
-	dbgprintf("initPgSQL: ssl status: %d\n", sslStatus);
+    dbgprintf("initPgSQL: ssl status: %d\n", sslStatus);
 
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -247,21 +247,21 @@ static rsRetVal initPgSQL(wrkrInstanceData_t *pWrkrData, int bSilent)
 static int
 tryExec(uchar *pszCmd, wrkrInstanceData_t *pWrkrData)
 {
-	PGresult *pgRet;
-	ExecStatusType execState;
-	int bHadError = 0;
+    PGresult *pgRet;
+    ExecStatusType execState;
+    int bHadError = 0;
 
-	/* try insert */
-	pgRet = PQexec(pWrkrData->f_hpgsql, (char*)pszCmd);
-	execState = PQresultStatus(pgRet);
-	if (execState != PGRES_COMMAND_OK && execState != PGRES_TUPLES_OK) {
-		// complain a lot in case any issues with DB communication
-		LogError(0, execState, "postgres query execution failed: %s", PQresStatus(PQresultStatus(pgRet)));
-		bHadError = 1;
-	}
-	PQclear(pgRet);
+    /* try insert */
+    pgRet = PQexec(pWrkrData->f_hpgsql, (char*)pszCmd);
+    execState = PQresultStatus(pgRet);
+    if (execState != PGRES_COMMAND_OK && execState != PGRES_TUPLES_OK) {
+        // complain a lot in case any issues with DB communication
+        LogError(0, execState, "postgres query execution failed: %s", PQresStatus(PQresultStatus(pgRet)));
+        bHadError = 1;
+    }
+    PQclear(pgRet);
 
-	return(bHadError);
+    return(bHadError);
 }
 
 
@@ -275,64 +275,64 @@ tryExec(uchar *pszCmd, wrkrInstanceData_t *pWrkrData)
 static rsRetVal
 writePgSQL(uchar *psz, wrkrInstanceData_t *pWrkrData)
 {
-	int bHadError = 0;
-	DEFiRet;
+    int bHadError = 0;
+    DEFiRet;
 
-	assert(psz != NULL);
-	assert(pWrkrData != NULL);
+    assert(psz != NULL);
+    assert(pWrkrData != NULL);
 
-	dbgprintf("writePgSQL: %s\n", psz);
+    dbgprintf("writePgSQL: %s\n", psz);
 
-	bHadError = tryExec(psz, pWrkrData); /* try insert */
+    bHadError = tryExec(psz, pWrkrData); /* try insert */
 
-	if (bHadError || (PQstatus(pWrkrData->f_hpgsql) != CONNECTION_OK)) {
-#if 0		/* re-enable once we have transaction support */
-		/* error occurred, try to re-init connection and retry */
-		int inTransaction = 0;
-		if(pData->f_hpgsql != NULL) {
-			PGTransactionStatusType xactStatus = PQtransactionStatus(pData->f_hpgsql);
-			if((xactStatus == PQTRANS_INTRANS) || (xactStatus == PQTRANS_ACTIVE)) {
-				inTransaction = 1;
-			}
-		}
-		if ( inTransaction == 0 )
+    if (bHadError || (PQstatus(pWrkrData->f_hpgsql) != CONNECTION_OK)) {
+#if 0       /* re-enable once we have transaction support */
+        /* error occurred, try to re-init connection and retry */
+        int inTransaction = 0;
+        if(pData->f_hpgsql != NULL) {
+            PGTransactionStatusType xactStatus = PQtransactionStatus(pData->f_hpgsql);
+            if((xactStatus == PQTRANS_INTRANS) || (xactStatus == PQTRANS_ACTIVE)) {
+                inTransaction = 1;
+            }
+        }
+        if ( inTransaction == 0 )
 #endif
-		{
-			closePgSQL(pWrkrData); /* close the current handle */
-			CHKiRet(initPgSQL(pWrkrData, 0)); /* try to re-open */
-			bHadError = tryExec(psz, pWrkrData); /* retry */
-		}
-		if(bHadError || (PQstatus(pWrkrData->f_hpgsql) != CONNECTION_OK)) {
-			/* we failed, giving up for now */
-			reportDBError(pWrkrData, 0);
-			closePgSQL(pWrkrData); /* free ressources */
-			ABORT_FINALIZE(RS_RET_SUSPENDED);
-		}
-	}
+        {
+            closePgSQL(pWrkrData); /* close the current handle */
+            CHKiRet(initPgSQL(pWrkrData, 0)); /* try to re-open */
+            bHadError = tryExec(psz, pWrkrData); /* retry */
+        }
+        if(bHadError || (PQstatus(pWrkrData->f_hpgsql) != CONNECTION_OK)) {
+            /* we failed, giving up for now */
+            reportDBError(pWrkrData, 0);
+            closePgSQL(pWrkrData); /* free ressources */
+            ABORT_FINALIZE(RS_RET_SUSPENDED);
+        }
+    }
 
 finalize_it:
-	if (iRet == RS_RET_OK) {
-		pWrkrData->eLastPgSQLStatus = CONNECTION_OK; /* reset error for error supression */
-	}
+    if (iRet == RS_RET_OK) {
+        pWrkrData->eLastPgSQLStatus = CONNECTION_OK; /* reset error for error supression */
+    }
 
-	RETiRet;
+    RETiRet;
 }
 
 
 BEGINtryResume
 CODESTARTtryResume
-	if (pWrkrData->f_hpgsql == NULL) {
-		iRet = initPgSQL(pWrkrData, 1);
-		if (iRet == RS_RET_OK) {
-			/* the code above seems not to actually connect to the database. As such, we do a
-			 * dummy statement (a pointless select...) to verify the connection and return
-			 * success only when that statemetn succeeds. Note that I am far from being a
-			 * PostgreSQL expert, so any patch that does the desired result in a more
-			 * intelligent way is highly welcome. -- rgerhards, 2009-12-16
-			 */
-			iRet = writePgSQL((uchar*)"select 'a' as a", pWrkrData);
-		}
-	}
+    if (pWrkrData->f_hpgsql == NULL) {
+        iRet = initPgSQL(pWrkrData, 1);
+        if (iRet == RS_RET_OK) {
+            /* the code above seems not to actually connect to the database. As such, we do a
+             * dummy statement (a pointless select...) to verify the connection and return
+             * success only when that statemetn succeeds. Note that I am far from being a
+             * PostgreSQL expert, so any patch that does the desired result in a more
+             * intelligent way is highly welcome. -- rgerhards, 2009-12-16
+             */
+            iRet = writePgSQL((uchar*)"select 'a' as a", pWrkrData);
+        }
+    }
 ENDtryResume
 
 
@@ -343,39 +343,39 @@ ENDbeginTransaction
 
 BEGINcommitTransaction
 CODESTARTcommitTransaction
-	dbgprintf("ompgsql: beginTransaction\n");
-	if (pWrkrData->f_hpgsql == NULL)
-		initPgSQL(pWrkrData, 0);
-	CHKiRet(writePgSQL((uchar*) "BEGIN", pWrkrData)); /* TODO: make user-configurable */
+    dbgprintf("ompgsql: beginTransaction\n");
+    if (pWrkrData->f_hpgsql == NULL)
+        initPgSQL(pWrkrData, 0);
+    CHKiRet(writePgSQL((uchar*) "BEGIN", pWrkrData)); /* TODO: make user-configurable */
 
-	for (unsigned i = 0 ; i < nParams ; ++i) {
-		iRet = writePgSQL(actParam(pParams, 1, i, 0).param, pWrkrData);
-		if (iRet != RS_RET_OK
-			&& iRet != RS_RET_DEFER_COMMIT
-			&& iRet != RS_RET_PREVIOUS_COMMITTED) {
-			// in case of any error lets retry, writePgSQL should return
-			// iRet = RS_RET_SUSPENDED and we need return it downstream, otherwise
-			// messages gonna be lost
-			LogError(0, iRet, "Failed too execute PG query. Message suspended.");
+    for (unsigned i = 0 ; i < nParams ; ++i) {
+        iRet = writePgSQL(actParam(pParams, 1, i, 0).param, pWrkrData);
+        if (iRet != RS_RET_OK
+            && iRet != RS_RET_DEFER_COMMIT
+            && iRet != RS_RET_PREVIOUS_COMMITTED) {
+            // in case of any error lets retry, writePgSQL should return
+            // iRet = RS_RET_SUSPENDED and we need return it downstream, otherwise
+            // messages gonna be lost
+            LogError(0, iRet, "Failed too execute PG query. Message suspended.");
 
-			// since writePgSQL may close connection in case of errors
-			// no point to issue rollback on new connection
-			// writePgSQL((uchar*) "ROLLBACK", pWrkrData);
+            // since writePgSQL may close connection in case of errors
+            // no point to issue rollback on new connection
+            // writePgSQL((uchar*) "ROLLBACK", pWrkrData);
 
-			// To be on safe side lets kill connection similar to what
-			// ommysql plugin does.
-			closePgSQL(pWrkrData);
-			// signal mod.om.beginTransaction that we want retry
-			ABORT_FINALIZE(iRet);
-			}
-		}
+            // To be on safe side lets kill connection similar to what
+            // ommysql plugin does.
+            closePgSQL(pWrkrData);
+            // signal mod.om.beginTransaction that we want retry
+            ABORT_FINALIZE(iRet);
+            }
+        }
 
-	CHKiRet(writePgSQL((uchar*) "COMMIT", pWrkrData)); /* TODO: make user-configurable */
+    CHKiRet(writePgSQL((uchar*) "COMMIT", pWrkrData)); /* TODO: make user-configurable */
 
 finalize_it:
-	if (iRet == RS_RET_OK) {
-		pWrkrData->eLastPgSQLStatus = CONNECTION_OK; /* reset error for error supression */
-	}
+    if (iRet == RS_RET_OK) {
+        pWrkrData->eLastPgSQLStatus = CONNECTION_OK; /* reset error for error supression */
+    }
 
 ENDcommitTransaction
 
@@ -383,180 +383,180 @@ ENDcommitTransaction
 static inline void
 setInstParamDefaults(instanceData *pData)
 {
-	pData->tpl           = NULL;
-	pData->multi_row     = 100;
-	pData->trans_commit  = 100;
-	pData->trans_age     = 60;
-	pData->port          = 5432;
-	strcpy(pData->user, "postgres");
-	strcpy(pData->pass, "postgres");
+    pData->tpl           = NULL;
+    pData->multi_row     = 100;
+    pData->trans_commit  = 100;
+    pData->trans_age     = 60;
+    pData->port          = 5432;
+    strcpy(pData->user, "postgres");
+    strcpy(pData->pass, "postgres");
 }
 
 BEGINnewActInst
-	struct cnfparamvals *pvals;
-	int i;
-	char *cstr;
-	size_t len;
+    struct cnfparamvals *pvals;
+    int i;
+    char *cstr;
+    size_t len;
 CODESTARTnewActInst
-	if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-	}
+    if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
 
-	CHKiRet(createInstance(&pData));
-	setInstParamDefaults(pData);
+    CHKiRet(createInstance(&pData));
+    setInstParamDefaults(pData);
 
-	CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	for (i = 0 ; i < actpblk.nParams ; ++i) {
-		if (!pvals[i].bUsed)
-			continue;
-		if (!strcmp(actpblk.descr[i].name, "server")) {
-			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			len = es_strlen(pvals[i].val.d.estr);
-			if(len >= sizeof(pData->srv)-1) {
-				parser_errmsg("ompgsql: srv parameter longer than supported "
-					"maximum of %d characters", (int)sizeof(pData->srv)-1);
-				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
-			}
-			memcpy(pData->srv, cstr, len+1);
-			free(cstr);
-		} else if (!strcmp(actpblk.descr[i].name, "port")) {
-			pData->port = (int) pvals[i].val.d.n;
-		} else if (!strcmp(actpblk.descr[i].name, "serverport")) {
-			pData->port = (int) pvals[i].val.d.n;
-		} else if (!strcmp(actpblk.descr[i].name, "multirows")) {
-			pData->multi_row = (int) pvals[i].val.d.n;
-		} else if (!strcmp(actpblk.descr[i].name, "trans_size")) {
-			pData->trans_commit = (int) pvals[i].val.d.n;
-		} else if (!strcmp(actpblk.descr[i].name, "trans_age")) {
-			pData->trans_age = (int) pvals[i].val.d.n;
-		} else if (!strcmp(actpblk.descr[i].name, "db")) {
-			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			len = es_strlen(pvals[i].val.d.estr);
-			if(len >= sizeof(pData->dbname)-1) {
-				parser_errmsg("ompgsql: db parameter longer than supported "
-					"maximum of %d characters", (int)sizeof(pData->dbname)-1);
-				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
-			}
-			memcpy(pData->dbname, cstr, len+1);
-			free(cstr);
-		} else if (   !strcmp(actpblk.descr[i].name, "user")
-		           || !strcmp(actpblk.descr[i].name, "uid")) {
-			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			len = es_strlen(pvals[i].val.d.estr);
-			if(len >= sizeof(pData->user)-1) {
-				parser_errmsg("ompgsql: user/uid parameter longer than supported "
-					"maximum of %d characters", (int)sizeof(pData->user)-1);
-				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
-			}
-			memcpy(pData->user, cstr, len+1);
-			free(cstr);
-		} else if (   !strcmp(actpblk.descr[i].name, "pass")
-		           || !strcmp(actpblk.descr[i].name, "pwd")) {
-			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			len = es_strlen(pvals[i].val.d.estr);
-			if(len >= sizeof(pData->pass)-1) {
-				parser_errmsg("ompgsql: pass/pwd parameter longer than supported "
-					"maximum of %d characters", (int)sizeof(pData->pass)-1);
-				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
-			}
-			memcpy(pData->pass, cstr, len+1);
-			free(cstr);
-		} else if (!strcmp(actpblk.descr[i].name, "template")) {
-			pData->tpl = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if (!strcmp(actpblk.descr[i].name, "conninfo")) {
-			cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
-			len = es_strlen(pvals[i].val.d.estr);
-			if(len >= sizeof(pData->conninfo)-1) {
-				parser_errmsg("ompgsql: conninfo parameter longer than supported "
-					"maximum of %d characters", (int)sizeof(pData->conninfo)-1);
-				ABORT_FINALIZE(RS_RET_PARAM_ERROR);
-			}
-			memcpy(pData->conninfo, cstr, len+1);
-			free(cstr);
-		} else {
-			dbgprintf("ompgsql: program error, non-handled "
-				"param '%s'\n", actpblk.descr[i].name);
-		}
-	}
+    CODE_STD_STRING_REQUESTparseSelectorAct(1)
+    for (i = 0 ; i < actpblk.nParams ; ++i) {
+        if (!pvals[i].bUsed)
+            continue;
+        if (!strcmp(actpblk.descr[i].name, "server")) {
+            cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+            len = es_strlen(pvals[i].val.d.estr);
+            if(len >= sizeof(pData->srv)-1) {
+                parser_errmsg("ompgsql: srv parameter longer than supported "
+                    "maximum of %d characters", (int)sizeof(pData->srv)-1);
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+            }
+            memcpy(pData->srv, cstr, len+1);
+            free(cstr);
+        } else if (!strcmp(actpblk.descr[i].name, "port")) {
+            pData->port = (int) pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "serverport")) {
+            pData->port = (int) pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "multirows")) {
+            pData->multi_row = (int) pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "trans_size")) {
+            pData->trans_commit = (int) pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "trans_age")) {
+            pData->trans_age = (int) pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "db")) {
+            cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+            len = es_strlen(pvals[i].val.d.estr);
+            if(len >= sizeof(pData->dbname)-1) {
+                parser_errmsg("ompgsql: db parameter longer than supported "
+                    "maximum of %d characters", (int)sizeof(pData->dbname)-1);
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+            }
+            memcpy(pData->dbname, cstr, len+1);
+            free(cstr);
+        } else if (   !strcmp(actpblk.descr[i].name, "user")
+                   || !strcmp(actpblk.descr[i].name, "uid")) {
+            cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+            len = es_strlen(pvals[i].val.d.estr);
+            if(len >= sizeof(pData->user)-1) {
+                parser_errmsg("ompgsql: user/uid parameter longer than supported "
+                    "maximum of %d characters", (int)sizeof(pData->user)-1);
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+            }
+            memcpy(pData->user, cstr, len+1);
+            free(cstr);
+        } else if (   !strcmp(actpblk.descr[i].name, "pass")
+                   || !strcmp(actpblk.descr[i].name, "pwd")) {
+            cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+            len = es_strlen(pvals[i].val.d.estr);
+            if(len >= sizeof(pData->pass)-1) {
+                parser_errmsg("ompgsql: pass/pwd parameter longer than supported "
+                    "maximum of %d characters", (int)sizeof(pData->pass)-1);
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+            }
+            memcpy(pData->pass, cstr, len+1);
+            free(cstr);
+        } else if (!strcmp(actpblk.descr[i].name, "template")) {
+            pData->tpl = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "conninfo")) {
+            cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+            len = es_strlen(pvals[i].val.d.estr);
+            if(len >= sizeof(pData->conninfo)-1) {
+                parser_errmsg("ompgsql: conninfo parameter longer than supported "
+                    "maximum of %d characters", (int)sizeof(pData->conninfo)-1);
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+            }
+            memcpy(pData->conninfo, cstr, len+1);
+            free(cstr);
+        } else {
+            dbgprintf("ompgsql: program error, non-handled "
+                "param '%s'\n", actpblk.descr[i].name);
+        }
+    }
 
-	if (strlen(pData->conninfo) == 0 && (strlen(pData->srv) == 0 || strlen(pData->dbname) == 0)) {
-		parser_errmsg("ompgsql: must provide conninfo or server and dbname");
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-	}
+    if (strlen(pData->conninfo) == 0 && (strlen(pData->srv) == 0 || strlen(pData->dbname) == 0)) {
+        parser_errmsg("ompgsql: must provide conninfo or server and dbname");
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
 
-	if (pData->tpl == NULL) {
-		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) strdup(" StdPgSQLFmt"),     OMSR_RQD_TPL_OPT_SQL));
-	} else {
-		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) strdup((char*) pData->tpl), OMSR_RQD_TPL_OPT_SQL));
-	}
+    if (pData->tpl == NULL) {
+        CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) strdup(" StdPgSQLFmt"),     OMSR_RQD_TPL_OPT_SQL));
+    } else {
+        CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) strdup((char*) pData->tpl), OMSR_RQD_TPL_OPT_SQL));
+    }
 
 CODE_STD_FINALIZERnewActInst
-	cnfparamvalsDestruct(pvals, &actpblk);
+    cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 BEGINparseSelectorAct
-	int iPgSQLPropErr = 0;
+    int iPgSQLPropErr = 0;
 CODESTARTparseSelectorAct
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	/* first check if this config line is actually for us
-	 * The first test [*p == '>'] can be skipped if a module shall only
-	 * support the newer slection syntax [:modname:]. This is in fact
-	 * recommended for new modules. Please note that over time this part
-	 * will be handled by rsyslogd itself, but for the time being it is
-	 * a good compromise to do it at the module level.
-	 * rgerhards, 2007-10-15
-	 */
+    /* first check if this config line is actually for us
+     * The first test [*p == '>'] can be skipped if a module shall only
+     * support the newer slection syntax [:modname:]. This is in fact
+     * recommended for new modules. Please note that over time this part
+     * will be handled by rsyslogd itself, but for the time being it is
+     * a good compromise to do it at the module level.
+     * rgerhards, 2007-10-15
+     */
 
-	if (!strncmp((char*) p, ":ompgsql:", sizeof(":ompgsql:") - 1))
-		p += sizeof(":ompgsql:") - 1; /* eat indicator sequence (-1 because of '\0'!) */
-	else
-		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
+    if (!strncmp((char*) p, ":ompgsql:", sizeof(":ompgsql:") - 1))
+        p += sizeof(":ompgsql:") - 1; /* eat indicator sequence (-1 because of '\0'!) */
+    else
+        ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
 
-	/* ok, if we reach this point, we have something for us */
-	if ((iRet = createInstance(&pData)) != RS_RET_OK)
-		goto finalize_it;
-	setInstParamDefaults(pData);
+    /* ok, if we reach this point, we have something for us */
+    if ((iRet = createInstance(&pData)) != RS_RET_OK)
+        goto finalize_it;
+    setInstParamDefaults(pData);
 
-	/* sur5r 2007-10-18: added support for PgSQL
-	 * :ompgsql:server,dbname,userid,password
-	 * Now we read the PgSQL connection properties
-	 * and verify that the properties are valid.
-	 */
-	if (getSubString(&p, pData->srv, MAXHOSTNAMELEN+1, ','))
-		iPgSQLPropErr++;
-	dbgprintf("%p:%s\n",p,p);
-	if (*pData->srv == '\0')
-		iPgSQLPropErr++;
-	if (getSubString(&p, pData->dbname, _DB_MAXDBLEN+1, ','))
-		iPgSQLPropErr++;
-	if (*pData->dbname == '\0')
-		iPgSQLPropErr++;
-	if (getSubString(&p, pData->user, _DB_MAXUNAMELEN+1, ','))
-		iPgSQLPropErr++;
-	if (*pData->user == '\0')
-		iPgSQLPropErr++;
-	if (getSubString(&p, pData->pass, _DB_MAXPWDLEN+1, ';'))
-		iPgSQLPropErr++;
-	/* now check for template
-	 * We specify that the SQL option must be present in the template.
-	 * This is for your own protection (prevent sql injection).
-	 */
-	if (*(p - 1) == ';') {
-		p--;
-		CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*) pData->tpl));
-	} else {
-		CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*)" StdPgSQLFmt"));
-	}
+    /* sur5r 2007-10-18: added support for PgSQL
+     * :ompgsql:server,dbname,userid,password
+     * Now we read the PgSQL connection properties
+     * and verify that the properties are valid.
+     */
+    if (getSubString(&p, pData->srv, MAXHOSTNAMELEN+1, ','))
+        iPgSQLPropErr++;
+    dbgprintf("%p:%s\n",p,p);
+    if (*pData->srv == '\0')
+        iPgSQLPropErr++;
+    if (getSubString(&p, pData->dbname, _DB_MAXDBLEN+1, ','))
+        iPgSQLPropErr++;
+    if (*pData->dbname == '\0')
+        iPgSQLPropErr++;
+    if (getSubString(&p, pData->user, _DB_MAXUNAMELEN+1, ','))
+        iPgSQLPropErr++;
+    if (*pData->user == '\0')
+        iPgSQLPropErr++;
+    if (getSubString(&p, pData->pass, _DB_MAXPWDLEN+1, ';'))
+        iPgSQLPropErr++;
+    /* now check for template
+     * We specify that the SQL option must be present in the template.
+     * This is for your own protection (prevent sql injection).
+     */
+    if (*(p - 1) == ';') {
+        p--;
+        CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*) pData->tpl));
+    } else {
+        CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar*)" StdPgSQLFmt"));
+    }
 
-	/* If we detect invalid properties, we disable logging,
-	 * because right properties are vital at this place.
-	 * Retries make no sense.
-	 */
-	if (iPgSQLPropErr) {
-		LogError(0, RS_RET_INVALID_PARAMS, "Trouble with PgSQL connection properties. "
-				"-PgSQL logging disabled");
-		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
-	}
+    /* If we detect invalid properties, we disable logging,
+     * because right properties are vital at this place.
+     * Retries make no sense.
+     */
+    if (iPgSQLPropErr) {
+        LogError(0, RS_RET_INVALID_PARAMS, "Trouble with PgSQL connection properties. "
+                "-PgSQL logging disabled");
+        ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+    }
 
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
@@ -578,13 +578,13 @@ ENDqueryEtryPt
 BEGINmodInit()
 CODESTARTmodInit
 INITLegCnfVars
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
-	if (!bCoreSupportsBatching) {
-		LogError(0, NO_ERRCODE, "ompgsql: rsyslog core too old");
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
+    INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
+    if (!bCoreSupportsBatching) {
+        LogError(0, NO_ERRCODE, "ompgsql: rsyslog core too old");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
 ENDmodInit
 
 /* vi:set ai: */

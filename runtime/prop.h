@@ -26,28 +26,28 @@
 
 /* the prop object */
 struct prop_s {
-	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	int iRefCount;		/* reference counter */
-	union {
-		uchar *psz;		/* stored string */
-		uchar sz[CONF_PROP_BUFSIZE];
-	} szVal;
-	int len;		/* we use int intentionally, otherwise we may get some troubles... */
-	DEF_ATOMIC_HELPER_MUT(mutRefCount)
+    BEGINobjInstance;   /* Data to implement generic object - MUST be the first data element! */
+    int iRefCount;      /* reference counter */
+    union {
+        uchar *psz;     /* stored string */
+        uchar sz[CONF_PROP_BUFSIZE];
+    } szVal;
+    int len;        /* we use int intentionally, otherwise we may get some troubles... */
+    DEF_ATOMIC_HELPER_MUT(mutRefCount)
 };
 
 /* interfaces */
 BEGINinterface(prop) /* name must also be changed in ENDinterface macro! */
-	INTERFACEObjDebugPrint(prop);
-	rsRetVal (*Construct)(prop_t **ppThis);
-	rsRetVal (*ConstructFinalize)(prop_t *pThis);
-	rsRetVal (*Destruct)(prop_t **ppThis);
-	rsRetVal (*SetString)(prop_t *pThis, const uchar* psz, const int len);
-	rsRetVal (*GetString)(prop_t *pThis, uchar** ppsz, int *plen);
-	int      (*GetStringLen)(prop_t *pThis);
-	rsRetVal (*AddRef)(prop_t *pThis);
-	rsRetVal (*CreateStringProp)(prop_t **ppThis, const uchar* psz, const int len);
-	rsRetVal (*CreateOrReuseStringProp)(prop_t **ppThis, const uchar *psz, const int len);
+    INTERFACEObjDebugPrint(prop);
+    rsRetVal (*Construct)(prop_t **ppThis);
+    rsRetVal (*ConstructFinalize)(prop_t *pThis);
+    rsRetVal (*Destruct)(prop_t **ppThis);
+    rsRetVal (*SetString)(prop_t *pThis, const uchar* psz, const int len);
+    rsRetVal (*GetString)(prop_t *pThis, uchar** ppsz, int *plen);
+    int      (*GetStringLen)(prop_t *pThis);
+    rsRetVal (*AddRef)(prop_t *pThis);
+    rsRetVal (*CreateStringProp)(prop_t **ppThis, const uchar* psz, const int len);
+    rsRetVal (*CreateOrReuseStringProp)(prop_t **ppThis, const uchar *psz, const int len);
 ENDinterface(prop)
 #define propCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 
@@ -64,7 +64,7 @@ ENDinterface(prop)
 static inline uchar * __attribute__((unused)) ATTR_NONNULL(1)
 propGetSzStr(prop_t *pThis)
 {
-	return(pThis->len < CONF_PROP_BUFSIZE) ? pThis->szVal.sz : pThis->szVal.psz;
+    return(pThis->len < CONF_PROP_BUFSIZE) ? pThis->szVal.sz : pThis->szVal.psz;
 }
 
 /* prototypes */

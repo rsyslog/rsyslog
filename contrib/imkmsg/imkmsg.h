@@ -19,34 +19,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef	IMKLOG_H_INCLUDED
-#define	IMKLOG_H_INCLUDED 1
+#ifndef IMKLOG_H_INCLUDED
+#define IMKLOG_H_INCLUDED 1
 
 #include "rsyslog.h"
 #include "dirty.h"
 
 typedef enum _kernel_ts_parse_mods {
-		KMSG_PARSE_TS_OFF = 0,
-		KMSG_PARSE_TS_ALWAYS = 1,
-		KMSG_PARSE_TS_STARTUP_ONLY = 2
-	} t_kernel_ts_parse_mode;
+        KMSG_PARSE_TS_OFF = 0,
+        KMSG_PARSE_TS_ALWAYS = 1,
+        KMSG_PARSE_TS_STARTUP_ONLY = 2
+    } t_kernel_ts_parse_mode;
 
 typedef enum _kernel_readmode {
-		KMSG_READMODE_FULL_BOOT = 0,
-		KMSG_READMODE_FULL_ALWAYS = 1,
-		KMSG_READMODE_NEW_ONLY = 2
-	} t_kernel_readmode;
+        KMSG_READMODE_FULL_BOOT = 0,
+        KMSG_READMODE_FULL_ALWAYS = 1,
+        KMSG_READMODE_NEW_ONLY = 2
+    } t_kernel_readmode;
 
 /* we need to have the modConf type present in all submodules */
 struct modConfData_s {
-	rsconf_t *pConf;
-	int iFacilIntMsg;
-	uchar *pszPath;
-	int console_log_level;
-	int expected_boot_complete_secs;
-	t_kernel_ts_parse_mode parseKernelStamp;
-	t_kernel_readmode readMode;
-	sbool configSetViaV2Method;
+    rsconf_t *pConf;
+    int iFacilIntMsg;
+    uchar *pszPath;
+    int console_log_level;
+    int expected_boot_complete_secs;
+    t_kernel_ts_parse_mode parseKernelStamp;
+    t_kernel_readmode readMode;
+    sbool configSetViaV2Method;
 };
 
 /* interface to "drivers"

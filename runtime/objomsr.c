@@ -36,21 +36,21 @@
  */
 rsRetVal OMSRdestruct(omodStringRequest_t *pThis)
 {
-	int i;
+    int i;
 
-	assert(pThis != NULL);
-	/* free the strings */
-	if(pThis->ppTplName != NULL) {
-		for(i = 0 ; i < pThis->iNumEntries ; ++i) {
-			free(pThis->ppTplName[i]);
-		}
-		free(pThis->ppTplName);
-	}
-	if(pThis->piTplOpts != NULL)
-		free(pThis->piTplOpts);
-	free(pThis);
+    assert(pThis != NULL);
+    /* free the strings */
+    if(pThis->ppTplName != NULL) {
+        for(i = 0 ; i < pThis->iNumEntries ; ++i) {
+            free(pThis->ppTplName[i]);
+        }
+        free(pThis->ppTplName);
+    }
+    if(pThis->piTplOpts != NULL)
+        free(pThis->piTplOpts);
+    free(pThis);
 
-	return RS_RET_OK;
+    return RS_RET_OK;
 }
 
 
@@ -58,37 +58,37 @@ rsRetVal OMSRdestruct(omodStringRequest_t *pThis)
  */
 rsRetVal OMSRconstruct(omodStringRequest_t **ppThis, int iNumEntries)
 {
-	omodStringRequest_t *pThis = NULL;
-	DEFiRet;
+    omodStringRequest_t *pThis = NULL;
+    DEFiRet;
 
-	assert(ppThis != NULL);
-	assert(iNumEntries >= 0);
-	if(iNumEntries > CONF_OMOD_NUMSTRINGS_MAXSIZE) {
-		ABORT_FINALIZE(RS_RET_MAX_OMSR_REACHED);
-	}
-	CHKmalloc(pThis = calloc(1, sizeof(omodStringRequest_t)));
+    assert(ppThis != NULL);
+    assert(iNumEntries >= 0);
+    if(iNumEntries > CONF_OMOD_NUMSTRINGS_MAXSIZE) {
+        ABORT_FINALIZE(RS_RET_MAX_OMSR_REACHED);
+    }
+    CHKmalloc(pThis = calloc(1, sizeof(omodStringRequest_t)));
 
-	/* got the structure, so fill it */
-	if(iNumEntries > 0) {
-		pThis->iNumEntries = iNumEntries;
-		/* allocate string for template name array. The individual strings will be
-		 * allocated as the code progresses (we do not yet know the string sizes)
-		 */
-		CHKmalloc(pThis->ppTplName = calloc(iNumEntries, sizeof(uchar*)));
+    /* got the structure, so fill it */
+    if(iNumEntries > 0) {
+        pThis->iNumEntries = iNumEntries;
+        /* allocate string for template name array. The individual strings will be
+         * allocated as the code progresses (we do not yet know the string sizes)
+         */
+        CHKmalloc(pThis->ppTplName = calloc(iNumEntries, sizeof(uchar*)));
 
-	/* allocate the template options array. */
-		CHKmalloc(pThis->piTplOpts = calloc(iNumEntries, sizeof(int)));
-	}
+    /* allocate the template options array. */
+        CHKmalloc(pThis->piTplOpts = calloc(iNumEntries, sizeof(int)));
+    }
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pThis != NULL) {
-			OMSRdestruct(pThis);
-			pThis = NULL;
-		}
-	}
-	*ppThis = pThis;
-	RETiRet;
+    if(iRet != RS_RET_OK) {
+        if(pThis != NULL) {
+            OMSRdestruct(pThis);
+            pThis = NULL;
+        }
+    }
+    *ppThis = pThis;
+    RETiRet;
 }
 
 /* set a template name and option to the object. Index must be given. The pTplName must be
@@ -96,15 +96,15 @@ finalize_it:
  */
 rsRetVal OMSRsetEntry(omodStringRequest_t *pThis, int iEntry, uchar *pTplName, int iTplOpts)
 {
-	assert(pThis != NULL);
-	assert(iEntry < pThis->iNumEntries);
+    assert(pThis != NULL);
+    assert(iEntry < pThis->iNumEntries);
 
-	if(pThis->ppTplName[iEntry] != NULL)
-		free(pThis->ppTplName[iEntry]);
-	pThis->ppTplName[iEntry] = pTplName;
-	pThis->piTplOpts[iEntry] = iTplOpts;
+    if(pThis->ppTplName[iEntry] != NULL)
+        free(pThis->ppTplName[iEntry]);
+    pThis->ppTplName[iEntry] = pTplName;
+    pThis->piTplOpts[iEntry] = iTplOpts;
 
-	return RS_RET_OK;
+    return RS_RET_OK;
 }
 
 
@@ -112,8 +112,8 @@ rsRetVal OMSRsetEntry(omodStringRequest_t *pThis, int iEntry, uchar *pTplName, i
  */
 int OMSRgetEntryCount(omodStringRequest_t *pThis)
 {
-	assert(pThis != NULL);
-	return pThis->iNumEntries;
+    assert(pThis != NULL);
+    return pThis->iNumEntries;
 }
 
 
@@ -125,15 +125,15 @@ int OMSRgetEntryCount(omodStringRequest_t *pThis)
  */
 int OMSRgetEntry(omodStringRequest_t *pThis, int iEntry, uchar **ppTplName, int *piTplOpts)
 {
-	assert(pThis != NULL);
-	assert(ppTplName != NULL);
-	assert(piTplOpts != NULL);
-	assert(iEntry < pThis->iNumEntries);
+    assert(pThis != NULL);
+    assert(ppTplName != NULL);
+    assert(piTplOpts != NULL);
+    assert(iEntry < pThis->iNumEntries);
 
-	*ppTplName = pThis->ppTplName[iEntry];
-	*piTplOpts = pThis->piTplOpts[iEntry];
+    *ppTplName = pThis->ppTplName[iEntry];
+    *piTplOpts = pThis->piTplOpts[iEntry];
 
-	return RS_RET_OK;
+    return RS_RET_OK;
 }
 
 
@@ -147,11 +147,11 @@ int OMSRgetEntry(omodStringRequest_t *pThis, int iEntry, uchar **ppTplName, int 
 rsRetVal
 OMSRgetSupportedTplOpts(unsigned long *pOpts)
 {
-	DEFiRet;
-	assert(pOpts != NULL);
-	*pOpts = OMSR_RQD_TPL_OPT_SQL | OMSR_TPL_AS_ARRAY | OMSR_TPL_AS_MSG
-		 | OMSR_TPL_AS_JSON;
-	RETiRet;
+    DEFiRet;
+    assert(pOpts != NULL);
+    *pOpts = OMSR_RQD_TPL_OPT_SQL | OMSR_TPL_AS_ARRAY | OMSR_TPL_AS_MSG
+         | OMSR_TPL_AS_JSON;
+    RETiRet;
 }
 
 /* vim:set ai:

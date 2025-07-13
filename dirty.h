@@ -23,8 +23,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef	DIRTY_H_INCLUDED
-#define	DIRTY_H_INCLUDED 1
+#ifndef DIRTY_H_INCLUDED
+#define DIRTY_H_INCLUDED 1
 
 rsRetVal __attribute__((deprecated)) multiSubmitMsg(multi_submit_t *pMultiSub);
 rsRetVal ATTR_NONNULL() multiSubmitMsg2(multi_submit_t *const pMultiSub); /* friends only! */
@@ -33,17 +33,17 @@ rsRetVal __attribute__((deprecated)) submitMsg(smsg_t *pMsg);
 rsRetVal multiSubmitFlush(multi_submit_t *pMultiSub);
 rsRetVal logmsgInternal(const int iErr, const syslog_pri_t pri, const uchar *const msg, int flags);
 rsRetVal __attribute__((deprecated)) parseAndSubmitMessage(const uchar *hname,
-	const uchar *hnameIP, const uchar *msg, const int len,
-	const int flags, const flowControl_t flowCtlType,
-	prop_t *pInputName, const struct syslogTime *stTime,
-	const time_t ttGenTime, ruleset_t *pRuleset);
+    const uchar *hnameIP, const uchar *msg, const int len,
+    const int flags, const flowControl_t flowCtlType,
+    prop_t *pInputName, const struct syslogTime *stTime,
+    const time_t ttGenTime, ruleset_t *pRuleset);
 rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *lst);
 rsRetVal startMainQueue(rsconf_t *cnf, qqueue_t *pQueue);
 int get_bHadHUP(void);
 
 extern int MarkInterval;
-#define CONF_VERIFY_PARTIAL_CONF 0x02		/* bit: partial configuration to be checked */
-extern int iConfigVerify;			/* is this just a config verify run? */
+#define CONF_VERIFY_PARTIAL_CONF 0x02       /* bit: partial configuration to be checked */
+extern int iConfigVerify;           /* is this just a config verify run? */
 extern int bHaveMainQueue;
 
 #endif /* #ifndef DIRTY_H_INCLUDED */

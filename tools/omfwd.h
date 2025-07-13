@@ -21,8 +21,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef	OMFWD_H_INCLUDED
-#define	OMFWD_H_INCLUDED 1
+#ifndef OMFWD_H_INCLUDED
+#define OMFWD_H_INCLUDED 1
 
 /* prototypes */
 rsRetVal modInitFwd(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided, rsRetVal (**pQueryEtryPt)(),

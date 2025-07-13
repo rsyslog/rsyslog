@@ -55,53 +55,53 @@ DEFobjStaticHelpers
 static int
 CreateSocket(struct addrinfo *addrDest)
 {
-	int fd;
-	struct addrinfo *r;
+    int fd;
+    struct addrinfo *r;
 
-	r = addrDest;
+    r = addrDest;
 
-	while(r != NULL) {
-		fd = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
-		if (fd != -1) {
-			/* We can not allow the TCP sender to block syslogd, at least
-			 * not in a single-threaded design. That would cause rsyslogd to
-			 * loose input messages - which obviously also would affect
-			 * other selector lines, too. So we do set it to non-blocking and
-			 * handle the situation ourselfs (by discarding messages). IF we run
-			 * dual-threaded, however, the situation is different: in this case,
-			 * the receivers and the selector line processing are only loosely
-			 * coupled via a memory buffer. Now, I think, we can afford the extra
-			 * wait time. Thus, we enable blocking mode for TCP if we compile with
-			 * pthreads. -- rgerhards, 2005-10-25
-			 * And now, we always run on multiple threads... -- rgerhards, 2007-12-20
-			 */
-			if (connect (fd, r->ai_addr, r->ai_addrlen) != 0) {
-				if(errno == EINPROGRESS) {
-					/* this is normal - will complete later select */
-					return fd;
-				} else {
-					char errStr[1024];
-					dbgprintf("create tcp connection failed, reason %s",
-						rs_strerror_r(errno, errStr, sizeof(errStr)));
-				}
+    while(r != NULL) {
+        fd = socket(r->ai_family, r->ai_socktype, r->ai_protocol);
+        if (fd != -1) {
+            /* We can not allow the TCP sender to block syslogd, at least
+             * not in a single-threaded design. That would cause rsyslogd to
+             * loose input messages - which obviously also would affect
+             * other selector lines, too. So we do set it to non-blocking and
+             * handle the situation ourselfs (by discarding messages). IF we run
+             * dual-threaded, however, the situation is different: in this case,
+             * the receivers and the selector line processing are only loosely
+             * coupled via a memory buffer. Now, I think, we can afford the extra
+             * wait time. Thus, we enable blocking mode for TCP if we compile with
+             * pthreads. -- rgerhards, 2005-10-25
+             * And now, we always run on multiple threads... -- rgerhards, 2007-12-20
+             */
+            if (connect (fd, r->ai_addr, r->ai_addrlen) != 0) {
+                if(errno == EINPROGRESS) {
+                    /* this is normal - will complete later select */
+                    return fd;
+                } else {
+                    char errStr[1024];
+                    dbgprintf("create tcp connection failed, reason %s",
+                        rs_strerror_r(errno, errStr, sizeof(errStr)));
+                }
 
-			}
-			else {
-				return fd;
-			}
-			close(fd);
-		}
-		else {
-			char errStr[1024];
-			dbgprintf("couldn't create send socket, reason %s", rs_strerror_r(errno, errStr,
-				sizeof(errStr)));
-		}
-		r = r->ai_next;
-	}
+            }
+            else {
+                return fd;
+            }
+            close(fd);
+        }
+        else {
+            char errStr[1024];
+            dbgprintf("couldn't create send socket, reason %s", rs_strerror_r(errno, errStr,
+                sizeof(errStr)));
+        }
+        r = r->ai_next;
+    }
 
-	dbgprintf("no working socket could be obtained");
+    dbgprintf("no working socket could be obtained");
 
-	return -1;
+    return -1;
 }
 
 
@@ -125,135 +125,135 @@ CreateSocket(struct addrinfo *addrDest)
 static rsRetVal
 TCPSendBldFrame(tcpclt_t *pThis, char **pmsg, size_t *plen, int *pbMustBeFreed)
 {
-	DEFiRet;
-	TCPFRAMINGMODE framingToUse;
-	int bIsCompressed;
-	size_t len;
-	char *msg;
-	char *buf = NULL;	/* if this is non-NULL, it MUST be freed before return! */
+    DEFiRet;
+    TCPFRAMINGMODE framingToUse;
+    int bIsCompressed;
+    size_t len;
+    char *msg;
+    char *buf = NULL;   /* if this is non-NULL, it MUST be freed before return! */
 
-	assert(plen != NULL);
-	assert(pbMustBeFreed != NULL);
-	assert(pmsg != NULL);
+    assert(plen != NULL);
+    assert(pbMustBeFreed != NULL);
+    assert(pmsg != NULL);
 
-	msg = *pmsg;
-	len = *plen;
-	bIsCompressed = *msg == 'z';	/* cache this, so that we can modify the message buffer */
-	/* select framing for this record. If we have a compressed record, we always need to
-	 * use octet counting because the data potentially contains all control characters
-	 * including LF.
-	 */
-	framingToUse = bIsCompressed ? TCP_FRAMING_OCTET_COUNTING : pThis->tcp_framing;
+    msg = *pmsg;
+    len = *plen;
+    bIsCompressed = *msg == 'z';    /* cache this, so that we can modify the message buffer */
+    /* select framing for this record. If we have a compressed record, we always need to
+     * use octet counting because the data potentially contains all control characters
+     * including LF.
+     */
+    framingToUse = bIsCompressed ? TCP_FRAMING_OCTET_COUNTING : pThis->tcp_framing;
 
-	/* now check if we need to add a line terminator. We need to
-	 * copy the string in memory in this case, this is probably
-	 * quicker than using writev and definitely quicker than doing
-	 * two socket calls.
-	 * rgerhards 2005-07-22
-	 *
-	 * Some messages already contain a \n character at the end
-	 * of the message. We append one only if we there is not
-	 * already one. This seems the best fit, though this also
-	 * means the message does not arrive unaltered at the final
-	 * destination. But in the spirit of legacy syslog, this is
-	 * probably the best to do...
-	 * rgerhards 2005-07-20
-	 */
+    /* now check if we need to add a line terminator. We need to
+     * copy the string in memory in this case, this is probably
+     * quicker than using writev and definitely quicker than doing
+     * two socket calls.
+     * rgerhards 2005-07-22
+     *
+     * Some messages already contain a \n character at the end
+     * of the message. We append one only if we there is not
+     * already one. This seems the best fit, though this also
+     * means the message does not arrive unaltered at the final
+     * destination. But in the spirit of legacy syslog, this is
+     * probably the best to do...
+     * rgerhards 2005-07-20
+     */
 
-	/* Build frame based on selected framing */
-	if(framingToUse == TCP_FRAMING_OCTET_STUFFING) {
-		if((*(msg+len-1) != pThis->tcp_framingDelimiter)) {
-			/* in the malloc below, we need to add 2 to the length. The
-			 * reason is that we a) add one character and b) len does
-			 * not take care of the '\0' byte. Up until today, it was just
-			 * +1 , which caused rsyslogd to sometimes dump core.
-			 * I have added this comment so that the logic is not accidently
-			 * changed again. rgerhards, 2005-10-25
-			 */
-			if((buf = malloc(len + 2)) == NULL) {
-				/* extreme mem shortage, try to solve
-				 * as good as we can. No point in calling
-				 * any alarms, they might as well run out
-				 * of memory (the risk is very high, so we
-				 * do NOT risk that). If we have a message of
-				 * more than 1 byte (what I guess), we simply
-				 * overwrite the last character.
-				 * rgerhards 2005-07-22
-				 */
-				if(len > 1) {
-					*(msg+len-1) = pThis->tcp_framingDelimiter;
-				} else {
-					/* we simply can not do anything in
-					 * this case (its an error anyhow...).
-					 */
-				}
-			} else {
-				/* we got memory, so we can copy the message */
-				memcpy(buf, msg, len); /* do not copy '\0' */
-				*(buf+len) = pThis->tcp_framingDelimiter;
-				*(buf+len+1) = '\0';
-				msg = buf; /* use new one */
-				++len; /* care for the \n */
-			}
-		}
-	} else {
-		/* Octect-Counting
-		 * In this case, we need to always allocate a buffer. This is because
-		 * we need to put a header in front of the message text
-		 */
-		char szLenBuf[16];
-		int iLenBuf;
+    /* Build frame based on selected framing */
+    if(framingToUse == TCP_FRAMING_OCTET_STUFFING) {
+        if((*(msg+len-1) != pThis->tcp_framingDelimiter)) {
+            /* in the malloc below, we need to add 2 to the length. The
+             * reason is that we a) add one character and b) len does
+             * not take care of the '\0' byte. Up until today, it was just
+             * +1 , which caused rsyslogd to sometimes dump core.
+             * I have added this comment so that the logic is not accidently
+             * changed again. rgerhards, 2005-10-25
+             */
+            if((buf = malloc(len + 2)) == NULL) {
+                /* extreme mem shortage, try to solve
+                 * as good as we can. No point in calling
+                 * any alarms, they might as well run out
+                 * of memory (the risk is very high, so we
+                 * do NOT risk that). If we have a message of
+                 * more than 1 byte (what I guess), we simply
+                 * overwrite the last character.
+                 * rgerhards 2005-07-22
+                 */
+                if(len > 1) {
+                    *(msg+len-1) = pThis->tcp_framingDelimiter;
+                } else {
+                    /* we simply can not do anything in
+                     * this case (its an error anyhow...).
+                     */
+                }
+            } else {
+                /* we got memory, so we can copy the message */
+                memcpy(buf, msg, len); /* do not copy '\0' */
+                *(buf+len) = pThis->tcp_framingDelimiter;
+                *(buf+len+1) = '\0';
+                msg = buf; /* use new one */
+                ++len; /* care for the \n */
+            }
+        }
+    } else {
+        /* Octect-Counting
+         * In this case, we need to always allocate a buffer. This is because
+         * we need to put a header in front of the message text
+         */
+        char szLenBuf[16];
+        int iLenBuf;
 
-		/* important: the printf-mask is "%d<sp>" because there must be a
-		 * space after the len!
-		 *//* The chairs of the IETF syslog-sec WG have announced that it is
-		 * consensus to do the octet count on the SYSLOG-MSG part only. I am
-		 * now changing the code to reflect this. Hopefully, it will not change
-		 * once again (there can no compatibility layer programmed for this).
-		 * To be on the save side, I just comment the code out. I mark these
-		 * comments with "IETF20061218".
-		 * rgerhards, 2006-12-19
-		 */
-		iLenBuf = snprintf(szLenBuf, sizeof(szLenBuf), "%d ", (int) len);
-		/* IETF20061218 iLenBuf =
-		  snprintf(szLenBuf, sizeof(szLenBuf), "%d ", len + iLenBuf);*/
+        /* important: the printf-mask is "%d<sp>" because there must be a
+         * space after the len!
+         *//* The chairs of the IETF syslog-sec WG have announced that it is
+         * consensus to do the octet count on the SYSLOG-MSG part only. I am
+         * now changing the code to reflect this. Hopefully, it will not change
+         * once again (there can no compatibility layer programmed for this).
+         * To be on the save side, I just comment the code out. I mark these
+         * comments with "IETF20061218".
+         * rgerhards, 2006-12-19
+         */
+        iLenBuf = snprintf(szLenBuf, sizeof(szLenBuf), "%d ", (int) len);
+        /* IETF20061218 iLenBuf =
+          snprintf(szLenBuf, sizeof(szLenBuf), "%d ", len + iLenBuf);*/
 
-		if((buf = malloc(len + iLenBuf)) == NULL) {
-			/* we are out of memory. This is an extreme situation. We do not
-			 * call any alarm handlers because they most likely run out of mem,
-			 * too. We are brave enough to call debug output, though. Other than
-			 * that, there is nothing left to do. We can not sent the message (as
-			 * in case of the other framing, because the message is incomplete.
-			 * We could, however, send two chunks (header and text separate), but
-			 * that would cause a lot of complexity in the code. So we think it
-			 * is appropriate enough to just make sure we do not crash in this
-			 * very unlikely case. For this, it is justified just to loose
-			 * the message. Rgerhards, 2006-12-07
-			 */
-			 dbgprintf("Error: out of memory when building TCP octet-counted "
-				 "frame. Message is lost, trying to continue.\n");
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-		}
+        if((buf = malloc(len + iLenBuf)) == NULL) {
+            /* we are out of memory. This is an extreme situation. We do not
+             * call any alarm handlers because they most likely run out of mem,
+             * too. We are brave enough to call debug output, though. Other than
+             * that, there is nothing left to do. We can not sent the message (as
+             * in case of the other framing, because the message is incomplete.
+             * We could, however, send two chunks (header and text separate), but
+             * that would cause a lot of complexity in the code. So we think it
+             * is appropriate enough to just make sure we do not crash in this
+             * very unlikely case. For this, it is justified just to loose
+             * the message. Rgerhards, 2006-12-07
+             */
+             dbgprintf("Error: out of memory when building TCP octet-counted "
+                 "frame. Message is lost, trying to continue.\n");
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
 
-		 memcpy(buf, szLenBuf, iLenBuf); /* header */
-		 memcpy(buf + iLenBuf, msg, len); /* message */
-		 len += iLenBuf;	/* new message size */
-		 msg = buf;	/* set message buffer */
-	}
+         memcpy(buf, szLenBuf, iLenBuf); /* header */
+         memcpy(buf + iLenBuf, msg, len); /* message */
+         len += iLenBuf;    /* new message size */
+         msg = buf; /* set message buffer */
+    }
 
-	/* frame building complete, on to actual sending */
+    /* frame building complete, on to actual sending */
 
-	*plen = len;
-	if(buf == NULL) {
-		/* msg not modified */
-		*pbMustBeFreed = 0;
-	} else {
-		*pmsg = msg;
-		*pbMustBeFreed = 1;
-	}
+    *plen = len;
+    if(buf == NULL) {
+        /* msg not modified */
+        *pbMustBeFreed = 0;
+    } else {
+        *pmsg = msg;
+        *pbMustBeFreed = 1;
+    }
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -286,70 +286,70 @@ finalize_it:
 static int
 Send(tcpclt_t *pThis, void *pData, char *msg, size_t len)
 {
-	DEFiRet;
-	int bDone = 0;
-	int retry = 0;
-	int bMsgMustBeFreed = 0;/* must msg be freed at end of function? 0 - no, 1 - yes */
+    DEFiRet;
+    int bDone = 0;
+    int retry = 0;
+    int bMsgMustBeFreed = 0;/* must msg be freed at end of function? 0 - no, 1 - yes */
 
-	ISOBJ_TYPE_assert(pThis, tcpclt);
-	assert(pData != NULL);
-	assert(msg != NULL);
-	assert(len > 0);
+    ISOBJ_TYPE_assert(pThis, tcpclt);
+    assert(pData != NULL);
+    assert(msg != NULL);
+    assert(len > 0);
 
-	CHKiRet(TCPSendBldFrame(pThis, &msg, &len, &bMsgMustBeFreed));
+    CHKiRet(TCPSendBldFrame(pThis, &msg, &len, &bMsgMustBeFreed));
 
-	while(!bDone) { /* loop is broken when send succeeds or error occurs */
-		CHKiRet(pThis->initFunc(pData));
-		iRet = pThis->sendFunc(pData, msg, len);
+    while(!bDone) { /* loop is broken when send succeeds or error occurs */
+        CHKiRet(pThis->initFunc(pData));
+        iRet = pThis->sendFunc(pData, msg, len);
 
-		if(iRet == RS_RET_OK || iRet == RS_RET_DEFER_COMMIT || iRet == RS_RET_PREVIOUS_COMMITTED) {
-			/* we are done, we also use this as indication that the previous
-			 * message was succesfully received (it's not always the case, but its at
-			 * least our best shot at it -- rgerhards, 2008-03-12
-			 * As of 2008-06-09, we have implemented an algorithm which detects connection
-			 * loss quite good in some (common) scenarios. Thus, the probability of
-			 * message duplication due to the code below has increased. We so now have
-			 * a config setting, default off, that enables the user to request retransmits.
-			 * However, if not requested, we do NOT need to do all the stuff needed for it.
-			 */
-			if(pThis->bResendLastOnRecon == 1) {
-				if(pThis->prevMsg != NULL)
-					free(pThis->prevMsg);
-				/* if we can not alloc a new buffer, we silently ignore it. The worst that
-				 * happens is that we lose our message recovery buffer - anything else would
-				 * be worse, so don't try anything ;) -- rgerhards, 2008-03-12
-				 */
-				if((pThis->prevMsg = malloc(len)) != NULL) {
-					memcpy(pThis->prevMsg, msg, len);
-					pThis->lenPrevMsg = len;
-				}
-			}
+        if(iRet == RS_RET_OK || iRet == RS_RET_DEFER_COMMIT || iRet == RS_RET_PREVIOUS_COMMITTED) {
+            /* we are done, we also use this as indication that the previous
+             * message was succesfully received (it's not always the case, but its at
+             * least our best shot at it -- rgerhards, 2008-03-12
+             * As of 2008-06-09, we have implemented an algorithm which detects connection
+             * loss quite good in some (common) scenarios. Thus, the probability of
+             * message duplication due to the code below has increased. We so now have
+             * a config setting, default off, that enables the user to request retransmits.
+             * However, if not requested, we do NOT need to do all the stuff needed for it.
+             */
+            if(pThis->bResendLastOnRecon == 1) {
+                if(pThis->prevMsg != NULL)
+                    free(pThis->prevMsg);
+                /* if we can not alloc a new buffer, we silently ignore it. The worst that
+                 * happens is that we lose our message recovery buffer - anything else would
+                 * be worse, so don't try anything ;) -- rgerhards, 2008-03-12
+                 */
+                if((pThis->prevMsg = malloc(len)) != NULL) {
+                    memcpy(pThis->prevMsg, msg, len);
+                    pThis->lenPrevMsg = len;
+                }
+            }
 
-			/* we are done with this record */
-			bDone = 1;
-		} else {
-			if(retry == 0) { /* OK, one retry */
-				++retry;
-				CHKiRet(pThis->prepRetryFunc(pData)); /* try to recover */
-				/* now try to send our stored previous message (which most probably
-				 * didn't make it. Note that if bResendLastOnRecon is 0, prevMsg will
-				 * never become non-NULL, so the check below covers all cases.
-				 */
-				if(pThis->prevMsg != NULL) {
-					CHKiRet(pThis->initFunc(pData));
-					CHKiRet(pThis->sendFunc(pData, pThis->prevMsg, pThis->lenPrevMsg));
-				}
-			} else {
-				/* OK, max number of retries reached, nothing we can do */
-				bDone = 1;
-			}
-		}
-	}
+            /* we are done with this record */
+            bDone = 1;
+        } else {
+            if(retry == 0) { /* OK, one retry */
+                ++retry;
+                CHKiRet(pThis->prepRetryFunc(pData)); /* try to recover */
+                /* now try to send our stored previous message (which most probably
+                 * didn't make it. Note that if bResendLastOnRecon is 0, prevMsg will
+                 * never become non-NULL, so the check below covers all cases.
+                 */
+                if(pThis->prevMsg != NULL) {
+                    CHKiRet(pThis->initFunc(pData));
+                    CHKiRet(pThis->sendFunc(pData, pThis->prevMsg, pThis->lenPrevMsg));
+                }
+            } else {
+                /* OK, max number of retries reached, nothing we can do */
+                bDone = 1;
+            }
+        }
+    }
 
 finalize_it:
-	if(bMsgMustBeFreed)
-		free(msg);
-	RETiRet;
+    if(bMsgMustBeFreed)
+        free(msg);
+    RETiRet;
 }
 
 
@@ -357,49 +357,49 @@ finalize_it:
 static rsRetVal
 SetResendLastOnRecon(tcpclt_t *pThis, const int bResendLastOnRecon)
 {
-	pThis->bResendLastOnRecon = (short) bResendLastOnRecon;
-	return RS_RET_OK;
+    pThis->bResendLastOnRecon = (short) bResendLastOnRecon;
+    return RS_RET_OK;
 }
 static rsRetVal
 SetSendInit(tcpclt_t *pThis, rsRetVal (*pCB)(void*))
 {
-	DEFiRet;
-	pThis->initFunc = pCB;
-	RETiRet;
+    DEFiRet;
+    pThis->initFunc = pCB;
+    RETiRet;
 }
 static rsRetVal
 SetSendPrepRetry(tcpclt_t *pThis, rsRetVal (*pCB)(void*))
 {
-	DEFiRet;
-	pThis->prepRetryFunc = pCB;
-	RETiRet;
+    DEFiRet;
+    pThis->prepRetryFunc = pCB;
+    RETiRet;
 }
 static rsRetVal
 SetSendFrame(tcpclt_t *pThis, rsRetVal (*pCB)(void*, char*, size_t))
 {
-	DEFiRet;
-	pThis->sendFunc = pCB;
-	RETiRet;
+    DEFiRet;
+    pThis->sendFunc = pCB;
+    RETiRet;
 }
 static rsRetVal
 SetFraming(tcpclt_t *pThis, TCPFRAMINGMODE framing)
 {
-	DEFiRet;
-	pThis->tcp_framing = framing;
-	RETiRet;
+    DEFiRet;
+    pThis->tcp_framing = framing;
+    RETiRet;
 }
 static rsRetVal
 SetFramingDelimiter(tcpclt_t *pThis, uchar tcp_framingDelimiter)
 {
-	DEFiRet;
-	pThis->tcp_framingDelimiter = tcp_framingDelimiter;
-	RETiRet;
+    DEFiRet;
+    pThis->tcp_framingDelimiter = tcp_framingDelimiter;
+    RETiRet;
 }
 
 /* Standard-Constructor
  */
 BEGINobjConstruct(tcpclt) /* be sure to specify the object type also in END macro! */
-	pThis->tcp_framingDelimiter = '\n';
+    pThis->tcp_framingDelimiter = '\n';
 ENDobjConstruct(tcpclt)
 
 
@@ -408,18 +408,18 @@ ENDobjConstruct(tcpclt)
 static rsRetVal
 tcpcltConstructFinalize(tcpclt_t __attribute__((unused)) *pThis)
 {
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, tcpclt);
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, tcpclt);
 
-	RETiRet;
+    RETiRet;
 }
 
 
 /* destructor for the tcpclt object */
 BEGINobjDestruct(tcpclt) /* be sure to specify the object type also in END and CODESTART macros! */
 CODESTARTobjDestruct(tcpclt)
-	if(pThis->prevMsg != NULL)
-		free(pThis->prevMsg);
+    if(pThis->prevMsg != NULL)
+        free(pThis->prevMsg);
 ENDobjDestruct(tcpclt)
 
 
@@ -430,29 +430,29 @@ ENDobjDestruct(tcpclt)
  */
 BEGINobjQueryInterface(tcpclt)
 CODESTARTobjQueryInterface(tcpclt)
-	if(pIf->ifVersion != tcpcltCURR_IF_VERSION) { /* check for current version, increment on each change */
-		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
-	}
+    if(pIf->ifVersion != tcpcltCURR_IF_VERSION) { /* check for current version, increment on each change */
+        ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+    }
 
-	/* ok, we have the right interface, so let's fill it
-	 * Please note that we may also do some backwards-compatibility
-	 * work here (if we can support an older interface version - that,
-	 * of course, also affects the "if" above).
-	 */
-	pIf->Construct = tcpcltConstruct;
-	pIf->ConstructFinalize = tcpcltConstructFinalize;
-	pIf->Destruct = tcpcltDestruct;
+    /* ok, we have the right interface, so let's fill it
+     * Please note that we may also do some backwards-compatibility
+     * work here (if we can support an older interface version - that,
+     * of course, also affects the "if" above).
+     */
+    pIf->Construct = tcpcltConstruct;
+    pIf->ConstructFinalize = tcpcltConstructFinalize;
+    pIf->Destruct = tcpcltDestruct;
 
-	pIf->CreateSocket = CreateSocket;
-	pIf->Send = Send;
+    pIf->CreateSocket = CreateSocket;
+    pIf->Send = Send;
 
-	/* set functions */
-	pIf->SetResendLastOnRecon = SetResendLastOnRecon;
-	pIf->SetSendInit = SetSendInit;
-	pIf->SetSendFrame = SetSendFrame;
-	pIf->SetSendPrepRetry = SetSendPrepRetry;
-	pIf->SetFraming = SetFraming;
-	pIf->SetFramingDelimiter = SetFramingDelimiter;
+    /* set functions */
+    pIf->SetResendLastOnRecon = SetResendLastOnRecon;
+    pIf->SetSendInit = SetSendInit;
+    pIf->SetSendFrame = SetSendFrame;
+    pIf->SetSendPrepRetry = SetSendPrepRetry;
+    pIf->SetFraming = SetFraming;
+    pIf->SetFramingDelimiter = SetFramingDelimiter;
 
 finalize_it:
 ENDobjQueryInterface(tcpclt)
@@ -463,7 +463,7 @@ ENDobjQueryInterface(tcpclt)
  */
 BEGINObjClassExit(tcpclt, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
 CODESTARTObjClassExit(tcpclt)
-	/* release objects we no longer need */
+    /* release objects we no longer need */
 ENDObjClassExit(tcpclt)
 
 
@@ -472,10 +472,10 @@ ENDObjClassExit(tcpclt)
  * rgerhards, 2008-02-29
  */
 BEGINObjClassInit(tcpclt, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE class also in END MACRO! */
-	/* request objects we use */
+    /* request objects we use */
 
-	/* set our own handlers */
-	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, tcpcltConstructFinalize);
+    /* set our own handlers */
+    OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, tcpcltConstructFinalize);
 ENDObjClassInit(tcpclt)
 
 
@@ -484,8 +484,8 @@ ENDObjClassInit(tcpclt)
 
 BEGINmodExit
 CODESTARTmodExit
-	/* de-init in reverse order! */
-	tcpcltClassExit();
+    /* de-init in reverse order! */
+    tcpcltClassExit();
 ENDmodExit
 
 
@@ -497,8 +497,8 @@ ENDqueryEtryPt
 
 BEGINmodInit()
 CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
-	/* Initialize all classes that are in our module - this includes ourselfs */
-	CHKiRet(tcpcltClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
+    /* Initialize all classes that are in our module - this includes ourselfs */
+    CHKiRet(tcpcltClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit
