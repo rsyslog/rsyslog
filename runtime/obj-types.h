@@ -398,7 +398,7 @@ rsRetVal objName##ClassExit(void) \
 		ifBEGIN		/* This MUST always be the first interface member */
 #define ENDinterface(obj) \
 	} obj##_if_t;
-	
+
 /* the following macro is used to get access to an object (not an instance,
  * just the class itself!). It must be called before any of the object's
  * methods can be accessed. The MYLIB part is the name of my library, or NULL if

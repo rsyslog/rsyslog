@@ -1,0 +1,42 @@
+---  # yamllint disable rule:comments-indentation
+blank_issues_enabled: false
+contact_links:
+  - name: 🤖 Try the rsyslog Assistant (AI Help)
+    url: https://rsyslog.ai
+    about: >
+      Experimental AI assistant trained on official rsyslog docs.
+      Try it before reporting an issue.
+  - name: 💬 Ask a Question (GitHub Discussions)
+    url: https://github.com/rsyslog/rsyslog/discussions
+    about: >
+      For general questions, ideas, and troubleshooting help —
+      start here before filing an issue.
+issue_templates:
+  - name: 📌 Support Question (not a bug)
+    description: >
+      You’re not sure it’s a bug, but something doesn’t work — ask here.
+    labels: [support, needs-triage]
+    file: support_question.md
+  - name: 🐛 Bug Report
+    description: Report something that's not working as expected.
+    labels: [bug, needs-triage]
+    file: bug_report.md
+  - name: 💡 Feature Request
+    description: Suggest a new feature or improvement for rsyslog.
+    labels: [enhancement, needs-triage]
+    file: feature_request.md
+  - name: 📄 Documentation Improvement
+    description: >
+      Help us improve the docs — point out unclear or missing info.
+    labels: [documentation, needs-triage]
+    file: documentation_improvement.md
+  - name: 🤖 Feedback on rsyslog Assistant (AI GPT)
+    description: >
+      Share what worked (or didn’t) when using the rsyslog Assistant AI.
+    labels: [ai, feedback]
+    file: rsyslog_assistant_feedback.md
+  - name: 🧠 AI Feedback – Core rsyslog Project
+    description: >
+      Feedback or ideas related to AI integration in the rsyslog project.
+    labels: [ai, core, feedback]
+    file: rsyslog_core_ai_feedback.md

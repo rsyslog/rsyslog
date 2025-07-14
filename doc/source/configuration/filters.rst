@@ -145,6 +145,11 @@ The following **compare-operations** are currently supported:
   implemented, it can make very much sense (performance-wise) to use
   "startswith".
 
+**endswith**
+  Checks if the value appears exactly at the end of the property value.
+  For example, ``:programname, endswith, "_foo"`` matches if the program name
+  ends with ``_foo``.
+
 **regex**
   Compares the property against the provided POSIX BRE regular expression.
 

@@ -2,7 +2,7 @@
  *
  * Module begun 2011-07-01 by Rainer Gerhards
  *
- * Copyright 2011-2022 Rainer Gerhards and Others.
+ * Copyright 2011-2025 Rainer Gerhards and Others.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -129,6 +129,7 @@ tokenToString(const int token)
 	case CMP_CONTAINSI: tokstr ="CMP_CONTAINSI"; break;
 	case CMP_STARTSWITH: tokstr ="CMP_STARTSWITH"; break;
 	case CMP_STARTSWITHI: tokstr ="CMP_STARTSWITHI"; break;
+	case CMP_ENDSWITH: tokstr ="CMP_ENDSWITH"; break;
 	case UMINUS: tokstr ="UMINUS"; break;
 	case '&': tokstr ="&"; break;
 	case '+': tokstr ="+"; break;
@@ -163,6 +164,9 @@ getFIOPName(const unsigned iFIOP)
 			break;
 		case FIOP_STARTSWITH:
 			pRet = "startswith";
+			break;
+		case FIOP_ENDSWITH:
+			pRet = "endswith";
 			break;
 		case FIOP_REGEX:
 			pRet = "regex";
@@ -310,6 +314,8 @@ DecodePropFilter(uchar *pline, struct cnfstmt *stmt)
 		stmt->d.s_propfilt.operation = FIOP_ISEMPTY;
 	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "startswith", 10)) {
 		stmt->d.s_propfilt.operation = FIOP_STARTSWITH;
+	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (uchar*) "endswith", 8)) {
+		stmt->d.s_propfilt.operation = FIOP_ENDSWITH;
 	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "regex", 5)) {
 		stmt->d.s_propfilt.operation = FIOP_REGEX;
 	} else if(!rsCStrOffsetSzStrCmp(pCSCompOp, iOffset, (unsigned char*) "ereregex", 8)) {
@@ -3002,6 +3008,14 @@ evalStrArrayCmp(es_str_t *const estr_l,
 			case CMP_STARTSWITHI:
 				r = es_strncasecmp(estr_l, ar->arr[i], es_strlen(ar->arr[i])) == 0;
 				break;
+			case CMP_ENDSWITH: {
+					const size_t len_l = es_strlen(estr_l);
+					const size_t len_suffix = es_strlen(ar->arr[i]);
+					r = len_l >= len_suffix &&
+					    (memcmp(es_getBufAddr(estr_l) + len_l - len_suffix,
+					            es_getBufAddr(ar->arr[i]), len_suffix) == 0);
+				}
+				break;
 			case CMP_CONTAINS:
 				r = es_strContains(estr_l, ar->arr[i]) != -1;
 				break;
@@ -3267,6 +3281,19 @@ cnfexprEval(const struct cnfexpr *__restrict__ const expr,
 			bMustFree = 0;
 		} else {
 			ret->d.n = es_strncmp(estr_l, estr_r, estr_r->lenStr) == 0;
+		}
+		FREE_TWO_STRINGS;
+		break;
+	case CMP_ENDSWITH:
+		PREP_TWO_STRINGS;
+		ret->datatype = 'N';
+		if(expr->r->nodetype == 'A') {
+			ret->d.n = evalStrArrayCmp(estr_l,  (struct cnfarray*) expr->r, CMP_ENDSWITH);
+			bMustFree = 0;
+		} else {
+			ret->d.n = estr_l->lenStr >= estr_r->lenStr &&
+				(memcmp(es_getBufAddr(estr_l) + estr_l->lenStr - estr_r->lenStr,
+						es_getBufAddr(estr_r), estr_r->lenStr) == 0);
 		}
 		FREE_TWO_STRINGS;
 		break;
@@ -3833,6 +3860,7 @@ cnfexprDestruct(struct cnfexpr *__restrict__ const expr)
 	case CMP_LT:
 	case CMP_GT:
 	case CMP_STARTSWITH:
+	case CMP_ENDSWITH:
 	case CMP_STARTSWITHI:
 	case CMP_CONTAINS:
 	case CMP_CONTAINSI:
@@ -3998,6 +4026,12 @@ cnfexprPrint(struct cnfexpr *expr, int indent)
 		cnfexprPrint(expr->l, indent+1);
 		doIndent(indent);
 		dbgprintf("STARTSWITH\n");
+		cnfexprPrint(expr->r, indent+1);
+		break;
+	case CMP_ENDSWITH:
+		cnfexprPrint(expr->l, indent+1);
+		doIndent(indent);
+		dbgprintf("ENDSWITH\n");
 		cnfexprPrint(expr->r, indent+1);
 		break;
 	case CMP_STARTSWITHI:
@@ -4947,6 +4981,7 @@ cnfexprOptimize(struct cnfexpr *expr)
 	case CMP_CONTAINS:
 	case CMP_CONTAINSI:
 	case CMP_STARTSWITH:
+	case CMP_ENDSWITH:
 	case CMP_STARTSWITHI:
 		expr->l = cnfexprOptimize(expr->l);
 		expr->r = cnfexprOptimize(expr->r);
@@ -5800,6 +5835,7 @@ tokenval2str(const int tok)
 	case CMP_CONTAINSI: return "CMP_CONTAINSI";
 	case CMP_STARTSWITH: return "CMP_STARTSWITH";
 	case CMP_STARTSWITHI: return "CMP_STARTSWITHI";
+	case CMP_ENDSWITH: return "CMP_ENDSWITH";
 	case UMINUS: return "UMINUS";
 	default: return "UNKNOWN TOKEN";
 	}

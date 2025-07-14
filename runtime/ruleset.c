@@ -11,7 +11,7 @@
  *
  * Module begun 2009-06-10 by Rainer Gerhards
  *
- * Copyright 2009-2021 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2009-2025 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -473,8 +473,11 @@ evalPROPFILT(struct cnfstmt *stmt, smsg_t *pMsg)
 			bRet = 1; /* process message! */
 		break;
 	case FIOP_STARTSWITH:
-		if(rsCStrSzStrStartsWithCStr(stmt->d.s_propfilt.pCSCompValue,
-				  pszPropVal, propLen) == 0)
+		if(rsCStrSzStrStartsWithCStr(stmt->d.s_propfilt.pCSCompValue, pszPropVal, propLen) == 0)
+			bRet = 1; /* process message! */
+		break;
+	case FIOP_ENDSWITH:
+		if(rsCStrSzStrEndsWithCStr(stmt->d.s_propfilt.pCSCompValue, pszPropVal, propLen) == 0)
 			bRet = 1; /* process message! */
 		break;
 	case FIOP_REGEX:

@@ -67,6 +67,7 @@ DEFobjCurrIf(net)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(nsd_ptcp)
 
+
 /* Static Helper variables for certless communication */
 static gnutls_anon_client_credentials_t anoncred;	/**< client anon credentials */
 static gnutls_anon_server_credentials_t anoncredSrv;	/**< server anon credentials */
@@ -131,8 +132,17 @@ doRetry(nsd_gtls_t *pNsd)
 				CHKiRet(gtlsChkPeerAuth(pNsd));
 			} else {
 				uchar *pGnuErr = gtlsStrerror(gnuRet);
+				uchar *fromHostIP = NULL;
+				int remotePort;
+				uchar remotePortStr[8];
+				nsd_ptcp.GetRemoteHName(pNsd->pTcp, &fromHostIP);
+				nsd_ptcp.GetRemotePort(pNsd->pTcp, &remotePort);
+				nsd_ptcp.FmtRemotePortStr(remotePort, remotePortStr, sizeof(remotePortStr));
 				LogError(0, RS_RET_TLS_HANDSHAKE_ERR,
-					"GnuTLS handshake retry returned error: %s\n", pGnuErr);
+					"nsd_gtls:TLS session terminated with remote client '%s:%s': "
+				"	GnuTLS handshake retry returned error: %s",
+				fromHostIP, remotePortStr, pGnuErr);
+				free(fromHostIP);
 				free(pGnuErr);
 				ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
 			}
@@ -2061,8 +2071,17 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo)
 		CHKiRet(gtlsChkPeerAuth(pNew));
 	} else {
 		uchar *pGnuErr = gtlsStrerror(gnuRet);
+		uchar *fromHostIP = NULL;
+		int remotePort;
+		uchar remotePortStr[8];
+		nsd_ptcp.GetRemoteHName((nsd_t*)pNew->pTcp, &fromHostIP);
+		nsd_ptcp.GetRemotePort((nsd_t*)pNew->pTcp, &remotePort);
+		nsd_ptcp.FmtRemotePortStr(remotePort, remotePortStr, sizeof(remotePortStr));
 		LogError(0, RS_RET_TLS_HANDSHAKE_ERR,
-			"gnutls returned error on handshake: %s\n", pGnuErr);
+			"nsd_gtls:TLS session terminated with remote client '%s:%s': "
+			"gnutls returned error on handshake: %s",
+		fromHostIP, remotePortStr, pGnuErr);
+		free(fromHostIP);
 		free(pGnuErr);
 		ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
 	}

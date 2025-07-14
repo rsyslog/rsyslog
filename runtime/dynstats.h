@@ -55,7 +55,7 @@ struct dynstats_bucket_s {
 	  accumulator value from this */
 	struct dynstats_ctr_s *survivor_ctrs;
 	htable *survivor_table;
-	
+
 	uint32_t maxCardinality;
 	uint32_t metricCount;
 	pthread_mutex_t mutMetricCount;

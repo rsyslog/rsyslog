@@ -172,9 +172,10 @@ typedef enum {
 	FIOP_CONTAINS  = 1,	/* contains string? */
 	FIOP_ISEQUAL  = 2,	/* is (exactly) equal? */
 	FIOP_STARTSWITH = 3,	/* starts with a string? */
-	FIOP_REGEX = 4,		/* matches a (BRE) regular expression? */
-	FIOP_EREREGEX = 5,	/* matches a ERE regular expression? */
-	FIOP_ISEMPTY = 6	/* string empty <=> strlen(s) == 0 ?*/
+	FIOP_ENDSWITH = 4,    /* ends with a string? */
+	FIOP_REGEX = 5,		/* matches a (BRE) regular expression? */
+	FIOP_EREREGEX = 6,	/* matches a ERE regular expression? */
+	FIOP_ISEMPTY = 7	/* string empty <=> strlen(s) == 0 ?*/
 } fiop_t;
 
 #ifndef HAVE_LSEEK64

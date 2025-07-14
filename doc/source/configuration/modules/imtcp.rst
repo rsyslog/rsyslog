@@ -500,6 +500,15 @@ https://docs.openssl.org/1.1.1/man3/SSL_CTX_set_verify/
 For GnuTLS, the default is 5 - see the doc for more:
 https://www.gnutls.org/manual/gnutls.html
 
+.. note::
+
+   The GnuTLS driver sends all certificates contained in the file
+   specified via ``StreamDriver.CertFile`` (or
+   ``$DefaultNetstreamDriverCertFile``) to connecting clients.  To
+   expose intermediate certificates, the file must contain the server
+   certificate first, followed by the intermediate certificates.
+   This capability was added in rsyslog version 8.36.0.
+
 
 PermittedPeer
 ^^^^^^^^^^^^^

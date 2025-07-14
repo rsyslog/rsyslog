@@ -11,9 +11,26 @@ Rsyslog can deliver over one million messages per second to local destinations u
 
 ---
 
-## Getting Help
-- **Mailing List:** [rsyslog mailing list](https://lists.adiscon.net/mailman/listinfo/rsyslog)
-- **GitHub Issues:** [Open an issue](https://github.com/rsyslog/rsyslog/issues)
+
+## 🤖 rsyslog Assistant (Experimental AI Help)
+
+Need help with rsyslog configuration or troubleshooting?
+Try the **[rsyslog Assistant](https://chatgpt.com/g/g-686f63c947688191abcbdd8d5d494626-rsyslog-assistant)** — your AI-powered support tool, built by the rsyslog team.
+
+> ⚠️ *Experimental.* May occasionally generate incorrect config examples — always review before applying.
+
+✅ Trained on official docs and changelogs
+✅ Covers both Linux rsyslog and Windows Agent
+✅ Version-aware and best-practice focused
+
+👉 Try it now: [chatgpt.com/g/g-686f63c947688191abcbdd8d5d494626-rsyslog-assistant](https://chatgpt.com/g/g-686f63c947688191abcbdd8d5d494626-rsyslog-assistant)
+
+
+## Getting Help (Other Sources)
+
+* **💬 GitHub Discussions:** [Ask questions or start a conversation](https://github.com/rsyslog/rsyslog/discussions)
+* **📧 Mailing List:** [rsyslog mailing list](https://lists.adiscon.net/mailman/listinfo/rsyslog)
+* **🐛 GitHub Issues:** [Open an issue](https://github.com/rsyslog/rsyslog/issues)
 
 ---
 
@@ -43,7 +60,7 @@ Build support libraries from source if you're working with the latest git master
 Refer to the respective section in the original README for required packages on CentOS, Ubuntu, Debian, SUSE, etc.
 
 #### Development Containers & Testing
-For a ready-to-use environment, use the images from [rsyslog-docker](https://github.com/rsyslog/rsyslog-docker). They contain all build dependencies. Run the test suite with `make check` (limit to `-j4`).
+Ready-to-use build environments are provided in `packaging/docker/dev_env`. These images were previously built in the separate [rsyslog-docker](https://github.com/rsyslog/rsyslog-docker) repository and are now maintained here. See `packaging/docker/README.md` for details. Runtime container definitions are in `packaging/docker/rsyslog`. Run the test suite inside the container with `make check` (limit to `-j4`).
 
 ---
 

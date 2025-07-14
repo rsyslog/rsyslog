@@ -121,7 +121,7 @@ static rsRetVal parseIntVal(uchar **pp, int64 *pVal)
 	assert(pp != NULL);
 	assert(*pp != NULL);
 	assert(pVal != NULL);
-	
+
 	skipWhiteSpace(pp); /* skip over any whitespace */
 	p = *pp;
 
@@ -169,7 +169,7 @@ static rsRetVal doGetSize(uchar **pp, rsRetVal (*pSetHdlr)(void*, int64), void *
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
-	
+
 	CHKiRet(parseIntVal(pp, &i));
 
 	/* we now check if the next character is one of our known modifiers.
@@ -223,7 +223,7 @@ static rsRetVal doGetInt(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t), void *p
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
-	
+
 	CHKiRet(doGetSize(pp, NULL,&i));
 	p = *pp;
 	if(i > 2147483648ll) { /*2^31*/
@@ -267,7 +267,7 @@ static rsRetVal doFileCreateMode(uchar **pp, rsRetVal (*pSetHdlr)(void*, uid_t),
 
 	assert(pp != NULL);
 	assert(*pp != NULL);
-	
+
 	skipWhiteSpace(pp); /* skip over any whitespace */
 	p = *pp;
 
@@ -327,7 +327,7 @@ static int doParseOnOffOption(uchar **pp)
 		LogError(0, NO_ERRCODE, "Invalid $-configline - could not extract on/off option");
 		return -1;
 	}
-	
+
 	if(!strcmp((char*)szOpt, "on")) {
 		return 1;
 	} else if(!strcmp((char*)szOpt, "off")) {
@@ -473,7 +473,7 @@ static rsRetVal doBinaryOptionLine(uchar **pp, rsRetVal (*pSetHdlr)(void*, int),
 
 	if((iOption = doParseOnOffOption(pp)) == -1)
 		return RS_RET_ERR;	/* nothing left to do */
-	
+
 	if(pSetHdlr == NULL) {
 		/* we should set value directly to var */
 		*((int*)pVal) = iOption;
@@ -655,7 +655,7 @@ static rsRetVal cslchDestruct(void *pThis)
 {
 	assert(pThis != NULL);
 	free(pThis);
-	
+
 	return RS_RET_OK;
 }
 
@@ -811,7 +811,7 @@ static rsRetVal cslcDestruct(void *pData)
 
 	llDestroy(&pThis->llCmdHdlrs);
 	free(pThis);
-	
+
 	return RS_RET_OK;
 }
 

@@ -1,6 +1,6 @@
 /* Definition of the queue support module.
  *
- * Copyright 2008-2019 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2025 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -19,6 +19,23 @@
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
+ */
+
+/**
+ * @file queue.h
+ * @brief Public interface and data structures for the rsyslog queue subsystem.
+ *
+ * This header defines the primary functions and data structures needed to
+ * interact with rsyslog queues (in-memory, disk, and disk-assisted). It serves
+ * as the main entry point for developers looking to understand how to use and
+ * interact with the queueing mechanism.
+ *
+ * For a detailed discussion of the architectural principles, especially
+ * concerning disk queues, their "Limited Duplication" guarantee, and a
+ * comparison to Write-Ahead Logs (WALs), please see the extensive header
+ * comment in queue.c.
+ *
+ * @see queue.c
  */
 
 #ifndef QUEUE_H_INCLUDED
@@ -55,8 +72,15 @@ typedef struct qLinkedList_S {
 	smsg_t *pMsg;
 } qLinkedList_t;
 
-
-/* the queue object */
+/**
+ * @brief The "queue object for the queueing subsystem".
+ *
+ * This structure holds the runtime state for a queue instance, especially a
+ * disk-based one. It contains the core pointers that define the Bounded Queue.
+ *
+ * Note on naming: This is named `qqueue` due to historical symbol clashes with
+ * system libraries on some platforms (e.g., AIX). See queue.c for details.
+ */
 struct queue_s {
 	BEGINobjInstance;
 	queueType_t	qType;

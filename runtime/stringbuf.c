@@ -11,7 +11,7 @@
  * e.g. search. Further refactoring and simplificytin may make
  * sense.
  *
- * Copyright (C) 2005-2019 Adiscon GmbH
+ * Copyright (C) 2005-2025 Adiscon GmbH
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -489,7 +489,7 @@ rsRetVal rsCStrTruncate(cstr_t *pThis, size_t nTrunc)
 
 	if(pThis->iStrLen < nTrunc)
 		return RS_TRUNCAT_TOO_LARGE;
-	
+
 	pThis->iStrLen -= nTrunc;
 
 	return RS_RET_OK;
@@ -554,9 +554,7 @@ rsCStrCStrCmp(cstr_t *const __restrict__ pCS1, cstr_t *const __restrict__ pCS2)
  * rgerhards 2005-10-19
  */
 int
-rsCStrSzStrStartsWithCStr(cstr_t *const __restrict__ pCS1,
-	uchar *const __restrict__ psz,
-	const size_t iLenSz)
+rsCStrSzStrStartsWithCStr(cstr_t *const __restrict__ pCS1, uchar *const __restrict__ psz, const size_t iLenSz)
 {
 	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
 	assert(psz != NULL);
@@ -568,6 +566,28 @@ rsCStrSzStrStartsWithCStr(cstr_t *const __restrict__ pCS1,
 			return memcmp(psz, pCS1->pBuf, pCS1->iStrLen);
 	} else {
 		return -1; /* pCS1 is less then psz */
+	}
+}
+
+/* check if a sz-type string ends with a CStr object. This helper mirrors
+ * rsCStrSzStrStartsWithCStr and is primarily intended for the new
+ * "endswith" property-filter operation.
+ * returns 0 if the string ends with the pattern, -1 otherwise.
+ */
+int
+rsCStrSzStrEndsWithCStr(cstr_t *const __restrict__ pCS1, uchar *const __restrict__ psz, const size_t iLenSz)
+{
+	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
+	assert(psz != NULL);
+	assert(iLenSz == strlen((char*)psz));
+	if(iLenSz >= pCS1->iStrLen) {
+		if(pCS1->iStrLen == 0) {
+			return 0; /* yes, it ends with a zero-sized string ;) */
+		} else {
+			return memcmp(psz + iLenSz - pCS1->iStrLen, pCS1->pBuf, pCS1->iStrLen);
+		}
+	} else {
+		return -1;
 	}
 }
 
@@ -625,7 +645,7 @@ finalize_it:
 void rsCStrRegexDestruct(void *rc)
 {
 	regex_t **cache = rc;
-	
+
 	assert(cache != NULL);
 	assert(*cache != NULL);
 
@@ -724,10 +744,10 @@ rsCStrLocateInSzStr(cstr_t *const pThis, uchar *const sz)
 	int bFound;
 	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 	assert(sz != NULL);
-	
+
 	if(pThis->iStrLen == 0)
 		return 0;
-	
+
 	/* compute the largest index where a match could occur - after all,
 	 * the to-be-located string must be able to be present in the
 	 * searched string (it needs its size ;)).

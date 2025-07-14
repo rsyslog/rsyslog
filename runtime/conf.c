@@ -180,13 +180,13 @@ doNameLine(uchar **pp, void* pVal)
 	ltrim(szName);
 	if(*p == ',')
 		++p; /* comma was eaten */
-	
+
 	/* we got the name - now we pass name & the rest of the string
 	 * to the subfunction. It makes no sense to do further
 	 * parsing here, as this is in close interaction with the
 	 * respective subsystem. rgerhards 2004-11-17
 	 */
-	
+
 	switch(eDir) {
 		case DIR_TEMPLATE:
 			tplAddLine(loadConf, szName, &p);
