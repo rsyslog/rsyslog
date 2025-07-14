@@ -79,7 +79,7 @@ static pthread_mutex_t glblVars_lock;
 struct json_object *global_var_root = NULL;
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(regexp)
@@ -984,7 +984,7 @@ rsRetVal msgDestruct(smsg_t **ppThis)
 #	ifdef HAVE_MALLOC_TRIM
 	int currCnt;
 #	endif
-CODESTARTobjDestruct(msg)
+CODESTARTobjDestruct(msg);
 	#if DEV_DEBUG == 1
 	dbgprintf("msgDestruct\t0x%lx, "
 		"Ref now: %d\n", (unsigned long)pThis, pThis->iRefCount - 1);
@@ -1093,6 +1093,7 @@ ENDobjDestruct(msg)
 		}\
 		cstrFinalize(pNew->pCS##name); \
 	}
+
 /* Constructs a message object by duplicating another one.
  * Returns NULL if duplication failed. We do not need to lock the
  * message object here, because a fully-created msg object is never

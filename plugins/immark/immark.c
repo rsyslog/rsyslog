@@ -47,15 +47,15 @@
 #include "ruleset.h"
 #include "prop.h"
 
-MODULE_TYPE_INPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_INPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("immark")
 
 /* defines */
 #define DEFAULT_MARK_PERIOD (20 * 60)
 
 /* Module static data */
-DEF_IMOD_STATIC_DATA
+DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
@@ -95,19 +95,19 @@ static prop_t *pInternalInputName = NULL;
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURENonCancelInputTermination)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINafterRun
-CODESTARTafterRun
+CODESTARTafterRun;
 ENDafterRun
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	/* init our settings */
@@ -146,7 +146,7 @@ finalize_it:
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
@@ -189,7 +189,7 @@ ENDsetModCnf
 
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	if(!loadModConf->configSetViaV2Method) {
 		pModConf->iMarkMessagePeriod = iMarkMessagePeriod;
 	}
@@ -197,7 +197,7 @@ ENDendCnfLoad
 
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 	pModConf->flags = (pModConf->bUseMarkFlag) ? MARK : 0;
 	if(pModConf->pszMarkMsgText == NULL) {
 		pModConf->pszMarkMsgText = strdup("-- MARK --");
@@ -220,14 +220,14 @@ ENDcheckCnf
 
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	MarkInterval = pModConf->iMarkMessagePeriod;
 	DBGPRINTF("immark set MarkInterval to %d\n", MarkInterval);
 ENDactivateCnf
 
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 ENDfreeCnf
 
 
@@ -266,7 +266,7 @@ finalize_it:
  * do not belong here.
  */
 BEGINrunInput
-CODESTARTrunInput
+CODESTARTrunInput;
 	/* this is an endless loop - it is terminated when the thread is
 	 * signalled to do so. This, however, is handled by the framework,
 	 * right into the sleep below.
@@ -289,12 +289,12 @@ ENDrunInput
 
 
 BEGINwillRun
-CODESTARTwillRun
+CODESTARTwillRun;
 ENDwillRun
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	if(pInternalInputName != NULL)
 		prop.Destruct(&pInternalInputName);
 	objRelease(ruleset, CORE_COMPONENT);
@@ -303,11 +303,11 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_IMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_IMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
@@ -317,7 +317,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 }
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

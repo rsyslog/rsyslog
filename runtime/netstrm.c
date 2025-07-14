@@ -57,7 +57,7 @@
 #include "netstrm.h"
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(netstrms)
 
 
@@ -68,7 +68,7 @@ ENDobjConstruct(netstrm)
 
 /* destructor for the netstrm object */
 BEGINobjDestruct(netstrm) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(netstrm)
+CODESTARTobjDestruct(netstrm);
 	if(pThis->pDrvrData != NULL)
 		iRet = pThis->Drvr.Destruct(&pThis->pDrvrData);
 ENDobjDestruct(netstrm)
@@ -496,7 +496,7 @@ finalize_it:
 /* queryInterface function
  */
 BEGINobjQueryInterface(netstrm)
-CODESTARTobjQueryInterface(netstrm)
+CODESTARTobjQueryInterface(netstrm);
 	if(pIf->ifVersion != netstrmCURR_IF_VERSION) {/* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
@@ -543,7 +543,7 @@ ENDobjQueryInterface(netstrm)
 /* exit our class
  */
 BEGINObjClassExit(netstrm, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(netstrm)
+CODESTARTObjClassExit(netstrm);
 	/* release objects we no longer need */
 	objRelease(netstrms, DONT_LOAD_LIB);
 ENDObjClassExit(netstrm)

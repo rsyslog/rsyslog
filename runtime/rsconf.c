@@ -72,7 +72,7 @@
 
 extern char* yytext;
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(ruleset)
 DEFobjCurrIf(module)
 DEFobjCurrIf(conf)
@@ -328,7 +328,7 @@ freeCnf(rsconf_t *pThis)
 /* destructor for the rsconf object */
 PROTOTYPEobjDestruct(rsconf);
 BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(rsconf)
+CODESTARTobjDestruct(rsconf);
 	freeCnf(pThis);
 	tplDeleteAll(pThis);
 	dynstats_destroyAllBuckets();
@@ -411,7 +411,7 @@ BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and
 	for(modNode = pThis->modules.root ; modNode != NULL ; modNode = modNode->next) {
 		dbgprintf("    %s\n", module.GetName(modNode->pMod));
 	}
-CODESTARTobjDebugPrint(rsconf)
+CODESTARTobjDebugPrint(rsconf);
 ENDobjDebugPrint(rsconf)
 
 
@@ -1554,7 +1554,7 @@ finalize_it:
 /* queryInterface function
  */
 BEGINobjQueryInterface(rsconf)
-CODESTARTobjQueryInterface(rsconf)
+CODESTARTobjQueryInterface(rsconf);
 	if(pIf->ifVersion != rsconfCURR_IF_VERSION) { /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}

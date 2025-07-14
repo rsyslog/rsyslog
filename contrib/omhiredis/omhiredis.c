@@ -43,12 +43,12 @@
 #include "cfsysline.h"
 #include "unicode-helper.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omhiredis")
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 
 #define OMHIREDIS_MODE_TEMPLATE 0
 #define OMHIREDIS_MODE_QUEUE 1
@@ -131,16 +131,16 @@ static struct cnfparamblk actpblk = {
 };
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 	pWrkrData->conn = NULL; /* Connect later */
 ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURERepeatedMsgReduction)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
@@ -156,7 +156,7 @@ static void closeHiredis(wrkrInstanceData_t *pWrkrData)
 
 /* Free our instance data. */
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	if (pData->server != NULL) {
 		free(pData->server);
 	}
@@ -171,12 +171,12 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 	closeHiredis(pWrkrData);
 ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	/* nothing special here */
 ENDdbgPrintInstInfo
 
@@ -364,7 +364,7 @@ finalize_it:
 /* called when resuming from suspended state.
  * try to restablish our connection to redis */
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 	closeHiredis(pWrkrData);
 	CHKiRet(initHiredis(pWrkrData, 0));
 	// Must get a master node for all modes, except 'publish'
@@ -379,7 +379,7 @@ ENDtryResume
  * future, this block should send the
  * MULTI command to redis. */
 BEGINbeginTransaction
-CODESTARTbeginTransaction
+CODESTARTbeginTransaction;
 	dbgprintf("omhiredis: beginTransaction called\n");
 	pWrkrData->count = 0;
 ENDbeginTransaction
@@ -390,7 +390,7 @@ ENDbeginTransaction
 BEGINdoAction
 	uchar *message, *key, *keyNameAck, *groupNameAck, *IndexNameAck;
 	int inputIndex = 0;
-CODESTARTdoAction
+CODESTARTdoAction;
 	// Don't change the order of conditions/assignations here without changing the end of the newActInst function!
 	message = ppString[inputIndex++];
 	key = pWrkrData->pData->dynaKey ? ppString[inputIndex++] : pWrkrData->pData->key;
@@ -418,7 +418,7 @@ ENDdoAction
  * don't really bother to check for errors
  * which should be fixed */
 BEGINendTransaction
-CODESTARTendTransaction
+CODESTARTendTransaction;
 	dbgprintf("omhiredis: endTransaction called\n");
 	redisReply *reply;
 	int i;
@@ -481,7 +481,7 @@ BEGINnewActInst
 	int i;
 	int iNumTpls;
 	uchar *strDup = NULL;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL)
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 
@@ -716,7 +716,7 @@ CODESTARTnewActInst
 
 	CHKiRet(OMSRsetEntry(*ppOMSR, --iNumTpls, ustrdup(pData->tplName), OMSR_NO_RQD_TPL_OPTS));
 
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 	free(strDup);
 ENDnewActInst
@@ -726,22 +726,22 @@ NO_LEGACY_CONF_parseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 ENDmodExit
 
 /* register our plugin entry points
  * with the rsyslog core engine */
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 CODEqueryEtryPt_TXIF_OMOD_QUERIES /*  supports transaction interface */
 ENDqueryEtryPt
 
 /* note we do not support rsyslog v5 syntax */
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* only supports rsyslog 6 configs */
 CODEmodInit_QueryRegCFSLineHdlr
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);

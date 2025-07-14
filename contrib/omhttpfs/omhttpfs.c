@@ -43,13 +43,13 @@
 #include "statsobj.h"
 #include "unicode-helper.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omhttpfs")
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
 
@@ -626,18 +626,18 @@ httpfs_log(wrkrInstanceData_t *pWrkrData, uchar* buf)
 
 
 BEGINinitConfVars
-	CODESTARTinitConfVars
+	CODESTARTinitConfVars;
 ENDinitConfVars
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 	DBGPRINTF("omhttpfs: createInstance\n");
 ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 	DBGPRINTF("omhttpfs: createWrkrInstance\n");
 	pWrkrData->curl = NULL;
 	iRet = httpfs_init_curl(pWrkrData, pWrkrData->pData);
@@ -647,14 +647,14 @@ ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURERepeatedMsgReduction)
 	    iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	free(pData->file);
 	free(pData->tplName);
 	free(pData->host);
@@ -663,7 +663,7 @@ ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 	free(pWrkrData->file);
 
 	if(pWrkrData->curl) {
@@ -674,7 +674,7 @@ ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	DBGPRINTF("OmHTTPFS\n");
 	DBGPRINTF("Version: %s\n", OMHTTPFS_VERSION);
 	DBGPRINTF("\tHost: %s\n", pData->host);
@@ -685,7 +685,7 @@ ENDdbgPrintInstInfo
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 	DBGPRINTF("omhttpfs: tryResume called\n");
 	/* TODO: test networking */
 	iRet = RS_RET_OK;
@@ -695,7 +695,7 @@ ENDtryResume
 * Do Action
 */
 BEGINdoAction
-CODESTARTdoAction
+CODESTARTdoAction;
 	DBGPRINTF("omhttpfs: doAction\n");
 	/* dynamic file name */
 	if (pWrkrData->pData->isDynFile) {
@@ -739,7 +739,7 @@ BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
 	uchar *tplToUse;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 	    ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -799,7 +799,7 @@ CODESTARTnewActInst
 	tplToUse = ustrdup((pData->tplName == NULL) ? (uchar* ) "RSYSLOG_FileFormat" : pData->tplName);
 	iRet = OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_NO_RQD_TPL_OPTS);
 
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
@@ -811,7 +811,7 @@ NO_LEGACY_CONF_parseSelectorAct
 * Module Exit
 */
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	/*  */
 	curl_global_cleanup();
 
@@ -825,11 +825,11 @@ ENDmodExit
 * Query Entry Point
 */
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-	CODEqueryEtryPt_STD_OMOD_QUERIES
-	CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-	CODEqueryEtryPt_STD_OMOD8_QUERIES
-	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
+CODESTARTqueryEtryPt;
+	CODEqueryEtryPt_STD_OMOD_QUERIES;
+	CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
+	CODEqueryEtryPt_STD_OMOD8_QUERIES;
+	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES;
 ENDqueryEtryPt
 
 
@@ -837,8 +837,8 @@ ENDqueryEtryPt
 * Module Init
 */
 BEGINmodInit()
-CODESTARTmodInit
-INITLegCnfVars
+CODESTARTmodInit;
+INITLegCnfVars;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	/* tell which objects we need */

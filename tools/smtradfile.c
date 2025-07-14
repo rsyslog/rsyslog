@@ -42,12 +42,12 @@
 #include "unicode-helper.h"
 
 MODULE_TYPE_STRGEN
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_NOKEEP;
 STRGEN_NAME("RSYSLOG_TraditionalFileFormat")
 
 /* internal structures
  */
-DEF_SMOD_STATIC_DATA
+DEF_SMOD_STATIC_DATA;
 
 
 /* config data */
@@ -67,7 +67,7 @@ BEGINstrgen
 	uchar *pMSG;
 	size_t lenMSG;
 	size_t lenTotal;
-CODESTARTstrgen
+CODESTARTstrgen;
 	/* first obtain all strings and their length (if not fixed) */
 	pTimeStamp = (uchar*) getTimeReported(pMsg, tplFmtRFC3164Date);
 	pHOSTNAME = (uchar*) getHOSTNAME(pMsg);
@@ -112,18 +112,18 @@ ENDstrgen
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_SMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_SMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit(smtradfile)
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	dbgprintf("traditional file format strgen init called, compiled with version %s\n", VERSION);

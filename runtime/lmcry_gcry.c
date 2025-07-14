@@ -38,10 +38,10 @@
 #include "libcry_common.h"
 
 MODULE_TYPE_LIB
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_NOKEEP;
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(glbl)
 
 /* tables for interfacing with the v6 config system */
@@ -91,7 +91,7 @@ ENDobjConstruct(lmcry_gcry)
 
 /* destructor for the lmcry_gcry object */
 BEGINobjDestruct(lmcry_gcry) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(lmcry_gcry)
+CODESTARTobjDestruct(lmcry_gcry);
 	rsgcryCtxDel(pThis->ctx);
 ENDobjDestruct(lmcry_gcry)
 
@@ -278,7 +278,7 @@ OnFileClose(void *pF, off64_t offsLogfile)
 }
 
 BEGINobjQueryInterface(lmcry_gcry)
-CODESTARTobjQueryInterface(lmcry_gcry)
+CODESTARTobjQueryInterface(lmcry_gcry);
 	 if(pIf->ifVersion != cryprovCURR_IF_VERSION) {/* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
@@ -297,7 +297,7 @@ ENDobjQueryInterface(lmcry_gcry)
 
 
 BEGINObjClassExit(lmcry_gcry, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(lmcry_gcry)
+CODESTARTObjClassExit(lmcry_gcry);
 	/* release objects we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
 
@@ -321,19 +321,19 @@ ENDObjClassInit(lmcry_gcry)
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	lmcry_gcryClassExit();
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_LIB_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(lmcry_gcryClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */

@@ -52,8 +52,8 @@
 #include "hashtable_itr.h"
 //#include "cfsysline.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omsendertrack")
 
 // TODO CI: a) more tests, multiple hosts, b) make current tests really check the counted stats, not just abort ;-)
@@ -63,7 +63,7 @@ MODULE_CNFNAME("omsendertrack")
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 
 #define DEFAULT_INTERVAL 60 /* seconds */
 
@@ -569,54 +569,54 @@ finalize_it:
 }
 
 BEGINinitConfVars
-CODESTARTinitConfVars
+CODESTARTinitConfVars;
 ENDinitConfVars
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 ENDbeginCnfLoad
 
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	loadModConf = NULL; /* done loading */
 ENDendCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 ENDfreeCnf
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURERepeatedMsgReduction)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	/* stop bgWriter */
 	if(pData->bgw_initialized) {
 		pData->bShutdownBackgroundWriter = 1;
@@ -639,27 +639,27 @@ ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	dbgprintf("omsendertrack\n");
 	dbgprintf("\ttemplate='%s'\n", pData->templateName);
 ENDdbgPrintInstInfo
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 ENDtryResume
 
 BEGINbeginTransaction
-CODESTARTbeginTransaction
+CODESTARTbeginTransaction;
 ENDbeginTransaction
 
 BEGINcommitTransaction
-CODESTARTcommitTransaction
+CODESTARTcommitTransaction;
 	const time_t lastSeen = time(NULL); /* do only query once per TX - it's sufficiently precise */
 	for(unsigned i = 0 ; i < nParams ; ++i) {
 		recordSender(pWrkrData->pData, actParam(pParams, 1, i, 0).param, lastSeen);
@@ -680,7 +680,7 @@ BEGINnewActInst
 	int i;
 	int bDestructPValsOnExit;
 	uchar *tplToUse;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	DBGPRINTF("newActInst (omsendertrack)\n");
 
 	bDestructPValsOnExit = 0;
@@ -716,13 +716,13 @@ CODESTARTnewActInst
 		}
 	}
 
-	CODE_STD_STRING_REQUESTnewActInst(1)
+	CODE_STD_STRING_REQUESTnewActInst(1);
 	//TODO: make the template a parameter
 	tplToUse = (uchar*) strdup((pData->templateName == NULL) ? "RSYSLOG_FileFormat" : (char *)pData->templateName);
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_NO_RQD_TPL_OPTS));
 
 	initHashtable(pData);
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	if(bDestructPValsOnExit)
 		cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
@@ -731,7 +731,7 @@ ENDnewActInst
 
 BEGINparseSelectorAct
 	int iTplOpts;
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* first check if this config line is actually for us */
 	if(strncmp((char*) p, ":omsendertrack:", sizeof(":omsendertrack:") - 1)) {
@@ -752,23 +752,23 @@ ENDparseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMODTX_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMODTX_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-INITLegCnfVars
+CODESTARTmodInit;
+INITLegCnfVars;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	/* old-style system not supported */

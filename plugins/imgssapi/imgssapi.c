@@ -61,8 +61,8 @@
 #include "unlimited_select.h"
 #include "rsconf.h"
 
-MODULE_TYPE_INPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_INPUT;
+MODULE_TYPE_NOKEEP;
 
 /* defines */
 #define ALLOWEDMETHOD_GSS 2
@@ -79,7 +79,7 @@ static rsRetVal onSessAccept(tcpsrv_t *pThis, tcps_sess_t *pSess, ATTR_UNUSED ch
 static rsRetVal OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *ppSess);
 
 /* static data */
-DEF_IMOD_STATIC_DATA
+DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(tcpsrv)
 DEFobjCurrIf(tcps_sess)
 DEFobjCurrIf(gssutil)
@@ -683,34 +683,34 @@ TCPSessGSSDeinit(void)
 
 #if 0 /* can be used to integrate into new config system */
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 ENDbeginCnfLoad
 
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 ENDendCnfLoad
 
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 ENDcheckCnf
 
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 ENDactivateCnf
 
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 ENDfreeCnf
 #endif
 
 /* This function is called to gather input.
  */
 BEGINrunInput
-CODESTARTrunInput
+CODESTARTrunInput;
 	/* This will fail if the priviledges are dropped. Should be
 	 * moved to the '*activateCnfPrePrivDrop' section eventually.
 	 */
@@ -722,7 +722,7 @@ ENDrunInput
 
 /* initialize and return if will run or not */
 BEGINwillRun
-CODESTARTwillRun
+CODESTARTwillRun;
 	if(srvPort == NULL)
 		ABORT_FINALIZE(RS_RET_NO_RUN);
 
@@ -734,7 +734,7 @@ ENDwillRun
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	if(pOurTcpsrv != NULL)
 		iRet = tcpsrv.Destruct(&pOurTcpsrv);
 	TCPSessGSSDeinit();
@@ -751,7 +751,7 @@ ENDmodExit
 
 
 BEGINafterRun
-CODESTARTafterRun
+CODESTARTafterRun;
 	/* do cleanup here */
 	net.clearAllowedSenders((uchar*)"TCP");
 	net.clearAllowedSenders((uchar*)"GSS");
@@ -759,16 +759,16 @@ ENDafterRun
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURENonCancelInputTermination)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_IMOD_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_IMOD_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
@@ -790,7 +790,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current definition */
 CODEmodInit_QueryRegCFSLineHdlr
 	pOurTcpsrv = NULL;

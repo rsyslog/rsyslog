@@ -51,12 +51,12 @@
 #include "msg.h"
 #include "dirty.h"
 
-MODULE_TYPE_INPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_INPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imkafka")
 
 /* static data */
-DEF_IMOD_STATIC_DATA
+DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
 DEFobjCurrIf(glbl)
@@ -530,7 +530,7 @@ BEGINnewInpInst
 	struct cnfparamvals *pvals;
 	instanceConf_t *inst;
 	int i;
-CODESTARTnewInpInst
+CODESTARTnewInpInst;
 	DBGPRINTF("newInpInst (imkafka)\n");
 
 	if((pvals = nvlstGetParams(lst, &inppblk, NULL)) == NULL) {
@@ -601,7 +601,7 @@ ENDnewInpInst
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	pModConf->pszBindRuleset = NULL;
@@ -611,7 +611,7 @@ ENDbeginCnfLoad
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "imkafka: error processing module "
@@ -640,7 +640,7 @@ finalize_it:
 ENDsetModCnf
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	if(loadModConf->pszBindRuleset == NULL) {
 		if((cs.pszBindRuleset == NULL) || (cs.pszBindRuleset[0] == '\0')) {
 			loadModConf->pszBindRuleset = NULL;
@@ -656,7 +656,7 @@ ENDendCnfLoad
 
 BEGINcheckCnf
 	instanceConf_t *inst;
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 	for(inst = pModConf->root ; inst != NULL ; inst = inst->next) {
 		if(inst->pszBindRuleset == NULL && pModConf->pszBindRuleset != NULL) {
 			CHKmalloc(inst->pszBindRuleset = ustrdup(pModConf->pszBindRuleset));
@@ -668,12 +668,12 @@ ENDcheckCnf
 
 
 BEGINactivateCnfPrePrivDrop
-CODESTARTactivateCnfPrePrivDrop
+CODESTARTactivateCnfPrePrivDrop;
 	runModConf = pModConf;
 ENDactivateCnfPrePrivDrop
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	for(instanceConf_t *inst = pModConf->root ; inst != NULL ; inst = inst->next) {
 		iRet = checkInstance(inst);
 	}
@@ -682,7 +682,7 @@ ENDactivateCnf
 
 BEGINfreeCnf
 	instanceConf_t *inst, *del;
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free(inst->topic);
 		free(inst->consumergroup);
@@ -743,7 +743,7 @@ shutdownKafkaWorkers(void)
 BEGINrunInput
 	int i;
 	instanceConf_t *inst;
-CODESTARTrunInput
+CODESTARTrunInput;
 	DBGPRINTF("imkafka: runInput loop started ...\n");
 	activeKafkaworkers = 0;
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
@@ -800,7 +800,7 @@ ENDrunInput
 
 
 BEGINwillRun
-CODESTARTwillRun
+CODESTARTwillRun;
 	/* we need to create the inputName property (only once during our lifetime) */
 	CHKiRet(prop.Construct(&pInputName));
 	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imkafka"), sizeof("imkafka") - 1));
@@ -810,7 +810,7 @@ ENDwillRun
 
 
 BEGINafterRun
-CODESTARTafterRun
+CODESTARTafterRun;
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
 
@@ -818,7 +818,7 @@ ENDafterRun
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	pthread_attr_destroy(&wrkrThrdAttr);
 	/* release objects we used */
 	objRelease(statsobj, CORE_COMPONENT);
@@ -829,25 +829,25 @@ ENDmodExit
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURENonCancelInputTermination)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_IMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
-CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_IMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES;
+CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
 	/* request objects we use */

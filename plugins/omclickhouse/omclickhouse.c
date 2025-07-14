@@ -56,12 +56,12 @@
 #  define O_LARGEFILE 0
 #endif
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omclickhouse")
 
 /* internal structures */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(statsobj)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
@@ -149,7 +149,7 @@ static struct cnfparamblk actpblk =
 static rsRetVal curlSetup(wrkrInstanceData_t *pWrkrData);
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 	pData->fdErrFile = -1;
 	pData->caCertFile = NULL;
 	pData->myCertFile = NULL;
@@ -157,7 +157,7 @@ CODESTARTcreateInstance
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 	pWrkrData->curlHeader = NULL;
 	pWrkrData->curlPostHandle = NULL;
 	pWrkrData->curlCheckConnHandle = NULL;
@@ -176,13 +176,13 @@ CODESTARTcreateWrkrInstance
 ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURERepeatedMsgReduction)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	free(pData->serverBaseUrl);
 	free(pData->user);
 	free(pData->pwd);
@@ -197,7 +197,7 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 	if(pWrkrData->curlHeader != NULL) {
 		curl_slist_free_all(pWrkrData->curlHeader);
 		pWrkrData->curlHeader = NULL;
@@ -218,7 +218,7 @@ CODESTARTfreeWrkrInstance
 ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	dbgprintf("omclickhouse\n");
 	dbgprintf("\tserver='%s'\n", pData->serverBaseUrl);
 	dbgprintf("\tport='%d'\n", pData->port);
@@ -281,7 +281,7 @@ finalize_it:
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 	dbgprintf("omclickhouse: tryResume called\n");
 	iRet = checkConn(pWrkrData);
 ENDtryResume
@@ -557,7 +557,7 @@ finalize_it:
 
 
 BEGINbeginTransaction
-CODESTARTbeginTransaction
+CODESTARTbeginTransaction;
 	if(!pWrkrData->pData->bulkmode) {
 		FINALIZE;
 	}
@@ -569,7 +569,7 @@ ENDbeginTransaction
 
 BEGINdoAction
 	char *batchPart = NULL;
-CODESTARTdoAction
+CODESTARTdoAction;
 	dbgprintf("CODESTARTdoAction: entered\n");
 	STATSCOUNTER_INC(indexSubmit, mutIndexSubmit);
 
@@ -600,7 +600,7 @@ ENDdoAction
 
 
 BEGINendTransaction
-CODESTARTendTransaction
+CODESTARTendTransaction;
 /* End Transaction only if batch data is not empty */
 	if (pWrkrData->batch.data != NULL && pWrkrData->batch.nmemb > 0) {
 		CHKiRet(submitBatch(pWrkrData));
@@ -819,7 +819,7 @@ BEGINnewActInst
 	int i;
 	FILE *fp;
 	char errStr[1024];
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -904,7 +904,7 @@ CODESTARTnewActInst
 	if(pData->user != NULL)
 		CHKiRet(computeAuthHeader((char*) pData->user, (char*) pData->pwd, &pData->authBuf));
 
-	CODE_STD_STRING_REQUESTnewActInst(1)
+	CODE_STD_STRING_REQUESTnewActInst(1);
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ?
 		" StdClickHouseFmt" : (char*)pData->tplName), OMSR_RQD_TPL_OPT_SQL));
 
@@ -925,14 +925,14 @@ CODESTARTnewActInst
 		loadModConf->tail = pData;
 	}
 
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	free(server);
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	pModConf->root = pModConf->tail = NULL;
@@ -940,28 +940,28 @@ ENDbeginCnfLoad
 
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	loadModConf = NULL; /* done loading */
 ENDendCnfLoad
 
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 ENDcheckCnf
 
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 ENDactivateCnf
 
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 ENDfreeCnf
 
 
 BEGINdoHUP
-CODESTARTdoHUP
+CODESTARTdoHUP;
 	if(pData->fdErrFile != -1) {
 		close(pData->fdErrFile);
 		pData->fdErrFile = -1;
@@ -970,7 +970,7 @@ ENDdoHUP
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	curl_global_cleanup();
 	statsobj.Destruct(&indexStats);
 	objRelease(statsobj, CORE_COMPONENT);
@@ -981,19 +981,19 @@ ENDmodExit
 NO_LEGACY_CONF_parseSelectorAct
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 CODEqueryEtryPt_doHUP
 CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
-CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_STD_CONF2_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));

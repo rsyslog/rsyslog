@@ -82,12 +82,12 @@
 /* the define is from tcpsrv.h, we need to find a new (but easier!!!) abstraction layer some time ... */
 #define TCPSRV_NO_ADDTL_DELIMITER -1 /* specifies that no additional delimiter is to be used in TCP framing */
 
-MODULE_TYPE_INPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_INPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imptcp")
 
 /* static data */
-DEF_IMOD_STATIC_DATA
+DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 DEFobjCurrIf(prop)
@@ -2198,7 +2198,7 @@ BEGINnewInpInst
 	instanceConf_t *inst;
 	char *cstr;
 	int i;
-CODESTARTnewInpInst
+CODESTARTnewInpInst;
 	DBGPRINTF("newInpInst (imptcp)\n");
 
 	if((pvals = nvlstGetParams(lst, &inppblk, NULL)) == NULL) {
@@ -2332,7 +2332,7 @@ ENDnewInpInst
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	/* init our settings */
@@ -2348,7 +2348,7 @@ ENDbeginCnfLoad
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "imptcp: error processing module "
@@ -2389,7 +2389,7 @@ ENDsetModCnf
 
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	if(!loadModConf->configSetViaV2Method) {
 		/* persist module-specific settings from legacy config system */
 		loadModConf->wrkrMax = cs.wrkrMax;
@@ -2414,7 +2414,7 @@ std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, insta
 }
 BEGINcheckCnf
 	instanceConf_t *inst;
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 	for(inst = pModConf->root ; inst != NULL ; inst = inst->next) {
 		std_checkRuleset(pModConf, inst);
 	}
@@ -2423,7 +2423,7 @@ ENDcheckCnf
 
 BEGINactivateCnfPrePrivDrop
 	instanceConf_t *inst;
-CODESTARTactivateCnfPrePrivDrop
+CODESTARTactivateCnfPrePrivDrop;
 	iMaxLine = glbl.GetMaxLine(runConf); /* get maximum size we currently support */
 	DBGPRINTF("imptcp: config params iMaxLine %d\n", iMaxLine);
 
@@ -2463,14 +2463,14 @@ ENDactivateCnfPrePrivDrop
 
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	/* nothing to do, all done pre priv drop */
 ENDactivateCnf
 
 
 BEGINfreeCnf
 	instanceConf_t *inst, *del;
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free(inst->pszBindPort);
 		free(inst->pszBindPath);
@@ -2494,7 +2494,7 @@ ENDfreeCnf
 BEGINrunInput
 	int nEvents;
 	struct epoll_event events[128];
-CODESTARTrunInput
+CODESTARTrunInput;
 	initIoQ();
 	startWorkerPool();
 	DBGPRINTF("imptcp: now beginning to process input data\n");
@@ -2511,7 +2511,7 @@ ENDrunInput
 
 /* initialize and return if will run or not */
 BEGINwillRun
-CODESTARTwillRun
+CODESTARTwillRun;
 ENDwillRun
 
 
@@ -2557,7 +2557,7 @@ shutdownSrv(ptcpsrv_t *pSrv)
 
 BEGINafterRun
 	ptcpsrv_t *pSrv, *srvDel;
-CODESTARTafterRun
+CODESTARTafterRun;
 	stopWorkerPool();
 	destroyIoQ();
 
@@ -2575,7 +2575,7 @@ ENDafterRun
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	pthread_attr_destroy(&wrkrThrdAttr);
 	/* release objects we used */
 	objRelease(glbl, CORE_COMPONENT);
@@ -2609,25 +2609,25 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURENonCancelInputTermination)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_IMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
-CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_IMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES;
+CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	/* request objects we use */

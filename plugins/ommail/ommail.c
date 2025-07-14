@@ -53,13 +53,13 @@
 #include "glbl.h"
 #include "parserif.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("ommail")
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
 
@@ -131,7 +131,7 @@ static struct cnfparamblk actpblk =
 
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars
+CODESTARTinitConfVars;
 	cs.lstRcpt = NULL;
 	cs.pszSrv = NULL;
 	cs.pszSrvPort = NULL;
@@ -256,26 +256,26 @@ finalize_it:
 /* end helpers for handling the recipient lists */
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 	pData->constSubject = NULL;
 	pData->bEnableBody = 1;
 ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURERepeatedMsgReduction)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	free(pData->tplName);
 	if(pData->iMode == 0) {
 		free(pData->md.smtp.pszSrv);
@@ -287,12 +287,12 @@ ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	printf("mail"); /* TODO: extend! */
 ENDdbgPrintInstInfo
 
@@ -666,7 +666,7 @@ finalize_it:
  * rgerhards, 2008-04-08
  */
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 	CHKiRet(serverConnect(pWrkrData));
 	CHKiRet(serverDisconnect(pWrkrData)); /* if we fail, we will never reach this line */
 finalize_it:
@@ -678,7 +678,7 @@ ENDtryResume
 BEGINdoAction
 	uchar *subject;
 	const instanceData *const __restrict__ pData = pWrkrData->pData;
-CODESTARTdoAction
+CODESTARTdoAction;
 	DBGPRINTF("ommail doAction()\n");
 
 	if(pData->constSubject != NULL)
@@ -709,7 +709,7 @@ BEGINnewActInst
 	struct cnfparamvals *pvals;
 	uchar *tplSubject = NULL;
 	int i, j;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -773,13 +773,13 @@ CODESTARTnewActInst
 			(uchar*) strdup((char*) pData->tplName),
 			OMSR_NO_RQD_TPL_OPTS));
 	}
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINparseSelectorAct
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 	if(!strncmp((char*) p, ":ommail:", sizeof(":ommail:") - 1)) {
 		p += sizeof(":ommail:") - 1; /* eat indicator sequence (-1 because of '\0'!) */
 	} else {
@@ -844,7 +844,7 @@ static rsRetVal freeConfigVariables(void)
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	/* cleanup our allocations */
 	freeConfigVariables();
 
@@ -855,11 +855,11 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES;
 ENDqueryEtryPt
 
 
@@ -875,8 +875,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 
 BEGINmodInit()
-CODESTARTmodInit
-INITLegCnfVars
+CODESTARTmodInit;
+INITLegCnfVars;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	/* tell which objects we need */

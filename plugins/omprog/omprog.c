@@ -50,15 +50,15 @@
 #include "glbl.h"
 #include "rsconf.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omprog")
 
 extern char **environ; /* POSIX environment ptr, by std not in a header... (see man 7 environ) */
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 
 #define NO_HUP_FORWARD -1	/* indicates that HUP should NOT be forwarded */
 #define DEFAULT_CONFIRM_TIMEOUT_MS 10000
@@ -848,13 +848,13 @@ endOutputCapture(outputCaptureCtx_t *pCtx, long timeoutMs)
 
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars
+CODESTARTinitConfVars;
 	cs.szBinary = NULL;	/* name of binary to call */
 ENDinitConfVars
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 	pData->szBinary = NULL;
 	pData->szTemplateName = NULL;
 	pData->aParams = NULL;
@@ -913,7 +913,7 @@ finalize_it:
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 	pWrkrData->pChildCtx = NULL;
 
 	if(pWrkrData->pData->pOutputCaptureCtx != NULL) {
@@ -933,7 +933,7 @@ ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
 	}
@@ -941,12 +941,12 @@ ENDisCompatibleWithFeature
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 ENDdbgPrintInstInfo
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 	if(pWrkrData->pData->bForceSingleInst) {
 		CHKiConcCtrl(pthread_mutex_lock(pWrkrData->pData->pSingleChildMut));
 	}
@@ -962,7 +962,7 @@ ENDtryResume
 
 
 BEGINbeginTransaction
-CODESTARTbeginTransaction
+CODESTARTbeginTransaction;
 	if(pWrkrData->pData->bForceSingleInst) {
 		CHKiConcCtrl(pthread_mutex_lock(pWrkrData->pData->pSingleChildMut));
 	}
@@ -986,7 +986,7 @@ ENDbeginTransaction
 
 
 BEGINdoAction
-CODESTARTdoAction
+CODESTARTdoAction;
 	if(pWrkrData->pData->bForceSingleInst) {
 		CHKiConcCtrl(pthread_mutex_lock(pWrkrData->pData->pSingleChildMut));
 	}
@@ -1022,7 +1022,7 @@ ENDdoAction
 
 
 BEGINendTransaction
-CODESTARTendTransaction
+CODESTARTendTransaction;
 	if(pWrkrData->pData->bForceSingleInst) {
 		CHKiConcCtrl(pthread_mutex_lock(pWrkrData->pData->pSingleChildMut));
 	}
@@ -1046,7 +1046,7 @@ ENDendTransaction
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 	if(!pWrkrData->pData->bForceSingleInst) {
 		if(pWrkrData->pChildCtx->bIsRunning) {
 			terminateChild(pWrkrData->pData, pWrkrData->pChildCtx);
@@ -1058,7 +1058,7 @@ ENDfreeWrkrInstance
 
 BEGINfreeInstance
 	int i;
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	if(pData->pSingleChildCtx != NULL) {
 		if(pData->pSingleChildCtx->bIsRunning) {
 			terminateChild(pData, pData->pSingleChildCtx);
@@ -1095,7 +1095,7 @@ ENDfreeInstance
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -1163,19 +1163,19 @@ CODESTARTnewActInst
 		}
 	}
 
-	CODE_STD_STRING_REQUESTnewActInst(1)
+	CODE_STD_STRING_REQUESTnewActInst(1);
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup(pData->szTemplateName == NULL ?
 			"RSYSLOG_FileFormat" : (char*)pData->szTemplateName), OMSR_NO_RQD_TPL_OPTS));
 
 	iRet = postInitInstance(pData);
 
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINparseSelectorAct
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* first check if this config line is actually for us */
 	if(strncmp((char*) p, ":omprog:", sizeof(":omprog:") - 1)) {
@@ -1204,7 +1204,7 @@ ENDparseSelectorAct
 
 
 BEGINdoHUP
-CODESTARTdoHUP
+CODESTARTdoHUP;
 	if(pData->bForceSingleInst && pData->iHUPForward != NO_HUP_FORWARD &&
 			pData->pSingleChildCtx->bIsRunning) {
 		DBGPRINTF("omprog: forwarding HUP to program '%s' (pid %ld) as signal %d\n",
@@ -1219,7 +1219,7 @@ ENDdoHUP
 
 
 BEGINdoHUPWrkr
-CODESTARTdoHUPWrkr
+CODESTARTdoHUPWrkr;
 	if(!pWrkrData->pData->bForceSingleInst && pWrkrData->pData->iHUPForward != NO_HUP_FORWARD &&
 	 		pWrkrData->pChildCtx->bIsRunning) {
 		DBGPRINTF("omprog: forwarding HUP to program '%s' (pid %ld) as signal %d\n",
@@ -1231,17 +1231,17 @@ ENDdoHUPWrkr
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	free(cs.szBinary);
 	cs.szBinary = NULL;
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface */
 CODEqueryEtryPt_doHUP
 CODEqueryEtryPt_doHUPWrkr
@@ -1260,8 +1260,8 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 }
 
 BEGINmodInit()
-CODESTARTmodInit
-INITLegCnfVars
+CODESTARTmodInit;
+INITLegCnfVars;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	/* tell engine which objects we need */

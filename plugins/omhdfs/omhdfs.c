@@ -54,13 +54,13 @@
 #include "hashtable.h"
 #include "hashtable_itr.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 /* MODULE_CNFNAME("omhdfs") we need this only when we convert the module to v2 config system */
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 
 /* global data */
 static struct hashtable *files;		/* holds all file objects that we know */
@@ -99,14 +99,14 @@ typedef struct wrkrInstanceData {
 static inline rsRetVal fileClose(file_t *pFile);
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURERepeatedMsgReduction)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	printf("omhdfs: file:%s", pData->pFile->name);
 ENDdbgPrintInstInfo
 
@@ -384,31 +384,31 @@ finalize_it:
 }
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 	pData->pFile = NULL;
 ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	if(pData->pFile != NULL)
 		fileObjDestruct(&pData->pFile);
 ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
 
 BEGINtryResume
 	instanceData *pData = pWrkrData->pData;
-CODESTARTtryResume
+CODESTARTtryResume;
 	pthread_mutex_lock(&mutDoAct);
 	fileClose(pData->pFile);
 	fileOpen(pData->pFile);
@@ -422,14 +422,14 @@ ENDtryResume
 
 
 BEGINbeginTransaction
-CODESTARTbeginTransaction
+CODESTARTbeginTransaction;
 	DBGPRINTF("omhdfs: beginTransaction\n");
 ENDbeginTransaction
 
 
 BEGINdoAction
 	instanceData *pData = pWrkrData->pData;
-CODESTARTdoAction
+CODESTARTdoAction;
 	DBGPRINTF("omhdfs: action to to write to %s\n", pData->pFile->name);
 	pthread_mutex_lock(&mutDoAct);
 	iRet = addData(pData, ppString[0]);
@@ -440,7 +440,7 @@ ENDdoAction
 
 BEGINendTransaction
 	instanceData *pData = pWrkrData->pData;
-CODESTARTendTransaction
+CODESTARTendTransaction;
 	DBGPRINTF("omhdfs: endTransaction\n");
 	pthread_mutex_lock(&mutDoAct);
 	if(pData->offsBuf != 0) {
@@ -455,7 +455,7 @@ BEGINparseSelectorAct
 	file_t *pFile;
 	int r;
 	uchar *keybuf;
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 
 	/* first check if this config line is actually for us */
 	if(strncmp((char*) p, ":omhdfs:", sizeof(":omhdfs:") - 1)) {
@@ -504,7 +504,7 @@ ENDparseSelectorAct
 BEGINdoHUP
 	file_t *pFile;
 	struct hashtable_itr *itr;
-CODESTARTdoHUP
+CODESTARTdoHUP;
 	DBGPRINTF("omhdfs: HUP received (file count %d)\n", hashtable_count(files));
 	/* Iterator constructor only returns a valid iterator if
 	* the hashtable is not empty */
@@ -536,24 +536,24 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	if(files != NULL)
 		hashtable_destroy(files, 1); /* 1 => free all values automatically */
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
 CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
-CODEqueryEtryPt_STD_OMOD8_QUERIES
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
 CODEqueryEtryPt_doHUP
 ENDqueryEtryPt
 
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKmalloc(files = create_hashtable(20, hash_from_string, key_equals_string,

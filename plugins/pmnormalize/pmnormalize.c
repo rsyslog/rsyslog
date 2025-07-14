@@ -42,12 +42,12 @@
 #include "unicode-helper.h"
 
 MODULE_TYPE_PARSER
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_NOKEEP;
 PARSER_NAME("rsyslog.pmnormalize")
 MODULE_CNFNAME("pmnormalize")
 
 /* internal structures */
-DEF_PMOD_STATIC_DATA
+DEF_PMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(parser)
 DEFobjCurrIf(datetime)
@@ -74,7 +74,7 @@ struct instanceConf_s {
 };
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATUREAutomaticSanitazion)
 		iRet = RS_RET_OK;
 	if(eFeat == sFEATUREAutomaticPRIParsing)
@@ -140,7 +140,7 @@ finalize_it:
 
 
 BEGINfreeParserInst
-CODESTARTfreeParserInst
+CODESTARTfreeParserInst;
 	dbgprintf("pmnormalize: free parser instance %p\n", pInst);
 	free(pInst->rulebase);
 	free(pInst->rule);
@@ -153,7 +153,7 @@ ENDfreeParserInst
 BEGINnewParserInst
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTnewParserInst
+CODESTARTnewParserInst;
 	DBGPRINTF("newParserInst (pmnormalize)\n");
 
 	inst = NULL;
@@ -220,7 +220,7 @@ BEGINparse2
 	rs_size_t len;
 	int r;
 	struct json_object *json = NULL;
-CODESTARTparse2
+CODESTARTparse2;
 	DBGPRINTF("Message will now be parsed by pmnormalize\n");
 	/*Msg OffSet needs to be set*/
 	MsgSetMSGoffs(pMsg, 0);
@@ -243,7 +243,7 @@ ENDparse2
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	/* release what we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
@@ -252,14 +252,14 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_PMOD2_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_PMOD2_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

@@ -59,12 +59,12 @@ PRAGMA_DIAGNOSTIC_POP
 #include "parserif.h"
 #include "unicode-helper.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("ommongodb")
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(datetime)
 
 typedef struct _instanceData {
@@ -116,15 +116,15 @@ static struct cnfparamblk actpblk =
 static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	/* use this to specify if select features are supported by this
 	 * plugin. If not, the framework will handle that. Currently, only
 	 * RepeatedMsgReduction ("last message repeated n times") is optional.
@@ -149,7 +149,7 @@ static void closeMongoDB(instanceData *pData)
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	closeMongoDB(pData);
 
 	if (pData->json_tokener != NULL)
@@ -167,12 +167,12 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	/* nothing special here */
 	(void)pData;
 ENDdbgPrintInstInfo
@@ -523,7 +523,7 @@ error:
 }
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 	if(pWrkrData->pData->client == NULL) {
 		iRet = initMongoDB(pWrkrData->pData, 1);
 	}
@@ -549,7 +549,7 @@ static int is_allowed_error_code(instanceData const* pData, uint32_t code)
 BEGINdoAction_NoStrings
 	bson_t *doc = NULL;
 	instanceData *pData;
-CODESTARTdoAction
+CODESTARTdoAction;
 	pthread_mutex_lock(&mutDoAct);
 	pData = pWrkrData->pData;
 	/* see if we are ready to proceed */
@@ -604,7 +604,7 @@ static void setInstParamDefaults(instanceData *pData)
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	dbgprintf("ommongodb: Getting configuration.\n");
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -614,7 +614,7 @@ CODESTARTnewActInst
 	setInstParamDefaults(pData);
 
 	dbgprintf("ommongodb: Parsing configuration directives.\n");
-	CODE_STD_STRING_REQUESTnewActInst(1)
+	CODE_STD_STRING_REQUESTnewActInst(1);
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
@@ -733,7 +733,7 @@ CODESTARTnewActInst
 	dbgprintf("ommongodb: The uristr: %s\n", pData->uristr);
 	dbgprintf("ommongodb: End of the configuration.\n");
 
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
@@ -742,16 +742,16 @@ NO_LEGACY_CONF_parseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	objRelease(datetime, CORE_COMPONENT);
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 ENDqueryEtryPt
 
 BEGINmodInit()
@@ -759,7 +759,7 @@ BEGINmodInit()
 	rsRetVal (*pomsrGetSupportedTplOpts)(unsigned long *pOpts);
 	unsigned long opts;
 	int bJSONPassingSupported;
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));

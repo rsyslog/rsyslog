@@ -37,11 +37,11 @@
 #include "cfsysline.h"
 #include <czmq.h>
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omczmq")
 
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 
 static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
@@ -314,25 +314,25 @@ setInstParamDefaults(instanceData* pData) {
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
 	}
 ENDisCompatibleWithFeature
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 ENDdbgPrintInstInfo
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	zlist_destroy(&pData->topics);
 	zsock_destroy(&pData->sock);
 	free(pData->sockEndpoints);
@@ -341,12 +341,12 @@ ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
 BEGINtryResume
 	instanceData *pData;
-CODESTARTtryResume
+CODESTARTtryResume;
 	pthread_mutex_lock(&mutDoAct);
 	pData = pWrkrData->pData;
 	DBGPRINTF("omczmq: trying to resume...\n");
@@ -356,7 +356,7 @@ CODESTARTtryResume
 ENDtryResume
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	runModConf = pModConf;
 	runModConf->pConf = pConf;
 	runModConf->authenticator = 0;
@@ -366,11 +366,11 @@ CODESTARTbeginCnfLoad
 ENDbeginCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	runModConf = pModConf;
 	if(runModConf->authenticator == 1) {
 		if(!authActor) {
@@ -388,7 +388,7 @@ CODESTARTactivateCnf
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	free(pModConf->tplName);
 	free(pModConf->authType);
 	free(pModConf->serverCertPath);
@@ -400,7 +400,7 @@ ENDfreeCnf
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if (pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module");
@@ -446,14 +446,14 @@ finalize_it:
 ENDsetModCnf
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	runModConf = NULL;
 ENDendCnfLoad
 
 
 BEGINdoAction
 	instanceData *pData;
-CODESTARTdoAction
+CODESTARTdoAction;
 	pthread_mutex_lock(&mutDoAct);
 	pData = pWrkrData->pData;
 	iRet = outputCZMQ(ppString, pData);
@@ -465,7 +465,7 @@ BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
 	int iNumTpls;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -598,7 +598,7 @@ CODESTARTnewActInst
 	if (pData->dynaTopic) {
 		iNumTpls = zlist_size (pData->topics) + iNumTpls;
 	}
-	CODE_STD_STRING_REQUESTnewActInst(iNumTpls)
+	CODE_STD_STRING_REQUESTnewActInst(iNumTpls);
 	
 	if (pData->tplName == NULL) {
 		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup("RSYSLOG_ForwardFormat"),
@@ -618,36 +618,36 @@ CODESTARTnewActInst
 		}
 	}
 
-	CODE_STD_FINALIZERnewActInst
+	CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 BEGINinitConfVars
-CODESTARTinitConfVars
+CODESTARTinitConfVars;
 ENDinitConfVars
 
 NO_LEGACY_CONF_parseSelectorAct
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 ENDmodExit
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-	CODEqueryEtryPt_STD_OMOD_QUERIES
-	CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-	CODEqueryEtryPt_STD_CONF2_QUERIES
-	CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-	CODEqueryEtryPt_STD_OMOD8_QUERIES
+CODESTARTqueryEtryPt;
+	CODEqueryEtryPt_STD_OMOD_QUERIES;
+	CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
+	CODEqueryEtryPt_STD_CONF2_QUERIES;
+	CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+	CODEqueryEtryPt_STD_OMOD8_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
 	DBGPRINTF("omczmq: module compiled with rsyslog version %s.\n", VERSION);
 
-	INITLegCnfVars
+	INITLegCnfVars;
 ENDmodInit

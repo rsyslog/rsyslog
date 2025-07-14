@@ -54,12 +54,12 @@
 #include "dirty.h"
 #include "unicode-helper.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("mmtaghostname")
 
 /* internal structures */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 
 /* parser instance parameters */
@@ -87,40 +87,40 @@ static const uchar *pszHostname = NULL;
 static size_t lenHostname = 0;
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	dbgprintf("mmtaghostname:\n");
 	dbgprintf("\ttag='%s'\n", pData->pszTag);
 	dbgprintf("\tforce local hostname='%d'\n", pData->bForceLocalHostname);
 ENDdbgPrintInstInfo
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 	pData->pszTag = NULL;
 	pData->lenTag = 0;
 	pData->bForceLocalHostname = 0;
 ENDcreateInstance
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	free(pData->pszTag);
 ENDfreeInstance
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 ENDisCompatibleWithFeature
 
 BEGINnewActInst
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	DBGPRINTF("newParserInst (mmtaghostname)\n");
 
 	CHKiRet(createInstance(&pData));
@@ -150,9 +150,9 @@ CODESTARTnewActInst
 				parserpblk.descr[i].name);
 		}
 	}
-	CODE_STD_STRING_REQUESTnewActInst(1)
+	CODE_STD_STRING_REQUESTnewActInst(1);
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	if(lst != NULL)
 		cnfparamvalsDestruct(pvals, &parserpblk);
 ENDnewActInst
@@ -161,7 +161,7 @@ BEGINdoAction_NoStrings
 	smsg_t **ppMsg = (smsg_t **) pMsgData;
 	smsg_t *pMsg = ppMsg[0];
 	instanceData *pData = pWrkrData->pData;
-CODESTARTdoAction
+CODESTARTdoAction;
 	DBGPRINTF("Message will now be managed by mmtaghostname\n");
 	if(pData->pszTag != NULL) {
 		MsgSetTAG(pMsg, (uchar *)pData->pszTag, pData->lenTag);
@@ -177,28 +177,28 @@ CODESTARTdoAction
 ENDdoAction
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 ENDtryResume
 
 BEGINparseSelectorAct
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	objRelease(glbl, CORE_COMPONENT);
 ENDmodExit
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 ENDqueryEtryPt
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

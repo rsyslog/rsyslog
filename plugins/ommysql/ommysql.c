@@ -45,15 +45,15 @@
 #include "cfsysline.h"
 #include "parserif.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("ommysql")
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 
 typedef struct _instanceData {
 	char	dbsrv[MAXHOSTNAMELEN+1];	/* IP or hostname of DB server*/
@@ -106,18 +106,18 @@ static struct cnfparamblk actpblk =
 pthread_rwlock_t rwlock_hmysql;
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars
+CODESTARTinitConfVars;
 	resetConfigVariables(NULL, NULL);
 ENDinitConfVars
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 	pthread_rwlock_wrlock(&rwlock_hmysql);
 	pWrkrData->hmysql = NULL;
 	pthread_rwlock_unlock(&rwlock_hmysql);
@@ -125,7 +125,7 @@ ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURERepeatedMsgReduction)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
@@ -148,7 +148,7 @@ static void closeMySQL(wrkrInstanceData_t *pWrkrData)
 }
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	free(pData->configfile);
 	free(pData->configsection);
 	free(pData->tplName);
@@ -157,7 +157,7 @@ ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 	pthread_rwlock_rdlock(&rwlock_hmysql);
 	closeMySQL(pWrkrData);
 	mysql_thread_end();
@@ -166,7 +166,7 @@ ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	/* nothing special here */
 ENDdbgPrintInstInfo
 
@@ -311,7 +311,7 @@ finalize_it:
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 	pthread_rwlock_rdlock(&rwlock_hmysql);
 	if(pWrkrData->hmysql == NULL) {
 		iRet = initMySQL(pWrkrData, 1);
@@ -320,12 +320,12 @@ CODESTARTtryResume
 ENDtryResume
 
 BEGINbeginTransaction
-CODESTARTbeginTransaction
+CODESTARTbeginTransaction;
 	// NOTHING TO DO IN HERE
 ENDbeginTransaction
 
 BEGINcommitTransaction
-CODESTARTcommitTransaction
+CODESTARTcommitTransaction;
 	DBGPRINTF("ommysql: commitTransaction\n");
 	pthread_rwlock_rdlock(&rwlock_hmysql);
 	CHKiRet(writeMySQL(pWrkrData, (uchar*)"START TRANSACTION"));
@@ -377,7 +377,7 @@ BEGINnewActInst
 	int i;
 	char *cstr;
 	size_t len;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -453,14 +453,14 @@ CODESTARTnewActInst
 			(uchar*) strdup((char*) pData->tplName),
 			OMSR_RQD_TPL_OPT_SQL));
 	}
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINparseSelectorAct
 	int iMySQLPropErr = 0;
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* first check if this config line is actually for us
 	 * The first test [*p == '>'] can be skipped if a module shall only
@@ -530,7 +530,7 @@ ENDparseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	pthread_rwlock_destroy(&rwlock_hmysql);
 #	ifdef HAVE_MYSQL_LIBRARY_INIT
 	mysql_library_end();
@@ -541,10 +541,10 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMODTX_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMODTX_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
@@ -562,8 +562,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 }
 
 BEGINmodInit()
-CODESTARTmodInit
-INITLegCnfVars
+CODESTARTmodInit;
+INITLegCnfVars;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);

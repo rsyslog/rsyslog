@@ -64,14 +64,14 @@
 
 #define RABBITMQ_CHANNEL 1
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omrabbitmq")
 
 /*
  * internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
 
@@ -859,7 +859,7 @@ finalize_it:
 
 BEGINdoAction
 	int iLen;
-CODESTARTdoAction
+CODESTARTdoAction;
 	/* The first element is a smsg_t pointer */
 	smsg_t **pMsg = (smsg_t **)pMsgData;
 	smsg_t *msg = pMsg[0];
@@ -958,13 +958,13 @@ CODESTARTdoAction
 ENDdoAction
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 	iRet = startAMQPConnection(pWrkrData);
 ENDtryResume
 
 BEGINcreateInstance
 	void *env_var;
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 	if ((env_var = getenv("OMRABBITMQ_TEST")) != NULL)
 		mode_test = atoi(env_var);
 
@@ -983,7 +983,7 @@ CODESTARTcreateInstance
 ENDcreateInstance
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	/* this is a cleanup callback. All dynamically-allocated resources
 	 * in instance data must be cleaned up here. Prime examples are
 	 * malloc()ed memory, file & database handles and the like.
@@ -1003,7 +1003,7 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	/* use this to specify if select features are supported by this
 	 * plugin. If not, the framework will handle that. Currently, only
 	 * RepeatedMsgReduction ("last message repeated n times") is optional.
@@ -1013,7 +1013,7 @@ CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	/* permits to spit out some debug info */
 	dbgprintf("omrabbitmq instance : %d\n", pData->iidx);
 	if (pData->server2.host) {
@@ -1070,7 +1070,7 @@ BEGINnewActInst
 	char *host = NULL, *vhost= NULL, *user = NULL, *password = NULL, *recover = NULL;
 	int port = 0;
 	long long expiration = 0;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -1312,7 +1312,7 @@ CODESTARTnewActInst
 
 	dbgPrintInstInfo(pData);
 
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
@@ -1321,13 +1321,13 @@ NO_LEGACY_CONF_parseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
 ENDmodExit
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 	memset(pWrkrData, 0, sizeof(wrkrInstanceData_t));
 
 	pWrkrData->pData = pData;
@@ -1358,7 +1358,7 @@ CODESTARTcreateWrkrInstance
 ENDcreateWrkrInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 
 	if (pWrkrData != NULL) {
 		closeAMQPConnection(pWrkrData);
@@ -1369,14 +1369,14 @@ CODESTARTfreeWrkrInstance
 ENDfreeWrkrInstance
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-	CODEqueryEtryPt_STD_OMOD_QUERIES
-	CODEqueryEtryPt_STD_OMOD8_QUERIES
-	CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+	CODEqueryEtryPt_STD_OMOD_QUERIES;
+	CODEqueryEtryPt_STD_OMOD8_QUERIES;
+	CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 ENDqueryEtryPt
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

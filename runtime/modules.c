@@ -59,7 +59,7 @@
 #include "strgen.h"
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(strgen)
 
 static modInfo_t *pLoadedModules = NULL;	/* list of currently-loaded modules */
@@ -1424,7 +1424,7 @@ Release(const char *srcFile, modInfo_t **ppThis)
  * rgerhards, 2008-03-11
  */
 BEGINObjClassExit(module, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(module)
+CODESTARTObjClassExit(module);
 	/* release objects we no longer need */
 	free(pModDir);
 #	ifdef DEBUG
@@ -1437,7 +1437,7 @@ ENDObjClassExit(module)
  * rgerhards, 2008-03-05
  */
 BEGINobjQueryInterface(module)
-CODESTARTobjQueryInterface(module)
+CODESTARTobjQueryInterface(module);
 	if(pIf->ifVersion != moduleCURR_IF_VERSION) { /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}

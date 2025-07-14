@@ -33,10 +33,10 @@
 #include "zlibw.h"
 
 MODULE_TYPE_LIB
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_NOKEEP;
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 
 
 /* ------------------------------ methods ------------------------------ */
@@ -182,7 +182,7 @@ zlib_Destruct(ATTR_UNUSED strm_t *pThis)
  * rgerhards, 2008-03-05
  */
 BEGINobjQueryInterface(zlibw)
-CODESTARTobjQueryInterface(zlibw)
+CODESTARTobjQueryInterface(zlibw);
 	if(pIf->ifVersion != zlibwCURR_IF_VERSION) { /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
@@ -218,18 +218,18 @@ ENDObjClassInit(zlibw)
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_LIB_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	CHKiRet(zlibwClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */

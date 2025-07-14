@@ -47,8 +47,8 @@
 #include "cfsysline.h"
 #include "dirty.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omruleset")
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
@@ -58,7 +58,7 @@ DEFobjCurrIf(ruleset);
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 
 /* config variables */
 
@@ -79,45 +79,45 @@ typedef struct configSettings_s {
 static configSettings_t cs;
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars
+CODESTARTinitConfVars;
 	resetConfigVariables(NULL, NULL);
 ENDinitConfVars
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	free(pData->pszRulesetName);
 ENDfreeInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	dbgprintf("omruleset target %s[%p]\n", (char*) pData->pszRulesetName, pData->pRuleset);
 ENDdbgPrintInstInfo
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 ENDtryResume
 
 /* Note that we change the flow control type to "no delay", because at this point in
@@ -127,7 +127,7 @@ ENDtryResume
 BEGINdoAction_NoStrings
 	smsg_t **ppMsg = (smsg_t **) pMsgData;
 	smsg_t *pMsg;
-CODESTARTdoAction
+CODESTARTdoAction;
 	CHKmalloc(pMsg = MsgDup(ppMsg[0]));
 	DBGPRINTF(":omruleset: forwarding message %p to ruleset %s[%p]\n", pMsg,
 		  (char*) pWrkrData->pData->pszRulesetName, pWrkrData->pData->pRuleset);
@@ -165,7 +165,7 @@ finalize_it:
 
 BEGINparseSelectorAct
 	int iTplOpts;
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* first check if this config line is actually for us */
 	if(strncmp((char*) p, ":omruleset:", sizeof(":omruleset:") - 1)) {
@@ -205,17 +205,17 @@ ENDparseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	free(cs.pszRulesetName);
 	objRelease(ruleset, CORE_COMPONENT);
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES;
 ENDqueryEtryPt
 
 
@@ -237,8 +237,8 @@ BEGINmodInit()
 	rsRetVal (*pomsrGetSupportedTplOpts)(unsigned long *pOpts);
 	unsigned long opts;
 	int bMsgPassingSupported;		/* does core support template passing as an array? */
-CODESTARTmodInit
-INITLegCnfVars
+CODESTARTmodInit;
+INITLegCnfVars;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	/* check if the rsyslog core supports parameter passing code */

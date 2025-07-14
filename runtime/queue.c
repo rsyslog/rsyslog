@@ -214,7 +214,7 @@
 #endif
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(strm)
 DEFobjCurrIf(datetime)
@@ -2858,7 +2858,7 @@ DoSaveOnShutdown(qqueue_t *pThis)
 
 /* destructor for the queue object */
 BEGINobjDestruct(qqueue) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(qqueue)
+CODESTARTobjDestruct(qqueue);
 	DBGOPRINT((obj_t*) pThis, "shutdown: begin to destruct queue\n");
 	if(ourConf->globals.shutdownQueueDoubleSize) {
 		pThis->iHighWtrMrk *= 2;
@@ -3684,30 +3684,35 @@ queuesEqual(qqueue_t *pOld, qqueue_t *pNew)
 }
 
 
-/* some simple object access methods */
-DEFpropSetMeth(qqueue, bSyncQueueFiles, int)
-DEFpropSetMeth(qqueue, iPersistUpdCnt, int)
-DEFpropSetMeth(qqueue, iDeqtWinFromHr, int)
-DEFpropSetMeth(qqueue, iDeqtWinToHr, int)
-DEFpropSetMeth(qqueue, toQShutdown, long)
-DEFpropSetMeth(qqueue, toActShutdown, long)
-DEFpropSetMeth(qqueue, toWrkShutdown, long)
-DEFpropSetMeth(qqueue, toEnq, long)
-DEFpropSetMeth(qqueue, iHighWtrMrk, int)
-DEFpropSetMeth(qqueue, iLowWtrMrk, int)
-DEFpropSetMeth(qqueue, iDiscardMrk, int)
-DEFpropSetMeth(qqueue, iDiscardSeverity, int)
-DEFpropSetMeth(qqueue, iLightDlyMrk, int)
-DEFpropSetMeth(qqueue, iNumWorkerThreads, int)
-DEFpropSetMeth(qqueue, iMinMsgsPerWrkr, int)
-DEFpropSetMeth(qqueue, bSaveOnShutdown, int)
-DEFpropSetMeth(qqueue, pAction, action_t*)
-DEFpropSetMeth(qqueue, iDeqSlowdown, int)
-DEFpropSetMeth(qqueue, iDeqBatchSize, int)
-DEFpropSetMeth(qqueue, iMinDeqBatchSize, int)
-DEFpropSetMeth(qqueue, sizeOnDiskMax, int64)
-DEFpropSetMeth(qqueue, iSmpInterval, int)
-
+/* some simple object access methods
+ * Note: the semicolons behind the macros are actually empty declarations. This is
+ * a work-around for clang-format's missing understanding of generative macros.
+ * Some compilers may flag this empty declarations by a warning. If so, we need
+ * to disable this warning. Alternatively, we could exclude this code from being
+ * reformatted by clang-format;
+ */
+DEFpropSetMeth(qqueue, bSyncQueueFiles, int);
+DEFpropSetMeth(qqueue, iPersistUpdCnt, int);
+DEFpropSetMeth(qqueue, iDeqtWinFromHr, int);
+DEFpropSetMeth(qqueue, iDeqtWinToHr, int);
+DEFpropSetMeth(qqueue, toQShutdown, long);
+DEFpropSetMeth(qqueue, toActShutdown, long);
+DEFpropSetMeth(qqueue, toWrkShutdown, long);
+DEFpropSetMeth(qqueue, toEnq, long);
+DEFpropSetMeth(qqueue, iHighWtrMrk, int);
+DEFpropSetMeth(qqueue, iLowWtrMrk, int);
+DEFpropSetMeth(qqueue, iDiscardMrk, int);
+DEFpropSetMeth(qqueue, iDiscardSeverity, int);
+DEFpropSetMeth(qqueue, iLightDlyMrk, int);
+DEFpropSetMeth(qqueue, iNumWorkerThreads, int);
+DEFpropSetMeth(qqueue, iMinMsgsPerWrkr, int);
+DEFpropSetMeth(qqueue, bSaveOnShutdown, int);
+DEFpropSetMeth(qqueue, pAction, action_t*);
+DEFpropSetMeth(qqueue, iDeqSlowdown, int);
+DEFpropSetMeth(qqueue, iDeqBatchSize, int);
+DEFpropSetMeth(qqueue, iMinDeqBatchSize, int);
+DEFpropSetMeth(qqueue, sizeOnDiskMax, int64);
+DEFpropSetMeth(qqueue, iSmpInterval, int);
 
 /* This function can be used as a generic way to set properties. Only the subset
  * of properties required to read persisted property bags is supported. This

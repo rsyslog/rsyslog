@@ -44,13 +44,13 @@
 #include "errmsg.h"
 #include "parserif.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omsnmp")
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 
 static oid             objid_snmptrap[] = { 1, 3, 6, 1, 6, 3, 1, 1, 4, 1, 0 };
 static oid             objid_sysuptime[] = { 1, 3, 6, 1, 2, 1, 1, 3, 0 };
@@ -139,7 +139,7 @@ static struct cnfparamblk actpblk =
 	};
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars
+CODESTARTinitConfVars;
 	cs.pszTransport = NULL;
 	cs.pszTarget = NULL;
 	cs.iPort = 0;
@@ -153,16 +153,16 @@ CODESTARTinitConfVars
 ENDinitConfVars
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 	pWrkrData->snmpsession = NULL;
 ENDcreateWrkrInstance
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	dbgprintf("SNMPTransport: %s\n", pData->szTransport);
 	dbgprintf("SNMPTarget: %s\n", pData->szTarget);
 	dbgprintf("SNMPPort: %d\n", pData->iPort);
@@ -178,7 +178,7 @@ ENDdbgPrintInstInfo
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	/* we are not compatible with repeated msg reduction feature, so do not allow it */
 ENDisCompatibleWithFeature
 
@@ -398,12 +398,12 @@ finalize_it:
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 	iRet = omsnmp_initSession(pWrkrData);
 ENDtryResume
 
 BEGINdoAction
-CODESTARTdoAction
+CODESTARTdoAction;
 	/* Abort if the STRING is not set, should never happen */
 	if (ppString[0] == NULL) {
 		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
@@ -415,13 +415,13 @@ finalize_it:
 ENDdoAction
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	free(pData->tplName);
 	free(pData->szTarget);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 	omsnmp_exitSession(pWrkrData);
 ENDfreeWrkrInstance
 
@@ -439,7 +439,7 @@ setInstParamDefaults(instanceData *pData)
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -447,7 +447,7 @@ CODESTARTnewActInst
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
 
-	CODE_STD_STRING_REQUESTnewActInst(2)
+	CODE_STD_STRING_REQUESTnewActInst(2);
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
@@ -501,13 +501,13 @@ CODESTARTnewActInst
 						" SNMP_SOURCETEMPLATE" : (char*)pData->szSnmpV1Source),
 						OMSR_NO_RQD_TPL_OPTS));
 
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINparseSelectorAct
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(!strncmp((char*) p, ":omsnmp:", sizeof(":omsnmp:") - 1)) {
 		p += sizeof(":omsnmp:") - 1; /* eat indicator sequence (-1 because of '\0'!) */
@@ -598,7 +598,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	free(cs.pszTarget);
 	free(cs.pszCommunity);
 	free(cs.pszEnterpriseOID);
@@ -610,16 +610,16 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	uchar *pTmp;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr

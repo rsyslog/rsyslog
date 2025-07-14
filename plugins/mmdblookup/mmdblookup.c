@@ -45,12 +45,12 @@
 
 #define JSON_IPLOOKUP_NAME "!iplocation"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("mmdblookup")
 
 
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 
 /* config variables */
 typedef struct _instanceData {
@@ -148,36 +148,36 @@ finalize_it:
 }
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 ENDbeginCnfLoad
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 ENDendCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	free((void*)runModConf->container);
 ENDfreeCnf
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 	CHKiRet(open_mmdb(pData->pszMmdbFile, &pWrkrData->mmdb));
 	pWrkrData->mmdb_is_open = 1;
 	CHKiConcCtrl(pthread_mutex_init(&pWrkrData->mmdbMutex, NULL));
@@ -186,12 +186,12 @@ ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	if(pData->fieldList.name != NULL) {
 		for(int i = 0 ; i < pData->fieldList.nmemb ; ++i) {
 			free(pData->fieldList.name[i]);
@@ -206,7 +206,7 @@ ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 	if (pWrkrData->mmdb_is_open) close_mmdb(&pWrkrData->mmdb);
 	pWrkrData->mmdb_is_open = 0;
 	pthread_mutex_destroy(&pWrkrData->mmdbMutex);
@@ -216,7 +216,7 @@ ENDfreeWrkrInstance
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	loadModConf->container = NULL;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
@@ -262,13 +262,13 @@ setInstParamDefaults(instanceData *pData)
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	dbgprintf("newActInst (mmdblookup)\n");
 	if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
-	CODE_STD_STRING_REQUESTnewActInst(1)
+	CODE_STD_STRING_REQUESTnewActInst(1);
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
@@ -318,18 +318,18 @@ CODESTARTnewActInst
 		}
 	}
 
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 ENDdbgPrintInstInfo
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 	iRet = wrkr_reopen_mmdb(pWrkrData);
 ENDtryResume
 
@@ -382,7 +382,7 @@ BEGINdoAction_NoStrings
 	instanceData *const pData = pWrkrData->pData;
 	json_object *total_json = NULL;
 	MMDB_entry_data_list_s *entry_data_list = NULL;
-CODESTARTdoAction
+CODESTARTdoAction;
 	/* ensure file is open before beginning */
 	if (!pWrkrData->mmdb_is_open) {
 		CHKiRet(wrkr_reopen_mmdb(pWrkrData));
@@ -485,7 +485,7 @@ ENDdoAction
 
 // HUP handling for the worker...
 BEGINdoHUPWrkr
-CODESTARTdoHUPWrkr
+CODESTARTdoHUPWrkr;
 	dbgprintf("mmdblookup: HUP received\n");
 	if (pWrkrData->pData->reloadOnHup) {
 		iRet = wrkr_reopen_mmdb(pWrkrData);
@@ -497,23 +497,23 @@ NO_LEGACY_CONF_parseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
 CODEqueryEtryPt_doHUPWrkr
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	/* we only support the current interface specification */
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr

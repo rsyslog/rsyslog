@@ -71,13 +71,13 @@
 #include "datetime.h"
 #include "net_ossl.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omdtls")
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(statsobj)
@@ -190,7 +190,7 @@ static modConfData_t *loadModConf = NULL;	/* modConf ptr to use for the current 
 static modConfData_t *runModConf = NULL;	/* modConf ptr to use for the current exec process */
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars
+CODESTARTinitConfVars;
 ENDinitConfVars
 
 static rsRetVal
@@ -221,7 +221,7 @@ finalize_it:
 }
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	pModConf->tplName = NULL;
@@ -229,7 +229,7 @@ ENDbeginCnfLoad
 
 BEGINsetModCnf
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	const struct cnfparamvals *const __restrict__ pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -256,17 +256,17 @@ finalize_it:
 ENDsetModCnf
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	loadModConf = NULL; /* done loading */
 ENDendCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 ENDcheckCnf
 
 BEGINactivateCnfPrePrivDrop
 	instanceData *inst;
-CODESTARTactivateCnfPrePrivDrop
+CODESTARTactivateCnfPrePrivDrop;
 	runModConf = pModConf;
 	DBGPRINTF("omdtls: activateCnfPrePrivDrop\n");
 
@@ -279,16 +279,16 @@ finalize_it:
 ENDactivateCnfPrePrivDrop
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	free(pModConf->tplName);
 ENDfreeCnf
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 	DBGPRINTF("createInstance[%p]: ENTER\n", pData);
 	pData->tplName = NULL;
 	pData->target = NULL;
@@ -312,7 +312,7 @@ ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 	DBGPRINTF("createWrkrInstance[%p]: ENTER\n", pWrkrData);
 	pWrkrData->ConnectState = DTLS_DISCONNECTED;
 
@@ -323,12 +323,12 @@ ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	DBGPRINTF("freeInstance[%p]: ENTER\n", pData);
 
 	if (pData->stats) {
@@ -348,7 +348,7 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 	DBGPRINTF("freeWrkrInstance[%p]: ENTER\n", pWrkrData);
 	pthread_rwlock_wrlock(&pWrkrData->pnLock);
 
@@ -361,11 +361,11 @@ ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 ENDdbgPrintInstInfo
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 	DBGPRINTF("omdtls[%p]: tryResume ENTER\n", pWrkrData);
 	if (pWrkrData->ConnectState == DTLS_DISCONNECTED) {
 		CHKiRet(dtls_create_socket(pWrkrData, SETUP_DTLS_AUTOCLOSE));
@@ -375,7 +375,7 @@ finalize_it:
 ENDtryResume
 
 BEGINbeginTransaction
-CODESTARTbeginTransaction
+CODESTARTbeginTransaction;
 	/* we have nothing to do to begin a transaction */
 	DBGPRINTF("omdtls[%p]: beginTransaction ENTER\n", pWrkrData);
 	if (pWrkrData->ConnectState == DTLS_DISCONNECTED) {
@@ -391,7 +391,7 @@ ENDbeginTransaction
 BEGINcommitTransaction
 	unsigned i;
 	sbool bDone = 0;
-CODESTARTcommitTransaction
+CODESTARTcommitTransaction;
 #ifndef NDEBUG
 	DBGPRINTF("omdtls[%p]: commitTransaction [%d msgs] ENTER\n", pWrkrData, nParams);
 #endif
@@ -416,7 +416,7 @@ BEGINnewActInst
 	int iNumTpls;
 	FILE *fp;
 	DBGPRINTF("newActInst: ENTER\n");
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -516,13 +516,13 @@ CODESTARTnewActInst
 			ctrType_IntCtr, CTR_FLAG_RESETTABLE, &pData->ctrDtlsFail));
 		CHKiRet(statsobj.ConstructFinalize(pData->stats));
 	}
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	DBGPRINTF("modExit: ENTER\n");
 	statsobj.Destruct(&dtlsStats);
 	objRelease(net_ossl, LM_NET_OSSL_FILENAME);
@@ -533,20 +533,20 @@ ENDmodExit
 
 NO_LEGACY_CONF_parseSelectorAct
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMODTX_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMODTX_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	DBGPRINTF("modInit: ENTER\n");
-INITLegCnfVars
+INITLegCnfVars;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
 	/* request objects we use */

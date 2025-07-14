@@ -40,8 +40,8 @@
 #define _jso_type(x) json_type_to_name(json_object_get_type(x))
 
 MODULE_TYPE_FUNCTION
-MODULE_TYPE_NOKEEP
-DEF_FMOD_STATIC_DATA
+MODULE_TYPE_NOKEEP;
+DEF_FMOD_STATIC_DATA;
 
 struct unflatten_ctx {
 	char *kbuf;
@@ -221,22 +221,22 @@ static struct scriptFunct functions[] = {
 };
 
 BEGINgetFunctArray
-CODESTARTgetFunctArray
+CODESTARTgetFunctArray;
 	*version = 1;
 	*functArray = functions;
 ENDgetFunctArray
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 ENDmodExit
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_FMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_FMOD_QUERIES;
 ENDqueryEtryPt
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	dbgprintf("rsyslog fmunflatten init called, compiled with version %s\n", VERSION);

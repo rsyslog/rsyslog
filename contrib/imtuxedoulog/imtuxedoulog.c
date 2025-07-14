@@ -94,7 +94,7 @@ static modConfData_t *runModConf = NULL; /* modConf ptr to use for run process *
 
 
 MODULE_TYPE_INPUT	/* must be present for input modules, do not remove */
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imtuxedoulog")
 
 /* defines */
@@ -705,7 +705,7 @@ BEGINnewInpInst
 	struct cnfparamvals *pvals;
 	instanceConf_t *inst;
 	int i;
-CODESTARTnewInpInst
+CODESTARTnewInpInst;
 	DBGPRINTF("newInpInst (imtuxedoulog)\n");
 
 	pvals = nvlstGetParams(lst, &inppblk, NULL);
@@ -765,40 +765,40 @@ CODE_STD_FINALIZERnewInpInst
 ENDnewInpInst
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 ENDbeginCnfLoad
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 ENDendCnfLoad
 
 BEGINcheckCnf
 instanceConf_t *inst;
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 	for(inst = confRoot ; inst != NULL ; inst = inst->next) {
 		std_checkRuleset(pModConf , inst);
 	}
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 ENDfreeCnf
 
 BEGINrunInput
-CODESTARTrunInput
+CODESTARTrunInput;
 	do_polling();
 	DBGPRINTF("terminating upon request of rsyslog core\n");
 ENDrunInput
 
 BEGINwillRun
-CODESTARTwillRun
+CODESTARTwillRun;
 	/* we need to create the inputName property (only once during our lifetime) */
 	CHKiRet(prop.Construct(&pInputName));
 	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imtuxedoulog"), sizeof("imtuxedoulog") - 1));
@@ -807,7 +807,7 @@ finalize_it:
 ENDwillRun
 
 BEGINafterRun
-CODESTARTafterRun
+CODESTARTafterRun;
 	while(confRoot != NULL) {
 		instanceConf_t *inst = confRoot;
 		confRoot = confRoot->next;
@@ -819,13 +819,13 @@ CODESTARTafterRun
 ENDafterRun
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURENonCancelInputTermination)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	/* release objects we used */
 	objRelease(strm, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
@@ -834,11 +834,11 @@ CODESTARTmodExit
 ENDmodExit
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_IMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_IMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 static inline void
@@ -850,7 +850,7 @@ std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, insta
 }
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

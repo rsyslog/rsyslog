@@ -64,7 +64,7 @@
 MODULE_TYPE_OUTPUT /* this is technically an output plugin */
 MODULE_TYPE_KEEP /* releasing the module would cause a leak through libcurl */
 MODULE_CNFNAME("mmkubernetes")
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(regexp)
 DEFobjCurrIf(statsobj)
 DEFobjCurrIf(datetime)
@@ -553,7 +553,7 @@ finalize_it:
 }
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 ENDbeginCnfLoad
@@ -565,7 +565,7 @@ BEGINsetModCnf
 	FILE *fp = NULL;
 	int ret;
 	char errStr[1024];
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "mmkubernetes: "
@@ -784,12 +784,12 @@ ENDsetModCnf
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 ENDcreateInstance
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	free(pData->kubernetesUrl);
 	msgPropDescrDestruct(pData->srcMetadataDescr);
 	free(pData->srcMetadataDescr);
@@ -852,7 +852,7 @@ finalize_it:
 #endif
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 	CURL *ctx;
 	struct curl_slist *hdr = NULL;
 	char *tokenHdr = NULL;
@@ -982,7 +982,7 @@ ENDcreateWrkrInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 	curl_easy_cleanup(pWrkrData->curlCtx);
 	curl_slist_free_all(pWrkrData->curlHdr);
 	statsobj.Destruct(&(pWrkrData->stats));
@@ -1257,7 +1257,7 @@ BEGINnewActInst
 	char *rxstr = NULL;
 	char *srcMetadataPath = NULL;
 	char errStr[1024];
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	DBGPRINTF("newActInst (mmkubernetes)\n");
 
 	pvals = nvlstGetParams(lst, &actpblk, NULL);
@@ -1272,7 +1272,7 @@ CODESTARTnewActInst
 		cnfparamsPrint(&actpblk, pvals);
 	}
 
-	CODE_STD_STRING_REQUESTnewActInst(1)
+	CODE_STD_STRING_REQUESTnewActInst(1);
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 	CHKiRet(createInstance(&pData));
 
@@ -1514,7 +1514,7 @@ CODESTARTnewActInst
 		caches[i] = pData->cache;
 		caches[i + 1] = NULL;
 	}
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	if(pvals != NULL)
 		cnfparamvalsDestruct(pvals, &actpblk);
 	if(fp)
@@ -1526,7 +1526,7 @@ ENDnewActInst
 
 /* legacy config format is not supported */
 BEGINparseSelectorAct
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(strncmp((char *) p, ":mmkubernetes:", sizeof(":mmkubernetes:") - 1)) {
 		LogError(0, RS_RET_LEGA_ACT_NOT_SUPPORTED,
@@ -1539,23 +1539,23 @@ ENDparseSelectorAct
 
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 ENDendCnfLoad
 
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 ENDcheckCnf
 
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	runModConf = pModConf;
 ENDactivateCnf
 
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	int i;
 
 	free(pModConf->kubernetesUrl);
@@ -1582,7 +1582,7 @@ ENDfreeCnf
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	dbgprintf("mmkubernetes\n");
 	dbgprintf("\tkubernetesUrl='%s'\n", pData->kubernetesUrl);
 	dbgprintf("\tsrcMetadataPath='%s'\n", pData->srcMetadataDescr->name);
@@ -1609,7 +1609,7 @@ ENDdbgPrintInstInfo
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 ENDtryResume
 
 static rsRetVal
@@ -1835,7 +1835,7 @@ BEGINdoAction
 	int add_pod_metadata = 1;
 	time_t now;
 
-CODESTARTdoAction
+CODESTARTdoAction;
 	CHKiRet_Hdlr(extractMsgMetadata(pMsg, pWrkrData->pData, &jMsgMeta)) {
 		ABORT_FINALIZE((iRet == RS_RET_NOT_FOUND) ? RS_RET_OK : iRet);
 	}
@@ -2046,13 +2046,13 @@ ENDdoAction
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 ENDisCompatibleWithFeature
 
 
 /* all the macros bellow have to be in a specific order */
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	curl_global_cleanup();
 
 	objRelease(datetime, CORE_COMPONENT);
@@ -2062,17 +2062,17 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("mmkubernetes: module compiled with rsyslog version %s.\n", VERSION);

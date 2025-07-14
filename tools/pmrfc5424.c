@@ -43,12 +43,12 @@
 #include "unicode-helper.h"
 
 MODULE_TYPE_PARSER
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_NOKEEP;
 PARSER_NAME("rsyslog.rfc5424")
 
 /* internal structures
  */
-DEF_PMOD_STATIC_DATA
+DEF_PMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(parser)
 DEFobjCurrIf(datetime)
@@ -58,7 +58,7 @@ DEFobjCurrIf(datetime)
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATUREAutomaticSanitazion)
 		iRet = RS_RET_OK;
 	if(eFeat == sFEATUREAutomaticPRIParsing)
@@ -214,7 +214,7 @@ BEGINparse
 	uchar *pBuf = NULL;
 	int lenMsg;
 	int bContParse = 1;
-CODESTARTparse
+CODESTARTparse;
 	assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
 	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
@@ -298,7 +298,7 @@ ENDparse
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	/* release what we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
@@ -307,14 +307,14 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_PMOD_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_PMOD_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit(pmrfc5424)
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

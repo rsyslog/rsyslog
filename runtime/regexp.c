@@ -38,10 +38,10 @@
 #include "hashtable_itr.h"
 
 MODULE_TYPE_LIB
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_NOKEEP;
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 
 /* When using glibc, we enable per-thread regex to avoid lock contention.
  * See:
@@ -293,7 +293,7 @@ static size_t _regerror(int errcode, const regex_t *preg, char *errbuf, size_t e
  * rgerhards, 2008-03-05
  */
 BEGINobjQueryInterface(regexp)
-CODESTARTobjQueryInterface(regexp)
+CODESTARTobjQueryInterface(regexp);
 	if(pIf->ifVersion != regexpCURR_IF_VERSION) { /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
@@ -363,18 +363,18 @@ ENDObjClassExit(regexp)
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_LIB_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	CHKiRet(regexpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */

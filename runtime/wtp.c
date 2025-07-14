@@ -60,7 +60,7 @@
 #include "errmsg.h"
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(glbl)
 
 /* forward-definitions */
@@ -162,7 +162,7 @@ finalize_it:
 /* Destructor */
 BEGINobjDestruct(wtp) /* be sure to specify the object type also in END and CODESTART macros! */
 	int i;
-CODESTARTobjDestruct(wtp)
+CODESTARTobjDestruct(wtp);
 	d_pthread_mutex_lock(&pThis->mutWtp); /* make sure nobody is still using the mutex */
 	assert(pThis->iCurNumWrkThrd == 0);
 
@@ -586,17 +586,23 @@ finalize_it:
 }
 
 
-/* some simple object access methods */
-DEFpropSetMeth(wtp, toWrkShutdown, long)
-DEFpropSetMeth(wtp, wtpState, wtpState_t)
-DEFpropSetMeth(wtp, iNumWorkerThreads, int)
-DEFpropSetMeth(wtp, pUsr, void*)
-DEFpropSetMethPTR(wtp, pmutUsr, pthread_mutex_t)
-DEFpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal(*pVal)(void*, int))
-DEFpropSetMethFP(wtp, pfRateLimiter, rsRetVal(*pVal)(void*))
-DEFpropSetMethFP(wtp, pfGetDeqBatchSize, rsRetVal(*pVal)(void*, int*))
-DEFpropSetMethFP(wtp, pfDoWork, rsRetVal(*pVal)(void*, void*))
-DEFpropSetMethFP(wtp, pfObjProcessed, rsRetVal(*pVal)(void*, wti_t*))
+/* some simple object access methods
+ * Note: the semicolons behind the macros are actually empty declarations. This is
+ * a work-around for clang-format's missing understanding of generative macros.
+ * Some compilers may flag this empty declarations by a warning. If so, we need
+ * to disable this warning. Alternatively, we could exclude this code from being
+ * reformatted by clang-format;
+ */
+DEFpropSetMeth(wtp, toWrkShutdown, long);
+DEFpropSetMeth(wtp, wtpState, wtpState_t);
+DEFpropSetMeth(wtp, iNumWorkerThreads, int);
+DEFpropSetMeth(wtp, pUsr, void*);
+DEFpropSetMethPTR(wtp, pmutUsr, pthread_mutex_t);
+DEFpropSetMethFP(wtp, pfChkStopWrkr, rsRetVal(*pVal)(void*, int));
+DEFpropSetMethFP(wtp, pfRateLimiter, rsRetVal(*pVal)(void*));
+DEFpropSetMethFP(wtp, pfGetDeqBatchSize, rsRetVal(*pVal)(void*, int*));
+DEFpropSetMethFP(wtp, pfDoWork, rsRetVal(*pVal)(void*, void*));
+DEFpropSetMethFP(wtp, pfObjProcessed, rsRetVal(*pVal)(void*, wti_t*));
 
 
 /* set the debug header message
@@ -635,7 +641,7 @@ static rsRetVal wtpQueryInterface(interface_t __attribute__((unused)) *i) { retu
 /* exit our class
  */
 BEGINObjClassExit(wtp, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(wtp)
+CODESTARTObjClassExit(wtp);
 	/* release objects we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
 ENDObjClassExit(wtp)

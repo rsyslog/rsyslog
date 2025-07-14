@@ -45,10 +45,10 @@
 #include "cfsysline.h"
 #include "tcl.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 
 typedef struct _instanceData {
 	Tcl_Interp * interp;
@@ -60,46 +60,46 @@ typedef struct wrkrInstanceData {
 } wrkrInstanceData_t;
 
 BEGINinitConfVars
-CODESTARTinitConfVars
+CODESTARTinitConfVars;
 ENDinitConfVars
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 	pData->interp = Tcl_CreateInterp();
 	pData->cmdName = NULL;
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 /* not compatible with message reduction */
 ENDisCompatibleWithFeature
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	if(pData->cmdName != NULL)
 		Tcl_DecrRefCount(pData->cmdName);
 	Tcl_DeleteInterp(pData->interp);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 ENDdbgPrintInstInfo
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 ENDtryResume
 
 BEGINdoAction
 	Tcl_Obj * objv[2];
-CODESTARTdoAction
+CODESTARTdoAction;
 	objv[0] = pWrkrData->pData->cmdName;
 	objv[1] = Tcl_NewStringObj((char*) ppString[0], -1);
 	if (Tcl_EvalObjv(pWrkrData->pData->interp, 2, objv, 0) != TCL_OK) {
@@ -111,7 +111,7 @@ ENDdoAction
 BEGINparseSelectorAct
 	char fileName[PATH_MAX+1];
 	char buffer[4096];
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(strncmp((char*) p, ":omtcl:", sizeof(":omtcl:") - 1)) {
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
@@ -142,20 +142,20 @@ CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-INITLegCnfVars
+CODESTARTmodInit;
+INITLegCnfVars;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("omtcl: module compiled with rsyslog version %s.\n", VERSION);

@@ -64,8 +64,8 @@
 #include "statsobj.h"
 #include "unicode-helper.h"
 
-MODULE_TYPE_INPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_INPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imdtls")
 
 /* defines */
@@ -76,7 +76,7 @@ MODULE_CNFNAME("imdtls")
 #define DTLS_DEFAULT_TIMEOUT 1800
 
 /* Module static data */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(prop)
@@ -806,7 +806,7 @@ BEGINnewInpInst
 	instanceConf_t *inst = NULL;
 	int i,j;
 	FILE *fp;
-CODESTARTnewInpInst
+CODESTARTnewInpInst;
 	DBGPRINTF("newInpInst (imdtls)\n");
 
 	if((pvals = nvlstGetParams(lst, &inppblk, NULL)) == NULL) {
@@ -917,7 +917,7 @@ ENDnewInpInst
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	pModConf->pszBindRuleset = NULL;
@@ -930,7 +930,7 @@ ENDbeginCnfLoad
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "imdtls: error processing module "
@@ -971,7 +971,7 @@ ENDsetModCnf
 
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	if(loadModConf->pszBindRuleset == NULL) {
 		if((cs.pszBindRuleset == NULL) || (cs.pszBindRuleset[0] == '\0')) {
 			loadModConf->pszBindRuleset = NULL;
@@ -993,7 +993,7 @@ ENDendCnfLoad
 
 BEGINcheckCnf
 	instanceConf_t *inst;
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 	for(inst = pModConf->root ; inst != NULL ; inst = inst->next) {
 		if(inst->pszBindRuleset == NULL && pModConf->pszBindRuleset != NULL) {
 			CHKmalloc(inst->pszBindRuleset = ustrdup(pModConf->pszBindRuleset));
@@ -1006,7 +1006,7 @@ ENDcheckCnf
 
 BEGINactivateCnfPrePrivDrop
 	instanceConf_t *inst;
-CODESTARTactivateCnfPrePrivDrop
+CODESTARTactivateCnfPrePrivDrop;
 	runModConf = pModConf;
 	DBGPRINTF("imdtls: activate addListners for dtls\n");
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
@@ -1015,14 +1015,14 @@ CODESTARTactivateCnfPrePrivDrop
 ENDactivateCnfPrePrivDrop
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 ENDactivateCnf
 
 
 BEGINfreeCnf
 	instanceConf_t *inst, *del;
 	int i;
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free(inst->pszBindPort);
 		if (inst->pszBindAddr != NULL) {
@@ -1071,7 +1071,7 @@ ENDfreeCnf
 BEGINrunInput
 	instanceConf_t *inst;
 	pthread_attr_t wrkrThrdAttr;
-CODESTARTrunInput
+CODESTARTrunInput;
 	pthread_attr_init(&wrkrThrdAttr);
 	pthread_attr_setstacksize(&wrkrThrdAttr, 4096*1024);
 
@@ -1104,7 +1104,7 @@ ENDrunInput
 
 
 BEGINwillRun
-CODESTARTwillRun
+CODESTARTwillRun;
 	/* we need to create the inputName property (only once during our lifetime) */
 	CHKiRet(prop.Construct(&pInputName));
 	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imdtls"), sizeof("imdtls") - 1));
@@ -1117,7 +1117,7 @@ ENDwillRun
  * CODEqueryEtryPt_STD_IMOD_QUERIES
  */
 BEGINafterRun
-CODESTARTafterRun
+CODESTARTafterRun;
 	/* TODO: do cleanup here ?! */
 	dbgprintf("imdtls: AfterRun\n");
 	if(pInputName != NULL)
@@ -1125,7 +1125,7 @@ CODESTARTafterRun
 ENDafterRun
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	DBGPRINTF("imdtls: modExit\n");
 	/* release objects we used */
 	objRelease(net_ossl, LM_NET_OSSL_FILENAME);
@@ -1138,23 +1138,23 @@ CODESTARTmodExit
 ENDmodExit
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURENonCancelInputTermination)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_IMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
-CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_IMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES;
+CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("imdtls: modInit\n");

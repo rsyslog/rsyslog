@@ -50,13 +50,13 @@
 #include "unicode-helper.h"
 #include "datetime.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omkafka")
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(strm)
 DEFobjCurrIf(statsobj)
@@ -296,7 +296,7 @@ static struct cnfparamblk actpblk =
 	};
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars
+CODESTARTinitConfVars;
 ENDinitConfVars
 
 static uint32_t
@@ -1653,7 +1653,7 @@ finalize_it:
 }
 
 BEGINdoHUP
-CODESTARTdoHUP
+CODESTARTdoHUP;
 	pthread_mutex_lock(&pData->mutErrFile);
 	if(pData->fdErrFile != -1) {
 		close(pData->fdErrFile);
@@ -1679,7 +1679,7 @@ finalize_it:
 ENDdoHUP
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 	pData->currPartition = 0;
 	pData->bIsOpen = 0;
 	pData->bIsSuspended = 0;
@@ -1703,17 +1703,17 @@ ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	/* Helpers for Failed Msg List */
 	failedmsg_entry* fmsgEntry1;
 	failedmsg_entry* fmsgEntry2;
@@ -1773,19 +1773,19 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 ENDdbgPrintInstInfo
 
 
 BEGINtryResume
 	int iKafkaRet;
 	const struct rd_kafka_metadata *metadata;
-CODESTARTtryResume
+CODESTARTtryResume;
 	pthread_mutex_lock(&pWrkrData->pData->mut_doAction); /* see doAction header comment! */
 	CHKiRet(setupKafkaHandle(pWrkrData->pData, 0));
 
@@ -1820,7 +1820,7 @@ ENDtryResume
  * including librdkafka handles.
  */
 BEGINdoAction
-CODESTARTdoAction
+CODESTARTdoAction;
 	failedmsg_entry* fmsgEntry;
 	instanceData *const pData = pWrkrData->pData;
 	int need_unlock = 0;
@@ -1950,7 +1950,7 @@ BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
 	int iNumTpls;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -2101,13 +2101,13 @@ CODESTARTnewActInst
 		CHKiRet(statsobj.ConstructFinalize(pData->stats));
 	}
 
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	statsobj.Destruct(&kafkaStats);
 	CHKiRet(objRelease(statsobj, CORE_COMPONENT));
 	DESTROY_ATOMIC_HELPER_MUT(mutClock);
@@ -2127,19 +2127,19 @@ ENDmodExit
 
 NO_LEGACY_CONF_parseSelectorAct
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 CODEqueryEtryPt_doHUP
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	uchar *pTmp;
-INITLegCnfVars
+INITLegCnfVars;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
 	dbgprintf("just because librdkafka needs it, sqrt of 4 is %f\n", sqrt(4.0));

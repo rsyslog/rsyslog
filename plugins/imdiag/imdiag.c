@@ -61,11 +61,11 @@
 #include "statsobj.h"
 
 
-MODULE_TYPE_INPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_INPUT;
+MODULE_TYPE_NOKEEP;
 
 /* static data */
-DEF_IMOD_STATIC_DATA
+DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(tcpsrv)
 DEFobjCurrIf(tcps_sess)
 DEFobjCurrIf(net)
@@ -730,34 +730,34 @@ finalize_it:
 
 #if 0 /* can be used to integrate into new config system */
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 ENDbeginCnfLoad
 
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 ENDendCnfLoad
 
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 ENDcheckCnf
 
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 ENDactivateCnf
 
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 ENDfreeCnf
 #endif
 
 /* This function is called to gather input.
  */
 BEGINrunInput
-CODESTARTrunInput
+CODESTARTrunInput;
 	CHKiRet(tcpsrv.ConstructFinalize(pOurTcpsrv));
 	iRet = tcpsrv.Run(pOurTcpsrv);
 finalize_it:
@@ -766,7 +766,7 @@ ENDrunInput
 
 /* initialize and return if will run or not */
 BEGINwillRun
-CODESTARTwillRun
+CODESTARTwillRun;
 	/* first apply some config settings */
 	if(pOurTcpsrv == NULL)
 		ABORT_FINALIZE(RS_RET_NO_RUN);
@@ -788,7 +788,7 @@ ENDwillRun
 
 
 BEGINafterRun
-CODESTARTafterRun
+CODESTARTafterRun;
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
 	if(pRcvDummy != NULL)
@@ -799,7 +799,7 @@ ENDafterRun
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	if(pOurTcpsrv != NULL)
 		iRet = tcpsrv.Destruct(&pOurTcpsrv);
 
@@ -855,21 +855,21 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURENonCancelInputTermination)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_IMOD_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_IMOD_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	pOurTcpsrv = NULL;

@@ -44,13 +44,13 @@
 #include "rsconf.h"
 
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("mmexternal")
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 
 typedef struct _instanceData {
 	uchar *szBinary;	/* name of binary to call */
@@ -99,20 +99,20 @@ static struct cnfparamblk actpblk =
 	};
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars
+CODESTARTinitConfVars;
 	cs.szBinary = NULL;	/* name of binary to call */
 ENDinitConfVars
 
 /* config settings */
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 	pData->inputProp = INPUT_MSG;
 	pthread_mutex_init(&pData->mut, NULL);
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 	pWrkrData->fdPipeIn = -1;
 	pWrkrData->fdPipeOut = -1;
 	pWrkrData->fdOutput = -1;
@@ -125,7 +125,7 @@ ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURERepeatedMsgReduction)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
@@ -133,7 +133,7 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 	int i;
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	pthread_mutex_destroy(&pData->mut);
 	free(pData->szBinary);
 	free(pData->outputFileName);
@@ -146,18 +146,18 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 	free(pWrkrData->respBuf);
 ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 ENDdbgPrintInstInfo
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 ENDtryResume
 
 
@@ -506,7 +506,7 @@ BEGINdoAction_NoStrings
 	smsg_t **ppMsg = (smsg_t **) pMsgData;
 	smsg_t *pMsg = ppMsg[0];
 	instanceData *pData;
-CODESTARTdoAction
+CODESTARTdoAction;
 	pData = pWrkrData->pData;
 	if(pData->bForceSingleInst)
 		pthread_mutex_lock(&pData->mut);
@@ -538,7 +538,7 @@ BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
 	const char *cstr = NULL;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -546,7 +546,7 @@ CODESTARTnewActInst
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
 
-	CODE_STD_STRING_REQUESTnewActInst(1)
+	CODE_STD_STRING_REQUESTnewActInst(1);
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
@@ -579,7 +579,7 @@ CODESTARTnewActInst
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 	DBGPRINTF("mmexternal: bForceSingleInst %d\n", pData->bForceSingleInst);
 	DBGPRINTF("mmexternal: interface.input '%s', mode %d\n", cstr, pData->inputProp);
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	free((void*)cstr);
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
@@ -588,23 +588,23 @@ NO_LEGACY_CONF_parseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	free(cs.szBinary);
 	cs.szBinary = NULL;
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 ENDqueryEtryPt
 
 BEGINmodInit()
-CODESTARTmodInit
-INITLegCnfVars
+CODESTARTmodInit;
+INITLegCnfVars;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 CODEmodInit_QueryRegCFSLineHdlr

@@ -75,8 +75,8 @@
 #include "janitor.h"
 #include "rsconf.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omfile")
 
 /* forward definitions */
@@ -84,7 +84,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(strm)
 DEFobjCurrIf(statsobj)
@@ -306,20 +306,20 @@ getDfltTpl(void)
 
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars
+CODESTARTinitConfVars;
 	pszFileDfltTplName = NULL; /* make sure this can be free'ed! */
 	iRet = resetConfigVariables(NULL, NULL); /* params are dummies */
 ENDinitConfVars
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURERepeatedMsgReduction)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	if(pData->bDynamicName) {
 		dbgprintf("[dynamic]\n");
 	} else { /* regular file */
@@ -909,7 +909,7 @@ finalize_it:
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	pModConf->tplName = NULL;
@@ -925,7 +925,7 @@ ENDbeginCnfLoad
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		parser_errmsg("error processing module "
@@ -1033,7 +1033,7 @@ janitorCB(void *pUsr)
 
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	loadModConf = NULL; /* done loading */
 	/* free legacy config vars */
 	free(pszFileDfltTplName);
@@ -1041,34 +1041,34 @@ CODESTARTendCnfLoad
 ENDendCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	free(pModConf->tplName);
 ENDfreeCnf
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 	pData->pStrm = NULL;
 	pthread_mutex_init(&pData->mutWrite, NULL);
 ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	free(pData->tplName);
 	free(pData->fname);
 	if(pData->iCloseTimeout > 0)
@@ -1098,16 +1098,16 @@ ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 ENDtryResume
 
 BEGINbeginTransaction
-CODESTARTbeginTransaction
+CODESTARTbeginTransaction;
 	/* we have nothing to do to begin a transaction */
 ENDbeginTransaction
 
@@ -1115,7 +1115,7 @@ ENDbeginTransaction
 BEGINcommitTransaction
 	instanceData *__restrict__ const pData = pWrkrData->pData;
 	unsigned i;
-CODESTARTcommitTransaction
+CODESTARTcommitTransaction;
 	pthread_mutex_lock(&pData->mutWrite);
 
 	for(i = 0 ; i < nParams ; ++i) {
@@ -1307,7 +1307,7 @@ BEGINnewActInst
 	struct cnfparamvals *pvals;
 	uchar *tplToUse;
 	int i;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	DBGPRINTF("newActInst (omfile)\n");
 
 	pvals = nvlstGetParams(lst, &actpblk, NULL);
@@ -1370,14 +1370,14 @@ CODESTARTnewActInst
 			pData->bCreateDirs = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "file")) {
 			pData->fname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-			CODE_STD_STRING_REQUESTnewActInst(1)
+			CODE_STD_STRING_REQUESTnewActInst(1);
 			pData->bDynamicName = 0;
 		} else if(!strcmp(actpblk.descr[i].name, "dynafile")) {
 			if(pData->fname != NULL) {
 				parser_errmsg("omfile: both \"file\" and \"dynafile\" set, will use dynafile");
 			}
 			pData->fname = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-			CODE_STD_STRING_REQUESTnewActInst(2)
+			CODE_STD_STRING_REQUESTnewActInst(2);
 			pData->bDynamicName = 1;
 		} else if(!strcmp(actpblk.descr[i].name, "template")) {
 			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
@@ -1437,14 +1437,14 @@ CODESTARTnewActInst
 	if(pData->iCloseTimeout > 0)
 		janitorAddEtry(janitorCB, pData->janitorID, pData);
 
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINparseSelectorAct
 	uchar fname[MAXFNAME];
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 	/* Note: the indicator sequence permits us to use '$' to signify
 	 * outchannel, what otherwise is not possible due to truely
 	 * unresolvable grammar conflicts (*this time no way around*).
@@ -1561,7 +1561,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 
 BEGINdoHUP
-CODESTARTdoHUP
+CODESTARTdoHUP;
 	pthread_mutex_lock(&pData->mutWrite);
 	if(pData->bDynamicName) {
 		dynaFileFreeCacheEntries(pData);
@@ -1575,7 +1575,7 @@ ENDdoHUP
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(strm, CORE_COMPONENT);
 	objRelease(statsobj, CORE_COMPONENT);
@@ -1584,21 +1584,21 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMODTX_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMODTX_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 CODEqueryEtryPt_doHUP
 ENDqueryEtryPt
 
 
 BEGINmodInit(File)
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
-INITLegCnfVars
+INITLegCnfVars;
 	CHKiRet(objUse(strm, CORE_COMPONENT));
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 

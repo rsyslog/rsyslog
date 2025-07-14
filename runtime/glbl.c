@@ -67,7 +67,7 @@
 #endif
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(prop)
 DEFobjCurrIf(net)
 
@@ -945,7 +945,7 @@ GetSourceIPofLocalClient(void)
  * rgerhards, 2008-02-21
  */
 BEGINobjQueryInterface(glbl)
-CODESTARTobjQueryInterface(glbl)
+CODESTARTobjQueryInterface(glbl);
 	if(pIf->ifVersion != glblCURR_IF_VERSION) { /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}

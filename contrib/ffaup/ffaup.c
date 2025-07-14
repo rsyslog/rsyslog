@@ -43,8 +43,8 @@
 
 
 MODULE_TYPE_FUNCTION
-MODULE_TYPE_NOKEEP
-DEF_FMOD_STATIC_DATA
+MODULE_TYPE_NOKEEP;
+DEF_FMOD_STATIC_DATA;
 
 faup_options_t *glbOptions = NULL;
 
@@ -354,7 +354,7 @@ static struct scriptFunct functions[] = {
 };
 
 BEGINgetFunctArray
-CODESTARTgetFunctArray
+CODESTARTgetFunctArray;
 	dbgprintf("Faup: ffaup\n");
 	*version = 1;
 	*functArray = functions;
@@ -362,7 +362,7 @@ ENDgetFunctArray
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	dbgprintf("ffaup: freeing options\n");
 	if(glbOptions){
 		faup_options_free(glbOptions);
@@ -372,13 +372,13 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_FMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_FMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	dbgprintf("ffaup: initializing options\n");

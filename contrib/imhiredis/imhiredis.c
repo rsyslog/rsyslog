@@ -56,12 +56,12 @@
 #include "msg.h"
 #include "dirty.h"
 
-MODULE_TYPE_INPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_INPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imhiredis")
 
 /* static data */
-DEF_IMOD_STATIC_DATA
+DEF_IMOD_STATIC_DATA;
 #define BATCH_SIZE 10
 #define WAIT_TIME_MS 500
 #define STREAM_INDEX_STR_MAXLEN 44 // "18446744073709551615-18446744073709551615"
@@ -418,7 +418,7 @@ BEGINnewInpInst
 	struct cnfparamvals *pvals;
 	instanceConf_t *inst;
 	int i;
-CODESTARTnewInpInst
+CODESTARTnewInpInst;
 	DBGPRINTF("newInpInst (imhiredis)\n");
 
 	if((pvals = nvlstGetParams(lst, &inppblk, NULL)) == NULL) {
@@ -546,7 +546,7 @@ ENDnewInpInst
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 ENDbeginCnfLoad
@@ -555,7 +555,7 @@ ENDbeginCnfLoad
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "imhiredis: error processing module "
@@ -582,12 +582,12 @@ finalize_it:
 ENDsetModCnf
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 ENDendCnfLoad
 
 BEGINcheckCnf
 	instanceConf_t *inst;
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 	for(inst = pModConf->root ; inst != NULL ; inst = inst->next) {
 		std_checkRuleset(pModConf, inst);
 	}
@@ -595,12 +595,12 @@ ENDcheckCnf
 
 
 BEGINactivateCnfPrePrivDrop
-CODESTARTactivateCnfPrePrivDrop
+CODESTARTactivateCnfPrePrivDrop;
 	runModConf = pModConf;
 ENDactivateCnfPrePrivDrop
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	for(instanceConf_t *inst = pModConf->root ; inst != NULL ; inst = inst->next) {
 		iRet = checkInstance(inst);
 		if (inst->mode == IMHIREDIS_MODE_SUBSCRIBE)
@@ -612,7 +612,7 @@ ENDactivateCnf
 BEGINfreeCnf
 	instanceConf_t *inst, *del;
 	redisNode *node;
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		if (inst->evtBase)
 			event_base_free(inst->evtBase);
@@ -686,7 +686,7 @@ shutdownImhiredisWorkers(void)
 BEGINrunInput
 	int i;
 	instanceConf_t *inst;
-CODESTARTrunInput
+CODESTARTrunInput;
 	DBGPRINTF("imhiredis: runInput loop started ...\n");
 	activeHiredisworkers = 0;
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
@@ -734,7 +734,7 @@ ENDrunInput
 
 
 BEGINwillRun
-CODESTARTwillRun
+CODESTARTwillRun;
 	/* we need to create the inputName property (only once during our lifetime) */
 	CHKiRet(prop.Construct(&pInputName));
 	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imhiredis"), sizeof("imhiredis") - 1));
@@ -744,7 +744,7 @@ ENDwillRun
 
 
 BEGINafterRun
-CODESTARTafterRun
+CODESTARTafterRun;
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
 
@@ -752,7 +752,7 @@ ENDafterRun
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	pthread_attr_destroy(&wrkrThrdAttr);
 
 	/* force cleaning of all libevent-related structures
@@ -769,25 +769,25 @@ ENDmodExit
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURENonCancelInputTermination)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_IMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
-CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_IMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES;
+CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
 	/* request objects we use */

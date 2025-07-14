@@ -34,10 +34,10 @@
 #include "zstdw.h"
 
 MODULE_TYPE_LIB
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_NOKEEP;
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 
 
 /* finish buffer, to be called before closing the zstd file. */
@@ -151,7 +151,7 @@ done:	RETiRet;
  * rgerhards, 2008-03-05
  */
 BEGINobjQueryInterface(zstdw)
-CODESTARTobjQueryInterface(zstdw)
+CODESTARTobjQueryInterface(zstdw);
 	if(pIf->ifVersion != zstdwCURR_IF_VERSION) { /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
@@ -174,18 +174,18 @@ ENDObjClassInit(zstdw)
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_LIB_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 	CHKiRet(zstdwClassInit(pModInfo));
 ENDmodInit

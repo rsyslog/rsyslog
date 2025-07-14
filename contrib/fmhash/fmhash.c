@@ -51,8 +51,8 @@
 
 
 MODULE_TYPE_FUNCTION
-MODULE_TYPE_NOKEEP
-DEF_FMOD_STATIC_DATA
+MODULE_TYPE_NOKEEP;
+DEF_FMOD_STATIC_DATA;
 
 typedef uint64_t hash_t;
 typedef uint32_t seed_t;
@@ -358,7 +358,7 @@ static struct scriptFunct functions[] = {
 
 
 BEGINgetFunctArray
-CODESTARTgetFunctArray
+CODESTARTgetFunctArray;
 	dbgprintf("Hash: fmhhash\n");
 	*version = 1;
 	*functArray = functions;
@@ -366,18 +366,18 @@ ENDgetFunctArray
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_FMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_FMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	dbgprintf("rsyslog fmhash init called, compiled with version %s\n", VERSION);

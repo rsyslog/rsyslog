@@ -57,13 +57,13 @@
 #include "cfsysline.h"
 #include "srUtils.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omtesting")
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 
 typedef struct _instanceData {
 	enum { MD_SLEEP, MD_FAIL, MD_RANDFAIL, MD_ALWAYS_SUSPEND }
@@ -91,12 +91,12 @@ typedef struct configSettings_s {
 static configSettings_t cs;
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars
+CODESTARTinitConfVars;
 	cs.bEchoStdout = 0;
 ENDinitConfVars
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 	pData->iWaitSeconds = 1;
 	pData->iWaitUSeconds = 0;
 	pthread_mutex_init(&pData->mut, NULL);
@@ -104,12 +104,12 @@ ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	dbgprintf("Action delays rule by %d second(s) and %d microsecond(s)\n",
 		  pData->iWaitSeconds, pData->iWaitUSeconds);
 	/* do nothing */
@@ -117,7 +117,7 @@ ENDdbgPrintInstInfo
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	/* we are not compatible with repeated msg reduction feature, so do not allow it */
 ENDisCompatibleWithFeature
 
@@ -190,7 +190,7 @@ static rsRetVal doRandFail(void)
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 	dbgprintf("omtesting tryResume() called\n");
 	pthread_mutex_lock(&pWrkrData->pData->mut);
 	switch(pWrkrData->pData->mode) {
@@ -215,7 +215,7 @@ ENDtryResume
 
 BEGINdoAction
 	instanceData *pData;
-CODESTARTdoAction
+CODESTARTdoAction;
 	dbgprintf("omtesting received msg '%s'\n", ppString[0]);
 	pData = pWrkrData->pData;
 	pthread_mutex_lock(&pData->mut);
@@ -247,20 +247,20 @@ ENDdoAction
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	pthread_mutex_destroy(&pData->mut);
 ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
 
 BEGINparseSelectorAct
 	int i;
 	uchar szBuf[1024];
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* code here is quick and dirty - if you like, clean it up. But keep
 	 * in mind it is just a testing aid ;) -- rgerhards, 2007-12-31
@@ -343,21 +343,21 @@ ENDparseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-INITLegCnfVars
+CODESTARTmodInit;
+INITLegCnfVars;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomtestingechostdout", 0, eCmdHdlrBinary, NULL,

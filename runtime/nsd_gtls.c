@@ -58,10 +58,10 @@
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #endif
 MODULE_TYPE_LIB
-MODULE_TYPE_KEEP
+MODULE_TYPE_KEEP;
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 DEFobjCurrIf(datetime)
@@ -1483,7 +1483,7 @@ ENDobjConstruct(nsd_gtls)
 /* destructor for the nsd_gtls object */
 PROTOTYPEobjDestruct(nsd_gtls);
 BEGINobjDestruct(nsd_gtls) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(nsd_gtls)
+CODESTARTobjDestruct(nsd_gtls);
 	if(pThis->iMode == 1) {
 		gtlsEndSess(pThis);
 	}
@@ -2446,7 +2446,7 @@ finalize_it:
 
 /* queryInterface function */
 BEGINobjQueryInterface(nsd_gtls)
-CODESTARTobjQueryInterface(nsd_gtls)
+CODESTARTobjQueryInterface(nsd_gtls);
 	if(pIf->ifVersion != nsdCURR_IF_VERSION) {/* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
@@ -2494,7 +2494,7 @@ ENDobjQueryInterface(nsd_gtls)
 /* exit our class
  */
 BEGINObjClassExit(nsd_gtls, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(nsd_gtls)
+CODESTARTObjClassExit(nsd_gtls);
 	gtlsGlblExit();	/* shut down GnuTLS */
 
 	/* release objects we no longer need */
@@ -2525,20 +2525,20 @@ ENDObjClassInit(nsd_gtls)
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	nsd_gtlsClassExit();
 	pthread_mutex_destroy(&mutGtlsStrerror);
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_LIB_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	/* Initialize all classes that are in our module - this includes ourselfs */

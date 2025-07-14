@@ -61,15 +61,15 @@
 #include "ratelimit.h"
 #include "unicode-helper.h"
 
-MODULE_TYPE_INPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_INPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imudp")
 
 /* defines */
 #define MAX_WRKR_THREADS 32
 
 /* Module static data */
-DEF_IMOD_STATIC_DATA
+DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 DEFobjCurrIf(datetime)
@@ -1025,7 +1025,7 @@ BEGINnewInpInst
 	struct cnfparamvals *pvals;
 	int i;
 	int portIdx;
-CODESTARTnewInpInst
+CODESTARTnewInpInst;
 	DBGPRINTF("newInpInst (imudp)\n");
 
 	if((pvals = nvlstGetParams(lst, &inppblk, NULL)) == NULL) {
@@ -1049,7 +1049,7 @@ ENDnewInpInst
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	/* init our settings */
@@ -1075,7 +1075,7 @@ BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
 	int wrkrMax;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "imudp: error processing module "
@@ -1129,7 +1129,7 @@ finalize_it:
 ENDsetModCnf
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	if(!loadModConf->configSetViaV2Method) {
 		/* persist module-specific settings from legacy config system */
 		loadModConf->iSchedPrio = cs.iSchedPrio;
@@ -1151,7 +1151,7 @@ ENDendCnfLoad
 
 BEGINcheckCnf
 	instanceConf_t *inst;
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 	checkSchedParam(pModConf); /* this can not cause fatal errors */
 	for(inst = pModConf->root ; inst != NULL ; inst = inst->next) {
 		std_checkRuleset(pModConf, inst);
@@ -1166,7 +1166,7 @@ ENDcheckCnf
 
 BEGINactivateCnfPrePrivDrop
 	instanceConf_t *inst;
-CODESTARTactivateCnfPrePrivDrop
+CODESTARTactivateCnfPrePrivDrop;
 	runModConf = pModConf;
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 		addListner(inst);
@@ -1185,7 +1185,7 @@ ENDactivateCnfPrePrivDrop
 BEGINactivateCnf
 	int i;
 	int lenRcvBuf;
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	/* caching various settings */
 	iMaxLine = glbl.GetMaxLine(runConf);
 	lenRcvBuf = iMaxLine + 1;
@@ -1208,7 +1208,7 @@ ENDactivateCnf
 
 BEGINfreeCnf
 	instanceConf_t *inst, *del;
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free(inst->pszBindPort);
 		free(inst->pszBindAddr);
@@ -1277,7 +1277,7 @@ wrkr(void *myself)
 BEGINrunInput
 	int i;
 	pthread_attr_t wrkrThrdAttr;
-CODESTARTrunInput
+CODESTARTrunInput;
 	pthread_attr_init(&wrkrThrdAttr);
 	pthread_attr_setstacksize(&wrkrThrdAttr, 4096*1024);
 	for(i = 0 ; i < runModConf->wrkrMax - 1 ; ++i) {
@@ -1301,7 +1301,7 @@ ENDrunInput
 
 /* initialize and return if will run or not */
 BEGINwillRun
-CODESTARTwillRun
+CODESTARTwillRun;
 	net.PrintAllowedSenders(1); /* UDP */
 	net.HasRestrictions(UCHAR_CONSTANT("UDP"), &bDoACLCheck); /* UDP */
 ENDwillRun
@@ -1310,7 +1310,7 @@ ENDwillRun
 BEGINafterRun
 	struct lstn_s *lstn, *lstnDel;
 	int i;
-CODESTARTafterRun
+CODESTARTafterRun;
 	/* do cleanup here */
 	net.clearAllowedSenders((uchar*)"UDP");
 	for(lstn = lcnfRoot ; lstn != NULL ; ) {
@@ -1335,7 +1335,7 @@ ENDafterRun
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	/* release what we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(statsobj, CORE_COMPONENT);
@@ -1347,20 +1347,20 @@ ENDmodExit
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURENonCancelInputTermination)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_IMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
-CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_IMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES;
+CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
@@ -1380,7 +1380,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

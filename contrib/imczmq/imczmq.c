@@ -38,11 +38,11 @@
 #include "unicode-helper.h"
 #include <czmq.h>
 
-MODULE_TYPE_INPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_INPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imczmq");
 
-DEF_IMOD_STATIC_DATA
+DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
@@ -374,13 +374,13 @@ finalize_it:
 }
 
 BEGINrunInput
-CODESTARTrunInput
+CODESTARTrunInput;
 	iRet = rcvData();
 ENDrunInput
 
 
 BEGINwillRun
-CODESTARTwillRun
+CODESTARTwillRun;
 	CHKiRet(prop.Construct(&s_namep));
 	CHKiRet(prop.SetString(s_namep,
 		UCHAR_CONSTANT("imczmq"),
@@ -393,7 +393,7 @@ ENDwillRun
 
 
 BEGINafterRun
-CODESTARTafterRun
+CODESTARTafterRun;
 	if(s_namep != NULL) {
 		prop.Destruct(&s_namep);
 	}
@@ -401,7 +401,7 @@ ENDafterRun
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 	objRelease(ruleset, CORE_COMPONENT);
@@ -409,7 +409,7 @@ ENDmodExit
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURENonCancelInputTermination) {
 		iRet = RS_RET_OK;
 	}
@@ -417,7 +417,7 @@ ENDisCompatibleWithFeature
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	runModConf = pModConf;
 	runModConf->pConf = pConf;
 	runModConf->authenticator = 0;
@@ -430,7 +430,7 @@ ENDbeginCnfLoad
 BEGINsetModCnf
 	struct cnfparamvals* pvals = NULL;
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(NULL == pvals) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS,
@@ -477,7 +477,7 @@ ENDsetModCnf
 
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 ENDendCnfLoad
 
 
@@ -493,7 +493,7 @@ std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, insta
 
 BEGINcheckCnf
 instanceConf_t* inst;
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 	for(inst = pModConf->root; inst!=NULL; inst=inst->next) {
 		std_checkRuleset(pModConf, inst);
 	}
@@ -501,20 +501,20 @@ ENDcheckCnf
 
 
 BEGINactivateCnfPrePrivDrop
-CODESTARTactivateCnfPrePrivDrop
+CODESTARTactivateCnfPrePrivDrop;
 	runModConf = pModConf;
 	putenv((char*)"ZSYS_SIGHANDLER=false");
 ENDactivateCnfPrePrivDrop
 
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 ENDactivateCnf
 
 
 BEGINfreeCnf
 	instanceConf_t *inst, *inst_r;
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	free(pModConf->authType);
 	free(pModConf->serverCertPath);
 	free(pModConf->clientCertPath);
@@ -533,7 +533,7 @@ BEGINnewInpInst
 	struct cnfparamvals* pvals;
 	instanceConf_t* inst;
 	int i;
-CODESTARTnewInpInst
+CODESTARTnewInpInst;
 	DBGPRINTF("newInpInst (imczmq)\n");
 	
 	pvals = nvlstGetParams(lst, &inppblk, NULL);
@@ -612,18 +612,18 @@ ENDnewInpInst
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_IMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
-CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_IMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES;
+CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

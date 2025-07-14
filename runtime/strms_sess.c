@@ -43,7 +43,7 @@
 
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(netstrm)
@@ -76,7 +76,7 @@ finalize_it:
 
 /* destructor for the strms_sess object */
 BEGINobjDestruct(strms_sess) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(strms_sess)
+CODESTARTobjDestruct(strms_sess);
 	if(pThis->pStrm != NULL)
 		netstrm.Destruct(&pThis->pStrm);
 
@@ -92,7 +92,7 @@ ENDobjDestruct(strms_sess)
 
 /* debugprint for the strms_sess object */
 BEGINobjDebugPrint(strms_sess) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDebugPrint(strms_sess)
+CODESTARTobjDebugPrint(strms_sess);
 ENDobjDebugPrint(strms_sess)
 
 
@@ -235,7 +235,7 @@ finalize_it:
  * rgerhards, 2008-02-29
  */
 BEGINobjQueryInterface(strms_sess)
-CODESTARTobjQueryInterface(strms_sess)
+CODESTARTobjQueryInterface(strms_sess);
 	if(pIf->ifVersion != strms_sessCURR_IF_VERSION) { /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
@@ -268,7 +268,7 @@ ENDobjQueryInterface(strms_sess)
  * rgerhards, 2008-03-10
  */
 BEGINObjClassExit(strms_sess, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(strms_sess)
+CODESTARTObjClassExit(strms_sess);
 	/* release objects we no longer need */
 	objRelease(netstrm, LM_NETSTRMS_FILENAME);
 	objRelease(datetime, CORE_COMPONENT);

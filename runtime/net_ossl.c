@@ -47,7 +47,7 @@
 #include "rsconf.h"
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 DEFobjCurrIf(nsd_ptcp)
@@ -1267,7 +1267,7 @@ ENDobjConstruct(net_ossl)
 
 /* destructor for the net_ossl object */
 BEGINobjDestruct(net_ossl) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(net_ossl)
+CODESTARTobjDestruct(net_ossl);
 	DBGPRINTF("net_ossl_destruct: [%p]\n", pThis);
 	/* Free SSL obj also if we do not have a session - or are NOT in TLS mode! */
 	if (pThis->ssl != NULL) {
@@ -1287,7 +1287,7 @@ ENDobjDestruct(net_ossl)
 
 /* queryInterface function */
 BEGINobjQueryInterface(net_ossl)
-CODESTARTobjQueryInterface(net_ossl)
+CODESTARTobjQueryInterface(net_ossl);
 	DBGPRINTF("netosslQueryInterface\n");
 	if(pIf->ifVersion != net_osslCURR_IF_VERSION) {/* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
@@ -1317,7 +1317,7 @@ ENDobjQueryInterface(net_ossl)
 /* exit our class
  */
 BEGINObjClassExit(net_ossl, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(net_ossl)
+CODESTARTObjClassExit(net_ossl);
 	DBGPRINTF("netosslClassExit\n");
 	/* release objects we no longer need */
 	objRelease(nsd_ptcp, LM_NSD_PTCP_FILENAME);

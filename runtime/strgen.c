@@ -41,7 +41,7 @@
 #include "cfsysline.h"
 
 /* definitions for objects we access */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(ruleset)
 
@@ -168,7 +168,7 @@ finalize_it:
 
 PROTOTYPEobjDestruct(strgen);
 BEGINobjDestruct(strgen) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(strgen)
+CODESTARTobjDestruct(strgen);
 	dbgprintf("destructing strgen '%s'\n", pThis->pName);
 	free(pThis->pName);
 ENDobjDestruct(strgen)
@@ -213,7 +213,7 @@ SetModPtr(strgen_t *pThis, modInfo_t *pMod)
 /* queryInterface function-- rgerhards, 2009-11-03
  */
 BEGINobjQueryInterface(strgen)
-CODESTARTobjQueryInterface(strgen)
+CODESTARTobjQueryInterface(strgen);
 	if(pIf->ifVersion != strgenCURR_IF_VERSION) { /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}

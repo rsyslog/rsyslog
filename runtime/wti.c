@@ -9,7 +9,7 @@
  * (and in the web doc set on https://www.rsyslog.com/doc/). Be sure to read it
  * if you are getting aquainted to the object.
  *
- * Copyright 2008-2019 Adiscon GmbH.
+ * Copyright 2008-2025 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -50,13 +50,11 @@
 #include "rsconf.h"
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(glbl)
 
 pthread_key_t thrd_wti_key;
 
-
-/* forward-definitions */
 
 /* methods */
 
@@ -237,7 +235,7 @@ finalize_it:
 
 /* Destructor */
 BEGINobjDestruct(wti) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(wti)
+CODESTARTobjDestruct(wti);
 	if(wtiGetState(pThis) != WRKTHRD_STOPPED) {
 		DBGPRINTF("%s: rsyslog bug: worker not stopped during shutdown\n",
 			wtiGetDbgHdr(pThis));
@@ -484,7 +482,11 @@ PRAGMA_DIAGNOSTIC_POP
 
 
 /* some simple object access methods */
-DEFpropSetMeth(wti, pWtp, wtp_t*)
+rsRetVal wtiSetpWtp(wti_t *pThis, wtp_t *pVal)
+{
+	pThis->pWtp = pVal;
+	return RS_RET_OK;
+}
 
 /* set the debug header message
  * The passed-in string is duplicated. So if the caller does not need
@@ -550,7 +552,7 @@ static rsRetVal wtiQueryInterface(interface_t __attribute__((unused)) *i) { retu
 /* exit our class
  */
 BEGINObjClassExit(wti, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(wti)
+CODESTARTObjClassExit(wti);
 	/* release objects we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
 	pthread_key_delete(thrd_wti_key);

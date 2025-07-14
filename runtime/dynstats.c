@@ -29,7 +29,7 @@
 #include "unicode-helper.h"
 
 /* definitions for objects we access */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(statsobj)
 
 #define DYNSTATS_PARAM_NAME "name"

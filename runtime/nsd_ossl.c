@@ -54,10 +54,10 @@
 #include "rsconf.h"
 
 MODULE_TYPE_LIB
-MODULE_TYPE_KEEP
+MODULE_TYPE_KEEP;
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 DEFobjCurrIf(datetime)
@@ -494,7 +494,7 @@ ENDobjConstruct(nsd_ossl)
 /* destructor for the nsd_ossl object */
 PROTOTYPEobjDestruct(nsd_ossl);
 BEGINobjDestruct(nsd_ossl) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(nsd_ossl)
+CODESTARTobjDestruct(nsd_ossl);
 	DBGPRINTF("nsd_ossl_destruct: [%p] Mode %d\n", pThis, pThis->iMode);
 	if(pThis->iMode == 1) {
 		osslEndSess(pThis);
@@ -1493,7 +1493,7 @@ finalize_it:
 
 /* queryInterface function */
 BEGINobjQueryInterface(nsd_ossl)
-CODESTARTobjQueryInterface(nsd_ossl)
+CODESTARTobjQueryInterface(nsd_ossl);
 	if(pIf->ifVersion != nsdCURR_IF_VERSION) {/* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
@@ -1541,7 +1541,7 @@ ENDobjQueryInterface(nsd_ossl)
 /* exit our class
  */
 BEGINObjClassExit(nsd_ossl, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(nsd_ossl)
+CODESTARTObjClassExit(nsd_ossl);
 	/* release objects we no longer need */
 	objRelease(net_ossl, CORE_COMPONENT);
 	objRelease(nsd_ptcp, LM_NSD_PTCP_FILENAME);
@@ -1568,20 +1568,20 @@ ENDObjClassInit(nsd_ossl)
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	nsd_osslClassExit();
 	net_osslClassExit();
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_LIB_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	/* Initialize all classes that are in our module - this includes ourselfs */

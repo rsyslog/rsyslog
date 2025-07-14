@@ -38,10 +38,10 @@
 #include "rsconf.h"
 
 MODULE_TYPE_LIB
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_NOKEEP;
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(netstrm)
 
@@ -92,7 +92,7 @@ ENDobjConstruct(netstrms)
 
 /* destructor for the netstrms object */
 BEGINobjDestruct(netstrms) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(netstrms)
+CODESTARTobjDestruct(netstrms);
 	/* and now we must release our driver, if we got one. We use the presence of
 	 * a driver name string as load indicator (because we also need that string
 	 * to release the driver
@@ -464,7 +464,7 @@ finalize_it:
 
 /* queryInterface function */
 BEGINobjQueryInterface(netstrms)
-CODESTARTobjQueryInterface(netstrms)
+CODESTARTobjQueryInterface(netstrms);
 	if(pIf->ifVersion != netstrmsCURR_IF_VERSION) {/* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
@@ -510,7 +510,7 @@ ENDobjQueryInterface(netstrms)
 
 /* exit our class */
 BEGINObjClassExit(netstrms, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(netstrms)
+CODESTARTObjClassExit(netstrms);
 	/* release objects we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(netstrm, DONT_LOAD_LIB);
@@ -533,20 +533,20 @@ ENDObjClassInit(netstrms)
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	netstrmsClassExit();
 	netstrmClassExit(); /* we use this object, so we must exit it after we are finished */
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_LIB_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	/* Initialize all classes that are in our module - this includes ourselfs */

@@ -39,7 +39,7 @@
 #include "var.h"
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 
 
 /* Standard-Constructor
@@ -64,7 +64,7 @@ varConstructFinalize(var_t __attribute__((unused)) *pThis)
 
 /* destructor for the var object */
 BEGINobjDestruct(var) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(var)
+CODESTARTobjDestruct(var);
 	if(pThis->pcsName != NULL)
 		rsCStrDestruct(&pThis->pcsName);
 	if(pThis->varType == VARTYPE_STR) {
@@ -76,7 +76,7 @@ ENDobjDestruct(var)
 
 /* DebugPrint support for the var object */
 BEGINobjDebugPrint(var) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDebugPrint(var)
+CODESTARTobjDebugPrint(var);
 	switch(pThis->varType) {
 		case VARTYPE_STR:
 			dbgoprint((obj_t*) pThis, "type: cstr, val '%s'\n", rsCStrGetSzStrNoNULL(pThis->val.pStr));
@@ -97,7 +97,7 @@ ENDobjDebugPrint(var)
  * rgerhards, 2008-02-21
  */
 BEGINobjQueryInterface(var)
-CODESTARTobjQueryInterface(var)
+CODESTARTobjQueryInterface(var);
 	if(pIf->ifVersion != varCURR_IF_VERSION) { /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
