@@ -1,5 +1,18 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-07-15: build: adjust version tag used for daily stable build process
+  Change version tag from ".master" to ".daily" to better reflect its
+  use in the automated daily stable build process. This also aligns with
+  the ongoing effort to eliminate use of the "master" name throughout the
+  repository.
+  see also: https://github.com/rsyslog/rsyslog/issues/5786
+- 2025-07-15: imfile: add new module/input parameter deleteStateOnFileMove
+  When enabled, state files are deleted when the watched file is moved or
+  rotated away.  This prevents accumulation of stale state files from
+  rotated logs.  By default the state file is kept. Does not change
+  default behavior for existing inputs.  The config option is available as
+  per-input and per-module parameter.
+  Thanks to Attila Lakatos for the patch.
 - 2025-07-15: refactor: modernize macro definitions to support formatting and clarity
   This commit performs a broad modernization of widely used rsyslog
   macros to align with modern C practices and support automated
@@ -26,6 +39,33 @@ Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
   lays the foundation for a robust, automated style normalization
   system.
   See also: https://github.com/rsyslog/rsyslog/issues/5747
+- 2025-07-12: Document statsobj architecture and formats
+  Adds Doxygen headers to runtime/statsobj.c and runtime/statsobj.h.
+  The comments describe how statistics objects store counters and how
+  GetAllStatsLines emits data. Supported output formats such as
+  legacy, JSON, CEE, JSON_ES and Prometheus are listed. This clarifies
+  the stats subsystem for future maintainers.
+  AI-Agent: Codex, Gemini
+- 2025-07-12: Improve TLS handshake error logging (#5762)
+  Log remote port on TLS handshake errors, this has been implemented
+  at the netstream driver layer and is now easy to support by all drivers.
+- 2025-07-12: merge: import rsyslog-docker into packaging/docker/
+  This commit integrates the full history of the
+  rsyslog/rsyslog-docker GitHub repository into the main rsyslog
+  monorepo under packaging/docker/.
+  The merge was performed on 2025-07-12 using 'git subtree add' to
+  preserve all commit history in a clean and non-interleaved form.
+  No changes were made to the imported content during this commit.
+  Rationale:
+  - Unify Docker artifacts with the core rsyslog development
+  - Reduce repository fragmentation
+  - Improve discoverability and cross-component development
+  - Simplify CI integration and contributor workflow
+  The original rsyslog-docker repository will be archived in
+  read-only mode. All future work on Docker images and related
+  tooling will continue under packaging/docker/ in this repository.
+  This merge is part of a broader effort to consolidate related
+  rsyslog projects into a complete, maintainable monorepo.
 - 2025-07-11: scripting: add endswith operator to property filters and RainerScript
   This Implements suffix comparison similar to startswith. Note that we
   do intentionally not use libestr functions in order to speed up adaption.
