@@ -1,5 +1,31 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-07-15: refactor: modernize macro definitions to support formatting and clarity
+  This commit performs a broad modernization of widely used rsyslog
+  macros to align with modern C practices and support automated
+  formatting tools like clang-format. The changes focus on improving
+  syntactic regularity, readability, and tooling compatibility — without
+  altering behavior.
+  Macros refactored in this commit now follow a consistent,
+  statement-like form with explicit trailing semicolons. Where
+  applicable, macro blocks that define module interfaces (`queryEtryPt`)
+  have been updated to use simple `if` statements instead of `else if`
+  chains. While this slightly increases evaluation time, the affected
+  functions are only called once per module during load time to register
+  supported interfaces — making the performance cost irrelevant in
+  practice.
+  These improvements serve multiple purposes:
+  - Enable reliable clang-format usage without mangling macro logic
+  - Simplify reasoning about macro-expanded code for human readers
+  - Reduce style drift and merge conflicts
+  - Facilitate development for contributors using assistive tools
+  - Support future formatting pipelines using:
+    1. `clang-format`
+    2. a post-fixup normalization script
+  This general modernization reduces macro misuse, improves DX, and
+  lays the foundation for a robust, automated style normalization
+  system.
+  See also: https://github.com/rsyslog/rsyslog/issues/5747
 - 2025-07-11: scripting: add endswith operator to property filters and RainerScript
   This Implements suffix comparison similar to startswith. Note that we
   do intentionally not use libestr functions in order to speed up adaption.
