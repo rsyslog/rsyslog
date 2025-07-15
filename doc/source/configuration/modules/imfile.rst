@@ -110,6 +110,20 @@ This sets the default value for input *timeout* parameters. See there
 for exact meaning. Parameter value is the number of seconds.
 
 
+deleteStateOnFileMove
+^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+If set to **on**, the state file for a monitored file is removed when that file
+is moved or rotated away. By default the state file is kept.
+
+
 timeoutGranularity
 ^^^^^^^^^^^^^^^^^^
 
@@ -559,6 +573,23 @@ knows exactly why this is required.
 For historical reasons, this parameter has an alias called
 `removeStateOnDelete`. This is to provide backward compatibility.
 Newer installations should use `deleteStateOnFileDelete` only.
+
+deleteStateOnFileMove
+^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "inherits from module parameter", "no", "none"
+
+This parameter controls if state files are deleted when their associated
+main file is moved or renamed. By default, this parameter inherits its
+value from the module-level `deleteStateOnFileMove` parameter. When set
+to "on", the state file will be automatically cleaned up when the file
+is moved, preventing orphaned state files.
+
 
 Ruleset
 ^^^^^^^
