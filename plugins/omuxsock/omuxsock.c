@@ -44,13 +44,13 @@
 #include "errmsg.h"
 #include "unicode-helper.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omuxsock")
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 
 #define INVLD_SOCK -1
@@ -96,7 +96,7 @@ static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current ex
 static pthread_mutex_t mutDoAct = PTHREAD_MUTEX_INITIALIZER;
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars
+CODESTARTinitConfVars;
 	cs.tplName = NULL;
 	cs.sockName = NULL;
 ENDinitConfVars
@@ -158,7 +158,7 @@ closeSocket(instanceData *pData)
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	pModConf->tplName = NULL;
@@ -167,7 +167,7 @@ ENDbeginCnfLoad
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
@@ -201,7 +201,7 @@ finalize_it:
 ENDsetModCnf
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	loadModConf = NULL; /* done loading */
 	/* free legacy config vars */
 	free(cs.tplName);
@@ -209,50 +209,50 @@ CODESTARTendCnfLoad
 ENDendCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	free(pModConf->tplName);
 ENDfreeCnf
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 	pData->sock = INVLD_SOCK;
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURERepeatedMsgReduction)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	/* final cleanup */
 	closeSocket(pData);
 	free(pData->sockName);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	DBGPRINTF("%s", pData->sockName);
 ENDdbgPrintInstInfo
 
@@ -337,7 +337,7 @@ static rsRetVal doTryResume(instanceData *pData)
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 	iRet = doTryResume(pWrkrData->pData);
 ENDtryResume
 
@@ -345,7 +345,7 @@ BEGINdoAction
 	char *psz = NULL; /* temporary buffering */
 	register unsigned l;
 	int iMaxLine;
-CODESTARTdoAction
+CODESTARTdoAction;
 	pthread_mutex_lock(&mutDoAct);
 	CHKiRet(doTryResume(pWrkrData->pData));
 
@@ -366,7 +366,7 @@ ENDdoAction
 
 
 BEGINparseSelectorAct
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 
 	/* first check if this config line is actually for us */
@@ -409,7 +409,7 @@ freeConfigVars(void)
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	/* release what we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
 
@@ -418,11 +418,11 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
 ENDqueryEtryPt
 
 
@@ -437,8 +437,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 
 BEGINmodInit()
-CODESTARTmodInit
-INITLegCnfVars
+CODESTARTmodInit;
+INITLegCnfVars;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

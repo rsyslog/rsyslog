@@ -86,8 +86,8 @@
 #include "datetime.h"
 #include "rsconf.h"
 
-MODULE_TYPE_INPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_INPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imsolaris")
 
 /* defines */
@@ -95,7 +95,7 @@ MODULE_CNFNAME("imsolaris")
 
 
 /* Module static data */
-DEF_IMOD_STATIC_DATA
+DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(datetime)
@@ -315,33 +315,33 @@ finalize_it:
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 ENDbeginCnfLoad
 
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 ENDendCnfLoad
 
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 ENDcheckCnf
 
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 ENDactivateCnf
 
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 ENDfreeCnf
 
 
 /* This function is called to gather input. */
 BEGINrunInput
-CODESTARTrunInput
+CODESTARTrunInput;
 	/* this is an endless loop - it is terminated when the thread is
 	 * signalled to do so. This, however, is handled by the framework,
 	 * right into the sleep below.
@@ -365,7 +365,7 @@ ENDrunInput
 
 
 BEGINwillRun
-CODESTARTwillRun
+CODESTARTwillRun;
 	/* we need to create the inputName property (only once during our lifetime) */
 	CHKiRet(prop.Construct(&pInputName));
 	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imsolaris"), sizeof("imsolaris") - 1));
@@ -380,7 +380,7 @@ ENDwillRun
 
 
 BEGINafterRun
-CODESTARTafterRun
+CODESTARTafterRun;
 	/* do cleanup here */
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
@@ -389,7 +389,7 @@ ENDafterRun
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	sun_delete_doorfiles();
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
@@ -398,16 +398,16 @@ ENDmodExit
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURENonCancelInputTermination)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_IMOD_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_IMOD_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp,
@@ -418,7 +418,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp,
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

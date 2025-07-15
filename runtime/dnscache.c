@@ -67,7 +67,7 @@ typedef struct dnscache_s dnscache_t;
 
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 static dnscache_t dnsCache;

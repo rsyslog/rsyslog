@@ -77,8 +77,8 @@
 #  define lseek64(fd, offset, whence) lseek(fd, offset, whence)
 #endif
 
-MODULE_TYPE_INPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_INPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imfile")
 
 /* defines */
@@ -1934,7 +1934,7 @@ BEGINnewInpInst
 	struct cnfparamvals *pvals;
 	instanceConf_t *inst;
 	int i;
-CODESTARTnewInpInst
+CODESTARTnewInpInst;
 	DBGPRINTF("newInpInst (imfile)\n");
 
 	pvals = nvlstGetParams(lst, &inppblk, NULL);
@@ -2064,7 +2064,7 @@ CODE_STD_FINALIZERnewInpInst
 ENDnewInpInst
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	currModConf = pModConf;
 	pModConf->pConf = pConf;
@@ -2098,7 +2098,7 @@ ENDbeginCnfLoad
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	#if defined(HAVE_PORT_SOURCE_FILE)
 		/* this means we are on Solaris, so inotify is not there */
 		loadModConf->opMode = OPMODE_FEN;
@@ -2178,7 +2178,7 @@ ENDsetModCnf
 
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	if(!loadModConf->configSetViaV2Method) {
 		/* persist module-specific settings from legacy config system */
 		loadModConf->iPollInterval = cs.iPollInterval;
@@ -2197,7 +2197,7 @@ ENDendCnfLoad
 
 BEGINcheckCnf
 	instanceConf_t *inst;
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 	if(getStateFileDir() == NULL) {
 		/* this intentionally is an error message */
 		LogError(0, RS_RET_NO_WRKDIR_SET,
@@ -2223,7 +2223,7 @@ ENDcheckCnf
  */
 BEGINactivateCnf
 	instanceConf_t *inst;
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	runModConf = pModConf;
 	currModConf = pModConf;
 	if(runModConf->root == NULL) {
@@ -2257,7 +2257,7 @@ ENDactivateCnf
 
 BEGINfreeCnf
 	instanceConf_t *inst, *del;
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	fs_node_destroy(pModConf->conf_tree);
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free(inst->pszBindRuleset);
@@ -2673,7 +2673,7 @@ do_fen(void)
  * you exit from this function, you violate the interface specification!
  */
 BEGINrunInput
-CODESTARTrunInput
+CODESTARTrunInput;
 	#if defined(OS_SOLARIS) && defined (HAVE_PORT_SOURCE_FILE) /* use FEN on Solaris! */
 	if(runModConf->opMode == OPMODE_INOTIFY) {
 		DBGPRINTF("auto-adjusting 'inotify' mode to 'fen' on Solaris\n");
@@ -2706,7 +2706,7 @@ ENDrunInput
  * proceed and call the runInput() entry point.
  */
 BEGINwillRun
-CODESTARTwillRun
+CODESTARTwillRun;
 	/* we need to create the inputName property (only once during our lifetime) */
 	CHKiRet(prop.Construct(&pInputName));
 	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imfile"), sizeof("imfile") - 1));
@@ -2846,14 +2846,14 @@ finalize_it:
  * shall free any resources and prepare the module for unload.
  */
 BEGINafterRun
-CODESTARTafterRun
+CODESTARTafterRun;
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
 ENDafterRun
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURENonCancelInputTermination)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
@@ -2864,7 +2864,7 @@ ENDisCompatibleWithFeature
  * any code here.
  */
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	/* release objects we used */
 	objRelease(strm, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
@@ -2879,12 +2879,12 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_IMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_IMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
@@ -2934,7 +2934,7 @@ std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, insta
  * set some variable defaults.
  */
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

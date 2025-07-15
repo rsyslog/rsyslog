@@ -56,15 +56,15 @@
 #include "errmsg.h"
 #include "rsconf.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(gssutil)
 DEFobjCurrIf(tcpclt)
@@ -121,17 +121,17 @@ getFwdSyslogPt(instanceData *pData)
 }
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURERepeatedMsgReduction)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
@@ -139,7 +139,7 @@ ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 OM_uint32 maj_stat, min_stat;
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	switch (pData->eDestState) {
 		case eDestFORW:
 		case eDestFORW_SUSP:
@@ -174,11 +174,11 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	printf("%s", pData->f_hname);
 ENDdbgPrintInstInfo
 
@@ -390,7 +390,7 @@ static rsRetVal doTryResume(instanceData *pData)
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 	pthread_mutex_lock(&mutDoAct);
 	iRet = doTryResume(pWrkrData->pData);
 	pthread_mutex_unlock(&mutDoAct);
@@ -401,7 +401,7 @@ BEGINdoAction
 	register unsigned l;
 	int iMaxLine;
 	instanceData *pData;
-CODESTARTdoAction
+CODESTARTdoAction;
 	pthread_mutex_lock(&mutDoAct);
 	pData = pWrkrData->pData;
 	switch (pData->eDestState) {
@@ -489,7 +489,7 @@ BEGINparseSelectorAct
 	int bErr;
 	struct addrinfo hints, *res;
 	TCPFRAMINGMODE tcp_framing = TCP_FRAMING_OCTET_STUFFING;
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* first check if this config line is actually for us
 	 * The first test [*p == '>'] can be skipped if a module shall only
@@ -650,7 +650,7 @@ ENDparseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(gssutil, LM_GSSUTIL_FILENAME);
 	objRelease(tcpclt, LM_TCPCLT_FILENAME);
@@ -663,9 +663,9 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
 ENDqueryEtryPt
 
 
@@ -702,7 +702,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

@@ -1301,7 +1301,7 @@ finalize_it:
  */
 PROTOTYPEObjQueryInterface(obj);
 BEGINobjQueryInterface(obj)
-CODESTARTobjQueryInterface(obj)
+CODESTARTobjQueryInterface(obj);
 	if(pIf->ifVersion != objCURR_IF_VERSION) { /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}

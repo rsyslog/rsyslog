@@ -61,13 +61,13 @@
 #include "statsobj.h"
 #include "datetime.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omfwd")
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 DEFobjCurrIf(netstrms)
@@ -280,7 +280,7 @@ static rsRetVal initTCP(wrkrInstanceData_t *pWrkrData);
 
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars
+CODESTARTinitConfVars;
 	cs.pszTplName = NULL; /* name of the default template to use */
 	cs.pszStrmDrvr = NULL; /* name of the stream driver to use */
 	cs.iStrmDrvrMode = 0; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
@@ -395,7 +395,7 @@ DestructTCPInstanceData(wrkrInstanceData_t *pWrkrData)
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	pModConf->tplName = NULL;
@@ -404,7 +404,7 @@ ENDbeginCnfLoad
 
 BEGINsetModCnf
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	const struct cnfparamvals *const __restrict__ pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -449,7 +449,7 @@ finalize_it:
 ENDsetModCnf
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	loadModConf = NULL; /* done loading */
 	/* free legacy config vars */
 	free(cs.pszTplName);
@@ -457,21 +457,21 @@ CODESTARTendCnfLoad
 ENDendCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	free(pModConf->tplName);
 ENDfreeCnf
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 	/* We always have at least one target and port */
 	pData->nTargets = 1;
 	pData->nActiveTargets = 0;
@@ -490,7 +490,7 @@ ENDcreateInstance
 /* Among others, all worker-specific targets are initialized here.
 */
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 	time_t ttNow;
 
 	datetime.GetTime(&ttNow);
@@ -523,14 +523,14 @@ ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURERepeatedMsgReduction)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	free(pData->pszStrmDrvr);
 	free(pData->pszStrmDrvrAuthMode);
 	free(pData->pszStrmDrvrPermitExpiredCerts);
@@ -568,7 +568,7 @@ ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 	LogMsg(0, RS_RET_DEBUG, LOG_DEBUG, "omfwd: [wrkr %u/%" PRIuPTR "] Destructing worker instance",
 		pWrkrData->wrkrID, (uintptr_t) pthread_self());
 
@@ -585,7 +585,7 @@ ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	dbgprintf("omfwd\n");
 ENDdbgPrintInstInfo
 
@@ -1302,7 +1302,7 @@ finalize_it:
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 	iRet = poolTryResume(pWrkrData);
 	countActiveTargets(pWrkrData);
 	const int nActiveTargets = ATOMIC_FETCH_32BIT(&pWrkrData->pData->nActiveTargets,
@@ -1316,7 +1316,7 @@ ENDtryResume
 
 
 BEGINbeginTransaction
-CODESTARTbeginTransaction
+CODESTARTbeginTransaction;
 	dbgprintf("omfwd: beginTransaction\n");
 	/* note: we need to try resume so that we are at least at the start
 	 * of the transaction aware of target states. It is not useful to
@@ -1417,7 +1417,7 @@ finalize_it:
 BEGINcommitTransaction
 	unsigned i;
 	char namebuf[264]; /* 256 for FQDN, 5 for port and 3 for transport => 264 */
-CODESTARTcommitTransaction
+CODESTARTcommitTransaction;
 	/* if needed, rebind first. This ensure we can deliver to the rebound addresses.
 	 * Note that rebind requires reconnect to the new targets. This is done by the
 	 * poolTryResume(), which needs to be made in any case.
@@ -1678,7 +1678,7 @@ BEGINnewActInst
 	int i;
 	rsRetVal localRet;
 	int complevel = -1;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	DBGPRINTF("newActInst (omfwd)\n");
 
 	pvals = nvlstGetParams(lst, &actpblk, NULL);
@@ -1924,7 +1924,7 @@ CODESTARTnewActInst
 		}
 	}
 
-	CODE_STD_STRING_REQUESTnewActInst(1)
+	CODE_STD_STRING_REQUESTnewActInst(1);
 
 	tplToUse = ustrdup((pData->tplName == NULL) ? getDfltTpl() : pData->tplName);
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_NO_RQD_TPL_OPTS));
@@ -1951,7 +1951,7 @@ CODESTARTnewActInst
 
 	setupInstStatsCtrs(pData);
 
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
@@ -1962,7 +1962,7 @@ BEGINparseSelectorAct
 	rsRetVal localRet;
 	struct addrinfo;
 	TCPFRAMINGMODE tcp_framing = TCP_FRAMING_OCTET_STUFFING;
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(*p != '@')
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
@@ -2148,7 +2148,7 @@ freeConfigVars(void)
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	/* release what we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(net, LM_NET_FILENAME);
@@ -2161,12 +2161,12 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMODTX_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMODTX_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
@@ -2193,8 +2193,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 
 BEGINmodInit(Fwd)
-CODESTARTmodInit
-INITLegCnfVars
+CODESTARTmodInit;
+INITLegCnfVars;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

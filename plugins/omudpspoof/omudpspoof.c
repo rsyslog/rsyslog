@@ -78,13 +78,13 @@
 #define __FAVOR_BSD 1
 
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omudpspoof")
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 
@@ -156,7 +156,7 @@ static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current l
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars
+CODESTARTinitConfVars;
 	cs.tplName = NULL;
 	cs.pszSourceNameTemplate = NULL;
 	cs.pszTargetHost = NULL;
@@ -239,7 +239,7 @@ static inline uchar *getFwdPt(instanceData *pData)
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	pModConf->tplName = NULL;
@@ -248,7 +248,7 @@ ENDbeginCnfLoad
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
@@ -282,7 +282,7 @@ finalize_it:
 ENDsetModCnf
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	loadModConf = NULL; /* done loading */
 	/* free legacy config vars */
 	free(cs.tplName);
@@ -290,42 +290,42 @@ CODESTARTendCnfLoad
 ENDendCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	free(pModConf->tplName);
 ENDfreeCnf
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 	pData->mtu = 1500;
 	pData->bReportLibnetInitErr = 1;
 ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 	pWrkrData->libnet_handle = NULL;
 	pWrkrData->sourcePort = pData->sourcePortStart;
 ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURERepeatedMsgReduction)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	/* final cleanup */
 	free(pData->tplName);
 	free(pData->port);
@@ -334,7 +334,7 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 	closeUDPSockets(pWrkrData);
 	if(pWrkrData->libnet_handle != NULL)
 		libnet_destroy(pWrkrData->libnet_handle);
@@ -342,7 +342,7 @@ ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	DBGPRINTF("%s", pData->host);
 ENDdbgPrintInstInfo
 
@@ -606,7 +606,7 @@ finalize_it:
 }
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 	iRet = doTryResume(pWrkrData);
 ENDtryResume
 
@@ -614,7 +614,7 @@ BEGINdoAction
 	char *psz; /* temporary buffering */
 	unsigned l;
 	int iMaxLine;
-CODESTARTdoAction
+CODESTARTdoAction;
 	CHKiRet(doTryResume(pWrkrData));
 
 	DBGPRINTF(" %s:%s/omudpspoof, src '%s', msg strt '%.256s'\n", pWrkrData->pData->host,
@@ -648,7 +648,7 @@ BEGINnewActInst
 	struct cnfparamvals *pvals;
 	uchar *tplToUse;
 	int i;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	DBGPRINTF("newActInst (omudpspoof)\n");
 
 	pvals = nvlstGetParams(lst, &actpblk, NULL);
@@ -689,20 +689,20 @@ CODESTARTnewActInst
 			  "param '%s'\n", actpblk.descr[i].name);
 		}
 	}
-	CODE_STD_STRING_REQUESTnewActInst(2)
+	CODE_STD_STRING_REQUESTnewActInst(2);
 
 	tplToUse = ustrdup((pData->tplName == NULL) ? getDfltTpl() : pData->tplName);
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_NO_RQD_TPL_OPTS));
 	CHKiRet(OMSRsetEntry(*ppOMSR, 1, ustrdup(pData->sourceTpl), OMSR_NO_RQD_TPL_OPTS));
 
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINparseSelectorAct
 	uchar *sourceTpl;
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 CODE_STD_STRING_REQUESTparseSelectorAct(2)
 	/* first check if this config line is actually for us */
 	if(strncmp((char*) p, ":omudpspoof:", sizeof(":omudpspoof:") - 1)) {
@@ -756,7 +756,7 @@ freeConfigVars(void)
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	/* destroy the libnet state needed for forged UDP sources */
 	pthread_mutex_destroy(&mutLibnet);
 	/* release what we no longer need */
@@ -767,12 +767,12 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
 ENDqueryEtryPt
 
 
@@ -790,8 +790,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 
 BEGINmodInit()
-CODESTARTmodInit
-INITLegCnfVars
+CODESTARTmodInit;
+INITLegCnfVars;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

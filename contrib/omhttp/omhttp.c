@@ -61,12 +61,12 @@
 #  define O_LARGEFILE 0
 #endif
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omhttp")
 
 /* internal structures */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
 DEFobjCurrIf(statsobj)
@@ -274,7 +274,7 @@ static rsRetVal ATTR_NONNULL()
 appendCompressCtx(wrkrInstanceData_t *pWrkrData, uchar *srcBuf, size_t srcLen);
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 	pData->fdErrFile = -1;
 	pthread_mutex_init(&pData->mutErrFile, NULL);
 	pData->caCertFile = NULL;
@@ -287,7 +287,7 @@ ENDcreateInstance
 
 BEGINcreateWrkrInstance
 uchar **batchData;
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 	PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
 	pWrkrData->curlHeader = NULL;
 	pWrkrData->curlPostHandle = NULL;
@@ -314,14 +314,14 @@ CODESTARTcreateWrkrInstance
 ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURERepeatedMsgReduction)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 	int i;
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	if(pData->fdErrFile != -1)
 		close(pData->fdErrFile);
 	pthread_mutex_destroy(&pData->mutErrFile);
@@ -363,7 +363,7 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 	curlCleanup(pWrkrData);
 
 	free(pWrkrData->restURL);
@@ -385,7 +385,7 @@ ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
 	int i;
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	dbgprintf("omhttp\n");
 	dbgprintf("\ttemplate='%s'\n", pData->tplName);
 	dbgprintf("\tnumServers=%d\n", pData->numServers);
@@ -610,7 +610,7 @@ finalize_it:
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 	DBGPRINTF("omhttp: tryResume called\n");
 	iRet = checkConn(pWrkrData);
 ENDtryResume
@@ -1633,7 +1633,7 @@ finalize_it:
 }
 
 BEGINbeginTransaction
-CODESTARTbeginTransaction
+CODESTARTbeginTransaction;
 	if(!pWrkrData->pData->batchMode) {
 		FINALIZE;
 	}
@@ -1645,7 +1645,7 @@ ENDbeginTransaction
 BEGINdoAction
 size_t nBytes;
 sbool submit;
-CODESTARTdoAction
+CODESTARTdoAction;
 	instanceData *const pData = pWrkrData->pData;
 	uchar *restPath = NULL;
 	STATSCOUNTER_INC(ctrMessagesSubmitted, mutCtrMessagesSubmitted);
@@ -1710,7 +1710,7 @@ ENDdoAction
 
 
 BEGINendTransaction
-CODESTARTendTransaction
+CODESTARTendTransaction;
 	/* End Transaction only if batch data is not empty */
 	if (pWrkrData->batch.nmemb > 0) {
 		CHKiRet(submitBatch(pWrkrData, NULL));
@@ -1981,7 +1981,7 @@ BEGINnewActInst
 	char errStr[1024];
 	char *batchFormatName;
 	int compressionLevel = -1;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -2202,7 +2202,7 @@ CODESTARTnewActInst
 	iNumTpls = 1;
 	if(pData->dynRestPath) ++iNumTpls;
 	DBGPRINTF("omhttp: requesting %d templates\n", iNumTpls);
-	CODE_STD_STRING_REQUESTnewActInst(iNumTpls)
+	CODE_STD_STRING_REQUESTnewActInst(iNumTpls);
 
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ?
 					    " StdJSONFmt" : (char*)pData->tplName),
@@ -2321,7 +2321,7 @@ CODESTARTnewActInst
 		loadModConf->tail = pData;
 	}
 
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 	if (serverParam)
 		free(serverParam);
@@ -2329,7 +2329,7 @@ ENDnewActInst
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	pModConf->root = pModConf->tail = NULL;
@@ -2337,14 +2337,14 @@ ENDbeginCnfLoad
 
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	loadModConf = NULL; /* done loading */
 ENDendCnfLoad
 
 
 BEGINcheckCnf
 	instanceConf_t *inst;
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 	for(inst = pModConf->root ; inst != NULL ; inst = inst->next) {
 		ruleset_t *pRuleset;
 		rsRetVal localRet;
@@ -2363,18 +2363,18 @@ ENDcheckCnf
 
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 ENDactivateCnf
 
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 ENDfreeCnf
 
 
 // HUP handling for the instance...
 BEGINdoHUP
-CODESTARTdoHUP
+CODESTARTdoHUP;
 	pthread_mutex_lock(&pData->mutErrFile);
 	if (pData->fdErrFile != -1) {
 		close(pData->fdErrFile);
@@ -2386,7 +2386,7 @@ ENDdoHUP
 
 // HUP handling for the worker...
 BEGINdoHUPWrkr
-CODESTARTdoHUPWrkr
+CODESTARTdoHUPWrkr;
 	if (pWrkrData->pData->reloadOnHup) {
 		LogMsg(0, NO_ERRCODE, LOG_INFO, "omhttp: received HUP reloading curl handles");
 		curlCleanup(pWrkrData);
@@ -2397,7 +2397,7 @@ ENDdoHUPWrkr
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
 	curl_global_cleanup();
@@ -2410,20 +2410,20 @@ ENDmodExit
 NO_LEGACY_CONF_parseSelectorAct
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 CODEqueryEtryPt_doHUP
 CODEqueryEtryPt_doHUPWrkr /* Load the worker HUP handling code */
 CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
-CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_STD_CONF2_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(prop, CORE_COMPONENT));

@@ -40,12 +40,12 @@
 #include "unicode-helper.h"
 
 MODULE_TYPE_PARSER
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_NOKEEP;
 PARSER_NAME("rsyslog.ciscoios")
 MODULE_CNFNAME("pmciscoios")
 
 /* internal structures */
-DEF_PMOD_STATIC_DATA
+DEF_PMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(parser)
 DEFobjCurrIf(datetime)
@@ -68,7 +68,7 @@ struct instanceConf_s {
 };
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATUREAutomaticSanitazion)
 		iRet = RS_RET_OK;
 	if(eFeat == sFEATUREAutomaticPRIParsing)
@@ -94,7 +94,7 @@ finalize_it:
 
 
 BEGINfreeParserInst
-CODESTARTfreeParserInst
+CODESTARTfreeParserInst;
 	dbgprintf("pmciscoios: free parser instance %p\n", pInst);
 ENDfreeParserInst
 
@@ -102,7 +102,7 @@ ENDfreeParserInst
 BEGINnewParserInst
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTnewParserInst
+CODESTARTnewParserInst;
 	DBGPRINTF("newParserInst (pmciscoios)\n");
 
 	inst = NULL;
@@ -149,7 +149,7 @@ BEGINparse2
 	int iHostname = 0;
 	uchar bufParseTAG[512];
 	uchar bufParseHOSTNAME[CONF_HOSTNAME_MAXSIZE]; /* used by origin */
-CODESTARTparse2
+CODESTARTparse2;
 	DBGPRINTF("Message will now be parsed by pmciscoios\n");
 	assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
@@ -267,7 +267,7 @@ ENDparse2
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	/* release what we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
@@ -276,14 +276,14 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_PMOD2_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_PMOD2_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

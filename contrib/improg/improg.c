@@ -66,8 +66,8 @@
 #include "ratelimit.h"
 #include "stringbuf.h"
 
-MODULE_TYPE_INPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_INPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("improg")
 
 struct instanceConf_s {
@@ -102,7 +102,7 @@ struct modConfData_s {
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
@@ -511,7 +511,7 @@ BEGINnewInpInst
 	struct cnfparamvals *pvals;
 	instanceConf_t *pInst = NULL;
 	int i;
-CODESTARTnewInpInst
+CODESTARTnewInpInst;
 	DBGPRINTF("newInpInst (improg)\n");
 
 	pvals = nvlstGetParams(lst, &inppblk, NULL);
@@ -574,7 +574,7 @@ CODE_STD_FINALIZERnewInpInst
 ENDnewInpInst
 
 BEGINwillRun
-CODESTARTwillRun
+CODESTARTwillRun;
 	/* we need to create the inputName property (only once during our lifetime) */
 	CHKiRet(prop.Construct(&pInputName));
 	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("improg"), sizeof("improg") - 1));
@@ -586,7 +586,7 @@ BEGINrunInput
 	struct timeval tv;
 	int retval;
 	instanceConf_t *pInst;
-CODESTARTrunInput
+CODESTARTrunInput;
 	FD_ZERO(&rfds);
 
 	for(pInst = confRoot ; pInst != NULL ; pInst = pInst->next) {
@@ -632,7 +632,7 @@ ENDrunInput
  * CODEqueryEtryPt_STD_IMOD_QUERIES
  */
 BEGINafterRun
-CODESTARTafterRun
+CODESTARTafterRun;
 	instanceConf_t *pInst = confRoot, *nextInst;
 	confRoot = NULL;
 
@@ -665,55 +665,55 @@ CODESTARTafterRun
 ENDafterRun
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURERepeatedMsgReduction) {
 		iRet = RS_RET_OK;
 	}
 ENDisCompatibleWithFeature
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	pModConf->pConf = pConf;
 ENDbeginCnfLoad
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 ENDendCnfLoad
 
 BEGINcheckCnf
 instanceConf_t *pInst;
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 	for(pInst = confRoot ; pInst != NULL ; pInst = pInst->next) {
 		std_checkRuleset(pModConf , pInst);
 	}
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 ENDfreeCnf
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	objRelease(ruleset, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
 ENDmodExit
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_IMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_IMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));

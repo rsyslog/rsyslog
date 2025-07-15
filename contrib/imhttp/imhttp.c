@@ -47,12 +47,12 @@
 #include <apr_base64.h>
 #include <apr_md5.h>
 
-MODULE_TYPE_INPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_INPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imhttp")
 
 /* static data */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
@@ -981,7 +981,7 @@ BEGINnewInpInst
 	struct cnfparamvals *pvals;
 	instanceConf_t *inst;
 	int i;
-CODESTARTnewInpInst
+CODESTARTnewInpInst;
 	DBGPRINTF("newInpInst (imhttp)\n");
 	pvals = nvlstGetParams(lst, &inppblk, NULL);
 	if(pvals == NULL) {
@@ -1041,7 +1041,7 @@ ENDnewInpInst
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	loadModConf->ports.name = NULL;
@@ -1053,7 +1053,7 @@ ENDbeginCnfLoad
 
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "imhttp: error processing module "
@@ -1102,7 +1102,7 @@ ENDsetModCnf
 
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	loadModConf = NULL; /* done loading */
 ENDendCnfLoad
 
@@ -1117,7 +1117,7 @@ std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, insta
 
 BEGINcheckCnf
 	instanceConf_t *inst;
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 	for(inst = pModConf->root ; inst != NULL ; inst = inst->next) {
 		std_checkRuleset(pModConf, inst);
 	}
@@ -1134,7 +1134,7 @@ ENDcheckCnf
 
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	runModConf = pModConf;
 
 	if (!s_httpserv) {
@@ -1222,7 +1222,7 @@ ENDactivateCnf
 
 BEGINfreeCnf
 	instanceConf_t *inst, *del;
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		if (inst->ratelimiter) {
 			ratelimitDestruct(inst->ratelimiter);
@@ -1260,17 +1260,17 @@ ENDfreeCnf
 /* This function is called to gather input.
  */
 BEGINrunInput
-CODESTARTrunInput
+CODESTARTrunInput;
 	runloop();
 ENDrunInput
 
 /* initialize and return if will run or not */
 BEGINwillRun
-CODESTARTwillRun
+CODESTARTwillRun;
 ENDwillRun
 
 BEGINafterRun
-CODESTARTafterRun
+CODESTARTafterRun;
 	if (s_httpserv) {
 		mg_stop(s_httpserv->ctx);
 		mg_exit_library();
@@ -1281,14 +1281,14 @@ ENDafterRun
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	// if(eFeat == sFEATURENonCancelInputTermination)
 	// 	iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	if(pInputName != NULL) {
 		prop.Destruct(&pInputName);
 	}
@@ -1301,17 +1301,17 @@ CODESTARTmodExit
 ENDmodExit
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_IMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_IMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));

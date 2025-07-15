@@ -53,7 +53,7 @@
 
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(netstrm)
 DEFobjCurrIf(prop)
@@ -95,7 +95,7 @@ finalize_it:
 
 /* destructor for the tcps_sess object */
 BEGINobjDestruct(tcps_sess) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(tcps_sess)
+CODESTARTobjDestruct(tcps_sess);
 	if(pThis->pStrm != NULL)
 		netstrm.Destruct(&pThis->pStrm);
 
@@ -114,7 +114,7 @@ ENDobjDestruct(tcps_sess)
 
 /* debugprint for the tcps_sess object */
 BEGINobjDebugPrint(tcps_sess) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDebugPrint(tcps_sess)
+CODESTARTobjDebugPrint(tcps_sess);
 ENDobjDebugPrint(tcps_sess)
 
 
@@ -562,7 +562,7 @@ finalize_it:
  * rgerhards, 2008-02-29
  */
 BEGINobjQueryInterface(tcps_sess)
-CODESTARTobjQueryInterface(tcps_sess)
+CODESTARTobjQueryInterface(tcps_sess);
 	if(pIf->ifVersion != tcps_sessCURR_IF_VERSION) { /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
@@ -597,7 +597,7 @@ ENDobjQueryInterface(tcps_sess)
  * rgerhards, 2008-03-10
  */
 BEGINObjClassExit(tcps_sess, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(tcps_sess)
+CODESTARTObjClassExit(tcps_sess);
 	/* release objects we no longer need */
 	objRelease(netstrm, LM_NETSTRMS_FILENAME);
 	objRelease(datetime, CORE_COMPONENT);

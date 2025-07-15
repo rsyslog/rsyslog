@@ -43,7 +43,7 @@ DEFobjCurrIf(vmprg)
 
 
 BEGINInit
-CODESTARTInit
+CODESTARTInit;
 	pErrObj = "expr"; CHKiRet(objUse(expr, CORE_COMPONENT));
 	pErrObj = "ctok"; CHKiRet(objUse(ctok, CORE_COMPONENT));
 	pErrObj = "ctok_token"; CHKiRet(objUse(ctok_token, CORE_COMPONENT));
@@ -51,7 +51,7 @@ CODESTARTInit
 ENDInit
 
 BEGINExit
-CODESTARTExit
+CODESTARTExit;
 ENDExit
 
 
@@ -237,7 +237,7 @@ BEGINTest
 	glob_t testFiles;
 	size_t i = 0;
 	struct stat fileInfo;
-CODESTARTTest
+CODESTARTTest;
 	glob("*.rstest", GLOB_MARK, NULL, &testFiles);
 
 	for(i = 0; i < testFiles.gl_pathc; i++) {

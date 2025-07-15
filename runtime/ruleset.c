@@ -53,7 +53,7 @@
 
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(parser)
 
 /* tables for interfacing with the v6 config system (as far as we need to) */
@@ -831,7 +831,7 @@ finalize_it:
 
 /* destructor for the ruleset object */
 BEGINobjDestruct(ruleset) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(ruleset)
+CODESTARTobjDestruct(ruleset);
 	DBGPRINTF("destructing ruleset %p, name %p\n", pThis, pThis->pszName);
 	if(pThis->pQueue != NULL) {
 		qqueueDestruct(&pThis->pQueue);
@@ -911,7 +911,7 @@ rulesetDestructForLinkedList(void *pData)
 
 /* debugprint for the ruleset object */
 BEGINobjDebugPrint(ruleset) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDebugPrint(ruleset)
+CODESTARTobjDebugPrint(ruleset);
 	dbgoprint((obj_t*) pThis, "rsyslog ruleset %s:\n", pThis->pszName);
 	cnfstmtPrint(pThis->root, 0);
 	dbgoprint((obj_t*) pThis, "ruleset %s assigned parser list:\n", pThis->pszName);
@@ -1140,7 +1140,7 @@ finalize_it:
  * rgerhards, 2008-02-21
  */
 BEGINobjQueryInterface(ruleset)
-CODESTARTobjQueryInterface(ruleset)
+CODESTARTobjQueryInterface(ruleset);
 	if(pIf->ifVersion != rulesetCURR_IF_VERSION) { /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}

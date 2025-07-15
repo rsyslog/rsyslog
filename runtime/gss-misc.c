@@ -52,10 +52,10 @@
 #include "unlimited_select.h"
 
 MODULE_TYPE_LIB
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_NOKEEP;
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(glbl)
 
 static void display_status_(char *m, OM_uint32 code, int type)
@@ -252,7 +252,7 @@ static int send_token(int s, gss_buffer_t tok)
  * rgerhards, 2008-02-29
  */
 BEGINobjQueryInterface(gssutil)
-CODESTARTobjQueryInterface(gssutil)
+CODESTARTobjQueryInterface(gssutil);
 	if(pIf->ifVersion != gssutilCURR_IF_VERSION) { /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
@@ -275,7 +275,7 @@ ENDobjQueryInterface(gssutil)
  * rgerhards, 2008-03-10
  */
 BEGINObjClassExit(gssutil, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(gssutil)
+CODESTARTObjClassExit(gssutil);
 	/* release objects we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
 ENDObjClassExit(gssutil)
@@ -295,19 +295,19 @@ ENDObjClassInit(gssutil)
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	gssutilClassExit();
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_LIB_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	/* Initialize all classes that are in our module - this includes ourselfs */

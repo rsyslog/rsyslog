@@ -62,13 +62,13 @@
 #include "rsconf.h"
 
 MODULE_TYPE_PARSER
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_NOKEEP;
 PARSER_NAME("rsyslog.snare")
 MODULE_CNFNAME("pmsnare")
 
 /* internal structures
  */
-DEF_PMOD_STATIC_DATA
+DEF_PMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(parser)
 DEFobjCurrIf(datetime)
@@ -138,7 +138,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
 BEGINnewParserInst
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTnewParserInst
+CODESTARTnewParserInst;
 	DBGPRINTF("newParserInst (pmsnare)\n");
 	inst = NULL;
 	CHKiRet(createInstance(&inst));
@@ -188,12 +188,12 @@ CODE_STD_FINALIZERnewParserInst
 ENDnewParserInst
 
 BEGINfreeParserInst
-CODESTARTfreeParserInst
+CODESTARTfreeParserInst;
 	dbgprintf("pmsnare: free parser instance %p\n", pInst);
 ENDfreeParserInst
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATUREAutomaticSanitazion)
 		iRet = RS_RET_OK;
 	if(eFeat == sFEATUREAutomaticPRIParsing)
@@ -202,20 +202,20 @@ ENDisCompatibleWithFeature
 
 /* Interface with the global config. */
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	modConf = pModConf;
 	pModConf->pConf = pConf;
 ENDbeginCnfLoad
 
 BEGINsetModCnf
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	/* Could use module-globals here, but not global globals. */
 	(void) lst;
 ENDsetModCnf
 
 BEGINendCnfLoad
 	instanceConf_t *inst;
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	dbgprintf("pmsnare: Begin endCnfLoad\n");
 	/* Loop through each parser instance and apply global settings to any option that hasn't been overridden.
 	 * This can't be done any earlier because the config wasn't fully loaded until now. */
@@ -254,16 +254,16 @@ CODESTARTendCnfLoad
 ENDendCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 ENDactivateCnf
 
 BEGINfreeCnf
 	instanceConf_t *inst, *del;
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	for(inst = modInstances->root ; inst != NULL ; ) {
 		del = inst;
 		inst = inst->next;
@@ -277,7 +277,7 @@ BEGINparse2
 	int lenMsg;
 	int snaremessage; /* 0 means not a snare message, otherwise it's the index of the tab after the tag  */
 
-CODESTARTparse2
+CODESTARTparse2;
 	dbgprintf("Message will now be parsed by fix Snare parser.\n");
 	assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
@@ -411,7 +411,7 @@ finalize_it:
 ENDparse2
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	/* release what we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(parser, CORE_COMPONENT);
@@ -419,16 +419,16 @@ CODESTARTmodExit
 ENDmodExit
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_MOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_STD_PMOD2_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_MOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_STD_PMOD2_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

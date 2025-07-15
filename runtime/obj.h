@@ -21,7 +21,7 @@
  *
  * pThis always references to a pointer of the object.
  *
- * Copyright 2008-2024 Adiscon GmbH.
+ * Copyright 2008-2025 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -60,11 +60,11 @@
 	}
 
 #define objSerializeSCALAR_VAR(strm, propName, propType, var) \
-	CHKiRet(obj.SerializeProp(strm, (uchar*) #propName, PROPTYPE_##propType, (void*) &var));
+	CHKiRet(obj.SerializeProp(strm, (uchar*) #propName, PROPTYPE_##propType, (void*) &var))
 #define objSerializeSCALAR(strm, propName, propType) \
-	CHKiRet(obj.SerializeProp(strm, (uchar*) #propName, PROPTYPE_##propType, (void*) &pThis->propName));
+	CHKiRet(obj.SerializeProp(strm, (uchar*) #propName, PROPTYPE_##propType, (void*) &pThis->propName))
 #define objSerializePTR(strm, propName, propType) \
-	CHKiRet(obj.SerializeProp(strm, (uchar*) #propName, PROPTYPE_##propType, (void*) pThis->propName));
+	CHKiRet(obj.SerializeProp(strm, (uchar*) #propName, PROPTYPE_##propType, (void*) pThis->propName))
 #define DEFobjStaticHelpers \
 	static objInfo_t __attribute__((unused)) *pObjInfoOBJ = NULL; \
 	DEFobjCurrIf(obj)

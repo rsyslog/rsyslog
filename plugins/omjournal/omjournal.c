@@ -47,12 +47,12 @@
 #include <sys/uio.h>
 #include "parserif.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omjournal")
 
 
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 
 /* config variables */
 
@@ -81,52 +81,52 @@ struct modConfData_s {
 static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 ENDbeginCnfLoad
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 ENDendCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 ENDfreeCnf
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURERepeatedMsgReduction)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	free(pData->tplName);
 ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
 static inline void
@@ -138,7 +138,7 @@ setInstParamDefaults(instanceData *pData)
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	DBGPRINTF("newActInst (mmjournal)\n");
 	pvals = nvlstGetParams(lst, &actpblk, NULL);
 	if(pvals == NULL) {
@@ -151,7 +151,7 @@ CODESTARTnewActInst
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
 
-	CODE_STD_STRING_REQUESTnewActInst(1)
+	CODE_STD_STRING_REQUESTnewActInst(1);
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
@@ -171,18 +171,18 @@ CODESTARTnewActInst
 				     OMSR_TPL_AS_JSON));
 	}
 
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 ENDdbgPrintInstInfo
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 ENDtryResume
 
 
@@ -287,7 +287,7 @@ send_template_message(struct json_object *const __restrict__ json)
 
 BEGINdoAction_NoStrings
 	instanceData *pData;
-CODESTARTdoAction
+CODESTARTdoAction;
 	pData = pWrkrData->pData;
 
 	if (pData->tplName == NULL) {
@@ -299,24 +299,24 @@ ENDdoAction
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 ENDmodExit
 
 
 NO_LEGACY_CONF_parseSelectorAct
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
 ENDqueryEtryPt
 
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("omjournal: module compiled with rsyslog version %s.\n", VERSION);

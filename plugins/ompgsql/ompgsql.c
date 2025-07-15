@@ -49,14 +49,14 @@
 #include "errmsg.h"
 #include "parserif.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("ompgsql")
 
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 
 typedef struct _instanceData {
 	char            srv[MAXHOSTNAMELEN+1];          /* IP or hostname of DB server*/
@@ -103,24 +103,24 @@ static struct cnfparamblk actpblk =
 
 
 BEGINinitConfVars     /* (re)set config variables to default values */
-CODESTARTinitConfVars
+CODESTARTinitConfVars;
 ENDinitConfVars
 
 
 static rsRetVal writePgSQL(uchar *psz, wrkrInstanceData_t *pData);
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 	pWrkrData->f_hpgsql = NULL;
 ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if (eFeat == sFEATURERepeatedMsgReduction)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
@@ -140,17 +140,17 @@ static void closePgSQL(wrkrInstanceData_t *pWrkrData)
 }
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	free(pData->tpl);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 	closePgSQL(pWrkrData);
 ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	/* nothing special here */
 ENDdbgPrintInstInfo
 
@@ -320,7 +320,7 @@ finalize_it:
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 	if (pWrkrData->f_hpgsql == NULL) {
 		iRet = initPgSQL(pWrkrData, 1);
 		if (iRet == RS_RET_OK) {
@@ -337,12 +337,12 @@ ENDtryResume
 
 
 BEGINbeginTransaction
-CODESTARTbeginTransaction
+CODESTARTbeginTransaction;
 ENDbeginTransaction
 
 
 BEGINcommitTransaction
-CODESTARTcommitTransaction
+CODESTARTcommitTransaction;
 	dbgprintf("ompgsql: beginTransaction\n");
 	if (pWrkrData->f_hpgsql == NULL)
 		initPgSQL(pWrkrData, 0);
@@ -397,7 +397,7 @@ BEGINnewActInst
 	int i;
 	char *cstr;
 	size_t len;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -490,13 +490,13 @@ CODESTARTnewActInst
 		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*) strdup((char*) pData->tpl), OMSR_RQD_TPL_OPT_SQL));
 	}
 
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 BEGINparseSelectorAct
 	int iPgSQLPropErr = 0;
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* first check if this config line is actually for us
 	 * The first test [*p == '>'] can be skipped if a module shall only
@@ -562,22 +562,22 @@ CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMODTX_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMODTX_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 /* CODEqueryEtryPt_TXIF_OMOD_QUERIES currently no TX support! */ /* we support the transactional interface! */
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-INITLegCnfVars
+CODESTARTmodInit;
+INITLegCnfVars;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);

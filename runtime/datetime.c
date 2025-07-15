@@ -46,7 +46,7 @@
 #include "timezones.h"
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 
 /* the following table of ten powers saves us some computation */
 static const int tenPowers[6] = { 1, 10, 100, 1000, 10000, 100000 };
@@ -1376,7 +1376,7 @@ formatUnixTimeFromTime_t(time_t unixtime, const char *format, char *pBuf,
  * rgerhards, 2008-03-05
  */
 BEGINobjQueryInterface(datetime)
-CODESTARTobjQueryInterface(datetime)
+CODESTARTobjQueryInterface(datetime);
 	if(pIf->ifVersion != datetimeCURR_IF_VERSION) { /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}

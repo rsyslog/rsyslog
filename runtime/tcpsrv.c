@@ -81,14 +81,14 @@
 
 PRAGMA_INGORE_Wswitch_enum
 MODULE_TYPE_LIB
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_NOKEEP;
 
 /* defines */
 #define TCPSESS_MAX_DEFAULT 200 /* default for nbr of tcp sessions if no number is given */
 #define TCPLSTN_MAX_DEFAULT 20 /* default for nbr of listeners */
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(conf)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(ruleset)
@@ -1629,7 +1629,7 @@ finalize_it:
 
 /* destructor for the tcpsrv object */
 BEGINobjDestruct(tcpsrv) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(tcpsrv)
+CODESTARTobjDestruct(tcpsrv);
 	if(pThis->OnDestruct != NULL)
 		pThis->OnDestruct(pThis->pUsr);
 
@@ -1654,7 +1654,7 @@ ENDobjDestruct(tcpsrv)
 
 /* debugprint for the tcpsrv object */
 BEGINobjDebugPrint(tcpsrv) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDebugPrint(tcpsrv)
+CODESTARTobjDebugPrint(tcpsrv);
 ENDobjDebugPrint(tcpsrv)
 
 /* set functions */
@@ -2154,7 +2154,7 @@ SetNumWrkr(tcpsrv_t *pThis, const int numWrkr)
  * rgerhards, 2008-02-29
  */
 BEGINobjQueryInterface(tcpsrv)
-CODESTARTobjQueryInterface(tcpsrv)
+CODESTARTobjQueryInterface(tcpsrv);
 	if(pIf->ifVersion != tcpsrvCURR_IF_VERSION) { /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
@@ -2229,7 +2229,7 @@ ENDobjQueryInterface(tcpsrv)
  * rgerhards, 2008-03-10
  */
 BEGINObjClassExit(tcpsrv, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(tcpsrv)
+CODESTARTObjClassExit(tcpsrv);
 	/* release objects we no longer need */
 	objRelease(tcps_sess, DONT_LOAD_LIB);
 	objRelease(conf, CORE_COMPONENT);
@@ -2268,7 +2268,7 @@ ENDObjClassInit(tcpsrv)
 /* --------------- here now comes the plumbing that makes as a library module --------------- */
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	/* de-init in reverse order! */
 	tcpsrvClassExit();
 	tcps_sessClassExit();
@@ -2276,13 +2276,13 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_LIB_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(tcps_sessClassInit(pModInfo));

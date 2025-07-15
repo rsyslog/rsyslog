@@ -66,12 +66,12 @@
 #include "net.h"
 #include "parserif.h"
 
-MODULE_TYPE_INPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_INPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imtcp")
 
 /* static data */
-DEF_IMOD_STATIC_DATA
+DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(tcpsrv)
 DEFobjCurrIf(tcps_sess)
 DEFobjCurrIf(net)
@@ -613,7 +613,7 @@ BEGINnewInpInst
 	struct cnfparamvals *pvals;
 	instanceConf_t *inst;
 	int i;
-CODESTARTnewInpInst
+CODESTARTnewInpInst;
 	DBGPRINTF("newInpInst (imtcp)\n");
 
 	pvals = nvlstGetParams(lst, &inppblk, NULL);
@@ -741,7 +741,7 @@ ENDnewInpInst
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	/* init our settings */
@@ -785,7 +785,7 @@ ENDbeginCnfLoad
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "imtcp: error processing module "
@@ -897,7 +897,7 @@ ENDsetModCnf
 
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	if(!loadModConf->configSetViaV2Method) {
 		/* persist module-specific settings from legacy config system */
 		pModConf->iTCPSessMax = cs.iTCPSessMax;
@@ -944,7 +944,7 @@ std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, insta
 
 BEGINcheckCnf
 	instanceConf_t *inst;
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 	for(inst = pModConf->root ; inst != NULL ; inst = inst->next) {
 		std_checkRuleset(pModConf, inst);
 		if(inst->cnf_params->bSuppOctetFram == FRAMING_UNSET)
@@ -960,7 +960,7 @@ ENDcheckCnf
 
 BEGINactivateCnfPrePrivDrop
 	instanceConf_t *inst;
-CODESTARTactivateCnfPrePrivDrop
+CODESTARTactivateCnfPrePrivDrop;
 	runModConf = pModConf;
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 		addListner(runModConf, inst);
@@ -977,14 +977,14 @@ ENDactivateCnfPrePrivDrop
 
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	/* sorry, nothing to do here... */
 ENDactivateCnf
 
 
 BEGINfreeCnf
 	instanceConf_t *inst, *del;
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	free(pModConf->gnutlsPriorityString);
 	free(pModConf->pszStrmDrvrName);
 	free(pModConf->pszStrmDrvrAuthMode);
@@ -1077,7 +1077,7 @@ stopSrvWrkr(tcpsrv_etry_t *const etry)
 /* This function is called to gather input.
  */
 BEGINrunInput
-CODESTARTrunInput
+CODESTARTrunInput;
 	tcpsrv_etry_t *etry = tcpsrv_root->next;
 	while(etry != NULL) {
 		startSrvWrkr(etry);
@@ -1097,13 +1097,13 @@ ENDrunInput
 
 /* initialize and return if will run or not */
 BEGINwillRun
-CODESTARTwillRun
+CODESTARTwillRun;
 	net.PrintAllowedSenders(2); /* TCP */
 ENDwillRun
 
 
 BEGINafterRun
-CODESTARTafterRun
+CODESTARTafterRun;
 	tcpsrv_etry_t *etry = tcpsrv_root;
 	tcpsrv_etry_t *del;
 	while(etry != NULL) {
@@ -1117,14 +1117,14 @@ ENDafterRun
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURENonCancelInputTermination)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	/* release objects we used */
 	objRelease(net, LM_NET_FILENAME);
 	objRelease(netstrm, LM_NETSTRMS_FILENAME);
@@ -1163,18 +1163,18 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_IMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
-CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_IMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES;
+CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	tcpsrv_root = NULL;

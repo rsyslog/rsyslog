@@ -58,12 +58,12 @@
 #include "ratelimit.h"
 
 
-MODULE_TYPE_INPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_INPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imjournal")
 
 /* Module static data */
-DEF_IMOD_STATIC_DATA
+DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(parser)
@@ -1032,7 +1032,7 @@ stopSrvWrkr(journal_etry_t *const etry)
 }
 
 BEGINrunInput
-CODESTARTrunInput
+CODESTARTrunInput;
 	CHKiRet(ratelimitNew(&ratelimiter, "imjournal", NULL));
 	dbgprintf("imjournal: ratelimiting burst %u, interval %u\n", cs.ratelimitBurst,
 		  cs.ratelimitInterval);
@@ -1066,7 +1066,7 @@ ENDrunInput
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	bLegacyCnfModGlobalsPermitted = 1;
@@ -1089,7 +1089,7 @@ ENDbeginCnfLoad
 
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	/* bad trick to handle old and new style config all in old-style var */
 	if(cs.stateFile != NULL && cs.stateFile[0] != '/') {
 		char *new_stateFile;
@@ -1107,7 +1107,7 @@ ENDendCnfLoad
 
 BEGINcheckCnf
 	instanceConf_t *inst;
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 	for(inst = pModConf->root ; inst != NULL ; inst = inst->next) {
 		std_checkRuleset(pModConf, inst);
 	}
@@ -1118,7 +1118,7 @@ BEGINactivateCnf
 	instanceConf_t *inst;
 	instanceConf_t *root_inst = NULL;
 	u_int8_t index = 0;
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	runModConf = pModConf;
 
 	/* support statistic gathering */
@@ -1224,7 +1224,7 @@ ENDactivateCnf
 
 BEGINfreeCnf
 	instanceConf_t *inst, *del;
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free(inst->pszBindRuleset);
 		free(inst->stateFile);
@@ -1241,7 +1241,7 @@ ENDfreeCnf
 /* open journal */
 BEGINwillRun
 	journal_etry_t *etry = journal_root;
-CODESTARTwillRun
+CODESTARTwillRun;
 	while(etry != NULL) {
 		CHKiRet(openJournal(etry->journalContext));
 		etry = etry->next;
@@ -1253,7 +1253,7 @@ ENDwillRun
 BEGINafterRun
 	journal_etry_t *etry = journal_root;
 	journal_etry_t *del;
-CODESTARTafterRun
+CODESTARTafterRun;
 	while(etry != NULL) {
 		char *stateFile = cs.stateFile;
 		if (etry->stateFile) {
@@ -1277,7 +1277,7 @@ ENDafterRun
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
 	if(pLocalHostIP != NULL)
@@ -1297,7 +1297,7 @@ ENDmodExit
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if (pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
@@ -1403,7 +1403,7 @@ BEGINnewInpInst
 	struct cnfparamvals *pvals;
 	instanceConf_t *inst;
 	int i;
-CODESTARTnewInpInst
+CODESTARTnewInpInst;
 	DBGPRINTF("newInpInst (imjournal)\n");
 
 	pvals = nvlstGetParams(lst, &inppblk, NULL);
@@ -1438,19 +1438,19 @@ ENDnewInpInst
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURENonCancelInputTermination)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_IMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_IMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
@@ -1462,7 +1462,7 @@ std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, insta
 }
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));

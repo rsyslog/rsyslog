@@ -53,8 +53,8 @@
 #include "parserif.h"
 
 
-MODULE_TYPE_INPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_INPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("impstats")
 
 /* defines */
@@ -63,7 +63,7 @@ MODULE_CNFNAME("impstats")
 #define DEFAULT_SEVERITY 6 /* info */
 
 /* Module static data */
-DEF_IMOD_STATIC_DATA
+DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(statsobj)
@@ -136,7 +136,7 @@ static statsobj_t *statsobj_resources;
 static pthread_mutex_t hup_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	prop.Destruct(&pInputName);
 	/* release objects we used */
 	objRelease(glbl, CORE_COMPONENT);
@@ -147,7 +147,7 @@ ENDmodExit
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURENonCancelInputTermination)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
@@ -330,7 +330,7 @@ generateStatsMsgs(void)
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	/* init our settings */
@@ -355,7 +355,7 @@ BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	char *mode;
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
@@ -428,7 +428,7 @@ ENDsetModCnf
 
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	if(!loadModConf->configSetViaV2Method) {
 		/* persist module-specific settings from legacy config system */
 		loadModConf->iStatsInterval = cs.iStatsInterval;
@@ -478,7 +478,7 @@ typedef struct _instanceData {
 	int dummy;
 } instanceData;
 BEGINdoHUP
-CODESTARTdoHUP
+CODESTARTdoHUP;
 	DBGPRINTF("impstats: received HUP\n")
 	pthread_mutex_lock(&hup_mutex);
 	if(runModConf->logfd != -1) {
@@ -491,7 +491,7 @@ ENDdoHUP
 
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 	if(pModConf->iStatsInterval == 0) {
 		LogError(0, NO_ERRCODE, "impstats: stats interval zero not permitted, using "
 				"default of %d seconds", DEFAULT_STATS_PERIOD);
@@ -503,7 +503,7 @@ ENDcheckCnf
 
 BEGINactivateCnf
 	rsRetVal localRet;
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	runModConf = pModConf;
 	DBGPRINTF("impstats: stats interval %d seconds, reset %d, logToSyslog %d, logFile %s\n",
 		  runModConf->iStatsInterval, runModConf->bResetCtrs, runModConf->bLogToSyslog,
@@ -549,7 +549,7 @@ ENDactivateCnf
 
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	if(runModConf->logfd != -1)
 		close(runModConf->logfd);
 	free(runModConf->logfile);
@@ -558,7 +558,7 @@ ENDfreeCnf
 
 
 BEGINrunInput
-CODESTARTrunInput
+CODESTARTrunInput;
 	/* this is an endless loop - it is terminated when the thread is
 	 * signalled to do so. This, however, is handled by the framework,
 	 * right into the sleep below. Note that we DELIBERATLY output
@@ -578,21 +578,21 @@ ENDrunInput
 
 
 BEGINwillRun
-CODESTARTwillRun
+CODESTARTwillRun;
 ENDwillRun
 
 
 BEGINafterRun
-CODESTARTafterRun
+CODESTARTafterRun;
 ENDafterRun
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_IMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_IMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 CODEqueryEtryPt_doHUP
 ENDqueryEtryPt
 
@@ -604,7 +604,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("impstats version %s loading\n", VERSION);

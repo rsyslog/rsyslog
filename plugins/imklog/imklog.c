@@ -65,12 +65,12 @@
 #include "ruleset.h"
 
 
-MODULE_TYPE_INPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_INPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imklog")
 
 /* Module static data */
-DEF_IMOD_STATIC_DATA
+DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(ruleset)
 DEFobjCurrIf(glbl)
@@ -313,7 +313,7 @@ int klog_getMaxLine(void)
 
 
 BEGINrunInput
-CODESTARTrunInput
+CODESTARTrunInput;
 	/* this is an endless loop - it is terminated when the thread is
 	 * signalled to do so. This, however, is handled by the framework,
 	 * right into the sleep below.
@@ -330,7 +330,7 @@ ENDrunInput
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	/* init our settings */
@@ -353,7 +353,7 @@ ENDbeginCnfLoad
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
@@ -405,7 +405,7 @@ ENDsetModCnf
 
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	if(!loadModConf->configSetViaV2Method) {
 		/* persist module-specific settings from legacy config system */
 		loadModConf->bPermitNonKernel = cs.bPermitNonKernel;
@@ -428,20 +428,20 @@ ENDendCnfLoad
 
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 	std_mod_checkRuleset(pModConf);
 ENDcheckCnf
 
 
 BEGINactivateCnfPrePrivDrop
-CODESTARTactivateCnfPrePrivDrop
+CODESTARTactivateCnfPrePrivDrop;
 	runModConf = pModConf;
 	iRet = klogWillRunPrePrivDrop(runModConf);
 ENDactivateCnfPrePrivDrop
 
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	CHKiRet(ratelimitNew(&runModConf->ratelimiter, "imklog", NULL));
 	ratelimitSetLinuxLike(runModConf->ratelimiter,
 			      runModConf->ratelimitInterval,
@@ -451,27 +451,27 @@ ENDactivateCnf
 
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	free(pModConf->pszBindRuleset);
 ENDfreeCnf
 
 
 BEGINwillRun
-CODESTARTwillRun
+CODESTARTwillRun;
 	pLocalHostIP = glbl.GetLocalHostIP();
 	iRet = klogWillRunPostPrivDrop(runModConf);
 ENDwillRun
 
 
 BEGINafterRun
-CODESTARTafterRun
+CODESTARTafterRun;
 	ratelimitDestruct(runModConf->ratelimiter);
 	iRet = klogAfterRun(runModConf);
 ENDafterRun
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
 
@@ -485,11 +485,11 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_IMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_IMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES;
 ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
@@ -506,7 +506,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 }
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(datetime, CORE_COMPONENT));

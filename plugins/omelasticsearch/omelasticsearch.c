@@ -59,12 +59,12 @@
 #  define O_LARGEFILE 0
 #endif
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omelasticsearch")
 
 /* internal structures */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(statsobj)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
@@ -236,7 +236,7 @@ static struct cnfparamblk actpblk =
 static rsRetVal curlSetup(wrkrInstanceData_t *pWrkrData);
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 	int r;
 	pData->fdErrFile = -1;
 	if((r = pthread_mutex_init(&pData->mutErrFile, NULL)) != 0) {
@@ -256,7 +256,7 @@ finalize_it:
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 	PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
 	pWrkrData->curlHeader = NULL;
 	pWrkrData->curlPostHandle = NULL;
@@ -281,14 +281,14 @@ CODESTARTcreateWrkrInstance
 ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURERepeatedMsgReduction)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 BEGINfreeInstance
 	int i;
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	if(pData->fdErrFile != -1)
 		close(pData->fdErrFile);
 
@@ -335,7 +335,7 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 	if(pWrkrData->curlHeader != NULL) {
 		curl_slist_free_all(pWrkrData->curlHeader);
 		pWrkrData->curlHeader = NULL;
@@ -358,7 +358,7 @@ ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
 	int i;
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	dbgprintf("omelasticsearch\n");
 	dbgprintf("\ttemplate='%s'\n", pData->tplName);
 	dbgprintf("\tnumServers=%d\n", pData->numServers);
@@ -563,7 +563,7 @@ finalize_it:
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 	DBGPRINTF("omelasticsearch: tryResume called\n");
 	iRet = checkConn(pWrkrData);
 ENDtryResume
@@ -1690,7 +1690,7 @@ finalize_it:
 }
 
 BEGINbeginTransaction
-CODESTARTbeginTransaction
+CODESTARTbeginTransaction;
 	if(!pWrkrData->pData->bulkmode) {
 		FINALIZE;
 	}
@@ -1700,7 +1700,7 @@ finalize_it:
 ENDbeginTransaction
 
 BEGINdoAction
-CODESTARTdoAction
+CODESTARTdoAction;
 	STATSCOUNTER_INC(indexSubmit, mutIndexSubmit);
 
 	if(pWrkrData->pData->bulkmode) {
@@ -1731,7 +1731,7 @@ ENDdoAction
 
 
 BEGINendTransaction
-CODESTARTendTransaction
+CODESTARTendTransaction;
 	/* End Transaction only if batch data is not empty */
 	if (pWrkrData->batch.data != NULL && pWrkrData->batch.nmemb > 0) {
 		CHKiRet(submitBatch(pWrkrData));
@@ -1888,7 +1888,7 @@ BEGINnewActInst
 	int iNumTpls;
 	FILE *fp;
 	char errStr[1024];
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -2064,7 +2064,7 @@ CODESTARTnewActInst
 	if(pData->dynBulkId) ++iNumTpls;
 	if(pData->dynPipelineName) ++iNumTpls;
 	DBGPRINTF("omelasticsearch: requesting %d templates\n", iNumTpls);
-	CODE_STD_STRING_REQUESTnewActInst(iNumTpls)
+	CODE_STD_STRING_REQUESTnewActInst(iNumTpls);
 
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ?
 					    " StdJSONFmt" : (char*)pData->tplName),
@@ -2169,7 +2169,7 @@ CODESTARTnewActInst
 		loadModConf->tail = pData;
 	}
 
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 	if (serverParam)
 		free(serverParam);
@@ -2177,7 +2177,7 @@ ENDnewActInst
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	pModConf->root = pModConf->tail = NULL;
@@ -2185,14 +2185,14 @@ ENDbeginCnfLoad
 
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	loadModConf = NULL; /* done loading */
 ENDendCnfLoad
 
 
 BEGINcheckCnf
 	instanceConf_t *inst;
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 	for(inst = pModConf->root ; inst != NULL ; inst = inst->next) {
 		ruleset_t *pRuleset;
 		rsRetVal localRet;
@@ -2211,17 +2211,17 @@ ENDcheckCnf
 
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 ENDactivateCnf
 
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 ENDfreeCnf
 
 
 BEGINdoHUP
-CODESTARTdoHUP
+CODESTARTdoHUP;
 	pthread_mutex_lock(&pData->mutErrFile);
 	if(pData->fdErrFile != -1) {
 		close(pData->fdErrFile);
@@ -2232,7 +2232,7 @@ ENDdoHUP
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
 	curl_global_cleanup();
@@ -2245,19 +2245,19 @@ ENDmodExit
 NO_LEGACY_CONF_parseSelectorAct
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 CODEqueryEtryPt_doHUP
 CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
-CODEqueryEtryPt_STD_CONF2_QUERIES
+CODEqueryEtryPt_STD_CONF2_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(statsobj, CORE_COMPONENT));

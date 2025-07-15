@@ -44,7 +44,7 @@
 #define PERCTILE_STATS_LOG(...) do { if(_DEBUG) fprintf(stderr, __VA_ARGS__); } while(0)
 
 /* definitions for objects we access */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(statsobj)
 DEFobjCurrIf(datetime)
 

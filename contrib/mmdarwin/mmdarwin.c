@@ -48,12 +48,12 @@
 #define INITIAL_BUFFER_SIZE 32
 #define BUFFER_DEFAULT_MAX_SIZE 65536
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("mmdarwin")
 
 DEFobjCurrIf(glbl)
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 
 typedef struct dyn_buffer_t
 {
@@ -514,40 +514,40 @@ const char* get_uuid_object(smsg_t *const pMsg) {
 }
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 pModConf->pConf = pConf;
 ENDbeginCnfLoad
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 ENDendCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	free((void *)pModConf->container);
 ENDfreeCnf
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	DBGPRINTF("%s\n", pData->pSockName);
 ENDdbgPrintInstInfo
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 	pWrkrData->pktSentSocket = 0;
 	pWrkrData->darwinBody.bufferAllocSize = 0;
 	pWrkrData->darwinBody.bufferMaxSize = BUFFER_DEFAULT_MAX_SIZE;
@@ -556,11 +556,11 @@ CODESTARTcreateWrkrInstance
 ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 ENDisCompatibleWithFeature
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	if (pData->fieldList.name != NULL)
 	{
 		for (int i = 0; i < pData->fieldList.nmemb; ++i)
@@ -577,7 +577,7 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 	closeSocket(pWrkrData);
 	free(pWrkrData->darwinBody.buffer);
 ENDfreeWrkrInstance
@@ -585,7 +585,7 @@ ENDfreeWrkrInstance
 BEGINsetModCnf
 struct cnfparamvals *pvals = NULL;
 int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	loadModConf->container = NULL;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if (pvals == NULL)
@@ -647,14 +647,14 @@ static inline void setInstParamDefaults(instanceData *pData)
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	DBGPRINTF("mmdarwin::newActInst::\n");
 	if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL)
 	{
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
-	CODE_STD_STRING_REQUESTnewActInst(1)
+	CODE_STD_STRING_REQUESTnewActInst(1);
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
@@ -789,12 +789,12 @@ CODESTARTnewActInst
 	snprintf(pData->pUUIDKey, sizeKey, "%s!%s", loadModConf->container, JSON_DARWIN_ID);
 	DBGPRINTF("mmdarwin:: uuid key is %s\n", pData->pUUIDKey);
 
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 	iRet = doTryResume(pWrkrData);
 ENDtryResume
 
@@ -805,7 +805,7 @@ BEGINdoAction_NoStrings
 	char *pFieldValue = NULL; /* ponter to the found field value */
 	int fieldsNum = 0; /* number of fields retrieved */
 
-CODESTARTdoAction
+CODESTARTdoAction;
 	DBGPRINTF("mmdarwin::doAction:: beggining action\n");
 	pWrkrData->darwinBody.bufferMsgSize = 0;
 	fieldsNum = 0;
@@ -930,21 +930,21 @@ ENDdoAction
 NO_LEGACY_CONF_parseSelectorAct
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	objRelease(glbl, CORE_COMPONENT);
 ENDmodExit
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
 ENDqueryEtryPt
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	/* we only support the current interface specification */
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr

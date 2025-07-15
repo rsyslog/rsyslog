@@ -44,7 +44,7 @@
 #include "prop.h"
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 
 //extern uchar *propGetSzStr(prop_t *pThis); /* expand inline function here */
 
@@ -59,7 +59,7 @@ ENDobjConstruct(prop)
 /* destructor for the prop object */
 BEGINobjDestruct(prop) /* be sure to specify the object type also in END and CODESTART macros! */
 	int currRefCount;
-CODESTARTobjDestruct(prop)
+CODESTARTobjDestruct(prop);
 	currRefCount = ATOMIC_DEC_AND_FETCH(&pThis->iRefCount, &pThis->mutRefCount);
 	if(currRefCount == 0) {
 		/* (only) in this case we need to actually destruct the object */
@@ -205,7 +205,7 @@ finalize_it:
 
 /* debugprint for the prop object */
 BEGINobjDebugPrint(prop) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDebugPrint(prop)
+CODESTARTobjDebugPrint(prop);
 	dbgprintf("prop object %p - no further debug info implemented\n", pThis);
 ENDobjDebugPrint(prop)
 
@@ -214,7 +214,7 @@ ENDobjDebugPrint(prop)
  * rgerhards, 2008-02-21
  */
 BEGINobjQueryInterface(prop)
-CODESTARTobjQueryInterface(prop)
+CODESTARTobjQueryInterface(prop);
 	if(pIf->ifVersion != propCURR_IF_VERSION) { /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}

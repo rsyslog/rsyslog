@@ -55,10 +55,10 @@
 #include "rsconf.h"
 
 MODULE_TYPE_LIB
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_NOKEEP;
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(net)
 DEFobjCurrIf(netstrms)
@@ -87,7 +87,7 @@ ENDobjConstruct(nsd_ptcp)
 
 /* destructor for the nsd_ptcp object */
 BEGINobjDestruct(nsd_ptcp) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(nsd_ptcp)
+CODESTARTobjDestruct(nsd_ptcp);
 	sockClose(&pThis->sock);
 	if(pThis->remoteIP != NULL)
 		prop.Destruct(&pThis->remoteIP);
@@ -1185,7 +1185,7 @@ GetRemoteIP(nsd_t *pNsd, prop_t **ip)
 
 /* queryInterface function */
 BEGINobjQueryInterface(nsd_ptcp)
-CODESTARTobjQueryInterface(nsd_ptcp)
+CODESTARTobjQueryInterface(nsd_ptcp);
 	if(pIf->ifVersion != nsdCURR_IF_VERSION) {/* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
@@ -1234,7 +1234,7 @@ ENDobjQueryInterface(nsd_ptcp)
 /* exit our class
  */
 BEGINObjClassExit(nsd_ptcp, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(nsd_ptcp)
+CODESTARTObjClassExit(nsd_ptcp);
 	/* release objects we no longer need */
 	objRelease(net, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
@@ -1264,19 +1264,19 @@ ENDObjClassInit(nsd_ptcp)
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	nsd_ptcpClassExit();
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_LIB_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	/* Initialize all classes that are in our module - this includes ourselfs */

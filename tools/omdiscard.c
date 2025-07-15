@@ -37,12 +37,12 @@
 #include "module-template.h"
 #include "errmsg.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 
 typedef struct _instanceData {
 	EMPTY_STRUCT
@@ -54,34 +54,34 @@ typedef struct wrkrInstanceData {
 
 /* we do not need a createInstance()!
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 ENDcreateInstance
 */
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	/* do nothing */
 ENDdbgPrintInstInfo
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	/* we are not compatible with repeated msg reduction feature, so do not allow it */
 ENDisCompatibleWithFeature
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 ENDtryResume
 
 BEGINdoAction_NoStrings
-CODESTARTdoAction
+CODESTARTdoAction;
 	(void)pMsgData; /* Suppress compiler warning on unused var */
 	dbgprintf("\n");
 	iRet = RS_RET_DISCARDMSG;
@@ -89,7 +89,7 @@ ENDdoAction
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	/* we do not have instance data, so we do not need to
 	 * do anything here. -- rgerhards, 2007-07-25
 	 */
@@ -97,12 +97,12 @@ ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
 
 BEGINparseSelectorAct
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 CODE_STD_STRING_REQUESTparseSelectorAct(0)
 	pData = NULL; /* this action does not have any instance data */
 	p = *pp;
@@ -137,19 +137,19 @@ ENDparseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit(Discard)
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 ENDmodInit

@@ -68,13 +68,13 @@
 #include "datetime.h"
 #include "glbl.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omazureeventhubs")
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(strm)
@@ -225,7 +225,7 @@ static struct cnfparamblk actpblk =
 	};
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars
+CODESTARTinitConfVars;
 ENDinitConfVars
 
 /* Helper function to URL encode a string */
@@ -570,7 +570,7 @@ finalize_it:
 }
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 	DBGPRINTF("createInstance[%p]: ENTER\n", pData);
 	pData->amqp_address = NULL;
 	pData->azurehost = NULL;
@@ -582,7 +582,7 @@ ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 	DBGPRINTF("createWrkrInstance[%p]: ENTER\n", pWrkrData);
 	pWrkrData->bIsConnecting = 0;
 	pWrkrData->bIsConnected = 0;
@@ -615,12 +615,12 @@ ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	DBGPRINTF("freeInstance[%p]: ENTER\n", pData);
 
 	if (pData->stats) {
@@ -645,7 +645,7 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 	DBGPRINTF("freeWrkrInstance[%p]: ENTER\n", pWrkrData);
 
 	/* Closing azure first! */
@@ -682,11 +682,11 @@ ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 ENDdbgPrintInstInfo
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 #ifndef NDEBUG
 	DBGPRINTF("omazureeventhubs[%p]: tryResume ENTER\n", pWrkrData);
 #endif
@@ -699,7 +699,7 @@ finalize_it:
 ENDtryResume
 
 BEGINbeginTransaction
-CODESTARTbeginTransaction
+CODESTARTbeginTransaction;
 	/* we have nothing to do to begin a transaction */
 	DBGPRINTF("omazureeventhubs[%p]: beginTransaction ENTER\n", pWrkrData);
 	if (pWrkrData->bIsConnecting == 0 && pWrkrData->bIsConnected == 0) {
@@ -718,7 +718,7 @@ BEGINcommitTransaction
 	unsigned iNeedSubmission;
 	sbool bDone = 0;
 	protonmsg_entry* pMsgEntry = NULL;
-CODESTARTcommitTransaction
+CODESTARTcommitTransaction;
 #ifndef NDEBUG
 	DBGPRINTF("omazureeventhubs[%p]: commitTransaction [%d msgs] ENTER\n", pWrkrData, nParams);
 #endif
@@ -857,7 +857,7 @@ BEGINnewActInst
 	int i;
 	int iNumTpls;
 	DBGPRINTF("newActInst: ENTER\n");
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -1056,13 +1056,13 @@ CODESTARTnewActInst
 		CHKiRet(statsobj.ConstructFinalize(pData->stats));
 	}
 
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	DBGPRINTF("modExit: ENTER\n");
 	statsobj.Destruct(&azureStats);
 	CHKiRet(objRelease(statsobj, CORE_COMPONENT));
@@ -1074,19 +1074,19 @@ ENDmodExit
 
 NO_LEGACY_CONF_parseSelectorAct
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMODTX_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMODTX_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 //	uchar *pTmp;
 	DBGPRINTF("modInit: ENTER\n");
-INITLegCnfVars
+INITLegCnfVars;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
 	/* request objects we use */

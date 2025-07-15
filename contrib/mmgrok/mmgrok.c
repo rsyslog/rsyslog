@@ -23,13 +23,13 @@
 #include "cfsysline.h"
 #include "dirty.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("mmgrok");
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
 
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 
 typedef struct result_s{
 	char *key;
@@ -76,42 +76,42 @@ static struct cnfparamblk actpblk =
 };
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 ENDbeginCnfLoad
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 ENDendCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 ENDfreeCnf
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 ENDisCompatibleWithFeature
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	 free(pData->pszPatternDir);
 	 free(pData->pszMatch);
 	 free(pData->pszSource);
@@ -119,7 +119,7 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
 
@@ -136,13 +136,13 @@ static inline void setInstParamDefaults(instanceData *pData)
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	DBGPRINTF("newActInst (mmgrok)\n");
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
-	CODE_STD_STRING_REQUESTnewActInst(1)
+	CODE_STD_STRING_REQUESTnewActInst(1);
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
@@ -175,17 +175,17 @@ CODESTARTnewActInst
 	if(pData->pszTarget == NULL) {
 		CHKmalloc(pData->pszTarget = strdup("!"));
 	}
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	DBGPRINTF("mmgrok\n");
 ENDdbgPrintInstInfo
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 ENDtryResume
 
 static inline grok_t *CreateGrok(void)
@@ -333,7 +333,7 @@ BEGINdoAction_NoStrings
 	uchar *buf;
 	    instanceData *pData;
 	
-CODESTARTdoAction
+CODESTARTdoAction;
 	    pData = pWrkrData->pData;
 	buf = getMSG(pMsg);
 	    pData->pmsg = pMsg;
@@ -352,7 +352,7 @@ finalize_it:
 ENDdoAction
 
 BEGINparseSelectorAct
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(strncmp((char*) p, ":mmgrok:", sizeof(":mmgrok:") - 1)) {
 		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
@@ -368,16 +368,16 @@ CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
 ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal)
@@ -391,7 +391,7 @@ BEGINmodInit()
 	rsRetVal (*pomsrGetSupportedTplOpts)(unsigned long *pOpts);
 	unsigned long opts;
 	int bMsgPassingSupported;
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
 	DBGPRINTF("mmgrok: module compiled with rsyslog version %s.\n", VERSION);

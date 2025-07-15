@@ -74,7 +74,7 @@
 
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(module)
 DEFobjCurrIf(net)
 DEFobjCurrIf(ruleset)
@@ -570,7 +570,7 @@ GetNbrActActions(rsconf_t *conf, int *piNbrActions)
  * rgerhards, 2008-02-29
  */
 BEGINobjQueryInterface(conf)
-CODESTARTobjQueryInterface(conf)
+CODESTARTobjQueryInterface(conf);
 	if(pIf->ifVersion != confCURR_IF_VERSION) { /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
@@ -604,7 +604,7 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
  * rgerhards, 2008-03-11
  */
 BEGINObjClassExit(conf, OBJ_IS_CORE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(conf)
+CODESTARTObjClassExit(conf);
 	/* free no-longer needed module-global variables */
 	if(pDfltHostnameCmp != NULL) {
 		rsCStrDestruct(&pDfltHostnameCmp);

@@ -37,10 +37,10 @@
 #include "lmcry_ossl.h"
 
 MODULE_TYPE_LIB
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_NOKEEP;
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(glbl)
 
 /* tables for interfacing with the v6 config system */
@@ -79,7 +79,7 @@ ENDobjConstruct(lmcry_ossl)
 
 /* destructor for the lmcry_ossl object */
 BEGINobjDestruct(lmcry_ossl) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(lmcry_ossl)
+CODESTARTobjDestruct(lmcry_ossl);
 	rsosslCtxDel(pThis->ctx);
 ENDobjDestruct(lmcry_ossl)
 
@@ -239,7 +239,7 @@ OnFileClose(void *pF, off64_t offsLogfile)
 }
 
 BEGINobjQueryInterface(lmcry_ossl)
-CODESTARTobjQueryInterface(lmcry_ossl)
+CODESTARTobjQueryInterface(lmcry_ossl);
 	 if(pIf->ifVersion != cryprovCURR_IF_VERSION) {/* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
@@ -258,7 +258,7 @@ ENDobjQueryInterface(lmcry_ossl)
 
 
 BEGINObjClassExit(lmcry_ossl, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(lmcry_ossl)
+CODESTARTObjClassExit(lmcry_ossl);
 	/* release objects we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
 	rsosslExit();
@@ -280,19 +280,19 @@ ENDObjClassInit(lmcry_ossl)
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	lmcry_osslClassExit();
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_LIB_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 	/* Initialize all classes that are in our module - this includes ourselfs */
 	CHKiRet(lmcry_osslClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */

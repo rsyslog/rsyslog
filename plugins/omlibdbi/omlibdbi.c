@@ -54,13 +54,13 @@
 #undef HAVE_DBI_TXSUPP
 /* transaction support disabled in v8 -- TODO: reenable */
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omlibdbi")
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 static int bDbiInitialized = 0;	/* dbi_initialize() can only be called one - this keeps track of it */
 
 typedef struct _instanceData {
@@ -146,7 +146,7 @@ getDfltTpl(void)
 
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars
+CODESTARTinitConfVars;
 	cs.dbiDrvrDir = NULL;
 	cs.drvrName = NULL;
 	cs.host = NULL;
@@ -163,16 +163,16 @@ static dbi_inst dbiInst;
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	/* we do not like repeated message reduction inside the database */
 ENDisCompatibleWithFeature
 
@@ -190,7 +190,7 @@ static void closeConn(instanceData *pData)
 }
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	free(pData->drvrName);
 	free(pData->host);
 	free(pData->usrName);
@@ -199,12 +199,12 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 	closeConn(pWrkrData->pData);
 ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	/* nothing special here */
 ENDdbgPrintInstInfo
 
@@ -360,7 +360,7 @@ finalize_it:
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 	if(pWrkrData->pData->conn == NULL) {
 		iRet = initConn(pWrkrData->pData, 1);
 	}
@@ -368,7 +368,7 @@ ENDtryResume
 
 /* transaction support 2013-03 */
 BEGINbeginTransaction
-CODESTARTbeginTransaction
+CODESTARTbeginTransaction;
 	if(pWrkrData->pData->conn == NULL) {
 		CHKiRet(initConn(pWrkrData->pData, 0));
 	}
@@ -389,7 +389,7 @@ ENDbeginTransaction
 /* end transaction */
 
 BEGINdoAction
-CODESTARTdoAction
+CODESTARTdoAction;
 	pthread_mutex_lock(&mutDoAct);
 	CHKiRet(writeDB(ppString[0], pWrkrData->pData));
 #	ifdef HAVE_DBI_TXSUPP
@@ -403,7 +403,7 @@ ENDdoAction
 
 /* transaction support 2013-03 */
 BEGINendTransaction
-CODESTARTendTransaction
+CODESTARTendTransaction;
 #	ifdef HAVE_DBI_TXSUPP
 	if (dbi_conn_transaction_commit(pData->conn) != 0) {
 		const char *emsg;
@@ -418,7 +418,7 @@ ENDendTransaction
 /* end transaction */
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	pModConf->tplName = NULL;
@@ -428,7 +428,7 @@ ENDbeginCnfLoad
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "omlibdbi: error processing "
@@ -465,7 +465,7 @@ finalize_it:
 ENDsetModCnf
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	loadModConf = NULL; /* done loading */
 	/* free legacy config vars */
 	free(cs.dbiDrvrDir);
@@ -485,16 +485,16 @@ CODESTARTendCnfLoad
 ENDendCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	free(pModConf->tplName);
 	free(pModConf->dbiDrvrDir);
 ENDfreeCnf
@@ -513,14 +513,14 @@ BEGINnewActInst
 	struct cnfparamvals *pvals;
 	uchar *tplToUse;
 	int i;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
-	CODE_STD_STRING_REQUESTnewActInst(1)
+	CODE_STD_STRING_REQUESTnewActInst(1);
 	for(i = 0 ; i < actpblk.nParams ; ++i) {
 		if(!pvals[i].bUsed)
 			continue;
@@ -544,13 +544,13 @@ CODESTARTnewActInst
 
 	tplToUse = (pData->tplName == NULL) ? (uchar*)strdup((char*)getDfltTpl()) : pData->tplName;
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_RQD_TPL_OPT_SQL));
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINparseSelectorAct
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(!strncmp((char*) p, ":omlibdbi:", sizeof(":omlibdbi:") - 1)) {
 		p += sizeof(":omlibdbi:") - 1; /* eat indicator sequence (-1 because of '\0'!) */
@@ -587,7 +587,7 @@ ENDparseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	/* if we initialized libdbi, we now need to cleanup */
 	if(bDbiInitialized) {
 #		ifdef HAVE_DBI_R
@@ -600,12 +600,12 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
 ENDqueryEtryPt
 
@@ -632,8 +632,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 
 BEGINmodInit()
-CODESTARTmodInit
-INITLegCnfVars
+CODESTARTmodInit;
+INITLegCnfVars;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 #	ifndef HAVE_DBI_TXSUPP

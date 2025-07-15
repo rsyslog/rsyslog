@@ -34,10 +34,10 @@
 #include "lmsig_ksi-ls12.h"
 
 MODULE_TYPE_LIB
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_NOKEEP;
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(glbl)
 
 /* tables for interfacing with the v6 config system */
@@ -102,7 +102,7 @@ ENDobjConstruct(lmsig_ksi_ls12)
 
 /* destructor for the lmsig_ksi object */
 BEGINobjDestruct(lmsig_ksi_ls12) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(lmsig_ksi_ls12)
+CODESTARTobjDestruct(lmsig_ksi_ls12);
 	rsksiCtxDel(pThis->ctx);
 ENDobjDestruct(lmsig_ksi_ls12)
 
@@ -297,7 +297,7 @@ OnFileClose(void *pF)
 }
 
 BEGINobjQueryInterface(lmsig_ksi_ls12)
-CODESTARTobjQueryInterface(lmsig_ksi_ls12)
+CODESTARTobjQueryInterface(lmsig_ksi_ls12);
 	if (pIf->ifVersion != sigprovCURR_IF_VERSION) {/* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
@@ -312,7 +312,7 @@ ENDobjQueryInterface(lmsig_ksi_ls12)
 
 
 BEGINObjClassExit(lmsig_ksi_ls12, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(lmsig_ksi_ls12)
+CODESTARTObjClassExit(lmsig_ksi_ls12);
 	/* release objects we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
 ENDObjClassExit(lmsig_ksi_ls12)
@@ -328,19 +328,19 @@ ENDObjClassInit(lmsig_ksi_ls12)
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 lmsig_ksi_ls12ClassExit();
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_LIB_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CHKiRet(lmsig_ksi_ls12ClassInit(pModInfo));
 ENDmodInit

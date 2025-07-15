@@ -67,7 +67,7 @@
 int GatherStats = 0;
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 
 /* doubly linked list of stats objects. Object is automatically linked to it
  * upon construction. Enqueue always happens at the front (simplifies logic).
@@ -816,7 +816,7 @@ checkGoneAwaySenders(const time_t tCurr)
 
 /* destructor for the statsobj object */
 BEGINobjDestruct(statsobj) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(statsobj)
+CODESTARTobjDestruct(statsobj);
 	removeFromObjList(pThis);
 
 	/* destruct counters */
@@ -831,7 +831,7 @@ ENDobjDestruct(statsobj)
 
 /* debugprint for the statsobj object */
 BEGINobjDebugPrint(statsobj) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDebugPrint(statsobj)
+CODESTARTobjDebugPrint(statsobj);
 	dbgoprint((obj_t*) pThis, "statsobj object, currently no state info available\n");
 ENDobjDebugPrint(statsobj)
 
@@ -839,7 +839,7 @@ ENDobjDebugPrint(statsobj)
 /* queryInterface function
  */
 BEGINobjQueryInterface(statsobj)
-CODESTARTobjQueryInterface(statsobj)
+CODESTARTobjQueryInterface(statsobj);
 	if(pIf->ifVersion != statsobjCURR_IF_VERSION) { /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}

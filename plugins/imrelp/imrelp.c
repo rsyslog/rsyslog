@@ -51,12 +51,12 @@
 #include "srUtils.h"
 #include "parserif.h"
 
-MODULE_TYPE_INPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_INPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imrelp")
 
 /* static data */
-DEF_IMOD_STATIC_DATA
+DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(net)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
@@ -512,7 +512,7 @@ BEGINnewInpInst
 	instanceConf_t *inst = NULL;
 	int i,j;
 	FILE *fp;
-CODESTARTnewInpInst
+CODESTARTnewInpInst;
 	DBGPRINTF("newInpInst (imrelp)\n");
 
 	if((pvals = nvlstGetParams(lst, &inppblk, NULL)) == NULL) {
@@ -679,7 +679,7 @@ ENDnewInpInst
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	pModConf->pszBindRuleset = NULL;
@@ -693,7 +693,7 @@ ENDbeginCnfLoad
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
@@ -734,7 +734,7 @@ finalize_it:
 ENDsetModCnf
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	if(loadModConf->pszBindRuleset == NULL) {
 		if((cs.pszBindRuleset == NULL) || (cs.pszBindRuleset[0] == '\0')) {
 			loadModConf->pszBindRuleset = NULL;
@@ -756,7 +756,7 @@ ENDendCnfLoad
 BEGINcheckCnf
 	instanceConf_t *inst;
 	size_t maxMessageSize;
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 	for(inst = pModConf->root ; inst != NULL ; inst = inst->next) {
 		if(inst->pszBindRuleset == NULL && pModConf->pszBindRuleset != NULL) {
 			CHKmalloc(inst->pszBindRuleset = ustrdup(pModConf->pszBindRuleset));
@@ -786,7 +786,7 @@ ENDcheckCnf
 
 BEGINactivateCnfPrePrivDrop
 	instanceConf_t *inst;
-CODESTARTactivateCnfPrePrivDrop
+CODESTARTactivateCnfPrePrivDrop;
 	runModConf = pModConf;
 	for(inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 		addListner(pModConf, inst);
@@ -799,14 +799,14 @@ finalize_it:
 ENDactivateCnfPrePrivDrop
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 ENDactivateCnf
 
 
 BEGINfreeCnf
 	instanceConf_t *inst, *del;
 	int i;
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	for(inst = pModConf->root ; inst != NULL ; ) {
 		free(inst->pszBindPort);
 		if (inst->pszBindAddr != NULL) {
@@ -850,7 +850,7 @@ doSIGTTIN(int __attribute__((unused)) sig)
 BEGINrunInput
 	sigset_t sigSet;
 	struct sigaction sigAct;
-CODESTARTrunInput
+CODESTARTrunInput;
 	/* we want to support non-cancel input termination. To do so, we must signal librelp
 	 * when to stop. As we run on the same thread, we need to register as SIGTTIN handler,
 	 * which will be used to put the terminating condition into librelp.
@@ -870,18 +870,18 @@ ENDrunInput
 
 
 BEGINwillRun
-CODESTARTwillRun
+CODESTARTwillRun;
 ENDwillRun
 
 
 BEGINafterRun
-CODESTARTafterRun
+CODESTARTafterRun;
 	/* do cleanup here */
 ENDafterRun
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	struct sigaction newAct;
 	memset(&newAct, 0, sizeof (newAct));
 	sigemptyset(&newAct.sa_mask);
@@ -910,25 +910,25 @@ resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unus
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURENonCancelInputTermination)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_IMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES
-CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_IMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES;
+CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	pRelpEngine = NULL;

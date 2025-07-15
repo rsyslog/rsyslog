@@ -30,15 +30,15 @@ rsconf_t *ourConf;
 MODULE_TYPE_TESTBENCH
 
 BEGINInit
-CODESTARTInit
+CODESTARTInit;
 ENDInit
 
 BEGINExit
-CODESTARTExit
+CODESTARTExit;
 ENDExit
 
 BEGINTest
-CODESTARTTest
+CODESTARTTest;
 /*finalize_it:*/
 	/* room for custom error reporter, leave blank if not needed */
 ENDTest

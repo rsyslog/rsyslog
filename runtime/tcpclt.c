@@ -45,10 +45,10 @@
 #include "srUtils.h"
 
 MODULE_TYPE_LIB
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_NOKEEP;
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 
 /* Initialize TCP sockets (for sender)
  */
@@ -417,7 +417,7 @@ tcpcltConstructFinalize(tcpclt_t __attribute__((unused)) *pThis)
 
 /* destructor for the tcpclt object */
 BEGINobjDestruct(tcpclt) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(tcpclt)
+CODESTARTobjDestruct(tcpclt);
 	if(pThis->prevMsg != NULL)
 		free(pThis->prevMsg);
 ENDobjDestruct(tcpclt)
@@ -429,7 +429,7 @@ ENDobjDestruct(tcpclt)
  * rgerhards, 2008-03-12
  */
 BEGINobjQueryInterface(tcpclt)
-CODESTARTobjQueryInterface(tcpclt)
+CODESTARTobjQueryInterface(tcpclt);
 	if(pIf->ifVersion != tcpcltCURR_IF_VERSION) { /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}
@@ -462,7 +462,7 @@ ENDobjQueryInterface(tcpclt)
  * rgerhards, 2008-03-10
  */
 BEGINObjClassExit(tcpclt, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(tcpclt)
+CODESTARTObjClassExit(tcpclt);
 	/* release objects we no longer need */
 ENDObjClassExit(tcpclt)
 
@@ -483,20 +483,20 @@ ENDObjClassInit(tcpclt)
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	/* de-init in reverse order! */
 	tcpcltClassExit();
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_LIB_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_LIB_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
 	/* Initialize all classes that are in our module - this includes ourselfs */

@@ -59,13 +59,13 @@
 #	define RELP_DFLT_PT "514"
 #endif
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omrelp")
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 
 #define DFLT_ENABLE_TLS 0
@@ -160,7 +160,7 @@ static struct cnfparamblk actpblk =
 	};
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars
+CODESTARTinitConfVars;
 ENDinitConfVars
 
 /* We may change the implementation to try to lookup the port
@@ -282,26 +282,26 @@ finalize_it:
 }
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	loadModConf = NULL;
 	runModConf = pModConf;
 ENDendCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	free((void*)pModConf->tlslib);
 ENDfreeCnf
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 	pData->sizeWindow = 0;
 	pData->timeout = 90;
 	pData->connTimeout = 10;
@@ -322,7 +322,7 @@ CODESTARTcreateInstance
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 	pWrkrData->pRelpClt = NULL;
 	iRet = doCreateRelpClient(pWrkrData->pData, &pWrkrData->pRelpClt);
 	if(relpCltSetUsrPtr(pWrkrData->pRelpClt, pWrkrData) != RELP_RET_OK)
@@ -333,7 +333,7 @@ ENDcreateWrkrInstance
 
 BEGINfreeInstance
 	int i;
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	free(pData->target);
 	free(pData->port);
 	free(pData->tplName);
@@ -354,7 +354,7 @@ CODESTARTfreeInstance
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 	if(pWrkrData->pRelpClt != NULL)
 		relpEngineCltDestruct(pRelpEngine, &pWrkrData->pRelpClt);
 ENDfreeWrkrInstance
@@ -388,7 +388,7 @@ setInstParamDefaults(instanceData *pData)
 }
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 	pModConf->tlslib = NULL;
@@ -405,7 +405,7 @@ ENDbeginCnfLoad
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		parser_errmsg("imrelp: error processing module config parameters [module(...)]");
@@ -449,7 +449,7 @@ BEGINnewActInst
 	int i,j;
 	FILE *fp;
 	relpClt_t *pRelpClt = NULL;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
@@ -541,7 +541,7 @@ CODESTARTnewActInst
 		}
 	}
 
-	CODE_STD_STRING_REQUESTnewActInst(1)
+	CODE_STD_STRING_REQUESTnewActInst(1);
 
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((pData->tplName == NULL) ?
 			    "RSYSLOG_ForwardFormat" : (char*)pData->tplName),
@@ -551,26 +551,26 @@ CODESTARTnewActInst
 	if(pRelpClt != NULL)
 		relpEngineCltDestruct(pRelpEngine, &pRelpClt);
 
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	if(pvals != NULL)
 		cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURERepeatedMsgReduction)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 BEGINSetShutdownImmdtPtr
-CODESTARTSetShutdownImmdtPtr
+CODESTARTSetShutdownImmdtPtr;
 	relpEngineSetShutdownImmdtPtr(pRelpEngine, pPtr);
 	DBGPRINTF("omrelp: shutdownImmediate ptr now is %p\n", pPtr);
 ENDSetShutdownImmdtPtr
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	dbgprintf("RELP/%s", pData->target);
 ENDdbgPrintInstInfo
 
@@ -621,7 +621,7 @@ finalize_it:
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 	if(pWrkrData->pData->bHadAuthFail) {
 		ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
 	}
@@ -646,7 +646,7 @@ finalize_it:
 }
 
 BEGINbeginTransaction
-CODESTARTbeginTransaction
+CODESTARTbeginTransaction;
 	DBGPRINTF("omrelp: beginTransaction\n");
 	if(!pWrkrData->bIsConnected) {
 		CHKiRet(doConnect(pWrkrData));
@@ -660,7 +660,7 @@ BEGINdoAction
 	size_t lenMsg;
 	relpRetVal ret;
 	instanceData *pData;
-CODESTARTdoAction
+CODESTARTdoAction;
 	pData = pWrkrData->pData;
 	dbgprintf(" %s:%s/RELP\n", pData->target, getRelpPt(pData));
 
@@ -707,7 +707,7 @@ ENDdoAction
 
 
 BEGINendTransaction
-CODESTARTendTransaction
+CODESTARTendTransaction;
 	DBGPRINTF("omrelp: endTransaction, connected %d\n", pWrkrData->bIsConnected);
 	if(pWrkrData->bIsConnected) {
 		relpCltHintBurstEnd(pWrkrData->pRelpClt);
@@ -718,7 +718,7 @@ BEGINparseSelectorAct
 	uchar *q;
 	int i;
 	int bErr;
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	if(!strncmp((char*) p, ":omrelp:", sizeof(":omrelp:") - 1)) {
 		p += sizeof(":omrelp:") - 1; /* eat indicator sequence (-1 because of '\0'!) */
@@ -795,7 +795,7 @@ ENDparseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	relpEngineDestruct(&pRelpEngine);
 
 	/* release what we no longer need */
@@ -804,21 +804,21 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
 CODEqueryEtryPt_TXIF_OMOD_QUERIES
 CODEqueryEtryPt_SetShutdownImmdtPtr
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
-INITLegCnfVars
+CODESTARTmodInit;
+INITLegCnfVars;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	/* tell which objects we need */

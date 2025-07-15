@@ -47,7 +47,7 @@
 #define DEFUPRI		(LOG_USER|LOG_NOTICE)
 
 /* definitions for objects we access */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(ruleset)
@@ -59,7 +59,7 @@ static char hexdigit[16] =
 	 '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 
 BEGINobjDestruct(parser) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(parser)
+CODESTARTobjDestruct(parser);
 	DBGPRINTF("destructing parser '%s'\n", pThis->pName);
 	if(pThis->pInst != NULL) {
 		pThis->pModule->mod.pm.freeParserInst(pThis->pInst);
@@ -694,7 +694,7 @@ destroyMasterParserList(parserList_t *pParserListRoot)
 /* queryInterface function-- rgerhards, 2009-11-03
  */
 BEGINobjQueryInterface(parser)
-CODESTARTobjQueryInterface(parser)
+CODESTARTobjQueryInterface(parser);
 	if(pIf->ifVersion != parserCURR_IF_VERSION) { /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}

@@ -36,7 +36,7 @@
 #include "dirty.h"
 
 /* definitions for objects we access */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
 DEFobjCurrIf(parser)

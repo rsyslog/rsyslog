@@ -4,7 +4,7 @@
  *
  * File begun on 2007-07-25 by RGerhards
  *
- * Copyright 2007-2015 Adiscon GmbH.
+ * Copyright 2007-2025 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -34,25 +34,25 @@
  */
 #define DEF_MOD_STATIC_DATA \
 	static __attribute__((unused)) rsRetVal (*omsdRegCFSLineHdlr)(uchar *pCmdName, int bChainingPermitted, \
-	ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie);
+	ecslCmdHdrlType eType, rsRetVal (*pHdlr)(), void *pData, void *pOwnerCookie)
 
 #define DEF_OMOD_STATIC_DATA \
-	DEF_MOD_STATIC_DATA \
+	DEF_MOD_STATIC_DATA; \
 	DEFobjCurrIf(obj) \
 	static __attribute__((unused)) int bCoreSupportsBatching;
 #define DEF_IMOD_STATIC_DATA \
-	DEF_MOD_STATIC_DATA \
+	DEF_MOD_STATIC_DATA; \
 	DEFobjCurrIf(obj)
 #define DEF_LMOD_STATIC_DATA \
 	DEF_MOD_STATIC_DATA
 #define DEF_PMOD_STATIC_DATA \
-	DEFobjCurrIf(obj) \
+	DEFobjCurrIf(obj); \
 	DEF_MOD_STATIC_DATA
 #define DEF_SMOD_STATIC_DATA \
-	DEFobjCurrIf(obj) \
+	DEFobjCurrIf(obj); \
 	DEF_MOD_STATIC_DATA
 #define DEF_FMOD_STATIC_DATA \
-	DEFobjCurrIf(obj) \
+	DEFobjCurrIf(obj); \
 	DEF_MOD_STATIC_DATA
 
 
@@ -77,7 +77,7 @@ static rsRetVal modGetType(eModType_t *modType) \
 #define MODULE_TYPE_STRGEN MODULE_TYPE(eMOD_STRGEN)
 #define MODULE_TYPE_FUNCTION MODULE_TYPE(eMOD_FUNCTION)
 #define MODULE_TYPE_LIB \
-	DEF_LMOD_STATIC_DATA \
+	DEF_LMOD_STATIC_DATA; \
 	MODULE_TYPE(eMOD_LIB)
 
 /* Macro to define whether the module should be kept dynamically linked.
@@ -405,7 +405,7 @@ static rsRetVal newActInst(uchar __attribute__((unused)) *modName, \
 #define CODESTARTnewActInst \
 
 #define CODE_STD_STRING_REQUESTnewActInst(NumStrReqEntries) \
-	CHKiRet(OMSRconstruct(ppOMSR, NumStrReqEntries));
+	CHKiRet(OMSRconstruct(ppOMSR, NumStrReqEntries))
 
 #define CODE_STD_FINALIZERnewActInst \
 finalize_it:\
@@ -542,227 +542,233 @@ static rsRetVal queryEtryPt(uchar *name, rsRetVal (**pEtryPoint)())\
 	RETiRet;\
 }
 
-/* the following definition is the standard block for queryEtryPt for all types
- * of modules. It should be included in any module, and typically is so by calling
- * the module-type specific macros.
+/** \addtogroup module_entrypoint_blocks
+ *  \{
+ * \brief Standard queryEtryPt block for all module types.
+ *
+ * Must be included in every module. This defines default queries
+ * like `modExit`, `modGetID`, etc.
  */
 #define CODEqueryEtryPt_STD_MOD_QUERIES \
-	if(!strcmp((char*) name, "modExit")) {\
-		*pEtryPoint = modExit;\
-	} else if(!strcmp((char*) name, "modGetID")) {\
-		*pEtryPoint = modGetID;\
-	} else if(!strcmp((char*) name, "getType")) {\
-		*pEtryPoint = modGetType;\
-	} else if(!strcmp((char*) name, "getKeepType")) {\
-		*pEtryPoint = modGetKeepType;\
+	if (!strcmp((char*) name, "modExit")) { \
+		*pEtryPoint = modExit; \
+	} \
+	if (!strcmp((char*) name, "modGetID")) { \
+		*pEtryPoint = modGetID; \
+	} \
+	if (!strcmp((char*) name, "getType")) { \
+		*pEtryPoint = modGetType; \
+	} \
+	if (!strcmp((char*) name, "getKeepType")) { \
+		*pEtryPoint = modGetKeepType; \
 	}
 
-/* the following definition is the standard block for queryEtryPt for output
- * modules WHICH DO NOT SUPPORT TRANSACTIONS.
+/**
+ * \brief Standard block for output modules without transaction support.
  */
 #define CODEqueryEtryPt_STD_OMOD_QUERIES \
 	CODEqueryEtryPt_STD_MOD_QUERIES \
-	else if(!strcmp((char*) name, "doAction")) {\
-		*pEtryPoint = doAction;\
-	} else if(!strcmp((char*) name, "dbgPrintInstInfo")) {\
-		*pEtryPoint = dbgPrintInstInfo;\
-	} else if(!strcmp((char*) name, "freeInstance")) {\
-		*pEtryPoint = freeInstance;\
-	} else if(!strcmp((char*) name, "parseSelectorAct")) {\
-		*pEtryPoint = parseSelectorAct;\
-	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {\
-		*pEtryPoint = isCompatibleWithFeature;\
-	} else if(!strcmp((char*) name, "tryResume")) {\
-		*pEtryPoint = tryResume;\
+	if (!strcmp((char*) name, "doAction")) { \
+		*pEtryPoint = doAction; \
+	} \
+	if (!strcmp((char*) name, "dbgPrintInstInfo")) { \
+		*pEtryPoint = dbgPrintInstInfo; \
+	} \
+	if (!strcmp((char*) name, "freeInstance")) { \
+		*pEtryPoint = freeInstance; \
+	} \
+	if (!strcmp((char*) name, "parseSelectorAct")) { \
+		*pEtryPoint = parseSelectorAct; \
+	} \
+	if (!strcmp((char*) name, "isCompatibleWithFeature")) { \
+		*pEtryPoint = isCompatibleWithFeature; \
+	} \
+	if (!strcmp((char*) name, "tryResume")) { \
+		*pEtryPoint = tryResume; \
 	}
 
-/* the following definition is the standard block for queryEtryPt for output
- * modules using the transaction interface.
+/**
+ * \brief Standard block for output modules using the transaction interface.
  */
 #define CODEqueryEtryPt_STD_OMODTX_QUERIES \
 	CODEqueryEtryPt_STD_MOD_QUERIES \
-	else if(!strcmp((char*) name, "beginTransaction")) {\
-		*pEtryPoint = beginTransaction;\
-	} else if(!strcmp((char*) name, "commitTransaction")) {\
-		*pEtryPoint = commitTransaction;\
-	} else if(!strcmp((char*) name, "dbgPrintInstInfo")) {\
-		*pEtryPoint = dbgPrintInstInfo;\
-	} else if(!strcmp((char*) name, "freeInstance")) {\
-		*pEtryPoint = freeInstance;\
-	} else if(!strcmp((char*) name, "parseSelectorAct")) {\
-		*pEtryPoint = parseSelectorAct;\
-	} else if(!strcmp((char*) name, "isCompatibleWithFeature")) {\
-		*pEtryPoint = isCompatibleWithFeature;\
-	} else if(!strcmp((char*) name, "tryResume")) {\
-		*pEtryPoint = tryResume;\
+	if (!strcmp((char*) name, "beginTransaction")) { \
+		*pEtryPoint = beginTransaction; \
+	} \
+	if (!strcmp((char*) name, "commitTransaction")) { \
+		*pEtryPoint = commitTransaction; \
+	} \
+	if (!strcmp((char*) name, "dbgPrintInstInfo")) { \
+		*pEtryPoint = dbgPrintInstInfo; \
+	} \
+	if (!strcmp((char*) name, "freeInstance")) { \
+		*pEtryPoint = freeInstance; \
+	} \
+	if (!strcmp((char*) name, "parseSelectorAct")) { \
+		*pEtryPoint = parseSelectorAct; \
+	} \
+	if (!strcmp((char*) name, "isCompatibleWithFeature")) { \
+		*pEtryPoint = isCompatibleWithFeature; \
+	} \
+	if (!strcmp((char*) name, "tryResume")) { \
+		*pEtryPoint = tryResume; \
 	}
 
-/* standard queries for output module interface in rsyslog v8+ */
+/**
+ * \brief Additional methods for output module v8+ support.
+ */
 #define CODEqueryEtryPt_STD_OMOD8_QUERIES \
-	else if(!strcmp((char*) name, "createWrkrInstance")) {\
-		*pEtryPoint = createWrkrInstance;\
-	} else if(!strcmp((char*) name, "freeWrkrInstance")) {\
-		*pEtryPoint = freeWrkrInstance;\
+	if (!strcmp((char*) name, "createWrkrInstance")) { \
+		*pEtryPoint = createWrkrInstance; \
+	} \
+	if (!strcmp((char*) name, "freeWrkrInstance")) { \
+		*pEtryPoint = freeWrkrInstance; \
 	}
 
-/* the following definition is queryEtryPt block that must be added
- * if an output module supports the transactional interface.
- * rgerhards, 2009-04-27
+/**
+ * \brief For output modules with transaction interface extension.
  */
 #define CODEqueryEtryPt_TXIF_OMOD_QUERIES \
-	  else if(!strcmp((char*) name, "beginTransaction")) {\
-		*pEtryPoint = beginTransaction;\
-	} else if(!strcmp((char*) name, "endTransaction")) {\
-		*pEtryPoint = endTransaction;\
+	if (!strcmp((char*) name, "beginTransaction")) { \
+		*pEtryPoint = beginTransaction; \
+	} \
+	if (!strcmp((char*) name, "endTransaction")) { \
+		*pEtryPoint = endTransaction; \
 	}
 
-
-/* the following definition is a queryEtryPt block that must be added
- * if a non-output module supports "isCompatibleWithFeature".
- * rgerhards, 2009-07-20
+/**
+ * \brief Optional support for feature compatibility query.
  */
 #define CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES \
-	  else if(!strcmp((char*) name, "isCompatibleWithFeature")) {\
-		*pEtryPoint = isCompatibleWithFeature;\
+	if (!strcmp((char*) name, "isCompatibleWithFeature")) { \
+		*pEtryPoint = isCompatibleWithFeature; \
 	}
 
-
-/* the following definition is the standard block for queryEtryPt for INPUT
- * modules. This can be used if no specific handling (e.g. to cover version
- * differences) is needed.
+/**
+ * \brief Standard block for input modules.
  */
 #define CODEqueryEtryPt_STD_IMOD_QUERIES \
 	CODEqueryEtryPt_STD_MOD_QUERIES \
-	else if(!strcmp((char*) name, "runInput")) {\
-		*pEtryPoint = runInput;\
-	} else if(!strcmp((char*) name, "willRun")) {\
-		*pEtryPoint = willRun;\
-	} else if(!strcmp((char*) name, "afterRun")) {\
-		*pEtryPoint = afterRun;\
+	if (!strcmp((char*) name, "runInput")) { \
+		*pEtryPoint = runInput; \
+	} \
+	if (!strcmp((char*) name, "willRun")) { \
+		*pEtryPoint = willRun; \
+	} \
+	if (!strcmp((char*) name, "afterRun")) { \
+		*pEtryPoint = afterRun; \
 	}
 
-
-/* the following block is to be added for modules that support the v2
- * config system. The config name is also provided.
+/**
+ * \brief For modules using the config interface v2.
  */
 #define CODEqueryEtryPt_STD_CONF2_QUERIES \
-	  else if(!strcmp((char*) name, "beginCnfLoad")) {\
-		*pEtryPoint = beginCnfLoad;\
-	} else if(!strcmp((char*) name, "endCnfLoad")) {\
-		*pEtryPoint = endCnfLoad;\
-	} else if(!strcmp((char*) name, "checkCnf")) {\
-		*pEtryPoint = checkCnf;\
-	} else if(!strcmp((char*) name, "activateCnf")) {\
-		*pEtryPoint = activateCnf;\
-	} else if(!strcmp((char*) name, "freeCnf")) {\
-		*pEtryPoint = freeCnf;\
+	if (!strcmp((char*) name, "beginCnfLoad")) { \
+		*pEtryPoint = beginCnfLoad; \
+	} \
+	if (!strcmp((char*) name, "endCnfLoad")) { \
+		*pEtryPoint = endCnfLoad; \
+	} \
+	if (!strcmp((char*) name, "checkCnf")) { \
+		*pEtryPoint = checkCnf; \
+	} \
+	if (!strcmp((char*) name, "activateCnf")) { \
+		*pEtryPoint = activateCnf; \
+	} \
+	if (!strcmp((char*) name, "freeCnf")) { \
+		*pEtryPoint = freeCnf; \
 	} \
 	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 
-/* the following block is to be added for modules that support v2
- * module global parameters [module(...)]
- */
 #define CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES \
-	  else if(!strcmp((char*) name, "setModCnf")) {\
-		*pEtryPoint = setModCnf;\
-	} \
-
-/* the following block is to be added for output modules that support the v2
- * config system. The config name is also provided.
- */
-#define CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES \
-	  else if(!strcmp((char*) name, "newActInst")) {\
-		*pEtryPoint = newActInst;\
-	} \
-	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
-
-
-/* the following block is to be added for input modules that support the v2
- * config system. The config name is also provided.
- */
-#define CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES \
-	  else if(!strcmp((char*) name, "newInpInst")) {\
-		*pEtryPoint = newInpInst;\
-	} \
-	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
-
-
-/* the following block is to be added for modules that require
- * pre priv drop activation support.
- */
-#define CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES \
-	  else if(!strcmp((char*) name, "activateCnfPrePrivDrop")) {\
-		*pEtryPoint = activateCnfPrePrivDrop;\
+	if (!strcmp((char*) name, "setModCnf")) { \
+		*pEtryPoint = setModCnf; \
 	}
 
-/* the following block is to be added for modules that support
- * their config name. This is required for the rsyslog v6 config
- * system, especially for outout modules which do not require
- * the new set of begin/end config settings.
+#define CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES \
+	if (!strcmp((char*) name, "newActInst")) { \
+		*pEtryPoint = newActInst; \
+	} \
+	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
+
+#define CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES \
+	if (!strcmp((char*) name, "newInpInst")) { \
+		*pEtryPoint = newInpInst; \
+	} \
+	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
+
+#define CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES \
+	if (!strcmp((char*) name, "activateCnfPrePrivDrop")) { \
+		*pEtryPoint = activateCnfPrePrivDrop; \
+	}
+
+/**
+ * \brief Config interface v6 module name support.
  */
 #define CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES \
-	  else if(!strcmp((char*) name, "getModCnfName")) {\
-		*pEtryPoint = modGetCnfName;\
+	if (!strcmp((char*) name, "getModCnfName")) { \
+		*pEtryPoint = modGetCnfName; \
 	}
 
-/* the following definition is the standard block for queryEtryPt for LIBRARY
- * modules. This can be used if no specific handling (e.g. to cover version
- * differences) is needed.
+/**
+ * \brief Standard block for library modules.
  */
 #define CODEqueryEtryPt_STD_LIB_QUERIES \
 	CODEqueryEtryPt_STD_MOD_QUERIES
 
-/* the following definition is the standard block for queryEtryPt for PARSER
- * modules. This can be used if no specific handling (e.g. to cover version
- * differences) is needed.
+/**
+ * \brief Standard block for parser modules.
  */
 #define CODEqueryEtryPt_STD_PMOD_QUERIES \
 	CODEqueryEtryPt_STD_MOD_QUERIES \
-	else if(!strcmp((char*) name, "parse")) {\
-		*pEtryPoint = parse;\
-	} else if(!strcmp((char*) name, "GetParserName")) {\
-		*pEtryPoint = GetParserName;\
+	if (!strcmp((char*) name, "parse")) { \
+		*pEtryPoint = parse; \
+	} \
+	if (!strcmp((char*) name, "GetParserName")) { \
+		*pEtryPoint = GetParserName; \
 	}
 
-/* the following definition is the standard block for queryEtryPt for PARSER
- * modules obeying the v2+ config interface.
+/**
+ * \brief Standard block for parser modules using config v2.
  */
 #define CODEqueryEtryPt_STD_PMOD2_QUERIES \
 	CODEqueryEtryPt_STD_MOD_QUERIES \
-	else if(!strcmp((char*) name, "parse2")) {\
-		*pEtryPoint = parse2;\
-	} else if(!strcmp((char*) name, "GetParserName")) {\
-		*pEtryPoint = GetParserName;\
-	} else if(!strcmp((char*) name, "newParserInst")) {\
-		*pEtryPoint = newParserInst;\
-	} else if(!strcmp((char*) name, "freeParserInst")) {\
-		*pEtryPoint = freeParserInst;\
+	if (!strcmp((char*) name, "parse2")) { \
+		*pEtryPoint = parse2; \
+	} \
+	if (!strcmp((char*) name, "GetParserName")) { \
+		*pEtryPoint = GetParserName; \
+	} \
+	if (!strcmp((char*) name, "newParserInst")) { \
+		*pEtryPoint = newParserInst; \
+	} \
+	if (!strcmp((char*) name, "freeParserInst")) { \
+		*pEtryPoint = freeParserInst; \
 	} \
 	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
 
-
-
-/* the following definition is the standard block for queryEtryPt for rscript function
- * modules. This can be used if no specific handling (e.g. to cover version
- * differences) is needed.
+/**
+ * \brief Standard block for rscript function modules.
  */
 #define CODEqueryEtryPt_STD_FMOD_QUERIES \
 	CODEqueryEtryPt_STD_MOD_QUERIES \
-	else if(!strcmp((char*) name, "getFunctArray")) {\
-		*pEtryPoint = getFunctArray;\
+	if (!strcmp((char*) name, "getFunctArray")) { \
+		*pEtryPoint = getFunctArray; \
 	}
 
-/* the following definition is the standard block for queryEtryPt for Strgen
- * modules. This can be used if no specific handling (e.g. to cover version
- * differences) is needed.
+/**
+ * \brief Standard block for strgen modules.
  */
 #define CODEqueryEtryPt_STD_SMOD_QUERIES \
 	CODEqueryEtryPt_STD_MOD_QUERIES \
-	else if(!strcmp((char*) name, "strgen")) {\
-		*pEtryPoint = strgen;\
-	} else if(!strcmp((char*) name, "GetName")) {\
-		*pEtryPoint = GetStrgenName;\
+	if (!strcmp((char*) name, "strgen")) { \
+		*pEtryPoint = strgen; \
+	} \
+	if (!strcmp((char*) name, "GetName")) { \
+		*pEtryPoint = GetStrgenName; \
 	}
+/** \} */  // end of module_entrypoint_blocks
+
 
 /* modInit()
  * This has an extra parameter, which is the specific name of the modInit
@@ -808,11 +814,11 @@ modInfo_t __attribute__((unused)) *pModInfo)\
 		return (iRet == RS_RET_OK) ? RS_RET_PARAM_ERROR : iRet; \
 	} \
 	/* now get the obj interface so that we can access other objects */ \
-	CHKiRet(pObjGetObjInterface(&obj));
+	CHKiRet(pObjGetObjInterface(&obj))
 
 /* do those initializations necessary for legacy config variables */
 #define INITLegCnfVars \
-	initConfVars();
+	initConfVars()
 
 #define ENDmodInit \
 finalize_it:\
@@ -1092,7 +1098,7 @@ static rsRetVal afterRun(void)\
  * rgerhards, 2008-10-22
  */
 #define CODEqueryEtryPt_doHUP \
-	else if(!strcmp((char*) name, "doHUP")) {\
+	if(!strcmp((char*) name, "doHUP")) {\
 		*pEtryPoint = doHUP;\
 	}
 #define BEGINdoHUP \
@@ -1112,7 +1118,7 @@ static rsRetVal doHUP(instanceData __attribute__((unused)) *pData)\
  * rgerhards, 2015-03-25
  */
 #define CODEqueryEtryPt_doHUPWrkr \
-	else if(!strcmp((char*) name, "doHUPWrkr")) {\
+	if(!strcmp((char*) name, "doHUPWrkr")) {\
 		*pEtryPoint = doHUPWrkr;\
 	}
 #define BEGINdoHUPWrkr \
@@ -1245,6 +1251,3 @@ static rsRetVal GetStrgenName(uchar **ppSz)\
 }
 
 #endif /* #ifndef MODULE_TEMPLATE_H_INCLUDED */
-
-/* vim:set ai:
- */

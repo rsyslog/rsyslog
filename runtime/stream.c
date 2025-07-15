@@ -76,7 +76,7 @@
 #endif
 
 /* static data */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(zlibw)
 DEFobjCurrIf(zstdw)
 
@@ -1300,7 +1300,7 @@ finalize_it:
 /* destructor for the strm object */
 BEGINobjDestruct(strm) /* be sure to specify the object type also in END and CODESTART macros! */
 	int i;
-CODESTARTobjDestruct(strm)
+CODESTARTobjDestruct(strm);
 	/* we need to stop the ZIP writer */
 	if(pThis->bAsyncWrite)
 		/* Note: mutex will be unlocked in strmCloseFile/stopWriter! */
@@ -2468,7 +2468,7 @@ strmGetCurrOffset(strm_t *pThis, int64 *pOffs)
  * rgerhards, 2008-02-29
  */
 BEGINobjQueryInterface(strm)
-CODESTARTobjQueryInterface(strm)
+CODESTARTobjQueryInterface(strm);
 	if(pIf->ifVersion != strmCURR_IF_VERSION) { /* check for current version, increment on each change */
 		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
 	}

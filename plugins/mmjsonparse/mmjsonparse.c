@@ -46,8 +46,8 @@
 #include "parserif.h"
 #include "dirty.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("mmjsonparse")
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
@@ -56,7 +56,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 
 typedef struct _instanceData {
 	sbool bUseRawMsg;     /**< use %rawmsg% instead of %msg% */
@@ -93,31 +93,31 @@ static struct cnfparamblk actpblk =
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 ENDbeginCnfLoad
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 ENDendCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 ENDfreeCnf
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 	CHKmalloc(pData->container = (uchar*)strdup("!"));
 	CHKmalloc(pData->cookie = strdup(CONST_CEE_COOKIE));
 	pData->lenCookie = CONST_LEN_CEE_COOKIE;
@@ -125,7 +125,7 @@ finalize_it:
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 	pWrkrData->tokener = json_tokener_new();
 	if(pWrkrData->tokener == NULL) {
 		LogError(0, RS_RET_ERR, "error: could not create json "
@@ -137,31 +137,31 @@ ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	free(pData->cookie);
 	free(pData->container);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 	if(pWrkrData->tokener != NULL)
 		json_tokener_free(pWrkrData->tokener);
 ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	DBGPRINTF("mmjsonparse\n");
 ENDdbgPrintInstInfo
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 ENDtryResume
 
 
@@ -220,7 +220,7 @@ BEGINdoAction_NoStrings
 	struct json_object *jval;
 	struct json_object *json;
 	instanceData *pData;
-CODESTARTdoAction
+CODESTARTdoAction;
 	pData = pWrkrData->pData;
 	/* note that we can performance-optimize the interface, but this also
 	 * requires changes to the libraries. For now, we accept message
@@ -263,14 +263,14 @@ setInstParamDefaults(instanceData *pData)
 BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	DBGPRINTF("newActInst (mmjsonparse)\n");
 	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
 	}
 
 
-	CODE_STD_STRING_REQUESTnewActInst(1)
+	CODE_STD_STRING_REQUESTnewActInst(1);
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 	CHKiRet(createInstance(&pData));
 	setInstParamDefaults(pData);
@@ -314,12 +314,12 @@ CODESTARTnewActInst
 	if(pData->container == NULL)
 		CHKmalloc(pData->container = (uchar*) strdup("!"));
 	pData->lenCookie = strlen(pData->cookie);
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 BEGINparseSelectorAct
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* first check if this config line is actually for us */
 	if(strncmp((char*) p, ":mmjsonparse:", sizeof(":mmjsonparse:") - 1)) {
@@ -342,16 +342,16 @@ ENDparseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
 ENDqueryEtryPt
 
 
@@ -370,7 +370,7 @@ BEGINmodInit()
 	rsRetVal (*pomsrGetSupportedTplOpts)(unsigned long *pOpts);
 	unsigned long opts;
 	int bMsgPassingSupported;
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 		/* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr

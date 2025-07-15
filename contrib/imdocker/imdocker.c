@@ -58,8 +58,8 @@
 #pragma GCC diagnostic ignored "-Wswitch-enum"
 #endif
 
-MODULE_TYPE_INPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_INPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imdocker")
 
 extern int Debug;
@@ -212,7 +212,7 @@ static sbool get_stream_info(const uchar* data, size_t size, int8_t *stream_type
 static int8_t is_valid_stream_type(int8_t stream_type);
 
 /* Module static data */
-DEF_IMOD_STATIC_DATA
+DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(parser)
@@ -807,7 +807,7 @@ dockerContainerInfoDestruct(docker_container_info_t *pThis) {
 }
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 
 	dbgprintf("imdocker: beginCnfLoad\n");
 
@@ -835,7 +835,7 @@ ENDbeginCnfLoad
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module "
@@ -925,15 +925,15 @@ finalize_it:
 ENDsetModCnf
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 ENDendCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	if (!loadModConf->dockerApiUnixSockAddr) {
 		loadModConf->dockerApiUnixSockAddr = (uchar*) strdup(DFLT_dockerAPIUnixSockAddr);
 	}
@@ -975,7 +975,7 @@ finalize_it:
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	if (loadModConf->dockerApiUnixSockAddr) {
 		free(loadModConf->dockerApiUnixSockAddr);
 	}
@@ -1696,7 +1696,7 @@ BEGINrunInput
 	pthread_attr_t thrd_attr;
 	int get_containers_thread_initialized = 0;
 	time_t now;
-CODESTARTrunInput
+CODESTARTrunInput;
 	datetime.GetTime(&now);
 
 	CHKiRet(ratelimitNew(&ratelimiter, "imdocker", NULL));
@@ -1738,15 +1738,15 @@ finalize_it:
 ENDrunInput
 
 BEGINwillRun
-CODESTARTwillRun
+CODESTARTwillRun;
 ENDwillRun
 
 BEGINafterRun
-CODESTARTafterRun
+CODESTARTafterRun;
 ENDafterRun
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	if(pInputName != NULL)
 		prop.Destruct(&pInputName);
 
@@ -1761,21 +1761,21 @@ CODESTARTmodExit
 ENDmodExit
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURENonCancelInputTermination)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_IMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_IMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 

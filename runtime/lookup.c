@@ -42,7 +42,7 @@
 
 PRAGMA_IGNORE_Wdeprecated_declarations
 /* definitions for objects we access */
-DEFobjStaticHelpers
+DEFobjStaticHelpers;
 DEFobjCurrIf(glbl)
 #ifdef FEATURE_REGEXP
 DEFobjCurrIf(regexp)

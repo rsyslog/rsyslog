@@ -44,13 +44,13 @@
 #include "unicode-helper.h"
 
 MODULE_TYPE_PARSER
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_NOKEEP;
 PARSER_NAME("db2.diag")
 MODULE_CNFNAME("pmdb2diag")
 
 /* internal structures
  */
-DEF_PMOD_STATIC_DATA
+DEF_PMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(datetime)
 
@@ -76,7 +76,7 @@ struct instanceConf_s {
 };
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATUREAutomaticPRIParsing)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
@@ -86,7 +86,7 @@ BEGINparse2
 	char *ms, *timepos, *pid, *prog, *eprog, *backslash, *end, *lvl;
 	int lprog, lpid, lvl_len;
 	char buffer[128];
-CODESTARTparse2
+CODESTARTparse2;
 	assert(pMsg != NULL);
 	assert(pMsg->pszRawMsg != NULL);
 
@@ -206,7 +206,7 @@ ENDparse2
 
 
 BEGINfreeParserInst
-CODESTARTfreeParserInst
+CODESTARTfreeParserInst;
 	free(pInst->timeformat);
 ENDfreeParserInst
 
@@ -229,7 +229,7 @@ finalize_it:
 BEGINnewParserInst
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTnewParserInst
+CODESTARTnewParserInst;
 	inst = NULL;
 
 	DBGPRINTF("newParserInst (pmdb2diag)\n");
@@ -281,22 +281,22 @@ CODE_STD_FINALIZERnewParserInst
 ENDnewParserInst
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	/* release what we no longer need */
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(datetime, CORE_COMPONENT);
 ENDmodExit
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_PMOD2_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_PMOD2_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));

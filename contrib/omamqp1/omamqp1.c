@@ -64,14 +64,14 @@
 #pragma GCC diagnostic ignored "-Wswitch-enum"
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omamqp1")
 
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 
 
 /* Settings for the action */
@@ -173,7 +173,7 @@ static struct cnfparamblk actpblk = {
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 {
 	if (eFeat == sFEATURERepeatedMsgReduction)
 		iRet = RS_RET_OK;
@@ -182,7 +182,7 @@ ENDisCompatibleWithFeature
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 {
 	memset(pData, 0, sizeof(instanceData));
 	_init_config_settings(&pData->config);
@@ -192,17 +192,17 @@ ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 {
 	_shutdown_thread(pData);
 	_clean_config_settings(&pData->config);
@@ -215,7 +215,7 @@ ENDfreeInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 {
 	configSettings_t *cfg = &pData->config;
 	dbgprintf("omamqp1:\n");
@@ -234,7 +234,7 @@ ENDdbgPrintInstInfo
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 {
 	// is the link active?
 	instanceData *pData = pWrkrData->pData;
@@ -244,7 +244,7 @@ ENDtryResume
 
 
 BEGINbeginTransaction
-CODESTARTbeginTransaction
+CODESTARTbeginTransaction;
 {
 	DBGPRINTF("omamqp1: beginTransaction\n");
 	instanceData *pData = pWrkrData->pData;
@@ -261,7 +261,7 @@ ENDbeginTransaction
 
 
 BEGINdoAction
-CODESTARTdoAction
+CODESTARTdoAction;
 {
 	DBGPRINTF("omamqp1: doAction\n");
 	instanceData *pData = pWrkrData->pData;
@@ -278,7 +278,7 @@ ENDdoAction
 
 
 BEGINendTransaction
-CODESTARTendTransaction
+CODESTARTendTransaction;
 {
 	DBGPRINTF("omamqp1: endTransaction\n");
 	instanceData *pData = pWrkrData->pData;
@@ -303,7 +303,7 @@ BEGINnewActInst
 	struct cnfparamvals *pvals;
 	int i;
 	configSettings_t *cs;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 {
 	if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
 		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -357,7 +357,7 @@ CODESTARTnewActInst
 	CHKiRet(_new_handler(&pData->handler, pData->reactor, dispatcher, &pData->config, &pData->ipc));
 	CHKiRet(_launch_protocol_thread(pData));
 }
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
@@ -366,22 +366,22 @@ NO_LEGACY_CONF_parseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 ENDmodExit
 
 
 BEGINqueryEtryPt
-	CODESTARTqueryEtryPt
-	CODEqueryEtryPt_STD_OMOD_QUERIES
-	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES
-	CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+	CODESTARTqueryEtryPt;
+	CODEqueryEtryPt_STD_OMOD_QUERIES;
+	CODEqueryEtryPt_STD_CONF2_CNFNAME_QUERIES;
+	CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 	CODEqueryEtryPt_TXIF_OMOD_QUERIES   /* use transaction interface */
-	CODEqueryEtryPt_STD_OMOD8_QUERIES
+	CODEqueryEtryPt_STD_OMOD8_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 {
 	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current
 						interface specification */

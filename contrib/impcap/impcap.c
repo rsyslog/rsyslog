@@ -61,8 +61,8 @@
 #include "parsers.h"
 
 
-MODULE_TYPE_INPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_INPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("impcap")
 
 #define DEFAULT_META_CONTAINER "!impcap"
@@ -70,7 +70,7 @@ MODULE_CNFNAME("impcap")
 
 
 /* static data */
-DEF_IMOD_STATIC_DATA
+DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 DEFobjCurrIf(prop)
 DEFobjCurrIf(ruleset)
@@ -188,7 +188,7 @@ BEGINnewInpInst
 struct cnfparamvals *pvals;
 instanceConf_t *inst;
 int i;
-CODESTARTnewInpInst
+CODESTARTnewInpInst;
 	pvals = nvlstGetParams(lst, &inppblk, NULL);
 
 	if(pvals == NULL) {
@@ -249,7 +249,7 @@ BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
 
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if (pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "impcap: error processing module "
@@ -290,7 +290,7 @@ ENDsetModCnf
 /* config v2 system */
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	loadModConf->pConf = pConf;
 	loadModConf->metadataOnly = 0;
@@ -300,7 +300,7 @@ CODESTARTbeginCnfLoad
 ENDbeginCnfLoad
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 ENDendCnfLoad
 
 
@@ -314,7 +314,7 @@ std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, insta
 
 BEGINcheckCnf
 	instanceConf_t *inst;
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 	if (pModConf->root == NULL) {
 		LogError(0, RS_RET_NO_LISTNERS , "impcap: module loaded, but "
 				 "no interface defined - no input will be gathered");
@@ -351,7 +351,7 @@ CODESTARTcheckCnf
 ENDcheckCnf
 
 BEGINactivateCnfPrePrivDrop
-CODESTARTactivateCnfPrePrivDrop
+CODESTARTactivateCnfPrePrivDrop;
 	runModConf = pModConf;
 ENDactivateCnfPrePrivDrop
 
@@ -362,7 +362,7 @@ BEGINactivateCnf
 	bpf_u_int32 SubNet, NetMask;
 	char errBuf[PCAP_ERRBUF_SIZE];
 	uint8_t retCode = 0;
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	for (inst = pModConf->root ; inst != NULL ; inst = inst->next) {
 		if (inst->filePath != NULL) {
 			dev = pcap_open_offline((const char *)inst->filePath, errBuf);
@@ -501,7 +501,7 @@ ENDactivateCnf
 
 BEGINfreeCnf
 	instanceConf_t *inst, *del;
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	DBGPRINTF("impcap: freeing confs...\n");
 	for (inst = pModConf->root ; inst != NULL ; ) {
 		del = inst;
@@ -668,7 +668,7 @@ static ATTR_NORETURN void *startCaptureThread(void *instanceConf) {
 BEGINrunInput
 	instanceConf_t *inst;
 	int ret = 0;
-CODESTARTrunInput
+CODESTARTrunInput;
 	for (inst = runModConf->root ; inst != NULL ; inst = inst->next) {
 		/* creates a thread and starts capturing on the interface */
 		ret = pthread_create(&inst->tid, NULL, startCaptureThread, inst);
@@ -699,7 +699,7 @@ CODESTARTrunInput
 ENDrunInput
 
 BEGINwillRun
-CODESTARTwillRun
+CODESTARTwillRun;
 /* we need to create the inputName property (only once during our lifetime) */
 	CHKiRet(prop.Construct(&pInputName));
 	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("impcap"), sizeof("impcap") - 1));
@@ -708,14 +708,14 @@ finalize_it:
 ENDwillRun
 
 BEGINafterRun
-CODESTARTafterRun
+CODESTARTafterRun;
 	if (pInputName != NULL) {
 		prop.Destruct(&pInputName);
 	}
 ENDafterRun
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 	DBGPRINTF("impcap:: modExit\n");
 	objRelease(glbl, CORE_COMPONENT);
 	objRelease(prop, CORE_COMPONENT);
@@ -726,23 +726,23 @@ ENDmodExit
 /* declaration of functions */
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURENonCancelInputTermination)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-	CODEqueryEtryPt_STD_IMOD_QUERIES
-	CODEqueryEtryPt_STD_CONF2_QUERIES
-	CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-	CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
+CODESTARTqueryEtryPt;
+	CODEqueryEtryPt_STD_IMOD_QUERIES;
+	CODEqueryEtryPt_STD_CONF2_QUERIES;
+	CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+	CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES;
 	CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES /* might need it */
-	CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+	CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
 	CHKiRet(objUse(ruleset, CORE_COMPONENT));

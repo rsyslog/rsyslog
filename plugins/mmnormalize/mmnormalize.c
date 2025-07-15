@@ -47,8 +47,8 @@
 #include "dirty.h"
 #include "unicode-helper.h"
 
-MODULE_TYPE_OUTPUT
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_OUTPUT;
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("mmnormalize")
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __attribute__((unused)) *pVal);
@@ -57,7 +57,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) *pp, void __a
 
 /* internal structures
  */
-DEF_OMOD_STATIC_DATA
+DEF_OMOD_STATIC_DATA;
 
 static struct cnfparamdescr modpdescr[] = {
 	{ "allowregex", eCmdHdlrBinary, 0 }
@@ -157,30 +157,30 @@ finalize_it:
 
 
 BEGINinitConfVars		/* (re)set config variables to default values */
-CODESTARTinitConfVars
+CODESTARTinitConfVars;
 	resetConfigVariables(NULL, NULL);
 ENDinitConfVars
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance
+CODESTARTcreateInstance;
 ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
+CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	loadModConf = pModConf;
 	pModConf->pConf = pConf;
 ENDbeginCnfLoad
 
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	loadModConf = NULL; /* done loading */
 	/* free legacy config vars */
 	free(cs.rulebase);
@@ -190,26 +190,26 @@ CODESTARTendCnfLoad
 ENDendCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 	runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 ENDfreeCnf
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance
+CODESTARTfreeInstance;
 	free(pData->rulebase);
 	free(pData->rule);
 	ln_exitCtx(pData->ctxln);
@@ -220,12 +220,12 @@ ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance
+CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo
+CODESTARTdbgPrintInstInfo;
 	dbgprintf("mmnormalize\n");
 	dbgprintf("\tvariable='%s'\n", pData->varDescr->name);
 	dbgprintf("\trulebase='%s'\n", pData->rulebase);
@@ -236,7 +236,7 @@ ENDdbgPrintInstInfo
 
 
 BEGINtryResume
-CODESTARTtryResume
+CODESTARTtryResume;
 ENDtryResume
 
 BEGINdoAction_NoStrings
@@ -247,7 +247,7 @@ BEGINdoAction_NoStrings
 	int r;
 	struct json_object *json = NULL;
 	unsigned short freeBuf = 0;
-CODESTARTdoAction
+CODESTARTdoAction;
 	if(pWrkrData->pData->bUseRawMsg) {
 		getRawMsg(pMsg, &buf, &len);
 	} else if (pWrkrData->pData->varDescr) {
@@ -286,7 +286,7 @@ setInstParamDefaults(instanceData *pData)
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "mmnormalize: error processing module "
@@ -325,7 +325,7 @@ BEGINnewActInst
 	char *buffer;
 	char *tStr;
 	int size = 0;
-CODESTARTnewActInst
+CODESTARTnewActInst;
 	DBGPRINTF("newActInst (mmnormalize)\n");
 
 	bDestructPValsOnExit = 0;
@@ -422,17 +422,17 @@ CODESTARTnewActInst
 		}
 	}
 
-	CODE_STD_STRING_REQUESTnewActInst(1)
+	CODE_STD_STRING_REQUESTnewActInst(1);
 	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
 	iRet = buildInstance(pData);
-CODE_STD_FINALIZERnewActInst
+CODE_STD_FINALIZERnewActInst;
 	if(bDestructPValsOnExit)
 		cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINparseSelectorAct
-CODESTARTparseSelectorAct
+CODESTARTparseSelectorAct;
 CODE_STD_STRING_REQUESTparseSelectorAct(1)
 	/* first check if this config line is actually for us */
 	if(strncmp((char*) p, ":mmnormalize:", sizeof(":mmnormalize:") - 1)) {
@@ -471,17 +471,17 @@ ENDparseSelectorAct
 
 
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_OMOD_QUERIES
-CODEqueryEtryPt_STD_OMOD8_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMOD8_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
@@ -512,8 +512,8 @@ BEGINmodInit()
 	rsRetVal (*pomsrGetSupportedTplOpts)(unsigned long *pOpts);
 	unsigned long opts;
 	int bMsgPassingSupported;
-CODESTARTmodInit
-INITLegCnfVars
+CODESTARTmodInit;
+INITLegCnfVars;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 		/* we only support the current interface specification */
 CODEmodInit_QueryRegCFSLineHdlr

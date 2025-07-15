@@ -68,7 +68,7 @@
 #include <regex.h>
 
 MODULE_TYPE_INPUT /* must be present for input modules, do not remove */
-MODULE_TYPE_NOKEEP
+MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imbatchreport")
 
 /* defines for freebsd */
@@ -683,7 +683,7 @@ BEGINnewInpInst
 	instanceConf_t *inst = NULL;
 	int i;
 	char *temp;
-CODESTARTnewInpInst
+CODESTARTnewInpInst;
 	DBGPRINTF("newInpInst (imbatchreport)\n");
 
 	pvals = nvlstGetParams(lst, &inppblk, NULL);
@@ -849,7 +849,7 @@ CODE_STD_FINALIZERnewInpInst
 ENDnewInpInst
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad
+CODESTARTbeginCnfLoad;
 	pModConf->pConf = pConf;
 	fixedModConf.iPollInterval = DFLT_PollInterval;
 
@@ -861,7 +861,7 @@ ENDbeginCnfLoad
 BEGINsetModCnf
 	struct cnfparamvals *pvals = NULL;
 	int i;
-CODESTARTsetModCnf
+CODESTARTsetModCnf;
 	pvals = nvlstGetParams(lst, &modpblk, NULL);
 	if(pvals == NULL) {
 		LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module config parameters [module(...)]");
@@ -890,7 +890,7 @@ ENDsetModCnf
 
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad
+CODESTARTendCnfLoad;
 	dbgprintf("polling interval is %d\n",
 			fixedModConf.iPollInterval);
 ENDendCnfLoad
@@ -898,7 +898,7 @@ ENDendCnfLoad
 
 BEGINcheckCnf
 	instanceConf_t *inst;
-CODESTARTcheckCnf
+CODESTARTcheckCnf;
 	for(inst = fixedModConf.root ; inst != NULL ; inst = inst->next) {
 		std_checkRuleset(pModConf, inst);
 	}
@@ -910,12 +910,12 @@ CODESTARTcheckCnf
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf
+CODESTARTactivateCnf;
 ENDactivateCnf
 
 BEGINfreeCnf
 	instanceConf_t *inst, *del;
-CODESTARTfreeCnf
+CODESTARTfreeCnf;
 	for(inst = fixedModConf.root ; inst != NULL ; ) {
 		del = inst;
 		inst = inst->next;
@@ -924,7 +924,7 @@ CODESTARTfreeCnf
 ENDfreeCnf
 
 BEGINwillRun
-CODESTARTwillRun
+CODESTARTwillRun;
 	CHKiRet(prop.Construct(&pInputName));
 	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("imbatchreport"),
 		sizeof("imbatchreport") - 1));
@@ -937,7 +937,7 @@ finalize_it:
 ENDwillRun
 
 BEGINrunInput
-CODESTARTrunInput
+CODESTARTrunInput;
 	fixedModConf.hostname = glbl.GetLocalHostName();
 	fixedModConf.lhostname = ustrlen(fixedModConf.hostname);
 
@@ -964,7 +964,7 @@ ENDrunInput
  * shall free any resources and prepare the module for unload.
  */
 BEGINafterRun
-CODESTARTafterRun
+CODESTARTafterRun;
 	if (fixedModConf.msg_buffer)
 		free(fixedModConf.msg_buffer);
 	if(pInputName != NULL)
@@ -973,7 +973,7 @@ ENDafterRun
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature
+CODESTARTisCompatibleWithFeature;
 	if(eFeat == sFEATURENonCancelInputTermination)
 		iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
@@ -984,7 +984,7 @@ ENDisCompatibleWithFeature
  * any code here.
  */
 BEGINmodExit
-CODESTARTmodExit
+CODESTARTmodExit;
 
 	objRelease(datetime, CORE_COMPONENT);
 	objRelease(glbl, CORE_COMPONENT);
@@ -995,12 +995,12 @@ ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt
-CODEqueryEtryPt_STD_IMOD_QUERIES
-CODEqueryEtryPt_STD_CONF2_QUERIES
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES
-CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES
+CODESTARTqueryEtryPt;
+CODEqueryEtryPt_STD_IMOD_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES;
+CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
@@ -1013,7 +1013,7 @@ ENDqueryEtryPt
  * set some variable defaults.
  */
 BEGINmodInit()
-CODESTARTmodInit
+CODESTARTmodInit;
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
 	CHKiRet(objUse(glbl, CORE_COMPONENT));
