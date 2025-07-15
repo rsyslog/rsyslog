@@ -2622,6 +2622,19 @@ qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the ConstructionFinalizer
 	CHKiRet(wtpSetpUsr		(pThis->pWtpReg, pThis));
 	CHKiRet(wtpConstructFinalize	(pThis->pWtpReg));
 
+	/* Validate queue configuration before starting */
+	if(pThis->qType == QUEUETYPE_DISK || pThis->bIsDA) {
+		/* Check that maxDiskSpace is not smaller than maxFileSize */
+		if(pThis->sizeOnDiskMax > 0 && pThis->iMaxFileSize > 0 && 
+		   pThis->sizeOnDiskMax < pThis->iMaxFileSize) {
+			LogError(0, RS_RET_CONF_PARAM_INVLD, 
+				"queue.maxDiskSpace (%lld) must be larger than queue.maxFileSize (%lld) - "
+				"setting queue.maxDiskSpace to %lld",
+				pThis->sizeOnDiskMax, pThis->iMaxFileSize, pThis->iMaxFileSize);
+			pThis->sizeOnDiskMax = pThis->iMaxFileSize;
+		}
+	}
+
 	/* set up DA system if we have a disk-assisted queue */
 	if(pThis->bIsDA)
 		InitDA(pThis, LOCK_MUTEX); /* initiate DA mode */
