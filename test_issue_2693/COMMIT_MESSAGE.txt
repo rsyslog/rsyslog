@@ -1,0 +1,18 @@
+queue: add validation for maxDiskSpace vs maxFileSize relationship
+
+Add validation in qqueueCorrectParams() to ensure that queue.maxDiskSpace
+is not smaller than queue.maxfilesize. This prevents the shutdown loop
+described in issue #2693 where rsyslog fails to shutdown properly when
+individual queue files can be larger than the total allowed disk space.
+
+The validation:
+- Only applies to disk queues (when pszFilePrefix is set)
+- Only validates when both parameters are explicitly set
+- Provides a clear error message explaining the problem and suggesting solutions
+- Follows existing patterns for queue parameter validation
+
+This fix prevents users from creating configurations that would cause
+shutdown problems and provides clear guidance on how to fix invalid
+configurations.
+
+closes: https://github.com/rsyslog/rsyslog/issues/2693
