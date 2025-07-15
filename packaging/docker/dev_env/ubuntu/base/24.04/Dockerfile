@@ -367,6 +367,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS=" \
 	--enable-usertools \
 	--enable-imdtls \
 	--enable-omdtls \
+	--enable-mmaitag \
 	--enable-valgrind \
 	\
 	--enable-testbench \
