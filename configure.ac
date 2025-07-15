@@ -1649,6 +1649,21 @@ AC_ARG_ENABLE(mmpstrucdata,
 )
 AM_CONDITIONAL(ENABLE_MMPSTRUCDATA, test x$enable_mmpstrucdata = xyes)
 
+# mmaitag
+AC_ARG_ENABLE(mmaitag,
+        [AS_HELP_STRING([--enable-mmaitag],[Enable AI tagging module @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmaitag="yes" ;;
+          no) enable_mmaitag="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmaitag) ;;
+         esac],
+        [enable_mmaitag=yes]
+)
+if test "x$enable_mmaitag" = "xyes"; then
+        PKG_CHECK_MODULES([CURL], [libcurl])
+fi
+AM_CONDITIONAL(ENABLE_MMAITAG, test x$enable_mmaitag = xyes)
+
 
 # mmrfc5424addhmac
 AC_ARG_ENABLE(mmrfc5424addhmac,
@@ -3030,9 +3045,10 @@ AC_CONFIG_FILES([Makefile \
 		plugins/mmanon/Makefile \
 		plugins/mmrm1stspace/Makefile \
 		plugins/mmutf8fix/Makefile \
-		plugins/mmfields/Makefile \
-		plugins/mmpstrucdata/Makefile \
-		plugins/omelasticsearch/Makefile \
+                plugins/mmfields/Makefile \
+                plugins/mmpstrucdata/Makefile \
+                plugins/mmaitag/Makefile \
+                plugins/omelasticsearch/Makefile \
 		plugins/omclickhouse/Makefile \
 		plugins/mmsnmptrapd/Makefile \
 		plugins/pmlastmsg/Makefile \
@@ -3181,6 +3197,7 @@ echo "    mmdarwin enabled:                         $enable_mmdarwin"
 echo "    mmfields enabled:                         $enable_mmfields"
 echo "    mmrm1stspace module enabled:              $enable_mmrm1stspace"
 echo "    mmkubernetes enabled:                     $enable_mmkubernetes"
+echo "    mmaitag enabled:                          $enable_mmaitag"
 echo "    mmtaghostname enabled:                    $enable_mmtaghostname"
 echo
 echo "---{ database support }---"
