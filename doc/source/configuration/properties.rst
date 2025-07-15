@@ -240,7 +240,7 @@ The following system properties exist:
 
 **$bom**
   The UTF-8 encoded Unicode byte-order mask (BOM). This may be useful in
-  templates for RFC5424 support, when the character set is know to be
+  templates for RFC5424 support, when the character set is known to be
   Unicode.
   
 **$myhostname**

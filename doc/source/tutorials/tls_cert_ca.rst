@@ -6,7 +6,7 @@ maintained by a trustworthy person (or group) and approves the
 identities of all machines. It does so by issuing their certificates.
 In a small setup, the administrator can provide the CA function. What is
 important is the CA's private key is well-protected and machine 
-certificates are only issued if it is know they are valid (in a 
+certificates are only issued if it is known they are valid (in a 
 single-admin case that means the admin should not issue certificates to 
 anyone else except himself).
 
