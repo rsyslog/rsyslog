@@ -323,25 +323,25 @@ SerializeProp(strm_t *pStrm, uchar *pszPropName, propType_t propType, void *pUsr
 			vType = VARTYPE_STR;
 			break;
 		case PROPTYPE_SHORT:
-			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), (long) *((short*) pUsr)));
+			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), (int64_t) *((short*) pUsr)));
 			pszBuf = szBuf;
 			lenBuf = ustrlen(szBuf);
 			vType = VARTYPE_NUMBER;
 			break;
 		case PROPTYPE_INT:
-			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), (long) *((int*) pUsr)));
+			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), (int64_t) *((int*) pUsr)));
 			pszBuf = szBuf;
 			lenBuf = ustrlen(szBuf);
 			vType = VARTYPE_NUMBER;
 			break;
 		case PROPTYPE_LONG:
-			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), *((long*) pUsr)));
+			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), (int64_t) *((long*) pUsr)));
 			pszBuf = szBuf;
 			lenBuf = ustrlen(szBuf);
 			vType = VARTYPE_NUMBER;
 			break;
 		case PROPTYPE_INT64:
-			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), *((int64*) pUsr)));
+			CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), *((int64_t*) pUsr)));
 			pszBuf = szBuf;
 			lenBuf = ustrlen(szBuf);
 			vType = VARTYPE_NUMBER;

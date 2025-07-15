@@ -132,7 +132,7 @@ syslogName_t	syslogFacNames[] = {
  * public members                                                    *
  * ################################################################# */
 
-rsRetVal srUtilItoA(char *pBuf, int iLenBuf, number_t iToConv)
+rsRetVal srUtilItoA(char *pBuf, int iLenBuf, int64_t iToConv)
 {
 	int i;
 	int bIsNegative;

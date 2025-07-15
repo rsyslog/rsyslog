@@ -63,7 +63,7 @@ extern syslogName_t syslogFacNames[];
  *
  * \param iToConv The integer to be converted.
  */
-rsRetVal srUtilItoA(char *pBuf, int iLenBuf, number_t iToConv);
+rsRetVal srUtilItoA(char *pBuf, int iLenBuf, int64_t iToConv);
 
 /**
  * A method to duplicate a string for which the length is known.
