@@ -1,5 +1,24 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-07-15: feat: introduce mmaitag PoC with Gemini AI provider (#5754)
+  This commit adds the initial implementation of the `mmaitag` module,
+  a pluggable AI-based message classification processor.
+  The module supports two providers:
+  - `gemini`: uses the Gemini API via libcurl and JSON-C
+  - `gemini_mock`: a deterministic in-memory mock used for testing
+  Each log message is classified individually and tagged with a label
+  stored in a configurable message variable (default: `$.aitag`).
+  Included:
+  - Provider abstraction layer (`ai_provider.h`)
+  - Gemini provider with API key support (inline or via file)
+  - Prompt customization and input property selection
+  - Two regression tests: basic and invalid-key scenarios
+  - Sphinx documentation under `doc/configuration/modules`
+  Note: mmaitag is in its infancy and primarily a PoC. Future work
+  will improve batching, performance, and add more providers.
+  Refs:
+  - https://github.com/rsyslog/rsyslog/issues/5747 (AI-first strategy)
+  With the help of AI Agents: Codex, Gemini
 - 2025-07-15: doc: add FAQ with commonly misunderstood config sequences
   "& stop" is right on top of the misunderstandings
 - 2025-07-15: code fix: Prevent redefinition warnings for syslog macros
