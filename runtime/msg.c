@@ -848,7 +848,7 @@ msgBaseConstruct(smsg_t **ppThis)
 	pM->iFacility = LOG_INVLD;
 	pM->iLenPROGNAME = -1;
 	pM->offAfterPRI = 0;
-	pM->offMSG = -1;
+	pM->offMSG = 0;
 	pM->iProtocolVersion = 0;
 	pM->msgFlags = 0;
 	pM->iLenRawMsg = 0;
