@@ -8,3 +8,4 @@ FAQ
    difference_queues
    encrypt_mysql_traffic_ommysql
    imudp-packet-loss
+   common-config-mistakes
