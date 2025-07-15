@@ -464,6 +464,28 @@ AC_ARG_ENABLE(fmunflatten,
 )
 AM_CONDITIONAL(ENABLE_FMUNFLATTEN, test x$enable_fmunflatten = xyes)
 
+# PCRE function module
+AC_ARG_ENABLE(fmpcre,
+       [AS_HELP_STRING([--enable-fmpcre],[Enable PCRE based match function @<:@default=no@:>@])],
+       [case "${enableval}" in
+        yes) enable_fmpcre="yes" ;;
+         no) enable_fmpcre="no" ;;
+          *) AC_MSG_ERROR(bad value ${enableval} for --enable-fmpcre) ;;
+        esac],
+       [enable_fmpcre=no]
+)
+if test "x$enable_fmpcre" = "xyes"; then
+       AC_CHECK_LIB([pcre], [pcre_exec], [
+               AC_CHECK_HEADER([pcre.h], [
+                       PCRE_LIBS="-lpcre"
+                       PCRE_CFLAGS=""
+                       AC_SUBST(PCRE_LIBS)
+                       AC_SUBST(PCRE_CFLAGS)
+               ], [AC_MSG_ERROR([pcre headers not found])])
+       ], [AC_MSG_ERROR([libpcre not found])])
+fi
+AM_CONDITIONAL(ENABLE_FMPCRE, test x$enable_fmpcre = xyes)
+
 
 #gssapi
 AC_ARG_ENABLE(gssapi_krb5,
@@ -3020,9 +3042,10 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omdtls/Makefile \
 		contrib/mmdarwin/Makefile \
 		contrib/omhttp/Makefile \
-		contrib/fmhash/Makefile \
-		contrib/fmunflatten/Makefile \
-		contrib/ffaup/Makefile \
+               contrib/fmhash/Makefile \
+               contrib/fmunflatten/Makefile \
+               plugins/fmpcre/Makefile \
+               contrib/ffaup/Makefile \
 		contrib/pmsnare/Makefile \
 		contrib/pmpanngfw/Makefile \
 		contrib/pmaixforwardedfrom/Makefile \
@@ -3182,6 +3205,7 @@ echo "    fmhttp enabled:                           $enable_fmhttp"
 echo "    fmhash enabled:                           $enable_fmhash"
 echo "    fmhash with xxhash enabled:               $enable_fmhash_xxhash"
 echo "    fmunflatten enabled:                      $enable_fmunflatten"
+echo "    fmpcre enabled:                          $enable_fmpcre"
 echo "    ffaup enabled:                            $enable_ffaup"
 echo
 echo "---{ debugging support }---"
