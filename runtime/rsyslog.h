@@ -219,7 +219,38 @@
 /* make sure we uses consistent macros, no matter what the
  * platform gives us.
  */
-#undef LOG_NFACILITIES /* may be system defined, override */
+#undef LOG_EMERG
+#undef LOG_ALERT
+#undef LOG_CRIT
+#undef LOG_ERR
+#undef LOG_WARNING
+#undef LOG_NOTICE
+#undef LOG_INFO
+#undef LOG_DEBUG
+
+#undef LOG_KERN
+#undef LOG_USER
+#undef LOG_MAIL
+#undef LOG_DAEMON
+#undef LOG_AUTH
+#undef LOG_SYSLOG
+#undef LOG_LPR
+#undef LOG_NEWS
+#undef LOG_UUCP
+#undef LOG_CRON
+#undef LOG_AUTHPRIV
+#undef LOG_FTP
+#undef LOG_LOCAL0
+#undef LOG_LOCAL1
+#undef LOG_LOCAL2
+#undef LOG_LOCAL3
+#undef LOG_LOCAL4
+#undef LOG_LOCAL5
+#undef LOG_LOCAL6
+#undef LOG_LOCAL7
+#undef LOG_FAC_INVLD
+#undef LOG_INVLD
+#undef LOG_NFACILITIES
 #define LOG_NFACILITIES 24+1 /* plus one for our special "invld" facility! */
 #define LOG_MAXPRI 191	/* highest supported valid PRI value --> RFC3164, RFC5424 */
 #undef LOG_MAKEPRI
