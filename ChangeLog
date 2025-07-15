@@ -1,5 +1,18 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-07-15: doc: add FAQ with commonly misunderstood config sequences
+  "& stop" is right on top of the misunderstandings
+- 2025-07-15: code fix: Prevent redefinition warnings for syslog macros
+  Undefine common syslog severity and facility macros before
+  redefining them in rsyslog.h. As rsyslog, we need consistent
+  definitions. This resolves "redefined" warnings when other
+  system headers are included. Improves build cleanliness.
+- 2025-07-15: imhttp: add simple http health check functionality
+  This also includes a basic Prometheus scrape entry point, which
+  currently can only be used for health checking.
+  We plan futher enhancement in this direction.
+  Also some "fixes" in regard to rsyslog code style and portability
+  methods.
 - 2025-07-15: impstats: add support for Prometheus metrics output format
   This commit extends the impstats input module to support a new
   "prometheus" format for exporting statistics. The output is
