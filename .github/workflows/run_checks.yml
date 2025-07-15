@@ -26,11 +26,13 @@ name: check
 
 on:
   pull_request:
-    paths-ignore:
-      - 'ChangeLog'
-      - '**/*.md'
-      - '**/*.txt'
-      - 'doc/**'
+    paths:
+      - '**/*.c'
+      - '**/*.h'
+      - 'grammar/lexer.y'
+      - 'grammar/grammar.y'
+      - 'tests/*.sh'
+      - '**/Makefile.am'
 
 jobs:
   CI:
