@@ -1,5 +1,23 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-07-15: impstats: add support for Prometheus metrics output format
+  This commit extends the impstats input module to support a new
+  "prometheus" format for exporting statistics. The output is
+  generated via statsobj.c, which already provides Prometheus-
+  compatible formatting.
+  To enable this, a new "format" config option value ("prometheus")
+  was added and recognized by impstats.c. When selected, impstats
+  invokes the appropriate statsobj function to generate output in
+  Prometheus exposition format.
+  The default behavior remains unchanged. Existing formats such as
+  "json" and "legacy" are not modified.
+  A new test has been added under tests/ to validate correct
+  Prometheus output generation. The test verifies that the format
+  header and at least one representative metric line conform to the
+  Prometheus text format specification.
+  This enhancement enables rsyslog to integrate more easily with
+  Prometheus-based monitoring stacks and paves the way for native
+  metrics scraping without external translation layers.
 - 2025-07-15: fmpcre: new function module to do pcre-based regex matches
 - 2025-07-15: build: adjust version tag used for daily stable build process
   Change version tag from ".master" to ".daily" to better reflect its
