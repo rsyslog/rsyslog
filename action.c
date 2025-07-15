@@ -858,6 +858,7 @@ actionDoRetry(action_t * const pThis, wti_t * const pWti)
 	int iRetries;
 	int iSleepPeriod;
 	int bTreatOKasSusp;
+	time_t ttTemp;
 	DEFiRet;
 
 	assert(pThis != NULL);
@@ -896,8 +897,13 @@ actionDoRetry(action_t * const pThis, wti_t * const pWti)
 					incActionNbrResRtry(pWti, pThis);
 			} else {
 				++iRetries;
+				datetime.GetTime(&ttTemp);
+				iSleepPeriod = 0;
+				DBGPRINTF("actionDoRetry: %s, controlled by resumeInterval, may miss the next try."
+				"Will sleep %d seconds. ResumeRtry=%lld (now %lld), iRetries %d\n",
+				pThis->pszName,
+				pThis->iResumeInterval, (long long)pThis->ttResumeRtry, (long long)ttTemp, iRetries);
 				iSleepPeriod = pThis->iResumeInterval;
-				DBGPRINTF("actionDoRetry: sleeping now %d seconds\n", iSleepPeriod);
 				srSleep(iSleepPeriod, 0);
 				if(*pWti->pbShutdownImmediate) {
 					ABORT_FINALIZE(RS_RET_FORCE_TERM);
