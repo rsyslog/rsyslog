@@ -414,9 +414,7 @@ int sharedJsonProperties, ruleset_t *pBindRuleset)
 	MsgSetRcvFromIP(pMsg, pLocalHostIP);
 	MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
 	MsgSetTAG(pMsg, pszTag, ustrlen(pszTag));
-	if (pBindRuleset != NULL) {
-		MsgSetRuleset(pMsg, pBindRuleset);
-	}
+	MsgSetRuleset(pMsg, pBindRuleset);
 	pMsg->iFacility = iFacility;
 	pMsg->iSeverity = iSeverity;
 
@@ -1054,13 +1052,7 @@ CODESTARTrunInput;
 	}
 
 	CHKiRet(doRun(journal_root));
-
-	etry = journal_root->next;
-	while(etry != NULL) {
-		stopSrvWrkr(etry);
-		etry = etry->next;
-	}
-
+	/* Stop the worker pool in AfterRun */
 finalize_it:
 ENDrunInput
 
@@ -1201,21 +1193,12 @@ CODESTARTactivateCnf;
 
 	// Default Handlers. Will be used as the main process if no `main`
 	// property is set in the input modules.
-	if (addListner(NULL, index++) != RS_RET_OK) {
-		LogError(0, RS_RET_NO_MORE_DATA,
-		  "imjournal: Can only support up to %i journals\n",
-		  MAX_JOURNAL);
-		ABORT_FINALIZE(RS_RET_NO_MORE_DATA);
-	}
-
 	// Main process will be the top of journal_root.
-	if (root_inst != NULL){
-		if (addListner(root_inst, index++) != RS_RET_OK) {
-			LogError(0, RS_RET_NO_MORE_DATA,
-			  "imjournal: Can only support up to %i journals\n",
-			  MAX_JOURNAL);
-			ABORT_FINALIZE(RS_RET_NO_MORE_DATA);
-		}
+	if (addListner(root_inst, index++) != RS_RET_OK) {
+		LogError(0, RS_RET_NO_MORE_DATA,
+			"imjournal: Can only support up to %i journals\n",
+			MAX_JOURNAL);
+		ABORT_FINALIZE(RS_RET_NO_MORE_DATA);
 	}
 
 finalize_it:
@@ -1255,6 +1238,10 @@ BEGINafterRun
 	journal_etry_t *del;
 CODESTARTafterRun;
 	while(etry != NULL) {
+		if (etry != journal_root) {
+			stopSrvWrkr(etry);
+		}
+
 		char *stateFile = cs.stateFile;
 		if (etry->stateFile) {
 			stateFile = etry->stateFile;
@@ -1269,6 +1256,7 @@ CODESTARTafterRun;
 		etry = etry->next;
 		free(del);
 	}
+	journal_root = NULL;
 
 	if (ratelimiter) {
 		ratelimitDestruct(ratelimiter);
