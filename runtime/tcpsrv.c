@@ -761,12 +761,15 @@ static rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDes
     assert(pioDescr->ptrType == NSD_PTR_TYPE_SESS);
     tcps_sess_t *pSess = pioDescr->ptr.pSess;
 
-    if (ATOMIC_CAS(&pSess->being_closed, 0, 1, &pSess->mut_being_closed)) {
-        FINALIZE;
+    if (!ATOMIC_CAS(&pSess->being_closed, 0, 1, &pSess->mut_being_closed)) {
+        FINALIZE; /* already being closed by another thread */
     }
 
 #if defined(ENABLE_IMTCP_EPOLL)
-    CHKiRet(epoll_Ctl(pThis, pioDescr, 0, EPOLL_CTL_DEL));
+    /* note: we do not check the result of eoll_Ctl because we cannot do
+     * anything agaist a failure BUT we need to do the cleanup in any case.
+     */
+    epoll_Ctl(pThis, pioDescr, 0, EPOLL_CTL_DEL);
 #endif
     pThis->pOnRegularClose(pSess);
     if (pThis->workQueue.numWrkr > 1) {
