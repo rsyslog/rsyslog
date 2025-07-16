@@ -42,208 +42,208 @@
 #include <stdlib.h>
 #include <string.h>
 #if defined(_AIX)
-	#include  <unistd.h>
+    #include <unistd.h>
 #else
-	#include <getopt.h>
+    #include <getopt.h>
 #endif
 
-int main(int argc, char *argv[])
-{
-	FILE *fp;
-	int val;
-	int i;
-	int ret = 0;
-	int scanfOK;
-	int verbose = 0;
-	int bHaveExtraData = 0;
-	int bAnticipateTruncation = 0;
-	int dupsPermitted = 0;
-	int start = 0, end = 0;
-	int opt;
-	int lostok = 0; /* how many messages are OK to be lost? */
-	int nDups = 0;
-	int increment = 1;
-	int reachedEOF;
-	int edLen;	/* length of extra data */
-	static char edBuf[500*1024]; /* buffer for extra data (pretty large to be on the save side...) */
-	static char ioBuf[sizeof(edBuf)+1024];
-	char *file = NULL;
+int main(int argc, char *argv[]) {
+    FILE *fp;
+    int val;
+    int i;
+    int ret = 0;
+    int scanfOK;
+    int verbose = 0;
+    int bHaveExtraData = 0;
+    int bAnticipateTruncation = 0;
+    int dupsPermitted = 0;
+    int start = 0, end = 0;
+    int opt;
+    int lostok = 0; /* how many messages are OK to be lost? */
+    int nDups = 0;
+    int increment = 1;
+    int reachedEOF;
+    int edLen; /* length of extra data */
+    static char edBuf[500 * 1024]; /* buffer for extra data (pretty large to be on the save side...) */
+    static char ioBuf[sizeof(edBuf) + 1024];
+    char *file = NULL;
 
-	while((opt = getopt(argc, argv, "i:e:f:ds:vm:ET")) != EOF) {
-		switch((char)opt) {
-		case 'f':
-			file = optarg;
-			break;
-		case 'd':
-			dupsPermitted = 1;
-			break;
-		case 'i':
-			increment = atoi(optarg);
-			break;
-		case 'e':
-			end = atoi(optarg);
-			break;
-		case 's':
-			start = atoi(optarg);
-			break;
-		case 'v':
-			++verbose;
-			break;
-		case 'm':
-			lostok = atoi(optarg);
-			break;
-		case 'E':
-			bHaveExtraData = 1;
-			break;
-		case 'T':
-			bAnticipateTruncation = 1;
-			break;
-		default:printf("Invalid call of chkseq, optchar='%c'\n", opt);
-			printf("Usage: chkseq file -sstart -eend -d -E\n");
-			exit(1);
-		}
-	}
+    while ((opt = getopt(argc, argv, "i:e:f:ds:vm:ET")) != EOF) {
+        switch ((char)opt) {
+            case 'f':
+                file = optarg;
+                break;
+            case 'd':
+                dupsPermitted = 1;
+                break;
+            case 'i':
+                increment = atoi(optarg);
+                break;
+            case 'e':
+                end = atoi(optarg);
+                break;
+            case 's':
+                start = atoi(optarg);
+                break;
+            case 'v':
+                ++verbose;
+                break;
+            case 'm':
+                lostok = atoi(optarg);
+                break;
+            case 'E':
+                bHaveExtraData = 1;
+                break;
+            case 'T':
+                bAnticipateTruncation = 1;
+                break;
+            default:
+                printf("Invalid call of chkseq, optchar='%c'\n", opt);
+                printf("Usage: chkseq file -sstart -eend -d -E\n");
+                exit(1);
+        }
+    }
 
-	if(start > end) {
-		printf("start must be less than or equal end!\n");
-		exit(1);
-	}
+    if (start > end) {
+        printf("start must be less than or equal end!\n");
+        exit(1);
+    }
 
-	if(verbose) {
-		printf("chkseq: start %d, end %d\n", start, end);
-	}
+    if (verbose) {
+        printf("chkseq: start %d, end %d\n", start, end);
+    }
 
-	/* read file */
-	if(file == NULL) {
-		fp = stdin;
-	} else {
-		fp = fopen(file, "r");
-	}
-	if(fp == NULL) {
-		printf("error opening file '%s'\n", file);
-		perror(file);
-		exit(1);
-	}
+    /* read file */
+    if (file == NULL) {
+        fp = stdin;
+    } else {
+        fp = fopen(file, "r");
+    }
+    if (fp == NULL) {
+        printf("error opening file '%s'\n", file);
+        perror(file);
+        exit(1);
+    }
 
-	for(i = start ; i <= end ; i += increment) {
-		if(bHaveExtraData) {
-			if(fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
-				scanfOK = 0;
-			} else {
-				scanfOK = sscanf(ioBuf, "%d,%d,%s\n", &val, &edLen, edBuf) == 3 ? 1 : 0;
-			}
-			if(edLen != (int) strlen(edBuf)) {
-				if (bAnticipateTruncation == 1) {
-					if (edLen < (int) strlen(edBuf)) {
-						 printf("extra data length specified %d, but actually is %ld in"
-							" record %d (truncation was anticipated, but payload should"
-							" have been smaller than data-length, not larger)\n",
-							edLen, (long) strlen(edBuf), i);
-						exit(1);
-					}
-				} else {
-					printf("extra data length specified %d, but actually is %ld in record %d\n",
-						   edLen, (long) strlen(edBuf), i);
-					exit(1);
-				}
-			}
-		} else {
-			if(fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
-				scanfOK = 0;
-			} else {
-				scanfOK = sscanf(ioBuf, "%d\n", &val) == 1 ? 1 : 0;
-			}
-		}
-		if(!scanfOK) {
-			printf("scanf error in index i=%d\n", i);
-			exit(1);
-		}
-		while(val > i && lostok > 0) {
-			--lostok;
-			printf("message %d missing (ok due to -m [now %d])\n", i, lostok);
-			++i;
-		}
-		if(val != i) {
-			if(val == i - increment && dupsPermitted) {
-				--i;
-				++nDups;
-			} else {
-				printf("read value %d, but expected value %d\n", val, i);
-				exit(1);
-			}
-		}
-	}
+    for (i = start; i <= end; i += increment) {
+        if (bHaveExtraData) {
+            if (fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
+                scanfOK = 0;
+            } else {
+                scanfOK = sscanf(ioBuf, "%d,%d,%s\n", &val, &edLen, edBuf) == 3 ? 1 : 0;
+            }
+            if (edLen != (int)strlen(edBuf)) {
+                if (bAnticipateTruncation == 1) {
+                    if (edLen < (int)strlen(edBuf)) {
+                        printf(
+                            "extra data length specified %d, but actually is %ld in"
+                            " record %d (truncation was anticipated, but payload should"
+                            " have been smaller than data-length, not larger)\n",
+                            edLen, (long)strlen(edBuf), i);
+                        exit(1);
+                    }
+                } else {
+                    printf("extra data length specified %d, but actually is %ld in record %d\n", edLen,
+                           (long)strlen(edBuf), i);
+                    exit(1);
+                }
+            }
+        } else {
+            if (fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
+                scanfOK = 0;
+            } else {
+                scanfOK = sscanf(ioBuf, "%d\n", &val) == 1 ? 1 : 0;
+            }
+        }
+        if (!scanfOK) {
+            printf("scanf error in index i=%d\n", i);
+            exit(1);
+        }
+        while (val > i && lostok > 0) {
+            --lostok;
+            printf("message %d missing (ok due to -m [now %d])\n", i, lostok);
+            ++i;
+        }
+        if (val != i) {
+            if (val == i - increment && dupsPermitted) {
+                --i;
+                ++nDups;
+            } else {
+                printf("read value %d, but expected value %d\n", val, i);
+                exit(1);
+            }
+        }
+    }
 
-	if(i - increment != end) {
-		printf("lastrecord does not match. file: %d, expected %d\n", i - increment, end);
-		exit(1);
-	}
+    if (i - increment != end) {
+        printf("lastrecord does not match. file: %d, expected %d\n", i - increment, end);
+        exit(1);
+    }
 
-	int c = getc(fp);
-	if(c == EOF) {
-		reachedEOF = 1;
-	} else {
-		ungetc(c, fp);
-		/* if duplicates are permitted, we need to do a final check if we have duplicates at the
-		 * end of file.
-		 */
-		if(dupsPermitted) {
-			i = end;
-			while(!feof(fp)) {
-				if(bHaveExtraData) {
-					if(fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
-						scanfOK = 0;
-					} else {
-						scanfOK = sscanf(ioBuf, "%d,%d,%s\n", &val,
-							&edLen, edBuf) == 3 ? 1 : 0;
-					}
-					if(edLen != (int) strlen(edBuf)) {
-						if (bAnticipateTruncation == 1) {
-							if (edLen < (int) strlen(edBuf)) {
-								 printf("extra data length specified %d, but "
-									"actually is %ld in record %d (truncation was"
-									" anticipated, but payload should have been "
-									"smaller than data-length, not larger)\n",
-									edLen, (long) strlen(edBuf), i);
-								exit(1);
-							}
-						} else {
-							 printf("extra data length specified %d, but actually "
-								"is %ld in record %d\n",
-								edLen, (long) strlen(edBuf), i);
-							exit(1);
-						}
-					}
-				} else {
-					if(fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
-						scanfOK = 0;
-					} else {
-						scanfOK = sscanf(ioBuf, "%d\n", &val) == 1 ? 1 : 0;
-					}
-				}
+    int c = getc(fp);
+    if (c == EOF) {
+        reachedEOF = 1;
+    } else {
+        ungetc(c, fp);
+        /* if duplicates are permitted, we need to do a final check if we have duplicates at the
+         * end of file.
+         */
+        if (dupsPermitted) {
+            i = end;
+            while (!feof(fp)) {
+                if (bHaveExtraData) {
+                    if (fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
+                        scanfOK = 0;
+                    } else {
+                        scanfOK = sscanf(ioBuf, "%d,%d,%s\n", &val, &edLen, edBuf) == 3 ? 1 : 0;
+                    }
+                    if (edLen != (int)strlen(edBuf)) {
+                        if (bAnticipateTruncation == 1) {
+                            if (edLen < (int)strlen(edBuf)) {
+                                printf(
+                                    "extra data length specified %d, but "
+                                    "actually is %ld in record %d (truncation was"
+                                    " anticipated, but payload should have been "
+                                    "smaller than data-length, not larger)\n",
+                                    edLen, (long)strlen(edBuf), i);
+                                exit(1);
+                            }
+                        } else {
+                            printf(
+                                "extra data length specified %d, but actually "
+                                "is %ld in record %d\n",
+                                edLen, (long)strlen(edBuf), i);
+                            exit(1);
+                        }
+                    }
+                } else {
+                    if (fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
+                        scanfOK = 0;
+                    } else {
+                        scanfOK = sscanf(ioBuf, "%d\n", &val) == 1 ? 1 : 0;
+                    }
+                }
 
-				if(val != i) {
-					reachedEOF = 0;
-					goto breakIF;
-				}
-			}
-			reachedEOF = feof(fp) ? 1 : 0;
-		} else {
-			reachedEOF = 0;
-		}
-	}
+                if (val != i) {
+                    reachedEOF = 0;
+                    goto breakIF;
+                }
+            }
+            reachedEOF = feof(fp) ? 1 : 0;
+        } else {
+            reachedEOF = 0;
+        }
+    }
 
 breakIF:
-	if(nDups != 0)
-		printf("info: had %d duplicates (this is no error)\n", nDups);
+    if (nDups != 0) printf("info: had %d duplicates (this is no error)\n", nDups);
 
-	if(!reachedEOF) {
-		printf("end of processing, but NOT end of file! First line of extra data is:\n");
-		for(c = fgetc(fp) ; c != '\n' && c != EOF ; c = fgetc(fp))
-			putchar(c);
-		putchar('\n');
-		exit(1);
-	}
+    if (!reachedEOF) {
+        printf("end of processing, but NOT end of file! First line of extra data is:\n");
+        for (c = fgetc(fp); c != '\n' && c != EOF; c = fgetc(fp)) putchar(c);
+        putchar('\n');
+        exit(1);
+    }
 
-	exit(ret);
+    exit(ret);
 }

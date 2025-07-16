@@ -23,28 +23,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef	IMKLOG_H_INCLUDED
-#define	IMKLOG_H_INCLUDED 1
+#ifndef IMKLOG_H_INCLUDED
+    #define IMKLOG_H_INCLUDED 1
 
-#include "rsyslog.h"
-#include "dirty.h"
-#include "ratelimit.h"
+    #include "rsyslog.h"
+    #include "dirty.h"
+    #include "ratelimit.h"
 
 /* we need to have the modConf type present in all submodules */
 struct modConfData_s {
-	rsconf_t *pConf;
-	int iFacilIntMsg;
-	uchar *pszPath;
-	int console_log_level;
-	sbool bParseKernelStamp;
-	sbool bKeepKernelStamp;
-	sbool bPermitNonKernel;
-	sbool configSetViaV2Method;
-	ratelimit_t *ratelimiter;
-	int ratelimitInterval;
-	int ratelimitBurst;
-	ruleset_t *pBindRuleset;	/* ruleset to bind (use system default if unspecified) */
-	uchar *pszBindRuleset;
+    rsconf_t *pConf;
+    int iFacilIntMsg;
+    uchar *pszPath;
+    int console_log_level;
+    sbool bParseKernelStamp;
+    sbool bKeepKernelStamp;
+    sbool bPermitNonKernel;
+    sbool configSetViaV2Method;
+    ratelimit_t *ratelimiter;
+    int ratelimitInterval;
+    int ratelimitBurst;
+    ruleset_t *pBindRuleset; /* ruleset to bind (use system default if unspecified) */
+    uchar *pszBindRuleset;
 };
 
 /* interface to "drivers"
@@ -60,16 +60,16 @@ rsRetVal klogWillRunPostPrivDrop(modConfData_t *pModConf);
 int klogFacilIntMsg(void);
 
 /* the functions below may be called by the drivers */
-rsRetVal imklogLogIntMsg(syslog_pri_t priority, const char *fmt, ...) __attribute__((format(printf,2, 3)));
+rsRetVal imklogLogIntMsg(syslog_pri_t priority, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 rsRetVal Syslog(modConfData_t *pModConf, syslog_pri_t priority, uchar *msg, struct timeval *tp);
 
 /* prototypes */
 extern int klog_getMaxLine(void); /* work-around for klog drivers to get configured max line size */
-extern int InitKsyms(modConfData_t*);
+extern int InitKsyms(modConfData_t *);
 extern void DeinitKsyms(void);
 extern int InitMsyms(void);
 extern void DeinitMsyms(void);
-extern char * ExpandKadds(char *, char *);
+extern char *ExpandKadds(char *, char *);
 extern void SetParanoiaLevel(int);
 
 #endif /* #ifndef IMKLOG_H_INCLUDED */

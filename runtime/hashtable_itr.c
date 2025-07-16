@@ -7,30 +7,25 @@
 /*****************************************************************************/
 /* hashtable_iterator    - iterator constructor */
 
-struct hashtable_itr *
-hashtable_iterator(struct hashtable *h)
-{
-	unsigned int i, tablelength;
-	struct hashtable_itr *itr = (struct hashtable_itr *)
-	malloc(sizeof(struct hashtable_itr));
-	if (NULL == itr) return NULL;
-	itr->h = h;
-	itr->e = NULL;
-	itr->parent = NULL;
-	tablelength = h->tablelength;
-	itr->index = tablelength;
-	if (0 == h->entrycount) return itr;
+struct hashtable_itr *hashtable_iterator(struct hashtable *h) {
+    unsigned int i, tablelength;
+    struct hashtable_itr *itr = (struct hashtable_itr *)malloc(sizeof(struct hashtable_itr));
+    if (NULL == itr) return NULL;
+    itr->h = h;
+    itr->e = NULL;
+    itr->parent = NULL;
+    tablelength = h->tablelength;
+    itr->index = tablelength;
+    if (0 == h->entrycount) return itr;
 
-	for (i = 0; i < tablelength; i++)
-	{
-		if (NULL != h->table[i])
-		{
-			itr->e = h->table[i];
-			itr->index = i;
-			break;
-		}
-	}
-	return itr;
+    for (i = 0; i < tablelength; i++) {
+        if (NULL != h->table[i]) {
+            itr->e = h->table[i];
+            itr->index = i;
+            break;
+        }
+    }
+    return itr;
 }
 
 /*****************************************************************************/
@@ -51,41 +46,35 @@ hashtable_iterator_value(struct hashtable_itr *i)
 /* advance - advance the iterator to the next element
  *           returns zero if advanced to end of table */
 
-int
-hashtable_iterator_advance(struct hashtable_itr *itr)
-{
-	unsigned int j,tablelength;
-	struct entry **table;
-	struct entry *next;
-	if (NULL == itr->e) return 0; /* stupidity check */
+int hashtable_iterator_advance(struct hashtable_itr *itr) {
+    unsigned int j, tablelength;
+    struct entry **table;
+    struct entry *next;
+    if (NULL == itr->e) return 0; /* stupidity check */
 
-	next = itr->e->next;
-	if (NULL != next)
-	{
-		itr->parent = itr->e;
-		itr->e = next;
-		return -1;
-	}
-	tablelength = itr->h->tablelength;
-	itr->parent = NULL;
-	if (tablelength <= (j = ++(itr->index)))
-	{
-		itr->e = NULL;
-		return 0;
-	}
-	table = itr->h->table;
-	while (NULL == (next = table[j]))
-	{
-		if (++j >= tablelength)
-		{
-			itr->index = tablelength;
-			itr->e = NULL;
-			return 0;
-		}
-	}
-	itr->index = j;
-	itr->e = next;
-	return -1;
+    next = itr->e->next;
+    if (NULL != next) {
+        itr->parent = itr->e;
+        itr->e = next;
+        return -1;
+    }
+    tablelength = itr->h->tablelength;
+    itr->parent = NULL;
+    if (tablelength <= (j = ++(itr->index))) {
+        itr->e = NULL;
+        return 0;
+    }
+    table = itr->h->table;
+    while (NULL == (next = table[j])) {
+        if (++j >= tablelength) {
+            itr->index = tablelength;
+            itr->e = NULL;
+            return 0;
+        }
+    }
+    itr->index = j;
+    itr->e = next;
+    return -1;
 }
 
 /*****************************************************************************/
@@ -96,62 +85,57 @@ hashtable_iterator_advance(struct hashtable_itr *itr)
  *          beware memory leaks if you don't.
  *          Returns zero if end of iteration. */
 
-int
-hashtable_iterator_remove(struct hashtable_itr *itr)
-{
-	struct entry *remember_e, *remember_parent;
-	int ret;
+int hashtable_iterator_remove(struct hashtable_itr *itr) {
+    struct entry *remember_e, *remember_parent;
+    int ret;
 
-	/* Do the removal */
-	if (NULL == (itr->parent))
-	{
-		/* element is head of a chain */
-		itr->h->table[itr->index] = itr->e->next;
-	} else {
-		/* element is mid-chain */
-		itr->parent->next = itr->e->next;
-	}
-	/* itr->e is now outside the hashtable */
-	remember_e = itr->e;
-	itr->h->entrycount--;
-	freekey(remember_e->k);
+    /* Do the removal */
+    if (NULL == (itr->parent)) {
+        /* element is head of a chain */
+        itr->h->table[itr->index] = itr->e->next;
+    } else {
+        /* element is mid-chain */
+        itr->parent->next = itr->e->next;
+    }
+    /* itr->e is now outside the hashtable */
+    remember_e = itr->e;
+    itr->h->entrycount--;
+    freekey(remember_e->k);
 
-	/* Advance the iterator, correcting the parent */
-	remember_parent = itr->parent;
-	ret = hashtable_iterator_advance(itr);
-	if (itr->parent == remember_e) { itr->parent = remember_parent; }
-	free(remember_e);
-	return ret;
+    /* Advance the iterator, correcting the parent */
+    remember_parent = itr->parent;
+    ret = hashtable_iterator_advance(itr);
+    if (itr->parent == remember_e) {
+        itr->parent = remember_parent;
+    }
+    free(remember_e);
+    return ret;
 }
 
 /*****************************************************************************/
 int /* returns zero if not found */
-hashtable_iterator_search(struct hashtable_itr *itr,
-			struct hashtable *h, void *k)
-{
-	struct entry *e, *parent;
-	unsigned int hashvalue, index;
+hashtable_iterator_search(struct hashtable_itr *itr, struct hashtable *h, void *k) {
+    struct entry *e, *parent;
+    unsigned int hashvalue, index;
 
-	hashvalue = hash(h,k);
-	index = indexFor(h->tablelength,hashvalue);
+    hashvalue = hash(h, k);
+    index = indexFor(h->tablelength, hashvalue);
 
-	e = h->table[index];
-	parent = NULL;
-	while (NULL != e)
-	{
-		/* Check hash value to short circuit heavier comparison */
-		if ((hashvalue == e->h) && (h->eqfn(k, e->k)))
-		{
-			itr->index = index;
-			itr->e = e;
-			itr->parent = parent;
-			itr->h = h;
-			return -1;
-		}
-		parent = e;
-		e = e->next;
-	}
-	return 0;
+    e = h->table[index];
+    parent = NULL;
+    while (NULL != e) {
+        /* Check hash value to short circuit heavier comparison */
+        if ((hashvalue == e->h) && (h->eqfn(k, e->k))) {
+            itr->index = index;
+            itr->e = e;
+            itr->parent = parent;
+            itr->h = h;
+            return -1;
+        }
+        parent = e;
+        e = e->next;
+    }
+    return 0;
 }
 
 
@@ -186,4 +170,4 @@ hashtable_iterator_search(struct hashtable_itr *itr,
  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */

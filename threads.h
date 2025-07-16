@@ -24,15 +24,15 @@
 
 /* the thread object */
 struct thrdInfo {
-	pthread_mutex_t mutThrd;/* mutex for handling long-running operations and shutdown */
-	pthread_cond_t condThrdTerm;/* condition: thread terminates (used just for shutdown loop) */
-	int bIsActive;		/* Is thread running? */
-	int bShallStop;		/* set to 1 if the thread should be stopped ? */
-	rsRetVal (*pUsrThrdMain)(struct thrdInfo*); /* user thread main to be called in new thread */
-	rsRetVal (*pAfterRun)(struct thrdInfo*);   /* cleanup function */
-	pthread_t thrdID;
-	sbool bNeedsCancel;	/* must input be terminated by pthread_cancel()? */
-	uchar *name;		/* a thread name, mainly for user interaction */
+    pthread_mutex_t mutThrd; /* mutex for handling long-running operations and shutdown */
+    pthread_cond_t condThrdTerm; /* condition: thread terminates (used just for shutdown loop) */
+    int bIsActive; /* Is thread running? */
+    int bShallStop; /* set to 1 if the thread should be stopped ? */
+    rsRetVal (*pUsrThrdMain)(struct thrdInfo *); /* user thread main to be called in new thread */
+    rsRetVal (*pAfterRun)(struct thrdInfo *); /* cleanup function */
+    pthread_t thrdID;
+    sbool bNeedsCancel; /* must input be terminated by pthread_cancel()? */
+    uchar *name; /* a thread name, mainly for user interaction */
 };
 
 /* prototypes */
@@ -40,7 +40,7 @@ rsRetVal thrdExit(void);
 rsRetVal thrdInit(void);
 rsRetVal thrdTerminate(thrdInfo_t *pThis);
 rsRetVal thrdTerminateAll(void);
-rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdInfo_t *), sbool, uchar*);
+rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t *), rsRetVal (*afterRun)(thrdInfo_t *), sbool, uchar *);
 
 /* macros (replace inline functions) */
 

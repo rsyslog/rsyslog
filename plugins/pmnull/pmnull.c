@@ -46,142 +46,126 @@ MODULE_CNFNAME("pmnull")
 
 /* internal structures */
 DEF_PMOD_STATIC_DATA;
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(parser)
-DEFobjCurrIf(datetime)
+DEFobjCurrIf(glbl) DEFobjCurrIf(parser) DEFobjCurrIf(datetime)
 
 
-/* parser instance parameters */
-static struct cnfparamdescr parserpdescr[] = {
-	{ "tag", eCmdHdlrString, 0 },
-	{ "syslogfacility", eCmdHdlrFacility, 0 },
-	{ "syslogseverity", eCmdHdlrSeverity, 0 }
-};
-static struct cnfparamblk parserpblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(parserpdescr)/sizeof(struct cnfparamdescr),
-	  parserpdescr
-	};
+    /* parser instance parameters */
+    static struct cnfparamdescr parserpdescr[] = {
+        {"tag", eCmdHdlrString, 0}, {"syslogfacility", eCmdHdlrFacility, 0}, {"syslogseverity", eCmdHdlrSeverity, 0}};
+static struct cnfparamblk parserpblk = {CNFPARAMBLK_VERSION, sizeof(parserpdescr) / sizeof(struct cnfparamdescr),
+                                        parserpdescr};
 
 struct instanceConf_s {
-	const char *tag;
-	size_t lenTag;
-	int pri;
+    const char *tag;
+    size_t lenTag;
+    int pri;
 };
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature;
-	if(eFeat == sFEATUREAutomaticSanitazion)
-		iRet = RS_RET_OK;
-	if(eFeat == sFEATUREAutomaticPRIParsing)
-		iRet = RS_RET_OK;
+    CODESTARTisCompatibleWithFeature;
+    if (eFeat == sFEATUREAutomaticSanitazion) iRet = RS_RET_OK;
+    if (eFeat == sFEATUREAutomaticPRIParsing) iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 /* create input instance, set default parameters, and
  * add it to the list of instances.
  */
-static rsRetVal
-createInstance(instanceConf_t **pinst)
-{
-	instanceConf_t *inst;
-	DEFiRet;
-	CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
-	inst->tag = NULL;
-	*pinst = inst;
+static rsRetVal createInstance(instanceConf_t **pinst) {
+    instanceConf_t *inst;
+    DEFiRet;
+    CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
+    inst->tag = NULL;
+    *pinst = inst;
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
 BEGINfreeParserInst
-CODESTARTfreeParserInst;
-	dbgprintf("pmnull: free parser instance %p\n", pInst);
+    CODESTARTfreeParserInst;
+    dbgprintf("pmnull: free parser instance %p\n", pInst);
 ENDfreeParserInst
 
 
 BEGINnewParserInst
-	struct cnfparamvals *pvals = NULL;
-	int i;
-	int syslogfacility = 1; /* default as of rfc3164 */
-	int syslogseverity = 5; /* default as of rfc3164 */
-CODESTARTnewParserInst;
-	DBGPRINTF("newParserInst (pmnull)\n");
+    struct cnfparamvals *pvals = NULL;
+    int i;
+    int syslogfacility = 1; /* default as of rfc3164 */
+    int syslogseverity = 5; /* default as of rfc3164 */
+    CODESTARTnewParserInst;
+    DBGPRINTF("newParserInst (pmnull)\n");
 
-	inst = NULL;
-	CHKiRet(createInstance(&inst));
+    inst = NULL;
+    CHKiRet(createInstance(&inst));
 
-	if(lst == NULL)
-		FINALIZE;  /* just set defaults, no param block! */
+    if (lst == NULL) FINALIZE; /* just set defaults, no param block! */
 
-	if((pvals = nvlstGetParams(lst, &parserpblk, NULL)) == NULL) {
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-	}
+    if ((pvals = nvlstGetParams(lst, &parserpblk, NULL)) == NULL) {
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
 
-	if(Debug) {
-		dbgprintf("parser param blk in pmnull:\n");
-		cnfparamsPrint(&parserpblk, pvals);
-	}
+    if (Debug) {
+        dbgprintf("parser param blk in pmnull:\n");
+        cnfparamsPrint(&parserpblk, pvals);
+    }
 
-	for(i = 0 ; i < parserpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
-			continue;
-		if(!strcmp(parserpblk.descr[i].name, "tag")) {
-			inst->tag = (const char *) es_str2cstr(pvals[i].val.d.estr, NULL);
-			inst->lenTag = strlen(inst->tag);
-		} else if(!strcmp(parserpblk.descr[i].name, "syslogfacility")) {
-			syslogfacility = pvals[i].val.d.n;
-		} else if(!strcmp(parserpblk.descr[i].name, "syslogseverity")) {
-			syslogseverity = pvals[i].val.d.n;
-		} else {
-			dbgprintf("pmnull: program error, non-handled "
-				"param '%s'\n", parserpblk.descr[i].name);
-		}
-	}
-	inst->pri = syslogfacility*8 + syslogseverity;
+    for (i = 0; i < parserpblk.nParams; ++i) {
+        if (!pvals[i].bUsed) continue;
+        if (!strcmp(parserpblk.descr[i].name, "tag")) {
+            inst->tag = (const char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            inst->lenTag = strlen(inst->tag);
+        } else if (!strcmp(parserpblk.descr[i].name, "syslogfacility")) {
+            syslogfacility = pvals[i].val.d.n;
+        } else if (!strcmp(parserpblk.descr[i].name, "syslogseverity")) {
+            syslogseverity = pvals[i].val.d.n;
+        } else {
+            dbgprintf(
+                "pmnull: program error, non-handled "
+                "param '%s'\n",
+                parserpblk.descr[i].name);
+        }
+    }
+    inst->pri = syslogfacility * 8 + syslogseverity;
 finalize_it:
-CODE_STD_FINALIZERnewParserInst
-	if(lst != NULL)
-		cnfparamvalsDestruct(pvals, &parserpblk);
-	if(iRet != RS_RET_OK)
-		freeParserInst(inst);
+    CODE_STD_FINALIZERnewParserInst if (lst != NULL) cnfparamvalsDestruct(pvals, &parserpblk);
+    if (iRet != RS_RET_OK) freeParserInst(inst);
 ENDnewParserInst
 
 
 BEGINparse2
-CODESTARTparse2;
-	DBGPRINTF("Message will now be parsed by pmnull\n");
-	if(pInst->tag != NULL) {
-		MsgSetTAG(pMsg, (uchar *)pInst->tag, pInst->lenTag);
-	}
-	msgSetPRI(pMsg, pInst->pri);
-	MsgSetMSGoffs(pMsg, 0);
+    CODESTARTparse2;
+    DBGPRINTF("Message will now be parsed by pmnull\n");
+    if (pInst->tag != NULL) {
+        MsgSetTAG(pMsg, (uchar *)pInst->tag, pInst->lenTag);
+    }
+    msgSetPRI(pMsg, pInst->pri);
+    MsgSetMSGoffs(pMsg, 0);
 ENDparse2
 
 
 BEGINmodExit
-CODESTARTmodExit;
-	/* release what we no longer need */
-	objRelease(glbl, CORE_COMPONENT);
-	objRelease(parser, CORE_COMPONENT);
-	objRelease(datetime, CORE_COMPONENT);
+    CODESTARTmodExit;
+    /* release what we no longer need */
+    objRelease(glbl, CORE_COMPONENT);
+    objRelease(parser, CORE_COMPONENT);
+    objRelease(datetime, CORE_COMPONENT);
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt;
-CODEqueryEtryPt_STD_PMOD2_QUERIES;
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
+    CODESTARTqueryEtryPt;
+    CODEqueryEtryPt_STD_PMOD2_QUERIES;
+    CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit;
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(parser, CORE_COMPONENT));
-	CHKiRet(objUse(datetime, CORE_COMPONENT));
+    CODESTARTmodInit;
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    CODEmodInit_QueryRegCFSLineHdlr CHKiRet(objUse(glbl, CORE_COMPONENT));
+    CHKiRet(objUse(parser, CORE_COMPONENT));
+    CHKiRet(objUse(datetime, CORE_COMPONENT));
 
-	DBGPRINTF("pmnull parser init called\n");
+    DBGPRINTF("pmnull parser init called\n");
 ENDmodInit

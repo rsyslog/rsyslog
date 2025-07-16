@@ -72,10 +72,10 @@ struct hashtable;
  * @return                  newly created hashtable or NULL on failure
  */
 
-struct hashtable *
-create_hashtable(unsigned int minsize,
-		unsigned int (*hashfunction) (void*),
-		int (*key_eq_fn) (void*,void*), void (*dest) (void*));
+struct hashtable *create_hashtable(unsigned int minsize,
+                                   unsigned int (*hashfunction)(void *),
+                                   int (*key_eq_fn)(void *, void *),
+                                   void (*dest)(void *));
 
 /*****************************************************************************
  * hashtable_insert
@@ -96,14 +96,12 @@ create_hashtable(unsigned int minsize,
  * If in doubt, remove before insert.
  */
 
-int
-hashtable_insert(struct hashtable *h, void *k, void *v);
+int hashtable_insert(struct hashtable *h, void *k, void *v);
 
-#define DEFINE_HASHTABLE_INSERT(fnname, keytype, valuetype) \
-int fnname (struct hashtable *h, keytype *k, valuetype *v) \
-{ \
-	return hashtable_insert(h,k,v); \
-}
+#define DEFINE_HASHTABLE_INSERT(fnname, keytype, valuetype)     \
+    int fnname(struct hashtable *h, keytype *k, valuetype *v) { \
+        return hashtable_insert(h, k, v);                       \
+    }
 
 /*****************************************************************************
  * hashtable_search
@@ -114,14 +112,12 @@ int fnname (struct hashtable *h, keytype *k, valuetype *v) \
  * @return      the value associated with the key, or NULL if none found
  */
 
-void *
-hashtable_search(struct hashtable *h, void *k);
+void *hashtable_search(struct hashtable *h, void *k);
 
 #define DEFINE_HASHTABLE_SEARCH(fnname, keytype, valuetype) \
-valuetype * fnname (struct hashtable *h, keytype *k) \
-{ \
-	return (valuetype *) (hashtable_search(h,k)); \
-}
+    valuetype *fnname(struct hashtable *h, keytype *k) {    \
+        return (valuetype *)(hashtable_search(h, k));       \
+    }
 
 /*****************************************************************************
  * hashtable_remove
@@ -136,10 +132,9 @@ void * /* returns value */
 hashtable_remove(struct hashtable *h, void *k);
 
 #define DEFINE_HASHTABLE_REMOVE(fnname, keytype, valuetype) \
-valuetype * fnname (struct hashtable *h, keytype *k) \
-{ \
-	return (valuetype *) (hashtable_remove(h,k)); \
-}
+    valuetype *fnname(struct hashtable *h, keytype *k) {    \
+        return (valuetype *)(hashtable_remove(h, k));       \
+    }
 
 
 /*****************************************************************************
@@ -149,8 +144,7 @@ valuetype * fnname (struct hashtable *h, keytype *k) \
  * @param   h   the hashtable
  * @return      the number of items stored in the hashtable
  */
-unsigned int
-hashtable_count(struct hashtable *h);
+unsigned int hashtable_count(struct hashtable *h);
 
 
 /*****************************************************************************
@@ -161,8 +155,7 @@ hashtable_count(struct hashtable *h);
  * @param       free_values     whether to call 'free' on the remaining values
  */
 
-void
-hashtable_destroy(struct hashtable *h, int free_values);
+void hashtable_destroy(struct hashtable *h, int free_values);
 
 /*
  * Copyright (c) 2002, Christopher Clark
@@ -196,7 +189,7 @@ hashtable_destroy(struct hashtable *h, int free_values);
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-unsigned __attribute__((nonnull(1))) int hash_from_string(void *k) ;
+unsigned __attribute__((nonnull(1))) int hash_from_string(void *k);
 int key_equals_string(void *key1, void *key2);
 
 #endif /* __HASHTABLE_CWC22_H__ */

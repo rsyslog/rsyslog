@@ -21,11 +21,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef	SMTRADFILE_H_INCLUDED
-#define	SMTRADFILE_H_INCLUDED 1
+#ifndef SMTRADFILE_H_INCLUDED
+#define SMTRADFILE_H_INCLUDED 1
 
 /* prototypes */
-rsRetVal modInitsmtradfile(int iIFVersRequested __attribute__((unused)), int *ipIFVersProvided,
-	rsRetVal (**pQueryEtryPt)(), rsRetVal (*pHostQueryEtryPt)(uchar*, rsRetVal (**)()), modInfo_t*);
+rsRetVal modInitsmtradfile(int iIFVersRequested __attribute__((unused)),
+                           int *ipIFVersProvided,
+                           rsRetVal (**pQueryEtryPt)(),
+                           rsRetVal (*pHostQueryEtryPt)(uchar *, rsRetVal (**)()),
+                           modInfo_t *);
 
 #endif /* #ifndef SMTRADFILE_H_INCLUDED */

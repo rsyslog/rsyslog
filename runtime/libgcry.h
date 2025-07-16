@@ -24,29 +24,29 @@
 #include <gcrypt.h>
 
 struct gcryctx_s {
-	uchar *key;
-	size_t keyLen;
-	int algo;
-	int mode;
+    uchar *key;
+    size_t keyLen;
+    int algo;
+    int mode;
 };
 typedef struct gcryctx_s *gcryctx;
 typedef struct gcryfile_s *gcryfile;
 
 /* this describes a file, as far as libgcry is concerned */
 struct gcryfile_s {
-	gcry_cipher_hd_t chd; /* cypher handle */
-	size_t blkLength; /* size of low-level crypto block */
-	uchar *eiName; /* name of .encinfo file */
-	int fd; /* descriptor of .encinfo file (-1 if not open) */
-	char openMode; /* 'r': read, 'w': write */
-	gcryctx ctx;
-	uchar *readBuf;
-	int16_t readBufIdx;
-	int16_t readBufMaxIdx;
-	int8_t bDeleteOnClose; /* for queue support, similar to stream subsys */
-	ssize_t bytesToBlkEnd; /* number of bytes remaining in current crypto block
-				-1 means -> no end (still being writen to, queue files),
-				0 means -> end of block, new one must be started. */
+    gcry_cipher_hd_t chd; /* cypher handle */
+    size_t blkLength; /* size of low-level crypto block */
+    uchar *eiName; /* name of .encinfo file */
+    int fd; /* descriptor of .encinfo file (-1 if not open) */
+    char openMode; /* 'r': read, 'w': write */
+    gcryctx ctx;
+    uchar *readBuf;
+    int16_t readBufIdx;
+    int16_t readBufMaxIdx;
+    int8_t bDeleteOnClose; /* for queue support, similar to stream subsys */
+    ssize_t bytesToBlkEnd; /* number of bytes remaining in current crypto block
+                -1 means -> no end (still being writen to, queue files),
+                0 means -> end of block, new one must be started. */
 };
 
 int rsgcryInit(void);
@@ -66,11 +66,8 @@ int rsgcryModename2Mode(char *const __restrict__ modename);
 int rsgcryAlgoname2Algo(char *const __restrict__ algoname);
 
 /* Note: gf may validly be NULL, e.g. if file has not yet been opened! */
-static inline void __attribute__((unused))
-gcryfileSetDeleteOnClose(gcryfile gf, const int val)
-{
-	if(gf != NULL)
-		gf->bDeleteOnClose = val;
+static inline void __attribute__((unused)) gcryfileSetDeleteOnClose(gcryfile gf, const int val) {
+    if (gf != NULL) gf->bDeleteOnClose = val;
 }
 
-#endif  /* #ifndef INCLUDED_LIBGCRY_H */
+#endif /* #ifndef INCLUDED_LIBGCRY_H */

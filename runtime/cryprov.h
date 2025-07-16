@@ -33,16 +33,16 @@
 
 /* interface */
 BEGINinterface(cryprov) /* name must also be changed in ENDinterface macro! */
-	rsRetVal (*Construct)(void *ppThis);
-	rsRetVal (*SetCnfParam)(void *ppThis, struct nvlst *lst, int paramType);
-	rsRetVal (*Destruct)(void *ppThis);
-	rsRetVal (*OnFileOpen)(void *pThis, uchar *fn, void *pFileInstData, char openMode);
-	rsRetVal (*Encrypt)(void *pFileInstData, uchar *buf, size_t *lenBuf);
-	rsRetVal (*Decrypt)(void *pFileInstData, uchar *buf, size_t *lenBuf);
-	rsRetVal (*OnFileClose)(void *pFileInstData, off64_t offsLogfile);
-	rsRetVal (*DeleteStateFiles)(uchar *logfn);
-	rsRetVal (*GetBytesLeftInBlock)(void *pFileInstData, ssize_t *left);
-	void (*SetDeleteOnClose)(void *pFileInstData, int val);
+    rsRetVal (*Construct)(void *ppThis);
+    rsRetVal (*SetCnfParam)(void *ppThis, struct nvlst *lst, int paramType);
+    rsRetVal (*Destruct)(void *ppThis);
+    rsRetVal (*OnFileOpen)(void *pThis, uchar *fn, void *pFileInstData, char openMode);
+    rsRetVal (*Encrypt)(void *pFileInstData, uchar *buf, size_t *lenBuf);
+    rsRetVal (*Decrypt)(void *pFileInstData, uchar *buf, size_t *lenBuf);
+    rsRetVal (*OnFileClose)(void *pFileInstData, off64_t offsLogfile);
+    rsRetVal (*DeleteStateFiles)(uchar *logfn);
+    rsRetVal (*GetBytesLeftInBlock)(void *pFileInstData, ssize_t *left);
+    void (*SetDeleteOnClose)(void *pFileInstData, int val);
 ENDinterface(cryprov)
 #define cryprovCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
 #endif /* #ifndef INCLUDED_CRYPROV_H */

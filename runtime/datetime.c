@@ -32,7 +32,7 @@
 #include <assert.h>
 #include <string.h>
 #ifdef HAVE_SYS_TIME_H
-#	include <sys/time.h>
+    #include <sys/time.h>
 #endif
 
 #include "rsyslog.h"
@@ -49,7 +49,7 @@
 DEFobjStaticHelpers;
 
 /* the following table of ten powers saves us some computation */
-static const int tenPowers[6] = { 1, 10, 100, 1000, 10000, 100000 };
+static const int tenPowers[6] = {1, 10, 100, 1000, 10000, 100000};
 
 /* the following table saves us from computing an additional date to get
  * the ordinal day of the year - at least from 1967-2099
@@ -61,51 +61,36 @@ static const int yearInSec_startYear = 1967;
  *   printf %s', ' $(date --date="Dec 31 ${x} UTC 23:59:59" +%s)
  * done |fold -w 70 -s */
 static const long long yearInSecs[] = {
-	-63158401, -31536001, -1, 31535999, 63071999, 94694399, 126230399,
-	157766399, 189302399, 220924799, 252460799, 283996799, 315532799,
-	347155199, 378691199, 410227199, 441763199, 473385599, 504921599,
-	536457599, 567993599, 599615999, 631151999, 662687999, 694223999,
-	725846399, 757382399, 788918399, 820454399, 852076799, 883612799,
-	915148799, 946684799, 978307199, 1009843199, 1041379199, 1072915199,
-	1104537599, 1136073599, 1167609599, 1199145599, 1230767999,
-	1262303999, 1293839999, 1325375999, 1356998399, 1388534399,
-	1420070399, 1451606399, 1483228799, 1514764799, 1546300799,
-	1577836799, 1609459199, 1640995199, 1672531199, 1704067199,
-	1735689599, 1767225599, 1798761599, 1830297599, 1861919999,
-	1893455999, 1924991999, 1956527999, 1988150399, 2019686399,
-	2051222399, 2082758399, 2114380799, 2145916799, 2177452799,
-	2208988799, 2240611199, 2272147199, 2303683199, 2335219199,
-	2366841599, 2398377599, 2429913599, 2461449599, 2493071999,
-	2524607999, 2556143999, 2587679999, 2619302399, 2650838399,
-	2682374399, 2713910399, 2745532799, 2777068799, 2808604799,
-	2840140799, 2871763199, 2903299199, 2934835199, 2966371199,
-	2997993599, 3029529599, 3061065599, 3092601599, 3124223999,
-	3155759999, 3187295999, 3218831999, 3250454399, 3281990399,
-	3313526399, 3345062399, 3376684799, 3408220799, 3439756799,
-	3471292799, 3502915199, 3534451199, 3565987199, 3597523199,
-	3629145599, 3660681599, 3692217599, 3723753599, 3755375999,
-	3786911999, 3818447999, 3849983999, 3881606399, 3913142399,
-	3944678399, 3976214399, 4007836799, 4039372799, 4070908799,
-	4102444799};
+    -63158401,  -31536001,  -1,         31535999,   63071999,   94694399,   126230399,  157766399,  189302399,
+    220924799,  252460799,  283996799,  315532799,  347155199,  378691199,  410227199,  441763199,  473385599,
+    504921599,  536457599,  567993599,  599615999,  631151999,  662687999,  694223999,  725846399,  757382399,
+    788918399,  820454399,  852076799,  883612799,  915148799,  946684799,  978307199,  1009843199, 1041379199,
+    1072915199, 1104537599, 1136073599, 1167609599, 1199145599, 1230767999, 1262303999, 1293839999, 1325375999,
+    1356998399, 1388534399, 1420070399, 1451606399, 1483228799, 1514764799, 1546300799, 1577836799, 1609459199,
+    1640995199, 1672531199, 1704067199, 1735689599, 1767225599, 1798761599, 1830297599, 1861919999, 1893455999,
+    1924991999, 1956527999, 1988150399, 2019686399, 2051222399, 2082758399, 2114380799, 2145916799, 2177452799,
+    2208988799, 2240611199, 2272147199, 2303683199, 2335219199, 2366841599, 2398377599, 2429913599, 2461449599,
+    2493071999, 2524607999, 2556143999, 2587679999, 2619302399, 2650838399, 2682374399, 2713910399, 2745532799,
+    2777068799, 2808604799, 2840140799, 2871763199, 2903299199, 2934835199, 2966371199, 2997993599, 3029529599,
+    3061065599, 3092601599, 3124223999, 3155759999, 3187295999, 3218831999, 3250454399, 3281990399, 3313526399,
+    3345062399, 3376684799, 3408220799, 3439756799, 3471292799, 3502915199, 3534451199, 3565987199, 3597523199,
+    3629145599, 3660681599, 3692217599, 3723753599, 3755375999, 3786911999, 3818447999, 3849983999, 3881606399,
+    3913142399, 3944678399, 3976214399, 4007836799, 4039372799, 4070908799, 4102444799};
 
 /* note ramge is 1969 -> 2100 because it needs to access previous/next year */
 /* for x in $(seq 1969 2100) ; do
  *   printf %s', ' $(date --date="Dec 28 ${x} UTC 12:00:00" +%V)
  * done | fold -w 70 -s */
 static const int weeksInYear[] = {
-	52, 53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52, 53, 52, 52, 52, 52,
-	52, 53, 52, 52, 52, 52, 53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52,
-	52, 53, 52, 52, 52, 52, 53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52,
-	53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52,
-	53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52, 53, 52, 52, 52, 52, 52,
-	53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52, 53, 52, 52, 52, 52, 52,
-	53, 52, 52, 52, 52, 53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52, 52,
-	53, 52, 52, 52, 52, 53, 52, 52, 52, 52, 52, 53, 52,
+    52, 53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52, 53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52, 53, 52, 52, 52,
+    52, 52, 53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52, 53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52, 53, 52, 52,
+    52, 52, 52, 53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52, 53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52, 53, 52,
+    52, 52, 52, 52, 53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52, 53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52, 53,
+    52, 52, 52, 52, 52, 53, 52, 52, 52, 52, 52, 53, 52, 52, 52, 52, 53, 52, 52, 52, 52, 52, 53, 52,
 };
 
-static const char* monthNames[12] = {
-	"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-};
+static const char *monthNames[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 
 /* ------------------------------ methods ------------------------------ */
 
@@ -113,64 +98,62 @@ static const char* monthNames[12] = {
 /**
  * Convert struct timeval to syslog_time
  */
-static void
-timeval2syslogTime(struct timeval *tp, struct syslogTime *t, const int inUTC)
-{
-	struct tm *tm;
-	struct tm tmBuf;
-	long lBias;
-	time_t secs;
+static void timeval2syslogTime(struct timeval *tp, struct syslogTime *t, const int inUTC) {
+    struct tm *tm;
+    struct tm tmBuf;
+    long lBias;
+    time_t secs;
 
 #if defined(__hpux)
-	struct timezone tz;
-#	endif
-	secs = tp->tv_sec;
-	if(inUTC)
-		tm = gmtime_r(&secs, &tmBuf);
-	else
-		tm = localtime_r(&secs, &tmBuf);
+    struct timezone tz;
+#endif
+    secs = tp->tv_sec;
+    if (inUTC)
+        tm = gmtime_r(&secs, &tmBuf);
+    else
+        tm = localtime_r(&secs, &tmBuf);
 
-	t->year = tm->tm_year + 1900;
-	t->month = tm->tm_mon + 1;
-	t->day = tm->tm_mday;
-	t->wday = tm->tm_wday;
-	t->hour = tm->tm_hour;
-	t->minute = tm->tm_min;
-	t->second = tm->tm_sec;
-	t->secfrac = tp->tv_usec;
-	t->secfracPrecision = 6;
+    t->year = tm->tm_year + 1900;
+    t->month = tm->tm_mon + 1;
+    t->day = tm->tm_mday;
+    t->wday = tm->tm_wday;
+    t->hour = tm->tm_hour;
+    t->minute = tm->tm_min;
+    t->second = tm->tm_sec;
+    t->secfrac = tp->tv_usec;
+    t->secfracPrecision = 6;
 
-	if(inUTC) {
-		t->OffsetMode = '+';
-		lBias = 0;
-	} else {
-#		if defined(__sun)
-			/* Solaris uses a different method of exporting the time zone.
-			 * It is UTC - localtime, which is the opposite sign of mins east of GMT.
-			 */
-			lBias = -(tm->tm_isdst ? altzone : timezone);
-#		elif defined(__hpux)
-			lBias = tz.tz_dsttime ? - tz.tz_minuteswest : 0;
-#		elif defined(_AIX)
-			/* AIXPORT : IBM documentation notice that 'extern long timezone'
-			 * is setted after calling tzset.
-			 * Recent version of AIX, localtime_r call inside tzset.
-			 */
-			if (tm->tm_isdst) tzset();
-			lBias = - timezone;
-#		else
-			lBias = tm->tm_gmtoff;
-#		endif
-		if(lBias < 0) {
-			t->OffsetMode = '-';
-			lBias *= -1;
-		} else
-			t->OffsetMode = '+';
-	}
-	t->OffsetHour = lBias / 3600;
-	t->OffsetMinute = (lBias % 3600) / 60;
-	t->timeType = TIME_TYPE_RFC5424; /* we have a high precision timestamp */
-	t->inUTC = inUTC;
+    if (inUTC) {
+        t->OffsetMode = '+';
+        lBias = 0;
+    } else {
+#if defined(__sun)
+        /* Solaris uses a different method of exporting the time zone.
+         * It is UTC - localtime, which is the opposite sign of mins east of GMT.
+         */
+        lBias = -(tm->tm_isdst ? altzone : timezone);
+#elif defined(__hpux)
+        lBias = tz.tz_dsttime ? -tz.tz_minuteswest : 0;
+#elif defined(_AIX)
+        /* AIXPORT : IBM documentation notice that 'extern long timezone'
+         * is setted after calling tzset.
+         * Recent version of AIX, localtime_r call inside tzset.
+         */
+        if (tm->tm_isdst) tzset();
+        lBias = -timezone;
+#else
+        lBias = tm->tm_gmtoff;
+#endif
+        if (lBias < 0) {
+            t->OffsetMode = '-';
+            lBias *= -1;
+        } else
+            t->OffsetMode = '+';
+    }
+    t->OffsetHour = lBias / 3600;
+    t->OffsetMinute = (lBias % 3600) / 60;
+    t->timeType = TIME_TYPE_RFC5424; /* we have a high precision timestamp */
+    t->inUTC = inUTC;
 }
 
 /**
@@ -189,34 +172,32 @@ timeval2syslogTime(struct timeval *tp, struct syslogTime *t, const int inUTC)
  * in some situations to minimize time() calls (namely when doing
  * output processing). This can be left NULL if not needed.
  */
-static void getCurrTime(struct syslogTime *t, time_t *ttSeconds, const int inUTC)
-{
-	struct timeval tp;
-/* AIXPORT : fix build error : "tm_gmtoff" is not a member of "struct tm"
- *           Choose the HPUX code path, only for this function.
- *           This is achieved by adding a check to _AIX wherever _hpux is checked
- */
+static void getCurrTime(struct syslogTime *t, time_t *ttSeconds, const int inUTC) {
+    struct timeval tp;
+    /* AIXPORT : fix build error : "tm_gmtoff" is not a member of "struct tm"
+     *           Choose the HPUX code path, only for this function.
+     *           This is achieved by adding a check to _AIX wherever _hpux is checked
+     */
 
 
 #if defined(__hpux) || defined(_AIX)
-	struct timezone tz;
-#	endif
+    struct timezone tz;
+#endif
 
-	assert(t != NULL);
+    assert(t != NULL);
 #if defined(__hpux) || defined(_AIX)
-		/* NOTE: under HP UX, the tz information might actually be
-		 * valid data. So we need to obtain and process it there.
-		 * As HP UX is not a supported platform, this is left to
-		 * explore by someone with interest in this platform.
-		 */
-		gettimeofday(&tp, &tz);
-#	else
-		gettimeofday(&tp, NULL);
-#	endif
-	if(ttSeconds != NULL)
-		*ttSeconds = tp.tv_sec;
+    /* NOTE: under HP UX, the tz information might actually be
+     * valid data. So we need to obtain and process it there.
+     * As HP UX is not a supported platform, this is left to
+     * explore by someone with interest in this platform.
+     */
+    gettimeofday(&tp, &tz);
+#else
+    gettimeofday(&tp, NULL);
+#endif
+    if (ttSeconds != NULL) *ttSeconds = tp.tv_sec;
 
-	timeval2syslogTime(&tp, t, inUTC);
+    timeval2syslogTime(&tp, t, inUTC);
 }
 
 
@@ -226,30 +207,23 @@ static void getCurrTime(struct syslogTime *t, time_t *ttSeconds, const int inUTC
  * this testing. So I created that function as a replacement.
  * rgerhards, 2009-11-12
  */
-time_t
-getTime(time_t *ttSeconds)
-{
-	struct timeval tp;
+time_t getTime(time_t *ttSeconds) {
+    struct timeval tp;
 
-	if(gettimeofday(&tp, NULL) == -1)
-		return -1;
+    if (gettimeofday(&tp, NULL) == -1) return -1;
 
-	if(ttSeconds != NULL)
-		*ttSeconds = tp.tv_sec;
-	return tp.tv_sec;
+    if (ttSeconds != NULL) *ttSeconds = tp.tv_sec;
+    return tp.tv_sec;
 }
 
-dateTimeFormat_t getDateTimeFormatFromStr(const char * const __restrict__ s) {
-	assert(s != NULL);
+dateTimeFormat_t getDateTimeFormatFromStr(const char *const __restrict__ s) {
+    assert(s != NULL);
 
-	if (strcmp(s, "date-rfc3164") == 0)
-		return DATE_RFC3164;
-	if (strcmp(s, "date-rfc3339") == 0)
-		return DATE_RFC3339;
-	if (strcmp(s, "date-unix") == 0)
-		return DATE_UNIX;
+    if (strcmp(s, "date-rfc3164") == 0) return DATE_RFC3164;
+    if (strcmp(s, "date-rfc3339") == 0) return DATE_RFC3339;
+    if (strcmp(s, "date-unix") == 0) return DATE_UNIX;
 
-	return DATE_INVALID;
+    return DATE_INVALID;
 }
 
 /*******************************************************************
@@ -281,19 +255,17 @@ dateTimeFormat_t getDateTimeFormatFromStr(const char * const __restrict__ s) {
  * 		  the method always returns zero.
  * \retval The number parsed.
  */
-static int
-srSLMGParseInt32(uchar** ppsz, int *pLenStr)
-{
-	register int i;
+static int srSLMGParseInt32(uchar **ppsz, int *pLenStr) {
+    register int i;
 
-	i = 0;
-	while(*pLenStr > 0 && **ppsz >= '0' && **ppsz <= '9' && i < INT_MAX/10-1) {
-		i = i * 10 + **ppsz - '0';
-		++(*ppsz);
-		--(*pLenStr);
-	}
+    i = 0;
+    while (*pLenStr > 0 && **ppsz >= '0' && **ppsz <= '9' && i < INT_MAX / 10 - 1) {
+        i = i * 10 + **ppsz - '0';
+        ++(*ppsz);
+        --(*pLenStr);
+    }
 
-	return i;
+    return i;
 }
 
 
@@ -307,144 +279,129 @@ srSLMGParseInt32(uchar** ppsz, int *pLenStr)
  * by the number of characters processed. If it is not a valid timestamp,
  * the length is kept unmodified. -- rgerhards, 2009-09-23
  */
-static rsRetVal
-ParseTIMESTAMP3339(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr)
-{
-	uchar *pszTS = *ppszTS;
-	/* variables to temporarily hold time information while we parse */
-	int year;
-	int month;
-	int day;
-	int hour; /* 24 hour clock */
-	int minute;
-	int second;
-	int secfrac;	/* fractional seconds (must be 32 bit!) */
-	int secfracPrecision;
-	char OffsetMode;	/* UTC offset + or - */
-	int OffsetHour;	/* UTC offset in hours */
-	int OffsetMinute;	/* UTC offset in minutes */
-	int lenStr;
-	/* end variables to temporarily hold time information while we parse */
-	DEFiRet;
+static rsRetVal ParseTIMESTAMP3339(struct syslogTime *pTime, uchar **ppszTS, int *pLenStr) {
+    uchar *pszTS = *ppszTS;
+    /* variables to temporarily hold time information while we parse */
+    int year;
+    int month;
+    int day;
+    int hour; /* 24 hour clock */
+    int minute;
+    int second;
+    int secfrac; /* fractional seconds (must be 32 bit!) */
+    int secfracPrecision;
+    char OffsetMode; /* UTC offset + or - */
+    int OffsetHour; /* UTC offset in hours */
+    int OffsetMinute; /* UTC offset in minutes */
+    int lenStr;
+    /* end variables to temporarily hold time information while we parse */
+    DEFiRet;
 
-	assert(pTime != NULL);
-	assert(ppszTS != NULL);
-	assert(pszTS != NULL);
+    assert(pTime != NULL);
+    assert(ppszTS != NULL);
+    assert(pszTS != NULL);
 
-	lenStr = *pLenStr;
-	year = srSLMGParseInt32(&pszTS, &lenStr);
+    lenStr = *pLenStr;
+    year = srSLMGParseInt32(&pszTS, &lenStr);
 
-	/* We take the liberty to accept slightly malformed timestamps e.g. in
-	 * the format of 2003-9-1T1:0:0. This doesn't hurt on receiving. Of course,
-	 * with the current state of affairs, we would never run into this code
-	 * here because at postion 11, there is no "T" in such cases ;)
-	 */
-	if(lenStr == 0 || *pszTS++ != '-' || year < 0 || year >= 2100) {
-		DBGPRINTF("ParseTIMESTAMP3339: invalid year: %d, pszTS: '%c'\n", year, *pszTS);
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
-	}
-	--lenStr;
-	month = srSLMGParseInt32(&pszTS, &lenStr);
-	if(month < 1 || month > 12)
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    /* We take the liberty to accept slightly malformed timestamps e.g. in
+     * the format of 2003-9-1T1:0:0. This doesn't hurt on receiving. Of course,
+     * with the current state of affairs, we would never run into this code
+     * here because at postion 11, there is no "T" in such cases ;)
+     */
+    if (lenStr == 0 || *pszTS++ != '-' || year < 0 || year >= 2100) {
+        DBGPRINTF("ParseTIMESTAMP3339: invalid year: %d, pszTS: '%c'\n", year, *pszTS);
+        ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    }
+    --lenStr;
+    month = srSLMGParseInt32(&pszTS, &lenStr);
+    if (month < 1 || month > 12) ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-	if(lenStr == 0 || *pszTS++ != '-')
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
-	--lenStr;
-	day = srSLMGParseInt32(&pszTS, &lenStr);
-	if(day < 1 || day > 31)
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    if (lenStr == 0 || *pszTS++ != '-') ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    --lenStr;
+    day = srSLMGParseInt32(&pszTS, &lenStr);
+    if (day < 1 || day > 31) ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-	if(lenStr == 0 || *pszTS++ != 'T')
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
-	--lenStr;
+    if (lenStr == 0 || *pszTS++ != 'T') ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    --lenStr;
 
-	hour = srSLMGParseInt32(&pszTS, &lenStr);
-	if(hour < 0 || hour > 23)
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    hour = srSLMGParseInt32(&pszTS, &lenStr);
+    if (hour < 0 || hour > 23) ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-	if(lenStr == 0 || *pszTS++ != ':')
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
-	--lenStr;
-	minute = srSLMGParseInt32(&pszTS, &lenStr);
-	if(minute < 0 || minute > 59)
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    if (lenStr == 0 || *pszTS++ != ':') ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    --lenStr;
+    minute = srSLMGParseInt32(&pszTS, &lenStr);
+    if (minute < 0 || minute > 59) ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-	if(lenStr == 0 || *pszTS++ != ':')
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
-	--lenStr;
-	second = srSLMGParseInt32(&pszTS, &lenStr);
-	if(second < 0 || second > 60)
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    if (lenStr == 0 || *pszTS++ != ':') ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    --lenStr;
+    second = srSLMGParseInt32(&pszTS, &lenStr);
+    if (second < 0 || second > 60) ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-	/* Now let's see if we have secfrac */
-	if(lenStr > 0 && *pszTS == '.') {
-		--lenStr;
-		uchar *pszStart = ++pszTS;
-		secfrac = srSLMGParseInt32(&pszTS, &lenStr);
-		secfracPrecision = (int) (pszTS - pszStart);
-	} else {
-		secfracPrecision = 0;
-		secfrac = 0;
-	}
+    /* Now let's see if we have secfrac */
+    if (lenStr > 0 && *pszTS == '.') {
+        --lenStr;
+        uchar *pszStart = ++pszTS;
+        secfrac = srSLMGParseInt32(&pszTS, &lenStr);
+        secfracPrecision = (int)(pszTS - pszStart);
+    } else {
+        secfracPrecision = 0;
+        secfrac = 0;
+    }
 
-	/* check the timezone */
-	if(lenStr == 0)
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    /* check the timezone */
+    if (lenStr == 0) ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-	if(*pszTS == 'Z') {
-		--lenStr;
-		pszTS++; /* eat Z */
-		OffsetMode = 'Z';
-		OffsetHour = 0;
-		OffsetMinute = 0;
-	} else if((*pszTS == '+') || (*pszTS == '-')) {
-		OffsetMode = *pszTS;
-		--lenStr;
-		pszTS++;
+    if (*pszTS == 'Z') {
+        --lenStr;
+        pszTS++; /* eat Z */
+        OffsetMode = 'Z';
+        OffsetHour = 0;
+        OffsetMinute = 0;
+    } else if ((*pszTS == '+') || (*pszTS == '-')) {
+        OffsetMode = *pszTS;
+        --lenStr;
+        pszTS++;
 
-		OffsetHour = srSLMGParseInt32(&pszTS, &lenStr);
-		if(OffsetHour < 0 || OffsetHour > 23)
-			ABORT_FINALIZE(RS_RET_INVLD_TIME);
+        OffsetHour = srSLMGParseInt32(&pszTS, &lenStr);
+        if (OffsetHour < 0 || OffsetHour > 23) ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-		if(lenStr == 0 || *pszTS != ':')
-			ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		--lenStr;
-		pszTS++;
-		OffsetMinute = srSLMGParseInt32(&pszTS, &lenStr);
-		if(OffsetMinute < 0 || OffsetMinute > 59)
-			ABORT_FINALIZE(RS_RET_INVLD_TIME);
-	} else {
-		/* there MUST be TZ information */
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
-	}
+        if (lenStr == 0 || *pszTS != ':') ABORT_FINALIZE(RS_RET_INVLD_TIME);
+        --lenStr;
+        pszTS++;
+        OffsetMinute = srSLMGParseInt32(&pszTS, &lenStr);
+        if (OffsetMinute < 0 || OffsetMinute > 59) ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    } else {
+        /* there MUST be TZ information */
+        ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    }
 
-	/* OK, we actually have a 3339 timestamp, so let's indicated this */
-	if(lenStr > 0) {
-		if(*pszTS != ' ') /* if it is not a space, it can not be a "good" time - 2010-02-22 rgerhards */
-			ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		++pszTS; /* just skip past it */
-		--lenStr;
-	}
+    /* OK, we actually have a 3339 timestamp, so let's indicated this */
+    if (lenStr > 0) {
+        if (*pszTS != ' ') /* if it is not a space, it can not be a "good" time - 2010-02-22 rgerhards */
+            ABORT_FINALIZE(RS_RET_INVLD_TIME);
+        ++pszTS; /* just skip past it */
+        --lenStr;
+    }
 
-	/* we had success, so update parse pointer and caller-provided timestamp */
-	*ppszTS = pszTS;
-	pTime->timeType = 2;
-	pTime->year = year;
-	pTime->month = month;
-	pTime->day = day;
-	pTime->hour = hour;
-	pTime->minute = minute;
-	pTime->second = second;
-	pTime->secfrac = secfrac;
-	pTime->secfracPrecision = secfracPrecision;
-	pTime->OffsetMode = OffsetMode;
-	pTime->OffsetHour = OffsetHour;
-	pTime->OffsetMinute = OffsetMinute;
-	*pLenStr = lenStr;
+    /* we had success, so update parse pointer and caller-provided timestamp */
+    *ppszTS = pszTS;
+    pTime->timeType = 2;
+    pTime->year = year;
+    pTime->month = month;
+    pTime->day = day;
+    pTime->hour = hour;
+    pTime->minute = minute;
+    pTime->second = second;
+    pTime->secfrac = secfrac;
+    pTime->secfracPrecision = secfracPrecision;
+    pTime->OffsetMode = OffsetMode;
+    pTime->OffsetHour = OffsetHour;
+    pTime->OffsetMinute = OffsetMinute;
+    *pLenStr = lenStr;
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -480,351 +437,328 @@ finalize_it:
  * 2000..2100 as years, so this option should explicitly be turned on
  * and is not meant for general consumption.
  */
-static rsRetVal
-ParseTIMESTAMP3164(struct syslogTime *pTime, uchar** ppszTS, int *pLenStr,
-	const int bParseTZ,
-	const int bDetectYearAfterTime)
-{
-	/* variables to temporarily hold time information while we parse */
-	int month;
-	int day;
-	int year = 0; /* 0 means no year provided */
-	int hour; /* 24 hour clock */
-	int minute;
-	int second;
-	int secfrac;	/* fractional seconds (must be 32 bit!) */
-	int secfracPrecision;
-	char tzstring[16];
-	char OffsetMode = '\0';	/* UTC offset: \0 -> indicate no update */
-	char OffsetHour = '\0';	/* UTC offset in hours */
-	int OffsetMinute = 0;	/* UTC offset in minutes */
-	/* end variables to temporarily hold time information while we parse */
-	int lenStr;
-	uchar *pszTS;
-	DEFiRet;
+static rsRetVal ParseTIMESTAMP3164(
+    struct syslogTime *pTime, uchar **ppszTS, int *pLenStr, const int bParseTZ, const int bDetectYearAfterTime) {
+    /* variables to temporarily hold time information while we parse */
+    int month;
+    int day;
+    int year = 0; /* 0 means no year provided */
+    int hour; /* 24 hour clock */
+    int minute;
+    int second;
+    int secfrac; /* fractional seconds (must be 32 bit!) */
+    int secfracPrecision;
+    char tzstring[16];
+    char OffsetMode = '\0'; /* UTC offset: \0 -> indicate no update */
+    char OffsetHour = '\0'; /* UTC offset in hours */
+    int OffsetMinute = 0; /* UTC offset in minutes */
+    /* end variables to temporarily hold time information while we parse */
+    int lenStr;
+    uchar *pszTS;
+    DEFiRet;
 
-	assert(ppszTS != NULL);
-	pszTS = *ppszTS;
-	assert(pszTS != NULL);
-	assert(pTime != NULL);
-	assert(pLenStr != NULL);
-	lenStr = *pLenStr;
+    assert(ppszTS != NULL);
+    pszTS = *ppszTS;
+    assert(pszTS != NULL);
+    assert(pTime != NULL);
+    assert(pLenStr != NULL);
+    lenStr = *pLenStr;
 
-	if(lenStr < 3)
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    if (lenStr < 3) ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-	/* first check if we have a year in front of the timestamp. some devices (e.g. Brocade)
-	 * do this. As it is pretty straightforward to detect and chance of misinterpretation
-	 * is low, we try to parse it.
-	 */
-	if(*pszTS >= '0' && *pszTS <= '9') {
-		/* OK, either we have a prepended year or an invalid format! */
-		year = srSLMGParseInt32(&pszTS, &lenStr);
-		if(year < 1970 || year > 2100 || *pszTS != ' ')
-			ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		++pszTS; /* skip SP */
-	}
+    /* first check if we have a year in front of the timestamp. some devices (e.g. Brocade)
+     * do this. As it is pretty straightforward to detect and chance of misinterpretation
+     * is low, we try to parse it.
+     */
+    if (*pszTS >= '0' && *pszTS <= '9') {
+        /* OK, either we have a prepended year or an invalid format! */
+        year = srSLMGParseInt32(&pszTS, &lenStr);
+        if (year < 1970 || year > 2100 || *pszTS != ' ') ABORT_FINALIZE(RS_RET_INVLD_TIME);
+        ++pszTS; /* skip SP */
+    }
 
-	/* If we look at the month (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec),
-	 * we may see the following character sequences occur:
-	 *
-	 * J(an/u(n/l)), Feb, Ma(r/y), A(pr/ug), Sep, Oct, Nov, Dec
-	 *
-	 * We will use this for parsing, as it probably is the
-	 * fastest way to parse it.
-	 *
-	 * 2009-08-17: we now do case-insensitive comparisons, as some devices obviously do not
-	 * obey to the RFC-specified case. As we need to guess in any case, we can ignore case
-	 * in the first place -- rgerhards
-	 *
-	 * 2005-07-18, well sometimes it pays to be a bit more verbose, even in C...
-	 * Fixed a bug that lead to invalid detection of the data. The issue was that
-	 * we had an if(++pszTS == 'x') inside of some of the consturcts below. However,
-	 * there were also some elseifs (doing the same ++), which than obviously did not
-	 * check the orginal character but the next one. Now removed the ++ and put it
-	 * into the statements below. Was a really nasty bug... I didn't detect it before
-	 * june, when it first manifested. This also lead to invalid parsing of the rest
-	 * of the message, as the time stamp was not detected to be correct. - rgerhards
-	 */
-	switch(*pszTS++)
-	{
-	case 'j':
-	case 'J':
-		if(*pszTS == 'a' || *pszTS == 'A') {
-			++pszTS;
-			if(*pszTS == 'n' || *pszTS == 'N') {
-				++pszTS;
-				month = 1;
-			} else
-				ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		} else if(*pszTS == 'u' || *pszTS == 'U') {
-			++pszTS;
-			if(*pszTS == 'n' || *pszTS == 'N') {
-				++pszTS;
-				month = 6;
-			} else if(*pszTS == 'l' || *pszTS == 'L') {
-				++pszTS;
-				month = 7;
-			} else
-				ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		} else
-			ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		break;
-	case 'f':
-	case 'F':
-		if(*pszTS == 'e' || *pszTS == 'E') {
-			++pszTS;
-			if(*pszTS == 'b' || *pszTS == 'B') {
-				++pszTS;
-				month = 2;
-			} else
-				ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		} else
-			ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		break;
-	case 'm':
-	case 'M':
-		if(*pszTS == 'a' || *pszTS == 'A') {
-			++pszTS;
-			if(*pszTS == 'r' || *pszTS == 'R') {
-				++pszTS;
-				month = 3;
-			} else if(*pszTS == 'y' || *pszTS == 'Y') {
-				++pszTS;
-				month = 5;
-			} else
-				ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		} else
-			ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		break;
-	case 'a':
-	case 'A':
-		if(*pszTS == 'p' || *pszTS == 'P') {
-			++pszTS;
-			if(*pszTS == 'r' || *pszTS == 'R') {
-				++pszTS;
-				month = 4;
-			} else
-				ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		} else if(*pszTS == 'u' || *pszTS == 'U') {
-			++pszTS;
-			if(*pszTS == 'g' || *pszTS == 'G') {
-				++pszTS;
-				month = 8;
-			} else
-				ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		} else
-			ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		break;
-	case 's':
-	case 'S':
-		if(*pszTS == 'e' || *pszTS == 'E') {
-			++pszTS;
-			if(*pszTS == 'p' || *pszTS == 'P') {
-				++pszTS;
-				month = 9;
-			} else
-				ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		} else
-			ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		break;
-	case 'o':
-	case 'O':
-		if(*pszTS == 'c' || *pszTS == 'C') {
-			++pszTS;
-			if(*pszTS == 't' || *pszTS == 'T') {
-				++pszTS;
-				month = 10;
-			} else
-				ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		} else
-			ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		break;
-	case 'n':
-	case 'N':
-		if(*pszTS == 'o' || *pszTS == 'O') {
-			++pszTS;
-			if(*pszTS == 'v' || *pszTS == 'V') {
-				++pszTS;
-				month = 11;
-			} else
-				ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		} else
-			ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		break;
-	case 'd':
-	case 'D':
-		if(*pszTS == 'e' || *pszTS == 'E') {
-			++pszTS;
-			if(*pszTS == 'c' || *pszTS == 'C') {
-				++pszTS;
-				month = 12;
-			} else
-				ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		} else
-			ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		break;
-	default:
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
-	}
+    /* If we look at the month (Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec),
+     * we may see the following character sequences occur:
+     *
+     * J(an/u(n/l)), Feb, Ma(r/y), A(pr/ug), Sep, Oct, Nov, Dec
+     *
+     * We will use this for parsing, as it probably is the
+     * fastest way to parse it.
+     *
+     * 2009-08-17: we now do case-insensitive comparisons, as some devices obviously do not
+     * obey to the RFC-specified case. As we need to guess in any case, we can ignore case
+     * in the first place -- rgerhards
+     *
+     * 2005-07-18, well sometimes it pays to be a bit more verbose, even in C...
+     * Fixed a bug that lead to invalid detection of the data. The issue was that
+     * we had an if(++pszTS == 'x') inside of some of the consturcts below. However,
+     * there were also some elseifs (doing the same ++), which than obviously did not
+     * check the orginal character but the next one. Now removed the ++ and put it
+     * into the statements below. Was a really nasty bug... I didn't detect it before
+     * june, when it first manifested. This also lead to invalid parsing of the rest
+     * of the message, as the time stamp was not detected to be correct. - rgerhards
+     */
+    switch (*pszTS++) {
+        case 'j':
+        case 'J':
+            if (*pszTS == 'a' || *pszTS == 'A') {
+                ++pszTS;
+                if (*pszTS == 'n' || *pszTS == 'N') {
+                    ++pszTS;
+                    month = 1;
+                } else
+                    ABORT_FINALIZE(RS_RET_INVLD_TIME);
+            } else if (*pszTS == 'u' || *pszTS == 'U') {
+                ++pszTS;
+                if (*pszTS == 'n' || *pszTS == 'N') {
+                    ++pszTS;
+                    month = 6;
+                } else if (*pszTS == 'l' || *pszTS == 'L') {
+                    ++pszTS;
+                    month = 7;
+                } else
+                    ABORT_FINALIZE(RS_RET_INVLD_TIME);
+            } else
+                ABORT_FINALIZE(RS_RET_INVLD_TIME);
+            break;
+        case 'f':
+        case 'F':
+            if (*pszTS == 'e' || *pszTS == 'E') {
+                ++pszTS;
+                if (*pszTS == 'b' || *pszTS == 'B') {
+                    ++pszTS;
+                    month = 2;
+                } else
+                    ABORT_FINALIZE(RS_RET_INVLD_TIME);
+            } else
+                ABORT_FINALIZE(RS_RET_INVLD_TIME);
+            break;
+        case 'm':
+        case 'M':
+            if (*pszTS == 'a' || *pszTS == 'A') {
+                ++pszTS;
+                if (*pszTS == 'r' || *pszTS == 'R') {
+                    ++pszTS;
+                    month = 3;
+                } else if (*pszTS == 'y' || *pszTS == 'Y') {
+                    ++pszTS;
+                    month = 5;
+                } else
+                    ABORT_FINALIZE(RS_RET_INVLD_TIME);
+            } else
+                ABORT_FINALIZE(RS_RET_INVLD_TIME);
+            break;
+        case 'a':
+        case 'A':
+            if (*pszTS == 'p' || *pszTS == 'P') {
+                ++pszTS;
+                if (*pszTS == 'r' || *pszTS == 'R') {
+                    ++pszTS;
+                    month = 4;
+                } else
+                    ABORT_FINALIZE(RS_RET_INVLD_TIME);
+            } else if (*pszTS == 'u' || *pszTS == 'U') {
+                ++pszTS;
+                if (*pszTS == 'g' || *pszTS == 'G') {
+                    ++pszTS;
+                    month = 8;
+                } else
+                    ABORT_FINALIZE(RS_RET_INVLD_TIME);
+            } else
+                ABORT_FINALIZE(RS_RET_INVLD_TIME);
+            break;
+        case 's':
+        case 'S':
+            if (*pszTS == 'e' || *pszTS == 'E') {
+                ++pszTS;
+                if (*pszTS == 'p' || *pszTS == 'P') {
+                    ++pszTS;
+                    month = 9;
+                } else
+                    ABORT_FINALIZE(RS_RET_INVLD_TIME);
+            } else
+                ABORT_FINALIZE(RS_RET_INVLD_TIME);
+            break;
+        case 'o':
+        case 'O':
+            if (*pszTS == 'c' || *pszTS == 'C') {
+                ++pszTS;
+                if (*pszTS == 't' || *pszTS == 'T') {
+                    ++pszTS;
+                    month = 10;
+                } else
+                    ABORT_FINALIZE(RS_RET_INVLD_TIME);
+            } else
+                ABORT_FINALIZE(RS_RET_INVLD_TIME);
+            break;
+        case 'n':
+        case 'N':
+            if (*pszTS == 'o' || *pszTS == 'O') {
+                ++pszTS;
+                if (*pszTS == 'v' || *pszTS == 'V') {
+                    ++pszTS;
+                    month = 11;
+                } else
+                    ABORT_FINALIZE(RS_RET_INVLD_TIME);
+            } else
+                ABORT_FINALIZE(RS_RET_INVLD_TIME);
+            break;
+        case 'd':
+        case 'D':
+            if (*pszTS == 'e' || *pszTS == 'E') {
+                ++pszTS;
+                if (*pszTS == 'c' || *pszTS == 'C') {
+                    ++pszTS;
+                    month = 12;
+                } else
+                    ABORT_FINALIZE(RS_RET_INVLD_TIME);
+            } else
+                ABORT_FINALIZE(RS_RET_INVLD_TIME);
+            break;
+        default:
+            ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    }
 
-	lenStr -= 3;
+    lenStr -= 3;
 
-	/* done month */
+    /* done month */
 
-	if(lenStr == 0 || *pszTS++ != ' ')
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
-	--lenStr;
+    if (lenStr == 0 || *pszTS++ != ' ') ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    --lenStr;
 
-	/* we accept a slightly malformed timestamp when receiving. This is
-	 * we accept one-digit days
-	 */
-	if(*pszTS == ' ') {
-		--lenStr;
-		++pszTS;
-	}
+    /* we accept a slightly malformed timestamp when receiving. This is
+     * we accept one-digit days
+     */
+    if (*pszTS == ' ') {
+        --lenStr;
+        ++pszTS;
+    }
 
-	day = srSLMGParseInt32(&pszTS, &lenStr);
-	if(day < 1 || day > 31)
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    day = srSLMGParseInt32(&pszTS, &lenStr);
+    if (day < 1 || day > 31) ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-	if(lenStr == 0 || *pszTS++ != ' ')
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
-	--lenStr;
+    if (lenStr == 0 || *pszTS++ != ' ') ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    --lenStr;
 
-	/* time part */
-	hour = srSLMGParseInt32(&pszTS, &lenStr);
-	if(year == 0 && hour > 1970 && hour < 2100) {
-		/* if so, we assume this actually is a year. This is a format found
-		 * e.g. in Cisco devices.
-		 * (if you read this 2100+ trying to fix a bug, congratulate me
-		 * to how long the code survived - me no longer ;)) -- rgerhards, 2008-11-18
-		 */
-		year = hour;
+    /* time part */
+    hour = srSLMGParseInt32(&pszTS, &lenStr);
+    if (year == 0 && hour > 1970 && hour < 2100) {
+        /* if so, we assume this actually is a year. This is a format found
+         * e.g. in Cisco devices.
+         * (if you read this 2100+ trying to fix a bug, congratulate me
+         * to how long the code survived - me no longer ;)) -- rgerhards, 2008-11-18
+         */
+        year = hour;
 
-		/* re-query the hour, this time it must be valid */
-		if(lenStr == 0 || *pszTS++ != ' ')
-			ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		--lenStr;
-		hour = srSLMGParseInt32(&pszTS, &lenStr);
-	}
+        /* re-query the hour, this time it must be valid */
+        if (lenStr == 0 || *pszTS++ != ' ') ABORT_FINALIZE(RS_RET_INVLD_TIME);
+        --lenStr;
+        hour = srSLMGParseInt32(&pszTS, &lenStr);
+    }
 
-	if(hour < 0 || hour > 23)
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    if (hour < 0 || hour > 23) ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-	if(lenStr == 0 || *pszTS++ != ':')
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
-	--lenStr;
-	minute = srSLMGParseInt32(&pszTS, &lenStr);
-	if(minute < 0 || minute > 59)
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    if (lenStr == 0 || *pszTS++ != ':') ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    --lenStr;
+    minute = srSLMGParseInt32(&pszTS, &lenStr);
+    if (minute < 0 || minute > 59) ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-	if(lenStr == 0 || *pszTS++ != ':')
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
-	--lenStr;
-	second = srSLMGParseInt32(&pszTS, &lenStr);
-	if(second < 0 || second > 60)
-		ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    if (lenStr == 0 || *pszTS++ != ':') ABORT_FINALIZE(RS_RET_INVLD_TIME);
+    --lenStr;
+    second = srSLMGParseInt32(&pszTS, &lenStr);
+    if (second < 0 || second > 60) ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-	/* as an extension e.g. found in CISCO IOS, we support sub-second resultion.
-	 * It's presence is indicated by a dot immediately following the second.
-	 */
-	if(lenStr > 0 && *pszTS == '.') {
-		--lenStr;
-		uchar *pszStart = ++pszTS;
-		secfrac = srSLMGParseInt32(&pszTS, &lenStr);
-		secfracPrecision = (int) (pszTS - pszStart);
-	} else {
-		secfracPrecision = 0;
-		secfrac = 0;
-	}
+    /* as an extension e.g. found in CISCO IOS, we support sub-second resultion.
+     * It's presence is indicated by a dot immediately following the second.
+     */
+    if (lenStr > 0 && *pszTS == '.') {
+        --lenStr;
+        uchar *pszStart = ++pszTS;
+        secfrac = srSLMGParseInt32(&pszTS, &lenStr);
+        secfracPrecision = (int)(pszTS - pszStart);
+    } else {
+        secfracPrecision = 0;
+        secfrac = 0;
+    }
 
-	/* try to parse the TZSTRING if we are instructed to do so */
-	if(bParseTZ && lenStr > 2 && *pszTS == ' ') {
-		int i;
-		for(  ++pszTS, --lenStr, i = 0
-		    ; lenStr > 0 && i < (int) sizeof(tzstring) - 1 && *pszTS != ':' && *pszTS != ' '
-		    ; --lenStr)
-			tzstring[i++] = *pszTS++;
-		if(i > 0) {
-			/* found TZ, apply it */
-			tzinfo_t* tzinfo;
-			tzstring[i] = '\0';
-			if((tzinfo = glblFindTimezone(runConf, (char*) tzstring)) == NULL) {
-				DBGPRINTF("ParseTIMESTAMP3164: invalid TZ string '%s' -- ignored\n",
-					  tzstring);
-			} else {
-				OffsetMode = tzinfo->offsMode;
-				OffsetHour = tzinfo->offsHour;
-				OffsetMinute = tzinfo->offsMin;
-			}
-		}
-	}
-	if(bDetectYearAfterTime && year == 0 && lenStr > 5 && *pszTS == ' ') {
-		int j;
-		int y = 0;
-		for(j = 1 ; j < 5 ; ++j) {
-			if(pszTS[j] < '0' || pszTS[j] > '9')
-				break;
-			y = 10 * y + pszTS[j] - '0';
-		}
-		if(lenStr > 6 && pszTS[5] != ' ')
-			y = 0; /* no year! */
-		if(2000 <= y && y < 2100) {
-			year = y;
-			pszTS += 5; /* we need to preserve the SP, checked below */
-			lenStr -= 5;
-		}
-	}
+    /* try to parse the TZSTRING if we are instructed to do so */
+    if (bParseTZ && lenStr > 2 && *pszTS == ' ') {
+        int i;
+        for (++pszTS, --lenStr, i = 0; lenStr > 0 && i < (int)sizeof(tzstring) - 1 && *pszTS != ':' && *pszTS != ' ';
+             --lenStr)
+            tzstring[i++] = *pszTS++;
+        if (i > 0) {
+            /* found TZ, apply it */
+            tzinfo_t *tzinfo;
+            tzstring[i] = '\0';
+            if ((tzinfo = glblFindTimezone(runConf, (char *)tzstring)) == NULL) {
+                DBGPRINTF("ParseTIMESTAMP3164: invalid TZ string '%s' -- ignored\n", tzstring);
+            } else {
+                OffsetMode = tzinfo->offsMode;
+                OffsetHour = tzinfo->offsHour;
+                OffsetMinute = tzinfo->offsMin;
+            }
+        }
+    }
+    if (bDetectYearAfterTime && year == 0 && lenStr > 5 && *pszTS == ' ') {
+        int j;
+        int y = 0;
+        for (j = 1; j < 5; ++j) {
+            if (pszTS[j] < '0' || pszTS[j] > '9') break;
+            y = 10 * y + pszTS[j] - '0';
+        }
+        if (lenStr > 6 && pszTS[5] != ' ') y = 0; /* no year! */
+        if (2000 <= y && y < 2100) {
+            year = y;
+            pszTS += 5; /* we need to preserve the SP, checked below */
+            lenStr -= 5;
+        }
+    }
 
-	/* we provide support for an extra ":" after the date. While this is an
-	 * invalid format, it occurs frequently enough (e.g. with Cisco devices)
-	 * to permit it as a valid case. -- rgerhards, 2008-09-12
-	 */
-	if(lenStr > 0 && *pszTS == ':') {
-		++pszTS; /* just skip past it */
-		--lenStr;
-	}
-	if(lenStr > 0) {
-		if(*pszTS != ' ') /* if it is not a space, it can not be a "good" time - 2010-02-22 rgerhards */
-			ABORT_FINALIZE(RS_RET_INVLD_TIME);
-		++pszTS; /* just skip past it */
-		--lenStr;
-	}
+    /* we provide support for an extra ":" after the date. While this is an
+     * invalid format, it occurs frequently enough (e.g. with Cisco devices)
+     * to permit it as a valid case. -- rgerhards, 2008-09-12
+     */
+    if (lenStr > 0 && *pszTS == ':') {
+        ++pszTS; /* just skip past it */
+        --lenStr;
+    }
+    if (lenStr > 0) {
+        if (*pszTS != ' ') /* if it is not a space, it can not be a "good" time - 2010-02-22 rgerhards */
+            ABORT_FINALIZE(RS_RET_INVLD_TIME);
+        ++pszTS; /* just skip past it */
+        --lenStr;
+    }
 
-	/* we had success, so update parse pointer and caller-provided timestamp
-	 * fields we do not have are not updated in the caller's timestamp. This
-	 * is the reason why the caller must pass in a correct timestamp.
-	 */
-	*ppszTS = pszTS; /* provide updated parse position back to caller */
-	pTime->timeType = 1;
-	pTime->month = month;
-	if(year > 0)
-		pTime->year = year; /* persist year if detected */
-	pTime->day = day;
-	pTime->hour = hour;
-	pTime->minute = minute;
-	pTime->second = second;
-	pTime->secfrac = secfrac;
-	pTime->secfracPrecision = secfracPrecision;
-	if(OffsetMode != '\0') { /* need to update TZ info? */
-		pTime->OffsetMode = OffsetMode;
-		pTime->OffsetHour = OffsetHour;
-		pTime->OffsetMinute = OffsetMinute;
-	}
-	*pLenStr = lenStr;
+    /* we had success, so update parse pointer and caller-provided timestamp
+     * fields we do not have are not updated in the caller's timestamp. This
+     * is the reason why the caller must pass in a correct timestamp.
+     */
+    *ppszTS = pszTS; /* provide updated parse position back to caller */
+    pTime->timeType = 1;
+    pTime->month = month;
+    if (year > 0) pTime->year = year; /* persist year if detected */
+    pTime->day = day;
+    pTime->hour = hour;
+    pTime->minute = minute;
+    pTime->second = second;
+    pTime->secfrac = secfrac;
+    pTime->secfracPrecision = secfracPrecision;
+    if (OffsetMode != '\0') { /* need to update TZ info? */
+        pTime->OffsetMode = OffsetMode;
+        pTime->OffsetHour = OffsetHour;
+        pTime->OffsetMinute = OffsetMinute;
+    }
+    *pLenStr = lenStr;
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
-void
-applyDfltTZ(struct syslogTime *pTime, char *tz)
-{
-	pTime->OffsetMode = tz[0];
-	pTime->OffsetHour = (tz[1] - '0') * 10 + (tz[2] - '0');
-	pTime->OffsetMinute = (tz[4] - '0') * 10 + (tz[5] - '0');
-
+void applyDfltTZ(struct syslogTime *pTime, char *tz) {
+    pTime->OffsetMode = tz[0];
+    pTime->OffsetHour = (tz[1] - '0') * 10 + (tz[2] - '0');
+    pTime->OffsetMinute = (tz[4] - '0') * 10 + (tz[5] - '0');
 }
 
 /*******************************************************************
@@ -840,65 +774,60 @@ applyDfltTZ(struct syslogTime *pTime, char *tz)
  * returns the size of the timestamp written in bytes (without
  * the string terminator). If 0 is returend, an error occurred.
  */
-static int
-formatTimestampToMySQL(struct syslogTime *ts, char* pBuf)
-{
-	/* currently we do not consider localtime/utc. This may later be
-	 * added. If so, I recommend using a property replacer option
-	 * and/or a global configuration option. However, we should wait
-	 * on user requests for this feature before doing anything.
-	 * rgerhards, 2007-06-26
-	 */
-	assert(ts != NULL);
-	assert(pBuf != NULL);
+static int formatTimestampToMySQL(struct syslogTime *ts, char *pBuf) {
+    /* currently we do not consider localtime/utc. This may later be
+     * added. If so, I recommend using a property replacer option
+     * and/or a global configuration option. However, we should wait
+     * on user requests for this feature before doing anything.
+     * rgerhards, 2007-06-26
+     */
+    assert(ts != NULL);
+    assert(pBuf != NULL);
 
-	pBuf[0] = (ts->year / 1000) % 10 + '0';
-	pBuf[1] = (ts->year / 100) % 10 + '0';
-	pBuf[2] = (ts->year / 10) % 10 + '0';
-	pBuf[3] = ts->year % 10 + '0';
-	pBuf[4] = (ts->month / 10) % 10 + '0';
-	pBuf[5] = ts->month % 10 + '0';
-	pBuf[6] = (ts->day / 10) % 10 + '0';
-	pBuf[7] = ts->day % 10 + '0';
-	pBuf[8] = (ts->hour / 10) % 10 + '0';
-	pBuf[9] = ts->hour % 10 + '0';
-	pBuf[10] = (ts->minute / 10) % 10 + '0';
-	pBuf[11] = ts->minute % 10 + '0';
-	pBuf[12] = (ts->second / 10) % 10 + '0';
-	pBuf[13] = ts->second % 10 + '0';
-	pBuf[14] = '\0';
-	return 15;
-
+    pBuf[0] = (ts->year / 1000) % 10 + '0';
+    pBuf[1] = (ts->year / 100) % 10 + '0';
+    pBuf[2] = (ts->year / 10) % 10 + '0';
+    pBuf[3] = ts->year % 10 + '0';
+    pBuf[4] = (ts->month / 10) % 10 + '0';
+    pBuf[5] = ts->month % 10 + '0';
+    pBuf[6] = (ts->day / 10) % 10 + '0';
+    pBuf[7] = ts->day % 10 + '0';
+    pBuf[8] = (ts->hour / 10) % 10 + '0';
+    pBuf[9] = ts->hour % 10 + '0';
+    pBuf[10] = (ts->minute / 10) % 10 + '0';
+    pBuf[11] = ts->minute % 10 + '0';
+    pBuf[12] = (ts->second / 10) % 10 + '0';
+    pBuf[13] = ts->second % 10 + '0';
+    pBuf[14] = '\0';
+    return 15;
 }
 
-static int
-formatTimestampToPgSQL(struct syslogTime *ts, char *pBuf)
-{
-	/* see note in formatTimestampToMySQL, applies here as well */
-	assert(ts != NULL);
-	assert(pBuf != NULL);
+static int formatTimestampToPgSQL(struct syslogTime *ts, char *pBuf) {
+    /* see note in formatTimestampToMySQL, applies here as well */
+    assert(ts != NULL);
+    assert(pBuf != NULL);
 
-	pBuf[0] = (ts->year / 1000) % 10 + '0';
-	pBuf[1] = (ts->year / 100) % 10 + '0';
-	pBuf[2] = (ts->year / 10) % 10 + '0';
-	pBuf[3] = ts->year % 10 + '0';
-	pBuf[4] = '-';
-	pBuf[5] = (ts->month / 10) % 10 + '0';
-	pBuf[6] = ts->month % 10 + '0';
-	pBuf[7] = '-';
-	pBuf[8] = (ts->day / 10) % 10 + '0';
-	pBuf[9] = ts->day % 10 + '0';
-	pBuf[10] = ' ';
-	pBuf[11] = (ts->hour / 10) % 10 + '0';
-	pBuf[12] = ts->hour % 10 + '0';
-	pBuf[13] = ':';
-	pBuf[14] = (ts->minute / 10) % 10 + '0';
-	pBuf[15] = ts->minute % 10 + '0';
-	pBuf[16] = ':';
-	pBuf[17] = (ts->second / 10) % 10 + '0';
-	pBuf[18] = ts->second % 10 + '0';
-	pBuf[19] = '\0';
-	return 19;
+    pBuf[0] = (ts->year / 1000) % 10 + '0';
+    pBuf[1] = (ts->year / 100) % 10 + '0';
+    pBuf[2] = (ts->year / 10) % 10 + '0';
+    pBuf[3] = ts->year % 10 + '0';
+    pBuf[4] = '-';
+    pBuf[5] = (ts->month / 10) % 10 + '0';
+    pBuf[6] = ts->month % 10 + '0';
+    pBuf[7] = '-';
+    pBuf[8] = (ts->day / 10) % 10 + '0';
+    pBuf[9] = ts->day % 10 + '0';
+    pBuf[10] = ' ';
+    pBuf[11] = (ts->hour / 10) % 10 + '0';
+    pBuf[12] = ts->hour % 10 + '0';
+    pBuf[13] = ':';
+    pBuf[14] = (ts->minute / 10) % 10 + '0';
+    pBuf[15] = ts->minute % 10 + '0';
+    pBuf[16] = ':';
+    pBuf[17] = (ts->second / 10) % 10 + '0';
+    pBuf[18] = ts->second % 10 + '0';
+    pBuf[19] = '\0';
+    return 19;
 }
 
 
@@ -911,34 +840,31 @@ formatTimestampToPgSQL(struct syslogTime *ts, char *pBuf)
  * The buffer must be at least 7 bytes large.
  * rgerhards, 2008-06-06
  */
-static int
-formatTimestampSecFrac(struct syslogTime *ts, char* pBuf)
-{
-	int iBuf;
-	int power;
-	int secfrac;
-	short digit;
+static int formatTimestampSecFrac(struct syslogTime *ts, char *pBuf) {
+    int iBuf;
+    int power;
+    int secfrac;
+    short digit;
 
-	assert(ts != NULL);
-	assert(pBuf != NULL);
+    assert(ts != NULL);
+    assert(pBuf != NULL);
 
-	iBuf = 0;
-	if(ts->secfracPrecision > 0)
-	{
-		power = tenPowers[(ts->secfracPrecision - 1) % 6];
-		secfrac = ts->secfrac;
-		while(power > 0) {
-			digit = secfrac / power;
-			secfrac -= digit * power;
-			power /= 10;
-			pBuf[iBuf++] = digit + '0';
-		}
-	} else {
-		pBuf[iBuf++] = '0';
-	}
-	pBuf[iBuf] = '\0';
+    iBuf = 0;
+    if (ts->secfracPrecision > 0) {
+        power = tenPowers[(ts->secfracPrecision - 1) % 6];
+        secfrac = ts->secfrac;
+        while (power > 0) {
+            digit = secfrac / power;
+            secfrac -= digit * power;
+            power /= 10;
+            pBuf[iBuf++] = digit + '0';
+        }
+    } else {
+        pBuf[iBuf++] = '0';
+    }
+    pBuf[iBuf] = '\0';
 
-	return iBuf;
+    return iBuf;
 }
 
 
@@ -950,72 +876,70 @@ formatTimestampSecFrac(struct syslogTime *ts, char* pBuf)
  * returns the size of the timestamp written in bytes (without
  * the string terminator). If 0 is returend, an error occurred.
  */
-static int
-formatTimestamp3339(struct syslogTime *ts, char* pBuf)
-{
-	int iBuf;
-	int power;
-	int secfrac;
-	short digit;
+static int formatTimestamp3339(struct syslogTime *ts, char *pBuf) {
+    int iBuf;
+    int power;
+    int secfrac;
+    short digit;
 
-	assert(ts != NULL);
-	assert(pBuf != NULL);
+    assert(ts != NULL);
+    assert(pBuf != NULL);
 
-	/* start with fixed parts */
-	/* year yyyy */
-	pBuf[0] = (ts->year / 1000) % 10 + '0';
-	pBuf[1] = (ts->year / 100) % 10 + '0';
-	pBuf[2] = (ts->year / 10) % 10 + '0';
-	pBuf[3] = ts->year % 10 + '0';
-	pBuf[4] = '-';
-	/* month */
-	pBuf[5] = (ts->month / 10) % 10 + '0';
-	pBuf[6] = ts->month % 10 + '0';
-	pBuf[7] = '-';
-	/* day */
-	pBuf[8] = (ts->day / 10) % 10 + '0';
-	pBuf[9] = ts->day % 10 + '0';
-	pBuf[10] = 'T';
-	/* hour */
-	pBuf[11] = (ts->hour / 10) % 10 + '0';
-	pBuf[12] = ts->hour % 10 + '0';
-	pBuf[13] = ':';
-	/* minute */
-	pBuf[14] = (ts->minute / 10) % 10 + '0';
-	pBuf[15] = ts->minute % 10 + '0';
-	pBuf[16] = ':';
-	/* second */
-	pBuf[17] = (ts->second / 10) % 10 + '0';
-	pBuf[18] = ts->second % 10 + '0';
+    /* start with fixed parts */
+    /* year yyyy */
+    pBuf[0] = (ts->year / 1000) % 10 + '0';
+    pBuf[1] = (ts->year / 100) % 10 + '0';
+    pBuf[2] = (ts->year / 10) % 10 + '0';
+    pBuf[3] = ts->year % 10 + '0';
+    pBuf[4] = '-';
+    /* month */
+    pBuf[5] = (ts->month / 10) % 10 + '0';
+    pBuf[6] = ts->month % 10 + '0';
+    pBuf[7] = '-';
+    /* day */
+    pBuf[8] = (ts->day / 10) % 10 + '0';
+    pBuf[9] = ts->day % 10 + '0';
+    pBuf[10] = 'T';
+    /* hour */
+    pBuf[11] = (ts->hour / 10) % 10 + '0';
+    pBuf[12] = ts->hour % 10 + '0';
+    pBuf[13] = ':';
+    /* minute */
+    pBuf[14] = (ts->minute / 10) % 10 + '0';
+    pBuf[15] = ts->minute % 10 + '0';
+    pBuf[16] = ':';
+    /* second */
+    pBuf[17] = (ts->second / 10) % 10 + '0';
+    pBuf[18] = ts->second % 10 + '0';
 
-	iBuf = 19; /* points to next free entry, now it becomes dynamic! */
+    iBuf = 19; /* points to next free entry, now it becomes dynamic! */
 
-	if(ts->secfracPrecision > 0) {
-		pBuf[iBuf++] = '.';
-		power = tenPowers[(ts->secfracPrecision - 1) % 6];
-		secfrac = ts->secfrac;
-		while(power > 0) {
-			digit = secfrac / power;
-			secfrac -= digit * power;
-			power /= 10;
-			pBuf[iBuf++] = digit + '0';
-		}
-	}
+    if (ts->secfracPrecision > 0) {
+        pBuf[iBuf++] = '.';
+        power = tenPowers[(ts->secfracPrecision - 1) % 6];
+        secfrac = ts->secfrac;
+        while (power > 0) {
+            digit = secfrac / power;
+            secfrac -= digit * power;
+            power /= 10;
+            pBuf[iBuf++] = digit + '0';
+        }
+    }
 
-	if(ts->OffsetMode == 'Z') {
-		pBuf[iBuf++] = 'Z';
-	} else {
-		pBuf[iBuf++] = ts->OffsetMode;
-		pBuf[iBuf++] = (ts->OffsetHour / 10) % 10 + '0';
-		pBuf[iBuf++] = ts->OffsetHour % 10 + '0';
-		pBuf[iBuf++] = ':';
-		pBuf[iBuf++] = (ts->OffsetMinute / 10) % 10 + '0';
-		pBuf[iBuf++] = ts->OffsetMinute % 10 + '0';
-	}
+    if (ts->OffsetMode == 'Z') {
+        pBuf[iBuf++] = 'Z';
+    } else {
+        pBuf[iBuf++] = ts->OffsetMode;
+        pBuf[iBuf++] = (ts->OffsetHour / 10) % 10 + '0';
+        pBuf[iBuf++] = ts->OffsetHour % 10 + '0';
+        pBuf[iBuf++] = ':';
+        pBuf[iBuf++] = (ts->OffsetMinute / 10) % 10 + '0';
+        pBuf[iBuf++] = ts->OffsetMinute % 10 + '0';
+    }
 
-	pBuf[iBuf] = '\0';
+    pBuf[iBuf] = '\0';
 
-	return iBuf;
+    return iBuf;
 }
 
 /**
@@ -1029,31 +953,29 @@ formatTimestamp3339(struct syslogTime *ts, char* pBuf)
  * day character if day < 10. syslog-ng seems to do that, and some
  * parsing scripts (in migration cases) rely on that.
  */
-static int
-formatTimestamp3164(struct syslogTime *ts, char* pBuf, int bBuggyDay)
-{
-	int iDay;
-	assert(ts != NULL);
-	assert(pBuf != NULL);
+static int formatTimestamp3164(struct syslogTime *ts, char *pBuf, int bBuggyDay) {
+    int iDay;
+    assert(ts != NULL);
+    assert(pBuf != NULL);
 
-	pBuf[0] = monthNames[(ts->month - 1)% 12][0];
-	pBuf[1] = monthNames[(ts->month - 1) % 12][1];
-	pBuf[2] = monthNames[(ts->month - 1) % 12][2];
-	pBuf[3] = ' ';
-	iDay = (ts->day / 10) % 10; /* we need to write a space if the first digit is 0 */
-	pBuf[4] = (bBuggyDay || iDay > 0) ? iDay + '0' : ' ';
-	pBuf[5] = ts->day % 10 + '0';
-	pBuf[6] = ' ';
-	pBuf[7] = (ts->hour / 10) % 10 + '0';
-	pBuf[8] = ts->hour % 10 + '0';
-	pBuf[9] = ':';
-	pBuf[10] = (ts->minute / 10) % 10 + '0';
-	pBuf[11] = ts->minute % 10 + '0';
-	pBuf[12] = ':';
-	pBuf[13] = (ts->second / 10) % 10 + '0';
-	pBuf[14] = ts->second % 10 + '0';
-	pBuf[15] = '\0';
-	return 16;	/* traditional: number of bytes written */
+    pBuf[0] = monthNames[(ts->month - 1) % 12][0];
+    pBuf[1] = monthNames[(ts->month - 1) % 12][1];
+    pBuf[2] = monthNames[(ts->month - 1) % 12][2];
+    pBuf[3] = ' ';
+    iDay = (ts->day / 10) % 10; /* we need to write a space if the first digit is 0 */
+    pBuf[4] = (bBuggyDay || iDay > 0) ? iDay + '0' : ' ';
+    pBuf[5] = ts->day % 10 + '0';
+    pBuf[6] = ' ';
+    pBuf[7] = (ts->hour / 10) % 10 + '0';
+    pBuf[8] = ts->hour % 10 + '0';
+    pBuf[9] = ':';
+    pBuf[10] = (ts->minute / 10) % 10 + '0';
+    pBuf[11] = ts->minute % 10 + '0';
+    pBuf[12] = ':';
+    pBuf[13] = (ts->second / 10) % 10 + '0';
+    pBuf[14] = ts->second % 10 + '0';
+    pBuf[15] = '\0';
+    return 16; /* traditional: number of bytes written */
 }
 
 
@@ -1076,95 +998,92 @@ formatTimestamp3164(struct syslogTime *ts, char* pBuf, int bBuggyDay)
  * In conclusion, we keep our own code for generating the unix timestamp.
  * rgerhards, 2016-03-02
  */
-static time_t
-syslogTime2time_t(const struct syslogTime *ts)
-{
-	long MonthInDays, NumberOfYears, NumberOfDays;
-	int utcOffset;
-	time_t TimeInUnixFormat;
+static time_t syslogTime2time_t(const struct syslogTime *ts) {
+    long MonthInDays, NumberOfYears, NumberOfDays;
+    int utcOffset;
+    time_t TimeInUnixFormat;
 
-	if(ts->year < 1970 || ts->year > 2100) {
-		TimeInUnixFormat = 0;
-		LogError(0, RS_RET_ERR, "syslogTime2time_t: invalid year %d "
-			"in timestamp - returning 1970-01-01 instead", ts->year);
-		goto done;
-	}
+    if (ts->year < 1970 || ts->year > 2100) {
+        TimeInUnixFormat = 0;
+        LogError(0, RS_RET_ERR,
+                 "syslogTime2time_t: invalid year %d "
+                 "in timestamp - returning 1970-01-01 instead",
+                 ts->year);
+        goto done;
+    }
 
-	/* Counting how many Days have passed since the 01.01 of the
-	 * selected Year (Month level), according to the selected Month*/
+    /* Counting how many Days have passed since the 01.01 of the
+     * selected Year (Month level), according to the selected Month*/
 
-	switch(ts->month)
-	{
-		case 1:
-			MonthInDays = 0;         //until 01 of January
-			break;
-		case 2:
-			MonthInDays = 31;        //until 01 of February - leap year handling down below!
-			break;
-		case 3:
-			MonthInDays = 59;        //until 01 of March
-			break;
-		case 4:
-			MonthInDays = 90;        //until 01 of April
-			break;
-		case 5:
-			MonthInDays = 120;       //until 01 of Mai
-			break;
-		case 6:
-			MonthInDays = 151;       //until 01 of June
-			break;
-		case 7:
-			MonthInDays = 181;       //until 01 of July
-			break;
-		case 8:
-			MonthInDays = 212;       //until 01 of August
-			break;
-		case 9:
-			MonthInDays = 243;       //until 01 of September
-			break;
-		case 10:
-			MonthInDays = 273;       //until 01 of Oktober
-			break;
-		case 11:
-			MonthInDays = 304;       //until 01 of November
-			break;
-		case 12:
-			MonthInDays = 334;       //until 01 of December
-			break;
-		default: /* this cannot happen (and would be a program error)
-		          * but we need the code to keep the compiler silent.
-			  */
-			MonthInDays = 0;	/* any value fits ;) */
-			break;
-	}
-	/* adjust for leap years */
-	if((ts->year % 100 != 0 && ts->year % 4 == 0) || (ts->year == 2000)) {
-		if(ts->month > 2)
-			MonthInDays++;
-	}
+    switch (ts->month) {
+        case 1:
+            MonthInDays = 0;  // until 01 of January
+            break;
+        case 2:
+            MonthInDays = 31;  // until 01 of February - leap year handling down below!
+            break;
+        case 3:
+            MonthInDays = 59;  // until 01 of March
+            break;
+        case 4:
+            MonthInDays = 90;  // until 01 of April
+            break;
+        case 5:
+            MonthInDays = 120;  // until 01 of Mai
+            break;
+        case 6:
+            MonthInDays = 151;  // until 01 of June
+            break;
+        case 7:
+            MonthInDays = 181;  // until 01 of July
+            break;
+        case 8:
+            MonthInDays = 212;  // until 01 of August
+            break;
+        case 9:
+            MonthInDays = 243;  // until 01 of September
+            break;
+        case 10:
+            MonthInDays = 273;  // until 01 of Oktober
+            break;
+        case 11:
+            MonthInDays = 304;  // until 01 of November
+            break;
+        case 12:
+            MonthInDays = 334;  // until 01 of December
+            break;
+        default: /* this cannot happen (and would be a program error)
+                  * but we need the code to keep the compiler silent.
+                  */
+            MonthInDays = 0; /* any value fits ;) */
+            break;
+    }
+    /* adjust for leap years */
+    if ((ts->year % 100 != 0 && ts->year % 4 == 0) || (ts->year == 2000)) {
+        if (ts->month > 2) MonthInDays++;
+    }
 
 
-	/*	1) Counting how many Years have passed since 1970
-		2) Counting how many Days have passed since the 01.01 of the selected Year
-			(Day level) according to the Selected Month and Day. Last day doesn't count,
-			it should be until last day
-		3) Calculating this period (NumberOfDays) in seconds*/
+    /*	1) Counting how many Years have passed since 1970
+        2) Counting how many Days have passed since the 01.01 of the selected Year
+            (Day level) according to the Selected Month and Day. Last day doesn't count,
+            it should be until last day
+        3) Calculating this period (NumberOfDays) in seconds*/
 
-	NumberOfYears = ts->year - yearInSec_startYear - 1;
-	NumberOfDays = MonthInDays + ts->day - 1;
-	TimeInUnixFormat = (time_t) (yearInSecs[NumberOfYears] + 1) + NumberOfDays * 86400;
+    NumberOfYears = ts->year - yearInSec_startYear - 1;
+    NumberOfDays = MonthInDays + ts->day - 1;
+    TimeInUnixFormat = (time_t)(yearInSecs[NumberOfYears] + 1) + NumberOfDays * 86400;
 
-	/*Add Hours, minutes and seconds */
-	TimeInUnixFormat += ts->hour*60*60;
-	TimeInUnixFormat += ts->minute*60;
-	TimeInUnixFormat += ts->second;
-	/* do UTC offset */
-	utcOffset = ts->OffsetHour*3600 + ts->OffsetMinute*60;
-	if(ts->OffsetMode == '+')
-		utcOffset *= -1; /* if timestamp is ahead, we need to "go back" to UTC */
-	TimeInUnixFormat += utcOffset;
+    /*Add Hours, minutes and seconds */
+    TimeInUnixFormat += ts->hour * 60 * 60;
+    TimeInUnixFormat += ts->minute * 60;
+    TimeInUnixFormat += ts->second;
+    /* do UTC offset */
+    utcOffset = ts->OffsetHour * 3600 + ts->OffsetMinute * 60;
+    if (ts->OffsetMode == '+') utcOffset *= -1; /* if timestamp is ahead, we need to "go back" to UTC */
+    TimeInUnixFormat += utcOffset;
 done:
-	return TimeInUnixFormat;
+    return TimeInUnixFormat;
 }
 
 
@@ -1178,11 +1097,9 @@ done:
  * Important: pBuf must point to a buffer of at least 11 bytes.
  * rgerhards, 2012-03-29
  */
-static int
-formatTimestampUnix(struct syslogTime *ts, char *pBuf)
-{
-	snprintf(pBuf, 11, "%u", (unsigned) syslogTime2time_t(ts));
-	return 11;
+static int formatTimestampUnix(struct syslogTime *ts, char *pBuf) {
+    snprintf(pBuf, 11, "%u", (unsigned)syslogTime2time_t(ts));
+    return 11;
 }
 
 /* 0 - Sunday, 1, Monday, ...
@@ -1192,213 +1109,204 @@ formatTimestampUnix(struct syslogTime *ts, char *pBuf)
  * leap time rules. To fix it then (*IF* this code really still exists then),
  * just use 2100 as new anchor year and adapt the initial day number.
  */
-int getWeekdayNbr(struct syslogTime *ts)
-{
-	int wday;
-	int g, f;
+int getWeekdayNbr(struct syslogTime *ts) {
+    int wday;
+    int g, f;
 
-	g = ts->year;
-	if(ts->month < 3) {
-		g--;
-		f = ts->month + 13;
-	} else {
-		f = ts->month + 1;
-	}
-	wday = ((36525*g)/100) + ((306*f)/10) + ts->day - 621049;
-	wday %= 7;
-	return wday;
+    g = ts->year;
+    if (ts->month < 3) {
+        g--;
+        f = ts->month + 13;
+    } else {
+        f = ts->month + 1;
+    }
+    wday = ((36525 * g) / 100) + ((306 * f) / 10) + ts->day - 621049;
+    wday %= 7;
+    return wday;
 }
 
 /* getOrdinal - 1-366 day of the year
  * I've given little thought to leap seconds here.
  */
-int getOrdinal(struct syslogTime *ts)
-{
-	int yday;
-	time_t thistime;
-	time_t previousyears;
-	int utcOffset;
-	time_t seconds_into_year;
+int getOrdinal(struct syslogTime *ts) {
+    int yday;
+    time_t thistime;
+    time_t previousyears;
+    int utcOffset;
+    time_t seconds_into_year;
 
-	if(ts->year < 1970 || ts->year > 2100) {
-		yday = 0;
-		LogError(0, RS_RET_ERR, "getOrdinal: invalid year %d "
-			"in timestamp - returning 1970-01-01 instead", ts->year);
-		goto done;
-	}
+    if (ts->year < 1970 || ts->year > 2100) {
+        yday = 0;
+        LogError(0, RS_RET_ERR,
+                 "getOrdinal: invalid year %d "
+                 "in timestamp - returning 1970-01-01 instead",
+                 ts->year);
+        goto done;
+    }
 
-	thistime = syslogTime2time_t(ts);
+    thistime = syslogTime2time_t(ts);
 
-	previousyears = (time_t) yearInSecs[ts->year - yearInSec_startYear - 1];
+    previousyears = (time_t)yearInSecs[ts->year - yearInSec_startYear - 1];
 
-	/* adjust previous years to match UTC offset */
-	utcOffset = ts->OffsetHour*3600 + ts->OffsetMinute*60;
-	if(ts->OffsetMode == '+')
-		utcOffset += -1; /* if timestamp is ahead, we need to "go back" to UTC */
-	previousyears += utcOffset;
+    /* adjust previous years to match UTC offset */
+    utcOffset = ts->OffsetHour * 3600 + ts->OffsetMinute * 60;
+    if (ts->OffsetMode == '+') utcOffset += -1; /* if timestamp is ahead, we need to "go back" to UTC */
+    previousyears += utcOffset;
 
-	/* subtract seconds from previous years */
-	seconds_into_year = thistime - previousyears;
+    /* subtract seconds from previous years */
+    seconds_into_year = thistime - previousyears;
 
-	/* divide by seconds in a day and truncate to int */
-	yday = seconds_into_year / 86400;
+    /* divide by seconds in a day and truncate to int */
+    yday = seconds_into_year / 86400;
 done:
-	return yday;
+    return yday;
 }
 
 /* getWeek - 1-52 week of the year */
-int getWeek(struct syslogTime *ts)
-{
-	int weekNum;
-	struct syslogTime yt;
-	int curDow;
-	int jan1Dow;
-	int curYearDay;
+int getWeek(struct syslogTime *ts) {
+    int weekNum;
+    struct syslogTime yt;
+    int curDow;
+    int jan1Dow;
+    int curYearDay;
 
-	/* initialize a timestamp for january 1st of the current year */
-	yt.year = ts->year;
-	yt.month = 1;
-	yt.day = 1;
-	yt.hour = 0;
-	yt.minute = 0;
-	yt.second = 0;
-	yt.secfracPrecision = 0;
-	yt.secfrac = 0;
-	yt.OffsetMinute = ts->OffsetMinute;
-	yt.OffsetHour = ts->OffsetHour;
-	yt.OffsetMode = ts->OffsetMode;
-	yt.timeType = TIME_TYPE_RFC3164; /* low-res time */
+    /* initialize a timestamp for january 1st of the current year */
+    yt.year = ts->year;
+    yt.month = 1;
+    yt.day = 1;
+    yt.hour = 0;
+    yt.minute = 0;
+    yt.second = 0;
+    yt.secfracPrecision = 0;
+    yt.secfrac = 0;
+    yt.OffsetMinute = ts->OffsetMinute;
+    yt.OffsetHour = ts->OffsetHour;
+    yt.OffsetMode = ts->OffsetMode;
+    yt.timeType = TIME_TYPE_RFC3164; /* low-res time */
 
-	/* get current day in year, current day of week
-	 * and the day of week of 1/1 */
-	curYearDay = getOrdinal(ts);
-	curDow = getWeekdayNbr(ts);
-	jan1Dow = getWeekdayNbr(&yt);
+    /* get current day in year, current day of week
+     * and the day of week of 1/1 */
+    curYearDay = getOrdinal(ts);
+    curDow = getWeekdayNbr(ts);
+    jan1Dow = getWeekdayNbr(&yt);
 
-	/* calculate week of year for given date by pinning 1/1 as start
-	 * of year, then going back and adjusting for the actual week day. */
-	weekNum = ((curYearDay + 6) / 7);
-	if (curDow < jan1Dow) {
-		++weekNum;
-	}
-	return weekNum;
+    /* calculate week of year for given date by pinning 1/1 as start
+     * of year, then going back and adjusting for the actual week day. */
+    weekNum = ((curYearDay + 6) / 7);
+    if (curDow < jan1Dow) {
+        ++weekNum;
+    }
+    return weekNum;
 }
 
 /* getISOWeek - 1-53 week of the year */
-int getISOWeek(struct syslogTime *ts, int *year)
-{
-	int weekNum;
-	int curDow;
-	int curYearDay;
+int getISOWeek(struct syslogTime *ts, int *year) {
+    int weekNum;
+    int curDow;
+    int curYearDay;
 
-	/* get current day in year, current day of week
-	 * and the day of week of 1/1 */
-	curYearDay = getOrdinal(ts);
-	curDow = getWeekdayNbr(ts);
+    /* get current day in year, current day of week
+     * and the day of week of 1/1 */
+    curYearDay = getOrdinal(ts);
+    curDow = getWeekdayNbr(ts);
 
-	/* map from 0 - Sunday, 1, Monday to 1, Monday, 7 - Sunday */
-	if (curDow == 0) {
-		curDow = 7;
-	}
-	/* make ordinal in range 1-366 */
-	curYearDay++;
+    /* map from 0 - Sunday, 1, Monday to 1, Monday, 7 - Sunday */
+    if (curDow == 0) {
+        curDow = 7;
+    }
+    /* make ordinal in range 1-366 */
+    curYearDay++;
 
-	weekNum = (10 + curYearDay - curDow) / 7;
-	*year = ts->year;
-	if (weekNum == 0) {
-		/* this is actually W52 or W53 of previous year */
-		weekNum = weeksInYear[ts->year - 1 - 1969];
-		*year = ts->year - 1;
-	} else if (weekNum > weeksInYear[ts->year - 1969]) {
-		/* this is actually W01 of next year */
-		weekNum = 1;
-		*year = ts->year + 1;
-	}
+    weekNum = (10 + curYearDay - curDow) / 7;
+    *year = ts->year;
+    if (weekNum == 0) {
+        /* this is actually W52 or W53 of previous year */
+        weekNum = weeksInYear[ts->year - 1 - 1969];
+        *year = ts->year - 1;
+    } else if (weekNum > weeksInYear[ts->year - 1969]) {
+        /* this is actually W01 of next year */
+        weekNum = 1;
+        *year = ts->year + 1;
+    }
 
-	return weekNum;
+    return weekNum;
 }
 
-void
-timeConvertToUTC(const struct syslogTime *const __restrict__ local,
-	struct syslogTime *const __restrict__ utc)
-{
-	struct timeval tp;
-	tp.tv_sec = syslogTime2time_t(local);
-	tp.tv_usec = local->secfrac;
-	timeval2syslogTime(&tp, utc, 1);
+void timeConvertToUTC(const struct syslogTime *const __restrict__ local, struct syslogTime *const __restrict__ utc) {
+    struct timeval tp;
+    tp.tv_sec = syslogTime2time_t(local);
+    tp.tv_usec = local->secfrac;
+    timeval2syslogTime(&tp, utc, 1);
 }
 
 /**
  * Format a UNIX timestamp.
  */
-static int
-formatUnixTimeFromTime_t(time_t unixtime, const char *format, char *pBuf,
-	__attribute__((unused)) uint pBufMax) {
+static int formatUnixTimeFromTime_t(time_t unixtime,
+                                    const char *format,
+                                    char *pBuf,
+                                    __attribute__((unused)) uint pBufMax) {
+    struct tm lt;
 
-	struct tm lt;
+    assert(format != NULL);
+    assert(pBuf != NULL);
 
-	assert(format != NULL);
-	assert(pBuf != NULL);
+    // Convert to struct tm
+    if (gmtime_r(&unixtime, &lt) == NULL) {
+        DBGPRINTF("Unexpected error calling gmtime_r().\n");
+        return -1;
+    }
 
-	// Convert to struct tm
-	if (gmtime_r(&unixtime, &lt) == NULL) {
-		DBGPRINTF("Unexpected error calling gmtime_r().\n");
-		return -1;
-	}
+    // Do our conversions
+    if (strcmp(format, "date-rfc3164") == 0) {
+        assert(pBufMax >= 16);
 
-	// Do our conversions
-	if (strcmp(format, "date-rfc3164") == 0) {
-		assert(pBufMax >= 16);
+        // Unlikely to run into this situation, but you never know...
+        if (lt.tm_mon < 0 || lt.tm_mon > 11) {
+            DBGPRINTF("lt.tm_mon is out of range. Value: %d\n", lt.tm_mon);
+            return -1;
+        }
 
-		// Unlikely to run into this situation, but you never know...
-		if (lt.tm_mon < 0 || lt.tm_mon > 11) {
-			DBGPRINTF("lt.tm_mon is out of range. Value: %d\n", lt.tm_mon);
-			return -1;
-		}
+        // MMM dd HH:mm:ss
+        sprintf(pBuf, "%s %2d %.2d:%.2d:%.2d", monthNames[lt.tm_mon], lt.tm_mday, lt.tm_hour, lt.tm_min, lt.tm_sec);
+    } else if (strcmp(format, "date-rfc3339") == 0) {
+        assert(pBufMax >= 26);
 
-		// MMM dd HH:mm:ss
-		sprintf(pBuf, "%s %2d %.2d:%.2d:%.2d",
-			monthNames[lt.tm_mon], lt.tm_mday, lt.tm_hour, lt.tm_min, lt.tm_sec
-		);
-	} else if (strcmp(format, "date-rfc3339") == 0) {
-		assert(pBufMax >= 26);
+        // YYYY-MM-DDTHH:mm:ss+00:00
+        sprintf(pBuf, "%d-%.2d-%.2dT%.2d:%.2d:%.2dZ", lt.tm_year + 1900, lt.tm_mon + 1, lt.tm_mday, lt.tm_hour,
+                lt.tm_min, lt.tm_sec);
+    }
 
-		// YYYY-MM-DDTHH:mm:ss+00:00
-		sprintf(pBuf, "%d-%.2d-%.2dT%.2d:%.2d:%.2dZ",
-			lt.tm_year + 1900, lt.tm_mon + 1, lt.tm_mday, lt.tm_hour, lt.tm_min, lt.tm_sec
-		);
-	}
-
-	return strlen(pBuf);
+    return strlen(pBuf);
 }
 
 /* queryInterface function
  * rgerhards, 2008-03-05
  */
 BEGINobjQueryInterface(datetime)
-CODESTARTobjQueryInterface(datetime);
-	if(pIf->ifVersion != datetimeCURR_IF_VERSION) { /* check for current version, increment on each change */
-		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
-	}
+    CODESTARTobjQueryInterface(datetime);
+    if (pIf->ifVersion != datetimeCURR_IF_VERSION) { /* check for current version, increment on each change */
+        ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+    }
 
-	/* ok, we have the right interface, so let's fill it
-	 * Please note that we may also do some backwards-compatibility
-	 * work here (if we can support an older interface version - that,
-	 * of course, also affects the "if" above).
-	 */
-	pIf->getCurrTime = getCurrTime;
-	pIf->GetTime = getTime;
-	pIf->timeval2syslogTime = timeval2syslogTime;
-	pIf->ParseTIMESTAMP3339 = ParseTIMESTAMP3339;
-	pIf->ParseTIMESTAMP3164 = ParseTIMESTAMP3164;
-	pIf->formatTimestampToMySQL = formatTimestampToMySQL;
-	pIf->formatTimestampToPgSQL = formatTimestampToPgSQL;
-	pIf->formatTimestampSecFrac = formatTimestampSecFrac;
-	pIf->formatTimestamp3339 = formatTimestamp3339;
-	pIf->formatTimestamp3164 = formatTimestamp3164;
-	pIf->formatTimestampUnix = formatTimestampUnix;
-	pIf->syslogTime2time_t = syslogTime2time_t;
-	pIf->formatUnixTimeFromTime_t = formatUnixTimeFromTime_t;
+    /* ok, we have the right interface, so let's fill it
+     * Please note that we may also do some backwards-compatibility
+     * work here (if we can support an older interface version - that,
+     * of course, also affects the "if" above).
+     */
+    pIf->getCurrTime = getCurrTime;
+    pIf->GetTime = getTime;
+    pIf->timeval2syslogTime = timeval2syslogTime;
+    pIf->ParseTIMESTAMP3339 = ParseTIMESTAMP3339;
+    pIf->ParseTIMESTAMP3164 = ParseTIMESTAMP3164;
+    pIf->formatTimestampToMySQL = formatTimestampToMySQL;
+    pIf->formatTimestampToPgSQL = formatTimestampToPgSQL;
+    pIf->formatTimestampSecFrac = formatTimestampSecFrac;
+    pIf->formatTimestamp3339 = formatTimestamp3339;
+    pIf->formatTimestamp3164 = formatTimestamp3164;
+    pIf->formatTimestampUnix = formatTimestampUnix;
+    pIf->syslogTime2time_t = syslogTime2time_t;
+    pIf->formatUnixTimeFromTime_t = formatUnixTimeFromTime_t;
 finalize_it:
 ENDobjQueryInterface(datetime)
 
@@ -1408,7 +1316,7 @@ ENDobjQueryInterface(datetime)
  * rgerhards, 2008-02-19
  */
 BEGINAbstractObjClassInit(datetime, 1, OBJ_IS_CORE_MODULE) /* class, version */
-	/* request objects we use */
+    /* request objects we use */
 ENDObjClassInit(datetime)
 
 /* vi:set ai:

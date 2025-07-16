@@ -35,19 +35,19 @@
 #include <unistd.h>
 #include <signal.h>
 #if defined(_AIX)
-	#include <sys/types.h>
-	#include  <unistd.h>
-	#include <sys/socket.h>
-	#include <sys/socketvar.h>
+    #include <sys/types.h>
+    #include <unistd.h>
+    #include <sys/socket.h>
+    #include <sys/socketvar.h>
 #else
-	#include <getopt.h>
+    #include <getopt.h>
 #endif
 #include <sys/un.h>
 #include <netdb.h>
 #include <poll.h>
 #include <errno.h>
 #if defined(__FreeBSD__)
-#include <sys/socket.h>
+    #include <sys/socket.h>
 #endif
 
 #define DFLT_TIMEOUT 60
@@ -59,134 +59,127 @@ int addNL = 0;
 
 /* called to clean up on exit
  */
-void
-cleanup(void)
-{
-	unlink(sockName);
-	close(sock);
+void cleanup(void) {
+    unlink(sockName);
+    close(sock);
 }
 
 
-void
-doTerm(int __attribute__((unused)) signum)
-{
-	exit(1);
+void doTerm(int __attribute__((unused)) signum) {
+    exit(1);
 }
 
 
-void
-usage(void)
-{
-	fprintf(stderr, "usage: uxsockrcvr -s /socket/name -o /output/file -l\n"
-			"-l adds newline after each message received\n"
-			"-s MUST be specified\n"
-			"if -o ist not specified, stdout is used\n");
-	exit(1);
+void usage(void) {
+    fprintf(stderr,
+            "usage: uxsockrcvr -s /socket/name -o /output/file -l\n"
+            "-l adds newline after each message received\n"
+            "-s MUST be specified\n"
+            "if -o ist not specified, stdout is used\n");
+    exit(1);
 }
 
 
-int
-main(int argc, char *argv[])
-{
-	int opt;
-	int rlen;
-	int timeout = DFLT_TIMEOUT;
-	FILE *fp = stdout;
-	unsigned char data[128*1024];
-	struct  sockaddr_un addr; /* address of server */
-	struct  sockaddr from;
-	socklen_t fromlen;
-	struct pollfd fds[1];
+int main(int argc, char *argv[]) {
+    int opt;
+    int rlen;
+    int timeout = DFLT_TIMEOUT;
+    FILE *fp = stdout;
+    unsigned char data[128 * 1024];
+    struct sockaddr_un addr; /* address of server */
+    struct sockaddr from;
+    socklen_t fromlen;
+    struct pollfd fds[1];
 
-	if(argc < 2) {
-		fprintf(stderr, "error: too few arguments!\n");
-		usage();
-	}
+    if (argc < 2) {
+        fprintf(stderr, "error: too few arguments!\n");
+        usage();
+    }
 
-	while((opt = getopt(argc, argv, "s:o:lt:")) != EOF) {
-		switch((char)opt) {
-		case 'l':
-			addNL = 1;
-			break;
-		case 's':
-			sockName = optarg;
-			break;
-		case 'o':
-			if((fp = fopen(optarg, "w")) == NULL) {
-				perror(optarg);
-				exit(1);
-			}
-			break;
-		case 't':
-			timeout = atoi(optarg);
-			break;
-		default:usage();
-		}
-	}
+    while ((opt = getopt(argc, argv, "s:o:lt:")) != EOF) {
+        switch ((char)opt) {
+            case 'l':
+                addNL = 1;
+                break;
+            case 's':
+                sockName = optarg;
+                break;
+            case 'o':
+                if ((fp = fopen(optarg, "w")) == NULL) {
+                    perror(optarg);
+                    exit(1);
+                }
+                break;
+            case 't':
+                timeout = atoi(optarg);
+                break;
+            default:
+                usage();
+        }
+    }
 
-	timeout = timeout * 1000;
+    timeout = timeout * 1000;
 
-	if(sockName == NULL) {
-		fprintf(stderr, "error: -s /socket/name must be specified!\n");
-		exit(1);
-	}
+    if (sockName == NULL) {
+        fprintf(stderr, "error: -s /socket/name must be specified!\n");
+        exit(1);
+    }
 
-	if(signal(SIGTERM, doTerm) == SIG_ERR) {
-		perror("signal(SIGTERM, ...)");
-		exit(1);
-	}
-	if(signal(SIGINT, doTerm) == SIG_ERR) {
-		perror("signal(SIGINT, ...)");
-		exit(1);
-	}
+    if (signal(SIGTERM, doTerm) == SIG_ERR) {
+        perror("signal(SIGTERM, ...)");
+        exit(1);
+    }
+    if (signal(SIGINT, doTerm) == SIG_ERR) {
+        perror("signal(SIGINT, ...)");
+        exit(1);
+    }
 
-	/*      Create a UNIX datagram socket for server        */
-	if ((sock = socket(AF_UNIX, SOCK_DGRAM, 0)) < 0) {
-		perror("server: socket");
-		exit(1);
-	}
+    /*      Create a UNIX datagram socket for server        */
+    if ((sock = socket(AF_UNIX, SOCK_DGRAM, 0)) < 0) {
+        perror("server: socket");
+        exit(1);
+    }
 
-	atexit(cleanup);
+    atexit(cleanup);
 
-	/*      Set up address structure for server socket      */
-	memset(&addr, 0, sizeof(addr));
-	addr.sun_family = AF_UNIX;
-	strcpy(addr.sun_path, sockName);
+    /*      Set up address structure for server socket      */
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    strcpy(addr.sun_path, sockName);
 
-	if (bind(sock, (struct sockaddr*) &addr, sizeof(addr)) < 0) {
-		close(sock);
-		perror("server: bind");
-		exit(1);
-	}
+    if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        close(sock);
+        perror("server: bind");
+        exit(1);
+    }
 
-	fds[0].fd = sock;
-	fds[0].events = POLLIN;
+    fds[0].fd = sock;
+    fds[0].events = POLLIN;
 
-	/* we now run in an endless loop. We do not check who sends us
-	 * data. This should be no problem for our testbench use.
-	 */
+    /* we now run in an endless loop. We do not check who sends us
+     * data. This should be no problem for our testbench use.
+     */
 
-	while(1) {
-		fromlen = sizeof(from);
-		rlen = poll(fds, 1, timeout);
-		if(rlen == -1) {
-			perror("uxsockrcvr : poll\n");
-			exit(1);
-		} else if(rlen == 0) {
-			fprintf(stderr, "Socket timed out - nothing to receive\n");
-			exit(1);
-		} else {
-			rlen = recvfrom(sock, data, 2000, 0, &from, &fromlen);
-			if(rlen == -1) {
-				perror("uxsockrcvr : recv\n");
-				exit(1);
-			} else {
-				fwrite(data, 1, rlen, fp);
-				if(addNL)
-					fputc('\n', fp);
-			}
-		}
-	}
+    while (1) {
+        fromlen = sizeof(from);
+        rlen = poll(fds, 1, timeout);
+        if (rlen == -1) {
+            perror("uxsockrcvr : poll\n");
+            exit(1);
+        } else if (rlen == 0) {
+            fprintf(stderr, "Socket timed out - nothing to receive\n");
+            exit(1);
+        } else {
+            rlen = recvfrom(sock, data, 2000, 0, &from, &fromlen);
+            if (rlen == -1) {
+                perror("uxsockrcvr : recv\n");
+                exit(1);
+            } else {
+                fwrite(data, 1, rlen, fp);
+                if (addNL) fputc('\n', fp);
+            }
+        }
+    }
 
-	return 0;
+    return 0;
 }

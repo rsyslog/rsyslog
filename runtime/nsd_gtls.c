@@ -30,7 +30,7 @@
 #include <gnutls/gnutls.h>
 #include <gnutls/x509.h>
 #if GNUTLS_VERSION_NUMBER <= 0x020b00
-#	include <gcrypt.h>
+    #include <gcrypt.h>
 #endif
 #include <errno.h>
 #include <sys/stat.h>
@@ -62,17 +62,14 @@ MODULE_TYPE_KEEP;
 
 /* static data */
 DEFobjStaticHelpers;
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(net)
-DEFobjCurrIf(datetime)
-DEFobjCurrIf(nsd_ptcp)
+DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(datetime) DEFobjCurrIf(nsd_ptcp)
 
 
-/* Static Helper variables for certless communication */
-static gnutls_anon_client_credentials_t anoncred;	/**< client anon credentials */
-static gnutls_anon_server_credentials_t anoncredSrv;	/**< server anon credentials */
-static int dhBits = 2048;	/**< number of bits for Diffie-Hellman key */
-static int dhMinBits = 512;	/**< minimum number of bits for Diffie-Hellman key */
+    /* Static Helper variables for certless communication */
+    static gnutls_anon_client_credentials_t anoncred; /**< client anon credentials */
+static gnutls_anon_server_credentials_t anoncredSrv; /**< server anon credentials */
+static int dhBits = 2048; /**< number of bits for Diffie-Hellman key */
+static int dhMinBits = 512; /**< minimum number of bits for Diffie-Hellman key */
 
 static pthread_mutex_t mutGtlsStrerror;
 /*< a mutex protecting the potentially non-reentrant gtlStrerror() function */
@@ -83,107 +80,104 @@ static gnutls_dh_params_t dh_params; /**< server DH parameters for anon mode */
  * CHKgnutls() to avoid some Coverity report in cases where we know GnuTLS
  * failed. Note: gnuRet must already be set accordingly!
  */
-#define ABORTgnutls { \
-		uchar *pErr = gtlsStrerror(gnuRet); \
-		LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", \
-	gnuRet, __FILE__, __LINE__, pErr); \
-		free(pErr); \
-		ABORT_FINALIZE(RS_RET_GNUTLS_ERR); \
-}
+#define ABORTgnutls                                                                                                    \
+    {                                                                                                                  \
+        uchar *pErr = gtlsStrerror(gnuRet);                                                                            \
+        LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", gnuRet, __FILE__, __LINE__, pErr); \
+        free(pErr);                                                                                                    \
+        ABORT_FINALIZE(RS_RET_GNUTLS_ERR);                                                                             \
+    }
 /* a macro to check GnuTLS calls against unexpected errors */
-#define CHKgnutls(x) { \
-	gnuRet = (x); \
-	if(gnuRet == GNUTLS_E_FILE_ERROR) { \
-		LogError(0, RS_RET_GNUTLS_ERR, "error reading file - a common cause is that the " \
-			"file  does not exist"); \
-		ABORT_FINALIZE(RS_RET_GNUTLS_ERR); \
-	} else if(gnuRet != 0) { \
-		ABORTgnutls; \
-	} \
-}
+#define CHKgnutls(x)                                                    \
+    {                                                                   \
+        gnuRet = (x);                                                   \
+        if (gnuRet == GNUTLS_E_FILE_ERROR) {                            \
+            LogError(0, RS_RET_GNUTLS_ERR,                              \
+                     "error reading file - a common cause is that the " \
+                     "file  does not exist");                           \
+            ABORT_FINALIZE(RS_RET_GNUTLS_ERR);                          \
+        } else if (gnuRet != 0) {                                       \
+            ABORTgnutls;                                                \
+        }                                                               \
+    }
 
 
 /* ------------------------------ GnuTLS specifics ------------------------------ */
-static rsRetVal
-doRetry(nsd_gtls_t *pNsd)
-{
-	DEFiRet;
-	int gnuRet;
+static rsRetVal doRetry(nsd_gtls_t *pNsd) {
+    DEFiRet;
+    int gnuRet;
 
-	dbgprintf("doRetry: GnuTLS requested retry of operation %d - executing\n", pNsd->rtryCall);
+    dbgprintf("doRetry: GnuTLS requested retry of operation %d - executing\n", pNsd->rtryCall);
 
-	/* We follow a common scheme here: first, we do the systen call and
-	 * then we check the result. So far, the result is checked after the
-	 * switch, because the result check is the same for all calls. Note that
-	 * this may change once we deal with the read and write calls (but
-	 * probably this becomes an issue only when we begin to work on TLS
-	 * for relp). -- rgerhards, 2008-04-30
-	 */
-	switch(pNsd->rtryCall) {
-		case gtlsRtry_handshake:
-			gnuRet = gnutls_handshake(pNsd->sess);
-			if(gnuRet == GNUTLS_E_AGAIN || gnuRet == GNUTLS_E_INTERRUPTED) {
-				dbgprintf("doRetry: GnuTLS handshake retry did not finish - "
-					"setting to retry (this is OK and can happen)\n");
-				FINALIZE;
-			} else if(gnuRet == 0) {
-				pNsd->rtryCall = gtlsRtry_None; /* we are done */
-				/* we got a handshake, now check authorization */
-				CHKiRet(gtlsChkPeerAuth(pNsd));
-			} else {
-				uchar *pGnuErr = gtlsStrerror(gnuRet);
-				uchar *fromHostIP = NULL;
-				int remotePort;
-				uchar remotePortStr[8];
-				nsd_ptcp.GetRemoteHName(pNsd->pTcp, &fromHostIP);
-				nsd_ptcp.GetRemotePort(pNsd->pTcp, &remotePort);
-				nsd_ptcp.FmtRemotePortStr(remotePort, remotePortStr, sizeof(remotePortStr));
-				LogError(0, RS_RET_TLS_HANDSHAKE_ERR,
-					"nsd_gtls:TLS session terminated with remote client '%s:%s': "
-				"	GnuTLS handshake retry returned error: %s",
-				fromHostIP, remotePortStr, pGnuErr);
-				free(fromHostIP);
-				free(pGnuErr);
-				ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
-			}
-			break;
-		case gtlsRtry_recv:
-		case gtlsRtry_None:
-		default:
-			assert(0); /* this shall not happen! */
-			dbgprintf("ERROR: pNsd->rtryCall %d invalid in nsd_gtls.c:%d\n",
-				pNsd->rtryCall, __LINE__);
-			gnuRet = 0; /* if it happens, we have at least a defined behaviour... ;) */
-			break;
-	}
+    /* We follow a common scheme here: first, we do the systen call and
+     * then we check the result. So far, the result is checked after the
+     * switch, because the result check is the same for all calls. Note that
+     * this may change once we deal with the read and write calls (but
+     * probably this becomes an issue only when we begin to work on TLS
+     * for relp). -- rgerhards, 2008-04-30
+     */
+    switch (pNsd->rtryCall) {
+        case gtlsRtry_handshake:
+            gnuRet = gnutls_handshake(pNsd->sess);
+            if (gnuRet == GNUTLS_E_AGAIN || gnuRet == GNUTLS_E_INTERRUPTED) {
+                dbgprintf(
+                    "doRetry: GnuTLS handshake retry did not finish - "
+                    "setting to retry (this is OK and can happen)\n");
+                FINALIZE;
+            } else if (gnuRet == 0) {
+                pNsd->rtryCall = gtlsRtry_None; /* we are done */
+                /* we got a handshake, now check authorization */
+                CHKiRet(gtlsChkPeerAuth(pNsd));
+            } else {
+                uchar *pGnuErr = gtlsStrerror(gnuRet);
+                uchar *fromHostIP = NULL;
+                int remotePort;
+                uchar remotePortStr[8];
+                nsd_ptcp.GetRemoteHName(pNsd->pTcp, &fromHostIP);
+                nsd_ptcp.GetRemotePort(pNsd->pTcp, &remotePort);
+                nsd_ptcp.FmtRemotePortStr(remotePort, remotePortStr, sizeof(remotePortStr));
+                LogError(0, RS_RET_TLS_HANDSHAKE_ERR,
+                         "nsd_gtls:TLS session terminated with remote client '%s:%s': "
+                         "	GnuTLS handshake retry returned error: %s",
+                         fromHostIP, remotePortStr, pGnuErr);
+                free(fromHostIP);
+                free(pGnuErr);
+                ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
+            }
+            break;
+        case gtlsRtry_recv:
+        case gtlsRtry_None:
+        default:
+            assert(0); /* this shall not happen! */
+            dbgprintf("ERROR: pNsd->rtryCall %d invalid in nsd_gtls.c:%d\n", pNsd->rtryCall, __LINE__);
+            gnuRet = 0; /* if it happens, we have at least a defined behaviour... ;) */
+            break;
+    }
 
-	if(gnuRet == 0) {
-		pNsd->rtryCall = gtlsRtry_None; /* we are done */
-	} else if(gnuRet != GNUTLS_E_AGAIN && gnuRet != GNUTLS_E_INTERRUPTED) {
-		uchar *pErr = gtlsStrerror(gnuRet);
-		LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n",
-		gnuRet, __FILE__, __LINE__, pErr); \
-		free(pErr);
-		pNsd->rtryCall = gtlsRtry_None; /* we are also done... ;) */
-		ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
-	}
-	/* if we are interrupted once again (else case), we do not need to
-	 * change our status because we are already setup for retries.
-	 */
+    if (gnuRet == 0) {
+        pNsd->rtryCall = gtlsRtry_None; /* we are done */
+    } else if (gnuRet != GNUTLS_E_AGAIN && gnuRet != GNUTLS_E_INTERRUPTED) {
+        uchar *pErr = gtlsStrerror(gnuRet);
+        LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d in %s:%d: %s\n", gnuRet, __FILE__, __LINE__, pErr);
+        free(pErr);
+        pNsd->rtryCall = gtlsRtry_None; /* we are also done... ;) */
+        ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+    }
+    /* if we are interrupted once again (else case), we do not need to
+     * change our status because we are already setup for retries.
+     */
 
 finalize_it:
-	if(iRet != RS_RET_OK && iRet != RS_RET_CLOSED && iRet != RS_RET_RETRY)
-		pNsd->bAbortConn = 1; /* request abort */
-	RETiRet;
+    if (iRet != RS_RET_OK && iRet != RS_RET_CLOSED && iRet != RS_RET_RETRY) pNsd->bAbortConn = 1; /* request abort */
+    RETiRet;
 }
 
 /* This defines a log function to be provided to GnuTLS. It hopefully
  * helps us track down hard to find problems.
  * rgerhards, 2008-06-20
  */
-static void logFunction(int level, const char *msg)
-{
-	dbgprintf("GnuTLS log msg, level %d: %s\n", level, msg);
+static void logFunction(int level, const char *msg) {
+    dbgprintf("GnuTLS log msg, level %d: %s\n", level, msg);
 }
 
 /* read in the whole content of a file. The caller is responsible for
@@ -191,52 +185,49 @@ static void logFunction(int level, const char *msg)
  * files larger than 1MB (which still is *very* large).
  * rgerhards, 2008-05-26
  */
-static rsRetVal
-readFile(const uchar *const pszFile, gnutls_datum_t *const pBuf)
-{
-	int fd;
-	struct stat stat_st;
-	DEFiRet;
+static rsRetVal readFile(const uchar *const pszFile, gnutls_datum_t *const pBuf) {
+    int fd;
+    struct stat stat_st;
+    DEFiRet;
 
-	assert(pszFile != NULL);
-	assert(pBuf != NULL);
+    assert(pszFile != NULL);
+    assert(pBuf != NULL);
 
-	pBuf->data = NULL;
+    pBuf->data = NULL;
 
-	if((fd = open((char*)pszFile, O_RDONLY)) == -1) {
-		LogError(errno, RS_RET_FILE_NOT_FOUND, "can not read file '%s'", pszFile);
-		ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
-	}
+    if ((fd = open((char *)pszFile, O_RDONLY)) == -1) {
+        LogError(errno, RS_RET_FILE_NOT_FOUND, "can not read file '%s'", pszFile);
+        ABORT_FINALIZE(RS_RET_FILE_NOT_FOUND);
+    }
 
-	if(fstat(fd, &stat_st) == -1) {
-		LogError(errno, RS_RET_FILE_NO_STAT, "can not stat file '%s'", pszFile);
-		ABORT_FINALIZE(RS_RET_FILE_NO_STAT);
-	}
+    if (fstat(fd, &stat_st) == -1) {
+        LogError(errno, RS_RET_FILE_NO_STAT, "can not stat file '%s'", pszFile);
+        ABORT_FINALIZE(RS_RET_FILE_NO_STAT);
+    }
 
-	/* 1MB limit */
-	if(stat_st.st_size > 1024 * 1024) {
-		LogError(0, RS_RET_FILE_TOO_LARGE, "file '%s' too large, max 1MB", pszFile);
-		ABORT_FINALIZE(RS_RET_FILE_TOO_LARGE);
-	}
+    /* 1MB limit */
+    if (stat_st.st_size > 1024 * 1024) {
+        LogError(0, RS_RET_FILE_TOO_LARGE, "file '%s' too large, max 1MB", pszFile);
+        ABORT_FINALIZE(RS_RET_FILE_TOO_LARGE);
+    }
 
-	CHKmalloc(pBuf->data = malloc(stat_st.st_size));
-	pBuf->size = stat_st.st_size;
-	if(read(fd,  pBuf->data, stat_st.st_size) != stat_st.st_size) {
-		LogError(0, RS_RET_IO_ERROR, "error or incomplete read of file '%s'", pszFile);
-		ABORT_FINALIZE(RS_RET_IO_ERROR);
-	}
+    CHKmalloc(pBuf->data = malloc(stat_st.st_size));
+    pBuf->size = stat_st.st_size;
+    if (read(fd, pBuf->data, stat_st.st_size) != stat_st.st_size) {
+        LogError(0, RS_RET_IO_ERROR, "error or incomplete read of file '%s'", pszFile);
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
 
 finalize_it:
-	if(fd != -1)
-		close(fd);
-	if(iRet != RS_RET_OK) {
-		if(pBuf->data != NULL) {
-			free(pBuf->data);
-			pBuf->data = NULL;
-			pBuf->size = 0;
-			}
-	}
-	RETiRet;
+    if (fd != -1) close(fd);
+    if (iRet != RS_RET_OK) {
+        if (pBuf->data != NULL) {
+            free(pBuf->data);
+            pBuf->data = NULL;
+            pBuf->size = 0;
+        }
+    }
+    RETiRet;
 }
 
 
@@ -247,74 +238,71 @@ finalize_it:
  * need to load certificates into our private store.
  * rgerhards, 2008-05-26
  */
-static rsRetVal
-gtlsLoadOurCertKey(nsd_gtls_t *pThis)
-{
-	DEFiRet;
-	int gnuRet;
-	gnutls_datum_t data = { NULL, 0 };
-	const uchar *keyFile;
-	const uchar *certFile;
+static rsRetVal gtlsLoadOurCertKey(nsd_gtls_t *pThis) {
+    DEFiRet;
+    int gnuRet;
+    gnutls_datum_t data = {NULL, 0};
+    const uchar *keyFile;
+    const uchar *certFile;
 
-	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+    ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-	certFile = (pThis->pszCertFile == NULL) ? glbl.GetDfltNetstrmDrvrCertFile(runConf) : pThis->pszCertFile;
-	keyFile = (pThis->pszKeyFile == NULL) ? glbl.GetDfltNetstrmDrvrKeyFile(runConf) : pThis->pszKeyFile;
+    certFile = (pThis->pszCertFile == NULL) ? glbl.GetDfltNetstrmDrvrCertFile(runConf) : pThis->pszCertFile;
+    keyFile = (pThis->pszKeyFile == NULL) ? glbl.GetDfltNetstrmDrvrKeyFile(runConf) : pThis->pszKeyFile;
 
-	if(certFile == NULL || keyFile == NULL) {
-		/* in this case, we can not set our certificate. If we are
-		 * a client and the server is running in "anon" auth mode, this
-		 * may be well acceptable. In other cases, we will see some
-		 * more error messages down the road. -- rgerhards, 2008-07-02
-		 */
-		dbgprintf("gtlsLoadOurCertKey our certificate is not set, file name values are cert: '%s', key: '%s'\n",
-			  certFile, keyFile);
-		ABORT_FINALIZE(RS_RET_CERTLESS);
-	}
+    if (certFile == NULL || keyFile == NULL) {
+        /* in this case, we can not set our certificate. If we are
+         * a client and the server is running in "anon" auth mode, this
+         * may be well acceptable. In other cases, we will see some
+         * more error messages down the road. -- rgerhards, 2008-07-02
+         */
+        dbgprintf("gtlsLoadOurCertKey our certificate is not set, file name values are cert: '%s', key: '%s'\n",
+                  certFile, keyFile);
+        ABORT_FINALIZE(RS_RET_CERTLESS);
+    }
 
-	/* try load certificate */
-	CHKiRet(readFile(certFile, &data));
-	pThis->nOurCerts = sizeof(pThis->pOurCerts) / sizeof(gnutls_x509_crt_t);
-	gnuRet = gnutls_x509_crt_list_import(pThis->pOurCerts, &pThis->nOurCerts,
-		&data, GNUTLS_X509_FMT_PEM,  GNUTLS_X509_CRT_LIST_IMPORT_FAIL_IF_EXCEED);
-	if(gnuRet < 0) {
-		ABORTgnutls;
-	}
-	pThis->bOurCertIsInit = 1;
-	free(data.data);
-	data.data = NULL;
+    /* try load certificate */
+    CHKiRet(readFile(certFile, &data));
+    pThis->nOurCerts = sizeof(pThis->pOurCerts) / sizeof(gnutls_x509_crt_t);
+    gnuRet = gnutls_x509_crt_list_import(pThis->pOurCerts, &pThis->nOurCerts, &data, GNUTLS_X509_FMT_PEM,
+                                         GNUTLS_X509_CRT_LIST_IMPORT_FAIL_IF_EXCEED);
+    if (gnuRet < 0) {
+        ABORTgnutls;
+    }
+    pThis->bOurCertIsInit = 1;
+    free(data.data);
+    data.data = NULL;
 
-	/* try load private key */
-	CHKiRet(readFile(keyFile, &data));
-	CHKgnutls(gnutls_x509_privkey_init(&pThis->ourKey));
-	pThis->bOurKeyIsInit = 1;
-	CHKgnutls(gnutls_x509_privkey_import(pThis->ourKey, &data, GNUTLS_X509_FMT_PEM));
-	free(data.data);
+    /* try load private key */
+    CHKiRet(readFile(keyFile, &data));
+    CHKgnutls(gnutls_x509_privkey_init(&pThis->ourKey));
+    pThis->bOurKeyIsInit = 1;
+    CHKgnutls(gnutls_x509_privkey_import(pThis->ourKey, &data, GNUTLS_X509_FMT_PEM));
+    free(data.data);
 
 
 finalize_it:
-	if(iRet == RS_RET_CERTLESS) {
-		dbgprintf("gtlsLoadOurCertKey certless exit\n");
-		pThis->bOurCertIsInit = 0;
-		pThis->bOurKeyIsInit = 0;
-	} else if(iRet != RS_RET_OK) {
-		dbgprintf("gtlsLoadOurCertKey error exit\n");
-		if(data.data != NULL)
-			free(data.data);
-		if(pThis->bOurCertIsInit) {
-			for(unsigned i=0; i<pThis->nOurCerts; ++i) {
-				gnutls_x509_crt_deinit(pThis->pOurCerts[i]);
-			}
-			pThis->bOurCertIsInit = 0;
-		}
-		if(pThis->bOurKeyIsInit) {
-			gnutls_x509_privkey_deinit(pThis->ourKey);
-			pThis->bOurKeyIsInit = 0;
-		}
-	} else {
-		dbgprintf("gtlsLoadOurCertKey Successfully Loaded cert '%s' and key: '%s'\n", certFile, keyFile);
-	}
-	RETiRet;
+    if (iRet == RS_RET_CERTLESS) {
+        dbgprintf("gtlsLoadOurCertKey certless exit\n");
+        pThis->bOurCertIsInit = 0;
+        pThis->bOurKeyIsInit = 0;
+    } else if (iRet != RS_RET_OK) {
+        dbgprintf("gtlsLoadOurCertKey error exit\n");
+        if (data.data != NULL) free(data.data);
+        if (pThis->bOurCertIsInit) {
+            for (unsigned i = 0; i < pThis->nOurCerts; ++i) {
+                gnutls_x509_crt_deinit(pThis->pOurCerts[i]);
+            }
+            pThis->bOurCertIsInit = 0;
+        }
+        if (pThis->bOurKeyIsInit) {
+            gnutls_x509_privkey_deinit(pThis->ourKey);
+            pThis->bOurKeyIsInit = 0;
+        }
+    } else {
+        dbgprintf("gtlsLoadOurCertKey Successfully Loaded cert '%s' and key: '%s'\n", certFile, keyFile);
+    }
+    RETiRet;
 }
 
 
@@ -329,34 +317,32 @@ finalize_it:
  * -1 on failure.
  * rgerhards, 2008-05-27
  */
-static int
-gtlsClientCertCallback(gnutls_session_t session,
-	__attribute__((unused)) const gnutls_datum_t* req_ca_rdn,
-	int __attribute__((unused)) nreqs,
-	__attribute__((unused)) const gnutls_pk_algorithm_t* sign_algos,
-	int __attribute__((unused)) sign_algos_length,
+static int gtlsClientCertCallback(gnutls_session_t session,
+                                  __attribute__((unused)) const gnutls_datum_t *req_ca_rdn,
+                                  int __attribute__((unused)) nreqs,
+                                  __attribute__((unused)) const gnutls_pk_algorithm_t *sign_algos,
+                                  int __attribute__((unused)) sign_algos_length,
 #if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION
-	gnutls_retr2_st* st
+                                  gnutls_retr2_st *st
 #else
-	gnutls_retr_st *st
+                                  gnutls_retr_st *st
 #endif
-	)
-{
-	nsd_gtls_t *pThis;
+) {
+    nsd_gtls_t *pThis;
 
-	pThis = (nsd_gtls_t*) gnutls_session_get_ptr(session);
+    pThis = (nsd_gtls_t *)gnutls_session_get_ptr(session);
 
 #if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION
-	st->cert_type = GNUTLS_CRT_X509;
+    st->cert_type = GNUTLS_CRT_X509;
 #else
-	st->type = GNUTLS_CRT_X509;
+    st->type = GNUTLS_CRT_X509;
 #endif
-	st->ncerts = pThis->nOurCerts;
-	st->cert.x509 = pThis->pOurCerts;
-	st->key.x509 = pThis->ourKey;
-	st->deinit_all = 0;
+    st->ncerts = pThis->nOurCerts;
+    st->cert.x509 = pThis->pOurCerts;
+    st->key.x509 = pThis->ourKey;
+    st->deinit_all = 0;
 
-	return 0;
+    return 0;
 }
 
 
@@ -366,107 +352,99 @@ gtlsClientCertCallback(gnutls_session_t session,
  * Caller must destruct it when no longer needed.
  * rgerhards, 2008-05-21
  */
-static rsRetVal
-gtlsGetCertInfo(nsd_gtls_t *const pThis, cstr_t **ppStr)
-{
-	uchar szBufA[1024];
-	uchar *szBuf = szBufA;
-	size_t szBufLen = sizeof(szBufA), tmp;
-	unsigned int algo, bits;
-	time_t expiration_time, activation_time;
-	const gnutls_datum_t *cert_list;
-	unsigned cert_list_size = 0;
-	gnutls_x509_crt_t cert;
-	cstr_t *pStr = NULL;
-	int gnuRet;
-	DEFiRet;
-	unsigned iAltName;
+static rsRetVal gtlsGetCertInfo(nsd_gtls_t *const pThis, cstr_t **ppStr) {
+    uchar szBufA[1024];
+    uchar *szBuf = szBufA;
+    size_t szBufLen = sizeof(szBufA), tmp;
+    unsigned int algo, bits;
+    time_t expiration_time, activation_time;
+    const gnutls_datum_t *cert_list;
+    unsigned cert_list_size = 0;
+    gnutls_x509_crt_t cert;
+    cstr_t *pStr = NULL;
+    int gnuRet;
+    DEFiRet;
+    unsigned iAltName;
 
-	assert(ppStr != NULL);
-	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+    assert(ppStr != NULL);
+    ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-	if(gnutls_certificate_type_get(pThis->sess) != GNUTLS_CRT_X509)
-		return RS_RET_TLS_CERT_ERR;
+    if (gnutls_certificate_type_get(pThis->sess) != GNUTLS_CRT_X509) return RS_RET_TLS_CERT_ERR;
 
-	cert_list = gnutls_certificate_get_peers(pThis->sess, &cert_list_size);
-	CHKiRet(rsCStrConstructFromszStrf(&pStr, "peer provided %d certificate(s). ", cert_list_size));
+    cert_list = gnutls_certificate_get_peers(pThis->sess, &cert_list_size);
+    CHKiRet(rsCStrConstructFromszStrf(&pStr, "peer provided %d certificate(s). ", cert_list_size));
 
-	if(cert_list_size > 0) {
-		/* we only print information about the first certificate */
-		CHKgnutls(gnutls_x509_crt_init(&cert));
-		CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER));
+    if (cert_list_size > 0) {
+        /* we only print information about the first certificate */
+        CHKgnutls(gnutls_x509_crt_init(&cert));
+        CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER));
 
-		expiration_time = gnutls_x509_crt_get_expiration_time(cert);
-		activation_time = gnutls_x509_crt_get_activation_time(cert);
-		ctime_r(&activation_time, (char*)szBuf);
-		szBuf[ustrlen(szBuf) - 1] = '\0'; /* strip linefeed */
-		CHKiRet(rsCStrAppendStrf(pStr, "Certificate 1 info: "
-			"certificate valid from %s ", szBuf));
-		ctime_r(&expiration_time, (char*)szBuf);
-		szBuf[ustrlen(szBuf) - 1] = '\0'; /* strip linefeed */
-		CHKiRet(rsCStrAppendStrf(pStr, "to %s; ", szBuf));
+        expiration_time = gnutls_x509_crt_get_expiration_time(cert);
+        activation_time = gnutls_x509_crt_get_activation_time(cert);
+        ctime_r(&activation_time, (char *)szBuf);
+        szBuf[ustrlen(szBuf) - 1] = '\0'; /* strip linefeed */
+        CHKiRet(rsCStrAppendStrf(pStr,
+                                 "Certificate 1 info: "
+                                 "certificate valid from %s ",
+                                 szBuf));
+        ctime_r(&expiration_time, (char *)szBuf);
+        szBuf[ustrlen(szBuf) - 1] = '\0'; /* strip linefeed */
+        CHKiRet(rsCStrAppendStrf(pStr, "to %s; ", szBuf));
 
-		/* Extract some of the public key algorithm's parameters */
-		algo = gnutls_x509_crt_get_pk_algorithm(cert, &bits);
-		CHKiRet(rsCStrAppendStrf(pStr, "Certificate public key: %s; ",
-			gnutls_pk_algorithm_get_name(algo)));
+        /* Extract some of the public key algorithm's parameters */
+        algo = gnutls_x509_crt_get_pk_algorithm(cert, &bits);
+        CHKiRet(rsCStrAppendStrf(pStr, "Certificate public key: %s; ", gnutls_pk_algorithm_get_name(algo)));
 
-		/* names */
-		tmp = szBufLen;
-		if(gnutls_x509_crt_get_dn(cert, (char*)szBuf, &tmp)
-		    == GNUTLS_E_SHORT_MEMORY_BUFFER) {
-			szBufLen = tmp;
-			szBuf = malloc(tmp);
-			gnutls_x509_crt_get_dn(cert, (char*)szBuf, &tmp);
-		}
-		CHKiRet(rsCStrAppendStrf(pStr, "DN: %s; ", szBuf));
+        /* names */
+        tmp = szBufLen;
+        if (gnutls_x509_crt_get_dn(cert, (char *)szBuf, &tmp) == GNUTLS_E_SHORT_MEMORY_BUFFER) {
+            szBufLen = tmp;
+            szBuf = malloc(tmp);
+            gnutls_x509_crt_get_dn(cert, (char *)szBuf, &tmp);
+        }
+        CHKiRet(rsCStrAppendStrf(pStr, "DN: %s; ", szBuf));
 
-		tmp = szBufLen;
-		if(gnutls_x509_crt_get_issuer_dn(cert, (char*)szBuf, &tmp)
-		    == GNUTLS_E_SHORT_MEMORY_BUFFER) {
-			szBufLen = tmp;
-			szBuf = realloc((szBuf == szBufA) ? NULL : szBuf, tmp);
-			gnutls_x509_crt_get_issuer_dn(cert, (char*)szBuf, &tmp);
-		}
-		CHKiRet(rsCStrAppendStrf(pStr, "Issuer DN: %s; ", szBuf));
+        tmp = szBufLen;
+        if (gnutls_x509_crt_get_issuer_dn(cert, (char *)szBuf, &tmp) == GNUTLS_E_SHORT_MEMORY_BUFFER) {
+            szBufLen = tmp;
+            szBuf = realloc((szBuf == szBufA) ? NULL : szBuf, tmp);
+            gnutls_x509_crt_get_issuer_dn(cert, (char *)szBuf, &tmp);
+        }
+        CHKiRet(rsCStrAppendStrf(pStr, "Issuer DN: %s; ", szBuf));
 
-		/* dNSName alt name */
-		iAltName = 0;
-		while(1) { /* loop broken below */
-			tmp = szBufLen;
-			gnuRet = gnutls_x509_crt_get_subject_alt_name(cert, iAltName,
-					szBuf, &tmp, NULL);
-			if(gnuRet == GNUTLS_E_SHORT_MEMORY_BUFFER) {
-				szBufLen = tmp;
-				szBuf = realloc((szBuf == szBufA) ? NULL : szBuf, tmp);
-				continue;
-			} else if(gnuRet < 0)
-				break;
-			else if(gnuRet == GNUTLS_SAN_DNSNAME) {
-				/* we found it! */
-				CHKiRet(rsCStrAppendStrf(pStr, "SAN:DNSname: %s; ", szBuf));
-				/* do NOT break, because there may be multiple dNSName's! */
-			}
-			++iAltName;
-		}
+        /* dNSName alt name */
+        iAltName = 0;
+        while (1) { /* loop broken below */
+            tmp = szBufLen;
+            gnuRet = gnutls_x509_crt_get_subject_alt_name(cert, iAltName, szBuf, &tmp, NULL);
+            if (gnuRet == GNUTLS_E_SHORT_MEMORY_BUFFER) {
+                szBufLen = tmp;
+                szBuf = realloc((szBuf == szBufA) ? NULL : szBuf, tmp);
+                continue;
+            } else if (gnuRet < 0)
+                break;
+            else if (gnuRet == GNUTLS_SAN_DNSNAME) {
+                /* we found it! */
+                CHKiRet(rsCStrAppendStrf(pStr, "SAN:DNSname: %s; ", szBuf));
+                /* do NOT break, because there may be multiple dNSName's! */
+            }
+            ++iAltName;
+        }
 
-		gnutls_x509_crt_deinit(cert);
-	}
+        gnutls_x509_crt_deinit(cert);
+    }
 
-	cstrFinalize(pStr);
-	*ppStr = pStr;
+    cstrFinalize(pStr);
+    *ppStr = pStr;
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pStr != NULL)
-			rsCStrDestruct(&pStr);
-	}
-	if(szBuf != szBufA)
-		free(szBuf);
+    if (iRet != RS_RET_OK) {
+        if (pStr != NULL) rsCStrDestruct(&pStr);
+    }
+    if (szBuf != szBufA) free(szBuf);
 
-	RETiRet;
+    RETiRet;
 }
-
 
 
 #if 0 /* we may need this in the future - code needs to be looked at then! */
@@ -561,30 +539,27 @@ print_info(nsd_gtls_t *pThis)
  * destruct that object.
  * rgerhards, 2008-05-08
  */
-static rsRetVal
-GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr, const char* prefix)
-{
-	cstr_t *pStr = NULL;
-	uchar buf[4];
-	size_t i;
-	DEFiRet;
+static rsRetVal GenFingerprintStr(uchar *pFingerprint, size_t sizeFingerprint, cstr_t **ppStr, const char *prefix) {
+    cstr_t *pStr = NULL;
+    uchar buf[4];
+    size_t i;
+    DEFiRet;
 
-	CHKiRet(rsCStrConstruct(&pStr));
-	CHKiRet(rsCStrAppendStrWithLen(pStr, (uchar*) prefix, strlen(prefix)));
-	for(i = 0 ; i < sizeFingerprint ; ++i) {
-		snprintf((char*)buf, sizeof(buf), ":%2.2X", pFingerprint[i]);
-		CHKiRet(rsCStrAppendStrWithLen(pStr, buf, 3));
-	}
-	cstrFinalize(pStr);
+    CHKiRet(rsCStrConstruct(&pStr));
+    CHKiRet(rsCStrAppendStrWithLen(pStr, (uchar *)prefix, strlen(prefix)));
+    for (i = 0; i < sizeFingerprint; ++i) {
+        snprintf((char *)buf, sizeof(buf), ":%2.2X", pFingerprint[i]);
+        CHKiRet(rsCStrAppendStrWithLen(pStr, buf, 3));
+    }
+    cstrFinalize(pStr);
 
-	*ppStr = pStr;
+    *ppStr = pStr;
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pStr != NULL)
-			rsCStrDestruct(&pStr);
-	}
-	RETiRet;
+    if (iRet != RS_RET_OK) {
+        if (pStr != NULL) rsCStrDestruct(&pStr);
+    }
+    RETiRet;
 }
 
 
@@ -592,15 +567,14 @@ finalize_it:
  * The caller must free the returned string.
  * rgerhards, 2008-04-30
  */
-uchar *gtlsStrerror(int error)
-{
-	uchar *pErr;
+uchar *gtlsStrerror(int error) {
+    uchar *pErr;
 
-	pthread_mutex_lock(&mutGtlsStrerror);
-	pErr = (uchar*) strdup(gnutls_strerror(error));
-	pthread_mutex_unlock(&mutGtlsStrerror);
+    pthread_mutex_lock(&mutGtlsStrerror);
+    pErr = (uchar *)strdup(gnutls_strerror(error));
+    pthread_mutex_unlock(&mutGtlsStrerror);
 
-	return pErr;
+    return pErr;
 }
 
 
@@ -612,64 +586,60 @@ uchar *gtlsStrerror(int error)
  * data.
  * rgerhards, 2008-06-24
  */
-rsRetVal
-gtlsRecordRecv(nsd_gtls_t *const pThis, unsigned int* nextIODirection)
-{
-	ssize_t lenRcvd;
-	DEFiRet;
+rsRetVal gtlsRecordRecv(nsd_gtls_t *const pThis, unsigned int *nextIODirection) {
+    ssize_t lenRcvd;
+    DEFiRet;
 
-	ISOBJ_TYPE_assert(pThis, nsd_gtls);
-	DBGPRINTF("gtlsRecordRecv: start (Pending Data: %zd | Wanted Direction: %s)\n",
-		gnutls_record_check_pending(pThis->sess),
-		(gnutls_record_get_direction(pThis->sess) == gtlsDir_READ ? "READ" : "WRITE") );
-	lenRcvd = gnutls_record_recv(pThis->sess, pThis->pszRcvBuf, NSD_GTLS_MAX_RCVBUF);
-	if(lenRcvd >= 0) {
-		DBGPRINTF("gtlsRecordRecv: gnutls_record_recv received %zd bytes\n", lenRcvd);
-		pThis->lenRcvBuf = lenRcvd;
-		pThis->ptrRcvBuf = 0;
+    ISOBJ_TYPE_assert(pThis, nsd_gtls);
+    DBGPRINTF("gtlsRecordRecv: start (Pending Data: %zd | Wanted Direction: %s)\n",
+              gnutls_record_check_pending(pThis->sess),
+              (gnutls_record_get_direction(pThis->sess) == gtlsDir_READ ? "READ" : "WRITE"));
+    lenRcvd = gnutls_record_recv(pThis->sess, pThis->pszRcvBuf, NSD_GTLS_MAX_RCVBUF);
+    if (lenRcvd >= 0) {
+        DBGPRINTF("gtlsRecordRecv: gnutls_record_recv received %zd bytes\n", lenRcvd);
+        pThis->lenRcvBuf = lenRcvd;
+        pThis->ptrRcvBuf = 0;
 
-		/* Check for additional data in SSL buffer */
-		size_t stBytesLeft = gnutls_record_check_pending(pThis->sess);
-		if (stBytesLeft > 0 ){
-			DBGPRINTF("gtlsRecordRecv: %zd Bytes pending after gnutls_record_recv, expand buffer.\n",
-				stBytesLeft);
-			/* realloc buffer size and preserve char content */
-			char *const newbuf = realloc(pThis->pszRcvBuf, NSD_GTLS_MAX_RCVBUF+stBytesLeft);
-			CHKmalloc(newbuf);
-			pThis->pszRcvBuf = newbuf;
+        /* Check for additional data in SSL buffer */
+        size_t stBytesLeft = gnutls_record_check_pending(pThis->sess);
+        if (stBytesLeft > 0) {
+            DBGPRINTF("gtlsRecordRecv: %zd Bytes pending after gnutls_record_recv, expand buffer.\n", stBytesLeft);
+            /* realloc buffer size and preserve char content */
+            char *const newbuf = realloc(pThis->pszRcvBuf, NSD_GTLS_MAX_RCVBUF + stBytesLeft);
+            CHKmalloc(newbuf);
+            pThis->pszRcvBuf = newbuf;
 
-			/* 2nd read will read missing bytes from the current SSL Packet */
-			lenRcvd = gnutls_record_recv(pThis->sess, pThis->pszRcvBuf+NSD_GTLS_MAX_RCVBUF, stBytesLeft);
-			if(lenRcvd > 0) {
-				DBGPRINTF("gtlsRecordRecv: 2nd SSL_read received %zd bytes\n",
-					(NSD_GTLS_MAX_RCVBUF+lenRcvd));
-				pThis->lenRcvBuf = NSD_GTLS_MAX_RCVBUF+lenRcvd;
-			} else {
-				if (lenRcvd == GNUTLS_E_AGAIN || lenRcvd == GNUTLS_E_INTERRUPTED) {
-					goto sslerragain;	/* Go to ERR AGAIN handling */
-				} else {
-					/* Do all other error handling */
-					int gnuRet = lenRcvd;
-					ABORTgnutls;
-				}
-			}
-		}
-	} else if(lenRcvd == GNUTLS_E_AGAIN || lenRcvd == GNUTLS_E_INTERRUPTED) {
-sslerragain:
-		/* Check if the underlaying file descriptor needs to read or write data!*/
-		pThis->rtryCall = gtlsRtry_recv; /* _recv refers to the gnutls call, not socket layer! */
-		dbgprintf("GnuTLS receive requires a retry, this most probably is OK and no error condition\n");
-		*nextIODirection = (gnutls_record_get_direction(pThis->sess) == 0) ? NSDSEL_RD : NSDSEL_WR;
-		ABORT_FINALIZE(RS_RET_RETRY);
-	} else {
-		int gnuRet = lenRcvd;
-		ABORTgnutls;
-	}
+            /* 2nd read will read missing bytes from the current SSL Packet */
+            lenRcvd = gnutls_record_recv(pThis->sess, pThis->pszRcvBuf + NSD_GTLS_MAX_RCVBUF, stBytesLeft);
+            if (lenRcvd > 0) {
+                DBGPRINTF("gtlsRecordRecv: 2nd SSL_read received %zd bytes\n", (NSD_GTLS_MAX_RCVBUF + lenRcvd));
+                pThis->lenRcvBuf = NSD_GTLS_MAX_RCVBUF + lenRcvd;
+            } else {
+                if (lenRcvd == GNUTLS_E_AGAIN || lenRcvd == GNUTLS_E_INTERRUPTED) {
+                    goto sslerragain; /* Go to ERR AGAIN handling */
+                } else {
+                    /* Do all other error handling */
+                    int gnuRet = lenRcvd;
+                    ABORTgnutls;
+                }
+            }
+        }
+    } else if (lenRcvd == GNUTLS_E_AGAIN || lenRcvd == GNUTLS_E_INTERRUPTED) {
+    sslerragain:
+        /* Check if the underlaying file descriptor needs to read or write data!*/
+        pThis->rtryCall = gtlsRtry_recv; /* _recv refers to the gnutls call, not socket layer! */
+        dbgprintf("GnuTLS receive requires a retry, this most probably is OK and no error condition\n");
+        *nextIODirection = (gnutls_record_get_direction(pThis->sess) == 0) ? NSDSEL_RD : NSDSEL_WR;
+        ABORT_FINALIZE(RS_RET_RETRY);
+    } else {
+        int gnuRet = lenRcvd;
+        ABORTgnutls;
+    }
 
 finalize_it:
-	dbgprintf("gtlsRecordRecv return. nsd %p, iRet %d, lenRcvd %d, lenRcvBuf %d, ptrRcvBuf %d\n",
-	pThis, iRet, (int) lenRcvd, pThis->lenRcvBuf, pThis->ptrRcvBuf);
-	RETiRet;
+    dbgprintf("gtlsRecordRecv return. nsd %p, iRet %d, lenRcvd %d, lenRcvBuf %d, ptrRcvBuf %d\n", pThis, iRet,
+              (int)lenRcvd, pThis->lenRcvBuf, pThis->ptrRcvBuf);
+    RETiRet;
 }
 
 
@@ -679,240 +649,229 @@ finalize_it:
  * this may be controlled by a config setting).
  * rgerhards, 2008-05-15
  */
-static rsRetVal
-gtlsAddOurCert(nsd_gtls_t *const pThis)
-{
-	int gnuRet = 0;
-	const uchar *keyFile;
-	const uchar *certFile;
-	uchar *pGnuErr; /* for GnuTLS error reporting */
-	DEFiRet;
+static rsRetVal gtlsAddOurCert(nsd_gtls_t *const pThis) {
+    int gnuRet = 0;
+    const uchar *keyFile;
+    const uchar *certFile;
+    uchar *pGnuErr; /* for GnuTLS error reporting */
+    DEFiRet;
 
-	certFile = (pThis->pszCertFile == NULL) ? glbl.GetDfltNetstrmDrvrCertFile(runConf) : pThis->pszCertFile;
-	keyFile = (pThis->pszKeyFile == NULL) ? glbl.GetDfltNetstrmDrvrKeyFile(runConf) : pThis->pszKeyFile;
-	dbgprintf("GTLS certificate file: '%s'\n", certFile);
-	dbgprintf("GTLS key file: '%s'\n", keyFile);
-	if(certFile == NULL) {
-		LogMsg(0, RS_RET_CERT_MISSING, LOG_WARNING, "warning: certificate file is not set");
-	}
-	if(keyFile == NULL) {
-		LogMsg(0, RS_RET_CERTKEY_MISSING, LOG_WARNING, "warning: key file is not set");
-	}
+    certFile = (pThis->pszCertFile == NULL) ? glbl.GetDfltNetstrmDrvrCertFile(runConf) : pThis->pszCertFile;
+    keyFile = (pThis->pszKeyFile == NULL) ? glbl.GetDfltNetstrmDrvrKeyFile(runConf) : pThis->pszKeyFile;
+    dbgprintf("GTLS certificate file: '%s'\n", certFile);
+    dbgprintf("GTLS key file: '%s'\n", keyFile);
+    if (certFile == NULL) {
+        LogMsg(0, RS_RET_CERT_MISSING, LOG_WARNING, "warning: certificate file is not set");
+    }
+    if (keyFile == NULL) {
+        LogMsg(0, RS_RET_CERTKEY_MISSING, LOG_WARNING, "warning: key file is not set");
+    }
 
-	/* set certificate in gnutls */
-	if(certFile != NULL && keyFile != NULL) {
-		CHKgnutls(gnutls_certificate_set_x509_key_file(pThis->xcred, (char*)certFile, (char*)keyFile,
-			GNUTLS_X509_FMT_PEM));
-	}
+    /* set certificate in gnutls */
+    if (certFile != NULL && keyFile != NULL) {
+        CHKgnutls(
+            gnutls_certificate_set_x509_key_file(pThis->xcred, (char *)certFile, (char *)keyFile, GNUTLS_X509_FMT_PEM));
+    }
 
 finalize_it:
-	if(iRet != RS_RET_OK && iRet != RS_RET_CERT_MISSING && iRet != RS_RET_CERTKEY_MISSING) {
-		pGnuErr = gtlsStrerror(gnuRet);
-		errno = 0;
-		LogError(0, iRet, "error adding our certificate. GnuTLS error %d, message: '%s', "
-				"key: '%s', cert: '%s'", gnuRet, pGnuErr, keyFile, certFile);
-		free(pGnuErr);
-	}
-	RETiRet;
+    if (iRet != RS_RET_OK && iRet != RS_RET_CERT_MISSING && iRet != RS_RET_CERTKEY_MISSING) {
+        pGnuErr = gtlsStrerror(gnuRet);
+        errno = 0;
+        LogError(0, iRet,
+                 "error adding our certificate. GnuTLS error %d, message: '%s', "
+                 "key: '%s', cert: '%s'",
+                 gnuRet, pGnuErr, keyFile, certFile);
+        free(pGnuErr);
+    }
+    RETiRet;
 }
 
 /*
-* removecomment ifdef out if needed
-*/
+ * removecomment ifdef out if needed
+ */
 #ifdef false
 
-static void print_cipher_suite_list(const char *priorities)
-{
-	size_t i;
-	int ret;
-	unsigned int idx;
-	const char *name;
-	const char *err;
-	unsigned char id[2];
-	gnutls_protocol_t version;
-	gnutls_priority_t pcache;
+static void print_cipher_suite_list(const char *priorities) {
+    size_t i;
+    int ret;
+    unsigned int idx;
+    const char *name;
+    const char *err;
+    unsigned char id[2];
+    gnutls_protocol_t version;
+    gnutls_priority_t pcache;
 
-	if (priorities != NULL) {
-		printf("print_cipher_suite_list: Cipher suites for %s\n", priorities);
+    if (priorities != NULL) {
+        printf("print_cipher_suite_list: Cipher suites for %s\n", priorities);
 
-		ret = gnutls_priority_init(&pcache, priorities, &err);
-		if (ret < 0) {
-			fprintf(stderr, "print_cipher_suite_list: Syntax error at: %s\n", err);
-			exit(1);
-		}
+        ret = gnutls_priority_init(&pcache, priorities, &err);
+        if (ret < 0) {
+            fprintf(stderr, "print_cipher_suite_list: Syntax error at: %s\n", err);
+            exit(1);
+        }
 
-		for (i = 0;; i++) {
-			ret = gnutls_priority_get_cipher_suite_index(pcache, i, &idx);
-			if (ret == GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE)
-				break;
-			if (ret == GNUTLS_E_UNKNOWN_CIPHER_SUITE)
-				continue;
+        for (i = 0;; i++) {
+            ret = gnutls_priority_get_cipher_suite_index(pcache, i, &idx);
+            if (ret == GNUTLS_E_REQUESTED_DATA_NOT_AVAILABLE) break;
+            if (ret == GNUTLS_E_UNKNOWN_CIPHER_SUITE) continue;
 
-			name = gnutls_cipher_suite_info(idx, id, NULL, NULL, NULL, &version);
+            name = gnutls_cipher_suite_info(idx, id, NULL, NULL, NULL, &version);
 
-			if (name != NULL)
-				dbgprintf("print_cipher_suite_list: %-50s\t0x%02x, 0x%02x\t%s\n",
-				name, (unsigned char) id[0],
-				(unsigned char) id[1],
-				gnutls_protocol_get_name(version));
-		}
+            if (name != NULL)
+                dbgprintf("print_cipher_suite_list: %-50s\t0x%02x, 0x%02x\t%s\n", name, (unsigned char)id[0],
+                          (unsigned char)id[1], gnutls_protocol_get_name(version));
+        }
 
-		return;
-	}
+        return;
+    }
 }
 #endif
 
 /* initialize GnuTLS credential structure (certs etc) */
-static rsRetVal
-gtlsInitCred(nsd_gtls_t *const pThis )
-{
-	int gnuRet;
-	const uchar *cafile, *crlfile;
-	DEFiRet;
+static rsRetVal gtlsInitCred(nsd_gtls_t *const pThis) {
+    int gnuRet;
+    const uchar *cafile, *crlfile;
+    DEFiRet;
 
-	/* X509 stuff */
-	if (pThis->xcred == NULL) {
-		/* Allocate only ONCE */
-		CHKgnutls(gnutls_certificate_allocate_credentials(&pThis->xcred));
-	}
+    /* X509 stuff */
+    if (pThis->xcred == NULL) {
+        /* Allocate only ONCE */
+        CHKgnutls(gnutls_certificate_allocate_credentials(&pThis->xcred));
+    }
 
-	/* sets the trusted cas file */
-	cafile = (pThis->pszCAFile == NULL) ? glbl.GetDfltNetstrmDrvrCAF(runConf) : pThis->pszCAFile;
-	if(cafile == NULL) {
-		LogMsg(0, RS_RET_CA_CERT_MISSING, LOG_WARNING,
-			"Warning: CA certificate is not set");
-	} else {
-		dbgprintf("GTLS CA file: '%s'\n", cafile);
-		gnuRet = gnutls_certificate_set_x509_trust_file(pThis->xcred, (char*)cafile, GNUTLS_X509_FMT_PEM);
-		if(gnuRet == GNUTLS_E_FILE_ERROR) {
-			LogError(0, RS_RET_GNUTLS_ERR,
-				"error reading certificate file '%s' - a common cause is that the "
-				"file  does not exist", cafile);
-			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
-		} else if(gnuRet < 0) {
-			/* TODO; a more generic error-tracking function (this one based on CHKgnutls()) */
-			uchar *pErr = gtlsStrerror(gnuRet);
-			LogError(0, RS_RET_GNUTLS_ERR,
-				"unexpected GnuTLS error reading CA certificate file %d in %s:%d: %s\n",
-			gnuRet, __FILE__, __LINE__, pErr);
-			free(pErr);
-			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
-		}
-	}
+    /* sets the trusted cas file */
+    cafile = (pThis->pszCAFile == NULL) ? glbl.GetDfltNetstrmDrvrCAF(runConf) : pThis->pszCAFile;
+    if (cafile == NULL) {
+        LogMsg(0, RS_RET_CA_CERT_MISSING, LOG_WARNING, "Warning: CA certificate is not set");
+    } else {
+        dbgprintf("GTLS CA file: '%s'\n", cafile);
+        gnuRet = gnutls_certificate_set_x509_trust_file(pThis->xcred, (char *)cafile, GNUTLS_X509_FMT_PEM);
+        if (gnuRet == GNUTLS_E_FILE_ERROR) {
+            LogError(0, RS_RET_GNUTLS_ERR,
+                     "error reading certificate file '%s' - a common cause is that the "
+                     "file  does not exist",
+                     cafile);
+            ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+        } else if (gnuRet < 0) {
+            /* TODO; a more generic error-tracking function (this one based on CHKgnutls()) */
+            uchar *pErr = gtlsStrerror(gnuRet);
+            LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error reading CA certificate file %d in %s:%d: %s\n",
+                     gnuRet, __FILE__, __LINE__, pErr);
+            free(pErr);
+            ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+        }
+    }
 
-	crlfile = (pThis->pszCRLFile == NULL) ? glbl.GetDfltNetstrmDrvrCRLF(runConf) : pThis->pszCRLFile;
-	if(crlfile == NULL) {
-		dbgprintf("Certificate revocation list (CRL) file not set.");
-	} else {
-		dbgprintf("GTLS CRL file: '%s'\n", crlfile);
-		gnuRet = gnutls_certificate_set_x509_crl_file(pThis->xcred, (char*)crlfile, GNUTLS_X509_FMT_PEM);
-		if(gnuRet == GNUTLS_E_FILE_ERROR) {
-			LogError(0, RS_RET_GNUTLS_ERR,
-				"error reading Certificate revocation list (CRL) '%s' - a common cause is that the "
-				"file  does not exist", crlfile);
-			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
-		} else if(gnuRet < 0) {
-			/* TODO; a more generic error-tracking function (this one based on CHKgnutls()) */
-			uchar *pErr = gtlsStrerror(gnuRet);
-			LogError(0, RS_RET_GNUTLS_ERR,
-				"unexpected GnuTLS error reading Certificate revocation list (CRL) %d in %s:%d: %s\n",
-			gnuRet, __FILE__, __LINE__, pErr);
-			free(pErr);
-			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
-		}
-	}
+    crlfile = (pThis->pszCRLFile == NULL) ? glbl.GetDfltNetstrmDrvrCRLF(runConf) : pThis->pszCRLFile;
+    if (crlfile == NULL) {
+        dbgprintf("Certificate revocation list (CRL) file not set.");
+    } else {
+        dbgprintf("GTLS CRL file: '%s'\n", crlfile);
+        gnuRet = gnutls_certificate_set_x509_crl_file(pThis->xcred, (char *)crlfile, GNUTLS_X509_FMT_PEM);
+        if (gnuRet == GNUTLS_E_FILE_ERROR) {
+            LogError(0, RS_RET_GNUTLS_ERR,
+                     "error reading Certificate revocation list (CRL) '%s' - a common cause is that the "
+                     "file  does not exist",
+                     crlfile);
+            ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+        } else if (gnuRet < 0) {
+            /* TODO; a more generic error-tracking function (this one based on CHKgnutls()) */
+            uchar *pErr = gtlsStrerror(gnuRet);
+            LogError(0, RS_RET_GNUTLS_ERR,
+                     "unexpected GnuTLS error reading Certificate revocation list (CRL) %d in %s:%d: %s\n", gnuRet,
+                     __FILE__, __LINE__, pErr);
+            free(pErr);
+            ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+        }
+    }
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
 /* globally initialize GnuTLS */
-static rsRetVal
-gtlsGlblInit(void)
-{
-	int gnuRet;
-	DEFiRet;
+static rsRetVal gtlsGlblInit(void) {
+    int gnuRet;
+    DEFiRet;
 
-	dbgprintf("gtlsGlblInit: Running Version: '%#010x'\n", GNUTLS_VERSION_NUMBER);
+    dbgprintf("gtlsGlblInit: Running Version: '%#010x'\n", GNUTLS_VERSION_NUMBER);
 
-	/* gcry_control must be called first, so that the thread system is correctly set up */
-	#if GNUTLS_VERSION_NUMBER <= 0x020b00
-	gcry_control (GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
-	#endif
-	CHKgnutls(gnutls_global_init());
+/* gcry_control must be called first, so that the thread system is correctly set up */
+#if GNUTLS_VERSION_NUMBER <= 0x020b00
+    gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread);
+#endif
+    CHKgnutls(gnutls_global_init());
 
-	if(GetGnuTLSLoglevel(runConf) > 0){
-		gnutls_global_set_log_function(logFunction);
-		gnutls_global_set_log_level(GetGnuTLSLoglevel(runConf));
-		/* 0 (no) to 9 (most), 10 everything */
-	}
+    if (GetGnuTLSLoglevel(runConf) > 0) {
+        gnutls_global_set_log_function(logFunction);
+        gnutls_global_set_log_level(GetGnuTLSLoglevel(runConf));
+        /* 0 (no) to 9 (most), 10 everything */
+    }
 
-	/* Init Anon cipher helpers */
-	CHKgnutls(gnutls_dh_params_init(&dh_params));
-	CHKgnutls(gnutls_dh_params_generate2(dh_params, dhBits));
+    /* Init Anon cipher helpers */
+    CHKgnutls(gnutls_dh_params_init(&dh_params));
+    CHKgnutls(gnutls_dh_params_generate2(dh_params, dhBits));
 
-	/* Allocate ANON Client Cred */
-	CHKgnutls(gnutls_anon_allocate_client_credentials(&anoncred));
+    /* Allocate ANON Client Cred */
+    CHKgnutls(gnutls_anon_allocate_client_credentials(&anoncred));
 
-	/* Allocate ANON Server Cred */
-	CHKgnutls(gnutls_anon_allocate_server_credentials(&anoncredSrv));
-	gnutls_anon_set_server_dh_params(anoncredSrv, dh_params);
+    /* Allocate ANON Server Cred */
+    CHKgnutls(gnutls_anon_allocate_server_credentials(&anoncredSrv));
+    gnutls_anon_set_server_dh_params(anoncredSrv, dh_params);
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
-static rsRetVal
-gtlsInitSession(nsd_gtls_t *pThis)
-{
-	DEFiRet;
-	int gnuRet = 0;
-	gnutls_session_t session;
+static rsRetVal gtlsInitSession(nsd_gtls_t *pThis) {
+    DEFiRet;
+    int gnuRet = 0;
+    gnutls_session_t session;
 
-	gnutls_init(&session, GNUTLS_SERVER);
-	pThis->bHaveSess = 1;
-	pThis->bIsInitiator = 0;
-	pThis->sess = session;
+    gnutls_init(&session, GNUTLS_SERVER);
+    pThis->bHaveSess = 1;
+    pThis->bIsInitiator = 0;
+    pThis->sess = session;
 
-	/* Moved CertKey Loading to top */
-#	if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION
-	/* store a pointer to ourselfs (needed by callback) */
-	gnutls_session_set_ptr(pThis->sess, (void*)pThis);
-	iRet = gtlsLoadOurCertKey(pThis); /* first load .pem files */
-	if(iRet == RS_RET_OK) {
-		dbgprintf("gtlsInitSession: enable certificate checking (VerifyDepth=%d)\n", pThis->DrvrVerifyDepth);
-		gnutls_certificate_set_retrieve_function(pThis->xcred, gtlsClientCertCallback);
-		if (pThis->DrvrVerifyDepth != 0){
-			gnutls_certificate_set_verify_limits(pThis->xcred, 8200, pThis->DrvrVerifyDepth);
-		}
-	} else if(iRet == RS_RET_CERTLESS) {
-		dbgprintf("gtlsInitSession: certificates not configured, not loaded.\n");
-	} else {
-		ABORT_FINALIZE(iRet); /* we have an error case! */
-	}
-#	endif
+    /* Moved CertKey Loading to top */
+#if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION
+    /* store a pointer to ourselfs (needed by callback) */
+    gnutls_session_set_ptr(pThis->sess, (void *)pThis);
+    iRet = gtlsLoadOurCertKey(pThis); /* first load .pem files */
+    if (iRet == RS_RET_OK) {
+        dbgprintf("gtlsInitSession: enable certificate checking (VerifyDepth=%d)\n", pThis->DrvrVerifyDepth);
+        gnutls_certificate_set_retrieve_function(pThis->xcred, gtlsClientCertCallback);
+        if (pThis->DrvrVerifyDepth != 0) {
+            gnutls_certificate_set_verify_limits(pThis->xcred, 8200, pThis->DrvrVerifyDepth);
+        }
+    } else if (iRet == RS_RET_CERTLESS) {
+        dbgprintf("gtlsInitSession: certificates not configured, not loaded.\n");
+    } else {
+        ABORT_FINALIZE(iRet); /* we have an error case! */
+    }
+#endif
 
-	/* avoid calling all the priority functions, since the defaults are adequate. */
-	CHKgnutls(gnutls_credentials_set(pThis->sess, GNUTLS_CRD_CERTIFICATE, pThis->xcred));
+    /* avoid calling all the priority functions, since the defaults are adequate. */
+    CHKgnutls(gnutls_credentials_set(pThis->sess, GNUTLS_CRD_CERTIFICATE, pThis->xcred));
 
-	/* check for anon authmode */
-	if (pThis->authMode == GTLS_AUTH_CERTANON) {
-		dbgprintf("gtlsInitSession: anon authmode, gnutls_credentials_set GNUTLS_CRD_ANON\n");
-		CHKgnutls(gnutls_credentials_set(pThis->sess, GNUTLS_CRD_ANON, anoncredSrv));
-		gnutls_dh_set_prime_bits(pThis->sess, dhMinBits);
-	}
+    /* check for anon authmode */
+    if (pThis->authMode == GTLS_AUTH_CERTANON) {
+        dbgprintf("gtlsInitSession: anon authmode, gnutls_credentials_set GNUTLS_CRD_ANON\n");
+        CHKgnutls(gnutls_credentials_set(pThis->sess, GNUTLS_CRD_ANON, anoncredSrv));
+        gnutls_dh_set_prime_bits(pThis->sess, dhMinBits);
+    }
 
-	/* request client certificate if any.  */
-	gnutls_certificate_server_set_request( pThis->sess, GNUTLS_CERT_REQUEST);
+    /* request client certificate if any.  */
+    gnutls_certificate_server_set_request(pThis->sess, GNUTLS_CERT_REQUEST);
 
 
 finalize_it:
-	if(iRet != RS_RET_OK && iRet != RS_RET_CERTLESS) {
-		LogError(0, iRet, "gtlsInitSession failed to INIT Session %d", gnuRet);
-	}
+    if (iRet != RS_RET_OK && iRet != RS_RET_CERTLESS) {
+        LogError(0, iRet, "gtlsInitSession failed to INIT Session %d", gnuRet);
+    }
 
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -926,140 +885,132 @@ finalize_it:
  * (*ppstrCN remains NULL). *ppstrCN MUST be NULL on entry!
  * rgerhards, 2008-05-22
  */
-static rsRetVal
-gtlsGetCN(gnutls_x509_crt_t *pCert, cstr_t **ppstrCN)
-{
-	DEFiRet;
-	int gnuRet;
-	int i;
-	int bFound;
-	cstr_t *pstrCN = NULL;
-	size_t size;
-	/* big var the last, so we hope to have all we usually neeed within one mem cache line */
-	uchar szDN[1024]; /* this should really be large enough for any non-malicious case... */
+static rsRetVal gtlsGetCN(gnutls_x509_crt_t *pCert, cstr_t **ppstrCN) {
+    DEFiRet;
+    int gnuRet;
+    int i;
+    int bFound;
+    cstr_t *pstrCN = NULL;
+    size_t size;
+    /* big var the last, so we hope to have all we usually neeed within one mem cache line */
+    uchar szDN[1024]; /* this should really be large enough for any non-malicious case... */
 
-	assert(pCert != NULL);
-	assert(ppstrCN != NULL);
-	assert(*ppstrCN == NULL);
+    assert(pCert != NULL);
+    assert(ppstrCN != NULL);
+    assert(*ppstrCN == NULL);
 
-	size = sizeof(szDN);
-	CHKgnutls(gnutls_x509_crt_get_dn(*pCert, (char*)szDN, &size));
+    size = sizeof(szDN);
+    CHKgnutls(gnutls_x509_crt_get_dn(*pCert, (char *)szDN, &size));
 
-	/* now search for the CN part */
-	i = 0;
-	bFound = 0;
-	while(!bFound && szDN[i] != '\0') {
-		/* note that we do not overrun our string due to boolean shortcut
-		 * operations. If we have '\0', the if does not match and evaluation
-		 * stops. Order of checks is obviously important!
-		 */
-		if(szDN[i] == 'C' && szDN[i+1] == 'N' && szDN[i+2] == '=') {
-			bFound = 1;
-			i += 2;
-		}
-		i++;
+    /* now search for the CN part */
+    i = 0;
+    bFound = 0;
+    while (!bFound && szDN[i] != '\0') {
+        /* note that we do not overrun our string due to boolean shortcut
+         * operations. If we have '\0', the if does not match and evaluation
+         * stops. Order of checks is obviously important!
+         */
+        if (szDN[i] == 'C' && szDN[i + 1] == 'N' && szDN[i + 2] == '=') {
+            bFound = 1;
+            i += 2;
+        }
+        i++;
+    }
 
-	}
+    if (!bFound) {
+        FINALIZE; /* we are done */
+    }
 
-	if(!bFound) {
-		FINALIZE; /* we are done */
-	}
+    /* we found a common name, now extract it */
+    CHKiRet(cstrConstruct(&pstrCN));
+    while (szDN[i] != '\0' && szDN[i] != ',') {
+        if (szDN[i] == '\\') {
+            /* hex escapes are not implemented */
+            ++i; /* escape char processed */
+            if (szDN[i] == '\0') ABORT_FINALIZE(RS_RET_CERT_INVALID_DN);
+            CHKiRet(cstrAppendChar(pstrCN, szDN[i]));
+        } else {
+            CHKiRet(cstrAppendChar(pstrCN, szDN[i]));
+        }
+        ++i; /* char processed */
+    }
+    cstrFinalize(pstrCN);
 
-	/* we found a common name, now extract it */
-	CHKiRet(cstrConstruct(&pstrCN));
-	while(szDN[i] != '\0' && szDN[i] != ',') {
-		if(szDN[i] == '\\') {
-			/* hex escapes are not implemented */
-			++i; /* escape char processed */
-			if(szDN[i] == '\0')
-				ABORT_FINALIZE(RS_RET_CERT_INVALID_DN);
-			CHKiRet(cstrAppendChar(pstrCN, szDN[i]));
-		} else {
-			CHKiRet(cstrAppendChar(pstrCN, szDN[i]));
-		}
-		++i; /* char processed */
-	}
-	cstrFinalize(pstrCN);
+    /* we got it - we ignore the rest of the DN string (if any). So we may
+     * not detect if it contains more than one CN
+     */
 
-	/* we got it - we ignore the rest of the DN string (if any). So we may
-	 * not detect if it contains more than one CN
-	 */
-
-	*ppstrCN = pstrCN;
+    *ppstrCN = pstrCN;
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pstrCN != NULL)
-			cstrDestruct(&pstrCN);
-	}
+    if (iRet != RS_RET_OK) {
+        if (pstrCN != NULL) cstrDestruct(&pstrCN);
+    }
 
-	RETiRet;
+    RETiRet;
 }
 
 
 /* Check the peer's ID in fingerprint auth mode.
  * rgerhards, 2008-05-22
  */
-static rsRetVal
-gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
-{
-	uchar fingerprint[20];
-	uchar fingerprintSha256[32];
-	size_t size;
-	size_t sizeSha256;
-	cstr_t *pstrFingerprint = NULL;
-	cstr_t *pstrFingerprintSha256 = NULL;
-	int bFoundPositiveMatch;
-	permittedPeers_t *pPeer;
-	int gnuRet;
-	DEFiRet;
+static rsRetVal gtlsChkPeerFingerprint(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert) {
+    uchar fingerprint[20];
+    uchar fingerprintSha256[32];
+    size_t size;
+    size_t sizeSha256;
+    cstr_t *pstrFingerprint = NULL;
+    cstr_t *pstrFingerprintSha256 = NULL;
+    int bFoundPositiveMatch;
+    permittedPeers_t *pPeer;
+    int gnuRet;
+    DEFiRet;
 
-	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+    ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-	/* obtain the SHA1 fingerprint */
-	size = sizeof(fingerprint);
-	sizeSha256 = sizeof(fingerprintSha256);
-	CHKgnutls(gnutls_x509_crt_get_fingerprint(*pCert, GNUTLS_DIG_SHA1, fingerprint, &size));
-	CHKgnutls(gnutls_x509_crt_get_fingerprint(*pCert, GNUTLS_DIG_SHA256, fingerprintSha256, &sizeSha256));
-	CHKiRet(GenFingerprintStr(fingerprint, size, &pstrFingerprint, "SHA1"));
-	CHKiRet(GenFingerprintStr(fingerprintSha256, sizeSha256, &pstrFingerprintSha256, "SHA256"));
-	dbgprintf("peer's certificate SHA1 fingerprint: %s\n", cstrGetSzStrNoNULL(pstrFingerprint));
-	dbgprintf("peer's certificate SHA256 fingerprint: %s\n", cstrGetSzStrNoNULL(pstrFingerprintSha256));
+    /* obtain the SHA1 fingerprint */
+    size = sizeof(fingerprint);
+    sizeSha256 = sizeof(fingerprintSha256);
+    CHKgnutls(gnutls_x509_crt_get_fingerprint(*pCert, GNUTLS_DIG_SHA1, fingerprint, &size));
+    CHKgnutls(gnutls_x509_crt_get_fingerprint(*pCert, GNUTLS_DIG_SHA256, fingerprintSha256, &sizeSha256));
+    CHKiRet(GenFingerprintStr(fingerprint, size, &pstrFingerprint, "SHA1"));
+    CHKiRet(GenFingerprintStr(fingerprintSha256, sizeSha256, &pstrFingerprintSha256, "SHA256"));
+    dbgprintf("peer's certificate SHA1 fingerprint: %s\n", cstrGetSzStrNoNULL(pstrFingerprint));
+    dbgprintf("peer's certificate SHA256 fingerprint: %s\n", cstrGetSzStrNoNULL(pstrFingerprintSha256));
 
 
-	/* now search through the permitted peers to see if we can find a permitted one */
-	bFoundPositiveMatch = 0;
-	pPeer = pThis->pPermPeers;
-	while(pPeer != NULL && !bFoundPositiveMatch) {
-		if(!rsCStrSzStrCmp(pstrFingerprint, pPeer->pszID, strlen((char*) pPeer->pszID))) {
-			dbgprintf("gtlsChkPeerFingerprint: peer's certificate SHA1 MATCH found: %s\n", pPeer->pszID);
-			bFoundPositiveMatch = 1;
-		} else if(!rsCStrSzStrCmp(pstrFingerprintSha256 , pPeer->pszID, strlen((char*) pPeer->pszID))) {
-			dbgprintf("gtlsChkPeerFingerprint: peer's certificate SHA256 MATCH found: %s\n", pPeer->pszID);
-			bFoundPositiveMatch = 1;
-		}
-		else {
-			pPeer = pPeer->pNext;
-		}
-	}
+    /* now search through the permitted peers to see if we can find a permitted one */
+    bFoundPositiveMatch = 0;
+    pPeer = pThis->pPermPeers;
+    while (pPeer != NULL && !bFoundPositiveMatch) {
+        if (!rsCStrSzStrCmp(pstrFingerprint, pPeer->pszID, strlen((char *)pPeer->pszID))) {
+            dbgprintf("gtlsChkPeerFingerprint: peer's certificate SHA1 MATCH found: %s\n", pPeer->pszID);
+            bFoundPositiveMatch = 1;
+        } else if (!rsCStrSzStrCmp(pstrFingerprintSha256, pPeer->pszID, strlen((char *)pPeer->pszID))) {
+            dbgprintf("gtlsChkPeerFingerprint: peer's certificate SHA256 MATCH found: %s\n", pPeer->pszID);
+            bFoundPositiveMatch = 1;
+        } else {
+            pPeer = pPeer->pNext;
+        }
+    }
 
-	if(!bFoundPositiveMatch) {
-		dbgprintf("invalid peer fingerprint, not permitted to talk to it\n");
-		if(pThis->bReportAuthErr == 1) {
-			errno = 0;
-			LogError(0, RS_RET_INVALID_FINGERPRINT, "error: peer fingerprint '%s' unknown - we are "
-					"not permitted to talk to it", cstrGetSzStrNoNULL(pstrFingerprint));
-			pThis->bReportAuthErr = 0;
-		}
-		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
-	}
+    if (!bFoundPositiveMatch) {
+        dbgprintf("invalid peer fingerprint, not permitted to talk to it\n");
+        if (pThis->bReportAuthErr == 1) {
+            errno = 0;
+            LogError(0, RS_RET_INVALID_FINGERPRINT,
+                     "error: peer fingerprint '%s' unknown - we are "
+                     "not permitted to talk to it",
+                     cstrGetSzStrNoNULL(pstrFingerprint));
+            pThis->bReportAuthErr = 0;
+        }
+        ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
+    }
 
 finalize_it:
-	if(pstrFingerprint != NULL)
-		cstrDestruct(&pstrFingerprint);
-	if(pstrFingerprintSha256 != NULL)
-		cstrDestruct(&pstrFingerprintSha256);
-	RETiRet;
+    if (pstrFingerprint != NULL) cstrDestruct(&pstrFingerprint);
+    if (pstrFingerprintSha256 != NULL) cstrDestruct(&pstrFingerprintSha256);
+    RETiRet;
 }
 
 
@@ -1071,108 +1022,100 @@ finalize_it:
  * TODO: implemet wildcards?
  * rgerhards, 2008-05-26
  */
-static rsRetVal
-gtlsChkOnePeerName(nsd_gtls_t *pThis, uchar *pszPeerID, int *pbFoundPositiveMatch)
-{
-	permittedPeers_t *pPeer;
-	DEFiRet;
+static rsRetVal gtlsChkOnePeerName(nsd_gtls_t *pThis, uchar *pszPeerID, int *pbFoundPositiveMatch) {
+    permittedPeers_t *pPeer;
+    DEFiRet;
 
-	ISOBJ_TYPE_assert(pThis, nsd_gtls);
-	assert(pszPeerID != NULL);
-	assert(pbFoundPositiveMatch != NULL);
+    ISOBJ_TYPE_assert(pThis, nsd_gtls);
+    assert(pszPeerID != NULL);
+    assert(pbFoundPositiveMatch != NULL);
 
-	if(pThis->pPermPeers) { /* do we have configured peer IDs? */
-		pPeer = pThis->pPermPeers;
-		while(pPeer != NULL) {
-			CHKiRet(net.PermittedPeerWildcardMatch(pPeer, pszPeerID, pbFoundPositiveMatch));
-			if(*pbFoundPositiveMatch)
-				break;
-			pPeer = pPeer->pNext;
-		}
-	} else {
-		/* we do not have configured peer IDs, so we use defaults */
-		if(   pThis->pszConnectHost
-		   && !strcmp((char*)pszPeerID, (char*)pThis->pszConnectHost)) {
-			*pbFoundPositiveMatch = 1;
-		}
-	}
+    if (pThis->pPermPeers) { /* do we have configured peer IDs? */
+        pPeer = pThis->pPermPeers;
+        while (pPeer != NULL) {
+            CHKiRet(net.PermittedPeerWildcardMatch(pPeer, pszPeerID, pbFoundPositiveMatch));
+            if (*pbFoundPositiveMatch) break;
+            pPeer = pPeer->pNext;
+        }
+    } else {
+        /* we do not have configured peer IDs, so we use defaults */
+        if (pThis->pszConnectHost && !strcmp((char *)pszPeerID, (char *)pThis->pszConnectHost)) {
+            *pbFoundPositiveMatch = 1;
+        }
+    }
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
 /* Check the peer's ID in name auth mode.
  * rgerhards, 2008-05-22
  */
-static rsRetVal
-gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert)
-{
-	uchar lnBuf[256];
-	char szAltName[1024]; /* this is sufficient for the DNSNAME... */
-	int iAltName;
-	size_t szAltNameLen;
-	int bFoundPositiveMatch;
-	int bHaveSAN = 0;
-	cstr_t *pStr = NULL;
-	cstr_t *pstrCN = NULL;
-	int gnuRet;
-	DEFiRet;
+static rsRetVal gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert) {
+    uchar lnBuf[256];
+    char szAltName[1024]; /* this is sufficient for the DNSNAME... */
+    int iAltName;
+    size_t szAltNameLen;
+    int bFoundPositiveMatch;
+    int bHaveSAN = 0;
+    cstr_t *pStr = NULL;
+    cstr_t *pstrCN = NULL;
+    int gnuRet;
+    DEFiRet;
 
-	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+    ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-	bFoundPositiveMatch = 0;
-	CHKiRet(rsCStrConstruct(&pStr));
+    bFoundPositiveMatch = 0;
+    CHKiRet(rsCStrConstruct(&pStr));
 
-	/* first search through the dNSName subject alt names */
-	iAltName = 0;
-	while(!bFoundPositiveMatch) { /* loop broken below */
-		szAltNameLen = sizeof(szAltName);
-		gnuRet = gnutls_x509_crt_get_subject_alt_name(*pCert, iAltName,
-				szAltName, &szAltNameLen, NULL);
-		if(gnuRet < 0)
-			break;
-		else if(gnuRet == GNUTLS_SAN_DNSNAME) {
-			bHaveSAN = 1;
-			dbgprintf("subject alt dnsName: '%s'\n", szAltName);
-			snprintf((char*)lnBuf, sizeof(lnBuf), "DNSname: %s; ", szAltName);
-			CHKiRet(rsCStrAppendStr(pStr, lnBuf));
-			CHKiRet(gtlsChkOnePeerName(pThis, (uchar*)szAltName, &bFoundPositiveMatch));
-			/* do NOT break, because there may be multiple dNSName's! */
-		}
-		++iAltName;
-	}
+    /* first search through the dNSName subject alt names */
+    iAltName = 0;
+    while (!bFoundPositiveMatch) { /* loop broken below */
+        szAltNameLen = sizeof(szAltName);
+        gnuRet = gnutls_x509_crt_get_subject_alt_name(*pCert, iAltName, szAltName, &szAltNameLen, NULL);
+        if (gnuRet < 0)
+            break;
+        else if (gnuRet == GNUTLS_SAN_DNSNAME) {
+            bHaveSAN = 1;
+            dbgprintf("subject alt dnsName: '%s'\n", szAltName);
+            snprintf((char *)lnBuf, sizeof(lnBuf), "DNSname: %s; ", szAltName);
+            CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+            CHKiRet(gtlsChkOnePeerName(pThis, (uchar *)szAltName, &bFoundPositiveMatch));
+            /* do NOT break, because there may be multiple dNSName's! */
+        }
+        ++iAltName;
+    }
 
-	/* Check also CN only if not configured per stricter RFC 6125 or no SAN present*/
-	if(!bFoundPositiveMatch && (!pThis->bSANpriority || !bHaveSAN)) {
-		CHKiRet(gtlsGetCN(pCert, &pstrCN));
-		if(pstrCN != NULL) { /* NULL if there was no CN present */
-			dbgprintf("gtls now checking auth for CN '%s'\n", cstrGetSzStrNoNULL(pstrCN));
-			snprintf((char*)lnBuf, sizeof(lnBuf), "CN: %s; ", cstrGetSzStrNoNULL(pstrCN));
-			CHKiRet(rsCStrAppendStr(pStr, lnBuf));
-			CHKiRet(gtlsChkOnePeerName(pThis, cstrGetSzStrNoNULL(pstrCN), &bFoundPositiveMatch));
-		}
-	}
+    /* Check also CN only if not configured per stricter RFC 6125 or no SAN present*/
+    if (!bFoundPositiveMatch && (!pThis->bSANpriority || !bHaveSAN)) {
+        CHKiRet(gtlsGetCN(pCert, &pstrCN));
+        if (pstrCN != NULL) { /* NULL if there was no CN present */
+            dbgprintf("gtls now checking auth for CN '%s'\n", cstrGetSzStrNoNULL(pstrCN));
+            snprintf((char *)lnBuf, sizeof(lnBuf), "CN: %s; ", cstrGetSzStrNoNULL(pstrCN));
+            CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+            CHKiRet(gtlsChkOnePeerName(pThis, cstrGetSzStrNoNULL(pstrCN), &bFoundPositiveMatch));
+        }
+    }
 
-	if(!bFoundPositiveMatch) {
-		dbgprintf("invalid peer name, not permitted to talk to it\n");
-		if(pThis->bReportAuthErr == 1) {
-			cstrFinalize(pStr);
-			errno = 0;
-			LogError(0, RS_RET_INVALID_FINGERPRINT, "error: peer name not authorized -  "
-					"not permitted to talk to it. Names: %s",
-					cstrGetSzStrNoNULL(pStr));
-			pThis->bReportAuthErr = 0;
-		}
-		ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
-	}
+    if (!bFoundPositiveMatch) {
+        dbgprintf("invalid peer name, not permitted to talk to it\n");
+        if (pThis->bReportAuthErr == 1) {
+            cstrFinalize(pStr);
+            errno = 0;
+            LogError(0, RS_RET_INVALID_FINGERPRINT,
+                     "error: peer name not authorized -  "
+                     "not permitted to talk to it. Names: %s",
+                     cstrGetSzStrNoNULL(pStr));
+            pThis->bReportAuthErr = 0;
+        }
+        ABORT_FINALIZE(RS_RET_INVALID_FINGERPRINT);
+    }
 
 finalize_it:
-	if(pStr != NULL)
-		rsCStrDestruct(&pStr);
-	if(pstrCN != NULL)
-		rsCStrDestruct(&pstrCN);
-	RETiRet;
+    if (pStr != NULL) rsCStrDestruct(&pStr);
+    if (pstrCN != NULL) rsCStrDestruct(&pstrCN);
+    RETiRet;
 }
 
 
@@ -1181,253 +1124,242 @@ finalize_it:
  * drivers once the certificate has been obtained.
  * rgerhards, 2008-05-08
  */
-static rsRetVal
-gtlsChkPeerID(nsd_gtls_t *pThis)
-{
-	const gnutls_datum_t *cert_list;
-	unsigned int list_size = 0;
-	gnutls_x509_crt_t cert;
-	int bMustDeinitCert = 0;
-	int gnuRet;
-	DEFiRet;
+static rsRetVal gtlsChkPeerID(nsd_gtls_t *pThis) {
+    const gnutls_datum_t *cert_list;
+    unsigned int list_size = 0;
+    gnutls_x509_crt_t cert;
+    int bMustDeinitCert = 0;
+    int gnuRet;
+    DEFiRet;
 
-	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+    ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-	/* This function only works for X.509 certificates.  */
-	if(gnutls_certificate_type_get(pThis->sess) != GNUTLS_CRT_X509)
-		return RS_RET_TLS_CERT_ERR;
+    /* This function only works for X.509 certificates.  */
+    if (gnutls_certificate_type_get(pThis->sess) != GNUTLS_CRT_X509) return RS_RET_TLS_CERT_ERR;
 
-	cert_list = gnutls_certificate_get_peers(pThis->sess, &list_size);
+    cert_list = gnutls_certificate_get_peers(pThis->sess, &list_size);
 
-	if(list_size < 1) {
-		if(pThis->bReportAuthErr == 1) {
-			uchar *fromHost = NULL;
-			errno = 0;
-			pThis->bReportAuthErr = 0;
-			nsd_ptcp.GetRemoteHName((nsd_t*)pThis->pTcp, &fromHost);
-			LogError(0, RS_RET_TLS_NO_CERT, "error: peer %s did not provide a certificate, "
-					"not permitted to talk to it", fromHost);
-			free(fromHost);
-		}
-		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
-	}
+    if (list_size < 1) {
+        if (pThis->bReportAuthErr == 1) {
+            uchar *fromHost = NULL;
+            errno = 0;
+            pThis->bReportAuthErr = 0;
+            nsd_ptcp.GetRemoteHName((nsd_t *)pThis->pTcp, &fromHost);
+            LogError(0, RS_RET_TLS_NO_CERT,
+                     "error: peer %s did not provide a certificate, "
+                     "not permitted to talk to it",
+                     fromHost);
+            free(fromHost);
+        }
+        ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
+    }
 
-	/* If we reach this point, we have at least one valid certificate.
-	 * We always use only the first certificate. As of GnuTLS documentation, the
-	 * first certificate always contains the remote peer's own certificate. All other
-	 * certificates are issuer's certificates (up the chain). We are only interested
-	 * in the first certificate, which is our peer. -- rgerhards, 2008-05-08
-	 */
-	CHKgnutls(gnutls_x509_crt_init(&cert));
-	bMustDeinitCert = 1; /* indicate cert is initialized and must be freed on exit */
-	CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER));
+    /* If we reach this point, we have at least one valid certificate.
+     * We always use only the first certificate. As of GnuTLS documentation, the
+     * first certificate always contains the remote peer's own certificate. All other
+     * certificates are issuer's certificates (up the chain). We are only interested
+     * in the first certificate, which is our peer. -- rgerhards, 2008-05-08
+     */
+    CHKgnutls(gnutls_x509_crt_init(&cert));
+    bMustDeinitCert = 1; /* indicate cert is initialized and must be freed on exit */
+    CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[0], GNUTLS_X509_FMT_DER));
 
-	/* Now we see which actual authentication code we must call.  */
-	if(pThis->authMode == GTLS_AUTH_CERTFINGERPRINT) {
-		CHKiRet(gtlsChkPeerFingerprint(pThis, &cert));
-	} else {
-		assert(pThis->authMode == GTLS_AUTH_CERTNAME);
-		CHKiRet(gtlsChkPeerName(pThis, &cert));
-	}
+    /* Now we see which actual authentication code we must call.  */
+    if (pThis->authMode == GTLS_AUTH_CERTFINGERPRINT) {
+        CHKiRet(gtlsChkPeerFingerprint(pThis, &cert));
+    } else {
+        assert(pThis->authMode == GTLS_AUTH_CERTNAME);
+        CHKiRet(gtlsChkPeerName(pThis, &cert));
+    }
 
 finalize_it:
-	if(bMustDeinitCert)
-		gnutls_x509_crt_deinit(cert);
+    if (bMustDeinitCert) gnutls_x509_crt_deinit(cert);
 
-	RETiRet;
+    RETiRet;
 }
 
 
 /* Verify the validity of the remote peer's certificate.
  * rgerhards, 2008-05-21
  */
-static rsRetVal
-gtlsChkPeerCertValidity(nsd_gtls_t *pThis)
-{
-	DEFiRet;
-	const char *pszErrCause;
-	int gnuRet;
-	cstr_t *pStr = NULL;
-	unsigned stateCert;
-	const gnutls_datum_t *cert_list;
-	unsigned cert_list_size = 0;
-	gnutls_x509_crt_t cert;
-	unsigned i;
-	time_t ttCert;
-	time_t ttNow;
-	sbool bAbort = RSFALSE;
-	int iAbortCode = RS_RET_OK;
+static rsRetVal gtlsChkPeerCertValidity(nsd_gtls_t *pThis) {
+    DEFiRet;
+    const char *pszErrCause;
+    int gnuRet;
+    cstr_t *pStr = NULL;
+    unsigned stateCert;
+    const gnutls_datum_t *cert_list;
+    unsigned cert_list_size = 0;
+    gnutls_x509_crt_t cert;
+    unsigned i;
+    time_t ttCert;
+    time_t ttNow;
+    sbool bAbort = RSFALSE;
+    int iAbortCode = RS_RET_OK;
 
-	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+    ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-	/* check if we have at least one cert */
-	cert_list = gnutls_certificate_get_peers(pThis->sess, &cert_list_size);
-	if(cert_list_size < 1) {
-		errno = 0;
-		uchar *fromHost = NULL;
-		nsd_ptcp.GetRemoteHName((nsd_t*)pThis->pTcp, &fromHost);
-		LogError(0, RS_RET_TLS_NO_CERT,
-			"peer %s did not provide a certificate, not permitted to talk to it",
-			fromHost);
-		free(fromHost);
-		ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
-	}
+    /* check if we have at least one cert */
+    cert_list = gnutls_certificate_get_peers(pThis->sess, &cert_list_size);
+    if (cert_list_size < 1) {
+        errno = 0;
+        uchar *fromHost = NULL;
+        nsd_ptcp.GetRemoteHName((nsd_t *)pThis->pTcp, &fromHost);
+        LogError(0, RS_RET_TLS_NO_CERT, "peer %s did not provide a certificate, not permitted to talk to it", fromHost);
+        free(fromHost);
+        ABORT_FINALIZE(RS_RET_TLS_NO_CERT);
+    }
 #ifdef EXTENDED_CERT_CHECK_AVAILABLE
-	if (pThis->dataTypeCheck == GTLS_NONE) {
+    if (pThis->dataTypeCheck == GTLS_NONE) {
 #endif
-		CHKgnutls(gnutls_certificate_verify_peers2(pThis->sess, &stateCert));
+        CHKgnutls(gnutls_certificate_verify_peers2(pThis->sess, &stateCert));
 #ifdef EXTENDED_CERT_CHECK_AVAILABLE
-	} else { /* we have configured data to check in addition to cert */
-		gnutls_typed_vdata_st data;
-		data.type = GNUTLS_DT_KEY_PURPOSE_OID;
-		if (pThis->bIsInitiator) { /* client mode */
-			data.data = (uchar *)GNUTLS_KP_TLS_WWW_SERVER;
-		} else { /* server mode */
-			data.data = (uchar *)GNUTLS_KP_TLS_WWW_CLIENT;
-		}
-		data.size = ustrlen(data.data);
-		CHKgnutls(gnutls_certificate_verify_peers(pThis->sess, &data, 1, &stateCert));
-	}
+    } else { /* we have configured data to check in addition to cert */
+        gnutls_typed_vdata_st data;
+        data.type = GNUTLS_DT_KEY_PURPOSE_OID;
+        if (pThis->bIsInitiator) { /* client mode */
+            data.data = (uchar *)GNUTLS_KP_TLS_WWW_SERVER;
+        } else { /* server mode */
+            data.data = (uchar *)GNUTLS_KP_TLS_WWW_CLIENT;
+        }
+        data.size = ustrlen(data.data);
+        CHKgnutls(gnutls_certificate_verify_peers(pThis->sess, &data, 1, &stateCert));
+    }
 #endif
 
-	if(stateCert & GNUTLS_CERT_INVALID) {
-		/* Default abort code */
-		iAbortCode = RS_RET_CERT_INVALID;
+    if (stateCert & GNUTLS_CERT_INVALID) {
+        /* Default abort code */
+        iAbortCode = RS_RET_CERT_INVALID;
 
-		/* provide error details if we have them */
-		if (stateCert & GNUTLS_CERT_EXPIRED ) {
-			dbgprintf("GnuTLS returned GNUTLS_CERT_EXPIRED, handling mode %d ...\n",
-				pThis->permitExpiredCerts);
-			/* Handle expired certs */
-			if (pThis->permitExpiredCerts == GTLS_EXPIRED_DENY) {
-				bAbort = RSTRUE;
-				iAbortCode = RS_RET_CERT_EXPIRED;
-			} else if (pThis->permitExpiredCerts == GTLS_EXPIRED_WARN) {
-				LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
-					"Warning, certificate expired but expired certs are permitted");
-			} else {
-				dbgprintf("GnuTLS returned GNUTLS_CERT_EXPIRED, but expired certs are permitted.\n");
-			}
-			pszErrCause = "certificate expired";
-		} else if(stateCert & GNUTLS_CERT_SIGNER_NOT_FOUND) {
-			pszErrCause = "signer not found";
-			bAbort = RSTRUE;
-		} else if(stateCert & GNUTLS_CERT_SIGNER_NOT_CA) {
-			pszErrCause = "signer is not a CA";
-			bAbort = RSTRUE;
-		} else if(stateCert & GNUTLS_CERT_INSECURE_ALGORITHM) {
-			pszErrCause = "insecure algorithm";
-			bAbort = RSTRUE;
-		} else if(stateCert & GNUTLS_CERT_REVOKED) {
-			pszErrCause = "certificate revoked";
-			bAbort = RSTRUE;
-			iAbortCode = RS_RET_CERT_REVOKED;
+        /* provide error details if we have them */
+        if (stateCert & GNUTLS_CERT_EXPIRED) {
+            dbgprintf("GnuTLS returned GNUTLS_CERT_EXPIRED, handling mode %d ...\n", pThis->permitExpiredCerts);
+            /* Handle expired certs */
+            if (pThis->permitExpiredCerts == GTLS_EXPIRED_DENY) {
+                bAbort = RSTRUE;
+                iAbortCode = RS_RET_CERT_EXPIRED;
+            } else if (pThis->permitExpiredCerts == GTLS_EXPIRED_WARN) {
+                LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
+                       "Warning, certificate expired but expired certs are permitted");
+            } else {
+                dbgprintf("GnuTLS returned GNUTLS_CERT_EXPIRED, but expired certs are permitted.\n");
+            }
+            pszErrCause = "certificate expired";
+        } else if (stateCert & GNUTLS_CERT_SIGNER_NOT_FOUND) {
+            pszErrCause = "signer not found";
+            bAbort = RSTRUE;
+        } else if (stateCert & GNUTLS_CERT_SIGNER_NOT_CA) {
+            pszErrCause = "signer is not a CA";
+            bAbort = RSTRUE;
+        } else if (stateCert & GNUTLS_CERT_INSECURE_ALGORITHM) {
+            pszErrCause = "insecure algorithm";
+            bAbort = RSTRUE;
+        } else if (stateCert & GNUTLS_CERT_REVOKED) {
+            pszErrCause = "certificate revoked";
+            bAbort = RSTRUE;
+            iAbortCode = RS_RET_CERT_REVOKED;
 #ifdef EXTENDED_CERT_CHECK_AVAILABLE
-		} else if(stateCert & GNUTLS_CERT_PURPOSE_MISMATCH) {
-			pszErrCause = "key purpose OID does not match";
-			bAbort = RSTRUE;
+        } else if (stateCert & GNUTLS_CERT_PURPOSE_MISMATCH) {
+            pszErrCause = "key purpose OID does not match";
+            bAbort = RSTRUE;
 #endif
-		} else {
-			pszErrCause = "GnuTLS returned no specific reason";
-			dbgprintf("GnuTLS returned no specific reason for GNUTLS_CERT_INVALID, certificate "
-				 "status is %d\n", stateCert);
-			bAbort = RSTRUE;
-		}
-	}
+        } else {
+            pszErrCause = "GnuTLS returned no specific reason";
+            dbgprintf(
+                "GnuTLS returned no specific reason for GNUTLS_CERT_INVALID, certificate "
+                "status is %d\n",
+                stateCert);
+            bAbort = RSTRUE;
+        }
+    }
 
-	if (bAbort == RSTRUE) {
-		uchar *fromHost = NULL;
-		nsd_ptcp.GetRemoteHName((nsd_t*)pThis->pTcp, &fromHost);
-		LogError(0, NO_ERRCODE, "not permitted to talk to peer '%s', certificate invalid: %s",
-				fromHost, pszErrCause);
-		free(fromHost);
-		gtlsGetCertInfo(pThis, &pStr);
-		LogError(0, NO_ERRCODE, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
-		cstrDestruct(&pStr);
-		ABORT_FINALIZE(iAbortCode);
-	}
+    if (bAbort == RSTRUE) {
+        uchar *fromHost = NULL;
+        nsd_ptcp.GetRemoteHName((nsd_t *)pThis->pTcp, &fromHost);
+        LogError(0, NO_ERRCODE, "not permitted to talk to peer '%s', certificate invalid: %s", fromHost, pszErrCause);
+        free(fromHost);
+        gtlsGetCertInfo(pThis, &pStr);
+        LogError(0, NO_ERRCODE, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
+        cstrDestruct(&pStr);
+        ABORT_FINALIZE(iAbortCode);
+    }
 
-	/* get current time for certificate validation */
-	if(datetime.GetTime(&ttNow) == -1)
-		ABORT_FINALIZE(RS_RET_SYS_ERR);
+    /* get current time for certificate validation */
+    if (datetime.GetTime(&ttNow) == -1) ABORT_FINALIZE(RS_RET_SYS_ERR);
 
-	/* as it looks, we need to validate the expiration dates ourselves...
-	 * We need to loop through all certificates as we need to make sure the
-	 * interim certificates are also not expired.
-	 */
-	for(i = 0 ; i < cert_list_size ; ++i) {
-		CHKgnutls(gnutls_x509_crt_init(&cert));
-		CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[i], GNUTLS_X509_FMT_DER));
-		ttCert = gnutls_x509_crt_get_activation_time(cert);
-		if(ttCert == -1)
-			ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
-		else if(ttCert > ttNow) {
-			uchar *fromHost = NULL;
-			nsd_ptcp.GetRemoteHName((nsd_t*)pThis->pTcp, &fromHost);
-			LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "not permitted to talk to peer '%s': "
-					"certificate %d not yet active", fromHost, i);
-			free(fromHost);
-			gtlsGetCertInfo(pThis, &pStr);
-			LogError(0, RS_RET_CERT_NOT_YET_ACTIVE,
-				"invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
-			cstrDestruct(&pStr);
-			ABORT_FINALIZE(RS_RET_CERT_NOT_YET_ACTIVE);
-		}
+    /* as it looks, we need to validate the expiration dates ourselves...
+     * We need to loop through all certificates as we need to make sure the
+     * interim certificates are also not expired.
+     */
+    for (i = 0; i < cert_list_size; ++i) {
+        CHKgnutls(gnutls_x509_crt_init(&cert));
+        CHKgnutls(gnutls_x509_crt_import(cert, &cert_list[i], GNUTLS_X509_FMT_DER));
+        ttCert = gnutls_x509_crt_get_activation_time(cert);
+        if (ttCert == -1)
+            ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
+        else if (ttCert > ttNow) {
+            uchar *fromHost = NULL;
+            nsd_ptcp.GetRemoteHName((nsd_t *)pThis->pTcp, &fromHost);
+            LogError(0, RS_RET_CERT_NOT_YET_ACTIVE,
+                     "not permitted to talk to peer '%s': "
+                     "certificate %d not yet active",
+                     fromHost, i);
+            free(fromHost);
+            gtlsGetCertInfo(pThis, &pStr);
+            LogError(0, RS_RET_CERT_NOT_YET_ACTIVE, "invalid cert info: %s", cstrGetSzStrNoNULL(pStr));
+            cstrDestruct(&pStr);
+            ABORT_FINALIZE(RS_RET_CERT_NOT_YET_ACTIVE);
+        }
 
-		gnutls_x509_crt_deinit(cert);
-
-	}
+        gnutls_x509_crt_deinit(cert);
+    }
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
 /* check if it is OK to talk to the remote peer
  * rgerhards, 2008-05-21
  */
-rsRetVal
-gtlsChkPeerAuth(nsd_gtls_t *pThis)
-{
-	DEFiRet;
+rsRetVal gtlsChkPeerAuth(nsd_gtls_t *pThis) {
+    DEFiRet;
 
-	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+    ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-	/* call the actual function based on current auth mode */
-	switch(pThis->authMode) {
-		case GTLS_AUTH_CERTNAME:
-			/* if we check the name, we must ensure the cert is valid */
-			CHKiRet(gtlsChkPeerCertValidity(pThis));
-			CHKiRet(gtlsChkPeerID(pThis));
-			break;
-		case GTLS_AUTH_CERTFINGERPRINT:
-			CHKiRet(gtlsChkPeerID(pThis));
-			break;
-		case GTLS_AUTH_CERTVALID:
-			CHKiRet(gtlsChkPeerCertValidity(pThis));
-			break;
-		case GTLS_AUTH_CERTANON:
-			FINALIZE;
-			break;
-		default:
-			// No action needed for other cases
-			break;
-	}
+    /* call the actual function based on current auth mode */
+    switch (pThis->authMode) {
+        case GTLS_AUTH_CERTNAME:
+            /* if we check the name, we must ensure the cert is valid */
+            CHKiRet(gtlsChkPeerCertValidity(pThis));
+            CHKiRet(gtlsChkPeerID(pThis));
+            break;
+        case GTLS_AUTH_CERTFINGERPRINT:
+            CHKiRet(gtlsChkPeerID(pThis));
+            break;
+        case GTLS_AUTH_CERTVALID:
+            CHKiRet(gtlsChkPeerCertValidity(pThis));
+            break;
+        case GTLS_AUTH_CERTANON:
+            FINALIZE;
+            break;
+        default:
+            // No action needed for other cases
+            break;
+    }
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
 /* globally de-initialize GnuTLS */
-static rsRetVal
-gtlsGlblExit(void)
-{
-	DEFiRet;
-	gnutls_anon_free_server_credentials(anoncredSrv);
-	gnutls_dh_params_deinit(dh_params);
-	gnutls_global_deinit();
-	RETiRet;
+static rsRetVal gtlsGlblExit(void) {
+    DEFiRet;
+    gnutls_anon_free_server_credentials(anoncredSrv);
+    gnutls_dh_params_deinit(dh_params);
+    gnutls_global_deinit();
+    RETiRet;
 }
 
 
@@ -1435,23 +1367,21 @@ gtlsGlblExit(void)
  * The function checks if we have a session and ends it only if so. So it can
  * always be called, even if there currently is no session.
  */
-static rsRetVal
-gtlsEndSess(nsd_gtls_t *pThis)
-{
-	int gnuRet;
-	DEFiRet;
+static rsRetVal gtlsEndSess(nsd_gtls_t *pThis) {
+    int gnuRet;
+    DEFiRet;
 
-	if(pThis->bHaveSess) {
-		if(pThis->bIsInitiator) {
-			gnuRet = gnutls_bye(pThis->sess, GNUTLS_SHUT_WR);
-			while(gnuRet == GNUTLS_E_INTERRUPTED || gnuRet == GNUTLS_E_AGAIN) {
-				gnuRet = gnutls_bye(pThis->sess, GNUTLS_SHUT_WR);
-			}
-		}
-		gnutls_deinit(pThis->sess);
-		pThis->bHaveSess = 0;
-	}
-	RETiRet;
+    if (pThis->bHaveSess) {
+        if (pThis->bIsInitiator) {
+            gnuRet = gnutls_bye(pThis->sess, GNUTLS_SHUT_WR);
+            while (gnuRet == GNUTLS_E_INTERRUPTED || gnuRet == GNUTLS_E_AGAIN) {
+                gnuRet = gnutls_bye(pThis->sess, GNUTLS_SHUT_WR);
+            }
+        }
+        gnutls_deinit(pThis->sess);
+        pThis->bHaveSess = 0;
+    }
+    RETiRet;
 }
 
 
@@ -1462,11 +1392,9 @@ gtlsEndSess(nsd_gtls_t *pThis)
  * rgerhards, 2008.05-07
  */
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
-static inline void
-gtlsSetTransportPtr(nsd_gtls_t *pThis, int sock)
-{
-	/* Note: the compiler warning for the next line is OK - see header comment! */
-	gnutls_transport_set_ptr(pThis->sess, (gnutls_transport_ptr_t) sock);
+static inline void gtlsSetTransportPtr(nsd_gtls_t *pThis, int sock) {
+    /* Note: the compiler warning for the next line is OK - see header comment! */
+    gnutls_transport_set_ptr(pThis->sess, (gnutls_transport_ptr_t)sock);
 }
 #pragma GCC diagnostic warning "-Wint-to-pointer-cast"
 
@@ -1475,43 +1403,40 @@ gtlsSetTransportPtr(nsd_gtls_t *pThis, int sock)
 
 /* Standard-Constructor */
 BEGINobjConstruct(nsd_gtls) /* be sure to specify the object type also in END macro! */
-	iRet = nsd_ptcp.Construct(&pThis->pTcp);
-	pThis->bReportAuthErr = 1;
+    iRet = nsd_ptcp.Construct(&pThis->pTcp);
+    pThis->bReportAuthErr = 1;
 ENDobjConstruct(nsd_gtls)
 
 
 /* destructor for the nsd_gtls object */
 PROTOTYPEobjDestruct(nsd_gtls);
 BEGINobjDestruct(nsd_gtls) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(nsd_gtls);
-	if(pThis->iMode == 1) {
-		gtlsEndSess(pThis);
-	}
+    CODESTARTobjDestruct(nsd_gtls);
+    if (pThis->iMode == 1) {
+        gtlsEndSess(pThis);
+    }
 
-	if(pThis->pTcp != NULL) {
-		nsd_ptcp.Destruct(&pThis->pTcp);
-	}
+    if (pThis->pTcp != NULL) {
+        nsd_ptcp.Destruct(&pThis->pTcp);
+    }
 
-	free(pThis->pszConnectHost);
-	free(pThis->pszRcvBuf);
-	free((void*) pThis->pszCAFile);
-	free((void*) pThis->pszCRLFile);
+    free(pThis->pszConnectHost);
+    free(pThis->pszRcvBuf);
+    free((void *)pThis->pszCAFile);
+    free((void *)pThis->pszCRLFile);
 
-	if(pThis->bOurCertIsInit)
-		for(unsigned i=0; i<pThis->nOurCerts; ++i) {
-			gnutls_x509_crt_deinit(pThis->pOurCerts[i]);
-		}
-	if(pThis->bOurKeyIsInit)
-		gnutls_x509_privkey_deinit(pThis->ourKey);
-	if(pThis->bHaveSess)
-		gnutls_deinit(pThis->sess);
-	if(pThis->xcred != NULL
-	   && (pThis->bIsInitiator || (!pThis->xcred_is_copy && (!pThis->bIsInitiator || pThis->bHaveSess)))
-	  ) {
-		gnutls_certificate_free_credentials(pThis->xcred);
-		free((void*) pThis->pszKeyFile);
-		free((void*) pThis->pszCertFile);
-	}
+    if (pThis->bOurCertIsInit)
+        for (unsigned i = 0; i < pThis->nOurCerts; ++i) {
+            gnutls_x509_crt_deinit(pThis->pOurCerts[i]);
+        }
+    if (pThis->bOurKeyIsInit) gnutls_x509_privkey_deinit(pThis->ourKey);
+    if (pThis->bHaveSess) gnutls_deinit(pThis->sess);
+    if (pThis->xcred != NULL &&
+        (pThis->bIsInitiator || (!pThis->xcred_is_copy && (!pThis->bIsInitiator || pThis->bHaveSess)))) {
+        gnutls_certificate_free_credentials(pThis->xcred);
+        free((void *)pThis->pszKeyFile);
+        free((void *)pThis->pszCertFile);
+    }
 ENDobjDestruct(nsd_gtls)
 
 
@@ -1520,24 +1445,24 @@ ENDobjDestruct(nsd_gtls)
  * 1 - work in TLS mode
  * rgerhards, 2008-04-28
  */
-static rsRetVal
-SetMode(nsd_t *const pNsd, const int mode)
-{
-	DEFiRet;
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+static rsRetVal SetMode(nsd_t *const pNsd, const int mode) {
+    DEFiRet;
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
 
-	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	dbgprintf("(tls) mode: %d\n", mode);
-	if(mode != 0 && mode != 1) {
-		LogError(0, RS_RET_INVALID_DRVR_MODE, "error: driver mode %d not supported by "
-				"gtls netstream driver", mode);
-		ABORT_FINALIZE(RS_RET_INVALID_DRVR_MODE);
-	}
+    ISOBJ_TYPE_assert((pThis), nsd_gtls);
+    dbgprintf("(tls) mode: %d\n", mode);
+    if (mode != 0 && mode != 1) {
+        LogError(0, RS_RET_INVALID_DRVR_MODE,
+                 "error: driver mode %d not supported by "
+                 "gtls netstream driver",
+                 mode);
+        ABORT_FINALIZE(RS_RET_INVALID_DRVR_MODE);
+    }
 
-	pThis->iMode = mode;
+    pThis->iMode = mode;
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* Set the authentication mode. For us, the following is supported:
@@ -1548,32 +1473,32 @@ finalize_it:
  * mode == NULL is valid and defaults to x509/name
  * rgerhards, 2008-05-16
  */
-static rsRetVal
-SetAuthMode(nsd_t *pNsd, uchar *mode)
-{
-	DEFiRet;
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+static rsRetVal SetAuthMode(nsd_t *pNsd, uchar *mode) {
+    DEFiRet;
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
 
-	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	if(mode == NULL || !strcasecmp((char*)mode, "x509/name")) {
-		pThis->authMode = GTLS_AUTH_CERTNAME;
-	} else if(!strcasecmp((char*) mode, "x509/fingerprint")) {
-		pThis->authMode = GTLS_AUTH_CERTFINGERPRINT;
-	} else if(!strcasecmp((char*) mode, "x509/certvalid")) {
-		pThis->authMode = GTLS_AUTH_CERTVALID;
-	} else if(!strcasecmp((char*) mode, "anon")) {
-		pThis->authMode = GTLS_AUTH_CERTANON;
-	} else {
-		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: authentication mode '%s' not supported by "
-				"gtls netstream driver", mode);
-		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
-	}
+    ISOBJ_TYPE_assert((pThis), nsd_gtls);
+    if (mode == NULL || !strcasecmp((char *)mode, "x509/name")) {
+        pThis->authMode = GTLS_AUTH_CERTNAME;
+    } else if (!strcasecmp((char *)mode, "x509/fingerprint")) {
+        pThis->authMode = GTLS_AUTH_CERTFINGERPRINT;
+    } else if (!strcasecmp((char *)mode, "x509/certvalid")) {
+        pThis->authMode = GTLS_AUTH_CERTVALID;
+    } else if (!strcasecmp((char *)mode, "anon")) {
+        pThis->authMode = GTLS_AUTH_CERTANON;
+    } else {
+        LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+                 "error: authentication mode '%s' not supported by "
+                 "gtls netstream driver",
+                 mode);
+        ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+    }
 
-	dbgprintf("SetAuthMode to %s\n", (mode != NULL ? (char*)mode : "NULL"));
-/* TODO: clear stored IDs! */
+    dbgprintf("SetAuthMode to %s\n", (mode != NULL ? (char *)mode : "NULL"));
+    /* TODO: clear stored IDs! */
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -1583,75 +1508,71 @@ finalize_it:
  * warn - warn if certificate is expired
  * alorbach, 2018-12-20
  */
-static rsRetVal
-SetPermitExpiredCerts(nsd_t *pNsd, uchar *mode)
-{
-	DEFiRet;
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+static rsRetVal SetPermitExpiredCerts(nsd_t *pNsd, uchar *mode) {
+    DEFiRet;
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
 
-	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	/* default is set to off! */
-	if(mode == NULL || !strcasecmp((char*)mode, "off")) {
-		pThis->permitExpiredCerts = GTLS_EXPIRED_DENY;
-	} else if(!strcasecmp((char*) mode, "warn")) {
-		pThis->permitExpiredCerts = GTLS_EXPIRED_WARN;
-	} else if(!strcasecmp((char*) mode, "on")) {
-		pThis->permitExpiredCerts = GTLS_EXPIRED_PERMIT;
-	} else {
-		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: permitexpiredcerts mode '%s' not supported by "
-				"gtls netstream driver", mode);
-		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
-	}
+    ISOBJ_TYPE_assert((pThis), nsd_gtls);
+    /* default is set to off! */
+    if (mode == NULL || !strcasecmp((char *)mode, "off")) {
+        pThis->permitExpiredCerts = GTLS_EXPIRED_DENY;
+    } else if (!strcasecmp((char *)mode, "warn")) {
+        pThis->permitExpiredCerts = GTLS_EXPIRED_WARN;
+    } else if (!strcasecmp((char *)mode, "on")) {
+        pThis->permitExpiredCerts = GTLS_EXPIRED_PERMIT;
+    } else {
+        LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+                 "error: permitexpiredcerts mode '%s' not supported by "
+                 "gtls netstream driver",
+                 mode);
+        ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+    }
 
-	dbgprintf("SetPermitExpiredCerts: Set Mode %s/%d\n",
-		(mode != NULL ? (char*)mode : "NULL"), pThis->permitExpiredCerts);
+    dbgprintf("SetPermitExpiredCerts: Set Mode %s/%d\n", (mode != NULL ? (char *)mode : "NULL"),
+              pThis->permitExpiredCerts);
 
-/* TODO: clear stored IDs! */
+    /* TODO: clear stored IDs! */
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
 /* Set permitted peers. It is depending on the auth mode if this are
  * fingerprints or names. -- rgerhards, 2008-05-19
  */
-static rsRetVal
-SetPermPeers(nsd_t *pNsd, permittedPeers_t *pPermPeers)
-{
-	DEFiRet;
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+static rsRetVal SetPermPeers(nsd_t *pNsd, permittedPeers_t *pPermPeers) {
+    DEFiRet;
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
 
-	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	if(pPermPeers == NULL)
-		FINALIZE;
+    ISOBJ_TYPE_assert((pThis), nsd_gtls);
+    if (pPermPeers == NULL) FINALIZE;
 
-	if(pThis->authMode != GTLS_AUTH_CERTFINGERPRINT && pThis->authMode != GTLS_AUTH_CERTNAME) {
-		LogError(0, RS_RET_VALUE_NOT_IN_THIS_MODE, "authentication not supported by "
-			"gtls netstream driver in the configured authentication mode - ignored");
-		ABORT_FINALIZE(RS_RET_VALUE_NOT_IN_THIS_MODE);
-	}
+    if (pThis->authMode != GTLS_AUTH_CERTFINGERPRINT && pThis->authMode != GTLS_AUTH_CERTNAME) {
+        LogError(0, RS_RET_VALUE_NOT_IN_THIS_MODE,
+                 "authentication not supported by "
+                 "gtls netstream driver in the configured authentication mode - ignored");
+        ABORT_FINALIZE(RS_RET_VALUE_NOT_IN_THIS_MODE);
+    }
 
-	pThis->pPermPeers = pPermPeers;
+    pThis->pPermPeers = pPermPeers;
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* gnutls priority string
  * PascalWithopf 2017-08-16
  */
-static rsRetVal
-SetGnutlsPriorityString(nsd_t *pNsd, uchar *gnutlsPriorityString)
-{
-	DEFiRet;
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+static rsRetVal SetGnutlsPriorityString(nsd_t *pNsd, uchar *gnutlsPriorityString) {
+    DEFiRet;
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
 
-	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	pThis->gnutlsPriorityString = gnutlsPriorityString;
-	dbgprintf("gnutlsPriorityString: set to '%s'\n",
-		(gnutlsPriorityString != NULL ? (char*)gnutlsPriorityString : "NULL"));
-	RETiRet;
+    ISOBJ_TYPE_assert((pThis), nsd_gtls);
+    pThis->gnutlsPriorityString = gnutlsPriorityString;
+    dbgprintf("gnutlsPriorityString: set to '%s'\n",
+              (gnutlsPriorityString != NULL ? (char *)gnutlsPriorityString : "NULL"));
+    RETiRet;
 }
 
 /* Set the driver cert extended key usage check setting
@@ -1659,23 +1580,23 @@ SetGnutlsPriorityString(nsd_t *pNsd, uchar *gnutlsPriorityString)
  * 1 - verify that cert contents is compatible with appropriate OID
  * jvymazal, 2019-08-16
  */
-static rsRetVal
-SetCheckExtendedKeyUsage(nsd_t *pNsd, int ChkExtendedKeyUsage)
-{
-	DEFiRet;
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+static rsRetVal SetCheckExtendedKeyUsage(nsd_t *pNsd, int ChkExtendedKeyUsage) {
+    DEFiRet;
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
 
-	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	if(ChkExtendedKeyUsage != 0 && ChkExtendedKeyUsage != 1) {
-		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: driver ChkExtendedKeyUsage %d "
-				"not supported by gtls netstream driver", ChkExtendedKeyUsage);
-		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
-	}
+    ISOBJ_TYPE_assert((pThis), nsd_gtls);
+    if (ChkExtendedKeyUsage != 0 && ChkExtendedKeyUsage != 1) {
+        LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+                 "error: driver ChkExtendedKeyUsage %d "
+                 "not supported by gtls netstream driver",
+                 ChkExtendedKeyUsage);
+        ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+    }
 
-	pThis->dataTypeCheck = ChkExtendedKeyUsage;
+    pThis->dataTypeCheck = ChkExtendedKeyUsage;
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* Set the driver name checking strictness
@@ -1683,213 +1604,190 @@ finalize_it:
  * 1 - more strict per RFC 6125 - if any SAN present it must match (CN is ignored)
  * jvymazal, 2019-08-16
  */
-static rsRetVal
-SetPrioritizeSAN(nsd_t *pNsd, int prioritizeSan)
-{
-	DEFiRet;
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+static rsRetVal SetPrioritizeSAN(nsd_t *pNsd, int prioritizeSan) {
+    DEFiRet;
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
 
-	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	if(prioritizeSan != 0 && prioritizeSan != 1) {
-		LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "error: driver prioritizeSan %d "
-				"not supported by gtls netstream driver", prioritizeSan);
-		ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
-	}
+    ISOBJ_TYPE_assert((pThis), nsd_gtls);
+    if (prioritizeSan != 0 && prioritizeSan != 1) {
+        LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+                 "error: driver prioritizeSan %d "
+                 "not supported by gtls netstream driver",
+                 prioritizeSan);
+        ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+    }
 
-	pThis->bSANpriority = prioritizeSan;
+    pThis->bSANpriority = prioritizeSan;
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* Set the driver tls  verifyDepth
  * alorbach, 2019-12-20
  */
-static rsRetVal
-SetTlsVerifyDepth(nsd_t *pNsd, int verifyDepth)
-{
-	DEFiRet;
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+static rsRetVal SetTlsVerifyDepth(nsd_t *pNsd, int verifyDepth) {
+    DEFiRet;
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
 
-	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	if (verifyDepth == 0) {
-		FINALIZE;
-	}
-	assert(verifyDepth >= 2);
-	pThis->DrvrVerifyDepth = verifyDepth;
+    ISOBJ_TYPE_assert((pThis), nsd_gtls);
+    if (verifyDepth == 0) {
+        FINALIZE;
+    }
+    assert(verifyDepth >= 2);
+    pThis->DrvrVerifyDepth = verifyDepth;
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
-static rsRetVal
-SetTlsCAFile(nsd_t *pNsd, const uchar *const caFile)
-{
-	DEFiRet;
-	nsd_gtls_t *const pThis = (nsd_gtls_t*) pNsd;
+static rsRetVal SetTlsCAFile(nsd_t *pNsd, const uchar *const caFile) {
+    DEFiRet;
+    nsd_gtls_t *const pThis = (nsd_gtls_t *)pNsd;
 
-	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	if(caFile == NULL) {
-		pThis->pszCAFile = NULL;
-	} else {
-		CHKmalloc(pThis->pszCAFile = (const uchar*) strdup((const char*) caFile));
-	}
+    ISOBJ_TYPE_assert((pThis), nsd_gtls);
+    if (caFile == NULL) {
+        pThis->pszCAFile = NULL;
+    } else {
+        CHKmalloc(pThis->pszCAFile = (const uchar *)strdup((const char *)caFile));
+    }
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
-static rsRetVal
-SetTlsCRLFile(nsd_t *pNsd, const uchar *const crlFile)
-{
-	DEFiRet;
-	nsd_gtls_t *const pThis = (nsd_gtls_t*) pNsd;
+static rsRetVal SetTlsCRLFile(nsd_t *pNsd, const uchar *const crlFile) {
+    DEFiRet;
+    nsd_gtls_t *const pThis = (nsd_gtls_t *)pNsd;
 
-	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	if(crlFile == NULL) {
-		pThis->pszCRLFile = NULL;
-	} else {
-		CHKmalloc(pThis->pszCRLFile = (const uchar*) strdup((const char*) crlFile));
-	}
+    ISOBJ_TYPE_assert((pThis), nsd_gtls);
+    if (crlFile == NULL) {
+        pThis->pszCRLFile = NULL;
+    } else {
+        CHKmalloc(pThis->pszCRLFile = (const uchar *)strdup((const char *)crlFile));
+    }
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
-static rsRetVal
-SetTlsKeyFile(nsd_t *pNsd, const uchar *const pszFile)
-{
-	DEFiRet;
-	nsd_gtls_t *const pThis = (nsd_gtls_t*) pNsd;
+static rsRetVal SetTlsKeyFile(nsd_t *pNsd, const uchar *const pszFile) {
+    DEFiRet;
+    nsd_gtls_t *const pThis = (nsd_gtls_t *)pNsd;
 
-	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	if(pszFile == NULL) {
-		pThis->pszKeyFile = NULL;
-	} else {
-		CHKmalloc(pThis->pszKeyFile = (const uchar*) strdup((const char*) pszFile));
-	}
+    ISOBJ_TYPE_assert((pThis), nsd_gtls);
+    if (pszFile == NULL) {
+        pThis->pszKeyFile = NULL;
+    } else {
+        CHKmalloc(pThis->pszKeyFile = (const uchar *)strdup((const char *)pszFile));
+    }
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
-static rsRetVal
-SetTlsCertFile(nsd_t *pNsd, const uchar *const pszFile)
-{
-	DEFiRet;
-	nsd_gtls_t *const pThis = (nsd_gtls_t*) pNsd;
+static rsRetVal SetTlsCertFile(nsd_t *pNsd, const uchar *const pszFile) {
+    DEFiRet;
+    nsd_gtls_t *const pThis = (nsd_gtls_t *)pNsd;
 
-	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	if(pszFile == NULL) {
-		pThis->pszCertFile = NULL;
-	} else {
-		CHKmalloc(pThis->pszCertFile = (const uchar*) strdup((const char*) pszFile));
-	}
+    ISOBJ_TYPE_assert((pThis), nsd_gtls);
+    if (pszFile == NULL) {
+        pThis->pszCertFile = NULL;
+    } else {
+        CHKmalloc(pThis->pszCertFile = (const uchar *)strdup((const char *)pszFile));
+    }
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* Provide access to the underlying OS socket. This is primarily
  * useful for other drivers (like nsd_gtls) who utilize ourselfs
  * for some of their functionality. -- rgerhards, 2008-04-18
  */
-static rsRetVal
-SetSock(nsd_t *pNsd, int sock)
-{
-	DEFiRet;
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+static rsRetVal SetSock(nsd_t *pNsd, int sock) {
+    DEFiRet;
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
 
-	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	assert(sock >= 0);
+    ISOBJ_TYPE_assert((pThis), nsd_gtls);
+    assert(sock >= 0);
 
-	nsd_ptcp.SetSock(pThis->pTcp, sock);
+    nsd_ptcp.SetSock(pThis->pTcp, sock);
 
-	RETiRet;
+    RETiRet;
 }
 
 
 /* Keep Alive Options
  */
-static rsRetVal
-SetKeepAliveIntvl(nsd_t *pNsd, int keepAliveIntvl)
-{
-	DEFiRet;
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+static rsRetVal SetKeepAliveIntvl(nsd_t *pNsd, int keepAliveIntvl) {
+    DEFiRet;
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
 
-	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	assert(keepAliveIntvl >= 0);
+    ISOBJ_TYPE_assert((pThis), nsd_gtls);
+    assert(keepAliveIntvl >= 0);
 
-	nsd_ptcp.SetKeepAliveIntvl(pThis->pTcp, keepAliveIntvl);
+    nsd_ptcp.SetKeepAliveIntvl(pThis->pTcp, keepAliveIntvl);
 
-	RETiRet;
+    RETiRet;
 }
 
 
 /* Keep Alive Options
  */
-static rsRetVal
-SetKeepAliveProbes(nsd_t *pNsd, int keepAliveProbes)
-{
-	DEFiRet;
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+static rsRetVal SetKeepAliveProbes(nsd_t *pNsd, int keepAliveProbes) {
+    DEFiRet;
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
 
-	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	assert(keepAliveProbes >= 0);
+    ISOBJ_TYPE_assert((pThis), nsd_gtls);
+    assert(keepAliveProbes >= 0);
 
-	nsd_ptcp.SetKeepAliveProbes(pThis->pTcp, keepAliveProbes);
+    nsd_ptcp.SetKeepAliveProbes(pThis->pTcp, keepAliveProbes);
 
-	RETiRet;
+    RETiRet;
 }
 
 
 /* Keep Alive Options
  */
-static rsRetVal
-SetKeepAliveTime(nsd_t *pNsd, int keepAliveTime)
-{
-	DEFiRet;
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
+static rsRetVal SetKeepAliveTime(nsd_t *pNsd, int keepAliveTime) {
+    DEFiRet;
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
 
-	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	assert(keepAliveTime >= 0);
+    ISOBJ_TYPE_assert((pThis), nsd_gtls);
+    assert(keepAliveTime >= 0);
 
-	nsd_ptcp.SetKeepAliveTime(pThis->pTcp, keepAliveTime);
+    nsd_ptcp.SetKeepAliveTime(pThis->pTcp, keepAliveTime);
 
-	RETiRet;
+    RETiRet;
 }
 
 
 /* abort a connection. This is meant to be called immediately
  * before the Destruct call. -- rgerhards, 2008-03-24
  */
-static rsRetVal
-Abort(nsd_t *pNsd)
-{
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
-	DEFiRet;
+static rsRetVal Abort(nsd_t *pNsd) {
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    DEFiRet;
 
-	ISOBJ_TYPE_assert((pThis), nsd_gtls);
+    ISOBJ_TYPE_assert((pThis), nsd_gtls);
 
-	if(pThis->iMode == 0) {
-		nsd_ptcp.Abort(pThis->pTcp);
-	}
+    if (pThis->iMode == 0) {
+        nsd_ptcp.Abort(pThis->pTcp);
+    }
 
-	RETiRet;
+    RETiRet;
 }
 
 
 /* Callback after netstrm obj init in nsd_ptcp - permits us to add some data */
-static rsRetVal
-LstnInitDrvr(netstrm_t *const pThis)
-{
-	DEFiRet;
-	CHKiRet(gtlsInitCred((nsd_gtls_t*) pThis->pDrvrData));
-	CHKiRet(gtlsAddOurCert((nsd_gtls_t*) pThis->pDrvrData));
+static rsRetVal LstnInitDrvr(netstrm_t *const pThis) {
+    DEFiRet;
+    CHKiRet(gtlsInitCred((nsd_gtls_t *)pThis->pDrvrData));
+    CHKiRet(gtlsAddOurCert((nsd_gtls_t *)pThis->pDrvrData));
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
-
 
 
 /* initialize the tcp socket for a listner
@@ -1898,15 +1796,16 @@ finalize_it:
  * a session, but not during listener setup.
  * gerhards, 2008-04-25
  */
-static rsRetVal ATTR_NONNULL(1,3,5)
-LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
-	 const int iSessMax, const tcpLstnParams_t *const cnf_params)
-{
-	DEFiRet;
-	pNS->fLstnInitDrvr = LstnInitDrvr;
-	iRet = nsd_ptcp.LstnInit(pNS, pUsr, fAddLstn, iSessMax, cnf_params);
-//finalize_it:
-	RETiRet;
+static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *pNS,
+                                               void *pUsr,
+                                               rsRetVal (*fAddLstn)(void *, netstrm_t *),
+                                               const int iSessMax,
+                                               const tcpLstnParams_t *const cnf_params) {
+    DEFiRet;
+    pNS->fLstnInitDrvr = LstnInitDrvr;
+    iRet = nsd_ptcp.LstnInit(pNS, pUsr, fAddLstn, iSessMax, cnf_params);
+    // finalize_it:
+    RETiRet;
 }
 
 
@@ -1914,64 +1813,54 @@ LstnInit(netstrms_t *pNS, void *pUsr, rsRetVal(*fAddLstn)(void*,netstrm_t*),
  * This is a dummy here. For details, check function common in ptcp driver.
  * rgerhards, 2008-06-09
  */
-static rsRetVal
-CheckConnection(nsd_t __attribute__((unused)) *pNsd)
-{
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
-	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+static rsRetVal CheckConnection(nsd_t __attribute__((unused)) * pNsd) {
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-	dbgprintf("CheckConnection for %p\n", pNsd);
-	return nsd_ptcp.CheckConnection(pThis->pTcp);
+    dbgprintf("CheckConnection for %p\n", pNsd);
+    return nsd_ptcp.CheckConnection(pThis->pTcp);
 }
 
 
 /* Provide access to the underlying OS socket.
  */
-static rsRetVal
-GetSock(nsd_t *pNsd, int *pSock)
-{
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
-	return nsd_ptcp.GetSock(pThis->pTcp, pSock);
+static rsRetVal GetSock(nsd_t *pNsd, int *pSock) {
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    return nsd_ptcp.GetSock(pThis->pTcp, pSock);
 }
 
 
 /* get the remote hostname. The returned hostname must be freed by the caller.
  * rgerhards, 2008-04-25
  */
-static rsRetVal
-GetRemoteHName(nsd_t *pNsd, uchar **ppszHName)
-{
-	DEFiRet;
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
-	ISOBJ_TYPE_assert(pThis, nsd_gtls);
-	iRet = nsd_ptcp.GetRemoteHName(pThis->pTcp, ppszHName);
-	RETiRet;
+static rsRetVal GetRemoteHName(nsd_t *pNsd, uchar **ppszHName) {
+    DEFiRet;
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    ISOBJ_TYPE_assert(pThis, nsd_gtls);
+    iRet = nsd_ptcp.GetRemoteHName(pThis->pTcp, ppszHName);
+    RETiRet;
 }
 
 
 /* Provide access to the sockaddr_storage of the remote peer. This
  * is needed by the legacy ACL system. --- gerhards, 2008-12-01
  */
-static rsRetVal
-GetRemAddr(nsd_t *pNsd, struct sockaddr_storage **ppAddr)
-{
-	DEFiRet;
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
-	ISOBJ_TYPE_assert(pThis, nsd_gtls);
-	iRet = nsd_ptcp.GetRemAddr(pThis->pTcp, ppAddr);
-	RETiRet;
+static rsRetVal GetRemAddr(nsd_t *pNsd, struct sockaddr_storage **ppAddr) {
+    DEFiRet;
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    ISOBJ_TYPE_assert(pThis, nsd_gtls);
+    iRet = nsd_ptcp.GetRemAddr(pThis->pTcp, ppAddr);
+    RETiRet;
 }
 
 
 /* get the remote host's IP address. Caller must Destruct the object. */
-static rsRetVal
-GetRemoteIP(nsd_t *pNsd, prop_t **ip)
-{
-	DEFiRet;
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
-	ISOBJ_TYPE_assert(pThis, nsd_gtls);
-	iRet = nsd_ptcp.GetRemoteIP(pThis->pTcp, ip);
-	RETiRet;
+static rsRetVal GetRemoteIP(nsd_t *pNsd, prop_t **ip) {
+    DEFiRet;
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    ISOBJ_TYPE_assert(pThis, nsd_gtls);
+    iRet = nsd_ptcp.GetRemoteIP(pThis->pTcp, ip);
+    RETiRet;
 }
 
 
@@ -1980,126 +1869,123 @@ GetRemoteIP(nsd_t *pNsd, prop_t **ip)
  * mode at this time).
  * rgerhards, 2008-04-25
  */
-static rsRetVal
-AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo)
-{
-	DEFiRet;
-	int gnuRet;
-	nsd_gtls_t *pNew = NULL;
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
-	const char *error_position = NULL;
+static rsRetVal AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo) {
+    DEFiRet;
+    int gnuRet;
+    nsd_gtls_t *pNew = NULL;
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    const char *error_position = NULL;
 
-	ISOBJ_TYPE_assert((pThis), nsd_gtls);
-	CHKiRet(nsd_gtlsConstruct(&pNew)); // TODO: prevent construct/destruct!
-	CHKiRet(nsd_ptcp.Destruct(&pNew->pTcp));
-	CHKiRet(nsd_ptcp.AcceptConnReq(pThis->pTcp, &pNew->pTcp, connInfo));
+    ISOBJ_TYPE_assert((pThis), nsd_gtls);
+    CHKiRet(nsd_gtlsConstruct(&pNew));  // TODO: prevent construct/destruct!
+    CHKiRet(nsd_ptcp.Destruct(&pNew->pTcp));
+    CHKiRet(nsd_ptcp.AcceptConnReq(pThis->pTcp, &pNew->pTcp, connInfo));
 
 
-	if(pThis->iMode == 0) {
-		/* we are in non-TLS mode, so we are done */
-		*ppNew = (nsd_t*) pNew;
-		FINALIZE;
-	}
-	/* copy Properties to pnew first */
-	pNew->authMode = pThis->authMode;
-	pNew->permitExpiredCerts = pThis->permitExpiredCerts;
-	pNew->pPermPeers = pThis->pPermPeers;
-	pNew->gnutlsPriorityString = pThis->gnutlsPriorityString;
-	pNew->DrvrVerifyDepth = pThis->DrvrVerifyDepth;
-	pNew->dataTypeCheck = pThis->dataTypeCheck;
-	pNew->bSANpriority = pThis->bSANpriority;
-	pNew->pszCertFile = pThis->pszCertFile;
-	pNew->pszKeyFile = pThis->pszKeyFile;
-	pNew->xcred = pThis->xcred; // TODO: verify once again; xcred is read only at this stage
-	pNew->xcred_is_copy = 1; // do not free on pNew Destruction
+    if (pThis->iMode == 0) {
+        /* we are in non-TLS mode, so we are done */
+        *ppNew = (nsd_t *)pNew;
+        FINALIZE;
+    }
+    /* copy Properties to pnew first */
+    pNew->authMode = pThis->authMode;
+    pNew->permitExpiredCerts = pThis->permitExpiredCerts;
+    pNew->pPermPeers = pThis->pPermPeers;
+    pNew->gnutlsPriorityString = pThis->gnutlsPriorityString;
+    pNew->DrvrVerifyDepth = pThis->DrvrVerifyDepth;
+    pNew->dataTypeCheck = pThis->dataTypeCheck;
+    pNew->bSANpriority = pThis->bSANpriority;
+    pNew->pszCertFile = pThis->pszCertFile;
+    pNew->pszKeyFile = pThis->pszKeyFile;
+    pNew->xcred = pThis->xcred;  // TODO: verify once again; xcred is read only at this stage
+    pNew->xcred_is_copy = 1;  // do not free on pNew Destruction
 
-	/* if we reach this point, we are in TLS mode */
-	iRet = gtlsInitSession(pNew);
-	if (iRet != RS_RET_OK) {
-		if (iRet == RS_RET_CERTLESS) {
-			dbgprintf("AcceptConnReq certless mode\n");
-			/* Set status to OK */
-			iRet = RS_RET_OK;
-		} else {
-			goto finalize_it;
-		}
-	}
-	gtlsSetTransportPtr(pNew, ((nsd_ptcp_t*) (pNew->pTcp))->sock);
+    /* if we reach this point, we are in TLS mode */
+    iRet = gtlsInitSession(pNew);
+    if (iRet != RS_RET_OK) {
+        if (iRet == RS_RET_CERTLESS) {
+            dbgprintf("AcceptConnReq certless mode\n");
+            /* Set status to OK */
+            iRet = RS_RET_OK;
+        } else {
+            goto finalize_it;
+        }
+    }
+    gtlsSetTransportPtr(pNew, ((nsd_ptcp_t *)(pNew->pTcp))->sock);
 
-	dbgprintf("AcceptConnReq bOurCertIsInit=%hu bOurKeyIsInit=%hu \n",
-		pNew->bOurCertIsInit, pNew->bOurKeyIsInit);
+    dbgprintf("AcceptConnReq bOurCertIsInit=%hu bOurKeyIsInit=%hu \n", pNew->bOurCertIsInit, pNew->bOurKeyIsInit);
 
-	/* here is the priorityString set */
-	if(pNew->gnutlsPriorityString != NULL) {
-		dbgprintf("AcceptConnReq setting configured priority string (ciphers)\n");
-		if(gnutls_priority_set_direct(pNew->sess,
-					(const char*) pNew->gnutlsPriorityString,
-					&error_position)==GNUTLS_E_INVALID_REQUEST) {
-			LogError(0, RS_RET_GNUTLS_ERR, "Syntax Error in"
-					" Priority String: \"%s\"\n", error_position);
-		}
-	} else {
-		if(pThis->authMode == GTLS_AUTH_CERTANON) {
-			/* Allow ANON Ciphers */
-			dbgprintf("AcceptConnReq setting anon ciphers Try1: %s\n", GTLS_ANON_PRIO_NOTLSV13);
-			if(gnutls_priority_set_direct(pNew->sess,(const char*) GTLS_ANON_PRIO_NOTLSV13,
-				&error_position)==GNUTLS_E_INVALID_REQUEST) {
-				dbgprintf("AcceptConnReq setting anon ciphers Try2 (TLS1.3 unknown): %s\n",
-					GTLS_ANON_PRIO);
-				CHKgnutls(gnutls_priority_set_direct(pNew->sess, GTLS_ANON_PRIO, &error_position));
-			}
-			/* Uncomment for DEBUG
-			print_cipher_suite_list("NORMAL:+ANON-DH:+ANON-ECDH:+COMP-ALL"); */
-		} else {
-			/* Use default priorities */
-			dbgprintf("AcceptConnReq setting default ciphers\n");
-			CHKgnutls(gnutls_set_default_priority(pNew->sess));
-		}
-	}
+    /* here is the priorityString set */
+    if (pNew->gnutlsPriorityString != NULL) {
+        dbgprintf("AcceptConnReq setting configured priority string (ciphers)\n");
+        if (gnutls_priority_set_direct(pNew->sess, (const char *)pNew->gnutlsPriorityString, &error_position) ==
+            GNUTLS_E_INVALID_REQUEST) {
+            LogError(0, RS_RET_GNUTLS_ERR,
+                     "Syntax Error in"
+                     " Priority String: \"%s\"\n",
+                     error_position);
+        }
+    } else {
+        if (pThis->authMode == GTLS_AUTH_CERTANON) {
+            /* Allow ANON Ciphers */
+            dbgprintf("AcceptConnReq setting anon ciphers Try1: %s\n", GTLS_ANON_PRIO_NOTLSV13);
+            if (gnutls_priority_set_direct(pNew->sess, (const char *)GTLS_ANON_PRIO_NOTLSV13, &error_position) ==
+                GNUTLS_E_INVALID_REQUEST) {
+                dbgprintf("AcceptConnReq setting anon ciphers Try2 (TLS1.3 unknown): %s\n", GTLS_ANON_PRIO);
+                CHKgnutls(gnutls_priority_set_direct(pNew->sess, GTLS_ANON_PRIO, &error_position));
+            }
+            /* Uncomment for DEBUG
+            print_cipher_suite_list("NORMAL:+ANON-DH:+ANON-ECDH:+COMP-ALL"); */
+        } else {
+            /* Use default priorities */
+            dbgprintf("AcceptConnReq setting default ciphers\n");
+            CHKgnutls(gnutls_set_default_priority(pNew->sess));
+        }
+    }
 
-	/* we now do the handshake. This is a bit complicated, because we are
-	 * on non-blocking sockets. Usually, the handshake will not complete
-	 * immediately, so that we need to retry it some time later.
-	 */
-	gnuRet = gnutls_handshake(pNew->sess);
-	if(gnuRet == GNUTLS_E_AGAIN || gnuRet == GNUTLS_E_INTERRUPTED) {
-		pNew->rtryCall = gtlsRtry_handshake;
-		dbgprintf("GnuTLS handshake does not complete immediately - "
-			"setting to retry (this is OK and normal)\n");
-	} else if(gnuRet == 0) {
-		/* we got a handshake, now check authorization */
-		CHKiRet(gtlsChkPeerAuth(pNew));
-	} else {
-		uchar *pGnuErr = gtlsStrerror(gnuRet);
-		uchar *fromHostIP = NULL;
-		int remotePort;
-		uchar remotePortStr[8];
-		nsd_ptcp.GetRemoteHName((nsd_t*)pNew->pTcp, &fromHostIP);
-		nsd_ptcp.GetRemotePort((nsd_t*)pNew->pTcp, &remotePort);
-		nsd_ptcp.FmtRemotePortStr(remotePort, remotePortStr, sizeof(remotePortStr));
-		LogError(0, RS_RET_TLS_HANDSHAKE_ERR,
-			"nsd_gtls:TLS session terminated with remote client '%s:%s': "
-			"gnutls returned error on handshake: %s",
-		fromHostIP, remotePortStr, pGnuErr);
-		free(fromHostIP);
-		free(pGnuErr);
-		ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
-	}
+    /* we now do the handshake. This is a bit complicated, because we are
+     * on non-blocking sockets. Usually, the handshake will not complete
+     * immediately, so that we need to retry it some time later.
+     */
+    gnuRet = gnutls_handshake(pNew->sess);
+    if (gnuRet == GNUTLS_E_AGAIN || gnuRet == GNUTLS_E_INTERRUPTED) {
+        pNew->rtryCall = gtlsRtry_handshake;
+        dbgprintf(
+            "GnuTLS handshake does not complete immediately - "
+            "setting to retry (this is OK and normal)\n");
+    } else if (gnuRet == 0) {
+        /* we got a handshake, now check authorization */
+        CHKiRet(gtlsChkPeerAuth(pNew));
+    } else {
+        uchar *pGnuErr = gtlsStrerror(gnuRet);
+        uchar *fromHostIP = NULL;
+        int remotePort;
+        uchar remotePortStr[8];
+        nsd_ptcp.GetRemoteHName((nsd_t *)pNew->pTcp, &fromHostIP);
+        nsd_ptcp.GetRemotePort((nsd_t *)pNew->pTcp, &remotePort);
+        nsd_ptcp.FmtRemotePortStr(remotePort, remotePortStr, sizeof(remotePortStr));
+        LogError(0, RS_RET_TLS_HANDSHAKE_ERR,
+                 "nsd_gtls:TLS session terminated with remote client '%s:%s': "
+                 "gnutls returned error on handshake: %s",
+                 fromHostIP, remotePortStr, pGnuErr);
+        free(fromHostIP);
+        free(pGnuErr);
+        ABORT_FINALIZE(RS_RET_TLS_HANDSHAKE_ERR);
+    }
 
-	pNew->iMode = 1; /* this session is now in TLS mode! */
+    pNew->iMode = 1; /* this session is now in TLS mode! */
 
-	*ppNew = (nsd_t*) pNew;
+    *ppNew = (nsd_t *)pNew;
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if (error_position != NULL) {
-			dbgprintf("AcceptConnReq error_position=%s\n", error_position);
-		}
+    if (iRet != RS_RET_OK) {
+        if (error_position != NULL) {
+            dbgprintf("AcceptConnReq error_position=%s\n", error_position);
+        }
 
-		if(pNew != NULL)
-			nsd_gtlsDestruct(&pNew);
-	}
-	RETiRet;
+        if (pNew != NULL) nsd_gtlsDestruct(&pNew);
+    }
+    RETiRet;
 }
 
 
@@ -2125,80 +2011,77 @@ finalize_it:
  * we must provide a fake "is ready for readign" status if we have data inside our
  * buffer. -- rgerhards, 2008-06-23
  */
-static rsRetVal
-Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr, unsigned *const nextIODirection)
-{
-	DEFiRet;
-	ssize_t iBytesCopy; /* how many bytes are to be copied to the client buffer? */
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
-	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+static rsRetVal Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr, unsigned *const nextIODirection) {
+    DEFiRet;
+    ssize_t iBytesCopy; /* how many bytes are to be copied to the client buffer? */
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-	if(pThis->bAbortConn)
-		ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
+    if (pThis->bAbortConn) ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
 
-	if(pThis->iMode == 0) {
-		CHKiRet(nsd_ptcp.Rcv(pThis->pTcp, pBuf, pLenBuf, oserr, nextIODirection));
-		FINALIZE;
-	}
+    if (pThis->iMode == 0) {
+        CHKiRet(nsd_ptcp.Rcv(pThis->pTcp, pBuf, pLenBuf, oserr, nextIODirection));
+        FINALIZE;
+    }
 
-	/* --- in TLS mode now --- */
-	if(pThis->rtryCall == gtlsRtry_handshake) {
-		/* note: we are in receive, so we acually will retry receive in any case */
-		DBGPRINTF("need to do retry handshake\n");
-		CHKiRet(doRetry(pThis));
-		ABORT_FINALIZE(RS_RET_RETRY);
-	}
+    /* --- in TLS mode now --- */
+    if (pThis->rtryCall == gtlsRtry_handshake) {
+        /* note: we are in receive, so we acually will retry receive in any case */
+        DBGPRINTF("need to do retry handshake\n");
+        CHKiRet(doRetry(pThis));
+        ABORT_FINALIZE(RS_RET_RETRY);
+    }
 
-	/* Buffer logic applies only if we are in TLS mode. Here we
-	 * assume that we will switch from plain to TLS, but never back. This
-	 * assumption may be unsafe, but it is the model for the time being and I
-	 * do not see any valid reason why we should switch back to plain TCP after
-	 * we were in TLS mode. However, in that case we may lose something that
-	 * is already in the receive buffer ... risk accepted. -- rgerhards, 2008-06-23
-	 */
+    /* Buffer logic applies only if we are in TLS mode. Here we
+     * assume that we will switch from plain to TLS, but never back. This
+     * assumption may be unsafe, but it is the model for the time being and I
+     * do not see any valid reason why we should switch back to plain TCP after
+     * we were in TLS mode. However, in that case we may lose something that
+     * is already in the receive buffer ... risk accepted. -- rgerhards, 2008-06-23
+     */
 
-	if(pThis->pszRcvBuf == NULL) {
-		/* we have no buffer, so we need to malloc one */
-		CHKmalloc(pThis->pszRcvBuf = malloc(NSD_GTLS_MAX_RCVBUF));
-		pThis->lenRcvBuf = -1;
-	}
+    if (pThis->pszRcvBuf == NULL) {
+        /* we have no buffer, so we need to malloc one */
+        CHKmalloc(pThis->pszRcvBuf = malloc(NSD_GTLS_MAX_RCVBUF));
+        pThis->lenRcvBuf = -1;
+    }
 
-	/* now check if we have something in our buffer. If so, we satisfy
-	 * the request from buffer contents.
-	 */
-	if(pThis->lenRcvBuf == -1) { /* no data present, must read */
-		CHKiRet(gtlsRecordRecv(pThis, nextIODirection));
-	}
+    /* now check if we have something in our buffer. If so, we satisfy
+     * the request from buffer contents.
+     */
+    if (pThis->lenRcvBuf == -1) { /* no data present, must read */
+        CHKiRet(gtlsRecordRecv(pThis, nextIODirection));
+    }
 
-	if(pThis->lenRcvBuf == 0) { /* EOS */
-		*oserr = errno;
-		ABORT_FINALIZE(RS_RET_CLOSED);
-	}
+    if (pThis->lenRcvBuf == 0) { /* EOS */
+        *oserr = errno;
+        ABORT_FINALIZE(RS_RET_CLOSED);
+    }
 
-	/* if we reach this point, data is present in the buffer and must be copied */
-	iBytesCopy = pThis->lenRcvBuf - pThis->ptrRcvBuf;
-	if(iBytesCopy > *pLenBuf) {
-		iBytesCopy = *pLenBuf;
-	} else {
-		pThis->lenRcvBuf = -1; /* buffer will be emptied below */
-	}
+    /* if we reach this point, data is present in the buffer and must be copied */
+    iBytesCopy = pThis->lenRcvBuf - pThis->ptrRcvBuf;
+    if (iBytesCopy > *pLenBuf) {
+        iBytesCopy = *pLenBuf;
+    } else {
+        pThis->lenRcvBuf = -1; /* buffer will be emptied below */
+    }
 
-	memcpy(pBuf, pThis->pszRcvBuf + pThis->ptrRcvBuf, iBytesCopy);
-	pThis->ptrRcvBuf += iBytesCopy;
-	*pLenBuf = iBytesCopy;
+    memcpy(pBuf, pThis->pszRcvBuf + pThis->ptrRcvBuf, iBytesCopy);
+    pThis->ptrRcvBuf += iBytesCopy;
+    *pLenBuf = iBytesCopy;
 
 finalize_it:
-	if (iRet != RS_RET_OK && iRet != RS_RET_RETRY) {
-		/* We need to free the receive buffer in error error case unless a retry is wanted. , if we
-		 * allocated one. -- rgerhards, 2008-12-03 -- moved here by alorbach, 2015-12-01
-		 */
-		*pLenBuf = 0;
-		free(pThis->pszRcvBuf);
-		pThis->pszRcvBuf = NULL;
-	}
-	dbgprintf("gtlsRcv return. nsd %p, iRet %d, lenRcvBuf %d, ptrRcvBuf %d\n", pThis,
-	iRet, pThis->lenRcvBuf, pThis->ptrRcvBuf);
-	RETiRet;
+    if (iRet != RS_RET_OK && iRet != RS_RET_RETRY) {
+        /* We need to free the receive buffer in error error case unless a retry is wanted. , if we
+         * allocated one. -- rgerhards, 2008-12-03 -- moved here by alorbach, 2015-12-01
+         */
+        *pLenBuf = 0;
+        free(pThis->pszRcvBuf);
+        pThis->pszRcvBuf = NULL;
+    }
+    dbgprintf("gtlsRcv return. nsd %p, iRet %d, lenRcvBuf %d, ptrRcvBuf %d\n", pThis, iRet, pThis->lenRcvBuf,
+              pThis->ptrRcvBuf);
+    RETiRet;
 }
 
 
@@ -2208,85 +2091,79 @@ finalize_it:
  * been written.
  * rgerhards, 2008-03-19
  */
-static rsRetVal
-Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf)
-{
-	int iSent;
-	int wantsWriteData = 0;
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, nsd_gtls);
+static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
+    int iSent;
+    int wantsWriteData = 0;
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, nsd_gtls);
 
-	if(pThis->rtryCall == gtlsRtry_recv) {
-		CHKiRet(doRetry(pThis));
-		FINALIZE;
-	}
-	if(pThis->bAbortConn)
-		ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
+    if (pThis->rtryCall == gtlsRtry_recv) {
+        CHKiRet(doRetry(pThis));
+        FINALIZE;
+    }
+    if (pThis->bAbortConn) ABORT_FINALIZE(RS_RET_CONNECTION_ABORTREQ);
 
-	if(pThis->iMode == 0) {
-		CHKiRet(nsd_ptcp.Send(pThis->pTcp, pBuf, pLenBuf));
-		FINALIZE;
-	}
+    if (pThis->iMode == 0) {
+        CHKiRet(nsd_ptcp.Send(pThis->pTcp, pBuf, pLenBuf));
+        FINALIZE;
+    }
 
-	while(1) { /* loop broken inside */
-		iSent = gnutls_record_send(pThis->sess, pBuf, *pLenBuf);
-		if(iSent >= 0) {
-			*pLenBuf = iSent;
-			break;
-		}
-		if(iSent != GNUTLS_E_INTERRUPTED && iSent != GNUTLS_E_AGAIN) {
-			/* Check if the underlaying file descriptor needs to read or write data!*/
-			wantsWriteData = gnutls_record_get_direction(pThis->sess);
-			uchar *pErr = gtlsStrerror(iSent);
-			LogError(0, RS_RET_GNUTLS_ERR, "unexpected GnuTLS error %d, wantsWriteData=%d - this "
-				"could be caused by a broken connection. GnuTLS reports: %s\n",
-				iSent, wantsWriteData, pErr);
-			free(pErr);
-			gnutls_perror(iSent);
-			ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
-		}
-	}
+    while (1) { /* loop broken inside */
+        iSent = gnutls_record_send(pThis->sess, pBuf, *pLenBuf);
+        if (iSent >= 0) {
+            *pLenBuf = iSent;
+            break;
+        }
+        if (iSent != GNUTLS_E_INTERRUPTED && iSent != GNUTLS_E_AGAIN) {
+            /* Check if the underlaying file descriptor needs to read or write data!*/
+            wantsWriteData = gnutls_record_get_direction(pThis->sess);
+            uchar *pErr = gtlsStrerror(iSent);
+            LogError(0, RS_RET_GNUTLS_ERR,
+                     "unexpected GnuTLS error %d, wantsWriteData=%d - this "
+                     "could be caused by a broken connection. GnuTLS reports: %s\n",
+                     iSent, wantsWriteData, pErr);
+            free(pErr);
+            gnutls_perror(iSent);
+            ABORT_FINALIZE(RS_RET_GNUTLS_ERR);
+        }
+    }
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* Enable KEEPALIVE handling on the socket.
  * rgerhards, 2009-06-02
  */
-static rsRetVal
-EnableKeepAlive(nsd_t *pNsd)
-{
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
-	ISOBJ_TYPE_assert(pThis, nsd_gtls);
-	return nsd_ptcp.EnableKeepAlive(pThis->pTcp);
+static rsRetVal EnableKeepAlive(nsd_t *pNsd) {
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    ISOBJ_TYPE_assert(pThis, nsd_gtls);
+    return nsd_ptcp.EnableKeepAlive(pThis->pTcp);
 }
 
 
 /*
  * SNI should not be used if the hostname is a bare IP address
  */
-static int
-SetServerNameIfPresent(nsd_gtls_t *pThis, uchar *host) {
-	struct sockaddr_in sa;
-	struct sockaddr_in6 sa6;
+static int SetServerNameIfPresent(nsd_gtls_t *pThis, uchar *host) {
+    struct sockaddr_in sa;
+    struct sockaddr_in6 sa6;
 
-	int inet_pton_ret = inet_pton(AF_INET, CHAR_CONVERT(host), &(sa.sin_addr));
+    int inet_pton_ret = inet_pton(AF_INET, CHAR_CONVERT(host), &(sa.sin_addr));
 
-	if (inet_pton_ret == 0) { // host wasn't a bare IPv4 address: try IPv6
-		inet_pton_ret = inet_pton(AF_INET6, CHAR_CONVERT(host), &(sa6.sin6_addr));
-	}
+    if (inet_pton_ret == 0) {  // host wasn't a bare IPv4 address: try IPv6
+        inet_pton_ret = inet_pton(AF_INET6, CHAR_CONVERT(host), &(sa6.sin6_addr));
+    }
 
-	switch(inet_pton_ret) {
-		case 1: // host is a valid IP address: don't use SNI
-			return 0;
-		case 0: // host isn't a valid IP address: assume it's a domain name, use SNI
-			return gnutls_server_name_set(pThis->sess, GNUTLS_NAME_DNS, host, ustrlen(host));
-		default: // unexpected error
-			return -1;
-	}
-
+    switch (inet_pton_ret) {
+        case 1:  // host is a valid IP address: don't use SNI
+            return 0;
+        case 0:  // host isn't a valid IP address: assume it's a domain name, use SNI
+            return gnutls_server_name_set(pThis->sess, GNUTLS_NAME_DNS, host, ustrlen(host));
+        default:  // unexpected error
+            return -1;
+    }
 }
 
 /* open a connection to a remote host (server). With GnuTLS, we always
@@ -2295,197 +2172,196 @@ SetServerNameIfPresent(nsd_gtls_t *pThis, uchar *host) {
  */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations" /* TODO: FIX Warnings! */
-static rsRetVal
-Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
-{
-	nsd_gtls_t *pThis = (nsd_gtls_t*) pNsd;
-	int sock;
-	int gnuRet;
-	const char *error_position;
-#	ifdef HAVE_GNUTLS_CERTIFICATE_TYPE_SET_PRIORITY
-	static const int cert_type_priority[2] = { GNUTLS_CRT_X509, 0 };
-#	endif
-	DEFiRet;
-	dbgprintf("Connect to %s:%s\n", host, port);
+static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device) {
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+    int sock;
+    int gnuRet;
+    const char *error_position;
+#ifdef HAVE_GNUTLS_CERTIFICATE_TYPE_SET_PRIORITY
+    static const int cert_type_priority[2] = {GNUTLS_CRT_X509, 0};
+#endif
+    DEFiRet;
+    dbgprintf("Connect to %s:%s\n", host, port);
 
-	ISOBJ_TYPE_assert(pThis, nsd_gtls);
-	assert(port != NULL);
-	assert(host != NULL);
+    ISOBJ_TYPE_assert(pThis, nsd_gtls);
+    assert(port != NULL);
+    assert(host != NULL);
 
-	CHKiRet(gtlsInitCred(pThis));
-	CHKiRet(gtlsAddOurCert(pThis));
-	CHKiRet(nsd_ptcp.Connect(pThis->pTcp, family, port, host, device));
+    CHKiRet(gtlsInitCred(pThis));
+    CHKiRet(gtlsAddOurCert(pThis));
+    CHKiRet(nsd_ptcp.Connect(pThis->pTcp, family, port, host, device));
 
-	if(pThis->iMode == 0)
-		FINALIZE;
+    if (pThis->iMode == 0) FINALIZE;
 
-	/* we reach this point if in TLS mode */
-	CHKgnutls(gnutls_init(&pThis->sess, GNUTLS_CLIENT));
-	pThis->bHaveSess = 1;
-	pThis->bIsInitiator = 1;
+    /* we reach this point if in TLS mode */
+    CHKgnutls(gnutls_init(&pThis->sess, GNUTLS_CLIENT));
+    pThis->bHaveSess = 1;
+    pThis->bIsInitiator = 1;
 
-	CHKgnutls(SetServerNameIfPresent(pThis, host));
+    CHKgnutls(SetServerNameIfPresent(pThis, host));
 
-	/* in the client case, we need to set a callback that ensures our certificate
-	 * will be presented to the server even if it is not signed by one of the server's
-	 * trusted roots. This is necessary to support fingerprint authentication.
-	 */
-	/* store a pointer to ourselfs (needed by callback) */
-	gnutls_session_set_ptr(pThis->sess, (void*)pThis);
-	iRet = gtlsLoadOurCertKey(pThis); /* first load .pem files */
-	if(iRet == RS_RET_OK) {
-#		if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION
-		gnutls_certificate_set_retrieve_function(pThis->xcred, gtlsClientCertCallback);
-#		else
-		gnutls_certificate_client_set_retrieve_function(pThis->xcred, gtlsClientCertCallback);
-#		endif
-		dbgprintf("Connect: enable certificate checking (VerifyDepth=%d)\n", pThis->DrvrVerifyDepth);
-		if (pThis->DrvrVerifyDepth != 0) {
-			gnutls_certificate_set_verify_limits(pThis->xcred, 8200, pThis->DrvrVerifyDepth);
-		}
-	} else if(iRet == RS_RET_CERTLESS) {
-		dbgprintf("Connect: certificates not configured, not loaded.\n");
-	} else {
-		LogError(0, iRet, "Connect failed to INIT Session %d", gnuRet);
-		ABORT_FINALIZE(iRet);; /* we have an error case! */
-	}
+    /* in the client case, we need to set a callback that ensures our certificate
+     * will be presented to the server even if it is not signed by one of the server's
+     * trusted roots. This is necessary to support fingerprint authentication.
+     */
+    /* store a pointer to ourselfs (needed by callback) */
+    gnutls_session_set_ptr(pThis->sess, (void *)pThis);
+    iRet = gtlsLoadOurCertKey(pThis); /* first load .pem files */
+    if (iRet == RS_RET_OK) {
+#if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION
+        gnutls_certificate_set_retrieve_function(pThis->xcred, gtlsClientCertCallback);
+#else
+        gnutls_certificate_client_set_retrieve_function(pThis->xcred, gtlsClientCertCallback);
+#endif
+        dbgprintf("Connect: enable certificate checking (VerifyDepth=%d)\n", pThis->DrvrVerifyDepth);
+        if (pThis->DrvrVerifyDepth != 0) {
+            gnutls_certificate_set_verify_limits(pThis->xcred, 8200, pThis->DrvrVerifyDepth);
+        }
+    } else if (iRet == RS_RET_CERTLESS) {
+        dbgprintf("Connect: certificates not configured, not loaded.\n");
+    } else {
+        LogError(0, iRet, "Connect failed to INIT Session %d", gnuRet);
+        ABORT_FINALIZE(iRet);
+        ; /* we have an error case! */
+    }
 
-	/*priority string setzen*/
-	if(pThis->gnutlsPriorityString != NULL) {
-		dbgprintf("Connect: setting configured priority string (ciphers)\n");
-		if(gnutls_priority_set_direct(pThis->sess,
-					(const char*) pThis->gnutlsPriorityString,
-					&error_position)==GNUTLS_E_INVALID_REQUEST) {
-			LogError(0, RS_RET_GNUTLS_ERR, "Syntax Error in"
-					" Priority String: \"%s\"\n", error_position);
-		}
-	} else {
-		if(pThis->authMode == GTLS_AUTH_CERTANON || pThis->bOurCertIsInit == 0) {
-			/* Allow ANON Ciphers */
-			dbgprintf("Connect: setting anon ciphers Try1: %s\n", GTLS_ANON_PRIO_NOTLSV13);
-			if(gnutls_priority_set_direct(pThis->sess,(const char*) GTLS_ANON_PRIO_NOTLSV13,
-				&error_position)==GNUTLS_E_INVALID_REQUEST) {
-				dbgprintf("Connect: setting anon ciphers Try2 (TLS1.3 unknown): %s\n", GTLS_ANON_PRIO);
-				CHKgnutls(gnutls_priority_set_direct(pThis->sess, GTLS_ANON_PRIO, &error_position));
-			}
-			/* Uncomment for DEBUG
-			print_cipher_suite_list("NORMAL:+ANON-DH:+ANON-ECDH:+COMP-ALL"); */
-		} else {
-			/* Use default priorities */
-			dbgprintf("Connect: setting default ciphers\n");
-			CHKgnutls(gnutls_set_default_priority(pThis->sess));
-		}
-	}
+    /*priority string setzen*/
+    if (pThis->gnutlsPriorityString != NULL) {
+        dbgprintf("Connect: setting configured priority string (ciphers)\n");
+        if (gnutls_priority_set_direct(pThis->sess, (const char *)pThis->gnutlsPriorityString, &error_position) ==
+            GNUTLS_E_INVALID_REQUEST) {
+            LogError(0, RS_RET_GNUTLS_ERR,
+                     "Syntax Error in"
+                     " Priority String: \"%s\"\n",
+                     error_position);
+        }
+    } else {
+        if (pThis->authMode == GTLS_AUTH_CERTANON || pThis->bOurCertIsInit == 0) {
+            /* Allow ANON Ciphers */
+            dbgprintf("Connect: setting anon ciphers Try1: %s\n", GTLS_ANON_PRIO_NOTLSV13);
+            if (gnutls_priority_set_direct(pThis->sess, (const char *)GTLS_ANON_PRIO_NOTLSV13, &error_position) ==
+                GNUTLS_E_INVALID_REQUEST) {
+                dbgprintf("Connect: setting anon ciphers Try2 (TLS1.3 unknown): %s\n", GTLS_ANON_PRIO);
+                CHKgnutls(gnutls_priority_set_direct(pThis->sess, GTLS_ANON_PRIO, &error_position));
+            }
+            /* Uncomment for DEBUG
+            print_cipher_suite_list("NORMAL:+ANON-DH:+ANON-ECDH:+COMP-ALL"); */
+        } else {
+            /* Use default priorities */
+            dbgprintf("Connect: setting default ciphers\n");
+            CHKgnutls(gnutls_set_default_priority(pThis->sess));
+        }
+    }
 
-#	ifdef HAVE_GNUTLS_CERTIFICATE_TYPE_SET_PRIORITY
-	/* The gnutls_certificate_type_set_priority function is deprecated
-	 * and not available in recent GnuTLS versions. However, there is no
-	 * doc how to properly replace it with gnutls_priority_set_direct.
-	 * A lot of folks have simply removed it, when they also called
-	 * gnutls_set_default_priority. This is what we now also do. If
-	 * this causes problems or someone has an idea of how to replace
-	 * the deprecated function in a better way, please let us know!
-	 * In any case, we use it as long as it is available and let
-	 * not insult us by the deprecation warnings.
-	 * 2015-05-18 rgerhards
-	 */
-	CHKgnutls(gnutls_certificate_type_set_priority(pThis->sess, cert_type_priority));
-#	endif
+#ifdef HAVE_GNUTLS_CERTIFICATE_TYPE_SET_PRIORITY
+    /* The gnutls_certificate_type_set_priority function is deprecated
+     * and not available in recent GnuTLS versions. However, there is no
+     * doc how to properly replace it with gnutls_priority_set_direct.
+     * A lot of folks have simply removed it, when they also called
+     * gnutls_set_default_priority. This is what we now also do. If
+     * this causes problems or someone has an idea of how to replace
+     * the deprecated function in a better way, please let us know!
+     * In any case, we use it as long as it is available and let
+     * not insult us by the deprecation warnings.
+     * 2015-05-18 rgerhards
+     */
+    CHKgnutls(gnutls_certificate_type_set_priority(pThis->sess, cert_type_priority));
+#endif
 
-	/* put the x509 credentials to the current session */
-	CHKgnutls(gnutls_credentials_set(pThis->sess, GNUTLS_CRD_CERTIFICATE, pThis->xcred));
+    /* put the x509 credentials to the current session */
+    CHKgnutls(gnutls_credentials_set(pThis->sess, GNUTLS_CRD_CERTIFICATE, pThis->xcred));
 
-	/* check for anon authmode */
-	if (pThis->authMode == GTLS_AUTH_CERTANON) {
-		dbgprintf("Connect: anon authmode, gnutls_credentials_set GNUTLS_CRD_ANON\n");
-		CHKgnutls(gnutls_credentials_set(pThis->sess, GNUTLS_CRD_ANON, anoncred));
-		gnutls_dh_set_prime_bits(pThis->sess, dhMinBits);
-	}
+    /* check for anon authmode */
+    if (pThis->authMode == GTLS_AUTH_CERTANON) {
+        dbgprintf("Connect: anon authmode, gnutls_credentials_set GNUTLS_CRD_ANON\n");
+        CHKgnutls(gnutls_credentials_set(pThis->sess, GNUTLS_CRD_ANON, anoncred));
+        gnutls_dh_set_prime_bits(pThis->sess, dhMinBits);
+    }
 
-	CHKiRet(nsd_ptcp.GetSock(pThis->pTcp, &sock));
+    CHKiRet(nsd_ptcp.GetSock(pThis->pTcp, &sock));
 
-	/* assign the socket to GnuTls */
-	gtlsSetTransportPtr(pThis, sock);
+    /* assign the socket to GnuTls */
+    gtlsSetTransportPtr(pThis, sock);
 
 
-	/* we need to store the hostname as an alternate mean of authentication if no
-	 * permitted peer names are given. Using the hostname is quite useful. It permits
-	 * auto-configuration of security if a commen root cert is present. -- rgerhards, 2008-05-26
-	 */
-	CHKmalloc(pThis->pszConnectHost = (uchar*)strdup((char*)host));
+    /* we need to store the hostname as an alternate mean of authentication if no
+     * permitted peer names are given. Using the hostname is quite useful. It permits
+     * auto-configuration of security if a commen root cert is present. -- rgerhards, 2008-05-26
+     */
+    CHKmalloc(pThis->pszConnectHost = (uchar *)strdup((char *)host));
 
-	/* and perform the handshake */
-	gnutls_handshake_set_timeout(pThis->sess, 3000);
-	CHKgnutls(gnutls_handshake(pThis->sess));
-	dbgprintf("GnuTLS handshake succeeded\n");
+    /* and perform the handshake */
+    gnutls_handshake_set_timeout(pThis->sess, 3000);
+    CHKgnutls(gnutls_handshake(pThis->sess));
+    dbgprintf("GnuTLS handshake succeeded\n");
 
-	/* now check if the remote peer is permitted to talk to us - ideally, we
-	 * should do this during the handshake, but GnuTLS does not yet provide
-	 * the necessary callbacks -- rgerhards, 2008-05-26
-	 */
-	CHKiRet(gtlsChkPeerAuth(pThis));
+    /* now check if the remote peer is permitted to talk to us - ideally, we
+     * should do this during the handshake, but GnuTLS does not yet provide
+     * the necessary callbacks -- rgerhards, 2008-05-26
+     */
+    CHKiRet(gtlsChkPeerAuth(pThis));
 
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pThis->bHaveSess) {
-			gnutls_deinit(pThis->sess);
-			pThis->bHaveSess = 0;
-			/* Free memory using gnutls api first*/
-			gnutls_certificate_free_credentials(pThis->xcred);
-			pThis->xcred = NULL;
-			/* Free other memory */
-			free(pThis->pszConnectHost);
-			pThis->pszConnectHost = NULL;
-		}
-	}
+    if (iRet != RS_RET_OK) {
+        if (pThis->bHaveSess) {
+            gnutls_deinit(pThis->sess);
+            pThis->bHaveSess = 0;
+            /* Free memory using gnutls api first*/
+            gnutls_certificate_free_credentials(pThis->xcred);
+            pThis->xcred = NULL;
+            /* Free other memory */
+            free(pThis->pszConnectHost);
+            pThis->pszConnectHost = NULL;
+        }
+    }
 
-	RETiRet;
+    RETiRet;
 }
 #pragma GCC diagnostic pop
 
 
 /* queryInterface function */
 BEGINobjQueryInterface(nsd_gtls)
-CODESTARTobjQueryInterface(nsd_gtls);
-	if(pIf->ifVersion != nsdCURR_IF_VERSION) {/* check for current version, increment on each change */
-		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
-	}
+    CODESTARTobjQueryInterface(nsd_gtls);
+    if (pIf->ifVersion != nsdCURR_IF_VERSION) { /* check for current version, increment on each change */
+        ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+    }
 
-	/* ok, we have the right interface, so let's fill it
-	 * Please note that we may also do some backwards-compatibility
-	 * work here (if we can support an older interface version - that,
-	 * of course, also affects the "if" above).
-	 */
-	pIf->Construct = (rsRetVal(*)(nsd_t**)) nsd_gtlsConstruct;
-	pIf->Destruct = (rsRetVal(*)(nsd_t**)) nsd_gtlsDestruct;
-	pIf->Abort = Abort;
-	pIf->LstnInit = LstnInit;
-	pIf->AcceptConnReq = AcceptConnReq;
-	pIf->Rcv = Rcv;
-	pIf->Send = Send;
-	pIf->Connect = Connect;
-	pIf->GetSock = GetSock;
-	pIf->SetSock = SetSock;
-	pIf->SetMode = SetMode;
-	pIf->SetAuthMode = SetAuthMode;
-	pIf->SetPermitExpiredCerts = SetPermitExpiredCerts;
-	pIf->SetPermPeers =SetPermPeers;
-	pIf->CheckConnection = CheckConnection;
-	pIf->GetRemoteHName = GetRemoteHName;
-	pIf->GetRemoteIP = GetRemoteIP;
-	pIf->GetRemAddr = GetRemAddr;
-	pIf->EnableKeepAlive = EnableKeepAlive;
-	pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
-	pIf->SetKeepAliveProbes = SetKeepAliveProbes;
-	pIf->SetKeepAliveTime = SetKeepAliveTime;
-	pIf->SetGnutlsPriorityString = SetGnutlsPriorityString;
-	pIf->SetCheckExtendedKeyUsage = SetCheckExtendedKeyUsage;
-	pIf->SetPrioritizeSAN = SetPrioritizeSAN;
-	pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
-	pIf->SetTlsCAFile = SetTlsCAFile;
-	pIf->SetTlsCRLFile = SetTlsCRLFile;
-	pIf->SetTlsKeyFile = SetTlsKeyFile;
-	pIf->SetTlsCertFile = SetTlsCertFile;
+    /* ok, we have the right interface, so let's fill it
+     * Please note that we may also do some backwards-compatibility
+     * work here (if we can support an older interface version - that,
+     * of course, also affects the "if" above).
+     */
+    pIf->Construct = (rsRetVal(*)(nsd_t **))nsd_gtlsConstruct;
+    pIf->Destruct = (rsRetVal(*)(nsd_t **))nsd_gtlsDestruct;
+    pIf->Abort = Abort;
+    pIf->LstnInit = LstnInit;
+    pIf->AcceptConnReq = AcceptConnReq;
+    pIf->Rcv = Rcv;
+    pIf->Send = Send;
+    pIf->Connect = Connect;
+    pIf->GetSock = GetSock;
+    pIf->SetSock = SetSock;
+    pIf->SetMode = SetMode;
+    pIf->SetAuthMode = SetAuthMode;
+    pIf->SetPermitExpiredCerts = SetPermitExpiredCerts;
+    pIf->SetPermPeers = SetPermPeers;
+    pIf->CheckConnection = CheckConnection;
+    pIf->GetRemoteHName = GetRemoteHName;
+    pIf->GetRemoteIP = GetRemoteIP;
+    pIf->GetRemAddr = GetRemAddr;
+    pIf->EnableKeepAlive = EnableKeepAlive;
+    pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
+    pIf->SetKeepAliveProbes = SetKeepAliveProbes;
+    pIf->SetKeepAliveTime = SetKeepAliveTime;
+    pIf->SetGnutlsPriorityString = SetGnutlsPriorityString;
+    pIf->SetCheckExtendedKeyUsage = SetCheckExtendedKeyUsage;
+    pIf->SetPrioritizeSAN = SetPrioritizeSAN;
+    pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
+    pIf->SetTlsCAFile = SetTlsCAFile;
+    pIf->SetTlsCRLFile = SetTlsCRLFile;
+    pIf->SetTlsKeyFile = SetTlsKeyFile;
+    pIf->SetTlsCertFile = SetTlsCertFile;
 
 finalize_it:
 ENDobjQueryInterface(nsd_gtls)
@@ -2494,14 +2370,14 @@ ENDobjQueryInterface(nsd_gtls)
 /* exit our class
  */
 BEGINObjClassExit(nsd_gtls, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(nsd_gtls);
-	gtlsGlblExit();	/* shut down GnuTLS */
+    CODESTARTObjClassExit(nsd_gtls);
+    gtlsGlblExit(); /* shut down GnuTLS */
 
-	/* release objects we no longer need */
-	objRelease(nsd_ptcp, LM_NSD_PTCP_FILENAME);
-	objRelease(net, LM_NET_FILENAME);
-	objRelease(glbl, CORE_COMPONENT);
-	objRelease(datetime, CORE_COMPONENT);
+    /* release objects we no longer need */
+    objRelease(nsd_ptcp, LM_NSD_PTCP_FILENAME);
+    objRelease(net, LM_NET_FILENAME);
+    objRelease(glbl, CORE_COMPONENT);
+    objRelease(datetime, CORE_COMPONENT);
 ENDObjClassExit(nsd_gtls)
 
 
@@ -2510,14 +2386,14 @@ ENDObjClassExit(nsd_gtls)
  * rgerhards, 2008-02-19
  */
 BEGINObjClassInit(nsd_gtls, 1, OBJ_IS_LOADABLE_MODULE) /* class, version */
-	/* request objects we use */
-	CHKiRet(objUse(datetime, CORE_COMPONENT));
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(net, LM_NET_FILENAME));
-	CHKiRet(objUse(nsd_ptcp, LM_NSD_PTCP_FILENAME));
+    /* request objects we use */
+    CHKiRet(objUse(datetime, CORE_COMPONENT));
+    CHKiRet(objUse(glbl, CORE_COMPONENT));
+    CHKiRet(objUse(net, LM_NET_FILENAME));
+    CHKiRet(objUse(nsd_ptcp, LM_NSD_PTCP_FILENAME));
 
-	/* now do global TLS init stuff */
-	CHKiRet(gtlsGlblInit());
+    /* now do global TLS init stuff */
+    CHKiRet(gtlsGlblInit());
 ENDObjClassInit(nsd_gtls)
 
 
@@ -2525,24 +2401,24 @@ ENDObjClassInit(nsd_gtls)
 
 
 BEGINmodExit
-CODESTARTmodExit;
-	nsd_gtlsClassExit();
-	pthread_mutex_destroy(&mutGtlsStrerror);
+    CODESTARTmodExit;
+    nsd_gtlsClassExit();
+    pthread_mutex_destroy(&mutGtlsStrerror);
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt;
-CODEqueryEtryPt_STD_LIB_QUERIES;
+    CODESTARTqueryEtryPt;
+    CODEqueryEtryPt_STD_LIB_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit;
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    CODESTARTmodInit;
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
-	/* Initialize all classes that are in our module - this includes ourselfs */
-	CHKiRet(nsd_gtlsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
+    /* Initialize all classes that are in our module - this includes ourselfs */
+    CHKiRet(nsd_gtlsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 
-	pthread_mutex_init(&mutGtlsStrerror, NULL);
+    pthread_mutex_init(&mutGtlsStrerror, NULL);
 ENDmodInit

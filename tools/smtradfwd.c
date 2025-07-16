@@ -58,85 +58,82 @@ DEF_SMOD_STATIC_DATA;
  * finally copy, we know exactly what we need. So we do at most one alloc.
  */
 BEGINstrgen
-	register int iBuf;
-	const char *pPRI;
-	size_t lenPRI;
-	uchar *pTimeStamp;
-	uchar *pHOSTNAME;
-	size_t lenHOSTNAME;
-	uchar *pTAG;
-	int lenTAG;
-	uchar *pMSG;
-	size_t lenMSG;
-	size_t lenTotal;
-CODESTARTstrgen;
-	/* first obtain all strings and their length (if not fixed) */
-	pPRI = getPRI(pMsg);
-	lenPRI = strlen(pPRI);
-	pTimeStamp = (uchar*) getTimeReported(pMsg, tplFmtRFC3164Date);
-	pHOSTNAME = (uchar*) getHOSTNAME(pMsg);
-	lenHOSTNAME = getHOSTNAMELen(pMsg);
-	getTAG(pMsg, &pTAG, &lenTAG, LOCK_MUTEX);
-	if(lenTAG > 32)
-		lenTAG = 32; /* for forwarding, a max of 32 chars is permitted (RFC!) */
-	pMSG = getMSG(pMsg);
-	lenMSG = getMSGLen(pMsg);
+    register int iBuf;
+    const char *pPRI;
+    size_t lenPRI;
+    uchar *pTimeStamp;
+    uchar *pHOSTNAME;
+    size_t lenHOSTNAME;
+    uchar *pTAG;
+    int lenTAG;
+    uchar *pMSG;
+    size_t lenMSG;
+    size_t lenTotal;
+    CODESTARTstrgen;
+    /* first obtain all strings and their length (if not fixed) */
+    pPRI = getPRI(pMsg);
+    lenPRI = strlen(pPRI);
+    pTimeStamp = (uchar *)getTimeReported(pMsg, tplFmtRFC3164Date);
+    pHOSTNAME = (uchar *)getHOSTNAME(pMsg);
+    lenHOSTNAME = getHOSTNAMELen(pMsg);
+    getTAG(pMsg, &pTAG, &lenTAG, LOCK_MUTEX);
+    if (lenTAG > 32) lenTAG = 32; /* for forwarding, a max of 32 chars is permitted (RFC!) */
+    pMSG = getMSG(pMsg);
+    lenMSG = getMSGLen(pMsg);
 
-	/* calculate len, constants for spaces and similar fixed strings */
-	lenTotal = 1 + lenPRI + 1 + CONST_LEN_TIMESTAMP_3164 + 1 + lenHOSTNAME + 1 + lenTAG + lenMSG + 1;
-	if(pMSG[0] != ' ')
-		++lenTotal; /* then we need to introduce one additional space */
+    /* calculate len, constants for spaces and similar fixed strings */
+    lenTotal = 1 + lenPRI + 1 + CONST_LEN_TIMESTAMP_3164 + 1 + lenHOSTNAME + 1 + lenTAG + lenMSG + 1;
+    if (pMSG[0] != ' ') ++lenTotal; /* then we need to introduce one additional space */
 
-	/* now make sure buffer is large enough */
-	if(lenTotal  >= iparam->lenBuf)
-		CHKiRet(ExtendBuf(iparam, lenTotal));
+    /* now make sure buffer is large enough */
+    if (lenTotal >= iparam->lenBuf) CHKiRet(ExtendBuf(iparam, lenTotal));
 
-	/* and concatenate the resulting string */
-	iparam->param[0] = '<';
-	memcpy(iparam->param + 1, pPRI, lenPRI);
-	iBuf = lenPRI + 1;
-	iparam->param[iBuf++] = '>';
+    /* and concatenate the resulting string */
+    iparam->param[0] = '<';
+    memcpy(iparam->param + 1, pPRI, lenPRI);
+    iBuf = lenPRI + 1;
+    iparam->param[iBuf++] = '>';
 
-	memcpy(iparam->param + iBuf, pTimeStamp, CONST_LEN_TIMESTAMP_3164);
-	iBuf += CONST_LEN_TIMESTAMP_3164;
-	iparam->param[iBuf++] = ' ';
+    memcpy(iparam->param + iBuf, pTimeStamp, CONST_LEN_TIMESTAMP_3164);
+    iBuf += CONST_LEN_TIMESTAMP_3164;
+    iparam->param[iBuf++] = ' ';
 
-	memcpy(iparam->param + iBuf, pHOSTNAME, lenHOSTNAME);
-	iBuf += lenHOSTNAME;
-	iparam->param[iBuf++] = ' ';
+    memcpy(iparam->param + iBuf, pHOSTNAME, lenHOSTNAME);
+    iBuf += lenHOSTNAME;
+    iparam->param[iBuf++] = ' ';
 
-	memcpy(iparam->param + iBuf, pTAG, lenTAG);
-	iBuf += lenTAG;
+    memcpy(iparam->param + iBuf, pTAG, lenTAG);
+    iBuf += lenTAG;
 
-	if(pMSG[0] != ' ')
-		iparam->param[iBuf++] = ' ';
-	memcpy(iparam->param + iBuf, pMSG, lenMSG);
-	iBuf += lenMSG;
+    if (pMSG[0] != ' ') iparam->param[iBuf++] = ' ';
+    memcpy(iparam->param + iBuf, pMSG, lenMSG);
+    iBuf += lenMSG;
 
-	/* string terminator */
-	iparam->param[iBuf] = '\0';
+    /* string terminator */
+    iparam->param[iBuf] = '\0';
 
-	iparam->lenStr = lenTotal - 1; /* do not count \0! */
+    iparam->lenStr = lenTotal - 1; /* do not count \0! */
 
 finalize_it:
 ENDstrgen
 
 
 BEGINmodExit
-CODESTARTmodExit;
+    CODESTARTmodExit;
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt;
-CODEqueryEtryPt_STD_SMOD_QUERIES;
+    CODESTARTqueryEtryPt;
+    CODEqueryEtryPt_STD_SMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit(smtradfwd)
-CODESTARTmodInit;
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	dbgprintf("rsyslog traditional (network) forward format strgen init called, compiled with "
-		"version %s\n", VERSION);
+    CODESTARTmodInit;
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    CODEmodInit_QueryRegCFSLineHdlr dbgprintf(
+        "rsyslog traditional (network) forward format strgen init called, compiled with "
+        "version %s\n",
+        VERSION);
 ENDmodInit

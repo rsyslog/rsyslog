@@ -27,32 +27,30 @@
 #include <stdio.h>
 #include <stdlib.h>
 #if defined(__FreeBSD__)
-#include <sys/time.h>
+    #include <sys/time.h>
 #else
-#include <time.h>
+    #include <time.h>
 #endif
 #if defined(HAVE_SYS_SELECT_H)
-#include <sys/select.h>
+    #include <sys/select.h>
 #endif
 
-int main(int argc, char *argv[])
-{
-	struct timeval tvSelectTimeout;
-	long sleepTime;
+int main(int argc, char *argv[]) {
+    struct timeval tvSelectTimeout;
+    long sleepTime;
 
-	if(argc != 2) {
-		fprintf(stderr, "usage: msleep <milliseconds>\n");
-		exit(1);
-	}
+    if (argc != 2) {
+        fprintf(stderr, "usage: msleep <milliseconds>\n");
+        exit(1);
+    }
 
-	sleepTime = atoi(argv[1]);
-	tvSelectTimeout.tv_sec = sleepTime / 1000;
-	tvSelectTimeout.tv_usec = (sleepTime % 1000) * 1000; /* micro seconds */
-	if(select(0, NULL, NULL, NULL, &tvSelectTimeout) == -1) {
-		perror("select");
-		exit(1);
-	}
+    sleepTime = atoi(argv[1]);
+    tvSelectTimeout.tv_sec = sleepTime / 1000;
+    tvSelectTimeout.tv_usec = (sleepTime % 1000) * 1000; /* micro seconds */
+    if (select(0, NULL, NULL, NULL, &tvSelectTimeout) == -1) {
+        perror("select");
+        exit(1);
+    }
 
-	return 0;
+    return 0;
 }
-

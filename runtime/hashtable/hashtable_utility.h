@@ -1,7 +1,7 @@
 /* Copyright (C) 2002 Christopher Clark <firstname.lastname@cl.cam.ac.uk> */
 
 #ifndef __HASHTABLE_CWC22_UTILITY_H__
-#define __HASHTABLE_CWC22_UTILITY_H__
+    #define __HASHTABLE_CWC22_UTILITY_H__
 
 /*****************************************************************************
  * hashtable_change
@@ -16,8 +16,7 @@
  * @param       value
  *
  */
-int
-hashtable_change(struct hashtable *h, void *k, void *v);
+int hashtable_change(struct hashtable *h, void *k, void *v);
 
 #endif /* __HASHTABLE_CWC22_H__ */
 
@@ -52,4 +51,4 @@ hashtable_change(struct hashtable *h, void *k, void *v);
  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */

@@ -48,228 +48,211 @@ DEF_OMOD_STATIC_DATA;
 /* config variables */
 
 /* define operation modes we have */
-#define SIMPLE_MODE 0	 /* just overwrite */
-#define REWRITE_MODE 1	 /* rewrite IP address, canoninized */
+#define SIMPLE_MODE 0 /* just overwrite */
+#define REWRITE_MODE 1 /* rewrite IP address, canoninized */
 typedef struct _instanceData {
-	char separator;
-	uchar *jsonRoot;	/**< container where to store fields */
+    char separator;
+    uchar *jsonRoot; /**< container where to store fields */
 } instanceData;
 
 typedef struct wrkrInstanceData {
-	instanceData *pData;
+    instanceData *pData;
 } wrkrInstanceData_t;
 
 struct modConfData_s {
-	rsconf_t *pConf;	/* our overall config object */
+    rsconf_t *pConf; /* our overall config object */
 };
-static modConfData_t *loadModConf = NULL;/* modConf ptr to use for the current load process */
-static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
+static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current exec process */
 
 
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
-static struct cnfparamdescr actpdescr[] = {
-	{ "separator", eCmdHdlrGetChar, 0 },
-	{ "jsonroot", eCmdHdlrString, 0 }
-};
-static struct cnfparamblk actpblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
-	  actpdescr
-	};
+static struct cnfparamdescr actpdescr[] = {{"separator", eCmdHdlrGetChar, 0}, {"jsonroot", eCmdHdlrString, 0}};
+static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad;
-	loadModConf = pModConf;
-	pModConf->pConf = pConf;
+    CODESTARTbeginCnfLoad;
+    loadModConf = pModConf;
+    pModConf->pConf = pConf;
 ENDbeginCnfLoad
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad;
+    CODESTARTendCnfLoad;
 ENDendCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf;
+    CODESTARTcheckCnf;
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf;
-	runModConf = pModConf;
+    CODESTARTactivateCnf;
+    runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf;
+    CODESTARTfreeCnf;
 ENDfreeCnf
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance;
+    CODESTARTcreateInstance;
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance;
+    CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature;
+    CODESTARTisCompatibleWithFeature;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance;
-	free(pData->jsonRoot);
+    CODESTARTfreeInstance;
+    free(pData->jsonRoot);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance;
+    CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
 
-static inline void
-setInstParamDefaults(instanceData *pData)
-{
-	pData->separator = ',';
-	pData->jsonRoot = NULL;
+static inline void setInstParamDefaults(instanceData *pData) {
+    pData->separator = ',';
+    pData->jsonRoot = NULL;
 }
 
 BEGINnewActInst
-	struct cnfparamvals *pvals;
-	int i;
-CODESTARTnewActInst;
-	DBGPRINTF("newActInst (mmfields)\n");
-	if((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-	}
+    struct cnfparamvals *pvals;
+    int i;
+    CODESTARTnewActInst;
+    DBGPRINTF("newActInst (mmfields)\n");
+    if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
 
-	CODE_STD_STRING_REQUESTnewActInst(1);
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
-	CHKiRet(createInstance(&pData));
-	setInstParamDefaults(pData);
+    CODE_STD_STRING_REQUESTnewActInst(1);
+    CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
+    CHKiRet(createInstance(&pData));
+    setInstParamDefaults(pData);
 
-	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
-			continue;
-		if(!strcmp(actpblk.descr[i].name, "separator")) {
-			pData->separator = es_getBufAddr(pvals[i].val.d.estr)[0];
-		} else if(!strcmp(actpblk.descr[i].name, "jsonroot")) {
-			pData->jsonRoot = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else {
-			dbgprintf("mmfields: program error, non-handled "
-			  "param '%s'\n", actpblk.descr[i].name);
-		}
-	}
-	if(pData->jsonRoot == NULL) {
-		CHKmalloc(pData->jsonRoot = (uchar*) strdup("!"));
-	}
+    for (i = 0; i < actpblk.nParams; ++i) {
+        if (!pvals[i].bUsed) continue;
+        if (!strcmp(actpblk.descr[i].name, "separator")) {
+            pData->separator = es_getBufAddr(pvals[i].val.d.estr)[0];
+        } else if (!strcmp(actpblk.descr[i].name, "jsonroot")) {
+            pData->jsonRoot = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else {
+            dbgprintf(
+                "mmfields: program error, non-handled "
+                "param '%s'\n",
+                actpblk.descr[i].name);
+        }
+    }
+    if (pData->jsonRoot == NULL) {
+        CHKmalloc(pData->jsonRoot = (uchar *)strdup("!"));
+    }
 
-CODE_STD_FINALIZERnewActInst;
-	cnfparamvalsDestruct(pvals, &actpblk);
+    CODE_STD_FINALIZERnewActInst;
+    cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo;
+    CODESTARTdbgPrintInstInfo;
 ENDdbgPrintInstInfo
 
 
 BEGINtryResume
-CODESTARTtryResume;
+    CODESTARTtryResume;
 ENDtryResume
 
 
-static rsRetVal
-extractField(instanceData *pData, uchar *msgtext, int lenMsg, int *curridx, uchar *fieldbuf)
-{
-	int i, j;
-	DEFiRet;
-	i = *curridx;
-	j = 0;
-	while(i < lenMsg && msgtext[i] != pData->separator) {
-		fieldbuf[j++] = msgtext[i++];
-	}
-	fieldbuf[j] = '\0';
-	if(i < lenMsg)
-		++i;
-	*curridx = i;
+static rsRetVal extractField(instanceData *pData, uchar *msgtext, int lenMsg, int *curridx, uchar *fieldbuf) {
+    int i, j;
+    DEFiRet;
+    i = *curridx;
+    j = 0;
+    while (i < lenMsg && msgtext[i] != pData->separator) {
+        fieldbuf[j++] = msgtext[i++];
+    }
+    fieldbuf[j] = '\0';
+    if (i < lenMsg) ++i;
+    *curridx = i;
 
-	RETiRet;
+    RETiRet;
 }
 
 
-static rsRetVal
-parse_fields(instanceData *pData, smsg_t *pMsg, uchar *msgtext, int lenMsg)
-{
-	uchar fieldbuf[32*1024];
-	uchar fieldname[512];
-	struct json_object *json;
-	struct json_object *jval;
-	int field;
-	uchar *buf;
-	int currIdx = 0;
-	DEFiRet;
+static rsRetVal parse_fields(instanceData *pData, smsg_t *pMsg, uchar *msgtext, int lenMsg) {
+    uchar fieldbuf[32 * 1024];
+    uchar fieldname[512];
+    struct json_object *json;
+    struct json_object *jval;
+    int field;
+    uchar *buf;
+    int currIdx = 0;
+    DEFiRet;
 
-	if(lenMsg < (int) sizeof(fieldbuf)) {
-		buf = fieldbuf;
-	} else {
-		CHKmalloc(buf = malloc(lenMsg+1));
-	}
+    if (lenMsg < (int)sizeof(fieldbuf)) {
+        buf = fieldbuf;
+    } else {
+        CHKmalloc(buf = malloc(lenMsg + 1));
+    }
 
-	json =  json_object_new_object();
-	if(json == NULL) {
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-	field = 1;
-	while(currIdx < lenMsg) {
-		CHKiRet(extractField(pData, msgtext, lenMsg, &currIdx, buf));
-		DBGPRINTF("mmfields: field %d: '%s'\n", field, buf);
-		snprintf((char*)fieldname, sizeof(fieldname), "f%d", field);
-		fieldname[sizeof(fieldname)-1] = '\0';
-		jval = json_object_new_string((char*)buf);
-		json_object_object_add(json, (char*)fieldname, jval);
-		field++;
-	}
-	msgAddJSON(pMsg, pData->jsonRoot, json, 0, 0);
+    json = json_object_new_object();
+    if (json == NULL) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    field = 1;
+    while (currIdx < lenMsg) {
+        CHKiRet(extractField(pData, msgtext, lenMsg, &currIdx, buf));
+        DBGPRINTF("mmfields: field %d: '%s'\n", field, buf);
+        snprintf((char *)fieldname, sizeof(fieldname), "f%d", field);
+        fieldname[sizeof(fieldname) - 1] = '\0';
+        jval = json_object_new_string((char *)buf);
+        json_object_object_add(json, (char *)fieldname, jval);
+        field++;
+    }
+    msgAddJSON(pMsg, pData->jsonRoot, json, 0, 0);
 finalize_it:
-	if(buf != fieldbuf)
-		free(buf);
-	RETiRet;
+    if (buf != fieldbuf) free(buf);
+    RETiRet;
 }
 
 
 BEGINdoAction_NoStrings
-	smsg_t **ppMsg = (smsg_t **) pMsgData;
-	smsg_t *pMsg = ppMsg[0];
-	uchar *msg;
-	int lenMsg;
-CODESTARTdoAction;
-	lenMsg = getMSGLen(pMsg);
-	msg = getMSG(pMsg);
-	iRet = parse_fields(pWrkrData->pData, pMsg, msg, lenMsg);
+    smsg_t **ppMsg = (smsg_t **)pMsgData;
+    smsg_t *pMsg = ppMsg[0];
+    uchar *msg;
+    int lenMsg;
+    CODESTARTdoAction;
+    lenMsg = getMSGLen(pMsg);
+    msg = getMSG(pMsg);
+    iRet = parse_fields(pWrkrData->pData, pMsg, msg, lenMsg);
 ENDdoAction
 
 
 NO_LEGACY_CONF_parseSelectorAct
 
 
-BEGINmodExit
-CODESTARTmodExit;
+    BEGINmodExit CODESTARTmodExit;
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt;
-CODEqueryEtryPt_STD_OMOD_QUERIES;
-CODEqueryEtryPt_STD_OMOD8_QUERIES;
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
-CODEqueryEtryPt_STD_CONF2_QUERIES;
+    CODESTARTqueryEtryPt;
+    CODEqueryEtryPt_STD_OMOD_QUERIES;
+    CODEqueryEtryPt_STD_OMOD8_QUERIES;
+    CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
+    CODEqueryEtryPt_STD_CONF2_QUERIES;
 ENDqueryEtryPt
 
 
-
 BEGINmodInit()
-CODESTARTmodInit;
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	DBGPRINTF("mmfields: module compiled with rsyslog version %s.\n", VERSION);
+    CODESTARTmodInit;
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    CODEmodInit_QueryRegCFSLineHdlr DBGPRINTF("mmfields: module compiled with rsyslog version %s.\n", VERSION);
 ENDmodInit

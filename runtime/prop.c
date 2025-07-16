@@ -46,102 +46,95 @@
 /* static data */
 DEFobjStaticHelpers;
 
-//extern uchar *propGetSzStr(prop_t *pThis); /* expand inline function here */
+// extern uchar *propGetSzStr(prop_t *pThis); /* expand inline function here */
 
 /* Standard-Constructor
  */
 BEGINobjConstruct(prop) /* be sure to specify the object type also in END macro! */
-	pThis->iRefCount = 1;
-	INIT_ATOMIC_HELPER_MUT(pThis->mutRefCount);
+    pThis->iRefCount = 1;
+    INIT_ATOMIC_HELPER_MUT(pThis->mutRefCount);
 ENDobjConstruct(prop)
 
 
 /* destructor for the prop object */
 BEGINobjDestruct(prop) /* be sure to specify the object type also in END and CODESTART macros! */
-	int currRefCount;
-CODESTARTobjDestruct(prop);
-	currRefCount = ATOMIC_DEC_AND_FETCH(&pThis->iRefCount, &pThis->mutRefCount);
-	if(currRefCount == 0) {
-		/* (only) in this case we need to actually destruct the object */
-		if(pThis->len >= CONF_PROP_BUFSIZE)
-			free(pThis->szVal.psz);
-		DESTROY_ATOMIC_HELPER_MUT(pThis->mutRefCount);
-	} else {
-		pThis = NULL; /* tell framework NOT to destructing the object! */
-	}
+    int currRefCount;
+    CODESTARTobjDestruct(prop);
+    currRefCount = ATOMIC_DEC_AND_FETCH(&pThis->iRefCount, &pThis->mutRefCount);
+    if (currRefCount == 0) {
+        /* (only) in this case we need to actually destruct the object */
+        if (pThis->len >= CONF_PROP_BUFSIZE) free(pThis->szVal.psz);
+        DESTROY_ATOMIC_HELPER_MUT(pThis->mutRefCount);
+    } else {
+        pThis = NULL; /* tell framework NOT to destructing the object! */
+    }
 ENDobjDestruct(prop)
 
 /* set string, we make our own private copy! This MUST only be called BEFORE
  * ConstructFinalize()!
  */
-static rsRetVal SetString(prop_t *pThis, const uchar *psz, const int len)
-{
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, prop);
-	if(pThis->len >= CONF_PROP_BUFSIZE)
-		free(pThis->szVal.psz);
-	pThis->len = len;
-	if(len < CONF_PROP_BUFSIZE) {
-		memcpy(pThis->szVal.sz, psz, len + 1);
-	} else {
-		if(pThis->szVal.psz != NULL) {
-			free(pThis->szVal.psz);
-		}
-		CHKmalloc(pThis->szVal.psz = malloc(len + 1));
-		memcpy(pThis->szVal.psz, psz, len + 1);
-	}
+static rsRetVal SetString(prop_t *pThis, const uchar *psz, const int len) {
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, prop);
+    if (pThis->len >= CONF_PROP_BUFSIZE) free(pThis->szVal.psz);
+    pThis->len = len;
+    if (len < CONF_PROP_BUFSIZE) {
+        memcpy(pThis->szVal.sz, psz, len + 1);
+    } else {
+        if (pThis->szVal.psz != NULL) {
+            free(pThis->szVal.psz);
+        }
+        CHKmalloc(pThis->szVal.psz = malloc(len + 1));
+        memcpy(pThis->szVal.psz, psz, len + 1);
+    }
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
 /* get string length */
-static int GetStringLen(prop_t *pThis)
-{
-	return pThis->len;
+static int GetStringLen(prop_t *pThis) {
+    return pThis->len;
 }
 
 
 /* get string */
-static rsRetVal GetString(prop_t *pThis, uchar **ppsz, int *plen)
-{
-	ISOBJ_TYPE_assert(pThis, prop);
-	if(pThis->len < CONF_PROP_BUFSIZE) {
-		*ppsz = pThis->szVal.sz;
-	} else {
-		*ppsz = pThis->szVal.psz;
-	}
-	*plen = pThis->len;
-	return RS_RET_OK;
+static rsRetVal GetString(prop_t *pThis, uchar **ppsz, int *plen) {
+    ISOBJ_TYPE_assert(pThis, prop);
+    if (pThis->len < CONF_PROP_BUFSIZE) {
+        *ppsz = pThis->szVal.sz;
+    } else {
+        *ppsz = pThis->szVal.psz;
+    }
+    *plen = pThis->len;
+    return RS_RET_OK;
 }
 
 
 /* ConstructionFinalizer
  * rgerhards, 2008-01-09
  */
-static rsRetVal
-propConstructFinalize(prop_t __attribute__((unused)) *pThis)
-{
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, prop);
-	RETiRet;
+static rsRetVal propConstructFinalize(prop_t __attribute__((unused)) * pThis) {
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, prop);
+    RETiRet;
 }
 
 
 /* add a new reference. It is VERY IMPORTANT to call this function whenever
  * the property is handed over to some entitiy that later call Destruct() on it.
  */
-static rsRetVal AddRef(prop_t *pThis)
-{
-	if(pThis == NULL)  {
-		DBGPRINTF("prop/AddRef is passed a NULL ptr - ignoring it "
-			"- further problems may occur\n");
-		FINALIZE;
-	}
-	ATOMIC_INC(&pThis->iRefCount, &pThis->mutRefCount);
+static rsRetVal AddRef(prop_t *pThis) {
+    if (pThis == NULL) {
+        DBGPRINTF(
+            "prop/AddRef is passed a NULL ptr - ignoring it "
+            "- further problems may occur\n");
+        FINALIZE;
+    }
+    ATOMIC_INC(&pThis->iRefCount, &pThis->mutRefCount);
 finalize_it:
-	return RS_RET_OK;
+    return RS_RET_OK;
 }
 
 
@@ -150,22 +143,20 @@ finalize_it:
  * convenience, it is also (very, very) slightly faster.
  * rgerhards, 2009-07-01
  */
-static rsRetVal CreateStringProp(prop_t **ppThis, const uchar* psz, const int len)
-{
-	prop_t *pThis = NULL;
-	DEFiRet;
+static rsRetVal CreateStringProp(prop_t **ppThis, const uchar *psz, const int len) {
+    prop_t *pThis = NULL;
+    DEFiRet;
 
-	CHKiRet(propConstruct(&pThis));
-	CHKiRet(SetString(pThis, psz, len));
-	CHKiRet(propConstructFinalize(pThis));
-	*ppThis = pThis;
+    CHKiRet(propConstruct(&pThis));
+    CHKiRet(SetString(pThis, psz, len));
+    CHKiRet(propConstructFinalize(pThis));
+    *ppThis = pThis;
 finalize_it:
-	if(iRet != RS_RET_OK) {
-		if(pThis != NULL)
-			propDestruct(&pThis);
-	}
+    if (iRet != RS_RET_OK) {
+        if (pThis != NULL) propDestruct(&pThis);
+    }
 
-	RETiRet;
+    RETiRet;
 }
 
 /* another one-stop function, quite useful: it takes a property pointer and
@@ -178,35 +169,34 @@ finalize_it:
  * existing property).
  * rgerhards, 2009-07-01
  */
-static rsRetVal CreateOrReuseStringProp(prop_t **ppThis, const uchar *psz, const int len)
-{
-	uchar *pszPrev;
-	int lenPrev;
-	DEFiRet;
-	assert(ppThis != NULL);
+static rsRetVal CreateOrReuseStringProp(prop_t **ppThis, const uchar *psz, const int len) {
+    uchar *pszPrev;
+    int lenPrev;
+    DEFiRet;
+    assert(ppThis != NULL);
 
-	if(*ppThis == NULL) {
-		/* we need to create a property */
-		CHKiRet(CreateStringProp(ppThis, psz, len));
-	} else {
-		/* already exists, check if we can re-use it */
-		GetString(*ppThis, &pszPrev, &lenPrev);
-		if(len != lenPrev || ustrcmp(psz, pszPrev)) {
-			/* different, need to discard old & create new one */
-			propDestruct(ppThis);
-			CHKiRet(CreateStringProp(ppThis, psz, len));
-		} /* else we can re-use the existing one! */
-	}
+    if (*ppThis == NULL) {
+        /* we need to create a property */
+        CHKiRet(CreateStringProp(ppThis, psz, len));
+    } else {
+        /* already exists, check if we can re-use it */
+        GetString(*ppThis, &pszPrev, &lenPrev);
+        if (len != lenPrev || ustrcmp(psz, pszPrev)) {
+            /* different, need to discard old & create new one */
+            propDestruct(ppThis);
+            CHKiRet(CreateStringProp(ppThis, psz, len));
+        } /* else we can re-use the existing one! */
+    }
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
 /* debugprint for the prop object */
 BEGINobjDebugPrint(prop) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDebugPrint(prop);
-	dbgprintf("prop object %p - no further debug info implemented\n", pThis);
+    CODESTARTobjDebugPrint(prop);
+    dbgprintf("prop object %p - no further debug info implemented\n", pThis);
 ENDobjDebugPrint(prop)
 
 
@@ -214,26 +204,26 @@ ENDobjDebugPrint(prop)
  * rgerhards, 2008-02-21
  */
 BEGINobjQueryInterface(prop)
-CODESTARTobjQueryInterface(prop);
-	if(pIf->ifVersion != propCURR_IF_VERSION) { /* check for current version, increment on each change */
-		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
-	}
+    CODESTARTobjQueryInterface(prop);
+    if (pIf->ifVersion != propCURR_IF_VERSION) { /* check for current version, increment on each change */
+        ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+    }
 
-	/* ok, we have the right interface, so let's fill it
-	 * Please note that we may also do some backwards-compatibility
-	 * work here (if we can support an older interface version - that,
-	 * of course, also affects the "if" above).
-	 */
-	pIf->Construct = propConstruct;
-	pIf->ConstructFinalize = propConstructFinalize;
-	pIf->Destruct = propDestruct;
-	pIf->DebugPrint = propDebugPrint;
-	pIf->SetString = SetString;
-	pIf->GetString = GetString;
-	pIf->GetStringLen = GetStringLen;
-	pIf->AddRef = AddRef;
-	pIf->CreateStringProp = CreateStringProp;
-	pIf->CreateOrReuseStringProp = CreateOrReuseStringProp;
+    /* ok, we have the right interface, so let's fill it
+     * Please note that we may also do some backwards-compatibility
+     * work here (if we can support an older interface version - that,
+     * of course, also affects the "if" above).
+     */
+    pIf->Construct = propConstruct;
+    pIf->ConstructFinalize = propConstructFinalize;
+    pIf->Destruct = propDestruct;
+    pIf->DebugPrint = propDebugPrint;
+    pIf->SetString = SetString;
+    pIf->GetString = GetString;
+    pIf->GetStringLen = GetStringLen;
+    pIf->AddRef = AddRef;
+    pIf->CreateStringProp = CreateStringProp;
+    pIf->CreateOrReuseStringProp = CreateOrReuseStringProp;
 
 finalize_it:
 ENDobjQueryInterface(prop)
@@ -251,11 +241,11 @@ ENDObjClassExit(prop)
  * rgerhards, 2008-02-19
  */
 BEGINObjClassInit(prop, 1, OBJ_IS_CORE_MODULE) /* class, version */
-	/* request objects we use */
+    /* request objects we use */
 
-	/* set our own handlers */
-	OBJSetMethodHandler(objMethod_DEBUGPRINT, propDebugPrint);
-	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, propConstructFinalize);
+    /* set our own handlers */
+    OBJSetMethodHandler(objMethod_DEBUGPRINT, propDebugPrint);
+    OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, propConstructFinalize);
 ENDObjClassInit(prop)
 
 /* vi:set ai:

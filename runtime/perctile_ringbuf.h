@@ -4,18 +4,18 @@
 typedef int64_t ITEM;
 
 struct circ_buf {
-	ITEM *buf;
-	int head;
-	int tail;
+    ITEM *buf;
+    int head;
+    int tail;
 };
 
 struct ringbuf_s {
-	struct circ_buf cb;
-	size_t size;
+    struct circ_buf cb;
+    size_t size;
 };
 typedef struct ringbuf_s ringbuf_t;
 
-ringbuf_t* ringbuf_new(size_t count);
+ringbuf_t *ringbuf_new(size_t count);
 void ringbuf_del(ringbuf_t *rb);
 int ringbuf_append(ringbuf_t *rb, ITEM item);
 int ringbuf_append_with_overwrite(ringbuf_t *rb, ITEM item);

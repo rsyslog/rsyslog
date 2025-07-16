@@ -25,8 +25,8 @@
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
  * A copy of the LGPL can be found in the file "COPYING.LESSER" in this distribution.
  */
-#ifndef	IM_HELPER_H_INCLUDED
-#define	IM_HELPER_H_INCLUDED 1
+#ifndef IM_HELPER_H_INCLUDED
+#define IM_HELPER_H_INCLUDED 1
 
 
 /* The following function provides a complete implementation to check a
@@ -36,27 +36,24 @@
  * be found.
  */
 static inline void std_checkRuleset_genErrMsg(modConfData_t *modConf, instanceConf_t *inst);
-static inline rsRetVal
-std_checkRuleset(modConfData_t *modConf, instanceConf_t *inst)
-{
-	ruleset_t *pRuleset;
-	rsRetVal localRet;
-	DEFiRet;
+static inline rsRetVal std_checkRuleset(modConfData_t *modConf, instanceConf_t *inst) {
+    ruleset_t *pRuleset;
+    rsRetVal localRet;
+    DEFiRet;
 
-	inst->pBindRuleset = NULL;	/* assume default ruleset */
+    inst->pBindRuleset = NULL; /* assume default ruleset */
 
-	if(inst->pszBindRuleset == NULL)
-		FINALIZE;
+    if (inst->pszBindRuleset == NULL) FINALIZE;
 
-	localRet = ruleset.GetRuleset(modConf->pConf, &pRuleset, inst->pszBindRuleset);
-	if(localRet == RS_RET_NOT_FOUND) {
-		std_checkRuleset_genErrMsg(modConf, inst);
-	}
-	CHKiRet(localRet);
-	inst->pBindRuleset = pRuleset;
+    localRet = ruleset.GetRuleset(modConf->pConf, &pRuleset, inst->pszBindRuleset);
+    if (localRet == RS_RET_NOT_FOUND) {
+        std_checkRuleset_genErrMsg(modConf, inst);
+    }
+    CHKiRet(localRet);
+    inst->pBindRuleset = pRuleset;
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 #endif /* #ifndef IM_HELPER_H_INCLUDED */

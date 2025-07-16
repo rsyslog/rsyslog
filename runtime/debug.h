@@ -27,13 +27,13 @@
 #include "obj-types.h"
 
 /* some settings for various debug modes */
-#define DEBUG_OFF	0
-#define DEBUG_ONDEMAND	1
-#define DEBUG_FULL	2
+#define DEBUG_OFF 0
+#define DEBUG_ONDEMAND 1
+#define DEBUG_FULL 2
 
 /* external static data elements (some time to be replaced) */
-extern int Debug;		/* debug flag  - read-only after startup */
-extern int debugging_on;	 /* read-only, except on sig USR1 */
+extern int Debug; /* debug flag  - read-only after startup */
+extern int debugging_on; /* read-only, except on sig USR1 */
 extern int stddbg; /* the handle for regular debug output, set to stdout if not forking, -1 otherwise */
 extern int dbgTimeoutToStderr;
 
@@ -44,35 +44,43 @@ rsRetVal dbgClassExit(void);
 void dbgSetDebugFile(uchar *fn);
 void dbgSetDebugLevel(int level);
 void dbgSetThrdName(const uchar *pszName);
-void dbgOutputTID(char* name);
+void dbgOutputTID(char *name);
 int dbgGetDbglogFd(void);
 
 /* external data */
 extern char *pszAltDbgFileName; /* if set, debug output is *also* sent to here */
-extern int altdbg;	/* and the handle for alternate debug output */
+extern int altdbg; /* and the handle for alternate debug output */
 
 /* macros */
 #ifdef DEBUGLESS
-#	define DBGL_UNUSED __attribute__((__unused__))
-	static inline void r_dbgoprint(const char DBGL_UNUSED *srcname, obj_t DBGL_UNUSED *pObj,
-	                         const char DBGL_UNUSED *fmt, ...) {}
-	static inline void r_dbgprintf(const char DBGL_UNUSED *srcname, const char DBGL_UNUSED *fmt, ...) {}
+    #define DBGL_UNUSED __attribute__((__unused__))
+static inline void r_dbgoprint(const char DBGL_UNUSED *srcname,
+                               obj_t DBGL_UNUSED *pObj,
+                               const char DBGL_UNUSED *fmt,
+                               ...) {}
+static inline void r_dbgprintf(const char DBGL_UNUSED *srcname, const char DBGL_UNUSED *fmt, ...) {}
 #else
-#	define DBGL_UNUSED
-	void r_dbgoprint(const char *srcname, obj_t *pObj, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
-	void r_dbgprintf(const char *srcname, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
+    #define DBGL_UNUSED
+void r_dbgoprint(const char *srcname, obj_t *pObj, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
+void r_dbgprintf(const char *srcname, const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 #endif
 
-#define DBGPRINTF(...) if(Debug) { r_dbgprintf(__FILE__, __VA_ARGS__); }
-#define DBGOPRINT(...) if(Debug) { r_dbgoprint(__FILE__, __VA_ARGS__); }
+#define DBGPRINTF(...)                      \
+    if (Debug) {                            \
+        r_dbgprintf(__FILE__, __VA_ARGS__); \
+    }
+#define DBGOPRINT(...)                      \
+    if (Debug) {                            \
+        r_dbgoprint(__FILE__, __VA_ARGS__); \
+    }
 #define dbgprintf(...) r_dbgprintf(__FILE__, __VA_ARGS__)
 #define dbgoprint(...) r_dbgoprint(__FILE__, __VA_ARGS__)
 
 /* things originally introduced for now removed rtinst */
-#define d_pthread_mutex_lock(x)     pthread_mutex_lock(x)
-#define d_pthread_mutex_trylock(x)  pthread_mutex_trylock(x)
-#define d_pthread_mutex_unlock(x)   pthread_mutex_unlock(x)
-#define d_pthread_cond_wait(cond, mut)   pthread_cond_wait(cond, mut)
-#define d_pthread_cond_timedwait(cond, mut, to)   pthread_cond_timedwait(cond, mut, to)
+#define d_pthread_mutex_lock(x) pthread_mutex_lock(x)
+#define d_pthread_mutex_trylock(x) pthread_mutex_trylock(x)
+#define d_pthread_mutex_unlock(x) pthread_mutex_unlock(x)
+#define d_pthread_cond_wait(cond, mut) pthread_cond_wait(cond, mut)
+#define d_pthread_cond_timedwait(cond, mut, to) pthread_cond_timedwait(cond, mut, to)
 
 #endif /* #ifndef DEBUG_H_INCLUDED */

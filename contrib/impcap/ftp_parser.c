@@ -31,84 +31,46 @@
 #include "config.h"
 #include "parsers.h"
 
-static const int ftp_cds[] = {
-		100, 110, 120, 125, 150,
-		200, 202, 211, 212, 213, 214, 215, 220, 221, 225, 226, 227, 228, 229, 230, 231, 232, 250, 257,
-		300, 331, 332, 350,
-		400, 421, 425, 426, 430, 434, 450, 451, 452,
-		500, 501, 502, 503, 504, 530, 532, 550, 551, 552, 553,
-		600, 631, 632, 633,
-		10000, 100054, 10060, 10061, 10066, 10068,
-		0
-};
+static const int ftp_cds[] = {100, 110, 120, 125, 150, 200, 202, 211,   212,    213,   214,   215,   220,   221, 225,
+                              226, 227, 228, 229, 230, 231, 232, 250,   257,    300,   331,   332,   350,   400, 421,
+                              425, 426, 430, 434, 450, 451, 452, 500,   501,    502,   503,   504,   530,   532, 550,
+                              551, 552, 553, 600, 631, 632, 633, 10000, 100054, 10060, 10061, 10066, 10068, 0};
 
-static const char *ftp_cmds[] = {
-		"STOR",
-		"TYPE",
-		"ABOR",
-		"ACCT",
-		"ALLO",
-		"APPE",
-		"CDUP",
-		"CWD",
-		"DELE",
-		"HELP",
-		"LIST",
-		"MKD",
-		"MODE",
-		"NLST",
-		"NOOP",
-		"PASS",
-		"PASV",
-		"PORT",
-		"PWD",
-		"QUIT",
-		"REIN",
-		"REST",
-		"RETR",
-		"RMD",
-		"RNFR",
-		"RNTO",
-		"SITE",
-		"SMNT",
-		"STAT",
-		"STOU",
-		"STRU",
-		"SYST",
-		"USER",
-		NULL
-};
+static const char *ftp_cmds[] = {"STOR", "TYPE", "ABOR", "ACCT", "ALLO", "APPE", "CDUP", "CWD",  "DELE",
+                                 "HELP", "LIST", "MKD",  "MODE", "NLST", "NOOP", "PASS", "PASV", "PORT",
+                                 "PWD",  "QUIT", "REIN", "REST", "RETR", "RMD",  "RNFR", "RNTO", "SITE",
+                                 "SMNT", "STAT", "STOU", "STRU", "SYST", "USER", NULL};
 
 /*
  * This function searches for a valid command in the header (from the list defined in ftp_cmds[])
  * and returns either the command or a NULL pointer
-*/
+ */
 static const char *check_Command_ftp(uchar *first_part_packet) {
-	DBGPRINTF("in check_Command_ftp\n");
-	DBGPRINTF("first_part_packet : '%s' \n", first_part_packet);
-	int i = 0;
-	for (i = 0; ftp_cmds[i] != NULL; i++) {
-		if (strncmp((const char *)first_part_packet, ftp_cmds[i], strlen((const char *)ftp_cmds[i]) + 1) == 0) {
-			return ftp_cmds[i];
-		}
-	}
-	return "UNKNOWN";
+    DBGPRINTF("in check_Command_ftp\n");
+    DBGPRINTF("first_part_packet : '%s' \n", first_part_packet);
+    int i = 0;
+    for (i = 0; ftp_cmds[i] != NULL; i++) {
+        if (strncmp((const char *)first_part_packet, ftp_cmds[i], strlen((const char *)ftp_cmds[i]) + 1) == 0) {
+            return ftp_cmds[i];
+        }
+    }
+    return "UNKNOWN";
 }
 
 /*
  * This function searches for a valid code in the header (from the list defined in ftp_cds[])
  * and returns either the command or a NULL pointer
-*/
+ */
 static int check_Code_ftp(uchar *first_part_packet) {
-	DBGPRINTF("in check_Code_ftp\n");
-	DBGPRINTF("first_part_packet : %s \n", first_part_packet);
-	int i = 0;
-	for (i = 0; ftp_cds[i] != 0; i++) {
-		if (strtol((const char *)first_part_packet, NULL, 10) == ftp_cds[i]) {
-			return ftp_cds[i];
-		}
-	}
-	return 0;
+    DBGPRINTF("in check_Code_ftp\n");
+    DBGPRINTF("first_part_packet : %s \n", first_part_packet);
+    int i = 0;
+    for (i = 0; ftp_cds[i] != 0; i++) {
+        if (strtol((const char *)first_part_packet, NULL, 10) == ftp_cds[i]) {
+            return ftp_cds[i];
+        }
+    }
+    return 0;
 }
 
 /*
@@ -123,30 +85,30 @@ static int check_Code_ftp(uchar *first_part_packet) {
  *
  *  This function returns a structure containing the data unprocessed by this parser
  *  or the ones after (as a list of bytes), and the length of this data.
-*/
+ */
 data_ret_t *ftp_parse(const uchar *packet, int pktSize, struct json_object *jparent) {
-	DBGPRINTF("ftp_parse\n");
-	DBGPRINTF("packet size %d\n", pktSize);
+    DBGPRINTF("ftp_parse\n");
+    DBGPRINTF("packet size %d\n", pktSize);
 
-	if (pktSize < 5) {  /* too short for ftp packet*/
-		RETURN_DATA_AFTER(0)
-	}
-	uchar *packet2 = (uchar *)malloc(pktSize * sizeof(uchar));
+    if (pktSize < 5) { /* too short for ftp packet*/
+        RETURN_DATA_AFTER(0)
+    }
+    uchar *packet2 = (uchar *)malloc(pktSize * sizeof(uchar));
 
-	memcpy(packet2, packet, pktSize); // strtok changes original packet
-	uchar *frst_part_ftp;
-	frst_part_ftp = (uchar *)strtok((char *)packet2, " "); // Get first part of packet ftp
-	strtok(NULL, "\r\n");
+    memcpy(packet2, packet, pktSize);  // strtok changes original packet
+    uchar *frst_part_ftp;
+    frst_part_ftp = (uchar *)strtok((char *)packet2, " ");  // Get first part of packet ftp
+    strtok(NULL, "\r\n");
 
-	if (frst_part_ftp) {
-		int code = check_Code_ftp(frst_part_ftp);
-		const char *command = check_Command_ftp(frst_part_ftp);
-		if (code != 0) {
-			json_object_object_add(jparent, "FTP_response", json_object_new_int(code));
-		} else if (command != NULL) {
-			json_object_object_add(jparent, "FTP_request", json_object_new_string(command));
-		}
-	}
-	free(packet2);
-	RETURN_DATA_AFTER(0)
+    if (frst_part_ftp) {
+        int code = check_Code_ftp(frst_part_ftp);
+        const char *command = check_Command_ftp(frst_part_ftp);
+        if (code != 0) {
+            json_object_object_add(jparent, "FTP_response", json_object_new_int(code));
+        } else if (command != NULL) {
+            json_object_object_add(jparent, "FTP_request", json_object_new_string(command));
+        }
+    }
+    free(packet2);
+    RETURN_DATA_AFTER(0)
 }

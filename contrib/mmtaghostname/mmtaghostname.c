@@ -62,144 +62,136 @@ MODULE_CNFNAME("mmtaghostname")
 DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(glbl)
 
-/* parser instance parameters */
-static struct cnfparamdescr parserpdescr[] = {
-	{ "tag", eCmdHdlrString, 0 },
-	{ "forcelocalhostname", eCmdHdlrBinary, 0 },
+    /* parser instance parameters */
+    static struct cnfparamdescr parserpdescr[] = {
+        {"tag", eCmdHdlrString, 0},
+        {"forcelocalhostname", eCmdHdlrBinary, 0},
 };
-static struct cnfparamblk parserpblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(parserpdescr)/sizeof(struct cnfparamdescr),
-	  parserpdescr
-	};
+static struct cnfparamblk parserpblk = {CNFPARAMBLK_VERSION, sizeof(parserpdescr) / sizeof(struct cnfparamdescr),
+                                        parserpdescr};
 
 typedef struct _instanceData {
-	char *pszTag;
-	size_t lenTag;
-	int bForceLocalHostname;
+    char *pszTag;
+    size_t lenTag;
+    int bForceLocalHostname;
 } instanceData;
 
 typedef struct wrkrInstanceData {
-	instanceData *pData;
+    instanceData *pData;
 } wrkrInstanceData_t;
 
 static const uchar *pszHostname = NULL;
 static size_t lenHostname = 0;
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance;
+    CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance;
+    CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo;
-	dbgprintf("mmtaghostname:\n");
-	dbgprintf("\ttag='%s'\n", pData->pszTag);
-	dbgprintf("\tforce local hostname='%d'\n", pData->bForceLocalHostname);
+    CODESTARTdbgPrintInstInfo;
+    dbgprintf("mmtaghostname:\n");
+    dbgprintf("\ttag='%s'\n", pData->pszTag);
+    dbgprintf("\tforce local hostname='%d'\n", pData->bForceLocalHostname);
 ENDdbgPrintInstInfo
 
 BEGINcreateInstance
-CODESTARTcreateInstance;
-	pData->pszTag = NULL;
-	pData->lenTag = 0;
-	pData->bForceLocalHostname = 0;
+    CODESTARTcreateInstance;
+    pData->pszTag = NULL;
+    pData->lenTag = 0;
+    pData->bForceLocalHostname = 0;
 ENDcreateInstance
 
 BEGINfreeInstance
-CODESTARTfreeInstance;
-	free(pData->pszTag);
+    CODESTARTfreeInstance;
+    free(pData->pszTag);
 ENDfreeInstance
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature;
+    CODESTARTisCompatibleWithFeature;
 ENDisCompatibleWithFeature
 
 BEGINnewActInst
-	struct cnfparamvals *pvals = NULL;
-	int i;
-CODESTARTnewActInst;
-	DBGPRINTF("newParserInst (mmtaghostname)\n");
+    struct cnfparamvals *pvals = NULL;
+    int i;
+    CODESTARTnewActInst;
+    DBGPRINTF("newParserInst (mmtaghostname)\n");
 
-	CHKiRet(createInstance(&pData));
+    CHKiRet(createInstance(&pData));
 
-	if(lst == NULL)
-		FINALIZE;  /* just set defaults, no param block! */
+    if (lst == NULL) FINALIZE; /* just set defaults, no param block! */
 
-	if((pvals = nvlstGetParams(lst, &parserpblk, NULL)) == NULL) {
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-	}
+    if ((pvals = nvlstGetParams(lst, &parserpblk, NULL)) == NULL) {
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
 
-	if(Debug) {
-		dbgprintf("parser param blk in mmtaghostname:\n");
-		cnfparamsPrint(&parserpblk, pvals);
-	}
+    if (Debug) {
+        dbgprintf("parser param blk in mmtaghostname:\n");
+        cnfparamsPrint(&parserpblk, pvals);
+    }
 
-	for(i = 0 ; i < parserpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
-			continue;
-		if(!strcmp(parserpblk.descr[i].name, "tag")) {
-			pData->pszTag = (char *) es_str2cstr(pvals[i].val.d.estr, NULL);
-			pData->lenTag = strlen(pData->pszTag);
-		} else if(!strcmp(parserpblk.descr[i].name, "forcelocalhostname")) {
-			pData->bForceLocalHostname = pvals[i].val.d.n;
-		} else {
-			dbgprintf("program error, non-handled param '%s'\n",
-				parserpblk.descr[i].name);
-		}
-	}
-	CODE_STD_STRING_REQUESTnewActInst(1);
-	CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
-CODE_STD_FINALIZERnewActInst;
-	if(lst != NULL)
-		cnfparamvalsDestruct(pvals, &parserpblk);
+    for (i = 0; i < parserpblk.nParams; ++i) {
+        if (!pvals[i].bUsed) continue;
+        if (!strcmp(parserpblk.descr[i].name, "tag")) {
+            pData->pszTag = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            pData->lenTag = strlen(pData->pszTag);
+        } else if (!strcmp(parserpblk.descr[i].name, "forcelocalhostname")) {
+            pData->bForceLocalHostname = pvals[i].val.d.n;
+        } else {
+            dbgprintf("program error, non-handled param '%s'\n", parserpblk.descr[i].name);
+        }
+    }
+    CODE_STD_STRING_REQUESTnewActInst(1);
+    CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
+    CODE_STD_FINALIZERnewActInst;
+    if (lst != NULL) cnfparamvalsDestruct(pvals, &parserpblk);
 ENDnewActInst
 
 BEGINdoAction_NoStrings
-	smsg_t **ppMsg = (smsg_t **) pMsgData;
-	smsg_t *pMsg = ppMsg[0];
-	instanceData *pData = pWrkrData->pData;
-CODESTARTdoAction;
-	DBGPRINTF("Message will now be managed by mmtaghostname\n");
-	if(pData->pszTag != NULL) {
-		MsgSetTAG(pMsg, (uchar *)pData->pszTag, pData->lenTag);
-	}
-	if (pData->bForceLocalHostname) {
-		if (pszHostname == NULL) {
-			pszHostname = glbl.GetLocalHostName();
-			lenHostname = ustrlen(glbl.GetLocalHostName());
-		}
-		MsgSetHOSTNAME(pMsg, pszHostname, lenHostname);
-		DBGPRINTF("Message hostname forced to local\n");
-	}
+    smsg_t **ppMsg = (smsg_t **)pMsgData;
+    smsg_t *pMsg = ppMsg[0];
+    instanceData *pData = pWrkrData->pData;
+    CODESTARTdoAction;
+    DBGPRINTF("Message will now be managed by mmtaghostname\n");
+    if (pData->pszTag != NULL) {
+        MsgSetTAG(pMsg, (uchar *)pData->pszTag, pData->lenTag);
+    }
+    if (pData->bForceLocalHostname) {
+        if (pszHostname == NULL) {
+            pszHostname = glbl.GetLocalHostName();
+            lenHostname = ustrlen(glbl.GetLocalHostName());
+        }
+        MsgSetHOSTNAME(pMsg, pszHostname, lenHostname);
+        DBGPRINTF("Message hostname forced to local\n");
+    }
 ENDdoAction
 
 BEGINtryResume
-CODESTARTtryResume;
+    CODESTARTtryResume;
 ENDtryResume
 
 BEGINparseSelectorAct
-CODESTARTparseSelectorAct;
-CODE_STD_FINALIZERparseSelectorAct
+    CODESTARTparseSelectorAct;
+    CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 BEGINmodExit
-CODESTARTmodExit;
-	objRelease(glbl, CORE_COMPONENT);
+    CODESTARTmodExit;
+    objRelease(glbl, CORE_COMPONENT);
 ENDmodExit
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt;
-CODEqueryEtryPt_STD_OMOD_QUERIES;
-CODEqueryEtryPt_STD_OMOD8_QUERIES;
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
+    CODESTARTqueryEtryPt;
+    CODEqueryEtryPt_STD_OMOD_QUERIES;
+    CODEqueryEtryPt_STD_OMOD8_QUERIES;
+    CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 ENDqueryEtryPt
 
 BEGINmodInit()
-CODESTARTmodInit;
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
+    CODESTARTmodInit;
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    CODEmodInit_QueryRegCFSLineHdlr CHKiRet(objUse(glbl, CORE_COMPONENT));
 ENDmodInit

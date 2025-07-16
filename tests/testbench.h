@@ -24,80 +24,71 @@
 #include <stdlib.h>
 
 /* everything we need to begin a testbench */
-#define MODULE_TYPE_TESTBENCH \
-/* definitions for objects we access */ \
-DEFobjCurrIf(obj) \
-\
-static rsRetVal doInit(void); \
-static rsRetVal doTest(void); \
-static rsRetVal doExit(void); \
-\
-/* Below is the driver, which is always the same */ \
-int main(int __attribute__((unused)) argc, char __attribute__((unused)) *argv[]) \
-{ \
-	DEFiRet; \
-	CHKiRet(doInit()); \
-	CHKiRet(doTest()); \
-	CHKiRet(doExit()); \
-finalize_it: \
-	if(iRet != RS_RET_OK) \
-		printf("test returns iRet %d\n", iRet); \
-	RETiRet; \
-}
+#define MODULE_TYPE_TESTBENCH                                                           \
+    /* definitions for objects we access */                                             \
+    DEFobjCurrIf(obj)                                                                   \
+                                                                                        \
+        static rsRetVal                                                                 \
+        doInit(void);                                                                   \
+    static rsRetVal doTest(void);                                                       \
+    static rsRetVal doExit(void);                                                       \
+                                                                                        \
+    /* Below is the driver, which is always the same */                                 \
+    int main(int __attribute__((unused)) argc, char __attribute__((unused)) * argv[]) { \
+        DEFiRet;                                                                        \
+        CHKiRet(doInit());                                                              \
+        CHKiRet(doTest());                                                              \
+        CHKiRet(doExit());                                                              \
+    finalize_it:                                                                        \
+        if (iRet != RS_RET_OK) printf("test returns iRet %d\n", iRet);                  \
+        RETiRet;                                                                        \
+    }
 
 
 /* Initialize everything (most importantly the runtime objects) for the test. The framework
  * initializes the global runtime, user must add those objects that it needs additionally.
  */
-#define BEGINInit \
-static rsRetVal doInit(void) \
-{ \
-	DEFiRet; \
-	char *pErrObj; /* tells us which object failed if that happens */ \
-	putenv("RSYSLOG_MODDIR=../runtime/.libs/"); /* this is a bit hackish... */ \
-\
-	dbgClassInit(); \
-	/* Intialize the runtime system */ \
-	pErrObj = "rsyslog runtime"; /* set in case the runtime errors before setting an object */ \
-	CHKiRet(rsrtInit(&pErrObj, &obj)); \
+#define BEGINInit                                                                                  \
+    static rsRetVal doInit(void) {                                                                 \
+        DEFiRet;                                                                                   \
+        char *pErrObj; /* tells us which object failed if that happens */                          \
+        putenv("RSYSLOG_MODDIR=../runtime/.libs/"); /* this is a bit hackish... */                 \
+                                                                                                   \
+        dbgClassInit();                                                                            \
+        /* Intialize the runtime system */                                                         \
+        pErrObj = "rsyslog runtime"; /* set in case the runtime errors before setting an object */ \
+        CHKiRet(rsrtInit(&pErrObj, &obj));
 
 #define CODESTARTInit
 
-#define ENDInit \
-finalize_it: \
-	if(iRet != RS_RET_OK) { \
-		printf("failure occurred during init of object '%s'\n", pErrObj); \
-	} \
-\
-	RETiRet; \
-}
-
+#define ENDInit                                                                                                \
+    finalize_it : if (iRet != RS_RET_OK) { printf("failure occurred during init of object '%s'\n", pErrObj); } \
+                                                                                                               \
+    RETiRet;                                                                                                   \
+    }
 
 
 /* Carry out the actual test...
  */
-#define BEGINTest \
-rsRetVal doTest(void) \
-{ \
-	DEFiRet;
+#define BEGINTest           \
+    rsRetVal doTest(void) { \
+        DEFiRet;
 
 #define CODESTARTTest
 
 #define ENDTest \
-	RETiRet; \
-}
+    RETiRet;    \
+    }
 
 
 /* De-init everything (most importantly the runtime objects) for the test.  */
-#define BEGINExit \
-rsRetVal doExit(void) \
-{ \
-	DEFiRet; \
-	CHKiRet(rsrtExit());
+#define BEGINExit           \
+    rsRetVal doExit(void) { \
+        DEFiRet;            \
+        CHKiRet(rsrtExit());
 
 #define CODESTARTExit
 
-#define ENDExit \
-finalize_it: \
-	RETiRet; \
-}
+#define ENDExit            \
+    finalize_it : RETiRet; \
+    }

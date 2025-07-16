@@ -22,20 +22,20 @@
 #define INCLUDED_RATELIMIT_H
 
 struct ratelimit_s {
-	char *name;	/**< rate limiter name, e.g. for user messages */
-	/* support for Linux kernel-type ratelimiting */
-	unsigned int interval;
-	unsigned int burst;
-	intTiny severity; /**< ratelimit only equal or lower severity levels (eq or higher values) */
-	unsigned done;
-	unsigned missed;
-	time_t begin;
-	/* support for "last message repeated n times */
-	unsigned nsupp;		/**< nbr of msgs suppressed */
-	smsg_t *pMsg;
-	sbool bThreadSafe;	/**< do we need to operate in Thread-Safe mode? */
-	sbool bNoTimeCache;	/**< if we shall not used cached reception time */
-	pthread_mutex_t mut;	/**< mutex if thread-safe operation desired */
+    char *name; /**< rate limiter name, e.g. for user messages */
+    /* support for Linux kernel-type ratelimiting */
+    unsigned int interval;
+    unsigned int burst;
+    intTiny severity; /**< ratelimit only equal or lower severity levels (eq or higher values) */
+    unsigned done;
+    unsigned missed;
+    time_t begin;
+    /* support for "last message repeated n times */
+    unsigned nsupp; /**< nbr of msgs suppressed */
+    smsg_t *pMsg;
+    sbool bThreadSafe; /**< do we need to operate in Thread-Safe mode? */
+    sbool bNoTimeCache; /**< if we shall not used cached reception time */
+    pthread_mutex_t mut; /**< mutex if thread-safe operation desired */
 };
 
 /* prototypes */
@@ -44,7 +44,7 @@ void ratelimitSetThreadSafe(ratelimit_t *ratelimit);
 void ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned int interval, unsigned int burst);
 void ratelimitSetNoTimeCache(ratelimit_t *ratelimit);
 void ratelimitSetSeverity(ratelimit_t *ratelimit, intTiny severity);
-rsRetVal ratelimitMsgCount(ratelimit_t *ratelimit, time_t tt, const char* const appname);
+rsRetVal ratelimitMsgCount(ratelimit_t *ratelimit, time_t tt, const char *const appname);
 rsRetVal ratelimitMsg(ratelimit_t *ratelimit, smsg_t *pMsg, smsg_t **ppRep);
 rsRetVal ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, smsg_t *pMsg);
 void ratelimitDestruct(ratelimit_t *pThis);

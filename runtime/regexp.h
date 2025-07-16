@@ -27,10 +27,10 @@
 
 /* interfaces */
 BEGINinterface(regexp) /* name must also be changed in ENDinterface macro! */
-	int (*regcomp)(regex_t *preg, const char *regex, int cflags);
-	int (*regexec)(const regex_t *preg, const char *string, size_t nmatch, regmatch_t pmatch[], int eflags);
-	size_t (*regerror)(int errcode, const regex_t *preg, char *errbuf, size_t errbuf_size);
-	void (*regfree)(regex_t *preg);
+    int (*regcomp)(regex_t *preg, const char *regex, int cflags);
+    int (*regexec)(const regex_t *preg, const char *string, size_t nmatch, regmatch_t pmatch[], int eflags);
+    size_t (*regerror)(int errcode, const regex_t *preg, char *errbuf, size_t errbuf_size);
+    void (*regfree)(regex_t *preg);
 ENDinterface(regexp)
 #define regexpCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 

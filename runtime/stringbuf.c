@@ -45,7 +45,7 @@
 #include "errmsg.h"
 #include "unicode-helper.h"
 
-#define DEV_DEBUG 0	/* set to 1 to enable very verbose developer debugging messages */
+#define DEV_DEBUG 0 /* set to 1 to enable very verbose developer debugging messages */
 
 
 /* ################################################################# *
@@ -53,175 +53,160 @@
  * ################################################################# */
 
 /* static data */
-DEFobjCurrIf(obj)
-DEFobjCurrIf(regexp)
+DEFobjCurrIf(obj) DEFobjCurrIf(regexp)
 
-/* ################################################################# *
- * public members                                                    *
- * ################################################################# */
+    /* ################################################################# *
+     * public members                                                    *
+     * ################################################################# */
 
 
-rsRetVal
-cstrConstruct(cstr_t **const ppThis)
-{
-	DEFiRet;
-	cstr_t *pThis;
+    rsRetVal cstrConstruct(cstr_t **const ppThis) {
+    DEFiRet;
+    cstr_t *pThis;
 
-	CHKmalloc(pThis = (cstr_t*) malloc(sizeof(cstr_t)));
-	rsSETOBJTYPE(pThis, OIDrsCStr);
-	#ifndef NDEBUG
-	pThis->isFinalized = 0;
-	#endif
-	pThis->pBuf = NULL;
-	pThis->iBufSize = 0;
-	pThis->iStrLen = 0;
-	*ppThis = pThis;
+    CHKmalloc(pThis = (cstr_t *)malloc(sizeof(cstr_t)));
+    rsSETOBJTYPE(pThis, OIDrsCStr);
+#ifndef NDEBUG
+    pThis->isFinalized = 0;
+#endif
+    pThis->pBuf = NULL;
+    pThis->iBufSize = 0;
+    pThis->iStrLen = 0;
+    *ppThis = pThis;
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
 /* construct from sz string
  * rgerhards 2005-09-15
  */
-rsRetVal
-rsCStrConstructFromszStr(cstr_t **const ppThis, const uchar *const sz)
-{
-	DEFiRet;
-	cstr_t *pThis;
+rsRetVal rsCStrConstructFromszStr(cstr_t **const ppThis, const uchar *const sz) {
+    DEFiRet;
+    cstr_t *pThis;
 
-	CHKiRet(rsCStrConstruct(&pThis));
+    CHKiRet(rsCStrConstruct(&pThis));
 
-	pThis->iStrLen = strlen((char *) sz);
-	pThis->iBufSize = strlen((char *) sz) + 1;
-	if((pThis->pBuf = (uchar*) malloc(pThis->iBufSize)) == NULL) {
-		RSFREEOBJ(pThis);
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
+    pThis->iStrLen = strlen((char *)sz);
+    pThis->iBufSize = strlen((char *)sz) + 1;
+    if ((pThis->pBuf = (uchar *)malloc(pThis->iBufSize)) == NULL) {
+        RSFREEOBJ(pThis);
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
 
-	/* we do NOT need to copy the \0! */
-	memcpy(pThis->pBuf, sz, pThis->iStrLen);
+    /* we do NOT need to copy the \0! */
+    memcpy(pThis->pBuf, sz, pThis->iStrLen);
 
-	*ppThis = pThis;
+    *ppThis = pThis;
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
 /* a helper function for rsCStr*Strf()
  */
-static rsRetVal rsCStrConstructFromszStrv(cstr_t **ppThis, const char *fmt,
-va_list ap) __attribute__((format(printf,2, 0)));
-static rsRetVal
-rsCStrConstructFromszStrv(cstr_t **const ppThis, const char *const fmt, va_list ap)
-{
-	DEFiRet;
-	cstr_t *pThis;
-	va_list ap2;
-	int len;
+static rsRetVal rsCStrConstructFromszStrv(cstr_t **ppThis, const char *fmt, va_list ap)
+    __attribute__((format(printf, 2, 0)));
+static rsRetVal rsCStrConstructFromszStrv(cstr_t **const ppThis, const char *const fmt, va_list ap) {
+    DEFiRet;
+    cstr_t *pThis;
+    va_list ap2;
+    int len;
 
-	va_copy(ap2, ap);
-	len = vsnprintf(NULL, 0, (char*)fmt, ap2);
-	va_end(ap2);
+    va_copy(ap2, ap);
+    len = vsnprintf(NULL, 0, (char *)fmt, ap2);
+    va_end(ap2);
 
-	if(len < 0)
-		ABORT_FINALIZE(RS_RET_ERR);
+    if (len < 0) ABORT_FINALIZE(RS_RET_ERR);
 
-	CHKiRet(rsCStrConstruct(&pThis));
+    CHKiRet(rsCStrConstruct(&pThis));
 
-	pThis->iStrLen = len;
-	pThis->iBufSize = len + 1;
-	len++; /* account for the \0 written by vsnprintf */
-	if((pThis->pBuf = (uchar*) malloc(pThis->iBufSize)) == NULL) {
-		RSFREEOBJ(pThis);
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
+    pThis->iStrLen = len;
+    pThis->iBufSize = len + 1;
+    len++; /* account for the \0 written by vsnprintf */
+    if ((pThis->pBuf = (uchar *)malloc(pThis->iBufSize)) == NULL) {
+        RSFREEOBJ(pThis);
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
 
-	vsnprintf((char*)pThis->pBuf, len, (char*)fmt, ap);
-	*ppThis = pThis;
+    vsnprintf((char *)pThis->pBuf, len, (char *)fmt, ap);
+    *ppThis = pThis;
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
 /* construct from a printf-style formated string
  */
-rsRetVal
-rsCStrConstructFromszStrf(cstr_t **ppThis, const char *fmt, ...)
-{
-	DEFiRet;
-	va_list ap;
+rsRetVal rsCStrConstructFromszStrf(cstr_t **ppThis, const char *fmt, ...) {
+    DEFiRet;
+    va_list ap;
 
-	va_start(ap, fmt);
-	iRet = rsCStrConstructFromszStrv(ppThis, fmt, ap);
-	va_end(ap);
+    va_start(ap, fmt);
+    iRet = rsCStrConstructFromszStrv(ppThis, fmt, ap);
+    va_end(ap);
 
-	RETiRet;
+    RETiRet;
 }
 
 
 /* construct from es_str_t string
  * rgerhards 2010-12-03
  */
-rsRetVal
-cstrConstructFromESStr(cstr_t **const ppThis, es_str_t *const str)
-{
-	DEFiRet;
-	cstr_t *pThis;
+rsRetVal cstrConstructFromESStr(cstr_t **const ppThis, es_str_t *const str) {
+    DEFiRet;
+    cstr_t *pThis;
 
-	CHKiRet(rsCStrConstruct(&pThis));
+    CHKiRet(rsCStrConstruct(&pThis));
 
-	pThis->iStrLen = es_strlen(str);
-	pThis->iBufSize = pThis->iStrLen + 1;
-	if((pThis->pBuf = (uchar*) malloc(pThis->iBufSize)) == NULL) {
-		RSFREEOBJ(pThis);
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
+    pThis->iStrLen = es_strlen(str);
+    pThis->iBufSize = pThis->iStrLen + 1;
+    if ((pThis->pBuf = (uchar *)malloc(pThis->iBufSize)) == NULL) {
+        RSFREEOBJ(pThis);
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
 
-	/* we do NOT need to copy the \0! */
-	memcpy(pThis->pBuf, es_getBufAddr(str), pThis->iStrLen);
+    /* we do NOT need to copy the \0! */
+    memcpy(pThis->pBuf, es_getBufAddr(str), pThis->iStrLen);
 
-	*ppThis = pThis;
+    *ppThis = pThis;
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* construct from CStr object.
  * rgerhards 2005-10-18
  */
-rsRetVal ATTR_NONNULL()
-rsCStrConstructFromCStr(cstr_t **const ppThis, const cstr_t *const pFrom)
-{
-	DEFiRet;
-	cstr_t *pThis;
+rsRetVal ATTR_NONNULL() rsCStrConstructFromCStr(cstr_t **const ppThis, const cstr_t *const pFrom) {
+    DEFiRet;
+    cstr_t *pThis;
 
-	rsCHECKVALIDOBJECT(pFrom, OIDrsCStr);
+    rsCHECKVALIDOBJECT(pFrom, OIDrsCStr);
 
-	CHKiRet(rsCStrConstruct(&pThis));
-	if(pFrom->iStrLen > 0) {
-		pThis->iStrLen = pFrom->iStrLen;
-		pThis->iBufSize = pFrom->iStrLen + 1;
-		if((pThis->pBuf = (uchar*) malloc(pThis->iBufSize)) == NULL) {
-			RSFREEOBJ(pThis);
-			ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-		}
-		memcpy(pThis->pBuf, pFrom->pBuf, pThis->iStrLen);
-	}
+    CHKiRet(rsCStrConstruct(&pThis));
+    if (pFrom->iStrLen > 0) {
+        pThis->iStrLen = pFrom->iStrLen;
+        pThis->iBufSize = pFrom->iStrLen + 1;
+        if ((pThis->pBuf = (uchar *)malloc(pThis->iBufSize)) == NULL) {
+            RSFREEOBJ(pThis);
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+        memcpy(pThis->pBuf, pFrom->pBuf, pThis->iStrLen);
+    }
 
-	*ppThis = pThis;
+    *ppThis = pThis;
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
-void rsCStrDestruct(cstr_t **const ppThis)
-{
-	free((*ppThis)->pBuf);
-	RSFREEOBJ(*ppThis);
-	*ppThis = NULL;
+void rsCStrDestruct(cstr_t **const ppThis) {
+    free((*ppThis)->pBuf);
+    RSFREEOBJ(*ppThis);
+    *ppThis = NULL;
 }
 
 
@@ -233,78 +218,74 @@ void rsCStrDestruct(cstr_t **const ppThis)
  * rgerhards, 2008-01-07
  * changed to utilized realloc() -- rgerhards, 2009-06-16
  */
-static rsRetVal
-rsCStrExtendBuf(cstr_t *const __restrict__ pThis, const size_t iMinNeeded)
-{
-	uchar *pNewBuf;
-	size_t iNewSize;
-	DEFiRet;
+static rsRetVal rsCStrExtendBuf(cstr_t *const __restrict__ pThis, const size_t iMinNeeded) {
+    uchar *pNewBuf;
+    size_t iNewSize;
+    DEFiRet;
 
-	/* first compute the new size needed */
-	if(iMinNeeded > RS_STRINGBUF_ALLOC_INCREMENT) {
-		/* we allocate "n" ALLOC_INCREMENTs. Usually, that should
-		 * leave some room after the absolutely needed one. It also
-		 * reduces memory fragmentation. Note that all of this are
-		 * integer operations (very important to understand what is
-		 * going on)! Parenthesis are for better readibility.
-		 */
-		iNewSize = (iMinNeeded / RS_STRINGBUF_ALLOC_INCREMENT + 1) * RS_STRINGBUF_ALLOC_INCREMENT;
-	} else {
-		iNewSize = pThis->iBufSize + RS_STRINGBUF_ALLOC_INCREMENT;
-	}
-	iNewSize += pThis->iBufSize; /* add current size */
+    /* first compute the new size needed */
+    if (iMinNeeded > RS_STRINGBUF_ALLOC_INCREMENT) {
+        /* we allocate "n" ALLOC_INCREMENTs. Usually, that should
+         * leave some room after the absolutely needed one. It also
+         * reduces memory fragmentation. Note that all of this are
+         * integer operations (very important to understand what is
+         * going on)! Parenthesis are for better readibility.
+         */
+        iNewSize = (iMinNeeded / RS_STRINGBUF_ALLOC_INCREMENT + 1) * RS_STRINGBUF_ALLOC_INCREMENT;
+    } else {
+        iNewSize = pThis->iBufSize + RS_STRINGBUF_ALLOC_INCREMENT;
+    }
+    iNewSize += pThis->iBufSize; /* add current size */
 
-	#if DEV_DEBUG == 1
-	dbgprintf("extending string buffer, old %d, new %d\n", pThis->iBufSize, iNewSize);
-	#endif
-	CHKmalloc(pNewBuf = (uchar*) realloc(pThis->pBuf, iNewSize));
-	pThis->iBufSize = iNewSize;
-	pThis->pBuf = pNewBuf;
+#if DEV_DEBUG == 1
+    dbgprintf("extending string buffer, old %d, new %d\n", pThis->iBufSize, iNewSize);
+#endif
+    CHKmalloc(pNewBuf = (uchar *)realloc(pThis->pBuf, iNewSize));
+    pThis->iBufSize = iNewSize;
+    pThis->pBuf = pNewBuf;
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* Append a character to the current string object. This may only be done until
  * cstrFinalize() is called.
  * rgerhards, 2009-06-16
  */
-rsRetVal cstrAppendChar(cstr_t *const __restrict__ pThis, const uchar c)
-{
-	rsRetVal iRet = RS_RET_OK;
+rsRetVal cstrAppendChar(cstr_t *const __restrict__ pThis, const uchar c) {
+    rsRetVal iRet = RS_RET_OK;
 
-	if(pThis->iStrLen+1 >= pThis->iBufSize) {
-		CHKiRet(rsCStrExtendBuf(pThis, 1)); /* need more memory! */
-	}
+    if (pThis->iStrLen + 1 >= pThis->iBufSize) {
+        CHKiRet(rsCStrExtendBuf(pThis, 1)); /* need more memory! */
+    }
 
-	/* ok, when we reach this, we have sufficient memory */
-	*(pThis->pBuf + pThis->iStrLen++) = c;
+    /* ok, when we reach this, we have sufficient memory */
+    *(pThis->pBuf + pThis->iStrLen++) = c;
 
 finalize_it:
-	return iRet;
+    return iRet;
 }
 
 /* append a string of known length. In this case, we make sure we do at most
  * one additional memory allocation.
  */
-rsRetVal rsCStrAppendStrWithLen(cstr_t *const pThis, const uchar*const  psz, const size_t iStrLen)
-{
-	DEFiRet;
+rsRetVal rsCStrAppendStrWithLen(cstr_t *const pThis, const uchar *const psz, const size_t iStrLen) {
+    DEFiRet;
 
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
-	assert(psz != NULL);
+    rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+    assert(psz != NULL);
 
-	/* does the string fit? */
-	if(pThis->iStrLen + iStrLen >= pThis->iBufSize) {
-		CHKiRet(rsCStrExtendBuf(pThis, iStrLen)); /* need more memory! */
-	}
+    /* does the string fit? */
+    if (pThis->iStrLen + iStrLen >= pThis->iBufSize) {
+        CHKiRet(rsCStrExtendBuf(pThis, iStrLen)); /* need more memory! */
+    }
 
-	/* ok, now we always have sufficient continues memory to do a memcpy() */
-	memcpy(pThis->pBuf + pThis->iStrLen, psz, iStrLen);
-	pThis->iStrLen += iStrLen;
+    /* ok, now we always have sufficient continues memory to do a memcpy() */
+    memcpy(pThis->pBuf + pThis->iStrLen, psz, iStrLen);
+    pThis->iStrLen += iStrLen;
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -313,55 +294,50 @@ finalize_it:
  * need to change existing code.
  * rgerhards, 2007-07-03
  */
-rsRetVal rsCStrAppendStr(cstr_t *const pThis, const uchar*const  psz)
-{
-	return rsCStrAppendStrWithLen(pThis, psz, strlen((char*) psz));
+rsRetVal rsCStrAppendStr(cstr_t *const pThis, const uchar *const psz) {
+    return rsCStrAppendStrWithLen(pThis, psz, strlen((char *)psz));
 }
 
 
 /* append the contents of one cstr_t object to another
  * rgerhards, 2008-02-25
  */
-rsRetVal cstrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend)
-{
-	return rsCStrAppendStrWithLen(pThis, pstrAppend->pBuf, pstrAppend->iStrLen);
+rsRetVal cstrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend) {
+    return rsCStrAppendStrWithLen(pThis, pstrAppend->pBuf, pstrAppend->iStrLen);
 }
 
 
 /* append a printf-style formated string
  */
-rsRetVal rsCStrAppendStrf(cstr_t *pThis, const char *fmt, ...)
-{
-	DEFiRet;
-	va_list ap;
-	cstr_t *pStr = NULL;
+rsRetVal rsCStrAppendStrf(cstr_t *pThis, const char *fmt, ...) {
+    DEFiRet;
+    va_list ap;
+    cstr_t *pStr = NULL;
 
-	va_start(ap, fmt);
-	iRet = rsCStrConstructFromszStrv(&pStr, (char*)fmt, ap);
-	va_end(ap);
+    va_start(ap, fmt);
+    iRet = rsCStrConstructFromszStrv(&pStr, (char *)fmt, ap);
+    va_end(ap);
 
-	if(iRet != RS_RET_OK)
-		goto finalize_it;
+    if (iRet != RS_RET_OK) goto finalize_it;
 
-	iRet = cstrAppendCStr(pThis, pStr);
-	rsCStrDestruct(&pStr);
+    iRet = cstrAppendCStr(pThis, pStr);
+    rsCStrDestruct(&pStr);
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
-rsRetVal rsCStrAppendInt(cstr_t *pThis, long i)
-{
-	DEFiRet;
-	uchar szBuf[32];
+rsRetVal rsCStrAppendInt(cstr_t *pThis, long i) {
+    DEFiRet;
+    uchar szBuf[32];
 
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+    rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
-	CHKiRet(srUtilItoA((char*) szBuf, sizeof(szBuf), i));
+    CHKiRet(srUtilItoA((char *)szBuf, sizeof(szBuf), i));
 
-	iRet = rsCStrAppendStr(pThis, szBuf);
+    iRet = rsCStrAppendStr(pThis, szBuf);
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -371,43 +347,39 @@ finalize_it:
  * created (this is NOT an error!).
  * rgerhards, 2005-10-18
  */
-rsRetVal rsCStrSetSzStr(cstr_t *const __restrict__ pThis,
-	uchar *const __restrict__ pszNew)
-{
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+rsRetVal rsCStrSetSzStr(cstr_t *const __restrict__ pThis, uchar *const __restrict__ pszNew) {
+    rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
-	if(pszNew == NULL) {
-		free(pThis->pBuf);
-		pThis->pBuf = NULL;
-		pThis->iStrLen = 0;
-		pThis->iBufSize = 0;
-	} else {
-		const size_t newlen = strlen((char*)pszNew);
-		if(newlen > pThis->iBufSize) {
-			uchar *const newbuf = (uchar*) realloc(pThis->pBuf, newlen + 1);
-			if(newbuf == NULL) {
-				/* we keep the old value, best we can do */
-				return RS_RET_OUT_OF_MEMORY;
-			}
-			pThis->pBuf = newbuf;
-			pThis->iBufSize = newlen + 1;
-		}
-		pThis->iStrLen = newlen;
-		memcpy(pThis->pBuf, pszNew, pThis->iStrLen);
-	}
+    if (pszNew == NULL) {
+        free(pThis->pBuf);
+        pThis->pBuf = NULL;
+        pThis->iStrLen = 0;
+        pThis->iBufSize = 0;
+    } else {
+        const size_t newlen = strlen((char *)pszNew);
+        if (newlen > pThis->iBufSize) {
+            uchar *const newbuf = (uchar *)realloc(pThis->pBuf, newlen + 1);
+            if (newbuf == NULL) {
+                /* we keep the old value, best we can do */
+                return RS_RET_OUT_OF_MEMORY;
+            }
+            pThis->pBuf = newbuf;
+            pThis->iBufSize = newlen + 1;
+        }
+        pThis->iStrLen = newlen;
+        memcpy(pThis->pBuf, pszNew, pThis->iStrLen);
+    }
 
-	return RS_RET_OK;
+    return RS_RET_OK;
 }
 
 /* Converts the CStr object to a classical zero-terminated C string
  * and returns that string. The caller must not free it and must not
  * destroy the CStr object as long as the ascii string is used.
  */
-uchar*
-cstrGetSzStrNoNULL(cstr_t *const __restrict__ pThis)
-{
-	assert(pThis->isFinalized);
-	return (pThis->pBuf == NULL) ? (uchar*) "" : pThis->pBuf;
+uchar *cstrGetSzStrNoNULL(cstr_t *const __restrict__ pThis) {
+    assert(pThis->isFinalized);
+    return (pThis->pBuf == NULL) ? (uchar *)"" : pThis->pBuf;
 }
 
 
@@ -427,42 +399,41 @@ cstrGetSzStrNoNULL(cstr_t *const __restrict__ pThis)
  * PLEASE NOTE: the caller must free the memory returned in ppSz in any case
  * (except, of course, if it is NULL).
  */
-rsRetVal cstrConvSzStrAndDestruct(cstr_t **ppThis, uchar **ppSz, int bRetNULL)
-{
-	DEFiRet;
-	uchar* pRetBuf;
-	cstr_t *pThis;
+rsRetVal cstrConvSzStrAndDestruct(cstr_t **ppThis, uchar **ppSz, int bRetNULL) {
+    DEFiRet;
+    uchar *pRetBuf;
+    cstr_t *pThis;
 
-	assert(ppThis != NULL);
-	pThis = *ppThis;
-	assert(pThis->isFinalized);
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
-	assert(ppSz != NULL);
-	assert(bRetNULL == 0 || bRetNULL == 1);
+    assert(ppThis != NULL);
+    pThis = *ppThis;
+    assert(pThis->isFinalized);
+    rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+    assert(ppSz != NULL);
+    assert(bRetNULL == 0 || bRetNULL == 1);
 
-	if(pThis->pBuf == NULL) {
-		if(bRetNULL == 0) {
-			CHKmalloc(pRetBuf = malloc(1));
-			*pRetBuf = '\0';
-		} else {
-			pRetBuf = NULL;
-		}
-	} else {
-		pThis->pBuf[pThis->iStrLen] = '\0'; /* space for this is reserved */
-		pRetBuf = pThis->pBuf;
-	}
+    if (pThis->pBuf == NULL) {
+        if (bRetNULL == 0) {
+            CHKmalloc(pRetBuf = malloc(1));
+            *pRetBuf = '\0';
+        } else {
+            pRetBuf = NULL;
+        }
+    } else {
+        pThis->pBuf[pThis->iStrLen] = '\0'; /* space for this is reserved */
+        pRetBuf = pThis->pBuf;
+    }
 
-	*ppSz = pRetBuf;
+    *ppSz = pRetBuf;
 
 finalize_it:
-	/* We got it, now free the object ourselfs. Please note
-	 * that we can NOT use the rsCStrDestruct function as it would
-	 * also free the sz String buffer, which we pass on to the user.
-	 */
-	RSFREEOBJ(pThis);
-	*ppThis = NULL;
+    /* We got it, now free the object ourselfs. Please note
+     * that we can NOT use the rsCStrDestruct function as it would
+     * also free the sz String buffer, which we pass on to the user.
+     */
+    RSFREEOBJ(pThis);
+    *ppThis = NULL;
 
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -473,52 +444,47 @@ finalize_it:
  * This is due to performance reasons.
  */
 #ifndef NDEBUG
-size_t cstrLen(cstr_t *pThis)
-{
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
-	return(pThis->iStrLen);
+size_t cstrLen(cstr_t *pThis) {
+    rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+    return (pThis->iStrLen);
 }
 #endif
 
 /* Truncate characters from the end of the string.
  * rgerhards 2005-09-15
  */
-rsRetVal rsCStrTruncate(cstr_t *pThis, size_t nTrunc)
-{
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+rsRetVal rsCStrTruncate(cstr_t *pThis, size_t nTrunc) {
+    rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
-	if(pThis->iStrLen < nTrunc)
-		return RS_TRUNCAT_TOO_LARGE;
+    if (pThis->iStrLen < nTrunc) return RS_TRUNCAT_TOO_LARGE;
 
-	pThis->iStrLen -= nTrunc;
+    pThis->iStrLen -= nTrunc;
 
-	return RS_RET_OK;
+    return RS_RET_OK;
 }
 
 /* Trim trailing whitespace from a given string
  */
-void
-cstrTrimTrailingWhiteSpace(cstr_t *const __restrict__ pThis)
-{
-	register int i;
-	register uchar *pC;
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+void cstrTrimTrailingWhiteSpace(cstr_t *const __restrict__ pThis) {
+    register int i;
+    register uchar *pC;
+    rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
 
-	if(pThis->iStrLen == 0)
-		goto done; /* empty string -> nothing to trim ;) */
-	i = pThis->iStrLen;
-	pC = pThis->pBuf + i - 1;
-	while(i > 0 && isspace((int)*pC)) {
-		--pC;
-		--i;
-	}
-	/* i now is the new string length! */
-	if(i != (int) pThis->iStrLen) {
-		pThis->iStrLen = i;
-		pThis->pBuf[pThis->iStrLen] = '\0'; /* we always have this space */ //TODO: can we remove this?
-	}
+    if (pThis->iStrLen == 0) goto done; /* empty string -> nothing to trim ;) */
+    i = pThis->iStrLen;
+    pC = pThis->pBuf + i - 1;
+    while (i > 0 && isspace((int)*pC)) {
+        --pC;
+        --i;
+    }
+    /* i now is the new string length! */
+    if (i != (int)pThis->iStrLen) {
+        pThis->iStrLen = i;
+        pThis->pBuf[pThis->iStrLen] = '\0'; /* we always have this space */  // TODO: can we remove this?
+    }
 
-done:	return;
+done:
+    return;
 }
 
 /* compare two string objects - works like strcmp(), but operates
@@ -530,18 +496,16 @@ done:	return;
  * in equal-size strings.
  * rgerhards, 2005-09-26
  */
-int
-rsCStrCStrCmp(cstr_t *const __restrict__ pCS1, cstr_t *const __restrict__ pCS2)
-{
-	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
-	rsCHECKVALIDOBJECT(pCS2, OIDrsCStr);
-	if(pCS1->iStrLen == pCS2->iStrLen)
-		if(pCS1->iStrLen == 0)
-			return 0; /* zero-sized string are equal ;) */
-		else
-			return memcmp(pCS1->pBuf, pCS2->pBuf, pCS1->iStrLen);
-	else
-		return pCS1->iStrLen - pCS2->iStrLen;
+int rsCStrCStrCmp(cstr_t *const __restrict__ pCS1, cstr_t *const __restrict__ pCS2) {
+    rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
+    rsCHECKVALIDOBJECT(pCS2, OIDrsCStr);
+    if (pCS1->iStrLen == pCS2->iStrLen)
+        if (pCS1->iStrLen == 0)
+            return 0; /* zero-sized string are equal ;) */
+        else
+            return memcmp(pCS1->pBuf, pCS2->pBuf, pCS1->iStrLen);
+    else
+        return pCS1->iStrLen - pCS2->iStrLen;
 }
 
 
@@ -553,20 +517,18 @@ rsCStrCStrCmp(cstr_t *const __restrict__ pCS1, cstr_t *const __restrict__ pCS2)
  * sequence while -1 indicates it does not!
  * rgerhards 2005-10-19
  */
-int
-rsCStrSzStrStartsWithCStr(cstr_t *const __restrict__ pCS1, uchar *const __restrict__ psz, const size_t iLenSz)
-{
-	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
-	assert(psz != NULL);
-	assert(iLenSz == strlen((char*)psz)); /* just make sure during debugging! */
-	if(iLenSz >= pCS1->iStrLen) {
-		if(pCS1->iStrLen == 0)
-			return 0; /* yes, it starts with a zero-sized string ;) */
-		else
-			return memcmp(psz, pCS1->pBuf, pCS1->iStrLen);
-	} else {
-		return -1; /* pCS1 is less then psz */
-	}
+int rsCStrSzStrStartsWithCStr(cstr_t *const __restrict__ pCS1, uchar *const __restrict__ psz, const size_t iLenSz) {
+    rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
+    assert(psz != NULL);
+    assert(iLenSz == strlen((char *)psz)); /* just make sure during debugging! */
+    if (iLenSz >= pCS1->iStrLen) {
+        if (pCS1->iStrLen == 0)
+            return 0; /* yes, it starts with a zero-sized string ;) */
+        else
+            return memcmp(psz, pCS1->pBuf, pCS1->iStrLen);
+    } else {
+        return -1; /* pCS1 is less then psz */
+    }
 }
 
 /* check if a sz-type string ends with a CStr object. This helper mirrors
@@ -574,21 +536,19 @@ rsCStrSzStrStartsWithCStr(cstr_t *const __restrict__ pCS1, uchar *const __restri
  * "endswith" property-filter operation.
  * returns 0 if the string ends with the pattern, -1 otherwise.
  */
-int
-rsCStrSzStrEndsWithCStr(cstr_t *const __restrict__ pCS1, uchar *const __restrict__ psz, const size_t iLenSz)
-{
-	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
-	assert(psz != NULL);
-	assert(iLenSz == strlen((char*)psz));
-	if(iLenSz >= pCS1->iStrLen) {
-		if(pCS1->iStrLen == 0) {
-			return 0; /* yes, it ends with a zero-sized string ;) */
-		} else {
-			return memcmp(psz + iLenSz - pCS1->iStrLen, pCS1->pBuf, pCS1->iStrLen);
-		}
-	} else {
-		return -1;
-	}
+int rsCStrSzStrEndsWithCStr(cstr_t *const __restrict__ pCS1, uchar *const __restrict__ psz, const size_t iLenSz) {
+    rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
+    assert(psz != NULL);
+    assert(iLenSz == strlen((char *)psz));
+    if (iLenSz >= pCS1->iStrLen) {
+        if (pCS1->iStrLen == 0) {
+            return 0; /* yes, it ends with a zero-sized string ;) */
+        } else {
+            return memcmp(psz + iLenSz - pCS1->iStrLen, pCS1->pBuf, pCS1->iStrLen);
+        }
+    } else {
+        return -1;
+    }
 }
 
 
@@ -604,37 +564,35 @@ rsCStrSzStrEndsWithCStr(cstr_t *const __restrict__ pCS1, uchar *const __restrict
  * If a caller does not need the cached version, it must still provide memory for it
  * and must call rsCStrRegexDestruct() afterwards.
  */
-rsRetVal rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz, int iType, void *rc)
-{
-	regex_t **cache = (regex_t**) rc;
-	int ret;
-	DEFiRet;
+rsRetVal rsCStrSzStrMatchRegex(cstr_t *pCS1, uchar *psz, int iType, void *rc) {
+    regex_t **cache = (regex_t **)rc;
+    int ret;
+    DEFiRet;
 
-	assert(pCS1 != NULL);
-	assert(psz != NULL);
-	assert(cache != NULL);
+    assert(pCS1 != NULL);
+    assert(psz != NULL);
+    assert(cache != NULL);
 
-	if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
-		if (*cache == NULL) {
-			*cache = calloc(1, sizeof(regex_t));
-			int errcode;
-			if((errcode = regexp.regcomp(*cache, (char*) rsCStrGetSzStrNoNULL(pCS1),
-				(iType == 1 ? REG_EXTENDED : 0) | REG_NOSUB))) {
-				char errbuff[512];
-				regexp.regerror(errcode, *cache, errbuff, sizeof(errbuff));
-				LogError(0, NO_ERRCODE, "Error in regular expression: %s\n", errbuff);
-				ABORT_FINALIZE(RS_RET_NOT_FOUND);
-			}
-		}
-		ret = regexp.regexec(*cache, (char*) psz, 0, NULL, 0);
-		if(ret != 0)
-			ABORT_FINALIZE(RS_RET_NOT_FOUND);
-	} else {
-		ABORT_FINALIZE(RS_RET_NOT_FOUND);
-	}
+    if (objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
+        if (*cache == NULL) {
+            *cache = calloc(1, sizeof(regex_t));
+            int errcode;
+            if ((errcode = regexp.regcomp(*cache, (char *)rsCStrGetSzStrNoNULL(pCS1),
+                                          (iType == 1 ? REG_EXTENDED : 0) | REG_NOSUB))) {
+                char errbuff[512];
+                regexp.regerror(errcode, *cache, errbuff, sizeof(errbuff));
+                LogError(0, NO_ERRCODE, "Error in regular expression: %s\n", errbuff);
+                ABORT_FINALIZE(RS_RET_NOT_FOUND);
+            }
+        }
+        ret = regexp.regexec(*cache, (char *)psz, 0, NULL, 0);
+        if (ret != 0) ABORT_FINALIZE(RS_RET_NOT_FOUND);
+    } else {
+        ABORT_FINALIZE(RS_RET_NOT_FOUND);
+    }
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -642,18 +600,17 @@ finalize_it:
  * Caller must provide a pointer to a buffer that was created by
  * rsCStrSzStrMatchRegexCache()
  */
-void rsCStrRegexDestruct(void *rc)
-{
-	regex_t **cache = rc;
+void rsCStrRegexDestruct(void *rc) {
+    regex_t **cache = rc;
 
-	assert(cache != NULL);
-	assert(*cache != NULL);
+    assert(cache != NULL);
+    assert(*cache != NULL);
 
-	if(objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
-		regexp.regfree(*cache);
-		free(*cache);
-		*cache = NULL;
-	}
+    if (objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
+        regexp.regfree(*cache);
+        free(*cache);
+        *cache = NULL;
+    }
 }
 
 
@@ -678,27 +635,25 @@ void rsCStrRegexDestruct(void *rc)
  * program bug and will lead to unpredictable results and program aborts).
  * rgerhards 2005-09-26
  */
-int rsCStrOffsetSzStrCmp(cstr_t *pCS1, size_t iOffset, uchar *psz, size_t iLenSz)
-{
-	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
-	assert(iOffset < pCS1->iStrLen);
-	assert(iLenSz == strlen((char*)psz)); /* just make sure during debugging! */
-	if((pCS1->iStrLen - iOffset) == iLenSz) {
-		/* we are using iLenSz below, because the lengths
-		 * are equal and iLenSz is faster to access
-		 */
-		if(iLenSz == 0) {
-			return 0; /* zero-sized strings are equal ;) */
-		} else {  /* we now have two non-empty strings of equal
-			 * length, so we need to actually check if they
-			 * are equal.
-			 */
-			return memcmp(pCS1->pBuf+iOffset, psz, iLenSz);
-		}
-	}
-	else {
-		return pCS1->iStrLen - iOffset - iLenSz;
-	}
+int rsCStrOffsetSzStrCmp(cstr_t *pCS1, size_t iOffset, uchar *psz, size_t iLenSz) {
+    rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
+    assert(iOffset < pCS1->iStrLen);
+    assert(iLenSz == strlen((char *)psz)); /* just make sure during debugging! */
+    if ((pCS1->iStrLen - iOffset) == iLenSz) {
+        /* we are using iLenSz below, because the lengths
+         * are equal and iLenSz is faster to access
+         */
+        if (iLenSz == 0) {
+            return 0; /* zero-sized strings are equal ;) */
+        } else { /* we now have two non-empty strings of equal
+                  * length, so we need to actually check if they
+                  * are equal.
+                  */
+            return memcmp(pCS1->pBuf + iOffset, psz, iLenSz);
+        }
+    } else {
+        return pCS1->iStrLen - iOffset - iLenSz;
+    }
 }
 
 
@@ -715,18 +670,17 @@ int rsCStrOffsetSzStrCmp(cstr_t *pCS1, size_t iOffset, uchar *psz, size_t iLenSz
  * The to sz string pointer must not be NULL!
  * rgerhards 2005-09-26
  */
-int rsCStrSzStrCmp(cstr_t *pCS1, uchar *psz, size_t iLenSz)
-{
-	rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
-	assert(psz != NULL);
-	assert(iLenSz == strlen((char*)psz)); /* just make sure during debugging! */
-	if(pCS1->iStrLen == iLenSz)
-		if(iLenSz == 0)
-			return 0; /* zero-sized strings are equal ;) */
-		else
-			return strncmp((char*)pCS1->pBuf, (char*)psz, iLenSz);
-	else
-		return (ssize_t) pCS1->iStrLen - (ssize_t) iLenSz;
+int rsCStrSzStrCmp(cstr_t *pCS1, uchar *psz, size_t iLenSz) {
+    rsCHECKVALIDOBJECT(pCS1, OIDrsCStr);
+    assert(psz != NULL);
+    assert(iLenSz == strlen((char *)psz)); /* just make sure during debugging! */
+    if (pCS1->iStrLen == iLenSz)
+        if (iLenSz == 0)
+            return 0; /* zero-sized strings are equal ;) */
+        else
+            return strncmp((char *)pCS1->pBuf, (char *)psz, iLenSz);
+    else
+        return (ssize_t)pCS1->iStrLen - (ssize_t)iLenSz;
 }
 
 
@@ -735,62 +689,55 @@ int rsCStrSzStrCmp(cstr_t *pCS1, uchar *psz, size_t iLenSz)
  * returned. Both parameters MUST be given (NULL is not allowed).
  * rgerhards 2005-09-19
  */
-int ATTR_NONNULL(1, 2)
-rsCStrLocateInSzStr(cstr_t *const pThis, uchar *const sz)
-{
-	size_t i;
-	size_t iMax;
-	size_t len_sz = ustrlen(sz);
-	int bFound;
-	rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
-	assert(sz != NULL);
+int ATTR_NONNULL(1, 2) rsCStrLocateInSzStr(cstr_t *const pThis, uchar *const sz) {
+    size_t i;
+    size_t iMax;
+    size_t len_sz = ustrlen(sz);
+    int bFound;
+    rsCHECKVALIDOBJECT(pThis, OIDrsCStr);
+    assert(sz != NULL);
 
-	if(pThis->iStrLen == 0)
-		return 0;
+    if (pThis->iStrLen == 0) return 0;
 
-	/* compute the largest index where a match could occur - after all,
-	 * the to-be-located string must be able to be present in the
-	 * searched string (it needs its size ;)).
-	 */
-	iMax = (pThis->iStrLen >= len_sz) ? 0 : len_sz - pThis->iStrLen;
+    /* compute the largest index where a match could occur - after all,
+     * the to-be-located string must be able to be present in the
+     * searched string (it needs its size ;)).
+     */
+    iMax = (pThis->iStrLen >= len_sz) ? 0 : len_sz - pThis->iStrLen;
 
-	bFound = 0;
-	i = 0;
-	while(i  <= iMax && !bFound) {
-		size_t iCheck;
-		uchar *pComp = sz + i;
-		for(iCheck = 0 ; iCheck < pThis->iStrLen ; ++iCheck)
-			if(*(pComp + iCheck) != *(pThis->pBuf + iCheck))
-				break;
-		if(iCheck == pThis->iStrLen)
-			bFound = 1; /* found! - else it wouldn't be equal */
-		else
-			++i; /* on to the next try */
-	}
+    bFound = 0;
+    i = 0;
+    while (i <= iMax && !bFound) {
+        size_t iCheck;
+        uchar *pComp = sz + i;
+        for (iCheck = 0; iCheck < pThis->iStrLen; ++iCheck)
+            if (*(pComp + iCheck) != *(pThis->pBuf + iCheck)) break;
+        if (iCheck == pThis->iStrLen)
+            bFound = 1; /* found! - else it wouldn't be equal */
+        else
+            ++i; /* on to the next try */
+    }
 
-	return(bFound ? (int) i : -1);
+    return (bFound ? (int)i : -1);
 }
 
 
 /* our exit function. TODO: remove once converted to a class
  * rgerhards, 2008-03-11
  */
-rsRetVal strExit(void)
-{
-	DEFiRet;
-	objRelease(regexp, LM_REGEXP_FILENAME);
-	RETiRet;
+rsRetVal strExit(void) {
+    DEFiRet;
+    objRelease(regexp, LM_REGEXP_FILENAME);
+    RETiRet;
 }
 
 
 /* our init function. TODO: remove once converted to a class
  */
-rsRetVal
-strInit(void)
-{
-	DEFiRet;
-	CHKiRet(objGetObjInterface(&obj));
+rsRetVal strInit(void) {
+    DEFiRet;
+    CHKiRet(objGetObjInterface(&obj));
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }

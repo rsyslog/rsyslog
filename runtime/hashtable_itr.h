@@ -1,18 +1,17 @@
 /* Copyright (C) 2002, 2004 Christopher Clark <firstname.lastname@cl.cam.ac.uk> */
 
 #ifndef __HASHTABLE_ITR_CWC22__
-#define __HASHTABLE_ITR_CWC22__
-#include "hashtable_private.h" /* needed to enable inlining */
+    #define __HASHTABLE_ITR_CWC22__
+    #include "hashtable_private.h" /* needed to enable inlining */
 
 /*****************************************************************************/
 /* This struct is only concrete here to allow the inlining of two of the
  * accessor functions. */
-struct hashtable_itr
-{
-	struct hashtable *h;
-	struct entry *e;
-	struct entry *parent;
-	unsigned int index;
+struct hashtable_itr {
+    struct hashtable *h;
+    struct entry *e;
+    struct entry *parent;
+    unsigned int index;
 };
 
 
@@ -20,26 +19,24 @@ struct hashtable_itr
 /* hashtable_iterator
  */
 
-struct hashtable_itr *
-hashtable_iterator(struct hashtable *h);
+struct hashtable_itr *hashtable_iterator(struct hashtable *h);
 
 /*****************************************************************************/
 /* hashtable_iterator_key
  * - return the value of the (key,value) pair at the current position */
 
-#define hashtable_iterator_key(i) ((i)->e->k)
+    #define hashtable_iterator_key(i) ((i)->e->k)
 
 /*****************************************************************************/
 /* value - return the value of the (key,value) pair at the current position */
 
-#define hashtable_iterator_value(i) ((i)->e->v)
+    #define hashtable_iterator_value(i) ((i)->e->v)
 
 /*****************************************************************************/
 /* advance - advance the iterator to the next element
  *           returns zero if advanced to end of table */
 
-int
-hashtable_iterator_advance(struct hashtable_itr *itr);
+int hashtable_iterator_advance(struct hashtable_itr *itr);
 
 /*****************************************************************************/
 /* remove - remove current element and advance the iterator to the next element
@@ -47,24 +44,19 @@ hashtable_iterator_advance(struct hashtable_itr *itr);
  *          removing. ie: beware memory leaks!
  *          returns zero if advanced to end of table */
 
-int
-hashtable_iterator_remove(struct hashtable_itr *itr);
+int hashtable_iterator_remove(struct hashtable_itr *itr);
 
 /*****************************************************************************/
 /* search - overwrite the supplied iterator, to point to the entry
  *          matching the supplied key.
  *          h points to the hashtable to be searched.
  *          returns zero if not found. */
-int
-hashtable_iterator_search(struct hashtable_itr *itr,
-				struct hashtable *h, void *k);
+int hashtable_iterator_search(struct hashtable_itr *itr, struct hashtable *h, void *k);
 
-#define DEFINE_HASHTABLE_ITERATOR_SEARCH(fnname, keytype) \
-int fnname (struct hashtable_itr *i, struct hashtable *h, keytype *k) \
-{ \
-	return (hashtable_iterator_search(i,h,k)); \
-}
-
+    #define DEFINE_HASHTABLE_ITERATOR_SEARCH(fnname, keytype)                  \
+        int fnname(struct hashtable_itr *i, struct hashtable *h, keytype *k) { \
+            return (hashtable_iterator_search(i, h, k));                       \
+        }
 
 
 #endif /* __HASHTABLE_ITR_CWC22__*/
@@ -100,4 +92,4 @@ int fnname (struct hashtable_itr *i, struct hashtable *h, keytype *k) \
  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */

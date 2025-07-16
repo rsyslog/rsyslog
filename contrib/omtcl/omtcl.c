@@ -51,114 +51,109 @@ MODULE_TYPE_NOKEEP;
 DEF_OMOD_STATIC_DATA;
 
 typedef struct _instanceData {
-	Tcl_Interp * interp;
-	Tcl_Obj * cmdName;
+    Tcl_Interp* interp;
+    Tcl_Obj* cmdName;
 } instanceData;
 
 typedef struct wrkrInstanceData {
-	instanceData * pData;
+    instanceData* pData;
 } wrkrInstanceData_t;
 
 BEGINinitConfVars
-CODESTARTinitConfVars;
+    CODESTARTinitConfVars;
 ENDinitConfVars
 
 BEGINcreateInstance
-CODESTARTcreateInstance;
-	pData->interp = Tcl_CreateInterp();
-	pData->cmdName = NULL;
+    CODESTARTcreateInstance;
+    pData->interp = Tcl_CreateInterp();
+    pData->cmdName = NULL;
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance;
+    CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature;
+    CODESTARTisCompatibleWithFeature;
 /* not compatible with message reduction */
 ENDisCompatibleWithFeature
 
 BEGINfreeInstance
-CODESTARTfreeInstance;
-	if(pData->cmdName != NULL)
-		Tcl_DecrRefCount(pData->cmdName);
-	Tcl_DeleteInterp(pData->interp);
+    CODESTARTfreeInstance;
+    if (pData->cmdName != NULL) Tcl_DecrRefCount(pData->cmdName);
+    Tcl_DeleteInterp(pData->interp);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance;
+    CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo;
+    CODESTARTdbgPrintInstInfo;
 ENDdbgPrintInstInfo
 
 BEGINtryResume
-CODESTARTtryResume;
+    CODESTARTtryResume;
 ENDtryResume
 
 BEGINdoAction
-	Tcl_Obj * objv[2];
-CODESTARTdoAction;
-	objv[0] = pWrkrData->pData->cmdName;
-	objv[1] = Tcl_NewStringObj((char*) ppString[0], -1);
-	if (Tcl_EvalObjv(pWrkrData->pData->interp, 2, objv, 0) != TCL_OK) {
-		iRet = RS_RET_ERR;
-		DBGPRINTF("omtcl: %s", Tcl_GetStringResult(pWrkrData->pData->interp));
-	}
+    Tcl_Obj* objv[2];
+    CODESTARTdoAction;
+    objv[0] = pWrkrData->pData->cmdName;
+    objv[1] = Tcl_NewStringObj((char*)ppString[0], -1);
+    if (Tcl_EvalObjv(pWrkrData->pData->interp, 2, objv, 0) != TCL_OK) {
+        iRet = RS_RET_ERR;
+        DBGPRINTF("omtcl: %s", Tcl_GetStringResult(pWrkrData->pData->interp));
+    }
 ENDdoAction
 
 BEGINparseSelectorAct
-	char fileName[PATH_MAX+1];
-	char buffer[4096];
-CODESTARTparseSelectorAct;
-CODE_STD_STRING_REQUESTparseSelectorAct(1)
-	if(strncmp((char*) p, ":omtcl:", sizeof(":omtcl:") - 1)) {
-		ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
-	}
-	p += sizeof(":omtcl:") - 1;
+    char fileName[PATH_MAX + 1];
+    char buffer[4096];
+    CODESTARTparseSelectorAct;
+    CODE_STD_STRING_REQUESTparseSelectorAct(1) if (strncmp((char*)p, ":omtcl:", sizeof(":omtcl:") - 1)) {
+        ABORT_FINALIZE(RS_RET_CONFLINE_UNPROCESSED);
+    }
+    p += sizeof(":omtcl:") - 1;
 
-	if(getSubString(&p, fileName, PATH_MAX+1, ',') || getSubString(&p, buffer, 4096, ';') || !strlen(buffer)) {
-		LogError(0, RS_RET_INVALID_PARAMS, "Invalid OmTcl parameters");
-		ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
-	}
+    if (getSubString(&p, fileName, PATH_MAX + 1, ',') || getSubString(&p, buffer, 4096, ';') || !strlen(buffer)) {
+        LogError(0, RS_RET_INVALID_PARAMS, "Invalid OmTcl parameters");
+        ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+    }
 
-	if (*(p-1) == ';')
-		--p;
+    if (*(p - 1) == ';') --p;
 
-	CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, 0, (uchar*) "RSYSLOG_FileFormat"));
+    CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, 0, (uchar*)"RSYSLOG_FileFormat"));
 
-	CHKiRet(createInstance(&pData));
-	pData->cmdName = Tcl_NewStringObj(buffer, -1);
-	Tcl_IncrRefCount(pData->cmdName);
+    CHKiRet(createInstance(&pData));
+    pData->cmdName = Tcl_NewStringObj(buffer, -1);
+    Tcl_IncrRefCount(pData->cmdName);
 
-	// TODO parse arguments: file,procname
-	if (Tcl_EvalFile(pData->interp, fileName) == TCL_ERROR) {
-		LogError(0, RS_RET_CONFIG_ERROR, "Loading Tcl script: %s", Tcl_GetStringResult(pData->interp));
-		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-	}
+    // TODO parse arguments: file,procname
+    if (Tcl_EvalFile(pData->interp, fileName) == TCL_ERROR) {
+        LogError(0, RS_RET_CONFIG_ERROR, "Loading Tcl script: %s", Tcl_GetStringResult(pData->interp));
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
 
-CODE_STD_FINALIZERparseSelectorAct
+    CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
 BEGINmodExit
-CODESTARTmodExit;
+    CODESTARTmodExit;
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt;
-CODEqueryEtryPt_STD_OMOD_QUERIES;
-CODEqueryEtryPt_STD_OMOD8_QUERIES;
+    CODESTARTqueryEtryPt;
+    CODEqueryEtryPt_STD_OMOD_QUERIES;
+    CODEqueryEtryPt_STD_OMOD8_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit;
-INITLegCnfVars;
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	DBGPRINTF("omtcl: module compiled with rsyslog version %s.\n", VERSION);
+    CODESTARTmodInit;
+    INITLegCnfVars;
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    CODEmodInit_QueryRegCFSLineHdlr DBGPRINTF("omtcl: module compiled with rsyslog version %s.\n", VERSION);
 
 ENDmodInit
-

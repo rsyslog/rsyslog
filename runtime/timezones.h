@@ -25,14 +25,14 @@
 
 /* timezone specific parameters*/
 struct timezones_s {
-	tzinfo_t *tzinfos;
-	int ntzinfos;
+    tzinfo_t *tzinfos;
+    int ntzinfos;
 };
 
 void displayTimezones(rsconf_t *cnf);
 void sortTimezones(rsconf_t *cnf);
 void glblProcessTimezone(struct cnfobj *o);
-tzinfo_t* glblFindTimezone(rsconf_t *cnf, char *id);
+tzinfo_t *glblFindTimezone(rsconf_t *cnf, char *id);
 void freeTimezones(rsconf_t *cnf);
 
 #endif

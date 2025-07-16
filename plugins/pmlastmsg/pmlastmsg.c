@@ -53,114 +53,109 @@ PARSER_NAME("rsyslog.lastline")
 /* internal structures
  */
 DEF_PMOD_STATIC_DATA;
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(parser)
-DEFobjCurrIf(datetime)
+DEFobjCurrIf(glbl) DEFobjCurrIf(parser) DEFobjCurrIf(datetime)
 
 
-/* static data */
-static int bParseHOSTNAMEandTAG;	/* cache for the equally-named global param - performance enhancement */
+    /* static data */
+    static int bParseHOSTNAMEandTAG; /* cache for the equally-named global param - performance enhancement */
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature;
-	if(eFeat == sFEATUREAutomaticSanitazion)
-		iRet = RS_RET_OK;
-	if(eFeat == sFEATUREAutomaticPRIParsing)
-		iRet = RS_RET_OK;
+    CODESTARTisCompatibleWithFeature;
+    if (eFeat == sFEATUREAutomaticSanitazion) iRet = RS_RET_OK;
+    if (eFeat == sFEATUREAutomaticPRIParsing) iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 /* parse a legay-formatted syslog message.
  */
 BEGINparse
-	uchar *p2parse;
-	int lenMsg;
+    uchar *p2parse;
+    int lenMsg;
 #define OpeningText "last message repeated "
 #define ClosingText " times"
-CODESTARTparse;
-	dbgprintf("Message will now be parsed by \"last message repated n times\" parser.\n");
-	assert(pMsg != NULL);
-	assert(pMsg->pszRawMsg != NULL);
-	lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
-	/* note: offAfterPRI is already the number of PRI chars (do not add one!) */
-	p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
+    CODESTARTparse;
+    dbgprintf("Message will now be parsed by \"last message repated n times\" parser.\n");
+    assert(pMsg != NULL);
+    assert(pMsg->pszRawMsg != NULL);
+    lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
+    /* note: offAfterPRI is already the number of PRI chars (do not add one!) */
+    p2parse = pMsg->pszRawMsg + pMsg->offAfterPRI; /* point to start of text, after PRI */
 
-	/* check if this message is of the type we handle in this (very limited) parser */
-	/* first, we permit SP */
-	while(lenMsg && *p2parse == ' ') {
-		--lenMsg;
-		++p2parse;
-	}
-	if((unsigned) lenMsg < sizeof(OpeningText)-1 + sizeof(ClosingText)-1 + 1) {
-		/* too short, can not be "our" message */
-		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-	}
+    /* check if this message is of the type we handle in this (very limited) parser */
+    /* first, we permit SP */
+    while (lenMsg && *p2parse == ' ') {
+        --lenMsg;
+        ++p2parse;
+    }
+    if ((unsigned)lenMsg < sizeof(OpeningText) - 1 + sizeof(ClosingText) - 1 + 1) {
+        /* too short, can not be "our" message */
+        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+    }
 
-	if(strncasecmp((char*) p2parse, OpeningText, sizeof(OpeningText)-1) != 0) {
-		/* wrong opening text */
-		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-	}
-	lenMsg -= sizeof(OpeningText) - 1;
-	p2parse += sizeof(OpeningText) - 1;
+    if (strncasecmp((char *)p2parse, OpeningText, sizeof(OpeningText) - 1) != 0) {
+        /* wrong opening text */
+        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+    }
+    lenMsg -= sizeof(OpeningText) - 1;
+    p2parse += sizeof(OpeningText) - 1;
 
-	/* now we need an integer --> digits */
-	while(lenMsg && isdigit(*p2parse)) {
-		--lenMsg;
-		++p2parse;
-	}
+    /* now we need an integer --> digits */
+    while (lenMsg && isdigit(*p2parse)) {
+        --lenMsg;
+        ++p2parse;
+    }
 
-	if(lenMsg != sizeof(ClosingText)-1) {
-		/* size must fit, else it is not "our" message... */
-		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-	}
+    if (lenMsg != sizeof(ClosingText) - 1) {
+        /* size must fit, else it is not "our" message... */
+        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+    }
 
-	if(strncasecmp((char*) p2parse, ClosingText, lenMsg) != 0) {
-		/* wrong closing text */
-		ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
-	}
+    if (strncasecmp((char *)p2parse, ClosingText, lenMsg) != 0) {
+        /* wrong closing text */
+        ABORT_FINALIZE(RS_RET_COULD_NOT_PARSE);
+    }
 
-	/* OK, now we know we need to process this message, so we do that
-	 * (and it is fairly simple in our case...)
-	 */
-	DBGPRINTF("pmlastmsg detected a \"last message repeated n times\" message\n");
+    /* OK, now we know we need to process this message, so we do that
+     * (and it is fairly simple in our case...)
+     */
+    DBGPRINTF("pmlastmsg detected a \"last message repeated n times\" message\n");
 
-	setProtocolVersion(pMsg, MSG_LEGACY_PROTOCOL);
-	memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
-	MsgSetMSGoffs(pMsg, pMsg->offAfterPRI); /* we don't have a header! */
-	MsgSetTAG(pMsg, (uchar*)"", 0);
+    setProtocolVersion(pMsg, MSG_LEGACY_PROTOCOL);
+    memcpy(&pMsg->tTIMESTAMP, &pMsg->tRcvdAt, sizeof(struct syslogTime));
+    MsgSetMSGoffs(pMsg, pMsg->offAfterPRI); /* we don't have a header! */
+    MsgSetTAG(pMsg, (uchar *)"", 0);
 
 finalize_it:
 ENDparse
 
 
 BEGINmodExit
-CODESTARTmodExit;
-	/* release what we no longer need */
-	objRelease(glbl, CORE_COMPONENT);
-	objRelease(parser, CORE_COMPONENT);
-	objRelease(datetime, CORE_COMPONENT);
+    CODESTARTmodExit;
+    /* release what we no longer need */
+    objRelease(glbl, CORE_COMPONENT);
+    objRelease(parser, CORE_COMPONENT);
+    objRelease(datetime, CORE_COMPONENT);
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt;
-CODEqueryEtryPt_STD_PMOD_QUERIES;
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
+    CODESTARTqueryEtryPt;
+    CODEqueryEtryPt_STD_PMOD_QUERIES;
+    CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit;
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	CHKiRet(objUse(parser, CORE_COMPONENT));
-	CHKiRet(objUse(datetime, CORE_COMPONENT));
+    CODESTARTmodInit;
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    CODEmodInit_QueryRegCFSLineHdlr CHKiRet(objUse(glbl, CORE_COMPONENT));
+    CHKiRet(objUse(parser, CORE_COMPONENT));
+    CHKiRet(objUse(datetime, CORE_COMPONENT));
 
-	dbgprintf("lastmsg parser init called, compiled with version %s\n", VERSION);
-	bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG(loadConf);
-	/* cache value, is set only during rsyslogd option processing */
+    dbgprintf("lastmsg parser init called, compiled with version %s\n", VERSION);
+    bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG(loadConf);
+    /* cache value, is set only during rsyslogd option processing */
 
 
 ENDmodInit

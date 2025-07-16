@@ -31,27 +31,25 @@
  * rgerhards, 2009-03-31
  */
 #ifndef HAVE_GETLINE
-ssize_t getline(char **lineptr, size_t *n, FILE *fp)
-{
-	int c;
-	int len = 0;
+ssize_t getline(char **lineptr, size_t *n, FILE *fp) {
+    int c;
+    int len = 0;
 
-	if(*lineptr == NULL)
-		*lineptr = malloc(4096); /* quick and dirty! */
+    if (*lineptr == NULL) *lineptr = malloc(4096); /* quick and dirty! */
 
-	c = fgetc(fp);
-	while(c != EOF && c != '\n') {
-		(*lineptr)[len++] = c;
-		c = fgetc(fp);
-	}
-	if(c != EOF) /* need to add NL? */
-		(*lineptr)[len++] = c;
+    c = fgetc(fp);
+    while (c != EOF && c != '\n') {
+        (*lineptr)[len++] = c;
+        c = fgetc(fp);
+    }
+    if (c != EOF) /* need to add NL? */
+        (*lineptr)[len++] = c;
 
-	(*lineptr)[len] = '\0';
+    (*lineptr)[len] = '\0';
 
-	*n = len;
-	//printf("getline returns: '%s'\n", *lineptr);
+    *n = len;
+    // printf("getline returns: '%s'\n", *lineptr);
 
-	return (len > 0) ? len : -1;
+    return (len > 0) ? len : -1;
 }
 #endif /* #ifndef HAVE_GETLINE */
