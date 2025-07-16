@@ -37,6 +37,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <arpa/inet.h>
 
 #include "rsyslog.h"
 #include "syslogd-types.h"
@@ -434,6 +435,12 @@ static rsRetVal gtlsGetCertInfo(nsd_gtls_t *const pThis, cstr_t **ppStr) {
                 /* we found it! */
                 CHKiRet(rsCStrAppendStrf(pStr, "SAN:DNSname: %s; ", szBuf));
                 /* do NOT break, because there may be multiple dNSName's! */
+            } else if (gnuRet == GNUTLS_SAN_IPADDRESS) {
+                char ipAddress[INET6_ADDRSTRLEN];
+                /* we found it! */
+                inet_ntop(((tmp == sizeof(struct in6_addr)) ? AF_INET6 : AF_INET), szBuf, ipAddress, sizeof(ipAddress));
+                CHKiRet(rsCStrAppendStrf(pStr, "SAN:IPaddress: %s; ", ipAddress));
+                /* do NOT break, because there may be multiple ipAddr's! */
             }
             ++iAltName;
         }
@@ -1064,7 +1071,7 @@ finalize_it:
  */
 static rsRetVal gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert) {
     uchar lnBuf[256];
-    char szAltName[1024]; /* this is sufficient for the DNSNAME... */
+    char szAltName[1024]; /* this is sufficient for the DNSNAME and IPADDRESS... */
     int iAltName;
     size_t szAltNameLen;
     int bFoundPositiveMatch;
@@ -1093,6 +1100,16 @@ static rsRetVal gtlsChkPeerName(nsd_gtls_t *pThis, gnutls_x509_crt_t *pCert) {
             CHKiRet(rsCStrAppendStr(pStr, lnBuf));
             CHKiRet(gtlsChkOnePeerName(pThis, (uchar *)szAltName, &bFoundPositiveMatch));
             /* do NOT break, because there may be multiple dNSName's! */
+        } else if (gnuRet == GNUTLS_SAN_IPADDRESS) {
+            bHaveSAN = 1;
+            char ipAddress[INET6_ADDRSTRLEN];
+            inet_ntop(((szAltNameLen == sizeof(struct in6_addr)) ? AF_INET6 : AF_INET), szAltName, ipAddress,
+                      INET6_ADDRSTRLEN);
+            dbgprintf("subject alt ipAddr: '%s'\n", ipAddress);
+            snprintf((char *)lnBuf, sizeof(lnBuf), "IPaddress: %s; ", ipAddress);
+            CHKiRet(rsCStrAppendStr(pStr, lnBuf));
+            CHKiRet(gtlsChkOnePeerName(pThis, (uchar *)ipAddress, &bFoundPositiveMatch));
+            /* do NOT break, because there may be multiple ipAddr's! */
         }
         ++iAltName;
     }
