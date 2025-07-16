@@ -46,9 +46,11 @@ AI Agent Note: run devtools/format-code.sh as the final formatting step before c
 
 ### Base Repository
 
-  - URL: [https://github.com/rsyslog/rsyslog](https://github.com/rsyslog/rsyslog)
-  - **Default base branch: `master`**
-    > For technical reasons, `master` is still the default branch. Numerous scripts and CI workflows rely on this name.
+- URL: [https://github.com/rsyslog/rsyslog](https://github.com/rsyslog/rsyslog)
+- **Default base branch: `main`**
+  > The `main` branch is now the canonical base for all development.
+  > Some older references to `master` may still exist in documentation
+  > or tooling and will be updated as needed.
 
 ### Contributor Workflow
 
