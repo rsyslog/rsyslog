@@ -1,0 +1,43 @@
+# Base on Google’s K&R-style preset (Attach braces, indent case labels, etc.)
+BasedOnStyle: Google
+
+# Switch from tabs to spaces (4 spaces per level)
+IndentWidth:        4
+TabWidth:           4
+UseTab:             Never
+
+# Ensure pointer stars stay next to the type, as in rsyslog’s declarations
+PointerAlignment:   Left
+
+# Keep case labels indented under switch
+IndentCaseLabels:   true
+
+# Continuation lines (e.g. broken calls) also align with 4 spaces
+ContinuationIndentWidth: 4
+
+# Pack function parameters onto one line when they fit
+#BinPackParameters:  true
+BinPackParameters:        false
+BinPackArguments:         true
+AlignAfterOpenBracket:    Align
+
+# Don’t realign or sort existing trailing comments or includes
+AlignTrailingComments: false
+SortIncludes:          false
+
+# Prevent short functions or blocks being reformatted into a single line
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortBlocksOnASingleLine:    false
+
+# Turn off automatic re-wrapping so long comment lines aren’t split
+ColumnLimit: 120
+
+# Special handling for some generative macros
+MacroBlockBegin: "^BEGIN"
+MacroBlockEnd: "^END"
+
+
+MaxEmptyLinesToKeep: 2
+# tells clang-format to indent the whole line – # and all – to the current code indent
+IndentPPDirectives: BeforeHash
+AlignEscapedNewlines: Left
