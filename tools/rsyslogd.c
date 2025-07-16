@@ -1591,23 +1591,23 @@ static void initAll(int argc, char **argv) {
             capng_type_t type;
         } capabilities_t;
 
+        // clang-format off
         capabilities_t capabilities[] = {
-    #define CAP_FIELD(code, type) {code, #code, 0, type}
-            CAP_FIELD(CAP_BLOCK_SUSPEND, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
-            CAP_FIELD(CAP_NET_RAW, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
-            CAP_FIELD(CAP_CHOWN, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
-            CAP_FIELD(CAP_LEASE, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
-            CAP_FIELD(CAP_NET_ADMIN, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
-            CAP_FIELD(CAP_NET_BIND_SERVICE, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
-            CAP_FIELD(CAP_DAC_OVERRIDE, CAPNG_EFFECTIVE | CAPNG_PERMITTED | CAPNG_BOUNDING_SET),
-            CAP_FIELD(CAP_SETGID, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
-            CAP_FIELD(CAP_SETUID, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
-            CAP_FIELD(CAP_SYS_ADMIN, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
-            CAP_FIELD(CAP_SYS_CHROOT, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
-            CAP_FIELD(CAP_SYS_RESOURCE, CAPNG_EFFECTIVE | CAPNG_PERMITTED),
-            CAP_FIELD(CAP_SYSLOG, CAPNG_EFFECTIVE | CAPNG_PERMITTED)
-    #undef CAP_FIELD
+            { CAP_BLOCK_SUSPEND,    "CAP_BLOCK_SUSPEND",    0, CAPNG_EFFECTIVE | CAPNG_PERMITTED },
+            { CAP_NET_RAW,          "CAP_NET_RAW",          0, CAPNG_EFFECTIVE | CAPNG_PERMITTED },
+            { CAP_CHOWN,            "CAP_CHOWN",            0, CAPNG_EFFECTIVE | CAPNG_PERMITTED },
+            { CAP_LEASE,            "CAP_LEASE",            0, CAPNG_EFFECTIVE | CAPNG_PERMITTED },
+            { CAP_NET_ADMIN,        "CAP_NET_ADMIN",        0, CAPNG_EFFECTIVE | CAPNG_PERMITTED },
+            { CAP_NET_BIND_SERVICE, "CAP_NET_BIND_SERVICE", 0, CAPNG_EFFECTIVE | CAPNG_PERMITTED },
+            { CAP_DAC_OVERRIDE,     "CAP_DAC_OVERRIDE",     0, CAPNG_EFFECTIVE | CAPNG_PERMITTED | CAPNG_BOUNDING_SET },
+            { CAP_SETGID,           "CAP_SETGID",           0, CAPNG_EFFECTIVE | CAPNG_PERMITTED },
+            { CAP_SETUID,           "CAP_SETUID",           0, CAPNG_EFFECTIVE | CAPNG_PERMITTED },
+            { CAP_SYS_ADMIN,        "CAP_SYS_ADMIN",        0, CAPNG_EFFECTIVE | CAPNG_PERMITTED },
+            { CAP_SYS_CHROOT,       "CAP_SYS_CHROOT",       0, CAPNG_EFFECTIVE | CAPNG_PERMITTED },
+            { CAP_SYS_RESOURCE,     "CAP_SYS_RESOURCE",     0, CAPNG_EFFECTIVE | CAPNG_PERMITTED },
+            { CAP_SYSLOG,           "CAP_SYSLOG",           0, CAPNG_EFFECTIVE | CAPNG_PERMITTED }
         };
+        // clang-format on
 
         if (capng_have_capabilities(CAPNG_SELECT_CAPS) > CAPNG_NONE) {
             /* Examine which capabilities are available to us, so we do not try to

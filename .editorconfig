@@ -1,0 +1,39 @@
+
+# EditorConfig is awesome: https://EditorConfig.org
+root = true
+
+# Default for all files
+[*]
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+insert_final_newline = true
+end_of_line = lf
+
+# Makefiles use hard tabs
+[Makefile]
+indent_style = tab
+
+# Autoconf scripts & shell files
+[*.{ac,am,sh}]
+indent_style = space
+indent_size = 2
+
+# C/C++ source and headers
+[*.{c,cpp,h,hpp}]
+indent_style = space
+indent_size = 4
+
+# Python
+[*.py]
+indent_style = space
+indent_size = 4
+
+# YAML/Ansible/CI files
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# Markdown/text—don’t trim here
+[*.{md,txt}]
+trim_trailing_whitespace = false

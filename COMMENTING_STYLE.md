@@ -16,11 +16,11 @@ These components are critical for understanding a module's architecture and publ
 * **Public API Functions**: Any function declared in a header file (`.h`) that is intended for use by other modules must be fully documented.
 * **Public Data Structures**: All structs, enums, and typedefs exposed in header files must be documented. This includes a description of the structure's purpose and a brief explanation for each member.
 * **Complex Functions**: Any function, public or static, whose implementation is non-trivial. Indicators of complexity include:
-* Complex algorithms or logic.
-* Subtle or non-obvious side-effects.
-* Interaction with multiple other components or systems.
-* Performance-critical code where specific implementation choices were made for optimization.
-* A large number of parameters, where the purpose of each is not immediately obvious from its name.
+  * Complex algorithms or logic.
+  * Subtle or non-obvious side-effects.
+  * Interaction with multiple other components or systems.
+  * Performance-critical code where specific implementation choices were made for optimization.
+  * A large number of parameters, where the purpose of each is not immediately obvious from its name.
 
 ## 2. When to AVOID Doxygen Comments
 
@@ -42,6 +42,25 @@ Before skipping a Doxygen comment on a function, ask these questions. If the ans
 * Are the **purpose and type of all parameters clear from their names**?
 * Does it have **no non-obvious side effects**?
 
+## 4. Commenting Preprocessor Macros
+
+Preprocessor macros should be documented using C-style block comments
+placed immediately above the `#define`, with Doxygen `@brief` tags.
+Inline comments on the same line as the macro may interfere with automated
+formatting (clang-format + devtools/format-code.sh) and should be moved
+into these comment blocks.
+
+Example:
+```c
+/**
+ * @brief Maximum size for a syslog TAG field.
+ *
+ * This value is intentionally set far above any realistic tag length to
+ * guard against malformed or excessive configurations.
+ */
+#define CONF_TAG_MAXSIZE 512
+```
+
 ## Proposed Workflow for Transformation
 
 1.  **Prioritize the Public Interface**: First, ensure all `.h` files and their corresponding public functions and structs in `.c` files are fully documented.
@@ -49,4 +68,3 @@ Before skipping a Doxygen comment on a function, ask these questions. If the ans
 3.  **Actively Skip Simple Functions**: Consciously apply the "Obvious Function" test and skip adding Doxygen blocks to trivial, static helper functions. If a function seems to need a long comment to explain what it does, first consider if it can be refactored to be more clear.
 4.  **Review and Refine**: After a file is processed, review it to see if the balance feels right. Is it easy to grasp the purpose of the undocumented functions? If not, they may not be as "obvious" as initially thought, and a brief Doxygen comment might be warranted.
 
----
