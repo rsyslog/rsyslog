@@ -1643,13 +1643,23 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **tpls
 	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
 	code = curl_easy_perform(curl);
 	DBGPRINTF("curl returned %lld\n", (long long) code);
+	long http_code = 0;
+	if(code == CURLE_OK || code == CURLE_HTTP_RETURNED_ERROR)
+	       curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
 	if (code != CURLE_OK && code != CURLE_HTTP_RETURNED_ERROR) {
-		STATSCOUNTER_INC(indexHTTPReqFail, mutIndexHTTPReqFail);
-		indexHTTPFail += nmsgs;
-		LogError(0, RS_RET_SUSPENDED,
-			"omelasticsearch: we are suspending ourselfs due "
-			"to server failure %lld: %s", (long long) code, errbuf);
-		ABORT_FINALIZE(RS_RET_SUSPENDED);
+	       STATSCOUNTER_INC(indexHTTPReqFail, mutIndexHTTPReqFail);
+	       indexHTTPFail += nmsgs;
+	       LogError(0, RS_RET_SUSPENDED,
+	               "omelasticsearch: we are suspending ourselfs due "
+	               "to server failure %lld: %s", (long long) code, errbuf);
+	       ABORT_FINALIZE(RS_RET_SUSPENDED);
+	} else if(http_code == 401 || http_code == 403 || http_code == 407) {
+	       STATSCOUNTER_INC(indexHTTPReqFail, mutIndexHTTPReqFail);
+	       indexHTTPFail += nmsgs;
+	       LogError(0, RS_RET_ERR,
+	               "omelasticsearch: authentication failed with status %ld",
+	               http_code);
+	       ABORT_FINALIZE(RS_RET_ERR);
 	}
 
 	if (pWrkrData->pData->rebindInterval > -1)
