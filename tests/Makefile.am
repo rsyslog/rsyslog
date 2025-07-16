@@ -1557,6 +1557,7 @@ TESTS +=  \
 	sndrcv_tls_ossl_certvalid_tlscommand.sh \
 	sndrcv_tls_ossl_certvalid_ciphers.sh \
 	sndrcv_tls_ossl_certvalid_revoked.sh \
+	sndrcv_tls_ossl_intermediate_ca_chain.sh \
 	imtcp-tls-ossl-x509valid.sh \
 	imtcp-tls-ossl-x509name.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \
