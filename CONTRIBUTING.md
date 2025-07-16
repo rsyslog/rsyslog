@@ -26,8 +26,7 @@ Rsyslog is a real open source project, welcoming contributions of all kinds—fr
 - For experiments, use **draft pull requests**. Close them after testing.
 
 ### Target Branch
-- All PRs must target the `master` branch (not `main`).
-- **Why `master`?** The `master` name is deeply integrated into our test and deployment infrastructure, across many legacy environments. Renaming would disrupt a wide ecosystem of automated tools and integrations.
+- All PRs must target the `main` branch (not `main`).
 
 ---
 
