@@ -760,6 +760,11 @@ static rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDes
     DEFiRet;
     assert(pioDescr->ptrType == NSD_PTR_TYPE_SESS);
     tcps_sess_t *pSess = pioDescr->ptr.pSess;
+
+    if (ATOMIC_CAS(&pSess->being_closed, 0, 1, &pSess->mut_being_closed)) {
+        FINALIZE;
+    }
+
 #if defined(ENABLE_IMTCP_EPOLL)
     CHKiRet(epoll_Ctl(pThis, pioDescr, 0, EPOLL_CTL_DEL));
 #endif
@@ -770,9 +775,6 @@ static rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDes
 
     tcps_sess.Destruct(&pSess);
 #if defined(ENABLE_IMTCP_EPOLL)
-finalize_it:
-#endif
-#if defined(ENABLE_IMTCP_EPOLL)
     /* in epoll mode, ioDescr is dynamically allocated */
     DESTROY_ATOMIC_HELPER_MUT(pioDescr->mut_isInError);
     DESTROY_ATOMIC_HELPER_MUT(pioDescr->mut_inQueue);
@@ -780,6 +782,7 @@ finalize_it:
 #else
     pThis->pSessions[pioDescr->id] = NULL;
 #endif
+finalize_it:
     RETiRet;
 }
 
