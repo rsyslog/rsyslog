@@ -167,8 +167,16 @@
 /* ############################################################# *
  * #                 Some constant values                      # *
  * ############################################################# */
-#define CONST_LEN_TIMESTAMP_3164 15 		/* number of chars (excluding \0!) in a RFC3164 timestamp */
-#define CONST_LEN_TIMESTAMP_3339 32 		/* number of chars (excluding \0!) in a RFC3339 timestamp */
+
+/**
+ * @brief Number of characters in an RFC 3164 timestamp (excluding the NUL terminator).
+ */
+#define CONST_LEN_TIMESTAMP_3164 15
+
+/**
+ * @brief Number of characters in an RFC 3339 timestamp (excluding the NUL terminator).
+ */
+#define CONST_LEN_TIMESTAMP_3339 32
 
 #define CONST_LEN_CEE_COOKIE 5
 #define CONST_CEE_COOKIE "@cee:"
@@ -177,40 +185,83 @@
  * #                    Config Settings                        # *
  * ############################################################# */
 #define RS_STRINGBUF_ALLOC_INCREMENT	128
+
 /* MAXSIZE are absolute maxima, while BUFSIZE are just values after which
  * processing is more time-intense. The BUFSIZE params currently add their
  * value to the fixed size of the message object.
  */
-#define CONF_TAG_MAXSIZE		512	/* a value that is deemed far too large for any valid TAG */
-#define CONF_HOSTNAME_MAXSIZE		512	/* a value that is deemed far too large for any valid HOSTNAME */
+
+/**
+ * @brief Maximum permitted size for a syslog TAG field.
+ *
+ * This value is intentionally set far above any realistic tag length
+ * to guard against malformed or excessive configurations.
+ */
+#define CONF_TAG_MAXSIZE 512
+
+/**
+ * @brief Maximum permitted size for a syslog HOSTNAME field.
+ *
+ * This value is intentionally set far above any realistic hostname length
+ * to guard against malformed or excessive configurations.
+ */
+#define CONF_HOSTNAME_MAXSIZE 512
 #define CONF_RAWMSG_BUFSIZE		101
 #define CONF_TAG_BUFSIZE		32
 #define CONF_PROGNAME_BUFSIZE		16
 #define CONF_HOSTNAME_BUFSIZE		32
-#define CONF_PROP_BUFSIZE		16	/* should be close to sizeof(ptr) or lighly above it */
-#define CONF_IPARAMS_BUFSIZE		16	/* initial size of iparams array in wti (is automatically extended) */
-#define	CONF_MIN_SIZE_FOR_COMPRESS	60 	/* config param: minimum message size to try compression. The smaller
-	 * the message, the less likely is any compression gain. We check for
-	 * gain before we submit the message. But to do so we still need to
-	 * do the (costly) compress() call. The following setting sets a size
-	 * for which no call to compress() is done at all. This may result in
-	 * a few more bytes being transmited but better overall performance.
-	 * Note: I have not yet checked the minimum UDP packet size. It might be
-	 * that we do not save anything by compressing very small messages, because
-	 * UDP might need to pad ;)
-	 * rgerhards, 2006-11-30
-	 */
+/**
+ * @brief Suggested buffer size for config string properties.
+ *
+ * Should be close to the size of a pointer or slightly above it.
+ * This may be used in unions with pointers.
+ */
+#define CONF_PROP_BUFSIZE        16
 
-#define CONF_OMOD_NUMSTRINGS_MAXSIZE	5	/* cache for pointers to output module buffer pointers. All
-	 * rsyslog-provided plugins do NOT need more than five buffers. If
-	 * more are needed (future developments, third-parties), rsyslog
-	 * must be recompiled with a larger parameter. Hardcoding this
-	 * saves us some overhead, both in runtime in code complexity. As
-	 * it is doubtful if ever more than 3 parameters are needed, the
-	 * approach taken here is considered appropriate.
-	 * rgerhards, 2010-06-24
-	 */
-#define CONF_NUM_MULTISUB		1024	/* default number of messages per multisub structure */
+/**
+ * @brief Initial size of iparams array in worker thread instances.
+ *
+ * This array is automatically extended as needed.
+ */
+#define CONF_IPARAMS_BUFSIZE 16
+
+/**
+ * @brief Minimum message size (in bytes) to attempt compression.
+ *
+ * Compression is skipped for smaller messages to avoid overhead.
+ * Even though rsyslog checks for compression gain before submitting,
+ * it still requires a (costly) compress() call. This threshold skips
+ * the call entirely for very small messages.
+ *
+ * @note Some small messages may be sent uncompressed, trading a few
+ * extra bytes for better performance.
+ *
+ * @remarks
+ * Originally introduced to avoid pointless compression attempts that
+ * save no bandwidth due to protocol padding (e.g. UDP).
+ * - rgerhards, 2006-11-30
+ */
+#define CONF_MIN_SIZE_FOR_COMPRESS 60
+
+/**
+ * @brief Maximum number of cached string buffer pointers in output modules.
+ *
+ * All rsyslog-provided plugins stay below this value. Recompile with a
+ * higher value only if future or third-party plugins require it.
+ *
+ * Hardcoding this value reduces runtime and code complexity overhead.
+ * Most modules require ≤ 3 buffers; 5 is considered safe.
+ *
+ * @remarks
+ * - rgerhards, 2010-06-24
+ */
+#define CONF_OMOD_NUMSTRINGS_MAXSIZE 5
+
+/**
+ * @brief Default number of messages per multisub structure.
+ */
+#define CONF_NUM_MULTISUB 1024
+
 
 /* ############################################################# *
  * #                  End Config Settings                      # *
@@ -251,8 +302,20 @@
 #undef LOG_FAC_INVLD
 #undef LOG_INVLD
 #undef LOG_NFACILITIES
-#define LOG_NFACILITIES 24+1 /* plus one for our special "invld" facility! */
-#define LOG_MAXPRI 191	/* highest supported valid PRI value --> RFC3164, RFC5424 */
+/**
+ * @brief Number of facility codes, including special invalid facility.
+ *
+ * This value covers the 24 standard syslog facilities plus
+ * one extra slot for the special “invld” facility.
+ */
+#define LOG_NFACILITIES  (24 + 1)
+
+/**
+ * @brief Maximum supported PRI (priority) value.
+ *
+ * The highest valid PRI according to RFC 3164 and RFC 5424.
+ */
+#define LOG_MAXPRI  191
 #undef LOG_MAKEPRI
 #define LOG_PRI_INVLD	(LOG_INVLD|LOG_DEBUG)
 /* PRI is invalid --> special "invld.=debug" PRI code (rsyslog-specific) */
