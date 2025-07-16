@@ -1,0 +1,92 @@
+# Jules configuration for building rsyslog with all dependencies from source.
+#
+# This script first builds all required libraries into a local directory,
+# then configures and builds the main rsyslog project.
+
+setup:
+  - command: |
+      #!/bin/bash
+      # Exit immediately if a command exits with a non-zero status.
+      # Print each command to the log before executing.
+      set -ex
+
+      ##########################################################################
+      # 1. DEFINE ENVIRONMENT
+      ##########################################################################
+      echo "--- Setting up build environment and paths ---"
+
+      # Directory where all our custom-built libraries will be installed
+      LOCAL_DEPS_PATH="$JULES_ROOT/local_deps"
+      mkdir -p "$LOCAL_DEPS_PATH"
+
+      # Tell subsequent build systems where to find our libraries.
+      # This is the most critical part of the setup.
+      export PKG_CONFIG_PATH="$LOCAL_DEPS_PATH/lib/pkgconfig:$LOCAL_DEPS_PATH/lib64/pkgconfig"
+      export CPPFLAGS="-I$LOCAL_DEPS_PATH/include"
+      export LDFLAGS="-L$LOCAL_DEPS_PATH/lib -L$LOCAL_DEPS_PATH/lib64"
+
+      # Directory for downloading source code
+      SRC_DIR="$JULES_ROOT/deps_src"
+      mkdir -p "$SRC_DIR"
+      cd "$SRC_DIR"
+
+      ##########################################################################
+      # 2. BUILD LIBRARIES (in order of dependency)
+      ##########################################################################
+
+      echo "--- Building Core Rsyslog Libs ---"
+      git clone https://github.com/rsyslog/libestr.git && cd libestr && autoreconf -fvi && ./configure --prefix="$LOCAL_DEPS_PATH" && make install && cd ..
+      git clone https://github.com/rsyslog/libfastjson.git && cd libfastjson && autoreconf -fvi && ./configure --prefix="$LOCAL_DEPS_PATH" && make install && cd ..
+      git clone https://github.com/rsyslog/liblognorm.git && cd liblognorm && autoreconf -fvi && ./configure --prefix="$LOCAL_DEPS_PATH" && make install && cd ..
+
+      echo "--- Building GnuTLS and its dependencies ---"
+      # GnuTLS needs libgcrypt, which needs libgpg-error. Build them first.
+      wget https://gnupg.org/ftp/gcrypt/libgpg-error/libgpg-error-1.49.tar.bz2 && tar xf libgpg-error-1.49.tar.bz2
+      cd libgpg-error-1.49 && ./configure --prefix="$LOCAL_DEPS_PATH" && make install && cd ..
+
+      wget https://gnupg.org/ftp/gcrypt/libgcrypt/libgcrypt-1.10.3.tar.bz2 && tar xf libgcrypt-1.10.3.tar.bz2
+      cd libgcrypt-1.10.3 && ./configure --prefix="$LOCAL_DEPS_PATH" --with-libgpg-error-prefix="$LOCAL_DEPS_PATH" && make install && cd ..
+
+      # GnuTLS also needs Nettle
+      wget https://ftp.gnu.org/gnu/nettle/nettle-3.9.1.tar.gz && tar xf nettle-3.9.1.tar.gz
+      cd nettle-3.9.1 && ./configure --prefix="$LOCAL_DEPS_PATH" --disable-openssl && make && make install && cd ..
+
+      # Now, GnuTLS itself
+      wget https://www.gnupg.org/ftp/gcrypt/gnutls/v3.8/gnutls-3.8.5.tar.xz && tar xf gnutls-3.8.5.tar.xz
+      cd gnutls-3.8.5 && ./configure --prefix="$LOCAL_DEPS_PATH" --with-nettle-prefix="$LOCAL_DEPS_PATH" --without-p11-kit --disable-guile && make install && cd ..
+
+      echo "--- Building other dependencies ---"
+      git clone https://github.com/curl/curl.git && cd curl && autoreconf -fvi && ./configure --prefix="$LOCAL_DEPS_PATH" --with-gnutls="$LOCAL_DEPS_PATH" --without-ssl && make install && cd ..
+      git clone https://github.com/civetweb/civetweb.git && cd civetweb && mkdir build && cd build && cmake .. -DCMAKE_INSTALL_PREFIX="$LOCAL_DEPS_PATH" && make install && cd ../..
+
+      echo "--- All dependencies built successfully. ---"
+
+# This `run` command will be executed after the `setup` block completes.
+# It operates from the root of your repository. The environment variables
+# from the setup block are still active here.
+run:
+  - command: |
+      #!/bin/bash
+      set -ex
+
+      echo "--- Configuring and building rsyslog ---"
+
+      # Generate the configure script
+      autoreconf -fvi
+
+      # Configure rsyslog. It will find the local libraries via the env vars.
+      # Add or remove any flags you need for your specific build.
+      ./configure --prefix=/usr/local \
+                  --enable-imfile \
+                  --enable-imptcp \
+                  --enable-omstdout \
+                  --enable-gnutls \
+                  --enable-libcurl \
+                  --enable-civetweb
+
+      # Compile the project
+      make -j$(nproc)
+
+      # Build the test harness but run no tests (for speed).
+      echo "--- Building rsyslog test tools ---"
+      make check TESTS=""
