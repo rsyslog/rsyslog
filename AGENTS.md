@@ -335,9 +335,6 @@ This ensures Codex can build core components even in constrained environments. S
   - **Shell Script Documentation**
     Use shdoc-style comments (`##`, `###`) in new and updated Bash scripts to enable automatic Markdown extraction. Many existing scripts lack these; it's **strongly recommended** to add them when modifying or creating scripts.
 
-  - **Final Style Check**
-    Always run `python3 devtools/rsyslog_stylecheck.py` before committing. Fix any style errors and re-run until it passes.
-
 When generating or editing code, prefer:
 
   - Clean modular design
