@@ -77,7 +77,10 @@ BEGINfreeInstance
         msgPropDescrDestruct(pData->inputProp);
         free(pData->inputProp);
     }
-    if (pData->provider && pData->provider->cleanup) pData->provider->cleanup(pData->provider);
+    if (pData->provider) {
+        if (pData->provider->cleanup) pData->provider->cleanup(pData->provider);
+        free(pData->provider);
+    }
 ENDfreeInstance
 
 BEGINcreateWrkrInstance
@@ -123,14 +126,18 @@ BEGINdoAction_NoStrings
     rs_size_t len;
     unsigned short freeBuf = 0;
     instanceData *const pData = pWrkrData->pData;
-    CODESTARTdoAction if (pData->inputProp == NULL) getRawMsg(pMsg, &val, &len);
-    else val = MsgGetProp(pMsg, NULL, pData->inputProp, &len, &freeBuf, NULL);
-    msgs[0] = strndup((char *)val, len);
+    CODESTARTdoAction;
+    if (pData->inputProp == NULL)
+        getRawMsg(pMsg, &val, &len);
+    else
+        val = MsgGetProp(pMsg, NULL, pData->inputProp, &len, &freeBuf, NULL);
+    CHKmalloc(msgs[0] = strndup((char *)val, len));
     if (freeBuf) free(val);
     if (pData->provider && pData->provider->classify)
         CHKiRet(pData->provider->classify(pData->provider, msgs, 1, &tags));
     if (tags && tags[0]) {
-        struct json_object *j = json_object_new_string(tags[0]);
+        struct json_object *j;
+        CHKmalloc(j = json_object_new_string(tags[0]));
         msgAddJSON(pMsg, (uchar *)pData->tag, j, 0, 0);
     }
 finalize_it:
@@ -202,7 +209,7 @@ BEGINnewActInst
     if (pData->provider == NULL) {
         pData->provider = get_provider(pData->provider_name);
         if (pData->provider == NULL) {
-            LogError(0, RS_RET_ERR, "mmaitag: unknown provider '%s'", pData->provider_name);
+            LogError(0, RS_RET_ERR, "mmaitag: could not initialize provider '%s'", pData->provider_name);
             ABORT_FINALIZE(RS_RET_ERR);
         }
         if (pData->provider->init)
@@ -211,13 +218,22 @@ BEGINnewActInst
     CODE_STD_FINALIZERnewActInst cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
-static ai_provider_t *get_provider(const char *name) {
-    // This function will need to be defined based on which providers are compiled in.
-    // For now, it's just a placeholder. You will need to provide the actual
-    // gemini_provider and gemini_mock_provider objects.
-    if (!strcmp(name, "gemini")) return &gemini_provider;
-    if (!strcmp(name, "gemini_mock")) return &gemini_mock_provider;
-    return NULL;
+static ATTR_NONNULL() ai_provider_t *get_provider(const char *name) {
+    const ai_provider_t *base = NULL;
+
+    if (!strcmp(name, "gemini"))
+        base = &gemini_provider;
+    else if (!strcmp(name, "gemini_mock"))
+        base = &gemini_mock_provider;
+    else
+        return NULL;
+
+    ai_provider_t *prov = calloc(1, sizeof(ai_provider_t));
+    if (prov == NULL) return NULL;
+
+    memcpy(prov, base, sizeof(ai_provider_t));
+    prov->data = NULL; /* ensure per-instance state */
+    return prov;
 }
 
 NO_LEGACY_CONF_parseSelectorAct
