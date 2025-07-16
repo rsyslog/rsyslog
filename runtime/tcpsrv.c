@@ -103,6 +103,7 @@ DEFobjCurrIf(statsobj)
 
 
 static rsRetVal enqueueWork(tcpsrv_io_descr_t *const pioDescr);
+static void removeFromQueue(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr);
 
 /* We check which event notification mechanism we have and use the best available one.
  * We switch back from library-specific drivers, because event notification always works
@@ -164,6 +165,7 @@ epoll_Ctl(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr, const int is
 			LogError(errno, RS_RET_ERR_EPOLL_CTL,
 				"epoll_ctl failed on fd %d, isLstn %d\n",
 				sock, isLstn);
+			ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
 		}
 	} else if(op == EPOLL_CTL_DEL) {
 		dbgprintf("removing epoll entry %d, socket %d\n", id, sock);
@@ -813,9 +815,11 @@ closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
 	DEFiRet;
 	assert(pioDescr->ptrType == NSD_PTR_TYPE_SESS);
 	tcps_sess_t *pSess = pioDescr->ptr.pSess;
-	#if defined(ENABLE_IMTCP_EPOLL)
-		CHKiRet(epoll_Ctl(pThis, pioDescr, 0, EPOLL_CTL_DEL));
-	#endif
+#if defined(ENABLE_IMTCP_EPOLL)
+	if(ATOMIC_FETCH_32BIT(&pioDescr->inQueue, &pioDescr->mut_inQueue))
+	removeFromQueue(pThis, pioDescr);
+	CHKiRet(epoll_Ctl(pThis, pioDescr, 0, EPOLL_CTL_DEL));
+#endif
 	pThis->pOnRegularClose(pSess);
 	if(pThis->workQueue.numWrkr > 1) {
 		pthread_mutex_unlock(&pSess->mut);
@@ -1200,6 +1204,31 @@ enqueueWork(tcpsrv_io_descr_t *const pioDescr)
 	}
 
 	RETiRet;
+}
+
+static void
+removeFromQueue(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr)
+{
+	workQueue_t *const queue = &pThis->workQueue;
+	pthread_mutex_lock(&queue->mut);
+	tcpsrv_io_descr_t *prev = NULL;
+	tcpsrv_io_descr_t *cur = queue->head;
+	while(cur != NULL) {
+	       if(cur == pioDescr) {
+		       if(prev == NULL)
+		               queue->head = cur->next;
+		       else
+		               prev->next = cur->next;
+		       if(queue->tail == pioDescr)
+		               queue->tail = prev;
+		       ATOMIC_STORE_0_TO_INT(&pioDescr->inQueue,
+		               &pioDescr->mut_inQueue);
+		       break;
+	       }
+	       prev = cur;
+	       cur = cur->next;
+	}
+	pthread_mutex_unlock(&queue->mut);
 }
 
 /* Worker thread function */
