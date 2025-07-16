@@ -448,6 +448,7 @@ osslEndSess(nsd_ossl_t *pThis)
 				nsd_ossl_lastOpenSSLErrorMsg(pThis, ret, pThis->pNetOssl->ssl, LOG_WARNING,
 					"osslEndSess", "SSL_shutdown");
 			}
+			
 			/* Shutdown not finished, call SSL_read to do a bidirectional shutdown, see doc for more:
 			*	https://www.openssl.org/docs/man1.1.1/man3/SSL_shutdown.html
 			*/
@@ -455,6 +456,22 @@ osslEndSess(nsd_ossl_t *pThis)
 			int iBytesRet = SSL_read(pThis->pNetOssl->ssl, rcvBuf, NSD_OSSL_MAX_RCVBUF);
 			DBGPRINTF("osslEndSess: Forcing ssl shutdown SSL_read (%d) to do a bidirectional shutdown\n",
 				iBytesRet);
+			
+			/* According to OpenSSL documentation, if SSL_shutdown returns 0 with SSL_ERROR_SYSCALL,
+			 * a second SSL_shutdown call should be made. This is especially important for
+			 * proper TLS session termination.
+			 */
+			if (err == SSL_ERROR_SYSCALL) {
+				DBGPRINTF("osslEndSess: SSL_ERROR_SYSCALL detected, calling SSL_shutdown again\n");
+				ret = SSL_shutdown(pThis->pNetOssl->ssl);
+				if (ret < 0) {
+					err = SSL_get_error(pThis->pNetOssl->ssl, ret);
+					DBGPRINTF("osslEndSess: second SSL_shutdown failed with err = %d\n", err);
+				} else {
+					DBGPRINTF("osslEndSess: second SSL_shutdown successful\n");
+				}
+			}
+			
 			if (ret < 0) {
 				/* Unsuccessful shutdown, log as INFO */
 				LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO, "nsd_ossl: "

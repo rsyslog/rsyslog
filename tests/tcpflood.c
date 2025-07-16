@@ -1584,7 +1584,22 @@ closeTLSSess(int i)
 		*/
 		char rcvBuf[MAX_RCVBUF];
 		SSL_read(sslArray[i], rcvBuf, MAX_RCVBUF);
-
+		
+		/* According to OpenSSL documentation, if SSL_shutdown returns 0 with SSL_ERROR_SYSCALL,
+		 * a second SSL_shutdown call should be made. This is especially important for
+		 * proper TLS session termination.
+		 */
+		int ssl_err = SSL_get_error(sslArray[i], r);
+		if (ssl_err == SSL_ERROR_SYSCALL) {
+			printf("[DEBUG] SSL_ERROR_SYSCALL detected, calling SSL_shutdown again\n");
+			r = SSL_shutdown(sslArray[i]);
+			if (r < 0) {
+				ssl_err = SSL_get_error(sslArray[i], r);
+				printf("[DEBUG] second SSL_shutdown failed with err = %d\n", ssl_err);
+			} else {
+				printf("[DEBUG] second SSL_shutdown successful\n");
+			}
+		}
 	}
 	SSL_free(sslArray[i]);
 }
@@ -1716,7 +1731,22 @@ closeDTLSSess()
 		*/
 		char rcvBuf[MAX_RCVBUF];
 		SSL_read(sslArray[0], rcvBuf, MAX_RCVBUF);
-
+		
+		/* According to OpenSSL documentation, if SSL_shutdown returns 0 with SSL_ERROR_SYSCALL,
+		 * a second SSL_shutdown call should be made. This is especially important for
+		 * proper TLS session termination.
+		 */
+		int ssl_err = SSL_get_error(sslArray[0], r);
+		if (ssl_err == SSL_ERROR_SYSCALL) {
+			printf("[DEBUG] SSL_ERROR_SYSCALL detected, calling SSL_shutdown again\n");
+			r = SSL_shutdown(sslArray[0]);
+			if (r < 0) {
+				ssl_err = SSL_get_error(sslArray[0], r);
+				printf("[DEBUG] second SSL_shutdown failed with err = %d\n", ssl_err);
+			} else {
+				printf("[DEBUG] second SSL_shutdown successful\n");
+			}
+		}
 	}
 	SSL_free(sslArray[0]);
 	close(udpsockout);

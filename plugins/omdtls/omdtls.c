@@ -828,6 +828,22 @@ dtls_close(wrkrInstanceData_t *pWrkrData)
 				*/
 				char rcvBuf[DTLS_MAX_RCVBUF];
 				SSL_read(pWrkrData->sslClient, rcvBuf, DTLS_MAX_RCVBUF);
+				
+				/* According to OpenSSL documentation, if SSL_shutdown returns 0 with SSL_ERROR_SYSCALL,
+				 * a second SSL_shutdown call should be made. This is especially important for
+				 * proper TLS session termination.
+				 */
+				int ssl_err = SSL_get_error(pWrkrData->sslClient, iErr);
+				if (ssl_err == SSL_ERROR_SYSCALL) {
+					DBGPRINTF("dtls_close[%p]: SSL_ERROR_SYSCALL detected, calling SSL_shutdown again\n", pWrkrData);
+					iErr = SSL_shutdown(pWrkrData->sslClient);
+					if (iErr < 0) {
+						ssl_err = SSL_get_error(pWrkrData->sslClient, iErr);
+						DBGPRINTF("dtls_close[%p]: second SSL_shutdown failed with err = %d\n", pWrkrData, ssl_err);
+					} else {
+						DBGPRINTF("dtls_close[%p]: second SSL_shutdown successful\n", pWrkrData);
+					}
+				}
 			}
 			SSL_free(pWrkrData->sslClient);
 			pWrkrData->sslClient = NULL;
