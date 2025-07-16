@@ -58,255 +58,232 @@ DEF_OMOD_STATIC_DATA;
 
 
 typedef struct _instanceData {
-	uchar *tplName;
+    uchar *tplName;
 } instanceData;
 
 typedef struct wrkrInstanceData {
-	instanceData *pData;
+    instanceData *pData;
 } wrkrInstanceData_t;
 
-static struct cnfparamdescr actpdescr[] = {
-	{ "template", eCmdHdlrGetWord, 0 }
-};
-static struct cnfparamblk actpblk =
-	{ CNFPARAMBLK_VERSION,
-	  sizeof(actpdescr)/sizeof(struct cnfparamdescr),
-	  actpdescr
-	};
+static struct cnfparamdescr actpdescr[] = {{"template", eCmdHdlrGetWord, 0}};
+static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 
 struct modConfData_s {
-	rsconf_t *pConf;	/* our overall config object */
+    rsconf_t *pConf; /* our overall config object */
 };
-static modConfData_t *runModConf = NULL;/* modConf ptr to use for the current exec process */
+static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current exec process */
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad;
+    CODESTARTbeginCnfLoad;
 ENDbeginCnfLoad
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad;
+    CODESTARTendCnfLoad;
 ENDendCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf;
+    CODESTARTcheckCnf;
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf;
-	runModConf = pModConf;
+    CODESTARTactivateCnf;
+    runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf;
+    CODESTARTfreeCnf;
 ENDfreeCnf
 
 
 BEGINcreateInstance
-CODESTARTcreateInstance;
+    CODESTARTcreateInstance;
 ENDcreateInstance
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance;
+    CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature;
-	if(eFeat == sFEATURERepeatedMsgReduction)
-		iRet = RS_RET_OK;
+    CODESTARTisCompatibleWithFeature;
+    if (eFeat == sFEATURERepeatedMsgReduction) iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance;
-	free(pData->tplName);
+    CODESTARTfreeInstance;
+    free(pData->tplName);
 ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance;
+    CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
-static inline void
-setInstParamDefaults(instanceData *pData)
-{
-	pData->tplName = NULL;
+static inline void setInstParamDefaults(instanceData *pData) {
+    pData->tplName = NULL;
 }
 
 BEGINnewActInst
-	struct cnfparamvals *pvals;
-	int i;
-CODESTARTnewActInst;
-	DBGPRINTF("newActInst (mmjournal)\n");
-	pvals = nvlstGetParams(lst, &actpblk, NULL);
-	if(pvals == NULL) {
-		parser_errmsg("error processing module "
-				"config parameters [module(...)]");
-		ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-	}
+    struct cnfparamvals *pvals;
+    int i;
+    CODESTARTnewActInst;
+    DBGPRINTF("newActInst (mmjournal)\n");
+    pvals = nvlstGetParams(lst, &actpblk, NULL);
+    if (pvals == NULL) {
+        parser_errmsg(
+            "error processing module "
+            "config parameters [module(...)]");
+        ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+    }
 
 
-	CHKiRet(createInstance(&pData));
-	setInstParamDefaults(pData);
+    CHKiRet(createInstance(&pData));
+    setInstParamDefaults(pData);
 
-	CODE_STD_STRING_REQUESTnewActInst(1);
-	for(i = 0 ; i < actpblk.nParams ; ++i) {
-		if(!pvals[i].bUsed)
-			continue;
+    CODE_STD_STRING_REQUESTnewActInst(1);
+    for (i = 0; i < actpblk.nParams; ++i) {
+        if (!pvals[i].bUsed) continue;
 
-	if(!strcmp(actpblk.descr[i].name, "template")) {
-			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else {
-			dbgprintf("ommongodb: program error, non-handled "
-			  "param '%s'\n", actpblk.descr[i].name);
-		}
-	}
+        if (!strcmp(actpblk.descr[i].name, "template")) {
+            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else {
+            dbgprintf(
+                "ommongodb: program error, non-handled "
+                "param '%s'\n",
+                actpblk.descr[i].name);
+        }
+    }
 
-	if(pData->tplName == NULL) {
-		CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
-	} else {
-		CHKiRet(OMSRsetEntry(*ppOMSR, 0, ustrdup(pData->tplName),
-				     OMSR_TPL_AS_JSON));
-	}
+    if (pData->tplName == NULL) {
+        CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
+    } else {
+        CHKiRet(OMSRsetEntry(*ppOMSR, 0, ustrdup(pData->tplName), OMSR_TPL_AS_JSON));
+    }
 
-CODE_STD_FINALIZERnewActInst;
-	cnfparamvalsDestruct(pvals, &actpblk);
+    CODE_STD_FINALIZERnewActInst;
+    cnfparamvalsDestruct(pvals, &actpblk);
 ENDnewActInst
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo;
+    CODESTARTdbgPrintInstInfo;
 ENDdbgPrintInstInfo
 
 
 BEGINtryResume
-CODESTARTtryResume;
+    CODESTARTtryResume;
 ENDtryResume
 
 
-static struct iovec *
-build_iovec(size_t *retargc, struct json_object *json)
-{
-	struct iovec *iov;
-	const char *key;
-	const char *val;
-	size_t key_len;
-	size_t val_len;
-	size_t vec_len;
-	size_t i;
+static struct iovec *build_iovec(size_t *retargc, struct json_object *json) {
+    struct iovec *iov;
+    const char *key;
+    const char *val;
+    size_t key_len;
+    size_t val_len;
+    size_t vec_len;
+    size_t i;
 
-	const size_t argc = json_object_object_length(json);
-	if(argc == 0)
-		return NULL;
-	iov = malloc( sizeof(struct iovec) * argc );
-	if(NULL == iov)
-		goto fail;
+    const size_t argc = json_object_object_length(json);
+    if (argc == 0) return NULL;
+    iov = malloc(sizeof(struct iovec) * argc);
+    if (NULL == iov) goto fail;
 
-	/* note: as we know the number of subobjects, we use the for loop
-	 * to iterate over them instead of the _iter_ API. This is guaranteed
-	 * to work. The somewhat cleaner case causes clang static analyzer to
-	 * complain and we need to avoid that.
-	 */
-	struct json_object_iterator it = json_object_iter_begin(json);
-	for(i = 0 ; i < argc ; ++i) {
-		key = json_object_iter_peek_name(&it);
-		val = json_object_get_string(json_object_iter_peek_value(&it));
+    /* note: as we know the number of subobjects, we use the for loop
+     * to iterate over them instead of the _iter_ API. This is guaranteed
+     * to work. The somewhat cleaner case causes clang static analyzer to
+     * complain and we need to avoid that.
+     */
+    struct json_object_iterator it = json_object_iter_begin(json);
+    for (i = 0; i < argc; ++i) {
+        key = json_object_iter_peek_name(&it);
+        val = json_object_get_string(json_object_iter_peek_value(&it));
 
-		key_len = strlen(key);
-		val_len = strlen(val);
-		// vec length is len(key=val)
-		vec_len = key_len + val_len + 1;
+        key_len = strlen(key);
+        val_len = strlen(val);
+        // vec length is len(key=val)
+        vec_len = key_len + val_len + 1;
 
-		char *buf = malloc(vec_len + 1);
-		if(NULL == buf)
-			goto fail;
+        char *buf = malloc(vec_len + 1);
+        if (NULL == buf) goto fail;
 
-		memcpy(buf, key, key_len);
-		memcpy(buf + key_len, "=", 1);
-		memcpy(buf + key_len + 1, val, val_len+1);
+        memcpy(buf, key, key_len);
+        memcpy(buf + key_len, "=", 1);
+        memcpy(buf + key_len + 1, val, val_len + 1);
 
-		iov[i].iov_base = buf;
-		iov[i].iov_len = vec_len;
+        iov[i].iov_base = buf;
+        iov[i].iov_len = vec_len;
 
-		json_object_iter_next(&it);
-	}
-	*retargc = argc;
-	return iov;
+        json_object_iter_next(&it);
+    }
+    *retargc = argc;
+    return iov;
 
 fail:
-	if( NULL == iov)
-		return NULL;
+    if (NULL == iov) return NULL;
 
-	size_t j;
-	// iterate over any iovecs that were initalised above and free them.
-	for(j = 0; j < i; j++) {
-		free(iov[j].iov_base);
-	}
+    size_t j;
+    // iterate over any iovecs that were initalised above and free them.
+    for (j = 0; j < i; j++) {
+        free(iov[j].iov_base);
+    }
 
-	free(iov);
-	return NULL;
+    free(iov);
+    return NULL;
 }
 
 
-static void
-send_non_template_message(smsg_t *const __restrict__ pMsg)
-{
-	uchar *tag;
-	int lenTag;
-	int sev;
+static void send_non_template_message(smsg_t *const __restrict__ pMsg) {
+    uchar *tag;
+    int lenTag;
+    int sev;
 
-	MsgGetSeverity(pMsg, &sev);
-	getTAG(pMsg, &tag, &lenTag, LOCK_MUTEX);
-	/* we can use more properties here, but let's see if there
-	* is some real user interest. We can always add later...
-	*/
-	sd_journal_send("MESSAGE=%s", getMSG(pMsg),
-		"PRIORITY=%d", (pMsg->iFacility * 8) | sev,
-		"SYSLOG_FACILITY=%d", pMsg->iFacility,
-		"SYSLOG_IDENTIFIER=%s", tag,
-		NULL);
+    MsgGetSeverity(pMsg, &sev);
+    getTAG(pMsg, &tag, &lenTag, LOCK_MUTEX);
+    /* we can use more properties here, but let's see if there
+     * is some real user interest. We can always add later...
+     */
+    sd_journal_send("MESSAGE=%s", getMSG(pMsg), "PRIORITY=%d", (pMsg->iFacility * 8) | sev, "SYSLOG_FACILITY=%d",
+                    pMsg->iFacility, "SYSLOG_IDENTIFIER=%s", tag, NULL);
 }
 
-static void
-send_template_message(struct json_object *const __restrict__ json)
-{
-	size_t argc;
-	struct iovec *iovec;
-	size_t i;
+static void send_template_message(struct json_object *const __restrict__ json) {
+    size_t argc;
+    struct iovec *iovec;
+    size_t i;
 
-	iovec = build_iovec(&argc,  json);
-	if( NULL != iovec) {
-		sd_journal_sendv(iovec, argc);
-		for (i =0; i< argc; i++)
-			free(iovec[i].iov_base);
-		free(iovec);
-	}
+    iovec = build_iovec(&argc, json);
+    if (NULL != iovec) {
+        sd_journal_sendv(iovec, argc);
+        for (i = 0; i < argc; i++) free(iovec[i].iov_base);
+        free(iovec);
+    }
 }
 
 BEGINdoAction_NoStrings
-	instanceData *pData;
-CODESTARTdoAction;
-	pData = pWrkrData->pData;
+    instanceData *pData;
+    CODESTARTdoAction;
+    pData = pWrkrData->pData;
 
-	if (pData->tplName == NULL) {
-		send_non_template_message((smsg_t*) ((void**)pMsgData)[0]);
-	} else {
-		send_template_message((struct json_object*) ((void**)pMsgData)[0]);
-	}
+    if (pData->tplName == NULL) {
+        send_non_template_message((smsg_t *)((void **)pMsgData)[0]);
+    } else {
+        send_template_message((struct json_object *)((void **)pMsgData)[0]);
+    }
 ENDdoAction
 
 
 BEGINmodExit
-CODESTARTmodExit;
+    CODESTARTmodExit;
 ENDmodExit
 
 
 NO_LEGACY_CONF_parseSelectorAct
 
-BEGINqueryEtryPt
-CODESTARTqueryEtryPt;
+    BEGINqueryEtryPt CODESTARTqueryEtryPt;
 CODEqueryEtryPt_STD_OMOD_QUERIES;
 CODEqueryEtryPt_STD_OMOD8_QUERIES;
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
@@ -314,10 +291,8 @@ CODEqueryEtryPt_STD_CONF2_QUERIES;
 ENDqueryEtryPt
 
 
-
 BEGINmodInit()
-CODESTARTmodInit;
-	*ipIFVersProvided = CURR_MOD_IF_VERSION;
-CODEmodInit_QueryRegCFSLineHdlr
-	DBGPRINTF("omjournal: module compiled with rsyslog version %s.\n", VERSION);
+    CODESTARTmodInit;
+    *ipIFVersProvided = CURR_MOD_IF_VERSION;
+    CODEmodInit_QueryRegCFSLineHdlr DBGPRINTF("omjournal: module compiled with rsyslog version %s.\n", VERSION);
 ENDmodInit

@@ -1,40 +1,38 @@
 /* Copyright (C) 2002, 2004 Christopher Clark <firstname.lastname@cl.cam.ac.uk> */
 
 #ifndef __HASHTABLE_PRIVATE_CWC22_H__
-#define __HASHTABLE_PRIVATE_CWC22_H__
+    #define __HASHTABLE_PRIVATE_CWC22_H__
 
-#include "hashtable.h"
+    #include "hashtable.h"
 
 /*****************************************************************************/
-struct entry
-{
-	void *k, *v;
-	unsigned int h;
-	struct entry *next;
+struct entry {
+    void *k, *v;
+    unsigned int h;
+    struct entry *next;
 };
 
 struct hashtable {
-	unsigned int tablelength;
-	struct entry **table;
-	unsigned int entrycount;
-	unsigned int loadlimit;
-	unsigned int primeindex;
-	unsigned int (*hashfn) (void *k);
-	int (*eqfn) (void *k1, void *k2);
-	void (*dest) (void *v); /* destructor for values, if NULL use free() */
+    unsigned int tablelength;
+    struct entry **table;
+    unsigned int entrycount;
+    unsigned int loadlimit;
+    unsigned int primeindex;
+    unsigned int (*hashfn)(void *k);
+    int (*eqfn)(void *k1, void *k2);
+    void (*dest)(void *v); /* destructor for values, if NULL use free() */
 };
 
 /*****************************************************************************/
-unsigned int
-hash(struct hashtable *h, void *k);
+unsigned int hash(struct hashtable *h, void *k);
 
-/*****************************************************************************/
-/* indexFor */
-#define indexFor(tablelength, hashvalue) ((hashvalue) % (tablelength))
+    /*****************************************************************************/
+    /* indexFor */
+    #define indexFor(tablelength, hashvalue) ((hashvalue) % (tablelength))
 
 
-/*****************************************************************************/
-#define freekey(X) free(X)
+    /*****************************************************************************/
+    #define freekey(X) free(X)
 
 
 /*****************************************************************************/
@@ -72,4 +70,4 @@ hash(struct hashtable *h, void *k);
  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
+ */

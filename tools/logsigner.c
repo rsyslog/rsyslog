@@ -27,7 +27,7 @@
  * limitations under the License.
  */
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+    #include "config.h"
 #endif
 #include <stdlib.h>
 #include <stdio.h>
@@ -112,48 +112,42 @@ done:	GTDataHash_free(hash);
 }
 #endif
 
-void
-processFile(char *name)
-{
-	FILE *fp;
-	size_t len;
-	char line[64*1024+1];
-	gtctx ctx = NULL;
+void processFile(char *name) {
+    FILE *fp;
+    size_t len;
+    char line[64 * 1024 + 1];
+    gtctx ctx = NULL;
 
-	ctx = rsgtCtxNew((unsigned char*)"SIGFILE", GT_HASHALG_SHA256);
-	sigblkInit(ctx);
-	if(!strcmp(name, "-"))
-		fp = stdin;
-	else
-		fp = fopen(name, "r");
+    ctx = rsgtCtxNew((unsigned char *)"SIGFILE", GT_HASHALG_SHA256);
+    sigblkInit(ctx);
+    if (!strcmp(name, "-"))
+        fp = stdin;
+    else
+        fp = fopen(name, "r");
 
-	while(1) {
-		if(fgets(line, sizeof(line), fp) == NULL) {
-			if(!feof(fp))
-				perror(name);
-			break;
-		}
-		len = strlen(line);
-		if(line[len-1] == '\n') {
-			--len;
-			line[len] = '\0';
-		}
-		//sign(line, len);
-		sigblkAddRecord(ctx, (unsigned char*)line, len);
-	}
+    while (1) {
+        if (fgets(line, sizeof(line), fp) == NULL) {
+            if (!feof(fp)) perror(name);
+            break;
+        }
+        len = strlen(line);
+        if (line[len - 1] == '\n') {
+            --len;
+            line[len] = '\0';
+        }
+        // sign(line, len);
+        sigblkAddRecord(ctx, (unsigned char *)line, len);
+    }
 
-	if(fp != stdin)
-		fclose(fp);
-	sigblkFinish(ctx);
-	rsgtCtxDel(ctx);
+    if (fp != stdin) fclose(fp);
+    sigblkFinish(ctx);
+    rsgtCtxDel(ctx);
 }
 
 
-int
-main(int argc, char *argv[])
-{
-	rsgtInit("rsyslog logsigner " VERSION);
-	processFile("-");
-	rsgtExit();
-	return 0;
+int main(int argc, char *argv[]) {
+    rsgtInit("rsyslog logsigner " VERSION);
+    processFile("-");
+    rsgtExit();
+    return 0;
 }

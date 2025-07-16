@@ -42,10 +42,10 @@
 #include "dirty.h"
 
 #ifdef __FreeBSD__
-#include <sys/socket.h>
+    #include <sys/socket.h>
 #else
 
-#include <netinet/ether.h>
+    #include <netinet/ether.h>
 
 #endif
 
@@ -59,25 +59,25 @@
 #include <arpa/inet.h>
 
 #ifndef INCLUDED_PARSER_H
-#define INCLUDED_PARSER_H 1
+    #define INCLUDED_PARSER_H 1
 
 /* data return structure */
 struct data_ret_s {
-	size_t size;
-	char *pData;
+    size_t size;
+    char *pData;
 };
 typedef struct data_ret_s data_ret_t;
 
-#define RETURN_DATA_AFTER(x)    data_ret_t *retData = malloc(sizeof(data_ret_t)); \
-	if(pktSize > x) { \
-		retData->size = pktSize - x;  \
-		retData->pData = (char *)packet + x;  \
-	} \
-	else {  \
-		retData->size = 0;  \
-		retData->pData = NULL;  \
-	} \
-	return retData; \
+    #define RETURN_DATA_AFTER(x)                          \
+        data_ret_t *retData = malloc(sizeof(data_ret_t)); \
+        if (pktSize > x) {                                \
+            retData->size = pktSize - x;                  \
+            retData->pData = (char *)packet + x;          \
+        } else {                                          \
+            retData->size = 0;                            \
+            retData->pData = NULL;                        \
+        }                                                 \
+        return retData;
 
 /* --- handlers prototypes --- */
 void packet_parse(uchar *arg, const struct pcap_pkthdr *pkthdr, const uchar *packet);
@@ -116,74 +116,65 @@ data_ret_t *dns_parse(const uchar *packet, int pktSize, struct json_object *jpar
 
 
 // inline function definitions
-static inline data_ret_t *dont_parse(
-	const uchar *packet,
-	int pktSize,
-	__attribute__((unused)) struct json_object *jparent);
+static inline data_ret_t *dont_parse(const uchar *packet,
+                                     int pktSize,
+                                     __attribute__((unused)) struct json_object *jparent);
 
-static inline data_ret_t *eth_proto_parse(
-	uint16_t ethProto,
-	const uchar *packet,
-	int pktSize,
-	struct json_object *jparent);
+static inline data_ret_t *eth_proto_parse(uint16_t ethProto,
+                                          const uchar *packet,
+                                          int pktSize,
+                                          struct json_object *jparent);
 
-static inline data_ret_t *ip_proto_parse(
-	uint16_t ipProto,
-	const uchar *packet,
-	int pktSize,
-	struct json_object *jparent);
+static inline data_ret_t *ip_proto_parse(uint16_t ipProto,
+                                         const uchar *packet,
+                                         int pktSize,
+                                         struct json_object *jparent);
 
 /*
  *  Mock function to do no parsing when protocol is not a valid number
-*/
-static inline data_ret_t *dont_parse(
-	const uchar *packet,
-	int pktSize,
-	__attribute__((unused)) struct json_object *jparent)
-{
-	DBGPRINTF("protocol not handled\n");
-	RETURN_DATA_AFTER(0)
+ */
+static inline data_ret_t *dont_parse(const uchar *packet,
+                                     int pktSize,
+                                     __attribute__((unused)) struct json_object *jparent) {
+    DBGPRINTF("protocol not handled\n");
+    RETURN_DATA_AFTER(0)
 }
 
 // proto code handlers
-static inline data_ret_t *eth_proto_parse(
-	uint16_t ethProto,
-	const uchar *packet,
-	int pktSize,
-	struct json_object *jparent)
-{
-	switch(ethProto) {
-		case ETHERTYPE_IP:
-			return ipv4_parse(packet, pktSize, jparent);
-		case ETHERTYPE_IPV6:
-			return ipv6_parse(packet, pktSize, jparent);
-		case ETHERTYPE_ARP:
-			return arp_parse(packet, pktSize, jparent);
-		case ETHERTYPE_REVARP:
-			return rarp_parse(packet, pktSize, jparent);
-		case ETHERTYPE_IPX:
-			return ipx_parse(packet, pktSize, jparent);
-		default:
-			return dont_parse(packet, pktSize, jparent);
-	}
+static inline data_ret_t *eth_proto_parse(uint16_t ethProto,
+                                          const uchar *packet,
+                                          int pktSize,
+                                          struct json_object *jparent) {
+    switch (ethProto) {
+        case ETHERTYPE_IP:
+            return ipv4_parse(packet, pktSize, jparent);
+        case ETHERTYPE_IPV6:
+            return ipv6_parse(packet, pktSize, jparent);
+        case ETHERTYPE_ARP:
+            return arp_parse(packet, pktSize, jparent);
+        case ETHERTYPE_REVARP:
+            return rarp_parse(packet, pktSize, jparent);
+        case ETHERTYPE_IPX:
+            return ipx_parse(packet, pktSize, jparent);
+        default:
+            return dont_parse(packet, pktSize, jparent);
+    }
 }
 
-static inline data_ret_t *ip_proto_parse(
-	uint16_t ipProto,
-	const uchar *packet,
-	int pktSize,
-	struct json_object *jparent)
-{
-	switch(ipProto) {
-		case IPPROTO_TCP:
-			return tcp_parse(packet, pktSize, jparent);
-		case IPPROTO_UDP:
-			return udp_parse(packet, pktSize, jparent);
-		case IPPROTO_ICMP:
-			return icmp_parse(packet, pktSize, jparent);
-		default:
-			return dont_parse(packet, pktSize, jparent);
-	}
+static inline data_ret_t *ip_proto_parse(uint16_t ipProto,
+                                         const uchar *packet,
+                                         int pktSize,
+                                         struct json_object *jparent) {
+    switch (ipProto) {
+        case IPPROTO_TCP:
+            return tcp_parse(packet, pktSize, jparent);
+        case IPPROTO_UDP:
+            return udp_parse(packet, pktSize, jparent);
+        case IPPROTO_ICMP:
+            return icmp_parse(packet, pktSize, jparent);
+        default:
+            return dont_parse(packet, pktSize, jparent);
+    }
 }
 
 #endif /* INCLUDED_PARSER_H */

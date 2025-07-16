@@ -19,7 +19,7 @@
 #ifndef PARSERIF_H_DEFINED
 #define PARSERIF_H_DEFINED
 #include "rainerscript.h"
-int cnfSetLexFile(const char*);
+int cnfSetLexFile(const char *);
 void parser_errmsg(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void parser_warnmsg(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 void tellLexEndParsing(void);

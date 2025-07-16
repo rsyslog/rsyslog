@@ -26,12 +26,12 @@
 
 /* interface */
 BEGINinterface(sigprov) /* name must also be changed in ENDinterface macro! */
-	rsRetVal (*Construct)(void *ppThis);
-	rsRetVal (*SetCnfParam)(void *ppThis, struct nvlst *lst);
-	rsRetVal (*Destruct)(void *ppThis);
-	rsRetVal (*OnFileOpen)(void *pThis, uchar *fn, void *pFileInstData);
-	rsRetVal (*OnRecordWrite)(void *pFileInstData, uchar *rec, rs_size_t lenRec);
-	rsRetVal (*OnFileClose)(void *pFileInstData);
+    rsRetVal (*Construct)(void *ppThis);
+    rsRetVal (*SetCnfParam)(void *ppThis, struct nvlst *lst);
+    rsRetVal (*Destruct)(void *ppThis);
+    rsRetVal (*OnFileOpen)(void *pThis, uchar *fn, void *pFileInstData);
+    rsRetVal (*OnRecordWrite)(void *pFileInstData, uchar *rec, rs_size_t lenRec);
+    rsRetVal (*OnFileClose)(void *pFileInstData);
 ENDinterface(sigprov)
 #define sigprovCURR_IF_VERSION 1 /* increment whenever you change the interface structure! */
 #endif /* #ifndef INCLUDED_SIGPROV_H */

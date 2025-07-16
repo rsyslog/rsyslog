@@ -26,45 +26,46 @@
  * used in ruleset.c as well as ourselvs).
  */
 struct parserList_s {
-	parser_t *pParser;
-	parserList_t *pNext;
+    parser_t *pParser;
+    parserList_t *pNext;
 };
 
 
 /* the parser object, a dummy because we have only static methods */
 struct parser_s {
-	BEGINobjInstance;	/* Data to implement generic object - MUST be the first data element! */
-	uchar *pName;		/* name of this parser */
-	modInfo_t *pModule;	/* pointer to parser's module */
-	void *pInst;		/* instance data for the parser (v2+ module interface) */
-	sbool bDoSanitazion;	/* do standard message sanitazion before calling parser? */
-	sbool bDoPRIParsing;	/* do standard PRI parsing before calling parser? */
+    BEGINobjInstance
+        ; /* Data to implement generic object - MUST be the first data element! */
+        uchar *pName; /* name of this parser */
+        modInfo_t *pModule; /* pointer to parser's module */
+        void *pInst; /* instance data for the parser (v2+ module interface) */
+        sbool bDoSanitazion; /* do standard message sanitazion before calling parser? */
+        sbool bDoPRIParsing; /* do standard PRI parsing before calling parser? */
 };
 
 /* interfaces */
 BEGINinterface(parser) /* name must also be changed in ENDinterface macro! */
-	INTERFACEObjDebugPrint(var);
-	rsRetVal (*Construct)(parser_t **ppThis);
-	rsRetVal (*ConstructFinalize)(parser_t *pThis);
-	rsRetVal (*Destruct)(parser_t **ppThis);
-	rsRetVal (*SetName)(parser_t *pThis, uchar *name);
-	rsRetVal (*SetModPtr)(parser_t *pThis, modInfo_t *pMod);
-	rsRetVal (*SetDoPRIParsing)(parser_t *pThis, int);
-	rsRetVal (*FindParser)(parserList_t *pParserListRoot, parser_t **ppThis, uchar*name);
-	rsRetVal (*DestructParserList)(parserList_t **pListRoot);
-	rsRetVal (*AddParserToList)(parserList_t **pListRoot, parser_t *pParser);
-	rsRetVal (*destroyMasterParserList)(parserList_t *pParserListRoot);
-	/* static functions */
-	rsRetVal (*ParseMsg)(smsg_t *pMsg);
-	rsRetVal (*SanitizeMsg)(smsg_t *pMsg);
-	rsRetVal (*AddDfltParser)(uchar *);
+    INTERFACEObjDebugPrint(var);
+    rsRetVal (*Construct)(parser_t **ppThis);
+    rsRetVal (*ConstructFinalize)(parser_t *pThis);
+    rsRetVal (*Destruct)(parser_t **ppThis);
+    rsRetVal (*SetName)(parser_t *pThis, uchar *name);
+    rsRetVal (*SetModPtr)(parser_t *pThis, modInfo_t *pMod);
+    rsRetVal (*SetDoPRIParsing)(parser_t *pThis, int);
+    rsRetVal (*FindParser)(parserList_t *pParserListRoot, parser_t **ppThis, uchar *name);
+    rsRetVal (*DestructParserList)(parserList_t **pListRoot);
+    rsRetVal (*AddParserToList)(parserList_t **pListRoot, parser_t *pParser);
+    rsRetVal (*destroyMasterParserList)(parserList_t *pParserListRoot);
+    /* static functions */
+    rsRetVal (*ParseMsg)(smsg_t *pMsg);
+    rsRetVal (*SanitizeMsg)(smsg_t *pMsg);
+    rsRetVal (*AddDfltParser)(uchar *);
 ENDinterface(parser)
 #define parserCURR_IF_VERSION 3 /* increment whenever you change the interface above! */
 /* version changes
-	2       SetDoSanitization removed, no longer needed
-	3       InitParserList removed, no longer needed
-	        destroyMasterParserList added
-	        findParser extended with new parameter specifying the parser list
+    2       SetDoSanitization removed, no longer needed
+    3       InitParserList removed, no longer needed
+            destroyMasterParserList added
+            findParser extended with new parameter specifying the parser list
 */
 
 void printParserList(parserList_t *pList);

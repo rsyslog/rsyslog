@@ -24,8 +24,7 @@ typedef struct ai_provider_s ai_provider_t;
  * @param[in] prompt The base system/initial prompt to use for classification.
  * @return RS_RET_OK on success, or an error code.
  */
-typedef rsRetVal (*ai_provider_init_t)(ai_provider_t *prov, const char *model,
-	const char *apikey, const char *prompt);
+typedef rsRetVal (*ai_provider_init_t)(ai_provider_t *prov, const char *model, const char *apikey, const char *prompt);
 
 /**
  * @brief Function pointer type for classifying a batch of messages.
@@ -42,8 +41,7 @@ typedef rsRetVal (*ai_provider_init_t)(ai_provider_t *prov, const char *model,
  *
  * @return RS_RET_OK on success, or an error code.
  */
-typedef rsRetVal (*ai_provider_classify_t)(ai_provider_t *prov,
-	const char **messages, size_t n, char ***tags);
+typedef rsRetVal (*ai_provider_classify_t)(ai_provider_t *prov, const char **messages, size_t n, char ***tags);
 
 /**
  * @brief Function pointer type for cleaning up a provider's resources.
@@ -57,10 +55,10 @@ typedef void (*ai_provider_cleanup_t)(ai_provider_t *prov);
  * @brief The central struct defining a provider's implementation.
  */
 struct ai_provider_s {
-	void *data;                     ///< Pointer to provider-specific private state data.
-	ai_provider_init_t init;        ///< Pointer to the provider's init function.
-	ai_provider_classify_t classify;///< Pointer to the provider's classification function.
-	ai_provider_cleanup_t cleanup;  ///< Pointer to the provider's cleanup function.
+    void *data;  ///< Pointer to provider-specific private state data.
+    ai_provider_init_t init;  ///< Pointer to the provider's init function.
+    ai_provider_classify_t classify;  ///< Pointer to the provider's classification function.
+    ai_provider_cleanup_t cleanup;  ///< Pointer to the provider's cleanup function.
 };
 
 /*

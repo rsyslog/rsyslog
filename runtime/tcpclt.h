@@ -22,42 +22,43 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef	TCPCLT_H_INCLUDED
-#define	TCPCLT_H_INCLUDED 1
+#ifndef TCPCLT_H_INCLUDED
+#define TCPCLT_H_INCLUDED 1
 
 #include "obj.h"
 
 /* the tcpclt object */
 typedef struct tcpclt_s {
-	BEGINobjInstance;	/**< Data to implement generic object - MUST be the first data element! */
-	TCPFRAMINGMODE tcp_framing;
-	uchar tcp_framingDelimiter;
-	char *prevMsg;
-	short bResendLastOnRecon; /* should the last message be resent on a successful reconnect? */
-	size_t lenPrevMsg;
-	/* session specific callbacks */
-	int iNumMsgs;		/* number of messages during current "rebind session" */
-	rsRetVal (*initFunc)(void*);
-	rsRetVal (*sendFunc)(void*, char*, size_t);
-	rsRetVal (*prepRetryFunc)(void*);
+    BEGINobjInstance
+        ; /**< Data to implement generic object - MUST be the first data element! */
+        TCPFRAMINGMODE tcp_framing;
+        uchar tcp_framingDelimiter;
+        char *prevMsg;
+        short bResendLastOnRecon; /* should the last message be resent on a successful reconnect? */
+        size_t lenPrevMsg;
+        /* session specific callbacks */
+        int iNumMsgs; /* number of messages during current "rebind session" */
+        rsRetVal (*initFunc)(void *);
+        rsRetVal (*sendFunc)(void *, char *, size_t);
+        rsRetVal (*prepRetryFunc)(void *);
 } tcpclt_t;
 
 
 /* interfaces */
 BEGINinterface(tcpclt) /* name must also be changed in ENDinterface macro! */
-	rsRetVal (*Construct)(tcpclt_t **ppThis);
-	rsRetVal (*ConstructFinalize)(tcpclt_t __attribute__((unused)) *pThis);
-	rsRetVal (*Destruct)(tcpclt_t **ppThis);
-	int (*Send)(tcpclt_t *pThis, void*pData, char*msg, size_t len);
-	int (*CreateSocket)(struct addrinfo *addrDest);
-	/* set methods */
-	rsRetVal (*SetResendLastOnRecon)(tcpclt_t*, int);
-	rsRetVal (*SetSendInit)(tcpclt_t*, rsRetVal (*)(void*));
-	rsRetVal (*SetSendFrame)(tcpclt_t*, rsRetVal (*)(void*, char*, size_t));
-	rsRetVal (*SetSendPrepRetry)(tcpclt_t*, rsRetVal (*)(void*));
-	rsRetVal (*SetFraming)(tcpclt_t*, TCPFRAMINGMODE framing);
-	/* v4, 2017-06-10*/
-	rsRetVal (*SetFramingDelimiter)(tcpclt_t*, uchar tcp_framingDelimiter);
+    rsRetVal (*Construct)(tcpclt_t **ppThis);
+    rsRetVal (*ConstructFinalize)(tcpclt_t __attribute__((unused)) * pThis);
+    rsRetVal (*Destruct)(tcpclt_t **ppThis);
+    int (*Send)(tcpclt_t *pThis, void *pData, char *msg, size_t len);
+    int (*CreateSocket)(struct addrinfo *addrDest);
+    /* set methods */
+    rsRetVal (*SetResendLastOnRecon)(tcpclt_t *, int);
+    rsRetVal (*SetSendInit)(tcpclt_t *, rsRetVal (*)(void *));
+    rsRetVal (*SetSendFrame)(tcpclt_t *, rsRetVal (*)(void *, char *, size_t));
+    rsRetVal (*SetSendPrepRetry)(tcpclt_t *, rsRetVal (*)(void *));
+    rsRetVal (*SetFraming)(tcpclt_t *, TCPFRAMINGMODE framing);
+    /* v4, 2017-06-10*/
+    rsRetVal (*SetFramingDelimiter)(tcpclt_t *, uchar tcp_framingDelimiter);
 ENDinterface(tcpclt)
 #define tcpcltCURR_IF_VERSION 5 /* increment whenever you change the interface structure! */
 

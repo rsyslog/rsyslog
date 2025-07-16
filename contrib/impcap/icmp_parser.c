@@ -32,10 +32,10 @@
 #include "parsers.h"
 
 struct icmp_header_s {
-	uint8_t type;
-	uint8_t code;
-	uint16_t checksum;
-	uint8_t data[];
+    uint8_t type;
+    uint8_t code;
+    uint16_t checksum;
+    uint8_t data[];
 };
 
 typedef struct icmp_header_s icmp_header_t;
@@ -52,28 +52,28 @@ typedef struct icmp_header_s icmp_header_t;
  *
  *  This function returns a structure containing the data unprocessed by this parser
  *  or the ones after (as a list of bytes), and the length of this data.
-*/
+ */
 data_ret_t *icmp_parse(const uchar *packet, int pktSize, struct json_object *jparent) {
-	DBGPRINTF("icmp_parse\n");
-	DBGPRINTF("packet size %d\n", pktSize);
+    DBGPRINTF("icmp_parse\n");
+    DBGPRINTF("packet size %d\n", pktSize);
 
-	if (pktSize < 8) {
-		DBGPRINTF("ICMP packet too small : %d\n", pktSize);
-		RETURN_DATA_AFTER(0);
-	}
+    if (pktSize < 8) {
+        DBGPRINTF("ICMP packet too small : %d\n", pktSize);
+        RETURN_DATA_AFTER(0);
+    }
 
-	/* Union to prevent cast from uchar to icmp_header_t */
-	union {
-		const uchar *pck;
-		icmp_header_t *hdr;
-	} icmp_header_to_char;
+    /* Union to prevent cast from uchar to icmp_header_t */
+    union {
+        const uchar *pck;
+        icmp_header_t *hdr;
+    } icmp_header_to_char;
 
-	icmp_header_to_char.pck = packet;
-	icmp_header_t *icmp_header = icmp_header_to_char.hdr;
+    icmp_header_to_char.pck = packet;
+    icmp_header_t *icmp_header = icmp_header_to_char.hdr;
 
-	json_object_object_add(jparent, "net_icmp_type", json_object_new_int(icmp_header->type));
-	json_object_object_add(jparent, "net_icmp_code", json_object_new_int(icmp_header->code));
-	json_object_object_add(jparent, "icmp_checksum", json_object_new_int(ntohs(icmp_header->checksum)));
+    json_object_object_add(jparent, "net_icmp_type", json_object_new_int(icmp_header->type));
+    json_object_object_add(jparent, "net_icmp_code", json_object_new_int(icmp_header->code));
+    json_object_object_add(jparent, "icmp_checksum", json_object_new_int(ntohs(icmp_header->checksum)));
 
-	RETURN_DATA_AFTER(8)
+    RETURN_DATA_AFTER(8)
 }

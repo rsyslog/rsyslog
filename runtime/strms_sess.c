@@ -44,13 +44,10 @@
 
 /* static data */
 DEFobjStaticHelpers;
-DEFobjCurrIf(glbl)
-DEFobjCurrIf(prop)
-DEFobjCurrIf(netstrm)
-DEFobjCurrIf(datetime)
+DEFobjCurrIf(glbl) DEFobjCurrIf(prop) DEFobjCurrIf(netstrm) DEFobjCurrIf(datetime)
 
-/* forward definitions */
-static rsRetVal Close(strms_sess_t *pThis);
+    /* forward definitions */
+    static rsRetVal Close(strms_sess_t *pThis);
 
 
 /* Standard-Constructor */
@@ -60,39 +57,35 @@ ENDobjConstruct(strms_sess)
 
 /* ConstructionFinalizer
  */
-static rsRetVal
-strms_sessConstructFinalize(strms_sess_t *pThis)
-{
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, strms_sess);
-	if(pThis->pSrv->OnSessConstructFinalize != NULL) {
-		CHKiRet(pThis->pSrv->OnSessConstructFinalize(&pThis->pUsr));
-	}
+static rsRetVal strms_sessConstructFinalize(strms_sess_t *pThis) {
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, strms_sess);
+    if (pThis->pSrv->OnSessConstructFinalize != NULL) {
+        CHKiRet(pThis->pSrv->OnSessConstructFinalize(&pThis->pUsr));
+    }
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
 /* destructor for the strms_sess object */
 BEGINobjDestruct(strms_sess) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDestruct(strms_sess);
-	if(pThis->pStrm != NULL)
-		netstrm.Destruct(&pThis->pStrm);
+    CODESTARTobjDestruct(strms_sess);
+    if (pThis->pStrm != NULL) netstrm.Destruct(&pThis->pStrm);
 
-	if(pThis->pSrv->pOnSessDestruct != NULL) {
-		pThis->pSrv->pOnSessDestruct(&pThis->pUsr);
-	}
-	/* now destruct our own properties */
-	free(pThis->fromHost);
-	if(pThis->fromHostIP != NULL)
-		prop.Destruct(&pThis->fromHostIP);
+    if (pThis->pSrv->pOnSessDestruct != NULL) {
+        pThis->pSrv->pOnSessDestruct(&pThis->pUsr);
+    }
+    /* now destruct our own properties */
+    free(pThis->fromHost);
+    if (pThis->fromHostIP != NULL) prop.Destruct(&pThis->fromHostIP);
 ENDobjDestruct(strms_sess)
 
 
 /* debugprint for the strms_sess object */
 BEGINobjDebugPrint(strms_sess) /* be sure to specify the object type also in END and CODESTART macros! */
-CODESTARTobjDebugPrint(strms_sess);
+    CODESTARTobjDebugPrint(strms_sess);
 ENDobjDebugPrint(strms_sess)
 
 
@@ -101,78 +94,63 @@ ENDobjDebugPrint(strms_sess)
  * the caller no longer controls it once SetHost() has received it. Most importantly,
  * the caller must not free it. -- rgerhards, 2008-04-24
  */
-static rsRetVal
-SetHost(strms_sess_t *pThis, uchar *pszHost)
-{
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, strms_sess);
-	free(pThis->fromHost);
-	pThis->fromHost = pszHost;
-	RETiRet;
+static rsRetVal SetHost(strms_sess_t *pThis, uchar *pszHost) {
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, strms_sess);
+    free(pThis->fromHost);
+    pThis->fromHost = pszHost;
+    RETiRet;
 }
 
 /* set the remote host's IP. Note that the caller *hands over* the property. That is,
  * the caller no longer controls it once SetHostIP() has received it. Most importantly,
  * the caller must not destruct it. -- rgerhards, 2008-05-16
  */
-static rsRetVal
-SetHostIP(strms_sess_t *pThis, prop_t *ip)
-{
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, strms_sess);
-	if(pThis->fromHostIP != NULL)
-		prop.Destruct(&pThis->fromHostIP);
-	pThis->fromHostIP = ip;
-	RETiRet;
+static rsRetVal SetHostIP(strms_sess_t *pThis, prop_t *ip) {
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, strms_sess);
+    if (pThis->fromHostIP != NULL) prop.Destruct(&pThis->fromHostIP);
+    pThis->fromHostIP = ip;
+    RETiRet;
 }
 
-static rsRetVal
-SetStrm(strms_sess_t *pThis, netstrm_t *pStrm)
-{
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, strms_sess);
-	pThis->pStrm = pStrm;
-	RETiRet;
+static rsRetVal SetStrm(strms_sess_t *pThis, netstrm_t *pStrm) {
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, strms_sess);
+    pThis->pStrm = pStrm;
+    RETiRet;
 }
 
 
 /* set our parent, the strmsrv object */
-static rsRetVal
-SetStrmsrv(strms_sess_t *pThis, strmsrv_t *pSrv)
-{
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, strms_sess);
-	ISOBJ_TYPE_assert(pSrv, strmsrv);
-	pThis->pSrv = pSrv;
-	RETiRet;
+static rsRetVal SetStrmsrv(strms_sess_t *pThis, strmsrv_t *pSrv) {
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, strms_sess);
+    ISOBJ_TYPE_assert(pSrv, strmsrv);
+    pThis->pSrv = pSrv;
+    RETiRet;
 }
 
 
 /* set our parent listener info*/
-static rsRetVal
-SetLstnInfo(strms_sess_t *pThis, strmLstnPortList_t *pLstnInfo)
-{
-	DEFiRet;
-	ISOBJ_TYPE_assert(pThis, strms_sess);
-	assert(pLstnInfo != NULL);
-	pThis->pLstnInfo = pLstnInfo;
-	RETiRet;
+static rsRetVal SetLstnInfo(strms_sess_t *pThis, strmLstnPortList_t *pLstnInfo) {
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, strms_sess);
+    assert(pLstnInfo != NULL);
+    pThis->pLstnInfo = pLstnInfo;
+    RETiRet;
 }
 
 
-static rsRetVal
-SetUsrP(strms_sess_t *pThis, void *pUsr)
-{
-	DEFiRet;
-	pThis->pUsr = pUsr;
-	RETiRet;
+static rsRetVal SetUsrP(strms_sess_t *pThis, void *pUsr) {
+    DEFiRet;
+    pThis->pUsr = pUsr;
+    RETiRet;
 }
 
 
-static void *
-GetUsrP(strms_sess_t *pThis)
-{
-	return pThis->pUsr;
+static void *GetUsrP(strms_sess_t *pThis) {
+    return pThis->pUsr;
 }
 
 
@@ -180,21 +158,17 @@ GetUsrP(strms_sess_t *pThis)
  * No attention is paid to the return code
  * of close, so potential-double closes are not detected.
  */
-static rsRetVal
-Close(strms_sess_t *pThis)
-{
-	DEFiRet;
+static rsRetVal Close(strms_sess_t *pThis) {
+    DEFiRet;
 
-	ISOBJ_TYPE_assert(pThis, strms_sess);
-	netstrm.Destruct(&pThis->pStrm);
-	free(pThis->fromHost);
-	pThis->fromHost = NULL; /* not really needed, but... */
-	if(pThis->fromHostIP != NULL)
-		prop.Destruct(&pThis->fromHostIP);
+    ISOBJ_TYPE_assert(pThis, strms_sess);
+    netstrm.Destruct(&pThis->pStrm);
+    free(pThis->fromHost);
+    pThis->fromHost = NULL; /* not really needed, but... */
+    if (pThis->fromHostIP != NULL) prop.Destruct(&pThis->fromHostIP);
 
-	RETiRet;
+    RETiRet;
 }
-
 
 
 /* Processes the data received via a STRM session. If there
@@ -209,25 +183,23 @@ Close(strms_sess_t *pThis)
  * or anything else, which means it must be closed.
  * rgerhards, 2008-03-01
  */
-static rsRetVal
-DataRcvd(strms_sess_t *pThis, char *pData, size_t iLen)
-{
-	DEFiRet;
-	char *pEnd;
+static rsRetVal DataRcvd(strms_sess_t *pThis, char *pData, size_t iLen) {
+    DEFiRet;
+    char *pEnd;
 
-	ISOBJ_TYPE_assert(pThis, strms_sess);
-	assert(pData != NULL);
-	assert(iLen > 0);
+    ISOBJ_TYPE_assert(pThis, strms_sess);
+    assert(pData != NULL);
+    assert(iLen > 0);
 
-	 /* We now copy the message to the session buffer. */
-	pEnd = pData + iLen; /* this is one off, which is intensional */
+    /* We now copy the message to the session buffer. */
+    pEnd = pData + iLen; /* this is one off, which is intensional */
 
-	while(pData < pEnd) {
-		CHKiRet(pThis->pSrv->OnCharRcvd(pThis, (uchar)*pData++));
-	}
+    while (pData < pEnd) {
+        CHKiRet(pThis->pSrv->OnCharRcvd(pThis, (uchar)*pData++));
+    }
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -235,31 +207,31 @@ finalize_it:
  * rgerhards, 2008-02-29
  */
 BEGINobjQueryInterface(strms_sess)
-CODESTARTobjQueryInterface(strms_sess);
-	if(pIf->ifVersion != strms_sessCURR_IF_VERSION) { /* check for current version, increment on each change */
-		ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
-	}
+    CODESTARTobjQueryInterface(strms_sess);
+    if (pIf->ifVersion != strms_sessCURR_IF_VERSION) { /* check for current version, increment on each change */
+        ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
+    }
 
-	/* ok, we have the right interface, so let's fill it
-	 * Please note that we may also do some backwards-compatibility
-	 * work here (if we can support an older interface version - that,
-	 * of course, also affects the "if" above).
-	 */
-	pIf->DebugPrint = strms_sessDebugPrint;
-	pIf->Construct = strms_sessConstruct;
-	pIf->ConstructFinalize = strms_sessConstructFinalize;
-	pIf->Destruct = strms_sessDestruct;
+    /* ok, we have the right interface, so let's fill it
+     * Please note that we may also do some backwards-compatibility
+     * work here (if we can support an older interface version - that,
+     * of course, also affects the "if" above).
+     */
+    pIf->DebugPrint = strms_sessDebugPrint;
+    pIf->Construct = strms_sessConstruct;
+    pIf->ConstructFinalize = strms_sessConstructFinalize;
+    pIf->Destruct = strms_sessDestruct;
 
-	pIf->Close = Close;
-	pIf->DataRcvd = DataRcvd;
+    pIf->Close = Close;
+    pIf->DataRcvd = DataRcvd;
 
-	pIf->SetUsrP = SetUsrP;
-	pIf->GetUsrP = GetUsrP;
-	pIf->SetStrmsrv = SetStrmsrv;
-	pIf->SetLstnInfo = SetLstnInfo;
-	pIf->SetHost = SetHost;
-	pIf->SetHostIP = SetHostIP;
-	pIf->SetStrm = SetStrm;
+    pIf->SetUsrP = SetUsrP;
+    pIf->GetUsrP = GetUsrP;
+    pIf->SetStrmsrv = SetStrmsrv;
+    pIf->SetLstnInfo = SetLstnInfo;
+    pIf->SetHost = SetHost;
+    pIf->SetHostIP = SetHostIP;
+    pIf->SetStrm = SetStrm;
 finalize_it:
 ENDobjQueryInterface(strms_sess)
 
@@ -268,10 +240,10 @@ ENDobjQueryInterface(strms_sess)
  * rgerhards, 2008-03-10
  */
 BEGINObjClassExit(strms_sess, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MACRO! */
-CODESTARTObjClassExit(strms_sess);
-	/* release objects we no longer need */
-	objRelease(netstrm, LM_NETSTRMS_FILENAME);
-	objRelease(datetime, CORE_COMPONENT);
+    CODESTARTObjClassExit(strms_sess);
+    /* release objects we no longer need */
+    objRelease(netstrm, LM_NETSTRMS_FILENAME);
+    objRelease(datetime, CORE_COMPONENT);
 ENDObjClassExit(strms_sess)
 
 
@@ -280,17 +252,17 @@ ENDObjClassExit(strms_sess)
  * rgerhards, 2008-02-29
  */
 BEGINObjClassInit(strms_sess, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE class also in END MACRO! */
-	/* request objects we use */
-	CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));
-	CHKiRet(objUse(datetime, CORE_COMPONENT));
-	CHKiRet(objUse(prop, CORE_COMPONENT));
+    /* request objects we use */
+    CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));
+    CHKiRet(objUse(datetime, CORE_COMPONENT));
+    CHKiRet(objUse(prop, CORE_COMPONENT));
 
-	CHKiRet(objUse(glbl, CORE_COMPONENT));
-	objRelease(glbl, CORE_COMPONENT);
+    CHKiRet(objUse(glbl, CORE_COMPONENT));
+    objRelease(glbl, CORE_COMPONENT);
 
-	/* set our own handlers */
-	OBJSetMethodHandler(objMethod_DEBUGPRINT, strms_sessDebugPrint);
-	OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, strms_sessConstructFinalize);
+    /* set our own handlers */
+    OBJSetMethodHandler(objMethod_DEBUGPRINT, strms_sessDebugPrint);
+    OBJSetMethodHandler(objMethod_CONSTRUCTION_FINALIZER, strms_sessConstructFinalize);
 ENDObjClassInit(strms_sess)
 
 /* vim:set ai:

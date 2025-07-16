@@ -50,122 +50,121 @@ DEF_OMOD_STATIC_DATA;
 
 /* config variables */
 typedef struct _instanceData {
-	char *dummy;
+    char *dummy;
 } instanceData;
 
 typedef struct wrkrInstanceData {
-	instanceData *pData;
+    instanceData *pData;
 } wrkrInstanceData_t;
 
-struct modConfData_s {
-};
+struct modConfData_s {};
 
 /* modConf ptr to use for the current load process */
 static modConfData_t *loadModConf = NULL;
 /* modConf ptr to use for the current exec process */
-static modConfData_t *runModConf  = NULL;
-
-
+static modConfData_t *runModConf = NULL;
 
 
 BEGINbeginCnfLoad
-CODESTARTbeginCnfLoad;
-	loadModConf = pModConf;
+    CODESTARTbeginCnfLoad;
+    loadModConf = pModConf;
 ENDbeginCnfLoad
 
 BEGINendCnfLoad
-CODESTARTendCnfLoad;
+    CODESTARTendCnfLoad;
 ENDendCnfLoad
 
 BEGINcheckCnf
-CODESTARTcheckCnf;
+    CODESTARTcheckCnf;
 ENDcheckCnf
 
 BEGINactivateCnf
-CODESTARTactivateCnf;
-	runModConf = pModConf;
+    CODESTARTactivateCnf;
+    runModConf = pModConf;
 ENDactivateCnf
 
 BEGINfreeCnf
-CODESTARTfreeCnf;
+    CODESTARTfreeCnf;
 ENDfreeCnf
 
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance;
+    CODESTARTcreateWrkrInstance;
 ENDcreateWrkrInstance
 
 
 BEGINisCompatibleWithFeature
-CODESTARTisCompatibleWithFeature;
+    CODESTARTisCompatibleWithFeature;
 ENDisCompatibleWithFeature
 
 
 BEGINfreeInstance
-CODESTARTfreeInstance;
+    CODESTARTfreeInstance;
 ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
-CODESTARTfreeWrkrInstance;
+    CODESTARTfreeWrkrInstance;
 ENDfreeWrkrInstance
 
 
 BEGINsetModCnf
-CODESTARTsetModCnf;
-	(void) lst;
-	parser_errmsg("%s is an optional module which could not be built on your platform "
-		"please remove it from the configuration or upgrade your platform", MODULE_NAME(MODNAME));
+    CODESTARTsetModCnf;
+    (void)lst;
+    parser_errmsg(
+        "%s is an optional module which could not be built on your platform "
+        "please remove it from the configuration or upgrade your platform",
+        MODULE_NAME(MODNAME));
 ENDsetModCnf
 
 
 BEGINnewActInst
-CODESTARTnewActInst;
-	(void) pData;
-	(void) ppModData;
-	parser_errmsg("%s is an optional module which could not be built on your platform "
-		"please remove it from the configuration or upgrade your platform", MODULE_NAME(MODNAME));
+    CODESTARTnewActInst;
+    (void)pData;
+    (void)ppModData;
+    parser_errmsg(
+        "%s is an optional module which could not be built on your platform "
+        "please remove it from the configuration or upgrade your platform",
+        MODULE_NAME(MODNAME));
 ENDnewActInst
 
 
 BEGINdbgPrintInstInfo
-CODESTARTdbgPrintInstInfo;
+    CODESTARTdbgPrintInstInfo;
 ENDdbgPrintInstInfo
 
 
 BEGINtryResume
-CODESTARTtryResume;
+    CODESTARTtryResume;
 ENDtryResume
 
 
 BEGINdoAction_NoStrings
-CODESTARTdoAction;
-	(void) pMsgData;
+    CODESTARTdoAction;
+    (void)pMsgData;
 ENDdoAction
 
 
 NO_LEGACY_CONF_parseSelectorAct
 
 
-BEGINmodExit
-CODESTARTmodExit;
+    BEGINmodExit CODESTARTmodExit;
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt;
-CODEqueryEtryPt_STD_OMOD_QUERIES;
-CODEqueryEtryPt_STD_OMOD8_QUERIES;
-CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
-CODEqueryEtryPt_STD_CONF2_QUERIES;
+    CODESTARTqueryEtryPt;
+    CODEqueryEtryPt_STD_OMOD_QUERIES;
+    CODEqueryEtryPt_STD_OMOD8_QUERIES;
+    CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
+    CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
+    CODEqueryEtryPt_STD_CONF2_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-CODESTARTmodInit;
-	/* we only support the current interface specification */
-	*ipIFVersProvided = CURR_MOD_IF_VERSION;
-CODEmodInit_QueryRegCFSLineHdlr
-	dbgprintf("dummy module compiled with rsyslog version %s.\n", VERSION);
+    CODESTARTmodInit;
+    /* we only support the current interface specification */
+    *ipIFVersProvided = CURR_MOD_IF_VERSION;
+    CODEmodInit_QueryRegCFSLineHdlr dbgprintf("dummy module compiled with rsyslog version %s.\n", VERSION);
 ENDmodInit

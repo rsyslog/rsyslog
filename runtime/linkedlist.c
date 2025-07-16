@@ -42,21 +42,22 @@
 /* Initialize an existing linkedList_t structure
  * pKey destructor may be zero to take care of non-keyed lists.
  */
-rsRetVal llInit(linkedList_t *pThis, rsRetVal (*pEltDestructor)(void*), rsRetVal (*pKeyDestructor)(void*),
-	int (*pCmpOp)(void*,void*))
-{
-	assert(pThis != NULL);
-	assert(pEltDestructor != NULL);
+rsRetVal llInit(linkedList_t *pThis,
+                rsRetVal (*pEltDestructor)(void *),
+                rsRetVal (*pKeyDestructor)(void *),
+                int (*pCmpOp)(void *, void *)) {
+    assert(pThis != NULL);
+    assert(pEltDestructor != NULL);
 
-	pThis->pEltDestruct = pEltDestructor;
-	pThis->pKeyDestruct = pKeyDestructor;
-	pThis->cmpOp = pCmpOp;
-	pThis->pKey = NULL;
-	pThis->iNumElts = 0;
-	pThis->pRoot = NULL;
-	pThis->pLast = NULL;
+    pThis->pEltDestruct = pEltDestructor;
+    pThis->pKeyDestruct = pKeyDestructor;
+    pThis->cmpOp = pCmpOp;
+    pThis->pKey = NULL;
+    pThis->iNumElts = 0;
+    pThis->pRoot = NULL;
+    pThis->pLast = NULL;
 
-	return RS_RET_OK;
+    return RS_RET_OK;
 };
 
 
@@ -64,81 +65,75 @@ rsRetVal llInit(linkedList_t *pThis, rsRetVal (*pEltDestructor)(void*), rsRetVal
  * It is a separate function as the
  * functionality is needed in multiple code-pathes.
  */
-static rsRetVal llDestroyElt(linkedList_t *pList, llElt_t *pElt)
-{
-	DEFiRet;
+static rsRetVal llDestroyElt(linkedList_t *pList, llElt_t *pElt) {
+    DEFiRet;
 
-	assert(pList != NULL);
-	assert(pElt != NULL);
+    assert(pList != NULL);
+    assert(pElt != NULL);
 
-	/* we ignore errors during destruction, as we need to try
-	 * free the element in any case.
-	 */
-	if(pElt->pData != NULL)
-		pList->pEltDestruct(pElt->pData);
-	if(pElt->pKey != NULL)
-		pList->pKeyDestruct(pElt->pKey);
-	free(pElt);
-	pList->iNumElts--; /* one less */
+    /* we ignore errors during destruction, as we need to try
+     * free the element in any case.
+     */
+    if (pElt->pData != NULL) pList->pEltDestruct(pElt->pData);
+    if (pElt->pKey != NULL) pList->pKeyDestruct(pElt->pKey);
+    free(pElt);
+    pList->iNumElts--; /* one less */
 
-	RETiRet;
+    RETiRet;
 }
 
 
 /* llDestroy - destroys a COMPLETE linkedList
  */
-rsRetVal llDestroy(linkedList_t *pThis)
-{
-	DEFiRet;
-	llElt_t *pElt;
+rsRetVal llDestroy(linkedList_t *pThis) {
+    DEFiRet;
+    llElt_t *pElt;
 
-	assert(pThis != NULL);
+    assert(pThis != NULL);
 
-	pElt = pThis->pRoot;
-	while(pElt != NULL) {
-		/* keep the list structure in a consistent state as
-		 * the destructor bellow may reference it again
-		 */
-		pThis->pRoot = pElt->pNext;
-		if(pElt->pNext == NULL)
-			pThis->pLast = NULL;
+    pElt = pThis->pRoot;
+    while (pElt != NULL) {
+        /* keep the list structure in a consistent state as
+         * the destructor bellow may reference it again
+         */
+        pThis->pRoot = pElt->pNext;
+        if (pElt->pNext == NULL) pThis->pLast = NULL;
 
-		/* we ignore errors during destruction, as we need to try
-		 * finish the linked list in any case.
-		 */
-		llDestroyElt(pThis, pElt);
-		pElt = pThis->pRoot;
-	}
+        /* we ignore errors during destruction, as we need to try
+         * finish the linked list in any case.
+         */
+        llDestroyElt(pThis, pElt);
+        pElt = pThis->pRoot;
+    }
 
-	RETiRet;
+    RETiRet;
 }
 
 /* llDestroyRootElt - destroy the root element but otherwise
  * keeps this list intact.  -- rgerhards, 2007-08-03
  */
-rsRetVal llDestroyRootElt(linkedList_t *pThis)
-{
-	DEFiRet;
-	llElt_t *pPrev;
+rsRetVal llDestroyRootElt(linkedList_t *pThis) {
+    DEFiRet;
+    llElt_t *pPrev;
 
-	if(pThis->pRoot == NULL) {
-		ABORT_FINALIZE(RS_RET_EMPTY_LIST);
-	}
+    if (pThis->pRoot == NULL) {
+        ABORT_FINALIZE(RS_RET_EMPTY_LIST);
+    }
 
-	pPrev = pThis->pRoot;
-	if(pPrev->pNext == NULL) {
-		/* it was the only list element */
-		pThis->pLast = NULL;
-		pThis->pRoot = NULL;
-	} else {
-		/* there are other list elements */
-		pThis->pRoot = pPrev->pNext;
-	}
+    pPrev = pThis->pRoot;
+    if (pPrev->pNext == NULL) {
+        /* it was the only list element */
+        pThis->pLast = NULL;
+        pThis->pRoot = NULL;
+    } else {
+        /* there are other list elements */
+        pThis->pRoot = pPrev->pNext;
+    }
 
-	CHKiRet(llDestroyElt(pThis, pPrev));
+    CHKiRet(llDestroyElt(pThis, pPrev));
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -149,28 +144,27 @@ finalize_it:
  * pointer to the current list element, but this is nothing that the
  * caller should rely on.
  */
-rsRetVal llGetNextElt(linkedList_t *pThis, linkedListCookie_t *ppElt, void **ppUsr)
-{
-	llElt_t *pElt;
-	DEFiRet;
+rsRetVal llGetNextElt(linkedList_t *pThis, linkedListCookie_t *ppElt, void **ppUsr) {
+    llElt_t *pElt;
+    DEFiRet;
 
-	assert(pThis != NULL);
-	assert(ppElt != NULL);
-	assert(ppUsr != NULL);
+    assert(pThis != NULL);
+    assert(ppElt != NULL);
+    assert(ppUsr != NULL);
 
-	pElt = *ppElt;
+    pElt = *ppElt;
 
-	pElt = (pElt == NULL) ? pThis->pRoot : pElt->pNext;
+    pElt = (pElt == NULL) ? pThis->pRoot : pElt->pNext;
 
-	if(pElt == NULL) {
-		iRet = RS_RET_END_OF_LINKEDLIST;
-	} else {
-		*ppUsr = pElt->pData;
-	}
+    if (pElt == NULL) {
+        iRet = RS_RET_END_OF_LINKEDLIST;
+    } else {
+        *ppUsr = pElt->pData;
+    }
 
-	*ppElt = pElt;
+    *ppElt = pElt;
 
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -179,59 +173,56 @@ rsRetVal llGetNextElt(linkedList_t *pThis, linkedListCookie_t *ppElt, void **ppU
  * but I need to make it a void* to avoid lots of compiler warnings.
  * It will be converted later down in the code.
  */
-rsRetVal llGetKey(llElt_t *pThis, void *ppData)
-{
-	assert(pThis != NULL);
-	assert(ppData != NULL);
+rsRetVal llGetKey(llElt_t *pThis, void *ppData) {
+    assert(pThis != NULL);
+    assert(ppData != NULL);
 
-	*(void**) ppData = pThis->pKey;
+    *(void **)ppData = pThis->pKey;
 
-	return RS_RET_OK;
+    return RS_RET_OK;
 }
 
 
 /* construct a new llElt_t
  */
-static rsRetVal llEltConstruct(llElt_t **ppThis, void *pKey, void *pData)
-{
-	DEFiRet;
-	llElt_t *pThis;
+static rsRetVal llEltConstruct(llElt_t **ppThis, void *pKey, void *pData) {
+    DEFiRet;
+    llElt_t *pThis;
 
-	assert(ppThis != NULL);
+    assert(ppThis != NULL);
 
-	if((pThis = (llElt_t*) calloc(1, sizeof(llElt_t))) == NULL) {
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
+    if ((pThis = (llElt_t *)calloc(1, sizeof(llElt_t))) == NULL) {
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
 
-	pThis->pKey = pKey;
-	pThis->pData = pData;
+    pThis->pKey = pKey;
+    pThis->pData = pData;
 
 finalize_it:
-	*ppThis = pThis;
-	RETiRet;
+    *ppThis = pThis;
+    RETiRet;
 }
 
 
 /* append a user element to the end of the linked list. This includes setting a key. If no
  * key is desired, simply pass in a NULL pointer for it.
  */
-rsRetVal llAppend(linkedList_t *pThis, void *pKey, void *pData)
-{
-	llElt_t *pElt;
-	DEFiRet;
+rsRetVal llAppend(linkedList_t *pThis, void *pKey, void *pData) {
+    llElt_t *pElt;
+    DEFiRet;
 
-	CHKiRet(llEltConstruct(&pElt, pKey, pData));
+    CHKiRet(llEltConstruct(&pElt, pKey, pData));
 
-	pThis->iNumElts++; /* one more */
-	if(pThis->pLast == NULL) {
-		pThis->pRoot = pElt;
-	} else {
-		pThis->pLast->pNext = pElt;
-	}
-	pThis->pLast = pElt;
+    pThis->iNumElts++; /* one more */
+    if (pThis->pLast == NULL) {
+        pThis->pRoot = pElt;
+    } else {
+        pThis->pLast->pNext = pElt;
+    }
+    pThis->pLast = pElt;
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -240,20 +231,18 @@ finalize_it:
  * root element).
  * rgerhards, 2007-11-21
  */
-static rsRetVal llUnlinkElt(linkedList_t *pThis, llElt_t *pElt, llElt_t *pEltPrev)
-{
-	assert(pElt != NULL);
+static rsRetVal llUnlinkElt(linkedList_t *pThis, llElt_t *pElt, llElt_t *pEltPrev) {
+    assert(pElt != NULL);
 
-	if(pEltPrev == NULL) { /* root element? */
-		pThis->pRoot = pElt->pNext;
-	} else { /* regular element */
-		pEltPrev->pNext = pElt->pNext;
-	}
+    if (pEltPrev == NULL) { /* root element? */
+        pThis->pRoot = pElt->pNext;
+    } else { /* regular element */
+        pEltPrev->pNext = pElt->pNext;
+    }
 
-	if(pElt == pThis->pLast)
-		pThis->pLast = pEltPrev;
+    if (pElt == pThis->pLast) pThis->pLast = pEltPrev;
 
-	return RS_RET_OK;
+    return RS_RET_OK;
 }
 
 
@@ -261,17 +250,16 @@ static rsRetVal llUnlinkElt(linkedList_t *pThis, llElt_t *pElt, llElt_t *pEltPre
  * be given (or zero if the root element is to be deleted).
  * rgerhards, 2007-11-21
  */
-static rsRetVal llUnlinkAndDelteElt(linkedList_t *pThis, llElt_t *pElt, llElt_t *pEltPrev)
-{
-	DEFiRet;
+static rsRetVal llUnlinkAndDelteElt(linkedList_t *pThis, llElt_t *pElt, llElt_t *pEltPrev) {
+    DEFiRet;
 
-	assert(pElt != NULL);
+    assert(pElt != NULL);
 
-	CHKiRet(llUnlinkElt(pThis, pElt, pEltPrev));
-	CHKiRet(llDestroyElt(pThis, pElt));
+    CHKiRet(llUnlinkElt(pThis, pElt, pEltPrev));
+    CHKiRet(llDestroyElt(pThis, pElt));
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* find a user element based on the provided key - this is the
@@ -281,53 +269,51 @@ finalize_it:
  * is the root elt.
  * rgerhards, 2007-11-21
  */
-static rsRetVal llFindElt(linkedList_t *pThis, void *pKey, llElt_t **ppElt, llElt_t **ppEltPrev)
-{
-	DEFiRet;
-	llElt_t *pElt;
-	llElt_t *pEltPrev = NULL;
-	int bFound = 0;
+static rsRetVal llFindElt(linkedList_t *pThis, void *pKey, llElt_t **ppElt, llElt_t **ppEltPrev) {
+    DEFiRet;
+    llElt_t *pElt;
+    llElt_t *pEltPrev = NULL;
+    int bFound = 0;
 
-	assert(pThis != NULL);
-	assert(pKey != NULL);
-	assert(ppElt != NULL);
-	assert(ppEltPrev != NULL);
+    assert(pThis != NULL);
+    assert(pKey != NULL);
+    assert(ppElt != NULL);
+    assert(ppEltPrev != NULL);
 
-	pElt = pThis->pRoot;
-	while(pElt != NULL && bFound == 0) {
-		if(pThis->cmpOp(pKey, pElt->pKey) == 0)
-			bFound = 1;
-		else {
-			pEltPrev = pElt;
-			pElt = pElt->pNext;
-		}
-	}
+    pElt = pThis->pRoot;
+    while (pElt != NULL && bFound == 0) {
+        if (pThis->cmpOp(pKey, pElt->pKey) == 0)
+            bFound = 1;
+        else {
+            pEltPrev = pElt;
+            pElt = pElt->pNext;
+        }
+    }
 
-	if(bFound == 1) {
-		*ppElt = pElt;
-		*ppEltPrev = pEltPrev;
-	} else
-		iRet = RS_RET_NOT_FOUND;
+    if (bFound == 1) {
+        *ppElt = pElt;
+        *ppEltPrev = pEltPrev;
+    } else
+        iRet = RS_RET_NOT_FOUND;
 
-	RETiRet;
+    RETiRet;
 }
 
 
 /* find a user element based on the provided key
  */
-rsRetVal llFind(linkedList_t *pThis, void *pKey, void **ppData)
-{
-	DEFiRet;
-	llElt_t *pElt;
-	llElt_t *pEltPrev;
+rsRetVal llFind(linkedList_t *pThis, void *pKey, void **ppData) {
+    DEFiRet;
+    llElt_t *pElt;
+    llElt_t *pEltPrev;
 
-	CHKiRet(llFindElt(pThis, pKey, &pElt, &pEltPrev));
+    CHKiRet(llFindElt(pThis, pKey, &pElt, &pEltPrev));
 
-	/* if we reach this point, we have found the element */
-	*ppData = pElt->pData;
+    /* if we reach this point, we have found the element */
+    *ppData = pElt->pData;
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -337,34 +323,32 @@ finalize_it:
  * at that time.
  * rgerhards, 2007-11-21
  */
-rsRetVal llFindAndDelete(linkedList_t *pThis, void *pKey)
-{
-	DEFiRet;
-	llElt_t *pElt;
-	llElt_t *pEltPrev;
+rsRetVal llFindAndDelete(linkedList_t *pThis, void *pKey) {
+    DEFiRet;
+    llElt_t *pElt;
+    llElt_t *pEltPrev;
 
-	CHKiRet(llFindElt(pThis, pKey, &pElt, &pEltPrev));
+    CHKiRet(llFindElt(pThis, pKey, &pElt, &pEltPrev));
 
-	/* if we reach this point, we have found an element */
-	CHKiRet(llUnlinkAndDelteElt(pThis, pElt, pEltPrev));
+    /* if we reach this point, we have found an element */
+    CHKiRet(llUnlinkAndDelteElt(pThis, pElt, pEltPrev));
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
 /* provide the count of linked list elements
  */
-rsRetVal llGetNumElts(linkedList_t *pThis, int *piCnt)
-{
-	DEFiRet;
+rsRetVal llGetNumElts(linkedList_t *pThis, int *piCnt) {
+    DEFiRet;
 
-	assert(pThis != NULL);
-	assert(piCnt != NULL);
+    assert(pThis != NULL);
+    assert(piCnt != NULL);
 
-	*piCnt = pThis->iNumElts;
+    *piCnt = pThis->iNumElts;
 
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -377,38 +361,36 @@ rsRetVal llGetNumElts(linkedList_t *pThis, int *piCnt)
  * If the called user function returns RS_RET_OK_DELETE_LISTENTRY the current element
  * is deleted.
  */
-rsRetVal llExecFunc(linkedList_t *pThis, rsRetVal (*pFunc)(void*, void*), void* pParam)
-{
-	DEFiRet;
-	rsRetVal iRetLL;
-	void *pData;
-	linkedListCookie_t llCookie = NULL;
-	linkedListCookie_t llCookiePrev = NULL; /* previous list element (needed for deletion, NULL = at root) */
+rsRetVal llExecFunc(linkedList_t *pThis, rsRetVal (*pFunc)(void *, void *), void *pParam) {
+    DEFiRet;
+    rsRetVal iRetLL;
+    void *pData;
+    linkedListCookie_t llCookie = NULL;
+    linkedListCookie_t llCookiePrev = NULL; /* previous list element (needed for deletion, NULL = at root) */
 
-	assert(pThis != NULL);
-	assert(pFunc != NULL);
+    assert(pThis != NULL);
+    assert(pFunc != NULL);
 
-	while((iRetLL = llGetNextElt(pThis, &llCookie, (void**)&pData)) == RS_RET_OK) {
-		iRet = pFunc(pData, pParam);
-		if(iRet == RS_RET_OK_DELETE_LISTENTRY) {
-			/* delete element */
-			CHKiRet(llUnlinkAndDelteElt(pThis, llCookie, llCookiePrev));
-			/* we need to revert back, as we have just deleted the current element.
-			 * So the actual current element is the one before it, which happens to be
-			 * stored in llCookiePrev. -- rgerhards, 2007-11-21
-			 */
-			llCookie = llCookiePrev;
-		} else if (iRet != RS_RET_OK) {
-			FINALIZE;
-		}
-		llCookiePrev = llCookie;
-	}
+    while ((iRetLL = llGetNextElt(pThis, &llCookie, (void **)&pData)) == RS_RET_OK) {
+        iRet = pFunc(pData, pParam);
+        if (iRet == RS_RET_OK_DELETE_LISTENTRY) {
+            /* delete element */
+            CHKiRet(llUnlinkAndDelteElt(pThis, llCookie, llCookiePrev));
+            /* we need to revert back, as we have just deleted the current element.
+             * So the actual current element is the one before it, which happens to be
+             * stored in llCookiePrev. -- rgerhards, 2007-11-21
+             */
+            llCookie = llCookiePrev;
+        } else if (iRet != RS_RET_OK) {
+            FINALIZE;
+        }
+        llCookiePrev = llCookie;
+    }
 
-	if(iRetLL != RS_RET_END_OF_LINKEDLIST)
-		iRet = iRetLL;
+    if (iRetLL != RS_RET_END_OF_LINKEDLIST) iRet = iRetLL;
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /* vim:set ai:

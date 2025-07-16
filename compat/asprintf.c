@@ -21,33 +21,32 @@
 #include "config.h"
 #ifndef HAVE_ASPRINTF
 
-#include <stdlib.h>
-#include <stdarg.h>
-#include <stdio.h>
-int asprintf(char **strp, const char *fmt, ...)
-{
-	va_list ap;
-	int len;
+    #include <stdlib.h>
+    #include <stdarg.h>
+    #include <stdio.h>
+int asprintf(char **strp, const char *fmt, ...) {
+    va_list ap;
+    int len;
 
-	va_start(ap, fmt);
-	len = vsnprintf(NULL, 0, fmt, ap);
-	va_end(ap);
+    va_start(ap, fmt);
+    len = vsnprintf(NULL, 0, fmt, ap);
+    va_end(ap);
 
-	*strp = malloc(len+1);
-	if (!*strp) {
-		return -1;
-	}
+    *strp = malloc(len + 1);
+    if (!*strp) {
+        return -1;
+    }
 
-	va_start(ap, fmt);
-	vsnprintf(*strp, len+1, fmt, ap);
-	va_end(ap);
+    va_start(ap, fmt);
+    vsnprintf(*strp, len + 1, fmt, ap);
+    va_end(ap);
 
-	(*strp)[len] = 0;
-	return len;
+    (*strp)[len] = 0;
+    return len;
 }
 #else
-/* XLC needs at least one method in source file even static to compile */
-#ifdef __xlc__
+    /* XLC needs at least one method in source file even static to compile */
+    #ifdef __xlc__
 static void dummy() {}
-#endif
+    #endif
 #endif /* #ifndef HAVE_ASPRINTF */

@@ -28,7 +28,7 @@
 
 #include <stdint.h>
 #if defined(__FreeBSD__) || !defined(HAVE_LSEEK64)
-#include <sys/types.h>
+    #include <sys/types.h>
 #endif
 
 /* some universal fixed size integer defines ... */
@@ -37,13 +37,13 @@ typedef long long int64;
 #endif
 typedef long long unsigned uint64;
 typedef int64 number_t; /* type to use for numbers - TODO: maybe an autoconf option? */
-typedef char intTiny; 	/* 0..127! */
-typedef unsigned char uintTiny;	/* 0..255! */
+typedef char intTiny; /* 0..127! */
+typedef unsigned char uintTiny; /* 0..255! */
 
 /* define some base data types */
 
 typedef uint16_t syslog_pri_t; /* to be used for syslog PRI values */
-typedef unsigned char uchar;/* get rid of the unhandy "unsigned char" */
+typedef unsigned char uchar; /* get rid of the unhandy "unsigned char" */
 typedef struct aUsrp_s aUsrp_t;
 typedef struct thrdInfo thrdInfo_t;
 typedef struct obj_s obj_t;
@@ -68,7 +68,7 @@ typedef struct prop_s prop_t;
 typedef struct interface_s interface_t;
 typedef struct objInfo_s objInfo_t;
 typedef enum rsRetVal_ rsRetVal; /**< friendly type for global return value */
-typedef rsRetVal (*errLogFunc_t)(uchar*);
+typedef rsRetVal (*errLogFunc_t)(uchar *);
 /* this is a trick to store a function ptr to a function returning a function ptr... */
 typedef struct permittedPeers_s permittedPeers_t;
 /* this should go away in the long term -- rgerhards, 2008-05-19 */
@@ -89,8 +89,8 @@ typedef struct strgen_s strgen_t;
 typedef struct strgenList_s strgenList_t;
 typedef struct statsobj_s statsobj_t;
 typedef void (*statsobj_read_notifier_t)(statsobj_t *, void *);
-//typedef struct nsd_epworkset_s nsd_epworkset_t; // TODO: REMOVE
-typedef struct tcpsrv_io_descr_s tcpsrv_io_descr_t; // i/o descriptor used for tcpsrv network i/o
+// typedef struct nsd_epworkset_s nsd_epworkset_t; // TODO: REMOVE
+typedef struct tcpsrv_io_descr_s tcpsrv_io_descr_t;  // i/o descriptor used for tcpsrv network i/o
 typedef struct templates_s templates_t;
 typedef struct parsers_s parsers_t;
 typedef struct queuecnf_s queuecnf_t;
@@ -121,13 +121,13 @@ typedef struct lookup_s lookup_t;
 typedef struct lookup_ref_s lookup_ref_t;
 typedef struct action_s action_t;
 typedef int rs_size_t; /* we do never need more than 2Gig strings, signed permits to
-			* use -1 as a special flag. */
-typedef rsRetVal (*prsf_t)(struct vmstk_s*, int);	/* pointer to a RainerScript function */
-typedef uint64 qDeqID;	/* queue Dequeue order ID. 32 bits is considered dangerously few */
+                        * use -1 as a special flag. */
+typedef rsRetVal (*prsf_t)(struct vmstk_s *, int); /* pointer to a RainerScript function */
+typedef uint64 qDeqID; /* queue Dequeue order ID. 32 bits is considered dangerously few */
 
 typedef struct tcpLstnParams_s tcpLstnParams_t;
-typedef struct tcpLstnPortList_s tcpLstnPortList_t; // TODO: rename?
-typedef struct strmLstnPortList_s strmLstnPortList_t; // TODO: rename?
+typedef struct tcpLstnPortList_s tcpLstnPortList_t;  // TODO: rename?
+typedef struct strmLstnPortList_s strmLstnPortList_t;  // TODO: rename?
 typedef struct actWrkrIParams actWrkrIParams_t;
 typedef struct dynstats_bucket_s dynstats_bucket_t;
 typedef struct dynstats_buckets_s dynstats_buckets_t;
@@ -139,11 +139,11 @@ typedef struct dynstats_ctr_s dynstats_ctr_t;
  * alignment errors.
  */
 #ifdef OS_SOLARIS
-	typedef void * obj_t_ptr;
-	typedef void nsd_t;
+typedef void *obj_t_ptr;
+typedef void nsd_t;
 #else
-	typedef obj_t *obj_t_ptr;
-	typedef obj_t nsd_t;
+typedef obj_t *obj_t_ptr;
+typedef obj_t nsd_t;
 #endif
 
 
@@ -154,34 +154,34 @@ typedef int socklen_t;
 
 typedef struct epoll_event epoll_event_t;
 
-typedef signed char sbool;	/* (small bool) I intentionally use char, to keep it slim so that
-				many fit into the CPU cache! */
+typedef signed char sbool; /* (small bool) I intentionally use char, to keep it slim so that
+               many fit into the CPU cache! */
 
 /* settings for flow control
  * TODO: is there a better place for them? -- rgerhards, 2008-03-14
  */
 typedef enum {
-	eFLOWCTL_NO_DELAY = 0,		/**< UDP and other non-delayable sources */
-	eFLOWCTL_LIGHT_DELAY = 1,	/**< some light delay possible, but no extended period of time */
-	eFLOWCTL_FULL_DELAY = 2	/**< delay possible for extended period of time */
+    eFLOWCTL_NO_DELAY = 0, /**< UDP and other non-delayable sources */
+    eFLOWCTL_LIGHT_DELAY = 1, /**< some light delay possible, but no extended period of time */
+    eFLOWCTL_FULL_DELAY = 2 /**< delay possible for extended period of time */
 } flowControl_t;
 
 /* filter operations */
 typedef enum {
-	FIOP_NOP = 0,		/* do not use - No Operation */
-	FIOP_CONTAINS  = 1,	/* contains string? */
-	FIOP_ISEQUAL  = 2,	/* is (exactly) equal? */
-	FIOP_STARTSWITH = 3,	/* starts with a string? */
-	FIOP_ENDSWITH = 4,    /* ends with a string? */
-	FIOP_REGEX = 5,		/* matches a (BRE) regular expression? */
-	FIOP_EREREGEX = 6,	/* matches a ERE regular expression? */
-	FIOP_ISEMPTY = 7	/* string empty <=> strlen(s) == 0 ?*/
+    FIOP_NOP = 0, /* do not use - No Operation */
+    FIOP_CONTAINS = 1, /* contains string? */
+    FIOP_ISEQUAL = 2, /* is (exactly) equal? */
+    FIOP_STARTSWITH = 3, /* starts with a string? */
+    FIOP_ENDSWITH = 4, /* ends with a string? */
+    FIOP_REGEX = 5, /* matches a (BRE) regular expression? */
+    FIOP_EREREGEX = 6, /* matches a ERE regular expression? */
+    FIOP_ISEMPTY = 7 /* string empty <=> strlen(s) == 0 ?*/
 } fiop_t;
 
 #ifndef HAVE_LSEEK64
-#	ifndef	HAVE_OFF64_T
-		typedef off_t off64_t;
-#	endif
+    #ifndef HAVE_OFF64_T
+typedef off_t off64_t;
+    #endif
 #endif
 
 
@@ -189,97 +189,97 @@ typedef enum {
  * to keep the memory footprint small (and thus cache hits high).
  * rgerhards, 2009-06-26
  */
-typedef uintTiny	propid_t;
-#define PROP_INVALID			0
-#define PROP_MSG			1
-#define PROP_TIMESTAMP			2
-#define PROP_HOSTNAME			3
-#define PROP_SYSLOGTAG			4
-#define PROP_RAWMSG			5
-#define PROP_INPUTNAME			6
-#define PROP_FROMHOST			7
-#define PROP_FROMHOST_IP		8
-#define PROP_PRI			9
-#define PROP_PRI_TEXT			10
-#define PROP_IUT			11
-#define PROP_SYSLOGFACILITY		12
-#define PROP_SYSLOGFACILITY_TEXT	13
-#define PROP_SYSLOGSEVERITY		14
-#define PROP_SYSLOGSEVERITY_TEXT	15
-#define PROP_TIMEGENERATED		16
-#define PROP_PROGRAMNAME		17
-#define PROP_PROTOCOL_VERSION		18
-#define PROP_STRUCTURED_DATA		19
-#define PROP_APP_NAME			20
-#define PROP_PROCID			21
-#define PROP_MSGID			22
-#define PROP_PARSESUCCESS		23
-#define PROP_JSONMESG			24
-#define PROP_RAWMSG_AFTER_PRI		25
-#define PROP_SYS_NOW			150
-#define PROP_SYS_YEAR			151
-#define PROP_SYS_MONTH			152
-#define PROP_SYS_DAY			153
-#define PROP_SYS_HOUR			154
-#define PROP_SYS_HHOUR			155
-#define PROP_SYS_QHOUR			156
-#define PROP_SYS_MINUTE			157
-#define PROP_SYS_MYHOSTNAME		158
-#define PROP_SYS_BOM			159
-#define PROP_SYS_UPTIME			160
-#define PROP_UUID			161
-#define PROP_SYS_NOW_UTC		162
-#define PROP_SYS_YEAR_UTC		163
-#define PROP_SYS_MONTH_UTC		164
-#define PROP_SYS_DAY_UTC		165
-#define PROP_SYS_HOUR_UTC		166
-#define PROP_SYS_HHOUR_UTC		167
-#define PROP_SYS_QHOUR_UTC		168
-#define PROP_SYS_MINUTE_UTC		169
-#define PROP_SYS_WDAY			170
-#define PROP_SYS_WDAY_UTC		171
-#define PROP_SYS_NOW_UXTIMESTAMP	173
-#define PROP_CEE			200
-#define PROP_CEE_ALL_JSON		201
-#define PROP_LOCAL_VAR			202
-#define PROP_GLOBAL_VAR			203
-#define PROP_CEE_ALL_JSON_PLAIN		204
+typedef uintTiny propid_t;
+#define PROP_INVALID 0
+#define PROP_MSG 1
+#define PROP_TIMESTAMP 2
+#define PROP_HOSTNAME 3
+#define PROP_SYSLOGTAG 4
+#define PROP_RAWMSG 5
+#define PROP_INPUTNAME 6
+#define PROP_FROMHOST 7
+#define PROP_FROMHOST_IP 8
+#define PROP_PRI 9
+#define PROP_PRI_TEXT 10
+#define PROP_IUT 11
+#define PROP_SYSLOGFACILITY 12
+#define PROP_SYSLOGFACILITY_TEXT 13
+#define PROP_SYSLOGSEVERITY 14
+#define PROP_SYSLOGSEVERITY_TEXT 15
+#define PROP_TIMEGENERATED 16
+#define PROP_PROGRAMNAME 17
+#define PROP_PROTOCOL_VERSION 18
+#define PROP_STRUCTURED_DATA 19
+#define PROP_APP_NAME 20
+#define PROP_PROCID 21
+#define PROP_MSGID 22
+#define PROP_PARSESUCCESS 23
+#define PROP_JSONMESG 24
+#define PROP_RAWMSG_AFTER_PRI 25
+#define PROP_SYS_NOW 150
+#define PROP_SYS_YEAR 151
+#define PROP_SYS_MONTH 152
+#define PROP_SYS_DAY 153
+#define PROP_SYS_HOUR 154
+#define PROP_SYS_HHOUR 155
+#define PROP_SYS_QHOUR 156
+#define PROP_SYS_MINUTE 157
+#define PROP_SYS_MYHOSTNAME 158
+#define PROP_SYS_BOM 159
+#define PROP_SYS_UPTIME 160
+#define PROP_UUID 161
+#define PROP_SYS_NOW_UTC 162
+#define PROP_SYS_YEAR_UTC 163
+#define PROP_SYS_MONTH_UTC 164
+#define PROP_SYS_DAY_UTC 165
+#define PROP_SYS_HOUR_UTC 166
+#define PROP_SYS_HHOUR_UTC 167
+#define PROP_SYS_QHOUR_UTC 168
+#define PROP_SYS_MINUTE_UTC 169
+#define PROP_SYS_WDAY 170
+#define PROP_SYS_WDAY_UTC 171
+#define PROP_SYS_NOW_UXTIMESTAMP 173
+#define PROP_CEE 200
+#define PROP_CEE_ALL_JSON 201
+#define PROP_LOCAL_VAR 202
+#define PROP_GLOBAL_VAR 203
+#define PROP_CEE_ALL_JSON_PLAIN 204
 
 /* types of configuration handlers. These are used in rainerscript.h
  */
 typedef enum cslCmdHdlrType {
-	eCmdHdlrInvalid = 0,		/* invalid handler type - indicates a coding error */
-	eCmdHdlrCustomHandler,		/* custom handler, just call handler function */
-	eCmdHdlrUID,
-	eCmdHdlrGID,
-	eCmdHdlrBinary,
-	eCmdHdlrFileCreateMode,
-	eCmdHdlrInt,
-	eCmdHdlrNonNegInt,
-	eCmdHdlrPositiveInt,
-	eCmdHdlrSize,
-	eCmdHdlrGetChar,
-	eCmdHdlrFacility,
-	eCmdHdlrSeverity,
-	eCmdHdlrGetWord,
-	eCmdHdlrString,
-	eCmdHdlrArray,
-	eCmdHdlrQueueType,
-	eCmdHdlrGoneAway		/* statment existed, but is no longer supported */
+    eCmdHdlrInvalid = 0, /* invalid handler type - indicates a coding error */
+    eCmdHdlrCustomHandler, /* custom handler, just call handler function */
+    eCmdHdlrUID,
+    eCmdHdlrGID,
+    eCmdHdlrBinary,
+    eCmdHdlrFileCreateMode,
+    eCmdHdlrInt,
+    eCmdHdlrNonNegInt,
+    eCmdHdlrPositiveInt,
+    eCmdHdlrSize,
+    eCmdHdlrGetChar,
+    eCmdHdlrFacility,
+    eCmdHdlrSeverity,
+    eCmdHdlrGetWord,
+    eCmdHdlrString,
+    eCmdHdlrArray,
+    eCmdHdlrQueueType,
+    eCmdHdlrGoneAway /* statment existed, but is no longer supported */
 } ecslCmdHdrlType;
 
 
 /* the next type describes $Begin .. $End block object types
  */
 typedef enum cslConfObjType {
-	eConfObjGlobal = 0,	/* global directives */
-	eConfObjAction,		/* action-specific directives */
-	/* now come states that indicate that we wait for a block-end. These are
-	 * states that permit us to do some safety checks and they hopefully ease
-	 * migration to a "real" parser/grammar.
-	 */
-	eConfObjActionWaitEnd,
-	eConfObjAlways		/* always valid, very special case (guess $End only!) */
+    eConfObjGlobal = 0, /* global directives */
+    eConfObjAction, /* action-specific directives */
+    /* now come states that indicate that we wait for a block-end. These are
+     * states that permit us to do some safety checks and they hopefully ease
+     * migration to a "real" parser/grammar.
+     */
+    eConfObjActionWaitEnd,
+    eConfObjAlways /* always valid, very special case (guess $End only!) */
 } ecslConfObjType;
 
 
@@ -290,16 +290,16 @@ typedef enum cslConfObjType {
  */
 typedef struct multi_submit_s multi_submit_t;
 struct multi_submit_s {
-	short	maxElem;	/* maximum number of Elements */
-	short	nElem;		/* current number of Elements, points to the next one FREE */
-	smsg_t	**ppMsgs;
+    short maxElem; /* maximum number of Elements */
+    short nElem; /* current number of Elements, points to the next one FREE */
+    smsg_t **ppMsgs;
 };
 
 /* the following structure is a helper to describe a message property */
 struct msgPropDescr_s {
-	propid_t id;
-	uchar *name;		/* name and lenName are only set for dynamic */
-	int nameLen;		/* properties (JSON) */
+    propid_t id;
+    uchar *name; /* name and lenName are only set for dynamic */
+    int nameLen; /* properties (JSON) */
 };
 
 /* some forward-definitions from the grammar */

@@ -22,7 +22,7 @@
  * limitations under the License.
  */
 #if HAVE_CONFIG_H
-#include "config.h"
+    #include "config.h"
 #endif
 #include <stdio.h>
 #include <sys/stat.h>
@@ -45,28 +45,26 @@
  * The key length is limited to 64KiB to prevent DoS.
  * Note well: key is a blob, not a C string (NUL may be present!)
  */
-int
-cryGetKeyFromFile(const char *const fn, char **const key, unsigned *const keylen)
-{
-	struct stat sb;
-	int r = -1;
+int cryGetKeyFromFile(const char *const fn, char **const key, unsigned *const keylen) {
+    struct stat sb;
+    int r = -1;
 
-	const int fd = open(fn, O_RDONLY);
-	if(fd < 0) goto done;
-	if(fstat(fd, &sb) == -1) goto done;
-	if(sb.st_size > 64*1024) {
-		errno = EMSGSIZE;
-		goto done;
-	}
-	if((*key = malloc(sb.st_size)) == NULL) goto done;
-	if(read(fd, *key, sb.st_size) != sb.st_size) goto done;
-	*keylen = sb.st_size;
-	r = 0;
+    const int fd = open(fn, O_RDONLY);
+    if (fd < 0) goto done;
+    if (fstat(fd, &sb) == -1) goto done;
+    if (sb.st_size > 64 * 1024) {
+        errno = EMSGSIZE;
+        goto done;
+    }
+    if ((*key = malloc(sb.st_size)) == NULL) goto done;
+    if (read(fd, *key, sb.st_size) != sb.st_size) goto done;
+    *keylen = sb.st_size;
+    r = 0;
 done:
-	if(fd >= 0) {
-		close(fd);
-	}
-	return r;
+    if (fd >= 0) {
+        close(fd);
+    }
+    return r;
 }
 
 
@@ -74,124 +72,122 @@ done:
  * after fork).
  */
 
-static void
-execKeyScript(char *cmd, int pipefd[])
-{
-	char *newargv[] = { NULL };
-	char *newenviron[] = { NULL };
+static void execKeyScript(char *cmd, int pipefd[]) {
+    char *newargv[] = {NULL};
+    char *newenviron[] = {NULL};
 
-	dup2(pipefd[0], STDIN_FILENO);
-	dup2(pipefd[1], STDOUT_FILENO);
+    dup2(pipefd[0], STDIN_FILENO);
+    dup2(pipefd[1], STDOUT_FILENO);
 
-	/* finally exec child */
-fprintf(stderr, "pre execve: %s\n", cmd);
-	execve(cmd, newargv, newenviron);
-	/* switch to?
-	execlp((char*)program, (char*) program, (char*)arg, NULL);
-	*/
+    /* finally exec child */
+    fprintf(stderr, "pre execve: %s\n", cmd);
+    execve(cmd, newargv, newenviron);
+    /* switch to?
+    execlp((char*)program, (char*) program, (char*)arg, NULL);
+    */
 
-	/* we should never reach this point, but if we do, we terminate */
-	return;
+    /* we should never reach this point, but if we do, we terminate */
+    return;
 }
 
 
-static int
-openPipe(char *cmd, int *fd)
-{
-	int pipefd[2];
-	pid_t cpid;
-	int r;
+static int openPipe(char *cmd, int *fd) {
+    int pipefd[2];
+    pid_t cpid;
+    int r;
 
-	if(pipe(pipefd) == -1) {
-		r = 1; goto done;
-	}
+    if (pipe(pipefd) == -1) {
+        r = 1;
+        goto done;
+    }
 
-	cpid = fork();
-	if(cpid == -1) {
-		r = 1; goto done;
-	}
+    cpid = fork();
+    if (cpid == -1) {
+        r = 1;
+        goto done;
+    }
 
-	if(cpid == 0) {
-		/* we are the child */
-		execKeyScript(cmd, pipefd);
-		exit(1);
-	}
+    if (cpid == 0) {
+        /* we are the child */
+        execKeyScript(cmd, pipefd);
+        exit(1);
+    }
 
-	close(pipefd[1]);
-	*fd = pipefd[0];
-	r = 0;
-done:	return r;
+    close(pipefd[1]);
+    *fd = pipefd[0];
+    r = 0;
+done:
+    return r;
 }
 
 
 /* Read a character from the program's output. */
-static int
-readProgChar(int fd, char *c)
-{
-	int r;
-	if(read(fd, c, 1) != 1) {
-		r = 1; goto done;
-	}
-	r = 0;
-done:	return r;
+static int readProgChar(int fd, char *c) {
+    int r;
+    if (read(fd, c, 1) != 1) {
+        r = 1;
+        goto done;
+    }
+    r = 0;
+done:
+    return r;
 }
 
 /* Read a line from the script. Line is terminated by LF, which
  * is NOT put into the buffer.
  * buf must be 64KiB
  */
-static int
-readProgLine(int fd, char *buf)
-{
-	char c;
-	int r;
-	unsigned i;
+static int readProgLine(int fd, char *buf) {
+    char c;
+    int r;
+    unsigned i;
 
-	for(i = 0 ; i < 64*1024 ; ++i) {
-		if((r = readProgChar(fd, &c)) != 0) goto done;
-		if(c == '\n')
-			break;
-		buf[i] = c;
-	};
-	if(i >= 64*1024) {
-		r = 1; goto done;
-	}
-	buf[i] = '\0';
-	r = 0;
-done:	return r;
+    for (i = 0; i < 64 * 1024; ++i) {
+        if ((r = readProgChar(fd, &c)) != 0) goto done;
+        if (c == '\n') break;
+        buf[i] = c;
+    };
+    if (i >= 64 * 1024) {
+        r = 1;
+        goto done;
+    }
+    buf[i] = '\0';
+    r = 0;
+done:
+    return r;
 }
-static int
-readProgKey(int fd, char *buf, unsigned keylen)
-{
-	char c;
-	int r;
-	unsigned i;
+static int readProgKey(int fd, char *buf, unsigned keylen) {
+    char c;
+    int r;
+    unsigned i;
 
-	for(i = 0 ; i < keylen ; ++i) {
-		if((r = readProgChar(fd, &c)) != 0) goto done;
-		buf[i] = c;
-	};
-	r = 0;
-done:	return r;
+    for (i = 0; i < keylen; ++i) {
+        if ((r = readProgChar(fd, &c)) != 0) goto done;
+        buf[i] = c;
+    };
+    r = 0;
+done:
+    return r;
 }
 
-int
-cryGetKeyFromProg(char *cmd, char **key, unsigned *keylen)
-{
-	int r;
-	int fd;
-	char rcvBuf[64*1024];
+int cryGetKeyFromProg(char *cmd, char **key, unsigned *keylen) {
+    int r;
+    int fd;
+    char rcvBuf[64 * 1024];
 
-	if((r = openPipe(cmd, &fd)) != 0) goto done;
-	if((r = readProgLine(fd, rcvBuf)) != 0) goto done;
-	if(strcmp(rcvBuf, "RSYSLOG-KEY-PROVIDER:0")) {
-		r = 2; goto done;
-	}
-	if((r = readProgLine(fd, rcvBuf)) != 0) goto done;
-	*keylen = atoi(rcvBuf);
-	if((*key = malloc(*keylen)) == NULL) {
-		r = -1; goto done;
-	}
-	if((r = readProgKey(fd, *key, *keylen)) != 0) goto done;
-done:	return r;
+    if ((r = openPipe(cmd, &fd)) != 0) goto done;
+    if ((r = readProgLine(fd, rcvBuf)) != 0) goto done;
+    if (strcmp(rcvBuf, "RSYSLOG-KEY-PROVIDER:0")) {
+        r = 2;
+        goto done;
+    }
+    if ((r = readProgLine(fd, rcvBuf)) != 0) goto done;
+    *keylen = atoi(rcvBuf);
+    if ((*key = malloc(*keylen)) == NULL) {
+        r = -1;
+        goto done;
+    }
+    if ((r = readProgKey(fd, *key, *keylen)) != 0) goto done;
+done:
+    return r;
 }

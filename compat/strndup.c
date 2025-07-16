@@ -22,28 +22,24 @@
 #ifndef HAVE_STRNDUP
 
 
-#include <stdlib.h>
-#include <string.h>
+    #include <stdlib.h>
+    #include <string.h>
 
 extern char *strndup(const char *s, size_t n);
 
-char *
-strndup(const char *s, size_t n)
-{
-	const size_t len = strlen(s);
-	char *new_s;
-	if(len <= n)
-		return strdup(s);
-	new_s = malloc(n+1);
-	if(new_s == NULL)
-		return NULL;
-	memcpy(new_s, s, n);
-	new_s[n] = '\0';
-	return new_s;
+char *strndup(const char *s, size_t n) {
+    const size_t len = strlen(s);
+    char *new_s;
+    if (len <= n) return strdup(s);
+    new_s = malloc(n + 1);
+    if (new_s == NULL) return NULL;
+    memcpy(new_s, s, n);
+    new_s[n] = '\0';
+    return new_s;
 }
 #else
-/* XLC needs at least one method in source file even static to compile */
-#ifdef __xlc__
+    /* XLC needs at least one method in source file even static to compile */
+    #ifdef __xlc__
 static void dummy() {}
-#endif
+    #endif
 #endif /* #ifndef HAVE_STRNDUP */

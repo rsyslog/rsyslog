@@ -50,13 +50,12 @@
 /**
  * The parse object
  */
-struct rsParsObject
-{
+struct rsParsObject {
 #ifndef NDEBUG
-	rsObjID OID;			/**< object ID */
+    rsObjID OID; /**< object ID */
 #endif
-	cstr_t *pCStr;		/**< pointer to the string object we are parsing */
-	size_t iCurrPos;	/**< current parsing position (char offset) */
+    cstr_t *pCStr; /**< pointer to the string object we are parsing */
+    size_t iCurrPos; /**< current parsing position (char offset) */
 };
 typedef struct rsParsObject rsParsObj;
 
@@ -73,7 +72,7 @@ rsRetVal rsParsConstruct(rsParsObj **ppThis);
 rsRetVal rsParsAssignString(rsParsObj *pThis, cstr_t *pCStr);
 
 /* parse an integer. The parse pointer is advanced */
-rsRetVal parsInt(rsParsObj *pThis, int* pInt);
+rsRetVal parsInt(rsParsObj *pThis, int *pInt);
 
 /* Skip whitespace. Often used to trim parsable entries. */
 rsRetVal parsSkipWhitespace(rsParsObj *pThis);
@@ -90,8 +89,8 @@ rsRetVal parsSkipWhitespace(rsParsObj *pThis);
  * Output:
  * ppCStr Pointer to the parsed string
  */
-rsRetVal parsDelimCStr(rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrimLeading,
-int bTrimTrailing, int bConvLower);
+rsRetVal parsDelimCStr(
+    rsParsObj *pThis, cstr_t **ppCStr, char cDelim, int bTrimLeading, int bTrimTrailing, int bConvLower);
 
 rsRetVal parsSkipAfterChar(rsParsObj *pThis, char c);
 rsRetVal parsQuotedCStr(rsParsObj *pThis, cstr_t **ppCStr);

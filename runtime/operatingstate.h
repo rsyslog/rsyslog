@@ -22,8 +22,8 @@
 #define INCLUDED_OPERATINGSTATEFILE_H
 
 /* supported TAGS */
-#define OSF_TAG_STATE	"STATE"
-#define OSF_TAG_MSG	"MSG"
+#define OSF_TAG_STATE "STATE"
+#define OSF_TAG_MSG "MSG"
 
 void osf_open(void);
 void ATTR_NONNULL() osf_write(const char *const tag, const char *const line);

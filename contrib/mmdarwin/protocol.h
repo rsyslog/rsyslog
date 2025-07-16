@@ -16,8 +16,7 @@
 #define DARWIN_PROTOCOL_H
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 #include <stddef.h>
@@ -28,40 +27,37 @@ extern "C"
 // code
 #define DEFAULT_CERTITUDE_LIST_SIZE 1
 
-	/// Represent the receiver of the results.
-	///
-	/// \enum darwin_response_type
-	enum darwin_filter_response_type
-	{
-		DARWIN_RESPONSE_SEND_NO = 0, //!< Don't send results to anybody.
-		DARWIN_RESPONSE_SEND_BACK,   //!< Send results back to caller.
-		DARWIN_RESPONSE_SEND_DARWIN, //!< Send results to the next filter.
-		DARWIN_RESPONSE_SEND_BOTH,   //!< Send results to both caller and the next filter.
-	};
+/// Represent the receiver of the results.
+///
+/// \enum darwin_response_type
+enum darwin_filter_response_type {
+    DARWIN_RESPONSE_SEND_NO = 0,  //!< Don't send results to anybody.
+    DARWIN_RESPONSE_SEND_BACK,  //!< Send results back to caller.
+    DARWIN_RESPONSE_SEND_DARWIN,  //!< Send results to the next filter.
+    DARWIN_RESPONSE_SEND_BOTH,  //!< Send results to both caller and the next filter.
+};
 
-	/// Represent the type of information sent.
-	///
-	/// \enum darwin_packet_type
-	enum darwin_packet_type
-	{
-		DARWIN_PACKET_OTHER = 0, //!< Information sent by something else.
-		DARWIN_PACKET_FILTER,	//!< Information sent by another filter.
-	};
+/// Represent the type of information sent.
+///
+/// \enum darwin_packet_type
+enum darwin_packet_type {
+    DARWIN_PACKET_OTHER = 0,  //!< Information sent by something else.
+    DARWIN_PACKET_FILTER,  //!< Information sent by another filter.
+};
 
-	/// First packet to be sent to a filter.
-	///
-	/// \struct darwin_filter_packet_t
-	typedef struct
-	{
-		enum darwin_packet_type type;			//!< The type of information sent.
-		enum darwin_filter_response_type response;	//!< Whom the response will be sent to.
-		long filter_code;				//!< The unique identifier code of a filter.
-		size_t body_size;				//!< The complete size of the the parameters to be sent
-		unsigned char evt_id[16];			//!< An array containing the event ID
-		size_t certitude_size;				//!< The size of the list containing the certitudes.
-		unsigned int certitude_list[DEFAULT_CERTITUDE_LIST_SIZE];
-		//!< The scores or the certitudes of the module. May be used to pass other info in specific cases.
-	} darwin_filter_packet_t;
+/// First packet to be sent to a filter.
+///
+/// \struct darwin_filter_packet_t
+typedef struct {
+    enum darwin_packet_type type;  //!< The type of information sent.
+    enum darwin_filter_response_type response;  //!< Whom the response will be sent to.
+    long filter_code;  //!< The unique identifier code of a filter.
+    size_t body_size;  //!< The complete size of the the parameters to be sent
+    unsigned char evt_id[16];  //!< An array containing the event ID
+    size_t certitude_size;  //!< The size of the list containing the certitudes.
+    unsigned int certitude_list[DEFAULT_CERTITUDE_LIST_SIZE];
+    //!< The scores or the certitudes of the module. May be used to pass other info in specific cases.
+} darwin_filter_packet_t;
 
 #ifdef __cplusplus
 };

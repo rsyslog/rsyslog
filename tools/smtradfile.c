@@ -58,73 +58,70 @@ DEF_SMOD_STATIC_DATA;
  * finally copy, we know exactly what we need. So we do at most one alloc.
  */
 BEGINstrgen
-	register int iBuf;
-	uchar *pTimeStamp;
-	uchar *pHOSTNAME;
-	size_t lenHOSTNAME;
-	uchar *pTAG;
-	int lenTAG;
-	uchar *pMSG;
-	size_t lenMSG;
-	size_t lenTotal;
-CODESTARTstrgen;
-	/* first obtain all strings and their length (if not fixed) */
-	pTimeStamp = (uchar*) getTimeReported(pMsg, tplFmtRFC3164Date);
-	pHOSTNAME = (uchar*) getHOSTNAME(pMsg);
-	lenHOSTNAME = getHOSTNAMELen(pMsg);
-	getTAG(pMsg, &pTAG, &lenTAG, LOCK_MUTEX);
-	pMSG = getMSG(pMsg);
-	lenMSG = getMSGLen(pMsg);
+    register int iBuf;
+    uchar *pTimeStamp;
+    uchar *pHOSTNAME;
+    size_t lenHOSTNAME;
+    uchar *pTAG;
+    int lenTAG;
+    uchar *pMSG;
+    size_t lenMSG;
+    size_t lenTotal;
+    CODESTARTstrgen;
+    /* first obtain all strings and their length (if not fixed) */
+    pTimeStamp = (uchar *)getTimeReported(pMsg, tplFmtRFC3164Date);
+    pHOSTNAME = (uchar *)getHOSTNAME(pMsg);
+    lenHOSTNAME = getHOSTNAMELen(pMsg);
+    getTAG(pMsg, &pTAG, &lenTAG, LOCK_MUTEX);
+    pMSG = getMSG(pMsg);
+    lenMSG = getMSGLen(pMsg);
 
-	/* calculate len, constants for spaces and similar fixed strings */
-	lenTotal = CONST_LEN_TIMESTAMP_3164 + 1 + lenHOSTNAME + 1 + lenTAG + lenMSG + 2;
-	if(pMSG[0] != ' ')
-		++lenTotal; /* then we need to introduce one additional space */
+    /* calculate len, constants for spaces and similar fixed strings */
+    lenTotal = CONST_LEN_TIMESTAMP_3164 + 1 + lenHOSTNAME + 1 + lenTAG + lenMSG + 2;
+    if (pMSG[0] != ' ') ++lenTotal; /* then we need to introduce one additional space */
 
-	/* now make sure buffer is large enough */
-	if(lenTotal  >= iparam->lenBuf)
-		CHKiRet(ExtendBuf(iparam, lenTotal));
+    /* now make sure buffer is large enough */
+    if (lenTotal >= iparam->lenBuf) CHKiRet(ExtendBuf(iparam, lenTotal));
 
-	/* and concatenate the resulting string */
-	memcpy(iparam->param, pTimeStamp, CONST_LEN_TIMESTAMP_3164);
-	iparam->param[CONST_LEN_TIMESTAMP_3164] = ' ';
+    /* and concatenate the resulting string */
+    memcpy(iparam->param, pTimeStamp, CONST_LEN_TIMESTAMP_3164);
+    iparam->param[CONST_LEN_TIMESTAMP_3164] = ' ';
 
-	memcpy(iparam->param + CONST_LEN_TIMESTAMP_3164 + 1, pHOSTNAME, lenHOSTNAME);
-	iBuf = CONST_LEN_TIMESTAMP_3164 + 1 + lenHOSTNAME;
-	iparam->param[iBuf++] = ' ';
+    memcpy(iparam->param + CONST_LEN_TIMESTAMP_3164 + 1, pHOSTNAME, lenHOSTNAME);
+    iBuf = CONST_LEN_TIMESTAMP_3164 + 1 + lenHOSTNAME;
+    iparam->param[iBuf++] = ' ';
 
-	memcpy(iparam->param + iBuf, pTAG, lenTAG);
-	iBuf += lenTAG;
+    memcpy(iparam->param + iBuf, pTAG, lenTAG);
+    iBuf += lenTAG;
 
-	if(pMSG[0] != ' ')
-		iparam->param[iBuf++] = ' ';
-	memcpy(iparam->param + iBuf, pMSG, lenMSG);
-	iBuf += lenMSG;
+    if (pMSG[0] != ' ') iparam->param[iBuf++] = ' ';
+    memcpy(iparam->param + iBuf, pMSG, lenMSG);
+    iBuf += lenMSG;
 
-	/* trailer */
-	iparam->param[iBuf++] = '\n';
-	iparam->param[iBuf] = '\0';
+    /* trailer */
+    iparam->param[iBuf++] = '\n';
+    iparam->param[iBuf] = '\0';
 
-	iparam->lenStr = lenTotal - 1; /* do not count \0! */
+    iparam->lenStr = lenTotal - 1; /* do not count \0! */
 
 finalize_it:
 ENDstrgen
 
 
 BEGINmodExit
-CODESTARTmodExit;
+    CODESTARTmodExit;
 ENDmodExit
 
 
 BEGINqueryEtryPt
-CODESTARTqueryEtryPt;
-CODEqueryEtryPt_STD_SMOD_QUERIES;
+    CODESTARTqueryEtryPt;
+    CODEqueryEtryPt_STD_SMOD_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit(smtradfile)
-CODESTARTmodInit;
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-CODEmodInit_QueryRegCFSLineHdlr
-	dbgprintf("traditional file format strgen init called, compiled with version %s\n", VERSION);
+    CODESTARTmodInit;
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    CODEmodInit_QueryRegCFSLineHdlr dbgprintf("traditional file format strgen init called, compiled with version %s\n",
+                                              VERSION);
 ENDmodInit

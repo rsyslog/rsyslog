@@ -24,21 +24,21 @@
 #include "config.h"
 #include "rsyslog.h"
 #include "testbench.h"
-#include <stdio.h>	/* must be last, else we get a zlib compile error on some platforms */
+#include <stdio.h> /* must be last, else we get a zlib compile error on some platforms */
 
 rsconf_t *ourConf;
 MODULE_TYPE_TESTBENCH
 
 BEGINInit
-CODESTARTInit;
+    CODESTARTInit;
 ENDInit
 
 BEGINExit
-CODESTARTExit;
+    CODESTARTExit;
 ENDExit
 
 BEGINTest
-CODESTARTTest;
-/*finalize_it:*/
-	/* room for custom error reporter, leave blank if not needed */
+    CODESTARTTest;
+    /*finalize_it:*/
+    /* room for custom error reporter, leave blank if not needed */
 ENDTest

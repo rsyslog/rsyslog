@@ -29,7 +29,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #if defined(__FreeBSD__)
-#include <netinet/in.h>
+    #include <netinet/in.h>
 #endif
 
 static char *targetIP = "127.0.0.1";
@@ -38,128 +38,122 @@ static int targetPort = 13500;
 
 /* open a single tcp connection
  */
-int openConn(int *fd)
-{
-	int sock;
-	struct sockaddr_in addr;
-	int port;
-	int retries = 0;
+int openConn(int *fd) {
+    int sock;
+    struct sockaddr_in addr;
+    int port;
+    int retries = 0;
 
-	if((sock=socket(AF_INET, SOCK_STREAM, 0))==-1) {
-		perror("socket()");
-		exit(1);
-	}
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+        perror("socket()");
+        exit(1);
+    }
 
-	port = targetPort;
-	memset((char *) &addr, 0, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(port);
-	if(inet_aton(targetIP, &addr.sin_addr)==0) {
-		fprintf(stderr, "inet_aton() failed\n");
-		exit(1);
-	}
-	while(1) { /* loop broken inside */
-		if(connect(sock, (struct sockaddr*)&addr, sizeof(addr)) == 0) {
-			break;
-		} else {
-			if(retries++ == 50) {
-				perror("connect()");
-				fprintf(stderr, "[%d] connect() failed\n", port);
-				exit(1);
-			} else {
-				fprintf(stderr, "[%d] connect failed, retrying...\n", port);
-				usleep(100000); /* ms = 1000 us! */
-			}
-		}
-	}
-	if(retries > 0) {
-		fprintf(stderr, "[%d] connection established.\n", port);
-	}
+    port = targetPort;
+    memset((char *)&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    if (inet_aton(targetIP, &addr.sin_addr) == 0) {
+        fprintf(stderr, "inet_aton() failed\n");
+        exit(1);
+    }
+    while (1) { /* loop broken inside */
+        if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
+            break;
+        } else {
+            if (retries++ == 50) {
+                perror("connect()");
+                fprintf(stderr, "[%d] connect() failed\n", port);
+                exit(1);
+            } else {
+                fprintf(stderr, "[%d] connect failed, retrying...\n", port);
+                usleep(100000); /* ms = 1000 us! */
+            }
+        }
+    }
+    if (retries > 0) {
+        fprintf(stderr, "[%d] connection established.\n", port);
+    }
 
-	*fd = sock;
-	return 0;
+    *fd = sock;
+    return 0;
 }
 
 
 /* send a string
  */
-static void
-sendCmd(int fd, char *buf, int len)
-{
-	int lenSend;
+static void sendCmd(int fd, char *buf, int len) {
+    int lenSend;
 
-	lenSend = send(fd, buf, len, 0);
-	if(lenSend != len) {
-		perror("sending string");
-		exit(1);
-	}
+    lenSend = send(fd, buf, len, 0);
+    if (lenSend != len) {
+        perror("sending string");
+        exit(1);
+    }
 }
 
 
 /* wait for a response from remote system
  */
-static void
-waitRsp(int fd, char *buf, int len)
-{
-	int ret;
+static void waitRsp(int fd, char *buf, int len) {
+    int ret;
 
-	ret = recv(fd, buf, len - 1, 0);
-	if(ret < 0) {
-		perror("receiving response");
-		exit(1);
-	}
-	/* we assume the message was complete, it may be better to wait
-	 * for a LF...
-	 */
-	buf[ret] = '\0';
+    ret = recv(fd, buf, len - 1, 0);
+    if (ret < 0) {
+        perror("receiving response");
+        exit(1);
+    }
+    /* we assume the message was complete, it may be better to wait
+     * for a LF...
+     */
+    buf[ret] = '\0';
 }
 
 
 /* do the actual processing
  */
-static void
-doProcessing()
-{
-	int fd;
-	int len;
-	char line[2048];
+static void doProcessing() {
+    int fd;
+    int len;
+    char line[2048];
 
-	openConn(&fd);
-	while(!feof(stdin)) {
-		if(fgets(line, sizeof(line) - 1, stdin) == NULL)
-			break;
-		len = strlen(line);
-		sendCmd(fd, line, len);
-		waitRsp(fd, line, sizeof(line));
-		printf("imdiag[%d]: %s", targetPort, line);
-		if (strstr(line, "imdiag::error") != NULL) {
-			exit(1);
-		}
-	}
+    openConn(&fd);
+    while (!feof(stdin)) {
+        if (fgets(line, sizeof(line) - 1, stdin) == NULL) break;
+        len = strlen(line);
+        sendCmd(fd, line, len);
+        waitRsp(fd, line, sizeof(line));
+        printf("imdiag[%d]: %s", targetPort, line);
+        if (strstr(line, "imdiag::error") != NULL) {
+            exit(1);
+        }
+    }
 }
 
 
 /* Run the test.
  * rgerhards, 2009-04-03
  */
-int main(int argc, char *argv[])
-{
-	int ret = 0;
-	int opt;
+int main(int argc, char *argv[]) {
+    int ret = 0;
+    int opt;
 
-	while((opt = getopt(argc, argv, "t:p:")) != -1) {
-		switch (opt) {
-		case 't':	targetIP = optarg;
-				break;
-		case 'p':	targetPort = atoi(optarg);
-				break;
-		default:	printf("invalid option '%c' or value missing - terminating...\n", opt);
-				exit (1);
-				break;
-		}
-	}
+    while ((opt = getopt(argc, argv, "t:p:")) != -1) {
+        switch (opt) {
+            case 't':
+                targetIP = optarg;
+                break;
+            case 'p':
+                targetPort = atoi(optarg);
+                break;
+            default:
+                printf("invalid option '%c' or value missing - terminating...\n", opt);
+                exit(1);
+                break;
+        }
+    }
 
-	doProcessing();
+    doProcessing();
 
-	exit(ret);
+    exit(ret);
 }

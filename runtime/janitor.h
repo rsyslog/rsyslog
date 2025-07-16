@@ -22,13 +22,13 @@
 #define INCLUDED_JANITOR_H
 
 struct janitorEtry {
-	struct janitorEtry *next;
-	char *id;	/* ID used to remove entry */
-	void (*cb)(void *pUsr);
-	void *pUsr;	/* user-settable pointer (passed to callback) */
+    struct janitorEtry *next;
+    char *id; /* ID used to remove entry */
+    void (*cb)(void *pUsr);
+    void *pUsr; /* user-settable pointer (passed to callback) */
 };
 
-rsRetVal janitorAddEtry(void (*cb)(void*), const char *id, void *pUsr);
+rsRetVal janitorAddEtry(void (*cb)(void *), const char *id, void *pUsr);
 rsRetVal janitorDelEtry(const char *__restrict__ const id);
 void janitorRun(void);
 

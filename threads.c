@@ -32,7 +32,7 @@
 #include <pthread.h>
 #include <assert.h>
 #ifdef HAVE_SYS_PRCTL_H
-#  include <sys/prctl.h>
+    #include <sys/prctl.h>
 #endif
 
 #include "rsyslog.h"
@@ -52,21 +52,19 @@ static linkedList_t llThrds;
 
 /* Construct a new thread object
  */
-static rsRetVal
-thrdConstruct(thrdInfo_t **ppThis)
-{
-	DEFiRet;
-	thrdInfo_t *pThis;
+static rsRetVal thrdConstruct(thrdInfo_t **ppThis) {
+    DEFiRet;
+    thrdInfo_t *pThis;
 
-	assert(ppThis != NULL);
+    assert(ppThis != NULL);
 
-	CHKmalloc(pThis = calloc(1, sizeof(thrdInfo_t)));
-	pthread_mutex_init(&pThis->mutThrd, NULL);
-	pthread_cond_init(&pThis->condThrdTerm, NULL);
-	*ppThis = pThis;
+    CHKmalloc(pThis = calloc(1, sizeof(thrdInfo_t)));
+    pthread_mutex_init(&pThis->mutThrd, NULL);
+    pthread_cond_init(&pThis->condThrdTerm, NULL);
+    *ppThis = pThis;
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -74,30 +72,28 @@ finalize_it:
  * linked list of threads. Please note that the thread should have been
  * stopped before. If not, we try to do it.
  */
-static rsRetVal thrdDestruct(thrdInfo_t *pThis)
-{
-	DEFiRet;
-	assert(pThis != NULL);
+static rsRetVal thrdDestruct(thrdInfo_t *pThis) {
+    DEFiRet;
+    assert(pThis != NULL);
 
-	pthread_mutex_lock(&pThis->mutThrd);
-	if(pThis->bIsActive == 1) {
-		pthread_mutex_unlock(&pThis->mutThrd);
-		thrdTerminate(pThis);
-	} else {
-		pthread_mutex_unlock(&pThis->mutThrd);
-		pthread_join(pThis->thrdID, NULL);
-	}
+    pthread_mutex_lock(&pThis->mutThrd);
+    if (pThis->bIsActive == 1) {
+        pthread_mutex_unlock(&pThis->mutThrd);
+        thrdTerminate(pThis);
+    } else {
+        pthread_mutex_unlock(&pThis->mutThrd);
+        pthread_join(pThis->thrdID, NULL);
+    }
 
-	/* call cleanup function, if any */
-	if(pThis->pAfterRun != NULL)
-		pThis->pAfterRun(pThis);
+    /* call cleanup function, if any */
+    if (pThis->pAfterRun != NULL) pThis->pAfterRun(pThis);
 
-	pthread_mutex_destroy(&pThis->mutThrd);
-	pthread_cond_destroy(&pThis->condThrdTerm);
-	free(pThis->name);
-	free(pThis);
+    pthread_mutex_destroy(&pThis->mutThrd);
+    pthread_cond_destroy(&pThis->condThrdTerm);
+    free(pThis->name);
+    free(pThis);
 
-	RETiRet;
+    RETiRet;
 }
 
 
@@ -105,98 +101,101 @@ static rsRetVal thrdDestruct(thrdInfo_t *pThis)
  * This is a separate function as it involves a bit more of code.
  * rgerhads, 2009-10-15
  */
-static rsRetVal
-thrdTerminateNonCancel(thrdInfo_t *pThis)
-{
-	struct timespec tTimeout;
-	int ret;
-	int was_active;
-	DEFiRet;
-	assert(pThis != NULL);
+static rsRetVal thrdTerminateNonCancel(thrdInfo_t *pThis) {
+    struct timespec tTimeout;
+    int ret;
+    int was_active;
+    DEFiRet;
+    assert(pThis != NULL);
 
-	DBGPRINTF("request term via SIGTTIN for input thread '%s' %p\n",
-		  pThis->name, (void*) pThis->thrdID);
+    DBGPRINTF("request term via SIGTTIN for input thread '%s' %p\n", pThis->name, (void *)pThis->thrdID);
 
-	pThis->bShallStop = RSTRUE;
-	d_pthread_mutex_lock(&pThis->mutThrd);
-	timeoutComp(&tTimeout, runConf->globals.inputTimeoutShutdown);
-	was_active = pThis->bIsActive;
-	while(was_active) {
-		if(dbgTimeoutToStderr) {
-			fprintf(stderr, "rsyslogd debug: info: trying to cooperatively stop "
-				"input %s, timeout %d ms\n", pThis->name, runConf->globals.inputTimeoutShutdown);
-		}
-		DBGPRINTF("thread %s: initiating termination, timeout %d ms\n",
-			pThis->name, runConf->globals.inputTimeoutShutdown);
-		const int r = pthread_kill(pThis->thrdID, SIGTTIN);
-		if(r != 0) {
-			LogError(r, RS_RET_INTERNAL_ERROR, "error terminating thread %s "
-				"this may cause shutdown issues", pThis->name);
-		}
-		ret = d_pthread_cond_timedwait(&pThis->condThrdTerm, &pThis->mutThrd, &tTimeout);
-		if(ret == ETIMEDOUT) {
-			DBGPRINTF("input thread term: timeout expired waiting on thread %s "
-				"termination - canceling\n", pThis->name);
-			if(dbgTimeoutToStderr) {
-				fprintf(stderr, "rsyslogd debug: input thread term: "
-					"timeout expired waiting on thread %s "
-					"termination - canceling\n", pThis->name);
-			}
-			pthread_cancel(pThis->thrdID);
-			break;
-		} else if(ret != 0) {
-			char errStr[1024];
-			int err = ret;
-			rs_strerror_r(err, errStr, sizeof(errStr));
-			DBGPRINTF("input thread term: cond_wait returned with error %d: %s\n",
-				  err, errStr);
-		}
-		was_active = pThis->bIsActive;
-	}
-	d_pthread_mutex_unlock(&pThis->mutThrd);
+    pThis->bShallStop = RSTRUE;
+    d_pthread_mutex_lock(&pThis->mutThrd);
+    timeoutComp(&tTimeout, runConf->globals.inputTimeoutShutdown);
+    was_active = pThis->bIsActive;
+    while (was_active) {
+        if (dbgTimeoutToStderr) {
+            fprintf(stderr,
+                    "rsyslogd debug: info: trying to cooperatively stop "
+                    "input %s, timeout %d ms\n",
+                    pThis->name, runConf->globals.inputTimeoutShutdown);
+        }
+        DBGPRINTF("thread %s: initiating termination, timeout %d ms\n", pThis->name,
+                  runConf->globals.inputTimeoutShutdown);
+        const int r = pthread_kill(pThis->thrdID, SIGTTIN);
+        if (r != 0) {
+            LogError(r, RS_RET_INTERNAL_ERROR,
+                     "error terminating thread %s "
+                     "this may cause shutdown issues",
+                     pThis->name);
+        }
+        ret = d_pthread_cond_timedwait(&pThis->condThrdTerm, &pThis->mutThrd, &tTimeout);
+        if (ret == ETIMEDOUT) {
+            DBGPRINTF(
+                "input thread term: timeout expired waiting on thread %s "
+                "termination - canceling\n",
+                pThis->name);
+            if (dbgTimeoutToStderr) {
+                fprintf(stderr,
+                        "rsyslogd debug: input thread term: "
+                        "timeout expired waiting on thread %s "
+                        "termination - canceling\n",
+                        pThis->name);
+            }
+            pthread_cancel(pThis->thrdID);
+            break;
+        } else if (ret != 0) {
+            char errStr[1024];
+            int err = ret;
+            rs_strerror_r(err, errStr, sizeof(errStr));
+            DBGPRINTF("input thread term: cond_wait returned with error %d: %s\n", err, errStr);
+        }
+        was_active = pThis->bIsActive;
+    }
+    d_pthread_mutex_unlock(&pThis->mutThrd);
 
-	if(was_active) {
-		DBGPRINTF("non-cancel input thread termination FAILED for thread %s %p\n",
-			  pThis->name, (void*) pThis->thrdID);
-	} else {
-		DBGPRINTF("non-cancel input thread termination succeeded for thread %s %p\n",
-			  pThis->name, (void*) pThis->thrdID);
-	}
+    if (was_active) {
+        DBGPRINTF("non-cancel input thread termination FAILED for thread %s %p\n", pThis->name, (void *)pThis->thrdID);
+    } else {
+        DBGPRINTF("non-cancel input thread termination succeeded for thread %s %p\n", pThis->name,
+                  (void *)pThis->thrdID);
+    }
 
-	RETiRet;
+    RETiRet;
 }
 
 
 /* terminate a thread gracefully.
  */
-rsRetVal thrdTerminate(thrdInfo_t *pThis)
-{
-	DEFiRet;
-	assert(pThis != NULL);
+rsRetVal thrdTerminate(thrdInfo_t *pThis) {
+    DEFiRet;
+    assert(pThis != NULL);
 
-	if(pThis->bNeedsCancel) {
-		DBGPRINTF("request term via canceling for input thread %s\n", pThis->name);
-		if(dbgTimeoutToStderr) {
-			fprintf(stderr, "rsyslogd debug: request term via canceling for "
-				"input thread %s\n", pThis->name);
-		}
-		pthread_cancel(pThis->thrdID);
-	} else {
-		thrdTerminateNonCancel(pThis);
-	}
-	pthread_join(pThis->thrdID, NULL); /* wait for input thread to complete */
+    if (pThis->bNeedsCancel) {
+        DBGPRINTF("request term via canceling for input thread %s\n", pThis->name);
+        if (dbgTimeoutToStderr) {
+            fprintf(stderr,
+                    "rsyslogd debug: request term via canceling for "
+                    "input thread %s\n",
+                    pThis->name);
+        }
+        pthread_cancel(pThis->thrdID);
+    } else {
+        thrdTerminateNonCancel(pThis);
+    }
+    pthread_join(pThis->thrdID, NULL); /* wait for input thread to complete */
 
-	RETiRet;
+    RETiRet;
 }
 
 
 /* terminate all known threads gracefully.
  */
-rsRetVal thrdTerminateAll(void)
-{
-	DEFiRet;
-	llDestroy(&llThrds);
-	RETiRet;
+rsRetVal thrdTerminateAll(void) {
+    DEFiRet;
+    llDestroy(&llThrds);
+    RETiRet;
 }
 
 
@@ -206,115 +205,112 @@ rsRetVal thrdTerminateAll(void)
  * function call has just "normal", non-threading semantics.
  * rgerhards, 2007-12-17
  */
-static ATTR_NORETURN void*
-thrdStarter(void *const arg)
-{
-	DEFiRet;
-	thrdInfo_t *const pThis = (thrdInfo_t*) arg;
-#	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
-	uchar thrdName[32] = "in:";
-#	endif
+static ATTR_NORETURN void *thrdStarter(void *const arg) {
+    DEFiRet;
+    thrdInfo_t *const pThis = (thrdInfo_t *)arg;
+#if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
+    uchar thrdName[32] = "in:";
+#endif
 
-	assert(pThis != NULL);
-	assert(pThis->pUsrThrdMain != NULL);
+    assert(pThis != NULL);
+    assert(pThis->pUsrThrdMain != NULL);
 
-#	if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
-	ustrncpy(thrdName+3, pThis->name, 20);
-	dbgOutputTID((char*)thrdName);
+#if defined(HAVE_PRCTL) && defined(PR_SET_NAME)
+    ustrncpy(thrdName + 3, pThis->name, 20);
+    dbgOutputTID((char *)thrdName);
 
-	/* set thread name - we ignore if the call fails, has no harsh consequences... */
-	if(prctl(PR_SET_NAME, thrdName, 0, 0, 0) != 0) {
-		DBGPRINTF("prctl failed, not setting thread name for '%s'\n", pThis->name);
-	} else {
-		DBGPRINTF("set thread name to '%s'\n", thrdName);
-	}
-#	endif
+    /* set thread name - we ignore if the call fails, has no harsh consequences... */
+    if (prctl(PR_SET_NAME, thrdName, 0, 0, 0) != 0) {
+        DBGPRINTF("prctl failed, not setting thread name for '%s'\n", pThis->name);
+    } else {
+        DBGPRINTF("set thread name to '%s'\n", thrdName);
+    }
+#endif
 
-	/* block all signals except SIGTTIN and SIGSEGV */
-	sigset_t sigSet;
-	sigfillset(&sigSet);
-	sigdelset(&sigSet, SIGTTIN);
-	sigdelset(&sigSet, SIGSEGV);
-	pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
+    /* block all signals except SIGTTIN and SIGSEGV */
+    sigset_t sigSet;
+    sigfillset(&sigSet);
+    sigdelset(&sigSet, SIGTTIN);
+    sigdelset(&sigSet, SIGSEGV);
+    pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
 
-	/* setup complete, we are now ready to execute the user code. We will not
-	 * regain control until the user code is finished, in which case we terminate
-	 * the thread.
-	 */
-	iRet = pThis->pUsrThrdMain(pThis);
+    /* setup complete, we are now ready to execute the user code. We will not
+     * regain control until the user code is finished, in which case we terminate
+     * the thread.
+     */
+    iRet = pThis->pUsrThrdMain(pThis);
 
-	if(iRet == RS_RET_OK) {
-		dbgprintf("thrdStarter: usrThrdMain %s - 0x%lx returned with iRet %d, exiting now.\n",
-			  pThis->name, (unsigned long) pThis->thrdID, iRet);
-	} else {
-		LogError(0, iRet, "main thread of %s terminated abnormally", pThis->name);
-	}
+    if (iRet == RS_RET_OK) {
+        dbgprintf("thrdStarter: usrThrdMain %s - 0x%lx returned with iRet %d, exiting now.\n", pThis->name,
+                  (unsigned long)pThis->thrdID, iRet);
+    } else {
+        LogError(0, iRet, "main thread of %s terminated abnormally", pThis->name);
+    }
 
-	/* signal master control that we exit (we do the mutex lock mostly to
-	 * keep the thread debugger happer, it would not really be necessary with
-	 * the logic we employ...)
-	 */
-	d_pthread_mutex_lock(&pThis->mutThrd);
-	pThis->bIsActive = 0;
-	pthread_cond_signal(&pThis->condThrdTerm);
-	d_pthread_mutex_unlock(&pThis->mutThrd);
+    /* signal master control that we exit (we do the mutex lock mostly to
+     * keep the thread debugger happer, it would not really be necessary with
+     * the logic we employ...)
+     */
+    d_pthread_mutex_lock(&pThis->mutThrd);
+    pThis->bIsActive = 0;
+    pthread_cond_signal(&pThis->condThrdTerm);
+    d_pthread_mutex_unlock(&pThis->mutThrd);
 
-	pthread_exit(0);
+    pthread_exit(0);
 }
 /* Start a new thread and add it to the list of currently
  * executing threads. It is added at the end of the list.
  * rgerhards, 2007-12-14
  */
-rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t*), rsRetVal(*afterRun)(thrdInfo_t *),
-	sbool bNeedsCancel, uchar *name)
-{
-	DEFiRet;
-	thrdInfo_t *pThis;
-#if defined (_AIX)
-	pthread_attr_t aix_attr;
+rsRetVal thrdCreate(rsRetVal (*thrdMain)(thrdInfo_t *),
+                    rsRetVal (*afterRun)(thrdInfo_t *),
+                    sbool bNeedsCancel,
+                    uchar *name) {
+    DEFiRet;
+    thrdInfo_t *pThis;
+#if defined(_AIX)
+    pthread_attr_t aix_attr;
 #endif
 
-	assert(thrdMain != NULL);
+    assert(thrdMain != NULL);
 
-	CHKiRet(thrdConstruct(&pThis));
-	pThis->bIsActive = 1;
-	pThis->pUsrThrdMain = thrdMain;
-	pThis->pAfterRun = afterRun;
-	pThis->bNeedsCancel = bNeedsCancel;
-	pThis->name = ustrdup(name);
-#if defined (_AIX)
-	pthread_attr_init(&aix_attr);
-	pthread_attr_setstacksize(&aix_attr, 4096*512);
-	pthread_create(&pThis->thrdID, &aix_attr, thrdStarter, pThis);
+    CHKiRet(thrdConstruct(&pThis));
+    pThis->bIsActive = 1;
+    pThis->pUsrThrdMain = thrdMain;
+    pThis->pAfterRun = afterRun;
+    pThis->bNeedsCancel = bNeedsCancel;
+    pThis->name = ustrdup(name);
+#if defined(_AIX)
+    pthread_attr_init(&aix_attr);
+    pthread_attr_setstacksize(&aix_attr, 4096 * 512);
+    pthread_create(&pThis->thrdID, &aix_attr, thrdStarter, pThis);
 #else
-	pthread_create(&pThis->thrdID, &default_thread_attr, thrdStarter, pThis);
+    pthread_create(&pThis->thrdID, &default_thread_attr, thrdStarter, pThis);
 #endif
-	CHKiRet(llAppend(&llThrds, NULL, pThis));
+    CHKiRet(llAppend(&llThrds, NULL, pThis));
 
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 
 /* initialize the thread-support subsystem
  * must be called once at the start of the program
  */
-rsRetVal thrdInit(void)
-{
-	DEFiRet;
-	iRet = llInit(&llThrds, (rsRetVal (*)(void*)) thrdDestruct, NULL, NULL);
-	RETiRet;
+rsRetVal thrdInit(void) {
+    DEFiRet;
+    iRet = llInit(&llThrds, (rsRetVal(*)(void *))thrdDestruct, NULL, NULL);
+    RETiRet;
 }
 
 
 /* de-initialize the thread subsystem
  * must be called once at the end of the program
  */
-rsRetVal thrdExit(void)
-{
-	DEFiRet;
-	iRet = llDestroy(&llThrds);
-	RETiRet;
+rsRetVal thrdExit(void) {
+    DEFiRet;
+    iRet = llDestroy(&llThrds);
+    RETiRet;
 }
 
 

@@ -12,8 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <unistd.h>      /* for sleep() */
-#include <ctype.h>       /* for isspace() */
+#include <unistd.h> /* for sleep() */
+#include <ctype.h> /* for isspace() */
 #include <curl/curl.h>
 #include <json.h>
 
@@ -25,17 +25,17 @@
  * generic `ai_provider_t->data` void pointer.
  */
 typedef struct gemini_data_s {
-	char *model;
-	char *apikey;
-	char *prompt;
+    char *model;
+    char *apikey;
+    char *prompt;
 } gemini_data_t;
 
 /**
  * @brief A simple buffer to accumulate the HTTP response from libcurl.
  */
 struct curl_resp {
-	char *buf;
-	size_t len;
+    char *buf;
+    size_t len;
 };
 
 /**
@@ -47,16 +47,14 @@ struct curl_resp {
  *
  * @param[in,out] str The string to be trimmed.
  */
-static void
-strip_trailing_whitespace(char *str)
-{
-	if (str == NULL) return;
+static void strip_trailing_whitespace(char *str) {
+    if (str == NULL) return;
 
-	// Strip any true whitespace characters, including LF, CR, space, etc.
-	int len = strlen(str);
-	while (len > 0 && isspace((unsigned char)str[len - 1])) {
-		str[--len] = '\0';
-	}
+    // Strip any true whitespace characters, including LF, CR, space, etc.
+    int len = strlen(str);
+    while (len > 0 && isspace((unsigned char)str[len - 1])) {
+        str[--len] = '\0';
+    }
 }
 
 
@@ -67,19 +65,16 @@ strip_trailing_whitespace(char *str)
  * This function is called by libcurl whenever new data is received from
  * the server. It appends the new data chunk to our curl_resp buffer.
  */
-static size_t
-write_cb(char *ptr, size_t size, size_t nmemb, void *data)
-{
-	struct curl_resp *r = (struct curl_resp*)data;
-	size_t tot = size * nmemb;
-	char *tmp = realloc(r->buf, r->len + tot + 1);
-	if(tmp == NULL)
-		return 0;
-	r->buf = tmp;
-	memcpy(r->buf + r->len, ptr, tot);
-	r->len += tot;
-	r->buf[r->len] = '\0';
-	return tot;
+static size_t write_cb(char *ptr, size_t size, size_t nmemb, void *data) {
+    struct curl_resp *r = (struct curl_resp *)data;
+    size_t tot = size * nmemb;
+    char *tmp = realloc(r->buf, r->len + tot + 1);
+    if (tmp == NULL) return 0;
+    r->buf = tmp;
+    memcpy(r->buf + r->len, ptr, tot);
+    r->len += tot;
+    r->buf[r->len] = '\0';
+    return tot;
 }
 
 /**
@@ -88,17 +83,14 @@ write_cb(char *ptr, size_t size, size_t nmemb, void *data)
  * Frees all resources allocated by this provider, namely the
  * private gemini_data_t state object.
  */
-static void
-gemini_cleanup(ai_provider_t *prov)
-{
-	gemini_data_t *d = (gemini_data_t*)prov->data;
-	if(d == NULL)
-		return;
-	free(d->model);
-	free(d->apikey);
-	free(d->prompt);
-	free(d);
-	prov->data = NULL;
+static void gemini_cleanup(ai_provider_t *prov) {
+    gemini_data_t *d = (gemini_data_t *)prov->data;
+    if (d == NULL) return;
+    free(d->model);
+    free(d->apikey);
+    free(d->prompt);
+    free(d);
+    prov->data = NULL;
 }
 
 /**
@@ -109,21 +101,18 @@ gemini_cleanup(ai_provider_t *prov)
  *
  * @param[in] prov The generic provider instance to initialize.
  */
-static rsRetVal
-gemini_init(ai_provider_t *prov, const char *model, const char *key, const char *prompt)
-{
-	gemini_data_t *d;
-	DEFiRet;
-	d = calloc(1, sizeof(*d));
-	if(d == NULL)
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	if(model)  d->model = strdup(model);
-	if(key)    d->apikey = strdup(key);
-	if(prompt) d->prompt = strdup(prompt);
-	prov->data = d;
-	prov->cleanup = gemini_cleanup;
+static rsRetVal gemini_init(ai_provider_t *prov, const char *model, const char *key, const char *prompt) {
+    gemini_data_t *d;
+    DEFiRet;
+    d = calloc(1, sizeof(*d));
+    if (d == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    if (model) d->model = strdup(model);
+    if (key) d->apikey = strdup(key);
+    if (prompt) d->prompt = strdup(prompt);
+    prov->data = d;
+    prov->cleanup = gemini_cleanup;
 finalize_it:
-	RETiRet;
+    RETiRet;
 }
 
 /**
@@ -145,131 +134,124 @@ finalize_it:
  * The caller is responsible for freeing the array and each
  * string within it.
  */
-static rsRetVal
-gemini_classify_batch(ai_provider_t *prov, const char **msgs, size_t n, char ***tags)
-{
-	gemini_data_t *d = (gemini_data_t*)prov->data;
-	DEFiRet;
-	char *url = NULL;
-	CURL *curl = NULL;
+static rsRetVal gemini_classify_batch(ai_provider_t *prov, const char **msgs, size_t n, char ***tags) {
+    gemini_data_t *d = (gemini_data_t *)prov->data;
+    DEFiRet;
+    char *url = NULL;
+    CURL *curl = NULL;
 
-	if(d == NULL || d->apikey == NULL)
-		ABORT_FINALIZE(RS_RET_ERR);
+    if (d == NULL || d->apikey == NULL) ABORT_FINALIZE(RS_RET_ERR);
 
-	CHKmalloc(*tags = calloc(n, sizeof(char*)));
+    CHKmalloc(*tags = calloc(n, sizeof(char *)));
 
-	curl = curl_easy_init();
-	if(curl == NULL)
-		ABORT_FINALIZE(RS_RET_ERR);
+    curl = curl_easy_init();
+    if (curl == NULL) ABORT_FINALIZE(RS_RET_ERR);
 
-	if(asprintf(&url,
-		"https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent",
-		d->model ? d->model : "gemini-2.0-flash") == -1) {
-		ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-	}
+    if (asprintf(&url, "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent",
+                 d->model ? d->model : "gemini-2.0-flash") == -1) {
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
 
-	for (size_t i = 0; i < n; ++i) {
-		struct curl_slist *headers = NULL;
-		struct curl_resp resp = {0};
-		struct json_object *req = NULL;
-		char *full_prompt = NULL;
-		char *api_key_header = NULL;
+    for (size_t i = 0; i < n; ++i) {
+        struct curl_slist *headers = NULL;
+        struct curl_resp resp = {0};
+        struct json_object *req = NULL;
+        char *full_prompt = NULL;
+        char *api_key_header = NULL;
 
-		if (asprintf(&full_prompt, "%s\n%s", d->prompt ? d->prompt : "", msgs[i]) == -1) {
-			(*tags)[i] = strdup("REGULAR");
-			continue;
-		}
-		
-		// ✅ Dynamically allocate header to prevent buffer overflow
-		if (asprintf(&api_key_header, "x-goog-api-key: %s", d->apikey) == -1) {
-			(*tags)[i] = strdup("REGULAR");
-			free(full_prompt);
-			continue;
-		}
+        if (asprintf(&full_prompt, "%s\n%s", d->prompt ? d->prompt : "", msgs[i]) == -1) {
+            (*tags)[i] = strdup("REGULAR");
+            continue;
+        }
 
-		req = json_object_new_object();
-		struct json_object *contents = json_object_new_array();
-		struct json_object *user_turn = json_object_new_object();
-		struct json_object *parts = json_object_new_array();
-		struct json_object *text_part = json_object_new_object();
+        // ✅ Dynamically allocate header to prevent buffer overflow
+        if (asprintf(&api_key_header, "x-goog-api-key: %s", d->apikey) == -1) {
+            (*tags)[i] = strdup("REGULAR");
+            free(full_prompt);
+            continue;
+        }
 
-		json_object_object_add(text_part, "text", json_object_new_string(full_prompt));
-		json_object_array_add(parts, text_part);
-		json_object_object_add(user_turn, "role", json_object_new_string("user"));
-		json_object_object_add(user_turn, "parts", parts);
-		json_object_array_add(contents, user_turn);
-		json_object_object_add(req, "contents", contents);
+        req = json_object_new_object();
+        struct json_object *contents = json_object_new_array();
+        struct json_object *user_turn = json_object_new_object();
+        struct json_object *parts = json_object_new_array();
+        struct json_object *text_part = json_object_new_object();
 
-		const char *body = json_object_to_json_string(req);
+        json_object_object_add(text_part, "text", json_object_new_string(full_prompt));
+        json_object_array_add(parts, text_part);
+        json_object_object_add(user_turn, "role", json_object_new_string("user"));
+        json_object_object_add(user_turn, "parts", parts);
+        json_object_array_add(contents, user_turn);
+        json_object_object_add(req, "contents", contents);
 
-		curl_easy_setopt(curl, CURLOPT_URL, url);
-		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body);
-		
-		headers = curl_slist_append(NULL, "Content-Type: application/json");
-		headers = curl_slist_append(headers, api_key_header);
-		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        const char *body = json_object_to_json_string(req);
 
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_cb);
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resp);
-		curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, body);
 
-		long http_code = 0;
-		CURLcode cc = curl_easy_perform(curl);
-		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
+        headers = curl_slist_append(NULL, "Content-Type: application/json");
+        headers = curl_slist_append(headers, api_key_header);
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
-		if (cc == CURLE_OK && http_code == 200) {
-			struct json_object *parsed = json_tokener_parse(resp.buf);
-			struct json_object *candidates = NULL;
-			struct json_object *first_candidate = NULL;
-			struct json_object *content = NULL;
-			struct json_object *parts_array = NULL;
-			struct json_object *part_obj = NULL;
-			struct json_object *text_obj = NULL;
-			const char *raw_tag = NULL;
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_cb);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resp);
+        curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
 
-			// This chain of checks ensures we don't dereference a NULL pointer.
-			if (parsed &&
-				json_object_object_get_ex(parsed, "candidates", &candidates) &&
-				(first_candidate = json_object_array_get_idx(candidates, 0)) != NULL &&
-				json_object_object_get_ex(first_candidate, "content", &content) &&
-				json_object_object_get_ex(content, "parts", &parts_array) &&
-				(part_obj = json_object_array_get_idx(parts_array, 0)) != NULL &&
-				json_object_object_get_ex(part_obj, "text", &text_obj)) {
+        long http_code = 0;
+        CURLcode cc = curl_easy_perform(curl);
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
 
-				raw_tag = json_object_get_string(text_obj);
-			}
+        if (cc == CURLE_OK && http_code == 200) {
+            struct json_object *parsed = json_tokener_parse(resp.buf);
+            struct json_object *candidates = NULL;
+            struct json_object *first_candidate = NULL;
+            struct json_object *content = NULL;
+            struct json_object *parts_array = NULL;
+            struct json_object *part_obj = NULL;
+            struct json_object *text_obj = NULL;
+            const char *raw_tag = NULL;
 
-			if (raw_tag) {
-				char *mutable_tag = strdup(raw_tag);
-				strip_trailing_whitespace(mutable_tag);
-				(*tags)[i] = mutable_tag;
-			} else {
-				(*tags)[i] = strdup("REGULAR");
-			}
+            // This chain of checks ensures we don't dereference a NULL pointer.
+            if (parsed && json_object_object_get_ex(parsed, "candidates", &candidates) &&
+                (first_candidate = json_object_array_get_idx(candidates, 0)) != NULL &&
+                json_object_object_get_ex(first_candidate, "content", &content) &&
+                json_object_object_get_ex(content, "parts", &parts_array) &&
+                (part_obj = json_object_array_get_idx(parts_array, 0)) != NULL &&
+                json_object_object_get_ex(part_obj, "text", &text_obj)) {
+                raw_tag = json_object_get_string(text_obj);
+            }
 
-			if (parsed) {
-				json_object_put(parsed);
-			}
-		} else {
-			(*tags)[i] = strdup("REGULAR");
-			char err_details[1024];
-			snprintf(err_details, sizeof(err_details), "HTTP %ld - %s", http_code, resp.buf ? resp.buf : curl_easy_strerror(cc));
-			LogError(0, RS_RET_ERR, "mmaitag: gemini request for a message failed: %s", err_details);
-		}
+            if (raw_tag) {
+                char *mutable_tag = strdup(raw_tag);
+                strip_trailing_whitespace(mutable_tag);
+                (*tags)[i] = mutable_tag;
+            } else {
+                (*tags)[i] = strdup("REGULAR");
+            }
 
-		// Cleanup for this loop iteration
-		curl_slist_free_all(headers);
-		free(api_key_header); // ✅ Free the dynamically allocated header
-		free(full_prompt);
-		free(resp.buf);
-		json_object_put(req);
-	}
+            if (parsed) {
+                json_object_put(parsed);
+            }
+        } else {
+            (*tags)[i] = strdup("REGULAR");
+            char err_details[1024];
+            snprintf(err_details, sizeof(err_details), "HTTP %ld - %s", http_code,
+                     resp.buf ? resp.buf : curl_easy_strerror(cc));
+            LogError(0, RS_RET_ERR, "mmaitag: gemini request for a message failed: %s", err_details);
+        }
+
+        // Cleanup for this loop iteration
+        curl_slist_free_all(headers);
+        free(api_key_header);  // ✅ Free the dynamically allocated header
+        free(full_prompt);
+        free(resp.buf);
+        json_object_put(req);
+    }
 
 finalize_it:
-	if(curl)
-		curl_easy_cleanup(curl);
-	free(url);
-	RETiRet;
+    if (curl) curl_easy_cleanup(curl);
+    free(url);
+    RETiRet;
 }
 
 
@@ -281,8 +263,4 @@ finalize_it:
  * so that mmaitag.c can find and use it at runtime.
  */
 ai_provider_t gemini_provider = {
-	.data     = NULL,
-	.init     = gemini_init,
-	.classify = gemini_classify_batch,
-	.cleanup  = gemini_cleanup
-};
+    .data = NULL, .init = gemini_init, .classify = gemini_classify_batch, .cleanup = gemini_cleanup};

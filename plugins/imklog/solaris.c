@@ -29,7 +29,7 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#	include "config.h"
+    #include "config.h"
 #endif
 #include <stdlib.h>
 #include <unistd.h>
@@ -39,7 +39,6 @@
 #include <sys/socket.h>
 
 
-
 #include "rsyslog.h"
 #include "imklog.h"
 #include "srUtils.h"
@@ -47,70 +46,59 @@
 #include "solaris_cddl.h"
 
 /* globals */
-static int fklog; // TODO: remove
+static int fklog;  // TODO: remove
 #ifndef _PATH_KLOG
-#	define _PATH_KLOG "/dev/log"
+    #define _PATH_KLOG "/dev/log"
 #endif
 
 
-static uchar *GetPath(void)
-{
-	return pszPath ? pszPath : UCHAR_CONSTANT(_PATH_KLOG);
+static uchar *GetPath(void) {
+    return pszPath ? pszPath : UCHAR_CONSTANT(_PATH_KLOG);
 }
 
 /* open the kernel log - will be called inside the willRun() imklog
  * entry point. -- rgerhards, 2008-04-09
  */
-rsRetVal
-klogWillRun(void)
-{
-	DEFiRet;
+rsRetVal klogWillRun(void) {
+    DEFiRet;
 
-	fklog = sun_openklog((char*) GetPath(), O_RDONLY);
-	if (fklog < 0) {
-		char errStr[1024];
-		int err = errno;
-		rs_strerror_r(err, errStr, sizeof(errStr));
-		DBGPRINTF("error %s opening log socket: %s\n",
-				   errStr, GetPath());
-		iRet = RS_RET_ERR; // TODO: better error code
-	}
+    fklog = sun_openklog((char *)GetPath(), O_RDONLY);
+    if (fklog < 0) {
+        char errStr[1024];
+        int err = errno;
+        rs_strerror_r(err, errStr, sizeof(errStr));
+        DBGPRINTF("error %s opening log socket: %s\n", errStr, GetPath());
+        iRet = RS_RET_ERR;  // TODO: better error code
+    }
 
-	RETiRet;
+    RETiRet;
 }
 
 
 /* to be called in the module's AfterRun entry point
  * rgerhards, 2008-04-09
  */
-rsRetVal klogAfterRun(void)
-{
-	DEFiRet;
-	if(fklog != -1)
-		close(fklog);
-	RETiRet;
+rsRetVal klogAfterRun(void) {
+    DEFiRet;
+    if (fklog != -1) close(fklog);
+    RETiRet;
 }
-
 
 
 /* to be called in the module's WillRun entry point, this is the main
  * "message pull" mechanism.
  * rgerhards, 2008-04-09
  */
-rsRetVal klogLogKMsg(void)
-{
-	DEFiRet;
-	sun_sys_poll();
-	RETiRet;
+rsRetVal klogLogKMsg(void) {
+    DEFiRet;
+    sun_sys_poll();
+    RETiRet;
 }
 
 
 /* provide the (system-specific) default facility for internal messages
  * rgerhards, 2008-04-14
  */
-int
-klogFacilIntMsg(void)
-{
-	return LOG_SYSLOG;
+int klogFacilIntMsg(void) {
+    return LOG_SYSLOG;
 }
-
