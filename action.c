@@ -1179,11 +1179,13 @@ static rsRetVal handleActionExecResult(action_t *__restrict__ const pThis,
             break;
         case RS_RET_DEFER_COMMIT:
             actionSetActionWorked(pThis, pWti); /* we had a successful call! */
+            pWti->actWrkrInfo[pThis->iActionNbr].bHadDeferCommit = 1;
             /* we are done, action state remains the same */
             break;
         case RS_RET_PREVIOUS_COMMITTED:
             /* action state remains the same, but we had a commit. */
             pWti->actWrkrInfo[pThis->iActionNbr].bHadAutoCommit = 1;
+            pWti->actWrkrInfo[pThis->iActionNbr].bHadDeferCommit = 1;
             actionSetActionWorked(pThis, pWti); /* we had a successful call! */
             break;
         case RS_RET_DISABLE_ACTION:
@@ -1516,6 +1518,14 @@ static rsRetVal ATTR_NONNULL() actionCommit(action_t *__restrict__ const pThis, 
     iRet = actionTryCommit(pThis, pWti, wrkrInfo->p.tx.iparams, wrkrInfo->p.tx.currIParam);
     DBGPRINTF("actionCommit[%s]: return actionTryCommit %d\n", pThis->pszName, iRet);
     if (iRet == RS_RET_OK) {
+        for (int j = 0; j < wrkrInfo->p.tx.currIParam; ++j) {
+            batchSetElemState(&pWti->batch, j, BATCH_STATE_COMM);
+        }
+        FINALIZE;
+    }
+
+    if (wrkrInfo->bHadDeferCommit) {
+        DBGPRINTF("actionCommit[%s]: transaction had deferred commits, retry all messages\n", pThis->pszName);
         FINALIZE;
     }
 
@@ -1577,6 +1587,7 @@ finalize_it:
         free(iparams);
     }
     wrkrInfo->p.tx.currIParam = 0; /* reset to beginning */
+    wrkrInfo->bHadDeferCommit = 0;
     RETiRet;
 }
 
@@ -1648,8 +1659,11 @@ static rsRetVal ATTR_NONNULL() processBatchMain(void *__restrict__ const pVoid,
             DBGPRINTF("processBatchMain: i %d, processMsgMain iRet %d\n", i, localRet);
             if (localRet == RS_RET_OK || localRet == RS_RET_DEFER_COMMIT || localRet == RS_RET_ACTION_FAILED ||
                 localRet == RS_RET_PREVIOUS_COMMITTED) {
-                batchSetElemState(pBatch, i, BATCH_STATE_COMM);
-                DBGPRINTF("processBatchMain: i %d, COMM state set\n", i);
+                if (pAction->isTransactional)
+                    batchSetElemState(pBatch, i, BATCH_STATE_SUB);
+                else
+                    batchSetElemState(pBatch, i, BATCH_STATE_COMM);
+                DBGPRINTF("processBatchMain: i %d, state set %s\n", i, pAction->isTransactional ? "SUB" : "COMM");
             }
         }
     }
