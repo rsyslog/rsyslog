@@ -31,17 +31,17 @@ provide dev and official release builds of the documentation.
 
 1.  Log in with a GitHub account.
 2.  Fork the official https://github.com/rsyslog/rsyslog repo.
-3.  Create a new branch off of the latest `master` branch.
+3.  Create a new branch off of the latest `main` branch.
 4.  Make your changes in the **`doc/`** subfolder.
 5.  Commit to the new branch in your fork.
 6.  Submit a Pull Request (PR) for review
     (https://github.com/rsyslog/rsyslog/pulls). **Note that PRs will be automatically AI reviewed.**
 7.  Stop making any changes to your new branch now that you've submitted a
-    Pull Request for review. Instead, create a new branch from your `master`
+    Pull Request for review. Instead, create a new branch from your `main`
     branch while you wait for feedback from the doc team.
 8.  A team member will review and offer feedback on your work. After
     feedback has been given and you've made all necessary changes, your
-    PR will be accepted and merged into the official `master` branch.
+    PR will be accepted and merged into the official `main` branch.
 9.  At this point, delete the branch you submitted the PR from and start
     a new one for your next round of work.
 
@@ -148,12 +148,12 @@ later steps are identical, so we've covered those steps in one place.
         1.  `python -m pip install -r requirements.txt`
 2.  Clone the official Git repo:
     1.  `git clone https://github.com/rsyslog/rsyslog.git`
-3.  Check out either the current stable or development (aka, "master") branch:
+3.  Check out either the current stable or development (aka, "main") branch:
     1.  `cd rsyslog/doc`
     1.  `git checkout BRANCH_NAME_HERE`
         -   Choose the `v8-stable` branch for coverage of features currently
             available in the latest stable release.
-        -   Choose the `master` branch for coverage of upcoming features and fixes.
+        -   Choose the `main` branch for coverage of upcoming features and fixes.
 4.  **Optional:** If you've previously cloned the repo, run `git pull` to update it
     with new changes before continuing.
 
