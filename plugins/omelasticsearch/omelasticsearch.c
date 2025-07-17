@@ -170,6 +170,7 @@ typedef struct wrkrInstanceData {
     int replyLen;
     size_t replyBufLen;
     char *reply;
+    long httpStatusCode; /* http status code of response */
     CURL *curlCheckConnHandle; /* libcurl session handle for checking the server connection */
     CURL *curlPostHandle; /* libcurl session handle for posting data to the server */
     HEADER *curlHeader; /* json POST request info */
@@ -270,6 +271,7 @@ BEGINcreateWrkrInstance
     pWrkrData->reply = NULL;
     pWrkrData->replyLen = 0;
     pWrkrData->replyBufLen = 0;
+    pWrkrData->httpStatusCode = 0;
     iRet = curlSetup(pWrkrData);
 ENDcreateWrkrInstance
 
@@ -1572,14 +1574,23 @@ static rsRetVal ATTR_NONNULL(1, 2)
     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, msglen);
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
     code = curl_easy_perform(curl);
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &pWrkrData->httpStatusCode);
     DBGPRINTF("curl returned %lld\n", (long long)code);
     if (code != CURLE_OK && code != CURLE_HTTP_RETURNED_ERROR) {
         STATSCOUNTER_INC(indexHTTPReqFail, mutIndexHTTPReqFail);
-        indexHTTPFail += nmsgs;
+        STATSCOUNTER_ADD(indexHTTPFail, mutIndexHTTPFail, nmsgs);
         LogError(0, RS_RET_SUSPENDED,
                  "omelasticsearch: we are suspending ourselfs due "
                  "to server failure %lld: %s",
                  (long long)code, errbuf);
+        ABORT_FINALIZE(RS_RET_SUSPENDED);
+    }
+
+    if (pWrkrData->httpStatusCode == 401 || pWrkrData->httpStatusCode == 403) {
+        STATSCOUNTER_INC(indexHTTPReqFail, mutIndexHTTPReqFail);
+        STATSCOUNTER_ADD(indexHTTPFail, mutIndexHTTPFail, nmsgs);
+        LogError(0, RS_RET_SUSPENDED, "omelasticsearch: authentication failed with status %ld",
+                 pWrkrData->httpStatusCode);
         ABORT_FINALIZE(RS_RET_SUSPENDED);
     }
 
