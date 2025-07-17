@@ -105,16 +105,16 @@ mbedtlsInitCred(nsd_mbedtls_t *const pThis)
 
 	cafile = (pThis->pszCAFile == NULL) ? glbl.GetDfltNetstrmDrvrCAF(runConf) : pThis->pszCAFile;
 	if(cafile != NULL) {
-		mbedtls_x509_crt_init(&(pThis->cacert));
 		mbedtls_x509_crt_free(&(pThis->cacert));
+		mbedtls_x509_crt_init(&(pThis->cacert));
 		CHKiRet(mbedtls_x509_crt_parse_file(&(pThis->cacert), (const char*)cafile));
 		pThis->bHaveCaCert = 1;
 	}
 
 	crlfile = (pThis->pszCRLFile == NULL) ? glbl.GetDfltNetstrmDrvrCRLF(runConf) : pThis->pszCRLFile;
 	if(crlfile != NULL) {
-		mbedtls_x509_crl_init(&(pThis->crl));
 		mbedtls_x509_crl_free(&(pThis->crl));
+		mbedtls_x509_crl_init(&(pThis->crl));
 		CHKiRet(mbedtls_x509_crl_parse_file(&(pThis->crl), (const char*)crlfile));
 		pThis->bHaveCrl = 1;
 	}
@@ -143,15 +143,15 @@ get_custom_string(char** out)
 {
 	DEFiRet;
 	struct timeval tv;
-	struct tm *tm;
+	struct tm tm;
 
 	CHKiRet(gettimeofday(&tv, NULL));
-	if((tm = localtime(&(tv.tv_sec))) == NULL) {
+	if(localtime_r(&(tv.tv_sec), &tm) == NULL) {
 		ABORT_FINALIZE(RS_RET_NO_ERRCODE);
 	}
 	if(asprintf(out, "nsd_mbedtls-%04d-%02d-%02d %02d:%02d:%02d:%08ld",
-		    tm->tm_year+1900, tm->tm_mon+1, tm->tm_mday,
-		    tm->tm_hour, tm->tm_min, tm->tm_sec, tv.tv_usec) == -1) {
+		    tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday,
+		    tm.tm_hour, tm.tm_min, tm.tm_sec, tv.tv_usec) == -1) {
 	    *out = NULL;
 	    ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
 	}
@@ -294,7 +294,7 @@ finalize_it:
  * rgerhards, 2008-05-16
  */
 static rsRetVal
-SetAuthMode(nsd_t *pNsd, uchar __attribute__((unused)) *mode)
+SetAuthMode(nsd_t *pNsd, uchar *mode)
 {
 	DEFiRet;
 	nsd_mbedtls_t *pThis = (nsd_mbedtls_t*) pNsd;
@@ -716,10 +716,14 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 	if(pThis->pPermPeer)
 		CHKmalloc(pNew->pPermPeer = (const uchar*)strdup((const char*)(pThis->pPermPeer)));
 	pNew->DrvrVerifyDepth = pThis->DrvrVerifyDepth;
-	pNew->pszCertFile = pThis->pszCertFile;
-	pNew->pszKeyFile = pThis->pszKeyFile;
-	pNew->pszCAFile = pThis->pszCAFile;
-	pNew->pszCRLFile = pThis->pszCRLFile;
+	if(pThis->pszCertFile)
+	    CHKmalloc(pNew->pszCertFile = (const uchar*)strdup((const char*)(pThis->pszCertFile)));
+	if(pThis->pszKeyFile)
+	    CHKmalloc(pNew->pszKeyFile = (const uchar*)strdup((const char*)(pThis->pszKeyFile)));
+	if(pThis->pszCAFile)
+	    CHKmalloc(pNew->pszCAFile = (const uchar*)strdup((const char*)(pThis->pszCAFile)));
+	if(pThis->pszCRLFile)
+	    CHKmalloc(pNew->pszCRLFile = (const uchar*)strdup((const char*)(pThis->pszCRLFile)));
 	pNew->iMode = pThis->iMode;
 
 	/* if we reach this point, we are in TLS mode */
@@ -1036,7 +1040,7 @@ CODESTARTobjQueryInterface(nsd_mbedtls)
 	pIf->SetMode = SetMode;
 	pIf->SetAuthMode = SetAuthMode;
 	pIf->SetPermitExpiredCerts = SetPermitExpiredCerts;
-	pIf->SetPermPeers =SetPermPeers;
+	pIf->SetPermPeers = SetPermPeers;
 	pIf->CheckConnection = CheckConnection;
 	pIf->GetRemoteHName = GetRemoteHName;
 	pIf->GetRemoteIP = GetRemoteIP;

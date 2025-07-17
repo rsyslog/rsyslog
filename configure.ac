@@ -1218,7 +1218,6 @@ AC_ARG_ENABLE(mbedtls,
 if test "x$enable_mbedtls" = "xyes"; then
 	PKG_CHECK_MODULES(MBEDTLS, mbedtls)
 	AC_DEFINE([ENABLE_MBEDTLS], [1], [Indicator that mbedtls is present])
-	save_libs=$LIBS
 fi
 AM_CONDITIONAL(ENABLE_MBEDTLS, test x$enable_mbedtls = xyes)
 
