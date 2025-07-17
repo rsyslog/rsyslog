@@ -71,8 +71,8 @@ run:
 
       echo "--- Configuring and building rsyslog ---"
 
-      # Generate the configure script
-      autoreconf -fvi
+      # Generate the configure script using the project's bootstrap script.
+      ./autogen.sh
 
       # Configure rsyslog. It will find the local libraries via the env vars.
       # Add or remove any flags you need for your specific build.
