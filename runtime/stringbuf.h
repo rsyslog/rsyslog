@@ -121,7 +121,7 @@ rsRetVal rsCStrAppendStrf(cstr_t *pThis, const char *fmt, ...) __attribute__((fo
  * Append an integer to the string. No special formatting is
  * done.
  */
-rsRetVal rsCStrAppendInt(cstr_t *pThis, long i);
+rsRetVal rsCStrAppendInt(cstr_t *pThis, const int64_t i);
 
 
 rsRetVal strExit(void);

@@ -123,8 +123,8 @@ syslogName_t syslogFacNames[] = {
  * public members                                                    *
  * ################################################################# */
 
-rsRetVal srUtilItoA(char *pBuf, int iLenBuf, number_t iToConv) {
-    int i;
+rsRetVal srUtilItoA(char *pBuf, const size_t iLenBuf, int64_t iToConv) {
+    ssize_t i;
     int bIsNegative;
     char szBuf[64]; /* sufficiently large for my lifespan and those of my children... ;) */
 

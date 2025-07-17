@@ -308,13 +308,13 @@ static rsRetVal SerializeProp(strm_t *pStrm, uchar *pszPropName, propType_t prop
             vType = VARTYPE_STR;
             break;
         case PROPTYPE_SHORT:
-            CHKiRet(srUtilItoA((char *)szBuf, sizeof(szBuf), (long)*((short *)pUsr)));
+            CHKiRet(srUtilItoA((char *)szBuf, sizeof(szBuf), (int64_t)*((short *)pUsr)));
             pszBuf = szBuf;
             lenBuf = ustrlen(szBuf);
             vType = VARTYPE_NUMBER;
             break;
         case PROPTYPE_INT:
-            CHKiRet(srUtilItoA((char *)szBuf, sizeof(szBuf), (long)*((int *)pUsr)));
+            CHKiRet(srUtilItoA((char *)szBuf, sizeof(szBuf), (int64_t)*((int *)pUsr)));
             pszBuf = szBuf;
             lenBuf = ustrlen(szBuf);
             vType = VARTYPE_NUMBER;

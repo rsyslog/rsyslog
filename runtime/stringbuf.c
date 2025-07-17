@@ -327,7 +327,7 @@ finalize_it:
 }
 
 
-rsRetVal rsCStrAppendInt(cstr_t *pThis, long i) {
+rsRetVal rsCStrAppendInt(cstr_t *pThis, const int64_t i) {
     DEFiRet;
     uchar szBuf[32];
 
