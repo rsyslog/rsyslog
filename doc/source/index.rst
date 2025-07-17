@@ -67,7 +67,7 @@ Contributing to the docs
 ------------------------
 
 This documentation is hosted on `github
-<https://github.com/rsyslog/rsyslog-doc>`_. If you find something to be
+<https://github.com/rsyslog/rsyslog/tree/main/doc>`_. If you find something to be
 improved, please feel free to fork and file a patch request with your
 improvements. There is also a Button 'Edit in GitHub' on every documentation
 page beginning with the main `docs page

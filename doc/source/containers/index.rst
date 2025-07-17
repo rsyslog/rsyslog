@@ -9,7 +9,7 @@ All versions of rsyslog work well in containers. Versions beginning with
 extra features that are useful inside containers.
 
 Note: the sources for docker containers created by the rsyslog project
-can be found at https://github.com/rsyslog/rsyslog-docker - these may
+can be found at https://github.com/rsyslog/rsyslog/tree/main/packaging/docker - these may
 be useful as a starting point for similar efforts. Feedback, bug
 reports and pull requests are also appreciated for this project.
 

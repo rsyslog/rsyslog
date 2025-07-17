@@ -33,8 +33,8 @@ needs_sphinx = '4.5.0'
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['edit_on_github', 'sphinx.ext.todo']
-edit_on_github_project = 'rsyslog/rsyslog-doc'
-edit_on_github_branch = 'master'
+edit_on_github_project = 'https://github.com/rsyslog/rsyslog'
+edit_on_github_branch = 'main'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
