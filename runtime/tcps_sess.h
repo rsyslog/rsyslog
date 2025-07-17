@@ -47,7 +47,9 @@ struct tcps_sess_s {
         void *pUsr; /* a user-pointer */
         rsRetVal (*DoSubmitMessage)(tcps_sess_t *, uchar *, int); /* submit message callback */
         int iMaxLine; /* fast lookup buffer for config property */
+        int being_closed; /**< flag: session is currently being closed */
         pthread_mutex_t mut;
+        DEF_ATOMIC_HELPER_MUT(mut_being_closed);
 };
 
 
