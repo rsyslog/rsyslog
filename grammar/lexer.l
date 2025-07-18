@@ -107,8 +107,9 @@ expand_backticks_echo(const char *param)
 	assert(param != NULL);
 	assert(strncmp(param, "echo ", sizeof("echo ")-1) == 0);
 	char envvar[512];
-	int i_envvar = 0;
-	int in_env = 0;
+       int i_envvar = 0;
+       int in_env = 0;
+       int env_braced = 0;
 	es_str_t *estr;
 
 	param += sizeof("echo ")-1;
@@ -117,36 +118,61 @@ expand_backticks_echo(const char *param)
 	}
 
 	while(*param) {
-		if(in_env) {
-			if(isspace(*param) || *param == '/') {
-				envvar[i_envvar] = '\0';
-				const char *envval = getenv(envvar);
-				if(envval != NULL)
-					es_addBuf(&estr, envval, strlen(envval));
-				es_addChar(&estr, *param); /* curr char part of output! */
-				i_envvar = 0;
-				in_env = 0;
-			} else if(i_envvar > sizeof(envvar) - 1) {
-				parser_errmsg("environment variable too long, begins with %s", envvar);
-				goto done;
-			} else {
-				envvar[i_envvar++] = *param;
-			}
-		} else if (*param == '$') {
-			in_env = 1;
-		} else {
-			es_addChar(&estr, *param);
-		}
+               if(in_env) {
+                       if(env_braced) {
+                               if(*param == '}') {
+                                       envvar[i_envvar] = '\0';
+                                       const char *envval = getenv(envvar);
+                                       if(envval != NULL)
+                                               es_addBuf(&estr, envval, strlen(envval));
+                                       i_envvar = 0;
+                                       in_env = 0;
+                                       env_braced = 0;
+                                       ++param;
+                                       continue; /* skip closing brace */
+                               } else if(i_envvar > sizeof(envvar) - 1) {
+                                       parser_errmsg("environment variable too long, begins with %s", envvar);
+                                       goto done;
+                               } else {
+                                       envvar[i_envvar++] = *param;
+                               }
+                       } else if(!isalnum((unsigned char)*param) && *param != '_') {
+                               envvar[i_envvar] = '\0';
+                               const char *envval = getenv(envvar);
+                               if(envval != NULL)
+                                       es_addBuf(&estr, envval, strlen(envval));
+                               es_addChar(&estr, *param); /* curr char part of output! */
+                               i_envvar = 0;
+                               in_env = 0;
+                       } else if(i_envvar > sizeof(envvar) - 1) {
+                               parser_errmsg("environment variable too long, begins with %s", envvar);
+                               goto done;
+                       } else {
+                               envvar[i_envvar++] = *param;
+                       }
+               } else if (*param == '$') {
+                       if(*(param + 1) == '{') {
+                               env_braced = 1;
+                               in_env = 1;
+                               param += 2;
+                               continue; /* skip '${' */
+                       } else {
+                               env_braced = 0;
+                               in_env = 1;
+                       }
+               } else {
+                       es_addChar(&estr, *param);
+               }
 		++param;
 	}
 
-	/* final check, we may be in env var name (very probable!) */
-	if(in_env) {
-		envvar[i_envvar] = '\0';
-		const char *envval = getenv(envvar);
-		if(envval != NULL)
-			es_addBuf(&estr, envval, strlen(envval));
-	}
+       /* final check, we may be in env var name (very probable!) */
+       if(in_env) {
+               envvar[i_envvar] = '\0';
+               const char *envval = getenv(envvar);
+               if(envval != NULL)
+                       es_addBuf(&estr, envval, strlen(envval));
+       }
 
 done:	return estr;
 }
