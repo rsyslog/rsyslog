@@ -31,7 +31,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Rsyslog.  If not, see <http://www.gnu.org/licenses/>.
  *
- * A copy of the GPL can be found in the file "COPYING" in this
+ * A copy of the GPL can be found in the file "COPYING" in this distribution.
  *
  * @section action_flow Action Execution Flow
  * The submission path depends on rate limiting and mark handling:
@@ -42,10 +42,16 @@
  *   doSubmitToActionQNotAllMark() -> doSubmitToActionQ() -> queue processing.
  * - Otherwise,
  *   doSubmitToActionQ() -> qqueueEnqObj() -> queue processing.
+ * When mark messages are not written immediately, doSubmitToActionQNotAllMark()
+ * filters out those that are not yet due.
+
  * After dequeue, processBatchMain() invokes processMsgMain() for each message.
  * Direct queues enter at processMsgMain().
  * All filtering happens before enqueue so direct and queued modes behave identically.
- * distribution.
+ * Historically some filters ran after the queue, leading to inconsistent
+ * results. Since version 5.8.2 all checks occur before enqueue so
+ * queued and direct modes process the same set of messages.
+
  */
 #include "config.h"
 #include <stdio.h>
@@ -1476,6 +1482,9 @@ static rsRetVal actionTryRemoveHardErrorsFromBatch(action_t *__restrict__ const 
  * @param[in] pThis action being committed
  * @param[in] pWti  worker thread instance
  *
+ * The return value is propagated via qqueueAdd() when the action queue
+ * operates in direct mode so that callers can react immediately.
+
  * @return Status code from the final commit attempt.
  * The result is propagated back through direct-mode queues so
  * higher levels can act on suspend or failure states.

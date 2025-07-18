@@ -117,6 +117,7 @@ If possible, agents should:
 
   - Build the project using `./configure` and `make`
   - Run an individual test using the instructions below
+  - After building, run `./tests/imtcp-basic.sh` as a smoke test unless another test is more appropriate
 
 > In restricted environments, a build may not be possible. In such cases, ensure the
 > generated code is clear and well-commented to aid review.
