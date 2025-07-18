@@ -31,6 +31,9 @@
 #include <assert.h>
 #include <errno.h>
 #include <ctype.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/stat.h>
 #include "syslogd.h"
 #include "conf.h"
 #include "syslogd-types.h"
@@ -42,6 +45,7 @@
 #include "parser.h"
 #include "datetime.h"
 #include "unicode-helper.h"
+#include "ruleset.h"
 #include "rsconf.h"
 MODULE_TYPE_PARSER
 MODULE_TYPE_NOKEEP;
@@ -51,7 +55,7 @@ MODULE_CNFNAME("pmrfc3164")
 /* internal structures
  */
 DEF_PMOD_STATIC_DATA;
-DEFobjCurrIf(glbl) DEFobjCurrIf(parser) DEFobjCurrIf(datetime)
+DEFobjCurrIf(glbl) DEFobjCurrIf(parser) DEFobjCurrIf(datetime) DEFobjCurrIf(ruleset)
 
 
     /* static data */
@@ -60,9 +64,18 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(parser) DEFobjCurrIf(datetime)
 
 /* parser instance parameters */
 static struct cnfparamdescr parserpdescr[] = {
-    {"detect.yearaftertimestamp", eCmdHdlrBinary, 0}, {"permit.squarebracketsinhostname", eCmdHdlrBinary, 0},
-    {"permit.slashesinhostname", eCmdHdlrBinary, 0},  {"permit.atsignsinhostname", eCmdHdlrBinary, 0},
-    {"force.tagendingbycolon", eCmdHdlrBinary, 0},    {"remove.msgfirstspace", eCmdHdlrBinary, 0},
+    {"detect.yearaftertimestamp", eCmdHdlrBinary, 0},
+    {"permit.squarebracketsinhostname", eCmdHdlrBinary, 0},
+    {"permit.slashesinhostname", eCmdHdlrBinary, 0},
+    {"permit.atsignsinhostname", eCmdHdlrBinary, 0},
+    {"force.tagendingbycolon", eCmdHdlrBinary, 0},
+    {"remove.msgfirstspace", eCmdHdlrBinary, 0},
+    {"detect.headerless", eCmdHdlrGetWord, 0},
+    {"headerless.hostname", eCmdHdlrString, 0},
+    {"headerless.tag", eCmdHdlrString, 0},
+    {"headerless.ruleset", eCmdHdlrString, 0},
+    {"headerless.errorfile", eCmdHdlrString, 0},
+    {"headerless.drop", eCmdHdlrBinary, 0},
 };
 static struct cnfparamblk parserpblk = {CNFPARAMBLK_VERSION, sizeof(parserpdescr) / sizeof(struct cnfparamdescr),
                                         parserpdescr};
@@ -74,6 +87,15 @@ struct instanceConf_s {
     int bPermitAtSignsInHostname;
     int bForceTagEndingByColon;
     int bRemoveMsgFirstSpace;
+    int hdrlessMode; /* 0=off,1=fast,2=strict */
+    uchar *pszHeaderlessHostname;
+    uchar *pszHeaderlessTag;
+    uchar *pszHeaderlessRulesetName;
+    ruleset_t *pHeaderlessRuleset;
+    uchar *pszHeaderlessErrFile;
+    int fdHeaderlessErr;
+    pthread_mutex_t mutErrFile;
+    int bDropHeaderless;
 };
 
 
@@ -97,6 +119,15 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->bPermitAtSignsInHostname = 0;
     inst->bForceTagEndingByColon = 0;
     inst->bRemoveMsgFirstSpace = 0;
+    inst->hdrlessMode = 0;
+    inst->pszHeaderlessHostname = NULL;
+    inst->pszHeaderlessTag = NULL;
+    inst->pszHeaderlessRulesetName = NULL;
+    inst->pHeaderlessRuleset = NULL;
+    inst->pszHeaderlessErrFile = NULL;
+    inst->fdHeaderlessErr = -1;
+    pthread_mutex_init(&inst->mutErrFile, NULL);
+    inst->bDropHeaderless = 0;
     bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG(loadConf);
     *pinst = inst;
 finalize_it:
@@ -137,6 +168,35 @@ BEGINnewParserInst
             inst->bForceTagEndingByColon = (int)pvals[i].val.d.n;
         } else if (!strcmp(parserpblk.descr[i].name, "remove.msgfirstspace")) {
             inst->bRemoveMsgFirstSpace = (int)pvals[i].val.d.n;
+        } else if (!strcmp(parserpblk.descr[i].name, "detect.headerless")) {
+            char *cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+            if (!strcasecmp(cstr, "fast"))
+                inst->hdrlessMode = 1;
+            else if (!strcasecmp(cstr, "strict"))
+                inst->hdrlessMode = 2;
+            else if (!strcasecmp(cstr, "on"))
+                inst->hdrlessMode = 1;
+            else
+                inst->hdrlessMode = 0; /* off and unknown fallback */
+            free(cstr);
+        } else if (!strcmp(parserpblk.descr[i].name, "headerless.hostname")) {
+            char *cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszHeaderlessHostname = (uchar *)strdup(cstr));
+            free(cstr);
+        } else if (!strcmp(parserpblk.descr[i].name, "headerless.tag")) {
+            char *cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszHeaderlessTag = (uchar *)strdup(cstr));
+            free(cstr);
+        } else if (!strcmp(parserpblk.descr[i].name, "headerless.ruleset")) {
+            char *cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszHeaderlessRulesetName = (uchar *)strdup(cstr));
+            free(cstr);
+        } else if (!strcmp(parserpblk.descr[i].name, "headerless.errorfile")) {
+            char *cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(inst->pszHeaderlessErrFile = (uchar *)strdup(cstr));
+            free(cstr);
+        } else if (!strcmp(parserpblk.descr[i].name, "headerless.drop")) {
+            inst->bDropHeaderless = (int)pvals[i].val.d.n;
         } else {
             dbgprintf(
                 "pmrfc3164: program error, non-handled "
@@ -152,8 +212,70 @@ ENDnewParserInst
 
 BEGINfreeParserInst
     CODESTARTfreeParserInst;
+    free(pInst->pszHeaderlessHostname);
+    free(pInst->pszHeaderlessTag);
+    free(pInst->pszHeaderlessRulesetName);
+    free(pInst->pszHeaderlessErrFile);
+    if (pInst->fdHeaderlessErr != -1) close(pInst->fdHeaderlessErr);
+    pthread_mutex_destroy(&pInst->mutErrFile);
     dbgprintf("pmrfc3164: free parser instance %p\n", pInst);
 ENDfreeParserInst
+
+/** Handle a headerless message by setting defaults and marking the object */
+static rsRetVal handleHeaderlessMessage(smsg_t *pMsg, instanceConf_t *pInst, uchar *p2parse, int lenMsg ATTR_UNUSED) {
+    DEFiRet;
+    uchar *hostname = pInst->pszHeaderlessHostname ? pInst->pszHeaderlessHostname : (uchar *)"unknown";
+    MsgSetHOSTNAME(pMsg, hostname, strlen((char *)hostname));
+
+    uchar *tag = pInst->pszHeaderlessTag ? pInst->pszHeaderlessTag : (uchar *)"headerless";
+    MsgSetTAG(pMsg, tag, strlen((char *)tag));
+
+    MsgSetMSGoffs(pMsg, p2parse - pMsg->pszRawMsg);
+    pMsg->msgFlags |= HEADERLESS_MSG;
+    if (pInst->pHeaderlessRuleset == NULL && pInst->pszHeaderlessRulesetName != NULL) {
+        rsRetVal r = ruleset.GetRuleset(runConf, &pInst->pHeaderlessRuleset, pInst->pszHeaderlessRulesetName);
+        if (r != RS_RET_OK) pInst->pHeaderlessRuleset = NULL;
+    }
+    if (pInst->pHeaderlessRuleset != NULL) MsgSetRuleset(pMsg, pInst->pHeaderlessRuleset);
+    if (pInst->pszHeaderlessErrFile != NULL) {
+        pthread_mutex_lock(&pInst->mutErrFile);
+        if (pInst->fdHeaderlessErr == -1) {
+            pInst->fdHeaderlessErr =
+                open((char *)pInst->pszHeaderlessErrFile, O_WRONLY | O_CREAT | O_APPEND | O_LARGEFILE | O_CLOEXEC,
+                     S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+            if (pInst->fdHeaderlessErr == -1) {
+                LogError(errno, RS_RET_ERR, "pmrfc3164: cannot open error file %s", pInst->pszHeaderlessErrFile);
+            }
+        }
+        if (pInst->fdHeaderlessErr != -1) {
+            ssize_t wr = write(pInst->fdHeaderlessErr, pMsg->pszRawMsg, pMsg->iLenRawMsg);
+            (void)wr;
+            wr = write(pInst->fdHeaderlessErr, "\n", 1);
+            (void)wr;
+        }
+        pthread_mutex_unlock(&pInst->mutErrFile);
+    }
+
+    DBGPRINTF("pmrfc3164: headerless message handled with hostname='%s', tag='%s'\n", hostname, tag);
+    if (pInst->bDropHeaderless) iRet = RS_RET_DISCARDMSG;
+    RETiRet;
+}
+
+static int hasPossibleTimestamp(uchar *p, int len) {
+    if (len < 3) return 0;
+    if (isalpha((unsigned char)p[0]) && isalpha((unsigned char)p[1]) && isalpha((unsigned char)p[2])) return 1;
+    if (len >= 4 && isdigit((unsigned char)p[0]) && isdigit((unsigned char)p[1]) && isdigit((unsigned char)p[2]) &&
+        isdigit((unsigned char)p[3]))
+        return 1;
+    return 0;
+}
+
+static int isObviouslyHeaderless(uchar *p, int len, int offAfterPRI, int mode) {
+    if (mode == 0) return 0;
+    if (offAfterPRI != 0) return 0;
+    if (mode == 2 && hasPossibleTimestamp(p, len)) return 0;
+    return 1;
+}
 
 
 /* parse a legay-formatted syslog message.
@@ -178,6 +300,12 @@ BEGINparse2
         FINALIZE;
     }
 
+    if (isObviouslyHeaderless(p2parse, lenMsg, pMsg->offAfterPRI, pInst->hdrlessMode)) {
+        DBGPRINTF("msg detected as obviously headerless in early check, treating it as such\n");
+        iRet = handleHeaderlessMessage(pMsg, pInst, p2parse, lenMsg);
+        FINALIZE;
+    }
+
     /* now check if we have a completely headerless message. This is indicated
      * by spaces or tabs followed '{' or '['.
      */
@@ -187,6 +315,7 @@ BEGINparse2
     }
     if (i < lenMsg && (p2parse[i] == '{' || p2parse[i] == '[')) {
         DBGPRINTF("msg seems to be headerless, treating it as such\n");
+        iRet = handleHeaderlessMessage(pMsg, pInst, p2parse, lenMsg);
         FINALIZE;
     }
 
@@ -368,6 +497,7 @@ BEGINmodExit
     objRelease(glbl, CORE_COMPONENT);
     objRelease(parser, CORE_COMPONENT);
     objRelease(datetime, CORE_COMPONENT);
+    objRelease(ruleset, CORE_COMPONENT);
 ENDmodExit
 
 
@@ -385,6 +515,7 @@ BEGINmodInit(pmrfc3164)
     CODEmodInit_QueryRegCFSLineHdlr CHKiRet(objUse(glbl, CORE_COMPONENT));
     CHKiRet(objUse(parser, CORE_COMPONENT));
     CHKiRet(objUse(datetime, CORE_COMPONENT));
+    CHKiRet(objUse(ruleset, CORE_COMPONENT));
 
     DBGPRINTF("rfc3164 parser init called\n");
     bParseHOSTNAMEandTAG = glbl.GetParseHOSTNAMEandTAG(loadConf);
