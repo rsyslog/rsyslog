@@ -755,6 +755,8 @@ AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew)
 		dbgprintf("mbedtls_ssl_set_hostname: '%s'\n", pNew->pPermPeer);
 		CHKiRet(mbedtls_ssl_set_hostname(&(pNew->ssl),(const char*)(pNew->pPermPeer)));
 	}
+	else
+	    CHKiRet(mbedtls_ssl_set_hostname(&(pNew->ssl), NULL));
 
 	CHKiRet(nsd_ptcp.GetSock(pNew->pTcp, &(pNew->sock)));
 	mbedtls_ssl_set_bio(&(pNew->ssl), pNew, mbedtlsNetSend, mbedtlsNetRecv, NULL);
@@ -923,6 +925,8 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 		CHKiRet(mbedtls_ssl_set_hostname(&(pThis->ssl),
 						 (const char*)(pThis->pPermPeer ? pThis->pPermPeer : host)));
 	}
+	else
+	    CHKiRet(mbedtls_ssl_set_hostname(&(pThis->ssl), NULL));
 
 	CHKiRet(nsd_ptcp.GetSock(pThis->pTcp, &(pThis->sock)));
 	mbedtls_ssl_set_bio(&(pThis->ssl), pThis, mbedtlsNetSend, mbedtlsNetRecv, NULL);
