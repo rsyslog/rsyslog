@@ -7,6 +7,7 @@ if [ "$(valgrind --version)" == "valgrind-3.11.0" ]; then
 fi
 . ${srcdir:=.}/diag.sh init
 export USE_VALGRIND="YES"
+export RSYSLOG_PRELOAD=$(find /usr -name libmbed\*.so | sed ':start;N;s/\n\//:\//;t start;P;D')
 export NUMMESSAGES=1
 generate_conf
 add_conf '
