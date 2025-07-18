@@ -130,8 +130,90 @@ but they also attach the year to the timestamp (which is not compliant to
 the RFC). With regular parsing, the year would be recognized to be the
 hostname and the hostname would become the syslogtag. This setting should
 prevent this. It is also limited to years between 2000 and 2099, so
-hostnames with numbers as their name can still be recognized correctly. But
-everything in this range will be detected as a year.
+    hostnames with numbers as their name can still be recognized correctly. But
+    everything in this range will be detected as a year.
+
+
+detect.headerless
+^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "off", "no"
+
+This parameter enables optional early detection of messages that clearly lack a
+syslog header. Supported values are ``off`` (disable), ``fast`` (detect if no
+``<pri>`` prefix is present) and ``strict`` (only treat as headerless when no
+``<pri>`` is found and the message does not look like it begins with a
+timestamp).
+
+headerless.hostname
+^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "\"unknown\"", "no"
+
+Specifies the hostname to assign to detected headerless messages.
+
+
+headerless.tag
+^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "\"headerless\"", "no"
+
+Specifies the tag to assign to detected headerless messages.
+
+
+headerless.ruleset
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no"
+
+If set, detected headerless messages are routed to the given ruleset for
+further processing (e.g. writing to a dedicated error log or discarding).
+
+headerless.errorfile
+^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "none", "no"
+
+If specified, raw headerless input will be appended to this file before any
+further processing. The file is created if it does not yet exist.
+
+headerless.drop
+^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no"
+
+When set to ``on``, headerless messages are discarded after optional logging to
+``headerless.errorfile`` and are not processed by subsequent rules.
 
 
 Examples
@@ -156,6 +238,5 @@ sections and parse them accordingly.
    	 detect.YearAfterTimestamp="on")
 
    ruleset(name="customparser" parser="custom.rfc3164") {
-   	 ... do processing here ...
-   }
-
+    ... do processing here...
+}

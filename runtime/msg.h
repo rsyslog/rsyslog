@@ -159,6 +159,8 @@ struct msg {
     /* rawmsg does not include a PRI (Solaris!), but PRI is already set correctly in the msg object */
     #define PRESERVE_CASE 0x200
     /* preserve case in fromhost */
+    #define HEADERLESS_MSG 0x400
+    /* message was detected as obviously headerless */
 
     /* (syslog) protocol types */
     #define MSG_LEGACY_PROTOCOL 0
