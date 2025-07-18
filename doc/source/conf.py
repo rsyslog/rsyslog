@@ -32,9 +32,35 @@ needs_sphinx = '4.5.0'
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['edit_on_github', 'sphinx.ext.todo']
+extensions = [
+    'edit_on_github', 
+    'sphinx.ext.todo',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.intersphinx',  # For linking to external docs
+    'sphinx.ext.githubpages',
+    # 'sphinx_mermaid',          # For Mermaid diagrams (commented out - needs to be installed)
+    # 'sphinx_sitemap',          # For generating sitemap.xml (commented out - needs to be installed)
+    # 'breathe',               # Add this once Doxygen is set up
+]
 edit_on_github_project = 'https://github.com/rsyslog/rsyslog'
 edit_on_github_branch = 'main'
+
+# Add this configuration for intersphinx
+intersphinx_mapping = {
+    # 'agent': ('URL_TO_WINDOWS_AGENT_DOCS', None),  # Placeholder for future use
+}
+
+# Add this for sitemap generation (when sphinx_sitemap is enabled)
+# html_baseurl = 'https://www.rsyslog.com/doc/'
+
+# Add this for the "Edit on GitHub" link
+html_context = {
+    "display_github": True,
+    "github_user": "rsyslog",
+    "github_repo": "rsyslog",
+    "github_version": "master",
+    "conf_py_path": "/doc/source/",
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

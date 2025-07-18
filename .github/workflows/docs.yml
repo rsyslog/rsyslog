@@ -1,0 +1,46 @@
+name: 'Documentation CI'
+
+on:
+  pull_request:
+    paths:
+      - 'doc/**'
+      - '.github/workflows/docs.yml'
+
+jobs:
+  build_and_test_docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install -r doc/requirements.txt
+          # Install rsyslog for validation (if available in runners)
+          sudo apt-get update && sudo apt-get install -y rsyslog || true
+
+      - name: Validate Examples
+        run: |
+          # Command to run the example validation script
+          python doc/ci/validate_examples.py || true
+          # Note: Set to || true for now as rsyslogd might not be available in CI
+
+      - name: Build Sphinx Docs
+        run: |
+          make -C doc html
+
+      # Future steps to add:
+      # - name: Generate Authoritative Spec
+      #   run: |
+      #     # Command to run doxygen and the spec generator script
+      #     make doc-spec
+      #
+      # - name: Run Drift Detector Linter
+      #   run: |
+      #     # Command to run the drift detector
+      #     python doc/ci/drift_detector.py
