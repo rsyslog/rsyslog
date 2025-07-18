@@ -59,13 +59,22 @@ by the shell:
     * param than is expanded to "/var/log/custompath/myfile"
 
     Note, however, that some common bash features are not supported.
-    Most importantly, `${VAR}` does not work. Also, environment variables
-    are only terminated by whitespace or `/`. Neither are things like
-    `$(pwd)` supported. The idea of this parameter is not to provide a
+    Environment variables are terminated once a character not belonging
+    to the set ``[A-Za-z0-9_]`` is encountered or by the closing brace in
+    ``${VAR}`` syntax. Constructs like ``$(pwd)`` remain unsupported. The idea
+    of this parameter is not to provide a
     full-blown bash-equivalent, but provide some functionality that is
     usually considered useful for customizing rsyslog configuration with
-    outside data. That said, we are still interested in extending the
-    coverage if clear need and reasoning is provided.
+    outside data.  For example, an expression like::
+
+        `echo Log-$HOSTNAME!`
+
+    expands to ``Log-<yourhost>!`` where ``$HOSTNAME`` is replaced and the
+    exclamation mark follows as literal text. The braces form ``${HOSTNAME}``
+    can also be used, e.g. `` `echo {${HOSTNAME}}` ``, which results in
+    ``{<yourhost>}``. That said, we are still
+    interested in extending the coverage if clear need and reasoning is
+    provided.
 
   - `cat filename` - It will evaluate to the content of the given file.
     Only a single file name is supported. If the file is not readable,
