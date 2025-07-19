@@ -422,3 +422,19 @@ epub_description = u'Documentation for the rsyslog project'
 def setup(app):
     app.add_css_file('rsyslog.css')
     app.add_lexer('rsyslog', RainerScriptLexer)
+# -- Conditional settings for minimal singlehtml build ----------------------------
+# This block is activated by the '-t minimal_build' tag passed from the Makefile
+# for the 'singlehtml' target. It strips the output for AI ingestion.
+
+if tags.has('minimal_build'):
+    # Point to a directory with empty templates to remove entire theme sections
+    # The files inside _templates_minimal are intentionally blank.
+    templates_path = ['_templates_minimal']
+
+    # Disable all sidebars
+    html_sidebars = {'**': []}
+
+    # Turn off other non-content elements
+    html_show_sourcelink = False
+    html_show_sphinx = False
+    html_show_copyright = False
