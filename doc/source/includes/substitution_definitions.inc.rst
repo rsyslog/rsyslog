@@ -17,8 +17,8 @@
 .. |RsyslogDockerHub| replace:: official rsyslog Docker Hub
 .. _RsyslogDockerHub: https://hub.docker.com/u/rsyslog/
 
-.. |GitHubDockerProject| replace:: rsyslog-docker project
-.. _GitHubDockerProject: https://github.com/rsyslog/rsyslog-docker
+.. |GitHubDockerProject| replace:: rsyslog docker definitions
+.. _GitHubDockerProject: https://github.com/rsyslog/rsyslog/packging/docker
 
 .. |DockerApplianceAlpineDockerHubRepo| replace:: Alpine rsyslog appliance Docker Hub repo
 .. _DockerApplianceAlpineDockerHubRepo: https://hub.docker.com/r/rsyslog/syslog_appliance_alpine/
@@ -30,11 +30,11 @@
 .. |RsyslogPackageDownloads| replace:: rsyslog package downloads
 .. _RsyslogPackageDownloads: http://www.rsyslog.com/downloads/download-other/
 
-.. |GitHubDocProject| replace:: rsyslog-doc project
-.. _GitHubDocProject: https://github.com/rsyslog/rsyslog-doc/
+.. |GitHubDocProject| replace:: rsyslog source documentation
+.. _GitHubDocProject: https://github.com/rsyslog/rsyslog/doc
 
 .. |GitHubDocProjectREADME| replace:: rsyslog-doc project README
-.. _GitHubDocProjectREADME: https://github.com/rsyslog/rsyslog-doc/blob/master/README.md
+.. _GitHubDocProjectREADME: https://github.com/rsyslog/rsyslog/doc/blob/master/README.md
 
 .. |GitHubDocProjectDevREADME| replace:: rsyslog-doc project BUILDS README
 .. _GitHubDocProjectDevREADME: https://github.com/rsyslog/rsyslog-doc/blob/master/BUILDS_README.md
