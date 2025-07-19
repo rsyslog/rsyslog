@@ -548,11 +548,11 @@ TESTS +=  \
 	include-obj-in-if-vg.sh \
 	include-obj-text-vg.sh \
 	rscript_parse_json-vg.sh \
-       rscript_backticks-vg.sh \
-       rscript_backticks_empty_envvar-vg.sh \
-       rscript_backticks_static_text-vg.sh \
-       rscript_backticks_braces_envvar-vg.sh \
-       rscript-config_enable-off-vg.sh \
+	rscript_backticks-vg.sh \
+	rscript_backticks_empty_envvar.sh \
+	rscript_backticks_static_text.sh \
+	rscript_backticks_braces_envvar.sh \
+	rscript-config_enable-off-vg.sh \
 	rscript_get_property-vg.sh \
 	prop-jsonmesg-vg.sh \
 	mmexternal-InvldProg-vg.sh \
@@ -2150,12 +2150,12 @@ EXTRA_DIST= \
 	rscript_is_time.sh \
 	rscript_script_error.sh \
 	rscript_parse_json.sh \
-       rscript_parse_json-vg.sh \
-       rscript_backticks-vg.sh \
-       rscript_backticks_empty_envvar-vg.sh \
-       rscript_backticks_static_text-vg.sh \
-       rscript_backticks_braces_envvar-vg.sh \
-       rscript_previous_action_suspended.sh \
+	rscript_parse_json-vg.sh \
+	rscript_backticks-vg.sh \
+	rscript_backticks_empty_envvar.sh \
+	rscript_backticks_static_text.sh \
+	rscript_backticks_braces_envvar.sh \
+	rscript_previous_action_suspended.sh \
 	rscript_str2num_negative.sh \
 	rscript_exists-yes.sh \
 	rscript_exists-yes2.sh \
