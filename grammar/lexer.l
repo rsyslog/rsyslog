@@ -9,7 +9,7 @@
   * cases. So while we hope that cfsysline support can be dropped some time in
   * the future, we will probably keep these useful constructs.
   *
-  * Copyright 2011-2014 Rainer Gerhards and Adiscon GmbH.
+  * Copyright 2011-2025 Rainer Gerhards and Adiscon GmbH.
   *
   * This file is part of the rsyslog runtime library.
   *
@@ -104,48 +104,64 @@ done:
 static es_str_t* ATTR_NONNULL(1)
 expand_backticks_echo(const char *param)
 {
-	assert(param != NULL);
 	assert(strncmp(param, "echo ", sizeof("echo ")-1) == 0);
 	char envvar[512];
 	int i_envvar = 0;
 	int in_env = 0;
+	int env_braced = 0;
 	es_str_t *estr;
 
 	param += sizeof("echo ")-1;
 	if((estr = es_newStr(strlen(param))) == NULL) {
+		estr = NULL;
 		goto done;
 	}
-
-	while(*param) {
-		if(in_env) {
-			if(isspace(*param) || *param == '/') {
+	while (*param) {
+		if (in_env) {
+			if (env_braced) {
+				if (*param == '}') {
+					envvar[i_envvar] = '\0';
+					const char *envval = getenv(envvar);
+					if (envval) es_addBuf(&estr, envval, strlen(envval));
+					i_envvar = 0;
+					in_env = env_braced = 0;
+					param++;
+					continue;
+				}
+			}
+			if (!env_braced && (!isalnum((unsigned char)*param) && *param != '_')) {
 				envvar[i_envvar] = '\0';
 				const char *envval = getenv(envvar);
-				if(envval != NULL)
-					es_addBuf(&estr, envval, strlen(envval));
-				es_addChar(&estr, *param); /* curr char part of output! */
-				i_envvar = 0;
-				in_env = 0;
-			} else if(i_envvar > sizeof(envvar) - 1) {
+				if (envval) es_addBuf(&estr, envval, strlen(envval));
+				es_addChar(&estr, *param);
+				i_envvar = in_env = 0;
+			} else if (i_envvar >= sizeof(envvar) - 1) {
+				envvar[i_envvar] = '\0';
 				parser_errmsg("environment variable too long, begins with %s", envvar);
+				es_deleteStr(estr);
+				estr = NULL;
 				goto done;
 			} else {
 				envvar[i_envvar++] = *param;
 			}
 		} else if (*param == '$') {
-			in_env = 1;
+			if (*(param + 1) == '{') {
+				env_braced = in_env = 1;
+				param += 2;
+				continue;
+			} else {
+				env_braced = 0;
+				in_env = 1;
+			}
 		} else {
 			es_addChar(&estr, *param);
 		}
-		++param;
+		param++;
 	}
-
-	/* final check, we may be in env var name (very probable!) */
-	if(in_env) {
+	if (in_env) {
 		envvar[i_envvar] = '\0';
 		const char *envval = getenv(envvar);
-		if(envval != NULL)
-			es_addBuf(&estr, envval, strlen(envval));
+		if (envval) es_addBuf(&estr, envval, strlen(envval));
 	}
 
 done:	return estr;
