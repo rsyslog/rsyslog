@@ -49,6 +49,7 @@ typedef struct actWrkrInfo {
                     immediate failure following */
     int iNbrResRtry; /* number of retries since last suspend */
     sbool bHadAutoCommit; /* did an auto-commit happen during doAction()? */
+    sbool bHadDeferCommit; /* message in current transaction deferred commit */
     struct {
         unsigned actState : 3;
     } flags;
