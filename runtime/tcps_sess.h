@@ -24,6 +24,7 @@
 
 #include "obj.h"
 #include "prop.h"
+#include "atomic.h"
 
 /* a forward-definition, we are somewhat cyclic */
 struct tcpsrv_s;
@@ -48,6 +49,8 @@ struct tcps_sess_s {
         rsRetVal (*DoSubmitMessage)(tcps_sess_t *, uchar *, int); /* submit message callback */
         int iMaxLine; /* fast lookup buffer for config property */
         pthread_mutex_t mut;
+        int being_closed;
+        pthread_mutex_t mut_being_closed;
 };
 
 
