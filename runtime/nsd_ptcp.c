@@ -977,7 +977,15 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
         gettimeofday(&end, NULL);
         seconds = end.tv_sec - start.tv_sec;
         useconds = end.tv_usec - start.tv_usec;
-        LogError(errno, RS_RET_IO_ERROR, "cannot connect to %s:%s (took %ld.%ld seconds)", host, port, seconds,
+        if (useconds < 0) {
+            useconds += 1000000;
+            seconds -= 1;
+        }
+        if (seconds < 0) {
+            seconds = 0;
+            useconds = 0;
+        }
+        LogError(errno, RS_RET_IO_ERROR, "cannot connect to %s:%s (took %ld.%02ld seconds)", host, port, seconds,
                  useconds / 10000);
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
