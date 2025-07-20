@@ -1,5 +1,8 @@
 name: documentation build
 
+# This workflow runs on all pull requests because branch protection requires it.
+# If no documentation files change, the build steps are skipped to save time.
+
 on:
   pull_request:
 
@@ -34,7 +37,3 @@ jobs:
         run: |
           cd doc
           make html SPHINXOPTS="-W --keep-going"
-
-      - name: Skip build
-        if: steps.doc_changes.outputs.any_changed == 'false'
-        run: echo "No doc changes detected. Skipping build."
