@@ -79,7 +79,7 @@ custom EVENT_TYPE field and to override journal's default *identifier* (which by
 Example 2
 ---------
 
-The :doc:`subtree` template is a better fit for structured outputs like this, allowing arbitrary expressions for the destination journal fields using :doc:`set` & :doc:`reset` directives in *rulsets*.  For instance, here the captured *tags* are translated with :doc:`Lookup Tables`
+The `subtree` template is a better fit for structured outputs like this, allowing arbitrary expressions for the destination journal fields using `set` & `reset` directives in *rulsets*.  For instance, here the captured *tags* are translated with `Lookup Tables`
 (to facilitae filtering with ``journalctl -t <TAG>``):
 
 .. code-block:: shell

@@ -23,8 +23,6 @@ import conf_helpers
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('_ext'))
 
-from rsyslog_lexer import RainerScriptLexer
-
 # -- General configuration -----------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -32,7 +30,7 @@ needs_sphinx = '4.5.0'
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['edit_on_github', 'sphinx.ext.todo']
+extensions = ['edit_on_github', 'sphinx.ext.todo','rsyslog_lexer']
 edit_on_github_project = 'https://github.com/rsyslog/rsyslog'
 edit_on_github_branch = 'main'
 
@@ -421,7 +419,7 @@ epub_description = u'Documentation for the rsyslog project'
 # Include our custom stylesheet in addition to specified theme
 def setup(app):
     app.add_css_file('rsyslog.css')
-    app.add_lexer('rsyslog', RainerScriptLexer)
+
 # -- Conditional settings for minimal singlehtml build ----------------------------
 # This block is activated by the '-t minimal_build' tag passed from the Makefile
 # for the 'singlehtml' target. It strips the output for AI ingestion.

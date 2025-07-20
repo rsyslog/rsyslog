@@ -1,3 +1,5 @@
+# source/_ext/rsyslog_lexer.py
+
 import re
 
 from pygments.lexer import RegexLexer, bygroups
@@ -87,7 +89,7 @@ class RainerScriptLexer(RegexLexer):
             (r'[{}(),;\[\].&]', Punctuation),
             
             # Identifiers
-            (r'[a-zA-Z_][a-zA-Z0-9_]*', Name),
+            (r'[a-zA-Z_][a-zA-Z0-9_-]*', Name), # <<<--- THIS IS THE CHANGE: Added '-' to allowed identifier characters
             
             # Legacy Directives
             (r'^\$\w+', Keyword.Pseudo),
@@ -119,4 +121,17 @@ class RainerScriptLexer(RegexLexer):
             (r'\S+', Name.Constant),
             (r'.*?\n', Text, '#pop'),
         ],
+    }
+
+# --- Sphinx Extension setup function ---
+def setup(app):
+    from sphinx.highlighting import PygmentsBridge
+    
+    app.add_lexer('rainerscript', RainerScriptLexer)
+    app.add_lexer('rsyslog', RainerScriptLexer) 
+
+    return {
+        'version': '0.1',
+        'parallel_read_safe': True,
+        'parallel_write_safe': True,
     }

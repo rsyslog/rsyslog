@@ -558,7 +558,8 @@ discards everything (ok, you can achieve the same by not running rsyslogd
 at all...).
 
 Note that in legacy configuration the tilde character "~" can also be
-used instead of the word "stop".
+used instead of the word "stop". This is nowadays a very bad practice and
+should be avoided.
 
 Output Channel
 ~~~~~~~~~~~~~~

@@ -1,5 +1,5 @@
-Legacy Action-Specific Configuration Statements
-===============================================
+Depricated Legacy Action-Specific Configuration Statements
+==========================================================
 
 Statements modify the next action(s) that is/are defined **via legacy syntax**
 after the respective statement.
@@ -12,6 +12,7 @@ Generic action configuration Statements
 These statements can be used with all types of actions.
 
 .. toctree::
+   :maxdepth: 1
    :glob:
 
    *action*
