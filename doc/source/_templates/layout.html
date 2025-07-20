@@ -1,0 +1,6 @@
+{% extends "!layout.html" %}
+{% block extrahead %}
+  {{ super() }}
+  <link rel="canonical" href="https://docs.rsyslog.com{{ pathto('', 1) }}" />
+  {{ schemaorg_script() }}
+{% endblock %}

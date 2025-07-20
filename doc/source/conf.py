@@ -30,7 +30,8 @@ needs_sphinx = '4.5.0'
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['edit_on_github', 'sphinx.ext.todo','rsyslog_lexer']
+extensions = ['edit_on_github', 'sphinx.ext.todo', 'rsyslog_lexer']
+extensions += ['sphinxcontrib.schemaorg']
 edit_on_github_project = 'https://github.com/rsyslog/rsyslog'
 edit_on_github_branch = 'main'
 
@@ -270,7 +271,17 @@ html_static_path = ['_static']
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
-#html_last_updated_fmt = '%b %d, %Y'
+html_last_updated_fmt = '%Y-%m-%d'
+
+# Schema.org metadata configuration for sphinxcontrib-schemaorg
+schemaorg_context = {
+    "@type": "TechArticle",
+    "headline": "{{ title }}",
+    "description": "{{ meta.description }}",
+    "url": "https://docs.rsyslog.com{{ pathto('', 1) }}",
+    "author": {"@type": "Organization", "name": "rsyslog.com"},
+    "dateModified": "{{ last_updated }}",
+}
 
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.
