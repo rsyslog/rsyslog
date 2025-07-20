@@ -1,19 +1,34 @@
-$DirOwner
----------
+How to Convert Deprecated `$DirOwner` to Modern Style
+======================================================
 
-**Type:** global configuration parameter
+.. warning::
+   The ``$DirOwner`` syntax is **deprecated**. We strongly recommend
+   using the modern omfile module syntax for all new configurations.
 
-**Default:**
+Modern Equivalent: `dirOwner`
+-----------------------------
 
-**Description:**
+The modern equivalent for the global `$DirOwner` directive is the **dirOwner** parameter, which is set within an `action()` object using the `omfile` module. It serves the same purpose of setting the user for newly created directories.
 
-Set the file owner for directories newly created. Please note that this
-setting does not affect the owner of directories already existing. The
-parameter is a user name, for which the userid is obtained by rsyslogd
-during startup processing. Interim changes to the user mapping are not
-detected.
+For full details, please see the :doc:`omfile module reference page </configuration/modules/omfile>`.
 
-**Sample:**
+Quick Conversion Example
+------------------------
 
-``$DirOwner loguser``
+This example shows how a legacy configuration is converted to the modern style.
 
+**Before (Legacy Syntax):**
+
+.. code-block:: rst
+
+   $DirOwner loguser
+   *.* /var/log/some-app/logfile.log
+
+**After (Modern `action()` Syntax):**
+
+.. code-block:: rsyslog
+
+   action(type="omfile"
+          file="/var/log/some-app/logfile.log"
+          dirOwner="loguser"
+         )

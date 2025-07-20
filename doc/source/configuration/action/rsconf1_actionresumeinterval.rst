@@ -1,26 +1,35 @@
-$ActionResumeInterval
----------------------
+How to Convert Deprecated `$ActionResumeInterval` to Modern Style
+===================================================================
 
-**Type:** action configuration parameter
+.. warning::
+   The ``$ActionResumeInterval`` syntax is **deprecated**. We
+   strongly recommend using the modern action() syntax for all new configurations.
 
-**Default:** 30
+Modern Equivalent: `action.resumeInterval`
+-------------------------------------------
 
-**Description:**
+The modern equivalent for `$ActionResumeInterval` is the **action.resumeInterval** parameter. It serves the same purpose of controlling the retry interval for a failed action.
 
-Sets the ActionResumeInterval for all following actions. The interval
-provided is always in seconds. Thus, multiply by 60 if you need minutes
-and 3,600 if you need hours (not recommended).
+For full details and a complete list of modern action parameters, please see the :doc:`primary Actions reference page </configuration/actions>`.
 
-When an action is suspended (e.g. destination can not be connected), the
-action is resumed for the configured interval. Thereafter, it is
-retried. If multiple retries fail, the interval is automatically
-extended. This is to prevent excessive resource use for retries. After
-each 10 retries, the interval is extended by itself. To be precise, the
-actual interval is (numRetries / 10 + 1) \* $ActionResumeInterval. so
-after the 10th try, it by default is 60 and after the 100th try it is
-330.
+Quick Conversion Example
+------------------------
 
-**Sample:**
+This example shows how a legacy configuration is converted to the modern style.
 
-$ActionResumeInterval 30
+**Before (Legacy Syntax):**
 
+.. code-block:: rst
+
+   $ActionResumeInterval 30
+   *.* @@192.168.0.1:514
+
+**After (Modern `action()` Syntax):**
+
+.. code-block:: rsyslog
+
+   action(type="omfwd"
+          target="192.168.0.1"
+          protocol="tcp"
+          action.resumeInterval="30"
+         )
