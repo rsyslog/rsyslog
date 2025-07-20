@@ -1,0 +1,16 @@
+{
+  "schema_version": "v1",
+  "name_for_human": "rsyslog Docs",
+  "name_for_model": "rsyslog_docs",
+  "description_for_human": "Official rsyslog configuration and API reference",
+  "description_for_model": "Plugin to look up rsyslog docs and config examples by topic",
+  "auth": { "type": "none" },
+  "api": {
+    "type": "openapi",
+    "url": "https://docs.rsyslog.com/.well-known/openapi.json",
+    "is_user_authenticated": false
+  },
+  "logo_url": "https://docs.rsyslog.com/logo.png",
+  "contact_email": "support@rsyslog.com",
+  "legal_info_url": "https://rsyslog.com/legal"
+}
