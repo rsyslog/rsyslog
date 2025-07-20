@@ -31,6 +31,11 @@ needs_sphinx = '4.5.0'
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['edit_on_github', 'sphinx.ext.todo','rsyslog_lexer']
+extensions += ["sphinxcontrib.anchors"]
+anchors_options = {
+    "selector": "p, li, h1, h2, h3, h4, h5, h6",
+    "permalink": False
+}
 edit_on_github_project = 'https://github.com/rsyslog/rsyslog'
 edit_on_github_branch = 'main'
 
