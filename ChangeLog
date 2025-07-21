@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-07-19: Correct connection timing computation
+  Handle microsecond rollover when measuring connection attempts.
+  Calculate seconds and microseconds directly, adjusting when the
+  microsecond field underflows.
+  Fixes https://github.com/rsyslog/rsyslog/issues/5831.
 - 2025-07-17: omelasticsearch fix: Handle HTTP 401/403 auth errors
     The omelasticsearch module previously failed to correctly handle HTTP
     error status codes returned by the server. The logic checked for

@@ -1,68 +1,18 @@
-/* action.c
+/**
+ * @file action.c
+ * @brief Implementation of the action object.
  *
- * Implementation of the action object.
+ * This module contains the core implementation of output actions.  An
+ * action can operate in direct or queued mode and may maintain
+ * per-worker state.  Several message submission paths exist and are
+ * chosen at runtime depending on configuration.  All filtering is
+ * performed before a message is enqueued so that queued and direct
+ * modes behave identically.
  *
- * File begun on 2007-08-06 by RGerhards (extracted from syslogd.c)
+ * The legacy comments below outline the call sequences used for the
+ * various execution modes.  They are retained for reference.
  *
- * Some notes on processing (this hopefully makes it easier to find
- * the right code in question): For performance reasons, this module
- * uses different methods of message submission based on the user-selected
- * configuration. This code is similar, but can not be abstracted because
- * of the performance-affecting differences in it. As such, it is often
- * necessary to triple-check that everything works well in *all* modes.
- * The different modes (and calling sequence) are:
- *
- * if set iExecEveryNthOccur > 1 || iSecsExecOnceInterval
- * - doSubmitToActionQComplex
- *   handles mark message reduction, but in essence calls
- * - actionWriteToAction
- * - doSubmitToActionQ
- *   (now queue engine processing)
- * if(pThis->bWriteAllMarkMsgs == RSFALSE)
- * - doSubmitToActionQNotAllMark
- * - doSubmitToActionQ (and from here like in the else case below!)
- * else
- * - doSubmitToActionQ
- * - qqueueEnqObj
- *   (now queue engine processing)
- *
- * Note that bWriteAllMakrMsgs on or off creates almost the same processing.
- * The difference ist that if WriteAllMarkMsgs is not set, we need to
- * preprocess the batch and drop mark messages which are not yet due for
- * writing.
- *
- * After dequeue, processing is as follows:
- * - processBatchMain
- * - processMsgMain (direct entry for DIRECT queue!)
- * - ...
- *
- * MORE ON PROCESSING, QUEUES and FILTERING
- * All filtering needs to be done BEFORE messages are enqueued to an
- * action. In previous code, part of the filtering was done at the
- * "remote end" of the action queue, which lead to problems in
- * non-direct mode (because then things run asynchronously). In order
- * to solve this problem once and for all, I have changed the code so
- * that all filtering is done before enq, and processing on the
- * dequeue side of action processing now always executes whatever is
- * enqueued. This is the only way to handle things consistently and
- * (as much as possible) in a queue-type agnostic way. However, it is
- * a rather radical change, which I unfortunately needed to make from
- * stable version 5.8.1 to 5.8.2. If new problems pop up, you now know
- * what may be their cause. In any case, the way it is done now is the
- * only correct one.
- * A problem is that, under fortunate conditions, we use the current
- * batch for the output system as well. This is very good from a performance
- * point of view, but makes the distinction between enq and deq side of
- * the queue a bit hard. The current idea is that the filter condition
- * alone is checked at the deq side of the queue (seems to be unavoidable
- * to do it that way), but all other complex conditons (like failover
- * handling) go into the computation of the filter condition. For
- * non-direct queues, we still enqueue only what is acutally necessary.
- * Note that in this case the rest of the code must ensure that the filter
- * is set to "true". While this is not perfect and not as simple as
- * we would like to see it, it looks like the best way to tackle that
- * beast.
- * rgerhards, 2011-06-15
+ * File begun on 2007-08-06 by Rainer Gerhards (extracted from syslogd.c).
  *
  * Copyright 2007-2022 Rainer Gerhards and Adiscon GmbH.
  *
@@ -82,6 +32,26 @@
  * along with Rsyslog.  If not, see <http://www.gnu.org/licenses/>.
  *
  * A copy of the GPL can be found in the file "COPYING" in this distribution.
+ *
+ * @section action_flow Action Execution Flow
+ * The submission path depends on rate limiting and mark handling:
+ * - If @c iExecEveryNthOccur or @c iSecsExecOnceInterval is set,
+ *   doSubmitToActionQComplex() -> actionWriteToAction() -> doSubmitToActionQ()
+ *   -> queue processing.
+ * - If @c bWriteAllMarkMsgs is false,
+ *   doSubmitToActionQNotAllMark() -> doSubmitToActionQ() -> queue processing.
+ * - Otherwise,
+ *   doSubmitToActionQ() -> qqueueEnqObj() -> queue processing.
+ * When mark messages are not written immediately, doSubmitToActionQNotAllMark()
+ * filters out those that are not yet due.
+
+ * After dequeue, processBatchMain() invokes processMsgMain() for each message.
+ * Direct queues enter at processMsgMain().
+ * All filtering happens before enqueue so direct and queued modes behave identically.
+ * Historically some filters ran after the queue, leading to inconsistent
+ * results. Since version 5.8.2 all checks occur before enqueue so
+ * queued and direct modes process the same set of messages.
+
  */
 #include "config.h"
 #include <stdio.h>
@@ -1274,7 +1244,21 @@ finalize_it:
 }
 
 
-/* the following function uses the new-style transactional interface */
+/**
+ * Execute a transactional batch for an action.
+ *
+ * Depending on the output module capabilities the batch is either
+ * handed to commitTransaction() or processed message by message for
+ * legacy modules.
+ *
+ * @param[in] pThis    action to execute
+ * @param[in] pWti     worker thread instance
+ * @param[in] iparams  parameter array for all messages
+ * @param[in] nparams  number of messages in the batch
+ *
+ * @retval RS_RET_OK           batch processed successfully
+ * @retval RS_RET_SUSPENDED    action entered retry state
+ */
 static rsRetVal doTransaction(action_t *__restrict__ const pThis,
                               wti_t *__restrict__ const pWti,
                               actWrkrIParams_t *__restrict__ const iparams,
@@ -1364,7 +1348,13 @@ finalize_it:
     RETiRet;
 }
 
-/* If a transcation failed, we write the error file (if configured).
+/**
+ * Write details about failed messages to the configured error file.
+ *
+ * @param[in] pThis    action that failed
+ * @param[in] ret      return code from the failed commit
+ * @param[in] iparams  parameter array describing the failed messages
+ * @param[in] nparams  number of messages contained in @a iparams
  */
 static void ATTR_NONNULL() actionWriteErrorFile(action_t *__restrict__ const pThis,
                                                 const rsRetVal ret,
@@ -1481,10 +1471,23 @@ static rsRetVal actionTryRemoveHardErrorsFromBatch(action_t *__restrict__ const 
     RETiRet;
 }
 
-/* Note: we currently need to return an iRet, as this is used in
- * direct mode. TODO: However, it may be worth further investigating this,
- * as it looks like there is no ultimate consumer of this code.
- * rgerhards, 2013-11-06
+/**
+ * Commit all messages currently buffered for an action.
+ *
+ * The function first tries to commit the whole batch. On failure each
+ * message is retried individually so that permanent errors can be
+ * written to the action's error file while temporary errors trigger the
+ * usual retry handling.
+ *
+ * @param[in] pThis action being committed
+ * @param[in] pWti  worker thread instance
+ *
+ * The return value is propagated via qqueueAdd() when the action queue
+ * operates in direct mode so that callers can react immediately.
+
+ * @return Status code from the final commit attempt.
+ * The result is propagated back through direct-mode queues so
+ * higher levels can act on suspend or failure states.
  */
 static rsRetVal ATTR_NONNULL() actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti) {
     actWrkrInfo_t *const wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
@@ -1785,12 +1788,12 @@ finalize_it:
 }
 
 
-/* This function builds up a batch of messages to be (later)
- * submitted to the action queue.
- * Important: this function MUST not be called with messages that are to
- * be discarded due to their "prevWasSuspended" state. It will not check for
- * this and submit all messages to the queue for execution. So these must
- * be filtered out before calling us (what is done currently!).
+/**
+ * Enqueue a single message for later processing by an action.
+ *
+ * The caller is responsible for filtering messages that should be
+ * discarded due to previous suspension state; this function always
+ * enqueues the provided message when the rate and interval checks pass.
  */
 rsRetVal actionWriteToAction(action_t *const pAction, smsg_t *pMsg, wti_t *const pWti) {
     DEFiRet;

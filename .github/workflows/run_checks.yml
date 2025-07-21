@@ -29,9 +29,10 @@ on:
     paths:
       - '**/*.c'
       - '**/*.h'
-      - 'grammar/lexer.y'
+      - 'grammar/lexer.l'
       - 'grammar/grammar.y'
       - 'tests/*.sh'
+      - 'diag.sh'
       - '**/Makefile.am'
 
 jobs:

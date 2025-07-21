@@ -31,7 +31,13 @@
 /* external data */
 extern int glbliActionResumeRetryCount;
 
-/* the following struct defines the action object data structure
+/**
+ * @struct action_s
+ * @brief Runtime representation of an output action.
+ *
+ * The structure holds configuration and state for a single action.
+ * An action may be processed by multiple worker threads and can use
+ * transactional semantics when supported by its output module.
  */
 struct action_s {
     time_t f_time; /* used for "max. n messages in m seconds" processing */
@@ -94,27 +100,60 @@ struct action_s {
 };
 
 
-/* function prototypes
- */
+/* function prototypes */
+
+/** Create a new action instance. */
 rsRetVal actionConstruct(action_t **ppThis);
+
+/** Finalize initialization after configuration parameters were applied. */
 rsRetVal actionConstructFinalize(action_t *pThis, struct nvlst *lst);
+
+/** Destroy an action instance and free all associated resources. */
 rsRetVal actionDestruct(action_t *pThis);
+
+/** Set the global default resume interval for actions. */
 rsRetVal actionSetGlobalResumeInterval(int iNewVal);
+
+/**
+ * Execute an action outside of a queue context.
+ * Primarily used for historic modules that expect this style.
+ */
 rsRetVal actionDoAction(action_t *pAction);
+
+/** Enqueue a message for processing by an action. */
 rsRetVal actionWriteToAction(action_t *pAction, smsg_t *pMsg, wti_t *);
+
+/** Trigger the HUP handler of an action if provided by the module. */
 rsRetVal actionCallHUPHdlr(action_t *pAction);
+
+/** Initialize global resources used by the action subsystem. */
 rsRetVal actionClassInit(void);
+
+/**
+ * Register a configured action with the ruleset.
+ * The action instance becomes owned by the configuration once added.
+ */
 rsRetVal addAction(action_t **ppAction,
                    modInfo_t *pMod,
                    void *pModData,
                    omodStringRequest_t *pOMSR,
                    struct cnfparamvals *actParams,
                    struct nvlst *lst);
+
+/** Start the message queues of all configured actions. */
 rsRetVal activateActions(void);
+
+/** Create a new action from configuration parameters. */
 rsRetVal actionNewInst(struct nvlst *lst, action_t **ppAction);
 rsRetVal actionProcessCnf(struct cnfobj *o);
+
+/** Commit all outstanding transactions for direct queues. */
 void actionCommitAllDirect(wti_t *pWti);
+
+/** Remove a worker instance from the action's bookkeeping. */
 void actionRemoveWorker(action_t *const pAction, void *const actWrkrData);
+
+/** Release parameter memory allocated by prepareDoActionParams(). */
 void releaseDoActionParams(action_t *const pAction, wti_t *const pWti, int action_destruct);
 
 #endif /* #ifndef ACTION_H_INCLUDED */

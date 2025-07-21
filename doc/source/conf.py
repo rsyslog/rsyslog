@@ -23,8 +23,6 @@ import conf_helpers
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('_ext'))
 
-from rsyslog_lexer import RainerScriptLexer
-
 # -- General configuration -----------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -32,9 +30,36 @@ needs_sphinx = '4.5.0'
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ['edit_on_github', 'sphinx.ext.todo']
+extensions = [
+    'edit_on_github', 
+    'sphinx.ext.todo',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.intersphinx',  # For linking to external docs
+    'sphinx.ext.githubpages',
+    'rsyslog_lexer',
+    # 'sphinx_mermaid',          # For Mermaid diagrams (commented out - needs to be installed)
+    # 'sphinx_sitemap',          # For generating sitemap.xml (commented out - needs to be installed)
+    # 'breathe',               # Add this once Doxygen is set up
+]
 edit_on_github_project = 'https://github.com/rsyslog/rsyslog'
 edit_on_github_branch = 'main'
+
+# Add this configuration for intersphinx
+intersphinx_mapping = {
+    # 'agent': ('URL_TO_WINDOWS_AGENT_DOCS', None),  # Placeholder for future use
+}
+
+# Add this for sitemap generation (when sphinx_sitemap is enabled)
+# html_baseurl = 'https://www.rsyslog.com/doc/'
+
+# Add this for the "Edit on GitHub" link
+html_context = {
+    "display_github": True,
+    "github_user": "rsyslog",
+    "github_repo": "rsyslog",
+    "github_version": "master",
+    "conf_py_path": "/doc/source/",
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -361,10 +386,8 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('queues', 'rsyslog-queues', u'Rsyslog Documentation: Queues',
-     [u'Rainer Gerhards'], 1),
-    ('configuration/actions', 'rsyslog-actions', u'Rsyslog Documentation: Actions',
-     [u'Rainer Gerhards'], 1),
+    ('man/rsyslogd', 'rsyslogd', u'Rsyslog Documentation: rsyslogd',
+     [u'Rainer Gerhards'], 8),
 ]
 
 # If true, show URL addresses after external links.
@@ -421,4 +444,20 @@ epub_description = u'Documentation for the rsyslog project'
 # Include our custom stylesheet in addition to specified theme
 def setup(app):
     app.add_css_file('rsyslog.css')
-    app.add_lexer('rsyslog', RainerScriptLexer)
+
+# -- Conditional settings for minimal singlehtml build ----------------------------
+# This block is activated by the '-t minimal_build' tag passed from the Makefile
+# for the 'singlehtml' target. It strips the output for AI ingestion.
+
+if tags.has('minimal_build'):
+    # Point to a directory with empty templates to remove entire theme sections
+    # The files inside _templates_minimal are intentionally blank.
+    templates_path = ['_templates_minimal']
+
+    # Disable all sidebars
+    html_sidebars = {'**': []}
+
+    # Turn off other non-content elements
+    html_show_sourcelink = False
+    html_show_sphinx = False
+    html_show_copyright = False

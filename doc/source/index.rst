@@ -12,31 +12,30 @@ While it started as a regular syslogd, rsyslog has evolved into a kind of
 
 Rsyslog has a strong enterprise focus but also scales down to small
 systems.
-It supports, among others, :doc:`MariaDB/MySQL <tutorials/database>`,
-:doc:`PostgreSQL <tutorials/database>`,
-:doc:`failover log destinations <tutorials/failover_syslog_server>`,
+It supports, among others, :doc:`MariaDB/MySQL <07_tutorials/database>`,
+:doc:`PostgreSQL <07_tutorials/database>`,
+:doc:`failover log destinations <07_tutorials/failover_syslog_server>`,
 ElasticSearch, syslog/tcp transport, fine grain output format control,
 high precision timestamps,
 queued operations and the ability to filter on any message part.
 
-Manual
-------
+Documentation
+-------------
+
 .. toctree::
    :maxdepth: 2
 
-   installation/index
-   configuration/index
-   containers/index
-   troubleshooting/index
-   faq/index
-   concepts/index
-   examples/index
-   tutorials/index
-   development/index
-   historical/index
+   01_getting_started/index
+   02_concepts/index
+   03_configuration/index
+   04_modules/index
+   05_how-to_guides/index
+   06_reference/index
+   07_tutorials/index
+   08_deployment_guides/index
 
-Reference
----------
+About
+-----
 .. toctree::
    :maxdepth: 1
 
@@ -45,10 +44,21 @@ Reference
    how2help
    community
    features
-   proposals/index
-   whitepapers/index
    free_support
-   compatibility/index
+
+Legacy Documentation
+--------------------
+.. toctree::
+   :maxdepth: 1
+
+   _needs_triage/index
+
+Man Pages
+---------
+.. toctree::
+   :maxdepth: 1
+
+   man/rsyslogd
 
 Sponsors and Community
 ----------------------

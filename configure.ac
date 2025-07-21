@@ -2092,7 +2092,7 @@ fi
 # Automake conditional
 AM_CONDITIONAL(ENABLE_IMTCP_EPOLL, test x$enable_imtcp_epoll = xyes)
 
- Print result
+# Print result
 echo "    TCP input module epoll mode: $enable_imtcp_epoll"
 
 
