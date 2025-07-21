@@ -1,78 +1,46 @@
-Welcome to Rsyslog
-==================
+rsyslog
+=======
 
-`Rsyslog <http://www.rsyslog.com/>`_ is a **r**\ ocket-fast **sys**\ tem for **log** processing.
-It offers high-performance, great security features and a modular design.
-While it started as a regular syslogd, rsyslog has evolved into a kind of
-**swiss army knife of logging**, being able to
+**rsyslog** is a high-performance, modular logging framework designed for
+both traditional syslog workloads and modern log processing pipelines. It
+supports flexible routing, advanced filtering, structured logging, and
+integrations with modern observability tools such as **Elasticsearch,
+Kafka, and cloud-based systems**.
 
-- accept inputs from a wide variety of sources,
-- transform them,
-- and output the results to diverse destinations.
+rsyslog is widely used as the default logging daemon on Linux systems and
+scales from embedded environments to large enterprise deployments. Its
+modular design enables you to collect, transform, and reliably deliver
+logs to a wide variety of destinations.
 
-Rsyslog has a strong enterprise focus but also scales down to small
-systems.
-It supports, among others, :doc:`MariaDB/MySQL <tutorials/database>`,
-:doc:`PostgreSQL <tutorials/database>`,
-:doc:`failover log destinations <tutorials/failover_syslog_server>`,
-ElasticSearch, syslog/tcp transport, fine grain output format control,
-high precision timestamps,
-queued operations and the ability to filter on any message part.
+**Start Here:**
+- :doc:`Getting Started <getting_started>`
+- :doc:`Configuration Basics <configuration/index>`
+- :doc:`Troubleshooting <troubleshooting/index>`
+- :doc:`Tutorials <tutorials/index>`
 
-Manual
-------
 .. toctree::
    :maxdepth: 2
 
-   installation/index
+   getting_started
    configuration/index
-   containers/index
-   troubleshooting/index
    faq/index
-   concepts/index
-   examples/index
    tutorials/index
+   troubleshooting/index
+   concepts/index
    development/index
-   historical/index
+   idx_reference
 
-Reference
----------
-.. toctree::
-   :maxdepth: 1
-
-   history
-   licensing
-   how2help
-   community
-   features
-   proposals/index
-   whitepapers/index
-   free_support
-   compatibility/index
-
-Sponsors and Community
+Community and Sponsors
 ----------------------
 
-Please visit the rsyslog `Sponsor's Page`_ to honor the project sponsors or
-become one yourself! We are very grateful for any help towards the project
-goals.
+See the `Sponsor's Page <http://www.rsyslog.com/sponsors>`_ for details on
+project sponsors and how to support ongoing development.
 
-If you like rsyslog, you might want to lend us a helping hand. It
-doesn't require a lot of time - even a single mouse click helps. Learn
-:doc:`how2help`.
+Want to help? See :doc:`how2help`.
 
-.. _Sponsor's Page: http://www.rsyslog.com/sponsors
+Contributing to Documentation
+-----------------------------
 
-Contributing to the docs
-------------------------
-
-This documentation is hosted on `github
-<https://github.com/rsyslog/rsyslog/tree/main/doc>`_. If you find something to be
-improved, please feel free to fork and file a patch request with your
-improvements. There is also a Button 'Edit in GitHub' on every documentation
-page beginning with the main `docs page
-<https://www.rsyslog.com/doc/v8-stable/>`_ that allows easy access.
-
-.. only:: dev
-
-    Built on |today| from branch |DOC_BRANCH|, commit |DOC_COMMIT|.
+This documentation is hosted on `GitHub
+<https://github.com/rsyslog/rsyslog/tree/main/doc>`_. Use the "Edit in
+GitHub" button on any page to suggest improvements.

@@ -1,18 +1,11 @@
-.. seealso::
+----
 
-   Help with configuring/using |PRODUCT|:
+**Support:** `rsyslog Assistant <https://rsyslog.ai>`_ | 
+`GitHub Discussions <https://github.com/rsyslog/rsyslog/discussions>`_ |
+GitHub Issues: |GitHubSourceProject|_
 
-   - `rsyslog Assistant <https://rsyslog.ai>`_: official AI-powered support
-   - `GitHub Discussions <https://github.com/rsyslog/rsyslog/discussions>`_
-   - GitHub Issues: |GitHubSourceProject|_ – report suspected bugs
+**Contributing:** Source & docs: |GitHubSourceProject|_
 
-.. seealso::
-
-   Contributing to |PRODUCT|:
-
-   - Source & documentation are in the unified |GitHubSourceProject|_ repository
-
-Copyright 2008-2025 `Rainer Gerhards <https://rainer.gerhards.net/>`__,
-(`Großrinderfeld <https://www.rainer-gerhards.de/grossrinderfeld/>`__),
-and others.
-
+© 2008–2025 `Rainer Gerhards <https://rainer.gerhards.net/>`_
+and others. Licensed under the `Apache License 2.0 
+<https://www.apache.org/licenses/LICENSE-2.0>`_.

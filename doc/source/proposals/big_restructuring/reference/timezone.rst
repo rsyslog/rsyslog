@@ -1,3 +1,0 @@
-Timezone Configuration Reference
-================================
-

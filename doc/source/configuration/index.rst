@@ -1,27 +1,36 @@
 Configuration
 =============
 
-**Rsyslog Configuration Reference Manual Introduction**
+This section is the **reference manual for configuring rsyslog**. It
+covers all major configuration concepts, modules, and directives needed
+to build robust logging infrastructures — from simple setups to complex
+log processing pipelines.
 
-This document serves as a detailed guide to rsyslog configuration, offering extensive information on the setup and management of system logging using
-`rsyslog <https://www.rsyslog.com>`_
-It covers various aspects of rsyslog configuration, including constructs, statements, and key concepts, designed to assist users in customizing their logging infrastructure according to specific needs.
+rsyslog’s primary configuration file is located at:
+``/etc/rsyslog.conf``
 
-The primary configuration file for rsyslog, located at `/etc/rsyslog.conf`, acts as the central point for establishing logging rules. This file is used to define input modules, filters, actions, and global directives, facilitating the processes of log collection, filtering, routing, and formatting.
+Additional configuration snippets are commonly placed in:
+``/etc/rsyslog.d/*.conf``
 
-Please note that this documentation is currently in the process of being refined to improve its clarity, structure, and accessibility. We value your patience and understanding during this phase and are committed to delivering a comprehensive and easy-to-navigate guide to rsyslog.
+Within these files, you define:
+- **Input modules** (where logs come from)
+- **Filters and parsers** (how logs are processed)
+- **Actions** (where logs are sent)
+- **Global directives** (overall behavior and performance tuning)
 
-For further exploration of rsyslog's configuration intricacies, please refer to the links provided below. This manual is designed to be a valuable resource for both experienced system administrators and those new to the field, aiming to fully leverage the capabilities of rsyslog.
-
-Note that **configurations can be built interactively** via the online
-`rsyslog configuration builder <http://www.rsyslog.com/rsyslog-configuration-builder/>`_ tool.
+The topics listed below provide a complete guide to rsyslog
+configuration.
 
 .. toctree::
    :maxdepth: 2
 
-   conf_formats
-   converting_to_new_format
-   sysklogd_format
+   modules/idx_output
+   modules/idx_input
+   modules/idx_parser
+   modules/idx_messagemod
+   modules/idx_stringgen
+   modules/idx_library
+
    basic_structure
    templates
    properties
@@ -44,20 +53,25 @@ Note that **configurations can be built interactively** via the online
    dyn_stats
    lookup_tables
    percentile_stats
+   converting_to_new_format
+   conf_formats
+   sysklogd_format
 
-`Configuration file examples can be found in the rsyslog
-wiki <http://wiki.rsyslog.com/index.php/Configuration_Samples>`_. Also
-keep the `rsyslog config
-snippets <http://www.rsyslog.com/config-snippets/>`_ on your mind. These
-are ready-to-use real building blocks for rsyslog configuration.
+Additional Resources
+--------------------
 
-There is also one sample file provided together with the documentation
-set. If you do not like to read, be sure to have at least a quick look
-at :download:`rsyslog-example.conf <rsyslog-example.conf>`.
+- **Config snippets:** See `rsyslog config snippets
+  <http://www.rsyslog.com/config-snippets/>`_ for ready-to-use building
+  blocks.
 
-While rsyslogd contains enhancements over standard syslogd, efforts have
-been made to keep the configuration file as compatible as possible.
-While, for obvious reasons, :doc:`enhanced features <../features>` require
-a different config file syntax, rsyslogd should be able to work with a
-standard syslog.conf file. This is especially useful while you are
-migrating from syslogd to rsyslogd.
+- **Example configuration:** Download a sample configuration file:
+  :download:`rsyslog-example.conf <rsyslog-example.conf>`.
+
+Compatibility Note
+------------------
+
+rsyslog retains partial configuration compatibility with traditional
+BSD-style syslogd, which can be helpful when migrating from older
+implementations (e.g., on Solaris or AIX). On modern Linux systems,
+native rsyslog configuration formats (especially RainerScript) are
+recommended and provide access to all advanced features.

@@ -138,7 +138,7 @@ work.
 
 .. seealso::
 
-   :doc:`/compatibility/v3compatibility`
+   :doc:`/historical/v3compatibility`
 
 To load the most common plug-ins, add the following to the top of
 rsyslog.conf:

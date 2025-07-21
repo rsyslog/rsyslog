@@ -5,9 +5,15 @@ which are still of interest or may be useful in some more exotic
 environments.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    
    php_syslog_ng
-   stunnel
    multi_ruleset_legacy_format_samples
    module_devel
+   high_performance
+   v8compatibility
+   v7compatibility
+   v6compatibility
+   v5compatibility
+   v4compatibility
+   v3compatibility

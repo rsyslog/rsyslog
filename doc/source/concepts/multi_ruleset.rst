@@ -310,11 +310,3 @@ By default, rulesets do **not** have their own queue. It must be
 activated via the
 :doc:`$RulesetCreateMainQueue <../configuration/ruleset/rsconf1_rulesetcreatemainqueue>`
 directive.
-
-See Also
---------
-.. toctree::
-   :maxdepth: 1
-   
-   ../historical/multi_ruleset_legacy_format_samples
-   

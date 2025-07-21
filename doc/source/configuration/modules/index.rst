@@ -24,10 +24,4 @@ There exist different classes of loadable modules:
 .. toctree::
    :maxdepth: 1
 
-   idx_output
-   idx_input
-   idx_parser
-   idx_messagemod
-   idx_stringgen
-   idx_library
    workflow

@@ -1,37 +1,52 @@
 Community Resources
 ===================
 
-You can also browse the following online resources:
+The rsyslog project is supported by a vibrant community and official resources
+that help users learn, troubleshoot, and stay up to date.
 
--  the `rsyslog wiki <http://wiki.rsyslog.com/>`_, a community resource
-   which includes `rsyslog configuration
-   examples <http://wiki.rsyslog.com/index.php/Configuration_Samples>`_
--  `rsyslog discussion forum - use this for technical
-   support <http://kb.monitorware.com/rsyslog-f40.html>`_
--  `rsyslog video tutorials <http://www.rsyslog.com/Topic8.phtml>`_
--  `rsyslog FAQ <http://www.rsyslog.com/Topic3.phtml>`_
--  `syslog device configuration
-   guide <http://www.monitorware.com/en/syslog-enabled-products/>`_
-   (off-site)
--  `deutsches rsyslog
-   forum <http://kb.monitorware.com/rsyslog-f49.html>`_ (forum in German
-   language)
+Primary Resources
+-----------------
 
-And don't forget about the `rsyslog mailing
-list <http://lists.adiscon.net/mailman/listinfo/rsyslog>`_. If you are
-interested in the "backstage", you may find
-`Rainer <https://rainer.gerhards.net/>`_'s
-`blog <https://rainer.gerhards.net/>`_ an interesting read (filter on
-syslog and rsyslog tags). Or meet `Rainer Gerhards at
-Facebook <https://www.facebook.com/rainer.gerhards.1/>`_.
-If you would like to use rsyslog source code inside your open source
-project, you can do that without any restriction as long as your license
-is GPLv3 compatible. If your license is incompatible to GPLv3, you may
-even be still permitted to use rsyslog source code. However, then you
-need to look at the way `rsyslog is licensed <licensing.html>`_.
+- `AI "rsyslog assistant" experiment <https://rsyslog.ai>`_  
+  An AI-powered assistant designed to help with configuration questions,
+  troubleshooting, and learning rsyslog concepts.
 
-Feedback is always welcome, but if you have a support question, please
-do not mail Rainer directly (`why not? <free_support.html>`_) - use the
-`rsyslog mailing
-list <http://lists.adiscon.net/mailman/listinfo/rsyslog>`_ or `github issue
-tracker <https://github.com/rsyslog/rsyslog/issues>`_ instead.
+- `GitHub Discussions <https://github.com/rsyslog/rsyslog/discussions>`_  
+  A community forum for questions, ideas, and feedback.
+
+- `rsyslog mailing list <http://lists.adiscon.net/mailman/listinfo/rsyslog>`_  
+  A long-standing mailing list where the community exchanges knowledge and
+  support.
+
+- `Rainer Gerhards' blog <https://rainer.gerhards.net/>`_  
+  Insights and updates from the maintainer of rsyslog. Filter for *syslog*
+  and *rsyslog* tags for relevant content.
+
+Self-Help
+---------
+
+For general support and troubleshooting, start with these resources:
+
+- `AI "rsyslog assistant" <https://rsyslog.ai>`_
+- `GitHub Discussions <https://github.com/rsyslog/rsyslog/discussions>`_
+- `rsyslog mailing list <http://lists.adiscon.net/mailman/listinfo/rsyslog>`_
+- `GitHub issue tracker <https://github.com/rsyslog/rsyslog/issues>`_
+
+Professional Support
+--------------------
+
+For guaranteed response times, private consultations, or expert help, consider
+`Adiscon’s professional services <https://www.rsyslog.com/professional-services/>`_.
+Adiscon is the main sponsor of rsyslog, and using its services helps fund the
+continued development of the project.
+
+Legacy Resources
+----------------
+
+The following resources may still be helpful but are no longer actively updated.
+New users are encouraged to start with the **AI assistant** and **GitHub
+Discussions** listed above for the most current information.
+
+- `rsyslog video tutorials <http://www.rsyslog.com/Topic8.phtml>`_  
+  These tutorials are slightly dated but still provide useful background on
+  common rsyslog concepts and configurations.
