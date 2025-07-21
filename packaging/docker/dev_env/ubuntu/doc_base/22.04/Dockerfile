@@ -29,7 +29,7 @@ RUN	apt-get install -y \
 	texlive-luatex \
 	texlive-xetex \
 	latexmk
-RUN	pip install sphinx sphinx_rtd_theme rst2pdf
+RUN	pip install sphinx sphinx_rtd_theme rst2pdf furo
 VOLUME	/rsyslog
 RUN	groupadd rsyslog \
 	&& useradd -g rsyslog -s /bin/bash rsyslog \
