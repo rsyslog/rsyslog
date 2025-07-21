@@ -1,3 +1,0 @@
-Module Configuration Reference
-==============================
-

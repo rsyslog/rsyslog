@@ -1,3 +1,0 @@
-Configuring an RFC 3164 Template with Json message
-==================================================
-

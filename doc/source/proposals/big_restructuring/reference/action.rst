@@ -1,3 +1,0 @@
-Action Configuration Reference
-==============================
-
