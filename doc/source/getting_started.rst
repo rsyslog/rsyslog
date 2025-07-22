@@ -60,10 +60,13 @@ A simple configuration that logs all messages to `/var/log/syslog`:
 
 .. code-block:: rsyslog
 
-   module(load="imuxsock")  # Unix socket for local system logging
-   module(load="imklog")    # Kernel logging support
-
-   *.* /var/log/syslog
+   module(load="imuxsock")  # Provides local system logging via Unix socket
+   module(load="imklog")    # Enables kernel log capture
+   
+   # Traditionally, a *.* selector ("all logs") is added here.
+   # This is unnecessary, as it is the default behavior.
+   # Therefore, no filter is explicitly shown.
+   action(type="omfile" file="/var/log/syslog")
 
 Apply changes by restarting rsyslog:
 
