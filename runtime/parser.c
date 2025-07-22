@@ -359,10 +359,17 @@ static rsRetVal SanitizeMsg(smsg_t *pMsg) {
      * their way into syslog messages unintentionally. In order to remain
      * compatible to recent IETF developments, we allow the user to
      * turn on/off this handling.  rgerhards, 2007-07-23
+     * Also handle trailing CR that may precede the LF (CR+LF sequence) if enabled.
+     * closes: https://github.com/rsyslog/rsyslog/issues/241
      */
     if (glbl.GetParserDropTrailingLFOnReception(runConf) && lenMsg > 0 && pszMsg[lenMsg - 1] == '\n') {
         DBGPRINTF("dropped LF at very end of message (DropTrailingLF is set)\n");
         lenMsg--;
+        /* also drop preceding CR if present (CR+LF sequence) and enabled */
+        if (glbl.GetParserDropTrailingCROnReception(runConf) && lenMsg > 0 && pszMsg[lenMsg - 1] == '\r') {
+            DBGPRINTF("dropped CR preceding LF at very end of message (DropTrailingCR is set)\n");
+            lenMsg--;
+        }
         pszMsg[lenMsg] = '\0';
         bUpdatedLen = RSTRUE;
     }

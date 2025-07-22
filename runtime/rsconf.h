@@ -69,6 +69,7 @@ struct queuecnf_s {
 struct parsercnf_s {
     uchar cCCEscapeChar; /* character to be used to start an escape sequence for control chars */
     int bDropTrailingLF; /* drop trailing LF's on reception? */
+    int bDropTrailingCR; /* drop trailing CR's preceding LF on reception? */
     int bEscapeCCOnRcv; /* escape control characters on reception: 0 - no, 1 - yes */
     int bSpaceLFOnRcv; /* replace newlines with spaces on reception: 0 - no, 1 - yes */
     int bEscape8BitChars; /* escape characters > 127 on reception: 0 - no, 1 - yes */

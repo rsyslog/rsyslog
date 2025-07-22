@@ -14,6 +14,7 @@ directives.
    rsconf1_allowedsender
    rsconf1_dropmsgswithmaliciousdnsptrrecords
    rsconf1_controlcharacterescapeprefix
+   rsconf1_droptrailingcronreception
    rsconf1_droptrailinglfonreception
    rsconf1_escape8bitcharsonreceive
    rsconf1_escapecontrolcharactersonreceive

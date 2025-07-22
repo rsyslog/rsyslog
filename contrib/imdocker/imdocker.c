@@ -1022,6 +1022,11 @@ static rsRetVal enqMsg(docker_cont_logs_inst_t *pInst,
         if (glbl.GetParserDropTrailingLFOnReception(loadModConf->pConf) && lenMsg > 0 && pszMsg[lenMsg - 1] == '\n') {
             DBGPRINTF("dropped LF at very end of message (DropTrailingLF is set)\n");
             lenMsg--;
+            /* also drop preceding CR if present (CR+LF sequence) and enabled */
+            if (glbl.GetParserDropTrailingCROnReception(loadModConf->pConf) && lenMsg > 0 && pszMsg[lenMsg - 1] == '\r') {
+                DBGPRINTF("dropped CR preceding LF at very end of message (DropTrailingCR is set)\n");
+                lenMsg--;
+            }
             pszMsg[lenMsg] = '\0';
         }
         pMsg->iLenRawMsg = lenMsg;

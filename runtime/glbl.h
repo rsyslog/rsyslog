@@ -101,6 +101,7 @@ BEGINinterface(glbl) /* name must also be changed in ENDinterface macro! */
     SIMP_PROP(NetstrmDrvrCAExtraFiles, uchar *);
     SIMP_PROP(ParserControlCharacterEscapePrefix, uchar);
     SIMP_PROP(ParserDropTrailingLFOnReception, int);
+    SIMP_PROP(ParserDropTrailingCROnReception, int);
     SIMP_PROP(ParserEscapeControlCharactersOnReceive, int);
     SIMP_PROP(ParserSpaceLFOnReceive, int);
     SIMP_PROP(ParserEscape8BitCharactersOnReceive, int);

@@ -131,6 +131,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
     {"action.reportsuspensioncontinuation", eCmdHdlrBinary, 0},
     {"parser.controlcharacterescapeprefix", eCmdHdlrGetChar, 0},
     {"parser.droptrailinglfonreception", eCmdHdlrBinary, 0},
+    {"parser.droptrailingcronreception", eCmdHdlrBinary, 0},
     {"parser.escapecontrolcharactersonreceive", eCmdHdlrBinary, 0},
     {"parser.spacelfonreceive", eCmdHdlrBinary, 0},
     {"parser.escape8bitcharactersonreceive", eCmdHdlrBinary, 0},
@@ -263,6 +264,7 @@ SIMP_PROP_GET(DfltNetstrmDrvrKeyFile, pszDfltNetstrmDrvrKeyFile, uchar *)
 SIMP_PROP_GET(NetstrmDrvrCAExtraFiles, pszNetstrmDrvrCAExtraFiles, uchar *)
 SIMP_PROP_GET(ParserControlCharacterEscapePrefix, parser.cCCEscapeChar, uchar)
 SIMP_PROP_GET(ParserDropTrailingLFOnReception, parser.bDropTrailingLF, int)
+SIMP_PROP_GET(ParserDropTrailingCROnReception, parser.bDropTrailingCR, int)
 SIMP_PROP_GET(ParserEscapeControlCharactersOnReceive, parser.bEscapeCCOnRcv, int)
 SIMP_PROP_GET(ParserSpaceLFOnReceive, parser.bSpaceLFOnRcv, int)
 SIMP_PROP_GET(ParserEscape8BitCharactersOnReceive, parser.bEscape8BitChars, int)
@@ -527,6 +529,12 @@ static rsRetVal setParserControlCharacterEscapePrefix(void __attribute__((unused
 static rsRetVal setParserDropTrailingLFOnReception(void __attribute__((unused)) * pVal, int pNewVal) {
     DEFiRet;
     loadConf->globals.parser.bDropTrailingLF = pNewVal;
+    RETiRet;
+}
+
+static rsRetVal setParserDropTrailingCROnReception(void __attribute__((unused)) * pVal, int pNewVal) {
+    DEFiRet;
+    loadConf->globals.parser.bDropTrailingCR = pNewVal;
     RETiRet;
 }
 
@@ -904,6 +912,7 @@ BEGINobjQueryInterface(glbl)
     pIf->GetNetstrmDrvrCAExtraFiles = GetNetstrmDrvrCAExtraFiles;
     pIf->GetParserControlCharacterEscapePrefix = GetParserControlCharacterEscapePrefix;
     pIf->GetParserDropTrailingLFOnReception = GetParserDropTrailingLFOnReception;
+    pIf->GetParserDropTrailingCROnReception = GetParserDropTrailingCROnReception;
     pIf->GetParserEscapeControlCharactersOnReceive = GetParserEscapeControlCharactersOnReceive;
     pIf->GetParserSpaceLFOnReceive = GetParserSpaceLFOnReceive;
     pIf->GetParserEscape8BitCharactersOnReceive = GetParserEscape8BitCharactersOnReceive;
@@ -959,6 +968,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
     loadConf->globals.reportOversizeMsg = 1;
     loadConf->globals.parser.cCCEscapeChar = '#';
     loadConf->globals.parser.bDropTrailingLF = 1;
+    loadConf->globals.parser.bDropTrailingCR = 0; /* off by default for backward compatibility */
     loadConf->globals.parser.bEscapeCCOnRcv = 1; /* default is to escape control characters */
     loadConf->globals.parser.bSpaceLFOnRcv = 0;
     loadConf->globals.parser.bEscape8BitChars = 0; /* default is not to escape control characters */
@@ -1231,6 +1241,9 @@ rsRetVal glblDoneLoadCnf(void) {
         } else if (!strcmp(paramblk.descr[i].name, "parser.droptrailinglfonreception")) {
             const int tmp = (int)cnfparamvals[i].val.d.n;
             setParserDropTrailingLFOnReception(NULL, tmp);
+        } else if (!strcmp(paramblk.descr[i].name, "parser.droptrailingcronreception")) {
+            const int tmp = (int)cnfparamvals[i].val.d.n;
+            setParserDropTrailingCROnReception(NULL, tmp);
         } else if (!strcmp(paramblk.descr[i].name, "parser.escapecontrolcharactersonreceive")) {
             const int tmp = (int)cnfparamvals[i].val.d.n;
             setParserEscapeControlCharactersOnReceive(NULL, tmp);
@@ -1439,6 +1452,8 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
                              setParserControlCharacterEscapePrefix, NULL, NULL));
     CHKiRet(regCfSysLineHdlr((uchar *)"droptrailinglfonreception", 0, eCmdHdlrBinary,
                              setParserDropTrailingLFOnReception, NULL, NULL));
+    CHKiRet(regCfSysLineHdlr((uchar *)"droptrailingcronreception", 0, eCmdHdlrBinary,
+                             setParserDropTrailingCROnReception, NULL, NULL));
     CHKiRet(regCfSysLineHdlr((uchar *)"escapecontrolcharactersonreceive", 0, eCmdHdlrBinary,
                              setParserEscapeControlCharactersOnReceive, NULL, NULL));
     CHKiRet(regCfSysLineHdlr((uchar *)"spacelfonreceive", 0, eCmdHdlrBinary, setParserSpaceLFOnReceive, NULL, NULL));
