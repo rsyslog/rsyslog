@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-07-22: greatly restructured and improved documentation
+  It is in far better shape now, but there are still improvements
+  planned and needed.
 - 2025-07-19: Correct connection timing computation
   Handle microsecond rollover when measuring connection attempts.
   Calculate seconds and microseconds directly, adjusting when the
