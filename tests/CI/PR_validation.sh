@@ -2,10 +2,10 @@
 # This script "validates" a PR from a git PoV. We check that best
 # practices are kept which most importantly means we try to detect
 # fixup commits. These should not be part of a PR and squashed into
-# the main commit.
+# the primary commit.
 # Copyright (C) 2019 by Rainer Gerhards
 exitcode=0;
-git log  --oneline HEAD...origin/master >gitlog
+git log  --oneline HEAD...origin/main >gitlog
 if head -1 gitlog | grep -q "Merge " gitlog; then
 	printf 'This looks like a github merge branch. Removing first commit:\n'
 	head -1 gitlog
@@ -59,7 +59,7 @@ if grep -q "Merge " gitlog; then
 	cat >&2 <<- EOF
 	This feature branch contains merge commits. This almost always indicates that it
 	contains unwanted merges where a rebase should have been applied.
-	Please consider squashing the branch and/or rebasing it to current master.
+	Please consider squashing the branch and/or rebasing it to current default branch.
 
 	You possibly wonder why this CI check complains. See
 	    https://rainer.gerhards.net/2019/03/squash-your-pull-requests.html
