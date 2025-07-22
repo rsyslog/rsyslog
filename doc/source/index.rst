@@ -13,7 +13,7 @@ modular design enables you to collect, transform, and reliably deliver
 logs to a wide variety of destinations.
 
 **Start Here:**
-- :doc:`Getting Started <getting_started>`
+- :doc:`Getting Started <getting_started/index>`
 - :doc:`Configuration Basics <configuration/index>`
 - :doc:`Troubleshooting <troubleshooting/index>`
 - :doc:`Tutorials <tutorials/index>`
@@ -21,7 +21,7 @@ logs to a wide variety of destinations.
 .. toctree::
    :maxdepth: 2
 
-   getting_started
+   getting_started/index
    configuration/index
    faq/index
    tutorials/index
