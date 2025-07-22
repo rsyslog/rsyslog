@@ -1,233 +1,225 @@
 Basic Structure
 ===============
 
-This section describes how rsyslog configuration basically works. Think
-of rsyslog as a big logging and event processing toolset. It can be considered
-a framework with some basic processing that is fixed in the way data flows,
-but is highly customizable in the details of this message flow. During
-configuration, this customization is done by defining and customizing
-the rsyslog objects.
+This page introduces the core concepts and structure of rsyslog configuration.
+Rsyslog is best thought of as a **highly extensible logging and event
+processing framework**. While the general message flow is fixed, almost every
+aspect of its processing pipeline can be customized by configuring rsyslog
+objects.
 
-Quick overview of message flow and objects
-------------------------------------------
-Messages enter rsyslog with the help of input modules. Then, they are
-passed to a ruleset, where rules are conditionally applied. When a rule
-matches, the message is transferred to an action, which then does
-something to the message, e.g. writes it to a file, database or
-forwards it to a remote host.
+Message Flow Overview
+---------------------
+
+At a high level, rsyslog processes messages in three main stages:
+
+1. **Inputs**: Messages are received from input modules (e.g., `imuxsock` for
+   system logs or `imtcp` for TCP-based logging).
+
+2. **Rulesets**: Each message is passed through one or more rulesets. A
+   ruleset contains a sequence of rules, each with a filter and associated
+   actions.
+
+3. **Actions (Outputs)**: When a rule matches, its actions are executed.
+   Actions determine what to do with the message: write to a file, forward to a
+   remote server, insert into a database, or other processing.
+
+.. mermaid::
+
+   flowchart LR
+       A[Input Modules] --> B[Rulesets]
+       B --> C[Rules: Filter and Action List]
+       C --> D[Actions and Outputs]
+       D --> E[File, DB, Remote,<br>Custom Destinations]
 
 Processing Principles
 ---------------------
 
-- inputs submit received messages to rulesets
+Key rules to understand the rsyslog processing model:
 
-  * if the ruleset is not specifically bound, the default ruleset is used
+- **Rulesets as Entry Points**:
+  
+  Inputs submit messages to a ruleset.  
+  If no ruleset is explicitly bound, the default ruleset
+  (`RSYSLOG_DefaultRuleset`) is used.  
+  Additional, custom rulesets can be defined.
 
-- by default, there is one ruleset (RSYSLOG_DefaultRuleset)
+- **Rules within Rulesets**:
 
-- additional rulesets can be user-defined
+  A ruleset contains zero or more rules (though zero rules makes no sense).  
+  Rules are evaluated **in order, top to bottom**, within the ruleset.
 
-- each ruleset contains zero or more rules
+- **Filter and Action Lists**:
 
-  * while it is permitted to have zero rules inside a ruleset,
-    this obviously makes no sense
+  A rule consists of a **filter** (evaluated as true/false) and an
+  **action list**.  
+  When a filter matches, the action list is executed.  
+  If a filter does not match, rsyslog continues with the next rule.
 
-- a rule consists of a filter and an action list
+- **Full Evaluation**:
 
-- filters provide yes/no decisions and thus control-of-flow capability
+  All rules are evaluated unless message processing is explicitly stopped
+  by a ``stop`` command.  ``stop`` immediately halts processing for that message.
 
-- if a filter "matches" (filter says "yes"), the corresponding
-  action list is executed. If it does not match, nothing special
-  happens
+- **Action Lists**:
 
-- rules are evaluated in sequence from the first to the last rule
-  **inside** the given ruleset. No rules from unrelated rulesets are
-  ever executed.
+  An action list can contain one or multiple actions.  
+  Actions are executed sequentially.  
+  Actions have no filters inside the same list (filters apply only at the
+  rule level).
 
-- all rules are **always** fully evaluated, no matter if a filter matches
-  or not (so we do **not** stop at the first match). If message processing
-  shall stop, the "discard" action (represented by the tilde character or the
-  stop command) must explicitly be executed. If discard is executed,
-  message processing immediately stops, without evaluating any further rules.
+.. mermaid::
 
-- an action list contains one or many actions
-
-- inside an action list no further filters are possible
-
-- to have more than one action inside a list, the ampersand character
-  must be placed in the position of the filter, and this must immediately
-  follow the previous action
-
-- actions consist of the action call itself (e.g. ":omusrmsg:") as
-  well as all action-defining configuration statements ($Action... directives)
-
-- if legacy format is used (see below), $Action... directives **must** be
-  specified in front of the action they are intended to configure
-
-- some config directives automatically refer to their previous values
-  after being applied, others not. See the respective doc for details. Be
-  warned that this is currently not always properly documented.
-
-- in general, rsyslog v5 is heavily outdated and its native config language
-  is a pain. The rsyslog project strongly recommends using at least version 7,
-  where these problems are solved and configuration is much easier.
-
-- legacy configuration statements (those starting with $) do **not** affect
-  RainerScript objects (e.g. actions).
-
+   flowchart TD
+       Start([Message Entered]) --> CheckFilter1{Filter 1 Match?}
+       CheckFilter1 -- Yes --> Action1[Execute Action 1]
+       CheckFilter1 -- No --> CheckFilter2{Filter 2 Match?}
+       CheckFilter2 -- Yes --> Action2[Execute Action 2]
+       CheckFilter2 -- No --> End([Processing Ends])
+       Action1 --> CheckFilter2
+       Action2 --> End
 
 Configuration File
 ------------------
-Upon startup, rsyslog reads its configuration from the ``rsyslog.conf``
-file by default. This file may contain references to include other
-config files.
 
-A different "root" configuration file can be specified via the ``-f <file>``
-rsyslogd command line option. This is usually done within some init
-script or similar facility.
+By default, rsyslog loads its configuration from ``/etc/rsyslog.conf``.
+This file may include other configuration snippets (commonly under
+``/etc/rsyslog.d/``).
 
-Statement Types
----------------
-Rsyslog supports three different types of configuration statements
-concurrently:
+To specify a different configuration file, use:
 
--  **sysklogd** - this is the plain old format, taught everywhere and
-   still pretty useful for simple use cases. Note that some
-   constructs are no longer supported because they are incompatible with
-   newer features. These are mentioned in the compatibility docs.
--  **legacy rsyslog** - these are statements that begin with a dollar
-   sign. They set some (case-insensitive) configuration parameters and
-   modify e.g. the way actions operate. This is the only format supported
-   in pre-v6 versions of rsyslog. It is still fully supported in v6 and
-   above. Note that some plugins and features may still only be available
-   through legacy format (because plugins need to be explicitly upgraded
-   to use the new style format, and this hasn't happened to all plugins).
--  **RainerScript** - the new style format. This is the best and most
-   precise format to be used for more complex cases. As with the legacy
-   format, RainerScript parameters are also case-insensitive.
-   The rest of this page assumes RainerScript based rsyslog.conf.
+.. code-block:: bash
 
+   rsyslogd -f /path/to/your-config.conf
 
-The rsyslog.conf files consists of statements. For old style (sysklogd &
-legacy rsyslog), lines do matter. For new style (RainerScript) line
-spacing is irrelevant. Most importantly, this means with new style
-actions and all other objects can split across lines as users want to.
+Supported Configuration Formats
+-------------------------------
 
-Recommended use of Statement Types
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Rsyslog historically supported three configuration syntaxes:
 
-In general it is recommended to use RainerScript type statements, as
-these provide clean and easy to read control-of-flow as well as
-no doubt about which parameters are active. They also have no
-side-effects with include files, which can be a major obstacle with
-legacy rsyslog statements.
+1. **RainerScript (modern style)** – **recommended and actively maintained**  
 
-For very simple things sysklogd statement types are still suggested,
-especially if the full config consists of such simple things. The
-classical sample is writing to files (or forwarding) via priority.
-In sysklogd, this looks like:
+   This is the current, fully supported configuration format. It is
+   clean, structured, and best suited for new and complex configurations.
 
-::
+2. **sysklogd style (legacy)** – **deprecated for new configs**  
 
-   mail.info /var/log/mail.log
-   mail.err @server.example.net
+   This format is widely known and still functional, but **hard to grasp for
+   new users**. It remains an option for experienced admins who know it
+   well or need to maintain older configurations. Example:
 
-This is hard to beat in simplicity, still being taught in courses
-and a lot of people know this syntax. It is perfectly fine to use
-these constructs even in newly written config files.
+   .. code-block:: none
 
-**As a rule of thumb, RainerScript config statements should be used
-when**
+      mail.info    /var/log/mail.log
+      mail.err     @server.example.net
 
-- configuration parameters are required (e.g. the ``Action...``
-  type of legacy statements)
-- more elaborate control-of-flow is required (e.g. when multiple
-  actions must be nested under the same condition)
+3. **Legacy rsyslog style (dollar-prefix)** – **deprecated**  
 
-It is usually **not** recommended to use rsyslog legacy config format
-(those directives starting with a dollar sign). However, a few
-settings and modules have not yet been converted to RainerScript. In
-those cases, the legacy syntax must be used.
+   This format, with directives starting with `$` (e.g.,
+   `$ActionFileDefaultTemplate`), is fully supported for backward
+   compatibility but **not recommended for any new configuration**.
+
+Why Prefer RainerScript?
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+RainerScript is easier to read and maintain, avoids side effects with
+include files, and supports modern features such as structured filters,
+templates, and complex control flow.
+
+**For new configurations, always use RainerScript.**  
+Legacy formats exist only for compatibility with older setups and
+distributions.
+
+Example RainerScript rule:
+
+.. code-block:: rsyslog
+
+   if $syslogfacility-text == 'mail' and $syslogseverity-text == 'err' then {
+       action(type="omfile" file="/var/log/mail-errors.log")
+   }
 
 Comments
 --------
 
-There are two types of comments:
+Rsyslog supports:
 
--  **#-Comments** - start with a hash sign (#) and run to the end of the
-   line
--  **C-style Comments** - start with /\* and end with \*/, just like in
-   the C programming language. They can be used to comment out multiple
-   lines at once. Comment nesting is not supported, but #-Comments can be
-   contained inside a C-style comment.
+- **# Comments** — start with `#` and extend to the end of the line.
+- **C-style Comments** — start with `/*` and end with `*/`.  
+  These can span multiple lines but cannot be nested.
 
 Processing Order
 ----------------
 
-Directives are processed from the top of rsyslog.conf to the bottom.
-Order matters. For example, if you stop processing of a message,
-obviously all statements after the stop statement are never evaluated.
+- Directives are processed **in order from top to bottom** of the
+  configuration.
+- Once a message is stopped via ``stop`` subsequent statements
+  will not be evaluated for that message.
 
-Flow Control Statements
-~~~~~~~~~~~~~~~~~~~~~~~
+Flow Control
+~~~~~~~~~~~~
 
-Flow control is provided by:
+- Control structures (if/else, etc.) are available in RainerScript.
+- Filters (e.g., `prifilt()`) provide conditional matching for messages.
 
-- :doc:`Control Structures <../rainerscript/control_structures>`
+See :doc:`../rainerscript/control_structures` and :doc:`filters` for details.
 
-- :doc:`Filter Conditions <filters>`
+Data Manipulation
+~~~~~~~~~~~~~~~~~
 
-
-Data Manipulation Statements
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Data manipulation is achieved by **set**, **unset** and **reset** statements
-which are :doc:`documented here in detail <../rainerscript/variable_property_types>`.
+Data can be modified using the `set`, `unset`, and `reset` statements.
+For details, refer to :doc:`../rainerscript/variable_property_types`.
 
 Inputs
 ------
 
-Every input requires an input module to be loaded and a listener defined
-for it. Full details can be found inside the :doc:`rsyslog
-modules <modules/index>` documentation. Once loaded, inputs
-are defined via the **input()** object.
+- Each input requires a dedicated input module.
+- Inputs are defined using the `input()` object after loading the module.
 
-Outputs
--------
+Example:
 
-Outputs are also called "actions". A small set of actions is pre-loaded
-(like the output file writer, which is used in almost every
-rsyslog.conf), others must be loaded just like inputs.
+.. code-block:: rsyslog
 
-An action is invoked via the **action(type="type" ...)** object. Type is
-mandatory and must contain the name of the plugin to be called (e.g.
-"omfile" or "ommongodb"). Other parameters may be present. Their type and
-use depends on the output plugin in question.
+   module(load="imtcp")                   # Load TCP input module
+   input(type="imtcp" port="514")         # Listen on TCP port 514
+
+See :doc:`modules/index` for the full list of input modules.
+
+Outputs (Actions)
+-----------------
+
+- Actions are responsible for output, such as writing to files, databases,
+  or forwarding to other systems.
+- Actions are configured with the `action()` object.
+
+Example:
+
+.. code-block:: rsyslog
+
+   action(type="omfile" file="/var/log/messages")   # Write to local file
 
 Rulesets and Rules
 ------------------
 
-Rulesets and rules form the basis of rsyslog processing. In short, a
-rule is a way how rsyslog shall process a specific message. Usually,
-there is a type of filter (if-statement) in front of the rule. Complex
-nesting of rules is possible, much like in a programming language.
+- A **ruleset** acts like a "program" for message processing.
+- A ruleset can be bound to specific inputs or used as the default.
 
-Rulesets are containers for rules. A single ruleset can contain many
-rules. In the programming language analogy, one may think of a ruleset
-like being a program. A ruleset can be "bound" (assigned) to a specific
-input. In the analogy, this means that when a message comes in via that
-input, the "program" (ruleset) bound to it will be executed (but not any
-other!).
+Example:
 
-There is detailed documentation available for
-:doc:`rsyslog rulesets <../concepts/multi_ruleset>`.
+.. code-block:: rsyslog
 
-For quick reference, rulesets are defined as follows:
+   ruleset(name="fileLogging") {
+       if prifilt("*.info") then {
+           action(type="omfile" file="/var/log/info.log")
+       }
+   }
 
-::
+.. mermaid::
 
-    ruleset(name="rulesetname") {
-        action(type="omfile" file="/path/to/file")
-        action(type="..." ...)
-        /* and so on... */
-    }
+   graph TD
+       Input1[Input: imtcp] --> Ruleset1
+       Input2[Input: imudp] --> Ruleset2
+       Ruleset1 --> Action1[omfile]
+       Ruleset2 --> Action2[omfwd]
+       Ruleset2 --> Action3[omelasticsearch]
+
+For details, see :doc:`../concepts/multi_ruleset`.
+

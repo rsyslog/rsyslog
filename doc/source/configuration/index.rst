@@ -24,14 +24,13 @@ configuration.
 .. toctree::
    :maxdepth: 2
 
+   basic_structure
    modules/idx_output
    modules/idx_input
    modules/idx_parser
    modules/idx_messagemod
    modules/idx_stringgen
    modules/idx_library
-
-   basic_structure
    templates
    properties
    property_replacer
