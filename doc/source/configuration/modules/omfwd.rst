@@ -432,7 +432,7 @@ Enable or disable keep-alive packets at the tcp socket layer. The
 default is to disable them.
 
 
-KeepAlive.Probes
+keepalive.probes
 ^^^^^^^^^^^^^^^^
 
 .. csv-table::
@@ -449,7 +449,7 @@ effect if keep-alive is enabled. The functionality may not be
 available on all platforms.
 
 
-KeepAlive.Interval
+keepalive.interval
 ^^^^^^^^^^^^^^^^^^
 
 .. csv-table::
@@ -466,7 +466,7 @@ effect if keep-alive is enabled. The functionality may not be
 available on all platforms.
 
 
-KeepAlive.Time
+keepalive.time
 ^^^^^^^^^^^^^^
 
 .. csv-table::
@@ -930,3 +930,14 @@ syslogs to remote servers in different namespaces specify them as separate actio
    action(type="omfwd" Target="192.168.1.13" Port="10514" Protocol="tcp" NetworkNamespace="ns_eth0.0")
    action(type="omfwd" Target="192.168.2.24" Port="10514" Protocol="tcp" NetworkNamespace="ns_eth0.1")
    action(type="omfwd" Target="192.168.3.38" Port="10514" Protocol="tcp" NetworkNamespace="ns_eth0.2")
+
+
+Example 3
+---------
+
+TCP forwarding with keepalive settings enabled. This helps detect broken connections.
+
+.. code-block:: none
+
+   action(type="omfwd" Target="192.168.1.100" Port="514" Protocol="tcp" 
+          KeepAlive="on" keepalive.time="60" keepalive.probes="3" keepalive.interval="10")

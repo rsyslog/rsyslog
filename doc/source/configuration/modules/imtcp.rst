@@ -189,7 +189,7 @@ Enable or disable keep-alive packets at the tcp socket layer. The
 default is to disable them.
 
 
-KeepAlive.Probes
+keepalive.probes
 ^^^^^^^^^^^^^^^^
 
 .. csv-table::
@@ -206,7 +206,7 @@ effect if keep-alive is enabled. The functionality may not be
 available on all platforms.
 
 
-KeepAlive.Time
+keepalive.time
 ^^^^^^^^^^^^^^
 
 .. csv-table::
@@ -224,7 +224,7 @@ This has only effect if keep-alive is enabled. The functionality may
 not be available on all platforms.
 
 
-KeepAlive.Interval
+keepalive.interval
 ^^^^^^^^^^^^^^^^^^
 
 .. csv-table::
@@ -1168,7 +1168,7 @@ This permits to override the equally-named module parameter on the input()
 level. For further details, see the module parameter.
 
 
-KeepAlive.Probes
+keepalive.probes
 ^^^^^^^^^^^^^^^^
 
 .. csv-table::
@@ -1184,7 +1184,7 @@ This permits to override the equally-named module parameter on the input()
 level. For further details, see the module parameter.
 
 
-KeepAlive.Time
+keepalive.time
 ^^^^^^^^^^^^^^
 
 .. csv-table::
@@ -1200,7 +1200,7 @@ This permits to override the equally-named module parameter on the input()
 level. For further details, see the module parameter.
 
 
-KeepAlive.Interval
+keepalive.interval
 ^^^^^^^^^^^^^^^^^^
 
 .. csv-table::
