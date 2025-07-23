@@ -45,6 +45,7 @@
 #include "errmsg.h"
 #include "unicode-helper.h"
 #include "ns_socket.h"
+#include "../../runtime/ns_socket.c"
 
 MODULE_TYPE_OUTPUT;
 MODULE_TYPE_NOKEEP;
