@@ -185,18 +185,11 @@ PRAGMA_DIAGNOSTIC_POP
 
 static void onErr(void *pUsr, char *objinfo, char *errmesg, __attribute__((unused)) relpRetVal errcode) {
     instanceConf_t *inst = (instanceConf_t *)pUsr;
-    if(!confFreed) {
-	    LogError(0, RS_RET_RELP_AUTH_FAIL, 
-	             "imrelp[%s]: error '%s', object "
-		     " '%s' - input may not work as intended",
-	             inst->pszBindPort, errmesg, objinfo);
-    }
-    else {
-	    LogError(0, RS_RET_RELP_AUTH_FAIL, 
-		     "imrelp[]: error '%s', object "
-	             " '%s' - input may not work as intended",
-	             errmesg, objinfo);
-    }
+    const char *bindPort = confFreed ? "" : inst->pszBindPort;
+    LogError(0, RS_RET_RELP_AUTH_FAIL,
+             "imrelp[%s]: error '%s', object "
+	     "'%s' - input may not work as intended",
+	     bindPort, errmesg, objinfo);
 }
 
 static void onGenericErr(char *objinfo, char *errmesg, __attribute__((unused)) relpRetVal errcode) {
@@ -786,6 +779,7 @@ ENDactivateCnf
 BEGINfreeCnf
     instanceConf_t *inst, *del;
     int i;
+    confFreed=1;
     CODESTARTfreeCnf;
     for (inst = pModConf->root; inst != NULL;) {
         free(inst->pszBindPort);
@@ -807,7 +801,6 @@ BEGINfreeCnf
         inst = inst->next;
         free(del);
     }
-    confFreed=1;
     free(pModConf->pszBindRuleset);
 ENDfreeCnf
 
