@@ -1528,7 +1528,9 @@ ENDbeginTransaction
 BEGINdoAction
     CODESTARTdoAction;
     /* When using transactions (which we always do), defer all work to commitTransaction */
+    (void)ppString; /* unused but required by macro */
     iRet = RS_RET_DEFER_COMMIT;
+    goto finalize_it; /* ensure label is used */
 finalize_it:
 ENDdoAction
 
