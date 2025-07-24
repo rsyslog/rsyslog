@@ -40,6 +40,7 @@
 #define BATCH_STATE_SUB 2 /* message submitted for processing, outcome yet unknown */
 #define BATCH_STATE_COMM 3 /* message successfully commited */
 #define BATCH_STATE_DISC 4 /* discarded - processed OK, but do not submit to any other action */
+#define BATCH_STATE_DEFER 5 /* message deferred for transaction commit, not yet final */
 typedef unsigned char batch_state_t;
 
 

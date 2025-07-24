@@ -192,6 +192,8 @@ batchState2String(const batch_state_t state)
 		return "BATCH_STATE_COMM";
 	case BATCH_STATE_DISC:
 		return "BATCH_STATE_DISC";
+	case BATCH_STATE_DEFER:
+		return "BATCH_STATE_DEFER";
 	default:
 		return "ERROR, batch state not known!";
 	}
@@ -627,6 +629,25 @@ static rsRetVal getReturnCode(action_t *const pThis, wti_t *const pWti) {
 static void actionSetState(action_t *const pThis, wti_t *const pWti, uint8_t newState) {
     setActionState(pWti, pThis, newState);
     DBGPRINTF("action[%s] transitioned to state: %s\n", pThis->pszName, getActStateName(pThis, pWti));
+}
+
+/* Finalize deferred messages in batch based on transaction outcome
+ * If transaction succeeded, mark deferred messages as committed
+ * If transaction failed, mark deferred messages as ready for retry
+ */
+static void finalizeDeferredMessages(batch_t *const pBatch, const rsRetVal txResult) {
+    int i;
+    for (i = 0; i < batchNumMsgs(pBatch); ++i) {
+        if (batchIsValidElem(pBatch, i) && pBatch->eltState[i] == BATCH_STATE_DEFER) {
+            if (txResult == RS_RET_OK) {
+                batchSetElemState(pBatch, i, BATCH_STATE_COMM);
+                DBGPRINTF("finalizeDeferredMessages: message %d committed after successful transaction\n", i);
+            } else {
+                batchSetElemState(pBatch, i, BATCH_STATE_RDY);
+                DBGPRINTF("finalizeDeferredMessages: message %d reset to RDY after failed transaction\n", i);
+            }
+        }
+    }
 }
 
 /* Handles the transient commit state. So far, this is
@@ -1649,15 +1670,21 @@ static rsRetVal ATTR_NONNULL() processBatchMain(void *__restrict__ const pVoid,
              */
             rsRetVal localRet = processMsgMain(pAction, pWti, pBatch->pElem[i].pMsg, &ttNow);
             DBGPRINTF("processBatchMain: i %d, processMsgMain iRet %d\n", i, localRet);
-            if (localRet == RS_RET_OK || localRet == RS_RET_DEFER_COMMIT || localRet == RS_RET_ACTION_FAILED ||
-                localRet == RS_RET_PREVIOUS_COMMITTED) {
+            if (localRet == RS_RET_OK || localRet == RS_RET_ACTION_FAILED || localRet == RS_RET_PREVIOUS_COMMITTED) {
                 batchSetElemState(pBatch, i, BATCH_STATE_COMM);
                 DBGPRINTF("processBatchMain: i %d, COMM state set\n", i);
+            } else if (localRet == RS_RET_DEFER_COMMIT) {
+                batchSetElemState(pBatch, i, BATCH_STATE_DEFER);
+                DBGPRINTF("processBatchMain: i %d, DEFER state set\n", i);
             }
         }
     }
 
     iRet = actionCommit(pAction, pWti);
+    
+    /* Finalize deferred messages based on transaction outcome */
+    finalizeDeferredMessages(pBatch, iRet);
+    
     RETiRet;
 }
 

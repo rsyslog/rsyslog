@@ -1810,7 +1810,8 @@ static rsRetVal DeleteProcessedBatch(qqueue_t *pThis, batch_t *pBatch) {
     for (i = 0; i < pBatch->nElem; ++i) {
         pMsg = pBatch->pElem[i].pMsg;
         DBGPRINTF("DeleteProcessedBatch: etry %d state %d\n", i, pBatch->eltState[i]);
-        if (pBatch->eltState[i] == BATCH_STATE_RDY || pBatch->eltState[i] == BATCH_STATE_SUB) {
+        if (pBatch->eltState[i] == BATCH_STATE_RDY || pBatch->eltState[i] == BATCH_STATE_SUB || 
+            pBatch->eltState[i] == BATCH_STATE_DEFER) {
             localRet = doEnqSingleObj(pThis, eFLOWCTL_NO_DELAY, MsgAddRef(pMsg));
             ++nEnqueued;
             if (localRet != RS_RET_OK) {
