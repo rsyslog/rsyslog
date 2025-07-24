@@ -1522,70 +1522,7 @@ BEGINbeginTransaction
 finalize_it:
 ENDbeginTransaction
 
-BEGINdoAction
-    size_t nBytes;
-    sbool submit;
-    CODESTARTdoAction;
-    instanceData *const pData = pWrkrData->pData;
-    uchar *restPath = NULL;
-    STATSCOUNTER_INC(ctrMessagesSubmitted, mutCtrMessagesSubmitted);
 
-    if (pWrkrData->pData->batchMode) {
-        if (pData->dynRestPath) {
-            /* Get copy of restpath in batch mode if dynRestPath enabled */
-            getRestPath(pData, ppString, &restPath);
-            if (pWrkrData->batch.restPath == NULL) {
-                pWrkrData->batch.restPath = (uchar *)strdup((char *)restPath);
-            } else if (strcmp((char *)pWrkrData->batch.restPath, (char *)restPath) != 0) {
-                /* Check if the restPath changed - if yes submit the current batch first*/
-                CHKiRet(submitBatch(pWrkrData, NULL));
-                initializeBatch(pWrkrData);
-            }
-        }
-
-        /* If the maxbatchsize is 1, then build and immediately post a batch with 1 element.
-         * This mode will play nicely with rsyslog's action.resumeRetryCount logic.
-         */
-        if (pWrkrData->pData->maxBatchSize == 1) {
-            initializeBatch(pWrkrData);
-            CHKiRet(buildBatch(pWrkrData, ppString[0]));
-            CHKiRet(submitBatch(pWrkrData, ppString));
-            FINALIZE;
-        }
-
-        /* We should submit if any of these conditions are true
-         * 1. Total batch size > pWrkrData->pData->maxBatchSize
-         * 2. Total bytes > pWrkrData->pData->maxBatchBytes
-         */
-        nBytes = ustrlen((char *)ppString[0]) - 1;
-        submit = 0;
-
-        if (pWrkrData->batch.nmemb >= pWrkrData->pData->maxBatchSize) {
-            submit = 1;
-            DBGPRINTF("omhttp: maxbatchsize limit reached submitting batch of %zd elements.\n", pWrkrData->batch.nmemb);
-        } else if (computeBatchSize(pWrkrData) + nBytes > pWrkrData->pData->maxBatchBytes) {
-            submit = 1;
-            DBGPRINTF("omhttp: maxbytes limit reached submitting partial batch of %zd elements.\n",
-                      pWrkrData->batch.nmemb);
-        }
-
-        if (submit) {
-            CHKiRet(submitBatch(pWrkrData, ppString));
-            initializeBatch(pWrkrData);
-        }
-
-        CHKiRet(buildBatch(pWrkrData, ppString[0]));
-
-        /* If there is only one item in the batch, all previous items have been
-         * submitted or this is the first item for this transaction. Return previous
-         * committed so that all items leading up to the current (exclusive)
-         * are not replayed should a failure occur anywhere else in the transaction. */
-        iRet = pWrkrData->batch.nmemb == 1 ? RS_RET_PREVIOUS_COMMITTED : RS_RET_DEFER_COMMIT;
-    } else {
-        CHKiRet(curlPost(pWrkrData, ppString[0], strlen((char *)ppString[0]), ppString, 1));
-    }
-finalize_it:
-ENDdoAction
 
 
 BEGINendTransaction
@@ -1600,6 +1537,90 @@ BEGINendTransaction
     }
 finalize_it:
 ENDendTransaction
+
+BEGINcommitTransaction
+    CODESTARTcommitTransaction;
+    instanceData *const pData = pWrkrData->pData;
+    size_t nBytes;
+    sbool submit;
+    uchar *restPath = NULL;
+    unsigned iMsg;
+    
+    DBGPRINTF("omhttp: commitTransaction [%d msgs] ENTER\n", nParams);
+    
+    for (iMsg = 0; iMsg < nParams; ++iMsg) {
+        STATSCOUNTER_INC(ctrMessagesSubmitted, mutCtrMessagesSubmitted);
+        
+        if (pWrkrData->pData->batchMode) {
+            if (pData->dynRestPath) {
+                /* Get copy of restpath in batch mode if dynRestPath enabled */
+                // For commitTransaction, the restPath is in template index 1 (second template)
+                if (iMsg == 0) {
+                    restPath = (uchar*)actParam(pParams, 1, iMsg, 0).param;
+                    if (pWrkrData->batch.restPath == NULL) {
+                        pWrkrData->batch.restPath = (uchar *)strdup((char *)restPath);
+                    } else if (strcmp((char *)pWrkrData->batch.restPath, (char *)restPath) != 0) {
+                        /* Check if the restPath changed - if yes submit the current batch first*/
+                        CHKiRet(submitBatch(pWrkrData, NULL));
+                        initializeBatch(pWrkrData);
+                        free(pWrkrData->batch.restPath);
+                        pWrkrData->batch.restPath = (uchar *)strdup((char *)restPath);
+                    }
+                }
+            }
+
+            /* If the maxbatchsize is 1, then build and immediately post a batch with 1 element.
+             * This mode will play nicely with rsyslog's action.resumeRetryCount logic.
+             */
+            if (pWrkrData->pData->maxBatchSize == 1) {
+                initializeBatch(pWrkrData);
+                CHKiRet(buildBatch(pWrkrData, (uchar*)actParam(pParams, 0, iMsg, 0).param));
+                CHKiRet(submitBatch(pWrkrData, NULL));
+                continue; // Process next message
+            }
+
+            /* We should submit if any of these conditions are true
+             * 1. Total batch size > pWrkrData->pData->maxBatchSize
+             * 2. Total bytes > pWrkrData->pData->maxBatchBytes
+             */
+            nBytes = ustrlen((char *)actParam(pParams, 0, iMsg, 0).param);
+            submit = 0;
+
+            if (pWrkrData->batch.nmemb >= pWrkrData->pData->maxBatchSize) {
+                submit = 1;
+                DBGPRINTF("omhttp: maxbatchsize limit reached submitting batch of %zd elements.\n", pWrkrData->batch.nmemb);
+            } else if (computeBatchSize(pWrkrData) + nBytes > pWrkrData->pData->maxBatchBytes) {
+                submit = 1;
+                DBGPRINTF("omhttp: maxbytes limit reached submitting partial batch of %zd elements.\n",
+                          pWrkrData->batch.nmemb);
+            }
+
+            if (submit) {
+                CHKiRet(submitBatch(pWrkrData, NULL));
+                initializeBatch(pWrkrData);
+            }
+
+            CHKiRet(buildBatch(pWrkrData, (uchar*)actParam(pParams, 0, iMsg, 0).param));
+        } else {
+             // Non-batch mode: send each message individually
+             uchar *msgTpls[2];
+             msgTpls[0] = (uchar*)actParam(pParams, 0, iMsg, 0).param;
+             if (pData->dynRestPath) {
+                 msgTpls[1] = (uchar*)actParam(pParams, 1, iMsg, 0).param;
+             }
+             CHKiRet(curlPost(pWrkrData, (uchar*)actParam(pParams, 0, iMsg, 0).param, 
+                            strlen((char *)actParam(pParams, 0, iMsg, 0).param), msgTpls, 1));
+         }
+    }
+    
+    // Submit any remaining messages in batch mode
+    if (pWrkrData->pData->batchMode && pWrkrData->batch.nmemb > 0) {
+        CHKiRet(submitBatch(pWrkrData, NULL));
+    }
+    
+    DBGPRINTF("omhttp: commitTransaction [%d msgs] EXIT\n", nParams);
+finalize_it:
+ENDcommitTransaction
 
 /* Creates authentication header uid:pwd
  */
