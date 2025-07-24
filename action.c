@@ -192,8 +192,6 @@ batchState2String(const batch_state_t state)
 		return "BATCH_STATE_COMM";
 	case BATCH_STATE_DISC:
 		return "BATCH_STATE_DISC";
-	case BATCH_STATE_DEFER:
-		return "BATCH_STATE_DEFER";
 	default:
 		return "ERROR, batch state not known!";
 	}
@@ -631,21 +629,29 @@ static void actionSetState(action_t *const pThis, wti_t *const pWti, uint8_t new
     DBGPRINTF("action[%s] transitioned to state: %s\n", pThis->pszName, getActStateName(pThis, pWti));
 }
 
-/* Finalize deferred messages in batch based on transaction outcome
- * If transaction succeeded, mark deferred messages as committed
- * If transaction failed, mark deferred messages as ready for retry
+/* Rollback committed state for RS_RET_DEFER_COMMIT messages when transaction fails
+ * This preserves transaction semantics by making deferred messages retriable
+ * when any part of the transaction fails.
  */
-static void finalizeDeferredMessages(batch_t *const pBatch, const rsRetVal txResult) {
+static void rollbackDeferredMessages(action_t *const pAction, batch_t *const pBatch, 
+                                   const int *deferredMsgIndices, const int numDeferredMsgs) {
     int i;
-    for (i = 0; i < batchNumMsgs(pBatch); ++i) {
-        if (batchIsValidElem(pBatch, i) && pBatch->eltState[i] == BATCH_STATE_DEFER) {
-            if (txResult == RS_RET_OK) {
-                batchSetElemState(pBatch, i, BATCH_STATE_COMM);
-                DBGPRINTF("finalizeDeferredMessages: message %d committed after successful transaction\n", i);
-            } else {
-                batchSetElemState(pBatch, i, BATCH_STATE_RDY);
-                DBGPRINTF("finalizeDeferredMessages: message %d reset to RDY after failed transaction\n", i);
-            }
+    
+    /* Only rollback for transactional actions */
+    if (!pAction->isTransactional || numDeferredMsgs == 0) {
+        return;
+    }
+    
+    DBGPRINTF("rollbackDeferredMessages[%s]: rolling back %d deferred messages in failed transaction\n", 
+              pAction->pszName, numDeferredMsgs);
+              
+    for (i = 0; i < numDeferredMsgs; ++i) {
+        int msgIdx = deferredMsgIndices[i];
+        if (batchIsValidElem(pBatch, msgIdx) && pBatch->eltState[msgIdx] == BATCH_STATE_COMM) {
+            /* Reset the state so the message will be retried */
+            batchSetElemState(pBatch, msgIdx, BATCH_STATE_RDY);
+            DBGPRINTF("rollbackDeferredMessages[%s]: message %d reset to RDY for retry\n", 
+                      pAction->pszName, msgIdx);
         }
     }
 }
@@ -1657,6 +1663,8 @@ static rsRetVal ATTR_NONNULL() processBatchMain(void *__restrict__ const pVoid,
     action_t *__restrict__ const pAction = (action_t *__restrict__ const)pVoid;
     int i;
     struct syslogTime ttNow;
+    int deferredMsgIndices[1024]; /* Track which messages were deferred - reasonable max batch size */
+    int numDeferredMsgs = 0;
     DEFiRet;
 
     wtiResetExecState(pWti, pBatch);
@@ -1670,20 +1678,26 @@ static rsRetVal ATTR_NONNULL() processBatchMain(void *__restrict__ const pVoid,
              */
             rsRetVal localRet = processMsgMain(pAction, pWti, pBatch->pElem[i].pMsg, &ttNow);
             DBGPRINTF("processBatchMain: i %d, processMsgMain iRet %d\n", i, localRet);
-            if (localRet == RS_RET_OK || localRet == RS_RET_ACTION_FAILED || localRet == RS_RET_PREVIOUS_COMMITTED) {
+            if (localRet == RS_RET_OK || localRet == RS_RET_DEFER_COMMIT || localRet == RS_RET_ACTION_FAILED ||
+                localRet == RS_RET_PREVIOUS_COMMITTED) {
                 batchSetElemState(pBatch, i, BATCH_STATE_COMM);
                 DBGPRINTF("processBatchMain: i %d, COMM state set\n", i);
-            } else if (localRet == RS_RET_DEFER_COMMIT) {
-                batchSetElemState(pBatch, i, BATCH_STATE_DEFER);
-                DBGPRINTF("processBatchMain: i %d, DEFER state set\n", i);
+                
+                /* Track messages that returned RS_RET_DEFER_COMMIT for potential rollback */
+                if (localRet == RS_RET_DEFER_COMMIT && pAction->isTransactional && numDeferredMsgs < 1024) {
+                    deferredMsgIndices[numDeferredMsgs++] = i;
+                    DBGPRINTF("processBatchMain: i %d, tracked as deferred message\n", i);
+                }
             }
         }
     }
 
     iRet = actionCommit(pAction, pWti);
     
-    /* Finalize deferred messages based on transaction outcome */
-    finalizeDeferredMessages(pBatch, iRet);
+    /* If transaction failed, rollback deferred messages so they can be retried */
+    if (iRet != RS_RET_OK && numDeferredMsgs > 0) {
+        rollbackDeferredMessages(pAction, pBatch, deferredMsgIndices, numDeferredMsgs);
+    }
     
     RETiRet;
 }
