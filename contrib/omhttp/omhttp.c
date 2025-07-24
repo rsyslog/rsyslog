@@ -1525,6 +1525,13 @@ ENDbeginTransaction
 
 
 
+BEGINdoAction
+    CODESTARTdoAction;
+    /* When using transactions (which we always do), defer all work to commitTransaction */
+    iRet = RS_RET_DEFER_COMMIT;
+finalize_it:
+ENDdoAction
+
 BEGINendTransaction
     CODESTARTendTransaction;
     /* End Transaction only if batch data is not empty */
