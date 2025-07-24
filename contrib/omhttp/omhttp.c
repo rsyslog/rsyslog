@@ -2290,6 +2290,9 @@ CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 CODEqueryEtryPt_doHUP CODEqueryEtryPt_doHUPWrkr /* Load the worker HUP handling code */
     CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
+    if (!strcmp((char *)name, "commitTransaction")) { /* export commitTransaction for new transaction interface */
+        *pEtryPoint = commitTransaction;
+    }
         CODEqueryEtryPt_STD_CONF2_QUERIES;
 ENDqueryEtryPt
 
