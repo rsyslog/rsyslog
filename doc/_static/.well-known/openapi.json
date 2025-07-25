@@ -1,0 +1,108 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "rsyslog Docs API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    { "url": "https://docs.rsyslog.com" }
+  ],
+  "paths": {
+    "/topics": {
+      "get": {
+        "summary": "List available documentation topics",
+        "responses": {
+          "200": {
+            "description": "List of topics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Topic" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/topics/{id}": {
+      "get": {
+        "summary": "Retrieve a specific topic",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A JSON document for the topic",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/search": {
+      "post": {
+        "summary": "Search within documentation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SearchRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/SearchResult" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Topic": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" }
+        },
+        "required": ["id", "title"]
+      },
+      "SearchRequest": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string" }
+        },
+        "required": ["query"]
+      },
+      "SearchResult": {
+        "type": "object",
+        "properties": {
+          "topicId": { "type": "string" },
+          "anchor": { "type": "string" },
+          "text": { "type": "string" },
+          "score": { "type": "number" }
+        },
+        "required": ["topicId", "anchor", "text", "score"]
+      }
+    }
+  }
+}
