@@ -4,7 +4,8 @@
  *
  * This module uses the CZMQ high-level API to create and manage ZeroMQ
  * sockets.  Messages are formatted using rsyslog templates and published
- * according to the configured socket type and topic list.  CURVE
+ * according to the configured socket type and topic list, which may be
+ * static or generated dynamically from templates.  CURVE
  * authentication and heartbeat settings are supported when available.
  *
  * Copyright (C) 2016 Brian Knox
@@ -208,12 +209,15 @@ finalize_it:
  * @brief Send a formatted message through the configured CZMQ socket.
  *
  * For PUB or RADIO sockets a list of topics can be configured.  Each
- * topic results in a message being sent as a separate frame.
- * Topics may be constructed dynamically when @c dynaTopic is true.
- * Other socket types simply
- * transmit the message frame created by rsyslog.
+ * topic triggers a send operation.  When @c topicFrame is true on PUB
+ * sockets, the topic is transmitted in a separate frame, otherwise it
+ * is prepended to the message.  RADIO sockets instead set the frame's
+ * group name to the topic.  When @c dynaTopic is enabled, template
+ * results beyond index @c 0 provide the topic strings.  Other socket
+ * types simply transmit the message stored in @c ppString[0].
  *
- * @param ppString array of template results, message text in @c ppString[0]
+ * @param ppString array of template results; message text is in
+ *        @c ppString[0] and additional elements may hold topics
  * @param pData    action instance data
  * @retval RS_RET_OK on success
  * @retval RS_RET_SUSPENDED if transmission fails
