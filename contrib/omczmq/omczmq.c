@@ -208,9 +208,9 @@ finalize_it:
  * @brief Send a formatted message through the configured CZMQ socket.
  *
  * For PUB or RADIO sockets a list of topics can be configured.  Each
- * topic results in a message being sent, optionally as a separate frame
- * when @c topicFrame is enabled.  Topics may be constructed dynamically
- * using templates when @c dynaTopic is true.  Other socket types simply
+ * topic results in a message being sent as a separate frame.
+ * Topics may be constructed dynamically when @c dynaTopic is true.
+ * Other socket types simply
  * transmit the message frame created by rsyslog.
  *
  * @param ppString array of template results, message text in @c ppString[0]
