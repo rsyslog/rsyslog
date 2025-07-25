@@ -68,10 +68,6 @@ while IFS= read -r line; do
                 # If that's not the expected behavior, the following lines must
                 # be removed when the bug is solved.
                 #
-                # (START OF CODE THAT WILL POSSIBLY NEED TO BE REMOVED)
-                messages_processed+=("${messages_to_commit[@]}")
-                unset "messages_processed[${#messages_processed[@]}-1]"
-                # (END OF CODE THAT WILL POSSIBLY NEED TO BE REMOVED)
 
                 messages_to_commit=()
                 transaction_state="NONE"
