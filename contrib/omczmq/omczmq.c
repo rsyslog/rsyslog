@@ -1,14 +1,22 @@
-/* omczmq.c
+/**
+ * @file omczmq.c
+ * @brief Output module for sending messages over ZeroMQ.
+ *
+ * This module uses the CZMQ high-level API to create and manage ZeroMQ
+ * sockets.  Messages are formatted using rsyslog templates and published
+ * according to the configured socket type and topic list.  CURVE
+ * authentication and heartbeat settings are supported when available.
+ *
  * Copyright (C) 2016 Brian Knox
  * Copyright (C) 2014 Rainer Gerhards
- *
- * Author: Brian Knox <bknox@digitalocean.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *       -or-
+ *     see COPYING.ASL20 in the source distribution
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -101,6 +109,18 @@ static struct cnfparamdescr actpdescr[] = {
 
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
+/**
+ * @brief Initialize the CZMQ socket for an action instance.
+ *
+ * Creates the socket of the configured type, applies optional CURVE
+ * authentication and heartbeat parameters and attaches it to the
+ * configured endpoints.  The @a serverish flag is set according to
+ * the socket type to control how CZMQ connects or binds the socket.
+ *
+ * @param pData action instance configuration
+ * @retval RS_RET_OK on success
+ * @retval RS_RET_SUSPENDED on initialization failure
+ */
 static rsRetVal initCZMQ(instanceData *pData) {
     DEFiRet;
     int rc;
@@ -184,6 +204,20 @@ finalize_it:
     RETiRet;
 }
 
+/**
+ * @brief Send a formatted message through the configured CZMQ socket.
+ *
+ * For PUB or RADIO sockets a list of topics can be configured.  Each
+ * topic results in a message being sent, optionally as a separate frame
+ * when @c topicFrame is enabled.  Topics may be constructed dynamically
+ * using templates when @c dynaTopic is true.  Other socket types simply
+ * transmit the message frame created by rsyslog.
+ *
+ * @param ppString array of template results, message text in @c ppString[0]
+ * @param pData    action instance data
+ * @retval RS_RET_OK on success
+ * @retval RS_RET_SUSPENDED if transmission fails
+ */
 static rsRetVal outputCZMQ(uchar **ppString, instanceData *pData) {
     DEFiRet;
 
