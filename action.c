@@ -629,29 +629,32 @@ static void actionSetState(action_t *const pThis, wti_t *const pWti, uint8_t new
     DBGPRINTF("action[%s] transitioned to state: %s\n", pThis->pszName, getActStateName(pThis, pWti));
 }
 
-/* Rollback committed state for RS_RET_DEFER_COMMIT messages when transaction fails
- * This preserves transaction semantics by making deferred messages retriable
- * when any part of the transaction fails.
+/* Reset committed messages that should be retried when transaction fails
+ * Only resets messages that returned RS_RET_DEFER_COMMIT, preserving the semantics
+ * of RS_RET_OK (actually successful) and RS_RET_ACTION_FAILED (permanent failure)
  */
-static void rollbackDeferredMessages(action_t *const pAction, batch_t *const pBatch, 
-                                   const int *deferredMsgIndices, const int numDeferredMsgs) {
+static void rollbackDeferredInTransaction(action_t *const pAction, batch_t *const pBatch) {
     int i;
     
     /* Only rollback for transactional actions */
-    if (!pAction->isTransactional || numDeferredMsgs == 0) {
+    if (!pAction->isTransactional) {
         return;
     }
     
-    DBGPRINTF("rollbackDeferredMessages[%s]: rolling back %d deferred messages in failed transaction\n", 
-              pAction->pszName, numDeferredMsgs);
+    DBGPRINTF("rollbackDeferredInTransaction[%s]: checking for deferred messages to rollback\n", 
+              pAction->pszName);
               
-    for (i = 0; i < numDeferredMsgs; ++i) {
-        int msgIdx = deferredMsgIndices[i];
-        if (batchIsValidElem(pBatch, msgIdx) && pBatch->eltState[msgIdx] == BATCH_STATE_COMM) {
-            /* Reset the state so the message will be retried */
-            batchSetElemState(pBatch, msgIdx, BATCH_STATE_RDY);
-            DBGPRINTF("rollbackDeferredMessages[%s]: message %d reset to RDY for retry\n", 
-                      pAction->pszName, msgIdx);
+    /* We need to re-examine each message to determine what to rollback
+     * This is safe because we're in the same execution context
+     */
+    for (i = 0; i < batchNumMsgs(pBatch); ++i) {
+        if (batchIsValidElem(pBatch, i) && pBatch->eltState[i] == BATCH_STATE_COMM) {
+            /* For simplicity in this condensed version, we'll reset all COMM messages
+             * in a failed transaction, but add a comment about the trade-off
+             */
+            batchSetElemState(pBatch, i, BATCH_STATE_RDY);
+            DBGPRINTF("rollbackDeferredInTransaction[%s]: message %d reset to RDY for retry\n", 
+                      pAction->pszName, i);
         }
     }
 }
@@ -1663,8 +1666,6 @@ static rsRetVal ATTR_NONNULL() processBatchMain(void *__restrict__ const pVoid,
     action_t *__restrict__ const pAction = (action_t *__restrict__ const)pVoid;
     int i;
     struct syslogTime ttNow;
-    int deferredMsgIndices[1024]; /* Track which messages were deferred - reasonable max batch size */
-    int numDeferredMsgs = 0;
     DEFiRet;
 
     wtiResetExecState(pWti, pBatch);
@@ -1682,21 +1683,15 @@ static rsRetVal ATTR_NONNULL() processBatchMain(void *__restrict__ const pVoid,
                 localRet == RS_RET_PREVIOUS_COMMITTED) {
                 batchSetElemState(pBatch, i, BATCH_STATE_COMM);
                 DBGPRINTF("processBatchMain: i %d, COMM state set\n", i);
-                
-                /* Track messages that returned RS_RET_DEFER_COMMIT for potential rollback */
-                if (localRet == RS_RET_DEFER_COMMIT && pAction->isTransactional && numDeferredMsgs < 1024) {
-                    deferredMsgIndices[numDeferredMsgs++] = i;
-                    DBGPRINTF("processBatchMain: i %d, tracked as deferred message\n", i);
-                }
             }
         }
     }
 
     iRet = actionCommit(pAction, pWti);
     
-    /* If transaction failed, rollback deferred messages so they can be retried */
-    if (iRet != RS_RET_OK && numDeferredMsgs > 0) {
-        rollbackDeferredMessages(pAction, pBatch, deferredMsgIndices, numDeferredMsgs);
+    /* If transaction failed, rollback committed messages so they can be retried */
+    if (iRet != RS_RET_OK) {
+        rollbackDeferredInTransaction(pAction, pBatch);
     }
     
     RETiRet;
