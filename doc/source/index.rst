@@ -21,6 +21,7 @@ logs to a wide variety of destinations.
 .. toctree::
    :maxdepth: 2
 
+   about/index
    getting_started/index
    configuration/index
    faq/index
