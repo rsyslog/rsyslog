@@ -432,7 +432,7 @@ Enable of disable keep-alive packets at the tcp socket layer. The
 default is to disable them.
 
 
-KeepAlive.Probes
+keepalive.probes
 ^^^^^^^^^^^^^^^^
 
 .. csv-table::
@@ -449,7 +449,7 @@ effect if keep-alive is enabled. The functionality may not be
 available on all platforms.
 
 
-KeepAlive.Interval
+keepalive.interval
 ^^^^^^^^^^^^^^^^^^
 
 .. csv-table::
@@ -466,7 +466,7 @@ effect if keep-alive is enabled. The functionality may not be
 available on all platforms.
 
 
-KeepAlive.Time
+keepalive.time
 ^^^^^^^^^^^^^^
 
 .. csv-table::
