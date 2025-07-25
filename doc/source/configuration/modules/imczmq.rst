@@ -1,8 +1,8 @@
 .. _imczmq:
 
-******************************
+*******************************
 imczmq: Input module for ZeroMQ
-******************************
+*******************************
 
 .. index:: ! imczmq
 
@@ -44,7 +44,7 @@ Input Parameters
 ----------------
 
 ``endpoints``
-  Comma-separated list of ZeroMQ endpoints to bind or connect to.
+  Space-separated list of ZeroMQ endpoints to bind or connect to.
 
 ``socktype``
   ZeroMQ socket type such as ``PULL``, ``SUB``, ``ROUTER``, ``DISH`` or ``SERVER``.

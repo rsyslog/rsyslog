@@ -45,7 +45,7 @@ Action Parameters
 -----------------
 
 ``endpoints``
-  Comma-separated list of ZeroMQ endpoints to connect or bind.
+  Space-separated list of ZeroMQ endpoints to connect or bind.
 
 ``socktype``
   ZeroMQ socket type such as ``PUSH``, ``PUB``, ``DEALER``, ``RADIO`` or ``CLIENT``.
