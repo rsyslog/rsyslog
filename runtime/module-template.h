@@ -1044,6 +1044,22 @@
     RETiRet;     \
     }
 
+/* doHUPParser()
+ */
+#define CODEqueryEtryPt_doHUPParser       \
+    if (!strcmp((char *)name, "doHUP")) { \
+        *pEtryPoint = doHUP;              \
+    }
+#define BEGINdoHUPParser                                                    \
+    static rsRetVal doHUP(instanceConf_t __attribute__((unused)) * pData) { \
+        DEFiRet;
+
+#define CODESTARTdoHUPParser
+
+#define ENDdoHUPParser \
+    RETiRet;           \
+    }
+
 
 /* doHUPWrkr()
  * This is like doHUP(), but on an action worker level.

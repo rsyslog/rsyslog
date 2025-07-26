@@ -271,6 +271,8 @@ TESTS +=  \
 	pmrfc3164-AtSignsInHostname_off.sh \
 	pmrfc3164-tagEndingByColon.sh \
 	pmrfc3164-defaultTag.sh \
+	pmrfc3164-headerless.sh \
+	pmrfc3164-drop.sh \
 	pmrfc3164-json.sh \
 	tcp_forwarding_tpl.sh \
 	tcp_forwarding_dflt_tpl.sh \
@@ -901,7 +903,7 @@ endif
 
 # see comments in configure.ac on flaky tests for important details!!!
 if ENABLE_FLAKY_TESTS
-#TESTS += 
+#TESTS +=
 #
 if ENABLE_OMHTTP
 TESTS +=  \
@@ -1951,6 +1953,8 @@ EXTRA_DIST= \
 	pmrfc3164-tagEndingByColon.sh \
 	pmrfc3164-defaultTag.sh \
 	pmrfc3164-json.sh \
+	pmrfc3164-headerless.sh \
+	pmrfc3164-drop.sh \
 	hostname-with-slash-dflt-invld.sh \
 	hostname-with-slash-dflt-slash-valid.sh \
 	glbl-umask.sh \
