@@ -2,27 +2,136 @@
 omfwd: syslog Forwarding Output Module
 **************************************
 
-===========================  ===========================================================================
-**Module Name:**             **omfwd**
-**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
-===========================  ===========================================================================
+The `omfwd` module forwards logs to remote systems using **UDP, TCP, or TLS**.
+
+It is **built-in** and does not require explicit loading.  
+To configure global defaults, use ``builtin:omfwd``.
+
+.. note::
+   For modern deployments, prefer **TCP with TLS** over plain TCP or UDP.  
+   If reliable delivery is critical, consider :doc:`omrelp <omrelp>`.
+
+Best Practices
+==============
+
+- **Choose the right transport:**  
+  TCP is often used for reliable delivery, especially with TLS.  
+  UDP can be preferable for low-latency, non-blocking scenarios (e.g., local 
+  high-speed networks).  
+  If you need **encrypted UDP**, consider :doc:`omdtls <omdtls>`.
+
+- **Use TLS where possible:**  
+  When sending logs over untrusted networks, configure TLS (`StreamDriver="ossl"` 
+  or `StreamDriver="gtls"`) with `omfwd` (for TCP) or switch to `omdtls` (for UDP).
+
+- **Enable queues for TCP forwarding:**  
+  Always define a queue (`queue.type="linkedList"`) to avoid blocking if the 
+  remote server is unavailable.
+
+- **Adjust queue parameters for heavy traffic:**  
+  For high-volume logging or prolonged outages, tune `queue.size` and related 
+  parameters to prevent message loss. The defaults are designed for typical workloads.
+
+- **Use templates for structured logs:**  
+  Apply templates (e.g., JSON) if the receiver expects a specific log format.
+
+- **Consider RELP for guaranteed delivery:**  
+  Use :doc:`omrelp <omrelp>` when 100% reliable delivery and acknowledgments 
+  are required.
+
+Quick Start
+===========
+
+The most common forwarding examples:
+
+**1. Forward all logs to a remote server via TCP**
+
+.. code-block:: rsyslog
+
+   # Forward all messages to a remote syslog server over TCP
+   action(
+       type="omfwd"
+       target="logs.example.com"   # Remote syslog server
+       port="514"                  # Destination port
+       protocol="tcp"              # Use TCP (reliable transport)
+       queue.type="linkedList"     # Prevent blocking if the remote server is down
+   )
+
+**2. Secure log forwarding with TLS**
+
+.. code-block:: rsyslog
+
+   # Forward logs securely using TLS (RFC5425)
+   action(
+       type="omfwd"
+       target="logs.example.com"
+       port="6514"                 # Standard port for TLS syslog
+       protocol="tcp"
+       StreamDriver="ossl"         # OpenSSL for TLS
+       StreamDriverMode="1"        # TLS-only mode
+       StreamDriverAuthMode="x509/name"
+       StreamDriverPermittedPeers="logs.example.com"
+   )
 
 
-Purpose
-=======
+Avoiding Legacy Antipatterns
+============================
 
-The `omfwd` plugin provides core functionality for traditional message forwarding 
-via UDP and TCP (including TLS). This built-in module does neither require loading
-nor can be loaded. If you need to "load" in order to set defaults, use "builtin:omfwd"
-as the module name.
+Old tutorials often show legacy directives like `@server` or `@@server`.  
+These are still supported but are **not recommended** because they lack queues 
+and modern flexibility.
 
-.. note:: The RELP protocol is not supported by `omfwd`. Use :doc:`omrelp <omrelp>` 
-   to forward messages via RELP.
+**TCP Forwarding**
 
- 
-Notable Features
-================
+**Before (legacy):**
 
+.. code-block:: text
+
+   *.* @@remote.example.com
+
+**After (modern):**
+
+.. code-block:: rsyslog
+
+   action(
+       type="omfwd"
+       target="remote.example.com"
+       port="514"
+       protocol="tcp"
+       queue.type="linkedList"   # Prevents blocking if remote server is offline
+   )
+
+**UDP Forwarding (custom port)**
+
+**Before (legacy):**
+
+.. code-block:: text
+
+   *.* @remote.example.com:515
+
+**After (modern):**
+
+.. code-block:: rsyslog
+
+   action(
+       type="omfwd"
+       target="remote.example.com"
+       port="515"                # Non-standard port
+       protocol="udp"
+   )
+
+What About `*.*`?
+-----------------
+
+The legacy syntax `*.*` means "all facilities and priorities."  
+In modern RainerScript, **all messages are matched by default**.  
+You only need filters (e.g., `if ... then ...`) when you want to **selectively forward** messages.
+
+.. code-block:: text
+
+   *.* @@remote.example.com
+
+is fully equivalent to the modern example above, **without needing `*.*`.**
 
 Configuration Parameters
 ========================
@@ -76,7 +185,7 @@ error is emitted, and rsyslog reverts to using the full size.
 Example
 .......
 
-.. code-block:: none
+.. code-block:: rsyslog
 
   module(load="builtin:omfwd" iobuffer.maxSize="8")
 
@@ -842,7 +951,7 @@ Example 1
 
 This will allow all protocols except for SSLv2 and SSLv3:
 
-.. code-block:: none
+.. code-block:: rsyslog
 
    gnutlsPriorityString="Protocol=ALL,-SSLv2,-SSLv3"
 
@@ -853,7 +962,7 @@ Example 2
 This will allow all protocols except for SSLv2, SSLv3 and TLSv1.
 It will also set the minimum protocol to TLSv1.2
 
-.. code-block:: none
+.. code-block:: rsyslog
 
    gnutlsPriorityString="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1
    MinProtocol=TLSv1.2"
@@ -913,7 +1022,7 @@ Example 1
 The following command sends all syslog messages to a remote server via
 TCP port 10514.
 
-.. code-block:: none
+.. code-block:: rsyslog
 
    action(type="omfwd" Target="192.168.2.11" Port="10514" Protocol="tcp" Device="eth0")
 
@@ -925,7 +1034,7 @@ In case the system in use has multiple (maybe virtual) network interfaces networ
 namespaces come in handy, each with its own routing table. To be able to distribute
 syslogs to remote servers in different namespaces specify them as separate actions.
 
-.. code-block:: none
+.. code-block:: rsyslog
 
    action(type="omfwd" Target="192.168.1.13" Port="10514" Protocol="tcp" NetworkNamespace="ns_eth0.0")
    action(type="omfwd" Target="192.168.2.24" Port="10514" Protocol="tcp" NetworkNamespace="ns_eth0.1")
