@@ -83,6 +83,7 @@ struct nsd_gtls_s {
         gnutls_x509_privkey_t ourKey; /**< our private key, if in client mode (unused in server mode) */
         short bOurCertIsInit; /**< 1 if our certificate is initialized and must be deinit on destruction */
         short bOurKeyIsInit; /**< 1 if our private key is initialized and must be deinit on destruction */
+        unsigned short loggedWarnings; /**< bitfield of logged warnings */
         char *pszRcvBuf;
         int lenRcvBuf;
         /**< -1: empty, 0: connection closed, 1..NSD_GTLS_MAX_RCVBUF-1: data of that size present */
