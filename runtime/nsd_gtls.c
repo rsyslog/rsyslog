@@ -76,6 +76,13 @@ static pthread_mutex_t mutGtlsStrerror;
 
 static gnutls_dh_params_t dh_params; /**< server DH parameters for anon mode */
 
+/* bitfield for warnings that have been logged */
+enum {
+    GTLS_LOGGED_WARN_CERT_MISSING = 1 << 0,
+    GTLS_LOGGED_WARN_KEY_MISSING = 1 << 1,
+    GTLS_LOGGED_WARN_CA_MISSING = 1 << 2
+};
+
 /* a macro to abort if GnuTLS error is not acceptable. We split this off from
  * CHKgnutls() to avoid some Coverity report in cases where we know GnuTLS
  * failed. Note: gnuRet must already be set accordingly!
@@ -660,11 +667,13 @@ static rsRetVal gtlsAddOurCert(nsd_gtls_t *const pThis) {
     keyFile = (pThis->pszKeyFile == NULL) ? glbl.GetDfltNetstrmDrvrKeyFile(runConf) : pThis->pszKeyFile;
     dbgprintf("GTLS certificate file: '%s'\n", certFile);
     dbgprintf("GTLS key file: '%s'\n", keyFile);
-    if (certFile == NULL) {
+    if (certFile == NULL && !(pThis->loggedWarnings & GTLS_LOGGED_WARN_CERT_MISSING)) {
         LogMsg(0, RS_RET_CERT_MISSING, LOG_WARNING, "warning: certificate file is not set");
+        pThis->loggedWarnings |= GTLS_LOGGED_WARN_CERT_MISSING;
     }
-    if (keyFile == NULL) {
+    if (keyFile == NULL && !(pThis->loggedWarnings & GTLS_LOGGED_WARN_KEY_MISSING)) {
         LogMsg(0, RS_RET_CERTKEY_MISSING, LOG_WARNING, "warning: key file is not set");
+        pThis->loggedWarnings |= GTLS_LOGGED_WARN_KEY_MISSING;
     }
 
     /* set certificate in gnutls */
@@ -741,8 +750,9 @@ static rsRetVal gtlsInitCred(nsd_gtls_t *const pThis) {
 
     /* sets the trusted cas file */
     cafile = (pThis->pszCAFile == NULL) ? glbl.GetDfltNetstrmDrvrCAF(runConf) : pThis->pszCAFile;
-    if (cafile == NULL) {
+    if (cafile == NULL && !(pThis->loggedWarnings & GTLS_LOGGED_WARN_CA_MISSING)) {
         LogMsg(0, RS_RET_CA_CERT_MISSING, LOG_WARNING, "Warning: CA certificate is not set");
+        pThis->loggedWarnings |= GTLS_LOGGED_WARN_CA_MISSING;
     } else {
         dbgprintf("GTLS CA file: '%s'\n", cafile);
         gnuRet = gnutls_certificate_set_x509_trust_file(pThis->xcred, (char *)cafile, GNUTLS_X509_FMT_PEM);
@@ -1405,6 +1415,7 @@ static inline void gtlsSetTransportPtr(nsd_gtls_t *pThis, int sock) {
 BEGINobjConstruct(nsd_gtls) /* be sure to specify the object type also in END macro! */
     iRet = nsd_ptcp.Construct(&pThis->pTcp);
     pThis->bReportAuthErr = 1;
+    pThis->loggedWarnings = 0;
 ENDobjConstruct(nsd_gtls)
 
 
@@ -2332,8 +2343,8 @@ BEGINobjQueryInterface(nsd_gtls)
      * work here (if we can support an older interface version - that,
      * of course, also affects the "if" above).
      */
-    pIf->Construct = (rsRetVal(*)(nsd_t **))nsd_gtlsConstruct;
-    pIf->Destruct = (rsRetVal(*)(nsd_t **))nsd_gtlsDestruct;
+    pIf->Construct = (rsRetVal (*)(nsd_t **))nsd_gtlsConstruct;
+    pIf->Destruct = (rsRetVal (*)(nsd_t **))nsd_gtlsDestruct;
     pIf->Abort = Abort;
     pIf->LstnInit = LstnInit;
     pIf->AcceptConnReq = AcceptConnReq;
