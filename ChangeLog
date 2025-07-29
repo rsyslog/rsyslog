@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-07-29: gtls fix: log missing certificate/key only once
+  When no TLS certificate or key is configured for forwarding actions,
+  repeated connection attempts produced the same warning messages over and
+  over. gtlsInitCred() and gtlsAddOurCert() now log these warnings only
+  during the initial setup
+  Thanks to Attila Lakatos for the patch.
 - 2025-07-22: greatly restructured and improved documentation
   It is in far better shape now, but there are still improvements
   planned and needed.
