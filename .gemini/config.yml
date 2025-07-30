@@ -12,7 +12,7 @@ review_triggers:
   # Do not trigger a review when a pull request is opened.
   pull_request_opened: true
   # Do not trigger a review when a new commit is pushed to the PR branch.
-  pull_request_commit_added: false
+  pull_request_commit_added: true
   # Do trigger a review when the bot is added as a reviewer.
   reviewer_added: true
 
