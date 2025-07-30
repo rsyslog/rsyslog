@@ -315,6 +315,34 @@ The following parameters can be set:
      reception. If you intend to use these property replacer options, you
      must turn off *parser.escapeControlCharactersOnReceive*.
 
+- **parser.dropTrailingLFOnReception** [on/off]
+
+  **Default:** on
+
+  Controls whether trailing line feed characters (LF) should be dropped from 
+  received messages. Syslog messages frequently have the line feed character as 
+  the last character of the message. In almost all cases, this LF should not 
+  really become part of the message. However, recent IETF syslog standardization 
+  recommends against modifying syslog messages (e.g. to keep digital signatures 
+  valid). This option allows to specify if trailing LFs should be dropped or not. 
+  The default is to drop them, which is consistent with what sysklogd does.
+
+- **parser.dropTrailingCROnReception** [on/off] available 8.2508.0+
+
+  **Default:** off
+
+  When enabled together with ``parser.dropTrailingLFOnReception``, this parameter
+  controls whether carriage return characters (CR) that precede trailing line feed 
+  characters (LF) should also be dropped from received messages. This is particularly 
+  useful when processing logs from Windows systems or other sources that use 
+  Windows-style line endings (CR+LF sequences). 
+
+  **Important:** This parameter only takes effect when ``parser.dropTrailingLFOnReception`` 
+  is also enabled. The default is ``off`` to maintain backward compatibility with 
+  existing installations.
+
+  **Note:** This feature resolves `Issue #241 <https://github.com/rsyslog/rsyslog/issues/241>`_.
+
 
 - **senders.keepTrack** [on/off] available 8.17.0+
 
