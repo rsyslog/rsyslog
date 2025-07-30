@@ -1,0 +1,39 @@
+name: "Code Style Check"
+
+on:
+  pull_request:
+
+jobs:
+  style-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Detect changed files
+        id: code_changes
+        uses: tj-actions/changed-files@v46
+        with:
+          files: |
+            **/*.c
+            **/*.h
+            devtools/format-code.sh
+
+      - name: Enforce code style
+        run: |
+          if [ "${{ steps.code_changes.outputs.any_changed }}" != "true" ]; then
+            echo "No code changes detected; skipping style check."
+            exit 0
+          fi
+          chmod +x devtools/format-code.sh
+          ./devtools/format-code.sh
+          if ! git diff --exit-code; then
+            echo "::error ::Code style violations detected."
+            echo "Contributors: to fix this, run './devtools/format-code.sh' locally"
+            echo "and push the updated commit to your branch."
+            echo "Ensure 'Allow edits from maintainers' is enabled on this PR so maintainers"
+            echo "can help apply formatting fixes if needed."
+            exit 1
+          fi
+
