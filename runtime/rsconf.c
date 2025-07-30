@@ -745,6 +745,27 @@ static rsRetVal tellModulesCheckConfig(void) {
     return RS_RET_OK; /* intentional: we do not care about module errors */
 }
 
+/* verify parser instances after full config load */
+static rsRetVal checkParserInstances(void) {
+    parserList_t *node;
+    rsRetVal localRet;
+    DEFiRet;
+
+    node = loadConf->parsers.pParsLstRoot;
+    while (node != NULL) {
+        if (node->pParser->pModule->mod.pm.checkParserInst != NULL) {
+            localRet = node->pParser->pModule->mod.pm.checkParserInst(node->pParser->pInst);
+            if (localRet != RS_RET_OK) {
+                iRet = localRet;
+                break;
+            }
+        }
+        node = node->pNext;
+    }
+
+    RETiRet;
+}
+
 
 /* Tell modules to activate current running config (pre privilege drop) */
 static rsRetVal tellModulesActivateConfigPrePrivDrop(void) {
@@ -1401,6 +1422,7 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
     tellModulesConfigLoadDone();
 
     tellModulesCheckConfig();
+    CHKiRet(checkParserInstances());
     CHKiRet(validateConf(loadConf));
     CHKiRet(loadMainQueue());
 

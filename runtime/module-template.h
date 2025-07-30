@@ -696,6 +696,9 @@
     if (!strcmp((char *)name, "newParserInst")) {                          \
         *pEtryPoint = newParserInst;                                       \
     }                                                                      \
+    if (!strcmp((char *)name, "checkParserInst")) {                        \
+        *pEtryPoint = checkParserInst;                                     \
+    }                                                                      \
     if (!strcmp((char *)name, "freeParserInst")) {                         \
         *pEtryPoint = freeParserInst;                                      \
     }                                                                      \
@@ -907,6 +910,18 @@
 
 #define ENDcheckCnf \
     RETiRet;        \
+    }
+
+/* checkParserInst() - verifies a parser instance configuration */
+#define BEGINcheckParserInst                                                   \
+    static rsRetVal checkParserInst(void *const ptr) {                         \
+        instanceConf_t __attribute__((unused)) *pInst = (instanceConf_t *)ptr; \
+        DEFiRet;
+
+#define CODESTARTcheckParserInst
+
+#define ENDcheckParserInst \
+    RETiRet;               \
     }
 
 
