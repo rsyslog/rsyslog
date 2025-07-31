@@ -1,5 +1,37 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-07-31: pmrfc3164: add headerless message detection and handling
+  This patch adds a robust, optional mechanism for handling "headerless" input—
+  log messages that do not conform to traditional syslog formatting.
+  - **Headerless detection (opt-in)**
+    - Controlled by the new `detect.headerless` boolean (default: off)
+    - Detects messages with **no PRI** and **no valid timestamp**
+    - Excludes structured inputs (e.g. JSON starting with `{` or `[`) as
+      before
+    - Injects default `hostname` and `tag` values
+    - Flags message internally as `HEADERLESS_MSG` for further processing
+  - **Fallback processing options**
+    - `headerless.ruleset`: route headerless messages to a dedicated ruleset
+    - `headerless.errorfile`: optionally store raw input to a file
+    - `headerless.drop`: discard headerless messages early if desired
+  - **Thread-safe HUP signal handling**
+    - New `doHUPParser` entry point allows safe log rotation for error file
+    - Follows standard reopen-on-write pattern post-HUP
+  - **Testing & Maintenance**
+    - Adds two test cases: `pmrfc3164-headerless.sh` and `pmrfc3164-drop.sh`
+    - Extends documentation for all new parameters
+    - Cleans up code formatting, includes, and bumps copyright
+  Some environments produce mixed or malformed input streams. This patch enables
+  early, lightweight detection of non-syslog input, with customizable recovery
+  and routing strategies. It avoids unnecessary parsing work and gives operators
+  better tools to isolate or discard garbage input—without breaking legacy behavior.
+- 2025-07-31: imjournal: fix vulnerability in state file creation
+  Initialize cs.fCreateMode to 0644 instead of -1 to prevent state files
+  from being created with all permission bits set when legacy configuration
+  is used. The setModCnf function is only called with modern configuration,
+  leaving cs.fCreateMode at -1 for legacy configs, which results in wrong
+  open() calls.
+  Thanks to Attila Lakatos for the patch.
 - 2025-07-31: doc fix: remove doc for debug options that no longer exist
   Some debug options were removed several years ago but unfortunately
   not removed from the doc. This is now done.
