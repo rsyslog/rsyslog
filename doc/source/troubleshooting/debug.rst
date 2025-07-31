@@ -36,19 +36,6 @@ There are two environment variables that set several debug settings:
    The "RSYSLOG\_DEBUG" environment variable contains an option string
    with the following options possible (all are case insensitive):
 
-   -  **LogFuncFlow** - print out the logical flow of functions
-      (entering and exiting them)
-   -  **FileTrace** - specifies which files to trace LogFuncFlow. If
-      **not** set (the default), a LogFuncFlow trace is provided for all
-      files. Set to limit it to the files specified. FileTrace may be
-      specified multiple times, one file each (e.g. export
-      RSYSLOG\_DEBUG="LogFuncFlow FileTrace=vm.c FileTrace=expr.c"
-   -  **PrintFuncDB** - print the content of the debug function database
-      whenever debug information is printed (e.g. abort case)!
-   -  **PrintAllDebugInfoOnExit** - print all debug information
-      immediately before rsyslogd exits (currently not implemented!)
-   -  **PrintMutexAction** - print mutex action as it happens. Useful
-      for finding deadlocks and such.
    -  **NoLogTimeStamp** - do not prefix log lines with a timestamp
       (default is to do that).
    -  **NoStdOut** - do not emit debug messages to stdout. If
