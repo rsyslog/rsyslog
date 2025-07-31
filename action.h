@@ -22,6 +22,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+/**
+ * @file action.h
+ * @brief Public API for output actions.
+ *
+ * Actions represent configured output destinations. Each action may run
+ * via its own queue or directly from a worker thread. When supported by
+ * the output module, actions treat a batch of messages as a transaction
+ * and coordinate commits via this interface. These are not strict
+ * database-style transactions; a rollback may not be possible and
+ * message delivery follows an "at least once" principle.
+ */
 #ifndef ACTION_H_INCLUDED
 #define ACTION_H_INCLUDED 1
 
@@ -35,9 +47,15 @@ extern int glbliActionResumeRetryCount;
  * @struct action_s
  * @brief Runtime representation of an output action.
  *
- * The structure holds configuration and state for a single action.
- * An action may be processed by multiple worker threads and can use
- * transactional semantics when supported by its output module.
+ * Holds configuration and runtime state for a single action.
+ *
+ * Actions may be processed by multiple worker threads. The primary
+ * mutex @c mutAction serializes state changes such as suspension and
+ * resume handling. When the associated output module supports
+ * transactions, the fields in this structure track in-flight batches
+ * and commit status. These transactions are best-effort batches; on
+ * failure only partial rollback may be possible, so delivery is
+ * guaranteed at least once.
  */
 struct action_s {
     time_t f_time; /* used for "max. n messages in m seconds" processing */
