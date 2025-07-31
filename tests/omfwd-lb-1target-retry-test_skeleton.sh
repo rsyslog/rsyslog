@@ -24,24 +24,22 @@ module(load="builtin:omfwd" template="outfmt" iobuffer.maxSize="'$OMFWD_IOBUF_SI
 
 if $msg contains "msgnum:" then {
 	action(type="omfwd" target=["127.0.0.1"] port="'$MINITCPSRVR_PORT1'" protocol="tcp"
-		#extendedConnectionCheck="off"
+		extendedConnectionCheck="off"
 		pool.resumeInterval="1"
 		action.resumeRetryCount="-1" action.resumeInterval="1")
-	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt"
-	       action.ExecOnlyWhenPreviousIsSuspended="on")
 }
 '
-echo Note: intentionally not started any local TCP receiver!
 
 # now do the usual run
 startup
 
 injectmsg
+sleep 20 # This is just an experiment! TODO: remove or adjust after experiment.
 shutdown_when_empty
 wait_shutdown
 # note: minitcpsrv shuts down automatically if the connection is closed!
 
 export SEQ_CHECK_OPTIONS=-d
 #permit 500 messages to be lost in this extreme test (-m 100)
-seq_check 0 $((NUMMESSAGES-1)) -m500
+seq_check 0 $((NUMMESSAGES-1)) -m100
 exit_test
