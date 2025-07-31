@@ -180,6 +180,10 @@ BEGINfreeParserInst
     dbgprintf("pmsnare: free parser instance %p\n", pInst);
 ENDfreeParserInst
 
+BEGINcheckParserInst
+    CODESTARTcheckParserInst;
+ENDcheckParserInst
+
 BEGINisCompatibleWithFeature
     CODESTARTisCompatibleWithFeature;
     if (eFeat == sFEATUREAutomaticSanitazion) iRet = RS_RET_OK;

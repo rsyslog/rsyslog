@@ -155,6 +155,10 @@ BEGINfreeParserInst
     dbgprintf("pmrfc3164: free parser instance %p\n", pInst);
 ENDfreeParserInst
 
+BEGINcheckParserInst
+    CODESTARTcheckParserInst;
+ENDcheckParserInst
+
 
 /* parse a legay-formatted syslog message.
  */
