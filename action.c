@@ -9,6 +9,10 @@
  * performed before a message is enqueued so that queued and direct
  * modes behave identically.
  *
+ * Some output modules offer transactional behavior. In this context a
+ * transaction simply groups the current batch of messages. Rollback
+ * is not guaranteed, so message delivery follows an at-least-once model.
+ *
  * The legacy comments below outline the call sequences used for the
  * various execution modes.  They are retained for reference.
  *
@@ -996,9 +1000,13 @@ finalize_it:
 }
 
 
-/* prepare an action for performing work. This involves trying to recover it,
- * depending on its current state.
- * rgerhards, 2009-05-07
+/**
+ * @brief Prepare an action for message processing.
+ *
+ * This helper ensures a worker instance exists and attempts to
+ * resume a suspended action. If the action becomes ready a new
+ * transaction is started via the output module's beginTransaction()
+ * hook, transitioning the internal state to @c ACT_STATE_ITX.
  */
 static rsRetVal ATTR_NONNULL() actionPrepare(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti) {
     DEFiRet;
@@ -1093,6 +1101,17 @@ finalize_it:
 }
 
 
+/**
+ * @brief Release memory allocated for action parameters.
+ *
+ * Parameters are prepared by prepareDoActionParams() before the
+ * output module is invoked. Depending on the parameter passing mode
+ * temporary buffers or JSON objects may need explicit cleanup.
+ *
+ * @param[in] pAction         action whose parameters are released
+ * @param[in] pWti            worker thread context
+ * @param[in] action_destruct non-zero if called during action teardown
+ */
 void releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restrict__ const pWti, int action_destruct) {
     int j;
     actWrkrInfo_t *__restrict__ pWrkrInfo;
@@ -1130,14 +1149,24 @@ void releaseDoActionParams(action_t *__restrict__ const pAction, wti_t *__restri
 }
 
 
-/* This is used in resume processing. We only finally know that a resume
- * worked when we have been able to actually process a messages. As such,
- * we need to do some cleanup and status tracking in that case.
+/**
+ * @brief Mark that an action successfully processed a message.
+ *
+ * This helper resets the consecutive resume counter so that the
+ * retry backoff is cleared once a message passes through the action
+ * after a suspension.
  */
 static void actionSetActionWorked(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti) {
     setActionResumeInRow(pWti, pThis, 0);
 }
 
+/**
+ * @brief Translate the result of an output module call into action state.
+ *
+ * Depending on @a ret the action's state machine is advanced and a
+ * suitable return code for higher layers is produced.  This function
+ * centralizes the logic for commit, retry and suspend transitions.
+ */
 static rsRetVal handleActionExecResult(action_t *__restrict__ const pThis,
                                        wti_t *__restrict__ const pWti,
                                        const rsRetVal ret) {
@@ -1249,7 +1278,8 @@ finalize_it:
  *
  * Depending on the output module capabilities the batch is either
  * handed to commitTransaction() or processed message by message for
- * legacy modules.
+ * legacy modules. Rollback is best effort only; if a commit fails some
+ * messages may have already been delivered.
  *
  * @param[in] pThis    action to execute
  * @param[in] pWti     worker thread instance
@@ -1299,7 +1329,14 @@ finalize_it:
 }
 
 
-/* Commit try committing (do not handle retry processing and such) */
+/**
+ * @brief Attempt to commit a batch without invoking retry logic.
+ *
+ * The action is prepared and the transaction executed. If the
+ * action remains in transactional state @c endTransaction() is
+ * invoked to finalize the batch. The return value reflects the
+ * resulting action state but no retries are performed here.
+ */
 static rsRetVal ATTR_NONNULL() actionTryCommit(action_t *__restrict__ const pThis,
                                                wti_t *__restrict__ const pWti,
                                                actWrkrIParams_t *__restrict__ const iparams,
@@ -1628,7 +1665,16 @@ finalize_it:
     RETiRet;
 }
 
-/* This entry point is called by the ACTION queue (not main queue!)
+/**
+ * @brief Worker callback for action queues.
+ *
+ * Called by the action's queue to process a batch of messages. Each
+ * message is executed via processMsgMain() so that transactional
+ * actions collect parameters before a final call to actionCommit().
+ *
+ * @param[in] pVoid   pointer to the action instance
+ * @param[in] pBatch  batch of messages from the queue
+ * @param[in] pWti    worker thread state
  */
 static rsRetVal ATTR_NONNULL() processBatchMain(void *__restrict__ const pVoid,
                                                 batch_t *__restrict__ const pBatch,
@@ -1662,8 +1708,11 @@ static rsRetVal ATTR_NONNULL() processBatchMain(void *__restrict__ const pVoid,
 }
 
 
-/* remove an action worker instance from our table of
- * workers. To be called from worker handler (wti).
+/**
+ * @brief Remove a worker instance from an action.
+ *
+ * Called by worker threads during shutdown to remove their private
+ * data pointer from the action's worker table.
  */
 void actionRemoveWorker(action_t *const __restrict__ pAction, void *const __restrict__ actWrkrData) {
     pthread_mutex_lock(&pAction->mutWrkrDataTable);
@@ -1678,9 +1727,12 @@ void actionRemoveWorker(action_t *const __restrict__ pAction, void *const __rest
 }
 
 
-/* call the HUP handler for a given action, if such a handler is defined.
- * Note that the action must be able to service HUP requests concurrently
- * to any current doAction() processing.
+/**
+ * @brief Invoke the configured HUP handlers for an action.
+ *
+ * Both action-level and per-worker callbacks may be registered by the
+ * output module. The worker table is locked while iterating to avoid
+ * races with worker removal.
  */
 rsRetVal actionCallHUPHdlr(action_t *const pAction) {
     DEFiRet;
