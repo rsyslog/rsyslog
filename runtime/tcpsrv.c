@@ -1189,7 +1189,11 @@ static void *wrkr(void *arg) {
         DBGPRINTF("prctl failed, not setting thread name for '%s'\n", thrdName);
     }
 #elif defined(HAVE_PTHREAD_SETNAME_NP)
+    #if defined(__APPLE__)
+    int r = pthread_setname_np((char *)shortThrdName);
+    #else
     int r = pthread_setname_np(pthread_self(), (char *)shortThrdName);
+    #endif
     if (r != 0) {
         DBGPRINTF("pthread_setname_np failed, not setting thread name for '%s'\n", thrdName);
     }
