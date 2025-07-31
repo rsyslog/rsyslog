@@ -1039,7 +1039,7 @@ BEGINbeginCnfLoad
     cs.bIgnoreNonValidStatefile = 1;
     cs.iPersistStateInterval = DFLT_persiststateinterval;
     cs.stateFile = NULL;
-    cs.fCreateMode = -1;
+    cs.fCreateMode = 0644;
     cs.ratelimitBurst = 20000;
     cs.ratelimitInterval = 600;
     cs.iDfltSeverity = DFLT_SEVERITY;
@@ -1314,16 +1314,6 @@ BEGINsetModCnf
                 "param '%s' in beginCnfLoad\n",
                 modpblk.descr[i].name);
         }
-    }
-
-    /* File create mode is not set */
-    if (cs.fCreateMode == -1) {
-        const int fCreateMode = 0644;
-        LogMsg(0, RS_RET_OK_WARN, LOG_WARNING,
-               "imjournal: filecreatemode is not set, "
-               "using default %04o",
-               fCreateMode);
-        cs.fCreateMode = fCreateMode;
     }
 
 finalize_it:
