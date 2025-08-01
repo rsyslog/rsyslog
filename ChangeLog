@@ -1,5 +1,26 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-08-01: ossl: Add PrioritizeSAN option to OpenSSL network stream driver
+  Add OpenSSL equivalent of existing GnuTLS PrioritizeSAN functionality
+  implemented in commit 937e278fdf51c3e21ebd3acf05f9d1b8649ce2c5
+  https://docs.openssl.org/1.1.1/man3/X509_check_host
+  > The X509_CHECK_FLAG_NEVER_CHECK_SUBJECT flag causes the function to
+  > never consider the subject DN even if the certificate contains no
+  > subject alternative names of the right type (DNS name or email address
+  > as appropriate); the default is to use the subject DN when no
+  > corresponding subject alternative names are present.
+  0x10100004L corresponds to OpenSSL 1.1.0-pre4 in which
+  X509_CHECK_FLAG_NEVER_CHECK_SUBJECT first appeared.
+  Thanks to Corey Siltala for the patch.
+- 2025-08-01: core: fix race condition in imtcp when closing sessions
+  This commit fixes a race condition that could occur when two threads tried to close
+  the same TCP session simultaneously. This could lead to an "epoll_ctl failed:
+  Bad file descriptor" error message.
+  The fix introduces an atomic flag `being_closed` to the `tcps_sess_t` struct.
+  This flag is used to ensure that the session-closing logic is executed only once
+  per session.  This commit also corrects the logic of the atomic check to prevent
+  the race condition correctly.
+  This was created with the help of Google Jules AI coding agent.
 - 2025-07-31: pmrfc3164: add headerless message detection and handling
   This patch adds a robust, optional mechanism for handling "headerless" input—
   log messages that do not conform to traditional syslog formatting.
