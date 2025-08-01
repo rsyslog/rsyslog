@@ -7,3 +7,5 @@ race:^imptcp_destruct_epd$
 race:doLogMsg
 race:setlocale
 race:doSIGTTIN
+# Known race condition in ommysql module when multiple worker threads close MySQL connections
+race:closeMySQL

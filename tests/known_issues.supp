@@ -43,6 +43,20 @@
 }
 
 {
+   <MySQL client library memory leaks - false positives>
+   Memcheck:Leak
+   match-leak-kinds: possible
+   fun:malloc
+   obj:/usr/lib/x86_64-linux-gnu/libssl.so.3
+   obj:/usr/lib/x86_64-linux-gnu/libmysqlclient.so.21.2.41
+   fun:mysql_real_connect
+   fun:initMySQL
+   fun:writeMySQL
+   fun:commitTransaction
+   fun:actionCallCommitTransaction
+}
+
+{
    <librdkafka mem leak - we cannot work around it>
    Memcheck:Leak
    ...
