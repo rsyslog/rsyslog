@@ -616,7 +616,7 @@ static rsRetVal net_ossl_chkonepeername(net_ossl_t *pThis,
     permittedPeers_t *pPeer;
 #if OPENSSL_VERSION_NUMBER >= 0x10002000L
     int osslRet;
-	unsigned int x509flags = 0;
+    unsigned int x509flags = 0;
 #endif
     char *x509name = NULL;
     DEFiRet;
@@ -644,15 +644,15 @@ static rsRetVal net_ossl_chkonepeername(net_ossl_t *pThis,
              * if prioritizeSAN set, only check against SAN
              */
             if (pThis->bSANpriority == 1) {
-#if OPENSSL_VERSION_NUMBER >= 0x10100004L && !defined(LIBRESSL_VERSION_NUMBER)
+    #if OPENSSL_VERSION_NUMBER >= 0x10100004L && !defined(LIBRESSL_VERSION_NUMBER)
                 x509flags = X509_CHECK_FLAG_NEVER_CHECK_SUBJECT;
-#else
+    #else
                 dbgprintf("net_ossl_chkonepeername: PrioritizeSAN not supported before OpenSSL 1.1.0\n");
-#endif // OPENSSL_VERSION_NUMBER >= 0x10100004L
+    #endif  // OPENSSL_VERSION_NUMBER >= 0x10100004L
             }
-			osslRet = X509_check_host(certpeer, (const char *)pPeer->pszID, strlen((const char *)pPeer->pszID),
-							x509flags, NULL);
-			if (osslRet == 1) {
+            osslRet = X509_check_host(certpeer, (const char *)pPeer->pszID, strlen((const char *)pPeer->pszID),
+                                      x509flags, NULL);
+            if (osslRet == 1) {
                 /* Found Peer cert in allowed Peerslist */
                 dbgprintf("net_ossl_chkonepeername: Client ('%s') is allowed (X509_check_host)\n", x509name);
                 *pbFoundPositiveMatch = 1;
@@ -1202,7 +1202,7 @@ void net_ossl_set_bio_callback(BIO *conn) {
 BEGINobjConstruct(net_ossl) /* be sure to specify the object type also in END macro! */
     DBGPRINTF("net_ossl_construct: [%p]\n", pThis);
     pThis->bReportAuthErr = 1;
-	pThis->bSANpriority = 0;
+    pThis->bSANpriority = 0;
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
     CHKiRet(net_ossl_init_engine(pThis));
 finalize_it:
