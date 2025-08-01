@@ -95,9 +95,22 @@ static struct cnfparamdescr actpdescr[] = {
 };
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
-/* we need to synchronize access to the mysql handle, because multiple threads
- * use it and we may need to (re)init it during processing. This could lead to
- * races with potentially wrong addresses or NULL accesses.
+/**
+ * @brief Synchronizes access to the shared MySQL handle.
+ *
+ * Worker threads read-lock this mutex while issuing queries so multiple
+ * threads can use the connection concurrently.  When the handle needs to be
+ * closed or reinitialized, the code temporarily upgrades to a write lock to
+ * gain exclusive access and prevent use-after-free errors.
+ *
+ * TODO: we need to validate this assumption - in theory, this shall not be
+ * possible, because instance data is worker-local. However, the following 2021
+ * commit suggests there were some issue. I tend to say the commit was wrong,
+ * but this needs to be checked in more depth, while we need some better doc
+ * on the current locking method right now. So we document existing and valid
+ * behaviour and will follow up later.
+ *
+ * related commit: https://github.com/rsyslog/rsyslog/pull/4719/commits/a3b2983342e20d157b76695d162533c3cfa69587
  */
 pthread_rwlock_t rwlock_hmysql;
 
@@ -126,14 +139,22 @@ BEGINisCompatibleWithFeature
 ENDisCompatibleWithFeature
 
 
-/* The following function is responsible for closing a
- * MySQL connection.
- * Initially added 2004-10-28
+/**
+ * @brief Close the current MySQL connection.
+ *
+ * The caller holds @ref rwlock_hmysql in read mode and expects to keep a read
+ * lock on return.  pthread rwlocks do not support in-place promotion, so the
+ * function releases the read lock, obtains a write lock, and then downgrades
+ * back to a read lock after closing the connection.  During the upgrade window
+ * other readers may continue to use the connection; they still hold their own
+ * read locks and thus cannot see a freed handle.  Once the write lock is
+ * obtained, the handle is closed and the pointer cleared so subsequent readers
+ * trigger reinitialization.
  */
 static void closeMySQL(wrkrInstanceData_t *pWrkrData) {
     pthread_rwlock_unlock(&rwlock_hmysql);
     pthread_rwlock_wrlock(&rwlock_hmysql);
-    if (pWrkrData->hmysql != NULL) { /* just to be on the safe side... */
+    if (pWrkrData->hmysql != NULL) { /* re-check to see if another instance already updated it */
         mysql_close(pWrkrData->hmysql);
         pWrkrData->hmysql = NULL;
     }
