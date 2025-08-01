@@ -74,3 +74,14 @@ Supported Authentication Modes
       anon cipher will be used.
 
 
+PrioritizeSAN
+=============
+
+-  **off** - by default this binary argument is turned off, which means
+   that validation of names in certificates goes per older RFC 5280 and either
+   Subject Alternative Name or Common Name match is good and connection is
+   allowed.
+
+-  **on** - if you turn this option on, it will perform stricter name checking
+   as per newer RFC 6125, where, if any SAN is found, contents of CN are 
+   completely ignored and name validity is decided based on SAN only. 

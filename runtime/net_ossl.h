@@ -67,6 +67,7 @@ struct net_ossl_s {
         int bReportAuthErr; /* only the first auth error is to be reported, this var triggers it. Initially, it is
                              * set to 1 and changed to 0 after the first report. It is changed back to 1 after
                              * one successful authentication. */
+        int bSANpriority; /* if true, we do stricter checking (if any SAN present we do not check CN) */
         /* Open SSL objects */
         BIO *bio; /* OpenSSL main BIO obj */
         int ctx_is_copy;
