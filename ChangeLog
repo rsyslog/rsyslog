@@ -1,5 +1,14 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-08-01: core: migrate callback invocations to type-safe signatures
+  Replace opaque/variadic callback usage with explicit, type-safe function
+  signatures to reduce undefined behavior and clarify intent.
+  Adapter helpers bridge the existing APIs without raw variadic casts, enabling
+  the transition incrementally. Callback setup sites are standardized for
+  consistent readability. This tightens the contract on callbacks, eases future
+  refactoring, and makes their roles more self-documenting.
+  Inspired by https://github.com/rsyslog/rsyslog/pull/5882
+  With AI support: Codex, Gemini
 - 2025-08-01: Fix: Remove unsafe function pointer casting in cfsysline.c
   - Replaced function pointer casting with direct handler calls for type safety
   - Fixes crashes (BUS errors) on ARM64 macOS 14+ due to strict calling conventions
