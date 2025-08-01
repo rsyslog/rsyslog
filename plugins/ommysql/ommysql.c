@@ -131,14 +131,10 @@ ENDisCompatibleWithFeature
  * Initially added 2004-10-28
  */
 static void closeMySQL(wrkrInstanceData_t *pWrkrData) {
-    pthread_rwlock_unlock(&rwlock_hmysql);
-    pthread_rwlock_wrlock(&rwlock_hmysql);
     if (pWrkrData->hmysql != NULL) { /* just to be on the safe side... */
         mysql_close(pWrkrData->hmysql);
         pWrkrData->hmysql = NULL;
     }
-    pthread_rwlock_unlock(&rwlock_hmysql);
-    pthread_rwlock_rdlock(&rwlock_hmysql);
 }
 
 BEGINfreeInstance
@@ -152,10 +148,10 @@ ENDfreeInstance
 
 BEGINfreeWrkrInstance
     CODESTARTfreeWrkrInstance;
-    pthread_rwlock_rdlock(&rwlock_hmysql);
+    pthread_rwlock_wrlock(&rwlock_hmysql);
     closeMySQL(pWrkrData);
-    mysql_thread_end();
     pthread_rwlock_unlock(&rwlock_hmysql);
+    mysql_thread_end();
 ENDfreeWrkrInstance
 
 
@@ -203,7 +199,6 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent) {
     assert(pWrkrData->hmysql == NULL);
     pData = pWrkrData->pData;
 
-    pthread_rwlock_unlock(&rwlock_hmysql);
     pthread_rwlock_wrlock(&rwlock_hmysql);
 
     pWrkrData->hmysql = mysql_init(NULL);
@@ -248,7 +243,6 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent) {
 
 finalize_it:
     pthread_rwlock_unlock(&rwlock_hmysql);
-    pthread_rwlock_rdlock(&rwlock_hmysql);
     RETiRet;
 }
 
@@ -302,7 +296,7 @@ finalize_it:
 
 BEGINtryResume
     CODESTARTtryResume;
-    pthread_rwlock_rdlock(&rwlock_hmysql);
+    pthread_rwlock_wrlock(&rwlock_hmysql);
     if (pWrkrData->hmysql == NULL) {
         iRet = initMySQL(pWrkrData, 1);
     }
@@ -317,7 +311,7 @@ ENDbeginTransaction
 BEGINcommitTransaction
     CODESTARTcommitTransaction;
     DBGPRINTF("ommysql: commitTransaction\n");
-    pthread_rwlock_rdlock(&rwlock_hmysql);
+    pthread_rwlock_wrlock(&rwlock_hmysql);
     CHKiRet(writeMySQL(pWrkrData, (uchar *)"START TRANSACTION"));
 
     for (unsigned i = 0; i < nParams; ++i) {
