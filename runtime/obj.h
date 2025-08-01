@@ -122,9 +122,9 @@ rsRetVal objDeserializeWithMethods(void *ppObj,
                                    strm_t *pStrm,
                                    rsRetVal (*fFixup)(obj_t *, void *),
                                    void *pUsr,
-                                   rsRetVal (*objConstruct)(void *, ...),
-                                   rsRetVal (*objConstructFinalize)(void *, ...),
-                                   rsRetVal (*objDeserialize)(void *, ...));
+                                   rsRetVal (*objConstruct)(void **),
+                                   rsRetVal (*objConstructFinalize)(void *),
+                                   rsRetVal (*objDeserialize)(void *, strm_t *));
 rsRetVal objDeserializeProperty(var_t *pProp, strm_t *pStrm);
 uchar *objGetName(obj_t *pThis);
 
