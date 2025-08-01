@@ -119,6 +119,8 @@
 #include <sys/resource.h>
 #include <sys/time.h>
 #include <errno.h>
+#include <execinfo.h>
+#include <ucontext.h>
 #ifdef ENABLE_GNUTLS
     #include <gnutls/gnutls.h>
     #if GNUTLS_VERSION_NUMBER <= 0x020b00
@@ -148,6 +150,7 @@ GCRY_THREAD_OPTION_PTHREAD_IMPL;
     #endif
 
 #endif
+
 
 char *test_rs_strerror_r(int errnum, char *buf, size_t buflen) {
 #ifndef HAVE_STRERROR_R
@@ -272,6 +275,62 @@ static int udpsockout; /* socket for sending in UDP mode */
 static struct sockaddr_in udpRcvr; /* remote receiver in UDP mode */
 
 static enum { TP_UDP, TP_TCP, TP_TLS, TP_RELP_PLAIN, TP_RELP_TLS, TP_DTLS } transport = TP_TCP;
+
+/* Signal handler for fatal signals to print stack trace */
+static void fatal_signal_handler(int sig, siginfo_t *info, void *ucontext) {
+    void *array[64];
+    size_t size;
+    char **strings;
+    size_t i;
+
+    /* Write to stderr to avoid buffering issues */
+    fprintf(stderr, "\n=== TCPFLOOD CRASH DETECTED ===\n");
+    fprintf(stderr, "TCPFLOOD: Signal: %d (%s)\n", sig,
+            sig == SIGSEGV   ? "SIGSEGV"
+            : sig == SIGABRT ? "SIGABRT"
+            : sig == SIGFPE  ? "SIGFPE"
+            : sig == SIGILL  ? "SIGILL"
+                             : "UNKNOWN");
+
+    if (info != NULL) {
+        fprintf(stderr, "TCPFLOOD: Signal info: si_code=%d, si_addr=%p\n", info->si_code, info->si_addr);
+    }
+
+    /* Get backtrace */
+    size = backtrace(array, 64);
+    strings = backtrace_symbols(array, size);
+
+    if (strings != NULL) {
+        fprintf(stderr, "TCPFLOOD: Stack trace (%zu frames):\n", size);
+        for (i = 0; i < size; i++) {
+            fprintf(stderr, "TCPFLOOD:   [%zu] %s\n", i, strings[i]);
+        }
+        free(strings);
+    } else {
+        fprintf(stderr, "TCPFLOOD: Failed to get stack trace symbols\n");
+    }
+
+    /* Print some context about the current state */
+    fprintf(stderr, "TCPFLOOD: Transport: %s\n",
+            transport == TP_TLS          ? "TLS"
+            : transport == TP_TCP        ? "TCP"
+            : transport == TP_UDP        ? "UDP"
+            : transport == TP_RELP_PLAIN ? "RELP_PLAIN"
+            : transport == TP_RELP_TLS   ? "RELP_TLS"
+            : transport == TP_DTLS       ? "DTLS"
+                                         : "UNKNOWN");
+
+    fprintf(stderr, "TCPFLOOD: Target IP: %s\n", targetIP);
+    fprintf(stderr, "TCPFLOOD: Target Port: %d\n", targetPort[0]);
+    fprintf(stderr, "TCPFLOOD: Connections: %d\n", numConnections);
+    fprintf(stderr, "TCPFLOOD: Messages to send: %d\n", numMsgsToSend);
+
+    fprintf(stderr, "=== END TCPFLOOD CRASH REPORT ===\n");
+    fflush(stderr);
+
+    /* Exit with the signal number */
+    exit(sig);
+}
 
 /* forward definitions */
 static void initTLSSess(int);
@@ -472,7 +531,14 @@ int openConn(const int connIdx) {
         sockArray[connIdx] = sock;
 
         if (transport == TP_TLS) {
+            if (verbose) {
+                fprintf(stderr, "TCPFLOOD: [DEBUG] openConn: Initializing TLS session for connection %d\n", connIdx);
+            }
             initTLSSess(connIdx);
+            if (verbose) {
+                fprintf(stderr, "TCPFLOOD: [DEBUG] openConn: TLS session initialization completed for connection %d\n",
+                        connIdx);
+            }
         }
     }
     return 0;
@@ -907,6 +973,9 @@ int sendMessages(struct instdata *inst) {
                     offsSendBuf = 0;
                 }
                 ++nConnDrops;
+                if (transport == TP_TLS) {
+                    closeTLSSess(socknum);
+                }
                 close(sockArray[socknum]);
                 sockArray[socknum] = -1;
             }
@@ -1438,10 +1507,17 @@ static void initTLSSess(const int i) {
     BIO *bio_client;
     SSL *pNewSsl = SSL_new(ctx);
 
+    /* Add debug info for crash analysis */
+    if (verbose) {
+        fprintf(stderr, "TCPFLOOD: [DEBUG] initTLSSess: connection=%d, socket=%d\n", i, sockArray[i]);
+    }
+
     sslArray[i] = pNewSsl;
 
     if (!sslArray[i]) {
+        fprintf(stderr, "TCPFLOOD: [TLS_ERROR] Failed to create SSL object for connection %d\n", i);
         osslLastSSLErrorMsg(0, sslArray[i], "initTLSSess1");
+        exit(1);
     }
 
     SSL_set_verify(sslArray[i], SSL_VERIFY_NONE, verify_callback);
@@ -1449,10 +1525,14 @@ static void initTLSSess(const int i) {
     /* Create BIO from socket array! */
     bio_client = BIO_new_socket(sockArray[i], BIO_CLOSE /*BIO_NOCLOSE*/);
     if (bio_client == NULL) {
+        fprintf(stderr, "TCPFLOOD: [TLS_ERROR] Failed to create BIO for connection %d, socket %d\n", i, sockArray[i]);
         osslLastSSLErrorMsg(0, sslArray[i], "initTLSSess2");
         exit(1);
     } else {
-        //	printf("initTLSSess: Init client BIO[%p] done\n", (void *)bio_client);
+        if (verbose) {
+            fprintf(stderr, "TCPFLOOD: [DEBUG] initTLSSess: Init client BIO[%p] done for connection %d\n",
+                    (void *)bio_client, i);
+        }
     }
 
     if (tlsLogLevel > 0) {
@@ -1469,10 +1549,19 @@ static void initTLSSess(const int i) {
     SSL_set_bio(sslArray[i], bio_client, bio_client);
     SSL_set_connect_state(sslArray[i]); /*sets ssl to work in client mode.*/
 
+    if (verbose) {
+        fprintf(stderr, "TCPFLOOD: [DEBUG] initTLSSess: Starting handshake for connection %d\n", i);
+    }
+
     /* Perform the TLS handshake */
     if ((res = SSL_do_handshake(sslArray[i])) <= 0) {
+        fprintf(stderr, "TCPFLOOD: [TLS_ERROR] Handshake failed for connection %d, result=%d\n", i, res);
         osslLastSSLErrorMsg(res, sslArray[i], "initTLSSess3");
         exit(1);
+    }
+
+    if (verbose) {
+        fprintf(stderr, "TCPFLOOD: [DEBUG] initTLSSess: Handshake completed for connection %d\n", i);
     }
 }
     #pragma GCC diagnostic pop
@@ -1481,6 +1570,11 @@ static void initTLSSess(const int i) {
 static int sendTLS(int i, char *buf, size_t lenBuf) {
     size_t lenSent;
     int r, err;
+
+    /* Add debug info for crash analysis */
+    if (verbose) {
+        fprintf(stderr, "TCPFLOOD: [DEBUG] sendTLS: connection=%d, buf_len=%zu\n", i, lenBuf);
+    }
 
     lenSent = 0;
     while (lenSent != lenBuf) {
@@ -1495,15 +1589,19 @@ static int sendTLS(int i, char *buf, size_t lenBuf) {
                  * in the protocol, i.e. if the connection has been closed cleanly.
                  *SSL_ERROR_WANT_READ/WRITE: The operation did not complete, try
                  * again later. */
-                printf("Error while sending data: [%d] %s", err, ERR_error_string(err, NULL));
-                printf("Error is: %s", ERR_reason_error_string(err));
+                fprintf(stderr, "TCPFLOOD: [TLS_ERROR] Error while sending data: [%d] %s\n", err,
+                        ERR_error_string(err, NULL));
+                fprintf(stderr, "TCPFLOOD: [TLS_ERROR] Error reason: %s\n", ERR_reason_error_string(err));
+                fprintf(stderr, "TCPFLOOD: [TLS_ERROR] Connection: %d, lenSent: %zu, lenBuf: %zu\n", i, lenSent,
+                        lenBuf);
             } else {
                 /* Check for SSL Shutdown */
                 if (SSL_get_shutdown(sslArray[i]) == SSL_RECEIVED_SHUTDOWN) {
-                    printf("received SSL_RECEIVED_SHUTDOWN!\n");
+                    fprintf(stderr, "TCPFLOOD: [TLS_INFO] received SSL_RECEIVED_SHUTDOWN!\n");
                 } else {
-                    printf("[ERROR] while sending data: [%d] %s", err, ERR_error_string(err, NULL));
-                    printf("[ERROR] Reason: %s", ERR_reason_error_string(err));
+                    fprintf(stderr, "TCPFLOOD: [TLS_ERROR] while sending data: [%d] %s\n", err,
+                            ERR_error_string(err, NULL));
+                    fprintf(stderr, "TCPFLOOD: [TLS_ERROR] Reason: %s\n", ERR_reason_error_string(err));
                 }
             }
             exit(1);
@@ -1711,6 +1809,13 @@ static void initTLS(void) {
     #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
 static void initTLSSess(const int i) {
     int r;
+
+    /* Clean up any existing session before creating a new one */
+    if (sessArray[i] != NULL) {
+        gnutls_deinit(sessArray[i]);
+        sessArray[i] = NULL;
+    }
+
     gnutls_init(sessArray + i, GNUTLS_CLIENT);
 
     /* Use default priorities */
@@ -1755,8 +1860,14 @@ static int sendTLS(int i, char *buf, size_t lenBuf) {
 }
 
 static void closeTLSSess(int i) {
-    gnutls_bye(sessArray[i], GNUTLS_SHUT_RDWR);
-    gnutls_deinit(sessArray[i]);
+    if (sessArray[i] != NULL) {
+        int r = gnutls_bye(sessArray[i], GNUTLS_SHUT_RDWR);
+        if (r < 0 && verbose) {
+            fprintf(stderr, "tcpflood: gnutls_bye() failed: %s\n", gnutls_strerror(r));
+        }
+        gnutls_deinit(sessArray[i]);
+        sessArray[i] = NULL;
+    }
 }
 #else /* NO TLS available */
 static void initTLS(void) {}
@@ -1820,6 +1931,14 @@ int main(int argc, char *argv[]) {
     sigemptyset(&sigAct.sa_mask);
     sigAct.sa_handler = SIG_IGN;
     sigaction(SIGPIPE, &sigAct, NULL);
+
+    /* Set up signal handlers for fatal signals to get stack traces on crashes */
+    sigAct.sa_sigaction = fatal_signal_handler;
+    sigAct.sa_flags = SA_SIGINFO;
+    sigaction(SIGSEGV, &sigAct, NULL);
+    sigaction(SIGABRT, &sigAct, NULL);
+    sigaction(SIGFPE, &sigAct, NULL);
+    sigaction(SIGILL, &sigAct, NULL);
 
     setvbuf(stdout, buf, _IONBF, 48);
 
@@ -2103,6 +2222,11 @@ int main(int argc, char *argv[]) {
                 "be specified\n");
             exit(1);
         }
+
+        if (verbose) {
+            fprintf(stderr, "TCPFLOOD: [DEBUG] Initializing TLS context...\n");
+        }
+
         /* Create main CTX Object. Use SSLv23_method for < Openssl 1.1.0 and TLS_method for newer versions! */
 #if defined(ENABLE_OPENSSL)
     #if OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -2113,6 +2237,10 @@ int main(int argc, char *argv[]) {
 #else
         initTLS();
 #endif
+
+        if (verbose) {
+            fprintf(stderr, "TCPFLOOD: [DEBUG] TLS context initialization completed\n");
+        }
     } else if (transport == TP_DTLS) {
         if (tlsKeyFile == NULL || tlsCertFile == NULL) {
             printf(
@@ -2132,9 +2260,17 @@ int main(int argc, char *argv[]) {
 #endif
     }
 
+    if (verbose) {
+        fprintf(stderr, "TCPFLOOD: [DEBUG] Starting to open connections...\n");
+    }
+
     if (openConnections() != 0) {
         printf("error opening connections\n");
         exit(1);
+    }
+
+    if (verbose) {
+        fprintf(stderr, "TCPFLOOD: [DEBUG] Connections opened successfully, starting tests...\n");
     }
 
     if (runTests() != 0) {
