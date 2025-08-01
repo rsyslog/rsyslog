@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-08-01: Fix: Remove unsafe function pointer casting in cfsysline.c
+  - Replaced function pointer casting with direct handler calls for type safety
+  - Fixes crashes (BUS errors) on ARM64 macOS 14+ due to strict calling conventions
+  - Root cause identified by ThreadSanitizer
+  - Eliminates undefined behavior, improves code safety
+  On MacOS, this fixes a potential segfault condition.
 - 2025-08-01: ossl: Add PrioritizeSAN option to OpenSSL network stream driver
   Add OpenSSL equivalent of existing GnuTLS PrioritizeSAN functionality
   implemented in commit 937e278fdf51c3e21ebd3acf05f9d1b8649ce2c5
