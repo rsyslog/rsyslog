@@ -130,7 +130,7 @@ jobs:
               # TODO: enable disabled components when the issues are fixed
               # It is better to run at least the majority of checks than to postpone that
               # any longer. 2025-01-31 RGerhards
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--enable-imdtls --enable-omdtls --disable-omamqp1 --disable-snmp --disable-elasticsearch-tests"
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--enable-omazureeventhubs --enable-imdtls --enable-omdtls --disable-omamqp1 --disable-snmp --disable-elasticsearch-tests"
               ;;
           'ubuntu_22_distcheck')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
