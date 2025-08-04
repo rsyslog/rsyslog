@@ -164,7 +164,6 @@ typedef struct wrkrInstanceData {
     int bIsConnecting; /* 1 if connecting, 0 if disconnected */
     int bIsConnected; /* 1 if connected, 0 if disconnected */
     int bIsSuspended; /* when broker fail, we need to suspend the action */
-    pthread_rwlock_t pnLock;
 
     // PROTON Handles
     pn_proactor_t *pnProactor;
@@ -467,7 +466,6 @@ static rsRetVal setupProtonHandle(wrkrInstanceData_t *const __restrict__ pWrkrDa
     DEFiRet;
     DBGPRINTF("omazureeventhubs[%p]: setupProtonHandle ENTER\n", pWrkrData);
 
-    pthread_rwlock_wrlock(&pWrkrData->pnLock);
     if (autoclose == SETUP_PROTON_AUTOCLOSE && (pWrkrData->bIsConnected == 1)) {
         DBGPRINTF("omazureeventhubs[%p]: setupProtonHandle closeProton\n", pWrkrData);
         closeProton(pWrkrData);
@@ -483,7 +481,6 @@ finalize_it:
                      "configuration parameters\n");
         }
     }
-    pthread_rwlock_unlock(&pWrkrData->pnLock);
     RETiRet;
 }
 
@@ -549,7 +546,6 @@ BEGINcreateWrkrInstance
     pWrkrData->nMaxProtonMsgs = MAX_DEFAULTMSGS;
     CHKmalloc(pWrkrData->aProtonMsgs = calloc(MAX_DEFAULTMSGS, sizeof(struct s_protonmsg_entry)));
 
-    CHKiRet(pthread_rwlock_init(&pWrkrData->pnLock, NULL));
 
     pWrkrData->bThreadRunning = 0;
     pWrkrData->tid = 0;
@@ -595,9 +591,6 @@ BEGINfreeWrkrInstance
     CODESTARTfreeWrkrInstance;
     DBGPRINTF("freeWrkrInstance[%p]: ENTER\n", pWrkrData);
 
-    /* Closing azure first! */
-    pthread_rwlock_wrlock(&pWrkrData->pnLock);
-
     // Close Proton Connection
     closeProton(pWrkrData);
 
@@ -612,8 +605,6 @@ BEGINfreeWrkrInstance
     }
     free(pWrkrData->pnMessageBuffer.start);
 
-    pthread_rwlock_unlock(&pWrkrData->pnLock);
-
     // Free our proton helper array
     if (pWrkrData->aProtonMsgs != NULL) {
         for (unsigned int i = 0; i < pWrkrData->nProtonMsgs; ++i) {
@@ -624,7 +615,6 @@ BEGINfreeWrkrInstance
         free(pWrkrData->aProtonMsgs);
     }
 
-    pthread_rwlock_destroy(&pWrkrData->pnLock);
 ENDfreeWrkrInstance
 
 
