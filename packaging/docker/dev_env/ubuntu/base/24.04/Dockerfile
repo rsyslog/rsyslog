@@ -14,7 +14,12 @@ RUN	apt-get install -y \
 	clang \
 	gdb \
 	clang-tools \
-	curl 
+	curl \
+	cmake-curses-gui \
+	swig \
+	python3-dev \
+	ruby-dev \
+	python3-sphinx 
 RUN	apt-get install -y \
 	default-jdk \
 	default-jre \
@@ -43,7 +48,7 @@ RUN	apt-get install -y \
 	libpcap-dev \
 	librabbitmq-dev \
 	libsnmp-dev \
-	libssl-dev libsasl2-dev \
+	libssl-dev libsasl2-dev libsasl2-2 libsasl2-modules \
 	libsystemd-dev \
 	libtirpc-dev \
 	libtokyocabinet-dev \
@@ -89,8 +94,6 @@ RUN	echo 'deb http://download.opensuse.org/repositories/home:/rgerhards/xUbuntu_
 RUN	apt-get update -y && \
 	apt-get install -y  \
 	libczmq-dev \
-	libqpid-proton11 \
-	libqpid-proton11-dev \
 	tcl-dev \
 	libsodium-dev
 # clickhouse
@@ -249,6 +252,20 @@ RUN	cd helper-projects && \
 	make install && \
 	cd .. && \
 	rm -r librelp && \
+	cd ..
+
+# libqpid-proton
+RUN	cd helper-projects && \
+	git clone https://github.com/apache/qpid-proton.git && \
+	cd qpid-proton && \
+	mkdir build && \
+	cd build && \
+	cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DSYSINSTALL_BINDINGS=ON -DBUILD_TESTING=OFF && \
+	make -j8 && \
+	make install && \
+	cd .. && \
+	cd .. && \
+	rm -r qpid-proton && \
 	cd ..
 
 # we need the latest librdkafka as there as always required updates -- not necessarily any longer!

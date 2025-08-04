@@ -1182,6 +1182,7 @@ static void handleProtonDelivery(wrkrInstanceData_t *const pWrkrData) {
  *
  */
 #pragma GCC diagnostic ignored "-Wswitch"
+#pragma GCC diagnostic ignored "-Wswitch-enum"
 static void handleProton(wrkrInstanceData_t *const pWrkrData, pn_event_t *event) {
     instanceData *const pData = (instanceData *const)pWrkrData->pData;
     /* Handle Proton Events */
@@ -1349,14 +1350,9 @@ static void handleProton(wrkrInstanceData_t *const pWrkrData, pn_event_t *event)
         case PN_PROACTOR_INACTIVE:
             DBGPRINTF("handleProton: INAKTIVE for %p:%s\n", pWrkrData, pData->azurehost);
             break;
-/* Workarround compiler warning:
- *	error: enumeration value '...' not handled in switch [-Werror=switch-enum]
- */
-#ifdef __GNU_C
         default:
             DBGPRINTF("handleProton: UNHANDELED EVENT %d for %p:%s\n", pn_event_type(event), pWrkrData,
                       pData->azurehost);
             break;
-#endif
     }
 }
