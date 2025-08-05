@@ -142,24 +142,21 @@ ENDisCompatibleWithFeature
 /**
  * @brief Close the current MySQL connection.
  *
- * The caller holds @ref rwlock_hmysql in read mode and expects to keep a read
- * lock on return.  pthread rwlocks do not support in-place promotion, so the
- * function releases the read lock, obtains a write lock, and then downgrades
- * back to a read lock after closing the connection.  During the upgrade window
- * other readers may continue to use the connection; they still hold their own
- * read locks and thus cannot see a freed handle.  Once the write lock is
- * obtained, the handle is closed and the pointer cleared so subsequent readers
- * trigger reinitialization.
+ * This function must be called with NO locks held on rwlock_hmysql.
+ * The previous implementation attempted to handle being called with a read lock
+ * held, but this created race conditions. Callers must now ensure they do not
+ * hold any locks when calling this function.
+ *
+ * The function will acquire a write lock, close the connection if needed,
+ * and release the lock before returning.
  */
 static void closeMySQL(wrkrInstanceData_t *pWrkrData) {
-    pthread_rwlock_unlock(&rwlock_hmysql);
     pthread_rwlock_wrlock(&rwlock_hmysql);
-    if (pWrkrData->hmysql != NULL) { /* re-check to see if another instance already updated it */
+    if (pWrkrData->hmysql != NULL) { /* just to be on the safe side... */
         mysql_close(pWrkrData->hmysql);
         pWrkrData->hmysql = NULL;
     }
     pthread_rwlock_unlock(&rwlock_hmysql);
-    pthread_rwlock_rdlock(&rwlock_hmysql);
 }
 
 BEGINfreeInstance
@@ -173,10 +170,8 @@ ENDfreeInstance
 
 BEGINfreeWrkrInstance
     CODESTARTfreeWrkrInstance;
-    pthread_rwlock_rdlock(&rwlock_hmysql);
     closeMySQL(pWrkrData);
     mysql_thread_end();
-    pthread_rwlock_unlock(&rwlock_hmysql);
 ENDfreeWrkrInstance
 
 
@@ -256,7 +251,9 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent) {
         if (mysql_real_connect(pWrkrData->hmysql, pData->dbsrv, pData->dbuid, pData->dbpwd, pData->dbname,
                                pData->dbsrvPort, (const char *)pData->socket, 0) == NULL) {
             reportDBError(pWrkrData, bSilent);
+            pthread_rwlock_unlock(&rwlock_hmysql);
             closeMySQL(pWrkrData); /* ignore any error we may get */
+            pthread_rwlock_rdlock(&rwlock_hmysql);
             ABORT_FINALIZE(RS_RET_SUSPENDED);
         }
         if (mysql_autocommit(pWrkrData->hmysql, 0)) {
@@ -352,7 +349,9 @@ BEGINcommitTransaction
                 if (mysql_rollback(pWrkrData->hmysql) != 0) {
                     DBGPRINTF("ommysql: server error: transaction could not be rolled back\n");
                 }
+                pthread_rwlock_unlock(&rwlock_hmysql);
                 closeMySQL(pWrkrData);
+                pthread_rwlock_rdlock(&rwlock_hmysql);
             }
             FINALIZE;
         }
