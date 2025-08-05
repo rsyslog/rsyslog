@@ -143,18 +143,18 @@ ENDisCompatibleWithFeature
  * @brief Close the current MySQL connection.
  *
  * The caller holds @ref rwlock_hmysql in read mode and expects to keep a read
- * lock on return.  pthread rwlocks do not support in-place promotion, so the
- * function releases the read lock, obtains a write lock, and then downgrades
- * back to a read lock after closing the connection.  During the upgrade window
- * other readers may continue to use the connection; they still hold their own
- * read locks and thus cannot see a freed handle.  Once the write lock is
- * obtained, the handle is closed and the pointer cleared so subsequent readers
- * trigger reinitialization.
+ * lock on return. This function temporarily releases the read lock, obtains a 
+ * write lock to safely close the connection, then reacquires a read lock.
+ * 
+ * Note: During the brief window between releasing the read lock and acquiring
+ * the write lock, other threads may also enter this function. The NULL check
+ * after acquiring the write lock ensures that only one thread actually closes
+ * the connection.
  */
 static void closeMySQL(wrkrInstanceData_t *pWrkrData) {
     pthread_rwlock_unlock(&rwlock_hmysql);
     pthread_rwlock_wrlock(&rwlock_hmysql);
-    if (pWrkrData->hmysql != NULL) { /* re-check to see if another instance already updated it */
+    if (pWrkrData->hmysql != NULL) { /* re-check to see if another instance already closed it */
         mysql_close(pWrkrData->hmysql);
         pWrkrData->hmysql = NULL;
     }
