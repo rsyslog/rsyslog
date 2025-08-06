@@ -16,7 +16,9 @@ This module provides the ability to send messages over an HTTP to a Splunk HEC s
 
 This module supports sending messages in individual requests (the default), and batching multiple messages into a single request. TLS encryption is configurable with the useTls_ parameter and associated tls parameters.
 
-In the default mode, every message is sent in its own HTTP request and it is a drop-in replacement for any other output module. In batch_ mode, the module implements several batch formatting options that are not configurable because this plugin send in JSON Format, the only format accepted by an HEC Splunk Server. Some additional attention to message formatting is required in this mode.
+In the default mode, every message is sent in its own HTTP request and it is a drop-in replacement for any other output module. In batch_ mode, the module implements JSON batch formatting options, the only format accepted by an HEC Splunk Server. Some additional attention to message formatting is required in this mode.
+
+Also, this module implements the endpoint "/event" of an HEC Server. The params "auto_extract_timestamp" can be activated or not for this endpoint
 
 See the `Examples`_ section for some configuration examples.
 
@@ -100,6 +102,19 @@ token
    "word", "none", "no", "none"
 
 The token created by the HEC server.
+
+
+extracttimestamp
+^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+This params is allow to ask the HEC Server to parse the Timestamps of a log into it and to not take the Indexed Timestamps. Please check out the documentation of Splunk for more explanation.
 
 
 batch

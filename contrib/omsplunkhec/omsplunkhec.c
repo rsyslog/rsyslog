@@ -108,6 +108,7 @@ static int omSplunkHecInstancesCnt = 0;
 
 #define HEC_RESTPATH_URL "/services/collector"
 #define HEC_RESTPATH_ENDPOINT_EVENT "/event"
+#define HEC_RESTPATH_ENDPOINT_EVENT_TIMESTAMP "?auto_extract_timestamp=true"
 #define HEC_RESTPATH_ENDPOINT_RAW "/raw"
 #define HEC_HEALTHCHECK_URL "/health"
 
@@ -131,6 +132,7 @@ typedef struct instanceConf_s {
 	uchar *restpath;
 	int restPathTimeout;
 	int port;
+	sbool extractTimestamp;
 
 	/* Batch */
 	sbool batch;
@@ -199,6 +201,7 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "token", eCmdHdlrGetWord, 0 },
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "batch", eCmdHdlrBinary, 0 },
+	{ "extracttimestamp", eCmdHdlrBinary, 0 },
 	{ "batch.maxsize", eCmdHdlrInt, 0 },
 	{ "batch.maxbytes", eCmdHdlrInt, 0 },
 	{ "useTls", eCmdHdlrBinary, 0 },
@@ -435,6 +438,7 @@ setInstDefaultParams(instanceData *const pData)
 	es_str_t *urlBuf = es_newStr(strlen(HEC_RESTPATH_URL));
 
 	pData->restpath = NULL;
+	pData->extractTimestamp = 0;
 
 	int answer = es_addBuf(&urlBuf, HEC_RESTPATH_URL, strlen(HEC_RESTPATH_URL));
 	if (answer == 0) {
@@ -764,6 +768,15 @@ setPostURL(wrkrInstanceData_t *const pWrkrData)
 		LogError(0, RS_RET_ERR, "omsplunkhec: failure in creating restURL, "
 				"error code: %d", answer);
 		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+	if (pData->extractTimestamp){
+		answer = es_addBuf(&url, HEC_RESTPATH_ENDPOINT_EVENT_TIMESTAMP, strlen(HEC_RESTPATH_ENDPOINT_EVENT_TIMESTAMP));
+		if(answer != 0) {
+			LogError(0, RS_RET_ERR, "omsplunkhec: failure in creating restURL with timestamps parsing, "
+					"error code: %d", answer);
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
 	}
 
 	if(pWrkrData->restURL != NULL)
@@ -1185,6 +1198,8 @@ CODESTARTnewActInst
 			pData->errorFilename = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "server")) {
 			servers = pvals[i].val.d.ar;
+		} else if(!strcmp(actpblk.descr[i].name, "extracttimestamp")) {
+			pData->extractTimestamp = pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "port")) {
 			pData->port = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "token")) {
