@@ -1571,13 +1571,35 @@ static rsRetVal ATTR_NONNULL() actionCommit(action_t *__restrict__ const pThis, 
             FINALIZE;
         }
     } else {
-        DBGPRINTF(
-            "actionCommit[%s]: somewhat unhappy, full batch of %d msgs returned "
-            "status %d. Trying messages as individual actions.\n",
-            pThis->pszName, wrkrInfo->p.tx.currIParam, iRet);
-        CHKmalloc(iparams = malloc(sizeof(actWrkrIParams_t) * pThis->iNumTpls * wrkrInfo->p.tx.currIParam));
-        needfree_iparams = 1;
-        actionTryRemoveHardErrorsFromBatch(pThis, pWti, iparams, &nMsgs);
+        /*
+         * For suspended transactions we must retry the WHOLE batch in the
+         * original order so that messages confirmed with RS_RET_DEFER_COMMIT
+         * are processed again together with the message that caused the
+         * suspend.  Processing individual messages separately would break the
+         * guaranteed at-least-once delivery semantics and caused the problem
+         * described in GitHub issue #2420 (deferred messages within a
+         * transaction not retried).  Only if the first attempt indicated a
+         * permanent data failure (RS_RET_DATAFAIL) do we need to single out
+         * the bad messages.  Otherwise keep the complete batch for retry.
+         */
+
+        if (iRet == RS_RET_DATAFAIL) {
+            DBGPRINTF(
+                "actionCommit[%s]: DATAFAIL on batch of %d msgs – isolating hard errors.\n",
+                pThis->pszName, wrkrInfo->p.tx.currIParam);
+
+            CHKmalloc(iparams = malloc(sizeof(actWrkrIParams_t) * pThis->iNumTpls * wrkrInfo->p.tx.currIParam));
+            needfree_iparams = 1;
+            actionTryRemoveHardErrorsFromBatch(pThis, pWti, iparams, &nMsgs);
+        } else {
+            /* Keep original batch intact for retry */
+            iparams = wrkrInfo->p.tx.iparams;
+            nMsgs = wrkrInfo->p.tx.currIParam;
+            needfree_iparams = 0;
+            DBGPRINTF(
+                "actionCommit[%s]: batch suspended (status %d), will retry %u msgs together.\n",
+                pThis->pszName, iRet, nMsgs);
+        }
     }
 
     if (nMsgs == 0) {
