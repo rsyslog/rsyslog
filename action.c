@@ -1318,7 +1318,16 @@ static rsRetVal doTransaction(action_t *__restrict__ const pThis,
                  */
                 srSleep(1, 0);
             } else if (iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED && iRet != RS_RET_OK) {
-                FINALIZE; /* let upper peer handle the error condition! */
+                /* Transaction failed - need to retry all deferred messages.
+                 * We reset the loop counter to -1 so that when incremented,
+                 * it starts from 0 again, retrying all messages in the transaction.
+                 * This fixes issue #2420: Deferred messages within a transaction not retried.
+                 */
+                DBGPRINTF("doTransaction: action %d, msg %d failed with %d, retrying entire transaction\n", 
+                          pThis->iActionNbr, i, iRet);
+                i = -1; /* restart from the beginning */
+                iRet = RS_RET_SUSPENDED; /* treat as suspended to trigger retry */
+                srSleep(1, 0); /* avoid CPU hammering */
             }
         }
     }
