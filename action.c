@@ -1295,6 +1295,8 @@ static rsRetVal doTransaction(action_t *__restrict__ const pThis,
                               const int nparams) {
     actWrkrInfo_t *wrkrInfo;
     int i;
+    int retryCount = 0;
+    const int maxRetries = 3; /* limit retries to avoid infinite loops */
     DEFiRet;
 
     DBGPRINTF("doTransaction[%s] enter\n", pThis->pszName);
@@ -1304,30 +1306,47 @@ static rsRetVal doTransaction(action_t *__restrict__ const pThis,
         CHKiRet(actionCallCommitTransaction(pThis, pWti, iparams, nparams));
     } else { /* note: this branch is for compatibility with old TX modules */
         DBGPRINTF("doTransaction: action '%s', currIParam %d\n", pThis->pszName, wrkrInfo->p.tx.currIParam);
+        int bPreviousMsgsDeferred = 0; /* track if we have deferred messages */
         for (i = 0; i < nparams; ++i) {
             /* Note: we provide the message's base iparam - actionProcessMessage()
              * uses this as *base* address.
              */
             iRet = actionProcessMessage(pThis, &actParam(iparams, pThis->iNumTpls, i, 0), pWti);
             DBGPRINTF("doTransaction: action %d, processing msg %d, result %d\n", pThis->iActionNbr, i, iRet);
-            if (iRet == RS_RET_SUSPENDED) {
-                --i; /* we need to re-submit */
-                /* note: we are suspended and need to retry. In order not to
-                 * hammer the CPU, we now do a voluntarly wait of 1 second.
-                 * The rest will be handled by the standard retry handler.
-                 */
-                srSleep(1, 0);
-            } else if (iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED && iRet != RS_RET_OK) {
-                /* Transaction failed - need to retry all deferred messages.
-                 * We reset the loop counter to -1 so that when incremented,
-                 * it starts from 0 again, retrying all messages in the transaction.
+            if (iRet == RS_RET_DEFER_COMMIT) {
+                bPreviousMsgsDeferred = 1; /* we have deferred messages */
+            } else if (iRet == RS_RET_SUSPENDED) {
+                /* Check if we have deferred messages - if so, we need to retry the entire transaction
                  * This fixes issue #2420: Deferred messages within a transaction not retried.
                  */
-                DBGPRINTF("doTransaction: action %d, msg %d failed with %d, retrying entire transaction\n", 
-                          pThis->iActionNbr, i, iRet);
-                i = -1; /* restart from the beginning */
-                iRet = RS_RET_SUSPENDED; /* treat as suspended to trigger retry */
-                srSleep(1, 0); /* avoid CPU hammering */
+                if (bPreviousMsgsDeferred && i > 0) {
+                    DBGPRINTF(
+                        "doTransaction: action %d, msg %d suspended with deferred messages, retrying entire "
+                        "transaction (attempt %d/%d)\n",
+                        pThis->iActionNbr, i, retryCount + 1, maxRetries);
+                    if (retryCount < maxRetries) {
+                        i = -1; /* restart from the beginning */
+                        bPreviousMsgsDeferred = 0; /* reset for new attempt */
+                        retryCount++;
+                        srSleep(1, 0); /* avoid CPU hammering */
+                        /* Continue the loop to retry from the beginning */
+                    } else {
+                        DBGPRINTF("doTransaction: max retries reached, giving up\n");
+                        FINALIZE; /* let upper peer handle the error condition! */
+                    }
+                } else {
+                    /* No deferred messages, just retry this one */
+                    --i; /* we need to re-submit */
+                    /* note: we are suspended and need to retry. In order not to
+                     * hammer the CPU, we now do a voluntarly wait of 1 second.
+                     * The rest will be handled by the standard retry handler.
+                     */
+                    srSleep(1, 0);
+                }
+            } else if (iRet != RS_RET_PREVIOUS_COMMITTED && iRet != RS_RET_OK) {
+                /* Unexpected error - should not happen in normal operation */
+                DBGPRINTF("doTransaction: unexpected return code %d\n", iRet);
+                FINALIZE; /* let upper peer handle the error condition! */
             }
         }
     }
