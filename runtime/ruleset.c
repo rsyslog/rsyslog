@@ -595,7 +595,14 @@ static rsRetVal processBatch(batch_t *pBatch, wti_t *pWti) {
         "END batch execution phase, entering to commit phase "
         "[processed %d of %d messages]\n",
         i, batchNumMsgs(pBatch));
-    actionCommitAllDirect(pWti);
+    const rsRetVal commitRet = actionCommitAllDirect(pWti);
+    if (commitRet != RS_RET_OK) {
+        for (int j = 0; j < batchNumMsgs(pBatch); ++j) {
+            if (batchIsValidElem(pBatch, j)) {
+                batchSetElemState(pBatch, j, BATCH_STATE_RDY);
+            }
+        }
+    }
 
     DBGPRINTF("processBATCH: batch of %d elements has been processed\n", pBatch->nElem);
     RETiRet;

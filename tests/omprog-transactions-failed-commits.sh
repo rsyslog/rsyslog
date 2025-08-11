@@ -25,7 +25,7 @@ template(name="outfmt" type="string" string="%msg%\n")
 :msg, contains, "msgnum:" {
     action(
         type="omprog"
-        binary=`echo $srcdir/testsuites/omprog-transactions-bin.sh --failed_commits`
+        binary="'$srcdir'/testsuites/omprog-transactions-bin.sh --failed_commits"
         template="outfmt"
         name="omprog_action"
         queue.type="Direct"  # the default; facilitates sync with the child process

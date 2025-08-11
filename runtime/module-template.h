@@ -207,7 +207,17 @@
     static rsRetVal isCompatibleWithFeature(syslogFeature __attribute__((unused)) eFeat) { \
         rsRetVal iRet = RS_RET_INCOMPATIBLE;
 
-#define CODESTARTisCompatibleWithFeature
+/* Allow modules to opt into legacy per-message retry semantics within
+ * transactional processing by defining OMOD_TX_OLD_RETRY_SEMANTICS before
+ * including this header. By default, modules are considered incompatible
+ * (whole-batch retry is the default).
+ */
+#ifdef OMOD_TX_OLD_RETRY_SEMANTICS
+    #define CODESTARTisCompatibleWithFeature \
+        if (eFeat == sFEATURETxOldRetrySemantics) iRet = RS_RET_OK;
+#else
+    #define CODESTARTisCompatibleWithFeature /* empty by default */
+#endif
 
 #define ENDisCompatibleWithFeature \
     RETiRet;                       \

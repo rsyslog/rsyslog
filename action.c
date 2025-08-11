@@ -1311,12 +1311,17 @@ static rsRetVal doTransaction(action_t *__restrict__ const pThis,
             iRet = actionProcessMessage(pThis, &actParam(iparams, pThis->iNumTpls, i, 0), pWti);
             DBGPRINTF("doTransaction: action %d, processing msg %d, result %d\n", pThis->iActionNbr, i, iRet);
             if (iRet == RS_RET_SUSPENDED) {
-                --i; /* we need to re-submit */
-                /* note: we are suspended and need to retry. In order not to
-                 * hammer the CPU, we now do a voluntarly wait of 1 second.
-                 * The rest will be handled by the standard retry handler.
-                 */
-                srSleep(1, 0);
+                /* Decide per-module whether to keep legacy per-message retry
+                 * (old semantics) or abort the whole batch (new default). */
+                const rsRetVal feat = pThis->pMod->isCompatibleWithFeature(sFEATURETxOldRetrySemantics);
+                if (feat == RS_RET_OK) {
+                    --i; /* re-submit same message */
+                    /* avoid hammering CPU */
+                    srSleep(1, 0);
+                } else {
+                    /* Abort full batch so caller can re-queue the whole set. */
+                    ABORT_FINALIZE(RS_RET_SUSPENDED);
+                }
             } else if (iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED && iRet != RS_RET_OK) {
                 FINALIZE; /* let upper peer handle the error condition! */
             }
@@ -1336,6 +1341,11 @@ finalize_it:
  * action remains in transactional state @c endTransaction() is
  * invoked to finalize the batch. The return value reflects the
  * resulting action state but no retries are performed here.
+ *
+ * Note: This function does not update per-message batch states.
+ * Callers (e.g., processBatchMain()) must reconcile element states
+ * after commit based on the returned status to uphold at-least-once
+ * semantics for transactional actions.
  */
 static rsRetVal ATTR_NONNULL() actionTryCommit(action_t *__restrict__ const pThis,
                                                wti_t *__restrict__ const pWti,
@@ -1521,10 +1531,11 @@ static rsRetVal actionTryRemoveHardErrorsFromBatch(action_t *__restrict__ const 
  *
  * The return value is propagated via qqueueAdd() when the action queue
  * operates in direct mode so that callers can react immediately.
-
+ *
  * @return Status code from the final commit attempt.
- * The result is propagated back through direct-mode queues so
- * higher levels can act on suspend or failure states.
+ * For transactional actions, callers (e.g., processBatchMain()) use
+ * this status to decide whether to mark staged elements as committed
+ * or to reset them for re-enqueue (at-least-once delivery).
  */
 static rsRetVal ATTR_NONNULL() actionCommit(action_t *__restrict__ const pThis, wti_t *__restrict__ const pWti) {
     actWrkrInfo_t *const wrkrInfo = &(pWti->actWrkrInfo[pThis->iActionNbr]);
@@ -1620,8 +1631,13 @@ finalize_it:
     RETiRet;
 }
 
-/* Commit all active transactions in *DIRECT mode* */
-void ATTR_NONNULL() actionCommitAllDirect(wti_t *__restrict__ const pWti) {
+/* Commit all active transactions in *DIRECT mode*
+ *
+ * Return a summarized status across all actions: first non-OK seen,
+ * or OK if all commits reported OK.
+ */
+rsRetVal ATTR_NONNULL() actionCommitAllDirect(wti_t *__restrict__ const pWti) {
+    rsRetVal ret = RS_RET_OK;
     int i;
     action_t *pAction;
 
@@ -1632,8 +1648,12 @@ void ATTR_NONNULL() actionCommitAllDirect(wti_t *__restrict__ const pWti) {
             "actionCommitAllDirect: action %d, state %u, nbr to commit %d "
             "isTransactional %d\n",
             i, getActionStateByNbr(pWti, i), pWti->actWrkrInfo->p.tx.currIParam, pAction->isTransactional);
-        if (pAction->pQueue->qType == QUEUETYPE_DIRECT) actionCommit(pAction, pWti);
+        if (pAction->pQueue->qType == QUEUETYPE_DIRECT) {
+            const rsRetVal cr = actionCommit(pAction, pWti);
+            if (ret == RS_RET_OK) ret = cr;
+        }
     }
+    return ret;
 }
 
 /* process a single message. This is both called if we run from the
@@ -1697,13 +1717,27 @@ static rsRetVal ATTR_NONNULL() processBatchMain(void *__restrict__ const pVoid,
             DBGPRINTF("processBatchMain: i %d, processMsgMain iRet %d\n", i, localRet);
             if (localRet == RS_RET_OK || localRet == RS_RET_DEFER_COMMIT || localRet == RS_RET_ACTION_FAILED ||
                 localRet == RS_RET_PREVIOUS_COMMITTED) {
-                batchSetElemState(pBatch, i, BATCH_STATE_COMM);
-                DBGPRINTF("processBatchMain: i %d, COMM state set\n", i);
+                /* transactional: stage as SUB / non-transactional: stage as COMM */
+                batchSetElemState(pBatch, i, (pAction->isTransactional ? BATCH_STATE_SUB : BATCH_STATE_COMM));
+                DBGPRINTF("processBatchMain: i %d, %s state set\n", i, (pAction->isTransactional ? "SUB" : "COMM"));
             }
         }
     }
 
     iRet = actionCommit(pAction, pWti);
+
+    /* For transactional actions executed via action-queue worker, reconcile
+     * per-element states after commit outcome to honor at-least-once. */
+    if (pAction->isTransactional) {
+        const batch_state_t finalState = (iRet == RS_RET_OK) ? BATCH_STATE_COMM : BATCH_STATE_RDY;
+        const char *const finalStateName = (iRet == RS_RET_OK) ? "COMM" : "RDY";
+        for (i = 0; i < batchNumMsgs(pBatch); ++i) {
+            if (pBatch->eltState[i] == BATCH_STATE_SUB) {
+                batchSetElemState(pBatch, i, finalState);
+                DBGPRINTF("processBatchMain: i %d, SUB->%s (commit %d)\n", i, finalStateName, iRet);
+            }
+        }
+    }
     RETiRet;
 }
 

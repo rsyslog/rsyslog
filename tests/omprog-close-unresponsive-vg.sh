@@ -19,7 +19,7 @@ main_queue(
 :msg, contains, "msgnum:" {
     action(
         type="omprog"
-        binary=`echo $srcdir/testsuites/omprog-close-unresponsive-bin.sh`
+        binary="'$srcdir'/testsuites/omprog-close-unresponsive-bin.sh"
         template="outfmt"
         name="omprog_action"
         queue.type="Direct"  # the default; facilitates sync with the child process
