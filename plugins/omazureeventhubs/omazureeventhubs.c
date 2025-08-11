@@ -1,7 +1,7 @@
 /* omazureeventhubs.c
  * This output plugin make rsyslog talk to Azure EventHubs.
  *
- * Copyright 2014-2017 by Adiscon GmbH.
+ * Copyright 2014-2025 by Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -75,9 +75,12 @@ MODULE_CNFNAME("omazureeventhubs")
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA;
-DEFobjCurrIf(glbl) DEFobjCurrIf(datetime) DEFobjCurrIf(strm) DEFobjCurrIf(statsobj)
+DEFobjCurrIf(glbl);
+DEFobjCurrIf(datetime);
+DEFobjCurrIf(strm);
+DEFobjCurrIf(statsobj);
 
-    statsobj_t *azureStats;
+statsobj_t *azureStats;
 STATSCOUNTER_DEF(ctrMessageSubmit, mutCtrMessageSubmit);
 STATSCOUNTER_DEF(ctrAzureFail, mutCtrAzureFail);
 STATSCOUNTER_DEF(ctrCacheMiss, mutCtrCacheMiss);
@@ -333,6 +336,14 @@ static pn_message_t *proton_encode_message(wrkrInstanceData_t *const pWrkrData, 
     return message;
 }
 
+/** \brief Tear down the active proton connection.
+ *
+ * The worker instance keeps track of messages that are in-flight.  This
+ * helper closes the connection and marks any message that was not yet
+ * acknowledged as rejected so that commitTransaction() can report failure.
+ * All connection related state inside \p pWrkrData is reset to make a new
+ * connection attempt possible.
+ */
 static rsRetVal closeProton(wrkrInstanceData_t *const __restrict__ pWrkrData) {
     DEFiRet;
     instanceData *const pData = (instanceData *const)pWrkrData->pData;
@@ -379,6 +390,13 @@ finalize_it:
     RETiRet;
 }
 
+/** \brief Establish a proton connection using worker configuration.
+ *
+ * This function configures SSL and the qpid-proton transport and then hands
+ * off to the proactor for asynchronous processing.  The caller must ensure
+ * that the worker thread is running so that connection progress and message
+ * exchange happen in parallel.
+ */
 static rsRetVal openProton(wrkrInstanceData_t *const __restrict__ pWrkrData) {
     DEFiRet;
     instanceData *const pData = (instanceData *const)pWrkrData->pData;
@@ -463,6 +481,13 @@ static sbool proton_check_condition(pn_event_t *event,
     }
 }
 
+/** \brief Ensure a usable proton connection for the worker instance.
+ *
+ * When \p autoclose is set, an existing connection is torn down before a new
+ * one is created.  This is typically used after error conditions.  The call
+ * blocks while the connection is established but the actual protocol exchange
+ * is handled by proton_thread().
+ */
 static rsRetVal setupProtonHandle(wrkrInstanceData_t *const __restrict__ pWrkrData, int autoclose) {
     DEFiRet;
     DBGPRINTF("omazureeventhubs[%p]: setupProtonHandle ENTER\n", pWrkrData);
@@ -487,6 +512,13 @@ finalize_it:
     RETiRet;
 }
 
+/** \brief Queue a single message for delivery by the proton thread.
+ *
+ * The message content is copied into a helper structure that is later picked
+ * up by handleProtonDelivery() once the broker grants link credit.  The
+ * function does not perform any network I/O itself and therefore does not
+ * block.
+ */
 static rsRetVal writeProton(wrkrInstanceData_t *__restrict__ const pWrkrData,
                             const actWrkrIParams_t *__restrict__ const pParam,
                             const int iMsg) {
@@ -554,7 +586,6 @@ BEGINcreateWrkrInstance
     pWrkrData->bThreadRunning = 0;
     pWrkrData->tid = 0;
 
-    // Run Proton Worker Thread now
     proton_run_thread(pWrkrData);
 finalize_it:
     DBGPRINTF("createWrkrInstance[%p] returned %d\n", pWrkrData, iRet);
@@ -659,6 +690,14 @@ ENDbeginTransaction
 /*
  *	New Transaction action interface
  */
+/** \brief Send a batch of messages and wait for broker acknowledgement.
+ *
+ * Messages queued via writeProton() are submitted to the proton sender.  The
+ * per-instance protocol thread (proton_thread()) performs the actual network
+ * I/O and updates the status of each message asynchronously.  This function
+ * loops until all messages have either been accepted or a suspension condition
+ * is detected.
+ */
 BEGINcommitTransaction
     // instanceData *__restrict__ const pData = pWrkrData->pData;
     unsigned i;
@@ -702,8 +741,13 @@ BEGINcommitTransaction
         }
         bDone = 1;
 
-        // Wait 100 milliseconds
-        srSleep(0, 100000);
+        /*
+         * The proton worker thread processes network events and updates the
+         * status of each message asynchronously.  Sleeping a short period
+         * prevents busy waiting and gives the worker an opportunity to perform
+         * delivery attempts and acknowledgement handling.
+         */
+        srSleep(0, 100000); /* 100ms */
 
         // Verify if messages have been submitted successfully
         for (i = 0; i < nParams; ++i) {
@@ -1046,8 +1090,12 @@ pn_timestamp_t time_now(void) {
     return ((pn_timestamp_t)now.tv_sec) * 1000 + (now.tv_usec / 1000);
 }
 
-/*
- *	Start PROTON Handling Thread
+/** \brief Start the per-instance proton event handling thread.
+ *
+ * Each action worker instance owns a dedicated thread that waits on the qpid-proton
+ * proactor and drives the AMQP state machine.  The thread persists for the
+ * lifetime of the action and shares \p pWrkrData with the rsyslog worker
+ * thread.
  */
 static rsRetVal proton_run_thread(wrkrInstanceData_t *pWrkrData) {
     DEFiRet;
@@ -1072,8 +1120,7 @@ finalize_it:
     }
     RETiRet;
 }
-/*	Stop PROTON Handling Thread
- */
+/** \brief Stop the proton event handling thread for this worker instance. */
 static rsRetVal proton_shutdown_thread(wrkrInstanceData_t *pWrkrData) {
     DEFiRet;
     if (pWrkrData->bThreadRunning) {
@@ -1090,8 +1137,11 @@ finalize_it:
     RETiRet;
 }
 
-/*
- *	Workerthread function for a single ProActor Handler
+/** \brief Thread procedure that processes proton proactor events.
+ *
+ * This function forms the core of the asynchronous processing model.  It waits
+ * for events on the proactor, dispatches them to handleProton(), and exits when
+ * rsyslog is terminating.
  */
 static void *proton_thread(void __attribute__((unused)) * pVoidWrkrData) {
     wrkrInstanceData_t *const pWrkrData = (wrkrInstanceData_t *const)pVoidWrkrData;
@@ -1119,6 +1169,12 @@ static void *proton_thread(void __attribute__((unused)) * pVoidWrkrData) {
     return NULL;
 }
 
+/** \brief Submit queued messages to the broker when link credit allows.
+ *
+ * Called from the protocol thread whenever the broker grants credit or the
+ * connection is explicitly woken up.  Messages are encoded and sent via the
+ * proton APIs and their status updated accordingly.
+ */
 static void handleProtonDelivery(wrkrInstanceData_t *const pWrkrData) {
     instanceData *const pData = (instanceData *const)pWrkrData->pData;
 
@@ -1183,6 +1239,12 @@ static void handleProtonDelivery(wrkrInstanceData_t *const pWrkrData) {
  */
 #pragma GCC diagnostic ignored "-Wswitch"
 #pragma GCC diagnostic ignored "-Wswitch-enum"
+/** \brief Dispatch a single proton event to the appropriate handler.
+ *
+ * This function is invoked by the protocol thread for every event returned by
+ * the proactor. It updates the connection state, forwards delivery events and
+ * handles error conditions reported by the library.
+ */
 static void handleProton(wrkrInstanceData_t *const pWrkrData, pn_event_t *event) {
     instanceData *const pData = (instanceData *const)pWrkrData->pData;
     /* Handle Proton Events */
