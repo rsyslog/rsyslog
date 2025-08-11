@@ -1,0 +1,1965 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Basic Parameters" href="omfwd/parameters/basic.html" /><link rel="prev" title="omfile: File Output Module" href="omfile.html" />
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.07.19 -->
+        <title>omfwd: syslog Forwarding Output Module - rsyslog 8.2508 daily stable documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=25af2a20" />
+    <link rel="stylesheet" type="text/css" href="../../_static/rsyslog.css?v=6406a7f4" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #eeffcc;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #2b2b2b;
+  --color-code-foreground: #f8f8f2;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #2b2b2b;
+  --color-code-foreground: #f8f8f2;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../index.html"><div class="brand">rsyslog 8.2508 daily stable documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
+  
+  <span class="sidebar-brand-text">rsyslog 8.2508 daily stable documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../about/index.html">About rsyslog</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of About rsyslog</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../about/ai_first.html">AI-First: Our Vision for rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../about/history.html">History and Future of rsyslog</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../getting_started/index.html">Getting Started with rsyslog</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Getting Started with rsyslog</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/installation.html">Installing rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/basic_configuration.html">Basic Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/understanding_default_config.html">Understanding the Default Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/forwarding_logs.html">Forwarding Logs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/next_steps.html">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">Configuration</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Configuration</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../basic_structure.html">Basic Structure</a></li>
+<li class="toctree-l2 current has-children"><a class="reference internal" href="idx_output.html">Output Modules</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Output Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="omamqp1.html">omamqp1: AMQP 1.0 Messaging Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omazureeventhubs.html">omazureeventhubs: Microsoft Azure Event Hubs Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omclickhouse.html">omclickhouse: ClickHouse Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omczmq.html">omczmq: Output module for ZeroMQ</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omdtls.html">omdtls: Output Module for DTLS Protocol over UDP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omelasticsearch.html">omelasticsearch: Elasticsearch Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omfile.html">omfile: File Output Module</a></li>
+<li class="toctree-l3 current has-children current-page"><a class="current reference internal" href="#">omfwd: syslog Forwarding Output Module</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of omfwd: syslog Forwarding Output Module</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="omfwd/parameters/basic.html">Basic Parameters</a></li>
+<li class="toctree-l4"><a class="reference internal" href="omfwd/parameters/module.html">Module Parameters</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="omhdfs.html">omhdfs: Hadoop Filesystem Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omhiredis.html">omhiredis: Redis Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omhttp.html">omhttp: HTTP Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omhttpfs.html">omhttpfs: Hadoop HTTPFS Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omjournal.html">omjournal: Systemd Journal Output</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omkafka.html">omkafka: write to Apache Kafka</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omlibdbi.html">omlibdbi: Generic Database Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ommail.html">ommail: Mail Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ommongodb.html">ommongodb: MongoDB Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ommysql.html">ommysql: MariaDB/MySQL Database Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omoracle.html">omoracle: Oracle Database Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ompgsql.html">PostgreSQL Database Output Module (ompgsql)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ompipe.html">ompipe: Pipe Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omprog.html">omprog: Program integration Output module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omrabbitmq.html">omrabbitmq: RabbitMQ output module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omrelp.html">omrelp: RELP Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omruleset.html">omruleset: ruleset output/including module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omsendertrack.html">omsendertrack: Sender Tracking Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omsnmp.html">omsnmp: SNMP Trap Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omstdout.html">omstdout: stdout output module (testbench tool)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omudpspoof.html">omudpspoof: UDP spoofing output module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omusrmsg.html">omusrmsg: notify users</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omuxsock.html">omuxsock: Unix sockets Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sigprov_gt.html">GuardTime Log Signature Provider (gt)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sigprov_ksi.html">Keyless Signature Infrastructure Provider (ksi)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sigprov_ksi12.html">KSI Signature Provider (rsyslog-ksi-ls12)</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="idx_input.html">Input Modules</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Input Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="im3195.html">im3195: RFC3195 Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imbatchreport.html">imbatchreport: Batch report input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imczmq.html">imczmq: Input module for ZeroMQ</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imdocker.html">imdocker: Docker Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imdtls.html">imdtls: Input Module for DTLS Protocol over UDP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imfile.html">imfile: Text File Input Module</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="imgssapi.html">imgssapi: GSSAPI Syslog Input Module</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of imgssapi: GSSAPI Syslog Input Module</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="gssapi.html">GSSAPI module support in rsyslog v3</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="imhiredis.html">Imhiredis: Redis input plugin</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imhttp.html">imhttp: HTTP input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imjournal.html">imjournal: Systemd Journal Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imkafka.html">imkafka: read from Apache Kafka</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imklog.html">imklog: Kernel Log Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imkmsg.html">imkmsg: /dev/kmsg Log Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="immark.html">immark: Mark Message Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="impcap.html">Impcap: network traffic capture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="improg.html">improg: Program integration input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="impstats.html">impstats: Generate Periodic Statistics of Internal Counters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imptcp.html">imptcp: Plain TCP Syslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imrelp.html">imrelp: RELP Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imsolaris.html">imsolaris: Solaris Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imtcp.html">imtcp: TCP Syslog Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imtuxedoulog.html">imtuxedoulog: Tuxedo ULOG input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imudp.html">imudp: UDP Syslog Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imuxsock.html">imuxsock: Unix Socket Input Module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="idx_parser.html">Parser Modules</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Parser Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="pmciscoios.html">pmciscoios</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmdb2diag.html">pmdb2diag: DB2 Diag file parser module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmlastmsg.html">pmlastmsg: last message repeated n times</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmnormalize.html">Log Message Normalization Parser Module (pmnormalize)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmnull.html">pmnull: Syslog Null Parser Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmrfc3164.html">pmrfc3164: Parse RFC3164-formatted messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmrfc3164sd.html">pmrfc3164sd: Parse RFC5424 structured data inside RFC3164 messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmrfc5424.html">pmrfc5424: Parse RFC5424-formatted messages</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="idx_messagemod.html">Message Modification Modules</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of Message Modification Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="mmaitag.html">AI-based classification (mmaitag)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmanon.html">IP Address Anonymization Module (mmanon)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmcount.html">mmcount</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmdarwin.html">Darwin connector (mmdarwin)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmdblookup.html">MaxMind/GeoIP DB lookup (mmdblookup)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmexternal.html">Support module for external message modification modules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmfields.html">Fields Extraction Module (mmfields)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmjsonparse.html">JSON/CEE Structured Content Extraction Module (mmjsonparse)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmkubernetes.html">Kubernetes Metadata Module (mmkubernetes)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmnormalize.html">Log Message Normalization Module (mmnormalize)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmpstrucdata.html">RFC5424 structured data parsing module (mmpstrucdata)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmrfc5424addhmac.html">mmrfc5424addhmac</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmrm1stspace.html">mmrm1stspace: First Space Modification Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmsequence.html">Number generator and counter module (mmsequence)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmsnmptrapd.html">mmsnmptrapd message modification module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmtaghostname.html">mmtaghostname: message modification module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmutf8fix.html">Fix invalid UTF-8 Sequences (mmutf8fix)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="idx_stringgen.html">String Generator Modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="idx_library.html">Library Modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../templates.html">Templates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../properties.html">rsyslog Properties</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../property_replacer.html">The Property Replacer</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of The Property Replacer</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../nomatch.html">Property Replacer nomatch mode</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../filters.html">Filter Conditions</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../rainerscript/index.html">RainerScript</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of RainerScript</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/data_types.html">Data Types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/expressions.html">Expressions</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../../rainerscript/functions/index.html">Functions</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><div class="visually-hidden">Toggle navigation of Functions</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4 has-children"><a class="reference internal" href="../../rainerscript/functions/idx_built-in_functions.html">Built-in Functions</a><input class="toctree-checkbox" id="toctree-checkbox-13" name="toctree-checkbox-13" role="switch" type="checkbox"/><label for="toctree-checkbox-13"><div class="visually-hidden">Toggle navigation of Built-in Functions</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-cnum.html">cnum()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-cstr.html">cstr()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-dyn_inc.html">dyn_inc()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-exec_template.html">exec_template()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-exists.html">exists()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-field.html">field()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-format_time.html">format_time()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-get_property.html">get_property()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-getenv.html">getenv()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-int2hex.html">int2hex()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-ipv4convert.html">num2ipv4() / ipv42num()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-is_time.html">is_time()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-lookup.html">lookup()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-parse_json.html">parse_json()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-parse_time.html">parse_time()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-percentile_observe.html">percentile_observe()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-previous_action_suspended.html">previous_action_suspended()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-prifilt.html">prifilt()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-random.html">random()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-re_extract.html">re_extract()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-re_extract_i.html">re_extract_i()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-re_match.html">re_match()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-re_match_i.html">re_match_i()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-replace.html">replace()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-script_error.html">script_error()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-strlen.html">strlen()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-substring.html">substring()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-tolower.html">tolower()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-trim.html">ltrim() / rtrim()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-wrap.html">wrap()</a></li>
+</ul>
+</li>
+<li class="toctree-l4 has-children"><a class="reference internal" href="../../rainerscript/functions/idx_module_functions.html">Module Functions</a><input class="toctree-checkbox" id="toctree-checkbox-14" name="toctree-checkbox-14" role="switch" type="checkbox"/><label for="toctree-checkbox-14"><div class="visually-hidden">Toggle navigation of Module Functions</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/mo-ffaup.html">Faup</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/mo-hashXX.html">HashXX</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/mo-hashXXmod.html">HashXXmod</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/mo-http_request.html">HTTP-Request</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/mo-unflatten.html">Unflatten</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/control_structures.html">Control Structures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/configuration_objects.html">configuration objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/constant_strings.html">String Constants</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/variable_property_types.html">Variable (Property) types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/lookup_tables.html">Lookup Tables</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/queue_parameters.html">General Queue Parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/rainerscript_call.html">The rsyslog “call” statement</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/rainerscript_call_indirect.html">The rsyslog “call_indirect” statement</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/global.html">global() configuration object</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/include.html">The rsyslog include() object</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../actions.html">Actions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../input.html">Input</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../parser.html">Parser</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../timezone.html">timezone</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../index_directives.html">Legacy Configuration Directives</a><input class="toctree-checkbox" id="toctree-checkbox-15" name="toctree-checkbox-15" role="switch" type="checkbox"/><label for="toctree-checkbox-15"><div class="visually-hidden">Toggle navigation of Legacy Configuration Directives</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../config_param_types.html">Configuration Parameter Types</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../global/index.html">Legacy Global Configuration Statements</a><input class="toctree-checkbox" id="toctree-checkbox-16" name="toctree-checkbox-16" role="switch" type="checkbox"/><label for="toctree-checkbox-16"><div class="visually-hidden">Toggle navigation of Legacy Global Configuration Statements</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_abortonuncleanconfig.html">$AbortOnUncleanConfig</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_debugprintcfsyslinehandlerlist.html">$DebugPrintCFSyslineHandlerList</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_debugprintmodulelist.html">$DebugPrintModuleList</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_debugprinttemplatelist.html">$DebugPrintTemplateList</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_failonchownfailure.html">$FailOnChownFailure</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_generateconfiggraph.html">$GenerateConfigGraph</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_includeconfig.html">$IncludeConfig</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_mainmsgqueuesize.html">$MainMsgQueueSize</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_maxopenfiles.html">$MaxOpenFiles</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_moddir.html">$ModDir</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_modload.html">$ModLoad</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_umask.html">$UMASK</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_resetconfigvariables.html">$ResetConfigVariables</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../input_directives/index.html">Legacy Directives affecting Input Modules</a><input class="toctree-checkbox" id="toctree-checkbox-17" name="toctree-checkbox-17" role="switch" type="checkbox"/><label for="toctree-checkbox-17"><div class="visually-hidden">Toggle navigation of Legacy Directives affecting Input Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_allowedsender.html">$AllowedSender</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_dropmsgswithmaliciousdnsptrrecords.html">$DropMsgsWithMaliciousDnsPTRRecords</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_controlcharacterescapeprefix.html">$ControlCharacterEscapePrefix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_droptrailinglfonreception.html">$DropTrailingLFOnReception</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_escape8bitcharsonreceive.html">$Escape8BitCharactersOnReceive</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_markmessageperiod.html">$MarkMessagePeriod</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../action/index.html">Depricated Legacy Action-Specific Configuration Statements</a><input class="toctree-checkbox" id="toctree-checkbox-18" name="toctree-checkbox-18" role="switch" type="checkbox"/><label for="toctree-checkbox-18"><div class="visually-hidden">Toggle navigation of Depricated Legacy Action-Specific Configuration Statements</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_actionexeconlywhenpreviousissuspended.html">How to Convert Deprecated <cite>$ActionExecOnlyWhenPreviousIsSuspended</cite> to Modern Style</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_actionresumeinterval.html">How to Convert Deprecated <cite>$ActionResumeInterval</cite> to Modern Style</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_repeatedmsgreduction.html">$RepeatedMsgReduction</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_omfileforcechown.html">$omfileForceChown</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_dirgroup.html">$DirGroup</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_dirowner.html">How to Convert Deprecated <cite>$DirOwner</cite> to Modern Style</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_dynafilecachesize.html">$DynaFileCacheSize</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_filecreatemode.html">$FileCreateMode</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_filegroup.html">$FileGroup</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_fileowner.html">$FileOwner</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_gssforwardservicename.html">$GssForwardServiceName</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_gssmode.html">$GssMode</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../ruleset/index.html">Ruleset-Specific Legacy Configuration Statements</a><input class="toctree-checkbox" id="toctree-checkbox-19" name="toctree-checkbox-19" role="switch" type="checkbox"/><label for="toctree-checkbox-19"><div class="visually-hidden">Toggle navigation of Ruleset-Specific Legacy Configuration Statements</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../ruleset/rsconf1_rulesetcreatemainqueue.html">$RulesetCreateMainQueue</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../ruleset/rsconf1_rulesetparser.html">$RulesetParser</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../rsyslog_statistic_counter.html">rsyslog statistic counter</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="index.html">Modules</a><input class="toctree-checkbox" id="toctree-checkbox-20" name="toctree-checkbox-20" role="switch" type="checkbox"/><label for="toctree-checkbox-20"><div class="visually-hidden">Toggle navigation of Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="workflow.html">Where are the modules integrated into the Message Flow?</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../output_channels.html">Output Channels</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../droppriv.html">Dropping privileges in rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipv6.html">Notes on IPv6 Handling in Rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../cryprov_gcry.html">libgcrypt Log Crypto Provider (gcry)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../cryprov_ossl.html">libossl Log Crypto Provider (ossl)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dyn_stats.html">Dynamic Stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../lookup_tables.html">Lookup Tables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../percentile_stats.html">Percentile Stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../converting_to_new_format.html">Converting older formats to <code class="docutils literal notranslate"><span class="pre">advanced</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../conf_formats.html">Configuration Formats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../sysklogd_format.html">sysklogd format</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../faq/index.html">FAQ</a><input class="toctree-checkbox" id="toctree-checkbox-21" name="toctree-checkbox-21" role="switch" type="checkbox"/><label for="toctree-checkbox-21"><div class="visually-hidden">Toggle navigation of FAQ</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../faq/faq_overall.html">FAQ: some general topics often asked</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../faq/difference_queues.html">What is the difference between the main_queue and a queue with a ruleset tied to an input?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../faq/encrypt_mysql_traffic_ommysql.html">FAQ: Encrypting MySQL Traffic with ommysql Plugin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../faq/imudp-packet-loss.html">FAQ: Troubleshooting UDP Packet Loss</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../faq/common-config-mistakes.html">Common Configuration Mistakes and Misunderstandings</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/index.html">Tutorials</a><input class="toctree-checkbox" id="toctree-checkbox-22" name="toctree-checkbox-22" role="switch" type="checkbox"/><label for="toctree-checkbox-22"><div class="visually-hidden">Toggle navigation of Tutorials</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../tutorials/tls_cert_summary.html">Encrypting Syslog Traffic with TLS (SSL)</a><input class="toctree-checkbox" id="toctree-checkbox-23" name="toctree-checkbox-23" role="switch" type="checkbox"/><label for="toctree-checkbox-23"><div class="visually-hidden">Toggle navigation of Encrypting Syslog Traffic with TLS (SSL)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_scenario.html">Sample Use Case: Single Central Log Server</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_ca.html">Setting up the CA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_machine.html">Generating the machine certificate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_server.html">Setting up the Central Server</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_client.html">Setting up a client</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_udp_relay.html">Setting up the UDP syslog relay</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_errmsgs.html">Error Messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_script.html">Creating certificates with a script</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/tls.html">Encrypting Syslog Traffic with TLS (SSL) [short version]</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/database.html">Writing syslog messages to MariaDB, MySQL, PostgreSQL or any other supported Database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/high_database_rate.html">Handling a massive syslog database insert rate with Rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/reliable_forwarding.html">Reliable Forwarding of syslog Messages with Rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/recording_pri.html">Recording the Priority of Syslog Messages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/failover_syslog_server.html">Failover Syslog Server</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/log_rotation_fix_size.html">Log rotation with rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/gelf_forwarding.html">GELF forwarding in rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/log_sampling.html">Log Sampling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/random_sampling.html">Random sampling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/hash_sampling.html">Hash-based Sampling</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../troubleshooting/index.html">Troubleshooting</a><input class="toctree-checkbox" id="toctree-checkbox-24" name="toctree-checkbox-24" role="switch" type="checkbox"/><label for="toctree-checkbox-24"><div class="visually-hidden">Toggle navigation of Troubleshooting</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../troubleshooting/file_not_written.html">Output File is not Being Written</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../troubleshooting/selinux.html">Troubleshooting SELinux-Related Issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../troubleshooting/debug.html">Rsyslog Debug Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../troubleshooting/troubleshoot.html">troubleshooting problems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../troubleshooting/howtodebug.html">How to create a debug log</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../concepts/index.html">Concepts</a><input class="toctree-checkbox" id="toctree-checkbox-25" name="toctree-checkbox-25" role="switch" type="checkbox"/><label for="toctree-checkbox-25"><div class="visually-hidden">Toggle navigation of Concepts</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../concepts/queues.html">Understanding rsyslog Queues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../concepts/janitor.html">The Janitor Process</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../concepts/messageparser.html">Message parsers in rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../concepts/multi_ruleset.html">Multiple Rulesets in rsyslog</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../concepts/netstrm_drvr.html">NetStream Drivers</a><input class="toctree-checkbox" id="toctree-checkbox-26" name="toctree-checkbox-26" role="switch" type="checkbox"/><label for="toctree-checkbox-26"><div class="visually-hidden">Toggle navigation of NetStream Drivers</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_ptcp.html">ptcp Network Stream Driver</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_gtls.html">gtls Network Stream Driver</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_gtls.html#supported-driver-modes">Supported Driver Modes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_gtls.html#supported-authentication-modes">Supported Authentication Modes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_gtls.html#checkextendedkeypurpose">CheckExtendedKeyPurpose</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_gtls.html#prioritizesan">PrioritizeSAN</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_ossl.html">openssl Network Stream Driver</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../development/index.html">Development</a><input class="toctree-checkbox" id="toctree-checkbox-27" name="toctree-checkbox-27" role="switch" type="checkbox"/><label for="toctree-checkbox-27"><div class="visually-hidden">Toggle navigation of Development</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../development/config_data_model.html">The rsyslog config data model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/config_data_model.html#objects">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/debugging.html">Debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/dev_action_threads.html">Action Threads and Queue Engine (Developer-Oriented)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/dev_codestyle.html">rsyslog code style</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/dev_oplugins.html">Writing Rsyslog Output Plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/dev_queue.html">The rsyslog queue object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/dev_testbench.html">writing rsyslog tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/doc_reference_section_guidelines.html">Documentation Reference Section Structure Guidelines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/doc_style_guide.html">Documentation Style Guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/generic_design.html">Generic design of a syslogd</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/internal_tooling.html">Internal tooling</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../idx_reference.html">Reference</a><input class="toctree-checkbox" id="toctree-checkbox-28" name="toctree-checkbox-28" role="switch" type="checkbox"/><label for="toctree-checkbox-28"><div class="visually-hidden">Toggle navigation of Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../containers/index.html">rsyslog and containers</a><input class="toctree-checkbox" id="toctree-checkbox-29" name="toctree-checkbox-29" role="switch" type="checkbox"/><label for="toctree-checkbox-29"><div class="visually-hidden">Toggle navigation of rsyslog and containers</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../containers/container_features.html">Container-Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../containers/docker_specifics.html">docker specifics</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../installation/index.html">Installation</a><input class="toctree-checkbox" id="toctree-checkbox-30" name="toctree-checkbox-30" role="switch" type="checkbox"/><label for="toctree-checkbox-30"><div class="visually-hidden">Toggle navigation of Installation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../installation/packages.html">Installing rsyslog from Package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../installation/rsyslog_docker.html">Using Rsyslog Docker Containers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../installation/install_from_source.html">Installing rsyslog from Source</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../installation/build_from_repo.html">Installing rsyslog from the source repository</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../historical/index.html">Historical Documents</a><input class="toctree-checkbox" id="toctree-checkbox-31" name="toctree-checkbox-31" role="switch" type="checkbox"/><label for="toctree-checkbox-31"><div class="visually-hidden">Toggle navigation of Historical Documents</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/php_syslog_ng.html">Using php-syslog-ng with rsyslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/multi_ruleset_legacy_format_samples.html">Legacy Format Samples for Multiple Rulesets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/module_devel.html">Developing rsyslog modules (outdated)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/high_performance.html">Receiving massive amounts of messages with high performance</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v8compatibility.html">Compatibility Notes for rsyslog v8</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v7compatibility.html">Compatibility Notes for rsyslog v7</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v6compatibility.html">Compatibility Notes for rsyslog v6</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v5compatibility.html">Compatibility Notes for rsyslog v5</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v4compatibility.html">Compatibility Notes for rsyslog v4</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v3compatibility.html">Compatibility Notes for rsyslog v3</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../history.html">RSyslog - History</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../licensing.html">Licensing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../how2help.html">How you can Help</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../community.html">Community Resources</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features.html">RSyslog - Features</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../proposals/index.html">Proposals</a><input class="toctree-checkbox" id="toctree-checkbox-32" name="toctree-checkbox-32" role="switch" type="checkbox"/><label for="toctree-checkbox-32"><div class="visually-hidden">Toggle navigation of Proposals</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../proposals/version_naming.html">Version Naming</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../whitepapers/index.html">Rsyslog Whitepapers</a><input class="toctree-checkbox" id="toctree-checkbox-33" name="toctree-checkbox-33" role="switch" type="checkbox"/><label for="toctree-checkbox-33"><div class="visually-hidden">Toggle navigation of Rsyslog Whitepapers</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../whitepapers/syslog_parsing.html">syslog parsing in rsyslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../whitepapers/syslog_protocol.html">syslog-protocol support in rsyslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../whitepapers/queues_analogy.html">Turning Lanes and Rsyslog Queues</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../whitepapers/preserve_in_nat.html">Preserving syslog sender over NAT</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../whitepapers/reliable_logging.html">How reliable should reliable logging be?</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../../_sources/configuration/modules/omfwd.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="omfwd-syslog-forwarding-output-module">
+<h1>omfwd: syslog Forwarding Output Module<a class="headerlink" href="#omfwd-syslog-forwarding-output-module" title="Link to this heading">¶</a></h1>
+<p>The <cite>omfwd</cite> module forwards logs to remote systems using <strong>UDP, TCP, or TLS</strong>.</p>
+<p>It is <strong>built-in</strong> and does not require explicit loading.
+To configure global defaults, use <code class="docutils literal notranslate"><span class="pre">builtin:omfwd</span></code>.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For modern deployments, prefer <strong>TCP with TLS</strong> over plain TCP or UDP.
+If reliable delivery is critical, consider <a class="reference internal" href="omrelp.html"><span class="doc">omrelp</span></a>.</p>
+</div>
+<section id="best-practices">
+<h2>Best Practices<a class="headerlink" href="#best-practices" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><strong>Choose the right transport:</strong>
+TCP is often used for reliable delivery, especially with TLS.
+UDP can be preferable for low-latency, non-blocking scenarios (e.g., local
+high-speed networks).
+If you need <strong>encrypted UDP</strong>, consider <a class="reference internal" href="omdtls.html"><span class="doc">omdtls</span></a>.</p></li>
+<li><p><strong>Use TLS where possible:</strong>
+When sending logs over untrusted networks, configure TLS (<cite>StreamDriver=”ossl”</cite>
+or <cite>StreamDriver=”gtls”</cite>) with <cite>omfwd</cite> (for TCP) or switch to <cite>omdtls</cite> (for UDP).</p></li>
+<li><p><strong>Enable queues for TCP forwarding:</strong>
+Always define a queue (<cite>queue.type=”linkedList”</cite>) to avoid blocking if the
+remote server is unavailable.</p></li>
+<li><p><strong>Adjust queue parameters for heavy traffic:</strong>
+For high-volume logging or prolonged outages, tune <cite>queue.size</cite> and related
+parameters to prevent message loss. The defaults are designed for typical workloads.</p></li>
+<li><p><strong>Use templates for structured logs:</strong>
+Apply templates (e.g., JSON) if the receiver expects a specific log format.</p></li>
+<li><p><strong>Consider RELP for guaranteed delivery:</strong>
+Use <a class="reference internal" href="omrelp.html"><span class="doc">omrelp</span></a> when 100% reliable delivery and acknowledgments
+are required.</p></li>
+</ul>
+</section>
+<section id="quick-start">
+<h2>Quick Start<a class="headerlink" href="#quick-start" title="Link to this heading">¶</a></h2>
+<p>The most common forwarding examples:</p>
+<p><strong>1. Forward all logs to a remote server via TCP</strong></p>
+<div class="highlight-rsyslog notranslate"><div class="highlight"><pre><span></span><span class="c1"># Forward all messages to a remote syslog server over TCP</span>
+<span class="kd">action</span><span class="p">(</span>
+    <span class="n">type</span><span class="o">=</span><span class="s2">&quot;omfwd&quot;</span>
+    <span class="n">target</span><span class="o">=</span><span class="s2">&quot;logs.example.com&quot;</span>   <span class="c1"># Remote syslog server</span>
+    <span class="n">port</span><span class="o">=</span><span class="s2">&quot;514&quot;</span>                  <span class="c1"># Destination port</span>
+    <span class="n">protocol</span><span class="o">=</span><span class="s2">&quot;tcp&quot;</span>              <span class="c1"># Use TCP (reliable transport)</span>
+    <span class="n">queue</span><span class="p">.</span><span class="n">type</span><span class="o">=</span><span class="s2">&quot;linkedList&quot;</span>     <span class="c1"># Prevent blocking if the remote server is down</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>2. Secure log forwarding with TLS</strong></p>
+<div class="highlight-rsyslog notranslate"><div class="highlight"><pre><span></span><span class="c1"># Forward logs securely using TLS (RFC5425)</span>
+<span class="kd">action</span><span class="p">(</span>
+    <span class="n">type</span><span class="o">=</span><span class="s2">&quot;omfwd&quot;</span>
+    <span class="n">target</span><span class="o">=</span><span class="s2">&quot;logs.example.com&quot;</span>
+    <span class="n">port</span><span class="o">=</span><span class="s2">&quot;6514&quot;</span>                 <span class="c1"># Standard port for TLS syslog</span>
+    <span class="n">protocol</span><span class="o">=</span><span class="s2">&quot;tcp&quot;</span>
+    <span class="n">StreamDriver</span><span class="o">=</span><span class="s2">&quot;ossl&quot;</span>         <span class="c1"># OpenSSL for TLS</span>
+    <span class="n">StreamDriverMode</span><span class="o">=</span><span class="s2">&quot;1&quot;</span>        <span class="c1"># TLS-only mode</span>
+    <span class="n">StreamDriverAuthMode</span><span class="o">=</span><span class="s2">&quot;x509/name&quot;</span>
+    <span class="n">StreamDriverPermittedPeers</span><span class="o">=</span><span class="s2">&quot;logs.example.com&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="outdated-legacy-methods">
+<h2>Outdated Legacy Methods<a class="headerlink" href="#outdated-legacy-methods" title="Link to this heading">¶</a></h2>
+<p>Many distro defaults and popular online tutorials still use <cite>&#64;server</cite>/<cite>&#64;&#64;server</cite>.
+These shorter forms bypass queues and lack back‑pressure control, misleading
+users about delivery guarantees and ranking high in search results.
+Although longer and seemingly complex, modern RainerScript variants
+are explicit, configurable, and robust—preventing hidden pitfalls.</p>
+<p><strong>TCP Forwarding</strong></p>
+<p><strong>Before (legacy):</strong></p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>*.* @@remote.example.com
+</pre></div>
+</div>
+<p><strong>After (modern):</strong></p>
+<div class="highlight-rsyslog notranslate"><div class="highlight"><pre><span></span><span class="kd">action</span><span class="p">(</span>
+    <span class="n">type</span><span class="o">=</span><span class="s2">&quot;omfwd&quot;</span>
+    <span class="n">target</span><span class="o">=</span><span class="s2">&quot;remote.example.com&quot;</span>
+    <span class="n">port</span><span class="o">=</span><span class="s2">&quot;514&quot;</span>
+    <span class="n">protocol</span><span class="o">=</span><span class="s2">&quot;tcp&quot;</span>
+    <span class="n">queue</span><span class="p">.</span><span class="n">type</span><span class="o">=</span><span class="s2">&quot;linkedList&quot;</span>   <span class="c1"># Prevents blocking if remote server is offline</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>UDP Forwarding (custom port)</strong></p>
+<p><strong>Before (legacy):</strong></p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>*.* @remote.example.com:515
+</pre></div>
+</div>
+<p><strong>After (modern):</strong></p>
+<div class="highlight-rsyslog notranslate"><div class="highlight"><pre><span></span><span class="kd">action</span><span class="p">(</span>
+    <span class="n">type</span><span class="o">=</span><span class="s2">&quot;omfwd&quot;</span>
+    <span class="n">target</span><span class="o">=</span><span class="s2">&quot;remote.example.com&quot;</span>
+    <span class="n">port</span><span class="o">=</span><span class="s2">&quot;515&quot;</span>                <span class="c1"># Non-standard port</span>
+    <span class="n">protocol</span><span class="o">=</span><span class="s2">&quot;udp&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<section id="what-about">
+<h3>What About <cite>*.*</cite>?<a class="headerlink" href="#what-about" title="Link to this heading">¶</a></h3>
+<p>The legacy syntax <cite>*.*</cite> means “all facilities and priorities.”
+In modern RainerScript, <strong>all messages are matched by default</strong>.
+You only need filters (e.g., <cite>if … then …</cite>) when you want to <strong>selectively forward</strong> messages.</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>*.* @@remote.example.com
+</pre></div>
+</div>
+<p>is fully equivalent to the modern example above, <strong>without needing `*.*`.</strong></p>
+</section>
+</section>
+<section id="configuration-parameters">
+<h2>Configuration Parameters<a class="headerlink" href="#configuration-parameters" title="Link to this heading">¶</a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Parameter names are case-insensitive.</p>
+</div>
+<section id="basic-parameters">
+<h3>Basic Parameters<a class="headerlink" href="#basic-parameters" title="Link to this heading">¶</a></h3>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="omfwd/parameters/basic.html">Basic Parameters</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="omfwd/parameters/basic.html#target">Target</a></li>
+<li class="toctree-l2"><a class="reference internal" href="omfwd/parameters/basic.html#port">Port</a></li>
+<li class="toctree-l2"><a class="reference internal" href="omfwd/parameters/basic.html#protocol">Protocol</a></li>
+<li class="toctree-l2"><a class="reference internal" href="omfwd/parameters/basic.html#template">Template</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="omfwd/parameters/module.html">Module Parameters</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="omfwd/parameters/module.html#list-of-module-parameters">List of Module Parameters</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="action-parameters-omfwd">
+<h3>Action Parameters (omfwd)<a class="headerlink" href="#action-parameters-omfwd" title="Link to this heading">¶</a></h3>
+<p>Action parameters define how a specific forwarding action behaves.
+They apply to each <cite>action(type=”omfwd” …)</cite> statement.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Parameter names are case-insensitive.</p>
+</div>
+<section id="pool-resumeinterval">
+<h4>pool.resumeinterval<a class="headerlink" href="#pool-resumeinterval" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>30 seconds</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>If a target pool exists, “pool.resumeinterval” configures how often an unavailable
+target is tried to be activated. A new connection request will be made in roughly
+“pool.resumeinterval” seconds until connection is reestablished or the action become
+completely suspenden (in which case the action settings take control).</p>
+<p>Please note the word “roughly”: the interval may be some seconds earlier or later
+on a try-by-try basis because of other ongoing activity inside rsyslog.</p>
+<p>Warning: we do NOT recommend to set this interval below 10 seconds, as it can lead
+DoS-like reconnection behaviour. Actually, the default of 30 seconds is quite short
+and should be extended if the use case permits.</p>
+</section>
+<section id="networknamespace">
+<h4>NetworkNamespace<a class="headerlink" href="#networknamespace" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Name of a network namespace in /var/run/netns/ to use for forwarding.</p>
+<p>If the setns() system call is unavailable (e.g., BSD kernel, Linux kernel
+before v2.6.24), the given namespace will be ignored.</p>
+</section>
+<section id="address">
+<h4>Address<a class="headerlink" href="#address" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.35.0.</span></p>
+</div>
+<p>Bind socket to a specific local IP address. This option is supported for
+UDP only, not TCP.</p>
+</section>
+<section id="ipfreebind">
+<h4>IpFreeBind<a class="headerlink" href="#ipfreebind" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>2</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.35.0.</span></p>
+</div>
+<p>Manages the IP_FREEBIND option on the UDP socket, which allows binding it to
+an IP address that is not yet associated to any network interface. This option
+is only relevant if the address option is set.</p>
+<p>The parameter accepts the following values:</p>
+<ul class="simple">
+<li><p>0 - does not enable the IP_FREEBIND option on the
+UDP socket. If the <em>bind()</em> call fails because of <em>EADDRNOTAVAIL</em> error,
+socket initialization fails.</p></li>
+<li><p>1 - silently enables the IP_FREEBIND socket
+option if it is required to successfully bind the socket to a nonlocal address.</p></li>
+<li><p>2 - enables the IP_FREEBIND socket option and
+warns when it is used to successfully bind the socket to a nonlocal address.</p></li>
+</ul>
+</section>
+<section id="device">
+<h4>Device<a class="headerlink" href="#device" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Bind socket to given device (e.g., eth0)</p>
+<p>For Linux with VRF support, the Device option can be used to specify the
+VRF for the Target address.</p>
+</section>
+<section id="tcp-framing">
+<h4>TCP_Framing<a class="headerlink" href="#tcp-framing" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>traditional</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Framing mode used for forwarding: either “traditional” or “octet-counted”. This
+applies only to TCP-based protocols and is ignored for UDP. In protocol
+engineering, “framing” refers to how multiple messages over the same connection
+are separated. Usually, this is transparent to users. However, the early syslog
+protocol evolved in such a way that users sometimes need to specify the framing.</p>
+<p>“Traditional” framing is non-transparent, where messages end when an LF
+(line feed) is encountered, and the next message starts immediately after the
+LF. If multi-line messages are received, they are split into multiple messages,
+with all but the first segment usually incorrectly formatted.</p>
+<p>“Octet-counted” framing addresses this issue. Each message is prefixed with its
+length, so the receiver knows exactly where the message ends. Multi-line
+messages are handled correctly. This mode is similar to the method described in
+<a class="reference external" href="https://datatracker.ietf.org/doc/html/rfc5425">RFC5425</a> for TLS-enabled
+syslog. Unfortunately, few syslog implementations support “octet-counted”
+framing. As such, “traditional” framing is the default, despite its defects.
+If the receiver supports “octet-counted” framing, it is recommended to use
+that mode.</p>
+</section>
+<section id="tcp-framedelimiter">
+<h4>TCP_FrameDelimiter<a class="headerlink" href="#tcp-framedelimiter" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>10</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Sets a custom frame delimiter for TCP transmission when running TCP_Framing
+in “traditional” mode. The delimiter has to be a number between 0 and 255
+(representing the ASCII-code of said character). The default value for this
+parameter is 10, representing a ‘\n’. When using Graylog, the parameter
+must be set to 0.</p>
+</section>
+<section id="ziplevel">
+<h4>ZipLevel<a class="headerlink" href="#ziplevel" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>0</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Compression level for messages.</p>
+<p>Up until rsyslog 7.5.1, this was the only compression setting that
+rsyslog understood. Starting with 7.5.1, we have different
+compression modes. All of them are affected by the ziplevel. If,
+however, no mode is explicitly set, setting ziplevel also turns on
+“single” compression mode, so pre 7.5.1 configuration will continue
+to work as expected.</p>
+<p>The compression level is specified via the usual factor of 0 to 9,
+with 9 being the strongest compression (taking up most processing
+time) and 0 being no compression at all (taking up no extra
+processing time).</p>
+</section>
+<section id="compression-mode">
+<h4>compression.Mode<a class="headerlink" href="#compression-mode" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><em>mode</em> is one of “none”, “single”, or “stream:always”. The default
+is “none”, in which no compression happens at all.
+In “single” compression mode, Rsyslog implements a proprietary
+capability to zip transmitted messages. That compression happens on a
+message-per-message basis. As such, there is a performance gain only
+for larger messages. Before compressing a message, rsyslog checks if
+there is some gain by compression. If so, the message is sent
+compressed. If not, it is sent uncompressed. As such, it is totally
+valid that compressed and uncompressed messages are intermixed within
+a conversation.</p>
+<p>In “stream:always” compression mode the full stream is being
+compressed. This also uses non-standard protocol and is compatible
+only with receives that have the same abilities. This mode offers
+potentially very high compression ratios. With typical syslog
+messages, it can be as high as 95+% compression (so only one
+twentieth of data is actually transmitted!). Note that this mode
+introduces extra latency, as data is only sent when the compressor
+emits new compressed data. For typical syslog messages, this can mean
+that some hundred messages may be held in local buffers before they
+are actually sent. This mode has been introduced in 7.5.1.</p>
+<p><strong>Note: currently only imptcp supports receiving stream-compressed
+data.</strong></p>
+</section>
+<section id="compression-stream-flushontxend">
+<h4>compression.stream.flushOnTXEnd<a class="headerlink" href="#compression-stream-flushontxend" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>on</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 7.5.3.</span></p>
+</div>
+<p>This setting affects stream compression mode, only. If enabled (the
+default), the compression buffer will by emptied at the end of a
+rsyslog batch. If set to “off”, end of batch will not affect
+compression at all.</p>
+<p>While setting it to “off” can potentially greatly improve
+compression ratio, it will also introduce severe delay between when a
+message is being processed by rsyslog and actually sent out to the
+network. We have seen cases where for several thousand message not a
+single byte was sent. This is good in the sense that it can happen
+only if we have a great compression ratio. This is most probably a
+very good mode for busy machines which will process several thousand
+messages per second and the resulting short delay will not pose any
+problems. However, the default is more conservative, while it works
+more “naturally” with even low message traffic. Even in flush mode,
+notable compression should be achievable (but we do not yet have
+practice reports on actual compression ratios).</p>
+</section>
+<section id="rebindinterval">
+<h4>RebindInterval<a class="headerlink" href="#rebindinterval" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>0</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$ActionSendTCPRebindInterval</span></code> or <code class="docutils literal notranslate"><span class="pre">$ActionSendUDPRebindInterval</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Permits to specify an interval at which the current connection is
+broken and re-established. This setting is primarily an aid to load
+balancers. After the configured number of batches (equals roughly to
+messages for UDP traffic, dependent on batch size for TCP) has been
+transmitted, the current connection is terminated and a new one
+started. Note that this setting applies to both TCP and UDP traffic.
+For UDP, the new ``connection’’ uses a different source port (ports
+are cycled and not reused too frequently). This usually is perceived
+as a ``new connection’’ by load balancers, which in turn forward
+messages to another physical target system.</p>
+</section>
+<section id="keepalive">
+<h4>KeepAlive<a class="headerlink" href="#keepalive" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Enable or disable keep-alive packets at the tcp socket layer. The
+default is to disable them.</p>
+</section>
+<section id="keepalive-probes">
+<h4>KeepAlive.Probes<a class="headerlink" href="#keepalive-probes" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>0</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The number of unacknowledged probes to send before considering the
+connection dead and notifying the application layer. The default, 0,
+means that the operating system defaults are used. This has only
+effect if keep-alive is enabled. The functionality may not be
+available on all platforms.</p>
+</section>
+<section id="keepalive-interval">
+<h4>KeepAlive.Interval<a class="headerlink" href="#keepalive-interval" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>0</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The interval between subsequential keepalive probes, regardless of
+what the connection has exchanged in the meantime. The default, 0,
+means that the operating system defaults are used. This has only
+effect if keep-alive is enabled. The functionality may not be
+available on all platforms.</p>
+</section>
+<section id="keepalive-time">
+<h4>KeepAlive.Time<a class="headerlink" href="#keepalive-time" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>0</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The interval between the last data packet sent (simple ACKs are not
+considered data) and the first keepalive probe; after the connection
+is marked to need keepalive, this counter is not used any further.
+The default, 0, means that the operating system defaults are used.
+This has only effect if keep-alive is enabled. The functionality may
+not be available on all platforms.</p>
+</section>
+<section id="conerrskip">
+<h4>ConErrSkip<a class="headerlink" href="#conerrskip" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>0</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The ConErrSkip can be used to limit the number of network errors
+recorded in logs. For example, value 10 means that each 10th error
+message is logged. Note that this options should be used as the last
+resort since the necessity of its use indicates network issues.
+The default behavior is that all network errors are logged.</p>
+</section>
+<section id="ratelimit-interval">
+<h4>RateLimit.Interval<a class="headerlink" href="#ratelimit-interval" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>max</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>0</p></td>
+<td></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Specifies the rate-limiting interval in seconds. Default value is 0,
+which turns off rate limiting.</p>
+</section>
+<section id="ratelimit-burst">
+<h4>RateLimit.Burst<a class="headerlink" href="#ratelimit-burst" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>max</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p>none</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>200</p></td>
+<td><p>(2^32)-1</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Specifies the rate-limiting burst in number of messages.</p>
+</section>
+<section id="streamdriver">
+<h4>StreamDriver<a class="headerlink" href="#streamdriver" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$ActionSendStreamDriver</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The recommended alias, compatible with imtcp, is “StreamDriver.Name”.</p>
+<p>Choose the stream driver to be used. Default is plain tcp, but
+you can also choose “ossl” or “gtls” for TLS encryption.</p>
+<p>Note: aliases help, but are not a great solution. They may
+cause confusion if both names are used together in a single
+config. So care must be taken when using an alias.</p>
+</section>
+<section id="streamdrivermode">
+<h4>StreamDriverMode<a class="headerlink" href="#streamdrivermode" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>0</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$ActionSendStreamDriverMode</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The recommended alias, compatible with imtcp, is “StreamDriver.Mode”.</p>
+<p>Mode to use with the stream driver (driver-specific)</p>
+<p>Note: aliases help, but are not a great solution. They may
+cause confusion if both names are used together in a single
+config. So care must be taken when using an alias.</p>
+</section>
+<section id="streamdriverauthmode">
+<h4>StreamDriverAuthMode<a class="headerlink" href="#streamdriverauthmode" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>string</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$ActionSendStreamDriverAuthMode</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The recommended alias, compatible with imtcp, is “StreamDriver.AuthMode”.</p>
+<p>Authentication mode to use with the stream driver. Note that this
+parameter requires TLS netstream drivers. For all others, it will be
+ignored. (driver-specific).</p>
+<p>Note: aliases help, but are not a great solution. They may
+cause confusion if both names are used together in a single
+config. So care must be taken when using an alias.</p>
+</section>
+<section id="streamdriver-permitexpiredcerts">
+<h4>StreamDriver.PermitExpiredCerts<a class="headerlink" href="#streamdriver-permitexpiredcerts" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>string</p></td>
+<td><p>warn</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Controls how expired certificates will be handled when stream driver is in TLS mode.
+It can have one of the following values:</p>
+<ul class="simple">
+<li><p>on = Expired certificates are allowed</p></li>
+<li><p>off = Expired certificates are not allowed  (Default, changed from warn to off since Version 8.2012.0)</p></li>
+<li><p>warn = Expired certificates are allowed but warning will be logged</p></li>
+</ul>
+</section>
+<section id="streamdriverpermittedpeers">
+<h4>StreamDriverPermittedPeers<a class="headerlink" href="#streamdriverpermittedpeers" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$ActionSendStreamDriverPermittedPeers</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Accepted fingerprint (SHA1) or name of remote peer. Note that this
+parameter requires TLS netstream drivers. For all others, it will be
+ignored. (driver-specific)</p>
+</section>
+<section id="streamdriver-checkextendedkeypurpose">
+<h4>StreamDriver.CheckExtendedKeyPurpose<a class="headerlink" href="#streamdriver-checkextendedkeypurpose" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Whether to check also purpose value in extended fields part of certificate
+for compatibility with rsyslog operation. (driver-specific)</p>
+</section>
+<section id="streamdriver-prioritizesan">
+<h4>StreamDriver.PrioritizeSAN<a class="headerlink" href="#streamdriver-prioritizesan" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Whether to use stricter SAN/CN matching. (driver-specific)</p>
+</section>
+<section id="streamdriver-tlsverifydepth">
+<h4>StreamDriver.TlsVerifyDepth<a class="headerlink" href="#streamdriver-tlsverifydepth" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>TLS library default</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Specifies the allowed maximum depth for the certificate chain verification.
+Support added in v8.2001.0, supported by GTLS and OpenSSL driver.
+If not set, the API default will be used.
+For OpenSSL, the default is 100 - see the doc for more:
+<a class="reference external" href="https://docs.openssl.org/1.1.1/man3/SSL_CTX_set_verify/">https://docs.openssl.org/1.1.1/man3/SSL_CTX_set_verify/</a>
+For GnuTLS, the default is 5 - see the doc for more:
+<a class="reference external" href="https://www.gnutls.org/manual/gnutls.html">https://www.gnutls.org/manual/gnutls.html</a></p>
+</section>
+<section id="streamdriver-cafile">
+<h4>StreamDriver.CAFile<a class="headerlink" href="#streamdriver-cafile" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>global() default</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.2108.0.</span></p>
+</div>
+<p>This permits to override the CA file set via <cite>global()</cite> config object at the
+per-action basis. This parameter is ignored if the netstream driver and/or its
+mode does not need or support certificates.</p>
+</section>
+<section id="streamdriver-crlfile">
+<h4>StreamDriver.CRLFile<a class="headerlink" href="#streamdriver-crlfile" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>optional</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>global() default</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.2308.0.</span></p>
+</div>
+<p>This permits to override the CRL (Certificate revocation list) file set via <cite>global()</cite> config
+object at the per-action basis. This parameter is ignored if the netstream driver and/or its
+mode does not need or support certificates.</p>
+</section>
+<section id="streamdriver-keyfile">
+<h4>StreamDriver.KeyFile<a class="headerlink" href="#streamdriver-keyfile" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>global() default</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.2108.0.</span></p>
+</div>
+<p>This permits to override the CA file set via <cite>global()</cite> config object at the
+per-action basis. This parameter is ignored if the netstream driver and/or its
+mode does not need or support certificates.</p>
+</section>
+<section id="streamdriver-certfile">
+<h4>StreamDriver.CertFile<a class="headerlink" href="#streamdriver-certfile" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>global() default</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.2108.0.</span></p>
+</div>
+<p>This permits to override the CA file set via <cite>global()</cite> config object at the
+per-action basis. This parameter is ignored if the netstream driver and/or its
+mode does not need or support certificates.</p>
+</section>
+<section id="resendlastmsgonreconnect">
+<h4>ResendLastMSGOnReconnect<a class="headerlink" href="#resendlastmsgonreconnect" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$ActionSendResendLastMsgOnReconnect</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Permits to resend the last message when a connection is reconnected.
+This setting affects TCP-based syslog, only. It is most useful for
+traditional, plain TCP syslog. Using this protocol, it is not always
+possible to know which messages were successfully transmitted to the
+receiver when a connection breaks. In many cases, the last message
+sent is lost. By switching this setting to “yes”, rsyslog will always
+retransmit the last message when a connection is reestablished. This
+reduces potential message loss, but comes at the price that some
+messages may be duplicated (what usually is more acceptable).</p>
+<p>Please note that busy systems probably loose more than a
+single message in such cases. This is caused by an
+<a class="reference external" href="https://rainer.gerhards.net/2008/04/on-unreliability-of-plain-tcp-syslog.html">inherant unreliability in plain tcp syslog</a>
+and there is no way rsyslog could prevent this from happening
+(if you read the detail description, be sure to follow the link
+to the follow-up posting). In order to prevent these problems,
+we recommend the use of <a class="reference internal" href="omrelp.html"><span class="doc">omrelp</span></a>.</p>
+</section>
+<section id="udp-sendtoall">
+<h4>udp.SendToAll<a class="headerlink" href="#udp-sendtoall" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>When sending UDP messages, there are potentially multiple paths to
+the target destination. By default, rsyslogd
+only sends to the first target it can successfully send to. If this
+option is set to “on”, messages are sent to all targets. This may improve
+reliability, but may also cause message duplication. This option
+should be enabled only if it is fully understood.</p>
+<p>Note: this option replaces the former -A command line option. In
+contrast to the -A option, this option must be set once per
+input() definition.</p>
+</section>
+<section id="udp-senddelay">
+<h4>udp.SendDelay<a class="headerlink" href="#udp-senddelay" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>0</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.7.0.</span></p>
+</div>
+<p>This is an <strong>expert option</strong>, do only use it if you know very well
+why you are using it!</p>
+<p>This options permits to introduce a small delay after <em>each</em> send
+operation. The integer specifies the delay in microseconds. This
+option can be used in cases where too-quick sending of UDP messages
+causes message loss (UDP is permitted to drop packets if e.g. a device
+runs out of buffers). Usually, you do not want this delay. The parameter
+was introduced in order to support some testbench tests. Be sure
+to think twice before you use it in production.</p>
+</section>
+<section id="gnutlsprioritystring">
+<h4>gnutlsPriorityString<a class="headerlink" href="#gnutlsprioritystring" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>string</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.29.0.</span></p>
+</div>
+<p>This strings setting is used to configure driver specific properties.
+Historically, the setting was only meant for gnutls driver. However
+with version v8.1905.0 and higher, the setting can also be used to set openssl configuration commands.</p>
+<p>For GNUTls, the setting specifies the TLS session’s handshake algorithms and
+options. These strings are intended as a user-specified override of the library
+defaults. If this parameter is NULL, the default settings are used. More
+information about priority Strings
+<a class="reference external" href="https://gnutls.org/manual/html_node/Priority-Strings.html">here</a>.</p>
+<p>For OpenSSL, the setting can be used to pass configuration commands to openssl library.
+OpenSSL Version 1.0.2 or higher is required for this feature.
+A list of possible commands and their valid values can be found in the documentation:
+<a class="reference external" href="https://docs.openssl.org/1.0.2/man3/SSL_CONF_cmd/">https://docs.openssl.org/1.0.2/man3/SSL_CONF_cmd/</a></p>
+<p>The setting can be single or multiline, each configuration command is separated by linefeed (n).
+Command and value are separated by equal sign (=). Here are a few samples:</p>
+</section>
+</section>
+<section id="example-1">
+<h3>Example 1<a class="headerlink" href="#example-1" title="Link to this heading">¶</a></h3>
+<p>This will allow all protocols except for SSLv2 and SSLv3:</p>
+<div class="highlight-rsyslog notranslate"><div class="highlight"><pre><span></span><span class="n">gnutlsPriorityString</span><span class="o">=</span><span class="s2">&quot;Protocol=ALL,-SSLv2,-SSLv3&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="example-2">
+<h3>Example 2<a class="headerlink" href="#example-2" title="Link to this heading">¶</a></h3>
+<p>This will allow all protocols except for SSLv2, SSLv3 and TLSv1.
+It will also set the minimum protocol to TLSv1.2</p>
+<div class="highlight-rsyslog notranslate"><div class="highlight"><pre><span></span><span class="n">gnutlsPriorityString</span><span class="o">=</span><span class="s2">&quot;Protocol=ALL,-SSLv2,-SSLv3,-TLSv1</span>
+<span class="s2">MinProtocol=TLSv1.2&quot;</span>
+</pre></div>
+</div>
+<section id="extendedconnectioncheck">
+<h4>extendedConnectionCheck<a class="headerlink" href="#extendedconnectioncheck" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>boolean</p></td>
+<td><p>true</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This setting permits to control if rsyslog should try to detect if the remote
+syslog server has broken the current TCP connection. It is has no meaning when
+UDP protocol is used.</p>
+<p>Generally, broken connections are not easily detectable. That setting does additional
+API calls to check for them. This causes some extra overhead, but is traditionally
+enabled.</p>
+<p>Especially in very busy systems it is probably worth to disable it. The extra overhead
+is unlikely to bring real benefits in such scenarios.</p>
+<p>Note: If you need reliable delivery, do NOT use plain TCP syslog transport.
+Use RELP instead.</p>
+</section>
+</section>
+</section>
+<section id="statistic-counter">
+<h2>Statistic Counter<a class="headerlink" href="#statistic-counter" title="Link to this heading">¶</a></h2>
+<p>This plugin maintains <a class="reference internal" href="../rsyslog_statistic_counter.html"><span class="doc">statistics</span></a> for each forwarding action.
+The statistic is named “target-port-protocol” where “target”, “port”, and
+“protocol” are the respective configuration parameters. So an actual name might be
+“192.0.2.1-514-TCP” or “example.net-10514-UDP”.</p>
+<p>The following properties are maintained for each action:</p>
+<ul class="simple">
+<li><p><strong>bytes.sent</strong> - total number of bytes sent to the network</p></li>
+</ul>
+</section>
+<section id="see-also">
+<h2>See Also<a class="headerlink" href="#see-also" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><a class="reference external" href="http://www.rsyslog.com/encrypted-disk-queues/">Encrypted Disk
+Queues</a></p></li>
+</ul>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading">¶</a></h2>
+<section id="id1">
+<h3>Example 1<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h3>
+<p>The following command sends all syslog messages to a remote server via
+TCP port 10514.</p>
+<div class="highlight-rsyslog notranslate"><div class="highlight"><pre><span></span><span class="kd">action</span><span class="p">(</span><span class="n">type</span><span class="o">=</span><span class="s2">&quot;omfwd&quot;</span> <span class="n">Target</span><span class="o">=</span><span class="s2">&quot;192.168.2.11&quot;</span> <span class="n">Port</span><span class="o">=</span><span class="s2">&quot;10514&quot;</span> <span class="n">Protocol</span><span class="o">=</span><span class="s2">&quot;tcp&quot;</span> <span class="n">Device</span><span class="o">=</span><span class="s2">&quot;eth0&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="id2">
+<h3>Example 2<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h3>
+<p>In case the system in use has multiple (maybe virtual) network interfaces network
+namespaces come in handy, each with its own routing table. To be able to distribute
+syslogs to remote servers in different namespaces specify them as separate actions.</p>
+<div class="highlight-rsyslog notranslate"><div class="highlight"><pre><span></span><span class="kd">action</span><span class="p">(</span><span class="n">type</span><span class="o">=</span><span class="s2">&quot;omfwd&quot;</span> <span class="n">Target</span><span class="o">=</span><span class="s2">&quot;192.168.1.13&quot;</span> <span class="n">Port</span><span class="o">=</span><span class="s2">&quot;10514&quot;</span> <span class="n">Protocol</span><span class="o">=</span><span class="s2">&quot;tcp&quot;</span> <span class="n">NetworkNamespace</span><span class="o">=</span><span class="s2">&quot;ns_eth0.0&quot;</span><span class="p">)</span>
+<span class="kd">action</span><span class="p">(</span><span class="n">type</span><span class="o">=</span><span class="s2">&quot;omfwd&quot;</span> <span class="n">Target</span><span class="o">=</span><span class="s2">&quot;192.168.2.24&quot;</span> <span class="n">Port</span><span class="o">=</span><span class="s2">&quot;10514&quot;</span> <span class="n">Protocol</span><span class="o">=</span><span class="s2">&quot;tcp&quot;</span> <span class="n">NetworkNamespace</span><span class="o">=</span><span class="s2">&quot;ns_eth0.1&quot;</span><span class="p">)</span>
+<span class="kd">action</span><span class="p">(</span><span class="n">type</span><span class="o">=</span><span class="s2">&quot;omfwd&quot;</span> <span class="n">Target</span><span class="o">=</span><span class="s2">&quot;192.168.3.38&quot;</span> <span class="n">Port</span><span class="o">=</span><span class="s2">&quot;10514&quot;</span> <span class="n">Protocol</span><span class="o">=</span><span class="s2">&quot;tcp&quot;</span> <span class="n">NetworkNamespace</span><span class="o">=</span><span class="s2">&quot;ns_eth0.2&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<hr class="docutils" />
+<p><strong>Support:</strong> <a class="reference external" href="https://rsyslog.ai">rsyslog Assistant</a> |
+<a class="reference external" href="https://github.com/rsyslog/rsyslog/discussions">GitHub Discussions</a> |
+GitHub Issues: <a class="reference external" href="https://github.com/rsyslog/rsyslog/">rsyslog source project</a></p>
+<p><strong>Contributing:</strong> Source &amp; docs: <a class="reference external" href="https://github.com/rsyslog/rsyslog/">rsyslog source project</a></p>
+<p>© 2008–2025 <a class="reference external" href="https://rainer.gerhards.net/">Rainer Gerhards</a>
+and others. Licensed under the <a class="reference external" href="https://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>.</p>
+</section>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="omfwd/parameters/basic.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Basic Parameters</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="omfile.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">omfile: File Output Module</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            Made with 
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">omfwd: syslog Forwarding Output Module</a><ul>
+<li><a class="reference internal" href="#best-practices">Best Practices</a></li>
+<li><a class="reference internal" href="#quick-start">Quick Start</a></li>
+<li><a class="reference internal" href="#outdated-legacy-methods">Outdated Legacy Methods</a><ul>
+<li><a class="reference internal" href="#what-about">What About <cite>*.*</cite>?</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#configuration-parameters">Configuration Parameters</a><ul>
+<li><a class="reference internal" href="#basic-parameters">Basic Parameters</a></li>
+<li><a class="reference internal" href="#action-parameters-omfwd">Action Parameters (omfwd)</a><ul>
+<li><a class="reference internal" href="#pool-resumeinterval">pool.resumeinterval</a></li>
+<li><a class="reference internal" href="#networknamespace">NetworkNamespace</a></li>
+<li><a class="reference internal" href="#address">Address</a></li>
+<li><a class="reference internal" href="#ipfreebind">IpFreeBind</a></li>
+<li><a class="reference internal" href="#device">Device</a></li>
+<li><a class="reference internal" href="#tcp-framing">TCP_Framing</a></li>
+<li><a class="reference internal" href="#tcp-framedelimiter">TCP_FrameDelimiter</a></li>
+<li><a class="reference internal" href="#ziplevel">ZipLevel</a></li>
+<li><a class="reference internal" href="#compression-mode">compression.Mode</a></li>
+<li><a class="reference internal" href="#compression-stream-flushontxend">compression.stream.flushOnTXEnd</a></li>
+<li><a class="reference internal" href="#rebindinterval">RebindInterval</a></li>
+<li><a class="reference internal" href="#keepalive">KeepAlive</a></li>
+<li><a class="reference internal" href="#keepalive-probes">KeepAlive.Probes</a></li>
+<li><a class="reference internal" href="#keepalive-interval">KeepAlive.Interval</a></li>
+<li><a class="reference internal" href="#keepalive-time">KeepAlive.Time</a></li>
+<li><a class="reference internal" href="#conerrskip">ConErrSkip</a></li>
+<li><a class="reference internal" href="#ratelimit-interval">RateLimit.Interval</a></li>
+<li><a class="reference internal" href="#ratelimit-burst">RateLimit.Burst</a></li>
+<li><a class="reference internal" href="#streamdriver">StreamDriver</a></li>
+<li><a class="reference internal" href="#streamdrivermode">StreamDriverMode</a></li>
+<li><a class="reference internal" href="#streamdriverauthmode">StreamDriverAuthMode</a></li>
+<li><a class="reference internal" href="#streamdriver-permitexpiredcerts">StreamDriver.PermitExpiredCerts</a></li>
+<li><a class="reference internal" href="#streamdriverpermittedpeers">StreamDriverPermittedPeers</a></li>
+<li><a class="reference internal" href="#streamdriver-checkextendedkeypurpose">StreamDriver.CheckExtendedKeyPurpose</a></li>
+<li><a class="reference internal" href="#streamdriver-prioritizesan">StreamDriver.PrioritizeSAN</a></li>
+<li><a class="reference internal" href="#streamdriver-tlsverifydepth">StreamDriver.TlsVerifyDepth</a></li>
+<li><a class="reference internal" href="#streamdriver-cafile">StreamDriver.CAFile</a></li>
+<li><a class="reference internal" href="#streamdriver-crlfile">StreamDriver.CRLFile</a></li>
+<li><a class="reference internal" href="#streamdriver-keyfile">StreamDriver.KeyFile</a></li>
+<li><a class="reference internal" href="#streamdriver-certfile">StreamDriver.CertFile</a></li>
+<li><a class="reference internal" href="#resendlastmsgonreconnect">ResendLastMSGOnReconnect</a></li>
+<li><a class="reference internal" href="#udp-sendtoall">udp.SendToAll</a></li>
+<li><a class="reference internal" href="#udp-senddelay">udp.SendDelay</a></li>
+<li><a class="reference internal" href="#gnutlsprioritystring">gnutlsPriorityString</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#example-1">Example 1</a></li>
+<li><a class="reference internal" href="#example-2">Example 2</a><ul>
+<li><a class="reference internal" href="#extendedconnectioncheck">extendedConnectionCheck</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#statistic-counter">Statistic Counter</a></li>
+<li><a class="reference internal" href="#see-also">See Also</a></li>
+<li><a class="reference internal" href="#examples">Examples</a><ul>
+<li><a class="reference internal" href="#id1">Example 1</a></li>
+<li><a class="reference internal" href="#id2">Example 2</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../../_static/documentation_options.js?v=6fd4f6cc"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/scripts/furo.js?v=46bd48cc"></script>
+    </body>
+</html>

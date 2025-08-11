@@ -1,0 +1,1976 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="Parser Modules" href="idx_parser.html" /><link rel="prev" title="imudp: UDP Syslog Input Module" href="imudp.html" />
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.07.19 -->
+        <title>imuxsock: Unix Socket Input Module - rsyslog 8.2508 daily stable documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=25af2a20" />
+    <link rel="stylesheet" type="text/css" href="../../_static/rsyslog.css?v=6406a7f4" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #eeffcc;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #2b2b2b;
+  --color-code-foreground: #f8f8f2;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #2b2b2b;
+  --color-code-foreground: #f8f8f2;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../index.html"><div class="brand">rsyslog 8.2508 daily stable documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
+  
+  <span class="sidebar-brand-text">rsyslog 8.2508 daily stable documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../about/index.html">About rsyslog</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of About rsyslog</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../about/ai_first.html">AI-First: Our Vision for rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../about/history.html">History and Future of rsyslog</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../getting_started/index.html">Getting Started with rsyslog</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Getting Started with rsyslog</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/installation.html">Installing rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/basic_configuration.html">Basic Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/understanding_default_config.html">Understanding the Default Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/forwarding_logs.html">Forwarding Logs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/next_steps.html">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">Configuration</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Configuration</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../basic_structure.html">Basic Structure</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="idx_output.html">Output Modules</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Output Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="omamqp1.html">omamqp1: AMQP 1.0 Messaging Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omazureeventhubs.html">omazureeventhubs: Microsoft Azure Event Hubs Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omclickhouse.html">omclickhouse: ClickHouse Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omczmq.html">omczmq: Output module for ZeroMQ</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omdtls.html">omdtls: Output Module for DTLS Protocol over UDP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omelasticsearch.html">omelasticsearch: Elasticsearch Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omfile.html">omfile: File Output Module</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="omfwd.html">omfwd: syslog Forwarding Output Module</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of omfwd: syslog Forwarding Output Module</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="omfwd/parameters/basic.html">Basic Parameters</a></li>
+<li class="toctree-l4"><a class="reference internal" href="omfwd/parameters/module.html">Module Parameters</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="omhdfs.html">omhdfs: Hadoop Filesystem Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omhiredis.html">omhiredis: Redis Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omhttp.html">omhttp: HTTP Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omhttpfs.html">omhttpfs: Hadoop HTTPFS Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omjournal.html">omjournal: Systemd Journal Output</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omkafka.html">omkafka: write to Apache Kafka</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omlibdbi.html">omlibdbi: Generic Database Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ommail.html">ommail: Mail Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ommongodb.html">ommongodb: MongoDB Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ommysql.html">ommysql: MariaDB/MySQL Database Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omoracle.html">omoracle: Oracle Database Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ompgsql.html">PostgreSQL Database Output Module (ompgsql)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ompipe.html">ompipe: Pipe Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omprog.html">omprog: Program integration Output module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omrabbitmq.html">omrabbitmq: RabbitMQ output module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omrelp.html">omrelp: RELP Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omruleset.html">omruleset: ruleset output/including module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omsendertrack.html">omsendertrack: Sender Tracking Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omsnmp.html">omsnmp: SNMP Trap Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omstdout.html">omstdout: stdout output module (testbench tool)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omudpspoof.html">omudpspoof: UDP spoofing output module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omusrmsg.html">omusrmsg: notify users</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omuxsock.html">omuxsock: Unix sockets Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sigprov_gt.html">GuardTime Log Signature Provider (gt)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sigprov_ksi.html">Keyless Signature Infrastructure Provider (ksi)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sigprov_ksi12.html">KSI Signature Provider (rsyslog-ksi-ls12)</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current has-children"><a class="reference internal" href="idx_input.html">Input Modules</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Input Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="im3195.html">im3195: RFC3195 Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imbatchreport.html">imbatchreport: Batch report input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imczmq.html">imczmq: Input module for ZeroMQ</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imdocker.html">imdocker: Docker Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imdtls.html">imdtls: Input Module for DTLS Protocol over UDP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imfile.html">imfile: Text File Input Module</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="imgssapi.html">imgssapi: GSSAPI Syslog Input Module</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of imgssapi: GSSAPI Syslog Input Module</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="gssapi.html">GSSAPI module support in rsyslog v3</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="imhiredis.html">Imhiredis: Redis input plugin</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imhttp.html">imhttp: HTTP input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imjournal.html">imjournal: Systemd Journal Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imkafka.html">imkafka: read from Apache Kafka</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imklog.html">imklog: Kernel Log Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imkmsg.html">imkmsg: /dev/kmsg Log Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="immark.html">immark: Mark Message Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="impcap.html">Impcap: network traffic capture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="improg.html">improg: Program integration input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="impstats.html">impstats: Generate Periodic Statistics of Internal Counters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imptcp.html">imptcp: Plain TCP Syslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imrelp.html">imrelp: RELP Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imsolaris.html">imsolaris: Solaris Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imtcp.html">imtcp: TCP Syslog Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imtuxedoulog.html">imtuxedoulog: Tuxedo ULOG input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imudp.html">imudp: UDP Syslog Input Module</a></li>
+<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">imuxsock: Unix Socket Input Module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="idx_parser.html">Parser Modules</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Parser Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="pmciscoios.html">pmciscoios</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmdb2diag.html">pmdb2diag: DB2 Diag file parser module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmlastmsg.html">pmlastmsg: last message repeated n times</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmnormalize.html">Log Message Normalization Parser Module (pmnormalize)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmnull.html">pmnull: Syslog Null Parser Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmrfc3164.html">pmrfc3164: Parse RFC3164-formatted messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmrfc3164sd.html">pmrfc3164sd: Parse RFC5424 structured data inside RFC3164 messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmrfc5424.html">pmrfc5424: Parse RFC5424-formatted messages</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="idx_messagemod.html">Message Modification Modules</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of Message Modification Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="mmaitag.html">AI-based classification (mmaitag)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmanon.html">IP Address Anonymization Module (mmanon)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmcount.html">mmcount</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmdarwin.html">Darwin connector (mmdarwin)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmdblookup.html">MaxMind/GeoIP DB lookup (mmdblookup)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmexternal.html">Support module for external message modification modules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmfields.html">Fields Extraction Module (mmfields)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmjsonparse.html">JSON/CEE Structured Content Extraction Module (mmjsonparse)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmkubernetes.html">Kubernetes Metadata Module (mmkubernetes)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmnormalize.html">Log Message Normalization Module (mmnormalize)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmpstrucdata.html">RFC5424 structured data parsing module (mmpstrucdata)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmrfc5424addhmac.html">mmrfc5424addhmac</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmrm1stspace.html">mmrm1stspace: First Space Modification Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmsequence.html">Number generator and counter module (mmsequence)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmsnmptrapd.html">mmsnmptrapd message modification module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmtaghostname.html">mmtaghostname: message modification module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmutf8fix.html">Fix invalid UTF-8 Sequences (mmutf8fix)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="idx_stringgen.html">String Generator Modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="idx_library.html">Library Modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../templates.html">Templates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../properties.html">rsyslog Properties</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../property_replacer.html">The Property Replacer</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of The Property Replacer</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../nomatch.html">Property Replacer nomatch mode</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../filters.html">Filter Conditions</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../rainerscript/index.html">RainerScript</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of RainerScript</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/data_types.html">Data Types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/expressions.html">Expressions</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../../rainerscript/functions/index.html">Functions</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><div class="visually-hidden">Toggle navigation of Functions</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4 has-children"><a class="reference internal" href="../../rainerscript/functions/idx_built-in_functions.html">Built-in Functions</a><input class="toctree-checkbox" id="toctree-checkbox-13" name="toctree-checkbox-13" role="switch" type="checkbox"/><label for="toctree-checkbox-13"><div class="visually-hidden">Toggle navigation of Built-in Functions</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-cnum.html">cnum()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-cstr.html">cstr()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-dyn_inc.html">dyn_inc()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-exec_template.html">exec_template()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-exists.html">exists()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-field.html">field()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-format_time.html">format_time()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-get_property.html">get_property()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-getenv.html">getenv()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-int2hex.html">int2hex()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-ipv4convert.html">num2ipv4() / ipv42num()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-is_time.html">is_time()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-lookup.html">lookup()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-parse_json.html">parse_json()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-parse_time.html">parse_time()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-percentile_observe.html">percentile_observe()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-previous_action_suspended.html">previous_action_suspended()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-prifilt.html">prifilt()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-random.html">random()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-re_extract.html">re_extract()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-re_extract_i.html">re_extract_i()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-re_match.html">re_match()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-re_match_i.html">re_match_i()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-replace.html">replace()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-script_error.html">script_error()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-strlen.html">strlen()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-substring.html">substring()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-tolower.html">tolower()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-trim.html">ltrim() / rtrim()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-wrap.html">wrap()</a></li>
+</ul>
+</li>
+<li class="toctree-l4 has-children"><a class="reference internal" href="../../rainerscript/functions/idx_module_functions.html">Module Functions</a><input class="toctree-checkbox" id="toctree-checkbox-14" name="toctree-checkbox-14" role="switch" type="checkbox"/><label for="toctree-checkbox-14"><div class="visually-hidden">Toggle navigation of Module Functions</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/mo-ffaup.html">Faup</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/mo-hashXX.html">HashXX</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/mo-hashXXmod.html">HashXXmod</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/mo-http_request.html">HTTP-Request</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/mo-unflatten.html">Unflatten</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/control_structures.html">Control Structures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/configuration_objects.html">configuration objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/constant_strings.html">String Constants</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/variable_property_types.html">Variable (Property) types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/lookup_tables.html">Lookup Tables</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/queue_parameters.html">General Queue Parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/rainerscript_call.html">The rsyslog “call” statement</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/rainerscript_call_indirect.html">The rsyslog “call_indirect” statement</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/global.html">global() configuration object</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/include.html">The rsyslog include() object</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../actions.html">Actions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../input.html">Input</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../parser.html">Parser</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../timezone.html">timezone</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../index_directives.html">Legacy Configuration Directives</a><input class="toctree-checkbox" id="toctree-checkbox-15" name="toctree-checkbox-15" role="switch" type="checkbox"/><label for="toctree-checkbox-15"><div class="visually-hidden">Toggle navigation of Legacy Configuration Directives</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../config_param_types.html">Configuration Parameter Types</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../global/index.html">Legacy Global Configuration Statements</a><input class="toctree-checkbox" id="toctree-checkbox-16" name="toctree-checkbox-16" role="switch" type="checkbox"/><label for="toctree-checkbox-16"><div class="visually-hidden">Toggle navigation of Legacy Global Configuration Statements</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_abortonuncleanconfig.html">$AbortOnUncleanConfig</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_debugprintcfsyslinehandlerlist.html">$DebugPrintCFSyslineHandlerList</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_debugprintmodulelist.html">$DebugPrintModuleList</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_debugprinttemplatelist.html">$DebugPrintTemplateList</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_failonchownfailure.html">$FailOnChownFailure</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_generateconfiggraph.html">$GenerateConfigGraph</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_includeconfig.html">$IncludeConfig</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_mainmsgqueuesize.html">$MainMsgQueueSize</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_maxopenfiles.html">$MaxOpenFiles</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_moddir.html">$ModDir</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_modload.html">$ModLoad</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_umask.html">$UMASK</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_resetconfigvariables.html">$ResetConfigVariables</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../input_directives/index.html">Legacy Directives affecting Input Modules</a><input class="toctree-checkbox" id="toctree-checkbox-17" name="toctree-checkbox-17" role="switch" type="checkbox"/><label for="toctree-checkbox-17"><div class="visually-hidden">Toggle navigation of Legacy Directives affecting Input Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_allowedsender.html">$AllowedSender</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_dropmsgswithmaliciousdnsptrrecords.html">$DropMsgsWithMaliciousDnsPTRRecords</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_controlcharacterescapeprefix.html">$ControlCharacterEscapePrefix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_droptrailinglfonreception.html">$DropTrailingLFOnReception</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_escape8bitcharsonreceive.html">$Escape8BitCharactersOnReceive</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_markmessageperiod.html">$MarkMessagePeriod</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../action/index.html">Depricated Legacy Action-Specific Configuration Statements</a><input class="toctree-checkbox" id="toctree-checkbox-18" name="toctree-checkbox-18" role="switch" type="checkbox"/><label for="toctree-checkbox-18"><div class="visually-hidden">Toggle navigation of Depricated Legacy Action-Specific Configuration Statements</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_actionexeconlywhenpreviousissuspended.html">How to Convert Deprecated <cite>$ActionExecOnlyWhenPreviousIsSuspended</cite> to Modern Style</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_actionresumeinterval.html">How to Convert Deprecated <cite>$ActionResumeInterval</cite> to Modern Style</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_repeatedmsgreduction.html">$RepeatedMsgReduction</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_omfileforcechown.html">$omfileForceChown</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_dirgroup.html">$DirGroup</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_dirowner.html">How to Convert Deprecated <cite>$DirOwner</cite> to Modern Style</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_dynafilecachesize.html">$DynaFileCacheSize</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_filecreatemode.html">$FileCreateMode</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_filegroup.html">$FileGroup</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_fileowner.html">$FileOwner</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_gssforwardservicename.html">$GssForwardServiceName</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_gssmode.html">$GssMode</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../ruleset/index.html">Ruleset-Specific Legacy Configuration Statements</a><input class="toctree-checkbox" id="toctree-checkbox-19" name="toctree-checkbox-19" role="switch" type="checkbox"/><label for="toctree-checkbox-19"><div class="visually-hidden">Toggle navigation of Ruleset-Specific Legacy Configuration Statements</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../ruleset/rsconf1_rulesetcreatemainqueue.html">$RulesetCreateMainQueue</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../ruleset/rsconf1_rulesetparser.html">$RulesetParser</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../rsyslog_statistic_counter.html">rsyslog statistic counter</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="index.html">Modules</a><input class="toctree-checkbox" id="toctree-checkbox-20" name="toctree-checkbox-20" role="switch" type="checkbox"/><label for="toctree-checkbox-20"><div class="visually-hidden">Toggle navigation of Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="workflow.html">Where are the modules integrated into the Message Flow?</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../output_channels.html">Output Channels</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../droppriv.html">Dropping privileges in rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipv6.html">Notes on IPv6 Handling in Rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../cryprov_gcry.html">libgcrypt Log Crypto Provider (gcry)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../cryprov_ossl.html">libossl Log Crypto Provider (ossl)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dyn_stats.html">Dynamic Stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../lookup_tables.html">Lookup Tables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../percentile_stats.html">Percentile Stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../converting_to_new_format.html">Converting older formats to <code class="docutils literal notranslate"><span class="pre">advanced</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../conf_formats.html">Configuration Formats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../sysklogd_format.html">sysklogd format</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../faq/index.html">FAQ</a><input class="toctree-checkbox" id="toctree-checkbox-21" name="toctree-checkbox-21" role="switch" type="checkbox"/><label for="toctree-checkbox-21"><div class="visually-hidden">Toggle navigation of FAQ</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../faq/faq_overall.html">FAQ: some general topics often asked</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../faq/difference_queues.html">What is the difference between the main_queue and a queue with a ruleset tied to an input?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../faq/encrypt_mysql_traffic_ommysql.html">FAQ: Encrypting MySQL Traffic with ommysql Plugin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../faq/imudp-packet-loss.html">FAQ: Troubleshooting UDP Packet Loss</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../faq/common-config-mistakes.html">Common Configuration Mistakes and Misunderstandings</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/index.html">Tutorials</a><input class="toctree-checkbox" id="toctree-checkbox-22" name="toctree-checkbox-22" role="switch" type="checkbox"/><label for="toctree-checkbox-22"><div class="visually-hidden">Toggle navigation of Tutorials</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../tutorials/tls_cert_summary.html">Encrypting Syslog Traffic with TLS (SSL)</a><input class="toctree-checkbox" id="toctree-checkbox-23" name="toctree-checkbox-23" role="switch" type="checkbox"/><label for="toctree-checkbox-23"><div class="visually-hidden">Toggle navigation of Encrypting Syslog Traffic with TLS (SSL)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_scenario.html">Sample Use Case: Single Central Log Server</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_ca.html">Setting up the CA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_machine.html">Generating the machine certificate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_server.html">Setting up the Central Server</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_client.html">Setting up a client</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_udp_relay.html">Setting up the UDP syslog relay</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_errmsgs.html">Error Messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_script.html">Creating certificates with a script</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/tls.html">Encrypting Syslog Traffic with TLS (SSL) [short version]</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/database.html">Writing syslog messages to MariaDB, MySQL, PostgreSQL or any other supported Database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/high_database_rate.html">Handling a massive syslog database insert rate with Rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/reliable_forwarding.html">Reliable Forwarding of syslog Messages with Rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/recording_pri.html">Recording the Priority of Syslog Messages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/failover_syslog_server.html">Failover Syslog Server</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/log_rotation_fix_size.html">Log rotation with rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/gelf_forwarding.html">GELF forwarding in rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/log_sampling.html">Log Sampling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/random_sampling.html">Random sampling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/hash_sampling.html">Hash-based Sampling</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../troubleshooting/index.html">Troubleshooting</a><input class="toctree-checkbox" id="toctree-checkbox-24" name="toctree-checkbox-24" role="switch" type="checkbox"/><label for="toctree-checkbox-24"><div class="visually-hidden">Toggle navigation of Troubleshooting</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../troubleshooting/file_not_written.html">Output File is not Being Written</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../troubleshooting/selinux.html">Troubleshooting SELinux-Related Issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../troubleshooting/debug.html">Rsyslog Debug Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../troubleshooting/troubleshoot.html">troubleshooting problems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../troubleshooting/howtodebug.html">How to create a debug log</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../concepts/index.html">Concepts</a><input class="toctree-checkbox" id="toctree-checkbox-25" name="toctree-checkbox-25" role="switch" type="checkbox"/><label for="toctree-checkbox-25"><div class="visually-hidden">Toggle navigation of Concepts</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../concepts/queues.html">Understanding rsyslog Queues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../concepts/janitor.html">The Janitor Process</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../concepts/messageparser.html">Message parsers in rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../concepts/multi_ruleset.html">Multiple Rulesets in rsyslog</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../concepts/netstrm_drvr.html">NetStream Drivers</a><input class="toctree-checkbox" id="toctree-checkbox-26" name="toctree-checkbox-26" role="switch" type="checkbox"/><label for="toctree-checkbox-26"><div class="visually-hidden">Toggle navigation of NetStream Drivers</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_ptcp.html">ptcp Network Stream Driver</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_gtls.html">gtls Network Stream Driver</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_gtls.html#supported-driver-modes">Supported Driver Modes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_gtls.html#supported-authentication-modes">Supported Authentication Modes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_gtls.html#checkextendedkeypurpose">CheckExtendedKeyPurpose</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_gtls.html#prioritizesan">PrioritizeSAN</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_ossl.html">openssl Network Stream Driver</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../development/index.html">Development</a><input class="toctree-checkbox" id="toctree-checkbox-27" name="toctree-checkbox-27" role="switch" type="checkbox"/><label for="toctree-checkbox-27"><div class="visually-hidden">Toggle navigation of Development</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../development/config_data_model.html">The rsyslog config data model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/config_data_model.html#objects">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/debugging.html">Debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/dev_action_threads.html">Action Threads and Queue Engine (Developer-Oriented)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/dev_codestyle.html">rsyslog code style</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/dev_oplugins.html">Writing Rsyslog Output Plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/dev_queue.html">The rsyslog queue object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/dev_testbench.html">writing rsyslog tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/doc_reference_section_guidelines.html">Documentation Reference Section Structure Guidelines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/doc_style_guide.html">Documentation Style Guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/generic_design.html">Generic design of a syslogd</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/internal_tooling.html">Internal tooling</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../idx_reference.html">Reference</a><input class="toctree-checkbox" id="toctree-checkbox-28" name="toctree-checkbox-28" role="switch" type="checkbox"/><label for="toctree-checkbox-28"><div class="visually-hidden">Toggle navigation of Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../containers/index.html">rsyslog and containers</a><input class="toctree-checkbox" id="toctree-checkbox-29" name="toctree-checkbox-29" role="switch" type="checkbox"/><label for="toctree-checkbox-29"><div class="visually-hidden">Toggle navigation of rsyslog and containers</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../containers/container_features.html">Container-Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../containers/docker_specifics.html">docker specifics</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../installation/index.html">Installation</a><input class="toctree-checkbox" id="toctree-checkbox-30" name="toctree-checkbox-30" role="switch" type="checkbox"/><label for="toctree-checkbox-30"><div class="visually-hidden">Toggle navigation of Installation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../installation/packages.html">Installing rsyslog from Package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../installation/rsyslog_docker.html">Using Rsyslog Docker Containers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../installation/install_from_source.html">Installing rsyslog from Source</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../installation/build_from_repo.html">Installing rsyslog from the source repository</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../historical/index.html">Historical Documents</a><input class="toctree-checkbox" id="toctree-checkbox-31" name="toctree-checkbox-31" role="switch" type="checkbox"/><label for="toctree-checkbox-31"><div class="visually-hidden">Toggle navigation of Historical Documents</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/php_syslog_ng.html">Using php-syslog-ng with rsyslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/multi_ruleset_legacy_format_samples.html">Legacy Format Samples for Multiple Rulesets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/module_devel.html">Developing rsyslog modules (outdated)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/high_performance.html">Receiving massive amounts of messages with high performance</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v8compatibility.html">Compatibility Notes for rsyslog v8</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v7compatibility.html">Compatibility Notes for rsyslog v7</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v6compatibility.html">Compatibility Notes for rsyslog v6</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v5compatibility.html">Compatibility Notes for rsyslog v5</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v4compatibility.html">Compatibility Notes for rsyslog v4</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v3compatibility.html">Compatibility Notes for rsyslog v3</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../history.html">RSyslog - History</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../licensing.html">Licensing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../how2help.html">How you can Help</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../community.html">Community Resources</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features.html">RSyslog - Features</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../proposals/index.html">Proposals</a><input class="toctree-checkbox" id="toctree-checkbox-32" name="toctree-checkbox-32" role="switch" type="checkbox"/><label for="toctree-checkbox-32"><div class="visually-hidden">Toggle navigation of Proposals</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../proposals/version_naming.html">Version Naming</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../whitepapers/index.html">Rsyslog Whitepapers</a><input class="toctree-checkbox" id="toctree-checkbox-33" name="toctree-checkbox-33" role="switch" type="checkbox"/><label for="toctree-checkbox-33"><div class="visually-hidden">Toggle navigation of Rsyslog Whitepapers</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../whitepapers/syslog_parsing.html">syslog parsing in rsyslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../whitepapers/syslog_protocol.html">syslog-protocol support in rsyslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../whitepapers/queues_analogy.html">Turning Lanes and Rsyslog Queues</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../whitepapers/preserve_in_nat.html">Preserving syslog sender over NAT</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../whitepapers/reliable_logging.html">How reliable should reliable logging be?</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../../_sources/configuration/modules/imuxsock.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="imuxsock-unix-socket-input-module">
+<h1>imuxsock: Unix Socket Input Module<a class="headerlink" href="#imuxsock-unix-socket-input-module" title="Link to this heading">¶</a></h1>
+<div class="table-wrapper docutils container">
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><strong>Module Name:</strong></p></td>
+<td><p><strong>imuxsock</strong></p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Author:</strong></p></td>
+<td><p><a class="reference external" href="https://rainer.gerhards.net/">Rainer Gerhards</a> &lt;<a class="reference external" href="mailto:rgerhards&#37;&#52;&#48;adiscon&#46;com">rgerhards<span>&#64;</span>adiscon<span>&#46;</span>com</a>&gt;</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<section id="purpose">
+<h2>Purpose<a class="headerlink" href="#purpose" title="Link to this heading">¶</a></h2>
+<p>This module provides the ability to accept syslog messages from applications
+running on the local system via Unix sockets. Most importantly, this is the
+mechanism by which the <em class="manpage">syslog(3)</em> call delivers syslog messages
+to rsyslogd.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="omuxsock.html"><span class="doc">omuxsock: Unix sockets Output Module</span></a></p>
+</div>
+</section>
+<section id="notable-features">
+<h2>Notable Features<a class="headerlink" href="#notable-features" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="#imuxsock-rate-limiting-label"><span class="std std-ref">Input rate limiting</span></a></p></li>
+<li><p><a class="reference internal" href="#imuxsock-trusted-properties-label"><span class="std std-ref">Trusted (syslog) properties</span></a></p></li>
+<li><p><a class="reference internal" href="#imuxsock-flow-control-label"><span class="std std-ref">Flow-control of Unix log sockets</span></a></p></li>
+<li><p><a class="reference internal" href="#imuxsock-application-timestamps-label"><span class="std std-ref">Control over application timestamps</span></a></p></li>
+<li><p><a class="reference internal" href="#imuxsock-systemd-details-label"><span class="std std-ref">Coexistence with systemd</span></a></p></li>
+</ul>
+</section>
+<section id="configuration-parameters">
+<h2>Configuration Parameters<a class="headerlink" href="#configuration-parameters" title="Link to this heading">¶</a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Parameter names are case-insensitive.</p>
+</div>
+<section id="module-parameters">
+<h3>Module Parameters<a class="headerlink" href="#module-parameters" title="Link to this heading">¶</a></h3>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>When running under systemd, <strong>many “sysSock.” parameters are ignored</strong>.
+See parameter descriptions and the <a class="reference internal" href="#imuxsock-systemd-details-label"><span class="std std-ref">Coexistence with systemd</span></a> section for
+details.</p>
+</div>
+<section id="syssock-ignoretimestamp">
+<h4>SysSock.IgnoreTimestamp<a class="headerlink" href="#syssock-ignoretimestamp" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>on</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$SystemLogSocketIgnoreMsgTimestamp</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Ignore timestamps included in the messages, applies to messages received via
+the system log socket.</p>
+</section>
+<section id="syssock-ignoreownmessages">
+<h4>SysSock.IgnoreOwnMessages<a class="headerlink" href="#syssock-ignoreownmessages" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>on</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Ignores messages that originated from the same instance of rsyslogd.
+There usually is no reason to receive messages from ourselves. This
+setting is vital when writing messages to the systemd journal.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 7.3.7.</span></p>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p>See <a class="reference internal" href="omjournal.html"><span class="doc">omjournal</span></a> module documentation for a more
+in-depth description.</p>
+</div>
+</section>
+<section id="syssock-use">
+<h4>SysSock.Use<a class="headerlink" href="#syssock-use" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>on</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$OmitLocalLogging</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Listen on the default local log socket (<code class="docutils literal notranslate"><span class="pre">/dev/log</span></code>) or, if provided, use
+the log socket value assigned to the <code class="docutils literal notranslate"><span class="pre">SysSock.Name</span></code> parameter instead
+of the default. This is most useful if you run multiple instances of
+rsyslogd where only one shall handle the system log socket.  Unless
+disabled by the <code class="docutils literal notranslate"><span class="pre">SysSock.Unlink</span></code> setting, this socket is created
+upon rsyslog startup and deleted upon shutdown, according to
+traditional syslogd behavior.</p>
+<p>The behavior of this parameter is different for systemd systems. For those
+systems, <code class="docutils literal notranslate"><span class="pre">SysSock.Use</span></code> still needs to be enabled, but the value of
+<code class="docutils literal notranslate"><span class="pre">SysSock.Name</span></code> is ignored and the socket provided by systemd is used
+instead. If this parameter is <em>not</em> enabled, then imuxsock will only be
+of use if a custom input is configured.</p>
+<p>See the <a class="reference internal" href="#imuxsock-systemd-details-label"><span class="std std-ref">Coexistence with systemd</span></a> section for details.</p>
+</section>
+<section id="syssock-name">
+<h4>SysSock.Name<a class="headerlink" href="#syssock-name" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>/dev/log</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$SystemLogSocketName</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Specifies an alternate log socket to be used instead of the default system
+log socket, traditionally <code class="docutils literal notranslate"><span class="pre">/dev/log</span></code>. Unless disabled by the
+<code class="docutils literal notranslate"><span class="pre">SysSock.Unlink</span></code> setting, this socket is created upon rsyslog startup
+and deleted upon shutdown, according to traditional syslogd behavior.</p>
+<dl class="simple">
+<dt>The behavior of this parameter is different for systemd systems. See the</dt><dd><p><a class="reference internal" href="#imuxsock-systemd-details-label"><span class="std std-ref">Coexistence with systemd</span></a> section for details.</p>
+</dd>
+</dl>
+</section>
+<section id="syssock-flowcontrol">
+<h4>SysSock.FlowControl<a class="headerlink" href="#syssock-flowcontrol" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$SystemLogFlowControl</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Specifies if flow control should be applied to the system log socket.</p>
+</section>
+<section id="syssock-usepidfromsystem">
+<h4>SysSock.UsePIDFromSystem<a class="headerlink" href="#syssock-usepidfromsystem" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$SystemLogUsePIDFromSystem</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Specifies if the pid being logged shall be obtained from the log socket
+itself. If so, the TAG part of the message is rewritten. It is recommended
+to turn this option on, but the default is “off” to keep compatible
+with earlier versions of rsyslog.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 5.7.0.</span></p>
+</div>
+</section>
+<section id="syssock-ratelimit-interval">
+<h4>SysSock.RateLimit.Interval<a class="headerlink" href="#syssock-ratelimit-interval" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>max</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>0</p></td>
+<td></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$SystemLogRateLimitInterval</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Specifies the rate-limiting interval in seconds. Default value is 0,
+which turns off rate limiting. Set it to a number of seconds (5
+recommended) to activate rate-limiting. The default of 0 has been
+chosen as people experienced problems with this feature activated
+by default. Now it needs an explicit opt-in by setting this parameter.</p>
+</section>
+<section id="syssock-ratelimit-burst">
+<h4>SysSock.RateLimit.Burst<a class="headerlink" href="#syssock-ratelimit-burst" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>max</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>200</p></td>
+<td><p>(2^31)-1</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$SystemLogRateLimitBurst</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Specifies the rate-limiting burst in number of messages.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 5.7.1.</span></p>
+</div>
+</section>
+<section id="syssock-ratelimit-severity">
+<h4>SysSock.RateLimit.Severity<a class="headerlink" href="#syssock-ratelimit-severity" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>max</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>1</p></td>
+<td></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$SystemLogRateLimitSeverity</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Specifies the severity of messages that shall be rate-limited.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference external" href="https://en.wikipedia.org/wiki/Syslog#Severity_level">https://en.wikipedia.org/wiki/Syslog#Severity_level</a></p>
+</div>
+</section>
+<section id="syssock-usesystimestamp">
+<h4>SysSock.UseSysTimeStamp<a class="headerlink" href="#syssock-usesystimestamp" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>on</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$SystemLogUseSysTimeStamp</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The same as the input parameter <code class="docutils literal notranslate"><span class="pre">UseSysTimeStamp</span></code>, but for the system log
+socket. This parameter instructs <code class="docutils literal notranslate"><span class="pre">imuxsock</span></code> to obtain message time from
+the system (via control messages) instead of using time recorded inside
+the message. This may be most useful in combination with systemd. Due to
+the usefulness of this functionality, we decided to enable it by default.
+As such, the behavior is slightly different than previous versions.
+However, we do not see how this could negatively affect existing environments.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 5.9.1.</span></p>
+</div>
+</section>
+<section id="syssock-annotate">
+<h4>SysSock.Annotate<a class="headerlink" href="#syssock-annotate" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$SystemLogSocketAnnotate</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Turn on annotation/trusted properties for the system log socket. See
+the <a class="reference internal" href="#imuxsock-trusted-properties-label"><span class="std std-ref">Trusted (syslog) properties</span></a> section for more info.</p>
+</section>
+<section id="syssock-parsetrusted">
+<h4>SysSock.ParseTrusted<a class="headerlink" href="#syssock-parsetrusted" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$SystemLogParseTrusted</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>If <code class="docutils literal notranslate"><span class="pre">SysSock.Annotation</span></code> is turned on, create JSON/lumberjack properties
+out of the trusted properties (which can be accessed via <code class="docutils literal notranslate"><span class="pre">advanced</span></code>
+JSON Variables, e.g. <code class="docutils literal notranslate"><span class="pre">$!pid</span></code>) instead of adding them to the message.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 7.2.7: </span><code class="docutils literal notranslate"><span class="pre">advanced</span></code> directive introduced</p>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 7.3.8: </span><code class="docutils literal notranslate"><span class="pre">advanced</span></code> directive introduced</p>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 6.5.0: </span><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive introduced</p>
+</div>
+</section>
+<section id="syssock-unlink">
+<h4>SysSock.Unlink<a class="headerlink" href="#syssock-unlink" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>on</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>If turned on (default), the system socket is unlinked and re-created
+when opened and also unlinked when finally closed. Note that this
+setting has no effect when running under systemd control (because
+systemd handles the socket. See the <a class="reference internal" href="#imuxsock-systemd-details-label"><span class="std std-ref">Coexistence with systemd</span></a>
+section for details.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 7.3.9.</span></p>
+</div>
+</section>
+<section id="syssock-usespecialparser">
+<h4>SysSock.UseSpecialParser<a class="headerlink" href="#syssock-usespecialparser" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>on</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The equivalent of the <code class="docutils literal notranslate"><span class="pre">UseSpecialParser</span></code> input parameter, but
+for the system socket. If turned on (the default) a special parser is
+used that parses the format that is usually used
+on the system log socket (the one <em class="manpage">syslog(3)</em> creates). If set to
+“off”, the regular parser chain is used, in which case the format on the
+log socket can be arbitrary.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>When the special parser is used, rsyslog is able to inject a more precise
+timestamp into the message (it is obtained from the log socket). If the
+regular parser chain is used, this is not possible.</p>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.9.0: </span>The setting was previously hard-coded “on”</p>
+</div>
+</section>
+<section id="syssock-parsehostname">
+<h4>SysSock.ParseHostname<a class="headerlink" href="#syssock-parsehostname" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This option only has an effect if <code class="docutils literal notranslate"><span class="pre">SysSock.UseSpecialParser</span></code> is
+set to “off”.</p>
+</div>
+<p>Normally, the local log sockets do <em>not</em> contain hostnames. If set
+to on, parsers will expect hostnames just like in regular formats. If
+set to off (the default), the parser chain is instructed to not expect
+them.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.9.0.</span></p>
+</div>
+</section>
+</section>
+<section id="input-parameters">
+<h3>Input Parameters<a class="headerlink" href="#input-parameters" title="Link to this heading">¶</a></h3>
+<section id="ruleset">
+<h4>Ruleset<a class="headerlink" href="#ruleset" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>string</p></td>
+<td><p>default ruleset</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Binds specified ruleset to this input. If not set, the default
+ruleset is bound.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.17.0.</span></p>
+</div>
+</section>
+<section id="ignoretimestamp">
+<h4>IgnoreTimestamp<a class="headerlink" href="#ignoretimestamp" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>on</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$InputUnixListenSocketIgnoreMsgTimestamp</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Ignore timestamps included in messages received from the input being
+defined.</p>
+</section>
+<section id="ignoreownmessages">
+<h4>IgnoreOwnMessages<a class="headerlink" href="#ignoreownmessages" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>on</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Ignore messages that originated from the same instance of rsyslogd.
+There usually is no reason to receive messages from ourselves. This
+setting is vital when writing messages to the systemd journal.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 7.3.7.</span></p>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p>See <a class="reference internal" href="omjournal.html"><span class="doc">omjournal</span></a> module documentation for a more
+in-depth description.</p>
+</div>
+</section>
+<section id="flowcontrol">
+<h4>FlowControl<a class="headerlink" href="#flowcontrol" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$InputUnixListenSocketFlowControl</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Specifies if flow control should be applied to the input being defined.</p>
+</section>
+<section id="ratelimit-interval">
+<h4>RateLimit.Interval<a class="headerlink" href="#ratelimit-interval" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>max</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>0</p></td>
+<td></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$IMUXSockRateLimitInterval</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Specifies the rate-limiting interval in seconds. Default value is 0, which
+turns off rate limiting. Set it to a number of seconds (5 recommended)
+to activate rate-limiting. The default of 0 has been chosen as people
+experienced problems with this feature activated by default. Now it
+needs an explicit opt-in by setting this parameter.</p>
+</section>
+<section id="ratelimit-burst">
+<h4>RateLimit.Burst<a class="headerlink" href="#ratelimit-burst" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>max</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>200</p></td>
+<td><p>(2^31)-1</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$IMUXSockRateLimitBurst</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Specifies the rate-limiting burst in number of messages.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 5.7.1.</span></p>
+</div>
+</section>
+<section id="ratelimit-severity">
+<h4>RateLimit.Severity<a class="headerlink" href="#ratelimit-severity" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>max</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>1</p></td>
+<td></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$IMUXSockRateLimitSeverity</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Specifies the severity of messages that shall be rate-limited.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference external" href="https://en.wikipedia.org/wiki/Syslog#Severity_level">https://en.wikipedia.org/wiki/Syslog#Severity_level</a></p>
+</div>
+</section>
+<section id="usepidfromsystem">
+<h4>UsePIDFromSystem<a class="headerlink" href="#usepidfromsystem" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$InputUnixListenSocketUsePIDFromSystem</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Specifies if the pid being logged shall be obtained from the log socket
+itself. If so, the TAG part of the message is rewritten. It is
+recommended to turn this option on, but the default is “off” to keep
+compatible with earlier versions of rsyslog.</p>
+</section>
+<section id="usesystimestamp">
+<h4>UseSysTimeStamp<a class="headerlink" href="#usesystimestamp" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>on</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$InputUnixListenSocketUseSysTimeStamp</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This parameter instructs <code class="docutils literal notranslate"><span class="pre">imuxsock</span></code> to obtain message time from
+the system (via control messages) instead of using time recorded inside
+the message. This may be most useful in combination with systemd. Due to
+the usefulness of this functionality, we decided to enable it by default.
+As such, the behavior is slightly different than previous versions.
+However, we do not see how this could negatively affect existing environments.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 5.9.1.</span></p>
+</div>
+</section>
+<section id="createpath">
+<h4>CreatePath<a class="headerlink" href="#createpath" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$InputUnixListenSocketCreatePath</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Create directories in the socket path if they do not already exist.
+They are created with 0755 permissions with the owner being the
+process under which rsyslogd runs. The default is not to create
+directories. Keep in mind, though, that rsyslogd always creates
+the socket itself if it does not exist (just not the directories
+by default).</p>
+<p>This option is primarily considered useful for defining additional
+sockets that reside on non-permanent file systems. As rsyslogd probably
+starts up before the daemons that create these sockets, it is a vehicle
+to enable rsyslogd to listen to those sockets even though their directories
+do not yet exist.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 4.7.0.</span></p>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 5.3.0.</span></p>
+</div>
+</section>
+<section id="socket">
+<h4>Socket<a class="headerlink" href="#socket" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>string</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$AddUnixListenSocket</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Adds additional unix socket. Formerly specified with the <code class="docutils literal notranslate"><span class="pre">-a</span></code> option.</p>
+</section>
+<section id="hostname">
+<h4>HostName<a class="headerlink" href="#hostname" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>string</p></td>
+<td><p>NULL</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$InputUnixListenSocketHostName</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Allows overriding the hostname that shall be used inside messages
+taken from the input that is being defined.</p>
+</section>
+<section id="annotate">
+<h4>Annotate<a class="headerlink" href="#annotate" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$InputUnixListenSocketAnnotate</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Turn on annotation/trusted properties for the input that is being defined.
+See the <a class="reference internal" href="#imuxsock-trusted-properties-label"><span class="std std-ref">Trusted (syslog) properties</span></a> section for more info.</p>
+</section>
+<section id="parsetrusted">
+<h4>ParseTrusted<a class="headerlink" href="#parsetrusted" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$ParseTrusted</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Equivalent to the <code class="docutils literal notranslate"><span class="pre">SysSock.ParseTrusted</span></code> module parameter, but applies
+to the input that is being defined.</p>
+</section>
+<section id="unlink">
+<h4>Unlink<a class="headerlink" href="#unlink" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>on</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">none</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>If turned on (default), the socket is unlinked and re-created when opened
+and also unlinked when finally closed. Set it to off if you handle socket
+creation yourself.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Note that handling socket creation oneself has the
+advantage that a limited amount of messages may be queued by the OS
+if rsyslog is not running.</p>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 7.3.9.</span></p>
+</div>
+</section>
+<section id="usespecialparser">
+<h4>UseSpecialParser<a class="headerlink" href="#usespecialparser" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>on</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Equivalent to the <code class="docutils literal notranslate"><span class="pre">SysSock.UseSpecialParser</span></code> module parameter, but applies
+to the input that is being defined.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.9.0: </span>The setting was previously hard-coded “on”</p>
+</div>
+</section>
+<section id="parsehostname">
+<h4>ParseHostname<a class="headerlink" href="#parsehostname" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Equivalent to the <code class="docutils literal notranslate"><span class="pre">SysSock.ParseHostname</span></code> module parameter, but applies
+to the input that is being defined.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.9.0.</span></p>
+</div>
+</section>
+</section>
+</section>
+<section id="input-rate-limiting">
+<span id="imuxsock-rate-limiting-label"></span><h2>Input rate limiting<a class="headerlink" href="#input-rate-limiting" title="Link to this heading">¶</a></h2>
+<p>rsyslog supports (optional) input rate limiting to guard against the problems
+of a wild running logging process. If more than
+<code class="docutils literal notranslate"><span class="pre">SysSock.RateLimit.Interval</span></code> * <code class="docutils literal notranslate"><span class="pre">SysSock.RateLimit.Burst</span></code> log messages
+are emitted from the same process, those messages with
+<code class="docutils literal notranslate"><span class="pre">SysSock.RateLimit.Severity</span></code> or lower will be dropped. It is not possible
+to recover anything about these messages, but imuxsock will tell you how
+many it has dropped once the interval has expired AND the next message is
+logged. Rate-limiting depends on <code class="docutils literal notranslate"><span class="pre">SCM\_CREDENTIALS</span></code>. If the platform does
+not support this socket option, rate limiting is turned off. If multiple
+sockets are configured, rate limiting works independently on each of
+them (that should be what you usually expect).</p>
+<p>The same functionality is available for additional log sockets, in which
+case the config statements just use the prefix RateLimit… but otherwise
+works exactly the same. When working with severities, please keep in mind
+that higher severity numbers mean lower severity and configure things
+accordingly. To turn off rate limiting, set the interval to zero.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 5.7.1.</span></p>
+</div>
+</section>
+<section id="trusted-syslog-properties">
+<span id="imuxsock-trusted-properties-label"></span><h2>Trusted (syslog) properties<a class="headerlink" href="#trusted-syslog-properties" title="Link to this heading">¶</a></h2>
+<p>rsyslog can annotate messages from system log sockets (via imuxsock) with
+so-called <a class="reference external" href="http://www.rsyslog.com/what-are-trusted-properties/">Trusted syslog
+properties</a>, (or just
+“Trusted Properties” for short). These are message properties not provided by
+the logging client application itself, but rather obtained from the system.
+As such, they can not be faked by the user application and are trusted in
+this sense. This feature is based on a similar idea introduced in systemd.</p>
+<p>This feature requires a recent enough Linux Kernel and access to
+the <code class="docutils literal notranslate"><span class="pre">/proc</span></code> file system. In other words, this may not work on all
+platforms and may not work fully when privileges are dropped (depending
+on how they are dropped). Note that trusted properties can be very
+useful, but also typically cause the message to grow rather large. Also,
+the format of log messages is changed by adding the trusted properties at
+the end. For these reasons, the feature is <strong>not enabled by default</strong>.
+If you want to use it, you must turn it on (via
+<code class="docutils literal notranslate"><span class="pre">SysSock.Annotate</span></code> and <code class="docutils literal notranslate"><span class="pre">Annotate</span></code>).</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 5.9.4.</span></p>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference external" href="http://www.rsyslog.com/what-are-trusted-properties/">What are “trusted properties”?</a></p>
+</div>
+</section>
+<section id="flow-control-of-unix-log-sockets">
+<span id="imuxsock-flow-control-label"></span><h2>Flow-control of Unix log sockets<a class="headerlink" href="#flow-control-of-unix-log-sockets" title="Link to this heading">¶</a></h2>
+<p>If processing queues fill up, the unix socket reader is blocked for a
+short while to help prevent overrunning the queues. If the queues are
+overrun, this may cause excessive disk-io and impact performance.</p>
+<p>While turning on flow control for many systems does not hurt, it <cite>can</cite> lead
+to a very unresponsive system and as such is disabled by default.</p>
+<p>This means that log records are placed as quickly as possible into the
+processing queues. If you would like to have flow control, you
+need to enable it via the <code class="docutils literal notranslate"><span class="pre">SysSock.FlowControl</span></code> and <code class="docutils literal notranslate"><span class="pre">FlowControl</span></code> config
+directives. Just make sure you have thought about the implications and have
+tested the change on a non-production system first.</p>
+</section>
+<section id="control-over-application-timestamps">
+<span id="imuxsock-application-timestamps-label"></span><h2>Control over application timestamps<a class="headerlink" href="#control-over-application-timestamps" title="Link to this heading">¶</a></h2>
+<p>Application timestamps are ignored by default. This is needed, as some
+programs (e.g. sshd) log with inconsistent timezone information, what
+messes up the local logs (which by default don’t even contain time zone
+information). This seems to be consistent with what sysklogd has done for
+many years. Alternate behaviour may be desirable if gateway-like processes
+send messages via the local log slot. In that case, it can be enabled via
+the <code class="docutils literal notranslate"><span class="pre">SysSock.IgnoreTimestamp</span></code> and <code class="docutils literal notranslate"><span class="pre">IgnoreTimestamp</span></code> config directives.</p>
+</section>
+<section id="coexistence-with-systemd">
+<span id="imuxsock-systemd-details-label"></span><h2>Coexistence with systemd<a class="headerlink" href="#coexistence-with-systemd" title="Link to this heading">¶</a></h2>
+<p>Rsyslog should by default be configured for systemd support on all platforms
+that usually run systemd (which means most Linux distributions, but not, for
+example, Solaris).</p>
+<p>Rsyslog is able to coexist with systemd with minimal changes on the part of the
+local system administrator. While the <code class="docutils literal notranslate"><span class="pre">systemd</span> <span class="pre">journal</span></code> now assumes full
+control of the local <code class="docutils literal notranslate"><span class="pre">/dev/log</span></code> system log socket, systemd provides
+access to logging data via the <code class="docutils literal notranslate"><span class="pre">/run/systemd/journal/syslog</span></code> log socket.
+This log socket is provided by the <code class="docutils literal notranslate"><span class="pre">syslog.socket</span></code> file that is shipped
+with systemd.</p>
+<p>The imuxsock module can still be used in this setup and provides superior
+performance over <a class="reference internal" href="imjournal.html"><span class="doc">imjournal</span></a>, the alternative journal input
+module.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>It must be noted, however, that the journal tends to drop messages
+when it becomes busy instead of forwarding them to the system log socket.
+This is because the journal uses an async log socket interface for forwarding
+instead of the traditional synchronous one.</p>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.32.0: </span>rsyslog emits an informational message noting the system log socket provided
+by systemd.</p>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference internal" href="imjournal.html"><span class="doc">imjournal: Systemd Journal Input Module</span></a></p>
+</div>
+<section id="handling-of-sockets">
+<h3>Handling of sockets<a class="headerlink" href="#handling-of-sockets" title="Link to this heading">¶</a></h3>
+<p>What follows is a brief description of the process rsyslog takes to determine
+what system socket to use, which sockets rsyslog should listen on, whether
+the sockets should be created and how rsyslog should handle the sockets when
+shutting down.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference external" href="https://www.freedesktop.org/wiki/Software/systemd/syslog/">Writing syslog Daemons Which Cooperate Nicely With systemd</a></p>
+</div>
+<section id="step-1-select-name-of-system-socket">
+<h4>Step 1: Select name of system socket<a class="headerlink" href="#step-1-select-name-of-system-socket" title="Link to this heading">¶</a></h4>
+<ol class="arabic simple">
+<li><p>If the user has not explicitly chosen to set <code class="docutils literal notranslate"><span class="pre">SysSock.Use=&quot;off&quot;</span></code> then
+the default listener socket (aka, “system log socket” or simply “system
+socket”) name is set to <code class="docutils literal notranslate"><span class="pre">/dev/log</span></code>. Otherwise, if the user <cite>has</cite>
+explicitly set <code class="docutils literal notranslate"><span class="pre">SysSock.Use=&quot;off&quot;</span></code>, then rsyslog will not listen on
+<code class="docutils literal notranslate"><span class="pre">/dev/log</span></code> OR any socket defined by the <code class="docutils literal notranslate"><span class="pre">SysSock.Name</span></code> parameter and
+the rest of this section does not apply.</p></li>
+<li><p>If the user has specified <code class="docutils literal notranslate"><span class="pre">sysSock.Name=&quot;/path/to/custom/socket&quot;</span></code> (and not
+explicitly set <code class="docutils literal notranslate"><span class="pre">SysSock.Use=&quot;off&quot;</span></code>), then the default listener socket name
+is overwritten with <code class="docutils literal notranslate"><span class="pre">/path/to/custom/socket</span></code>.</p></li>
+<li><p>Otherwise, if rsyslog is running under systemd AND
+<code class="docutils literal notranslate"><span class="pre">/run/systemd/journal/syslog</span></code> exists, (AND the user has not
+explicitly set <code class="docutils literal notranslate"><span class="pre">SysSock.Use=&quot;off&quot;</span></code>) then the default listener socket name
+is overwritten with <code class="docutils literal notranslate"><span class="pre">/run/systemd/journal/syslog</span></code>.</p></li>
+</ol>
+</section>
+<section id="step-2-listen-on-specified-sockets">
+<h4>Step 2: Listen on specified sockets<a class="headerlink" href="#step-2-listen-on-specified-sockets" title="Link to this heading">¶</a></h4>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is true for all sockets, be it system socket or not. But if
+<code class="docutils literal notranslate"><span class="pre">SysSock.Use=&quot;off&quot;</span></code>, the system socket will not be listened on.</p>
+</div>
+<p>rsyslog evaluates the list of sockets it has been asked to activate:</p>
+<ul class="simple">
+<li><p>the system log socket (if still enabled after completion of the last section)</p></li>
+<li><p>any custom inputs defined by the user</p></li>
+</ul>
+<p>and then checks to see if it has been passed in via systemd (name is checked).
+If it was passed in via systemd, the socket is used as-is (e.g., not recreated
+upon rsyslog startup), otherwise if not passed in via systemd the log socket
+is unlinked, created and opened.</p>
+</section>
+<section id="step-3-shutdown-log-sockets">
+<h4>Step 3: Shutdown log sockets<a class="headerlink" href="#step-3-shutdown-log-sockets" title="Link to this heading">¶</a></h4>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is true for all sockets, be it system socket or not.</p>
+</div>
+<p>Upon shutdown, rsyslog processes each socket it is listening on and evaluates
+it. If the socket was originally passed in via systemd (name is checked), then
+rsyslog does nothing with the socket (systemd maintains the socket).</p>
+<p>If the socket was <cite>not</cite> passed in via systemd AND the configuration permits
+rsyslog to do so (the default setting), rsyslog will unlink/remove the log
+socket. If not permitted to do so (the user specified otherwise), then rsyslog
+will not unlink the log socket and will leave that cleanup step to the
+user or application that created the socket to remove it.</p>
+</section>
+</section>
+</section>
+<section id="statistic-counter">
+<h2>Statistic Counter<a class="headerlink" href="#statistic-counter" title="Link to this heading">¶</a></h2>
+<p>This plugin maintains a global <a class="reference internal" href="../rsyslog_statistic_counter.html"><span class="doc">statistics</span></a> with the following properties:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">submitted</span></code> - total number of messages submitted for processing since startup</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ratelimit.discarded</span></code> - number of messages discarded due to rate limiting</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ratelimit.numratelimiters</span></code> - number of currently active rate limiters
+(small data structures used for the rate limiting logic)</p></li>
+</ul>
+</section>
+<section id="caveats-known-bugs">
+<h2>Caveats/Known Bugs<a class="headerlink" href="#caveats-known-bugs" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>When running under systemd, <strong>many “sysSock.” parameters are ignored</strong>.
+See parameter descriptions and the <a class="reference internal" href="#imuxsock-systemd-details-label"><span class="std std-ref">Coexistence with systemd</span></a> section for
+details.</p></li>
+<li><p>On systems where systemd is used this module is often not loaded by default.
+See the <a class="reference internal" href="#imuxsock-systemd-details-label"><span class="std std-ref">Coexistence with systemd</span></a> section for details.</p></li>
+<li><p>Application timestamps are ignored by default. See the
+<a class="reference internal" href="#imuxsock-application-timestamps-label"><span class="std std-ref">Control over application timestamps</span></a> section for details.</p></li>
+<li><p><a class="reference external" href="http://www.rsyslog.com/why-does-imuxsock-not-work-on-solaris/">imuxsock does not work on Solaris</a></p></li>
+</ul>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading">¶</a></h2>
+<section id="minimum-setup">
+<h3>Minimum setup<a class="headerlink" href="#minimum-setup" title="Link to this heading">¶</a></h3>
+<p>The following sample is the minimum setup required to accept syslog
+messages from applications running on the local system.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>module(load=&quot;imuxsock&quot;)
+</pre></div>
+</div>
+<p>This only needs to be done once.</p>
+</section>
+<section id="enable-flow-control">
+<h3>Enable flow control<a class="headerlink" href="#enable-flow-control" title="Link to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span> module(load=&quot;imuxsock&quot; # needs to be done just once
+<span class="hll">        SysSock.FlowControl=&quot;on&quot;) # enable flow control (use if needed)
+</span></pre></div>
+</div>
+</section>
+<section id="enable-trusted-properties">
+<h3>Enable trusted properties<a class="headerlink" href="#enable-trusted-properties" title="Link to this heading">¶</a></h3>
+<p>As noted in the <a class="reference internal" href="#imuxsock-trusted-properties-label"><span class="std std-ref">Trusted (syslog) properties</span></a> section, trusted properties
+are disabled by default. If you want to use them, you must turn the feature
+on via <code class="docutils literal notranslate"><span class="pre">SysSock.Annotate</span></code> for the system log socket and <code class="docutils literal notranslate"><span class="pre">Annotate</span></code> for
+inputs.</p>
+<section id="append-to-end-of-message">
+<h4>Append to end of message<a class="headerlink" href="#append-to-end-of-message" title="Link to this heading">¶</a></h4>
+<p>The following sample is used to activate message annotation and thus
+trusted properties on the system log socket. These trusted properties
+are appended to the end of each message.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>module(load=&quot;imuxsock&quot; # needs to be done just once
+<span class="hll">         SysSock.Annotate=&quot;on&quot;)
+</span></pre></div>
+</div>
+</section>
+<section id="store-in-json-message-properties">
+<h4>Store in JSON message properties<a class="headerlink" href="#store-in-json-message-properties" title="Link to this heading">¶</a></h4>
+<p>The following sample is similar to the first one, but enables parsing of
+trusted properties, which places the results into JSON/lumberjack variables.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>module(load=&quot;imuxsock&quot;
+<span class="hll">         SysSock.Annotate=&quot;on&quot; SysSock.ParseTrusted=&quot;on&quot;)
+</span></pre></div>
+</div>
+</section>
+</section>
+<section id="read-log-data-from-jails">
+<h3>Read log data from jails<a class="headerlink" href="#read-log-data-from-jails" title="Link to this heading">¶</a></h3>
+<p>The following sample is a configuration where rsyslogd pulls logs from
+two jails, and assigns different hostnames to each of the jails:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>module(load=&quot;imuxsock&quot;) # needs to be done just once
+input(type=&quot;imuxsock&quot;
+<span class="hll">      HostName=&quot;jail1.example.net&quot;
+</span><span class="hll">      Socket=&quot;/jail/1/dev/log&quot;) input(type=&quot;imuxsock&quot;
+</span><span class="hll">      HostName=&quot;jail2.example.net&quot; Socket=&quot;/jail/2/dev/log&quot;)
+</span></pre></div>
+</div>
+</section>
+<section id="read-from-socket-on-temporary-file-system">
+<h3>Read from socket on temporary file system<a class="headerlink" href="#read-from-socket-on-temporary-file-system" title="Link to this heading">¶</a></h3>
+<p>The following sample is a configuration where rsyslogd reads the openssh
+log messages via a separate socket, but this socket is created on a
+temporary file system. As rsyslogd starts up before the sshd daemon, it needs
+to create the socket directories, because it otherwise can not open the
+socket and thus not listen to openssh messages.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>module(load=&quot;imuxsock&quot;) # needs to be done just once
+input(type=&quot;imuxsock&quot;
+<span class="hll">      Socket=&quot;/var/run/sshd/dev/log&quot;
+</span><span class="hll">      CreatePath=&quot;on&quot;)
+</span></pre></div>
+</div>
+</section>
+<section id="disable-rate-limiting">
+<h3>Disable rate limiting<a class="headerlink" href="#disable-rate-limiting" title="Link to this heading">¶</a></h3>
+<p>The following sample is used to turn off input rate limiting on the
+system log socket.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>module(load=&quot;imuxsock&quot; # needs to be done just once
+<span class="hll">         SysSock.RateLimit.Interval=&quot;0&quot;) # turn off rate limiting
+</span></pre></div>
+</div>
+<hr class="docutils" />
+<p><strong>Support:</strong> <a class="reference external" href="https://rsyslog.ai">rsyslog Assistant</a> |
+<a class="reference external" href="https://github.com/rsyslog/rsyslog/discussions">GitHub Discussions</a> |
+GitHub Issues: <a class="reference external" href="https://github.com/rsyslog/rsyslog/">rsyslog source project</a></p>
+<p><strong>Contributing:</strong> Source &amp; docs: <a class="reference external" href="https://github.com/rsyslog/rsyslog/">rsyslog source project</a></p>
+<p>© 2008–2025 <a class="reference external" href="https://rainer.gerhards.net/">Rainer Gerhards</a>
+and others. Licensed under the <a class="reference external" href="https://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>.</p>
+</section>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="idx_parser.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Parser Modules</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="imudp.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">imudp: UDP Syslog Input Module</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            Made with 
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">imuxsock: Unix Socket Input Module</a><ul>
+<li><a class="reference internal" href="#purpose">Purpose</a></li>
+<li><a class="reference internal" href="#notable-features">Notable Features</a></li>
+<li><a class="reference internal" href="#configuration-parameters">Configuration Parameters</a><ul>
+<li><a class="reference internal" href="#module-parameters">Module Parameters</a><ul>
+<li><a class="reference internal" href="#syssock-ignoretimestamp">SysSock.IgnoreTimestamp</a></li>
+<li><a class="reference internal" href="#syssock-ignoreownmessages">SysSock.IgnoreOwnMessages</a></li>
+<li><a class="reference internal" href="#syssock-use">SysSock.Use</a></li>
+<li><a class="reference internal" href="#syssock-name">SysSock.Name</a></li>
+<li><a class="reference internal" href="#syssock-flowcontrol">SysSock.FlowControl</a></li>
+<li><a class="reference internal" href="#syssock-usepidfromsystem">SysSock.UsePIDFromSystem</a></li>
+<li><a class="reference internal" href="#syssock-ratelimit-interval">SysSock.RateLimit.Interval</a></li>
+<li><a class="reference internal" href="#syssock-ratelimit-burst">SysSock.RateLimit.Burst</a></li>
+<li><a class="reference internal" href="#syssock-ratelimit-severity">SysSock.RateLimit.Severity</a></li>
+<li><a class="reference internal" href="#syssock-usesystimestamp">SysSock.UseSysTimeStamp</a></li>
+<li><a class="reference internal" href="#syssock-annotate">SysSock.Annotate</a></li>
+<li><a class="reference internal" href="#syssock-parsetrusted">SysSock.ParseTrusted</a></li>
+<li><a class="reference internal" href="#syssock-unlink">SysSock.Unlink</a></li>
+<li><a class="reference internal" href="#syssock-usespecialparser">SysSock.UseSpecialParser</a></li>
+<li><a class="reference internal" href="#syssock-parsehostname">SysSock.ParseHostname</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#input-parameters">Input Parameters</a><ul>
+<li><a class="reference internal" href="#ruleset">Ruleset</a></li>
+<li><a class="reference internal" href="#ignoretimestamp">IgnoreTimestamp</a></li>
+<li><a class="reference internal" href="#ignoreownmessages">IgnoreOwnMessages</a></li>
+<li><a class="reference internal" href="#flowcontrol">FlowControl</a></li>
+<li><a class="reference internal" href="#ratelimit-interval">RateLimit.Interval</a></li>
+<li><a class="reference internal" href="#ratelimit-burst">RateLimit.Burst</a></li>
+<li><a class="reference internal" href="#ratelimit-severity">RateLimit.Severity</a></li>
+<li><a class="reference internal" href="#usepidfromsystem">UsePIDFromSystem</a></li>
+<li><a class="reference internal" href="#usesystimestamp">UseSysTimeStamp</a></li>
+<li><a class="reference internal" href="#createpath">CreatePath</a></li>
+<li><a class="reference internal" href="#socket">Socket</a></li>
+<li><a class="reference internal" href="#hostname">HostName</a></li>
+<li><a class="reference internal" href="#annotate">Annotate</a></li>
+<li><a class="reference internal" href="#parsetrusted">ParseTrusted</a></li>
+<li><a class="reference internal" href="#unlink">Unlink</a></li>
+<li><a class="reference internal" href="#usespecialparser">UseSpecialParser</a></li>
+<li><a class="reference internal" href="#parsehostname">ParseHostname</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#input-rate-limiting">Input rate limiting</a></li>
+<li><a class="reference internal" href="#trusted-syslog-properties">Trusted (syslog) properties</a></li>
+<li><a class="reference internal" href="#flow-control-of-unix-log-sockets">Flow-control of Unix log sockets</a></li>
+<li><a class="reference internal" href="#control-over-application-timestamps">Control over application timestamps</a></li>
+<li><a class="reference internal" href="#coexistence-with-systemd">Coexistence with systemd</a><ul>
+<li><a class="reference internal" href="#handling-of-sockets">Handling of sockets</a><ul>
+<li><a class="reference internal" href="#step-1-select-name-of-system-socket">Step 1: Select name of system socket</a></li>
+<li><a class="reference internal" href="#step-2-listen-on-specified-sockets">Step 2: Listen on specified sockets</a></li>
+<li><a class="reference internal" href="#step-3-shutdown-log-sockets">Step 3: Shutdown log sockets</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#statistic-counter">Statistic Counter</a></li>
+<li><a class="reference internal" href="#caveats-known-bugs">Caveats/Known Bugs</a></li>
+<li><a class="reference internal" href="#examples">Examples</a><ul>
+<li><a class="reference internal" href="#minimum-setup">Minimum setup</a></li>
+<li><a class="reference internal" href="#enable-flow-control">Enable flow control</a></li>
+<li><a class="reference internal" href="#enable-trusted-properties">Enable trusted properties</a><ul>
+<li><a class="reference internal" href="#append-to-end-of-message">Append to end of message</a></li>
+<li><a class="reference internal" href="#store-in-json-message-properties">Store in JSON message properties</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#read-log-data-from-jails">Read log data from jails</a></li>
+<li><a class="reference internal" href="#read-from-socket-on-temporary-file-system">Read from socket on temporary file system</a></li>
+<li><a class="reference internal" href="#disable-rate-limiting">Disable rate limiting</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../../_static/documentation_options.js?v=6fd4f6cc"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/scripts/furo.js?v=46bd48cc"></script>
+    </body>
+</html>

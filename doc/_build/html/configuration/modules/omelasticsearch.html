@@ -1,0 +1,2081 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="omfile: File Output Module" href="omfile.html" /><link rel="prev" title="omdtls: Output Module for DTLS Protocol over UDP" href="omdtls.html" />
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.07.19 -->
+        <title>omelasticsearch: Elasticsearch Output Module - rsyslog 8.2508 daily stable documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=25af2a20" />
+    <link rel="stylesheet" type="text/css" href="../../_static/rsyslog.css?v=6406a7f4" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #eeffcc;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #2b2b2b;
+  --color-code-foreground: #f8f8f2;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #2b2b2b;
+  --color-code-foreground: #f8f8f2;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../index.html"><div class="brand">rsyslog 8.2508 daily stable documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
+  
+  <span class="sidebar-brand-text">rsyslog 8.2508 daily stable documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../about/index.html">About rsyslog</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of About rsyslog</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../about/ai_first.html">AI-First: Our Vision for rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../about/history.html">History and Future of rsyslog</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../getting_started/index.html">Getting Started with rsyslog</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Getting Started with rsyslog</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/installation.html">Installing rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/basic_configuration.html">Basic Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/understanding_default_config.html">Understanding the Default Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/forwarding_logs.html">Forwarding Logs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/next_steps.html">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">Configuration</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Configuration</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../basic_structure.html">Basic Structure</a></li>
+<li class="toctree-l2 current has-children"><a class="reference internal" href="idx_output.html">Output Modules</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Output Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="omamqp1.html">omamqp1: AMQP 1.0 Messaging Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omazureeventhubs.html">omazureeventhubs: Microsoft Azure Event Hubs Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omclickhouse.html">omclickhouse: ClickHouse Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omczmq.html">omczmq: Output module for ZeroMQ</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omdtls.html">omdtls: Output Module for DTLS Protocol over UDP</a></li>
+<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">omelasticsearch: Elasticsearch Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omfile.html">omfile: File Output Module</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="omfwd.html">omfwd: syslog Forwarding Output Module</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of omfwd: syslog Forwarding Output Module</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="omfwd/parameters/basic.html">Basic Parameters</a></li>
+<li class="toctree-l4"><a class="reference internal" href="omfwd/parameters/module.html">Module Parameters</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="omhdfs.html">omhdfs: Hadoop Filesystem Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omhiredis.html">omhiredis: Redis Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omhttp.html">omhttp: HTTP Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omhttpfs.html">omhttpfs: Hadoop HTTPFS Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omjournal.html">omjournal: Systemd Journal Output</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omkafka.html">omkafka: write to Apache Kafka</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omlibdbi.html">omlibdbi: Generic Database Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ommail.html">ommail: Mail Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ommongodb.html">ommongodb: MongoDB Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ommysql.html">ommysql: MariaDB/MySQL Database Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omoracle.html">omoracle: Oracle Database Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ompgsql.html">PostgreSQL Database Output Module (ompgsql)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ompipe.html">ompipe: Pipe Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omprog.html">omprog: Program integration Output module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omrabbitmq.html">omrabbitmq: RabbitMQ output module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omrelp.html">omrelp: RELP Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omruleset.html">omruleset: ruleset output/including module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omsendertrack.html">omsendertrack: Sender Tracking Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omsnmp.html">omsnmp: SNMP Trap Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omstdout.html">omstdout: stdout output module (testbench tool)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omudpspoof.html">omudpspoof: UDP spoofing output module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omusrmsg.html">omusrmsg: notify users</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omuxsock.html">omuxsock: Unix sockets Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sigprov_gt.html">GuardTime Log Signature Provider (gt)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sigprov_ksi.html">Keyless Signature Infrastructure Provider (ksi)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sigprov_ksi12.html">KSI Signature Provider (rsyslog-ksi-ls12)</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="idx_input.html">Input Modules</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Input Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="im3195.html">im3195: RFC3195 Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imbatchreport.html">imbatchreport: Batch report input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imczmq.html">imczmq: Input module for ZeroMQ</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imdocker.html">imdocker: Docker Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imdtls.html">imdtls: Input Module for DTLS Protocol over UDP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imfile.html">imfile: Text File Input Module</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="imgssapi.html">imgssapi: GSSAPI Syslog Input Module</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of imgssapi: GSSAPI Syslog Input Module</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="gssapi.html">GSSAPI module support in rsyslog v3</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="imhiredis.html">Imhiredis: Redis input plugin</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imhttp.html">imhttp: HTTP input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imjournal.html">imjournal: Systemd Journal Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imkafka.html">imkafka: read from Apache Kafka</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imklog.html">imklog: Kernel Log Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imkmsg.html">imkmsg: /dev/kmsg Log Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="immark.html">immark: Mark Message Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="impcap.html">Impcap: network traffic capture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="improg.html">improg: Program integration input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="impstats.html">impstats: Generate Periodic Statistics of Internal Counters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imptcp.html">imptcp: Plain TCP Syslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imrelp.html">imrelp: RELP Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imsolaris.html">imsolaris: Solaris Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imtcp.html">imtcp: TCP Syslog Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imtuxedoulog.html">imtuxedoulog: Tuxedo ULOG input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imudp.html">imudp: UDP Syslog Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imuxsock.html">imuxsock: Unix Socket Input Module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="idx_parser.html">Parser Modules</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Parser Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="pmciscoios.html">pmciscoios</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmdb2diag.html">pmdb2diag: DB2 Diag file parser module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmlastmsg.html">pmlastmsg: last message repeated n times</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmnormalize.html">Log Message Normalization Parser Module (pmnormalize)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmnull.html">pmnull: Syslog Null Parser Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmrfc3164.html">pmrfc3164: Parse RFC3164-formatted messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmrfc3164sd.html">pmrfc3164sd: Parse RFC5424 structured data inside RFC3164 messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmrfc5424.html">pmrfc5424: Parse RFC5424-formatted messages</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="idx_messagemod.html">Message Modification Modules</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of Message Modification Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="mmaitag.html">AI-based classification (mmaitag)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmanon.html">IP Address Anonymization Module (mmanon)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmcount.html">mmcount</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmdarwin.html">Darwin connector (mmdarwin)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmdblookup.html">MaxMind/GeoIP DB lookup (mmdblookup)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmexternal.html">Support module for external message modification modules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmfields.html">Fields Extraction Module (mmfields)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmjsonparse.html">JSON/CEE Structured Content Extraction Module (mmjsonparse)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmkubernetes.html">Kubernetes Metadata Module (mmkubernetes)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmnormalize.html">Log Message Normalization Module (mmnormalize)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmpstrucdata.html">RFC5424 structured data parsing module (mmpstrucdata)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmrfc5424addhmac.html">mmrfc5424addhmac</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmrm1stspace.html">mmrm1stspace: First Space Modification Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmsequence.html">Number generator and counter module (mmsequence)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmsnmptrapd.html">mmsnmptrapd message modification module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmtaghostname.html">mmtaghostname: message modification module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmutf8fix.html">Fix invalid UTF-8 Sequences (mmutf8fix)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="idx_stringgen.html">String Generator Modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="idx_library.html">Library Modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../templates.html">Templates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../properties.html">rsyslog Properties</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../property_replacer.html">The Property Replacer</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of The Property Replacer</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../nomatch.html">Property Replacer nomatch mode</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../filters.html">Filter Conditions</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../rainerscript/index.html">RainerScript</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of RainerScript</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/data_types.html">Data Types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/expressions.html">Expressions</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../../rainerscript/functions/index.html">Functions</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><div class="visually-hidden">Toggle navigation of Functions</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4 has-children"><a class="reference internal" href="../../rainerscript/functions/idx_built-in_functions.html">Built-in Functions</a><input class="toctree-checkbox" id="toctree-checkbox-13" name="toctree-checkbox-13" role="switch" type="checkbox"/><label for="toctree-checkbox-13"><div class="visually-hidden">Toggle navigation of Built-in Functions</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-cnum.html">cnum()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-cstr.html">cstr()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-dyn_inc.html">dyn_inc()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-exec_template.html">exec_template()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-exists.html">exists()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-field.html">field()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-format_time.html">format_time()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-get_property.html">get_property()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-getenv.html">getenv()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-int2hex.html">int2hex()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-ipv4convert.html">num2ipv4() / ipv42num()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-is_time.html">is_time()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-lookup.html">lookup()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-parse_json.html">parse_json()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-parse_time.html">parse_time()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-percentile_observe.html">percentile_observe()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-previous_action_suspended.html">previous_action_suspended()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-prifilt.html">prifilt()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-random.html">random()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-re_extract.html">re_extract()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-re_extract_i.html">re_extract_i()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-re_match.html">re_match()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-re_match_i.html">re_match_i()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-replace.html">replace()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-script_error.html">script_error()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-strlen.html">strlen()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-substring.html">substring()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-tolower.html">tolower()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-trim.html">ltrim() / rtrim()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-wrap.html">wrap()</a></li>
+</ul>
+</li>
+<li class="toctree-l4 has-children"><a class="reference internal" href="../../rainerscript/functions/idx_module_functions.html">Module Functions</a><input class="toctree-checkbox" id="toctree-checkbox-14" name="toctree-checkbox-14" role="switch" type="checkbox"/><label for="toctree-checkbox-14"><div class="visually-hidden">Toggle navigation of Module Functions</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/mo-ffaup.html">Faup</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/mo-hashXX.html">HashXX</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/mo-hashXXmod.html">HashXXmod</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/mo-http_request.html">HTTP-Request</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/mo-unflatten.html">Unflatten</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/control_structures.html">Control Structures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/configuration_objects.html">configuration objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/constant_strings.html">String Constants</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/variable_property_types.html">Variable (Property) types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/lookup_tables.html">Lookup Tables</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/queue_parameters.html">General Queue Parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/rainerscript_call.html">The rsyslog “call” statement</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/rainerscript_call_indirect.html">The rsyslog “call_indirect” statement</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/global.html">global() configuration object</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/include.html">The rsyslog include() object</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../actions.html">Actions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../input.html">Input</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../parser.html">Parser</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../timezone.html">timezone</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../index_directives.html">Legacy Configuration Directives</a><input class="toctree-checkbox" id="toctree-checkbox-15" name="toctree-checkbox-15" role="switch" type="checkbox"/><label for="toctree-checkbox-15"><div class="visually-hidden">Toggle navigation of Legacy Configuration Directives</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../config_param_types.html">Configuration Parameter Types</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../global/index.html">Legacy Global Configuration Statements</a><input class="toctree-checkbox" id="toctree-checkbox-16" name="toctree-checkbox-16" role="switch" type="checkbox"/><label for="toctree-checkbox-16"><div class="visually-hidden">Toggle navigation of Legacy Global Configuration Statements</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_abortonuncleanconfig.html">$AbortOnUncleanConfig</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_debugprintcfsyslinehandlerlist.html">$DebugPrintCFSyslineHandlerList</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_debugprintmodulelist.html">$DebugPrintModuleList</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_debugprinttemplatelist.html">$DebugPrintTemplateList</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_failonchownfailure.html">$FailOnChownFailure</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_generateconfiggraph.html">$GenerateConfigGraph</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_includeconfig.html">$IncludeConfig</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_mainmsgqueuesize.html">$MainMsgQueueSize</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_maxopenfiles.html">$MaxOpenFiles</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_moddir.html">$ModDir</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_modload.html">$ModLoad</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_umask.html">$UMASK</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_resetconfigvariables.html">$ResetConfigVariables</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../input_directives/index.html">Legacy Directives affecting Input Modules</a><input class="toctree-checkbox" id="toctree-checkbox-17" name="toctree-checkbox-17" role="switch" type="checkbox"/><label for="toctree-checkbox-17"><div class="visually-hidden">Toggle navigation of Legacy Directives affecting Input Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_allowedsender.html">$AllowedSender</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_dropmsgswithmaliciousdnsptrrecords.html">$DropMsgsWithMaliciousDnsPTRRecords</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_controlcharacterescapeprefix.html">$ControlCharacterEscapePrefix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_droptrailinglfonreception.html">$DropTrailingLFOnReception</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_escape8bitcharsonreceive.html">$Escape8BitCharactersOnReceive</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_markmessageperiod.html">$MarkMessagePeriod</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../action/index.html">Depricated Legacy Action-Specific Configuration Statements</a><input class="toctree-checkbox" id="toctree-checkbox-18" name="toctree-checkbox-18" role="switch" type="checkbox"/><label for="toctree-checkbox-18"><div class="visually-hidden">Toggle navigation of Depricated Legacy Action-Specific Configuration Statements</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_actionexeconlywhenpreviousissuspended.html">How to Convert Deprecated <cite>$ActionExecOnlyWhenPreviousIsSuspended</cite> to Modern Style</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_actionresumeinterval.html">How to Convert Deprecated <cite>$ActionResumeInterval</cite> to Modern Style</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_repeatedmsgreduction.html">$RepeatedMsgReduction</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_omfileforcechown.html">$omfileForceChown</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_dirgroup.html">$DirGroup</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_dirowner.html">How to Convert Deprecated <cite>$DirOwner</cite> to Modern Style</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_dynafilecachesize.html">$DynaFileCacheSize</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_filecreatemode.html">$FileCreateMode</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_filegroup.html">$FileGroup</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_fileowner.html">$FileOwner</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_gssforwardservicename.html">$GssForwardServiceName</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_gssmode.html">$GssMode</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../ruleset/index.html">Ruleset-Specific Legacy Configuration Statements</a><input class="toctree-checkbox" id="toctree-checkbox-19" name="toctree-checkbox-19" role="switch" type="checkbox"/><label for="toctree-checkbox-19"><div class="visually-hidden">Toggle navigation of Ruleset-Specific Legacy Configuration Statements</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../ruleset/rsconf1_rulesetcreatemainqueue.html">$RulesetCreateMainQueue</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../ruleset/rsconf1_rulesetparser.html">$RulesetParser</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../rsyslog_statistic_counter.html">rsyslog statistic counter</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="index.html">Modules</a><input class="toctree-checkbox" id="toctree-checkbox-20" name="toctree-checkbox-20" role="switch" type="checkbox"/><label for="toctree-checkbox-20"><div class="visually-hidden">Toggle navigation of Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="workflow.html">Where are the modules integrated into the Message Flow?</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../output_channels.html">Output Channels</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../droppriv.html">Dropping privileges in rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipv6.html">Notes on IPv6 Handling in Rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../cryprov_gcry.html">libgcrypt Log Crypto Provider (gcry)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../cryprov_ossl.html">libossl Log Crypto Provider (ossl)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dyn_stats.html">Dynamic Stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../lookup_tables.html">Lookup Tables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../percentile_stats.html">Percentile Stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../converting_to_new_format.html">Converting older formats to <code class="docutils literal notranslate"><span class="pre">advanced</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../conf_formats.html">Configuration Formats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../sysklogd_format.html">sysklogd format</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../faq/index.html">FAQ</a><input class="toctree-checkbox" id="toctree-checkbox-21" name="toctree-checkbox-21" role="switch" type="checkbox"/><label for="toctree-checkbox-21"><div class="visually-hidden">Toggle navigation of FAQ</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../faq/faq_overall.html">FAQ: some general topics often asked</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../faq/difference_queues.html">What is the difference between the main_queue and a queue with a ruleset tied to an input?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../faq/encrypt_mysql_traffic_ommysql.html">FAQ: Encrypting MySQL Traffic with ommysql Plugin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../faq/imudp-packet-loss.html">FAQ: Troubleshooting UDP Packet Loss</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../faq/common-config-mistakes.html">Common Configuration Mistakes and Misunderstandings</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/index.html">Tutorials</a><input class="toctree-checkbox" id="toctree-checkbox-22" name="toctree-checkbox-22" role="switch" type="checkbox"/><label for="toctree-checkbox-22"><div class="visually-hidden">Toggle navigation of Tutorials</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../tutorials/tls_cert_summary.html">Encrypting Syslog Traffic with TLS (SSL)</a><input class="toctree-checkbox" id="toctree-checkbox-23" name="toctree-checkbox-23" role="switch" type="checkbox"/><label for="toctree-checkbox-23"><div class="visually-hidden">Toggle navigation of Encrypting Syslog Traffic with TLS (SSL)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_scenario.html">Sample Use Case: Single Central Log Server</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_ca.html">Setting up the CA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_machine.html">Generating the machine certificate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_server.html">Setting up the Central Server</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_client.html">Setting up a client</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_udp_relay.html">Setting up the UDP syslog relay</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_errmsgs.html">Error Messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_script.html">Creating certificates with a script</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/tls.html">Encrypting Syslog Traffic with TLS (SSL) [short version]</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/database.html">Writing syslog messages to MariaDB, MySQL, PostgreSQL or any other supported Database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/high_database_rate.html">Handling a massive syslog database insert rate with Rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/reliable_forwarding.html">Reliable Forwarding of syslog Messages with Rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/recording_pri.html">Recording the Priority of Syslog Messages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/failover_syslog_server.html">Failover Syslog Server</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/log_rotation_fix_size.html">Log rotation with rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/gelf_forwarding.html">GELF forwarding in rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/log_sampling.html">Log Sampling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/random_sampling.html">Random sampling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/hash_sampling.html">Hash-based Sampling</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../troubleshooting/index.html">Troubleshooting</a><input class="toctree-checkbox" id="toctree-checkbox-24" name="toctree-checkbox-24" role="switch" type="checkbox"/><label for="toctree-checkbox-24"><div class="visually-hidden">Toggle navigation of Troubleshooting</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../troubleshooting/file_not_written.html">Output File is not Being Written</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../troubleshooting/selinux.html">Troubleshooting SELinux-Related Issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../troubleshooting/debug.html">Rsyslog Debug Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../troubleshooting/troubleshoot.html">troubleshooting problems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../troubleshooting/howtodebug.html">How to create a debug log</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../concepts/index.html">Concepts</a><input class="toctree-checkbox" id="toctree-checkbox-25" name="toctree-checkbox-25" role="switch" type="checkbox"/><label for="toctree-checkbox-25"><div class="visually-hidden">Toggle navigation of Concepts</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../concepts/queues.html">Understanding rsyslog Queues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../concepts/janitor.html">The Janitor Process</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../concepts/messageparser.html">Message parsers in rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../concepts/multi_ruleset.html">Multiple Rulesets in rsyslog</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../concepts/netstrm_drvr.html">NetStream Drivers</a><input class="toctree-checkbox" id="toctree-checkbox-26" name="toctree-checkbox-26" role="switch" type="checkbox"/><label for="toctree-checkbox-26"><div class="visually-hidden">Toggle navigation of NetStream Drivers</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_ptcp.html">ptcp Network Stream Driver</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_gtls.html">gtls Network Stream Driver</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_gtls.html#supported-driver-modes">Supported Driver Modes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_gtls.html#supported-authentication-modes">Supported Authentication Modes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_gtls.html#checkextendedkeypurpose">CheckExtendedKeyPurpose</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_gtls.html#prioritizesan">PrioritizeSAN</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_ossl.html">openssl Network Stream Driver</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../development/index.html">Development</a><input class="toctree-checkbox" id="toctree-checkbox-27" name="toctree-checkbox-27" role="switch" type="checkbox"/><label for="toctree-checkbox-27"><div class="visually-hidden">Toggle navigation of Development</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../development/config_data_model.html">The rsyslog config data model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/config_data_model.html#objects">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/debugging.html">Debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/dev_action_threads.html">Action Threads and Queue Engine (Developer-Oriented)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/dev_codestyle.html">rsyslog code style</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/dev_oplugins.html">Writing Rsyslog Output Plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/dev_queue.html">The rsyslog queue object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/dev_testbench.html">writing rsyslog tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/doc_reference_section_guidelines.html">Documentation Reference Section Structure Guidelines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/doc_style_guide.html">Documentation Style Guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/generic_design.html">Generic design of a syslogd</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/internal_tooling.html">Internal tooling</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../idx_reference.html">Reference</a><input class="toctree-checkbox" id="toctree-checkbox-28" name="toctree-checkbox-28" role="switch" type="checkbox"/><label for="toctree-checkbox-28"><div class="visually-hidden">Toggle navigation of Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../containers/index.html">rsyslog and containers</a><input class="toctree-checkbox" id="toctree-checkbox-29" name="toctree-checkbox-29" role="switch" type="checkbox"/><label for="toctree-checkbox-29"><div class="visually-hidden">Toggle navigation of rsyslog and containers</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../containers/container_features.html">Container-Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../containers/docker_specifics.html">docker specifics</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../installation/index.html">Installation</a><input class="toctree-checkbox" id="toctree-checkbox-30" name="toctree-checkbox-30" role="switch" type="checkbox"/><label for="toctree-checkbox-30"><div class="visually-hidden">Toggle navigation of Installation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../installation/packages.html">Installing rsyslog from Package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../installation/rsyslog_docker.html">Using Rsyslog Docker Containers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../installation/install_from_source.html">Installing rsyslog from Source</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../installation/build_from_repo.html">Installing rsyslog from the source repository</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../historical/index.html">Historical Documents</a><input class="toctree-checkbox" id="toctree-checkbox-31" name="toctree-checkbox-31" role="switch" type="checkbox"/><label for="toctree-checkbox-31"><div class="visually-hidden">Toggle navigation of Historical Documents</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/php_syslog_ng.html">Using php-syslog-ng with rsyslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/multi_ruleset_legacy_format_samples.html">Legacy Format Samples for Multiple Rulesets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/module_devel.html">Developing rsyslog modules (outdated)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/high_performance.html">Receiving massive amounts of messages with high performance</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v8compatibility.html">Compatibility Notes for rsyslog v8</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v7compatibility.html">Compatibility Notes for rsyslog v7</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v6compatibility.html">Compatibility Notes for rsyslog v6</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v5compatibility.html">Compatibility Notes for rsyslog v5</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v4compatibility.html">Compatibility Notes for rsyslog v4</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v3compatibility.html">Compatibility Notes for rsyslog v3</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../history.html">RSyslog - History</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../licensing.html">Licensing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../how2help.html">How you can Help</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../community.html">Community Resources</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features.html">RSyslog - Features</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../proposals/index.html">Proposals</a><input class="toctree-checkbox" id="toctree-checkbox-32" name="toctree-checkbox-32" role="switch" type="checkbox"/><label for="toctree-checkbox-32"><div class="visually-hidden">Toggle navigation of Proposals</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../proposals/version_naming.html">Version Naming</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../whitepapers/index.html">Rsyslog Whitepapers</a><input class="toctree-checkbox" id="toctree-checkbox-33" name="toctree-checkbox-33" role="switch" type="checkbox"/><label for="toctree-checkbox-33"><div class="visually-hidden">Toggle navigation of Rsyslog Whitepapers</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../whitepapers/syslog_parsing.html">syslog parsing in rsyslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../whitepapers/syslog_protocol.html">syslog-protocol support in rsyslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../whitepapers/queues_analogy.html">Turning Lanes and Rsyslog Queues</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../whitepapers/preserve_in_nat.html">Preserving syslog sender over NAT</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../whitepapers/reliable_logging.html">How reliable should reliable logging be?</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../../_sources/configuration/modules/omelasticsearch.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="omelasticsearch-elasticsearch-output-module">
+<h1>omelasticsearch: Elasticsearch Output Module<a class="headerlink" href="#omelasticsearch-elasticsearch-output-module" title="Link to this heading">¶</a></h1>
+<div class="table-wrapper docutils container">
+<table class="docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><strong>Module Name:</strong></p></td>
+<td><p><strong>omelasticsearch</strong></p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Author:</strong></p></td>
+<td><p><a class="reference external" href="https://rainer.gerhards.net/">Rainer Gerhards</a> &lt;<a class="reference external" href="mailto:rgerhards&#37;&#52;&#48;adiscon&#46;com">rgerhards<span>&#64;</span>adiscon<span>&#46;</span>com</a>&gt;</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<section id="purpose">
+<h2>Purpose<a class="headerlink" href="#purpose" title="Link to this heading">¶</a></h2>
+<p>This module provides native support for logging to
+<a class="reference external" href="http://www.elasticsearch.org/">Elasticsearch</a>.</p>
+</section>
+<section id="notable-features">
+<h2>Notable Features<a class="headerlink" href="#notable-features" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="#omelasticsearch-statistic-counter"><span class="std std-ref">Statistic Counter</span></a></p></li>
+</ul>
+</section>
+<section id="configuration-parameters">
+<h2>Configuration Parameters<a class="headerlink" href="#configuration-parameters" title="Link to this heading">¶</a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Parameter names are case-insensitive.</p>
+</div>
+<section id="action-parameters">
+<h3>Action Parameters<a class="headerlink" href="#action-parameters" title="Link to this heading">¶</a></h3>
+<section id="server">
+<h4>Server<a class="headerlink" href="#server" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>array</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>An array of Elasticsearch servers in the specified format. If no scheme
+is specified, it will be chosen according to <a class="reference internal" href="#usehttps">usehttps</a>. If no port is
+specified, <a class="reference internal" href="#serverport">serverport</a> will be used. Defaults to “localhost”.</p>
+<p>Requests to Elasticsearch will be load-balanced between all servers in
+round-robin fashion.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Examples:
+     server=&quot;localhost:9200&quot;
+     server=[&quot;elasticsearch1&quot;, &quot;elasticsearch2&quot;]
+</pre></div>
+</div>
+</section>
+<section id="serverport">
+<span id="id1"></span><h4>Serverport<a class="headerlink" href="#serverport" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>9200</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Default HTTP port to use to connect to Elasticsearch if none is specified
+on a <a class="reference internal" href="#server">server</a>. Defaults to 9200</p>
+</section>
+<section id="healthchecktimeout">
+<span id="id2"></span><h4>HealthCheckTimeout<a class="headerlink" href="#healthchecktimeout" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>3500</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Specifies the number of milliseconds to wait for a successful health check
+on a <a class="reference internal" href="#server">server</a>. Before trying to submit events to Elasticsearch, rsyslog will
+execute an <em>HTTP HEAD</em> to <code class="docutils literal notranslate"><span class="pre">/_cat/health</span></code> and expect an <em>HTTP OK</em> within
+this timeframe. Defaults to 3500.</p>
+<p><em>Note, the health check is verifying connectivity only, not the state of
+the Elasticsearch cluster.</em></p>
+</section>
+<section id="esversion-major">
+<span id="id3"></span><h4>esVersion.major<a class="headerlink" href="#esversion-major" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>0</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>ElasticSearch is notoriously bad at maintaining backwards compatibility. For this
+reason, the setting can be used to configure the server’s major version number (e.g. 7, 8, …).
+As far as we know breaking changes only happen with major version changes.
+As of now, only value 8 triggers API changes. All other values select
+pre-version-8 API usage.</p>
+</section>
+<section id="searchindex">
+<span id="id4"></span><h4>searchIndex<a class="headerlink" href="#searchindex" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><a class="reference external" href="http://www.elasticsearch.org/guide/appendix/glossary.html#index">Elasticsearch
+index</a>
+to send your logs to. Defaults to “system”</p>
+</section>
+<section id="dynsearchindex">
+<span id="id5"></span><h4>dynSearchIndex<a class="headerlink" href="#dynsearchindex" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Whether the string provided for <a class="reference internal" href="#searchindex">searchIndex</a> should be taken as a
+<a class="reference external" href="http://www.rsyslog.com/doc/rsyslog_conf_templates.html">rsyslog template</a>.
+Defaults to “off”, which means the index name will be taken
+literally. Otherwise, it will look for a template with that name, and
+the resulting string will be the index name. For example, let’s
+assume you define a template named “date-days” containing
+“%timereported:1:10:date-rfc3339%”. Then, with dynSearchIndex=”on”,
+if you say searchIndex=”date-days”, each log will be sent to and
+index named after the first 10 characters of the timestamp, like
+“2013-03-22”.</p>
+</section>
+<section id="searchtype">
+<span id="id6"></span><h4>searchType<a class="headerlink" href="#searchtype" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><a class="reference external" href="http://www.elasticsearch.org/guide/appendix/glossary.html#type">Elasticsearch
+type</a>
+to send your index to. Defaults to “events”.
+Setting this parameter to an empty string will cause the type to be omitted,
+which is required since Elasticsearch 7.0. See
+<a class="reference external" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/removal-of-types.html">Elasticsearch documentation</a>
+for more information.</p>
+</section>
+<section id="dynsearchtype">
+<span id="id7"></span><h4>dynSearchType<a class="headerlink" href="#dynsearchtype" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Like <a class="reference internal" href="#dynsearchindex">dynSearchIndex</a>, it allows you to specify a
+<a class="reference external" href="http://www.rsyslog.com/doc/rsyslog_conf_templates.html">rsyslog template</a>
+for <a class="reference internal" href="#searchtype">searchType</a>, instead of a static string.</p>
+</section>
+<section id="pipelinename">
+<span id="id9"></span><h4>pipelineName<a class="headerlink" href="#pipelinename" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The <a class="reference external" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/ingest.html">ingest node</a>
+pipeline name to be included in the request. This allows pre processing
+of events before indexing them. By default, events are not send to a pipeline.</p>
+</section>
+<section id="dynpipelinename">
+<span id="id10"></span><h4>dynPipelineName<a class="headerlink" href="#dynpipelinename" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Like <a class="reference internal" href="#dynsearchindex">dynSearchIndex</a>, it allows you to specify a
+<a class="reference external" href="http://www.rsyslog.com/doc/rsyslog_conf_templates.html">rsyslog template</a>
+for <a class="reference internal" href="#pipelinename">pipelineName</a>, instead of a static string.</p>
+</section>
+<section id="skippipelineifempty">
+<span id="id12"></span><h4>skipPipelineIfEmpty<a class="headerlink" href="#skippipelineifempty" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>When POST’ing a document, Elasticsearch does not allow an empty pipeline
+parameter value. If boolean option skipPipelineIfEmpty is set to <cite>“on”</cite>, the
+pipeline parameter won’t be posted. Default is <cite>“off”</cite>.</p>
+</section>
+<section id="asyncrepl">
+<span id="id13"></span><h4>asyncrepl<a class="headerlink" href="#asyncrepl" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>No longer supported as ElasticSearch no longer supports it.</p>
+</section>
+<section id="usehttps">
+<span id="id14"></span><h4>usehttps<a class="headerlink" href="#usehttps" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Default scheme to use when sending events to Elasticsearch if none is
+specified on a  <a class="reference internal" href="#server">server</a>. Good for when you have
+Elasticsearch behind Apache or something else that can add HTTPS.
+Note that if you have a self-signed certificate, you’d need to install
+it first. This is done by copying the certificate to a trusted path
+and then running <em>update-ca-certificates</em>. That trusted path is
+typically <em>/usr/local/share/ca-certificates</em> but check the man page of
+<em>update-ca-certificates</em> for the default path of your distro</p>
+</section>
+<section id="timeout">
+<span id="id15"></span><h4>timeout<a class="headerlink" href="#timeout" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>1m</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>How long Elasticsearch will wait for a primary shard to be available
+for indexing your log before sending back an error. Defaults to “1m”.</p>
+</section>
+<section id="indextimeout">
+<span id="id16"></span><h4>indexTimeout<a class="headerlink" href="#indextimeout" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>0</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.2204.0.</span></p>
+</div>
+<p>Specifies the number of milliseconds to wait for a successful log indexing
+request on a <a class="reference internal" href="#server">server</a>. By default there is no timeout.</p>
+</section>
+<section id="template">
+<span id="id17"></span><h4>template<a class="headerlink" href="#template" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>see below</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This is the JSON document that will be indexed in Elasticsearch. The
+resulting string needs to be a valid JSON, otherwise Elasticsearch
+will return an error. Defaults to:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$template StdJSONFmt, &quot;{\&quot;message\&quot;:\&quot;%msg:::json%\&quot;,\&quot;fromhost\&quot;:\&quot;%HOSTNAME:::json%\&quot;,\&quot;facility\&quot;:\&quot;%syslogfacility-text%\&quot;,\&quot;priority\&quot;:\&quot;%syslogpriority-text%\&quot;,\&quot;timereported\&quot;:\&quot;%timereported:::date-rfc3339%\&quot;,\&quot;timegenerated\&quot;:\&quot;%timegenerated:::date-rfc3339%\&quot;}&quot;
+</pre></div>
+</div>
+<p>Which will produce this sort of documents (pretty-printed here for
+readability):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>{
+    &quot;message&quot;: &quot; this is a test message&quot;,
+    &quot;fromhost&quot;: &quot;test-host&quot;,
+    &quot;facility&quot;: &quot;user&quot;,
+    &quot;priority&quot;: &quot;info&quot;,
+    &quot;timereported&quot;: &quot;2013-03-12T18:05:01.344864+02:00&quot;,
+    &quot;timegenerated&quot;: &quot;2013-03-12T18:05:01.344864+02:00&quot;
+}
+</pre></div>
+</div>
+<p>Another template, FullJSONFmt, is available that includes more fields including programname, PROCID (usually the process ID), and MSGID.</p>
+</section>
+<section id="bulkmode">
+<span id="id18"></span><h4>bulkmode<a class="headerlink" href="#bulkmode" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The default “off” setting means logs are shipped one by one. Each in
+its own HTTP request, using the <a class="reference external" href="http://www.elasticsearch.org/guide/reference/api/index_.html">Index
+API</a>.
+Set it to “on” and it will use Elasticsearch’s <a class="reference external" href="http://www.elasticsearch.org/guide/reference/api/bulk.html">Bulk
+API</a> to
+send multiple logs in the same request. The maximum number of logs
+sent in a single bulk request depends on your <a class="reference internal" href="#maxbytes">maxbytes</a>
+and queue settings -
+usually limited by the <a class="reference external" href="http://www.rsyslog.com/doc/node35.html">dequeue batch
+size</a>. More information
+about queues can be found
+<a class="reference external" href="http://www.rsyslog.com/doc/node32.html">here</a>.</p>
+</section>
+<section id="maxbytes">
+<span id="id19"></span><h4>maxbytes<a class="headerlink" href="#maxbytes" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>100m</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.23.0.</span></p>
+</div>
+<p>When shipping logs with <a class="reference internal" href="#bulkmode">bulkmode</a> <strong>on</strong>, maxbytes specifies the maximum
+size of the request body sent to Elasticsearch. Logs are batched until
+either the buffer reaches maxbytes or the <a class="reference external" href="http://www.rsyslog.com/doc/node35.html">dequeue batch
+size</a> is reached. In order to
+ensure Elasticsearch does not reject requests due to content length, verify
+this value is set according to the <a class="reference external" href="https://www.elastic.co/guide/en/elasticsearch/reference/current/modules-http.html">http.max_content_length</a>
+setting in Elasticsearch. Defaults to 100m.</p>
+</section>
+<section id="parent">
+<span id="id21"></span><h4>parent<a class="headerlink" href="#parent" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Specifying a string here will index your logs with that string the
+parent ID of those logs. Please note that you need to define the
+<a class="reference external" href="http://www.elasticsearch.org/guide/reference/mapping/parent-field.html">parent
+field</a>
+in your
+<a class="reference external" href="http://www.elasticsearch.org/guide/reference/mapping/">mapping</a>
+for that to work. By default, logs are indexed without a parent.</p>
+</section>
+<section id="dynparent">
+<span id="id22"></span><h4>dynParent<a class="headerlink" href="#dynparent" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Using the same parent for all the logs sent in the same action is
+quite unlikely. So you’d probably want to turn this “on” and specify
+a
+<a class="reference external" href="http://www.rsyslog.com/doc/rsyslog_conf_templates.html">rsyslog template</a>
+that will provide meaningful parent IDs for your logs.</p>
+</section>
+<section id="uid">
+<span id="id24"></span><h4>uid<a class="headerlink" href="#uid" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>If you have basic HTTP authentication deployed (eg through the
+<a class="reference external" href="https://github.com/Asquera/elasticsearch-http-basic">elasticsearch-basic
+plugin</a>), you
+can specify your user-name here.</p>
+</section>
+<section id="pwd">
+<span id="id25"></span><h4>pwd<a class="headerlink" href="#pwd" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Password for basic authentication.</p>
+</section>
+<section id="errorfile">
+<span id="id26"></span><h4>errorFile<a class="headerlink" href="#errorfile" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>If specified, records failed in bulk mode are written to this file, including
+their error cause. Rsyslog itself does not process the file any more, but the
+idea behind that mechanism is that the user can create a script to periodically
+inspect the error file and react appropriately. As the complete request is
+included, it is possible to simply resubmit messages from that script.</p>
+<p><em>Please note:</em> when rsyslog has problems connecting to elasticsearch, a general
+error is assumed and the submit is retried. However, if we receive negative
+responses during batch processing, we assume an error in the data itself
+(like a mandatory field is not filled in, a format error or something along
+those lines). Such errors cannot be solved by simply resubmitting the record.
+As such, they are written to the error file so that the user (script) can
+examine them and act appropriately. Note that e.g. after search index
+reconfiguration (e.g. dropping the mandatory attribute) a resubmit may
+be successful.</p>
+</section>
+<section id="tls-cacert">
+<span id="omelasticsearch-tls-cacert"></span><h4>tls.cacert<a class="headerlink" href="#tls-cacert" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This is the full path and file name of the file containing the CA cert for the
+CA that issued the Elasticsearch server cert.  This file is in PEM format.  For
+example: <cite>/etc/rsyslog.d/es-ca.crt</cite></p>
+</section>
+<section id="tls-mycert">
+<span id="id27"></span><h4>tls.mycert<a class="headerlink" href="#tls-mycert" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This is the full path and file name of the file containing the client cert for
+doing client cert auth against Elasticsearch.  This file is in PEM format.  For
+example: <cite>/etc/rsyslog.d/es-client-cert.pem</cite></p>
+</section>
+<section id="tls-myprivkey">
+<span id="id28"></span><h4>tls.myprivkey<a class="headerlink" href="#tls-myprivkey" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This is the full path and file name of the file containing the private key
+corresponding to the cert <cite>tls.mycert</cite> used for doing client cert auth against
+Elasticsearch.  This file is in PEM format, and must be unencrypted, so take
+care to secure it properly.  For example: <cite>/etc/rsyslog.d/es-client-key.pem</cite></p>
+</section>
+<section id="allowunsignedcerts">
+<span id="omelasticsearch-allowunsignedcerts"></span><h4>allowunsignedcerts<a class="headerlink" href="#allowunsignedcerts" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>boolean</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>If <cite>“on”</cite>, this will set the curl <cite>CURLOPT_SSL_VERIFYPEER</cite> option to
+<cite>0</cite>.  You are strongly discouraged to set this to <cite>“on”</cite>.  It is
+primarily useful only for debugging or testing.</p>
+</section>
+<section id="skipverifyhost">
+<span id="omelasticsearch-skipverifyhost"></span><h4>skipverifyhost<a class="headerlink" href="#skipverifyhost" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>boolean</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>If <cite>“on”</cite>, this will set the curl <cite>CURLOPT_SSL_VERIFYHOST</cite> option to
+<cite>0</cite>.  You are strongly discouraged to set this to <cite>“on”</cite>.  It is
+primarily useful only for debugging or testing.</p>
+</section>
+<section id="bulkid">
+<span id="omelasticsearch-bulkid"></span><h4>bulkid<a class="headerlink" href="#bulkid" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This is the unique id to assign to the record.  The <cite>bulk</cite> part is misleading - this
+can be used in both bulk mode <a class="reference internal" href="#bulkmode"><span class="std std-ref">bulkmode</span></a> or in index
+(record at a time) mode.  Although you can specify a static value for this
+parameter, you will almost always want to specify a <em>template</em> for the value of
+this parameter, and set <cite>dynbulkid=”on”</cite> <a class="reference internal" href="#omelasticsearch-dynbulkid"><span class="std std-ref">dynbulkid</span></a>.  NOTE:
+you must use <cite>bulkid</cite> and <cite>dynbulkid</cite> in order to use <cite>writeoperation=”create”</cite>
+<a class="reference internal" href="#omelasticsearch-writeoperation"><span class="std std-ref">writeoperation</span></a>.</p>
+</section>
+<section id="dynbulkid">
+<span id="omelasticsearch-dynbulkid"></span><h4>dynbulkid<a class="headerlink" href="#dynbulkid" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>If this parameter is set to <cite>“on”</cite>, then the <cite>bulkid</cite> parameter <a class="reference internal" href="#omelasticsearch-bulkid"><span class="std std-ref">bulkid</span></a>
+specifies a <em>template</em> to use to generate the unique id value to assign to the record.  If
+using <cite>bulkid</cite> you will almost always want to set this parameter to <cite>“on”</cite> to assign
+a different unique id value to each record.  NOTE:
+you must use <cite>bulkid</cite> and <cite>dynbulkid</cite> in order to use <cite>writeoperation=”create”</cite>
+<a class="reference internal" href="#omelasticsearch-writeoperation"><span class="std std-ref">writeoperation</span></a>.</p>
+</section>
+<section id="writeoperation">
+<span id="omelasticsearch-writeoperation"></span><h4>writeoperation<a class="headerlink" href="#writeoperation" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>index</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The value of this parameter is either <cite>“index”</cite> (the default) or <cite>“create”</cite>.  If <cite>“create”</cite> is
+used, this means the bulk action/operation will be <cite>create</cite> - create a document only if the
+document does not already exist.  The record must have a unique id in order to use <cite>create</cite>.
+See <a class="reference internal" href="#omelasticsearch-bulkid"><span class="std std-ref">bulkid</span></a> and <a class="reference internal" href="#omelasticsearch-dynbulkid"><span class="std std-ref">dynbulkid</span></a>.  See
+<a class="reference internal" href="#omelasticsearch-writeoperation-example"><span class="std std-ref">Example 4</span></a> for an example.</p>
+</section>
+<section id="retryfailures">
+<span id="omelasticsearch-retryfailures"></span><h4>retryfailures<a class="headerlink" href="#retryfailures" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>If this parameter is set to <cite>“on”</cite>, then the module will look for an
+<cite>“errors”:true</cite> in the bulk index response.  If found, each element in the
+response will be parsed to look for errors, since a bulk request may have some
+records which are successful and some which are failures.  Failed requests will
+be converted back into records and resubmitted back to rsyslog for
+reprocessing.  Each failed request will be resubmitted with a local variable
+called <cite>$.omes</cite>.  This is a hash consisting of the fields from the metadata
+header in the original request, and the fields from the response.  If the same
+field is in the request and response, the value from the field in the <em>request</em>
+will be used, to facilitate retries that want to send the exact same request,
+and want to know exactly what was sent.
+See below <a class="reference internal" href="#omelasticsearch-retry-example"><span class="std std-ref">Example 5</span></a> for an example of how retry
+processing works.
+<em>NOTE</em> The retried record will be resubmitted at the “top” of your processing
+pipeline.  If your processing pipeline is not idempotent (that is, your
+processing pipeline expects “raw” records), then you can specify a ruleset to
+redirect retries to.  See <a class="reference internal" href="#omelasticsearch-retryruleset"><span class="std std-ref">retryruleset</span></a> below.</p>
+<p><cite>$.omes</cite> fields:</p>
+<ul class="simple">
+<li><p>writeoperation - the operation used to submit the request - for rsyslog
+omelasticsearch this currently means either <cite>“index”</cite> or <cite>“create”</cite></p></li>
+<li><p>status - the HTTP status code - typically an error will have a <cite>4xx</cite> or <cite>5xx</cite>
+code - of particular note is <cite>429</cite> - this means Elasticsearch was unable to
+process this bulk record request due to a temporary condition e.g. the bulk
+index thread pool queue is full, and rsyslog should retry the operation.</p></li>
+<li><p>_index, _type, _id, pipeline, _parent - the metadata associated with the
+request - not all of these fields will be present with every request - for
+example, if you do not use <cite>“pipelinename”</cite> or <cite>“dynpipelinename”</cite>, there
+will be no <cite>$.omes!pipeline</cite> field.</p></li>
+<li><p>error - a hash containing one or more, possibly nested, fields containing
+more detailed information about a failure.  Typically there will be fields
+<cite>$.omes!error!type</cite> (a keyword) and <cite>$.omes!error!reason</cite> (a longer string)
+with more detailed information about the rejection.  NOTE: The format is
+apparently not described in great detail, so code must not make any
+assumption about the availability of <cite>error</cite> or any specific sub-field.</p></li>
+</ul>
+<p>There may be other fields too - the code just copies everything in the
+response.  Here is an example of a detailed error response, in JSON format, from
+Elasticsearch 5.6.9:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="nt">&quot;omes&quot;</span><span class="p">:</span>
+<span class="w">  </span><span class="p">{</span><span class="nt">&quot;writeoperation&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;create&quot;</span><span class="p">,</span>
+<span class="w">   </span><span class="nt">&quot;_index&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;rsyslog_testbench&quot;</span><span class="p">,</span>
+<span class="w">   </span><span class="nt">&quot;_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;test-type&quot;</span><span class="p">,</span>
+<span class="w">   </span><span class="nt">&quot;_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;92BE7AF79CD44305914C7658AF846A08&quot;</span><span class="p">,</span>
+<span class="w">   </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">400</span><span class="p">,</span>
+<span class="w">   </span><span class="nt">&quot;error&quot;</span><span class="p">:</span>
+<span class="w">     </span><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;mapper_parsing_exception&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;reason&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;failed to parse [msgnum]&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;caused_by&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="p">{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;number_format_exception&quot;</span><span class="p">,</span>
+<span class="w">         </span><span class="nt">&quot;reason&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;For input string: \&quot;x00000025\&quot;&quot;</span><span class="p">}}}}</span>
+</pre></div>
+</div>
+<p>Reference: <a class="reference external" href="https://www.elastic.co/guide/en/elasticsearch/guide/current/bulk.html#bulk">https://www.elastic.co/guide/en/elasticsearch/guide/current/bulk.html#bulk</a></p>
+</section>
+<section id="retryruleset">
+<span id="omelasticsearch-retryruleset"></span><h4>retryruleset<a class="headerlink" href="#retryruleset" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>If <cite>retryfailures</cite> is not <cite>“on”</cite> (<a class="reference internal" href="#omelasticsearch-retryfailures"><span class="std std-ref">retryfailures</span></a>) then
+this parameter has no effect.  This parameter specifies the name of a ruleset
+to use to route retries.  This is useful if you do not want retried messages to
+be processed starting from the top of your processing pipeline, or if you have
+multiple outputs but do not want to send retried Elasticsearch failures to all
+of your outputs, and you do not want to clutter your processing pipeline with a
+lot of conditionals.  See below <a class="reference internal" href="#omelasticsearch-retry-example"><span class="std std-ref">Example 5</span></a> for an
+example of how retry processing works.</p>
+</section>
+<section id="ratelimit-interval">
+<span id="omelasticsearch-ratelimit-interval"></span><h4>ratelimit.interval<a class="headerlink" href="#ratelimit-interval" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>600</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>If <cite>retryfailures</cite> is not <cite>“on”</cite> (<a class="reference internal" href="#omelasticsearch-retryfailures"><span class="std std-ref">retryfailures</span></a>) then
+this parameter has no effect.  Specifies the interval in seconds onto which
+rate-limiting is to be applied. If more than ratelimit.burst messages are read
+during that interval, further messages up to the end of the interval are
+discarded. The number of messages discarded is emitted at the end of the
+interval (if there were any discards).
+Setting this to value zero turns off ratelimiting.</p>
+</section>
+<section id="ratelimit-burst">
+<span id="omelasticsearch-ratelimit-burst"></span><h4>ratelimit.burst<a class="headerlink" href="#ratelimit-burst" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>20000</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>If <cite>retryfailures</cite> is not <cite>“on”</cite> (<a class="reference internal" href="#omelasticsearch-retryfailures"><span class="std std-ref">retryfailures</span></a>) then
+this parameter has no effect.  Specifies the maximum number of messages that
+can be emitted within the ratelimit.interval interval. For further information,
+see description there.</p>
+</section>
+<section id="rebindinterval">
+<span id="omelasticsearch-rebindinterval"></span><h4>rebindinterval<a class="headerlink" href="#rebindinterval" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>-1</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This parameter tells omelasticsearch to close the connection and reconnect
+to Elasticsearch after this many operations have been submitted.  The default
+value <cite>-1</cite> means that omelasticsearch will not reconnect.  A value greater
+than <cite>-1</cite> tells omelasticsearch, after this many operations have been
+submitted to Elasticsearch, to drop the connection and establish a new
+connection.  This is useful when rsyslog connects to multiple Elasticsearch
+nodes through a router or load balancer, and you need to periodically drop
+and reestablish connections to help the router balance the connections.  Use
+the counter <cite>rebinds</cite> to monitor the number of times this has happened.</p>
+</section>
+</section>
+</section>
+<section id="statistic-counter">
+<span id="omelasticsearch-statistic-counter"></span><h2>Statistic Counter<a class="headerlink" href="#statistic-counter" title="Link to this heading">¶</a></h2>
+<p>This plugin maintains global <a class="reference internal" href="../rsyslog_statistic_counter.html"><span class="doc">statistics</span></a>,
+which accumulate all action instances. The statistic is named “omelasticsearch”.
+Parameters are:</p>
+<ul class="simple">
+<li><p><strong>submitted</strong> - number of messages submitted for processing (with both
+success and error result)</p></li>
+<li><p><strong>fail.httprequests</strong> - the number of times an HTTP request failed. Note
+that a single HTTP request may be used to submit multiple messages, so this
+number may be (much) lower than fail.http.</p></li>
+<li><p><strong>fail.http</strong> - number of message failures due to connection like-problems
+(things like remote server down, broken link etc)</p></li>
+<li><p><strong>fail.es</strong> - number of failures due to elasticsearch error reply; Note that
+this counter does NOT count the number of failed messages but the number of
+times a failure occurred (a potentially much smaller number). Counting messages
+would be quite performance-intense and is thus not done.</p></li>
+</ul>
+<p>The following counters are available when <cite>retryfailures=”on”</cite> is used:</p>
+<ul class="simple">
+<li><p><strong>response.success</strong> - number of records successfully sent in bulk index
+requests - counts the number of successful responses</p></li>
+<li><p><strong>response.bad</strong> - number of times omelasticsearch received a response in a
+bulk index response that was unrecognized or unable to be parsed.  This may
+indicate that omelasticsearch is attempting to communicate with a version of
+Elasticsearch that is incompatible, or is otherwise sending back data in the
+response that cannot be handled</p></li>
+<li><p><strong>response.duplicate</strong> - number of records in the bulk index request that
+were duplicates of already existing records - this will only be reported if
+using <cite>writeoperation=”create”</cite> and <cite>bulkid</cite> to assign each record a unique
+ID</p></li>
+<li><p><strong>response.badargument</strong> - number of times omelasticsearch received a
+response that had a status indicating omelasticsearch sent bad data to
+Elasticsearch.  For example, status <cite>400</cite> and an error message indicating
+omelasticsearch attempted to store a non-numeric string value in a numeric
+field.</p></li>
+<li><p><strong>response.bulkrejection</strong> - number of times omelasticsearch received a
+response that had a status indicating Elasticsearch was unable to process
+the record at this time - status <cite>429</cite>.  The record can be retried.</p></li>
+<li><p><strong>response.other</strong> - number of times omelasticsearch received a
+response not recognized as one of the above responses, typically some other
+<cite>4xx</cite> or <cite>5xx</cite> HTTP status.</p></li>
+<li><p><strong>rebinds</strong> - if using <cite>rebindinterval</cite> this will be the number of
+times omelasticsearch has reconnected to Elasticsearch</p></li>
+</ul>
+<p><strong>The fail.httprequests and fail.http counters reflect only failures that
+omelasticsearch detected.</strong> Once it detects problems, it (usually, depends on
+circumstances) tell the rsyslog core that it wants to be suspended until the
+situation clears (this is a requirement for rsyslog output modules). Once it is
+suspended, it does NOT receive any further messages. Depending on the user
+configuration, messages will be lost during this period. Those lost messages will
+NOT be counted by impstats (as it does not see them).</p>
+<p>Note that some previous (pre 7.4.5) versions of this plugin had different counters.
+These were experimental and confusing. The only ones really used were “submits”,
+which were the number of successfully processed messages and “connfail” which were
+equivalent to “failed.http”.</p>
+</section>
+<section id="how-retries-are-handled">
+<h2>How Retries Are Handled<a class="headerlink" href="#how-retries-are-handled" title="Link to this heading">¶</a></h2>
+<p>When using <cite>retryfailures=”on”</cite> (<a class="reference internal" href="#omelasticsearch-retryfailures"><span class="std std-ref">retryfailures</span></a>), the
+original <cite>Message</cite> object (that is, the original <cite>smsg_t *msg</cite> object) <strong>is not
+available</strong>.  This means none of the metadata associated with that object, such
+as various timestamps, hosts/ip addresses, etc. are not available for the retry
+operation.  The only thing available are the metadata header (_index, _type,
+_id, pipeline, _parent) and original JSON string sent in the original request,
+and whatever data is returned in the error response.  All of these are made
+available in the <cite>$.omes</cite> fields.  If the same field name exists in the request
+metadata and the response, the field from the request will be used, in order to
+facilitate retrying the exact same request.  For the message to retry, the code
+will take the original JSON string and parse it back into an internal <cite>Message</cite>
+object.  This means you <strong>may need to use a different template</strong> to output
+messages for your retry ruleset.  For example, if you used the following
+template to format the Elasticsearch message for the initial submission:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;es_output_template&quot;
+         type=&quot;list&quot;
+         option.json=&quot;on&quot;) {
+           constant(value=&quot;{&quot;)
+             constant(value=&quot;\&quot;timestamp\&quot;:\&quot;&quot;)      property(name=&quot;timereported&quot; dateFormat=&quot;rfc3339&quot;)
+             constant(value=&quot;\&quot;,\&quot;message\&quot;:\&quot;&quot;)     property(name=&quot;msg&quot;)
+             constant(value=&quot;\&quot;,\&quot;host\&quot;:\&quot;&quot;)        property(name=&quot;hostname&quot;)
+             constant(value=&quot;\&quot;,\&quot;severity\&quot;:\&quot;&quot;)    property(name=&quot;syslogseverity-text&quot;)
+             constant(value=&quot;\&quot;,\&quot;facility\&quot;:\&quot;&quot;)    property(name=&quot;syslogfacility-text&quot;)
+             constant(value=&quot;\&quot;,\&quot;syslogtag\&quot;:\&quot;&quot;)   property(name=&quot;syslogtag&quot;)
+           constant(value=&quot;\&quot;}&quot;)
+         }
+</pre></div>
+</div>
+<p>You would have to use a different template for the retry, since none of the
+<cite>timereported</cite>, <cite>msg</cite>, etc. fields will have the same values for the retry as
+for the initial try.</p>
+<p>Same with the other omelasticsearch parameters which can be constructed with
+templates, such as <cite>“dynpipelinename”</cite>, <cite>“dynsearchindex”</cite>, <cite>“dynsearchtype”</cite>,
+<cite>“dynparent”</cite>, and <cite>“dynbulkid”</cite>.  For example, if you generate the <cite>_id</cite> to
+use in the request, you will want to reuse the same <cite>_id</cite> for each subsequent
+retry:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;id-template&quot; type=&quot;string&quot; string=&quot;%$.es_msg_id%&quot;)
+if strlen($.omes!_id) &gt; 0 then {
+    set $.es_msg_id = $.omes!_id;
+} else {
+    # NOTE: depends on rsyslog being compiled with --enable-uuid
+    set $.es_msg_id = $uuid;
+}
+action(type=&quot;omelasticsearch&quot; bulkid=&quot;id-template&quot; ...)
+</pre></div>
+</div>
+<p>That is, if this is a retry, <cite>$.omes!_id</cite> will be set, so use that value for
+the bulk id for this record, otherwise, generate a new one with <cite>$uuid</cite>.  Note
+that the template uses the temporary variable <cite>$.es_msg_id</cite> which must be set
+each time, to either <cite>$.omes!_id</cite> or <cite>$uuid</cite>.</p>
+<p>The <cite>rawmsg</cite> field is a special case.  If the original request had a field
+called <cite>message</cite>, then when constructing the new message from the original to
+retry, the <cite>rawmsg</cite> message property will be set to the value of the <cite>message</cite>
+field.  Otherwise, the <cite>rawmsg</cite> property value will be set to the entire
+original request - the data part, not the metadata.  In previous versions,
+without the <cite>message</cite> field, the <cite>rawmsg</cite> property was set to the value of the
+data plus the Elasticsearch metadata, which caused problems with retries.  See
+<a class="reference external" href="https://github.com/rsyslog/rsyslog/issues/3573">rsyslog issue 3573</a></p>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading">¶</a></h2>
+<section id="example-1">
+<h3>Example 1<a class="headerlink" href="#example-1" title="Link to this heading">¶</a></h3>
+<p>The following sample does the following:</p>
+<ul class="simple">
+<li><p>loads the omelasticsearch module</p></li>
+<li><p>outputs all logs to Elasticsearch using the default settings</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>module(load=&quot;omelasticsearch&quot;)
+*.*     action(type=&quot;omelasticsearch&quot;)
+</pre></div>
+</div>
+</section>
+<section id="example-2">
+<h3>Example 2<a class="headerlink" href="#example-2" title="Link to this heading">¶</a></h3>
+<p>The following sample does the following:</p>
+<ul class="simple">
+<li><p>loads the omelasticsearch module</p></li>
+<li><p>outputs all logs to Elasticsearch using the full JSON logging template including program name</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>module(load=&quot;omelasticsearch&quot;)
+*.*     action(type=&quot;omelasticsearch&quot; template=&quot;FullJSONFmt&quot;)
+</pre></div>
+</div>
+</section>
+<section id="example-3">
+<h3>Example 3<a class="headerlink" href="#example-3" title="Link to this heading">¶</a></h3>
+<p>The following sample does the following:</p>
+<ul class="simple">
+<li><p>loads the omelasticsearch module</p></li>
+<li><p>defines a template that will make the JSON contain the following
+properties</p>
+<ul>
+<li><p>RFC-3339 timestamp when the event was generated</p></li>
+<li><p>the message part of the event</p></li>
+<li><p>hostname of the system that generated the message</p></li>
+<li><p>severity of the event, as a string</p></li>
+<li><p>facility, as a string</p></li>
+<li><p>the tag of the event</p></li>
+</ul>
+</li>
+<li><p>outputs to Elasticsearch with the following settings</p>
+<ul>
+<li><p>host name of the server is myserver.local</p></li>
+<li><p>port is 9200</p></li>
+<li><p>JSON docs will look as defined in the template above</p></li>
+<li><p>index will be “test-index”</p></li>
+<li><p>type will be “test-type”</p></li>
+<li><p>activate bulk mode. For that to work effectively, we use an
+in-memory queue that can hold up to 5000 events. The maximum bulk
+size will be 300</p></li>
+<li><p>retry indefinitely if the HTTP request failed (eg: if the target
+server is down)</p></li>
+</ul>
+</li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>module(load=&quot;omelasticsearch&quot;)
+template(name=&quot;testTemplate&quot;
+         type=&quot;list&quot;
+         option.json=&quot;on&quot;) {
+           constant(value=&quot;{&quot;)
+             constant(value=&quot;\&quot;timestamp\&quot;:\&quot;&quot;)      property(name=&quot;timereported&quot; dateFormat=&quot;rfc3339&quot;)
+             constant(value=&quot;\&quot;,\&quot;message\&quot;:\&quot;&quot;)     property(name=&quot;msg&quot;)
+             constant(value=&quot;\&quot;,\&quot;host\&quot;:\&quot;&quot;)        property(name=&quot;hostname&quot;)
+             constant(value=&quot;\&quot;,\&quot;severity\&quot;:\&quot;&quot;)    property(name=&quot;syslogseverity-text&quot;)
+             constant(value=&quot;\&quot;,\&quot;facility\&quot;:\&quot;&quot;)    property(name=&quot;syslogfacility-text&quot;)
+             constant(value=&quot;\&quot;,\&quot;syslogtag\&quot;:\&quot;&quot;)   property(name=&quot;syslogtag&quot;)
+           constant(value=&quot;\&quot;}&quot;)
+         }
+action(type=&quot;omelasticsearch&quot;
+       server=&quot;myserver.local&quot;
+       serverport=&quot;9200&quot;
+       template=&quot;testTemplate&quot;
+       searchIndex=&quot;test-index&quot;
+       searchType=&quot;test-type&quot;
+       bulkmode=&quot;on&quot;
+       maxbytes=&quot;100m&quot;
+       queue.type=&quot;linkedlist&quot;
+       queue.size=&quot;5000&quot;
+       queue.dequeuebatchsize=&quot;300&quot;
+       action.resumeretrycount=&quot;-1&quot;)
+</pre></div>
+</div>
+</section>
+<section id="example-4">
+<span id="omelasticsearch-writeoperation-example"></span><h3>Example 4<a class="headerlink" href="#example-4" title="Link to this heading">¶</a></h3>
+<p>The following sample shows how to use <a class="reference internal" href="#omelasticsearch-writeoperation"><span class="std std-ref">writeoperation</span></a>
+with <a class="reference internal" href="#omelasticsearch-dynbulkid"><span class="std std-ref">dynbulkid</span></a> and <a class="reference internal" href="#omelasticsearch-bulkid"><span class="std std-ref">bulkid</span></a>.  For
+simplicity, it assumes rsyslog has been built with <cite>–enable-libuuid</cite> which
+provides the <cite>uuid</cite> property for each record:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>module(load=&quot;omelasticsearch&quot;)
+set $!es_record_id = $uuid;
+template(name=&quot;bulkid-template&quot; type=&quot;list&quot;) { property(name=&quot;$!es_record_id&quot;) }
+action(type=&quot;omelasticsearch&quot;
+       ...
+       bulkmode=&quot;on&quot;
+       bulkid=&quot;bulkid-template&quot;
+       dynbulkid=&quot;on&quot;
+       writeoperation=&quot;create&quot;)
+</pre></div>
+</div>
+</section>
+<section id="example-5">
+<span id="omelasticsearch-retry-example"></span><h3>Example 5<a class="headerlink" href="#example-5" title="Link to this heading">¶</a></h3>
+<p>The following sample shows how to use <a class="reference internal" href="#omelasticsearch-retryfailures"><span class="std std-ref">retryfailures</span></a> to
+process, discard, or retry failed operations.  This uses
+<cite>writeoperation=”create”</cite> with a unique <cite>bulkid</cite> so that we can check for and
+discard duplicate messages as successful.  The <cite>try_es</cite> ruleset is used both
+for the initial attempt and any subsequent retries.  The code in the ruleset
+assumes that if <cite>$.omes!status</cite> is set and is non-zero, this is a retry for a
+previously failed operation.  If the status was successful, or Elasticsearch
+said this was a duplicate, the record is already in Elasticsearch, so we can
+drop the record.  If there was some error processing the response
+e.g. Elasticsearch sent a response formatted in some way that we did not know
+how to process, then submit the record to the <cite>error_es</cite> ruleset.  If the
+response was a “hard” error like <cite>400</cite>, then submit the record to the
+<cite>error_es</cite> ruleset.  In any other case, such as a status <cite>429</cite> or <cite>5xx</cite>, the
+record will be resubmitted to Elasticsearch. In the example, the <cite>error_es</cite>
+ruleset just dumps the records to a file.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>module(load=&quot;omelasticsearch&quot;)
+module(load=&quot;omfile&quot;)
+template(name=&quot;bulkid-template&quot; type=&quot;list&quot;) { property(name=&quot;$.es_record_id&quot;) }
+
+ruleset(name=&quot;error_es&quot;) {
+        action(type=&quot;omfile&quot; template=&quot;RSYSLOG_DebugFormat&quot; file=&quot;es-bulk-errors.log&quot;)
+}
+
+ruleset(name=&quot;try_es&quot;) {
+    if strlen($.omes!status) &gt; 0 then {
+        # retry case
+        if ($.omes!status == 200) or ($.omes!status == 201) or (($.omes!status == 409) and ($.omes!writeoperation == &quot;create&quot;)) then {
+            stop # successful
+        }
+        if ($.omes!writeoperation == &quot;unknown&quot;) or (strlen($.omes!error!type) == 0) or (strlen($.omes!error!reason) == 0) then {
+            call error_es
+            stop
+        }
+        if ($.omes!status == 400) or ($.omes!status &lt; 200) then {
+            call error_es
+            stop
+        }
+        # else fall through to retry operation
+    }
+    if strlen($.omes!_id) &gt; 0 then {
+        set $.es_record_id = $.omes!_id;
+    } else {
+        # NOTE: depends on rsyslog being compiled with --enable-uuid
+        set $.es_record_id = $uuid;
+    }
+    action(type=&quot;omelasticsearch&quot;
+              ...
+              bulkmode=&quot;on&quot;
+              bulkid=&quot;bulkid-template&quot;
+              dynbulkid=&quot;on&quot;
+              writeoperation=&quot;create&quot;
+              retryfailures=&quot;on&quot;
+              retryruleset=&quot;try_es&quot;)
+}
+call try_es
+</pre></div>
+</div>
+<hr class="docutils" />
+<p><strong>Support:</strong> <a class="reference external" href="https://rsyslog.ai">rsyslog Assistant</a> |
+<a class="reference external" href="https://github.com/rsyslog/rsyslog/discussions">GitHub Discussions</a> |
+GitHub Issues: <a class="reference external" href="https://github.com/rsyslog/rsyslog/">rsyslog source project</a></p>
+<p><strong>Contributing:</strong> Source &amp; docs: <a class="reference external" href="https://github.com/rsyslog/rsyslog/">rsyslog source project</a></p>
+<p>© 2008–2025 <a class="reference external" href="https://rainer.gerhards.net/">Rainer Gerhards</a>
+and others. Licensed under the <a class="reference external" href="https://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>.</p>
+</section>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="omfile.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">omfile: File Output Module</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="omdtls.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">omdtls: Output Module for DTLS Protocol over UDP</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            Made with 
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">omelasticsearch: Elasticsearch Output Module</a><ul>
+<li><a class="reference internal" href="#purpose">Purpose</a></li>
+<li><a class="reference internal" href="#notable-features">Notable Features</a></li>
+<li><a class="reference internal" href="#configuration-parameters">Configuration Parameters</a><ul>
+<li><a class="reference internal" href="#action-parameters">Action Parameters</a><ul>
+<li><a class="reference internal" href="#server">Server</a></li>
+<li><a class="reference internal" href="#serverport">Serverport</a></li>
+<li><a class="reference internal" href="#healthchecktimeout">HealthCheckTimeout</a></li>
+<li><a class="reference internal" href="#esversion-major">esVersion.major</a></li>
+<li><a class="reference internal" href="#searchindex">searchIndex</a></li>
+<li><a class="reference internal" href="#dynsearchindex">dynSearchIndex</a></li>
+<li><a class="reference internal" href="#searchtype">searchType</a></li>
+<li><a class="reference internal" href="#dynsearchtype">dynSearchType</a></li>
+<li><a class="reference internal" href="#pipelinename">pipelineName</a></li>
+<li><a class="reference internal" href="#dynpipelinename">dynPipelineName</a></li>
+<li><a class="reference internal" href="#skippipelineifempty">skipPipelineIfEmpty</a></li>
+<li><a class="reference internal" href="#asyncrepl">asyncrepl</a></li>
+<li><a class="reference internal" href="#usehttps">usehttps</a></li>
+<li><a class="reference internal" href="#timeout">timeout</a></li>
+<li><a class="reference internal" href="#indextimeout">indexTimeout</a></li>
+<li><a class="reference internal" href="#template">template</a></li>
+<li><a class="reference internal" href="#bulkmode">bulkmode</a></li>
+<li><a class="reference internal" href="#maxbytes">maxbytes</a></li>
+<li><a class="reference internal" href="#parent">parent</a></li>
+<li><a class="reference internal" href="#dynparent">dynParent</a></li>
+<li><a class="reference internal" href="#uid">uid</a></li>
+<li><a class="reference internal" href="#pwd">pwd</a></li>
+<li><a class="reference internal" href="#errorfile">errorFile</a></li>
+<li><a class="reference internal" href="#tls-cacert">tls.cacert</a></li>
+<li><a class="reference internal" href="#tls-mycert">tls.mycert</a></li>
+<li><a class="reference internal" href="#tls-myprivkey">tls.myprivkey</a></li>
+<li><a class="reference internal" href="#allowunsignedcerts">allowunsignedcerts</a></li>
+<li><a class="reference internal" href="#skipverifyhost">skipverifyhost</a></li>
+<li><a class="reference internal" href="#bulkid">bulkid</a></li>
+<li><a class="reference internal" href="#dynbulkid">dynbulkid</a></li>
+<li><a class="reference internal" href="#writeoperation">writeoperation</a></li>
+<li><a class="reference internal" href="#retryfailures">retryfailures</a></li>
+<li><a class="reference internal" href="#retryruleset">retryruleset</a></li>
+<li><a class="reference internal" href="#ratelimit-interval">ratelimit.interval</a></li>
+<li><a class="reference internal" href="#ratelimit-burst">ratelimit.burst</a></li>
+<li><a class="reference internal" href="#rebindinterval">rebindinterval</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#statistic-counter">Statistic Counter</a></li>
+<li><a class="reference internal" href="#how-retries-are-handled">How Retries Are Handled</a></li>
+<li><a class="reference internal" href="#examples">Examples</a><ul>
+<li><a class="reference internal" href="#example-1">Example 1</a></li>
+<li><a class="reference internal" href="#example-2">Example 2</a></li>
+<li><a class="reference internal" href="#example-3">Example 3</a></li>
+<li><a class="reference internal" href="#example-4">Example 4</a></li>
+<li><a class="reference internal" href="#example-5">Example 5</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../../_static/documentation_options.js?v=6fd4f6cc"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/scripts/furo.js?v=46bd48cc"></script>
+    </body>
+</html>

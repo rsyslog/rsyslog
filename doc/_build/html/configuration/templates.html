@@ -1,0 +1,1497 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="rsyslog Properties" href="properties.html" /><link rel="prev" title="Library Modules" href="modules/idx_library.html" />
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.07.19 -->
+        <title>Templates - rsyslog 8.2508 daily stable documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=25af2a20" />
+    <link rel="stylesheet" type="text/css" href="../_static/rsyslog.css?v=6406a7f4" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #eeffcc;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #2b2b2b;
+  --color-code-foreground: #f8f8f2;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #2b2b2b;
+  --color-code-foreground: #f8f8f2;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">rsyslog 8.2508 daily stable documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <span class="sidebar-brand-text">rsyslog 8.2508 daily stable documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../about/index.html">About rsyslog</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of About rsyslog</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../about/ai_first.html">AI-First: Our Vision for rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../about/history.html">History and Future of rsyslog</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../getting_started/index.html">Getting Started with rsyslog</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Getting Started with rsyslog</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/installation.html">Installing rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/basic_configuration.html">Basic Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/understanding_default_config.html">Understanding the Default Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/forwarding_logs.html">Forwarding Logs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/next_steps.html">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Configuration</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Configuration</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="basic_structure.html">Basic Structure</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="modules/idx_output.html">Output Modules</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Output Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/omamqp1.html">omamqp1: AMQP 1.0 Messaging Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omazureeventhubs.html">omazureeventhubs: Microsoft Azure Event Hubs Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omclickhouse.html">omclickhouse: ClickHouse Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omczmq.html">omczmq: Output module for ZeroMQ</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omdtls.html">omdtls: Output Module for DTLS Protocol over UDP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omelasticsearch.html">omelasticsearch: Elasticsearch Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omfile.html">omfile: File Output Module</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="modules/omfwd.html">omfwd: syslog Forwarding Output Module</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of omfwd: syslog Forwarding Output Module</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/omfwd/parameters/basic.html">Basic Parameters</a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/omfwd/parameters/module.html">Module Parameters</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omhdfs.html">omhdfs: Hadoop Filesystem Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omhiredis.html">omhiredis: Redis Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omhttp.html">omhttp: HTTP Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omhttpfs.html">omhttpfs: Hadoop HTTPFS Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omjournal.html">omjournal: Systemd Journal Output</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omkafka.html">omkafka: write to Apache Kafka</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omlibdbi.html">omlibdbi: Generic Database Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/ommail.html">ommail: Mail Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/ommongodb.html">ommongodb: MongoDB Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/ommysql.html">ommysql: MariaDB/MySQL Database Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omoracle.html">omoracle: Oracle Database Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/ompgsql.html">PostgreSQL Database Output Module (ompgsql)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/ompipe.html">ompipe: Pipe Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omprog.html">omprog: Program integration Output module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omrabbitmq.html">omrabbitmq: RabbitMQ output module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omrelp.html">omrelp: RELP Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omruleset.html">omruleset: ruleset output/including module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omsendertrack.html">omsendertrack: Sender Tracking Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omsnmp.html">omsnmp: SNMP Trap Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omstdout.html">omstdout: stdout output module (testbench tool)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omudpspoof.html">omudpspoof: UDP spoofing output module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omusrmsg.html">omusrmsg: notify users</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omuxsock.html">omuxsock: Unix sockets Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/sigprov_gt.html">GuardTime Log Signature Provider (gt)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/sigprov_ksi.html">Keyless Signature Infrastructure Provider (ksi)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/sigprov_ksi12.html">KSI Signature Provider (rsyslog-ksi-ls12)</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="modules/idx_input.html">Input Modules</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Input Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/im3195.html">im3195: RFC3195 Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imbatchreport.html">imbatchreport: Batch report input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imczmq.html">imczmq: Input module for ZeroMQ</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imdocker.html">imdocker: Docker Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imdtls.html">imdtls: Input Module for DTLS Protocol over UDP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imfile.html">imfile: Text File Input Module</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="modules/imgssapi.html">imgssapi: GSSAPI Syslog Input Module</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of imgssapi: GSSAPI Syslog Input Module</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/gssapi.html">GSSAPI module support in rsyslog v3</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imhiredis.html">Imhiredis: Redis input plugin</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imhttp.html">imhttp: HTTP input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imjournal.html">imjournal: Systemd Journal Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imkafka.html">imkafka: read from Apache Kafka</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imklog.html">imklog: Kernel Log Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imkmsg.html">imkmsg: /dev/kmsg Log Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/immark.html">immark: Mark Message Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/impcap.html">Impcap: network traffic capture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/improg.html">improg: Program integration input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/impstats.html">impstats: Generate Periodic Statistics of Internal Counters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imptcp.html">imptcp: Plain TCP Syslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imrelp.html">imrelp: RELP Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imsolaris.html">imsolaris: Solaris Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imtcp.html">imtcp: TCP Syslog Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imtuxedoulog.html">imtuxedoulog: Tuxedo ULOG input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imudp.html">imudp: UDP Syslog Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imuxsock.html">imuxsock: Unix Socket Input Module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="modules/idx_parser.html">Parser Modules</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Parser Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/pmciscoios.html">pmciscoios</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/pmdb2diag.html">pmdb2diag: DB2 Diag file parser module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/pmlastmsg.html">pmlastmsg: last message repeated n times</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/pmnormalize.html">Log Message Normalization Parser Module (pmnormalize)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/pmnull.html">pmnull: Syslog Null Parser Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/pmrfc3164.html">pmrfc3164: Parse RFC3164-formatted messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/pmrfc3164sd.html">pmrfc3164sd: Parse RFC5424 structured data inside RFC3164 messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/pmrfc5424.html">pmrfc5424: Parse RFC5424-formatted messages</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="modules/idx_messagemod.html">Message Modification Modules</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of Message Modification Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmaitag.html">AI-based classification (mmaitag)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmanon.html">IP Address Anonymization Module (mmanon)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmcount.html">mmcount</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmdarwin.html">Darwin connector (mmdarwin)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmdblookup.html">MaxMind/GeoIP DB lookup (mmdblookup)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmexternal.html">Support module for external message modification modules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmfields.html">Fields Extraction Module (mmfields)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmjsonparse.html">JSON/CEE Structured Content Extraction Module (mmjsonparse)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmkubernetes.html">Kubernetes Metadata Module (mmkubernetes)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmnormalize.html">Log Message Normalization Module (mmnormalize)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmpstrucdata.html">RFC5424 structured data parsing module (mmpstrucdata)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmrfc5424addhmac.html">mmrfc5424addhmac</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmrm1stspace.html">mmrm1stspace: First Space Modification Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmsequence.html">Number generator and counter module (mmsequence)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmsnmptrapd.html">mmsnmptrapd message modification module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmtaghostname.html">mmtaghostname: message modification module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmutf8fix.html">Fix invalid UTF-8 Sequences (mmutf8fix)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="modules/idx_stringgen.html">String Generator Modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/idx_library.html">Library Modules</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Templates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="properties.html">rsyslog Properties</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="property_replacer.html">The Property Replacer</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of The Property Replacer</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="nomatch.html">Property Replacer nomatch mode</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="filters.html">Filter Conditions</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../rainerscript/index.html">RainerScript</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of RainerScript</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/data_types.html">Data Types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/expressions.html">Expressions</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../rainerscript/functions/index.html">Functions</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><div class="visually-hidden">Toggle navigation of Functions</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4 has-children"><a class="reference internal" href="../rainerscript/functions/idx_built-in_functions.html">Built-in Functions</a><input class="toctree-checkbox" id="toctree-checkbox-13" name="toctree-checkbox-13" role="switch" type="checkbox"/><label for="toctree-checkbox-13"><div class="visually-hidden">Toggle navigation of Built-in Functions</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-cnum.html">cnum()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-cstr.html">cstr()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-dyn_inc.html">dyn_inc()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-exec_template.html">exec_template()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-exists.html">exists()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-field.html">field()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-format_time.html">format_time()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-get_property.html">get_property()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-getenv.html">getenv()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-int2hex.html">int2hex()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-ipv4convert.html">num2ipv4() / ipv42num()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-is_time.html">is_time()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-lookup.html">lookup()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-parse_json.html">parse_json()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-parse_time.html">parse_time()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-percentile_observe.html">percentile_observe()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-previous_action_suspended.html">previous_action_suspended()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-prifilt.html">prifilt()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-random.html">random()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-re_extract.html">re_extract()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-re_extract_i.html">re_extract_i()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-re_match.html">re_match()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-re_match_i.html">re_match_i()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-replace.html">replace()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-script_error.html">script_error()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-strlen.html">strlen()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-substring.html">substring()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-tolower.html">tolower()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-trim.html">ltrim() / rtrim()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-wrap.html">wrap()</a></li>
+</ul>
+</li>
+<li class="toctree-l4 has-children"><a class="reference internal" href="../rainerscript/functions/idx_module_functions.html">Module Functions</a><input class="toctree-checkbox" id="toctree-checkbox-14" name="toctree-checkbox-14" role="switch" type="checkbox"/><label for="toctree-checkbox-14"><div class="visually-hidden">Toggle navigation of Module Functions</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/mo-ffaup.html">Faup</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/mo-hashXX.html">HashXX</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/mo-hashXXmod.html">HashXXmod</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/mo-http_request.html">HTTP-Request</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/mo-unflatten.html">Unflatten</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/control_structures.html">Control Structures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/configuration_objects.html">configuration objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/constant_strings.html">String Constants</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/variable_property_types.html">Variable (Property) types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/lookup_tables.html">Lookup Tables</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/queue_parameters.html">General Queue Parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/rainerscript_call.html">The rsyslog “call” statement</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/rainerscript_call_indirect.html">The rsyslog “call_indirect” statement</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/global.html">global() configuration object</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/include.html">The rsyslog include() object</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="actions.html">Actions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input.html">Input</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parser.html">Parser</a></li>
+<li class="toctree-l2"><a class="reference internal" href="timezone.html">timezone</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="index_directives.html">Legacy Configuration Directives</a><input class="toctree-checkbox" id="toctree-checkbox-15" name="toctree-checkbox-15" role="switch" type="checkbox"/><label for="toctree-checkbox-15"><div class="visually-hidden">Toggle navigation of Legacy Configuration Directives</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="config_param_types.html">Configuration Parameter Types</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="global/index.html">Legacy Global Configuration Statements</a><input class="toctree-checkbox" id="toctree-checkbox-16" name="toctree-checkbox-16" role="switch" type="checkbox"/><label for="toctree-checkbox-16"><div class="visually-hidden">Toggle navigation of Legacy Global Configuration Statements</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_abortonuncleanconfig.html">$AbortOnUncleanConfig</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_debugprintcfsyslinehandlerlist.html">$DebugPrintCFSyslineHandlerList</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_debugprintmodulelist.html">$DebugPrintModuleList</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_debugprinttemplatelist.html">$DebugPrintTemplateList</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_failonchownfailure.html">$FailOnChownFailure</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_generateconfiggraph.html">$GenerateConfigGraph</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_includeconfig.html">$IncludeConfig</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_mainmsgqueuesize.html">$MainMsgQueueSize</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_maxopenfiles.html">$MaxOpenFiles</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_moddir.html">$ModDir</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_modload.html">$ModLoad</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_umask.html">$UMASK</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_resetconfigvariables.html">$ResetConfigVariables</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="input_directives/index.html">Legacy Directives affecting Input Modules</a><input class="toctree-checkbox" id="toctree-checkbox-17" name="toctree-checkbox-17" role="switch" type="checkbox"/><label for="toctree-checkbox-17"><div class="visually-hidden">Toggle navigation of Legacy Directives affecting Input Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="input_directives/rsconf1_allowedsender.html">$AllowedSender</a></li>
+<li class="toctree-l4"><a class="reference internal" href="input_directives/rsconf1_dropmsgswithmaliciousdnsptrrecords.html">$DropMsgsWithMaliciousDnsPTRRecords</a></li>
+<li class="toctree-l4"><a class="reference internal" href="input_directives/rsconf1_controlcharacterescapeprefix.html">$ControlCharacterEscapePrefix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="input_directives/rsconf1_droptrailinglfonreception.html">$DropTrailingLFOnReception</a></li>
+<li class="toctree-l4"><a class="reference internal" href="input_directives/rsconf1_escape8bitcharsonreceive.html">$Escape8BitCharactersOnReceive</a></li>
+<li class="toctree-l4"><a class="reference internal" href="input_directives/rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a></li>
+<li class="toctree-l4"><a class="reference internal" href="input_directives/rsconf1_markmessageperiod.html">$MarkMessagePeriod</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="action/index.html">Depricated Legacy Action-Specific Configuration Statements</a><input class="toctree-checkbox" id="toctree-checkbox-18" name="toctree-checkbox-18" role="switch" type="checkbox"/><label for="toctree-checkbox-18"><div class="visually-hidden">Toggle navigation of Depricated Legacy Action-Specific Configuration Statements</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_actionexeconlywhenpreviousissuspended.html">How to Convert Deprecated <cite>$ActionExecOnlyWhenPreviousIsSuspended</cite> to Modern Style</a></li>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_actionresumeinterval.html">How to Convert Deprecated <cite>$ActionResumeInterval</cite> to Modern Style</a></li>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_repeatedmsgreduction.html">$RepeatedMsgReduction</a></li>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_omfileforcechown.html">$omfileForceChown</a></li>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_dirgroup.html">$DirGroup</a></li>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_dirowner.html">How to Convert Deprecated <cite>$DirOwner</cite> to Modern Style</a></li>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_dynafilecachesize.html">$DynaFileCacheSize</a></li>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_filecreatemode.html">$FileCreateMode</a></li>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_filegroup.html">$FileGroup</a></li>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_fileowner.html">$FileOwner</a></li>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_gssforwardservicename.html">$GssForwardServiceName</a></li>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_gssmode.html">$GssMode</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="ruleset/index.html">Ruleset-Specific Legacy Configuration Statements</a><input class="toctree-checkbox" id="toctree-checkbox-19" name="toctree-checkbox-19" role="switch" type="checkbox"/><label for="toctree-checkbox-19"><div class="visually-hidden">Toggle navigation of Ruleset-Specific Legacy Configuration Statements</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="ruleset/rsconf1_rulesetcreatemainqueue.html">$RulesetCreateMainQueue</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ruleset/rsconf1_rulesetparser.html">$RulesetParser</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="rsyslog_statistic_counter.html">rsyslog statistic counter</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="modules/index.html">Modules</a><input class="toctree-checkbox" id="toctree-checkbox-20" name="toctree-checkbox-20" role="switch" type="checkbox"/><label for="toctree-checkbox-20"><div class="visually-hidden">Toggle navigation of Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/workflow.html">Where are the modules integrated into the Message Flow?</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="output_channels.html">Output Channels</a></li>
+<li class="toctree-l2"><a class="reference internal" href="droppriv.html">Dropping privileges in rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipv6.html">Notes on IPv6 Handling in Rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cryprov_gcry.html">libgcrypt Log Crypto Provider (gcry)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cryprov_ossl.html">libossl Log Crypto Provider (ossl)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dyn_stats.html">Dynamic Stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lookup_tables.html">Lookup Tables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="percentile_stats.html">Percentile Stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="converting_to_new_format.html">Converting older formats to <code class="docutils literal notranslate"><span class="pre">advanced</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="conf_formats.html">Configuration Formats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sysklogd_format.html">sysklogd format</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../faq/index.html">FAQ</a><input class="toctree-checkbox" id="toctree-checkbox-21" name="toctree-checkbox-21" role="switch" type="checkbox"/><label for="toctree-checkbox-21"><div class="visually-hidden">Toggle navigation of FAQ</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../faq/faq_overall.html">FAQ: some general topics often asked</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../faq/difference_queues.html">What is the difference between the main_queue and a queue with a ruleset tied to an input?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../faq/encrypt_mysql_traffic_ommysql.html">FAQ: Encrypting MySQL Traffic with ommysql Plugin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../faq/imudp-packet-loss.html">FAQ: Troubleshooting UDP Packet Loss</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../faq/common-config-mistakes.html">Common Configuration Mistakes and Misunderstandings</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials/index.html">Tutorials</a><input class="toctree-checkbox" id="toctree-checkbox-22" name="toctree-checkbox-22" role="switch" type="checkbox"/><label for="toctree-checkbox-22"><div class="visually-hidden">Toggle navigation of Tutorials</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../tutorials/tls_cert_summary.html">Encrypting Syslog Traffic with TLS (SSL)</a><input class="toctree-checkbox" id="toctree-checkbox-23" name="toctree-checkbox-23" role="switch" type="checkbox"/><label for="toctree-checkbox-23"><div class="visually-hidden">Toggle navigation of Encrypting Syslog Traffic with TLS (SSL)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/tls_cert_scenario.html">Sample Use Case: Single Central Log Server</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/tls_cert_ca.html">Setting up the CA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/tls_cert_machine.html">Generating the machine certificate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/tls_cert_server.html">Setting up the Central Server</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/tls_cert_client.html">Setting up a client</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/tls_cert_udp_relay.html">Setting up the UDP syslog relay</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/tls_cert_errmsgs.html">Error Messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/tls_cert_script.html">Creating certificates with a script</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/tls.html">Encrypting Syslog Traffic with TLS (SSL) [short version]</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/database.html">Writing syslog messages to MariaDB, MySQL, PostgreSQL or any other supported Database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/high_database_rate.html">Handling a massive syslog database insert rate with Rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/reliable_forwarding.html">Reliable Forwarding of syslog Messages with Rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/recording_pri.html">Recording the Priority of Syslog Messages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/failover_syslog_server.html">Failover Syslog Server</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/log_rotation_fix_size.html">Log rotation with rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/gelf_forwarding.html">GELF forwarding in rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/log_sampling.html">Log Sampling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/random_sampling.html">Random sampling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/hash_sampling.html">Hash-based Sampling</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../troubleshooting/index.html">Troubleshooting</a><input class="toctree-checkbox" id="toctree-checkbox-24" name="toctree-checkbox-24" role="switch" type="checkbox"/><label for="toctree-checkbox-24"><div class="visually-hidden">Toggle navigation of Troubleshooting</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../troubleshooting/file_not_written.html">Output File is not Being Written</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../troubleshooting/selinux.html">Troubleshooting SELinux-Related Issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../troubleshooting/debug.html">Rsyslog Debug Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../troubleshooting/troubleshoot.html">troubleshooting problems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../troubleshooting/howtodebug.html">How to create a debug log</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../concepts/index.html">Concepts</a><input class="toctree-checkbox" id="toctree-checkbox-25" name="toctree-checkbox-25" role="switch" type="checkbox"/><label for="toctree-checkbox-25"><div class="visually-hidden">Toggle navigation of Concepts</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/queues.html">Understanding rsyslog Queues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/janitor.html">The Janitor Process</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/messageparser.html">Message parsers in rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/multi_ruleset.html">Multiple Rulesets in rsyslog</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../concepts/netstrm_drvr.html">NetStream Drivers</a><input class="toctree-checkbox" id="toctree-checkbox-26" name="toctree-checkbox-26" role="switch" type="checkbox"/><label for="toctree-checkbox-26"><div class="visually-hidden">Toggle navigation of NetStream Drivers</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../concepts/ns_ptcp.html">ptcp Network Stream Driver</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../concepts/ns_gtls.html">gtls Network Stream Driver</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../concepts/ns_gtls.html#supported-driver-modes">Supported Driver Modes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../concepts/ns_gtls.html#supported-authentication-modes">Supported Authentication Modes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../concepts/ns_gtls.html#checkextendedkeypurpose">CheckExtendedKeyPurpose</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../concepts/ns_gtls.html#prioritizesan">PrioritizeSAN</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../concepts/ns_ossl.html">openssl Network Stream Driver</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../development/index.html">Development</a><input class="toctree-checkbox" id="toctree-checkbox-27" name="toctree-checkbox-27" role="switch" type="checkbox"/><label for="toctree-checkbox-27"><div class="visually-hidden">Toggle navigation of Development</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../development/config_data_model.html">The rsyslog config data model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../development/config_data_model.html#objects">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../development/debugging.html">Debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../development/dev_action_threads.html">Action Threads and Queue Engine (Developer-Oriented)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../development/dev_codestyle.html">rsyslog code style</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../development/dev_oplugins.html">Writing Rsyslog Output Plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../development/dev_queue.html">The rsyslog queue object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../development/dev_testbench.html">writing rsyslog tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../development/doc_reference_section_guidelines.html">Documentation Reference Section Structure Guidelines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../development/doc_style_guide.html">Documentation Style Guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../development/generic_design.html">Generic design of a syslogd</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../development/internal_tooling.html">Internal tooling</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../idx_reference.html">Reference</a><input class="toctree-checkbox" id="toctree-checkbox-28" name="toctree-checkbox-28" role="switch" type="checkbox"/><label for="toctree-checkbox-28"><div class="visually-hidden">Toggle navigation of Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../containers/index.html">rsyslog and containers</a><input class="toctree-checkbox" id="toctree-checkbox-29" name="toctree-checkbox-29" role="switch" type="checkbox"/><label for="toctree-checkbox-29"><div class="visually-hidden">Toggle navigation of rsyslog and containers</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../containers/container_features.html">Container-Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../containers/docker_specifics.html">docker specifics</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../installation/index.html">Installation</a><input class="toctree-checkbox" id="toctree-checkbox-30" name="toctree-checkbox-30" role="switch" type="checkbox"/><label for="toctree-checkbox-30"><div class="visually-hidden">Toggle navigation of Installation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../installation/packages.html">Installing rsyslog from Package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../installation/rsyslog_docker.html">Using Rsyslog Docker Containers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../installation/install_from_source.html">Installing rsyslog from Source</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../installation/build_from_repo.html">Installing rsyslog from the source repository</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../historical/index.html">Historical Documents</a><input class="toctree-checkbox" id="toctree-checkbox-31" name="toctree-checkbox-31" role="switch" type="checkbox"/><label for="toctree-checkbox-31"><div class="visually-hidden">Toggle navigation of Historical Documents</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../historical/php_syslog_ng.html">Using php-syslog-ng with rsyslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../historical/multi_ruleset_legacy_format_samples.html">Legacy Format Samples for Multiple Rulesets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../historical/module_devel.html">Developing rsyslog modules (outdated)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../historical/high_performance.html">Receiving massive amounts of messages with high performance</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../historical/v8compatibility.html">Compatibility Notes for rsyslog v8</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../historical/v7compatibility.html">Compatibility Notes for rsyslog v7</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../historical/v6compatibility.html">Compatibility Notes for rsyslog v6</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../historical/v5compatibility.html">Compatibility Notes for rsyslog v5</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../historical/v4compatibility.html">Compatibility Notes for rsyslog v4</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../historical/v3compatibility.html">Compatibility Notes for rsyslog v3</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../history.html">RSyslog - History</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../licensing.html">Licensing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../how2help.html">How you can Help</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../community.html">Community Resources</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../features.html">RSyslog - Features</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../proposals/index.html">Proposals</a><input class="toctree-checkbox" id="toctree-checkbox-32" name="toctree-checkbox-32" role="switch" type="checkbox"/><label for="toctree-checkbox-32"><div class="visually-hidden">Toggle navigation of Proposals</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../proposals/version_naming.html">Version Naming</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../whitepapers/index.html">Rsyslog Whitepapers</a><input class="toctree-checkbox" id="toctree-checkbox-33" name="toctree-checkbox-33" role="switch" type="checkbox"/><label for="toctree-checkbox-33"><div class="visually-hidden">Toggle navigation of Rsyslog Whitepapers</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../whitepapers/syslog_parsing.html">syslog parsing in rsyslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../whitepapers/syslog_protocol.html">syslog-protocol support in rsyslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../whitepapers/queues_analogy.html">Turning Lanes and Rsyslog Queues</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../whitepapers/preserve_in_nat.html">Preserving syslog sender over NAT</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../whitepapers/reliable_logging.html">How reliable should reliable logging be?</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/configuration/templates.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="templates">
+<h1>Templates<a class="headerlink" href="#templates" title="Link to this heading">¶</a></h1>
+<section id="description">
+<h2>Description<a class="headerlink" href="#description" title="Link to this heading">¶</a></h2>
+<p>Templates are a key feature of rsyslog. They allow to specify any format
+a user might want. They are also used for dynamic file name generation.
+Every output in rsyslog uses templates - this holds true for files, user
+messages and so on. The database writer expects its template to be a
+proper SQL statement - so this is highly customizable too. You might ask
+how does all of this work when no templates at all are specified. Good
+question ;). The answer is simple, though. Templates compatible with the
+stock syslogd formats are hardcoded into rsyslogd. So if no template is
+specified, we use one of those hardcoded templates. Search for
+“template_” in rsconf.c and you will find the hardcoded ones.</p>
+<p>Templates are specified by template() objects. They can also be
+specified via $template legacy statements.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Note: key elements of templates are rsyslog properties. See the
+<a class="reference internal" href="properties.html"><span class="doc">rsyslog properties reference</span></a> for a list of which
+are available.</p>
+</div>
+</section>
+<section id="template-processing">
+<h2>Template processing<a class="headerlink" href="#template-processing" title="Link to this heading">¶</a></h2>
+<p>Due to lack of standardization regarding logs formats, when a template is
+specified it’s supposed to include HEADER, as defined in <a class="reference external" href="https://datatracker.ietf.org/doc/html/rfc5424">RFC5424</a></p>
+<p>It’s very important to have this in mind, and also to understand how
+<a class="reference external" href="http://www.rsyslog.com/doc/syslog_parsing.html">rsyslog parsing</a> works.</p>
+<p>For example, if the MSG field is set to “this:is a message” and neither HOSTNAME
+nor TAG are specified, the outgoing parser will split the message as:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>TAG:this:
+MSG:is a message
+</pre></div>
+</div>
+</section>
+<section id="the-template-object">
+<h2>The template() object<a class="headerlink" href="#the-template-object" title="Link to this heading">¶</a></h2>
+<p>The template() object is used to define templates. Note that it is a
+<strong>static</strong> object, that means all templates are defined when rsyslog
+reads the config file. As such, templates are not affected by
+if-statements or config nesting.</p>
+<p>The basic structure of the template object is as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(parameters)
+</pre></div>
+</div>
+<p>In addition to this simpler syntax, list templates (to be described
+below) support an extended syntax:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(parameters) { list-descriptions }
+</pre></div>
+</div>
+<p>Each template has a parameter <strong>name</strong>, which specifies the template
+name, and a parameter <strong>type</strong>, which specifies the template type. The
+name parameter must be unique, and behaviour is unpredictable if it is
+not. The <strong>type</strong> parameter specifies different template types.
+Different types simply enable different ways to specify the template
+content. The template type <strong>does not</strong> affect what an (output) plugin
+can do with it. So use the type that best fits your needs (from a config
+writing point of view!). The following types are available:</p>
+<ul class="simple">
+<li><p>list</p></li>
+<li><p>subtree</p></li>
+<li><p>string</p></li>
+<li><p>plugin</p></li>
+</ul>
+<p>The various types are described below.</p>
+<section id="list">
+<h3>List<a class="headerlink" href="#list" title="Link to this heading">¶</a></h3>
+<p>In this case, the template is generated by a list of constant and
+variable statements. These follow the template spec in curly braces.
+This type is also primarily meant to be used with structure-aware outputs,
+like ommongodb. However, it also works perfectly with text-based
+outputs. We recommend to use this mode if more complex property
+substitutions need to be done. In that case, the list-based template
+syntax is much clearer than the simple string-based one.</p>
+<p>The list template contains the template header (with <strong>type=”list”</strong>)
+and is followed by <strong>constant</strong> and <strong>property</strong> statements, given in
+curly braces to signify the template statement they belong to. As the
+name says, <strong>constant</strong> statements describe constant text and
+<strong>property</strong> describes property access. There are many options to
+<strong>property</strong>, described further below. Most of these options are used to
+extract only partial property contents or to modify the text obtained
+(for instance to change its case to upper or lower case).</p>
+<p>To grasp the idea, an actual sample is:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;tpl1&quot; type=&quot;list&quot;) {
+     constant(value=&quot;Syslog MSG is: &#39;&quot;)
+     property(name=&quot;msg&quot;)
+     constant(value=&quot;&#39;, &quot;)
+     property(name=&quot;timereported&quot; dateFormat=&quot;rfc3339&quot; caseConversion=&quot;lower&quot;)
+     constant(value=&quot;\n&quot;)
+     }
+</pre></div>
+</div>
+<p>This sample is probably primarily targeted at the usual file-based
+output.</p>
+<section id="constant-statement">
+<h4>Constant statement<a class="headerlink" href="#constant-statement" title="Link to this heading">¶</a></h4>
+<p>This provides a way to specify constant text. The text is used
+literally. It is primarily intended for text-based output, so that some
+constant text can be included. For example, if a complex template is
+built for file output, one usually needs to finish it by a newline,
+which can be introduced by a constant statement. Here is an actual
+sample of that use case from the rsyslog testbench:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">template</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;outfmt&quot;</span> <span class="nb">type</span><span class="o">=</span><span class="s2">&quot;list&quot;</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nb">property</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;$!usr!msgnum&quot;</span><span class="p">)</span>
+    <span class="n">constant</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The following escape sequences are recognized inside the constant text:</p>
+<ul class="simple">
+<li><p>\\ - single backslash</p></li>
+<li><p>\n - LF</p></li>
+<li><p>\ooo - (three octal digits) - represents a character with this
+octal numerical value (e.g. \101 equals “A”). Note that three octal digits
+must be given (in contrast to some languages, where between one and
+three are valid). While we support octal notation, we recommend to
+use hex notation as this is better known.</p></li>
+<li><p>\xhh - (where h is a hex digit) - represents a character with this
+hexadecimal numerical value (e.g. \x41 equals “A”). Note that two hexadecimal
+digits must be given (in contrast to some languages where either one or two
+are valid).</p></li>
+<li><p>… some others … list needs to be extended</p></li>
+</ul>
+<p>Note: if an unsupported character follows a backslash, this is treated
+as an error. Behaviour is unpredictable in this case.</p>
+<p>To aid usage of the same template both for text-based outputs and
+structured ones, constant text without an “outname” parameter will be
+ignored when creating the name/value tree for structured outputs. So if
+you want to supply some constant text e.g. to mongodb, you must include
+an outname, as can be seen here:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;outfmt&quot; type=&quot;list&quot;) {
+    property(name=&quot;$!usr!msgnum&quot;)
+    constant(value=&quot;\n&quot; outname=&quot;IWantThisInMyDB&quot;)
+}
+</pre></div>
+</div>
+<p>To generate a constant json field, the <cite>format</cite> parameter can be used, as
+in this example</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;outfmt&quot; type=&quot;list&quot; option.jsonf=&quot;on&quot;) {
+          property(outname=&quot;message&quot; name=&quot;msg&quot; format=&quot;jsonf&quot;)
+          constant(outname=&quot;@version&quot; value=&quot;1&quot; format=&quot;jsonf&quot;)
+}
+</pre></div>
+</div>
+<p>The constant statement in this case will generate <cite>“&#64;version”:”1”</cite>. Note that to do
+this, both the <cite>value</cite> and the <cite>format</cite> parameters must be given.</p>
+<p>The “constant” statement supports the following parameters:</p>
+<ul class="simple">
+<li><p>value - the constant value to use</p></li>
+<li><p>outname - the output field name (for structured outputs)</p></li>
+<li><p>format - can be either empty or <cite>jsonf</cite></p></li>
+</ul>
+</section>
+<section id="property-statement">
+<h4>Property statement<a class="headerlink" href="#property-statement" title="Link to this heading">¶</a></h4>
+<p>This statement is used to include property values. It can access all
+properties. Also, options permit to specify picking only part of a
+property or modifying it. It supports the following parameters:</p>
+<ul>
+<li><p><strong>name</strong> - the name of the property to access</p></li>
+<li><p><strong>outname</strong> - the output field name (for structured outputs)</p></li>
+<li><p><strong>dateformat</strong> - the date format to use (only for date-related properties).
+<a class="reference external" href="property_replacer.html#property-options">Here</a> you can find a list of all
+property options. <strong>TODO:</strong> right now, the property replacer documentation
+contains property format options for string templates, only. The formats for
+non-string templates differ. For example, date format options in string
+templates start with “date-” whereas those in property statements do not
+(e.g. “date-year” vs. just “year”). The technical reason behind this is
+that inside string templates, the option must include what it applies
+to whereas with the explicit format that is part of the parameter name.</p>
+<p>To create a customized format you can use multiple property options
+together. The following example would result in <strong>YYYY-MM-DD</strong>:</p>
+</li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>property(name=&quot;timereported&quot; dateformat=&quot;year&quot;)
+constant(value=&quot;-&quot;)
+property(name=&quot;timereported&quot; dateformat=&quot;month&quot;)
+constant(value=&quot;-&quot;)
+property(name=&quot;timereported&quot; dateformat=&quot;day&quot;)
+</pre></div>
+</div>
+<ul>
+<li><p><strong>date.inUTC</strong> - date shall be shown in UTC (please note that this
+requires a bit more performance due to the necessary conversions)
+Available since 8.18.0.</p></li>
+<li><p><strong>caseconversion</strong> - permits to convert case of the text. Supported
+values are “lower” and “upper”</p></li>
+<li><p><strong>controlcharacters</strong> - specifies how to handle control characters.
+Supported values are “escape”, which escapes them, “space”, which
+replaces them by a single space, and “drop”, which simply removes
+them from the string.</p></li>
+<li><p><strong>securepath</strong> - used for creating pathnames suitable for use in dynafile
+templates. Supported values are “drop” and “replace”.</p></li>
+<li><p><strong>format</strong> - specify format on a field basis. Supported values are:</p>
+<ul class="simple">
+<li><p>“<a class="reference external" href="property_replacer.html#csv">csv</a>“ for use when csv-data is
+generated</p></li>
+<li><p>“<a class="reference external" href="property_replacer.html#json">json</a>“ which formats proper
+json content (but without a field header)</p></li>
+<li><p>“<a class="reference external" href="property_replacer.html#jsonf">jsonf</a>“ which formats as a
+complete json field</p></li>
+<li><p>“<a class="reference external" href="property_replacer.html#jsonr">jsonr</a>“ which avoids double
+escaping the value but makes it safe for a json field</p></li>
+<li><p>“<a class="reference external" href="property_replacer.html#jsonfr">jsonfr</a>“ which is the
+combination of “jsonf” and “jsonr”.</p></li>
+</ul>
+</li>
+<li><p><strong>position.from</strong> - obtain substring starting from this position (1 is
+the first position)</p></li>
+<li><p><strong>position.to</strong> - obtain substring up to this position. As a special
+extension available since 8.2302.0. the <cite>position.to</cite> value may be
+negative (-n). In this case, all characters from <cite>position.from</cite> to the
+end of the actual property string except the last n characters are extracted.
+This makes it easy to strip the beginning and end of a string with changing
+legth. Let us assume you have a string <cite>“[abc]”</cite> and want to remove the
+braces. In this case, use <cite>position.from=”2” position.to=”-1”</cite> in the
+<cite>property()</cite> object. This will result in the string <cite>“abc”</cite> after template
+processing. This is especially useful if you want to drop the braces around
+the <cite>STRUCTURED-DATA</cite> message property.</p></li>
+<li><p><strong>position.relativeToEnd</strong> - the from and to position is relative to the
+end of the string instead of the usual start of string. (available
+since rsyslog v7.3.10)</p></li>
+<li><p><strong>fixedwidth</strong> - changes behaviour of position.to so that it pads the
+source string with spaces up to the value of position.to if the source
+string is shorter. “on” or “off” (default) (available since rsyslog
+v8.13.0)</p></li>
+<li><p><strong>compressspace</strong> - compresses multiple spaces (US-ASCII SP character)
+inside the string to a single one. This compression happens at a very
+late stage in processing. Most importantly, it happens after substring
+extraction, so the <strong>position.from</strong> and <strong>position.to</strong> positions
+are <strong>NOT</strong> affected by this option. (available since v8.18.0).</p></li>
+<li><p><strong>field.number</strong> - obtain this field match</p></li>
+<li><p><strong>field.delimiter</strong> - decimal value of delimiter character for field
+extraction</p></li>
+<li><p><strong>regex.expression</strong> - expression to use</p></li>
+<li><p><strong>regex.type</strong> - either ERE or BRE</p></li>
+<li><p><strong>regex.nomatchmode</strong> - what to do if we have no match</p></li>
+<li><p><strong>regex.match</strong> - match to use</p></li>
+<li><p><strong>regex.submatch</strong> - submatch to use</p></li>
+<li><p><strong>droplastlf</strong> - drop a trailing LF, if it is present</p></li>
+<li><p><strong>mandatory</strong> - signifies a field as mandatory. If set to “on”, this
+field will always be present in data passed to structured outputs,
+even if it is empty. If “off” (the default) empty fields will not be
+passed to structured outputs. This is especially useful for outputs
+that support dynamic schemas (like ommongodb).</p></li>
+<li><p><strong>spifno1stsp</strong> - expert options for RFC3164 template processing</p></li>
+<li><p><strong>datatype</strong> - for “jsonf” format ONLY; permits to set a datatype
+Log messages as string data types natively. Thus every property inside
+rsyslog is string based. However, in some end systems you need different
+data types like numbers of boolean. This setting, in jsonf mode, permits
+to configure a desired data type. Supported data types are:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>number - value is treated as a JSON number and not enclosed in quotes.</dt><dd><p>If the property is empty, the value 0 is generated.</p>
+</dd>
+</dl>
+</li>
+<li><p>string - value is a string and enclosed in quotes</p></li>
+<li><dl class="simple">
+<dt>auto - value is treated as number if numeric and as string otherwise.</dt><dd><p>The current implementation treats only integers as numeric to avoid
+confusion.</p>
+</dd>
+</dl>
+</li>
+<li><p>bool - the value is treated as boolean. If it is empty or 0, it will
+generate “false”, else “true”.</p></li>
+</ul>
+<p>If not specified, ‘string’ datatype is assumed.
+This is a feature of rsyslog 8.1905.0 or later.</p>
+</li>
+<li><p><strong>onEmpty</strong> - for “jsonf” format ONLY; specifies how empty values
+shall be handled. Possible values are:</p>
+<ul class="simple">
+<li><p>keep - emit the empty element</p></li>
+<li><p>skip - completely ignore the element, do not emit anything</p></li>
+<li><p>null - emit a JSON ‘null’ value</p></li>
+</ul>
+<p>If not specified, ‘keep’ is assumed.
+This is a feature of rsyslog 8.1905.0 or later.</p>
+</li>
+</ul>
+</section>
+</section>
+<section id="subtree">
+<h3>Subtree<a class="headerlink" href="#subtree" title="Link to this heading">¶</a></h3>
+<p>Available since rsyslog 7.1.4</p>
+<p>In this case, the template is generated based on a complete (CEE)
+subtree. This type of template is most useful for outputs that know how
+to process hierarchical structure, like ommongodb. With that type, the
+parameter <strong>subtree</strong> must be specified, which tells which subtree to
+use. For example template(name=”tpl1” type=”subtree” subtree=”$!”)
+includes all CEE data, while template(name=”tpl2” type=”subtree”
+subtree=”$!usr!tpl2”) includes only the subtree starting at $!usr!tpl2.
+The core idea when using this type of template is that the actual data
+is prefabricated via set and unset script statements, and the resulting
+structure is then used inside the template. This method MUST be used if
+a complete subtree needs to be placed <em>directly</em> into the object’s root.
+With all other template types, only subcontainers can be generated. Note
+that subtree type can also be used with text-based outputs, like omfile.
+HOWEVER, you do not have any capability to specify constant text, and as
+such cannot include line breaks. As a consequence, using this template
+type for text outputs is usually only useful for debugging or very
+special cases (e.g. where the text is interpreted by a JSON parser later
+on).</p>
+<section id="use-case">
+<h4>Use case<a class="headerlink" href="#use-case" title="Link to this heading">¶</a></h4>
+<p>A typical use case is to first create a custom subtree and then include
+it into the template, like in this small example:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>set $!usr!tpl2!msg = $msg;
+set $!usr!tpl2!dataflow = field($msg, 58, 2);
+template(name=&quot;tpl2&quot; type=&quot;subtree&quot; subtree=&quot;$!usr!tpl2&quot;)
+</pre></div>
+</div>
+<p>Here, we assume that $msg contains various fields, and the data from a
+field is to be extracted and stored - together with the message - as
+field content.</p>
+</section>
+</section>
+<section id="string">
+<h3>String<a class="headerlink" href="#string" title="Link to this heading">¶</a></h3>
+<p>This closely resembles the legacy template statement. It has a mandatory
+parameter <strong>string</strong>, which holds the template string to be applied. A
+template string is a mix of constant text and replacement variables (see
+property replacer). These variables are taken from message or other
+dynamic content when the final string to be passed to a plugin is
+generated. String-based templates are a great way to specify textual
+content, especially if no complex manipulation to properties is
+necessary.</p>
+<p>This is a sample for a string-based template:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;tpl3&quot; type=&quot;string&quot;
+         string=&quot;%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n&quot;
+        )
+</pre></div>
+</div>
+<p>The text between percent signs (‘%’) is interpreted by the rsyslog
+<a class="reference internal" href="property_replacer.html"><span class="doc">property replacer</span></a>. In a nutshell,
+it contains the property to use as well as options for formatting
+and further processing. This is very similar to what the <code class="docutils literal notranslate"><span class="pre">property</span></code>
+object in list templates does (it actually is just a different language to
+express most of the same things).</p>
+<p>Everything outside of the percent signs is constant text. In the
+above case, we have mostly spaces between the property values. At the
+end of the string, an escape sequence is used.</p>
+<p>Escape sequences permit to specify nonprintable characters. They work
+very similar to escape sequences in C and many other languages. They
+are initiated by the backslash characters and followed by one or more
+characters that specify the actual character. For example \7 is the
+US-ASCII BEL character and \n is a newline. The set is similar to
+what C and perl support, but a bit more limited.</p>
+</section>
+<section id="plugin">
+<h3>Plugin<a class="headerlink" href="#plugin" title="Link to this heading">¶</a></h3>
+<p>In this case, the template is generated by a plugin (which is then
+called a “strgen” or “string generator”). The format is fixed as it is
+coded. While this is inflexible, it provides superior performance, and
+is often used for that reason (not that “regular” templates are slow -
+but in very demanding environments that “last bit” can make a
+difference). Refer to the plugin’s documentation for further details.
+For this type, the parameter <strong>plugin</strong> must be specified and must
+contain the name of the plugin as it identifies itself. Note that the
+plugin must be loaded prior to being used inside a template.
+Config example:</p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">template(name=&quot;tpl4&quot;</span> <span class="pre">type=&quot;plugin&quot;</span> <span class="pre">plugin=&quot;mystrgen&quot;)</span></code></p>
+</div></blockquote>
+<section id="options">
+<h4>Options<a class="headerlink" href="#options" title="Link to this heading">¶</a></h4>
+<p>The &lt;options&gt; part is optional. It carries options influencing the
+template as a whole and is a part of the template parameters. See details
+below. Be sure NOT to mistake template options with property options -
+the latter ones are processed by the property replacer and apply to a
+SINGLE property, only (and not the whole template).
+Template options are case-insensitive. Currently defined are:</p>
+<p><strong>option.sql</strong> - format the string suitable for an SQL statement in MariaDB/
+MySQL format. This will replace single quotes (”’”) and the backslash
+character by their backslash-escaped counterpart (”\’” and “\\”)
+inside each field. Please note that in MySQL configuration, the
+<code class="docutils literal notranslate"><span class="pre">NO_BACKSLASH_ESCAPES</span></code> mode must be turned off for this format to work
+(this is the default).</p>
+<p><strong>option.stdsql</strong> - format the string suitable for an SQL statement that
+is to be sent to a standards-compliant sql server. This will replace
+single quotes (”’”) by two single quotes (”’’”) inside each field. You
+must use stdsql together with MySQL if in MySQL configuration the
+<code class="docutils literal notranslate"><span class="pre">NO_BACKSLASH_ESCAPES</span></code> is turned on.</p>
+<p><strong>option.json</strong> - format the string suitable for a json statement. This
+will replace single quotes (”’”) by two single quotes (”’’”) inside each
+field.</p>
+<p><strong>option.jsonf</strong> - format the string as JSON object. This means a leading
+and trailing curly brace “{” will be added as well as a comma between all
+non-terminal properties and constants.</p>
+<p><strong>option.casesensitive</strong> - treat property name references as case
+sensitive. The default is “off”, where all property name references are
+first converted to lowercase during template definition. With this
+option turned “on”, property names are looked up as defined in the
+template. Use this option if you have JSON (<code class="docutils literal notranslate"><span class="pre">$!*</span></code>), local (<code class="docutils literal notranslate"><span class="pre">!.*</span></code>),
+or global (<code class="docutils literal notranslate"><span class="pre">$!\\*</span></code>) properties which contain uppercase letters. The
+normal Rsyslog properties are case-insensitive, so this option is not
+needed for properly referencing those properties.</p>
+<p>Use of the options <strong>option.sql</strong>, <strong>option.stdsql</strong>, and
+<strong>option.json</strong> are mutually exclusive. Using more than one at the same
+time can cause unpredictable behaviour.</p>
+<p>Either the <strong>sql</strong> or <strong>stdsql</strong> option <strong>must</strong> be specified when a
+template is used for writing to a database, otherwise injection might
+occur. Please note that due to the unfortunate fact that several vendors
+have violated the sql standard and introduced their own escape methods,
+it is impossible to have a single option doing all the work.  So you
+yourself must make sure you are using the right format. <strong>If you choose
+the wrong one, you are still vulnerable to sql injection.</strong>
+Please note that the database writer <em>checks</em> that the sql option is
+present in the template. If it is not present, the write database action
+is disabled. This is to guard you against accidentally forgetting it and
+then becoming vulnerable to SQL injection. The sql option can also be
+useful with files - especially if you want to import them into a
+database on another machine for performance reasons. However, do NOT use
+it if you do not have a real need for it - among others, it takes some
+toll on the processing time. Not much, but on a really busy system you
+might notice it.</p>
+<p>The default template for the write to database action has the sql option
+set. As we currently support only MariaDB/MySQL and the sql option matches
+the default MariaDB/MySQL configuration, this is a good choice. However,
+if you  have turned on <code class="docutils literal notranslate"><span class="pre">NO_BACKSLASH_ESCAPES</span></code> in your MySQL config, you
+need to supply a template with the stdsql option. Otherwise you will become
+vulnerable to SQL injection.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template (name=&quot;TraditionalFormat&quot; type=&quot;string&quot;
+string=&quot;%timegenerated% %HOSTNAME% %syslogtag%%msg%\\n&quot;)
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading">¶</a></h2>
+<section id="standard-template-for-writing-to-files">
+<h3>Standard Template for Writing to Files<a class="headerlink" href="#standard-template-for-writing-to-files" title="Link to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;FileFormat&quot; type=&quot;list&quot;) {
+    property(name=&quot;timestamp&quot; dateFormat=&quot;rfc3339&quot;)
+    constant(value=&quot; &quot;)
+    property(name=&quot;hostname&quot;)
+    constant(value=&quot; &quot;)
+    property(name=&quot;syslogtag&quot;)
+    property(name=&quot;msg&quot; spifno1stsp=&quot;on&quot; )
+    property(name=&quot;msg&quot; droplastlf=&quot;on&quot; )
+    constant(value=&quot;\n&quot;)
+    }
+</pre></div>
+</div>
+<p>The equivalent string template looks like this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;FileFormat&quot; type=&quot;string&quot;
+         string= &quot;%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n&quot;
+        )
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The template string itself must be on a single line.</p>
+</div>
+</section>
+<section id="standard-template-for-forwarding-to-a-remote-host-rfc3164-mode">
+<h3>Standard Template for Forwarding to a Remote Host (RFC3164 mode)<a class="headerlink" href="#standard-template-for-forwarding-to-a-remote-host-rfc3164-mode" title="Link to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;ForwardFormat&quot; type=&quot;list&quot;) {
+    constant(value=&quot;&lt;&quot;)
+    property(name=&quot;pri&quot;)
+    constant(value=&quot;&gt;&quot;)
+    property(name=&quot;timestamp&quot; dateFormat=&quot;rfc3339&quot;)
+    constant(value=&quot; &quot;)
+    property(name=&quot;hostname&quot;)
+    constant(value=&quot; &quot;)
+    property(name=&quot;syslogtag&quot; position.from=&quot;1&quot; position.to=&quot;32&quot;)
+    property(name=&quot;msg&quot; spifno1stsp=&quot;on&quot; )
+    property(name=&quot;msg&quot;)
+    }
+</pre></div>
+</div>
+<p>The equivalent string template looks like this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;forwardFormat&quot; type=&quot;string&quot;
+         string=&quot;&lt;%PRI%&gt;%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%&quot;
+        )
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The template string itself must be on a single line.</p>
+</div>
+</section>
+<section id="standard-template-for-writing-to-the-mariadb-mysql-database">
+<h3>Standard Template for writing to the MariaDB/MySQL database<a class="headerlink" href="#standard-template-for-writing-to-the-mariadb-mysql-database" title="Link to this heading">¶</a></h3>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;StdSQLformat&quot; type=&quot;list&quot; option.sql=&quot;on&quot;) {
+        constant(value=&quot;insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag)&quot;)
+        constant(value=&quot; values (&#39;&quot;)
+        property(name=&quot;msg&quot;)
+        constant(value=&quot;&#39;, &quot;)
+        property(name=&quot;syslogfacility&quot;)
+        constant(value=&quot;, &#39;&quot;)
+        property(name=&quot;hostname&quot;)
+        constant(value=&quot;&#39;, &quot;)
+        property(name=&quot;syslogpriority&quot;)
+        constant(value=&quot;, &#39;&quot;)
+        property(name=&quot;timereported&quot; dateFormat=&quot;mysql&quot;)
+        constant(value=&quot;&#39;, &#39;&quot;)
+        property(name=&quot;timegenerated&quot; dateFormat=&quot;mysql&quot;)
+        constant(value=&quot;&#39;, &quot;)
+        property(name=&quot;iut&quot;)
+        constant(value=&quot;, &#39;&quot;)
+        property(name=&quot;syslogtag&quot;)
+        constant(value=&quot;&#39;)&quot;)
+        }
+</pre></div>
+</div>
+<p>The equivalent string template looks like this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;stdSQLformat&quot; type=&quot;string&quot; option.sql=&quot;on&quot;
+         string=&quot;insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values (&#39;%msg%&#39;, %syslogfacility%, &#39;%HOSTNAME%&#39;, %syslogpriority%, &#39;%timereported:::date-mysql%&#39;, &#39;%timegenerated:::date-mysql%&#39;, %iut%, &#39;%syslogtag%&#39;)&quot;
+        )
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The template string itself must be on a single line.</p>
+</div>
+</section>
+<section id="generating-json">
+<h3>Generating JSON<a class="headerlink" href="#generating-json" title="Link to this heading">¶</a></h3>
+<p>This is especially useful for RESTful APIs, like for example ElasticSearch provides.</p>
+<p>This template</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;outfmt&quot; type=&quot;list&quot; option.jsonf=&quot;on&quot;) {
+         property(outname=&quot;@timestamp&quot; name=&quot;timereported&quot; dateFormat=&quot;rfc3339&quot; format=&quot;jsonf&quot;)
+         property(outname=&quot;host&quot; name=&quot;hostname&quot; format=&quot;jsonf&quot;)
+         property(outname=&quot;severity&quot; name=&quot;syslogseverity&quot; caseConversion=&quot;upper&quot; format=&quot;jsonf&quot; datatype=&quot;number&quot;)
+         property(outname=&quot;facility&quot; name=&quot;syslogfacility&quot; format=&quot;jsonf&quot; datatype=&quot;number&quot;)
+         property(outname=&quot;syslog-tag&quot; name=&quot;syslogtag&quot; format=&quot;jsonf&quot;)
+         property(outname=&quot;source&quot; name=&quot;app-name&quot; format=&quot;jsonf&quot; onEmpty=&quot;null&quot;)
+         property(outname=&quot;message&quot; name=&quot;msg&quot; format=&quot;jsonf&quot;)
+
+ }
+</pre></div>
+</div>
+<p>Generates output similar to this</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>{&quot;@timestamp&quot;:&quot;2018-03-01T01:00:00+00:00&quot;, &quot;host&quot;:&quot;172.20.245.8&quot;, &quot;severity&quot;:7, &quot;facility&quot;:20, &quot;syslog-tag&quot;:&quot;tag&quot;, &quot;source&quot;:&quot;tag&quot;, &quot;message&quot;:&quot; msgnum:00000000:&quot;}
+</pre></div>
+</div>
+<p>Pretty-printed this looks like</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>{
+  &quot;@timestamp&quot;: &quot;2018-03-01T01:00:00+00:00&quot;,
+  &quot;host&quot;: &quot;172.20.245.8&quot;,
+  &quot;severity&quot;: 7,
+  &quot;facility&quot;: 20,
+  &quot;syslog-tag&quot;: &quot;tag&quot;,
+  &quot;source&quot;: &quot;tag&quot;,
+  &quot;message&quot;: &quot; msgnum:00000000:&quot;
+}
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The output is <strong>not</strong> pretty-printed as this is just waste of resources when
+used in RESTful APIs.</p>
+</div>
+<p>If the “app-name” property is empty, a JSON null value is generated as the <cite>onEmpty=”null”</cite>
+parameter is used</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>{&quot;@timestamp&quot;:&quot;2018-03-01T01:00:00+00:00&quot;, &quot;host&quot;:&quot;172.20.245.8&quot;, &quot;severity&quot;:7, &quot;facility&quot;:20, &quot;syslog-tag&quot;:&quot;tag&quot;, &quot;source&quot;:null, &quot;message&quot;:&quot; msgnum:00000000:&quot;}
+</pre></div>
+</div>
+</section>
+<section id="creating-dynamic-file-names-for-omfile">
+<h3>Creating Dynamic File Names for omfile<a class="headerlink" href="#creating-dynamic-file-names-for-omfile" title="Link to this heading">¶</a></h3>
+<p>Templates can be used to generate actions with dynamic file names.
+For example, if you would like to split syslog messages from different hosts
+to different files (one per host), you can define the following template:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template (name=&quot;DynFile&quot; type=&quot;string&quot; string=&quot;/var/log/system-%HOSTNAME%.log&quot;)
+</pre></div>
+</div>
+</section>
+<section id="reserved-template-names">
+<h3>Reserved Template Names<a class="headerlink" href="#reserved-template-names" title="Link to this heading">¶</a></h3>
+<p>Template names beginning with “RSYSLOG_” are reserved for rsyslog use.
+Do NOT use them, otherwise you may cause conflicts in the future
+(and quite unpredictable behaviour). There is a small set of pre-defined
+templates that you can use without the need to define them:</p>
+<p><strong>RSYSLOG_TraditionalFileFormat</strong> - The “old style” default log file
+format with low-precision timestamps.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;RSYSLOG_TraditionalFileFormat&quot; type=&quot;string&quot;
+     string=&quot;%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n&quot;)
+</pre></div>
+</div>
+<p><strong>RSYSLOG_FileFormat</strong> - A modern-style logfile format similar to
+TraditionalFileFormat, both with high-precision timestamps and
+timezone information.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;RSYSLOG_FileFormat&quot; type=&quot;list&quot;) {
+     property(name=&quot;timereported&quot; dateFormat=&quot;rfc3339&quot;)
+     constant(value=&quot; &quot;)
+     property(name=&quot;hostname&quot;)
+     constant(value=&quot; &quot;)
+     property(name=&quot;syslogtag&quot;)
+     property(name=&quot;msg&quot; spifno1stsp=&quot;on&quot;)
+     property(name=&quot;msg&quot; droplastlf=&quot;on&quot;)
+     constant(value=&quot;\n&quot;)
+}
+</pre></div>
+</div>
+<p><strong>RSYSLOG_TraditionalForwardFormat</strong> - The traditional forwarding format
+with low-precision timestamps. Most useful if you send messages to
+other syslogd’s or rsyslogd below version 3.12.5.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;RSYSLOG_TraditionalForwardFormat&quot; type=&quot;string&quot;
+     string=&quot;&lt;%PRI%&gt;%TIMESTAMP% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%&quot;)
+</pre></div>
+</div>
+<p><strong>RSYSLOG_SysklogdFileFormat</strong> - Sysklogd compatible log file format. If
+used with options: <code class="docutils literal notranslate"><span class="pre">$SpaceLFOnReceive</span> <span class="pre">on</span></code>,
+<code class="docutils literal notranslate"><span class="pre">$EscapeControlCharactersOnReceive</span> <span class="pre">off</span></code>, <code class="docutils literal notranslate"><span class="pre">$DropTrailingLFOnReception</span> <span class="pre">off</span></code>,
+the log format will conform to sysklogd log format.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;RSYSLOG_SysklogdFileFormat&quot; type=&quot;string&quot;
+     string=&quot;%TIMESTAMP% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg%\n&quot;)
+</pre></div>
+</div>
+<p><strong>RSYSLOG_ForwardFormat</strong> - a new high-precision forwarding format very
+similar to the traditional one, but with high-precision timestamps
+and timezone information. Recommended to be used when sending
+messages to rsyslog 3.12.5 or above.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;RSYSLOG_ForwardFormat&quot; type=&quot;string&quot;
+     string=&quot;&lt;%PRI%&gt;%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag:1:32%%msg:::sp-if-no-1st-sp%%msg%&quot;)
+</pre></div>
+</div>
+<p><strong>RSYSLOG_SyslogProtocol23Format</strong> - the format specified in IETF’s
+internet-draft ietf-syslog-protocol-23, which is very close to the actual
+syslog standard <a class="reference external" href="https://datatracker.ietf.org/doc/html/rfc5424">RFC5424</a> (we couldn’t
+update this template as things were in production for quite some time when
+RFC5424 was finally approved). This format includes several improvements.
+You may use this format with all relatively recent versions of rsyslog or syslogd.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;RSYSLOG_SyslogProtocol23Format&quot; type=&quot;string&quot;
+     string=&quot;&lt;%PRI%&gt;1 %TIMESTAMP:::date-rfc3339% %HOSTNAME% %APP-NAME% %PROCID% %MSGID% %STRUCTURED-DATA% %msg%\n&quot;)
+</pre></div>
+</div>
+<p><strong>RSYSLOG_DebugFormat</strong> - a special format used for troubleshooting
+property problems. This format is meant to be written to a log file.
+Do <strong>not</strong> use for production or remote forwarding.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;RSYSLOG_DebugFormat&quot; type=&quot;list&quot;) {
+     constant(value=&quot;Debug line with all properties:\nFROMHOST: &#39;&quot;)
+     property(name=&quot;fromhost&quot;)
+     constant(value=&quot;&#39;, fromhost-ip: &#39;&quot;)
+     property(name=&quot;fromhost-ip&quot;)
+     constant(value=&quot;&#39;, HOSTNAME: &#39;&quot;)
+     property(name=&quot;hostname&quot;)
+     constant(value=&quot;&#39;, PRI: &#39;&quot;)
+     property(name=&quot;pri&quot;)
+     constant(value=&quot;,\nsyslogtag &#39;&quot;)
+     property(name=&quot;syslogtag&quot;)
+     constant(value=&quot;&#39;, programname: &#39;&quot;)
+     property(name=&quot;programname&quot;)
+     constant(value=&quot;&#39;, APP-NAME: &#39;&quot;)
+     property(name=&quot;app-name&quot;)
+     constant(value=&quot;&#39;, PROCID: &#39;&quot;)
+     property(name=&quot;procid&quot;)
+     constant(value=&quot;&#39;, MSGID: &#39;&quot;)
+     property(name=&quot;msgid&quot;)
+     constant(value=&quot;&#39;,\nTIMESTAMP: &#39;&quot;)
+     property(name=&quot;timereported&quot;)
+     constant(value=&quot;&#39;, STRUCTURED-DATA: &#39;&quot;)
+     property(name=&quot;structured-data&quot;)
+     constant(value=&quot;&#39;,\nmsg: &#39;&quot;)
+     property(name=&quot;msg&quot;)
+     constant(value=&quot;&#39;\nescaped msg: &#39;&quot;)
+     property(name=&quot;msg&quot; controlcharacters=&quot;drop&quot;)
+     constant(value=&quot;&#39;\ninputname: &quot;)
+     property(name=&quot;inputname&quot;)
+     constant(value=&quot; rawmsg: &#39;&quot;)
+     property(name=&quot;rawmsg&quot;)
+     constant(value=&quot;&#39;\n$!:&quot;)
+     property(name=&quot;$!&quot;)
+     constant(value=&quot;\n$.:&quot;)
+     property(name=&quot;$.&quot;)
+     constant(value=&quot;\n$/:&quot;)
+     property(name=&quot;$/&quot;)
+     constant(value=&quot;\n\n&quot;)
+}
+</pre></div>
+</div>
+<p><strong>RSYSLOG_WallFmt</strong> - Contains information about the host and the time the
+message was generated and at the end the syslogtag and message itself.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;RSYSLOG_WallFmt&quot; type=&quot;string&quot;
+     string=&quot;\r\n\7Message from syslogd@%HOSTNAME% at %timegenerated% ...\r\n%syslogtag%%msg%\n\r&quot;)
+</pre></div>
+</div>
+<p><strong>RSYSLOG_StdUsrMsgFmt</strong> - The syslogtag followed by the message is returned.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;RSYSLOG_StdUsrMsgFmt&quot; type=&quot;string&quot;
+     string=&quot; %syslogtag%%msg%\n\r&quot;)
+</pre></div>
+</div>
+<p><strong>RSYSLOG_StdDBFmt</strong> - Generates a insert command with the message
+properties, into table SystemEvents for a MariaDB/MySQL database.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;RSYSLOG_StdDBFmt&quot; type=&quot;list&quot;) {
+     constant(value=&quot;insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag)&quot;)
+     constant(value=&quot; values (&#39;&quot;)
+     property(name=&quot;msg&quot;)
+     constant(value=&quot;&#39;, &quot;)
+     property(name=&quot;syslogfacility&quot;)
+     constant(value=&quot;, &#39;&quot;)
+     property(name=&quot;hostname&quot;)
+     constant(value=&quot;&#39;, &quot;)
+     property(name=&quot;syslogpriority&quot;)
+     constant(value=&quot;, &#39;&quot;)
+     property(name=&quot;timereported&quot; dateFormat=&quot;date-mysql&quot;)
+     constant(value=&quot;&#39;, &#39;&quot;)
+     property(name=&quot;timegenerated&quot; dateFormat=&quot;date-mysql&quot;)
+     constant(value=&quot;&#39;, &quot;)
+     property(name=&quot;iut&quot;)
+     constant(value=&quot;, &#39;&quot;)
+     property(name=&quot;syslogtag&quot;)
+     constant(value=&quot;&#39;)&quot;)
+}
+</pre></div>
+</div>
+<p><strong>RSYSLOG_StdPgSQLFmt</strong> - Generates a insert command with the message
+properties, into table SystemEvents for a pgsql database.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;RSYSLOG_StdPgSQLFmt&quot; type=&quot;string&quot;
+string=&quot;insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime,
+     ReceivedAt, InfoUnitID, SysLogTag) values (&#39;%msg%&#39;, %syslogfacility%, &#39;%HOSTNAME%&#39;,
+     %syslogpriority%, &#39;%timereported:::date-pgsql%&#39;, &#39;%timegenerated:::date-pgsql%&#39;, %iut%,
+     &#39;%syslogtag%&#39;)&quot;)
+</pre></div>
+</div>
+<p><strong>RSYSLOG_spoofadr</strong> - Generates a message containing nothing more than
+the ip address of the sender.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;RSYSLOG_spoofadr&quot; type=&quot;string&quot; string=&quot;%fromhost-ip%&quot;)
+</pre></div>
+</div>
+<p><strong>RSYSLOG_StdJSONFmt</strong> - Generates a JSON structure containing the message
+properties.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;RSYSLOG_StdJSONFmt&quot; type=&quot;string&quot;
+     string=&quot;{\&quot;message\&quot;:\&quot;%msg:::json%\&quot;,\&quot;fromhost\&quot;:\&quot;%HOSTNAME:::json%\&quot;,\&quot;facility\&quot;:
+             \&quot;%syslogfacility-text%\&quot;,\&quot;priority\&quot;:\&quot;%syslogpriority-text%\&quot;,\&quot;timereported\&quot;:
+             \&quot;%timereported:::date-rfc3339%\&quot;,\&quot;timegenerated\&quot;:
+             \&quot;%timegenerated:::date-rfc3339%\&quot;}&quot;)
+</pre></div>
+</div>
+</section>
+</section>
+<section id="the-legacy-template-statement">
+<h2>The LEGACY $template statement<a class="headerlink" href="#the-legacy-template-statement" title="Link to this heading">¶</a></h2>
+<p>Legacy format provides limited functionality, but is still frequently used.
+So you probably need to at least be able to understand them. Legacy format
+is also good for fairly simple templates.</p>
+<p>In legacy, only string templates are supported. The full format is as follows:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$template myname,&lt;string-template&gt;
+</pre></div>
+</div>
+<p>Here, <em>myname</em> is the name of the template (like the <em>name=”myname”</em> property in
+modern template format). The <em>&lt;string-template&gt;</em> is exactly the <em>string</em> property
+like in modern template format.</p>
+<p>Take for example the following modern template object:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>template(name=&quot;tpl3&quot; type=&quot;string&quot;
+         string=&quot;%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n&quot;
+        )
+</pre></div>
+</div>
+<p>It translates to the following legacy template statement:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$template tpl3,&quot;%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg:::drop-last-lf%\n&quot;
+</pre></div>
+</div>
+<section id="see-also">
+<h3>See Also<a class="headerlink" href="#see-also" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><a class="reference external" href="http://www.rsyslog.com/how-to-bind-a-template/">How to bind a
+template</a></p></li>
+<li><p><a class="reference external" href="http://www.rsyslog.com/adding-the-bom-to-a-message/">Adding the BOM to a
+message</a></p></li>
+<li><p><a class="reference external" href="http://www.rsyslog.com/article60/">How to separate log files by host name of the sending
+device</a></p></li>
+</ul>
+<hr class="docutils" />
+<p><strong>Support:</strong> <a class="reference external" href="https://rsyslog.ai">rsyslog Assistant</a> |
+<a class="reference external" href="https://github.com/rsyslog/rsyslog/discussions">GitHub Discussions</a> |
+GitHub Issues: <a class="reference external" href="https://github.com/rsyslog/rsyslog/">rsyslog source project</a></p>
+<p><strong>Contributing:</strong> Source &amp; docs: <a class="reference external" href="https://github.com/rsyslog/rsyslog/">rsyslog source project</a></p>
+<p>© 2008–2025 <a class="reference external" href="https://rainer.gerhards.net/">Rainer Gerhards</a>
+and others. Licensed under the <a class="reference external" href="https://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>.</p>
+</section>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="properties.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">rsyslog Properties</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="modules/idx_library.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Library Modules</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            Made with 
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Templates</a><ul>
+<li><a class="reference internal" href="#description">Description</a></li>
+<li><a class="reference internal" href="#template-processing">Template processing</a></li>
+<li><a class="reference internal" href="#the-template-object">The template() object</a><ul>
+<li><a class="reference internal" href="#list">List</a><ul>
+<li><a class="reference internal" href="#constant-statement">Constant statement</a></li>
+<li><a class="reference internal" href="#property-statement">Property statement</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#subtree">Subtree</a><ul>
+<li><a class="reference internal" href="#use-case">Use case</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#string">String</a></li>
+<li><a class="reference internal" href="#plugin">Plugin</a><ul>
+<li><a class="reference internal" href="#options">Options</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#examples">Examples</a><ul>
+<li><a class="reference internal" href="#standard-template-for-writing-to-files">Standard Template for Writing to Files</a></li>
+<li><a class="reference internal" href="#standard-template-for-forwarding-to-a-remote-host-rfc3164-mode">Standard Template for Forwarding to a Remote Host (RFC3164 mode)</a></li>
+<li><a class="reference internal" href="#standard-template-for-writing-to-the-mariadb-mysql-database">Standard Template for writing to the MariaDB/MySQL database</a></li>
+<li><a class="reference internal" href="#generating-json">Generating JSON</a></li>
+<li><a class="reference internal" href="#creating-dynamic-file-names-for-omfile">Creating Dynamic File Names for omfile</a></li>
+<li><a class="reference internal" href="#reserved-template-names">Reserved Template Names</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#the-legacy-template-statement">The LEGACY $template statement</a><ul>
+<li><a class="reference internal" href="#see-also">See Also</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=6fd4f6cc"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    </body>
+</html>

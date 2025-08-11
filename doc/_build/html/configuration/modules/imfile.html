@@ -1,0 +1,2008 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../../">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="imgssapi: GSSAPI Syslog Input Module" href="imgssapi.html" /><link rel="prev" title="imdtls: Input Module for DTLS Protocol over UDP" href="imdtls.html" />
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.07.19 -->
+        <title>imfile: Text File Input Module - rsyslog 8.2508 daily stable documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=25af2a20" />
+    <link rel="stylesheet" type="text/css" href="../../_static/rsyslog.css?v=6406a7f4" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #eeffcc;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #2b2b2b;
+  --color-code-foreground: #f8f8f2;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #2b2b2b;
+  --color-code-foreground: #f8f8f2;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../../index.html"><div class="brand">rsyslog 8.2508 daily stable documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
+  
+  <span class="sidebar-brand-text">rsyslog 8.2508 daily stable documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../about/index.html">About rsyslog</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of About rsyslog</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../about/ai_first.html">AI-First: Our Vision for rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../about/history.html">History and Future of rsyslog</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../getting_started/index.html">Getting Started with rsyslog</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Getting Started with rsyslog</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/installation.html">Installing rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/basic_configuration.html">Basic Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/understanding_default_config.html">Understanding the Default Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/forwarding_logs.html">Forwarding Logs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../getting_started/next_steps.html">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">Configuration</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Configuration</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../basic_structure.html">Basic Structure</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="idx_output.html">Output Modules</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Output Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="omamqp1.html">omamqp1: AMQP 1.0 Messaging Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omazureeventhubs.html">omazureeventhubs: Microsoft Azure Event Hubs Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omclickhouse.html">omclickhouse: ClickHouse Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omczmq.html">omczmq: Output module for ZeroMQ</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omdtls.html">omdtls: Output Module for DTLS Protocol over UDP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omelasticsearch.html">omelasticsearch: Elasticsearch Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omfile.html">omfile: File Output Module</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="omfwd.html">omfwd: syslog Forwarding Output Module</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of omfwd: syslog Forwarding Output Module</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="omfwd/parameters/basic.html">Basic Parameters</a></li>
+<li class="toctree-l4"><a class="reference internal" href="omfwd/parameters/module.html">Module Parameters</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="omhdfs.html">omhdfs: Hadoop Filesystem Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omhiredis.html">omhiredis: Redis Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omhttp.html">omhttp: HTTP Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omhttpfs.html">omhttpfs: Hadoop HTTPFS Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omjournal.html">omjournal: Systemd Journal Output</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omkafka.html">omkafka: write to Apache Kafka</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omlibdbi.html">omlibdbi: Generic Database Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ommail.html">ommail: Mail Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ommongodb.html">ommongodb: MongoDB Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ommysql.html">ommysql: MariaDB/MySQL Database Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omoracle.html">omoracle: Oracle Database Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ompgsql.html">PostgreSQL Database Output Module (ompgsql)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ompipe.html">ompipe: Pipe Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omprog.html">omprog: Program integration Output module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omrabbitmq.html">omrabbitmq: RabbitMQ output module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omrelp.html">omrelp: RELP Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omruleset.html">omruleset: ruleset output/including module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omsendertrack.html">omsendertrack: Sender Tracking Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omsnmp.html">omsnmp: SNMP Trap Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omstdout.html">omstdout: stdout output module (testbench tool)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omudpspoof.html">omudpspoof: UDP spoofing output module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omusrmsg.html">omusrmsg: notify users</a></li>
+<li class="toctree-l3"><a class="reference internal" href="omuxsock.html">omuxsock: Unix sockets Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sigprov_gt.html">GuardTime Log Signature Provider (gt)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sigprov_ksi.html">Keyless Signature Infrastructure Provider (ksi)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="sigprov_ksi12.html">KSI Signature Provider (rsyslog-ksi-ls12)</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current has-children"><a class="reference internal" href="idx_input.html">Input Modules</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Input Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="im3195.html">im3195: RFC3195 Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imbatchreport.html">imbatchreport: Batch report input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imczmq.html">imczmq: Input module for ZeroMQ</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imdocker.html">imdocker: Docker Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imdtls.html">imdtls: Input Module for DTLS Protocol over UDP</a></li>
+<li class="toctree-l3 current current-page"><a class="current reference internal" href="#">imfile: Text File Input Module</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="imgssapi.html">imgssapi: GSSAPI Syslog Input Module</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of imgssapi: GSSAPI Syslog Input Module</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="gssapi.html">GSSAPI module support in rsyslog v3</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="imhiredis.html">Imhiredis: Redis input plugin</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imhttp.html">imhttp: HTTP input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imjournal.html">imjournal: Systemd Journal Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imkafka.html">imkafka: read from Apache Kafka</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imklog.html">imklog: Kernel Log Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imkmsg.html">imkmsg: /dev/kmsg Log Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="immark.html">immark: Mark Message Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="impcap.html">Impcap: network traffic capture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="improg.html">improg: Program integration input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="impstats.html">impstats: Generate Periodic Statistics of Internal Counters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imptcp.html">imptcp: Plain TCP Syslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imrelp.html">imrelp: RELP Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imsolaris.html">imsolaris: Solaris Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imtcp.html">imtcp: TCP Syslog Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imtuxedoulog.html">imtuxedoulog: Tuxedo ULOG input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imudp.html">imudp: UDP Syslog Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="imuxsock.html">imuxsock: Unix Socket Input Module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="idx_parser.html">Parser Modules</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Parser Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="pmciscoios.html">pmciscoios</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmdb2diag.html">pmdb2diag: DB2 Diag file parser module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmlastmsg.html">pmlastmsg: last message repeated n times</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmnormalize.html">Log Message Normalization Parser Module (pmnormalize)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmnull.html">pmnull: Syslog Null Parser Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmrfc3164.html">pmrfc3164: Parse RFC3164-formatted messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmrfc3164sd.html">pmrfc3164sd: Parse RFC5424 structured data inside RFC3164 messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pmrfc5424.html">pmrfc5424: Parse RFC5424-formatted messages</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="idx_messagemod.html">Message Modification Modules</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of Message Modification Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="mmaitag.html">AI-based classification (mmaitag)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmanon.html">IP Address Anonymization Module (mmanon)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmcount.html">mmcount</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmdarwin.html">Darwin connector (mmdarwin)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmdblookup.html">MaxMind/GeoIP DB lookup (mmdblookup)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmexternal.html">Support module for external message modification modules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmfields.html">Fields Extraction Module (mmfields)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmjsonparse.html">JSON/CEE Structured Content Extraction Module (mmjsonparse)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmkubernetes.html">Kubernetes Metadata Module (mmkubernetes)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmnormalize.html">Log Message Normalization Module (mmnormalize)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmpstrucdata.html">RFC5424 structured data parsing module (mmpstrucdata)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmrfc5424addhmac.html">mmrfc5424addhmac</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmrm1stspace.html">mmrm1stspace: First Space Modification Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmsequence.html">Number generator and counter module (mmsequence)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmsnmptrapd.html">mmsnmptrapd message modification module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmtaghostname.html">mmtaghostname: message modification module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="mmutf8fix.html">Fix invalid UTF-8 Sequences (mmutf8fix)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="idx_stringgen.html">String Generator Modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="idx_library.html">Library Modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../templates.html">Templates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../properties.html">rsyslog Properties</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../property_replacer.html">The Property Replacer</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of The Property Replacer</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../nomatch.html">Property Replacer nomatch mode</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../filters.html">Filter Conditions</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../rainerscript/index.html">RainerScript</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of RainerScript</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/data_types.html">Data Types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/expressions.html">Expressions</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../../rainerscript/functions/index.html">Functions</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><div class="visually-hidden">Toggle navigation of Functions</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4 has-children"><a class="reference internal" href="../../rainerscript/functions/idx_built-in_functions.html">Built-in Functions</a><input class="toctree-checkbox" id="toctree-checkbox-13" name="toctree-checkbox-13" role="switch" type="checkbox"/><label for="toctree-checkbox-13"><div class="visually-hidden">Toggle navigation of Built-in Functions</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-cnum.html">cnum()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-cstr.html">cstr()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-dyn_inc.html">dyn_inc()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-exec_template.html">exec_template()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-exists.html">exists()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-field.html">field()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-format_time.html">format_time()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-get_property.html">get_property()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-getenv.html">getenv()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-int2hex.html">int2hex()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-ipv4convert.html">num2ipv4() / ipv42num()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-is_time.html">is_time()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-lookup.html">lookup()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-parse_json.html">parse_json()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-parse_time.html">parse_time()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-percentile_observe.html">percentile_observe()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-previous_action_suspended.html">previous_action_suspended()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-prifilt.html">prifilt()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-random.html">random()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-re_extract.html">re_extract()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-re_extract_i.html">re_extract_i()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-re_match.html">re_match()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-re_match_i.html">re_match_i()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-replace.html">replace()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-script_error.html">script_error()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-strlen.html">strlen()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-substring.html">substring()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-tolower.html">tolower()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-trim.html">ltrim() / rtrim()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/rs-wrap.html">wrap()</a></li>
+</ul>
+</li>
+<li class="toctree-l4 has-children"><a class="reference internal" href="../../rainerscript/functions/idx_module_functions.html">Module Functions</a><input class="toctree-checkbox" id="toctree-checkbox-14" name="toctree-checkbox-14" role="switch" type="checkbox"/><label for="toctree-checkbox-14"><div class="visually-hidden">Toggle navigation of Module Functions</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/mo-ffaup.html">Faup</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/mo-hashXX.html">HashXX</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/mo-hashXXmod.html">HashXXmod</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/mo-http_request.html">HTTP-Request</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../../rainerscript/functions/mo-unflatten.html">Unflatten</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/control_structures.html">Control Structures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/configuration_objects.html">configuration objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/constant_strings.html">String Constants</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/variable_property_types.html">Variable (Property) types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/lookup_tables.html">Lookup Tables</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/queue_parameters.html">General Queue Parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/rainerscript_call.html">The rsyslog “call” statement</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/rainerscript_call_indirect.html">The rsyslog “call_indirect” statement</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/global.html">global() configuration object</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../rainerscript/include.html">The rsyslog include() object</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../actions.html">Actions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../input.html">Input</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../parser.html">Parser</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../timezone.html">timezone</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../index_directives.html">Legacy Configuration Directives</a><input class="toctree-checkbox" id="toctree-checkbox-15" name="toctree-checkbox-15" role="switch" type="checkbox"/><label for="toctree-checkbox-15"><div class="visually-hidden">Toggle navigation of Legacy Configuration Directives</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../config_param_types.html">Configuration Parameter Types</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../global/index.html">Legacy Global Configuration Statements</a><input class="toctree-checkbox" id="toctree-checkbox-16" name="toctree-checkbox-16" role="switch" type="checkbox"/><label for="toctree-checkbox-16"><div class="visually-hidden">Toggle navigation of Legacy Global Configuration Statements</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_abortonuncleanconfig.html">$AbortOnUncleanConfig</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_debugprintcfsyslinehandlerlist.html">$DebugPrintCFSyslineHandlerList</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_debugprintmodulelist.html">$DebugPrintModuleList</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_debugprinttemplatelist.html">$DebugPrintTemplateList</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_failonchownfailure.html">$FailOnChownFailure</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_generateconfiggraph.html">$GenerateConfigGraph</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_includeconfig.html">$IncludeConfig</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_mainmsgqueuesize.html">$MainMsgQueueSize</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_maxopenfiles.html">$MaxOpenFiles</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_moddir.html">$ModDir</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_modload.html">$ModLoad</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_umask.html">$UMASK</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../global/options/rsconf1_resetconfigvariables.html">$ResetConfigVariables</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../input_directives/index.html">Legacy Directives affecting Input Modules</a><input class="toctree-checkbox" id="toctree-checkbox-17" name="toctree-checkbox-17" role="switch" type="checkbox"/><label for="toctree-checkbox-17"><div class="visually-hidden">Toggle navigation of Legacy Directives affecting Input Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_allowedsender.html">$AllowedSender</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_dropmsgswithmaliciousdnsptrrecords.html">$DropMsgsWithMaliciousDnsPTRRecords</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_controlcharacterescapeprefix.html">$ControlCharacterEscapePrefix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_droptrailinglfonreception.html">$DropTrailingLFOnReception</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_escape8bitcharsonreceive.html">$Escape8BitCharactersOnReceive</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../input_directives/rsconf1_markmessageperiod.html">$MarkMessagePeriod</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../action/index.html">Depricated Legacy Action-Specific Configuration Statements</a><input class="toctree-checkbox" id="toctree-checkbox-18" name="toctree-checkbox-18" role="switch" type="checkbox"/><label for="toctree-checkbox-18"><div class="visually-hidden">Toggle navigation of Depricated Legacy Action-Specific Configuration Statements</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_actionexeconlywhenpreviousissuspended.html">How to Convert Deprecated <cite>$ActionExecOnlyWhenPreviousIsSuspended</cite> to Modern Style</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_actionresumeinterval.html">How to Convert Deprecated <cite>$ActionResumeInterval</cite> to Modern Style</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_repeatedmsgreduction.html">$RepeatedMsgReduction</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_omfileforcechown.html">$omfileForceChown</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_dirgroup.html">$DirGroup</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_dirowner.html">How to Convert Deprecated <cite>$DirOwner</cite> to Modern Style</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_dynafilecachesize.html">$DynaFileCacheSize</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_filecreatemode.html">$FileCreateMode</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_filegroup.html">$FileGroup</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_fileowner.html">$FileOwner</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_gssforwardservicename.html">$GssForwardServiceName</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../action/rsconf1_gssmode.html">$GssMode</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../ruleset/index.html">Ruleset-Specific Legacy Configuration Statements</a><input class="toctree-checkbox" id="toctree-checkbox-19" name="toctree-checkbox-19" role="switch" type="checkbox"/><label for="toctree-checkbox-19"><div class="visually-hidden">Toggle navigation of Ruleset-Specific Legacy Configuration Statements</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="../ruleset/rsconf1_rulesetcreatemainqueue.html">$RulesetCreateMainQueue</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../ruleset/rsconf1_rulesetparser.html">$RulesetParser</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../rsyslog_statistic_counter.html">rsyslog statistic counter</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="index.html">Modules</a><input class="toctree-checkbox" id="toctree-checkbox-20" name="toctree-checkbox-20" role="switch" type="checkbox"/><label for="toctree-checkbox-20"><div class="visually-hidden">Toggle navigation of Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="workflow.html">Where are the modules integrated into the Message Flow?</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../output_channels.html">Output Channels</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../droppriv.html">Dropping privileges in rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../ipv6.html">Notes on IPv6 Handling in Rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../cryprov_gcry.html">libgcrypt Log Crypto Provider (gcry)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../cryprov_ossl.html">libossl Log Crypto Provider (ossl)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../dyn_stats.html">Dynamic Stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../lookup_tables.html">Lookup Tables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../percentile_stats.html">Percentile Stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../converting_to_new_format.html">Converting older formats to <code class="docutils literal notranslate"><span class="pre">advanced</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="../conf_formats.html">Configuration Formats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../sysklogd_format.html">sysklogd format</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../faq/index.html">FAQ</a><input class="toctree-checkbox" id="toctree-checkbox-21" name="toctree-checkbox-21" role="switch" type="checkbox"/><label for="toctree-checkbox-21"><div class="visually-hidden">Toggle navigation of FAQ</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../faq/faq_overall.html">FAQ: some general topics often asked</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../faq/difference_queues.html">What is the difference between the main_queue and a queue with a ruleset tied to an input?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../faq/encrypt_mysql_traffic_ommysql.html">FAQ: Encrypting MySQL Traffic with ommysql Plugin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../faq/imudp-packet-loss.html">FAQ: Troubleshooting UDP Packet Loss</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../faq/common-config-mistakes.html">Common Configuration Mistakes and Misunderstandings</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../tutorials/index.html">Tutorials</a><input class="toctree-checkbox" id="toctree-checkbox-22" name="toctree-checkbox-22" role="switch" type="checkbox"/><label for="toctree-checkbox-22"><div class="visually-hidden">Toggle navigation of Tutorials</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../tutorials/tls_cert_summary.html">Encrypting Syslog Traffic with TLS (SSL)</a><input class="toctree-checkbox" id="toctree-checkbox-23" name="toctree-checkbox-23" role="switch" type="checkbox"/><label for="toctree-checkbox-23"><div class="visually-hidden">Toggle navigation of Encrypting Syslog Traffic with TLS (SSL)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_scenario.html">Sample Use Case: Single Central Log Server</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_ca.html">Setting up the CA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_machine.html">Generating the machine certificate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_server.html">Setting up the Central Server</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_client.html">Setting up a client</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_udp_relay.html">Setting up the UDP syslog relay</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_errmsgs.html">Error Messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../tutorials/tls_cert_script.html">Creating certificates with a script</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/tls.html">Encrypting Syslog Traffic with TLS (SSL) [short version]</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/database.html">Writing syslog messages to MariaDB, MySQL, PostgreSQL or any other supported Database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/high_database_rate.html">Handling a massive syslog database insert rate with Rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/reliable_forwarding.html">Reliable Forwarding of syslog Messages with Rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/recording_pri.html">Recording the Priority of Syslog Messages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/failover_syslog_server.html">Failover Syslog Server</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/log_rotation_fix_size.html">Log rotation with rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/gelf_forwarding.html">GELF forwarding in rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/log_sampling.html">Log Sampling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/random_sampling.html">Random sampling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../tutorials/hash_sampling.html">Hash-based Sampling</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../troubleshooting/index.html">Troubleshooting</a><input class="toctree-checkbox" id="toctree-checkbox-24" name="toctree-checkbox-24" role="switch" type="checkbox"/><label for="toctree-checkbox-24"><div class="visually-hidden">Toggle navigation of Troubleshooting</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../troubleshooting/file_not_written.html">Output File is not Being Written</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../troubleshooting/selinux.html">Troubleshooting SELinux-Related Issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../troubleshooting/debug.html">Rsyslog Debug Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../troubleshooting/troubleshoot.html">troubleshooting problems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../troubleshooting/howtodebug.html">How to create a debug log</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../concepts/index.html">Concepts</a><input class="toctree-checkbox" id="toctree-checkbox-25" name="toctree-checkbox-25" role="switch" type="checkbox"/><label for="toctree-checkbox-25"><div class="visually-hidden">Toggle navigation of Concepts</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../concepts/queues.html">Understanding rsyslog Queues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../concepts/janitor.html">The Janitor Process</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../concepts/messageparser.html">Message parsers in rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../concepts/multi_ruleset.html">Multiple Rulesets in rsyslog</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../concepts/netstrm_drvr.html">NetStream Drivers</a><input class="toctree-checkbox" id="toctree-checkbox-26" name="toctree-checkbox-26" role="switch" type="checkbox"/><label for="toctree-checkbox-26"><div class="visually-hidden">Toggle navigation of NetStream Drivers</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_ptcp.html">ptcp Network Stream Driver</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_gtls.html">gtls Network Stream Driver</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_gtls.html#supported-driver-modes">Supported Driver Modes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_gtls.html#supported-authentication-modes">Supported Authentication Modes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_gtls.html#checkextendedkeypurpose">CheckExtendedKeyPurpose</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_gtls.html#prioritizesan">PrioritizeSAN</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../concepts/ns_ossl.html">openssl Network Stream Driver</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../development/index.html">Development</a><input class="toctree-checkbox" id="toctree-checkbox-27" name="toctree-checkbox-27" role="switch" type="checkbox"/><label for="toctree-checkbox-27"><div class="visually-hidden">Toggle navigation of Development</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../development/config_data_model.html">The rsyslog config data model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/config_data_model.html#objects">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/debugging.html">Debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/dev_action_threads.html">Action Threads and Queue Engine (Developer-Oriented)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/dev_codestyle.html">rsyslog code style</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/dev_oplugins.html">Writing Rsyslog Output Plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/dev_queue.html">The rsyslog queue object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/dev_testbench.html">writing rsyslog tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/doc_reference_section_guidelines.html">Documentation Reference Section Structure Guidelines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/doc_style_guide.html">Documentation Style Guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/generic_design.html">Generic design of a syslogd</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../development/internal_tooling.html">Internal tooling</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../idx_reference.html">Reference</a><input class="toctree-checkbox" id="toctree-checkbox-28" name="toctree-checkbox-28" role="switch" type="checkbox"/><label for="toctree-checkbox-28"><div class="visually-hidden">Toggle navigation of Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../containers/index.html">rsyslog and containers</a><input class="toctree-checkbox" id="toctree-checkbox-29" name="toctree-checkbox-29" role="switch" type="checkbox"/><label for="toctree-checkbox-29"><div class="visually-hidden">Toggle navigation of rsyslog and containers</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../containers/container_features.html">Container-Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../containers/docker_specifics.html">docker specifics</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../installation/index.html">Installation</a><input class="toctree-checkbox" id="toctree-checkbox-30" name="toctree-checkbox-30" role="switch" type="checkbox"/><label for="toctree-checkbox-30"><div class="visually-hidden">Toggle navigation of Installation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../installation/packages.html">Installing rsyslog from Package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../installation/rsyslog_docker.html">Using Rsyslog Docker Containers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../installation/install_from_source.html">Installing rsyslog from Source</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../installation/build_from_repo.html">Installing rsyslog from the source repository</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../historical/index.html">Historical Documents</a><input class="toctree-checkbox" id="toctree-checkbox-31" name="toctree-checkbox-31" role="switch" type="checkbox"/><label for="toctree-checkbox-31"><div class="visually-hidden">Toggle navigation of Historical Documents</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/php_syslog_ng.html">Using php-syslog-ng with rsyslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/multi_ruleset_legacy_format_samples.html">Legacy Format Samples for Multiple Rulesets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/module_devel.html">Developing rsyslog modules (outdated)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/high_performance.html">Receiving massive amounts of messages with high performance</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v8compatibility.html">Compatibility Notes for rsyslog v8</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v7compatibility.html">Compatibility Notes for rsyslog v7</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v6compatibility.html">Compatibility Notes for rsyslog v6</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v5compatibility.html">Compatibility Notes for rsyslog v5</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v4compatibility.html">Compatibility Notes for rsyslog v4</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../historical/v3compatibility.html">Compatibility Notes for rsyslog v3</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../../history.html">RSyslog - History</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../licensing.html">Licensing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../how2help.html">How you can Help</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../community.html">Community Resources</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../features.html">RSyslog - Features</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../proposals/index.html">Proposals</a><input class="toctree-checkbox" id="toctree-checkbox-32" name="toctree-checkbox-32" role="switch" type="checkbox"/><label for="toctree-checkbox-32"><div class="visually-hidden">Toggle navigation of Proposals</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../proposals/version_naming.html">Version Naming</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../../whitepapers/index.html">Rsyslog Whitepapers</a><input class="toctree-checkbox" id="toctree-checkbox-33" name="toctree-checkbox-33" role="switch" type="checkbox"/><label for="toctree-checkbox-33"><div class="visually-hidden">Toggle navigation of Rsyslog Whitepapers</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../../whitepapers/syslog_parsing.html">syslog parsing in rsyslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../whitepapers/syslog_protocol.html">syslog-protocol support in rsyslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../whitepapers/queues_analogy.html">Turning Lanes and Rsyslog Queues</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../whitepapers/preserve_in_nat.html">Preserving syslog sender over NAT</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../../whitepapers/reliable_logging.html">How reliable should reliable logging be?</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../../_sources/configuration/modules/imfile.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="imfile-text-file-input-module">
+<h1>imfile: Text File Input Module<a class="headerlink" href="#imfile-text-file-input-module" title="Link to this heading">¶</a></h1>
+<div class="table-wrapper docutils container" id="index-0">
+<table class="docutils align-default" id="index-0">
+<tbody>
+<tr class="row-odd"><td><p><strong>Module Name:</strong></p></td>
+<td><p><strong>imfile</strong></p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Author:</strong></p></td>
+<td><p><a class="reference external" href="https://rainer.gerhards.net/">Rainer Gerhards</a> &lt;<a class="reference external" href="mailto:rgerhards&#37;&#52;&#48;adiscon&#46;com">rgerhards<span>&#64;</span>adiscon<span>&#46;</span>com</a>&gt;</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<section id="purpose">
+<h2>Purpose<a class="headerlink" href="#purpose" title="Link to this heading">¶</a></h2>
+<p>This module provides the ability to convert any standard text file
+into a syslog
+message. A standard text file is a file consisting of printable
+characters with lines being delimited by LF.</p>
+<p>The file is read line-by-line and any line read is passed to rsyslog’s
+rule engine. The rule engine applies filter conditions and selects which
+actions needs to be carried out. Empty lines are <strong>not</strong> processed, as
+they would result in empty syslog records. They are simply ignored.</p>
+<p>As new lines are written they are taken from the file and processed.
+Depending on the selected mode, this happens via inotify or based on
+a polling interval. Especially in polling mode, file reading doesn’t
+happen immediately. But there are also slight delays (due to process
+scheduling and internal processing) in inotify mode.</p>
+<p>The file monitor supports file rotation. To fully work,
+rsyslogd must run while the file is rotated. Then, any remaining lines
+from the old file are read and processed and when done with that, the
+new file is being processed from the beginning. If rsyslogd is stopped
+during rotation, the new file is read, but any not-yet-reported lines
+from the previous file can no longer be obtained.</p>
+<p>When rsyslogd is stopped while monitoring a text file, it records the
+last processed location and continues to work from there upon restart.
+So no data is lost during a restart (except, as noted above, if the file
+is rotated just in this very moment).</p>
+</section>
+<section id="notable-features">
+<h2>Notable Features<a class="headerlink" href="#notable-features" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="#metadata"><span class="std std-ref">Metadata</span></a></p></li>
+<li><p><a class="reference internal" href="#state-files"><span class="std std-ref">State Files</span></a></p></li>
+<li><p><a class="reference internal" href="#wildcards"><span class="std std-ref">WildCards</span></a></p></li>
+<li><p>presentation on <a class="reference external" href="http://www.slideshare.net/rainergerhards1/using-wildcards-with-rsyslogs-file-monitor-imfile">using wildcards with imfile</a></p></li>
+</ul>
+</section>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading">¶</a></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Parameter names are case-insensitive.</p>
+</div>
+<section id="module-parameters">
+<h3>Module Parameters<a class="headerlink" href="#module-parameters" title="Link to this heading">¶</a></h3>
+<section id="mode">
+<h4>Mode<a class="headerlink" href="#mode" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>word</p></td>
+<td><p>inotify</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.1.5.</span></p>
+</div>
+<p>This specifies if imfile is shall run in inotify (“inotify”) or polling
+(“polling”) mode. Traditionally, imfile used polling mode, which is
+much more resource-intense (and slower) than inotify mode. It is
+suggested that users turn on “polling” mode only if they experience
+strange problems in inotify mode. In theory, there should never be a
+reason to enable “polling” mode and later versions will most probably
+remove it.</p>
+<p>Note: if a legacy “$ModLoad” statement is used, the default is <em>polling</em>.
+This default was kept to prevent problems with old configurations. It
+might change in the future.</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.32.0.</span></p>
+</div>
+<p>On Solaris, the FEN API is used instead of INOTIFY. You can set the mode
+to fen or inotify (which is automatically mapped to fen on Solaris OS).
+Please note that the FEN is limited compared to INOTIFY. Deep wildcard
+matches may not work because of the API limits for now.</p>
+</section>
+<section id="readtimeout">
+<h4>readTimeout<a class="headerlink" href="#readtimeout" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>0</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><em>Default: 0 (no timeout)</em></p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.23.0.</span></p>
+</div>
+<p>This sets the default value for input <em>timeout</em> parameters. See there
+for exact meaning. Parameter value is the number of seconds.</p>
+</section>
+<section id="deletestateonfilemove">
+<h4>deleteStateOnFileMove<a class="headerlink" href="#deletestateonfilemove" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>If set to <strong>on</strong>, the state file for a monitored file is removed when that file
+is moved or rotated away. By default the state file is kept.</p>
+</section>
+<section id="timeoutgranularity">
+<h4>timeoutGranularity<a class="headerlink" href="#timeoutgranularity" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>1</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.23.0.</span></p>
+</div>
+<p>This sets the interval in which multi-line-read timeouts are checked.
+The interval is specified in seconds. Note that
+this establishes a lower limit on the length of the timeout. For example, if
+a timeoutGranularity of 60 seconds is selected and a readTimeout value of 10 seconds
+is used, the timeout is nevertheless only checked every 60 seconds (if there is
+no other activity in imfile). This means that the readTimeout is also only
+checked every 60 seconds, which in turn means a timeout can occur only after 60
+seconds.</p>
+<p>Note that timeGranularity has some performance implication. The more frequently
+timeout processing is triggered, the more processing time is needed. This
+effect should be negligible, except if a very large number of files is being
+monitored.</p>
+</section>
+<section id="sortfiles">
+<h4>sortFiles<a class="headerlink" href="#sortfiles" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.32.0.</span></p>
+</div>
+<p>If this parameter is set to on, the files will be processed in sorted order, else
+not. However, due to the inherent asynchronicity of the whole operations involved
+in tracking files, it is not possible to guarantee this sorted order, as it also
+depends on operation mode and OS timing.</p>
+</section>
+<section id="pollinginterval">
+<h4>PollingInterval<a class="headerlink" href="#pollinginterval" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>10</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This setting specifies how often files are to be
+polled for new data. For obvious reasons, it has effect only if
+imfile is running in polling mode.
+The time specified is in seconds. During each
+polling interval, all files are processed in a round-robin fashion.</p>
+<p>A short poll interval provides more rapid message forwarding, but
+requires more system resources. While it is possible, we strongly
+recommend not to set the polling interval to 0 seconds. That will
+make rsyslogd become a CPU hog, taking up considerable resources. It
+is supported, however, for the few very unusual situations where this
+level may be needed. Even if you need quick response, 1 seconds
+should be well enough. Please note that imfile keeps reading files as
+long as there is any data in them. So a “polling sleep” will only
+happen when nothing is left to be processed.</p>
+<p><strong>We recommend to use inotify mode.</strong></p>
+</section>
+<section id="statefile-directory">
+<h4>statefile.directory<a class="headerlink" href="#statefile-directory" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>string</p></td>
+<td><p>global(WorkDirectory) value</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.1905.0.</span></p>
+</div>
+<p>This parameter permits to specify a dedicated directory for the storage of
+imfile state files. An absolute path name should be specified (e.g.
+<cite>/var/rsyslog/imfilestate</cite>). This permits to keep imfile state files separate
+from other rsyslog work items.</p>
+<p>If not specified the global <cite>workDirectory</cite> setting is used.</p>
+<p><strong>Important: The directory must exist before rsyslog is started.</strong> Also,
+rsyslog needs write permissions to work correctly. Keep in mind that this
+also might require SELinux definitions (or similar for other enhanced security
+systems).</p>
+</section>
+</section>
+<section id="input-parameters">
+<h3>Input Parameters<a class="headerlink" href="#input-parameters" title="Link to this heading">¶</a></h3>
+<section id="file">
+<h4>File<a class="headerlink" href="#file" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>string</p></td>
+<td><p>none</p></td>
+<td><p>yes</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$InputFileName</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The file being monitored. So far, this must be an absolute name (no
+macros or templates). Note that wildcards are supported at the file
+name level (see <strong>WildCards</strong> below for more details).</p>
+</section>
+<section id="tag">
+<h4>Tag<a class="headerlink" href="#tag" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>string</p></td>
+<td><p>none</p></td>
+<td><p>yes</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$InputFileTag</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The tag to be assigned to messages read from this file. If you would like to
+see the colon after the tag, you need to include it when you assign a tag
+value, like so: <code class="docutils literal notranslate"><span class="pre">tag=&quot;myTagValue:&quot;</span></code>.</p>
+</section>
+<section id="facility">
+<h4>Facility<a class="headerlink" href="#facility" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer or string (preferred)</p></td>
+<td><p>local0</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$InputFileFacility</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The syslog facility to be assigned to messages read from this file. Can be
+specified in textual form (e.g. <code class="docutils literal notranslate"><span class="pre">local0</span></code>, <code class="docutils literal notranslate"><span class="pre">local1</span></code>, …) or as numbers (e.g.
+16 for <code class="docutils literal notranslate"><span class="pre">local0</span></code>). Textual form is suggested. Default  is <code class="docutils literal notranslate"><span class="pre">local0</span></code>.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference external" href="https://en.wikipedia.org/wiki/Syslog">https://en.wikipedia.org/wiki/Syslog</a></p>
+</div>
+</section>
+<section id="severity">
+<h4>Severity<a class="headerlink" href="#severity" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer or string (preferred)</p></td>
+<td><p>notice</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$InputFileSeverity</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The syslog severity to be assigned to lines read. Can be specified
+in textual   form (e.g. <code class="docutils literal notranslate"><span class="pre">info</span></code>, <code class="docutils literal notranslate"><span class="pre">warning</span></code>, …) or as numbers (e.g. 6
+for <code class="docutils literal notranslate"><span class="pre">info</span></code>). Textual form is suggested. Default is <code class="docutils literal notranslate"><span class="pre">notice</span></code>.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<p><a class="reference external" href="https://en.wikipedia.org/wiki/Syslog">https://en.wikipedia.org/wiki/Syslog</a></p>
+</div>
+</section>
+<section id="persiststateinterval">
+<h4>PersistStateInterval<a class="headerlink" href="#persiststateinterval" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>0</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$InputFilePersistStateInterval</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Specifies how often the state file shall be written when processing
+the input file. The <strong>default</strong> value is 0, which means a new state
+file is at least being written when the monitored files is being closed (end of
+rsyslogd execution). Any other value n means that the state file is
+written at least every time n file lines have been processed. This setting can
+be used to guard against message duplication due to fatal errors
+(like power fail). Note that this setting affects imfile performance,
+especially when set to a low value. Frequently writing the state file
+is very time consuming.</p>
+<p>Note further that rsyslog may write state files
+more frequently. This happens if rsyslog has some reason to do so.
+There is intentionally no more precise description of when state files
+are being written, as this is an implementation detail and may change
+as needed.</p>
+<p><strong>Note: If this parameter is not set, state files are not created.</strong></p>
+</section>
+<section id="startmsg-regex">
+<h4>startmsg.regex<a class="headerlink" href="#startmsg-regex" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>string</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.10.0.</span></p>
+</div>
+<p>This permits the processing of multi-line messages. When set, a
+messages is terminated when the next one begins, and
+<code class="docutils literal notranslate"><span class="pre">startmsg.regex</span></code> contains the regex that identifies the start
+of a message. As this parameter is using regular expressions, it
+is more flexible than <code class="docutils literal notranslate"><span class="pre">readMode</span></code> but at the cost of lower
+performance.
+Note that <code class="docutils literal notranslate"><span class="pre">readMode</span></code> and <code class="docutils literal notranslate"><span class="pre">startmsg.regex</span></code> and <code class="docutils literal notranslate"><span class="pre">endmsg.regex</span></code> cannot all be
+defined for the same input.</p>
+</section>
+<section id="endmsg-regex">
+<h4>endmsg.regex<a class="headerlink" href="#endmsg-regex" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>string</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.38.0.</span></p>
+</div>
+<p>This permits the processing of multi-line messages. When set, a message is
+terminated when <code class="docutils literal notranslate"><span class="pre">endmsg.regex</span></code> matches the line that
+identifies the end of a message. As this parameter is using regular
+expressions, it is more flexible than <code class="docutils literal notranslate"><span class="pre">readMode</span></code> but at the cost of lower
+performance.
+Note that <code class="docutils literal notranslate"><span class="pre">readMode</span></code> and <code class="docutils literal notranslate"><span class="pre">startmsg.regex</span></code> and <code class="docutils literal notranslate"><span class="pre">endmsg.regex</span></code> cannot all be
+defined for the same input.
+The primary use case for this is multiline container log files which look like
+this:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>date stdout P start of message
+date stdout P  middle of message
+date stdout F  end of message
+</pre></div>
+</div>
+<p>The <cite>F</cite> means this is the line which contains the final part of the message.
+The fully assembled message should be <cite>start of message middle of message end of
+message</cite>.  <cite>endmsg.regex=”^[^ ]+ stdout F “</cite> will match.</p>
+</section>
+<section id="id1">
+<h4>readTimeout<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>0</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.23.0.</span></p>
+</div>
+<p>This can be used with <em>startmsg.regex</em> (but not <em>readMode</em>). If specified,
+partial multi-line reads are timed out after the specified timeout interval.
+That means the current message fragment is being processed and the next
+message fragment arriving is treated as a completely new message. The
+typical use case for this parameter is a file that is infrequently being
+written. In such cases, the next message arrives relatively late, maybe hours
+later. Specifying a readTimeout will ensure that those “last messages” are
+emitted in a timely manner. In this use case, the “partial” messages being
+processed are actually full messages, so everything is fully correct.</p>
+<p>To guard against accidental too-early emission of a (partial) message, the
+timeout should be sufficiently large (5 to 10 seconds or more recommended).
+Specifying a value of zero turns off timeout processing. Also note the
+relationship to the <em>timeoutGranularity</em> global parameter, which sets the
+lower bound of <em>readTimeout</em>.</p>
+<p>Setting timeout values slightly increases processing time requirements; the
+effect should only be visible of a very large number of files is being
+monitored.</p>
+</section>
+<section id="readmode">
+<h4>readMode<a class="headerlink" href="#readmode" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>0</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$InputFileReadMode</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This provides support for processing some standard types of multiline
+messages. It is less flexible than <code class="docutils literal notranslate"><span class="pre">startmsg.regex</span></code> or <code class="docutils literal notranslate"><span class="pre">endmsg.regex</span></code> but
+offers higher performance than regex processing. Note that <code class="docutils literal notranslate"><span class="pre">readMode</span></code> and
+<code class="docutils literal notranslate"><span class="pre">startmsg.regex</span></code> and <code class="docutils literal notranslate"><span class="pre">endmsg.regex</span></code> cannot all be defined for the same
+input.</p>
+<p>The value can range from 0-2 and determines the multiline
+detection method.</p>
+<p>0 - (<strong>default</strong>) line based (each line is a new message)</p>
+<p>1 - paragraph (There is a blank line between log messages)</p>
+<p>2 - indented (new log messages start at the beginning of a line. If a
+line starts with a space or tab “t” it is part of the log message before it)</p>
+</section>
+<section id="escapelf">
+<h4>escapeLF<a class="headerlink" href="#escapelf" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>1</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This is only meaningful if multi-line messages are to be processed.
+LF characters embedded into syslog messages cause a lot of trouble,
+as most tools and even the legacy syslog TCP protocol do not expect
+these. If set to “on”, this option avoid this trouble by properly
+escaping LF characters to the 4-byte sequence “#012”. This is
+consistent with other rsyslog control character escaping. By default,
+escaping is turned on. If you turn it off, make sure you test very
+carefully with all associated tools. Please note that if you intend
+to use plain TCP syslog with embedded LF characters, you need to
+enable octet-counted framing. For more details, see
+<a class="reference external" href="https://rainer.gerhards.net/2013/09/imfile-multi-line-messages.html">Rainer Gerhards’ blog posting on imfile LF escaping</a>.</p>
+</section>
+<section id="escapelf-replacement">
+<h4>escapeLF.replacement<a class="headerlink" href="#escapelf-replacement" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>string</p></td>
+<td><p>depending on use</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.2001.0.</span></p>
+</div>
+<p>This parameter works in conjunction with <cite>escapeLF</cite>. It is only
+honored if <cite>escapeLF=”on”</cite>.</p>
+<p>It permits to replace the default escape sequence by a different character
+sequence. The default historically is inconsistent and depends on which
+functionality is used to read the file. It can be either “#012” or “\n”. If
+you want to retain that default, do not configure this parameter.</p>
+<p>If it is configured, any sequence may be used. For example, to replace an LF
+with a simple space, use:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">escapeLF</span><span class="o">.</span><span class="n">replacement</span><span class="o">=</span><span class="s2">&quot; &quot;</span>
+</pre></div>
+</div>
+<p>It is also possible to configure longer replacements. An example for this is:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">escapeLF</span><span class="o">.</span><span class="n">replacement</span><span class="o">=</span><span class="s2">&quot;[LF]&quot;</span>
+</pre></div>
+</div>
+<p>Finally, it is possible to completely remove the LF. This is done by specifying
+an empty replacement sequence:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">escapeLF</span><span class="o">.</span><span class="n">replacement</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="maxlinesatonce">
+<h4>MaxLinesAtOnce<a class="headerlink" href="#maxlinesatonce" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>0</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$InputFileMaxLinesAtOnce</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This is a legacy setting that only is supported in <em>polling</em> mode.
+In <em>inotify</em> mode, it is fixed at 0 and all attempts to configure
+a different value will be ignored, but will generate an error
+message.</p>
+<p>Please note that future versions of imfile may not support this
+parameter at all. So it is suggested to not use it.</p>
+<p>In <em>polling</em> mode, if set to 0, each file will be fully processed and
+then processing switches to the next file. If it is set to any other
+value, a maximum of [number] lines is processed in sequence for each file,
+and then the file is switched. This provides a kind of multiplexing
+the load of multiple files and probably leads to a more natural
+distribution of events when multiple busy files are monitored. For
+<em>polling</em> mode, the <strong>default</strong> is 10240.</p>
+</section>
+<section id="maxsubmitatonce">
+<h4>MaxSubmitAtOnce<a class="headerlink" href="#maxsubmitatonce" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>1024</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This is an expert option. It can be used to set the maximum input
+batch size that imfile can generate. The <strong>default</strong> is 1024, which
+is suitable for a wide range of applications. Be sure to understand
+rsyslog message batch processing before you modify this option. If
+you do not know what this doc here talks about, this is a good
+indication that you should NOT modify the default.</p>
+</section>
+<section id="deletestateonfiledelete">
+<h4>deleteStateOnFileDelete<a class="headerlink" href="#deletestateonfiledelete" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>on</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This parameter controls if state files are deleted if their associated
+main file is deleted. Usually, this is a good idea, because otherwise
+problems would occur if a new file with the same name is created. In
+that case, imfile would pick up reading from the last position in
+the <strong>deleted</strong> file, which usually is not what you want.</p>
+<p>However, there is one situation where not deleting associated state
+file makes sense: this is the case if a monitored file is modified
+with an editor (like vi or gedit). Most editors write out modifications
+by deleting the old file and creating a new now. If the state file
+would be deleted in that case, all of the file would be reprocessed,
+something that’s probably not intended in most case. As a side-note,
+it is strongly suggested <em>not</em> to modify monitored files with
+editors. In any case, in such a situation, it makes sense to
+disable state file deletion. That also applies to similar use
+cases.</p>
+<p>In general, this parameter should only by set if the users
+knows exactly why this is required.</p>
+<p>For historical reasons, this parameter has an alias called
+<cite>removeStateOnDelete</cite>. This is to provide backward compatibility.
+Newer installations should use <cite>deleteStateOnFileDelete</cite> only.</p>
+</section>
+<section id="id2">
+<h4>deleteStateOnFileMove<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>inherits from module parameter</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This parameter controls if state files are deleted when their associated
+main file is moved or renamed. By default, this parameter inherits its
+value from the module-level <cite>deleteStateOnFileMove</cite> parameter. When set
+to “on”, the state file will be automatically cleaned up when the file
+is moved, preventing orphaned state files.</p>
+</section>
+<section id="ruleset">
+<h4>Ruleset<a class="headerlink" href="#ruleset" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>string</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$InputFileBindRuleset</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Binds the listener to a specific <a class="reference internal" href="../../concepts/multi_ruleset.html"><span class="doc">ruleset</span></a>.</p>
+</section>
+<section id="addmetadata">
+<h4>addMetadata<a class="headerlink" href="#addmetadata" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>-1</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><strong>Default: see intro section on Metadata</strong></p>
+<p>This is used to turn on or off the addition of metadata to the
+message object.</p>
+</section>
+<section id="addceetag">
+<h4>addCeeTag<a class="headerlink" href="#addceetag" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This is used to turn on or off the addition of the “&#64;cee:” cookie to the
+message object.</p>
+</section>
+<section id="reopenontruncate">
+<h4>reopenOnTruncate<a class="headerlink" href="#reopenontruncate" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This is an <strong>experimental</strong> feature that tells rsyslog to reopen input file
+when it was truncated (inode unchanged but file size on disk is less than
+current offset in memory).</p>
+</section>
+<section id="maxlinesperminute">
+<h4>MaxLinesPerMinute<a class="headerlink" href="#maxlinesperminute" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>0</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Instructs rsyslog to enqueue up to the specified maximum number of lines
+as messages per minute. Lines above this value are discarded.</p>
+<p>The <strong>default</strong> value is 0, which means that no lines are discarded.</p>
+</section>
+<section id="maxbytesperminute">
+<h4>MaxBytesPerMinute<a class="headerlink" href="#maxbytesperminute" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>0</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Instructs rsyslog to enqueue a maximum number of bytes as messages per
+minute. Once MaxBytesPerMinute is reached, subsequent messages are
+discarded.</p>
+<p>Note that messages are not truncated as a result of MaxBytesPerMinute,
+rather the entire message is discarded if part of it would be above the
+specified maximum bytes per minute.</p>
+<p>The <strong>default</strong> value is 0, which means that no messages are discarded.</p>
+</section>
+<section id="trimlineoverbytes">
+<h4>trimLineOverBytes<a class="headerlink" href="#trimlineoverbytes" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>0</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This is used to tell rsyslog to truncate the line which length is greater
+than specified bytes. If it is positive number, rsyslog truncate the line
+at specified bytes. Default value of ‘trimLineOverBytes’ is 0, means never
+truncate line.</p>
+<p>This option can be used when <code class="docutils literal notranslate"><span class="pre">readMode</span></code> is 0 or 2.</p>
+</section>
+<section id="freshstarttail">
+<h4>freshStartTail<a class="headerlink" href="#freshstarttail" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This is used to tell rsyslog to seek to the end/tail of input files
+(discard old logs) <strong>at its first start(freshStart)</strong> and process only new
+log messages.</p>
+<p>When deploy rsyslog to a large number of servers, we may only care about
+new log messages generated after the deployment. set <strong>freshstartTail</strong>
+to <strong>on</strong> will discard old logs. Otherwise, there may be vast useless
+message burst on the remote central log receiver</p>
+<p>This parameter only applies to files that are already existing during
+rsyslog’s initial processing of the file monitors.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Depending on the number and location of existing files, this initial
+startup processing may take some time as well. If another process
+creates a new file at exactly the time of startup processing and writes
+data to it, rsyslog might detect this file and it’s data as preexisting
+and may skip it. This race is inevitable. So when freshStartTail is used,
+some risk of data loss exists. The same holds true if between the last
+shutdown of rsyslog and its restart log file content has been added.
+As such, the rsyslog team advises against activating the freshStartTail
+option.</p>
+</div>
+</section>
+<section id="discardtruncatedmsg">
+<h4>discardTruncatedMsg<a class="headerlink" href="#discardtruncatedmsg" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>When messages are too long they are truncated and the following part is
+processed as a new message. When this parameter is turned on the
+truncated part is not processed but discarded.</p>
+</section>
+<section id="msgdiscardingerror">
+<h4>msgDiscardingError<a class="headerlink" href="#msgdiscardingerror" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>on</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Upon truncation an error is given. When this parameter is turned off, no
+error will be shown upon truncation.</p>
+</section>
+<section id="needparse">
+<h4>needParse<a class="headerlink" href="#needparse" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.1903.0.</span></p>
+</div>
+<p>By default, read message are sent to output modules without passing through
+parsers. This parameter informs rsyslog to use also defined parser module(s).</p>
+</section>
+<section id="persiststateaftersubmission">
+<h4>persistStateAfterSubmission<a class="headerlink" href="#persiststateaftersubmission" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>binary</p></td>
+<td><p>off</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.2006.0.</span></p>
+</div>
+<p>This setting makes imfile persist state file information after a batch of
+messages has been submitted. It can be activated (switched to “on”) in order
+to provide enhanced robustness against unclean shutdowns. Depending on the
+configuration of the rest of rsyslog (most importantly queues), persisting
+the state file after each message submission prevents message loss
+when reading files and the system is shutdown in an unclean way (e.g.
+loss of power).</p>
+<p>Please note that this setting may cause frequent state file writes and
+as such may cause some performance degradation.</p>
+</section>
+<section id="ignoreolderthan">
+<h4>ignoreOlderThan<a class="headerlink" href="#ignoreolderthan" title="Link to this heading">¶</a></h4>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>integer</p></td>
+<td><p>0</p></td>
+<td><p>no</p></td>
+<td><p>none</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.2108.0.</span></p>
+</div>
+<p>Instructs imfile to ignore a discovered file that has not been modified in the
+specified number of seconds. Once a file is discovered, the file is no longer
+ignored and new data will be read. This option is disabled (set to 0) by default.</p>
+</section>
+</section>
+</section>
+<section id="metadata">
+<span id="id3"></span><h2>Metadata<a class="headerlink" href="#metadata" title="Link to this heading">¶</a></h2>
+<p>The imfile module supports message metadata. It supports the following
+data items:</p>
+<ul>
+<li><p>filename</p>
+<p>Name of the file where the message originated from. This is most
+useful when using wildcards inside file monitors, because it then
+is the only way to know which file the message originated from.
+The value can be accessed using the %$!metadata!filename% property.
+<strong>Note</strong>: For symlink-ed files this does <strong>not</strong> contain name of the
+actual file (source of the data) but name of the symlink (file which
+matched configured input).</p>
+</li>
+<li><p>fileoffset</p>
+<p>Offset of the file in bytes at the time the message was read. The
+offset reported is from the <strong>start</strong> of the line.
+This information can be useful when recreating multi-line files
+that may have been accessed or transmitted non-sequentially.
+The value can be accessed using the %$!metadata!fileoffset% property.</p>
+</li>
+</ul>
+<p>Metadata is only present if enabled. By default it is enabled for
+input() statements that contain wildcards. For all others, it is
+disabled by default. It can explicitly be turned on or off via the
+<em>addMetadata</em> input() parameter, which always overrides the default.</p>
+</section>
+<section id="state-files">
+<span id="id4"></span><h2>State Files<a class="headerlink" href="#state-files" title="Link to this heading">¶</a></h2>
+<p>Rsyslog must keep track of which parts of the monitored file
+are already processed. This is done in so-called “state files” that
+are created in the rsyslog working directory and are read on startup to
+resume monitoring after a shutdown. The location of the rsyslog
+working directory is configurable via the <code class="docutils literal notranslate"><span class="pre">global(workDirectory)</span></code>
+<code class="docutils literal notranslate"><span class="pre">advanced</span></code> format parameter.</p>
+<p><strong>Note</strong>: The <code class="docutils literal notranslate"><span class="pre">PersistStateInterval</span></code> parameter must be set, otherwise state
+files will NOT be created.</p>
+<p>Rsyslog automatically generates state file names. These state file
+names will begin with the string <code class="docutils literal notranslate"><span class="pre">imfile-state:</span></code> and be followed
+by some suffix rsyslog generates.</p>
+<p>There is intentionally no more precise description of when state file
+naming, as this is an implementation detail and may change as needed.</p>
+<p>Note that it is possible to set a fixed state file name via the
+deprecated <code class="docutils literal notranslate"><span class="pre">stateFile</span></code> parameter. It is suggested to avoid this, as
+the user must take care of name clashes. Most importantly, if
+“stateFile” is set for file monitors with wildcards, the <strong>same</strong>
+state file is used for all occurrences of these files. In short,
+this will usually not work and cause confusion. Upon startup,
+rsyslog tries to detect these cases and emit warning messages.
+However, the detection simply checks for the presence of “*”
+and as such it will not cover more complex cases.</p>
+<p>Note that when the <code class="docutils literal notranslate"><span class="pre">global(workDirectory)</span></code> <code class="docutils literal notranslate"><span class="pre">advanced</span></code> format
+parameter is points to a non-writable location, the state file
+<strong>will not be generated</strong>. In those cases, the file content will always
+be completely re-sent by imfile, because the module does not know that it
+already processed parts of that file. if The parameter is not set to all, it
+defaults to the file system root, which may or may not be writable by
+the rsyslog process.</p>
+</section>
+<section id="wildcards">
+<span id="id5"></span><h2>WildCards<a class="headerlink" href="#wildcards" title="Link to this heading">¶</a></h2>
+<p>As of rsyslog version 8.25.0 and later, wildcards are fully supported in both directory names and filenames. This allows for flexible file monitoring configurations.</p>
+<p>Examples of supported wildcard usage:</p>
+<ul class="simple">
+<li><p><cite>/var/log/*.log</cite> (all .log files in /var/log)</p></li>
+<li><p><cite>/var/log/*/*.log</cite> (all .log files in immediate subdirectories of /var/log)</p></li>
+<li><p><cite>/var/log/app*/*/*.log</cite> (all .log files in subdirectories of directories starting with “app” in /var/log)</p></li>
+</ul>
+<p>All matching files in all matching subfolders will be monitored.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Using complex wildcard patterns, especially those that match many directories and files, may have an impact on performance. It’s advisable to use the most specific patterns possible.</p>
+</div>
+<p>Historically, versions prior to 8.25.0 had limitations, supporting wildcards only in the filename part and not in directory paths.</p>
+</section>
+<section id="caveats-known-bugs">
+<h2>Caveats/Known Bugs<a class="headerlink" href="#caveats-known-bugs" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>symlink may not always be properly processed</p></li>
+</ul>
+</section>
+<section id="configuration-examples">
+<h2>Configuration Examples<a class="headerlink" href="#configuration-examples" title="Link to this heading">¶</a></h2>
+<p>The following sample monitors two files. If you need just one, remove
+the second one. If you need more, add them according to the sample ;).
+This code must be placed in /etc/rsyslog.conf (or wherever your distro
+puts rsyslog’s config files). Note that only commands actually needed
+need to be specified. The second file uses less commands and uses
+defaults instead.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>module(load=&quot;imfile&quot; PollingInterval=&quot;10&quot;) #needs to be done just once
+
+# File 1
+input(type=&quot;imfile&quot;
+      File=&quot;/path/to/file1&quot;
+      Tag=&quot;tag1&quot;
+      Severity=&quot;error&quot;
+      Facility=&quot;local7&quot;)
+
+# File 2
+input(type=&quot;imfile&quot;
+      File=&quot;/path/to/file2&quot;
+      Tag=&quot;tag2&quot;)
+
+# ... and so on ... #
+</pre></div>
+</div>
+</section>
+<section id="deprecated-parameters">
+<h2>Deprecated parameters<a class="headerlink" href="#deprecated-parameters" title="Link to this heading">¶</a></h2>
+<p><strong>Note:</strong> While these parameters are still accepted, they should no longer be
+used for newly created configurations.</p>
+<section id="statefile">
+<h3>stateFile<a class="headerlink" href="#statefile" title="Link to this heading">¶</a></h3>
+<div class="table-wrapper colwidths-auto parameter-table docutils container">
+<table class="parameter-table docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>type</p></th>
+<th class="head"><p>default</p></th>
+<th class="head"><p>mandatory</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">obsolete</span> <span class="pre">legacy</span></code> directive</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>string</p></td>
+<td><p>none</p></td>
+<td><p>no</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">$InputFileStateFile</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>This is the name of this file’s state file. This parameter should
+usually <strong>not</strong> be used. Check the section on “State Files” above
+for more details.</p>
+<hr class="docutils" />
+<p><strong>Support:</strong> <a class="reference external" href="https://rsyslog.ai">rsyslog Assistant</a> |
+<a class="reference external" href="https://github.com/rsyslog/rsyslog/discussions">GitHub Discussions</a> |
+GitHub Issues: <a class="reference external" href="https://github.com/rsyslog/rsyslog/">rsyslog source project</a></p>
+<p><strong>Contributing:</strong> Source &amp; docs: <a class="reference external" href="https://github.com/rsyslog/rsyslog/">rsyslog source project</a></p>
+<p>© 2008–2025 <a class="reference external" href="https://rainer.gerhards.net/">Rainer Gerhards</a>
+and others. Licensed under the <a class="reference external" href="https://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>.</p>
+</section>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="imgssapi.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">imgssapi: GSSAPI Syslog Input Module</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="imdtls.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">imdtls: Input Module for DTLS Protocol over UDP</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            Made with 
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">imfile: Text File Input Module</a><ul>
+<li><a class="reference internal" href="#purpose">Purpose</a></li>
+<li><a class="reference internal" href="#notable-features">Notable Features</a></li>
+<li><a class="reference internal" href="#configuration">Configuration</a><ul>
+<li><a class="reference internal" href="#module-parameters">Module Parameters</a><ul>
+<li><a class="reference internal" href="#mode">Mode</a></li>
+<li><a class="reference internal" href="#readtimeout">readTimeout</a></li>
+<li><a class="reference internal" href="#deletestateonfilemove">deleteStateOnFileMove</a></li>
+<li><a class="reference internal" href="#timeoutgranularity">timeoutGranularity</a></li>
+<li><a class="reference internal" href="#sortfiles">sortFiles</a></li>
+<li><a class="reference internal" href="#pollinginterval">PollingInterval</a></li>
+<li><a class="reference internal" href="#statefile-directory">statefile.directory</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#input-parameters">Input Parameters</a><ul>
+<li><a class="reference internal" href="#file">File</a></li>
+<li><a class="reference internal" href="#tag">Tag</a></li>
+<li><a class="reference internal" href="#facility">Facility</a></li>
+<li><a class="reference internal" href="#severity">Severity</a></li>
+<li><a class="reference internal" href="#persiststateinterval">PersistStateInterval</a></li>
+<li><a class="reference internal" href="#startmsg-regex">startmsg.regex</a></li>
+<li><a class="reference internal" href="#endmsg-regex">endmsg.regex</a></li>
+<li><a class="reference internal" href="#id1">readTimeout</a></li>
+<li><a class="reference internal" href="#readmode">readMode</a></li>
+<li><a class="reference internal" href="#escapelf">escapeLF</a></li>
+<li><a class="reference internal" href="#escapelf-replacement">escapeLF.replacement</a></li>
+<li><a class="reference internal" href="#maxlinesatonce">MaxLinesAtOnce</a></li>
+<li><a class="reference internal" href="#maxsubmitatonce">MaxSubmitAtOnce</a></li>
+<li><a class="reference internal" href="#deletestateonfiledelete">deleteStateOnFileDelete</a></li>
+<li><a class="reference internal" href="#id2">deleteStateOnFileMove</a></li>
+<li><a class="reference internal" href="#ruleset">Ruleset</a></li>
+<li><a class="reference internal" href="#addmetadata">addMetadata</a></li>
+<li><a class="reference internal" href="#addceetag">addCeeTag</a></li>
+<li><a class="reference internal" href="#reopenontruncate">reopenOnTruncate</a></li>
+<li><a class="reference internal" href="#maxlinesperminute">MaxLinesPerMinute</a></li>
+<li><a class="reference internal" href="#maxbytesperminute">MaxBytesPerMinute</a></li>
+<li><a class="reference internal" href="#trimlineoverbytes">trimLineOverBytes</a></li>
+<li><a class="reference internal" href="#freshstarttail">freshStartTail</a></li>
+<li><a class="reference internal" href="#discardtruncatedmsg">discardTruncatedMsg</a></li>
+<li><a class="reference internal" href="#msgdiscardingerror">msgDiscardingError</a></li>
+<li><a class="reference internal" href="#needparse">needParse</a></li>
+<li><a class="reference internal" href="#persiststateaftersubmission">persistStateAfterSubmission</a></li>
+<li><a class="reference internal" href="#ignoreolderthan">ignoreOlderThan</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#metadata">Metadata</a></li>
+<li><a class="reference internal" href="#state-files">State Files</a></li>
+<li><a class="reference internal" href="#wildcards">WildCards</a></li>
+<li><a class="reference internal" href="#caveats-known-bugs">Caveats/Known Bugs</a></li>
+<li><a class="reference internal" href="#configuration-examples">Configuration Examples</a></li>
+<li><a class="reference internal" href="#deprecated-parameters">Deprecated parameters</a><ul>
+<li><a class="reference internal" href="#statefile">stateFile</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../../_static/documentation_options.js?v=6fd4f6cc"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/scripts/furo.js?v=46bd48cc"></script>
+    </body>
+</html>

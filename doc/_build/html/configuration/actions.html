@@ -1,0 +1,1248 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Input" href="input.html" /><link rel="prev" title="The rsyslog include() object" href="../rainerscript/include.html" />
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.07.19 -->
+        <title>Actions - rsyslog 8.2508 daily stable documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=25af2a20" />
+    <link rel="stylesheet" type="text/css" href="../_static/rsyslog.css?v=6406a7f4" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #eeffcc;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #2b2b2b;
+  --color-code-foreground: #f8f8f2;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #2b2b2b;
+  --color-code-foreground: #f8f8f2;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">rsyslog 8.2508 daily stable documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <span class="sidebar-brand-text">rsyslog 8.2508 daily stable documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1 has-children"><a class="reference internal" href="../about/index.html">About rsyslog</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of About rsyslog</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../about/ai_first.html">AI-First: Our Vision for rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../about/history.html">History and Future of rsyslog</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../getting_started/index.html">Getting Started with rsyslog</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Getting Started with rsyslog</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/installation.html">Installing rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/basic_configuration.html">Basic Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/understanding_default_config.html">Understanding the Default Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/forwarding_logs.html">Forwarding Logs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../getting_started/next_steps.html">Next Steps</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Configuration</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Configuration</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="basic_structure.html">Basic Structure</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="modules/idx_output.html">Output Modules</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of Output Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/omamqp1.html">omamqp1: AMQP 1.0 Messaging Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omazureeventhubs.html">omazureeventhubs: Microsoft Azure Event Hubs Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omclickhouse.html">omclickhouse: ClickHouse Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omczmq.html">omczmq: Output module for ZeroMQ</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omdtls.html">omdtls: Output Module for DTLS Protocol over UDP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omelasticsearch.html">omelasticsearch: Elasticsearch Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omfile.html">omfile: File Output Module</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="modules/omfwd.html">omfwd: syslog Forwarding Output Module</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of omfwd: syslog Forwarding Output Module</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/omfwd/parameters/basic.html">Basic Parameters</a></li>
+<li class="toctree-l4"><a class="reference internal" href="modules/omfwd/parameters/module.html">Module Parameters</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omhdfs.html">omhdfs: Hadoop Filesystem Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omhiredis.html">omhiredis: Redis Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omhttp.html">omhttp: HTTP Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omhttpfs.html">omhttpfs: Hadoop HTTPFS Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omjournal.html">omjournal: Systemd Journal Output</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omkafka.html">omkafka: write to Apache Kafka</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omlibdbi.html">omlibdbi: Generic Database Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/ommail.html">ommail: Mail Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/ommongodb.html">ommongodb: MongoDB Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/ommysql.html">ommysql: MariaDB/MySQL Database Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omoracle.html">omoracle: Oracle Database Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/ompgsql.html">PostgreSQL Database Output Module (ompgsql)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/ompipe.html">ompipe: Pipe Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omprog.html">omprog: Program integration Output module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omrabbitmq.html">omrabbitmq: RabbitMQ output module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omrelp.html">omrelp: RELP Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omruleset.html">omruleset: ruleset output/including module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omsendertrack.html">omsendertrack: Sender Tracking Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omsnmp.html">omsnmp: SNMP Trap Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omstdout.html">omstdout: stdout output module (testbench tool)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omudpspoof.html">omudpspoof: UDP spoofing output module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omusrmsg.html">omusrmsg: notify users</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/omuxsock.html">omuxsock: Unix sockets Output Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/sigprov_gt.html">GuardTime Log Signature Provider (gt)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/sigprov_ksi.html">Keyless Signature Infrastructure Provider (ksi)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/sigprov_ksi12.html">KSI Signature Provider (rsyslog-ksi-ls12)</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="modules/idx_input.html">Input Modules</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of Input Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/im3195.html">im3195: RFC3195 Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imbatchreport.html">imbatchreport: Batch report input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imczmq.html">imczmq: Input module for ZeroMQ</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imdocker.html">imdocker: Docker Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imdtls.html">imdtls: Input Module for DTLS Protocol over UDP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imfile.html">imfile: Text File Input Module</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="modules/imgssapi.html">imgssapi: GSSAPI Syslog Input Module</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of imgssapi: GSSAPI Syslog Input Module</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="modules/gssapi.html">GSSAPI module support in rsyslog v3</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imhiredis.html">Imhiredis: Redis input plugin</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imhttp.html">imhttp: HTTP input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imjournal.html">imjournal: Systemd Journal Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imkafka.html">imkafka: read from Apache Kafka</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imklog.html">imklog: Kernel Log Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imkmsg.html">imkmsg: /dev/kmsg Log Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/immark.html">immark: Mark Message Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/impcap.html">Impcap: network traffic capture</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/improg.html">improg: Program integration input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/impstats.html">impstats: Generate Periodic Statistics of Internal Counters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imptcp.html">imptcp: Plain TCP Syslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imrelp.html">imrelp: RELP Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imsolaris.html">imsolaris: Solaris Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imtcp.html">imtcp: TCP Syslog Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imtuxedoulog.html">imtuxedoulog: Tuxedo ULOG input module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imudp.html">imudp: UDP Syslog Input Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/imuxsock.html">imuxsock: Unix Socket Input Module</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="modules/idx_parser.html">Parser Modules</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of Parser Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/pmciscoios.html">pmciscoios</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/pmdb2diag.html">pmdb2diag: DB2 Diag file parser module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/pmlastmsg.html">pmlastmsg: last message repeated n times</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/pmnormalize.html">Log Message Normalization Parser Module (pmnormalize)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/pmnull.html">pmnull: Syslog Null Parser Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/pmrfc3164.html">pmrfc3164: Parse RFC3164-formatted messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/pmrfc3164sd.html">pmrfc3164sd: Parse RFC5424 structured data inside RFC3164 messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/pmrfc5424.html">pmrfc5424: Parse RFC5424-formatted messages</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="modules/idx_messagemod.html">Message Modification Modules</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of Message Modification Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmaitag.html">AI-based classification (mmaitag)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmanon.html">IP Address Anonymization Module (mmanon)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmcount.html">mmcount</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmdarwin.html">Darwin connector (mmdarwin)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmdblookup.html">MaxMind/GeoIP DB lookup (mmdblookup)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmexternal.html">Support module for external message modification modules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmfields.html">Fields Extraction Module (mmfields)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmjsonparse.html">JSON/CEE Structured Content Extraction Module (mmjsonparse)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmkubernetes.html">Kubernetes Metadata Module (mmkubernetes)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmnormalize.html">Log Message Normalization Module (mmnormalize)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmpstrucdata.html">RFC5424 structured data parsing module (mmpstrucdata)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmrfc5424addhmac.html">mmrfc5424addhmac</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmrm1stspace.html">mmrm1stspace: First Space Modification Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmsequence.html">Number generator and counter module (mmsequence)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmsnmptrapd.html">mmsnmptrapd message modification module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmtaghostname.html">mmtaghostname: message modification module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="modules/mmutf8fix.html">Fix invalid UTF-8 Sequences (mmutf8fix)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="modules/idx_stringgen.html">String Generator Modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="modules/idx_library.html">Library Modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="templates.html">Templates</a></li>
+<li class="toctree-l2"><a class="reference internal" href="properties.html">rsyslog Properties</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="property_replacer.html">The Property Replacer</a><input class="toctree-checkbox" id="toctree-checkbox-10" name="toctree-checkbox-10" role="switch" type="checkbox"/><label for="toctree-checkbox-10"><div class="visually-hidden">Toggle navigation of The Property Replacer</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="nomatch.html">Property Replacer nomatch mode</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="filters.html">Filter Conditions</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../rainerscript/index.html">RainerScript</a><input class="toctree-checkbox" id="toctree-checkbox-11" name="toctree-checkbox-11" role="switch" type="checkbox"/><label for="toctree-checkbox-11"><div class="visually-hidden">Toggle navigation of RainerScript</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/data_types.html">Data Types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/expressions.html">Expressions</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="../rainerscript/functions/index.html">Functions</a><input class="toctree-checkbox" id="toctree-checkbox-12" name="toctree-checkbox-12" role="switch" type="checkbox"/><label for="toctree-checkbox-12"><div class="visually-hidden">Toggle navigation of Functions</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4 has-children"><a class="reference internal" href="../rainerscript/functions/idx_built-in_functions.html">Built-in Functions</a><input class="toctree-checkbox" id="toctree-checkbox-13" name="toctree-checkbox-13" role="switch" type="checkbox"/><label for="toctree-checkbox-13"><div class="visually-hidden">Toggle navigation of Built-in Functions</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-cnum.html">cnum()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-cstr.html">cstr()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-dyn_inc.html">dyn_inc()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-exec_template.html">exec_template()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-exists.html">exists()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-field.html">field()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-format_time.html">format_time()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-get_property.html">get_property()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-getenv.html">getenv()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-int2hex.html">int2hex()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-ipv4convert.html">num2ipv4() / ipv42num()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-is_time.html">is_time()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-lookup.html">lookup()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-parse_json.html">parse_json()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-parse_time.html">parse_time()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-percentile_observe.html">percentile_observe()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-previous_action_suspended.html">previous_action_suspended()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-prifilt.html">prifilt()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-random.html">random()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-re_extract.html">re_extract()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-re_extract_i.html">re_extract_i()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-re_match.html">re_match()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-re_match_i.html">re_match_i()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-replace.html">replace()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-script_error.html">script_error()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-strlen.html">strlen()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-substring.html">substring()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-tolower.html">tolower()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-trim.html">ltrim() / rtrim()</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/rs-wrap.html">wrap()</a></li>
+</ul>
+</li>
+<li class="toctree-l4 has-children"><a class="reference internal" href="../rainerscript/functions/idx_module_functions.html">Module Functions</a><input class="toctree-checkbox" id="toctree-checkbox-14" name="toctree-checkbox-14" role="switch" type="checkbox"/><label for="toctree-checkbox-14"><div class="visually-hidden">Toggle navigation of Module Functions</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/mo-ffaup.html">Faup</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/mo-hashXX.html">HashXX</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/mo-hashXXmod.html">HashXXmod</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/mo-http_request.html">HTTP-Request</a></li>
+<li class="toctree-l5"><a class="reference internal" href="../rainerscript/functions/mo-unflatten.html">Unflatten</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/control_structures.html">Control Structures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/configuration_objects.html">configuration objects</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/constant_strings.html">String Constants</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/variable_property_types.html">Variable (Property) types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/lookup_tables.html">Lookup Tables</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/queue_parameters.html">General Queue Parameters</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/rainerscript_call.html">The rsyslog “call” statement</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/rainerscript_call_indirect.html">The rsyslog “call_indirect” statement</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/global.html">global() configuration object</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../rainerscript/include.html">The rsyslog include() object</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Actions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input.html">Input</a></li>
+<li class="toctree-l2"><a class="reference internal" href="parser.html">Parser</a></li>
+<li class="toctree-l2"><a class="reference internal" href="timezone.html">timezone</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="index_directives.html">Legacy Configuration Directives</a><input class="toctree-checkbox" id="toctree-checkbox-15" name="toctree-checkbox-15" role="switch" type="checkbox"/><label for="toctree-checkbox-15"><div class="visually-hidden">Toggle navigation of Legacy Configuration Directives</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="config_param_types.html">Configuration Parameter Types</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="global/index.html">Legacy Global Configuration Statements</a><input class="toctree-checkbox" id="toctree-checkbox-16" name="toctree-checkbox-16" role="switch" type="checkbox"/><label for="toctree-checkbox-16"><div class="visually-hidden">Toggle navigation of Legacy Global Configuration Statements</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_abortonuncleanconfig.html">$AbortOnUncleanConfig</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_debugprintcfsyslinehandlerlist.html">$DebugPrintCFSyslineHandlerList</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_debugprintmodulelist.html">$DebugPrintModuleList</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_debugprinttemplatelist.html">$DebugPrintTemplateList</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_failonchownfailure.html">$FailOnChownFailure</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_generateconfiggraph.html">$GenerateConfigGraph</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_includeconfig.html">$IncludeConfig</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_mainmsgqueuesize.html">$MainMsgQueueSize</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_maxopenfiles.html">$MaxOpenFiles</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_moddir.html">$ModDir</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_modload.html">$ModLoad</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_umask.html">$UMASK</a></li>
+<li class="toctree-l4"><a class="reference internal" href="global/options/rsconf1_resetconfigvariables.html">$ResetConfigVariables</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="input_directives/index.html">Legacy Directives affecting Input Modules</a><input class="toctree-checkbox" id="toctree-checkbox-17" name="toctree-checkbox-17" role="switch" type="checkbox"/><label for="toctree-checkbox-17"><div class="visually-hidden">Toggle navigation of Legacy Directives affecting Input Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="input_directives/rsconf1_allowedsender.html">$AllowedSender</a></li>
+<li class="toctree-l4"><a class="reference internal" href="input_directives/rsconf1_dropmsgswithmaliciousdnsptrrecords.html">$DropMsgsWithMaliciousDnsPTRRecords</a></li>
+<li class="toctree-l4"><a class="reference internal" href="input_directives/rsconf1_controlcharacterescapeprefix.html">$ControlCharacterEscapePrefix</a></li>
+<li class="toctree-l4"><a class="reference internal" href="input_directives/rsconf1_droptrailinglfonreception.html">$DropTrailingLFOnReception</a></li>
+<li class="toctree-l4"><a class="reference internal" href="input_directives/rsconf1_escape8bitcharsonreceive.html">$Escape8BitCharactersOnReceive</a></li>
+<li class="toctree-l4"><a class="reference internal" href="input_directives/rsconf1_escapecontrolcharactersonreceive.html">$EscapeControlCharactersOnReceive</a></li>
+<li class="toctree-l4"><a class="reference internal" href="input_directives/rsconf1_markmessageperiod.html">$MarkMessagePeriod</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="action/index.html">Depricated Legacy Action-Specific Configuration Statements</a><input class="toctree-checkbox" id="toctree-checkbox-18" name="toctree-checkbox-18" role="switch" type="checkbox"/><label for="toctree-checkbox-18"><div class="visually-hidden">Toggle navigation of Depricated Legacy Action-Specific Configuration Statements</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_actionexeconlywhenpreviousissuspended.html">How to Convert Deprecated <cite>$ActionExecOnlyWhenPreviousIsSuspended</cite> to Modern Style</a></li>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_actionresumeinterval.html">How to Convert Deprecated <cite>$ActionResumeInterval</cite> to Modern Style</a></li>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_repeatedmsgreduction.html">$RepeatedMsgReduction</a></li>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_omfileforcechown.html">$omfileForceChown</a></li>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_dirgroup.html">$DirGroup</a></li>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_dirowner.html">How to Convert Deprecated <cite>$DirOwner</cite> to Modern Style</a></li>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_dynafilecachesize.html">$DynaFileCacheSize</a></li>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_filecreatemode.html">$FileCreateMode</a></li>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_filegroup.html">$FileGroup</a></li>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_fileowner.html">$FileOwner</a></li>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_gssforwardservicename.html">$GssForwardServiceName</a></li>
+<li class="toctree-l4"><a class="reference internal" href="action/rsconf1_gssmode.html">$GssMode</a></li>
+</ul>
+</li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="ruleset/index.html">Ruleset-Specific Legacy Configuration Statements</a><input class="toctree-checkbox" id="toctree-checkbox-19" name="toctree-checkbox-19" role="switch" type="checkbox"/><label for="toctree-checkbox-19"><div class="visually-hidden">Toggle navigation of Ruleset-Specific Legacy Configuration Statements</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="ruleset/rsconf1_rulesetcreatemainqueue.html">$RulesetCreateMainQueue</a></li>
+<li class="toctree-l4"><a class="reference internal" href="ruleset/rsconf1_rulesetparser.html">$RulesetParser</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="rsyslog_statistic_counter.html">rsyslog statistic counter</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="modules/index.html">Modules</a><input class="toctree-checkbox" id="toctree-checkbox-20" name="toctree-checkbox-20" role="switch" type="checkbox"/><label for="toctree-checkbox-20"><div class="visually-hidden">Toggle navigation of Modules</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="modules/workflow.html">Where are the modules integrated into the Message Flow?</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="output_channels.html">Output Channels</a></li>
+<li class="toctree-l2"><a class="reference internal" href="droppriv.html">Dropping privileges in rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ipv6.html">Notes on IPv6 Handling in Rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cryprov_gcry.html">libgcrypt Log Crypto Provider (gcry)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="cryprov_ossl.html">libossl Log Crypto Provider (ossl)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="dyn_stats.html">Dynamic Stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lookup_tables.html">Lookup Tables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="percentile_stats.html">Percentile Stats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="converting_to_new_format.html">Converting older formats to <code class="docutils literal notranslate"><span class="pre">advanced</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="conf_formats.html">Configuration Formats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sysklogd_format.html">sysklogd format</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../faq/index.html">FAQ</a><input class="toctree-checkbox" id="toctree-checkbox-21" name="toctree-checkbox-21" role="switch" type="checkbox"/><label for="toctree-checkbox-21"><div class="visually-hidden">Toggle navigation of FAQ</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../faq/faq_overall.html">FAQ: some general topics often asked</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../faq/difference_queues.html">What is the difference between the main_queue and a queue with a ruleset tied to an input?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../faq/encrypt_mysql_traffic_ommysql.html">FAQ: Encrypting MySQL Traffic with ommysql Plugin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../faq/imudp-packet-loss.html">FAQ: Troubleshooting UDP Packet Loss</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../faq/common-config-mistakes.html">Common Configuration Mistakes and Misunderstandings</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../tutorials/index.html">Tutorials</a><input class="toctree-checkbox" id="toctree-checkbox-22" name="toctree-checkbox-22" role="switch" type="checkbox"/><label for="toctree-checkbox-22"><div class="visually-hidden">Toggle navigation of Tutorials</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../tutorials/tls_cert_summary.html">Encrypting Syslog Traffic with TLS (SSL)</a><input class="toctree-checkbox" id="toctree-checkbox-23" name="toctree-checkbox-23" role="switch" type="checkbox"/><label for="toctree-checkbox-23"><div class="visually-hidden">Toggle navigation of Encrypting Syslog Traffic with TLS (SSL)</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/tls_cert_scenario.html">Sample Use Case: Single Central Log Server</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/tls_cert_ca.html">Setting up the CA</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/tls_cert_machine.html">Generating the machine certificate</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/tls_cert_server.html">Setting up the Central Server</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/tls_cert_client.html">Setting up a client</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/tls_cert_udp_relay.html">Setting up the UDP syslog relay</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/tls_cert_errmsgs.html">Error Messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/tls_cert_script.html">Creating certificates with a script</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/tls.html">Encrypting Syslog Traffic with TLS (SSL) [short version]</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/database.html">Writing syslog messages to MariaDB, MySQL, PostgreSQL or any other supported Database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/high_database_rate.html">Handling a massive syslog database insert rate with Rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/reliable_forwarding.html">Reliable Forwarding of syslog Messages with Rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/recording_pri.html">Recording the Priority of Syslog Messages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/failover_syslog_server.html">Failover Syslog Server</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/log_rotation_fix_size.html">Log rotation with rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/gelf_forwarding.html">GELF forwarding in rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/log_sampling.html">Log Sampling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/random_sampling.html">Random sampling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/hash_sampling.html">Hash-based Sampling</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../troubleshooting/index.html">Troubleshooting</a><input class="toctree-checkbox" id="toctree-checkbox-24" name="toctree-checkbox-24" role="switch" type="checkbox"/><label for="toctree-checkbox-24"><div class="visually-hidden">Toggle navigation of Troubleshooting</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../troubleshooting/file_not_written.html">Output File is not Being Written</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../troubleshooting/selinux.html">Troubleshooting SELinux-Related Issues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../troubleshooting/debug.html">Rsyslog Debug Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../troubleshooting/troubleshoot.html">troubleshooting problems</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../troubleshooting/howtodebug.html">How to create a debug log</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../concepts/index.html">Concepts</a><input class="toctree-checkbox" id="toctree-checkbox-25" name="toctree-checkbox-25" role="switch" type="checkbox"/><label for="toctree-checkbox-25"><div class="visually-hidden">Toggle navigation of Concepts</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/queues.html">Understanding rsyslog Queues</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/janitor.html">The Janitor Process</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/messageparser.html">Message parsers in rsyslog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../concepts/multi_ruleset.html">Multiple Rulesets in rsyslog</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../concepts/netstrm_drvr.html">NetStream Drivers</a><input class="toctree-checkbox" id="toctree-checkbox-26" name="toctree-checkbox-26" role="switch" type="checkbox"/><label for="toctree-checkbox-26"><div class="visually-hidden">Toggle navigation of NetStream Drivers</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../concepts/ns_ptcp.html">ptcp Network Stream Driver</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../concepts/ns_gtls.html">gtls Network Stream Driver</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../concepts/ns_gtls.html#supported-driver-modes">Supported Driver Modes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../concepts/ns_gtls.html#supported-authentication-modes">Supported Authentication Modes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../concepts/ns_gtls.html#checkextendedkeypurpose">CheckExtendedKeyPurpose</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../concepts/ns_gtls.html#prioritizesan">PrioritizeSAN</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../concepts/ns_ossl.html">openssl Network Stream Driver</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../development/index.html">Development</a><input class="toctree-checkbox" id="toctree-checkbox-27" name="toctree-checkbox-27" role="switch" type="checkbox"/><label for="toctree-checkbox-27"><div class="visually-hidden">Toggle navigation of Development</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../development/config_data_model.html">The rsyslog config data model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../development/config_data_model.html#objects">Objects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../development/debugging.html">Debugging</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../development/dev_action_threads.html">Action Threads and Queue Engine (Developer-Oriented)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../development/dev_codestyle.html">rsyslog code style</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../development/dev_oplugins.html">Writing Rsyslog Output Plugins</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../development/dev_queue.html">The rsyslog queue object</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../development/dev_testbench.html">writing rsyslog tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../development/doc_reference_section_guidelines.html">Documentation Reference Section Structure Guidelines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../development/doc_style_guide.html">Documentation Style Guide</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../development/generic_design.html">Generic design of a syslogd</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../development/internal_tooling.html">Internal tooling</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../idx_reference.html">Reference</a><input class="toctree-checkbox" id="toctree-checkbox-28" name="toctree-checkbox-28" role="switch" type="checkbox"/><label for="toctree-checkbox-28"><div class="visually-hidden">Toggle navigation of Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../containers/index.html">rsyslog and containers</a><input class="toctree-checkbox" id="toctree-checkbox-29" name="toctree-checkbox-29" role="switch" type="checkbox"/><label for="toctree-checkbox-29"><div class="visually-hidden">Toggle navigation of rsyslog and containers</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../containers/container_features.html">Container-Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../containers/docker_specifics.html">docker specifics</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../installation/index.html">Installation</a><input class="toctree-checkbox" id="toctree-checkbox-30" name="toctree-checkbox-30" role="switch" type="checkbox"/><label for="toctree-checkbox-30"><div class="visually-hidden">Toggle navigation of Installation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../installation/packages.html">Installing rsyslog from Package</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../installation/rsyslog_docker.html">Using Rsyslog Docker Containers</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../installation/install_from_source.html">Installing rsyslog from Source</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../installation/build_from_repo.html">Installing rsyslog from the source repository</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../historical/index.html">Historical Documents</a><input class="toctree-checkbox" id="toctree-checkbox-31" name="toctree-checkbox-31" role="switch" type="checkbox"/><label for="toctree-checkbox-31"><div class="visually-hidden">Toggle navigation of Historical Documents</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../historical/php_syslog_ng.html">Using php-syslog-ng with rsyslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../historical/multi_ruleset_legacy_format_samples.html">Legacy Format Samples for Multiple Rulesets</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../historical/module_devel.html">Developing rsyslog modules (outdated)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../historical/high_performance.html">Receiving massive amounts of messages with high performance</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../historical/v8compatibility.html">Compatibility Notes for rsyslog v8</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../historical/v7compatibility.html">Compatibility Notes for rsyslog v7</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../historical/v6compatibility.html">Compatibility Notes for rsyslog v6</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../historical/v5compatibility.html">Compatibility Notes for rsyslog v5</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../historical/v4compatibility.html">Compatibility Notes for rsyslog v4</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../historical/v3compatibility.html">Compatibility Notes for rsyslog v3</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../history.html">RSyslog - History</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../licensing.html">Licensing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../how2help.html">How you can Help</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../community.html">Community Resources</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../features.html">RSyslog - Features</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../proposals/index.html">Proposals</a><input class="toctree-checkbox" id="toctree-checkbox-32" name="toctree-checkbox-32" role="switch" type="checkbox"/><label for="toctree-checkbox-32"><div class="visually-hidden">Toggle navigation of Proposals</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../proposals/version_naming.html">Version Naming</a></li>
+</ul>
+</li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../whitepapers/index.html">Rsyslog Whitepapers</a><input class="toctree-checkbox" id="toctree-checkbox-33" name="toctree-checkbox-33" role="switch" type="checkbox"/><label for="toctree-checkbox-33"><div class="visually-hidden">Toggle navigation of Rsyslog Whitepapers</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../whitepapers/syslog_parsing.html">syslog parsing in rsyslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../whitepapers/syslog_protocol.html">syslog-protocol support in rsyslog</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../whitepapers/queues_analogy.html">Turning Lanes and Rsyslog Queues</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../whitepapers/preserve_in_nat.html">Preserving syslog sender over NAT</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../whitepapers/reliable_logging.html">How reliable should reliable logging be?</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/configuration/actions.rst.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="actions">
+<h1>Actions<a class="headerlink" href="#actions" title="Link to this heading">¶</a></h1>
+<p id="cfgobj-input"><span id="index-0"></span>The Action object describe what is to be done with a message. They are
+implemented via <a class="reference internal" href="modules/idx_output.html"><span class="doc">output modules</span></a>.</p>
+<p>The action object has different parameters:</p>
+<ul class="simple">
+<li><p>those that apply to all actions and are action specific. These are
+documented below.</p></li>
+<li><p>parameters for the action queue. While they also apply to all
+parameters, they are queue-specific, not action-specific (they are
+the same that are used in rulesets, for example). The are documented
+separately under <a class="reference internal" href="../rainerscript/queue_parameters.html"><span class="doc">queue parameters</span></a>.</p></li>
+<li><p>action-specific parameters. These are specific to a certain type of
+actions. They are documented by the <a class="reference internal" href="modules/idx_output.html"><span class="doc">output modules</span></a>
+in question.</p></li>
+</ul>
+<section id="general-action-parameters">
+<h2>General Action Parameters<a class="headerlink" href="#general-action-parameters" title="Link to this heading">¶</a></h2>
+<p>Note: parameter names are case-insensitive.</p>
+<ul>
+<li><p><strong>name</strong> word</p>
+<p>This names the action. The name is used for statistics gathering
+and documentation. If no name is given, one is dynamically generated
+based on the occurrence of this action inside the rsyslog configuration.
+Actions are sequentially numbered from 1 to n.</p>
+</li>
+<li><p><strong>type</strong> string</p>
+<p>Mandatory parameter for every action. The name of the module that
+should be used.</p>
+</li>
+<li><p><strong>action.writeAllMarkMessages</strong> <em>on</em>/off</p>
+<p>This setting tells if mark messages are always written (“on”, the
+default) or only if the action was not recently executed (“off”). By
+default, recently means within the past 20 minutes. If this setting
+is “on”, mark messages are always sent to actions, no matter how
+recently they have been executed. In this mode, mark messages can be
+used as a kind of heartbeat. This mode also enables faster processing
+inside the rule engine. So it should be set to “off” only when there
+is a good reason to do so.</p>
+</li>
+<li><p><strong>action.execOnlyEveryNthTime</strong> integer</p>
+<p>If configured, the next action will only be executed every n-th time.
+For example, if configured to 3, the first two messages that go into
+the action will be dropped, the 3rd will actually cause the action to
+execute, the 4th and 5th will be dropped, the 6th executed under the
+action, … and so on.</p>
+</li>
+<li><p><strong>action.execOnlyEveryNthTimeout</strong> integer</p>
+<p>Has a meaning only if Action.ExecOnlyEveryNthTime is also configured
+for the same action. If so, the timeout setting specifies after which
+period the counting of “previous actions” expires and a new action
+count is begun. Specify 0 (the default) to disable timeouts. Why is
+this option needed? Consider this case: a message comes in at, eg.,
+10am. That’s count 1. Then, nothing happens for the next 10 hours. At
+8pm, the next one occurs. That’s count 2. Another 5 hours later, the
+next message occurs, bringing the total count to 3. Thus, this
+message now triggers the rule. The question is if this is desired
+behavior? Or should the rule only be triggered if the messages occur
+within an e.g. 20 minute window? If the later is the case, you need a
+Action.ExecOnlyEveryNthTimeTimeout=”1200”
+This directive will timeout previous messages seen if they are older
+than 20 minutes. In the example above, the count would now be always
+1 and consequently no rule would ever be triggered.</p>
+</li>
+<li><p><strong>action.errorfile</strong> string</p>
+<div class="versionadded">
+<p><span class="versionmodified added">Added in version 8.32.0.</span></p>
+</div>
+<p>When an action is executed, some messages may permanently fail.
+Depending on configuration, this could for example be caused by an
+offline target or exceptionally non-numerical data inside a
+numerical database field. If action.errorfile is specified, those
+messages are written to the specified file. If it is not specified
+(the default), messages are silently discarded.</p>
+<p>The error file format is JSON. It contains the failed messages as
+provided to the action in question, the action name as well as
+the rsyslog status code roughly explaining why it failed.</p>
+</li>
+<li><p><strong>action.errorfile.maxsize</strong> integer</p>
+<p>In some cases, error file needs to be limited in size.
+This option allows specifying a maximum size, in bytes, for the error file.
+When error file reaches that size, no more errors are written to it.</p>
+</li>
+<li><p><strong>action.execOnlyOnceEveryInterval</strong> integer</p>
+<p>Execute action only if the last execute is at last seconds in the
+past (more info in ommail, but may be used with any action)</p>
+</li>
+<li><p><strong>action.execOnlyWhenPreviousIsSuspended</strong> on/off</p>
+<p>This directive allows to specify if actions should always be executed
+(“off,” the default) or only if the previous action is suspended
+(“on”). This directive works hand-in-hand with the multiple actions
+per selector feature. It can be used, for example, to create rules
+that automatically switch destination servers or databases to a (set
+of) backup(s), if the primary server fails. Note that this feature
+depends on proper implementation of the suspend feature in the output
+module. All built-in output modules properly support it (most
+importantly the database write and the syslog message forwarder).
+Note, however, that a failed action may not immediately be detected.
+For more information, see the <a class="reference external" href="https://www.rsyslog.com/action-execonlywhenpreviousissuspended-preciseness/">rsyslog
+execOnlyWhenPreviousIsSuspended
+preciseness</a>
+FAQ article.</p>
+</li>
+<li><p><strong>action.repeatedmsgcontainsoriginalmsg</strong> on/off</p>
+<p>“last message repeated n times” messages, if generated, have a
+different format that contains the message that is being repeated.
+Note that only the first “n” characters are included, with n to be at
+least 80 characters, most probably more (this may change from version
+to version, thus no specific limit is given). The bottom line is that
+n is large enough to get a good idea which message was repeated but
+it is not necessarily large enough for the whole message. (Introduced
+with 4.1.5).</p>
+</li>
+<li><p><strong>action.resumeRetryCount</strong> integer</p>
+<p>[default 0, -1 means eternal]</p>
+<p>Sets how often an action is retried before it is considered to have
+failed. Failed actions discard messages.</p>
+</li>
+<li><p><strong>action.resumeInterval</strong> integer</p>
+<p>Sets the action’s resume interval. The interval provided
+is always in seconds. Thus, multiply by 60 if you need minutes and
+3,600 if you need hours (not recommended). When an action is
+suspended (e.g. destination can not be connected), the action is
+resumed for the configured interval. Thereafter, it is retried. If
+multiple retries fail, the interval is automatically extended. This
+is to prevent excessive resource use for retries. After each 10
+retries, the interval is extended by itself. To be precise, the
+actual interval is <cite>(numRetries / 10 + 1) * action.resumeInterval</cite>.
+Using the default value of 30, this means that on the 10th try the
+suspension interval will be 60 (seconds) and after the 100th try
+it will be 330 (seconds).</p>
+</li>
+<li><p><strong>action.resumeIntervalMax</strong> integer</p>
+<p>Default: 1800 (30 minutes)</p>
+<p>This sets an upper limit on the growth of action.resumeInterval.
+No wait will be larger than the value configured here. Going higher
+than the default is only recommended if you know that a system may
+be offline for an extended period of time <strong>and</strong> if it is acceptable
+that it may take quite long to detect it came online again.</p>
+</li>
+<li><p><strong>action.reportSuspension</strong> on/off</p>
+<p>Configures rsyslog to report suspension and reactivation
+of the action. This is useful to note which actions have
+problems (e.g. connecting to a remote system) and when.
+The default for this setting is the equally-named global
+parameter.</p>
+</li>
+<li><p><strong>action.reportSuspensionContinuation</strong> on/off</p>
+<p>Configures rsyslog to report continuation of action suspension.
+This emits new messages whenever an action is to be retried, but
+continues to fail. If set to “on”, <em>action.reportSuspension</em> is
+also automatically set to “on”.
+The default for this setting is the equally-named global
+parameter.</p>
+</li>
+<li><p><strong>action.copyMsg</strong> on/<em>off</em></p>
+<p>Configures action to <em>copy</em> the message if <em>on</em>. Defaults to
+<em>off</em> (which is how actions have worked traditionally), which
+causes queue to refer to the original message object, with
+reference-counting. (Introduced with 8.10.0).</p>
+</li>
+</ul>
+</section>
+<section id="useful-links">
+<h2>Useful Links<a class="headerlink" href="#useful-links" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Rainer’s blog posting on the performance of <a class="reference external" href="https://rainer.gerhards.net/2013/06/rsyslog-performance-main-and-action.html">main and action queue
+worker
+threads</a></p></li>
+</ul>
+</section>
+<section id="legacy-format">
+<h2>Legacy Format<a class="headerlink" href="#legacy-format" title="Link to this heading">¶</a></h2>
+<p id="legacy-action-order"><strong>Be warned that legacy action format is hard to get right. It is
+recommended to use RainerScript-Style action format whenever possible!</strong>
+A key problem with legacy format is that a single action is defined via
+multiple configurations lines, which may be spread all across
+rsyslog.conf. Even the definition of multiple actions may be intermixed
+(often not intentional!). If legacy actions format needs to be used
+(e.g. some modules may not yet implement the RainerScript format), it is
+strongly recommended to place all configuration statements pertaining to
+a single action closely together.</p>
+<p>Please also note that legacy action parameters <strong>do not</strong> affect
+RainerScript action objects. So if you define for example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$actionResumeRetryCount 10
+action(type=&quot;omfwd&quot; target=&quot;server1.example.net&quot;)
+@@server2.example.net
+</pre></div>
+</div>
+<p>server1’s “action.resumeRetryCount” parameter is <strong>not</strong> set, instead
+server2’s is!</p>
+<p>A goal of the new RainerScript action format was to avoid confusion
+which parameters are actually used. As such, it would be
+counter-productive to honor legacy action parameters inside a
+RainerScript definition. As result, both types of action definitions are
+strictly (and nicely) separated from each other. The bottom line is that
+if RainerScript actions are used, one does not need to care about which
+legacy action parameters may (still…) be in effect.</p>
+<p>Note that not all modules necessarily support legacy action format.
+Especially newer modules are recommended to NOT support it.</p>
+<section id="legacy-description">
+<h3>Legacy Description<a class="headerlink" href="#legacy-description" title="Link to this heading">¶</a></h3>
+<p>Templates can be used with many actions. If used, the specified template
+is used to generate the message content (instead of the default
+template). To specify a template, write a semicolon after the action
+value immediately followed by the template name.
+Beware: templates MUST be defined BEFORE they are used. It is OK to
+define some templates, then use them in selector lines, define more
+templates and use them in the following selector lines. But it is
+NOT permitted to use a template in a selector line that is above its
+definition. If you do this, the action will be ignored.</p>
+<p><strong>You can have multiple actions for a single selector</strong> (or more
+precisely a single filter of such a selector line). Each action must be
+on its own line and the line must start with an ampersand (’&amp;’)
+character and have no filters. An example would be</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">*.=</span><span class="n">crit</span> <span class="p">:</span><span class="n">omusrmsg</span><span class="p">:</span><span class="n">rger</span>
+<span class="o">&amp;</span> <span class="n">root</span>
+<span class="o">&amp;</span> <span class="o">/</span><span class="n">var</span><span class="o">/</span><span class="n">log</span><span class="o">/</span><span class="n">critmsgs</span>
+</pre></div>
+</div>
+<p>These three lines send critical messages to the user rger and root and
+also store them in /var/log/critmsgs. <strong>Using multiple actions per
+selector is</strong> convenient and also <strong>offers a performance benefit</strong>. As
+the filter needs to be evaluated only once, there is less computation
+required to process the directive compared to the otherwise-equal config
+directives below:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">*.=</span><span class="n">crit</span> <span class="p">:</span><span class="n">omusrmsg</span><span class="p">:</span><span class="n">rger</span>
+<span class="o">*.=</span><span class="n">crit</span> <span class="n">root</span>
+<span class="o">*.=</span><span class="n">crit</span> <span class="o">/</span><span class="n">var</span><span class="o">/</span><span class="n">log</span><span class="o">/</span><span class="n">critmsgs</span>
+</pre></div>
+</div>
+</section>
+<section id="regular-file">
+<h3>Regular File<a class="headerlink" href="#regular-file" title="Link to this heading">¶</a></h3>
+<p>Typically messages are logged to real files. The file usually is
+specified by full pathname, beginning with a slash “/”. Starting with
+version 4.6.2 and 5.4.1 (previous v5 version do NOT support this)
+relative file names can also be specified. To do so, these must begin
+with a dot. For example, use “./file-in-current-dir.log” to specify a
+file in the current directory. Please note that rsyslogd usually changes
+its working directory to the root, so relative file names must be tested
+with care (they were introduced primarily as a debugging vehicle, but
+may have useful other applications as well).
+You may prefix each entry with the minus “-’’ sign to omit syncing the
+file after every logging. Note that you might lose information if the
+system crashes right behind a write attempt. Nevertheless this might
+give you back some performance, especially if you run programs that use
+logging in a very verbose manner.</p>
+<p>If your system is connected to a reliable UPS and you receive lots of
+log data (e.g. firewall logs), it might be a very good idea to turn of
+syncing by specifying the “-” in front of the file name.</p>
+<p><strong>The filename can be either static</strong>(always the same) or <strong>dynamic</strong>
+(different based on message received). The later is useful if you would
+automatically split messages into different files based on some message
+criteria. For example, dynamic file name selectors allow you to split
+messages into different files based on the host that sent them. With
+dynamic file names, everything is automatic and you do not need any
+filters.</p>
+<p>It works via the template system. First, you define a template for the
+file name. An example can be seen above in the description of template.
+We will use the “DynFile” template defined there. Dynamic filenames are
+indicated by specifying a questions mark “?” instead of a slash,
+followed by the template name. Thus, the selector line for our dynamic
+file name would look as follows:</p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">*.*</span> <span class="pre">?DynFile</span></code></p>
+</div></blockquote>
+<p>That’s all you need to do. Rsyslog will now automatically generate file
+names for you and store the right messages into the right files. Please
+note that the minus sign also works with dynamic file name selectors.
+Thus, to avoid syncing, you may use</p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">*.*</span> <span class="pre">-?DynFile</span></code></p>
+</div></blockquote>
+<p>And of course you can use templates to specify the output format:</p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">*.*</span> <span class="pre">?DynFile;MyTemplate</span></code></p>
+</div></blockquote>
+<p><strong>A word of caution:</strong> rsyslog creates files as needed. So if a new host
+is using your syslog server, rsyslog will automatically create a new
+file for it.</p>
+<p><strong>Creating directories is also supported</strong>. For example you can use the
+hostname as directory and the program name as file name:</p>
+<blockquote>
+<div><p><code class="docutils literal notranslate"><span class="pre">$template</span> <span class="pre">DynFile,&quot;/var/log/%HOSTNAME%/%programname%.log&quot;</span></code></p>
+</div></blockquote>
+</section>
+<section id="named-pipes">
+<h3>Named Pipes<a class="headerlink" href="#named-pipes" title="Link to this heading">¶</a></h3>
+<p>This version of rsyslogd(8) has support for logging output to named
+pipes (fifos). A fifo or named pipe can be used as a destination for log
+messages by prepending a pipe symbol (”|’’) to the name of the file.
+This is handy for debugging. Note that the fifo must be created with the
+mkfifo(1) command before rsyslogd(8) is started.</p>
+</section>
+<section id="terminal-and-console">
+<h3>Terminal and Console<a class="headerlink" href="#terminal-and-console" title="Link to this heading">¶</a></h3>
+<p>If the file you specified is a tty, special tty-handling is done, same
+with /dev/console.</p>
+</section>
+<section id="remote-machine">
+<h3>Remote Machine<a class="headerlink" href="#remote-machine" title="Link to this heading">¶</a></h3>
+<p>Rsyslogd provides full remote logging, i.e. is able to send messages to
+a remote host running rsyslogd(8) and to receive messages from remote
+hosts. Using this feature you’re able to control all syslog messages on
+one host, if all other machines will log remotely to that. This tears
+down administration needs.</p>
+<p>To forward messages to another host, prepend the hostname with the at
+sign (“&#64;”). A single at sign means that messages will be forwarded via
+UDP protocol (the standard for syslog). If you prepend two at signs
+(“&#64;&#64;”), the messages will be transmitted via TCP. Please note that plain
+TCP based syslog is not officially standardized, but most major syslogds
+support it (e.g. syslog-ng or <a class="reference external" href="https://www.winsyslog.com/">WinSyslog</a>).
+The forwarding action indicator (at-sign) can be followed by one or more
+options. If they are given, they must be immediately (without a space)
+following the final at sign and be enclosed in parenthesis. The
+individual options must be separated by commas. The following options
+are right now defined:</p>
+<p><strong>z&lt;number&gt;</strong></p>
+<p>Enable zlib-compression for the message. The &lt;number&gt; is the compression
+level. It can be 1 (lowest gain, lowest CPU overhead) to 9 (maximum
+compression, highest CPU overhead). The level can also be 0, which means
+“no compression”. If given, the “z” option is ignored. So this does not
+make an awful lot of sense. There is hardly a difference between level 1
+and 9 for typical syslog messages. You can expect a compression gain
+between 0% and 30% for typical messages. Very chatty messages may
+compress up to 50%, but this is seldom seen with typically traffic.
+Please note that rsyslogd checks the compression gain. Messages with 60
+bytes or less will never be compressed. This is because compression gain
+is pretty unlikely and we prefer to save CPU cycles. Messages over that
+size are always compressed. However, it is checked if there is a gain in
+compression and only if there is, the compressed message is transmitted.
+Otherwise, the uncompressed messages is transmitted. This saves the
+receiver CPU cycles for decompression. It also prevents small message to
+actually become larger in compressed form.</p>
+<p><strong>Please note that when a TCP transport is used, compression will also
+turn on syslog-transport-tls framing. See the “o” option for important
+information on the implications.</strong></p>
+<p>Compressed messages are automatically detected and decompressed by the
+receiver. There is nothing that needs to be configured on the receiver
+side.</p>
+<p><strong>o</strong></p>
+<p><strong>This option is experimental. Use at your own risk and only if you know
+why you need it! If in doubt, do NOT turn it on.</strong></p>
+<p>This option is only valid for plain TCP based transports. It selects a
+different framing based on IETF internet draft syslog-transport-tls-06.
+This framing offers some benefits over traditional LF-based framing.
+However, the standardization effort is not yet complete. There may be
+changes in upcoming versions of this standard. Rsyslog will be kept in
+line with the standard. There is some chance that upcoming changes will
+be incompatible to the current specification. In this case, all systems
+using -transport-tls framing must be upgraded. There will be no effort
+made to retain compatibility between different versions of rsyslog. The
+primary reason for that is that it seems technically impossible to
+provide compatibility between some of those changes. So you should take
+this note very serious. It is not something we do not *like* to do
+(and may change our mind if enough people beg…), it is something we
+most probably *can not* do for technical reasons (aka: you can beg as
+much as you like, it won’t change anything…).</p>
+<p>The most important implication is that compressed syslog messages via
+TCP must be considered with care. Unfortunately, it is technically
+impossible to transfer compressed records over traditional syslog plain
+tcp transports, so you are left with two evil choices…</p>
+<blockquote>
+<div><p>The hostname may be followed by a colon and the destination port.</p>
+</div></blockquote>
+<p>The following is an example selector line with forwarding:</p>
+<p>*.*    &#64;&#64;(o,z9)192.168.0.1:1470</p>
+<p>In this example, messages are forwarded via plain TCP with experimental
+framing and maximum compression to the host 192.168.0.1 at port 1470.</p>
+<p>*.* &#64;192.168.0.1</p>
+<p>In the example above, messages are forwarded via UDP to the machine
+192.168.0.1, the destination port defaults to 514. Messages will not be
+compressed.</p>
+<p>Note that IPv6 addresses contain colons. So if an IPv6 address is
+specified in the hostname part, rsyslogd could not detect where the IP
+address ends and where the port starts. There is a syntax extension to
+support this: put square brackets around the address (e.g. “[2001::1]”).
+Square brackets also work with real host names and IPv4 addresses, too.</p>
+<p>A valid sample to send messages to the IPv6 host 2001::1 at port 515 is
+as follows:</p>
+<p>*.* &#64;[2001::1]:515</p>
+<p>This works with TCP, too.</p>
+<p><strong>Note to sysklogd users:</strong> sysklogd does <strong>not</strong> support RFC 3164
+format, which is the default forwarding template in rsyslog. As such,
+you will experience duplicate hostnames if rsyslog is the sender and
+sysklogd is the receiver. The fix is simple: you need to use a different
+template. Use that one:</p>
+<dl class="simple">
+<dt>$template sysklogd,”&lt;%PRI%&gt;%TIMESTAMP% %syslogtag%%msg%\””</dt><dd><p>*.* &#64;192.168.0.1;sysklogd</p>
+</dd>
+</dl>
+</section>
+<section id="list-of-users">
+<h3>List of Users<a class="headerlink" href="#list-of-users" title="Link to this heading">¶</a></h3>
+<p>Usually critical messages are also directed to “root’’ on that machine.
+You can specify a list of users that shall get the message by simply
+writing “:omusrmsg: followed by the login name. For example, the send
+messages to root, use “:omusrmsg:root”. You may specify more than one
+user by separating them with commas (“,’’). Do not repeat the
+“:omusrmsg:” prefix in this case. For example, to send data to users
+root and rger, use “:omusrmsg:root,rger” (do not use
+“:omusrmsg:root,:omusrmsg:rger”, this is invalid). If they’re logged in
+they get the message.</p>
+</section>
+<section id="everyone-logged-on">
+<h3>Everyone logged on<a class="headerlink" href="#everyone-logged-on" title="Link to this heading">¶</a></h3>
+<p>Emergency messages often go to all users currently online to notify them
+that something strange is happening with the system. To specify this
+wall(1)-feature use an asterisk as the user message
+destination(“:omusrmsg:*’’).</p>
+</section>
+<section id="call-plugin">
+<h3>Call Plugin<a class="headerlink" href="#call-plugin" title="Link to this heading">¶</a></h3>
+<p>This is a generic way to call an output plugin. The plugin must support
+this functionality. Actual parameters depend on the module, so see the
+module’s doc on what to supply. The general syntax is as follows:</p>
+<p>:modname:params;template</p>
+<p>Currently, the ommysql database output module supports this syntax (in
+addition to the “&gt;” syntax it traditionally supported). For ommysql, the
+module name is “ommysql” and the params are the traditional ones. The
+;template part is not module specific, it is generic rsyslog
+functionality available to all modules.</p>
+<p>As an example, the ommysql module may be called as follows:</p>
+<p>:ommysql:dbhost,dbname,dbuser,dbpassword;dbtemplate</p>
+<p>For details, please see the “Database Table” section of this
+documentation.</p>
+<p>Note: as of this writing, the “:modname:” part is hardcoded into the
+module. So the name to use is not necessarily the name the module’s
+plugin file is called.</p>
+</section>
+<section id="database-table">
+<h3>Database Table<a class="headerlink" href="#database-table" title="Link to this heading">¶</a></h3>
+<p>This allows logging of the message to a database table. Currently, only
+MariaDB/MySQL databases are supported. However, other database drivers
+will most probably be developed as plugins. By default, a
+<a class="reference external" href="https://www.mwagent.com/">MonitorWare</a>-compatible schema is
+required for this to work. You can create that schema with the
+createDB.SQL file that came with the rsyslog package. You can also
+use any other schema of your liking - you just need to define a proper
+template and assign this template to the action.
+The database writer is called by specifying a greater-then sign (“&gt;”)
+in front of the database connect information. Immediately after that
+sign the database host name must be given, a comma, the database name,
+another comma, the database user, a comma and then the user’s password.
+If a specific template is to be used, a semicolon followed by the
+template name can follow the connect information. This is as follows:
+&gt;dbhost,dbname,dbuser,dbpassword;dbtemplate</p>
+<p><strong>Important: to use the database functionality, the MariaDB/MySQL output
+module must be loaded in the config file</strong> BEFORE the first database table
+action is used. This is done by placing the</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ModLoad ommysql
+</pre></div>
+</div>
+<p>directive some place above the first use of the database write (we
+recommend doing at the beginning of the config file).</p>
+</section>
+<section id="discard-stop">
+<h3>Discard / Stop<a class="headerlink" href="#discard-stop" title="Link to this heading">¶</a></h3>
+<p>If the discard action is carried out, the received message is
+immediately discarded. No further processing of it occurs. Discard has
+primarily been added to filter out messages before carrying on any
+further processing. For obvious reasons, the results of “discard” are
+depending on where in the configuration file it is being used. Please
+note that once a message has been discarded there is no way to retrieve
+it in later configuration file lines.</p>
+<p>Discard can be highly effective if you want to filter out some annoying
+messages that otherwise would fill your log files. To do that, place the
+discard actions early in your log files. This often plays well with
+property-based filters, giving you great freedom in specifying what you
+do not want.</p>
+<p>Discard is just the word “stop” with no further parameters:</p>
+<p>stop</p>
+<p>For example,</p>
+<p>*.*   stop</p>
+<p>discards everything (ok, you can achieve the same by not running rsyslogd
+at all…).</p>
+<p>Note that in legacy configuration the tilde character “~” can also be
+used instead of the word “stop”. This is nowadays a very bad practice and
+should be avoided.</p>
+</section>
+<section id="output-channel">
+<h3>Output Channel<a class="headerlink" href="#output-channel" title="Link to this heading">¶</a></h3>
+<p>Binds an output channel definition (see there for details) to this
+action. Output channel actions must start with a $-sign, e.g. if you
+would like to bind your output channel definition “mychannel” to the
+action, use “$mychannel”. Output channels support template definitions
+like all other actions.</p>
+</section>
+<section id="shell-execute">
+<h3>Shell Execute<a class="headerlink" href="#shell-execute" title="Link to this heading">¶</a></h3>
+<p><strong>NOTE: This action is only supported for backwards compatibility.
+For new configs, use</strong> <a class="reference internal" href="modules/omprog.html"><span class="doc">omprog</span></a> <strong>instead.
+It provides a more solid
+and secure solution with higher performance.</strong></p>
+<p>This executes a program in a subshell. The program is passed the
+template-generated message as the only command line parameter. Rsyslog
+waits until the program terminates and only then continues to run.</p>
+<p>^program-to-execute;template</p>
+<p>The program-to-execute can be any valid executable. It receives the
+template string as a single parameter (argv[1]).</p>
+<p><strong>WARNING:</strong> The Shell Execute action was added to serve an urgent need.
+While it is considered reasonable save when used with some thinking, its
+implications must be considered. The current implementation uses a
+system() call to execute the command. This is not the best way to do it
+(and will hopefully changed in further releases). Also, proper escaping
+of special characters is done to prevent command injection. However,
+attackers always find smart ways to circumvent escaping, so we can not
+say if the escaping applied will really safe you from all hassles.
+Lastly, rsyslog will wait until the shell command terminates. Thus, a
+program error in it (e.g. an infinite loop) can actually disable
+rsyslog. Even without that, during the programs run-time no messages are
+processed by rsyslog. As the IP stacks buffers are quickly overflowed,
+this bears an increased risk of message loss. You must be aware of these
+implications. Even though they are severe, there are several cases where
+the “shell execute” action is very useful. This is the reason why we
+have included it in its current form. To mitigate its risks, always a)
+test your program thoroughly, b) make sure its runtime is as short as
+possible (if it requires a longer run-time, you might want to spawn your
+own sub-shell asynchronously), c) apply proper firewalling so that only
+known senders can send syslog messages to rsyslog. Point c) is
+especially important: if rsyslog is accepting message from any hosts,
+chances are much higher that an attacker might try to exploit the “shell
+execute” action.</p>
+</section>
+<section id="template-name">
+<h3>Template Name<a class="headerlink" href="#template-name" title="Link to this heading">¶</a></h3>
+<p>Every ACTION can be followed by a template name. If so, that template is
+used for message formatting. If no name is given, a hard-coded default
+template is used for the action. There can only be one template name for
+each given action. The default template is specific to each action. For
+a description of what a template is and what you can do with it, see the
+<a class="reference internal" href="templates.html"><span class="doc">template</span></a> documentation.</p>
+<hr class="docutils" />
+<p><strong>Support:</strong> <a class="reference external" href="https://rsyslog.ai">rsyslog Assistant</a> |
+<a class="reference external" href="https://github.com/rsyslog/rsyslog/discussions">GitHub Discussions</a> |
+GitHub Issues: <a class="reference external" href="https://github.com/rsyslog/rsyslog/">rsyslog source project</a></p>
+<p><strong>Contributing:</strong> Source &amp; docs: <a class="reference external" href="https://github.com/rsyslog/rsyslog/">rsyslog source project</a></p>
+<p>© 2008–2025 <a class="reference external" href="https://rainer.gerhards.net/">Rainer Gerhards</a>
+and others. Licensed under the <a class="reference external" href="https://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>.</p>
+</section>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="input.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Input</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="../rainerscript/include.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">The rsyslog include() object</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            Made with 
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Actions</a><ul>
+<li><a class="reference internal" href="#general-action-parameters">General Action Parameters</a></li>
+<li><a class="reference internal" href="#useful-links">Useful Links</a></li>
+<li><a class="reference internal" href="#legacy-format">Legacy Format</a><ul>
+<li><a class="reference internal" href="#legacy-description">Legacy Description</a></li>
+<li><a class="reference internal" href="#regular-file">Regular File</a></li>
+<li><a class="reference internal" href="#named-pipes">Named Pipes</a></li>
+<li><a class="reference internal" href="#terminal-and-console">Terminal and Console</a></li>
+<li><a class="reference internal" href="#remote-machine">Remote Machine</a></li>
+<li><a class="reference internal" href="#list-of-users">List of Users</a></li>
+<li><a class="reference internal" href="#everyone-logged-on">Everyone logged on</a></li>
+<li><a class="reference internal" href="#call-plugin">Call Plugin</a></li>
+<li><a class="reference internal" href="#database-table">Database Table</a></li>
+<li><a class="reference internal" href="#discard-stop">Discard / Stop</a></li>
+<li><a class="reference internal" href="#output-channel">Output Channel</a></li>
+<li><a class="reference internal" href="#shell-execute">Shell Execute</a></li>
+<li><a class="reference internal" href="#template-name">Template Name</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=6fd4f6cc"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=46bd48cc"></script>
+    </body>
+</html>
