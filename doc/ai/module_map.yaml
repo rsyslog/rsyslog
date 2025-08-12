@@ -1,0 +1,34 @@
+# Seed map for AI agents; keep minimal and truthful. Extend over time.
+omfile:
+  paths: ["plugins/omfile/"]
+  requires_serialization: true
+  locks:
+    - type: mutex
+      field: pData.mutWrite
+
+omfwd:
+  paths: ["plugins/omfwd/"]
+  requires_serialization: false
+
+omelasticsearch:
+  paths: ["plugins/omelasticsearch/"]
+  requires_serialization: false
+
+omazureeventhubs:
+  paths: ["plugins/omazureeventhubs/"]
+  requires_serialization: true
+  locks:
+    - type: rwlock
+      field: pData.pnLock
+      writer: rsyslog_worker
+      reader: proton_thread
+
+contrib_omhttp:
+  paths: ["contrib/omhttp/"]
+  requires_serialization: false
+
+contrib_mmkubernetes:
+  paths: ["contrib/mmkubernetes/"]
+  requires_serialization: false
+  notes:
+    - WID is per-thread; shared caches in pData must be guarded.
