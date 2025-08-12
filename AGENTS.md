@@ -2,14 +2,15 @@
 
 This file defines guidelines and instructions for AI assistants (e.g., Codex, GitHub Copilot Workspace, ChatGPT agents) to understand and contribute effectively to the rsyslog codebase.
 
-
 ## Repository Overview
 
   - **Primary Language**: C
   - **Build System**: autotools (`autogen.sh`, `configure`, `make`)
-  - **Modules**: Dynamically loaded from `modules/`
+  - **Modules**: Dynamically loaded from `plugins/`
+  - **Contrib Modules**: Community-contributed under `contrib/`
   - **Contributions**: Additional modules and features are placed in `contrib/`, which contains community-contributed plugins not actively maintained by the core rsyslog team. These are retained in `contrib/` even if adopted later, to avoid disruptions in dependent software.
   - **Documentation**: Maintained in the doc/ subdirectory
+  - **AI module map**: `doc/ai/module_map.yaml` (per-module paths & locking hints)
   - **docker definitions**: Maintained in the packaging/docker/ subdirectory
   - **Side Libraries** (each in its own repo within the rsyslog GitHub org):
       - [`liblognorm`](https://github.com/rsyslog/liblognorm)
@@ -40,13 +41,14 @@ AI agents should follow this process:
     Formatting-only commits listed in .git-blame-ignore-revs.
 
 AI Agent Note: run devtools/format-code.sh as the final formatting step before commit.
+
 -----
 
 ## Development Workflow
 
 ### Base Repository
 
-- URL: [https://github.com/rsyslog/rsyslog](https://github.com/rsyslog/rsyslog)
+- URL: https://github.com/rsyslog/rsyslog
 - **Default base branch: `main`**
   > The `main` branch is now the canonical base for all development.
   > Some older references to `master` may still exist in documentation
@@ -57,7 +59,7 @@ AI Agent Note: run devtools/format-code.sh as the final formatting step before c
 1.  Fork the repository (for personal development)
 2.  Create a feature/fix branch
 3.  Push changes to your fork
-4.  Open a **pull request directly into `rsyslog/rsyslog:master`**
+4.  Open a **pull request directly into `rsyslog/rsyslog:main`**
 
 > **Important**: AI-generated PRs must target the `rsyslog/rsyslog` repository directly.
 
@@ -77,7 +79,7 @@ There are no strict naming rules, but these conventions are used frequently:
 ## Coding Standards
 
   - Commit messages **must include all relevant information**, not just in the PR
-  - Commit message titles **must not exceed 70 characters**
+  - Commit message titles **must not exceed 65 characters** (aim for 62)
   - commit message text must be plain US ASCII, line length must not exceed 86 characters
   - When referencing GitHub issues, use the **full GitHub URL** to assist in `git log`-based reviews
   - Favor **self-documenting code** over excessive inline comments
@@ -90,7 +92,7 @@ When fixing compiler warnings like `stringop-overread`, explain in the commit me
   - Why the warning occurred
   - What part of the code was changed
   - How the fix prevents undefined behavior or aligns with compiler expectations
-  - Optionally link: [https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wstringop-overread](https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wstringop-overread)
+  - Optionally link: https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wstringop-overread
 
 -----
 
@@ -255,7 +257,7 @@ This ensures Codex can build core components even in constrained environments. S
 
 ### `imdocker`
 
-  - Depends on: `libcurl` (\>= 7.40.0)
+  - Depends on: `libcurl` (>= 7.40.0)
 
 ### `impcap`
 
@@ -263,15 +265,15 @@ This ensures Codex can build core components even in constrained environments. S
 
 ### `imczmq` and `omczmq`
 
-  - Depends on: `libczmq` (\>= 4.0.0)
+  - Depends on: `libczmq` (>= 4.0.0)
 
 ### `omrabbitmq`
 
-  - Depends on: `librabbitmq` (\>= 0.2.0)
+  - Depends on: `librabbitmq` (>= 0.2.0)
 
 ### `omdtls` and `imdtls`
 
-  - Depends on: `openssl` (\>= 1.0.2 for output, \>= 1.1.0 for input)
+  - Depends on: `openssl` (>= 1.0.2 for output, >= 1.1.0 for input)
 
 ### `omhttp`
 
@@ -283,11 +285,11 @@ This ensures Codex can build core components even in constrained environments. S
 
 ### `mmnormalize`
 
-  - Depends on: `liblognorm` (\>= 2.0.3)
+  - Depends on: `liblognorm` (>= 2.0.3)
 
 ### `mmkubernetes`
 
-  - Depends on: `libcurl` and `liblognorm` (\>= 2.0.3)
+  - Depends on: `libcurl` and `liblognorm` (>= 2.0.3)
 
 ### `mmgrok`
 
@@ -321,16 +323,11 @@ This ensures Codex can build core components even in constrained environments. S
 
 ## AI-Specific Hints
 
-  - The `modules/` directory contains dynamically loaded input/output plugins
-
+  - The `plugins/` directory contains dynamically loaded input/output plugins
   - `contrib/` contains external contributions (e.g., plugins) that are not core-maintained
-
   - `statsobj.c` implements the statistics interface
-
   - Documentation resides in the monorepo’s doc/ directory
-
   - You may reference `rsyslog-docker` for dev/test environment setup
-
   - Side libraries are external GitHub repos, not subdirectories
 
   - **Shell Script Documentation**
@@ -364,3 +361,28 @@ If you are an AI agent contributing code or documentation:
   - Do not install third-party dependencies unless explicitly approved
   - PRs must pass standard CI and review checks
   - All code **must be reviewed manually**; AI output is subject to full review
+
+-----
+
+## Quickstart for AI coding agents (v8 concurrency & state)
+
+**Read these first:**
+* [`DEVELOPING.md`](./DEVELOPING.md) — v8 worker model & locking rules
+* [`MODULE_AUTHOR_CHECKLIST.md`](./MODULE_AUTHOR_CHECKLIST.md) — one-screen checklist
+* [doc/ai/module_map.yaml](./doc/ai/module_map.yaml) — seed list of modules, paths, and known locking needs
+
+**Rules you must not break**
+1. The framework may run **multiple workers per action**.
+2. `wrkrInstanceData_t` (WID) is **per-worker**; never share it.
+3. Shared mutable state lives in **pData** (per-action) and **must be protected**
+   by the module (mutex/rwlock). Do **not** rely on `mutAction` for this.
+4. **Inherently serial resources** (e.g., a shared stream) must be serialized
+   inside the module via a mutex in **pData**.
+5. **Direct queues** do not remove the need to serialize serial resources.
+
+**Common agent tasks**
+* Consult `doc/ai/module_map.yaml` to understand module paths and known locking.
+* Add a “Concurrency & Locking” block at the top of output modules.
+* Ensure serial modules guard stream/flush with a **pData** mutex.
+* For modules with a library I/O thread (e.g., Proton), verify read/write locks
+  are taken on **all** callback paths.
