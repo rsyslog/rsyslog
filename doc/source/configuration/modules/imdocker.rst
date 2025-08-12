@@ -138,7 +138,7 @@ DefaultFacility
    :widths: auto
    :class: parameter-table
 
-   "integer or string (preferred)", "user", "no", "``$InputFileFacility``"
+   "integer or string (preferred)", "user", "no", ""
 
 The syslog facility to be assigned to log messages received. Specified as numbers.
 
@@ -155,7 +155,7 @@ DefaultSeverity
    :widths: auto
    :class: parameter-table
 
-   "integer or string (preferred)", "notice", "no", "``$InputFileSeverity``"
+   "integer or string (preferred)", "info", "no", ""
 
 The syslog severity to be assigned to log messages received. Specified as numbers (e.g. 6
 for ``info``). Textual form is suggested. Default is ``notice``.
