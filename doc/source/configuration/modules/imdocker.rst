@@ -32,7 +32,7 @@ the behavior of imdocker.
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; CamelCase is recommended for readability.
 
 .. note::
 
@@ -43,150 +43,61 @@ the behavior of imdocker.
 Module Parameters
 -----------------
 
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-DockerApiUnixSockAddr
-^^^^^^^^^^^^^^^^^^^^^
+   * - Parameter
+     - Summary
+   * - :ref:`param-imdocker-module-dockerapiunixsockaddr`
+     - .. include:: ../../reference/parameters/imdocker-dockerapiunixsockaddr.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdocker-module-apiversionstr`
+     - .. include:: ../../reference/parameters/imdocker-apiversionstr.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdocker-module-pollinginterval`
+     - .. include:: ../../reference/parameters/imdocker-pollinginterval.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdocker-module-listcontainersoptions`
+     - .. include:: ../../reference/parameters/imdocker-listcontainersoptions.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdocker-module-getcontainerlogoptions`
+     - .. include:: ../../reference/parameters/imdocker-getcontainerlogoptions.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdocker-module-retrievenewlogsfromstart`
+     - .. include:: ../../reference/parameters/imdocker-retrievenewlogsfromstart.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdocker-module-defaultfacility`
+     - .. include:: ../../reference/parameters/imdocker-defaultfacility.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdocker-module-defaultseverity`
+     - .. include:: ../../reference/parameters/imdocker-defaultseverity.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdocker-module-escapelf`
+     - .. include:: ../../reference/parameters/imdocker-escapelf.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
+.. toctree::
+   :hidden:
 
-   "string", "/var/run/docker.sock", "no", "none"
-
-Specifies the Docker unix socket address to use.
-
-ApiVersionStr
-^^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "v1.27", "no", "none"
-
-Specifies the version of Docker API to use. Must be in the format specified by the
-Docker api, e.g. similar to the default above (v1.27, v1.28, etc).
-
-
-PollingInterval
-^^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "60", "no", "none"
-
-Specifies the polling interval in seconds, imdocker will poll for new containers by
-calling the 'List containers' API from the Docker engine.
-
-
-ListContainersOptions
-^^^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "", "no", "none"
-
-Specifies the HTTP query component of the a 'List Containers' HTTP API request.
-See Docker API for more information about available options.
-**Note**: It is not necessary to prepend the string with '?'.
-
-
-GetContainerLogOptions
-^^^^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "timestamp=0&follow=1&stdout=1&stderr=1&tail=1", "no", "none"
-
-Specifies the HTTP query component of the a 'Get container logs' HTTP API request.
-See Docker API for more information about available options.
-**Note**: It is not necessary to prepend the string with '?'.
-
-
-RetrieveNewLogsFromStart
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "1", "no", "none"
-
-This option specifies the whether imdocker will process newly found container logs from the beginning.
-The exception is for containers found on start-up. The container logs for containers
-that were active at imdocker start-up are controlled via 'GetContainerLogOptions', the
-'tail' in particular.
-
-
-DefaultFacility
-^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer or string (preferred)", "user", "no", "``$InputFileFacility``"
-
-The syslog facility to be assigned to log messages received. Specified as numbers.
-
-.. seealso::
-
-   https://en.wikipedia.org/wiki/Syslog
-
-
-DefaultSeverity
-^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer or string (preferred)", "notice", "no", "``$InputFileSeverity``"
-
-The syslog severity to be assigned to log messages received. Specified as numbers (e.g. 6
-for ``info``). Textual form is suggested. Default is ``notice``.
-
-.. seealso::
-
-   https://en.wikipedia.org/wiki/Syslog
-
-
-escapeLF
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "on", "no", "none"
-
-This is only meaningful if multi-line messages are to be processed.
-LF characters embedded into syslog messages cause a lot of trouble,
-as most tools and even the legacy syslog TCP protocol do not expect
-these. If set to "on", this option avoid this trouble by properly
-escaping LF characters to the 4-byte sequence "#012". This is
-consistent with other rsyslog control character escaping. By default,
-escaping is turned on. If you turn it off, make sure you test very
-carefully with all associated tools. Please note that if you intend
-to use plain TCP syslog with embedded LF characters, you need to
-enable octet-counted framing.
-For more details, see Rainer's blog posting on imfile LF escaping.
-
+   ../../reference/parameters/imdocker-dockerapiunixsockaddr
+   ../../reference/parameters/imdocker-apiversionstr
+   ../../reference/parameters/imdocker-pollinginterval
+   ../../reference/parameters/imdocker-listcontainersoptions
+   ../../reference/parameters/imdocker-getcontainerlogoptions
+   ../../reference/parameters/imdocker-retrievenewlogsfromstart
+   ../../reference/parameters/imdocker-defaultfacility
+   ../../reference/parameters/imdocker-defaultseverity
+   ../../reference/parameters/imdocker-escapelf
 
 Metadata
 ========
