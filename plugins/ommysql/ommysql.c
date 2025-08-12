@@ -95,24 +95,7 @@ static struct cnfparamdescr actpdescr[] = {
 };
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
-/**
- * @brief Synchronizes access to the shared MySQL handle.
- *
- * Worker threads read-lock this mutex while issuing queries so multiple
- * threads can use the connection concurrently.  When the handle needs to be
- * closed or reinitialized, the code temporarily upgrades to a write lock to
- * gain exclusive access and prevent use-after-free errors.
- *
- * TODO: we need to validate this assumption - in theory, this shall not be
- * possible, because instance data is worker-local. However, the following 2021
- * commit suggests there were some issue. I tend to say the commit was wrong,
- * but this needs to be checked in more depth, while we need some better doc
- * on the current locking method right now. So we document existing and valid
- * behaviour and will follow up later.
- *
- * related commit: https://github.com/rsyslog/rsyslog/pull/4719/commits/a3b2983342e20d157b76695d162533c3cfa69587
- */
-pthread_rwlock_t rwlock_hmysql;
+/* Each worker maintains its own MySQL handle. No additional locking is needed. */
 
 BEGINinitConfVars /* (re)set config variables to default values */
     CODESTARTinitConfVars;
@@ -127,9 +110,7 @@ ENDcreateInstance
 
 BEGINcreateWrkrInstance
     CODESTARTcreateWrkrInstance;
-    pthread_rwlock_wrlock(&rwlock_hmysql);
     pWrkrData->hmysql = NULL;
-    pthread_rwlock_unlock(&rwlock_hmysql);
 ENDcreateWrkrInstance
 
 
@@ -141,25 +122,12 @@ ENDisCompatibleWithFeature
 
 /**
  * @brief Close the current MySQL connection.
- *
- * The caller holds @ref rwlock_hmysql in read mode and expects to keep a read
- * lock on return.  pthread rwlocks do not support in-place promotion, so the
- * function releases the read lock, obtains a write lock, and then downgrades
- * back to a read lock after closing the connection.  During the upgrade window
- * other readers may continue to use the connection; they still hold their own
- * read locks and thus cannot see a freed handle.  Once the write lock is
- * obtained, the handle is closed and the pointer cleared so subsequent readers
- * trigger reinitialization.
  */
 static void closeMySQL(wrkrInstanceData_t *pWrkrData) {
-    pthread_rwlock_unlock(&rwlock_hmysql);
-    pthread_rwlock_wrlock(&rwlock_hmysql);
-    if (pWrkrData->hmysql != NULL) { /* re-check to see if another instance already updated it */
+    if (pWrkrData->hmysql != NULL) {
         mysql_close(pWrkrData->hmysql);
         pWrkrData->hmysql = NULL;
     }
-    pthread_rwlock_unlock(&rwlock_hmysql);
-    pthread_rwlock_rdlock(&rwlock_hmysql);
 }
 
 BEGINfreeInstance
@@ -173,10 +141,8 @@ ENDfreeInstance
 
 BEGINfreeWrkrInstance
     CODESTARTfreeWrkrInstance;
-    pthread_rwlock_rdlock(&rwlock_hmysql);
     closeMySQL(pWrkrData);
     mysql_thread_end();
-    pthread_rwlock_unlock(&rwlock_hmysql);
 ENDfreeWrkrInstance
 
 
@@ -224,9 +190,6 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent) {
     assert(pWrkrData->hmysql == NULL);
     pData = pWrkrData->pData;
 
-    pthread_rwlock_unlock(&rwlock_hmysql);
-    pthread_rwlock_wrlock(&rwlock_hmysql);
-
     pWrkrData->hmysql = mysql_init(NULL);
     if (pWrkrData->hmysql == NULL) {
         LogError(0, RS_RET_SUSPENDED, "can not initialize MySQL handle");
@@ -268,8 +231,6 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent) {
     }
 
 finalize_it:
-    pthread_rwlock_unlock(&rwlock_hmysql);
-    pthread_rwlock_rdlock(&rwlock_hmysql);
     RETiRet;
 }
 
@@ -323,11 +284,9 @@ finalize_it:
 
 BEGINtryResume
     CODESTARTtryResume;
-    pthread_rwlock_rdlock(&rwlock_hmysql);
     if (pWrkrData->hmysql == NULL) {
         iRet = initMySQL(pWrkrData, 1);
     }
-    pthread_rwlock_unlock(&rwlock_hmysql);
 ENDtryResume
 
 BEGINbeginTransaction
@@ -338,7 +297,6 @@ ENDbeginTransaction
 BEGINcommitTransaction
     CODESTARTcommitTransaction;
     DBGPRINTF("ommysql: commitTransaction\n");
-    pthread_rwlock_rdlock(&rwlock_hmysql);
     CHKiRet(writeMySQL(pWrkrData, (uchar *)"START TRANSACTION"));
 
     for (unsigned i = 0; i < nParams; ++i) {
@@ -365,7 +323,6 @@ BEGINcommitTransaction
     }
     DBGPRINTF("ommysql: transaction committed\n");
 finalize_it:
-    pthread_rwlock_unlock(&rwlock_hmysql);
 ENDcommitTransaction
 
 static inline void setInstParamDefaults(instanceData *pData) {
@@ -540,7 +497,6 @@ ENDparseSelectorAct
 
 BEGINmodExit
     CODESTARTmodExit;
-    pthread_rwlock_destroy(&rwlock_hmysql);
 #ifdef HAVE_MYSQL_LIBRARY_INIT
     mysql_library_end();
 #else
@@ -592,8 +548,6 @@ BEGINmodInit()
                  "can not run");
         ABORT_FINALIZE(RS_RET_ERR);
     }
-
-    pthread_rwlock_init(&rwlock_hmysql, NULL);
 
     /* register our config handlers */
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionommysqlserverport", 0, eCmdHdlrInt, NULL, &cs.iSrvPort,
