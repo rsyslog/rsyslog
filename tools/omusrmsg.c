@@ -72,6 +72,9 @@
 #ifdef HAVE_PATHS_H
     #include <paths.h>
 #endif
+#ifndef _PATH_UTMP
+    #define _PATH_UTMP "/var/run/utmp"
+#endif
 #ifdef HAVE_LIBSYSTEMD
     #include <systemd/sd-daemon.h>
     #include <systemd/sd-login.h>
