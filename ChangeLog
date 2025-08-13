@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-08-13: improved developer documentation
+  - internal locking needs / action interface
+  - control flow for actions / queues
+  - removes any doubts that might have existed due to missing docs
+  - improves onboarding new developers
 - 2025-08-01: core: migrate callback invocations to type-safe signatures
   Replace opaque/variadic callback usage with explicit, type-safe function
   signatures to reduce undefined behavior and clarify intent.
