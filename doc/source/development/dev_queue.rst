@@ -6,14 +6,21 @@ still incomplete. Target audience is developers and users who would like
 to get an in-depth understanding of queues as used in
 `rsyslog <http://www.rsyslog.com/>`_.
 
-**Please note that this document is outdated and does not longer reflect
-the specifics of the queue object. However, I have decided to leave it
-in the doc set, as the overall picture provided still is quite OK. I
-intend to update this document somewhat later when I have reached the
-"store-and-forward" milestone.**
+**Note: This document describes historic implementation details and is
+partially outdated. For the current developer overview of action threads
+and queues, see :doc:`dev_action_threads`.**
+
+*Please note that this document outdated no longer reflects the specifics
+of the queue object. However, we have decided to leave it
+in the doc set, as the overall picture provided still is quite OK. We
+intend to continue update this document somewhat later when we have
+clarified some the overall developer doc structure.*
 
 Some definitions
 ----------------
+
+The term "DA" means "disk-assisted mode" of a queue. Details in the
+implementation details.
 
 A queue is DA-enabled if it is configured to use disk-assisted mode when
 there is need to. A queue is in DA mode (or DA run mode), when it
