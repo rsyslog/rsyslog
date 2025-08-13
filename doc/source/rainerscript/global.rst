@@ -42,6 +42,11 @@ The following parameters can be set:
   Permits to overwrite the local host hostname.
 
 - **preserveFQDN**
+
+  Keep fully qualified hostnames instead of stripping the local domain.
+  The default is "off" for sysklogd compatibility. Reverse lookup results
+  are cached; see :ref:`reverse_dns_cache` for options to refresh cached
+  names.
 - **defaultNetstreamDriverCAFile**
 
   For `TLS syslog <http://www.rsyslog.com/doc/rsyslog_secure_tls.html>`_,
@@ -204,7 +209,9 @@ The following parameters can be set:
 
   **Default:** on
 
-  Can be used to turn DNS name resolution on or off.
+  Can be used to turn DNS name resolution on or off. When disabled, no
+  reverse lookups are performed and the cache described in
+  :ref:`reverse_dns_cache` is bypassed.
 
 - **net.permitACLWarning** [on/off] available 8.6.0+
 

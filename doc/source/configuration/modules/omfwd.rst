@@ -8,8 +8,13 @@ It is **built-in** and does not require explicit loading.
 To configure global defaults, use ``builtin:omfwd``.
 
 .. note::
-   For modern deployments, prefer **TCP with TLS** over plain TCP or UDP.  
+   For modern deployments, prefer **TCP with TLS** over plain TCP or UDP.
    If reliable delivery is critical, consider :doc:`omrelp <omrelp>`.
+
+.. note::
+   Hostnames in ``target`` are resolved on each connection attempt using the
+   system resolver. Reverse lookup cache settings (:ref:`reverse_dns_cache`)
+   do not affect outbound name resolution.
 
 Best Practices
 ==============
