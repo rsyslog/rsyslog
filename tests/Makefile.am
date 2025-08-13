@@ -1585,7 +1585,10 @@ endif
 endif
 
 if ENABLE_OMUXSOCK
-TESTS += uxsock_simple.sh
+TESTS += uxsock_simple.sh \
+	 uxsock_simple_abstract.sh \
+	 uxsock_multiple.sh \
+	 uxsock_multiple_netns.sh
 endif
 
 if ENABLE_RELP
@@ -2800,6 +2803,9 @@ EXTRA_DIST= \
 	testsuites/omprog-transactions-bin.sh \
 	pipe_noreader.sh \
 	uxsock_simple.sh \
+	uxsock_simple_abstract.sh \
+	uxsock_multiple.sh \
+	uxsock_multiple_netns.sh \
 	asynwr_simple.sh \
 	asynwr_simple_2.sh \
 	asynwr_timeout.sh \
