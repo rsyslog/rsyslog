@@ -32,3 +32,10 @@ contrib_mmkubernetes:
   requires_serialization: false
   notes:
     - WID is per-thread; shared caches in pData must be guarded.
+
+ommysql:
+  paths: ["plugins/ommysql/"]
+  requires_serialization: false
+  notes:
+    - Per-worker MYSQL handle in pWrkrData; no module-level RW lock required after refactor.
+
