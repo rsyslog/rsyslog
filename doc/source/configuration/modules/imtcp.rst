@@ -16,6 +16,9 @@ natively provided by selecting the appropriate network stream driver
 and can also be provided by using `stunnel <rsyslog_stunnel.html>`_ (an
 alternative is the use the `imgssapi <imgssapi.html>`_ module).
 
+.. note::
+   Reverse DNS lookups for remote senders are cached. To control refresh
+   intervals, see :ref:`reverse_dns_cache`.
 
 Notable Features
 ================

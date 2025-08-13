@@ -93,7 +93,8 @@ True Global Directives
 -  **$PreserveFQDN** [on/**off**) - if set to off (legacy default to remain
    compatible to sysklogd), the domain part from a name that is within
    the same domain as the receiving system is stripped. If set to on,
-   full names are always used.
+   full names are always used. Reverse lookup results are cached; see
+   :ref:`reverse_dns_cache` for controlling cache refresh.
 -  **$WorkDirectory** <name> (directory for spool and other work files. Do
    **not** use trailing slashes)
 -  `$PrivDropToGroup <droppriv.html>`_
