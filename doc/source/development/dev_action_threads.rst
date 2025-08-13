@@ -58,6 +58,14 @@ Thread and Queue Topology
      A1W --> A1Out["Action A1: omfile"];
      A2W --> A2Out["Action A2: omfwd"];
 
+Concurrency & Locking
+---------------------
+- The framework may run **multiple workers per action**.
+- ``wrkrInstanceData_t`` (WID) is **per-worker**; do not share it; no locks needed inside WID.
+- Shared per-action state (``pData``/``instanceData``) **must be protected by the module** (mutex/rwlock).
+- **Direct** mode does **not** remove the need to serialize inherently serial resources in the module.
+
+
 Message Processing Lifecycle (Action Queue)
 -------------------------------------------
 1. Enqueue
