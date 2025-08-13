@@ -35,7 +35,7 @@ Key uses for ``omsendertrack`` include:
     daemon restarts, ensuring continuous tracking.
 
 The module achieves this by periodically writing these statistics to a JSON
-:ref:`statefile <omsendertrack_statefile>`.
+:ref:`statefile <param-omsendertrack-statefile>`.
 
 Functionality
 -------------
@@ -48,7 +48,7 @@ Initialization
 
 Upon rsyslog startup, the ``omsendertrack`` module attempts to load its
 previously saved state from the configured :ref:`statefile
-<omsendertrack_statefile>`. This data, which includes sender identifiers,
+<param-omsendertrack-statefile>`. This data, which includes sender identifiers,
 message counts, and last event times, is loaded into an in-memory hash table.
 This ensures that message statistics are restored and tracking continues
 seamlessly across daemon restarts. A background task is then spawned to handle
@@ -60,7 +60,7 @@ OnAction Call (Message Processing)
 When a message is routed to an ``omsendertrack`` action:
 
 1.  **Sender Identification:** The module uses the configured :ref:`senderid
-    <omsendertrack_senderid>` template to derive a unique identifier for the
+    <param-omsendertrack-senderid>` template to derive a unique identifier for the
     message sender.
 2.  **Statistic Update:** It then updates or inserts an entry for this sender in
     its internal hash table.
@@ -75,7 +75,7 @@ HUP Signal Handling
 
 When rsyslog receives a HUP signal (typically used for configuration reloads),
 the ``omsendertrack`` module is designed to check for the existence of a
-:ref:`cmdfile <omsendertrack_cmdfile>`. If a `cmdfile` is specified and found,
+:ref:`cmdfile <param-omsendertrack-cmdfile>`. If a `cmdfile` is specified and found,
 it would be read and its commands processed. After processing, the `cmdfile`
 would be deleted to prevent re-execution on subsequent HUP signals.
 
@@ -86,7 +86,7 @@ Background Task
 ^^^^^^^^^^^^^^^
 
 A dedicated background task is responsible for persisting the module's current
-state to the configured :ref:`statefile <omsendertrack_statefile>`. This task
+state to the configured :ref:`statefile <param-omsendertrack-statefile>`. This task
 wakes up at the `interval` specified in the configuration. It performs atomic
 writes to the `statefile` to prevent data corruption, even if rsyslog
 unexpectedly terminates during a write operation.
@@ -96,7 +96,7 @@ Shutdown
 
 During rsyslog shutdown, the ``omsendertrack`` module ensures that the most
 current sender statistics are saved to the :ref:`statefile
-<omsendertrack_statefile>`. This critical step guarantees data persistence and
+<param-omsendertrack-statefile>`. This critical step guarantees data persistence and
 allows for an accurate resumption of tracking when rsyslog restarts.
 
 Configuration
@@ -106,108 +106,33 @@ The ``omsendertrack`` module supports the following action parameters.
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; CamelCase is recommended for readability.
 
 Action Parameters
 -----------------
 
-senderid
-^^^^^^^^
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. _omsendertrack_senderid:
-
-.. csv-table::
-   :header: "Type", "Default", "Mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "RSYSLOG_FileFormat", "no", "none"
-
-This parameter defines the **template used to determine the sender's unique
-identifier**. The value produced by this template will be used as the key for
-tracking individual senders within the module's internal statistics.
-
-For instance:
-
-* A simple template like ``"%hostname%"`` will track each unique host that
-    submits messages to rsyslog.
-* Using ``"%fromhost-ip%"`` will track senders based on their IP address.
-* A more granular template such as ``"%hostname%-%app-name%"`` can
-    differentiate between applications on the same host.
-
-**Note:** The processing of this template for every incoming message can impact
-overall throughput, especially if complex templates are used. Choose your
-template wisely based on your tracking needs and performance considerations.
-
-.. important::
-
-   The current Proof-of-Concept implementation of the ``omsendertrack`` module
-   might still refer to this parameter as ``template`` instead of ``senderid``.
-   Please use ``template`` if ``senderid`` is not recognized by your rsyslog
-   version, and be aware that this will be harmonized in future releases.
-
-interval
-^^^^^^^^
-
-.. _omsendertrack_interval:
-
-.. csv-table::
-   :header: "Type", "Default", "Mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "60", "no", "none"
-
-This parameter defines the **interval in seconds** after which the module
-writes the current sender statistics to the configured :ref:`statefile
-<omsendertrack_statefile>`.
-
-A smaller `interval` value results in more frequent updates to the state file,
-reducing potential data loss in case of an unexpected system crash, but it also
-increases disk I/O. A larger `interval` reduces I/O but means less up-to-date
-statistics on disk.
-
-statefile
-^^^^^^^^^
-
-.. _omsendertrack_statefile:
-
-.. csv-table::
-   :header: "Type", "Default", "Mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "yes", "none"
-
-This mandatory parameter specifies the **absolute path to the JSON file** where
-sender information will be stored. The module updates this file periodically
-based on the :ref:`interval <omsendertrack_interval>` and also upon rsyslog
-shutdown to preserve the latest statistics.
-
-**Important:** Ensure that the rsyslog user has appropriate write permissions
-to the directory where this `statefile` is located. Failure to do so will
-prevent the module from saving its state.
-
-cmdfile
-^^^^^^^
-
-.. _omsendertrack_cmdfile:
-
-.. csv-table::
-   :header: "Type", "Default", "Mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "no", "none"
-
-This optional parameter allows you to specify the **absolute path to a command
-file**. This file *is designed to be processed when rsyslog receives a HUP
-signal* (e.g., via `systemctl reload rsyslog`).
-
-**Note:** Command file support is currently **not implemented** in this
-proof-of-concept version of the module. When implemented, this feature is
-intended to allow dynamic control over the module's behavior, such as resetting
-statistics for specific senders, without requiring an rsyslog restart.
+   * - Parameter
+     - Summary
+   * - :ref:`param-omsendertrack-senderid`
+     - .. include:: ../../reference/parameters/omsendertrack-senderid.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omsendertrack-interval`
+     - .. include:: ../../reference/parameters/omsendertrack-interval.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omsendertrack-statefile`
+     - .. include:: ../../reference/parameters/omsendertrack-statefile.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omsendertrack-cmdfile`
+     - .. include:: ../../reference/parameters/omsendertrack-cmdfile.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 Statistic Counter
 -----------------
@@ -215,7 +140,7 @@ Statistic Counter
 The ``omsendertrack`` module is designed to maintain a set of statistics for
 each unique sender identifier it tracks. These statistics are intended to be
 periodically serialized and written to the configured :ref:`statefile
-<omsendertrack_statefile>` in JSON format.
+<param-omsendertrack-statefile>` in JSON format.
 
 **Important:** This module **does not offer statistics counters in the typical
 sense** that are consumable by other rsyslog modules like `impstats`. The
@@ -239,7 +164,7 @@ The JSON structure for each sender entry is envisioned to look like this:
 Where:
 
 * ``senderid``: The unique identifier for the sender, as determined by the
-    :ref:`senderid <omsendertrack_senderid>` template.
+    :ref:`senderid <param-omsendertrack-senderid>` template.
 * ``last-event-time``: A UTC timestamp (ISO 8601 format) indicating when the
     last message from this sender was received.
 * ``message-count``: The total number of messages received from this sender
@@ -284,14 +209,14 @@ adhere to the following best practices:
     house the ``omsendertrack`` action (as shown in Example 2), ensure that
     this specific ruleset **does not have a queue configured**. The module's
     fast execution makes queues redundant here.
-* **Efficient Sender Identification:** Choose your :ref:`senderid <omsendertrack_senderid>` template carefully. Simpler templates (e.g., ``"%hostname%"``, ``"%fromhost-ip%"``) result in better performance, as template processing occurs for every message.
+* **Efficient Sender Identification:** Choose your :ref:`senderid <param-omsendertrack-senderid>` template carefully. Simpler templates (e.g., ``"%hostname%"``, ``"%fromhost-ip%"``) result in better performance, as template processing occurs for every message.
 * **Appropriate `interval` for State File Writes:** Balance your need for
     up-to-date statistics against disk I/O. A very small `interval` can lead
     to increased disk writes, while a larger one might mean slightly older data
     on disk in case of an unexpected shutdown.
 * **Ensure State File Write Permissions:** Verify that the rsyslog user has
     proper write permissions to the directory specified in the :ref:`statefile
-    <omsendertrack_statefile>` parameter. Without this, statistics cannot be
+    <param-omsendertrack-statefile>` parameter. Without this, statistics cannot be
     persisted.
 * **Dedicated Ruleset for Unified Stats:** Use a dedicated ruleset that is
     called from multiple input-bound rulesets (Example 2) **only when** you
@@ -319,9 +244,13 @@ when the overall volume is low.
 
 .. code-block:: rsyslog
 
-   module(load="omsendertrack")
+   # Define the template for senderid in omsendertrack
+   template(name="id-template" type="list") {
+       property(name="hostname")
+   }
+
    action(type="omsendertrack"
-          senderid="%hostname%"
+          senderid="id-template"
           interval="60"
           statefile="/var/lib/rsyslog/senderstats.json")
 
@@ -459,3 +388,11 @@ state files.
    ruleset(name="RSYSLOG_DefaultRuleset") {
        stop
    }
+
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/omsendertrack-senderid
+   ../../reference/parameters/omsendertrack-interval
+   ../../reference/parameters/omsendertrack-statefile
+   ../../reference/parameters/omsendertrack-cmdfile
