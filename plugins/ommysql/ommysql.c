@@ -465,10 +465,7 @@ BEGINparseSelectorAct
      * We specify that the SQL option must be present in the template.
      * This is for your own protection (prevent sql injection).
      */
-    if (*(p - 1) == ';')
-        --p; /* TODO: the whole parsing of the MySQL module needs to be re-thought - but this here
-              *       is clean enough for the time being -- rgerhards, 2007-07-30
-              */
+    if (*(p - 1) == ';') --p; /* point back to the delimiter for cflineParseTemplateName */
     CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar *)" StdDBFmt"));
 
     /* If we detect invalid properties, we disable logging,
