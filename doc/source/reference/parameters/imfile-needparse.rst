@@ -10,7 +10,7 @@ needParse
 
 .. summary-start
 
-.
+Instructs rsyslog to process messages from this file through configured parser modules.
 
 .. summary-end
 

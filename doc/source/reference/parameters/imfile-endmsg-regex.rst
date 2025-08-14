@@ -11,7 +11,7 @@ endmsg.regex
 
 .. summary-start
 
-.
+Specifies a regular expression to detect the end of a multi-line message.
 
 .. summary-end
 

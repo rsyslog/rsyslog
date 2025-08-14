@@ -10,7 +10,7 @@ escapeLF.replacement
 
 .. summary-start
 
-.
+Specifies a custom replacement string for escaped line feed characters in multi-line messages.
 
 .. summary-end
 

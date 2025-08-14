@@ -10,7 +10,7 @@ persistStateAfterSubmission
 
 .. summary-start
 
-.
+Ensures state file information is written after each batch of messages has been submitted for improved robustness.
 
 .. summary-end
 

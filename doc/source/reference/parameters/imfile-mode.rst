@@ -10,7 +10,7 @@ Mode
 
 .. summary-start
 
-.
+Specifies if imfile shall run in inotify ("inotify") or polling ("polling") mode.
 
 .. summary-end
 

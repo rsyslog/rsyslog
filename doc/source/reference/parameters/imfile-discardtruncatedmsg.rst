@@ -10,7 +10,7 @@ discardTruncatedMsg
 
 .. summary-start
 
-When messages are too long they are truncated and the following part is processed as a new message.
+Controls whether the truncated part of an overly long message is discarded instead of being processed as a new message.
 
 .. summary-end
 

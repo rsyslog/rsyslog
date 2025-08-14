@@ -11,7 +11,7 @@ statefile.directory
 
 .. summary-start
 
-.
+Sets a dedicated directory for storing imfile state files.
 
 .. summary-end
 

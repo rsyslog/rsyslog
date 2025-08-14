@@ -10,7 +10,7 @@ sortFiles
 
 .. summary-start
 
-.
+If enabled, files are processed in sorted order.
 
 .. summary-end
 

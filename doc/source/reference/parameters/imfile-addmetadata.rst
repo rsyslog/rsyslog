@@ -10,7 +10,7 @@ addMetadata
 
 .. summary-start
 
-**Default: see intro section on Metadata**  This is used to turn on or off the addition of metadata to the message object.
+Controls whether file-related metadata is added to messages. By default, this is automatically enabled when wildcards are used in the file path.
 
 .. summary-end
 
@@ -18,17 +18,16 @@ This parameter applies to :doc:`../../configuration/modules/imfile`.
 
 :Name: addMetadata
 :Scope: input
-:Type: boolean
-:Default: input=-1
+:Type: word
+:Default: input=auto (enabled for wildcards, disabled otherwise)
 :Required?: no
 :Introduced: at least 8.x, possibly earlier
 
 Description
 -----------
-**Default: see intro section on Metadata**
-
-This is used to turn on or off the addition of metadata to the
-message object.
+This parameter controls whether file-related metadata is attached to each
+message. If left unspecified, metadata is automatically added when wildcards
+appear in the ``File`` setting; otherwise it is disabled.
 
 Input usage
 -----------
@@ -40,7 +39,7 @@ Input usage
 
 Notes
 -----
-- Legacy docs describe this as a binary option; it is a boolean.
+- Allowed values: ``on`` or ``off``. If omitted, the value is ``auto``.
 
 See also
 --------

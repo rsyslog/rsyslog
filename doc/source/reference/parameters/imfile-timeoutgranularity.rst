@@ -10,7 +10,7 @@ timeoutGranularity
 
 .. summary-start
 
-.
+Sets the interval in which multi-line-read timeouts are checked.
 
 .. summary-end
 

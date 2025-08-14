@@ -11,7 +11,7 @@ startmsg.regex
 
 .. summary-start
 
-.
+Specifies a regular expression that marks the beginning of a multi-line message.
 
 .. summary-end
 

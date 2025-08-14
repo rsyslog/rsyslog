@@ -9,7 +9,9 @@ ignoreOlderThan
    single: ignoreOlderThan
 
 .. summary-start
-Ignores files untouched for the given number of seconds.
+
+Instructs imfile to ignore discovered files that have not been modified within a specified time. Once a file is being monitored, it is no longer ignored.
+
 .. summary-end
 
 This parameter applies to :doc:`../../configuration/modules/imfile`.

@@ -10,7 +10,7 @@ msgDiscardingError
 
 .. summary-start
 
-Upon truncation an error is given.
+Controls whether an error is logged when a message is truncated.
 
 .. summary-end
 
