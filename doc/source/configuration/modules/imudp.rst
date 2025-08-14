@@ -33,362 +33,101 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; CamelCase is recommended for readability.
 
 .. index:: imudp; module parameters
+
 
 
 Module Parameters
 -----------------
 
-TimeRequery
-^^^^^^^^^^^
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "2", "no", "``$UDPServerTimeRequery``"
-
-This is a performance optimization. Getting the system time is very
-costly. With this setting, imudp can be instructed to obtain the
-precise time only once every n-times. This logic is only activated if
-messages come in at a very fast rate, so doing less frequent time
-calls should usually be acceptable. The default value is two, because
-we have seen that even without optimization the kernel often returns
-twice the identical time. You can set this value as high as you like,
-but do so at your own risk. The higher the value, the less precise
-the timestamp.
-
-**Note:** the timeRequery is done based on executed system calls
-(**not** messages received). So when batch sizes are used, multiple
-messages are received with one system call. All of these messages
-always receive the same timestamp, as they are effectively received
-at the same time. When there is very high traffic and successive
-system calls immediately return the next batch of messages, the time
-requery logic kicks in, which means that by default time is only
-queried for every second batch. Again, this should not cause a
-too-much deviation as it requires messages to come in very rapidly.
-However, we advise not to set the "timeRequery" parameter to a large
-value (larger than 10) if input batches are used.
-
-
-SchedulingPolicy
-^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "``$IMUDPSchedulingPolicy``"
-
-Can be used the set the scheduler priority, if the necessary
-functionality is provided by the platform. Most useful to select
-"fifo" for real-time processing under Linux (and thus reduce chance
-of packet loss). Other options are "rr" and "other".
-
-
-SchedulingPriority
-^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "none", "no", "``$IMUDPSchedulingPriority``"
-
-Scheduling priority to use.
-
-
-BatchSize
-^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "32", "no", "none"
-
-This parameter is only meaningful if the system support recvmmsg()
-(newer Linux OSs do this). The parameter is silently ignored if the
-system does not support it. If supported, it sets the maximum number
-of UDP messages that can be obtained with a single OS call. For
-systems with high UDP traffic, a relatively high batch size can
-reduce system overhead and improve performance. However, this
-parameter should not be overdone. For each buffer, max message size
-bytes are statically required. Also, a too-high number leads to
-reduced efficiency, as some structures need to be completely
-initialized before the OS call is done. We would suggest to not set
-it above a value of 128, except if experimental results show that
-this is useful.
-
-
-Threads
-^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "1", "no", "none"
-
-.. versionadded:: 7.5.5
-
-Number of worker threads to process incoming messages. These threads
-are utilized to pull data off the network. On a busy system,
-additional threads (but not more than there are CPUs/Cores) can help
-improving performance and avoiding message loss. Note that with too
-many threads, performance can suffer. There is a hard upper limit on
-the number of threads that can be defined. Currently, this limit is
-set to 32. It may increase in the future when massive multicore
-processors become available.
-
-
-PreserveCase
-^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "boolean", "off", "no", "none"
-
-.. versionadded:: 8.37.0
-
-This parameter is for controlling the case in fromhost.  If preservecase is set to "on", the case in fromhost is preserved.  E.g., 'Host1.Example.Org' when the message was received from 'Host1.Example.Org'.  Default to "off" for the backward compatibility.
-
+   * - Parameter
+     - Summary
+   * - :ref:`param-imudp-timerequery`
+     - .. include:: ../../reference/parameters/imudp-timerequery.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imudp-schedulingpolicy`
+     - .. include:: ../../reference/parameters/imudp-schedulingpolicy.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imudp-schedulingpriority`
+     - .. include:: ../../reference/parameters/imudp-schedulingpriority.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imudp-batchsize`
+     - .. include:: ../../reference/parameters/imudp-batchsize.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imudp-threads`
+     - .. include:: ../../reference/parameters/imudp-threads.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imudp-preservecase`
+     - .. include:: ../../reference/parameters/imudp-preservecase.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 .. index:: imudp; input parameters
-
 
 Input Parameters
 ----------------
 
-.. index:: imudp; address (input parameter)
-
-Address
-^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "no", "``$UDPServerAddress``"
-
-Local IP address (or name) the UDP server should bind to. Use "*"
-to bind to all of the machine's addresses.
-
-
-Port
-^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "array", "514", "yes", "``$UDPServerRun``"
-
-Specifies the port the server shall listen to.. Either a single port can
-be specified or an array of ports. If multiple ports are specified, a
-listener will be automatically started for each port. Thus, no
-additional inputs need to be configured.
-
-Single port: Port="514"
-
-Array of ports: Port=["514","515","10514","..."]
-
-
-IpFreeBind
-^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "2", "no", "none"
-
-.. versionadded:: 8.18.0
-
-Manages the IP_FREEBIND option on the UDP socket, which allows binding it to
-an IP address that is nonlocal or not (yet) associated to any network interface.
-
-The parameter accepts the following values:
-
--  0 - does not enable the IP_FREEBIND option on the
-   UDP socket. If the *bind()* call fails because of *EADDRNOTAVAIL* error,
-   socket initialization fails.
-
--  1 - silently enables the IP_FREEBIND socket
-   option if it is required to successfully bind the socket to a nonlocal address.
-
--  2 - enables the IP_FREEBIND socket option and
-   warns when it is used to successfully bind the socket to a nonlocal address.
-
-
-Device
-^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "no", "none"
-
-Bind socket to given device (e.g., eth0)
-
-For Linux with VRF support, the Device option can be used to specify the
-VRF for the Address.
-
-
-Ruleset
-^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "RSYSLOG_DefaultRuleset", "no", "``$InputUDPServerBindRuleset``"
-
-Binds the listener to a specific :doc:`ruleset <../../concepts/multi_ruleset>`.
-
-
-RateLimit.Interval
-^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "0", "no", "none"
-
-.. versionadded:: 7.3.1
-
-The rate-limiting interval in seconds. Value 0 turns off rate limiting.
-Set it to a number of seconds (5 recommended) to activate rate-limiting.
-
-
-RateLimit.Burst
-^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "10000", "no", "none"
-
-.. versionadded:: 7.3.1
-
-Specifies the rate-limiting burst in number of messages.
-
-
-Name
-^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "imudp", "no", "none"
-
-.. versionadded:: 8.3.3
-
-Specifies the value of the inputname property. In older versions,
-this was always "imudp" for all
-listeners, which still is the default. Starting with 7.3.9 it can be
-set to different values for each listener. Note that when a single
-input statement defines multiple listener ports, the inputname will be
-the same for all of them. If you want to differentiate in that case,
-use "name.appendPort" to make them unique. Note that the
-"name" parameter can be an empty string. In that case, the
-corresponding inputname property will obviously also be the empty
-string. This is primarily meant to be used together with
-"name.appendPort" to set the inputname equal to the port.
-
-
-Name.appendPort
-^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "none"
-
-.. versionadded:: 7.3.9
-
-Appends the port the inputname property. Note that when no "name" is
-specified, the default of "imudp" is used and the port is appended to
-that default. So, for example, a listener port of 514 in that case
-will lead to an inputname of "imudp514". The ability to append a port
-is most useful when multiple ports are defined for a single input and
-each of the inputnames shall be unique. Note that there currently is
-no differentiation between IPv4/v6 listeners on the same port.
-
-
-DefaultTZ
-^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "no", "none"
-
-This is an **experimental** parameter; details may change at any
-time and it may also be discontinued without any early warning.
-Permits to set a default timezone for this listener. This is useful
-when working with legacy syslog (RFC3164 et al) residing in different
-timezones. If set it will be used as timezone for all messages **that
-do not contain timezone info**. Currently, the format **must** be
-"+/-hh:mm", e.g. "-05:00", "+01:30". Other formats, including TZ
-names (like EST) are NOT yet supported. Note that consequently no
-daylight saving settings are evaluated when working with timezones.
-If an invalid format is used, "interesting" things can happen, among
-them malformed timestamps and rsyslogd segfaults. This will obviously
-be changed at the time this feature becomes non-experimental.
-
-
-RcvBufSize
-^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "size", "none", "no", "none"
-
-.. versionadded:: 7.3.9
-
-This request a socket receive buffer of specific size from the operating system. It
-is an expert parameter, which should only be changed for a good reason.
-Note that setting this parameter disables Linux auto-tuning, which
-usually works pretty well. The default value is 0, which means "keep
-the OS buffer size unchanged". This is a size value. So in addition
-to pure integer values, sizes like "256k", "1m" and the like can be
-specified. Note that setting very large sizes may require root or
-other special privileges. Also note that the OS may slightly adjust
-the value or shrink it to a system-set max value if the user is not
-sufficiently privileged. Technically, this parameter will result in a
-setsockopt() call with SO\_RCVBUF (and SO\_RCVBUFFORCE if it is
-available). (Maximum Value: 1G)
-
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Parameter
+     - Summary
+   * - :ref:`param-imudp-address`
+     - .. include:: ../../reference/parameters/imudp-address.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imudp-port`
+     - .. include:: ../../reference/parameters/imudp-port.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imudp-ipfreebind`
+     - .. include:: ../../reference/parameters/imudp-ipfreebind.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imudp-device`
+     - .. include:: ../../reference/parameters/imudp-device.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imudp-ruleset`
+     - .. include:: ../../reference/parameters/imudp-ruleset.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imudp-ratelimit-interval`
+     - .. include:: ../../reference/parameters/imudp-ratelimit-interval.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imudp-ratelimit-burst`
+     - .. include:: ../../reference/parameters/imudp-ratelimit-burst.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imudp-name`
+     - .. include:: ../../reference/parameters/imudp-name.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imudp-name-appendport`
+     - .. include:: ../../reference/parameters/imudp-name-appendport.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imudp-defaulttz`
+     - .. include:: ../../reference/parameters/imudp-defaulttz.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imudp-rcvbufsize`
+     - .. include:: ../../reference/parameters/imudp-rcvbufsize.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 .. _imudp-statistic-counter:
 
@@ -598,3 +337,25 @@ Additional Resources
    counters <http://www.rsyslog.com/rsyslog-statistic-counter/>`_.
    This also describes all imudp counters.
 
+
+
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/imudp-timerequery
+   ../../reference/parameters/imudp-schedulingpolicy
+   ../../reference/parameters/imudp-schedulingpriority
+   ../../reference/parameters/imudp-batchsize
+   ../../reference/parameters/imudp-threads
+   ../../reference/parameters/imudp-preservecase
+   ../../reference/parameters/imudp-address
+   ../../reference/parameters/imudp-port
+   ../../reference/parameters/imudp-ipfreebind
+   ../../reference/parameters/imudp-device
+   ../../reference/parameters/imudp-ruleset
+   ../../reference/parameters/imudp-ratelimit-interval
+   ../../reference/parameters/imudp-ratelimit-burst
+   ../../reference/parameters/imudp-name
+   ../../reference/parameters/imudp-name-appendport
+   ../../reference/parameters/imudp-defaulttz
+   ../../reference/parameters/imudp-rcvbufsize
