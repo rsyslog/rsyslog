@@ -54,174 +54,47 @@ Configuration
 
 .. note::
 
-   Parameter names are case-insensitive.
+  Parameter names are case-insensitive; CamelCase is recommended for
+   readability.
 
 
 Module Parameters
 -----------------
 
-Mode
-^^^^
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "inotify", "no", "none"
-
-.. versionadded:: 8.1.5
-
-This specifies if imfile is shall run in inotify ("inotify") or polling
-("polling") mode. Traditionally, imfile used polling mode, which is
-much more resource-intense (and slower) than inotify mode. It is
-suggested that users turn on "polling" mode only if they experience
-strange problems in inotify mode. In theory, there should never be a
-reason to enable "polling" mode and later versions will most probably
-remove it.
-
-Note: if a legacy "$ModLoad" statement is used, the default is *polling*.
-This default was kept to prevent problems with old configurations. It
-might change in the future.
-
-.. versionadded:: 8.32.0
-
-On Solaris, the FEN API is used instead of INOTIFY. You can set the mode
-to fen or inotify (which is automatically mapped to fen on Solaris OS).
-Please note that the FEN is limited compared to INOTIFY. Deep wildcard
-matches may not work because of the API limits for now.
-
-
-readTimeout
-^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "0", "no", "none"
-
-*Default: 0 (no timeout)*
-
-.. versionadded:: 8.23.0
-
-This sets the default value for input *timeout* parameters. See there
-for exact meaning. Parameter value is the number of seconds.
-
-
-deleteStateOnFileMove
-^^^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "none"
-
-If set to **on**, the state file for a monitored file is removed when that file
-is moved or rotated away. By default the state file is kept.
-
-
-timeoutGranularity
-^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "1", "no", "none"
-
-.. versionadded:: 8.23.0
-
-This sets the interval in which multi-line-read timeouts are checked.
-The interval is specified in seconds. Note that
-this establishes a lower limit on the length of the timeout. For example, if
-a timeoutGranularity of 60 seconds is selected and a readTimeout value of 10 seconds
-is used, the timeout is nevertheless only checked every 60 seconds (if there is
-no other activity in imfile). This means that the readTimeout is also only
-checked every 60 seconds, which in turn means a timeout can occur only after 60
-seconds.
-
-Note that timeGranularity has some performance implication. The more frequently
-timeout processing is triggered, the more processing time is needed. This
-effect should be negligible, except if a very large number of files is being
-monitored.
-
-
-sortFiles
-^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "none"
-
-.. versionadded:: 8.32.0
-
-If this parameter is set to on, the files will be processed in sorted order, else
-not. However, due to the inherent asynchronicity of the whole operations involved
-in tracking files, it is not possible to guarantee this sorted order, as it also
-depends on operation mode and OS timing.
-
-
-PollingInterval
-^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "10", "no", "none"
-
-This setting specifies how often files are to be
-polled for new data. For obvious reasons, it has effect only if
-imfile is running in polling mode.
-The time specified is in seconds. During each
-polling interval, all files are processed in a round-robin fashion.
-
-A short poll interval provides more rapid message forwarding, but
-requires more system resources. While it is possible, we strongly
-recommend not to set the polling interval to 0 seconds. That will
-make rsyslogd become a CPU hog, taking up considerable resources. It
-is supported, however, for the few very unusual situations where this
-level may be needed. Even if you need quick response, 1 seconds
-should be well enough. Please note that imfile keeps reading files as
-long as there is any data in them. So a "polling sleep" will only
-happen when nothing is left to be processed.
-
-**We recommend to use inotify mode.**
-
-
-statefile.directory
-^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "global(WorkDirectory) value", "no", "none"
-
-.. versionadded:: 8.1905.0
-
-This parameter permits to specify a dedicated directory for the storage of
-imfile state files. An absolute path name should be specified (e.g.
-`/var/rsyslog/imfilestate`). This permits to keep imfile state files separate
-from other rsyslog work items.
-
-If not specified the global `workDirectory` setting is used.
-
-**Important: The directory must exist before rsyslog is started.** Also,
-rsyslog needs write permissions to work correctly. Keep in mind that this
-also might require SELinux definitions (or similar for other enhanced security
-systems).
-
+   * - Parameter
+     - Summary
+   * - :ref:`param-imfile-mode`
+     - .. include:: ../../reference/parameters/imfile-mode.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imfile-readtimeout`
+     - .. include:: ../../reference/parameters/imfile-readtimeout.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imfile-deletestateonfilemove`
+     - .. include:: ../../reference/parameters/imfile-deletestateonfilemove.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imfile-timeoutgranularity`
+     - .. include:: ../../reference/parameters/imfile-timeoutgranularity.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imfile-sortfiles`
+     - .. include:: ../../reference/parameters/imfile-sortfiles.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imfile-pollinginterval`
+     - .. include:: ../../reference/parameters/imfile-pollinginterval.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imfile-statefile-directory`
+     - .. include:: ../../reference/parameters/imfile-statefile-directory.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 Input Parameters
 ----------------
@@ -975,4 +848,15 @@ This is the name of this file's state file. This parameter should
 usually **not** be used. Check the section on "State Files" above
 for more details.
 
+
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/imfile-mode
+   ../../reference/parameters/imfile-readtimeout
+   ../../reference/parameters/imfile-deletestateonfilemove
+   ../../reference/parameters/imfile-timeoutgranularity
+   ../../reference/parameters/imfile-sortfiles
+   ../../reference/parameters/imfile-pollinginterval
+   ../../reference/parameters/imfile-statefile-directory
 
