@@ -36,4 +36,4 @@ jobs:
         if: steps.doc_changes.outputs.any_changed == 'true'
         run: |
           cd doc
-          make html SPHINXOPTS="-W --keep-going"
+          make html SPHINXOPTS="-W -q --keep-going"
