@@ -60,8 +60,9 @@ syslog, make sure that you do proper egress and ingress filtering at the
 firewall and router level.
 
 Rsyslog also detects some kind of malicious reverse DNS entries. In any
-case, using DNS names adds an extra layer of vulnerability. We recommend
-to stick with hard-coded IP addresses wherever possible.
+case, using DNS names adds an extra layer of vulnerability. Reverse lookup
+results are cached; see :ref:`reverse_dns_cache` for ways to refresh cached
+names. We recommend to stick with hard-coded IP addresses wherever possible.
 
 **Sample:**
 

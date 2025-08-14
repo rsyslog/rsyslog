@@ -20,6 +20,9 @@ provide TLS services. Encryption can be provided by using
 This module has no limit on the number of listeners and sessions that
 can be used.
 
+.. note::
+   Reverse DNS lookups for remote senders are cached. Set the TTL via
+   :ref:`reverse_dns_cache`.
 
 Notable Features
 ================

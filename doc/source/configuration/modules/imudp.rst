@@ -21,6 +21,9 @@ statements.
 Note that in order to enable UDP reception, Firewall rules probably
 need to be modified as well. Also, SELinux may need additional rules.
 
+.. note::
+   Reverse DNS lookups for remote senders are cached. To control how long
+   cached hostnames persist, see :ref:`reverse_dns_cache`.
 
 Notable Features
 ================
