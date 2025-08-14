@@ -66,6 +66,7 @@
 #include "srUtils.h"
 #include "parserif.h"
 #include "datetime.h"
+#include "statsobj.h"
 
 #include <regex.h>
 
@@ -88,7 +89,7 @@ MODULE_CNFNAME("imfile")
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA /* must be present, starts static data */
-    DEFobjCurrIf(glbl) DEFobjCurrIf(strm) DEFobjCurrIf(prop) DEFobjCurrIf(ruleset) DEFobjCurrIf(datetime)
+    DEFobjCurrIf(glbl) DEFobjCurrIf(strm) DEFobjCurrIf(prop) DEFobjCurrIf(ruleset) DEFobjCurrIf(datetime) DEFobjCurrIf(statsobj)
 
         extern int rs_siphash(const uint8_t *in,
                               const size_t inlen,
@@ -210,6 +211,9 @@ struct act_obj_s {
     multi_submit_t multiSub;
     int is_symlink;
     time_t time_to_delete; /* Helper variable to DELAY the actual file delete in act_obj_unlink */
+    /* per-file statistics */
+    statsobj_t *stats; /* stats object for this file */
+    STATSCOUNTER_DEF(bytesProcessed, mutBytesProcessed); /* total bytes processed from this file */
 };
 struct fs_edge_s {
     fs_node_t *parent; /* node pointing to this edge */
@@ -723,6 +727,9 @@ static rsRetVal ATTR_NONNULL(1, 2) act_obj_add(fs_edge_t *const edge,
     act->is_symlink = is_symlink;
     act->ratelimiter = NULL;
     act->time_to_delete = 0;
+    /* initialize per-file stats */
+    act->stats = NULL;
+    STATSCOUNTER_INIT(act->bytesProcessed, act->mutBytesProcessed);
     if (source) { /* we are target of symlink */
         CHKmalloc(act->source_name = strdup(source));
     } else {
@@ -738,6 +745,13 @@ static rsRetVal ATTR_NONNULL(1, 2) act_obj_add(fs_edge_t *const edge,
         CHKmalloc(act->multiSub.ppMsgs = malloc(inst->nMultiSub * sizeof(smsg_t *)));
         act->multiSub.maxElem = inst->nMultiSub;
         act->multiSub.nElem = 0;
+        /* set up per-file stats object */
+        CHKiRet(statsobj.Construct(&act->stats));
+        CHKiRet(statsobj.SetName(act->stats, (uchar *)name));
+        CHKiRet(statsobj.SetOrigin(act->stats, (uchar *)"imfile"));
+        CHKiRet(statsobj.AddCounter(act->stats, UCHAR_CONSTANT("bytes.processed"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+                                    &(act->bytesProcessed)));
+        CHKiRet(statsobj.ConstructFinalize(act->stats));
         pollFile(act);
     }
 
@@ -981,6 +995,11 @@ static void act_obj_destroy(act_obj_t *const act, const int is_deleted) {
     if (act->pStrm != NULL) {
         const instanceConf_t *const inst = act->edge->instarr[0];  // TODO: same file, multiple instances?
         pollFile(act); /* get any left-over data */
+        /* destroy per-file stats */
+        if (act->stats) {
+            statsobj.Destruct(&act->stats);
+            act->stats = NULL;
+        }
         if (inst->bRMStateOnDel) {
             statefn = getStateFileName(act, statefile, sizeof(statefile));
             getFullStateFileName(statefn, act->file_id, toDel, sizeof(toDel));  // TODO: check!
@@ -1590,6 +1609,13 @@ static rsRetVal ATTR_NONNULL() pollFileReal(act_obj_t *act, cstr_t **pCStr) {
             startOffs = act->pStrm->iCurrOffs; /* disable check */
         }
         runModConf->bHadFileData = 1; /* this is just a flag, so set it and forget it */
+        /* account bytes processed for this file using delta of offsets */
+        if (act->pStrm != NULL) {
+            int64_t endOffs = act->pStrm->iCurrOffs;
+            if (endOffs > strtOffs) {
+                STATSCOUNTER_ADD(act->bytesProcessed, act->mutBytesProcessed, (uint64_t)(endOffs - strtOffs));
+            }
+        }
         CHKiRet(enqLine(act, *pCStr, strtOffs)); /* process line */
         rsCStrDestruct(pCStr); /* discard string (must be done by us!) */
         if (inst->iPersistStateInterval > 0 && ++act->nRecords >= inst->iPersistStateInterval) {
@@ -2761,6 +2787,7 @@ BEGINmodExit
     objRelease(prop, CORE_COMPONENT);
     objRelease(ruleset, CORE_COMPONENT);
     objRelease(datetime, CORE_COMPONENT);
+    objRelease(statsobj, CORE_COMPONENT);
 
 #ifdef HAVE_INOTIFY_INIT
     free(wdmap);
@@ -2828,6 +2855,7 @@ BEGINmodInit()
     CHKiRet(objUse(ruleset, CORE_COMPONENT));
     CHKiRet(objUse(prop, CORE_COMPONENT));
     CHKiRet(objUse(datetime, CORE_COMPONENT));
+    CHKiRet(objUse(statsobj, CORE_COMPONENT));
 
     DBGPRINTF("version %s initializing\n", VERSION);
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"inputfilename", 0, eCmdHdlrGetWord, NULL, &cs.pszFileName,

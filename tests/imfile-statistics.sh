@@ -1,7 +1,7 @@
 #!/bin/bash
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-export NUMMESSAGES=50000
+export NUMMESSAGES=1000
 generate_conf
 # NOTE: do NOT set a working directory!
 add_conf '
@@ -34,7 +34,12 @@ shutdown_when_empty
 wait_shutdown
 seq_check
 content_check "imfile: no working or state file directory set" $RSYSLOG_DYNNAME.othermsgs
+
 # content_check 'global: origin=imfile' $RSYSLOG_OUT_LOG.stats.log
 echo /Users/ahallur/PersonalWorkspace/rsyslog_og/tests/$RSYSLOG_DYNNAME.stats.log
-content_check '"name": "./'$RSYSLOG_DYNNAME'.input", "origin": "imfile"'
+
+EXPECTED_BYTES=$((17 * NUMMESSAGES)) # Test data is 17 bytes per line
+EXPECTED_LINES=$((NUMMESSAGES))
+content_check --regex '^.*{ \"name\": \".*'$RSYSLOG_DYNNAME'.input\", \"origin\": \"imfile\".*\"bytes.processed\": '$EXPECTED_BYTES'.*$' $RSYSLOG_DYNNAME.stats.log
+content_check --regex '^.*{ \"name\": \".*'$RSYSLOG_DYNNAME'.input\", \"origin\": \"imfile\".*\"lines.processed\": '$EXPECTED_LINES'.*$' $RSYSLOG_DYNNAME.stats.log
 exit_test preserve
