@@ -214,6 +214,7 @@ struct act_obj_s {
     /* per-file statistics */
     statsobj_t *stats; /* stats object for this file */
     STATSCOUNTER_DEF(bytesProcessed, mutBytesProcessed); /* total bytes processed from this file */
+    STATSCOUNTER_DEF(linesProcessed, mutLinesProcessed); /* total lines processed from this file */
 };
 struct fs_edge_s {
     fs_node_t *parent; /* node pointing to this edge */
@@ -730,6 +731,7 @@ static rsRetVal ATTR_NONNULL(1, 2) act_obj_add(fs_edge_t *const edge,
     /* initialize per-file stats */
     act->stats = NULL;
     STATSCOUNTER_INIT(act->bytesProcessed, act->mutBytesProcessed);
+    STATSCOUNTER_INIT(act->linesProcessed, act->mutLinesProcessed);
     if (source) { /* we are target of symlink */
         CHKmalloc(act->source_name = strdup(source));
     } else {
@@ -751,6 +753,8 @@ static rsRetVal ATTR_NONNULL(1, 2) act_obj_add(fs_edge_t *const edge,
         CHKiRet(statsobj.SetOrigin(act->stats, (uchar *)"imfile"));
         CHKiRet(statsobj.AddCounter(act->stats, UCHAR_CONSTANT("bytes.processed"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
                                     &(act->bytesProcessed)));
+        CHKiRet(statsobj.AddCounter(act->stats, UCHAR_CONSTANT("lines.processed"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+                                    &(act->linesProcessed)));
         CHKiRet(statsobj.ConstructFinalize(act->stats));
         pollFile(act);
     }
@@ -1609,12 +1613,13 @@ static rsRetVal ATTR_NONNULL() pollFileReal(act_obj_t *act, cstr_t **pCStr) {
             startOffs = act->pStrm->iCurrOffs; /* disable check */
         }
         runModConf->bHadFileData = 1; /* this is just a flag, so set it and forget it */
-        /* account bytes processed for this file using delta of offsets */
+        /* account bytes and lines processed for this file */
         if (act->pStrm != NULL) {
             int64_t endOffs = act->pStrm->iCurrOffs;
             if (endOffs > strtOffs) {
                 STATSCOUNTER_ADD(act->bytesProcessed, act->mutBytesProcessed, (uint64_t)(endOffs - strtOffs));
             }
+            STATSCOUNTER_INC(act->linesProcessed, act->mutLinesProcessed);
         }
         CHKiRet(enqLine(act, *pCStr, strtOffs)); /* process line */
         rsCStrDestruct(pCStr); /* discard string (must be done by us!) */
