@@ -25,8 +25,10 @@ if $msg contains "msgnum:" then
 else
 	action(type="omfile" file="'$RSYSLOG_DYNNAME'.othermsgs")
 '
-# make sure file exists when rsyslog starts up
-touch $RSYSLOG_DYNNAME.input
+# make sure file(s) exists when rsyslog starts up
+touch "$RSYSLOG_DYNNAME"_1.input
+touch "$RSYSLOG_DYNNAME"_2.input
+touch "$RSYSLOG_DYNNAME".input_3
 startup
 ./msleep 2000
 ./inputfilegen -m $NUMMESSAGES -i 0 	>> "$RSYSLOG_DYNNAME"_1.input
@@ -41,11 +43,10 @@ content_check "imfile: no working or state file directory set" $RSYSLOG_DYNNAME.
 
 EXPECTED_BYTES=$((17 * NUMMESSAGES)) # Test data is 17 bytes per line
 EXPECTED_LINES=$((NUMMESSAGES))
-content_check --regex '^.*{ \"name\": \".*'$RSYSLOG_DYNNAME'_1.input\", \"origin\": \"imfile\".*\"bytes.processed\": '$EXPECTED_BYTES'.*$' $RSYSLOG_DYNNAME.stats.log
-content_check --regex '^.*{ \"name\": \".*'$RSYSLOG_DYNNAME'_1.input\", \"origin\": \"imfile\".*\"lines.processed\": '$EXPECTED_LINES'.*$' $RSYSLOG_DYNNAME.stats.log
-content_check --regex '^.*{ \"name\": \".*'$RSYSLOG_DYNNAME'_2.input\", \"origin\": \"imfile\".*\"bytes.processed\": '$EXPECTED_BYTES'.*$' $RSYSLOG_DYNNAME.stats.log
-content_check --regex '^.*{ \"name\": \".*'$RSYSLOG_DYNNAME'_2.input\", \"origin\": \"imfile\".*\"lines.processed\": '$EXPECTED_LINES'.*$' $RSYSLOG_DYNNAME.stats.log
-content_check --regex '^.*{ \"name\": \".*'$RSYSLOG_DYNNAME'.input_3\", \"origin\": \"imfile\".*\"bytes.processed\": '$EXPECTED_BYTES'.*$' $RSYSLOG_DYNNAME.stats.log
-content_check --regex '^.*{ \"name\": \".*'$RSYSLOG_DYNNAME'.input_3\", \"origin\": \"imfile\".*\"lines.processed\": '$EXPECTED_LINES'.*$' $RSYSLOG_DYNNAME.stats.log
+
+for f in "${RSYSLOG_DYNNAME}_1.input" "${RSYSLOG_DYNNAME}_2.input" "${RSYSLOG_DYNNAME}.input_3"; do
+    content_check --regex '^.*{ \"name\": \".*'"$f"'\", \"origin\": \"imfile\".*\"bytes.processed\": '"$EXPECTED_BYTES"'.*$' "$RSYSLOG_DYNNAME".stats.log
+    content_check --regex '^.*{ \"name\": \".*'"$f"'\", \"origin\": \"imfile\".*\"lines.processed\": '"$EXPECTED_LINES"'.*$' "$RSYSLOG_DYNNAME".stats.log
+done
 
 exit_test

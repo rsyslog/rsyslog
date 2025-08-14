@@ -728,10 +728,6 @@ static rsRetVal ATTR_NONNULL(1, 2) act_obj_add(fs_edge_t *const edge,
     act->is_symlink = is_symlink;
     act->ratelimiter = NULL;
     act->time_to_delete = 0;
-    /* initialize per-file stats */
-    act->stats = NULL;
-    STATSCOUNTER_INIT(act->bytesProcessed, act->mutBytesProcessed);
-    STATSCOUNTER_INIT(act->linesProcessed, act->mutLinesProcessed);
     if (source) { /* we are target of symlink */
         CHKmalloc(act->source_name = strdup(source));
     } else {
@@ -747,6 +743,10 @@ static rsRetVal ATTR_NONNULL(1, 2) act_obj_add(fs_edge_t *const edge,
         CHKmalloc(act->multiSub.ppMsgs = malloc(inst->nMultiSub * sizeof(smsg_t *)));
         act->multiSub.maxElem = inst->nMultiSub;
         act->multiSub.nElem = 0;
+        /* initialize per-file stats */
+        act->stats = NULL;
+        STATSCOUNTER_INIT(act->bytesProcessed, act->mutBytesProcessed);
+        STATSCOUNTER_INIT(act->linesProcessed, act->mutLinesProcessed);
         /* set up per-file stats object */
         CHKiRet(statsobj.Construct(&act->stats));
         CHKiRet(statsobj.SetName(act->stats, (uchar *)name));
@@ -1011,6 +1011,10 @@ static void act_obj_destroy(act_obj_t *const act, const int is_deleted) {
         }
         persistStrmState(act);
         strm.Destruct(&act->pStrm);
+
+        /* destroy stats counter mutexes to avoid leaks (only for file objects) */
+        DESTROY_ATOMIC_HELPER_MUT64(act->mutBytesProcessed);
+        DESTROY_ATOMIC_HELPER_MUT64(act->mutLinesProcessed);
 
         /*
          * We delete the state file after the destruct operation to ensure that any pending
