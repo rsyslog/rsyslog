@@ -870,7 +870,8 @@ ENDobjDestruct
      * modified while its content is copied - it's forbidden by definition.
      * rgerhards, 2007-07-10
      */
-    smsg_t *MsgDup(smsg_t *pOld) {
+    smsg_t *
+    MsgDup(smsg_t *pOld) {
     smsg_t *pNew;
     rsRetVal localRet;
 

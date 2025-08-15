@@ -76,7 +76,8 @@ ENDobjDestruct
 
 
     /* ConstructionFinalizer */
-    static rsRetVal netstrmConstructFinalize(netstrm_t *pThis) {
+    static rsRetVal
+    netstrmConstructFinalize(netstrm_t *pThis) {
     DEFiRet;
     NULL_CHECK(pThis);
     iRet = pThis->Drvr.Construct(&pThis->pDrvrData);

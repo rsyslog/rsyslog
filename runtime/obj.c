@@ -122,7 +122,7 @@ static rsRetVal objInfoNotImplementedDummy(void __attribute__((unused)) * pThis)
  * must be provided an objInfo_t pointer.
  */
 #define objInfoIsImplemented(pThis, method) \
-    (pThis->objMethods[method] != (rsRetVal(*)(void *, ...))objInfoNotImplementedDummy)
+    (pThis->objMethods[method] != (rsRetVal (*)(void *, ...))objInfoNotImplementedDummy)
 
 /* construct an object Info object. Each class shall do this on init. The
  * resulting object shall be cached during the lifetime of the class and each
@@ -152,10 +152,10 @@ static rsRetVal InfoConstruct(objInfo_t **ppThis,
     pThis->QueryIF = pQueryIF;
     pThis->pModInfo = pModInfo;
 
-    pThis->objMethods[0] = (rsRetVal(*)(void *, ...))pConstruct;
-    pThis->objMethods[1] = (rsRetVal(*)(void *, ...))pDestruct;
+    pThis->objMethods[0] = (rsRetVal (*)(void *, ...))pConstruct;
+    pThis->objMethods[1] = (rsRetVal (*)(void *, ...))pDestruct;
     for (i = 2; i < OBJ_NUM_METHODS; ++i) {
-        pThis->objMethods[i] = (rsRetVal(*)(void *, ...))objInfoNotImplementedDummy;
+        pThis->objMethods[i] = (rsRetVal (*)(void *, ...))objInfoNotImplementedDummy;
     }
 
     *ppThis = pThis;
@@ -186,7 +186,7 @@ static rsRetVal InfoDestruct(objInfo_t **ppThis) {
 
 /* set a method handler */
 static rsRetVal InfoSetMethod(objInfo_t *pThis, objMethod_t objMethod, rsRetVal (*pHandler)(void *)) {
-    pThis->objMethods[objMethod] = (rsRetVal(*)(void *, ...))pHandler;
+    pThis->objMethods[objMethod] = (rsRetVal (*)(void *, ...))pHandler;
     return RS_RET_OK;
 }
 
@@ -839,7 +839,7 @@ static rsRetVal Deserialize(
 
     /* we got the object, now we need to fill the properties */
     CHKiRet(
-        objDeserializeProperties(pObj, (rsRetVal(*)(void *, ...))pObjInfo->objMethods[objMethod_SETPROPERTY], pStrm));
+        objDeserializeProperties(pObj, (rsRetVal (*)(void *, ...))pObjInfo->objMethods[objMethod_SETPROPERTY], pStrm));
 
     /* check if we need to call a fixup function that modifies the object
      * before it is finalized. -- rgerhards, 2008-01-13
@@ -976,7 +976,7 @@ static rsRetVal DeserializePropBag(obj_t *pObj, strm_t *pStrm) {
 
     /* we got the object, now we need to fill the properties */
     CHKiRet(
-        objDeserializeProperties(pObj, (rsRetVal(*)(void *, ...))pObjInfo->objMethods[objMethod_SETPROPERTY], pStrm));
+        objDeserializeProperties(pObj, (rsRetVal (*)(void *, ...))pObjInfo->objMethods[objMethod_SETPROPERTY], pStrm));
 
 finalize_it:
     if (pstrID != NULL) rsCStrDestruct(&pstrID);

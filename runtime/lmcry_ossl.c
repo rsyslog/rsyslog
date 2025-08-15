@@ -218,10 +218,10 @@ BEGINobjQueryInterface(lmcry_ossl)
     if (pIf->ifVersion != cryprovCURR_IF_VERSION) { /* check for current version, increment on each change */
         ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
     }
-    pIf->Construct = (rsRetVal(*)(void *))lmcry_osslConstruct;
+    pIf->Construct = (rsRetVal (*)(void *))lmcry_osslConstruct;
     pIf->SetCnfParam = SetCnfParam;
     pIf->SetDeleteOnClose = SetDeleteOnClose;
-    pIf->Destruct = (rsRetVal(*)(void *))lmcry_osslDestruct;
+    pIf->Destruct = (rsRetVal (*)(void *))lmcry_osslDestruct;
     pIf->OnFileOpen = OnFileOpen;
     pIf->Encrypt = Encrypt;
     pIf->Decrypt = Decrypt;

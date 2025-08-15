@@ -1236,8 +1236,8 @@ BEGINobjQueryInterface(net_ossl)
     if (pIf->ifVersion != net_osslCURR_IF_VERSION) { /* check for current version, increment on each change */
         ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
     }
-    pIf->Construct = (rsRetVal(*)(net_ossl_t **))net_osslConstruct;
-    pIf->Destruct = (rsRetVal(*)(net_ossl_t **))net_osslDestruct;
+    pIf->Construct = (rsRetVal (*)(net_ossl_t **))net_osslConstruct;
+    pIf->Destruct = (rsRetVal (*)(net_ossl_t **))net_osslDestruct;
     pIf->osslCtxInit = net_ossl_osslCtxInit;
     pIf->osslChkpeername = net_ossl_chkpeername;
     pIf->osslPeerfingerprint = net_ossl_peerfingerprint;

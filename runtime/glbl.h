@@ -140,8 +140,10 @@ extern DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);
 #define DEV_OPTION_8_1905_HANG_TEST 2  // TODO: remove - temporary for bughunt
 
 #define glblGetOurPid() glbl_ourpid
-#define glblSetOurPid(pid) \
-    { glbl_ourpid = (pid); }
+#define glblSetOurPid(pid)   \
+    {                        \
+        glbl_ourpid = (pid); \
+    }
 
 void glblPrepCnf(void);
 void glblProcessCnf(struct cnfobj *o);

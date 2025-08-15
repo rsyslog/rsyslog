@@ -1714,10 +1714,10 @@ static bool process_requests_async(rsksictx ctx, KSI_CTX *ksi_ctx, KSI_AsyncServ
         /* stop at first processed item */
         if (item->status != QITEM_WAITING) continue;
 
-            /* Due to a bug in libksi it is possible that async signer may send out
-             * more signing requests than permitted by the gateway. Workaround is to
-             * keep track of signing requests here.
-             */
+        /* Due to a bug in libksi it is possible that async signer may send out
+         * more signing requests than permitted by the gateway. Workaround is to
+         * keep track of signing requests here.
+         */
 #if KSI_SDK_VER_MAJOR == 3 && KSI_SDK_VER_MINOR < 22
         if (ctx->roundCount >= ctx->max_requests) ctx->bRoundLock = 1;
         if (ctx->bRoundLock) break;

@@ -299,7 +299,7 @@ finalize_it:
  */
 rsRetVal thrdInit(void) {
     DEFiRet;
-    iRet = llInit(&llThrds, (rsRetVal(*)(void *))thrdDestruct, NULL, NULL);
+    iRet = llInit(&llThrds, (rsRetVal (*)(void *))thrdDestruct, NULL, NULL);
     RETiRet;
 }
 

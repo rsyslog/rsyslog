@@ -327,7 +327,8 @@
 #define CODE_STD_STRING_REQUESTparseSelectorAct(NumStrReqEntries) CHKiRet(OMSRconstruct(ppOMSR, NumStrReqEntries));
 
 #define CODE_STD_FINALIZERparseSelectorAct                                         \
-    finalize_it : ATTR_UNUSED; /* semi-colon needed according to gcc doc! */       \
+finalize_it:                                                                       \
+    ATTR_UNUSED; /* semi-colon needed according to gcc doc! */                     \
     if (iRet == RS_RET_OK || iRet == RS_RET_OK_WARN || iRet == RS_RET_SUSPENDED) { \
         *ppModData = pData;                                                        \
         *pp = p;                                                                   \
@@ -380,18 +381,19 @@
 
 #define CODE_STD_STRING_REQUESTnewActInst(NumStrReqEntries) CHKiRet(OMSRconstruct(ppOMSR, NumStrReqEntries))
 
-#define CODE_STD_FINALIZERnewActInst                                   \
-    finalize_it : if (iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED) { \
-        *ppModData = pData;                                            \
-    } else {                                                           \
-        /* cleanup, we failed */                                       \
-        if (*ppOMSR != NULL) {                                         \
-            OMSRdestruct(*ppOMSR);                                     \
-            *ppOMSR = NULL;                                            \
-        }                                                              \
-        if (pData != NULL) {                                           \
-            freeInstance(pData);                                       \
-        }                                                              \
+#define CODE_STD_FINALIZERnewActInst                     \
+finalize_it:                                             \
+    if (iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED) { \
+        *ppModData = pData;                              \
+    } else {                                             \
+        /* cleanup, we failed */                         \
+        if (*ppOMSR != NULL) {                           \
+            OMSRdestruct(*ppOMSR);                       \
+            *ppOMSR = NULL;                              \
+        }                                                \
+        if (pData != NULL) {                             \
+            freeInstance(pData);                         \
+        }                                                \
     }
 
 #define ENDnewActInst \
@@ -773,9 +775,10 @@
 /* do those initializations necessary for legacy config variables */
 #define INITLegCnfVars initConfVars()
 
-#define ENDmodInit                             \
-    finalize_it : *pQueryEtryPt = queryEtryPt; \
-    RETiRet;                                   \
+#define ENDmodInit               \
+finalize_it:                     \
+    *pQueryEtryPt = queryEtryPt; \
+    RETiRet;                     \
     }
 
 

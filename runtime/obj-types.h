@@ -183,15 +183,15 @@ struct obj_s { /* the dummy struct that each derived class can be casted to */
  */
 #define OBJ_IS_CORE_MODULE 1 /* This should better be renamed to something like "OBJ_IS_NOT_LIBHEAD" or so... ;) */
 #define OBJ_IS_LOADABLE_MODULE 0
-#define BEGINObjClassInit(objName, objVers, objType)                                                                 \
-    rsRetVal objName##ClassInit(struct modInfo_s *pModInfo) {                                                        \
-        DEFiRet;                                                                                                     \
-        if (objType == OBJ_IS_CORE_MODULE) { /* are we a core module? */                                             \
-            CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */            \
-        }                                                                                                            \
-        CHKiRet(obj.InfoConstruct(&pObjInfoOBJ, (uchar *)#objName, objVers, (rsRetVal(*)(void *))objName##Construct, \
-                                  (rsRetVal(*)(void *))objName##Destruct,                                            \
-                                  (rsRetVal(*)(interface_t *))objName##QueryInterface, pModInfo));
+#define BEGINObjClassInit(objName, objVers, objType)                                                                  \
+    rsRetVal objName##ClassInit(struct modInfo_s *pModInfo) {                                                         \
+        DEFiRet;                                                                                                      \
+        if (objType == OBJ_IS_CORE_MODULE) { /* are we a core module? */                                              \
+            CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */             \
+        }                                                                                                             \
+        CHKiRet(obj.InfoConstruct(&pObjInfoOBJ, (uchar *)#objName, objVers, (rsRetVal (*)(void *))objName##Construct, \
+                                  (rsRetVal (*)(void *))objName##Destruct,                                            \
+                                  (rsRetVal (*)(interface_t *))objName##QueryInterface, pModInfo));
 
 #define ENDObjClassInit(objName)                            \
     iRet = obj.RegisterObj((uchar *)#objName, pObjInfoOBJ); \
@@ -209,7 +209,7 @@ finalize_it:                                                \
             CHKiRet(objGetObjInterface(&obj)); /* this provides the root pointer for all other queries */ \
         }                                                                                                 \
         CHKiRet(obj.InfoConstruct(&pObjInfoOBJ, (uchar *)#objName, objVers, NULL, NULL,                   \
-                                  (rsRetVal(*)(interface_t *))objName##QueryInterface, pModInfo));
+                                  (rsRetVal (*)(interface_t *))objName##QueryInterface, pModInfo));
 
 #define ENDObjClassInit(objName)                            \
     iRet = obj.RegisterObj((uchar *)#objName, pObjInfoOBJ); \

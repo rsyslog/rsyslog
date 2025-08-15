@@ -1142,8 +1142,8 @@ BEGINobjQueryInterface(nsd_ptcp)
      * work here (if we can support an older interface version - that,
      * of course, also affects the "if" above).
      */
-    pIf->Construct = (rsRetVal(*)(nsd_t **))nsd_ptcpConstruct;
-    pIf->Destruct = (rsRetVal(*)(nsd_t **))nsd_ptcpDestruct;
+    pIf->Construct = (rsRetVal (*)(nsd_t **))nsd_ptcpConstruct;
+    pIf->Destruct = (rsRetVal (*)(nsd_t **))nsd_ptcpDestruct;
     pIf->Abort = Abort;
     pIf->GetRemAddr = GetRemAddr;
     pIf->GetSock = GetSock;
