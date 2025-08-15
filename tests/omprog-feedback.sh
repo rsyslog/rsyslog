@@ -49,28 +49,26 @@ for i in {0..9}; do
     fi
 done
 
-# Check that messages 4 and 7 had error responses
-grep -q "=> msgnum:00000004:" $RSYSLOG_OUT_LOG
-if [ $? -ne 0 ]; then
-    echo "FAIL: message 4 not found in output"
-    cat $RSYSLOG_OUT_LOG
-    exit 1
-fi
+# Check that messages 4 and 7 had error responses and were eventually successful
+for i in 4 7; do
+    msg_pattern=$(printf "msgnum:%08d:" $i)
 
-grep -q "=> msgnum:00000007:" $RSYSLOG_OUT_LOG
-if [ $? -ne 0 ]; then
-    echo "FAIL: message 7 not found in output"
-    cat $RSYSLOG_OUT_LOG
-    exit 1
-fi
+    # Check that the message appears with an error response at least once
+    # We look for an "Error" line immediately following a message send line
+    if ! grep -A 1 "=> ${msg_pattern}" "$RSYSLOG_OUT_LOG" | grep -q "Error: could not process log message"; then
+        echo "FAIL: message $i did not have an error response as expected"
+        cat "$RSYSLOG_OUT_LOG"
+        exit 1
+    fi
 
-# Check that error responses occurred
-grep -q "<= Error: could not process log message" $RSYSLOG_OUT_LOG
-if [ $? -ne 0 ]; then
-    echo "FAIL: no error responses found in output"
-    cat $RSYSLOG_OUT_LOG
-    exit 1
-fi
+    # Check that the message was eventually successful
+    # We look for an "OK" line immediately following a message send line
+    if ! grep -A 1 "=> ${msg_pattern}" "$RSYSLOG_OUT_LOG" | grep -q "OK"; then
+        echo "FAIL: message $i was not eventually successful"
+        cat "$RSYSLOG_OUT_LOG"
+        exit 1
+    fi
+done
 
 # Check that OK responses occurred
 grep -q "<= OK" $RSYSLOG_OUT_LOG
