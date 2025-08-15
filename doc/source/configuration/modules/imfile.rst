@@ -217,6 +217,10 @@ Input Parameters
      - .. include:: ../../reference/parameters/imfile-ignoreolderthan.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imfile-statefile`
+     - .. include:: ../../reference/parameters/imfile-statefile.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 .. _Metadata:
 
@@ -271,7 +275,7 @@ There is intentionally no more precise description of when state file
 naming, as this is an implementation detail and may change as needed.
 
 Note that it is possible to set a fixed state file name via the
-deprecated ``stateFile`` parameter. It is suggested to avoid this, as
+deprecated :ref:`stateFile <param-imfile-statefile>` parameter. It is suggested to avoid this, as
 the user must take care of name clashes. Most importantly, if
 "stateFile" is set for file monitors with wildcards, the **same**
 state file is used for all occurrences of these files. In short,
@@ -346,27 +350,6 @@ defaults instead.
   # ... and so on ... #
 
 
-Deprecated parameters
-=====================
-
-**Note:** While these parameters are still accepted, they should no longer be
-used for newly created configurations.
-
-stateFile
----------
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "no", "``$InputFileStateFile``"
-
-This is the name of this file's state file. This parameter should
-usually **not** be used. Check the section on "State Files" above
-for more details.
-
-
 .. toctree::
    :hidden:
 
@@ -399,6 +382,7 @@ for more details.
    ../../reference/parameters/imfile-severity
    ../../reference/parameters/imfile-sortfiles
    ../../reference/parameters/imfile-startmsg-regex
+   ../../reference/parameters/imfile-statefile
    ../../reference/parameters/imfile-statefile-directory
    ../../reference/parameters/imfile-tag
    ../../reference/parameters/imfile-timeoutgranularity
