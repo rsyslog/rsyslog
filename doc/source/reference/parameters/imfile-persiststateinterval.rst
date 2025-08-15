@@ -50,6 +50,7 @@ Legacy names (for reference)
 Historic names/directives for compatibility. Do not use in new configs.
 
 .. _imfile.parameter.legacy.inputfilepersiststateinterval:
+
 - ``$InputFilePersistStateInterval`` — maps to PersistStateInterval (status: legacy)
 
 .. index::

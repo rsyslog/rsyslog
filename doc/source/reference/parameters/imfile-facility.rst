@@ -48,6 +48,7 @@ Legacy names (for reference)
 Historic names/directives for compatibility. Do not use in new configs.
 
 .. _imfile.parameter.legacy.inputfilefacility:
+
 - ``$InputFileFacility`` — maps to Facility (status: legacy)
 
 .. index::

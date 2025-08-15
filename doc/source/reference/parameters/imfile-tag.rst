@@ -44,6 +44,7 @@ Legacy names (for reference)
 Historic names/directives for compatibility. Do not use in new configs.
 
 .. _imfile.parameter.legacy.inputfiletag:
+
 - ``$InputFileTag`` — maps to Tag (status: legacy)
 
 .. index::
