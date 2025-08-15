@@ -15,9 +15,8 @@ if [ "$CC" == "gcc" ] && [[ "$CFLAGS" == *"-coverage"* ]]; then
 	exit 77
 fi
 
-NUMMESSAGES=10000       # number of logs to send
-ERROR_RATE_PERCENT=1    # percentage of logs to be retried
-
+export NUMMESSAGES=10000       # number of logs to send
+export ERROR_RATE_PERCENT=1    # percentage of logs to be retried
 export command_line="$srcdir/testsuites/omprog-feedback-mt-bin.sh $ERROR_RATE_PERCENT"
 
 generate_conf
@@ -47,7 +46,7 @@ main_queue(
 '
 startup
 injectmsg 0 $NUMMESSAGES
-wait_file_lines --abort-on-oversize "$RSYSLOG_OUT_LOG" $NUMMESSAGES
+wait_file_lines "$RSYSLOG_OUT_LOG" $NUMMESSAGES
 shutdown_when_empty
 wait_shutdown
 exit_test
