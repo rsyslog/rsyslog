@@ -1,5 +1,6 @@
 .. _param-imtcp-streamdriver-mode:
 .. _imtcp.parameter.module.streamdriver-mode:
+.. _imtcp.parameter.input.streamdriver-mode:
 
 StreamDriver.Mode
 =================
@@ -17,9 +18,9 @@ Sets the driver mode for the selected network stream driver.
 This parameter applies to :doc:`../../configuration/modules/imtcp`.
 
 :Name: StreamDriver.Mode
-:Scope: module
+:Scope: module, input
 :Type: integer
-:Default: module=0
+:Default: module=0, input=module parameter
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
@@ -40,6 +41,15 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="imtcp" streamDriver.mode="...")
+
+Input usage
+-----------
+.. _param-imtcp-input-streamdriver-mode:
+.. _imtcp.parameter.input.streamdriver-mode-usage:
+
+.. code-block:: rsyslog
+
+   input(type="imtcp" port="514" streamDriver.mode="...")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

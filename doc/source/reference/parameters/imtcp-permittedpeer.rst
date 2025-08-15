@@ -1,5 +1,6 @@
 .. _param-imtcp-permittedpeer:
 .. _imtcp.parameter.module.permittedpeer:
+.. _imtcp.parameter.input.permittedpeer:
 
 PermittedPeer
 =============
@@ -17,9 +18,9 @@ Restricts connections to listed peer identities.
 This parameter applies to :doc:`../../configuration/modules/imtcp`.
 
 :Name: PermittedPeer
-:Scope: module
+:Scope: module, input
 :Type: array
-:Default: module=none
+:Default: module=none, input=module parameter
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
@@ -50,6 +51,15 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="imtcp" permittedPeer="127.0.0.1")
+
+Input usage
+-----------
+.. _param-imtcp-input-permittedpeer:
+.. _imtcp.parameter.input.permittedpeer-usage:
+
+.. code-block:: rsyslog
+
+   input(type="imtcp" port="514" permittedPeer="127.0.0.1")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

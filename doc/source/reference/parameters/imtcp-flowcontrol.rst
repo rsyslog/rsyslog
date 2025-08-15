@@ -1,5 +1,6 @@
 .. _param-imtcp-flowcontrol:
 .. _imtcp.parameter.module.flowcontrol:
+.. _imtcp.parameter.input.flowcontrol:
 
 FlowControl
 ===========
@@ -17,9 +18,9 @@ Applies light flow control to throttle senders when queues near full.
 This parameter applies to :doc:`../../configuration/modules/imtcp`.
 
 :Name: FlowControl
-:Scope: module
+:Scope: module, input
 :Type: boolean
-:Default: module=on
+:Default: module=on, input=module parameter
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
@@ -45,6 +46,15 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="imtcp" flowControl="off")
+
+Input usage
+-----------
+.. _param-imtcp-input-flowcontrol:
+.. _imtcp.parameter.input.flowcontrol-usage:
+
+.. code-block:: rsyslog
+
+   input(type="imtcp" port="514" flowControl="off")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

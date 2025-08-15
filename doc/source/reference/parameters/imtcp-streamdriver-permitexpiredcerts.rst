@@ -1,5 +1,6 @@
 .. _param-imtcp-streamdriver-permitexpiredcerts:
 .. _imtcp.parameter.module.streamdriver-permitexpiredcerts:
+.. _imtcp.parameter.input.streamdriver-permitexpiredcerts:
 
 StreamDriver.PermitExpiredCerts
 ===============================
@@ -17,9 +18,9 @@ Controls how expired certificates are handled in TLS mode.
 This parameter applies to :doc:`../../configuration/modules/imtcp`.
 
 :Name: StreamDriver.PermitExpiredCerts
-:Scope: module
+:Scope: module, input
 :Type: string (see :doc:`../../rainerscript/constant_strings`)
-:Default: module=warn
+:Default: module=warn, input=module parameter
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
@@ -45,6 +46,15 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="imtcp" streamDriver.permitExpiredCerts="off")
+
+Input usage
+-----------
+.. _param-imtcp-input-streamdriver-permitexpiredcerts:
+.. _imtcp.parameter.input.streamdriver-permitexpiredcerts-usage:
+
+.. code-block:: rsyslog
+
+   input(type="imtcp" port="514" streamDriver.permitExpiredCerts="off")
 
 See also
 --------

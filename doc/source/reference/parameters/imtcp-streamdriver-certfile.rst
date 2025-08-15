@@ -30,6 +30,14 @@ Description
 This permits to override the ``DefaultNetstreamDriverCertFile`` global parameter on the ``input()``
 level. For further details, see the global parameter.
 
+.. note::
+
+   The GnuTLS driver sends all certificates contained in the file
+   specified via ``StreamDriver.CertFile`` to connecting clients.  To
+   expose intermediate certificates, the file must contain the server
+   certificate first, followed by the intermediate certificates.
+   This capability was added in rsyslog version 8.36.0.
+
 Input usage
 -----------
 .. _param-imtcp-input-streamdriver-certfile:

@@ -1,5 +1,6 @@
 .. _param-imtcp-disablelfdelimiter:
 .. _imtcp.parameter.module.disablelfdelimiter:
+.. _imtcp.parameter.input.disablelfdelimiter:
 
 DisableLFDelimiter
 ==================
@@ -17,9 +18,9 @@ Disables LF as a frame delimiter to allow a custom delimiter.
 This parameter applies to :doc:`../../configuration/modules/imtcp`.
 
 :Name: DisableLFDelimiter
-:Scope: module
+:Scope: module, input
 :Type: boolean
-:Default: module=off
+:Default: module=off, input=module parameter
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
@@ -46,6 +47,15 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="imtcp" disableLFDelimiter="on")
+
+Input usage
+-----------
+.. _param-imtcp-input-disablelfdelimiter:
+.. _imtcp.parameter.input.disablelfdelimiter-usage:
+
+.. code-block:: rsyslog
+
+   input(type="imtcp" port="514" disableLFDelimiter="on")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

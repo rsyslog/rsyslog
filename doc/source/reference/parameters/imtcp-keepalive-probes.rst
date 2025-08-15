@@ -1,5 +1,6 @@
 .. _param-imtcp-keepalive-probes:
 .. _imtcp.parameter.module.keepalive-probes:
+.. _imtcp.parameter.input.keepalive-probes:
 
 KeepAlive.Probes
 ================
@@ -17,9 +18,9 @@ Defines how many unacknowledged probes are sent before a connection is considere
 This parameter applies to :doc:`../../configuration/modules/imtcp`.
 
 :Name: KeepAlive.Probes
-:Scope: module
+:Scope: module, input
 :Type: integer
-:Default: module=0
+:Default: module=0, input=module parameter
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
@@ -42,6 +43,15 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="imtcp" keepAlive.probes="...")
+
+Input usage
+-----------
+.. _param-imtcp-input-keepalive-probes:
+.. _imtcp.parameter.input.keepalive-probes-usage:
+
+.. code-block:: rsyslog
+
+   input(type="imtcp" port="514" keepAlive.probes="...")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

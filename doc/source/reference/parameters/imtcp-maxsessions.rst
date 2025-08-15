@@ -1,5 +1,6 @@
 .. _param-imtcp-maxsessions:
 .. _imtcp.parameter.module.maxsessions:
+.. _imtcp.parameter.input.maxsessions:
 
 MaxSessions
 ===========
@@ -17,9 +18,9 @@ Sets the maximum number of sessions supported.
 This parameter applies to :doc:`../../configuration/modules/imtcp`.
 
 :Name: MaxSessions
-:Scope: module
+:Scope: module, input
 :Type: integer
-:Default: module=200
+:Default: module=200, input=module parameter
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
@@ -39,6 +40,15 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="imtcp" maxSessions="500")
+
+Input usage
+-----------
+.. _param-imtcp-input-maxsessions:
+.. _imtcp.parameter.input.maxsessions-usage:
+
+.. code-block:: rsyslog
+
+   input(type="imtcp" port="514" maxSessions="500")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

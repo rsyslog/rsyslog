@@ -1,5 +1,6 @@
 .. _param-imtcp-maxlisteners:
 .. _imtcp.parameter.module.maxlisteners:
+.. _imtcp.parameter.input.maxlisteners:
 
 MaxListeners
 ============
@@ -17,9 +18,9 @@ Sets the maximum number of listener ports supported.
 This parameter applies to :doc:`../../configuration/modules/imtcp`.
 
 :Name: MaxListeners
-:Scope: module
+:Scope: module, input
 :Type: integer
-:Default: module=20
+:Default: module=20, input=module parameter
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
@@ -39,6 +40,15 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="imtcp" maxListeners="50")
+
+Input usage
+-----------
+.. _param-imtcp-input-maxlisteners:
+.. _imtcp.parameter.input.maxlisteners-usage:
+
+.. code-block:: rsyslog
+
+   input(type="imtcp" port="514" maxListeners="50")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

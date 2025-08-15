@@ -1,5 +1,6 @@
 .. _param-imtcp-streamdriver-name:
 .. _imtcp.parameter.module.streamdriver-name:
+.. _imtcp.parameter.input.streamdriver-name:
 
 StreamDriver.Name
 =================
@@ -17,9 +18,9 @@ Selects the network stream driver for all inputs using this module.
 This parameter applies to :doc:`../../configuration/modules/imtcp`.
 
 :Name: StreamDriver.Name
-:Scope: module
+:Scope: module, input
 :Type: string (see :doc:`../../rainerscript/constant_strings`)
-:Default: module=none
+:Default: module=none, input=module parameter
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
@@ -39,6 +40,15 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="imtcp" streamDriver.name="mydriver")
+
+Input usage
+-----------
+.. _param-imtcp-input-streamdriver-name:
+.. _imtcp.parameter.input.streamdriver-name-usage:
+
+.. code-block:: rsyslog
+
+   input(type="imtcp" port="514" streamDriver.name="mydriver")
 
 See also
 --------

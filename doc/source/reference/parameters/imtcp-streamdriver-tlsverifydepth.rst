@@ -1,5 +1,6 @@
 .. _param-imtcp-streamdriver-tlsverifydepth:
 .. _imtcp.parameter.module.streamdriver-tlsverifydepth:
+.. _imtcp.parameter.input.streamdriver-tlsverifydepth:
 
 StreamDriver.TlsVerifyDepth
 ===========================
@@ -17,9 +18,9 @@ Specifies the maximum depth allowed for certificate chain verification.
 This parameter applies to :doc:`../../configuration/modules/imtcp`.
 
 :Name: StreamDriver.TlsVerifyDepth
-:Scope: module
+:Scope: module, input
 :Type: integer
-:Default: module=TLS library default
+:Default: module=TLS library default, input=module parameter
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
@@ -33,15 +34,6 @@ https://docs.openssl.org/1.1.1/man3/SSL_CTX_set_verify/
 For GnuTLS, the default is 5 - see the doc for more:
 https://www.gnutls.org/manual/gnutls.html
 
-.. note::
-
-   The GnuTLS driver sends all certificates contained in the file
-   specified via ``StreamDriver.CertFile`` (or
-   ``$DefaultNetstreamDriverCertFile``) to connecting clients.  To
-   expose intermediate certificates, the file must contain the server
-   certificate first, followed by the intermediate certificates.
-   This capability was added in rsyslog version 8.36.0.
-
 The same-named input parameter can override this module setting.
 
 
@@ -53,6 +45,15 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="imtcp" streamDriver.tlsVerifyDepth="7")
+
+Input usage
+-----------
+.. _param-imtcp-input-streamdriver-tlsverifydepth:
+.. _imtcp.parameter.input.streamdriver-tlsverifydepth-usage:
+
+.. code-block:: rsyslog
+
+   input(type="imtcp" port="514" streamDriver.tlsVerifyDepth="7")
 
 See also
 --------
