@@ -2794,7 +2794,9 @@ file_size_check() {
 }
 
 case $1 in
-   'init')	$srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
+  'init')
+    export srcdir # in case it was not yet in environment
+    $srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
 		source set-envvars
 		# for (solaris) load debugging, uncomment next 2 lines:
 		#export LD_DEBUG=all
