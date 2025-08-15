@@ -107,10 +107,10 @@ BEGINobjConstruct(wtp) /* be sure to specify the object type also in END macro! 
     pthread_attr_setinheritsched(&pThis->attrThrd, PTHREAD_EXPLICIT_SCHED);
 #endif
     /* set all function pointers to "not implemented" dummy so that we can safely call them */
-    pThis->pfChkStopWrkr = (rsRetVal(*)(void *, int))NotImplementedDummy_voidp_int;
-    pThis->pfGetDeqBatchSize = (rsRetVal(*)(void *, int *))NotImplementedDummy_voidp_intp;
-    pThis->pfDoWork = (rsRetVal(*)(void *, void *))NotImplementedDummy_voidp_voidp;
-    pThis->pfObjProcessed = (rsRetVal(*)(void *, wti_t *))NotImplementedDummy_voidp_wti_tp;
+    pThis->pfChkStopWrkr = (rsRetVal (*)(void *, int))NotImplementedDummy_voidp_int;
+    pThis->pfGetDeqBatchSize = (rsRetVal (*)(void *, int *))NotImplementedDummy_voidp_intp;
+    pThis->pfDoWork = (rsRetVal (*)(void *, void *))NotImplementedDummy_voidp_voidp;
+    pThis->pfObjProcessed = (rsRetVal (*)(void *, wti_t *))NotImplementedDummy_voidp_wti_tp;
     INIT_ATOMIC_HELPER_MUT(pThis->mutCurNumWrkThrd);
     INIT_ATOMIC_HELPER_MUT(pThis->mutWtpState);
 ENDobjConstruct(wtp)

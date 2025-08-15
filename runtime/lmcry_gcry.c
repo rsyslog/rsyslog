@@ -255,10 +255,10 @@ BEGINobjQueryInterface(lmcry_gcry)
     if (pIf->ifVersion != cryprovCURR_IF_VERSION) { /* check for current version, increment on each change */
         ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
     }
-    pIf->Construct = (rsRetVal(*)(void *))lmcry_gcryConstruct;
+    pIf->Construct = (rsRetVal (*)(void *))lmcry_gcryConstruct;
     pIf->SetCnfParam = SetCnfParam;
     pIf->SetDeleteOnClose = SetDeleteOnClose;
-    pIf->Destruct = (rsRetVal(*)(void *))lmcry_gcryDestruct;
+    pIf->Destruct = (rsRetVal (*)(void *))lmcry_gcryDestruct;
     pIf->OnFileOpen = OnFileOpen;
     pIf->Encrypt = Encrypt;
     pIf->Decrypt = Decrypt;

@@ -1563,10 +1563,12 @@ BEGINcommitTransaction
             submit = 0;
             if (pWrkrData->batch.nmemb >= pData->maxBatchSize) {
                 submit = 1;
-                DBGPRINTF("omhttp: maxbatchsize limit reached submitting batch of %zd elements.\n", pWrkrData->batch.nmemb);
+                DBGPRINTF("omhttp: maxbatchsize limit reached submitting batch of %zd elements.\n",
+                          pWrkrData->batch.nmemb);
             } else if (computeBatchSize(pWrkrData) + nBytes > pData->maxBatchBytes) {
                 submit = 1;
-                DBGPRINTF("omhttp: maxbytes limit reached submitting partial batch of %zd elements.\n", pWrkrData->batch.nmemb);
+                DBGPRINTF("omhttp: maxbytes limit reached submitting partial batch of %zd elements.\n",
+                          pWrkrData->batch.nmemb);
             }
 
             if (submit) {
@@ -1591,7 +1593,6 @@ BEGINcommitTransaction
     }
 finalize_it:
 ENDcommitTransaction
-
 
 
 /* Creates authentication header uid:pwd
@@ -2252,67 +2253,67 @@ CODEqueryEtryPt_STD_OMODTX_QUERIES;
 CODEqueryEtryPt_STD_OMOD8_QUERIES;
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 CODEqueryEtryPt_doHUP CODEqueryEtryPt_doHUPWrkr /* Load the worker HUP handling code */
-CODEqueryEtryPt_STD_CONF2_QUERIES;
+    CODEqueryEtryPt_STD_CONF2_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-	CODESTARTmodInit;
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-	CODEmodInit_QueryRegCFSLineHdlr CHKiRet(objUse(prop, CORE_COMPONENT));
-	CHKiRet(objUse(ruleset, CORE_COMPONENT));
-	CHKiRet(objUse(statsobj, CORE_COMPONENT));
+    CODESTARTmodInit;
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    CODEmodInit_QueryRegCFSLineHdlr CHKiRet(objUse(prop, CORE_COMPONENT));
+    CHKiRet(objUse(ruleset, CORE_COMPONENT));
+    CHKiRet(objUse(statsobj, CORE_COMPONENT));
 
-	CHKiRet(statsobj.Construct(&httpStats));
-	CHKiRet(statsobj.SetName(httpStats, (uchar *)"omhttp"));
-	CHKiRet(statsobj.SetOrigin(httpStats, (uchar *)"omhttp"));
+    CHKiRet(statsobj.Construct(&httpStats));
+    CHKiRet(statsobj.SetName(httpStats, (uchar *)"omhttp"));
+    CHKiRet(statsobj.SetOrigin(httpStats, (uchar *)"omhttp"));
 
-	STATSCOUNTER_INIT(ctrMessagesSubmitted, mutCtrMessagesSubmitted);
-	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.submitted", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-				&ctrMessagesSubmitted));
+    STATSCOUNTER_INIT(ctrMessagesSubmitted, mutCtrMessagesSubmitted);
+    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.submitted", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+                                &ctrMessagesSubmitted));
 
-	STATSCOUNTER_INIT(ctrMessagesSuccess, mutCtrMessagesSuccess);
-	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.success", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-				&ctrMessagesSuccess));
+    STATSCOUNTER_INIT(ctrMessagesSuccess, mutCtrMessagesSuccess);
+    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.success", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+                                &ctrMessagesSuccess));
 
-	STATSCOUNTER_INIT(ctrMessagesFail, mutCtrMessagesFail);
-	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.fail", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-				&ctrMessagesFail));
+    STATSCOUNTER_INIT(ctrMessagesFail, mutCtrMessagesFail);
+    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.fail", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+                                &ctrMessagesFail));
 
-	STATSCOUNTER_INIT(ctrMessagesRetry, mutCtrMessagesRetry);
-	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.retry", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-				&ctrMessagesRetry));
+    STATSCOUNTER_INIT(ctrMessagesRetry, mutCtrMessagesRetry);
+    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.retry", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+                                &ctrMessagesRetry));
 
-	STATSCOUNTER_INIT(ctrHttpRequestCount, mutCtrHttpRequestCount);
-	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.count", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-				&ctrHttpRequestCount));
+    STATSCOUNTER_INIT(ctrHttpRequestCount, mutCtrHttpRequestCount);
+    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.count", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+                                &ctrHttpRequestCount));
 
-	STATSCOUNTER_INIT(ctrHttpRequestSuccess, mutCtrHttpRequestSuccess);
-	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.success", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-				&ctrHttpRequestSuccess));
+    STATSCOUNTER_INIT(ctrHttpRequestSuccess, mutCtrHttpRequestSuccess);
+    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.success", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+                                &ctrHttpRequestSuccess));
 
-	STATSCOUNTER_INIT(ctrHttpRequestFail, mutCtrHttpRequestFail);
-	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.fail", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-				&ctrHttpRequestFail));
+    STATSCOUNTER_INIT(ctrHttpRequestFail, mutCtrHttpRequestFail);
+    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.fail", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+                                &ctrHttpRequestFail));
 
-	STATSCOUNTER_INIT(ctrHttpStatusSuccess, mutCtrHttpStatusSuccess);
-	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.status.success", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-				&ctrHttpStatusSuccess));
+    STATSCOUNTER_INIT(ctrHttpStatusSuccess, mutCtrHttpStatusSuccess);
+    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.status.success", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+                                &ctrHttpStatusSuccess));
 
-	STATSCOUNTER_INIT(ctrHttpStatusFail, mutCtrHttpStatusFail);
-	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.status.fail", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-				&ctrHttpStatusFail));
+    STATSCOUNTER_INIT(ctrHttpStatusFail, mutCtrHttpStatusFail);
+    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.status.fail", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+                                &ctrHttpStatusFail));
 
-	CHKiRet(statsobj.ConstructFinalize(httpStats));
+    CHKiRet(statsobj.ConstructFinalize(httpStats));
 
-	if (curl_global_init(CURL_GLOBAL_ALL) != 0) {
-		LogError(0, RS_RET_OBJ_CREATION_FAILED, "CURL fail. -http disabled");
-		ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
-	}
+    if (curl_global_init(CURL_GLOBAL_ALL) != 0) {
+        LogError(0, RS_RET_OBJ_CREATION_FAILED, "CURL fail. -http disabled");
+        ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
+    }
 
-	CHKiRet(prop.Construct(&pInputName));
-	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("omhttp"), sizeof("omhttp") - 1));
-	CHKiRet(prop.ConstructFinalize(pInputName));
+    CHKiRet(prop.Construct(&pInputName));
+    CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("omhttp"), sizeof("omhttp") - 1));
+    CHKiRet(prop.ConstructFinalize(pInputName));
 ENDmodInit
 
 /* vi:set ai:
