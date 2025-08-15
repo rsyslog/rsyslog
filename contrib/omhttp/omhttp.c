@@ -1513,80 +1513,84 @@ finalize_it:
 }
 
 BEGINbeginTransaction
-    CODESTARTbeginTransaction;
-    if (!pWrkrData->pData->batchMode) {
-        FINALIZE;
-    }
+	CODESTARTbeginTransaction;
+	if (!pWrkrData->pData->batchMode) {
+		FINALIZE;
+	}
 
-    initializeBatch(pWrkrData);
+	initializeBatch(pWrkrData);
 finalize_it:
 ENDbeginTransaction
 
-BEGINdoAction
-    size_t nBytes;
-    sbool submit;
-    CODESTARTdoAction;
-    instanceData *const pData = pWrkrData->pData;
-    uchar *restPath = NULL;
-    STATSCOUNTER_INC(ctrMessagesSubmitted, mutCtrMessagesSubmitted);
+BEGINcommitTransaction
+	unsigned i;
+	size_t nBytes;
+	sbool submit;
+	CODESTARTcommitTransaction;
+	instanceData *const pData = pWrkrData->pData;
+	const int iNumTpls = pData->dynRestPath ? 2 : 1;
 
-    if (pWrkrData->pData->batchMode) {
-        if (pData->dynRestPath) {
-            /* Get copy of restpath in batch mode if dynRestPath enabled */
-            getRestPath(pData, ppString, &restPath);
-            if (pWrkrData->batch.restPath == NULL) {
-                pWrkrData->batch.restPath = (uchar *)strdup((char *)restPath);
-            } else if (strcmp((char *)pWrkrData->batch.restPath, (char *)restPath) != 0) {
-                /* Check if the restPath changed - if yes submit the current batch first*/
-                CHKiRet(submitBatch(pWrkrData, NULL));
-                initializeBatch(pWrkrData);
-            }
-        }
+	for (i = 0; i < nParams; ++i) {
+		uchar *payload = actParam(pParams, iNumTpls, i, 0).param;
+		uchar *tpls[2];
+		tpls[0] = payload;
+		if (iNumTpls == 2) tpls[1] = actParam(pParams, iNumTpls, i, 1).param;
 
-        /* If the maxbatchsize is 1, then build and immediately post a batch with 1 element.
-         * This mode will play nicely with rsyslog's action.resumeRetryCount logic.
-         */
-        if (pWrkrData->pData->maxBatchSize == 1) {
-            initializeBatch(pWrkrData);
-            CHKiRet(buildBatch(pWrkrData, ppString[0]));
-            CHKiRet(submitBatch(pWrkrData, ppString));
-            FINALIZE;
-        }
+		STATSCOUNTER_INC(ctrMessagesSubmitted, mutCtrMessagesSubmitted);
 
-        /* We should submit if any of these conditions are true
-         * 1. Total batch size > pWrkrData->pData->maxBatchSize
-         * 2. Total bytes > pWrkrData->pData->maxBatchBytes
-         */
-        nBytes = ustrlen((char *)ppString[0]) - 1;
-        submit = 0;
+		if (pData->batchMode) {
+			if (pData->dynRestPath) {
+				uchar *restPath = actParam(pParams, iNumTpls, i, 1).param;
+				if (pWrkrData->batch.restPath == NULL) {
+					pWrkrData->batch.restPath = (uchar *)strdup((char *)restPath);
+				} else if (strcmp((char *)pWrkrData->batch.restPath, (char *)restPath) != 0) {
+					/* restPath changed -> flush current batch first */
+					CHKiRet(submitBatch(pWrkrData, NULL));
+					initializeBatch(pWrkrData);
+				}
+			}
 
-        if (pWrkrData->batch.nmemb >= pWrkrData->pData->maxBatchSize) {
-            submit = 1;
-            DBGPRINTF("omhttp: maxbatchsize limit reached submitting batch of %zd elements.\n", pWrkrData->batch.nmemb);
-        } else if (computeBatchSize(pWrkrData) + nBytes > pWrkrData->pData->maxBatchBytes) {
-            submit = 1;
-            DBGPRINTF("omhttp: maxbytes limit reached submitting partial batch of %zd elements.\n",
-                      pWrkrData->batch.nmemb);
-        }
+			/* If maxBatchSize is 1, immediately build and post a single-element batch */
+			if (pData->maxBatchSize == 1) {
+				initializeBatch(pWrkrData);
+				CHKiRet(buildBatch(pWrkrData, payload));
+				CHKiRet(submitBatch(pWrkrData, tpls));
+				continue;
+			}
 
-        if (submit) {
-            CHKiRet(submitBatch(pWrkrData, ppString));
-            initializeBatch(pWrkrData);
-        }
+			/* Determine if we should submit due to size/bytes thresholds */
+			nBytes = ustrlen((char *)payload) - 1;
+			submit = 0;
+			if (pWrkrData->batch.nmemb >= pData->maxBatchSize) {
+				submit = 1;
+				DBGPRINTF("omhttp: maxbatchsize limit reached submitting batch of %zd elements.\n", pWrkrData->batch.nmemb);
+			} else if (computeBatchSize(pWrkrData) + nBytes > pData->maxBatchBytes) {
+				submit = 1;
+				DBGPRINTF("omhttp: maxbytes limit reached submitting partial batch of %zd elements.\n", pWrkrData->batch.nmemb);
+			}
 
-        CHKiRet(buildBatch(pWrkrData, ppString[0]));
+			if (submit) {
+				CHKiRet(submitBatch(pWrkrData, tpls));
+				initializeBatch(pWrkrData);
+			}
 
-        /* If there is only one item in the batch, all previous items have been
-         * submitted or this is the first item for this transaction. Return previous
-         * committed so that all items leading up to the current (exclusive)
-         * are not replayed should a failure occur anywhere else in the transaction. */
-        iRet = pWrkrData->batch.nmemb == 1 ? RS_RET_PREVIOUS_COMMITTED : RS_RET_DEFER_COMMIT;
-    } else {
-        CHKiRet(curlPost(pWrkrData, ppString[0], strlen((char *)ppString[0]), ppString, 1));
-    }
+			CHKiRet(buildBatch(pWrkrData, payload));
+		} else {
+			/* non-batch mode: send immediately */
+			CHKiRet(curlPost(pWrkrData, payload, strlen((char *)payload), tpls, 1));
+		}
+	}
+
+	/* finalize any remaining batch data */
+	if (pData->batchMode) {
+		if (pWrkrData->batch.nmemb > 0) {
+			CHKiRet(submitBatch(pWrkrData, NULL));
+		} else {
+			dbgprintf("omhttp: commitTransaction, pWrkrData->batch.nmemb = 0, nothing to send. \n");
+		}
+	}
 finalize_it:
-ENDdoAction
-
+ENDcommitTransaction
 
 BEGINendTransaction
     CODESTARTendTransaction;
@@ -2254,73 +2258,71 @@ ENDmodExit
 NO_LEGACY_CONF_parseSelectorAct
 
     BEGINqueryEtryPt CODESTARTqueryEtryPt;
-CODEqueryEtryPt_STD_OMOD_QUERIES;
+CODEqueryEtryPt_STD_OMODTX_QUERIES;
 CODEqueryEtryPt_STD_OMOD8_QUERIES;
-CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
 CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
 CODEqueryEtryPt_doHUP CODEqueryEtryPt_doHUPWrkr /* Load the worker HUP handling code */
-    CODEqueryEtryPt_TXIF_OMOD_QUERIES /* we support the transactional interface! */
-        CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_CONF2_QUERIES;
 ENDqueryEtryPt
 
 
 BEGINmodInit()
-    CODESTARTmodInit;
-    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-    CODEmodInit_QueryRegCFSLineHdlr CHKiRet(objUse(prop, CORE_COMPONENT));
-    CHKiRet(objUse(ruleset, CORE_COMPONENT));
-    CHKiRet(objUse(statsobj, CORE_COMPONENT));
+	CODESTARTmodInit;
+	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+	CODEmodInit_QueryRegCFSLineHdlr CHKiRet(objUse(prop, CORE_COMPONENT));
+	CHKiRet(objUse(ruleset, CORE_COMPONENT));
+	CHKiRet(objUse(statsobj, CORE_COMPONENT));
 
-    CHKiRet(statsobj.Construct(&httpStats));
-    CHKiRet(statsobj.SetName(httpStats, (uchar *)"omhttp"));
-    CHKiRet(statsobj.SetOrigin(httpStats, (uchar *)"omhttp"));
+	CHKiRet(statsobj.Construct(&httpStats));
+	CHKiRet(statsobj.SetName(httpStats, (uchar *)"omhttp"));
+	CHKiRet(statsobj.SetOrigin(httpStats, (uchar *)"omhttp"));
 
-    STATSCOUNTER_INIT(ctrMessagesSubmitted, mutCtrMessagesSubmitted);
-    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.submitted", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &ctrMessagesSubmitted));
+	STATSCOUNTER_INIT(ctrMessagesSubmitted, mutCtrMessagesSubmitted);
+	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.submitted", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+				&ctrMessagesSubmitted));
 
-    STATSCOUNTER_INIT(ctrMessagesSuccess, mutCtrMessagesSuccess);
-    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.success", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &ctrMessagesSuccess));
+	STATSCOUNTER_INIT(ctrMessagesSuccess, mutCtrMessagesSuccess);
+	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.success", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+				&ctrMessagesSuccess));
 
-    STATSCOUNTER_INIT(ctrMessagesFail, mutCtrMessagesFail);
-    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.fail", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &ctrMessagesFail));
+	STATSCOUNTER_INIT(ctrMessagesFail, mutCtrMessagesFail);
+	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.fail", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+				&ctrMessagesFail));
 
-    STATSCOUNTER_INIT(ctrMessagesRetry, mutCtrMessagesRetry);
-    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.retry", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &ctrMessagesRetry));
+	STATSCOUNTER_INIT(ctrMessagesRetry, mutCtrMessagesRetry);
+	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.retry", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+				&ctrMessagesRetry));
 
-    STATSCOUNTER_INIT(ctrHttpRequestCount, mutCtrHttpRequestCount);
-    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.count", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &ctrHttpRequestCount));
+	STATSCOUNTER_INIT(ctrHttpRequestCount, mutCtrHttpRequestCount);
+	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.count", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+				&ctrHttpRequestCount));
 
-    STATSCOUNTER_INIT(ctrHttpRequestSuccess, mutCtrHttpRequestSuccess);
-    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.success", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &ctrHttpRequestSuccess));
+	STATSCOUNTER_INIT(ctrHttpRequestSuccess, mutCtrHttpRequestSuccess);
+	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.success", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+				&ctrHttpRequestSuccess));
 
-    STATSCOUNTER_INIT(ctrHttpRequestFail, mutCtrHttpRequestFail);
-    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.fail", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &ctrHttpRequestFail));
+	STATSCOUNTER_INIT(ctrHttpRequestFail, mutCtrHttpRequestFail);
+	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.fail", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+				&ctrHttpRequestFail));
 
-    STATSCOUNTER_INIT(ctrHttpStatusSuccess, mutCtrHttpStatusSuccess);
-    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.status.success", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &ctrHttpStatusSuccess));
+	STATSCOUNTER_INIT(ctrHttpStatusSuccess, mutCtrHttpStatusSuccess);
+	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.status.success", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+				&ctrHttpStatusSuccess));
 
-    STATSCOUNTER_INIT(ctrHttpStatusFail, mutCtrHttpStatusFail);
-    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.status.fail", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &ctrHttpStatusFail));
+	STATSCOUNTER_INIT(ctrHttpStatusFail, mutCtrHttpStatusFail);
+	CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.status.fail", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+				&ctrHttpStatusFail));
 
-    CHKiRet(statsobj.ConstructFinalize(httpStats));
+	CHKiRet(statsobj.ConstructFinalize(httpStats));
 
-    if (curl_global_init(CURL_GLOBAL_ALL) != 0) {
-        LogError(0, RS_RET_OBJ_CREATION_FAILED, "CURL fail. -http disabled");
-        ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
-    }
+	if (curl_global_init(CURL_GLOBAL_ALL) != 0) {
+		LogError(0, RS_RET_OBJ_CREATION_FAILED, "CURL fail. -http disabled");
+		ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
+	}
 
-    CHKiRet(prop.Construct(&pInputName));
-    CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("omhttp"), sizeof("omhttp") - 1));
-    CHKiRet(prop.ConstructFinalize(pInputName));
+	CHKiRet(prop.Construct(&pInputName));
+	CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("omhttp"), sizeof("omhttp") - 1));
+	CHKiRet(prop.ConstructFinalize(pInputName));
 ENDmodInit
 
 /* vi:set ai:
