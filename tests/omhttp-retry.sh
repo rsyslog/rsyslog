@@ -5,6 +5,7 @@
 . ${srcdir:=.}/diag.sh init
 
 export NUMMESSAGES=10000
+export SEQ_CHECK_OPTIONS="-d"
 
 omhttp_start_server 0 --fail-every 1000
 
