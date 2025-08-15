@@ -47,7 +47,8 @@ main_queue(
 '
 startup
 injectmsg 0 $NUMMESSAGES
-wait_file_lines --abort-on-oversize "$RSYSLOG_OUT_LOG" $NUMMESSAGES
+# no --abort-on-oversize because of changed transaction handling
+wait_file_lines "$RSYSLOG_OUT_LOG" $NUMMESSAGES
 shutdown_when_empty
 wait_shutdown
 exit_test

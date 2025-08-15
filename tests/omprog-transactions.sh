@@ -4,7 +4,6 @@
 # This test tests omprog with the confirmMessages=on and useTransactions=on
 # parameters, with the external program successfully confirming all messages
 # and transactions.
-
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '
@@ -15,7 +14,7 @@ template(name="outfmt" type="string" string="%msg%\n")
 :msg, contains, "msgnum:" {
     action(
         type="omprog"
-        binary=`echo $srcdir/testsuites/omprog-transactions-bin.sh`
+        binary="'$srcdir'/testsuites/omprog-transactions-bin.sh"
         template="outfmt"
         name="omprog_action"
         queue.type="Direct"  # the default; facilitates sync with the child process

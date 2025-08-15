@@ -165,8 +165,12 @@ rsRetVal activateActions(void);
 rsRetVal actionNewInst(struct nvlst *lst, action_t **ppAction);
 rsRetVal actionProcessCnf(struct cnfobj *o);
 
-/** Commit all outstanding transactions for direct queues. */
-void actionCommitAllDirect(wti_t *pWti);
+/** Commit all outstanding transactions for direct queues.
+ *
+ * Returns RS_RET_OK if all direct transactional actions committed successfully.
+ * Any non-OK indicates at least one action signaled suspend/failure/other error.
+ */
+rsRetVal actionCommitAllDirect(wti_t *pWti);
 
 /** Remove a worker instance from the action's bookkeeping. */
 void actionRemoveWorker(action_t *const pAction, void *const actWrkrData);

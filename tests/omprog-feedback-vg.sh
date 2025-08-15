@@ -15,7 +15,7 @@ template(name="outfmt" type="string" string="%msg%\n")
 :msg, contains, "msgnum:" {
     action(
         type="omprog"
-        binary=`echo $srcdir/testsuites/omprog-feedback-bin.sh`
+        binary="'$srcdir'/testsuites/omprog-feedback-bin.sh"
         template="outfmt"
         name="omprog_action"
         queue.type="Direct"

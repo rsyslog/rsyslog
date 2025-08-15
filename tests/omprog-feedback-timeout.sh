@@ -16,7 +16,7 @@ template(name="outfmt" type="string" string="%msg%\n")
 :msg, contains, "msgnum:" {
     action(
         type="omprog"
-        binary=`echo $srcdir/testsuites/omprog-feedback-timeout-bin.sh`
+        binary="'$srcdir'/testsuites/omprog-feedback-timeout-bin.sh"
         template="outfmt"
         name="omprog_action"
         queue.type="Direct"  # the default; facilitates sync with the child process
@@ -45,7 +45,17 @@ export EXPECTED="Starting
 <= (timeout)
 Starting
 <= OK
+=> msgnum:00000000:
+<= OK
+=> msgnum:00000001:
+<= OK
+=> msgnum:00000002:
+<= OK
+=> msgnum:00000003:
+<= OK
 => msgnum:00000004:
+<= (timeout)
+Starting
 <= OK
 => msgnum:00000005:
 <= OK
@@ -56,6 +66,12 @@ Starting
 => msgnum:00000008:
 <= OK
 => msgnum:00000009:
+<= OK
+=> msgnum:00000004:
+<= (timeout)
+Starting
+<= OK
+=> msgnum:00000004:
 <= OK"
 
 cmp_exact $RSYSLOG_OUT_LOG

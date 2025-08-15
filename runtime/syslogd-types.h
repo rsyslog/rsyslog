@@ -48,7 +48,10 @@ typedef enum _syslogFeature {
     sFEATURERepeatedMsgReduction = 1, /* for output modules */
     sFEATURENonCancelInputTermination = 2, /* for input modules */
     sFEATUREAutomaticSanitazion = 3, /* for parser modules */
-    sFEATUREAutomaticPRIParsing = 4 /* for parser modules */
+    sFEATUREAutomaticPRIParsing = 4, /* for parser modules */
+    /* Output module requests legacy per-message retry semantics inside
+     * doTransaction()/commit path (no whole-batch abort on RS_RET_SUSPENDED). */
+    sFEATURETxOldRetrySemantics = 5 /* for output modules */
 } syslogFeature;
 
 /* we define our own facility and severities */

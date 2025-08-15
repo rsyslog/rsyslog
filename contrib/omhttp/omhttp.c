@@ -48,6 +48,8 @@
 #include "syslogd-types.h"
 #include "srUtils.h"
 #include "template.h"
+/* Enable legacy per-message retry semantics for this module */
+#define OMOD_TX_OLD_RETRY_SEMANTICS 1
 #include "module-template.h"
 #include "errmsg.h"
 #include "cfsysline.h"

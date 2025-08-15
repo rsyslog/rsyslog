@@ -43,23 +43,31 @@ export EXPECTED="<= OK
 <= OK
 => msgnum:00000004:
 <= Error: could not process log message
+=> msgnum:00000000:
+<= OK
+=> msgnum:00000001:
+<= OK
+=> msgnum:00000002:
+<= OK
+=> msgnum:00000003:
+<= OK
 => msgnum:00000004:
 <= Error: could not process log message
-=> msgnum:00000004:
-<= OK
 => msgnum:00000005:
 <= OK
 => msgnum:00000006:
 <= OK
 => msgnum:00000007:
-<= Error: could not process log message
-=> msgnum:00000007:
-<= Error: could not process log message
-=> msgnum:00000007:
 <= OK
 => msgnum:00000008:
 <= OK
 => msgnum:00000009:
+<= OK
+=> msgnum:00000004:
+<= Error: could not process log message
+=> msgnum:00000004:
+<= Error: could not process log message
+=> msgnum:00000004:
 <= OK"
 
 cmp_exact $RSYSLOG_OUT_LOG
