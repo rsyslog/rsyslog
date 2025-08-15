@@ -258,3 +258,78 @@ comma-delimited list of values as shown here:
          )
 
 
+.. _omkafka-sasl-password-from-env:
+
+Set SASL password from an environment variable
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. versionchanged:: 8.2508.0
+
+   Backticks in RainerScript support the ``${VAR}`` form and adjacent text.
+   This enables a simpler inline configuration such as::
+
+      `echo sasl.password=${KAFKA_PASSWORD}`
+
+**Recommended (rsyslog v8.2508.0 and later)**
+
+Keep the secret out of *rsyslog.conf* and inject it via environment.
+Then build the ``key=value`` pair inline with backticks:
+
+.. code-block:: bash
+
+   # set by your service manager or a secure env file
+   export KAFKA_PASSWORD='supersecret'
+
+.. code-block:: rsyslog
+
+   action(
+     type="omkafka"
+     broker=["kafka.example.com:9093"]
+     confParam=[
+       "security.protocol=SASL_SSL",
+       "sasl.mechanism=SCRAM-SHA-512",
+       "sasl.username=myuser",
+       `echo sasl.password=${KAFKA_PASSWORD}`
+     ]
+   )
+
+Notes:
+
+- This relies on the enhanced backtick handling; it is **not** a general shell.
+  Only the documented backtick subset (notably ``echo`` and ``cat``) is supported.
+- The variable expansion happens at rsyslog parse time, using the process
+  environment of the rsyslog daemon.
+
+**Older rsyslog versions (before v8.2508.0)**
+
+Backticks did **not** understand ``${VAR}`` or adjacency. Inline forms like
+`` `echo sasl.password=$KAFKA_PASSWORD` `` could cause errors such as
+“missing equal sign in parameter”. Use a pre-composed environment variable that
+already contains the full ``key=value`` pair and echo **that**:
+
+.. code-block:: bash
+
+   export KAFKA_PASSWORD='supersecret'
+   # Pre-compose the full key=value (done *outside* rsyslog)
+   export SASL_PWDPARAM="sasl.password=${KAFKA_PASSWORD}"
+
+.. code-block:: rsyslog
+
+   action(
+     type="omkafka"
+     broker=["kafka.example.com:9093"]
+     confParam=[
+       "security.protocol=SASL_SSL",
+       "sasl.mechanism=SCRAM-SHA-512",
+       "sasl.username=myuser",
+       `echo $SASL_PWDPARAM`
+     ]
+   )
+
+Security guidance
+^^^^^^^^^^^^^^^^^
+
+- Prefer environment files or service manager mechanisms with strict permissions
+  over embedding secrets directly in *rsyslog.conf*.
+- Process environments may be visible to privileged users (e.g., via ``/proc``);
+  secure host access accordingly.
