@@ -1522,6 +1522,86 @@ BEGINbeginTransaction
 finalize_it:
 ENDbeginTransaction
 
+BEGINcommitTransaction
+    CODESTARTcommitTransaction;
+    instanceData *const pData = pWrkrData->pData;
+    const unsigned nActTpls = pData->dynRestPath ? 2u : 1u;
+
+    /* mirror doAction() accounting */
+    STATSCOUNTER_ADD(ctrMessagesSubmitted, mutCtrMessagesSubmitted, nParams);
+
+    if (!pData->batchMode) {
+        for (unsigned i = 0; i < nParams; ++i) {
+            uchar *tpls[2];
+            tpls[0] = actParam(pParams, nActTpls, i, 0).param;
+            if (pData->dynRestPath) {
+                tpls[1] = actParam(pParams, nActTpls, i, 1).param;
+            } else {
+                tpls[1] = NULL;
+            }
+            CHKiRet(curlPost(pWrkrData, tpls[0], strlen((char *)tpls[0]), pData->dynRestPath ? tpls : NULL, 1));
+        }
+        FINALIZE;
+    }
+
+    /* batch mode */
+    initializeBatch(pWrkrData);
+    for (unsigned i = 0; i < nParams; ++i) {
+        uchar *tpls[2];
+        uchar *msg = actParam(pParams, nActTpls, i, 0).param;
+        tpls[0] = msg;
+
+        if (pData->dynRestPath) {
+            uchar *restPath = actParam(pParams, nActTpls, i, 1).param;
+            tpls[1] = restPath;
+            if (pWrkrData->batch.restPath == NULL) {
+                pWrkrData->batch.restPath = (uchar *)strdup((char *)restPath);
+            } else if (strcmp((char *)pWrkrData->batch.restPath, (char *)restPath) != 0) {
+                /* REST path changed mid-transaction: flush current batch first */
+                CHKiRet(submitBatch(pWrkrData, NULL));
+                initializeBatch(pWrkrData);
+                pWrkrData->batch.restPath = (uchar *)strdup((char *)restPath);
+            }
+        } else {
+            tpls[1] = NULL;
+        }
+
+        if (pData->maxBatchSize == 1) {
+            initializeBatch(pWrkrData);
+            CHKiRet(buildBatch(pWrkrData, msg));
+            CHKiRet(submitBatch(pWrkrData, pData->dynRestPath ? tpls : NULL));
+            continue;
+        }
+
+        size_t nBytes = ustrlen((char *)msg) - 1;
+        sbool submit = 0;
+        if (pWrkrData->batch.nmemb >= pData->maxBatchSize) {
+            submit = 1;
+            DBGPRINTF("omhttp: maxbatchsize limit reached submitting batch of %zd elements.\n", pWrkrData->batch.nmemb);
+        } else if (computeBatchSize(pWrkrData) + nBytes > pData->maxBatchBytes) {
+            submit = 1;
+            DBGPRINTF("omhttp: maxbytes limit reached submitting partial batch of %zd elements.\n", pWrkrData->batch.nmemb);
+        }
+
+        if (submit) {
+            CHKiRet(submitBatch(pWrkrData, pData->dynRestPath ? tpls : NULL));
+            initializeBatch(pWrkrData);
+            if (pData->dynRestPath && pWrkrData->batch.restPath == NULL && tpls[1] != NULL) {
+                pWrkrData->batch.restPath = (uchar *)strdup((char *)tpls[1]);
+            }
+        }
+
+        CHKiRet(buildBatch(pWrkrData, msg));
+    }
+
+    if (pWrkrData->batch.nmemb > 0) {
+        CHKiRet(submitBatch(pWrkrData, NULL));
+    }
+    /* ensure endTransaction() has nothing left to flush */
+    initializeBatch(pWrkrData);
+finalize_it:
+ENDcommitTransaction
+
 BEGINdoAction
     size_t nBytes;
     sbool submit;
