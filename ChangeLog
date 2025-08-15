@@ -1,5 +1,30 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-08-15: rainerscript: enhanced backticks support ${VAR}
+  This implements brace-style env vars inside backticks with `echo` and
+  fixes termination of unbraced `$VAR`. Most importantly, variables can
+  now be adjacent to static text (e.g., `foo${ENV}bar`), which previously
+  did not work and caused confusion. This aligns behavior with common
+  bash expectations.
+  Why
+  - Users expect `${VAR}` and `$VAR!` to expand while keeping punctuation.
+  - Concatenations like `foo${ENV}bar` are common and should be valid.
+  What
+  - Add support for braced variables `${VAR}` with proper `}` handling.
+  - For unbraced `$VAR`, stop the name at the first non `[A-Za-z0-9_]`
+    char and emit that char (e.g., `!`, `.`) as literal output.
+  - Improve error handling for overlong env var names.
+  - Keep other shell features (e.g., `$(pwd)`) unsupported by design.
+  Docs
+  - Update `constant_strings.rst` to document `${VAR}`, the new
+    termination rules, and examples including `foo${ENV}bar` and `$VAR!`.
+  Tests
+  - Add `rscript_backticks_braces_envvar.sh` for `${VAR}` support.
+  - Add `rscript_backticks_static_text.sh` for `$VAR!` and adjacency.
+  - Convert `rscript_backticks_empty_envvar-vg.sh` to non-VG variant and
+    adjust `tests/Makefile.am`.
+  Compatibility
+  - Backward compatible. Changes affect only previously broken edge cases.
 - 2025-08-13: improved developer documentation
   - internal locking needs / action interface
   - control flow for actions / queues
