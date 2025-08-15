@@ -9,18 +9,18 @@
   * cases. So while we hope that cfsysline support can be dropped some time in
   * the future, we will probably keep these useful constructs.
   *
-  * Copyright 2011-2014 Rainer Gerhards and Adiscon GmbH.
+  * Copyright 2011-2025 Rainer Gerhards and Adiscon GmbH.
   *
   * This file is part of the rsyslog runtime library.
   *
   * Licensed under the Apache License, Version 2.0 (the "License");
   * you may not use this file except in compliance with the License.
   * You may obtain a copy of the License at
-  * 
+  *
   *       http://www.apache.org/licenses/LICENSE-2.0
   *       -or-
   *       see COPYING.ASL20 in the source distribution
-  * 
+  *
   * Unless required by applicable law or agreed to in writing, software
   * distributed under the License is distributed on an "AS IS" BASIS,
   * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -104,48 +104,63 @@ done:
 static es_str_t* ATTR_NONNULL(1)
 expand_backticks_echo(const char *param)
 {
-	assert(param != NULL);
 	assert(strncmp(param, "echo ", sizeof("echo ")-1) == 0);
 	char envvar[512];
 	int i_envvar = 0;
 	int in_env = 0;
+	int env_braced = 0;
 	es_str_t *estr;
 
 	param += sizeof("echo ")-1;
 	if((estr = es_newStr(strlen(param))) == NULL) {
 		goto done;
 	}
-
-	while(*param) {
-		if(in_env) {
-			if(isspace(*param) || *param == '/') {
+	while (*param) {
+		if (in_env) {
+			if (env_braced) {
+				if (*param == '}') {
+					envvar[i_envvar] = '\0';
+					const char *envval = getenv(envvar);
+					if (envval) es_addBuf(&estr, envval, strlen(envval));
+					i_envvar = 0;
+					in_env = env_braced = 0;
+					param++;
+					continue;
+				}
+			}
+			if (!env_braced && (!isalnum((unsigned char)*param) && *param != '_')) {
 				envvar[i_envvar] = '\0';
 				const char *envval = getenv(envvar);
-				if(envval != NULL)
-					es_addBuf(&estr, envval, strlen(envval));
-				es_addChar(&estr, *param); /* curr char part of output! */
-				i_envvar = 0;
-				in_env = 0;
-			} else if(i_envvar > sizeof(envvar) - 1) {
+				if (envval) es_addBuf(&estr, envval, strlen(envval));
+				es_addChar(&estr, *param);
+				i_envvar = in_env = 0;
+			} else if (i_envvar >= sizeof(envvar) - 1) {
+				envvar[i_envvar] = '\0';
 				parser_errmsg("environment variable too long, begins with %s", envvar);
+				es_deleteStr(estr);
+				estr = NULL;
 				goto done;
 			} else {
 				envvar[i_envvar++] = *param;
 			}
 		} else if (*param == '$') {
-			in_env = 1;
+			if (*(param + 1) == '{') {
+				env_braced = in_env = 1;
+				param += 2;
+				continue;
+			} else {
+				env_braced = 0;
+				in_env = 1;
+			}
 		} else {
 			es_addChar(&estr, *param);
 		}
-		++param;
+		param++;
 	}
-
-	/* final check, we may be in env var name (very probable!) */
-	if(in_env) {
+	if (in_env) {
 		envvar[i_envvar] = '\0';
 		const char *envval = getenv(envvar);
-		if(envval != NULL)
-			es_addBuf(&estr, envval, strlen(envval));
+		if (envval) es_addBuf(&estr, envval, strlen(envval));
 	}
 
 done:	return estr;
@@ -216,13 +231,13 @@ expand_backticks(char *const param)
 %x INCALL
 	/* INCALL: support for the call statement */
 %x IN_PROCEDURE_CALL
-	/* IN_PROCEDURE_CALL: support for the call statement */	
+	/* IN_PROCEDURE_CALL: support for the call statement */
 %x EXPR
 	/* EXPR is a bit ugly, but we need it to support pre v6-syntax. The problem
 	 * is that cfsysline statement start with $..., the same like variables in
 	 * an expression. However, cfsysline statements can never appear inside an
-	 * expression. So we create a specific expr mode, which is turned on after 
-	 * we lexed a keyword that needs to be followed by an expression (using 
+	 * expression. So we create a specific expr mode, which is turned on after
+	 * we lexed a keyword that needs to be followed by an expression (using
 	 * knowledge from the upper layer...). In expr mode, we strictly do
 	 * expression-based parsing. Expr mode is stopped when we reach a token
 	 * that can not be part of an expression (currently only "then"). As I
@@ -257,7 +272,7 @@ int cnfSetLexFile(const char *fname);
 static void cnfPrintToken(const char *token);
 extern int yydebug;
 
-/* somehow, I need these prototype even though the headers are 
+/* somehow, I need these prototype even though the headers are
  * included. I guess that's some autotools magic I don't understand...
  */
 #if !defined(__FreeBSD__) && !defined(__NetBSD__) && !defined(__OpenBSD__) \
@@ -462,7 +477,7 @@ int fileno(FILE *stream);
 					yylval.s = strdup(yytext);
 					return LEGACY_RULESET;
 				  } else {
-					  cnfDoCfsysline(strdup(yytext)); 
+					  cnfDoCfsysline(strdup(yytext));
 				  }
 				}
 ![^ \t\n]+[ \t]*$		{ cnfPrintToken(yytext); yylval.s = strdup(yytext); return BSD_TAG_SELECTOR; }
@@ -561,7 +576,7 @@ cnfSetLexFile(const char *const fname)
 	readConfFile(fp, &str);
 	if(fp != stdin)
 		fclose(fp);
-	
+
 	r = cnfAddConfigBuffer(str, ((fname == NULL) ? "stdin" : fname));
 
 done:
@@ -581,7 +596,7 @@ popfile(void)
 
 	if(bs == NULL)
 		return 1;
-	
+
 	/* delete current entry. But we must not free the file name if
 	 * this is the top-level file, because then it may still be used
 	 * in error messages for other processing steps.
@@ -604,7 +619,7 @@ popfile(void)
 		dbgprintf("config parser: parsing completed\n");
 		return 1; /* all processed */
 	}
-	
+
 	yy_switch_to_buffer(currbs->bs);
 	yylineno = currbs->lineno;
 	cnfcurrfn = currbs->fn;
