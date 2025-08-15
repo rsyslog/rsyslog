@@ -1,5 +1,6 @@
 .. _param-imtcp-discardtruncatedmsg:
 .. _imtcp.parameter.module.discardtruncatedmsg:
+.. _imtcp.parameter.input.discardtruncatedmsg:
 
 DiscardTruncatedMsg
 ===================
@@ -17,9 +18,9 @@ Discards data beyond the truncation point in octet-stuffing mode.
 This parameter applies to :doc:`../../configuration/modules/imtcp`.
 
 :Name: DiscardTruncatedMsg
-:Scope: module
+:Scope: module, input
 :Type: boolean
-:Default: module=off
+:Default: module=off, input=module parameter
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
@@ -38,6 +39,15 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="imtcp" discardTruncatedMsg="on")
+
+Input usage
+-----------
+.. _param-imtcp-input-discardtruncatedmsg:
+.. _imtcp.parameter.input.discardtruncatedmsg-usage:
+
+.. code-block:: rsyslog
+
+   input(type="imtcp" port="514" discardTruncatedMsg="on")
 
 See also
 --------

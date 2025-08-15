@@ -1,5 +1,6 @@
 .. _param-imtcp-maxframesize:
 .. _imtcp.parameter.module.maxframesize:
+.. _imtcp.parameter.input.maxframesize:
 
 MaxFrameSize
 ============
@@ -17,9 +18,9 @@ Sets the maximum frame size in octet-counted mode before switching to octet stuf
 This parameter applies to :doc:`../../configuration/modules/imtcp`.
 
 :Name: MaxFrameSize
-:Scope: module
+:Scope: module, input
 :Type: integer
-:Default: module=200000
+:Default: module=200000, input=module parameter
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
@@ -44,6 +45,15 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="imtcp" maxFrameSize="...")
+
+Input usage
+-----------
+.. _param-imtcp-input-maxframesize:
+.. _imtcp.parameter.input.maxframesize-usage:
+
+.. code-block:: rsyslog
+
+   input(type="imtcp" port="514" maxFrameSize="...")
 
 See also
 --------

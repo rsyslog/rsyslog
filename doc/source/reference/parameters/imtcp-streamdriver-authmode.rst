@@ -1,5 +1,6 @@
 .. _param-imtcp-streamdriver-authmode:
 .. _imtcp.parameter.module.streamdriver-authmode:
+.. _imtcp.parameter.input.streamdriver-authmode:
 
 StreamDriver.AuthMode
 =====================
@@ -17,9 +18,9 @@ Sets stream driver authentication mode.
 This parameter applies to :doc:`../../configuration/modules/imtcp`.
 
 :Name: StreamDriver.AuthMode
-:Scope: module
+:Scope: module, input
 :Type: string (see :doc:`../../rainerscript/constant_strings`)
-:Default: module=none
+:Default: module=none, input=module parameter
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
@@ -40,6 +41,15 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="imtcp" streamDriver.authMode="...")
+
+Input usage
+-----------
+.. _param-imtcp-input-streamdriver-authmode:
+.. _imtcp.parameter.input.streamdriver-authmode-usage:
+
+.. code-block:: rsyslog
+
+   input(type="imtcp" port="514" streamDriver.authMode="...")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

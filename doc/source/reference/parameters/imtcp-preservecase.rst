@@ -1,5 +1,6 @@
 .. _param-imtcp-preservecase:
 .. _imtcp.parameter.module.preservecase:
+.. _imtcp.parameter.input.preservecase:
 
 PreserveCase
 ============
@@ -17,9 +18,9 @@ Controls whether the case of fromhost is preserved.
 This parameter applies to :doc:`../../configuration/modules/imtcp`.
 
 :Name: PreserveCase
-:Scope: module
+:Scope: module, input
 :Type: boolean
-:Default: module=on
+:Default: module=on, input=module parameter
 :Required?: no
 :Introduced: 8.37.0
 
@@ -38,6 +39,15 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="imtcp" preserveCase="off")
+
+Input usage
+-----------
+.. _param-imtcp-input-preservecase:
+.. _imtcp.parameter.input.preservecase-usage:
+
+.. code-block:: rsyslog
+
+   input(type="imtcp" port="514" preserveCase="off")
 
 See also
 --------

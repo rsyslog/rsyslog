@@ -1,5 +1,6 @@
 .. _param-imtcp-keepalive-interval:
 .. _imtcp.parameter.module.keepalive-interval:
+.. _imtcp.parameter.input.keepalive-interval:
 
 KeepAlive.Interval
 ==================
@@ -17,9 +18,9 @@ Defines the interval for keep-alive packets.
 This parameter applies to :doc:`../../configuration/modules/imtcp`.
 
 :Name: KeepAlive.Interval
-:Scope: module
+:Scope: module, input
 :Type: integer
-:Default: module=0
+:Default: module=0, input=module parameter
 :Required?: no
 :Introduced: 8.2106.0
 
@@ -38,6 +39,15 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="imtcp" keepAlive.interval="...")
+
+Input usage
+-----------
+.. _param-imtcp-input-keepalive-interval:
+.. _imtcp.parameter.input.keepalive-interval-usage:
+
+.. code-block:: rsyslog
+
+   input(type="imtcp" port="514" keepAlive.interval="...")
 
 See also
 --------

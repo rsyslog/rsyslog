@@ -1,5 +1,6 @@
 .. _param-imtcp-keepalive-time:
 .. _imtcp.parameter.module.keepalive-time:
+.. _imtcp.parameter.input.keepalive-time:
 
 KeepAlive.Time
 ==============
@@ -17,9 +18,9 @@ Sets the interval between last data and first keepalive probe.
 This parameter applies to :doc:`../../configuration/modules/imtcp`.
 
 :Name: KeepAlive.Time
-:Scope: module
+:Scope: module, input
 :Type: integer
-:Default: module=0
+:Default: module=0, input=module parameter
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
@@ -43,6 +44,15 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="imtcp" keepAlive.time="...")
+
+Input usage
+-----------
+.. _param-imtcp-input-keepalive-time:
+.. _imtcp.parameter.input.keepalive-time-usage:
+
+.. code-block:: rsyslog
+
+   input(type="imtcp" port="514" keepAlive.time="...")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

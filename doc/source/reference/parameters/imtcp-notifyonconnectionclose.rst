@@ -1,5 +1,6 @@
 .. _param-imtcp-notifyonconnectionclose:
 .. _imtcp.parameter.module.notifyonconnectionclose:
+.. _imtcp.parameter.input.notifyonconnectionclose:
 
 NotifyOnConnectionClose
 =======================
@@ -17,9 +18,9 @@ Emits a message when a remote peer closes a connection.
 This parameter applies to :doc:`../../configuration/modules/imtcp`.
 
 :Name: NotifyOnConnectionClose
-:Scope: module
+:Scope: module, input
 :Type: boolean
-:Default: module=off
+:Default: module=off, input=module parameter
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
@@ -39,6 +40,15 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="imtcp" notifyOnConnectionClose="on")
+
+Input usage
+-----------
+.. _param-imtcp-input-notifyonconnectionclose:
+.. _imtcp.parameter.input.notifyonconnectionclose-usage:
+
+.. code-block:: rsyslog
+
+   input(type="imtcp" port="514" notifyOnConnectionClose="on")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

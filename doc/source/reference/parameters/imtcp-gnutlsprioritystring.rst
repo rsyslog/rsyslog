@@ -1,5 +1,6 @@
 .. _param-imtcp-gnutlsprioritystring:
 .. _imtcp.parameter.module.gnutlsprioritystring:
+.. _imtcp.parameter.input.gnutlsprioritystring:
 
 gnutlsPriorityString
 ====================
@@ -17,9 +18,9 @@ Provides driver-specific TLS configuration via a priority string.
 This parameter applies to :doc:`../../configuration/modules/imtcp`.
 
 :Name: gnutlsPriorityString
-:Scope: module
+:Scope: module, input
 :Type: string (see :doc:`../../rainerscript/constant_strings`)
-:Default: module=none
+:Default: module=none, input=module parameter
 :Required?: no
 :Introduced: 8.29.0
 
@@ -47,7 +48,7 @@ In GNUTLS, this setting determines the handshake algorithms and options for the 
 
 **OpenSSL Configuration**
 
-This feature is compatible with OpenSSL Version 1.0.2 and above. It enables the passing of configuration commands to the OpenSSL library. You can find a comprehensive list of commands and their acceptable values in the OpenSSL Documentation, accessible at [OpenSSL Documentation](https://docs.openssl.org/1.0.2/man3/SSL_CONF_cmd/).
+This feature is compatible with OpenSSL Version 1.0.2 and above. It enables the passing of configuration commands to the OpenSSL library. You can find a comprehensive list of commands and their acceptable values in the `OpenSSL Documentation <https://docs.openssl.org/1.0.2/man3/SSL_CONF_cmd/>`_.
 
 **General Configuration Guidelines**
 
@@ -82,6 +83,15 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="imtcp" gnutlsPriorityString="Protocol=ALL,-SSLv2,-SSLv3")
+
+Input usage
+-----------
+.. _param-imtcp-input-gnutlsprioritystring:
+.. _imtcp.parameter.input.gnutlsprioritystring-usage:
+
+.. code-block:: rsyslog
+
+   input(type="imtcp" port="514" gnutlsPriorityString="Protocol=ALL,-SSLv2,-SSLv3")
 
 See also
 --------

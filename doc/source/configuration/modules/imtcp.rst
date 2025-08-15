@@ -70,11 +70,6 @@ datacenter deployments**.
 Configuration Parameters
 ========================
 
-.. note::
-
-   Parameter names are case-insensitive.
-
-
 Module Parameters
 -----------------
 
@@ -233,10 +228,6 @@ Module Parameters
 
 Input Parameters
 ----------------
-
-.. note::
-
-   Parameter names are case-insensitive; camelCase is recommended for readability.
 
 .. list-table::
    :widths: 30 70
