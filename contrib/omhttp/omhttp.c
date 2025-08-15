@@ -1513,97 +1513,86 @@ finalize_it:
 }
 
 BEGINbeginTransaction
-	CODESTARTbeginTransaction;
-	if (!pWrkrData->pData->batchMode) {
-		FINALIZE;
-	}
+    CODESTARTbeginTransaction;
+    if (!pWrkrData->pData->batchMode) {
+        FINALIZE;
+    }
 
-	initializeBatch(pWrkrData);
+    initializeBatch(pWrkrData);
 finalize_it:
 ENDbeginTransaction
 
 BEGINcommitTransaction
-	unsigned i;
-	size_t nBytes;
-	sbool submit;
-	CODESTARTcommitTransaction;
-	instanceData *const pData = pWrkrData->pData;
-	const int iNumTpls = pData->dynRestPath ? 2 : 1;
+    unsigned i;
+    size_t nBytes;
+    sbool submit;
+    CODESTARTcommitTransaction;
+    instanceData *const pData = pWrkrData->pData;
+    const int iNumTpls = pData->dynRestPath ? 2 : 1;
 
-	for (i = 0; i < nParams; ++i) {
-		uchar *payload = actParam(pParams, iNumTpls, i, 0).param;
-		uchar *tpls[2];
-		tpls[0] = payload;
-		if (iNumTpls == 2) tpls[1] = actParam(pParams, iNumTpls, i, 1).param;
+    for (i = 0; i < nParams; ++i) {
+        uchar *payload = actParam(pParams, iNumTpls, i, 0).param;
+        uchar *tpls[2];
+        tpls[0] = payload;
+        if (iNumTpls == 2) tpls[1] = actParam(pParams, iNumTpls, i, 1).param;
 
-		STATSCOUNTER_INC(ctrMessagesSubmitted, mutCtrMessagesSubmitted);
+        STATSCOUNTER_INC(ctrMessagesSubmitted, mutCtrMessagesSubmitted);
 
-		if (pData->batchMode) {
-			if (pData->dynRestPath) {
-				uchar *restPath = actParam(pParams, iNumTpls, i, 1).param;
-				if (pWrkrData->batch.restPath == NULL) {
-					pWrkrData->batch.restPath = (uchar *)strdup((char *)restPath);
-				} else if (strcmp((char *)pWrkrData->batch.restPath, (char *)restPath) != 0) {
-					/* restPath changed -> flush current batch first */
-					CHKiRet(submitBatch(pWrkrData, NULL));
-					initializeBatch(pWrkrData);
-				}
-			}
+        if (pData->batchMode) {
+            if (pData->dynRestPath) {
+                uchar *restPath = actParam(pParams, iNumTpls, i, 1).param;
+                if (pWrkrData->batch.restPath == NULL) {
+                    pWrkrData->batch.restPath = (uchar *)strdup((char *)restPath);
+                } else if (strcmp((char *)pWrkrData->batch.restPath, (char *)restPath) != 0) {
+                    /* restPath changed -> flush current batch first */
+                    CHKiRet(submitBatch(pWrkrData, NULL));
+                    initializeBatch(pWrkrData);
+                }
+            }
 
-			/* If maxBatchSize is 1, immediately build and post a single-element batch */
-			if (pData->maxBatchSize == 1) {
-				initializeBatch(pWrkrData);
-				CHKiRet(buildBatch(pWrkrData, payload));
-				CHKiRet(submitBatch(pWrkrData, tpls));
-				continue;
-			}
+            /* If maxBatchSize is 1, immediately build and post a single-element batch */
+            if (pData->maxBatchSize == 1) {
+                initializeBatch(pWrkrData);
+                CHKiRet(buildBatch(pWrkrData, payload));
+                CHKiRet(submitBatch(pWrkrData, tpls));
+                continue;
+            }
 
-			/* Determine if we should submit due to size/bytes thresholds */
-			nBytes = ustrlen((char *)payload) - 1;
-			submit = 0;
-			if (pWrkrData->batch.nmemb >= pData->maxBatchSize) {
-				submit = 1;
-				DBGPRINTF("omhttp: maxbatchsize limit reached submitting batch of %zd elements.\n", pWrkrData->batch.nmemb);
-			} else if (computeBatchSize(pWrkrData) + nBytes > pData->maxBatchBytes) {
-				submit = 1;
-				DBGPRINTF("omhttp: maxbytes limit reached submitting partial batch of %zd elements.\n", pWrkrData->batch.nmemb);
-			}
+            /* Determine if we should submit due to size/bytes thresholds */
+            nBytes = ustrlen((char *)payload) - 1;
+            submit = 0;
+            if (pWrkrData->batch.nmemb >= pData->maxBatchSize) {
+                submit = 1;
+                DBGPRINTF("omhttp: maxbatchsize limit reached submitting batch of %zd elements.\n", pWrkrData->batch.nmemb);
+            } else if (computeBatchSize(pWrkrData) + nBytes > pData->maxBatchBytes) {
+                submit = 1;
+                DBGPRINTF("omhttp: maxbytes limit reached submitting partial batch of %zd elements.\n", pWrkrData->batch.nmemb);
+            }
 
-			if (submit) {
-				CHKiRet(submitBatch(pWrkrData, tpls));
-				initializeBatch(pWrkrData);
-			}
+            if (submit) {
+                CHKiRet(submitBatch(pWrkrData, tpls));
+                initializeBatch(pWrkrData);
+            }
 
-			CHKiRet(buildBatch(pWrkrData, payload));
-		} else {
-			/* non-batch mode: send immediately */
-			CHKiRet(curlPost(pWrkrData, payload, strlen((char *)payload), tpls, 1));
-		}
-	}
+            CHKiRet(buildBatch(pWrkrData, payload));
+        } else {
+            /* non-batch mode: send immediately */
+            CHKiRet(curlPost(pWrkrData, payload, strlen((char *)payload), tpls, 1));
+        }
+    }
 
-	/* finalize any remaining batch data */
-	if (pData->batchMode) {
-		if (pWrkrData->batch.nmemb > 0) {
-			CHKiRet(submitBatch(pWrkrData, NULL));
-		} else {
-			dbgprintf("omhttp: commitTransaction, pWrkrData->batch.nmemb = 0, nothing to send. \n");
-		}
-	}
+    /* finalize any remaining batch data */
+    if (pData->batchMode) {
+        if (pWrkrData->batch.nmemb > 0) {
+            CHKiRet(submitBatch(pWrkrData, NULL));
+        } else {
+            dbgprintf("omhttp: commitTransaction, pWrkrData->batch.nmemb = 0, nothing to send. \n");
+        }
+    }
 finalize_it:
 ENDcommitTransaction
 
-BEGINendTransaction
-    CODESTARTendTransaction;
-    /* End Transaction only if batch data is not empty */
-    if (pWrkrData->batch.nmemb > 0) {
-        CHKiRet(submitBatch(pWrkrData, NULL));
-    } else {
-        dbgprintf(
-            "omhttp: endTransaction, pWrkrData->batch.nmemb = 0, "
-            "nothing to send. \n");
-    }
-finalize_it:
-ENDendTransaction
+
 
 /* Creates authentication header uid:pwd
  */
@@ -1775,6 +1764,7 @@ static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
     pData->nHttpHeaders = 0;
     pData->pwd = NULL;
     pData->authBuf = NULL;
+    pData->headerBuf = NULL;
     pData->restPath = NULL;
     pData->checkPath = NULL;
     pData->dynRestPath = 0;
