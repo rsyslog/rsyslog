@@ -1295,6 +1295,7 @@ static rsRetVal doTransaction(action_t *__restrict__ const pThis,
                               const int nparams) {
     actWrkrInfo_t *wrkrInfo;
     int i;
+    sbool bSuspended = 0;
     DEFiRet;
 
     DBGPRINTF("doTransaction[%s] enter\n", pThis->pszName);
@@ -1311,15 +1312,27 @@ static rsRetVal doTransaction(action_t *__restrict__ const pThis,
             iRet = actionProcessMessage(pThis, &actParam(iparams, pThis->iNumTpls, i, 0), pWti);
             DBGPRINTF("doTransaction: action %d, processing msg %d, result %d\n", pThis->iActionNbr, i, iRet);
             if (iRet == RS_RET_SUSPENDED) {
-                --i; /* we need to re-submit */
-                /* note: we are suspended and need to retry. In order not to
-                 * hammer the CPU, we now do a voluntarly wait of 1 second.
-                 * The rest will be handled by the standard retry handler.
-                 */
-                srSleep(1, 0);
+                if (!bSuspended) {
+                    /* First suspension for this message:
+                     * - Avoid busy-spin: wait 1 second, then try the same message once more.
+                     * - Decrement the loop index so the current message is processed again
+                     *   on the next iteration.
+                     * - Set the flag so we do not perform repeated local retries.
+                     * If suspension persists, the next hit takes the RS_RET_SUSPENDED path
+                     * and the rsyslog core’s standard retry logic takes over.
+                     */
+                    --i; /* reprocess this message on the next loop iteration */
+                    srSleep(1, 0); /* sleep 1 second */
+                    bSuspended = 1; /* mark that the one local retry has been done */
+                    continue;
+                } else {
+                    /* Already retried locally: delegate to core retry handling. */
+                    ABORT_FINALIZE(RS_RET_SUSPENDED);
+                }
             } else if (iRet != RS_RET_DEFER_COMMIT && iRet != RS_RET_PREVIOUS_COMMITTED && iRet != RS_RET_OK) {
                 FINALIZE; /* let upper peer handle the error condition! */
             }
+            bSuspended = 0;
         }
     }
 finalize_it:
