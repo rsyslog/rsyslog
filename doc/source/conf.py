@@ -231,6 +231,11 @@ suppress_warnings = ['epub.unknown_project_files']
 
 # -- Options for HTML output ---------------------------------------------------
 
+# The base URL which points to the root of the HTML documentation.
+# It is used to indicate the location of document like canonical_url.
+RSYSLOG_BASE_URL = 'https://www.rsyslog.com'
+html_baseurl = f'{RSYSLOG_BASE_URL}/doc/'
+
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 html_theme = 'furo'
