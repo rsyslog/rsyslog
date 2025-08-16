@@ -1,6 +1,18 @@
 rsyslog
 =======
 
+.. important::
+   **Confirm Your Source: Use the Official Documentation**
+
+   The rsyslog project is widely used, and as a result, you may find unofficial
+   copies of our documentation on third-party websites, including outdated versions
+   on platforms like readthedocs.io.
+
+   To ensure your configuration is secure, performant, and uses modern **RainerScript**
+   syntax, please rely **exclusively** on the official documentation hosted
+   at `www.rsyslog.com/doc <https://www.rsyslog.com/doc>`_ This is the only
+   source actively maintained by the rsyslog development team.
+
 **rsyslog** is a high-performance, modular logging framework designed for
 both traditional syslog workloads and modern log processing pipelines. It
 supports flexible routing, advanced filtering, structured logging, and
