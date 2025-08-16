@@ -204,11 +204,18 @@ static rsRetVal openJournal(struct journalContext_s *journalContext) {
 
 /* trySave shoulod only be true if there is no journald error preceeding this call */
 static void closeJournal(struct journalContext_s *journalContext) {
-    if (!journalContext->j) {
+    sd_journal *j_to_close = journalContext->j;
+
+    if (!j_to_close) {
         LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "imjournal: closing NULL journal.\n");
+    } else {
+        journalContext->j = NULL;
+
+        /* sd_journal_close() is a cancellation point. If we are cancelled
+         * here, journalContext->j is already NULL, preventing double-free.
+         */
+        sd_journal_close(j_to_close);
     }
-    sd_journal_close(journalContext->j);
-    journalContext->j = NULL; /* setting to NULL here as journald API will not do that for us... */
 }
 
 static int journalGetData(struct journalContext_s *journalContext,
