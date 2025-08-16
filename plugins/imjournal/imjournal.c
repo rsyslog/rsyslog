@@ -204,11 +204,16 @@ static rsRetVal openJournal(struct journalContext_s *journalContext) {
 
 /* trySave shoulod only be true if there is no journald error preceeding this call */
 static void closeJournal(struct journalContext_s *journalContext) {
+    int iCancelStateSave;
+
     if (!journalContext->j) {
         LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "imjournal: closing NULL journal.\n");
     }
+    /* at this spot, we must not be cancelled */
+    pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, &iCancelStateSave);
     sd_journal_close(journalContext->j);
     journalContext->j = NULL; /* setting to NULL here as journald API will not do that for us... */
+    pthread_setcancelstate(iCancelStateSave, NULL);
 }
 
 static int journalGetData(struct journalContext_s *journalContext,
