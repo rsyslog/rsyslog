@@ -66,6 +66,10 @@ export TB_ERR_TIMEOUT=101
 # CONFIG
 export ZOOPIDFILE="$(pwd)/zookeeper.pid"
 
+# Ensure srcdir is available to all tests and child processes.
+# If not provided by the caller, default to the current tests directory.
+export srcdir="${srcdir:=.}"
+
 #valgrind="valgrind --malloc-fill=ff --free-fill=fe --log-fd=1"
 #valgrind="valgrind --tool=callgrind" # for kcachegrind profiling
 
