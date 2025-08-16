@@ -101,3 +101,47 @@ The `subtree` template is a better fit for structured outputs like this, allowin
 
      action(type="omjournal" template="journal-subtree")
    }
+
+namespace
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+Starting from systemd v256, the journal supports namespaces. This allows
+you to write to a specific namespace in the journal, which can be useful
+for isolating logs from different applications or components.
+However, this feature does not support templates yet.
+
+Examples
+========
+
+Example 1
+---------
+
+The following example shows how to use the namespace feature to filter logs
+by facility and write them to different namespaces in the journal. This is useful for journal isolation and classification:
+
+.. code-block:: shell
+
+   module(load="imtcp")
+   module(load="omjournal")
+
+   # Each tcp input will trigger the filter ruleset
+   input(type="imtcp" port="80" ruleset="output-filter")
+
+   # Filter logs by facility into two different namespaces audit and application
+   ruleset(name="output-filter") {
+      if ($syslogfacility == 13) then {
+         action(type="omjournal" namespace="audit-journal-namespace")
+      }
+      if ($syslogfacility == 16) then {
+         action(type="omjournal" namespace="application-journal-namespace")
+      }
+   }
+   # If you specify a namespace, you must not specify a template. If you do, the action will fail with an error message.
+   # namespaces have to be created before use.

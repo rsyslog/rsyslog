@@ -2251,6 +2251,11 @@ if test "x$enable_omjournal" = "xyes"; then
 	PKG_CHECK_MODULES([LIBSYSTEMD_JOURNAL], [libsystemd >= 209] ,, [
 	    PKG_CHECK_MODULES([LIBSYSTEMD_JOURNAL], [libsystemd-journal >= 197])
 	])
+
+	save_libs=$LIBS
+	LIBS="$LIBS $LIBSYSTEMD_JOURNAL_LIBS"
+	AC_CHECK_FUNCS(sd_journal_stream_fd_with_namespace,,)
+	LIBS=$save_libs
 fi
 AM_CONDITIONAL(ENABLE_OMJOURNAL, test x$enable_omjournal = xyes)
 
