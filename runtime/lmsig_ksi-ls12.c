@@ -297,9 +297,9 @@ BEGINobjQueryInterface(lmsig_ksi_ls12)
     if (pIf->ifVersion != sigprovCURR_IF_VERSION) { /* check for current version, increment on each change */
         ABORT_FINALIZE(RS_RET_INTERFACE_NOT_SUPPORTED);
     }
-    pIf->Construct = (rsRetVal(*)(void *))lmsig_ksi_ls12Construct;
+    pIf->Construct = (rsRetVal (*)(void *))lmsig_ksi_ls12Construct;
     pIf->SetCnfParam = SetCnfParam;
-    pIf->Destruct = (rsRetVal(*)(void *))lmsig_ksi_ls12Destruct;
+    pIf->Destruct = (rsRetVal (*)(void *))lmsig_ksi_ls12Destruct;
     pIf->OnFileOpen = OnFileOpen;
     pIf->OnRecordWrite = OnRecordWrite;
     pIf->OnFileClose = OnFileClose;

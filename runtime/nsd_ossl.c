@@ -1436,8 +1436,8 @@ BEGINobjQueryInterface(nsd_ossl)
      * work here (if we can support an older interface version - that,
      * of course, also affects the "if" above).
      */
-    pIf->Construct = (rsRetVal(*)(nsd_t **))nsd_osslConstruct;
-    pIf->Destruct = (rsRetVal(*)(nsd_t **))nsd_osslDestruct;
+    pIf->Construct = (rsRetVal (*)(nsd_t **))nsd_osslConstruct;
+    pIf->Destruct = (rsRetVal (*)(nsd_t **))nsd_osslDestruct;
     pIf->Abort = Abort;
     pIf->LstnInit = LstnInit;
     pIf->AcceptConnReq = AcceptConnReq;

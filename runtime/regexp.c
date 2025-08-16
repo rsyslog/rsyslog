@@ -90,7 +90,7 @@ typedef struct perthread_regex {
 
 
 static unsigned __attribute__((nonnull(1))) int hash_from_regex(void *k) {
-    return (uintptr_t) * (regex_t **)k;
+    return (uintptr_t)*(regex_t **)k;
 }
 
 static int key_equals_regex(void *key1, void *key2) {

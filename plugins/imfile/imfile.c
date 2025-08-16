@@ -612,7 +612,7 @@ static void ATTR_NONNULL() fen_setupWatch(act_obj_t *const act) {
     act->pfinf->fobj.fo_atime = fileInfo.st_atim;
     act->pfinf->fobj.fo_mtime = fileInfo.st_mtim;
     act->pfinf->fobj.fo_ctime = fileInfo.st_ctim;
-    if (port_associate(glport, PORT_SOURCE_FILE, (uintptr_t) & (act->pfinf->fobj), act->pfinf->events, (void *)act) ==
+    if (port_associate(glport, PORT_SOURCE_FILE, (uintptr_t)&(act->pfinf->fobj), act->pfinf->events, (void *)act) ==
         -1) {
         LogError(errno, RS_RET_SYS_ERR,
                  "fen_setupWatch: Failed to associate port for file "

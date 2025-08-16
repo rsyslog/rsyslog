@@ -61,10 +61,13 @@
 
 #define CODESTARTInit
 
-#define ENDInit                                                                                                \
-    finalize_it : if (iRet != RS_RET_OK) { printf("failure occurred during init of object '%s'\n", pErrObj); } \
-                                                                                                               \
-    RETiRet;                                                                                                   \
+#define ENDInit                                                           \
+    finalize_it:                                                          \
+    if (iRet != RS_RET_OK) {                                              \
+        printf("failure occurred during init of object '%s'\n", pErrObj); \
+    }                                                                     \
+                                                                          \
+    RETiRet;                                                              \
     }
 
 
@@ -89,6 +92,7 @@
 
 #define CODESTARTExit
 
-#define ENDExit            \
-    finalize_it : RETiRet; \
+#define ENDExit  \
+    finalize_it: \
+    RETiRet;     \
     }
