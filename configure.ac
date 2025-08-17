@@ -2660,7 +2660,11 @@ AC_ARG_ENABLE(ommongodb,
         [enable_ommongodb=no]
 )
 if test "x$enable_ommongodb" = "xyes"; then
-	PKG_CHECK_MODULES(LIBMONGOC, libmongoc-1.0)
+	PKG_CHECK_MODULES(LIBMONGOC, mongoc2,, [
+		PKG_CHECK_MODULES(LIBMONGOC, libmongoc-1.0,
+			[AC_DEFINE([HAVE_LIBMONGOC1], [1], [Use v1 of libmongoc])
+		])
+	])
     AC_CHECK_FUNCS(mongoc_client_set_ssl_opts,,)
 
 fi
