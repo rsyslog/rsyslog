@@ -14,14 +14,22 @@ the ``YYYY-MM`` rsyslog release.
 
 Available variants include:
 
-* ``rsyslog/rsyslog-minimal`` – rsyslog core only.
-* ``rsyslog/rsyslog`` – standard image with common modules such as
-  ``imhttp`` and ``omhttp``.
-* ``rsyslog/rsyslog-collector`` – adds modules for centralized log
-  collection (``elasticsearch``, ...).
-* ``rsyslog/rsyslog-dockerlogs`` – includes ``imdocker`` to process
-  logs from the Docker daemon.
+* :doc:`rsyslog/rsyslog-minimal <minimal>` – rsyslog core only.
+* :doc:`rsyslog/rsyslog <standard>` – standard image with common modules
+  such as ``imhttp`` and ``omhttp``.
+* :doc:`rsyslog/rsyslog-collector <collector>` – adds modules for
+  centralized log collection (``elasticsearch``, ...).
+* :doc:`rsyslog/rsyslog-dockerlogs <dockerlogs>` – includes ``imdocker``
+  to process logs from the Docker daemon.
 * ``rsyslog/rsyslog-debug`` – planned variant with troubleshooting tools.
+
+.. toctree::
+   :maxdepth: 1
+
+   minimal
+   standard
+   collector
+   dockerlogs
 
 Images are built using the layered ``Makefile`` in
 ``packaging/docker/rsyslog``::
