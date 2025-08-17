@@ -1,20 +1,22 @@
-rsyslog and containers
-======================
+.. _containers-index:
 
-In this chapter, we describe how rsyslog can be used together with
-containers.
+Rsyslog Containers
+==================
 
-All versions of rsyslog work well in containers. Versions beginning with
-8.32.0 have also been made explicitly container-aware and provide some
-extra features that are useful inside containers.
+.. index::
+   single: containers
+   single: Docker images
 
-Note: the sources for docker containers created by the rsyslog project
-can be found at https://github.com/rsyslog/rsyslog/tree/main/packaging/docker - these may
-be useful as a starting point for similar efforts. Feedback, bug
-reports and pull requests are also appreciated for this project.
+Rsyslog runs well inside containers and the project provides official
+Docker images for common logging scenarios. Dockerfiles and build
+recipes live under `packaging/docker <https://github.com/rsyslog/rsyslog/tree/main/packaging/docker>`_.
+
+Since version 8.32.0 rsyslog also adjusts a few defaults when it detects
+that it is running as PID 1 inside a container: ``Ctrl-C`` is handled and
+no pid file is written.
 
 .. toctree::
    :maxdepth: 2
 
-   container_features
-   docker_specifics
+   user_images
+   development_images
