@@ -16,17 +16,17 @@ add your own modules or configuration.
 Environment Variables
 ---------------------
 
-The entrypoint script recognises the following variables:
+The entrypoint script recognizes the following variables:
 
 .. _containers-user-minimal-rsyslog_hostname:
 .. envvar:: RSYSLOG_HOSTNAME
 
-   Hostname used inside rsyslog. If unset the script reads ``/etc/hostname``.
+   Hostname used inside rsyslog. Defaults to the value of ``/etc/hostname`` when unset.
 
 .. _containers-user-minimal-permit_unclean_start:
 .. envvar:: PERMIT_UNCLEAN_START
 
-   Skip ``rsyslogd -N1`` configuration check when set. By default the configuration is validated.
+   Skip configuration validation when set. By default ``rsyslogd -N1`` validates the configuration.
 
 .. _containers-user-minimal-rsyslog_role:
 .. envvar:: RSYSLOG_ROLE

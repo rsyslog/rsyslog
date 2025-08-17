@@ -30,12 +30,12 @@ Runtime behaviour can be tuned with the following variables:
 .. _containers-user-collector-write_all_file:
 .. envvar:: WRITE_ALL_FILE
 
-   Write all messages to ``/var/log/all.log`` when ``on`` (default).
+   Write all messages to ``/var/log/all.log``. Default ``on``.
 
 .. _containers-user-collector-write_json_file:
 .. envvar:: WRITE_JSON_FILE
 
-   Write JSON formatted messages to ``/var/log/all-json.log`` when ``on`` (default).
+   Write JSON formatted messages to ``/var/log/all-json.log``. Default ``on``.
 
 .. _containers-user-collector-rsyslog_hostname:
 .. envvar:: RSYSLOG_HOSTNAME
