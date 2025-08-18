@@ -41,7 +41,10 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imfile" stateFile="/path/to/state")
+   input(type="imfile"
+         File="/var/log/example.log"
+         Tag="example"
+         stateFile="/path/to/state")
 
 Notes
 -----

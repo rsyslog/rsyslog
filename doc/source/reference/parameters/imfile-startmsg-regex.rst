@@ -40,7 +40,10 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imfile" startmsg.regex="^start")
+   input(type="imfile"
+         File="/var/log/example.log"
+         Tag="example"
+         startmsg.regex="^start")
 
 See also
 --------

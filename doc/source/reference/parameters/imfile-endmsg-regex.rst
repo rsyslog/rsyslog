@@ -50,7 +50,10 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imfile" endmsg.regex="pattern")
+   input(type="imfile"
+         File="/var/log/example.log"
+         Tag="example"
+         endmsg.regex="pattern")
 
 See also
 --------

@@ -37,7 +37,10 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imfile" reopenOnTruncate="on")
+   input(type="imfile"
+         File="/var/log/example.log"
+         Tag="example"
+         reopenOnTruncate="on")
 
 Notes
 -----

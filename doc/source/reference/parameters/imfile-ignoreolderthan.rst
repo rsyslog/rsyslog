@@ -37,7 +37,10 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imfile" ignoreOlderThan="0")
+   input(type="imfile"
+         File="/var/log/example.log"
+         Tag="example"
+         ignoreOlderThan="0")
 
 See also
 --------

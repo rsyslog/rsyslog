@@ -37,7 +37,10 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imfile" needParse="on")
+   input(type="imfile"
+         File="/var/log/example.log"
+         Tag="example"
+         needParse="on")
 
 Notes
 -----

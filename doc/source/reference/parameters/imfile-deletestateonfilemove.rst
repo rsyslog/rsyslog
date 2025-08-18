@@ -50,7 +50,10 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imfile" deleteStateOnFileMove="on")
+   input(type="imfile"
+         File="/var/log/example.log"
+         Tag="example"
+         deleteStateOnFileMove="on")
 
 Notes
 -----

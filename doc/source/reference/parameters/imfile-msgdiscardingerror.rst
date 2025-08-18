@@ -36,7 +36,10 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imfile" msgDiscardingError="on")
+   input(type="imfile"
+         File="/var/log/example.log"
+         Tag="example"
+         msgDiscardingError="on")
 
 Notes
 -----

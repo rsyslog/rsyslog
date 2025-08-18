@@ -43,7 +43,10 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imfile" PersistStateInterval="0")
+   input(type="imfile"
+         File="/var/log/example.log"
+         Tag="example"
+         PersistStateInterval="0")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

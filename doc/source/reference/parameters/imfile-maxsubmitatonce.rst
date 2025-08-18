@@ -38,7 +38,10 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imfile" MaxSubmitAtOnce="1024")
+   input(type="imfile"
+         File="/var/log/example.log"
+         Tag="example"
+         MaxSubmitAtOnce="1024")
 
 See also
 --------

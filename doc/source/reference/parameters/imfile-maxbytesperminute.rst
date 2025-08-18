@@ -38,7 +38,10 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imfile" MaxBytesPerMinute="0")
+   input(type="imfile"
+         File="/var/log/example.log"
+         Tag="example"
+         MaxBytesPerMinute="0")
 
 See also
 --------
