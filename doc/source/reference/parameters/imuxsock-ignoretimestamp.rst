@@ -40,8 +40,8 @@ Input usage
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Historic names/directives for compatibility. Do not use in new configs.
-
 .. _imuxsock.parameter.legacy.inputunixlistensocketignoremsgtimestamp:
+
 - $InputUnixListenSocketIgnoreMsgTimestamp — maps to IgnoreTimestamp (status: legacy)
 
 .. index::

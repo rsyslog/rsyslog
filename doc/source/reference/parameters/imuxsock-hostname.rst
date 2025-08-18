@@ -40,8 +40,8 @@ Input usage
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Historic names/directives for compatibility. Do not use in new configs.
-
 .. _imuxsock.parameter.legacy.inputunixlistensockethostname:
+
 - $InputUnixListenSocketHostName — maps to HostName (status: legacy)
 
 .. index::

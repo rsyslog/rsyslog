@@ -39,7 +39,6 @@ to enable rsyslogd to listen to those sockets even though their directories
 do not yet exist.
 
 .. versionadded:: 4.7.0
-.. versionadded:: 5.3.0
 
 Input usage
 -----------
@@ -53,8 +52,8 @@ Input usage
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Historic names/directives for compatibility. Do not use in new configs.
-
 .. _imuxsock.parameter.legacy.inputunixlistensocketcreatepath:
+
 - $InputUnixListenSocketCreatePath — maps to CreatePath (status: legacy)
 
 .. index::

@@ -31,8 +31,8 @@ setting is vital when writing messages to the systemd journal.
 
 .. seealso::
 
-   See :doc:`omjournal <omjournal>` module documentation for a more
-   in-depth description.
+   See :doc:`omjournal <../../configuration/modules/omjournal>` module
+   documentation for a more in-depth description.
 
 Input usage
 -----------

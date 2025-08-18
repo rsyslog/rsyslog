@@ -43,7 +43,6 @@ Module usage
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Historic names/directives for compatibility. Do not use in new configs.
-
 .. _imuxsock.parameter.legacy.systemlogratelimitinterval:
 
 - $SystemLogRateLimitInterval — maps to SysSock.RateLimit.Interval (status: legacy)

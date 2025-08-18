@@ -45,7 +45,6 @@ Module usage
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Historic names/directives for compatibility. Do not use in new configs.
-
 .. _imuxsock.parameter.legacy.systemlogusesystimestamp:
 
 - $SystemLogUseSysTimeStamp — maps to SysSock.UseSysTimeStamp (status: legacy)

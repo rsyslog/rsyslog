@@ -29,14 +29,11 @@ If ``SysSock.Annotation`` is turned on, create JSON/lumberjack properties
 out of the trusted properties (which can be accessed via |FmtAdvancedName|
 JSON Variables, e.g. ``$!pid``) instead of adding them to the message.
 
-.. versionadded:: 7.2.7
-   |FmtAdvancedName| directive introduced
-
-.. versionadded:: 7.3.8
-   |FmtAdvancedName| directive introduced
-
 .. versionadded:: 6.5.0
-   |FmtObsoleteName| directive introduced
+   As ``$SystemLogParseTrusted``.
+
+.. versionchanged:: 7.2.7
+   Support for the advanced format was added.
 
 Module usage
 ------------
@@ -50,7 +47,6 @@ Module usage
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Historic names/directives for compatibility. Do not use in new configs.
-
 .. _imuxsock.parameter.legacy.systemlogparsetrusted:
 
 - $SystemLogParseTrusted — maps to SysSock.ParseTrusted (status: legacy)
