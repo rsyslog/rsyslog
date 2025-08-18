@@ -72,6 +72,11 @@ Rsyslog is a community-driven open-source project. Contributions are welcome and
 
 If you're working with AI coding agents (e.g. GitHub Copilot, OpenAI Codex), note that we support these workflows with agent-specific instructions in `AGENTS.md`.
 
+**Commit Assistant (recommended):** Draft compliant commit messages with
+https://www.rsyslog.com/tool_rsyslog-commit-assistant (see rules in
+[CONTRIBUTING.md](CONTRIBUTING.md)). Put the substance into the **commit
+message** (amend before PR if needed).
+
 ---
 
 ### AI-Based Code Review (Experimental)
@@ -111,4 +116,4 @@ Third-party contributions, services, and integrations are welcome.
 ---
 
 ## Legal Notice (GDPR)
-Contributions to rsyslog are stored in git history and publicly distributed. Please refer to `CONTRIBUTING.md` for detailed GDPR-related information.
+Contributions to rsyslog are stored in git history and publicly distributed.

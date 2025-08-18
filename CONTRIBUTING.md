@@ -26,7 +26,7 @@ Rsyslog is a real open source project, welcoming contributions of all kinds—fr
 - For experiments, use **draft pull requests**. Close them after testing.
 
 ### Target Branch
-- All PRs must target the `main` branch (not `main`).
+- All PRs must target the `main` branch.
 
 ---
 
@@ -51,6 +51,32 @@ AI-Agent: Codex 2025-06
 ```
 
 This helps us track and evaluate contributions and agent capabilities.
+
+---
+
+## Commit Messages & Commit Assistant
+
+To speed up reviews and keep history consistent, please follow these rules for commit messages. You can use our assistant to generate compliant messages.
+
+- **Commit Assistant (web, for humans):**
+  https://www.rsyslog.com/tool_rsyslog-commit-assistant
+- **Base prompt (canonical, in-repo; for agents/offline):**
+  `ai/rsyslog_commit_assistant/base_prompt.txt`
+
+**Rules (must):**
+- ASCII only.
+- Title ≤ **62** characters; body lines ≤ **72** characters.
+- Title format: `<component>: <concise action>`
+  Examples: `omhttp: migrate to OMODTX`, `docs: clarify imfile wildcards`.
+- Lead with a brief **non-technical “why”** (modernization, maintainability, performance, security, Docker/CI readiness, user value).
+- Include **Impact:** one line when tests or user-visible behavior change.
+- Add a one-line **Before/After** behavior summary.
+- Provide a **technical overview** (conceptual, not line-by-line) in 4–12 lines.
+- Footer with full-URL reference(s):
+  - `Fixes: https://github.com/rsyslog/rsyslog/issues/<id>` (only if conclusively fixed)
+  - otherwise `Refs: https://github.com/rsyslog/rsyslog/issues/<id>`
+
+Do **not** include secrets/tokens or paste sensitive data from diffs.
 
 ---
 
@@ -81,7 +107,7 @@ False positives must be resolved, not ignored. Only in extreme cases use:
 ```c
 #pragma diagnostic push
 #pragma GCC diagnostic ignored "..."
-// ... function
+/* ... function ... */
 #pragma diagnostic pop
 ```
 
@@ -117,3 +143,4 @@ If you use your real identity, note:
 - We cannot delete commits retroactively without damaging project history.
 - Identity data is used only to maintain copyright tracking and audit trails.
 - Public commits may be copied by third parties and redistributed without control.
+

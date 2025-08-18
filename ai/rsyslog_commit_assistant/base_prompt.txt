@@ -38,7 +38,7 @@ WORKFLOW
    - Test changes implying behavior shifts (e.g., retry/duplicates).
    - Config parameter semantics, defaults, deprecations.
    - Packaging/CI/doc changes.
-   If behavior or tests changed OR you suspect risk, output **Findings**
+   If behavior or tests changed OR you suspect risk, output **Findings:**
    with 3–7 bullets (MANDATORY in those cases). Proceed with the commit
    message regardless (do not block output).
 
