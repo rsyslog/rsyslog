@@ -1006,6 +1006,7 @@ TESTS +=  \
 	omhttp-batch-kafkarest.sh \
 	omhttp-batch-lokirest-retry.sh \
 	omhttp-batch-lokirest.sh \
+	omhttp-profile-loki.sh \
 	omhttp-batch-newline.sh \
 	omhttp-retry.sh \
 	omhttp-retry-timeout.sh \
@@ -2748,6 +2749,7 @@ EXTRA_DIST= \
 	omhttp-batch-lokirest-retry.sh \
 	omhttp-batch-lokirest.sh \
 	omhttp-batch-lokirest-vg.sh \
+	omhttp-profile-loki.sh \
 	omhttp-batch-newline.sh \
 	omhttp-batch-retry-metadata.sh \
 	omhttp-retry-timeout.sh \
