@@ -61,6 +61,7 @@ DEF_OMOD_STATIC_DATA;
  * via pData */
 typedef struct _instanceData {
     uchar *server; /* redis server address */
+    uchar *socketPath; /* redis server UDS address (This option only takes effect if the server is not set) */
     int port; /* redis port */
     uchar *serverpassword; /* redis password */
     uchar *tplName; /* template name */
@@ -105,6 +106,7 @@ typedef struct wrkrInstanceData {
 static struct cnfparamdescr actpdescr[] = {
     {"server", eCmdHdlrGetWord, 0},
     {"serverport", eCmdHdlrInt, 0},
+    {"socketpath", eCmdHdlrGetWord, 0},
     {"serverpassword", eCmdHdlrGetWord, 0},
     {"template", eCmdHdlrGetWord, 0},
     {"mode", eCmdHdlrGetWord, 0},
@@ -154,6 +156,9 @@ BEGINfreeInstance
     if (pData->server != NULL) {
         free(pData->server);
     }
+    if (pData->socketPath != NULL) {
+        free(pData->socketPath);
+    }
     free(pData->key);
     free(pData->modeDescription);
     free(pData->serverpassword);
@@ -177,16 +182,41 @@ ENDdbgPrintInstInfo
 /* establish our connection to redis */
 static rsRetVal initHiredis(wrkrInstanceData_t *pWrkrData, int bSilent) {
     char *server;
+    sbool udsAddr = 0;
     redisReply *reply = NULL;
     DEFiRet;
 
-    server = (pWrkrData->pData->server == NULL) ? (char *)"127.0.0.1" : (char *)pWrkrData->pData->server;
-    DBGPRINTF("omhiredis: trying connect to '%s' at port %d\n", server, pWrkrData->pData->port);
+    if (pWrkrData->pData->server != NULL) {
+        server = (char *)pWrkrData->pData->server;
+    } else if (pWrkrData->pData->socketPath != NULL) {
+        udsAddr = 1;
+        server = (char *)pWrkrData->pData->socketPath;
+    } else {
+        server = (char *)"127.0.0.1";
+    }
 
     struct timeval timeout = {1, 500000}; /* 1.5 seconds */
-    pWrkrData->conn = redisConnectWithTimeout(server, pWrkrData->pData->port, timeout);
-    if (pWrkrData->conn->err) {
-        if (!bSilent) LogError(0, RS_RET_SUSPENDED, "can not initialize redis handle");
+    if (udsAddr) {
+        DBGPRINTF("omhiredis: trying connect to UDS socket '%s'\n", server);
+        pWrkrData->conn = redisConnectUnixWithTimeout(server, timeout);
+    } else {
+        DBGPRINTF("omhiredis: trying connect to '%s' at port %d\n", server, pWrkrData->pData->port);
+        pWrkrData->conn = redisConnectWithTimeout(server, pWrkrData->pData->port, timeout);
+    }
+
+    if (pWrkrData->conn == NULL || pWrkrData->conn->err) {
+        if (!bSilent) {
+            const char *err_str = pWrkrData->conn == NULL ? "could not allocate context!" : pWrkrData->conn->errstr;
+            if (udsAddr) {
+                LogError(0, RS_RET_REDIS_ERROR, "omhiredis: can not connect to redis UDS socket '%s' -> %s", server,
+                         err_str);
+            } else {
+                LogError(0, RS_RET_REDIS_ERROR,
+                         "omhiredis: can not connect to redis server '%s', "
+                         "port %d -> %s",
+                         server, pWrkrData->pData->port, err_str);
+            }
+        }
         ABORT_FINALIZE(RS_RET_SUSPENDED);
     }
 
@@ -426,6 +456,7 @@ ENDendTransaction
  * probable just set the default here instead */
 static void setInstParamDefaults(instanceData *pData) {
     pData->server = NULL;
+    pData->socketPath = NULL;
     pData->port = 6379;
     pData->serverpassword = NULL;
     pData->tplName = NULL;
@@ -469,6 +500,8 @@ BEGINnewActInst
             pData->server = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(actpblk.descr[i].name, "serverport")) {
             pData->port = (int)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "socketpath")) {
+            pData->socketPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(actpblk.descr[i].name, "serverpassword")) {
             pData->serverpassword = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(actpblk.descr[i].name, "template")) {
@@ -538,6 +571,13 @@ BEGINnewActInst
                  "omhiredis: no stream.outField set, "
                  "using 'msg' as default");
         pData->streamOutField = ustrdup("msg");
+    }
+
+    if (pData->server != NULL && pData->socketPath != NULL) {
+        LogError(0, RS_RET_CONF_PARSE_WARNING,
+                 "omhiredis: both 'server' and 'socketpath' are set; 'socketpath' will be ignored");
+        free(pData->socketPath);
+        pData->socketPath = NULL;
     }
 
     if (pData->tplName == NULL) {
