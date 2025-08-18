@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/imptcp`.
 
 Description
 -----------
-The legacy octed-counted framing (similar to RFC5425 framing) is
+The legacy octet-counted framing (similar to RFC5425 framing) is
 activated. This is the default and should be left unchanged until you
 know very well what you do. It may be useful to turn it off, if you know
 this framing is not used and some senders emit multi-line messages into
