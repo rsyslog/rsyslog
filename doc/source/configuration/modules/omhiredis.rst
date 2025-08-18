@@ -26,6 +26,7 @@ Configuration Parameters
 
 Action Parameters
 -----------------
+.. _omhiredis_server:
 
 Server
 ^^^^^^
@@ -39,6 +40,18 @@ Server
 
 Name or address of the Redis server
 
+
+SocketPath
+^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+Defines the unix domain socket path to use when trying to connect to Redis. Will be ignored if :ref:`omhiredis_server` is given.
 
 ServerPort
 ^^^^^^^^^^
