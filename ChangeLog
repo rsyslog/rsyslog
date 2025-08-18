@@ -1,5 +1,45 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-08-18: imjournal: fix double sd_journal_close() during thread cancellation
+  When the main thread cancel imjournal thread, the thread exits without
+  setting sd_journal to NULL because sd_journal_close() contain cancel point.
+  This leads to a double free scenario where:
+  1. The thread cancel occurs during sd_journal_close()
+  2. The main thread then calls imjournal's afterrun function
+  3. sd_journal_close() is called again on the already-freed sd_journal
+  Thanks for the patch toxietangxin
+- 2025-08-18: omhttp: migrate to OMODTX; prep for project-supported status
+  Why: Modernize omhttp so HTTP forwarding is viable and maintainable in
+  current deployments (incl. Docker). Align the module with core-supported
+  interfaces, reduce maintenance risk, and pave the way to promote it from
+  contrib to an officially supported module.
+  Technical overview (conceptual):
+  - Switch plugin API from legacy TXIF (doAction) to OMODTX
+    (commitTransaction). Update query entry points accordingly.
+  - Keep beginTransaction for batch init; fold the final flush from
+    endTransaction into commitTransaction per OMODTX.
+  - Preserve external behavior: batching thresholds (maxBatchSize and
+    maxBatchBytes), dynRestPath handling, statistics, and HUP behavior.
+  - In commitTransaction, process all records in one pass and submit
+    batches when thresholds are crossed; non-batch mode posts per record.
+  - Retry test adjusted to tolerate duplicates during migration
+    (omhttp-retry.sh), reflecting current OMODTX replay characteristics.
+  Addresses from #5957:
+  - Core modernization of omhttp to the project’s current module
+    interface, suitable for containerized use cases.
+  - First step toward “project-supported” status by aligning with the
+    supported core API and updating tests.
+  Planned follow-ups (separate commits):
+  - Fix dynRestPath after a batch flush (set new path right after
+    initializeBatch).
+  - Revisit commit/replay semantics to minimize duplicates under retry, or
+    document dup-tolerant behavior and test both modes.
+  - Verify and free batch.restPath and headerBuf; add focused tests (path
+    change mid-batch, maxBatchBytes edges, TLS/gzip, HUP reinit).
+  - Documentation and packaging steps required for “project-supported”
+    status (module docs, release notes, CI/packaging policy).
+  - Evaluate if a compatibility query hook is needed for older cores.
+  see also: https://github.com/rsyslog/rsyslog/issues/5957
 - 2025-08-15: rainerscript: enhanced backticks support ${VAR}
   This implements brace-style env vars inside backticks with `echo` and
   fixes termination of unbraced `$VAR`. Most importantly, variables can
