@@ -830,9 +830,8 @@ static rsRetVal checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg) {
         numMessages = 1;
     }
 
-    // 500+ errors return RS_RET_SUSPENDED if NOT batchMode and should be retried
-    // status 0 is the default and the request failed for some reason, retry this too
-    // 400-499 are malformed input and should not be retried just logged instead
+    // Default classification: retry only on transport failures (0) and 5xx
+    // 3xx/4xx are treated as data failures and will not be retried
     if (statusCode == 0) {
         // request failed, suspend or retry
         STATSCOUNTER_ADD(ctrMessagesFail, mutCtrMessagesFail, numMessages);
@@ -844,10 +843,10 @@ static rsRetVal checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg) {
         STATSCOUNTER_ADD(ctrMessagesFail, mutCtrMessagesFail, numMessages);
         iRet = RS_RET_SUSPENDED;
     } else if (statusCode >= 300) {
-        // redirection or client error, NO suspend nor retry
+        // redirection or client error, do NOT retry by default
         STATSCOUNTER_INC(ctrHttpStatusFail, mutCtrHttpStatusFail);
         STATSCOUNTER_ADD(ctrMessagesFail, mutCtrMessagesFail, numMessages);
-        iRet = RS_RET_SUSPENDED;
+        iRet = RS_RET_DATAFAIL;
 
         if (statusCode >= 300 && statusCode < 400) {
             STATSCOUNTER_INC(pData->ctrHttpRequestsStatus3xx, pData->mutCtrHttpRequestsStatus3xx);
@@ -903,7 +902,7 @@ static rsRetVal checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg) {
             }
         }
         if (bMatch) {
-            /* just force retry */
+            /* force retry */
             iRet = RS_RET_SUSPENDED;
         } else {
             iRet = RS_RET_OK;
@@ -939,7 +938,6 @@ static rsRetVal checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg) {
                            "some messages may be lost");
                 }
             }
-            iRet = RS_RET_OK;  // We've done all we can tell rsyslog to carry on
         }
     }
 

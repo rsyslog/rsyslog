@@ -15,7 +15,7 @@ module(load="../contrib/omhttp/.libs/omhttp")
 main_queue(queue.dequeueBatchSize="2048")
 
 template(name="tpl" type="string"
-	 string="{\"msgnum\":\"%msg:F,58:2%\"}")
+	 string="{\"stream\": {\"host\": \"%HOSTNAME%\"}, \"values\":[[\"%timegenerated:::date-unixtimestamp%000000000\", \"%msg%\"]]}")
 
 # Echo message as-is for retry
 template(name="tpl_echo" type="string" string="%msg%")

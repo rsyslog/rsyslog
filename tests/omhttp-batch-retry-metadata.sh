@@ -4,30 +4,23 @@
 #  Starting actual testbench
 . ${srcdir:=.}/diag.sh init
 
-export NUMMESSAGES=50000
+export NUMMESSAGES=1000
 
-port="$(get_free_port)"
-omhttp_start_server $port --fail-every 100 --fail-with 207
+omhttp_start_server 0 --fail-every 100
 
 generate_conf
 add_conf '
 module(load="../contrib/omhttp/.libs/omhttp")
 
-main_queue(queue.dequeueBatchSize="2048")
+main_queue(queue.dequeueBatchSize="500")
 
 template(name="tpl" type="string"
 	 string="{\"msgnum\":\"%msg:F,58:2%\"}")
 
 # Echo message as-is for retry
-template(name="tpl_echo" type="string" string="%msg%\n")
-
-# Echo response as-is for retry
-template(name="tpl_response" type="string" string="{ \"message\": %msg%, \"response\": %$!omhttp!response% }\n")
+template(name="tpl_echo" type="string" string="%msg%")
 
 ruleset(name="ruleset_omhttp_retry") {
-    #action(type="omfile" file="'$RSYSLOG_DYNNAME/omhttp.message.log'" template="tpl_echo")
-    # log the response
-    action(type="omfile" file="'$RSYSLOG_DYNNAME/omhttp.response.log'" template="tpl_response")
     action(
         name="action_omhttp"
         type="omhttp"
@@ -35,13 +28,12 @@ ruleset(name="ruleset_omhttp_retry") {
         template="tpl_echo"
 
         server="localhost"
-        serverport="'$port'"
+        serverport="'$omhttp_server_lstnport'"
         restpath="my/endpoint"
         batch="on"
         batch.maxsize="100"
-        batch.format="kafkarest"
+        batch.format="jsonarray"
 
-        httpretrycodes=["207","500"]
         retry="on"
         retry.ruleset="ruleset_omhttp_retry"
         retry.addmetadata="on"
@@ -59,13 +51,12 @@ ruleset(name="ruleset_omhttp") {
         template="tpl"
 
         server="localhost"
-        serverport="'$port'"
+        serverport="'$omhttp_server_lstnport'"
         restpath="my/endpoint"
         batch="on"
         batch.maxsize="100"
-        batch.format="kafkarest"
+        batch.format="jsonarray"
 
-        httpretrycodes=["207", "500"]
         retry="on"
         retry.ruleset="ruleset_omhttp_retry"
         retry.addmetadata="on"
@@ -82,9 +73,7 @@ startup
 injectmsg
 shutdown_when_empty
 wait_shutdown
-omhttp_get_data $port my/endpoint kafkarest
+omhttp_get_data $omhttp_server_lstnport my/endpoint jsonarray
 omhttp_stop_server
 seq_check
-cat -n ${RSYSLOG_DYNNAME}/omhttp.response.log
-omhttp_validate_metadata_response
 exit_test

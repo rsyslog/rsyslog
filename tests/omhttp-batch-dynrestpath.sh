@@ -4,9 +4,7 @@
 #  Starting actual testbench
 . ${srcdir:=.}/diag.sh init
 
-export NUMMESSAGES=10000
-export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
-export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"
+export NUMMESSAGES=50000
 
 omhttp_start_server 0
 
@@ -14,9 +12,10 @@ generate_conf
 add_conf '
 template(name="tpl" type="string"
 	 string="{\"msgnum\":\"%msg:F,58:2%\"}")
-template(name="dynrestpath" type="string" string="my/endpoint")
 
 module(load="../contrib/omhttp/.libs/omhttp")
+
+main_queue(queue.dequeueBatchSize="2048")
 
 if $msg contains "msgnum:" then
 	action(
@@ -28,12 +27,11 @@ if $msg contains "msgnum:" then
 
 		server="localhost"
 		serverport="'$omhttp_server_lstnport'"
-		dynrestpath = "on"
-		restpath="dynrestpath"
-
+		restpath="tpl"
+		dynrestpath="on"
 		batch="on"
-		batch.format="jsonarray"
-		batch.maxsize="1000"
+		batch.format="newline"
+		batch.maxsize="100"
 
 		# Auth
 		usehttps="off"
@@ -43,7 +41,7 @@ startup
 injectmsg
 shutdown_when_empty
 wait_shutdown
-omhttp_get_data $omhttp_server_lstnport my/endpoint jsonarray
+omhttp_get_data $omhttp_server_lstnport 0 msgnum
 omhttp_stop_server
 seq_check
 exit_test

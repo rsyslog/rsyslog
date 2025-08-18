@@ -4,24 +4,22 @@
 #  Starting actual testbench
 . ${srcdir:=.}/diag.sh init
 
-export NUMMESSAGES=10000
-export SEQ_CHECK_OPTIONS="-d"
+print_info "This testbench is generic only. A more specific one may be present."
 
-omhttp_start_server 0 --fail-every 1000
+export NUMMESSAGES=10000
+
+omhttp_start_server 0 --fail-every 100
 
 generate_conf
 add_conf '
-module(load="../contrib/omhttp/.libs/omhttp")
-
-main_queue(queue.dequeueBatchSize="2048")
-
 template(name="tpl" type="string"
 	 string="{\"msgnum\":\"%msg:F,58:2%\"}")
+
+module(load="../contrib/omhttp/.libs/omhttp")
 
 if $msg contains "msgnum:" then
 	action(
 		# Payload
-		action.resumeRetryCount="-1"
 		name="my_http_action"
 		type="omhttp"
 		errorfile="'$RSYSLOG_DYNNAME/omhttp.error.log'"
@@ -30,12 +28,14 @@ if $msg contains "msgnum:" then
 		server="localhost"
 		serverport="'$omhttp_server_lstnport'"
 		restpath="my/endpoint"
-		checkpath="ping"
 		batch="off"
+
+		# Note: this still exercises the legacy retry.ruleset path in test server; keep for compatibility
+		retry="on"
 
 		# Auth
 		usehttps="off"
-  )
+    )
 '
 startup
 injectmsg

@@ -4,9 +4,9 @@
 #  Starting actual testbench
 . ${srcdir:=.}/diag.sh init
 
-export NUMMESSAGES=1000
+export NUMMESSAGES=10000
 
-omhttp_start_server 0
+omhttp_start_server 0 --fail-every 100
 
 generate_conf
 add_conf '
@@ -22,13 +22,11 @@ if $msg contains "msgnum:" then
 		type="omhttp"
 		errorfile="'$RSYSLOG_DYNNAME/omhttp.error.log'"
 		template="tpl"
-		httpheaders=[
-			"X-Insert-Key: dummy-value",
-			"X-Event-Source: logs"
-		]
+
 		server="localhost"
 		serverport="'$omhttp_server_lstnport'"
 		restpath="my/endpoint"
+		httpheaders=["X-Header-1: value 1", "X-Header-2: value 2"]
 		batch="off"
 
 		# Auth

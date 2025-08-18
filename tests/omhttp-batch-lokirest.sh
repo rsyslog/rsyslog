@@ -10,31 +10,62 @@ omhttp_start_server 0
 
 generate_conf
 add_conf '
-template(name="tpl" type="string"
-	 string="{\"msgnum\":\"%msg:F,58:2%\"}")
-
 module(load="../contrib/omhttp/.libs/omhttp")
 
 main_queue(queue.dequeueBatchSize="2048")
 
+template(name="tpl" type="string"
+	 string="{\"stream\": {\"host\": \"%HOSTNAME%\"}, \"values\":[[\"%timegenerated:::date-unixtimestamp%000000000\", \"%msg%\"]]}")
+
+# Echo message as-is for retry
+template(name="tpl_echo" type="string" string="%msg%")
+
+ruleset(name="ruleset_omhttp_retry") {
+    action(
+        name="action_omhttp"
+        type="omhttp"
+        errorfile="'$RSYSLOG_DYNNAME/omhttp.error.log'"
+        template="tpl_echo"
+
+        server="localhost"
+        serverport="'$omhttp_server_lstnport'"
+        restpath="my/endpoint"
+        batch="on"
+        batch.maxsize="100"
+        batch.format="lokirest"
+
+        retry="on"
+        retry.ruleset="ruleset_omhttp_retry"
+
+        # Auth
+        usehttps="off"
+    ) & stop
+}
+
+ruleset(name="ruleset_omhttp") {
+    action(
+        name="action_omhttp"
+        type="omhttp"
+        errorfile="'$RSYSLOG_DYNNAME/omhttp.error.log'"
+        template="tpl"
+
+        server="localhost"
+        serverport="'$omhttp_server_lstnport'"
+        restpath="my/endpoint"
+        batch="on"
+        batch.maxsize="100"
+        batch.format="lokirest"
+
+        retry="on"
+        retry.ruleset="ruleset_omhttp_retry"
+
+        # Auth
+        usehttps="off"
+    ) & stop
+}
+
 if $msg contains "msgnum:" then
-	action(
-		# Payload
-		name="my_http_action"
-		type="omhttp"
-		errorfile="'$RSYSLOG_DYNNAME/omhttp.error.log'"
-		template="tpl"
-
-		server="localhost"
-		serverport="'$omhttp_server_lstnport'"
-		restpath="my/endpoint"
-		batch="on"
-		batch.format="lokirest"
-		batch.maxsize="100"
-
-		# Auth
-		usehttps="off"
-    )
+    call ruleset_omhttp
 '
 startup
 injectmsg
