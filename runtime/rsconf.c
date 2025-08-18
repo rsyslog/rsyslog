@@ -132,6 +132,8 @@ static uchar template_StdClickHouseFmt[] =
     "\"INSERT INTO rsyslog.SystemEvents (severity, facility, "
     "timestamp, hostname, tag, message) VALUES (%syslogseverity%, %syslogfacility%, "
     "'%timereported:::date-unixtimestamp%', '%hostname%', '%syslogtag%', '%msg%')\",STDSQL";
+static uchar template_StdOmSenderTrack_senderid[] =
+    "\"%fromhost-ip%\""; /* default template for omsendertrack "senderid" parameter*/
 /* end templates */
 
 /* tables for interfacing with the v6 config system (as far as we need to) */
@@ -1329,6 +1331,8 @@ static rsRetVal initLegacyConf(void) {
     tplAddLine(ourConf, " FullJSONFmt", &pTmp);
     pTmp = template_StdClickHouseFmt;
     tplAddLine(ourConf, " StdClickHouseFmt", &pTmp);
+    pTmp = template_StdOmSenderTrack_senderid;
+    tplAddLine(ourConf, " StdOmSenderTrack-senderid", &pTmp);
     pTmp = template_spoofadr;
     tplLastStaticInit(ourConf, tplAddLine(ourConf, "RSYSLOG_omudpspoofDfltSourceTpl", &pTmp));
 
