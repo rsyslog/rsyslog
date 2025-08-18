@@ -728,20 +728,28 @@ static void genMsg(char *buf, size_t maxBuf, size_t *pLenBuf, struct instdata *i
         *pLenBuf = snprintf(buf, maxBuf, "%s%c", MsgToSend, frameDelim);
     }
     if (octateCountFramed == 1) {
+        size_t actual_len;
+
         /* when using octet-counted framing, omit the delimiter from the
          * payload itself. the delimiter is included in the default message
          * format to support traditional plain TCP framing. remove it here
          * before we prefix the payload length. */
-        if (*pLenBuf > 0 && buf[*pLenBuf - 1] == frameDelim) {
-            --(*pLenBuf);
-            buf[*pLenBuf] = '\0';
+        actual_len = *pLenBuf;
+        if (actual_len > 0 && buf[actual_len - 1] == frameDelim) {
+            buf[--actual_len] = '\0';
         }
 
-        snprintf(payloadLen, sizeof(payloadLen), "%zu ", *pLenBuf);
-        payloadStringLen = strlen(payloadLen);
-        memmove(buf + payloadStringLen, buf, *pLenBuf);
+        payloadStringLen = snprintf(payloadLen, sizeof(payloadLen), "%zu ", actual_len);
+        if (payloadStringLen < 0 || payloadStringLen >= sizeof(payloadLen)) {
+            fprintf(stderr,
+                    "tcpflood: payloadLen buffer too short or error - cannot continue "
+                    "(internal error), snprintf return %d\n",
+                    payloadStringLen);
+            exit(1);
+        }
+        memmove(buf + payloadStringLen, buf, actual_len);
         memcpy(buf, payloadLen, payloadStringLen);
-        *pLenBuf += payloadStringLen;
+        *pLenBuf = actual_len + payloadStringLen;
     }
     ++inst->numSent;
 
