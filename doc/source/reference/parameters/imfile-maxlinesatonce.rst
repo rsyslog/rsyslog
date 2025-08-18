@@ -42,7 +42,10 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imfile" MaxLinesAtOnce="0")
+   input(type="imfile"
+         File="/var/log/example.log"
+         Tag="example"
+         MaxLinesAtOnce="0")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

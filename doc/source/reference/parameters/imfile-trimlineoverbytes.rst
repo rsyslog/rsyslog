@@ -38,7 +38,10 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imfile" trimLineOverBytes="0")
+   input(type="imfile"
+         File="/var/log/example.log"
+         Tag="example"
+         trimLineOverBytes="0")
 
 See also
 --------

@@ -53,7 +53,10 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imfile" readTimeout="0")
+   input(type="imfile"
+         File="/var/log/example.log"
+         Tag="example"
+         readTimeout="0")
 
 Notes
 -----

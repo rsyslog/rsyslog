@@ -46,7 +46,10 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imfile" escapeLF="on" escapeLF.replacement="[LF]")
+   input(type="imfile"
+         File="/var/log/example.log"
+         Tag="example"
+         escapeLF="on" escapeLF.replacement="[LF]")
 
 See also
 --------

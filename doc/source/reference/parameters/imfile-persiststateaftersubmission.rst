@@ -38,7 +38,10 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imfile" persistStateAfterSubmission="on")
+   input(type="imfile"
+         File="/var/log/example.log"
+         Tag="example"
+         persistStateAfterSubmission="on")
 
 Notes
 -----

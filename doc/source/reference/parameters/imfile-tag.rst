@@ -37,7 +37,9 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imfile" Tag="app:")
+   input(type="imfile"
+         File="/var/log/example.log"
+         Tag="app:")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

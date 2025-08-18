@@ -42,7 +42,10 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imfile" readMode="0")
+   input(type="imfile"
+         File="/var/log/example.log"
+         Tag="example"
+         readMode="0")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

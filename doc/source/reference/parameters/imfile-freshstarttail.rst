@@ -47,7 +47,10 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imfile" freshStartTail="on")
+   input(type="imfile"
+         File="/var/log/example.log"
+         Tag="example"
+         freshStartTail="on")
 
 Notes
 -----

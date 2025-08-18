@@ -37,7 +37,10 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imfile" discardTruncatedMsg="on")
+   input(type="imfile"
+         File="/var/log/example.log"
+         Tag="example"
+         discardTruncatedMsg="on")
 
 Notes
 -----

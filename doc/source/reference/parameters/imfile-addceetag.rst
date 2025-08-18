@@ -36,7 +36,10 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imfile" addCeeTag="on")
+   input(type="imfile"
+         File="/var/log/example.log"
+         Tag="example"
+         addCeeTag="on")
 
 Notes
 -----

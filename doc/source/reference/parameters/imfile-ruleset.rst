@@ -35,7 +35,10 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="imfile" Ruleset="myrules")
+   input(type="imfile"
+         File="/var/log/example.log"
+         Tag="example"
+         Ruleset="myrules")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
