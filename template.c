@@ -154,6 +154,7 @@ rsRetVal tplToString(struct template *__restrict__ const pTpl,
         if (iLenVal >= (rs_size_t)iparam->lenBuf) /* we reserve one char for the final \0! */
             CHKiRet(ExtendBuf(iparam, iLenVal + 1));
         memcpy(iparam->param, pVal, iLenVal + 1);
+        iparam->lenStr = iLenVal;
         FINALIZE;
     }
 
