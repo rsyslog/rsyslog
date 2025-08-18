@@ -1561,6 +1561,7 @@ TESTS +=  \
 	sndrcv_tls_ossl_certvalid_tlscommand.sh \
 	sndrcv_tls_ossl_certvalid_ciphers.sh \
 	sndrcv_tls_ossl_certvalid_revoked.sh \
+	sndrcv_tls_ossl_intermediate_ca_chain.sh \
 	imtcp-tls-ossl-x509valid.sh \
 	imtcp-tls-ossl-x509name.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \
@@ -3165,6 +3166,7 @@ EXTRA_DIST= \
 	sndrcv_tls_gtls_serveranon_ossl_clientanon.sh \
 	sndrcv_tls_client_missing_cert.sh \
 	sndrcv_ossl_cert_chain.sh \
+	sndrcv_tls_ossl_intermediate_ca_chain.sh \
 	omtcl.sh \
 	omtcl.tcl \
 	pmsnare-default.sh \

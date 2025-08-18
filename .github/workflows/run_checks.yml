@@ -69,7 +69,8 @@ jobs:
           case "${{ matrix.config }}" in
           'centos_7')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_centos:7'
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--disable-elasticsearch-tests --disable-kafka-tests --disable-snmp-tests'
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
+                     --disable-kafka-tests --disable-snmp-tests"
               export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
               ;;
           'centos_8')
@@ -131,7 +132,8 @@ jobs:
               # TODO: enable disabled components when the issues are fixed
               # It is better to run at least the majority of checks than to postpone that
               # any longer. 2025-01-31 RGerhards
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--enable-omazureeventhubs --enable-imdtls --enable-omdtls --disable-omamqp1 --disable-snmp --disable-elasticsearch-tests"
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--enable-omazureeventhubs --enable-imdtls \
+                     --enable-omdtls --disable-omamqp1 --disable-snmp --disable-elasticsearch-tests"
               ;;
           'ubuntu_22_distcheck')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
@@ -155,7 +157,8 @@ jobs:
               ;;
           'ubuntu_24_tsan')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
-              export CI_MAKE_CHECK_OPT='-j2' # This is CPU-heavy due to tsan, so we need less concurrency to prevent flakes
+              # This is CPU-heavy due to tsan, so we need less concurrency to prevent flakes
+              export CI_MAKE_CHECK_OPT='-j2'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
               export CI_SANITIZE_BLACKLIST='tests/tsan.supp'
               export CC='clang'
