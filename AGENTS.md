@@ -79,8 +79,8 @@ There are no strict naming rules, but these conventions are used frequently:
 ## Coding Standards
 
   - Commit messages **must include all relevant information**, not just in the PR
-  - Commit message titles **must not exceed 65 characters** (aim for 62)
-  - commit message text must be plain US ASCII, line length must not exceed 86 characters
+  - Commit message titles **must not exceed 62 characters**
+  - commit message text must be plain US ASCII, line length must not exceed 72 characters
   - When referencing GitHub issues, use the **full GitHub URL** to assist in `git log`-based reviews
   - Favor **self-documenting code** over excessive inline comments
   - Public functions should use Doxygen-style comments
@@ -352,6 +352,9 @@ If you are an AI agent contributing code or documentation:
       - Note any impact on existing versions or behaviors (especially for bug fixes).
   - Commit message descriptions should clearly identify that they were generated or co-authored by an AI tool.
   - Include a **commit footer tag** like "AI-Agent: Codex"
+  - **Use the canonical commit-message base prompt** to draft/lint messages (ASCII, 62/72 wrap, `<component>:` title, non-tech “why”, Impact, Before/After, full-URL Fixes/Refs):
+    ai/rsyslog_commit_assistant/base_prompt.txt
+  - **Commit-first:** ensure the substance is in the commit body (not only the PR). If needed, amend before opening the PR (`git commit --amend`).
 
 -----
 
