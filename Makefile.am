@@ -118,6 +118,10 @@ if ENABLE_OMMONGODB
 SUBDIRS += plugins/ommongodb
 endif
 
+if ENABLE_OMSENTINEL
+SUBDIRS += plugins/omsentinel
+endif
+
 if ENABLE_OMHIREDIS
 SUBDIRS += contrib/omhiredis
 endif
@@ -440,6 +444,10 @@ endif
 
 if ENABLE_OMMONGODB
 DISTCHECK_CONFIGURE_FLAGS+= --enable-ommongodb
+endif
+
+if ENABLE_OMSENTINEL
+DISTCHECK_CONFIGURE_FLAGS+= --enable-omsentinel
 endif
 
 if ENABLE_OMHIREDIS
