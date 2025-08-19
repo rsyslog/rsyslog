@@ -203,8 +203,8 @@ struct queue_s {
         cryprov_if_t cryprov; /* ptr to crypto provider interface */
         void *cryprovData; /* opaque data ptr for provider use */
         uchar *cryprovNameFull; /* full internal crypto provider name */
-        DEF_ATOMIC_HELPER_MUT(mutQueueSize)
-        DEF_ATOMIC_HELPER_MUT(mutLogDeq)
+        DEF_ATOMIC_HELPER_MUT(mutQueueSize);
+        DEF_ATOMIC_HELPER_MUT(mutLogDeq);
         /* for statistics subsystem */
         statsobj_t *statsobj;
         STATSCOUNTER_DEF(ctrEnqueued, mutCtrEnqueued)

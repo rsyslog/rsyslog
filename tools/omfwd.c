@@ -78,8 +78,8 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(netstrms) DEFobjCurrIf(netstrm
     statsobj_t *stats;
     intctr_t sentBytes;
     intctr_t sentMsgs;
-    DEF_ATOMIC_HELPER_MUT64(mut_sentBytes)
-    DEF_ATOMIC_HELPER_MUT64(mut_sentMsgs)
+    DEF_ATOMIC_HELPER_MUT64(mut_sentBytes);
+    DEF_ATOMIC_HELPER_MUT64(mut_sentMsgs);
 } targetStats_t;
 
 typedef struct _instanceData {

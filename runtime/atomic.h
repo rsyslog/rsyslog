@@ -203,9 +203,9 @@ static inline void ATOMIC_SUB_unsigned(unsigned *data, int val, pthread_mutex_t 
     (*data) -= val;
     pthread_mutex_unlock(phlpmut);
 }
-    #define DEF_ATOMIC_HELPER_MUT(x) pthread_mutex_t x;
-    #define INIT_ATOMIC_HELPER_MUT(x) pthread_mutex_init(&(x), NULL);
-    #define DESTROY_ATOMIC_HELPER_MUT(x) pthread_mutex_destroy(&(x));
+    #define DEF_ATOMIC_HELPER_MUT(x) pthread_mutex_t x
+    #define INIT_ATOMIC_HELPER_MUT(x) pthread_mutex_init(&(x), NULL)
+    #define DESTROY_ATOMIC_HELPER_MUT(x) pthread_mutex_destroy(&(x))
 
     #define PREFER_ATOMIC_INC(data) ((void)++data)
     #define PREFER_FETCH_32BIT(data) ((unsigned)(data))
@@ -254,7 +254,7 @@ static inline unsigned ATOMIC_INC_AND_FETCH_uint64(uint64 *data, pthread_mutex_t
     return (val);
 }
 
-    #define DEF_ATOMIC_HELPER_MUT64(x) pthread_mutex_t x;
+    #define DEF_ATOMIC_HELPER_MUT64(x) pthread_mutex_t x
     #define INIT_ATOMIC_HELPER_MUT64(x) pthread_mutex_init(&(x), NULL)
     #define DESTROY_ATOMIC_HELPER_MUT64(x) pthread_mutex_destroy(&(x))
 #endif /* #ifdef HAVE_ATOMIC_BUILTINS64 */

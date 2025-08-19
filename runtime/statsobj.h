@@ -203,7 +203,7 @@ void checkGoneAwaySenders(time_t);
  */
 #define STATSCOUNTER_DEF(ctr, mut) \
     intctr_t ctr;                  \
-    DEF_ATOMIC_HELPER_MUT64(mut)
+    DEF_ATOMIC_HELPER_MUT64(mut);
 
 #define STATSCOUNTER_INIT(ctr, mut) \
     INIT_ATOMIC_HELPER_MUT64(mut);  \
