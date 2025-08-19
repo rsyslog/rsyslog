@@ -36,7 +36,7 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
 Module Parameters
 -----------------
@@ -48,588 +48,150 @@ Module Parameters
    details.
 
 
-SysSock.IgnoreTimestamp
-^^^^^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "on", "no", "``$SystemLogSocketIgnoreMsgTimestamp``"
-
-Ignore timestamps included in the messages, applies to messages received via
-the system log socket.
-
-
-SysSock.IgnoreOwnMessages
-^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "on", "no", "none"
-
-Ignores messages that originated from the same instance of rsyslogd.
-There usually is no reason to receive messages from ourselves. This
-setting is vital when writing messages to the systemd journal.
-
-.. versionadded:: 7.3.7
-
-.. seealso::
-
-   See :doc:`omjournal <omjournal>` module documentation for a more
-   in-depth description.
-
-
-SysSock.Use
-^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "on", "no", "``$OmitLocalLogging``"
-
-Listen on the default local log socket (``/dev/log``) or, if provided, use
-the log socket value assigned to the ``SysSock.Name`` parameter instead
-of the default. This is most useful if you run multiple instances of
-rsyslogd where only one shall handle the system log socket.  Unless
-disabled by the ``SysSock.Unlink`` setting, this socket is created
-upon rsyslog startup and deleted upon shutdown, according to
-traditional syslogd behavior.
-
-The behavior of this parameter is different for systemd systems. For those
-systems, ``SysSock.Use`` still needs to be enabled, but the value of
-``SysSock.Name`` is ignored and the socket provided by systemd is used
-instead. If this parameter is *not* enabled, then imuxsock will only be
-of use if a custom input is configured.
-
-See the :ref:`imuxsock-systemd-details-label` section for details.
-
-
-SysSock.Name
-^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "/dev/log", "no", "``$SystemLogSocketName``"
-
-Specifies an alternate log socket to be used instead of the default system
-log socket, traditionally ``/dev/log``. Unless disabled by the
-``SysSock.Unlink`` setting, this socket is created upon rsyslog startup
-and deleted upon shutdown, according to traditional syslogd behavior.
-
-The behavior of this parameter is different for systemd systems. See the
- :ref:`imuxsock-systemd-details-label` section for details.
-
-
-SysSock.FlowControl
-^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "``$SystemLogFlowControl``"
-
-Specifies if flow control should be applied to the system log socket.
-
-
-SysSock.UsePIDFromSystem
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "``$SystemLogUsePIDFromSystem``"
-
-Specifies if the pid being logged shall be obtained from the log socket
-itself. If so, the TAG part of the message is rewritten. It is recommended
-to turn this option on, but the default is "off" to keep compatible
-with earlier versions of rsyslog.
-
-.. versionadded:: 5.7.0
-
-
-SysSock.RateLimit.Interval
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "max", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "0", "", "no", "``$SystemLogRateLimitInterval``"
-
-Specifies the rate-limiting interval in seconds. Default value is 0,
-which turns off rate limiting. Set it to a number of seconds (5
-recommended) to activate rate-limiting. The default of 0 has been
-chosen as people experienced problems with this feature activated
-by default. Now it needs an explicit opt-in by setting this parameter.
-
-
-SysSock.RateLimit.Burst
-^^^^^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "max", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "200", "(2^31)-1", "no", "``$SystemLogRateLimitBurst``"
-
-Specifies the rate-limiting burst in number of messages.
-
-.. versionadded:: 5.7.1
-
-
-SysSock.RateLimit.Severity
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "max", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "1", "", "no", "``$SystemLogRateLimitSeverity``"
-
-Specifies the severity of messages that shall be rate-limited.
-
-.. seealso::
-
-   https://en.wikipedia.org/wiki/Syslog#Severity_level
-
-
-SysSock.UseSysTimeStamp
-^^^^^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "on", "no", "``$SystemLogUseSysTimeStamp``"
-
-The same as the input parameter ``UseSysTimeStamp``, but for the system log
-socket. This parameter instructs ``imuxsock`` to obtain message time from
-the system (via control messages) instead of using time recorded inside
-the message. This may be most useful in combination with systemd. Due to
-the usefulness of this functionality, we decided to enable it by default.
-As such, the behavior is slightly different than previous versions.
-However, we do not see how this could negatively affect existing environments.
-
-.. versionadded:: 5.9.1
-
-
-SysSock.Annotate
-^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "``$SystemLogSocketAnnotate``"
-
-Turn on annotation/trusted properties for the system log socket. See
-the :ref:`imuxsock-trusted-properties-label` section for more info.
-
-
-SysSock.ParseTrusted
-^^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "``$SystemLogParseTrusted``"
-
-If ``SysSock.Annotation`` is turned on, create JSON/lumberjack properties
-out of the trusted properties (which can be accessed via |FmtAdvancedName|
-JSON Variables, e.g. ``$!pid``) instead of adding them to the message.
-
-.. versionadded:: 7.2.7
-   |FmtAdvancedName| directive introduced
-
-.. versionadded:: 7.3.8
-   |FmtAdvancedName| directive introduced
-
-.. versionadded:: 6.5.0
-   |FmtObsoleteName| directive introduced
-
-
-SysSock.Unlink
-^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "on", "no", "none"
-
-If turned on (default), the system socket is unlinked and re-created
-when opened and also unlinked when finally closed. Note that this
-setting has no effect when running under systemd control (because
-systemd handles the socket. See the :ref:`imuxsock-systemd-details-label`
-section for details.
-
-.. versionadded:: 7.3.9
-
-
-SysSock.UseSpecialParser
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "on", "no", "none"
-
-The equivalent of the ``UseSpecialParser`` input parameter, but
-for the system socket. If turned on (the default) a special parser is
-used that parses the format that is usually used
-on the system log socket (the one :manpage:`syslog(3)` creates). If set to
-"off", the regular parser chain is used, in which case the format on the
-log socket can be arbitrary.
-
-.. note::
-
-   When the special parser is used, rsyslog is able to inject a more precise
-   timestamp into the message (it is obtained from the log socket). If the
-   regular parser chain is used, this is not possible.
-
-.. versionadded:: 8.9.0
-   The setting was previously hard-coded "on"
-
-
-SysSock.ParseHostname
-^^^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "none"
-
-.. note::
-
-   This option only has an effect if ``SysSock.UseSpecialParser`` is
-   set to "off".
-
-Normally, the local log sockets do *not* contain hostnames. If set
-to on, parsers will expect hostnames just like in regular formats. If
-set to off (the default), the parser chain is instructed to not expect
-them.
-
-.. versionadded:: 8.9.0
-
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Parameter
+     - Summary
+   * - :ref:`param-imuxsock-syssock-ignoretimestamp`
+     - .. include:: ../../reference/parameters/imuxsock-syssock-ignoretimestamp.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-syssock-ignoreownmessages`
+     - .. include:: ../../reference/parameters/imuxsock-syssock-ignoreownmessages.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-syssock-use`
+     - .. include:: ../../reference/parameters/imuxsock-syssock-use.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-syssock-name`
+     - .. include:: ../../reference/parameters/imuxsock-syssock-name.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-syssock-flowcontrol`
+     - .. include:: ../../reference/parameters/imuxsock-syssock-flowcontrol.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-syssock-usepidfromsystem`
+     - .. include:: ../../reference/parameters/imuxsock-syssock-usepidfromsystem.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-syssock-ratelimit-interval`
+     - .. include:: ../../reference/parameters/imuxsock-syssock-ratelimit-interval.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-syssock-ratelimit-burst`
+     - .. include:: ../../reference/parameters/imuxsock-syssock-ratelimit-burst.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-syssock-ratelimit-severity`
+     - .. include:: ../../reference/parameters/imuxsock-syssock-ratelimit-severity.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-syssock-usesystimestamp`
+     - .. include:: ../../reference/parameters/imuxsock-syssock-usesystimestamp.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-syssock-annotate`
+     - .. include:: ../../reference/parameters/imuxsock-syssock-annotate.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-syssock-parsetrusted`
+     - .. include:: ../../reference/parameters/imuxsock-syssock-parsetrusted.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-syssock-unlink`
+     - .. include:: ../../reference/parameters/imuxsock-syssock-unlink.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-syssock-usespecialparser`
+     - .. include:: ../../reference/parameters/imuxsock-syssock-usespecialparser.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-syssock-parsehostname`
+     - .. include:: ../../reference/parameters/imuxsock-syssock-parsehostname.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 Input Parameters
 ----------------
 
-Ruleset
-^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "default ruleset", "no", "none"
-
-Binds specified ruleset to this input. If not set, the default
-ruleset is bound.
-
-.. versionadded:: 8.17.0
-
-
-IgnoreTimestamp
-^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "on", "no", "``$InputUnixListenSocketIgnoreMsgTimestamp``"
-
-Ignore timestamps included in messages received from the input being
-defined.
-
-
-IgnoreOwnMessages
-^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "on", "no", "none"
-
-Ignore messages that originated from the same instance of rsyslogd.
-There usually is no reason to receive messages from ourselves. This
-setting is vital when writing messages to the systemd journal.
-
-.. versionadded:: 7.3.7
-
-.. seealso::
-
-   See :doc:`omjournal <omjournal>` module documentation for a more
-   in-depth description.
-
-
-
-
-FlowControl
-^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "``$InputUnixListenSocketFlowControl``"
-
-Specifies if flow control should be applied to the input being defined.
-
-
-RateLimit.Interval
-^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "max", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "0", "", "no", "``$IMUXSockRateLimitInterval``"
-
-Specifies the rate-limiting interval in seconds. Default value is 0, which
-turns off rate limiting. Set it to a number of seconds (5 recommended)
-to activate rate-limiting. The default of 0 has been chosen as people
-experienced problems with this feature activated by default. Now it
-needs an explicit opt-in by setting this parameter.
-
-
-RateLimit.Burst
-^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "max", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "200", "(2^31)-1", "no", "``$IMUXSockRateLimitBurst``"
-
-Specifies the rate-limiting burst in number of messages.
-
-.. versionadded:: 5.7.1
-
-
-RateLimit.Severity
-^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "max", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "1", "", "no", "``$IMUXSockRateLimitSeverity``"
-
-Specifies the severity of messages that shall be rate-limited.
-
-.. seealso::
-
-   https://en.wikipedia.org/wiki/Syslog#Severity_level
-
-
-UsePIDFromSystem
-^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "``$InputUnixListenSocketUsePIDFromSystem``"
-
-Specifies if the pid being logged shall be obtained from the log socket
-itself. If so, the TAG part of the message is rewritten. It is
-recommended to turn this option on, but the default is "off" to keep
-compatible with earlier versions of rsyslog.
-
-
-UseSysTimeStamp
-^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "on", "no", "``$InputUnixListenSocketUseSysTimeStamp``"
-
-This parameter instructs ``imuxsock`` to obtain message time from
-the system (via control messages) instead of using time recorded inside
-the message. This may be most useful in combination with systemd. Due to
-the usefulness of this functionality, we decided to enable it by default.
-As such, the behavior is slightly different than previous versions.
-However, we do not see how this could negatively affect existing environments.
-
-.. versionadded:: 5.9.1
-
-
-CreatePath
-^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "``$InputUnixListenSocketCreatePath``"
-
-Create directories in the socket path if they do not already exist.
-They are created with 0755 permissions with the owner being the
-process under which rsyslogd runs. The default is not to create
-directories. Keep in mind, though, that rsyslogd always creates
-the socket itself if it does not exist (just not the directories
-by default).
-
-This option is primarily considered useful for defining additional
-sockets that reside on non-permanent file systems. As rsyslogd probably
-starts up before the daemons that create these sockets, it is a vehicle
-to enable rsyslogd to listen to those sockets even though their directories
-do not yet exist.
-
-.. versionadded:: 4.7.0
-.. versionadded:: 5.3.0
-
-
-Socket
-^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "no", "``$AddUnixListenSocket``"
-
-Adds additional unix socket. Formerly specified with the ``-a`` option.
-
-
-HostName
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "NULL", "no", "``$InputUnixListenSocketHostName``"
-
-Allows overriding the hostname that shall be used inside messages
-taken from the input that is being defined.
-
-
-Annotate
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "``$InputUnixListenSocketAnnotate``"
-
-Turn on annotation/trusted properties for the input that is being defined.
-See the :ref:`imuxsock-trusted-properties-label` section for more info.
-
-
-ParseTrusted
-^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "``$ParseTrusted``"
-
-Equivalent to the ``SysSock.ParseTrusted`` module parameter, but applies
-to the input that is being defined.
-
-
-Unlink
-^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "on", "no", "``none``"
-
-If turned on (default), the socket is unlinked and re-created when opened
-and also unlinked when finally closed. Set it to off if you handle socket
-creation yourself.
-
-.. note::
-
-   Note that handling socket creation oneself has the
-   advantage that a limited amount of messages may be queued by the OS
-   if rsyslog is not running.
-
-.. versionadded:: 7.3.9
-
-
-UseSpecialParser
-^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "on", "no", "none"
-
-Equivalent to the ``SysSock.UseSpecialParser`` module parameter, but applies
-to the input that is being defined.
-
-.. versionadded:: 8.9.0
-   The setting was previously hard-coded "on"
-
-
-ParseHostname
-^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "none"
-
-Equivalent to the ``SysSock.ParseHostname`` module parameter, but applies
-to the input that is being defined.
-
-.. versionadded:: 8.9.0
-
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Parameter
+     - Summary
+   * - :ref:`param-imuxsock-ruleset`
+     - .. include:: ../../reference/parameters/imuxsock-ruleset.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-ignoretimestamp`
+     - .. include:: ../../reference/parameters/imuxsock-ignoretimestamp.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-ignoreownmessages`
+     - .. include:: ../../reference/parameters/imuxsock-ignoreownmessages.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-flowcontrol`
+     - .. include:: ../../reference/parameters/imuxsock-flowcontrol.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-ratelimit-interval`
+     - .. include:: ../../reference/parameters/imuxsock-ratelimit-interval.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-ratelimit-burst`
+     - .. include:: ../../reference/parameters/imuxsock-ratelimit-burst.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-ratelimit-severity`
+     - .. include:: ../../reference/parameters/imuxsock-ratelimit-severity.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-usepidfromsystem`
+     - .. include:: ../../reference/parameters/imuxsock-usepidfromsystem.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-usesystimestamp`
+     - .. include:: ../../reference/parameters/imuxsock-usesystimestamp.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-createpath`
+     - .. include:: ../../reference/parameters/imuxsock-createpath.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-socket`
+     - .. include:: ../../reference/parameters/imuxsock-socket.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-hostname`
+     - .. include:: ../../reference/parameters/imuxsock-hostname.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-annotate`
+     - .. include:: ../../reference/parameters/imuxsock-annotate.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-parsetrusted`
+     - .. include:: ../../reference/parameters/imuxsock-parsetrusted.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-unlink`
+     - .. include:: ../../reference/parameters/imuxsock-unlink.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-usespecialparser`
+     - .. include:: ../../reference/parameters/imuxsock-usespecialparser.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imuxsock-parsehostname`
+     - .. include:: ../../reference/parameters/imuxsock-parsehostname.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 .. _imuxsock-rate-limiting-label:
 
@@ -963,4 +525,41 @@ system log socket.
 
    module(load="imuxsock" # needs to be done just once
             SysSock.RateLimit.Interval="0") # turn off rate limiting
+
+
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/imuxsock-syssock-ignoretimestamp
+   ../../reference/parameters/imuxsock-syssock-ignoreownmessages
+   ../../reference/parameters/imuxsock-syssock-use
+   ../../reference/parameters/imuxsock-syssock-name
+   ../../reference/parameters/imuxsock-syssock-flowcontrol
+   ../../reference/parameters/imuxsock-syssock-usepidfromsystem
+   ../../reference/parameters/imuxsock-syssock-ratelimit-interval
+   ../../reference/parameters/imuxsock-syssock-ratelimit-burst
+   ../../reference/parameters/imuxsock-syssock-ratelimit-severity
+   ../../reference/parameters/imuxsock-syssock-usesystimestamp
+   ../../reference/parameters/imuxsock-syssock-annotate
+   ../../reference/parameters/imuxsock-syssock-parsetrusted
+   ../../reference/parameters/imuxsock-syssock-unlink
+   ../../reference/parameters/imuxsock-syssock-usespecialparser
+   ../../reference/parameters/imuxsock-syssock-parsehostname
+   ../../reference/parameters/imuxsock-ruleset
+   ../../reference/parameters/imuxsock-ignoretimestamp
+   ../../reference/parameters/imuxsock-ignoreownmessages
+   ../../reference/parameters/imuxsock-flowcontrol
+   ../../reference/parameters/imuxsock-ratelimit-interval
+   ../../reference/parameters/imuxsock-ratelimit-burst
+   ../../reference/parameters/imuxsock-ratelimit-severity
+   ../../reference/parameters/imuxsock-usepidfromsystem
+   ../../reference/parameters/imuxsock-usesystimestamp
+   ../../reference/parameters/imuxsock-createpath
+   ../../reference/parameters/imuxsock-socket
+   ../../reference/parameters/imuxsock-hostname
+   ../../reference/parameters/imuxsock-annotate
+   ../../reference/parameters/imuxsock-parsetrusted
+   ../../reference/parameters/imuxsock-unlink
+   ../../reference/parameters/imuxsock-usespecialparser
+   ../../reference/parameters/imuxsock-parsehostname
 
