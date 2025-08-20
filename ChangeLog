@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+- 2025-08-20: AI: add support files for github copilot
+  helps craft better patches via copilot
 - 2025-08-18: imjournal: fix double sd_journal_close() during thread cancellation
   When the main thread cancel imjournal thread, the thread exits without
   setting sd_journal to NULL because sd_journal_close() contain cancel point.
