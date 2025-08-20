@@ -754,9 +754,16 @@ finalize_it:
 
 
 /* helper to close a session. Takes status of poll vs. select into consideration.
- * rgerhards, 2009-11-25
- */
-static rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr) {
+ *
+ * CONTRACT / CALLER OBLIGATIONS:
+ * - After this call, pioDescr and the associated pSess are invalid and must not be dereferenced.
+ * - The caller may continue its processing loop only if it guarantees that no code path
+ *   touches the invalidated pioDescr/pSess again (including logging, epoll rearm, queue ops).
+ *   Typically this means immediately replacing them with new, distinct objects and setting
+ *   local pointers to NULL.
+ * - If the caller cannot guarantee the above, it must terminate the loop (return or set do_run=0).
+ * - Ownership is released; any refcount must be zero before free (EPOLL path frees pioDescr).
+ */static rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr) {
     DEFiRet;
     assert(pioDescr->ptrType == NSD_PTR_TYPE_SESS);
     tcps_sess_t *pSess = pioDescr->ptr.pSess;
@@ -766,8 +773,8 @@ static rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDes
     }
 
 #if defined(ENABLE_IMTCP_EPOLL)
-    /* note: we do not check the result of eoll_Ctl because we cannot do
-     * anything agaist a failure BUT we need to do the cleanup in any case.
+    /* note: we do not check the result of epoll_Ctl because we cannot do
+     * anything against a failure BUT we need to do the cleanup in any case.
      */
     epoll_Ctl(pThis, pioDescr, 0, EPOLL_CTL_DEL);
 #endif
