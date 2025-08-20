@@ -5,7 +5,7 @@ applyTo: "plugins/**"
 # Copilot: Module development (plugins/**)
 
 **Before editing:**
-- Read `AGENTS.md`, `MODULE_AUTHOR_CHECKLIST.md`, and `doc/ai/module_map.yaml`.
+- Read `AGENTS.md`, `DEVELOPING.md`, `MODULE_AUTHOR_CHECKLIST.md`, and `doc/ai/module_map.yaml`.
 - Confirm module placement and naming align with `module_map.yaml`.
 
 **When changing code:**
