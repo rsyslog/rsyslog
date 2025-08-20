@@ -1,11 +1,32 @@
 # call this via "python[3] script name"
 import sys
 import importlib.util
-from pysnmp.entity import engine, config
-from pysnmp.carrier.asyncio.dgram import udp  # Changed from asyncore to asyncio
-from pysnmp.entity.rfc3413 import ntfrcv
-from pysnmp.smi import builder, view, compiler, rfc1902
-from pyasn1.type.univ import OctetString
+import asyncio
+import os
+
+# Add debug output for startup issues
+print("SNMP Trap Receiver v2 starting...", file=sys.stderr)
+print(f"Python version: {sys.version}", file=sys.stderr)
+print(f"Arguments: {sys.argv}", file=sys.stderr)
+
+# Ensure asyncio event loop is properly set up for Python 3.11+
+if sys.version_info >= (3, 11):
+    try:
+        asyncio.set_event_loop_policy(asyncio.DefaultEventLoopPolicy())
+        print("Set asyncio event loop policy for Python 3.11+", file=sys.stderr)
+    except Exception as e:
+        print(f"Warning: Could not set asyncio event loop policy: {e}", file=sys.stderr)
+
+try:
+    from pysnmp.entity import engine, config
+    from pysnmp.carrier.asyncio.dgram import udp  # Changed from asyncore to asyncio
+    from pysnmp.entity.rfc3413 import ntfrcv
+    from pysnmp.smi import builder, view, compiler, rfc1902
+    from pyasn1.type.univ import OctetString
+    print("All pysnmp imports successful", file=sys.stderr)
+except ImportError as e:
+    print(f"Import error: {e}", file=sys.stderr)
+    sys.exit(1)
 
 # Global variables
 snmpport = 10162
@@ -27,8 +48,10 @@ if len(sys.argv) > 4:
     szSnmpLogfile = sys.argv[4]
 
 # Create output files
+print(f"Creating output files: {szOutputfile}, {szSnmpLogfile}", file=sys.stderr)
 outputFile = open(szOutputfile,"w+")
 logFile = open(szSnmpLogfile,"a+")
+print("Output files created successfully", file=sys.stderr)
 
 # Assemble MIB viewer
 mibBuilder = builder.MibBuilder()
@@ -45,11 +68,13 @@ snmpEngine = engine.SnmpEngine()
 
 # Transport setup
 # UDP over IPv4, add listening interface/port
+print(f"Setting up transport for {snmpip}:{snmpport}", file=sys.stderr)
 config.addTransport(
     snmpEngine,
     udp.domainName + (1,),
     udp.UdpTransport().openServerMode((snmpip, snmpport))
 )
+print("Transport setup completed", file=sys.stderr)
 
 # SNMPv1/2c setup
 # SecurityName <-> CommunityName mapping
@@ -60,9 +85,10 @@ logFile.write("Started SNMP Trap Receiver: %s, %s, Output: %s" % (snmpport, snmp
 logFile.flush()
 
 # Add PID file creation after startup message
-import os
+print("Creating .started file", file=sys.stderr)
 with open(szSnmpLogfile + ".started", "w") as f:
     f.write(str(os.getpid()))
+print("Started file created successfully", file=sys.stderr)
 
 # Callback function for receiving notifications
 # noinspection PyUnusedLocal,PyUnusedLocal,PyUnusedLocal
@@ -98,15 +124,19 @@ def cbReceiverSnmp(snmpEngine, stateReference, contextEngineId, contextName, var
 
 
 # Register SNMP Application at the SNMP engine
+print("Registering notification receiver", file=sys.stderr)
 ntfrcv.NotificationReceiver(snmpEngine, cbReceiverSnmp)
 
 # Run I/O dispatcher which would receive queries and send confirmations
+print("Starting transport dispatcher", file=sys.stderr)
 try:
     snmpEngine.transportDispatcher.runDispatcher()
 except KeyboardInterrupt:
-    os.remove(szOutputfile + ".started")  # Remove PID file on shutdown
+    print("Received keyboard interrupt, shutting down", file=sys.stderr)
+    os.remove(szSnmpLogfile + ".started")  # Remove PID file on shutdown
     snmpEngine.transportDispatcher.closeDispatcher()
 except Exception as e:
-    os.remove(szOutputfile + ".started")  # Remove PID file on shutdown
+    print(f"Exception in dispatcher: {e}", file=sys.stderr)
+    os.remove(szSnmpLogfile + ".started")  # Remove PID file on shutdown
     snmpEngine.transportDispatcher.closeDispatcher()
     raise

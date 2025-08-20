@@ -34,6 +34,7 @@ on:
       - 'tests/*.sh'
       - 'diag.sh'
       - '**/Makefile.am'
+      - '.github/workflows/*.yml'
 
 jobs:
   CI:
@@ -43,9 +44,9 @@ jobs:
       # When set to true, cancel all in-progress jobs if any matrix job fails.
       fail-fast: false
       matrix:
-        config: [centos_7, centos_8, debian_10, debian_11,
+        config: [centos_7, centos_8, debian_11, debian_13,
                  ubuntu_24_imtcp_no_epoll,
-                 fedora_35, fedora_36,
+                 fedora_41, fedora_42,
                  ubuntu_18, ubuntu_20, ubuntu_24,
                  ubuntu_22_san, ubuntu_24_tsan, ubuntu_22_codecov, ubuntu_22_distcheck,
                  kafka_codecov, elasticsearch]
@@ -76,14 +77,14 @@ jobs:
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
                             --disable-snmp-tests --enable-imdtls --enable-omdtls"
               ;;
-          'debian_10')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_debian:10'
-              export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
-                            --without-valgrind-testbench"
-              ;;
           'debian_11')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_debian:11'
+              export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
+                            --without-valgrind-testbench --enable-imdtls --enable-omdtls"
+              ;;
+          'debian_13')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_debian:13'
               export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
                             --without-valgrind-testbench --enable-imdtls --enable-omdtls"
@@ -103,13 +104,13 @@ jobs:
                      --disable-omkafka --disable-imkafka \
                      --enable-gnutls --enable-openssl --enable-gnutls-tests"
               ;;
-          'fedora_35')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:35'
+          'fedora_41')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:41'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
-                     --disable-kafka-tests --enable-debug"
+                     --disable-kafka-tests --enable-debug --enable-imdtls --enable-omdtls"
               ;;
-          'fedora_36')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:36'
+          'fedora_42')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:42'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
                      --disable-kafka-tests --enable-debug --enable-imdtls --enable-omdtls"
               ;;
@@ -216,7 +217,7 @@ jobs:
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
       - name: show error logs (if we errored)
-        if:  ${{ failure() || cancelled() }}
+        if: ${{ failure() || cancelled() }}
         run: |
           devtools/gather-check-logs.sh
           cat failed-tests.log
