@@ -753,8 +753,15 @@ finalize_it:
 }
 
 
-/* helper to close a session. Takes status of poll vs. select into consideration.
- * rgerhards, 2009-11-25
+/* helper to close a session. Takes status of poll vs. select.
+ *
+ * \warning After this call, both `pioDescr` and its `pSess` are invalid.
+ * \post    Callers must not touch `pioDescr`/`pSess` again (no queueing,
+ *          no epoll rearm, no logging with them).
+ * \post    If inside a processing loop, the caller must EITHER terminate
+ *          the loop OR replace local pointers with fresh objects and set
+ *          the old pointers to NULL before any further use.
+ * \note    EPOLL path frees `pioDescr` in this function.
  */
 static rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr) {
     DEFiRet;
@@ -766,8 +773,8 @@ static rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDes
     }
 
 #if defined(ENABLE_IMTCP_EPOLL)
-    /* note: we do not check the result of eoll_Ctl because we cannot do
-     * anything agaist a failure BUT we need to do the cleanup in any case.
+    /* note: we do not check the result of epoll_Ctl because we cannot do
+     * anything against a failure BUT we need to do the cleanup in any case.
      */
     epoll_Ctl(pThis, pioDescr, 0, EPOLL_CTL_DEL);
 #endif
