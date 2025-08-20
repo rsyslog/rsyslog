@@ -1417,12 +1417,30 @@ BEGINcommitTransaction
                        "Remaining messages will be sent when it is online again.",
                        pWrkrData->wrkrID, pWrkrData->target[j].target_name, pWrkrData->target[j].port);
                 DestructTCPTargetData(&(pWrkrData->target[j]));
+                /* Note: do not return RS_RET_SUSPENDED here. We only return SUSPENDED
+                 * when no pool member is left active (see block below after pool stats).
+                 * For multi-target pools, other active targets may continue to work
+                 * and the remaining buffered data for this target will be flushed once
+                 * it resumes on a subsequent transaction.
+                 */
                 iRet = RS_RET_OK;
             }
         }
     }
 
 finalize_it:
+    /*
+     * Return semantics for commitTransaction:
+     * - Only return RS_RET_SUSPENDED when no pool member is left active.
+     *   We determine this by calling countActiveTargets() and inspecting
+     *   the atomic nActiveTargets value. When it is zero, the whole pool
+     *   is unavailable and the action engine must enter retry logic.
+     * - If at least one target remains active, we keep returning OK here
+     *   so that the action is not suspended at pool level. Any buffered
+     *   frames for failed targets remain in that target's send buffer and
+     *   will be flushed once doTryResume() re-establishes the connection
+     *   on a subsequent transaction.
+     */
     /* do pool stats */
 
     countActiveTargets(pWrkrData);
@@ -1430,6 +1448,11 @@ finalize_it:
         ATOMIC_FETCH_32BIT(&pWrkrData->pData->nActiveTargets, &pWrkrData->pData->mut_nActiveTargets);
 
     if (nActiveTargets == 0) {
+        /*
+         * All pool members are currently unavailable. Only in this case we
+         * return RS_RET_SUSPENDED from commitTransaction, as required by the
+         * omfwd pool contract.
+         */
         iRet = RS_RET_SUSPENDED;
     }
 
