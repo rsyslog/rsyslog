@@ -70,6 +70,8 @@ BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END m
     pthread_mutex_init(&pThis->mut, NULL);
     pThis->being_closed = 0;
     INIT_ATOMIC_HELPER_MUT(pThis->mut_being_closed);
+    pThis->ref_count = 1; /* initial reference for creator */
+    INIT_ATOMIC_HELPER_MUT(pThis->mut_ref_count);
     /* now allocate the message reception buffer */
     CHKmalloc(pThis->pMsg = (uchar *)malloc(pThis->iMaxLine + 1));
 finalize_it:
@@ -100,11 +102,39 @@ BEGINobjDestruct(tcps_sess) /* be sure to specify the object type also in END an
     }
     pthread_mutex_destroy(&pThis->mut);
     DESTROY_ATOMIC_HELPER_MUT(pThis->mut_being_closed);
+    DESTROY_ATOMIC_HELPER_MUT(pThis->mut_ref_count);
     /* now destruct our own properties */
     if (pThis->fromHost != NULL) CHKiRet(prop.Destruct(&pThis->fromHost));
     if (pThis->fromHostIP != NULL) CHKiRet(prop.Destruct(&pThis->fromHostIP));
     free(pThis->pMsg);
 ENDobjDestruct(tcps_sess)
+
+
+/* Reference counting functions for thread-safe session management
+ * These ensure sessions are not destroyed while worker threads are using them.
+ * rgerhards, 2025-08-19
+ */
+
+/* AddRef - increment reference count
+ * Must be called by worker threads before accessing session data
+ */
+static void tcps_sessAddRef(tcps_sess_t *pThis) {
+    ISOBJ_TYPE_assert(pThis, tcps_sess);
+    ATOMIC_INC(&pThis->ref_count, &pThis->mut_ref_count);
+}
+
+/* Release - decrement reference count and return destruction flag
+ * Must be called by worker threads after finishing with session
+ * Returns 1 if caller should destroy session, 0 if other references exist
+ */
+static int tcps_sessRelease(tcps_sess_t *pThis) {
+    ISOBJ_TYPE_assert(pThis, tcps_sess);
+    if (ATOMIC_DEC_AND_FETCH(&pThis->ref_count, &pThis->mut_ref_count) == 0) {
+        return 1; /* Last reference released - caller should destroy */
+    } else {
+        return 0; /* Still has references - do not destroy */
+    }
+}
 
 
 /* debugprint for the tcps_sess object */
@@ -549,6 +579,10 @@ BEGINobjQueryInterface(tcps_sess)
     pIf->PrepareClose = PrepareClose;
     pIf->Close = Close;
     pIf->DataRcvd = DataRcvd;
+
+    /* reference counting for thread safety */
+    pIf->AddRef = tcps_sessAddRef;
+    pIf->Release = tcps_sessRelease;
 
     pIf->SetUsrP = SetUsrP;
     pIf->SetTcpsrv = SetTcpsrv;

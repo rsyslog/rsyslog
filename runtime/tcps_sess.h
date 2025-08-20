@@ -51,6 +51,8 @@ struct tcps_sess_s {
         pthread_mutex_t mut;
         int being_closed;
         pthread_mutex_t mut_being_closed;
+        int ref_count; /* atomic reference counter for safe destruction */
+        DEF_ATOMIC_HELPER_MUT(mut_ref_count);
 };
 
 
@@ -63,6 +65,9 @@ BEGINinterface(tcps_sess) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*PrepareClose)(tcps_sess_t *pThis);
     rsRetVal (*Close)(tcps_sess_t *pThis);
     rsRetVal (*DataRcvd)(tcps_sess_t *pThis, char *pData, size_t iLen);
+    /* reference counting for safe multi-threaded access */
+    void (*AddRef)(tcps_sess_t *pThis);
+    int (*Release)(tcps_sess_t *pThis);
     /* set methods */
     rsRetVal (*SetTcpsrv)(tcps_sess_t *pThis, struct tcpsrv_s *pSrv);
     rsRetVal (*SetLstnInfo)(tcps_sess_t *pThis, tcpLstnPortList_t *pLstnInfo);
@@ -73,11 +78,13 @@ BEGINinterface(tcps_sess) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*SetMsgIdx)(tcps_sess_t *pThis, int);
     rsRetVal (*SetOnMsgReceive)(tcps_sess_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t *, uchar *, int));
 ENDinterface(tcps_sess)
-#define tcps_sessCURR_IF_VERSION 3 /* increment whenever you change the interface structure! */
+#define tcps_sessCURR_IF_VERSION 4 /* increment whenever you change the interface structure! */
 /* interface changes
  * to version v2, rgerhards, 2009-05-22
  * - Data structures changed
  * - SetLstnInfo entry point added
+ * to version v4, 2025-08-19
+ * - Added reference counting (AddRef/Release) for thread-safe session management
  * version 3, rgerhards, 2013-01-21:
  * - signature of SetHostIP() changed
  */

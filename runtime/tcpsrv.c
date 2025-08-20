@@ -776,7 +776,15 @@ static rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDes
         pthread_mutex_unlock(&pSess->mut);
     }
 
-    tcps_sess.Destruct(&pSess);
+    /* Release the initial reference from session creation.
+     * If worker threads are still using this session, they hold their own references
+     * and the session will only be destroyed when the last reference is released.
+     * This eliminates the need for sleep-based synchronization.
+     */
+    if (tcps_sess.Release(pSess)) {
+        /* Last reference released - we need to destroy the session */
+        tcps_sess.Destruct(&pSess);
+    }
 #if defined(ENABLE_IMTCP_EPOLL)
     /* in epoll mode, ioDescr is dynamically allocated */
     DESTROY_ATOMIC_HELPER_MUT(pioDescr->mut_isInError);
@@ -823,6 +831,7 @@ static rsRetVal ATTR_NONNULL(1)
     tcps_sess_t *const pSess = pioDescr->ptr.pSess;
     tcpsrv_t *const pThis = pioDescr->pSrv;
     int freeMutex = 0;
+    int haveRef = 0; /* track if we've added a reference */
     const unsigned maxReads = pThis->starvationMaxReads;
 #if defined(ENABLE_IMTCP_EPOLL)
     int needReArm = 1;
@@ -838,6 +847,7 @@ static rsRetVal ATTR_NONNULL(1)
     if (pThis->workQueue.numWrkr > 1) {
         pthread_mutex_lock(&pSess->mut);
         freeMutex = 1;
+        haveRef = 1; /* Reference was taken at enqueue time */
     }
 
 #if defined(ENABLE_IMTCP_EPOLL)
@@ -884,6 +894,27 @@ static rsRetVal ATTR_NONNULL(1)
                     break;
                 case RS_RET_OK:
                     /* valid data received, process it! */
+                    /**
+                     * @brief Race condition protection for multi-threaded session access
+                     *
+                     * In multi-threaded mode, we must check if the session is being closed
+                     * by another thread before calling DataRcvd. Without this check, we can
+                     * get a segfault when calling tcps_sess.DataRcvd() on a session that has
+                     * been freed by closeSess() in another worker thread.
+                     *
+                     * The crash occurs at offset 0xa0 when dereferencing the DataRcvd function
+                     * pointer in the freed tcps_sess interface structure.
+                     *
+                     * This was introduced with the new worker thread pool implementation.
+                     */
+                    if (pThis->workQueue.numWrkr > 1) {
+                        if (ATOMIC_FETCH_32BIT(&pSess->being_closed, &pSess->mut_being_closed)) {
+                            /* Session is being closed by another thread, skip processing */
+                            DBGPRINTF("tcpsrv: skipping DataRcvd on session being closed by another thread\n");
+                            do_run = 0;
+                            break;
+                        }
+                    }
                     localRet = tcps_sess.DataRcvd(pSess, buf, iRcvd);
                     if (localRet != RS_RET_OK && localRet != RS_RET_QUEUE_FULL) {
                         /* in this case, something went awfully wrong.
@@ -941,6 +972,15 @@ finalize_it:
 
     if (freeMutex) { /* in case of single worker, freeMutex is set to 0 right from the begining */
         pthread_mutex_unlock(&pSess->mut);
+    }
+
+    /* Always release our worker reference if we added one */
+    if (haveRef) {
+        if (tcps_sess.Release(pSess)) {
+            /* Last reference released - we need to destroy the session */
+            tcps_sess_t *pSessDestroy = pSess;
+            tcps_sess.Destruct(&pSessDestroy);
+        }
     }
 
     RETiRet;
@@ -1122,6 +1162,13 @@ static rsRetVal enqueueWork(tcpsrv_io_descr_t *const pioDescr) {
     workQueue_t *const queue = &pioDescr->pSrv->workQueue;
     DEFiRet;
 
+    /* Take reference to session before enqueuing to prevent use-after-free.
+     * This protects against the session being freed between enqueue and worker processing.
+     */
+    if (pioDescr->ptrType == NSD_PTR_TYPE_SESS) {
+        tcps_sess.AddRef(pioDescr->ptr.pSess);
+    }
+
     if (ATOMIC_CAS(&pioDescr->inQueue, 0, 1, &pioDescr->mut_inQueue)) {
         pthread_mutex_lock(&queue->mut);
         pioDescr->next = NULL;
@@ -1135,6 +1182,15 @@ static rsRetVal enqueueWork(tcpsrv_io_descr_t *const pioDescr) {
 
         pthread_cond_signal(&queue->workRdy);
         pthread_mutex_unlock(&queue->mut);
+    } else {
+        /* Enqueue failed - release the reference we took */
+        if (pioDescr->ptrType == NSD_PTR_TYPE_SESS) {
+            if (tcps_sess.Release(pioDescr->ptr.pSess)) {
+                /* Last reference released - we need to destroy the session */
+                tcps_sess_t *pSessDestroy = pioDescr->ptr.pSess;
+                tcps_sess.Destruct(&pSessDestroy);
+            }
+        }
     }
 
     RETiRet;
