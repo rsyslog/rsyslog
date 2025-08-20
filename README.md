@@ -11,6 +11,11 @@ Rsyslog can deliver over one million messages per second to local destinations u
 
 ---
 
+## getting rsyslog news
+
+* [www.rsyslog.com](https://www.rsyslog.com/), via [RSS](https://www.rsyslog.com/feed/)
+* Messenger Platforms [Telegram](https://t.me/rsyslog_official), [WhatsApp](https://whatsapp.com/channel/0029VbBJQLhCxoArVHjrL32E) - operated by maintainer Rainer Gerhards
+---
 
 ## 🤖 rsyslog Assistant (Experimental AI Help)
 
