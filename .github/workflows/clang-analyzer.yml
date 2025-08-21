@@ -19,6 +19,8 @@ jobs:
           SCAN_BUILD: scan-build
           SCAN_BUILD_CC: clang
           SCAN_BUILD_REPORT_DIR: scan-build-report
+          DOCKER_RUN_EXTRA_OPTS: >-
+            -e SCAN_BUILD -e SCAN_BUILD_CC -e SCAN_BUILD_REPORT_DIR
         run: |
           chmod -R go+rw .
           set +e
