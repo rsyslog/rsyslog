@@ -753,8 +753,40 @@ finalize_it:
 }
 
 
-/* helper to close a session. Takes status of poll vs. select into consideration.
- * rgerhards, 2009-11-25
+/**
+ * \brief Close a TCP session and release associated resources.
+ *
+ * Closes the session referenced by \p pioDescr, performs module-specific
+ * close handling, and updates polling/epoll state. On the EPOLL path,
+ * the I/O descriptor itself is freed.
+ *
+ * \param[in] pThis    Server instance.
+ * \param[in] pioDescr I/O descriptor pointing to the session to close
+ *                     (pioDescr->ptrType == NSD_PTR_TYPE_SESS).
+ *
+ * \pre  \p pioDescr is valid and refers to a live session; its pSess mutex
+ *       may be locked by the caller.
+ *
+ * \post Both \p pioDescr and its associated \c pSess are invalid. Callers
+ *       must not dereference or log with them, must not rearm epoll, and must
+ *       not enqueue them.
+ * \post If called inside a processing loop, the caller MUST either terminate
+ *       that loop, or immediately replace local pointers with fresh objects
+ *       and set the old pointers to NULL before any further use.
+ * \post On EPOLL builds, \p pioDescr is freed inside this function.
+ *       On non-EPOLL builds, the session table entry is cleared.
+ *
+ * \warning Any access to \p pioDescr or \c pSess after return is undefined
+ *          behavior (use-after-free on EPOLL).
+ *
+ * \note Attempts epoll_Ctl(…, EPOLL_CTL_DEL) on the socket; failure does not
+ *       prevent cleanup. Invokes pOnRegularClose(pSess). If the worker pool
+ *       size > 1 and the caller holds \c pSess->mut, this function unlocks it
+ *       during teardown.
+ *
+ * \retval RS_RET_OK          on success.
+ * \retval RS_RET_ERR_*       on errors during teardown; regardless, the session
+ *                            should be considered closed at the call site.
  */
 static rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr) {
     DEFiRet;
@@ -766,8 +798,8 @@ static rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDes
     }
 
 #if defined(ENABLE_IMTCP_EPOLL)
-    /* note: we do not check the result of eoll_Ctl because we cannot do
-     * anything agaist a failure BUT we need to do the cleanup in any case.
+    /* note: we do not check the result of epoll_Ctl because we cannot do
+     * anything against a failure BUT we need to do the cleanup in any case.
      */
     epoll_Ctl(pThis, pioDescr, 0, EPOLL_CTL_DEL);
 #endif
@@ -893,6 +925,7 @@ static rsRetVal ATTR_NONNULL(1)
                         SET_REARM(0);
                         freeMutex = 0;
                         CHKiRet(closeSess(pThis, pioDescr));
+                        do_run = 0;
                     }
                     break;
                 default:
