@@ -574,20 +574,13 @@ BEGINtryResume
 ENDtryResume
 
 
-/* get the current index and type for this message */
+/* get the current rest path for this message */
 static void ATTR_NONNULL(1) getRestPath(const instanceData *const pData, uchar **const tpls, uchar **const restPath) {
     *restPath = pData->restPath;
-    if (tpls == NULL) {
-        goto done;
+    if (pData->dynRestPath && tpls != NULL) {
+        *restPath = tpls[1];
     }
 
-    int iNumTpls = 1;
-    if (pData->dynRestPath) {
-        *restPath = tpls[iNumTpls];
-        ++iNumTpls;
-    }
-
-done:
     assert(restPath != NULL);
     return;
 }
@@ -1532,8 +1525,7 @@ BEGINcommitTransaction
 
     for (i = 0; i < nParams; ++i) {
         uchar *payload = actParam(pParams, iNumTpls, i, 0).param;
-        uchar *tpls[2];
-        tpls[0] = payload;
+        uchar *tpls[2] = {payload, NULL};
         if (iNumTpls == 2) tpls[1] = actParam(pParams, iNumTpls, i, 1).param;
 
         STATSCOUNTER_INC(ctrMessagesSubmitted, mutCtrMessagesSubmitted);
