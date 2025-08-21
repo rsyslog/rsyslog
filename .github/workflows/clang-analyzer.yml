@@ -9,11 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy-report.outputs.page_url }}
 
     steps:
       - name: Checkout repository
@@ -35,6 +30,8 @@ jobs:
               | tee clang-analyzer.log
           echo "exitcode=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
 
+      # GitHub Pages deployment is disabled due to setup issues; reports remain
+      # available as downloadable artifacts
       - name: Upload clang static analyzer report
         if: always()
         id: upload-report
@@ -44,42 +41,23 @@ jobs:
           path: scan-build-report
           retention-days: 7
 
-      - name: Upload HTML report for Pages
-        if: always()
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: scan-build-report
-
-      - name: Deploy report to GitHub Pages
-        if: always()
-        id: deploy-report
-        uses: actions/deploy-pages@v4  # publish HTML report online
-
       - name: Show clang static analyzer report link
         if: always()
         run: |
           artifact=${{ steps.upload-report.outputs.artifact-url }}
-          pages=${{ steps.deploy-report.outputs.page_url }}
           cat >> $GITHUB_STEP_SUMMARY <<EOF
           Clang static analyzer HTML report (download):
           $artifact
-
-          Clang static analyzer HTML report (browse online):
-          $pages
           EOF
           echo "Clang static analyzer HTML report (download):"
           echo "$artifact"
-          echo "Clang static analyzer HTML report (browse online):"
-          echo "$pages"
 
       - name: Fail if analysis failed
         if: steps.run-clang.outputs.exitcode != '0'
         run: |
           artifact="${{ steps.upload-report.outputs.artifact-url }}"
-          pages="${{ steps.deploy-report.outputs.page_url }}"
           echo "clang static analyzer detected issues:" >&2
           tail -n 200 clang-analyzer.log >&2 || true
           echo >&2
           echo "Clang static analyzer HTML report (download): $artifact" >&2
-          echo "Clang static analyzer HTML report (browse online): $pages" >&2
           exit 1
