@@ -48,10 +48,17 @@ Parameters
   - ``jsonr`` – avoid double escaping while keeping JSON safe
   - ``jsonfr`` – combination of ``jsonf`` and ``jsonr``
 
-- ``position.from`` – start position for substring extraction (1-based)
 - ``position.to`` – end position. Since 8.2302.0, negative values strip
   characters from the end. For example, ``position.from="2"
-  position.to="-1"`` removes the first and last character.
+  position.to="-1"`` removes the first and last character. This is handy
+  when removing surrounding characters such as brackets:
+
+  .. code-block:: none
+
+     property(name="msg" position.from="2" position.to="-1")
+
+  With an input of ``[abc]`` the result is ``abc``. This is especially
+  useful when parsing ``STRUCTURED-DATA`` fields.
 - ``position.relativeToEnd`` – interpret positions relative to end of
   string (since 7.3.10)
 - ``fixedWidth`` – pad string with spaces up to ``position.to`` when
@@ -69,8 +76,10 @@ Parameters
 - ``mandatory`` – if ``on``, always emit field for structured outputs even
   when empty
 - ``spIfNo1stSp`` – expert option for RFC3164 processing
-- ``dataType`` – for ``jsonf`` format only; sets JSON data type. Supported
-  values:
+- ``dataType`` – for ``jsonf`` format only; sets JSON data type. Rsyslog
+  properties are strings, but some consuming systems require numbers or
+  booleans. ``dataType`` controls how the ``jsonf`` field is emitted.
+  Supported values:
 
   - ``number`` – emit numeric value, using 0 if empty
   - ``string`` – emit as string (default)
