@@ -789,7 +789,6 @@ static void ATTR_NONNULL() actionSuspend(action_t *const pThis, wti_t *const pWt
  */
 static rsRetVal ATTR_NONNULL() actionDoRetry(action_t *const pThis, wti_t *const pWti) {
     int iRetries;
-    int iSleepPeriod;
     int bTreatOKasSusp;
     time_t ttTemp;
     DEFiRet;
@@ -831,14 +830,12 @@ static rsRetVal ATTR_NONNULL() actionDoRetry(action_t *const pThis, wti_t *const
             } else {
                 ++iRetries;
                 datetime.GetTime(&ttTemp);
-                iSleepPeriod = 0;
                 DBGPRINTF(
                     "actionDoRetry: %s, controlled by resumeInterval, may miss the next try."
                     "Will sleep %d seconds. ResumeRtry=%lld (now %lld), iRetries %d\n",
                     pThis->pszName, pThis->iResumeInterval, (long long)pThis->ttResumeRtry, (long long)ttTemp,
                     iRetries);
-                iSleepPeriod = pThis->iResumeInterval;
-                srSleep(iSleepPeriod, 0);
+                srSleep(pThis->iResumeInterval, 0);
                 if (*pWti->pbShutdownImmediate) {
                     ABORT_FINALIZE(RS_RET_FORCE_TERM);
                 }
@@ -862,7 +859,6 @@ finalize_it:
  */
 static rsRetVal ATTR_NONNULL() actionDoRetry_extFile(action_t *const pThis, wti_t *const pWti) {
     int iRetries;
-    int iSleepPeriod;
     DEFiRet;
 
     assert(pThis != NULL);
@@ -896,8 +892,7 @@ static rsRetVal ATTR_NONNULL() actionDoRetry_extFile(action_t *const pThis, wti_
                 if (getActionNbrResRtry(pWti, pThis) < 20) incActionNbrResRtry(pWti, pThis);
             } else {
                 ++iRetries;
-                iSleepPeriod = pThis->iResumeInterval;
-                srSleep(iSleepPeriod, 0);
+                srSleep(pThis->iResumeInterval, 0);
                 if (*pWti->pbShutdownImmediate) {
                     ABORT_FINALIZE(RS_RET_FORCE_TERM);
                 }
