@@ -213,7 +213,7 @@ RUN	cd helper-projects && \
 	git clone https://github.com/stricaud/faup.git && \
 	cd faup && \
 	cd build && \
-	cmake .. && make -j&& \
+	cmake .. && make -j && \
 	make install && \
 	cd .. && \
 	cd .. && \

@@ -2673,6 +2673,27 @@ snmp_start_trapreceiver() {
         echo "Cannot find ${snmptrapreceiver} for omsnmp test"
         error_exit 1
     fi
+    
+    # Test if the script can be executed at all
+    echo "Testing Python script execution..."
+    if ! $SNMP_PYTHON ${snmptrapreceiver} --help >/dev/null 2>&1; then
+        echo "Warning: Python script does not support --help, testing basic execution..."
+        if ! $SNMP_PYTHON -c "import sys; print('Python executable test passed')" >/dev/null 2>&1; then
+            echo "ERROR: Python executable test failed"
+            error_exit 1
+        fi
+    fi
+    
+    # Test if required Python packages are available
+    echo "Testing required Python packages..."
+    if ! $SNMP_PYTHON -c "import pysnmp; print('pysnmp available')" >/dev/null 2>&1; then
+        echo "ERROR: pysnmp package not available"
+        error_exit 1
+    fi
+    if ! $SNMP_PYTHON -c "import pyasn1; print('pyasn1 available')" >/dev/null 2>&1; then
+        echo "ERROR: pyasn1 package not available"
+        error_exit 1
+    fi
 
     if [ "x$1" == "x" ]; then
         snmp_server_port="10162"
@@ -2684,6 +2705,14 @@ snmp_start_trapreceiver() {
         output_file="${RSYSLOG_DYNNAME}.snmp.out"
     else
         output_file="$2"
+    fi
+    
+    # Check if port is already in use
+    echo "Checking if port ${snmp_server_port} is available..."
+    if netstat -tuln 2>/dev/null | grep -q ":${snmp_server_port} "; then
+        echo "WARNING: Port ${snmp_server_port} appears to be in use"
+        echo "Active connections on port ${snmp_server_port}:"
+        netstat -tuln 2>/dev/null | grep ":${snmp_server_port} " || true
     fi
 
     # Create work directory for parallel tests
@@ -2698,7 +2727,11 @@ snmp_start_trapreceiver() {
     $SNMP_PYTHON ${snmptrapreceiver} ${server_args} ${snmp_server_logfile} >> ${snmp_server_logfile} 2>&1 &
     snmp_server_pid=$!
     if ! ps -p $snmp_server_pid > /dev/null 2>&1; then
-        echo "Failed to start snmptrapreceiver wiht $SNMP_PYTHON."
+        echo "Failed to start snmptrapreceiver with $SNMP_PYTHON."
+        echo "Debug: Checking if Python script exists and is executable..."
+        ls -la ${snmptrapreceiver}
+        echo "Debug: Testing Python script execution..."
+        $SNMP_PYTHON ${snmptrapreceiver} --help 2>&1 || echo "Script execution test failed"
         if [ "$SNMP_PYTHON" = "/usr/bin/python" ]; then
             SNMP_PYTHON="/usr/bin/python3"
 			rm -rf ${snmp_work_dir}
@@ -2709,6 +2742,11 @@ snmp_start_trapreceiver() {
 			snmp_server_pid=$!
 			if ! ps -p $snmp_server_pid > /dev/null 2>&1; then
                 echo "Failed to start snmptrapreceiver with $SNMP_PYTHON."
+                echo "Debug: Checking log file for errors..."
+                if [ -f "${snmp_server_logfile}" ]; then
+                    echo "SNMP server log content:"
+                    cat "${snmp_server_logfile}"
+                fi
 				rm -rf ${snmp_work_dir}
                 error_exit 1
             fi
@@ -2716,19 +2754,62 @@ snmp_start_trapreceiver() {
     fi
     echo ${snmp_server_pid} > ${snmp_server_pidfile}
 
-	while test ! -f ${snmp_server_logfile}.started; do
+    # Wait for .started file with 30 second timeout
+    echo "Waiting for SNMP server to create .started file..."
+    timeout_start=$(date +%s)
+    timeout_duration=30
+    while test ! -f ${snmp_server_logfile}.started; do
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
 		printf "."
+		current_time=$(date +%s)
+		if [ $((current_time - timeout_start)) -gt $timeout_duration ]; then
+		    echo ""
+		    echo "TIMEOUT: SNMP server failed to create .started file within ${timeout_duration} seconds"
+		    echo "Debug: Checking if process is still running..."
+		    if ps -p $snmp_server_pid > /dev/null 2>&1; then
+		        echo "Process is still running, checking log file..."
+		        if [ -f "${snmp_server_logfile}" ]; then
+		            echo "SNMP server log content:"
+		            cat "${snmp_server_logfile}"
+		        fi
+		    else
+		        echo "Process is no longer running"
+		        if [ -f "${snmp_server_logfile}" ]; then
+		            echo "SNMP server log content:"
+		            cat "${snmp_server_logfile}"
+		        fi
+		    fi
+		    snmp_stop_trapreceiver
+		    error_exit 1
+		fi
 	done
+    echo ""
 
+    # Wait for log file to have content with 30 second timeout
+    echo "Waiting for SNMP server log file to have content..."
+    timeout_start=$(date +%s)
+    timeout_duration=30
     while test ! -s "${snmp_server_logfile}"; do
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
-		printf '%s ABORT! Timeout waiting on startup (pid file %s)\n' "$(tb_timestamp)" "$1"
-		ls -l "$1"
-		ps -fp $(cat "$1")
-		snmp_stop_trapreceiver
-		error_exit 1
+		current_time=$(date +%s)
+		if [ $((current_time - timeout_start)) -gt $timeout_duration ]; then
+		    echo "TIMEOUT: SNMP server log file remained empty for ${timeout_duration} seconds"
+		    echo "Debug: Checking if process is still running..."
+		    if ps -p $snmp_server_pid > /dev/null 2>&1; then
+		        echo "Process is still running, checking log file..."
+		        if [ -f "${snmp_server_logfile}" ]; then
+		            echo "SNMP server log content:"
+		            cat "${snmp_server_logfile}"
+		        fi
+		    else
+		        echo "Process is no longer running"
+		        if [ -f "${snmp_server_logfile}" ]; then
+		            echo "SNMP server log content:"
+		            cat "${snmp_server_logfile}"
+		        fi
+		    fi
+		    snmp_stop_trapreceiver
+		    error_exit 1
 		fi
     done
 

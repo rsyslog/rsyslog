@@ -39,7 +39,7 @@ jobs:
       # When set to true, cancel all in-progress jobs if any matrix job fails.
       fail-fast: false
       matrix:
-        config: [centos_6, centos_7, centos_8, debian_10, ubuntu_16, ubuntu_18_san, ubuntu_18_tsan, suse_tumbleweed]
+        config: [centos_6, centos_7, centos_8, debian_13, ubuntu_16, ubuntu_18_san, ubuntu_18_tsan, suse_tumbleweed]
 
     steps:
       - name: git checkout project
@@ -74,8 +74,8 @@ jobs:
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_centos:8'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--disable-elasticsearch-tests --disable-kafka-tests --disable-snmp-tests'
               ;;
-          'debian_10')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_debian:10'
+          'debian_13')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_debian:13'
               export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
                             --without-valgrind-testbench"
@@ -119,7 +119,7 @@ jobs:
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
       - name: show error logs (if we errored)
-        if:  ${{ failure() || cancelled() }}
+        if: ${{ failure() || cancelled() }}
         run: |
           devtools/gather-check-logs.sh
           cat failed-tests.log

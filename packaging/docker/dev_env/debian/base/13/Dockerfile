@@ -1,6 +1,6 @@
 # container for rsyslog development
 # creates the build environment
-FROM	debian:10
+FROM	debian:13
 ENV	DEBIAN_FRONTEND=noninteractive
 RUN 	apt-get update && \
 	apt-get upgrade -y
@@ -11,6 +11,8 @@ RUN	apt-get install -y \
 	autotools-dev \
 	bison \
 	clang \
+	clang-17 \
+	clang-tools-17 \
 	curl \
 	default-jdk \
 	faketime \
@@ -23,7 +25,6 @@ RUN	apt-get install -y \
 	libgcrypt20-dev \
 	libglib2.0-dev \
 	libgnutls28-dev \
-	libgrok1 libgrok-dev \
 	libhiredis-dev \
 	libkrb5-dev \
 	liblz4-dev \
@@ -37,25 +38,27 @@ RUN	apt-get install -y \
 	libsystemd-dev \
 	libtokyocabinet-dev \
 	libtool \
+	libzstd-dev \
 	default-mysql-server \
 	net-tools \
 	pkg-config \
 	postgresql-client \
-	python-docutils \
-	python-pysnmp4 \
-	software-properties-common \
-	sudo \
+	python3-docutils \
+	python3-pysnmp4 \
+	python3-pysnmp4-apps \
+	python3-pysnmp4-mibs \
 	tcl-dev \
 	uuid-dev \
 	valgrind \
 	vim \
 	wget \
-	sudo \
-	logrotate \
-	zlib1g-dev
+	zlib1g-dev \
+	zstd
 #	libbson-dev
 #	libmaxminddb-dev 
 #	libmongoc-dev 
+#	libgrok1 libgrok-dev
+#	software-properties-common
 #RUN     add-apt-repository ppa:adiscon/v8-stable -y && \
 #	add-apt-repository ppa:qpid/released -y && \
 #	add-apt-repository ppa:ubuntu-toolchain-r/test -y && \
@@ -68,11 +71,16 @@ RUN	apt-get install -y \
 RUN	apt-get update -y && \
 	apt-get install -y \
 	libestr-dev \
+	libfastjson-dev \
 	libsodium-dev
-#	clang-tools-5.0 
+
+# Create libgcrypt-config wrapper for Debian 13 compatibility
+# (libgcrypt-config is not provided in Debian 13, but pkg-config is available)
+RUN	printf '#!/bin/sh\ncase "$1" in\n  --version)\n    echo "%s"\n    ;;\n  --cflags)\n    pkg-config --cflags libgcrypt\n    ;;\n  --libs)\n    pkg-config --libs libgcrypt\n    ;;\n  *)\n    echo "Usage: $0 {--version|--cflags|--libs}"\n    exit 1\n    ;;\nesac\n' "$(pkg-config --modversion libgcrypt)" > /usr/bin/libgcrypt-config && chmod +x /usr/bin/libgcrypt-config
+#	clang-tools-17
 #	libfastjson-dev 
 #	libczmq-dev 
-#	clang-5.0 
+#	clang-17 
 #	gcc-7 
 #	libqpid-proton10-dev 
 
@@ -85,16 +93,15 @@ RUN	mkdir /rsyslog \
 	&& chown rsyslog:rsyslog /rsyslog
 VOLUME	/rsyslog
 ENV	PKG_CONFIG_PATH=/usr/lib64/pkgconfig \
-	xLD_LIBRARY_PATH=/usr/lib \
+	LD_LIBRARY_PATH=/usr/lib \
 	DEBIAN_FRONTEND=
 
 # create dependency cache
 RUN	mkdir /local_dep_cache && \
-	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz
-RUN	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz
-RUN	wget -nv https://www.rsyslog.com/files/download/rsyslog/elasticsearch-7.14.1-linux-x86_64.tar.gz -O /local_dep_cache/elasticsearch-7.14.1-linux-x86_64.tar.gz
-RUN	wget -nv https://dlcdn.apache.org/zookeeper/zookeeper-3.9.3/apache-zookeeper-3.9.3-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.9.3-bin.tar.gz
-RUN	wget -nv https://www.apache.org/dyn/closer.cgi?path=/kafka/2.8.0/kafka_2.13-2.8.0.tgz -O /local_dep_cache/kafka_2.13-2.8.0.tgz
+	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz && \
+	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz && \
+	wget -nv https://dlcdn.apache.org/zookeeper/zookeeper-3.9.3/apache-zookeeper-3.9.3-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.9.3-bin.tar.gz && \
+	wget -nv https://www.apache.org/dyn/closer.cgi?path=/kafka/2.8.0/kafka_2.13-2.8.0.tgz -O /local_dep_cache/kafka_2.13-2.8.0.tgz
 # tell tests which are the newester versions, so they can be checked without the need
 # to adjust test sources.
 #ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
@@ -180,17 +187,8 @@ RUN	cd helper-projects && \
 	rm -r liblogging && \
 	cd ..
 
-# liblfastjson
-RUN	cd helper-projects && \
-	git clone https://github.com/rsyslog/libfastjson.git && \
-	cd libfastjson && \
-	autoreconf -fi && \
-	./configure --prefix=/usr --libdir=/usr/lib64 && \
-	make -j && \
-	make install && \
-	cd .. && \
-	rm -r libfastjson && \
-	cd ..
+# liblfastjson - using system package instead of building from source
+# (system package is available in Debian 13)
 
 # liblognorm
 RUN	cd helper-projects && \
@@ -218,10 +216,10 @@ RUN	cd helper-projects && \
 
 # next ENV is specifically for running scan-build - so we do not need to
 # change scripts if at a later time we can move on to a newer version
-ENV SCAN_BUILD=scan-build \
-    SCAN_BUILD_CC=clang-5.0
+ENV	SCAN_BUILD=scan-build \
+	SCAN_BUILD_CC=clang-17
 
-ENV RSYSLOG_CONFIGURE_OPTIONS \
+ENV	RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-elasticsearch \
 	--enable-elasticsearch-tests \
 	--enable-gnutls \
@@ -243,13 +241,14 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-libdbi \
 	--enable-libfaketime \
 	--enable-libgcrypt \
+	--enable-libzstd \
 	--enable-mail \
 	--enable-mmanon \
 	--enable-mmaudit \
 	--enable-mmcount \
 	--disable-mmdblookup \
 	--enable-mmfields \
-	--enable-mmgrok \
+	--disable-mmgrok \
 	--enable-mmjsonparse \
 	--enable-mmkubernetes \
 	--enable-mmnormalize \
@@ -286,24 +285,27 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-pmsnare \
 	--enable-relp \
 	--enable-snmp \
-	--enable-snmp-tests \
+	# SNMP Tests disabled due to Python 3.12+ compatibility issues
+	# TODO: Re-enable once pysnmp is updated to support Python 3.12+
+	# See: https://github.com/rsyslog/rsyslog/issues/5999
+	#--enable-snmp-tests \
 	--enable-usertools \
 	--enable-valgrind \
 	\
 	--enable-testbench
 
 RUN	echo merge me up \
-	&& groupadd -g 999 rsyslog999 \
-	&& groupadd -g 998 rsyslog998 \
-	&& groupadd -g 997 rsyslog997 \
-	&& groupadd -g 996 rsyslog996 \
-	&& groupadd -g 995 rsyslog995 \
+	&& groupadd -g 1001 rsyslog999 \
+	&& groupadd -g 1002 rsyslog998 \
+	&& groupadd -g 1003 rsyslog997 \
+	&& groupadd -g 1004 rsyslog996 \
+	&& groupadd -g 1005 rsyslog995 \
 	&& echo missing \
-	&& useradd -u 999 -g rsyslog999  -s /bin/bash rsyslog999 \
-	&& useradd -u 998 -g rsyslog998  -s /bin/bash rsyslog998 \
-	&& useradd -u 997 -g rsyslog997  -s /bin/bash rsyslog997 \
-	&& useradd -u 996 -g rsyslog996  -s /bin/bash rsyslog996 \
-	&& useradd -u 995 -g rsyslog995  -s /bin/bash rsyslog995 \
+	&& useradd -u 1001 -g rsyslog999  -s /bin/bash rsyslog999 \
+	&& useradd -u 1002 -g rsyslog998  -s /bin/bash rsyslog998 \
+	&& useradd -u 1003 -g rsyslog997  -s /bin/bash rsyslog997 \
+	&& useradd -u 1004 -g rsyslog996  -s /bin/bash rsyslog996 \
+	&& useradd -u 1005 -g rsyslog995  -s /bin/bash rsyslog995 \
 	&& echo "rsyslog999 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
 	&& echo "rsyslog998 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
 	&& echo "rsyslog997 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
