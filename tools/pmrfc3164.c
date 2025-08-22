@@ -94,7 +94,7 @@ struct instanceConf_s {
     uchar* pszHeaderlessTag; /** < TAG to use for headerless messages */
     uchar* pszHeaderlessRulesetName; /** < name of Ruleset to use for headerless messages */
     ruleset_t* pHeaderlessRuleset; /**< Ruleset to use for headerless messages */
-    DEF_ATOMIC_HELPER_MUT(mutHeaderlessRuleset) /**< mutex for atomic operations on pHeaderlessRuleset */
+    DEF_ATOMIC_HELPER_MUT(mutHeaderlessRuleset); /**< mutex for atomic operations on pHeaderlessRuleset */
     uchar* pszHeaderlessErrFile; /**< name of error file for headerless messages */
     FILE* fpHeaderlessErr; /**< file pointer for error file (headerless) */
     pthread_mutex_t mutErrFile;

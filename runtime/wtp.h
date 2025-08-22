@@ -70,8 +70,8 @@ struct wtp_s {
         rsRetVal (*pfDoWork)(void *pUsr, void *pWti);
         /* end user objects */
         uchar *pszDbgHdr; /* header string for debug messages */
-        DEF_ATOMIC_HELPER_MUT(mutCurNumWrkThrd)
-        DEF_ATOMIC_HELPER_MUT(mutWtpState)
+        DEF_ATOMIC_HELPER_MUT(mutCurNumWrkThrd);
+        DEF_ATOMIC_HELPER_MUT(mutWtpState);
 };
 
 /* some symbolic constants for easier reference */

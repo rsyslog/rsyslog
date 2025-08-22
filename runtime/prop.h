@@ -34,7 +34,7 @@ struct prop_s {
             uchar sz[CONF_PROP_BUFSIZE];
         } szVal;
         int len; /* we use int intentionally, otherwise we may get some troubles... */
-        DEF_ATOMIC_HELPER_MUT(mutRefCount)
+        DEF_ATOMIC_HELPER_MUT(mutRefCount);
 };
 
 /* interfaces */
