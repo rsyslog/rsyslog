@@ -1,0 +1,52 @@
+You are reviewing C/C++ code for subtle correctness issues.
+
+=== INPUT ===
+<CODE>
+[PASTE CODE HERE]
+</CODE>
+Primary scope (function name or "auto"): [FUNC or auto]
+Language dialect & platform (e.g., GNU C11 on Linux): [DIALECT/PLATFORM]
+Loop-exit flags (comma-separated): [e.g., do_run, keepRunning]
+Critical resources regex (ownership/lifetime): (alloc|malloc|new|open|socket|epoll_ctl|kqueue|register|enqueue|lock|ref|acquire)
+Invalidators regex (freeing/unregistering): (free|close|destroy|destruct|deinit|unref|deregister|EPOLL_CTL_DEL)
+Concurrency primitives/APIs: [e.g., pthread_mutex_*, atomic_*, __atomic_*, epoll, poll, select]
+
+=== TASK ===
+Analyze ONLY the primary scope (or pick the longest hot function if "auto") and perform a **structured, path-sensitive audit** across these classes:
+
+A) Lifetime/Ownership: UAF, double-free, leaks, stale event/queue pointers, refcount under/overflow.
+B) Concurrency: data races, double-queue, requeue-while-owned, deadlocks (missing unlocks, lock order), ABA on CAS, misuse of atomics (missing memory order).
+C) Control-flow/State: missing loop exit on error, inconsistent state transitions, fallthroughs, starvation busy-loops, rearm/register logic errors.
+D) Error handling: ignored errno/returns, partial cleanup, double-close on error paths.
+E) Resource discipline: lock/fd/socket/refcount acquire/release balance on every branch.
+F) Bounds/Arithmetic: overflow/underflow, signed/unsigned mix, size_t truncation, negative lengths.
+G) API misuse: violated preconditions/postconditions (POSIX, epoll, pthreads).
+H) Reentrancy/Signals: functions unsafe for signal handlers, async-signal-unsafe calls.
+I) Logging side-effects: dereferencing invalid objects in logs/DBG after teardown.
+
+=== METHOD ===
+1) Identify: loops/guards, flags, counters; resources (objects), their creators/invalidators; locks/atomics; event/queue ops.
+2) Build a **case table** for each branch near: invalidators, (re)queue/(re)arm, lock/unlock, return/error.
+3) For each case, answer:
+   - “Loop exit?” (return/break/goto/flag/None)
+   - “Balanced resources?” (lock/unlock, alloc/free, ref++/ref--)
+   - “Any later use of invalidated objects?”
+   - “Any re-arm/queue after invalidation?”
+4) Produce EXACTLY the following output:
+
+SECTION A — Findings Table
+Finding class | Location (func:line) | Object/Resource | Path predicate | Evidence (line refs) | Risk | Minimal safe fix
+------------- | -------------------- | ---------------- | -------------- | -------------------- | ---- | -----------------
+
+SECTION B — Counterexamples
+For each non-OK finding, give a 3–8 step path (with concrete variables and line refs) from entry to the misuse.
+
+SECTION C — Obligations not met
+List violated postconditions inferred from comments or APIs (e.g., “after EPOLL_CTL_DEL the pointer must not be used”, “after closeXX loop must exit or replace+NULL”).
+
+=== RULES ===
+- Treat words **MUST/SHALL** in comments as normative contracts.
+- Prefer precise, short counterexamples over prose.
+- If uncertain, mark “Risk=Potential” and still show the path.
+- Do not rewrite code; analysis only.
+
