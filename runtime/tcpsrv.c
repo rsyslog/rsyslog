@@ -788,16 +788,13 @@ finalize_it:
  * \retval RS_RET_ERR_*       on errors during teardown; regardless, the session
  *                            should be considered closed at the call site.
  */
-static rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr) {
+static ATTR_NONNULL() rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr) {
     DEFiRet;
     assert(pioDescr->ptrType == NSD_PTR_TYPE_SESS);
     tcps_sess_t *pSess = pioDescr->ptr.pSess;
 
-    if (!ATOMIC_CAS(&pSess->being_closed, 0, 1, &pSess->mut_being_closed)) {
-        FINALIZE; /* already being closed by another thread */
-    }
-
 #if defined(ENABLE_IMTCP_EPOLL)
+
     /* note: we do not check the result of epoll_Ctl because we cannot do
      * anything against a failure BUT we need to do the cleanup in any case.
      */
@@ -810,13 +807,12 @@ static rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDes
 
     tcps_sess.Destruct(&pSess);
 #if defined(ENABLE_IMTCP_EPOLL)
-    /* in epoll mode, ioDescr is dynamically allocated */
+    /* in epoll mode, pioDescr is dynamically allocated */
     DESTROY_ATOMIC_HELPER_MUT(pioDescr->mut_isInError);
     free(pioDescr);
 #else
     pThis->pSessions[pioDescr->id] = NULL;
 #endif
-finalize_it:
     RETiRet;
 }
 
