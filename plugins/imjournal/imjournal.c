@@ -1333,10 +1333,7 @@ ENDsetModCnf
 static rsRetVal ATTR_NONNULL(1) createInstance(instanceConf_t **const pinst) {
     instanceConf_t *inst;
     DEFiRet;
-    CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
-    inst->next = NULL;
-    inst->pBindRuleset = NULL;
-    inst->pszBindRuleset = NULL;
+    CHKmalloc(inst = calloc(1, sizeof(instanceConf_t)));
 
     /* node created, let's add to config */
     if (loadModConf->tail == NULL) {
