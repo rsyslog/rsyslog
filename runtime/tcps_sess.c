@@ -68,8 +68,6 @@ BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END m
     pThis->inputState = eAtStrtFram; /* indicate frame header expected */
     pThis->eFraming = TCP_FRAMING_OCTET_STUFFING; /* just make sure... */
     pthread_mutex_init(&pThis->mut, NULL);
-    pThis->being_closed = 0;
-    INIT_ATOMIC_HELPER_MUT(pThis->mut_being_closed);
     /* now allocate the message reception buffer */
     CHKmalloc(pThis->pMsg = (uchar *)malloc(pThis->iMaxLine + 1));
 finalize_it:
@@ -99,7 +97,6 @@ BEGINobjDestruct(tcps_sess) /* be sure to specify the object type also in END an
         pThis->pSrv->pOnSessDestruct(&pThis->pUsr);
     }
     pthread_mutex_destroy(&pThis->mut);
-    DESTROY_ATOMIC_HELPER_MUT(pThis->mut_being_closed);
     /* now destruct our own properties */
     if (pThis->fromHost != NULL) CHKiRet(prop.Destruct(&pThis->fromHost));
     if (pThis->fromHostIP != NULL) CHKiRet(prop.Destruct(&pThis->fromHostIP));
