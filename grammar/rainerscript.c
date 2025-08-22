@@ -56,7 +56,7 @@
 #include "unicode-helper.h"
 #include "errmsg.h"
 
-PRAGMA_INGORE_Wswitch_enum
+PRAGMA_IGNORE_Wswitch_enum
 
     DEFobjCurrIf(obj) DEFobjCurrIf(regexp) DEFobjCurrIf(datetime)
 
