@@ -75,10 +75,10 @@ static rsRetVal gemini_classify_batch(ai_provider_t *prov, const char **messages
     const char *mock = getenv("GEMINI_MOCK_RESPONSE");
     (void)prov;
     (void)messages;
-    char *tmp;
-    char *tok;
+    char *tmp = NULL;
+    char *tok = NULL;
     char *saveptr = NULL;
-    char **out;
+    char **out = NULL;
     size_t idx = 0;
     DEFiRet;
 
@@ -96,21 +96,29 @@ static rsRetVal gemini_classify_batch(ai_provider_t *prov, const char **messages
     for (size_t i = 0; i < next && tok != NULL; ++i) tok = strtok_r(NULL, ",", &saveptr);
 
     CHKmalloc(out = calloc(n, sizeof(char *)));
+
     for (idx = 0; idx < n; ++idx) {
         if (tok != NULL) {
-            out[idx] = strdup(tok);
+            CHKmalloc(out[idx] = strdup(tok));
             tok = strtok_r(NULL, ",", &saveptr);
         } else {
             // Fallback if we run out of mock tags
-            out[idx] = strdup("REGULAR");
+            CHKmalloc(out[idx] = strdup("REGULAR"));
         }
     }
     next += n;  // Update state for the next call
 
-    free(tmp);
     *tags = out;
+    out = NULL;
 
 finalize_it:
+    if (out != NULL) {
+        for (idx = 0; idx < n; ++idx) {
+            free(out[idx]);
+        }
+        free(out);
+    }
+    free(tmp);
     RETiRet;
 }
 
