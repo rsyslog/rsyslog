@@ -3,7 +3,7 @@
  * Docker API in order to stream all container logs available on a host. Will also
  * update relevant container metadata.
  *
- * Copyright (C) 2018, 2019 the rsyslog project.
+ * Copyright (C) 2018, 2025 the rsyslog project.
  *
  * This file is part of rsyslog.
  *
@@ -803,6 +803,7 @@ ENDbeginCnfLoad
 BEGINsetModCnf
     struct cnfparamvals *pvals = NULL;
     int i;
+    char *buf = NULL;
     CODESTARTsetModCnf;
     pvals = nvlstGetParams(lst, &modpblk, NULL);
     if (pvals == NULL) {
@@ -834,8 +835,7 @@ BEGINsetModCnf
             /* also intialize the non-tail version */
             size_t offset = 0;
             size_t option_str_len = strlen((char *)loadModConf->getContainerLogOptions);
-            char *buf = strdup((char *)loadModConf->getContainerLogOptions);
-            CHKmalloc(buf);
+            CHKmalloc(buf = strdup((char *)loadModConf->getContainerLogOptions));
             uchar *option_str = calloc(1, option_str_len + 1);
             CHKmalloc(option_str);
 
@@ -860,7 +860,6 @@ BEGINsetModCnf
                 token = strtok(NULL, "&");
             }
             loadModConf->getContainerLogOptionsWithoutTail = option_str;
-            free(buf);
         } else if (!strcmp(modpblk.descr[i].name, "dockerapiunixsockaddr")) {
             loadModConf->dockerApiUnixSockAddr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(modpblk.descr[i].name, "dockerapiaddr")) {
@@ -888,6 +887,7 @@ BEGINsetModCnf
 
 finalize_it:
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &modpblk);
+    free(buf);
 ENDsetModCnf
 
 BEGINendCnfLoad
