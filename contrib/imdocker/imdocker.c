@@ -860,6 +860,8 @@ BEGINsetModCnf
                 token = strtok(NULL, "&");
             }
             loadModConf->getContainerLogOptionsWithoutTail = option_str;
+            free(buf);
+            buf = NULL;
         } else if (!strcmp(modpblk.descr[i].name, "dockerapiunixsockaddr")) {
             loadModConf->dockerApiUnixSockAddr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(modpblk.descr[i].name, "dockerapiaddr")) {
