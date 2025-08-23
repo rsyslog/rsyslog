@@ -660,10 +660,10 @@ static rsRetVal ATTR_NONNULL() InitDA(qqueue_t *const pThis, const int bLockMute
     lenBuf = snprintf((char *)pszBuf, sizeof(pszBuf), "%s:DAwpool", obj.GetName((obj_t *)pThis));
     CHKiRet(wtpConstruct(&pThis->pWtpDA));
     CHKiRet(wtpSetDbgHdr(pThis->pWtpDA, pszBuf, lenBuf));
-    CHKiRet(wtpSetpfChkStopWrkr(pThis->pWtpDA, (rsRetVal (*)(void *pUsr, int))qqueueChkStopWrkrDA));
-    CHKiRet(wtpSetpfGetDeqBatchSize(pThis->pWtpDA, (rsRetVal (*)(void *pUsr, int *))GetDeqBatchSize));
-    CHKiRet(wtpSetpfDoWork(pThis->pWtpDA, (rsRetVal (*)(void *pUsr, void *pWti))ConsumerDA));
-    CHKiRet(wtpSetpfObjProcessed(pThis->pWtpDA, (rsRetVal (*)(void *pUsr, wti_t *pWti))batchProcessed));
+    CHKiRet(wtpSetpfChkStopWrkr(pThis->pWtpDA, (rsRetVal(*)(void *pUsr, int))qqueueChkStopWrkrDA));
+    CHKiRet(wtpSetpfGetDeqBatchSize(pThis->pWtpDA, (rsRetVal(*)(void *pUsr, int *))GetDeqBatchSize));
+    CHKiRet(wtpSetpfDoWork(pThis->pWtpDA, (rsRetVal(*)(void *pUsr, void *pWti))ConsumerDA));
+    CHKiRet(wtpSetpfObjProcessed(pThis->pWtpDA, (rsRetVal(*)(void *pUsr, wti_t *pWti))batchProcessed));
     CHKiRet(wtpSetpmutUsr(pThis->pWtpDA, pThis->mut));
     CHKiRet(wtpSetiNumWorkerThreads(pThis->pWtpDA, 1));
     CHKiRet(wtpSettoWrkShutdown(pThis->pWtpDA, pThis->toWrkShutdown));
@@ -954,9 +954,9 @@ static rsRetVal qqueueTryLoadPersistedInfo(qqueue_t *pThis) {
 
     /* then the stream objects (same order as when persisted!) */
     CHKiRet(obj.Deserialize(&pThis->tVars.disk.pWrite, (uchar *)"strm", psQIF,
-                            (rsRetVal (*)(obj_t *, void *))qqueueLoadPersStrmInfoFixup, pThis));
+                            (rsRetVal(*)(obj_t *, void *))qqueueLoadPersStrmInfoFixup, pThis));
     CHKiRet(obj.Deserialize(&pThis->tVars.disk.pReadDel, (uchar *)"strm", psQIF,
-                            (rsRetVal (*)(obj_t *, void *))qqueueLoadPersStrmInfoFixup, pThis));
+                            (rsRetVal(*)(obj_t *, void *))qqueueLoadPersStrmInfoFixup, pThis));
     /* create a duplicate for the read "pointer". */
     CHKiRet(strm.Dup(pThis->tVars.disk.pReadDel, &pThis->tVars.disk.pReadDeq));
     CHKiRet(strm.SetbDeleteOnClose(pThis->tVars.disk.pReadDeq, 0)); /* deq must NOT delete the files! */
@@ -2545,11 +2545,11 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
     }
     CHKiRet(wtpConstruct(&pThis->pWtpReg));
     CHKiRet(wtpSetDbgHdr(pThis->pWtpReg, pszBuf, lenBuf));
-    CHKiRet(wtpSetpfRateLimiter(pThis->pWtpReg, (rsRetVal (*)(void *pUsr))RateLimiter));
-    CHKiRet(wtpSetpfChkStopWrkr(pThis->pWtpReg, (rsRetVal (*)(void *pUsr, int))ChkStopWrkrReg));
-    CHKiRet(wtpSetpfGetDeqBatchSize(pThis->pWtpReg, (rsRetVal (*)(void *pUsr, int *))GetDeqBatchSize));
-    CHKiRet(wtpSetpfDoWork(pThis->pWtpReg, (rsRetVal (*)(void *pUsr, void *pWti))ConsumerReg));
-    CHKiRet(wtpSetpfObjProcessed(pThis->pWtpReg, (rsRetVal (*)(void *pUsr, wti_t *pWti))batchProcessed));
+    CHKiRet(wtpSetpfRateLimiter(pThis->pWtpReg, (rsRetVal(*)(void *pUsr))RateLimiter));
+    CHKiRet(wtpSetpfChkStopWrkr(pThis->pWtpReg, (rsRetVal(*)(void *pUsr, int))ChkStopWrkrReg));
+    CHKiRet(wtpSetpfGetDeqBatchSize(pThis->pWtpReg, (rsRetVal(*)(void *pUsr, int *))GetDeqBatchSize));
+    CHKiRet(wtpSetpfDoWork(pThis->pWtpReg, (rsRetVal(*)(void *pUsr, void *pWti))ConsumerReg));
+    CHKiRet(wtpSetpfObjProcessed(pThis->pWtpReg, (rsRetVal(*)(void *pUsr, wti_t *pWti))batchProcessed));
     CHKiRet(wtpSetpmutUsr(pThis->pWtpReg, pThis->mut));
     CHKiRet(wtpSetiNumWorkerThreads(pThis->pWtpReg, pThis->iNumWorkerThreads));
     CHKiRet(wtpSettoWrkShutdown(pThis->pWtpReg, pThis->toWrkShutdown));
