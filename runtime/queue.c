@@ -1762,12 +1762,26 @@ static rsRetVal ATTR_NONNULL(1) DoDeleteBatchFromQStore(qqueue_t *const pThis, c
 }
 
 
-/* remove messages from the physical queue store that are fully processed. This is
- * controlled via the to-delete list.
+typedef enum tdlPhase_e { TDL_EMPTY, TDL_PROCESS_HEAD, TDL_QUEUE } tdlPhase_t;
+
+/**
+ * Remove messages from the physical queue store that are fully processed.
+ *
+ * Deletion proceeds through a small state machine governed by the
+ * to-delete list:
+ * - TDL_EMPTY:  list is empty, delete the current batch directly.
+ * - TDL_PROCESS_HEAD:  pending head elements are removed first, then the
+ *   current batch.
+ * - TDL_QUEUE:  current batch cannot be deleted and is queued for later.
+ *
+ * The dequeue identifier advances strictly monotonically, ensuring
+ * deterministic order and proper resource release for both disk and
+ * memory queue implementations.
  */
 static rsRetVal DeleteBatchFromQStore(qqueue_t *pThis, batch_t *pBatch) {
     toDeleteLst_t *pTdl;
-    qDeqID deqIDDel;
+    qDeqID nextID;
+    tdlPhase_t phase;
     DEFiRet;
 
     ISOBJ_TYPE_assert(pThis, qqueue);
@@ -1775,23 +1789,41 @@ static rsRetVal DeleteBatchFromQStore(qqueue_t *pThis, batch_t *pBatch) {
 
     dbgprintf("rger: deleteBatchFromQStore, nElem %d\n", (int)pBatch->nElem);
     pTdl = tdlPeek(pThis); /* get current head element */
-    if (pTdl == NULL) { /* to-delete list empty */
-        DoDeleteBatchFromQStore(pThis, pBatch->nElem);
+
+    if (pTdl == NULL) {
+        phase = TDL_EMPTY;
     } else if (pBatch->deqID == pThis->deqIDDel) {
-        deqIDDel = pThis->deqIDDel;
-        pTdl = tdlPeek(pThis);
-        while (pTdl != NULL && deqIDDel == pTdl->deqID) {
-            DoDeleteBatchFromQStore(pThis, pTdl->nElemDeq);
-            tdlPop(pThis);
-            ++deqIDDel;
-            pTdl = tdlPeek(pThis);
-        }
-        /* old entries deleted, now delete current ones... */
-        DoDeleteBatchFromQStore(pThis, pBatch->nElem);
+        phase = TDL_PROCESS_HEAD;
     } else {
-        /* can not delete, insert into to-delete list */
-        DBGPRINTF("not at head of to-delete list, enqueue %d\n", (int)pBatch->deqID);
-        CHKiRet(tdlAdd(pThis, pBatch->deqID, pBatch->nElem));
+        phase = TDL_QUEUE;
+    }
+
+    switch (phase) {
+        case TDL_EMPTY:
+            DoDeleteBatchFromQStore(pThis, pBatch->nElem);
+            break;
+
+        case TDL_PROCESS_HEAD:
+            nextID = pThis->deqIDDel;
+            while ((pTdl = tdlPeek(pThis)) != NULL && pTdl->deqID == nextID) {
+                DoDeleteBatchFromQStore(pThis, pTdl->nElemDeq);
+                tdlPop(pThis);
+                ++nextID;
+            }
+            assert(pThis->deqIDDel == nextID);
+            /* old entries deleted, now delete current ones... */
+            DoDeleteBatchFromQStore(pThis, pBatch->nElem);
+            break;
+
+        case TDL_QUEUE:
+            /* cannot delete, insert into to-delete list */
+            DBGPRINTF("not at head of to-delete list, enqueue %d\n", (int)pBatch->deqID);
+            CHKiRet(tdlAdd(pThis, pBatch->deqID, pBatch->nElem));
+            break;
+
+        default:
+            /* all phases handled above */
+            break;
     }
 
 finalize_it:
