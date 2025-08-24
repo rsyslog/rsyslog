@@ -312,6 +312,11 @@ if ENABLE_OMAMQP1
 SUBDIRS += contrib/omamqp1
 endif
 
+# omtelegram
+if ENABLE_OMTELEGRAM
+SUBDIRS += contrib/omtelegram
+endif
+
 # imbatchreport
 if ENABLE_IMBATCHREPORT
 SUBDIRS += contrib/imbatchreport
