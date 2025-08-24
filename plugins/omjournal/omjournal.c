@@ -59,13 +59,14 @@ DEF_OMOD_STATIC_DATA;
 
 typedef struct _instanceData {
     uchar *tplName;
+    uchar *namespace;
 } instanceData;
 
 typedef struct wrkrInstanceData {
     instanceData *pData;
 } wrkrInstanceData_t;
 
-static struct cnfparamdescr actpdescr[] = {{"template", eCmdHdlrGetWord, 0}};
+static struct cnfparamdescr actpdescr[] = {{"template", eCmdHdlrGetWord, 0}, {"namespace", eCmdHdlrGetWord, 0}};
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 
@@ -115,6 +116,7 @@ ENDisCompatibleWithFeature
 BEGINfreeInstance
     CODESTARTfreeInstance;
     free(pData->tplName);
+    free(pData->namespace);
 ENDfreeInstance
 
 
@@ -124,6 +126,7 @@ ENDfreeWrkrInstance
 
 static inline void setInstParamDefaults(instanceData *pData) {
     pData->tplName = NULL;
+    pData->namespace = NULL;
 }
 
 BEGINnewActInst
@@ -149,9 +152,11 @@ BEGINnewActInst
 
         if (!strcmp(actpblk.descr[i].name, "template")) {
             pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "namespace")) {
+            pData->namespace = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else {
             dbgprintf(
-                "ommongodb: program error, non-handled "
+                "omjournal: program error, non-handled "
                 "param '%s'\n",
                 actpblk.descr[i].name);
         }
@@ -235,6 +240,52 @@ fail:
     return NULL;
 }
 
+static rsRetVal send_non_template_message_with_namespace(uchar *namespace, smsg_t *const __restrict__ pMsg) {
+    DEFiRet;
+    int fd;
+    FILE *log;
+
+    int sev;
+
+    MsgGetSeverity(pMsg, &sev);
+
+#ifdef HAVE_SD_JOURNAL_STREAM_FD_WITH_NAMESPACE
+    fd = sd_journal_stream_fd_with_namespace((char *)namespace, (const char *)getMSG(pMsg),
+                                             (pMsg->iFacility << 3) | sev, 1);
+#else
+    LogError(0, RS_RET_SYSTEMD_VERSION_ERR,
+             "omjournal: "
+             "namespace='%s', however you need systemd V256 to make use of this feature.\n",
+             (char *)namespace);
+    ABORT_FINALIZE(RS_RET_SYSTEMD_VERSION_ERR);
+#endif
+    if (fd < 0) {
+        LogError(errno, RS_RET_FILE_OPEN_ERROR,
+                 "omjournal: "
+                 "Failed to create stream fd.\n");
+        ABORT_FINALIZE(RS_RET_FILE_OPEN_ERROR);
+    }
+
+    log = fdopen(fd, "w");
+    if (!log) {
+        LogError(errno, RS_RET_FOPEN_FAILURE,
+                 "omjournal: "
+                 "failed to open journal namespace fd.\n");
+        close(fd);
+        ABORT_FINALIZE(RS_RET_FOPEN_FAILURE);
+    }
+    if (fprintf(log, "%s\n", (char *)getMSG(pMsg)) < 0) {
+        LogError(errno, RS_RET_IO_ERROR,
+                 "omjournal: "
+                 "failed to write journal namespace file.\n");
+        fclose(log);
+        ABORT_FINALIZE(RS_RET_IO_ERROR);
+    }
+    fclose(log);
+
+finalize_it:
+    RETiRet;
+}
 
 static void send_non_template_message(smsg_t *const __restrict__ pMsg) {
     uchar *tag;
@@ -268,13 +319,20 @@ BEGINdoAction_NoStrings
     CODESTARTdoAction;
     pData = pWrkrData->pData;
 
-    if (pData->tplName == NULL) {
+    if (pData->namespace != NULL && pData->tplName != NULL) {
+        LogError(0, RS_RET_NO_TEMPLATE_SUPPORT_ERR,
+                 "omjournal: "
+                 "journald namespace feature does not support templates yet.");
+        ABORT_FINALIZE(RS_RET_NO_TEMPLATE_SUPPORT_ERR);
+    } else if (pData->namespace != NULL) {
+        CHKiRet(send_non_template_message_with_namespace(pData->namespace, (smsg_t *)((void **)pMsgData)[0]));
+    } else if (pData->tplName == NULL) {
         send_non_template_message((smsg_t *)((void **)pMsgData)[0]);
     } else {
         send_template_message((struct json_object *)((void **)pMsgData)[0]);
     }
+finalize_it:
 ENDdoAction
-
 
 BEGINmodExit
     CODESTARTmodExit;
