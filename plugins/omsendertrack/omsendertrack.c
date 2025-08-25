@@ -138,7 +138,6 @@ static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current e
 /* forward references */
 static rsRetVal initHashtable(instanceData *const pData);
 static void *bgWriter(void *arg);
-static rsRetVal buildTmpStatefile(instanceData *const pData);
 
 /**
  * @brief Build and cache the temporary state file path.
@@ -773,6 +772,7 @@ BEGINnewActInst
 
     /* build cached temp filename once */
     CHKiRet(buildTmpStatefile(pData));
+    assert(pData->statefile_tmp != NULL);
 
     CODE_STD_STRING_REQUESTnewActInst(1);
     tplToUse = (uchar *)strdup((pData->senderidTemplate == NULL) ? " StdOmSenderTrack-senderid"
