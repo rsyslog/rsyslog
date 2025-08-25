@@ -87,8 +87,9 @@ typedef struct {
 typedef struct _instanceData {
     int interval; /**< write interval in seconds */
     uchar *statefile; /**< path to the JSON state file */
+    uchar *statefile_tmp; /**< cached path to temp state file (statefile + ".tmp") */
     uchar *cmdfile; /**< path to command file (unused) */
-    uchar *templateName; /**< template that defines sender ID */
+    uchar *senderidTemplate; /**< template that defines sender ID */
     pthread_rwlock_t mutSenders; /**< protects the sender hash table */
     struct hashtable *stats_senders; /**< hash table of sender_stats_t */
     int bShutdownBackgroundWriter; /**< tells bgwriter to terminate */
@@ -117,14 +118,14 @@ static struct cnfparamdescr actpdescr[] = {
     /** @param interval at which the sender state file is written. */
     {"interval", eCmdHdlrPositiveInt, 0},
     /** @param statefile State file for the statistics object. */
-    {"statefile", eCmdHdlrString, 0},
+    {"statefile", eCmdHdlrString, 1}, /* required */
     /**
      * @param cmdfile Specifies the full path to the command file that omsendertrack will periodically poll for
      * new commands. Supported commands are "delete" and "GET". Not implemented in the current PoC.
      */
     {"cmdfile", eCmdHdlrString, 0},
     /** @param template Template to use for the output format. */
-    {"template", eCmdHdlrGetWord, 0}};
+    {"senderid", eCmdHdlrGetWord, 0}};
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 struct modConfData_s {
@@ -137,6 +138,34 @@ static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current e
 /* forward references */
 static rsRetVal initHashtable(instanceData *const pData);
 static void *bgWriter(void *arg);
+static rsRetVal buildTmpStatefile(instanceData *const pData);
+
+/**
+ * @brief Build and cache the temporary state file path.
+ *
+ * This constructs "<statefile>.tmp" and stores it in pData->statefile_tmp.
+ * Keeping the temp file in the same directory as the final file ensures that
+ * the subsequent rename() is atomic on POSIX filesystems.
+ */
+static rsRetVal buildTmpStatefile(instanceData *const pData) {
+    DEFiRet;
+    if (pData == NULL || pData->statefile == NULL) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    const size_t statefile_len = strlen((const char *)pData->statefile);
+    const size_t tmp_len = statefile_len + 4 + 1; /* ".tmp" + NUL */
+    uchar *tmp = (uchar *)malloc(tmp_len);
+    if (tmp == NULL) {
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
+    snprintf((char *)tmp, tmp_len, "%s.tmp", (const char *)pData->statefile);
+    if (pData->statefile_tmp != NULL) {
+        free(pData->statefile_tmp);
+    }
+    pData->statefile_tmp = tmp;
+finalize_it:
+    RETiRet;
+}
 
 
 /**
@@ -424,6 +453,16 @@ static rsRetVal
 /**
  * Persist sender statistics to disk.
  *
+ * Process overview for new contributors:
+ *  1) Use cached temp path (statefile_tmp) created at config-time.
+ *  2) Write JSON to the temp file.
+ *  3) Atomically replace the final file via rename(temp, statefile).
+ *
+ * Why cached temp path? It avoids repeated allocations and guarantees the
+ * temp file lives in the same directory as the target so that rename()
+ * is atomic. If the cache is unexpectedly missing (e.g., future reload
+ * flow), we fall back to computing it once here.
+ *
  * @param pData module instance data
  * @retval RS_RET_OK on success
  */
@@ -431,10 +470,23 @@ writeSenderInfo(instanceData *const pData)
 {
     DEFiRet;
     FILE *fp = NULL;
-    char tmpname[1024];  // TODO: size!
+    const char *tmpname = (const char *)pData->statefile_tmp;
+    int tmp_alloc = 0;
 
     dbgprintf("writeSenderInfo, file %s\n", pData->statefile);
-    snprintf(tmpname, sizeof(tmpname), "%s.tmp", pData->statefile);
+    if (tmpname == NULL) {
+        /* safety fallback if not yet built */
+        const size_t statefile_len = strlen((const char *)pData->statefile);
+        const size_t tmp_len = statefile_len + 4 + 1;
+        char *tn = (char *)malloc(tmp_len);
+        if (tn == NULL) {
+            LogError(0, RS_RET_OUT_OF_MEMORY, "omsendertrack: out of memory building temp sender file name");
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+        snprintf(tn, tmp_len, "%s.tmp", (const char *)pData->statefile);
+        tmpname = tn;
+        tmp_alloc = 1;
+    }
 
     if ((fp = fopen(tmpname, "w")) == NULL) {
         LogError(errno, RS_RET_IO_ERROR, "omsendertrack could not create new temp sender file");
@@ -455,6 +507,9 @@ writeSenderInfo(instanceData *const pData)
 finalize_it:
     if (fp != NULL) {
         fclose(fp);
+    }
+    if (tmp_alloc && tmpname != NULL) {
+        free((void *)tmpname);
     }
     RETiRet;
 }
@@ -619,8 +674,9 @@ BEGINfreeInstance
     writeSenderInfo(pData);
 
     /* destroy data structs */
-    free((void *)pData->templateName);
+    free((void *)pData->senderidTemplate);
     free((void *)pData->statefile);
+    if (pData->statefile_tmp) free((void *)pData->statefile_tmp);
     pthread_rwlock_destroy(&pData->mutSenders);
     hashtable_destroy(pData->stats_senders, 1); /* 1 => free all values automatically */
 ENDfreeInstance
@@ -634,7 +690,7 @@ ENDfreeWrkrInstance
 BEGINdbgPrintInstInfo
     CODESTARTdbgPrintInstInfo;
     dbgprintf("omsendertrack\n");
-    dbgprintf("\ttemplate='%s'\n", pData->templateName);
+    dbgprintf("\tsenderid='%s'\n", pData->senderidTemplate);
 ENDdbgPrintInstInfo
 
 
@@ -655,9 +711,12 @@ BEGINcommitTransaction
 ENDcommitTransaction
 
 
-static void setInstParamDefaults(instanceData *pData) {
+static rsRetVal setInstParamDefaults(instanceData *pData) {
+    DEFiRet;
     pData->interval = DEFAULT_INTERVAL;
-    pData->templateName = (uchar *)"TODO_WHICH_ONE";  // TODO
+    CHKmalloc(pData->senderidTemplate = (uchar *)strdup(" StdOmSenderTrack-senderid"));
+finalize_it:
+    RETiRet;
 }
 
 
@@ -685,18 +744,19 @@ BEGINnewActInst
     }
 
     CHKiRet(createInstance(&pData));
-    setInstParamDefaults(pData);
+    CHKiRet(setInstParamDefaults(pData));
 
     for (i = 0; i < actpblk.nParams; ++i) {
         if (!pvals[i].bUsed) {
             continue;
         } else if (!strcmp(actpblk.descr[i].name, "interval")) {
             pData->interval = (int)pvals[i].val.d.n;
-            // TODO: add statefile, cmdfile
+            // TODO: add cmdfile
         } else if (!strcmp(actpblk.descr[i].name, "statefile")) {
             pData->statefile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
-        } else if (!strcmp(actpblk.descr[i].name, "template")) {
-            pData->templateName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "senderid")) {
+            free((void *)pData->senderidTemplate);  // free default template
+            pData->senderidTemplate = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else {
             DBGPRINTF(
                 "omsendertrack: program error, non-handled "
@@ -705,9 +765,18 @@ BEGINnewActInst
         }
     }
 
+    /* Enforce required param (defensive in addition to descriptor flag). */
+    if (pData->statefile == NULL || ((const char *)pData->statefile)[0] == '\0') {
+        LogError(0, RS_RET_CONF_RQRD_PARAM_MISSING, "omsendertrack: 'statefile' parameter is required");
+        ABORT_FINALIZE(RS_RET_CONF_RQRD_PARAM_MISSING);
+    }
+
+    /* build cached temp filename once */
+    CHKiRet(buildTmpStatefile(pData));
+
     CODE_STD_STRING_REQUESTnewActInst(1);
-    // TODO: make the template a parameter
-    tplToUse = (uchar *)strdup((pData->templateName == NULL) ? "RSYSLOG_FileFormat" : (char *)pData->templateName);
+    tplToUse = (uchar *)strdup((pData->senderidTemplate == NULL) ? " StdOmSenderTrack-senderid"
+                                                                 : (char *)pData->senderidTemplate);
     CHKiRet(OMSRsetEntry(*ppOMSR, 0, tplToUse, OMSR_NO_RQD_TPL_OPTS));
 
     initHashtable(pData);
@@ -717,7 +786,6 @@ ENDnewActInst
 
 
 BEGINparseSelectorAct
-    int iTplOpts;
     CODESTARTparseSelectorAct;
     CODE_STD_STRING_REQUESTparseSelectorAct(1)
         /* first check if this config line is actually for us */
@@ -731,8 +799,6 @@ BEGINparseSelectorAct
 
     /* check if a non-standard template is to be applied */
     if (*(p - 1) == ';') --p;
-    iTplOpts = 0;
-    CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, iTplOpts, (uchar *)"RSYSLOG_FileFormat"));
     CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 

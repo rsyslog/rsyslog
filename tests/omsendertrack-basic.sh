@@ -10,7 +10,7 @@ module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 
 template(name="hostname" type="string" string="%hostname%")
-action(type="omsendertrack" template="hostname" statefile="'$RSYSLOG_DYNNAME'.sendertrack")
+action(type="omsendertrack" senderid="hostname" statefile="'$RSYSLOG_DYNNAME'.sendertrack")
 
 # The following is just to find a terminating condition for message injection
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
