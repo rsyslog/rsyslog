@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-26
 
 IMPORTANT NOTE TO Package Builders / Distros:
 
@@ -18,7 +18,37 @@ AI slop is not accepted and this release addresses AI slop by better parametrizi
 agents in regard to code generation and streamlining code so that AIs better
 understand it. This is an ongoing effort.
 
-- 2025-08-20:omsendertrack: stop towards full completion of module.
+- 2025-08-25: tcpsrv: refactor IO loop; rearm-before-unlock; poll path
+  Improve maintainability and robustness of the TCP server by clarifying
+  locking/ownership, tightening invariants, and simplifying queueing.
+  Also fix a long-standing pragma macro typo across the tree.
+  Impact: Internal behavior only. EPOLL re-arm now occurs while holding
+  pSess->mut; starvation cap counts only successful reads.
+  Before/After:
+  Before: EPOLL re-arm happened after leaving the critical section; read
+  starvation cap counted loop iterations; closeSess() sometimes unlocked;
+  select_* helpers used on non-epoll path; enqueueWork() returned status.
+  After: EPOLLONESHOT is re-armed before unlocking; starvation cap counts
+  only RS_RET_OK reads; closeSess() never unlocks; poll_* helpers replace
+  select_*; enqueueWork() is void (best-effort).
+  Technical details:
+  - Replace notifyReArm() with rearmIoEvent() (EPOLL_CTL_MOD with
+    EPOLLONESHOT|EPOLLET; asserts efd/sock; logs on failure).
+  - doReceive(): explicit state machine; would-block path re-arms before
+    unlock; close path unlocks then calls closeSess(); starvation handoff
+    enqueues without re-arming.
+  - Initialize ioDirection for listener and session descriptors; add
+    assert(sock >= 0) and widespread ATTR_NONNULL annotations.
+  - startWrkrPool(): single finalize rollback (cancel/join partial
+    threads; destroy cond/mutex); stopWrkrPool(): destroy cond/mutex.
+  - enqueueWork(): FIFO append under lock and cond signal; returns void.
+  - Cleanup hardening on construct failure: free ppLstn, ppLstnPort,
+    ppioDescrPtr; free fromHostIP on SessAccept() error.
+  - Non-epoll: rename select_Add/Poll/IsReady -> poll_*; RunPoll() uses
+    poll_* and sets sane ioDirection defaults.
+  - Typo fix: standardize PRAGMA_IGNORE_Wswitch_enum in header and all
+    users (action.c, rainerscript.c, template.c, tcpsrv.c).
+- 2025-08-25: omsendertrack: stop towards full completion of module.
   Work towards full completion of the module’s interface as it exits PoC.
   The new name senderid (formerly: template) matches intent (identify a
   sender, not an output format) and avoids confusion.  Also make state
