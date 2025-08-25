@@ -1,5 +1,46 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+
+IMPORTANT NOTE TO Package Builders / Distros:
+
+The documentation has been integrated back into the main repository, in the
+doc/ subdirectory. As such, there is no second doc tarball available and
+package build most probably needs adjustments.
+
+This release had the overall theme of improving code quality, including the
+initial introduction of doxygen comments, improving the user experience by
+documentation updates, and implementing the rsyslog responsible "AI First"
+strategy. Note that while AI generated code is part of the release, all
+contributions, AI or human, follow the same rigourus review and CI procedures
+with the final acceptance is by a maintainer.
+
+AI slop is not accepted and this release addresses AI slop by better parametrizing
+agents in regard to code generation and streamlining code so that AIs better
+understand it. This is an ongoing effort.
+
+- 2025-08-20:omsendertrack: stop towards full completion of module.
+  Work towards full completion of the module’s interface as it exits PoC.
+  The new name senderid (formerly: template) matches intent (identify a
+  sender, not an output format) and avoids confusion.  Also make state
+  persistence safer via atomic writes.
+  Merged a bit pre-completion in order to get a static analyzer fix
+  into the main code base. Some additional cleanup PR will follow.
+  State is much cleaner now than in PoC.
+  Impact: Configs must use senderid=; statefile is now required. Tests
+  and docs updated.
+  Before/After: action(... template="name") -> action(... senderid="name").
+  Technical details:
+  - Replace the config parameter and instance field; drop legacy template
+    parsing in parseSelectorAct. The module now reads only senderid=.
+  - Enforce required statefile (descriptor + runtime) and cache a temp
+    path "<statefile>.tmp" to ensure rename() is atomic. Provide a
+    one-time fallback build if the cache is missing (e.g., reload flow).
+  - Add built-in template "StdOmSenderTrack-senderid" yielding
+    "%fromhost-ip%" and use it as the default senderid template.
+  - Improve memory ownership (free cached temp path/default template) and
+    keep existing locking/queue semantics unchanged.
+  - Update tests to use senderid= and prune PoC doc note accordingly.
+  see also: https://github.com/rsyslog/rsyslog/issues/5599
 - 2025-08-20: AI: add support files for github copilot
   helps craft better patches via copilot
 - 2025-08-18: imjournal: fix double sd_journal_close() during thread cancellation
