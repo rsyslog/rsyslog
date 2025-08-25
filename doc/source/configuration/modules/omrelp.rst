@@ -148,6 +148,66 @@ balancers, which in turn forward messages to another physical target
 system.
 
 
+KeepAlive
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+Enable or disable keep-alive packets at the TCP socket layer. By
+default keep-alives are disabled.
+
+
+KeepAlive.Probes
+^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", "none"
+
+The number of keepalive probes to send before considering the
+connection dead. The default, 0, uses the operating system defaults.
+This only has an effect if keep-alive is enabled and may not be
+available on all platforms.
+
+
+KeepAlive.Interval
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", "none"
+
+The interval between subsequent keepalive probes. The default, 0,
+uses the operating system defaults. This only has an effect if
+keep-alive is enabled and may not be available on all platforms.
+
+
+KeepAlive.Time
+^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "integer", "0", "no", "none"
+
+The idle time before the first keepalive probe is sent. The default, 0,
+uses the operating system defaults. This only has an effect if
+keep-alive is enabled and may not be available on all platforms.
+
+
 WindowSize
 ^^^^^^^^^^
 

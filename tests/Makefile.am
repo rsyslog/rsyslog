@@ -213,9 +213,10 @@ TESTS +=  \
 	omfwd-lb-2target-basic.sh \
 	omfwd-lb-2target-retry.sh \
 	omfwd-lb-2target-one_fail.sh \
-	omfwd-tls-invalid-permitExpiredCerts.sh \
-	omfwd-keepalive.sh \
-	omusrmsg-errmsg-no-params.sh \
+        omfwd-tls-invalid-permitExpiredCerts.sh \
+        omfwd-keepalive.sh \
+        omrelp-keepalive.sh \
+        omusrmsg-errmsg-no-params.sh \
 	omusrmsg-noabort.sh \
 	omfile-module-params.sh \
 	omfile-read-only-errmsg.sh \
@@ -2244,10 +2245,11 @@ EXTRA_DIST= \
 	omfwd-lb-2target-impstats.sh \
 	omfwd-lb-2target-retry.sh \
 	omfwd-lb-2target-one_fail.sh \
-	omfwd-tls-invalid-permitExpiredCerts.sh \
-	omfwd-keepalive.sh \
-	omfwd_fast_imuxsock.sh \
-	omfile_hup-vg.sh \
+        omfwd-tls-invalid-permitExpiredCerts.sh \
+        omfwd-keepalive.sh \
+        omrelp-keepalive.sh \
+        omfwd_fast_imuxsock.sh \
+        omfile_hup-vg.sh \
 	omsendertrack-basic.sh \
 	omsendertrack-basic-vg.sh \
 	omsendertrack-statefile.sh \
