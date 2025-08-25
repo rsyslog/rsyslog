@@ -735,9 +735,21 @@ static void genMsg(char *buf, size_t maxBuf, size_t *pLenBuf, struct instdata *i
         *pLenBuf = snprintf(buf, maxBuf, "%s%c", MsgToSend, frameDelim);
     }
     if (octateCountFramed == 1) {
-        snprintf(payloadLen, sizeof(payloadLen), "%zd ", *pLenBuf);
+        size_t actual_len;
+
+        /* when using octet-counted framing, omit the delimiter from the
+         * payload itself. the delimiter is included in the default message
+         * format to support traditional plain TCP framing. remove it here
+         * before we prefix the payload length. */
+        actual_len = strlen(buf);
+        if (actual_len > 0 && buf[actual_len - 1] == frameDelim) {
+            buf[--actual_len] = '\0';
+        }
+        *pLenBuf = actual_len;
+
+        snprintf(payloadLen, sizeof(payloadLen), "%zu ", actual_len);
         payloadStringLen = strlen(payloadLen);
-        memmove(buf + payloadStringLen, buf, *pLenBuf);
+        memmove(buf + payloadStringLen, buf, actual_len);
         memcpy(buf, payloadLen, payloadStringLen);
         *pLenBuf += payloadStringLen;
     }
