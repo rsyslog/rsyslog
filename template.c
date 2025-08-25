@@ -48,7 +48,7 @@
 #include "parserif.h"
 #include "unicode-helper.h"
 
-PRAGMA_INGORE_Wswitch_enum
+PRAGMA_IGNORE_Wswitch_enum
     /* static data */
     DEFobjCurrIf(obj) DEFobjCurrIf(strgen)
 

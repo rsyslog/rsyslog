@@ -79,7 +79,7 @@
 #include "nsd_ptcp.h"
 
 
-PRAGMA_INGORE_Wswitch_enum MODULE_TYPE_LIB MODULE_TYPE_NOKEEP;
+PRAGMA_IGNORE_Wswitch_enum MODULE_TYPE_LIB MODULE_TYPE_NOKEEP;
 
 /* defines */
 #define TCPSESS_MAX_DEFAULT 200 /* default for nbr of tcp sessions if no number is given */
@@ -87,13 +87,20 @@ PRAGMA_INGORE_Wswitch_enum MODULE_TYPE_LIB MODULE_TYPE_NOKEEP;
 
 /* static data */
 DEFobjStaticHelpers;
-DEFobjCurrIf(conf) DEFobjCurrIf(glbl) DEFobjCurrIf(ruleset) DEFobjCurrIf(tcps_sess) DEFobjCurrIf(net)
-    DEFobjCurrIf(netstrms) DEFobjCurrIf(netstrm) DEFobjCurrIf(prop) DEFobjCurrIf(statsobj)
+DEFobjCurrIf(conf);
+DEFobjCurrIf(glbl);
+DEFobjCurrIf(ruleset);
+DEFobjCurrIf(tcps_sess);
+DEFobjCurrIf(net);
+DEFobjCurrIf(netstrms);
+DEFobjCurrIf(netstrm);
+DEFobjCurrIf(prop);
+DEFobjCurrIf(statsobj);
 
 #define NSPOLL_MAX_EVENTS_PER_WAIT 128
 
 
-        static rsRetVal enqueueWork(tcpsrv_io_descr_t *const pioDescr);
+static void enqueueWork(tcpsrv_io_descr_t *const pioDescr);
 
 /* We check which event notification mechanism we have and use the best available one.
  * We switch back from library-specific drivers, because event notification always works
@@ -104,7 +111,7 @@ DEFobjCurrIf(conf) DEFobjCurrIf(glbl) DEFobjCurrIf(ruleset) DEFobjCurrIf(tcps_se
  */
 #if defined(ENABLE_IMTCP_EPOLL)
 
-static rsRetVal eventNotify_init(tcpsrv_t *const pThis) {
+static rsRetVal ATTR_NONNULL() eventNotify_init(tcpsrv_t *const pThis) {
     DEFiRet;
     #if defined(ENABLE_IMTCP_EPOLL) && defined(EPOLL_CLOEXEC) && defined(HAVE_EPOLL_CREATE1)
     DBGPRINTF("tcpsrv uses epoll_create1()\n");
@@ -126,7 +133,7 @@ finalize_it:
 }
 
 
-static rsRetVal eventNotify_exit(tcpsrv_t *const pThis) {
+static rsRetVal ATTR_NONNULL() eventNotify_exit(tcpsrv_t *const pThis) {
     DEFiRet;
     close(pThis->evtdata.epoll.efd);
     RETiRet;
@@ -134,12 +141,13 @@ static rsRetVal eventNotify_exit(tcpsrv_t *const pThis) {
 
 
 /* Modify socket set */
-static rsRetVal epoll_Ctl(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr, const int isLstn, const int op) {
+static rsRetVal ATTR_NONNULL()
+    epoll_Ctl(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr, const int isLstn, const int op) {
     DEFiRet;
 
     const int id = pioDescr->id;
     const int sock = pioDescr->sock;
-    assert(sock != 0);
+    assert(sock >= 0);
 
     if (op == EPOLL_CTL_ADD) {
         dbgprintf("adding epoll entry %d, socket %d\n", id, sock);
@@ -177,10 +185,8 @@ finalize_it:
  * number of entries actually read on exit.
  * rgerhards, 2009-11-18
  */
-static rsRetVal epoll_Wait(tcpsrv_t *const pThis,
-                           const int timeout,
-                           int *const numEntries,
-                           tcpsrv_io_descr_t *pWorkset[]) {
+static rsRetVal ATTR_NONNULL()
+    epoll_Wait(tcpsrv_t *const pThis, const int timeout, int *const numEntries, tcpsrv_io_descr_t *pWorkset[]) {
     struct epoll_event event[NSPOLL_MAX_EVENTS_PER_WAIT];
     int nfds;
     int i;
@@ -222,21 +228,20 @@ finalize_it:
     #define FDSET_INCREMENT 1024 /* increment for struct pollfds array allocation */
 
 
-static rsRetVal eventNotify_init(tcpsrv_t *const pThis ATTR_UNUSED) {
-    DEFiRet;
-    RETiRet;
+static rsRetVal ATTR_NONNULL() eventNotify_init(tcpsrv_t *const pThis ATTR_UNUSED) {
+    return RS_RET_OK;
 }
 
 
-static rsRetVal eventNotify_exit(tcpsrv_t *const pThis) {
+static rsRetVal ATTR_NONNULL() eventNotify_exit(tcpsrv_t *const pThis) {
     DEFiRet;
     free(pThis->evtdata.poll.fds);
     RETiRet;
 }
 
 
-/* Add a socket to the select set */
-static rsRetVal ATTR_NONNULL() select_Add(tcpsrv_t *const pThis, netstrm_t *const pStrm, const nsdsel_waitOp_t waitOp) {
+/* Add a socket to the poll set */
+static rsRetVal ATTR_NONNULL() poll_Add(tcpsrv_t *const pThis, netstrm_t *const pStrm, const nsdsel_waitOp_t waitOp) {
     DEFiRet;
     int sock;
 
@@ -273,7 +278,7 @@ finalize_it:
 
 /* perform the poll()  piNumReady returns how many descriptors are ready for IO
  */
-static rsRetVal ATTR_NONNULL() select_Poll(tcpsrv_t *const pThis, int *const piNumReady) {
+static rsRetVal ATTR_NONNULL() poll_Poll(tcpsrv_t *const pThis, int *const piNumReady) {
     DEFiRet;
 
     assert(piNumReady != NULL);
@@ -304,7 +309,7 @@ static rsRetVal ATTR_NONNULL() select_Poll(tcpsrv_t *const pThis, int *const piN
 
 /* check if a socket is ready for IO */
 static rsRetVal ATTR_NONNULL()
-    select_IsReady(tcpsrv_t *const pThis, netstrm_t *const pStrm, const nsdsel_waitOp_t waitOp, int *const pbIsReady) {
+    poll_IsReady(tcpsrv_t *const pThis, netstrm_t *const pStrm, const nsdsel_waitOp_t waitOp, int *const pbIsReady) {
     DEFiRet;
     int sock;
 
@@ -349,7 +354,7 @@ finalize_it:
 /* add new listener port to listener port list
  * rgerhards, 2009-05-21
  */
-static rsRetVal ATTR_NONNULL(1, 2) addNewLstnPort(tcpsrv_t *const pThis, tcpLstnParams_t *const cnf_params) {
+static rsRetVal ATTR_NONNULL() addNewLstnPort(tcpsrv_t *const pThis, tcpLstnParams_t *const cnf_params) {
     tcpLstnPortList_t *pEntry;
     uchar statname[64];
     DEFiRet;
@@ -409,7 +414,7 @@ finalize_it:
  * Note: pszPort is handed over to us - the caller MUST NOT free it!
  * rgerhards, 2008-03-20
  */
-static rsRetVal ATTR_NONNULL(1, 2) configureTCPListen(tcpsrv_t *const pThis, tcpLstnParams_t *const cnf_params) {
+static rsRetVal ATTR_NONNULL() configureTCPListen(tcpsrv_t *const pThis, tcpLstnParams_t *const cnf_params) {
     assert(cnf_params->pszPort != NULL);
     int i;
     DEFiRet;
@@ -437,7 +442,7 @@ finalize_it:
 /* Initialize the session table
  * returns 0 if OK, somewhat else otherwise
  */
-static rsRetVal TCPSessTblInit(tcpsrv_t *const pThis) {
+static rsRetVal ATTR_NONNULL() TCPSessTblInit(tcpsrv_t *const pThis) {
     DEFiRet;
 
     ISOBJ_TYPE_assert(pThis, tcpsrv);
@@ -458,7 +463,7 @@ finalize_it:
  * is full, -1 is returned, else the index of the free
  * entry (0 or higher).
  */
-static int TCPSessTblFindFreeSpot(tcpsrv_t *const pThis) {
+static int ATTR_NONNULL() TCPSessTblFindFreeSpot(tcpsrv_t *const pThis) {
     register int i;
 
     ISOBJ_TYPE_assert(pThis, tcpsrv);
@@ -480,7 +485,7 @@ static int TCPSessTblFindFreeSpot(tcpsrv_t *const pThis) {
  * might as well return -1, if there is no session at all in the
  * session table.
  */
-static int TCPSessGetNxtSess(tcpsrv_t *pThis, int iCurr) {
+static int ATTR_NONNULL() TCPSessGetNxtSess(tcpsrv_t *pThis, const int iCurr) {
     register int i;
 
     ISOBJ_TYPE_assert(pThis, tcpsrv);
@@ -549,7 +554,7 @@ static void ATTR_NONNULL() deinit_tcp_listener(tcpsrv_t *const pThis) {
 /* add a listen socket to our listen socket array. This is a callback
  * invoked from the netstrm class. -- rgerhards, 2008-04-23
  */
-static rsRetVal addTcpLstn(void *pUsr, netstrm_t *const pLstn) {
+static rsRetVal ATTR_NONNULL() addTcpLstn(void *pUsr, netstrm_t *const pLstn) {
     tcpLstnPortList_t *pPortList = (tcpLstnPortList_t *)pUsr;
     tcpsrv_t *pThis = pPortList->pSrv;
     DEFiRet;
@@ -573,7 +578,7 @@ finalize_it:
  * set on connect!
  * rgerhards, 2009-05-21
  */
-static rsRetVal initTCPListener(tcpsrv_t *pThis, tcpLstnPortList_t *pPortEntry) {
+static rsRetVal ATTR_NONNULL() initTCPListener(tcpsrv_t *pThis, tcpLstnPortList_t *pPortEntry) {
     DEFiRet;
 
     ISOBJ_TYPE_assert(pThis, tcpsrv);
@@ -587,7 +592,7 @@ finalize_it:
 
 
 /* Initialize TCP sockets (for listener) and listens on them */
-static rsRetVal create_tcp_socket(tcpsrv_t *const pThis) {
+static rsRetVal ATTR_NONNULL() create_tcp_socket(tcpsrv_t *const pThis) {
     DEFiRet;
     rsRetVal localRet;
     tcpLstnPortList_t *pEntry;
@@ -638,11 +643,11 @@ finalize_it:
  * session object, so that it can do its own initialization.
  * rgerhards, 2008-03-02
  */
-static rsRetVal SessAccept(tcpsrv_t *const pThis,
-                           tcpLstnPortList_t *const pLstnInfo,
-                           tcps_sess_t **ppSess,
-                           netstrm_t *pStrm,
-                           char *const connInfo) {
+static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
+                                          tcpLstnPortList_t *const pLstnInfo,
+                                          tcps_sess_t **ppSess,
+                                          netstrm_t *pStrm,
+                                          char *const connInfo) {
     DEFiRet;
     tcps_sess_t *pSess = NULL;
     netstrm_t *pNewStrm = NULL;
@@ -746,6 +751,7 @@ finalize_it:
         }
         if (pSess != NULL) tcps_sess.Destruct(&pSess);
         if (pNewStrm != NULL) netstrm.Destruct(&pNewStrm);
+        if (fromHostIP != NULL) prop.Destruct(&fromHostIP);
         free(fromHostFQDN);
     }
 
@@ -756,37 +762,27 @@ finalize_it:
 /**
  * \brief Close a TCP session and release associated resources.
  *
- * Closes the session referenced by \p pioDescr, performs module-specific
- * close handling, and updates polling/epoll state. On the EPOLL path,
- * the I/O descriptor itself is freed.
+ * Closes the session referenced by \p pioDescr, runs the module-specific
+ * close hook, and updates the event notification set. On EPOLL builds the
+ * I/O descriptor is heap-allocated and is freed here after best-effort
+ * removal from the epoll set.
+ *
+ * No locking is performed; callers are responsible for any required
+ * mutex handling before/after this call.
  *
  * \param[in] pThis    Server instance.
- * \param[in] pioDescr I/O descriptor pointing to the session to close
+ * \param[in] pioDescr I/O descriptor for the session to close
  *                     (pioDescr->ptrType == NSD_PTR_TYPE_SESS).
  *
- * \pre  \p pioDescr is valid and refers to a live session; its pSess mutex
- *       may be locked by the caller.
+ * \pre  \p pioDescr and its \c pSess are valid.
+ * \post The session object is destroyed. On EPOLL builds, \p pioDescr is
+ *       freed; on non-EPOLL builds, the session table entry is cleared.
+ * \post Callers must not access \p pioDescr or \c pSess after return.
  *
- * \post Both \p pioDescr and its associated \c pSess are invalid. Callers
- *       must not dereference or log with them, must not rearm epoll, and must
- *       not enqueue them.
- * \post If called inside a processing loop, the caller MUST either terminate
- *       that loop, or immediately replace local pointers with fresh objects
- *       and set the old pointers to NULL before any further use.
- * \post On EPOLL builds, \p pioDescr is freed inside this function.
- *       On non-EPOLL builds, the session table entry is cleared.
+ * \note epoll removal is performed on a best-effort basis; teardown proceeds
+ *       regardless of epoll_ctl outcome.
  *
- * \warning Any access to \p pioDescr or \c pSess after return is undefined
- *          behavior (use-after-free on EPOLL).
- *
- * \note Attempts epoll_Ctl(…, EPOLL_CTL_DEL) on the socket; failure does not
- *       prevent cleanup. Invokes pOnRegularClose(pSess). If the worker pool
- *       size > 1 and the caller holds \c pSess->mut, this function unlocks it
- *       during teardown.
- *
- * \retval RS_RET_OK          on success.
- * \retval RS_RET_ERR_*       on errors during teardown; regardless, the session
- *                            should be considered closed at the call site.
+ * \retval RS_RET_OK
  */
 static ATTR_NONNULL() rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_t *const pioDescr) {
     DEFiRet;
@@ -794,16 +790,13 @@ static ATTR_NONNULL() rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_
     tcps_sess_t *pSess = pioDescr->ptr.pSess;
 
 #if defined(ENABLE_IMTCP_EPOLL)
-
     /* note: we do not check the result of epoll_Ctl because we cannot do
      * anything against a failure BUT we need to do the cleanup in any case.
      */
     epoll_Ctl(pThis, pioDescr, 0, EPOLL_CTL_DEL);
 #endif
+    assert(pThis->pOnRegularClose != NULL);
     pThis->pOnRegularClose(pSess);
-    if (pThis->workQueue.numWrkr > 1) {
-        pthread_mutex_unlock(&pSess->mut);
-    }
 
     tcps_sess.Destruct(&pSess);
 #if defined(ENABLE_IMTCP_EPOLL)
@@ -817,13 +810,41 @@ static ATTR_NONNULL() rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_
 }
 
 
+/**
+ * @brief Re-arm EPOLLONESHOT for this session’s descriptor.
+ *
+ * Uses EPOLL_CTL_MOD to (re)register the descriptor for the next I/O event,
+ * selecting EPOLLIN or EPOLLOUT from `pioDescr->ioDirection` and always
+ * enabling `EPOLLET | EPOLLONESHOT`. The epoll user data is set to the
+ * given `pioDescr` so the same descriptor is delivered on the next event.
+ *
+ * @pre  `pioDescr` is valid; `pioDescr->sock` and
+ *       `pioDescr->pSrv->evtdata.epoll.efd` refer to open fds.
+ * @pre  `pioDescr->ioDirection` ∈ { `NSDSEL_RD`, `NSDSEL_WR` }.
+ * @pre  Called by the thread that owns the descriptor (no concurrent epoll_ctl).
+ *
+ * @post On success, the descriptor is armed for the next edge-triggered event.
+ *       On failure, the previous epoll registration remains unchanged.
+ *
+ * @param[in] pioDescr  I/O descriptor to (re)arm.
+ * @retval RS_RET_OK               on success.
+ * @retval RS_RET_ERR_EPOLL_CTL    on epoll_ctl failure (error is logged).
+ *
+ * @note Compiled only when ENABLE_IMTCP_EPOLL is defined.
+ */
 #if defined(ENABLE_IMTCP_EPOLL)
-static rsRetVal notifyReArm(tcpsrv_io_descr_t *const pioDescr) {
+static ATTR_NONNULL() rsRetVal rearmIoEvent(tcpsrv_io_descr_t *const pioDescr) {
     DEFiRet;
-    const unsigned waitIOEvent = (pioDescr->ioDirection == NSDSEL_WR) ? EPOLLOUT : EPOLLIN;
+
+    /* Debug-only invariants */
+    assert(pioDescr->ioDirection == NSDSEL_RD || pioDescr->ioDirection == NSDSEL_WR);
+    assert(pioDescr->pSrv != NULL && pioDescr->pSrv->evtdata.epoll.efd >= 0);
+    assert(pioDescr->sock >= 0);
+
+    const uint32_t waitIOEvent = (pioDescr->ioDirection == NSDSEL_WR) ? EPOLLOUT : EPOLLIN;
     struct epoll_event event = {.events = waitIOEvent | EPOLLET | EPOLLONESHOT, .data = {.ptr = pioDescr}};
     if (epoll_ctl(pioDescr->pSrv->evtdata.epoll.efd, EPOLL_CTL_MOD, pioDescr->sock, &event) < 0) {
-        LogError(errno, RS_RET_ERR_EPOLL_CTL, "epoll_ctl failed re-armed socket %d", pioDescr->sock);
+        LogError(errno, RS_RET_ERR_EPOLL_CTL, "epoll_ctl failed re-arm socket %d", pioDescr->sock);
         ABORT_FINALIZE(RS_RET_ERR_EPOLL_CTL);
     }
 
@@ -832,9 +853,29 @@ finalize_it:
 }
 #endif
 
-/* process a receive request on one of the streams
- * If in epoll mode, we need to remove any descriptor we close from the epoll set.
- * rgerhards, 2009-07-020
+
+/**
+ * @brief Receive and dispatch data for a TCP session with starvation control and EPOLL re-arm.
+ *
+ * Flow:
+ *  - Read via pThis->pRcvData(), forward to tcps_sess.DataRcvd().
+ *  - Starvation: after `starvationMaxReads`, enqueue `pioDescr` (handoff) and return (no re-arm).
+ *  - Would-block (RS_RET_RETRY): re-arm EPOLLONESHOT and return.
+ *  - Close/error: exit the loop and close the session after unlocking.
+ *
+ * Locking:
+ *  - If workQueue.numWrkr > 1, this function locks `pSess->mut` on entry and always unlocks
+ *    before return (including close/error and starvation/handoff paths).
+ *  - **Re-arm timing:** on the would-block path, `rearmIoEvent(pioDescr)` is called *before*
+ *    unlocking `pSess->mut` to keep ownership until the EPOLL_CTL_MOD completes.
+ *  - `closeSess()` is called *after* unlocking.
+ *
+ * Starvation accounting:
+ *  - `read_calls` counts only successful reads (RS_RET_OK), so the cap reflects actual data
+ *    consumption, not retries/closures/errors.
+ *
+ * @pre  `pioDescr`, `pioDescr->ptr.pSess`, and `pioDescr->pSrv` are valid; I/O is non-blocking.
+ * @post On close paths, both `pioDescr` and `pSess` are invalid on return.
  */
 static rsRetVal ATTR_NONNULL(1)
     doReceive(tcpsrv_io_descr_t *const pioDescr, tcpsrvWrkrData_t *const wrkrData ATTR_UNUSED) {
@@ -845,18 +886,10 @@ static rsRetVal ATTR_NONNULL(1)
     uchar *pszPeer;
     int lenPeer;
     int oserr = 0;
-    int do_run = 1;
     unsigned read_calls = 0;
     tcps_sess_t *const pSess = pioDescr->ptr.pSess;
     tcpsrv_t *const pThis = pioDescr->pSrv;
-    int freeMutex = 0;
     const unsigned maxReads = pThis->starvationMaxReads;
-#if defined(ENABLE_IMTCP_EPOLL)
-    int needReArm = 1;
-    #define SET_REARM(x) (needReArm = (x))
-#else
-    #define SET_REARM(x) /* not needed when ENABLE_IMTCP_EPOLL is not defined */
-#endif
 
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     prop.GetString((pSess)->fromHostIP, &pszPeer, &lenPeer);
@@ -864,111 +897,115 @@ static rsRetVal ATTR_NONNULL(1)
 
     if (pThis->workQueue.numWrkr > 1) {
         pthread_mutex_lock(&pSess->mut);
-        freeMutex = 1;
     }
 
+    /* explicit state machine */
+    enum RecvState { RS_READING, RS_STARVATION, RS_DONE_REARM, RS_DONECLOSE, RS_DONE_HANDOFF };
+    enum RecvState state = RS_READING;
+
 #if defined(ENABLE_IMTCP_EPOLL)
-    /* if we had EPOLLERR, give information. The other processing continues. This
-     * seems to be best practice and may cause better error information.
-     */
+    /* If we had EPOLLERR, log additional info; processing continues. */
     if (ATOMIC_FETCH_32BIT(&pioDescr->isInError, &pioDescr->mut_isInError)) {
+        ATOMIC_STORE_0_TO_INT(&pioDescr->isInError, &pioDescr->mut_isInError);
         int error = 0;
         socklen_t len = sizeof(error);
-        const int sock = ((nsd_ptcp_t *)pSess->pStrm->pDrvrData)->sock;
+        const int sock = pioDescr->sock;
         if (getsockopt(sock, SOL_SOCKET, SO_ERROR, &error, &len) == 0) {
-            LogError(error, RS_RET_IO_ERROR,
-                     "epoll subsystem signalled state EPOLLERR "
-                     "for stream %p, peer %s  ",
-                     (pSess)->pStrm, pszPeer);
-        } /* no else - if this fails, we have nothing to report... */
+            LogError(error, RS_RET_IO_ERROR, "epoll subsystem signaled EPOLLERR for stream %p, peer %s", (pSess)->pStrm,
+                     pszPeer);
+        }
     }
 #endif
 
-    while (do_run) { /*  outer loop as "backup" if starvation protection does not properly work */
-        while (do_run && (maxReads == 0 || read_calls < maxReads)) { /*  break in switch below! */
-            iRet = pThis->pRcvData(pSess, buf, sizeof(buf), &iRcvd, &oserr, &pioDescr->ioDirection);
-            switch (iRet) {
-                case RS_RET_CLOSED:
-                    if (pThis->bEmitMsgOnClose) {
-                        errno = 0;
-                        LogError(0, RS_RET_PEER_CLOSED_CONN,
-                                 "Netstream session %p "
-                                 "closed by remote peer %s.\n",
-                                 (pSess)->pStrm, pszPeer);
-                    }
-                    SET_REARM(0);
-                    freeMutex = 0;
-                    closeSess(pThis, pioDescr);
-                    do_run = 0;
-                    break;
-                case RS_RET_RETRY:
-#if defined(ENABLE_IMTCP_EPOLL)
-                    if (pThis->workQueue.numWrkr > 1 && read_calls == 0) {
-                        STATSCOUNTER_ADD(wrkrData->ctrEmptyRead, wrkrData->mutCtrEmptyRead, 1);
-                    }
-#endif
-                    do_run = 0;
-                    break;
-                case RS_RET_OK:
-                    /* valid data received, process it! */
-                    localRet = tcps_sess.DataRcvd(pSess, buf, iRcvd);
-                    if (localRet != RS_RET_OK && localRet != RS_RET_QUEUE_FULL) {
-                        /* in this case, something went awfully wrong.
-                         * We are instructed to terminate the session.
-                         */
-                        LogError(oserr, localRet, "Tearing down TCP Session from %s", pszPeer);
-                        SET_REARM(0);
-                        freeMutex = 0;
-                        CHKiRet(closeSess(pThis, pioDescr));
-                        do_run = 0;
-                    }
-                    break;
-                default:
-                    LogError(oserr, iRet, "netstream session %p from %s will be closed due to error", pSess->pStrm,
-                             pszPeer);
-                    SET_REARM(0);
-                    freeMutex = 0;
-                    closeSess(pThis, pioDescr);
-                    do_run = 0;
-                    break;
-            }
-            if (pThis->workQueue.numWrkr > 1) {
-                ++read_calls;
-            }
-        }
+    /* Sanity (debug builds): I/O direction must be valid. */
+    assert(pioDescr->ioDirection == NSDSEL_RD || pioDescr->ioDirection == NSDSEL_WR);
 
-        if (do_run) { /* we did not finish, just exited loop for starvation avoidance */
-            dbgprintf("starvation avoidance triggered, ctr=%d, maxReads=%u\n", read_calls, maxReads);
-#if defined(ENABLE_IMTCP_EPOLL)
-            assert(pThis->workQueue.numWrkr > 1);
-            STATSCOUNTER_INC(wrkrData->ctrStarvation, wrkrData->mutCtrStarvation);
-#endif
+    /* Loop while in non-terminal states (positive check for readability). */
+    while (state == RS_READING || state == RS_STARVATION) {
+        switch (state) {
+            case RS_READING:
+                while (state == RS_READING && (maxReads == 0 || read_calls < maxReads)) {
+                    iRet = pThis->pRcvData(pSess, buf, sizeof(buf), &iRcvd, &oserr, &pioDescr->ioDirection);
 
-            iRet = enqueueWork(pioDescr);
-            if (iRet == RS_RET_OK) {
-                do_run = 0;
-                SET_REARM(0);
-            } else {
-                LogError(errno, iRet,
-                         "error during starvation avoidance processing, "
-                         "continuing reading from %s",
-                         pszPeer);
-            }
+                    switch (iRet) {
+                        case RS_RET_CLOSED:
+                            if (pThis->bEmitMsgOnClose) {
+                                errno = 0;
+                                LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p closed by remote peer %s.",
+                                         (pSess)->pStrm, pszPeer);
+                            }
+                            state = RS_DONECLOSE;
+                            break;
+
+                        case RS_RET_RETRY:
+#if defined(ENABLE_IMTCP_EPOLL)
+                            if (pThis->workQueue.numWrkr > 1 && read_calls == 0) {
+                                STATSCOUNTER_ADD(wrkrData->ctrEmptyRead, wrkrData->mutCtrEmptyRead, 1);
+                            }
+#endif
+                            state = RS_DONE_REARM; /* would block → exit and re-arm */
+                            break;
+
+                        case RS_RET_OK:
+                            /* Successful read counts toward starvation cap */
+                            if (pThis->workQueue.numWrkr > 1) {
+                                ++read_calls;
+                            }
+                            localRet = tcps_sess.DataRcvd(pSess, buf, iRcvd);
+                            if (localRet != RS_RET_OK && localRet != RS_RET_QUEUE_FULL) {
+                                LogError(oserr, localRet, "Tearing down TCP Session from %s", pszPeer);
+                                state = RS_DONECLOSE;
+                            }
+                            break;
+
+                        default:
+                            LogError(oserr, iRet, "netstream session %p from %s will be closed due to error",
+                                     pSess->pStrm, pszPeer);
+                            state = RS_DONECLOSE;
+                            break;
+                    }
+                }
+
+                if (state == RS_READING) {
+                    state = RS_STARVATION; /* hit the read cap */
+                }
+                break;
+
+            case RS_STARVATION:
+                dbgprintf("starvation avoidance triggered, ctr=%u, maxReads=%u\n", read_calls, maxReads);
+                assert(pThis->workQueue.numWrkr > 1);
+#if defined(ENABLE_IMTCP_EPOLL)
+                STATSCOUNTER_INC(wrkrData->ctrStarvation, wrkrData->mutCtrStarvation);
+#endif
+                enqueueWork(pioDescr);
+                state = RS_DONE_HANDOFF; /* queued behind existing work → exit, no re-arm */
+                break;
+
+            default:
+                assert(0 && "unhandled RecvState inside doReceive loop");
+                state = RS_DONECLOSE;
+                break;
         }
     }
 
-finalize_it:
+    /* Postcondition: we must have transitioned to a terminal state. */
+    assert(state == RS_DONE_REARM || state == RS_DONECLOSE || state == RS_DONE_HANDOFF);
+
 #if defined(ENABLE_IMTCP_EPOLL)
     if (pThis->workQueue.numWrkr > 1) {
         STATSCOUNTER_ADD(wrkrData->ctrRead, wrkrData->mutCtrRead, read_calls);
     }
-    if (needReArm) {
-        notifyReArm(pioDescr);
+    if (state == RS_DONE_REARM) {
+        rearmIoEvent(pioDescr); /* re-arm while still holding pSess->mut */
     }
 #endif
 
-    if (freeMutex) { /* in case of single worker, freeMutex is set to 0 right from the begining */
+    if (pThis->workQueue.numWrkr > 1) {
         pthread_mutex_unlock(&pSess->mut);
+    }
+
+    if (state == RS_DONECLOSE) {
+        closeSess(pThis, pioDescr); /* also frees pioDescr in epoll builds */
     }
 
     RETiRet;
@@ -1048,7 +1085,7 @@ static rsRetVal ATTR_NONNULL(1)
     if (pioDescr->pSrv->workQueue.numWrkr > 1) {
         STATSCOUNTER_ADD(wrkrData->ctrAccept, wrkrData->mutCtrAccept, nAccept);
     }
-    notifyReArm(pioDescr); /* listeners must ALWAYS be re-armed */
+    rearmIoEvent(pioDescr); /* listeners must ALWAYS be re-armed */
 #endif
 
     RETiRet;
@@ -1073,37 +1110,108 @@ static rsRetVal ATTR_NONNULL(1)
 
 /* work queue functions */
 
-static void *wrkr(void *arg); /* forward-def of wrkr */
+static void ATTR_NONNULL() * wrkr(void *arg); /* forward-def of wrkr */
 
-static rsRetVal startWrkrPool(tcpsrv_t *const pThis) {
+/**
+ * @brief Start the worker thread pool for tcpsrv (best-effort, single-path cleanup).
+ *
+ * @details
+ *  This function allocates worker arrays, initializes synchronization primitives,
+ *  and spawns `workQueue.numWrkr` threads running `wrkr()`.
+ *
+ *  ### Why all cleanup happens in `finalize_it`
+ *  This routine runs during initialization. If we fail here, the process is very
+ *  likely unable to run successfully anyway. To keep the code robust and
+ *  maintainable as more CHKiRet checks are added over time, we centralize **all**
+ *  rollback into the single `finalize_it` block:
+ *
+ *   - guarantees a single, well-tested teardown path
+ *   - avoids fragile “partial cleanups” spread across multiple branches
+ *   - tolerates partial initialization (some threads created, some not; mutex/cond
+ *     initialized or not), destroying only what actually succeeded
+ *   - ignores secondary errors from pthread_*destroy/cancel/join — this is an
+ *     extreme error path and best-effort cleanup is sufficient
+ *
+ *  ### Thread cancellation model
+ *  If any threads were created before failure, we call `pthread_cancel()` and then
+ *  `pthread_join()` on each. Worker threads block in `pthread_cond_wait()` which is
+ *  a POSIX cancellation point, so cancellation is reliable here.
+ *
+ *  @param pThis Server instance (must have `workQueue.numWrkr > 1`).
+ *  @retval RS_RET_OK on success; error code on failure (resources cleaned up).
+ */
+static rsRetVal ATTR_NONNULL() startWrkrPool(tcpsrv_t *const pThis) {
     DEFiRet;
     workQueue_t *const queue = &pThis->workQueue;
+    int mut_initialized = 0;
+    int cond_initialized = 0;
+    unsigned created = 0;
 
     assert(queue->numWrkr > 1);
-    CHKmalloc(pThis->workQueue.wrkr_tids = calloc(queue->numWrkr, sizeof(pthread_t)));
-    CHKmalloc(pThis->workQueue.wrkr_data = calloc(queue->numWrkr, sizeof(tcpsrvWrkrData_t)));
-    pThis->currWrkrs = 0;
+
+    /* Initialize queue state first. */
     queue->head = NULL;
     queue->tail = NULL;
-    pthread_mutex_init(&queue->mut, NULL);
-    pthread_cond_init(&queue->workRdy, NULL);
-    for (unsigned i = 0; i < queue->numWrkr; i++) {
+
+    /* Allocate arrays. */
+    CHKmalloc(queue->wrkr_tids = calloc(queue->numWrkr, sizeof(pthread_t)));
+    CHKmalloc(queue->wrkr_data = calloc(queue->numWrkr, sizeof(tcpsrvWrkrData_t)));
+
+    /* Init sync primitives. */
+    if (pthread_mutex_init(&queue->mut, NULL) != 0) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    mut_initialized = 1;
+
+    if (pthread_cond_init(&queue->workRdy, NULL) != 0) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    cond_initialized = 1;
+
+    /* Spawn workers. */
+    pThis->currWrkrs = 0;
+    for (unsigned i = 0; i < queue->numWrkr; ++i) {
         if (pthread_create(&queue->wrkr_tids[i], NULL, wrkr, pThis) != 0) {
-            ABORT_FINALIZE(RS_RET_ERR);
+            iRet = RS_RET_ERR;
+            break;
         }
+        ++created;
     }
 
 finalize_it:
     if (iRet != RS_RET_OK) {
-        free(pThis->workQueue.wrkr_tids);
-        pThis->workQueue.wrkr_tids = NULL;
-        free(pThis->workQueue.wrkr_data);
-        pThis->workQueue.wrkr_data = NULL;
+        /* Best-effort rollback in strict reverse order of construction. */
+
+        /* If any threads were created, cancel and join them. */
+        if (created > 0) {
+            for (unsigned i = 0; i < created; ++i) {
+                (void)pthread_cancel(queue->wrkr_tids[i]); /* cond_wait is a cancellation point */
+            }
+            for (unsigned i = 0; i < created; ++i) {
+                (void)pthread_join(queue->wrkr_tids[i], NULL);
+            }
+        }
+
+        /* Destroy sync primitives IFF they were successfully initialized. */
+        if (cond_initialized) {
+            (void)pthread_cond_destroy(&queue->workRdy);
+        }
+        if (mut_initialized) {
+            (void)pthread_mutex_destroy(&queue->mut);
+        }
+
+        /* Free arrays (they might be NULL if allocation failed early). */
+        free(queue->wrkr_tids);
+        free(queue->wrkr_data);
+        queue->wrkr_tids = NULL;
+        queue->wrkr_data = NULL;
     }
+
     RETiRet;
 }
 
-static void stopWrkrPool(tcpsrv_t *const pThis) {
+
+static void ATTR_NONNULL() stopWrkrPool(tcpsrv_t *const pThis) {
     workQueue_t *const queue = &pThis->workQueue;
 
     pthread_mutex_lock(&queue->mut);
@@ -1115,9 +1223,14 @@ static void stopWrkrPool(tcpsrv_t *const pThis) {
     }
     free(pThis->workQueue.wrkr_tids);
     free(pThis->workQueue.wrkr_data);
+
+    pthread_mutex_destroy(&queue->mut);
+    pthread_cond_destroy(&queue->workRdy);
+    pThis->workQueue.wrkr_tids = NULL;
+    pThis->workQueue.wrkr_data = NULL;
 }
 
-static tcpsrv_io_descr_t *dequeueWork(tcpsrv_t *pSrv) {
+static tcpsrv_io_descr_t ATTR_NONNULL() * dequeueWork(tcpsrv_t *pSrv) {
     workQueue_t *const queue = &pSrv->workQueue;
     tcpsrv_io_descr_t *pioDescr;
 
@@ -1141,9 +1254,31 @@ finalize_it:
     return pioDescr;
 }
 
-static rsRetVal enqueueWork(tcpsrv_io_descr_t *const pioDescr) {
+/**
+ * @brief Queue a ready I/O descriptor for worker processing (best-effort).
+ *
+ * Appends @p pioDescr to the work FIFO and signals one worker. Performs its
+ * own locking; callers must not hold workQueue::mut. No epoll re-arm is done here.
+ *
+ * Intent:
+ *  - File-local helper for starvation/handoff paths.
+ *  - Best-effort, side-effect only; no return value. In debug builds you may assert
+ *    on obvious misuse, but callers do not recover here.
+ *
+ * Threading & Ownership:
+ *  - Thread-safe; may be called from the event loop or a worker.
+ *  - Stores a non-owning pointer; @p pioDescr must remain valid until a worker
+ *    dequeues it.
+ *
+ * Preconditions:
+ *  - @p pioDescr != NULL and @p pioDescr->pSrv != NULL.
+ *  - Multi-thread mode active (workQueue.numWrkr > 1).
+ *
+ * Postconditions:
+ *  - @p pioDescr is placed at the queue tail and one worker is signaled.
+ */
+static void ATTR_NONNULL() enqueueWork(tcpsrv_io_descr_t *const pioDescr) {
     workQueue_t *const queue = &pioDescr->pSrv->workQueue;
-    DEFiRet;
 
     pthread_mutex_lock(&queue->mut);
     pioDescr->next = NULL;
@@ -1157,12 +1292,10 @@ static rsRetVal enqueueWork(tcpsrv_io_descr_t *const pioDescr) {
 
     pthread_cond_signal(&queue->workRdy);
     pthread_mutex_unlock(&queue->mut);
-
-    RETiRet;
 }
 
 /* Worker thread function */
-static void *wrkr(void *arg) {
+static void ATTR_NONNULL() * wrkr(void *arg) {
     tcpsrv_t *const pThis = (tcpsrv_t *)arg;
     workQueue_t *const queue = &pThis->workQueue;
     tcpsrv_io_descr_t *pioDescr;
@@ -1257,7 +1390,7 @@ static void *wrkr(void *arg) {
  * out to a pool of threads, but try to avoid context switches
  * as much as possible.
  */
-static rsRetVal processWorkset(const int numEntries, tcpsrv_io_descr_t *const pioDescr[]) {
+static rsRetVal ATTR_NONNULL() processWorkset(const int numEntries, tcpsrv_io_descr_t *const pioDescr[]) {
     int i;
     assert(numEntries > 0);
     const unsigned numWrkr = pioDescr[0]->pSrv->workQueue.numWrkr; /* pSrv is always the same! */
@@ -1270,7 +1403,7 @@ static rsRetVal processWorkset(const int numEntries, tcpsrv_io_descr_t *const pi
             /* we process all on this thread, no need for context switch */
             processWorksetItem(pioDescr[i], NULL);
         } else {
-            iRet = enqueueWork(pioDescr[i]);
+            enqueueWork(pioDescr[i]);
         }
     }
     RETiRet;
@@ -1281,7 +1414,7 @@ static rsRetVal processWorkset(const int numEntries, tcpsrv_io_descr_t *const pi
 /* This function is called to gather input.
  */
 PRAGMA_DIAGNOSTIC_PUSH
-PRAGMA_IGNORE_Wempty_body static rsRetVal RunPoll(tcpsrv_t *const pThis) {
+PRAGMA_IGNORE_Wempty_body static ATTR_NONNULL() rsRetVal RunPoll(tcpsrv_t *const pThis) {
     DEFiRet;
     int nfds;
     int i;
@@ -1312,7 +1445,7 @@ PRAGMA_IGNORE_Wempty_body static rsRetVal RunPoll(tcpsrv_t *const pThis) {
     CHKmalloc(pThis->evtdata.poll.fds = calloc(FDSET_INCREMENT + 1, sizeof(struct pollfd)));
     /* Add the TCP listen sockets to the list of read descriptors. */
     for (i = 0; i < pThis->iLstnCurr; ++i) {
-        CHKiRet(select_Add(pThis, pThis->ppLstn[i], NSDSEL_RD));
+        CHKiRet(poll_Add(pThis, pThis->ppLstn[i], NSDSEL_RD));
     }
 
     while (1) {
@@ -1321,7 +1454,7 @@ PRAGMA_IGNORE_Wempty_body static rsRetVal RunPoll(tcpsrv_t *const pThis) {
         iTCPSess = TCPSessGetNxtSess(pThis, -1);
         while (iTCPSess != -1) {
             /* TODO: access to pNsd is NOT really CLEAN, use method... */
-            CHKiRet(select_Add(pThis, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD));
+            CHKiRet(poll_Add(pThis, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD));
             DBGPRINTF("tcpsrv process session %d:\n", iTCPSess);
 
             /* now get next... */
@@ -1332,18 +1465,19 @@ PRAGMA_IGNORE_Wempty_body static rsRetVal RunPoll(tcpsrv_t *const pThis) {
         assert(pThis->evtdata.poll.maxfds != pThis->evtdata.poll.currfds);
         pThis->evtdata.poll.fds[pThis->evtdata.poll.currfds].fd = 0;
         /* wait for io to become ready */
-        CHKiRet(select_Poll(pThis, &nfds));
+        CHKiRet(poll_Poll(pThis, &nfds));
         if (glbl.GetGlobalInputTermState() == 1) break; /* terminate input! */
 
         iWorkset = 0;
         for (i = 0; i < pThis->iLstnCurr && nfds; ++i) {
             if (glbl.GetGlobalInputTermState() == 1) ABORT_FINALIZE(RS_RET_FORCE_TERM);
-            CHKiRet(select_IsReady(pThis, pThis->ppLstn[i], NSDSEL_RD, &bIsReady));
+            CHKiRet(poll_IsReady(pThis, pThis->ppLstn[i], NSDSEL_RD, &bIsReady));
             if (bIsReady) {
                 workset[iWorkset].pSrv = pThis;
                 workset[iWorkset].ptrType = NSD_PTR_TYPE_LSTN;
                 workset[iWorkset].id = i;
                 workset[iWorkset].isInError = 0;
+                workset[iWorkset].ioDirection = NSDSEL_RD; /* non-epoll: ensure sane default */
                 CHKiRet(netstrm.GetSock(pThis->ppLstn[i], &(workset[iWorkset].sock)));
                 workset[iWorkset].ptr.ppLstn = pThis->ppLstn;
                 /* this is a flag to indicate listen sock */
@@ -1360,12 +1494,13 @@ PRAGMA_IGNORE_Wempty_body static rsRetVal RunPoll(tcpsrv_t *const pThis) {
         iTCPSess = TCPSessGetNxtSess(pThis, -1);
         while (nfds && iTCPSess != -1) {
             if (glbl.GetGlobalInputTermState() == 1) ABORT_FINALIZE(RS_RET_FORCE_TERM);
-            localRet = select_IsReady(pThis, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD, &bIsReady);
+            localRet = poll_IsReady(pThis, pThis->pSessions[iTCPSess]->pStrm, NSDSEL_RD, &bIsReady);
             if (bIsReady || localRet != RS_RET_OK) {
                 workset[iWorkset].pSrv = pThis;
                 workset[iWorkset].ptrType = NSD_PTR_TYPE_SESS;
                 workset[iWorkset].id = iTCPSess;
                 workset[iWorkset].isInError = 0;
+                workset[iWorkset].ioDirection = NSDSEL_RD; /* non-epoll: ensure sane default */
                 CHKiRet(netstrm.GetSock(pThis->pSessions[iTCPSess]->pStrm, &(workset[iWorkset].sock)));
                 workset[iWorkset].ptr.pSess = pThis->pSessions[iTCPSess];
                 ++iWorkset;
@@ -1399,7 +1534,7 @@ PRAGMA_DIAGNOSTIC_POP
 
 
 #if defined(ENABLE_IMTCP_EPOLL)
-static rsRetVal RunEpoll(tcpsrv_t *const pThis) {
+static rsRetVal ATTR_NONNULL() RunEpoll(tcpsrv_t *const pThis) {
     DEFiRet;
     int i;
     tcpsrv_io_descr_t *workset[NSPOLL_MAX_EVENTS_PER_WAIT];
@@ -1415,6 +1550,7 @@ static rsRetVal RunEpoll(tcpsrv_t *const pThis) {
         pThis->ppioDescrPtr[i]->pSrv = pThis;
         pThis->ppioDescrPtr[i]->id = i;
         pThis->ppioDescrPtr[i]->isInError = 0;
+        pThis->ppioDescrPtr[i]->ioDirection = NSDSEL_RD;
         INIT_ATOMIC_HELPER_MUT(pThis->ppioDescrPtr[i]->mut_isInError);
         CHKiRet(netstrm.GetSock(pThis->ppLstn[i], &(pThis->ppioDescrPtr[i]->sock)));
         pThis->ppioDescrPtr[i]->ptrType = NSD_PTR_TYPE_LSTN;
@@ -1460,7 +1596,7 @@ finalize_it:
  * select() equivalent.
  * rgerhards, 2009-11-18
  */
-static rsRetVal Run(tcpsrv_t *const pThis) {
+static rsRetVal ATTR_NONNULL() Run(tcpsrv_t *const pThis) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
 
@@ -1524,7 +1660,7 @@ ENDobjConstruct(tcpsrv)
 
 
 /* ConstructionFinalizer */
-static rsRetVal tcpsrvConstructFinalize(tcpsrv_t *pThis) {
+static rsRetVal ATTR_NONNULL() tcpsrvConstructFinalize(tcpsrv_t *pThis) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
 
@@ -1558,6 +1694,13 @@ static rsRetVal tcpsrvConstructFinalize(tcpsrv_t *pThis) {
 finalize_it:
     if (iRet != RS_RET_OK) {
         if (pThis->pNS != NULL) netstrms.Destruct(&pThis->pNS);
+        free(pThis->ppLstn);
+        pThis->ppLstn = NULL;
+        free(pThis->ppLstnPort);
+        pThis->ppLstnPort = NULL;
+        free(pThis->ppioDescrPtr);
+        pThis->ppioDescrPtr = NULL;
+
         LogError(0, iRet, "tcpsrv could not create listener (inputname: '%s')",
                  (pThis->pszInputName == NULL) ? (uchar *)"*UNSET*" : pThis->pszInputName);
     }
@@ -1594,103 +1737,103 @@ BEGINobjDebugPrint(tcpsrv) /* be sure to specify the object type also in END and
 ENDobjDebugPrint(tcpsrv)
 
 /* set functions */
-static rsRetVal SetCBIsPermittedHost(tcpsrv_t *pThis,
-                                     int (*pCB)(struct sockaddr *addr, char *fromHostFQDN, void *, void *)) {
+static rsRetVal ATTR_NONNULL(1)
+    SetCBIsPermittedHost(tcpsrv_t *pThis, int (*pCB)(struct sockaddr *addr, char *fromHostFQDN, void *, void *)) {
     DEFiRet;
     pThis->pIsPermittedHost = pCB;
     RETiRet;
 }
 
-static rsRetVal SetCBRcvData(tcpsrv_t *pThis,
-                             rsRetVal (*pRcvData)(tcps_sess_t *, char *, size_t, ssize_t *, int *, unsigned *)) {
+static rsRetVal ATTR_NONNULL(1)
+    SetCBRcvData(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t *, char *, size_t, ssize_t *, int *, unsigned *)) {
     DEFiRet;
     pThis->pRcvData = pRcvData;
     RETiRet;
 }
 
-static rsRetVal SetCBOnListenDeinit(tcpsrv_t *pThis, rsRetVal (*pCB)(void *)) {
+static rsRetVal ATTR_NONNULL(1) SetCBOnListenDeinit(tcpsrv_t *pThis, rsRetVal (*pCB)(void *)) {
     DEFiRet;
     pThis->pOnListenDeinit = pCB;
     RETiRet;
 }
 
-static rsRetVal SetCBOnSessAccept(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t *, tcps_sess_t *, char *)) {
+static rsRetVal ATTR_NONNULL(1) SetCBOnSessAccept(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t *, tcps_sess_t *, char *)) {
     DEFiRet;
     pThis->pOnSessAccept = pCB;
     RETiRet;
 }
 
-static rsRetVal SetCBOnDestruct(tcpsrv_t *pThis, rsRetVal (*pCB)(void *)) {
+static rsRetVal ATTR_NONNULL(1) SetCBOnDestruct(tcpsrv_t *pThis, rsRetVal (*pCB)(void *)) {
     DEFiRet;
     pThis->OnDestruct = pCB;
     RETiRet;
 }
 
-static rsRetVal SetCBOnSessConstructFinalize(tcpsrv_t *pThis, rsRetVal (*pCB)(void *)) {
+static rsRetVal ATTR_NONNULL(1) SetCBOnSessConstructFinalize(tcpsrv_t *pThis, rsRetVal (*pCB)(void *)) {
     DEFiRet;
     pThis->OnSessConstructFinalize = pCB;
     RETiRet;
 }
 
-static rsRetVal SetCBOnSessDestruct(tcpsrv_t *pThis, rsRetVal (*pCB)(void *)) {
+static rsRetVal ATTR_NONNULL(1) SetCBOnSessDestruct(tcpsrv_t *pThis, rsRetVal (*pCB)(void *)) {
     DEFiRet;
     pThis->pOnSessDestruct = pCB;
     RETiRet;
 }
 
-static rsRetVal SetCBOnRegularClose(tcpsrv_t *pThis, rsRetVal (*pCB)(tcps_sess_t *)) {
+static rsRetVal ATTR_NONNULL(1) SetCBOnRegularClose(tcpsrv_t *pThis, rsRetVal (*pCB)(tcps_sess_t *)) {
     DEFiRet;
     pThis->pOnRegularClose = pCB;
     RETiRet;
 }
 
-static rsRetVal SetCBOnErrClose(tcpsrv_t *pThis, rsRetVal (*pCB)(tcps_sess_t *)) {
+static rsRetVal ATTR_NONNULL(1) SetCBOnErrClose(tcpsrv_t *pThis, rsRetVal (*pCB)(tcps_sess_t *)) {
     DEFiRet;
     pThis->pOnErrClose = pCB;
     RETiRet;
 }
 
-static rsRetVal SetCBOpenLstnSocks(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t *)) {
+static rsRetVal ATTR_NONNULL(1) SetCBOpenLstnSocks(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t *)) {
     DEFiRet;
     pThis->OpenLstnSocks = pCB;
     RETiRet;
 }
 
-static rsRetVal SetUsrP(tcpsrv_t *pThis, void *pUsr) {
+static rsRetVal ATTR_NONNULL(1) SetUsrP(tcpsrv_t *pThis, void *pUsr) {
     DEFiRet;
     pThis->pUsr = pUsr;
     RETiRet;
 }
 
-static rsRetVal SetKeepAlive(tcpsrv_t *pThis, int iVal) {
+static rsRetVal ATTR_NONNULL(1) SetKeepAlive(tcpsrv_t *pThis, const int iVal) {
     DEFiRet;
     DBGPRINTF("tcpsrv: keep-alive set to %d\n", iVal);
     pThis->bUseKeepAlive = iVal;
     RETiRet;
 }
 
-static rsRetVal SetKeepAliveIntvl(tcpsrv_t *pThis, int iVal) {
+static rsRetVal ATTR_NONNULL(1) SetKeepAliveIntvl(tcpsrv_t *pThis, const int iVal) {
     DEFiRet;
     DBGPRINTF("tcpsrv: keep-alive interval set to %d\n", iVal);
     pThis->iKeepAliveIntvl = iVal;
     RETiRet;
 }
 
-static rsRetVal SetKeepAliveProbes(tcpsrv_t *pThis, int iVal) {
+static rsRetVal ATTR_NONNULL(1) SetKeepAliveProbes(tcpsrv_t *pThis, int iVal) {
     DEFiRet;
     DBGPRINTF("tcpsrv: keep-alive probes set to %d\n", iVal);
     pThis->iKeepAliveProbes = iVal;
     RETiRet;
 }
 
-static rsRetVal SetKeepAliveTime(tcpsrv_t *pThis, int iVal) {
+static rsRetVal ATTR_NONNULL(1) SetKeepAliveTime(tcpsrv_t *pThis, int iVal) {
     DEFiRet;
     DBGPRINTF("tcpsrv: keep-alive timeout set to %d\n", iVal);
     pThis->iKeepAliveTime = iVal;
     RETiRet;
 }
 
-static rsRetVal SetGnutlsPriorityString(tcpsrv_t *pThis, uchar *iVal) {
+static rsRetVal ATTR_NONNULL(1) SetGnutlsPriorityString(tcpsrv_t *pThis, uchar *iVal) {
     DEFiRet;
     DBGPRINTF("tcpsrv: gnutlsPriorityString set to %s\n", (iVal == NULL) ? "(null)" : (const char *)iVal);
     pThis->gnutlsPriorityString = iVal;
@@ -1698,7 +1841,8 @@ static rsRetVal SetGnutlsPriorityString(tcpsrv_t *pThis, uchar *iVal) {
 }
 
 
-static rsRetVal SetOnMsgReceive(tcpsrv_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t *, uchar *, int)) {
+static rsRetVal ATTR_NONNULL(1)
+    SetOnMsgReceive(tcpsrv_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t *, uchar *, int)) {
     DEFiRet;
     assert(OnMsgReceive != NULL);
     pThis->OnMsgReceive = OnMsgReceive;
@@ -1709,7 +1853,7 @@ static rsRetVal SetOnMsgReceive(tcpsrv_t *pThis, rsRetVal (*OnMsgReceive)(tcps_s
 /* set enable/disable standard LF frame delimiter (use with care!)
  * -- rgerhards, 2010-01-03
  */
-static rsRetVal SetbDisableLFDelim(tcpsrv_t *pThis, int bVal) {
+static rsRetVal ATTR_NONNULL(1) SetbDisableLFDelim(tcpsrv_t *pThis, int bVal) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     pThis->bDisableLFDelim = bVal;
@@ -1720,7 +1864,7 @@ static rsRetVal SetbDisableLFDelim(tcpsrv_t *pThis, int bVal) {
 /* discard the truncated msg part
  * -- PascalWithopf, 2017-04-20
  */
-static rsRetVal SetDiscardTruncatedMsg(tcpsrv_t *pThis, int discard) {
+static rsRetVal ATTR_NONNULL(1) SetDiscardTruncatedMsg(tcpsrv_t *pThis, int discard) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     pThis->discardTruncatedMsg = discard;
@@ -1729,7 +1873,7 @@ static rsRetVal SetDiscardTruncatedMsg(tcpsrv_t *pThis, int discard) {
 
 
 /* Set additional framing to use (if any) -- rgerhards, 2008-12-10 */
-static rsRetVal SetAddtlFrameDelim(tcpsrv_t *pThis, int iDelim) {
+static rsRetVal ATTR_NONNULL(1) SetAddtlFrameDelim(tcpsrv_t *pThis, int iDelim) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     pThis->addtlFrameDelim = iDelim;
@@ -1738,7 +1882,7 @@ static rsRetVal SetAddtlFrameDelim(tcpsrv_t *pThis, int iDelim) {
 
 
 /* Set max frame size for octet counted -- PascalWithopf, 2017-04-20*/
-static rsRetVal SetMaxFrameSize(tcpsrv_t *pThis, int maxFrameSize) {
+static rsRetVal ATTR_NONNULL(1) SetMaxFrameSize(tcpsrv_t *pThis, int maxFrameSize) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     pThis->maxFrameSize = maxFrameSize;
@@ -1746,7 +1890,7 @@ static rsRetVal SetMaxFrameSize(tcpsrv_t *pThis, int maxFrameSize) {
 }
 
 
-static rsRetVal SetDfltTZ(tcpsrv_t *const pThis, uchar *const tz) {
+static rsRetVal ATTR_NONNULL(1) SetDfltTZ(tcpsrv_t *const pThis, uchar *const tz) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     strncpy((char *)pThis->dfltTZ, (char *)tz, sizeof(pThis->dfltTZ));
@@ -1755,14 +1899,14 @@ static rsRetVal SetDfltTZ(tcpsrv_t *const pThis, uchar *const tz) {
 }
 
 
-static rsRetVal SetbSPFramingFix(tcpsrv_t *pThis, const sbool val) {
+static rsRetVal ATTR_NONNULL(1) SetbSPFramingFix(tcpsrv_t *pThis, const sbool val) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     pThis->bSPFramingFix = val;
     RETiRet;
 }
 
-static rsRetVal SetOrigin(tcpsrv_t *pThis, uchar *origin) {
+static rsRetVal ATTR_NONNULL(1) SetOrigin(tcpsrv_t *pThis, uchar *origin) {
     DEFiRet;
     free(pThis->pszOrigin);
     pThis->pszOrigin = (origin == NULL) ? NULL : ustrdup(origin);
@@ -1770,7 +1914,8 @@ static rsRetVal SetOrigin(tcpsrv_t *pThis, uchar *origin) {
 }
 
 /* Set the input name to use -- rgerhards, 2008-12-10 */
-static rsRetVal SetInputName(tcpsrv_t *const pThis, tcpLstnParams_t *const cnf_params, const uchar *const name) {
+static rsRetVal ATTR_NONNULL(1)
+    SetInputName(tcpsrv_t *const pThis, tcpLstnParams_t *const cnf_params, const uchar *const name) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     if (name == NULL) {
@@ -1790,7 +1935,8 @@ finalize_it:
 
 
 /* Set the linux-like ratelimiter settings */
-static rsRetVal SetLinuxLikeRatelimiters(tcpsrv_t *pThis, unsigned int ratelimitInterval, unsigned int ratelimitBurst) {
+static rsRetVal ATTR_NONNULL(1)
+    SetLinuxLikeRatelimiters(tcpsrv_t *pThis, unsigned int ratelimitInterval, unsigned int ratelimitBurst) {
     DEFiRet;
     pThis->ratelimitInterval = ratelimitInterval;
     pThis->ratelimitBurst = ratelimitBurst;
@@ -1799,12 +1945,12 @@ static rsRetVal SetLinuxLikeRatelimiters(tcpsrv_t *pThis, unsigned int ratelimit
 
 
 /* Set connection open notification */
-static rsRetVal SetNotificationOnRemoteOpen(tcpsrv_t *pThis, const int bNewVal) {
+static rsRetVal ATTR_NONNULL(1) SetNotificationOnRemoteOpen(tcpsrv_t *pThis, const int bNewVal) {
     pThis->bEmitMsgOnOpen = bNewVal;
     return RS_RET_OK;
 }
 /* Set connection close notification */
-static rsRetVal SetNotificationOnRemoteClose(tcpsrv_t *pThis, const int bNewVal) {
+static rsRetVal ATTR_NONNULL(1) SetNotificationOnRemoteClose(tcpsrv_t *pThis, const int bNewVal) {
     DEFiRet;
     pThis->bEmitMsgOnClose = bNewVal;
     RETiRet;
@@ -1817,14 +1963,14 @@ static rsRetVal SetNotificationOnRemoteClose(tcpsrv_t *pThis, const int bNewVal)
  * -------------------------------------------------------------------------- */
 
 /* set the driver mode -- rgerhards, 2008-04-30 */
-static rsRetVal SetDrvrMode(tcpsrv_t *pThis, const int iMode) {
+static rsRetVal ATTR_NONNULL(1) SetDrvrMode(tcpsrv_t *pThis, const int iMode) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     pThis->iDrvrMode = iMode;
     RETiRet;
 }
 
-static rsRetVal SetDrvrName(tcpsrv_t *pThis, uchar *const name) {
+static rsRetVal ATTR_NONNULL(1) SetDrvrName(tcpsrv_t *pThis, uchar *const name) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     free(pThis->pszDrvrName);
@@ -1834,7 +1980,7 @@ finalize_it:
 }
 
 /* set the driver authentication mode -- rgerhards, 2008-05-19 */
-static rsRetVal SetDrvrAuthMode(tcpsrv_t *pThis, uchar *const mode) {
+static rsRetVal ATTR_NONNULL(1) SetDrvrAuthMode(tcpsrv_t *pThis, uchar *const mode) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     CHKmalloc(pThis->pszDrvrAuthMode = ustrdup(mode));
@@ -1844,7 +1990,7 @@ finalize_it:
 
 /* set the driver permitexpiredcerts mode -- alorbach, 2018-12-20
  */
-static rsRetVal SetDrvrPermitExpiredCerts(tcpsrv_t *pThis, uchar *mode) {
+static rsRetVal ATTR_NONNULL(1) SetDrvrPermitExpiredCerts(tcpsrv_t *pThis, uchar *mode) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     if (mode != NULL) {
@@ -1854,7 +2000,7 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal SetDrvrCAFile(tcpsrv_t *const pThis, uchar *const mode) {
+static rsRetVal ATTR_NONNULL(1) SetDrvrCAFile(tcpsrv_t *const pThis, uchar *const mode) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     if (mode != NULL) {
@@ -1864,7 +2010,7 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal SetDrvrCRLFile(tcpsrv_t *const pThis, uchar *const mode) {
+static rsRetVal ATTR_NONNULL(1) SetDrvrCRLFile(tcpsrv_t *const pThis, uchar *const mode) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     if (mode != NULL) {
@@ -1874,7 +2020,7 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal SetDrvrKeyFile(tcpsrv_t *pThis, uchar *mode) {
+static rsRetVal ATTR_NONNULL(1) SetDrvrKeyFile(tcpsrv_t *pThis, uchar *mode) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     if (mode != NULL) {
@@ -1884,7 +2030,7 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal SetDrvrCertFile(tcpsrv_t *pThis, uchar *mode) {
+static rsRetVal ATTR_NONNULL(1) SetDrvrCertFile(tcpsrv_t *pThis, uchar *mode) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     if (mode != NULL) {
@@ -1896,7 +2042,7 @@ finalize_it:
 
 
 /* set the driver's permitted peers -- rgerhards, 2008-05-19 */
-static rsRetVal SetDrvrPermPeers(tcpsrv_t *pThis, permittedPeers_t *pPermPeers) {
+static rsRetVal ATTR_NONNULL(1) SetDrvrPermPeers(tcpsrv_t *pThis, permittedPeers_t *pPermPeers) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     pThis->pPermPeers = pPermPeers;
@@ -1904,7 +2050,7 @@ static rsRetVal SetDrvrPermPeers(tcpsrv_t *pThis, permittedPeers_t *pPermPeers) 
 }
 
 /* set the driver cert extended key usage check setting -- jvymazal, 2019-08-16 */
-static rsRetVal SetDrvrCheckExtendedKeyUsage(tcpsrv_t *pThis, int ChkExtendedKeyUsage) {
+static rsRetVal ATTR_NONNULL(1) SetDrvrCheckExtendedKeyUsage(tcpsrv_t *pThis, int ChkExtendedKeyUsage) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     pThis->DrvrChkExtendedKeyUsage = ChkExtendedKeyUsage;
@@ -1912,7 +2058,7 @@ static rsRetVal SetDrvrCheckExtendedKeyUsage(tcpsrv_t *pThis, int ChkExtendedKey
 }
 
 /* set the driver name checking policy -- jvymazal, 2019-08-16 */
-static rsRetVal SetDrvrPrioritizeSAN(tcpsrv_t *pThis, int prioritizeSan) {
+static rsRetVal ATTR_NONNULL(1) SetDrvrPrioritizeSAN(tcpsrv_t *pThis, int prioritizeSan) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     pThis->DrvrPrioritizeSan = prioritizeSan;
@@ -1920,7 +2066,7 @@ static rsRetVal SetDrvrPrioritizeSAN(tcpsrv_t *pThis, int prioritizeSan) {
 }
 
 /* set the driver Set the driver tls  verifyDepth -- alorbach, 2019-12-20 */
-static rsRetVal SetDrvrTlsVerifyDepth(tcpsrv_t *pThis, int verifyDepth) {
+static rsRetVal ATTR_NONNULL(1) SetDrvrTlsVerifyDepth(tcpsrv_t *pThis, int verifyDepth) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     pThis->DrvrTlsVerifyDepth = verifyDepth;
@@ -1937,7 +2083,7 @@ static rsRetVal SetDrvrTlsVerifyDepth(tcpsrv_t *pThis, int verifyDepth) {
  * this must be called before ConstructFinalize, or it will have no effect!
  * rgerhards, 2009-08-17
  */
-static rsRetVal SetLstnMax(tcpsrv_t *pThis, int iMax) {
+static rsRetVal ATTR_NONNULL(1) SetLstnMax(tcpsrv_t *pThis, int iMax) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     pThis->iLstnMax = iMax;
@@ -1947,7 +2093,7 @@ static rsRetVal SetLstnMax(tcpsrv_t *pThis, int iMax) {
 
 /* set if flow control shall be supported
  */
-static rsRetVal SetUseFlowControl(tcpsrv_t *pThis, int bUseFlowControl) {
+static rsRetVal ATTR_NONNULL(1) SetUseFlowControl(tcpsrv_t *pThis, int bUseFlowControl) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     pThis->bUseFlowControl = bUseFlowControl;
@@ -1959,7 +2105,7 @@ static rsRetVal SetUseFlowControl(tcpsrv_t *pThis, int bUseFlowControl) {
  * this must be called before ConstructFinalize, or it will have no effect!
  * rgerhards, 2009-04-09
  */
-static rsRetVal SetSessMax(tcpsrv_t *pThis, int iMax) {
+static rsRetVal ATTR_NONNULL(1) SetSessMax(tcpsrv_t *pThis, int iMax) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     pThis->iSessMax = iMax;
@@ -1967,7 +2113,7 @@ static rsRetVal SetSessMax(tcpsrv_t *pThis, int iMax) {
 }
 
 
-static rsRetVal SetPreserveCase(tcpsrv_t *pThis, int bPreserveCase) {
+static rsRetVal ATTR_NONNULL(1) SetPreserveCase(tcpsrv_t *pThis, int bPreserveCase) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     pThis->bPreserveCase = bPreserveCase;
@@ -1975,19 +2121,19 @@ static rsRetVal SetPreserveCase(tcpsrv_t *pThis, int bPreserveCase) {
 }
 
 
-static rsRetVal SetSynBacklog(tcpsrv_t *pThis, const int iSynBacklog) {
+static rsRetVal ATTR_NONNULL(1) SetSynBacklog(tcpsrv_t *pThis, const int iSynBacklog) {
     pThis->iSynBacklog = iSynBacklog;
     return RS_RET_OK;
 }
 
 
-static rsRetVal SetStarvationMaxReads(tcpsrv_t *pThis, const unsigned int maxReads) {
+static rsRetVal ATTR_NONNULL(1) SetStarvationMaxReads(tcpsrv_t *pThis, const unsigned int maxReads) {
     pThis->starvationMaxReads = maxReads;
     return RS_RET_OK;
 }
 
 
-static rsRetVal SetNumWrkr(tcpsrv_t *pThis, const int numWrkr) {
+static rsRetVal ATTR_NONNULL(1) SetNumWrkr(tcpsrv_t *pThis, const int numWrkr) {
     pThis->workQueue.numWrkr = numWrkr;
     return RS_RET_OK;
 }
