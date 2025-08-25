@@ -227,21 +227,40 @@ finalize_it:
 
 /* submit a generated numeric-suffix message to the rsyslog core
  */
-static rsRetVal doInjectNumericSuffixMsg(int iNum, ratelimit_t *ratelimiter) {
+static rsRetVal doInjectNumericSuffixMsg(int iNum, int payloadSize, ratelimit_t *ratelimiter) {
+    const char *const prefix = "<167>Mar  1 01:00:00 172.20.245.8 tag ";
+    size_t const prefixLen = strlen(prefix);
     uchar szMsg[1024];
+    uchar *dynMsg = NULL;
+    size_t msgLen;
     DEFiRet;
-    snprintf((char *)szMsg, sizeof(szMsg) / sizeof(uchar), "<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8d:", iNum);
-    iRet = doInjectMsg(szMsg, ratelimiter);
+
+    if (payloadSize > 0) {
+        msgLen = prefixLen + (size_t)payloadSize;
+        CHKmalloc(dynMsg = malloc(msgLen + 1));
+        memcpy(dynMsg, prefix, prefixLen);
+        int const n = snprintf((char *)(dynMsg + prefixLen), (size_t)payloadSize + 1, "msgnum:%08d:", iNum);
+        if (n < payloadSize) {
+            memset(dynMsg + prefixLen + n, 'x', (size_t)payloadSize - (size_t)n);
+        }
+        dynMsg[msgLen] = '\0';
+        iRet = doInjectMsg(dynMsg, ratelimiter);
+        free(dynMsg);
+    } else {
+        snprintf((char *)szMsg, sizeof(szMsg) / sizeof(uchar), "%smsgnum:%8.8d:", prefix, iNum);
+        iRet = doInjectMsg(szMsg, ratelimiter);
+    }
     RETiRet;
 }
 
 /* This function injects messages. Command format:
- * injectmsg <fromnbr> <number-of-messages>
+ * injectmsg <fromnbr> <number-of-messages> [payload-size]
  * rgerhards, 2009-05-27
  */
 static rsRetVal injectMsg(uchar *pszCmd, tcps_sess_t *pSess) {
     uchar wordBuf[1024];
     int iFrom, nMsgs;
+    int payloadSize = 0;
     uchar *literalMsg;
     int i;
     ratelimit_t *ratelimit = NULL;
@@ -262,8 +281,10 @@ static rsRetVal injectMsg(uchar *pszCmd, tcps_sess_t *pSess) {
         iFrom = atoi((char *)wordBuf);
         getFirstWord(&pszCmd, wordBuf, sizeof(wordBuf), TO_LOWERCASE);
         nMsgs = atoi((char *)wordBuf);
+        getFirstWord(&pszCmd, wordBuf, sizeof(wordBuf), TO_LOWERCASE);
+        if (*wordBuf != '\0') payloadSize = atoi((char *)wordBuf);
         for (i = 0; i < nMsgs; ++i) {
-            CHKiRet(doInjectNumericSuffixMsg(i + iFrom, ratelimit));
+            CHKiRet(doInjectNumericSuffixMsg(i + iFrom, payloadSize, ratelimit));
         }
     }
     CHKiRet(sendResponse(pSess, "%d messages injected\n", nMsgs));
