@@ -2867,6 +2867,20 @@ if test "x$enable_omamqp1" = "xyes"; then
 fi
 AM_CONDITIONAL(ENABLE_OMAMQP1, test x$enable_omamqp1 = xyes)
 
+AC_ARG_ENABLE(omtelegram,
+        [AS_HELP_STRING([--enable-omtelegram],[Enable Telegram output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omtelegram="yes" ;;
+          no) enable_omtelegram="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-omtelegram) ;;
+         esac],
+        [enable_omtelegram=no]
+)
+if test "x$enable_omtelegram" = "xyes"; then
+        PKG_CHECK_MODULES([CURL], [libcurl])
+fi
+AM_CONDITIONAL(ENABLE_OMTELEGRAM, test x$enable_omtelegram = xyes)
+
 # END AMQP 1.0 PROTOCOL SUPPORT
 
 # TCL SUPPORT
@@ -3075,11 +3089,12 @@ AC_CONFIG_FILES([Makefile \
 		contrib/mmsequence/Makefile \
 		contrib/mmrfc5424addhmac/Makefile \
 		contrib/pmcisconames/Makefile \
-		contrib/omhttpfs/Makefile \
-		contrib/omamqp1/Makefile \
-		contrib/omtcl/Makefile \
-		contrib/imbatchreport/Makefile \
-		contrib/omfile-hardened/Makefile \
+               contrib/omhttpfs/Makefile \
+               contrib/omamqp1/Makefile \
+               contrib/omtelegram/Makefile \
+               contrib/omtcl/Makefile \
+               contrib/imbatchreport/Makefile \
+               contrib/omfile-hardened/Makefile \
 		contrib/mmkubernetes/Makefile \
 		contrib/impcap/Makefile \
 		contrib/imtuxedoulog/Makefile \
@@ -3165,6 +3180,7 @@ echo "    omczmq module will be compiled:           $enable_omczmq"
 echo "    omrabbitmq module will be compiled:       $enable_omrabbitmq"
 echo "    omhttpfs module will be compiled:         $enable_omhttpfs"
 echo "    omamqp1 module will be compiled:          $enable_omamqp1"
+echo "    omtelegram module will be compiled:       $enable_omtelegram"
 echo "    omtcl module will be compiled:            $enable_omtcl"
 echo "    omkafka module will be compiled:          $enable_omkafka"
 echo "    omhiredis module will be compiled:        $enable_omhiredis"

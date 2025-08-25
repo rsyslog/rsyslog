@@ -33,6 +33,10 @@ contrib_mmkubernetes:
   notes:
     - WID is per-thread; shared caches in pData must be guarded.
 
+contrib_omtelegram:
+  paths: ["contrib/omtelegram/"]
+  requires_serialization: false
+
 ommysql:
   paths: ["plugins/ommysql/"]
   requires_serialization: false
