@@ -1,0 +1,20 @@
+---
+name: Spellcheck
+
+'on':
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  spellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install codespell
+        run: pip install codespell
+      - name: Check spelling in docs and comments
+        run: |
+          codespell doc/source
+          git ls-files '*.c' '*.h' '*.py' '*.sh' | xargs -r codespell
