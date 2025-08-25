@@ -25,6 +25,7 @@ Notable Features
 
 - :ref:`imhttp-statistic-counter`
 - :ref:`imhttp-error-messages`
+- :ref:`imhttp-prometheus-metrics`
 
 
 Configuration Parameters
@@ -86,6 +87,75 @@ Configures civetweb library "Options".
 
 - `Civetweb Options <https://github.com/civetweb/civetweb/blob/master/docs/UserManual.md#options-from-civetwebc>`_
 
+
+.. _imhttp-healthcheckpath:
+
+healthCheckPath
+^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "mandatory", "format", "default"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "no", "path that begins with '/'", "/healthz"
+
+Configures the request path for a simple HTTP health probe that returns
+``200`` when the module is running.
+The endpoint is unauthenticated unless :ref:`healthCheckBasicAuthFile
+<imhttp-healthcheckbasicauthfile>` is set. Otherwise, bind the server to
+``localhost`` or use CivetWeb access controls if external access is not
+desired.
+
+.. _imhttp-healthcheckbasicauthfile:
+
+healthCheckBasicAuthFile
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "mandatory", "format", "default"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "no", "path to htpasswd file", "none"
+
+Protects the health probe with HTTP Basic Authentication using a file in
+`htpasswd` format.
+
+.. _imhttp-metricspath:
+
+metricsPath
+^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "mandatory", "format", "default"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "no", "path that begins with '/'", "/metrics"
+
+Exposes rsyslog statistics in Prometheus text format at the specified
+path. The endpoint emits counters such as ``imhttp_submitted_total`` and
+``imhttp_failed_total``.
+By default the endpoint does not enforce authentication, but it can be
+protected with :ref:`metricsBasicAuthFile <imhttp-metricsbasicauthfile>`.
+Leaving the default paths enabled creates user-visible URLs as soon as
+the module is loaded, so review firewall and access-control settings.
+
+.. _imhttp-metricsbasicauthfile:
+
+metricsBasicAuthFile
+^^^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "mandatory", "format", "default"
+   :widths: auto
+   :class: parameter-table
+
+   "string", "no", "path to htpasswd file", "none"
+
+Protects the metrics endpoint with HTTP Basic Authentication using a
+file in `htpasswd` format.
 
 Input Parameters
 ----------------
@@ -276,6 +346,25 @@ accumulated for all inputs. The statistic has the following counters:
 -  **discarded** - Total number of messages discarded since startup, due to rate limiting or similar.
 
 
+.. _imhttp-prometheus-metrics:
+
+Prometheus Metrics
+==================
+
+If :ref:`metricspath <imhttp-metricspath>` is configured (default
+``/metrics``), imhttp exposes rsyslog statistics in the Prometheus
+text exposition format. The endpoint provides counters such as
+``imhttp_submitted_total``, ``imhttp_failed_total`` and
+``imhttp_discarded_total``.
+
+The handler sends a ``Content-Length`` header and closes the connection.
+Proxies or load balancers must allow such responses. An ``imhttp_up`` gauge is exported
+alongside the full rsyslog statistics. Name collisions with other
+exporters are unlikely but should be documented in monitoring setups.
+To expose only the metrics endpoint, load the module without configuring
+any ``input()`` statements.
+
+
 .. _imhttp-error-messages:
 
 Error Messages
@@ -367,3 +456,38 @@ imhttp can also support the underlying options of `Civetweb <https://github.com/
          endpoint="/postrequest"
          ruleset="postrequest_rs"
          )
+
+
+Example 4
+---------
+
+Expose a Prometheus metrics endpoint alongside an input path:
+
+.. code-block:: none
+
+   module(load="imhttp" ports="8080" metricspath="/metrics")
+   input(type="imhttp" endpoint="/postrequest")
+
+   # scrape statistics
+   # curl http://localhost:8080/metrics
+   # HELP imhttp_up Indicates if the imhttp module is operational (1 for up, 0 for down).
+   # TYPE imhttp_up gauge
+   imhttp_up 1
+   # HELP imhttp_submitted_total rsyslog stats: origin="imhttp" object="imhttp", counter="submitted"
+   # TYPE imhttp_submitted_total counter
+   imhttp_submitted_total 0
+
+Example 5
+---------
+
+Expose only a Prometheus metrics endpoint secured with Basic
+Authentication:
+
+.. code-block:: none
+
+   module(load="imhttp" ports="8080"
+          metricspath="/metrics"
+          metricsbasicauthfile="/etc/rsyslog/htpasswd")
+
+   # scrape statistics with credentials
+   # curl -u user:password http://localhost:8080/metrics
