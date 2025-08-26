@@ -17,10 +17,10 @@ What is a Ruleset?
 
 If you have worked with (r)syslog.conf, you know that it is made up of
 what I call rules (others tend to call them selectors, a sysklogd term).
-Each rule consist of a filter and one or more actions to be carried out
+Each rule consists of a filter and one or more actions to be carried out
 when the filter evaluates to true. A filter may be as simple as a
 traditional syslog priority based filter (like "\*.\*" or "mail.info" or
-a as complex as a script-like expression. Details on that are covered in
+as complex as a script-like expression. Details on that are covered in
 the config file documentation. After the filter come action specifiers,
 and an action is something that does something to a message, e.g. write
 it to a file or forward it to a remote logging server.
@@ -45,7 +45,7 @@ processed, the config file parser looks for the directive
 Where name is any name the user likes (but must not start with
 "RSYSLOG\_", which is the name space reserved for rsyslog use). If it
 finds this directive, it begins a new rule set (if the name was not yet
-know) or switches to an already-existing one (if the name was known).
+known) or switches to an already-existing one (if the name was known).
 All rules defined between this $RuleSet directive and the next one are
 appended to the named ruleset. Note that the reserved name
 "RSYSLOG\_DefaultRuleset" is used to specify rsyslogd's default ruleset.
@@ -289,7 +289,7 @@ Partitioning of Input Data
 
 Starting with rsyslog 5.3.4, rulesets permit higher concurrency. They
 offer the ability to run on their own "main" queue. What that means is
-that a own queue is associated with a specific rule set. That means that
+that its own queue is associated with a specific rule set. That means that
 inputs bound to that ruleset do no longer need to compete with each
 other when they enqueue a data element into the queue. Instead, enqueue
 operations can be completed in parallel.
