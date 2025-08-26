@@ -2,6 +2,9 @@
 
 Rsyslog is a real open source project, welcoming contributions of all kinds—from code to documentation to community engagement. Whether you're an experienced developer or a first-time contributor, there are many ways to get involved.
 
+Quick start for newcomers: pick a small task from our curated board:
+https://www.rsyslog.com/tool_good-first-issues
+
 ---
 
 ## Ways to Contribute
@@ -15,6 +18,7 @@ Rsyslog is a real open source project, welcoming contributions of all kinds—fr
   - Help maintain [rsyslog.com/doc](http://rsyslog.com/doc)
 - **Maintain infrastructure**: Help with project websites, CI, or packaging.
 - **Develop code**: Implement new features, improve existing ones, or fix bugs.
+- the rsyslog project welcomes AI generated patches, we have no friction with them. Qualitiy is ensured by CI and maitainer guidance and review.
 - AI-assisted contributions should follow [AGENTS.md](AGENTS.md) for setup and workflow guidance.
 
 ---
