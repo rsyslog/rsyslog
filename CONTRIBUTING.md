@@ -5,6 +5,8 @@ Rsyslog is a real open source project, welcoming contributions of all kinds—fr
 Quick start for newcomers: pick a small task from our curated board:
 https://www.rsyslog.com/tool_good-first-issues
 
+> Community expectations: please read our [Code of Conduct](CODE_OF_CONDUCT.md).
+
 ---
 
 ## Ways to Contribute

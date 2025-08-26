@@ -75,8 +75,8 @@ Rsyslog is a community-driven open-source project. Contributions are welcome and
 - See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
 - Starter tasks: https://www.rsyslog.com/tool_good-first-issues
 - To develop new output plugins in Python or Perl, see: [plugins/external/README.md](plugins/external/README.md)
-
-If you're working with AI coding agents (e.g. GitHub Copilot, OpenAI Codex), note that we support these workflows with agent-specific instructions in `AGENTS.md`.
+- If you're working with AI coding agents (e.g. GitHub Copilot, OpenAI Codex), note that we support these workflows with agent-specific instructions in [AGENTS.md](AGENTS.md).
+- Community: [Code of Conduct](CODE_OF_CONDUCT.md)
 
 **Commit Assistant (recommended):** Draft compliant commit messages with
 https://www.rsyslog.com/tool_rsyslog-commit-assistant (see rules in
