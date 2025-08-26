@@ -1,7 +1,7 @@
 Writing Rsyslog Output Plugins
 ==============================
 
-This page is the begin of some developer documentation for writing
+This page is the beginning of some developer documentation for writing
 output plugins. Doing so is quite easy (and that was a design goal), but
 there currently is only sparse documentation on the process available. I
 was tempted NOT to write this guide here because I know I will most
