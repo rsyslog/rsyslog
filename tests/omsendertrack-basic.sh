@@ -1,5 +1,5 @@
 #!/bin/bash
-# addd 2016-05-13 by RGerhards, released under ASL 2.0
+# add 2016-05-13 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=10 # MUST be an even number!
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines

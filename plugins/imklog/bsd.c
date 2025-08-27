@@ -225,7 +225,7 @@ static void readklog(modConfData_t *pModConf) {
 
     /* we optimize performance: if iMaxLine is below our fixed size buffer (which
      * usually is sufficiently large), we use this buffer. if it is higher, heap memory
-     * is used. We could use alloca() to achive a similar aspect, but there are so
+     * is used. We could use alloca() to achieve a similar aspect, but there are so
      * many issues with alloca() that I do not want to take that route.
      * rgerhards, 2008-09-02
      */
@@ -277,7 +277,7 @@ rsRetVal ATTR_NONNULL() klogAfterRun(modConfData_t *const pModConf __attribute__
     DEFiRet;
     if (fklog != -1) close(fklog);
 #ifdef OS_LINUX
-    /* Turn on logging of messages to console, but only if a log level was speficied */
+    /* Turn on logging of messages to console, but only if a log level was specified */
     if (pModConf->console_log_level != -1) klogctl(7, NULL, 0);
 #endif
     RETiRet;

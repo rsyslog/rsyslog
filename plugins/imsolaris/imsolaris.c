@@ -5,7 +5,7 @@
  * did not lock appropriately on second thought. So I created this module
  * that does anything for local message recption.
  *
- * This module is not meant to be used on plaforms other than Solaris. As
+ * This module is not meant to be used on platforms other than Solaris. As
  * such, trying to compile it elswhere will probably fail with all sorts
  * of errors.
  *
@@ -37,7 +37,7 @@
  * one complete pull cycle on the log socket (until it has no further data
  * available) and only thereafter create the door file and start the "regular"
  * pull cycle. As of my understanding, there is a minimal race between the
- * point where the intial pull cycle has ended and the door file is created,
+ * point where the initial pull cycle has ended and the door file is created,
  * but that race is also present in OpenSolaris syslogd code, so it should
  * not matter that much (plus, I do not know how to avoid it...)
  *
@@ -111,7 +111,7 @@ static char *LogName = NULL; /* the log socket name TODO: make configurable! */
 /* a function to replace the sun logerror() function.
  * It generates an error message from the supplied string. The main
  * reason for not calling logError directly is that sun_cddl.c does not
- * know or has acces to rsyslog objects (namely errmsg) -- and we do not
+ * know or has access to rsyslog objects (namely errmsg) -- and we do not
  * want to do this effort. -- rgerhards, 2010-04-19
  */
 void imsolaris_logerror(int err, char *errStr) {
@@ -222,7 +222,7 @@ finalize_it:
  * We may think about replacing this with a read-loop, thus saving
  * us the overhead of the poll.
  * The timeout variable is the timeout to use for poll. During startup,
- * it should be set to 0 (non-blocking) and later to -1 (infinit, blocking).
+ * it should be set to 0 (non-blocking) and later to -1 (infinite, blocking).
  * This mimics the (strange) behaviour of the original syslogd.
  * rgerhards, 2010-04-19
  */
@@ -238,7 +238,7 @@ static rsRetVal getMsgs(thrdInfo_t *pThrd, int timeout) {
 
     /* we optimize performance: if iMaxLine is below 4K (which it is in almost all
      * cases, we use a fixed buffer on the stack. Only if it is higher, heap memory
-     * is used. We could use alloca() to achive a similar aspect, but there are so
+     * is used. We could use alloca() to achieve a similar aspect, but there are so
      * many issues with alloca() that I do not want to take that route.
      * rgerhards, 2008-09-02
      */
@@ -333,7 +333,7 @@ BEGINrunInput
      * right into the sleep below.
      */
 
-    DBGPRINTF("imsolaris: doing startup poll before openeing door()\n");
+    DBGPRINTF("imsolaris: doing startup poll before opening door()\n");
     CHKiRet(getMsgs(pThrd, 0));
 
     /* note: sun's syslogd code claims that the door should only

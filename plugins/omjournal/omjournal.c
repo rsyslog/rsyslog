@@ -226,7 +226,7 @@ fail:
     if (NULL == iov) return NULL;
 
     size_t j;
-    // iterate over any iovecs that were initalised above and free them.
+    // iterate over any iovecs that were initialised above and free them.
     for (j = 0; j < i; j++) {
         free(iov[j].iov_base);
     }

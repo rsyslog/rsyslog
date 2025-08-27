@@ -90,7 +90,7 @@ BEGINparse2
 
     /* Instead of comparing strings which a waste of cpu cycles we take interpret the 4 first chars of
      * level read it as int32 and compare it to same interpretation of our constant "levels"
-     * So this test is not sensitive to ENDIANESS. This is not a clean way but very efficient.
+     * So this test is not sensitive to ENDIANNESS. This is not a clean way but very efficient.
      */
     lvl = (char *)(pMsg->pszRawMsg + pMsg->offAfterPRI + pInst->levelpos);
 

@@ -4,7 +4,7 @@
  * File begun on 2011-06-06 by RGerhards
  * The initial implementation is far from being optimal. The idea is to
  * first get somethting that'S functionally OK, and then evolve the algorithm.
- * In any case, even the initial implementaton is far faster than what we had
+ * In any case, even the initial implementation is far faster than what we had
  * before. -- rgerhards, 2011-06-06
  *
  * Copyright 2011-2019 by Rainer Gerhards and Adiscon GmbH.
@@ -287,7 +287,7 @@ static rsRetVal ATTR_NONNULL() resolveAddr(struct sockaddr_storage *addr, dnscac
                     ABORT_FINALIZE(RS_RET_MALICIOUS_ENTITY);
                 }
 
-                /* Please note: we deal with a malicous entry. Thus, we have crafted
+                /* Please note: we deal with a malicious entry. Thus, we have crafted
                  * the snprintf() below so that all text is in front of the entry - maybe
                  * it contains characters that make the message unreadable
                  * (OK, I admit this is more or less impossible, but I am paranoid...)

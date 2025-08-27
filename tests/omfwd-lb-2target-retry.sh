@@ -39,7 +39,7 @@ printf "\nSUCCESS for part 1 of the test\n\n"
 
 echo WARNING: The next part of this test is flacky, because there is an
 echo inevitable race on the port number for minitcpsrvr. If another
-echo parallel test has aquired it in the interim, this test here will
+echo parallel test has acquired it in the interim, this test here will
 echo invalidly fail.
 ./minitcpsrv -t127.0.0.1 -p $TCPFLOOD_PORT -f "$RSYSLOG2_OUT_LOG" \
 	-P "$RSYSLOG_DYNNAME.minitcpsrvr_port2"  &

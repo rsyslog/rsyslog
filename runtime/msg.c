@@ -616,7 +616,7 @@ uchar *propIDToName(propid_t propID) {
  * NOTE: this constructor does NOT call calloc(), as we have many bytes
  * inside the structure which do not need to be cleared. bzero() will
  * heavily thrash the cache, so we do the init manually (which also
- * is the right thing to do with pointers, as they are not neccessarily
+ * is the right thing to do with pointers, as they are not necessarily
  * a binary 0 on all machines [but today almost always...]).
  * rgerhards, 2008-10-06
  */
@@ -626,7 +626,7 @@ static rsRetVal msgBaseConstruct(smsg_t **ppThis) {
 
     assert(ppThis != NULL);
     CHKmalloc(pM = malloc(sizeof(smsg_t)));
-    objConstructSetObjInfo(pM); /* intialize object helper entities */
+    objConstructSetObjInfo(pM); /* initialize object helper entities */
 
     /* initialize members in ORDER they appear in structure (think "cache line"!) */
     pM->flowCtlType = 0;
@@ -724,7 +724,7 @@ rsRetVal msgConstruct(smsg_t **ppThis) {
      * are consistent. Also, this saves us from doing any further time calls just
      * to obtain a timestamp. The memcpy() should not really make a difference,
      * especially as I think there is no codepath currently where it would not be
-     * required (after I have cleaned up the pathes ;)). -- rgerhards, 2008-10-02
+     * required (after I have cleaned up the paths ;)). -- rgerhards, 2008-10-02
      */
     datetime.getCurrTime(&((*ppThis)->tRcvdAt), &((*ppThis)->ttGenTime), TIME_IN_LOCALTIME);
     memcpy(&(*ppThis)->tTIMESTAMP, &(*ppThis)->tRcvdAt, sizeof(struct syslogTime));
@@ -837,7 +837,7 @@ rsRetVal msgDestruct(smsg_t **ppThis) {
 ENDobjDestruct
 (msg)
 /* The macros below are used in MsgDup(). I use macros
- * to keep the fuction code somewhat more readyble. It is my
+ * to keep the function code somewhat more readyble. It is my
  * replacement for inline functions in CPP
  */
 #define tmpCOPYSZ(name)                                                                    \
@@ -1443,8 +1443,8 @@ void getRawMsgAfterPRI(smsg_t *const pM, uchar **pBuf, int *piLen) {
             /* unfortunately, pM->offAfterPRI seems NOT to be
              * correct/consistent in all cases. imuxsock and imudp
              * seem to have other values than imptcp. Testbench
-             * covers some of that. As a work-around, we caluculate
-             * the value ourselfes here. -- rgerhards, 2015-10-09
+             * covers some of that. As a work-around, we calculate
+             * the value ourselves here. -- rgerhards, 2015-10-09
              */
             size_t offAfterPRI = 0;
             if (pM->pszRawMsg[0] == '<') { /* do we have a PRI? */
@@ -1937,7 +1937,7 @@ rsRetVal MsgSetAfterPRIOffs(smsg_t *const pMsg, int offs) {
  * This is not locked, because it either is called during message
  * construction (where we need no locking) or later as part of a function
  * which already obtained the lock. So in general, this function here must
- * only be called when it it safe to do so without it aquiring a lock.
+ * only be called when it it safe to do so without it acquiring a lock.
  */
 rsRetVal ATTR_NONNULL(1, 2) MsgSetAPPNAME(smsg_t *__restrict__ const pMsg, const char *pszAPPNAME) {
     DEFiRet;
@@ -2058,7 +2058,7 @@ static const char *getMSGID(smsg_t *const pM) {
     }
 }
 
-/* rgerhards 2012-03-15: set parser success (an integer, acutally bool)
+/* rgerhards 2012-03-15: set parser success (an integer, actually bool)
  */
 void MsgSetParseSuccess(smsg_t *const pMsg, int bSuccess) {
     assert(pMsg != NULL);
@@ -2070,7 +2070,7 @@ void MsgSetParseSuccess(smsg_t *const pMsg, int bSuccess) {
 const uchar *msgGetJSONMESG(smsg_t *__restrict__ const pMsg) {
     struct json_object *json;
     struct json_object *jval;
-    uchar *pRes; /* result pointer */
+    uchar *press; /* result pointer */
     rs_size_t bufLen = -1; /* length of string or -1, if not known */
 
     json = json_object_new_object();
@@ -2078,23 +2078,23 @@ const uchar *msgGetJSONMESG(smsg_t *__restrict__ const pMsg) {
     jval = json_object_new_string((char *)getMSG(pMsg));
     json_object_object_add(json, "msg", jval);
 
-    getRawMsg(pMsg, &pRes, &bufLen);
-    jval = json_object_new_string((char *)pRes);
+    getRawMsg(pMsg, &press, &bufLen);
+    jval = json_object_new_string((char *)press);
     json_object_object_add(json, "rawmsg", jval);
 
-    pRes = (uchar *)getTimeReported(pMsg, tplFmtRFC3339Date);
-    jval = json_object_new_string((char *)pRes);
+    press = (uchar *)getTimeReported(pMsg, tplFmtRFC3339Date);
+    jval = json_object_new_string((char *)press);
     json_object_object_add(json, "timereported", jval);
 
     jval = json_object_new_string(getHOSTNAME(pMsg));
     json_object_object_add(json, "hostname", jval);
 
-    getTAG(pMsg, &pRes, &bufLen, LOCK_MUTEX);
-    jval = json_object_new_string((char *)pRes);
+    getTAG(pMsg, &press, &bufLen, LOCK_MUTEX);
+    jval = json_object_new_string((char *)press);
     json_object_object_add(json, "syslogtag", jval);
 
-    getInputName(pMsg, &pRes, &bufLen);
-    jval = json_object_new_string((char *)pRes);
+    getInputName(pMsg, &press, &bufLen);
+    jval = json_object_new_string((char *)press);
     json_object_object_add(json, "inputname", jval);
 
     jval = json_object_new_string((char *)getRcvFrom(pMsg));
@@ -2112,8 +2112,8 @@ const uchar *msgGetJSONMESG(smsg_t *__restrict__ const pMsg) {
     jval = json_object_new_string(getSeverity(pMsg));
     json_object_object_add(json, "syslogseverity", jval);
 
-    pRes = (uchar *)getTimeGenerated(pMsg, tplFmtRFC3339Date);
-    jval = json_object_new_string((char *)pRes);
+    press = (uchar *)getTimeGenerated(pMsg, tplFmtRFC3339Date);
+    jval = json_object_new_string((char *)press);
     json_object_object_add(json, "timegenerated", jval);
 
     jval = json_object_new_string((char *)getProgramName(pMsg, LOCK_MUTEX));
@@ -2122,8 +2122,8 @@ const uchar *msgGetJSONMESG(smsg_t *__restrict__ const pMsg) {
     jval = json_object_new_string(getProtocolVersionString(pMsg));
     json_object_object_add(json, "protocol-version", jval);
 
-    MsgGetStructuredData(pMsg, &pRes, &bufLen);
-    jval = json_object_new_string((char *)pRes);
+    MsgGetStructuredData(pMsg, &press, &bufLen);
+    jval = json_object_new_string((char *)press);
     json_object_object_add(json, "structured-data", jval);
 
     jval = json_object_new_string(getAPPNAME(pMsg, LOCK_MUTEX));
@@ -2139,17 +2139,17 @@ const uchar *msgGetJSONMESG(smsg_t *__restrict__ const pMsg) {
     if (pMsg->pszUUID == NULL) {
         jval = NULL;
     } else {
-        getUUID(pMsg, &pRes, &bufLen);
-        jval = json_object_new_string((char *)pRes);
+        getUUID(pMsg, &press, &bufLen);
+        jval = json_object_new_string((char *)press);
     }
     json_object_object_add(json, "uuid", jval);
 #endif
 
     json_object_object_add(json, "$!", json_object_get(pMsg->json));
 
-    pRes = (uchar *)strdup(json_object_get_string(json));
+    press = (uchar *)strdup(json_object_get_string(json));
     json_object_put(json);
-    return pRes;
+    return press;
 }
 
 /* rgerhards 2009-06-12: set associated ruleset
@@ -2175,7 +2175,7 @@ void MsgSetTAG(smsg_t *__restrict__ const pMsg, const uchar *pszBuf, const size_
         pBuf = pMsg->TAG.szBuf;
     } else {
         if ((pBuf = (uchar *)malloc(pMsg->iLenTAG + 1)) == NULL) {
-            /* truncate message, better than completely loosing it... */
+            /* truncate message, better than completely losing it... */
             pBuf = pMsg->TAG.szBuf;
             pMsg->iLenTAG = CONF_TAG_BUFSIZE - 1;
         } else {
@@ -2329,9 +2329,9 @@ uchar *ATTR_NONNULL(1) getProgramName(smsg_t *const pM, const sbool bLockMutex) 
 
     if (pM->iLenPROGNAME == -1) {
         if (pM->iLenTAG == 0) {
-            uchar *pRes;
+            uchar *press;
             rs_size_t bufLen = -1;
-            getTAG(pM, &pRes, &bufLen, MUTEX_ALREADY_LOCKED);
+            getTAG(pM, &press, &bufLen, MUTEX_ALREADY_LOCKED);
         }
         acquireProgramName(pM);
     }
@@ -2443,7 +2443,7 @@ void MsgSetRcvFrom(smsg_t *pThis, prop_t *new) {
  * called if there is a reliable way for a caller to make sure that the
  * same name can be used across multiple messages. However, if it can not
  * ensure that, calling this function is the second best thing, because it
- * will re-use the previously created property if it contained the same
+ * will reuse the previously created property if it contained the same
  * name (but it works only for the immediate previous).
  * rgerhards, 2009-06-31
  */
@@ -2474,7 +2474,7 @@ rsRetVal MsgSetRcvFromIP(smsg_t *pThis, prop_t *new) {
  * called if there is a reliable way for a caller to make sure that the
  * same name can be used across multiple messages. However, if it can not
  * ensure that, calling this function is the second best thing, because it
- * will re-use the previously created property if it contained the same
+ * will reuse the previously created property if it contained the same
  * name (but it works only for the immediate previous).
  * rgerhards, 2009-06-31
  */
@@ -2510,7 +2510,7 @@ void MsgSetHOSTNAME(smsg_t *pThis, const uchar *pszHOSTNAME, const int lenHOSTNA
         /* small enough: use fixed buffer (faster!) */
         pThis->pszHOSTNAME = pThis->szHOSTNAME;
     } else if ((pThis->pszHOSTNAME = (uchar *)malloc(pThis->iLenHOSTNAME + 1)) == NULL) {
-        /* truncate message, better than completely loosing it... */
+        /* truncate message, better than completely losing it... */
         pThis->pszHOSTNAME = pThis->szHOSTNAME;
         pThis->iLenHOSTNAME = CONF_HOSTNAME_BUFSIZE - 1;
     }
@@ -2611,7 +2611,7 @@ void ATTR_NONNULL() MsgSetRawMsg(smsg_t *const pThis, const char *const pszRawMs
         /* small enough: use fixed buffer (faster!) */
         pThis->pszRawMsg = pThis->szRawMsg;
     } else if ((pThis->pszRawMsg = (uchar *)malloc(pThis->iLenRawMsg + 1)) == NULL) {
-        /* truncate message, better than completely loosing it... */
+        /* truncate message, better than completely losing it... */
         pThis->pszRawMsg = pThis->szRawMsg;
         pThis->iLenRawMsg = CONF_RAWMSG_BUFSIZE - 1;
     }
@@ -2642,20 +2642,20 @@ void MsgSetRawMsgWOSize(smsg_t *const pMsg, char *pszRawMsg) {
 
 
 /* create textual representation of facility and severity.
- * The variable pRes must point to a user-supplied buffer of
+ * The variable press must point to a user-supplied buffer of
  * at least 20 characters.
  */
 static uchar *textpri(const smsg_t *const __restrict__ pMsg) {
     int lenfac = len_syslog_fac_names[pMsg->iFacility];
     int lensev = len_syslog_severity_names[pMsg->iSeverity];
     int totlen = lenfac + 1 + lensev + 1;
-    char *pRes = malloc(totlen);
-    if (pRes != NULL) {
-        memcpy(pRes, syslog_fac_names[pMsg->iFacility], lenfac);
-        pRes[lenfac] = '.';
-        memcpy(pRes + lenfac + 1, syslog_severity_names[pMsg->iSeverity], lensev + 1 /* for \0! */);
+    char *press = malloc(totlen);
+    if (press != NULL) {
+        memcpy(press, syslog_fac_names[pMsg->iFacility], lenfac);
+        press[lenfac] = '.';
+        memcpy(press + lenfac + 1, syslog_severity_names[pMsg->iSeverity], lensev + 1 /* for \0! */);
     }
-    return (uchar *)pRes;
+    return (uchar *)press;
 }
 
 
@@ -2817,7 +2817,7 @@ finalize_it:
 
 /* Get a JSON-Property as string value  (used for various types of JSON-based vars) */
 rsRetVal getJSONPropVal(
-    smsg_t *const pMsg, msgPropDescr_t *pProp, uchar **pRes, rs_size_t *buflen, unsigned short *pbMustBeFreed) {
+    smsg_t *const pMsg, msgPropDescr_t *pProp, uchar **press, rs_size_t *buflen, unsigned short *pbMustBeFreed) {
     uchar *leaf;
     struct json_object **jroot;
     struct json_object *parent;
@@ -2825,7 +2825,7 @@ rsRetVal getJSONPropVal(
     pthread_mutex_t *mut = NULL;
     DEFiRet;
 
-    *pRes = NULL;
+    *press = NULL;
     CHKiRet(getJSONRootAndMutex(pMsg, pProp->id, &jroot, &mut));
     pthread_mutex_lock(mut);
 
@@ -2839,16 +2839,16 @@ rsRetVal getJSONPropVal(
         if (jsonVarExtract(parent, (char *)leaf, &field) == FALSE) field = NULL;
     }
     if (field != NULL) {
-        *pRes = (uchar *)strdup(json_object_get_string(field));
-        *buflen = (int)ustrlen(*pRes);
+        *press = (uchar *)strdup(json_object_get_string(field));
+        *buflen = (int)ustrlen(*press);
         *pbMustBeFreed = 1;
     }
 
 finalize_it:
     if (mut != NULL) pthread_mutex_unlock(mut);
-    if (*pRes == NULL) {
+    if (*press == NULL) {
         /* could not find any value, so set it to empty */
-        *pRes = (unsigned char *)"";
+        *press = (unsigned char *)"";
         *pbMustBeFreed = 0;
     }
     RETiRet;
@@ -2941,7 +2941,7 @@ finalize_it:
 }
 
 
-/* Helper for jsonAddVal(), to be called onces we know there are actually
+/* Helper for jsonAddVal(), to be called once we know there are actually
  * json escapes inside the string. If so, this function takes over.
  * Splitting the functions permits us to make some performance optimizations.
  * For further details, see jsonAddVal().
@@ -3116,7 +3116,7 @@ finalize_it:
 /* encode a property in JSON escaped format. This is a helper
  * to MsgGetProp. It needs to update all provided parameters.
  * For performance reasons, we begin to copy the string only
- * when we recognice that we actually need to do some escaping.
+ * when we recognize that we actually need to do some escaping.
  * rgerhards, 2012-03-16
  */
 static rsRetVal jsonEncode(uchar **ppRes, unsigned short *pbMustBeFreed, int *pBufLen, int escapeAll) {
@@ -3278,7 +3278,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                   rs_size_t *__restrict__ const pPropLen,
                   unsigned short *__restrict__ const pbMustBeFreed,
                   struct syslogTime *const ttNow) {
-    uchar *pRes; /* result pointer */
+    uchar *press; /* result pointer */
     rs_size_t bufLen = -1; /* length of string or -1, if not known */
     uchar *pBufStart;
     uchar *pBuf;
@@ -3300,7 +3300,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
 
     switch (pProp->id) {
         case PROP_MSG:
-            pRes = getMSG(pMsg);
+            press = getMSG(pMsg);
             bufLen = getMSGLen(pMsg);
             break;
         case PROP_TIMESTAMP:
@@ -3312,56 +3312,56 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                 bDateInUTC = 0;
             }
             if (bDateInUTC) {
-                pRes = (uchar *)getTimeUTC(&pMsg->tTIMESTAMP, datefmt, pbMustBeFreed);
+                press = (uchar *)getTimeUTC(&pMsg->tTIMESTAMP, datefmt, pbMustBeFreed);
             } else {
-                pRes = (uchar *)getTimeReported(pMsg, datefmt);
+                press = (uchar *)getTimeReported(pMsg, datefmt);
             }
             break;
         case PROP_HOSTNAME:
-            pRes = (uchar *)getHOSTNAME(pMsg);
+            press = (uchar *)getHOSTNAME(pMsg);
             bufLen = getHOSTNAMELen(pMsg);
             break;
         case PROP_SYSLOGTAG:
-            getTAG(pMsg, &pRes, &bufLen, LOCK_MUTEX);
+            getTAG(pMsg, &press, &bufLen, LOCK_MUTEX);
             break;
         case PROP_RAWMSG:
-            getRawMsg(pMsg, &pRes, &bufLen);
+            getRawMsg(pMsg, &press, &bufLen);
             break;
         case PROP_RAWMSG_AFTER_PRI:
-            getRawMsgAfterPRI(pMsg, &pRes, &bufLen);
+            getRawMsgAfterPRI(pMsg, &press, &bufLen);
             break;
         case PROP_INPUTNAME:
-            getInputName(pMsg, &pRes, &bufLen);
+            getInputName(pMsg, &press, &bufLen);
             break;
         case PROP_FROMHOST:
-            pRes = getRcvFrom(pMsg);
+            press = getRcvFrom(pMsg);
             break;
         case PROP_FROMHOST_IP:
-            pRes = getRcvFromIP(pMsg);
+            press = getRcvFromIP(pMsg);
             break;
         case PROP_PRI:
-            pRes = (uchar *)getPRI(pMsg);
+            press = (uchar *)getPRI(pMsg);
             break;
         case PROP_PRI_TEXT:
-            pRes = textpri(pMsg);
-            if (pRes == NULL) RET_OUT_OF_MEMORY;
+            press = textpri(pMsg);
+            if (press == NULL) RET_OUT_OF_MEMORY;
             *pbMustBeFreed = 1;
             break;
         case PROP_IUT:
-            pRes = UCHAR_CONSTANT("1"); /* always 1 for syslog messages (a MonitorWare thing;)) */
+            press = UCHAR_CONSTANT("1"); /* always 1 for syslog messages (a MonitorWare thing;)) */
             bufLen = 1;
             break;
         case PROP_SYSLOGFACILITY:
-            pRes = (uchar *)getFacility(pMsg);
+            press = (uchar *)getFacility(pMsg);
             break;
         case PROP_SYSLOGFACILITY_TEXT:
-            pRes = (uchar *)getFacilityStr(pMsg);
+            press = (uchar *)getFacilityStr(pMsg);
             break;
         case PROP_SYSLOGSEVERITY:
-            pRes = (uchar *)getSeverity(pMsg);
+            press = (uchar *)getSeverity(pMsg);
             break;
         case PROP_SYSLOGSEVERITY_TEXT:
-            pRes = (uchar *)getSeverityStr(pMsg);
+            press = (uchar *)getSeverityStr(pMsg);
             break;
         case PROP_TIMEGENERATED:
             if (pTpe != NULL) {
@@ -3372,43 +3372,43 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                 bDateInUTC = 0;
             }
             if (bDateInUTC) {
-                pRes = (uchar *)getTimeUTC(&pMsg->tRcvdAt, datefmt, pbMustBeFreed);
+                press = (uchar *)getTimeUTC(&pMsg->tRcvdAt, datefmt, pbMustBeFreed);
             } else {
-                pRes = (uchar *)getTimeGenerated(pMsg, datefmt);
+                press = (uchar *)getTimeGenerated(pMsg, datefmt);
             }
             break;
         case PROP_PROGRAMNAME:
-            pRes = getProgramName(pMsg, LOCK_MUTEX);
+            press = getProgramName(pMsg, LOCK_MUTEX);
             break;
         case PROP_PROTOCOL_VERSION:
-            pRes = (uchar *)getProtocolVersionString(pMsg);
+            press = (uchar *)getProtocolVersionString(pMsg);
             break;
         case PROP_STRUCTURED_DATA:
-            MsgGetStructuredData(pMsg, &pRes, &bufLen);
+            MsgGetStructuredData(pMsg, &press, &bufLen);
             break;
         case PROP_APP_NAME:
-            pRes = (uchar *)getAPPNAME(pMsg, LOCK_MUTEX);
+            press = (uchar *)getAPPNAME(pMsg, LOCK_MUTEX);
             break;
         case PROP_PROCID:
-            pRes = (uchar *)getPROCID(pMsg, LOCK_MUTEX);
+            press = (uchar *)getPROCID(pMsg, LOCK_MUTEX);
             break;
         case PROP_MSGID:
-            pRes = (uchar *)getMSGID(pMsg);
+            press = (uchar *)getMSGID(pMsg);
             break;
         case PROP_JSONMESG:
-            pRes = (uchar *)msgGetJSONMESG(pMsg);
+            press = (uchar *)msgGetJSONMESG(pMsg);
             *pbMustBeFreed = 1;
             break;
 #ifdef USE_LIBUUID
         case PROP_UUID:
-            getUUID(pMsg, &pRes, &bufLen);
+            getUUID(pMsg, &press, &bufLen);
             break;
 #endif
         case PROP_PARSESUCCESS:
-            pRes = (uchar *)getParseSuccess(pMsg);
+            press = (uchar *)getParseSuccess(pMsg);
             break;
         case PROP_SYS_NOW:
-            if ((pRes = getNOW(NOW_NOW, ttNow, TIME_IN_LOCALTIME)) == NULL) {
+            if ((press = getNOW(NOW_NOW, ttNow, TIME_IN_LOCALTIME)) == NULL) {
                 RET_OUT_OF_MEMORY;
             } else {
                 *pbMustBeFreed = 1;
@@ -3416,7 +3416,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             }
             break;
         case PROP_SYS_YEAR:
-            if ((pRes = getNOW(NOW_YEAR, ttNow, TIME_IN_LOCALTIME)) == NULL) {
+            if ((press = getNOW(NOW_YEAR, ttNow, TIME_IN_LOCALTIME)) == NULL) {
                 RET_OUT_OF_MEMORY;
             } else {
                 *pbMustBeFreed = 1;
@@ -3424,7 +3424,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             }
             break;
         case PROP_SYS_MONTH:
-            if ((pRes = getNOW(NOW_MONTH, ttNow, TIME_IN_LOCALTIME)) == NULL) {
+            if ((press = getNOW(NOW_MONTH, ttNow, TIME_IN_LOCALTIME)) == NULL) {
                 RET_OUT_OF_MEMORY;
             } else {
                 *pbMustBeFreed = 1;
@@ -3432,7 +3432,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             }
             break;
         case PROP_SYS_DAY:
-            if ((pRes = getNOW(NOW_DAY, ttNow, TIME_IN_LOCALTIME)) == NULL) {
+            if ((press = getNOW(NOW_DAY, ttNow, TIME_IN_LOCALTIME)) == NULL) {
                 RET_OUT_OF_MEMORY;
             } else {
                 *pbMustBeFreed = 1;
@@ -3440,7 +3440,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             }
             break;
         case PROP_SYS_HOUR:
-            if ((pRes = getNOW(NOW_HOUR, ttNow, TIME_IN_LOCALTIME)) == NULL) {
+            if ((press = getNOW(NOW_HOUR, ttNow, TIME_IN_LOCALTIME)) == NULL) {
                 RET_OUT_OF_MEMORY;
             } else {
                 *pbMustBeFreed = 1;
@@ -3448,7 +3448,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             }
             break;
         case PROP_SYS_HHOUR:
-            if ((pRes = getNOW(NOW_HHOUR, ttNow, TIME_IN_LOCALTIME)) == NULL) {
+            if ((press = getNOW(NOW_HHOUR, ttNow, TIME_IN_LOCALTIME)) == NULL) {
                 RET_OUT_OF_MEMORY;
             } else {
                 *pbMustBeFreed = 1;
@@ -3456,7 +3456,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             }
             break;
         case PROP_SYS_QHOUR:
-            if ((pRes = getNOW(NOW_QHOUR, ttNow, TIME_IN_LOCALTIME)) == NULL) {
+            if ((press = getNOW(NOW_QHOUR, ttNow, TIME_IN_LOCALTIME)) == NULL) {
                 RET_OUT_OF_MEMORY;
             } else {
                 *pbMustBeFreed = 1;
@@ -3464,7 +3464,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             }
             break;
         case PROP_SYS_MINUTE:
-            if ((pRes = getNOW(NOW_MINUTE, ttNow, TIME_IN_LOCALTIME)) == NULL) {
+            if ((press = getNOW(NOW_MINUTE, ttNow, TIME_IN_LOCALTIME)) == NULL) {
                 RET_OUT_OF_MEMORY;
             } else {
                 *pbMustBeFreed = 1;
@@ -3472,7 +3472,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             }
             break;
         case PROP_SYS_NOW_UTC:
-            if ((pRes = getNOW(NOW_NOW, ttNow, TIME_IN_UTC)) == NULL) {
+            if ((press = getNOW(NOW_NOW, ttNow, TIME_IN_UTC)) == NULL) {
                 RET_OUT_OF_MEMORY;
             } else {
                 *pbMustBeFreed = 1;
@@ -3480,7 +3480,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             }
             break;
         case PROP_SYS_YEAR_UTC:
-            if ((pRes = getNOW(NOW_YEAR, ttNow, TIME_IN_UTC)) == NULL) {
+            if ((press = getNOW(NOW_YEAR, ttNow, TIME_IN_UTC)) == NULL) {
                 RET_OUT_OF_MEMORY;
             } else {
                 *pbMustBeFreed = 1;
@@ -3488,7 +3488,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             }
             break;
         case PROP_SYS_MONTH_UTC:
-            if ((pRes = getNOW(NOW_MONTH, ttNow, TIME_IN_UTC)) == NULL) {
+            if ((press = getNOW(NOW_MONTH, ttNow, TIME_IN_UTC)) == NULL) {
                 RET_OUT_OF_MEMORY;
             } else {
                 *pbMustBeFreed = 1;
@@ -3496,7 +3496,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             }
             break;
         case PROP_SYS_DAY_UTC:
-            if ((pRes = getNOW(NOW_DAY, ttNow, TIME_IN_UTC)) == NULL) {
+            if ((press = getNOW(NOW_DAY, ttNow, TIME_IN_UTC)) == NULL) {
                 RET_OUT_OF_MEMORY;
             } else {
                 *pbMustBeFreed = 1;
@@ -3504,7 +3504,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             }
             break;
         case PROP_SYS_HOUR_UTC:
-            if ((pRes = getNOW(NOW_HOUR, ttNow, TIME_IN_UTC)) == NULL) {
+            if ((press = getNOW(NOW_HOUR, ttNow, TIME_IN_UTC)) == NULL) {
                 RET_OUT_OF_MEMORY;
             } else {
                 *pbMustBeFreed = 1;
@@ -3512,7 +3512,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             }
             break;
         case PROP_SYS_HHOUR_UTC:
-            if ((pRes = getNOW(NOW_HHOUR, ttNow, TIME_IN_UTC)) == NULL) {
+            if ((press = getNOW(NOW_HHOUR, ttNow, TIME_IN_UTC)) == NULL) {
                 RET_OUT_OF_MEMORY;
             } else {
                 *pbMustBeFreed = 1;
@@ -3520,7 +3520,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             }
             break;
         case PROP_SYS_QHOUR_UTC:
-            if ((pRes = getNOW(NOW_QHOUR, ttNow, TIME_IN_UTC)) == NULL) {
+            if ((press = getNOW(NOW_QHOUR, ttNow, TIME_IN_UTC)) == NULL) {
                 RET_OUT_OF_MEMORY;
             } else {
                 *pbMustBeFreed = 1;
@@ -3528,7 +3528,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             }
             break;
         case PROP_SYS_MINUTE_UTC:
-            if ((pRes = getNOW(NOW_MINUTE, ttNow, TIME_IN_UTC)) == NULL) {
+            if ((press = getNOW(NOW_MINUTE, ttNow, TIME_IN_UTC)) == NULL) {
                 RET_OUT_OF_MEMORY;
             } else {
                 *pbMustBeFreed = 1;
@@ -3536,7 +3536,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             }
             break;
         case PROP_SYS_WDAY:
-            if ((pRes = getNOW(NOW_WDAY, ttNow, TIME_IN_LOCALTIME)) == NULL) {
+            if ((press = getNOW(NOW_WDAY, ttNow, TIME_IN_LOCALTIME)) == NULL) {
                 RET_OUT_OF_MEMORY;
             } else {
                 *pbMustBeFreed = 1;
@@ -3544,7 +3544,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             }
             break;
         case PROP_SYS_WDAY_UTC:
-            if ((pRes = getNOW(NOW_WDAY, ttNow, TIME_IN_UTC)) == NULL) {
+            if ((press = getNOW(NOW_WDAY, ttNow, TIME_IN_UTC)) == NULL) {
                 RET_OUT_OF_MEMORY;
             } else {
                 *pbMustBeFreed = 1;
@@ -3552,22 +3552,22 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             }
             break;
         case PROP_SYS_NOW_UXTIMESTAMP:
-            if ((pRes = malloc(16)) == NULL) {
+            if ((press = malloc(16)) == NULL) {
                 RET_OUT_OF_MEMORY;
             } else {
-                snprintf((char *)pRes, 16 - 1, "%lld", (long long)getTime(NULL));
-                pRes[16 - 1] = '\0';
+                snprintf((char *)press, 16 - 1, "%lld", (long long)getTime(NULL));
+                press[16 - 1] = '\0';
                 *pbMustBeFreed = 1;
                 bufLen = -1;
             }
             break;
         case PROP_SYS_MYHOSTNAME:
-            pRes = glbl.GetLocalHostName();
+            press = glbl.GetLocalHostName();
             break;
         case PROP_CEE_ALL_JSON:
         case PROP_CEE_ALL_JSON_PLAIN:
             if (pMsg->json == NULL) {
-                pRes = (uchar *)"{}";
+                press = (uchar *)"{}";
                 bufLen = 2;
                 *pbMustBeFreed = 0;
             } else {
@@ -3584,8 +3584,8 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                 if (jstr == NULL) {
                     RET_OUT_OF_MEMORY;
                 }
-                pRes = (uchar *)strdup(jstr);
-                if (pRes == NULL) {
+                press = (uchar *)strdup(jstr);
+                if (press == NULL) {
                     RET_OUT_OF_MEMORY;
                 }
                 *pbMustBeFreed = 1;
@@ -3594,10 +3594,10 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
         case PROP_CEE:
         case PROP_LOCAL_VAR:
         case PROP_GLOBAL_VAR:
-            getJSONPropVal(pMsg, pProp, &pRes, &bufLen, pbMustBeFreed);
+            getJSONPropVal(pMsg, pProp, &press, &bufLen, pbMustBeFreed);
             break;
         case PROP_SYS_BOM:
-            pRes = (uchar *)"\xEF\xBB\xBF";
+            press = (uchar *)"\xEF\xBB\xBF";
             *pbMustBeFreed = 0;
             break;
         case PROP_SYS_UPTIME:
@@ -3605,7 +3605,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             /* An alternative on some systems (eg Solaris) is to scan
              * /var/adm/utmpx for last boot time.
              */
-            pRes = (uchar *)"UPTIME NOT available on this system";
+            press = (uchar *)"UPTIME NOT available on this system";
             *pbMustBeFreed = 0;
 
 #elif defined(__FreeBSD__)
@@ -3613,19 +3613,19 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
         {
             struct timespec tp;
 
-            if ((pRes = (uchar *)malloc(32)) == NULL) {
+            if ((press = (uchar *)malloc(32)) == NULL) {
                 RET_OUT_OF_MEMORY;
             }
 
             if (clock_gettime(CLOCK_UPTIME, &tp) == -1) {
-                free(pRes);
+                free(press);
                 *pPropLen = sizeof("**SYSCALL FAILED**") - 1;
                 return (UCHAR_CONSTANT("**SYSCALL FAILED**"));
             }
 
             *pbMustBeFreed = 1;
 
-            snprintf((char *)pRes, 32, "%ld", tp.tv_sec);
+            snprintf((char *)press, 32, "%ld", tp.tv_sec);
         }
 
 #else
@@ -3633,19 +3633,19 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
         {
             struct sysinfo s_info;
 
-            if ((pRes = (uchar *)malloc(32)) == NULL) {
+            if ((press = (uchar *)malloc(32)) == NULL) {
                 RET_OUT_OF_MEMORY;
             }
 
             if (sysinfo(&s_info) < 0) {
-                free(pRes);
+                free(press);
                 *pPropLen = sizeof("**SYSCALL FAILED**") - 1;
                 return (UCHAR_CONSTANT("**SYSCALL FAILED**"));
             }
 
             *pbMustBeFreed = 1;
 
-            snprintf((char *)pRes, 32, "%ld", s_info.uptime);
+            snprintf((char *)press, 32, "%ld", s_info.uptime);
         }
 #endif
             break;
@@ -3661,8 +3661,8 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
 
     /* If we did not receive a template pointer, we are already done... */
     if (pTpe == NULL || !pTpe->bComplexProcessing) {
-        *pPropLen = (bufLen == -1) ? (int)ustrlen(pRes) : bufLen;
-        return pRes;
+        *pPropLen = (bufLen == -1) ? (int)ustrlen(press) : bufLen;
+        return press;
     }
 
     /* Now check if we need to make "temporary" transformations (these
@@ -3682,7 +3682,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
          * is always one character and is stored in the template entry.
          */
         iCurrFld = 1;
-        pFld = pRes;
+        pFld = press;
         while (*pFld && iCurrFld < pTpe->data.field.iFieldNr) {
             /* skip fields until the requested field or end of string is found */
             while (*pFld && (uchar)*pFld != pTpe->data.field.field_delim) ++pFld; /* skip to field terminator */
@@ -3712,19 +3712,19 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             iLen = pFldEnd - pFld + 1; /* the +1 is for an actual char, NOT \0! */
             pBufStart = pBuf = malloc(iLen + 1);
             if (pBuf == NULL) {
-                if (*pbMustBeFreed == 1) free(pRes);
+                if (*pbMustBeFreed == 1) free(press);
                 RET_OUT_OF_MEMORY;
             }
             /* now copy */
             memcpy(pBuf, pFld, iLen);
             bufLen = iLen;
             pBuf[iLen] = '\0'; /* terminate it */
-            if (*pbMustBeFreed == 1) free(pRes);
-            pRes = pBufStart;
+            if (*pbMustBeFreed == 1) free(press);
+            press = pBufStart;
             *pbMustBeFreed = 1;
         } else {
             /* field not found, return error */
-            if (*pbMustBeFreed == 1) free(pRes);
+            if (*pbMustBeFreed == 1) free(press);
             *pbMustBeFreed = 0;
             *pPropLen = sizeof("**FIELD NOT FOUND**") - 1;
             return UCHAR_CONSTANT("**FIELD NOT FOUND**");
@@ -3736,14 +3736,14 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             if (pTpe->data.field.has_regex == 2) {
                 /* Could not compile regex before! */
                 if (*pbMustBeFreed == 1) {
-                    free(pRes);
+                    free(press);
                     *pbMustBeFreed = 0;
                 }
                 *pPropLen = sizeof("**NO MATCH** **BAD REGULAR EXPRESSION**") - 1;
                 return UCHAR_CONSTANT("**NO MATCH** **BAD REGULAR EXPRESSION**");
             }
 
-            dbgprintf("string to match for regex is: %s\n", pRes);
+            dbgprintf("string to match for regex is: %s\n", press);
 
             if (objUse(regexp, LM_REGEXP_FILENAME) == RS_RET_OK) {
                 short iTry = 0;
@@ -3754,7 +3754,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                  */
                 while (!bFound) {
                     int iREstat;
-                    iREstat = regexp.regexec(&pTpe->data.field.re, (char *)(pRes + iOffs), nmatch, pmatch, 0);
+                    iREstat = regexp.regexec(&pTpe->data.field.re, (char *)(press + iOffs), nmatch, pmatch, 0);
                     dbgprintf("regexec return is %d\n", iREstat);
                     if (iREstat == 0) {
                         if (pmatch[0].rm_so == -1) {
@@ -3782,18 +3782,18 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                     /* we got no match! */
                     if (pTpe->data.field.nomatchAction != TPL_REGEX_NOMATCH_USE_WHOLE_FIELD) {
                         if (*pbMustBeFreed == 1) {
-                            free(pRes);
+                            free(press);
                             *pbMustBeFreed = 0;
                         }
                         if (pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_DFLTSTR) {
                             bufLen = sizeof("**NO MATCH**") - 1;
-                            pRes = UCHAR_CONSTANT("**NO MATCH**");
+                            press = UCHAR_CONSTANT("**NO MATCH**");
                         } else if (pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_ZERO) {
                             bufLen = 1;
-                            pRes = UCHAR_CONSTANT("0");
+                            press = UCHAR_CONSTANT("0");
                         } else {
                             bufLen = 0;
-                            pRes = UCHAR_CONSTANT("");
+                            press = UCHAR_CONSTANT("");
                         }
                     }
                 } else {
@@ -3802,18 +3802,18 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                     if (pmatch[pTpe->data.field.iSubMatchToUse].rm_so == -1) {
                         if (pTpe->data.field.nomatchAction != TPL_REGEX_NOMATCH_USE_WHOLE_FIELD) {
                             if (*pbMustBeFreed == 1) {
-                                free(pRes);
+                                free(press);
                                 *pbMustBeFreed = 0;
                             }
                             if (pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_DFLTSTR) {
                                 bufLen = sizeof("**NO MATCH**") - 1;
-                                pRes = UCHAR_CONSTANT("**NO MATCH**");
+                                press = UCHAR_CONSTANT("**NO MATCH**");
                             } else if (pTpe->data.field.nomatchAction == TPL_REGEX_NOMATCH_USE_ZERO) {
                                 bufLen = 1;
-                                pRes = UCHAR_CONSTANT("0");
+                                press = UCHAR_CONSTANT("0");
                             } else {
                                 bufLen = 0;
-                                pRes = UCHAR_CONSTANT("");
+                                press = UCHAR_CONSTANT("");
                             }
                         }
                     }
@@ -3826,17 +3826,17 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                     pB = malloc(iLenBuf + 1);
 
                     if (pB == NULL) {
-                        if (*pbMustBeFreed == 1) free(pRes);
+                        if (*pbMustBeFreed == 1) free(press);
                         RET_OUT_OF_MEMORY;
                     }
 
                     /* Lets copy the matched substring to the buffer */
-                    memcpy(pB, pRes + iOffs + pmatch[pTpe->data.field.iSubMatchToUse].rm_so, iLenBuf);
+                    memcpy(pB, press + iOffs + pmatch[pTpe->data.field.iSubMatchToUse].rm_so, iLenBuf);
                     bufLen = iLenBuf;
                     pB[iLenBuf] = '\0'; /* terminate string, did not happen before */
 
-                    if (*pbMustBeFreed == 1) free(pRes);
-                    pRes = pB;
+                    if (*pbMustBeFreed == 1) free(press);
+                    press = pB;
                     *pbMustBeFreed = 1;
                 }
             } else {
@@ -3846,7 +3846,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                  */
                 dbgprintf("could not get regexp object pointer, so regexp can not be evaluated\n");
                 if (*pbMustBeFreed == 1) {
-                    free(pRes);
+                    free(press);
                     *pbMustBeFreed = 0;
                 }
                 *pPropLen = sizeof("***REGEXP NOT AVAILABLE***") - 1;
@@ -3862,7 +3862,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
         uchar *pSb;
         iFrom = pTpe->data.field.iFromPos;
         iTo = pTpe->data.field.iToPos;
-        if (bufLen == -1) bufLen = ustrlen(pRes);
+        if (bufLen == -1) bufLen = ustrlen(press);
         if (pTpe->data.field.options.bFromPosEndRelative) {
             iFrom = (bufLen < iFrom) ? 0 : bufLen - iFrom;
             iTo = (bufLen < iTo) ? 0 : bufLen - iTo;
@@ -3881,8 +3881,8 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
         }
         if (iFrom >= bufLen) {
             DBGPRINTF("msgGetProp: iFrom %d >= buflen %d, returning empty string\n", iFrom, bufLen);
-            if (*pbMustBeFreed == 1) free(pRes);
-            pRes = (uchar *)"";
+            if (*pbMustBeFreed == 1) free(press);
+            press = (uchar *)"";
             *pbMustBeFreed = 0;
             bufLen = 0;
         } else if (iFrom == 0 && iTo >= bufLen && pTpe->data.field.options.bFixedWidth == 0) {
@@ -3899,10 +3899,10 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             iLen = iTo - iFrom + 1; /* the +1 is for an actual char, NOT \0! */
             pBufStart = pBuf = malloc(iLen + 1);
             if (pBuf == NULL) {
-                if (*pbMustBeFreed == 1) free(pRes);
+                if (*pbMustBeFreed == 1) free(press);
                 RET_OUT_OF_MEMORY;
             }
-            pSb = pRes;
+            pSb = press;
             if (iFrom) {
                 /* skip to the start of the substring (can't do pointer arithmetic
                  * because the whole string might be smaller!!)
@@ -3925,38 +3925,38 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             }
             *pBuf = '\0';
             bufLen -= iLen; /* subtract remaining length if the string was smaller! */
-            if (*pbMustBeFreed == 1) free(pRes);
-            pRes = pBufStart;
+            if (*pbMustBeFreed == 1) free(press);
+            press = pBufStart;
             *pbMustBeFreed = 1;
         }
     }
 
     /* now check if we need to do our "SP if first char is non-space" hack logic */
-    if (*pRes && pTpe->data.field.options.bSPIffNo1stSP) {
+    if (*press && pTpe->data.field.options.bSPIffNo1stSP) {
         /* here, we always destruct the buffer and return a new one */
-        uchar cFirst = *pRes; /* save first char */
-        if (*pbMustBeFreed == 1) free(pRes);
-        pRes = (cFirst == ' ') ? UCHAR_CONSTANT("") : UCHAR_CONSTANT(" ");
+        uchar cFirst = *press; /* save first char */
+        if (*pbMustBeFreed == 1) free(press);
+        press = (cFirst == ' ') ? UCHAR_CONSTANT("") : UCHAR_CONSTANT(" ");
         bufLen = (cFirst == ' ') ? 0 : 1;
         *pbMustBeFreed = 0;
     }
 
-    if (*pRes) {
+    if (*press) {
         /* case conversations (should go after substring, because so we are able to
          * work on the smallest possible buffer).
          */
         if (pTpe->data.field.eCaseConv != tplCaseConvNo) {
             /* we need to obtain a private copy */
-            if (bufLen == -1) bufLen = ustrlen(pRes);
+            if (bufLen == -1) bufLen = ustrlen(press);
             uchar *pBStart;
             uchar *pB;
             uchar *pSrc;
             pBStart = pB = malloc(bufLen + 1);
             if (pB == NULL) {
-                if (*pbMustBeFreed == 1) free(pRes);
+                if (*pbMustBeFreed == 1) free(press);
                 RET_OUT_OF_MEMORY;
             }
-            pSrc = pRes;
+            pSrc = press;
             while (*pSrc) {
                 *pB++ = (pTpe->data.field.eCaseConv == tplCaseConvUpper) ? (uchar)toupper((int)*pSrc)
                                                                          : (uchar)tolower((int)*pSrc);
@@ -3964,15 +3964,15 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                 ++pSrc;
             }
             *pB = '\0';
-            if (*pbMustBeFreed == 1) free(pRes);
-            pRes = pBStart;
+            if (*pbMustBeFreed == 1) free(press);
+            press = pBStart;
             *pbMustBeFreed = 1;
         }
 
         /* now do control character dropping/escaping/replacement
          * Only one of these can be used. If multiple options are given, the
          * result is random (though currently there obviously is an order of
-         * preferrence, see code below. But this is NOT guaranteed.
+         * preference, see code below. But this is NOT guaranteed.
          * RGerhards, 2006-11-17
          * We must copy the strings if we modify them, because they may either
          * point to static memory or may point into the message object, in which
@@ -3982,7 +3982,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
          */
         if (pTpe->data.field.options.bDropCC) {
             int iLenBuf = 0;
-            uchar *pSrc = pRes;
+            uchar *pSrc = press;
             uchar *pDstStart;
             uchar *pDst;
             uchar bDropped = 0;
@@ -3997,15 +3997,15 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             if (bDropped) {
                 pDst = pDstStart = malloc(iLenBuf + 1);
                 if (pDst == NULL) {
-                    if (*pbMustBeFreed == 1) free(pRes);
+                    if (*pbMustBeFreed == 1) free(press);
                     RET_OUT_OF_MEMORY;
                 }
-                for (pSrc = pRes; *pSrc; pSrc++) {
+                for (pSrc = press; *pSrc; pSrc++) {
                     if (!iscntrl((int)*pSrc)) *pDst++ = *pSrc;
                 }
                 *pDst = '\0';
-                if (*pbMustBeFreed == 1) free(pRes);
-                pRes = pDstStart;
+                if (*pbMustBeFreed == 1) free(press);
+                press = pDstStart;
                 bufLen = iLenBuf;
                 *pbMustBeFreed = 1;
             }
@@ -4020,28 +4020,28 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                  * modify it in-place without any harm. This is a
                  * performance optiomization.
                  */
-                for (pDst = pRes; *pDst; pDst++) {
+                for (pDst = press; *pDst; pDst++) {
                     if (iscntrl((int)*pDst)) *pDst = ' ';
                 }
             } else {
-                if (bufLen == -1) bufLen = ustrlen(pRes);
+                if (bufLen == -1) bufLen = ustrlen(press);
                 pDst = pDstStart = malloc(bufLen + 1);
                 if (pDst == NULL) {
-                    if (*pbMustBeFreed == 1) free(pRes);
+                    if (*pbMustBeFreed == 1) free(press);
                     RET_OUT_OF_MEMORY;
                 }
-                for (pSrc = pRes; *pSrc; pSrc++) {
+                for (pSrc = press; *pSrc; pSrc++) {
                     if (iscntrl((int)*pSrc))
                         *pDst++ = ' ';
                     else
                         *pDst++ = *pSrc;
                 }
                 *pDst = '\0';
-                pRes = pDstStart;
+                press = pDstStart;
                 *pbMustBeFreed = 1;
             }
         } else if (pTpe->data.field.options.bEscapeCC) {
-            /* we must first count how many control charactes are
+            /* we must first count how many control characters are
              * present, because we need this to compute the new string
              * buffer length. While doing so, we also compute the string
              * length.
@@ -4051,7 +4051,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             uchar *pSrc;
             uchar *pB;
 
-            for (pB = pRes; *pB; ++pB) {
+            for (pB = press; *pB; ++pB) {
                 ++iLenBuf;
                 if (iscntrl((int)*pB)) ++iNumCC;
             }
@@ -4065,10 +4065,10 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                 iLenBuf += iNumCC * 4;
                 pBStart = pB = malloc(iLenBuf + 1);
                 if (pB == NULL) {
-                    if (*pbMustBeFreed == 1) free(pRes);
+                    if (*pbMustBeFreed == 1) free(press);
                     RET_OUT_OF_MEMORY;
                 }
-                for (pSrc = pRes; *pSrc; pSrc++) {
+                for (pSrc = press; *pSrc; pSrc++) {
                     if (iscntrl((int)*pSrc)) {
                         snprintf((char *)szCCEsc, sizeof(szCCEsc), "#%3.3d", *pSrc);
                         for (i = 0; i < 4; ++i) *pB++ = szCCEsc[i];
@@ -4077,8 +4077,8 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                     }
                 }
                 *pB = '\0';
-                if (*pbMustBeFreed == 1) free(pRes);
-                pRes = pBStart;
+                if (*pbMustBeFreed == 1) free(press);
+                press = pBStart;
                 bufLen = -1;
                 *pbMustBeFreed = 1;
             }
@@ -4091,7 +4091,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
     if (pTpe->data.field.options.bSecPathDrop || pTpe->data.field.options.bSecPathReplace) {
         if (pTpe->data.field.options.bSecPathDrop) {
             int iLenBuf = 0;
-            uchar *pSrc = pRes;
+            uchar *pSrc = press;
             uchar *pDstStart;
             uchar *pDst;
             uchar bDropped = 0;
@@ -4106,15 +4106,15 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             if (bDropped) {
                 pDst = pDstStart = malloc(iLenBuf + 1);
                 if (pDst == NULL) {
-                    if (*pbMustBeFreed == 1) free(pRes);
+                    if (*pbMustBeFreed == 1) free(press);
                     RET_OUT_OF_MEMORY;
                 }
-                for (pSrc = pRes; *pSrc; pSrc++) {
+                for (pSrc = press; *pSrc; pSrc++) {
                     if (*pSrc != '/') *pDst++ = *pSrc;
                 }
                 *pDst = '\0';
-                if (*pbMustBeFreed == 1) free(pRes);
-                pRes = pDstStart;
+                if (*pbMustBeFreed == 1) free(press);
+                press = pDstStart;
                 bufLen = -1; /* TODO: can we do better? */
                 *pbMustBeFreed = 1;
             }
@@ -4129,17 +4129,17 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                  * in-place modification is possible. This is a performance
                  * enhancement.
                  */
-                for (pDst = pRes; *pDst; pDst++) {
+                for (pDst = press; *pDst; pDst++) {
                     if (*pDst == '/') *pDst++ = '_';
                 }
             } else {
-                if (bufLen == -1) bufLen = ustrlen(pRes);
+                if (bufLen == -1) bufLen = ustrlen(press);
                 pDst = pDstStart = malloc(bufLen + 1);
                 if (pDst == NULL) {
-                    if (*pbMustBeFreed == 1) free(pRes);
+                    if (*pbMustBeFreed == 1) free(press);
                     RET_OUT_OF_MEMORY;
                 }
-                for (pSrc = pRes; *pSrc; pSrc++) {
+                for (pSrc = press; *pSrc; pSrc++) {
                     if (*pSrc == '/')
                         *pDst++ = '_';
                     else
@@ -4150,24 +4150,24 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                  * this in the if above. So if we come to hear, the pSrc string needs
                  * not to be freed (and we do not need to care about it).
                  */
-                pRes = pDstStart;
+                press = pDstStart;
                 *pbMustBeFreed = 1;
             }
         }
 
         /* check for "." and ".." (note the parenthesis in the if condition!) */
-        if (*pRes == '\0') {
-            if (*pbMustBeFreed == 1) free(pRes);
-            pRes = UCHAR_CONSTANT("_");
+        if (*press == '\0') {
+            if (*pbMustBeFreed == 1) free(press);
+            press = UCHAR_CONSTANT("_");
             bufLen = 1;
             *pbMustBeFreed = 0;
-        } else if ((*pRes == '.') && (*(pRes + 1) == '\0' || (*(pRes + 1) == '.' && *(pRes + 2) == '\0'))) {
-            uchar *pTmp = pRes;
+        } else if ((*press == '.') && (*(press + 1) == '\0' || (*(press + 1) == '.' && *(press + 2) == '\0'))) {
+            uchar *pTmp = press;
 
-            if (*(pRes + 1) == '\0')
-                pRes = UCHAR_CONSTANT("_");
+            if (*(press + 1) == '\0')
+                press = UCHAR_CONSTANT("_");
             else
-                pRes = UCHAR_CONSTANT("_.");
+                press = UCHAR_CONSTANT("_.");
             ;
             if (*pbMustBeFreed == 1) free(pTmp);
             *pbMustBeFreed = 0;
@@ -4180,9 +4180,9 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
     if (pTpe->data.field.options.bDropLastLF && !pTpe->data.field.options.bEscapeCC) {
         int iLn;
         uchar *pB;
-        if (bufLen == -1) bufLen = ustrlen(pRes);
+        if (bufLen == -1) bufLen = ustrlen(press);
         iLn = bufLen;
-        if (iLn > 0 && *(pRes + iLn - 1) == '\n') {
+        if (iLn > 0 && *(press + iLn - 1) == '\n') {
             /* we have a LF! */
             /* check if we need to obtain a private copy */
             if (*pbMustBeFreed == 0) {
@@ -4191,11 +4191,11 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                 if (pB == NULL) {
                     RET_OUT_OF_MEMORY;
                 }
-                memcpy(pB, pRes, iLn - 1);
-                pRes = pB;
+                memcpy(pB, press, iLn - 1);
+                press = pB;
                 *pbMustBeFreed = 1;
             }
-            *(pRes + iLn - 1) = '\0'; /* drop LF ;) */
+            *(press + iLn - 1) = '\0'; /* drop LF ;) */
             --bufLen;
         }
     }
@@ -4209,16 +4209,16 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
         int hadSP = 0;
         uchar *pB;
         if (*pbMustBeFreed == 0) {
-            for (pB = pRes; *pB && needCompress == 0; ++pB) {
+            for (pB = press; *pB && needCompress == 0; ++pB) {
                 if (*pB == ' ') {
                     if (hadSP) {
-                        uchar *const tmp = ustrdup(pRes);
+                        uchar *const tmp = ustrdup(press);
                         if (tmp == NULL)
                             /* better not compress than
                              * loose message. */
                             break;
                         *pbMustBeFreed = 1;
-                        pRes = tmp;
+                        press = tmp;
                         needCompress = 1;
                     } else {
                         hadSP = 1;
@@ -4235,9 +4235,9 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
         }
         if (needCompress) {
             hadSP = 0;
-            uchar *pDst = pRes;
+            uchar *pDst = press;
             int needCopy = 0;
-            for (pB = pRes; *pB; ++pB) {
+            for (pB = press; *pB; ++pB) {
                 if (*pB == ' ') {
                     if (hadSP) {
                         needCopy = 1;
@@ -4253,7 +4253,7 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                 }
             }
             *pDst = '\0';
-            bufLen = pDst - pRes;
+            bufLen = pDst - press;
         }
     }
 
@@ -4268,15 +4268,15 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
         uchar *pBStart;
         uchar *pDst;
         uchar *pSrc;
-        if (bufLen == -1) bufLen = ustrlen(pRes);
+        if (bufLen == -1) bufLen = ustrlen(press);
         iBufLen = bufLen;
         /* the malloc may be optimized, we currently use the worst case... */
         pBStart = pDst = malloc(2 * iBufLen + 3);
         if (pDst == NULL) {
-            if (*pbMustBeFreed == 1) free(pRes);
+            if (*pbMustBeFreed == 1) free(press);
             RET_OUT_OF_MEMORY;
         }
-        pSrc = pRes;
+        pSrc = press;
         *pDst++ = '"'; /* starting quote */
         while (*pSrc) {
             if (*pSrc == '"') *pDst++ = '"'; /* need to add double double quote (see RFC4180) */
@@ -4284,23 +4284,23 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
         }
         *pDst++ = '"'; /* ending quote */
         *pDst = '\0';
-        if (*pbMustBeFreed == 1) free(pRes);
-        pRes = pBStart;
+        if (*pbMustBeFreed == 1) free(press);
+        press = pBStart;
         bufLen = -1;
         *pbMustBeFreed = 1;
     } else if (pTpe->data.field.options.bJSON) {
-        jsonEncode(&pRes, pbMustBeFreed, &bufLen, RSTRUE);
+        jsonEncode(&press, pbMustBeFreed, &bufLen, RSTRUE);
     } else if (pTpe->data.field.options.bJSONf) {
-        jsonField(pTpe, &pRes, pbMustBeFreed, &bufLen, RSTRUE);
+        jsonField(pTpe, &press, pbMustBeFreed, &bufLen, RSTRUE);
     } else if (pTpe->data.field.options.bJSONr) {
-        jsonEncode(&pRes, pbMustBeFreed, &bufLen, RSFALSE);
+        jsonEncode(&press, pbMustBeFreed, &bufLen, RSFALSE);
     } else if (pTpe->data.field.options.bJSONfr) {
-        jsonField(pTpe, &pRes, pbMustBeFreed, &bufLen, RSFALSE);
+        jsonField(pTpe, &press, pbMustBeFreed, &bufLen, RSFALSE);
     }
 
-    *pPropLen = (bufLen == -1) ? (int)ustrlen(pRes) : bufLen;
+    *pPropLen = (bufLen == -1) ? (int)ustrlen(press) : bufLen;
 
-    return (pRes);
+    return (press);
 }
 
 /* Set a single property based on the JSON object provided. The
@@ -4366,7 +4366,7 @@ static rsRetVal msgSetPropViaJSON(smsg_t *__restrict__ const pMsg,
         MsgSetRcvFromIPStr(pMsg, (const uchar *)psz, strlen(psz), &propRcvFromIP);
         prop.Destruct(&propRcvFromIP);
     } else if (!strcmp(name, "$!")) {
-        /* msgAddJSON expects that it can keep the object without incremeting
+        /* msgAddJSON expects that it can keep the object without incrementing
          * the json reference count. So we MUST NOT free (_put) the object in
          * this case. -- rgerhards, 2018-09-14
          */
@@ -4374,7 +4374,7 @@ static rsRetVal msgSetPropViaJSON(smsg_t *__restrict__ const pMsg,
         msgAddJSON(pMsg, (uchar *)"!", json, 0, sharedReference);
     } else {
         /* we ignore unknown properties */
-        DBGPRINTF("msgSetPropViaJSON: unkonwn property ignored: %s\n", name);
+        DBGPRINTF("msgSetPropViaJSON: unknown property ignored: %s\n", name);
     }
 
     if (bNeedFree) {
@@ -4388,9 +4388,9 @@ static rsRetVal msgSetPropViaJSON(smsg_t *__restrict__ const pMsg,
 /* set message properties based on JSON string. This function does it all,
  * including parsing the JSON string. If an error is detected, the operation
  * is aborted at the time of error. Any modifications made before the
- * error ocurs are still PERSISTED.
+ * error occurs are still PERSISTED.
  * This function is meant to support the external message modifiction module
- * interface. As such, replacing properties is expressively permited. Note that
+ * interface. As such, replacing properties is expressively permitted. Note that
  * properties which were derived from the message during parsing are NOT
  * updated if the underlying (raw)msg property is changed.
  */
@@ -4679,7 +4679,7 @@ rsRetVal msgAddJSON(smsg_t *const pM, uchar *name, struct json_object *json, int
         }
         if (jsonVarExtract(parent, (char *)leaf, &leafnode) == FALSE) leafnode = NULL;
         /* json-c code indicates we can simply replace a
-         * json type. Unfortunaltely, this is not documented
+         * json type. Unfortunately, this is not documented
          * as part of the interface spec. We still use it,
          * because it speeds up processing. If it does not work
          * at some point, use
@@ -4897,7 +4897,7 @@ finalize_it:
 }
 
 
-/* Fill a message propert description. Space must already be alloced
+/* Fill a message property description. Space must already be alloced
  * by the caller. This is for efficiency, as we expect this to happen
  * as part of a larger structure alloc.
  * Note that CEE/LOCAL_VAR properties can come in either as

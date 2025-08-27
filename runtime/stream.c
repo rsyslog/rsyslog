@@ -133,11 +133,11 @@ static const char *getFileDebugName(const strm_t *const pThis) {
 
 /* Try to resolve a size limit situation. This is used to support custom-file size handlers
  * for omfile. It first runs the command, and then checks if we are still above the size
- * treshold. Note that this works only with single file names, NOT with circular names.
+ * threshold. Note that this works only with single file names, NOT with circular names.
  * Note that pszCurrFName can NOT be taken from pThis, because the stream is closed when
  * we are called (and that destroys pszCurrFName, as there is NO CURRENT file name!). So
  * we need to receive the name as a parameter.
- * initially wirtten 2005-06-21, moved to this class & updates 2009-06-01, both rgerhards
+ * initially written 2005-06-21, moved to this class & updates 2009-06-01, both rgerhards
  */
 static rsRetVal resolveFileSizeLimit(strm_t *pThis, uchar *pszCurrFName) {
     uchar *pParams;
@@ -430,7 +430,7 @@ static void strmWaitAsyncWriterDone(strm_t *pThis) {
     }
 }
 
-/* stop the writer thread (we MUST be runnnig asynchronously when this method
+/* stop the writer thread (we MUST be running asynchronously when this method
  * is called!). Note that the mutex must be locked! -- rgerhards, 2009-07-06
  */
 static void stopWriter(strm_t *const pThis) {
@@ -785,7 +785,7 @@ static rsRetVal strmUnreadChar(strm_t *pThis, uchar c) {
     --pThis->iCurrOffs; /* one less octet read - NOTE: this can cause problems if we got a file change
     and immediately do an unread and the file is on a buffer boundary and the stream is then persisted.
     With the queue, this can not happen as an Unread is only done on record begin, which is never split
-    accross files. For other cases we accept the very remote risk. -- rgerhards, 2008-01-12 */
+    across files. For other cases we accept the very remote risk. -- rgerhards, 2008-01-12 */
 
     return RS_RET_OK;
 }
@@ -793,7 +793,7 @@ static rsRetVal strmUnreadChar(strm_t *pThis, uchar c) {
 /* read a 'paragraph' from a strm file.
  * A paragraph may be terminated by a LF, by a LFLF, or by LF<not whitespace> depending on the option set.
  * The termination LF characters are read, but are
- * not returned in the buffer (it is discared). The caller is responsible for
+ * not returned in the buffer (it is discarded). The caller is responsible for
  * destruction of the returned CStr object! -- dlang 2010-12-13
  *
  * Parameter mode controls legacy multi-line processing:
@@ -942,7 +942,7 @@ finalize_it:
         DBGPRINTF("RGER: strmReadLine iRet %d\n", iRet);
         if (*ppCStr != NULL) {
             if (cstrLen(*ppCStr) > 0) {
-                /* we may have an empty string in an unsuccesfull poll or after restart! */
+                /* we may have an empty string in an unsuccessful poll or after restart! */
                 if (rsCStrConstructFromCStr(&pThis->prevLineSegment, *ppCStr) != RS_RET_OK) {
                     /* we cannot do anything against this, but we can at least
                      * ensure we do not have any follow-on errors.
@@ -961,7 +961,7 @@ finalize_it:
  * @return 0 - no timeout, something else - timeout
  */
 int strmReadMultiLine_isTimedOut(const strm_t *const __restrict__ pThis) {
-    /* note: order of evaluation is choosen so that the most inexpensive
+    /* note: order of evaluation is chosen so that the most inexpensive
      * processing flow is used.
      */
     DBGPRINTF(
@@ -1289,7 +1289,7 @@ ENDobjDestruct(strm)
 
 
 /* check if we need to open a new file (in output mode only).
- * The decision is based on file size AND record delimition state.
+ * The decision is based on file size AND record delimitation state.
  * This method may also be called on a closed file, in which case
  * it immediately returns.
  */
@@ -1312,7 +1312,7 @@ finalize_it:
 }
 
 
-/* try to recover a tty after a write error. This may have happend
+/* try to recover a tty after a write error. This may have happened
  * due to vhangup(), and, if so, we can simply re-open it.
  */
 #ifdef linux
@@ -1461,7 +1461,7 @@ finalize_it:
  * strmWrite...() calls. Also note that we always have only a single producer,
  * so we can simply serially assign the next free buffer to it and be sure that
  * the very some producer comes back in sequence to submit the then-filled buffers.
- * This also enables us to timout on partially written buffers. -- rgerhards, 2009-07-06
+ * This also enables us to timeout on partially written buffers. -- rgerhards, 2009-07-06
  */
 static rsRetVal doAsyncWriteInternal(strm_t *pThis, size_t lenBuf, const int bFlushZip) {
     DEFiRet;
@@ -1743,7 +1743,7 @@ static rsRetVal strmFlushInternal(strm_t *pThis, int bFlushZip) {
 /* flush stream output buffer to persistent storage. This can be called at any time
  * and is automatically called when the output buffer is full. This function is for
  * use by EXTERNAL callers. Do NOT use it internally. It locks the async writer
- * mutex if ther is need to do so.
+ * mutex if there is need to do so.
  * rgerhards, 2010-03-18
  */
 static rsRetVal strmFlush(strm_t *pThis) {
@@ -1866,7 +1866,7 @@ static rsRetVal strmSeekCurrOffs(strm_t *pThis) {
         FINALIZE;
     }
 
-    /* As the cryprov may use CBC or similiar things, we need to read skip data */
+    /* As the cryprov may use CBC or similar things, we need to read skip data */
     targetOffs = pThis->iCurrOffs;
     pThis->strtOffs = pThis->iCurrOffs = 0;
     DBGOPRINT((obj_t *)pThis, "encrypted, doing skip read of %lld bytes\n", (long long)targetOffs);
@@ -1926,7 +1926,7 @@ finalize_it:
 
 /* write memory buffer to a stream object.
  * process the data in chunks and copy it over to our buffer. The caller-provided data
- * may theoritically be larger than our buffer. In that case, we do multiple copies. One
+ * may theoretically be larger than our buffer. In that case, we do multiple copies. One
  * may argue if it were more efficient to write out the caller-provided buffer in that case
  * and earlier versions of rsyslog did this. However, this introduces a lot of complexity
  * inside the buffered writer and potential performance bottlenecks when trying to solve
@@ -2086,7 +2086,7 @@ finalize_it:
  * situation (actually quite common), where a single data record should not
  * be split across files. This may be problematic if multiple stream write
  * calls are used to create the record. To support that, we provide the
- * bInRecord status variable. If it is set, no file spliting occurs. Once
+ * bInRecord status variable. If it is set, no file splitting occurs. Once
  * it is set to 0, a check is done if a split is necessary and it then
  * happens. For a record-oriented caller, the proper sequence is:
  *
@@ -2142,7 +2142,7 @@ static rsRetVal strmSerialize(strm_t *pThis, strm_t *pStrm) {
     strmFlushInternal(pThis, 0);
     CHKiRet(obj.BeginSerialize(pStrm, (obj_t *)pThis));
 
-    objSerializeSCALAR(pStrm, iCurrFNum, INT); /* implicit cast is OK for persistance */
+    objSerializeSCALAR(pStrm, iCurrFNum, INT); /* implicit cast is OK for persistence */
     objSerializePTR(pStrm, pszFName, PSZ);
     objSerializeSCALAR(pStrm, iMaxFiles, INT);
     objSerializeSCALAR(pStrm, bDeleteOnClose, INT);
@@ -2307,7 +2307,7 @@ finalize_it:
 #undef isProp
 
 
-/* return the current offset inside the stream. Note that on two consequtive calls, the offset
+/* return the current offset inside the stream. Note that on two consecutive calls, the offset
  * reported on the second call may actually be lower than on the first call. This is due to
  * file circulation. A caller must deal with that. -- rgerhards, 2008-01-30
  */

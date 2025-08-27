@@ -1,6 +1,6 @@
 #!/bin/bash
 # see that we can an error message if wrong tls lib is selected
-# addd 2019-02-09 by RGerhards, released under ASL 2.0
+# add 2019-02-09 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 require_relpEngineSetTLSLibByName
 generate_conf

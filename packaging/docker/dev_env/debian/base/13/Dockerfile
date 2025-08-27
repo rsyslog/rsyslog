@@ -164,7 +164,7 @@ RUN	cd helper-projects && \
 # but not a full one (via --no-cache)
 ENV	RSYSLOG_DEP_VERSION=2020-01-26
 
-# libestr - currently, not needed, we use from offical repo (unlikely to change)
+# libestr - currently, not needed, we use from official repo (unlikely to change)
 #RUN	cd helper-projects && \
 #	git clone https://github.com/rsyslog/libestr.git && \
 #	cd libestr && \

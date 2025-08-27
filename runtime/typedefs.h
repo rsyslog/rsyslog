@@ -265,7 +265,7 @@ typedef enum cslCmdHdlrType {
     eCmdHdlrString,
     eCmdHdlrArray,
     eCmdHdlrQueueType,
-    eCmdHdlrGoneAway /* statment existed, but is no longer supported */
+    eCmdHdlrGoneAway /* statement existed, but is no longer supported */
 } ecslCmdHdrlType;
 
 

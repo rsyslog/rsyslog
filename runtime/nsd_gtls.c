@@ -116,7 +116,7 @@ static rsRetVal doRetry(nsd_gtls_t *pNsd) {
 
     dbgprintf("doRetry: GnuTLS requested retry of operation %d - executing\n", pNsd->rtryCall);
 
-    /* We follow a common scheme here: first, we do the systen call and
+    /* We follow a common scheme here: first, we do the system call and
      * then we check the result. So far, the result is checked after the
      * switch, because the result check is the same for all calls. Note that
      * this may change once we deal with the read and write calls (but
@@ -633,7 +633,7 @@ rsRetVal gtlsRecordRecv(nsd_gtls_t *const pThis, unsigned int *nextIODirection) 
         }
     } else if (lenRcvd == GNUTLS_E_AGAIN || lenRcvd == GNUTLS_E_INTERRUPTED) {
     sslerragain:
-        /* Check if the underlaying file descriptor needs to read or write data!*/
+        /* Check if the underlying file descriptor needs to read or write data!*/
         pThis->rtryCall = gtlsRtry_recv; /* _recv refers to the gnutls call, not socket layer! */
         dbgprintf("GnuTLS receive requires a retry, this most probably is OK and no error condition\n");
         *nextIODirection = (gnutls_record_get_direction(pThis->sess) == 0) ? NSDSEL_RD : NSDSEL_WR;
@@ -846,7 +846,7 @@ static rsRetVal gtlsInitSession(nsd_gtls_t *pThis) {
 
     /* Moved CertKey Loading to top */
 #if HAVE_GNUTLS_CERTIFICATE_SET_RETRIEVE_FUNCTION
-    /* store a pointer to ourselfs (needed by callback) */
+    /* store a pointer to ourselves (needed by callback) */
     gnutls_session_set_ptr(pThis->sess, (void *)pThis);
     iRet = gtlsLoadOurCertKey(pThis); /* first load .pem files */
     if (iRet == RS_RET_OK) {
@@ -902,7 +902,7 @@ static rsRetVal gtlsGetCN(gnutls_x509_crt_t *pCert, cstr_t **ppstrCN) {
     int bFound;
     cstr_t *pstrCN = NULL;
     size_t size;
-    /* big var the last, so we hope to have all we usually neeed within one mem cache line */
+    /* big var the last, so we hope to have all we usually need within one mem cache line */
     uchar szDN[1024]; /* this should really be large enough for any non-malicious case... */
 
     assert(pCert != NULL);
@@ -1029,7 +1029,7 @@ finalize_it:
  * set to 1 if the ID matches. *pbFoundPositiveMatch must have been initialized
  * to 0 by the caller (this is a performance enhancement as we expect to be
  * called multiple times).
- * TODO: implemet wildcards?
+ * TODO: implement wildcards?
  * rgerhards, 2008-05-26
  */
 static rsRetVal gtlsChkOnePeerName(nsd_gtls_t *pThis, uchar *pszPeerID, int *pbFoundPositiveMatch) {
@@ -1395,7 +1395,7 @@ static rsRetVal gtlsEndSess(nsd_gtls_t *pThis) {
 }
 
 
-/* a small wrapper for gnutls_transport_set_ptr(). The main intension for
+/* a small wrapper for gnutls_transport_set_ptr(). The main intention for
  * creating this wrapper is to get the annoying "cast to pointer from different
  * size" compiler warning just once. There seems to be no way around it, see:
  * http://lists.gnu.org/archive/html/help-gnutls/2008-05/msg00000.html
@@ -1713,7 +1713,7 @@ finalize_it:
 }
 
 /* Provide access to the underlying OS socket. This is primarily
- * useful for other drivers (like nsd_gtls) who utilize ourselfs
+ * useful for other drivers (like nsd_gtls) who utilize ourselves
  * for some of their functionality. -- rgerhards, 2008-04-18
  */
 static rsRetVal SetSock(nsd_t *pNsd, int sock) {
@@ -1801,7 +1801,7 @@ finalize_it:
 }
 
 
-/* initialize the tcp socket for a listner
+/* initialize the tcp socket for a listener
  * Here, we use the ptcp driver - because there is nothing special
  * at this point with GnuTLS. Things become special once we accept
  * a session, but not during listener setup.
@@ -2011,7 +2011,7 @@ finalize_it:
  * to supply the SAME buffer on the retry. We can not assure this, as the
  * caller is free to call us with any buffer location (and in current
  * implementation, it is on the stack and extremely likely to change). To
- * work-around this problem, we allocate a buffer ourselfs and always receive
+ * work-around this problem, we allocate a buffer ourselves and always receive
  * into that buffer. We pass data on to the caller only after we have received it.
  * To save some space, we allocate that internal buffer only when it is actually
  * needed, which means when we reach this function for the first time. To keep
@@ -2037,7 +2037,7 @@ static rsRetVal Rcv(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf, int *const oserr
 
     /* --- in TLS mode now --- */
     if (pThis->rtryCall == gtlsRtry_handshake) {
-        /* note: we are in receive, so we acually will retry receive in any case */
+        /* note: we are in receive, so we actually will retry receive in any case */
         DBGPRINTF("need to do retry handshake\n");
         CHKiRet(doRetry(pThis));
         ABORT_FINALIZE(RS_RET_RETRY);
@@ -2127,7 +2127,7 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
             break;
         }
         if (iSent != GNUTLS_E_INTERRUPTED && iSent != GNUTLS_E_AGAIN) {
-            /* Check if the underlaying file descriptor needs to read or write data!*/
+            /* Check if the underlying file descriptor needs to read or write data!*/
             wantsWriteData = gnutls_record_get_direction(pThis->sess);
             uchar *pErr = gtlsStrerror(iSent);
             LogError(0, RS_RET_GNUTLS_ERR,
@@ -2215,7 +2215,7 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
      * will be presented to the server even if it is not signed by one of the server's
      * trusted roots. This is necessary to support fingerprint authentication.
      */
-    /* store a pointer to ourselfs (needed by callback) */
+    /* store a pointer to ourselves (needed by callback) */
     gnutls_session_set_ptr(pThis->sess, (void *)pThis);
     iRet = gtlsLoadOurCertKey(pThis); /* first load .pem files */
     if (iRet == RS_RET_OK) {
@@ -2297,7 +2297,7 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
 
     /* we need to store the hostname as an alternate mean of authentication if no
      * permitted peer names are given. Using the hostname is quite useful. It permits
-     * auto-configuration of security if a commen root cert is present. -- rgerhards, 2008-05-26
+     * auto-configuration of security if a comment root cert is present. -- rgerhards, 2008-05-26
      */
     CHKmalloc(pThis->pszConnectHost = (uchar *)strdup((char *)host));
 
@@ -2428,7 +2428,7 @@ BEGINmodInit()
     CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
-    /* Initialize all classes that are in our module - this includes ourselfs */
+    /* Initialize all classes that are in our module - this includes ourselves */
     CHKiRet(nsd_gtlsClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 
     pthread_mutex_init(&mutGtlsStrerror, NULL);

@@ -54,7 +54,7 @@ struct nsd_gtls_s {
         gnutls_certificate_credentials_t xcred;
         int xcred_is_copy;
         int iMode; /* 0 - plain tcp, 1 - TLS */
-        int bAbortConn; /* if set, abort conncection (fatal error had happened) */
+        int bAbortConn; /* if set, abort connection (fatal error had happened) */
         enum {
             GTLS_AUTH_CERTNAME = 0,
             GTLS_AUTH_CERTFINGERPRINT = 1,
@@ -63,7 +63,7 @@ struct nsd_gtls_s {
         } authMode;
         enum { GTLS_EXPIRED_PERMIT = 0, GTLS_EXPIRED_DENY = 1, GTLS_EXPIRED_WARN = 2 } permitExpiredCerts;
         enum { GTLS_NONE = 0, GTLS_PURPOSE = 1 } dataTypeCheck;
-        int bSANpriority; /* if true, we do stricter checking (if any SAN present we do not cehck CN) */
+        int bSANpriority; /* if true, we do stricter checking (if any SAN present we do not check CN) */
         gtlsRtryCall_t rtryCall; /**< what must we retry? */
         int bIsInitiator; /**< 0 if socket is the server end (listener), 1 if it is the initiator */
         gnutls_session_t sess;

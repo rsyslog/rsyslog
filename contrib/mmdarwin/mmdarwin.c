@@ -705,11 +705,11 @@ BEGINdoAction_NoStrings
     smsg_t **ppMsg = (smsg_t **)pMsgData; /* the raw data */
     smsg_t *pMsg = ppMsg[0]; /* the raw log line */
     instanceData *pData = pWrkrData->pData; /* the parameters given for the plugin */
-    char *pFieldValue = NULL; /* ponter to the found field value */
+    char *pFieldValue = NULL; /* pointer to the found field value */
     int fieldsNum = 0; /* number of fields retrieved */
 
     CODESTARTdoAction;
-    DBGPRINTF("mmdarwin::doAction:: beggining action\n");
+    DBGPRINTF("mmdarwin::doAction:: beginning action\n");
     pWrkrData->darwinBody.bufferMsgSize = 0;
     fieldsNum = 0;
 

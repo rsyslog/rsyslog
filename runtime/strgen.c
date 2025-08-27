@@ -2,7 +2,7 @@
  * Module to handle string generators. These are C modules that receive
  * the message object and return a custom-built string. The primary purpose
  * for their existence is performance -- they do the same as template strings, but
- * potentially faster (if well implmented).
+ * potentially faster (if well implemented).
  *
  * Module begun 2010-06-01 by Rainer Gerhards
  *
@@ -54,7 +54,7 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(ruleset)
     strgenList_t *pStrgenLstRoot = NULL;
 
 
-/* intialize (but NOT allocate) a strgen list. Primarily meant as a hook
+/* initialize (but NOT allocate) a strgen list. Primarily meant as a hook
  * which can be used to extend the list in the future. So far, just sets
  * it to NULL.
  */
@@ -83,7 +83,7 @@ static rsRetVal DestructStrgenList(strgenList_t **ppListRoot) {
 }
 
 
-/* Add a strgen to the list. We use a VERY simple and ineffcient algorithm,
+/* Add a strgen to the list. We use a VERY simple and inefficient algorithm,
  * but it is employed only for a few milliseconds during config processing. So
  * I prefer to keep it very simple and with simple data structures. Unfortunately,
  * we need to preserve the order, but I don't like to add a tail pointer as that

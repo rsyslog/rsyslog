@@ -1,9 +1,9 @@
 /* a testcase generator
- * THis program reads stdin, which must consist of (name,stmt) tupels
+ * THis program reads stdin, which must consist of (name,stmt) tuples
  * where name is a part of the config name  (small!) and stmt is an actual
- * config statement. These tupels must be encoded as
+ * config statement. These tuples must be encoded as
  * name<SP>stmt<LF>
- * on stdin. After all tupels are read, the power set of all possible
+ * on stdin. After all tuples are read, the power set of all possible
  * configurations is generated.
  * Copyright (C) 2011 by Rainer Gerhards and Adiscon GmbH
  * Released under the GPLv3 as part of the rsyslog project.

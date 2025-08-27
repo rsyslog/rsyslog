@@ -93,7 +93,7 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(net)
     uchar *port;
     uchar *sourceTpl;
     int mtu;
-    u_short sourcePortStart; /* for sorce port iteration */
+    u_short sourcePortStart; /* for source port iteration */
     u_short sourcePortEnd;
     int bReportLibnetInitErr; /* help prevent multiple error messages on init err */
 } instanceData;
@@ -523,7 +523,7 @@ static rsRetVal doTryResume(wrkrInstanceData_t *pWrkrData) {
     pData = pWrkrData->pData;
 
     if (pWrkrData->libnet_handle == NULL) {
-        /* Initialize the libnet library.  Root priviledges are required.
+        /* Initialize the libnet library.  Root privileges are required.
          * this initializes a IPv4 socket to use for forging UDP packets.
          */
         pWrkrData->libnet_handle = libnet_init(LIBNET_RAW4, /* injection type */

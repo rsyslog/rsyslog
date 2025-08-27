@@ -15,7 +15,7 @@
  * sigblkInitKSI or sigblkDestruct (if no more signature blocks are
  * to be emitted, e.g. on file close). sigblkDestruct saves state
  * information (most importantly last block hash) and sigblkConstruct
- * reads (or initilizes if not present) it.
+ * reads (or initializes if not present) it.
  *
  * Copyright 2013-2018 Adiscon GmbH and Guardtime, Inc.
  *
@@ -736,7 +736,7 @@ static int ksiOpenSigFile(ksifile ksi) {
 
     /* we now need to obtain the last previous hash, so that
      * we can continue the hash chain. We do not check for error
-     * as a state file error can be recovered by graceful degredation.
+     * as a state file error can be recovered by graceful degradation.
      */
     ksiReadStateFile(ksi);
 
@@ -1524,7 +1524,7 @@ int rsksiSetAggregator(rsksictx ctx, char *uri, char *loginid, char *key) {
     strTmp = ctx->aggregatorUri;
     while ((strTmpUri = strsep(&strTmp, "|")) != NULL) {
         if (ctx->aggregatorEndpointCount >= KSI_CTX_HA_MAX_SUBSERVICES) {
-            report(ctx, "Maximum number (%d) of service endoints reached, ignoring endpoint: %s",
+            report(ctx, "Maximum number (%d) of service endpoints reached, ignoring endpoint: %s",
                    KSI_CTX_HA_MAX_SUBSERVICES, strTmpUri);
         } else {
             ctx->aggregatorEndpoints[ctx->aggregatorEndpointCount] = strTmpUri;
@@ -1708,7 +1708,7 @@ static bool process_requests_async(rsksictx ctx, KSI_CTX *ksi_ctx, KSI_AsyncServ
     for (i = 0; i < ProtectedQueue_count(ctx->signer_queue); i++) {
         item = NULL;
         if (!ProtectedQueue_getItem(ctx->signer_queue, i, (void **)&item) || !item) continue;
-        /* ingore non request queue items */
+        /* ignore non request queue items */
         if (item->type != QITEM_SIGNATURE_REQUEST) continue;
 
         /* stop at first processed item */

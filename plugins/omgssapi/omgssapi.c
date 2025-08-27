@@ -1,5 +1,5 @@
 /* omgssapi.c
- * This is the implementation of the build-in forwarding output module.
+ * This is the implementation of the built-in forwarding output module.
  *
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
@@ -70,7 +70,7 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(gssutil) DEFobjCurrIf(tcpclt)
     typedef struct _instanceData {
     char *f_hname;
     short sock; /* file descriptor */
-    enum { /* TODO: we shoud revisit these definitions */
+    enum { /* TODO: we should revisit these definitions */
            eDestFORW,
            eDestFORW_SUSP,
            eDestFORW_UNKN
@@ -470,7 +470,7 @@ BEGINparseSelectorAct
     CODE_STD_STRING_REQUESTparseSelectorAct(1)
         /* first check if this config line is actually for us
          * The first test [*p == '>'] can be skipped if a module shall only
-         * support the newer slection syntax [:modname:]. This is in fact
+         * support the newer selection syntax [:modname:]. This is in fact
          * recommended for new modules. Please note that over time this part
          * will be handled by rsyslogd itself, but for the time being it is
          * a good compromise to do it at the module level.
@@ -494,7 +494,7 @@ BEGINparseSelectorAct
      * the compression level. If it is not given, 9 (best compression) is
      * assumed. An example action statement might be:
      * @@(z5,o)127.0.0.1:1400
-     * Which means send via TCP with medium (5) compresion (z) to the local
+     * Which means send via TCP with medium (5) compression (z) to the local
      * host on port 1400. The '0' option means that octet-couting (as in
      * IETF I-D syslog-transport-tls) is to be used for framing (this option
      * applies to TCP-based syslog only and is ignored when specified with UDP).
@@ -625,7 +625,7 @@ BEGINparseSelectorAct
     CHKiRet(tcpclt.SetFraming(pData->pTCPClt, tcp_framing));
 
     /* TODO: do we need to call freeInstance if we failed - this is a general question for
-     * all output modules. I'll address it lates as the interface evolves. rgerhards, 2007-07-25
+     * all output modules. I'll address it latest as the interface evolves. rgerhards, 2007-07-25
      */
     CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct

@@ -1,6 +1,6 @@
 #!/bin/bash
 oldbranch=$(git rev-parse --abbrev-ref HEAD)
-# note: we usually do not have permissons to modify git config --global,
+# note: we usually do not have permissions to modify git config --global,
 # so we do it just to the local context, which is fine with us.
 git config user.email "buildbot@rsyslog.com"
 git config user.name "buildbot"

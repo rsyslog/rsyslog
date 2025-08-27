@@ -5,7 +5,7 @@
 export NUMMESSAGES=5000
 # Note: we need to pre-build the second level include file name because
 # under "make distchek" we have a different environment and with the
-# current rsyslog implemenation, we can only have a single environment
+# current rsyslog implementation, we can only have a single environment
 # variable in an `echo $VAR` block. This we cannot combine the include
 # file name inside the config include without this trick.
 export INCLUDE2="${srcdir}/testsuites/include-std2-omfile-action.conf"

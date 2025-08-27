@@ -494,7 +494,7 @@ finalize_it:
 }
 
 
-/* read numerical response code from server and compare it to requried response code.
+/* read numerical response code from server and compare it to required response code.
  * If they two don't match, return RS_RET_SMTP_ERROR.
  * rgerhards, 2008-04-07
  */

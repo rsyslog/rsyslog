@@ -256,7 +256,7 @@ struct modConfData_s {
     sbool configSetViaV2Method;
     uchar *stateFileDirectory;
     sbool sortFiles;
-    sbool normalizePath; /* normalize file system pathes (all start with root dir) */
+    sbool normalizePath; /* normalize file system paths (all start with root dir) */
     sbool haveReadTimeouts; /* use special processing if read timeouts exist */
     sbool bHadFileData; /* actually a global variable:
                    1 - last call to pollFile() had data
@@ -620,7 +620,7 @@ static void ATTR_NONNULL() fen_setupWatch(act_obj_t *const act) {
                  act->pfinf->fobj.fo_name);
         goto done;
     } else {
-        /* Port successfull listening now*/
+        /* Port successful listening now*/
         DBGPRINTF("fen_setupWatch: associated port for file %s\n", act->name);
         act->bPortAssociated = 1;
     }
@@ -1195,7 +1195,7 @@ finalize_it:
 
 
 /* Helper function to combine statefile and state file directory
- * This function is guranteed to work only on config data and DOES NOT
+ * This function is guaranteed to work only on config data and DOES NOT
  * open or otherwise modify disk file state.
  */
 static int ATTR_NONNULL() getFullStateFileName(const uchar *const pszstatefile,
@@ -1205,7 +1205,7 @@ static int ATTR_NONNULL() getFullStateFileName(const uchar *const pszstatefile,
     int lenout;
     const uchar *pszstatedir;
 
-    /* Get Raw Workdir, if it is NULL we need to propper handle it */
+    /* Get Raw Workdir, if it is NULL we need to proper handle it */
     pszstatedir = getStateFileDir();
 
     /* Construct file name */
@@ -1272,7 +1272,7 @@ static void ATTR_NONNULL(1) getFileID(act_obj_t *const act) {
  * malloc calls, it must be passed a buffer which should be MAXFNAME large.
  * Note: the buffer is not necessarily populated ... always ONLY use the
  * RETURN VALUE!
- * This function is guranteed to work only on config data and DOES NOT
+ * This function is guaranteed to work only on config data and DOES NOT
  * open or otherwise modify disk file state.
  */
 static uchar *ATTR_NONNULL(1, 2)
@@ -1435,7 +1435,7 @@ static rsRetVal ATTR_NONNULL(1) openFileWithStateFile(act_obj_t *const act) {
     /* we access some data items a bit dirty, as we need to refactor the whole
      * thing in any case - TODO
      */
-    /* Note: we ignore filname property - it is just an aid to the user. Most
+    /* Note: we ignore filename property - it is just an aid to the user. Most
      * importantly it *is wrong* after a file move!
      */
     fjson_object_object_get_ex(json, "prev_was_nl", &jval);
@@ -1801,7 +1801,7 @@ static rsRetVal addInstance(void __attribute__((unused)) * pVal, uchar *pNewVal)
         if (loadModConf->opMode == OPMODE_INOTIFY) {
             LogError(0, RS_RET_PARAM_NOT_PERMITTED,
                      "parameter \"maxLinesAtOnce\" not "
-                     "permited in inotify mode - ignored");
+                     "permitted in inotify mode - ignored");
         } else {
             inst->maxLinesAtOnce = cs.maxLinesAtOnce;
         }
@@ -1903,7 +1903,7 @@ BEGINnewInpInst
             if (loadModConf->opMode == OPMODE_INOTIFY && pvals[i].val.d.n > 0) {
                 LogError(0, RS_RET_PARAM_NOT_PERMITTED,
                          "parameter \"maxLinesAtOnce\" not "
-                         "permited in inotify mode - ignored");
+                         "permitted in inotify mode - ignored");
             } else {
                 inst->maxLinesAtOnce = pvals[i].val.d.n;
             }
@@ -2195,7 +2195,7 @@ ENDfreeCnf
 /* initial poll run, to be used for all modes. Depending on mode, it does some
  * further initializations (e.g. watches in inotify mode). Most importantly,
  * it processes already-existing files, which would not otherwise be picked
- * up in notifcation modes (inotfiy, FEN). Also, when freshStartTail is set,
+ * up in notification modes (inotfiy, FEN). Also, when freshStartTail is set,
  * this run assumes that all previous existing data exists and needs not
  * to be considered.
  * Note: there is a race on files created *during* the run, but that race is
@@ -2245,7 +2245,7 @@ static void ATTR_NONNULL(1) in_dbg_showEv(const struct inotify_event *ev) {
         dbgprintf("INOTIFY event: watch was REMOVED\n");
     }
     if (ev->mask & IN_MODIFY) {
-        dbgprintf("INOTIFY event: watch was MODIFID\n");
+        dbgprintf("INOTIFY event: watch was MODIFIED\n");
     }
     if (ev->mask & IN_ACCESS) {
         dbgprintf("INOTIFY event: watch IN_ACCESS\n");
@@ -2344,7 +2344,7 @@ static void ATTR_NONNULL(1) in_processEvent(struct inotify_event *ev) {
     if (ev->mask & (IN_MOVED_FROM | IN_MOVED_TO)) {
         fs_node_walk(etry->act->edge->node, poll_tree);
     } else if (etry->act->edge->is_file && !(etry->act->is_symlink)) {
-        in_handleFileEvent(ev, etry);  // esentially poll_file()!
+        in_handleFileEvent(ev, etry);  // essentially poll_file()!
     } else {
         fs_node_walk(etry->act->edge->node, poll_tree);
     }
@@ -2591,7 +2591,7 @@ ENDrunInput
 
 /* The function is called by rsyslog before runInput() is called. It is a last chance
  * to set up anything specific. Most importantly, it can be used to tell rsyslog if the
- * input shall run or not. The idea is that if some config settings (or similiar things)
+ * input shall run or not. The idea is that if some config settings (or similar things)
  * are not OK, the input can tell rsyslog it will not execute. To do so, return
  * RS_RET_NO_RUN or a specific error code. If RS_RET_OK is returned, rsyslog will
  * proceed and call the runInput() entry point.

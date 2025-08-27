@@ -1,6 +1,6 @@
 #!/bin/bash
 # same as omusrmsg-noabort, but with legacy syntax.
-# addd 2018-08-05 by RGerhards, released under ASL 2.0
+# add 2018-08-05 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=10
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines

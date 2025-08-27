@@ -527,7 +527,7 @@ BEGINrunInput
     CODESTARTrunInput;
     /* this is an endless loop - it is terminated when the thread is
      * signalled to do so. This, however, is handled by the framework,
-     * right into the sleep below. Note that we DELIBERATLY output
+     * right into the sleep below. Note that we DELIBERATELY output
      * final set of stats counters on termination request. Depending
      * on configuration, they may not make it to the final destination...
      */

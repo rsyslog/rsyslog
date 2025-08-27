@@ -195,7 +195,7 @@ static void print_perctiles(perctile_bucket_t *bkt) {
 }
 #endif
 
-// Assumes a fully created pstat and bkt, also initiliazes some values in pstat.
+// Assumes a fully created pstat and bkt, also initializes some values in pstat.
 static rsRetVal initAndAddPerctileMetrics(perctile_stat_t *pstat, perctile_bucket_t *bkt, uchar *key) {
     char stat_name[128];
     int bytes = 0;

@@ -65,7 +65,7 @@ static int CreateSocket(struct addrinfo *addrDest) {
              * not in a single-threaded design. That would cause rsyslogd to
              * loose input messages - which obviously also would affect
              * other selector lines, too. So we do set it to non-blocking and
-             * handle the situation ourselfs (by discarding messages). IF we run
+             * handle the situation ourselves (by discarding messages). IF we run
              * dual-threaded, however, the situation is different: in this case,
              * the receivers and the selector line processing are only loosely
              * coupled via a memory buffer. Now, I think, we can afford the extra
@@ -109,9 +109,9 @@ static int CreateSocket(struct addrinfo *addrDest) {
  * syslog-transport-tls-05 (current at the time of this writing). This also
  * eases things when we go ahead and implement that framing. I have now made
  * available two cases where this framing is used: either by explitely
- * specifying it in the config file or implicitely when sending a compressed
+ * specifying it in the config file or implicitly when sending a compressed
  * message. In the later case, compressed and uncompressed messages within
- * the same session have different framings. If it is explicitely set to
+ * the same session have different framings. If it is explicitly set to
  * octet-counting, only this framing mode is used within the session.
  * rgerhards, 2006-12-07
  */
@@ -158,7 +158,7 @@ static rsRetVal TCPSendBldFrame(tcpclt_t *pThis, char **pmsg, size_t *plen, int 
              * reason is that we a) add one character and b) len does
              * not take care of the '\0' byte. Up until today, it was just
              * +1 , which caused rsyslogd to sometimes dump core.
-             * I have added this comment so that the logic is not accidently
+             * I have added this comment so that the logic is not accidentally
              * changed again. rgerhards, 2005-10-25
              */
             if ((buf = malloc(len + 2)) == NULL) {
@@ -266,7 +266,7 @@ finalize_it:
  * that purpose. I have added the param "len", because it is known by the
  * caller and so saves us some time. Also, it MUST be given because there
  * may be NULs inside msg so that we can not rely on strlen(). Please note
- * that the restrictions outlined above do not existin in multi-threaded
+ * that the restrictions outlined above do not existing in multi-threaded
  * mode, which we assume will now be most often used. So there is no
  * real issue with the potential message loss in single-threaded builds.
  * rgerhards, 2006-11-30
@@ -294,7 +294,7 @@ static int Send(tcpclt_t *pThis, void *pData, char *msg, size_t len) {
 
         if (iRet == RS_RET_OK || iRet == RS_RET_DEFER_COMMIT || iRet == RS_RET_PREVIOUS_COMMITTED) {
             /* we are done, we also use this as indication that the previous
-             * message was succesfully received (it's not always the case, but its at
+             * message was successfully received (it's not always the case, but its at
              * least our best shot at it -- rgerhards, 2008-03-12
              * As of 2008-06-09, we have implemented an algorithm which detects connection
              * loss quite good in some (common) scenarios. Thus, the probability of
@@ -472,6 +472,6 @@ BEGINmodInit()
     CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
-    /* Initialize all classes that are in our module - this includes ourselfs */
+    /* Initialize all classes that are in our module - this includes ourselves */
     CHKiRet(tcpcltClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit

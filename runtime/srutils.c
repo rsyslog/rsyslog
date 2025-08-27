@@ -1,5 +1,5 @@
 /**\file srUtils.c
- * \brief General utilties that fit nowhere else.
+ * \brief General utilities that fit nowhere else.
  *
  * The namespace for this file is "srUtil".
  *
@@ -84,7 +84,7 @@ syslogName_t syslogFacNames[] = {
     {"news", LOG_NEWS},
     {"ntp", (12 << 3)}, /* NTP, perhaps BSD-specific? */
     {"security", LOG_AUTH}, /* DEPRECATED */
-    {"bsd_security", (13 << 3)}, /* BSD-specific, unfortunatly with duplicate name... */
+    {"bsd_security", (13 << 3)}, /* BSD-specific, unfortunately with duplicate name... */
     {"syslog", LOG_SYSLOG},
     {"user", LOG_USER},
     {"uucp", LOG_UUCP},
@@ -185,7 +185,7 @@ uchar *srUtilStrDup(uchar *pOld, size_t len) {
  * the creation fails in the similar way, we return an error on that second
  * try because otherwise we would potentially run into an endless loop.
  * loop. -- rgerhards, 2010-03-25
- * The likeliest scenario for a prolonged contest of creating the parent directiories
+ * The likeliest scenario for a prolonged contest of creating the parent directories
  * is within our process space. This can happen with a high probability when two
  * threads, that want to start logging to files within same directory tree, are
  * started close to each other. We should fix what we can. -- nipakoo, 2017-11-25
@@ -309,7 +309,7 @@ int execProg(uchar *program, int bWait, uchar *arg) {
      * checking here. However, it can not easily be done. For starters, we
      * may run into endless loops if we log to syslog. The next problem is
      * that output is typically not seen by the user. For the time being,
-     * we use no error reporting, which is quite consitent with the old
+     * we use no error reporting, which is quite consistent with the old
      * system() way of doing things. rgerhards, 2007-07-20
      */
     perror("exec");
@@ -320,7 +320,7 @@ int execProg(uchar *program, int bWait, uchar *arg) {
 
 /* skip over whitespace in a standard C string. The
  * provided pointer is advanced to the first non-whitespace
- * charater or the \0 byte, if there is none. It is never
+ * character or the \0 byte, if there is none. It is never
  * moved past the \0.
  */
 void skipWhiteSpace(uchar **pp) {
@@ -578,7 +578,7 @@ int decodeSyslogName(uchar *name, syslogName_t *codetab) {
  *
  * \param ppSrc		Pointer to a pointer of the source array of characters. If a
             separator detected the Pointer points to the next char after the
-            separator. Except if the end of the string is dedected ('\n').
+            separator. Except if the end of the string is detected ('\n').
             Then it points to the terminator char.
  * \param pDst		Pointer to the destination array of characters. Here the substing
             will be stored.

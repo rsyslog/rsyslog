@@ -5,7 +5,7 @@
 #   * This file is part of RSyslog
 #   *
 #   * This script processes impstats logfiles and searches for abnormalities
-#   * Dependecies:  - python pip        -> Needed to install python packages
+#   * Dependencies:  - python pip        -> Needed to install python packages
 #   *       - python cairosvg   -> Needed for PNG converting support!
 #   *       - Install python packages using this command:
 #   *       pip install CairoSVG tinycss cssselect pygal
@@ -78,7 +78,7 @@ else:
     if bDebugOutput:
         print ": '" + szInput+ "'"
     
-    # Open inout file
+    # Open input file
     inputfile = open(szInput, 'r')
     for line in inputfile.readlines():
 #       if line.find("rsyslogd-pstats") != -1:
@@ -115,7 +115,7 @@ else:
 
                     # If LogobjectID is -1, we have JSON Format in LN_LOGDATA
                     if loglineindexes[iLogRegExIndex]["LN_LOGOBJECT"] == -1:
-                        # Remove unecessary characters and split into templ array
+                        # Remove unnecessary characters and split into templ array
                         aCleanedArray = re.sub("[{}\"]", "", result[loglineindexes[iLogRegExIndex]["LN_LOGDATA"]]).split(",")
                         # Reset Logdata
                         result[ loglineindexes[iLogRegExIndex]["LN_LOGDATA"] ] = ""

@@ -59,7 +59,7 @@ Note: volumes are automatically populated with the default file upon creation.
 
   Default: disabled
 
-  If you would like to overwite the `/etc/rsyslog.conf` file, _without_ mounting a configuration file into the container, you can use this variable. The contents are the base64 encoded `rsyslog.conf` file contents, without newlines. This can be generated with the following command: `cat rsyslog.conf | base64 | tr -d '\n'`. On startup, the contents of the environment variable will be decoded and overwrite the `/etc/rsyslog.conf` file.
+  If you would like to overwrite the `/etc/rsyslog.conf` file, _without_ mounting a configuration file into the container, you can use this variable. The contents are the base64 encoded `rsyslog.conf` file contents, without newlines. This can be generated with the following command: `cat rsyslog.conf | base64 | tr -d '\n'`. On startup, the contents of the environment variable will be decoded and overwrite the `/etc/rsyslog.conf` file.
 
 # Runtime Environment
 

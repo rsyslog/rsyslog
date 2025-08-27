@@ -46,7 +46,7 @@ rsyslog_testbench_setup_testuser() {
 			break
 		done
 		if [ -z "${has_testuser}" ]; then
-			echo "ERROR: running as root and no suiteable testuser found - skipping test"
+			echo "ERROR: running as root and no suitable testuser found - skipping test"
 			echo 'You mas set a testuser via the RSYSLOG_TESTUSER environment variable'
 			exit 77
 		fi

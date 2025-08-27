@@ -35,7 +35,7 @@
 
 rsconf_t *ourConf;
 MODULE_TYPE_TESTBENCH
-/* define addtional objects we need for our tests */
+/* define additional objects we need for our tests */
 DEFobjCurrIf(expr) DEFobjCurrIf(ctok) DEFobjCurrIf(ctok_token) DEFobjCurrIf(vmprg)
 
 

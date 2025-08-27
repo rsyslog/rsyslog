@@ -105,7 +105,7 @@ static rsRetVal GetRemAddr(nsd_t *pNsd, struct sockaddr_storage **ppAddr) {
 
 
 /* Provide access to the underlying OS socket. This is primarily
- * useful for other drivers (like nsd_gtls) who utilize ourselfs
+ * useful for other drivers (like nsd_gtls) who utilize ourselves
  * for some of their functionality. -- rgerhards, 2008-04-18
  */
 static rsRetVal GetSock(nsd_t *pNsd, int *pSock) {
@@ -312,7 +312,7 @@ finalize_it:
 
 
 /* Provide access to the underlying OS socket. This is primarily
- * useful for other drivers (like nsd_gtls) who utilize ourselfs
+ * useful for other drivers (like nsd_gtls) who utilize ourselves
  * for some of their functionality.
  * This function sets the socket -- rgerhards, 2008-04-25
  */
@@ -538,7 +538,7 @@ finalize_it:
 }
 
 
-/* initialize tcp sockets for a listner. The initialized sockets are passed to the
+/* initialize tcp sockets for a listener. The initialized sockets are passed to the
  * app-level caller via a callback.
  * pLstnPort must point to a port name or number. NULL is NOT permitted. pLstnIP
  * points to the port to listen to (NULL means "all"), iMaxSess has the maximum
@@ -676,7 +676,7 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *const pNS,
          * pick a port that is used by some protocol (well, at least this looks very
          * unlikely...). If our asusmption is wrong, we should iterate until we find a
          * combination that works - it is very unusual to have the same service listen
-         * on differnt ports on IPv4 and IPv6.
+         * on different ports on IPv4 and IPv6.
          */
         savecast.sa = (struct sockaddr *)r->ai_addr;
         const int currport = (isIPv6) ? savecast.ipv6->sin6_port : savecast.ipv4->sin_port;
@@ -751,7 +751,7 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *const pNS,
         CHKiRet(fAddLstn(pUsr, pNewStrm));
         pNewStrm = NULL;
         /* sock has been handed over by SetSock() above, so invalidate it here
-         * coverity scan falsely identifies this as ressource leak
+         * coverity scan falsely identifies this as resource leak
          */
         sock = -1;
         ++numSocks;
@@ -1227,6 +1227,6 @@ BEGINmodInit()
     CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
-    /* Initialize all classes that are in our module - this includes ourselfs */
+    /* Initialize all classes that are in our module - this includes ourselves */
     CHKiRet(nsd_ptcpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit

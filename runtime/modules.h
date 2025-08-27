@@ -1,8 +1,8 @@
 /* modules.h
  *
- * Definition for build-in and plug-ins module handler. This file is the base
+ * Definition for built-in and plug-ins module handler. This file is the base
  * for all dynamically loadable module support. In theory, in v3 all modules
- * are dynamically loaded, in practice we currently do have a few build-in
+ * are dynamically loaded, in practice we currently do have a few built-in
  * once. This may become removed.
  *
  * The loader keeps track of what is loaded. For library modules, it is also
@@ -40,7 +40,7 @@
 
 
 /* the following define defines the current version of the module interface.
- * It can be used by any module which want's to simply prevent version conflicts
+ * It can be used by any module which wants to simply prevent version conflicts
  * and does not intend to do specific old-version emulations.
  * rgerhards, 2008-03-04
  * version 3 adds modInfo_t ptr to call of modInit -- rgerhards, 2008-03-10

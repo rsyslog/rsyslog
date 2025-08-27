@@ -5,7 +5,7 @@
 # any other journal content matches our test message. We skip the 
 # test in case message does not make it even to journal which may 
 # sometimes happen in some environments.
-# addd 2017-10-25 by RGerhards, released under ASL 2.0
+# add 2017-10-25 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh require-journalctl
 generate_conf

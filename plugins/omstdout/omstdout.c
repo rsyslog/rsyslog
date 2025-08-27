@@ -1,6 +1,6 @@
 /* omstdout.c
  * send all output to stdout - this is primarily a test driver (but may
- * be used for weired use cases). Not tested for robustness!
+ * be used for weird use cases). Not tested for robustness!
  *
  * NOTE: read comments in module-template.h for more specifics!
  *
@@ -341,7 +341,7 @@ BEGINmodInit()
     DBGPRINTF("omstdout: array-passing is %ssupported by rsyslog core.\n", bArrayPassingSupported ? "" : "not ");
 
     if (bArrayPassingSupported) {
-        /* enable config comand only if core supports it */
+        /* enable config command only if core supports it */
         CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionomstdoutarrayinterface", 0, eCmdHdlrBinary, NULL,
                                    &cs.bUseArrayInterface, STD_LOADABLE_MODULE_ID));
     }

@@ -1,5 +1,5 @@
 /* parsing routines for the counted string class. for generic
- * informaton see parse.h.
+ * information see parse.h.
  *
  * begun 2005-09-15 rgerhards
  *

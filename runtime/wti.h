@@ -74,7 +74,7 @@ struct wti_s {
         int *pbShutdownImmediate; /* end processing of this batch immediately if set to 1 */
         wtp_t *pWtp; /* my worker thread pool (important if only the work thread instance is passed! */
         batch_t batch; /* pointer to an object array meaningful for current user
-                  pointer (e.g. queue pUsr data elemt) */
+                  pointer (e.g. queue pUsr data element) */
         uchar *pszDbgHdr; /* header string for debug messages */
         actWrkrInfo_t *actWrkrInfo; /* *array* of action wrkr infos for all actions
                           (sized for max nbr of actions in config!) */

@@ -3,7 +3,7 @@
 # Note: this mimics an issue actually seen in practice.
 # Triggering condition: "json" property (message variables) are present
 # and "structured-data" property is also present. Caused rsyslog to
-# thrash the queue file, getting messages stuck in it and loosing all
+# thrash the queue file, getting messages stuck in it and losing all
 # after the initial problem occurrence.
 # add 2017-02-08 by Rainer Gerhards, released under ASL 2.0
 

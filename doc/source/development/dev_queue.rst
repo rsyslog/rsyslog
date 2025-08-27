@@ -234,7 +234,7 @@ Queue Destruction
 ~~~~~~~~~~~~~~~~~
 
 Now let's consider **the case of destruction of the primary
-queue.**\ During destruction, our focus is on loosing as few messages as
+queue.**\ During destruction, our focus is on losing as few messages as
 possible. If the queue is not DA-enabled, there is nothing but the
 configured timeouts to handle that situation. However, with a DA-enabled
 queue there are more options.

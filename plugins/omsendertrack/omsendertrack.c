@@ -286,7 +286,7 @@ jsonToHashtable(instanceData *const pData, json_object *const jsonTree)
     if (!json_object_is_type(jsonTree, json_type_array)) {
         LogError(0, RS_RET_ERR,
                  "current sender file does not contain proper JSON "
-                 "object, array as first-level element excpected. Starting without "
+                 "object, array as first-level element expected. Starting without "
                  "any previous data");
         ABORT_FINALIZE(RS_RET_ERR);
     }

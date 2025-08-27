@@ -1542,7 +1542,7 @@ rsRetVal redisDequeue(instanceConf_t *inst) {
 
         if (replyType == REDIS_REPLY_NIL) {
             /* sleep 1s between 2 POP tries, when no new entries are available (list is empty)
-             * this does NOT limit dequeing rate, but prevents the input from polling Redis too often
+             * this does NOT limit dequeuing rate, but prevents the input from polling Redis too often
              */
             for (i = 0; i < 10; i++) {
                 // Time to stop the thread
@@ -2056,7 +2056,7 @@ void workerLoop(struct imhiredisWrkrInfo_s *me) {
     while (glbl.GetGlobalInputTermState() == 0) {
         if (!me->fnIsConnected(me->inst)) {
             /*
-             * Sleep 10 seconds before attempting to resume a broken connexion
+             * Sleep 10 seconds before attempting to resume a broken connection
              * (sleep small amounts to avoid missing termination status)
              */
             LogMsg(0, RS_RET_OK, LOG_INFO,
@@ -2176,7 +2176,7 @@ finalize_it:
 }
 
 /*
- *	free all ressources of the node
+ *	free all resources of the node
  *	will return next node if one is present, NULL otherwise
  */
 redisNode *freeNode(redisNode *node) {

@@ -43,7 +43,7 @@ struct nsd_ossl_s {
         uchar *pszConnectHost; /**< hostname used for connect - may be used to
                        authenticate peer if no other name given */
         int iMode; /* 0 - plain tcp, 1 - TLS */
-        int bAbortConn; /* if set, abort conncection (fatal error had happened) */
+        int bAbortConn; /* if set, abort connection (fatal error had happened) */
         PermitExpiredCerts permitExpiredCerts;
         osslRtryCall_t rtryCall; /**< what must we retry? */
         int rtryOsslErr; /**< store ssl error code into like SSL_ERROR_WANT_READ or SSL_ERROR_WANT_WRITE */

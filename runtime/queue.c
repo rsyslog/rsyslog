@@ -6,7 +6,7 @@
  *
  * There is some in-depth documentation available in doc/dev_queue.html
  * (and in the web doc set on https://www.rsyslog.com/doc/). Be sure to read it
- * if you are getting aquainted to the object.
+ * if you are getting acquainted to the object.
  *
  * NOTE: as of 2009-04-22, I have begin to remove the qqueue* prefix from static
  * function names - this makes it really hard to read and does not provide much
@@ -325,7 +325,7 @@ void qqueueDoneLoadCnf(void) {
  ***********************************************************************/
 
 /* generate next uniqueue dequeue ID. Note that uniqueness is only required
- * on a per-queue basis and while this instance runs. So a stricly monotonically
+ * on a per-queue basis and while this instance runs. So a strictly monotonically
  * increasing counter is sufficient (if enough bits are used).
  */
 static inline qDeqID getNextDeqID(qqueue_t *pQueue) {
@@ -474,8 +474,8 @@ static int getLogicalQueueSize(qqueue_t *pThis) {
 
 /* This function drains the queue in cases where this needs to be done. The most probable
  * reason is a HUP which needs to discard data (because the queue is configured to be lossy).
- * During a shutdown, this is typically not needed, as the OS frees up ressources and does
- * this much quicker than when we clean up ourselvs. -- rgerhards, 2008-10-21
+ * During a shutdown, this is typically not needed, as the OS frees up resources and does
+ * this much quicker than when we clean up ourselves. -- rgerhards, 2008-10-21
  * This function returns void, as it makes no sense to communicate an error back, even if
  * it happens.
  * This functions works "around" the regular deque mechanism, because it is only used to
@@ -503,7 +503,7 @@ static void queueDrain(qqueue_t *pThis) {
 
 /* returns the number of workers that should be advised at
  * this point in time. The mutex must be locked when
- * ths function is called. -- rgerhards, 2008-01-25
+ * the function is called. -- rgerhards, 2008-01-25
  */
 static rsRetVal qqueueAdviseMaxWorkers(qqueue_t *pThis) {
     DEFiRet;
@@ -653,7 +653,7 @@ static rsRetVal ATTR_NONNULL() InitDA(qqueue_t *const pThis, const int bLockMute
     /* check if we already have a DA worker pool. If not, initiate one. Please note that the
      * pool is created on first need but never again destructed (until the queue is). This
      * is intentional. We assume that when we need it once, we may also need it on another
-     * occasion. Ressources used are quite minimal when no worker is running.
+     * occasion. Resources used are quite minimal when no worker is running.
      * rgerhards, 2008-01-24
      * NOTE: this is the DA worker *pool*, not the DA queue!
      */
@@ -866,7 +866,7 @@ static rsRetVal qDelLinkedList(qqueue_t *pThis) {
  * with all on-disk structures kept as-is as much as possible. However,
  * we do not really stop or destruct the in-memory disk queue object.
  * Practice has shown that this may cause races during destruction which
- * themselfs can lead to segfault. So we prefer to was some ressources by
+ * themselves can lead to segfault. So we prefer to was some resources by
  * keeping the queue active.
  * Instead, the queue is switched to direct mode, so that at least
  * some processing can happen. Of course, this may still have lots of
@@ -949,7 +949,7 @@ static rsRetVal qqueueTryLoadPersistedInfo(qqueue_t *pThis) {
     CHKiRet(strm.SetFName(psQIF, pThis->pszQIFNam, pThis->lenQIFNam));
     CHKiRet(strm.ConstructFinalize(psQIF));
 
-    /* first, we try to read the property bag for ourselfs */
+    /* first, we try to read the property bag for ourselves */
     CHKiRet(obj.DeserializePropBag((obj_t *)pThis, psQIF));
 
     /* then the stream objects (same order as when persisted!) */
@@ -1086,7 +1086,7 @@ static rsRetVal qDestructDisk(qqueue_t *pThis) {
         strm.GetCurrOffset(pThis->tVars.disk.pWrite, &currOffs);
         if (currOffs == 0) {
             /* if no data is present, we can (and must!) delete this
-             * file. Else we can leave garbagge after termination.
+             * file. Else we can leave garbage after termination.
              */
             strm.SetbDeleteOnClose(pThis->tVars.disk.pWrite, 1);
         }
@@ -1181,7 +1181,7 @@ static rsRetVal qAddDirectWithWti(qqueue_t *pThis, smsg_t *pMsg, wti_t *pWti) {
 
     /* calling the consumer is quite different here than it is from a worker thread */
     /* we need to provide the consumer's return value back to the caller because in direct
-     * mode the consumer probably has a lot to convey (which get's lost in the other modes
+     * mode the consumer probably has a lot to convey (which gets lost in the other modes
      * because they are asynchronous. But direct mode is deliberately synchronous.
      * rgerhards, 2008-02-12
      * We use our knowledge about the batch_t structure below, but without that, we
@@ -1220,7 +1220,7 @@ static rsRetVal qAddDirect(qqueue_t *pThis, smsg_t *pMsg) {
 /* generic code to add a queue entry
  * We use some specific code to most efficiently support direct mode
  * queues. This is justified in spite of the gain and the need to do some
- * things truely different. -- rgerhards, 2008-02-12
+ * things truly different. -- rgerhards, 2008-02-12
  */
 static rsRetVal qqueueAdd(qqueue_t *pThis, smsg_t *pMsg) {
     DEFiRet;
@@ -1621,7 +1621,7 @@ void qqueueSetDefaultsActionQueue(qqueue_t *pThis) {
     pThis->bSyncQueueFiles = 0;
     pThis->toQShutdown = loadConf->globals.actq_dflt_toQShutdown; /* queue shutdown */
     pThis->toActShutdown = loadConf->globals.actq_dflt_toActShutdown; /* action shutdown (in phase 2) */
-    pThis->toEnq = loadConf->globals.actq_dflt_toEnq; /* timeout for queue enque */
+    pThis->toEnq = loadConf->globals.actq_dflt_toEnq; /* timeout for queue enqueue */
     pThis->toWrkShutdown = loadConf->globals.actq_dflt_toWrkShutdown; /* timeout for worker thread shutdown */
     pThis->iMinMsgsPerWrkr = -1; /* minimum messages per worker needed to start a new one */
     pThis->bSaveOnShutdown = 1; /* save queue on shutdown (when DA enabled)? */
@@ -1709,7 +1709,7 @@ finalize_it:
  */
 static rsRetVal ATTR_NONNULL(1) DoDeleteBatchFromQStore(qqueue_t *const pThis, const int nElem) {
     int i;
-    off64_t bytesDel = 0; /* keep CLANG static anaylzer happy */
+    off64_t bytesDel = 0; /* keep CLANG static analyzer happy */
     DEFiRet;
 
     ISOBJ_TYPE_assert(pThis, qqueue);
@@ -1956,7 +1956,7 @@ static rsRetVal ATTR_NONNULL() DequeueConsumableElements(qqueue_t *const pThis,
     /* it is sufficient to persist only when the bulk of work is done */
     qqueueChkPersist(pThis, nDequeued + nDiscarded + nDeleted);
 
-    /* If messages where DISCARDED, we need to substract them from the OverallQueueSize */
+    /* If messages where DISCARDED, we need to subtract them from the OverallQueueSize */
 #ifdef ENABLE_IMDIAG
     #ifdef HAVE_ATOMIC_BUILTINS
     ATOMIC_SUB(&iOverallQueueSize, nDiscarded, &NULL);
@@ -2151,7 +2151,7 @@ finalize_it:
  * batch. Otherwise, we may not complete it, and then the cancel
  * handler also tries to delete the batch. But then it finds some of
  * the messages already destructed. This was a bug we have seen, especially
- * with disk mode, where a delete takes rather long. Anyhow, the coneptual
+ * with disk mode, where a delete takes rather long. Anyhow, the conceptual
  * problem exists in all queue modes.
  * rgerhards, 2009-05-27
  */
@@ -2286,7 +2286,7 @@ static rsRetVal ConsumerDA(qqueue_t *pThis, wti_t *pWti) {
                           i, iRet);
             }
         }
-        pWti->batch.eltState[i] = BATCH_STATE_COMM; /* commited to other queue! */
+        pWti->batch.eltState[i] = BATCH_STATE_COMM; /* committed to other queue! */
     }
 
     /* but now cancellation is no longer permitted */
@@ -2309,7 +2309,7 @@ finalize_it:
      *	this has not been done so consistently. Andre convinced me that the current
      *	code is an elegant solution. However, if problems with queue workers and/or
      *	shutdown come up, this code here should be looked at suspiciously. In those
-     *	cases it may work out to check all status codes explicitely, just to avoid
+     *	cases it may work out to check all status codes explicitly, just to avoid
      *	a pitfall due to unexpected states being passed on to the caller.
      */
     if (iRet != RS_RET_OK && iRet != RS_RET_ERR_QUEUE_EMERGENCY && iRet < 0) {
@@ -2645,7 +2645,7 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint) {
     CHKiRet(strm.SetFName(psQIF, (uchar *)tmpQIFName, lentmpQIFName));
     CHKiRet(strm.ConstructFinalize(psQIF));
 
-    /* first, write the property bag for ourselfs
+    /* first, write the property bag for ourselves
      * And, surprisingly enough, we currently need to persist only the size of the
      * queue. All the rest is re-created with then-current config parameters when the
      * queue is re-created. Well, we'll also save the current queue type, just so that
@@ -2677,7 +2677,7 @@ static rsRetVal qqueuePersist(qqueue_t *pThis, int bIsCheckpoint) {
     }
 
     /* we have persisted the queue object. So whenever it comes to an empty queue,
-     * we need to delete the QIF. Thus, we indicte that need.
+     * we need to delete the QIF. Thus, we indicate that need.
      */
     pThis->bNeedDelQIF = 1;
 
@@ -2733,7 +2733,7 @@ static rsRetVal DoSaveOnShutdown(qqueue_t *pThis) {
      * it is reached.
      */
     DBGOPRINT((obj_t *)pThis, "bSaveOnShutdown set, restarting DA worker...\n");
-    pThis->bShutdownImmediate = 0; /* would termiante the DA worker! */
+    pThis->bShutdownImmediate = 0; /* would terminate the DA worker! */
     pThis->iLowWtrMrk = 0;
     wtpSetState(pThis->pWtpDA, wtpState_SHUTDOWN); /* shutdown worker (only) when done (was _IMMEDIATE!) */
     wtpAdviseMaxWorkers(pThis->pWtpDA, 1, PERMIT_WORKER_START_DURING_SHUTDOWN); /* restart DA worker */
@@ -3043,7 +3043,7 @@ static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_
                 msgDestruct(&pMsg);
                 ABORT_FINALIZE(RS_RET_QUEUE_FULL);
             }
-            dbgoprint((obj_t *)pThis, "doEnqSingleObject: wait solved queue full condition, enqueing\n");
+            dbgoprint((obj_t *)pThis, "doEnqSingleObject: wait solved queue full condition, enqueuing\n");
         }
     }
 

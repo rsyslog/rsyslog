@@ -280,7 +280,7 @@ finalize_it:
 /* This function waits until all queues are drained (size = 0)
  * To make sure it really is drained, we check multiple times. Otherwise we
  * may just see races. Note: it is important to ensure that the size
- * is zero multiple times in succession. Otherwise, we may just accidently
+ * is zero multiple times in succession. Otherwise, we may just accidentally
  * hit a situation where the queue isn't filled for a while (we have seen
  * this in practice, see https://github.com/rsyslog/rsyslog/issues/688).
  * Note: until 2014--07-13, this checked just the main queue. However,
@@ -291,7 +291,7 @@ finalize_it:
 static rsRetVal waitMainQEmpty(tcps_sess_t *pSess) {
     int iPrint = 0;
     int iPrintVerbosity = 500;  // 500 default
-    int nempty = 0;
+    int empty = 0;
     static unsigned lastOverallQueueSize = 1;
     DEFiRet;
 
@@ -299,26 +299,26 @@ static rsRetVal waitMainQEmpty(tcps_sess_t *pSess) {
         processImInternal();
         const unsigned OverallQueueSize = PREFER_FETCH_32BIT(iOverallQueueSize);
         if (OverallQueueSize == 0) {
-            ++nempty;
+            ++empty;
         } else {
             if (OverallQueueSize > 500) {
                 /* do a bit of extra sleep to not poll too frequently */
                 srSleep(0, (OverallQueueSize > 2000) ? 900000 : 100000);
             }
-            nempty = 0;
+            empty = 0;
         }
         if (dbgTimeoutToStderr) { /* we abuse this setting a bit ;-) */
             if (OverallQueueSize != lastOverallQueueSize) {
-                fprintf(stderr, "imdiag: wait q_empty: qsize %d nempty %d\n", OverallQueueSize, nempty);
+                fprintf(stderr, "imdiag: wait q_empty: qsize %d empty %d\n", OverallQueueSize, empty);
                 lastOverallQueueSize = OverallQueueSize;
             }
         }
-        if (nempty > max_empty_checks) break;
+        if (empty > max_empty_checks) break;
         if (iPrint++ % iPrintVerbosity == 0)
             DBGPRINTF(
                 "imdiag sleeping, wait queues drain, "
-                "curr size %d, nempty %d\n",
-                OverallQueueSize, nempty);
+                "curr size %d, empty %d\n",
+                OverallQueueSize, empty);
         srSleep(0, 100000); /* wait a little bit */
     }
 
@@ -523,8 +523,8 @@ static rsRetVal ATTR_NONNULL() OnMsgReceived(tcps_sess_t *const pSess, uchar *co
     } else if (!ustrcmp(cmdBuf, UCHAR_CONSTANT("enabledebug"))) {
         CHKiRet(enableDebug(pSess));
     } else {
-        dbgprintf("imdiag unkown command '%s'\n", cmdBuf);
-        CHKiRet(sendResponse(pSess, "unkown command '%s'\n", cmdBuf));
+        dbgprintf("imdiag unknown command '%s'\n", cmdBuf);
+        CHKiRet(sendResponse(pSess, "unknown command '%s'\n", cmdBuf));
     }
 
 finalize_it:
@@ -635,7 +635,7 @@ static void *timeoutGuard(ATTR_UNUSED void *arg) {
             srSleep(to, 0);
         }
         if (time(NULL) < endTO) {
-            dbgprintf("timeoutGuard: spurios wakeup, going back to sleep, time: %lld\n", (long long)time(NULL));
+            dbgprintf("timeoutGuard: spurious wakeup, going back to sleep, time: %lld\n", (long long)time(NULL));
         } else {
             break;
         }

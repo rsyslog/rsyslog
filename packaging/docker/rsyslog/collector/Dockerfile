@@ -14,7 +14,7 @@ ARG RSYSLOG_IMG_VERSION="unset"
 # This ensures common modules, core rsyslog setup, and imhttp are inherited.
 FROM ${BASE_IMAGE_TAG}
 
-# Re-declare ARGs after FROM to make them available to subsequent instructions like LABEL.
+# Redeclare ARGs after FROM to make them available to subsequent instructions like LABEL.
 ARG UBUNTU_VERSION
 ARG RSYSLOG_IMG_VERSION
 ARG BASE_IMAGE_TAG

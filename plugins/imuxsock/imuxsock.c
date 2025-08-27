@@ -474,7 +474,7 @@ static rsRetVal discardLogSockets(void) {
 /* used to create a log socket if NOT passed in via systemd.
  */
 /* note: the linux SUN_LEN macro uses a sizeof based on a NULL pointer. This
- * triggers UBSan warning. As such, we turn that warning off for the fuction.
+ * triggers UBSan warning. As such, we turn that warning off for the function.
  * As it is OS-provided, there is no way to solve it ourselves. The problem
  * may also exist on other platforms, we have just noticed it on Linux.
  */
@@ -675,7 +675,7 @@ static void fixPID(uchar *bufTAG, int *lenTag, struct ucred *cred) {
 
 
 /* Get an "trusted property" from the system. Returns an empty string if the
- * property can not be obtained. Inspired by similiar functionality inside
+ * property can not be obtained. Inspired by similar functionality inside
  * journald. Currently works with Linux /proc filesystem, only.
  */
 static rsRetVal getTrustedProp(struct ucred *cred, const char *propName, uchar *buf, size_t lenBuf, int *lenProp) {
@@ -1021,7 +1021,7 @@ static rsRetVal readSocket(lstn_t *pLstn) {
 
     /* we optimize performance: if iMaxLine is below 4K (which it is in almost all
      * cases, we use a fixed buffer on the stack. Only if it is higher, heap memory
-     * is used. We could use alloca() to achive a similar aspect, but there are so
+     * is used. We could use alloca() to achieve a similar aspect, but there are so
      * many issues with alloca() that I do not want to take that route.
      * rgerhards, 2008-09-02
      */

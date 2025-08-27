@@ -226,7 +226,7 @@ static int _regcomp(regex_t *preg, const char *regex, int cflags) {
     // Remove previous data if caller forgot to call regfree().
     remove_uncomp_regexp(preg);
 
-    // Make sure preg itself it correctly initalized.
+    // Make sure preg itself it correctly initialized.
     ret = regcomp(preg, regex, cflags);
     if (ret != 0) return ret;
 
@@ -369,7 +369,7 @@ BEGINmodInit()
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
     CHKiRet(regexpClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
-    /* Initialize all classes that are in our module - this includes ourselfs */
+    /* Initialize all classes that are in our module - this includes ourselves */
 ENDmodInit
 /* vi:set ai:
  */

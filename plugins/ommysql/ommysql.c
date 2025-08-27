@@ -1,5 +1,5 @@
 /* ommysql.c
- * This is the implementation of the build-in output module for MySQL.
+ * This is the implementation of the built-in output module for MySQL.
  *
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
@@ -249,7 +249,7 @@ static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, const uchar *const psz
         /* We assume server error codes are non-recoverable, mainly data errors.
          * This also means we need to differentiate between client and server error
          * codes. Unfortunately, the API does not provide a specified function for
-         * this. Howerver, error codes 2000..2999 are currently client error codes.
+         * this. However, error codes 2000..2999 are currently client error codes.
          * So we use this as guideline.
          */
         if (mysql_err < 2000 || mysql_err > 2999) {
@@ -264,14 +264,14 @@ static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, const uchar *const psz
             /* we failed, giving up for now */
             DBGPRINTF("ommysql: suspending due to failed write of '%s'\n", psz);
             reportDBError(pWrkrData, 0);
-            closeMySQL(pWrkrData); /* free ressources */
+            closeMySQL(pWrkrData); /* free resources */
             ABORT_FINALIZE(RS_RET_SUSPENDED);
         }
     }
 
 finalize_it:
     if (iRet == RS_RET_OK) {
-        pWrkrData->uLastMySQLErrno = 0; /* reset error for error supression */
+        pWrkrData->uLastMySQLErrno = 0; /* reset error for error suppression */
     }
 
     RETiRet;
@@ -430,7 +430,7 @@ BEGINparseSelectorAct
     CODE_STD_STRING_REQUESTparseSelectorAct(1)
         /* first check if this config line is actually for us
          * The first test [*p == '>'] can be skipped if a module shall only
-         * support the newer slection syntax [:modname:]. This is in fact
+         * support the newer selection syntax [:modname:]. This is in fact
          * recommended for new modules. Please note that over time this part
          * will be handled by rsyslogd itself, but for the time being it is
          * a good compromise to do it at the module level.

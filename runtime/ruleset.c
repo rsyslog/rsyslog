@@ -494,7 +494,7 @@ finalize_it:
 }
 
 /* The rainerscript execution engine. It is debatable if that would be better
- * contained in grammer/rainerscript.c, HOWEVER, that file focusses primarily
+ * contained in grammar/rainerscript.c, HOWEVER, that file focusses primarily
  * on the parsing and object creation part. So as an actual executor, it is
  * better suited here.
  * rgerhards, 2012-09-04
@@ -716,7 +716,7 @@ static rsRetVal rulesetConstructFinalize(rsconf_t *conf, ruleset_t *pThis) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, ruleset);
 
-    /* we must duplicate our name, as the key destructer would also
+    /* we must duplicate our name, as the key destructor would also
      * free it, resulting in a double-free. It's also cleaner to have
      * two separate copies.
      */

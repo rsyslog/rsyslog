@@ -289,6 +289,6 @@ BEGINmodInit()
     CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
-    /* Initialize all classes that are in our module - this includes ourselfs */
+    /* Initialize all classes that are in our module - this includes ourselves */
     CHKiRet(gssutilClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit

@@ -35,7 +35,7 @@ cd ..
 
 # prep rsyslog for submission
 autoreconf -vfi
-# explicit ./configure as this needs to be consistent accross all builds
+# explicit ./configure as this needs to be consistent across all builds
 # for Coverity
 ./configure -enable-testbench --enable-imdiag --enable-imfile --enable-impstats --enable-imptcp --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omruleset --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-libgcrypt --enable-mmnormalize --disable-omudpspoof --enable-relp=yes --enable-snmp --disable-mmsnmptrapd --enable-gnutls --enable-mysql=yes --enable-usertools=yes --enable-ksi-ls12 --enable-libdbi --enable-pgsql --enable-omhttpfs --enable-elasticsearch --enable-valgrind --enable-ommongodb --enable-omamqp1=no --enable-imjournal --enable-omjournal --enable-compile-warnings=error --enable-testbench --enable-compile-warnings=yes --without-valgrind-testbench --enable-omrelp-default-port=13515 --disable-liblogging-stdlog --enable-mmrm1stspace -enable-omkafka --enable-imkafka --enable-mmdblookup --enable-mmcount --enable-ommongodb --enable-openssl --enable-omhttp --enable-imdocker
 make clean

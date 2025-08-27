@@ -37,7 +37,7 @@ ruleset(name="spool" queue.type="direct") {
 }
 '
 startup
-# How many tcpfloods we run at the same tiem
+# How many tcpfloods we run at the same time
 for ((i=1;i<=5;i++)); do 
         # How many times tcpflood runs in each threads
 	./tcpflood -Trelp-plain -p$TCPFLOOD_PORT -m$NUMMESSAGES -s &

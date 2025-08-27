@@ -338,8 +338,8 @@ static int amqp_authenticate(wrkrInstanceData_t *self, amqp_connection_state_t a
 }
 
 /* This method establish a new connection
- * @self pointer on the worker datas
- * @server pointer on the server datas (preferred or backup)
+ * @self pointer on the worker data
+ * @server pointer on the server data (preferred or backup)
  * @return the connection state or NULL on error
  */
 static amqp_connection_state_t tryConnection(wrkrInstanceData_t *self, server_t *server) {
@@ -537,7 +537,7 @@ static void *run_connection_routine(void *arg) {
         if (!self->go_on) {
             go_on = 0;
             state_out = RS_RET_DISABLE_ACTION;
-            continue; /* lets go back to wile (go_on) and leave cleanly */
+            continue; /* lets go back to while (go_on) and leave cleanly */
         }
 
         if (self->serverActive == &self->serverBackup) {
@@ -587,7 +587,7 @@ static void *run_connection_routine(void *arg) {
         if (!self->go_on) {
             go_on = 0;
             state_out = RS_RET_DISABLE_ACTION;
-            continue; /* lets go back to wile (go_on) and leave cleanly */
+            continue; /* lets go back to while (go_on) and leave cleanly */
         }
 
         /* signal that the thread is started */

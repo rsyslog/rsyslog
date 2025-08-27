@@ -1,7 +1,7 @@
 #!/bin/bash
 # This tests a memory leak we have seen when processing internal error
 # message with the settings used in this test. We use imfile as it is
-# easist to reproduce this way. Note that we are only interested in
+# easiest to reproduce this way. Note that we are only interested in
 # whether or not we have a leak, not any other functionality. Most
 # importantly, we do not care if the error message appears or not. This
 # is because it is not so easy to pick it up from the system log and other

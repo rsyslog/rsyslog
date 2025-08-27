@@ -244,7 +244,7 @@ static modConfData_t *loadModConf = NULL;
 static modConfData_t *runModConf = NULL;
 
 static prop_t *pInputName = NULL; /* our inputName currently is always "imdocker", and this will hold it */
-static prop_t *pLocalHostIP = NULL; /* a pseudo-constant propterty for 127.0.0.1 */
+static prop_t *pLocalHostIP = NULL; /* a pseudo-constant property for 127.0.0.1 */
 
 static ratelimit_t *ratelimiter = NULL;
 
@@ -832,7 +832,7 @@ BEGINsetModCnf
             loadModConf->listContainersOptions = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(modpblk.descr[i].name, "getcontainerlogoptions")) {
             CHKmalloc(loadModConf->getContainerLogOptions = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-            /* also intialize the non-tail version */
+            /* also initialize the non-tail version */
             size_t offset = 0;
             size_t option_str_len = strlen((char *)loadModConf->getContainerLogOptions);
             CHKmalloc(buf = strdup((char *)loadModConf->getContainerLogOptions));
@@ -1205,7 +1205,7 @@ static rsRetVal SubmitMsg(docker_cont_logs_inst_t *pInst, docker_cont_logs_buf_t
  *
  * Callback function for CURLOPT_WRITEFUNCTION, gets container logs
  *
- * The main container log stream handler. This function is registerred with curl to
+ * The main container log stream handler. This function is registered with curl to
  * as callback to handle container log streaming. It follows the docker stream protocol
  * as described in the docker container logs api. As per docker's api documentation,
  * Docker Stream format:

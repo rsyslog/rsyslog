@@ -1,5 +1,5 @@
 /* immark.c
- * This is the implementation of the build-in mark message input module.
+ * This is the implementation of the built-in mark message input module.
  *
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
@@ -257,7 +257,7 @@ finalize_it:
  * We are running on our own thread, so this is extremely easy: we just
  * sleep MarkInterval seconds and each time we awake, we inject the message.
  * Please note that we do not do the other fancy things that sysklogd
- * (and pre 1.20.2 releases of rsyslog) did in mark procesing. They simply
+ * (and pre 1.20.2 releases of rsyslog) did in mark processing. They simply
  * do not belong here.
  */
 BEGINrunInput

@@ -155,7 +155,7 @@ success=50
 badarg=50
 ./msleep 5000
 injectmsg 0 $NUMMESSAGES
-./msleep 1500; cat $RSYSLOG_OUT_LOG # debuging - we sometimes miss 1 message
+./msleep 1500; cat $RSYSLOG_OUT_LOG # debugging - we sometimes miss 1 message
 wait_content '"response.success": 50' $RSYSLOG_DYNNAME.spool/es-stats.log
 wait_content '"response.badargument": 50' $RSYSLOG_DYNNAME.spool/es-stats.log
 shutdown_when_empty

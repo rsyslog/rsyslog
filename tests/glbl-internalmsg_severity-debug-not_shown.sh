@@ -1,7 +1,7 @@
 #!/bin/bash
 # check that info-severity messages are actually emitted; we use
 # lookup table as a simple sample to get such a message.
-# addd 2019-05-07 by RGerhards, released under ASL 2.0
+# add 2019-05-07 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '

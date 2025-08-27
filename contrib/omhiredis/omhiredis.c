@@ -57,7 +57,7 @@ DEF_OMOD_STATIC_DATA;
 #define OMHIREDIS_MODE_STREAM 4
 
 /* our instance data.
- * this will be accessable
+ * this will be accessible
  * via pData */
 typedef struct _instanceData {
     uchar *server; /* redis server address */

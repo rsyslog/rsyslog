@@ -18,7 +18,7 @@
 .. _RsyslogDockerHub: https://hub.docker.com/u/rsyslog/
 
 .. |GitHubDockerProject| replace:: rsyslog docker definitions
-.. _GitHubDockerProject: https://github.com/rsyslog/rsyslog/packging/docker
+.. _GitHubDockerProject: https://github.com/rsyslog/rsyslog/packaging/docker
 
 .. |DockerApplianceAlpineDockerHubRepo| replace:: Alpine rsyslog appliance Docker Hub repo
 .. _DockerApplianceAlpineDockerHubRepo: https://hub.docker.com/r/rsyslog/syslog_appliance_alpine/

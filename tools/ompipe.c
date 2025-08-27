@@ -1,5 +1,5 @@
 /* ompipe.c
- * This is the implementation of the build-in pipe output module.
+ * This is the implementation of the built-in pipe output module.
  * Note that this module stems back to the "old" (4.4.2 and below)
  * omfile. There were some issues with the new omfile code and pipes
  * (namely in regard to xconsole), so we took out the pipe code and moved
@@ -40,8 +40,14 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <pthread.h>
 #include <unistd.h>
+#ifdef HAVE_SYS_FILE_H
 #include <sys/file.h>
+#endif
+#include <sys/types.h>
+#include <sys/select.h>
+#include <sys/time.h>
 
 #include "rsyslog.h"
 #include "syslogd.h"
@@ -133,7 +139,7 @@ ENDdbgPrintInstInfo
 
 
 /* This is now shared code for all types of files. It simply prepares
- * pipe access, which, among others, means the the pipe wil be opened
+ * pipe access, which, among others, means the pipe will be opened
  * and any directories in between will be created (based on config, of
  * course). -- rgerhards, 2008-10-22
  * changed to iRet interface - 2009-03-19

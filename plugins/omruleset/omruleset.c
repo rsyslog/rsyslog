@@ -121,7 +121,7 @@ BEGINtryResume
 ENDtryResume
 
 /* Note that we change the flow control type to "no delay", because at this point in
- * rsyslog procesing we can not really slow down the producer any longer, as we already
+ * rsyslog processing we can not really slow down the producer any longer, as we already
  * work off a queue. So a delay would just block out execution for longer than needed.
  */
 BEGINdoAction_NoStrings

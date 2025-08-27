@@ -138,7 +138,7 @@ finalize_it:
 }
 
 
-/* construct from a printf-style formated string
+/* construct from a printf-style formatted string
  */
 rsRetVal rsCStrConstructFromszStrf(cstr_t **ppThis, const char *fmt, ...) {
     DEFiRet;
@@ -211,7 +211,7 @@ void rsCStrDestruct(cstr_t **const ppThis) {
 
 
 /* extend the string buffer if its size is insufficient.
- * Param iMinNeeded is the minumum free space needed. If it is larger
+ * Param iMinNeeded is the minimum free space needed. If it is larger
  * than the default alloc increment, space for at least this amount is
  * allocated. In practice, a bit more is allocated because we envision that
  * some more characters may be added after these.
@@ -229,7 +229,7 @@ static rsRetVal rsCStrExtendBuf(cstr_t *const __restrict__ pThis, const size_t i
          * leave some room after the absolutely needed one. It also
          * reduces memory fragmentation. Note that all of this are
          * integer operations (very important to understand what is
-         * going on)! Parenthesis are for better readibility.
+         * going on)! Parenthesis are for better readability.
          */
         iNewSize = (iMinNeeded / RS_STRINGBUF_ALLOC_INCREMENT + 1) * RS_STRINGBUF_ALLOC_INCREMENT;
     } else {
@@ -307,7 +307,7 @@ rsRetVal cstrAppendCStr(cstr_t *pThis, cstr_t *pstrAppend) {
 }
 
 
-/* append a printf-style formated string
+/* append a printf-style formatted string
  */
 rsRetVal rsCStrAppendStrf(cstr_t *pThis, const char *fmt, ...) {
     DEFiRet;
@@ -342,7 +342,7 @@ finalize_it:
 
 
 /* Sets the string object to the classigal sz-string provided.
- * Any previously stored vlaue is discarded. If a NULL pointer
+ * Any previously stored value is discarded. If a NULL pointer
  * the the new value (pszNew) is provided, an empty string is
  * created (this is NOT an error!).
  * rgerhards, 2005-10-18
@@ -389,7 +389,7 @@ uchar *cstrGetSzStrNoNULL(cstr_t *const __restrict__ pThis) {
  * no memory can be allocated.
  *
  * This is the NEW replacement for rsCStrConvSzStrAndDestruct which does
- * no longer utilize a special buffer but soley works on pBuf (and also
+ * no longer utilize a special buffer but solely works on pBuf (and also
  * assumes that cstrFinalize had been called).
  *
  * Parameters are as follows:
@@ -426,7 +426,7 @@ rsRetVal cstrConvSzStrAndDestruct(cstr_t **ppThis, uchar **ppSz, int bRetNULL) {
     *ppSz = pRetBuf;
 
 finalize_it:
-    /* We got it, now free the object ourselfs. Please note
+    /* We got it, now free the object ourselves. Please note
      * that we can NOT use the rsCStrDestruct function as it would
      * also free the sz String buffer, which we pass on to the user.
      */
@@ -663,7 +663,7 @@ int rsCStrOffsetSzStrCmp(cstr_t *pCS1, size_t iOffset, uchar *psz, size_t iLenSz
  * provided. If the caller does not know the length he can
  * call with
  * rsCstrSzStrCmp(pCS, psz, strlen((char*)psz));
- * we are not doing the strlen((char*)) ourselfs as the caller might
+ * we are not doing the strlen((char*)) ourselves as the caller might
  * already know the length and in such cases we can save the
  * overhead of doing it one more time (strelen() is costly!).
  * The bottom line is that the provided length MUST be correct!

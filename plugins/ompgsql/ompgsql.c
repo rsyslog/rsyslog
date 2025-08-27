@@ -1,5 +1,5 @@
 /* ompgsql.c
- * This is the implementation of the build-in output module for PgSQL.
+ * This is the implementation of the built-in output module for PgSQL.
  *
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
@@ -282,14 +282,14 @@ static rsRetVal writePgSQL(uchar *psz, wrkrInstanceData_t *pWrkrData) {
         if (bHadError || (PQstatus(pWrkrData->f_hpgsql) != CONNECTION_OK)) {
             /* we failed, giving up for now */
             reportDBError(pWrkrData, 0);
-            closePgSQL(pWrkrData); /* free ressources */
+            closePgSQL(pWrkrData); /* free resources */
             ABORT_FINALIZE(RS_RET_SUSPENDED);
         }
     }
 
 finalize_it:
     if (iRet == RS_RET_OK) {
-        pWrkrData->eLastPgSQLStatus = CONNECTION_OK; /* reset error for error supression */
+        pWrkrData->eLastPgSQLStatus = CONNECTION_OK; /* reset error for error suppression */
     }
 
     RETiRet;
@@ -348,7 +348,7 @@ BEGINcommitTransaction
 
 finalize_it:
     if (iRet == RS_RET_OK) {
-        pWrkrData->eLastPgSQLStatus = CONNECTION_OK; /* reset error for error supression */
+        pWrkrData->eLastPgSQLStatus = CONNECTION_OK; /* reset error for error suppression */
     }
 
 ENDcommitTransaction
@@ -480,7 +480,7 @@ BEGINparseSelectorAct
     CODE_STD_STRING_REQUESTparseSelectorAct(1)
         /* first check if this config line is actually for us
          * The first test [*p == '>'] can be skipped if a module shall only
-         * support the newer slection syntax [:modname:]. This is in fact
+         * support the newer selection syntax [:modname:]. This is in fact
          * recommended for new modules. Please note that over time this part
          * will be handled by rsyslogd itself, but for the time being it is
          * a good compromise to do it at the module level.

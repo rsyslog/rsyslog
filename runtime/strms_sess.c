@@ -192,7 +192,7 @@ static rsRetVal DataRcvd(strms_sess_t *pThis, char *pData, size_t iLen) {
     assert(iLen > 0);
 
     /* We now copy the message to the session buffer. */
-    pEnd = pData + iLen; /* this is one off, which is intensional */
+    pEnd = pData + iLen; /* this is one off, which is intentional */
 
     while (pData < pEnd) {
         CHKiRet(pThis->pSrv->OnCharRcvd(pThis, (uchar)*pData++));

@@ -2,7 +2,7 @@
 # check that global ruleset queue defaults can be specified. However,
 # we do not tests that they actually work - that's quite hard to
 # do reliably.
-# addd 2019-05-09 by RGerhards, released under ASL 2.0
+# add 2019-05-09 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '

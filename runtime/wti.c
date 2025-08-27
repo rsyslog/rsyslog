@@ -7,7 +7,7 @@
  *
  * There is some in-depth documentation available in doc/dev_queue.html
  * (and in the web doc set on https://www.rsyslog.com/doc/). Be sure to read it
- * if you are getting aquainted to the object.
+ * if you are getting acquainted to the object.
  *
  * Copyright 2008-2025 Adiscon GmbH.
  *
@@ -365,7 +365,7 @@ PRAGMA_IGNORE_Wempty_body rsRetVal wtiWorker(wti_t *__restrict__ const pThis) {
      * this is not true: it actually is unlocked when the actual processing
      * is done, as part of pWtp->pfDoWork() processing. Note that this
      * function is required to re-lock it when done. We cannot do the
-     * lock/unlock here ourselfs, as pfDoWork() needs to access queue
+     * lock/unlock here ourselves, as pfDoWork() needs to access queue
      * structures itself.
      * The same goes for pfRateLimiter(). While we could unlock/lock when
      * we call it, in practice the function is often called without any

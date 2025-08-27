@@ -655,7 +655,7 @@ static void setKey(void) {
     }
 }
 
-/* Retrieve algorithm and mode from the choosen library. In libgcrypt,
+/* Retrieve algorithm and mode from the chosen library. In libgcrypt,
 this is done in two steps (AES128 + CBC). However, other libraries expect this to be
 expressed in a single step, e.g. AES-128-CBC in openssl */
 static void setAlgoMode(char *algo, char *mode) {

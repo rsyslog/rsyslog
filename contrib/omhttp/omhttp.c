@@ -721,7 +721,7 @@ static rsRetVal ATTR_NONNULL()
     DBGPRINTF("omhttp: error record: '%s'\n", rendered);
     toWrite = strlen(rendered) + 1;
     /* Note: we overwrite the '\0' terminator with '\n' -- so we avoid
-     * caling malloc() -- write() does NOT need '\0'!
+     * calling malloc() -- write() does NOT need '\0'!
      */
     rendered[toWrite - 1] = '\n'; /* NO LONGER A STRING! */
     wrRet = write(pData->fdErrFile, rendered, toWrite);
@@ -1076,7 +1076,7 @@ static rsRetVal ATTR_NONNULL() buildCurlHeaders(wrkrInstanceData_t *pWrkrData, s
         slist = curl_slist_append(slist, (char *)pWrkrData->pData->headerContentTypeBuf);
     } else {
         if (pWrkrData->pData->batchMode) {
-            // If in batch mode, use the approprate content type header for the format,
+            // If in batch mode, use the appropriate content type header for the format,
             // defaulting to text/plain with newline
             switch (pWrkrData->pData->batchFormat) {
                 case FMT_JSONARRAY:

@@ -1,5 +1,5 @@
 /* omfwd.h
- * These are the definitions for the build-in forwarding output module.
+ * These are the definitions for the built-in forwarding output module.
  *
  * File begun on 2007-07-13 by RGerhards
  *

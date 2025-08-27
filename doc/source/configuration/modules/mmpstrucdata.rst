@@ -77,7 +77,7 @@ in user variables before anonymization).
 
 Take this example message (inspired by RFC5424 sample;)):
 
-``<34>1 2003-10-11T22:14:15.003Z mymachine.example.com su - ID47 [exampleSDID@32473 iut="3" eventSource="Application" eventID="1011"][id@2 test="tast"] BOM'su root' failed for lonvick on /dev/pts/8``
+``<34>1 2003-10-11T22:14:15.003Z mymachine.example.com su - ID47 [exampleSDID@32473 iut="3" eventSource="Application" eventID="1011"][id@2 test="task"] BOM'su root' failed for lonvick on /dev/pts/8``
 
 We apply this configuration:
 
@@ -93,7 +93,7 @@ We apply this configuration:
 
 This will output:
 
-``ALL: { "rfc5424-sd": { "examplesdid@32473": { "iut": "3", "eventsource": "Application", "eventid": "1011" }, "id@2": { "test": "tast" } } } SD: { "examplesdid@32473": { "iut": "3", "eventsource": "Application", "eventid": "1011" }, "id@2": { "test": "tast" } } IUT:3 RAWMSG: <34>1 2003-10-11T22:14:15.003Z mymachine.example.com su - ID47 [exampleSDID@32473 iut="3" eventSource="Application" eventID="1011"][id@2 test="tast"] BOM'su root' failed for lonvick on /dev/pts/8``
+``ALL: { "rfc5424-sd": { "examplesdid@32473": { "iut": "3", "eventsource": "Application", "eventid": "1011" }, "id@2": { "test": "task" } } } SD: { "examplesdid@32473": { "iut": "3", "eventsource": "Application", "eventid": "1011" }, "id@2": { "test": "task" } } IUT:3 RAWMSG: <34>1 2003-10-11T22:14:15.003Z mymachine.example.com su - ID47 [exampleSDID@32473 iut="3" eventSource="Application" eventID="1011"][id@2 test="task"] BOM'su root' failed for lonvick on /dev/pts/8``
 
 As you can seem, you can address each of the individual items. Note that
 the case of the RFC5424 parameter names has been converted to lower

@@ -535,7 +535,7 @@ static rsRetVal ATTR_NONNULL() prepareDynTopic(instanceData *__restrict__ const 
     }
     STATSCOUNTER_INC(ctrCacheMiss, mutCtrCacheMiss);
 
-    /* invalidate iCurrElt as we may error-exit out of this function when the currrent
+    /* invalidate iCurrElt as we may error-exit out of this function when the current
      * iCurrElt has been freed or otherwise become unusable. This is a precaution, and
      * performance-wise it may be better to do that in each of the exits. However, that
      * is error-prone, so I prefer to do it here. -- rgerhards, 2010-03-02
@@ -1239,7 +1239,7 @@ getConfiguredPartitions()
 		rd_kafka_metadata_destroy(pMetadata);
 	} else {
 		dbgprintf("omkafka: error reading metadata\n");
-		// TODO: handle this gracefull **when** we actually need
+		// TODO: handle this graceful **when** we actually need
 		// the metadata -- or remove completely. 2014-12-12 rgerhards
 	}
 }
@@ -1510,7 +1510,7 @@ static rsRetVal loadFailedMsgs(instanceData *const __restrict__ pData) {
                 }
                 SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
             } else {
-                LogError(0, RS_RET_ERR, "omkafka: loadFailedMsgs droping invalid msg found: %s",
+                LogError(0, RS_RET_ERR, "omkafka: loadFailedMsgs dropping invalid msg found: %s",
                          (char *)rsCStrGetSzStrNoNULL(pCStr));
             }
         }

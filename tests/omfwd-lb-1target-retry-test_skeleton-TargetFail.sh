@@ -1,6 +1,6 @@
 #!/bin/bash
 # added 2024-02-19 by rgerhards. Released under ASL 2.0
-# This test is not meant to be executed independetly. It just permits
+# This test is not meant to be executed independently. It just permits
 # to be called by different drivers with different io buffer sizes.
 # This in turn is needed to test some edge cases.
 . ${srcdir:=.}/diag.sh init

@@ -1,5 +1,5 @@
 /* omshell.c
- * These are the definitions for the build-in shell output module.
+ * These are the definitions for the built-in shell output module.
  *
  * File begun on 2007-07-13 by RGerhards (extracted from syslogd.c)
  *

@@ -330,8 +330,8 @@ BEGINparse2
 
     /* Check to see if msg contains a timestamp. We start by assuming
      * that the message timestamp is the time of reception (which we
-     * generated ourselfs and then try to actually find one inside the
-     * message. There we go from high-to low precison and are done
+     * generated ourselves and then try to actually find one inside the
+     * message. There we go from high-to low precision and are done
      * when we find a matching one. -- rgerhards, 2008-09-16
      */
     int bFoundTimestamp = 0; /**< indicates if we found a timestamp or not */

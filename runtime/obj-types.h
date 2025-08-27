@@ -352,7 +352,7 @@ finalize_it:                                            \
  * obtain the interface and can then call through it.
  *
  * The interface data type must always be called <obj>_if_t, as this is expected
- * by the macros. Having consitent naming is also easier for the programmer. By default,
+ * by the macros. Having consistent naming is also easier for the programmer. By default,
  * macros create a static variable named like the object in each calling objects
  * static data block.
  *

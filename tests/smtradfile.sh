@@ -1,5 +1,5 @@
 #!/bin/bash
-# addd 2019-04-15 by RGerhards, released under ASL 2.0
+# add 2019-04-15 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '

@@ -82,7 +82,7 @@ static rsRetVal DestructParserList(parserList_t **ppListRoot) {
 }
 
 
-/* Add a parser to the list. We use a VERY simple and ineffcient algorithm,
+/* Add a parser to the list. We use a VERY simple and inefficient algorithm,
  * but it is employed only for a few milliseconds during config processing. So
  * I prefer to keep it very simple and with simple data structures. Unfortunately,
  * we need to preserve the order, but I don't like to add a tail pointer as that
@@ -237,9 +237,9 @@ rsRetVal parserConstructViaModAndName(modInfo_t *__restrict__ pMod, uchar *const
     }
     CHKiRet(parserConstruct(&pParser));
     /* check some features */
-    localRet = pMod->isCompatibleWithFeature(sFEATUREAutomaticSanitazion);
+    localRet = pMod->isCompatibleWithFeature(sFEATUREAutomaticSanitization);
     if (localRet == RS_RET_OK) {
-        pParser->bDoSanitazion = RSTRUE;
+        pParser->bDoSanitization = RSTRUE;
     }
     localRet = pMod->isCompatibleWithFeature(sFEATUREAutomaticPRIParsing);
     if (localRet == RS_RET_OK) {
@@ -372,7 +372,7 @@ static rsRetVal SanitizeMsg(smsg_t *pMsg) {
      * this and terminate when it is not needed - which is expectedly the case
      * for the vast majority of messages. -- rgerhards, 2009-06-15
      * Note that we do NOT check here if tab characters are to be escaped or
-     * not. I expect this functionality to be seldomly used and thus I do not
+     * not. I expect this functionality to be seldom used and thus I do not
      * like to pay the performance penalty. So the penalty is only with those
      * that actually use it, because we may call the sanitizer without actual
      * need below (but it then still will work perfectly well!). -- rgerhards, 2009-11-27
@@ -515,7 +515,7 @@ finalize_it:
 }
 
 /* A standard parser to parse out the PRI. This is made available in
- * this module as it is expected that allmost all parsers will need
+ * this module as it is expected that almost all parsers will need
  * that functionality and so they do not need to implement it themsleves.
  */
 static rsRetVal ParsePRI(smsg_t *pMsg) {
@@ -578,7 +578,7 @@ static rsRetVal ParseMsg(smsg_t *pMsg) {
     /* we now need to go through our list of parsers and see which one is capable of
      * parsing the message. Note that the first parser that requires message sanitization
      * will cause it to happen. After that, access to the unsanitized message is no
-     * loger possible.
+     * logger possible.
      */
     pParserList = ruleset.GetParserList(runConf, pMsg);
     if (pParserList == NULL) {
@@ -591,7 +591,7 @@ static rsRetVal ParseMsg(smsg_t *pMsg) {
     bPRIisParsed = RSFALSE;
     while (pParserList != NULL) {
         pParser = pParserList->pParser;
-        if (pParser->bDoSanitazion && bIsSanitized == RSFALSE) {
+        if (pParser->bDoSanitization && bIsSanitized == RSFALSE) {
             CHKiRet(SanitizeMsg(pMsg));
             if (pParser->bDoPRIParsing && bPRIisParsed == RSFALSE) {
                 CHKiRet(ParsePRI(pMsg));
