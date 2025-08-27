@@ -141,7 +141,7 @@ A ``lookup`` call looks like:
 ::
 
    set $.bu = lookup("host_bu", $hostname);
-   
+
    if ($.bu == "unknown") then {
        ....
    }

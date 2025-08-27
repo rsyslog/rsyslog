@@ -64,7 +64,7 @@ if someone has asked for the feature). So we do not like to wait for the
 original focus feature to be ready (what could take maybe three more
 weeks). As a result, we release the new features. But that version will
 also include partial code of the focus feature. Typically this doesn't
-hurt as long as noone tries to use it (what of course would miserably
+hurt as long as no one tries to use it (what of course would miserably
 fail). But still, part of the new code is already in it. When we release
 such a "minor-feature enhanced" but "focus-feature not yet completed"
 version, we need a way to flag it. In current thinking, that is using a

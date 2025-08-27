@@ -65,7 +65,7 @@ ServerPassword
 
 Password to support authenticated redis database server to push messages
 across networks and datacenters. Parameter is optional if not provided
-AUTH command wont be sent to the server.
+AUTH command won't be sent to the server.
 
 
 Mode

@@ -33,7 +33,7 @@ directory it resides after processing each batch. There currently
 is no way to sync only after each n-th batch.
 
 Enabling sync causes a severe performance hit. Actually,
-it slows omfile so much down, that the probability of loosing messages
+it slows omfile so much down, that the probability of losing messages
 **increases**. In short,
 you should enable syncing only if you know exactly what you do, and
 fully understand how the rest of the engine works, and have tuned
