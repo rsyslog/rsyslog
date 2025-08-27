@@ -5,13 +5,15 @@ on:
     - cron: "*/5 * * * *"
   workflow_dispatch:
 
-concurrency:
-  group: welcome-pr-scanner
-  cancel-in-progress: true
-
 permissions:
   contents: read
-  pull-requests: write
+  pull-requests: read
+  issues: write
+
+# avoid canceling runs if queue is busy
+concurrency:
+  group: welcome-pr-scanner
+  cancel-in-progress: false
 
 jobs:
   scan:
@@ -28,36 +30,61 @@ jobs:
             const MARKER = "<!-- rsyslog-welcome-bot:v1 -->";
             const sinceISO = new Date(Date.now() - 24*60*60*1000).toISOString();
 
-            // 1) List open PRs created in last 24h (server-side filter)
+            // helper: english ordinal, no i18n complexity
+            function ordinal(n) {
+              const s = ["th","st","nd","rd"], v = n % 100;
+              return n + (s[(v-20)%10] || s[v] || s[0]);
+            }
+
+            core.info(`Repo: ${owner}/${repo} | Window: created >= ${sinceISO}`);
+
+            // PRs opened in the last 24h (server-side filter)
             const q = `repo:${owner}/${repo} is:pr is:open created:>=${sinceISO}`;
             const items = await github.paginate(
               github.rest.search.issuesAndPullRequests,
               { q, sort: "created", order: "desc", per_page: 100 },
-              (res) => res.data.items
+              (res) => res?.data?.items ?? []   // <-- guard against undefined
             );
 
+            core.info(`Found ${items.length} open PR(s) in the last 24h`);
+
+            const now = Date.now();
+
             for (const it of items) {
+              // guard: skip any weird/empty entry
+              if (!it || typeof it.number !== "number" || !it.user) {
+                core.info(`Skip malformed search item: ${JSON.stringify(it ?? {})}`);
+                continue;
+              }
+
               const number = it.number;
+              const pr_creator = it.user.login;
 
               // Skip bot accounts
-              if (it.user?.type === "Bot") continue;
+              if (it.user?.type === "Bot") {
+                core.info(`#${number} by ${pr_creator}: skip bot`);
+                continue;
+              }
 
               // Idempotency: skip if marker already present
               const comments = await github.paginate(
                 github.rest.issues.listComments,
                 { owner, repo, issue_number: number, per_page: 100 }
               );
-              if (comments.some(c => c.body?.includes(MARKER))) continue;
-
-              const pr_creator = it.user.login;
+              if (comments.some(c => c.body?.includes(MARKER))) {
+                core.info(`#${number}: marker present -> skip`);
+                continue;
+              }
 
               // Account age (days) - best effort
               let account_age_days = 0;
               try {
                 const u = await github.rest.users.getByUsername({ username: pr_creator });
                 const createdAt = new Date(u.data.created_at).getTime();
-                account_age_days = Math.max(0, Math.floor((Date.now() - createdAt) / 86400000));
-              } catch { /* ignore */ }
+                account_age_days = Math.max(0, Math.floor((now - createdAt) / 86400000));
+              } catch (e) {
+                core.info(`#${number}: user lookup failed (${e.status || e.message}) -> default age 0`);
+              }
 
               // Number of merged PRs to THIS repo by this author
               let merged_prs = 0;
@@ -65,7 +92,9 @@ jobs:
                 const qMerged = `repo:${owner}/${repo} is:pr is:merged author:${pr_creator}`;
                 const res = await github.rest.search.issuesAndPullRequests({ q: qMerged, per_page: 1 });
                 merged_prs = res.data.total_count || 0;
-              } catch { /* ignore */ }
+              } catch (e) {
+                core.info(`#${number}: merged count lookup failed -> assume 0`);
+              }
 
               // Total public commits for the user (best effort)
               let total_public_commits = 0;
@@ -76,15 +105,20 @@ jobs:
                   headers: { accept: 'application/vnd.github.v3.text-match+json' }
                 });
                 total_public_commits = res.data.total_count || 0;
-              } catch { /* ignore */ }
+              } catch (e) {
+                core.info(`#${number}: commit search failed -> assume 0`);
+              }
 
-              // --- Exit Condition: Do not comment if the user is a seasoned contributor to this repo. ---
+              core.info(`#${number} by ${pr_creator} | age=${account_age_days}d merged_here=${merged_prs} commits=${total_public_commits}`);
+
+              // Exit for seasoned contributors
               if (merged_prs >= 30) {
-                core.info(`PR #${number}: ${pr_creator} has ${merged_prs} merged PRs - skipping.`);
+                core.info(`#${number}: seasoned contributor -> skip`);
                 continue;
               }
 
-              // --- Build the core welcome based on account age. ---
+              // --- Your original wording below ---
+
               let welcomeIntro = `👋 **Welcome, @${pr_creator}!**`;
               if (account_age_days < 30) {
                 welcomeIntro += ` We especially appreciate developers like you who are new to the platform choosing to contribute to our project!`;
@@ -94,27 +128,23 @@ jobs:
                 welcomeIntro += ` We're thrilled to see your contribution!`;
               }
 
-              // --- Build the core message based on the number of merged PRs to THIS repo. ---
               let mainMessage = '';
-              // Condition for the very first PR ever on GitHub.
               if (merged_prs === 0 && total_public_commits === 0) {
                 mainMessage = `Thank you for your very first PR on GitHub! We are happy you have chosen rsyslog to begin your open source journey.`;
               } else if (merged_prs === 0) {
                 mainMessage = `Thank you for your very first PR with us!`;
               } else if (merged_prs < 10) {
-              mainMessage = `This is your ${Intl.NumberFormat('en', { style: 'ordinal' }).format(merged_prs + 1)} PR here. Glad you are sticking with us.`;
+                // fixed: ordinal helper, not Intl.NumberFormat
+                mainMessage = `This is your ${ordinal(merged_prs + 1)} PR with us! We're so glad you're sticking with us.`;
               } else { // merged_prs >= 10 && < 30
                 mainMessage = `Thank you for your continued contributions!`;
               }
 
-              // --- Add policy info for all new contributors to the repo (less than 30 merged PRs). ---
               let policyMessage = '';
               if (merged_prs < 30) {
                 policyMessage = `\nAll contributions undergo automated and manual review. To help us merge your PR faster, please read the comments from automated tools and either implement the suggested fixes or add a short note on why they're not taken.`;
               }
 
-              // --- Add messages based on the user's overall GitHub public commit history. ---
-              // This is only included if it is not their first ever PR on GitHub.
               let generalMessage = '';
               if (!(merged_prs === 0 && total_public_commits === 0)) {
                 if (total_public_commits < 10) {
@@ -126,10 +156,13 @@ jobs:
                 }
               }
 
-              // Combine and post (marker-only idempotency)
               const finalMessage = `${MARKER}\n${welcomeIntro}\n\n${mainMessage}${policyMessage}${generalMessage}`;
 
               await github.rest.issues.createComment({
                 owner, repo, issue_number: number, body: finalMessage
               });
+
+              core.info(`#${number}: welcome posted`);
             }
+
+            core.info("Done.");
