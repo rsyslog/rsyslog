@@ -1,6 +1,0 @@
-#/bin/sh
-# must be called with the certificate file as first parameter. Displays all
-# fingerprints for the first certificate.
-# 2008-05-08, rgerhards
-# TODO: make this a robust shell script
-certtool -i < $1|grep Fingerprint
