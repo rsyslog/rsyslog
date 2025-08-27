@@ -1,8 +1,0 @@
-{
-  "version": 1,
-  "nomatch": "baz",
-  "type" : "string",
-  "table":[
-      {"value":"foo" },
-      {"value":"bar" }]
-}

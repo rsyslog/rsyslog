@@ -1,6 +1,0 @@
-This directory contains scripts and other files
-related to the various Continuous Integration
-environments.
-
-Note: for historical reasons, travis support is
-currently under ./tests/travis

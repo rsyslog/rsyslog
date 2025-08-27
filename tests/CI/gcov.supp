@@ -1,6 +1,0 @@
-{
-   gcc -coverage exceptions
-   Helgrind:Race
-   fun:__gcov_merge_add
-   ...
-}
