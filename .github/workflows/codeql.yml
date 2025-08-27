@@ -31,11 +31,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ python, cpp ]
+        language: [ python, cpp, actions ]
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
 
       - name: Install Packages (cpp)
         if: ${{ matrix.language == 'cpp' }}
