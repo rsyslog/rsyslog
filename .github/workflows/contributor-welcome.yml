@@ -80,7 +80,7 @@ jobs:
             } else if (merged_prs === 0) {
               mainMessage = `Thank you for your first PR with us!`;
             } else if (merged_prs < 10) {
-              mainMessage = `This is your ${merged_prs + 1}st PR here. Glad you are sticking with us.`;
+              mainMessage = `This is your ${Intl.NumberFormat('en', { style: 'ordinal' }).format(merged_prs + 1)} PR here. Glad you are sticking with us.`;
             } else {
               mainMessage = `Thank you for your continued contributions!`;
             }
