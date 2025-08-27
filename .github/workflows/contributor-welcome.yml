@@ -1,111 +1,135 @@
-name: Generate Contributor Welcome Message
+name: Generate Contributor Welcome Message (scheduled)
 
 on:
-  pull_request_target:
-    types: [opened]
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: welcome-pr-scanner
+  cancel-in-progress: true
 
 permissions:
   contents: read
   pull-requests: write
 
 jobs:
-  check-info:
+  scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Get Contributor Info
-        id: contributor_info
-        run: |
-          set -euo pipefail
-          pr_creator="${{ github.event.pull_request.user.login }}"
-          repo_owner="${{ github.repository_owner }}"
-          repo_name="${{ github.event.repository.name }}"
-
-          # Account creation date
-          created_at=$(curl -s -H "Authorization: Bearer ${{ github.token }}" \
-            "https://api.github.com/users/$pr_creator" | jq -r '.created_at // empty')
-          if [ -n "${created_at:-}" ]; then
-            created_date=$(date -d "$created_at" '+%s')
-            current_date=$(date '+%s')
-            account_age_days=$(( (current_date - created_date) / 86400 ))
-          else
-            account_age_days=0
-          fi
-
-          # Count merged PRs by this author in THIS repo
-          merged_prs=$(curl -s -H "Authorization: Bearer ${{ github.token }}" \
-            "https://api.github.com/search/issues?q=repo:$repo_owner/$repo_name+is:pr+is:merged+author:$pr_creator" \
-            | jq '.total_count // 0')
-
-          # Public commit count (optional; preview header kept for compatibility)
-          total_public_commits=$(curl -s \
-            -H "Authorization: Bearer ${{ github.token }}" \
-            -H "Accept: application/vnd.github.cloak-preview+json" \
-            "https://api.github.com/search/commits?q=author:$pr_creator" \
-            | jq '.total_count // 0')
-
-          {
-            echo "pr_creator=$pr_creator"
-            echo "account_age_days=$account_age_days"
-            echo "merged_prs=$merged_prs"
-            echo "total_public_commits=$total_public_commits"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Add Public Welcome Message
-        id: welcome_message
+      - name: Scan recent PRs and post welcome (marker-only)
         uses: actions/github-script@v7
         with:
           script: |
-            const pr_creator = '${{ steps.contributor_info.outputs.pr_creator }}';
-            const account_age_days = parseInt('${{ steps.contributor_info.outputs.account_age_days }}', 10);
-            const merged_prs = parseInt('${{ steps.contributor_info.outputs.merged_prs }}', 10);
-            const total_public_commits = parseInt('${{ steps.contributor_info.outputs.total_public_commits }}', 10);
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
 
-            if (Number.isNaN(merged_prs) || merged_prs >= 30) {
-              core.info('Seasoned contributor or unknown count. Skipping welcome.');
-              return;
-            }
+            const MARKER = "<!-- rsyslog-welcome-bot:v1 -->";
+            const sinceISO = new Date(Date.now() - 24*60*60*1000).toISOString();
 
-            let welcomeIntro = `👋 **Welcome, @${pr_creator}!**`;
-            if (account_age_days < 30) {
-              welcomeIntro += ` Great to see a new developer contributing!`;
-            } else if (account_age_days < 365) {
-              welcomeIntro += ` Happy to see you growing on GitHub and choosing rsyslog.`;
-            } else {
-              welcomeIntro += ` Thanks for contributing!`;
-            }
+            // 1) List open PRs created in last 24h (server-side filter)
+            const q = `repo:${owner}/${repo} is:pr is:open created:>=${sinceISO}`;
+            const items = await github.paginate(
+              github.rest.search.issuesAndPullRequests,
+              { q, sort: "created", order: "desc", per_page: 100 },
+              (res) => res.data.items
+            );
 
-            let mainMessage = '';
-            if (merged_prs === 0 && total_public_commits === 0) {
-              mainMessage = `Thank you for your very first PR on GitHub!`;
-            } else if (merged_prs === 0) {
-              mainMessage = `Thank you for your first PR with us!`;
-            } else if (merged_prs < 10) {
-              mainMessage = `This is your ${Intl.NumberFormat('en', { style: 'ordinal' }).format(merged_prs + 1)} PR here. Glad you are sticking with us.`;
-            } else {
-              mainMessage = `Thank you for your continued contributions!`;
-            }
+            for (const it of items) {
+              const number = it.number;
 
-            const policyMessage =
-              `\nAll contributions undergo automated and manual review. ` +
-              `To help us merge faster, please address tool comments or briefly explain why not.`;
+              // Skip bot accounts
+              if (it.user?.type === "Bot") continue;
 
-            let generalMessage = '';
-            if (!(merged_prs === 0 && total_public_commits === 0)) {
-              if (total_public_commits < 10) {
-                generalMessage = `\n\nWe appreciate you choosing rsyslog so early in your GitHub journey.`;
-              } else if (total_public_commits < 30) {
-                generalMessage = `\n\nThanks for adding rsyslog to your contributions.`;
-              } else if (total_public_commits < 100) {
-                generalMessage = `\n\nContributing here is a solid way to grow your profile.`;
+              // Idempotency: skip if marker already present
+              const comments = await github.paginate(
+                github.rest.issues.listComments,
+                { owner, repo, issue_number: number, per_page: 100 }
+              );
+              if (comments.some(c => c.body?.includes(MARKER))) continue;
+
+              const pr_creator = it.user.login;
+
+              // Account age (days) - best effort
+              let account_age_days = 0;
+              try {
+                const u = await github.rest.users.getByUsername({ username: pr_creator });
+                const createdAt = new Date(u.data.created_at).getTime();
+                account_age_days = Math.max(0, Math.floor((Date.now() - createdAt) / 86400000));
+              } catch { /* ignore */ }
+
+              // Number of merged PRs to THIS repo by this author
+              let merged_prs = 0;
+              try {
+                const qMerged = `repo:${owner}/${repo} is:pr is:merged author:${pr_creator}`;
+                const res = await github.rest.search.issuesAndPullRequests({ q: qMerged, per_page: 1 });
+                merged_prs = res.data.total_count || 0;
+              } catch { /* ignore */ }
+
+              // Total public commits for the user (best effort)
+              let total_public_commits = 0;
+              try {
+                const res = await github.request('GET /search/commits', {
+                  q: `author:${pr_creator}`,
+                  per_page: 1,
+                  headers: { accept: 'application/vnd.github.v3.text-match+json' }
+                });
+                total_public_commits = res.data.total_count || 0;
+              } catch { /* ignore */ }
+
+              // --- Exit Condition: Do not comment if the user is a seasoned contributor to this repo. ---
+              if (merged_prs >= 30) {
+                core.info(`PR #${number}: ${pr_creator} has ${merged_prs} merged PRs - skipping.`);
+                continue;
               }
+
+              // --- Build the core welcome based on account age. ---
+              let welcomeIntro = `👋 **Welcome, @${pr_creator}!**`;
+              if (account_age_days < 30) {
+                welcomeIntro += ` We especially appreciate developers like you who are new to the platform choosing to contribute to our project!`;
+              } else if (account_age_days < 365) {
+                welcomeIntro += ` We are thrilled to see a growing developer on GitHub contributing to us!`;
+              } else {
+                welcomeIntro += ` We're thrilled to see your contribution!`;
+              }
+
+              // --- Build the core message based on the number of merged PRs to THIS repo. ---
+              let mainMessage = '';
+              // Condition for the very first PR ever on GitHub.
+              if (merged_prs === 0 && total_public_commits === 0) {
+                mainMessage = `Thank you for your very first PR on GitHub! We are happy you have chosen rsyslog to begin your open source journey.`;
+              } else if (merged_prs === 0) {
+                mainMessage = `Thank you for your very first PR with us!`;
+              } else if (merged_prs < 10) {
+              mainMessage = `This is your ${Intl.NumberFormat('en', { style: 'ordinal' }).format(merged_prs + 1)} PR here. Glad you are sticking with us.`;
+              } else { // merged_prs >= 10 && < 30
+                mainMessage = `Thank you for your continued contributions!`;
+              }
+
+              // --- Add policy info for all new contributors to the repo (less than 30 merged PRs). ---
+              let policyMessage = '';
+              if (merged_prs < 30) {
+                policyMessage = `\nAll contributions undergo automated and manual review. To help us merge your PR faster, please read the comments from automated tools and either implement the suggested fixes or add a short note on why they're not taken.`;
+              }
+
+              // --- Add messages based on the user's overall GitHub public commit history. ---
+              // This is only included if it is not their first ever PR on GitHub.
+              let generalMessage = '';
+              if (!(merged_prs === 0 && total_public_commits === 0)) {
+                if (total_public_commits < 10) {
+                  generalMessage = `\n\nIt looks like you have ${total_public_commits} public commits on your GitHub career so far - we are happy you have chosen rsyslog.`;
+                } else if (total_public_commits < 30) {
+                  generalMessage = `\n\nThanks for considering rsyslog to add to your ${total_public_commits} public commits.`;
+                } else if (total_public_commits < 100) {
+                  generalMessage = `\n\nContributing to rsyslog is a great idea to grow your profile on GitHub!`;
+                }
+              }
+
+              // Combine and post (marker-only idempotency)
+              const finalMessage = `${MARKER}\n${welcomeIntro}\n\n${mainMessage}${policyMessage}${generalMessage}`;
+
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: number, body: finalMessage
+              });
             }
-
-            const body = `${welcomeIntro}\n\n${mainMessage}${policyMessage}${generalMessage}`;
-
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body
-            });
-
