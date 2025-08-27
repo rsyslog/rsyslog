@@ -2,7 +2,7 @@ name: "CodeQL"
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "main" ]
     paths-ignore:
       - 'ChangeLog'
       - '**/*.md'
@@ -10,7 +10,7 @@ on:
       - 'doc/**'
 
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main" ]
     paths-ignore:
       - 'ChangeLog'
       - '**/*.md'
