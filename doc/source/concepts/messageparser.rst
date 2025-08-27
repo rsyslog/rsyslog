@@ -9,8 +9,8 @@ Intro
 
 Message parsers are a feature of rsyslog 5.3.4 and above. In this
 article, I describe what message parsers are, what they can do and how
-they relate to the relevant standards. I will also describe what you can
-not do with time. Finally, I give some advice on implementing your own
+they relate to the relevant standards. I will also describe what you cannot 
+do with them. Finally, I give some advice on implementing your own
 custom parser.
 
 What are message parsers?
