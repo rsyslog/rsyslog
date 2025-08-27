@@ -226,7 +226,7 @@ todo_include_todos = True
 # is False.
 todo_emit_warnings = True
 
-# Supress "unknown mimetype for ..." warnings
+# Suppress "unknown mimetype for ..." warnings
 suppress_warnings = ['epub.unknown_project_files']
 
 # -- Options for HTML output ---------------------------------------------------

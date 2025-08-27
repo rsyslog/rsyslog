@@ -16,7 +16,7 @@ def get_current_branch():
         # This means we are operating in a detached head state, will need to
         # parse out the branch that the commit is from.
 
-        # Decode "bytes" type to UTF-8 sting to avoid Python 3 error:
+        # Decode "bytes" type to UTF-8 string to avoid Python 3 error:
         # "TypeError: a bytes-like object is required, not 'str'""
         # https://docs.python.org/3/library/stdtypes.html#bytes.decode
         branches = subprocess.check_output(['git', 'branch']).decode('utf-8').split('\n')

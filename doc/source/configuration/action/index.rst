@@ -1,4 +1,4 @@
-Depricated Legacy Action-Specific Configuration Statements
+Deprecated Legacy Action-Specific Configuration Statements
 ==========================================================
 
 Statements modify the next action(s) that is/are defined **via legacy syntax**

@@ -140,9 +140,9 @@ A ``lookup`` call looks like:
 
 ::
 
-   set $.bu = lookup("host_bu", $hostname);
-   
-   if ($.bu == "unknown") then {
+   set $.business_unit = lookup("host_business_unit", $hostname);
+
+   if ($.business_unit == "unknown") then {
        ....
    }
 

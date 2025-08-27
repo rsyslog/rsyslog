@@ -166,7 +166,7 @@ RatelimitBurst
 .. versionadded:: 8.35.0
 
 Specifies the rate-limiting burst in number of messages.  Set it high to
-preserve all bootup messages.
+preserve all boot-up messages.
 
 
 Caveats/Known Bugs

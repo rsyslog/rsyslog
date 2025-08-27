@@ -35,7 +35,7 @@ UriStr
 
    "word", "none", "no", "none"
 
-MongoDB connexion string, as defined by the MongoDB String URI Format (See: https://docs.mongodb.com/manual/reference/connection-string/). If uristr is defined, following directives will be ignored: server, serverport, uid, pwd.
+MongoDB connection string, as defined by the MongoDB String URI Format (See: https://docs.mongodb.com/manual/reference/connection-string/). If uristr is defined, following directives will be ignored: server, serverport, uid, pwd.
 
 
 SSL_Cert

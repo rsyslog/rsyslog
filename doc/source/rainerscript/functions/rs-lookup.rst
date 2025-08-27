@@ -28,6 +28,6 @@ the corresponding value is returned.
 .. code-block:: none
 
    lookup_table(name="host_bu" file="/var/lib/host_billing_unit_mapping.json")
-   set $.bu = lookup("host_bu", $hostname);
+   set $.business_unit = lookup("host_business_unit", $hostname);
 
 
