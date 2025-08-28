@@ -59,7 +59,7 @@ MODULE_CNFNAME("imrelp")
 DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(net) DEFobjCurrIf(prop) DEFobjCurrIf(ruleset) DEFobjCurrIf(glbl) DEFobjCurrIf(statsobj)
 
-int confFreed=0;
+static volatile int confFreed=0;
 
     /* forward definitions */
     static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal);
@@ -185,7 +185,7 @@ PRAGMA_DIAGNOSTIC_POP
 
 static void onErr(void *pUsr, char *objinfo, char *errmesg, __attribute__((unused)) relpRetVal errcode) {
     instanceConf_t *inst = (instanceConf_t *)pUsr;
-    const char *bindPort = confFreed ? "" : inst->pszBindPort;
+    const char *bindPort = confFreed ? "" : (char*)inst->pszBindPort;
     LogError(0, RS_RET_RELP_AUTH_FAIL,
              "imrelp[%s]: error '%s', object "
 	     "'%s' - input may not work as intended",
