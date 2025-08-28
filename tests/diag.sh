@@ -666,15 +666,18 @@ startup_vgthread() {
 }
 
 
-# inject messages via our inject interface (imdiag)
-# $1 is start message number, env var NUMMESSAGES is number of messages to inject
+## inject messages via our inject interface (imdiag)
+## $1: start message number
+## $2: number of messages to inject
+## $3: optional payload size, unpadded if unset
 injectmsg() {
-	if [ "$3" != "" ] ; then
-		printf 'error: injectmsg only has two arguments, extra arg is %s\n' "$3"
-	fi
-	msgs=${2:-$NUMMESSAGES}
-	echo injecting $msgs messages
-	echo injectmsg "${1:-0}" "$msgs" | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
+        msgs=${2:-$NUMMESSAGES}
+        echo injecting $msgs messages
+        if [ -n "$3" ]; then
+                echo injectmsg "${1:-0}" "$msgs" "$3" | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
+        else
+                echo injectmsg "${1:-0}" "$msgs" | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
+        fi
 }
 
 # inject messages in INSTANCE 2 via our inject interface (imdiag)
