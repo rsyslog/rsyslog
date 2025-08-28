@@ -1,5 +1,22 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
+- 2025-08-28: CI: ensure static analyzer script only runs when actually needed
+  Also
+  - auto-abort on re-push
+  - some minor tweaks
+- 2025-08-28: ci: add spellcheck workflow
+  Add a GitHub Actions job using codespell to check Sphinx docs in doc/source.
+  This helps catch spelling errors early and improves documentation quality.
+  With help from AI-Agent: ChatGPT
+- 2025-08-28: CI: add github action security analysis
+  Thanks to Kevin Backhouse for the patch.
+- 2025-08-28: doc: systematic typo fixes for documentation files, add checker
+  After we received single typo fixes, we carried out a systematic approach
+  for the rest of the documentation. It should now be typo-free.
+  As a safeguard, we added a new CI action for doc spellchecking.
+- 2025-08-28: doc: fix typos
+  Thanks to Madhushree and Naisthecreator for the patch.
+- 2025-08-28: doc: add rsyslog issue assistant build files
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-26
 
