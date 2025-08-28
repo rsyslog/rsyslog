@@ -370,7 +370,7 @@ static inline syslog_pri_t __attribute__((unused)) pri2fac(const syslog_pri_t pr
  * can be combined. -- rgerhards, 2009-04-27
  */
 #define CORE_FEATURE_BATCHING 1
-/*#define CORE_FEATURE_whatever 2 ... and so on ... */
+/* for additional features, define as powers of two (e.g. 'CORE_FEATURE_whatever 2', then 4, ...) */
 
 #ifndef _PATH_CONSOLE
     #define _PATH_CONSOLE "/dev/console"
