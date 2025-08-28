@@ -1,14 +1,14 @@
 #!/bin/sh
 # Sample startup script for rsyslogd on FreeBSD.
 # It worked on my machine, but this does not necessarily
-# mean it works on all machines - it's not thouroughly
+# mean it works on all machines - it's not thoroughly
 # tested. Please note that it may also work on other
 # BSD variants, too.
 #
 # As of this writing, there was an issue with the mysql client
 # library on startup. If compiled with MySQL support, rsyslogd
 # would not necessarily start correctly but could eventually
-# die with a "mysql client libary not found" (or similar) 
+# die with a "mysql client library not found" (or similar) 
 # message. I do not know its cause neither the cure. If you
 # have one, let me know.
 #

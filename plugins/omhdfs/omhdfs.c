@@ -113,7 +113,7 @@ ENDdbgPrintInstInfo
 /* note that hdfsFileExists() does not work, so we did our
  * own function to see if a pathname exists. Returns 0 if the
  * file does not exists, something else otherwise. Note that
- * we can also check a directroy (if that matters...)
+ * we can also check a directory (if that matters...)
  */
 static int HDFSFileExists(hdfsFS fs, uchar *name) {
     int r;

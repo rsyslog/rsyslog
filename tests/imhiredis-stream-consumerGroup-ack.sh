@@ -49,7 +49,7 @@ if [ -z "$output" ]; then
 fi
 
 if ! echo "$output" | grep -q "pending 0"; then
-    echo "ERROR: entries werent acknowledged!"
+    echo "ERROR: entries weren't acknowledged!"
     echo "ERROR: output from Redis is '$output'"
     echo "ERROR: expected 'pending 0'"
     error_exit 1

@@ -31,7 +31,7 @@
 
 /* The following function provides a complete implementation to check a
  * ruleset and set the actual ruleset pointer. The macro assumes that
- * standard field names are used. A functon std_checkRuleset_genErrMsg()
+ * standard field names are used. A function std_checkRuleset_genErrMsg()
  * must be defined to generate error messages in case the ruleset cannot
  * be found.
  */

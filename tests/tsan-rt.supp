@@ -1,4 +1,4 @@
-# supressions for LLVM TSAN
+# suppressions for LLVM TSAN
 # doc: https://github.com/google/sanitizers/wiki/ThreadSanitizerSuppressions
 race:^close$
 race:^closeSess$

@@ -2,7 +2,7 @@
  * Please note: this file introduces the new config format, but maintains
  * backward compatibility. In order to do so, the grammar is not 100% clean,
  * but IMHO still sufficiently easy both to understand for programmers
- * maitaining the code as well as users writing the config file. Users are,
+ * maintaining the code as well as users writing the config file. Users are,
  * of course, encouraged to use new constructs only. But it needs to be noted
  * that some of the legacy constructs (specifically the in-front-of-action
  * PRI filter) are very hard to beat in ease of use, at least for simpler
@@ -125,7 +125,7 @@ extern int yyerror(const char*);
 %nonassoc UMINUS NOT
 
 %expect 1 /* dangling else */
-/* If more erors show up, Use "bison -v grammar.y" if more conflicts arise and
+/* If more errors show up, Use "bison -v grammar.y" if more conflicts arise and
  * check grammar.output for were exactly these conflicts exits.
  */
 %%

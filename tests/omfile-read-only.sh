@@ -1,5 +1,5 @@
 #!/bin/bash
-# addd 2016-06-16 by RGerhards, released under ASL 2.0
+# add 2016-06-16 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 messages=20000 # how many messages to inject?
 # Note: we need to inject a somewhat larger number of messages in order

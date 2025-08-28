@@ -88,7 +88,7 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(datetime) DEFobjCurrIf(prop) D
 
 
 static int bLegacyCnfModGlobalsPermitted; /* are legacy module-global config parameters permitted? */
-static int bDoACLCheck; /* are ACL checks neeed? Cached once immediately before listener startup */
+static int bDoACLCheck; /* are ACL checks need? Cached once immediately before listener startup */
 static int iMaxLine; /* maximum UDP message size supported */
 #define BATCH_SIZE_DFLT 32 /* do not overdo, has heavy toll on memory, especially with large msgs */
 #define TIME_REQUERY_DFLT 2
@@ -219,7 +219,7 @@ finalize_it:
     RETiRet;
 }
 
-/* This function is called when a new listener instace shall be added to
+/* This function is called when a new listener instance shall be added to
  * the current config object via the legacy config system. It just shuffles
  * all parameters to the listener in-memory instance.
  * rgerhards, 2011-05-04
@@ -771,7 +771,7 @@ static rsRetVal rcvMainLoop(struct wrkrInfo_s *const __restrict__ pWrkr) {
     }
 
     /* fill the epoll set - we need to do this only once, as the set
-     * can not change dyamically.
+     * can not change dynamically.
      */
     i = 0;
     for (lstn = lcnfRoot; lstn != NULL; lstn = lstn->next) {
@@ -1186,7 +1186,7 @@ static void *wrkr(void *myself) {
 
     /* Note well: the setting of scheduling parameters will not work
      * when we dropped privileges (if the user is not sufficiently
-     * privileged, of course). Howerver, we can't change the
+     * privileged, of course). However, we can't change the
      * scheduling params in PrePrivDrop(), as at that point our thread
      * is not yet created. So at least as an interim solution, we do
      * NOT support both setting sched parameters and dropping

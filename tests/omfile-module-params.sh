@@ -1,5 +1,5 @@
 #!/bin/bash
-# addd 2018-08-02 by RGerhards, released under ASL 2.0
+# add 2018-08-02 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=100 # we only check output fmt, so few messages are OK
 generate_conf

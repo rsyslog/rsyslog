@@ -6,7 +6,7 @@ echo "--- RPMMaker                      ---"
 echo "-------------------------------------"
 
 if [ -z $RPM_PLATFORM ]; then
-	echo "Which Linux Plattform?:"
+	echo "Which Linux Platform?:"
 	select szDist in $PLATOPTIONS "All"
 	do
 		case $szDist in "All")
@@ -28,7 +28,7 @@ if [ -z $RPM_ARCH ]; then
 		case $szArch in "All")
 			szArch=$ARCHOPTIONS;
 		esac
-		echo "Making RPM for Plattforms '$szArch'
+		echo "Making RPM for Platforms '$szArch'
 		"
 	        break;
 	done

@@ -24,7 +24,7 @@
 
 
 /* we create a small helper object, a list of strgens, that we can use to
- * build a chain of them whereever this is needed.
+ * build a chain of them wherever this is needed.
  */
 struct strgenList_s {
     strgen_t *pStrgen;

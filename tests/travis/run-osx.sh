@@ -56,6 +56,6 @@ then
         echo "error in make check, error-terminating now"
         exit $ALL_OK
     fi
-    set -e # now errors are no longer permited, again
+    set -e # now errors are no longer permitted, again
     make distcheck
 fi

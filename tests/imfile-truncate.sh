@@ -1,5 +1,5 @@
 #!/bin/bash
-# addd 2016-10-06 by RGerhards, released under ASL 2.0
+# add 2016-10-06 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 . $srcdir/diag.sh check-inotify
 generate_conf

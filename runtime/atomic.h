@@ -1,5 +1,5 @@
 /* This header supplies atomic operations. So far, we rely on GCC's
- * atomic builtins. During configure, we check if atomic operatons are
+ * atomic builtins. During configure, we check if atomic operations are
  * available. If they are not, I am making the necessary provisioning to live without them if
  * they are not available. Please note that you should only use the macros
  * here if you think you can actually live WITHOUT an explicit atomic operation,
@@ -62,7 +62,7 @@
     #define INIT_ATOMIC_HELPER_MUT(x)
     #define DESTROY_ATOMIC_HELPER_MUT(x)
 
-    /* the following operations should preferrably be done atomic, but it is
+    /* the following operations should preferably be done atomic, but it is
      * not fatal if not -- that means we can live with some missed updates. So be
      * sure to use these macros only if that really does not matter!
      */
@@ -71,7 +71,7 @@
     #define PREFER_STORE_0_TO_INT(data) __sync_fetch_and_and(data, 0)
     #define PREFER_STORE_1_TO_INT(data) __sync_fetch_and_or(data, 1)
 #else
-    /* note that we gained parctical proof that theoretical problems DO occur
+    /* note that we gained practical proof that theoretical problems DO occur
      * if we do not properly address them. See this blog post for details:
      * http://blog.gerhards.net/2009/01/rsyslog-data-race-analysis.html
      * The bottom line is that if there are no atomics available, we should NOT
@@ -214,7 +214,7 @@ static inline void ATOMIC_SUB_unsigned(unsigned *data, int val, pthread_mutex_t 
 
 #endif
 
-/* we need to handle 64bit atomics seperately as some platforms have
+/* we need to handle 64bit atomics separately as some platforms have
  * 32 bit atomics, but not 64 bit ones... -- rgerhards, 2010-12-01
  */
 #ifdef HAVE_ATOMIC_BUILTINS64

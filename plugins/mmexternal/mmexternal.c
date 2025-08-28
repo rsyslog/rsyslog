@@ -72,7 +72,7 @@ typedef struct wrkrInstanceData {
     int fdPipeOut; /* file descriptor to write to */
     int fdPipeIn; /* fd we receive messages from the program (if we want to) */
     int bIsRunning; /* is binary currently running? 0-no, 1-yes */
-    char *respBuf; /* buffer to read exernal plugin's response */
+    char *respBuf; /* buffer to read external plugin's response */
     int maxLenRespBuf; /* (current) maximum length of response buffer */
     int lenRespBuf; /* actual nbr of chars in response buffer */
     int idxRespBuf; /* last char read from response buffer */

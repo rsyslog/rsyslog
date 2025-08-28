@@ -1,6 +1,6 @@
 #!/bin/bash
 # test many concurrent tcp connections
-# addd 2016-03-02 by RGerhards, released under ASL 2.0
+# add 2016-03-02 by RGerhards, released under ASL 2.0
 # Note: we run several subtests here in order to save us
 # from creating additional tests
 # requires faketime

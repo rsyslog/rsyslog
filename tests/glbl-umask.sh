@@ -1,5 +1,5 @@
 #!/bin/bash
-# addd 2017-03-06 by RGerhards, released under ASL 2.0
+# add 2017-03-06 by RGerhards, released under ASL 2.0
 
 # Note: we need to inject a somewhat larger number of messages in order
 # to ensure that we receive some messages in the actual output file,

@@ -454,7 +454,7 @@ static rsRetVal openProton(wrkrInstanceData_t *const __restrict__ pWrkrData) {
     pWrkrData->bIsSuspended = 0;
 finalize_it:
     if (iRet != RS_RET_OK) {
-        closeProton(pWrkrData);  // Make sure to free ressources
+        closeProton(pWrkrData);  // Make sure to free resources
     }
     RETiRet;
 }
@@ -526,7 +526,7 @@ static rsRetVal writeProton(wrkrInstanceData_t *__restrict__ const pWrkrData,
     instanceData *const pData = (instanceData *const)pWrkrData->pData;
     protonmsg_entry *fmsgEntry;
 
-    // Create Unqiue Message ID
+    // Create Unique Message ID
     char szMsgID[64];
     sprintf(szMsgID, "%d", pWrkrData->iMsgSeq);
 
@@ -635,7 +635,7 @@ BEGINfreeWrkrInstance
     // Stop Proton Handle Thread
     proton_shutdown_thread(pWrkrData);
 
-    // Free Proton Ressources
+    // Free Proton Resources
     if (pWrkrData->pnProactor != NULL) {
         DBGPRINTF("freeWrkrInstance[%p]:  FREE proactor\n", pWrkrData);
         pn_proactor_free(pWrkrData->pnProactor);
@@ -1221,7 +1221,7 @@ static void handleProtonDelivery(wrkrInstanceData_t *const pWrkrData) {
                         iCreditBalance, pWrkrData->nProtonMsgs);
                     pn_link_flow(pWrkrData->pnSender, pWrkrData->nProtonMsgs);
 
-                    // TODO: MAKE CONFIGUREABLE
+                    // TODO: MAKE CONFIGURABLE
                     // Wait 10 microseconds
                     // srSleep(0, 10000);
                     break;
@@ -1413,7 +1413,7 @@ static void handleProton(wrkrInstanceData_t *const pWrkrData, pn_event_t *event)
             DBGPRINTF("handleProton: INAKTIVE for %p:%s\n", pWrkrData, pData->azurehost);
             break;
         default:
-            DBGPRINTF("handleProton: UNHANDELED EVENT %d for %p:%s\n", pn_event_type(event), pWrkrData,
+            DBGPRINTF("handleProton: UNHANDLED EVENT %d for %p:%s\n", pn_event_type(event), pWrkrData,
                       pData->azurehost);
             break;
     }

@@ -17,7 +17,7 @@
  * provides such useful things like a circular file buffer and, hopefully
  * at a later stage, a lazy writer. The object is also seriazable and thus
  * can easily be persistet. The bottom line is that it makes much sense to
- * use this class whereever possible as its features may grow in the future.
+ * use this class wherever possible as its features may grow in the future.
  *
  * An important note on writing gzip format via zlib (kept anonymous
  * by request):
@@ -129,14 +129,14 @@ struct strm_s {
         ino_t inode; /* current inode for files being monitored (undefined else) */
         uchar *pszCurrFName; /* name of current file (if open) */
         uchar *pIOBuf; /* the iobuffer currently in use to gather data */
-        char *pIOBuf_truncation; /* iobuffer used during trucation detection block re-reads */
+        char *pIOBuf_truncation; /* iobuffer used during truncation detection block re-reads */
         size_t iBufPtrMax; /* current max Ptr in Buffer (if partial read!) */
         size_t iBufPtr; /* pointer into current buffer */
         int iUngetC; /* char set via UngetChar() call or -1 if none set */
         sbool bInRecord; /* if 1, indicates that we are currently writing a not-yet complete record */
         int iZipLevel; /* zip level (0..9). If 0, zip is completely disabled */
         Bytef *pZipBuf;
-        /* support for async flush procesing */
+        /* support for async flush processing */
         sbool bAsyncWrite; /* do asynchronous writes (always if a flush interval is given) */
         sbool bStopWriter; /* shall writer thread terminate? */
         sbool bDoTimedWait; /* instruct writer thread to do a times wait to support flush timeouts */

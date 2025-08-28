@@ -12,7 +12,7 @@
 # condition that never occurs (because it would need to be signalled by the
 # async writer). Even worse, in that case, the async writer was signalled invalid
 # in such a way that when it received a wakeup, it thought it shall not terminate,
-# but received a spurios wakeup due to timeout and no data to write. In that case
+# but received a spurious wakeup due to timeout and no data to write. In that case
 # it (correctly) concluded that it would not need to timeout until a new buffer write
 # was done (in which case it would receive a wakeup). As such, it went into an eternal
 # wait. However, the invalid signaling did not take into account that it did not

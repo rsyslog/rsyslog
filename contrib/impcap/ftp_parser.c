@@ -36,7 +36,7 @@ static const int ftp_cds[] = {100, 110, 120, 125, 150, 200, 202, 211,   212,    
                               425, 426, 430, 434, 450, 451, 452, 500,   501,    502,   503,   504,   530,   532, 550,
                               551, 552, 553, 600, 631, 632, 633, 10000, 100054, 10060, 10061, 10066, 10068, 0};
 
-static const char *ftp_cmds[] = {"STOR", "TYPE", "ABOR", "ACCT", "ALLO", "APPE", "CDUP", "CWD",  "DELE",
+static const char *ftp_cmds[] = {"STOR", "TYPE", "ABOR", "ACCT", "ALLOW", "APPE", "CDUP", "CWD",  "DELE",
                                  "HELP", "LIST", "MKD",  "MODE", "NLST", "NOOP", "PASS", "PASV", "PORT",
                                  "PWD",  "QUIT", "REIN", "REST", "RETR", "RMD",  "RNFR", "RNTO", "SITE",
                                  "SMNT", "STAT", "STOU", "STRU", "SYST", "USER", NULL};

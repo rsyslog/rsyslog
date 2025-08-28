@@ -1,5 +1,5 @@
 #!/bin/bash
-# addd 2016-03-22 by RGerhards, released under ASL 2.0
+# add 2016-03-22 by RGerhards, released under ASL 2.0
 
 # NOTE: faketime does NOT properly support subseconds,
 # so we must ensure we do not use them. Actually, what we

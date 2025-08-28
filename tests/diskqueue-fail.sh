@@ -1,7 +1,7 @@
 #!/bin/bash
 # checks that nothing bad happens if a DA (disk) queue runs out
 # of configured disk space
-# addd 2017-02-07 by RGerhards, released under ASL 2.0
+# add 2017-02-07 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=100
 generate_conf

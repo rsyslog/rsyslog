@@ -171,7 +171,7 @@ static rsRetVal doSleep(instanceData *pData) {
 /* implement "randomfail" command */
 static rsRetVal doRandFail(void) {
     DEFiRet;
-    if ((randomNumber() >> 4) < (RAND_MAX >> 5)) { /* rougly same probability */
+    if ((randomNumber() >> 4) < (RAND_MAX >> 5)) { /* roughly same probability */
         iRet = RS_RET_OK;
         dbgprintf("omtesting randfail: succeeded this time\n");
     } else {

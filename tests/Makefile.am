@@ -40,7 +40,7 @@ liboverride_getaddrinfo_la_SOURCES = override_getaddrinfo.c
 liboverride_getaddrinfo_la_CFLAGS =
 liboverride_getaddrinfo_la_LDFLAGS = -avoid-version -shared
 
-# TODO: reenable TESTRUNS = rt_init rscript
+# TODO: re-enable TESTRUNS = rt_init rscript
 check_PROGRAMS = $(TESTRUNS) ourtail tcpflood chkseq msleep randomgen \
 	diagtalker uxsockrcvr syslog_caller inputfilegen minitcpsrv \
 	omrelp_dflt_port \
@@ -2037,13 +2037,13 @@ EXTRA_DIST= \
 	testsuites/x.509/client-expired-key.pem \
 	cfg.sh \
 	cfg1.cfgtest \
-	cfg1.testin \
+	cfg1.testing \
 	cfg2.cfgtest \
-	cfg2.testin \
+	cfg2.testing \
 	cfg3.cfgtest \
-	cfg3.testin \
+	cfg3.testing \
 	cfg4.cfgtest \
-	cfg4.testin \
+	cfg4.testing \
 	DevNull.cfgtest \
 	err1.rstest \
 	NoExistFile.cfgtest \

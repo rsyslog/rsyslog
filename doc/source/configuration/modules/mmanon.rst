@@ -30,7 +30,7 @@ where each of the octets has a value between 0 and 255, inclusively.
 An IPv6 is defined by being between zero and eight hex values between 0
 and ffff. These are separated by ':'. Leading zeros in blocks can be omitted
 and blocks full of zeros can be abbreviated by using '::'. However, this
-can ony happen once in an IP address.
+can only happen once in an IP address.
 
 An IPv6 address with embedded IPv4 is an IPv6 address where the last two blocks
 have been replaced by an IPv4 address. (see also: RFC4291, 2.2.3) 

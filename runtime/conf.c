@@ -2,7 +2,7 @@
  *
  * This file is based on an excerpt from syslogd.c, which dates back
  * much later. I began the file on 2008-02-19 as part of the modularization
- * effort. Over time, a clean abstration will become even more important
+ * effort. Over time, a clean abstraction will become even more important
  * because the config file handler will by dynamically be loaded and be
  * kept in memory only as long as the config file is actually being
  * processed. Thereafter, it shall be unloaded. -- rgerhards
@@ -83,7 +83,7 @@ DEFobjCurrIf(module) DEFobjCurrIf(net) DEFobjCurrIf(ruleset)
 /* The following module-global variables are used for building
  * tag and host selector lines during startup and config reload.
  * This is stored as a global variable pool because of its ease. It is
- * also fairly compatible with multi-threading as the stratup code must
+ * also fairly compatible with multi-threading as the startup code must
  * be run in a single thread anyways. So there can be no race conditions.
  * rgerhards 2005-10-18
  */
@@ -321,7 +321,7 @@ rsRetVal cflineParseFileName(
     assert(pOMSR != NULL);
 
     pName = pFileName;
-    i = 1; /* we start at 1 so that we reseve space for the '\0'! */
+    i = 1; /* we start at 1 so that we reserve space for the '\0'! */
     while (*p && *p != ';' && *p != ' ' && i < MAXFNAME) {
         *pName++ = *p++;
         ++i;

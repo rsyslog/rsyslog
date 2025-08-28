@@ -645,7 +645,7 @@ static void closeOutputFile(outputCaptureCtx_t *pCtx) {
 
 /* This code runs in a dedicated thread. Captures the output of the child processes
  * through a shared pipe (one reader and multiple writers), and writes the output
- * to a file. The lines concurrently emmitted to stdout/stderr by the child processes
+ * to a file. The lines concurrently emitted to stdout/stderr by the child processes
  * will not appear intermingled in the output file if 1) the lines are short enough
  * (less than PIPE_BUF bytes long: 4KB on Linux, and 512 bytes or more on other
  * POSIX systems), and 2) the program outputs each line using a single 'write'

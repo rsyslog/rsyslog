@@ -18,7 +18,7 @@ to stay stable. So it may be necessary to modify string generator
 modules if the interface changes. Obviously, we will not do that without
 good reason, but it may happen.
 
-Rsyslog comes with a set of core, build-in string generators, which are
+Rsyslog comes with a set of core, built-in string generators, which are
 used to provide those default templates that we consider to be
 time-critical:
 

@@ -462,7 +462,7 @@ static rsRetVal processOctetMsgLen(const instanceConf_t *const inst, struct conn
                 remoteAddr = (const char *)propGetSzStr(connWrkr->propRemoteAddr);
             }
 
-            /* handle space delimeter */
+            /* handle space delimiter */
             if (ch != ' ') {
                 LogError(0, NO_ERRCODE,
                          "Framing Error in received TCP message "

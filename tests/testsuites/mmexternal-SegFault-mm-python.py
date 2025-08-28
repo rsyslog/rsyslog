@@ -37,7 +37,7 @@ def onInit():
 
 def onReceive(msg):
     """This is the entry point where actual work needs to be done. It receives
-       the messge from rsyslog and now needs to examine it, do any processing
+       the message from rsyslog and now needs to examine it, do any processing
        necessary. The to-be-modified properties (one or many) need to be pushed
        back to stdout, in JSON format, with no interim line breaks and a line
        break at the end of the JSON. If no field is to be modified, empty
@@ -61,7 +61,7 @@ def onExit():
 -------------------------------------------------------
 This is plumbing that DOES NOT need to be CHANGED
 -------------------------------------------------------
-Implementor's note: Python seems to very agressively
+Implementor's note: Python seems to very aggressively
 buffer stdouot. The end result was that rsyslog does not
 receive the script's messages in a timely manner (sometimes
 even never, probably due to races). To prevent this, we

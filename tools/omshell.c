@@ -1,5 +1,5 @@
 /* omshell.c
- * This is the implementation of the build-in shell output module.
+ * This is the implementation of the built-in shell output module.
  *
  * ************* DO NOT EXTEND THIS MODULE **************
  * This is pure legacy, omprog has much better and more

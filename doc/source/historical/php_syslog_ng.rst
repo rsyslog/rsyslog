@@ -76,7 +76,7 @@ outdated, `let me know <mailto:rgerhards@adiscon.com>`_ so that I can
 fix it.
 
 Once this schema is created, we simply instruct rsyslogd to store
-received data in it. I wont go into too much detail here. If you are
+received data in it. I won't go into too much detail here. If you are
 interested in some more details, you might find my paper "`Writing
 syslog messages to MySQL <rsyslog_mysql.html>`_\ " worth reading. For
 this article, we simply modify `rsyslog.conf <rsyslog_conf.html>`_\ so

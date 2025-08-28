@@ -1,6 +1,6 @@
 #!/bin/bash
 # test $NOW family of system properties
-# addd 2016-01-12 by RGerhards, released under ASL 2.0
+# add 2016-01-12 by RGerhards, released under ASL 2.0
 # requires faketime
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=1

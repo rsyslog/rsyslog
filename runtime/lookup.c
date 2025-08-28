@@ -906,7 +906,7 @@ rsRetVal ATTR_NONNULL(1) lookupReload(lookup_ref_t *const pThis, const uchar *co
         /* we can choose to stub the table here, but it'll hurt because
            the table reloader may take time to complete the reload
            and stubbing because of a concurrent reload message may
-           not be desirable (except in very tightly controled environments
+           not be desirable (except in very tightly controlled environments
            where reload-triggering messages pushed are timed accurately
            and an idempotency-filter is used to reject re-deliveries) */
     }

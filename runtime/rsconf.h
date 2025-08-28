@@ -54,7 +54,7 @@ struct queuecnf_s {
     int bMainMsgQSyncQeueFiles; /* sync queue files on every write? */
     int iMainMsgQtoQShutdown; /* queue shutdown (ms) */
     int iMainMsgQtoActShutdown; /* action shutdown (in phase 2) */
-    int iMainMsgQtoEnq; /* timeout for queue enque */
+    int iMainMsgQtoEnq; /* timeout for queue enqueue */
     int iMainMsgQtoWrkShutdown; /* timeout for worker thread shutdown */
     int iMainMsgQWrkMinMsgs; /* minimum messages per worker needed to start a new one */
     int iMainMsgQDeqSlowdown; /* dequeue slowdown (simple rate limiting) */
@@ -99,8 +99,8 @@ struct globals_s {
                       config) if there was any issue in conf */
     int bAbortOnFailedQueueStartup; /* similar to bAbortOnUncleanConfig, but abort if a queue
                        startup fails. This is not exactly an unclan config. */
-    int uidDropPriv; /* user-id to which priveleges should be dropped to */
-    int gidDropPriv; /* group-id to which priveleges should be dropped to */
+    int uidDropPriv; /* user-id to which privileges should be dropped to */
+    int gidDropPriv; /* group-id to which privileges should be dropped to */
     int gidDropPrivKeepSupplemental; /* keep supplemental groups when dropping? */
     int abortOnIDResolutionFail;
     int umask; /* umask to use */
@@ -145,12 +145,12 @@ struct globals_s {
 
     int actq_dflt_toQShutdown; /* queue shutdown */
     int actq_dflt_toActShutdown; /* action shutdown (in phase 2) */
-    int actq_dflt_toEnq; /* timeout for queue enque */
+    int actq_dflt_toEnq; /* timeout for queue enqueue */
     int actq_dflt_toWrkShutdown; /* timeout for worker thread shutdown */
 
     int ruleset_dflt_toQShutdown; /* queue shutdown */
     int ruleset_dflt_toActShutdown; /* action shutdown (in phase 2) */
-    int ruleset_dflt_toEnq; /* timeout for queue enque */
+    int ruleset_dflt_toEnq; /* timeout for queue enqueue */
     int ruleset_dflt_toWrkShutdown; /* timeout for worker thread shutdown */
 
     unsigned dnscacheDefaultTTL; /* 24 hrs default TTL */
@@ -176,7 +176,7 @@ struct globals_s {
  * to all code, but they can change value and other objects (like
  * actions) actually copy the value a global had at the time the action
  * was defined. In that sense, a global default is just that, a default,
- * wich can (and will) be changed in the course of config file
+ * which can (and will) be changed in the course of config file
  * processing. Once the config file has been processed, defaults
  * can be dropped. The current code does not do this for simplicity.
  * That is not a problem, because the defaults do not take up much memory.

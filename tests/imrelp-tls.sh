@@ -1,5 +1,5 @@
 #!/bin/bash
-# addd 2019-01-31 by PascalWithopf, released under ASL 2.0
+# add 2019-01-31 by PascalWithopf, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=1000
 do_skip=0

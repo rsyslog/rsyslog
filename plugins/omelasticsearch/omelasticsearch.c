@@ -1046,7 +1046,7 @@ static rsRetVal getDataInterleaved(context *ctx,
     fjson_object *interleavedNode = NULL;
     /*create interleaved node that has req and response json data*/
     if ((interleavedNode = fjson_object_new_object()) == NULL) {
-        DBGPRINTF("omelasticsearch: Failed to create interleaved node. Cann't continue\n");
+        DBGPRINTF("omelasticsearch: Failed to create interleaved node. Can't continue\n");
         ABORT_FINALIZE(RS_RET_ERR);
     }
     fjson_object_object_add(interleavedNode, "request", fjson_object_new_string(request));
@@ -1456,7 +1456,7 @@ static rsRetVal ATTR_NONNULL() writeDataError(wrkrInstanceData_t *const pWrkrDat
     DBGPRINTF("omelasticsearch: error record: '%s'\n", rendered);
     toWrite = strlen(rendered) + 1;
     /* Note: we overwrite the '\0' terminator with '\n' -- so we avoid
-     * caling malloc() -- write() does NOT need '\0'!
+     * calling malloc() -- write() does NOT need '\0'!
      */
     rendered[toWrite - 1] = '\n'; /* NO LONGER A STRING! */
     wrRet = write(pData->fdErrFile, rendered, toWrite);
@@ -1580,7 +1580,7 @@ static rsRetVal ATTR_NONNULL(1, 2)
         STATSCOUNTER_INC(indexHTTPReqFail, mutIndexHTTPReqFail);
         STATSCOUNTER_ADD(indexHTTPFail, mutIndexHTTPFail, nmsgs);
         LogError(0, RS_RET_SUSPENDED,
-                 "omelasticsearch: we are suspending ourselfs due "
+                 "omelasticsearch: we are suspending ourselves due "
                  "to server failure %lld: %s",
                  (long long)code, errbuf);
         ABORT_FINALIZE(RS_RET_SUSPENDED);

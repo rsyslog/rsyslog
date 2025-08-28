@@ -27,7 +27,7 @@ rm -r libksi
 
 # NOTE: we do NOT install coverity, because
 # - it is pretty large
-# - seldomly used
+# - seldom used
 # - quickly installed when required (no build process)
 
 # we need the latest librdkafka as there as always required updates

@@ -46,7 +46,7 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(netstrm)
 
 
     /* load our low-level driver. This must be done before any
-     * driver-specific functions (allmost all...) can be carried
+     * driver-specific functions (almost all...) can be carried
      * out. Note that the driver's .ifIsLoaded is correctly
      * initialized by calloc() and we depend on that.
      */
@@ -489,7 +489,7 @@ BEGINmodInit()
     CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
-    /* Initialize all classes that are in our module - this includes ourselfs */
+    /* Initialize all classes that are in our module - this includes ourselves */
     CHKiRet(netstrmClassInit(pModInfo));
     CHKiRet(netstrmsClassInit(pModInfo));
 ENDmodInit

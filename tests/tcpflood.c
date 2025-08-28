@@ -15,7 +15,7 @@
  *      to set a "soft limit": if tcpflood cannot open the
  *      requested number of connections, gracefully degrade to
  *      whatever number could be opened. This is useful in environments
- *      where system config constraints cannot be overriden (e.g.
+ *      where system config constraints cannot be overridden (e.g.
  *      vservers, non-admin users, ...)
  * -m	number of messages to send (connection is random)
  * -i	initial message number (optional)
@@ -49,7 +49,7 @@
  * -X   generate sTats data records. Default: off
  * -e   encode output in CSV (not yet everywhere supported)
  *      for performance data:
- *      each inidividual line has the runtime of one test
+ *      each individual line has the runtime of one test
  *      the last line has 0 in field 1, followed by numberRuns,TotalRuntime,
  *      Average,min,max
  * -T   transport to use. Currently supported: "udp", "tcp" (default), "tls" (tcp+tls), relp-plain, relp-tls
@@ -64,7 +64,7 @@
  * -z	private key file for TLS mode
  * -Z	cert (public key) file for TLS mode
  * -a	Authentication Mode for relp-tls
- * -A	do NOT abort if an error occured during sending messages
+ * -A	do NOT abort if an error occurred during sending messages
  * -E	Permitted Peer for relp-tls
  * -L	loglevel to use for GnuTLS troubleshooting (0-off to 10-all, 0 default)
  * -j	format message in json, parameter is JSON cookie
@@ -177,7 +177,7 @@ char *test_rs_strerror_r(int errnum, char *buf, size_t buflen) {
 #define MAX_SENDBUF 2 * MAX_EXTRADATA_LEN
 #define MAX_RCVBUF 16 * 1024 + 1 /* TLS RFC 8449: max size of buffer for message reception */
 
-static int nThreadsConnOpen = 25; /* Number for threads for openeing the connections */
+static int nThreadsConnOpen = 25; /* Number for threads for opening the connections */
 static char *targetIP = "127.0.0.1";
 static char *msgPRI = "167";
 static int targetPort[5] = {13514};
@@ -249,7 +249,7 @@ static pthread_mutex_t tlsSessInitMutex = PTHREAD_MUTEX_INITIALIZER;
 /* variables for managing multi-threaded operations */
 int runningThreads; /* number of threads currently running */
 int doRun; /* shall sender thread begin to run? */
-pthread_mutex_t thrdMgmt; /* mutex for controling startup/shutdown */
+pthread_mutex_t thrdMgmt; /* mutex for controlling startup/shutdown */
 pthread_cond_t condStarted;
 pthread_cond_t condDoRun;
 
@@ -592,7 +592,7 @@ int openConnections(void) {
 /* we also close all connections because otherwise we may get very bad
  * timing for the syslogd - it may not be able to process all incoming
  * messages fast enough if we immediately shut down.
- * TODO: it may be an interesting excercise to handle that situation
+ * TODO: it may be an interesting exercise to handle that situation
  * at the syslogd level, too
  * rgerhards, 2009-04-14
  */
@@ -1113,7 +1113,7 @@ static int runTests(void) {
 }
 
 #if defined(ENABLE_OPENSSL)
-/* OpenSSL implementation of TLS funtions.
+/* OpenSSL implementation of TLS functions.
  * alorbach, 2018-06-11
  */
 
@@ -1322,14 +1322,14 @@ static void initTLS(const SSL_METHOD *method) {
     if (SSL_CTX_use_certificate_chain_file(ctx, tlsCertFile) != 1) {
         printf("tcpflood: error cert file could not be accessed -- have you mixed up key and certificate?\n");
         printf("If in doubt, try swapping the files in -z/-Z\n");
-        printf("Certifcate is: '%s'\n", tlsCertFile);
+        printf("Certificate is: '%s'\n", tlsCertFile);
         printf("Key        is: '%s'\n", tlsKeyFile);
         exit(1);
     }
     if (SSL_CTX_use_PrivateKey_file(ctx, tlsKeyFile, SSL_FILETYPE_PEM) != 1) {
         printf("tcpflood: error key file could not be accessed -- have you mixed up key and certificate?\n");
         printf("If in doubt, try swapping the files in -z/-Z\n");
-        printf("Certifcate is: '%s'\n", tlsCertFile);
+        printf("Certificate is: '%s'\n", tlsCertFile);
         printf("Key        is: '%s'\n", tlsKeyFile);
         exit(1);
     }
@@ -1424,7 +1424,7 @@ static void initTLS(const SSL_METHOD *method) {
     /* Set default VERIFY Options for OpenSSL CTX - and CALLBACK */
     SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, verify_callback);
 
-    SSL_CTX_set_timeout(ctx, 30); /* Default Session Timeout, TODO: Make configureable */
+    SSL_CTX_set_timeout(ctx, 30); /* Default Session Timeout, TODO: Make configurable */
     SSL_CTX_set_mode(ctx, SSL_MODE_AUTO_RETRY);
 }
 
@@ -1699,7 +1699,7 @@ static void initTLS(void) {
     if (r != GNUTLS_E_SUCCESS) {
         printf("error setting certificate files -- have you mixed up key and certificate?\n");
         printf("If in doubt, try swapping the files in -z/-Z\n");
-        printf("Certifcate is: '%s'\n", tlsCertFile);
+        printf("Certificate is: '%s'\n", tlsCertFile);
         printf("Key        is: '%s'\n", tlsKeyFile);
         gnutls_perror(r);
         r = gnutls_certificate_set_x509_key_file(tlscred, tlsKeyFile, tlsCertFile, GNUTLS_X509_FMT_PEM);

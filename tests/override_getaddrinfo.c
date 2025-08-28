@@ -18,7 +18,7 @@ static void __attribute__((constructor)) my_init(void) {
      * a "template". It can be used, e.g. to emit some diagnostic
      * information:
     printf("loaded\n");
-     * or - more importantly - obtain a pointer to the overriden
+     * or - more importantly - obtain a pointer to the overridden
      * API:
     orig_etry = dlsym(RTLD_NEXT, "original_entry_point");
     */

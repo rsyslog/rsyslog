@@ -42,7 +42,7 @@
          * messages which may be truncated in the very unlikely case of all
          * vars using max value. If going over the max size, the engine will
          * most likely truncate due to max message size anyhow. Also, sizing
-         * the buffers for max-max message size is a wast of (stack) memory.
+         * the buffers for max-max message size is a waste of (stack) memory.
          */
         #pragma GCC diagnostic ignored "-Wformat-truncation"
         /* The next one flags variable initializations within out exception handling
@@ -391,14 +391,14 @@ enum rsRetVal_ {
     RS_RET_NO_ERRCODE = -1, /**< RESERVED for NO_ERRCODE errmsg.logError status name */
     RS_RET_INCLUDE_ERRNO = 1073741824, /* 2**30  - do NOT use error codes above this! */
     /* begin regular error codes */
-    RS_RET_NOT_IMPLEMENTED = -7, /**< implementation is missing (probably internal error or lazyness ;)) */
+    RS_RET_NOT_IMPLEMENTED = -7, /**< implementation is missing (probably internal error or laziness ;)) */
     RS_RET_OUT_OF_MEMORY = -6, /**< memory allocation failed */
     RS_RET_PROVIDED_BUFFER_TOO_SMALL = -50, /*< the caller provided a buffer, but the called function sees
                           the size of this buffer is too small - operation not carried out */
     RS_RET_FILE_TRUNCATED = -51, /**< (input) file was truncated, not an error but a status */
     RS_RET_TRUE = -3, /**< to indicate a true state (can be used as TRUE, legacy) */
     RS_RET_FALSE = -2, /**< to indicate a false state (can be used as FALSE, legacy) */
-    RS_RET_NO_IRET = -8, /**< This is a trick for the debuging system - it means no iRet is provided  */
+    RS_RET_NO_IRET = -8, /**< This is a trick for the debugging system - it means no iRet is provided  */
     RS_RET_VALIDATION_RUN = -9, /**< indicates a (config) validation run, processing not carried out */
     RS_RET_ERR = -3000, /**< generic failure */
     RS_TRUNCAT_TOO_LARGE = -3001, /**< truncation operation where too many chars should be truncated */
@@ -432,7 +432,7 @@ enum rsRetVal_ {
     RS_RET_NOENTRY = -2004, /**< do not create an entry for (whatever) - not necessary an error */
     RS_RET_NO_SQL_STRING = -2005, /**< string is not suitable for use as SQL */
     RS_RET_DISABLE_ACTION = -2006, /**< action requests that it be disabled */
-    RS_RET_SUSPENDED = -2007, /**< something was suspended, not neccesarily an error */
+    RS_RET_SUSPENDED = -2007, /**< something was suspended, not necessarily an error */
     RS_RET_RQD_TPLOPT_MISSING = -2008, /**< a required template option is missing */
     RS_RET_INVALID_VALUE = -2009, /**< some value is invalid (e.g. user-supplied data) */
     RS_RET_INVALID_INT = -2010, /**< invalid integer */
@@ -443,7 +443,7 @@ enum rsRetVal_ {
     RS_RET_CHAIN_NOT_PERMITTED = -2015, /**< chaining (e.g. of config command handlers) not permitted */
     RS_RET_INVALID_PARAMS = -2016, /**< supplied parameters are invalid */
     RS_RET_EMPTY_LIST = -2017, /**< linked list is empty */
-    RS_RET_FINISHED = -2018, /**< some opertion is finished, not an error state */
+    RS_RET_FINISHED = -2018, /**< some operation is finished, not an error state */
     RS_RET_INVALID_SOURCE = -2019, /**< source (address) invalid for some reason */
     RS_RET_ADDRESS_UNKNOWN = -2020, /**< an address is unknown - not necessarily an error */
     RS_RET_MALICIOUS_ENTITY = -2021, /**< there is an malicious entity involved */
@@ -472,7 +472,7 @@ enum rsRetVal_ {
     RS_RET_ALREADY_STARTING = -2043, /**< something (a thread?) is already starting - not necessarily an error */
     RS_RET_NO_MORE_THREADS = -2044, /**< no more threads available, not necessarily an error */
     RS_RET_NO_FILEPREFIX = -2045, /**< file prefix is not specified where one is needed */
-    RS_RET_CONFIG_ERROR = -2046, /**< there is a problem with the user-provided config settigs */
+    RS_RET_CONFIG_ERROR = -2046, /**< there is a problem with the user-provided config settings */
     RS_RET_OUT_OF_DESRIPTORS = -2047, /**< a descriptor table's space has been exhausted */
     RS_RET_NO_DRIVERS = -2048, /**< a required drivers missing */
     RS_RET_NO_DRIVERNAME = -2049, /**< driver name missing where one was required */
@@ -496,7 +496,7 @@ enum rsRetVal_ {
     RS_RET_MODULE_LOAD_ERR_NO_INIT = -2067, /**< module could not be loaded - init() missing */
     RS_RET_MODULE_LOAD_ERR_INIT_FAILED = -2068, /**< module could not be loaded - init() failed */
     RS_RET_NO_SOCKET = -2069, /**< socket could not be obtained or was not provided */
-    RS_RET_SMTP_ERROR = -2070, /**< error during SMTP transation */
+    RS_RET_SMTP_ERROR = -2070, /**< error during SMTP transaction */
     RS_RET_MAIL_NO_TO = -2071, /**< recipient for mail destination is missing */
     RS_RET_MAIL_NO_FROM = -2072, /**< sender for mail destination is missing */
     RS_RET_INVALID_PRI = -2073, /**< PRI value is invalid */
@@ -513,11 +513,11 @@ enum rsRetVal_ {
     RS_RET_TLS_CERT_ERR = -2084, /**< generic TLS certificate error */
     RS_RET_TLS_NO_CERT = -2085, /**< no TLS certificate available where one was expected */
     RS_RET_VALUE_NOT_SUPPORTED = -2086, /**< a provided value is not supported */
-    RS_RET_VALUE_NOT_IN_THIS_MODE = -2087, /**< a provided value is invalid for the curret mode */
+    RS_RET_VALUE_NOT_IN_THIS_MODE = -2087, /**< a provided value is invalid for the current mode */
     RS_RET_INVALID_FINGERPRINT = -2088, /**< a fingerprint is not valid for this use case */
     RS_RET_CONNECTION_ABORTREQ = -2089, /**< connection was abort requested due to previous error */
     RS_RET_CERT_INVALID = -2090, /**< a x509 certificate failed validation */
-    RS_RET_CERT_INVALID_DN = -2091, /**< distinguised name in x509 certificate is invalid (e.g. wrong escaping) */
+    RS_RET_CERT_INVALID_DN = -2091, /**< distinguished name in x509 certificate is invalid (e.g. wrong escaping) */
     RS_RET_CERT_EXPIRED = -2092, /**< we are past a x.509 cert's expiration time */
     RS_RET_CERT_NOT_YET_ACTIVE = -2094, /**< x.509 cert's activation time not yet reached */
     RS_RET_SYS_ERR = -2095, /**< system error occurred (e.g. time() returned -1, quite unexpected) */
@@ -540,7 +540,7 @@ enum rsRetVal_ {
     RS_RET_INVLD_NBR_ARGUMENTS = -2112, /**< invalid number of arguments for function call (rainerscript) */
     RS_RET_INVLD_FUNC = -2113, /**< invalid function name for function call (rainerscript) */
     RS_RET_DUP_FUNC_NAME = -2114, /**< duplicate function name (rainerscript) */
-    RS_RET_UNKNW_FUNC = -2115, /**< unkown function name (rainerscript) */
+    RS_RET_UNKNW_FUNC = -2115, /**< unknown function name (rainerscript) */
     RS_RET_ERR_RLIM_NOFILE = -2116, /**< error setting max. nbr open files process limit */
     RS_RET_ERR_CREAT_PIPE = -2117, /**< error during pipe creation */
     RS_RET_ERR_FORK = -2118, /**< error during fork() */
@@ -558,7 +558,7 @@ enum rsRetVal_ {
     RS_RET_EMPTY_MSG = -2143, /**< provided (raw) MSG is empty */
     RS_RET_PEER_CLOSED_CONN = -2144, /**< remote peer closed connection (information, no error) */
     RS_RET_ERR_OPEN_KLOG = -2145, /**< error opening or reading the kernel log socket */
-    RS_RET_ERR_AQ_CONLOG = -2146, /**< error aquiring console log (on solaris) */
+    RS_RET_ERR_AQ_CONLOG = -2146, /**< error acquiring console log (on solaris) */
     RS_RET_ERR_DOOR = -2147, /**< some problems with handling the Solaris door functionality */
     RS_RET_NO_SRCNAME_TPL = -2150, /**< sourcename template was not specified where one was needed
 (omudpspoof spoof addr) */
@@ -624,7 +624,7 @@ enum rsRetVal_ {
     /* reserved for pre-v6.5 */
     RS_RET_DUP_PARAM = -2220, /**< config parameter is given more than once */
     RS_RET_MODULE_ALREADY_IN_CONF = -2221, /**< module already in current configuration */
-    RS_RET_PARAM_NOT_PERMITTED = -2222, /**< legacy parameter no longer permitted (usally already set by v2) */
+    RS_RET_PARAM_NOT_PERMITTED = -2222, /**< legacy parameter no longer permitted (usually already set by v2) */
     RS_RET_NO_JSON_PASSING = -2223, /**< rsyslog core does not support JSON-passing plugin API */
     RS_RET_MOD_NO_INPUT_STMT = -2224, /**< (input) module does not support input() statement */
     RS_RET_NO_CEE_MSG = -2225, /**< the message being processed is NOT CEE-enhanced */
@@ -652,8 +652,8 @@ enum rsRetVal_ {
     RS_RET_EI_NO_EXISTS = -2323, /**< .encinfo file does not exist (status, not necessarily error!)*/
     RS_RET_EI_WR_ERR = -2324, /**< error writing an .encinfo file */
     RS_RET_EI_INVLD_FILE = -2325, /**< header indicates the file is no .encinfo file */
-    RS_RET_CRY_INVLD_ALGO = -2326, /**< user specified invalid (unkonwn) crypto algorithm */
-    RS_RET_CRY_INVLD_MODE = -2327, /**< user specified invalid (unkonwn) crypto mode */
+    RS_RET_CRY_INVLD_ALGO = -2326, /**< user specified invalid (unknown) crypto algorithm */
+    RS_RET_CRY_INVLD_MODE = -2327, /**< user specified invalid (unknown) crypto mode */
     RS_RET_QUEUE_DISK_NO_FN = -2328, /**< disk queue configured, but filename not set */
     RS_RET_CA_CERT_MISSING = -2329, /**< a CA cert is missing where one is required (e.g. TLS) */
     RS_RET_CERT_MISSING = -2330, /**< a cert is missing where one is required (e.g. TLS) */
@@ -696,7 +696,7 @@ enum rsRetVal_ {
     RS_RET_SENDER_GONE_AWAY = -2429, /**< warning: sender not seen for configured amount of time */
     RS_RET_SENDER_APPEARED = -2430, /**< info: new sender appeared */
     RS_RET_FILE_ALREADY_IN_TABLE = -2431, /**< in imfile: table already contains to be added file */
-    RS_RET_ERR_DROP_PRIV = -2432, /**< error droping privileges */
+    RS_RET_ERR_DROP_PRIV = -2432, /**< error dropping privileges */
     RS_RET_FILE_OPEN_ERROR = -2433, /**< error other than "not found" occurred during open() */
     RS_RET_RENAME_TMP_QI_ERROR = -2435, /**< renaming temporary .qi file failed */
     RS_RET_ERR_SETENV = -2436, /**< error setting an environment variable */
@@ -704,7 +704,7 @@ enum rsRetVal_ {
     RS_RET_JSON_UNUSABLE = -2438, /**< JSON object is NULL or otherwise unusable */
     RS_RET_OPERATION_STATUS = -2439, /**< operational status (info) message, no error */
     RS_RET_UDP_MSGSIZE_TOO_LARGE = -2440, /**< a message is too large to be sent via UDP */
-    RS_RET_NON_JSON_PROP = -2441, /**< a non-json property id is provided where a json one is requried */
+    RS_RET_NON_JSON_PROP = -2441, /**< a non-json property id is provided where a json one is required */
     RS_RET_NO_TZ_SET = -2442, /**< system env var TZ is not set (status msg) */
     RS_RET_FS_ERR = -2443, /**< file-system error */
     RS_RET_POLL_ERR = -2444, /**< error in poll() system call */
@@ -886,7 +886,7 @@ struct actWrkrIParams {
  * because it needs an initialized runtime system (and may at some point in time
  * even be loaded itself). So this is a no-go. What we do is use a single global
  * variable which may be provided with a pointer by the caller. This variable
- * resides in rsyslog.c, the main runtime file. We have not seen any realy valule
+ * resides in rsyslog.c, the main runtime file. We have not seen any really value
  * in providing object access functions. If you don't like that, feel free to
  * add them. -- rgerhards, 2008-04-17
  */

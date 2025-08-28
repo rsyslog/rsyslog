@@ -480,7 +480,7 @@ finalize_it:
 }
 
 
-/* Parse and process an binary cofig option. pVal must be
+/* Parse and process an binary config option. pVal must be
  * a pointer to an integer which is to receive the option
  * value.
  * rgerhards, 2007-07-15
@@ -541,7 +541,7 @@ finalize_it:
 }
 
 
-/* Parse and a word config line option. A word is a consequtive
+/* Parse and a word config line option. A word is a consecutive
  * sequence of non-whitespace characters. pVal must be
  * a pointer to a string which is to receive the option
  * value. The returned string must be freed by the caller.
@@ -859,7 +859,7 @@ finalize_it:
  * we can tell the legacy system (us here!) to check if a config directive is
  * still permitted. For example, the v2 system will disable module global
  * parameters if the are supplied via the native v2 callbacks. In order not
- * to break exisiting modules, we have renamed the rgCfSysLinHdlr routine to
+ * to break existing modules, we have renamed the rgCfSysLinHdlr routine to
  * version 2 and added a new one with the original name. It just calls the
  * v2 function and supplies a "don't care (NULL)" pointer as this argument.
  * rgerhards, 2012-06-26
@@ -965,7 +965,7 @@ rsRetVal unregCfSysLineHdlrs4Owner(void *pOwnerCookie) {
     iRet = llExecFunc(&llCmdList, unregHdlrsHeadExec, pOwnerCookie);
     if (iRet == RS_RET_NOT_FOUND) {
         /* It is not considered an error if a module had no
-           hanlers registered. */
+           handlers registered. */
         iRet = RS_RET_OK;
     }
 

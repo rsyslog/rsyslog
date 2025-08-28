@@ -1,5 +1,5 @@
 #!/bin/bash
-# addd 2020-08-25 by alorbach, released under ASL 2.0
+# add 2020-08-25 by alorbach, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 require_relpEngineVersion "1.7.0"
 export NUMMESSAGES=1000

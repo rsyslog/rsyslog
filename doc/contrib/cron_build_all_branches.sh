@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Do not allow use of unitilized variables
+# Do not allow use of uninitialized variables
 set -u
 
 # Exit if any statement returns a non-true value
@@ -92,7 +92,7 @@ update_build_conf_variables() {
 
 echo ""
 echo "This script is intended to run with a clean repo version of the code."
-echo "Run the sphinx-build command manually if you want to see your uncommited changes."
+echo "Run the sphinx-build command manually if you want to see your uncommitted changes."
 echo "If you run this script with uncommitted and un-pushed changes, YOU WILL LOSE THOSE CHANGES!"
 echo ""
 echo "Press Enter to continue or Ctrl-C to cancel...."

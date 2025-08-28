@@ -464,7 +464,7 @@ static rsRetVal OnSessAcceptGSS(tcpsrv_t *pThis, tcps_sess_t *pSess) {
                 pGSess->allowedMethods = ALLOWEDMETHOD_TCP;
                 ABORT_FINALIZE(RS_RET_OK);  // TODO: define good error codes
             } else if (ret == 4) {
-                /* The client might has been interupted after sending
+                /* The client might has been interrupted after sending
                  * the data length (4B), give him another chance.
                  */
                 srSleep(1, 0);
@@ -676,7 +676,7 @@ ENDfreeCnf
  */
 BEGINrunInput
     CODESTARTrunInput;
-    /* This will fail if the priviledges are dropped. Should be
+    /* This will fail if the privileges are dropped. Should be
      * moved to the '*activateCnfPrePrivDrop' section eventually.
      */
     actGSSListener(srvPort);

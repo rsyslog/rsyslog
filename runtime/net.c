@@ -596,7 +596,7 @@ static rsRetVal AddAllowedSender(struct AllowedSenders **ppRoot,
 
     if (!F_ISSET(iAllow->flags, ADDR_NAME)) {
         if (iSignificantBits == 0)
-            /* we handle this seperatly just to provide a better
+            /* we handle this separately just to provide a better
              * error message.
              */
             LogError(0, NO_ERRCODE,
@@ -1002,7 +1002,7 @@ static int isAllowedSender(uchar *pszType, struct sockaddr *pFrom, const char *p
 
 
 /* The following #ifdef sequence is a small compatibility
- * layer. It tries to work around the different availality
+ * layer. It tries to work around the different availability
  * levels of SO_BSDCOMPAT on linuxes...
  * I borrowed this code from
  *    http://www.erlang.org/ml-archive/erlang-questions/200307/msg00037.html
@@ -1051,7 +1051,7 @@ finalize_it:
 #endif /* #ifndef OS_BSD */
 }
 #ifndef SO_BSDCOMPAT
-    /* this shall prevent compiler errors due to undfined name */
+    /* this shall prevent compiler errors due to undefined name */
     #define SO_BSDCOMPAT 0
 #endif
 
@@ -1111,7 +1111,7 @@ static rsRetVal cvthname(struct sockaddr_storage *f, prop_t **localName, prop_t 
  * in, which on exit points to the local hostname. This buffer is dynamically
  * allocated and must be free()ed by the caller. If the functions returns an
  * error, the pointer is NULL.
- * This function always tries to return a FQDN, even so be quering DNS. So it
+ * This function always tries to return a FQDN, even so be querying DNS. So it
  * is safe to assume for the caller that when the function does not return
  * a FQDN, it simply is not available. The domain part of that string is
  * normalized to lower case. The hostname is kept in mixed case for historic
@@ -1487,8 +1487,8 @@ static int *create_udp_socket(uchar *hostname,
  * at the relevant fields, what means a somewhat more complicated processing.
  * Also note that we use a non-standard calling interface, as this is much more natural and
  * it looks extremely unlikely that we get an exception of any kind here. What we
- * return is mimiced after memcmp(), and as such useful for building binary trees
- * (the order relation may be a bit arbritrary, but at least it is consistent).
+ * return is mimicked after memcmp(), and as such useful for building binary trees
+ * (the order relation may be a bit arbitrary, but at least it is consistent).
  * rgerhards, 2009-09-03
  */
 static int CmpHost(struct sockaddr_storage *s1, struct sockaddr_storage *s2, size_t socklen) {
@@ -1675,7 +1675,7 @@ BEGINmodInit()
     CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
 
-    /* Initialize all classes that are in our module - this includes ourselfs */
+    /* Initialize all classes that are in our module - this includes ourselves */
     CHKiRet(netClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit
 /* vi:set ai:

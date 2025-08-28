@@ -172,7 +172,7 @@ static ATTR_NORETURN void usage(void) {
     exit(1);
 }
 
-/* Those three functions are "endianess" insensitive */
+/* Those three functions are "endianness" insensitive */
 static uint16_t buf2uint16(uchar *b) {
     return ((uint16_t)b[0]) << 8 | ((uint16_t)b[1]);
 }

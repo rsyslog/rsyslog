@@ -5,7 +5,7 @@ ACK=0
 SLEEP=0
 DELAY=500
 NB=1
-MESSAGE="program datas"
+MESSAGE="program data"
 SIGNALED=0
 ERR=$0.stderr
 while getopts "cd:e:s:n:m:g" OPTION; do

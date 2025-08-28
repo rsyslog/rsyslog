@@ -1,5 +1,5 @@
 #!/bin/bash
-# addd 2019-11-14 by alorbach, released under ASL 2.0
+# add 2019-11-14 by alorbach, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 require_relpEngineSetTLSLibByName
 export NUMMESSAGES=1000

@@ -1,5 +1,5 @@
 /* ompipe.h
- * These are the definitions for the build-in pipe output module.
+ * These are the definitions for the built-in pipe output module.
  *
  * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
  *

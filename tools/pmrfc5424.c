@@ -128,7 +128,7 @@ static int parseRFCStructuredData(uchar **pp2parse, uchar *pResult, int *pLenStr
     lenStr = *pLenStr;
 
     /* this is the actual parsing loop
-     * Remeber: structured data starts with [ and includes any characters
+     * Remember: structured data starts with [ and includes any characters
      * until the first ] followed by a SP. There may be spaces inside
      * structured data. There may also be \] inside the structured data, which
      * do NOT terminate an element.

@@ -2108,7 +2108,7 @@ create_kafka_topic() {
 			echo "ENV ERROR: kafka brokers did not come up:"
 			cat -n <<< $text
 			if [ $is_retry == 1 ]; then
-				echo "SKIPing test as the env is not ready for it"
+				echo "skipping test as the env is not ready for it"
 				exit 177
 			fi
 			echo "RETRYING kafka startup, doing shutdown and startup"

@@ -8,7 +8,7 @@
 # use env var DOCKER_RUN_EXTRA_OPTS to provide extra options to docker run
 # command.
 #
-# TO MODIFIY BEHAVIOUR, use
+# TO MODIFY BEHAVIOUR, use
 # RSYSLOG_CONTAINER_UID, format uid:gid,
 #                   to change the users container is run under
 #                   set to "" to use the container default settings

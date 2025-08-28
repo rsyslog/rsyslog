@@ -183,7 +183,7 @@ static struct cnfparamblk inppblk = {CNFPARAMBLK_VERSION, sizeof(inppdescr) / si
 #include "im-helper.h" /* must be included AFTER the type definitions! */
 
 /* enqueue the read file line as a message. The provided string is
- * not freed - thuis must be done by the caller.
+ * not freed - thus must be done by the caller.
  */
 static rsRetVal enqMsg(instanceConf_t *pInst, smsg_t *pMsg) {
     DEFiRet;

@@ -187,7 +187,7 @@ finalize_it:
 }
 
 /* add a counter to an object
- * ctrName is duplicated, caller must free it if requried
+ * ctrName is duplicated, caller must free it if required
  * NOTE: The counter is READ-ONLY and MUST NOT be modified (most
  * importantly, it must not be initialized, so the caller must
  * ensure the counter is properly initialized before AddCounter()
@@ -297,7 +297,7 @@ static rsRetVal addCtrForReporting(json_object *to, const uchar *field_name, int
     DEFiRet;
 
     /*We should migrate libfastjson to support uint64_t in addition to int64_t.
-      Although no counter is likely to grow to int64 max-value, this is theoritically
+      Although no counter is likely to grow to int64 max-value, this is theoretically
       incorrect (as intctr_t is uint64)*/
     CHKmalloc(v = json_object_new_int64((int64_t)value));
 

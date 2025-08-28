@@ -126,7 +126,7 @@ struct results {
 };
 
 
-static void formater(struct ofields* fields) {
+static void formatter(struct ofields* fields) {
     char str[N];
     time_t rtime;
     struct tm now;
@@ -408,7 +408,7 @@ int main(int argc, char* argv[]) {
     while (cursor_next(db_c, res)) /* Move cursor & get pointed data */
     {
         fields = get_data(res);
-        formater(fields); /* format output */
+        formatter(fields); /* format output */
         free(fields);
     }
 

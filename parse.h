@@ -17,7 +17,7 @@
  * The to-be-parsed string provided to the parse object MUST NOT be
  * freed or modified by the caller during the lifetime of the parse
  * object. However, the caller must free it when it is no longer needed.
- * Optinally, the parse object can be instructed to do that. All objects
+ * Optionally, the parse object can be instructed to do that. All objects
  * returned by the parse routines must be freed by the caller. For
  * simpler data types (like integers), the caller must provide the
  * necessary buffer space.

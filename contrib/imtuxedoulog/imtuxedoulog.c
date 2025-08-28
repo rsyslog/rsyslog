@@ -2,7 +2,7 @@
  *
  * This is the input module for reading Tuxedo ULOG files. The particularity of this file
  * is that the timestamp is split between the filename (date) and the log line (time).
- * So this module switches on the date base betwwen files to open only the current file.
+ * So this module switches on the date base between files to open only the current file.
  * The log line is parsed according to the Tuxedo format. The ECID is extracted as a
  * structured data attribute.
  *
@@ -150,7 +150,7 @@ static int getFullStateFileName(uchar *pszstatefile, uchar *pszout, int ilenout)
     int lenout;
     const uchar *pszworkdir;
 
-    /* Get Raw Workdir, if it is NULL we need to propper handle it */
+    /* Get Raw Workdir, if it is NULL we need to proper handle it */
     pszworkdir = glblGetWorkDirRaw(runModConf->pConf);
 
     /* Construct file name */
@@ -610,7 +610,7 @@ static void do_polling(void) {
                         "switching form '%s' to '%s' !",
                         (char *)pInst->pszUlogBaseName, temp);
 
-                    /* first of all change the listener datas */
+                    /* first of all change the listener data */
                     if (pInst->pszCurrFName != NULL) {
                         free(pInst->pszCurrFName);
                         strm.Destruct(&pInst->pStrm);

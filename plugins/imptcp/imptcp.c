@@ -233,7 +233,7 @@ typedef struct epolld_s epolld_t;
 
 /* the ptcp server (listener) object
  * Note that the object contains support for forming a linked list
- * of them. It does not make sense to do this seperately.
+ * of them. It does not make sense to do this separately.
  */
 struct ptcpsrv_s {
     ptcpsrv_t *pNext; /* linked list maintenance */
@@ -426,7 +426,7 @@ static void destructSrv(ptcpsrv_t *pSrv) {
 
 /****************************************** TCP SUPPORT FUNCTIONS ***********************************/
 /* We may later think about moving this into a helper library again. But the whole point
- * so far was to keep everything related close togehter. -- rgerhards, 2010-08-10
+ * so far was to keep everything related close together. -- rgerhards, 2010-08-10
  */
 
 static rsRetVal startupUXSrv(ptcpsrv_t *pSrv) {
@@ -634,7 +634,7 @@ static rsRetVal startupSrv(ptcpsrv_t *pSrv) {
          * pick a port that is used by some protocol (well, at least this looks very
          * unlikely...). If our asusmption is wrong, we should iterate until we find a
          * combination that works - it is very unusual to have the same service listen
-         * on differnt ports on IPv4 and IPv6.
+         * on different ports on IPv4 and IPv6.
          */
         savecast.sa = (struct sockaddr *)r->ai_addr;
         const int currport = (isIPv6) ? savecast.ipv6->sin6_port : savecast.ipv4->sin_port;
@@ -1225,7 +1225,7 @@ finalize_it:
  * RS_RET_OK, which means the session should be kept open
  * or anything else, which means it must be closed.
  * rgerhards, 2008-03-01
- * As a performance optimization, we pick up the timestamp here. Acutally,
+ * As a performance optimization, we pick up the timestamp here. Actually,
  * this *is* the *correct* reception step for all the data we received, because
  * we have just received a bunch of data! -- rgerhards, 2009-06-16
  * EXTRACT from tcps_sess.c
@@ -1246,7 +1246,7 @@ static rsRetVal ATTR_NONNULL(1, 2) DataRcvdUncompressed(
     multiSub.nElem = 0;
 
     /* We now copy the message to the session buffer. */
-    pEnd = pData + iLen; /* this is one off, which is intensional */
+    pEnd = pData + iLen; /* this is one off, which is intentional */
 
     while (pData < pEnd) {
         CHKiRet(processDataRcvd(pThis, &pData, pEnd - pData, stTime, ttGenTime, &multiSub, &nMsgs));
@@ -1640,7 +1640,7 @@ finalize_it:
 }
 
 
-/* This function is called when a new listener instace shall be added to
+/* This function is called when a new listener instance shall be added to
  * the current config object via the legacy config system. It just shuffles
  * all parameters to the listener in-memory instance.
  */
@@ -2435,7 +2435,7 @@ static void shutdownSrv(ptcpsrv_t *pSrv) {
     while (pLstn != NULL) {
         close(pLstn->sock);
         statsobj.Destruct(&(pLstn->stats));
-        /* now unlink listner */
+        /* now unlink listener */
         lstnDel = pLstn;
         pLstn = pLstn->next;
         DBGPRINTF(

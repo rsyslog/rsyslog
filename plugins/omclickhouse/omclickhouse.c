@@ -337,7 +337,7 @@ static rsRetVal ATTR_NONNULL() writeDataError(wrkrInstanceData_t *const pWrkrDat
     dbgprintf("omclickhouse: error record: '%s'\n", rendered);
     toWrite = strlen(rendered) + 1;
     /* Note: we overwrite the '\0' terminator with '\n' -- so we avoid
-     * caling malloc() -- write() does NOT need '\0'!
+     * calling malloc() -- write() does NOT need '\0'!
      */
     rendered[toWrite - 1] = '\n'; /* NO LONGER A STRING! */
     wrRet = write(pData->fdErrFile, rendered, toWrite);
@@ -479,7 +479,7 @@ static rsRetVal ATTR_NONNULL(1, 2)
         STATSCOUNTER_INC(indexHTTPReqFail, mutIndexHTTPReqFail);
         indexHTTPFail += nmsgs;
         LogError(0, RS_RET_SUSPENDED,
-                 "omclickhouse: we are suspending ourselfs due "
+                 "omclickhouse: we are suspending ourselves due "
                  "to server failure %lld: %s",
                  (long long)code, errbuf);
         ABORT_FINALIZE(RS_RET_SUSPENDED);

@@ -7,7 +7,7 @@
 echo "----------------------------------"
 echo "--- Coredump Analysis with GDB ---"
 echo "----------------------------------"
-read -p "Where are the core files localed (default /)?" DIRECTORY
+read -p "Where are the core files located (default /)?" DIRECTORY
 if [ "$DIRECTORY" == "" ]; then
 	DIRECTORY="/"
 fi

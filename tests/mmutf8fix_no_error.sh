@@ -45,7 +45,7 @@ tcpflood -m1 -M "\"<129>Mar 10 01:00:00 172.20.245.8 tag: this is a test message
 <129>Mar 10 01:00:00 172.20.245.8 tag: invalid 4-byte UTF-8 (invalid 2nd continuation but valid utf8) 0xF0 0x41 0xC5 0xB0: ğAÅ°
 <129>Mar 10 01:00:00 172.20.245.8 tag: invalid 4-byte UTF-8 (invalid 2nd continuation but valid utf8) 0xF0 0xEC 0x8C 0xB0: ğìŒ°
 <129>Mar 10 01:00:00 172.20.245.8 tag: invalid 4-byte UTF-8 (invalid 3rd continuation but valid utf8) 0xF0 0x90 0xC5 0xB0: ğÅ°
-<129>Mar 10 01:00:00 172.20.245.8 tag: invalid 4-byte UTF-8 (invalid 4rd continuation but valid utf8) 0xF0 0x90 0xC5 0x2E: ğŒ.
+<129>Mar 10 01:00:00 172.20.245.8 tag: invalid 4-byte UTF-8 (invalid 4th continuation but valid utf8) 0xF0 0x90 0xC5 0x2E: ğŒ.
 <129>Mar 10 01:00:00 172.20.245.8 tag: special characters: ??%%,,..
 <129>Mar 10 01:00:00 172.20.245.8 tag: numbers: 1234567890\""
 
@@ -80,7 +80,7 @@ echo ' this is a test message
  invalid 4-byte UTF-8 (invalid 2nd continuation but valid utf8) 0xF0 0x41 0xC5 0xB0: ?AÅ°
  invalid 4-byte UTF-8 (invalid 2nd continuation but valid utf8) 0xF0 0xEC 0x8C 0xB0: ?ìŒ°
  invalid 4-byte UTF-8 (invalid 3rd continuation but valid utf8) 0xF0 0x90 0xC5 0xB0: ??Å°
- invalid 4-byte UTF-8 (invalid 4rd continuation but valid utf8) 0xF0 0x90 0xC5 0x2E: ???.
+ invalid 4-byte UTF-8 (invalid 4th continuation but valid utf8) 0xF0 0x90 0xC5 0x2E: ???.
  special characters: ??%%,,..
  numbers: 1234567890' > "$RSYSLOG_OUT_LOG.expect"
 

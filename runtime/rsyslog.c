@@ -101,7 +101,7 @@ static int iRefCount = 0; /* our refcount - it MUST exist only once inside a pro
 /* This is the default instance of the error logger. It simply writes the message
  * to stderr. It is expected that this is replaced by the runtime user very early
  * during startup (at least if the default is unsuitable). However, we provide a
- * default so that we can log errors during the intial phase, most importantly
+ * default so that we can log errors during the initial phase, most importantly
  * during initialization. -- rgerhards. 2008-04-17
  */
 void dfltErrLogger(const int severity, const int iErr, const uchar *errMsg) {
@@ -118,7 +118,7 @@ void rsrtSetErrLogger(void (*errLogger)(const int, const int, const uchar *)) {
 }
 
 
-/* globally initialze the runtime system
+/* globally initialize the runtime system
  * NOTE: this is NOT thread safe and must not be called concurrently. If that
  * ever poses a problem, we may use proper mutex calls - not considered needed yet.
  * If ppErrObj is provided, it receives a char pointer to the name of the object that
@@ -190,16 +190,16 @@ rsRetVal rsrtInit(const char **ppErrObj, obj_if_t *pObjIF) {
         }
 #endif
         if (ppErrObj != NULL) *ppErrObj = "obj";
-        CHKiRet(objClassInit(NULL)); /* *THIS* *MUST* always be the first class initilizer being called! */
+        CHKiRet(objClassInit(NULL)); /* *THIS* *MUST* always be the first class initializer being called! */
         CHKiRet(objGetObjInterface(pObjIF)); /* this provides the root pointer for all other queries */
 
         /* initialize core classes. We must be very careful with the order of events. Some
          * classes use others and if we do not initialize them in the right order, we may end
          * up with an invalid call. The most important thing that can happen is that an error
-         * is detected and needs to be logged, wich in turn requires a broader number of classes
+         * is detected and needs to be logged, which in turn requires a broader number of classes
          * to be available. The solution is that we take care in the order of calls AND use a
          * class immediately after it is initialized. And, of course, we load those classes
-         * first that we use ourselfs... -- rgerhards, 2008-03-07
+         * first that we use ourselves... -- rgerhards, 2008-03-07
          */
         if (ppErrObj != NULL) *ppErrObj = "statsobj";
         CHKiRet(statsobjClassInit(NULL));
@@ -266,7 +266,7 @@ rsRetVal rsrtExit(void) {
         propClassExit();
         statsobjClassExit();
 
-        objClassExit(); /* *THIS* *MUST/SHOULD?* always be the first class initilizer being
+        objClassExit(); /* *THIS* *MUST/SHOULD?* always be the first class initializer being
                 called (except debug)! */
     }
 

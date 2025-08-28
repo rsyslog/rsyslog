@@ -284,10 +284,10 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM(, return __builtin_expect(main != 0, 1))],
 
 # check for availability of atomic operations
 # Note: this switch is primarily for the testbench, so that we can try
-# to build w/o automic operations on systems that actually support them.
+# to build w/o atomic operations on systems that actually support them.
 # Usually, atomic operations should be used when available as this
-# speeds up processig.
-# note that when automic operations are enabled but not available, they
+# speeds up processing.
+# note that when atomic operations are enabled but not available, they
 # will silently NOT be used!
 AC_ARG_ENABLE(atomic-operations,
         [AS_HELP_STRING([--enable-atomic-operations],[Enable atomic operation support @<:@default=yes@:>@])],
@@ -825,7 +825,7 @@ fi
 
 # valgrind
 AC_ARG_ENABLE(valgrind,
-        [AS_HELP_STRING([--enable-valgrind],[Enable somes special code that rsyslog core developers consider useful for testing. Do NOT use if you don't exactly know what you are doing, except if told so by rsyslog developers. NOT to be used by distro maintainers for building regular packages. @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-valgrind],[Enable some special code that rsyslog core developers consider useful for testing. Do NOT use if you don't exactly know what you are doing, except if told so by rsyslog developers. NOT to be used by distro maintainers for building regular packages. @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_valgrind="yes" ;;
           no) enable_valgrind="no" ;;
@@ -1116,7 +1116,7 @@ fi
 AM_CONDITIONAL(ENABLE_OMHTTP, test x$enable_omhttp = xyes)
 
 
-# capability to enable elasticsearch testbench tests. This requries that an ES test
+# capability to enable elasticsearch testbench tests. This requires that an ES test
 # environment is present on the local (127.0.0.1) machine.
 # we support a "minimal" mode to take care of travis where we cannot run all tests
 # due to runtime constraints
@@ -1134,7 +1134,7 @@ AM_CONDITIONAL(ENABLE_ELASTICSEARCH_TESTS, test x$enable_elasticsearch_tests = x
 AM_CONDITIONAL(ENABLE_ELASTICSEARCH_TESTS_MINIMAL, test x$enable_elasticsearch_tests = xminimal -o x$enable_elasticsearch_tests = xyes)
 
 
-# capability to enable clickhouse testbench tests. This requries that a test
+# capability to enable clickhouse testbench tests. This requires that a test
 # environment is present on the local (127.0.0.1) machine.
 AC_ARG_ENABLE(clickhouse_tests,
         [AS_HELP_STRING([--enable-clickhouse-tests],[enable Elasticsearch specific tests in testbench @<:@default=no@:>@])],
@@ -1350,7 +1350,7 @@ AM_CONDITIONAL(ENABLE_RSYSLOGD, test x$enable_rsyslogd = xyes)
 # for this switch is that some test simply take too long to execute them on a regular
 # basis. So we enable to skip them, while the majority of tests can still be used. The
 # idea is that at least "make distcheck" executes the extended testbench, and also
-# developers should explicitely enable it after important changes. -- rgerhards, 2010-04-12
+# developers should explicitly enable it after important changes. -- rgerhards, 2010-04-12
 AC_ARG_ENABLE(extended_tests,
         [AS_HELP_STRING([--enable-extended-tests],[extended testbench @<:@default=no@:>@])],
         [case "${enableval}" in
@@ -1363,7 +1363,7 @@ AC_ARG_ENABLE(extended_tests,
 AM_CONDITIONAL(ENABLE_EXTENDED_TESTS, test x$enable_extended_tests = xyes)
 
 
-# capability to enable MySQL testbench tests. This requries that a Syslog database
+# capability to enable MySQL testbench tests. This requires that a Syslog database
 # with the default schema has been created on the local (127.0.0.1) MySQL server and
 # a user "rsyslog" with password "testbench" exists, is able to login with default
 # parameters and has sufficient (read: all) privileges on that database.
@@ -1380,7 +1380,7 @@ AC_ARG_ENABLE(mysql_tests,
 AM_CONDITIONAL(ENABLE_MYSQL_TESTS, test x$enable_mysql_tests = xyes)
 
 
-# capability to enable PostgreSQL testbench tests. This requries that a Syslog database
+# capability to enable PostgreSQL testbench tests. This requires that a Syslog database
 # with the default schema (see plugins/ompgsql/createDB.sql) has been created on the
 # local (127.0.0.1) PostgreSQL server and a user "rsyslog" with password "testbench"
 # exists, is able to login with default parameters and has sufficient (read: all)
@@ -2496,7 +2496,7 @@ if test "$enable_omkafka" = "yes" -o "$enable_omkafka" = "optional"; then
 				AS_IF([test "$enable_omkafka" = "yes"],
 					AC_MSG_ERROR([could not find rdkafka library])
 				)
-				AC_MSG_NOTICE([omkafka: no suiteable build environment, use omkafka dummy])
+				AC_MSG_NOTICE([omkafka: no suitable build environment, use omkafka dummy])
 				omkafka_use_dummy=yes
 				AC_DEFINE([ENABLE_OMKAFKA_DUMMY], [1], [Indicator that we need to build a dummy omkafka module])
 			])
@@ -2531,7 +2531,7 @@ if test "x$enable_imkafka" = "xyes" -o "$enable_imkafka" = "optional"; then
 			AS_IF([test "$enable_imkafka" = "yes"],
 				AC_MSG_ERROR([could not find sufficiently current rdkafka library])
 			)
-			AC_MSG_NOTICE([imkafka: no suiteable build environment, use imkafka dummy])
+			AC_MSG_NOTICE([imkafka: no suitable build environment, use imkafka dummy])
 			imkafka_use_dummy=yes
 			AC_DEFINE([ENABLE_IMKAFKA_DUMMY], [1], [Indicator that we need to build a dummy imkafka module])
 		])
@@ -2956,7 +2956,7 @@ AC_ARG_ENABLE(generate-man-pages,
 # This provides a work-around to use "make distcheck" without
 # running tests (mode used pre 2018-07-02)
 AC_ARG_ENABLE(distcheck-workaround,
-        [AS_HELP_STRING([--enable-distcheck-workaround],[enable to use make distcheck without runing testbench inside it @<:@default=no@:>@])],
+        [AS_HELP_STRING([--enable-distcheck-workaround],[enable to use make distcheck without running testbench inside it @<:@default=no@:>@])],
         [case "${enableval}" in
          yes) enable_distcheck_workaround="yes" ;;
           no) enable_distcheck_workaround="no" ;;

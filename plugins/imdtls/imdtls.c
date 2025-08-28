@@ -247,7 +247,7 @@ static rsRetVal DTLSCreateSocket(instanceConf_t *inst) {
     setsockopt(inst->sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
     setsockopt(inst->sockfd, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
 
-    // Set NON Blcoking Flags
+    // Set NON Blocking Flags
     flags = fcntl(inst->sockfd, F_GETFL, 0);
     fcntl(inst->sockfd, F_SETFL, flags | O_NONBLOCK);
 
@@ -987,7 +987,7 @@ BEGINfreeCnf
         free(inst->pszBindRuleset);
         free(inst->pszInputName);
 
-        // --- CleanUP OpenSSL ressources
+        // --- CleanUP OpenSSL resources
         // Remove SSL CLients
         if (inst->dtlsClients != NULL) {
             for (i = 0; i < MAX_DTLS_CLIENTS; ++i) {

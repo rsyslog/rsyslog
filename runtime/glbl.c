@@ -1,7 +1,7 @@
-/* glbl.c - this module holds global defintions and data items.
+/* glbl.c - this module holds global definitions and data items.
  * These are shared among the runtime library. Their use should be
- * limited to cases where it is actually needed. The main intension for
- * implementing them was support for the transistion from v2 to v4
+ * limited to cases where it is actually needed. The main intention for
+ * implementing them was support for the transition from v2 to v4
  * (with fully modular design), but it turned out that there may also
  * be some other good use cases besides backwards-compatibility.
  *
@@ -331,7 +331,7 @@ static rsRetVal setLocalHostIPIF(void __attribute__((unused)) * pVal, uchar *pNe
     if (localRet != RS_RET_OK) {
         LogError(0, RS_RET_ERR,
                  "$LocalHostIPIF: IP address for interface "
-                 "'%s' cannnot be obtained - ignoring directive",
+                 "'%s' cannot be obtained - ignoring directive",
                  pNewVal);
     } else {
         storeLocalHostIPIF(myIP);
@@ -631,7 +631,7 @@ static int getDefPFFamily(rsconf_t *cnf) {
 
 /* return our local IP.
  * If no local IP is set, "127.0.0.1" is selected *and* set. This
- * is an intensional side effect that we do in order to keep things
+ * is an intentional side effect that we do in order to keep things
  * consistent and avoid config errors (this will make us not accept
  * setting the local IP address once a module has obtained it - so
  * it forces the $LocalHostIPIF directive high up in rsyslog.conf)
@@ -789,7 +789,7 @@ static rsRetVal GenerateLocalHostNameProperty(void) {
             else
                 pszName = LocalHostName;
         }
-    } else { /* local hostname is overriden via config */
+    } else { /* local hostname is overridden via config */
         pszName = LocalHostNameOverride;
     }
     DBGPRINTF("GenerateLocalHostName uses '%s'\n", pszName);
@@ -1390,7 +1390,7 @@ finalize_it:
     /* we have now read the config. We need to query the local host name now
      * as it was set by the config.
      *
-     * Note: early messages are already emited, and have "[localhost]" as
+     * Note: early messages are already emitted, and have "[localhost]" as
      * hostname. These messages are currently in iminternal queue. Once they
      * are taken from that queue, the hostname will be adapted.
      */
@@ -1407,7 +1407,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
     /* request objects we use */
     CHKiRet(objUse(prop, CORE_COMPONENT));
 
-    /* intialize properties */
+    /* initialize properties */
     storeLocalHostIPIF((uchar *)"127.0.0.1");
 
     /* config handlers are never unregistered and need not be - we are always loaded ;) */

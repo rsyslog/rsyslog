@@ -52,7 +52,7 @@
 #include "conf.h"
 
 #undef HAVE_DBI_TXSUPP
-/* transaction support disabled in v8 -- TODO: reenable */
+/* transaction support disabled in v8 -- TODO: re-enable */
 
 MODULE_TYPE_OUTPUT;
 MODULE_TYPE_NOKEEP;
@@ -318,14 +318,14 @@ static rsRetVal writeDB(const uchar *psz, instanceData *const __restrict__ pData
         if ((dbiRes = dbi_conn_query(pData->conn, (const char *)psz)) == NULL) { /* re-try insert */
             /* we failed, giving up for now */
             reportDBError(pData, 0);
-            closeConn(pData); /* free ressources */
+            closeConn(pData); /* free resources */
             ABORT_FINALIZE(RS_RET_SUSPENDED);
         }
     }
 
 finalize_it:
     if (iRet == RS_RET_OK) {
-        pData->uLastDBErrno = 0; /* reset error for error supression */
+        pData->uLastDBErrno = 0; /* reset error for error suppression */
     }
 
     if (dbiRes != NULL) dbi_result_free(dbiRes);

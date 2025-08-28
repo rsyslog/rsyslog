@@ -86,7 +86,7 @@ struct action_s {
     rsRetVal (*submitToActQ)(action_t *, wti_t *, smsg_t *); /* function submit message to action queue */
     rsRetVal (*qConstruct)(struct queue_s *pThis);
     sbool bUsesMsgPassingMode;
-    sbool bNeedReleaseBatch; /* do we need to release batch ressources? Depends on ParamPassig modes... */
+    sbool bNeedReleaseBatch; /* do we need to release batch resources? Depends on ParamPassig modes... */
     int iNumTpls; /* number of array entries for template element below */
     struct template **ppTpl; /* array of template to use - strings must be passed to doAction
                               * in this order. */

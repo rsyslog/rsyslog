@@ -69,7 +69,7 @@ static pthread_key_t keyThrdName;
 
 
 /* output the current thread ID to "relevant" places
- * (what "relevant" means is determinded by various ways)
+ * (what "relevant" means is determined by various ways)
  */
 void dbgOutputTID(char *name __attribute__((unused))) {
 #if defined(HAVE_SYSCALL) && defined(HAVE_SYS_gettid)
@@ -238,7 +238,7 @@ void r_dbgoprint(const char *srcname, obj_t *pObj, const char *fmt, ...) {
     lenWriteBuf = vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
     va_end(ap);
     if (lenWriteBuf >= sizeof(pszWriteBuf)) {
-        /* prevent buffer overrruns and garbagge display */
+        /* prevent buffer overrruns and garbage display */
         pszWriteBuf[sizeof(pszWriteBuf) - 5] = '.';
         pszWriteBuf[sizeof(pszWriteBuf) - 4] = '.';
         pszWriteBuf[sizeof(pszWriteBuf) - 3] = '.';
@@ -271,7 +271,7 @@ void r_dbgprintf(const char *srcname, const char *fmt, ...) {
     lenWriteBuf = vsnprintf(pszWriteBuf, sizeof(pszWriteBuf), fmt, ap);
     va_end(ap);
     if (lenWriteBuf >= sizeof(pszWriteBuf)) {
-        /* prevent buffer overrruns and garbagge display */
+        /* prevent buffer overrruns and garbage display */
         pszWriteBuf[sizeof(pszWriteBuf) - 5] = '.';
         pszWriteBuf[sizeof(pszWriteBuf) - 4] = '.';
         pszWriteBuf[sizeof(pszWriteBuf) - 3] = '.';

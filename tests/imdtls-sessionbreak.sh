@@ -38,7 +38,7 @@ ruleset(name="spool" queue.type="direct") {
 }
 '
 startup
-# How many tcpfloods we run at the same tiem
+# How many tcpfloods we run at the same time
 for ((i=1;i<=10;i++)); do 
         # How many times tcpflood runs in each threads
 	./tcpflood -Tdtls -p$PORT_RCVR -m$NUMMESSAGES -W1000 -d102400 -x$srcdir/tls-certs/ca.pem -Z$srcdir/tls-certs/cert.pem -z$srcdir/tls-certs/key.pem -s &

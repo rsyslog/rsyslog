@@ -1,5 +1,5 @@
 #!/bin/bash
-# addd 2017-03-31 by Pascal Withopf, released under ASL 2.0
+# add 2017-03-31 by Pascal Withopf, released under ASL 2.0
 
 . ${srcdir:=.}/diag.sh init
 generate_conf

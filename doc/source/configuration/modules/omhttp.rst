@@ -659,15 +659,15 @@ Additionally, the following statistics can also be configured for a specific act
 
 - **requests.status.0xx** - Number of failed requests. 0xx errors indicate request never reached destination.
 
-- **requests.status.1xx** - Number of HTTP requests returing 1xx status codes
+- **requests.status.1xx** - Number of HTTP requests returning 1xx status codes
 
-- **requests.status.2xx** - Number of HTTP requests returing 2xx status codes
+- **requests.status.2xx** - Number of HTTP requests returning 2xx status codes
 
-- **requests.status.3xx** - Number of HTTP requests returing 3xx status codes
+- **requests.status.3xx** - Number of HTTP requests returning 3xx status codes
 
-- **requests.status.4xx** - Number of HTTP requests returing 4xx status codes
+- **requests.status.4xx** - Number of HTTP requests returning 4xx status codes
 
-- **requests.status.5xx** - Number of HTTP requests returing 5xx status codes
+- **requests.status.5xx** - Number of HTTP requests returning 5xx status codes
 
 - **requests.bytes** - Total number of bytes sent - derived from CURLINFO_REQUEST_SIZE.
 

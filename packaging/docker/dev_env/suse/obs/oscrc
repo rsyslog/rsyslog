@@ -74,7 +74,7 @@ build-jobs = 4
 #exclude_glob = .osc CVS .svn .* _linkerror *~ #*# *.orig *.bak *.changes.vctmp.*
 # limit the age of requests shown with 'osc req list'.
 # this is a default only, can be overridden by 'osc req list -D NNN'
-# Use 0 for unlimted.
+# Use 0 for unlimited.
 #request_list_days = 0
 # show info useful for debugging
 #debug = 1

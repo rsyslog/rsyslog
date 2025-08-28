@@ -92,7 +92,7 @@ echo LINES:	$(wc -l $RSYSLOG_DYNNAME.input.log.2)
 echo TAIL	$RSYSLOG_DYNNAME.input.log.2:
 tail $RSYSLOG_DYNNAME.input.log.2
 echo ""
-echo LINES:	$(wc -l $RSYSLOG_DYNNAME.inpt.log.3)
+echo LINES:	$(wc -l $RSYSLOG_DYNNAME.input.log.3)
 echo TAIL	$RSYSLOG_DYNNAME.input.log.3:
 tail $RSYSLOG_DYNNAME.input.log.3
 echo ""

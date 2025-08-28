@@ -1,5 +1,5 @@
 /* receives messages from a specified unix sockets and writes
- * output to specfied file.
+ * output to specified file.
  *
  * Command line options:
  * -s name of socket (required)

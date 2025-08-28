@@ -1,5 +1,5 @@
 #!/bin/bash
-# addd 2023-01-11 by RGerhards, released under ASL 2.0
+# add 2023-01-11 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=50000
 echo "ls -l $RSYSLOG_DYNNAME.channel.*

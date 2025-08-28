@@ -1,5 +1,5 @@
 /* omsnmp.h
- * These are the definitions for the build-in MySQL output module.
+ * These are the definitions for the built-in MySQL output module.
  *
  * Copyright 2007-2012 Rainer Gerhards and Adiscon GmbH.
  *

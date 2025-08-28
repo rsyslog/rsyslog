@@ -18,7 +18,7 @@ printf '\n'
 if ! tests/CI/check_commit_text.py gitlog; then
 	cat >&2 <<- EOF
 
-	There are problems with the commit titles. Please fix them, ammend your
+	There are problems with the commit titles. Please fix them, amend your
 	commit via "git commit --amend" and force-push the fixed branch via
 	"git push -f".
 

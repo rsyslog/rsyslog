@@ -235,7 +235,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*SetOnMsgReceive)(tcpsrv_t *pThis,
                                 rsRetVal (*OnMsgReceive)(tcps_sess_t *, uchar *, int)); /* 2009-05-24 */
     rsRetVal (*SetRuleset)(tcpsrv_t *pThis, ruleset_t *); /* 2009-06-12 */
-    /* added v7 (accidently named v8!) */
+    /* added v7 (accidentally named v8!) */
     rsRetVal (*SetLstnMax)(tcpsrv_t *pThis, int iMaxLstn); /* 2009-08-17 */
     rsRetVal (*SetNotificationOnRemoteClose)(tcpsrv_t *pThis, int bNewVal); /* 2009-10-01 */
     rsRetVal (*SetNotificationOnRemoteOpen)(tcpsrv_t *pThis, int bNewVal); /* 2022-08-23 */

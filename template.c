@@ -232,7 +232,7 @@ rsRetVal tplToString(struct template *__restrict__ const pTpl,
     }
 
     if (iBuf == iparam->lenBuf) {
-        /* in the weired case of an *empty* template, this can happen.
+        /* in the weird case of an *empty* template, this can happen.
          * it is debatable if we should really fix it here or simply
          * forbid that case. However, performance toll is minimal, so
          * I tend to permit it. -- 2010-11-05 rgerhards
@@ -253,7 +253,7 @@ finalize_it:
 
 
 /* This functions converts a template into a json object.
- * For further general details, see the very similar funtion
+ * For further general details, see the very similar function
  * tpltoString().
  * rgerhards, 2012-08-29
  */
@@ -981,7 +981,7 @@ static rsRetVal do_Parameter(uchar **pp, struct template *pTpl) {
             dbgprintf("debug: has regex \n");
             /* APR 2005-09 I need the string that represent the regex */
             /* The regex end is: "--end" */
-            /* TODO : this is hardcoded and cant be escaped, please change */
+            /* TODO : this is hardcoded and can't be escaped, please change */
             regex_end = (unsigned char *)strstr((char *)p, "--end");
             if (regex_end == NULL) {
                 dbgprintf("error: can not find regex end in: '%s'\n", p);
@@ -1160,7 +1160,7 @@ static rsRetVal tplAddTplMod(struct template *pTpl, uchar **ppRestOfConfLine) {
      * Note: we have opted to let the name contain all options. This sounds
      * useful, because the strgen MUST actually implement a specific set
      * of options. Doing this via the name looks to the enduser as if the
-     * regular syntax were used, and it make sure the strgen postively
+     * regular syntax were used, and it make sure the strgen positively
      * acknowledged implementing the option. -- rgerhards, 2011-03-21
      */
     if (lenMod > 6 && !strcasecmp((char *)szMod + lenMod - 7, ",stdsql")) {
@@ -1666,14 +1666,14 @@ static rsRetVal createPropertyTpe(struct template *pTpl, struct cnfobj *o) {
     if (bPosRelativeToEnd) {
         if (topos > frompos) {
             LogError(0, RS_RET_ERR,
-                     "position.to=%d is higher than postion.from=%d "
+                     "position.to=%d is higher than position.from=%d "
                      "in 'relativeToEnd' mode\n",
                      topos, frompos);
             ABORT_FINALIZE(RS_RET_ERR);
         }
     } else {
         if ((topos >= 0) && (topos < frompos)) {
-            LogError(0, RS_RET_ERR, "position.to=%d is lower than postion.from=%d\n", topos, frompos);
+            LogError(0, RS_RET_ERR, "position.to=%d is lower than position.from=%d\n", topos, frompos);
             ABORT_FINALIZE(RS_RET_ERR);
         }
     }
@@ -1922,7 +1922,7 @@ rsRetVal ATTR_NONNULL() tplProcessCnf(struct cnfobj *o) {
         }
     }
 
-    /* the following check is just for clang static anaylzer: this condition
+    /* the following check is just for clang static analyzer: this condition
      * cannot occur if all is setup well, because "name" is a required parameter
      * inside the param block and so the code should err out above.
      */

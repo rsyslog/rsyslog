@@ -28,6 +28,6 @@ tcpflood -m 1 -j "::1\ "
 tcpflood -m 1 -j "202.106.0.20\ "
 shutdown_when_empty
 wait_shutdown
-# If the second tcpflood worked, this sould be in the output file
+# If the second tcpflood worked, this should be in the output file
 content_check '{ "city": "Beijing" }'
 exit_test

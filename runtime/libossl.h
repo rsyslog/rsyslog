@@ -46,7 +46,7 @@ struct osslfile_s {
     int16_t readBufMaxIdx;
     int8_t bDeleteOnClose; /* for queue support, similar to stream subsys */
     ssize_t bytesToBlkEnd; /* number of bytes remaining in current crypto block
-                -1 means -> no end (still being writen to, queue files),
+                -1 means -> no end (still being written to, queue files),
                 0 means -> end of block, new one must be started. */
 };
 

@@ -83,7 +83,7 @@ but does not precisely specify anything.
 
 After all of this bashing, I now have to admit that RFC3164 has some
 format recommendations laid out in section 4. The format described has
-quite some value in it and implementors recently try to follow it. This
+quite some value in it and implementers recently try to follow it. This
 format is usually meant when someone tells you that a software is
 "RFC3164 compliant" or expects "RFC3164 compliant messages". I also have
 to admit that rsyslog also uses this format and, in the sense outlined

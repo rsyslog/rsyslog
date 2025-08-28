@@ -1,6 +1,6 @@
 /* modules.c
  * This is the implementation of syslogd modules object.
- * This object handles plug-ins and build-in modules of all kind.
+ * This object handles plug-ins and built-in modules of all kind.
  *
  * Modules are reference-counted. Anyone who access a module must call
  * Use() before any function is accessed and Release() when he is done.
@@ -156,7 +156,7 @@ static void modUsrDel(modInfo_t *pThis, const char *pszUsr) {
         } else {
             pPrev->pNext = pUsr->pNext;
         }
-        /* free ressources */
+        /* free resources */
         free(pUsr->pszFile);
         free(pUsr);
         pUsr = NULL; /* just to make sure... */
@@ -322,7 +322,7 @@ static void ATTR_NONNULL() addModToGlblList(modInfo_t *const pThis) {
 
 /* ready module for config processing. this includes checking if the module
  * is already in the config, so this function may return errors. Returns a
- * pointer to the last module inthe current config. That pointer needs to
+ * pointer to the last module in the current config. That pointer needs to
  * be passed to addModToCnfLst() when it is called later in the process.
  */
 rsRetVal readyModForCnf(modInfo_t *pThis, cfgmodules_etry_t **ppNew, cfgmodules_etry_t **ppLast) {
@@ -1084,7 +1084,7 @@ static rsRetVal ATTR_NONNULL(1) Load(uchar *const pModName, const sbool bConfLoa
                     }
                 } else {
                     /* regular modules need to be added to conf list (for
-                     * builtins, this happend during initial load).
+                     * builtins, this happened during initial load).
                      */
                     addModToCnfList(&pNew, pLast);
                 }
@@ -1297,7 +1297,7 @@ static rsRetVal Use(const char *srcFile, modInfo_t *pThis) {
 }
 
 
-/* Reference-Counting object access: subract one from the current refcount. Must
+/* Reference-Counting object access: subtract one from the current refcount. Must
  * by called by anyone who no longer needs a module. If count reaches 0, the
  * module is unloaded. -- rgerhards, 20080-03-10
  */

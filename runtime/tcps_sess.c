@@ -252,8 +252,8 @@ finalize_it:
 /* This should be called before a normal (non forced) close
  * of a TCP session. This function checks if there is any unprocessed
  * message left in the TCP stream. Such a message is probably a
- * fragement. If evrything goes well, we must be right at the
- * beginnig of a new frame without any data received from it. If
+ * fragment. If everything goes well, we must be right at the
+ * beginning of a new frame without any data received from it. If
  * not, there is some kind of a framing error. I think I remember that
  * some legacy syslog/TCP implementations have non-LF terminated
  * messages at the end of the stream. For now, we allow this behaviour.
@@ -485,7 +485,7 @@ finalize_it:
  * RS_RET_OK, which means the session should be kept open
  * or anything else, which means it must be closed.
  * rgerhards, 2008-03-01
- * As a performance optimization, we pick up the timestamp here. Acutally,
+ * As a performance optimization, we pick up the timestamp here. Actually,
  * this *is* the *correct* reception step for all the data we received, because
  * we have just received a bunch of data! -- rgerhards, 2009-06-16
  */
@@ -509,7 +509,7 @@ static rsRetVal DataRcvd(tcps_sess_t *pThis, char *pData, const size_t iLen) {
     multiSub.nElem = 0;
 
     /* We now copy the message to the session buffer. */
-    pEnd = pData + iLen; /* this is one off, which is intensional */
+    pEnd = pData + iLen; /* this is one off, which is intentional */
 
     while (pData < pEnd) {
         CHKiRet(processDataRcvd(pThis, *pData++, &stTime, ttGenTime, &multiSub, &nMsgs));

@@ -124,7 +124,7 @@ DEFobjCurrIf(obj) DEFobjCurrIf(datetime) DEFobjCurrIf(module) DEFobjCurrIf(stats
     time_t iActExecEveryNthOccurTO; /* timeout for n-occurrence setting (in seconds, 0=never) */
     int glbliActionResumeInterval;
     int glbliActionResumeRetryCount; /* how often should suspended actions be retried? */
-    int bActionRepMsgHasMsg; /* last messsage repeated... has msg fragment in it */
+    int bActionRepMsgHasMsg; /* last message repeated... has msg fragment in it */
     uchar *pszActionName; /* short name for the action */
     /* action queue and its configuration parameters */
     queueType_t ActionQueType; /* type of the main message queue above */
@@ -142,7 +142,7 @@ DEFobjCurrIf(obj) DEFobjCurrIf(datetime) DEFobjCurrIf(module) DEFobjCurrIf(stats
     int bActionQSyncQeueFiles; /* sync queue files */
     int iActionQtoQShutdown; /* queue shutdown */
     int iActionQtoActShutdown; /* action shutdown (in phase 2) */
-    int iActionQtoEnq; /* timeout for queue enque */
+    int iActionQtoEnq; /* timeout for queue enqueue */
     int iActionQtoWrkShutdown; /* timeout for worker thread shutdown */
     int iActionQWrkMinMsgs; /* minimum messages per worker needed to start a new one */
     int bActionQSaveOnShutdown; /* save queue on shutdown (when DA enabled)? */
@@ -208,8 +208,8 @@ batchState2String(const batch_state_t state)
  * is not necessarily real-time. In order to enhance performance, current
  * system time is obtained the first time an action needs to know the time
  * and then kept cached inside the action structure. Later requests will
- * always return that very same time. Wile not totally accurate, it is far
- * accurate in most cases and considered "acurate enough" for all cases.
+ * always return that very same time. While not totally accurate, it is far
+ * accurate in most cases and considered "accurate enough" for all cases.
  * When changing the threading model, please keep in mind that this
  * logic needs to be changed should we once allow more than one parallel
  * call into the same action (object). As this is currently not supported,
@@ -220,7 +220,7 @@ batchState2String(const batch_state_t state)
  * invocation if time() failed. Then, of course, we would probably already
  * be in trouble, but for the sake of performance we accept this very,
  * very slight risk.
- * This logic has been added as part of an overall performance improvment
+ * This logic has been added as part of an overall performance improvement
  * effort inspired by David Lang. -- rgerhards, 2008-09-16
  * Note: this function does not use the usual iRet call conventions
  * because that would provide little to no benefit but complicate things
@@ -262,7 +262,7 @@ static rsRetVal actionResetQueueParams(void) {
     cs.bActionQSyncQeueFiles = 0;
     cs.iActionQtoQShutdown = 0; /* queue shutdown */
     cs.iActionQtoActShutdown = 1000; /* action shutdown (in phase 2) */
-    cs.iActionQtoEnq = 50; /* timeout for queue enque */
+    cs.iActionQtoEnq = 50; /* timeout for queue enqueue */
     cs.iActionQtoWrkShutdown = 60000; /* timeout for worker thread shutdown */
     cs.iActionQWrkMinMsgs = -1; /* minimum messages per worker needed to start a new one */
     cs.bActionQSaveOnShutdown = 1; /* save queue on shutdown (when DA enabled)? */
@@ -544,7 +544,7 @@ rsRetVal actionConstructFinalize(action_t *__restrict__ const pThis, struct nvls
         parser_warnmsg(
             "module %s with message passing mode uses "
             "non-direct queue. This most probably leads to undesired "
-            "results. For message modificaton modules (mm*), this means "
+            "results. For message modification modules (mm*), this means "
             "that they will have no effect - "
             "see https://www.rsyslog.com/mm-no-queue/",
             (char *)modGetName(pThis->pMod));
@@ -583,7 +583,7 @@ static uchar *getActStateName(action_t *const pThis, wti_t *const pWti) {
         case ACT_STATE_DATAFAIL:
             return (uchar *)"datafail";
         default:
-            return (uchar *)"ERROR/UNKNWON";
+            return (uchar *)"ERROR/UNKNOWN";
     }
 }
 
@@ -781,7 +781,7 @@ static void ATTR_NONNULL() actionSuspend(action_t *const pThis, wti_t *const pWt
  * engine to go into a tight loop. That obviously is not acceptable. As such, we track the
  * count of iterations that a tryResume returning RS_RET_OK is immediately followed by
  * an unsuccessful call to doAction(). If that happens more than 10 times, we assume
- * the return acutally is a RS_RET_SUSPENDED. In order to go through the various
+ * the return actually is a RS_RET_SUSPENDED. In order to go through the various
  * resumption stages, we do this for every 10 requests. This magic number 10 may
  * not be the most appropriate, but it should be thought of a "if nothing else helps"
  * kind of facility: in the first place, the module should return a proper indication
@@ -1554,7 +1554,7 @@ static rsRetVal ATTR_NONNULL() actionCommit(action_t *__restrict__ const pThis, 
     }
     DBGPRINTF("actionCommit[%s]: processing...\n", pThis->pszName);
 
-    /* we now do one try at commiting the whole batch. Usually, this will
+    /* we now do one try at committing the whole batch. Usually, this will
      * succeed. If so, we are happy and done. If not, we dig into the details
      * of finding out if we have a non-temporary error and try to handle this
      * as well as retry processing. Due to this logic we do a bit more retries
@@ -1589,7 +1589,7 @@ static rsRetVal ATTR_NONNULL() actionCommit(action_t *__restrict__ const pThis, 
     }
 
     if (nMsgs == 0) {
-        ABORT_FINALIZE(RS_RET_OK);  // here, we consider everyting OK
+        ABORT_FINALIZE(RS_RET_OK);  // here, we consider everything OK
     }
 
     /* We still have some messages with suspend error. So now let's do our
@@ -2042,7 +2042,7 @@ static rsRetVal actionApplyCnfParam(action_t *const pAction, struct cnfparamvals
         if (!strcmp(pblk.descr[i].name, "name")) {
             pAction->pszName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(pblk.descr[i].name, "type")) {
-            continue; /* this is handled seperately during module select! */
+            continue; /* this is handled separately during module select! */
         } else if (!strcmp(pblk.descr[i].name, "action.errorfile")) {
             pAction->pszErrFile = es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(pblk.descr[i].name, "action.errorfile.maxsize")) {
@@ -2110,7 +2110,7 @@ rsRetVal addAction(action_t **ppAction,
     CHKiRet(actionConstruct(&pAction)); /* create action object first */
     pAction->pMod = pMod;
     pAction->pModData = pModData;
-    if (actParams == NULL) { /* use legacy systemn */
+    if (actParams == NULL) { /* use legacy system */
         pAction->pszName = cs.pszActionName;
         pAction->iResumeInterval = cs.glbliActionResumeInterval;
         pAction->iResumeRetryCount = cs.glbliActionResumeRetryCount;
@@ -2334,7 +2334,7 @@ rsRetVal actionClassInit(void) {
     CHKiRet(
         regCfSysLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL, NULL));
 
-    initConfigVariables(); /* first-time init of config setings */
+    initConfigVariables(); /* first-time init of config settings */
 
 finalize_it:
     RETiRet;

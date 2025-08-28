@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Do not allow use of unitilized variables
+# Do not allow use of uninitialized variables
 set -u
 
 # Exit if any statement returns a non-true value

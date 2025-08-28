@@ -35,7 +35,7 @@
  * somewhat unnatural to call a regular interface function via a special
  * method. So what we do instead is define a special function called
  * objGetObjInterface() which delivers our own interface. That function
- * than will be defined global and be queriable via pHostQueryEtryPoint().
+ * than will be defined global and be queryable via pHostQueryEtryPoint().
  * I agree, technically this is much the same, but from an architecture
  * point of view it looks cleaner (at least to me).
  *
@@ -292,7 +292,7 @@ static rsRetVal SerializeProp(strm_t *pStrm, uchar *pszPropName, propType_t prop
     /*dbgprintf("objSerializeProp: strm %p, propName '%s', type %d, pUsr %p\n",
         pStrm, pszPropName, propType, pUsr);*/
     /* if we have no user pointer, there is no need to write this property.
-     * TODO: think if that's the righ point of view
+     * TODO: think if that's the right point of view
      * rgerhards, 2008-01-06
      */
     if (pUsr == NULL) {
@@ -726,7 +726,7 @@ finalize_it:
  * To do so, it scans the line beginning cookies and waits for the object
  * cookie. If that is found, control is returned. If the store is exhausted,
  * we will receive an RS_RET_EOF error as part of NEXTC, which will also
- * terminate this function. So we may either return with somehting that
+ * terminate this function. So we may either return with something that
  * looks like a valid object or end of store.
  * rgerhards, 2008-01-07
  */
@@ -861,7 +861,7 @@ finalize_it:
 }
 
 
-/* De-Serialize an object, with known constructur and destructor. Params like Deserialize().
+/* De-Serialize an object, with known constructor and destructor. Params like Deserialize().
  * Note: this is for the queue subsystem, and optimized for its use.
  * rgerhards, 2012-11-03
  */
@@ -1007,7 +1007,7 @@ finalize_it:
 
 /* get the object (instance) name
  * Note that we use a non-standard calling convention. Thus function must never
- * fail, else we run into real big problems. So it must make sure that at least someting
+ * fail, else we run into real big problems. So it must make sure that at least something
  * is returned.
  * rgerhards, 2008-01-30
  */
@@ -1223,7 +1223,7 @@ static rsRetVal ReleaseObj(const char *srcFile, uchar *pObjName, uchar *pObjFile
     ifIsLoaded %d\n", srcFile, pObjName, pIf->ifIsLoaded); */
     pthread_mutex_lock(&mutObjGlobalOp);
 
-    if (pObjFile == NULL) FINALIZE; /* if it is not a lodable module, we do not need to do anything... */
+    if (pObjFile == NULL) FINALIZE; /* if it is not a loadable module, we do not need to do anything... */
 
     if (pIf->ifIsLoaded == 0) {
         FINALIZE; /* we are not loaded - this is perfectly OK... */

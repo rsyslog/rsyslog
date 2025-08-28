@@ -1,6 +1,6 @@
 #!/bin/bash
 # This test checks if omfile segfaults when a file open() in dynacache mode fails.
-# The test is mimiced after a real-life scenario (which, of course, was much more
+# The test is mimicked after a real-life scenario (which, of course, was much more
 # complex).
 #
 # added 2010-03-22 by Rgerhards

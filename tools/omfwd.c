@@ -1,5 +1,5 @@
 /* omfwd.c
- * This is the implementation of the build-in forwarding output module.
+ * This is the implementation of the built-in forwarding output module.
  *
  * NOTE: read comments in module-template.h to understand how this file
  *	 works!
@@ -160,7 +160,7 @@ typedef struct targetData {
     int offsSndBuf; /* next free spot in send buffer */
     time_t ttResume;
     targetStats_t *pTargetStats;
-/* sndBuf buffer size is intensionally fixed -- see no good reason to make configurable */
+/* sndBuf buffer size is intentionally fixed -- see no good reason to make configurable */
 #define SNDBUF_FIXED_BUFFER_SIZE (16 * 1024)
     uchar sndBuf[SNDBUF_FIXED_BUFFER_SIZE];
 } targetData_t;
@@ -339,7 +339,7 @@ static void DestructTCPTargetData(targetData_t *const pTarget) {
         netstrms.Destruct(&pTarget->pNS);
     }
 
-    /* set resume time for interal retries */
+    /* set resume time for internal retries */
     datetime.GetTime(&pTarget->ttResume);
     pTarget->ttResume += pTarget->pData->poolResumeInterval;
     pTarget->bIsConnected = 0;
@@ -854,7 +854,7 @@ done:
 }
 
 
-/* Add frame to send buffer (or send, if requried)
+/* Add frame to send buffer (or send, if required)
  */
 static rsRetVal TCPSendFrame(void *pvData, char *msg, const size_t len) {
     DEFiRet;
@@ -1465,7 +1465,7 @@ ENDcommitTransaction
 
 
 /* This function loads TCP support, if not already loaded. It will be called
- * during config processing. To server ressources, TCP support will only
+ * during config processing. To server resources, TCP support will only
  * be loaded if it actually is used. -- rgerhard, 2008-04-17
  */
 static rsRetVal loadTCPSupport(void) {
@@ -1843,7 +1843,7 @@ BEGINnewActInst
         pData->compressionLevel = complevel;
         if (pData->compressionMode == COMPRESS_NEVER) {
             /* to keep compatible with pre-7.3.11, only setting the
-             * compresion level means old-style single-message mode.
+             * compression level means old-style single-message mode.
              */
             pData->compressionMode = COMPRESS_SINGLE_MSG;
         }
@@ -1915,7 +1915,7 @@ BEGINparseSelectorAct
      * the compression level. If it is not given, 9 (best compression) is
      * assumed. An example action statement might be:
      * @@(z5,o)127.0.0.1:1400
-     * Which means send via TCP with medium (5) compresion (z) to the local
+     * Which means send via TCP with medium (5) compression (z) to the local
      * host on port 1400. The '0' option means that octet-couting (as in
      * IETF I-D syslog-transport-tls) is to be used for framing (this option
      * applies to TCP-based syslog only and is ignored when specified with UDP).

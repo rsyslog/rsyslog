@@ -69,7 +69,7 @@ ENDinterface(datetime)
      * 6 - see above
      * 8 - ParseTIMESTAMP3164 has addtl parameter to permit TZ string parsing
      * 9 - ParseTIMESTAMP3164 has addtl parameter to permit year parsing
-     * 10 - functions having addtl paramater inUTC to emit time in UTC:
+     * 10 - functions having addtl parameter inUTC to emit time in UTC:
      *      timeval2syslogTime, getCurrtime
      * 11 - Add formatUnixTimeFromTime_t
      */

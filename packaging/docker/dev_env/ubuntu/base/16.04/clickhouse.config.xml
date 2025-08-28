@@ -57,7 +57,7 @@
     <interserver_http_port>9009</interserver_http_port>
 
     <!-- Hostname that is used by other replicas to request this server.
-         If not specified, than it is determined analoguous to 'hostname -f' command.
+         If not specified, than it is determined analogous to 'hostname -f' command.
          This setting could be used to switch replication to another network interface.
       -->
     <!--
@@ -122,7 +122,7 @@
     <!-- Default profile of settings. -->
     <default_profile>default</default_profile>
 
-    <!-- System profile of settings. This settings are used by internal processes (Buffer storage, Distibuted DDL worker and so on). -->
+    <!-- System profile of settings. This settings are used by internal processes (Buffer storage, Distributed DDL worker and so on). -->
     <!-- <system_profile>default</system_profile> -->
 
     <!-- Default database. -->

@@ -1,6 +1,6 @@
 #!/bin/bash
 # check that omfile does not segfault when filename is given but empty.
-# addd 2018-04-03 by RGerhards, released under ASL 2.0
+# add 2018-04-03 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 generate_conf
 add_conf '

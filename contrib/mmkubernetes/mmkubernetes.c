@@ -1818,7 +1818,7 @@ BEGINdoAction
             /* This is likely caused by transient apiserver errors: 401, 403, 500, etc.
              * Treat it similar to 404 while returning file path based pod metadata.
              * When transient error condition resolves, additional metadata will be
-             * available for events originating from a new pod whose metatadata is not
+             * available for events originating from a new pod whose metadata is not
              * yet cached.
              * */
             iRet = RS_RET_OK;
@@ -1902,7 +1902,7 @@ BEGINisCompatibleWithFeature
 ENDisCompatibleWithFeature
 
 
-/* all the macros bellow have to be in a specific order */
+/* all the macros below have to be in a specific order */
 BEGINmodExit
     CODESTARTmodExit;
     curl_global_cleanup();

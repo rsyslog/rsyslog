@@ -1,5 +1,5 @@
 FROM	fedora:36
-# Workarround for a bug affecting buildkit with yum when ulimit is unlimited
+# Workaround for a bug affecting buildkit with yum when ulimit is unlimited
 # https://github.com/docker/buildx/issues/379#issuecomment-1196517905
 RUN echo "* soft nofile 1024000" >> /etc/security/limits.conf && \
     echo "* hard nofile 1024000" >> /etc/security/limits.conf && \

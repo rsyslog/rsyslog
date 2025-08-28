@@ -620,7 +620,7 @@ static rsRetVal dtls_connect(wrkrInstanceData_t *pWrkrData) {
         ABORT_FINALIZE(RS_RET_ERR);
     }
 
-    // Set certifcate check callback
+    // Set certificate check callback
     if (pData->pNetOssl->authMode != OSSL_AUTH_CERTANON) {
         dbgprintf("dtls_connect[%p]: enable certificate checking (Mode=%d, VerifyDepth=%d)\n", pWrkrData,
                   pData->pNetOssl->authMode, pData->CertVerifyDepth);
@@ -709,7 +709,7 @@ static rsRetVal dtls_init(wrkrInstanceData_t *pWrkrData) {
     struct addrinfo hints;
     DBGPRINTF("dtls_init[%p]: setup for %s:%s\n", pWrkrData, pData->target, pData->port);
 
-    // Close previous ressources if any left open
+    // Close previous resources if any left open
     dtls_close(pWrkrData);
 
     // Setup receiving Socket for DTLS
@@ -750,7 +750,7 @@ static rsRetVal dtls_init(wrkrInstanceData_t *pWrkrData) {
         ABORT_FINALIZE(RS_RET_ERR);
     }
 
-    // Socket Connect successfull, no continue with TLS
+    // Socket Connect successful, no continue with TLS
     CHKiRet(dtls_connect(pWrkrData));
 
     // We reached this position means we are ready to send!

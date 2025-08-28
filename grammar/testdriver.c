@@ -1,5 +1,5 @@
 /* This is a stand-alone test driver for grammar processing. We try to
- * keep this separate as it simplyfies grammer development.
+ * keep this separate as it simplifies grammar development.
  *
  * Copyright 2011 by Rainer Gerhards and Adiscon GmbH.
  *

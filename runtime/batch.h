@@ -38,7 +38,7 @@
 #define BATCH_STATE_RDY 0 /* object ready for processing */
 #define BATCH_STATE_BAD 1 /* unrecoverable failure while processing, do NOT resubmit to same action */
 #define BATCH_STATE_SUB 2 /* message submitted for processing, outcome yet unknown */
-#define BATCH_STATE_COMM 3 /* message successfully commited */
+#define BATCH_STATE_COMM 3 /* message successfully committed */
 #define BATCH_STATE_DISC 4 /* discarded - processed OK, but do not submit to any other action */
 typedef unsigned char batch_state_t;
 
@@ -110,7 +110,7 @@ static inline void __attribute__((unused)) batchFree(batch_t *const pBatch) {
 }
 
 
-/* initialiaze a batch "object". The record must already exist,
+/* initialize a batch "object". The record must already exist,
  * we "just" initialize it. The max number of elements must be
  * provided. -- rgerhards, 2010-06-15
  */

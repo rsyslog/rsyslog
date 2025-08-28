@@ -87,7 +87,7 @@ static int n_tcpsrv = 0;
 
 static permittedPeers_t *pPermPeersRoot = NULL;
 
-/* default number of workes to configure. We choose 2, as this is probably good for
+/* default number of works to configure. We choose 2, as this is probably good for
  * many installations. High-Volume ones may need much higher number!
  */
 #define DEFAULT_NUMWRKR 2
@@ -180,7 +180,7 @@ struct modConfData_s {
     int bSuppOctetFram;
     sbool bDisableLFDelim; /* disable standard LF delimiter */
     sbool discardTruncatedMsg;
-    sbool bUseFlowControl; /* use flow control, what means indicate ourselfs a "light delayable" */
+    sbool bUseFlowControl; /* use flow control, what means indicate ourselves a "light delayable" */
     sbool bKeepAlive;
     int iKeepAliveIntvl;
     int iKeepAliveProbes;
@@ -413,7 +413,7 @@ finalize_it:
 }
 
 
-/* This function is called when a new listener instace shall be added to
+/* This function is called when a new listener instance shall be added to
  * the current config object via the legacy config system. It just shuffles
  * all parameters to the listener in-memory instance.
  * rgerhards, 2011-05-04
@@ -1001,7 +1001,7 @@ static void startSrvWrkr(tcpsrv_etry_t *const etry) {
     /* We need to temporarily block all signals because the new thread
      * inherits our signal mask. There is a race if we do not block them
      * now, and we have seen in practice that this race causes grief.
-     * So we 1. save the current set, 2. block evertyhing, 3. start
+     * So we 1. save the current set, 2. block everything, 3. start
      * threads, and 4 reset the current set to saved state.
      * rgerhards, 2019-08-16
      */

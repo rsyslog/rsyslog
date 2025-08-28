@@ -8,7 +8,7 @@ ARG RSYSLOG_IMG_VERSION="unset" # New ARG to pick up version from Makefile
 
 FROM ubuntu:${UBUNTU_VERSION}
 
-# Re-declare ARGs after FROM to make them available to subsequent instructions like LABEL
+# Redeclare ARGs after FROM to make them available to subsequent instructions like LABEL
 ARG UBUNTU_VERSION
 ARG RSYSLOG_IMG_VERSION
 

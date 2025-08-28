@@ -499,7 +499,7 @@ static int ATTR_NONNULL() TCPSessGetNxtSess(tcpsrv_t *pThis, const int iCurr) {
 #endif
 
 
-/* De-Initialize TCP listner sockets.
+/* De-Initialize TCP listener sockets.
  * This function deinitializes everything, including freeing the
  * session table. No TCP listen receive operations are permitted
  * unless the subsystem is reinitialized.
@@ -1569,7 +1569,7 @@ static rsRetVal ATTR_NONNULL() RunEpoll(tcpsrv_t *const pThis) {
         /* check if we need to ignore the i/o ready state. We do this if we got an invalid
          * return state. Validly, this can happen for RS_RET_EINTR, for other cases it may
          * not be the right thing, but what is the right thing is really hard at this point...
-         * Note: numEntries can be validly 0 in some rare cases (eg spurios wakeup).
+         * Note: numEntries can be validly 0 in some rare cases (eg spurious wakeup).
          */
         if (localRet != RS_RET_OK || numEntries == 0) {
             continue;
@@ -1601,7 +1601,7 @@ static rsRetVal ATTR_NONNULL() Run(tcpsrv_t *const pThis) {
     ISOBJ_TYPE_assert(pThis, tcpsrv);
 
     if (pThis->iLstnCurr == 0) {
-        dbgprintf("tcpsrv: no listeneres at all (probably init error), terminating\n");
+        dbgprintf("tcpsrv: no listeners at all (probably init error), terminating\n");
         FINALIZE;
     }
 
@@ -2074,7 +2074,7 @@ static rsRetVal ATTR_NONNULL(1) SetDrvrTlsVerifyDepth(tcpsrv_t *pThis, int verif
 }
 
 
-/* End of methods to shuffle autentication settings to the driver.;
+/* End of methods to shuffle authentication settings to the driver.;
 
  * -------------------------------------------------------------------------- */
 
@@ -2273,7 +2273,7 @@ ENDqueryEtryPt
 BEGINmodInit()
     CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-    /* Initialize all classes that are in our module - this includes ourselfs */
+    /* Initialize all classes that are in our module - this includes ourselves */
     CHKiRet(tcps_sessClassInit(pModInfo));
     CHKiRet(tcpsrvClassInit(pModInfo)); /* must be done after tcps_sess, as we use it */
 ENDmodInit

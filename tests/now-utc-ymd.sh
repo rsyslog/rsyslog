@@ -1,6 +1,6 @@
 #!/bin/bash
 # test many concurrent tcp connections
-# addd 2016-02-23 by RGerhards, released under ASL 2.0
+# add 2016-02-23 by RGerhards, released under ASL 2.0
 # requires faketime
 . ${srcdir:=.}/diag.sh init
 echo \[now-utc-ymd\]: test \$year-utc, \$month-utc, \$day-utc

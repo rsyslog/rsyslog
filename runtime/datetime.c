@@ -1,7 +1,7 @@
 /* The datetime object. It contains date and time related functions.
  *
  * Module begun 2008-03-05 by Rainer Gerhards, based on some code
- * from syslogd.c. The main intension was to move code out of syslogd.c
+ * from syslogd.c. The main intention was to move code out of syslogd.c
  * in a useful manner. It is still undecided if all functions will continue
  * to stay here or some will be moved into parser modules (once we have them).
  *
@@ -136,7 +136,7 @@ static void timeval2syslogTime(struct timeval *tp, struct syslogTime *t, const i
         lBias = tz.tz_dsttime ? -tz.tz_minuteswest : 0;
 #elif defined(_AIX)
         /* AIXPORT : IBM documentation notice that 'extern long timezone'
-         * is setted after calling tzset.
+         * is set after calling tzset.
          * Recent version of AIX, localtime_r call inside tzset.
          */
         if (tm->tm_isdst) tzset();
@@ -234,7 +234,7 @@ dateTimeFormat_t getDateTimeFormatFromStr(const char *const __restrict__ s) {
  * to be removed (see http://www.monitorware.com/liblogging for
  * more details. 2004-11-16 rgerhards
  *
- * Please note that the orginal liblogging code is modified so that
+ * Please note that the original liblogging code is modified so that
  * it fits into the context of the current version of syslogd.c.
  *
  * DO NOT PUT ANY OTHER CODE IN THIS BEGIN ... END BLOCK!!!!
@@ -272,7 +272,7 @@ static int srSLMGParseInt32(uchar **ppsz, int *pLenStr) {
 /**
  * Parse a TIMESTAMP-3339.
  * updates the parse pointer position. The pTime parameter
- * is guranteed to be updated only if a new valid timestamp
+ * is guaranteed to be updated only if a new valid timestamp
  * could be obtained (restriction added 2008-09-16 by rgerhards).
  * This method now also checks the maximum string length it is passed.
  * If a *valid* timestamp is found, the string length is decremented
@@ -307,7 +307,7 @@ static rsRetVal ParseTIMESTAMP3339(struct syslogTime *pTime, uchar **ppszTS, int
     /* We take the liberty to accept slightly malformed timestamps e.g. in
      * the format of 2003-9-1T1:0:0. This doesn't hurt on receiving. Of course,
      * with the current state of affairs, we would never run into this code
-     * here because at postion 11, there is no "T" in such cases ;)
+     * here because at position 11, there is no "T" in such cases ;)
      */
     if (lenStr == 0 || *pszTS++ != '-' || year < 0 || year >= 2100) {
         DBGPRINTF("ParseTIMESTAMP3339: invalid year: %d, pszTS: '%c'\n", year, *pszTS);
@@ -407,10 +407,10 @@ finalize_it:
 
 /**
  * Parse a TIMESTAMP-3164. The pTime parameter
- * is guranteed to be updated only if a new valid timestamp
+ * is guaranteed to be updated only if a new valid timestamp
  * could be obtained (restriction added 2008-09-16 by rgerhards). This
  * also means the caller *must* provide a valid (probably current)
- * timstamp in pTime when calling this function. a 3164 timestamp contains
+ * timestamp in pTime when calling this function. a 3164 timestamp contains
  * only partial information and only that partial information is updated.
  * So the "output timestamp" is a valid timestamp only if the "input
  * timestamp" was valid, too. The is actually an optimization, as it
@@ -432,7 +432,7 @@ finalize_it:
  * by the tag. So it MUST only be enabled in specialised parsers.
  * subsec, [yyyy] in front, TZSTRING was added in 2014-07-08 rgerhards
  * Similarly, we try to detect a year after the timestamp if
- * bDetectYearAfterTime is set. This is mutally exclusive with bParseTZ.
+ * bDetectYearAfterTime is set. This is mutually exclusive with bParseTZ.
  * Note: bDetectYearAfterTime will misdetect hostnames in the range
  * 2000..2100 as years, so this option should explicitly be turned on
  * and is not meant for general consumption.
@@ -491,9 +491,9 @@ static rsRetVal ParseTIMESTAMP3164(
      *
      * 2005-07-18, well sometimes it pays to be a bit more verbose, even in C...
      * Fixed a bug that lead to invalid detection of the data. The issue was that
-     * we had an if(++pszTS == 'x') inside of some of the consturcts below. However,
+     * we had an if(++pszTS == 'x') inside of some of the constructs below. However,
      * there were also some elseifs (doing the same ++), which than obviously did not
-     * check the orginal character but the next one. Now removed the ++ and put it
+     * check the original character but the next one. Now removed the ++ and put it
      * into the statements below. Was a really nasty bug... I didn't detect it before
      * june, when it first manifested. This also lead to invalid parsing of the rest
      * of the message, as the time stamp was not detected to be correct. - rgerhards
@@ -668,7 +668,7 @@ static rsRetVal ParseTIMESTAMP3164(
     second = srSLMGParseInt32(&pszTS, &lenStr);
     if (second < 0 || second > 60) ABORT_FINALIZE(RS_RET_INVLD_TIME);
 
-    /* as an extension e.g. found in CISCO IOS, we support sub-second resultion.
+    /* as an extension e.g. found in CISCO IOS, we support sub-second resolution.
      * It's presence is indicated by a dot immediately following the second.
      */
     if (lenStr > 0 && *pszTS == '.') {
@@ -772,7 +772,7 @@ void applyDfltTZ(struct syslogTime *pTime, char *tz) {
  * The caller must provide the timestamp as well as a character
  * buffer that will receive the resulting string. The function
  * returns the size of the timestamp written in bytes (without
- * the string terminator). If 0 is returend, an error occurred.
+ * the string terminator). If 0 is returned, an error occurred.
  */
 static int formatTimestampToMySQL(struct syslogTime *ts, char *pBuf) {
     /* currently we do not consider localtime/utc. This may later be
@@ -836,7 +836,7 @@ static int formatTimestampToPgSQL(struct syslogTime *ts, char *pBuf) {
  * The caller must provide the timestamp as well as a character
  * buffer that will receive the resulting string. The function
  * returns the size of the timestamp written in bytes (without
- * the string terminator). If 0 is returend, an error occurred.
+ * the string terminator). If 0 is returned, an error occurred.
  * The buffer must be at least 7 bytes large.
  * rgerhards, 2008-06-06
  */
@@ -874,7 +874,7 @@ static int formatTimestampSecFrac(struct syslogTime *ts, char *pBuf) {
  * The caller must provide the timestamp as well as a character
  * buffer that will receive the resulting string. The function
  * returns the size of the timestamp written in bytes (without
- * the string terminator). If 0 is returend, an error occurred.
+ * the string terminator). If 0 is returned, an error occurred.
  */
 static int formatTimestamp3339(struct syslogTime *ts, char *pBuf) {
     int iBuf;
@@ -943,11 +943,11 @@ static int formatTimestamp3339(struct syslogTime *ts, char *pBuf) {
 }
 
 /**
- * Format a syslogTimestamp to a RFC3164 timestamp sring.
+ * Format a syslogTimestamp to a RFC3164 timestamp string.
  * The caller must provide the timestamp as well as a character
  * buffer that will receive the resulting string. The function
  * returns the size of the timestamp written in bytes (without
- * the string termnator). If 0 is returend, an error occurred.
+ * the string termnator). If 0 is returned, an error occurred.
  * rgerhards, 2010-03-05: Added support to for buggy 3164 dates,
  * where a zero-digit is written instead of a space for the first
  * day character if day < 10. syslog-ng seems to do that, and some
@@ -1044,7 +1044,7 @@ static time_t syslogTime2time_t(const struct syslogTime *ts) {
             MonthInDays = 243;  // until 01 of September
             break;
         case 10:
-            MonthInDays = 273;  // until 01 of Oktober
+            MonthInDays = 273;  // until 01 of October
             break;
         case 11:
             MonthInDays = 304;  // until 01 of November
