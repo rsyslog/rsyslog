@@ -449,7 +449,6 @@ static rsRetVal writeSenderStats(instanceData *const pData, FILE *const fp) {
     RETiRet;
 }
 
-static rsRetVal
 /**
  * Persist sender statistics to disk.
  *
@@ -466,8 +465,7 @@ static rsRetVal
  * @param pData module instance data
  * @retval RS_RET_OK on success
  */
-writeSenderInfo(instanceData *const pData)
-{
+static ATTR_NONNULL() rsRetVal writeSenderInfo(instanceData *const pData) {
     DEFiRet;
     FILE *fp = NULL;
     const char *tmpname = (const char *)pData->statefile_tmp;
@@ -530,6 +528,7 @@ static void *bgWriter(void *arg) {
     sigdelset(&sigSet, SIGTTIN);
     sigdelset(&sigSet, SIGSEGV);
     pthread_sigmask(SIG_BLOCK, &sigSet, NULL);
+    assert(pData->statefile != NULL); /* parameter is mandatory, as such must be set */
 
     uchar thrdName[32];
     snprintf((char *)thrdName, sizeof(thrdName), "omsendertrack/bgw");  // TODO: instance-identifier?
@@ -670,6 +669,7 @@ BEGINfreeInstance
         pthread_join(pData->bgw_tid, NULL);
     }
 
+    assert(pData->statefile != NULL); /* parameter is mandatory, as such must be set */
     /* do final write */
     writeSenderInfo(pData);
 
