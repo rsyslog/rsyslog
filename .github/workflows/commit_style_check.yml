@@ -15,6 +15,10 @@ name: PR Validation
 on:
   pull_request: # Defaults to opened, synchronize, reopened
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate-pr:
     runs-on: ubuntu-latest # 'ubuntu-latest' provides a virtual machine with the latest Ubuntu OS.
