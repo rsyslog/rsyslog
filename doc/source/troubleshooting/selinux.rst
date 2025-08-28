@@ -15,7 +15,7 @@ do the following:
 If it now succeeds, you know that you have a SELinux policy issue.
 The solution here is **not** to keep SELinux disabled. Instead do:
 
-* reenable SELinux (set back to previous state, whatever that was)
+* re-enable SELinux (set back to previous state, whatever that was)
 * add proper SELinux policies for what you want to do with rsyslog
 
 With SELinux running, restart rsyslog

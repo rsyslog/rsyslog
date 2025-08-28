@@ -15,7 +15,7 @@ This directive permits to specify which `message
 parsers <../../concepts/messageparser.html>`_ should be used for the ruleset in
 question. It no ruleset is explicitly specified, the default ruleset is
 used. Message parsers are contained in (loadable) parser modules with
-the most common cases (RFC3164 and RFC5424) being build-in into
+the most common cases (RFC3164 and RFC5424) being built into
 rsyslogd.
 
 When this directive is specified the first time for a ruleset, it will

@@ -50,7 +50,7 @@ will get dropped at the network layer if the remote system is unresponsive.
 You have lots of options.
 
 If you are really concerned with reliability, I should point out that using
-TCP does not eliminate the possibility of loosing logs when a remote system
+TCP does not eliminate the possibility of losing logs when a remote system
 goes down. When you send a message via TCP, the sender considers it sent
 when it's handed to the OS to send it. The OS has a window of how much data
 it allows to be outstanding (sent without acknowledgement from the remote
@@ -66,7 +66,7 @@ the OS after rsyslog tells the OS to write the logs) as potential data loss
 points. Those failures will only trigger if the system crashes or rsyslog
 is shutdown (and yes, there are ways to address these as well)
 
-The reason why nothing today operates without the possibility of loosing
+The reason why nothing today operates without the possibility of losing
 log messages is that making the logs completely reliable absolutely kills
 performance. With buffering, rsyslog can handle 400,000 logs/sec on a
 low-mid range machine. With utterly reliable logs and spinning disks, this

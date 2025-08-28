@@ -11,8 +11,8 @@ Performs an HTTP request to target and returns the result of said request.
 
 .. note::
 
-   this function is very slow and therefore we suggest using it only seldomly
-   to insure adequate performance.
+   this function is very slow and therefore we suggest using it only seldom
+   to ensure adequate performance.
 
 
 Example

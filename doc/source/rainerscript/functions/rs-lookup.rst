@@ -25,9 +25,10 @@ Example
 In the following example the hostname is looked up in the given table and
 the corresponding value is returned.
 
-.. code-block:: none
+   .. code-block:: none
 
    lookup_table(name="host_bu" file="/var/lib/host_billing_unit_mapping.json")
    set $.bu = lookup("host_bu", $hostname);
+   set $.business_unit = lookup("host_bu", $hostname);
 
 
