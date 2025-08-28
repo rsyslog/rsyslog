@@ -99,6 +99,8 @@ struct modConfData_s {
     int nOptions;
     char *pszHealthCheckPath;
     char *pszMetricsPath;
+    char *pszHealthCheckAuthFile;
+    char *pszMetricsAuthFile;
 };
 
 struct instanceConf_s {
@@ -145,7 +147,9 @@ static struct cnfparamdescr modpdescr[] = {{"ports", eCmdHdlrString, 0},
                                            {"documentroot", eCmdHdlrString, 0},
                                            {"liboptions", eCmdHdlrArray, 0},
                                            {"healthcheckpath", eCmdHdlrString, 0},
-                                           {"metricspath", eCmdHdlrString, 0}};
+                                           {"metricspath", eCmdHdlrString, 0},
+                                           {"healthcheckbasicauthfile", eCmdHdlrString, 0},
+                                           {"metricsbasicauthfile", eCmdHdlrString, 0}};
 
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 
@@ -777,24 +781,23 @@ static int authorize(struct mg_connection *conn, FILE *filep) {
     see also: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Authorization
 */
 static int basicAuthHandler(struct mg_connection *conn, void *cbdata) {
-    const instanceConf_t *inst = (const instanceConf_t *)cbdata;
+    const char *authFile = (const char *)cbdata;
     char errStr[512];
     FILE *fp = NULL;
     int ret = 1;
 
-    if (!inst->pszBasicAuthFile) {
-        mg_cry(conn, "warning: 'BasicAuthFile' not configured.\n");
+    if (!authFile) {
+        mg_cry(conn, "warning: auth file not configured for this endpoint.\n");
         ret = 0;
         goto finalize;
     }
 
-    fp = fopen((const char *)inst->pszBasicAuthFile, "r");
+    fp = fopen(authFile, "r");
     if (fp == NULL) {
         if (strerror_r(errno, errStr, sizeof(errStr)) == 0) {
-            mg_cry(conn, "error: 'BasicAuthFile' file '%s' could not be accessed: %s\n", inst->pszBasicAuthFile,
-                   errStr);
+            mg_cry(conn, "error: auth file '%s' could not be accessed: %s\n", authFile, errStr);
         } else {
-            mg_cry(conn, "error: 'BasicAuthFile' file '%s' could not be accessed: %d\n", inst->pszBasicAuthFile, errno);
+            mg_cry(conn, "error: auth file '%s' could not be accessed: %d\n", authFile, errno);
         }
         ret = 0;
         goto finalize;
@@ -916,22 +919,77 @@ static int health_check_handler(struct mg_connection *conn, ATTR_UNUSED void *cb
 
 /*
  * prometheus_metrics_handler
- * Responds with a single, constant Prometheus metric indicating the module is up.
+ * Export rsyslog statistics in Prometheus text format.
  */
+struct stats_buf {
+    char *buf;
+    size_t len;
+    size_t cap;
+};
+
+static rsRetVal prom_stats_collect(void *usrptr, const char *line) {
+    struct stats_buf *sb = (struct stats_buf *)usrptr;
+    const size_t line_len = strlen(line);
+    if (sb->len + line_len >= sb->cap) {
+        size_t newcap = sb->cap ? sb->cap * 2 : 1024;
+        while (newcap <= sb->len + line_len) {
+            if (newcap > ((size_t)-1) / 2) {
+                return RS_RET_OUT_OF_MEMORY;
+            }
+            newcap *= 2;
+        }
+        char *tmp = realloc(sb->buf, newcap);
+        if (tmp == NULL) {
+            return RS_RET_OUT_OF_MEMORY;
+        }
+        sb->buf = tmp;
+        sb->cap = newcap;
+    }
+    memcpy(sb->buf + sb->len, line, line_len);
+    sb->len += line_len;
+    sb->buf[sb->len] = '\0';
+    return RS_RET_OK;
+}
+
 static int prometheus_metrics_handler(struct mg_connection *conn, ATTR_UNUSED void *cbdata) {
-    // Prometheus text exposition format
-    const char *metrics_body =
+    struct stats_buf sb = {.buf = NULL, .len = 0, .cap = 0};
+    rsRetVal ret = RS_RET_OK;
+    int http_status = 200;
+    const char *imhttp_up_metric =
         "# HELP imhttp_up Indicates if the imhttp module is operational (1 for up, 0 for down).\n"
         "# TYPE imhttp_up gauge\n"
         "imhttp_up 1\n";
 
-    // Send HTTP OK with Prometheus content type
-    mg_send_http_ok(conn, "text/plain; version=0.0.4; charset=utf-8", strlen(metrics_body));
+    ret = prom_stats_collect(&sb, imhttp_up_metric);
+    if (ret != RS_RET_OK) {
+        LogError(0, RS_RET_OUT_OF_MEMORY, "imhttp: failed to allocate initial buffer for statistics");
+        http_status = 500;
+        goto finalize;
+    }
 
-    // Write the metrics body
-    mg_write(conn, metrics_body, strlen(metrics_body));
+    ret = statsobj.GetAllStatsLines(prom_stats_collect, &sb, statsFmt_Prometheus, 0);
+    if (ret != RS_RET_OK) {
+        LogError(0, ret, "imhttp: failed to retrieve statistics");
+        http_status = 500;
+        goto finalize;
+    }
 
-    return 200;  // HTTP 200 OK (signals to CivetWeb that the request was handled)
+    mg_printf(conn,
+              "HTTP/1.1 200 OK\r\n"
+              "Content-Type: text/plain; version=0.0.4; charset=utf-8\r\n"
+              "Content-Length: %zu\r\n"
+              "Connection: close\r\n"
+              "\r\n",
+              sb.len);
+
+    mg_write(conn, sb.buf, sb.len);
+
+finalize:
+    if (http_status != 200) {
+        mg_printf(conn, "HTTP/1.1 500 Internal Server Error\r\nConnection: close\r\n\r\n");
+    }
+    free(sb.buf);
+    return http_status;
 }
 
 
@@ -945,7 +1003,8 @@ static int runloop(void) {
             dbgprintf("setting request handler: '%s'\n", inst->pszEndpoint);
             mg_set_request_handler(s_httpserv->ctx, (char *)inst->pszEndpoint, postHandler, inst);
             if (inst->pszBasicAuthFile) {
-                mg_set_auth_handler(s_httpserv->ctx, (char *)inst->pszEndpoint, basicAuthHandler, inst);
+                mg_set_auth_handler(s_httpserv->ctx, (char *)inst->pszEndpoint, basicAuthHandler,
+                                    inst->pszBasicAuthFile);
             }
         }
     }
@@ -953,12 +1012,20 @@ static int runloop(void) {
     if (runModConf->pszHealthCheckPath && runModConf->pszHealthCheckPath[0] != '\0') {
         dbgprintf("imhttp: setting request handler for global health check: '%s'\n", runModConf->pszHealthCheckPath);
         mg_set_request_handler(s_httpserv->ctx, runModConf->pszHealthCheckPath, health_check_handler, NULL);
+        if (runModConf->pszHealthCheckAuthFile) {
+            mg_set_auth_handler(s_httpserv->ctx, runModConf->pszHealthCheckPath, basicAuthHandler,
+                                runModConf->pszHealthCheckAuthFile);
+        }
     }
 
     if (runModConf->pszMetricsPath && runModConf->pszMetricsPath[0] != '\0') {
         dbgprintf("imhttp: setting request handler for Prometheus metrics: '%s'\n", runModConf->pszMetricsPath);
         mg_set_request_handler(s_httpserv->ctx, runModConf->pszMetricsPath, prometheus_metrics_handler,
                                NULL /* cbdata, not used */);
+        if (runModConf->pszMetricsAuthFile) {
+            mg_set_auth_handler(s_httpserv->ctx, runModConf->pszMetricsPath, basicAuthHandler,
+                                runModConf->pszMetricsAuthFile);
+        }
     }
 
     /* Wait until the server should be closed */
@@ -1038,12 +1105,13 @@ BEGINbeginCnfLoad
     loadModConf->docroot.name = NULL;
     loadModConf->nOptions = 0;
     loadModConf->options = NULL;
+    loadModConf->pszHealthCheckAuthFile = NULL;
+    loadModConf->pszMetricsAuthFile = NULL;
 ENDbeginCnfLoad
 
 
 BEGINsetModCnf
     struct cnfparamvals *pvals = NULL;
-    char *val_str = NULL;
     CODESTARTsetModCnf;
     pvals = nvlstGetParams(lst, &modpblk, NULL);
     if (pvals == NULL) {
@@ -1079,15 +1147,17 @@ BEGINsetModCnf
                 free(cstr);
             }
         } else if (!strcmp(modpblk.descr[i].name, "healthcheckpath")) {
-            val_str = es_str2cstr(pvals[i].val.d.estr, NULL);
             free(loadModConf->pszHealthCheckPath);
-            loadModConf->pszHealthCheckPath = strdup(val_str);
-            free(val_str);
+            loadModConf->pszHealthCheckPath = es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(modpblk.descr[i].name, "metricspath")) {
-            val_str = es_str2cstr(pvals[i].val.d.estr, NULL);
-            free(loadModConf->pszMetricsPath);  // Free previous if any
-            loadModConf->pszMetricsPath = strdup(val_str);
-            free(val_str);
+            free(loadModConf->pszMetricsPath);
+            loadModConf->pszMetricsPath = es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(modpblk.descr[i].name, "healthcheckbasicauthfile")) {
+            free(loadModConf->pszHealthCheckAuthFile);
+            loadModConf->pszHealthCheckAuthFile = es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(modpblk.descr[i].name, "metricsbasicauthfile")) {
+            free(loadModConf->pszMetricsAuthFile);
+            loadModConf->pszMetricsAuthFile = es_str2cstr(pvals[i].val.d.estr, NULL);
         } else {
             dbgprintf(
                 "imhttp: program error, non-handled "
@@ -1280,6 +1350,8 @@ BEGINfreeCnf
     free((void *)pModConf->docroot.val);
     free((void *)pModConf->pszHealthCheckPath);
     free((void *)pModConf->pszMetricsPath);
+    free((void *)pModConf->pszHealthCheckAuthFile);
+    free((void *)pModConf->pszMetricsAuthFile);
 
     if (statsCounter.stats) {
         statsobj.Destruct(&statsCounter.stats);
