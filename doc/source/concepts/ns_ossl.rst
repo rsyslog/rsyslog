@@ -39,13 +39,13 @@ Supported Authentication Modes
    described in IETF's draft-ietf-syslog-transport-tls-12 Internet draft.
    The fingerprint must be provided as the SHA1 or the SHA256 hex string of
    the certificate. Multiple values must be separated by comma (,).
-   A valid configuration would be e.G.
+   A valid configuration would be e.g.
    ::
 
       StreamDriverPermittedPeers="SHA256:10:C4:26:1D:CB:3C:AB:12:DB:1A:F0:47:37:AE:6D:D2:DE:66:B5:71:B7:2E:5B:BB:AE:0C:7E:7F:5F:0D:E9:64,SHA1:DD:23:E3:E7:70:F5:B4:13:44:16:78:A5:5A:8C:39:48:53:A6:DD:25"
 
 -  **x509/certvalid** - certificate validation only. x509/certvalid is
-   a nonstandard mode. It validates the remote peers certificate, but
+   a nonstandard mode. It validates the remote peer's certificate, but
    does not check the subject name. This is weak authentication that may
    be useful in scenarios where multiple devices are deployed and it is
    sufficient proof of authenticity when their certificates are signed by

@@ -201,7 +201,7 @@ discards it:
     *.emerg                               *
     ... more ...
 
-Note that "stop" is the discard action!. Also note that we assume that
+Note that "stop" is the discard action! Also note that we assume that
 192.0.2.1 is the sole remote sender (to keep it simple).
 
 With multiple rulesets, we can simply define a dedicated ruleset for the
@@ -290,7 +290,7 @@ Partitioning of Input Data
 Starting with rsyslog 5.3.4, rulesets permit higher concurrency. They
 offer the ability to run on their own "main" queue. What that means is
 that its own queue is associated with a specific rule set. That means that
-inputs bound to that ruleset do no longer need to compete with each
+inputs bound to that ruleset no longer need to compete with each
 other when they enqueue a data element into the queue. Instead, enqueue
 operations can be completed in parallel.
 

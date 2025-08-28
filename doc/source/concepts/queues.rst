@@ -44,7 +44,7 @@ places, too.
 
 Wherever "*<object>*\ "  is used in the config file statements,
 substitute "*<object>*\ " with either "MainMsg" or "Action". The former
-will set main message queue parameters, the later parameters for the
+will set main message queue parameters, the latter parameters for the
 next action that will be created. Action queue parameters can not be
 modified once the action has been specified. For example, to tell the
 main message queue to save its content on shutdown, use
@@ -326,7 +326,7 @@ example, let's assume it is set to 100. As long as no more than 100
 messages are in the queue, a single worker will be used. When more than
 100 messages arrive, a new worker thread is automatically started.
 Similarly, a third worker will be started when there are at least 300
-messages, a forth when reaching 400 and so on.
+messages, a fourth when reaching 400 and so on.
 
 It, however, does not make sense to have too many worker threads running
 in parallel. Thus, the upper limit can be set via
@@ -357,7 +357,7 @@ the queue.
 
 The discard watermark is a last resort setting. It should be set
 sufficiently high, but low enough to allow for large message burst.
-Please note that it take effect immediately and thus shows effect
+Please note that it takes effect immediately and thus shows effect
 promptly - but that doesn't help if the burst mainly consist of
 high-priority messages...
 
@@ -497,7 +497,7 @@ Terminating Queues
 
 Terminating a process sounds easy, but can be complex. Terminating a
 running queue is in fact the most complex operation a queue object can
-perform. You don't see that from a user's point of view, but its quite
+perform. You don't see that from a user's point of view, but it's quite
 hard work for the developer to do everything in the right order.
 
 The complexity arises when the queue has still data enqueued when it
