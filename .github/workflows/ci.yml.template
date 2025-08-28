@@ -31,6 +31,10 @@ on:
       - '**/*.md'
       - '**/*.txt'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   container_checks:
     runs-on: ubuntu-18.04

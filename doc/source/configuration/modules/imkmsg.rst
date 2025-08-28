@@ -66,7 +66,7 @@ been told cases where this is in the magnitude of days. Just think about
 desktops which are in hibernate during the night, missing several hours
 each day. So this is a real-world problem.
 
-To work around this, we usually do **not** use the kernel timstamp when
+To work around this, we usually do **not** use the kernel timestamp when
 we calculate the message time. Instead, we use wallclock time (obtained
 from the respective linux timer) of the instant when imkmsg reads the
 message from the kernel log. As message creation and imkmsg reading it
@@ -75,7 +75,7 @@ is usually in very close time proximity, this approach works very well.
 **However**, this is not helpful for e.g. early boot messages. These
 were potentially generated some seconds to a minute or two before rsyslog
 startup. To provide a proper meaning of time for these events, we use
-the kernel timstamp instead of wallclock time during rsyslog startup.
+the kernel timestamp instead of wallclock time during rsyslog startup.
 This is most probably correct, because it is extremely unlikely (close
 to impossible) that the system entered a low-power state before rsyslog
 startup.

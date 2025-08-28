@@ -1,7 +1,7 @@
 Writing Rsyslog Output Plugins
 ==============================
 
-This page is the begin of some developer documentation for writing
+This page is the beginning of some developer documentation for writing
 output plugins. Doing so is quite easy (and that was a design goal), but
 there currently is only sparse documentation on the process available. I
 was tempted NOT to write this guide here because I know I will most
@@ -14,7 +14,7 @@ Getting Started and Samples
 ---------------------------
 
 The best to get started with rsyslog plugin development is by looking at
-existing plugins. All that start with "om" are **o**\ utput
+existing plugins. All that start with "om" are **o**\ output
 **m**\ odules. That means they are primarily thought of being message
 sinks. In theory, however, output plugins may aggregate other
 functionality, too. Nobody has taken this route so far so if you would

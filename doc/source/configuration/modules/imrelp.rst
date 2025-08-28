@@ -378,8 +378,8 @@ tls.tlscfgcmd
 
 .. versionadded:: 8.2001.0
 
-The setting can be used if tls.tlslib is set to "openssl" to pass configuration commands to 
-the openssl libray.
+The setting can be used if tls.tlslib is set to "openssl" to pass configuration commands to
+the openssl library.
 OpenSSL Version 1.0.2 or higher is required for this feature.
 A list of possible commands and their valid values can be found in the documentation:
 https://docs.openssl.org/1.0.2/man3/SSL_CONF_cmd/
@@ -419,8 +419,8 @@ KeepAlive
 
    "binary", "off", "no", "none"
 
-Enable or disable keep-alive packets at the TCP socket layer. By 
-default keep-alives are disabled.
+Enable or disable keep-alive packets at the TCP socket layer. By
+default keep-alive is disabled.
 
 
 KeepAlive.Probes
@@ -435,8 +435,8 @@ KeepAlive.Probes
 
 The number of keep-alive probes to send before considering the
 connection dead and notifying the application layer. The default, 0,
-means that the operating system defaults are used. This only has an 
-effect if keep-alives are enabled. The functionality may not be
+means that the operating system defaults are used. This only has an
+effect if keep-alive is enabled. The functionality may not be
 available on all platforms.
 
 

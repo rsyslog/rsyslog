@@ -278,13 +278,13 @@ options are defined:
   returns the ordinal for the given day, e.g. it is 2 for January, 2nd
 
 **date-iso-week** and **date-iso-week-year**
-  return the ISO week number adn week-numbering year, which should be used together. See `ISO week date <https://en.wikipedia.org/wiki/ISO_week_date>`_ for more details
+  return the ISO week number and week-numbering year, which should be used together. See `ISO week date <https://en.wikipedia.org/wiki/ISO_week_date>`_ for more details
 
 **date-week**
   returns the week number
 
 **date-wday**
-  just the weekday number of the timstamp. This is a single digit,
+  just the weekday number of the timestamp. This is a single digit,
   with 0=Sunday, 1=Monday, ..., 6=Saturday.
 
 **date-wdayname**
