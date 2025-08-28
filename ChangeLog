@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
+- 2025-08-28: core/queue: some refactoring for better code clarity
+  The enhanced clarity not only helps with understanding but also is the bases
+  for better manual and automatted analysis, thus maintenance.
 - 2025-08-28: CI: ensure static analyzer script only runs when actually needed
   Also
   - auto-abort on re-push
