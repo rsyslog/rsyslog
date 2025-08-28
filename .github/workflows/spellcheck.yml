@@ -1,0 +1,16 @@
+---
+name: Spellcheck
+
+'on':
+  pull_request:
+
+jobs:
+  spellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install codespell
+        run: pip install codespell
+      - name: Check spelling in docs
+        run: |
+          codespell doc/source
