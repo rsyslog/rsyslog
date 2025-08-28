@@ -2,7 +2,7 @@ name: "CodeQL"
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "main" ]
     paths-ignore:
       - 'ChangeLog'
       - '**/*.md'
@@ -10,7 +10,7 @@ on:
       - 'doc/**'
 
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main" ]
     paths-ignore:
       - 'ChangeLog'
       - '**/*.md'
@@ -18,6 +18,10 @@ on:
       - 'doc/**'
   schedule:
     - cron: "38 1 * * 3"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   analyze:
@@ -31,11 +35,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ python, cpp ]
+        language: [ python, cpp, actions ]
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
 
       - name: Install Packages (cpp)
         if: ${{ matrix.language == 'cpp' }}

@@ -362,7 +362,10 @@ BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and
     if (pThis->globals.bDebugPrintTemplateList) tplPrintList(pThis);
     if (pThis->globals.bDebugPrintModuleList) module.PrintList();
     if (pThis->globals.bDebugPrintCfSysLineHandlerList) dbgPrintCfSysLineHandlers();
-    // TODO: The following code needs to be "streamlined", so far just moved over...
+    /* we use the now traditional messages, albeit they originally were expected to become
+     * "streamlined". Also we do not add any more, as the config system ouputs this data in
+     * any case and we have seen no need for more info in the past 10+ years.
+     */
     dbgprintf("Main queue size %d messages.\n", pThis->globals.mainQ.iMainMsgQueueSize);
     dbgprintf("Main queue worker threads: %d, wThread shutdown: %d, Perists every %d updates.\n",
               pThis->globals.mainQ.iMainMsgQueueNumWorkers, pThis->globals.mainQ.iMainMsgQtoWrkShutdown,
@@ -375,15 +378,6 @@ BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and
               pThis->globals.mainQ.iMainMsgQDiscardMark, pThis->globals.mainQ.iMainMsgQDiscardSeverity);
     dbgprintf("Main queue save on shutdown %d, max disk space allowed %lld\n",
               pThis->globals.mainQ.bMainMsgQSaveOnShutdown, pThis->globals.mainQ.iMainMsgQueMaxDiskSpace);
-    /* TODO: add
-    iActionRetryCount = 0;
-    iActionRetryInterval = 30000;
-    static int iMainMsgQtoWrkMinMsgs = 100;
-    static int iMainMsgQbSaveOnShutdown = 1;
-    iMainMsgQueMaxDiskSpace = 0;
-    setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", 100);
-    setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", 1);
-     */
     dbgprintf("Work Directory: '%s'.\n", glbl.GetWorkDir(pThis));
     ochPrintList(pThis);
     dbgprintf("Modules used in this configuration:\n");

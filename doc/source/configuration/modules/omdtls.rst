@@ -160,7 +160,7 @@ tls.tlscfgcmd
    "string", "none", "no", "none"
 
 Used to pass additional OpenSSL configuration commands. This can be used to fine-tune the OpenSSL
-settings by passing configuration commands to the openssl libray.
+settings by passing configuration commands to the openssl library.
 OpenSSL Version 1.0.2 or higher is required for this feature.
 A list of possible commands and their valid values can be found in the documentation:
 https://docs.openssl.org/1.0.2/man3/SSL_CONF_cmd/

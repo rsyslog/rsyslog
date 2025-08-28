@@ -1,12 +1,18 @@
----
 name: "Clang Static Analyzer"
 
-"on":
+on:
   pull_request:
-    paths-ignore:
-      - "**/*.rst"
-      - "**/*.md"
-      - "**/*.txt"
+    paths:
+      - '**/*.c'
+      - '**/*.h'
+      - 'grammar/lexer.l'
+      - 'grammar/grammar.y'
+      - 'devtools/run-static-analyzer.sh' # run on change of analyzer script itself
+      - '.github/workflows/clang-analyzer.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   clang-analyzer:
@@ -30,12 +36,9 @@ jobs:
         run: |
           chmod -R go+rw .
           set +e
-            devtools/devcontainer.sh --rm devtools/run-static-analyzer.sh 2>&1 \
-              | tee clang-analyzer.log
+          devtools/devcontainer.sh --rm devtools/run-static-analyzer.sh 2>&1 | tee clang-analyzer.log
           echo "exitcode=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
 
-      # GitHub Pages deployment is disabled due to setup issues; reports remain
-      # available as downloadable artifacts
       - name: Upload clang static analyzer report
         if: always()
         id: upload-report
@@ -44,6 +47,7 @@ jobs:
           name: clang-static-analyzer-report
           path: scan-build-report
           retention-days: 7
+          if-no-files-found: ignore   # optional: prevents failure if dir absent
 
       - name: Show clang static analyzer report link
         if: always()
@@ -65,3 +69,4 @@ jobs:
           echo >&2
           echo "Clang static analyzer HTML report (download): $artifact" >&2
           exit 1
+
