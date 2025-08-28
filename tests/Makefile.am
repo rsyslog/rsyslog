@@ -215,6 +215,7 @@ TESTS +=  \
 	omfwd-lb-2target-one_fail.sh \
 	omfwd-tls-invalid-permitExpiredCerts.sh \
 	omfwd-keepalive.sh \
+	omfwd-subtree-tpl.sh \
 	omusrmsg-errmsg-no-params.sh \
 	omusrmsg-noabort.sh \
 	omfile-module-params.sh \
@@ -239,7 +240,7 @@ TESTS +=  \
 	privdropabortonidfail.sh \
 	privdropabortonidfaillegacy.sh \
 	json-nonstring.sh \
-        json-onempty-at-end.sh \
+	json-onempty-at-end.sh \
 	template-json.sh \
 	template-pure-json.sh \
 	template-pos-from-to.sh \
@@ -271,6 +272,8 @@ TESTS +=  \
 	pmrfc3164-AtSignsInHostname_off.sh \
 	pmrfc3164-tagEndingByColon.sh \
 	pmrfc3164-defaultTag.sh \
+	pmrfc3164-headerless.sh \
+	pmrfc3164-drop.sh \
 	pmrfc3164-json.sh \
 	tcp_forwarding_tpl.sh \
 	tcp_forwarding_dflt_tpl.sh \
@@ -549,7 +552,9 @@ TESTS +=  \
 	include-obj-text-vg.sh \
 	rscript_parse_json-vg.sh \
 	rscript_backticks-vg.sh \
-	rscript_backticks_empty_envvar-vg.sh \
+	rscript_backticks_empty_envvar.sh \
+	rscript_backticks_static_text.sh \
+	rscript_backticks_braces_envvar.sh \
 	rscript-config_enable-off-vg.sh \
 	rscript_get_property-vg.sh \
 	prop-jsonmesg-vg.sh \
@@ -901,7 +906,7 @@ endif
 
 # see comments in configure.ac on flaky tests for important details!!!
 if ENABLE_FLAKY_TESTS
-#TESTS += 
+#TESTS +=
 #
 if ENABLE_OMHTTP
 TESTS +=  \
@@ -1951,6 +1956,8 @@ EXTRA_DIST= \
 	pmrfc3164-tagEndingByColon.sh \
 	pmrfc3164-defaultTag.sh \
 	pmrfc3164-json.sh \
+	pmrfc3164-headerless.sh \
+	pmrfc3164-drop.sh \
 	hostname-with-slash-dflt-invld.sh \
 	hostname-with-slash-dflt-slash-valid.sh \
 	glbl-umask.sh \
@@ -2150,7 +2157,9 @@ EXTRA_DIST= \
 	rscript_parse_json.sh \
 	rscript_parse_json-vg.sh \
 	rscript_backticks-vg.sh \
-	rscript_backticks_empty_envvar-vg.sh \
+	rscript_backticks_empty_envvar.sh \
+	rscript_backticks_static_text.sh \
+	rscript_backticks_braces_envvar.sh \
 	rscript_previous_action_suspended.sh \
 	rscript_str2num_negative.sh \
 	rscript_exists-yes.sh \
@@ -2235,12 +2244,13 @@ EXTRA_DIST= \
 	omfwd-lb-2target-basic.sh \
 	omfwd-lb-2target-impstats.sh \
 	omfwd-lb-2target-retry.sh \
-	omfwd-lb-2target-one_fail.sh \
-	omfwd-tls-invalid-permitExpiredCerts.sh \
-	omfwd-keepalive.sh \
-	omfwd_fast_imuxsock.sh \
-	omfile_hup-vg.sh \
-	omsendertrack-basic.sh \
+        omfwd-lb-2target-one_fail.sh \
+        omfwd-tls-invalid-permitExpiredCerts.sh \
+        omfwd-keepalive.sh \
+        omfwd-subtree-tpl.sh \
+        omfwd_fast_imuxsock.sh \
+        omfile_hup-vg.sh \
+        omsendertrack-basic.sh \
 	omsendertrack-basic-vg.sh \
 	omsendertrack-statefile.sh \
 	omsendertrack-statefile-vg.sh \

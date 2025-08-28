@@ -319,7 +319,7 @@ struct ptcplstn_s {
     STATSCOUNTER_DEF(ctrSessOpen, mutCtrSessOpen)
     STATSCOUNTER_DEF(ctrSessOpenErr, mutCtrSessOpenErr)
     STATSCOUNTER_DEF(ctrSessClose, mutCtrSessClose)
-    DEF_ATOMIC_HELPER_MUT64(mut_rcvdBytes)
+    DEF_ATOMIC_HELPER_MUT64(mut_rcvdBytes);
 };
 
 

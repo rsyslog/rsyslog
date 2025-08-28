@@ -220,6 +220,11 @@ ENDactivateCnf
 
 BEGINfreeCnf
     CODESTARTfreeCnf;
+    /* free configuration strings allocated during load to avoid leaks */
+    free((char *)pModConf->pszMarkMsgText);
+    pModConf->pszMarkMsgText = NULL;
+    free(pModConf->pszBindRuleset);
+    pModConf->pszBindRuleset = NULL;
 ENDfreeCnf
 
 

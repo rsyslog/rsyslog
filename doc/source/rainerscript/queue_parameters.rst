@@ -471,7 +471,7 @@ With all progress blocked (unable to deliver a message):
 * all delayable inputs (tcp, relp, imfile, imjournal, etc) will block
   indefinitely (assuming queue.lightdelaymark and queue.fulldelaymark
   are set sensible, which they are by default).
-* imudp will be loosing messages because the OS will be dropping them
+* imudp will be losing messages because the OS will be dropping them
 * messages arriving via UDP or imuxsock that do make it to rsyslog,
   and that are a severity high enough to not be filtered by
   discardseverity, will block for 2 seconds trying to put the message in
@@ -605,3 +605,7 @@ The following is a sample of a TCP forwarding action with its own queue.
           queue.filename="forwarding" queue.size="1000000" queue.type="LinkedList"
          )
 
+See also
+========
+
+- :ref:`dev-action-threads`

@@ -95,11 +95,6 @@ static struct cnfparamdescr actpdescr[] = {
 };
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
-/* we need to synchronize access to the mysql handle, because multiple threads
- * use it and we may need to (re)init it during processing. This could lead to
- * races with potentially wrong addresses or NULL accesses.
- */
-pthread_rwlock_t rwlock_hmysql;
 
 BEGINinitConfVars /* (re)set config variables to default values */
     CODESTARTinitConfVars;
@@ -114,9 +109,7 @@ ENDcreateInstance
 
 BEGINcreateWrkrInstance
     CODESTARTcreateWrkrInstance;
-    pthread_rwlock_wrlock(&rwlock_hmysql);
     pWrkrData->hmysql = NULL;
-    pthread_rwlock_unlock(&rwlock_hmysql);
 ENDcreateWrkrInstance
 
 
@@ -126,19 +119,11 @@ BEGINisCompatibleWithFeature
 ENDisCompatibleWithFeature
 
 
-/* The following function is responsible for closing a
- * MySQL connection.
- * Initially added 2004-10-28
- */
 static void closeMySQL(wrkrInstanceData_t *pWrkrData) {
-    pthread_rwlock_unlock(&rwlock_hmysql);
-    pthread_rwlock_wrlock(&rwlock_hmysql);
-    if (pWrkrData->hmysql != NULL) { /* just to be on the safe side... */
+    if (pWrkrData->hmysql != NULL) {
         mysql_close(pWrkrData->hmysql);
         pWrkrData->hmysql = NULL;
     }
-    pthread_rwlock_unlock(&rwlock_hmysql);
-    pthread_rwlock_rdlock(&rwlock_hmysql);
 }
 
 BEGINfreeInstance
@@ -152,10 +137,8 @@ ENDfreeInstance
 
 BEGINfreeWrkrInstance
     CODESTARTfreeWrkrInstance;
-    pthread_rwlock_rdlock(&rwlock_hmysql);
     closeMySQL(pWrkrData);
     mysql_thread_end();
-    pthread_rwlock_unlock(&rwlock_hmysql);
 ENDfreeWrkrInstance
 
 
@@ -203,9 +186,6 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent) {
     assert(pWrkrData->hmysql == NULL);
     pData = pWrkrData->pData;
 
-    pthread_rwlock_unlock(&rwlock_hmysql);
-    pthread_rwlock_wrlock(&rwlock_hmysql);
-
     pWrkrData->hmysql = mysql_init(NULL);
     if (pWrkrData->hmysql == NULL) {
         LogError(0, RS_RET_SUSPENDED, "can not initialize MySQL handle");
@@ -247,8 +227,6 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent) {
     }
 
 finalize_it:
-    pthread_rwlock_unlock(&rwlock_hmysql);
-    pthread_rwlock_rdlock(&rwlock_hmysql);
     RETiRet;
 }
 
@@ -302,11 +280,9 @@ finalize_it:
 
 BEGINtryResume
     CODESTARTtryResume;
-    pthread_rwlock_rdlock(&rwlock_hmysql);
     if (pWrkrData->hmysql == NULL) {
         iRet = initMySQL(pWrkrData, 1);
     }
-    pthread_rwlock_unlock(&rwlock_hmysql);
 ENDtryResume
 
 BEGINbeginTransaction
@@ -317,7 +293,6 @@ ENDbeginTransaction
 BEGINcommitTransaction
     CODESTARTcommitTransaction;
     DBGPRINTF("ommysql: commitTransaction\n");
-    pthread_rwlock_rdlock(&rwlock_hmysql);
     CHKiRet(writeMySQL(pWrkrData, (uchar *)"START TRANSACTION"));
 
     for (unsigned i = 0; i < nParams; ++i) {
@@ -344,7 +319,6 @@ BEGINcommitTransaction
     }
     DBGPRINTF("ommysql: transaction committed\n");
 finalize_it:
-    pthread_rwlock_unlock(&rwlock_hmysql);
 ENDcommitTransaction
 
 static inline void setInstParamDefaults(instanceData *pData) {
@@ -491,10 +465,7 @@ BEGINparseSelectorAct
      * We specify that the SQL option must be present in the template.
      * This is for your own protection (prevent sql injection).
      */
-    if (*(p - 1) == ';')
-        --p; /* TODO: the whole parsing of the MySQL module needs to be re-thought - but this here
-              *       is clean enough for the time being -- rgerhards, 2007-07-30
-              */
+    if (*(p - 1) == ';') --p; /* point back to the delimiter for cflineParseTemplateName */
     CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_RQD_TPL_OPT_SQL, (uchar *)" StdDBFmt"));
 
     /* If we detect invalid properties, we disable logging,
@@ -519,7 +490,6 @@ ENDparseSelectorAct
 
 BEGINmodExit
     CODESTARTmodExit;
-    pthread_rwlock_destroy(&rwlock_hmysql);
 #ifdef HAVE_MYSQL_LIBRARY_INIT
     mysql_library_end();
 #else
@@ -571,8 +541,6 @@ BEGINmodInit()
                  "can not run");
         ABORT_FINALIZE(RS_RET_ERR);
     }
-
-    pthread_rwlock_init(&rwlock_hmysql, NULL);
 
     /* register our config handlers */
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionommysqlserverport", 0, eCmdHdlrInt, NULL, &cs.iSrvPort,

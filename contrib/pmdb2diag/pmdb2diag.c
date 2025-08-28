@@ -202,6 +202,10 @@ BEGINfreeParserInst
     free(pInst->timeformat);
 ENDfreeParserInst
 
+BEGINcheckParserInst
+    CODESTARTcheckParserInst;
+ENDcheckParserInst
+
 static rsRetVal createInstance(instanceConf_t **ppInst) {
     instanceConf_t *pInst;
     DEFiRet;

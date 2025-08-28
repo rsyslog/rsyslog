@@ -1,29 +1,45 @@
 <!--
-LEGAL GDPR NOTICE:
-According to the European data protection laws (GDPR), we would like to make you
-aware that contributing to rsyslog via git will permanently store the
-name and email address you provide as well as the actual commit and the
-time and date you made it inside git's version history. This is inevitable,
-because it is a main feature git. If you are concerned about your
-privacy, we strongly recommend to use
+Thanks for your PR!
 
---author "anonymous <gdpr@example.com>"
+Commit Assistant (recommended for the commit message):
+- Web (humans): https://www.rsyslog.com/tool_rsyslog-commit-assistant
+- Base prompt (canonical): https://github.com/rsyslog/rsyslog/blob/main/ai/rsyslog_commit_assistant/base_prompt.txt
 
-together with your commit. Also please do NOT sign your commit in this case,
-as that potentially could lead back to you. Please note that if you use your
-real identity, the GDPR grants you the right to have this information removed
-later. However, we have valid reasons why we cannot remove that information
-later on. The reasons are:
-
-* this would break git history and make future merges unworkable
-* the rsyslog projects has legitimate interest to keep a permanent record of the
-  contributor identity, once given, for
-  - copyright verification
-  - being able to provide proof should a malicious commit be made
-
-Please also note that your commit is public and as such will potentially be
-processed by many third-parties. Git's distributed nature makes it impossible
-to track where exactly your commit, and thus your personal data, will be stored
-and be processed. If you would not like to accept this risk, please do either
-commit anonymously or refrain from contributing to the rsyslog project.
+Important: put the substance into the **commit message** (not only here).
+If needed, amend first (`git commit --amend`) and then open the PR.
 -->
+
+### Summary (non-technical, complete)
+<!-- Why this change matters: modernization, maintainability, perf/security,
+     Docker/CI readiness, or user value. This text should mirror the commit’s
+     non-technical intro. -->
+
+### References
+<!-- Full GitHub URLs; use Fixes: only if conclusively fixed. -->
+Refs: https://github.com/rsyslog/rsyslog/issues/<id>
+
+### Notes (optional)
+<!-- Mention tests/docs updates or planned follow-ups. If behavior changed,
+     ensure the commit body has a one-line Impact and a one-line Before/After. -->
+
+---
+
+#### Quick check (optional)
+- Commit message follows rules (ASCII; title ≤62, body ≤72; `<component>:`).
+- Commit message includes non-technical “why”, Impact (if behavior/tests changed),
+  and a one-line Before/After when behavior changed.
+- Used the Commit Assistant or mirrored its structure.
+
+---
+
+#### Git workflow tips (optional, but helps reviews)
+- Start by crafting the commit message locally (use the Assistant).
+- If you already committed, improve it with:
+  ```
+  git commit --amend
+  ```
+- Squash related commits before PR where appropriate.
+- Push your branch and then open the PR.
+- If key info is only in the PR text, maintainers may ask you to move it
+  into the commit message for a clean history.
+

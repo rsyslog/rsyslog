@@ -2,9 +2,9 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.2508.0.daily],[rsyslog@lists.adiscon.com])    # UPDATE on release
+AC_INIT([rsyslog],[8.2510.0.daily],[rsyslog@lists.adiscon.com])    # UPDATE on release
 AC_DEFINE(VERSION_YEAR,  25, [year part of real rsyslog version])  # UPDATE on release
-AC_DEFINE(VERSION_MONTH,  8, [month part of real rsyslog version]) # UPDATE on release
+AC_DEFINE(VERSION_MONTH, 10, [month part of real rsyslog version]) # UPDATE on release
 
 AM_INIT_AUTOMAKE([subdir-objects])
 
@@ -2251,6 +2251,11 @@ if test "x$enable_omjournal" = "xyes"; then
 	PKG_CHECK_MODULES([LIBSYSTEMD_JOURNAL], [libsystemd >= 209] ,, [
 	    PKG_CHECK_MODULES([LIBSYSTEMD_JOURNAL], [libsystemd-journal >= 197])
 	])
+
+	save_libs=$LIBS
+	LIBS="$LIBS $LIBSYSTEMD_JOURNAL_LIBS"
+	AC_CHECK_FUNCS(sd_journal_stream_fd_with_namespace,,)
+	LIBS=$save_libs
 fi
 AM_CONDITIONAL(ENABLE_OMJOURNAL, test x$enable_omjournal = xyes)
 

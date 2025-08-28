@@ -225,7 +225,7 @@ Note: this parameter is mandatory depending on the value of
 
 Peer Places access restrictions on this forwarder. Only peers which
 have been listed in this parameter may be connected to. This guards
-against rouge servers and man-in-the-middle attacks. The validation
+against rogue servers and man-in-the-middle attacks. The validation
 bases on the certificate the remote peer presents.
 
 This contains either remote system names or fingerprints, depending
@@ -386,8 +386,8 @@ tls.tlscfgcmd
 
 .. versionadded:: 8.2001.0
 
-The setting can be used if tls.tlslib is set to "openssl" to pass configuration commands to 
-the openssl libray.
+The setting can be used if tls.tlslib is set to "openssl" to pass configuration commands to
+the openssl library.
 OpenSSL Version 1.0.2 or higher is required for this feature.
 A list of possible commands and their valid values can be found in the documentation:
 https://docs.openssl.org/1.0.2/man3/SSL_CONF_cmd/

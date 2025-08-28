@@ -87,6 +87,10 @@ BEGINfreeParserInst
     dbgprintf("pmnull: free parser instance %p\n", pInst);
 ENDfreeParserInst
 
+BEGINcheckParserInst
+    CODESTARTcheckParserInst;
+ENDcheckParserInst
+
 
 BEGINnewParserInst
     struct cnfparamvals *pvals = NULL;

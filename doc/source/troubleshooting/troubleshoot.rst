@@ -37,6 +37,16 @@ but rather use the host that sent the message (taken from the socket
 layer). Of course, this does not work over NAT or relay chains, where
 the only cure is to make sure senders emit well-formed messages.
 
+Stale reverse DNS entries
+-------------------------
+
+If logged hostnames appear outdated, rsyslog may have cached reverse DNS
+results. The cache persists for the process lifetime unless a time-to-live
+is configured. See :ref:`reverse_dns_cache` for settings that control cache
+expiry and refresh. Forward lookups for outbound connections are not cached;
+if a target hostname resolves to a new address, rsyslog picks it up the next
+time a connection is established.
+
 Configuration Problems
 ----------------------
 

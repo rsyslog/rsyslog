@@ -93,7 +93,7 @@ This is the name of the template that contains a numerical IP
 address that is to be used as the source system IP address. While it
 may often be a constant value, it can be generated as usual via the
 property replacer, as long as it is a valid IPv4 address. If not
-specified, the build-in default template
+specified, the built-in default template
 RSYSLOG\_omudpspoofDfltSourceTpl is used. This template is defined as
 follows:
 $template RSYSLOG\_omudpspoofDfltSourceTpl,"%fromhost-ip%"

@@ -15,7 +15,7 @@ module(load="../plugins/omsendertrack/.libs/omsendertrack")
 
 template(name="hostname" type="string" string="%hostname%")
 template(name="outfmt" type="string" string="%msg:F,58:2%\n")
-action(type="omsendertrack" template="hostname" statefile="'$RSYSLOG_DYNNAME'.sendertrack")
+action(type="omsendertrack" senderid="hostname" statefile="'$RSYSLOG_DYNNAME'.sendertrack")
 :msg, contains, "msgnum:" action(type="omfile" template="outfmt" file="'$RSYSLOG_OUT_LOG'")
 '
 

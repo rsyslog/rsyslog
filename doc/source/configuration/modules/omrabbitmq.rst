@@ -215,7 +215,7 @@ delivery\_mode
   :widths: auto
   :class: parameter-table
 
-  "string", "no", "TRANSIENT\|PERSISTANT", "TRANSIENT"
+  "string", "no", "TRANSIENT\|PERSISTENT", "TRANSIENT"
 
 persistence of the message in the broker
 

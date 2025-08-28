@@ -42,6 +42,11 @@ The following parameters can be set:
   Permits to overwrite the local host hostname.
 
 - **preserveFQDN**
+
+  Keep fully qualified hostnames instead of stripping the local domain.
+  The default is "off" for sysklogd compatibility. Reverse lookup results
+  are cached; see :ref:`reverse_dns_cache` for options to refresh cached
+  names.
 - **defaultNetstreamDriverCAFile**
 
   For `TLS syslog <http://www.rsyslog.com/doc/rsyslog_secure_tls.html>`_,
@@ -204,7 +209,9 @@ The following parameters can be set:
 
   **Default:** on
 
-  Can be used to turn DNS name resolution on or off.
+  Can be used to turn DNS name resolution on or off. When disabled, no
+  reverse lookups are performed and the cache described in
+  :ref:`reverse_dns_cache` is bypassed.
 
 - **net.permitACLWarning** [on/off] available 8.6.0+
 
@@ -585,28 +592,54 @@ The following parameters can be set:
 
   These parameters set global queue defaults for the respective queue settings.
 
-- **reverselookup.cache.ttl.default** [numeric, seconds] available 8.1904.0+
+.. _reverse_dns_cache:
 
-  Rsyslog includes a cache for ip-address-to-hostname lookups. This is most
-  useful for inputs without a connection. imudp is the prime example.
-  This settings permits to specify after which period (in seconds) an
-  entry expires. Upon expiration the entry will be discarded and re-queried.
-  The **default** value is 24 hours.
-  To never cache entries, set the parameter to 0, which will make cache
-  entries expire immediately. Note that especially with imudp this can
-  cause huge performance degradation and potentially also message loss.
+Reverse DNS caching
+-------------------
 
-  Note: for many years rsyslog did **not** timeout cache entries at all. This
-  only occasionally caused issues. We assume that the once-every-24-hrs
-  default value is a very good compromise between performance and
-  keeping reverse lookup information current.
+.. index::
+   single: reverse DNS cache
+   single: dnsCacheTTL
+   single: dnscacheEnableTTL
+   single: dnscacheDefaultTTL
+   single: reverse DNS refresh
+   single: DNS lookup cache timeout
+
+Rsyslog caches results from reverse DNS lookups. When TTL expiry is disabled
+(*reverselookup.cache.ttl.enable*="off", the default), cache entries remain
+valid for the lifetime of the process. Enabling the TTL mechanism permits
+automatic refresh after a fixed interval. These controls apply **only** to
+reverse lookups of inbound messages. Forward lookups for outbound connections
+(for example, resolving `server.example.net` for *omfwd*) use the system
+resolver each time and are not cached by rsyslog, so no TTL setting exists for
+them.
 
 - **reverselookup.cache.ttl.enable** [boolean (on/off)] available 8.1904.0+
 
-  This configures whether rsyslog expires DNS cache entries (setting "on") or
-  not (setting "off", the default). If configured to "off",
-  *reverselookup.cache.default.ttl* is not in effect. Note that this is the
-  **default**.
+  Controls whether cached hostnames expire. If set to "on", entries expire
+  after the duration specified by *reverselookup.cache.ttl.default*. When set
+  to "off" the cache never expires.
+
+- **reverselookup.cache.ttl.default** [numeric, seconds] available 8.1904.0+
+
+  Fixed time-to-live for cached reverse lookup results. The **default** value
+  is 24 hours. Setting this parameter to ``0`` effectively disables caching,
+  which can severely degrade performance, especially for UDP inputs.
+
+These settings interact with ``preserveFQDN`` and ``net.enableDNS``. If DNS
+resolution is disabled globally, no caching occurs.
+
+Example:
+
+.. code-block:: none
+
+   global(
+     reverselookup.cache.ttl.enable="on"
+     reverselookup.cache.ttl.default="3600"    # seconds
+   )
+
+Historically these options were referenced in source code and change logs as
+``dnscacheEnableTTL`` and ``dnscacheDefaultTTL``.
 
 - **security.abortOnIDResolutionFail** [boolean (on/off)], default "on", available 8.2002.0+
 

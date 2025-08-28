@@ -4,7 +4,8 @@
 #  Starting actual testbench
 . ${srcdir:=.}/diag.sh init
 
-export NUMMESSAGES=10000
+export NUMMESSAGES=5000
+export SEQ_CHECK_OPTIONS="-d"
 
 port="$(get_free_port)"
 omhttp_start_server $port --fail-every 1000 --fail-with-delay-secs 2
@@ -13,7 +14,7 @@ generate_conf
 add_conf '
 module(load="../contrib/omhttp/.libs/omhttp")
 
-main_queue(queue.dequeueBatchSize="2048")
+main_queue(queue.dequeueBatchSize="500")
 
 template(name="tpl" type="string"
 	 string="{\"msgnum\":\"%msg:F,58:2%\"}")

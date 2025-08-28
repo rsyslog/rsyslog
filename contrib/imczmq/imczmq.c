@@ -1,14 +1,22 @@
-/* imczmq.c
+/**
+ * @file imczmq.c
+ * @brief Input module for receiving messages via ZeroMQ.
+ *
+ * The module creates one or more CZMQ sockets according to the
+ * configuration and converts each incoming frame into an rsyslog
+ * message processed by the specified ruleset.  Socket type, topics and
+ * CURVE authentication parameters are fully configurable.
+ *
  * Copyright (C) 2016 Brian Knox
  * Copyright (C) 2014 Rainer Gerhards
- *
- * Author: Brian Knox <bknox@digitalocean.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *       -or-
+ *     see COPYING.ASL20 in the source distribution
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -104,6 +112,17 @@ static void setDefaults(instanceConf_t *iconf) {
     iconf->next = NULL;
 };
 
+/**
+ * @brief Allocate a new listener configuration block.
+ *
+ * The new instance is initialized with default values and appended to
+ * the module's list of listeners which will be activated when the
+ * input starts.
+ *
+ * @param[out] pinst pointer receiving the allocated instance
+ * @retval RS_RET_OK on success
+ * @retval RS_RET_OUT_OF_MEMORY if allocation fails
+ */
 static rsRetVal createInstance(instanceConf_t **pinst) {
     DEFiRet;
     instanceConf_t *inst;
@@ -122,6 +141,18 @@ finalize_it:
     RETiRet;
 }
 
+/**
+ * @brief Create a CZMQ listener socket from the given configuration.
+ *
+ * The function initializes the socket, applies optional CURVE
+ * authentication, subscribes to topics and attaches the socket to the
+ * configured endpoints.  The resulting listener structure is stored in
+ * the global list used by the receiver loop.
+ *
+ * @param iconf configuration describing one listener
+ * @retval RS_RET_OK on success
+ * @retval RS_RET_ERR if socket setup fails
+ */
 static rsRetVal addListener(instanceConf_t *iconf) {
     DEFiRet;
 
@@ -248,6 +279,17 @@ finalize_it:
     RETiRet;
 }
 
+/**
+ * @brief Receive messages from all configured CZMQ listeners.
+ *
+ * Builds a poller for the active sockets, waits for incoming frames and
+ * converts them into rsyslog messages which are then processed by the
+ * listener's ruleset.  Authentication actors are started when requested
+ * and resources are cleaned up on termination.
+ *
+ * @retval RS_RET_OK on graceful shutdown
+ * @retval RS_RET_ERR on initialization or runtime failure
+ */
 static rsRetVal rcvData(void) {
     DEFiRet;
 

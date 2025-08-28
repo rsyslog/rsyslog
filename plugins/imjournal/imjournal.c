@@ -204,11 +204,18 @@ static rsRetVal openJournal(struct journalContext_s *journalContext) {
 
 /* trySave shoulod only be true if there is no journald error preceeding this call */
 static void closeJournal(struct journalContext_s *journalContext) {
-    if (!journalContext->j) {
+    sd_journal *j_to_close = journalContext->j;
+
+    if (!j_to_close) {
         LogMsg(0, RS_RET_OK_WARN, LOG_WARNING, "imjournal: closing NULL journal.\n");
+    } else {
+        journalContext->j = NULL;
+
+        /* sd_journal_close() is a cancellation point. If we are cancelled
+         * here, journalContext->j is already NULL, preventing double-free.
+         */
+        sd_journal_close(j_to_close);
     }
-    sd_journal_close(journalContext->j);
-    journalContext->j = NULL; /* setting to NULL here as journald API will not do that for us... */
 }
 
 static int journalGetData(struct journalContext_s *journalContext,
@@ -1039,7 +1046,7 @@ BEGINbeginCnfLoad
     cs.bIgnoreNonValidStatefile = 1;
     cs.iPersistStateInterval = DFLT_persiststateinterval;
     cs.stateFile = NULL;
-    cs.fCreateMode = -1;
+    cs.fCreateMode = 0644;
     cs.ratelimitBurst = 20000;
     cs.ratelimitInterval = 600;
     cs.iDfltSeverity = DFLT_SEVERITY;
@@ -1316,16 +1323,6 @@ BEGINsetModCnf
         }
     }
 
-    /* File create mode is not set */
-    if (cs.fCreateMode == -1) {
-        const int fCreateMode = 0644;
-        LogMsg(0, RS_RET_OK_WARN, LOG_WARNING,
-               "imjournal: filecreatemode is not set, "
-               "using default %04o",
-               fCreateMode);
-        cs.fCreateMode = fCreateMode;
-    }
-
 finalize_it:
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &modpblk);
 ENDsetModCnf
@@ -1336,10 +1333,7 @@ ENDsetModCnf
 static rsRetVal ATTR_NONNULL(1) createInstance(instanceConf_t **const pinst) {
     instanceConf_t *inst;
     DEFiRet;
-    CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
-    inst->next = NULL;
-    inst->pBindRuleset = NULL;
-    inst->pszBindRuleset = NULL;
+    CHKmalloc(inst = calloc(1, sizeof(instanceConf_t)));
 
     /* node created, let's add to config */
     if (loadModConf->tail == NULL) {

@@ -11,6 +11,11 @@ Rsyslog can deliver over one million messages per second to local destinations u
 
 ---
 
+## getting rsyslog news
+
+* [www.rsyslog.com](https://www.rsyslog.com/), via [RSS](https://www.rsyslog.com/feed/)
+* Messenger Platforms [Telegram](https://t.me/rsyslog_official), [WhatsApp](https://whatsapp.com/channel/0029VbBJQLhCxoArVHjrL32E) - operated by maintainer Rainer Gerhards
+---
 
 ## 🤖 rsyslog Assistant (Experimental AI Help)
 
@@ -68,9 +73,15 @@ Ready-to-use build environments are provided in `packaging/docker/dev_env`. Thes
 Rsyslog is a community-driven open-source project. Contributions are welcome and encouraged!
 
 - See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
+- Starter tasks: https://www.rsyslog.com/tool_good-first-issues
 - To develop new output plugins in Python or Perl, see: [plugins/external/README.md](plugins/external/README.md)
+- If you're working with AI coding agents (e.g. GitHub Copilot, OpenAI Codex), note that we support these workflows with agent-specific instructions in [AGENTS.md](AGENTS.md).
+- Community: [Code of Conduct](CODE_OF_CONDUCT.md)
 
-If you're working with AI coding agents (e.g. GitHub Copilot, OpenAI Codex), note that we support these workflows with agent-specific instructions in `AGENTS.md`.
+**Commit Assistant (recommended):** Draft compliant commit messages with
+https://www.rsyslog.com/tool_rsyslog-commit-assistant (see rules in
+[CONTRIBUTING.md](CONTRIBUTING.md)). Put the substance into the **commit
+message** (amend before PR if needed).
 
 ---
 
@@ -111,4 +122,4 @@ Third-party contributions, services, and integrations are welcome.
 ---
 
 ## Legal Notice (GDPR)
-Contributions to rsyslog are stored in git history and publicly distributed. Please refer to `CONTRIBUTING.md` for detailed GDPR-related information.
+Contributions to rsyslog are stored in git history and publicly distributed.

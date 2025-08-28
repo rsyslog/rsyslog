@@ -149,6 +149,7 @@ struct modInfo_s {
         } lm;
         struct { /* data for parser modules */
             rsRetVal (*newParserInst)(struct nvlst *lst, void *pinst);
+            rsRetVal (*checkParserInst)(void *pinst);
             rsRetVal (*freeParserInst)(void *pinst);
             rsRetVal (*parse2)(instanceConf_t *const, smsg_t *);
             rsRetVal (*parse)(smsg_t *);

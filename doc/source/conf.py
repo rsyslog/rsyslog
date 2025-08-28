@@ -94,8 +94,8 @@ rst_epilog = """
 # real values will be generated dynamically from info in the repo. If the
 # user builds the docs from "bare" sources not yet processed
 ###############################################################################
-version = '8.2508'
-#release = '8.2508.0'
+version = '8.2510'
+#release = '8.2510.0'
 release = version + ' daily stable'
 
 # For this to be true, it means that we are not attempting to build from
@@ -226,10 +226,15 @@ todo_include_todos = True
 # is False.
 todo_emit_warnings = True
 
-# Supress "unknown mimetype for ..." warnings
+# Suppress "unknown mimetype for ..." warnings
 suppress_warnings = ['epub.unknown_project_files']
 
 # -- Options for HTML output ---------------------------------------------------
+
+# The base URL which points to the root of the HTML documentation.
+# It is used to indicate the location of document like canonical_url.
+RSYSLOG_BASE_URL = 'https://www.rsyslog.com'
+html_baseurl = f'{RSYSLOG_BASE_URL}/doc/'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.

@@ -723,46 +723,45 @@ static rsRetVal cslchSetEntry(
  */
 static rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine) {
     DEFiRet;
-    rsRetVal (*pHdlr)(void *, ...) = NULL;
     assert(pThis != NULL);
     assert(ppConfLine != NULL);
 
     switch (pThis->eType) {
         case eCmdHdlrCustomHandler:
-            pHdlr = (rsRetVal(*)(void *, ...))doCustomHdlr;
+            CHKiRet(doCustomHdlr(ppConfLine, pThis->cslCmdHdlr, pThis->pData));
             break;
         case eCmdHdlrUID:
-            pHdlr = (rsRetVal(*)(void *, ...))doGetUID;
+            CHKiRet(doGetUID(ppConfLine, pThis->cslCmdHdlr, pThis->pData));
             break;
         case eCmdHdlrGID:
-            pHdlr = (rsRetVal(*)(void *, ...))doGetGID;
+            CHKiRet(doGetGID(ppConfLine, pThis->cslCmdHdlr, pThis->pData));
             break;
         case eCmdHdlrBinary:
-            pHdlr = (rsRetVal(*)(void *, ...))doBinaryOptionLine;
+            CHKiRet(doBinaryOptionLine(ppConfLine, pThis->cslCmdHdlr, pThis->pData));
             break;
         case eCmdHdlrFileCreateMode:
-            pHdlr = (rsRetVal(*)(void *, ...))doFileCreateMode;
+            CHKiRet(doFileCreateMode(ppConfLine, pThis->cslCmdHdlr, pThis->pData));
             break;
         case eCmdHdlrInt:
-            pHdlr = (rsRetVal(*)(void *, ...))doGetInt;
+            CHKiRet(doGetInt(ppConfLine, pThis->cslCmdHdlr, pThis->pData));
             break;
         case eCmdHdlrSize:
-            pHdlr = (rsRetVal(*)(void *, ...))doGetSize;
+            CHKiRet(doGetSize(ppConfLine, pThis->cslCmdHdlr, pThis->pData));
             break;
         case eCmdHdlrGetChar:
-            pHdlr = (rsRetVal(*)(void *, ...))doGetChar;
+            CHKiRet(doGetChar(ppConfLine, pThis->cslCmdHdlr, pThis->pData));
             break;
         case eCmdHdlrFacility:
-            pHdlr = (rsRetVal(*)(void *, ...))doFacility;
+            CHKiRet(doFacility(ppConfLine, pThis->cslCmdHdlr, pThis->pData));
             break;
         case eCmdHdlrSeverity:
-            pHdlr = (rsRetVal(*)(void *, ...))doSeverity;
+            CHKiRet(doSeverity(ppConfLine, pThis->cslCmdHdlr, pThis->pData));
             break;
         case eCmdHdlrGetWord:
-            pHdlr = (rsRetVal(*)(void *, ...))doGetWord;
+            CHKiRet(doGetWord(ppConfLine, pThis->cslCmdHdlr, pThis->pData));
             break;
         case eCmdHdlrGoneAway:
-            pHdlr = (rsRetVal(*)(void *, ...))doGoneAway;
+            CHKiRet(doGoneAway(ppConfLine, pThis->cslCmdHdlr, pThis->pData));
             break;
         /* some non-legacy handler (used in v6+ solely) */
         case eCmdHdlrInvalid:
@@ -777,9 +776,6 @@ static rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine) {
             goto finalize_it;
     }
 
-    /* we got a pointer to the handler, so let's call it */
-    assert(pHdlr != NULL);
-    CHKiRet(pHdlr(ppConfLine, pThis->cslCmdHdlr, pThis->pData));
 
 finalize_it:
     RETiRet;

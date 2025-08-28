@@ -1,5 +1,245 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-??
+Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
+- 2025-08-28: CI: ensure static analyzer script only runs when actually needed
+  Also
+  - auto-abort on re-push
+  - some minor tweaks
+- 2025-08-28: ci: add spellcheck workflow
+  Add a GitHub Actions job using codespell to check Sphinx docs in doc/source.
+  This helps catch spelling errors early and improves documentation quality.
+  With help from AI-Agent: ChatGPT
+- 2025-08-28: CI: add github action security analysis
+  Thanks to Kevin Backhouse for the patch.
+- 2025-08-28: doc: systematic typo fixes for documentation files, add checker
+  After we received single typo fixes, we carried out a systematic approach
+  for the rest of the documentation. It should now be typo-free.
+  As a safeguard, we added a new CI action for doc spellchecking.
+- 2025-08-28: doc: fix typos
+  Thanks to Madhushree and Naisthecreator for the patch.
+- 2025-08-28: doc: add rsyslog issue assistant build files
+----------------------------------------------------------------------------------------
+Scheduled Release 8.2508.0 (aka 2025.08) 2025-08-26
+
+IMPORTANT NOTE TO Package Builders / Distros:
+
+The documentation has been integrated back into the main repository, in the
+doc/ subdirectory. As such, there is no second doc tarball available and
+package build most probably needs adjustments.
+
+This release had the overall theme of improving code quality, including the
+initial introduction of doxygen comments, improving the user experience by
+documentation updates, and implementing the rsyslog responsible "AI First"
+strategy. Note that while AI generated code is part of the release, all
+contributions, AI or human, follow the same rigourus review and CI procedures
+with the final acceptance is by a maintainer.
+
+AI slop is not accepted and this release addresses AI slop by better parametrizing
+agents in regard to code generation and streamlining code so that AIs better
+understand it. This is an ongoing effort.
+
+- 2025-08-25: tcpsrv: refactor IO loop; rearm-before-unlock; poll path
+  Improve maintainability and robustness of the TCP server by clarifying
+  locking/ownership, tightening invariants, and simplifying queueing.
+  Also fix a long-standing pragma macro typo across the tree.
+  Impact: Internal behavior only. EPOLL re-arm now occurs while holding
+  pSess->mut; starvation cap counts only successful reads.
+  Before/After:
+  Before: EPOLL re-arm happened after leaving the critical section; read
+  starvation cap counted loop iterations; closeSess() sometimes unlocked;
+  select_* helpers used on non-epoll path; enqueueWork() returned status.
+  After: EPOLLONESHOT is re-armed before unlocking; starvation cap counts
+  only RS_RET_OK reads; closeSess() never unlocks; poll_* helpers replace
+  select_*; enqueueWork() is void (best-effort).
+  Technical details:
+  - Replace notifyReArm() with rearmIoEvent() (EPOLL_CTL_MOD with
+    EPOLLONESHOT|EPOLLET; asserts efd/sock; logs on failure).
+  - doReceive(): explicit state machine; would-block path re-arms before
+    unlock; close path unlocks then calls closeSess(); starvation handoff
+    enqueues without re-arming.
+  - Initialize ioDirection for listener and session descriptors; add
+    assert(sock >= 0) and widespread ATTR_NONNULL annotations.
+  - startWrkrPool(): single finalize rollback (cancel/join partial
+    threads; destroy cond/mutex); stopWrkrPool(): destroy cond/mutex.
+  - enqueueWork(): FIFO append under lock and cond signal; returns void.
+  - Cleanup hardening on construct failure: free ppLstn, ppLstnPort,
+    ppioDescrPtr; free fromHostIP on SessAccept() error.
+  - Non-epoll: rename select_Add/Poll/IsReady -> poll_*; RunPoll() uses
+    poll_* and sets sane ioDirection defaults.
+  - Typo fix: standardize PRAGMA_IGNORE_Wswitch_enum in header and all
+    users (action.c, rainerscript.c, template.c, tcpsrv.c).
+- 2025-08-25: omsendertrack: stop towards full completion of module.
+  Work towards full completion of the module’s interface as it exits PoC.
+  The new name senderid (formerly: template) matches intent (identify a
+  sender, not an output format) and avoids confusion.  Also make state
+  persistence safer via atomic writes.
+  Merged a bit pre-completion in order to get a static analyzer fix
+  into the main code base. Some additional cleanup PR will follow.
+  State is much cleaner now than in PoC.
+  Impact: Configs must use senderid=; statefile is now required. Tests
+  and docs updated.
+  Before/After: action(... template="name") -> action(... senderid="name").
+  Technical details:
+  - Replace the config parameter and instance field; drop legacy template
+    parsing in parseSelectorAct. The module now reads only senderid=.
+  - Enforce required statefile (descriptor + runtime) and cache a temp
+    path "<statefile>.tmp" to ensure rename() is atomic. Provide a
+    one-time fallback build if the cache is missing (e.g., reload flow).
+  - Add built-in template "StdOmSenderTrack-senderid" yielding
+    "%fromhost-ip%" and use it as the default senderid template.
+  - Improve memory ownership (free cached temp path/default template) and
+    keep existing locking/queue semantics unchanged.
+  - Update tests to use senderid= and prune PoC doc note accordingly.
+  see also: https://github.com/rsyslog/rsyslog/issues/5599
+- 2025-08-20: AI: add support files for github copilot
+  helps craft better patches via copilot
+- 2025-08-18: imjournal: fix double sd_journal_close() during thread cancellation
+  When the main thread cancel imjournal thread, the thread exits without
+  setting sd_journal to NULL because sd_journal_close() contain cancel point.
+  This leads to a double free scenario where:
+  1. The thread cancel occurs during sd_journal_close()
+  2. The main thread then calls imjournal's afterrun function
+  3. sd_journal_close() is called again on the already-freed sd_journal
+  Thanks for the patch toxietangxin
+- 2025-08-18: omhttp: migrate to OMODTX; prep for project-supported status
+  Why: Modernize omhttp so HTTP forwarding is viable and maintainable in
+  current deployments (incl. Docker). Align the module with core-supported
+  interfaces, reduce maintenance risk, and pave the way to promote it from
+  contrib to an officially supported module.
+  Technical overview (conceptual):
+  - Switch plugin API from legacy TXIF (doAction) to OMODTX
+    (commitTransaction). Update query entry points accordingly.
+  - Keep beginTransaction for batch init; fold the final flush from
+    endTransaction into commitTransaction per OMODTX.
+  - Preserve external behavior: batching thresholds (maxBatchSize and
+    maxBatchBytes), dynRestPath handling, statistics, and HUP behavior.
+  - In commitTransaction, process all records in one pass and submit
+    batches when thresholds are crossed; non-batch mode posts per record.
+  - Retry test adjusted to tolerate duplicates during migration
+    (omhttp-retry.sh), reflecting current OMODTX replay characteristics.
+  Addresses from #5957:
+  - Core modernization of omhttp to the project’s current module
+    interface, suitable for containerized use cases.
+  - First step toward “project-supported” status by aligning with the
+    supported core API and updating tests.
+  Planned follow-ups (separate commits):
+  - Fix dynRestPath after a batch flush (set new path right after
+    initializeBatch).
+  - Revisit commit/replay semantics to minimize duplicates under retry, or
+    document dup-tolerant behavior and test both modes.
+  - Verify and free batch.restPath and headerBuf; add focused tests (path
+    change mid-batch, maxBatchBytes edges, TLS/gzip, HUP reinit).
+  - Documentation and packaging steps required for “project-supported”
+    status (module docs, release notes, CI/packaging policy).
+  - Evaluate if a compatibility query hook is needed for older cores.
+  see also: https://github.com/rsyslog/rsyslog/issues/5957
+- 2025-08-15: rainerscript: enhanced backticks support ${VAR}
+  This implements brace-style env vars inside backticks with `echo` and
+  fixes termination of unbraced `$VAR`. Most importantly, variables can
+  now be adjacent to static text (e.g., `foo${ENV}bar`), which previously
+  did not work and caused confusion. This aligns behavior with common
+  bash expectations.
+  Why
+  - Users expect `${VAR}` and `$VAR!` to expand while keeping punctuation.
+  - Concatenations like `foo${ENV}bar` are common and should be valid.
+  What
+  - Add support for braced variables `${VAR}` with proper `}` handling.
+  - For unbraced `$VAR`, stop the name at the first non `[A-Za-z0-9_]`
+    char and emit that char (e.g., `!`, `.`) as literal output.
+  - Improve error handling for overlong env var names.
+  - Keep other shell features (e.g., `$(pwd)`) unsupported by design.
+  Docs
+  - Update `constant_strings.rst` to document `${VAR}`, the new
+    termination rules, and examples including `foo${ENV}bar` and `$VAR!`.
+  Tests
+  - Add `rscript_backticks_braces_envvar.sh` for `${VAR}` support.
+  - Add `rscript_backticks_static_text.sh` for `$VAR!` and adjacency.
+  - Convert `rscript_backticks_empty_envvar-vg.sh` to non-VG variant and
+    adjust `tests/Makefile.am`.
+  Compatibility
+  - Backward compatible. Changes affect only previously broken edge cases.
+- 2025-08-13: improved developer documentation
+  - internal locking needs / action interface
+  - control flow for actions / queues
+  - removes any doubts that might have existed due to missing docs
+  - improves onboarding new developers
+- 2025-08-01: core: migrate callback invocations to type-safe signatures
+  Replace opaque/variadic callback usage with explicit, type-safe function
+  signatures to reduce undefined behavior and clarify intent.
+  Adapter helpers bridge the existing APIs without raw variadic casts, enabling
+  the transition incrementally. Callback setup sites are standardized for
+  consistent readability. This tightens the contract on callbacks, eases future
+  refactoring, and makes their roles more self-documenting.
+  Inspired by https://github.com/rsyslog/rsyslog/pull/5882
+  With AI support: Codex, Gemini
+- 2025-08-01: Fix: Remove unsafe function pointer casting in cfsysline.c
+  - Replaced function pointer casting with direct handler calls for type safety
+  - Fixes crashes (BUS errors) on ARM64 macOS 14+ due to strict calling conventions
+  - Root cause identified by ThreadSanitizer
+  - Eliminates undefined behavior, improves code safety
+  On MacOS, this fixes a potential segfault condition.
+- 2025-08-01: ossl: Add PrioritizeSAN option to OpenSSL network stream driver
+  Add OpenSSL equivalent of existing GnuTLS PrioritizeSAN functionality
+  implemented in commit 937e278fdf51c3e21ebd3acf05f9d1b8649ce2c5
+  https://docs.openssl.org/1.1.1/man3/X509_check_host
+  > The X509_CHECK_FLAG_NEVER_CHECK_SUBJECT flag causes the function to
+  > never consider the subject DN even if the certificate contains no
+  > subject alternative names of the right type (DNS name or email address
+  > as appropriate); the default is to use the subject DN when no
+  > corresponding subject alternative names are present.
+  0x10100004L corresponds to OpenSSL 1.1.0-pre4 in which
+  X509_CHECK_FLAG_NEVER_CHECK_SUBJECT first appeared.
+  Thanks to Corey Siltala for the patch.
+- 2025-08-01: core: fix race condition in imtcp when closing sessions
+  This commit fixes a race condition that could occur when two threads tried to close
+  the same TCP session simultaneously. This could lead to an "epoll_ctl failed:
+  Bad file descriptor" error message.
+  The fix introduces an atomic flag `being_closed` to the `tcps_sess_t` struct.
+  This flag is used to ensure that the session-closing logic is executed only once
+  per session.  This commit also corrects the logic of the atomic check to prevent
+  the race condition correctly.
+  This was created with the help of Google Jules AI coding agent.
+- 2025-07-31: pmrfc3164: add headerless message detection and handling
+  This patch adds a robust, optional mechanism for handling "headerless" input—
+  log messages that do not conform to traditional syslog formatting.
+  - **Headerless detection (opt-in)**
+    - Controlled by the new `detect.headerless` boolean (default: off)
+    - Detects messages with **no PRI** and **no valid timestamp**
+    - Excludes structured inputs (e.g. JSON starting with `{` or `[`) as
+      before
+    - Injects default `hostname` and `tag` values
+    - Flags message internally as `HEADERLESS_MSG` for further processing
+  - **Fallback processing options**
+    - `headerless.ruleset`: route headerless messages to a dedicated ruleset
+    - `headerless.errorfile`: optionally store raw input to a file
+    - `headerless.drop`: discard headerless messages early if desired
+  - **Thread-safe HUP signal handling**
+    - New `doHUPParser` entry point allows safe log rotation for error file
+    - Follows standard reopen-on-write pattern post-HUP
+  - **Testing & Maintenance**
+    - Adds two test cases: `pmrfc3164-headerless.sh` and `pmrfc3164-drop.sh`
+    - Extends documentation for all new parameters
+    - Cleans up code formatting, includes, and bumps copyright
+  Some environments produce mixed or malformed input streams. This patch enables
+  early, lightweight detection of non-syslog input, with customizable recovery
+  and routing strategies. It avoids unnecessary parsing work and gives operators
+  better tools to isolate or discard garbage input—without breaking legacy behavior.
+- 2025-07-31: imjournal: fix vulnerability in state file creation
+  Initialize cs.fCreateMode to 0644 instead of -1 to prevent state files
+  from being created with all permission bits set when legacy configuration
+  is used. The setModCnf function is only called with modern configuration,
+  leaving cs.fCreateMode at -1 for legacy configs, which results in wrong
+  open() calls.
+  Thanks to Attila Lakatos for the patch.
+- 2025-07-31: doc fix: remove doc for debug options that no longer exist
+  Some debug options were removed several years ago but unfortunately
+  not removed from the doc. This is now done.
+  closes: https://github.com/rsyslog/rsyslog/issues/4817
+- 2025-07-29: gtls fix: log missing certificate/key only once
+  When no TLS certificate or key is configured for forwarding actions,
+  repeated connection attempts produced the same warning messages over and
+  over. gtlsInitCred() and gtlsAddOurCert() now log these warnings only
+  during the initial setup
+  Thanks to Attila Lakatos for the patch.
 - 2025-07-22: greatly restructured and improved documentation
   It is in far better shape now, but there are still improvements
   planned and needed.

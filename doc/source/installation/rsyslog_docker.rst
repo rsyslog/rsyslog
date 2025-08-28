@@ -1,23 +1,21 @@
+.. _install-rsyslog-docker:
+
 Using Rsyslog Docker Containers
 ===============================
 
-The rsyslog project provides a ready-to-run "syslog appliance" which provides
-all rsyslog features in an easy to use way. To run it, simply do
+.. index::
+   single: containers
+   pair: installation; Docker
 
-|DockerApplianceAlpineRun|
+The rsyslog project publishes official Docker images on Docker Hub.
+They are built from the definitions in ``packaging/docker`` and ship
+current rsyslog releases.
 
-Up-to-date information on how to use this container can be found at the
-|DockerApplianceAlpineDockerHubRepo|_.
+Images follow the pattern ``rsyslog/rsyslog[-<function>]:<version>``
+with variants such as ``rsyslog/rsyslog`` (standard) and
+``rsyslog/rsyslog-minimal``. To build them locally run::
 
-.. warning::
+    make -C packaging/docker/rsyslog all
 
-   The docker containers are currently (early 2018) under development
-   and must be used with some care.
-
-Further Information
--------------------
-The rsyslog project also provides a number of additional containers for
-different needs (end users, developers, package builders, ...). A full
-overview of what is currently available can be found at the |RsyslogDockerHub|_.
-Source code for the docker containers is kept in Github at
-|GitHubDockerProject|_.
+See :doc:`../containers/index` for an overview of available images and
+for notes on development and historical container work.

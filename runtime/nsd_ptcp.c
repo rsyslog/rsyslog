@@ -1036,6 +1036,7 @@ static rsRetVal GetRemotePort(nsd_t *pNsd, int *port) {
     assert(port != NULL);
 
     *port = -1; /* Initialize port to -1, indicating no port found initially or on error */
+    memset(&addr, 0, sizeof(addr)); /* avoid potential garbage values */
 
     if (getpeername(pThis->sock, (struct sockaddr *)&addr, &addrlen) == 0) {
         if (addr.ss_family == AF_INET6) {

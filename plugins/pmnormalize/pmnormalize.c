@@ -137,6 +137,10 @@ BEGINfreeParserInst
     }
 ENDfreeParserInst
 
+BEGINcheckParserInst
+    CODESTARTcheckParserInst;
+ENDcheckParserInst
+
 
 BEGINnewParserInst
     struct cnfparamvals *pvals = NULL;

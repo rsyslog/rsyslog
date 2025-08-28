@@ -696,6 +696,9 @@
     if (!strcmp((char *)name, "newParserInst")) {                          \
         *pEtryPoint = newParserInst;                                       \
     }                                                                      \
+    if (!strcmp((char *)name, "checkParserInst")) {                        \
+        *pEtryPoint = checkParserInst;                                     \
+    }                                                                      \
     if (!strcmp((char *)name, "freeParserInst")) {                         \
         *pEtryPoint = freeParserInst;                                      \
     }                                                                      \
@@ -909,6 +912,18 @@
     RETiRet;        \
     }
 
+/* checkParserInst() - verifies a parser instance configuration */
+#define BEGINcheckParserInst                                                   \
+    static rsRetVal checkParserInst(void *const ptr) {                         \
+        instanceConf_t __attribute__((unused)) *pInst = (instanceConf_t *)ptr; \
+        DEFiRet;
+
+#define CODESTARTcheckParserInst
+
+#define ENDcheckParserInst \
+    RETiRet;               \
+    }
+
 
 /* activateCnfPrePrivDrop()
  * Initial config activation, before dropping privileges. This is an optional
@@ -1042,6 +1057,22 @@
 
 #define ENDdoHUP \
     RETiRet;     \
+    }
+
+/* doHUPParser()
+ */
+#define CODEqueryEtryPt_doHUPParser       \
+    if (!strcmp((char *)name, "doHUP")) { \
+        *pEtryPoint = doHUP;              \
+    }
+#define BEGINdoHUPParser                                                    \
+    static rsRetVal doHUP(instanceConf_t __attribute__((unused)) * pData) { \
+        DEFiRet;
+
+#define CODESTARTdoHUPParser
+
+#define ENDdoHUPParser \
+    RETiRet;           \
     }
 
 

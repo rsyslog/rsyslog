@@ -139,13 +139,6 @@ For instance:
 overall throughput, especially if complex templates are used. Choose your
 template wisely based on your tracking needs and performance considerations.
 
-.. important::
-
-   The current Proof-of-Concept implementation of the ``omsendertrack`` module
-   might still refer to this parameter as ``template`` instead of ``senderid``.
-   Please use ``template`` if ``senderid`` is not recognized by your rsyslog
-   version, and be aware that this will be harmonized in future releases.
-
 interval
 ^^^^^^^^
 

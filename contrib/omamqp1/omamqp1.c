@@ -26,6 +26,15 @@
  * <kgiusti@gmail.com>
  */
 
+/**
+ * @file omamqp1.c
+ * @brief rsyslog output plugin for AMQP 1.0 via Qpid Proton.
+ *
+ * Each action instance spawns a dedicated protocol thread that manages the
+ * AMQP connection. Worker threads batch log messages and send them to this
+ * thread through a small command queue for asynchronous transmission.
+ */
+
 #include "config.h"
 #include "rsyslog.h"
 #include <stdio.h>
@@ -228,6 +237,12 @@ BEGINtryResume
 ENDtryResume
 
 
+/**
+ * @brief Initialize a new batch of log records.
+ *
+ * beginTransaction() prepares a Proton message and opens a list container
+ * that will hold each formatted log message added by doAction().
+ */
 BEGINbeginTransaction
     CODESTARTbeginTransaction;
     {
@@ -245,6 +260,16 @@ finalize_it:
 ENDbeginTransaction
 
 
+/**
+ * @brief Append a formatted message to the current batch.
+ *
+ * This function is invoked for each log record emitted by rsyslog. The
+ * formatted string provided by the template is stored in the Proton
+ * message created in beginTransaction().
+ *
+ * The actual transmission is deferred until endTransaction() issues a
+ * COMMAND_SEND to the protocol thread.
+ */
 BEGINdoAction
     CODESTARTdoAction;
     {
@@ -261,6 +286,13 @@ finalize_it:
 ENDdoAction
 
 
+/**
+ * @brief Finalize the batch and forward it to the protocol thread.
+ *
+ * Closes the list started in beginTransaction() and hands the assembled
+ * message to amqp1_thread via COMMAND_SEND. If no messages were queued the
+ * Proton message is discarded.
+ */
 BEGINendTransaction
     CODESTARTendTransaction;
     {
@@ -458,10 +490,11 @@ finalize_it:
 // in case existing buffer too small
 static rsRetVal _grow_buffer(protocolState_t *pState) {
     DEFiRet;
-    pState->buffer_size *= 2;
-    free(pState->encode_buffer);
-    pState->encode_buffer = (char *)malloc(pState->buffer_size);
-    CHKmalloc(pState->encode_buffer);
+    size_t new_size = pState->buffer_size * 2;
+    char *new_buf = realloc(pState->encode_buffer, new_size);
+    CHKmalloc(new_buf);
+    pState->encode_buffer = new_buf;
+    pState->buffer_size = new_size;
 
 finalize_it:
     RETiRet;
@@ -645,8 +678,13 @@ static void dispatcher(pn_handler_t *handler, pn_event_t *event, pn_event_type_t
 }
 
 
-// Send a command to the protocol thread and
-// wait for the command to complete
+/**
+ * @brief Send a control command to the protocol thread.
+ *
+ * The calling worker thread populates the shared IPC structure with the
+ * command and optional message payload, wakes the Proton reactor and waits
+ * on the condition variable until amqp1_thread processes the request.
+ */
 static rsRetVal _issue_command(threadIPC_t *ipc, pn_reactor_t *reactor, commands_t command, pn_message_t *message) {
     DEFiRet;
 
@@ -677,7 +715,12 @@ static rsRetVal _issue_command(threadIPC_t *ipc, pn_reactor_t *reactor, commands
 }
 
 
-// check if a command needs processing
+/**
+ * @brief Check for and execute pending commands from the main thread.
+ *
+ * Invoked by the protocol thread between reactor events to handle requests
+ * like message send, readiness queries or shutdown.
+ */
 static void _poll_command(protocolState_t *ps) {
     if (ps->stopped) return;
 
@@ -742,8 +785,12 @@ static void _poll_command(protocolState_t *ps) {
     pthread_mutex_unlock(&ipc->lock);
 }
 
-/* runs the protocol engine, allowing it to handle TCP socket I/O and timer
- * events in the background.
+/**
+ * @brief Worker thread driving the Proton reactor.
+ *
+ * This thread owns the AMQP connection and processes commands issued via
+ * _issue_command(). It reconnects on failure and periodically polls for
+ * shutdown requests.
  */
 static void *amqp1_thread(void *arg) {
     pn_handler_t *handler = (pn_handler_t *)arg;
@@ -803,6 +850,8 @@ static void *amqp1_thread(void *arg) {
         // delay reconnectDelay seconds before re-connecting:
         int delay = ps->config->reconnectDelay;
         while (delay-- > 0 && !ps->stopped) {
+            /* Sleep in one-second increments to pace reconnect attempts and
+             * still allow _poll_command() to observe shutdown requests. */
             srSleep(1, 0);
             _poll_command(ps);
         }
@@ -822,6 +871,12 @@ static void *amqp1_thread(void *arg) {
 }
 
 
+/**
+ * @brief Spawn the protocol thread that manages the AMQP connection.
+ *
+ * The thread executes amqp1_thread() using the instance's handler and
+ * sets the bThreadRunning flag on success.
+ */
 static rsRetVal _launch_protocol_thread(instanceData *pData) {
     int rc;
     DBGPRINTF("omamqp1: Starting protocol thread\n");
@@ -836,6 +891,9 @@ static rsRetVal _launch_protocol_thread(instanceData *pData) {
     return RS_RET_SYS_ERR;
 }
 
+/**
+ * @brief Request protocol thread termination and wait for completion.
+ */
 static rsRetVal _shutdown_thread(instanceData *pData) {
     DEFiRet;
 

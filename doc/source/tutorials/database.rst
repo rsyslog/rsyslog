@@ -130,7 +130,7 @@ Does that mean you need to create database schema yourself and also must
 fully understand rsyslogd's properties? No, that's not needed. Because
 we anticipated that folks are probably more interested in getting things
 going instead of designing them from scratch. So we have provided a
-default schema as well as build-in support for it. This schema also
+default schema as well as built-in support for it. This schema also
 offers an additional benefit: rsyslog is part of
 `Adiscon <http://www.adiscon.com/en/>`_'s `MonitorWare product
 line <http://www.monitorware.com/en/>`_ (which includes open source and
@@ -152,7 +152,7 @@ table was successfully created.
 
 It is important to note that the correct database encoding must be used
 so that the database will accept strings independent of the string
-encoding. This is an important part because it can not be guarantied
+encoding. This is an important part because it can not be guaranteed
 that all syslog messages will have a defined character encoding. This is
 especially true if the rsyslog-Server will collect messages from
 different clients and different products.

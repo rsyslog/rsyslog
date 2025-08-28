@@ -696,10 +696,17 @@ static rsRetVal doModInit(pModInit_t modInit, uchar *name, void *pModHdlr, modIn
             if (localRet == RS_RET_OK) {
                 pNew->mod.pm.parse = NULL;
                 CHKiRet((*pNew->modQueryEtryPt)((uchar *)"newParserInst", &pNew->mod.pm.newParserInst));
+                localRet = (*pNew->modQueryEtryPt)((uchar *)"checkParserInst", &pNew->mod.pm.checkParserInst);
+                if (localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
+                    pNew->mod.pm.checkParserInst = NULL;
+                } else {
+                    CHKiRet(localRet);
+                }
                 CHKiRet((*pNew->modQueryEtryPt)((uchar *)"freeParserInst", &pNew->mod.pm.freeParserInst));
             } else if (localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
                 pNew->mod.pm.parse2 = NULL;
                 pNew->mod.pm.newParserInst = NULL;
+                pNew->mod.pm.checkParserInst = NULL;
                 pNew->mod.pm.freeParserInst = NULL;
                 CHKiRet((*pNew->modQueryEtryPt)((uchar *)"parse", &pNew->mod.pm.parse));
             } else {
@@ -861,6 +868,10 @@ static void modPrintList(void) {
             case eMOD_PARSER:
                 dbgprintf("Parser Module Entry Points\n");
                 dbgprintf("\tparse:              0x%lx\n", (unsigned long)pMod->mod.pm.parse);
+                dbgprintf("\tparse2:             %p\n", pMod->mod.pm.parse2);
+                dbgprintf("\tnewParserInst:      %p\n", pMod->mod.pm.newParserInst);
+                dbgprintf("\tcheckParserInst:    %p\n", pMod->mod.pm.checkParserInst);
+                dbgprintf("\tfreeParserInst:     %p\n", pMod->mod.pm.freeParserInst);
                 break;
             case eMOD_STRGEN:
                 dbgprintf("Strgen Module Entry Points\n");

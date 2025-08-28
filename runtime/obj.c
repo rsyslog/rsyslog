@@ -871,9 +871,9 @@ rsRetVal objDeserializeWithMethods(void *ppObj,
                                    strm_t *pStrm,
                                    rsRetVal (*fFixup)(obj_t *, void *),
                                    void *pUsr,
-                                   rsRetVal (*objConstruct)(void *, ...),
-                                   rsRetVal (*objConstructFinalize)(void *, ...),
-                                   rsRetVal (*objDeserialize)(void *, ...)) {
+                                   rsRetVal (*objConstruct)(void **),
+                                   rsRetVal (*objConstructFinalize)(void *),
+                                   rsRetVal (*objDeserialize)(void *, strm_t *)) {
     DEFiRet;
     rsRetVal iRetLocal;
     obj_t *pObj = NULL;
@@ -904,7 +904,7 @@ rsRetVal objDeserializeWithMethods(void *ppObj,
 
     if (rsCStrSzStrCmp(pstrID, pszTypeExpected, lenTypeExpected)) ABORT_FINALIZE(RS_RET_INVALID_OID);
 
-    CHKiRet(objConstruct(&pObj));
+    CHKiRet(objConstruct((void **)&pObj));
 
     /* we got the object, now we need to fill the properties */
     CHKiRet(objDeserialize(pObj, pStrm));

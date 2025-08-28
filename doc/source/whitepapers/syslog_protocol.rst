@@ -64,7 +64,7 @@ This lists what has been found during implementation:
    no way to find out what it is. In order to make the syslogd do
    anything useful, I have now simply taken the message as is and
    stuffed it into the MSG part. Please note that I think this will be a
-   route that other implementors would take, too.
+   route that other implementers would take, too.
 -  A minimal parser is easy to implement. It took me roughly 2 hours to
    add it to rsyslogd. This includes the time for restructuring the code
    to be able to parse both legacy syslog as well as syslog-protocol.
@@ -75,7 +75,7 @@ This lists what has been found during implementation:
       errors caught. For my needs with this syslogd, that level of
       structured data processing is probably sufficient. I do not want
       to parse/validate it in all cases. This is also a performance
-      issue. I think other implementors could have the same view. As
+      issue. I think other implementers could have the same view. As
       such, we should not make validation a requirement.
    -  MSG is not further processed (e.g. Unicode not being validated)
    -  the other header fields are also extracted, but no validation is
@@ -207,7 +207,7 @@ be discussed ;)
    (see section 155.9 of
    `https://www.unicode.org/versions/Unicode4.0.0/ch15.pdf <https://www.unicode.org/versions/Unicode4.0.0/ch15.pdf>`_)
 -  Requirements to drop messages should be reconsidered. I guess I would
-   not be the only implementor ignoring them.
+   not be the only implementer ignoring them.
 -  Logging requirements should be reconsidered and probably be removed.
 -  It would be advisable to specify "-" for APP-NAME is the name is not
    known to the sender.

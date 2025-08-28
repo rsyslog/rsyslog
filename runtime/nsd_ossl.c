@@ -969,6 +969,7 @@ static rsRetVal AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo) 
     pNew->pNetOssl->authMode = pThis->pNetOssl->authMode;
     pNew->permitExpiredCerts = pThis->permitExpiredCerts;
     pNew->pNetOssl->pPermPeers = pThis->pNetOssl->pPermPeers;
+    pNew->pNetOssl->bSANpriority = pThis->pNetOssl->bSANpriority;
     pNew->DrvrVerifyDepth = pThis->DrvrVerifyDepth;
     pNew->gnutlsPriorityString = pThis->gnutlsPriorityString;
     pNew->pNetOssl->ctx = pThis->pNetOssl->ctx;
@@ -1318,19 +1319,26 @@ finalize_it:
     RETiRet;
 }
 
-/* Set the driver name checking strictness, for now it is empty wrapper.
- * TODO: implement openSSL version
- * jvymazal, 2019-08-16
+/* Set the driver name checking strictness
+ * 0 - less strict per RFC 5280, section 4.1.2.6 - either SAN or CN match is good
+ * 1 - more strict per RFC 6125 - if any SAN present it must match (CN is ignored)
+ * jvymazal, 2019-08-16, csiltala, 2025-07-28
  */
-static rsRetVal SetPrioritizeSAN(nsd_t __attribute__((unused)) * pNsd, int prioritizeSan) {
+static rsRetVal SetPrioritizeSAN(nsd_t *pNsd, int prioritizeSan) {
     DEFiRet;
-    if (prioritizeSan != 0) {
+    nsd_ossl_t *pThis = (nsd_ossl_t *)pNsd;
+
+    ISOBJ_TYPE_assert((pThis), nsd_ossl);
+    if (prioritizeSan != 0 && prioritizeSan != 1) {
         LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
                  "error: driver prioritizeSan %d "
                  "not supported by ossl netstream driver",
                  prioritizeSan);
         ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
     }
+
+    pThis->pNetOssl->bSANpriority = prioritizeSan;
+
 finalize_it:
     RETiRet;
 }
@@ -1452,7 +1460,7 @@ BEGINobjQueryInterface(nsd_ossl)
     pIf->SetKeepAliveTime = SetKeepAliveTime;
     pIf->SetGnutlsPriorityString = SetGnutlsPriorityString; /* we don't NEED this interface! */
     pIf->SetCheckExtendedKeyUsage = SetCheckExtendedKeyUsage; /* we don't NEED this interface! */
-    pIf->SetPrioritizeSAN = SetPrioritizeSAN; /* we don't NEED this interface! */
+    pIf->SetPrioritizeSAN = SetPrioritizeSAN;
     pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
     pIf->SetTlsCAFile = SetTlsCAFile;
     pIf->SetTlsCRLFile = SetTlsCRLFile;

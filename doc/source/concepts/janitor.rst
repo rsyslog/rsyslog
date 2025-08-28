@@ -18,7 +18,7 @@ to occur after *n* minutes will occur after *n* and *(n + 2\*janitorInterval)*
 minutes.
 
 To reduce the potential delay caused by janitor invocation,
-:ref:`the interval at which the janitor runs can be be adjusted <global_janitorInterval>`\ .
+:ref:`the interval at which the janitor runs can be adjusted <global_janitorInterval>`\ .
 If high precision is
 required, it should be set to one minute. Janitor-based activities will
 still be NET times, but the time frame will be much smaller. In the
@@ -31,7 +31,7 @@ for data center machines (which usually always run at full speed), but it
 may be an issue for power-constrained environments like notebooks. For
 such systems, a higher janitor interval may make sense.
 
-As a special case, sending a HUP signal to rsyslog also activate the
+As a special case, sending a HUP signal to rsyslog also activates the
 janitor process. This can lead to too-frequent wakeups of janitor-related
 services. However, we don't expect this to cause any issues. If it does,
 it could be solved by creating a separate thread for the janitor. But as

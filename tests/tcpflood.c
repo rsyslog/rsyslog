@@ -243,6 +243,9 @@ static struct sockaddr_in dtls_client_addr; /* socket address sender for receivi
 static int udpsockin; /* socket for receiving messages in DTLS mode */
 #endif
 
+/* serialize TLS session setup to avoid races inside the TLS library */
+static pthread_mutex_t tlsSessInitMutex = PTHREAD_MUTEX_INITIALIZER;
+
 /* variables for managing multi-threaded operations */
 int runningThreads; /* number of threads currently running */
 int doRun; /* shall sender thread begin to run? */
@@ -472,7 +475,9 @@ int openConn(const int connIdx) {
         sockArray[connIdx] = sock;
 
         if (transport == TP_TLS) {
+            pthread_mutex_lock(&tlsSessInitMutex);
             initTLSSess(connIdx);
+            pthread_mutex_unlock(&tlsSessInitMutex);
         }
     }
     return 0;
@@ -480,6 +485,7 @@ int openConn(const int connIdx) {
 
 static int progressCounter = 0;
 static pthread_mutex_t counterLock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t reportedConnOpenErrLock = PTHREAD_MUTEX_INITIALIZER;
 typedef struct {
     int startIdx;
     int endIdx;
@@ -489,14 +495,15 @@ typedef struct {
 void *connectionWorker(void *arg) {
     ThreadArgsOpen *args = (ThreadArgsOpen *)arg;
     int i;
-    static int reportedConnOpenErr = 0;  // TODO: mutex!
+    static int reportedConnOpenErr = 0;
 
     for (i = args->startIdx; i <= args->endIdx; i++) {
         if (openConn(i) != 0) {
+            pthread_mutex_lock(&reportedConnOpenErrLock);
             if (reportedConnOpenErr++ == 0) {
                 fprintf(stderr, "Error opening connection %d; %s\n", i, strerror(errno));
             }
-
+            pthread_mutex_unlock(&reportedConnOpenErrLock);
             pthread_exit(NULL);
         }
 

@@ -132,6 +132,8 @@ static uchar template_StdClickHouseFmt[] =
     "\"INSERT INTO rsyslog.SystemEvents (severity, facility, "
     "timestamp, hostname, tag, message) VALUES (%syslogseverity%, %syslogfacility%, "
     "'%timereported:::date-unixtimestamp%', '%hostname%', '%syslogtag%', '%msg%')\",STDSQL";
+static uchar template_StdOmSenderTrack_senderid[] =
+    "\"%fromhost-ip%\""; /* default template for omsendertrack "senderid" parameter*/
 /* end templates */
 
 /* tables for interfacing with the v6 config system (as far as we need to) */
@@ -360,7 +362,10 @@ BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and
     if (pThis->globals.bDebugPrintTemplateList) tplPrintList(pThis);
     if (pThis->globals.bDebugPrintModuleList) module.PrintList();
     if (pThis->globals.bDebugPrintCfSysLineHandlerList) dbgPrintCfSysLineHandlers();
-    // TODO: The following code needs to be "streamlined", so far just moved over...
+    /* we use the now traditional messages, albeit they originally were expected to become
+     * "streamlined". Also we do not add any more, as the config system ouputs this data in
+     * any case and we have seen no need for more info in the past 10+ years.
+     */
     dbgprintf("Main queue size %d messages.\n", pThis->globals.mainQ.iMainMsgQueueSize);
     dbgprintf("Main queue worker threads: %d, wThread shutdown: %d, Perists every %d updates.\n",
               pThis->globals.mainQ.iMainMsgQueueNumWorkers, pThis->globals.mainQ.iMainMsgQtoWrkShutdown,
@@ -373,15 +378,6 @@ BEGINobjDebugPrint(rsconf) /* be sure to specify the object type also in END and
               pThis->globals.mainQ.iMainMsgQDiscardMark, pThis->globals.mainQ.iMainMsgQDiscardSeverity);
     dbgprintf("Main queue save on shutdown %d, max disk space allowed %lld\n",
               pThis->globals.mainQ.bMainMsgQSaveOnShutdown, pThis->globals.mainQ.iMainMsgQueMaxDiskSpace);
-    /* TODO: add
-    iActionRetryCount = 0;
-    iActionRetryInterval = 30000;
-    static int iMainMsgQtoWrkMinMsgs = 100;
-    static int iMainMsgQbSaveOnShutdown = 1;
-    iMainMsgQueMaxDiskSpace = 0;
-    setQPROP(qqueueSetiMinMsgsPerWrkr, "$MainMsgQueueWorkerThreadMinimumMessages", 100);
-    setQPROP(qqueueSetbSaveOnShutdown, "$MainMsgQueueSaveOnShutdown", 1);
-     */
     dbgprintf("Work Directory: '%s'.\n", glbl.GetWorkDir(pThis));
     ochPrintList(pThis);
     dbgprintf("Modules used in this configuration:\n");
@@ -743,6 +739,27 @@ static rsRetVal tellModulesCheckConfig(void) {
     }
 
     return RS_RET_OK; /* intentional: we do not care about module errors */
+}
+
+/* verify parser instances after full config load */
+static rsRetVal checkParserInstances(void) {
+    parserList_t *node;
+    rsRetVal localRet;
+    DEFiRet;
+
+    node = loadConf->parsers.pParsLstRoot;
+    while (node != NULL) {
+        if (node->pParser->pModule->mod.pm.checkParserInst != NULL) {
+            localRet = node->pParser->pModule->mod.pm.checkParserInst(node->pParser->pInst);
+            if (localRet != RS_RET_OK) {
+                iRet = localRet;
+                break;
+            }
+        }
+        node = node->pNext;
+    }
+
+    RETiRet;
 }
 
 
@@ -1308,6 +1325,8 @@ static rsRetVal initLegacyConf(void) {
     tplAddLine(ourConf, " FullJSONFmt", &pTmp);
     pTmp = template_StdClickHouseFmt;
     tplAddLine(ourConf, " StdClickHouseFmt", &pTmp);
+    pTmp = template_StdOmSenderTrack_senderid;
+    tplAddLine(ourConf, " StdOmSenderTrack-senderid", &pTmp);
     pTmp = template_spoofadr;
     tplLastStaticInit(ourConf, tplAddLine(ourConf, "RSYSLOG_omudpspoofDfltSourceTpl", &pTmp));
 
@@ -1401,6 +1420,7 @@ static rsRetVal load(rsconf_t **cnf, uchar *confFile) {
     tellModulesConfigLoadDone();
 
     tellModulesCheckConfig();
+    CHKiRet(checkParserInstances());
     CHKiRet(validateConf(loadConf));
     CHKiRet(loadMainQueue());
 

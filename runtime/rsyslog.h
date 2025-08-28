@@ -96,7 +96,7 @@
 #include "typedefs.h"
 
 #if defined(__GNUC__)
-    #define PRAGMA_INGORE_Wswitch_enum _Pragma("GCC diagnostic ignored \"-Wswitch-enum\"")
+    #define PRAGMA_IGNORE_Wswitch_enum _Pragma("GCC diagnostic ignored \"-Wswitch-enum\"")
     #define PRAGMA_IGNORE_Wempty_body _Pragma("GCC diagnostic ignored \"-Wempty-body\"")
     #define PRAGMA_IGNORE_Wstrict_prototypes _Pragma("GCC diagnostic ignored \"-Wstrict-prototypes\"")
     #define PRAGMA_IGNORE_Wold_style_definition _Pragma("GCC diagnostic ignored \"-Wold-style-definition\"")
@@ -129,7 +129,7 @@
         #define PRAGMA_DIAGNOSTIC_POP
     #endif
 #else
-    #define PRAGMA_INGORE_Wswitch_enum
+    #define PRAGMA_IGNORE_Wswitch_enum
     #define PRAGMA_IGNORE_Wsign_compare
     #define PRAGMA_IGNORE_Wformat_nonliteral
     #define PRAGMA_IGNORE_Wpragmas
@@ -370,7 +370,7 @@ static inline syslog_pri_t __attribute__((unused)) pri2fac(const syslog_pri_t pr
  * can be combined. -- rgerhards, 2009-04-27
  */
 #define CORE_FEATURE_BATCHING 1
-/*#define CORE_FEATURE_whatever 2 ... and so on ... */
+/* for additional features, define as powers of two (e.g. 'CORE_FEATURE_whatever 2', then 4, ...) */
 
 #ifndef _PATH_CONSOLE
     #define _PATH_CONSOLE "/dev/console"
@@ -727,6 +727,8 @@ enum rsRetVal_ {
     RS_RET_WARN_NO_SENDER_STATS = -2461, /**< TLS lib had problem with syscall */
     RS_RET_UNSUPP_SOCK_AF = -2462, /**< unsupported socket address family, use if code cannot process
                       address family or does not expect it (may be handled locally) */
+    RS_RET_SYSTEMD_VERSION_ERR = -2463, /**< systemd version doesn't support journal namespacing */
+    RS_RET_NO_TEMPLATE_SUPPORT_ERR = -2464, /**< journald namespace doesn't support template yet */
 
     /* RainerScript error messages (range 1000.. 1999) */
     RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

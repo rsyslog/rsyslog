@@ -53,7 +53,7 @@ to archive both in order to prove integrity.
    downtime, always check carefully when you change the algorithm.
 
 -  **cry.mode** <Algorithm Mode>
-   The encryption mode to be used. Default ist Cipher Block Chaining
+   The encryption mode to be used. Default is Cipher Block Chaining
    (CBC). Note that not all encryption modes can be used together with
    all algorithms.
    Currently, the following modes are supported:

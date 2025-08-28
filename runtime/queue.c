@@ -1140,11 +1140,18 @@ finalize_it:
 }
 
 
+static rsRetVal msgConstructFromVoid(void **ppThis) {
+    return msgConstructForDeserializer((smsg_t **)ppThis);
+}
+
+static rsRetVal msgDeserializeFromVoid(void *pObj, strm_t *pStrm) {
+    return MsgDeserialize((smsg_t *)pObj, pStrm);
+}
+
 static rsRetVal qDeqDisk(qqueue_t *pThis, smsg_t **ppMsg) {
     DEFiRet;
-    iRet = objDeserializeWithMethods(ppMsg, (uchar *)"msg", 3, pThis->tVars.disk.pReadDeq, NULL, NULL,
-                                     (rsRetVal(*)(void *, ...))msgConstructForDeserializer, NULL,
-                                     (rsRetVal(*)(void *, ...))MsgDeserialize);
+    iRet = objDeserializeWithMethods(ppMsg, (uchar *)"msg", sizeof("msg") - 1, pThis->tVars.disk.pReadDeq, NULL, NULL,
+                                     msgConstructFromVoid, NULL, msgDeserializeFromVoid);
     if (iRet != RS_RET_OK) {
         LogError(0, iRet, "%s: qDeqDisk error happened at around offset %lld", obj.GetName((obj_t *)pThis),
                  (long long)pThis->tVars.disk.pReadDeq->iCurrOffs);

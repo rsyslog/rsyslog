@@ -2,27 +2,142 @@
 omfwd: syslog Forwarding Output Module
 **************************************
 
-===========================  ===========================================================================
-**Module Name:**             **omfwd**
-**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
-===========================  ===========================================================================
+The `omfwd` module forwards logs to remote systems using **UDP, TCP, or TLS**.
 
+It is **built-in** and does not require explicit loading.  
+To configure global defaults, use ``builtin:omfwd``.
 
-Purpose
-=======
+.. note::
+   For modern deployments, prefer **TCP with TLS** over plain TCP or UDP.
+   If reliable delivery is critical, consider :doc:`omrelp <omrelp>`.
 
-The `omfwd` plugin provides core functionality for traditional message forwarding 
-via UDP and TCP (including TLS). This built-in module does neither require loading
-nor can be loaded. If you need to "load" in order to set defaults, use "builtin:omfwd"
-as the module name.
+.. note::
+   Hostnames in ``target`` are resolved on each connection attempt using the
+   system resolver. Reverse lookup cache settings (:ref:`reverse_dns_cache`)
+   do not affect outbound name resolution.
 
-.. note:: The RELP protocol is not supported by `omfwd`. Use :doc:`omrelp <omrelp>` 
-   to forward messages via RELP.
+Best Practices
+==============
 
- 
-Notable Features
-================
+- **Choose the right transport:**  
+  TCP is often used for reliable delivery, especially with TLS.  
+  UDP can be preferable for low-latency, non-blocking scenarios (e.g., local 
+  high-speed networks).  
+  If you need **encrypted UDP**, consider :doc:`omdtls <omdtls>`.
 
+- **Use TLS where possible:**  
+  When sending logs over untrusted networks, configure TLS (`StreamDriver="ossl"` 
+  or `StreamDriver="gtls"`) with `omfwd` (for TCP) or switch to `omdtls` (for UDP).
+
+- **Enable queues for TCP forwarding:**  
+  Always define a queue (`queue.type="linkedList"`) to avoid blocking if the 
+  remote server is unavailable.
+
+- **Adjust queue parameters for heavy traffic:**  
+  For high-volume logging or prolonged outages, tune `queue.size` and related 
+  parameters to prevent message loss. The defaults are designed for typical workloads.
+
+- **Use templates for structured logs:**  
+  Apply templates (e.g., JSON) if the receiver expects a specific log format.
+
+- **Consider RELP for guaranteed delivery:**  
+  Use :doc:`omrelp <omrelp>` when 100% reliable delivery and acknowledgments 
+  are required.
+
+Quick Start
+===========
+
+The most common forwarding examples:
+
+**1. Forward all logs to a remote server via TCP**
+
+.. code-block:: rsyslog
+
+   # Forward all messages to a remote syslog server over TCP
+   action(
+       type="omfwd"
+       target="logs.example.com"   # Remote syslog server
+       port="514"                  # Destination port
+       protocol="tcp"              # Use TCP (reliable transport)
+       queue.type="linkedList"     # Prevent blocking if the remote server is down
+   )
+
+**2. Secure log forwarding with TLS**
+
+.. code-block:: rsyslog
+
+   # Forward logs securely using TLS (RFC5425)
+   action(
+       type="omfwd"
+       target="logs.example.com"
+       port="6514"                 # Standard port for TLS syslog
+       protocol="tcp"
+       StreamDriver="ossl"         # OpenSSL for TLS
+       StreamDriverMode="1"        # TLS-only mode
+       StreamDriverAuthMode="x509/name"
+       StreamDriverPermittedPeers="logs.example.com"
+   )
+
+Outdated Legacy Methods
+=======================
+
+Many distro defaults and popular online tutorials still use `@server`/`@@server`.
+These shorter forms bypass queues and lack back‑pressure control, misleading
+users about delivery guarantees and ranking high in search results.
+Although longer and seemingly complex, modern RainerScript variants
+are explicit, configurable, and robust—preventing hidden pitfalls.
+
+**TCP Forwarding**
+
+**Before (legacy):**
+
+.. code-block:: text
+
+   *.* @@remote.example.com
+
+**After (modern):**
+
+.. code-block:: rsyslog
+
+   action(
+       type="omfwd"
+       target="remote.example.com"
+       port="514"
+       protocol="tcp"
+       queue.type="linkedList"   # Prevents blocking if remote server is offline
+   )
+
+**UDP Forwarding (custom port)**
+
+**Before (legacy):**
+
+.. code-block:: text
+
+   *.* @remote.example.com:515
+
+**After (modern):**
+
+.. code-block:: rsyslog
+
+   action(
+       type="omfwd"
+       target="remote.example.com"
+       port="515"                # Non-standard port
+       protocol="udp"
+   )
+
+What About `*.*`?
+-----------------
+
+The legacy syntax `*.*` means "all facilities and priorities."  
+In modern RainerScript, **all messages are matched by default**.  
+You only need filters (e.g., `if ... then ...`) when you want to **selectively forward** messages.
+
+.. code-block:: text
+
+   *.* @@remote.example.com
+
+is fully equivalent to the modern example above, **without needing `*.*`.**
 
 Configuration Parameters
 ========================
@@ -31,114 +146,23 @@ Configuration Parameters
 
    Parameter names are case-insensitive.
 
-Module Parameters
------------------
+Basic Parameters
+----------------
 
+.. toctree::
+   :maxdepth: 2
 
-Template
-^^^^^^^^
+   omfwd/parameters/basic
+   omfwd/parameters/module
 
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
+Action Parameters (omfwd)
+-------------------------
 
-   "word", "RSYSLOG_TraditionalForwardFormat", "no", "``$ActionForwardDefaultTemplate``"
-
-Sets a custom default template for this module.
-
-iobuffer.maxSize
-^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "full size", "no", "none"
-
-The iobuffer.maxSize parameter sets the maximum size of the I/O buffer
-used by rsyslog when submitting messages to the TCP send API. This
-parameter allows limiting the buffer size to a specific value and is
-primarily intended for testing purposes, such as within an automated
-testbench. By default, the full size of the I/O buffer is used, which
-depends on the rsyslog version. If the specified size is too large, an
-error is emitted, and rsyslog reverts to using the full size.
+Action parameters define how a specific forwarding action behaves.  
+They apply to each `action(type="omfwd" ...)` statement.
 
 .. note::
-    The I/O buffer has a fixed upper size limit for performance reasons. This limitation
-    allows saving one ``malloc()`` call and indirect addressing. Therefore, the ``iobuffer.maxSize``
-    parameter cannot be set to a value higher than this fixed limit.
-
-.. note::
-    This parameter should usually not be used in production environments.
-
-Example
-.......
-
-.. code-block:: none
-
-  module(load="builtin:omfwd" iobuffer.maxSize="8")
-
-In this example, a very small buffer size is used. This setting helps
-force rsyslog to execute code paths that are rarely used in normal
-operations. It allows testing edge cases that typically cannot be
-tested automatically.
-
-**Note that contrary to most other modules, omfwd is a built-in module. As such,
-you cannot "normally" load it just by name but need to prefix it with
-"builtin:" as can be seen above!**
-
-
-Action Parameters
------------------
-
-Target
-^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "array/word", "none", "no", "none"
-
-Name or IP address of the system to receive messages. Any resolvable name is fine.
-Here either a single target or an array of targets can be provided.
-
-If an array is provided, rsyslog forms a "target pool". Inside the pool, it
-performs equal load-balancing among them. Targets are changed for
-each message being sent. If targets become unreachable, they will temporarily not
-participate in load balancing. If all targets become offline (then and only then)
-the action itself is suspended. Unreachable targets are automatically retried
-by omfwd.
-
-NOTE: target pools are ONLY available for TCP transport. If UDP is selected, an
-error message is emitted and only the first target used.
-
-Single target: Target="syslog.example.net"
-
-Array of targets: Target=["syslog1.example.net", "syslog2.example.net", "syslog3.example.net"]
-
-Port
-^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "array/word", "514", "no", "none"
-
-Name or numerical value of the port to use when connecting to the target.
-If multiple targets are defined, different ports can be defined for each target.
-To do so, use array mode. The first port will be used for the first target, the
-second for the second target and so on. If fewer ports than targets are defined,
-the remaining targets will use the first port configured. This also means that you
-also need to define a single port, if all targets should use the same port.
-
-Note: if more ports than targets are defined, the remaining ports are ignored and
-an error message is emitted.
+   Parameter names are case-insensitive.
 
 
 pool.resumeinterval
@@ -162,23 +186,6 @@ on a try-by-try basis because of other ongoing activity inside rsyslog.
 Warning: we do NOT recommend to set this interval below 10 seconds, as it can lead
 DoS-like reconnection behaviour. Actually, the default of 30 seconds is quite short
 and should be extended if the use case permits.
-
-Protocol
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "udp", "no", "none"
-
-Type of protocol to use for forwarding. Note that ``tcp`` includes both legacy 
-plain TCP syslog and 
-`RFC5425 <https://datatracker.ietf.org/doc/html/rfc5425>`_-based TLS-encrypted 
-syslog. The selection depends on the StreamDriver parameter. If StreamDriver is 
-set to "ossl" or "gtls", it will use TLS-encrypted syslog.
-
 
 NetworkNamespace
 ^^^^^^^^^^^^^^^^
@@ -758,7 +765,7 @@ single message in such cases. This is caused by an
 and there is no way rsyslog could prevent this from happening
 (if you read the detail description, be sure to follow the link
 to the follow-up posting). In order to prevent these problems,
-we recommend the use of :doc:`omrelp <omrelp>`.
+we recommend the use of :doc:`omrelp<omrelp>`.
 
 
 udp.SendToAll
@@ -842,7 +849,7 @@ Example 1
 
 This will allow all protocols except for SSLv2 and SSLv3:
 
-.. code-block:: none
+.. code-block:: rsyslog
 
    gnutlsPriorityString="Protocol=ALL,-SSLv2,-SSLv3"
 
@@ -853,7 +860,7 @@ Example 2
 This will allow all protocols except for SSLv2, SSLv3 and TLSv1.
 It will also set the minimum protocol to TLSv1.2
 
-.. code-block:: none
+.. code-block:: rsyslog
 
    gnutlsPriorityString="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1
    MinProtocol=TLSv1.2"
@@ -884,7 +891,6 @@ is unlikely to bring real benefits in such scenarios.
 Note: If you need reliable delivery, do NOT use plain TCP syslog transport.
 Use RELP instead.
 
-
 Statistic Counter
 =================
 
@@ -913,7 +919,7 @@ Example 1
 The following command sends all syslog messages to a remote server via
 TCP port 10514.
 
-.. code-block:: none
+.. code-block:: rsyslog
 
    action(type="omfwd" Target="192.168.2.11" Port="10514" Protocol="tcp" Device="eth0")
 
@@ -925,7 +931,7 @@ In case the system in use has multiple (maybe virtual) network interfaces networ
 namespaces come in handy, each with its own routing table. To be able to distribute
 syslogs to remote servers in different namespaces specify them as separate actions.
 
-.. code-block:: none
+.. code-block:: rsyslog
 
    action(type="omfwd" Target="192.168.1.13" Port="10514" Protocol="tcp" NetworkNamespace="ns_eth0.0")
    action(type="omfwd" Target="192.168.2.24" Port="10514" Protocol="tcp" NetworkNamespace="ns_eth0.1")
