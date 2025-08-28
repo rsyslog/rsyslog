@@ -1080,6 +1080,19 @@ static rsRetVal curlAuth(wrkrInstanceData_t *pWrkrData, uchar *message)
 		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, message);
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, pData);
+		if (pData->proxyHost != NULL)
+		{
+			curl_easy_setopt(curl, CURLOPT_PROXY, pData->proxyHost);
+		}
+		if (pData->proxyPort != 0)
+		{
+			curl_easy_setopt(curl, CURLOPT_PROXYPORT, pData->proxyPort);
+		}
+		if (pData->authBuf != NULL)
+		{
+			curl_easy_setopt(curl, CURLOPT_USERPWD, pData->authBuf);
+			curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+		}
 		res = curl_easy_perform(curl);
 		if (res != CURLE_OK)
 		{
