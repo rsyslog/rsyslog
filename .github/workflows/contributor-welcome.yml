@@ -1,9 +1,12 @@
 name: Generate Contributor Welcome Message (scheduled)
 
-on:
-  schedule:
-    - cron: "*/5 * * * *"
-  workflow_dispatch:
+# Replace automatic trigger with a manual one as we need to improve this!
+on: workflow_dispatch
+
+#on:
+  #schedule:
+  #  - cron: "*/5 * * * *"
+  #workflow_dispatch:
 
 permissions:
   contents: read
