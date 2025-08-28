@@ -51,6 +51,7 @@ RUN	dnf -y install \
 	nc \
 	net-snmp-devel \
 	net-tools \
+	openssl \
 	openssl-devel \
 	openssl-devel-engine \
 	postgresql-devel \
