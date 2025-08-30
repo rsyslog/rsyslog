@@ -19,3 +19,7 @@ what sysklogd does.
 
 ``$DropTrailingLFOnReception on``
 
+**See Also:**
+
+- :doc:`rsconf1_droptrailingcronreception` - Remove trailing CR characters that precede trailing LF
+
