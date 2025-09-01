@@ -17,14 +17,8 @@ EXTRA_DIST = \
 	contrib/gnutls/ca.pem \
 	contrib/gnutls/cert.pem \
 	contrib/gnutls/key.pem \
-	doc/ai \
-	doc/source \
-	doc/requirements.txt \
-	doc/Makefile \
-	doc/README.md \
-	doc/STRATEGY.md \
-	doc/CONTRIBUTING.md \
-	doc/LICENSE
+	doc/ai/module_map.yaml \
+	$(DOC_FILES)
 
 SUBDIRS = compat runtime grammar . plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
 # external plugin driver is always enabled (core component)
