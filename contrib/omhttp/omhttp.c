@@ -985,6 +985,7 @@ static rsRetVal compressHttpPayload(wrkrInstanceData_t *pWrkrData, uchar *messag
     DEFiRet;
 
     if (!pWrkrData->bzInitDone) {
+        /* Initialize compressor once per worker and keep it around for reuse. */
         pWrkrData->zstrm.zalloc = Z_NULL;
         pWrkrData->zstrm.zfree = Z_NULL;
         pWrkrData->zstrm.opaque = Z_NULL;
@@ -995,6 +996,13 @@ static rsRetVal compressHttpPayload(wrkrInstanceData_t *pWrkrData, uchar *messag
             ABORT_FINALIZE(RS_RET_ZLIB_ERR);
         }
         pWrkrData->bzInitDone = 1;
+    } else {
+        /* Reuse the existing stream to avoid repeated init/free overhead. */
+        zRet = deflateReset(&pWrkrData->zstrm);
+        if (zRet != Z_OK) {
+            DBGPRINTF("omhttp: compressHttpPayload error %d returned from zlib/deflateReset()\n", zRet);
+            ABORT_FINALIZE(RS_RET_ZLIB_ERR);
+        }
     }
 
     CHKiRet(resetCompressCtx(pWrkrData, len));
@@ -1030,8 +1038,7 @@ static rsRetVal compressHttpPayload(wrkrInstanceData_t *pWrkrData, uchar *messag
     } while (pWrkrData->zstrm.avail_out == 0);
 
 finalize_it:
-    if (pWrkrData->bzInitDone) deflateEnd(&pWrkrData->zstrm);
-    pWrkrData->bzInitDone = 0;
+    /* Keep the initialized zlib stream for reuse; cleaned up in freeWrkrInstance. */
     RETiRet;
 }
 
@@ -1434,40 +1441,75 @@ finalize_it:
  * Used to decide if a batch should be flushed early.
  */
 static size_t computeBatchSize(wrkrInstanceData_t *pWrkrData) {
-    size_t extraBytes = 0;
+    /* Returns the estimated wire size (in bytes) of the CURRENT batch payload
+     * without accounting for any terminating NUL. This is used solely for
+     * deciding when to flush the batch before adding the next message.
+     */
     size_t sizeBytes = pWrkrData->batch.sizeBytes;
     size_t numMessages = pWrkrData->batch.nmemb;
 
-    switch (pWrkrData->pData->batchFormat) {
-        case FMT_JSONARRAY:
-            // square brackets, commas between each message
-            // 2 + numMessages - 1 = numMessages + 1
-            extraBytes = numMessages > 0 ? numMessages + 1 : 2;
-            break;
-        case FMT_KAFKAREST:
-            // '{}', '[]', '"records":'= 2 + 2 + 10 = 14
-            // '{"value":}' for each message = n * 10
-            // numMessages == 0 handled implicitly in multiplication
-            extraBytes = (numMessages * 10) + 14;
-            break;
-        case FMT_NEWLINE:
-            // newlines between each message
-            extraBytes = numMessages > 0 ? numMessages - 1 : 0;
-            break;
-        case FMT_LOKIREST:
-            // {"streams":[ '{}', '[]', '"streams":' = 14
-            //    {"stream": {key:value}..., "values":[[timestamp: msg1]]},
-            //    {"stream": {key:value}..., "values":[[timestamp: msg2]]}
-            // ]}
-            // message (11) * numMessages + header ( 16 )
-            extraBytes = (numMessages * 2) + 14;
-            break;
-        default:
-            // newlines between each message
-            extraBytes = numMessages > 0 ? numMessages - 1 : 0;
+    if (numMessages == 0) {
+        return 0;
     }
 
-    return sizeBytes + extraBytes + 1;  // plus a null
+    switch (pWrkrData->pData->batchFormat) {
+        case FMT_JSONARRAY:
+            /* brackets (2) + commas between N elems (N-1) */
+            return sizeBytes + 2 + (numMessages - 1);
+        case FMT_KAFKAREST:
+            /* rough estimate: constant header (14) + per-record wrapper (~10)
+             * + commas between records (N-1)
+             */
+            return sizeBytes + 14 + (numMessages * 10) + (numMessages - 1);
+        case FMT_NEWLINE:
+            /* join by newline -> (N-1) delimiters */
+            return sizeBytes + (numMessages - 1);
+        case FMT_LOKIREST:
+            /* object wrapper {"streams":[ ... ]} -> constant (~14) + commas (N-1) */
+            return sizeBytes + 14 + (numMessages - 1);
+        default:
+            return sizeBytes + (numMessages - 1);
+    }
+}
+
+/* Predict the size in bytes if we were to append a new payload of length
+ * nextPayloadLen to the current batch, considering delimiters/wrappers.
+ */
+static size_t computeNextBatchSize(wrkrInstanceData_t *pWrkrData, size_t nextPayloadLen) {
+    const size_t currentSize = computeBatchSize(pWrkrData);
+    const size_t numMessages = pWrkrData->batch.nmemb;
+
+    if (numMessages == 0) {
+        /* First message in batch, must account for initial wrappers */
+        switch (pWrkrData->pData->batchFormat) {
+            case FMT_KAFKAREST:
+                /* {"records":[{"value":...}]} -> header(14) + wrapper(10) */
+                return nextPayloadLen + 24;
+            case FMT_JSONARRAY:
+                /* [msg] -> brackets(2) */
+                return nextPayloadLen + 2;
+            case FMT_LOKIREST:
+                /* {"streams":[...]} -> wrapper(~14) */
+                return nextPayloadLen + 14;
+            case FMT_NEWLINE:
+            default:
+                /* no wrapper for first message */
+                return nextPayloadLen;
+        }
+    }
+
+    /* Subsequent message, add delimiter and per-message overhead */
+    switch (pWrkrData->pData->batchFormat) {
+        case FMT_KAFKAREST:
+            /* per-record wrapper overhead (~10) + comma */
+            return currentSize + nextPayloadLen + 11;
+        case FMT_JSONARRAY:
+        case FMT_LOKIREST:
+        case FMT_NEWLINE:
+        default:
+            /* comma/newline */
+            return currentSize + nextPayloadLen + 1;
+    }
 }
 
 static void ATTR_NONNULL() initializeBatch(wrkrInstanceData_t *pWrkrData) {
@@ -1576,13 +1618,13 @@ BEGINcommitTransaction
             }
 
             /* Determine if we should submit due to size/bytes thresholds */
-            nBytes = ustrlen((char *)payload) - 1;
+            nBytes = ustrlen((char *)payload);
             submit = 0;
             if (pWrkrData->batch.nmemb >= pData->maxBatchSize) {
                 submit = 1;
                 DBGPRINTF("omhttp: maxbatchsize limit reached submitting batch of %zd elements.\n",
                           pWrkrData->batch.nmemb);
-            } else if (computeBatchSize(pWrkrData) + nBytes > pData->maxBatchBytes) {
+            } else if (computeNextBatchSize(pWrkrData, nBytes) > pData->maxBatchBytes) {
                 submit = 1;
                 DBGPRINTF("omhttp: maxbytes limit reached submitting partial batch of %zd elements.\n",
                           pWrkrData->batch.nmemb);

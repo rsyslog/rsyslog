@@ -40,7 +40,14 @@ AI agents should follow this process:
 5.  Git blame hygiene
     Formatting-only commits listed in .git-blame-ignore-revs.
 
-AI Agent Note: run devtools/format-code.sh as the final formatting step before commit.
+AI Agent Note: Always run `./devtools/format-code.sh` as the final step before commit and push. CI will reject PRs with formatting violations.
+
+Tooling prerequisites (formatting)
+
+- Ensure `clang-format` is installed to run the formatter.
+  - Ubuntu/Debian: `sudo apt-get update && sudo apt-get install -y clang-format`
+  - macOS (Homebrew): `brew install clang-format`
+  - Fedora/RHEL: `sudo dnf install clang-tools-extra`
 
 -----
 
@@ -58,8 +65,12 @@ AI Agent Note: run devtools/format-code.sh as the final formatting step before c
 
 1.  Fork the repository (for personal development)
 2.  Create a feature/fix branch
-3.  Push changes to your fork
-4.  Open a **pull request directly into `rsyslog/rsyslog:main`**
+3.  Implement your changes
+4.  Run the formatter before committing (install `clang-format` if missing):
+    - `./devtools/format-code.sh`
+    - Ensure a clean diff for style-only changes
+5.  Commit and push your branch
+6.  Open a **pull request directly into `rsyslog/rsyslog:main`**
 
 > **Important**: AI-generated PRs must target the `rsyslog/rsyslog` repository directly.
 
