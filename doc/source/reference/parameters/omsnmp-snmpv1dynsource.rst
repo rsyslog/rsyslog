@@ -27,8 +27,7 @@ Description
 -----------
 .. versionadded:: 8.2001
 
-If set, the source field of the SNMP trap can be overwritten with the a
-template. The internal default is "%fromhost-ip%". The result should be a
+If set, the source field of the SNMP trap can be overwritten with a template.
 valid IPv4 Address. Otherwise setting the source will fail.
 
 Below is a sample template called "dynsource" which you can use to set the
