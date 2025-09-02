@@ -6,7 +6,7 @@ AC_INIT([rsyslog],[8.2510.0.daily],[rsyslog@lists.adiscon.com])    # UPDATE on r
 AC_DEFINE(VERSION_YEAR,  25, [year part of real rsyslog version])  # UPDATE on release
 AC_DEFINE(VERSION_MONTH, 10, [month part of real rsyslog version]) # UPDATE on release
 
-AM_INIT_AUTOMAKE([subdir-objects])
+AM_INIT_AUTOMAKE([tar-pax subdir-objects])
 
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
@@ -2999,6 +2999,26 @@ AC_CHECK_PROGS([RST2MAN], [rst2man rst2man.py], [false])
 if test "x$have_to_generate_man_pages" = "xyes" && test "x$RST2MAN" = "xfalse"; then
         AC_MSG_ERROR([rst2man is required when building from git source or --enable-generate-man-pages option was set, please install python-docutils.])
 fi
+
+
+dnl ---- gather doc files for EXTRA_DIST ----
+# .rst files
+rst_files=`cd "$srcdir" && find doc/source -type f -name '*.rst' -print 2>/dev/null | LC_ALL=C sort`
+
+# assemble; keep paths relative to top (we cd into $srcdir above)
+DOC_FILES="$rst_files
+doc/source/conf.py
+doc/requirements.txt
+doc/README.md
+doc/STRATEGY.md
+doc/CONTRIBUTING.md
+doc/LICENSE
+$ai_files"
+
+# collapse newlines and extra whitespace to single spaces
+DOC_FILES=`printf "%s\n" "$DOC_FILES" | awk 'NF' | tr '\n' ' '`
+
+AC_SUBST([DOC_FILES])
 
 
 AC_CONFIG_FILES([Makefile \
