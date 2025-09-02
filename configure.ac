@@ -1214,13 +1214,13 @@ AC_ARG_ENABLE(gnutls-tests,
           no) enable_gnutls_tests="no" ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-gnutls-tests) ;;
          esac],
-        [if [[ "$enable_gnutls" == "yes" ]]; then
+        [if test "x$enable_gnutls" = "xyes"; then
 		enable_gnutls_tests=yes
 	else
 		enable_gnutls_tests=no
 	fi]
 )
-if  [[ "$enable_gnutls_tests" == "yes" ]] && [[ "$enable_gnutls" != "yes" ]]; then
+if test "x$enable_gnutls_tests" = "xyes" && test "x$enable_gnutls" != "xyes"; then
 		AC_MSG_WARN([gnutls-tests can not be enabled without gnutls support. Disabling gnutls tests...])
 		enable_gnutls_tests="no"
 fi
@@ -1954,7 +1954,7 @@ AC_ARG_ENABLE(imfile-tests,
          esac],
         [enable_imfile_tests=yes]
 )
-if  [[ "$enable_imfile_tests" == "yes" ]] && [[ "$enable_imfile" != "yes" ]]; then
+if  test "x$enable_imfile_tests" = "xyes" && test "x$enable_imfile" != "xyes"; then
 		AC_MSG_WARN([imfile-tests can not be enabled without imfile support. Disabling imfile tests...])
 		enable_imfile_tests="no"
 fi
