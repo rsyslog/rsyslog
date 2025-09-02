@@ -38,6 +38,7 @@ on:
       - 'tests/*.sh'
       - 'diag.sh'
       - '**/Makefile.am'
+      - 'configure.ac'
       - '.github/workflows/*.yml'
 
 jobs:
