@@ -777,6 +777,8 @@ BEGINfreeCnf
     instanceConf_t *inst, *del;
     int i;
     CODESTARTfreeCnf;
+    if (pRelpEngine != NULL) iRet = relpEngineDestruct(&pRelpEngine);
+
     for (inst = pModConf->root; inst != NULL;) {
         free(inst->pszBindPort);
         if (inst->pszBindAddr != NULL) {
@@ -855,8 +857,6 @@ BEGINmodExit
     sigemptyset(&newAct.sa_mask);
     newAct.sa_handler = SIG_IGN;
     sigaction(SIGTTIN, &newAct, NULL);
-
-    if (pRelpEngine != NULL) iRet = relpEngineDestruct(&pRelpEngine);
 
     /* release objects we used */
     objRelease(statsobj, CORE_COMPONENT);
