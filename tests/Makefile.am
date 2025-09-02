@@ -612,7 +612,9 @@ endif # ENABLE_DEFAULT_TESTS
 
 if ENABLE_IMTCP_TESTS
 TESTS +=  \
-	imtcp-listen-port-file-2.sh \
+	fromhost-port.sh \
+	fromhost-port-tuple.sh \
+	fromhost-port-async-ruleset.sh \
 	allowed-sender-tcp-ok.sh \
 	allowed-sender-tcp-fail.sh \
 	allowed-sender-tcp-hostname-ok.sh \
@@ -2506,6 +2508,9 @@ EXTRA_DIST= \
 	msgdup_props.sh \
 	empty-ruleset.sh \
 	ruleset-direct-queue.sh \
+	fromhost-port.sh \
+	fromhost-port-tuple.sh \
+	fromhost-port-async-ruleset.sh \
 	imtcp-listen-port-file-2.sh \
 	allowed-sender-tcp-ok.sh \
 	allowed-sender-tcp-fail.sh \

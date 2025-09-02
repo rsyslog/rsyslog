@@ -95,6 +95,7 @@ struct msg {
         cstr_t *pCSMSGID; /* MSGID */
         prop_t *pInputName; /* input name property */
         prop_t *pRcvFromIP; /* IP of system message was received from */
+        prop_t *pRcvFromPort; /* port of system message was received from */
         union {
             prop_t *pRcvFrom; /* name of system message was received from */
             struct sockaddr_storage *pfrominet; /* unresolved name */
@@ -194,6 +195,8 @@ void MsgSetRcvFrom(smsg_t *pMsg, prop_t *);
 void MsgSetRcvFromStr(smsg_t *const pMsg, const uchar *pszRcvFrom, const int, prop_t **);
 rsRetVal MsgSetRcvFromIP(smsg_t *pMsg, prop_t *);
 rsRetVal MsgSetRcvFromIPStr(smsg_t *const pThis, const uchar *psz, const int len, prop_t **ppProp);
+rsRetVal MsgSetRcvFromPort(smsg_t *pMsg, prop_t *);
+rsRetVal MsgSetRcvFromPortStr(smsg_t *const pThis, const uchar *psz, const int len, prop_t **ppProp);
 void MsgSetHOSTNAME(smsg_t *pMsg, const uchar *pszHOSTNAME, const int lenHOSTNAME);
 rsRetVal MsgSetAfterPRIOffs(smsg_t *pMsg, int offs);
 void MsgSetMSGoffs(smsg_t *pMsg, int offs);

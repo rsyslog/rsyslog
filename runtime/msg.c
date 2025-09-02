@@ -36,6 +36,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 #ifdef HAVE_SYSINFO_UPTIME
     #include <sys/sysinfo.h>
 #endif
@@ -262,6 +263,11 @@ static inline void MsgSetRcvFromIPWithoutAddRef(smsg_t *pThis, prop_t *new) {
     pThis->pRcvFromIP = new;
 }
 
+static inline void MsgSetRcvFromPortWithoutAddRef(smsg_t *pThis, prop_t *new) {
+    if (pThis->pRcvFromPort != NULL) prop.Destruct(&pThis->pRcvFromPort);
+    pThis->pRcvFromPort = new;
+}
+
 
 /* set RcvFrom name in msg object WITHOUT calling AddRef.
  * rgerhards, 2013-01-22
@@ -305,6 +311,9 @@ static rsRetVal resolveDNS(smsg_t *const pMsg) {
     prop_t *propFromHost = NULL;
     prop_t *ip;
     prop_t *localName;
+    prop_t *port = NULL;
+    char portbuf[8];
+    uint16_t pnum;
     DEFiRet;
 
     MsgLock(pMsg);
@@ -319,6 +328,19 @@ static rsRetVal resolveDNS(smsg_t *const pMsg) {
             /* we pass down the props, so no need for AddRef */
             MsgSetRcvFromWithoutAddRef(pMsg, localName);
             MsgSetRcvFromIPWithoutAddRef(pMsg, ip);
+
+            if (pMsg->pRcvFromPort == NULL) {
+                if (pMsg->rcvFrom.pfrominet->ss_family == AF_INET)
+                    pnum = ntohs(((struct sockaddr_in *)pMsg->rcvFrom.pfrominet)->sin_port);
+                else if (pMsg->rcvFrom.pfrominet->ss_family == AF_INET6)
+                    pnum = ntohs(((struct sockaddr_in6 *)pMsg->rcvFrom.pfrominet)->sin6_port);
+                else
+                    pnum = 0;
+                snprintf(portbuf, sizeof(portbuf), "%u", pnum);
+                CHKiRet(prop.CreateStringProp(&port, (uchar *)portbuf, strlen(portbuf)));
+                MsgSetRcvFromPortWithoutAddRef(pMsg, port);
+                port = NULL;
+            }
         }
     }
 finalize_it:
@@ -329,6 +351,7 @@ finalize_it:
     }
     MsgUnlock(pMsg);
     if (propFromHost != NULL) prop.Destruct(&propFromHost);
+    if (port != NULL) prop.Destruct(&port);
     RETiRet;
 }
 
@@ -358,6 +381,21 @@ static uchar *getRcvFromIP(smsg_t *const pM) {
     return psz;
 }
 
+static uchar *getRcvFromPort(smsg_t *const pM) {
+    uchar *psz;
+    int len;
+    if (pM == NULL) {
+        psz = UCHAR_CONSTANT("");
+    } else {
+        resolveDNS(pM);
+        if (pM->pRcvFromPort == NULL)
+            psz = UCHAR_CONSTANT("");
+        else
+            prop.GetString(pM->pRcvFromPort, &psz, &len);
+    }
+    return psz;
+}
+
 
 /* map a property name (string) to a property ID */
 rsRetVal propNameToID(const uchar *const pName, propid_t *const pPropID) {
@@ -383,6 +421,8 @@ rsRetVal propNameToID(const uchar *const pName, propid_t *const pPropID) {
         *pPropID = PROP_FROMHOST;
     } else if (!strcasecmp((char *)pName, "fromhost-ip")) {
         *pPropID = PROP_FROMHOST_IP;
+    } else if (!strcasecmp((char *)pName, "fromhost-port")) {
+        *pPropID = PROP_FROMHOST_PORT;
     } else if (!strcasecmp((char *)pName, "pri")) {
         *pPropID = PROP_PRI;
     } else if (!strcasecmp((char *)pName, "pri-text")) {
@@ -505,6 +545,8 @@ uchar *propIDToName(propid_t propID) {
             return UCHAR_CONSTANT("fromhost");
         case PROP_FROMHOST_IP:
             return UCHAR_CONSTANT("fromhost-ip");
+        case PROP_FROMHOST_PORT:
+            return UCHAR_CONSTANT("fromhost-port");
         case PROP_PRI:
             return UCHAR_CONSTANT("pri");
         case PROP_PRI_TEXT:
@@ -660,6 +702,7 @@ static rsRetVal msgBaseConstruct(smsg_t **ppThis) {
     pM->pCSMSGID = NULL;
     pM->pInputName = NULL;
     pM->pRcvFromIP = NULL;
+    pM->pRcvFromPort = NULL;
     pM->rcvFrom.pRcvFrom = NULL;
     pM->pRuleset = NULL;
     pM->json = NULL;
@@ -790,6 +833,7 @@ rsRetVal msgDestruct(smsg_t **ppThis) {
             free(pThis->rcvFrom.pfrominet);
         }
         if (pThis->pRcvFromIP != NULL) prop.Destruct(&pThis->pRcvFromIP);
+        if (pThis->pRcvFromPort != NULL) prop.Destruct(&pThis->pRcvFromPort);
         free(pThis->pszRcvdAt3164);
         free(pThis->pszRcvdAt3339);
         free(pThis->pszRcvdAt_MySQL);
@@ -910,6 +954,10 @@ ENDobjDestruct
     if (pOld->pRcvFromIP != NULL) {
         pNew->pRcvFromIP = pOld->pRcvFromIP;
         prop.AddRef(pNew->pRcvFromIP);
+    }
+    if (pOld->pRcvFromPort != NULL) {
+        pNew->pRcvFromPort = pOld->pRcvFromPort;
+        prop.AddRef(pNew->pRcvFromPort);
     }
     if (pOld->pInputName != NULL) {
         pNew->pInputName = pOld->pInputName;
@@ -2103,6 +2151,9 @@ const uchar *msgGetJSONMESG(smsg_t *__restrict__ const pMsg) {
     jval = json_object_new_string((char *)getRcvFromIP(pMsg));
     json_object_object_add(json, "fromhost-ip", jval);
 
+    jval = json_object_new_string((char *)getRcvFromPort(pMsg));
+    json_object_object_add(json, "fromhost-port", jval);
+
     jval = json_object_new_string(getPRI(pMsg));
     json_object_object_add(json, "pri", jval);
 
@@ -2484,6 +2535,25 @@ rsRetVal MsgSetRcvFromIPStr(smsg_t *const pThis, const uchar *psz, const int len
 
     CHKiRet(prop.CreateOrReuseStringProp(ppProp, psz, len));
     MsgSetRcvFromIP(pThis, *ppProp);
+
+finalize_it:
+    RETiRet;
+}
+
+rsRetVal MsgSetRcvFromPort(smsg_t *pThis, prop_t *new) {
+    assert(pThis != NULL);
+
+    prop.AddRef(new);
+    MsgSetRcvFromPortWithoutAddRef(pThis, new);
+    return RS_RET_OK;
+}
+
+rsRetVal MsgSetRcvFromPortStr(smsg_t *const pThis, const uchar *psz, const int len, prop_t **ppProp) {
+    DEFiRet;
+    assert(pThis != NULL);
+
+    CHKiRet(prop.CreateOrReuseStringProp(ppProp, psz, len));
+    MsgSetRcvFromPort(pThis, *ppProp);
 
 finalize_it:
     RETiRet;
@@ -3338,6 +3408,9 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             break;
         case PROP_FROMHOST_IP:
             pRes = getRcvFromIP(pMsg);
+            break;
+        case PROP_FROMHOST_PORT:
+            pRes = getRcvFromPort(pMsg);
             break;
         case PROP_PRI:
             pRes = (uchar *)getPRI(pMsg);
