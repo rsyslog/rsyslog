@@ -31,8 +31,7 @@ message including syslog header. It is recommend to use the default
 OID.
 In order to decode this OID, you will need to have the
 ADISCON-MONITORWARE-MIB and ADISCON-MIB mibs installed on the
-receiver side. To download these custom mibs, see the description of
-**TrapOID**.
+receiver side. To download these custom mibs, see the description of :ref:`param-omsnmp-trapoid`.
 
 Module usage
 ------------
