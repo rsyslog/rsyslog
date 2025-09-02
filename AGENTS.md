@@ -40,14 +40,13 @@ AI agents should follow this process:
 5.  Git blame hygiene
     Formatting-only commits listed in .git-blame-ignore-revs.
 
+Prerequisite: install `clang-format` so the formatter can run
+
+- Ubuntu/Debian: `sudo apt-get update && sudo apt-get install -y clang-format`
+- macOS (Homebrew): `brew install clang-format`
+- Fedora/RHEL: `sudo dnf install clang-tools-extra`
+
 AI Agent Note: Always run `./devtools/format-code.sh` as the final step before commit and push. CI will reject PRs with formatting violations.
-
-Tooling prerequisites (formatting)
-
-- Ensure `clang-format` is installed to run the formatter.
-  - Ubuntu/Debian: `sudo apt-get update && sudo apt-get install -y clang-format`
-  - macOS (Homebrew): `brew install clang-format`
-  - Fedora/RHEL: `sudo dnf install clang-tools-extra`
 
 -----
 
