@@ -13,29 +13,35 @@ The mmpstrucdata parses the structured data of `RFC5424 <https://datatracker.iet
 
 The difference of RFC5424 is in the message layout: the SYSLOG-MSG part only contains the structured-data part instead of the normal message part. Further down you can find a example of a structured-data part.
 
-**Module Configuration Parameters**:
+Configuration Parameters
+========================
 
-Note: parameter names are case-insensitive.
+.. note::
 
-Currently none.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
- 
+Module Parameters
+-----------------
 
-**Action Configuration Parameters**:
+This module has no module parameters.
 
-Note: parameter names are case-insensitive.
+Action Parameters
+-----------------
 
--  **jsonRoot** - default "!"
-    Specifies into which json container the data shall be parsed to.
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
--  **sd_name.lowercase** - default "on"
-
-    Available: rsyslog 8.32.0 and above
-
-    Specifies if sd names (SDID) shall be lowercased. If set to "on", this
-    is the case, if "off" than not. The default of "on" is used because that
-    was the traditional mode of operations. It it generally advised to
-    change the parameter to "off" if not otherwise required.
+   * - Parameter
+     - Summary
+   * - :ref:`param-mmpstrucdata-jsonroot`
+     - .. include:: ../../reference/parameters/mmpstrucdata-jsonroot.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmpstrucdata-sd_name.lowercase`
+     - .. include:: ../../reference/parameters/mmpstrucdata-sd_name.lowercase.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 **See Also**
 
@@ -98,4 +104,10 @@ This will output:
 As you can seem, you can address each of the individual items. Note that
 the case of the RFC5424 parameter names has been converted to lower
 case.
+
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/mmpstrucdata-jsonroot
+   ../../reference/parameters/mmpstrucdata-sd_name.lowercase
 
