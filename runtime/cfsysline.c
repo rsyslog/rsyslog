@@ -776,7 +776,6 @@ static rsRetVal cslchCallHdlr(cslCmdHdlr_t *pThis, uchar **ppConfLine) {
             goto finalize_it;
     }
 
-
 finalize_it:
     RETiRet;
 }

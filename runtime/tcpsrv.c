@@ -1322,10 +1322,28 @@ static void ATTR_NONNULL() * wrkr(void *arg) {
         DBGPRINTF("prctl failed, not setting thread name for '%s'\n", thrdName);
     }
 #elif defined(HAVE_PTHREAD_SETNAME_NP)
+    #if defined(__APPLE__)
+    /* The macOS variant takes only the thread name and returns an int. */
+    int r = pthread_setname_np((char *)shortThrdName);
+    if (r != 0) {
+        DBGPRINTF("pthread_setname_np failed, not setting thread name for '%s'\n", shortThrdName);
+    }
+    #elif defined(__FreeBSD__)
+    /* FreeBSD variant has a void return type. */
+    pthread_setname_np(pthread_self(), (char *)shortThrdName);
+    #elif defined(__NetBSD__)
+    /* NetBSD variant takes a format string and returns an int. */
+    int r = pthread_setname_np(pthread_self(), "%s", (void *)shortThrdName);
+    if (r != 0) {
+        DBGPRINTF("pthread_setname_np failed, not setting thread name for '%s'\n", shortThrdName);
+    }
+    #else
+    /* The glibc variant takes thread ID and name, and returns an int. */
     int r = pthread_setname_np(pthread_self(), (char *)shortThrdName);
     if (r != 0) {
-        DBGPRINTF("pthread_setname_np failed, not setting thread name for '%s'\n", thrdName);
+        DBGPRINTF("pthread_setname_np failed, not setting thread name for '%s'\n", shortThrdName);
     }
+    #endif
 #endif
 
     if ((localRet = statsobj.Construct(&wrkrData->stats)) == RS_RET_OK) {
