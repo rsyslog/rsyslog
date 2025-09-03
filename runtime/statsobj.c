@@ -507,11 +507,15 @@ static void getSenderStats(rsRetVal (*cb)(void *, const char *),
  *   <obj>_<ctr> <value>
  *
  * If bResetCtrs=TRUE and the counter has CTR_FLAG_RESETTABLE, zero it after reading.
+ *
+ * Note: by rsyslog stats subsystem design decision, read and write counters is racy
+ *       because we need the performance. It is OK that the counters in question are
+ *       not 100% precise.
  */
-static rsRetVal emitPrometheusForObject(statsobj_t *o,
-                                        rsRetVal (*cb)(void *, const char *),
-                                        void *usrptr,
-                                        int8_t bResetCtrs) {
+static ATTR_NO_SANITIZE_THREAD rsRetVal emitPrometheusForObject(statsobj_t *o,
+                                                                rsRetVal (*cb)(void *, const char *),
+                                                                void *usrptr,
+                                                                int8_t bResetCtrs) {
     ctr_t *pCtr;
     char linebuf[512];
     int len;

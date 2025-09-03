@@ -61,8 +61,10 @@
 
     #if defined(__clang__)
         #define ATTR_NO_SANITIZE_UNDEFINED __attribute__((no_sanitize("undefined")))
+        #define ATTR_NO_SANITIZE_THREAD __attribute__((no_sanitize("thread")))
     #else
         #define ATTR_NO_SANITIZE_UNDEFINED
+        #define ATTR_NO_SANITIZE_THREAD
     #endif
     /* define a couple of attributes to improve cross-platform builds */
     #if __GNUC__ > 6
@@ -81,6 +83,8 @@
     #define ATTR_NORETURN
     #define ATTR_UNUSED
     #define ATTR_NONNULL(...)
+    #define ATTR_NO_SANITIZE_UNDEFINED __attribute__((no_sanitize("undefined")))
+    #define ATTR_NO_SANITIZE_THREAD __attribute__((no_sanitize("thread")))
 
 #endif /* ifdef __GNUC__ */
 
