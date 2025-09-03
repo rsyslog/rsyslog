@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
+- 2025-09-03: build: some cross-platform enhancents, especially for
+  MacOS/Darwin
+- 2025-09-03: tests: add -w port file option to tcpflood
+  Adds -w option to tcpflood to write its local port to a file.
+  This permits to craft tests which need the source port number from the
+  connecting client.
 - 2025-09-03: imhttp: optional auth + Content-Length for metrics/health
   Harden default endpoints for cloud-native use: make health/metrics
   scrapes proxy-friendly and allow locking them down with Basic Auth.
