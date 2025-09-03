@@ -58,8 +58,8 @@
 #include "srUtils.h"
 #include "parserif.h"
 
-PRAGMA_IGNORE_Wsign_compare
-PRAGMA_IGNORE_Wmissing_noreturn
+PRAGMA_IGNORE_Wsign_compare;
+PRAGMA_IGNORE_Wmissing_noreturn;
 
 FILE *fp_rs_full_conf_output = NULL;
 

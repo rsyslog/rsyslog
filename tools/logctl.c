@@ -54,24 +54,28 @@
 
 #include "rsyslog.h"
 /* we need this to avoid issues with older versions of libbson */
-PRAGMA_DIAGNOSTIC_PUSH
-PRAGMA_IGNORE_Wpragmas PRAGMA_IGNORE_Wunknown_warning_option PRAGMA_IGNORE_Wunknown_attribute
-    PRAGMA_IGNORE_Wexpansion_to_defined PRAGMA_IGNORE_Wstrict_prototypes PRAGMA_IGNORE_Wold_style_definition
+PRAGMA_DIAGNOSTIC_PUSH;
+PRAGMA_IGNORE_Wpragmas;
+PRAGMA_IGNORE_Wunknown_warning_option;
+PRAGMA_IGNORE_Wunknown_attribute;
+PRAGMA_IGNORE_Wexpansion_to_defined;
+PRAGMA_IGNORE_Wstrict_prototypes;
+PRAGMA_IGNORE_Wold_style_definition;
 #include <mongoc.h>
 #include <bson.h>
-        PRAGMA_DIAGNOSTIC_POP
+PRAGMA_DIAGNOSTIC_POP;
 
 #define N 80
 
-    static struct option long_options[] = {{"level", required_argument, NULL, 'l'},
-                                           {"severity", required_argument, NULL, 's'},
-                                           {"ret", required_argument, NULL, 'r'},
-                                           {"skip", required_argument, NULL, 'k'},
-                                           {"sys", required_argument, NULL, 'y'},
-                                           {"msg", required_argument, NULL, 'm'},
-                                           {"datef", required_argument, NULL, 'f'},
-                                           {"dateu", required_argument, NULL, 'u'},
-                                           {NULL, 0, NULL, 0}};
+static struct option long_options[] = {{"level", required_argument, NULL, 'l'},
+                                       {"severity", required_argument, NULL, 's'},
+                                       {"ret", required_argument, NULL, 'r'},
+                                       {"skip", required_argument, NULL, 'k'},
+                                       {"sys", required_argument, NULL, 'y'},
+                                       {"msg", required_argument, NULL, 'm'},
+                                       {"datef", required_argument, NULL, 'f'},
+                                       {"dateu", required_argument, NULL, 'u'},
+                                       {NULL, 0, NULL, 0}};
 
 struct queryopt {
     int32_t e_sever;

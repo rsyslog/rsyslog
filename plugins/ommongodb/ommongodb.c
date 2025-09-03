@@ -38,11 +38,15 @@
 #include "rsyslog.h"
 /* we need this to avoid issues with older versions of libbson */
 PRAGMA_DIAGNOSTIC_PUSH
-PRAGMA_IGNORE_Wpragmas PRAGMA_IGNORE_Wunknown_warning_option PRAGMA_IGNORE_Wunknown_attribute
-    PRAGMA_IGNORE_Wexpansion_to_defined PRAGMA_IGNORE_Wstrict_prototypes PRAGMA_IGNORE_Wold_style_definition
+PRAGMA_IGNORE_Wpragmas;
+PRAGMA_IGNORE_Wunknown_warning_option;
+PRAGMA_IGNORE_Wunknown_attribute;
+PRAGMA_IGNORE_Wexpansion_to_defined;
+PRAGMA_IGNORE_Wstrict_prototypes;
+PRAGMA_IGNORE_Wold_style_definition;
 #include <mongoc.h>
 #include <bson.h>
-        PRAGMA_DIAGNOSTIC_POP
+PRAGMA_DIAGNOSTIC_POP;
 
 #include "conf.h"
 #include "syslogd-types.h"
@@ -55,7 +59,7 @@ PRAGMA_IGNORE_Wpragmas PRAGMA_IGNORE_Wunknown_warning_option PRAGMA_IGNORE_Wunkn
 #include "parserif.h"
 #include "unicode-helper.h"
 
-            MODULE_TYPE_OUTPUT;
+MODULE_TYPE_OUTPUT;
 MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("ommongodb")
 /* internal structures
