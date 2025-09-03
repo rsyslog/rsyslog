@@ -1,12 +1,12 @@
 .. _param-mmpstrucdata-jsonroot:
-.. _mmpstrucdata.parameter.module.jsonroot:
+.. _mmpstrucdata.parameter.action.jsonroot:
 
-JsonRoot
+jsonRoot
 ========
 
 .. index::
-   single: mmpstrucdata; JsonRoot
-   single: JsonRoot
+   single: mmpstrucdata; jsonRoot
+   single: jsonRoot
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Sets the JSON root container where parsed structured data is stored.
 
 This parameter applies to :doc:`../../configuration/modules/mmpstrucdata`.
 
-:Name: JsonRoot
+:Name: jsonRoot
 :Scope: action
 :Type: string
 :Default: action="!"

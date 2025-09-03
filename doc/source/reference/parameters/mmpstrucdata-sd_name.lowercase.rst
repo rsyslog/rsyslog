@@ -1,5 +1,5 @@
 .. _param-mmpstrucdata-sd_name.lowercase:
-.. _mmpstrucdata.parameter.module.sd_name.lowercase:
+.. _mmpstrucdata.parameter.action.sd_name.lowercase:
 
 sd_name.lowercase
 =================
@@ -26,11 +26,9 @@ This parameter applies to :doc:`../../configuration/modules/mmpstrucdata`.
 Description
 -----------
 Specifies if sd names (SDID) shall be lowercased. If set to "on", this is
-the case, if "off" than not. The default of "on" is used because that was the
-traditional mode of operations. It it generally advised to change the
+the case; if "off", then not. The default of "on" is used because that was the
+traditional mode of operations. It is generally advised to change the
 parameter to "off" if not otherwise required.
-
-.. versionadded:: 8.32.0
 
 Action usage
 ------------
