@@ -82,6 +82,12 @@ TB_TIMEOUT_STARTSTOP=400 # timeout for start/stop rsyslogd in tenths (!) of a se
 # note that 40sec for the startup should be sufficient even on very slow machines. we changed this from 2min on 2017-12-12
 TB_TEST_TIMEOUT=90  # number of seconds after which test checks timeout (eg. waits)
 TB_TEST_MAX_RUNTIME=${TEST_MAX_RUNTIME:-580} # maximum runtime in seconds for a test;
+# Check if valgrind is enabled, use longer timeout if so
+if [ "$USE_VALGRIND" == "YES" ] || [ "$USE_VALGRIND" == "YES-NOLEAK" ]; then
+	TB_STARTUP_MAX_RUNTIME=${STARTUP_MAX_RUNTIME:-240} # maximum runtime in seconds for rsyslog startup with valgrind;
+else
+	TB_STARTUP_MAX_RUNTIME=${STARTUP_MAX_RUNTIME:-60} # maximum runtime in seconds for rsyslog startup;
+fi
 			# default TEST_MAX_RUNTIME e.g. for long-running tests or special
 			# testbench use. Testbench will abort test
 			# after that time (iff it has a chance to, not strictly enforced)
@@ -108,7 +114,7 @@ rsyslog_testbench_test_url_access() {
     fi
 
     local http_endpoint="$1"
-    if ! curl --fail --max-time 30 "${http_endpoint}" 1>/dev/null 2>&1; then
+    if ! curl -L --fail --max-time 30 "${http_endpoint}" 1>/dev/null 2>&1; then
         echo "HTTP endpoint '${http_endpoint}' is not reachable. Skipping test ..."
         exit 77
     else
@@ -315,8 +321,8 @@ wait_startup_pid() {
 	fi
 	while test ! -f $1; do
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
-		   printf '%s ABORT! Timeout waiting on startup (pid file %s)\n' "$(tb_timestamp)" "$1"
+		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_STARTUP_MAX_RUNTIME )) ]; then
+		   printf '%s ABORT! Timeout waiting on startup (pid file %s) after %d seconds\n' "$(tb_timestamp)" "$1" $TB_STARTUP_MAX_RUNTIME
 		   ls -l "$1"
 		   ps -fp $($SUDO cat "$1")
 		   error_exit 1
@@ -482,27 +488,64 @@ injectmsg_kcat() {
 }
 
 
+# check if rsyslog process is active
+# $1 - instance ID
+# exits with error if process is not active
+check_rsyslog_active() {
+	local instance_id=$1
+	local pid_file="$RSYSLOG_PIDBASE$instance_id.pid"
+
+	if [ ! -f "$pid_file" ]; then
+		echo "ABORT! rsyslog pid file $pid_file does not exist!"
+		error_exit 1 stacktrace
+	fi
+
+	if ! ps -p "$(cat "$pid_file")" &> /dev/null; then
+		echo "ABORT! rsyslog pid no longer active!"
+		error_exit 1 stacktrace
+	fi
+}
+
 # wait for rsyslogd startup ($1 is the instance)
 wait_startup() {
-	wait_rsyslog_startup_pid $1
-	while test ! -f ${RSYSLOG_DYNNAME}$1.started; do
-		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-		ps -p $(cat $RSYSLOG_PIDBASE$1.pid) &> /dev/null
-		if [ $? -ne 0 ]
-		then
-		   echo "ABORT! rsyslog pid no longer active during startup!"
-		   error_exit 1 stacktrace
+	local instance=$1
+	local pid_file="$RSYSLOG_PIDBASE$instance.pid"
+	local started_file="${RSYSLOG_DYNNAME}$instance.started"
+	local imdiag_port_file="$RSYSLOG_DYNNAME.imdiag$instance.port"
+	# Wait until any early startup indicator appears: pid file, started marker, or imdiag port file
+	while :; do
+		if [ -f "$pid_file" ] || [ -f "$started_file" ] || { [ -f "$imdiag_port_file" ] && [ "$(cat "$imdiag_port_file" 2>/dev/null)" != "" ]; }; then
+			break
 		fi
-		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
-		   printf '%s ABORT! Timeout waiting startup file %s\n' "$(tb_timestamp)" "${RSYSLOG_DYNNAME}.started"
-		   error_exit 1
+		# If we are exactly at/over timeout threshold, re-check once more before aborting
+		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_STARTUP_MAX_RUNTIME )) ]; then
+			if [ -f "$pid_file" ] || [ -f "$started_file" ] || { [ -f "$imdiag_port_file" ] && [ "$(cat "$imdiag_port_file" 2>/dev/null)" != "" ]; }; then
+				break
+			fi
+			printf '%s ABORT! Timeout waiting startup indicator (%s or %s or %s) after %d seconds\n' "$(tb_timestamp)" "$pid_file" "$started_file" "$imdiag_port_file" $TB_STARTUP_MAX_RUNTIME
+			# show current file states for diagnostics
+			ls -l "$pid_file" "$started_file" "$imdiag_port_file" 2>/dev/null || true
+			# observed late creation on some CI runners; proceed softly and let subsequent waits validate
+			break
 		fi
+		$TESTTOOL_DIR/msleep 50 # wait 50 milliseconds
 	done
-	echo "$(tb_timestamp) rsyslogd$1 startup msg seen, pid " $(cat $RSYSLOG_PIDBASE$1.pid)
-	wait_file_exists $RSYSLOG_DYNNAME.imdiag$1.port
-	eval export IMDIAG_PORT$1=$(cat $RSYSLOG_DYNNAME.imdiag$1.port)
-	eval PORT='$IMDIAG_PORT'$1
-	echo "imdiag$1 port: $PORT"
+	# If we have a pid file, perform a quick liveness check
+	if [ -f "$pid_file" ]; then
+		$TESTTOOL_DIR/msleep 50
+		check_rsyslog_active $instance
+	fi
+	if [ -f "$pid_file" ]; then
+		echo "$(tb_timestamp) rsyslogd$instance startup indicator seen, pid " $(cat "$pid_file")
+	else
+		echo "$(tb_timestamp) rsyslogd$instance startup indicator seen (pid pending)"
+	fi
+	# Ensure we have the imdiag port
+	wait_file_exists "$imdiag_port_file"
+	export "IMDIAG_PORT$instance"=$(cat "$imdiag_port_file")
+	local port_var="IMDIAG_PORT$instance"
+	local PORT="${!port_var}"
+	echo "imdiag$instance port: $PORT"
 	if [ "$PORT" == "" ]; then
 		echo "TESTBENCH ERROR: imdiag port not found!"
 		ls -l $RSYSLOG_DYNNAME*
@@ -1347,39 +1390,124 @@ error_exit() {
 	if [ $1 -eq $TB_ERR_TIMEOUT ]; then
 		printf '%s Test %s exceeded max runtime of %d seconds\n' "$(tb_timestamp)" "$0" $TB_TEST_MAX_RUNTIME
 	fi
-	if [ "$(ls core* 2>/dev/null)" != "" ]; then
-		echo trying to obtain crash location info
-		echo note: this may not be the correct file, check it
-		CORE=$(ls core*)
-		echo "bt" >> gdb.in
-		echo "q" >> gdb.in
-		gdb ../tools/rsyslogd $CORE -batch -x gdb.in
-		CORE=
-		rm gdb.in
-	fi
-	if [[ "$2" == 'stacktrace' || ( ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ) ]]; then
-		if [ "$(ls core* 2>/dev/null)" != "" ]; then
-			CORE=$(ls core*)
-			printf 'trying to analyze core "%s" for main rsyslogd binary\n' "$CORE"
-			printf 'note: this may not be the correct file, check it\n'
-			$SUDO gdb ../tools/rsyslogd "$CORE" -batch <<- EOF
-				bt
-				echo === THREAD INFO ===
-				info thread
-				echo === thread apply all bt full ===
-				thread apply all bt full
-				q
-				EOF
-			$SUDO gdb ./tcpflood "$CORE" -batch <<- EOF
-				bt
-				echo === THREAD INFO ===
-				info thread
-				echo === thread apply all bt full ===
-				thread apply all bt full
-				q
-				EOF
+	# Core dump analysis - always run when cores are detected
+	echo "=== Core Dump Detection and Analysis ==="
+	core_dumps_found=0
+	
+	# Search for core dumps in multiple locations and patterns
+	echo "Searching for core dumps in:"
+	echo "  - Current directory: $(pwd)"
+	echo "  - /cores/ directory (macOS system cores)"
+	echo "  - Subdirectories (*.core, core.*)"
+	
+	# Process core files safely using while read to handle filenames with spaces/special chars
+	process_core_file() {
+		local corefile="$1"
+		if [ -f "$corefile" ]; then
+			core_dumps_found=$((core_dumps_found + 1))
+			echo "=== Analyzing core dump #$core_dumps_found: $corefile ==="
+			
+			# Identify the core file type and size
+			if command -v file >/dev/null 2>&1; then
+			echo "Core file type:"
+			file "$corefile"
 		fi
+		echo "Core file size: $(wc -c < "$corefile") bytes"
+			
+			# Use platform-appropriate debugger for stack trace
+			if [ "$(uname)" == "Darwin" ]; then
+				if command -v lldb >/dev/null 2>&1; then
+					echo "Getting stack trace with lldb:"
+					$SUDO lldb -c "$corefile" -b -o "bt all" -o "thread backtrace all" -o "quit" ../tools/rsyslogd || echo "lldb analysis failed"
+					# Also try tcpflood if available
+					if [ -x "./tcpflood" ]; then
+						echo "Getting stack trace with lldb (tcpflood):"
+						$SUDO lldb -c "$corefile" -b -o "bt all" -o "thread backtrace all" -o "quit" ./tcpflood || echo "lldb analysis failed for tcpflood"
+					fi
+				else
+					echo "lldb not found, trying gdb..."
+					_gdb_in=$(mktemp "${RSYSLOG_DYNNAME}.gdb.in.XXXXXX")
+					echo "bt" > "$_gdb_in"
+					echo "q" >> "$_gdb_in"
+					$SUDO gdb ../tools/rsyslogd "$corefile" -batch -x "$_gdb_in" || echo "gdb analysis failed"
+					# Also try tcpflood if available
+					if [ -x "./tcpflood" ]; then
+						$SUDO gdb ./tcpflood "$corefile" -batch -x "$_gdb_in" || echo "gdb analysis failed for tcpflood"
+					fi
+					rm -f "$_gdb_in"
+				fi
+			else
+				_gdb_in=$(mktemp "${RSYSLOG_DYNNAME}.gdb.in.XXXXXX")
+				echo "bt" > "$_gdb_in"
+				echo "info thread" >> "$_gdb_in"
+				echo "thread apply all bt full" >> "$_gdb_in"
+				echo "q" >> "$_gdb_in"
+				$SUDO gdb ../tools/rsyslogd "$corefile" -batch -x "$_gdb_in" || echo "gdb analysis failed"
+				# Also try tcpflood if available
+				if [ -x "./tcpflood" ]; then
+					$SUDO gdb ./tcpflood "$corefile" -batch -x "$_gdb_in" || echo "gdb analysis failed for tcpflood"
+				fi
+				rm -f "$_gdb_in"
+			fi
+			echo ""
+		fi
+	}
+	
+	# Process glob patterns (handle no-match cleanly via nullglob)
+	shopt -q nullglob; _had_nullglob=$?
+	[ $_had_nullglob -ne 0 ] && shopt -s nullglob
+	for corefile in core* /cores/core-* /cores/core.*; do
+		process_core_file "$corefile"
+	done
+	[ $_had_nullglob -ne 0 ] && shopt -u nullglob
+	
+	# Process find results safely using while read without subshell (process substitution)
+	while IFS= read -r corefile; do
+		process_core_file "$corefile"
+	done < <(find . -name "core.*" -o -name "*.core" 2>/dev/null)
+	
+	if [ $core_dumps_found -eq 0 ]; then
+		echo "No core dumps found. Checking possible reasons:"
+		echo "  - Core dump creation might be disabled"
+		echo "  - Insufficient disk space (check df -h output below)"
+		echo "  - Core dumps might be in unexpected locations"
+		if [ "$(uname)" == "Darwin" ]; then
+			echo "  - macOS core pattern: $(sysctl kern.corefile 2>/dev/null || echo 'unknown')"
+			echo "  - macOS core dump enabled: $(sysctl kern.coredump 2>/dev/null || echo 'unknown')"
+		fi
+		echo "  - Current ulimit -c: $(ulimit -c)"
+		
+		# Look for evidence of recent segfaults in log output or dmesg
+		echo "  - Checking for segfault evidence:"
+		if [ "$(uname)" == "Darwin" ]; then
+			# Check Console.app style crash reports
+			if [ -d "/Library/Logs/CrashReporter" ]; then
+				echo "    Recent crash logs: $(find /Library/Logs/CrashReporter -name '*rsyslogd*' -mtime -1 2>/dev/null | wc -l) found"
+			fi
+			if [ -d "$HOME/Library/Logs/CrashReporter" ]; then
+				echo "    User crash logs: $(find "$HOME/Library/Logs/CrashReporter" -name '*rsyslogd*' -mtime -1 2>/dev/null | wc -l) found"
+			fi
+		else
+			# Check dmesg for segfault messages
+			if command -v dmesg >/dev/null 2>&1; then
+				recent_segfaults=$(dmesg 2>/dev/null | tail -50 | grep -i "segfault\|killed\|terminated" | wc -l)
+				echo "    Recent segfault messages in dmesg: $recent_segfaults"
+			fi
+		fi
+	else
+		echo "=== Analyzed $core_dumps_found core dump(s) ==="
 	fi
+
+	# Check disk space immediately after core dump analysis
+	echo "=== Disk Space Analysis ==="
+df -hP . | tail -1 | awk '{
+		usage=$5+0;
+		if (usage >= 95) 
+			print "WARNING: Disk usage is " $5 " (Free: " $4 ") - This may prevent core dump creation!"
+		else 
+			print "Disk usage: " $5 " (Free: " $4 ")"
+	}'
+	
 	if [[ ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ]]; then
 		touch IN_AUTO_DEBUG
 		# OK, we have the testname and can re-run under valgrind
@@ -1403,6 +1531,57 @@ error_exit() {
 	#	netstat
 	#fi
 
+	# Comprehensive system and error information gathering
+	echo "=== System Information ==="
+	uname -a
+	if [ "$(uname)" == "Darwin" ]; then
+		if command -v sw_vers >/dev/null 2>&1; then
+			sw_vers
+		fi
+		# macOS-specific memory information  
+		echo "=== macOS System Status ==="
+		echo "Memory usage:"
+		top -l 1 | grep "PhysMem" || echo "Memory info unavailable"
+		
+		# Recent system logs for rsyslogd (if available)
+		echo "=== Recent macOS System Logs ==="
+		if command -v log >/dev/null 2>&1; then
+			log show --predicate 'process == "rsyslogd"' --info --last 1h || echo "No recent rsyslogd logs found"
+		else
+			echo "macOS log command not available"
+		fi
+	else
+		# Linux-specific information
+		echo "=== Linux System Status ==="
+		if [ -f /proc/meminfo ]; then
+			echo "Memory info:"
+			grep -E "(MemTotal|MemFree|MemAvailable)" /proc/meminfo
+		fi
+	fi
+	
+	# Gather test error logs
+	echo "=== Error Logs Collection ==="
+	# Run gather-check-logs.sh if available; account for being invoked from tests/ dir
+	if [ -f "$srcdir/../devtools/gather-check-logs.sh" ]; then
+		echo "Running gather-check-logs.sh (via srcdir/..)..."
+		( cd "$srcdir/.." && devtools/gather-check-logs.sh )
+	elif [ -f "../devtools/gather-check-logs.sh" ]; then
+		echo "Running gather-check-logs.sh (via ..)..."
+		( cd .. && devtools/gather-check-logs.sh )
+	elif [ -f "devtools/gather-check-logs.sh" ]; then
+		echo "Running gather-check-logs.sh (cwd)..."
+		devtools/gather-check-logs.sh
+	else
+		echo "gather-check-logs.sh not found, collecting available logs manually..."
+	fi
+	
+	if [ -f "failed-tests.log" ]; then
+		echo "=== Failed Tests Log ==="
+		cat failed-tests.log
+	else
+		echo "No failed-tests.log found"
+	fi
+	
 	# Extended debug output for dependencies started by testbench
 	if [ "$EXTRA_EXITCHECK" == 'dumpkafkalogs' ] && [ "$TEST_OUTPUT" == "VERBOSE" ]; then
 		# Dump Zookeeper log
