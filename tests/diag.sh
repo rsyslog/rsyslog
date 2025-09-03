@@ -1802,7 +1802,7 @@ download_kafka() {
 			printf 'Zookeeper: satisfying dependency %s from system cache.\n' "$RS_ZK_DOWNLOAD"
 			cp /local_dep_cache/$RS_ZK_DOWNLOAD $dep_zk_cached_file
 		else
-			echo "Downloading zookeeper"
+			echo "Downloading zookeeper from $dep_zk_url"
 			echo wget -q $dep_zk_url -O $dep_zk_cached_file
 			wget -q $dep_zk_url -O $dep_zk_cached_file
 			if [ $? -ne 0 ]
@@ -1822,7 +1822,7 @@ download_kafka() {
 			printf 'Kafka: satisfying dependency %s from system cache.\n' "$RS_KAFKA_DOWNLOAD"
 			cp /local_dep_cache/$RS_KAFKA_DOWNLOAD $dep_kafka_cached_file
 		else
-			echo "Downloading kafka"
+			echo "Downloading kafka from $dep_kafka_url"
 			wget -q $dep_kafka_url -O $dep_kafka_cached_file
 			if [ $? -ne 0 ]
 			then
