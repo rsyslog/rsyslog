@@ -1,5 +1,30 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
+- 2025-09-03: imhttp: optional auth + Content-Length for metrics/health
+  Harden default endpoints for cloud-native use: make health/metrics
+  scrapes proxy-friendly and allow locking them down with Basic Auth.
+  This aligns imhttp with common Kubernetes/Prometheus patterns and
+  supports metrics-only deployments.
+  Impact: /metrics now exports full rsyslog stats with Content-Length;
+  health and metrics can be gated via htpasswd; unified 500 on failures.
+  Technical details:
+  - Add module params: healthCheckBasicAuthFile and metricsBasicAuthFile.
+    When set, attach a Basic Auth handler that reads an htpasswd file;
+    reuse the same handler for per-input endpoints by passing the file via
+    cbdata.
+  - Rework Prometheus handler to collect data through statsobj in
+    Prometheus format. Accumulate lines into a growable buffer with
+    overflow checks, append an imhttp_up gauge, then reply with an
+    explicit Content-Length and close the connection.
+  - Fix metrics buffer termination to use a single NUL byte; prevent a
+    leak when buffer growth fails; consolidate error paths so the buffer is
+    freed and a single HTTP 500 is emitted.
+  - Docs: describe new auth options, clarify default paths, document that
+    metrics responses carry Content-Length, and add examples (including
+    metrics-only setups).
+  Before/After: metrics previously exposed a minimal body without auth;
+  now they export full rsyslog stats with optional Basic Auth and a
+  Content-Length header.
 - 2025-09-02: imrelp: fix potential segfault on termination
   A segfault could occur during module termination within the rsyslog shutdown
   process. That in turn could lead to e.g. damage state files or disk queue
