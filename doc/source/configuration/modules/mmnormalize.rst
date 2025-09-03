@@ -35,76 +35,60 @@ times. This incurs a small performance drawback.
 Module Parameters
 ~~~~~~~~~~~~~~~~~
 
-Note: parameter names are case-insensitive.
+.. note::
 
-.. function:: allow_regex <boolean>
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
-   **Default**: off
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-   Specifies if regex field-type should be allowed. Regex field-type has
-   significantly higher computational overhead compared to other fields,
-   so it should be avoided when another field-type can achieve the desired
-   effect. Needs to be "on" for regex field-type to work.
+   * - Parameter
+     - Summary
+   * - :ref:`param-mmnormalize-allow-regex`
+     - .. include:: ../../reference/parameters/mmnormalize-allow-regex.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 Action Parameters
 ~~~~~~~~~~~~~~~~~
 
-Note: parameter names are case-insensitive.
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. function:: ruleBase <word>
+   * - Parameter
+     - Summary
+   * - :ref:`param-mmnormalize-rulebase`
+     - .. include:: ../../reference/parameters/mmnormalize-rulebase.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmnormalize-rule`
+     - .. include:: ../../reference/parameters/mmnormalize-rule.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmnormalize-userawmsg`
+     - .. include:: ../../reference/parameters/mmnormalize-userawmsg.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmnormalize-path`
+     - .. include:: ../../reference/parameters/mmnormalize-path.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmnormalize-variable`
+     - .. include:: ../../reference/parameters/mmnormalize-variable.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
-   Specifies which rulebase file is to use. If there are multiple
-   mmnormalize instances, each one can use a different file. However, a
-   single instance can use only a single file. This parameter or **rule** MUST be
-   given, because normalization can only happen based on a rulebase. It
-   is recommended that an absolute path name is given. Information on
-   how to create the rulebase can be found in the `liblognorm
-   manual <http://www.liblognorm.com/files/manual/index.html>`_.
+.. toctree::
+   :hidden:
 
-.. function:: rule <array>
-
-   *(Available since: 8.26.0)*
-
-   Contains an array of strings which will be put together as the rulebase. This parameter
-   or **rulebase** MUST be given, because normalization can only happen based on a rulebase.
-
-.. function:: useRawMsg <boolean>
-
-   **Default**: off
-
-   Specifies if the raw message should be used for normalization (on)
-   or just the MSG part of the message (off).
-
-.. function:: path <word>
-
-   **Default**: $!
-
-   Specifies the JSON path under which parsed elements should be
-   placed. By default, all parsed properties are merged into root of
-   message properties. You can place them under a subtree, instead. You
-   can place them in local variables, also, by setting path="$.".
-
-.. function:: variable <word>
-
-   *(Available since: 8.5.1)*
-
-   Specifies if a variable instead of property 'msg' should be used for
-   normalization. A variable can be property, local variable, json-path etc.
-   Please note that **useRawMsg** overrides this parameter, so if **useRawMsg**
-   is set, **variable** will be ignored and raw message will be used.
-
-
-
-
-Legacy Configuration Parameters
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Note: parameter names are case-insensitive.
-
--  $mmnormalizeRuleBase <rulebase-file> - equivalent to the "ruleBase"
-   parameter.
--  $mmnormalizeUseRawMsg <on/off> - equivalent to the "useRawMsg"
-   parameter.
+   ../../reference/parameters/mmnormalize-allow-regex
+   ../../reference/parameters/mmnormalize-rulebase
+   ../../reference/parameters/mmnormalize-rule
+   ../../reference/parameters/mmnormalize-userawmsg
+   ../../reference/parameters/mmnormalize-path
+   ../../reference/parameters/mmnormalize-variable
 
 See Also
 ~~~~~~~~
