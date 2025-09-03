@@ -31,9 +31,9 @@ is `3600` (one hour).  When cache expiration is checked, if a cache entry
 has a ttl less than or equal to the current time, it will be removed from
 the cache.
 
-This option is only used if `cacheexpireinterval` is 0 or greater.
+This option is only used if :ref:`param-mmkubernetes-cacheexpireinterval` is 0 or greater.
 
-This value must be 0 or greater, otherwise, if `cacheexpireinterval` is 0
+This value must be 0 or greater, otherwise, if :ref:`param-mmkubernetes-cacheexpireinterval` is 0
 or greater, you will get an error.
 
 Action usage

@@ -27,7 +27,7 @@ Description
 -----------
 When processing labels and annotations, if this parameter is set to
 `"on"`, the key strings will have their `.` characters replaced with
-the string specified by the `de_dot_separator` parameter.
+the string specified by the :ref:`param-mmkubernetes-de-dot-separator` parameter.
 
 Action usage
 ------------

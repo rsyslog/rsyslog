@@ -26,7 +26,7 @@ This parameter applies to :doc:`../../configuration/modules/mmkubernetes`.
 Description
 -----------
 This is the full path and file name of the file containing the private key
-corresponding to the cert `tls.mycert` used for doing client cert auth against
+corresponding to the cert :ref:`param-mmkubernetes-tls-mycert` used for doing client cert auth against
 Kubernetes.  This file is in PEM format, and must be unencrypted, so take
 care to secure it properly.  For example: `/etc/rsyslog.d/k8s-client-key.pem`
 

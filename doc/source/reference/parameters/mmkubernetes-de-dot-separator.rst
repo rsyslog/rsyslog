@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/mmkubernetes`.
 
 Description
 -----------
-When processing labels and annotations, if the `de_dot` parameter is
+When processing labels and annotations, if the :ref:`param-mmkubernetes-de-dot` parameter is
 set to `"on"`, the key strings will have their `.` characters replaced
 with the string specified by the string value of this parameter.
 

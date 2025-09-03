@@ -28,7 +28,8 @@ Description
 Full path and file name of file containing the CA cert of the
 Kubernetes API server cert issuer.  Example: `/etc/rsyslog.d/mmk8s-ca.crt`.
 This parameter is not mandatory if using an `http` scheme instead of `https` in
-`kubernetesurl`, or if using `allowunsignedcerts="yes"`.
+:ref:`param-mmkubernetes-kubernetesurl`, or if :ref:`param-mmkubernetes-allowunsignedcerts`
+is set to `"on"`.
 
 Action usage
 ------------

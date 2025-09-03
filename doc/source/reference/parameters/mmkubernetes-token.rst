@@ -26,7 +26,7 @@ This parameter applies to :doc:`../../configuration/modules/mmkubernetes`.
 Description
 -----------
 The token to use to authenticate to the Kubernetes API server.  One of `token`
-or `tokenfile` is required if Kubernetes is configured with access control.
+or :ref:`param-mmkubernetes-tokenfile` is required if Kubernetes is configured with access control.
 Example: `UxMU46ptoEWOSqLNa1bFmH`
 
 Action usage

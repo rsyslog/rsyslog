@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/mmkubernetes`.
 
 Description
 -----------
-When processing json-file logs, this is the rulebase used to match the
+When processing journald logs, this is the rulebase used to match the
 CONTAINER_NAME property value and extract metadata.  For the actual rules, see
 :ref:`param-mmkubernetes-containerrules`.
 

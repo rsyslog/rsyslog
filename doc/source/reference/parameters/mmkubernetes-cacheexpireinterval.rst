@@ -45,7 +45,7 @@ if the last time we checked was more than this many seconds ago.
 
 When cache expiration is checked, it will delete all cache entries which
 have a ttl less than or equal to the current time.  The cache entry ttl
-is set using the `cacheentryttl`.
+is set using the :ref:`param-mmkubernetes-cacheentryttl`.
 
 Action usage
 ------------
