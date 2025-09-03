@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/mmkubernetes`.
 :Name: containerrules
 :Scope: action
 :Type: word
-:Default: action=SEE BELOW
+:Default: SEE BELOW
 :Required?: no
 :Introduced: at least 8.x, possibly earlier
 
@@ -41,7 +41,7 @@ The default value is::
 
 .. note::
 
-    In the above rules, the slashes ``\\`` ending each line indicate
+    In the above rules, the slashes ``\`` ending each line indicate
     line wrapping - they are not part of the rule.
 
 There are two rules because the `container_hash` is optional.

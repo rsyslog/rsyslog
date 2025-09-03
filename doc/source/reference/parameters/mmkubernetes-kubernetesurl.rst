@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/mmkubernetes`.
 :Name: KubernetesURL
 :Scope: action
 :Type: word
-:Default: action=https://kubernetes.default.svc.cluster.local:443
+:Default: https://kubernetes.default.svc.cluster.local:443
 :Required?: no
 :Introduced: at least 8.x, possibly earlier
 

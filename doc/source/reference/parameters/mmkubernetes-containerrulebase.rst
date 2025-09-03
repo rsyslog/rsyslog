@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/mmkubernetes`.
 :Name: containerrulebase
 :Scope: action
 :Type: word
-:Default: action=/etc/rsyslog.d/k8s_container_name.rulebase
+:Default: /etc/rsyslog.d/k8s_container_name.rulebase
 :Required?: no
 :Introduced: at least 8.x, possibly earlier
 

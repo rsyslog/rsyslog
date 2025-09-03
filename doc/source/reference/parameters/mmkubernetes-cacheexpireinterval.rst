@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/mmkubernetes`.
 :Name: cacheexpireinterval
 :Scope: action
 :Type: integer
-:Default: action=-1
+:Default: -1
 :Required?: no
 :Introduced: at least 8.x, possibly earlier
 

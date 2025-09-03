@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/mmkubernetes`.
 :Name: filenamerules
 :Scope: action
 :Type: word
-:Default: action=SEE BELOW
+:Default: SEE BELOW
 :Required?: no
 :Introduced: at least 8.x, possibly earlier
 
@@ -37,7 +37,7 @@ match the filename and extract metadata.  The default value is::
 
 .. note::
 
-    In the above rules, the slashes ``\\`` ending each line indicate
+    In the above rules, the slashes ``\`` ending each line indicate
     line wrapping - they are not part of the rule.
 
 Action usage

@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/mmkubernetes`.
 :Name: dstmetadatapath
 :Scope: action
 :Type: word
-:Default: action=$!
+:Default: $!
 :Required?: no
 :Introduced: at least 8.x, possibly earlier
 

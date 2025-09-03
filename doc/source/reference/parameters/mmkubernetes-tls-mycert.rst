@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/mmkubernetes`.
 :Name: tls.mycert
 :Scope: action
 :Type: word
-:Default: action=none
+:Default: none
 :Required?: no
 :Introduced: at least 8.x, possibly earlier
 

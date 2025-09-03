@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/mmkubernetes`.
 :Name: srcmetadatapath
 :Scope: action
 :Type: word
-:Default: action=$!metadata!filename
+:Default: $!metadata!filename
 :Required?: no
 :Introduced: at least 8.x, possibly earlier
 

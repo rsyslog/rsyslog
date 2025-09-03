@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/mmkubernetes`.
 :Name: cacheentryttl
 :Scope: action
 :Type: integer
-:Default: action=3600
+:Default: 3600
 :Required?: no
 :Introduced: at least 8.x, possibly earlier
 

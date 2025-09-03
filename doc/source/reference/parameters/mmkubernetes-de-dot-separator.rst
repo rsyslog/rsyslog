@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/mmkubernetes`.
 :Name: de_dot_separator
 :Scope: action
 :Type: word
-:Default: action=_
+:Default: _
 :Required?: no
 :Introduced: at least 8.x, possibly earlier
 

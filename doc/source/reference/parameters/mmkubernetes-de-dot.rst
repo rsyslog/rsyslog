@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/mmkubernetes`.
 :Name: de_dot
 :Scope: action
 :Type: boolean
-:Default: action=on
+:Default: on
 :Required?: no
 :Introduced: at least 8.x, possibly earlier
 

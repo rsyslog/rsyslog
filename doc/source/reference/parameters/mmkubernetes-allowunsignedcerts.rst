@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/mmkubernetes`.
 :Name: allowunsignedcerts
 :Scope: action
 :Type: boolean
-:Default: action=off
+:Default: off
 :Required?: no
 :Introduced: at least 8.x, possibly earlier
 
