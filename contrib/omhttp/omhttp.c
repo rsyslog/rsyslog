@@ -1447,8 +1447,8 @@ static size_t computeBatchSize(wrkrInstanceData_t *pWrkrData) {
         case FMT_KAFKAREST:
             // '{}', '[]', '"records":'= 2 + 2 + 10 = 14
             // '{"value":}' for each message = n * 10
-            // numMessages == 0 handled implicitly in multiplication
-            extraBytes = (numMessages * 10) + 14;
+            // plus commas between array elements (n > 0 ? n - 1 : 0)
+            extraBytes = (numMessages * 10) + 14 + (numMessages > 0 ? numMessages - 1 : 0);
             break;
         case FMT_NEWLINE:
             // newlines between each message
@@ -1459,8 +1459,8 @@ static size_t computeBatchSize(wrkrInstanceData_t *pWrkrData) {
             //    {"stream": {key:value}..., "values":[[timestamp: msg1]]},
             //    {"stream": {key:value}..., "values":[[timestamp: msg2]]}
             // ]}
-            // message (11) * numMessages + header ( 16 )
-            extraBytes = (numMessages * 2) + 14;
+            // Approximate per-message wrapper overhead (2) plus commas between elements
+            extraBytes = (numMessages * 2) + 14 + (numMessages > 0 ? numMessages - 1 : 0);
             break;
         default:
             // newlines between each message
@@ -1468,6 +1468,29 @@ static size_t computeBatchSize(wrkrInstanceData_t *pWrkrData) {
     }
 
     return sizeBytes + extraBytes + 1;  // plus a null
+}
+
+/* Return the delta of extra bytes added by appending one more message to
+ * the current batch, based on the configured serialization format.
+ */
+static inline size_t computeDeltaExtraOnAppend(const wrkrInstanceData_t *pWrkrData) {
+    const size_t numMessages = pWrkrData->batch.nmemb;
+    switch (pWrkrData->pData->batchFormat) {
+        case FMT_JSONARRAY:
+            /* add a comma if there is already at least one element */
+            return (numMessages > 0) ? 1 : 0;
+        case FMT_KAFKAREST:
+            /* per-message wrapper overhead (e.g. {"value":}) + comma if needed */
+            return 10 + ((numMessages > 0) ? 1 : 0);
+        case FMT_NEWLINE:
+            /* add a newline if there is already at least one element */
+            return (numMessages > 0) ? 1 : 0;
+        case FMT_LOKIREST:
+            /* approximate per-message overhead in wrapper + comma if needed */
+            return 2 + ((numMessages > 0) ? 1 : 0);
+        default:
+            return (numMessages > 0) ? 1 : 0;
+    }
 }
 
 static void ATTR_NONNULL() initializeBatch(wrkrInstanceData_t *pWrkrData) {
@@ -1561,9 +1584,12 @@ BEGINcommitTransaction
                 if (pWrkrData->batch.restPath == NULL) {
                     CHKmalloc(pWrkrData->batch.restPath = (uchar *)strdup((char *)restPath));
                 } else if (strcmp((char *)pWrkrData->batch.restPath, (char *)restPath) != 0) {
-                    /* restPath changed -> flush current batch first */
-                    CHKiRet(submitBatch(pWrkrData, NULL));
+                    /* restPath changed -> flush current batch if it contains data */
+                    if (pWrkrData->batch.nmemb > 0) {
+                        CHKiRet(submitBatch(pWrkrData, NULL));
+                    }
                     initializeBatch(pWrkrData);
+                    CHKmalloc(pWrkrData->batch.restPath = (uchar *)strdup((char *)restPath));
                 }
             }
 
@@ -1576,21 +1602,29 @@ BEGINcommitTransaction
             }
 
             /* Determine if we should submit due to size/bytes thresholds */
-            nBytes = ustrlen((char *)payload) - 1;
+            nBytes = ustrlen((char *)payload);
             submit = 0;
             if (pWrkrData->batch.nmemb >= pData->maxBatchSize) {
                 submit = 1;
                 DBGPRINTF("omhttp: maxbatchsize limit reached submitting batch of %zd elements.\n",
                           pWrkrData->batch.nmemb);
-            } else if (computeBatchSize(pWrkrData) + nBytes > pData->maxBatchBytes) {
-                submit = 1;
-                DBGPRINTF("omhttp: maxbytes limit reached submitting partial batch of %zd elements.\n",
-                          pWrkrData->batch.nmemb);
+            } else {
+                const size_t predicted = computeBatchSize(pWrkrData) + nBytes + computeDeltaExtraOnAppend(pWrkrData);
+                if (predicted > pData->maxBatchBytes) {
+                    submit = 1;
+                    DBGPRINTF("omhttp: maxbytes limit reached submitting partial batch of %zd elements.\n",
+                              pWrkrData->batch.nmemb);
+                }
             }
 
             if (submit) {
-                CHKiRet(submitBatch(pWrkrData, tpls));
+                /* flush current batch, then start a new one. keep dyn restPath consistent */
+                CHKiRet(submitBatch(pWrkrData, NULL));
                 initializeBatch(pWrkrData);
+                if (pData->dynRestPath) {
+                    uchar *restPath = actParam(pParams, iNumTpls, i, 1).param;
+                    CHKmalloc(pWrkrData->batch.restPath = (uchar *)strdup((char *)restPath));
+                }
             }
 
             CHKiRet(buildBatch(pWrkrData, payload));

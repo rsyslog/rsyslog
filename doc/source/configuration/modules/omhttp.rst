@@ -296,7 +296,9 @@ This parameter activates batching mode, which queues messages and sends them as 
 
 Note that rsyslog core is the ultimate authority on when a batch must be submitted, due to the way that batching is implemented. This plugin implements the `output plugin transaction interface <https://www.rsyslog.com/doc/v8-stable/development/dev_oplugins.html#output-plugin-transaction-interface>`_. There may be multiple batches in a single transaction, but a batch will never span multiple transactions. This means that if batch.maxsize_ or batch.maxbytes_ is set very large, you may never actually see batches hit this size. Additionally, the number of messages per transaction is determined by the size of the main, action, and ruleset queues as well.
 
-Additionally, due to some open issues with rsyslog and the transaction interface, batching requires some nuanced retry_ configuration.
+The plugin flushes a batch early if either the configured batch.maxsize_ is reached or if adding the next message would exceed batch.maxbytes_ once serialized (format overhead included). When dynrestpath_ is enabled, a change of the effective REST path also forces a flush so that each batch targets a single path.
+
+Additionally, due to some open issues with rsyslog and the transaction interface, batching requires some nuanced retry_ configuration. By default, omhttp signals transport/server failures to rsyslog core (suspend/resume), which performs retries. The retry.ruleset_ mechanism remains available for advanced per-message retry handling in batch mode.
 
 
 batch.format
