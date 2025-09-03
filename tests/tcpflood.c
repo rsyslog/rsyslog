@@ -73,10 +73,14 @@
  * -v   verbose output, possibly useful for troubleshooting. Most importantly,
  *      this gives insight into librelp actions (if relp is selected as protocol).
  * -k	Custom Configuration string passwed through the TLS library.
- *	Currently only OpenSSL is supported, possible configuration commands and values can be found here:
- *	https://www.openssl.org/docs/man1.0.2/man3/SSL_CONF_cmd.html
- *	Sample: -k"Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.1"
- *	Works for LIBRELP now as well!
+ *      Currently only OpenSSL is supported, possible configuration commands and values can be found here:
+ *      https://www.openssl.org/docs/man1.0.2/man3/SSL_CONF_cmd.html
+ *      Sample: -k"Protocol=ALL,-SSLv2,-SSLv3,-TLSv1,-TLSv1.1"
+ *      Works for LIBRELP now as well!
+ * -w   write the locally used port number to the specified file. The file
+ *      contains the port number followed by a line feed and is only valid
+ *      when a single connection is created. Works with TCP and UDP transports;
+ *      using it with RELP results in an error.
  *
  * Part of the testbench for rsyslog.
  *
@@ -203,6 +207,7 @@ static char *MsgToSend = NULL; /* if non-null, this is the actual message to sen
 static char *hostname = "172.20.245.8"; /* this is the "tratditional" default, as bad is it is... */
 static int bBinaryFile = 0; /* is -I file binary */
 static char *dataFile = NULL; /* name of data file, if NULL, generate own data */
+static char *portFile = NULL; /* file to store local port number */
 static int numFileIterations = 1; /* how often is file data to be sent? */
 static char frameDelim = '\n'; /* default frame delimiter */
 FILE *dataFP = NULL; /* file pointer for data file, if used */
@@ -326,7 +331,18 @@ static void initRELP_PLAIN(void) {
 
 /* prepare send subsystem for UDP send */
 static int setupUDP(void) {
+    struct sockaddr_in lcl;
+
     if ((udpsockout = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) return 1;
+
+    memset(&lcl, 0, sizeof(lcl));
+    lcl.sin_family = AF_INET;
+    lcl.sin_addr.s_addr = htonl(INADDR_ANY);
+    lcl.sin_port = htons(0);
+    if (bind(udpsockout, (struct sockaddr *)&lcl, sizeof(lcl)) == -1) {
+        perror("bind()");
+        return 1;
+    }
 
     memset((char *)&udpRcvr, 0, sizeof(udpRcvr));
     udpRcvr.sin_family = AF_INET;
@@ -1849,7 +1865,7 @@ int main(int argc, char *argv[]) {
 
     while ((opt = getopt(argc, argv,
                          "a:ABb:c:C:d:DeE:f:F:h:i:I:j:k:l:L:m:M:n:o:OP:p:rR:"
-                         "sS:t:T:u:vW:x:XyYz:Z:")) != -1) {
+                         "sS:t:T:u:vW:w:x:XyYz:Z:")) != -1) {
         switch (opt) {
             case 'b':
                 batchsize = atoll(optarg);
@@ -2038,6 +2054,9 @@ int main(int argc, char *argv[]) {
             case 'k':
                 customConfig = optarg;
                 break;
+            case 'w':
+                portFile = optarg;
+                break;
             default:
                 printf("invalid option '%c' or value missing - terminating...\n", opt);
                 exit(1);
@@ -2067,6 +2086,16 @@ int main(int argc, char *argv[]) {
                     "error-terminate\n");
             exit(1);
         }
+    }
+
+    if (portFile != NULL && numConnections != 1) {
+        fprintf(stderr, "-w requires exactly one connection\n");
+        exit(1);
+    }
+
+    if (portFile != NULL && (transport == TP_RELP_PLAIN || transport == TP_RELP_TLS)) {
+        fprintf(stderr, "-w not supported with RELP\n");
+        exit(1);
     }
 
     if (tlsCAFile != NULL && transport != TP_RELP_TLS) {
@@ -2159,6 +2188,28 @@ int main(int argc, char *argv[]) {
     if (openConnections() != 0) {
         printf("error opening connections\n");
         exit(1);
+    }
+
+    if (portFile != NULL) {
+        int portSock;
+        struct sockaddr_in sin;
+        socklen_t slen = sizeof(sin);
+
+        portSock = (transport == TP_UDP) ? udpsockout : sockArray[0];
+        if (getsockname(portSock, (struct sockaddr *)&sin, &slen) != 0) {
+            perror("getsockname()");
+            exit(1);
+        }
+        FILE *pf = fopen(portFile, "w");
+        if (pf == NULL) {
+            perror(portFile);
+            exit(1);
+        }
+        if (fprintf(pf, "%u\n", ntohs(sin.sin_port)) < 0) {
+            perror("fprintf to port file");
+            exit(1);
+        }
+        fclose(pf);
     }
 
     if (runTests() != 0) {
