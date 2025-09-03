@@ -29,13 +29,13 @@ namespace.
 For json-file and CRI-O logs, you must use the `imfile` module with the
 `addmetadata="on"` parameter, and the filename must match the
 liblognorm rules specified by the `filenamerules`
-(:ref:`filenamerules`) or `filenamerulebase` (:ref:`filenamerulebase`)
+(:ref:`param-mmkubernetes-filenamerules`) or `filenamerulebase` (:ref:`param-mmkubernetes-filenamerulebase`)
 parameter values.
 
 For journald logs, there must be a message property `CONTAINER_NAME`
 which matches the liblognorm rules specified by the `containerrules`
-(:ref:`containerrules`) or `containerrulebase`
-(:ref:`containerrulebase`) parameter values. The record must also have
+(:ref:`param-mmkubernetes-containerrules`) or `containerrulebase`
+(:ref:`param-mmkubernetes-containerrulebase`) parameter values. The record must also have
 the message property `CONTAINER_ID_FULL`.
 
 This module is implemented via the output module interface. This means
@@ -53,422 +53,129 @@ for more details.
 Configuration Parameters
 ========================
 
-.. note::
-
-   Parameter names are case-insensitive.
-
-Module Parameters and Action Parameters
----------------------------------------
-
-.. _kubernetesurl:
-
-KubernetesURL
-^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "https://kubernetes.default.svc.cluster.local:443", "no", "none"
-
-The URL of the Kubernetes API server.  Example: `https://localhost:8443`.
-
-.. _mmkubernetes-tls.cacert:
-
-tls.cacert
-^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-Full path and file name of file containing the CA cert of the
-Kubernetes API server cert issuer.  Example: `/etc/rsyslog.d/mmk8s-ca.crt`.
-This parameter is not mandatory if using an `http` scheme instead of `https` in
-`kubernetesurl`, or if using `allowunsignedcerts="yes"`.
-
-.. _mmkubernetes-tls.mycert:
-
-tls.mycert
-^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-This is the full path and file name of the file containing the client cert for
-doing client cert auth against Kubernetes.  This file is in PEM format.  For
-example: `/etc/rsyslog.d/k8s-client-cert.pem`
-
-.. _mmkubernetes-tls.myprivkey:
-
-tls.myprivkey
-^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-This is the full path and file name of the file containing the private key
-corresponding to the cert `tls.mycert` used for doing client cert auth against
-Kubernetes.  This file is in PEM format, and must be unencrypted, so take
-care to secure it properly.  For example: `/etc/rsyslog.d/k8s-client-key.pem`
-
-.. _tokenfile:
-
-tokenfile
-^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-The file containing the token to use to authenticate to the Kubernetes API
-server.  One of `tokenfile` or `token` is required if Kubernetes is configured
-with access control.  Example: `/etc/rsyslog.d/mmk8s.token`
-
-.. _token:
-
-token
-^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-The token to use to authenticate to the Kubernetes API server.  One of `token`
-or `tokenfile` is required if Kubernetes is configured with access control.
-Example: `UxMU46ptoEWOSqLNa1bFmH`
-
-.. _annotation_match:
-
-annotation_match
-^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "array", "none", "no", "none"
-
-By default no pod or namespace annotations will be added to the
-messages.  This parameter is an array of patterns to match the keys of
-the `annotations` field in the pod and namespace metadata to include
-in the `$!kubernetes!annotations` (for pod annotations) or the
-`$!kubernetes!namespace_annotations` (for namespace annotations)
-message properties.  Example: `["k8s.*master","k8s.*node"]`
-
-.. _srcmetadatapath:
-
-srcmetadatapath
-^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "$!metadata!filename", "no", "none"
-
-When reading json-file logs, with `imfile` and `addmetadata="on"`,
-this is the property where the filename is stored.
-
-.. _dstmetadatapath:
-
-dstmetadatapath
-^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "$!", "no", "none"
-
-This is the where the `kubernetes` and `docker` properties will be
-written.  By default, the module will add `$!kubernetes` and
-`$!docker`.
-
-.. _allowunsignedcerts:
-
-allowunsignedcerts
-^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "boolean", "off", "no", "none"
-
-If `"on"`, this will set the curl `CURLOPT_SSL_VERIFYPEER` option to
-`0`.  You are strongly discouraged to set this to `"on"`.  It is
-primarily useful only for debugging or testing.
-
-.. _skipverifyhost:
-
-skipverifyhost
-^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "boolean", "off", "no", "none"
-
-If `"on"`, this will set the curl `CURLOPT_SSL_VERIFYHOST` option to
-`0`.  You are strongly discouraged to set this to `"on"`.  It is
-primarily useful only for debugging or testing.
-
-.. _de_dot:
-
-de_dot
-^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "boolean", "on", "no", "none"
-
-When processing labels and annotations, if this parameter is set to
-`"on"`, the key strings will have their `.` characters replaced with
-the string specified by the `de_dot_separator` parameter.
-
-.. _de_dot_separator:
-
-de_dot_separator
-^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "_", "no", "none"
-
-When processing labels and annotations, if the `de_dot` parameter is
-set to `"on"`, the key strings will have their `.` characters replaced
-with the string specified by the string value of this parameter.
-
-.. _filenamerules:
-
-filenamerules
-^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "SEE BELOW", "no", "none"
 
 .. note::
 
-    This directive is not supported with liblognorm 2.0.2 and earlier.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
-When processing json-file logs, these are the lognorm rules to use to
-match the filename and extract metadata.  The default value is::
+.. toctree::
+   :hidden:
 
-    rule=:/var/log/containers/%pod_name:char-to:_%_%namespace_name:char-to:_%_%contai\
-    ner_name_and_id:char-to:.%.log
+   ../../reference/parameters/mmkubernetes-annotation-match
+   ../../reference/parameters/mmkubernetes-allowunsignedcerts
+   ../../reference/parameters/mmkubernetes-busyretryinterval
+   ../../reference/parameters/mmkubernetes-cacheentryttl
+   ../../reference/parameters/mmkubernetes-cacheexpireinterval
+   ../../reference/parameters/mmkubernetes-containerrulebase
+   ../../reference/parameters/mmkubernetes-containerrules
+   ../../reference/parameters/mmkubernetes-de-dot
+   ../../reference/parameters/mmkubernetes-de-dot-separator
+   ../../reference/parameters/mmkubernetes-dstmetadatapath
+   ../../reference/parameters/mmkubernetes-filenamerulebase
+   ../../reference/parameters/mmkubernetes-filenamerules
+   ../../reference/parameters/mmkubernetes-kubernetesurl
+   ../../reference/parameters/mmkubernetes-skipverifyhost
+   ../../reference/parameters/mmkubernetes-srcmetadatapath
+   ../../reference/parameters/mmkubernetes-sslpartialchain
+   ../../reference/parameters/mmkubernetes-tls-cacert
+   ../../reference/parameters/mmkubernetes-tls-mycert
+   ../../reference/parameters/mmkubernetes-tls-myprivkey
+   ../../reference/parameters/mmkubernetes-token
+   ../../reference/parameters/mmkubernetes-tokenfile
 
-.. note::
+Action Parameters
+-----------------
 
-    In the above rules, the slashes ``\`` ending each line indicate
-    line wrapping - they are not part of the rule.
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. _filenamerulebase:
-
-filenamerulebase
-^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "/etc/rsyslog.d/k8s_filename.rulebase", "no", "none"
-
-When processing json-file logs, this is the rulebase used to match the filename
-and extract metadata.  For the actual rules, see :ref:`filenamerules`.
-
-.. _containerrules:
-
-containerrules
-^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "SEE BELOW", "no", "none"
-
-.. note::
-
-    This directive is not supported with liblognorm 2.0.2 and earlier.
-
-For journald logs, there must be a message property `CONTAINER_NAME`
-which has a value matching these rules specified by this parameter.
-The default value is::
-
-    rule=:%k8s_prefix:char-to:_%_%container_name:char-to:.%.%container_hash:char-to:\
-    _%_%pod_name:char-to:_%_%namespace_name:char-to:_%_%not_used_1:char-to:_%_%not_u\
-    sed_2:rest%
-    rule=:%k8s_prefix:char-to:_%_%container_name:char-to:_%_%pod_name:char-to:_%_%na\
-    mespace_name:char-to:_%_%not_used_1:char-to:_%_%not_used_2:rest%
-
-.. note::
-
-    In the above rules, the slashes ``\`` ending each line indicate
-    line wrapping - they are not part of the rule.
-
-There are two rules because the `container_hash` is optional.
-
-.. _containerrulebase:
-
-containerrulebase
-^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "/etc/rsyslog.d/k8s_container_name.rulebase", "no", "none"
-
-When processing json-file logs, this is the rulebase used to match the
-CONTAINER_NAME property value and extract metadata.  For the actual rules, see
-:ref:`containerrules`.
-
-.. _mmkubernetes-busyretryinterval:
-
-busyretryinterval
-^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "5", "no", "none"
-
-The number of seconds to wait before retrying operations to the Kubernetes API
-server after receiving a `429 Busy` response.  The default `"5"` means that the
-module will retry the connection every `5` seconds.  Records processed during
-this time will _not_ have any additional metadata associated with them, so you
-will need to handle cases where some of your records have all of the metadata
-and some do not.
-
-If you want to have rsyslog suspend the plugin until the Kubernetes API server
-is available, set `busyretryinterval` to `"0"`.  This will cause the plugin to
-return an error to rsyslog.
-
-.. _mmkubernetes-sslpartialchain:
-
-sslpartialchain
-^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "boolean", "off", "no", "none"
-
-This option is only available if rsyslog was built with support for OpenSSL and
-only if the `X509_V_FLAG_PARTIAL_CHAIN` flag is available.  If you attempt to
-set this parameter on other platforms, you will get an `INFO` level log
-message.  This was done so that you could use the same configuration on
-different platforms.
-If `"on"`, this will set the OpenSSL certificate store flag
-`X509_V_FLAG_PARTIAL_CHAIN`.   This will allow you to verify the Kubernetes API
-server cert with only an intermediate CA cert in your local trust store, rather
-than having to have the entire intermediate CA + root CA chain in your local
-trust store.  See also `man s_client` - the `-partial_chain` flag.
-If you get errors like this, you probably need to set `sslpartialchain="on"`:
-
-.. code-block:: none
-
-    rsyslogd: mmkubernetes: failed to connect to [https://...url...] -
-    60:Peer certificate cannot be authenticated with given CA certificates
-
-.. _mmkubernetes-cacheexpireinterval:
-
-cacheexpireinterval
-^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "-1", "no", "none"
-
-This parameter allows you to expire entries from the metadata cache.  The
-values are:
-
-- -1 (default) - disables metadata cache expiration
-- 0 - check cache for expired entries before every cache lookup
-- 1 or higher - the number is a number of seconds - check the cache
-  for expired entries every this many seconds, when processing an
-  entry
-
-The cache is only checked if processing a record from Kubernetes.  There
-isn't some sort of housekeeping thread that continually runs cleaning up
-the cache.  When an record from Kubernetes is processed:
-
-If `cacheexpireinterval` is -1, then do not check for cache expiration.
-If `cacheexpireinterval` is 0, then check for cache expiration.
-If `cacheexpireinterval` is greater than 0, check for cache expiration
-if the last time we checked was more than this many seconds ago.
-
-When cache expiration is checked, it will delete all cache entries which
-have a ttl less than or equal to the current time.  The cache entry ttl
-is set using the `cacheentryttl`.
-
-.. _mmkubernetes-cacheentryttl:
-
-cacheentryttl
-^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "3600", "no", "none"
-
-This parameter allows you to set the maximum age (time-to-live, or ttl) of
-an entry in the metadata cache.  The value is in seconds.  The default value
-is `3600` (one hour).  When cache expiration is checked, if a cache entry
-has a ttl less than or equal to the current time, it will be removed from
-the cache.
-
-This option is only used if `cacheexpireinterval` is 0 or greater.
-
-This value must be 0 or greater, otherwise, if `cacheexpireinterval` is 0
-or greater, you will get an error.
+   * - Parameter
+     - Summary
+   * - :ref:`param-mmkubernetes-annotation-match`
+     - .. include:: ../../reference/parameters/mmkubernetes-annotation-match.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmkubernetes-allowunsignedcerts`
+     - .. include:: ../../reference/parameters/mmkubernetes-allowunsignedcerts.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmkubernetes-busyretryinterval`
+     - .. include:: ../../reference/parameters/mmkubernetes-busyretryinterval.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmkubernetes-cacheentryttl`
+     - .. include:: ../../reference/parameters/mmkubernetes-cacheentryttl.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmkubernetes-cacheexpireinterval`
+     - .. include:: ../../reference/parameters/mmkubernetes-cacheexpireinterval.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmkubernetes-containerrulebase`
+     - .. include:: ../../reference/parameters/mmkubernetes-containerrulebase.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmkubernetes-containerrules`
+     - .. include:: ../../reference/parameters/mmkubernetes-containerrules.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmkubernetes-de-dot`
+     - .. include:: ../../reference/parameters/mmkubernetes-de-dot.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmkubernetes-de-dot-separator`
+     - .. include:: ../../reference/parameters/mmkubernetes-de-dot-separator.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmkubernetes-dstmetadatapath`
+     - .. include:: ../../reference/parameters/mmkubernetes-dstmetadatapath.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmkubernetes-filenamerulebase`
+     - .. include:: ../../reference/parameters/mmkubernetes-filenamerulebase.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmkubernetes-filenamerules`
+     - .. include:: ../../reference/parameters/mmkubernetes-filenamerules.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmkubernetes-kubernetesurl`
+     - .. include:: ../../reference/parameters/mmkubernetes-kubernetesurl.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmkubernetes-skipverifyhost`
+     - .. include:: ../../reference/parameters/mmkubernetes-skipverifyhost.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmkubernetes-srcmetadatapath`
+     - .. include:: ../../reference/parameters/mmkubernetes-srcmetadatapath.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmkubernetes-sslpartialchain`
+     - .. include:: ../../reference/parameters/mmkubernetes-sslpartialchain.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmkubernetes-tls-cacert`
+     - .. include:: ../../reference/parameters/mmkubernetes-tls-cacert.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmkubernetes-tls-mycert`
+     - .. include:: ../../reference/parameters/mmkubernetes-tls-mycert.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmkubernetes-tls-myprivkey`
+     - .. include:: ../../reference/parameters/mmkubernetes-tls-myprivkey.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmkubernetes-token`
+     - .. include:: ../../reference/parameters/mmkubernetes-token.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmkubernetes-tokenfile`
+     - .. include:: ../../reference/parameters/mmkubernetes-tokenfile.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 .. _mmkubernetes-statistic-counter:
 
@@ -478,7 +185,7 @@ Statistic Counter
 This plugin maintains per-action :doc:`statistics
 <../rsyslog_statistic_counter>`.  The statistic is named
 "mmkubernetes($kubernetesurl)", where `$kubernetesurl` is the
-:ref:`kubernetesurl` setting for the action.
+:ref:`param-mmkubernetes-kubernetesurl` setting for the action.
 
 Parameters are:
 
@@ -572,7 +279,7 @@ result, and will _not_ add the metadata to the record. This can happen in very
 large Kubernetes clusters when you run into the upper limit on the number of
 concurrent Kubernetes API service connections.  You may have to increase that
 limit.  In the meantime, you can control what the plugin does with those
-records using the :ref:`mmkubernetes-busyretryinterval` setting.  If you want
+records using the :ref:`param-mmkubernetes-busyretryinterval` setting.  If you want
 to continue to process the records, but with incomplete metadata, set
 `busyretryinterval` to a non-zero value, which will be the number of seconds
 after which mmkubernetes will retry the connection.  The default value is `5`,
