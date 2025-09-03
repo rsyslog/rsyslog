@@ -39,6 +39,7 @@ Configuration Parameters
    ../../reference/parameters/omkafka-statsfile
    ../../reference/parameters/omkafka-confparam
    ../../reference/parameters/omkafka-topicconfparam
+   ../../reference/parameters/omkafka-kafkaheader
    ../../reference/parameters/omkafka-template
    ../../reference/parameters/omkafka-closetimeout
    ../../reference/parameters/omkafka-resubmitonfailure
@@ -105,6 +106,10 @@ Action Parameters
         :end-before: .. summary-end
    * - :ref:`param-omkafka-topicconfparam`
      - .. include:: ../../reference/parameters/omkafka-topicconfparam.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omkafka-kafkaheader`
+     - .. include:: ../../reference/parameters/omkafka-kafkaheader.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`param-omkafka-template`
