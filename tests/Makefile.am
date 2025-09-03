@@ -2252,6 +2252,7 @@ EXTRA_DIST= \
         omfwd-subtree-tpl.sh \
         omfwd_fast_imuxsock.sh \
         omfile_hup-vg.sh \
+	omrelp-keepalive.sh \
         omsendertrack-basic.sh \
 	omsendertrack-basic-vg.sh \
 	omsendertrack-statefile.sh \

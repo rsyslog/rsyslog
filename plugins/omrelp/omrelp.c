@@ -93,6 +93,10 @@ typedef struct _instanceData {
 #endif
     uchar *tplName;
     uchar *localClientIP;
+    sbool bKeepAlive; /* support keep-alive packets */
+    int iKeepAliveProbes;
+    int iKeepAliveTime;
+    int iKeepAliveIntvl;
     struct {
         int nmemb;
         uchar **name;
@@ -136,7 +140,9 @@ static struct cnfparamdescr actpdescr[] = {
     {"tls.tlscfgcmd", eCmdHdlrString, 0},   {"tls.permittedpeer", eCmdHdlrArray, 0},
     {"port", eCmdHdlrGetWord, 0},           {"rebindinterval", eCmdHdlrInt, 0},
     {"windowsize", eCmdHdlrInt, 0},         {"timeout", eCmdHdlrInt, 0},
-    {"conn.timeout", eCmdHdlrInt, 0},       {"localclientip", eCmdHdlrGetWord, 0},
+    {"conn.timeout", eCmdHdlrInt, 0},       {"keepalive", eCmdHdlrBinary, 0},
+    {"keepalive.probes", eCmdHdlrInt, 0},   {"keepalive.time", eCmdHdlrInt, 0},
+    {"keepalive.interval", eCmdHdlrInt, 0}, {"localclientip", eCmdHdlrGetWord, 0},
     {"template", eCmdHdlrGetWord, 0}};
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
@@ -210,6 +216,11 @@ static rsRetVal doCreateRelpClient(instanceData *pData, relpClt_t **pRelpClt) {
         ABORT_FINALIZE(RS_RET_RELP_ERR);
     }
     if (relpCltSetWindowSize(*pRelpClt, pData->sizeWindow) != RELP_RET_OK) ABORT_FINALIZE(RS_RET_RELP_ERR);
+#if defined(HAVE_RELPCLTSETKEEPALIVE)
+    if (relpCltSetKeepAlive(*pRelpClt, pData->bKeepAlive, pData->iKeepAliveIntvl, pData->iKeepAliveProbes,
+                            pData->iKeepAliveTime) != RELP_RET_OK)
+        ABORT_FINALIZE(RS_RET_RELP_ERR);
+#endif
     if (pData->bEnableTLS) {
         if (relpCltEnableTLS(*pRelpClt) != RELP_RET_OK) ABORT_FINALIZE(RS_RET_RELP_ERR);
         if (pData->bEnableTLSZip) {
@@ -282,6 +293,10 @@ BEGINcreateInstance
 #if defined(HAVE_RELPENGINESETTLSCFGCMD)
     pData->tlscfgcmd = NULL;
 #endif
+    pData->bKeepAlive = 0;
+    pData->iKeepAliveProbes = 0;
+    pData->iKeepAliveTime = 0;
+    pData->iKeepAliveIntvl = 0;
     pData->permittedPeers.nmemb = 0;
 ENDcreateInstance
 
@@ -344,6 +359,10 @@ static void setInstParamDefaults(instanceData *pData) {
 #if defined(HAVE_RELPENGINESETTLSCFGCMD)
     pData->tlscfgcmd = NULL;
 #endif
+    pData->bKeepAlive = 0;
+    pData->iKeepAliveProbes = 0;
+    pData->iKeepAliveTime = 0;
+    pData->iKeepAliveIntvl = 0;
     pData->permittedPeers.name = NULL;
     pData->permittedPeers.nmemb = 0;
 }
@@ -432,6 +451,14 @@ BEGINnewActInst
             pData->timeout = (unsigned)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "conn.timeout")) {
             pData->connTimeout = (int)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "keepalive")) {
+            pData->bKeepAlive = (sbool)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "keepalive.probes")) {
+            pData->iKeepAliveProbes = (int)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "keepalive.time")) {
+            pData->iKeepAliveTime = (int)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "keepalive.interval")) {
+            pData->iKeepAliveIntvl = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "rebindinterval")) {
             pData->rebindInterval = (unsigned)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "windowsize")) {
