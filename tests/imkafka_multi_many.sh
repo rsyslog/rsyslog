@@ -3,7 +3,7 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 echo Init Testbench 
 . ${srcdir:=.}/diag.sh init
-check_command_available kafkacat
+check_command_available kcat
 
 # *** ==============================================================================
 export TESTMESSAGES=100000
@@ -115,7 +115,7 @@ do
 done
 
 echo Inject messages into kafka
-kafkacat <$RSYSLOG_OUT_LOG.in  -P -b localhost:29092 -t $RANDTOPIC
+kcat <$RSYSLOG_OUT_LOG.in  -P -b localhost:29092 -t $RANDTOPIC
 # --- 
 
 echo Give imkafka some time to start...
