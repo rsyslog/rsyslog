@@ -31,7 +31,7 @@ use only a single file. This parameter or ``rule`` MUST be given, because
 normalization can only happen based on a rulebase. It is recommended that an
 absolute path name is given. Information on how to create the rulebase can
 be found in the
-`liblognorm manual <http://www.liblognorm.com/files/manual/index.html>`_.
+`liblognorm manual <https://www.liblognorm.com/manual/>`_.
 
 Action usage
 -------------
