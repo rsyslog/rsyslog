@@ -996,7 +996,9 @@ finalize:
 static int runloop(void) {
     dbgprintf("imhttp started.\n");
 
-    /* Add handler for form data */
+    /* Register handlers under context lock to avoid civetweb races */
+    mg_lock_context(s_httpserv->ctx);
+
     for (instanceConf_t *inst = runModConf->root; inst != NULL; inst = inst->next) {
         assert(inst->pszEndpoint);
         if (inst->pszEndpoint) {
@@ -1027,6 +1029,8 @@ static int runloop(void) {
                                 runModConf->pszMetricsAuthFile);
         }
     }
+
+    mg_unlock_context(s_httpserv->ctx);
 
     /* Wait until the server should be closed */
     while (glbl.GetGlobalInputTermState() == 0) {
