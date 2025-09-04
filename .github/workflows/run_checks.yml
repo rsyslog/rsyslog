@@ -155,9 +155,12 @@ jobs:
               export ABORT_ALL_ON_TEST_FAIL='YES'
               export VERBOSE=1
               ;;
-          'ubuntu_22_san')
+          'ubuntu_24_san')
+              # TODO: remove the -fno-sanitize=function once the root issue is solved. We use
+              #       it in order to migrate to the newer sanitizer checker which otherwise
+              #       would be much delayed. That was the prime reason we did not upgrade before.
               export CI_SANITIZE_BLACKLIST='tests/asan.supp'
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
               export CC='clang'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
                       --disable-libfaketime --without-valgrind-testbench --disable-valgrind \
@@ -167,6 +170,7 @@ jobs:
               export CFLAGS="-fstack-protector -D_FORTIFY_SOURCE=2 \
                      -fsanitize=address,undefined,nullability,unsigned-integer-overflow \
                      -fno-sanitize-recover=undefined,nullability,unsigned-integer-overflow \
+                     -fno-sanitize=function \
                      -g -O3 -fno-omit-frame-pointer -fno-color-diagnostics"
               export LSAN_OPTIONS='detect_leaks=0'
               export UBSAN_OPTIONS='print_stacktrace=1'
