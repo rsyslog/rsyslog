@@ -1,5 +1,5 @@
 .. _param-mmnormalize-variable:
-.. _mmnormalize.parameter.input.variable:
+.. _mmnormalize.parameter.action.variable:
 
 variable
 ========
@@ -17,9 +17,9 @@ Normalizes the content of a specified variable instead of the default msg proper
 This parameter applies to :doc:`../../configuration/modules/mmnormalize`.
 
 :Name: variable
-:Scope: input
+:Scope: action
 :Type: word
-:Default: input=msg
+:Default: action=msg
 :Required?: no
 :Introduced: 8.5.1
 
@@ -29,10 +29,10 @@ Description
 
 Specifies if a variable instead of property 'msg' should be used for normalization. A variable can be property, local variable, json-path etc. Please note that **useRawMsg** overrides this parameter, so if **useRawMsg** is set, **variable** will be ignored and raw message will be used.
 
-Input usage
------------
-.. _param-mmnormalize-input-variable:
-.. _mmnormalize.parameter.input.variable-usage:
+Action usage
+-------------
+.. _param-mmnormalize-action-variable:
+.. _mmnormalize.parameter.action.variable-usage:
 
 .. code-block:: rsyslog
 

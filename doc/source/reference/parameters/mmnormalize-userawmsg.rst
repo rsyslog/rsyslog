@@ -1,5 +1,5 @@
 .. _param-mmnormalize-userawmsg:
-.. _mmnormalize.parameter.input.userawmsg:
+.. _mmnormalize.parameter.action.userawmsg:
 
 useRawMsg
 =========
@@ -17,9 +17,9 @@ Uses the raw message instead of just the MSG part during normalization.
 This parameter applies to :doc:`../../configuration/modules/mmnormalize`.
 
 :Name: useRawMsg
-:Scope: input
+:Scope: action
 :Type: boolean
-:Default: input=off
+:Default: action=off
 :Required?: no
 :Introduced: at least 6.1.2, possibly earlier
 
@@ -27,10 +27,10 @@ Description
 -----------
 Specifies if the raw message should be used for normalization (on) or just the MSG part of the message (off).
 
-Input usage
------------
-.. _param-mmnormalize-input-userawmsg:
-.. _mmnormalize.parameter.input.userawmsg-usage:
+Action usage
+-------------
+.. _param-mmnormalize-action-userawmsg:
+.. _mmnormalize.parameter.action.userawmsg-usage:
 
 .. code-block:: rsyslog
 

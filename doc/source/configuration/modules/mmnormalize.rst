@@ -45,13 +45,17 @@ Module Parameters
 
    * - Parameter
      - Summary
-   * - :ref:`param-mmnormalize-allow-regex`
-     - .. include:: ../../reference/parameters/mmnormalize-allow-regex.rst
+   * - :ref:`param-mmnormalize-allowregex`
+     - .. include:: ../../reference/parameters/mmnormalize-allowregex.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
 
 Action Parameters
 ~~~~~~~~~~~~~~~~~
+
+.. note::
+
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
 .. list-table::
    :widths: 30 70
@@ -83,7 +87,7 @@ Action Parameters
 .. toctree::
    :hidden:
 
-   ../../reference/parameters/mmnormalize-allow-regex
+   ../../reference/parameters/mmnormalize-allowregex
    ../../reference/parameters/mmnormalize-rulebase
    ../../reference/parameters/mmnormalize-rule
    ../../reference/parameters/mmnormalize-userawmsg

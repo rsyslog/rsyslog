@@ -1,12 +1,12 @@
-.. _param-mmnormalize-allow-regex:
-.. _mmnormalize.parameter.module.allow-regex:
+.. _param-mmnormalize-allowregex:
+.. _mmnormalize.parameter.module.allowregex:
 
-allow_regex
+allowRegex
 ===========
 
 .. index::
-   single: mmnormalize; allow_regex
-   single: allow_regex
+   single: mmnormalize; allowRegex
+   single: allowRegex
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Enables support for liblognorm regex field types despite higher overhead.
 
 This parameter applies to :doc:`../../configuration/modules/mmnormalize`.
 
-:Name: allow_regex
+:Name: allowRegex
 :Scope: module
 :Type: boolean
 :Default: module=off
@@ -29,8 +29,8 @@ Specifies if regex field-type should be allowed. Regex field-type has significan
 
 Module usage
 ------------
-.. _param-mmnormalize-module-allow-regex:
-.. _mmnormalize.parameter.module.allow-regex-usage:
+.. _param-mmnormalize-module-allowregex:
+.. _mmnormalize.parameter.module.allowregex-usage:
 
 .. code-block:: rsyslog
 

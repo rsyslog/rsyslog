@@ -1,5 +1,5 @@
 .. _param-mmnormalize-path:
-.. _mmnormalize.parameter.input.path:
+.. _mmnormalize.parameter.action.path:
 
 path
 ====
@@ -17,9 +17,9 @@ Sets the JSON path where parsed elements are stored.
 This parameter applies to :doc:`../../configuration/modules/mmnormalize`.
 
 :Name: path
-:Scope: input
+:Scope: action
 :Type: word
-:Default: input=$!
+:Default: action=$!
 :Required?: no
 :Introduced: at least 6.1.2, possibly earlier
 
@@ -27,10 +27,10 @@ Description
 -----------
 Specifies the JSON path under which parsed elements should be placed. By default, all parsed properties are merged into root of message properties. You can place them under a subtree, instead. You can place them in local variables, also, by setting path="$.".
 
-Input usage
------------
-.. _param-mmnormalize-input-path:
-.. _mmnormalize.parameter.input.path-usage:
+Action usage
+-------------
+.. _param-mmnormalize-action-path:
+.. _mmnormalize.parameter.action.path-usage:
 
 .. code-block:: rsyslog
 

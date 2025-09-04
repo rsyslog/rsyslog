@@ -1,5 +1,5 @@
 .. _param-mmnormalize-rule:
-.. _mmnormalize.parameter.input.rule:
+.. _mmnormalize.parameter.action.rule:
 
 rule
 ====
@@ -17,9 +17,9 @@ Builds the rulebase from an array of strings.
 This parameter applies to :doc:`../../configuration/modules/mmnormalize`.
 
 :Name: rule
-:Scope: input
+:Scope: action
 :Type: array
-:Default: input=
+:Default: none
 :Required?: yes
 :Introduced: 8.26.0
 
@@ -29,10 +29,10 @@ Description
 
 Contains an array of strings which will be put together as the rulebase. This parameter or **ruleBase** MUST be given, because normalization can only happen based on a rulebase.
 
-Input usage
------------
-.. _param-mmnormalize-input-rule:
-.. _mmnormalize.parameter.input.rule-usage:
+Action usage
+-------------
+.. _param-mmnormalize-action-rule:
+.. _mmnormalize.parameter.action.rule-usage:
 
 .. code-block:: rsyslog
 
