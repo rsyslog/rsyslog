@@ -63,6 +63,8 @@ docker run $ti $optrm $DOCKER_RUN_EXTRA_OPTS \
 	-e ABORT_ALL_ON_TEST_FAIL \
 	-e USE_AUTO_DEBUG \
 	-e RSYSLOG_STATSURL \
+	-e CODECOV_commit_sha \
+	-e CODECOV_repo_slug \
 	-e VCS_SLUG \
 	--cap-add SYS_ADMIN \
 	--cap-add SYS_PTRACE \

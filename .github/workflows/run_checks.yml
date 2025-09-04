@@ -63,6 +63,8 @@ jobs:
       - name: run container CI pipeline
         run: |
           chmod -R go+rw .
+          export CODECOV_repo_slug="$(git config --get remote.origin.url | sed -E 's#.*[:/]([^/]+/[^/.]+)(\\.git)?$#\1#')"
+          export CODECOV_commit_sha="$(git rev-parse HEAD)"
           export RSYSLOG_CONTAINER_UID="" # use default
           export RSYSLOG_STATSURL='http://build.rsyslog.com/testbench-failedtest.php'
           export CFLAGS='-g'
