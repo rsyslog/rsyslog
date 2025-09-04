@@ -145,9 +145,9 @@ jobs:
               export CI_CHECK_CMD='distcheck'
               export ABORT_ALL_ON_TEST_FAIL='YES'
               ;;
-          'ubuntu_22_san')
+          'ubuntu_24_san')
               export CI_SANITIZE_BLACKLIST='tests/asan.supp'
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
               export CC='clang'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
                       --disable-libfaketime --without-valgrind-testbench --disable-valgrind \
