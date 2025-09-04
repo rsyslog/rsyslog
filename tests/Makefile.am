@@ -391,6 +391,7 @@ TESTS +=  \
 	suspend-omfwd-via-file.sh \
 	externalstate-failed-rcvr.sh \
 	rcvr_fail_restore.sh \
+	rscript_b64_decode.sh \
 	rscript_contains.sh \
 	rscript_bare_var_root.sh \
 	rscript_bare_var_root-empty.sh \
@@ -551,6 +552,7 @@ TESTS +=  \
 	include-obj-outside-control-flow-vg.sh \
 	include-obj-in-if-vg.sh \
 	include-obj-text-vg.sh \
+	rscript_b64_decode-vg.sh \
 	rscript_parse_json-vg.sh \
 	rscript_backticks-vg.sh \
 	rscript_backticks_empty_envvar.sh \
@@ -2111,6 +2113,8 @@ EXTRA_DIST= \
 	rscript_http_request-vg.sh \
 	rscript_bare_var_root.sh \
 	rscript_bare_var_root-empty.sh \
+	rscript_b64_decode.sh \
+	rscript_b64_decode-vg.sh \
 	rscript_contains.sh \
 	rscript_ipv42num.sh \
 	rscript_field.sh \
