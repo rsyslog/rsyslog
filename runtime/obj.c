@@ -1154,7 +1154,10 @@ finalize_it:
  * a pointer to the objects interface.
  * rgerhards, 2008-02-29
  */
-static ATTR_NO_SANITIZE_UNDEFINED rsRetVal UseObj(const char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf) {
+static ATTR_NO_SANITIZE_UNDEFINED rsRetVal UseObj(const char *srcFile,
+                                                  uchar *pObjName,
+                                                  uchar *pObjFile,
+                                                  interface_t *pIf) {
     DEFiRet;
     objInfo_t *pObjInfo;
 
