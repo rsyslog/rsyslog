@@ -28,7 +28,7 @@ Description
 .. versionadded:: 8.26.0
 
 Contains an array of strings which will be put together as the rulebase. This
-parameter or ``ruleBase`` MUST be given, because normalization can only happen
+parameter or :ref:`param-mmnormalize-rulebase` MUST be given, because normalization can only happen
 based on a rulebase.
 
 Action usage
