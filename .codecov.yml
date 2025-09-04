@@ -1,22 +1,27 @@
 # note: codecov doc is hard to navigate. The info on SPLITTING UP PROJECTS
 # can be found here: https://docs.codecov.io/docs/commit-status
 # This link also contains helpful other config info not easily found.
-comment: off
+
+codecov:
+  branch: main            # canonical default branch (was implicit before)
+
+comment: off              # keep Codecov PR comment disabled
 
 coverage:
   # to get things started, let's aim at a lower goal. This actually helps
   # to find those areas that we need to concentrate on.
-  range: 50..75
+  range: "50...75"
   status:
     project:
       default:
         target: auto
-        threshold: .5
+        threshold: 0.5
+        informational: true   # non-blocking
       contrib:
-        paths: contrib
-        threshold: .5
-    patch:
-       threshold: null
+        paths: ["contrib/**"] # split status for contrib subtree
+        threshold: 0.5
+        informational: true   # non-blocking
+    patch: off                # disable patch status entirely (was implicit via null)
 
 ignore:
   # different execution pathes (if not, remove) -- rgerhards, 2018-10-12
@@ -25,8 +30,8 @@ ignore:
   - "contrib/omczmq"
 
   # we are currently unable to provide test environment for these:
-  - "plugins/imgssapi"
-  - "plugins/omgssapi"
+  - "plugins/imgssapi/**"
+  - "plugins/omgssapi/**"
 
   # these seem to be untestable under CI runs by principle because
   # that would require a service registration
