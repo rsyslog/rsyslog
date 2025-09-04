@@ -20,7 +20,6 @@
 # https://github.com/settings/notifications
 # https://software.opensuse.org//download.html?project=home%3Argerhards&package=rsyslog
 
-
 ---
 name: check systemd journal
 
@@ -50,6 +49,7 @@ jobs:
               | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home:rgerhards.gpg > /dev/null
           sudo apt-get update
           sudo apt-get install -y \
+            lcov \
             libestr-dev \
             libgcrypt20-dev \
             libglib2.0-dev \
@@ -90,7 +90,15 @@ jobs:
              rm -r libfastjson && \
              cd ..
 
+      - name: enable coverage flags
+        run: |
+          echo 'CFLAGS=-g -O0 --coverage' >> "$GITHUB_ENV"
+          echo 'LDFLAGS=--coverage' >> "$GITHUB_ENV"
+
       - name: prepare for build
+        env:
+          CFLAGS: ${{ env.CFLAGS }}
+          LDFLAGS: ${{ env.LDFLAGS }}
         run: |
           autoreconf -fvi
           ./configure --enable-silent-rules --enable-testbench \
@@ -107,12 +115,52 @@ jobs:
              --enable-compile-warnings=error --disable-helgrind --disable-uuid --disable-fmhttp
 
       - name: build
-        run: |
-          make -j
+        env:
+          CFLAGS: ${{ env.CFLAGS }}
+          LDFLAGS: ${{ env.LDFLAGS }}
+        run: make -j
 
       - name: make check
+        env:
+          CFLAGS: ${{ env.CFLAGS }}
+          LDFLAGS: ${{ env.LDFLAGS }}
+        run: make -j8 check
+
+      - name: generate coverage (lcov)
+        if: ${{ always() }}
         run: |
-          make -j8 check
+          # capture; tolerate macro/line-mapping quirks and normalise unexecuted blocks
+          lcov --capture --directory . \
+               --rc geninfo_unexecuted_blocks=1 \
+               --ignore-errors mismatch \
+               --output-file coverage.raw.info
+
+          # optional pruning to reduce noise
+          lcov --remove coverage.raw.info '/usr/*' '*/tests/*' -o coverage.info || true
+          rm -f coverage.raw.info
+
+          # sanity: list summary and ensure file exists (non-empty)
+          lcov --list coverage.info | sed -n '1,60p' || true
+          [ -s coverage.info ] || { echo "coverage.info is empty"; exit 1; }
+
+      # Same-repo PRs: use org/repo secret (protected branches need token)
+      - name: Upload coverage to Codecov (internal)
+        if: ${{ always() && github.event.pull_request.head.repo.full_name == github.repository }}
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.info
+          flags: journal
+          fail_ci_if_error: false
+
+      # Forked PRs: tokenless upload
+      - name: Upload coverage to Codecov (fork PR)
+        if: ${{ always() && github.event.pull_request.head.repo.full_name != github.repository }}
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.info
+          flags: journal
+          fail_ci_if_error: false
 
       - name: show error logs (if we errored)
         if:  ${{ failure() || cancelled() }}
