@@ -25,7 +25,10 @@ This parameter applies to :doc:`../../configuration/modules/mmnormalize`.
 
 Description
 -----------
-Specifies if regex field-type should be allowed. Regex field-type has significantly higher computational overhead compared to other fields, so it should be avoided when another field-type can achieve the desired effect. Needs to be "on" for regex field-type to work.
+Specifies if regex field-type should be allowed. Regex field-type has
+significantly higher computational overhead compared to other fields, so it
+should be avoided when another field-type can achieve the desired effect.
+Needs to be ``on`` for regex field-type to work.
 
 Module usage
 ------------

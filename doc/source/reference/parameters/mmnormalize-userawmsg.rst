@@ -25,7 +25,8 @@ This parameter applies to :doc:`../../configuration/modules/mmnormalize`.
 
 Description
 -----------
-Specifies if the raw message should be used for normalization (on) or just the MSG part of the message (off).
+Specifies if the raw message should be used for normalization (``on``) or just
+the MSG part of the message (``off``).
 
 Action usage
 -------------

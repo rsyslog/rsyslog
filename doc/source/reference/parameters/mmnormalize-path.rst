@@ -25,7 +25,10 @@ This parameter applies to :doc:`../../configuration/modules/mmnormalize`.
 
 Description
 -----------
-Specifies the JSON path under which parsed elements should be placed. By default, all parsed properties are merged into root of message properties. You can place them under a subtree, instead. You can place them in local variables, also, by setting path="$.".
+Specifies the JSON path under which parsed elements should be placed. By
+default, all parsed properties are merged into root of message properties. You
+can place them under a subtree, instead. You can place them in local
+variables, also, by setting ``path="$."``.
 
 Action usage
 -------------

@@ -37,7 +37,8 @@ Module Parameters
 
 .. note::
 
-   Parameter names are case-insensitive; camelCase is recommended for readability.
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
 
 .. list-table::
    :widths: 30 70
@@ -55,7 +56,8 @@ Action Parameters
 
 .. note::
 
-   Parameter names are case-insensitive; camelCase is recommended for readability.
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
 
 .. list-table::
    :widths: 30 70

@@ -10,7 +10,8 @@ variable
 
 .. summary-start
 
-Normalizes the content of a specified variable instead of the default msg property.
+Normalizes the content of a specified variable instead of the default ``msg``
+property.
 
 .. summary-end
 
@@ -27,7 +28,10 @@ Description
 -----------
 .. versionadded:: 8.5.1
 
-Specifies if a variable instead of property 'msg' should be used for normalization. A variable can be property, local variable, json-path etc. Please note that **useRawMsg** overrides this parameter, so if **useRawMsg** is set, **variable** will be ignored and raw message will be used.
+Specifies if a variable instead of property ``msg`` should be used for
+normalization. A variable can be property, local variable, json-path etc.
+Please note that ``useRawMsg`` overrides this parameter, so if ``useRawMsg``
+is set, ``variable`` will be ignored and raw message will be used.
 
 Action usage
 -------------

@@ -25,7 +25,13 @@ This parameter applies to :doc:`../../configuration/modules/mmnormalize`.
 
 Description
 -----------
-Specifies which rulebase file is to use. If there are multiple mmnormalize instances, each one can use a different file. However, a single instance can use only a single file. This parameter or **rule** MUST be given, because normalization can only happen based on a rulebase. It is recommended that an absolute path name is given. Information on how to create the rulebase can be found in the `liblognorm manual <http://www.liblognorm.com/files/manual/index.html>`_.
+Specifies which rulebase file is to use. If there are multiple mmnormalize
+instances, each one can use a different file. However, a single instance can
+use only a single file. This parameter or ``rule`` MUST be given, because
+normalization can only happen based on a rulebase. It is recommended that an
+absolute path name is given. Information on how to create the rulebase can
+be found in the
+`liblognorm manual <http://www.liblognorm.com/files/manual/index.html>`_.
 
 Action usage
 -------------
