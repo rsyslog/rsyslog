@@ -58,8 +58,9 @@ if [ "$CI_CODECOV_TOKEN" != "" ]; then
         curl -Os https://uploader.codecov.io/latest/linux/codecov
         curl -Os https://uploader.codecov.io/latest/linux/codecov.SHA256SUM
         if ! sha256sum -c codecov.SHA256SUM; then
-                echo 'SHA256 verification for Codecov uploader failed'
+                echo 'SHA256 verification for Codecov uploader failed' >&2
                 rm -f codecov codecov.SHA256SUM
+                exit 1
         else
                 chmod +x codecov
                 printf "repo slug %s, commit_sha %s\n" "$CODECOV_repo_slug" "$CODECOV_commit_sha"
