@@ -30,7 +30,7 @@ Description
 
 Specifies if a variable instead of property ``msg`` should be used for
 normalization. A variable can be property, local variable, json-path etc.
-Please note that ``useRawMsg`` overrides this parameter, so if ``useRawMsg``
+Please note that :ref:`param-mmnormalize-userawmsg` overrides this parameter, so if it
 is set, ``variable`` will be ignored and raw message will be used.
 
 Action usage
