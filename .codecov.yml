@@ -13,7 +13,7 @@ coverage:
         target: auto
         threshold: .5
       contrib:
-        paths: contrib
+        paths: ["contrib"]
         threshold: .5
     patch:
        threshold: null
