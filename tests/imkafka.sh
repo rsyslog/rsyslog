@@ -2,7 +2,7 @@
 # added 2018-08-29 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-check_command_available kafkacat
+check_command_available kcat
 export KEEP_KAFKA_RUNNING="YES"
 
 export TESTMESSAGES=100000
@@ -46,7 +46,7 @@ if ($msg contains "msgnum:") then {
 }
 '
 startup
-injectmsg_kafkacat --wait 1 $TESTMESSAGESFULL -d
+injectmsg_kcat --wait 1 $TESTMESSAGESFULL -d
 shutdown_when_empty
 wait_shutdown
 

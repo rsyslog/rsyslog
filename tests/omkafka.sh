@@ -3,7 +3,7 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 test_status unreliable 'https://github.com/rsyslog/rsyslog/issues/3197'
-check_command_available kafkacat
+check_command_available kcat
 
 export KEEP_KAFKA_RUNNING="YES"
 export TESTMESSAGES=100000
@@ -78,7 +78,7 @@ injectmsg 1 $TESTMESSAGES
 
 wait_file_lines $RSYSLOG_OUT_LOG $TESTMESSAGESFULL 100
 
-# experimental: wait until kafkacat receives everything
+# experimental: wait until kcat receives everything
 
 timeoutend=100
 timecounter=0
@@ -86,7 +86,7 @@ timecounter=0
 while [ $timecounter -lt $timeoutend ]; do
 	(( timecounter++ ))
 
-	kafkacat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%s' > $RSYSLOG_OUT_LOG
+	kcat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%s' > $RSYSLOG_OUT_LOG
 	count=$(wc -l < ${RSYSLOG_OUT_LOG})
 	if [ $count -eq $TESTMESSAGESFULL ]; then
 		printf '**** wait-kafka-lines success, have %d lines ****\n\n' "$TESTMESSAGESFULL"
@@ -115,8 +115,8 @@ echo Stopping sender instance [omkafka]
 shutdown_when_empty
 wait_shutdown
 
-#kafkacat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%s' > $RSYSLOG_OUT_LOG
-#kafkacat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%p@%o:%k:%s' > $RSYSLOG_OUT_LOG.extra
+#kcat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%s' > $RSYSLOG_OUT_LOG
+#kcat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%p@%o:%k:%s' > $RSYSLOG_OUT_LOG.extra
 
 # Delete topic to remove old traces before
 delete_kafka_topic $RANDTOPIC '.dep_wrk' '22181'

@@ -445,11 +445,11 @@ kafka_check_broken_broker() {
 	fi
 }
 
-# inject messages via kafkacat tool (for imkafka tests)
+# inject messages via kcat tool (for imkafka tests)
 # $1 == "--wait" means wait for rsyslog to receive TESTMESSAGES lines in RSYSLOG_OUT_LOG
 # $TESTMESSAGES contains number of messages to inject
 # $RANDTOPIC contains topic to produce to
-injectmsg_kafkacat() {
+injectmsg_kcat() {
 	if [ "$1" == "--wait" ]; then
 		wait="YES"
 		shift
@@ -458,7 +458,7 @@ injectmsg_kafkacat() {
 		printf 'TESTBENCH ERROR: TESTMESSAGES env var not set!\n'
 		error_exit 1
 	fi
-	MAXATONCE=25000 # how many msgs should kafkacat send? - hint: current version errs out above ~70000
+	MAXATONCE=25000 # how many msgs should kcat send? - hint: current version errs out above ~70000
 	i=1
 	while (( i<=TESTMESSAGES )); do
 		currmsgs=0
@@ -466,14 +466,14 @@ injectmsg_kafkacat() {
 			printf ' msgnum:%8.8d\n' $i;
 			i=$((i + 1))
 			currmsgs=$((currmsgs+1))
-		done  > "$RSYSLOG_DYNNAME.kafkacat.in"
+		done  > "$RSYSLOG_DYNNAME.kcat.in"
 		set -e
-		kafkacat -P -b localhost:29092 -t $RANDTOPIC <"$RSYSLOG_DYNNAME.kafkacat.in" 2>&1 | tee >$RSYSLOG_DYNNAME.kafkacat.log
+		kcat -P -b localhost:29092 -t $RANDTOPIC <"$RSYSLOG_DYNNAME.kcat.in" 2>&1 | tee >$RSYSLOG_DYNNAME.kcat.log
 		set +e
-		printf 'kafkacat injected %d msgs so far\n' $((i - 1))
-		kafka_check_broken_broker $RSYSLOG_DYNNAME.kafkacat.log
-		check_not_present "ERROR" $RSYSLOG_DYNNAME.kafkacat.log
-		cat $RSYSLOG_DYNNAME.kafkacat.log
+		printf 'kcat injected %d msgs so far\n' $((i - 1))
+		kafka_check_broken_broker $RSYSLOG_DYNNAME.kcat.log
+		check_not_present "ERROR" $RSYSLOG_DYNNAME.kcat.log
+		cat $RSYSLOG_DYNNAME.kcat.log
 	done
 
 	if [ "$wait" == "YES" ]; then

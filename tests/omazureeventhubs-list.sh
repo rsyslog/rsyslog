@@ -94,7 +94,7 @@ tcpflood -m$NUMMESSAGES -i1
 
 wait_file_lines $RSYSLOG_OUT_LOG $NUMMESSAGESFULL 100
 
-# experimental: wait until kafkacat receives everything
+# experimental: wait until kcat receives everything
 timeoutend=$WAITTIMEOUT
 timecounter=0
 
