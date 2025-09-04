@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
+- 2025-09-04: build: use pkg_config for libgcrypt
+  This fixes failing builds in newer platforms.
+  Old method had been depricated and finally is no longer available. We fall
+  back to old method if pkg_config for libgcrypt is not available on the build
+  system.
+  Thanks to github user schrotthaufen for the patch.
 - 2025-09-03: omrelp: keep-alive support added
 - 2025-09-03: build: some cross-platform enhancents, especially for
   MacOS/Darwin
