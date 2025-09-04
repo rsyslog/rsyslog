@@ -3,11 +3,10 @@
 FROM	ubuntu:24.04
 ENV	DEBIAN_FRONTEND="noninteractive"
 RUN 	apt-get update && \
-	apt-get upgrade -y
-RUN	apt-get install -y \
+	apt-get upgrade -y && \
+	apt-get install -y \
 	autoconf \
-	autoconf-archive
-RUN	apt-get install -y \
+	autoconf-archive \
 	automake \
 	autotools-dev \
 	bison \
@@ -19,8 +18,7 @@ RUN	apt-get install -y \
 	swig \
 	python3-dev \
 	ruby-dev \
-	python3-sphinx 
-RUN	apt-get install -y \
+	python3-sphinx \
 	default-jdk \
 	default-jre \
 	faketime libdbd-mysql \
@@ -31,6 +29,7 @@ RUN	apt-get install -y \
 	git \
 	libaprutil1-dev \
 	libbson-dev \
+	libcivetweb-dev \
 	libcap-ng-dev \
 	libcap-ng0 \
 	libcurl4-gnutls-dev \
@@ -107,12 +106,6 @@ RUN	apt-get update -y && \
 
 # create dependency cache
 RUN	mkdir /local_dep_cache
-#RUN	wget -nv https://www.rsyslog.com/files/download/rsyslog/elasticsearch-7.14.1-linux-x86_64.tar.gz -O /local_dep_cache/elasticsearch-7.14.1-linux-x86_64.tar.gz
-RUN	wget -nv https://dlcdn.apache.org/zookeeper/zookeeper-3.9.3/apache-zookeeper-3.9.3-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.9.3-bin.tar.gz
-RUN	wget -nv https://www.apache.org/dyn/closer.cgi?path=/kafka/2.8.0/kafka_2.13-2.8.0.tgz -O /local_dep_cache/kafka_2.13-2.8.0.tgz
-# tell tests which are the newester versions, so they can be checked without the need
-# to adjust test sources.
-#ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
 
 
 # for clickhouse, the container requires some pre-generated files for TLS. generate them via
@@ -285,15 +278,6 @@ RUN	cd helper-projects \
 	&& (unset CFLAGS; ./configure --prefix=/usr --CFLAGS="-g" ; make -j) \
 	&& make install \
 	&& cd .. \
-	&& cd ..
-
-# we need civetweb, as there are no packages for it
-RUN	cd helper-projects && \
-	git clone https://github.com/civetweb/civetweb.git \
-	&& cd civetweb \
-	&& (unset CFLAGS; make -j build COPT="-DREENTRANT_TIME"; make install-headers ; make install-slib ) \
-	&& cd .. \
-	&& rm -rf civetweb \
 	&& cd ..
 
 RUN	pip install pyasn1 pysnmp --break-system-packages --upgrade

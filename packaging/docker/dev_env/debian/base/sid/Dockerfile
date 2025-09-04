@@ -1,6 +1,6 @@
 # container for rsyslog development
 # creates the build environment
-FROM	debian:13
+FROM	debian:sid
 ENV	DEBIAN_FRONTEND=noninteractive
 RUN 	apt-get update && \
 	apt-get upgrade -y
@@ -79,7 +79,6 @@ RUN	apt-get update -y && \
 # Create libgcrypt-config wrapper for Debian 13 compatibility
 # (libgcrypt-config is not provided in Debian 13, but pkg-config is available)
 RUN	printf '#!/bin/sh\ncase "$1" in\n  --version)\n    echo "%s"\n    ;;\n  --cflags)\n    pkg-config --cflags libgcrypt\n    ;;\n  --libs)\n    pkg-config --libs libgcrypt\n    ;;\n  *)\n    echo "Usage: $0 {--version|--cflags|--libs}"\n    exit 1\n    ;;\nesac\n' "$(pkg-config --modversion libgcrypt)" > /usr/bin/libgcrypt-config && chmod +x /usr/bin/libgcrypt-config
-#	clang-tools-17
 #	libfastjson-dev 
 #	libczmq-dev 
 #	clang-17 
