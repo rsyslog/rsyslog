@@ -59,7 +59,6 @@ rsRetVal klogLogKMsg(modConfData_t *pModConf);
 rsRetVal klogWillRunPrePrivDrop(modConfData_t *pModConf);
 rsRetVal klogWillRunPostPrivDrop(modConfData_t *pModConf);
 rsRetVal klogAfterRun(modConfData_t *pModConf);
-int klogFacilIntMsg();
 
 /* the functions below may be called by the drivers */
 rsRetVal imkmsgLogIntMsg(syslog_pri_t priority, const char *fmt, ...) __attribute__((format(printf, 2, 3)));

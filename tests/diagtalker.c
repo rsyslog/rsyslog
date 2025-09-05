@@ -112,7 +112,7 @@ static void waitRsp(int fd, char *buf, int len) {
 
 /* do the actual processing
  */
-static void doProcessing() {
+static void doProcessing(void) {
     int fd;
     int len;
     char line[2048];

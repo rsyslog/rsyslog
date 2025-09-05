@@ -53,7 +53,7 @@ static void hdlr_sighup(int sig) {
     fprintf(stderr, "inputfilegen: had hup, sig %d\n", sig);
     bHadHUP = 1;
 }
-static void sighup_enable() {
+static void sighup_enable(void) {
     struct sigaction sigAct;
     memset(&sigAct, 0, sizeof(sigAct));
     sigemptyset(&sigAct.sa_mask);

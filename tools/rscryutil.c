@@ -415,10 +415,10 @@ static int gcryDoDecrypt(FILE __attribute__((unused)) * logfp,
                          FILE __attribute__((unused)) * outfp) {
     return 0;
 }
-static int rsgcryAlgoname2Algo() {
+static int rsgcryAlgoname2Algo(char *const __attribute__((unused)) algoname) {
     return 0;
 }
-static int rsgcryModename2Mode() {
+static int rsgcryModename2Mode(char *const __attribute__((unused)) modename) {
     return 0;
 }
 #endif
