@@ -52,29 +52,6 @@ fi
 AC_PROG_LIBTOOL
 AC_CANONICAL_HOST
 
-if test "$GCC" = "yes"
-then
-	m4_ifdef([AX_IS_RELEASE], [
-		AX_IS_RELEASE([git-directory])
-		m4_ifdef([AX_COMPILER_FLAGS], [
-			AX_COMPILER_FLAGS(,,,,[-Wunused-parameter -Wmissing-field-initializers])
-			# unfortunately, AX_COMPILER_FLAGS does not provide a way to override
-			# the default -Wno-error=warning" flags. So we do this via sed below.
-			# Note: we *really* want to have this error out during CI testing!
-			# rgerhards, 2018-05-09
-			WARN_CFLAGS="$(echo "$WARN_CFLAGS" | sed s/-Wno-error=/-W/g)"
-		], [
-			CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
-			AC_MSG_WARN([missing AX_COMPILER_FLAGS macro, not using it])
-		])
-	], [
-		CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
-		AC_MSG_WARN([missing AX_IS_RELEASE macro, not using AX_COMPILER_FLAGS macro because of this])
-	])
-else
-	AC_MSG_WARN([compiler is not GCC or close compatible, not using ax_compiler_flags because of this (CC=$CC)])
-fi
-
 PKG_PROG_PKG_CONFIG
 
 AC_ARG_VAR(CONF_FILE_PATH, Configuration file path (default : /etc/rsyslog.conf))
@@ -338,6 +315,36 @@ case "${enable_largefile}" in
   no) ;;
   *) enable_largefile="yes" ;;
 esac
+
+if test "$GCC" = "yes"
+then
+	m4_ifdef([AX_IS_RELEASE], [
+		AX_IS_RELEASE([git-directory])
+		m4_ifdef([AX_COMPILER_FLAGS], [
+			AX_COMPILER_FLAGS(,,,,[-Wunused-parameter -Wmissing-field-initializers])
+			# unfortunately, AX_COMPILER_FLAGS does not provide a way to override
+			# the default -Wno-error=warning" flags. So we do this via sed below.
+			# Note: we *really* want to have this error out during CI testing!
+			# rgerhards, 2018-05-09
+			WARN_CFLAGS="$(echo "$WARN_CFLAGS" | sed s/-Wno-error=/-W/g)"
+
+            # AX_COMPILER_FLAGS does not reliably enable -Werror.
+            # So explicitly add -Werror if it's a git checkout.
+            # This bypasses the problematic check in AX_COMPILER_FLAGS.
+            if test "$ax_is_release" = "no"; then
+                CFLAGS="$CFLAGS -Werror"
+            fi
+		], [
+			CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+			AC_MSG_WARN([missing AX_COMPILER_FLAGS macro, not using it])
+		])
+	], [
+		CFLAGS="$CFLAGS -W -Wall -Wformat-security -Wshadow -Wcast-align -Wpointer-arith -Wmissing-format-attribute -g"
+		AC_MSG_WARN([missing AX_IS_RELEASE macro, not using AX_COMPILER_FLAGS macro because of this])
+	])
+else
+	AC_MSG_WARN([compiler is not GCC or close compatible, not using ax_compiler_flags because of this (CC=$CC)])
+fi
 
 # Regular expressions
 AC_ARG_ENABLE(regexp,
