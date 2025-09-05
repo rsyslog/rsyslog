@@ -28,7 +28,7 @@ Configuration Parameters
 ========================
 
 .. note::
-
+   This module has no module-level parameters. All parameters listed below are for actions.
    Parameter names are case-insensitive; camelCase is recommended for readability.
 
 .. list-table::

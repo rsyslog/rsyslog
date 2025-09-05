@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/mmrfc5424addhmac`.
 
 Description
 -----------
-The "key" (string) to be used to generate the HMAC.
+The key to be used to generate the HMAC.
 
 Action usage
 ------------
