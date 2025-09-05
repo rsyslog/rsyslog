@@ -3025,6 +3025,10 @@ rst_files=`cd "$srcdir" && find doc/source -type f -name '*.rst' -print 2>/dev/n
 # assemble; keep paths relative to top (we cd into $srcdir above)
 DOC_FILES="$rst_files
 doc/source/conf.py
+doc/source/conf_helpers.py
+doc/source/_ext/edit_on_github.py
+doc/source/_ext/rsyslog_lexer.py
+doc/source/_static/rsyslog.css
 doc/requirements.txt
 doc/README.md
 doc/STRATEGY.md
