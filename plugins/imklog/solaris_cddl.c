@@ -169,7 +169,7 @@ int sun_openklog(char *name, int mode) {
 /*
  * Pull up one message from log driver.
  */
-void sun_getkmsg() {
+static void sun_getkmsg(void) {
     int flags = 0, i;
     char *lastline;
     struct strbuf ctl, dat;
@@ -249,7 +249,7 @@ void sun_getkmsg() {
  * thread.
  */
 /*ARGSUSED*/
-void *sun_sys_poll() {
+void *sun_sys_poll(void) {
     int nfds;
 
     dbgprintf("klog:sys_poll: sys_thread started\n");

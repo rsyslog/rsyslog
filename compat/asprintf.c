@@ -47,6 +47,6 @@ int asprintf(char **strp, const char *fmt, ...) {
 #else
     /* XLC needs at least one method in source file even static to compile */
     #ifdef __xlc__
-static void dummy() {}
+static void dummy(void) {}
     #endif
 #endif /* #ifndef HAVE_ASPRINTF */

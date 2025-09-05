@@ -55,7 +55,7 @@ static long long fileSize = 1024 * 1024; /* file size in K, 1MB default */
 /* generate the random file. This code really can be improved (e.g. read /dev/urandom
  * when available)
  */
-static void genFile() {
+static void genFile(void) {
     long i;
     FILE *fp;
     FILE *rfp = NULL;

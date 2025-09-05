@@ -989,7 +989,7 @@ static void *thrdStarter(void *arg) {
  * parameter blocks and starts threads. It returns when all threads are ready to run
  * and the main task must just enable them.
  */
-static void prepareGenerators() {
+static void prepareGenerators(void) {
     int i;
     long long msgsThrd;
     long long starting = 0;
@@ -1031,7 +1031,7 @@ static void prepareGenerators() {
 /* Let all generators run. Threads must have been started. Here we wait until
  * all threads are initialized and then broadcast that they can begin to run.
  */
-static void runGenerators() {
+static void runGenerators(void) {
     pthread_mutex_lock(&thrdMgmt);
     while (runningThreads != numThrds) {
         pthread_cond_wait(&condStarted, &thrdMgmt);
@@ -1044,7 +1044,7 @@ static void runGenerators() {
 
 /* Wait for all traffic generators to stop.
  */
-static void waitGenerators() {
+static void waitGenerators(void) {
     int i;
     for (i = 0; i < numThrds; ++i) {
         pthread_join(instarray[i].thread, NULL);
@@ -1568,7 +1568,7 @@ static void closeTLSSess(int i) {
 
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"
-static void initDTLSSess() {
+static void initDTLSSess(void) {
     int res;
     BIO *bio_client;
 
@@ -1676,7 +1676,7 @@ static int sendDTLS(char *buf, size_t lenBuf) {
     return lenSent;
 }
 
-static void closeDTLSSess() {
+static void closeDTLSSess(void) {
     printf("closeDTLSSess ENTER\n");
 
     int r;

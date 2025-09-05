@@ -54,7 +54,7 @@ static int batchsize = 1000;
 
 /* read the input file and create in-memory representation
  */
-static void readFile() {
+static void readFile(void) {
     char *r;
     char lnBuf[10240];
     struct line *node;
@@ -89,7 +89,7 @@ static void readFile() {
 }
 
 
-static void genCopies() {
+static void genCopies(void) {
     long long i;
     long long unsigned lnnbr;
     struct line *node;
