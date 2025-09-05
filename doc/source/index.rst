@@ -57,3 +57,5 @@ Contributing to Documentation
 This documentation is hosted on `GitHub
 <https://github.com/rsyslog/rsyslog/tree/main/doc>`_. Use the "Edit in
 GitHub" button on any page to suggest improvements.
+
+dummychange 2
