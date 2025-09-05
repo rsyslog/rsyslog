@@ -23,30 +23,42 @@ be used, the recommended calling sequence is
 with that sequence, the generated hash will become available for
 mmpstrucdata.
 
- 
 
-**Module Configuration Parameters**:
+Configuration Parameters
+========================
 
-Note: parameter names are case-insensitive.
+.. note::
 
-Currently none.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
- 
+.. toctree::
+   :hidden:
 
-**Action Configuration Parameters**:
+   ../../reference/parameters/mmrfc5424addhmac-key
+   ../../reference/parameters/mmrfc5424addhmac-hashfunction
+   ../../reference/parameters/mmrfc5424addhmac-sd-id
 
-Note: parameter names are case-insensitive.
+Action Parameters
+-----------------
 
--  **key**
-   The "key" (string) to be used to generate the hmac.
--  **hashfunction**
-   An openssl hash function name for the function to be used. This is
-   passed on to openssl, so see the openssl list of supported function
-   names.
--  **sd\_id**
-   The RFC5424 structured data ID to be used by this module. This is
-   the SD-ID that will be added. Note that nothing is added if this
-   SD-ID is already present.
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Parameter
+     - Summary
+   * - :ref:`param-mmrfc5424addhmac-key`
+     - .. include:: ../../reference/parameters/mmrfc5424addhmac-key.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmrfc5424addhmac-hashfunction`
+     - .. include:: ../../reference/parameters/mmrfc5424addhmac-hashfunction.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmrfc5424addhmac-sd-id`
+     - .. include:: ../../reference/parameters/mmrfc5424addhmac-sd-id.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 **Verification method**
 
