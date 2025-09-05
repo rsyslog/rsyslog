@@ -49,7 +49,7 @@ jobs:
       # When set to true, cancel all in-progress jobs if any matrix job fails.
       fail-fast: false
       matrix:
-        config: [centos_7, centos_8, debian_11, debian_13,
+        config: [centos_7, centos_8, debian_sid, debian_13,
                  ubuntu_24_imtcp_no_epoll,
                  fedora_41, fedora_42,
                  ubuntu_18, ubuntu_20, ubuntu_24,
@@ -85,8 +85,8 @@ jobs:
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
                             --disable-snmp-tests --enable-imdtls --enable-omdtls"
               ;;
-          'debian_11')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_debian:11'
+          'debian_sid')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_debian:sid'
               export CI_VALGRIND_SUPPRESSIONS='centos7.supp'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --disable-kafka-tests \
                             --without-valgrind-testbench --enable-imdtls --enable-omdtls"
