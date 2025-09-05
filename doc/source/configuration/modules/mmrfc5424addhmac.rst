@@ -31,16 +31,6 @@ Configuration Parameters
 
    Parameter names are case-insensitive; camelCase is recommended for readability.
 
-.. toctree::
-   :hidden:
-
-   ../../reference/parameters/mmrfc5424addhmac-key
-   ../../reference/parameters/mmrfc5424addhmac-hashfunction
-   ../../reference/parameters/mmrfc5424addhmac-sd-id
-
-Action Parameters
------------------
-
 .. list-table::
    :widths: 30 70
    :header-rows: 1
@@ -59,6 +49,13 @@ Action Parameters
      - .. include:: ../../reference/parameters/mmrfc5424addhmac-sd-id.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/mmrfc5424addhmac-key
+   ../../reference/parameters/mmrfc5424addhmac-hashfunction
+   ../../reference/parameters/mmrfc5424addhmac-sd-id
 
 **Verification method**
 

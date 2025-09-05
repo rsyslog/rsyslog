@@ -1,12 +1,12 @@
 .. _param-mmrfc5424addhmac-hashfunction:
 .. _mmrfc5424addhmac.parameter.action.hashfunction:
 
-hashfunction
+hashFunction
 ============
 
 .. index::
-   single: mmrfc5424addhmac; hashfunction
-   single: hashfunction
+   single: mmrfc5424addhmac; hashFunction
+   single: hashFunction
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Specifies the OpenSSL hash algorithm used for the HMAC.
 
 This parameter applies to :doc:`../../configuration/modules/mmrfc5424addhmac`.
 
-:Name: hashfunction
+:Name: hashFunction
 :Scope: action
 :Type: string
 :Default: none

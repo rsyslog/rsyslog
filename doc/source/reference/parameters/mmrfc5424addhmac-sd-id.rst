@@ -1,12 +1,12 @@
 .. _param-mmrfc5424addhmac-sd-id:
 .. _mmrfc5424addhmac.parameter.action.sd-id:
 
-sd_id
-=====
+sdId
+====
 
 .. index::
-   single: mmrfc5424addhmac; sd_id
-   single: sd_id
+   single: mmrfc5424addhmac; sdId
+   single: sdId
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Sets the RFC5424 structured data ID added to the message.
 
 This parameter applies to :doc:`../../configuration/modules/mmrfc5424addhmac`.
 
-:Name: sd_id
+:Name: sdId
 :Scope: action
 :Type: word
 :Default: none
