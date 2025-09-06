@@ -43,7 +43,7 @@ jobs:
 
     steps:
       - name: git checkout project
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
 
       - name: run container CI pipeline
         run: |

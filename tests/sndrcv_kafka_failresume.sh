@@ -5,12 +5,11 @@
 echo Init Testbench
 . ${srcdir:=.}/diag.sh init
 
-# *** ==============================================================================
 export TESTMESSAGES=50000
 export TESTMESSAGESFULL=50000
 
 # Generate random topic name
-export RANDTOPIC=$(tr -dc 'a-zA-Z0-9' < /dev/urandom | fold -w 8 | head -n 1)
+export RANDTOPIC="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
 
 # Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.
 export EXTRA_EXITCHECK=dumpkafkalogs

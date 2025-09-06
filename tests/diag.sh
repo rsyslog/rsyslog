@@ -1975,13 +1975,14 @@ start_zookeeper() {
 			rm -f "$ZOOPIDFILE"
 		fi
 	fi
-	if [ "x$1" == "x" ]; then
-		dep_work_dir=$(readlink -f .dep_wrk)
-		dep_work_tk_config="zoo.cfg"
-	else
-		dep_work_dir=$(readlink -f $srcdir/$1)
-		dep_work_tk_config="zoo$1.cfg"
-	fi
+
+  if [ -z "$1" ]; then
+      dep_work_dir=$(readlink -f ".dep_wrk")
+      dep_work_tk_config="zoo.cfg"
+  else
+      dep_work_dir=$(readlink -f "$srcdir/$1")
+      dep_work_tk_config="zoo$1.cfg"
+  fi
 
 	if [ ! -f $dep_zk_cached_file ]; then
 			echo "Dependency-cache does not have zookeeper package, did you download dependencies?"
