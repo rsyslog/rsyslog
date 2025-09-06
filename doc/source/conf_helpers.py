@@ -2,14 +2,20 @@
 
 import datetime
 import re
+import shutil
 import subprocess
+
+# Resolve git executable to avoid relying on PATH (Bandit B607)
+GIT_EXE = shutil.which("git")
+if GIT_EXE is None:
+    raise RuntimeError("git executable not found")
 
 def get_current_branch():
     """Return the current branch we are on or the branch that the detached head
     is pointed to"""
 
     current_branch = subprocess.check_output(
-        ['git', 'rev-parse', '--abbrev-ref', "HEAD"]
+        [GIT_EXE, 'rev-parse', '--abbrev-ref', "HEAD"]
         ).decode("utf-8").strip()
 
     if current_branch == 'HEAD':
@@ -19,7 +25,7 @@ def get_current_branch():
         # Decode "bytes" type to UTF-8 string to avoid Python 3 error:
         # "TypeError: a bytes-like object is required, not 'str'""
         # https://docs.python.org/3/library/stdtypes.html#bytes.decode
-        branches = subprocess.check_output(['git', 'branch']).decode('utf-8').split('\n')
+        branches = subprocess.check_output([GIT_EXE, 'branch']).decode('utf-8').split('\n')
         for branch in branches:
 
             # Git marks the current branch, or in this case the branch
@@ -44,7 +50,7 @@ def get_current_stable_version():
         """"Helper function: Return the latest git tag"""
 
         git_tag_output = subprocess.check_output(
-            ['git', 'tag', '--list', "v*"]
+            [GIT_EXE, 'tag', '--list', "v*"]
             ).decode("utf-8").strip()
 
         git_tag_list = re.sub('[A-Za-z]', '', git_tag_output).split('\n')
@@ -78,7 +84,7 @@ def get_next_stable_version():
 def get_current_commit_hash():
     """Return commit hash string"""
 
-    commit_hash = subprocess.check_output(['git', 'log', '--pretty=format:%h', 'HEAD', '-n1']).decode("utf-8")
+    commit_hash = subprocess.check_output([GIT_EXE, 'log', '--pretty=format:%h', 'HEAD', '-n1']).decode("utf-8")
 
     return commit_hash
 
