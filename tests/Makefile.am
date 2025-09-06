@@ -442,6 +442,7 @@ TESTS +=  \
 	rscript_int2Hex.sh \
 	rscript_trim.sh \
 	rscript_substring.sh \
+	rscript_toupper.sh \
 	rscript_format_time.sh \
 	rscript_parse_time.sh \
 	rscript_is_time.sh \
@@ -2151,6 +2152,7 @@ EXTRA_DIST= \
 	rscript_int2Hex.sh \
 	rscript_trim.sh \
 	rscript_substring.sh \
+	rscript_toupper.sh \
 	rscript_format_time.sh \
 	rscript_parse_time.sh \
 	rscript_parse_time_get-ts.py \

@@ -2115,6 +2115,31 @@ static void ATTR_NONNULL() doFunct_ToLower(struct cnffunc *__restrict__ const fu
     varFreeMembers(&srcVal);
 }
 
+static void ATTR_NONNULL() doFunct_ToUpper(struct cnffunc *__restrict__ const func,
+                                           struct svar *__restrict__ const ret,
+                                           void *__restrict__ const usrptr,
+                                           wti_t *__restrict__ const pWti) {
+    struct svar srcVal;
+    es_str_t *estr;
+    int bMustFree;
+    uchar *p;
+    int i, len;
+
+    cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
+    estr = var2String(&srcVal, &bMustFree);
+    if (!bMustFree) { /* let caller handle that M) */
+        estr = es_strdup(estr);
+    }
+    p = es_getBufAddr(estr);
+    len = es_strlen(estr);
+    for (i = 0; i < len; ++i) {
+        p[i] = toupper((int)p[i]);
+    }
+    ret->datatype = 'S';
+    ret->d.estr = estr;
+    varFreeMembers(&srcVal);
+}
+
 static void ATTR_NONNULL() doFunct_CStr(struct cnffunc *__restrict__ const func,
                                         struct svar *__restrict__ const ret,
                                         void *__restrict__ const usrptr,
@@ -3614,6 +3639,7 @@ static struct scriptFunct functions[] = {
     {"ltrim", 1, 1, doFunct_LTrim, NULL, NULL},
     {"rtrim", 1, 1, doFunct_RTrim, NULL, NULL},
     {"tolower", 1, 1, doFunct_ToLower, NULL, NULL},
+    {"toupper", 1, 1, doFunct_ToUpper, NULL, NULL},
     {"cstr", 1, 1, doFunct_CStr, NULL, NULL},
     {"cnum", 1, 1, doFunct_CNum, NULL, NULL},
     {"ip42num", 1, 1, doFunct_Ipv42num, NULL, NULL},
