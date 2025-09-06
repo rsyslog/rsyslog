@@ -171,10 +171,12 @@ jobs:
               export CC='clang'
               # impstats has known and OK races
               # mmpstrucdata TEMPORARILY disabled because of a threading hang on shutdown
+              # imhttp disabled because of race in civetweb (need to consider different lib)
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --enable-imfile-tests \
                     --disable-impstats --disable-kafka-tests --disable-mmpstrucdata \
                     --disable-clickhouse --disable-clickhouse-tests --disable-kafka-tests \
-                    --disable-libfaketime --without-valgrind-testbench --disable-valgrind"
+                    --disable-libfaketime --disable-imhttp \
+                    --without-valgrind-testbench --disable-valgrind"
               export CFLAGS="-g -fstack-protector -D_FORTIFY_SOURCE=2 -fsanitize=thread \
                     -O0 -fno-omit-frame-pointer -fno-color-diagnostics"
               # note: we need pathes in container, thus /rsyslog vs. $(pwd) in TSAN_OPTIONS
