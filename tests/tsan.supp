@@ -18,3 +18,8 @@ fun:processWorksetItem
 fun:doLogMsg
 
 fun:setSuspendMessageConfVars
+
+# suppress civetweb's gmtime race until built with REENTRANT_TIME
+# right now the only way to do this reliably is to not check for
+# gmtime at all
+fun:gmtime
