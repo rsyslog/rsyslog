@@ -1,5 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
+- 2025-09-06: rainerscript: add toupper() function
+  Add a RainerScript function to convert strings to uppercase. The
+  implementation mirrors tolower() but operates per-byte using
+  toupper(). Tests demonstrate the new function, documentation and
+  ChangeLog entries added.
+  closes: https://github.com/rsyslog/rsyslog/issues/3666
 - 2025-09-06: devtools: Specify usage of clang-format-18 to pin v18
   Thanks to Will Robertson for the patch.
 - 2025-09-05: CI: re-enabled CodeCov integration
