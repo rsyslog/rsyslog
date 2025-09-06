@@ -10,6 +10,7 @@ RUN	dnf -y install \
 	autoconf-archive \
 	automake \
 	bison \
+	civetweb-devel \
 	clang \
 	clang-analyzer \
 	clang18 \
@@ -27,6 +28,7 @@ RUN	dnf -y install \
 	iproute \
 	java-21-openjdk \
 	java-21-openjdk-devel \
+	apr-util-devel \
 	libcurl-devel \
 	libdbi-dbd-mysql \
 	libdbi-devel \
@@ -76,15 +78,6 @@ RUN	dnf -y install \
 ENV	TCL_LIB_SPEC="-L/usr/lib64 -ltcl8.6" \
 	TCL_INCLUDE_SPEC="-I/usr/include"
 
-# create dependency cache
-RUN	mkdir /local_dep_cache && \
-	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.6.9.tar.gz -O /local_dep_cache/elasticsearch-5.6.9.tar.gz && \
-	wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-6.0.0.tar.gz -O /local_dep_cache/elasticsearch-6.0.0.tar.gz && \
-	wget -nv https://dlcdn.apache.org/zookeeper/zookeeper-3.9.3/apache-zookeeper-3.9.3-bin.tar.gz -O /local_dep_cache/apache-zookeeper-3.9.3-bin.tar.gz && \
-	wget -nv https://www.apache.org/dyn/closer.cgi?path=/kafka/2.8.0/kafka_2.13-2.8.0.tgz -O /local_dep_cache/kafka_2.13-2.8.0.tgz
-# tell tests which are the newester versions, so they can be checked without the need
-# to adjust test sources.
-#ENV	ELASTICSEARCH_NEWEST="elasticsearch-6.3.1.tar.gz"
 WORKDIR	/home/devel
 RUN	groupadd rsyslog \
 	&& adduser -g rsyslog  -s /bin/bash rsyslog \
@@ -232,6 +225,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	# See: https://github.com/rsyslog/rsyslog/issues/5996 (create issue)
 	--disable-imczmq \
 	--enable-imdiag \
+	--enable-imhttp \
 	--enable-imfile \
 	--enable-imjournal \
 	--enable-imkafka \
@@ -262,6 +256,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-omamqp1 \
 	--disable-omczmq \
 	--enable-omhiredis \
+	--enable-omhttp \
 	--enable-omhttpfs \
 	--enable-omjournal \
 	--enable-omkafka \
@@ -273,6 +268,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--disable-omrabbitmq \
 	--enable-omrelp-default-port=13515 \
 	--enable-omruleset \
+	--enable-omsendertrack \
 	--enable-omstdout \
 	# TCL module disabled due to missing TCL 8.6 library in Fedora 42
 	# TODO: Re-enable once TCL 8.6 library is available or alternative is found
