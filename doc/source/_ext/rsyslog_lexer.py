@@ -43,7 +43,7 @@ class RainerScriptLexer(RegexLexer):
         'syslogtag', 'protocol-version', 'structured-data', 'app-name',
         'procid', 'msgid', 'pri', 'pri-text', 'syslogfacility',
         'syslogfacility-text', 'syslogseverity', 'syslogseverity-text',
-        'fromhost', 'fromhost-ip', 'remotehost', 'remotehost-ip', 'timereported',
+        'fromhost', 'fromhost-ip', 'fromhost-port', 'remotehost', 'remotehost-ip', 'timereported',
         'timegenerated', 'timestamp', 'json', 'jsonmesg', 'jsonf'
     ]
 
