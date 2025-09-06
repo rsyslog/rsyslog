@@ -72,6 +72,7 @@ extern int Debug;
 
 #define DOCKER_CONTAINER_ID_PARSE_NAME "Id"
 #define DOCKER_CONTAINER_NAMES_PARSE_NAME "Names"
+#define DOCKER_CONTAINER_IMAGE_PARSE_NAME "Image"
 #define DOCKER_CONTAINER_IMAGEID_PARSE_NAME "ImageID"
 #define DOCKER_CONTAINER_CREATED_PARSE_NAME "Created"
 #define DOCKER_CONTAINER_LABELS_PARSE_NAME "Labels"
@@ -124,6 +125,7 @@ typedef struct imdocker_req_s {
 
 typedef struct docker_container_info_s {
     uchar *name;
+    uchar *image;
     uchar *image_id;
     uint64_t created;
     /* json string container labels */
@@ -503,6 +505,9 @@ static rsRetVal dockerContLogsInstNew(docker_cont_logs_inst_t **ppThis,
     /* make a copy */
     if (container_info) {
         CHKiRet(dockerContainerInfoNew(&pThis->container_info));
+        if (container_info->image) {
+            pThis->container_info->image = (uchar *)strdup((char *)container_info->image);
+        }
         if (container_info->image_id) {
             pThis->container_info->image_id = (uchar *)strdup((char *)container_info->image_id);
         }
@@ -764,6 +769,9 @@ static void dockerContainerInfoDestruct(docker_container_info_t *pThis) {
         if (pThis->image_id) {
             free(pThis->image_id);
         }
+        if (pThis->image) {
+            free(pThis->image);
+        }
         if (pThis->name) {
             free(pThis->name);
         }
@@ -965,19 +973,21 @@ BEGINfreeCnf
 ENDfreeCnf
 
 static rsRetVal addDockerMetaData(const uchar *container_id, docker_container_info_t *pinfo, smsg_t *pMsg) {
-    const uchar *names[4] = {
+    const uchar *names[5] = {
         (const uchar *)DOCKER_CONTAINER_ID_PARSE_NAME, (const uchar *)DOCKER_CONTAINER_NAMES_PARSE_NAME,
-        (const uchar *)DOCKER_CONTAINER_IMAGEID_PARSE_NAME, (const uchar *)DOCKER_CONTAINER_LABELS_PARSE_NAME};
+        (const uchar *)DOCKER_CONTAINER_IMAGE_PARSE_NAME, (const uchar *)DOCKER_CONTAINER_IMAGEID_PARSE_NAME,
+        (const uchar *)DOCKER_CONTAINER_LABELS_PARSE_NAME};
 
     const uchar *empty_str = (const uchar *)"";
     const uchar *id = container_id ? container_id : empty_str;
     const uchar *name = pinfo->name ? pinfo->name : empty_str;
+    const uchar *image = pinfo->image ? pinfo->image : empty_str;
     const uchar *image_id = pinfo->image_id ? pinfo->image_id : empty_str;
     const uchar *json_str_labels = pinfo->json_str_labels ? pinfo->json_str_labels : empty_str;
 
-    const uchar *values[4] = {id, name, image_id, json_str_labels};
+    const uchar *values[5] = {id, name, image, image_id, json_str_labels};
 
-    return msgAddMultiMetadata(pMsg, names, values, 4);
+    return msgAddMultiMetadata(pMsg, names, values, 5);
 }
 
 static rsRetVal enqMsg(docker_cont_logs_inst_t *pInst,
@@ -1406,7 +1416,7 @@ static rsRetVal process_json(sbool isInit, const char *json, docker_cont_log_ins
         if (p_json_elm) {
             const char *containerId = NULL;
             docker_container_info_t containerInfo = {
-                .name = NULL, .image_id = NULL, .created = 0, .json_str_labels = NULL};
+                .name = NULL, .image = NULL, .image_id = NULL, .created = 0, .json_str_labels = NULL};
 
             struct fjson_object_iterator it = fjson_object_iter_begin(p_json_elm);
             struct fjson_object_iterator itEnd = fjson_object_iter_end(p_json_elm);
@@ -1424,6 +1434,8 @@ static rsRetVal process_json(sbool isInit, const char *json, docker_cont_log_ins
                         fjson_object *names_elm = json_object_array_get_idx(fjson_object_iter_peek_value(&it), 0);
                         containerInfo.name = (uchar *)fjson_object_get_string(names_elm);
                     }
+                } else if (strcmp(fjson_object_iter_peek_name(&it), DOCKER_CONTAINER_IMAGE_PARSE_NAME) == 0) {
+                    containerInfo.image = (uchar *)fjson_object_get_string(fjson_object_iter_peek_value(&it));
                 } else if (strcmp(fjson_object_iter_peek_name(&it), DOCKER_CONTAINER_IMAGEID_PARSE_NAME) == 0) {
                     containerInfo.image_id = (uchar *)fjson_object_get_string(fjson_object_iter_peek_value(&it));
                 } else if (strcmp(fjson_object_iter_peek_name(&it), DOCKER_CONTAINER_CREATED_PARSE_NAME) == 0) {

@@ -19,7 +19,7 @@ Other features include:
 
 - filter containers through the plugin options
 - handle long log lines (greater than 16kb) and obtain
-- container metadata, such as container id, name, image id, labels, etc.
+- container metadata, such as container id, name, image, image id, labels, etc.
 
 **Note**: Multiple docker instances are not supported at the time of this writing.
 
@@ -108,6 +108,8 @@ data items:
 
 - **Names** - the first container associated with the message.
 
+- **Image** - the image name and tag of the container associated with the message.
+
 - **ImageID** - the image id of the container associated with the message.
 
 - **Labels** - all the labels of the container associated with the message in json format.
@@ -174,6 +176,6 @@ An example of how to create a template with container metadata
 .. code-block:: none
 
   template (name="ImdockerFormat" type="string"
-  	string="program:%programname% tag:%syslogtag% id:%$!metadata!Id% name:%$!metadata!Names% imageid:%$!metadata!ImageID% labels:%$!metadata!Labels% msg: %msg%\n"
+  	string="program:%programname% tag:%syslogtag% id:%$!metadata!Id% name:%$!metadata!Names% image:%$!metadata!Image% imageid:%$!metadata!ImageID% labels:%$!metadata!Labels% msg: %msg%\n"
   )
 
