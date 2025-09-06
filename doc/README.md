@@ -167,3 +167,12 @@ later steps are identical, so we've covered those steps in one place.
     -   Open `rsyslog/doc/build/index.html` in a browser.
     -   Use Calibre, Microsoft Edge, Okular, Google Play Books, or any other
         EPUB compatible reader to view the `rsyslog/doc/build/rsyslog.epub` file.
+
+---
+
+## CI deployment to GitHub Pages
+
+-   On pushes to the `main`/`master` branches and on manual runs, GitHub Actions builds the docs using the rsyslog doc Makefile: `make html SPHINXOPTS="-W"`.
+-   Sphinx warnings are treated as errors via the `-W` flag.
+-   The built HTML in `doc/build/html` is uploaded as a workflow artifact and deployed to GitHub Pages.
+-   The deployment URL is exposed on the workflow run under the `github-pages` environment.
