@@ -56,7 +56,7 @@
          */
         #pragma GCC diagnostic ignored "-Wjump-misses-init"
         #pragma GCC diagnostic ignored "-Wincompatible-pointer-types"
-        #pragma GCC diagnostic ignored "-Wcast-function-type"
+     //   #pragma GCC diagnostic ignored "-Wcast-function-type"
     #endif
 
     #if defined(__clang__)
