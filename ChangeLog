@@ -1,5 +1,18 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
+- 2025-09-06: devtools: Specify usage of clang-format-18 to pin v18
+  Thanks to Will Robertson for the patch.
+- 2025-09-05: CI: re-enabled CodeCov integration
+  There may still be some quirks, but basically it works again.
+- 2025-09-05: doc: restore missing doc files in configure.ac
+  The docs build has been failing because doc/source/conf_helpers.py was
+  removed, but Sphinx imports it from conf.py. This reintroduces the
+  helper module so the documentation can be built again.
+  Regression introduced by:
+  https://github.com/rsyslog/rsyslog/commit/ba762b653331f3c97ba2da91cf6a0ab602e6243c
+  Impact: restores local and CI doc builds; no runtime behavior change.
+  Before: sphinx-build failed with ImportError for conf_helpers.
+  After:  sphinx-build completes successfully.
 - 2025-09-04: build: use pkg_config for libgcrypt
   This fixes failing builds in newer platforms.
   Old method had been depricated and finally is no longer available. We fall
