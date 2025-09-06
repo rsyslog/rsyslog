@@ -660,10 +660,10 @@ static rsRetVal ATTR_NONNULL() InitDA(qqueue_t *const pThis, const int bLockMute
     lenBuf = snprintf((char *)pszBuf, sizeof(pszBuf), "%s:DAwpool", obj.GetName((obj_t *)pThis));
     CHKiRet(wtpConstruct(&pThis->pWtpDA));
     CHKiRet(wtpSetDbgHdr(pThis->pWtpDA, pszBuf, lenBuf));
-    CHKiRet(wtpSetpfChkStopWrkr(pThis->pWtpDA, (rsRetVal(*)(void *pUsr, int))qqueueChkStopWrkrDA));
-    CHKiRet(wtpSetpfGetDeqBatchSize(pThis->pWtpDA, (rsRetVal(*)(void *pUsr, int *))GetDeqBatchSize));
-    CHKiRet(wtpSetpfDoWork(pThis->pWtpDA, (rsRetVal(*)(void *pUsr, void *pWti))ConsumerDA));
-    CHKiRet(wtpSetpfObjProcessed(pThis->pWtpDA, (rsRetVal(*)(void *pUsr, wti_t *pWti))batchProcessed));
+    CHKiRet(wtpSetpfChkStopWrkr(pThis->pWtpDA, (rsRetVal (*)(void *pUsr, int))qqueueChkStopWrkrDA));
+    CHKiRet(wtpSetpfGetDeqBatchSize(pThis->pWtpDA, (rsRetVal (*)(void *pUsr, int *))GetDeqBatchSize));
+    CHKiRet(wtpSetpfDoWork(pThis->pWtpDA, (rsRetVal (*)(void *pUsr, void *pWti))ConsumerDA));
+    CHKiRet(wtpSetpfObjProcessed(pThis->pWtpDA, (rsRetVal (*)(void *pUsr, wti_t *pWti))batchProcessed));
     CHKiRet(wtpSetpmutUsr(pThis->pWtpDA, pThis->mut));
     CHKiRet(wtpSetiNumWorkerThreads(pThis->pWtpDA, 1));
     CHKiRet(wtpSettoWrkShutdown(pThis->pWtpDA, pThis->toWrkShutdown));
@@ -954,9 +954,9 @@ static rsRetVal qqueueTryLoadPersistedInfo(qqueue_t *pThis) {
 
     /* then the stream objects (same order as when persisted!) */
     CHKiRet(obj.Deserialize(&pThis->tVars.disk.pWrite, (uchar *)"strm", psQIF,
-                            (rsRetVal(*)(obj_t *, void *))qqueueLoadPersStrmInfoFixup, pThis));
+                            (rsRetVal (*)(obj_t *, void *))qqueueLoadPersStrmInfoFixup, pThis));
     CHKiRet(obj.Deserialize(&pThis->tVars.disk.pReadDel, (uchar *)"strm", psQIF,
-                            (rsRetVal(*)(obj_t *, void *))qqueueLoadPersStrmInfoFixup, pThis));
+                            (rsRetVal (*)(obj_t *, void *))qqueueLoadPersStrmInfoFixup, pThis));
     /* create a duplicate for the read "pointer". */
     CHKiRet(strm.Dup(pThis->tVars.disk.pReadDel, &pThis->tVars.disk.pReadDeq));
     CHKiRet(strm.SetbDeleteOnClose(pThis->tVars.disk.pReadDeq, 0)); /* deq must NOT delete the files! */
@@ -2545,11 +2545,11 @@ rsRetVal qqueueStart(rsconf_t *cnf, qqueue_t *pThis) /* this is the Construction
     }
     CHKiRet(wtpConstruct(&pThis->pWtpReg));
     CHKiRet(wtpSetDbgHdr(pThis->pWtpReg, pszBuf, lenBuf));
-    CHKiRet(wtpSetpfRateLimiter(pThis->pWtpReg, (rsRetVal(*)(void *pUsr))RateLimiter));
-    CHKiRet(wtpSetpfChkStopWrkr(pThis->pWtpReg, (rsRetVal(*)(void *pUsr, int))ChkStopWrkrReg));
-    CHKiRet(wtpSetpfGetDeqBatchSize(pThis->pWtpReg, (rsRetVal(*)(void *pUsr, int *))GetDeqBatchSize));
-    CHKiRet(wtpSetpfDoWork(pThis->pWtpReg, (rsRetVal(*)(void *pUsr, void *pWti))ConsumerReg));
-    CHKiRet(wtpSetpfObjProcessed(pThis->pWtpReg, (rsRetVal(*)(void *pUsr, wti_t *pWti))batchProcessed));
+    CHKiRet(wtpSetpfRateLimiter(pThis->pWtpReg, (rsRetVal (*)(void *pUsr))RateLimiter));
+    CHKiRet(wtpSetpfChkStopWrkr(pThis->pWtpReg, (rsRetVal (*)(void *pUsr, int))ChkStopWrkrReg));
+    CHKiRet(wtpSetpfGetDeqBatchSize(pThis->pWtpReg, (rsRetVal (*)(void *pUsr, int *))GetDeqBatchSize));
+    CHKiRet(wtpSetpfDoWork(pThis->pWtpReg, (rsRetVal (*)(void *pUsr, void *pWti))ConsumerReg));
+    CHKiRet(wtpSetpfObjProcessed(pThis->pWtpReg, (rsRetVal (*)(void *pUsr, wti_t *pWti))batchProcessed));
     CHKiRet(wtpSetpmutUsr(pThis->pWtpReg, pThis->mut));
     CHKiRet(wtpSetiNumWorkerThreads(pThis->pWtpReg, pThis->iNumWorkerThreads));
     CHKiRet(wtpSettoWrkShutdown(pThis->pWtpReg, pThis->toWrkShutdown));
@@ -2983,102 +2983,119 @@ static rsRetVal doEnqSingleObj(qqueue_t *pThis, flowControl_t flowCtlType, smsg_
     if (unlikely(pThis->takeFlowCtlFromMsg)) { /* recommendation is NOT to use this option */
         flowCtlType = pMsg->flowCtlType;
     }
-    if (flowCtlType == eFLOWCTL_FULL_DELAY) {
-        while (pThis->iQueueSize >= pThis->iFullDlyMrk && !glbl.GetGlobalInputTermState()) {
-            /* We have a problem during shutdown if we block eternally. In that
-             * case, the the input thread cannot be terminated. So we wake up
-             * from time to time to check for termination.
-             * TODO/v6(at earliest): check if we could signal the condition during
-             * shutdown. However, this requires new queue registries and thus is
-             * far to much change for a stable version (and I am still not sure it
-             * is worth the effort, given how seldom this situation occurs and how
-             * few resources the wakeups need). -- rgerhards, 2012-05-03
-             * In any case, this was the old code (if we do the TODO):
-             * pthread_cond_wait(&pThis->belowFullDlyWtrMrk, pThis->mut);
-             */
-            DBGOPRINT((obj_t *)pThis,
-                      "doEnqSingleObject: FullDelay mark reached for full "
-                      "delayable message - blocking, queue size is %d.\n",
-                      pThis->iQueueSize);
-            timeoutComp(&t, 1000);
-            err = pthread_cond_timedwait(&pThis->belowLightDlyWtrMrk, pThis->mut, &t);
-            if (err != 0 && err != ETIMEDOUT) {
-                /* Something is really wrong now. Report to debug log and abort the
-                 * wait. That keeps us running, even though we may lose messages.
-                 */
-                DBGOPRINT((obj_t *)pThis,
-                          "potential program bug: pthread_cond_timedwait()"
-                          "/fulldelay returned %d\n",
-                          err);
+
+    /* flow control state machine */
+    enum flowctl_state {
+        FLOWCTL_CHECK, /**< evaluate current queue conditions */
+        FLOWCTL_FULL_WAIT, /**< wait while above full delay watermark */
+        FLOWCTL_LIGHT_WAIT, /**< short wait while above light delay mark */
+        FLOWCTL_WAIT_NOTFULL, /**< basic flow control wait for queue drain */
+        FLOWCTL_ENQUEUE, /**< enqueue message */
+        FLOWCTL_DROP, /**< drop message due to full queue */
+        FLOWCTL_SHUTDOWN /**< abort due to global shutdown */
+    } state = FLOWCTL_CHECK;
+
+    while (1) {
+        switch (state) {
+            case FLOWCTL_CHECK:
+                if (glbl.GetGlobalInputTermState()) {
+                    state = FLOWCTL_SHUTDOWN;
+                    break;
+                }
+                if (flowCtlType == eFLOWCTL_FULL_DELAY && pThis->iQueueSize >= pThis->iFullDlyMrk) {
+                    state = FLOWCTL_FULL_WAIT;
+                } else if (flowCtlType == eFLOWCTL_LIGHT_DELAY && pThis->iQueueSize >= pThis->iLightDlyMrk) {
+                    state = FLOWCTL_LIGHT_WAIT;
+                } else if ((pThis->iMaxQueueSize > 0 && pThis->iQueueSize >= pThis->iMaxQueueSize) ||
+                           ((pThis->qType == QUEUETYPE_DISK || pThis->bIsDA) && pThis->sizeOnDiskMax != 0 &&
+                            pThis->tVars.disk.sizeOnDisk > pThis->sizeOnDiskMax)) {
+                    state = FLOWCTL_WAIT_NOTFULL;
+                } else {
+                    state = FLOWCTL_ENQUEUE;
+                }
                 break;
-            }
-            DBGPRINTF("wti worker in full delay timed out, checking termination...\n");
-        }
-    } else if (flowCtlType == eFLOWCTL_LIGHT_DELAY && !glbl.GetGlobalInputTermState()) {
-        if (pThis->iQueueSize >= pThis->iLightDlyMrk) {
-            DBGOPRINT((obj_t *)pThis,
-                      "doEnqSingleObject: LightDelay mark reached for light "
-                      "delayable message - blocking a bit.\n");
-            timeoutComp(&t, 1000); /* 1000 millisconds = 1 second TODO: make configurable */
-            err = pthread_cond_timedwait(&pThis->belowLightDlyWtrMrk, pThis->mut, &t);
-            if (err != 0 && err != ETIMEDOUT) {
-                /* Something is really wrong now. Report to debug log */
+
+            case FLOWCTL_FULL_WAIT:
                 DBGOPRINT((obj_t *)pThis,
-                          "potential program bug: pthread_cond_timedwait()"
-                          "/lightdelay returned %d\n",
-                          err);
-            }
+                          "doEnqSingleObject: FullDelay mark reached for full "
+                          "delayable message - blocking, queue size is %d.\n",
+                          pThis->iQueueSize);
+                timeoutComp(&t, 1000);
+                err = pthread_cond_timedwait(&pThis->belowLightDlyWtrMrk, pThis->mut, &t);
+                if (err != 0 && err != ETIMEDOUT) {
+                    DBGOPRINT((obj_t *)pThis, "potential program bug: pthread_cond_timedwait()/fulldelay returned %d\n",
+                              err);
+                }
+                state = FLOWCTL_CHECK;
+                break;
+
+            case FLOWCTL_LIGHT_WAIT:
+                DBGOPRINT((obj_t *)pThis,
+                          "doEnqSingleObject: LightDelay mark reached for light "
+                          "delayable message - blocking a bit.\n");
+                timeoutComp(&t, 1000); /* 1000 millisconds = 1 second TODO: make configurable */
+                err = pthread_cond_timedwait(&pThis->belowLightDlyWtrMrk, pThis->mut, &t);
+                if (err != 0 && err != ETIMEDOUT) {
+                    DBGOPRINT((obj_t *)pThis,
+                              "potential program bug: pthread_cond_timedwait()/lightdelay returned %d\n", err);
+                }
+                state = FLOWCTL_CHECK;
+                break;
+
+            case FLOWCTL_WAIT_NOTFULL:
+                if (glbl.GetGlobalInputTermState()) {
+                    state = FLOWCTL_SHUTDOWN;
+                    break;
+                }
+                STATSCOUNTER_INC(pThis->ctrFull, pThis->mutCtrFull);
+                if (pThis->toEnq == 0 || pThis->bEnqOnly) {
+                    DBGOPRINT((obj_t *)pThis,
+                              "doEnqSingleObject: queue FULL - configured for immediate "
+                              "discarding QueueSize=%d MaxQueueSize=%d sizeOnDisk=%lld sizeOnDiskMax=%lld\n",
+                              pThis->iQueueSize, pThis->iMaxQueueSize, pThis->tVars.disk.sizeOnDisk,
+                              pThis->sizeOnDiskMax);
+                    state = FLOWCTL_DROP;
+                    break;
+                }
+                DBGOPRINT((obj_t *)pThis, "doEnqSingleObject: queue FULL - waiting %dms to drain.\n", pThis->toEnq);
+                timeoutComp(&t, pThis->toEnq);
+                err = pthread_cond_timedwait(&pThis->notFull, pThis->mut, &t);
+                if (dbgTimeoutToStderr && err != 0) {
+                    fprintf(stderr, "%lld: queue timeout(%dms), error %d%s, lost message %s\n", (long long)time(NULL),
+                            pThis->toEnq, err, (err == ETIMEDOUT) ? "[ETIMEDOUT]" : "", pMsg->pszRawMsg);
+                }
+                if (err == ETIMEDOUT) {
+                    DBGOPRINT((obj_t *)pThis, "doEnqSingleObject: cond timeout, dropping message!\n");
+                    state = FLOWCTL_DROP;
+                } else if (err != 0) {
+                    DBGOPRINT((obj_t *)pThis, "doEnqSingleObject: cond error %d, dropping message!\n", err);
+                    state = FLOWCTL_DROP;
+                } else {
+                    dbgoprint((obj_t *)pThis, "doEnqSingleObject: wait solved queue full condition, enqueing\n");
+                    state = FLOWCTL_CHECK;
+                }
+                break;
+
+            case FLOWCTL_DROP:
+                STATSCOUNTER_INC(pThis->ctrFDscrd, pThis->mutCtrFDscrd);
+                msgDestruct(&pMsg);
+                ABORT_FINALIZE(RS_RET_QUEUE_FULL);
+                break;
+
+            case FLOWCTL_SHUTDOWN:
+                msgDestruct(&pMsg);
+                ABORT_FINALIZE(RS_RET_FORCE_TERM);
+                break;
+
+            case FLOWCTL_ENQUEUE:
+                goto enqueue_msg;
+            default:
+                state = FLOWCTL_ENQUEUE;
+                break;
         }
     }
 
-    /* from our regular flow control settings, we are now ready to enqueue the object.
-     * However, we now need to do a check if the queue permits to add more data. If that
-     * is not the case, basic flow control enters the field, which means we wait for
-     * the queue to become ready or drop the new message. -- rgerhards, 2008-03-14
-     */
-    while ((pThis->iMaxQueueSize > 0 && pThis->iQueueSize >= pThis->iMaxQueueSize) ||
-           ((pThis->qType == QUEUETYPE_DISK || pThis->bIsDA) && pThis->sizeOnDiskMax != 0 &&
-            pThis->tVars.disk.sizeOnDisk > pThis->sizeOnDiskMax)) {
-        STATSCOUNTER_INC(pThis->ctrFull, pThis->mutCtrFull);
-        if (pThis->toEnq == 0 || pThis->bEnqOnly) {
-            DBGOPRINT((obj_t *)pThis,
-                      "doEnqSingleObject: queue FULL - configured for immediate "
-                      "discarding QueueSize=%d MaxQueueSize=%d sizeOnDisk=%lld "
-                      "sizeOnDiskMax=%lld\n",
-                      pThis->iQueueSize, pThis->iMaxQueueSize, pThis->tVars.disk.sizeOnDisk, pThis->sizeOnDiskMax);
-            STATSCOUNTER_INC(pThis->ctrFDscrd, pThis->mutCtrFDscrd);
-            msgDestruct(&pMsg);
-            ABORT_FINALIZE(RS_RET_QUEUE_FULL);
-        } else {
-            DBGOPRINT((obj_t *)pThis, "doEnqSingleObject: queue FULL - waiting %dms to drain.\n", pThis->toEnq);
-            if (glbl.GetGlobalInputTermState()) {
-                DBGOPRINT((obj_t *)pThis,
-                          "doEnqSingleObject: queue FULL, discard due to "
-                          "FORCE_TERM.\n");
-                ABORT_FINALIZE(RS_RET_FORCE_TERM);
-            }
-            timeoutComp(&t, pThis->toEnq);
-            const int r = pthread_cond_timedwait(&pThis->notFull, pThis->mut, &t);
-            if (dbgTimeoutToStderr && r != 0) {
-                fprintf(stderr,
-                        "%lld: queue timeout(%dms), error %d%s, "
-                        "lost message %s\n",
-                        (long long)time(NULL), pThis->toEnq, r, (r == ETIMEDOUT) ? "[ETIMEDOUT]" : "", pMsg->pszRawMsg);
-            }
-            if (r == ETIMEDOUT) {
-                DBGOPRINT((obj_t *)pThis, "doEnqSingleObject: cond timeout, dropping message!\n");
-                STATSCOUNTER_INC(pThis->ctrFDscrd, pThis->mutCtrFDscrd);
-                msgDestruct(&pMsg);
-                ABORT_FINALIZE(RS_RET_QUEUE_FULL);
-            } else if (r != 0) {
-                DBGOPRINT((obj_t *)pThis, "doEnqSingleObject: cond error %d, dropping message!\n", r);
-                STATSCOUNTER_INC(pThis->ctrFDscrd, pThis->mutCtrFDscrd);
-                msgDestruct(&pMsg);
-                ABORT_FINALIZE(RS_RET_QUEUE_FULL);
-            }
-            dbgoprint((obj_t *)pThis, "doEnqSingleObject: wait solved queue full condition, enqueing\n");
-        }
-    }
+enqueue_msg:
 
     /* and finally enqueue the message */
     CHKiRet(qqueueAdd(pThis, pMsg));
