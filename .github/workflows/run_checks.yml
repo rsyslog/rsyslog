@@ -184,8 +184,9 @@ jobs:
               export ABORT_ALL_ON_TEST_FAIL='YES'
               ;;
           'ubuntu_22_codecov')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
+              export CC='gcc-14'
               export CFLAGS='-g -O0 -coverage'
               export LDFLAGS='-lgcov'
               export USE_AUTO_DEBUG='off'
@@ -196,8 +197,9 @@ jobs:
                             --disable-elasticsearch-tests"
               ;;
           'kafka_codecov')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
+              export CC='gcc-14'
               export CFLAGS='-g -O0 -coverage'
               export LDFLAGS='-lgcov'
               export CI_CODECOV_TOKEN='9958eda4-50ae-4f2c-b6b6-567d3e6a2e81'
@@ -210,9 +212,11 @@ jobs:
                      --enable-omkafka --enable-gnutls --disable-gnutls-tests --enable-imkafka"
               ;;
           'elasticsearch')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
               export CI_CODECOV_TOKEN='9958eda4-50ae-4f2c-b6b6-567d3e6a2e81'
+              export CC='gcc-14'
+              export CFLAGS='-g -O0 -coverage'
               export CI_MAKE_CHECK_OPT='-j1'
               export ABORT_ALL_ON_TEST_FAIL='NO'
               export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \

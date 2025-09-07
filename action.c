@@ -1,3 +1,4 @@
+/* REMOVE ME - THIS IS JUST TO TRIGGER A CI RUN FOR CI TESTING ITSELF! */
 /**
  * @file action.c
  * @brief Implementation of the action object.

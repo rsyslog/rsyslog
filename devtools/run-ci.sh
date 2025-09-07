@@ -49,7 +49,7 @@ if [ "$CI_CODECOV_TOKEN" != "" ]; then
         coverage_file=""
         ## Prefer lcov for aggregated coverage info; warn if unavailable
         if command -v lcov >/dev/null 2>&1; then
-                lcov --capture --directory . --output-file coverage.info >/dev/null 2>&1
+                lcov --capture --directory . --output-file coverage.info --gcov-tool gcov-14 --ignore-errors mismatch --filter range
                 coverage_file="coverage.info"
         else
                 printf 'warning: lcov not found; using gcov\n' >&2
