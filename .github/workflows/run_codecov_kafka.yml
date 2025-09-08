@@ -7,8 +7,7 @@ concurrency:
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
     paths:
       - '**/*.c'
@@ -19,118 +18,76 @@ on:
       - 'diag.sh'
       - '**/Makefile.am'
       - 'configure.ac'
-      - '.github/workflows/*.yml'
+      - '.github/workflows/run_codecov_kafka.yml'
 
 jobs:
   CI:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 25
 
     steps:
       - name: add extra dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
+          sudo apt-get install -y --no-install-recommends \
             lcov \
             autoconf \
             autoconf-archive \
             automake \
             autotools-dev \
-            bison \
             clang \
             gdb \
             clang-tools \
-            curl \
-            cmake-curses-gui \
             swig \
-            python3-dev \
-            ruby-dev \
-            python3-sphinx \
-            default-jdk \
-            default-jre \
+            default-jre-headless \
             faketime libdbd-mysql \
-            flex \
             gcc \
             gcc-14 \
-            gdb \
             git \
-            libaprutil1-dev \
-            libbson-dev \
-            libcivetweb-dev \
-            libcap-ng-dev \
-            libcap-ng0 \
-            libcurl4-gnutls-dev \
-            libdbi-dev \
             libgcrypt20-dev \
             libglib2.0-dev \
             libgnutls28-dev \
-            libhiredis-dev \
-            libkrb5-dev \
             liblz4-dev \
-            libmaxminddb-dev libmongoc-dev \
-            libmongoc-dev \
-            libmysqlclient-dev \
             libnet1-dev \
-            libpcap-dev \
-            librabbitmq-dev \
-            libsnmp-dev \
             libssl-dev libsasl2-dev libsasl2-2 libsasl2-modules \
             libsystemd-dev \
             libtirpc-dev \
-            libtokyocabinet-dev \
             libtool \
             libtool-bin \
             libzstd-dev \
             logrotate \
             lsof \
             make \
-            mysql-server \
             net-tools \
             pkg-config \
-            postgresql-client libpq-dev \
-            python3-docutils  \
-            python3-pip \
-            python3-pysnmp4 \
             software-properties-common \
-            sudo \
             uuid-dev \
             valgrind \
-            wget \
             zlib1g-dev \
             zstd \
             libestr-dev \
-            libfastjson-dev \
             librdkafka-dev \
             libfastjson-dev \
             librelp-dev \
             liblognorm-dev \
-            libczmq-dev \
-            tcl-dev \
-            libsodium-dev \
+            kcat \
             cmake
-
-      - name: add helper projects
-        run: |
-          mkdir helper-projects
-          cd helper-projects
-          git clone https://github.com/edenhill/kafkacat
-          cd kafkacat
-          (unset CFLAGS; ./configure --prefix=/usr --CFLAGS="-g" ; make -j)
-          sudo make install
-          cd ..
-          rm -rf kafkacat
-          git clone https://github.com/apache/qpid-proton.git
-          #cd qpid-proton
-          #mkdir build
-          #cd build
-          #cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DSYSINSTALL_BINDINGS=ON -DBUILD_TESTING=OFF && \
-          #make -j8
-          #make install
-          #cd ..
-          cd ..
 
       - name: git checkout project
         uses: actions/checkout@v4
+
+      # NEW: cache Autotools feature-probe results
+      - name: cache configure results
+        uses: actions/cache@v4
+        with:
+          path: config.cache
+          key: >
+            cfgcache-${{ runner.os }}-${{ runner.arch }}-gcc14
+            -cfg-${{ hashFiles('configure.ac','m4/**','**/Makefile.am') }}
+            -flags--g-O0--coverage
+          restore-keys: |
+            cfgcache-${{ runner.os }}-${{ runner.arch }}-gcc14-
+            cfgcache-${{ runner.os }}-${{ runner.arch }}-
 
       - name: enable coverage flags
         run: |
@@ -144,10 +101,12 @@ jobs:
         run: |
           autoreconf -fvi
           ./configure \
+            --cache-file=config.cache \
             --enable-compile-warning=error \
             --enable-testbench \
             --enable-omstdout \
             --enable-imdiag \
+            --disable-generate-man-pages \
             --disable-impstats \
             --enable-imfile \
             --disable-imfile-tests \
@@ -184,21 +143,15 @@ jobs:
       - name: generate coverage (lcov)
         if: ${{ always() }}
         run: |
-          # capture; tolerate macro/line-mapping quirks and normalise unexecuted blocks
           lcov --capture --directory . \
                --rc geninfo_unexecuted_blocks=1 \
                --ignore-errors mismatch \
                --output-file coverage.raw.info
-
-          # optional pruning to reduce noise
           lcov --remove coverage.raw.info '/usr/*' '*/tests/*' -o coverage.info || true
           rm -f coverage.raw.info
-
-          # sanity: list summary and ensure file exists (non-empty)
           lcov --list coverage.info | sed -n '1,60p' || true
           [ -s coverage.info ] || { echo "coverage.info is empty"; exit 1; }
 
-      # Same-repo PRs: use org/repo secret (protected branches need token)
       - name: Upload coverage to Codecov (internal)
         if: ${{ always() && github.event.pull_request.head.repo.full_name == github.repository }}
         uses: codecov/codecov-action@v4
@@ -208,7 +161,6 @@ jobs:
           flags: kafka
           fail_ci_if_error: false
 
-      # Forked PRs: tokenless upload
       - name: Upload coverage to Codecov (fork PR)
         if: ${{ always() && github.event.pull_request.head.repo.full_name != github.repository }}
         uses: codecov/codecov-action@v4

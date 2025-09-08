@@ -2,6 +2,7 @@
 # added 2017-05-03 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+set -xv
 test_status unreliable 'https://github.com/rsyslog/rsyslog/issues/3197'
 check_command_available kcat
 
@@ -14,7 +15,7 @@ export RANDTOPIC="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
 # Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.
 export EXTRA_EXITCHECK=dumpkafkalogs
 export EXTRA_EXIT=kafka
-echo Check and Stop previous instances of kafka/zookeeper 
+echo Check and Stop previous instances of kafka/zookeeper
 download_kafka
 stop_zookeeper
 stop_kafka
@@ -24,7 +25,7 @@ start_zookeeper
 start_kafka
 create_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 
-# --- Create/Start omkafka sender config 
+# --- Create/Start omkafka sender config
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
 add_conf '
@@ -73,7 +74,7 @@ action( type="omfile" file="'$RSYSLOG_DYNNAME.othermsg'")
 echo Starting sender instance [omkafka]
 startup
 
-echo Inject messages into rsyslog sender instance  
+echo Inject messages into rsyslog sender instance
 injectmsg 1 $TESTMESSAGES
 
 wait_file_lines $RSYSLOG_OUT_LOG $TESTMESSAGESFULL 100

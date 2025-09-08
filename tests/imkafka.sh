@@ -2,6 +2,7 @@
 # added 2018-08-29 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+set -xv
 check_command_available kcat
 export KEEP_KAFKA_RUNNING="YES"
 
@@ -54,4 +55,5 @@ delete_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 
 seq_check 1 $TESTMESSAGESFULL -d
 
+exit 1
 exit_test
