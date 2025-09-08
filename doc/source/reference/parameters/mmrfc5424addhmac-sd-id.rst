@@ -1,5 +1,5 @@
 .. _param-mmrfc5424addhmac-sd-id:
-.. _mmrfc5424addhmac.parameter.action.sd-id:
+.. _mmrfc5424addhmac.parameter.action.sdId:
 
 sdId
 ====
@@ -30,8 +30,8 @@ will be added. Note that nothing is added if this SD-ID is already present.
 
 Action usage
 ------------
-.. _param-mmrfc5424addhmac-action-sd-id:
-.. _mmrfc5424addhmac.parameter.action.sd-id-usage:
+.. _param-mmrfc5424addhmac-action-sdId:
+.. _mmrfc5424addhmac.parameter.action.sdId-usage:
 
 .. code-block:: rsyslog
 

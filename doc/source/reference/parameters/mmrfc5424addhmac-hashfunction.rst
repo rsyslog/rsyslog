@@ -1,5 +1,5 @@
 .. _param-mmrfc5424addhmac-hashfunction:
-.. _mmrfc5424addhmac.parameter.action.hashfunction:
+.. _mmrfc5424addhmac.parameter.action.hashFunction:
 
 hashFunction
 ============
@@ -30,8 +30,8 @@ OpenSSL, so see the OpenSSL list of supported function names.
 
 Action usage
 ------------
-.. _param-mmrfc5424addhmac-action-hashfunction:
-.. _mmrfc5424addhmac.parameter.action.hashfunction-usage:
+.. _param-mmrfc5424addhmac-action-hashFunction:
+.. _mmrfc5424addhmac.parameter.action.hashFunction-usage:
 
 .. code-block:: rsyslog
 
