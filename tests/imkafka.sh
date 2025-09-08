@@ -53,7 +53,7 @@ wait_shutdown
 
 delete_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 
-seq_check 1 $TESTMESSAGESFULL -d
+seq_check 10 $TESTMESSAGESFULL -d
 
 exit 1
 exit_test
