@@ -2,7 +2,6 @@
 # added 2017-05-03 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-set -xv
 test_status unreliable 'https://github.com/rsyslog/rsyslog/issues/3197'
 check_command_available kcat
 
@@ -44,7 +43,7 @@ local4.* {
 	action(	name="kafka-fwd"
 	type="omkafka"
 	topic="'$RANDTOPIC'"
-	broker="localhost:29092"
+	broker="127.0.0.1:29092"
 	template="outfmt"
 	confParam=[	"compression.codec=none",
 			"socket.timeout.ms=10000",
@@ -87,7 +86,7 @@ timecounter=0
 while [ $timecounter -lt $timeoutend ]; do
 	(( timecounter++ ))
 
-	kcat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%s' > $RSYSLOG_OUT_LOG
+	kcat -b 127.0.0.1:29092 -e -C -o beginning -t $RANDTOPIC -f '%s' > $RSYSLOG_OUT_LOG
 	count=$(wc -l < ${RSYSLOG_OUT_LOG})
 	if [ $count -eq $TESTMESSAGESFULL ]; then
 		printf '**** wait-kafka-lines success, have %d lines ****\n\n' "$TESTMESSAGESFULL"
@@ -116,8 +115,8 @@ echo Stopping sender instance [omkafka]
 shutdown_when_empty
 wait_shutdown
 
-#kcat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%s' > $RSYSLOG_OUT_LOG
-#kcat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%p@%o:%k:%s' > $RSYSLOG_OUT_LOG.extra
+#kcat -b 127.0.0.1:29092 -e -C -o beginning -t $RANDTOPIC -f '%s' > $RSYSLOG_OUT_LOG
+#kcat -b 127.0.0.1:29092 -e -C -o beginning -t $RANDTOPIC -f '%p@%o:%k:%s' > $RSYSLOG_OUT_LOG.extra
 
 # Delete topic to remove old traces before
 delete_kafka_topic $RANDTOPIC '.dep_wrk' '22181'

@@ -26,52 +26,36 @@ jobs:
     timeout-minutes: 25
 
     steps:
+      - name: hosts
+        run: |
+          cat -n /etc/hosts
+          echo resetting
+          sudo bash -c 'echo "127.0.0.1 localhost" > /etc/hosts'
+          cat -n /etc/hosts
+
       - name: add extra dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             lcov \
-            autoconf \
             autoconf-archive \
-            automake \
-            autotools-dev \
-            clang \
             gdb \
-            clang-tools \
-            swig \
-            default-jre-headless \
-            faketime libdbd-mysql \
-            gcc \
-            gcc-14 \
-            git \
+            faketime \
             libgcrypt20-dev \
-            libglib2.0-dev \
             libgnutls28-dev \
-            liblz4-dev \
             libnet1-dev \
-            libssl-dev libsasl2-dev libsasl2-2 libsasl2-modules \
+            libsasl2-dev \
             libsystemd-dev \
             libtirpc-dev \
-            libtool \
             libtool-bin \
-            libzstd-dev \
-            logrotate \
-            lsof \
-            make \
-            net-tools \
-            pkg-config \
-            software-properties-common \
             uuid-dev \
             valgrind \
-            zlib1g-dev \
-            zstd \
             libestr-dev \
             librdkafka-dev \
             libfastjson-dev \
             librelp-dev \
             liblognorm-dev \
-            kcat \
-            cmake
+            kcat
 
       - name: git checkout project
         uses: actions/checkout@v4
@@ -132,7 +116,11 @@ jobs:
         env:
           CFLAGS: ${{ env.CFLAGS }}
           LDFLAGS: ${{ env.LDFLAGS }}
-        run: make -j2 check
+        run: make -j3 check
+
+      - name: show all logs
+        run: |
+          cat -n tests/*.log
 
       - name: show error logs (if we errored)
         if: ${{ failure() || cancelled() }}

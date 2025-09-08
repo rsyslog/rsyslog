@@ -24,36 +24,24 @@ on:
 jobs:
   CI:
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 50
 
     steps:
       - name: add extra dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
+          sudo apt-get install -y --no-install-recommends \
             lcov \
-            autoconf \
-            autoconf-archive \
-            automake \
-            autotools-dev \
-            bison \
-            clang \
-            gdb \
             clang-tools \
             curl \
             cmake-curses-gui \
-            swig \
             python3-dev \
             ruby-dev \
             python3-sphinx \
-            default-jdk \
-            default-jre \
-            faketime libdbd-mysql \
-            flex \
-            gcc \
-            gcc-14 \
+            default-jre-headless \
+            faketime \
+            libdbd-mysql \
             gdb \
-            git \
             libaprutil1-dev \
             libbson-dev \
             libcivetweb-dev \
@@ -81,24 +69,16 @@ jobs:
             libtool \
             libtool-bin \
             libzstd-dev \
-            logrotate \
-            lsof \
-            make \
             mysql-server \
             net-tools \
-            pkg-config \
             postgresql-client libpq-dev \
             python3-docutils  \
             python3-pip \
             python3-pysnmp4 \
             software-properties-common \
-            sudo \
             uuid-dev \
             valgrind \
-            vim \
-            wget \
             zlib1g-dev \
-            zstd \
             libestr-dev \
             libfastjson-dev \
             librdkafka-dev \
@@ -129,7 +109,7 @@ jobs:
 
       - name: enable coverage flags
         run: |
-          echo 'CFLAGS=-g -O0 --coverage' >> "$GITHUB_ENV"
+          echo 'CFLAGS=-g -O0 --coverage -fprofile-update=atomic' >> "$GITHUB_ENV"
           echo 'LDFLAGS=--coverage' >> "$GITHUB_ENV"
 
       - name: prepare for build
@@ -155,7 +135,8 @@ jobs:
             --enable-imfile \
             --enable-imhttp \
             --enable-imjournal \
-            --enable-imkafka \
+            --disable-imkafka \
+            --disable-omkafka \
             --enable-impstats \
             --enable-impcap \
             --enable-imptcp \
@@ -230,7 +211,7 @@ jobs:
         env:
           CFLAGS: ${{ env.CFLAGS }}
           LDFLAGS: ${{ env.LDFLAGS }}
-        run: make -j4 check
+        run: make -j5 check
 
       - name: show error logs (if we errored)
         if: ${{ failure() || cancelled() }}
@@ -263,7 +244,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: coverage.info
-          flags: main body
+          flags: main
           fail_ci_if_error: false
 
       # Forked PRs: tokenless upload
@@ -272,7 +253,7 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           files: coverage.info
-          flags: main body
+          flags: main
           fail_ci_if_error: false
 
       - name: show error logs (if we errored)

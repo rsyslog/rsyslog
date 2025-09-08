@@ -33,7 +33,7 @@ printf 'receiving messages via kcat\n'
 while [ $timecounter -lt $timeoutend ]; do
 	(( timecounter++ ))
 
-	kcat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%s\n' > $RSYSLOG_OUT_LOG
+	kcat -b 127.0.0.1:29092 -e -C -o beginning -t $RANDTOPIC -f '%s\n' > $RSYSLOG_OUT_LOG
 	count=$(wc -l < ${RSYSLOG_OUT_LOG})
 	if [ $count -eq $TESTMESSAGES ]; then
 		printf '**** wait-kafka-lines success, have %d lines ****\n\n' "$TESTMESSAGES"

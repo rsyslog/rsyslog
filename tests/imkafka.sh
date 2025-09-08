@@ -2,7 +2,6 @@
 # added 2018-08-29 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-set -xv
 check_command_available kcat
 export KEEP_KAFKA_RUNNING="YES"
 
@@ -30,7 +29,7 @@ module(load="../plugins/imkafka/.libs/imkafka")
 /* Polls messages from kafka server!*/
 input(	type="imkafka"
 	topic="'$RANDTOPIC'"
-	broker="localhost:29092"
+	broker="127.0.0.1:29092"
 	consumergroup="default"
 	confParam=[ "compression.codec=none",
 		"session.timeout.ms=10000",
@@ -53,7 +52,6 @@ wait_shutdown
 
 delete_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 
-seq_check 10 $TESTMESSAGESFULL -d
+seq_check 1 $TESTMESSAGESFULL -d
 
-exit 1
 exit_test

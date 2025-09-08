@@ -1072,7 +1072,7 @@ TESTS += \
 	omkafka-vg.sh \
 	imkafka-vg.sh
 
-omkafka-vg.log: sndrcv_kafka_multi_topics.log
+omkafka-vg.log: omkafkadynakey.log
 imkafka-vg.log: omkafka-vg.log
 endif
 endif
