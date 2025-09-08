@@ -25,7 +25,7 @@ mmpstrucdata.
 
 
 Configuration Parameters
-========================
+------------------------
 
 .. note::
    This module has no module-level parameters. All parameters listed below are for actions.
@@ -57,7 +57,8 @@ Configuration Parameters
    ../../reference/parameters/mmrfc5424addhmac-hashfunction
    ../../reference/parameters/mmrfc5424addhmac-sd-id
 
-**Verification method**
+Verification method
+-------------------
 
 rsyslog does not contain any tools to verify a log file (this was not
 part of the custom project). So you need to write your own verifier.
