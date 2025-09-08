@@ -1711,7 +1711,7 @@ check_command_available() {
 			have_cmd=1
 		fi
 	else
-    if command -v "$1" >/dev/null 2>&1; then
+		if command -v "$1" >/dev/null 2>&1; then
 			have_cmd=1
 		fi
 	fi
