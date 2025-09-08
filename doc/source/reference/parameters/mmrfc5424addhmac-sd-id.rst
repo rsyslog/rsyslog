@@ -18,7 +18,7 @@ This parameter applies to :doc:`../../configuration/modules/mmrfc5424addhmac`.
 
 :Name: sdId
 :Scope: action
-:Type: word
+:Type: string
 :Default: none
 :Required?: yes
 :Introduced: 7.5.6
