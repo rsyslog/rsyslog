@@ -170,7 +170,7 @@ jobs:
           fail_ci_if_error: false
 
       - name: show error logs (if we errored)
-        if: ${{ failure() || cancelled() }}
+        #if: ${{ failure() || cancelled() }}
         run: |
           devtools/gather-check-logs.sh
           cat failed-tests.log
