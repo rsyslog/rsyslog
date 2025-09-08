@@ -37,15 +37,15 @@ Configuration Parameters
 
    * - Parameter
      - Summary
-   * - :ref:`param-mmrfc5424addhmac-key`
+   * - :ref:`key <param-mmrfc5424addhmac-key>`
      - .. include:: ../../reference/parameters/mmrfc5424addhmac-key.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - :ref:`param-mmrfc5424addhmac-hashfunction`
+   * - :ref:`hashFunction <param-mmrfc5424addhmac-hashfunction>`
      - .. include:: ../../reference/parameters/mmrfc5424addhmac-hashfunction.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - :ref:`param-mmrfc5424addhmac-sd-id`
+   * - :ref:`sdId <param-mmrfc5424addhmac-sd-id>`
      - .. include:: ../../reference/parameters/mmrfc5424addhmac-sd-id.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
