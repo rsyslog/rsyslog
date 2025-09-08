@@ -2,10 +2,16 @@
 # can be found here: https://docs.codecov.io/docs/commit-status
 # This link also contains helpful other config info not easily found.
 
-codecov:
-  branch: main            # canonical default branch (was implicit before)
+fixes:
+  # Fix for container builds where the git checkout is at /rsyslog
+  - "/rsyslog/::"
 
-comment: off              # keep Codecov PR comment disabled
+  # Fix for GitHub Actions runners
+  - "/home/runner/work/rsyslog/rsyslog/::"
+
+
+# keep Codecov PR comment disabled
+comment: false
 
 coverage:
   # to get things started, let's aim at a lower goal. This actually helps
@@ -21,7 +27,7 @@ coverage:
         paths: ["contrib/**"] # split status for contrib subtree
         threshold: 0.5
         informational: true   # non-blocking
-    patch: off                # disable patch status entirely (was implicit via null)
+    patch: false              # disable patch status entirely
 
 ignore:
   # different execution pathes (if not, remove) -- rgerhards, 2018-10-12

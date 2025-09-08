@@ -53,12 +53,12 @@ jobs:
                  ubuntu_24_imtcp_no_epoll,
                  fedora_41, fedora_42,
                  ubuntu_18, ubuntu_20, ubuntu_24,
-                 ubuntu_22_san, ubuntu_24_tsan, ubuntu_22_codecov, ubuntu_22_distcheck,
+                 ubuntu_22_san, ubuntu_24_tsan, ubuntu_22_distcheck,
                  kafka_codecov, elasticsearch]
 
     steps:
       - name: git checkout project
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
 
       - name: run container CI pipeline
         run: |
@@ -184,7 +184,7 @@ jobs:
               export ABORT_ALL_ON_TEST_FAIL='YES'
               ;;
           'ubuntu_22_codecov')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
               export CFLAGS='-g -O0 -coverage'
               export LDFLAGS='-lgcov'
@@ -196,7 +196,7 @@ jobs:
                             --disable-elasticsearch-tests"
               ;;
           'kafka_codecov')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
               export CFLAGS='-g -O0 -coverage'
               export LDFLAGS='-lgcov'

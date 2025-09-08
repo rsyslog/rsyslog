@@ -74,7 +74,7 @@ jobs:
             zstd
 
       - name: git checkout project
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
 
       - name: build dependencies which require that
         run: |
