@@ -1,5 +1,14 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
+- 2025-09-09: imdocker: Add image name to metadata fields 
+  Exposes the image name and tag of the source container (what the Docker API simply
+  calls Image) as an additional metadata value alongside the existing ones.
+  Why?
+  While the ImageID is available today, a SHA hash is not a particularly user-friendly
+  way to identify what is actually generating the logs.
+  The image name provides a simple, easy-to-read identifier for the common scenario
+  where an unmodified application image is used.
+  Thanks to Will Robertson for the patch.
 - 2025-09-09: ci: improve Codecov uploads; deflake kafka topics
   Motivation: code coverage reports were incomplete. This lays a better
   base for consistent reporting via GitHub Actions, with room for follow-ups.
