@@ -54,7 +54,7 @@ jobs:
                  fedora_41, fedora_42,
                  ubuntu_20, ubuntu_24,
                  ubuntu_22_san, ubuntu_24_tsan, ubuntu_22_distcheck,
-                 kafka_codecov, elasticsearch]
+                 elasticsearch]
 
     steps:
       - name: git checkout project
@@ -179,32 +179,6 @@ jobs:
               # note: we need pathes in container, thus /rsyslog vs. $(pwd) in TSAN_OPTIONS
               export TSAN_OPTIONS="halt_on_error=1 suppressions=/rsyslog/tests/tsan-rt.supp"
               export ABORT_ALL_ON_TEST_FAIL='YES'
-              ;;
-          'ubuntu_22_codecov')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
-              export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
-              export CFLAGS='-g -O0 -coverage'
-              export LDFLAGS='-lgcov'
-              export USE_AUTO_DEBUG='off'
-              export CI_CODECOV_TOKEN='9958eda4-50ae-4f2c-b6b6-567d3e6a2e81'
-              export ABORT_ALL_ON_TEST_FAIL='NO'
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-kafka-tests --disable-imkafka \
-                            --disable-omkafka --enable-debug --disable-elasticsearch \
-                            --disable-elasticsearch-tests"
-              ;;
-          'kafka_codecov')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
-              export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
-              export CFLAGS='-g -O0 -coverage'
-              export LDFLAGS='-lgcov'
-              export CI_CODECOV_TOKEN='9958eda4-50ae-4f2c-b6b6-567d3e6a2e81'
-              export ABORT_ALL_ON_TEST_FAIL='NO'
-              # Note: we completely override the container configure options here!
-              export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
-                     --enable-imdiag --disable-impstats --enable-imfile --disable-imfile-tests \
-                     --disable-fmhttp --enable-valgrind --enable-valgrind-testbench \
-                     --disable-helgrind --disable-default-tests --disable-imtcp-tests --enable-kafka-tests \
-                     --enable-omkafka --enable-gnutls --disable-gnutls-tests --enable-imkafka"
               ;;
           'elasticsearch')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
