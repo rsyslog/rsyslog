@@ -1,181 +1,286 @@
-Documentation Reference Section Structure Guidelines
-====================================================
+# Documentation Reference Section Structure Guidelines
 
-This page describes the **ultimate desired layout** for all _reference_ pages
-(e.g. modules under Configuration → Output Modules), balancing both:
+This page describes the desired layout for all _reference_ pages so they work well for humans (Furo theme) and for AI/RAG ingestion. It reflects the **current method**: every parameter lives in its own file in `doc/source/reference/parameters/`, and module pages show compact summary tables that include those files.
 
-- **Human UX** under the Furo theme  
-- **AI/RAG ingestion** needs for fine-grained, semantically focused chunks
+---
 
-Overview
+## Overview
+
+- Keep each module page at `doc/source/configuration/modules/<module>.rst`.
+- Move **all parameter details** into **per-parameter** files under `doc/source/reference/parameters/`.
+- On the module page, replace long inline parameter blocks with two **list-tables** that:
+  - list parameters,
+  - include the short per-parameter summary from the parameter files.
+
+No content loss. Preserve legacy names, defaults, version markers, warnings, and examples.
+
+---
+
+## Directory layout
+
+```text
+doc/
+└── source/
+    ├── configuration/
+    │   └── modules/
+    │       ├── imudp.rst
+    │       ├── omfwd.rst
+    │       └── omprog.rst                  # module pages remain here
+    └── reference/
+        └── parameters/
+            ├── imudp-port.rst
+            ├── imudp-rcvbufsize.rst
+            ├── omfwd-target.rst
+            ├── omfwd-protocol.rst
+            └── omprog-command.rst          # one file per parameter
+```
+
+**Do not** create per-module subfolders for parameters. File names are flat and follow `<module>-<param-lower>.rst`.
+
+---
+
+## Per-parameter page template (RST)
+
+Each parameter page must use this structure and anchors. Replace placeholders.
+
+```rst
+.. _param-<module>-<param-lower>:
+.. _<module>.parameter.<scope>.<param-lower>:
+
+<ParamName>
+===========
+
+.. index::
+   single: <module>; <ParamName>
+   single: <ParamName>
+
+.. summary-start
+
+<One concise present-tense sentence summarizing the parameter.>
+
+.. summary-end
+
+This parameter applies to :doc:`../../configuration/modules/<module>`.
+
+:Name: <ParamName>
+:Scope: <module|input>
+:Type: <type>
+:Default: <value>
+:Required?: <yes|no>
+:Introduced: <version text from original, or policy fallback>
+
+Description
+-----------
+
+<Bring over original description verbatim or near-verbatim. Preserve
+notes/warnings and versionadded/versionchanged blocks. Keep enumerations.>
+
+<scope> usage
+-------------
+
+.. _param-<module>-<scope>-<param-lower>:
+.. _<module>.parameter.<scope>.<param-lower>-usage:
+
+.. code-block:: rsyslog
+
+   <minimal but correct example using recommended casing>
+
+Legacy names (for reference)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Historic names/directives for compatibility. Do not use in new configs.
+
+<Only include if any exist. For each legacy token add a hidden anchor:>
+
+.. _<module>.parameter.legacy.<legacy-canonical>:
+- $<LegacyName> — maps to <ParamName> (status: legacy)
+
+.. index::
+   single: <module>; $<LegacyName>
+   single: $<LegacyName>
+
+See also
 --------
 
-Each reference module (e.g., ``omfwd``) is defined by its master RST file and
-an optional set of category pages for related parameters. **Do not move or rename
-existing module files** (e.g., ``source/configuration/modules/omfwd.rst``) to
-preserve SEO, bookmarks, and inter-document links.
+See also :doc:`../../configuration/modules/<module>`.
+```
 
-Directory Layout
-----------------
+### Casing policy for examples
 
-Modules remain at top level; parameter group pages live in a new sub-folder.
+- Parameter names are case-insensitive. In examples, **use camelCase** (recommended).
+- Headings must keep the canonical parameter name as used in official docs.
+- Do not use deprecated aliases in examples; keep them only in the Legacy section.
 
-.. code-block:: text
+---
 
-   source/configuration/modules/
-   ├── omfwd.rst                    # master reference page (unchanged)
-   ├── imfile.rst                   # other modules (unchanged)
-   └── omfwd/                       # new subdirectory for parameter categories
-       └── parameters/
-           ├── basic.rst            # core parameters (target, port, protocol)
-           ├── transport.rst        # networking params (Address, NetworkNamespace)
-           ├── security.rst         # TLS/auth params (StreamDriver, AuthMode)
-           └── advanced.rst         # compression, framing, keep-alive, etc.
+## Anchors and xref conventions
 
-Master Page ("<module>.rst")
-----------------------------
+- **Canonical anchor**: `.. _param-<module>-<param-lower>:`
+  Example: `param-imudp-port`
+- **Scoped anchor**: `.. _<module>.parameter.<scope>.<param-lower>:`
+  Scope is `module` or `input` only.
+- **Usage anchors**: duplicate both above with `-usage` suffix placed next to the code block.
+- Anchor leafs are **lowercase**, words separated by hyphens. Keep dots from names in headings, but normalize to hyphens in file and anchor leafs (e.g., `RateLimit.Interval` -> `ratelimit-interval`).
+- From module pages, link parameters via `:ref:` to the **canonical** anchor, for example `:ref:`param-imudp-port``.
 
-Enhance the existing master file (e.g., ``omfwd.rst``) with these sections:
+**No duplicate anchors** anywhere.
 
-#. **Introduction** and **Best Practices** (concise overview).  
-#. **Common Pitfalls** of legacy syntax with minimal before/after snippets.  
-#. **Parameters at a Glance** — two tables:
-   - **Module-Load Parameters** (e.g., ``iobuffer.maxSize``)  
-   - **Action-Instance Parameters** (e.g., ``target``, ``queue.type``)  
-#. A hidden ``.. toctree::`` pulling in the category pages:
+---
 
-   .. code-block:: rst
+## Module page changes (`doc/source/configuration/modules/<module>.rst`)
 
-      .. toctree::
-         :hidden:
-         :maxdepth: 1
+Leave narrative content untouched (purpose, features, statistics, examples, performance notes, caveats). Replace inline parameter blocks with two list-tables.
 
-         omfwd/parameters/basic
-         omfwd/parameters/transport
-         omfwd/parameters/security
-         omfwd/parameters/advanced
+1) Optional casing note placed right above parameters:
 
-**Example Parameters at a Glance:**
+```rst
+.. note::
 
-.. code-block:: rst
+   Parameter names are case-insensitive; camelCase is recommended for readability.
+```
 
-   **Module-Load Parameters**
+2) **Module Parameters** list-table:
 
-   .. csv-table::
-      :header: "Parameter", "Default", "Description", "Page"
-      :widths: 20 15 50 25
+```rst
+Module Parameters
+=================
 
-      "iobuffer.maxSize", "full size", "Max TCP API buffer.", :doc:`module <omfwd/parameters/module>`
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-   **Action-Instance Parameters**
+   * - Parameter
+     - Summary
+   * - :ref:`param-<module>-<param-a>`
+     - .. include:: ../../reference/parameters/<module>-<param-a>.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-<module>-<param-b>`
+     - .. include:: ../../reference/parameters/<module>-<param-b>.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+```
 
-   .. csv-table::
-      :header: "Parameter", "Default", "Description", "Page"
-      :widths: 20 15 50 25
+3) **Input Parameters** list-table (same pattern; only include if the module has input-scoped params):
 
-      "target", "none", "Remote host(s).", :doc:`action <omfwd/parameters/action>`
-      "port", "514", "Destination port.", :doc:`action <omfwd/parameters/action>`
-      "protocol", "udp", "Transport protocol (udp/tcp/TLS).", :doc:`action <omfwd/parameters/action>`
-      "queue.type", "linkedList", "Per-action queue type.", :doc:`action <omfwd/parameters/action>`
+```rst
+Input Parameters
+================
 
-Category Pages ("parameters/\*.rst")
-------------------------------------
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-Group related parameters into 3–8 per category. Example structure for "basic.rst":
+   * - Parameter
+     - Summary
+   * - :ref:`param-<module>-<param-c>`
+     - .. include:: ../../reference/parameters/<module>-<param-c>.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+```
 
-.. code-block:: rst
+4) Optionally append a **hidden toctree** listing all newly created parameter files for this module:
 
-   Basic Parameters
-   ================
+```rst
+.. toctree::
+   :hidden:
 
-   .. meta::
-      :tag: module:omfwd
-      :tag: category:basic
+   ../../reference/parameters/<module>-<param-a>
+   ../../reference/parameters/<module>-<param-b>
+   ../../reference/parameters/<module>-<param-c>
+```
 
-   Core settings for forwarding.
+---
 
-   ---
+## Naming rules
 
-   target
-   ~~~~~~
+- Parameter files: `<module>-<param-lower>.rst`
+- `<param-lower>` is the parameter name lowercased, with dots replaced by hyphens.
+- Keep module names lowercased (e.g., `imudp`, `omfwd`).
 
-   **Summary:** Name or IP of the remote syslog server.
+---
 
-   :type: array/word  
-   :default: none  
-   :mandatory: no  
+## Content rules
 
-   .. code-block:: rsyslog
+- **No content loss**. Bring over all technical information, including defaults, types, units, enumerations, warnings, version markers, examples.
+- Normalize legacy "binary" type to "boolean" in `:Type:`. If the term "binary" appears in original text, you may mention it in a note.
+- Keep size units exactly as shown (e.g., `256k`, `1m`).
+- Where a parameter was documented in multiple places, consolidate into the one parameter page and keep all content.
 
-      action(
-        type="omfwd"
-        target="logs.example.com"
-        port="514"
-        protocol="tcp"
-        queue.type="linkedList"
-      )
+---
 
-   .. toggle::
-      :caption: Deep dive: How target pools work
+## Validation and quality gates
 
-      .. include:: ../../../concepts/queues.inc
+Sphinx build must be clean:
 
-Repeat for transport, security, and advanced categories.
+- No duplicate labels, no unknown references, no orphaned includes.
+- All `:ref:` targets resolve.
+- All `.. include::` paths exist.
+- Every parameter from original Module/Input sections has a parameter file and a row in the correct list-table.
+- Anchors use the correct scope:
+  - Module params -> `.module.` anchors only.
+  - Input params  -> `.input.` anchors only.
+- Usage anchors end with `-usage` and are unique.
+- Defaults, types, and introduced versions match original text.
+- Legacy names appear only in the Legacy section of the parameter page, and only if they exist.
 
-Concept Snippets
-----------------
+---
 
-Centralize deep theory under ``source/concepts/``:
+## Edge cases and fixes
 
-- ``<topic>.inc`` — conceptual snippet content  
-- ``<topic>.rst`` — standalone concept page including the snippet
+- Fix mis-scoped anchors from the original (for example `.module.` vs `.input.`) and adjust internal references.
+- Align inconsistent example casing to camelCase.
+- Parameters with dots keep the dot in the **heading** but use hyphen in file and anchor leaf.
+- If a parameter had both module and input variants, create two pages only if they are semantically different. Otherwise one page with the correct scope.
 
-Include snippets in parameter pages via:
+---
 
-.. code-block:: rst
+## Metadata and tags (optional but helpful)
 
-   .. toggle::
-      :caption: Deep dive: How target pools work
+At the top of each page you may add:
 
-      .. include:: ../../../concepts/queues.inc
+```rst
+.. meta::
+   :tag: module:<module>
+   :tag: parameter:<param-lower>
+```
 
-Metadata & Tags
----------------
+Use tags consistently if you rely on them for AI/RAG filtering.
 
-At the top of every page (master, category, concept), include:
+---
 
-.. code-block:: rst
+## TOC integration
 
-   .. meta::
-      :tag: module:<module-name>
-      :tag: category:<category-name>    # category pages only
-      :tag: parameter:<parameter-name>  # if desired on parameter sections
-      :tag: concept:<topic-name>        # on concept pages
+If you maintain curated TOCs:
 
-These tags drive precise AI/RAG filtering.
+- In any developer documentation index that lists writing guides, include this page:
 
-TOC Integration
----------------
+```rst
+.. toctree::
+   :maxdepth: 1
 
-**In Doc Writing → Development** (``source/development/doc_style_guide.rst``):
+   reference_section_guidelines
+```
 
-.. code-block:: rst
+- Module indices remain unchanged; module pages continue to live under `configuration/modules/`.
 
-   .. toctree::
-      :maxdepth: 1
+---
 
-      doc_style_guide
-      reference_section_guidelines
+## Policy for "Introduced"
 
-**In Configuration → Output Modules** (``source/configuration/modules/index.rst``):
+- Use the value from the original docs if present.
+- If unknown, use the current project fallback policy for Introduced text.
+- When a parameter lists any legacy equivalent directive, prefer the older fallback per policy.
 
-.. code-block:: rst
+---
 
-   .. toctree::
-      :maxdepth: 2
+## Checklist
 
-      omfwd
-      omrelp
-      omfile
-      …
+- [ ] All parameters from the original Module/Input sections are covered.
+- [ ] Sphinx builds with no duplicate or unknown labels.
+- [ ] All includes and refs resolve.
+- [ ] Anchors match conventions and scopes.
+- [ ] Examples use camelCase; headings remain canonical.
+- [ ] Legacy names appear only in the Legacy section and only if they exist.
+- [ ] Narrative content outside parameter sections on the module page is unchanged.
 
