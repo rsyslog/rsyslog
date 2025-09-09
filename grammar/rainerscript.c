@@ -2887,6 +2887,137 @@ static int ATTR_NONNULL()
     return r;
 }
 
+/* Base64 function to predict decoded length (for allocation) from Apache */
+static ATTR_NONNULL() int base64_decode_len(const char *str) {
+    size_t len;
+
+    len = strlen(str);
+    while (len && str[len - 1] == '=') {
+        len--;
+    }
+
+    return len * 3 / 4;
+}
+
+/* The following code comes from
+ * https://en.wikibooks.org/wiki/Algorithm_Implementation/Miscellaneous/Base64#C_2 */
+static const unsigned char base64_table[] = {
+    66, 66, 66, 66, 66, 66, 66, 66, 66, 64, 64, 66, 66, 64, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+    66, 66, 66, 64, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 62, 66, 66, 66, 63, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61,
+    66, 66, 66, 65, 66, 66, 66, 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+    22, 23, 24, 25, 66, 66, 66, 66, 66, 66, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44,
+    45, 46, 47, 48, 49, 50, 51, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+    66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+    66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+    66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66,
+    66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66};
+
+/* From https://en.wikibooks.org/wiki/Algorithm_Implementation/Miscellaneous/Base64#C_2
+ * This code is public domain.
+ * This solution has been optimized using pointer math and a look-up table.
+ * This algorithm handles multiple encoding formats: with and without line breaks,
+ * with and without whitespace,
+ * and with and without padding characters.
+ * */
+static int base64_decode(char *in, size_t inLen, unsigned char *out, size_t *outLen) {
+    char *end = in + inLen;
+    char iter = 0;
+    uint32_t buf = 0;
+    size_t len = 0;
+
+    while (in < end) {
+        unsigned char c = base64_table[(unsigned char)*in++];
+
+        switch (c) {
+            case 64:
+                continue; /* skip whitespace */
+            case 66:
+                return 1; /* invalid input, return error */
+            case 65: /* = char, pad character, end of data */
+                in = end;
+                continue;
+            default:
+                buf = buf << 6 | c;
+                iter++;  // increment the number of iteration
+                /* If the buffer is full, split it into bytes */
+                if (iter == 4) {
+                    if ((len += 3) > *outLen) return 1; /* buffer overflow */
+                    *(out++) = (buf >> 16) & 255;
+                    *(out++) = (buf >> 8) & 255;
+                    *(out++) = buf & 255;
+                    buf = 0;
+                    iter = 0;
+                }
+        }
+    }
+
+    if (iter == 3) {
+        if ((len += 2) > *outLen) return 1; /* buffer overflow */
+        *(out++) = (buf >> 10) & 255;
+        *(out++) = (buf >> 2) & 255;
+    } else if (iter == 2) {
+        if (++len > *outLen) return 1; /* buffer overflow */
+        *(out++) = (buf >> 4) & 255;
+    }
+
+    *outLen = len; /* modify to reflect the actual output size */
+    return 0;
+}
+
+static void ATTR_NONNULL() doFunct_Base64Dec(struct cnffunc *__restrict__ const func,
+                                             struct svar *__restrict__ const ret,
+                                             void *__restrict__ const usrptr,
+                                             wti_t *__restrict__ const pWti) {
+    struct svar srcVal;
+    int bMustFree;
+    char *cstr = NULL;
+    unsigned char *res = NULL;
+    size_t len = 0;
+    ret->d.estr = NULL;
+
+    if (func->expr[0]->nodetype == 'S') {
+        /* if we already have a string, we do not need to
+         * do one more recursive call.
+         */
+        cstr = (char *)es_str2cstr(((struct cnfstringval *)func->expr[0])->estr, NULL);
+        bMustFree = 1;
+    } else {
+        // Otherwise, retrieve the value from the specified value name
+        cnfexprEval(func->expr[0], &srcVal, usrptr, pWti);
+        cstr = (char *)var2CString(&srcVal, &bMustFree);
+        varFreeMembers(&srcVal);
+    }
+    DBGPRINTF("rainerscript: (base64_dec) String to decode = '%s' \n", cstr);
+    len = base64_decode_len((const char *)cstr);
+    if (len == 0) {
+        if (strlen(cstr) != 0) {
+            DBGPRINTF("base64_dec: Failed to determine decoded payload length of '%s' \n", cstr);
+        }
+        goto finalize_it;
+    }
+    DBGPRINTF("rainerscript: (base64_dec) Predicted decoded data length : '%lu' \n", (long unsigned int)len);
+    res = malloc(len + 1);
+    if (res == NULL) goto finalize_it;
+    if (base64_decode(cstr, strlen(cstr), res, &len)) {
+        DBGPRINTF("rainerscript: (base64_dec) Failed to decode base64 data '%s'", cstr);
+        goto finalize_it;
+    }
+    res[len] = '\0';
+    // Beware, decoded data (for instance \x01\x02) will be ''
+    DBGPRINTF("rainerscript: (base64_dec) Decoded data = '%.*s' \n", (int)len, res);
+    ret->d.estr = es_newStrFromCStr((char *)res, len);
+
+finalize_it:
+    ret->datatype = 'S';
+    if (ret->d.estr == NULL) {
+        ret->d.estr = es_newStr(0);
+    }
+    free(res);
+    if (bMustFree) {
+        free(cstr);
+    }
+}
+
 static void evalVar(struct cnfvar *__restrict__ const var,
                     void *__restrict__ const usrptr,
                     struct svar *__restrict__ const ret) {
@@ -3664,6 +3795,7 @@ static struct scriptFunct functions[] = {
     {"get_property", 2, 2, doFunc_get_property, NULL, NULL},
     {"script_error", 0, 0, doFunct_ScriptError, NULL, NULL},
     {"previous_action_suspended", 0, 0, doFunct_PreviousActionSuspended, NULL, NULL},
+    {"b64_decode", 1, 1, doFunct_Base64Dec, NULL, NULL},
     {NULL, 0, 0, NULL, NULL, NULL}  // last element to check end of array
 };
 
