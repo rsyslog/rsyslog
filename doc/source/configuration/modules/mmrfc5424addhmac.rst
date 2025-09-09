@@ -23,32 +23,42 @@ be used, the recommended calling sequence is
 with that sequence, the generated hash will become available for
 mmpstrucdata.
 
- 
 
-**Module Configuration Parameters**:
+Configuration Parameters
+------------------------
 
-Note: parameter names are case-insensitive.
+.. note::
+   This module has no module-level parameters. All parameters listed below are for actions.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
-Currently none.
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
- 
+   * - Parameter
+     - Summary
+   * - :ref:`key <param-mmrfc5424addhmac-key>`
+     - .. include:: ../../reference/parameters/mmrfc5424addhmac-key.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`hashFunction <param-mmrfc5424addhmac-hashfunction>`
+     - .. include:: ../../reference/parameters/mmrfc5424addhmac-hashfunction.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`sdId <param-mmrfc5424addhmac-sd-id>`
+     - .. include:: ../../reference/parameters/mmrfc5424addhmac-sd-id.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
-**Action Configuration Parameters**:
+.. toctree::
+   :hidden:
 
-Note: parameter names are case-insensitive.
+   ../../reference/parameters/mmrfc5424addhmac-key
+   ../../reference/parameters/mmrfc5424addhmac-hashfunction
+   ../../reference/parameters/mmrfc5424addhmac-sd-id
 
--  **key**
-   The "key" (string) to be used to generate the hmac.
--  **hashfunction**
-   An openssl hash function name for the function to be used. This is
-   passed on to openssl, so see the openssl list of supported function
-   names.
--  **sd\_id**
-   The RFC5424 structured data ID to be used by this module. This is
-   the SD-ID that will be added. Note that nothing is added if this
-   SD-ID is already present.
-
-**Verification method**
+Verification method
+-------------------
 
 rsyslog does not contain any tools to verify a log file (this was not
 part of the custom project). So you need to write your own verifier.
