@@ -35,7 +35,7 @@ Action usage
 
 .. code-block:: rsyslog
 
-   action(type="mmrfc5424addhmac" hashFunction="sha1")
+   action(type="mmrfc5424addhmac" hashFunction="sha256")
 
 See also
 --------
