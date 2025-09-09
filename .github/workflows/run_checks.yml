@@ -52,7 +52,7 @@ jobs:
         config: [centos_7, centos_8, debian_sid, debian_13,
                  ubuntu_24_imtcp_no_epoll,
                  fedora_41, fedora_42,
-                 ubuntu_18, ubuntu_20, ubuntu_24,
+                 ubuntu_20, ubuntu_24,
                  ubuntu_22_san, ubuntu_24_tsan, ubuntu_22_distcheck,
                  kafka_codecov, elasticsearch]
 
@@ -121,9 +121,6 @@ jobs:
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:42'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
                      --disable-kafka-tests --enable-debug --enable-imdtls --enable-omdtls"
-              ;;
-          'ubuntu_18')
-              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
               ;;
           'ubuntu_20')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
