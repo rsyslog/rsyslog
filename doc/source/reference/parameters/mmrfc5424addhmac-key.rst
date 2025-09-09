@@ -34,7 +34,7 @@ Action usage
 
 .. code-block:: rsyslog
 
-   action(type="mmrfc5424addhmac" key="s3cr3t")
+   action(type="mmrfc5424addhmac" key="a-long-and-very-secret-key-phrase")
 
 See also
 --------
