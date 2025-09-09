@@ -1,5 +1,15 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
+- 2025-09-09: ci: improve Codecov uploads; deflake kafka topics
+  Motivation: code coverage reports were incomplete. This lays a better
+  base for consistent reporting via GitHub Actions, with room for follow-ups.
+  It also removes a test flake source in Kafka jobs.
+  Impact: CI/tests only; no runtime behavior or ABI changes expected.
+  Before: Coverage uploads were inconsistent; Kafka tests could hang while
+  reading from /dev/urandom to generate topic names.
+  After: Coverage is collected with lcov and uploaded via a dedicated GH
+  Action; Kafka topics use fast $RANDOM-based hex, avoiding early-boot
+  entropy stalls.
 - 2025-09-06: rainerscript: add toupper() function
   Add a RainerScript function to convert strings to uppercase. The
   implementation mirrors tolower() but operates per-byte using
