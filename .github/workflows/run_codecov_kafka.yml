@@ -140,6 +140,17 @@ jobs:
           lcov --list coverage.info | sed -n '1,60p' || true
           [ -s coverage.info ] || { echo "coverage.info is empty"; exit 1; }
 
+      # Push to protected branches -> needs token
+      - name: Upload coverage to Codecov (push)
+        if: ${{ always() && github.event_name == 'push' }}
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: main
+          fail_ci_if_error: false
+
+      # Same-repo PRs: use org/repo secret (protected branches need token)
       - name: Upload coverage to Codecov (internal)
         if: ${{ always() && github.event.pull_request.head.repo.full_name == github.repository }}
         uses: codecov/codecov-action@v4
@@ -157,6 +168,7 @@ jobs:
           flags: kafka
           fail_ci_if_error: false
 
+      # Forked PRs: tokenless upload
       - name: show error logs (if we errored)
         #if: ${{ failure() || cancelled() }}
         run: |
