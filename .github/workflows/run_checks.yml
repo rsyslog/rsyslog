@@ -212,7 +212,6 @@ jobs:
           'elasticsearch')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
-              export CI_CODECOV_TOKEN='9958eda4-50ae-4f2c-b6b6-567d3e6a2e81'
               export CI_MAKE_CHECK_OPT='-j1'
               export ABORT_ALL_ON_TEST_FAIL='NO'
               export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
