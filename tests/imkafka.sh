@@ -29,7 +29,7 @@ module(load="../plugins/imkafka/.libs/imkafka")
 /* Polls messages from kafka server!*/
 input(	type="imkafka"
 	topic="'$RANDTOPIC'"
-	broker="localhost:29092"
+	broker="127.0.0.1:29092"
 	consumergroup="default"
 	confParam=[ "compression.codec=none",
 		"session.timeout.ms=10000",

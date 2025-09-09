@@ -14,7 +14,7 @@ export RANDTOPIC="$(printf '%08x' "$(( (RANDOM<<16) ^ RANDOM ))")"
 # Set EXTRA_EXITCHECK to dump kafka/zookeeperlogfiles on failure only.
 export EXTRA_EXITCHECK=dumpkafkalogs
 export EXTRA_EXIT=kafka
-echo Check and Stop previous instances of kafka/zookeeper 
+echo Check and Stop previous instances of kafka/zookeeper
 download_kafka
 stop_zookeeper
 stop_kafka
@@ -24,7 +24,7 @@ start_zookeeper
 start_kafka
 create_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 
-# --- Create/Start omkafka sender config 
+# --- Create/Start omkafka sender config
 export RSYSLOG_DEBUGLOG="log"
 generate_conf
 add_conf '
@@ -42,7 +42,7 @@ template(name="outfmt" type="string" string="%msg:F,58:2%\n")
 template(name="keyin" type="list"){
   property(name="$.inkey")
 }
-  
+
 local4.* {
 	set $.inkey = substring(field($msg,":",2),7,1);
  	action(	name="kafka-fwd"
@@ -50,7 +50,7 @@ local4.* {
 	topic="'$RANDTOPIC'"
 	key="keyin"
 	dynaKey="on"
-	broker="localhost:29092"
+	broker="127.0.0.1:29092"
 	template="outfmt"
 	confParam=[	"compression.codec=none",
 			"socket.timeout.ms=10000",
@@ -79,7 +79,7 @@ action( type="omfile" file="'$RSYSLOG_DYNNAME.othermsg'")
 echo Starting sender instance [omkafka]
 startup
 
-echo Inject messages into rsyslog sender instance  
+echo Inject messages into rsyslog sender instance
 injectmsg 1 $TESTMESSAGES
 
 wait_file_lines $RSYSLOG_OUT_LOG $TESTMESSAGESFULL 100
@@ -92,21 +92,21 @@ timecounter=0
 while [ $timecounter -lt $timeoutend ]; do
 	(( timecounter++ ))
 
-	kcat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%s' > $RSYSLOG_OUT_LOG
+	kcat -b 127.0.0.1:29092 -e -C -o beginning -t $RANDTOPIC -f '%s' > $RSYSLOG_OUT_LOG
 	count=$(wc -l < ${RSYSLOG_OUT_LOG})
 	if [ $count -eq $TESTMESSAGESFULL ]; then
 		printf '**** wait-kafka-lines success, have %d lines ****\n\n' "$TESTMESSAGESFULL"
-	        kcat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%p %k\n' | sort | uniq > "$RSYSLOG_OUT_LOG.extra"
+	        kcat -b 127.0.0.1:29092 -e -C -o beginning -t $RANDTOPIC -f '%p %k\n' | sort | uniq > "$RSYSLOG_OUT_LOG.extra"
         	count=$(wc -l < "${RSYSLOG_OUT_LOG}.extra")
 	        if [ $count -eq 10 ]; then
-			printf '**** partition check success, have 10 partition-key combinations ****\n\n' 
+			printf '**** partition check success, have 10 partition-key combinations ****\n\n'
 			break
 	        else
 			shutdown_when_empty
 			wait_shutdown
 			printf '\n\nERROR: partition check failed, expected 10 got %s\n' "$count"
 			printf '\ņRAW DATA:\n'
-			kcat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%p %k\n'
+			kcat -b 127.0.0.1:29092 -e -C -o beginning -t $RANDTOPIC -f '%p %k\n'
 			printf '\nCHECKED OUTPUT:\n'
 			cat "$RSYSLOG_OUT_LOG.extra"
 			error_exit 1
@@ -138,8 +138,8 @@ echo Stopping sender instance [omkafka]
 shutdown_when_empty
 wait_shutdown
 
-#kcat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%s' > $RSYSLOG_OUT_LOG
-#kcat -b localhost:29092 -e -C -o beginning -t $RANDTOPIC -f '%p@%o:%k:%s' > $RSYSLOG_OUT_LOG.extra
+#kcat -b 127.0.0.1:29092 -e -C -o beginning -t $RANDTOPIC -f '%s' > $RSYSLOG_OUT_LOG
+#kcat -b 127.0.0.1:29092 -e -C -o beginning -t $RANDTOPIC -f '%p@%o:%k:%s' > $RSYSLOG_OUT_LOG.extra
 
 # Delete topic to remove old traces before
 delete_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
