@@ -47,7 +47,7 @@ steps in this document.
 1. Merge `main` into the current stable branch (e.g., `v8-stable`)
 1. Tag the stable branch
 1. Push all changes to the remote
-1. Run the `doc/tools/release_build.sh` script
+1. Run the `tools/release_build.sh` script
 1. Sync the contents of the `build` directory over to the web server
 1. Sync the latest release doc tarball to where the previous release
    tarball is hosted. Update references to this tarball as necessary.
