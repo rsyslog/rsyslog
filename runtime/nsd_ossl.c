@@ -1141,8 +1141,8 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
         } else {
             err = SSL_get_error(pThis->pNetOssl->ssl, iSent);
             if (err == SSL_ERROR_ZERO_RETURN) {
-                DBGPRINTF("Send: SSL_ERROR_ZERO_RETURN received, retry next time\n");
-                ABORT_FINALIZE(RS_RET_RETRY);
+                DBGPRINTF("Send: SSL_ERROR_ZERO_RETURN received, connection closed by peer\n");
+                ABORT_FINALIZE(RS_RET_CLOSED);
             } else if (err == SSL_ERROR_SYSCALL) {
                 /* Output error and abort */
                 nsd_ossl_lastOpenSSLErrorMsg(pThis, iSent, pThis->pNetOssl->ssl, LOG_INFO, "Send", "SSL_write");
@@ -1161,10 +1161,31 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
                 nsd_ossl_lastOpenSSLErrorMsg(pThis, iSent, pThis->pNetOssl->ssl, LOG_ERR, "Send", "SSL_write");
                 ABORT_FINALIZE(RS_RET_NO_ERRCODE);
             } else {
-                /* Check for SSL Shutdown */
-                if (SSL_get_shutdown(pThis->pNetOssl->ssl) == SSL_RECEIVED_SHUTDOWN) {
-                    dbgprintf("osslRcv received SSL_RECEIVED_SHUTDOWN!\n");
-                    ABORT_FINALIZE(RS_RET_CLOSED);
+                /*
+                 * OpenSSL needs us to READ or WRITE to make progress.
+                 * In TLS 1.3, servers may send post-handshake messages (e.g. KeyUpdate)
+                 * which require the client to read before it can continue writing.
+                 * Use the buffered receive helper to preserve any application data.
+                 */
+                if (err == SSL_ERROR_WANT_READ) {
+                    unsigned nextIODirection ATTR_UNUSED;
+                    rsRetVal rcvRet = osslRecordRecv(pThis, &nextIODirection);
+                    if (rcvRet == RS_RET_CLOSED) {
+                        ABORT_FINALIZE(RS_RET_CLOSED);
+                    } else if (rcvRet != RS_RET_OK && rcvRet != RS_RET_RETRY) {
+                        ABORT_FINALIZE(rcvRet);
+                    }
+                    if (SSL_get_shutdown(pThis->pNetOssl->ssl) == SSL_RECEIVED_SHUTDOWN) {
+                        dbgprintf("Send: detected SSL_RECEIVED_SHUTDOWN while handling WANT_READ\n");
+                        ABORT_FINALIZE(RS_RET_CLOSED);
+                    }
+                    /* Continue loop to retry SSL_write */
+                } else {
+                    /* Check for SSL Shutdown */
+                    if (SSL_get_shutdown(pThis->pNetOssl->ssl) == SSL_RECEIVED_SHUTDOWN) {
+                        dbgprintf("osslRcv received SSL_RECEIVED_SHUTDOWN!\n");
+                        ABORT_FINALIZE(RS_RET_CLOSED);
+                    }
                 }
             }
         }
