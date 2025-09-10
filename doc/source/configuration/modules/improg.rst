@@ -14,7 +14,7 @@ Purpose
 This module allows rsyslog to spawn external command(s) and consume message
 from pipe(s) (stdout of the external process).
 
-**Limitation:** Be careful when you rely on stdio like  `printf(...)` or
+**Limitation:** Be careful when you rely on stdio like `printf(...)` or
 `fprintf(stdout,...)` - the buffering they apply can prevent your message
 go out timely to improg and my make your process seem stuck. Either disable
 buffering or be sure to do an `fflush()` when ready with the current output.
