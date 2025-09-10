@@ -167,3 +167,19 @@ later steps are identical, so we've covered those steps in one place.
     -   Open `rsyslog/doc/build/index.html` in a browser.
     -   Use Calibre, Microsoft Edge, Okular, Google Play Books, or any other
         EPUB compatible reader to view the `rsyslog/doc/build/rsyslog.epub` file.
+
+---
+
+## CI deployment to GitHub Pages
+
+A GitHub Actions workflow automatically builds and deploys documentation previews for pull requests and updates the main documentation site.
+
+-   **Pull Request Previews**:
+    -   Triggered by changes to doc/**/*.rst files in a PR.
+    -   Builds docs with make html SPHINXOPTS="-W -q --keep-going".
+    -   For same-repo PRs, a preview is deployed to GitHub Pages (e.g., .../pr-<PR_NUMBER>/) and a link is posted as a PR comment.
+    -   For forked PRs, deployment is skipped due to permissions, but the built HTML is available as a downloadable artifact.
+-   **Main Branch Deployment**:
+    -   Triggered by pushes to main/master or manual runs.
+    -   Builds docs with make html SPHINXOPTS="-W", treating warnings as errors.
+    -   Deploys to the main GitHub Pages site and uploads the build as an artifact.
