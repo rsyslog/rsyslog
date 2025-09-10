@@ -158,7 +158,7 @@ and is useful to identify a dev build from a release set of documentation.
    installing `pip`, setting up the virtual environment and installing
    the latest version of the Sphinx package.
 1. Run `git clone https://github.com/rsyslog/rsyslog.git`
+1. Change into the cloned repository: `cd rsyslog`
 1. Run `git checkout main`
-1. Change to doc folder
-1. Run `sphinx-build -b html source build` to generate HTML format and
-   `sphinx-build -b epub source build` to build an epub file.
+1. Change into the documentation folder: `cd doc`
+1. Run `sphinx-build -b html source build` to generate HTML format and `sphinx-build -b epub source build` to build an epub file.
