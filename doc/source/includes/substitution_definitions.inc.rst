@@ -39,8 +39,8 @@
 .. |GitHubDocProjectDevREADME| replace:: rsyslog doc/ BUILDS README
 .. _GitHubDocProjectDevREADME: https://github.com/rsyslog/rsyslog/blob/main/doc/BUILDS_README.md
 
-.. |GitHubDocProjectGoodFirstIssueLabel| replace:: rsyslog-doc issues marked with Good First Issue label
-.. _GitHubDocProjectGoodFirstIssueLabel: https://github.com/rsyslog/rsyslog-doc/labels/good%20first%20issue
+.. |GitHubDocProjectGoodFirstIssueLabel| replace:: rsyslog doc issues marked with Good First Issue label
+.. _GitHubDocProjectGoodFirstIssueLabel: https://github.com/rsyslog/rsyslog/labels/good%20first%20issue
 
 
 .. |GitHubDocProjectHelpWantedLabel| replace:: rsyslog-doc issues marked with Help Wanted label
