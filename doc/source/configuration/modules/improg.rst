@@ -14,8 +14,10 @@ Purpose
 This module allows rsyslog to spawn external command(s) and consume message
 from pipe(s) (stdout of the external process).
 
-**Limitation:** `select()` seems not to support usage of `printf(...)` or
-`fprintf(stdout,...)`. Only `write(STDOUT_FILENO,...)` seems to be efficient.
+**Limitation:** Be careful when you rely on stdio like  `printf(...)` or
+`fprintf(stdout,...)` - the buffering they apply can prevent your message
+go out timely to improg and my make your process seem stuck. Either disable
+buffering or be sure to do an `fflush()` when ready with the current output.
 
 The input module consume pipes form all external programs in a mono-threaded
 `runInput` method. This means that data treatments will be serialized.
@@ -50,7 +52,7 @@ Binary
   :widths: auto
   :class: parameter-table
 
-  "string", "yes", "command arguments...",   
+  "string", "yes", "command arguments...",
 
 Command line : external program and arguments
 
@@ -76,7 +78,7 @@ Facility
   :widths: auto
   :class: parameter-table
 
-  "string", "no", "facility\|number", "local0" 
+  "string", "no", "facility\|number", "local0"
 
 The syslog facility to be assigned to messages read from this file. Can be
 specified in textual form (e.g. ``local0``, ``local1``, ...) or as numbers (e.g.
@@ -164,7 +166,7 @@ Stop sequence
 1. If `confirmMessages` is set to on, a `STOP` is written in stdin of the child.
 2. If `signalOnClose` is set to "on", a TERM signal is sent to the child.
 3. The pipes with the child process are closed (the child will receive EOF on stdin),
-4. Then, rsyslog waits for the child process to terminate during closeTimeout, 
+4. Then, rsyslog waits for the child process to terminate during closeTimeout,
 5. If the child has not terminated within the timeout, a KILL signal is sent to it.
 
 
