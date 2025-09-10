@@ -1,5 +1,9 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
+- 2025-09-10: config script: add b64_decode function
+  This PR provides a new Rainerscript function: b64_decode.
+  This function is based on RFC4648.
+  Thanks to Kevin Guillemot for the patch.
 - 2025-09-09: imdocker: Add image name to metadata fields 
   Exposes the image name and tag of the source container (what the Docker API simply
   calls Image) as an additional metadata value alongside the existing ones.
