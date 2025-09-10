@@ -57,30 +57,34 @@ this module, with the help of filters or multiple rulesets and ruleset
 bindings. In short words, all capabilities rsyslog offers to control
 output modules are also available to mmsnmptrapd.
 
-**Configuration Parameters**:
+Module Parameters
+~~~~~~~~~~~~~~~~~
 
-Note: parameter names are case-insensitive.
+.. note::
 
--  **$mmsnmptrapdTag** [tagname]
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
 
-   Tells the module which start string inside the tag to look for. The
-   default is "snmptrapd". Note that a slash is automatically added to
-   this tag when it comes to matching incoming messages. It MUST not be
-   given, except if two slashes are required for whatever reasons (so
-   "tag/" results in a check for "tag//" at the start of the tag field).
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
--  **$mmsnmptrapdSeverityMapping** [severitymap]
-   This specifies the severity mapping table. It needs to be specified
-   as a list. Note that due to the current config system **no
-   whitespace** is supported inside the list, so be sure not to use any
-   whitespace inside it.
-   The list is constructed of Severity-Name/Severity-Value pairs,
-   delimited by comma. Severity-Name is a case-sensitive string, e.g.
-   "warning" and an associated numerical value (e.g. 4). Possible values
-   are in the rage 0..7 and are defined in RFC5424, table 2. The given
-   sample would be specified as "warning/4".
-   If multiple instances of mmsnmptrapd are used, each instance uses
-   the most recently defined $mmsnmptrapdSeverityMapping before itself.
+   * - Parameter
+     - Summary
+   * - :ref:`param-mmsnmptrapd-tag`
+     - .. include:: ../../reference/parameters/mmsnmptrapd-tag.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmsnmptrapd-severitymapping`
+     - .. include:: ../../reference/parameters/mmsnmptrapd-severitymapping.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/mmsnmptrapd-tag
+   ../../reference/parameters/mmsnmptrapd-severitymapping
 
 **Caveats/Known Bugs:**
 
@@ -93,10 +97,9 @@ warning severities. The default tag is used.
 
 ::
 
-  $ModLoad mmsnmptrapd # needs to be done just once
+  module(load="mmsnmptrapd" SeverityMapping="warning/4,error/3") # needs to be done just once
   # ... other module loads and listener setup ...
   *.* /path/to/file/with/originalMessage # this file receives unmodified messages
-  $mmsnmptrapdSeverityMapping warning/4,error/3
   *.* :mmsnmptrapd: # now message is modified
   *.* /path/to/file/with/modifiedMessage # this file receives modified messages
   # ... rest of config ...
