@@ -965,6 +965,31 @@ ENDobjDestruct
 #undef tmpCOPYSZ
 #undef tmpCOPYCSTR
 
+/* Return a textual representation of @json.
+ *
+ * The pointer is owned by @json; do NOT free it.
+ * To keep the string beyond the next mutation, serialization call,
+ * or destruction of @json, make a copy (e.g., strdup()).
+ */
+static const char *jsonToString(struct json_object *const json) {
+    if (!json) {
+        return NULL;
+    }
+
+    if (json_object_get_type(json) == json_type_string) {
+        /* Direct pointer to internal string storage.
+         * - Stable across repeated json_object_get_string() calls.
+         * - Invalidated once the object is modified or fjson_object_put().
+         */
+        return json_object_get_string(json);
+    }
+
+    /* Non-string types serialize into json->_pb.
+     * - json->_pb is reset/overwritten on every serialization or mutation.
+     * - The returned pointer becomes invalid immediately after that.
+     */
+    return json_object_to_json_string_ext(json, glblJsonFormatOpt);
+}
 
 /* This method serializes a message object. That means the whole
  * object is modified into text form. That text form is suitable for
@@ -1011,13 +1036,13 @@ static rsRetVal MsgSerialize(smsg_t *pThis, strm_t *pStrm) {
     CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("pszStrucData"), PROPTYPE_PSZ, (void *)psz));
     if (pThis->json != NULL) {
         MsgLock(pThis);
-        psz = (uchar *)json_object_get_string(pThis->json);
+        psz = (uchar *)jsonToString(pThis->json);
         MsgUnlock(pThis);
         CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("json"), PROPTYPE_PSZ, (void *)psz));
     }
     if (pThis->localvars != NULL) {
         MsgLock(pThis);
-        psz = (uchar *)json_object_get_string(pThis->localvars);
+        psz = (uchar *)jsonToString(pThis->localvars);
         MsgUnlock(pThis);
         CHKiRet(obj.SerializeProp(pStrm, UCHAR_CONSTANT("localvars"), PROPTYPE_PSZ, (void *)psz));
     }
@@ -2147,7 +2172,7 @@ const uchar *msgGetJSONMESG(smsg_t *__restrict__ const pMsg) {
 
     json_object_object_add(json, "$!", json_object_get(pMsg->json));
 
-    pRes = (uchar *)strdup(json_object_get_string(json));
+    pRes = (uchar *)strdup(jsonToString(json));
     json_object_put(json);
     return pRes;
 }
@@ -2839,7 +2864,7 @@ rsRetVal getJSONPropVal(
         if (jsonVarExtract(parent, (char *)leaf, &field) == FALSE) field = NULL;
     }
     if (field != NULL) {
-        *pRes = (uchar *)strdup(json_object_get_string(field));
+        *pRes = (uchar *)strdup(jsonToString(field));
         *buflen = (int)ustrlen(*pRes);
         *pbMustBeFreed = 1;
     }
@@ -2897,7 +2922,7 @@ rsRetVal msgGetJSONPropJSONorString(smsg_t *const pMsg,
         *pcstr = (uchar *)strdup("");
     } else {
         if (json_object_get_type(*pjson) == json_type_string) {
-            *pcstr = (uchar *)strdup(json_object_get_string(*pjson));
+            *pcstr = (uchar *)strdup(jsonToString(*pjson));
             *pjson = NULL;
         }
     }
@@ -4317,18 +4342,18 @@ static rsRetVal msgSetPropViaJSON(smsg_t *__restrict__ const pMsg,
     int bNeedFree = 1;
     DEFiRet;
 
-    /* note: json_object_get_string() manages the memory of the returned
+    /* note: jsonToString() manages the memory of the returned
      *       string. So we MUST NOT free it!
      */
     dbgprintf("DDDD: msgSetPropViaJSON key: '%s'\n", name);
     if (!strcmp(name, "rawmsg")) {
-        psz = json_object_get_string(json);
+        psz = jsonToString(json);
         MsgSetRawMsg(pMsg, psz, strlen(psz));
     } else if (!strcmp(name, "msg")) {
-        psz = json_object_get_string(json);
+        psz = jsonToString(json);
         MsgReplaceMSG(pMsg, (const uchar *)psz, strlen(psz));
     } else if (!strcmp(name, "syslogtag")) {
-        psz = json_object_get_string(json);
+        psz = jsonToString(json);
         MsgSetTAG(pMsg, (const uchar *)psz, strlen(psz));
     } else if (!strcmp(name, "pri")) {
         val = json_object_get_int(json);
@@ -4346,23 +4371,23 @@ static rsRetVal msgSetPropViaJSON(smsg_t *__restrict__ const pMsg,
         else
             DBGPRINTF("mmexternal: invalid fac %d requested -- ignored\n", val);
     } else if (!strcmp(name, "procid")) {
-        psz = json_object_get_string(json);
+        psz = jsonToString(json);
         MsgSetPROCID(pMsg, psz);
     } else if (!strcmp(name, "msgid")) {
-        psz = json_object_get_string(json);
+        psz = jsonToString(json);
         MsgSetMSGID(pMsg, psz);
     } else if (!strcmp(name, "structured-data")) {
-        psz = json_object_get_string(json);
+        psz = jsonToString(json);
         MsgSetStructuredData(pMsg, psz);
     } else if (!strcmp(name, "hostname") || !strcmp(name, "source")) {
-        psz = json_object_get_string(json);
+        psz = jsonToString(json);
         MsgSetHOSTNAME(pMsg, (const uchar *)psz, strlen(psz));
     } else if (!strcmp(name, "fromhost")) {
-        psz = json_object_get_string(json);
+        psz = jsonToString(json);
         MsgSetRcvFromStr(pMsg, (const uchar *)psz, strlen(psz), &propFromHost);
         prop.Destruct(&propFromHost);
     } else if (!strcmp(name, "fromhost-ip")) {
-        psz = json_object_get_string(json);
+        psz = jsonToString(json);
         MsgSetRcvFromIPStr(pMsg, (const uchar *)psz, strlen(psz), &propRcvFromIP);
         prop.Destruct(&propRcvFromIP);
     } else if (!strcmp(name, "$!")) {
@@ -4818,7 +4843,7 @@ struct json_object *jsonDeepCopy(struct json_object *src) {
             dst = json_object_new_int64(json_object_get_int64(src));
             break;
         case json_type_string:
-            dst = json_object_new_string(json_object_get_string(src));
+            dst = json_object_new_string(jsonToString(src));
             break;
         case json_type_object:
             dst = json_object_new_object();

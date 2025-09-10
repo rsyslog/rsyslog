@@ -40,6 +40,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
+#include <json.h>
 
 #include "rsyslog.h"
 #include "obj.h"
@@ -93,6 +94,13 @@ char **glblDbgFiles = NULL;
 size_t glblDbgFilesNum = 0;
 int glblDbgWhitelist = 1;
 int glblPermitCtlC = 0;
+/* For global option CompactJsonString:
+ *   Compact the JSON variable string, without extra space.
+ *   Considering compatibility issues, the default options(CompactJsonString = "off")
+ *   keep the same as before.
+ */
+int glblJsonFormatOpt = JSON_C_TO_STRING_SPACED;
+
 
 pid_t glbl_ourpid;
 #ifndef HAVE_ATOMIC_BUILTINS
@@ -109,6 +117,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
     {"operatingstatefile", eCmdHdlrString, 0},
     {"dropmsgswithmaliciousdnsptrrecords", eCmdHdlrBinary, 0},
     {"localhostname", eCmdHdlrGetWord, 0},
+    {"compactjsonstring", eCmdHdlrBinary, 0},
     {"preservefqdn", eCmdHdlrBinary, 0},
     {"debug.onshutdown", eCmdHdlrBinary, 0},
     {"debug.logfile", eCmdHdlrString, 0},
@@ -1224,6 +1233,8 @@ rsRetVal glblDoneLoadCnf(void) {
             setNetstrmDrvrCAExtraFiles(NULL, cstr);
         } else if (!strcmp(paramblk.descr[i].name, "preservefqdn")) {
             bPreserveFQDN = (int)cnfparamvals[i].val.d.n;
+        } else if (!strcmp(paramblk.descr[i].name, "compactjsonstring")) {
+            glblJsonFormatOpt = cnfparamvals[i].val.d.n ? JSON_C_TO_STRING_PLAIN : JSON_C_TO_STRING_SPACED;
         } else if (!strcmp(paramblk.descr[i].name, "dropmsgswithmaliciousdnsptrrecords")) {
             loadConf->globals.bDropMalPTRMsgs = (int)cnfparamvals[i].val.d.n;
         } else if (!strcmp(paramblk.descr[i].name, "action.reportsuspension")) {

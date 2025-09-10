@@ -117,6 +117,7 @@ ENDinterface(glbl)
 /* the remaining prototypes */
 PROTOTYPEObj(glbl);
 
+extern int glblJsonFormatOpt;
 extern int glblUnloadModules;
 extern short janitorInterval;
 extern char **glblDbgFiles;
