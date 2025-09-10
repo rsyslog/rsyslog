@@ -30,10 +30,11 @@ Note that due to the current config system **no whitespace** is supported inside
 the list, so be sure not to use any whitespace inside it. The list is
 constructed of Severity-Name/Severity-Value pairs, delimited by comma.
 Severity-Name is a case-sensitive string, e.g. ``warning`` and an associated
-numerical value (e.g. 4). Possible values are in the rage 0..7 and are defined
+numerical value (e.g. 4). Possible values are in the range 0..7 and are defined
 in RFC5424, table 2. The given sample would be specified as ``warning/4``.
-If multiple instances of mmsnmptrapd are used, each instance uses the most
-recently defined ``$mmsnmptrapdSeverityMapping`` before itself.
+If multiple instances of mmsnmptrapd are configured, each module instance uses
+the most recently defined SeverityMapping that appears before its own
+``module()`` statement.
 
 Module usage
 ------------
