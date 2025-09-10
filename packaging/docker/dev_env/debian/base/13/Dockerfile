@@ -3,8 +3,8 @@
 FROM	debian:13
 ENV	DEBIAN_FRONTEND=noninteractive
 RUN 	apt-get update && \
-	apt-get upgrade -y
-RUN	apt-get install -y \
+	apt-get upgrade -y \
+	&& apt-get install -y \
 	autoconf \
 	autoconf-archive \
 	automake \
@@ -30,6 +30,7 @@ RUN	apt-get install -y \
 	libhiredis-dev \
 	libkrb5-dev \
 	liblz4-dev \
+	libmaxminddb-dev \
 	default-libmysqlclient-dev \
 	libnet1-dev \
 	libpcap-dev \
@@ -55,10 +56,10 @@ RUN	apt-get install -y \
 	vim \
 	wget \
 	zlib1g-dev \
-	zstd
+	libmongoc-dev \
+	zstd \
+	&& apt clean
 #	libbson-dev
-#	libmaxminddb-dev 
-#	libmongoc-dev 
 #	libgrok1 libgrok-dev
 #	software-properties-common
 #RUN     add-apt-repository ppa:adiscon/v8-stable -y && \
@@ -130,19 +131,6 @@ RUN	cd helper-projects && \
 # uninstall (in case the user wants to go back to system-default)
 #	cd ..
 
-# libmongoc is unfortunately not available on openSuse - later?
-#RUN	cd helper-projects && \
-#	wget -nv https://github.com/mongodb/mongo-c-driver/releases/download/1.12.0/mongo-c-driver-1.12.0.tar.gz && \
-#	tar xzf mongo-c-driver-1.12.0.tar.gz && \
-#	cd mongo-c-driver-1.12.0 && \
-#	mkdir cmake-build && \
-#	cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF && \
-#	make -j4 && \
-#	make install && \
-#	cd .. && \
-#	rm -r mongo-c-driver-1.12.0* && \
-#	cd ..
-
 # bump dependency version below to trigger a dependency rebuild
 # but not a full one (via --no-cache)
 ENV	RSYSLOG_DEP_VERSION=2020-01-26
@@ -170,7 +158,7 @@ RUN	cd helper-projects && \
 	rm -r liblogging && \
 	cd ..
 
-# liblfastjson - using system package instead of building from source
+# libfastjson - using system package instead of building from source
 # (system package is available in Debian 13)
 
 # liblognorm
@@ -178,7 +166,7 @@ RUN	cd helper-projects && \
 	git clone https://github.com/rsyslog/liblognorm.git && \
 	cd liblognorm && \
 	autoreconf -fi && \
-	./configure --prefix=/usr --libdir=/usr/lib64 && \
+	./configure --prefix=/usr --libdir=/usr/lib64 --disable-Werror && \
 	make -j && \
 	make install && \
 	cd .. && \
@@ -210,6 +198,7 @@ ENV	RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-imbatchreport \
 	--disable-imczmq \
 	--enable-imdiag \
+	--enable-imdocker \
 	--enable-imfile \
 	--enable-imhttp \
 	--enable-imjournal \
@@ -220,7 +209,7 @@ ENV	RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-impcap \
 	--enable-imtuxedolog \
 	--disable-kafka-tests \
-	--disable-kmsg \
+	--enable-kmsg \
 	--enable-ksi-ls12 \
 	--enable-libdbi \
 	--enable-libfaketime \
@@ -230,7 +219,7 @@ ENV	RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-mmanon \
 	--enable-mmaudit \
 	--enable-mmcount \
-	--disable-mmdblookup \
+	--enable-mmdblookup \
 	--enable-mmfields \
 	--disable-mmgrok \
 	--enable-mmjsonparse \
@@ -246,10 +235,12 @@ ENV	RSYSLOG_CONFIGURE_OPTIONS \
 	--disable-omamqp1 \
 	--disable-omczmq \
 	--enable-omhiredis \
+	--enable-omhttp \
 	--enable-omhttpfs \
 	--enable-omjournal \
 	--disable-omkafka \
-	--disable-ommongodb \
+	--enable-ommongodb \
+	--enable-omclickhouse \
 	--enable-omprog \
 	--enable-omrelp-default-port=13515 \
 	--enable-omruleset \
