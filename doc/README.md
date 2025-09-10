@@ -172,7 +172,14 @@ later steps are identical, so we've covered those steps in one place.
 
 ## CI deployment to GitHub Pages
 
--   On pushes to the `main`/`master` branches and on manual runs, GitHub Actions builds the docs using the rsyslog doc Makefile: `make html SPHINXOPTS="-W"`.
--   Sphinx warnings are treated as errors via the `-W` flag.
--   The built HTML in `doc/build/html` is uploaded as a workflow artifact and deployed to GitHub Pages.
--   The deployment URL is exposed on the workflow run under the `github-pages` environment.
+A GitHub Actions workflow automatically builds and deploys documentation previews for pull requests and updates the main documentation site.
+
+-   **Pull Request Previews**:
+    -   Triggered by changes to doc/**/*.rst files in a PR.
+    -   Builds docs with make html SPHINXOPTS="-W -q --keep-going".
+    -   For same-repo PRs, a preview is deployed to GitHub Pages (e.g., .../pr-<PR_NUMBER>/) and a link is posted as a PR comment.
+    -   For forked PRs, deployment is skipped due to permissions, but the built HTML is available as a downloadable artifact.
+-   **Main Branch Deployment**:
+    -   Triggered by pushes to main/master or manual runs.
+    -   Builds docs with make html SPHINXOPTS="-W", treating warnings as errors.
+    -   Deploys to the main GitHub Pages site and uploads the build as an artifact.
