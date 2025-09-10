@@ -22,7 +22,7 @@ code <http://www.rsyslog.com/where-to-find-the-rsyslog-source-code/>`_\ "
 page on the project site will point you to the current repository
 location.
 
-After you have cloned the repository, you are in the master branch by
+After you have cloned the repository, you are in the main branch by
 default. This is where we keep the devel branch. If you need any other
 branch, you need to do a "git checkout --track -b branch origin/branch".
 For example, the command to check out the beta branch is "git checkout

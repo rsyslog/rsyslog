@@ -9,7 +9,7 @@ CMD	["build-doc"]
 ENTRYPOINT ["/home/appliance/starter.sh"]
 VOLUME	/rsyslog-doc
 RUN	chmod a+w /rsyslog-doc
-ENV	BRANCH="master" \
+ENV	BRANCH="main" \
 	FORMAT="html" \
 	STRICT="-n -W"
 COPY	starter.sh ./

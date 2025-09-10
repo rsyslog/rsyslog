@@ -31,13 +31,13 @@
 .. _RsyslogPackageDownloads: http://www.rsyslog.com/downloads/download-other/
 
 .. |GitHubDocProject| replace:: rsyslog source documentation
-.. _GitHubDocProject: https://github.com/rsyslog/rsyslog/doc
+.. _GitHubDocProject: https://github.com/rsyslog/rsyslog/tree/main/doc
 
-.. |GitHubDocProjectREADME| replace:: rsyslog-doc project README
-.. _GitHubDocProjectREADME: https://github.com/rsyslog/rsyslog/doc/blob/master/README.md
+.. |GitHubDocProjectREADME| replace:: rsyslog doc/ README
+.. _GitHubDocProjectREADME: https://github.com/rsyslog/rsyslog/blob/main/doc/README.md
 
-.. |GitHubDocProjectDevREADME| replace:: rsyslog-doc project BUILDS README
-.. _GitHubDocProjectDevREADME: https://github.com/rsyslog/rsyslog-doc/blob/master/BUILDS_README.md
+.. |GitHubDocProjectDevREADME| replace:: rsyslog doc/ BUILDS README
+.. _GitHubDocProjectDevREADME: https://github.com/rsyslog/rsyslog/blob/main/doc/BUILDS_README.md
 
 .. |GitHubDocProjectGoodFirstIssueLabel| replace:: rsyslog-doc issues marked with Good First Issue label
 .. _GitHubDocProjectGoodFirstIssueLabel: https://github.com/rsyslog/rsyslog-doc/labels/good%20first%20issue
@@ -63,7 +63,7 @@
 .. _GitHubSourceProject: https://github.com/rsyslog/rsyslog/
 
 .. |GitHubSourceProjectREADME| replace:: rsyslog project README
-.. _GitHubSourceProjectREADME: https://github.com/rsyslog/rsyslog/blob/master/README.md
+.. _GitHubSourceProjectREADME: https://github.com/rsyslog/rsyslog/blob/main/README.md
 
 .. |GitHubSourceProjectGoodFirstIssueLabel| replace:: rsyslog issues marked with Good First Issue label
 .. _GitHubSourceProjectGoodFirstIssueLabel: https://github.com/rsyslog/rsyslog/labels/good%20first%20issue

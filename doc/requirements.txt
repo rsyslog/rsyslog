@@ -1,5 +1,5 @@
 
-# Need at least 1.5.1 due to some of the features we are using
-sphinx >=1.5.1
+# Align with conf.py needs_sphinx requirement
+sphinx>=4.5.0
 furo
 sphinxcontrib.mermaid

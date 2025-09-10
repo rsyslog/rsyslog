@@ -4,7 +4,7 @@
 
 This doc is intended for maintainers and regular contributors to
 the project. The [`README.md`](README.md) doc covers the basic steps for one-off
-builds from the `master` branch.
+builds from the `main` branch.
 
 In all cases, the version number and release string do not *need* to be
 manually specified, though the directions do provide steps for doing so
@@ -43,11 +43,11 @@ steps in this document.
 1. Review the [`README.md`](README.md) file for instructions that cover
    installing `pip`, setting up the virtual environment and installing
    the latest version of the Sphinx package.
-1. Clone the https://github.com/rsyslog/rsyslog-doc.git repo
-1. Merge `master` into the current stable branch (e.g., `v8-stable`)
+1. Change to the `doc/` folder within the rsyslog repository
+1. Merge `main` into the current stable branch (e.g., `v8-stable`)
 1. Tag the stable branch
 1. Push all changes to the remote
-1. Run the `release_build.sh` script
+1. Run the `doc/tools/release_build.sh` script
 1. Sync the contents of the `build` directory over to the web server
 1. Sync the latest release doc tarball to where the previous release
    tarball is hosted. Update references to this tarball as necessary.
@@ -72,7 +72,7 @@ You have several options:
    was within the tarball
     - For example, `cd /tmp/rsyslog-8.33.0`
       (the `rsyslog-8.33.0` folder is within the tarball)
-1. Run `sphinx -b html source build`
+1. Run `sphinx-build -b html source build`
 
 You may need to first follow the directions in the [`README.md`](README.md)
 doc to create or activate your virtual environment if the `sphinx` package
@@ -80,8 +80,8 @@ is not already installed and known to your installation of Python.
 
 #### Build from GitHub download
 
-1. Visit https://github.com/rsyslog/rsyslog-doc
-1. Click on 'Branch: master' and choose 'Tags' from the right-column
+1. Visit https://github.com/rsyslog/rsyslog
+1. Click on 'Branch: main' and choose 'Tags' from the right-column
 1. Select the `v8.33.0` tag
 1. Click on the 'Clone or download' green button to the far right
 1. Click 'Download ZIP' and save the file to your system
@@ -91,7 +91,7 @@ is not already installed and known to your installation of Python.
    within the tarball.
     - For example, `cd C:\users\deoren\Downloads\rsyslog-8.33.0`
       (the `rsyslog-8.33.0` folder is within the tarball)
-1. `sphinx -D version="8.33" release="8.33.0" -b html source build`
+1. `sphinx-build -D version="8.33" release="8.33.0" -b html source build`
     - You have to specify the `version` and `release` values here for now
       because we do not modify the `source/conf.py` file in the stable branch
       or its tags to hard-code the new version number.
@@ -105,9 +105,10 @@ is not already installed and known to your installation of Python.
 1. Review the [`README.md`](README.md) file for instructions that cover
    installing `pip`, setting up the virtual environment and installing
    the latest version of the Sphinx package.
-1. Run `git clone https://github.com/rsyslog/rsyslog-doc.git`
+1. Run `git clone https://github.com/rsyslog/rsyslog.git`
+1. Move to doc directory.
 1. Run `git checkout v8.33.0`
-1. Run `sphinx -D version="8.33" release="8.33.0" -b html source build`
+1. Run `sphinx-build -D version="8.33" release="8.33.0" -b html source build`
 
 You may need to first follow the directions in the [`README.md`](README.md)
 doc to create or activate your virtual environment if the `sphinx` package
@@ -119,7 +120,7 @@ is not already installed and known to your installation of Python.
 ### Obtain docs
 
 You have several options for obtaining a snapshot of the branch you would
-like to build (most often this is the `master` branch):
+like to build (most often this is the `main` branch):
 
 - Download a zip file from GitHub
 - Clone GitHub repo using Git
@@ -130,23 +131,23 @@ of the docs.
 
 ### Build from GitHub download
 
-These directions assume that you wish to build the docs from the `master`
-branch. Substitute `master` for any other branch that you wish to build.
+These directions assume that you wish to build the docs from the `main`
+branch. Substitute `main` for any other branch that you wish to build.
 
 1. Follow the steps previously given for downloading the zip file from GitHub,
    this time substituting the tag download option for the branch you wish
    to obtain doc sources for.
 1. Decompress the zip file and change your current working directory to
    that path.
-1. Run `sphinx -D release="dev-build" -b html source build` to generate
-   HTML format and `sphinx -b epub source build` to build an epub file.
+1. Run `sphinx-build -D release="dev-build" -b html source build` to generate
+   HTML format and `sphinx-build -b epub source build` to build an epub file.
 
 
 
 ### Build from Git repo
 
-These directions assume that you wish to build the docs from the `master`
-branch. Substitute `master` for any other branch that you wish to build.
+These directions assume that you wish to build the docs from the `main`
+branch. Substitute `main` for any other branch that you wish to build.
 
 The Sphinx build configuration file will attempt to pull the needed information
 from the Git repo in order to generate a "dev build" release string. This
@@ -156,7 +157,8 @@ and is useful to identify a dev build from a release set of documentation.
 1. Review the [`README.md`](README.md) file for instructions that cover
    installing `pip`, setting up the virtual environment and installing
    the latest version of the Sphinx package.
-1. Run `git clone https://github.com/rsyslog/rsyslog-doc.git`
-1. Run `git checkout master`
-1. Run `sphinx -b html source build` to generate HTML format and
-   `sphinx -b epub source build` to build an epub file.
+1. Run `git clone https://github.com/rsyslog/rsyslog.git`
+1. Run `git checkout main`
+1. Change to doc folder
+1. Run `sphinx-build -b html source build` to generate HTML format and
+   `sphinx-build -b epub source build` to build an epub file.

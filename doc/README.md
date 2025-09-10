@@ -79,7 +79,7 @@ to Stack Exchange](https://serverfault.com/questions/ask?tags=rsyslog).
 
 ## Building the documentation
 
-These directions assume a modern Python 3 environment (Python 3.6 or newer is recommended).
+These directions assume a modern Python 3 environment (Python 3.8+; 3.10+ recommended).
 
 ### Assumptions
 
