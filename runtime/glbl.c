@@ -1234,11 +1234,7 @@ rsRetVal glblDoneLoadCnf(void) {
         } else if (!strcmp(paramblk.descr[i].name, "preservefqdn")) {
             bPreserveFQDN = (int)cnfparamvals[i].val.d.n;
         } else if (!strcmp(paramblk.descr[i].name, "compactjsonstring")) {
-            if (cnfparamvals[i].val.d.n) {
-                glblJsonFormatOpt = JSON_C_TO_STRING_PLAIN;
-            } else {
-                glblJsonFormatOpt = JSON_C_TO_STRING_SPACED;
-            }
+            glblJsonFormatOpt = cnfparamvals[i].val.d.n ? JSON_C_TO_STRING_PLAIN : JSON_C_TO_STRING_SPACED;
         } else if (!strcmp(paramblk.descr[i].name, "dropmsgswithmaliciousdnsptrrecords")) {
             loadConf->globals.bDropMalPTRMsgs = (int)cnfparamvals[i].val.d.n;
         } else if (!strcmp(paramblk.descr[i].name, "action.reportsuspension")) {

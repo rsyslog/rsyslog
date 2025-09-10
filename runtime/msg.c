@@ -965,13 +965,29 @@ ENDobjDestruct
 #undef tmpCOPYSZ
 #undef tmpCOPYCSTR
 
+/* Return a textual representation of @json.
+ *
+ * The pointer is owned by @json; do NOT free it.
+ * To keep the string beyond the next mutation, serialization call,
+ * or destruction of @json, make a copy (e.g., strdup()).
+ */
 static const char *jsonToString(struct json_object *const json) {
-    if (!json) return NULL;
+    if (!json) {
+        return NULL;
+    }
 
     if (json_object_get_type(json) == json_type_string) {
+        /* Direct pointer to internal string storage.
+         * - Stable across repeated json_object_get_string() calls.
+         * - Invalidated once the object is modified or fjson_object_put().
+         */
         return json_object_get_string(json);
     }
 
+    /* Non-string types serialize into json->_pb.
+     * - json->_pb is reset/overwritten on every serialization or mutation.
+     * - The returned pointer becomes invalid immediately after that.
+     */
     return json_object_to_json_string_ext(json, glblJsonFormatOpt);
 }
 
