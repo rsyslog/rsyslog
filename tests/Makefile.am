@@ -628,6 +628,7 @@ TESTS +=  \
 	imtcp-maxFrameSize.sh \
 	imtcp-msg-truncation-on-number.sh \
 	imtcp-msg-truncation-on-number2.sh \
+	imtcp-netns.sh \
 	imtcp-NUL.sh \
 	imtcp-NUL-rawmsg.sh \
 	imtcp_incomplete_frame_at_end.sh \
@@ -1466,6 +1467,7 @@ TESTS +=  \
 	imptcp-oversize-message-display.sh \
 	imptcp-msg-truncation-on-number.sh \
 	imptcp-msg-truncation-on-number2.sh \
+	imtcp-netns.sh \
 	imptcp-maxFrameSize-parameter.sh \
 	mmjsonparse_cim.sh \
 	mmjsonparse_cim2.sh \
@@ -2442,6 +2444,7 @@ EXTRA_DIST= \
 	imptcp-oversize-message-display.sh \
 	imptcp-msg-truncation-on-number.sh \
 	imptcp-msg-truncation-on-number2.sh \
+	imtcp-netns.sh \
 	imptcp-maxFrameSize-parameter.sh \
 	mmjsonparse_cim.sh \
 	mmjsonparse_cim2.sh \
@@ -2528,6 +2531,7 @@ EXTRA_DIST= \
 	imtcp-maxFrameSize.sh \
 	imtcp-msg-truncation-on-number.sh \
 	imtcp-msg-truncation-on-number2.sh \
+	imtcp-netns.sh \
 	imtcp-NUL.sh \
 	imtcp-NUL-rawmsg.sh \
 	imtcp-tls-gtls-x509fingerprint-invld.sh \
