@@ -656,6 +656,7 @@ static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
     struct sockaddr_storage *addr;
     uchar *fromHostFQDN = NULL;
     prop_t *fromHostIP = NULL;
+    prop_t *fromHostPort = NULL;
 
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     assert(pLstnInfo != NULL);
@@ -699,6 +700,18 @@ static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
     }
     CHKiRet(netstrm.GetRemoteIP(pNewStrm, &fromHostIP));
     CHKiRet(netstrm.GetRemAddr(pNewStrm, &addr));
+    char portbuf[8];
+    uint16_t port;
+    if (addr->ss_family == AF_INET)
+        port = ntohs(((struct sockaddr_in *)addr)->sin_port);
+    else if (addr->ss_family == AF_INET6)
+        port = ntohs(((struct sockaddr_in6 *)addr)->sin6_port);
+    else
+        port = 0;
+    snprintf(portbuf, sizeof(portbuf), "%u", port);
+    CHKiRet(prop.Construct(&fromHostPort));
+    CHKiRet(prop.SetString(fromHostPort, (uchar *)portbuf, strlen(portbuf)));
+    CHKiRet(prop.ConstructFinalize(fromHostPort));
     /* Here we check if a host is permitted to send us messages. If it isn't, we do not further
      * process the message but log a warning (if we are configured to do this).
      * rgerhards, 2005-09-26
@@ -721,6 +734,8 @@ static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
     CHKiRet(tcps_sess.SetHost(pSess, fromHostFQDN));
     fromHostFQDN = NULL; /* we handed this string over */
     CHKiRet(tcps_sess.SetHostIP(pSess, fromHostIP));
+    CHKiRet(tcps_sess.SetHostPort(pSess, fromHostPort));
+    fromHostPort = NULL;
     CHKiRet(tcps_sess.SetStrm(pSess, pNewStrm));
     pNewStrm = NULL; /* prevent it from being freed in error handler, now done in tcps_sess! */
     CHKiRet(tcps_sess.SetMsgIdx(pSess, 0));
@@ -752,6 +767,7 @@ finalize_it:
         if (pSess != NULL) tcps_sess.Destruct(&pSess);
         if (pNewStrm != NULL) netstrm.Destruct(&pNewStrm);
         if (fromHostIP != NULL) prop.Destruct(&fromHostIP);
+        if (fromHostPort != NULL) prop.Destruct(&fromHostPort);
         free(fromHostFQDN);
     }
 
