@@ -44,8 +44,13 @@ PRAGMA_IGNORE_Wunknown_attribute;
 PRAGMA_IGNORE_Wexpansion_to_defined;
 PRAGMA_IGNORE_Wstrict_prototypes;
 PRAGMA_IGNORE_Wold_style_definition;
-#include <mongoc.h>
-#include <bson.h>
+#ifdef HAVE_LIBMONGOC1
+    #include <mongoc.h>
+    #include <bson.h>
+#else
+    #include <mongoc/mongoc.h>
+    #include <bson/bson.h>
+#endif
 PRAGMA_DIAGNOSTIC_POP;
 
 #include "conf.h"
@@ -192,7 +197,7 @@ static rsRetVal initMongoDB(instanceData *pData, int bSilent) {
     mongoc_init();
     pData->client = mongoc_client_new(pData->uristr);
     if (pData->ssl_cert && pData->ssl_ca) {
-#ifdef HAVE_MONGOC_CLIENT_SET_SSL_OPTS
+#ifdef MONGOC_ENABLE_SSL
         mongoc_ssl_opt_t ssl_opts;
         memset(&ssl_opts, 0, sizeof(mongoc_ssl_opt_t));
         ssl_opts.pem_file = pData->ssl_cert;
