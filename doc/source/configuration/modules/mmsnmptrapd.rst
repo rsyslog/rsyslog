@@ -58,7 +58,7 @@ bindings. In short words, all capabilities rsyslog offers to control
 output modules are also available to mmsnmptrapd.
 
 Module Parameters
-~~~~~~~~~~~~~~~~~
+-----------------
 
 .. note::
 
