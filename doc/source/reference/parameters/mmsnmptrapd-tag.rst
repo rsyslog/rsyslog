@@ -26,10 +26,10 @@ This parameter applies to :doc:`../../configuration/modules/mmsnmptrapd`.
 Description
 -----------
 Tells the module which start string inside the tag to look for. The default is
-``snmptrapd``. Note that a slash is automatically added to this tag when it
-comes to matching incoming messages. It MUST not be given, except if two
-slashes are required for whatever reasons (so ``tag/`` results in a check for
-``tag//`` at the start of the tag field).
+``snmptrapd``. Note that a slash (``/``) is automatically appended to this tag for
+matching. You should not include a trailing slash unless you specifically need
+to match a double slash. For example, setting ``tag="tag/"`` results in a
+check for ``tag//`` at the start of the tag field.
 
 Module usage
 ------------
