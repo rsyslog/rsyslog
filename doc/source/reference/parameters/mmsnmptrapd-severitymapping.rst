@@ -32,10 +32,10 @@ constructed of Severity-Name/Severity-Value pairs, delimited by comma.
 Severity-Name is a case-sensitive string, e.g. ``warning`` and an associated
 numerical value (e.g. 4). Possible values are in the range 0..7 and are defined
 in `RFC5424, table 2 <https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1>`_.
-The given sample would be specified as ``warning/4``. If multiple instances of
-mmsnmptrapd are configured, each module instance uses the most recently defined
-severityMapping that appears before its own
-``module()`` statement.
+The given sample would be specified as ``warning/4``. The mapping is defined
+when the module is loaded using the ``module()`` statement. This setting applies
+to all subsequent actions that use this module instance. To use different
+mappings, load separate instances of the module in different rulesets.
 
 Module usage
 ------------
