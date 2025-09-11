@@ -25,9 +25,9 @@ This parameter applies to :doc:`../../configuration/modules/mmsnmptrapd`.
 
 Description
 -----------
-This specifies the severity mapping table. It needs to be specified as a list.
-Note that due to the current config system **no whitespace** is supported inside
-the list, so be sure not to use any whitespace inside it. The list is
+This specifies the severity mapping table. It must be specified as a list.
+Note that **no whitespace** is supported inside the list. Avoid adding any
+whitespace, as it will likely lead to parsing errors. The list is
 constructed of Severity-Name/Severity-Value pairs, delimited by comma.
 Severity-Name is a case-sensitive string, e.g. ``warning`` and an associated
 numerical value (e.g. 4). Possible values are in the range 0..7 and are defined
