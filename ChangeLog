@@ -1,10 +1,25 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
+- 2025-09-11: ommongodb: add support for mongo-c-driver v2
+  Update pkg-config check for v2 of mongo-c-driver
+  The name of the pkg-config file has changed from libmongoc-1.0.pc to
+  mongoc2.pc. First try the new version and keep the old version as
+  fallback.
+  In version 1.13.0, the headers were re-organized and the preferred way
+  of including the headers are <mongoc/mongo.h> and <bson/bson.h>.
+  Forwarding headers to keep backwards compatibility were introduced that
+  have been removed in v2.
+  To support building on CentOS 7 and Ubuntu 18, which ship versions older
+  than 1.13.0, keep using the old include names for v1 and use the new
+  include names for v2.
+  Once the minimum version of mongo-c-driver is bumped to >= 1.13.0, this
+  fallback can be dropped.
+  Thanks: Michael Biebl for the patch and his help on the issue in general.
 - 2025-09-10: config script: add b64_decode function
   This PR provides a new Rainerscript function: b64_decode.
   This function is based on RFC4648.
   Thanks to Kevin Guillemot for the patch.
-- 2025-09-09: imdocker: Add image name to metadata fields 
+- 2025-09-09: imdocker: Add image name to metadata fields
   Exposes the image name and tag of the source container (what the Docker API simply
   calls Image) as an additional metadata value alongside the existing ones.
   Why?
