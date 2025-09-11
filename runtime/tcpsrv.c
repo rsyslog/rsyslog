@@ -536,6 +536,7 @@ static void ATTR_NONNULL() deinit_tcp_listener(tcpsrv_t *const pThis) {
         free((void *)pEntry->cnf_params->pszPort);
         free((void *)pEntry->cnf_params->pszAddr);
         free((void *)pEntry->cnf_params->pszLstnPortFileName);
+        free((void *)pEntry->cnf_params->pszNetworkNamespace);
         free((void *)pEntry->cnf_params);
         ratelimitDestruct(pEntry->ratelimiter);
         statsobj.Destruct(&(pEntry->stats));
@@ -604,12 +605,15 @@ static rsRetVal ATTR_NONNULL() create_tcp_socket(tcpsrv_t *const pThis) {
     while (pEntry != NULL) {
         localRet = initTCPListener(pThis, pEntry);
         if (localRet != RS_RET_OK) {
+            char *ns = pEntry->cnf_params->pszNetworkNamespace;
+
             LogError(
                 0, localRet,
                 "Could not create tcp listener, ignoring port "
-                "%s bind-address %s.",
+                "%s bind-address %s%s%s.",
                 (pEntry->cnf_params->pszPort == NULL) ? "**UNSPECIFIED**" : (const char *)pEntry->cnf_params->pszPort,
-                (pEntry->cnf_params->pszAddr == NULL) ? "**UNSPECIFIED**" : (const char *)pEntry->cnf_params->pszAddr);
+                (pEntry->cnf_params->pszAddr == NULL) ? "**UNSPECIFIED**" : (const char *)pEntry->cnf_params->pszAddr,
+                (ns == NULL) ? "" : " namespace ", (ns == NULL) ? "" : ns);
         }
         pEntry = pEntry->pNext;
     }
@@ -1951,6 +1955,25 @@ finalize_it:
     RETiRet;
 }
 
+static rsRetVal SetNetworkNamespace(tcpsrv_t *pThis __attribute__((unused)),
+                                    tcpLstnParams_t *const cnf_params,
+                                    const char *const networkNamespace) {
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, tcpsrv);
+    free(cnf_params->pszNetworkNamespace);
+    if (!networkNamespace || !*networkNamespace) {
+        cnf_params->pszNetworkNamespace = NULL;
+    } else {
+#ifdef HAVE_SETNS
+        CHKmalloc(cnf_params->pszNetworkNamespace = strdup(networkNamespace));
+#else  // ndef HAVE_SETNS
+        LogError(0, RS_RET_VALUE_NOT_SUPPORTED, "Namespaces are not supported");
+        ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+#endif  // #else ndef HAVE_SETNS
+    }
+finalize_it:
+    RETiRet;
+}
 
 /* Set the linux-like ratelimiter settings */
 static rsRetVal ATTR_NONNULL(1)
@@ -2180,6 +2203,7 @@ BEGINobjQueryInterface(tcpsrv)
     pIf->create_tcp_socket = create_tcp_socket;
     pIf->Run = Run;
 
+    pIf->SetNetworkNamespace = SetNetworkNamespace;
     pIf->SetKeepAlive = SetKeepAlive;
     pIf->SetKeepAliveIntvl = SetKeepAliveIntvl;
     pIf->SetKeepAliveProbes = SetKeepAliveProbes;

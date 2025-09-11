@@ -58,7 +58,7 @@
 
 /* static data */
 DEFobjStaticHelpers;
-DEFobjCurrIf(netstrms)
+DEFobjCurrIf(net) DEFobjCurrIf(netstrms)
 
 
     /* Standard-Constructor */
@@ -145,14 +145,31 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *pNS,
                                                const int iSessMax,
                                                const tcpLstnParams_t *const cnf_params) {
     DEFiRet;
+    const char *ns = cnf_params->pszNetworkNamespace;
+    int netns_fd = -1;
 
     ISOBJ_TYPE_assert(pNS, netstrms);
     assert(fAddLstn != NULL);
     assert(cnf_params->pszPort != NULL);
 
+#ifdef HAVE_SETNS
+    if (ns) {
+        CHKiRet(net.netns_save(&netns_fd));
+        CHKiRet(net.netns_switch(ns));
+    }
+#endif  // ndef HAVE_SETNS
+
     CHKiRet(pNS->Drvr.LstnInit(pNS, pUsr, fAddLstn, iSessMax, cnf_params));
 
 finalize_it:
+#ifdef HAVE_SETNS
+    if (ns) {
+        // netns_restore will log a message on failure
+        // but there's really nothing we can do about it
+        (void)net.netns_restore(&netns_fd);
+    }
+#endif  // ndef HAVE_SETNS
+
     RETiRet;
 }
 
@@ -493,6 +510,7 @@ BEGINObjClassExit(netstrm, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END M
     CODESTARTObjClassExit(netstrm);
     /* release objects we no longer need */
     objRelease(netstrms, DONT_LOAD_LIB);
+    objRelease(net, LM_NET_FILENAME);
 ENDObjClassExit(netstrm)
 
 
@@ -502,6 +520,7 @@ ENDObjClassExit(netstrm)
  */
 BEGINAbstractObjClassInit(netstrm, 1, OBJ_IS_CORE_MODULE) /* class, version */
     /* request objects we use */
+    CHKiRet(objUse(net, LM_NET_FILENAME));
 
     /* set our own handlers */
 ENDObjClassInit(netstrm)
