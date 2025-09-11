@@ -74,7 +74,7 @@ when a new message arrives, it will be processed via the bound ruleset.
 Rules from all other rulesets are irrelevant and will never be processed.
 
 This makes multiple rulesets very handy to process local and remote
-message via separate means: bind the respective receivers to different
+messages via separate means: bind the respective receivers to different
 rule sets, and you do not need to separate the messages by any other
 method.
 
@@ -173,7 +173,7 @@ rsyslog.conf. As an example, your rsyslog.conf might look like this:
     *.emerg     *
     ... more ...
 
-Now, you want to add receive messages from a remote system and log these
+Now, you want to add receiving messages from a remote system and log these
 to a special file, but you do not want to have these messages written to
 the files specified above. The traditional approach is to add a rule in
 front of all others that filters on the message, processes it and then

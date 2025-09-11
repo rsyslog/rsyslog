@@ -58,7 +58,7 @@ Supported Authentication Modes
    -  If both Server and Client do not have a certificate, the highest available
       anon cipher will be used.
 
-x509/certvalid is a nonstandard mode. It validates the remote peers
+x509/certvalid is a non-standard mode. It validates the remote peers
 certificate, but does not check the subject name. This is weak
 authentication that may be useful in scenarios where multiple devices
 are deployed and it is sufficient proof of authenticity when their
@@ -75,7 +75,7 @@ CheckExtendedKeyPurpose
 
 -  **on** - if you turn this option on, it will check that peer's certificate
    contains the value for GNUTLS_KP_TLS_WWW_SERVER or GNUTLS_KP_TLS_WWW_CLIENT
-   respectively, depending whether we are on sending or receiving end of a
+   respectively, depending whether we are on the sending or the receiving end of a
    connection. 
 
 PrioritizeSAN

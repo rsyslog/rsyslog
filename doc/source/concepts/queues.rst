@@ -45,7 +45,7 @@ places, too.
 Wherever "*<object>*\ "  is used in the config file statements,
 substitute "*<object>*\ " with either "MainMsg" or "Action". The former
 will set main message queue parameters, the latter parameters for the
-next action that will be created. Action queue parameters can not be
+next action that will be created. Action queue parameters cannot be
 modified once the action has been specified. For example, to tell the
 main message queue to save its content on shutdown, use
 *$MainMsgQueueSaveOnShutdown on*".
@@ -245,12 +245,12 @@ run as a disk queue once the in-memory queue is full. A much smarter
 algorithm is used, which involves a "high watermark" and a "low
 watermark". Both specify numbers of queued items. If the queue size
 reaches high watermark elements, the queue begins to write data elements
-to disk. It does so until it reaches the low water mark elements. At
-this point, it stops writing until either high water mark is reached
+to disk. It does so until it reaches the low watermark elements. At
+this point, it stops writing until either high watermark is reached
 again or the on-disk queue becomes empty, in which case the queue
 reverts back to in-memory mode, only. While holding at the low
 watermark, new elements are actually enqueued in memory. They are
-eventually written to disk, but only if the high water mark is ever
+eventually written to disk, but only if the high watermark is ever
 reached again. If it isn't, these items never touch the disk. So even
 when a queue runs disk-assisted, there is in-memory data present (this
 is a big difference to pure disk queues!).
@@ -261,15 +261,15 @@ files and writing to them is a lengthy operation. It is too lengthy to
 e.g. block receiving UDP messages. Doing so would result in message
 loss. Thus, the queue initiates DA mode, but still is able to receive
 messages and enqueue them - as long as the maximum queue size is not
-reached. The number of elements between the high water mark and the
+reached. The number of elements between the high watermark and the
 maximum queue size serves as this "emergency buffer". Size it according
 to your needs, if traffic is very bursty you will probably need a large
 buffer here. Keep in mind, though, that under normal operations these
-queue elements will probably never be used. Setting the high water mark
+queue elements will probably never be used. Setting the high watermark
 too low will cause disk-assistance to be turned on more often than
 actually needed.
 
-The water marks can be set via the "*$<object>QueueHighWatermark*\ "
+The watermarks can be set via the "*$<object>QueueHighWatermark*\ "
 and  "*$<object>QueueLowWatermark*\ " configuration file directives.
 Note that these are actual numbers, not percentages. Be sure they make
 sense (also in respect to "*$<object>QueueSize*\ "). Rsyslogd does

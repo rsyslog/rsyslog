@@ -18,7 +18,7 @@ What are message parsers?
 
 Well, the quick answer is that message parsers are the component of
 rsyslog that parses the syslog message after it is being received. Prior
-to rsyslog 5.3.4, message parsers where built in into the rsyslog core
+to rsyslog 5.3.4, message parsers were built in into the rsyslog core
 itself and could not be modified (other than by modifying the rsyslog
 code).
 
@@ -73,7 +73,7 @@ how things are -unfortunately- done in plain tcp syslog...). So wire
 will see "A\\nB\\n". When this arrives at the receiver, the transport
 layer will undo the framing. When it sees the LF after A, it thinks it
 finds a valid frame delimiter (in fact, this is the correct view!). So
-the receive will extract one complete message A and one complete message
+the receiver will extract one complete message A and one complete message
 B, not knowing that they once were both part of a large multi-line
 message. These two messages are then passed to the upper layers, where
 the message parsers receive them and extract information. However, the
@@ -105,7 +105,7 @@ as messages are consistently in the same wrong format (and they usually
 are!), a message parser can look at that format, parse it, and make the
 message processable just like it were well formed in the first place.
 Plus, one can abuse the interface to do some other "interesting" tricks,
-but that would take us to far.
+but that would take us too far.
 
 While this functionality may not sound exciting, it actually solves a
 very big issue (that you only really understand if you have managed a
@@ -145,7 +145,7 @@ message it is being presented is supported by it. If so, the parser will
 tell the rsyslog engine and parse the message. The rsyslog engine now
 calls each parser inside the chain (in sequence!) until the first parser
 is able to parse the message. After one parser has been found, the
-message is considered parsed and no others parsers are called on that
+message is considered parsed and no other parsers are called on that
 message.
 
 Side-note: this method implies there are some "not-so-dirty" tricks
@@ -265,7 +265,7 @@ As of this writing, there exist only two message parsers, one for
 RFC5424 format and one for legacy syslog (loosely described in
 `RFC3164 <https://datatracker.ietf.org/doc/html/rfc3164>`_). These parsers are
 built-in and must not be explicitly loaded. However, message parsers can
-be added with relative ease by anyone knowing to code in C. Then, they
+be added with relative ease by anyone knowing how to code in C. Then, they
 can be loaded via $ModLoad just like any other loadable module. It is
 expected that the rsyslog project will be contributed additional message
 parsers over time, so that at some point there hopefully is a rich
