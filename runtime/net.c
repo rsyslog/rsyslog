@@ -1628,6 +1628,11 @@ BEGINobjQueryInterface(net)
     pIf->CmpHost = CmpHost;
     pIf->HasRestrictions = HasRestrictions;
     pIf->GetIFIPAddr = getIFIPAddr;
+
+    pIf->netns_save = netns_save;
+    pIf->netns_restore = netns_restore;
+    pIf->netns_switch = netns_switch;
+    pIf->netns_socket = netns_socket;
 finalize_it:
 ENDobjQueryInterface(net)
 

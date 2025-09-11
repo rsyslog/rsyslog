@@ -987,45 +987,11 @@ static rsRetVal TCPSendPrepRetry(void *pvData) {
 static rsRetVal changeToNs(instanceData *const pData __attribute__((unused))) {
     DEFiRet;
 #ifdef HAVE_SETNS
-    int iErr;
-    int destinationNs = -1;
-    char *nsPath = NULL;
-
     if (pData->networkNamespace) {
-        /* keep file descriptor of original network namespace */
-        pData->originalNamespace = open("/proc/self/ns/net", O_RDONLY);
-        if (pData->originalNamespace < 0) {
-            LogError(0, RS_RET_IO_ERROR, "omfwd: could not read /proc/self/ns/net");
-            ABORT_FINALIZE(RS_RET_IO_ERROR);
-        }
-
-        /* build network namespace path */
-        if (asprintf(&nsPath, "/var/run/netns/%s", pData->networkNamespace) == -1) {
-            LogError(0, RS_RET_OUT_OF_MEMORY, "omfwd: asprintf failed");
-            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-        }
-
-        /* keep file descriptor of destination network namespace */
-        destinationNs = open(nsPath, 0);
-        if (destinationNs < 0) {
-            LogError(0, RS_RET_IO_ERROR, "omfwd: could not change to namespace '%s'", pData->networkNamespace);
-            ABORT_FINALIZE(RS_RET_IO_ERROR);
-        }
-
-        /* actually change in the destination network namespace */
-        if ((iErr = (setns(destinationNs, CLONE_NEWNET))) != 0) {
-            LogError(0, RS_RET_IO_ERROR, "could not change to namespace '%s': %s", pData->networkNamespace,
-                     gai_strerror(iErr));
-            ABORT_FINALIZE(RS_RET_IO_ERROR);
-        }
-        dbgprintf("omfwd: changed to network namespace '%s'\n", pData->networkNamespace);
+        CHKiRet(net.netns_save(&pData->originalNamespace));
+        CHKiRet(net.netns_switch(pData->networkNamespace));
     }
-
 finalize_it:
-    free(nsPath);
-    if (destinationNs >= 0) {
-        close(destinationNs);
-    }
 #else /* #ifdef HAVE_SETNS */
     dbgprintf("omfwd: OS does not support network namespaces\n");
 #endif /* #ifdef HAVE_SETNS */
@@ -1039,21 +1005,12 @@ finalize_it:
 static rsRetVal returnToOriginalNs(instanceData *const pData __attribute__((unused))) {
     DEFiRet;
 #ifdef HAVE_SETNS
-    int iErr;
-
     /* only in case a network namespace is given and a file descriptor to
      * the original namespace exists */
     if (pData->networkNamespace && pData->originalNamespace >= 0) {
-        /* actually change to the original network namespace */
-        if ((iErr = (setns(pData->originalNamespace, CLONE_NEWNET))) != 0) {
-            LogError(0, RS_RET_IO_ERROR, "could not return to original namespace: %s", gai_strerror(iErr));
-            ABORT_FINALIZE(RS_RET_IO_ERROR);
-        }
-
-        close(pData->originalNamespace);
+        CHKiRet(net.netns_restore(&pData->originalNamespace));
         dbgprintf("omfwd: returned to original network namespace\n");
     }
-
 finalize_it:
 #endif /* #ifdef HAVE_SETNS */
     RETiRet;

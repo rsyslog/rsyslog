@@ -165,7 +165,7 @@ endif
 # basic network support, needed for rsyslog startup (e.g. our own system name)
 #
 pkglib_LTLIBRARIES += lmnet.la
-lmnet_la_SOURCES = net.c net.h
+lmnet_la_SOURCES = net.c net.h netns_socket.c netns_socket.h
 lmnet_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS)
 lmnet_la_LDFLAGS = -module -avoid-version ../compat/compat_la-getifaddrs.lo
 lmnet_la_LIBADD =
