@@ -97,7 +97,7 @@ warning severities. The default tag is used.
 
 ::
 
-  module(load="mmsnmptrapd" SeverityMapping="warning/4,error/3") # needs to be done just once
+  module(load="mmsnmptrapd" severityMapping="warning/4,error/3") # needs to be done just once
   # ... other module loads and listener setup ...
   *.* /path/to/file/with/originalMessage # this file receives unmodified messages
   *.* :mmsnmptrapd: # now message is modified

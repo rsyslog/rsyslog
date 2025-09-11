@@ -1,12 +1,12 @@
 .. _param-mmsnmptrapd-tag:
 .. _mmsnmptrapd.parameter.module.tag:
 
-Tag
+tag
 ===
 
 .. index::
-   single: mmsnmptrapd; Tag
-   single: Tag
+   single: mmsnmptrapd; tag
+   single: tag
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Specifies the tag prefix that identifies messages for processing.
 
 This parameter applies to :doc:`../../configuration/modules/mmsnmptrapd`.
 
-:Name: Tag
+:Name: tag
 :Scope: module
 :Type: word (see :doc:`../../rainerscript/constant_strings`)
 :Default: module=snmptrapd
@@ -38,7 +38,7 @@ Module usage
 
 .. code-block:: rsyslog
 
-   module(load="mmsnmptrapd" Tag="snmptrapd")
+   module(load="mmsnmptrapd" tag="snmptrapd")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -46,7 +46,7 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _mmsnmptrapd.parameter.legacy.mmsnmptrapdtag:
 
-- $mmsnmptrapdTag — maps to Tag (status: legacy)
+- $mmsnmptrapdTag — maps to tag (status: legacy)
 
 .. index::
    single: mmsnmptrapd; $mmsnmptrapdTag
