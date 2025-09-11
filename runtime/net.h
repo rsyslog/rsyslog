@@ -27,6 +27,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h> /* this is needed on HP UX -- rgerhards, 2008-03-04 */
+#include "netns_socket.h"
 
 typedef enum _TCPFRAMINGMODE {
     TCP_FRAMING_OCTET_STUFFING = 0, /* traditional LF-delimited */
@@ -170,8 +171,65 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
     /* v8 cvthname() signature change -- rgerhards, 2013-01-18 */
     /* v9 create_udp_socket() signature change -- dsahern, 2016-11-11 */
     /* v10 moved data members to rsconf_t -- alakatos, 2021-12-29 */
+
+    /* v11 netns functions -- balsup, 2025-09-11 */
+    /*
+     * @brief Open a socket on the given namespace
+     * @param fdp A place to store the descriptor.  This must not be NULL.
+     *            A failure will store -1 here.
+     * @param domain The communication domain argument to the underlying socket call
+     * @param type The type argument to the underlying socket call
+     * @param protocol The protocol argument to the underlying socket call
+     * @param ns The desired namespace.  This may be NULL or the empty string if
+     *           the current namespace is desired.
+     * @return RS_RET_OK on success, otherwise a failure code.
+     * @details This is a wrapper to socket, allowing one to open a socket in
+     *          a given namespace. For platforms that do not support network
+     *          namespaces, an error will be returned if the ns parameter
+     *          is not NULL or the empty string.
+     */
+    rsRetVal (*netns_socket)(int *fdp, int domain, int type, int protocol, const char *ns);
+
+    /*
+     * @brief Switch to the given network namespace
+     * @param ns The desired namespace.  If this is NULL or the empty string, then
+     *           this function is a no-op.
+     * @return RS_RET_OK on success, otherwise a failure code.
+     * @details For platforms that do not support network namespaces, an error will
+     *          be returned if the ns parameter is not NULL or the empty string.
+     */
+    rsRetVal (*netns_switch)(const char *ns);
+
+    /*
+     * @brief Save a descriptor to the current network namespace
+     * @param fd The location to store the descriptor for the current
+     *           namespace.  This must not not be NULL, and the
+     *           descriptor must be pre-initialized to -1, i.e. *fd == -1
+     *           is a precondition.  This style is to prevent inadvertent
+     *           descriptor leaks that might arise by overwriting a valid
+     *           descriptor.
+     * @return RS_RET_OK on success, otherwise a failure code.
+     * @details For platforms that do not support network namespaces, this
+     *          function is a no-op and will always return RS_RET_OK.
+     */
+    rsRetVal (*netns_save)(int *fd);
+
+    /*
+     * @brief Restore the original network namespace
+     * @param fd A pointer to a descriptor associated with the original
+     *           namespace.  This must not not be NULL.  If the descriptor
+     *           is -1, then this function is a no-op.  A valid descriptor
+     *           is always closed as a side-effect of this function,
+     *           with the descriptor being updated to -1.
+     * @return RS_RET_OK on success, otherwise a failure code.
+     * @details For platforms that do not support network namespaces, this
+     *          function cannot change the network namespace.  However, if
+     *          presented with an fd that is not -1, it will still close
+     *          that fd and reset the value to -1.
+     */
+    rsRetVal (*netns_restore)(int *fd);
 ENDinterface(net)
-#define netCURR_IF_VERSION 10 /* increment whenever you change the interface structure! */
+#define netCURR_IF_VERSION 11 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(net);
