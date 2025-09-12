@@ -26,7 +26,7 @@ ip netns add rsyslog_test_ns
 ip netns exec rsyslog_test_ns ip link set dev lo up
 
 # run server in namespace
-ip netns exec rsyslog_test_ns ./minitcpsrv -t127.0.0.1 -p'$TCPFLOOD_PORT' -f $RSYSLOG_OUT_LOG &
+ip netns exec rsyslog_test_ns ./minitcpsrv -t127.0.0.1 -p"$TCPFLOOD_PORT" -f $RSYSLOG_OUT_LOG &
 BGPROCESS=$!
 echo background minitcpsrvr process id is $BGPROCESS
 

@@ -27,6 +27,7 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h> /* this is needed on HP UX -- rgerhards, 2008-03-04 */
+#include "netns_socket.h"
 
 typedef enum _TCPFRAMINGMODE {
     TCP_FRAMING_OCTET_STUFFING = 0, /* traditional LF-delimited */
@@ -170,8 +171,13 @@ BEGINinterface(net) /* name must also be changed in ENDinterface macro! */
     /* v8 cvthname() signature change -- rgerhards, 2013-01-18 */
     /* v9 create_udp_socket() signature change -- dsahern, 2016-11-11 */
     /* v10 moved data members to rsconf_t -- alakatos, 2021-12-29 */
+    /* v11 netns functions -- balsup, 2025-09-11 */
+    rsRetVal (*netns_socket)(int *fdp, int domain, int type, int protocol, const char *ns);
+    rsRetVal (*netns_switch)(const char *ns);
+    rsRetVal (*netns_save)(int *fd);
+    rsRetVal (*netns_restore)(int *fd);
 ENDinterface(net)
-#define netCURR_IF_VERSION 10 /* increment whenever you change the interface structure! */
+#define netCURR_IF_VERSION 11 /* increment whenever you change the interface structure! */
 
 /* prototypes */
 PROTOTYPEObj(net);
