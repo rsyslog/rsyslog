@@ -81,7 +81,7 @@ the HOSTNAME is overwritten and a tag is set.
     global(localhostname="sales-front")
     
     ruleset(name="TagUDP" parser=[ "rsyslog.rfc5424" ]) {
-        action(type="mmtaghostname" tag="front" forcelocalhostname="on")
+        action(type="mmtaghostname" tag="front" forceLocalHostname="on")
         call ...
     }
     input(type="imudp" port="514" ruleset="TagUDP")

@@ -1,12 +1,12 @@
 .. _param-mmtaghostname-tag:
 .. _mmtaghostname.parameter.input.tag:
 
-Tag
+tag
 ===
 
 .. index::
-   single: mmtaghostname; Tag
-   single: Tag
+   single: mmtaghostname; tag
+   single: tag
 
 .. summary-start
 
@@ -17,7 +17,7 @@ Assigns a tag to messages. This is useful for inputs like ``imudp`` or
 
 This parameter applies to :doc:`../../configuration/modules/mmtaghostname`.
 
-:Name: Tag
+:Name: tag
 :Scope: input
 :Type: string
 :Default: none

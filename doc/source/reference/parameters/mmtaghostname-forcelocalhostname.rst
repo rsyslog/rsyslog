@@ -1,12 +1,12 @@
 .. _param-mmtaghostname-forcelocalhostname:
 .. _mmtaghostname.parameter.input.forcelocalhostname:
 
-ForceLocalHostname
+forceLocalHostname
 ==================
 
 .. index::
-   single: mmtaghostname; ForceLocalHostname
-   single: ForceLocalHostname
+   single: mmtaghostname; forceLocalHostname
+   single: forceLocalHostname
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Forces the message ``HOSTNAME`` to the rsyslog ``localHostName`` value.
 
 This parameter applies to :doc:`../../configuration/modules/mmtaghostname`.
 
-:Name: ForceLocalHostname
+:Name: forceLocalHostname
 :Scope: input
 :Type: boolean
 :Default: off
