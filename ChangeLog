@@ -1,5 +1,8 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
+- overall improved documentation via a large set of topic updates.
+- 2025-09-12: docker: fix collector, udp and tcp could not be enabled individually
+  If either one was disabled, so was the other one as well.
 - 2025-09-11: ommongodb: add support for mongo-c-driver v2
   Update pkg-config check for v2 of mongo-c-driver
   The name of the pkg-config file has changed from libmongoc-1.0.pc to
