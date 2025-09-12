@@ -21,8 +21,8 @@ get_latest_stable_branch() {
         tail -n 1
 }
 
-# This includes 'master', but intentionally excludes the stable branches
-# which master is periodically merged into
+# This includes 'main', but intentionally excludes the stable branches
+# which main is periodically merged into
 get_dev_branches() {
 
     git branch -r | \
@@ -102,7 +102,6 @@ read -r REPLY
 # Refresh local content
 echo "Fetching latest changes from origin ..."
 git fetch origin --prune --tags
-
 
 
 
@@ -232,10 +231,9 @@ tar -czf $output_dir/$doc_tarball source build LICENSE README.md ||
     { echo "[!] tarball creation failed for $latest_stable_tag tag ... aborting"; exit 1; }
 
 
-
 ###############################################################
-# Reset repo to master for next build
+# Reset repo to main for next build
 ###############################################################
 
 # This ensures that the build script is always at the latest version
-prep_branch_for_build master
+prep_branch_for_build main
