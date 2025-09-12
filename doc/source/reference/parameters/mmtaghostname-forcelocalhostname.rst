@@ -40,7 +40,7 @@ Input usage
 
 Notes
 -----
-- Legacy documentation referred to the type as ``Binary``; it is treated as boolean.
+- Legacy documentation referred to type ``Binary``; it is now a boolean.
 
 See also
 --------
