@@ -10,7 +10,7 @@ ForceLocalHostname
 
 .. summary-start
 
-Forces the message hostname to the rsyslog local host name.
+Forces the message ``HOSTNAME`` to the rsyslog ``localHostName`` value.
 
 .. summary-end
 
@@ -40,7 +40,8 @@ Input usage
 
 Notes
 -----
-- Legacy documentation referred to type ``Binary``; it is now a boolean.
+- Legacy documentation referred to the type as ``Binary``;
+  it is treated as boolean.
 
 See also
 --------
