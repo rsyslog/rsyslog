@@ -872,3 +872,23 @@ The `libcapng.enable` global option defines whether rsyslog should
 drop capabilities at startup or not. By default, it is set to "on".
 Until this point, if the project was compiled with --enable-libcap-ng option,
 capabilities were automatically dropped. This is configurable now.
+
+compactjsonstring
+^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+.. versionadded:: 8.2510.0
+
+The `compactjsonstring` global option defines whether JSON strings generated
+by rsyslog should be in the most compact form, even without spaces.
+The traditional default is that spaces are introduced. This increases
+readability for humans, but needs more resources (disk, transfer, computation)
+in automated pipelines.
+To keep things as compatible as possible, we leave the default as "off" but
+recommend that this option is turned on for use in data pipelines.
