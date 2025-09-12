@@ -29,6 +29,10 @@ This parameter forces the message's ``HOSTNAME`` field to the rsyslog value
 ``localHostName``. This is useful for setting a consistent hostname on
 messages that may not have one, e.g. those received via ``imudp`` or
 ``imtcp``.
+A common use case is with applications in auto-scaling environments
+(e.g. AWS), where instances may have ephemeral hostnames. Forcing the
+hostname to the rsyslog host's name can provide more meaningful and
+consistent hostnames in logs.
 
 Input usage
 -----------
@@ -46,4 +50,4 @@ Notes
 
 See also
 --------
-See also :doc:`../../configuration/modules/mmtaghostname`.
+* :doc:`../../configuration/modules/mmtaghostname`

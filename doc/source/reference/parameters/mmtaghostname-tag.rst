@@ -26,10 +26,11 @@ This parameter applies to :doc:`../../configuration/modules/mmtaghostname`.
 
 Description
 -----------
-The tag to be assigned to messages processed by this module. If you would
-like to see the colon after the tag, you need to include it when you assign
-a tag value, like so: ``tag="myTagValue:"``. If this parameter is not set,
-message tags are not modified.
+The tag to be assigned to messages processed by this module. This is often
+used to route messages to different rulesets or output actions based on the
+tag. If you would like to see the colon after the tag, you need to include it
+when you assign a tag value, like so: ``tag="myTagValue:"``. If this
+parameter is not set, message tags are not modified.
 
 Input usage
 -----------
@@ -42,4 +43,4 @@ Input usage
 
 See also
 --------
-See also :doc:`../../configuration/modules/mmtaghostname`.
+* :doc:`../../configuration/modules/mmtaghostname`
