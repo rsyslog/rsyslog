@@ -10,7 +10,8 @@ Tag
 
 .. summary-start
 
-Assigns a tag to messages processed by mmtaghostname.
+Assigns a tag to messages. This is useful for inputs like ``imudp`` or
+``imtcp`` that do not provide a tag.
 
 .. summary-end
 

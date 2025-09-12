@@ -26,8 +26,9 @@ This parameter applies to :doc:`../../configuration/modules/mmtaghostname`.
 Description
 -----------
 This parameter forces the message's ``HOSTNAME`` field to the rsyslog value
-``localHostName``. It allows setting a valid hostname for messages received
-from local applications through imudp or imtcp.
+``localHostName``. This is useful for setting a consistent hostname on
+messages that may not have one, e.g. those received via ``imudp`` or
+``imtcp``.
 
 Input usage
 -----------
