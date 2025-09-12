@@ -885,8 +885,8 @@ compactjsonstring
 
 .. versionadded:: 8.2510.0
 
-The `compactjsonstring` global option defines if json string should
-be generated in the most compact form, even without spaces.
+The `compactjsonstring` global option defines whether JSON strings generated
+by rsyslog should be in the most compact form, even without spaces.
 The traditional default is that spaces are introduced. This increases
 readability for humans, but needs more ressources (disk, transfer, computation)
 in automatted pipelines.
