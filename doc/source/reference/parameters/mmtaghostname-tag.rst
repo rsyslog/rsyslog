@@ -1,5 +1,5 @@
 .. _param-mmtaghostname-tag:
-.. _mmtaghostname.parameter.module.tag:
+.. _mmtaghostname.parameter.input.tag:
 
 Tag
 ===
@@ -17,7 +17,7 @@ Assigns a tag to messages processed by mmtaghostname.
 This parameter applies to :doc:`../../configuration/modules/mmtaghostname`.
 
 :Name: Tag
-:Scope: module
+:Scope: input
 :Type: string
 :Default: none
 :Required?: no
@@ -30,10 +30,9 @@ colon after the tag, you need to include it when you assign a tag value,
 like so: ``tag="myTagValue:"``.
 If this attribute is not provided, message tags are not modified.
 
-Module usage
-------------
-.. _param-mmtaghostname-module-tag:
-.. _mmtaghostname.parameter.module.tag-usage:
+Input usage
+-----------
+.. _mmtaghostname.parameter.input.tag-usage:
 
 .. code-block:: rsyslog
 

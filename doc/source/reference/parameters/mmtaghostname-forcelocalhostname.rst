@@ -1,5 +1,5 @@
 .. _param-mmtaghostname-forcelocalhostname:
-.. _mmtaghostname.parameter.module.forcelocalhostname:
+.. _mmtaghostname.parameter.input.forcelocalhostname:
 
 ForceLocalHostname
 ==================
@@ -17,7 +17,7 @@ Forces message hostname to the rsyslog local host name.
 This parameter applies to :doc:`../../configuration/modules/mmtaghostname`.
 
 :Name: ForceLocalHostname
-:Scope: module
+:Scope: input
 :Type: boolean
 :Default: off
 :Required?: no
@@ -29,10 +29,9 @@ This attribute forces the message's ``HOSTNAME`` field to the rsyslog value
 ``localHostName``. It allows setting a valid hostname for messages received
 from local applications through imudp or imtcp.
 
-Module usage
-------------
-.. _param-mmtaghostname-module-forcelocalhostname:
-.. _mmtaghostname.parameter.module.forcelocalhostname-usage:
+Input usage
+-----------
+.. _mmtaghostname.parameter.input.forcelocalhostname-usage:
 
 .. code-block:: rsyslog
 
