@@ -43,10 +43,6 @@ jobs:
     steps:
       - name: add extra dependencies
         run: |
-          echo 'deb http://download.opensuse.org/repositories/home:/rgerhards/xUbuntu_20.04/ /' \
-              | sudo tee /etc/apt/sources.list.d/home:rgerhards.list
-          curl -fsSL https://download.opensuse.org/repositories/home:rgerhards/xUbuntu_20.04/Release.key \
-              | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home:rgerhards.gpg > /dev/null
           sudo apt-get update
           sudo apt-get install -y \
             lcov \
