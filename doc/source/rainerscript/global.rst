@@ -888,7 +888,7 @@ compactjsonstring
 The `compactjsonstring` global option defines whether JSON strings generated
 by rsyslog should be in the most compact form, even without spaces.
 The traditional default is that spaces are introduced. This increases
-readability for humans, but needs more ressources (disk, transfer, computation)
-in automatted pipelines.
+readability for humans, but needs more resources (disk, transfer, computation)
+in automated pipelines.
 To keep things as compatible as possible, we leave the default as "off" but
 recommend that this option is turned on for use in data pipelines.
