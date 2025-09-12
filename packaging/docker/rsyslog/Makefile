@@ -14,7 +14,7 @@ ORG_NAME = rsyslog
 
 # Default version for all images.
 # This can be overridden via command line: 'make VERSION=my-custom-tag <target>'
-VERSION ?= 2025-06
+VERSION ?= 2025-10
 
 # Variable to control cache busting. Set to 'yes' to force a rebuild from scratch for all targets.
 # Example: make all REBUILD=yes
