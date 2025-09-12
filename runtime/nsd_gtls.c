@@ -2134,7 +2134,7 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
             if (gnutls_record_get_direction(pThis->sess) == gtlsDir_READ) {
                 unsigned nextIODirection ATTR_UNUSED;
                 rsRetVal rcvRet = gtlsRecordRecv(pThis, &nextIODirection);
-                if (pThis->lenRcvBuf == 0) { /* A 0-byte read indicates graceful close */
+                if (rcvRet == RS_RET_CLOSED || pThis->lenRcvBuf == 0) { /* check for explicit close or 0-byte read */
                     ABORT_FINALIZE(RS_RET_CLOSED);
                 } else if (rcvRet != RS_RET_OK && rcvRet != RS_RET_RETRY) {
                     ABORT_FINALIZE(rcvRet);

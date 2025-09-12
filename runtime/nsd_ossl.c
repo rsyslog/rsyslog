@@ -1180,7 +1180,7 @@ static rsRetVal Send(nsd_t *pNsd, uchar *pBuf, ssize_t *pLenBuf) {
                         ABORT_FINALIZE(RS_RET_CLOSED);
                     }
                     /* Continue loop to retry SSL_write */
-                } else{
+                } else {
                     /* Check for SSL Shutdown */
                     if (SSL_get_shutdown(pThis->pNetOssl->ssl) == SSL_RECEIVED_SHUTDOWN) {
                         dbgprintf("osslRcv received SSL_RECEIVED_SHUTDOWN!\n");
