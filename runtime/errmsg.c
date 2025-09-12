@@ -72,15 +72,13 @@ int hadErrMsgs(void) {
     return bHadErrMsgs;
 }
 
-/* We now receive three parameters: one is the internal error code
- * which will also become the error message number, the second is
- * errno - if it is non-zero, the corresponding error message is included
- * in the text and finally the message text itself. Note that it is not
- * 100% clean to use the internal errcode, as it may be reached from
- * multiple actual error causes. However, it is much better than having
- * no error code at all (and in most cases, a single internal error code
- * maps to a specific error event).
- * rgerhards, 2008-06-27
+/** @internal
+ * Build and emit a single diagnostic line.
+ *
+ * - If iErrno != 0, append strerror(iErrno).
+ * - If iErrCode is neither NO_ERRCODE nor RS_RET_ERR, append a help URL.
+ * - Truncate to the configured max line length.
+ * - Set the "had error" flag for LOG_ERR.
  */
 static void doLogMsg(const int iErrno, const int iErrCode, const int severity, const char *msg) {
     char buf[2048];
