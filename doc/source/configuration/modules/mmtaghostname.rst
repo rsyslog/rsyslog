@@ -40,35 +40,30 @@ To successfully compile mmtaghostname module.
 Configuration Parameters
 ========================
 
-Tag
-^^^
+.. note::
 
-.. csv-table::
-  :header: "type", "mandatory", "format", "default"
-  :widths: auto
-  :class: parameter-table
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
-  "string", "no", ,"none"
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-The tag to be assigned to messages modified. If you would like to see the 
-colon after the tag, you need to include it when you assign a tag value, 
-like so: ``tag="myTagValue:"``.
+   * - Parameter
+     - Summary
+   * - :ref:`param-mmtaghostname-tag`
+     - .. include:: ../../reference/parameters/mmtaghostname-tag.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmtaghostname-forcelocalhostname`
+     - .. include:: ../../reference/parameters/mmtaghostname-forcelocalhostname.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
-If this attribute is no provided, messages tags are not modified.
+.. toctree::
+   :hidden:
 
-ForceLocalHostname
-^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-  :header: "type", "mandatory", "format", "default"
-  :widths: auto
-  :class: parameter-table
-
-  "Binary", "no", ,"off"
-
-This attribute force to set the HOSTNAME of the message to the rsyslog
-value "localHostName". This allow to set a valid value to message received
-received from local application through imudp or imtcp.
+   ../../reference/parameters/mmtaghostname-tag
+   ../../reference/parameters/mmtaghostname-forcelocalhostname
 
 Sample
 ======
