@@ -61,8 +61,13 @@ PRAGMA_IGNORE_Wunknown_attribute;
 PRAGMA_IGNORE_Wexpansion_to_defined;
 PRAGMA_IGNORE_Wstrict_prototypes;
 PRAGMA_IGNORE_Wold_style_definition;
-#include <mongoc.h>
-#include <bson.h>
+#ifdef HAVE_LIBMONGOC1
+    #include <mongoc.h>
+    #include <bson.h>
+#else
+    #include <mongoc/mongoc.h>
+    #include <bson/bson.h>
+#endif
 PRAGMA_DIAGNOSTIC_POP;
 
 #define N 80
