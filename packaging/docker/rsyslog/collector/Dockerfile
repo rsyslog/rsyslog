@@ -33,6 +33,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         rsyslog-elasticsearch \
         rsyslog-omhttp \
+        rsyslog-relp \
     && apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -45,10 +46,12 @@ COPY 10-collector.conf 80-file-output.conf /etc/rsyslog.d/
 # These ports will be exposed by default for UDP and TCP syslog reception.
 EXPOSE 514/udp
 EXPOSE 514/tcp
+EXPOSE 2514/tcp
 
 # Default config toggles for an entrypoint script to use
 ENV ENABLE_UDP=on
 ENV ENABLE_TCP=on
+ENV ENABLE_RELP=off
 ENV WRITE_ALL_FILE=on
 ENV WRITE_JSON_FILE=on
 
