@@ -10,7 +10,7 @@ ForceLocalHostname
 
 .. summary-start
 
-Forces message hostname to the rsyslog local host name.
+Forces the message hostname to the rsyslog local host name.
 
 .. summary-end
 
