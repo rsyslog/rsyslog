@@ -3,8 +3,8 @@
 FROM	debian:sid
 ENV	DEBIAN_FRONTEND=noninteractive
 RUN 	apt-get update && \
-	apt-get upgrade -y
-RUN	apt-get install -y \
+	apt-get upgrade -y \
+	&& apt-get install -y \
 	autoconf \
 	autoconf-archive \
 	automake \
@@ -30,6 +30,7 @@ RUN	apt-get install -y \
 	libhiredis-dev \
 	libkrb5-dev \
 	liblz4-dev \
+	libmaxminddb-dev \
 	default-libmysqlclient-dev \
 	libnet1-dev \
 	libpcap-dev \
@@ -55,10 +56,10 @@ RUN	apt-get install -y \
 	vim \
 	wget \
 	zlib1g-dev \
-	zstd
+	libmongoc-dev \
+	zstd \
+	&& apt clean
 #	libbson-dev
-#	libmaxminddb-dev 
-#	libmongoc-dev 
 #	libgrok1 libgrok-dev
 #	software-properties-common
 #RUN     add-apt-repository ppa:adiscon/v8-stable -y && \
@@ -93,9 +94,6 @@ RUN	groupadd rsyslog \
 RUN	mkdir /rsyslog \
 	&& chown rsyslog:rsyslog /rsyslog
 VOLUME	/rsyslog
-ENV	PKG_CONFIG_PATH=/usr/lib64/pkgconfig \
-	LD_LIBRARY_PATH=/usr/lib \
-	DEBIAN_FRONTEND=
 
 # bump dependency version below to trigger a dependency rebuild
 # but not a full one (via --no-cache)
@@ -108,7 +106,7 @@ RUN	cd helper-projects && \
 	git clone https://github.com/guardtime/libksi.git && \
 	cd libksi && \
 	autoreconf -fvi && \
-	./configure --libdir=/usr/lib64 && \
+	./configure && \
 	make -j && \
 	make install && \
 	cd .. && \
@@ -119,28 +117,15 @@ RUN	cd helper-projects && \
 #	liblz4-dev
 
 # we need the latest librdkafka as there as always required updates
-#RUN	cd helper-projects && \
-#	git clone https://github.com/edenhill/librdkafka && \
-#	cd librdkafka && \
-#	(unset CFLAGS; ./configure --prefix=/usr --libdir=/usr/lib64 --CFLAGS="-g" ; make -j) && \
-#	make install && \
-#	cd .. && \
+RUN	cd helper-projects && \
+	git clone https://github.com/edenhill/librdkafka && \
+	cd librdkafka && \
+	(unset CFLAGS; ./configure --prefix=/usr --CFLAGS="-g" ; make -j) && \
+	make install && \
+	cd .. && \
 # Note: we do NOT delete the source as we may need it to
 # uninstall (in case the user wants to go back to system-default)
-#	cd ..
-
-# libmongoc is unfortunately not available on openSuse - later?
-#RUN	cd helper-projects && \
-#	wget -nv https://github.com/mongodb/mongo-c-driver/releases/download/1.12.0/mongo-c-driver-1.12.0.tar.gz && \
-#	tar xzf mongo-c-driver-1.12.0.tar.gz && \
-#	cd mongo-c-driver-1.12.0 && \
-#	mkdir cmake-build && \
-#	cmake -DENABLE_AUTOMATIC_INIT_AND_CLEANUP=OFF && \
-#	make -j4 && \
-#	make install && \
-#	cd .. && \
-#	rm -r mongo-c-driver-1.12.0* && \
-#	cd ..
+	cd ..
 
 # bump dependency version below to trigger a dependency rebuild
 # but not a full one (via --no-cache)
@@ -150,7 +135,7 @@ ENV	RSYSLOG_DEP_VERSION=2020-01-26
 #RUN	cd helper-projects && \
 #	git clone https://github.com/rsyslog/libestr.git && \
 #	cd libestr && \
-#	autoreconf -fi && ./configure --libdir=/usr/lib64 --prefix=/usr && \
+#	autoreconf -fi && ./configure --prefix=/usr && \
 #	make -j4 && \
 #	make install && \
 #	cd .. && \
@@ -162,7 +147,7 @@ RUN	cd helper-projects && \
 	git clone https://github.com/rsyslog/liblogging.git && \
 	cd liblogging && \
 	autoreconf -fi && \
-	./configure --prefix=/usr --libdir=/usr/lib64 --disable-journal && \
+	./configure --prefix=/usr --disable-journal && \
 	make -j && \
 	make install && \
 	cd .. && \
@@ -177,7 +162,7 @@ RUN	cd helper-projects && \
 	git clone https://github.com/rsyslog/liblognorm.git && \
 	cd liblognorm && \
 	autoreconf -fi && \
-	./configure --prefix=/usr --libdir=/usr/lib64 && \
+	./configure --prefix=/usr && \
 	make -j && \
 	make install && \
 	cd .. && \
@@ -189,7 +174,7 @@ RUN	cd helper-projects && \
 	git clone https://github.com/rsyslog/librelp.git && \
 	cd librelp && \
 	autoreconf -fi && \
-	./configure --prefix=/usr --enable-compile-warnings=yes --libdir=/usr/lib64 && \
+	./configure --prefix=/usr --enable-compile-warnings=yes && \
 	make -j && \
 	make install && \
 	cd .. && \
@@ -212,14 +197,14 @@ ENV	RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-imfile \
 	--enable-imhttp \
 	--enable-imjournal \
-	--disable-imkafka \
+	--enable-imkafka \
 	--enable-impstats \
 	--enable-improg \
 	--enable-imptcp \
 	--enable-impcap \
 	--enable-imtuxedolog \
 	--disable-kafka-tests \
-	--disable-kmsg \
+	--enable-kmsg \
 	--enable-ksi-ls12 \
 	--enable-libdbi \
 	--enable-libfaketime \
@@ -229,7 +214,7 @@ ENV	RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-mmanon \
 	--enable-mmaudit \
 	--enable-mmcount \
-	--disable-mmdblookup \
+	--enable-mmdblookup \
 	--enable-mmfields \
 	--disable-mmgrok \
 	--enable-mmjsonparse \
@@ -247,8 +232,9 @@ ENV	RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-omhiredis \
 	--enable-omhttpfs \
 	--enable-omjournal \
-	--disable-omkafka \
-	--disable-ommongodb \
+	--enable-omkafka \
+	--enable-ommongodb \
+	--enable-omclickhouse \
 	--enable-omprog \
 	--enable-omrelp-default-port=13515 \
 	--enable-omruleset \
