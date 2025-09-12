@@ -71,7 +71,8 @@ RUN 	apt-get update && \
 	vim \
 	wget \
 	zlib1g-dev \
-	zstd
+	zstd \
+	&& apt clean
 #	libgrok1 libgrok-dev \
 ENV	REBUILD=1
 # Adiscon/rsyslog components
@@ -120,12 +121,14 @@ RUN	mkdir /local_dep_cache
 #		/etc/clickhouse-server/config.xml
 
 WORKDIR	/home/devel
-RUN	mkdir /rsyslog
-VOLUME	/rsyslog
 RUN	groupadd rsyslog \
 	&& useradd -g rsyslog  -s /bin/bash rsyslog \
 	&& echo "rsyslog ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
 	&& echo "buildbot ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+RUN	mkdir /rsyslog \
+	&& chmod o+rw /rsyslog \
+	&& chown rsyslog:rsyslog /rsyslog
+VOLUME	/rsyslog
 
 # mysql needs a little help:
 RUN	mkdir -p /var/run/mysqld && \
@@ -312,6 +315,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS=" \
 	--enable-impcap \
 	--enable-imptcp \
 	--enable-kafka-tests \
+	--enable-kmsg \
 	--enable-ksi-ls12 \
 	--enable-libdbi \
 	--enable-libfaketime \
@@ -387,5 +391,20 @@ RUN	printf '\n' > /var/log/mysql/error.log
 ENV	ASAN_SYMBOLIZER_PATH="/usr/lib/llvm-18/bin/llvm-symbolizer"
 VOLUME	/var/lib/mysql
 ENV	C_INCLUDE_PATH="/usr/include/tirpc/"
+
+RUN	groupadd -g 1002 rsyslog998 \
+	&& groupadd -g 1003 rsyslog997 \
+	&& groupadd -g 1004 rsyslog996 \
+	&& groupadd -g 1005 rsyslog995 \
+	&& useradd -u 1002 -g rsyslog998  -s /bin/bash rsyslog998 \
+	&& useradd -u 1003 -g rsyslog997  -s /bin/bash rsyslog997 \
+	&& useradd -u 1004 -g rsyslog996  -s /bin/bash rsyslog996 \
+	&& useradd -u 1005 -g rsyslog995  -s /bin/bash rsyslog995  \
+	&& echo "rsyslog999 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
+	&& echo "rsyslog998 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
+	&& echo "rsyslog997 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
+	&& echo "rsyslog996 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers \
+	&& echo "rsyslog995 ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
 WORKDIR	/rsyslog
 USER	rsyslog
