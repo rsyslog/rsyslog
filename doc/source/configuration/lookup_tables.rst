@@ -13,10 +13,11 @@ server or the department or remote office it is located in.
 This can be emulated using if and else-if stack, but implementing it as a
 dedicated component allows ``lookup`` to be made fast.
 
-The lookup tables itself exists in a separate data file (one per
+The lookup table itself exists in a separate data file (one per
 table). This file is loaded on Rsyslog startup and when a reload is requested.
 
 There are different types of lookup tables (identified by "type" field in json data-file).
+These are ``string``, ``array``, ``sparseArray`` and ``regex``.
 
 Types
 ^^^^^
@@ -49,6 +50,23 @@ matching of IPv4 address information.
 
 Note that index integer numbers are represented by unsigned 32 bits.
 
+regex
+-----
+
+The key is treated as a string and compared against a list of regular
+expression patterns. Each entry in the table contains a ``regex`` field for
+the pattern and a ``tag`` field for the value to return. Rsyslog uses the
+POSIX extended regular expression engine (``<regex.h>``); PCRE-style features
+are not supported. This type requires rsyslog to be compiled with regular
+expression support.
+
+**Match criterion**: Patterns are evaluated sequentially and the **first**
+regex that matches the key determines the returned tag. If no regex matches,
+the ``nomatch`` string is used. Because evaluation is sequential and uses the
+regular expression engine, this type is slower than other table types.
+Overlapping regexes in the same table can lead to unexpected results; order
+the entries carefully and avoid ambiguous patterns.
+
 
 Lookup Table File Format
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -71,12 +89,17 @@ Parameters:
 
 This must be an array of elements, even if only a single value exists (for obvious reasons,
 we do not expect this to occur often). Each array element must contain two fields "index"
-and "value". 
+and "value". When ``type`` is ``regex`` these fields are instead named ``regex``
+and ``tag``.
+
+For ``regex`` tables the list is scanned from top to bottom. The first pattern
+that matches the looked-up key stops the scan and returns the associated tag.
+If none of the regexes match, the ``nomatch`` string is returned.
 
 This is a sample of how an ip-to-office mapping may look like:
 
 ::
-   
+
     { "version" : 1,
       "nomatch" : "unk",
       "type" : "string",
@@ -88,8 +111,24 @@ This is a sample of how an ip-to-office mapping may look like:
         {"index" : "10.0.2.2", "value" : "B" },
         {"index" : "10.0.2.3", "value" : "B" }]}
 
-				
+
 Note: In the example above, if a different IP comes in, the value "unk" is returned thanks to the nomatch parameter in the first line.
+
+This is how a simple regex table looks. Each entry contains a ``regex`` and a
+``tag`` field. The ``tag`` of the **first** matching entry is returned:
+
+::
+
+    { "version": 1,
+      "nomatch": "unknown",
+      "type": "regex",
+      "table": [
+        {"regex": "^10\\.0\\.1\\.", "tag": "netA"},
+        {"regex": "^10\\.0\\.",   "tag": "netB"}]}
+
+For an input of ``10.0.1.25`` the tag ``netA`` is returned, while ``10.0.2.5``
+returns ``netB``. If the second entry were placed before the first, both
+addresses would return ``netB`` due to the overlap of the patterns.
 
 Lookup tables can be accessed via the ``lookup()`` built-in function. A common usage pattern is to set a local variable to the lookup result and later use that variable in templates.
 
@@ -133,9 +172,9 @@ matching-criteria specified above), the "nomatch" string is returned (or an empt
 
 Parameters:
     **name** <string literal, mandatory> : Name of the table.
-    
+
     **expr** <expression resulting in string or number according to lookup-table type, mandatory> : Key to be looked up.
-    
+
 A ``lookup`` call looks like:
 
 ::
@@ -213,6 +252,28 @@ key     return
 100     baz
 ======  ==============
 
+**regex table**:
+
+::
+
+    { "nomatch" : "no_match",
+      "type" : "regex",
+      "table":[
+        {"regex" : "^error",       "tag" : "err"},
+        {"regex" : "^error.*crit", "tag" : "crit"}]}
+
+Match behaviour depends on table order. The first matching regex wins:
+
+=============  =========
+key            return
+=============  =========
+error1         err
+errorcritical  err
+warning        no_match
+=============  =========
+
+Reversing the entries would return ``crit`` for ``errorcritical``.
+
 
 reload_lookup_table("<table>", "<stub value>") (statement)
 ----------------------------------------------------------
@@ -228,13 +289,13 @@ Note: For performance reasons, message that triggers reload should be accepted o
 
 Parameters:
     **name** <string literal, mandatory> : Name of the table.
-    
+
     **stub value** <string literal, optional> : Value to stub the table in-case reload-attempt fails.
 
 A ``reload_lookup_table`` invocation looks like:
 
 ::
-   
+
    if ($.do_reload == "y") then {
        reload_lookup_table("host_bu", "unknown")
    }
@@ -246,6 +307,8 @@ Implementation Details
 The lookup table functionality is implemented via efficient algorithms.
 
 The string and sparseArray lookup have O(log(n)) time complexity, while array lookup is O(1).
+Regex tables are scanned sequentially and thus operate in O(n) time on top of
+the cost of each regular expression evaluation.
 
 To preserve space and, more important, increase cache hit performance, equal data values are only stored once,
 no matter how often a lookup index points to them.
