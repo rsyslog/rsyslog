@@ -1,5 +1,5 @@
 .. _param-mmutf8fix-replacementchar:
-.. _mmutf8fix.parameter.action.replacementchar:
+.. _mmutf8fix.parameter.input.replacementchar:
 
 replacementChar
 ===============
@@ -17,9 +17,9 @@ Defines the printable character used to substitute invalid sequences.
 This parameter applies to :doc:`../../configuration/modules/mmutf8fix`.
 
 :Name: replacementChar
-:Scope: action
+:Scope: input
 :Type: string
-:Default: action=" "
+:Default: " "
 :Required?: no
 :Introduced: 7.5.4
 
@@ -27,10 +27,10 @@ Description
 -----------
 This is the character that invalid sequences are replaced by. It must be a printable US-ASCII character.
 
-Action usage
-------------
-.. _param-mmutf8fix-action-replacementchar:
-.. _mmutf8fix.parameter.action.replacementchar-usage:
+Input usage
+-----------
+.. _param-mmutf8fix-input-replacementchar:
+.. _mmutf8fix.parameter.input.replacementchar-usage:
 
 .. code-block:: rsyslog
 

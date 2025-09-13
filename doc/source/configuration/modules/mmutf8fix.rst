@@ -57,8 +57,8 @@ Module Parameters
 
 This module has no module parameters.
 
-Action Parameters
------------------
+Input Parameters
+----------------
 
 .. list-table::
    :widths: 30 70
