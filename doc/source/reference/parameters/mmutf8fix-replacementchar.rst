@@ -25,7 +25,8 @@ This parameter applies to :doc:`../../configuration/modules/mmutf8fix`.
 
 Description
 -----------
-This is the character that invalid sequences are replaced by. It must be a printable US-ASCII character.
+This is the character that invalid sequences are replaced by. It must be
+a printable US-ASCII character.
 
 Input usage
 -----------
