@@ -29,7 +29,6 @@ This is the character that invalid sequences are replaced by. It must be a print
 
 Input usage
 -----------
-.. _param-mmutf8fix-input-replacementchar:
 .. _mmutf8fix.parameter.input.replacementchar-usage:
 
 .. code-block:: rsyslog

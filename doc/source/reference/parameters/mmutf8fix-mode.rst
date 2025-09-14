@@ -35,7 +35,6 @@ Sets the basic detection mode for invalid byte sequences.
 
 Input usage
 -----------
-.. _param-mmutf8fix-input-mode:
 .. _mmutf8fix.parameter.input.mode-usage:
 
 .. code-block:: rsyslog

@@ -46,19 +46,17 @@ their incoming traffic, bind them to specific
 this ruleset.
 
 Configuration Parameters
-========================
+------------------------
 
 .. note::
 
    Parameter names are case-insensitive; camelCase is recommended for readability.
 
-Module Parameters
------------------
+**Module Parameters**
 
 This module has no module parameters.
 
-Input Parameters
-----------------
+**Input Parameters**
 
 .. list-table::
    :widths: 30 70
