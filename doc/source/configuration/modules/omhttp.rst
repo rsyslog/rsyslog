@@ -630,6 +630,22 @@ statistics tracked for this action instance are **submitted**, **acked**, **fail
 See the `Statistic Counter`_ section for more details.
 
 
+statsbysenders
+^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "binary", "off", "no", "none"
+
+
+This parameter allows the module "impstats" to generate stats by senders (sender list in the field "server") and not stats by omhttp instance.
+if this is enable, the name of the stats will be : "<instance name>(<server name>)".
+if this is disable, the name of the stats will be : "<instance name>(ALL)".
+
+
 Statistic Counter
 =================
 
