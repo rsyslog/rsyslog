@@ -1,6 +1,15 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
 - overall improved documentation via a large set of topic updates.
+- 2025-09-15: tls: process TLS 1.3 KeyUpdate during send (ossl/gtls)
+  Handle post-handshake KeyUpdate by driving a minimal non-blocking read when the
+  TLS library requests READ during Send(). This prevents stalls when servers send
+  TLS 1.3 KeyUpdate and aligns behavior with RFC 8446 §4.6.3.
+  - nsd_ossl.c: SSL_ERROR_WANT_READ => small SSL_read(), then retry write
+  - nsd_gtls.c: E_AGAIN/E_INTERRUPTED with READ direction => small gnutls_record_recv(), then retry write
+  Backward-compatible and only active when the TLS stack signals a need to read.
+  Implemented with help for Cursor tool by Andre Lorbach.
+  closes: https://github.com/rsyslog/rsyslog/issues/5627
 - 2025-09-12: docker: fix collector, udp and tcp could not be enabled individually
   If either one was disabled, so was the other one as well.
 - 2025-09-11: ommongodb: add support for mongo-c-driver v2
