@@ -53,8 +53,8 @@ Action Parameters
      - .. include:: ../../reference/parameters/mmaitag-model.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - :ref:`param-mmaitag-expert-initial_prompt`
-     - .. include:: ../../reference/parameters/mmaitag-expert-initial_prompt.rst
+   * - :ref:`param-mmaitag-expert-initialprompt`
+     - .. include:: ../../reference/parameters/mmaitag-expert-initialprompt.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`param-mmaitag-inputproperty`
@@ -76,7 +76,7 @@ Action Parameters
    ../../reference/parameters/mmaitag-provider
    ../../reference/parameters/mmaitag-tag
    ../../reference/parameters/mmaitag-model
-   ../../reference/parameters/mmaitag-expert-initial_prompt
+   ../../reference/parameters/mmaitag-expert-initialprompt
    ../../reference/parameters/mmaitag-inputproperty
    ../../reference/parameters/mmaitag-apikey
    ../../reference/parameters/mmaitag-apikey_file
