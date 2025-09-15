@@ -27,7 +27,7 @@ Description
 -----------
 Sets the basic detection mode for invalid byte sequences.
 
-``utf-8`` (default)
+``"utf-8"`` (default)
     Checks for proper UTF-8 encoding. Bytes that are not proper UTF-8
     sequences are replaced with the character defined by
     :ref:`param-mmutf8fix-replacementchar`. If a multi-byte start byte
@@ -36,7 +36,7 @@ Sets the basic detection mode for invalid byte sequences.
     This mode is most useful with non-US-ASCII character sets, which
     validly include multibyte sequences.
 
-``controlcharacters``
+``"controlcharacters"``
     Replaces all bytes that do not represent a printable US-ASCII
     character (codes 32 to 126) with the character defined by
     :ref:`param-mmutf8fix-replacementchar`. This invalidates valid
