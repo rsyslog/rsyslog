@@ -27,22 +27,59 @@ Default labels
 | IMPORTANT | Should be logged and may indicate early signs of issues    |
 | CRITICAL  | Indicates immediate or serious problems                    |
 
-Configuration Parameters
-========================
+Action Parameters
+=================
 
-- ``provider``: which backend to use (``gemini`` or ``gemini_mock``)
-- ``tag``: message variable name for the classification
-- ``model``: AI model identifier (provider specific)
-- ``expert.initial_prompt``: optional custom prompt text. If unset, the
-  following default is used::
+.. note::
 
-    You are a tool that classifies log messages. Given an array of log
-    messages, respond with a JSON array of labels: 'NOISE', 'REGULAR',
-    'IMPORTANT', or 'CRITICAL' — one per message, in order. Do not
-    include explanations or additional formatting.
-- ``inputproperty``: which message property to classify
-- ``apikey``: API key for the provider
-- ``apikey_file``: file containing the API key
+   Parameter names are case-insensitive; camelCase is recommended for
+   readability.
+
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Parameter
+     - Summary
+   * - :ref:`param-mmaitag-provider`
+     - .. include:: ../../reference/parameters/mmaitag-provider.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmaitag-tag`
+     - .. include:: ../../reference/parameters/mmaitag-tag.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmaitag-model`
+     - .. include:: ../../reference/parameters/mmaitag-model.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmaitag-expert-initial_prompt`
+     - .. include:: ../../reference/parameters/mmaitag-expert-initial_prompt.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmaitag-inputproperty`
+     - .. include:: ../../reference/parameters/mmaitag-inputproperty.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmaitag-apikey`
+     - .. include:: ../../reference/parameters/mmaitag-apikey.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmaitag-apikey_file`
+     - .. include:: ../../reference/parameters/mmaitag-apikey_file.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/mmaitag-provider
+   ../../reference/parameters/mmaitag-tag
+   ../../reference/parameters/mmaitag-model
+   ../../reference/parameters/mmaitag-expert-initial_prompt
+   ../../reference/parameters/mmaitag-inputproperty
+   ../../reference/parameters/mmaitag-apikey
+   ../../reference/parameters/mmaitag-apikey_file
 
 Example
 =======
