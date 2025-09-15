@@ -33,6 +33,8 @@ Sets the basic detection mode for invalid byte sequences.
     :ref:`param-mmutf8fix-replacementchar`. If a multi-byte start byte
     is followed by any invalid byte, the entire sequence is replaced.
     Control characters are not replaced because they are valid UTF-8.
+    This mode is most useful with non-US-ASCII character sets, which
+    validly include multibyte sequences.
 
 ``controlcharacters``
     Replaces all bytes that do not represent a printable US-ASCII
