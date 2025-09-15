@@ -20,13 +20,14 @@ This parameter applies to :doc:`../../configuration/modules/mmaitag`.
 :Scope: action
 :Type: string
 :Default: none
-:Required?: no (either ``apiKey`` or ``apiKeyFile`` must be set)
+:Required?: no (either :ref:`param-mmaitag-apikey` or ``apiKeyFile`` must be set)
 :Introduced: 9.0.0
 
 Description
 -----------
-File containing the API key for the provider. If ``apiKey`` is not set, the
-module reads the first line of this file and uses it as the API key.
+File containing the API key for the provider. If :ref:`param-mmaitag-apikey`
+is not set, the module reads the first line of this file and uses it as the
+API key.
 
 Action usage
 -------------

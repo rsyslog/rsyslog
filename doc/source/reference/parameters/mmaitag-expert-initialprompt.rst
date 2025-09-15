@@ -28,11 +28,7 @@ This parameter applies to :doc:`../../configuration/modules/mmaitag`.
 
 Description
 -----------
-Optional custom prompt text. If unset, the following default is used::
-
-    Task: Classify the log message that follows. Output: Exactly one label
-    from this list: NOISE, REGULAR, IMPORTANT, CRITICAL. Restrictions: No
-    other text, explanations, formatting, or newline characters.
+Optional custom prompt text. If unset, the default value is used.
 
 Action usage
 -------------
