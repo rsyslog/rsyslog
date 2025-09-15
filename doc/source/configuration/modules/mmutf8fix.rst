@@ -74,10 +74,6 @@ This module has no module parameters.
           :start-after: .. summary-start
           :end-before: .. summary-end
 
-**Caveats/Known Bugs:**
-
--  overlong UTF-8 encodings are currently not detected in utf-8 mode.
-
 **Samples:**
 
 In this snippet, we write one file without fixing UTF-8 and another one
@@ -104,7 +100,6 @@ This is mostly the same as the previous sample, but uses
 
   module(load="mmutf8fix") if $fromhost-ip == "10.0.0.1" then
   action(type="mmutf8fix" mode="controlcharacters") # all other actions here...
-
 
 .. toctree::
    :hidden:
