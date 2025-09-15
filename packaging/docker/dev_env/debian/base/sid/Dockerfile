@@ -77,15 +77,6 @@ RUN	apt-get update -y && \
 	libfastjson-dev \
 	libsodium-dev
 
-# Create libgcrypt-config wrapper for Debian 13 compatibility
-# (libgcrypt-config is not provided in Debian 13, but pkg-config is available)
-RUN	printf '#!/bin/sh\ncase "$1" in\n  --version)\n    echo "%s"\n    ;;\n  --cflags)\n    pkg-config --cflags libgcrypt\n    ;;\n  --libs)\n    pkg-config --libs libgcrypt\n    ;;\n  *)\n    echo "Usage: $0 {--version|--cflags|--libs}"\n    exit 1\n    ;;\nesac\n' "$(pkg-config --modversion libgcrypt)" > /usr/bin/libgcrypt-config && chmod +x /usr/bin/libgcrypt-config
-#	libfastjson-dev 
-#	libczmq-dev 
-#	clang-17 
-#	gcc-7 
-#	libqpid-proton10-dev 
-
 WORKDIR	/home/devel
 RUN	groupadd rsyslog \
 	&& useradd -g rsyslog  -s /bin/bash rsyslog \
@@ -101,7 +92,7 @@ ENV	DEP_VERSION=1
 # Helper projects and dependency build starts here
 RUN	mkdir helper-projects
 
-# we need Guardtime libksi here, otherwise we cannot check the KSI component	
+# we need Guardtime libksi here, otherwise we cannot check the KSI component
 RUN	cd helper-projects && \
 	git clone https://github.com/guardtime/libksi.git && \
 	cd libksi && \
