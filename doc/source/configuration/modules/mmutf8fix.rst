@@ -67,12 +67,12 @@ This module has no module parameters.
      - Summary
    * - :ref:`param-mmutf8fix-mode`
      - .. include:: ../../reference/parameters/mmutf8fix-mode.rst
-        :start-after: .. summary-start
-        :end-before: .. summary-end
+          :start-after: .. summary-start
+          :end-before: .. summary-end
    * - :ref:`param-mmutf8fix-replacementchar`
      - .. include:: ../../reference/parameters/mmutf8fix-replacementchar.rst
-        :start-after: .. summary-start
-        :end-before: .. summary-end
+          :start-after: .. summary-start
+          :end-before: .. summary-end
 
 **Caveats/Known Bugs:**
 
