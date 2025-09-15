@@ -20,7 +20,7 @@ This parameter applies to :doc:`../../configuration/modules/mmaitag`.
 :Scope: action
 :Type: string
 :Default: none
-:Required?: no (either ``apiKey`` or ``apiKeyFile`` must be set)
+:Required?: no (either ``apiKey`` or :ref:`param-mmaitag-apikey_file` must be set)
 :Introduced: 9.0.0
 
 Description
