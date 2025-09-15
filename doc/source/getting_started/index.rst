@@ -14,6 +14,7 @@ This guide helps you get up and running quickly. It includes:
 .. toctree::
    :maxdepth: 1
 
+   beginner_tutorials/index
    installation
    basic_configuration
    understanding_default_config
