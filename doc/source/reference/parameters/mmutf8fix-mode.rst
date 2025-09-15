@@ -35,8 +35,8 @@ Sets the basic detection mode for invalid byte sequences.
 
     * Invalid start bytes or stray continuation bytes.
     * A multi-byte sequence that is incomplete.
-    * A complete sequence that is invalid (e.g., overlong encoding or a
-      disallowed codepoint like a UTF-16 surrogate).
+    * A complete sequence that is invalid (e.g., overlong encoding, a
+      disallowed codepoint like a UTF-16 surrogate, or a value > U+10FFFF).
 
     Control characters are not replaced because they are valid UTF-8.
     This mode is most useful with non-US-ASCII character sets, which
