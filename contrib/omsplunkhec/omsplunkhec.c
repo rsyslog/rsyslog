@@ -62,6 +62,13 @@
 #  define O_LARGEFILE 0
 #endif
 
+/* ENUM mode */
+enum ENDPOINT_TYPE {
+	EVENT,
+	RAW,
+	NOT_DEFINED
+} endpointType;
+
 MODULE_TYPE_OUTPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("omsplunkhec")
@@ -104,18 +111,27 @@ static int omSplunkHecInstancesCnt = 0;
 #define ERR_MSG_NULL "NULL: curl request failed or no response"
 #define HTTP_HEADER_CONTENT_JSON "Content-Type: application/json; charset=utf-8"
 #define HTTP_HEADER_CONTENT_TEXT "Content-Type: text/plain"
+#define HTTP_HEADER_CONTENT_RAW_HEADER "X-Splunk-Request-Channel"
 #define HTTP_HEADER_EXPECT_EMPTY "Expect:"
 
 #define HEC_RESTPATH_URL "/services/collector"
 #define HEC_RESTPATH_ENDPOINT_EVENT "/event"
 #define HEC_RESTPATH_ENDPOINT_EVENT_TIMESTAMP "?auto_extract_timestamp=true"
 #define HEC_RESTPATH_ENDPOINT_RAW "/raw"
+
 #define HEC_HEALTHCHECK_URL "/health"
 
 #define HTTPS "https://"
 #define HTTP "http://"
 
 #define DEFAULTJSONTEMPLATE "StdJSONFmt"
+#define CUSTOMTPLSPLKEVENT "SPLK_Event"
+#define CUSTOMTPLSPLKRAW "SPLK_Raw"
+
+static uchar template_StdJSONSplkEvent[] =
+    "\"{\\\"event\\\":\\\"%rawmsg:::jsonfr%\\\"}\"";
+static uchar template_StdJSONSplkRaw[] =
+    "\"%rawmsg:::drop-last-lf%\n\"";
 
 typedef struct curl_slist HEADER;
 
@@ -133,6 +149,11 @@ typedef struct instanceConf_s {
 	int restPathTimeout;
 	int port;
 	sbool extractTimestamp;
+
+    enum ENDPOINT_TYPE mode; // using to define if the endpoint is "event" or "raw"
+	sbool dynRestPath;
+	uchar *templateDynRestPath;
+	uchar *rawGUID;
 
 	/* Batch */
 	sbool batch;
@@ -202,6 +223,10 @@ static struct cnfparamdescr actpdescr[] = {
 	{ "template", eCmdHdlrGetWord, 0 },
 	{ "batch", eCmdHdlrBinary, 0 },
 	{ "extracttimestamp", eCmdHdlrBinary, 0 },
+	{ "dynrestpath", eCmdHdlrBinary, 0 },
+	{ "templatedynrestpath", eCmdHdlrGetWord, 0 },
+	{ "guid", eCmdHdlrGetWord, 0 },
+	{ "mode", eCmdHdlrGetWord, 0 },
 	{ "batch.maxsize", eCmdHdlrInt, 0 },
 	{ "batch.maxbytes", eCmdHdlrInt, 0 },
 	{ "useTls", eCmdHdlrBinary, 0 },
@@ -228,19 +253,20 @@ static rsRetVal buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message);
 static rsRetVal submitBatch(wrkrInstanceData_t *pWrkrData, uchar **tp);
 static rsRetVal renderJsonErrorMessage(wrkrInstanceData_t *pWrkrData, uchar *reqmsg, char **rendered);
 static rsRetVal serializeBatchJsonArray(wrkrInstanceData_t *pWrkrData, char **batchBuf, int *countMsg);
+static rsRetVal serializeBatchRaw(wrkrInstanceData_t *pWrkrData, char **batchBuf, int *countMsg);
 static void ATTR_NONNULL() initializeBatch(wrkrInstanceData_t *pWrkrData);
 static inline void incrementServerIndex(wrkrInstanceData_t *pWrkrData);
 static void ATTR_NONNULL() setInstDefaultParams(instanceData *const pData);
 static rsRetVal ATTR_NONNULL() writeDataError(wrkrInstanceData_t *const pWrkrData,
 instanceData *const pData, uchar *const reqmsg);
 static void ATTR_NONNULL() curlCleanup(wrkrInstanceData_t *const pWrkrData);
-static rsRetVal ATTR_NONNULL(1, 2) curlPost(wrkrInstanceData_t *pWrkrData, uchar *message,
-int msglen, const int nmsgs);
+static rsRetVal ATTR_NONNULL(1, 2) curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, 
+int msglen, uchar **template,const int nmsgs);
 static void ATTR_NONNULL(1) curlPostMethod(wrkrInstanceData_t *const pWrkrData);
 static void ATTR_NONNULL() checkConnSetupCurl(wrkrInstanceData_t *const pWrkrData);
 static rsRetVal ATTR_NONNULL() curlSetup(wrkrInstanceData_t *const pWrkrData);
 static rsRetVal checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg);
-static rsRetVal ATTR_NONNULL(1) setPostURL(wrkrInstanceData_t *const pWrkrData);
+static rsRetVal ATTR_NONNULL(1) setPostURL(wrkrInstanceData_t *const pWrkrData, uchar **const template);
 static rsRetVal ATTR_NONNULL() generateCurlHeader(wrkrInstanceData_t *pWrkrData);
 static size_t curlResponse(void *ptr, size_t size, size_t nmemb, void *userdata);
 static void ATTR_NONNULL() curlSetupProxySSL(wrkrInstanceData_t *const pWrkrData, CURL *const handle);
@@ -248,7 +274,25 @@ static void ATTR_NONNULL() curlCheckConnSetup(wrkrInstanceData_t *const pWrkrDat
 static rsRetVal ATTR_NONNULL() checkConn(wrkrInstanceData_t *const pWrkrData);
 static rsRetVal createBaseUrl(const char*const serverParam, const int defaultPort,
 const sbool useHttps, uchar **baseUrl);
+static char* url_encoded(const char* str);
 
+/********************** REST PATH *****************************************/
+
+static void ATTR_NONNULL(1)
+generateRestPath(const instanceData *const pData, uchar **const template,
+		      uchar **const restPath)
+{
+	*restPath = pData->restpath;
+	if(template == NULL) {
+		return;
+	}
+	int iNumTpls = 1;
+	if(pData->dynRestPath) {
+		*restPath = template[iNumTpls];
+		iNumTpls++;
+	}
+}
+/********************** END REST PATH *************************************/
 
 /********************** BATCH *****************************************/
 
@@ -280,7 +324,13 @@ submitBatch(wrkrInstanceData_t *pWrkrData, uchar **tp)
 	int countMsg = 0;
 
 	/* Serialize the data into JSON */
-	iRet = serializeBatchJsonArray(pWrkrData, &batchBuf, &countMsg);
+	if (pWrkrData->pData->mode == EVENT){
+		iRet = serializeBatchJsonArray(pWrkrData, &batchBuf, &countMsg);
+	} else if(pWrkrData->pData->mode == RAW){
+		iRet = serializeBatchRaw(pWrkrData, &batchBuf, &countMsg);
+	} else{
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
 
 	if (iRet != RS_RET_OK || batchBuf == NULL || countMsg == 0){
 		LogError(0, iRet, "omsplunkhec: submitBatch, batch: NULL in serialize");
@@ -290,7 +340,7 @@ submitBatch(wrkrInstanceData_t *pWrkrData, uchar **tp)
 		ABORT_FINALIZE(iRet);
 	} else {
 		DBGPRINTF("omsplunkhec: submitBatch, batch: '%s' tpls: '%p'\n", batchBuf, tp);
-		CHKiRet(curlPost(pWrkrData, (uchar*) batchBuf, strlen(batchBuf), pWrkrData->batch.nmemb));
+		CHKiRet(curlPost(pWrkrData, (uchar*) batchBuf, strlen(batchBuf), tp, pWrkrData->batch.nmemb));
 	}
 
 finalize_it:
@@ -346,6 +396,54 @@ finalize_it:
 	if (errRoot != NULL)
 		fjson_object_put(errRoot);
 
+	RETiRet;
+}
+
+static rsRetVal
+serializeBatchRaw(wrkrInstanceData_t *pWrkrData, char **batchBuf, int *countMsg){
+	DEFiRet;
+	size_t numMessages = pWrkrData->batch.nmemb;
+	size_t sizeTotal = pWrkrData->batch.sizeBytes + numMessages; // message + newline
+	int r = 0;
+	DBGPRINTF("omsplunkhec: serializeBatchRaw numMessages=%zd sizeTotal=%zd\n", numMessages, sizeTotal);
+
+	/* Avoid crash if numMessages is 0 */
+	if (numMessages == 0) {
+		*batchBuf = NULL;
+		*countMsg = 0;
+		FINALIZE;
+	}
+
+	es_str_t *batchString = es_newStr(1024);
+
+	if (batchString == NULL)
+		ABORT_FINALIZE(RS_RET_ERR);
+
+	for (size_t i = 0; i < numMessages; i++) {
+
+		if (r == 0) {
+			r = es_addBuf(&batchString, (char *)pWrkrData->batch.data[i], ustrlen(pWrkrData->batch.data[i]));
+			/* Count message serialized to avoid sending empty batch */
+			(*countMsg)++;
+		}
+		if (i == numMessages - 1) break; // Do not add "\n" if no more msg to add
+		if (r == 0) {
+			r = es_addChar(&batchString, '\n');
+		}
+	}
+
+	if (r == 0) {
+		*batchBuf = (char *) es_str2cstr(batchString, NULL);
+	}
+
+	if (r != 0 || *batchBuf== NULL) {
+		LogError(0, RS_RET_ERR, "omsplunkhec: serializeBatchRaw error to create batch buffer");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
+
+finalize_it:
+	if (batchString != NULL)
+		es_deleteStr(batchString);
 	RETiRet;
 }
 
@@ -439,6 +537,10 @@ setInstDefaultParams(instanceData *const pData)
 
 	pData->restpath = NULL;
 	pData->extractTimestamp = 0;
+	pData->mode = NOT_DEFINED;
+	pData->dynRestPath = 0;
+	pData->templateDynRestPath = NULL;
+	pData->rawGUID = NULL;
 
 	int answer = es_addBuf(&urlBuf, HEC_RESTPATH_URL, strlen(HEC_RESTPATH_URL));
 	if (answer == 0) {
@@ -550,9 +652,9 @@ curlCleanup(wrkrInstanceData_t *const pWrkrData)
 }
 
 static rsRetVal ATTR_NONNULL(1, 2)
-curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen,
+curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen, uchar **template,
 		const int nmsgs)
-{
+{ 
 	CURLcode curlCode;
 	CURL *const curl = pWrkrData->curlPostHandle;
 	char errbuf[CURL_ERROR_SIZE] = "";
@@ -570,7 +672,7 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen,
 	ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestSumitted,
 		&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestSumitted);
 
-	CHKiRet(setPostURL(pWrkrData));
+	CHKiRet(setPostURL(pWrkrData, template));
 
 	pWrkrData->reply = NULL;
 	pWrkrData->replyLen = 0;
@@ -600,9 +702,9 @@ curlPost(wrkrInstanceData_t *pWrkrData, uchar *message, int msglen,
 		checkResult(pWrkrData, message);
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	} else {
-			ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestSuccess,
+		ATOMIC_INC_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestSuccess,
 				&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestSuccess);
-			ATOMIC_ADD_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestNbMsg,
+		ATOMIC_ADD_uint64(&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].requestNbMsg,
 				&pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mut_requestNbMsg, nmsgs);
 	}
 
@@ -738,7 +840,7 @@ checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg)
 }
 
 static rsRetVal ATTR_NONNULL(1)
-setPostURL(wrkrInstanceData_t *const pWrkrData)
+setPostURL(wrkrInstanceData_t *const pWrkrData, uchar **const template)
 {
 	uchar *restPath;
 	char* baseUrl;
@@ -755,34 +857,51 @@ setPostURL(wrkrInstanceData_t *const pWrkrData)
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 	
-	restPath = pData->restpath;
+	if (pWrkrData->batch.restPath != NULL) {
+		/* get from batch if set! */
+		restPath = pWrkrData->batch.restPath;
+	} else {
+		generateRestPath(pData, template, &restPath);
+	}
 
 	answer = 0;
 	if (restPath != NULL) {
-		answer = es_addBuf(&url, (char*)restPath, ustrlen(restPath));
-		if (answer == 0) {
-			answer = es_addBuf(&url, HEC_RESTPATH_ENDPOINT_EVENT, strlen(HEC_RESTPATH_ENDPOINT_EVENT));
+		if (pData->mode == EVENT) {
+			answer = es_addBuf(&url, (char*)restPath, ustrlen(restPath));
+			if (answer == 0) {
+				answer = es_addBuf(&url, HEC_RESTPATH_ENDPOINT_EVENT, 
+								strlen(HEC_RESTPATH_ENDPOINT_EVENT));
+				if (answer == 0 && pData->extractTimestamp) {
+					answer = es_addBuf(&url, HEC_RESTPATH_ENDPOINT_EVENT_TIMESTAMP, 
+										strlen(HEC_RESTPATH_ENDPOINT_EVENT_TIMESTAMP));
+					if(answer != 0) {
+						LogError(0, RS_RET_ERR, 
+						"omsplunkhec: failure in creating restURL with timestamps parsing, "
+						"error code: %d", answer);
+						ABORT_FINALIZE(RS_RET_ERR);
+					}
+				}
+			}
+		} else if (pData->mode == RAW){
+			answer = es_addBuf(&url, (char*)restPath, ustrlen(restPath));
 		}
 	}
+		
 	if(answer != 0) {
 		LogError(0, RS_RET_ERR, "omsplunkhec: failure in creating restURL, "
 				"error code: %d", answer);
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
 
-	if (pData->extractTimestamp){
-		answer = es_addBuf(&url, HEC_RESTPATH_ENDPOINT_EVENT_TIMESTAMP, strlen(HEC_RESTPATH_ENDPOINT_EVENT_TIMESTAMP));
-		if(answer != 0) {
-			LogError(0, RS_RET_ERR, "omsplunkhec: failure in creating restURL with timestamps parsing, "
-					"error code: %d", answer);
-			ABORT_FINALIZE(RS_RET_ERR);
-		}
-	}
-
 	if(pWrkrData->restURL != NULL)
 		free(pWrkrData->restURL);
 
+	//pWrkrData->restURL = (uchar*)url_encoded((char*)es_str2cstr(url, NULL));
 	pWrkrData->restURL = (uchar*)es_str2cstr(url, NULL);
+	if (pWrkrData->restURL == NULL ){
+		LogError(0, RS_RET_ERR, "omsplunkhec: failure in encoding URL");
+		ABORT_FINALIZE(RS_RET_ERR);
+	}
 	curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_URL, pWrkrData->restURL);
 	DBGPRINTF("omsplunkhec: using REST URL: '%s'\n", pWrkrData->restURL);
 
@@ -797,6 +916,7 @@ generateCurlHeader(wrkrInstanceData_t *pWrkrData)
 {
 	struct curl_slist *slist = NULL;
 	char auth_header_str[256];
+	char guid_header_str[256];
 
 	DEFiRet;
 
@@ -808,7 +928,8 @@ generateCurlHeader(wrkrInstanceData_t *pWrkrData)
 		pWrkrData->curlHeader = NULL;
 	}
 	
-	snprintf(auth_header_str, sizeof(auth_header_str), "Authorization: Splunk %s", pWrkrData->pData->token);
+	snprintf(auth_header_str, sizeof(auth_header_str), 
+			"Authorization: Splunk %s", pWrkrData->pData->token);
 
 	slist = curl_slist_append(slist, HTTP_HEADER_CONTENT_JSON);
 	if (slist == NULL) {
@@ -824,6 +945,19 @@ generateCurlHeader(wrkrInstanceData_t *pWrkrData)
 			"omsplunkhec: error adding Authorization Token to curl Header");
 		ABORT_FINALIZE(RS_RET_ERR);
 	}
+	if(pWrkrData->pData->mode == RAW){
+		snprintf(guid_header_str, sizeof(guid_header_str), "%s: %s", 
+				HTTP_HEADER_CONTENT_RAW_HEADER, pWrkrData->pData->rawGUID);
+		
+		slist = curl_slist_append(slist, guid_header_str);
+		if (slist == NULL) {
+			curl_slist_free_all(slist);
+			LogError(0, RS_RET_OUT_OF_MEMORY,
+			"omsplunkhec: error adding GUID to curl Header");
+			ABORT_FINALIZE(RS_RET_ERR);
+		}
+	}
+
 	/*
 	 * Thanks OMHTTP for this "bug"
 	 * When sending more than 1Kb, libcurl automatically sends an Except: 100-Continue header
@@ -990,6 +1124,34 @@ finalize_it:
 
 /********************** TOOLS *****************************************/
 
+static char* url_encoded(const char* str){
+	
+	const char *hex = "0123456789abcdef";
+
+	if(str == NULL) return NULL;
+
+	char *encodedChar = malloc(strlen(str) * 3 + 1);
+	if(encodedChar == NULL) return NULL;
+    
+	char *p = encodedChar;
+	while(*str) {
+		if((*str >= 'a' && *str <= 'z') || (*str >= 'A' && *str <= 'Z') || (*str >= '0' && *str <= '9')){
+			*p++ = *str;
+		} else if(*str == '-' || *str == '_' || *str == '.' || *str == '~') {
+			*p++ = *str;
+		} else {
+			unsigned char cTmp = (unsigned char)*str;
+			*p++ = '%';
+			*p++ = hex[cTmp >> 4];
+			*p++ = hex[cTmp && 15];
+		}
+		str++;
+	}
+	*p = '\0';
+
+	return encodedChar;
+}
+
 static rsRetVal
 createBaseUrl(const char*const serverParam,
 	const int defaultPort,
@@ -1133,6 +1295,8 @@ CODESTARTfreeInstance
 	pthread_mutex_destroy(&pData->mutErrFile);
 	free(pData->token);
 	free(pData->template);
+	free(pData->templateDynRestPath);
+	free(pData->rawGUID);
 	free(pData->restpath);
 	for(i = 0 ; i < pData->numListServerName ; ++i)
 		free(pData->serverList[i]);
@@ -1200,6 +1364,12 @@ CODESTARTnewActInst
 			servers = pvals[i].val.d.ar;
 		} else if(!strcmp(actpblk.descr[i].name, "extracttimestamp")) {
 			pData->extractTimestamp = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "dynrestpath")) {
+			pData->dynRestPath = pvals[i].val.d.n;
+		} else if(!strcmp(actpblk.descr[i].name, "templatedynrestpath")) {
+			pData->templateDynRestPath = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
+		} else if(!strcmp(actpblk.descr[i].name, "guid")) {
+			pData->rawGUID = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
 		} else if(!strcmp(actpblk.descr[i].name, "port")) {
 			pData->port = (int) pvals[i].val.d.n;
 		} else if(!strcmp(actpblk.descr[i].name, "token")) {
@@ -1259,7 +1429,47 @@ CODESTARTnewActInst
 			} else {
 				fclose(fp);
 			}
+		} else if(!strcmp(actpblk.descr[i].name, "mode")) {
+			const char* tmpMode = (char*)es_str2cstr(pvals[i].val.d.estr, NULL);
+			if (!strcmp(tmpMode, "event")){
+				pData->mode = EVENT;
+			} else if (!strcmp(tmpMode, "raw")){
+				pData->mode = RAW;
+			} else {
+				pData->mode = NOT_DEFINED;
+				LogError(0, RS_RET_CONF_PARSE_ERROR,
+				"omsplunkhec: MODE must be \"event\" or \"raw\" "
+				" - MODE definition invalid");
+				ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+			}
 		}
+	}
+
+	if (pData->mode == NOT_DEFINED){
+		LogError(0, RS_RET_CONF_PARSE_ERROR,
+		"omsplunkhec: MODE must be \"event\" or \"raw\" "
+		" - MODE definition invalid");
+		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+	}
+
+	if(pData->mode == RAW && pData->extractTimestamp){
+		LogError(0, RS_RET_CONF_PARSE_ERROR,
+		"omsplunkhec: in MODE \"raw\" params \"extracttimestamp\" cannot be used"
+		" - \"extracttimestamp\" using not good");
+		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+	}
+
+	if(pData->dynRestPath && pData->templateDynRestPath == NULL) {
+		LogError(0, RS_RET_CONFIG_ERROR,
+			"omsplunkhec: requested dynamic rest path"
+			"path template empty - action definition invalid");
+		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+	}
+	if (pData->mode == RAW && pData->rawGUID == NULL) {
+		LogError(0, RS_RET_CONFIG_ERROR,
+			"omsplunkhec: RAW endpoint need unique GUID"
+			"GUID missing - action definition invalid");
+		ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
 	}
 
 	/* Checking if token is set */
@@ -1288,14 +1498,31 @@ CODESTARTnewActInst
 			pData->proxyHost = ustrdup(http_proxy);
 		}
 	}
+
+	iNumTpls = 1;
+	if (pData->dynRestPath) {
+		iNumTpls++;
+	}
+	
+	CODE_STD_STRING_REQUESTnewActInst(iNumTpls)
 	if (pData->template == NULL){
-		iNumTpls = 1;
-		CODE_STD_STRING_REQUESTnewActInst(iNumTpls)
-		CHKiRet(OMSRsetEntry(*ppOMSR, 0,(uchar*) strdup(DEFAULTJSONTEMPLATE), OMSR_NO_RQD_TPL_OPTS));
+		if (pData->mode == EVENT){
+			CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup(CUSTOMTPLSPLKEVENT), OMSR_NO_RQD_TPL_OPTS));
+		} else if (pData->mode == RAW){
+			CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup(CUSTOMTPLSPLKRAW), OMSR_NO_RQD_TPL_OPTS));
+		} else {
+			CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup(DEFAULTJSONTEMPLATE), OMSR_NO_RQD_TPL_OPTS));
+		}
 	} else {
-		iNumTpls = 1;
-		CODE_STD_STRING_REQUESTnewActInst(iNumTpls)
 		CHKiRet(OMSRsetEntry(*ppOMSR, 0, (uchar*)strdup((char*)pData->template), OMSR_NO_RQD_TPL_OPTS));
+	}
+
+	// Ask one template for dynrestpath
+	iNumTpls = 1;
+	if(pData->dynRestPath) {
+		CHKiRet(OMSRsetEntry(*ppOMSR, iNumTpls, ustrdup(pData->templateDynRestPath),
+			OMSR_NO_RQD_TPL_OPTS));
+		iNumTpls++;
 	}
 
 	/* Checking if server is set */
@@ -1490,14 +1717,24 @@ ENDendTransaction
 BEGINdoAction
 size_t nBytes;
 sbool submit;
+uchar *restPath = NULL;
 CODESTARTdoAction
 
-
-
 	if (pWrkrData->pData->batch) {
-		/* If the batchMaxBatchSize is 1, then build and immediately post a batch with 1 element.
-		 * This mode will play nicely with rsyslog's action.resumeRetryCount logic.
-		 */
+		if(pWrkrData->pData->dynRestPath) {
+			generateRestPath(pWrkrData->pData, ppString, &restPath);
+
+			if (pWrkrData->batch.restPath == NULL) {
+				pWrkrData->batch.restPath = (uchar*)strdup((char*)restPath);
+			} else if (strcmp((char*)pWrkrData->batch.restPath, (char*)restPath) != 0) {
+				/* Check if the restPath changed 
+				* if changed submit the current batch 
+				*/
+				CHKiRet(submitBatch(pWrkrData, NULL));
+				initializeBatch(pWrkrData);
+			}
+		}
+
 		if (pWrkrData->pData->batchMaxBatchSize == 1) {
 			initializeBatch(pWrkrData);
 			CHKiRet(buildBatch(pWrkrData, ppString[0]));
@@ -1518,7 +1755,7 @@ CODESTARTdoAction
 			nBytes--;
 		}
 
-		size_t batch_size = pWrkrData->batch.sizeBytes + 1;
+		size_t batch_size = pWrkrData->batch.sizeBytes + (pWrkrData->batch.nmemb - 1) + 1; // size of batch + NB msg - 1 (for \n counter) + null
 
 		if (pWrkrData->batch.nmemb >= pWrkrData->pData->batchMaxBatchSize) {
 			submit = 1;
@@ -1543,7 +1780,7 @@ CODESTARTdoAction
 		 * are not replayed should a failure occur anywhere else in the transaction. */
 		iRet = pWrkrData->batch.nmemb == 1 ? RS_RET_PREVIOUS_COMMITTED : RS_RET_DEFER_COMMIT;
 	} else {
-		CHKiRet(curlPost(pWrkrData, ppString[0], strlen((char*)ppString[0]), 1));
+		CHKiRet(curlPost(pWrkrData, ppString[0], strlen((char*)ppString[0]), ppString, 1));
 	}
 finalize_it:
 ENDdoAction
@@ -1564,6 +1801,7 @@ ENDqueryEtryPt
 
 BEGINmodInit()
 CODESTARTmodInit
+	 uchar *pTmp;
 	/* we only support the current interface specification */
 	*ipIFVersProvided = CURR_MOD_IF_VERSION;
 CODEmodInit_QueryRegCFSLineHdlr
@@ -1574,4 +1812,10 @@ CODEmodInit_QueryRegCFSLineHdlr
 		LogError(0, RS_RET_OBJ_CREATION_FAILED, "CURL fail. -http disabled");
 		ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
 	}
+
+	// Add custom template to this conf
+	pTmp = template_StdJSONSplkEvent;
+    tplAddLine(ourConf, CUSTOMTPLSPLKEVENT, &pTmp);
+	pTmp = template_StdJSONSplkRaw;
+    tplAddLine(ourConf, CUSTOMTPLSPLKRAW, &pTmp);
 ENDmodInit
