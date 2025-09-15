@@ -28,13 +28,19 @@ Description
 Sets the basic detection mode for invalid byte sequences.
 
 ``"utf-8"`` (default)
-    Checks for proper UTF-8 encoding. Bytes that are not proper UTF-8
+    Checks for proper UTF-8 encoding. Bytes that form invalid UTF-8
     sequences are replaced with the character defined by
-    :ref:`param-mmutf8fix-replacementchar`. If a multi-byte start byte
-    is followed by any invalid byte, the sequence up to that point is
-    replaced. Control characters are not replaced because they are
-    valid UTF-8. This mode is most useful with non-US-ASCII character
-    sets, which validly include multibyte sequences.
+    :ref:`param-mmutf8fix-replacementchar`. This applies to various
+    invalid conditions, including:
+
+    * Invalid start bytes or stray continuation bytes.
+    * A multi-byte sequence that is incomplete.
+    * A complete sequence that is invalid (e.g., overlong encoding or a
+      disallowed codepoint like a UTF-16 surrogate).
+
+    Control characters are not replaced because they are valid UTF-8.
+    This mode is most useful with non-US-ASCII character sets, which
+    validly include multibyte sequences.
 
 ``"controlcharacters"``
     Replaces all bytes that do not represent a printable US-ASCII
