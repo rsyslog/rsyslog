@@ -1,6 +1,25 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
 - overall improved documentation via a large set of topic updates.
+- 2025-09-16: core: add fromhost-port message property
+  Some deployments need to disambiguate multiple senders sharing an IP,
+  for example autossh or similar tunnel setups. Exposing the source port
+  improves observability and lets pipelines key on a stable tuple.
+  Impact: new property/JSON field; tcps_sess IF v4; out-of-tree modules
+  must rebuild.
+  Before: messages exposed fromhost and fromhost-ip only.
+  After:  messages also expose fromhost-port and jsonmesg includes it.
+  Introduce PROP_FROMHOST_PORT and wire it through msg.{h,c}. For TCP,
+  capture the remote port on accept, store it in tcps_sess, and attach it
+  to the msg on submit. For other inputs, resolveDNS derives the port from
+  the sockaddr when available; local inputs return an empty string. Add a
+  getter, duplication and destructor handling, and name<->ID mapping. Add
+  the field to jsonmesg output. Update docs, lexer keywords, and the
+  external plugin interface doc (property is modifiable). Bump
+  tcps_sessCURR_IF_VERSION to 4 and add SetHostPort() to the interface.
+  Include a focused test (fromhost-port.sh) that verifies the property.
+  Non-technical rationale: allow identification by (fromhost-ip,
+  fromhost-port) where IP alone is shared across systems (e.g., autossh).
 - 2025-09-15: tls: process TLS 1.3 KeyUpdate during send (ossl/gtls)
   Handle post-handshake KeyUpdate by driving a minimal non-blocking read when the
   TLS library requests READ during Send(). This prevents stalls when servers send
