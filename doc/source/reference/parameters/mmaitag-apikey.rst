@@ -25,8 +25,8 @@ This parameter applies to :doc:`../../configuration/modules/mmaitag`.
 
 Description
 -----------
-API key for the provider. Either this parameter or
-:ref:`param-mmaitag-apikey_file` must be specified.
+API key for the provider. This parameter takes precedence over
+:ref:`param-mmaitag-apikey_file`.
 
 Action usage
 -------------
