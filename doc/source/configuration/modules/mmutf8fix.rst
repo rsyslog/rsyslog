@@ -45,43 +45,34 @@ their incoming traffic, bind them to specific
 `ruleset <multi_ruleset.html>`_ and call mmutf8fix as first action in
 this ruleset.
 
-**Module Configuration Parameters**:
+Configuration Parameters
+------------------------
 
-Note: parameter names are case-insensitive.
+.. note::
 
-Currently none.
+   Parameter names are case-insensitive; camelCase is recommended
+   for readability.
 
- 
+**Module Parameters**
 
-**Action Configuration Parameters**:
+This module has no module parameters.
 
-Note: parameter names are case-insensitive.
+**Input Parameters**
 
--  **mode** - **utf-8**/controlcharacters
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-   This sets the basic detection mode.
-   In **utf-8** mode (the default), proper UTF-8 encoding is checked and
-   bytes which are not proper UTF-8 sequences are acted on. If a proper
-   multi-byte start sequence byte is detected but any of the following
-   bytes is invalid, the whole sequence is replaced by the replacement
-   method. This mode is most useful with non-US-ASCII character sets,
-   which validly includes multibyte sequences. Note that in this mode
-   control characters are NOT being replaced, because they are valid
-   UTF-8.
-   In **controlcharacters** mode, all bytes which do not represent a
-   printable US-ASCII character (codes 32 to 126) are replaced. Note
-   that this also mangles valid UTF-8 multi-byte sequences, as these are
-   (deliberately) outside of that character range. This mode is most
-   useful if it is known that no characters outside of the US-ASCII
-   alphabet need to be processed.
--  **replacementChar** - default " " (space), a single character
-
-   This is the character that invalid sequences are replaced by.
-   Currently, it MUST be a **printable** US-ASCII character.
-
-**Caveats/Known Bugs:**
-
--  overlong UTF-8 encodings are currently not detected in utf-8 mode.
+   * - Parameter
+     - Summary
+   * - :ref:`param-mmutf8fix-mode`
+     - .. include:: ../../reference/parameters/mmutf8fix-mode.rst
+          :start-after: .. summary-start
+          :end-before: .. summary-end
+   * - :ref:`param-mmutf8fix-replacementchar`
+     - .. include:: ../../reference/parameters/mmutf8fix-replacementchar.rst
+          :start-after: .. summary-start
+          :end-before: .. summary-end
 
 **Samples:**
 
@@ -110,3 +101,8 @@ This is mostly the same as the previous sample, but uses
   module(load="mmutf8fix") if $fromhost-ip == "10.0.0.1" then
   action(type="mmutf8fix" mode="controlcharacters") # all other actions here...
 
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/mmutf8fix-mode
+   ../../reference/parameters/mmutf8fix-replacementchar
