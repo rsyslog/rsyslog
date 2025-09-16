@@ -29,7 +29,7 @@ Limits counting to a specific property value when combined with
 :ref:`param-mmcount-key`. After :ref:`param-mmcount-appname` matches and
 the requested key is present, mmcount compares the property's string
 representation with ``value``. If they are equal, a dedicated counter is
-incremented and stored in the message's ``mmcount`` field. Messages that
+incremented and stored in the message's ``mmcount`` property. Messages that
 do not match are left unchanged. When ``value`` is not provided, mmcount
 maintains separate counters for each property value instead.
 
