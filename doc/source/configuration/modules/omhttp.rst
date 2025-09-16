@@ -633,8 +633,12 @@ See the `Statistic Counter`_ section for more details.
 Statistic Counter
 =================
 
-This plugin maintains global :doc:`statistics <../rsyslog_statistic_counter>` for omhttp that
-accumulates all action instances. The statistic origin is named "omhttp" with following counters:
+This plugin maintains global :doc:`statistics <../rsyslog_statistic_counter>` for omhttp. Each destination server have its own statistics counter,
+so one action can generate multiple statistic counters for each destination server set up.
+
+Additionally, the following statistics can also be configured for a specific action instances. See `statsname`_ for more details.
+
+The naming of the origin is "<name of the action>(destination server)" with following counters:
 
 - **messages.submitted** - Number of messages submitted to omhttp. Messages resubmitted via a retry ruleset will be counted twice.
 
@@ -654,11 +658,6 @@ accumulates all action instances. The statistic origin is named "omhttp" with fo
 
 - **request.status.fail** - Number of requests returning 3XX, 4XX, or 5XX HTTP status codes. If a requests fails (i.e. server not reachable) this counter will *not* be incremented.
 
-
-Additionally, the following statistics can also be configured for a specific action instances. See `statsname`_ for more details.
-
-- **requests.count** - Number of requests 
-
 - **requests.status.0xx** - Number of failed requests. 0xx errors indicate request never reached destination.
 
 - **requests.status.1xx** - Number of HTTP requests returning 1xx status codes
@@ -674,8 +673,6 @@ Additionally, the following statistics can also be configured for a specific act
 - **requests.bytes** - Total number of bytes sent - derived from CURLINFO_REQUEST_SIZE.
 
 - **requests.time_ms** - Total accumulated request time in milliseconds - derived from CURLINFO_TOTAL_TIME.
-
-
 
 Message Batching
 ================

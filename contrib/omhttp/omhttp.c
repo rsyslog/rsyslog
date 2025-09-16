@@ -87,7 +87,6 @@ typedef struct _targetStats {
     STATSCOUNTER_DEF(ctrHttpRequestFail, mutCtrHttpRequestFail); // Number of failed HTTP req, 4XX+ are NOT failures
     STATSCOUNTER_DEF(ctrHttpStatusSuccess, mutCtrHttpStatusSuccess); // Number of requests returning 1XX/2XX status
     STATSCOUNTER_DEF(ctrHttpStatusFail, mutCtrHttpStatusFail); // Number of requests returning 300+ status
-    STATSCOUNTER_DEF(ctrHttpRequestsCount, mutCtrHttpRequestsCount);  // Number of attempted HTTP requests
     STATSCOUNTER_DEF(httpRequestsBytes, mutHttpRequestsBytes); // Number of bytes in HTTP requests
     STATSCOUNTER_DEF(httpRequestsTimeMs, mutHttpRequestsTimeMs); // Number of Times(ms) in HTTP requests
     STATSCOUNTER_DEF(ctrHttpRequestsStatus0xx, mutCtrHttpRequestsStatus0xx); // HTTP requests returning 0xx
@@ -835,6 +834,7 @@ static rsRetVal checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg) {
     size_t numMessages;
     DEFiRet;
     CURLcode resCurl = 0;
+    targetStats_t *const serverStats = &pWrkrData->pData->listObjStats[pWrkrData->serverIndex];
 
     pData = pWrkrData->pData;
     statusCode = pWrkrData->httpStatusCode;
@@ -854,42 +854,42 @@ static rsRetVal checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg) {
      */
     if (statusCode == 0) {
         // Transport/connection failure - retriable
-        STATSCOUNTER_ADD(pData->listObjStats[pWrkrData->serverIndex].ctrMessagesFail, pData->listObjStats[pWrkrData->serverIndex].mutCtrMessagesFail, numMessages);
-        STATSCOUNTER_INC(pData->listObjStats[pWrkrData->serverIndex].ctrHttpRequestsStatus0xx, pData->listObjStats[pWrkrData->serverIndex].mutCtrHttpRequestsStatus0xx);
+        STATSCOUNTER_ADD(serverStats->ctrMessagesFail, serverStats->mutCtrMessagesFail, numMessages);
+        STATSCOUNTER_INC(serverStats->ctrHttpRequestsStatus0xx, serverStats->mutCtrHttpRequestsStatus0xx);
         iRet = RS_RET_SUSPENDED;
     } else if (statusCode >= 100 && statusCode < 300) {
         // 1xx (informational) and 2xx (success) - treat as success
-        STATSCOUNTER_INC(pData->listObjStats[pWrkrData->serverIndex].ctrHttpStatusSuccess, pData->listObjStats[pWrkrData->serverIndex].mutCtrHttpStatusSuccess);
-        STATSCOUNTER_ADD(pData->listObjStats[pWrkrData->serverIndex].ctrMessagesSuccess, pData->listObjStats[pWrkrData->serverIndex].mutCtrMessagesSuccess, numMessages);
+        STATSCOUNTER_INC(serverStats->ctrHttpStatusSuccess, serverStats->mutCtrHttpStatusSuccess);
+        STATSCOUNTER_ADD(serverStats->ctrMessagesSuccess, serverStats->mutCtrMessagesSuccess, numMessages);
 
         if (statusCode >= 100 && statusCode < 200) {
-            STATSCOUNTER_INC(pData->listObjStats[pWrkrData->serverIndex].ctrHttpRequestsStatus1xx, pData->listObjStats[pWrkrData->serverIndex].mutCtrHttpRequestsStatus1xx);
+            STATSCOUNTER_INC(serverStats->ctrHttpRequestsStatus1xx, serverStats->mutCtrHttpRequestsStatus1xx);
         } else if (statusCode >= 200 && statusCode < 300) {
-            STATSCOUNTER_INC(pData->listObjStats[pWrkrData->serverIndex].ctrHttpRequestsStatus2xx, pData->listObjStats[pWrkrData->serverIndex].mutCtrHttpRequestsStatus2xx);
+            STATSCOUNTER_INC(serverStats->ctrHttpRequestsStatus2xx, serverStats->mutCtrHttpRequestsStatus2xx);
         }
         iRet = RS_RET_OK;
     } else if (statusCode >= 300 && statusCode < 400) {
         // 3xx - redirection, treat as permanent failure (non-retriable)
-        STATSCOUNTER_INC(pData->listObjStats[pWrkrData->serverIndex].ctrHttpStatusFail, pData->listObjStats[pWrkrData->serverIndex].mutCtrHttpStatusFail);
-        STATSCOUNTER_ADD(pData->listObjStats[pWrkrData->serverIndex].ctrMessagesFail, pData->listObjStats[pWrkrData->serverIndex].mutCtrMessagesFail, numMessages);
-        STATSCOUNTER_INC(pData->listObjStats[pWrkrData->serverIndex].ctrHttpRequestsStatus3xx, pData->listObjStats[pWrkrData->serverIndex].mutCtrHttpRequestsStatus3xx);
+        STATSCOUNTER_INC(serverStats->ctrHttpStatusFail, serverStats->mutCtrHttpStatusFail);
+        STATSCOUNTER_ADD(serverStats->ctrMessagesFail, serverStats->mutCtrMessagesFail, numMessages);
+        STATSCOUNTER_INC(serverStats->ctrHttpRequestsStatus3xx, serverStats->mutCtrHttpRequestsStatus3xx);
         iRet = RS_RET_DATAFAIL;  // permanent failure
     } else if (statusCode >= 400 && statusCode < 500) {
         // 4xx - client error, permanent failure (non-retriable)
-        STATSCOUNTER_INC(pData->listObjStats[pWrkrData->serverIndex].ctrHttpStatusFail, pData->listObjStats[pWrkrData->serverIndex].mutCtrHttpStatusFail);
-        STATSCOUNTER_ADD(pData->listObjStats[pWrkrData->serverIndex].ctrMessagesFail, pData->listObjStats[pWrkrData->serverIndex].mutCtrMessagesFail, numMessages);
-        STATSCOUNTER_INC(pData->listObjStats[pWrkrData->serverIndex].ctrHttpRequestsStatus4xx, pData->listObjStats[pWrkrData->serverIndex].mutCtrHttpRequestsStatus4xx);
+        STATSCOUNTER_INC(serverStats->ctrHttpStatusFail, serverStats->mutCtrHttpStatusFail);
+        STATSCOUNTER_ADD(serverStats->ctrMessagesFail, serverStats->mutCtrMessagesFail, numMessages);
+        STATSCOUNTER_INC(serverStats->ctrHttpRequestsStatus4xx, serverStats->mutCtrHttpRequestsStatus4xx);
         iRet = RS_RET_DATAFAIL;  // permanent failure
     } else if (statusCode >= 500) {
         // 5xx - server error, retriable
-        STATSCOUNTER_INC(pData->listObjStats[pWrkrData->serverIndex].ctrHttpStatusFail, pData->listObjStats[pWrkrData->serverIndex].mutCtrHttpStatusFail);
-        STATSCOUNTER_ADD(pData->listObjStats[pWrkrData->serverIndex].ctrMessagesFail, pData->listObjStats[pWrkrData->serverIndex].mutCtrMessagesFail, numMessages);
-        STATSCOUNTER_INC(pData->listObjStats[pWrkrData->serverIndex].ctrHttpRequestsStatus5xx, pData->listObjStats[pWrkrData->serverIndex].mutCtrHttpRequestsStatus5xx);
+        STATSCOUNTER_INC(serverStats->ctrHttpStatusFail, serverStats->mutCtrHttpStatusFail);
+        STATSCOUNTER_ADD(serverStats->ctrMessagesFail, serverStats->mutCtrMessagesFail, numMessages);
+        STATSCOUNTER_INC(serverStats->ctrHttpRequestsStatus5xx, serverStats->mutCtrHttpRequestsStatus5xx);
         iRet = RS_RET_SUSPENDED;
     } else {
         // Unexpected status code
-        STATSCOUNTER_INC(pData->listObjStats[pWrkrData->serverIndex].ctrHttpStatusFail, pData->listObjStats[pWrkrData->serverIndex].mutCtrHttpStatusFail);
-        STATSCOUNTER_ADD(pData->listObjStats[pWrkrData->serverIndex].ctrMessagesFail, pData->listObjStats[pWrkrData->serverIndex].mutCtrMessagesFail, numMessages);
+        STATSCOUNTER_INC(serverStats->ctrHttpStatusFail, serverStats->mutCtrHttpStatusFail);
+        STATSCOUNTER_ADD(serverStats->ctrMessagesFail, serverStats->mutCtrMessagesFail, numMessages);
         iRet = RS_RET_DATAFAIL;
     }
 
@@ -900,15 +900,15 @@ static rsRetVal checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg) {
         /* record total bytes */
         resCurl = curl_easy_getinfo(pWrkrData->curlPostHandle, CURLINFO_REQUEST_SIZE, &req);
         if (!resCurl) {
-            STATSCOUNTER_ADD(pWrkrData->pData->listObjStats[pWrkrData->serverIndex].httpRequestsBytes,
-            pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mutHttpRequestsBytes, (uint64_t)req);
+            STATSCOUNTER_ADD(serverStats->httpRequestsBytes,
+            serverStats->mutHttpRequestsBytes, (uint64_t)req);
         }
         resCurl = curl_easy_getinfo(pWrkrData->curlPostHandle, CURLINFO_TOTAL_TIME, &total);
         if (CURLE_OK == resCurl) {
             /* this needs to be converted to milliseconds */
             long total_time_ms = (long)(total * 1000);
-            STATSCOUNTER_ADD(pWrkrData->pData->listObjStats[pWrkrData->serverIndex].httpRequestsTimeMs,
-            pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mutHttpRequestsTimeMs, (uint64_t)total_time_ms);
+            STATSCOUNTER_ADD(serverStats->httpRequestsTimeMs,
+            serverStats->mutHttpRequestsTimeMs, (uint64_t)total_time_ms);
         }
     }
 
@@ -1223,8 +1223,6 @@ static rsRetVal ATTR_NONNULL(1, 2) curlPost(
     DBGPRINTF("omhttp: curlPost curl returned %lld\n", (long long)curlCode);
     STATSCOUNTER_INC(pWrkrData->pData->listObjStats[pWrkrData->serverIndex].ctrHttpRequestCount,
     pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mutCtrHttpRequestCount);
-    STATSCOUNTER_INC(pWrkrData->pData->listObjStats[pWrkrData->serverIndex].ctrHttpRequestsCount,
-    pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mutCtrHttpRequestsCount);
 
     if (curlCode != CURLE_OK) {
         STATSCOUNTER_INC(pWrkrData->pData->listObjStats[pWrkrData->serverIndex].ctrHttpRequestFail,
@@ -1586,14 +1584,14 @@ BEGINcommitTransaction
     CODESTARTcommitTransaction;
     instanceData *const pData = pWrkrData->pData;
     const int iNumTpls = pData->dynRestPath ? 2 : 1;
+    targetStats_t *const serverStats = &pData->listObjStats[pWrkrData->serverIndex];
 
     for (i = 0; i < nParams; ++i) {
         uchar *payload = actParam(pParams, iNumTpls, i, 0).param;
         uchar *tpls[2] = {payload, NULL};
         if (iNumTpls == 2) tpls[1] = actParam(pParams, iNumTpls, i, 1).param;
 
-        STATSCOUNTER_INC(pWrkrData->pData->listObjStats[pWrkrData->serverIndex].ctrMessagesSubmitted,
-        pWrkrData->pData->listObjStats[pWrkrData->serverIndex].mutCtrMessagesSubmitted);
+        STATSCOUNTER_INC(serverStats->ctrMessagesSubmitted, serverStats->mutCtrMessagesSubmitted);
 
         if (pData->batchMode) {
             if (pData->dynRestPath) {
@@ -2241,7 +2239,7 @@ BEGINnewActInst
             ABORT_FINALIZE(RS_RET_ERR);
         }
 
-        pData->listObjStats = malloc(servers->nmemb * sizeof(targetStats_t));
+        pData->listObjStats = calloc(servers->nmemb, sizeof(targetStats_t));
 
         for (i = 0; i < servers->nmemb; ++i) {
             serverParam = es_str2cstr(servers->arr[i], NULL);
@@ -2256,107 +2254,104 @@ BEGINnewActInst
             if (serverParam[serverParamLastChar] == '/') {
                 serverParam[serverParamLastChar] = '\0';
             }
+
+             targetStats_t *const serverStats = &pData->listObjStats[i];
          
             /* Create StatsObject */
 			snprintf((char*)ctrName, sizeof(ctrName), "%s(%s)", pData->statsName, serverParam);
 			ctrName[sizeof(ctrName)-1] = '\0';
 
             // instantiate the stats object and add the counters
-	        CHKiRet(statsobj.Construct(&(pData->listObjStats[i].defaultstats)));
-	        CHKiRet(statsobj.SetName(pData->listObjStats[i].defaultstats, ctrName));
-	        CHKiRet(statsobj.SetOrigin(pData->listObjStats[i].defaultstats, (uchar *)"omhttp"));
+	        CHKiRet(statsobj.Construct(&(serverStats->defaultstats)));
+	        CHKiRet(statsobj.SetName(serverStats->defaultstats, ctrName));
+	        CHKiRet(statsobj.SetOrigin(serverStats->defaultstats, (uchar *)"omhttp"));
 
-            STATSCOUNTER_INIT(pData->listObjStats[i].ctrMessagesSubmitted, pData->listObjStats[i].mutCtrMessagesSubmitted);
-            CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+            STATSCOUNTER_INIT(serverStats->ctrMessagesSubmitted, serverStats->mutCtrMessagesSubmitted);
+            CHKiRet(statsobj.AddCounter(serverStats->defaultstats,
             (uchar *)"messages.submitted", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                        &(pData->listObjStats[i].ctrMessagesSubmitted)));
+                                        &(serverStats->ctrMessagesSubmitted)));
 
-            STATSCOUNTER_INIT(pData->listObjStats[i].ctrMessagesSuccess, pData->listObjStats[i].mutCtrMessagesSuccess);
-            CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+            STATSCOUNTER_INIT(serverStats->ctrMessagesSuccess, serverStats->mutCtrMessagesSuccess);
+            CHKiRet(statsobj.AddCounter(serverStats->defaultstats,
             (uchar *)"messages.success", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                        &(pData->listObjStats[i].ctrMessagesSuccess)));
+                                        &(serverStats->ctrMessagesSuccess)));
 
-            STATSCOUNTER_INIT(pData->listObjStats[i].ctrMessagesFail, pData->listObjStats[i].mutCtrMessagesFail);
-            CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+            STATSCOUNTER_INIT(serverStats->ctrMessagesFail, serverStats->mutCtrMessagesFail);
+            CHKiRet(statsobj.AddCounter(serverStats->defaultstats,
             (uchar *)"messages.fail", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                        &(pData->listObjStats[i].ctrMessagesFail)));
+                                        &(serverStats->ctrMessagesFail)));
 
-            STATSCOUNTER_INIT(pData->listObjStats[i].ctrMessagesRetry, pData->listObjStats[i].mutCtrMessagesRetry);
-            CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+            STATSCOUNTER_INIT(serverStats->ctrMessagesRetry, serverStats->mutCtrMessagesRetry);
+            CHKiRet(statsobj.AddCounter(serverStats->defaultstats,
             (uchar *)"messages.retry", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                        &(pData->listObjStats[i].ctrMessagesRetry)));
+                                        &(serverStats->ctrMessagesRetry)));
 
-            STATSCOUNTER_INIT(pData->listObjStats[i].ctrHttpRequestCount, pData->listObjStats[i].mutCtrHttpRequestCount);
-            CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+            STATSCOUNTER_INIT(serverStats->ctrHttpRequestCount, serverStats->mutCtrHttpRequestCount);
+            CHKiRet(statsobj.AddCounter(serverStats->defaultstats,
             (uchar *)"request.count", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                        &(pData->listObjStats[i].ctrHttpRequestCount)));
+                                        &(serverStats->ctrHttpRequestCount)));
 
-            STATSCOUNTER_INIT(pData->listObjStats[i].ctrHttpRequestSuccess, pData->listObjStats[i].mutCtrHttpRequestSuccess);
-            CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+            STATSCOUNTER_INIT(serverStats->ctrHttpRequestSuccess, serverStats->mutCtrHttpRequestSuccess);
+            CHKiRet(statsobj.AddCounter(serverStats->defaultstats,
             (uchar *)"request.success", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                        &(pData->listObjStats[i].ctrHttpRequestSuccess)));
+                                        &(serverStats->ctrHttpRequestSuccess)));
 
-            STATSCOUNTER_INIT(pData->listObjStats[i].ctrHttpRequestFail, pData->listObjStats[i].mutCtrHttpRequestFail);
-            CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+            STATSCOUNTER_INIT(serverStats->ctrHttpRequestFail, serverStats->mutCtrHttpRequestFail);
+            CHKiRet(statsobj.AddCounter(serverStats->defaultstats,
             (uchar *)"request.fail", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                        &(pData->listObjStats[i].ctrHttpRequestFail)));
+                                        &(serverStats->ctrHttpRequestFail)));
 
-            STATSCOUNTER_INIT(pData->listObjStats[i].ctrHttpStatusSuccess, pData->listObjStats[i].mutCtrHttpStatusSuccess);
-            CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+            STATSCOUNTER_INIT(serverStats->ctrHttpStatusSuccess, serverStats->mutCtrHttpStatusSuccess);
+            CHKiRet(statsobj.AddCounter(serverStats->defaultstats,
             (uchar *)"request.status.success", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                        &(pData->listObjStats[i].ctrHttpStatusSuccess)));
+                                        &(serverStats->ctrHttpStatusSuccess)));
 
-            STATSCOUNTER_INIT(pData->listObjStats[i].ctrHttpStatusFail, pData->listObjStats[i].mutCtrHttpStatusFail);
-            CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+            STATSCOUNTER_INIT(serverStats->ctrHttpStatusFail, serverStats->mutCtrHttpStatusFail);
+            CHKiRet(statsobj.AddCounter(serverStats->defaultstats,
             (uchar *)"request.status.fail", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                        &(pData->listObjStats[i].ctrHttpStatusFail)));
+                                        &(serverStats->ctrHttpStatusFail)));
 
-            STATSCOUNTER_INIT(pData->listObjStats[i].ctrHttpRequestsCount, pData->listObjStats[i].mutCtrHttpRequestsCount);
-            CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
-            (uchar *)"requests.count", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                        &(pData->listObjStats[i].ctrHttpRequestsCount)));
-
-            STATSCOUNTER_INIT(pData->listObjStats[i].ctrHttpRequestsStatus0xx, pData->listObjStats[i].mutCtrHttpRequestsStatus0xx);
-            CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+            STATSCOUNTER_INIT(serverStats->ctrHttpRequestsStatus0xx, serverStats->mutCtrHttpRequestsStatus0xx);
+            CHKiRet(statsobj.AddCounter(serverStats->defaultstats,
             (uchar *)"requests.status.0xx", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                        &(pData->listObjStats[i].ctrHttpRequestsStatus0xx)));
+                                        &(serverStats->ctrHttpRequestsStatus0xx)));
 
-            STATSCOUNTER_INIT(pData->listObjStats[i].ctrHttpRequestsStatus1xx, pData->listObjStats[i].mutCtrHttpRequestsStatus1xx);
-            CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+            STATSCOUNTER_INIT(serverStats->ctrHttpRequestsStatus1xx, serverStats->mutCtrHttpRequestsStatus1xx);
+            CHKiRet(statsobj.AddCounter(serverStats->defaultstats,
             (uchar *)"requests.status.1xx", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                        &(pData->listObjStats[i].ctrHttpRequestsStatus1xx)));
+                                        &(serverStats->ctrHttpRequestsStatus1xx)));
 
-            STATSCOUNTER_INIT(pData->listObjStats[i].ctrHttpRequestsStatus2xx, pData->listObjStats[i].mutCtrHttpRequestsStatus2xx);
-            CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+            STATSCOUNTER_INIT(serverStats->ctrHttpRequestsStatus2xx, serverStats->mutCtrHttpRequestsStatus2xx);
+            CHKiRet(statsobj.AddCounter(serverStats->defaultstats,
             (uchar *)"requests.status.2xx", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                        &(pData->listObjStats[i].ctrHttpRequestsStatus2xx)));
+                                        &(serverStats->ctrHttpRequestsStatus2xx)));
 
-            STATSCOUNTER_INIT(pData->listObjStats[i].ctrHttpRequestsStatus3xx, pData->listObjStats[i].mutCtrHttpRequestsStatus3xx);
-            CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+            STATSCOUNTER_INIT(serverStats->ctrHttpRequestsStatus3xx, serverStats->mutCtrHttpRequestsStatus3xx);
+            CHKiRet(statsobj.AddCounter(serverStats->defaultstats,
             (uchar *)"requests.status.3xx", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                        &(pData->listObjStats[i].ctrHttpRequestsStatus3xx)));
+                                        &(serverStats->ctrHttpRequestsStatus3xx)));
 
-            STATSCOUNTER_INIT(pData->listObjStats[i].ctrHttpRequestsStatus4xx, pData->listObjStats[i].mutCtrHttpRequestsStatus4xx);
-            CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+            STATSCOUNTER_INIT(serverStats->ctrHttpRequestsStatus4xx, serverStats->mutCtrHttpRequestsStatus4xx);
+            CHKiRet(statsobj.AddCounter(serverStats->defaultstats,
             (uchar *)"requests.status.4xx", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                        &(pData->listObjStats[i].ctrHttpRequestsStatus4xx)));
+                                        &(serverStats->ctrHttpRequestsStatus4xx)));
 
-            STATSCOUNTER_INIT(pData->listObjStats[i].ctrHttpRequestsStatus5xx, pData->listObjStats[i].mutCtrHttpRequestsStatus5xx);
-            CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+            STATSCOUNTER_INIT(serverStats->ctrHttpRequestsStatus5xx, serverStats->mutCtrHttpRequestsStatus5xx);
+            CHKiRet(statsobj.AddCounter(serverStats->defaultstats,
             (uchar *)"requests.status.5xx", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                        &(pData->listObjStats[i].ctrHttpRequestsStatus5xx)));
+                                        &(serverStats->ctrHttpRequestsStatus5xx)));
 
-            STATSCOUNTER_INIT(pData->listObjStats[i].httpRequestsBytes, pData->listObjStats[i].mutHttpRequestsBytes);
-            CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+            STATSCOUNTER_INIT(serverStats->httpRequestsBytes, serverStats->mutHttpRequestsBytes);
+            CHKiRet(statsobj.AddCounter(serverStats->defaultstats,
             (uchar *)"requests.bytes", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                        &(pData->listObjStats[i].httpRequestsBytes)));
+                                        &(serverStats->httpRequestsBytes)));
 
-            STATSCOUNTER_INIT(pData->listObjStats[i].httpRequestsTimeMs, pData->listObjStats[i].mutHttpRequestsTimeMs);
-            CHKiRet(statsobj.AddCounter(pData->listObjStats[i].defaultstats,
+            STATSCOUNTER_INIT(serverStats->httpRequestsTimeMs, serverStats->mutHttpRequestsTimeMs);
+            CHKiRet(statsobj.AddCounter(serverStats->defaultstats,
             (uchar *)"requests.time_ms", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                        &(pData->listObjStats[i].httpRequestsTimeMs)));
+                                        &(serverStats->httpRequestsTimeMs)));
 								
-	        CHKiRet(statsobj.ConstructFinalize(pData->listObjStats[i].defaultstats));
+	        CHKiRet(statsobj.ConstructFinalize(serverStats->defaultstats));
 
             CHKiRet(computeBaseUrl(serverParam, pData->defaultPort, pData->useHttps, pData->serverBaseUrls + i));
             free(serverParam);
