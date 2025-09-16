@@ -327,6 +327,7 @@ Most message properties can be modified. Modifiable are:
 * hostname (aliased "source")
 * fromhost
 * fromhost-ip
+* fromhost-port
 * all message variable ("$!" tree)
 
 If the message variable tree is modified, new variables may also be *added*. Deletion

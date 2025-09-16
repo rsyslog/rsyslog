@@ -68,6 +68,9 @@ BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END m
     pThis->inputState = eAtStrtFram; /* indicate frame header expected */
     pThis->eFraming = TCP_FRAMING_OCTET_STUFFING; /* just make sure... */
     pthread_mutex_init(&pThis->mut, NULL);
+    pThis->fromHost = NULL;
+    pThis->fromHostIP = NULL;
+    pThis->fromHostPort = NULL;
     /* now allocate the message reception buffer */
     CHKmalloc(pThis->pMsg = (uchar *)malloc(pThis->iMaxLine + 1));
 finalize_it:
@@ -100,6 +103,7 @@ BEGINobjDestruct(tcps_sess) /* be sure to specify the object type also in END an
     /* now destruct our own properties */
     if (pThis->fromHost != NULL) CHKiRet(prop.Destruct(&pThis->fromHost));
     if (pThis->fromHostIP != NULL) CHKiRet(prop.Destruct(&pThis->fromHostIP));
+    if (pThis->fromHostPort != NULL) CHKiRet(prop.Destruct(&pThis->fromHostPort));
     free(pThis->pMsg);
 ENDobjDestruct(tcps_sess)
 
@@ -141,6 +145,17 @@ static rsRetVal SetHostIP(tcps_sess_t *pThis, prop_t *ip) {
         prop.Destruct(&pThis->fromHostIP);
     }
     pThis->fromHostIP = ip;
+    RETiRet;
+}
+
+static rsRetVal SetHostPort(tcps_sess_t *pThis, prop_t *port) {
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, tcps_sess);
+
+    if (pThis->fromHostPort != NULL) {
+        prop.Destruct(&pThis->fromHostPort);
+    }
+    pThis->fromHostPort = port;
     RETiRet;
 }
 
@@ -236,6 +251,7 @@ static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis,
     pMsg->msgFlags = NEEDS_PARSING | PARSE_HOSTNAME;
     MsgSetRcvFrom(pMsg, pThis->fromHost);
     CHKiRet(MsgSetRcvFromIP(pMsg, pThis->fromHostIP));
+    CHKiRet(MsgSetRcvFromPort(pMsg, pThis->fromHostPort));
     MsgSetRuleset(pMsg, cnf_params->pRuleset);
 
     STATSCOUNTER_INC(pThis->pLstnInfo->ctrSubmit, pThis->pLstnInfo->mutCtrSubmit);
@@ -552,6 +568,7 @@ BEGINobjQueryInterface(tcps_sess)
     pIf->SetLstnInfo = SetLstnInfo;
     pIf->SetHost = SetHost;
     pIf->SetHostIP = SetHostIP;
+    pIf->SetHostPort = SetHostPort;
     pIf->SetStrm = SetStrm;
     pIf->SetMsgIdx = SetMsgIdx;
     pIf->SetOnMsgReceive = SetOnMsgReceive;

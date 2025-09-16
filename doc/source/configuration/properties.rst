@@ -66,6 +66,10 @@ The following message properties exist:
   The same as fromhost, but always as an IP address. Local inputs (like
   imklog) use 127.0.0.1 in this property.
 
+**fromhost-port**
+  The same as fromhost, but contains the numeric source port of the
+  sender. Local inputs provide an empty string.
+
 **syslogtag**
   TAG from the message
 
