@@ -23,8 +23,8 @@ or json property of given app-name. The count value is added into the
 log message as json property named 'mmcount'.
 
 
-Module Parameters
-~~~~~~~~~~~~~~~~~
+Parameters
+~~~~~~~~~~
 
 **Input Parameters**
 
