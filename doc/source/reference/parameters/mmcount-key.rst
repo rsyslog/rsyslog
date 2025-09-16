@@ -1,5 +1,5 @@
 .. _param-mmcount-key:
-.. _mmcount.parameter.module.key:
+.. _mmcount.parameter.input.key:
 
 key
 ===
@@ -17,7 +17,7 @@ Names the JSON property whose values are counted on matching messages.
 This parameter applies to :doc:`../../configuration/modules/mmcount`.
 
 :Name: key
-:Scope: module
+:Scope: input
 :Type: word
 :Default: none (count messages per severity)
 :Required?: no
@@ -36,8 +36,11 @@ which counter to increment. Without :ref:`param-mmcount-value`, mmcount
 creates a distinct counter for every observed value and writes the
 running total for that value into the message's ``mmcount`` property.
 
-Module usage
-------------
+Input usage
+-----------
+.. _param-mmcount-input-key:
+.. _param-mmcount-key-usage:
+.. _mmcount.parameter.input.key-usage:
 
 .. code-block:: rsyslog
 

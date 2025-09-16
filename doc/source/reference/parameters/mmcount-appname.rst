@@ -1,5 +1,5 @@
 .. _param-mmcount-appname:
-.. _mmcount.parameter.module.appname:
+.. _mmcount.parameter.input.appname:
 
 appName
 =======
@@ -17,7 +17,7 @@ Selects the application name whose messages the mmcount action tracks.
 This parameter applies to :doc:`../../configuration/modules/mmcount`.
 
 :Name: appName
-:Scope: module
+:Scope: input
 :Type: word
 :Default: none
 :Required?: yes
@@ -37,8 +37,11 @@ module counts per-severity totals for the selected application. If
 that parameter's logic. The updated total is written into the message's
 ``mmcount`` JSON property so later actions can react to it.
 
-Module usage
-------------
+Input usage
+-----------
+.. _param-mmcount-input-appname:
+.. _param-mmcount-appname-usage:
+.. _mmcount.parameter.input.appname-usage:
 
 .. code-block:: rsyslog
 

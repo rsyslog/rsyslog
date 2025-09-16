@@ -1,5 +1,5 @@
 .. _param-mmcount-value:
-.. _mmcount.parameter.module.value:
+.. _mmcount.parameter.input.value:
 
 value
 =====
@@ -17,7 +17,7 @@ Counts only messages where the selected key equals the specified value.
 This parameter applies to :doc:`../../configuration/modules/mmcount`.
 
 :Name: value
-:Scope: module
+:Scope: input
 :Type: word
 :Default: none (count every observed key value)
 :Required?: no
@@ -36,8 +36,11 @@ maintains separate counters for each property value instead.
 Specifying ``value`` without :ref:`param-mmcount-key` has no practical
 effect; in that case the module still counts messages per severity.
 
-Module usage
-------------
+Input usage
+-----------
+.. _param-mmcount-input-value:
+.. _param-mmcount-value-usage:
+.. _mmcount.parameter.input.value-usage:
 
 .. code-block:: rsyslog
 

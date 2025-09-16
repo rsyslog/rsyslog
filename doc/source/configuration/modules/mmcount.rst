@@ -26,6 +26,8 @@ log message as json property named 'mmcount'.
 Module Parameters
 ~~~~~~~~~~~~~~~~~
 
+**Input Parameters**
+
 .. note::
 
    Parameter names are case-insensitive; camelCase is recommended for readability.
