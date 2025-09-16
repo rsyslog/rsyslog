@@ -17,11 +17,46 @@ Purpose
 =======
 
 Message modification plugin which counts messages.
-        
+
 This module provides the capability to count log messages by severity
 or json property of given app-name. The count value is added into the
 log message as json property named 'mmcount'.
- 
+
+
+Module Parameters
+~~~~~~~~~~~~~~~~~
+
+.. note::
+
+   Parameter names are case-insensitive; camelCase is recommended for readability.
+
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Parameter
+     - Summary
+   * - :ref:`param-mmcount-appname`
+     - .. include:: ../../reference/parameters/mmcount-appname.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmcount-key`
+     - .. include:: ../../reference/parameters/mmcount-key.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmcount-value`
+     - .. include:: ../../reference/parameters/mmcount-value.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+
+
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/mmcount-appname
+   ../../reference/parameters/mmcount-key
+   ../../reference/parameters/mmcount-value
+
 
 Examples
 ========
