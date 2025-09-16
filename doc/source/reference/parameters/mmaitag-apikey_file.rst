@@ -40,4 +40,4 @@ Action usage
 
 See also
 --------
-See also :doc:`../../configuration/modules/mmaitag`.
+* :doc:`../../configuration/modules/mmaitag`
