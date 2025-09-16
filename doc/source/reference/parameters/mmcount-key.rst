@@ -38,8 +38,6 @@ running total for that value into the message's ``mmcount`` property.
 
 Module usage
 ------------
-.. _param-mmcount-module-key:
-.. _mmcount.parameter.module.key-usage:
 
 .. code-block:: rsyslog
 

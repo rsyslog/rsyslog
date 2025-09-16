@@ -38,8 +38,6 @@ effect; in that case the module still counts messages per severity.
 
 Module usage
 ------------
-.. _param-mmcount-module-value:
-.. _mmcount.parameter.module.value-usage:
 
 .. code-block:: rsyslog
 

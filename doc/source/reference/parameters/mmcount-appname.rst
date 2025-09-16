@@ -39,8 +39,6 @@ that parameter's logic. The updated total is written into the message's
 
 Module usage
 ------------
-.. _param-mmcount-module-appname:
-.. _mmcount.parameter.module.appname-usage:
 
 .. code-block:: rsyslog
 
