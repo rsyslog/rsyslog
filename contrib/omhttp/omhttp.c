@@ -5,8 +5,12 @@
  *
  * Supports profile-based configuration for common HTTP endpoints:
  * - profile="loki" for Grafana Loki
- * - profile="hec:splunk" for Splunk HTTP Event Collector (proof-of-concept only, see
+ * - profile="hec:splunk:event" for Splunk HTTP Event Collector (Endpoint EVENT)
+ * - profile="hec:splunk:raw" for Splunk HTTP Event Collector (Endpoint RAW)
+ * (proof-of-concept only, see
  * https://github.com/rsyslog/rsyslog/issues/5756 for feedback)
+ * The profile configuration is based on this method :
+ *      profile="techno:vendor:endpoint"
  *
  * Copyright 2011 Nathan Scott.
  * Copyright 2009-2018 Rainer Gerhards and Adiscon GmbH.
@@ -88,6 +92,14 @@ STATSCOUNTER_DEF(ctrHttpStatusFail, mutCtrHttpStatusFail);  // Number of request
 static prop_t *pInputName = NULL;
 static int omhttpInstancesCnt = 0;
 
+
+#define NAME_TPL_SPLK_EVENT " StdSplkEvent"
+#define NAME_TPL_SPLK_RAW " StdSplkRAW"
+static uchar template_StdSplkEvent[] =
+    "\"{\\\"event\\\":\\\"%rawmsg:::json%\\\"}\"";
+static uchar template_StdSplkRaw[] =
+    "\"%rawmsg:::drop-last-lf%\n\"";
+
 #define WRKR_DATA_TYPE_ES 0xBADF0001
 
 #define HTTP_HEADER_CONTENT_JSON "Content-Type: application/json; charset=utf-8"
@@ -96,12 +108,19 @@ static int omhttpInstancesCnt = 0;
 #define HTTP_HEADER_ENCODING_GZIP "Content-Encoding: gzip"
 #define HTTP_HEADER_EXPECT_EMPTY "Expect:"
 
-#define VALID_BATCH_FORMATS "newline jsonarray kafkarest lokirest"
+#define VALID_BATCH_FORMATS "newline json jsonarray kafkarest lokirest"
+
+/* Splunk define value */
+#define SPLUNK_HEC_RESTPATH_ENDPOINT_EVENT "services/collector/event"
+#define SPLUNK_HEC_RESTPATH_ENDPOINT_RAW "services/collector/raw"
+#define SPLUNK_HEC_RESTPATH_ENDPOINT_HEALTH "services/collector/health"
+#define SPLUNK_HEC_HEADER_AUTH "Splunk "
+
 
 /* Default batch size constants */
 #define DEFAULT_MAX_BATCH_BYTES (10 * 1024 * 1024) /* 10 MB - default max message size for AWS API Gateway */
 #define SPLUNK_HEC_MAX_BATCH_BYTES (1024 * 1024) /* 1 MB - Splunk HEC recommended limit */
-typedef enum batchFormat_e { FMT_NEWLINE, FMT_JSONARRAY, FMT_KAFKAREST, FMT_LOKIREST } batchFormat_t;
+typedef enum batchFormat_e { FMT_NEWLINE, FMT_JSON, FMT_JSONARRAY, FMT_KAFKAREST, FMT_LOKIREST } batchFormat_t;
 
 /* REST API uses this URL:
  * https://<hostName>:<restPort>/restPath
@@ -115,6 +134,7 @@ typedef struct instanceConf_s {
     int numServers;
     long healthCheckTimeout;
     long restPathTimeout;
+    uchar *token;
     uchar *uid;
     uchar *pwd;
     uchar *authBuf;
@@ -218,6 +238,7 @@ static struct cnfparamdescr actpdescr[] = {
     {"httpheaderkey", eCmdHdlrGetWord, 0},
     {"httpheadervalue", eCmdHdlrString, 0},
     {"httpheaders", eCmdHdlrArray, 0},
+    {"token", eCmdHdlrGetWord, 0},
     {"uid", eCmdHdlrGetWord, 0},
     {"pwd", eCmdHdlrGetWord, 0},
     {"restpath", eCmdHdlrGetWord, 0},
@@ -319,6 +340,7 @@ BEGINfreeInstance
     pthread_mutex_destroy(&pData->mutErrFile);
     for (i = 0; i < pData->numServers; ++i) free(pData->serverBaseUrls[i]);
     free(pData->serverBaseUrls);
+    free(pData->token);
     free(pData->uid);
     free(pData->httpcontenttype);
     free(pData->headerContentTypeBuf);
@@ -383,6 +405,7 @@ BEGINdbgPrintInstInfo
     for (i = 0; i < pData->numServers; ++i) dbgprintf("%c'%s'", i == 0 ? '[' : ' ', pData->serverBaseUrls[i]);
     dbgprintf("]\n");
     dbgprintf("\tdefaultPort=%d\n", pData->defaultPort);
+    dbgprintf("\ttoken='%s'\n", pData->token == NULL ? (uchar *)"(not configured)" : pData->token);
     dbgprintf("\tuid='%s'\n", pData->uid == NULL ? (uchar *)"(not configured)" : pData->uid);
     dbgprintf("\thttpcontenttype='%s'\n",
               pData->httpcontenttype == NULL ? (uchar *)"(not configured)" : pData->httpcontenttype);
@@ -1104,6 +1127,9 @@ static rsRetVal ATTR_NONNULL() buildCurlHeaders(wrkrInstanceData_t *pWrkrData, s
             // If in batch mode, use the approprate content type header for the format,
             // defaulting to text/plain with newline
             switch (pWrkrData->pData->batchFormat) {
+                case FMT_JSON:
+                    slist = curl_slist_append(slist, HTTP_HEADER_CONTENT_JSON);
+                    break;
                 case FMT_JSONARRAY:
                     slist = curl_slist_append(slist, HTTP_HEADER_CONTENT_JSON);
                     break;
@@ -1358,6 +1384,65 @@ finalize_it:
 
     RETiRet;
 }
+
+/* Build a JSON batch without being an array.
+ */
+ static rsRetVal
+serializeBatchJson(wrkrInstanceData_t *pWrkrData, char **batchBuf)
+{
+	fjson_object *msgObj = NULL;
+	size_t numMessages = pWrkrData->batch.nmemb;
+	size_t sizeTotal = pWrkrData->batch.sizeBytes + numMessages + 1;
+    es_str_t *buff = es_newStr(pWrkrData->batch.sizeBytes + 1);
+	DBGPRINTF("omhttp: serializeBatchJson numMessages=%zd sizeTotal=%zd\n", numMessages, sizeTotal);
+
+	DEFiRet;
+
+	/* Avoid crash if numMessages is 0 */
+	if (numMessages == 0) {
+		*batchBuf = NULL;
+		FINALIZE;
+	}
+
+	if (buff == NULL)
+		ABORT_FINALIZE(RS_RET_ERR);
+
+
+	for (size_t i = 0; i < numMessages; i++) {
+		msgObj = fjson_tokener_parse((char *) pWrkrData->batch.data[i]);
+		if (msgObj == NULL) {
+			LogError(0, NO_ERRCODE,
+				"omhttp: serializeBatchJson failed to parse %s as json, ignoring it",
+				pWrkrData->batch.data[i]);
+			continue;
+		}
+
+		const char *tmp = fjson_object_to_json_string_ext(msgObj, FJSON_TO_STRING_PLAIN);
+		es_addBuf(&buff, (char*)tmp, strlen(tmp));
+		es_addChar(&buff, '\n');
+		fjson_object_put(msgObj); // free json object
+		msgObj = NULL;
+	}
+
+	if(es_strlen(buff) > 0) {
+		*batchBuf = es_str2cstr(buff, NULL);
+	} else {
+		*batchBuf = NULL;
+		LogError(0, NO_ERRCODE,
+                "omhttp: serializeBatchJson: created empty batch buffer, no valid messages found");
+	}
+
+finalize_it:
+	if (msgObj != NULL) {
+		fjson_object_put(msgObj);
+	}
+	if (buff != NULL) {
+		es_deleteStr(buff);
+	}
+	RETiRet;
+}
+
+
 /* Build a JSON batch by placing each element in an array.
  */
 static rsRetVal serializeBatchJsonArray(wrkrInstanceData_t *pWrkrData, char **batchBuf) {
@@ -1439,6 +1524,11 @@ static size_t computeBatchSize(wrkrInstanceData_t *pWrkrData) {
     size_t numMessages = pWrkrData->batch.nmemb;
 
     switch (pWrkrData->pData->batchFormat) {
+        case FMT_JSON:
+            // commas between each message
+            // 2 + numMessages - 1 = numMessages + 1
+            extraBytes = numMessages;
+            break;
         case FMT_JSONARRAY:
             // square brackets, commas between each message
             // 2 + numMessages - 1 = numMessages + 1
@@ -1476,6 +1566,9 @@ static size_t computeBatchSize(wrkrInstanceData_t *pWrkrData) {
 static inline size_t computeDeltaExtraOnAppend(const wrkrInstanceData_t *pWrkrData) {
     const size_t numMessages = pWrkrData->batch.nmemb;
     switch (pWrkrData->pData->batchFormat) {
+        case FMT_JSON:
+            /* add a comma if there is already at least one element */
+            return 1;
         case FMT_JSONARRAY:
             /* add a comma if there is already at least one element */
             return (numMessages > 0) ? 1 : 0;
@@ -1526,6 +1619,9 @@ static rsRetVal submitBatch(wrkrInstanceData_t *pWrkrData, uchar **tpls) {
     char *batchBuf = NULL;
 
     switch (pWrkrData->pData->batchFormat) {
+        case FMT_JSON:
+            iRet = serializeBatchJson(pWrkrData, &batchBuf);
+            break;
         case FMT_JSONARRAY:
             iRet = serializeBatchJsonArray(pWrkrData, &batchBuf);
             break;
@@ -1806,6 +1902,7 @@ static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
     pData->serverBaseUrls = NULL;
     pData->defaultPort = 443;
     pData->healthCheckTimeout = 3500;
+    pData->token = NULL;
     pData->uid = NULL;
     pData->restPathTimeout = 0;
     pData->httpcontenttype = NULL;
@@ -1914,23 +2011,87 @@ static rsRetVal applyProfileSettings(instanceData *const pData, const char *cons
         /* HEC (HTTP Event Collector) profile */
         const char *vendor = profile + 4;
 
-        if (strcasecmp(vendor, "splunk") == 0) {
-            LogMsg(0, RS_RET_OK, LOG_INFO, "omhttp: applying 'hec:splunk' profile");
+        if (strncasecmp(vendor, "splunk:", 7) == 0) {
+            /*  Check endpoint */
+            const char *endpoint = vendor + 7;
 
-            /* Set default rest path for Splunk HEC */
-            if (pData->restPath == NULL) {
-                CHKmalloc(pData->restPath = (uchar *)strdup("services/collector/event"));
+            if(strcasecmp(endpoint, "raw") == 0) {
+                LogMsg(0, RS_RET_OK, LOG_INFO, "omhttp: applying 'hec:splunk:raw' profile");
+
+                /* Set default rest path for Splunk HEC */
+                if (pData->restPath == NULL && !pData->dynRestPath) {
+                    CHKmalloc(pData->restPath = (uchar *)strdup(SPLUNK_HEC_RESTPATH_ENDPOINT_RAW));
+                }
+
+                /* Set batch format to newline (Splunk HEC uses newline-delimited format) */
+                if (!pData->bFreeBatchFormatName) {
+                    pData->batchFormatName = (uchar *)"newline";
+                    pData->batchFormat = FMT_NEWLINE;
+                }
+
+                /* Disable batch mode for HEC */
+                if (pData->batchMode) {
+                    pData->batchMode = 0;
+                }
+
+                /* Set a custom template */
+                if (pData->tplName == NULL) {
+                    pData->tplName = (uchar *) NAME_TPL_SPLK_RAW;
+                }
+            }
+            else if(strcasecmp(endpoint, "event") == 0){
+                LogMsg(0, RS_RET_OK, LOG_INFO, "omhttp: applying 'hec:splunk:event' profile");
+
+                /* Set default rest path for Splunk HEC */
+                if (pData->restPath == NULL && !pData->dynRestPath) {
+                    CHKmalloc(pData->restPath = (uchar *)strdup(SPLUNK_HEC_RESTPATH_ENDPOINT_EVENT));
+                }
+
+                /* Set batch format to json (not json array) (Splunk HEC uses newline-delimited JSON) */
+                if (!pData->bFreeBatchFormatName) {
+                    pData->batchFormatName = (uchar *)"json";
+                    pData->batchFormat = FMT_JSON;
+                }
+
+                /* Enable batch mode for HEC */
+                if (!pData->batchMode) {
+                    pData->batchMode = 1;
+                }
+
+                /* Set a custom template */
+                if (pData->tplName == NULL) {
+                    pData->tplName = (uchar *) NAME_TPL_SPLK_EVENT;
+                }
+            }
+            else {
+                LogError(0, RS_RET_PARAM_ERROR, "omhttp: unknown Splunk HEC endpoint '%s' in profile", endpoint);
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
             }
 
-            /* Set batch format to newline (Splunk HEC uses newline-delimited JSON) */
-            if (!pData->bFreeBatchFormatName) {
-                pData->batchFormatName = (uchar *)"newline";
-                pData->batchFormat = FMT_NEWLINE;
-            }
+            /* Header */
+            if (pData->token != NULL) {
 
-            /* Enable batch mode for HEC */
-            if (!pData->batchMode) {
-                pData->batchMode = 1;
+                /* Create authorization header */
+                es_str_t *tmpHeader = es_newStr(10240);
+                int r = es_addBuf(&tmpHeader, "Authorization", strlen("Authorization"));
+                if (r == 0) r = es_addChar(&tmpHeader, ':');
+                if (r == 0) r = es_addChar(&tmpHeader, ' ');
+                if (r == 0) r = es_addBuf(&tmpHeader, SPLUNK_HEC_HEADER_AUTH, strlen(SPLUNK_HEC_HEADER_AUTH));                          
+                if (r == 0) r = es_addBuf(&tmpHeader, (char *)pData->token, ustrlen(pData->token));              
+
+                if (pData->nHttpHeaders > 0) {
+                    CHKmalloc(pData->httpHeaders = malloc(sizeof(uchar *) * 1)); // Only one HEADER
+                    pData->nHttpHeaders = 1;
+                    pData->httpHeaders[0] = (uchar *)es_str2cstr(tmpHeader, NULL);
+                } else {
+                    pData->httpHeaders = realloc(pData->httpHeaders, sizeof(uchar *) * (pData->nHttpHeaders + 1));
+                    pData->nHttpHeaders = pData->nHttpHeaders + 1;
+                    pData->httpHeaders[pData->nHttpHeaders - 1] = (uchar *)es_str2cstr(tmpHeader, NULL);                    
+                }
+                if (tmpHeader != NULL) es_deleteStr(tmpHeader);
+            } else { 
+                LogError(0, RS_RET_PARAM_ERROR, "omhttp: Splunk HEC endpoint : a token is need it");
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
             }
 
             /* Set default max batch bytes (Splunk recommends < 1MB) */
@@ -1938,10 +2099,21 @@ static rsRetVal applyProfileSettings(instanceData *const pData, const char *cons
                 pData->maxBatchBytes = SPLUNK_HEC_MAX_BATCH_BYTES; /* 1MB */
             }
 
-            /* Note: Authorization header should be set separately with httpheaderkey/value
-             * e.g., httpheaderkey="Authorization" httpheadervalue="Splunk YOUR-HEC-TOKEN"
+            /* Set default retry codes to 5xx
+             * https://docs.splunk.com/Documentation/Splunk/9.4.2/Data/TroubleshootHTTPEventCollector#Possible_error_codes 
              */
+            if (pData->nhttpRetryCodes == 0) {
+                static const unsigned int splk_retry_codes[] = {503};
+                const size_t num_codes = sizeof(splk_retry_codes) / sizeof(splk_retry_codes[0]);
+                pData->nhttpRetryCodes = num_codes;
+                CHKmalloc(pData->httpRetryCodes = malloc(sizeof(splk_retry_codes)));
+                memcpy(pData->httpRetryCodes, splk_retry_codes, sizeof(splk_retry_codes));
+            }
 
+            /* Define health Check URL */
+            if (pData->checkPath != NULL) {
+                CHKmalloc(pData->checkPath = (uchar *)strdup(SPLUNK_HEC_RESTPATH_ENDPOINT_HEALTH));
+            }
         } else {
             LogError(0, RS_RET_PARAM_ERROR, "omhttp: unknown HEC vendor '%s' in profile", vendor);
             ABORT_FINALIZE(RS_RET_PARAM_ERROR);
@@ -1987,6 +2159,8 @@ BEGINnewActInst
             pData->healthCheckTimeout = (long)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "restpathtimeout")) {
             pData->restPathTimeout = (long)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "token")) {
+            pData->token = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(actpblk.descr[i].name, "uid")) {
             pData->uid = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(actpblk.descr[i].name, "httpcontenttype")) {
@@ -2024,6 +2198,8 @@ BEGINnewActInst
                 pData->bFreeBatchFormatName = 1;
                 if (!strcmp(batchFormatName, "newline")) {
                     pData->batchFormat = FMT_NEWLINE;
+                } else if (!strcmp(batchFormatName, "json")) {
+                    pData->batchFormat = FMT_JSON;
                 } else if (!strcmp(batchFormatName, "jsonarray")) {
                     pData->batchFormat = FMT_JSONARRAY;
                 } else if (!strcmp(batchFormatName, "kafkarest")) {
@@ -2164,6 +2340,14 @@ BEGINnewActInst
         ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
     }
 
+    /* Apply header before profile */
+    if (pData->httpcontenttype != NULL)
+        CHKiRet(computeApiHeader((char *)"Content-Type", (char *)pData->httpcontenttype, &pData->headerContentTypeBuf));
+
+    if (pData->httpheaderkey != NULL)
+        CHKiRet(computeApiHeader((char *)pData->httpheaderkey, (char *)pData->httpheadervalue, &pData->headerBuf));
+
+
     /* Apply profile settings if specified */
     if (profileName != NULL) {
         CHKiRet(applyProfileSettings(pData, profileName));
@@ -2182,11 +2366,6 @@ BEGINnewActInst
     }
 
     if (pData->uid != NULL) CHKiRet(computeAuthHeader((char *)pData->uid, (char *)pData->pwd, &pData->authBuf));
-    if (pData->httpcontenttype != NULL)
-        CHKiRet(computeApiHeader((char *)"Content-Type", (char *)pData->httpcontenttype, &pData->headerContentTypeBuf));
-
-    if (pData->httpheaderkey != NULL)
-        CHKiRet(computeApiHeader((char *)pData->httpheaderkey, (char *)pData->httpheadervalue, &pData->headerBuf));
 
     iNumTpls = 1;
     if (pData->dynRestPath) ++iNumTpls;
@@ -2409,6 +2588,7 @@ ENDqueryEtryPt
 
 BEGINmodInit()
     CODESTARTmodInit;
+    uchar *pTmp;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
     CODEmodInit_QueryRegCFSLineHdlr CHKiRet(objUse(prop, CORE_COMPONENT));
     CHKiRet(objUse(ruleset, CORE_COMPONENT));
@@ -2460,6 +2640,14 @@ BEGINmodInit()
         LogError(0, RS_RET_OBJ_CREATION_FAILED, "CURL fail. -http disabled");
         ABORT_FINALIZE(RS_RET_OBJ_CREATION_FAILED);
     }
+
+    /* Add custom template for Splunk endpoit RAW */
+    pTmp = template_StdSplkRaw;
+    tplAddLine(ourConf, (char *) NAME_TPL_SPLK_RAW, &pTmp);
+
+    /* Add custom template for Splunk endpoit EVENT */
+    pTmp = template_StdSplkEvent;
+    tplAddLine(ourConf,  (char *) NAME_TPL_SPLK_EVENT, &pTmp);
 
     CHKiRet(prop.Construct(&pInputName));
     CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("omhttp"), sizeof("omhttp") - 1));

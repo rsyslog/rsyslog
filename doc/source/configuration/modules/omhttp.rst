@@ -329,14 +329,21 @@ Each message on the "Inputs" line is the templated log line that is fed into the
     Inputs: {"msg": "message 1"} {"msg"": "message 2"} {"msg": "message 3"}
     Output: [{"msg": "message 1"}, {"msg"": "message 2"}, {"msg": "message 3"}]
 
-3. *kafkarest* - Builds a JSON object that conforms to the `Kafka Rest Proxy specification <https://docs.confluent.io/platform/current/kafka-rest/quickstart.html>`_. This mode requires that each message is parsable JSON, since the plugin parses each message as JSON while building the batch object.
+3. *json* - Builds a JSON containing all messages in the batch without a JSON Array. This mode requires that each message is parsable JSON, since the plugin parses each message as JSON.
+
+.. code-block:: text
+
+    Inputs: {"msg": "message 1"} {"msg"": "message 2"} {"msg": "message 3"}
+    Output: [{"msg": "message 1"}, {"msg"": "message 2"}, {"msg": "message 3"}]
+
+4. *kafkarest* - Builds a JSON object that conforms to the `Kafka Rest Proxy specification <https://docs.confluent.io/platform/current/kafka-rest/quickstart.html>`_. This mode requires that each message is parsable JSON, since the plugin parses each message as JSON while building the batch object.
 
 .. code-block:: text
 
     Inputs: {"msg": "message 1"} {"msg"": "message 2"} {"msg": "message 3"}
     Output: {"records": [{"value": {"msg": "message 1"}}, {"value": {"msg": "message 2"}}, {"value": {"msg": "message 3"}}]}
 
-4. *lokirest* - Builds a JSON object that conforms to the `Loki Rest specification <https://github.com/grafana/loki/blob/main/docs/sources/reference/loki-http-api.md#ingest-logs>`_. This mode requires that each message is parsable JSON, since the plugin parses each message as JSON while building the batch object. Additionally, the operator is responsible for providing index keys, and message values.
+5. *lokirest* - Builds a JSON object that conforms to the `Loki Rest specification <https://github.com/grafana/loki/blob/main/docs/sources/reference/loki-http-api.md#ingest-logs>`_. This mode requires that each message is parsable JSON, since the plugin parses each message as JSON while building the batch object. Additionally, the operator is responsible for providing index keys, and message values.
 
 .. code-block:: text
 
@@ -628,6 +635,51 @@ statsname
 The name assigned to statistics specific to this action instance. The supported set of
 statistics tracked for this action instance are **submitted**, **acked**, **failures**.
 See the `Statistic Counter`_ section for more details.
+
+
+profile
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+
+The profile allow user to use a defined profile supported by this module.
+The list of the current supported profile is :
+
+1. loki : allow Rsyslog to send data to the loki endpoint "loki/api/v1/push"
+2. hec:splunk:event : allow Rsyslog to send data to the Splunk HEC endpoint "event". This profile use a custom template to format logs into json :
+
+.. code-block:: text
+
+    {"event":"%rawmsg:::json%"}
+
+3. hec:splunk:raw : allow Rsyslog to send data to the Splunk HEC endpoint "raw". This profile use a custom template to format logs :
+
+.. code-block:: text
+
+    %rawmsg:::drop-last-lf%\n
+
+
+Other name set up here is ignored.
+
+token
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+
+The token is necessary when you use the profile "hec:splunk:event" or "hec:splunk:raw". The token to set up is given by when you create a Splunk HEC.
+This value is ignored if you use other profile.
 
 
 Statistic Counter
