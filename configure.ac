@@ -2524,8 +2524,8 @@ AM_CONDITIONAL(ENABLE_KAFKA_STATIC, test x$enable_kafka_static = xyes)
 # omkafka works with older library
 omkafka_use_dummy="no"
 if test "$enable_omkafka" = "yes" -o "$enable_omkafka" = "optional"; then
-	PKG_CHECK_MODULES([LIBRDKAFKA], [rdkafka >= 0.9.1],, [
-		PKG_CHECK_MODULES([LIBRDKAFKA], [librdkafka],, [
+        PKG_CHECK_MODULES([LIBRDKAFKA], [rdkafka >= 0.11.0],, [
+                PKG_CHECK_MODULES([LIBRDKAFKA], [librdkafka],, [
 			AC_CHECK_LIB([rdkafka], [rd_kafka_last_error], [
 				AC_MSG_WARN([librdkafka is missing but library present, using -lrdkafka])
 				LIBRDKAFKA_LIBS=-lrdkafka
@@ -2560,7 +2560,7 @@ fi
 imkafka_use_dummy="no"
 # imkafka needs newer library
 if test "x$enable_imkafka" = "xyes" -o "$enable_imkafka" = "optional"; then
-	PKG_CHECK_MODULES([LIBRDKAFKA], [rdkafka >= 0.9.1],, [
+        PKG_CHECK_MODULES([LIBRDKAFKA], [rdkafka >= 0.11.0],, [
 		AC_CHECK_LIB([rdkafka], [rd_kafka_consumer_poll], [
 			AC_MSG_WARN([librdkafka is missing but library present, using -lrdkafka])
 			LIBRDKAFKA_LIBS=-lrdkafka
