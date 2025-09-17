@@ -47,6 +47,3 @@ Input usage
 
    action(type="mmcount" appName="gluster")
 
-See also
---------
-See also :doc:`../../configuration/modules/mmcount`.

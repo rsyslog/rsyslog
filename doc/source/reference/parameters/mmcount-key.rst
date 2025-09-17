@@ -46,6 +46,3 @@ Input usage
 
    action(type="mmcount" appName="glusterd" key="!gf_code")
 
-See also
---------
-See also :doc:`../../configuration/modules/mmcount`.

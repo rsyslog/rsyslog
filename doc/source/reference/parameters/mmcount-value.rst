@@ -46,6 +46,3 @@ Input usage
 
    action(type="mmcount" appName="glusterfsd" key="!gf_code" value="9999")
 
-See also
---------
-See also :doc:`../../configuration/modules/mmcount`.
