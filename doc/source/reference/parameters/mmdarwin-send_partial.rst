@@ -52,7 +52,6 @@ the third field won't be found, so the call to Darwin will be dropped.
 
 Input usage
 -----------
-.. _param-mmdarwin-input-send_partial:
 .. _mmdarwin.parameter.input.send_partial-usage:
 
 .. code-block:: rsyslog

@@ -61,7 +61,6 @@ where :json:`"certitude"` represents the score returned by Darwin.
 
 Input usage
 -----------
-.. _param-mmdarwin-input-key:
 .. _mmdarwin.parameter.input.key-usage:
 
 .. code-block:: rsyslog

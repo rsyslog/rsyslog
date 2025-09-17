@@ -38,7 +38,6 @@ Tells the Darwin filter what to do next:
 
 Input usage
 -----------
-.. _param-mmdarwin-input-response:
 .. _mmdarwin.parameter.input.response-usage:
 
 .. code-block:: rsyslog

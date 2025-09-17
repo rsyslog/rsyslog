@@ -30,7 +30,6 @@ This code was mandatory but is now obsolete. It can be omitted or left at its de
 
 Input usage
 -----------
-.. _param-mmdarwin-input-filtercode:
 .. _mmdarwin.parameter.input.filtercode-usage:
 
 .. code-block:: rsyslog

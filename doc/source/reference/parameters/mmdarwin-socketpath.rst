@@ -29,7 +29,6 @@ The Darwin filter socket path to use.
 
 Input usage
 -----------
-.. _param-mmdarwin-input-socketpath:
 .. _mmdarwin.parameter.input.socketpath-usage:
 
 .. code-block:: rsyslog
