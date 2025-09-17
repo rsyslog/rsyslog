@@ -1,6 +1,15 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
 - overall improved documentation via a large set of topic updates.
+- 2025-09-17: build: fix err on systems with pkg-config but not libgcrypt-config
+  Build did not succeed on some platforms due to invalid confgure check.
+  This has been resolved.
+  The AC_CHECK_PROG macro requires a value-if-found parameter
+  and an optional value-if-not-found parameter
+  Fix by adding the value-if-found parameter
+  Also handle the situation where there's no libgcrypt.pc
+  file for libgcrypt versions before 1.8.4
+  Thanks to Zhang Wen for analysis and patch.
 - 2025-09-16: core: add fromhost-port message property
   Some deployments need to disambiguate multiple senders sharing an IP,
   for example autossh or similar tunnel setups. Exposing the source port
