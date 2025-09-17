@@ -6,6 +6,12 @@ This doc is intended for maintainers and regular contributors to
 the project. The [`README.md`](README.md) doc covers the basic steps for one-off
 builds from the `main` branch.
 
+Quick links:
+
+-   Helper scripts: `doc/tools/build-doc-linux.sh`, `doc/tools/build-doc-windows.ps1`
+-   Requirements file: `doc/requirements.txt`
+-   Linux distro prerequisites (Debian/Ubuntu/RHEL): see `doc/README.md` (Linux distribution packages)
+
 In all cases, the version number and release string do not *need* to be
 manually specified, though the directions do provide steps for doing so
 in at least one case.
@@ -40,9 +46,13 @@ steps in this document.
 
 #### Directions
 
-1. Review the [`README.md`](README.md) file for instructions that cover
-   installing `pip`, setting up the virtual environment and installing
-   the latest version of the Sphinx package.
+1. Ensure base tools are installed (major distros only):
+   - Debian/Ubuntu: `sudo apt update && sudo apt install -y python3 python3-venv python3-pip git`
+   - RHEL/CentOS/Fedora: `sudo dnf install -y python3 python3-pip git` (use `yum` on older releases)
+1. Optional: use helper scripts to create venv and build:
+   - Linux: `./tools/build-doc-linux.sh --strict --clean --format html`
+   - Windows: `powershell -ExecutionPolicy Bypass -File .\tools\build-doc-windows.ps1 -Strict -Clean -Format html`
+1. Or manually create a venv and install deps: `python3 -m venv .venv-docs && source .venv-docs/bin/activate && pip install -r requirements.txt`
 1. Change to the `doc/` folder within the rsyslog repository
 1. Merge `main` into the current stable branch (e.g., `v8-stable`)
 1. Tag the stable branch
@@ -102,9 +112,7 @@ is not already installed and known to your installation of Python.
 
 #### Build from Git repo
 
-1. Review the [`README.md`](README.md) file for instructions that cover
-   installing `pip`, setting up the virtual environment and installing
-   the latest version of the Sphinx package.
+1. Ensure base tools are installed (see maintainer directions). Create/activate venv and `pip install -r requirements.txt`.
 1. Run `git clone https://github.com/rsyslog/rsyslog.git`
 1. Move to doc directory.
 1. Run `git checkout v8.33.0`
