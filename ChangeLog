@@ -1,6 +1,27 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
 - overall improved documentation via a large set of topic updates.
+- 2025-09-17: imtcp: warn on TLS handshakes received on plain listeners
+  Admins often report "gibberish" when a TLS-enabled sender connects to a
+  plain imtcp port. Making the mismatch explicit reduces operator confusion
+  and support churn, and points directly to remediation.
+  Impact: logs one explicit error per mismatched connection; no change to
+  parsing or transport on plain listeners.
+  Before/After: before, ClientHello bytes were ingested as binary with no
+  hint; after, imtcp detects a TLS ClientHello on ptcp and logs a clear
+  message with a troubleshooting URL.
+  Technically, we add a small per-session probe in tcps_sess_t and sample
+  the first 5 bytes of new sessions. If the record header matches a TLS
+  handshake (type 0x16, version 0x03.00–0x04, length 40–16384) and the
+  listener is plain TCP (streamDriver.mode=0), we emit a single error and
+  disable further probing for that session. The probe is called from
+  DataRcvd() and returns RS_RET_SERVER_NO_TLS when triggered; the session
+  is otherwise left untouched.
+  Runtime: introduce RS_RET_SERVER_NO_TLS (-2465) to tag the condition.
+  Docs: add imtcp troubleshooting section and a dedicated FAQ page.
+  Tests/tools: add test imtcp-tls-gibberish.sh and extend tcpflood with
+  -H to send only a ClientHello (OpenSSL and GnuTLS paths tolerate early
+  termination and non-blocking I/O for this mode).
 - 2025-09-17: build: fix err on systems with pkg-config but not libgcrypt-config
   Build did not succeed on some platforms due to invalid confgure check.
   This has been resolved.
