@@ -49,6 +49,10 @@ struct tcps_sess_s {
         rsRetVal (*DoSubmitMessage)(tcps_sess_t *, uchar *, int); /* submit message callback */
         int iMaxLine; /* fast lookup buffer for config property */
         pthread_mutex_t mut;
+        unsigned tlsProbeBytes; /**< number of bytes collected for TLS client detection */
+        uchar tlsProbeBuf[5]; /**< first bytes received for TLS client detection */
+        sbool tlsProbeDone; /**< indicates TLS client detection has been completed */
+        sbool tlsMismatchWarned; /**< avoids logging the same TLS mismatch twice */
 };
 
 

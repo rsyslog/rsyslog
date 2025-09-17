@@ -9,3 +9,4 @@ FAQ
    encrypt_mysql_traffic_ommysql
    imudp-packet-loss
    common-config-mistakes
+   imtcp-tls-gibberish
