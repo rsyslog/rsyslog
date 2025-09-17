@@ -293,6 +293,7 @@ TESTS +=  \
 	msgdup_props.sh \
 	empty-ruleset.sh \
 	ruleset-direct-queue.sh \
+	imtcp-tls-gibberish.sh \
 	imtcp-listen-port-file-2.sh \
 	allowed-sender-tcp-ok.sh \
 	allowed-sender-tcp-fail.sh \
@@ -2519,6 +2520,7 @@ EXTRA_DIST= \
 	fromhost-port.sh \
 	fromhost-port-tuple.sh \
 	fromhost-port-async-ruleset.sh \
+	imtcp-tls-gibberish.sh \
 	imtcp-listen-port-file-2.sh \
 	allowed-sender-tcp-ok.sh \
 	allowed-sender-tcp-fail.sh \

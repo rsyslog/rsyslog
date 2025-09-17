@@ -25,9 +25,9 @@ Notable Features
 
 - :ref:`imtcp-statistic-counter`
 
-The ``imtcp`` module runs on all platforms but is **optimized for Linux** and other systems that 
-support **epoll in edge-triggered mode**. While earlier versions of imtcp operated exclusively 
-in **single-threaded** mode, starting with **version 8.2504.0**, a **worker pool** is used on 
+The ``imtcp`` module runs on all platforms but is **optimized for Linux** and other systems that
+support **epoll in edge-triggered mode**. While earlier versions of imtcp operated exclusively
+in **single-threaded** mode, starting with **version 8.2504.0**, a **worker pool** is used on
 **epoll-enabled systems**, significantly improving performance.
 
 The **number of worker threads** can be configured to match system requirements.
@@ -35,36 +35,36 @@ The **number of worker threads** can be configured to match system requirements.
 Starvation Protection
 ---------------------
 
-A common issue in high-volume logging environments is **starvation**, where a few high-traffic 
-sources overwhelm the system. Without protection, a worker may become stuck processing a single 
+A common issue in high-volume logging environments is **starvation**, where a few high-traffic
+sources overwhelm the system. Without protection, a worker may become stuck processing a single
 connection continuously, preventing other clients from being served.
 
-For example, if two worker threads are available and one machine floods the system with data, 
-**only one worker remains** to handle all other connections. If multiple sources send large 
-amounts of data, **all workers could become monopolized**, preventing other connections from 
+For example, if two worker threads are available and one machine floods the system with data,
+**only one worker remains** to handle all other connections. If multiple sources send large
+amounts of data, **all workers could become monopolized**, preventing other connections from
 being processed.
 
-To mitigate this, **imtcp allows limiting the number of consecutive requests a worker can handle 
-per session**. Once the limit is reached, the worker temporarily stops processing that session 
-and switches to other active connections. This ensures **fair resource distribution** while 
+To mitigate this, **imtcp allows limiting the number of consecutive requests a worker can handle
+per session**. Once the limit is reached, the worker temporarily stops processing that session
+and switches to other active connections. This ensures **fair resource distribution** while
 preventing any single sender from **monopolizing rsyslog’s processing power**.
 
-Even in **single-threaded mode**, a high-volume sender may consume significant resources, but it 
+Even in **single-threaded mode**, a high-volume sender may consume significant resources, but it
 will no longer block all other connections.
 
 Configurable Behavior
 ---------------------
 
-- The **maximum number of requests per session** before switching to another connection can be 
+- The **maximum number of requests per session** before switching to another connection can be
   adjusted.
-- In **epoll mode**, the **number of worker threads** can also be configured. More workers 
+- In **epoll mode**, the **number of worker threads** can also be configured. More workers
   provide better protection against single senders dominating processing.
 
 Monitoring and Performance Insights
 -----------------------------------
 
-**Statistics counters** provide insights into key metrics, including starvation prevention. 
-These counters are **critical for monitoring system health**, especially in **high-volume 
+**Statistics counters** provide insights into key metrics, including starvation prevention.
+These counters are **critical for monitoring system health**, especially in **high-volume
 datacenter deployments**.
 
 Configuration Parameters
@@ -395,26 +395,26 @@ The following properties are maintained for each listener:
 Worker Statistics Counters
 --------------------------
 
-When ``imtcp`` operates with **multiple worker threads** (``workerthreads > 1``),  
-it **automatically generates statistics counters** to provide insight into worker  
-activity and system health. These counters are part of the ``impstats`` module and  
-can be used to monitor system performance, detect bottlenecks, and analyze load  
+When ``imtcp`` operates with **multiple worker threads** (``workerthreads > 1``),
+it **automatically generates statistics counters** to provide insight into worker
+activity and system health. These counters are part of the ``impstats`` module and
+can be used to monitor system performance, detect bottlenecks, and analyze load
 distribution among worker threads.
 
-**Note:** These counters **do not exist** if ``workerthreads`` is set to ``1``,  
+**Note:** These counters **do not exist** if ``workerthreads`` is set to ``1``,
 as ``imtcp`` runs in single-threaded mode in that case.
 
 **Statistics Counters**
 
-Each worker thread reports its statistics using the format ``tcpsrv/wX``,  
-where ``X`` is the worker thread number (e.g., ``tcpsrv/w0`` for the first worker).  
+Each worker thread reports its statistics using the format ``tcpsrv/wX``,
+where ``X`` is the worker thread number (e.g., ``tcpsrv/w0`` for the first worker).
 The following counters are available:
 
 - **runs** → Number of times the worker thread has been invoked.
-- **read** → Number of read calls performed by the worker.  
+- **read** → Number of read calls performed by the worker.
   - For TLS connections, this includes both **read** and **write** calls.
 - **accept** → Number of times this worker has processed a new connection via ``accept()``.
-- **starvation_protect** → Number of times a socket was placed back into the queue  
+- **starvation_protect** → Number of times a socket was placed back into the queue
   due to reaching the ``StarvationProtection.MaxReads`` limit.
 
 **Example Output**
@@ -428,7 +428,7 @@ An example of ``impstats`` output with three worker threads:
 
 In this case:
 
-- Worker ``w0`` was invoked **72 times**, performed **2662 reads**,  
+- Worker ``w0`` was invoked **72 times**, performed **2662 reads**,
   applied **starvation protection once**, and accepted **2 connections**.
 - Worker ``w1`` handled more reads but did not process any ``accept()`` calls.
 - Worker ``w2`` processed fewer reads and did not trigger starvation protection.
@@ -436,15 +436,36 @@ In this case:
 **Usage and Monitoring**
 
 - These counters help analyze how load is distributed across worker threads.
-- High ``starvation_protect`` values indicate that some connections are consuming  
+- High ``starvation_protect`` values indicate that some connections are consuming
   too many reads, potentially impacting fairness.
-- If a single worker handles **most** of the ``accept()`` calls, this may  
+- If a single worker handles **most** of the ``accept()`` calls, this may
   indicate an imbalance in connection handling.
-- Regular monitoring can help optimize the ``workerthreads`` and  
+- Regular monitoring can help optimize the ``workerthreads`` and
   ``StarvationProtection.MaxReads`` parameters for better system efficiency.
 
-By using these statistics, administrators can fine-tune ``imtcp`` to ensure  
+By using these statistics, administrators can fine-tune ``imtcp`` to ensure
 **fair resource distribution and optimal performance** in high-traffic environments.
+
+
+Troubleshooting
+===============
+
+TLS-enabled clients connecting to a plain listener
+--------------------------------------------------
+
+If a sender negotiates TLS but the listener still uses the plain ``ptcp``
+driver (``streamDriver.mode="0"``), ``imtcp`` inspects the first bytes it
+receives. When it detects a TLS ClientHello under these conditions, it emits an
+error similar to::
+
+   imtcp: TLS handshake detected from sender.example.com (192.0.2.10:65123) but
+   listener is not TLS-enabled. Enable TLS on this listener or disable TLS on
+   the client. See https://www.rsyslog.com/doc/faq/imtcp-tls-gibberish.html
+   for troubleshooting.
+
+This message prevents binary TLS handshakes from being mistaken for syslog
+payloads and points directly to the fix. For detailed remediation guidance, see
+:doc:`../../faq/imtcp-tls-gibberish`.
 
 
 Caveats/Known Bugs

@@ -71,6 +71,10 @@ BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END m
     pThis->fromHost = NULL;
     pThis->fromHostIP = NULL;
     pThis->fromHostPort = NULL;
+    pThis->tlsProbeBytes = 0;
+    pThis->tlsProbeDone = 0;
+    pThis->tlsMismatchWarned = 0;
+    memset(pThis->tlsProbeBuf, 0, sizeof(pThis->tlsProbeBuf));
     /* now allocate the message reception buffer */
     CHKmalloc(pThis->pMsg = (uchar *)malloc(pThis->iMaxLine + 1));
 finalize_it:
@@ -163,6 +167,57 @@ static rsRetVal SetStrm(tcps_sess_t *pThis, netstrm_t *pStrm) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcps_sess);
     pThis->pStrm = pStrm;
+    RETiRet;
+}
+
+
+static inline int isLikelyTlsClientHello(const uchar buf[5]) {
+    if (buf[0] != 0x16) return 0; /* handshake record */
+    if (buf[1] != 0x03) return 0; /* TLS major version */
+    if (buf[2] > 0x04) return 0; /* accept TLS 1.0 - 1.3 */
+    const unsigned recordLen = ((unsigned)buf[3] << 8) | buf[4];
+    if (recordLen < 40 || recordLen > 16384) return 0; /* sanity */
+    return 1;
+}
+
+static ATTR_NONNULL() rsRetVal maybeDetectTlsClientHello(tcps_sess_t *pThis, const char *data, size_t len) {
+    DEFiRet;
+    if (pThis->tlsProbeDone) FINALIZE;
+
+    if (pThis->pSrv->pszOrigin == NULL || strcmp((const char *)pThis->pSrv->pszOrigin, "imtcp") != 0) {
+        pThis->tlsProbeDone = 1;
+        FINALIZE;
+    }
+
+    if (pThis->pSrv->iDrvrMode != 0) {
+        pThis->tlsProbeDone = 1;
+        FINALIZE;
+    }
+
+    while (len > 0 && pThis->tlsProbeBytes < sizeof(pThis->tlsProbeBuf)) {
+        pThis->tlsProbeBuf[pThis->tlsProbeBytes++] = (uchar)*data++;
+        --len;
+    }
+
+    if (pThis->tlsProbeBytes >= sizeof(pThis->tlsProbeBuf)) {
+        if (!pThis->tlsMismatchWarned && isLikelyTlsClientHello(pThis->tlsProbeBuf)) {
+            const char *const host =
+                (pThis->fromHost != NULL) ? (const char *)propGetSzStr(pThis->fromHost) : "(host unknown)";
+            const char *const ip =
+                (pThis->fromHostIP != NULL) ? (const char *)propGetSzStr(pThis->fromHostIP) : "(IP unknown)";
+            const char *const port =
+                (pThis->fromHostPort != NULL) ? (const char *)propGetSzStr(pThis->fromHostPort) : "(port unknown)";
+            LogError(0, RS_RET_SERVER_NO_TLS,
+                     "imtcp: TLS handshake detected from %s (%s:%s) but listener is not TLS-enabled. "
+                     "Enable TLS on this listener or disable TLS on the client. "
+                     "See https://www.rsyslog.com/doc/faq/imtcp-tls-gibberish.html for troubleshooting.",
+                     host, ip, port);
+            pThis->tlsMismatchWarned = 1;
+            ABORT_FINALIZE(RS_RET_SERVER_NO_TLS);
+        }
+        pThis->tlsProbeDone = 1;
+    }
+finalize_it:
     RETiRet;
 }
 
@@ -518,6 +573,8 @@ static rsRetVal DataRcvd(tcps_sess_t *pThis, char *pData, const size_t iLen) {
     ISOBJ_TYPE_assert(pThis, tcps_sess);
     assert(pData != NULL);
     assert(iLen > 0);
+
+    CHKiRet(maybeDetectTlsClientHello(pThis, pData, iLen));
 
     datetime.getCurrTime(&stTime, &ttGenTime, TIME_IN_LOCALTIME);
     multiSub.ppMsgs = pMsgs;

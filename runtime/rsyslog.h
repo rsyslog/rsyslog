@@ -733,6 +733,7 @@ enum rsRetVal_ {
                       address family or does not expect it (may be handled locally) */
     RS_RET_SYSTEMD_VERSION_ERR = -2463, /**< systemd version doesn't support journal namespacing */
     RS_RET_NO_TEMPLATE_SUPPORT_ERR = -2464, /**< journald namespace doesn't support template yet */
+    RS_RET_SERVER_NO_TLS = -2465, /**< server received TLS handshake but is not configured for TLS */
 
     /* RainerScript error messages (range 1000.. 1999) */
     RS_RET_SYSVAR_NOT_FOUND = 1001, /**< system variable could not be found (maybe misspelled) */

@@ -54,6 +54,8 @@
  *      Average,min,max
  * -T   transport to use. Currently supported: "udp", "tcp" (default), "tls" (tcp+tls), relp-plain, relp-tls
  *      Note: UDP supports a single target port, only
+ * -H
+ *      initiate a TLS ClientHello and exit once it is sent (requires -Ttls)
  * -u	Set RELP TLS Library to gnutls or openssl
  * -W	wait time between sending batches of messages, in microseconds (Default: 0)
  * -b   number of messages within a batch (default: 100,000,000 millions)
@@ -117,6 +119,9 @@
 #include <strings.h>
 #include <netinet/in.h>
 #include <pthread.h>
+#include <stdbool.h>
+#include <fcntl.h>
+#include <getopt.h>
 #ifdef ENABLE_RELP
     #include <librelp.h>
 #endif
@@ -234,6 +239,7 @@ static int tlsLogLevel = 0;
 static char *jsonCookie = NULL; /* if non-NULL, use JSON format with this cookie */
 static int octateCountFramed = 0;
 static char *customConfig = NULL; /* Stores a string with custom configuration passed through the TLS driver */
+static bool handshakeOnly = false;
 
 #ifdef ENABLE_GNUTLS
 static gnutls_session_t *sessArray; /* array of TLS sessions to use */
@@ -1487,7 +1493,8 @@ static void initTLSSess(const int i) {
     SSL_set_verify(sslArray[i], SSL_VERIFY_NONE, verify_callback);
 
     /* Create BIO from socket array! */
-    bio_client = BIO_new_socket(sockArray[i], BIO_CLOSE /*BIO_NOCLOSE*/);
+    const int bioCloseFlag = handshakeOnly ? BIO_NOCLOSE : BIO_CLOSE;
+    bio_client = BIO_new_socket(sockArray[i], bioCloseFlag);
     if (bio_client == NULL) {
         osslLastSSLErrorMsg(0, sslArray[i], "initTLSSess2");
         exit(1);
@@ -1504,15 +1511,66 @@ static void initTLSSess(const int i) {
     #endif  // OPENSSL_VERSION_NUMBER >= 0x10100000L
     }
 
-    /* Blocking socket */
-    BIO_set_nbio(bio_client, 0);
+    BIO_set_nbio(bio_client, handshakeOnly ? 1 : 0);
     SSL_set_bio(sslArray[i], bio_client, bio_client);
     SSL_set_connect_state(sslArray[i]); /*sets ssl to work in client mode.*/
 
     /* Perform the TLS handshake */
     if ((res = SSL_do_handshake(sslArray[i])) <= 0) {
-        osslLastSSLErrorMsg(res, sslArray[i], "initTLSSess3");
-        exit(1);
+        const int err = SSL_get_error(sslArray[i], res);
+        if (handshakeOnly) {
+            int allow = 0;
+            switch (err) {
+                case SSL_ERROR_WANT_READ:
+                case SSL_ERROR_WANT_WRITE:
+    #ifdef SSL_ERROR_WANT_CONNECT
+                case SSL_ERROR_WANT_CONNECT:
+    #endif
+    #ifdef SSL_ERROR_WANT_ACCEPT
+                case SSL_ERROR_WANT_ACCEPT:
+    #endif
+                case SSL_ERROR_ZERO_RETURN:
+                case SSL_ERROR_SYSCALL:
+                case SSL_ERROR_SSL:
+                    allow = 1;
+                    break;
+                default:
+                    break;
+            }
+            if (!allow) {
+                osslLastSSLErrorMsg(res, sslArray[i], "initTLSSess3");
+                exit(1);
+            }
+            if (verbose) {
+                switch (err) {
+                    case SSL_ERROR_WANT_READ:
+                    case SSL_ERROR_WANT_WRITE:
+    #ifdef SSL_ERROR_WANT_CONNECT
+                    case SSL_ERROR_WANT_CONNECT:
+    #endif
+    #ifdef SSL_ERROR_WANT_ACCEPT
+                    case SSL_ERROR_WANT_ACCEPT:
+    #endif
+                        break;
+                    default:
+                        osslLastSSLErrorMsg(res, sslArray[i], "initTLSSess3");
+                        break;
+                }
+            }
+            ERR_clear_error();
+        } else {
+            osslLastSSLErrorMsg(res, sslArray[i], "initTLSSess3");
+            exit(1);
+        }
+    }
+
+    if (handshakeOnly) {
+        SSL_free(sslArray[i]);
+        sslArray[i] = NULL;
+        if (sockArray[i] != -1) {
+            close(sockArray[i]);
+        }
+        sockArray[i] = -1;
     }
 }
     #pragma GCC diagnostic pop
@@ -1554,6 +1612,9 @@ static int sendTLS(int i, char *buf, size_t lenBuf) {
 }
 
 static void closeTLSSess(int i) {
+    if (sslArray == NULL || sslArray[i] == NULL) {
+        return;
+    }
     int r;
     r = SSL_shutdown(sslArray[i]);
     if (r <= 0) {
@@ -1564,6 +1625,7 @@ static void closeTLSSess(int i) {
         SSL_read(sslArray[i], rcvBuf, MAX_RCVBUF);
     }
     SSL_free(sslArray[i]);
+    sslArray[i] = NULL;
 }
 
     #pragma GCC diagnostic push
@@ -1768,9 +1830,69 @@ static void initTLSSess(const int i) {
      * be no way around it with current GnuTLS. Do NOT try to "fix" the situation!
      */
     gnutls_transport_set_ptr(sessArray[i], (gnutls_transport_ptr_t)sockArray[i]);
+    if (handshakeOnly) {
+        int flags = fcntl(sockArray[i], F_GETFL, 0);
+        if (flags != -1) {
+            fcntl(sockArray[i], F_SETFL, flags | O_NONBLOCK);
+        }
+    }
 
     /* Perform the TLS handshake */
     r = gnutls_handshake(sessArray[i]);
+    if (r < 0) {
+        if (handshakeOnly) {
+            int allow = 0;
+            switch (r) {
+                case GNUTLS_E_AGAIN:
+                case GNUTLS_E_INTERRUPTED:
+    #ifdef GNUTLS_E_PREMATURE_TERMINATION
+                case GNUTLS_E_PREMATURE_TERMINATION:
+    #endif
+    #ifdef GNUTLS_E_FATAL_ALERT_RECEIVED
+                case GNUTLS_E_FATAL_ALERT_RECEIVED:
+    #endif
+    #ifdef GNUTLS_E_UNEXPECTED_PACKET_LENGTH
+                case GNUTLS_E_UNEXPECTED_PACKET_LENGTH:
+    #endif
+    #ifdef GNUTLS_E_PUSH_ERROR
+                case GNUTLS_E_PUSH_ERROR:
+    #endif
+    #ifdef GNUTLS_E_PULL_ERROR
+                case GNUTLS_E_PULL_ERROR:
+    #endif
+    #ifdef GNUTLS_E_HANDSHAKE_FAILED
+                case GNUTLS_E_HANDSHAKE_FAILED:
+    #endif
+                    allow = 1;
+                    break;
+                default:
+                    break;
+            }
+            if (!allow) {
+                fprintf(stderr, "TLS Handshake failed\n");
+                gnutls_perror(r);
+                exit(1);
+            }
+            if (verbose && r != GNUTLS_E_AGAIN && r != GNUTLS_E_INTERRUPTED) {
+                fprintf(stderr, "TLS handshake ended early: %s\n", gnutls_strerror(r));
+            }
+        } else {
+            fprintf(stderr, "TLS Handshake failed\n");
+            gnutls_perror(r);
+            exit(1);
+        }
+    }
+
+    if (handshakeOnly) {
+        gnutls_deinit(sessArray[i]);
+        sessArray[i] = NULL;
+        if (sockArray[i] != -1) {
+            close(sockArray[i]);
+        }
+        sockArray[i] = -1;
+        return;
+    }
+
     if (r < 0) {
         fprintf(stderr, "TLS Handshake failed\n");
         gnutls_perror(r);
@@ -1795,8 +1917,12 @@ static int sendTLS(int i, char *buf, size_t lenBuf) {
 }
 
 static void closeTLSSess(int i) {
+    if (sessArray == NULL || sessArray[i] == NULL) {
+        return;
+    }
     gnutls_bye(sessArray[i], GNUTLS_SHUT_RDWR);
     gnutls_deinit(sessArray[i]);
+    sessArray[i] = NULL;
 }
 #else /* NO TLS available */
 static void initTLS(void) {}
@@ -1865,7 +1991,7 @@ int main(int argc, char *argv[]) {
 
     while ((opt = getopt(argc, argv,
                          "a:ABb:c:C:d:DeE:f:F:h:i:I:j:k:l:L:m:M:n:o:OP:p:rR:"
-                         "sS:t:T:u:vW:w:x:XyYz:Z:")) != -1) {
+                         "sS:t:T:u:vW:w:x:XyYz:Z:H")) != -1) {
         switch (opt) {
             case 'b':
                 batchsize = atoll(optarg);
@@ -2057,6 +2183,9 @@ int main(int argc, char *argv[]) {
             case 'w':
                 portFile = optarg;
                 break;
+            case 'H':
+                handshakeOnly = true;
+                break;
             default:
                 printf("invalid option '%c' or value missing - terminating...\n", opt);
                 exit(1);
@@ -2086,6 +2215,16 @@ int main(int argc, char *argv[]) {
                     "error-terminate\n");
             exit(1);
         }
+    }
+
+    if (handshakeOnly && transport != TP_TLS) {
+        fprintf(stderr, "-H requires TLS transport (-Ttls)\n");
+        exit(1);
+    }
+
+    if (handshakeOnly && portFile != NULL) {
+        fprintf(stderr, "-H cannot be combined with -w\n");
+        exit(1);
     }
 
     if (portFile != NULL && numConnections != 1) {
@@ -2212,9 +2351,11 @@ int main(int argc, char *argv[]) {
         fclose(pf);
     }
 
-    if (runTests() != 0) {
-        printf("error running tests\n");
-        exit(1);
+    if (!handshakeOnly) {
+        if (runTests() != 0) {
+            printf("error running tests\n");
+            exit(1);
+        }
     }
 
     closeConnections(); /* this is important so that we do not finish too early! */
