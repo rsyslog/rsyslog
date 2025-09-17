@@ -47,7 +47,7 @@ The probe checks for:
 * A plausible record length (40–16384 bytes)
 
 If these criteria match and the listener is plain TCP (``streamDriver.mode="0"``),
-``imtcp`` raises the warning but continues to process the connection.
+``imtcp`` raises the warning and closes the connection.
 
 Versions prior to 8.2510 did not detect TLS handshake attempts and simply
 accepted the gibberish as syslog messages. As of late 2025, most
