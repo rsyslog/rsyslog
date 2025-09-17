@@ -14,7 +14,7 @@ mailing list for questions
 
 
 Purpose
-=======
+--------
 
 Message modification plugin which counts messages.
 
@@ -61,7 +61,7 @@ Parameters
 
 
 Examples
-========
+--------
 
 Example usage of the module in the configuration file.
 
