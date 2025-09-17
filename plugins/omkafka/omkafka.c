@@ -1,3 +1,4 @@
+/* REMOVE ME - THIS IS TO TRIGGER CI RUN */
 /* omkafka.c
  * This output plugin make rsyslog talk to Apache Kafka.
  *

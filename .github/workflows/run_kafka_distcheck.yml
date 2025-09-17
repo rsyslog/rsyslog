@@ -63,6 +63,7 @@ jobs:
           export CI_CHECK_CMD='distcheck'
           export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
           export ABORT_ALL_ON_TEST_FAIL='YES'
+          export VERBOSE=1
           devtools/devcontainer.sh --rm devtools/run-ci.sh
 
       - name: show error logs (if we errored)

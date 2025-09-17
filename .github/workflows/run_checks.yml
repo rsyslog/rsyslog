@@ -144,6 +144,7 @@ jobs:
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
               export CI_CHECK_CMD='distcheck'
               export ABORT_ALL_ON_TEST_FAIL='YES'
+              export VERBOSE=1
               ;;
           'ubuntu_22_san')
               export CI_SANITIZE_BLACKLIST='tests/asan.supp'
