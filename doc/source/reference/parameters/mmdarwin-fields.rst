@@ -29,7 +29,7 @@ Array containing values to be sent to Darwin as parameters.
 
 Two types of values can be set:
 
-* if it starts with a bang (:json:`"!"`), mmdarwin will search in the JSON-parsed log line the associated value. You can search in subkeys as well: just add a bang to go to a deeper level.
+* if it starts with a bang (:json:`"!"`), mmdarwin will search in the JSON-parsed log line for the associated value. To access nested properties, separate keys with a bang (for example, :json:`"!data!status"` reads the :json:`"status"` property inside the :json:`"data"` object).
 * otherwise, the value is considered static, and will be forwarded directly to Darwin.
 
 For example, given the following log line:

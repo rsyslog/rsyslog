@@ -25,8 +25,8 @@ This parameter applies to :doc:`../../configuration/modules/mmdarwin`.
 
 Description
 -----------
-Whether to send to Darwin if not all :json:`"fields"` could be found in the message, or not.
-All current Darwin filters required a strict number (and format) of parameters as input, so they will most likely not process the data if some fields are missing. This should be kept to "off", unless you know what you're doing.
+Controls whether to send data to Darwin if not all :json:`"fields"` could be found in the message.
+Darwin filters typically require a strict set of parameters and may not process incomplete data, so leaving this setting at :json:`"off"` is recommended unless you have verified the filter accepts missing fields.
 
 For example, for the following log line:
 
