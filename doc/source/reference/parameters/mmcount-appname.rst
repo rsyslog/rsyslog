@@ -39,11 +39,14 @@ that parameter's logic. The updated total is written into the message's
 
 Input usage
 -----------
-.. _param-mmcount-input-appname:
 .. _param-mmcount-appname-usage:
 .. _mmcount.parameter.input.appname-usage:
 
 .. code-block:: rsyslog
 
    action(type="mmcount" appName="gluster")
+
+See also
+--------
+See also :doc:`../../configuration/modules/mmcount`.
 

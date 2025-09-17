@@ -38,11 +38,14 @@ running total for that value into the message's ``mmcount`` property.
 
 Input usage
 -----------
-.. _param-mmcount-input-key:
 .. _param-mmcount-key-usage:
 .. _mmcount.parameter.input.key-usage:
 
 .. code-block:: rsyslog
 
    action(type="mmcount" appName="glusterd" key="!gf_code")
+
+See also
+--------
+See also :doc:`../../configuration/modules/mmcount`.
 

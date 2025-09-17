@@ -24,7 +24,7 @@ log message as json property named 'mmcount'.
 
 
 Parameters
-~~~~~~~~~~
+----------
 
 **Input Parameters**
 

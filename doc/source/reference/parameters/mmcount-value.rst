@@ -38,11 +38,14 @@ effect; in that case the module still counts messages per severity.
 
 Input usage
 -----------
-.. _param-mmcount-input-value:
 .. _param-mmcount-value-usage:
 .. _mmcount.parameter.input.value-usage:
 
 .. code-block:: rsyslog
 
    action(type="mmcount" appName="glusterfsd" key="!gf_code" value="9999")
+
+See also
+--------
+See also :doc:`../../configuration/modules/mmcount`.
 
