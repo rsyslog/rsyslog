@@ -7,7 +7,7 @@ fi
 . ${srcdir:=.}/diag.sh init
 
 # ---	If test is needed, create helper script to store environment variables for 
-#	éventhubs access:
+#	ï¿½venthubs access:
 #	export AZURE_HOST=""
 #	export AZURE_PORT=""
 #	export AZURE_KEY_NAME=""
@@ -29,6 +29,7 @@ export interrupt_host="$AZURE_HOST"
 export interrupt_port="$AZURE_PORT"
 export interrupt_tick="10"
 
+TEST_TIMEOUT_WAIT=180
 
 # REQUIRES EXTERNAL ENVIRONMENT VARIABLES
 if [[ -z "${AZURE_HOST}" ]]; then
@@ -113,7 +114,7 @@ startup
 echo Inject messages into rsyslog sender instance  
 injectmsg 1 $NUMMESSAGES
 
-wait_file_lines --interrupt-connection $interrupt_host $interrupt_port $interrupt_tick $RSYSLOG_OUT_LOG $NUMMESSAGESFULL 100
+wait_file_lines --interrupt-connection $interrupt_host $interrupt_port $interrupt_tick $RSYSLOG_OUT_LOG $NUMMESSAGESFULL $TEST_TIMEOUT_WAIT
 
 timeoutend=$WAITTIMEOUT
 timecounter=0
