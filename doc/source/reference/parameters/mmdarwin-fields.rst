@@ -29,8 +29,12 @@ Array containing values to be sent to Darwin as parameters.
 
 Two types of values can be set:
 
-* if it starts with a bang (:json:`"!"`), mmdarwin will search in the JSON-parsed log line for the associated value. To access nested properties, separate keys with a bang (for example, :json:`"!data!status"` reads the :json:`"status"` property inside the :json:`"data"` object).
-* otherwise, the value is considered static, and will be forwarded directly to Darwin.
+* if it starts with a bang (:json:`"!"`), mmdarwin will search in the JSON-
+  parsed log line for the associated value. To access nested properties,
+  separate keys with a bang (for example, :json:`"!data!status"` reads the
+  :json:`"status"` property inside the :json:`"data"` object).
+* otherwise, the value is considered static, and will be forwarded directly to
+  Darwin.
 
 For example, given the following log line:
 
@@ -52,11 +56,14 @@ and the :json:`"fields"` array:
 
    ["!from", "!data!status", "rsyslog"]
 
-The parameters sent to Darwin would be :json:`"192.168.1.42"`, :json:`true` and :json:`"rsyslog"`.
+The parameters sent to Darwin would be :json:`"192.168.1.42"`, :json:`true` and
+:json:`"rsyslog"`.
 
 .. note::
-    The order of the parameters is important. Thus, you have to be careful when providing the fields in the array.
-    Refer to `Darwin documentation`_ to see what each filter requires as parameters.
+   The order of the parameters is important. Thus, you have to be careful when
+   providing the fields in the array.
+   Refer to `Darwin documentation`_ to see what each filter requires as
+   parameters.
 
 .. _`Darwin documentation`: https://github.com/VultureProject/darwin/wiki
 
