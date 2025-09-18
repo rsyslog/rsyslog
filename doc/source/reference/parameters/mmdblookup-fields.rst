@@ -1,12 +1,12 @@
 .. _param-mmdblookup-fields:
 .. _mmdblookup.parameter.input.fields:
 
-Fields
+fields
 ======
 
 .. index::
-   single: mmdblookup; Fields
-   single: Fields
+   single: mmdblookup; fields
+   single: fields
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Defines the list of database fields whose values are appended to the message.
 
 This parameter applies to :doc:`../../configuration/modules/mmdblookup`.
 
-:Name: Fields
+:Name: fields
 :Scope: input
 :Type: array (word)
 :Default: input=none
@@ -44,7 +44,7 @@ Input usage
 
    action(type="mmdblookup"
           key="!clientip"
-          mmdbfile="/etc/rsyslog.d/GeoLite2-City.mmdb"
+          mmdbFile="/etc/rsyslog.d/GeoLite2-City.mmdb"
           fields=[":continent:!continent!code", ":loc:!location"])
 
 See also

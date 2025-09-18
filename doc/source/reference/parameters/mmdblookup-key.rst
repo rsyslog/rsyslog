@@ -1,12 +1,12 @@
 .. _param-mmdblookup-key:
 .. _mmdblookup.parameter.input.key:
 
-Key
+key
 ===
 
 .. index::
-   single: mmdblookup; Key
-   single: Key
+   single: mmdblookup; key
+   single: key
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Identifies the message field that supplies the IP address to look up.
 
 This parameter applies to :doc:`../../configuration/modules/mmdblookup`.
 
-:Name: Key
+:Name: key
 :Scope: input
 :Type: string (word)
 :Default: input=none
@@ -36,7 +36,7 @@ Input usage
 
    action(type="mmdblookup"
           key="!clientip"
-          mmdbfile="/etc/rsyslog.d/GeoLite2-City.mmdb"
+          mmdbFile="/etc/rsyslog.d/GeoLite2-City.mmdb"
           fields=["!continent!code", "!location"])
 
 See also

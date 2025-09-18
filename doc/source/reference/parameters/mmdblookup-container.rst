@@ -1,12 +1,12 @@
 .. _param-mmdblookup-container:
 .. _mmdblookup.parameter.module.container:
 
-Container
+container
 =========
 
 .. index::
-   single: mmdblookup; Container
-   single: Container
+   single: mmdblookup; container
+   single: container
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Selects the structured data container that receives fields added by mmdblookup.
 
 This parameter applies to :doc:`../../configuration/modules/mmdblookup`.
 
-:Name: Container
+:Name: container
 :Scope: module
 :Type: string (word)
 :Default: module=!iplocation

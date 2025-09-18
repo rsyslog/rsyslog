@@ -1,12 +1,12 @@
 .. _param-mmdblookup-mmdbfile:
 .. _mmdblookup.parameter.input.mmdbfile:
 
-Mmdbfile
+mmdbfile
 ========
 
 .. index::
-   single: mmdblookup; Mmdbfile
-   single: Mmdbfile
+   single: mmdblookup; mmdbfile
+   single: mmdbfile
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Specifies the path to the MaxMind DB file used for lookups.
 
 This parameter applies to :doc:`../../configuration/modules/mmdblookup`.
 
-:Name: Mmdbfile
+:Name: mmdbfile
 :Scope: input
 :Type: string (word)
 :Default: input=none
@@ -36,7 +36,7 @@ Input usage
 
    action(type="mmdblookup"
           key="!clientip"
-          mmdbfile="/etc/rsyslog.d/GeoLite2-City.mmdb"
+          mmdbFile="/etc/rsyslog.d/GeoLite2-City.mmdb"
           fields=["!continent!code", "!location"])
 
 See also
