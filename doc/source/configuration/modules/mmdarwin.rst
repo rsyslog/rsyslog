@@ -34,8 +34,16 @@ Configuration Parameter
 
 Module Parameters
 -----------------
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-This module does not define module-scoped parameters.
+   * - Parameter
+     - Summary
+   * - :ref:`param-mmdarwin-container`
+     - .. include:: ../../reference/parameters/mmdarwin-container.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 Input Parameters
 ----------------
@@ -99,6 +107,7 @@ This example shows a possible configuration of mmdarwin.
 .. toctree::
    :hidden:
 
+   ../../reference/parameters/mmdarwin-container
    ../../reference/parameters/mmdarwin-key
    ../../reference/parameters/mmdarwin-socketpath
    ../../reference/parameters/mmdarwin-response
