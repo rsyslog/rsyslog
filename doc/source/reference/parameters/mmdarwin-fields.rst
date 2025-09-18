@@ -30,9 +30,9 @@ Array containing values to be sent to Darwin as parameters.
 Two types of values can be set:
 
 * if it starts with a bang (:json:`"!"`), mmdarwin will search in the JSON-
-  parsed log line for the associated value. To access nested properties,
-  separate keys with a bang (for example, :json:`"!data!status"` reads the
-  :json:`"status"` property inside the :json:`"data"` object).
+  parsed log line for the associated value. For nested properties, use
+  additional bangs as separators (for example, :json:`"!data!status"` reads
+  the :json:`"status"` property inside the :json:`"data"` object).
 * otherwise, the value is considered static, and will be forwarded directly to
   Darwin.
 
@@ -60,8 +60,8 @@ The parameters sent to Darwin would be :json:`"192.168.1.42"`, :json:`true` and
 :json:`"rsyslog"`.
 
 .. note::
-   The order of the parameters is important. Thus, you have to be careful when
-   providing the fields in the array.
+   The order of the parameters is important and must match the order expected
+   by the Darwin filter.
    Refer to `Darwin documentation`_ to see what each filter requires as
    parameters.
 
