@@ -248,6 +248,10 @@ if ENABLE_MMNORMALIZE
 SUBDIRS += plugins/mmnormalize
 endif
 
+if ENABLE_MMLEEFPARSE
+SUBDIRS += plugins/mmleefparse
+endif
+
 if ENABLE_MMJSONPARSE
 SUBDIRS += plugins/mmjsonparse
 endif
