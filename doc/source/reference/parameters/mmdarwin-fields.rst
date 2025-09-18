@@ -29,10 +29,11 @@ Array containing values to be sent to Darwin as parameters.
 
 Two types of values can be set:
 
-* if it starts with a bang (:json:`"!"`), mmdarwin will search in the JSON-
-  parsed log line for the associated value. For nested properties, use
-  additional bangs as separators (for example, :json:`"!data!status"` reads
-  the :json:`"status"` property inside the :json:`"data"` object).
+* if it starts with a bang (:json:`"!"`) or a dot (:json:`"."`), mmdarwin
+  will search in the JSON-parsed log line (:json:`"!"`) or in rsyslog local
+  variables (:json:`"."`) for the associated value. For nested properties,
+  use additional bangs as separators (for example, :json:`"!data!status"`
+  reads the :json:`"status"` property inside the :json:`"data"` object).
 * otherwise, the value is considered static, and will be forwarded directly to
   Darwin.
 

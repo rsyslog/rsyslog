@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/mmdarwin`.
 :Name: container
 :Scope: module
 :Type: word
-:Default: module=!mmdarwin
+:Default: module="!mmdarwin"
 :Required?: no
 :Introduced: 8.2008.0
 
