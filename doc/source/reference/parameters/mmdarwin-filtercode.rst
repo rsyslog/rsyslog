@@ -32,6 +32,7 @@ default value.
 
 Input usage
 -----------
+.. _param-mmdarwin-input-filtercode-usage:
 .. _mmdarwin.parameter.input.filtercode-usage:
 
 .. code-block:: rsyslog

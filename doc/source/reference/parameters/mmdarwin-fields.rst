@@ -69,6 +69,7 @@ The parameters sent to Darwin would be :json:`"192.168.1.42"`, :json:`true` and
 
 Input usage
 -----------
+.. _param-mmdarwin-input-fields-usage:
 .. _mmdarwin.parameter.input.fields-usage:
 
 .. code-block:: rsyslog
