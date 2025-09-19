@@ -43,7 +43,6 @@ For example, to extract ``!city!names!en`` but rename it to
 
 Input usage
 -----------
-.. _param-mmdblookup-input-fields:
 .. _mmdblookup.parameter.input.fields-usage:
 
 .. code-block:: rsyslog

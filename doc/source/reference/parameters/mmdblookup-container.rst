@@ -33,7 +33,6 @@ Description
 
 Module usage
 ------------
-.. _param-mmdblookup-module-container:
 .. _mmdblookup.parameter.module.container-usage:
 
 .. code-block:: rsyslog
