@@ -34,7 +34,7 @@ overridden by specifying a custom name. Use the following syntax to
 control the resulting variable name and lookup path:
 
 * ``:customName:!path!to!field`` — specify the custom variable name
-  between the leading colons and the MaxMind DB path that follows.
+  between a pair of colons, followed by the MaxMind DB path.
 * Bang signs (``!``) denote path levels within the database record.
 
 For example, to extract ``!city!names!en`` but rename it to
@@ -42,6 +42,7 @@ For example, to extract ``!city!names!en`` but rename it to
 
 Input usage
 -----------
+.. _param-mmdblookup-input-fields:
 .. _mmdblookup.parameter.input.fields-usage:
 
 .. code-block:: rsyslog

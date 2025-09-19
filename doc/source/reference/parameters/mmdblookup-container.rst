@@ -27,13 +27,13 @@ Description
 -----------
 .. versionadded:: 8.28.0
 
-   Specifies the container to be used to store the fields amended by
-   mmdblookup. This parameter specifies the name of the JSON container
-   (a JSON object) where the looked-up fields will be stored within the
-   rsyslog message. If not specified, it defaults to ``!iplocation``.
+   This parameter specifies the JSON container (a JSON object) used to
+   store the fields amended by mmdblookup within the rsyslog message.
+   If not specified, it defaults to ``!iplocation``.
 
 Module usage
 ------------
+.. _param-mmdblookup-module-container:
 .. _mmdblookup.parameter.module.container-usage:
 
 .. code-block:: rsyslog
