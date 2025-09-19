@@ -1,6 +1,8 @@
 #!/bin/bash
 # added 2018-08-13 by alorbach
 # This file is part of the rsyslog project, released under ASL 2.0
+: "${STARTUP_MAX_RUNTIME:=300}"
+export STARTUP_MAX_RUNTIME
 . ${srcdir:=.}/diag.sh init
 
 export TESTMESSAGES=50000
@@ -57,7 +59,7 @@ local4.* action(	name="kafka-fwd"
 	action.resumeRetryCount="10"
 	queue.saveonshutdown="on"
 	)
-local4.* action(	name="kafka-fwd"
+local4.* action(	name="kafka-fwd-2"
 	type="omkafka"
 	topic="'$RANDTOPIC2'"
 	broker="localhost:29092"
