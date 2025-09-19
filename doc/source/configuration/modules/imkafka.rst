@@ -157,6 +157,10 @@ Caveats/Known Bugs
 
 -  currently none
 
+Notes
+=====
+- Metrics have been implemented with the help of JSON parsers for librdkafka emissions.
+
 
 Examples
 ========
