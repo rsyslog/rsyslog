@@ -81,6 +81,28 @@ to Stack Exchange](https://serverfault.com/questions/ask?tags=rsyslog).
 
 These directions assume a modern Python 3 environment (Python 3.8+; 3.10+ recommended).
 
+### Linux distribution packages
+
+Install the base packages for your distro. Only major distros are listed here:
+
+-   Debian/Ubuntu:
+    -   `sudo apt update && sudo apt install -y python3 python3-venv python3-pip git`
+-   Red Hat (RHEL/CentOS/Fedora):
+    -   `sudo dnf install -y python3 python3-pip git`  (use `yum` on older releases)
+
+These provide Python 3, `venv`/`pip`, and `git`. If `python3 -m venv` is unavailable on your platform, install `virtualenv` via `pip` and the scripts below will fall back to it automatically.
+
+### Quickstart using helper scripts
+
+We provide simple scripts that create a virtual environment (if missing), install `doc/requirements.txt`, and build the docs.
+
+-   Linux:
+    -   `./doc/tools/build-doc-linux.sh --clean --format html`
+    -   Options: `--strict` (treat warnings as errors), `--format html|epub`, `--extra "<opts>"` for extra `sphinx-build` options.
+-   Windows (PowerShell):
+    -   `powershell -ExecutionPolicy Bypass -File .\doc\tools\build-doc-windows.ps1 -Clean -Format html`
+    -   Options: `-Strict`, `-Format html|epub`, `-Extra "<opts>"`.
+
 ### Assumptions
 
 -   You want to install the `pip` Python package as a standard user, which places
@@ -106,40 +128,22 @@ later steps are identical, so we've covered those steps in one place.
 
 #### Linux
 
-1.  Download the pip installer from https://bootstrap.pypa.io/get-pip.py.
-2.  Install `pip` locally instead of system-wide:
-        1.  `python3 ./get-pip.py --user`
-3.  Install the `virtualenv` package and create a new virtual environment:
-        1.  `python3 -m pip install virtualenv --user`
-        1.  `python3 -m virtualenv rsyslog-docs-build`
-    1.  `source rsyslog-docs-build/bin/activate`
-4.  Install `git` for your distro. Since distros name the package differently,
-    you may need to substitute the package name from the examples
-    below with the name of the package for your distro.
+If you prefer the manual route instead of the helper script above:
 
-    You'll need to install Git to clone the project repo, manage
-    your changes, and contribute them back for review and eventual inclusion
-    in the project.
-
-    Example commands for installing Git:
-
-    -   Debian/Ubuntu: `apt-get install git-core`
-    -   CentOS/RHEL: `yum install git`
-
-    See the
-    [Installing Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
-    chapter from [Pro Git 2](https://git-scm.com/book/) for additional examples.
+1.  Ensure distro packages are installed (see "Linux distribution packages" above).
+2.  Create and activate a virtual environment:
+        1.  `python3 -m venv rsyslog-docs-build || (python3 -m pip install --user virtualenv && python3 -m virtualenv rsyslog-docs-build)`
+        1.  `source rsyslog-docs-build/bin/activate`
+3.  Install Git if not present and proceed below.
 
 #### Windows
 
-1.  Download the pip installer from https://bootstrap.pypa.io/get-pip.py.
-2.  Download and install Git for Windows from https://git-scm.com/download/win.
-3.  Install `pip` locally instead of system-wide:
-        1.  `python get-pip.py --user`
-4.  Install the `virtualenv` package and create a new virtual environment:
-        1.  `python -m pip install virtualenv --user`
-        1.  `python -m virtualenv rsyslog-docs-build`
-    1.  `rsyslog-docs-build\Scripts\activate.bat`
+If you prefer the manual route instead of the helper script above:
+
+1.  Install Python 3 from `https://www.python.org/downloads/` and Git for Windows from `https://git-scm.com/download/win`.
+2.  Create and activate a virtual environment:
+        1.  `python -m venv rsyslog-docs-build` (or `python -m pip install --user virtualenv && python -m virtualenv rsyslog-docs-build`)
+        1.  `rsyslog-docs-build\Scripts\activate.bat`
 
 #### Windows and Linux
 
