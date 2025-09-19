@@ -19,6 +19,7 @@ stop_kafka
 
 start_zookeeper
 start_kafka
+wait_for_kafka_startup
 create_kafka_topic $RANDTOPIC '.dep_wrk' '22181'
 
 generate_conf
