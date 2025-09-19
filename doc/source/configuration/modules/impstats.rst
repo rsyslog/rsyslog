@@ -163,7 +163,16 @@ JSON implementation.  ES 2.0 no longer supports valid JSON and
 disallows dots inside names.  The "json-elasticsearch" format
 option replaces those dots by the bang ("!") character. So
 "discarded.full" becomes "discarded!full".
-Options: json/json-elasticsearch/cee/legacy
+
+The zabbix format supports arrayed-JSON objects with a single JSON object
+per pstats emission to disk or syslog. This format should be compatible
+with most JSON parsers from other monitoring products. log.file is highly 
+recommended as log.syslog may encounter message truncation problems if the 
+emission is large. If you must use log.syslog, it's recommended to monitor
+pstats for truncation and increase $MaxMessageSize at the top of your 
+main rsyslog configuration file.
+
+Options: json/json-elasticsearch/cee/legacy/zabbix
 
 
 log.syslog
