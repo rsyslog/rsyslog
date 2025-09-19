@@ -31,7 +31,6 @@ lookups.
 
 Input usage
 -----------
-.. _param-mmdblookup-input-mmdbfile:
 .. _mmdblookup.parameter.input.mmdbfile-usage:
 
 .. code-block:: rsyslog

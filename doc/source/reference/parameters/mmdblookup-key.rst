@@ -31,7 +31,6 @@ property obtained from a parsed message or structured log.
 
 Input usage
 -----------
-.. _param-mmdblookup-input-key:
 .. _mmdblookup.parameter.input.key-usage:
 
 .. code-block:: rsyslog
