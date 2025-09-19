@@ -24,70 +24,42 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
 
 Action Parameters
 -----------------
 
-binary
-^^^^^^
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
+   * - Parameter
+     - Summary
+   * - :ref:`param-mmexternal-binary`
+     - .. include:: ../../reference/parameters/mmexternal-binary.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmexternal-interface-input`
+     - .. include:: ../../reference/parameters/mmexternal-interface-input.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmexternal-output`
+     - .. include:: ../../reference/parameters/mmexternal-output.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmexternal-forcesingleinstance`
+     - .. include:: ../../reference/parameters/mmexternal-forcesingleinstance.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
-   "string", "none", "yes", "none"
+.. toctree::
+   :hidden:
 
-The name of the external message modification plugin to be called. This
-can be a full path name.
-
-
-interface.input
-^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "msg", "no", "none"
-
-This can either be "msg", "rawmsg" or "fulljson". In case of "fulljson", the
-message object is provided as a json object. Otherwise, the respective
-property is provided. This setting **must** match the external plugin's
-expectations. Check the external plugin documentation for what needs to be used.
-
-
-output
-^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "no", "none"
-
-This is a debug aid. If set, this is a filename where the plugins output
-is logged. Note that the output is also being processed as usual by rsyslog.
-Setting this parameter thus gives insight into the internal processing
-that happens between plugin and rsyslog core.
-
-
-forceSingleInstance
-^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "none"
-
-This is an expert parameter, just like the equivalent *omprog* parameter.
-See the message modification plugin's documentation if it is needed.
+   ../../reference/parameters/mmexternal-binary
+   ../../reference/parameters/mmexternal-interface-input
+   ../../reference/parameters/mmexternal-output
+   ../../reference/parameters/mmexternal-forcesingleinstance
 
 
 Examples
