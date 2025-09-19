@@ -93,7 +93,7 @@ static uint64 int_latency_avg_usec;
 #define INST_STATSCOUNTER_INC(inst, ctr, mut) \
     do { if ((inst)->stats) { STATSCOUNTER_INC((ctr), (mut)); } } while(0)
 #define INST_STATSCOUNTER_SETMAX(inst, ctr, val) \
-    do { if ((inst)->stats) { STATSCOUNTER_SETMAX_NOMUT((ctr), (unsigned)(val)); } } while(0)
+    do { if ((inst)->stats) { STATSCOUNTER_SETMAX_NOMUT((ctr), (uint64_t)(val)); } } while(0)
 
 /* forward references */
 static void *imkafkawrkr(void *myself);
@@ -401,7 +401,7 @@ static void msgConsume(instanceConf_t *inst)
                 == RD_KAFKA_RESP_ERR_NO_ERROR) {
                 int64_t lag = hi - rkmessage->offset - 1;
                 if (lag < 0) lag = 0;
-                STATSCOUNTER_SETMAX_NOMUT(ctrMaxLag, (unsigned)lag);
+                STATSCOUNTER_SETMAX_NOMUT(ctrMaxLag, (uint64_t)lag);
                 INST_STATSCOUNTER_SETMAX(inst, inst->ctrMaxLag, lag);
             }
         }
@@ -796,7 +796,7 @@ CODESTARTactivateCnf;
         if (iRet == RS_RET_OK && inst->stats == NULL) {
             char namebuf[256];
             (void)statsobj.Construct(&inst->stats);
-            snprintf(namebuf, sizeof(namebuf), "imkafka[%s\n%s]",
+            snprintf(namebuf, sizeof(namebuf), "imkafka[%s_%s]",
                      inst->topic ? (char*)inst->topic : "topic?",
                      inst->consumergroup ? (char*)inst->consumergroup : "group?");
             (void)statsobj.SetName(inst->stats, (uchar*)strdup(namebuf));
