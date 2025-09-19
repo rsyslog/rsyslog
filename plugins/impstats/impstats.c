@@ -20,7 +20,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #include "config.h"
 #include "rsyslog.h"
 #include <stdlib.h>
@@ -54,6 +53,9 @@
 #include "ruleset.h"
 #include "parserif.h"
 
+/* libfastjson for robust JSON parsing in Zabbix collector */
+#include <libfastjson/json.h>
+
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("impstats")
@@ -62,6 +64,9 @@ MODULE_CNFNAME("impstats")
 #define DEFAULT_STATS_PERIOD (5 * 60)
 #define DEFAULT_FACILITY 5 /* syslog */
 #define DEFAULT_SEVERITY 6 /* info */
+
+/* Sentinel value for the Zabbix format (distinct from values defined in statsobj.h) */
+#define statsFmt_Zabbix ((statsFmtType_t)(1001))
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA;
@@ -90,6 +95,7 @@ struct modConfData_s {
     sbool configSetViaV2Method;
     uchar *pszBindRuleset; /* name of ruleset to bind to */
 };
+
 static modConfData_t *loadModConf = NULL;
 static modConfData_t *runModConf = NULL;
 static configSettings_t cs;
@@ -119,7 +125,6 @@ static intctr_t st_ru_oublock;
 static intctr_t st_ru_nvcsw;
 static intctr_t st_ru_nivcsw;
 static statsobj_t *statsobj_resources;
-
 static pthread_mutex_t hup_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* forward declaration for Zabbix grouped JSON output */
@@ -134,7 +139,6 @@ BEGINmodExit
     objRelease(statsobj, CORE_COMPONENT);
     objRelease(ruleset, CORE_COMPONENT);
 ENDmodExit
-
 BEGINisCompatibleWithFeature
     CODESTARTisCompatibleWithFeature;
     if (eFeat == sFEATURENonCancelInputTermination) iRet = RS_RET_OK;
@@ -207,6 +211,7 @@ static void doLogToFile(const char *ln, const size_t lenLn)
 
     pthread_mutex_lock(&hup_mutex);
     if (lenLn == 0) goto done;
+
     if (runModConf->logfd == -1) {
         runModConf->logfd = open(runModConf->logfile,
             O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC,
@@ -218,6 +223,7 @@ static void doLogToFile(const char *ln, const size_t lenLn)
             DBGPRINTF("impstats: opened stats file %s\n", runModConf->logfile);
         }
     }
+
     time(&t);
     iov[0].iov_base = ctime_r(&t, timebuf);
     iov[0].iov_len = nexpect = strlen((char*)iov[0].iov_base) - 1; /* strip \n */
@@ -263,7 +269,6 @@ static void generateStatsMsgs(void)
 {
     struct rusage ru;
     int r;
-
     r = getrusage(RUSAGE_SELF, &ru);
     if (r != 0) {
         DBGPRINTF("impstats: getrusage() failed with error %d, zeroing out\n", errno);
@@ -282,7 +287,7 @@ static void generateStatsMsgs(void)
     st_ru_nvcsw = ru.ru_nvcsw;
     st_ru_nivcsw = ru.ru_nivcsw;
 
-    if (runModConf->statsFmt == (statsFmtType_t)(1001)) { /* statsFmt_Zabbix sentinel */
+    if (runModConf->statsFmt == statsFmt_Zabbix) { /* statsFmt_Zabbix sentinel */
 #ifdef DEBUG_ZABBIX
         DBGPRINTF("impstats: statsFmt=%d (Zabbix sentinel=1001) -> entering generateZabbixStats()\n",
             (int)runModConf->statsFmt);
@@ -297,6 +302,7 @@ BEGINbeginCnfLoad
     CODESTARTbeginCnfLoad;
     loadModConf = pModConf;
     pModConf->pConf = pConf;
+
     /* init our settings */
     loadModConf->configSetViaV2Method = 0;
     loadModConf->iStatsInterval = DEFAULT_STATS_PERIOD;
@@ -309,8 +315,8 @@ BEGINbeginCnfLoad
     loadModConf->bLogToSyslog = 1;
     loadModConf->bBracketing = 0;
     loadModConf->bResetCtrs = 0;
-
     bLegacyCnfModGlobalsPermitted = 1;
+
     initConfigSettings();
 ENDbeginCnfLoad
 
@@ -318,6 +324,7 @@ BEGINsetModCnf
     struct cnfparamvals *pvals = NULL;
     char *mode;
     int i;
+
     CODESTARTsetModCnf;
     pvals = nvlstGetParams(lst, &modpblk, NULL);
     if (pvals == NULL) {
@@ -356,8 +363,7 @@ BEGINsetModCnf
             } else if (!strcasecmp(mode, "legacy")) {
                 loadModConf->statsFmt = statsFmt_Legacy;
             } else if (!strcasecmp(mode, "zabbix")) {
-                /* Use a local sentinel distinct from built-in statsFmt values */
-                loadModConf->statsFmt = (statsFmtType_t)(1001); /* statsFmt_Zabbix */
+                loadModConf->statsFmt = statsFmt_Zabbix;
             } else {
                 LogError(0, RS_RET_ERR, "impstats: invalid format %s", mode);
             }
@@ -379,6 +385,7 @@ BEGINsetModCnf
     }
     loadModConf->configSetViaV2Method = 1;
     bLegacyCnfModGlobalsPermitted = 0;
+
 finalize_it:
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &modpblk);
 ENDsetModCnf
@@ -405,7 +412,6 @@ static rsRetVal checkRuleset(modConfData_t *modConf)
     ruleset_t *pRuleset;
     rsRetVal localRet;
     DEFiRet;
-
     modConf->pBindRuleset = NULL; /* default ruleset */
     if (modConf->pszBindRuleset == NULL) FINALIZE;
     localRet = ruleset.GetRuleset(modConf->pConf, &pRuleset, modConf->pszBindRuleset);
@@ -463,6 +469,7 @@ BEGINactivateCnf
         LogError(0, localRet, "impstats: error enabling statistics gathering");
         ABORT_FINALIZE(RS_RET_NO_RUN);
     }
+
     /* initialize our own counters */
     CHKiRet(statsobj.Construct(&statsobj_resources));
     CHKiRet(statsobj.SetName(statsobj_resources, (uchar*)"resource-usage"));
@@ -490,6 +497,7 @@ BEGINactivateCnf
         ctrType_Int, CTR_FLAG_NONE, &st_openfiles));
 #endif
     CHKiRet(statsobj.ConstructFinalize(statsobj_resources));
+
 finalize_it:
     if (iRet != RS_RET_OK) {
         LogError(0, iRet, "impstats: error activating module");
@@ -568,56 +576,22 @@ BEGINmodInit()
 ENDmodInit
 
 /* ---------- Zabbix (grouped JSON object) builder ----------
-   Produces one JSON object per emission:
-   {
-     "timedate": "<ctime_r>",
-     "stats_<origin>": [ ... ],
-     "stats_<origin>_global": [ ... ], "stats_<origin>_local": [ ... ] // for dual-origins
-   }
-
-   Dual-origin rule:
-   - For origins that have both global and local statistics (imkafka, omkafka, imtcp, imudp):
-     if (name == origin) -> "stats_<origin>_global"
-     else                -> "stats_<origin>_local"
-
-   Remap rule (this patch):
-   - If origin == "core.action" AND name contains "omkafka":
-     group into "stats_omkafka_local" (without changing the JSON line).
+ Produces one JSON object per emission:
+ {
+   "timedate": "<ctime_r>",
+   "stats_<origin>": [ ... ],
+   "stats_<origin>_global": [ ... ], "stats_<origin>_local": [ ... ] // for dual-origins
+ }
+ Dual-origin rule:
+ - For origins that have both global and local statistics (imkafka, omkafka, imtcp, imudp):
+   if (name == origin) -> "stats_<origin>_global"
+   else -> "stats_<origin>_local"
+ Remap rule (this patch):
+ - If origin == "core.action" AND name contains "omkafka":
+   group into "stats_omkafka_local" (without changing the JSON line).
 */
 
-/* Sentinel value for the zabbix format (distinct from values defined in statsobj.h) */
-#define statsFmt_Zabbix ((statsFmtType_t)(1001))
-
-/* Extract the first occurrence of a JSON string field key -> value (without unescaping). */
-static int extract_json_str_field(const char *json, const char *key, char *out, size_t outlen)
-{
-    if (outlen == 0) return 0;
-    out[0] = '\0';
-    char pat[128];
-    snprintf(pat, sizeof(pat), "\"%s\"", key);
-    const char *p = strstr(json, pat);
-    if (!p) return 0;
-    p += strlen(pat);
-    /* skip spaces */
-    while (*p == ' ' || *p == '\t') ++p;
-    if (*p != ':') return 0;
-    ++p;
-    while (*p == ' ' || *p == '\t') ++p;
-    if (*p != '\"') return 0;
-    const char *vq = p;
-    int esc = 0;
-    const char *ve = vq + 1;
-    for (; *ve; ++ve) {
-        if (!esc && *ve == '\"') break;
-        if (*ve == '\\' && !esc) esc = 1; else esc = 0;
-    }
-    if (!*ve) return 0; /* no closing quote */
-    size_t n = (size_t)(ve - (vq + 1));
-    if (n >= outlen) n = outlen - 1;
-    memcpy(out, vq + 1, n);
-    out[n] = '\0';
-    return 1;
-}
+/* NOTE: statsFmt_Zabbix is defined at the top with other defines (no duplicates here). */
 
 /* whether this origin has both global & local lines we must separate */
 static int is_dual_origin(const char *origin)
@@ -655,7 +629,7 @@ static zbx_group_t *zbx_find_or_create_group(zbx_ctx_t *ctx, const char *key)
 {
     for (size_t i = 0; i < ctx->len; ++i) {
         if (!strcmp(ctx->groups[i].key, key))
-         return &ctx->groups[i];
+            return &ctx->groups[i];
     }
     /* grow */
     if (ctx->len == ctx->cap) {
@@ -680,17 +654,48 @@ static int is_core_action_omkafka(const char *origin, const char *name)
     return (strcmp(origin, "core.action") == 0) && (strstr(name, "omkafka") != NULL);
 }
 
+/* Parse once and read "origin" and "name" via libfastjson (robust), minimizing overhead. */
+static void parse_origin_name(const char *json, char *origin, size_t olen,
+                              char *name, size_t nlen)
+{
+    if (olen) origin[0] = '\0';
+    if (nlen) name[0] = '\0';
+
+    struct fjson_object *root = fjson_tokener_parse(json);
+    if (!root) {
+        if (olen) { strncpy(origin, "unknown", olen - 1); origin[olen - 1] = '\0'; }
+        return;
+    }
+
+    struct fjson_object *j = NULL;
+
+    if (fjson_object_object_get_ex(root, "origin", &j) &&
+        fjson_object_is_type(j, fjson_type_string)) {
+        const char *s = fjson_object_get_string(j);
+        if (s && olen) { strncpy(origin, s, olen - 1); origin[olen - 1] = '\0'; }
+    } else if (olen) {
+        strncpy(origin, "unknown", olen - 1);
+        origin[olen - 1] = '\0';
+    }
+
+    j = NULL;
+    if (fjson_object_object_get_ex(root, "name", &j) &&
+        fjson_object_is_type(j, fjson_type_string)) {
+        const char *s = fjson_object_get_string(j);
+        if (s && nlen) { strncpy(name, s, nlen - 1); name[nlen - 1] = '\0'; }
+    }
+
+    fjson_object_put(root);
+}
+
 /* Collector: called for each JSON stats line from statsobj (rendered as JSON). */
 static rsRetVal collectStats_zbx(void *usrptr, const char *const str)
 {
     zbx_ctx_t *ctx = (zbx_ctx_t*)usrptr;
 
-    /* Parse minimal fields from the JSON line */
+    /* Parse minimal fields from the JSON line (once) */
     char origin[128] = {0}, name[256] = {0};
-    if (!extract_json_str_field(str, "origin", origin, sizeof(origin))) {
-        strcpy(origin, "unknown");
-    }
-    (void)extract_json_str_field(str, "name", name, sizeof(name));
+    parse_origin_name(str, origin, sizeof(origin), name, sizeof(name));
 
     /* Remap core.action/omkafka lines into stats_omkafka_local (no JSON mutation) */
     if (is_core_action_omkafka(origin, name)) {
@@ -744,6 +749,7 @@ static void generateZabbixStats(void)
 #ifdef OS_LINUX
     countOpenFiles();
 #endif
+
     /* Collect and group */
     zbx_ctx_t ctx = { .groups = NULL, .len = 0, .cap = 0 };
 #ifdef DEBUG_ZABBIX
@@ -776,12 +782,12 @@ static void generateZabbixStats(void)
         es_addBuf(&ctx.groups[i].arr, "]", 1);
         es_addBuf(&finalJson, (const char*)es_getBufAddr(ctx.groups[i].arr), es_strlen(ctx.groups[i].arr));
     }
-
     es_addChar(&finalJson, '}');
 
 #ifdef DEBUG_ZABBIX
     DBGPRINTF("impstats: Zabbix: %zu groups emitted\n", ctx.len);
 #endif
+
     /* Emit */
     char *out = es_str2cstr(finalJson, NULL);
     submitLine(out, strlen(out));
@@ -795,4 +801,3 @@ static void generateZabbixStats(void)
     free(ctx.groups);
     es_deleteStr(finalJson);
 }
-
