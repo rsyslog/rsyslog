@@ -428,6 +428,177 @@ debug output in the receiver and check for actual problems.
 "
 }
 
+# Wait until a TCP port accepts connections. $1=host, $2=port,
+# $3(optional)=timeout in seconds, $4(optional)=description for log output.
+wait_for_tcp_service() {
+        local host="$1"
+        local port="$2"
+        local timeout="${3:-60}"
+        local description="${4:-${host}:${port}}"
+        local start_ts
+        local elapsed
+        local iteration=0
+
+        if [ -z "$host" ] || [ -z "$port" ]; then
+                printf 'wait_for_tcp_service: host (%s) or port (%s) missing\n' "$host" "$port"
+                return 1
+        fi
+
+        start_ts=$(date +%s)
+        while true; do
+                if nc -w1 -z "$host" "$port" >/dev/null 2>&1; then
+                        printf '%s %s reachable on %s:%s\n' "$(tb_timestamp)" "$description" "$host" "$port"
+                        return 0
+                fi
+
+                elapsed=$(( $(date +%s) - start_ts ))
+                if [ "$elapsed" -ge "$timeout" ]; then
+                        printf '%s ERROR: timeout waiting for %s (%s:%s)\n' "$(tb_timestamp)" "$description" "$host" "$port"
+                        return 1
+                fi
+
+                if (( iteration % 5 == 0 )); then
+                        printf '%s waiting for %s (%s:%s) - elapsed %ss\n' "$(tb_timestamp)" "$description" "$host" "$port" "$elapsed"
+                fi
+
+                $TESTTOOL_DIR/msleep 200
+                (( iteration++ ))
+        done
+}
+
+# Helper to obtain listener endpoints (host:port) from a Kafka server config.
+_kafka_listeners_from_config() {
+        local config_path="$1"
+        local listeners_line
+        local value
+        local entry
+        local host
+        local port
+
+        if [ ! -f "$config_path" ]; then
+                return
+        fi
+
+        listeners_line=$(grep -i '^listeners=' "$config_path" | tail -n1)
+        if [ -z "$listeners_line" ]; then
+                printf '127.0.0.1:9092\n'
+                return
+        fi
+
+        value=${listeners_line#*=}
+        IFS=',' read -ra __kafka_listener_entries <<< "$value"
+        for entry in "${__kafka_listener_entries[@]}"; do
+                entry=$(echo "$entry" | tr -d '[:space:]')
+                if [ -z "$entry" ]; then
+                        continue
+                fi
+                entry=${entry#*://}
+                host=${entry%:*}
+                port=${entry##*:}
+                if [ -z "$port" ]; then
+                        continue
+                fi
+                if [ -z "$host" ] || [ "$host" = "0.0.0.0" ]; then
+                        host="127.0.0.1"
+                fi
+                printf '%s:%s\n' "$host" "$port"
+        done
+}
+
+# Wait for Kafka brokers configured via $2 (config path) under $1 (kafka dir).
+# Accepts optional timeout (seconds) as third parameter.
+wait_for_kafka_ready_internal() {
+        local kafka_dir="$1"
+        local config_path="$2"
+        local timeout="${3:-60}"
+        local -a endpoints=()
+        local endpoint
+        local host
+        local port
+        local last_topics_output=""
+        local start_ts
+        local elapsed
+        local iteration=0
+        local bootstrap_csv
+        local output
+
+        if [ ! -d "$kafka_dir" ]; then
+                printf 'wait_for_kafka_ready_internal: missing kafka dir %s\n' "$kafka_dir"
+                return 1
+        fi
+
+        while IFS= read -r endpoint; do
+                [ -n "$endpoint" ] && endpoints+=("$endpoint")
+        done < <(_kafka_listeners_from_config "$config_path")
+
+        if [ ${#endpoints[@]} -eq 0 ]; then
+                endpoints=("127.0.0.1:9092")
+        fi
+
+        local IFS=,
+        bootstrap_csv="${endpoints[*]}"
+        unset IFS
+
+        start_ts=$(date +%s)
+        while true; do
+                local ports_ready=1
+                for endpoint in "${endpoints[@]}"; do
+                        host=${endpoint%:*}
+                        port=${endpoint##*:}
+                        if ! nc -w1 -z "$host" "$port" >/dev/null 2>&1; then
+                                ports_ready=0
+                                break
+                        fi
+                done
+
+                elapsed=$(( $(date +%s) - start_ts ))
+
+                if [ $ports_ready -eq 1 ]; then
+                        printf '%s kafka brokers reachable on %s after %ss\n' "$(tb_timestamp)" "$bootstrap_csv" "$elapsed"
+                        return 0
+                fi
+
+                if output=$(cd "$kafka_dir" && ./bin/kafka-topics.sh --bootstrap-server "$bootstrap_csv" --list 2>&1); then
+                        printf '%s kafka-topics --list succeeded for %s after %ss\n' "$(tb_timestamp)" "$bootstrap_csv" "$elapsed"
+                        return 0
+                else
+                        last_topics_output=$output
+                fi
+
+                if [ "$elapsed" -ge "$timeout" ]; then
+                        printf '%s ERROR: kafka brokers %s not ready after %ss\n' "$(tb_timestamp)" "$bootstrap_csv" "$timeout"
+                        if [ -n "$last_topics_output" ]; then
+                                printf '%s last kafka-topics output:\n%s\n' "$(tb_timestamp)" "$last_topics_output"
+                        fi
+                        return 1
+                fi
+
+                if (( iteration % 5 == 0 )); then
+                        printf '%s waiting for kafka brokers %s (elapsed %ss)\n' "$(tb_timestamp)" "$bootstrap_csv" "$elapsed"
+                fi
+
+                $TESTTOOL_DIR/msleep 200
+                (( iteration++ ))
+        done
+}
+
+wait_for_kafka_startup() {
+        local instance="$1"
+        local timeout="${2:-60}"
+        local dep_work_dir
+        local dep_work_kafka_config
+
+        if [ "x$instance" == "x" ]; then
+                dep_work_dir=$(readlink -f .dep_wrk)
+                dep_work_kafka_config="kafka-server.properties"
+        else
+                dep_work_dir=$(readlink -f "$instance")
+                dep_work_kafka_config="kafka-server${instance}.properties"
+        fi
+
+        wait_for_kafka_ready_internal "$dep_work_dir/kafka" "$dep_work_dir/kafka/config/$dep_work_kafka_config" "$timeout"
+}
+
 # check if kafka itself failed. $1 is the message file name.
 kafka_check_broken_broker() {
 	failed=0
@@ -1997,10 +2168,22 @@ start_zookeeper() {
 	fi
 	rm -rf $dep_work_dir/zk
 	(cd $dep_work_dir && tar -zxvf $dep_zk_cached_file --xform $dep_zk_dir_xform_pattern --show-transformed-names) > /dev/null
-	cp -f $srcdir/testsuites/$dep_work_tk_config $dep_work_dir/zk/conf/zoo.cfg
-	echo "Starting Zookeeper instance $1"
-	(cd $dep_work_dir/zk && ./bin/zkServer.sh start)
-	wait_startup_pid "$ZOOPIDFILE"
+        cp -f $srcdir/testsuites/$dep_work_tk_config $dep_work_dir/zk/conf/zoo.cfg
+        echo "Starting Zookeeper instance $1"
+        (cd $dep_work_dir/zk && ./bin/zkServer.sh start)
+        wait_startup_pid "$ZOOPIDFILE"
+
+        local zk_config="$dep_work_dir/zk/conf/zoo.cfg"
+        local zk_client_port
+        zk_client_port=$(awk -F= '/^[[:space:]]*clientPort[[:space:]]*=/ {gsub(/[[:space:]]*/, "", $2); print $2; exit}' "$zk_config")
+        if [ -n "$zk_client_port" ]; then
+                if ! wait_for_tcp_service "127.0.0.1" "$zk_client_port" 60 "zookeeper client port"; then
+                        dump_zookeeper_serverlog "$1"
+                        error_exit 77
+                fi
+        else
+                printf 'WARNING: unable to determine ZooKeeper client port from %s\n' "$zk_config"
+        fi
 }
 
 start_kafka() {
@@ -2009,13 +2192,13 @@ start_kafka() {
 	# Force IPv4 usage of Kafka!
 	export KAFKA_OPTS="-Djava.net.preferIPv4Stack=True"
 	export KAFKA_HEAP_OPTS="-Xms256m -Xmx256m" # we need to take care for smaller CI systems!
-	if [ "x$1" == "x" ]; then
-		dep_work_dir=$(readlink -f .dep_wrk)
-		dep_work_kafka_config="kafka-server.properties"
-	else
-		dep_work_dir=$(readlink -f $1)
-		dep_work_kafka_config="kafka-server$1.properties"
-	fi
+        if [ "x$1" == "x" ]; then
+                dep_work_dir=$(readlink -f .dep_wrk)
+                dep_work_kafka_config="kafka-server.properties"
+        else
+                dep_work_dir=$(readlink -f "$1")
+                dep_work_kafka_config="kafka-server$1.properties"
+        fi
 
 	# shellcheck disable=SC2009  - we do not grep on the process name!
 	kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
@@ -2037,36 +2220,60 @@ start_kafka() {
 	  tar -zxvf $dep_kafka_cached_file --xform $dep_kafka_dir_xform_pattern --show-transformed-names) > /dev/null
 	cp -f $srcdir/testsuites/$dep_work_kafka_config $dep_work_dir/kafka/config/
 	#if [ "$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')" != "" ]; then
-	echo "Starting Kafka instance $dep_work_kafka_config"
-	(cd $dep_work_dir/kafka && ./bin/kafka-server-start.sh -daemon ./config/$dep_work_kafka_config)
-	$TESTTOOL_DIR/msleep 4000
+        echo "Starting Kafka instance $dep_work_kafka_config"
+        (cd $dep_work_dir/kafka && ./bin/kafka-server-start.sh -daemon ./config/$dep_work_kafka_config)
 
-	# Check if kafka instance came up!
-	# shellcheck disable=SC2009  - we do not grep on the process name!
-	kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
-	if [[ "" !=  "$kafkapid" ]];
-	then
-		echo "Kafka instance $dep_work_kafka_config (PID $kafkapid) started ... "
-	else
-		echo "Starting Kafka instance $dep_work_kafka_config, SECOND ATTEMPT!"
-		(cd $dep_work_dir/kafka && ./bin/kafka-server-start.sh -daemon ./config/$dep_work_kafka_config)
-		$TESTTOOL_DIR/msleep 4000
+        local kafka_dir="$dep_work_dir/kafka"
+        local kafka_config_path="$kafka_dir/config/$dep_work_kafka_config"
+        local readiness_ok=0
 
-		# shellcheck disable=SC2009  - we do not grep on the process name!
-		kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
-		if [[ "" !=  "$kafkapid" ]];
-		then
-			echo "Kafka instance $dep_work_kafka_config (PID $kafkapid) started ... "
-		else
-			echo "Failed to start Kafka instance for $dep_work_kafka_config"
-			echo "displaying all kafka logs now:"
-			for logfile in $dep_work_dir/logs/*; do
-				echo "FILE: $logfile"
-				cat $logfile
-			done
-			error_exit 77
-		fi
-	fi
+        if wait_for_kafka_ready_internal "$kafka_dir" "$kafka_config_path"; then
+                readiness_ok=1
+        fi
+
+        # shellcheck disable=SC2009  - we do not grep on the process name!
+        kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
+        if [ "$readiness_ok" -eq 1 ] && [ -n "$kafkapid" ]; then
+                echo "Kafka instance $dep_work_kafka_config (PID $kafkapid) started ... "
+                return
+        fi
+
+        if [ -n "$kafkapid" ] && [ "$readiness_ok" -ne 1 ]; then
+                echo "Kafka instance $dep_work_kafka_config has PID $kafkapid but readiness checks failed"
+                echo "displaying all kafka logs now:"
+                for logfile in $dep_work_dir/logs/*; do
+                        echo "FILE: $logfile"
+                        cat $logfile
+                done
+                error_exit 77
+        fi
+
+        echo "Starting Kafka instance $dep_work_kafka_config, SECOND ATTEMPT!"
+        (cd $dep_work_dir/kafka && ./bin/kafka-server-start.sh -daemon ./config/$dep_work_kafka_config)
+
+        if ! wait_for_kafka_ready_internal "$kafka_dir" "$kafka_config_path"; then
+                echo "Failed to start Kafka instance for $dep_work_kafka_config"
+                echo "displaying all kafka logs now:"
+                for logfile in $dep_work_dir/logs/*; do
+                        echo "FILE: $logfile"
+                        cat $logfile
+                done
+                error_exit 77
+        fi
+
+        # shellcheck disable=SC2009  - we do not grep on the process name!
+        kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
+        if [[ "" !=  "$kafkapid" ]]; then
+                echo "Kafka instance $dep_work_kafka_config (PID $kafkapid) started ... "
+        else
+                echo "Failed to start Kafka instance for $dep_work_kafka_config"
+                echo "displaying all kafka logs now:"
+                for logfile in $dep_work_dir/logs/*; do
+                        echo "FILE: $logfile"
+                        cat $logfile
+                done
+                error_exit 77
+        fi
 }
 
 create_kafka_topic() {
@@ -2927,11 +3134,11 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 		fi
 
 		# Extra Variables for Test statistic reporting
-		export RSYSLOG_TESTNAME=$(basename $0)
+                export RSYSLOG_TESTNAME=$(basename $0)
 
-		# we create one file with the test name, so that we know what was
-		# left over if "make distcheck" complains
-		touch $RSYSLOG_DYNNAME-$(basename $0).test_id
+                # we create one file with the test name, so that we know what was
+                # left over if "make distcheck" complains
+                touch $RSYSLOG_DYNNAME-$(basename $0).test_id
 
 		if [ -z $RS_SORTCMD ]; then
 			RS_SORTCMD="sort"
@@ -2980,15 +3187,19 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 		if [ "$USE_AUTO_DEBUG" != 'on' ] ; then
 			rm -f IN_AUTO_DEBUG
                 fi
-		if [ -e IN_AUTO_DEBUG ]; then
-			export valgrind="valgrind --malloc-fill=ff --free-fill=fe --suppressions=$srcdir/known_issues.supp ${EXTRA_VALGRIND_SUPPRESSIONS:-} --log-fd=1"
-		fi
-		;;
+                if [ -e IN_AUTO_DEBUG ]; then
+                        export valgrind="valgrind --malloc-fill=ff --free-fill=fe --suppressions=$srcdir/known_issues.supp ${EXTRA_VALGRIND_SUPPRESSIONS:-} --log-fd=1"
+                fi
+                ;;
+
+   'wait-kafka-startup')
+                wait_for_kafka_startup "$2" "$3"
+                ;;
 
    'check-ipv6-available')   # check if IPv6  - will exit 77 when not OK
-		if ip address > /dev/null ; then
-			cmd="ip address"
-		else
+                if ip address > /dev/null ; then
+                        cmd="ip address"
+                else
 			cmd="ifconfig -a"
 		fi
 		echo command used for ipv6 detection: $cmd
