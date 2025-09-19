@@ -29,11 +29,16 @@ Fields that will be appended to processed message. The fields will
 always be appended in the container used by mmdblookup (which may be
 overridden by the "container" parameter on module load).
 
-By default, the maxmindb field name is used for variables. This can
-be overridden by specifying a custom name between colons at the
-beginning of the field name. As usual, bang signs denote path levels.
-So for example, if you want to extract "!city!names!en" but rename it
-to "cityname", you can use ":cityname:!city!names!en" as field name.
+By default, the maxmindb field name is used for variables. This can be
+overridden by specifying a custom name. Use the following syntax to
+control the resulting variable name and lookup path:
+
+* ``:customName:!path!to!field`` — specify the custom variable name
+  between the leading colons and the MaxMind DB path that follows.
+* Bang signs (``!``) denote path levels within the database record.
+
+For example, to extract ``!city!names!en`` but rename it to
+``cityname``, use ``:cityname:!city!names!en`` as the field value.
 
 Input usage
 -----------

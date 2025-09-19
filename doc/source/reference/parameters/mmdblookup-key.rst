@@ -25,7 +25,10 @@ This parameter applies to :doc:`../../configuration/modules/mmdblookup`.
 
 Description
 -----------
-Name of field containing IP address.
+Name of field containing IP address. This parameter specifies the name
+of the field in the message that contains the IP address to be looked
+up. This is typically a JSON property obtained from a parsed message or
+structured log.
 
 Input usage
 -----------

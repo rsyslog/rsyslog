@@ -25,7 +25,9 @@ This parameter applies to :doc:`../../configuration/modules/mmdblookup`.
 
 Description
 -----------
-Location of Maxmind DB file.
+Location of Maxmind DB file. This parameter specifies the full path to
+the MaxMind DB file (for example, ``/etc/rsyslog.d/GeoLite2-City.mmdb``)
+to be used for IP lookups.
 
 Input usage
 -----------
