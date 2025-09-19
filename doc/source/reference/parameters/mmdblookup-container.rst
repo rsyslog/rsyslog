@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/mmdblookup`.
 :Name: container
 :Scope: module
 :Type: string (word)
-:Default: module=!iplocation
+:Default: !iplocation
 :Required?: no
 :Introduced: 8.28.0
 
@@ -33,6 +33,7 @@ Description
 
 Module usage
 ------------
+.. _param-mmdblookup-module-container:
 .. _mmdblookup.parameter.module.container-usage:
 
 .. code-block:: rsyslog

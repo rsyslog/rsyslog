@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/mmdblookup`.
 :Name: fields
 :Scope: input
 :Type: array (word)
-:Default: input=none
+:Default: none
 :Required?: yes
 :Introduced: 8.24.0
 
@@ -43,6 +43,7 @@ For example, to extract ``!city!names!en`` but rename it to
 
 Input usage
 -----------
+.. _param-mmdblookup-input-fields:
 .. _mmdblookup.parameter.input.fields-usage:
 
 .. code-block:: rsyslog

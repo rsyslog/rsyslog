@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/mmdblookup`.
 :Name: mmdbfile
 :Scope: input
 :Type: string (word)
-:Default: input=none
+:Default: none
 :Required?: yes
 :Introduced: 8.24.0
 
@@ -31,6 +31,7 @@ lookups.
 
 Input usage
 -----------
+.. _param-mmdblookup-input-mmdbfile:
 .. _mmdblookup.parameter.input.mmdbfile-usage:
 
 .. code-block:: rsyslog

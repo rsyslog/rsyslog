@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/mmdblookup`.
 :Name: key
 :Scope: input
 :Type: string (word)
-:Default: input=none
+:Default: none
 :Required?: yes
 :Introduced: 8.24.0
 
@@ -31,6 +31,7 @@ property obtained from a parsed message or structured log.
 
 Input usage
 -----------
+.. _param-mmdblookup-input-key:
 .. _mmdblookup.parameter.input.key-usage:
 
 .. code-block:: rsyslog
