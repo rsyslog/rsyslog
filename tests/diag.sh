@@ -505,6 +505,28 @@ _kafka_listeners_from_config() {
         done
 }
 
+# Populate the Kafka dependency workspace directory and config file name for an
+# optional instance suffix provided via $1. The computed values are written to
+# the variables whose names are supplied via $2 (directory) and $3 (config).
+_kafka_instance_layout() {
+        local instance="$1"
+        local dir_var="$2"
+        local config_var="$3"
+        local dir
+        local config
+
+        if [ -z "$instance" ]; then
+                dir=$(readlink -f .dep_wrk)
+                config="kafka-server.properties"
+        else
+                dir=$(readlink -f "$instance")
+                config="kafka-server${instance}.properties"
+        fi
+
+        printf -v "$dir_var" '%s' "$dir"
+        printf -v "$config_var" '%s' "$config"
+}
+
 # Wait for Kafka brokers configured via $2 (config path) under $1 (kafka dir).
 # Accepts optional timeout (seconds) as third parameter.
 wait_for_kafka_ready_internal() {
@@ -513,8 +535,6 @@ wait_for_kafka_ready_internal() {
         local timeout="${3:-60}"
         local -a endpoints=()
         local endpoint
-        local host
-        local port
         local last_topics_output=""
         local start_ts
         local elapsed
@@ -541,30 +561,15 @@ wait_for_kafka_ready_internal() {
 
         start_ts=$(date +%s)
         while true; do
-                local ports_ready=1
-                for endpoint in "${endpoints[@]}"; do
-                        host=${endpoint%:*}
-                        port=${endpoint##*:}
-                        if ! nc -w1 -z "$host" "$port" >/dev/null 2>&1; then
-                                ports_ready=0
-                                break
-                        fi
-                done
-
-                elapsed=$(( $(date +%s) - start_ts ))
-
-                if [ $ports_ready -eq 1 ]; then
-                        printf '%s kafka brokers reachable on %s after %ss\n' "$(tb_timestamp)" "$bootstrap_csv" "$elapsed"
-                        return 0
-                fi
-
                 if output=$(cd "$kafka_dir" && ./bin/kafka-topics.sh --bootstrap-server "$bootstrap_csv" --list 2>&1); then
+                        elapsed=$(( $(date +%s) - start_ts ))
                         printf '%s kafka-topics --list succeeded for %s after %ss\n' "$(tb_timestamp)" "$bootstrap_csv" "$elapsed"
                         return 0
                 else
                         last_topics_output=$output
                 fi
 
+                elapsed=$(( $(date +%s) - start_ts ))
                 if [ "$elapsed" -ge "$timeout" ]; then
                         printf '%s ERROR: kafka brokers %s not ready after %ss\n' "$(tb_timestamp)" "$bootstrap_csv" "$timeout"
                         if [ -n "$last_topics_output" ]; then
@@ -574,7 +579,7 @@ wait_for_kafka_ready_internal() {
                 fi
 
                 if (( iteration % 5 == 0 )); then
-                        printf '%s waiting for kafka brokers %s (elapsed %ss)\n' "$(tb_timestamp)" "$bootstrap_csv" "$elapsed"
+                        printf '%s waiting for kafka-topics --list to succeed for %s (elapsed %ss)\n' "$(tb_timestamp)" "$bootstrap_csv" "$elapsed"
                 fi
 
                 $TESTTOOL_DIR/msleep 200
@@ -588,13 +593,7 @@ wait_for_kafka_startup() {
         local dep_work_dir
         local dep_work_kafka_config
 
-        if [ "x$instance" == "x" ]; then
-                dep_work_dir=$(readlink -f .dep_wrk)
-                dep_work_kafka_config="kafka-server.properties"
-        else
-                dep_work_dir=$(readlink -f "$instance")
-                dep_work_kafka_config="kafka-server${instance}.properties"
-        fi
+        _kafka_instance_layout "$instance" dep_work_dir dep_work_kafka_config
 
         wait_for_kafka_ready_internal "$dep_work_dir/kafka" "$dep_work_dir/kafka/config/$dep_work_kafka_config" "$timeout"
 }
@@ -2035,15 +2034,15 @@ stop_kafka() {
 		kill $kafkapid
 
 		# Check if kafka instance went down!
-		while true; do
-			# shellcheck disable=SC2009  - we do not grep on the process name!
-			kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
-			if [[ "" !=  "$kafkapid" ]]; then
-				$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-				if test $i -gt $TB_TIMEOUT_STARTSTOP; then
-					echo "Kafka instance $dep_work_kafka_config (PID $kafkapid) still running - Performing hard shutdown (-9)"
-					kill -9 $kafkapid
-					break
+                while true; do
+                        # shellcheck disable=SC2009  - we do not grep on the process name!
+                        kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
+                        if [ -n "$kafkapid" ]; then
+                                $TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
+                                if test $i -gt $TB_TIMEOUT_STARTSTOP; then
+                                        echo "Kafka instance $dep_work_kafka_config (PID $kafkapid) still running - Performing hard shutdown (-9)"
+                                        kill -9 $kafkapid
+                                        break
 				fi
 				(( i++ ))
 			else
@@ -2187,25 +2186,22 @@ start_zookeeper() {
 }
 
 start_kafka() {
-	printf '%s starting kafka\n' "$(tb_timestamp)"
+        printf '%s starting kafka\n' "$(tb_timestamp)"
 
-	# Force IPv4 usage of Kafka!
-	export KAFKA_OPTS="-Djava.net.preferIPv4Stack=True"
-	export KAFKA_HEAP_OPTS="-Xms256m -Xmx256m" # we need to take care for smaller CI systems!
-        if [ "x$1" == "x" ]; then
-                dep_work_dir=$(readlink -f .dep_wrk)
-                dep_work_kafka_config="kafka-server.properties"
-        else
-                dep_work_dir=$(readlink -f "$1")
-                dep_work_kafka_config="kafka-server$1.properties"
+        # Force IPv4 usage of Kafka!
+        export KAFKA_OPTS="-Djava.net.preferIPv4Stack=True"
+        export KAFKA_HEAP_OPTS="-Xms256m -Xmx256m" # we need to take care for smaller CI systems!
+        local dep_work_dir
+        local dep_work_kafka_config
+
+        _kafka_instance_layout "$1" dep_work_dir dep_work_kafka_config
+
+        # shellcheck disable=SC2009  - we do not grep on the process name!
+        kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
+        if [ "$KEEP_KAFKA_RUNNING" == "YES" ] && [ -n "$kafkapid" ]; then
+                printf 'kafka already running, no need to start\n'
+                return
         fi
-
-	# shellcheck disable=SC2009  - we do not grep on the process name!
-	kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
-	if [ "$KEEP_KAFKA_RUNNING" == "YES" ] && [ "$kafkapid" != "" ]; then
-		printf 'kafka already running, no need to start\n'
-		return
-	fi
 
 	if [ ! -f $dep_kafka_cached_file ]; then
 			echo "Dependency-cache does not have kafka package, did you download dependencies?"
@@ -2263,7 +2259,7 @@ start_kafka() {
 
         # shellcheck disable=SC2009  - we do not grep on the process name!
         kafkapid=$(ps aux | grep -i $dep_work_kafka_config | grep java | grep -v grep | awk '{print $2}')
-        if [[ "" !=  "$kafkapid" ]]; then
+        if [ -n "$kafkapid" ]; then
                 echo "Kafka instance $dep_work_kafka_config (PID $kafkapid) started ... "
         else
                 echo "Failed to start Kafka instance for $dep_work_kafka_config"
