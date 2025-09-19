@@ -95,7 +95,7 @@ This example shows a possible configuration of mmdarwin.
 
    ruleset(name="darwin_ruleset") {
       action(type="mmjsonparse" cookie="")
-     action(type="mmdarwin" socketPath="/path/to/reputation_1.sock" fields=["!srcip", "ATTACK;TOR"] key="reputation" response="back" filterCode="0x72657075")
+      action(type="mmdarwin" socketPath="/path/to/reputation_1.sock" fields=["!srcip", "ATTACK;TOR"] key="reputation" response="back" filterCode="0x72657075")
 
       call darwin_output
    }
