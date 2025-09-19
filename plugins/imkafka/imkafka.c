@@ -1,4 +1,5 @@
-/* imkafka.c
+/*
+ * imkafka.c
  *
  * This input plugin is a consumer for Apache Kafka.
  *
@@ -50,6 +51,11 @@
 #include "msg.h"
 #include "dirty.h"
 
+/* If your build already injects the header, you may omit this include.
+   Otherwise, prefer the canonical libfastjson path: */
+// #include <json.h>
+#include <libfastjson/json.h>
+
 MODULE_TYPE_INPUT;
 MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("imkafka")
@@ -59,25 +65,24 @@ DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(prop) DEFobjCurrIf(ruleset) DEFobjCurrIf(glbl) DEFobjCurrIf(statsobj)
 
 /* =============================================================================
- *  Stats (module-global + per-instance) — parity with omkafka, adapted for consumer
+ * Stats (module-global + per-instance) — parity with omkafka, adapted for consumer
  * ============================================================================= */
-static statsobj_t *kafkaStats = NULL;    /* module-global stats object */
-
+static statsobj_t *kafkaStats = NULL; /* module-global stats object */
 /* Global counters (consumer-flavored) */
-STATSCOUNTER_DEF(ctrReceived,      mutCtrReceived);     /* polled messages */
-STATSCOUNTER_DEF(ctrSubmitted,     mutCtrSubmitted);    /* submitted to rsyslog core */
-STATSCOUNTER_DEF(ctrKafkaFail,     mutCtrKafkaFail);    /* errors on poll/submit */
-STATSCOUNTER_DEF(ctrEOF,           mutCtrEOF);          /* RD_KAFKA_RESP_ERR__PARTITION_EOF */
-STATSCOUNTER_DEF(ctrPollEmpty,     mutCtrPollEmpty);    /* polls returning NULL */
-STATSCOUNTER_DEF(ctrMaxLag,        mutCtrMaxLag);       /* maximum observed consumer lag */
+STATSCOUNTER_DEF(ctrReceived, mutCtrReceived); /* polled messages */
+STATSCOUNTER_DEF(ctrSubmitted, mutCtrSubmitted); /* submitted to rsyslog core */
+STATSCOUNTER_DEF(ctrKafkaFail, mutCtrKafkaFail); /* errors on poll/submit */
+STATSCOUNTER_DEF(ctrEOF, mutCtrEOF); /* RD_KAFKA_RESP_ERR__PARTITION_EOF */
+STATSCOUNTER_DEF(ctrPollEmpty, mutCtrPollEmpty); /* polls returning NULL */
+STATSCOUNTER_DEF(ctrMaxLag, mutCtrMaxLag); /* maximum observed consumer lag */
 
 /* Global categorized errors (mirrors omkafka) */
-STATSCOUNTER_DEF(ctrKafkaRespTimedOut,    mutCtrKafkaRespTimedOut);
-STATSCOUNTER_DEF(ctrKafkaRespTransport,   mutCtrKafkaRespTransport);
-STATSCOUNTER_DEF(ctrKafkaRespBrokerDown,  mutCtrKafkaRespBrokerDown);
-STATSCOUNTER_DEF(ctrKafkaRespAuth,        mutCtrKafkaRespAuth);
-STATSCOUNTER_DEF(ctrKafkaRespSSL,         mutCtrKafkaRespSSL);
-STATSCOUNTER_DEF(ctrKafkaRespOther,       mutCtrKafkaRespOther);
+STATSCOUNTER_DEF(ctrKafkaRespTimedOut, mutCtrKafkaRespTimedOut);
+STATSCOUNTER_DEF(ctrKafkaRespTransport, mutCtrKafkaRespTransport);
+STATSCOUNTER_DEF(ctrKafkaRespBrokerDown, mutCtrKafkaRespBrokerDown);
+STATSCOUNTER_DEF(ctrKafkaRespAuth, mutCtrKafkaRespAuth);
+STATSCOUNTER_DEF(ctrKafkaRespSSL, mutCtrKafkaRespSSL);
+STATSCOUNTER_DEF(ctrKafkaRespOther, mutCtrKafkaRespOther);
 
 /* librdkafka window metrics (like omkafka) exposed as counters */
 static uint64 rtt_avg_usec;
@@ -92,7 +97,6 @@ static uint64 int_latency_avg_usec;
 
 /* forward references */
 static void *imkafkawrkr(void *myself);
-
 struct kafka_params {
     const char *name;
     const char *val;
@@ -108,7 +112,7 @@ static struct configSettings_s {
     struct kafka_params *confParams;
 } cs;
 
-struct instanceConf_s {
+typedef struct instanceConf_s {
     uchar *topic;
     uchar *consumergroup;
     char *brokers;
@@ -126,18 +130,17 @@ struct instanceConf_s {
     int bIsSubscribed;
     int nMsgParsingFlags;
     struct instanceConf_s *next;
-
     /* per-instance stats object + counters */
     statsobj_t *stats;
-    STATSCOUNTER_DEF(ctrReceived,   mutCtrReceived);
-    STATSCOUNTER_DEF(ctrSubmitted,  mutCtrSubmitted);
-    STATSCOUNTER_DEF(ctrKafkaFail,  mutCtrKafkaFail);
-    STATSCOUNTER_DEF(ctrEOF,        mutCtrEOF);
-    STATSCOUNTER_DEF(ctrPollEmpty,  mutCtrPollEmpty);
-    STATSCOUNTER_DEF(ctrMaxLag,     mutCtrMaxLag);
-};
+    STATSCOUNTER_DEF(ctrReceived, mutCtrReceived);
+    STATSCOUNTER_DEF(ctrSubmitted, mutCtrSubmitted);
+    STATSCOUNTER_DEF(ctrKafkaFail, mutCtrKafkaFail);
+    STATSCOUNTER_DEF(ctrEOF, mutCtrEOF);
+    STATSCOUNTER_DEF(ctrPollEmpty, mutCtrPollEmpty);
+    STATSCOUNTER_DEF(ctrMaxLag, mutCtrMaxLag);
+} instanceConf_t;
 
-struct modConfData_s {
+typedef struct modConfData_s {
     rsconf_t *pConf; /* our overall config object */
     uchar *topic;
     uchar *consumergroup;
@@ -145,7 +148,7 @@ struct modConfData_s {
     instanceConf_t *root, *tail;
     ruleset_t *pBindRuleset; /* ruleset to bind listener to (use system default if unspecified) */
     uchar *pszBindRuleset;   /* default name of Ruleset to bind to */
-};
+} modConfData_t;
 
 /* global data */
 pthread_attr_t wrkrThrdAttr; /* Attribute for worker threads ; read only after startup */
@@ -153,10 +156,11 @@ static int activeKafkaworkers = 0;
 /* The following structure controls the worker threads. Global data is
  * needed for their access.
  */
-static struct kafkaWrkrInfo_s {
-    pthread_t tid;           /* the worker's thread ID */
-    instanceConf_t *inst;    /* Pointer to imkafka instance */
-} *kafkaWrkrInfo;
+struct kafkaWrkrInfo_s {
+    pthread_t tid;     /* the worker's thread ID */
+    instanceConf_t *inst; /* Pointer to imkafka instance */
+};
+static struct kafkaWrkrInfo_s *kafkaWrkrInfo;
 
 static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL;  /* modConf ptr to use for the current load process */
@@ -179,7 +183,7 @@ static struct cnfparamblk inppblk = {CNFPARAMBLK_VERSION, sizeof(inppdescr) / si
 #include "im-helper.h" /* must be included AFTER the type definitions! */
 
 /* -------------------------------------------------------------------------- */
-/*  Kafka logging callback                                                    */
+/* Kafka logging callback                                                     */
 /* -------------------------------------------------------------------------- */
 static void kafkaLogger(const rd_kafka_t __attribute__((unused)) * rk, int level, const char *fac, const char *buf)
 {
@@ -187,12 +191,12 @@ static void kafkaLogger(const rd_kafka_t __attribute__((unused)) * rk, int level
 }
 
 /* -------------------------------------------------------------------------- */
-/*  JSON helpers for stats_cb parsing (same pattern as in omkafka)            */
-/*  librdkafka emits JSON stats when statistics.interval.ms > 0               */
-/*  See Confluent's librdkafka statistics docs for schema.                    */
+/* JSON helpers for stats_cb parsing (same pattern as in omkafka)             */
+/* librdkafka emits JSON stats when statistics.interval.ms > 0                */
+/* See Confluent's librdkafka statistics docs for schema.                     */
 /* -------------------------------------------------------------------------- */
-/* NOTE: omkafka uses libfastjson via 'struct fjson_object' without explicit
- * include here, relying on rsyslog's build environment. We mirror that usage. */
+
+/* get_object: exact key match (fix for previous prefix match bug) */
 static struct fjson_object *get_object(struct fjson_object *fj_obj, const char *name)
 {
     struct fjson_object_iterator it = fjson_object_iter_begin(fj_obj);
@@ -200,7 +204,8 @@ static struct fjson_object *get_object(struct fjson_object *fj_obj, const char *
     while (!fjson_object_iter_equal(&it, &itEnd)) {
         const char *key = fjson_object_iter_peek_name(&it);
         struct fjson_object *val = fjson_object_iter_peek_value(&it);
-        if (!strncmp(key, name, strlen(name))) {
+        /* SUGGESTION #1: use strcmp for exact match */
+        if (strcmp(key, name) == 0) {
             return val;
         }
         fjson_object_iter_next(&it);
@@ -218,19 +223,26 @@ static uint64 jsonExtractWindoStats(struct fjson_object *stats_object,
     uint64 agg_val = 0;
     uint64 ret_val = 0;
     int active_brokers = 0;
+
     struct fjson_object *brokers_obj = get_object(stats_object, "brokers");
     if (brokers_obj == NULL) {
         LogMsg(0, NO_ERRCODE, LOG_ERR, "imkafka: statscb: failed to find brokers object");
         return ret_val;
     }
+
     struct fjson_object_iterator it = fjson_object_iter_begin(brokers_obj);
     struct fjson_object_iterator itEnd = fjson_object_iter_end(brokers_obj);
     while (!fjson_object_iter_equal(&it, &itEnd)) {
         struct fjson_object *val = fjson_object_iter_peek_value(&it);
+
         struct fjson_object *level1_obj = get_object(val, level1_obj_name);
-        if (level1_obj == NULL) return ret_val;
+        /* SUGGESTION #2: do not abort on a single-broker miss; skip it */
+        if (level1_obj == NULL) { fjson_object_iter_next(&it); continue; }
+
         struct fjson_object *level2_obj = get_object(level1_obj, level2_obj_name);
-        if (level2_obj == NULL) return ret_val;
+        /* SUGGESTION #2: do not abort on a single-broker miss; skip it */
+        if (level2_obj == NULL) { fjson_object_iter_next(&it); continue; }
+
         level2_val = fjson_object_get_int64(level2_obj);
         if (level2_val > skip_threshold) {
             agg_val += level2_val;
@@ -238,6 +250,7 @@ static uint64 jsonExtractWindoStats(struct fjson_object *stats_object,
         }
         fjson_object_iter_next(&it);
     }
+
     if (active_brokers > 0) {
         ret_val = agg_val / active_brokers;
     }
@@ -255,10 +268,11 @@ static int statsCallback(rd_kafka_t __attribute__((unused)) * rk,
         LogMsg(0, NO_ERRCODE, LOG_ERR, "imkafka: statsCallback: fjson tokenizer failed");
         return 0;
     }
+
     /* Window stats extraction */
-    rtt_avg_usec         = jsonExtractWindoStats(stats_object, "rtt",        "avg", 100);
-    throttle_avg_msec    = jsonExtractWindoStats(stats_object, "throttle",   "avg", 0);
-    int_latency_avg_usec = jsonExtractWindoStats(stats_object, "int_latency","avg", 0);
+    rtt_avg_usec         = jsonExtractWindoStats(stats_object, "rtt",         "avg", 100);
+    throttle_avg_msec    = jsonExtractWindoStats(stats_object, "throttle",    "avg",   0);
+    int_latency_avg_usec = jsonExtractWindoStats(stats_object, "int_latency", "avg",   0);
     fjson_object_put(stats_object);
 
     /* Optional: visible info line for operator */
@@ -275,17 +289,17 @@ static void errorCallback(rd_kafka_t __attribute__((unused)) * rk,
                           void __attribute__((unused)) * opaque)
 {
     if (err == RD_KAFKA_RESP_ERR__MSG_TIMED_OUT) {
-        STATSCOUNTER_INC(ctrKafkaRespTimedOut,   mutCtrKafkaRespTimedOut);
+        STATSCOUNTER_INC(ctrKafkaRespTimedOut, mutCtrKafkaRespTimedOut);
     } else if (err == RD_KAFKA_RESP_ERR__TRANSPORT) {
-        STATSCOUNTER_INC(ctrKafkaRespTransport,  mutCtrKafkaRespTransport);
+        STATSCOUNTER_INC(ctrKafkaRespTransport, mutCtrKafkaRespTransport);
     } else if (err == RD_KAFKA_RESP_ERR__ALL_BROKERS_DOWN) {
         STATSCOUNTER_INC(ctrKafkaRespBrokerDown, mutCtrKafkaRespBrokerDown);
     } else if (err == RD_KAFKA_RESP_ERR__AUTHENTICATION) {
-        STATSCOUNTER_INC(ctrKafkaRespAuth,       mutCtrKafkaRespAuth);
+        STATSCOUNTER_INC(ctrKafkaRespAuth, mutCtrKafkaRespAuth);
     } else if (err == RD_KAFKA_RESP_ERR__SSL) {
-        STATSCOUNTER_INC(ctrKafkaRespSSL,        mutCtrKafkaRespSSL);
+        STATSCOUNTER_INC(ctrKafkaRespSSL, mutCtrKafkaRespSSL);
     } else {
-        STATSCOUNTER_INC(ctrKafkaRespOther,      mutCtrKafkaRespOther);
+        STATSCOUNTER_INC(ctrKafkaRespOther, mutCtrKafkaRespOther);
     }
     LogError(0, RS_RET_KAFKA_ERROR, "imkafka: kafka error message: %d,'%s','%s'",
              err, rd_kafka_err2str(err), reason);
@@ -308,7 +322,6 @@ static rsRetVal enqMsg(instanceConf_t *const __restrict__ inst, rd_kafka_message
     }
 
     DBGPRINTF("imkafka: enqMsg: Msg: %.*s\n", (int)rkmessage->len, (char *)rkmessage->payload);
-
     CHKiRet(msgConstruct(&pMsg));
     MsgSetInputName(pMsg, pInputName);
     MsgSetRawMsg(pMsg, (char *)rkmessage->payload, (int)rkmessage->len);
@@ -321,14 +334,12 @@ static rsRetVal enqMsg(instanceConf_t *const __restrict__ inst, rd_kafka_message
         DBGPRINTF("imkafka: enqMsg: Key: %.*s\n", (int)rkmessage->key_len, (char *)rkmessage->key);
         MsgSetTAG(pMsg, (const uchar *)rkmessage->key, (int)rkmessage->key_len);
     }
-
     MsgSetMSGoffs(pMsg, 0); /* we do not have a header... */
     CHKiRet(submitMsg2(pMsg));
 
     /* submitted successfully */
     STATSCOUNTER_INC(ctrSubmitted, mutCtrSubmitted);
     INST_STATSCOUNTER_INC(inst, inst->ctrSubmitted, inst->mutCtrSubmitted);
-
 finalize_it:
     RETiRet;
 }
@@ -354,10 +365,7 @@ static void msgConsume(instanceConf_t *inst)
             if (rkmessage->err == RD_KAFKA_RESP_ERR__PARTITION_EOF) {
                 /* not an error, just a regular status! */
                 DBGPRINTF(
-                    "imkafka: Consumer "
-                    "reached end of topic \"%s\" [%" PRId32
-                    "]"
-                    "message queue offset %" PRId64 "\n",
+                    "imkafka: Consumer reached end of topic \"%s\" [%" PRId32 "] message queue offset %" PRId64 "\n",
                     rd_kafka_topic_name(rkmessage->rkt), rkmessage->partition, rkmessage->offset);
                 STATSCOUNTER_INC(ctrEOF, mutCtrEOF);
                 INST_STATSCOUNTER_INC(inst, inst->ctrEOF, inst->mutCtrEOF);
@@ -365,25 +373,21 @@ static void msgConsume(instanceConf_t *inst)
             }
             if (rkmessage->rkt) {
                 LogError(0, RS_RET_KAFKA_ERROR,
-                    "imkafka: Consumer error for topic \"%s\" [%" PRId32
-                    "]"
-                    "message queue offset %" PRId64 ": %s\n",
-                    rd_kafka_topic_name(rkmessage->rkt), rkmessage->partition, rkmessage->offset,
-                    rd_kafka_message_errstr(rkmessage));
+                         "imkafka: Consumer error for topic \"%s\" [%" PRId32 "] message queue offset %" PRId64 ": %s\n",
+                         rd_kafka_topic_name(rkmessage->rkt), rkmessage->partition, rkmessage->offset,
+                         rd_kafka_message_errstr(rkmessage));
             } else {
                 LogError(0, RS_RET_KAFKA_ERROR, "imkafka: Consumer error for topic \"%s\": \"%s\"\n",
-                    rd_kafka_err2str(rkmessage->err), rd_kafka_message_errstr(rkmessage));
+                         rd_kafka_err2str(rkmessage->err), rd_kafka_message_errstr(rkmessage));
             }
             STATSCOUNTER_INC(ctrKafkaFail, mutCtrKafkaFail);
             INST_STATSCOUNTER_INC(inst, inst->ctrKafkaFail, inst->mutCtrKafkaFail);
             goto done;
         }
 
-        DBGPRINTF("imkafka: msgConsume Loop on %s/%s/%s: [%" PRId32
-            "], "
-            "offset %" PRId64 ", %zd bytes):\n",
-            rd_kafka_topic_name(rkmessage->rkt) /*inst->topic*/, inst->consumergroup, inst->brokers,
-            rkmessage->partition, rkmessage->offset, rkmessage->len);
+        DBGPRINTF("imkafka: msgConsume Loop on %s/%s/%s: [%" PRId32 "], offset %" PRId64 ", %zd bytes):\n",
+                  rd_kafka_topic_name(rkmessage->rkt) /*inst->topic*/, inst->consumergroup, inst->brokers,
+                  rkmessage->partition, rkmessage->offset, rkmessage->len);
 
         /* message received */
         STATSCOUNTER_INC(ctrReceived, mutCtrReceived);
@@ -430,7 +434,6 @@ static rsRetVal createInstance(instanceConf_t **pinst)
 {
     instanceConf_t *inst;
     DEFiRet;
-
     CHKmalloc(inst = malloc(sizeof(instanceConf_t)));
     inst->next = NULL;
     inst->brokers = NULL;
@@ -444,16 +447,13 @@ static rsRetVal createInstance(instanceConf_t **pinst)
     inst->nMsgParsingFlags = NEEDS_PARSING;
     inst->bIsConnected = 0;
     inst->bIsSubscribed = 0;
-
     /* Kafka objects */
     inst->conf = NULL;
     inst->rk = NULL;
     inst->topic_conf = NULL;
     inst->partition = RD_KAFKA_PARTITION_UA;
-
     /* stats */
     inst->stats = NULL;
-
     /* node created, let's add to config */
     if (loadModConf->tail == NULL) {
         loadModConf->tail = loadModConf->root = inst;
@@ -466,8 +466,7 @@ finalize_it:
     RETiRet;
 }
 
-/* this function checks instance parameters and does some required pre-processing
- */
+/* this function checks instance parameters and does some required pre-processing */
 static rsRetVal ATTR_NONNULL() checkInstance(instanceConf_t *const inst)
 {
     DEFiRet;
@@ -478,15 +477,15 @@ static rsRetVal ATTR_NONNULL() checkInstance(instanceConf_t *const inst)
     if (inst->conf == NULL) {
         if (inst->bReportErrs) {
             LogError(0, RS_RET_KAFKA_ERROR, "imkafka: error creating kafka conf obj: %s\n",
-                rd_kafka_err2str(rd_kafka_last_error()));
+                     rd_kafka_err2str(rd_kafka_last_error()));
         }
         ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
     }
 
 #ifdef DEBUG
     /* enable kafka debug output */
-    if (rd_kafka_conf_set(inst->conf, "debug", RD_KAFKA_DEBUG_CONTEXTS, kafkaErrMsg, sizeof(kafkaErrMsg)) !=
-        RD_KAFKA_CONF_OK) {
+    if (rd_kafka_conf_set(inst->conf, "debug", RD_KAFKA_DEBUG_CONTEXTS, kafkaErrMsg, sizeof(kafkaErrMsg))
+        != RD_KAFKA_CONF_OK) {
         LogError(0, RS_RET_KAFKA_ERROR, "imkafka: error setting kafka debug option: %s\n", kafkaErrMsg);
         /* DO NOT ABORT IN THIS CASE! */
     }
@@ -495,18 +494,17 @@ static rsRetVal ATTR_NONNULL() checkInstance(instanceConf_t *const inst)
     /* Set custom configuration parameters */
     for (int i = 0; i < inst->nConfParams; ++i) {
         assert(inst->confParams + i != NULL); /* invariant: nConfParams MUST exist! */
-        DBGPRINTF("imkafka: setting custom configuration parameter: %s:%s\n", inst->confParams[i].name,
-            inst->confParams[i].val);
-        if (rd_kafka_conf_set(inst->conf, inst->confParams[i].name, inst->confParams[i].val, kafkaErrMsg,
-            sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
+        DBGPRINTF("imkafka: setting custom configuration parameter: %s:%s\n",
+                  inst->confParams[i].name, inst->confParams[i].val);
+        if (rd_kafka_conf_set(inst->conf, inst->confParams[i].name, inst->confParams[i].val,
+                              kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
             if (inst->bReportErrs) {
                 LogError(0, RS_RET_PARAM_ERROR,
-                    "error setting custom configuration "
-                    "parameter '%s=%s': %s",
-                    inst->confParams[i].name, inst->confParams[i].val, kafkaErrMsg);
+                         "error setting custom configuration parameter '%s=%s': %s",
+                         inst->confParams[i].name, inst->confParams[i].val, kafkaErrMsg);
             } else {
                 DBGPRINTF("imkafka: error setting custom configuration parameter '%s=%s': %s",
-                    inst->confParams[i].name, inst->confParams[i].val, kafkaErrMsg);
+                          inst->confParams[i].name, inst->confParams[i].val, kafkaErrMsg);
             }
             ABORT_FINALIZE(RS_RET_PARAM_ERROR);
         }
@@ -518,33 +516,34 @@ static rsRetVal ATTR_NONNULL() checkInstance(instanceConf_t *const inst)
     /* Assign kafka group id */
     if (inst->consumergroup != NULL) {
         DBGPRINTF("imkafka: setting consumergroup: '%s'\n", inst->consumergroup);
-        if (rd_kafka_conf_set(inst->conf, "group.id", (char *)inst->consumergroup, kafkaErrMsg, sizeof(kafkaErrMsg)) !=
-            RD_KAFKA_CONF_OK) {
+        if (rd_kafka_conf_set(inst->conf, "group.id", (char *)inst->consumergroup,
+                              kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
             if (inst->bReportErrs) {
                 LogError(0, RS_RET_KAFKA_ERROR,
-                    "imkafka: error assigning consumergroup %s to "
-                    "kafka config: %s\n",
-                    inst->consumergroup, kafkaErrMsg);
+                         "imkafka: error assigning consumergroup %s to kafka config: %s\n",
+                         inst->consumergroup, kafkaErrMsg);
             }
             ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
         }
 
         /* Set default for auto offset reset */
-        if (rd_kafka_topic_conf_set(inst->topic_conf, "auto.offset.reset", "smallest", kafkaErrMsg,
-            sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
+        if (rd_kafka_topic_conf_set(inst->topic_conf, "auto.offset.reset", "smallest",
+                                    kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
             if (inst->bReportErrs) {
-                LogError(0, RS_RET_KAFKA_ERROR, "imkafka: error setting kafka auto.offset.reset on %s: %s\n",
-                    inst->consumergroup, kafkaErrMsg);
+                LogError(0, RS_RET_KAFKA_ERROR,
+                         "imkafka: error setting kafka auto.offset.reset on %s: %s\n",
+                         inst->consumergroup, kafkaErrMsg);
             }
             ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
         }
 
         /* Consumer groups always use broker based offset storage */
-        if (rd_kafka_topic_conf_set(inst->topic_conf, "offset.store.method", "broker", kafkaErrMsg,
-            sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
+        if (rd_kafka_topic_conf_set(inst->topic_conf, "offset.store.method", "broker",
+                                    kafkaErrMsg, sizeof(kafkaErrMsg)) != RD_KAFKA_CONF_OK) {
             if (inst->bReportErrs) {
-                LogError(0, RS_RET_KAFKA_ERROR, "imkafka: error setting kafka offset.store.method on %s: %s\n",
-                    inst->consumergroup, kafkaErrMsg);
+                LogError(0, RS_RET_KAFKA_ERROR,
+                         "imkafka: error setting kafka offset.store.method on %s: %s\n",
+                         inst->consumergroup, kafkaErrMsg);
             }
             ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
         }
@@ -569,10 +568,10 @@ static rsRetVal ATTR_NONNULL() checkInstance(instanceConf_t *const inst)
         }
         ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
     }
+
 #if RD_KAFKA_VERSION < 0x00090001
     rd_kafka_set_logger(inst->rk, kafkaLogger);
 #endif
-
     DBGPRINTF("imkafka: setting brokers: '%s'\n", inst->brokers);
     if (rd_kafka_brokers_add(inst->rk, (char *)inst->brokers) == 0) {
         if (inst->bReportErrs) {
@@ -583,7 +582,6 @@ static rsRetVal ATTR_NONNULL() checkInstance(instanceConf_t *const inst)
 
     /* Kafka Consumer is opened */
     inst->bIsConnected = 1;
-
 finalize_it:
     if (iRet != RS_RET_OK) {
         if (inst->rk == NULL) {
@@ -604,9 +602,8 @@ static inline void std_checkRuleset_genErrMsg(__attribute__((unused)) modConfDat
 {
     if (inst->bReportErrs) {
         LogError(0, NO_ERRCODE,
-            "imkafka: ruleset '%s' not found - "
-            "using default ruleset instead",
-            inst->pszBindRuleset);
+                 "imkafka: ruleset '%s' not found - using default ruleset instead",
+                 inst->pszBindRuleset);
     }
 }
 
@@ -618,6 +615,7 @@ addConsumer(modConfData_t __attribute__((unused)) * modConf, instanceConf_t *ins
     assert(inst != NULL);
 
     rd_kafka_topic_partition_list_t *topics = NULL;
+
     DBGPRINTF("imkafka: creating kafka consumer on %s/%s/%s\n", inst->topic, inst->consumergroup, inst->brokers);
 
     /* Redirect rd_kafka_poll() to consumer_poll() */
@@ -631,12 +629,12 @@ addConsumer(modConfData_t __attribute__((unused)) * modConf, instanceConf_t *ins
         /* Subscription failed */
         inst->bIsSubscribed = 0;
         LogError(0, RS_RET_KAFKA_ERROR,
-            "imkafka: Failed to start consuming "
-            "topics: %s\n",
-            rd_kafka_err2str(err));
+                 "imkafka: Failed to start consuming topics: %s\n",
+                 rd_kafka_err2str(err));
         ABORT_FINALIZE(RS_RET_KAFKA_ERROR);
     } else {
-        DBGPRINTF("imkafka: Successfully subscribed to %s/%s/%s\n", inst->topic, inst->consumergroup, inst->brokers);
+        DBGPRINTF("imkafka: Successfully subscribed to %s/%s/%s\n",
+                  inst->topic, inst->consumergroup, inst->brokers);
         /* Subscription is working */
         inst->bIsSubscribed = 1;
     }
@@ -646,20 +644,18 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal ATTR_NONNULL()
-processKafkaParam(char *const param, const char **const name, const char **const paramval)
+static rsRetVal ATTR_NONNULL() processKafkaParam(char *const param, const char **const name, const char **const paramval)
 {
     DEFiRet;
     char *val = strstr(param, "=");
     if (val == NULL) {
         LogError(0, RS_RET_PARAM_ERROR,
-            "missing equal sign in "
-            "parameter '%s'",
-            param);
+                 "missing equal sign in parameter '%s'",
+                 param);
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
     *val = '\0'; /* terminates name */
-    ++val;       /* now points to begin of value */
+    ++val; /* now points to begin of value */
     CHKmalloc(*name = strdup(param));
     CHKmalloc(*paramval = strdup(val));
 finalize_it:
@@ -679,6 +675,7 @@ CODESTARTnewInpInst;
         dbgprintf("input param blk in imkafka:\n");
         cnfparamsPrint(&inppblk, pvals);
     }
+
     CHKiRet(createInstance(&inst));
     for (i = 0; i < inppblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
@@ -708,26 +705,20 @@ CODESTARTnewInpInst;
             inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(inppblk.descr[i].name, "parsehostname")) {
             if (pvals[i].val.d.n) {
-                inst->nMsgParsingFlags = NEEDS_PARSING
-                    | PARSE_HOSTNAME;
+                inst->nMsgParsingFlags = NEEDS_PARSING | PARSE_HOSTNAME;
             } else {
                 inst->nMsgParsingFlags = NEEDS_PARSING;
             }
         } else {
-            dbgprintf(
-                "imkafka: program error, non-handled "
-                "param '%s'\n",
-                inppblk.descr[i].name);
+            dbgprintf("imkafka: program error, non-handled param '%s'\n", inppblk.descr[i].name);
         }
     }
     if (inst->brokers == NULL) {
         CHKmalloc(inst->brokers = strdup("localhost:9092"));
         LogMsg(0, NO_ERRCODE, LOG_INFO,
-            "imkafka: \"broker\" parameter not specified "
-            "using default of localhost:9092 -- this may not be what you want!");
+               "imkafka: \"broker\" parameter not specified using default of localhost:9092 -- this may not be what you want!");
     }
-    DBGPRINTF("imkafka: newInpIns brokers=%s, topic=%s, consumergroup=%s\n", inst->brokers, inst->topic,
-        inst->consumergroup);
+    DBGPRINTF("imkafka: newInpIns brokers=%s, topic=%s, consumergroup=%s\n", inst->brokers, inst->topic, inst->consumergroup);
 finalize_it:
 CODE_STD_FINALIZERnewInpInst cnfparamvalsDestruct(pvals, &inppblk);
 ENDnewInpInst
@@ -746,8 +737,7 @@ CODESTARTsetModCnf;
     pvals = nvlstGetParams(lst, &modpblk, NULL);
     if (pvals == NULL) {
         LogError(0, RS_RET_MISSING_CNFPARAMS,
-            "imkafka: error processing module "
-            "config parameters [module(...)]");
+                 "imkafka: error processing module config parameters [module(...)]");
         ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
     }
     if (Debug) {
@@ -759,10 +749,7 @@ CODESTARTsetModCnf;
         if (!strcmp(modpblk.descr[i].name, "ruleset")) {
             loadModConf->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else {
-            dbgprintf(
-                "imkafka: program error, non-handled "
-                "param '%s' in beginCnfLoad\n",
-                modpblk.descr[i].name);
+            dbgprintf("imkafka: program error, non-handled param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
         }
     }
 finalize_it:
@@ -772,9 +759,7 @@ ENDsetModCnf
 BEGINendCnfLoad
 CODESTARTendCnfLoad;
     if (loadModConf->pszBindRuleset == NULL) {
-        if ((cs.pszBindRuleset == NULL)
-        ||
-        (cs.pszBindRuleset[0] == '\0')) {
+        if ((cs.pszBindRuleset == NULL) || (cs.pszBindRuleset[0] == '\0')) {
             loadModConf->pszBindRuleset = NULL;
         } else {
             CHKmalloc(loadModConf->pszBindRuleset = ustrdup(cs.pszBindRuleset));
@@ -804,43 +789,35 @@ CODESTARTactivateCnfPrePrivDrop;
 ENDactivateCnfPrePrivDrop
 
 BEGINactivateCnf
- CODESTARTactivateCnf;
- for (instanceConf_t *inst = pModConf->root; inst != NULL; inst = inst->next) {
-   iRet = checkInstance(inst);
-   /* Create per-instance stats after successful instance setup */
-   if (iRet == RS_RET_OK && inst->stats == NULL) {
-     char namebuf[256];
-     (void)statsobj.Construct(&inst->stats);
-     snprintf(namebuf, sizeof(namebuf), "imkafka[%s|%s]",
-              inst->topic ? (char*)inst->topic : "topic?",
-              inst->consumergroup ? (char*)inst->consumergroup : "group?");
-     (void)statsobj.SetName(inst->stats, (uchar*)strdup(namebuf));
-     (void)statsobj.SetOrigin(inst->stats, (uchar*)"imkafka");
-
-     /* init and register per-instance counters */
-     STATSCOUNTER_INIT(inst->ctrReceived,   inst->mutCtrReceived);
-     (void)statsobj.AddCounter(inst->stats, (uchar*)"received",  ctrType_IntCtr, CTR_FLAG_RESETTABLE, &inst->ctrReceived);
-
-     STATSCOUNTER_INIT(inst->ctrSubmitted,  inst->mutCtrSubmitted);
-     (void)statsobj.AddCounter(inst->stats, (uchar*)"submitted", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &inst->ctrSubmitted);
-
-     STATSCOUNTER_INIT(inst->ctrKafkaFail,  inst->mutCtrKafkaFail);
-     (void)statsobj.AddCounter(inst->stats, (uchar*)"failures",  ctrType_IntCtr, CTR_FLAG_RESETTABLE, &inst->ctrKafkaFail);
-
-     STATSCOUNTER_INIT(inst->ctrEOF,        inst->mutCtrEOF);
-     (void)statsobj.AddCounter(inst->stats, (uchar*)"eof",       ctrType_IntCtr, CTR_FLAG_RESETTABLE, &inst->ctrEOF);
-
-     STATSCOUNTER_INIT(inst->ctrPollEmpty,  inst->mutCtrPollEmpty);
-     (void)statsobj.AddCounter(inst->stats, (uchar*)"poll_empty",ctrType_IntCtr, CTR_FLAG_RESETTABLE, &inst->ctrPollEmpty);
-
-     STATSCOUNTER_INIT(inst->ctrMaxLag,     inst->mutCtrMaxLag);
-     (void)statsobj.AddCounter(inst->stats, (uchar*)"maxlag",    ctrType_Int,    CTR_FLAG_NONE,       &inst->ctrMaxLag);
-
-     (void)statsobj.ConstructFinalize(inst->stats);
-   }
- }
+CODESTARTactivateCnf;
+    for (instanceConf_t *inst = pModConf->root; inst != NULL; inst = inst->next) {
+        iRet = checkInstance(inst);
+        /* Create per-instance stats after successful instance setup */
+        if (iRet == RS_RET_OK && inst->stats == NULL) {
+            char namebuf[256];
+            (void)statsobj.Construct(&inst->stats);
+            snprintf(namebuf, sizeof(namebuf), "imkafka[%s\n%s]",
+                     inst->topic ? (char*)inst->topic : "topic?",
+                     inst->consumergroup ? (char*)inst->consumergroup : "group?");
+            (void)statsobj.SetName(inst->stats, (uchar*)strdup(namebuf));
+            (void)statsobj.SetOrigin(inst->stats, (uchar*)"imkafka");
+            /* init and register per-instance counters */
+            STATSCOUNTER_INIT(inst->ctrReceived, inst->mutCtrReceived);
+            (void)statsobj.AddCounter(inst->stats, (uchar*)"received", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &inst->ctrReceived);
+            STATSCOUNTER_INIT(inst->ctrSubmitted, inst->mutCtrSubmitted);
+            (void)statsobj.AddCounter(inst->stats, (uchar*)"submitted", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &inst->ctrSubmitted);
+            STATSCOUNTER_INIT(inst->ctrKafkaFail, inst->mutCtrKafkaFail);
+            (void)statsobj.AddCounter(inst->stats, (uchar*)"failures", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &inst->ctrKafkaFail);
+            STATSCOUNTER_INIT(inst->ctrEOF, inst->mutCtrEOF);
+            (void)statsobj.AddCounter(inst->stats, (uchar*)"eof", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &inst->ctrEOF);
+            STATSCOUNTER_INIT(inst->ctrPollEmpty, inst->mutCtrPollEmpty);
+            (void)statsobj.AddCounter(inst->stats, (uchar*)"poll_empty", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &inst->ctrPollEmpty);
+            STATSCOUNTER_INIT(inst->ctrMaxLag, inst->mutCtrMaxLag);
+            (void)statsobj.AddCounter(inst->stats, (uchar*)"maxlag", ctrType_Int, CTR_FLAG_NONE, &inst->ctrMaxLag);
+            (void)statsobj.ConstructFinalize(inst->stats);
+        }
+    }
 ENDactivateCnf
-
 
 BEGINfreeCnf
     instanceConf_t *inst, *del;
@@ -888,9 +865,7 @@ static void shutdownKafkaWorkers(void)
 #if RD_KAFKA_VERSION < 0x00090001
         /* Wait for kafka being destroyed in old API */
         if (rd_kafka_wait_destroyed(10000) < 0) {
-            DBGPRINTF(
-                "imkafka: error, rd_kafka_destroy did not finish after grace "
-                "timeout (10s)!\n");
+            DBGPRINTF("imkafka: error, rd_kafka_destroy did not finish after grace timeout (10s)!\n");
         } else {
             DBGPRINTF("imkafka: rd_kafka_destroy successfully finished\n");
         }
@@ -904,7 +879,6 @@ BEGINrunInput
     instanceConf_t *inst;
 CODESTARTrunInput;
     DBGPRINTF("imkafka: runInput loop started ...\n");
-
     activeKafkaworkers = 0;
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
         if (inst->rk != NULL) {
@@ -913,19 +887,15 @@ CODESTARTrunInput;
     }
     if (activeKafkaworkers == 0) {
         LogError(0, RS_RET_ERR,
-            "imkafka: no active inputs, input does "
-            "not run - there should have been additional error "
-            "messages given previously");
+                 "imkafka: no active inputs, input does not run - there should have been additional error messages given previously");
         ABORT_FINALIZE(RS_RET_ERR);
     }
-
     DBGPRINTF("imkafka: Starting %d imkafka workerthreads\n", activeKafkaworkers);
     kafkaWrkrInfo = calloc(activeKafkaworkers, sizeof(struct kafkaWrkrInfo_s));
     if (kafkaWrkrInfo == NULL) {
         LogError(errno, RS_RET_OUT_OF_MEMORY, "imkafka: worker-info array allocation failed.");
         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
-
     /* Start worker threads for each imkafka input source */
     i = 0;
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
@@ -934,7 +904,6 @@ CODESTARTrunInput;
         pthread_create(&kafkaWrkrInfo[i].tid, &wrkrThrdAttr, imkafkawrkr, &(kafkaWrkrInfo[i]));
         i++;
     }
-
     while (glbl.GetGlobalInputTermState() == 0) {
         /* Note: the additional 10000ns wait is vitally important. It guards rsyslog
          * against totally hogging the CPU if the users selects a polling interval
@@ -943,7 +912,6 @@ CODESTARTrunInput;
         if (glbl.GetGlobalInputTermState() == 0) srSleep(0, 100000);
     }
     DBGPRINTF("imkafka: terminating upon request of rsyslog core\n");
-
     /* we need to shutdown kafak worker threads here because this operation can
      * potentially block (e.g. when no kafka broker is available!). If this
      * happens in runInput, the rsyslog core can cancel our thread. However,
@@ -1000,14 +968,17 @@ BEGINmodInit()
 CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION;
     CODEmodInit_QueryRegCFSLineHdlr
+
     /* request objects we use */
     CHKiRet(objUse(glbl, CORE_COMPONENT));
     CHKiRet(objUse(prop, CORE_COMPONENT));
     CHKiRet(objUse(ruleset, CORE_COMPONENT));
     CHKiRet(objUse(statsobj, CORE_COMPONENT));
+
     /* initialize "read-only" thread attributes */
     pthread_attr_init(&wrkrThrdAttr);
     pthread_attr_setstacksize(&wrkrThrdAttr, 4096 * 1024);
+
     DBGPRINTF("imkafka %s using librdkafka version %s, 0x%x\n", VERSION, rd_kafka_version_str(), rd_kafka_version());
 
     /* ---- module-global stats object and counters ---- */
@@ -1015,56 +986,55 @@ CODESTARTmodInit;
     CHKiRet(statsobj.SetName(kafkaStats, (uchar*)"imkafka"));
     CHKiRet(statsobj.SetOrigin(kafkaStats, (uchar*)"imkafka"));
 
-    STATSCOUNTER_INIT(ctrReceived,  mutCtrReceived);
+    STATSCOUNTER_INIT(ctrReceived, mutCtrReceived);
     CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"received",  ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrReceived));
     STATSCOUNTER_INIT(ctrSubmitted, mutCtrSubmitted);
     CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"submitted", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrSubmitted));
     STATSCOUNTER_INIT(ctrKafkaFail, mutCtrKafkaFail);
     CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"failures",  ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaFail));
-    STATSCOUNTER_INIT(ctrEOF,       mutCtrEOF);
+    STATSCOUNTER_INIT(ctrEOF, mutCtrEOF);
     CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"eof",       ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrEOF));
     STATSCOUNTER_INIT(ctrPollEmpty, mutCtrPollEmpty);
-    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"poll_empty",ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrPollEmpty));
-    STATSCOUNTER_INIT(ctrMaxLag,    mutCtrMaxLag);
-    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"maxlag",    ctrType_Int,    CTR_FLAG_NONE,       &ctrMaxLag));
+    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"poll_empty", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrPollEmpty));
+    STATSCOUNTER_INIT(ctrMaxLag, mutCtrMaxLag);
+    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"maxlag",     ctrType_Int,    CTR_FLAG_NONE, &ctrMaxLag));
 
     /* librdkafka window metrics */
-    CHKiRet(statsobj.AddCounter(kafkaStats, UCHAR_CONSTANT("rtt_avg_usec"),         ctrType_Int, CTR_FLAG_NONE, &rtt_avg_usec));
-    CHKiRet(statsobj.AddCounter(kafkaStats, UCHAR_CONSTANT("throttle_avg_msec"),    ctrType_Int, CTR_FLAG_NONE, &throttle_avg_msec));
+    CHKiRet(statsobj.AddCounter(kafkaStats, UCHAR_CONSTANT("rtt_avg_usec"),       ctrType_Int, CTR_FLAG_NONE, &rtt_avg_usec));
+    CHKiRet(statsobj.AddCounter(kafkaStats, UCHAR_CONSTANT("throttle_avg_msec"),  ctrType_Int, CTR_FLAG_NONE, &throttle_avg_msec));
     CHKiRet(statsobj.AddCounter(kafkaStats, UCHAR_CONSTANT("int_latency_avg_usec"), ctrType_Int, CTR_FLAG_NONE, &int_latency_avg_usec));
 
     /* categorized error counters */
-    STATSCOUNTER_INIT(ctrKafkaRespTimedOut,   mutCtrKafkaRespTimedOut);
-    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_timed_out",   ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespTimedOut));
-    STATSCOUNTER_INIT(ctrKafkaRespTransport,  mutCtrKafkaRespTransport);
-    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_transport",   ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespTransport));
+    STATSCOUNTER_INIT(ctrKafkaRespTimedOut, mutCtrKafkaRespTimedOut);
+    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_timed_out", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespTimedOut));
+    STATSCOUNTER_INIT(ctrKafkaRespTransport, mutCtrKafkaRespTransport);
+    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_transport", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespTransport));
     STATSCOUNTER_INIT(ctrKafkaRespBrokerDown, mutCtrKafkaRespBrokerDown);
-    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_broker_down",ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespBrokerDown));
-    STATSCOUNTER_INIT(ctrKafkaRespAuth,       mutCtrKafkaRespAuth);
-    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_auth",       ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespAuth));
-    STATSCOUNTER_INIT(ctrKafkaRespSSL,        mutCtrKafkaRespSSL);
-    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_ssl",        ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespSSL));
-    STATSCOUNTER_INIT(ctrKafkaRespOther,      mutCtrKafkaRespOther);
-    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_other",      ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespOther));
+    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_broker_down", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespBrokerDown));
+    STATSCOUNTER_INIT(ctrKafkaRespAuth, mutCtrKafkaRespAuth);
+    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_auth", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespAuth));
+    STATSCOUNTER_INIT(ctrKafkaRespSSL, mutCtrKafkaRespSSL);
+    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_ssl", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespSSL));
+    STATSCOUNTER_INIT(ctrKafkaRespOther, mutCtrKafkaRespOther);
+    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_other", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespOther));
 
     CHKiRet(statsobj.ConstructFinalize(kafkaStats));
 ENDmodInit
 
 /*
- *    Workerthread function for a single kafka consomer
+ * Workerthread function for a single kafka consomer
  */
 static void *imkafkawrkr(void *myself)
 {
     struct kafkaWrkrInfo_s *me = (struct kafkaWrkrInfo_s *)myself;
-    DBGPRINTF("imkafka: started kafka consumer workerthread on %s/%s/%s\n", me->inst->topic, me->inst->consumergroup,
-        me->inst->brokers);
-
+    DBGPRINTF("imkafka: started kafka consumer workerthread on %s/%s/%s\n",
+              me->inst->topic, me->inst->consumergroup, me->inst->brokers);
     do {
         if (glbl.GetGlobalInputTermState() == 1) break; /* terminate input! */
         if (me->inst->rk == NULL) {
             continue;
         }
-        // Try to add consumer only if connected! */
+        // Try to add consumer only if connected!
         if (me->inst->bIsConnected == 1 && me->inst->bIsSubscribed == 0) {
             addConsumer(runModConf, me->inst);
         }
@@ -1078,9 +1048,7 @@ static void *imkafkawrkr(void *myself)
          */
         if (glbl.GetGlobalInputTermState() == 0) srSleep(0, 100000);
     } while (glbl.GetGlobalInputTermState() == 0);
-
-    DBGPRINTF("imkafka: stopped kafka consumer workerthread on %s/%s/%s\n", me->inst->topic, me->inst->consumergroup,
-        me->inst->brokers);
+    DBGPRINTF("imkafka: stopped kafka consumer workerthread on %s/%s/%s\n",
+              me->inst->topic, me->inst->consumergroup, me->inst->brokers);
     return NULL;
 }
-
