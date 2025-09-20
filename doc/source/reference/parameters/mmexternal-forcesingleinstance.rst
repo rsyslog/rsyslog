@@ -10,7 +10,8 @@ forceSingleInstance
 
 .. summary-start
 
-Enforces that only a single instance of the external message modification plugin runs.
+Enforces that only a single instance of the external message modification
+plugin runs.
 
 .. summary-end
 
@@ -25,7 +26,8 @@ This parameter applies to :doc:`../../configuration/modules/mmexternal`.
 
 Description
 -----------
-This is an expert parameter, just like the equivalent *omprog* parameter. See the message modification plugin's documentation if it is needed.
+This is an expert parameter, just like the equivalent *omprog* parameter. See
+the message modification plugin's documentation if it is needed.
 
 Input usage
 -----------

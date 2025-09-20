@@ -10,7 +10,8 @@ binary
 
 .. summary-start
 
-Specifies the external message modification plugin executable that mmexternal invokes.
+Specifies the external message modification plugin executable that
+mmexternal invokes.
 
 .. summary-end
 
@@ -25,7 +26,8 @@ This parameter applies to :doc:`../../configuration/modules/mmexternal`.
 
 Description
 -----------
-The name of the external message modification plugin to be called. This can be a full path name.
+The name of the external message modification plugin to be called. This can
+be a full path name.
 
 Input usage
 -----------

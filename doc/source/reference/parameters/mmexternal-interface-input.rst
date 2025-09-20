@@ -10,7 +10,8 @@ interface.input
 
 .. summary-start
 
-Selects which message representation mmexternal passes to the external plugin.
+Selects which message representation mmexternal passes to the external
+plugin.
 
 .. summary-end
 
@@ -25,7 +26,11 @@ This parameter applies to :doc:`../../configuration/modules/mmexternal`.
 
 Description
 -----------
-This can either be "msg", "rawmsg" or "fulljson". In case of "fulljson", the message object is provided as a json object. Otherwise, the respective property is provided. This setting **must** match the external plugin's expectations. Check the external plugin documentation for what needs to be used.
+This can either be "msg", "rawmsg" or "fulljson". In case of "fulljson",
+the message object is provided as a json object. Otherwise, the respective
+property is provided. This setting **must** match the external plugin's
+expectations. Check the external plugin documentation for what needs to be
+used.
 
 Input usage
 -----------
