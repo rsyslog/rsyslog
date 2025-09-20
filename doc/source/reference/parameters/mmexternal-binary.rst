@@ -1,12 +1,12 @@
 .. _param-mmexternal-binary:
-.. _mmexternal.parameter.module.binary:
+.. _mmexternal.parameter.action.binary:
 
-Binary
+binary
 ======
 
 .. index::
-   single: mmexternal; Binary
-   single: Binary
+   single: mmexternal; binary
+   single: binary
 
 .. summary-start
 
@@ -16,10 +16,10 @@ Specifies the external message modification plugin executable that mmexternal in
 
 This parameter applies to :doc:`../../configuration/modules/mmexternal`.
 
-:Name: Binary
-:Scope: module
+:Name: binary
+:Scope: action
 :Type: string
-:Default: module=none
+:Default: none
 :Required?: yes
 :Introduced: 8.3.0
 
@@ -27,10 +27,10 @@ Description
 -----------
 The name of the external message modification plugin to be called. This can be a full path name.
 
-Module usage
+Action usage
 ------------
-.. _param-mmexternal-module-binary:
-.. _mmexternal.parameter.module.binary-usage:
+.. _param-mmexternal-action-binary:
+.. _mmexternal.parameter.action.binary-usage:
 
 .. code-block:: rsyslog
 
