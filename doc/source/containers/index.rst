@@ -20,3 +20,4 @@ no pid file is written.
 
    user_images
    development_images
+   rosi_loki_poc
