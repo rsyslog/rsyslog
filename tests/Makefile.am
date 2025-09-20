@@ -1432,10 +1432,10 @@ endif
 
 if ENABLE_MMNORMALIZE
 TESTS += msgvar-concurrency-array.sh \
-	msgvar-concurrency-array-event.tags.sh \
-	mmnormalize_rule_from_string.sh \
-	mmnormalize_rule_from_array.sh \
-	mmnormalize_parsesuccess.sh
+        msgvar-concurrency-array-event.tags.sh \
+        mmnormalize_rule_from_string.sh \
+        mmnormalize_rule_from_array.sh \
+        mmnormalize_parsesuccess.sh
 
 if HAVE_VALGRIND
 TESTS += \
@@ -1456,10 +1456,17 @@ TESTS += \
 endif
 endif # ENABLE_MMNORMALIZE
 
+if ENABLE_MMLEEFPARSE
+if ENABLE_IMPTCP
+TESTS += \
+        mmleefparse_basic.sh
+endif
+endif
+
 if ENABLE_MMJSONPARSE
 TESTS += \
-	mmjsonparse-w-o-cookie.sh \
-	mmjsonparse-w-o-cookie-multi-spaces.sh
+        mmjsonparse-w-o-cookie.sh \
+        mmjsonparse-w-o-cookie-multi-spaces.sh
 if ENABLE_IMPSTATS
 TESTS += \
 	mmjsonparse-invalid-containerName.sh \
@@ -2436,11 +2443,12 @@ EXTRA_DIST= \
 	rscript_ruleset_call_indirect-basic.sh \
 	rscript_ruleset_call_indirect-var.sh \
 	rscript_ruleset_call_indirect-invld.sh \
-	cee_simple.sh \
-	cee_diskqueue.sh \
-	mmjsonparse-w-o-cookie.sh \
-	mmjsonparse-w-o-cookie-multi-spaces.sh \
-	mmjsonparse_simple.sh \
+        cee_simple.sh \
+        cee_diskqueue.sh \
+        mmleefparse_basic.sh \
+        mmjsonparse-w-o-cookie.sh \
+        mmjsonparse-w-o-cookie-multi-spaces.sh \
+        mmjsonparse_simple.sh \
 	mmjsonparse-invalid-containerName.sh \
 	wtpShutdownAll-assertionFailure.sh \
 	imptcp-octet-framing-too-long-vg.sh \
