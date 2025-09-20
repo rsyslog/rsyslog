@@ -10,7 +10,7 @@ container
 
 .. summary-start
 
-Selects the structured data container that receives fields added by mmdblookup.
+Specifies the container for structured data from mmdblookup.
 
 .. summary-end
 
