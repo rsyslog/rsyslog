@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/mmdblookup`.
 :Name: container
 :Scope: module
 :Type: string (word)
-:Default: !iplocation
+:Default: ``!iplocation``
 :Required?: no
 :Introduced: 8.28.0
 
