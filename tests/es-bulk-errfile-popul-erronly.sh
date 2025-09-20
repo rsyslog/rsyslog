@@ -1,7 +1,6 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 ensure_elasticsearch_ready
 
 init_elasticsearch
@@ -29,7 +28,7 @@ ruleset(name="foo") {
   action(type="omelasticsearch"
 	 template="tpl"
 	 searchIndex="rsyslog_testbench"
-	 searchType="test-type"
+	 searchType="_doc"
 	 serverport="19200"
 	 bulkmode="on"
 	 errorFile="'${RSYSLOG_DYNNAME}'.errorfile"

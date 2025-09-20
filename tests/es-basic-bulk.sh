@@ -14,11 +14,12 @@ template(name="tpl" type="string"
 
 module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 :msg, contains, "msgnum:" {
-			action(type="omelasticsearch"
-				 template="tpl"
-				 serverport=`echo $ES_PORT`
-				 searchIndex="rsyslog_testbench"
-				 bulkmode="on")
+                        action(type="omelasticsearch"
+                                 template="tpl"
+                                 serverport=`echo $ES_PORT`
+                                 searchType="_doc"
+                                 searchIndex="rsyslog_testbench"
+                                 bulkmode="on")
 }
 '
 startup

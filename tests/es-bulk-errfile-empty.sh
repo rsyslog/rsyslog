@@ -1,7 +1,6 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 export ES_PORT=19200
 export NUMMESSAGES=10000
 export QUEUE_EMPTY_CHECK_FUNC=es_shutdown_empty_check
@@ -15,12 +14,13 @@ template(name="tpl" type="string"
 
 module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 :msg, contains, "msgnum:" {
-			action(type="omelasticsearch"
-				 template="tpl"
-				 serverport=`echo $ES_PORT`
-				 searchIndex="rsyslog_testbench"
-				 bulkmode="on"
-				 errorFile="./'${RSYSLOG_DYNNAME}'.errorfile")
+                        action(type="omelasticsearch"
+                                 template="tpl"
+                                 serverport=`echo $ES_PORT`
+                                 searchType="_doc"
+                                 searchIndex="rsyslog_testbench"
+                                 bulkmode="on"
+                                 errorFile="./'${RSYSLOG_DYNNAME}'.errorfile")
 }
 '
 startup

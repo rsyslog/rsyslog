@@ -1,7 +1,6 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 ensure_elasticsearch_ready
 generate_conf
 add_conf '
@@ -16,10 +15,11 @@ module(load="../plugins/impstats/.libs/impstats" interval="2" severity="7" reset
 
 module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 :msg, contains, "msgnum:" action(type="omelasticsearch"
-				 server=["localhost", "http://localhost/", "localhost:9201"]
-				 serverport="19200"
-				 template="tpl"
-				 searchIndex="rsyslog_testbench")
+                                 server=["localhost", "http://localhost/", "localhost:9201"]
+                                 serverport="19200"
+                                 template="tpl"
+                                 searchType="_doc"
+                                 searchIndex="rsyslog_testbench")
 '
 startup
 injectmsg  0 100

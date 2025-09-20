@@ -73,6 +73,7 @@ jobs:
           export CI_MAKE_OPT='-j20'
           export CI_MAKE_CHECK_OPT='-j4'
           export CI_CHECK_CMD='check'
+          export VERBOSE=1
           case "${{ matrix.config }}" in
           'centos_7')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_centos:7'
@@ -137,7 +138,8 @@ jobs:
               # It is better to run at least the majority of checks than to postpone that
               # any longer. 2025-01-31 RGerhards
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--enable-omazureeventhubs --enable-imdtls \
-                     --enable-omdtls --disable-omamqp1 --disable-snmp --disable-elasticsearch-tests"
+                     --enable-omdtls --disable-omamqp1 --disable-snmp --disable-kafka-tests \
+                     --disable-elasticsearch-tests"
               ;;
           'ubuntu_22_distcheck')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
@@ -194,7 +196,6 @@ jobs:
               export CI_MAKE_CHECK_OPT='-j8'
               export CI_CHECK_CMD='check'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp" # they are still valid
-              devtools/devcontainer.sh --rm devtools/run-ci.sh
               ;;
           esac
           devtools/devcontainer.sh --rm devtools/run-ci.sh
