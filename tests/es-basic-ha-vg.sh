@@ -2,7 +2,8 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=100
-export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
+#export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
+export ES_DOWNLOAD=elasticsearch-6.8.23.tar.gz
 export ES_PORT=19200
 ensure_elasticsearch_ready
 
