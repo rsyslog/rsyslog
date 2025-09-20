@@ -1,0 +1,45 @@
+services:
+  loki:
+    image: grafana/loki:2.9.6
+    command: -config.file=/etc/loki/local-config.yml
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki-data:/loki
+      - ./loki-config.yml:/etc/loki/local-config.yml:ro
+    restart: unless-stopped
+    networks:
+      - rosi-loki-net
+  grafana:
+    image: grafana/grafana:10.4.6
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - loki
+    restart: unless-stopped
+    networks:
+      - rosi-loki-net
+  promtail:
+    image: grafana/promtail:2.9.6
+    command: -config.file=/etc/promtail/config.yml
+    ports:
+      - "1514:1514/tcp"
+    volumes:
+      - ./promtail-config.yml:/etc/promtail/config.yml:ro
+    depends_on:
+      - loki
+    restart: unless-stopped
+    networks:
+      - rosi-loki-net
+
+volumes:
+  loki-data:
+
+networks:
+  rosi-loki-net:
+    driver: bridge
