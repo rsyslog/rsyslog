@@ -1,5 +1,5 @@
 .. _param-mmexternal-forcesingleinstance:
-.. _mmexternal.parameter.action.forcesingleinstance:
+.. _mmexternal.parameter.input.forcesingleinstance:
 
 forceSingleInstance
 ===================
@@ -17,7 +17,7 @@ Enforces that only a single instance of the external message modification plugin
 This parameter applies to :doc:`../../configuration/modules/mmexternal`.
 
 :Name: forceSingleInstance
-:Scope: action
+:Scope: input
 :Type: boolean
 :Default: off
 :Required?: no
@@ -27,10 +27,9 @@ Description
 -----------
 This is an expert parameter, just like the equivalent *omprog* parameter. See the message modification plugin's documentation if it is needed.
 
-Action usage
-------------
-.. _param-mmexternal-action-forcesingleinstance:
-.. _mmexternal.parameter.action.forcesingleinstance-usage:
+Input usage
+-----------
+.. _mmexternal.parameter.input.forcesingleinstance-usage:
 
 .. code-block:: rsyslog
 

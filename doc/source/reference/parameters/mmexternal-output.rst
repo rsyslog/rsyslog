@@ -1,5 +1,5 @@
 .. _param-mmexternal-output:
-.. _mmexternal.parameter.action.output:
+.. _mmexternal.parameter.input.output:
 
 output
 ======
@@ -17,7 +17,7 @@ Writes the external plugin's standard output to a helper log file for debugging.
 This parameter applies to :doc:`../../configuration/modules/mmexternal`.
 
 :Name: output
-:Scope: action
+:Scope: input
 :Type: string
 :Default: none
 :Required?: no
@@ -27,10 +27,9 @@ Description
 -----------
 This is a debug aid. If set, this is a filename where the plugins output is logged. Note that the output is also being processed as usual by rsyslog. Setting this parameter thus gives insight into the internal processing that happens between plugin and rsyslog core.
 
-Action usage
-------------
-.. _param-mmexternal-action-output:
-.. _mmexternal.parameter.action.output-usage:
+Input usage
+-----------
+.. _mmexternal.parameter.input.output-usage:
 
 .. code-block:: rsyslog
 

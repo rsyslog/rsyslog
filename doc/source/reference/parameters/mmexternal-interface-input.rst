@@ -1,5 +1,5 @@
 .. _param-mmexternal-interface-input:
-.. _mmexternal.parameter.action.interface-input:
+.. _mmexternal.parameter.input.interface-input:
 
 interface.input
 ===============
@@ -17,7 +17,7 @@ Selects which message representation mmexternal passes to the external plugin.
 This parameter applies to :doc:`../../configuration/modules/mmexternal`.
 
 :Name: interface.input
-:Scope: action
+:Scope: input
 :Type: string
 :Default: msg
 :Required?: no
@@ -27,10 +27,9 @@ Description
 -----------
 This can either be "msg", "rawmsg" or "fulljson". In case of "fulljson", the message object is provided as a json object. Otherwise, the respective property is provided. This setting **must** match the external plugin's expectations. Check the external plugin documentation for what needs to be used.
 
-Action usage
-------------
-.. _param-mmexternal-action-interface-input:
-.. _mmexternal.parameter.action.interface-input-usage:
+Input usage
+-----------
+.. _mmexternal.parameter.input.interface-input-usage:
 
 .. code-block:: rsyslog
 

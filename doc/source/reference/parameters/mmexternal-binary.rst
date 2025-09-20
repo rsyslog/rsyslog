@@ -1,5 +1,5 @@
 .. _param-mmexternal-binary:
-.. _mmexternal.parameter.action.binary:
+.. _mmexternal.parameter.input.binary:
 
 binary
 ======
@@ -17,7 +17,7 @@ Specifies the external message modification plugin executable that mmexternal in
 This parameter applies to :doc:`../../configuration/modules/mmexternal`.
 
 :Name: binary
-:Scope: action
+:Scope: input
 :Type: string
 :Default: none
 :Required?: yes
@@ -27,10 +27,9 @@ Description
 -----------
 The name of the external message modification plugin to be called. This can be a full path name.
 
-Action usage
-------------
-.. _param-mmexternal-action-binary:
-.. _mmexternal.parameter.action.binary-usage:
+Input usage
+-----------
+.. _mmexternal.parameter.input.binary-usage:
 
 .. code-block:: rsyslog
 
