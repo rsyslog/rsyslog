@@ -13,7 +13,7 @@ services:
   grafana:
     image: grafana/grafana:10.4.6
     environment:
-      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
     ports:
       - "3000:3000"
@@ -31,6 +31,7 @@ services:
       - "1514:1514/tcp"
     volumes:
       - ./promtail-config.yml:/etc/promtail/config.yml:ro
+      - promtail-data:/var/lib/promtail
     depends_on:
       - loki
     restart: unless-stopped
@@ -39,6 +40,7 @@ services:
 
 volumes:
   loki-data:
+  promtail-data:
 
 networks:
   rosi-loki-net:
