@@ -17,10 +17,11 @@ echo Init Testbench
 echo Create kafka/zookeeper instance and topics
 . $srcdir/diag.sh start-zookeeper
 . $srcdir/diag.sh start-kafka
+. $srcdir/diag.sh wait-kafka-startup
 . $srcdir/diag.sh create-kafka-topic 'static' '.dep_wrk' '22181'
 
-echo Give Kafka some time to process topic create ...
-sleep 5
+echo Ensuring kafka broker is reachable before starting receiver ...
+. $srcdir/diag.sh wait-kafka-startup
 
 echo Starting receiver instance [imkafka]
 export RSYSLOG_DEBUGLOG="log"
@@ -82,8 +83,8 @@ startup_vg 2
 echo Inject messages into rsyslog sender instance
 injectmsg 1 $TESTMESSAGES
 
-echo Sleep to give rsyslog instances time to process data ...
-sleep 5
+echo Verifying kafka broker remains reachable after message injection ...
+. $srcdir/diag.sh wait-kafka-startup
 
 echo Stopping sender instance [omkafka]
 shutdown_when_empty 2
