@@ -15,11 +15,12 @@ template(name="tpl" type="string"
 module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 
 if $msg contains "msgnum:" then {
-	action(type="omelasticsearch"
-	       server="127.0.0.1"
-	       serverport=`echo $ES_PORT`
-	       template="tpl"
-	       searchIndex="rsyslog_testbench")
+        action(type="omelasticsearch"
+               server="127.0.0.1"
+               serverport=`echo $ES_PORT`
+               template="tpl"
+               searchType="_doc"
+               searchIndex="rsyslog_testbench")
 }
 '
 startup_vgthread

@@ -24,12 +24,13 @@ module(load="../plugins/impstats/.libs/impstats" interval="1"
 module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 
 if $msg contains "msgnum:" then
-	action(type="omelasticsearch"
-	       server="127.0.0.1"
-	       serverport="'$ES_PORT'"
-	       template="tpl"
-	       searchIndex="rsyslog_testbench"
-	       rebindinterval="'$REBIND_INTERVAL'")
+        action(type="omelasticsearch"
+               server="127.0.0.1"
+               serverport="'$ES_PORT'"
+               template="tpl"
+               searchType="_doc"
+               searchIndex="rsyslog_testbench"
+               rebindinterval="'$REBIND_INTERVAL'")
 '
 startup
 injectmsg  0 $NUMMESSAGES
