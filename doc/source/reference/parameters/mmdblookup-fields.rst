@@ -30,10 +30,10 @@ messages. The fields will always be appended in the container used by
 mmdblookup (which may be overridden by the ``container`` parameter on
 module load).
 
-By default, the lookup path itself is used as the name for the resulting
-JSON property. This can be overridden by specifying a custom name. Use
-the following syntax to control the resulting variable name and lookup
-path:
+By default, the lookup path (without a leading exclamation mark (``!``),
+if present) is used as the name for the resulting JSON property. This can
+be overridden by specifying a custom name. Use the following syntax to
+control the resulting variable name and lookup path:
 
 * ``:customName:!path!to!field`` — specify the custom variable name
   enclosed in colons, followed by the MaxMind DB path.
