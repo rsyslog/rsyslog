@@ -1904,7 +1904,7 @@ presort() {
 
 #START: ext kafka config
 #dep_cache_dir=$(readlink -f .dep_cache)
-export RS_ZK_DOWNLOAD=apache-zookeeper-3.8.4.tar.gz
+export RS_ZK_DOWNLOAD=apache-zookeeper-3.8.5-bin.tar.gz
 dep_cache_dir=$(pwd)/.dep_cache
 dep_zk_url=https://www.rsyslog.com/files/download/rsyslog/$RS_ZK_DOWNLOAD
 dep_zk_cached_file=$dep_cache_dir/$RS_ZK_DOWNLOAD
