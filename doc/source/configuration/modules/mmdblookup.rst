@@ -74,6 +74,10 @@ Input Parameters
      - .. include:: ../../reference/parameters/mmdblookup-fields.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-mmdblookup-reloadonhup`
+     - .. include:: ../../reference/parameters/mmdblookup-reloadonhup.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 
 Examples
@@ -115,5 +119,6 @@ The following example uses a custom container and custom field name
    ../../reference/parameters/mmdblookup-key
    ../../reference/parameters/mmdblookup-mmdbfile
    ../../reference/parameters/mmdblookup-fields
+   ../../reference/parameters/mmdblookup-reloadonhup
 
 
