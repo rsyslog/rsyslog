@@ -26,11 +26,17 @@ This parameter applies to :doc:`../../configuration/modules/mmexternal`.
 
 Description
 -----------
-This can either be "msg", "rawmsg" or "fulljson". In case of "fulljson",
-the message object is provided as a json object. Otherwise, the respective
-property is provided. This setting **must** match the external plugin's
-expectations. Check the external plugin documentation for what needs to be
-used.
+This parameter controls what part of the message is passed to the external
+program's standard input. It can be set to one of the following values:
+
+* ``"msg"`` (default): Passes the MSG part of the syslog message.
+* ``"rawmsg"``: Passes the complete, original syslog message as received by
+  rsyslog, including headers.
+* ``"fulljson"``: Passes the rsyslog message object represented as a JSON
+  object.
+
+This setting **must** match the external plugin's expectations. Check the
+external plugin documentation for what needs to be used.
 
 Input usage
 -----------
