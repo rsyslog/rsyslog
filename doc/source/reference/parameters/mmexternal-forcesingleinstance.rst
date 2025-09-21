@@ -27,7 +27,7 @@ This parameter applies to :doc:`../../configuration/modules/mmexternal`.
 Description
 -----------
 This is an expert parameter, just like the equivalent
-:doc:`omprog <../../configuration/modules/omprog>` parameter. See the message
+:ref:`param-omprog-forcesingleinstance` parameter. See the message
 modification plugin's documentation if it is needed.
 
 Input usage
