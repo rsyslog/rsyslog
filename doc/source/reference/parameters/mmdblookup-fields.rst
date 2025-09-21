@@ -37,7 +37,7 @@ path:
 
 * ``:customName:!path!to!field`` — specify the custom variable name
   enclosed in colons, followed by the MaxMind DB path.
-* Bang signs (``!``) denote path levels within the database record.
+* Exclamation marks (``!``) denote path levels within the database record.
 
 For example, to extract ``!city!names!en`` but rename it to
 ``cityname``, use ``:cityname:!city!names!en`` as the field value.

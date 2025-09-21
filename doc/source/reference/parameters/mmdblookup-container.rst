@@ -10,7 +10,7 @@ container
 
 .. summary-start
 
-Specifies the container for structured data from mmdblookup.
+Specifies the container for fields amended by mmdblookup.
 
 .. summary-end
 
