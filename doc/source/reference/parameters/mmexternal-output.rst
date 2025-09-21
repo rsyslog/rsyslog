@@ -27,9 +27,9 @@ This parameter applies to :doc:`../../configuration/modules/mmexternal`.
 Description
 -----------
 This is a debug aid. If set, this is a filename where the plugin's standard
-output is logged. Note that the output is also being processed as usual by
-rsyslog. Setting this parameter thus gives insight into the internal
-processing that happens between plugin and rsyslog core.
+output and standard error are logged. Note that the output is also being
+processed as usual by rsyslog. Setting this parameter thus gives insight into
+the internal processing that happens between plugin and rsyslog core.
 
 .. warning::
 
