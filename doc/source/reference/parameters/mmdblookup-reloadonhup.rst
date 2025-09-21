@@ -1,12 +1,12 @@
 .. _param-mmdblookup-reloadonhup:
 .. _mmdblookup.parameter.input.reloadonhup:
 
-reloadOnHup
+reloadonhup
 ===========
 
 .. index::
-   single: mmdblookup; reloadOnHup
-   single: reloadOnHup
+   single: mmdblookup; reloadonhup
+   single: reloadonhup
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Controls whether mmdblookup reopens the MaxMind database after a HUP signal.
 
 This parameter applies to :doc:`../../configuration/modules/mmdblookup`.
 
-:Name: reloadOnHup
+:Name: reloadonhup
 :Scope: input
 :Type: boolean
 :Default: on
