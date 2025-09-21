@@ -51,7 +51,9 @@ Input usage
    action(type="mmdblookup"
           key="!clientip"
           mmdbFile="/etc/rsyslog.d/GeoLite2-City.mmdb"
-          fields=[":continent:!continent!code", ":loc:!location"])
+          fields=[":continent:!continent!code",
+                  "!country!iso_code",
+                  ":loc:!location"])
 
 See also
 --------
