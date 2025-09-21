@@ -43,7 +43,7 @@ Input usage
    action(
        type="mmexternal"
        binary="/path/to/mmexternal.py"
-       interface.input="fulljson"
+       interfaceInput="fulljson"
    )
 
 See also
