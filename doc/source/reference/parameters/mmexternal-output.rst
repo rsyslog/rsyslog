@@ -10,8 +10,8 @@ output
 
 .. summary-start
 
-Writes the external plugin's standard output to a helper log file for
-debugging.
+Writes the external plugin's standard output and standard error to a helper
+log file for debugging.
 
 .. summary-end
 
