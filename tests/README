@@ -3,6 +3,21 @@ evolving. New tests are always welcome. So far, most tests check
 out the functionality of a single module. More complex tests are
 welcome.
 
+Quick Start (Modern Harness)
+============================
+
+-   To run a single test script from the repository root, execute
+    `./tests/<test-name>.sh`. The root-level `diag.sh` stub will
+    automatically run `autoreconf`, invoke `./configure --enable-testbench`
+    with the default feature set, and build any missing helper binaries
+    before forwarding to `tests/diag.sh`.
+-   For the full suite, run `make check -j4` after configuration. Inspect
+    `tests/test-suite.log` if a failure occurs.
+-   When introducing a new test, mirror an existing script, source
+    `${srcdir:=.}/diag.sh`, and register the script inside `tests/Makefile.am`
+    so the autotools harness is aware of it. See `AGENTS.md` for additional
+    guidance aimed at AI contributors.
+
 For a simple sample, see rtinit.c, which does a simple
 init/deinit check of the runtime system.
 

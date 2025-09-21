@@ -140,10 +140,16 @@ Instead, AI agents should invoke individual test scripts directly. This yields u
 
 ### Running Individual Tests (AI-Agent Best Practice)
 
-1.  **Configure the project** (once per session):
+1.  **Initialize the build system** (first run after cloning):
     ```bash
-    ./configure --enable-imdiag --enable-testbench
+    ./autogen.sh        # or: autoreconf -fi
+    ./configure --enable-imdiag --enable-imfile \
+        --enable-omstdout --enable-testbench --enable-imtcp
     ```
+    *Skipping this step is usually safe—the root-level `diag.sh` stub will
+    regenerate `configure` and invoke it automatically.* Running it yourself,
+    however, surfaces missing autotools packages up front and lets you adjust
+    configure options explicitly.
 2.  **Invoke your test**:
     ```bash
     ./tests/<test-script>.sh
@@ -156,6 +162,23 @@ Instead, AI agents should invoke individual test scripts directly. This yields u
       - Each test script transparently finds and loads the test harness
       - You get unfiltered stdout/stderr without any CI wrapper
       - No manual `cd` or log-file parsing required
+
+-----
+
+### Creating or Updating Tests
+
+-   Shell-based tests live in `tests/` and should source `${srcdir:=.}/diag.sh`
+    (see any existing `*.sh` test for the canonical header).
+-   Follow the naming conventions in `tests/README` (e.g., suffix `-vg.sh` for
+    valgrind, `-vgthread.sh` for helgrind).
+-   Register new scripts in `tests/Makefile.am` within the appropriate feature
+    guard (`if ENABLE_DEFAULT_TESTS`, Elasticsearch-specific blocks, etc.) so
+    `make check` knows about them.
+-   Prefer reusing helpers from `tests/diag.sh` (e.g., `rsyslog_testbench_require_*`
+    probes, dynamic port helpers) instead of ad-hoc shell logic. This keeps
+    tests parallel-safe and consistent with CI expectations.
+-   When adding C helpers for a test, list them in `tests/Makefile.am` via
+    `check_PROGRAMS` so they are compiled automatically during `make check`.
 
 -----
 
