@@ -888,7 +888,9 @@ static rsRetVal doWrite(instanceData *__restrict__ const pData, uchar *__restric
     const int needsLF = pData->bAddLF && (lenBuf == 0 || pszBuf[lenBuf - 1] != '\n');
     uchar addlfBuf[ADDLF_SIGBUF_STACKLEN];
     uchar *sigBuf = NULL;
+    uchar *sigWriteBuf = pszBuf;
     size_t sigLen = 0;
+    rs_size_t sigWriteLen = (rs_size_t)lenBuf;
     int freeSigBuf = 0;
 
     DBGPRINTF("omfile: write to stream, pData->pStrm %p, lenBuf %d, needsLF %d, strt data %.128s\n", pData->pStrm,
@@ -898,31 +900,30 @@ static rsRetVal doWrite(instanceData *__restrict__ const pData, uchar *__restric
             CHKiRet(strm.Write(pData->pStrm, pszBuf, lenBuf));
         }
         if (needsLF) {
-            if (pData->useSigprov) {
-                sigLen = (size_t)lenBuf + 1;
-                if (sigLen <= sizeof(addlfBuf)) {
-                    sigBuf = addlfBuf;
-                } else {
-                    sigBuf = (uchar *)malloc(sigLen);
-                    if (sigBuf == NULL) {
-                        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-                    }
-                    freeSigBuf = 1;
-                }
-                if (lenBuf > 0) {
-                    memcpy(sigBuf, pszBuf, (size_t)lenBuf);
-                }
-                sigBuf[lenBuf] = '\n';
-            }
             CHKiRet(strm.WriteChar(pData->pStrm, '\n'));
         }
-        if (pData->useSigprov) {
-            if (needsLF) {
-                CHKiRet(pData->sigprov.OnRecordWrite(pData->sigprovFileData, sigBuf, (rs_size_t)sigLen));
+    }
+
+    if (pData->useSigprov) {
+        if (needsLF) {
+            sigLen = (size_t)lenBuf + 1;
+            if (sigLen <= sizeof(addlfBuf)) {
+                sigBuf = addlfBuf;
             } else {
-                CHKiRet(pData->sigprov.OnRecordWrite(pData->sigprovFileData, pszBuf, lenBuf));
+                sigBuf = (uchar *)malloc(sigLen);
+                if (sigBuf == NULL) {
+                    ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+                }
+                freeSigBuf = 1;
             }
+            if (lenBuf > 0) {
+                memcpy(sigBuf, pszBuf, (size_t)lenBuf);
+            }
+            sigBuf[lenBuf] = '\n';
+            sigWriteBuf = sigBuf;
+            sigWriteLen = (rs_size_t)sigLen;
         }
+        CHKiRet(pData->sigprov.OnRecordWrite(pData->sigprovFileData, sigWriteBuf, sigWriteLen));
     }
 
 finalize_it:
