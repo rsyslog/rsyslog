@@ -48,59 +48,30 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
 
 Action Parameters
 -----------------
 
-cookie
-^^^^^^
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "@cee:", "no", "none"
-
-Permits to set the cookie that must be present in front of the
-JSON part of the message.
-
-Most importantly, this can be set to the empty string ("") in order
-to not require any cookie. In this case, leading spaces are permitted
-in front of the JSON. No non-whitespace characters are permitted
-after the JSON. If such is required, mmnormalize must be used.
-
-
-useRawMsg
-^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "none"
-
-Specifies if the raw message should be used for normalization (on)
-or just the MSG part of the message (off).
-
-
-container
-^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "$!", "no", "none"
-
-Specifies the JSON container (path) under which parsed elements should be
-placed. By default, all parsed properties are merged into root of
-message properties. You can place them under a subtree, instead. You
-can place them in local variables, also, by setting path="$.".
+   * - Parameter
+     - Summary
+   * - :ref:`param-mmjsonparse-cookie`
+     - .. include:: ../../reference/parameters/mmjsonparse-cookie.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmjsonparse-userawmsg`
+     - .. include:: ../../reference/parameters/mmjsonparse-userawmsg.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmjsonparse-container`
+     - .. include:: ../../reference/parameters/mmjsonparse-container.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 
 .. _mmjsonparse-parsing-result:
@@ -144,4 +115,12 @@ To permit parsing messages without cookie, use this action statement
 .. code-block:: none
 
   action(type="mmjsonparse" cookie="")
+
+
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/mmjsonparse-cookie
+   ../../reference/parameters/mmjsonparse-userawmsg
+   ../../reference/parameters/mmjsonparse-container
 
