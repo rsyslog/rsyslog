@@ -382,8 +382,18 @@ BEGINsetModCnf
         loadModConf->pszBindRuleset = NULL;
     }
 
-    /* Add warning about log.syslog and format=zabbix */
-    
+    /* Add warning about log.syslog and format=zabbix without log.file */
+    if (loadModConf->bLogToSyslog != 0 
+        && loadModConf->statsFmt == statsFmt_Zabbix 
+        && loadModConf->bLogToFile == NULL) {
+        parser_warnmsg(
+          "impstats: log.syslog set to \"on\" and format set to \"zabbix\" without "
+            "log.file set. This is not recommended due to potential for pstats msg "
+            "truncation leading to malformed JSON. Ensure \"$MaxMessageSize\" at the "
+            "top of rsyslog.conf to a sufficient size or ensure log.file is specified. " 
+            "Increasing $MaxMessageSize may have other adverse side effect."
+        );
+    }
     loadModConf->configSetViaV2Method = 1;
     bLegacyCnfModGlobalsPermitted = 0;
 
