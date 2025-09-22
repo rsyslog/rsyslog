@@ -38,6 +38,11 @@ program's standard input. It can be set to one of the following values:
 This setting **must** match the external plugin's expectations. Check the
 external plugin documentation for what needs to be used.
 
+.. note::
+   When processing multi-line messages, you **must** use ``"fulljson"``. This
+   ensures that embedded line breaks are encoded properly and do not cause
+   parsing errors in the external plugin interface.
+
 Input usage
 -----------
 .. _mmexternal.parameter.input.interface-input-usage:
