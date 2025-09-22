@@ -1,6 +1,12 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
 - overall improved documentation via a large set of topic updates.
+- 2025-09-22: mmleefparse: new message modification module for LEEF format
+  This parses the LEEF message (if it is) and creates a JSON subtree.
+  The current implementation is PoC and will be provided to gather
+  early review.
+  Changes, including breaking changes, may happen in future versions of
+  this module.
 - 2025-09-21: tests/omelasticsearch: align suite with ES 7.14, reduce flakiness
   Non-technical: test flakiness makes it hard to validate unrelated changes.
   This aligns omelasticsearch tests with ES 7.14 defaults to get the
