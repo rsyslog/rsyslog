@@ -32,8 +32,9 @@ program's standard input. It can be set to one of the following values:
 * ``"msg"`` (default): Passes the MSG part of the syslog message.
 * ``"rawmsg"``: Passes the complete, original syslog message as received by
   rsyslog, including headers.
-* ``"fulljson"``: Passes the rsyslog message object represented as a JSON
-  object.
+* ``"fulljson"``: Passes the complete rsyslog message object (with all
+  properties) as a JSON object string. This corresponds to the ``jsonmesg``
+  dynamic message property.
 
 This setting **must** match the external plugin's expectations. Check the
 external plugin documentation for what needs to be used.
