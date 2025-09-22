@@ -40,8 +40,8 @@ When the prefix is present ``mmaudit`` extracts two header elements:
   ``):`` (typically ``timestamp:sequence``).
 
 The remainder of the record is interpreted as a sequence of
-whitespace-separated ``name=value`` pairs. Values may be wrapped in
-single or double quotes. The extracted data is inserted into a JSON
+whitespace-separated ``name=value`` pairs. Values may be unquoted (terminated
+by a space) or wrapped in single or double quotes. The extracted data is inserted into a JSON
 object called ``data`` beneath the ``$!audit`` subtree. Each value is
 stored without surrounding quotes.
 
