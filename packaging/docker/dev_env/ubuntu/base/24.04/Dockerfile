@@ -298,7 +298,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS=" \
 	--enable-clickhouse \
 	--enable-clickhouse-tests=no \
 	--enable-elasticsearch \
-	--enable-elasticsearch-tests \
+	--disable-elasticsearch-tests \
 	--enable-ffaup \
 	--enable-gnutls \
 	--enable-gssapi-krb5 \
@@ -331,6 +331,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS=" \
 	--enable-mmfields \
 	--enable-mmjsonparse \
 	--enable-mmkubernetes \
+	--enable-mmleefparse \
 	--enable-mmnormalize \
 	--enable-mmpstrucdata \
 	--enable-mmrm1stspace \
