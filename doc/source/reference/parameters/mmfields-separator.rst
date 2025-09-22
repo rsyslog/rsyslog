@@ -39,7 +39,7 @@ one and being incremented for each field.
 
 Module usage
 ------------
-.. _param-mmfields-module-separator:
+.. _param-mmfields-module-separator-usage:
 .. _mmfields.parameter.module.separator-usage:
 
 .. code-block:: rsyslog

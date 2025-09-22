@@ -30,7 +30,7 @@ written. The default is to use the JSON root object itself.
 
 Module usage
 ------------
-.. _param-mmfields-module-jsonroot:
+.. _param-mmfields-module-jsonroot-usage:
 .. _mmfields.parameter.module.jsonroot-usage:
 
 .. code-block:: rsyslog
