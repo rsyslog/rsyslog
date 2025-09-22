@@ -25,14 +25,13 @@ This parameter applies to :doc:`../../configuration/modules/mmfields`.
 
 Description
 -----------
-This is the character used to separate fields. Currently, only a single
-character is permitted, while the RainerScript method permits to specify
-multi-character separator strings. For CEF, this is not required. If there
-is actual need to support multi-character separator strings, support can
-relatively easy be added. It is suggested to request it on the rsyslog
-mailing list, together with the use case - we intend to add functionality only
-if there is a real use case behind the request (in the past we too-often
-implemented things that actually never got used).
+This parameter specifies the character used to separate fields. The module
+currently accepts only a single character. Multi-character separators are not
+supported by ``mmfields`` but can be implemented via the RainerScript method.
+CEF does not require multi-character separators, so this limitation is usually
+acceptable. If you need multi-character separators in ``mmfields``, please
+request this feature on the rsyslog mailing list and describe the use case;
+support can be added when there is a documented requirement.
 
 The fields are named f\ *nbr*, where *nbr* is the field number starting with
 one and being incremented for each field.
