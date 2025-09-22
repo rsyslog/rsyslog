@@ -667,6 +667,12 @@ static zbx_group_t *zbx_find_or_create_group(zbx_ctx_t *ctx, const char *key)
     g->first = 1;
     g->key = strdup(key);
     g->count = 0;
+    if(g->arr == NULL || g->key == NULL) {
+        if(g->arr != NULL) es_deleteStr(g->arr);
+        if(g->key != NULL) free(g->key);
+        ctx->len--;
+        return NULL;
+    }    
     return g;
 }
 
@@ -792,6 +798,11 @@ static void generateZabbixStats(void)
 
     /* Build final grouped JSON */
     es_str_t *finalJson = es_newStrFromCStr("{ \"timedate\": \"", strlen("{ \"timedate\": \""));
+    if (finalJson == NULL) {
+        LogError(0, RS_RET_OUT_OF_MEMORY, "impstats: fn() generateZabbixStats: could not create finalJson string");
+        /* cleanup of ctx is handled at the end of the function, so we can just return */
+        return;
+    }
     es_addBuf(&finalJson, timebuf, strlen(timebuf));
     es_addBuf(&finalJson, "\"", 1);
 
