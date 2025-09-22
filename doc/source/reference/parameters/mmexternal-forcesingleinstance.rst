@@ -26,12 +26,11 @@ This parameter applies to :doc:`../../configuration/modules/mmexternal`.
 
 Description
 -----------
-This is an expert parameter. By default, ``mmexternal`` may start multiple
-instances of the external program, for example when used with an action queue
-with multiple worker threads. If you need to ensure that only a single
-instance of the program is ever running, set this parameter to ``"on"``. This
-is useful if the external program accesses a shared resource that does not
-support concurrent access.
+This is an expert parameter. By default, ``mmexternal`` starts an instance of
+the external program for each worker thread configured for the action. If you
+need to ensure that only a single instance of the program is ever running, set
+this parameter to ``"on"``. This is useful if the external program accesses a
+shared resource that does not support concurrent access.
 
 This parameter is equivalent to the
 :ref:`param-omprog-forcesingleinstance` parameter.
