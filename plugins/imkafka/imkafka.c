@@ -803,17 +803,23 @@ CODESTARTactivateCnf;
             (void)statsobj.SetOrigin(inst->stats, (uchar*)"imkafka");
             /* init and register per-instance counters */
             STATSCOUNTER_INIT(inst->ctrReceived, inst->mutCtrReceived);
-            (void)statsobj.AddCounter(inst->stats, (uchar*)"received", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &inst->ctrReceived);
+            (void)statsobj.AddCounter(inst->stats, (uchar*)"received", ctrType_IntCtr,
+                CTR_FLAG_RESETTABLE, &inst->ctrReceived);
             STATSCOUNTER_INIT(inst->ctrSubmitted, inst->mutCtrSubmitted);
-            (void)statsobj.AddCounter(inst->stats, (uchar*)"submitted", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &inst->ctrSubmitted);
+            (void)statsobj.AddCounter(inst->stats, (uchar*)"submitted", ctrType_IntCtr,
+                CTR_FLAG_RESETTABLE, &inst->ctrSubmitted);
             STATSCOUNTER_INIT(inst->ctrKafkaFail, inst->mutCtrKafkaFail);
-            (void)statsobj.AddCounter(inst->stats, (uchar*)"failures", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &inst->ctrKafkaFail);
+            (void)statsobj.AddCounter(inst->stats, (uchar*)"failures", ctrType_IntCtr,
+                CTR_FLAG_RESETTABLE, &inst->ctrKafkaFail);
             STATSCOUNTER_INIT(inst->ctrEOF, inst->mutCtrEOF);
-            (void)statsobj.AddCounter(inst->stats, (uchar*)"eof", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &inst->ctrEOF);
+            (void)statsobj.AddCounter(inst->stats, (uchar*)"eof", ctrType_IntCtr,
+                CTR_FLAG_RESETTABLE, &inst->ctrEOF);
             STATSCOUNTER_INIT(inst->ctrPollEmpty, inst->mutCtrPollEmpty);
-            (void)statsobj.AddCounter(inst->stats, (uchar*)"poll_empty", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &inst->ctrPollEmpty);
+            (void)statsobj.AddCounter(inst->stats, (uchar*)"poll_empty", ctrType_IntCtr,
+                CTR_FLAG_RESETTABLE, &inst->ctrPollEmpty);
             STATSCOUNTER_INIT(inst->ctrMaxLag, inst->mutCtrMaxLag);
-            (void)statsobj.AddCounter(inst->stats, (uchar*)"maxlag", ctrType_Int, CTR_FLAG_NONE, &inst->ctrMaxLag);
+            (void)statsobj.AddCounter(inst->stats, (uchar*)"maxlag", ctrType_Int,
+                CTR_FLAG_NONE, &inst->ctrMaxLag);
             (void)statsobj.ConstructFinalize(inst->stats);
         }
     }
@@ -858,14 +864,16 @@ static void shutdownKafkaWorkers(void)
     kafkaWrkrInfo = NULL;
 
     for (inst = runModConf->root; inst != NULL; inst = inst->next) {
-        DBGPRINTF("imkafka: stop consuming %s/%s/%s\n", inst->topic, inst->consumergroup, inst->brokers);
+        DBGPRINTF("imkafka: stop consuming %s/%s/%s\n", inst->topic,
+            inst->consumergroup, inst->brokers);
         rd_kafka_consumer_close(inst->rk); /* Close the consumer, committing final offsets, etc. */
         rd_kafka_destroy(inst->rk);        /* Destroy handle object */
-        DBGPRINTF("imkafka: stopped consuming %s/%s/%s\n", inst->topic, inst->consumergroup, inst->brokers);
+        DBGPRINTF("imkafka: stopped consuming %s/%s/%s\n", inst->topic,
+            inst->consumergroup, inst->brokers);
 #if RD_KAFKA_VERSION < 0x00090001
         /* Wait for kafka being destroyed in old API */
         if (rd_kafka_wait_destroyed(10000) < 0) {
-            DBGPRINTF("imkafka: error, rd_kafka_destroy did not finish after grace timeout (10s)!\n");
+            DBGPRINTF("imkafka: error, rd_kafka_destroy didn't finish after grace timeout (10s)!\n");
         } else {
             DBGPRINTF("imkafka: rd_kafka_destroy successfully finished\n");
         }
@@ -887,7 +895,7 @@ CODESTARTrunInput;
     }
     if (activeKafkaworkers == 0) {
         LogError(0, RS_RET_ERR,
-                 "imkafka: no active inputs, input does not run - there should have been additional error messages given previously");
+                 "imkafka: no active inputs, input not run - other additional error messages should've given previously");
         ABORT_FINALIZE(RS_RET_ERR);
     }
     DBGPRINTF("imkafka: Starting %d imkafka workerthreads\n", activeKafkaworkers);
@@ -979,7 +987,8 @@ CODESTARTmodInit;
     pthread_attr_init(&wrkrThrdAttr);
     pthread_attr_setstacksize(&wrkrThrdAttr, 4096 * 1024);
 
-    DBGPRINTF("imkafka %s using librdkafka version %s, 0x%x\n", VERSION, rd_kafka_version_str(), rd_kafka_version());
+    DBGPRINTF("imkafka %s using librdkafka version %s, 0x%x\n", VERSION,
+        rd_kafka_version_str(), rd_kafka_version());
 
     /* ---- module-global stats object and counters ---- */
     CHKiRet(statsobj.Construct(&kafkaStats));
@@ -1000,23 +1009,32 @@ CODESTARTmodInit;
     CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"maxlag",     ctrType_Int,    CTR_FLAG_NONE, &ctrMaxLag));
 
     /* librdkafka window metrics */
-    CHKiRet(statsobj.AddCounter(kafkaStats, UCHAR_CONSTANT("rtt_avg_usec"),       ctrType_Int, CTR_FLAG_NONE, &rtt_avg_usec));
-    CHKiRet(statsobj.AddCounter(kafkaStats, UCHAR_CONSTANT("throttle_avg_msec"),  ctrType_Int, CTR_FLAG_NONE, &throttle_avg_msec));
-    CHKiRet(statsobj.AddCounter(kafkaStats, UCHAR_CONSTANT("int_latency_avg_usec"), ctrType_Int, CTR_FLAG_NONE, &int_latency_avg_usec));
+    CHKiRet(statsobj.AddCounter(kafkaStats, UCHAR_CONSTANT("rtt_avg_usec"),
+        ctrType_Int, CTR_FLAG_NONE, &rtt_avg_usec));
+    CHKiRet(statsobj.AddCounter(kafkaStats, UCHAR_CONSTANT("throttle_avg_msec"), 
+        ctrType_Int, CTR_FLAG_NONE, &throttle_avg_msec));
+    CHKiRet(statsobj.AddCounter(kafkaStats, UCHAR_CONSTANT("int_latency_avg_usec"),
+        ctrType_Int, CTR_FLAG_NONE, &int_latency_avg_usec));
 
     /* categorized error counters */
     STATSCOUNTER_INIT(ctrKafkaRespTimedOut, mutCtrKafkaRespTimedOut);
-    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_timed_out", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespTimedOut));
+    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_timed_out",
+        ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespTimedOut));
     STATSCOUNTER_INIT(ctrKafkaRespTransport, mutCtrKafkaRespTransport);
-    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_transport", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespTransport));
+    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_transport",
+        ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespTransport));
     STATSCOUNTER_INIT(ctrKafkaRespBrokerDown, mutCtrKafkaRespBrokerDown);
-    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_broker_down", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespBrokerDown));
+    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_broker_down",
+        ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespBrokerDown));
     STATSCOUNTER_INIT(ctrKafkaRespAuth, mutCtrKafkaRespAuth);
-    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_auth", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespAuth));
+    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_auth",
+        ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespAuth));
     STATSCOUNTER_INIT(ctrKafkaRespSSL, mutCtrKafkaRespSSL);
-    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_ssl", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespSSL));
+    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_ssl",
+        ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespSSL));
     STATSCOUNTER_INIT(ctrKafkaRespOther, mutCtrKafkaRespOther);
-    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_other", ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespOther));
+    CHKiRet(statsobj.AddCounter(kafkaStats, (uchar*)"errors_other",
+        ctrType_IntCtr, CTR_FLAG_RESETTABLE, &ctrKafkaRespOther));
 
     CHKiRet(statsobj.ConstructFinalize(kafkaStats));
 ENDmodInit
