@@ -27,7 +27,8 @@ This parameter applies to :doc:`../../configuration/modules/mmexternal`.
 Description
 -----------
 The name of the external message modification plugin to be called. This can
-be a full path name.
+be a full path name. Command-line arguments for the executable can also be
+included in the string.
 
 Input usage
 -----------
