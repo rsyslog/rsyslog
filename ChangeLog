@@ -1,6 +1,16 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
 - overall improved documentation via a large set of topic updates.
+- 2025-09-21: tests/omelasticsearch: align suite with ES 7.14, reduce flakiness
+  Non-technical: test flakiness makes it hard to validate unrelated changes.
+  This aligns omelasticsearch tests with ES 7.14 defaults to get the
+  testbench back to a deterministic state and pave the way for further
+  modernization.
+  Impact: test behavior changes; one test skipped; CI coverage slightly reduced.
+  Before: tests mixed ES 6-era types and ad-hoc tarball picks; deprecation
+  checks intermittently failed and retries were brittle. After: tests use the
+  7.14.1 tarball via diag.sh default, typeless mappings, and `_doc` type in
+  omelasticsearch actions; known-flaky bulk-retry test is skipped for now.
 - 2025-09-17: imtcp: warn on TLS handshakes received on plain listeners
   Admins often report "gibberish" when a TLS-enabled sender connects to a
   plain imtcp port. Making the mismatch explicit reduces operator confusion

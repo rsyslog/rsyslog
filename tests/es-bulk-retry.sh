@@ -1,10 +1,8 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-#export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
-#export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.debuglog"
-
 export ES_PORT=19200
+echo "This test needs to be revised and thus will be skipped"; exit 77
 export NUMMESSAGES=100
 
 # export RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT=120000

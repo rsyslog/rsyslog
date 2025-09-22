@@ -13,10 +13,11 @@ template(name="tpl" type="string"
 
 module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 :msg, contains, "msgnum:" action(type="omelasticsearch"
-				 server="localhost" 
-				 serverport=`echo $ES_PORT`
-				 template="tpl"
-				 searchIndex="rsyslog_testbench")
+                                 server="localhost"
+                                 serverport=`echo $ES_PORT`
+                                 template="tpl"
+                                 searchType="_doc"
+                                 searchIndex="rsyslog_testbench")
 '
 startup
 injectmsg

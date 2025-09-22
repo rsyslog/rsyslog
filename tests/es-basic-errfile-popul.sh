@@ -1,7 +1,6 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
-export ES_DOWNLOAD=elasticsearch-6.0.0.tar.gz
 export ES_PORT=19200
 export NUMMESSAGES=1000 # slow test, thus low number - large number is NOT necessary
 ensure_elasticsearch_ready
@@ -9,11 +8,9 @@ ensure_elasticsearch_ready
 init_elasticsearch
 curl -H 'Content-Type: application/json' -XPUT localhost:19200/rsyslog_testbench/ -d '{
   "mappings": {
-    "test-type": {
-      "properties": {
-        "msgnum": {
-          "type": "integer"
-        }
+    "properties": {
+      "msgnum": {
+        "type": "integer"
       }
     }
   }
@@ -31,7 +28,7 @@ module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 :msg, contains, "msgnum:" action(type="omelasticsearch"
 				 template="tpl"
 				 searchIndex="rsyslog_testbench"
-				 searchType="test-type"
+				 searchType="_doc"
 				 serverport="19200"
 				 bulkmode="off"
 				 errorFile="./'${RSYSLOG_DYNNAME}'.errorfile")

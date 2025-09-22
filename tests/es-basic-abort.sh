@@ -12,13 +12,14 @@ template(name="tpl" type="string"
 module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 
 if $msg contains "msgnum:" then {
-	action(type="omelasticsearch"
-		server="127.0.0.1"
-		serverport="19200"
-		template="tpl"
-		action.resumeRetryCount="-1"
-		action.resumeInterval="1"
-		searchIndex="rsyslog_testbench")
+        action(type="omelasticsearch"
+                server="127.0.0.1"
+                serverport="19200"
+                template="tpl"
+                searchType="_doc"
+                action.resumeRetryCount="-1"
+                action.resumeInterval="1"
+                searchIndex="rsyslog_testbench")
 
 	# this action just to count processed messages
 	action(type="omfile" file="'$RSYSLOG_DYNNAME'.syncfile")

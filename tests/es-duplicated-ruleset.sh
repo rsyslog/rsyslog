@@ -17,23 +17,25 @@ template(name="tpl" type="string" string="{\"msgnum\":\"%msg:F,58:2%\"}")
 
 module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 ruleset(name="try_es") {
-		action(type="omelasticsearch"
-				 server="localhost"
-				 serverport=`echo $ES_PORT`
-				 template="tpl"
-				 searchIndex="rsyslog_testbench"
-				 retryruleset="try_es"
-				 )
+                action(type="omelasticsearch"
+                                 server="localhost"
+                                 serverport=`echo $ES_PORT`
+                                 template="tpl"
+                                 searchType="_doc"
+                                 searchIndex="rsyslog_testbench"
+                                 retryruleset="try_es"
+                                 )
 }
 
 ruleset(name="try_es") {
-		action(type="omelasticsearch"
-				 server="localhost"
-				 serverport=`echo $ES_PORT`
-				 template="tpl"
-				 searchIndex="rsyslog_testbench"
-				 retryruleset="try_es"
-				 )
+                action(type="omelasticsearch"
+                                 server="localhost"
+                                 serverport=`echo $ES_PORT`
+                                 template="tpl"
+                                 searchType="_doc"
+                                 searchIndex="rsyslog_testbench"
+                                 retryruleset="try_es"
+                                 )
 }
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'")
 '

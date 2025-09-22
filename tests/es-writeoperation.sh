@@ -10,12 +10,13 @@ template(name="tpl" type="string"
 module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 
 if $msg contains "msgnum:" then
-	action(type="omelasticsearch"
-	       server="127.0.0.1"
-	       serverport="19200"
-	       template="tpl"
-	       writeoperation="create"
-	       searchIndex="rsyslog_testbench")
+        action(type="omelasticsearch"
+               server="127.0.0.1"
+               serverport="19200"
+               template="tpl"
+               searchType="_doc"
+               writeoperation="create"
+               searchIndex="rsyslog_testbench")
 
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
@@ -40,12 +41,13 @@ template(name="tpl" type="string"
 module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 
 if $msg contains "msgnum:" then
-	action(type="omelasticsearch"
-	       server="127.0.0.1"
-	       serverport="19200"
-	       template="tpl"
-	       writeoperation="unknown"
-	       searchIndex="rsyslog_testbench")
+        action(type="omelasticsearch"
+               server="127.0.0.1"
+               serverport="19200"
+               template="tpl"
+               searchType="_doc"
+               writeoperation="unknown"
+               searchIndex="rsyslog_testbench")
 
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
@@ -72,12 +74,13 @@ module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 template(name="id-template" type="list") { constant(value="123456789") }
 
 if $msg contains "msgnum:" then
-	action(type="omelasticsearch"
-	       server="127.0.0.1"
-	       serverport="19200"
-	       template="tpl"
-	       writeoperation="create"
-	       bulkid="id-template"
+        action(type="omelasticsearch"
+               server="127.0.0.1"
+               serverport="19200"
+               template="tpl"
+               searchType="_doc"
+               writeoperation="create"
+               bulkid="id-template"
 	       dynbulkid="on"
 	       bulkmode="on"
 	       searchIndex="rsyslog_testbench")

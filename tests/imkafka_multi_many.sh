@@ -33,6 +33,10 @@ start_kafka '.dep_wrk1'
 start_kafka '.dep_wrk2'
 start_kafka '.dep_wrk3'
 
+wait_for_kafka_startup '.dep_wrk1'
+wait_for_kafka_startup '.dep_wrk2'
+wait_for_kafka_startup '.dep_wrk3'
+
 # create new topic
 create_kafka_topic $RANDTOPIC '.dep_wrk1' '22181'
 
@@ -118,8 +122,10 @@ echo Inject messages into kafka
 kcat <$RSYSLOG_OUT_LOG.in  -P -b 127.0.0.1:29092 -t $RANDTOPIC
 # ---
 
-echo Give imkafka some time to start...
-sleep 5
+echo Ensuring kafka brokers remain reachable before shutdown...
+wait_for_kafka_startup '.dep_wrk1'
+wait_for_kafka_startup '.dep_wrk2'
+wait_for_kafka_startup '.dep_wrk3'
 
 echo Stopping sender instance [omkafka]
 shutdown_when_empty

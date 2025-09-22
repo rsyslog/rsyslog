@@ -18,10 +18,11 @@ echo Init Testbench
 echo Create kafka/zookeeper instance and topics
 . $srcdir/diag.sh start-zookeeper
 . $srcdir/diag.sh start-kafka
+. $srcdir/diag.sh wait-kafka-startup
 . $srcdir/diag.sh create-kafka-topic 'static' '.dep_wrk' '22181'
 
-echo Give Kafka some time to process topic create ...
-sleep 5
+echo Ensuring kafka broker is reachable before starting receiver ...
+. $srcdir/diag.sh wait-kafka-startup
 
 echo Starting receiver instance [imkafka]
 export RSYSLOG_DEBUGLOG="log"
