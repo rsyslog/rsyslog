@@ -27,7 +27,7 @@ This parameter applies to :doc:`../../configuration/modules/mmexternal`.
 Description
 -----------
 This is an expert parameter. By default, ``mmexternal`` starts an instance of
-the external program for each worker thread configured for the action. If you
+the external program for each worker thread in the action's queue. If you
 need to ensure that only a single instance of the program is ever running, set
 this parameter to ``"on"``. This is useful if the external program accesses a
 shared resource that does not support concurrent access.
