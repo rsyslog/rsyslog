@@ -1,5 +1,5 @@
 .. _param-mmfields-jsonroot:
-.. _mmfields.parameter.module.jsonroot:
+.. _mmfields.parameter.input.jsonroot:
 
 jsonRoot
 ========
@@ -17,7 +17,7 @@ Sets the JSON path that receives the extracted fields.
 This parameter applies to :doc:`../../configuration/modules/mmfields`.
 
 :Name: jsonRoot
-:Scope: module
+:Scope: input
 :Type: string
 :Default: !
 :Required?: no
@@ -28,10 +28,10 @@ Description
 This parameter specifies into which JSON path the extracted fields shall be
 written. The default is to use the JSON root object itself.
 
-Module usage
-------------
-.. _param-mmfields-module-jsonroot-usage:
-.. _mmfields.parameter.module.jsonroot-usage:
+Input usage
+-----------
+.. _param-mmfields-input-jsonroot-usage:
+.. _mmfields.parameter.input.jsonroot-usage:
 
 .. code-block:: rsyslog
 

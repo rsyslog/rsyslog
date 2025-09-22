@@ -1,5 +1,5 @@
 .. _param-mmfields-separator:
-.. _mmfields.parameter.module.separator:
+.. _mmfields.parameter.input.separator:
 
 separator
 =========
@@ -17,7 +17,7 @@ Sets the character that separates fields when mmfields extracts them.
 This parameter applies to :doc:`../../configuration/modules/mmfields`.
 
 :Name: separator
-:Scope: module
+:Scope: input
 :Type: char
 :Default: ,
 :Required?: no
@@ -37,10 +37,10 @@ implemented things that actually never got used).
 The fields are named f\ *nbr*, where *nbr* is the field number starting with
 one and being incremented for each field.
 
-Module usage
-------------
-.. _param-mmfields-module-separator-usage:
-.. _mmfields.parameter.module.separator-usage:
+Input usage
+-----------
+.. _param-mmfields-input-separator-usage:
+.. _mmfields.parameter.input.separator-usage:
 
 .. code-block:: rsyslog
 
