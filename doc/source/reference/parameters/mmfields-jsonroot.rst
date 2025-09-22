@@ -1,12 +1,12 @@
 .. _param-mmfields-jsonroot:
 .. _mmfields.parameter.input.jsonroot:
 
-jsonRoot
+jsonroot
 ========
 
 .. index::
-   single: mmfields; jsonRoot
-   single: jsonRoot
+   single: mmfields; jsonroot
+   single: jsonroot
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Sets the JSON path that receives the extracted fields.
 
 This parameter applies to :doc:`../../configuration/modules/mmfields`.
 
-:Name: jsonRoot
+:Name: jsonroot
 :Scope: input
 :Type: string
 :Default: !
