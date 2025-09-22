@@ -1,5 +1,4 @@
-/*
- * impstats.c
+/* impstats.c
  * A module to periodically output statistics gathered by rsyslog.
  *
  * Copyright 2010-2025 Adiscon GmbH.
@@ -37,8 +36,8 @@
 #include <time.h>
 #include <sys/resource.h>
 #ifdef OS_LINUX
-# include <sys/types.h>
-# include <dirent.h>
+#include <sys/types.h>
+#include <dirent.h>
 #endif
 #include "dirty.h"
 #include "cfsysline.h"
@@ -52,9 +51,7 @@
 #include "prop.h"
 #include "ruleset.h"
 #include "parserif.h"
-
-/* libfastjson for robust JSON parsing in Zabbix collector */
-#include <libfastjson/json.h>
+#include <libfastjson/json.h> /* libfastjson for robust JSON parsing in Zabbix collector */
 
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
@@ -78,6 +75,7 @@ typedef struct configSettings_s {
     int iSeverity;
     int bJSON;
     int bCEE;
+    int bPrometheus;
 } configSettings_t;
 
 struct modConfData_s {
@@ -96,18 +94,18 @@ struct modConfData_s {
     uchar *pszBindRuleset; /* name of ruleset to bind to */
 };
 
-static modConfData_t *loadModConf = NULL;
-static modConfData_t *runModConf = NULL;
+static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current load process */
 static configSettings_t cs;
-static int bLegacyCnfModGlobalsPermitted;
+static int bLegacyCnfModGlobalsPermitted; /* are legacy module-global config parameters permitted? */
 static prop_t *pInputName = NULL;
 
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
     {"interval", eCmdHdlrInt, 0},{"facility", eCmdHdlrInt, 0},{"severity", eCmdHdlrInt, 0},
     {"bracketing", eCmdHdlrBinary, 0},{"log.syslog", eCmdHdlrBinary, 0},{"resetcounters", eCmdHdlrBinary, 0},
-    {"log.file", eCmdHdlrGetWord,0},{"format", eCmdHdlrGetWord,0},{"ruleset", eCmdHdlrString, 0}
-};
+    {"log.file", eCmdHdlrGetWord,0},{"format", eCmdHdlrGetWord,0},{"ruleset", eCmdHdlrString, 0}};
+
 static struct cnfparamblk modpblk =
     { CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr };
 
@@ -146,8 +144,7 @@ ENDisCompatibleWithFeature
 
 #ifdef OS_LINUX
 /* count number of open files (linux specific) */
-static void countOpenFiles(void)
-{
+static void countOpenFiles(void) {
     char proc_path[MAXFNAME];
     DIR *dp;
     struct dirent *files;
@@ -166,8 +163,7 @@ static void countOpenFiles(void)
 }
 #endif
 
-static void initConfigSettings(void)
-{
+static void initConfigSettings(void) {
     cs.iStatsInterval = DEFAULT_STATS_PERIOD;
     cs.iFacility = DEFAULT_FACILITY;
     cs.iSeverity = DEFAULT_SEVERITY;
@@ -176,8 +172,7 @@ static void initConfigSettings(void)
 }
 
 /* actually submit a message to the rsyslog core */
-static void doSubmitMsg(const char *line)
-{
+static void doSubmitMsg(const char *line) {
     smsg_t *pMsg;
     if (msgConstruct(&pMsg) != RS_RET_OK) goto finalize_it;
     MsgSetInputName(pMsg, pInputName);
@@ -192,17 +187,15 @@ static void doSubmitMsg(const char *line)
     pMsg->iFacility = runModConf->iFacility;
     pMsg->iSeverity = runModConf->iSeverity;
     pMsg->msgFlags = 0;
-    /* stats messages are always emitted */
+    /* we do not use rate-limiting, as the stats message always need to be emitted */
     submitMsg2(pMsg);
-    DBGPRINTF("impstats: submit [%d,%d] msg '%s'\n",
-        runModConf->iFacility, runModConf->iSeverity, line);
+    DBGPRINTF("impstats: submit [%d,%d] msg '%s'\n", runModConf->iFacility, runModConf->iSeverity, line);
 finalize_it:
     return;
 }
 
 /* log stats message to file; limited error handling done */
-static void doLogToFile(const char *ln, const size_t lenLn)
-{
+static void doLogToFile(const char *ln, const size_t lenLn) {
     struct iovec iov[4];
     ssize_t nwritten;
     ssize_t nexpect;
@@ -213,9 +206,7 @@ static void doLogToFile(const char *ln, const size_t lenLn)
     if (lenLn == 0) goto done;
 
     if (runModConf->logfd == -1) {
-        runModConf->logfd = open(runModConf->logfile,
-            O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC,
-            S_IRUSR | S_IWUSR);
+        runModConf->logfd = open(runModConf->logfile, O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, S_IRUSR | S_IWUSR);
         if (runModConf->logfd == -1) {
             DBGPRINTF("impstats: error opening stats file %s\n", runModConf->logfile);
             goto done;
@@ -238,8 +229,7 @@ static void doLogToFile(const char *ln, const size_t lenLn)
     nexpect++;
     nwritten = writev(runModConf->logfd, iov, 4);
     if (nwritten != nexpect) {
-        DBGPRINTF("error writing stats file %s, nwritten %lld, expected %lld\n",
-            runModConf->logfile, (long long)nwritten, (long long)nexpect);
+        DBGPRINTF("error writing stats file %s, nwritten %lld, expected %lld\n", runModConf->logfile, (long long)nwritten, (long long)nexpect);
     }
 _done2:
     pthread_mutex_unlock(&hup_mutex);
@@ -247,7 +237,9 @@ _done2:
 done: goto _done2;
 }
 
-/* submit a line to our log destinations. Line must be fully formatted */
+/* submit a line to our log destinations. Line must be fully formatted as
+ * required (but may be a simple verb like "BEGIN" and "END".
+ */
 static rsRetVal submitLine(const char *const ln, const size_t lenLn)
 {
     DEFiRet;
@@ -256,7 +248,9 @@ static rsRetVal submitLine(const char *const ln, const size_t lenLn)
     RETiRet;
 }
 
-/* callback for statsobj */
+/* callback for statsobj
+ * Note: usrptr exists only to satisfy requirements of statsobj callback interface!
+ */
 static rsRetVal doStatsLine(void __attribute__((unused)) * usrptr, const char *const str)
 {
     DEFiRet;
@@ -264,7 +258,9 @@ static rsRetVal doStatsLine(void __attribute__((unused)) * usrptr, const char *c
     RETiRet;
 }
 
-/* generate statistics messages */
+/* the function to generate the actual statistics messages
+ * rgerhards, 2010-09-09
+ */
 static void generateStatsMsgs(void)
 {
     struct rusage ru;
@@ -282,8 +278,8 @@ static void generateStatsMsgs(void)
     st_ru_maxrss = ru.ru_maxrss;
     st_ru_minflt = ru.ru_minflt;
     st_ru_majflt = ru.ru_majflt;
-    st_ru_inblock= ru.ru_inblock;
-    st_ru_oublock= ru.ru_oublock;
+    st_ru_inblock = ru.ru_inblock;
+    st_ru_oublock = ru.ru_oublock;
     st_ru_nvcsw = ru.ru_nvcsw;
     st_ru_nivcsw = ru.ru_nivcsw;
 
@@ -316,7 +312,7 @@ BEGINbeginCnfLoad
     loadModConf->bBracketing = 0;
     loadModConf->bResetCtrs = 0;
     bLegacyCnfModGlobalsPermitted = 1;
-
+    /* init legacy config vars */
     initConfigSettings();
 ENDbeginCnfLoad
 
@@ -362,6 +358,8 @@ BEGINsetModCnf
                 loadModConf->statsFmt = statsFmt_CEE;
             } else if (!strcasecmp(mode, "legacy")) {
                 loadModConf->statsFmt = statsFmt_Legacy;
+            } else if (!strcasecmp(mode, "prometheus")) {
+                loadModConf->statsFmt = statsFmt_Prometheus;
             } else if (!strcasecmp(mode, "zabbix")) {
                 loadModConf->statsFmt = statsFmt_Zabbix;
             } else {
@@ -383,6 +381,9 @@ BEGINsetModCnf
         free(loadModConf->pszBindRuleset);
         loadModConf->pszBindRuleset = NULL;
     }
+
+    /* Add warning about log.syslog and format=zabbix */
+    
     loadModConf->configSetViaV2Method = 1;
     bLegacyCnfModGlobalsPermitted = 0;
 
@@ -393,6 +394,7 @@ ENDsetModCnf
 BEGINendCnfLoad
     CODESTARTendCnfLoad;
     if (!loadModConf->configSetViaV2Method) {
+        /* persist module-specific settings from legacy config system */
         loadModConf->iStatsInterval = cs.iStatsInterval;
         loadModConf->iFacility = cs.iFacility;
         loadModConf->iSeverity = cs.iSeverity;
@@ -406,13 +408,12 @@ BEGINendCnfLoad
     }
 ENDendCnfLoad
 
-/* Resolve ruleset name if set */
-static rsRetVal checkRuleset(modConfData_t *modConf)
-{
+/* we need our special version of checkRuleset(), as we do not have any instances */
+static rsRetVal checkRuleset(modConfData_t *modConf) {
     ruleset_t *pRuleset;
     rsRetVal localRet;
     DEFiRet;
-    modConf->pBindRuleset = NULL; /* default ruleset */
+    modConf->pBindRuleset = NULL; /* assume default ruleset */
     if (modConf->pszBindRuleset == NULL) FINALIZE;
     localRet = ruleset.GetRuleset(modConf->pConf, &pRuleset, modConf->pszBindRuleset);
     if (localRet == RS_RET_NOT_FOUND) {
@@ -426,7 +427,10 @@ finalize_it:
     RETiRet;
 }
 
-/* to use HUP, we need to have an instanceData type */
+/* to use HUP, we need to have an instanceData type, as this was
+ * originally designed for actions. However, we do not, and cannot,
+ * use the content. The core will always provide a NULL pointer.
+ */
 typedef struct _instanceData {
     int dummy;
 } instanceData;
@@ -514,6 +518,12 @@ ENDfreeCnf
 
 BEGINrunInput
     CODESTARTrunInput;
+    /* this is an endless loop - it is terminated when the thread is
+     * signalled to do so. This, however, is handled by the framework,
+     * right into the sleep below. Note that we DELIBERATLY output
+     * final set of stats counters on termination request. Depending
+     * on configuration, they may not make it to the final destination...
+     */
     while (glbl.GetGlobalInputTermState() == 0) {
         srSleep(runModConf->iStatsInterval, 0); /* seconds, micro seconds */
         DBGPRINTF("impstats: woke up, generating messages\n");
