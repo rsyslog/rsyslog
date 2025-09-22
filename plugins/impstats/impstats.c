@@ -362,7 +362,7 @@ BEGINsetModCnf
             } else if (!strcasecmp(mode, "prometheus")) {
                 loadModConf->statsFmt = statsFmt_Prometheus;
             } else if (!strcasecmp(mode, "zabbix")) {
-                loadModConf->statsFmt = statsFmt_Zabbix;
+                loadModConf->statsFmt = statsFmt_Zabbix; /* RFC 8259 Compliant */
             } else {
                 LogError(0, RS_RET_ERR, "impstats: invalid format %s", mode);
             }
@@ -597,6 +597,7 @@ BEGINmodInit()
 ENDmodInit
 
 /* ---------- Zabbix (grouped JSON object) builder ----------
+ Produces RFC 8259 Compliant Arrayed-JSON.
  Produces one JSON object per emission:
  {
    "timedate": "<ctime_r>",
