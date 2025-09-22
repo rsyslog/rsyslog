@@ -229,7 +229,8 @@ static void doLogToFile(const char *ln, const size_t lenLn) {
     nexpect++;
     nwritten = writev(runModConf->logfd, iov, 4);
     if (nwritten != nexpect) {
-        DBGPRINTF("error writing stats file %s, nwritten %lld, expected %lld\n", runModConf->logfile, (long long)nwritten, (long long)nexpect);
+        DBGPRINTF("error writing stats file %s, nwritten %lld, expected %lld\n",
+            runModConf->logfile, (long long)nwritten, (long long)nexpect);
     }
 _done2:
     pthread_mutex_unlock(&hup_mutex);
