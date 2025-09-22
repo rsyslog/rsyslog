@@ -385,7 +385,7 @@ BEGINsetModCnf
     /* Add warning about log.syslog and format=zabbix without log.file */
     if (loadModConf->bLogToSyslog != 0 
         && loadModConf->statsFmt == statsFmt_Zabbix 
-        && loadModConf->bLogToFile == NULL) {
+        && loadModConf->logfile == NULL) {
         parser_warnmsg(
           "impstats: log.syslog set to \"on\" and format set to \"zabbix\" without "
             "log.file set. This is not recommended due to potential for pstats msg "
