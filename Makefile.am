@@ -308,6 +308,10 @@ if ENABLE_MMRFC5424ADDHMAC
 SUBDIRS += contrib/mmrfc5424addhmac
 endif
 
+if ENABLE_MMSNAREWINSEC
+SUBDIRS += plugins/mmsnarewinsec
+endif
+
 # omhttpfs
 if ENABLE_OMHTTPFS
 SUBDIRS += contrib/omhttpfs

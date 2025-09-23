@@ -63,8 +63,10 @@ jobs:
       - name: run container CI pipeline
         run: |
           chmod -R go+rw .
-          export CODECOV_repo_slug="$(git config --get remote.origin.url | sed -E 's#.*[:/]([^/]+/[^/.]+)(\\.git)?$#\1#')"
-          export CODECOV_commit_sha="$(git rev-parse HEAD)"
+          CODECOV_repo_slug="$(git config --get remote.origin.url | sed -E 's#.*[:/]([^/]+/[^/.]+)(\\.git)?$#\1#')"
+          export CODECOV_repo_slug
+          CODECOV_commit_sha="$(git rev-parse HEAD)"
+          export CODECOV_commit_sha
           export RSYSLOG_CONTAINER_UID="" # use default
           export RSYSLOG_STATSURL='http://build.rsyslog.com/testbench-failedtest.php'
           export CFLAGS='-g'
@@ -144,7 +146,7 @@ jobs:
               # any longer. 2025-01-31 RGerhards
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--enable-omazureeventhubs --enable-imdtls \
                      --enable-omdtls --disable-omamqp1 --disable-snmp --disable-kafka-tests \
-                     --disable-elasticsearch-tests"
+                     --disable-elasticsearch-tests --enable-mmsnarewinsec"
               ;;
           'ubuntu_22_distcheck')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
@@ -159,7 +161,8 @@ jobs:
               export CC='clang'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
                       --disable-libfaketime --without-valgrind-testbench --disable-valgrind \
-                      --disable-kafka-tests --enable-imdtls --enable-omdtls"
+                      --disable-kafka-tests --enable-imdtls --enable-omdtls \
+                      --enable-mmsnarewinsec"
               export CFLAGS="-fstack-protector -D_FORTIFY_SOURCE=2 \
                      -fsanitize=address,undefined,nullability,unsigned-integer-overflow \
                      -fno-sanitize-recover=undefined,nullability,unsigned-integer-overflow \
@@ -181,7 +184,8 @@ jobs:
                     --disable-impstats --disable-kafka-tests --disable-mmpstrucdata \
                     --disable-clickhouse --disable-clickhouse-tests --disable-kafka-tests \
                     --disable-libfaketime --disable-imhttp \
-                    --without-valgrind-testbench --disable-valgrind"
+                    --without-valgrind-testbench --disable-valgrind \
+                    --enable-mmsnarewinsec"
               export CFLAGS="-g -fstack-protector -D_FORTIFY_SOURCE=2 -fsanitize=thread \
                     -O0 -fno-omit-frame-pointer -fno-color-diagnostics"
               # note: we need pathes in container, thus /rsyslog vs. $(pwd) in TSAN_OPTIONS

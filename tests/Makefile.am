@@ -501,11 +501,28 @@ TESTS +=  \
 	parsertest-parse-nodate.sh \
 	parsertest-parse-nodate-udp.sh \
 	parsertest-snare_ccoff_udp.sh \
-	parsertest-snare_ccoff_udp2.sh
+    parsertest-snare_ccoff_udp2.sh
+
+if ENABLE_MMSNAREWINSEC
+TESTS += \
+	mmsnarewinsec-basic.sh \
+	mmsnarewinsec-json.sh \
+	mmsnarewinsec-syslog.sh \
+	mmsnarewinsec-comprehensive.sh \
+	mmsnarewinsec-value-types.sh \
+	mmsnarewinsec-enhanced-validation.sh \
+	mmsnarewinsec-kerberos.sh \
+	mmsnarewinsec-custom.sh \
+	mmsnarewinsec-realworld-4624-4634-5140.sh
+if HAVE_VALGRIND
+TESTS += \
+	mmsnarewinsec-comprehensive-vg.sh
+endif
+endif
 
 if ENABLE_OMSENDERTRACK
 TESTS += \
-	omsendertrack-basic.sh
+        omsendertrack-basic.sh
 TESTS += \
 	omsendertrack-statefile.sh
 if HAVE_VALGRIND
@@ -519,10 +536,10 @@ endif
 
 if ENABLE_LIBZSTD
 TESTS +=  \
-	zstd.sh
+        zstd.sh
 if HAVE_VALGRIND
 TESTS +=  \
-	zstd-vg.sh
+        zstd-vg.sh
 endif # if HAVE_VALGRIND
 endif
 
@@ -2010,10 +2027,21 @@ EXTRA_DIST= \
 	imbatchreport_delete_toolarge.sh \
 	imbatchreport_rename_toolarge.sh \
 	imbatchreport_errmsg_no_params-vg.sh \
-	mmexternal-SegFault.sh \
-	mmexternal-SegFault-empty-jroot-vg.sh \
-	testsuites/mmexternal-SegFault-mm-python.py \
-	mmexternal-InvldProg-vg.sh \
+        mmexternal-SegFault.sh \
+        mmexternal-SegFault-empty-jroot-vg.sh \
+        testsuites/mmexternal-SegFault-mm-python.py \
+        testsuites/mmsnarewinsec/sample-custom-pattern.data \
+        mmsnarewinsec-basic.sh \
+        mmsnarewinsec-comprehensive.sh \
+        mmsnarewinsec-comprehensive-vg.sh \
+        mmsnarewinsec-custom.sh \
+        mmsnarewinsec-enhanced-validation.sh \
+        mmsnarewinsec-json.sh \
+        mmsnarewinsec-kerberos.sh \
+        mmsnarewinsec-realworld-4624-4634-5140.sh \
+        mmsnarewinsec-syslog.sh \
+        mmsnarewinsec-value-types.sh \
+        mmexternal-InvldProg-vg.sh \
 	nested-call-shutdown.sh \
 	1.rstest 2.rstest 3.rstest err1.rstest \
 	config_multiple_include.sh \
@@ -2928,9 +2956,9 @@ EXTRA_DIST= \
 	imfile-symlink-ext-tmp-dir-tree.sh \
 	imfile-logrotate.sh \
 	imfile-logrotate-async.sh \
+	imfile-logrotate-multiple.sh \
 	imfile-logrotate-copytruncate.sh \
 	imfile-logrotate-nocopytruncate.sh \
-	imfile-logrotate-multiple.sh \
 	imfile-logrotate-state-files.sh \
 	imfile-growing-file-id.sh \
 	imfile-ignore-old-file-1.sh \
