@@ -35,76 +35,49 @@ Configuration Parameter
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
 
 Module Parameters
 -----------------
 
-container
-^^^^^^^^^
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "!iplocation", "no", "none"
-
-.. versionadded:: 8.28.0
-
-Specifies the container to be used to store the fields amended by
-mmdblookup.
+   * - Parameter
+     - Summary
+   * - :ref:`param-mmdblookup-container`
+     - .. include:: ../../reference/parameters/mmdblookup-container.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 
 Input Parameters
 ----------------
 
-key
-^^^
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "yes", "none"
-
-Name of field containing IP address.
-
-
-mmdbfile
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "yes", "none"
-
-Location of Maxmind DB file.
-
-
-fields
-^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "array", "none", "yes", "none"
-
-Fields that will be appended to processed message. The fields will
-always be appended in the container used by mmdblookup (which may be
-overridden by the "container" parameter on module load).
-
-By default, the maxmindb field name is used for variables. This can
-be overridden by specifying a custom name between colons at the
-beginning of the field name. As usual, bang signs denote path levels.
-So for example, if you want to extract "!city!names!en" but rename it
-to "cityname", you can use ":cityname:!city!names!en" as field name.
+   * - Parameter
+     - Summary
+   * - :ref:`param-mmdblookup-key`
+     - .. include:: ../../reference/parameters/mmdblookup-key.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmdblookup-mmdbfile`
+     - .. include:: ../../reference/parameters/mmdblookup-mmdbfile.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmdblookup-fields`
+     - .. include:: ../../reference/parameters/mmdblookup-fields.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmdblookup-reloadonhup`
+     - .. include:: ../../reference/parameters/mmdblookup-reloadonhup.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 
 Examples
@@ -137,5 +110,15 @@ The following example uses a custom container and custom field name
    action( type="mmdblookup" mmdbfile="/etc/rsyslog.d/GeoLite2-City.mmdb"
                 fields=[":continent:!continent!code", ":loc:!location"]
                 key="!clientip")
+
+
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/mmdblookup-container
+   ../../reference/parameters/mmdblookup-key
+   ../../reference/parameters/mmdblookup-mmdbfile
+   ../../reference/parameters/mmdblookup-fields
+   ../../reference/parameters/mmdblookup-reloadonhup
 
 
