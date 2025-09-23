@@ -8,7 +8,7 @@ module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
 template(name="outfmt" type="string" string="%hostname%") # no LF, as HOSTNAME file also does not have it!
 
-local4.debug action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG`)
+local4.debug action(type="omfile" template="outfmt" file=`echo $RSYSLOG_OUT_LOG` addLF="off")
 '
 startup
 echo '<167>Mar  6 16:57:54 hostname1/hostname2 test: msgnum:0' > $RSYSLOG_DYNNAME.input

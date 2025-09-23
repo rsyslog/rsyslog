@@ -262,7 +262,7 @@ struct modConfData_s {
     int bDynafileDoNotSuspend;
     strm_compressionDriver_t compressionDriver;
     int compressionDriver_workers;
-    sbool addLF; /**< default setting for addLF action parameter */
+    sbool bAddLF; /**< default setting for addLF action parameter */
 };
 
 static modConfData_t *loadModConf = NULL; /**< modConf ptr to use for the current load process */
@@ -989,7 +989,7 @@ BEGINbeginCnfLoad
     pModConf->fileGID = -1;
     pModConf->dirGID = -1;
     pModConf->bDynafileDoNotSuspend = 1;
-    pModConf->addLF = 0;
+    pModConf->bAddLF = 1;
 ENDbeginCnfLoad
 
 BEGINsetModCnf
@@ -1023,7 +1023,7 @@ BEGINsetModCnf
                     "results.");
             }
         } else if (!strcmp(modpblk.descr[i].name, "addlf")) {
-            loadModConf->addLF = pvals[i].val.d.n;
+            loadModConf->bAddLF = pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "compression.driver")) {
             if (!es_strcasebufcmp(pvals[i].val.d.estr, (const unsigned char *)"zlib", 4)) {
                 loadModConf->compressionDriver = STRM_COMPRESS_ZIP;
@@ -1153,7 +1153,7 @@ ENDfreeCnf
 BEGINcreateInstance
     CODESTARTcreateInstance;
     pData->pStrm = NULL;
-    pData->bAddLF = 0;
+    pData->bAddLF = 1;
     pthread_mutex_init(&pData->mutWrite, NULL);
 ENDcreateInstance
 
@@ -1268,7 +1268,7 @@ static void setInstParamDefaults(instanceData *__restrict__ const pData) {
     pData->iIOBufSize = IOBUF_DFLT_SIZE;
     pData->iFlushInterval = FLUSH_INTRVL_DFLT;
     pData->bUseAsyncWriter = USE_ASYNCWRITER_DFLT;
-    pData->bAddLF = loadModConf->addLF;
+    pData->bAddLF = loadModConf->bAddLF;
     pData->sigprovName = NULL;
     pData->cryprovName = NULL;
     pData->useSigprov = 0;
@@ -1677,7 +1677,6 @@ BEGINparseSelectorAct
     pData->iIOBufSize = (int)cs.iIOBufSize;
     pData->iFlushInterval = cs.iFlushInterval;
     pData->bUseAsyncWriter = cs.bUseAsyncWriter;
-    pData->bAddLF = cs.bAddLF;
     pData->bVeryRobustZip = 0; /* cannot be specified via legacy conf */
     pData->iCloseTimeout = 0; /* cannot be specified via legacy conf */
     setupInstStatsCtrs(pData);
@@ -1711,7 +1710,6 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
     cs.iIOBufSize = IOBUF_DFLT_SIZE;
     cs.iFlushInterval = FLUSH_INTRVL_DFLT;
     cs.bUseAsyncWriter = USE_ASYNCWRITER_DFLT;
-    cs.bAddLF = 0;
     free(pszFileDfltTplName);
     pszFileDfltTplName = NULL;
     return RS_RET_OK;
@@ -1771,7 +1769,6 @@ BEGINmodInit(File)
                                STD_LOADABLE_MODULE_ID));
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileflushontxend", 0, eCmdHdlrBinary, NULL, &cs.bFlushOnTXEnd,
                                STD_LOADABLE_MODULE_ID));
-    CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileaddlf", 0, eCmdHdlrBinary, NULL, &cs.bAddLF, STD_LOADABLE_MODULE_ID));
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileiobuffersize", 0, eCmdHdlrSize, NULL, &cs.iIOBufSize,
                                STD_LOADABLE_MODULE_ID));
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirowner", 0, eCmdHdlrUID, NULL, &cs.dirUID, STD_LOADABLE_MODULE_ID));
