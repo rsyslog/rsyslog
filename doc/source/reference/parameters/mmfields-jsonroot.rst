@@ -40,4 +40,4 @@ Input usage
 
 See also
 --------
-See also :doc:`../../configuration/modules/mmfields`.
+This parameter is part of the :doc:`../../configuration/modules/mmfields` module.
