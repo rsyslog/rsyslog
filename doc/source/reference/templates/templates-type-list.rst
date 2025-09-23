@@ -126,10 +126,10 @@ field-by-field mapping:
      property(outname="network.packets"         name="$!leef!fields!totalPackets"  format="jsonf" dataType="number")
      property(outname="event.start"             name="$!leef!fields!StartTime"     format="jsonf")
      property(outname="event.duration"          name="$!leef!fields!ElapsedTime"   format="jsonf" dataType="number")
-     property(outname="server.packets"          name="$!leef!fields!srcPackets"    format="jsonf" dataType="number")
-     property(outname="destination.packets"     name="$!leef!fields!srcPackets"    format="jsonf" dataType="number")
-     property(outname="client.packets"          name="$!leef!fields!dstPackets"    format="jsonf" dataType="number")
-     property(outname="source.packets"          name="$!leef!fields!dstPackets"    format="jsonf" dataType="number")
+     property(outname="client.packets"          name="$!leef!fields!srcPackets"    format="jsonf" dataType="number")
+     property(outname="source.packets"          name="$!leef!fields!srcPackets"    format="jsonf" dataType="number")
+     property(outname="server.packets"          name="$!leef!fields!dstPackets"    format="jsonf" dataType="number")
+     property(outname="destination.packets"     name="$!leef!fields!dstPackets"    format="jsonf" dataType="number")
      property(outname="observer.hostname"       name="$!leef!fields!DeviceName"    format="jsonf")
    }
 
