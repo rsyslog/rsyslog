@@ -21,7 +21,6 @@ ruleset(name="try_es") {
                                  server="localhost"
                                  serverport=`echo $ES_PORT`
                                  template="tpl"
-                                 searchType="_doc"
                                  searchIndex="rsyslog_testbench"
                                  retryruleset="try_es"
                                  )
@@ -32,7 +31,6 @@ ruleset(name="try_es") {
                                  server="localhost"
                                  serverport=`echo $ES_PORT`
                                  template="tpl"
-                                 searchType="_doc"
                                  searchIndex="rsyslog_testbench"
                                  retryruleset="try_es"
                                  )

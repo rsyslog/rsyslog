@@ -28,8 +28,7 @@ module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 :msg, contains, "msgnum:" action(type="omelasticsearch"
 				 template="tpl"
 				 searchIndex="rsyslog_testbench"
-				 searchType="_doc"
-				 serverport="19200"
+                              serverport="19200"
 				 bulkmode="off"
 				 errorFile="./'${RSYSLOG_DYNNAME}'.errorfile")
 '

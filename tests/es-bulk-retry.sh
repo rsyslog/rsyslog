@@ -13,11 +13,9 @@ ensure_elasticsearch_ready --no-start
 # change settings to cause bulk rejection errors
 case "$ES_DOWNLOAD" in
     elasticsearch-5.*) es_option="thread_pool.bulk"
-                       es_mapping_uses_type=true
-                       es_search_type="test-type" ;;
+                       es_mapping_uses_type=true ;;
     *) es_option="thread_pool.write"
-       es_mapping_uses_type=false
-       es_search_type="_doc" ;;
+       es_mapping_uses_type=false ;;
 esac
 cat >> $dep_work_dir/es/config/elasticsearch.yml <<EOF
 ${es_option}.queue_size: 1
@@ -99,9 +97,8 @@ ruleset(name="try_es") {
 		       dynbulkid="on"
 		       bulkmode="on"
 		       retryfailures="on"
-		       retryruleset="try_es"
-		       searchType="'${es_search_type}'"
-		       searchIndex="rsyslog_testbench")
+                       retryruleset="try_es"
+                       searchIndex="rsyslog_testbench")
 	}
 }
 

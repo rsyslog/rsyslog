@@ -446,7 +446,6 @@ The following sample does the following:
            serverport="9200"
            template="testTemplate"
            searchIndex="test-index"
-           searchType="test-type"
            bulkmode="on"
            maxbytes="100m"
            queue.type="linkedlist"

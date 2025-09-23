@@ -86,7 +86,6 @@ static prop_t *pInputName = NULL;
 #define META_STRT "{\"index\":{\"_index\": \""
 #define META_STRT_CREATE "{\"create\":{" /* \"_index\": \" */
 #define META_IX "\"_index\": \""
-#define META_TYPE "\",\"_type\":\""
 #define META_PIPELINE "\",\"pipeline\":\""
 #define META_PARENT "\",\"_parent\":\""
 #define META_ID "\", \"_id\":\""
@@ -105,10 +104,34 @@ typedef enum {
 #define DEFAULT_REBIND_INTERVAL -1
 
 /* REST API for elasticsearch hits this URL:
- * http://<hostName>:<restPort>/<searchIndex>/<searchType>
+ * http://<hostName>:<restPort>/<searchIndex>
  */
 /* bulk API uses /_bulk */
 typedef struct curl_slist HEADER;
+typedef enum {
+    BACKEND_UNKNOWN = 0,
+    BACKEND_ELASTICSEARCH,
+    BACKEND_OPENSEARCH,
+} backend_type_t;
+
+static const char *backendTypeToString(const backend_type_t type) {
+    switch (type) {
+        case BACKEND_ELASTICSEARCH:
+            return "elasticsearch";
+        case BACKEND_OPENSEARCH:
+            return "opensearch";
+        case BACKEND_UNKNOWN:
+        default:
+            return "unknown";
+    }
+}
+
+static inline sbool isValidSearchType(const uchar *const value) {
+    if (value == NULL || value[0] == '\0') {
+        return 0;
+    }
+    return (!strcmp((const char *)value, "query_then_fetch") || !strcmp((const char *)value, "dfs_query_then_fetch"));
+}
 typedef struct instanceConf_s {
     int defaultPort;
     int fdErrFile; /* error file fd or -1 if not open */
@@ -154,6 +177,12 @@ typedef struct instanceConf_s {
     uchar *retryRulesetName;
     ruleset_t *retryRuleset;
     int rebindInterval;
+    sbool searchTypeConfigured;
+    sbool searchTypeAllowed;
+    backend_type_t backendType;
+    uchar *backendVersion;
+    sbool backendInfoInitialized;
+    pthread_mutex_t mutBackendInfo;
     struct instanceConf_s *next;
 } instanceData;
 
@@ -167,7 +196,7 @@ typedef struct wrkrInstanceData {
     PTR_ASSERT_DEF
     instanceData *pData;
     int serverIndex;
-    int replyLen;
+    size_t replyLen;
     size_t replyBufLen;
     char *reply;
     long httpStatusCode; /* http status code of response */
@@ -227,6 +256,7 @@ static struct cnfparamdescr actpdescr[] = {{"server", eCmdHdlrArray, 0},
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 static rsRetVal curlSetup(wrkrInstanceData_t *pWrkrData);
+static rsRetVal ensureBackendInfo(wrkrInstanceData_t *pWrkrData);
 
 BEGINcreateInstance
     CODESTARTcreateInstance;
@@ -236,6 +266,11 @@ BEGINcreateInstance
         LogError(r, RS_RET_ERR,
                  "omelasticsearch: cannot create "
                  "error file mutex, failing this action");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    if ((r = pthread_mutex_init(&pData->mutBackendInfo, NULL)) != 0) {
+        LogError(r, RS_RET_ERR, "omelasticsearch: cannot create backend info mutex, failing this action");
+        pthread_mutex_destroy(&pData->mutErrFile);
         ABORT_FINALIZE(RS_RET_ERR);
     }
     pData->caCertFile = NULL;
@@ -304,6 +339,7 @@ BEGINfreeInstance
         }
     }
 
+    pthread_mutex_destroy(&pData->mutBackendInfo);
     pthread_mutex_destroy(&pData->mutErrFile);
     for (i = 0; i < pData->numServers; ++i) free(pData->serverBaseUrls[i]);
     free(pData->serverBaseUrls);
@@ -322,6 +358,7 @@ BEGINfreeInstance
     free(pData->myCertFile);
     free(pData->myPrivKeyFile);
     free(pData->retryRulesetName);
+    free(pData->backendVersion);
     if (pData->ratelimiter != NULL) ratelimitDestruct(pData->ratelimiter);
 ENDfreeInstance
 
@@ -362,7 +399,10 @@ BEGINdbgPrintInstInfo
     dbgprintf("\tuid='%s'\n", pData->uid == NULL ? (uchar *)"(not configured)" : pData->uid);
     dbgprintf("\tpwd=(%sconfigured)\n", pData->pwd == NULL ? "not " : "");
     dbgprintf("\tsearch index='%s'\n", pData->searchIndex == NULL ? (uchar *)"(not configured)" : pData->searchIndex);
-    dbgprintf("\tsearch type='%s'\n", pData->searchType == NULL ? (uchar *)"(not configured)" : pData->searchType);
+    dbgprintf("\tsearch type parameter='%s'\n",
+              pData->searchType == NULL ? (uchar *)"(not configured)" : pData->searchType);
+    dbgprintf("\tsearch type configured=%d\n", pData->searchTypeConfigured);
+    dbgprintf("\tsearch type allowed=%d\n", pData->searchTypeAllowed);
     dbgprintf("\tpipeline name='%s'\n", pData->pipelineName);
     dbgprintf("\tdynamic pipeline name=%d\n", pData->dynPipelineName);
     dbgprintf("\tskipPipelineIfEmpty=%d\n", pData->skipPipelineIfEmpty);
@@ -389,6 +429,8 @@ BEGINdbgPrintInstInfo
     dbgprintf("\tratelimit.interval='%u'\n", pData->ratelimitInterval);
     dbgprintf("\tratelimit.burst='%u'\n", pData->ratelimitBurst);
     dbgprintf("\trebindinterval='%d'\n", pData->rebindInterval);
+    dbgprintf("\tbackend type='%s'\n", backendTypeToString(pData->backendType));
+    dbgprintf("\tbackend version='%s'\n", pData->backendVersion == NULL ? "(unknown)" : (char *)pData->backendVersion);
 ENDdbgPrintInstInfo
 
 
@@ -594,14 +636,14 @@ static rsRetVal ATTR_NONNULL(1) setPostURL(wrkrInstanceData_t *const pWrkrData, 
     uchar *parent;
     uchar *bulkId;
     char *baseUrl;
-    /* since 7.0, the API always requires /idx/_doc, so use that if searchType is not explicitly set */
-    uchar *actualSearchType = (uchar *)"_doc";
-    es_str_t *url;
+    es_str_t *url = NULL;
     int r = 0;
     DEFiRet;
     instanceData *const pData = pWrkrData->pData;
     char separator;
     const int bulkmode = pData->bulkmode;
+
+    CHKiRet(ensureBackendInfo(pWrkrData));
 
     baseUrl = (char *)pData->serverBaseUrls[pWrkrData->serverIndex];
     url = es_newStrFromCStr(baseUrl, strlen(baseUrl));
@@ -612,23 +654,34 @@ static rsRetVal ATTR_NONNULL(1) setPostURL(wrkrInstanceData_t *const pWrkrData, 
 
     separator = '?';
 
+    getIndexTypeAndParent(pData, tpls, &searchIndex, &searchType, &parent, &bulkId, &pipelineName);
+
     if (bulkmode) {
         r = es_addBuf(&url, "_bulk", sizeof("_bulk") - 1);
         parent = NULL;
     } else {
-        getIndexTypeAndParent(pData, tpls, &searchIndex, &searchType, &parent, &bulkId, &pipelineName);
         if (searchIndex != NULL) {
             r = es_addBuf(&url, (char *)searchIndex, ustrlen(searchIndex));
-            if (searchType != NULL && searchType[0] != '\0') {
-                actualSearchType = searchType;
-            }
-            if (r == 0) r = es_addChar(&url, '/');
-            if (r == 0) r = es_addBuf(&url, (char *)actualSearchType, ustrlen(actualSearchType));
+            if (r == 0) r = es_addBuf(&url, "/_doc", sizeof("/_doc") - 1);
         }
         if (pipelineName != NULL && (!pData->skipPipelineIfEmpty || pipelineName[0] != '\0')) {
             if (r == 0) r = es_addChar(&url, separator);
             if (r == 0) r = es_addBuf(&url, "pipeline=", sizeof("pipeline=") - 1);
             if (r == 0) r = es_addBuf(&url, (char *)pipelineName, ustrlen(pipelineName));
+            separator = '&';
+        }
+    }
+
+    if (pData->searchTypeAllowed && searchType != NULL && searchType[0] != '\0') {
+        if (!isValidSearchType(searchType)) {
+            LogError(0, RS_RET_CONFIG_ERROR,
+                     "omelasticsearch: invalid searchType '%s' - supported values are 'query_then_fetch' and "
+                     "'dfs_query_then_fetch'",
+                     (char *)searchType);
+        } else {
+            if (r == 0) r = es_addChar(&url, separator);
+            if (r == 0) r = es_addBuf(&url, "search_type=", sizeof("search_type=") - 1);
+            if (r == 0) r = es_addBuf(&url, (char *)searchType, ustrlen(searchType));
             separator = '&';
         }
     }
@@ -677,16 +730,10 @@ static size_t computeMessageSize(const wrkrInstanceData_t *const pWrkrData,
     uchar *pipelineName;
 
     getIndexTypeAndParent(pWrkrData->pData, tpls, &searchIndex, &searchType, &parent, &bulkId, &pipelineName);
+    (void)searchType;
     r += ustrlen((char *)message);
     if (searchIndex != NULL) {
         r += ustrlen(searchIndex);
-    }
-    if (searchType != NULL) {
-        if (searchType[0] == '\0') {
-            r += 4;  // "_doc"
-        } else {
-            r += ustrlen(searchType);
-        }
     }
     if (parent != NULL) {
         r += sizeof(META_PARENT) - 1 + ustrlen(parent);
@@ -728,10 +775,6 @@ static rsRetVal buildBatch(wrkrInstanceData_t *pWrkrData, uchar *message, uchar 
         if (pWrkrData->pData->writeOperation == ES_WRITE_CREATE)
             if (r == 0) r = es_addBuf(&pWrkrData->batch.data, META_IX, sizeof(META_IX) - 1);
         if (r == 0) r = es_addBuf(&pWrkrData->batch.data, (char *)searchIndex, ustrlen(searchIndex));
-        if (searchType != NULL && searchType[0] != '\0') {
-            if (r == 0) r = es_addBuf(&pWrkrData->batch.data, META_TYPE, sizeof(META_TYPE) - 1);
-            if (r == 0) r = es_addBuf(&pWrkrData->batch.data, (char *)searchType, ustrlen(searchType));
-        }
     }
     if (parent != NULL) {
         endQuote = 1;
@@ -1597,9 +1640,9 @@ static rsRetVal ATTR_NONNULL(1, 2)
     if (pWrkrData->pData->rebindInterval > -1) pWrkrData->nOperations++;
 
     if (pWrkrData->reply == NULL) {
-        DBGPRINTF("omelasticsearch: pWrkrData reply==NULL, replyLen = '%d'\n", pWrkrData->replyLen);
+        DBGPRINTF("omelasticsearch: pWrkrData reply==NULL, replyLen = '%zu'\n", pWrkrData->replyLen);
     } else {
-        DBGPRINTF("omelasticsearch: pWrkrData replyLen = '%d'\n", pWrkrData->replyLen);
+        DBGPRINTF("omelasticsearch: pWrkrData replyLen = '%zu'\n", pWrkrData->replyLen);
         if (pWrkrData->replyLen > 0) {
             pWrkrData->reply[pWrkrData->replyLen] = '\0';
             /* Append 0 Byte if replyLen is above 0 - byte has been reserved in malloc */
@@ -1759,6 +1802,143 @@ finalize_it:
     RETiRet;
 }
 
+static rsRetVal ATTR_NONNULL(1) detectBackendUnlocked(wrkrInstanceData_t *const pWrkrData) {
+    instanceData *const pData = pWrkrData->pData;
+    CURL *curl = NULL;
+    CURLcode res;
+    char errbuf[CURL_ERROR_SIZE] = "";
+    fjson_object *root = NULL;
+    fjson_object *jo = NULL;
+    const char *versionStr = NULL;
+    const char *distribution = NULL;
+    const char *tagline = NULL;
+    backend_type_t backend = BACKEND_UNKNOWN;
+    uchar *versionDup = NULL;
+    DEFiRet;
+
+    pWrkrData->replyLen = 0;
+    if (pWrkrData->reply != NULL && pWrkrData->replyBufLen > 0) {
+        pWrkrData->reply[0] = '\0';
+    }
+
+    CHKmalloc(curl = curl_easy_init());
+    curlSetupCommon(pWrkrData, curl);
+    curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, pData->healthCheckTimeout);
+    curl_easy_setopt(curl, CURLOPT_URL, pData->serverBaseUrls[pWrkrData->serverIndex]);
+    curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
+
+    res = curl_easy_perform(curl);
+    if (res != CURLE_OK) {
+        const char *const detail = errbuf[0] != '\0' ? errbuf : curl_easy_strerror(res);
+        DBGPRINTF("omelasticsearch: backend detection request failed: %s\n", detail);
+        ABORT_FINALIZE(RS_RET_OK);
+    }
+
+    if (pWrkrData->reply == NULL || pWrkrData->replyBufLen == 0) {
+        DBGPRINTF("omelasticsearch: backend detection returned empty reply\n");
+        ABORT_FINALIZE(RS_RET_OK);
+    }
+    if (pWrkrData->replyLen >= pWrkrData->replyBufLen) {
+        DBGPRINTF("omelasticsearch: backend detection reply length exceeds buffer\n");
+        ABORT_FINALIZE(RS_RET_OK);
+    }
+    pWrkrData->reply[pWrkrData->replyLen] = '\0';
+
+    root = fjson_tokener_parse(pWrkrData->reply);
+    if (root == NULL) {
+        DBGPRINTF("omelasticsearch: unable to parse backend detection response\n");
+        ABORT_FINALIZE(RS_RET_OK);
+    }
+
+    if (fjson_object_object_get_ex(root, "version", &jo)) {
+        fjson_object *num = NULL;
+        fjson_object *dist = NULL;
+        if (fjson_object_object_get_ex(jo, "number", &num)) {
+            versionStr = fjson_object_get_string(num);
+        }
+        if (fjson_object_object_get_ex(jo, "distribution", &dist)) {
+            distribution = fjson_object_get_string(dist);
+        }
+    }
+    if (fjson_object_object_get_ex(root, "tagline", &jo)) {
+        tagline = fjson_object_get_string(jo);
+    }
+
+    if (distribution != NULL && !strcmp(distribution, "opensearch")) {
+        backend = BACKEND_OPENSEARCH;
+    } else if (tagline != NULL && strstr(tagline, "OpenSearch") != NULL) {
+        backend = BACKEND_OPENSEARCH;
+    } else if (versionStr != NULL) {
+        backend = BACKEND_ELASTICSEARCH;
+    }
+
+    if (versionStr != NULL) {
+        CHKmalloc(versionDup = ustrdup((const uchar *)versionStr));
+    }
+
+    free(pData->backendVersion);
+    pData->backendVersion = versionDup;
+    pData->backendType = backend;
+    pData->searchTypeAllowed = (backend == BACKEND_OPENSEARCH);
+    pData->backendInfoInitialized = 1;
+
+    dbgprintf("omelasticsearch: detected backend '%s' version '%s'\n", backendTypeToString(backend),
+              versionStr == NULL ? "(unknown)" : versionStr);
+
+    if (backend == BACKEND_ELASTICSEARCH && pData->searchTypeConfigured) {
+        LogError(0, RS_RET_CONFIG_ERROR,
+                 "omelasticsearch: searchType parameter is not supported by Elasticsearch %s - ignoring configuration",
+                 versionStr == NULL ? "(unknown)" : versionStr);
+    }
+
+finalize_it:
+    /*
+     * Backend detection reuses the worker's reply buffer, so make sure that
+     * subsequent requests start with an empty destination regardless of how we
+     * exit this routine. Otherwise, the first real HTTP response would be
+     * appended to the detection payload and fail JSON parsing.
+     */
+    pWrkrData->replyLen = 0;
+    if (pWrkrData->reply != NULL && pWrkrData->replyBufLen > 0) {
+        pWrkrData->reply[0] = '\0';
+    }
+    if (curl != NULL) curl_easy_cleanup(curl);
+    if (root != NULL) fjson_object_put(root);
+    RETiRet;
+}
+
+static rsRetVal ATTR_NONNULL(1) ensureBackendInfo(wrkrInstanceData_t *const pWrkrData) {
+    instanceData *const pData = pWrkrData->pData;
+    int r;
+    sbool mutexLocked = 0;
+    DEFiRet;
+
+    if (pData->backendInfoInitialized) {
+        RETiRet;
+    }
+
+    if ((r = pthread_mutex_lock(&pData->mutBackendInfo)) != 0) {
+        LogError(r, RS_RET_ERR, "omelasticsearch: failed to lock backend info mutex");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    mutexLocked = 1;
+
+    if (!pData->backendInfoInitialized) {
+        CHKiRet(detectBackendUnlocked(pWrkrData));
+        if (!pData->backendInfoInitialized) {
+            pData->backendType = BACKEND_UNKNOWN;
+            pData->searchTypeAllowed = 0;
+        }
+    }
+
+finalize_it:
+    if (mutexLocked) {
+        pthread_mutex_unlock(&pData->mutBackendInfo);
+    }
+    RETiRet;
+}
+
 static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
     pData->serverBaseUrls = NULL;
     pData->defaultPort = 9200;
@@ -1799,6 +1979,11 @@ static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
     pData->retryRulesetName = NULL;
     pData->retryRuleset = NULL;
     pData->rebindInterval = DEFAULT_REBIND_INTERVAL;
+    pData->searchTypeConfigured = 0;
+    pData->searchTypeAllowed = 0;
+    pData->backendType = BACKEND_UNKNOWN;
+    pData->backendVersion = NULL;
+    pData->backendInfoInitialized = 0;
 }
 
 BEGINnewActInst
@@ -1841,6 +2026,11 @@ BEGINnewActInst
             pData->searchIndex = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(actpblk.descr[i].name, "searchtype")) {
             pData->searchType = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            if (pData->searchType != NULL && pData->searchType[0] != '\0') {
+                pData->searchTypeConfigured = 1;
+            } else {
+                pData->searchTypeConfigured = 0;
+            }
         } else if (!strcmp(actpblk.descr[i].name, "pipelinename")) {
             pData->pipelineName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(actpblk.descr[i].name, "dynpipelinename")) {
@@ -1853,6 +2043,9 @@ BEGINnewActInst
             pData->dynSrchIdx = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "dynsearchtype")) {
             pData->dynSrchType = pvals[i].val.d.n;
+            if (pData->dynSrchType) {
+                pData->searchTypeConfigured = 1;
+            }
         } else if (!strcmp(actpblk.descr[i].name, "dynparent")) {
             pData->dynParent = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "bulkmode")) {
@@ -1935,6 +2128,16 @@ BEGINnewActInst
                      "non-handled param '%s'",
                      actpblk.descr[i].name);
         }
+    }
+
+    if (pData->searchTypeConfigured && !pData->dynSrchType && !isValidSearchType(pData->searchType)) {
+        LogError(0, RS_RET_CONFIG_ERROR,
+                 "omelasticsearch: invalid searchType '%s' - supported values are 'query_then_fetch' and "
+                 "'dfs_query_then_fetch'",
+                 pData->searchType == NULL ? "(null)" : (char *)pData->searchType);
+        free(pData->searchType);
+        pData->searchType = NULL;
+        pData->searchTypeConfigured = 0;
     }
 
     if (pData->pwd != NULL && pData->uid == NULL) {
@@ -2058,7 +2261,6 @@ BEGINnewActInst
 
     if (pData->esVersion < 8) {
         if (pData->searchIndex == NULL) pData->searchIndex = (uchar *)strdup("system");
-        if (pData->searchType == NULL) pData->searchType = (uchar *)strdup("events");
 
         if ((pData->writeOperation != ES_WRITE_INDEX) && (pData->bulkId == NULL)) {
             LogError(0, RS_RET_CONFIG_ERROR, "omelasticsearch: writeoperation '%d' requires bulkid",

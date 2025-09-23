@@ -17,7 +17,6 @@ if $msg contains "msgnum:" then
                server="127.0.0.1"
                serverport="19200"
                template="tpl"
-               searchType="_doc"
                searchIndex="rsyslog_testbench")
 '
 startup

@@ -14,7 +14,6 @@ if $msg contains "msgnum:" then
                server="127.0.0.1"
                serverport="19200"
                template="tpl"
-               searchType="_doc"
                writeoperation="create"
                searchIndex="rsyslog_testbench")
 
@@ -45,7 +44,6 @@ if $msg contains "msgnum:" then
                server="127.0.0.1"
                serverport="19200"
                template="tpl"
-               searchType="_doc"
                writeoperation="unknown"
                searchIndex="rsyslog_testbench")
 
@@ -78,7 +76,6 @@ if $msg contains "msgnum:" then
                server="127.0.0.1"
                serverport="19200"
                template="tpl"
-               searchType="_doc"
                writeoperation="create"
                bulkid="id-template"
 	       dynbulkid="on"
