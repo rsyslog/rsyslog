@@ -34,7 +34,6 @@ Notes
 
 Input usage
 -----------
-.. _param-mmjsonparse-input-useRawMsg:
 .. _mmjsonparse.parameter.input.useRawMsg-usage:
 
 .. code-block:: rsyslog
