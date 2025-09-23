@@ -1,5 +1,5 @@
 .. _param-mmjsonparse-cookie:
-.. _mmjsonparse.parameter.module.cookie:
+.. _mmjsonparse.parameter.input.cookie:
 
 cookie
 ======
@@ -17,9 +17,9 @@ Defines the cookie string that must appear before the JSON content of a message.
 This parameter applies to :doc:`../../configuration/modules/mmjsonparse`.
 
 :Name: cookie
-:Scope: module
+:Scope: input
 :Type: string
-:Default: module=@cee:
+:Default: "@cee:"
 :Required?: no
 :Introduced: at least 6.6.0, possibly earlier
 
@@ -33,10 +33,9 @@ cookie. In this case, leading spaces are permitted in front of the JSON. No
 non-whitespace characters are permitted after the JSON. If such is required,
 :doc:`../../configuration/modules/mmnormalize` must be used.
 
-Module usage
-------------
-.. _param-mmjsonparse-module-cookie:
-.. _mmjsonparse.parameter.module.cookie-usage:
+Input usage
+-----------
+.. _mmjsonparse.parameter.input.cookie-usage:
 
 .. code-block:: rsyslog
 

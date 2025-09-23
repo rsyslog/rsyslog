@@ -1,5 +1,5 @@
 .. _param-mmjsonparse-userawmsg:
-.. _mmjsonparse.parameter.module.userawmsg:
+.. _mmjsonparse.parameter.input.userawmsg:
 
 useRawMsg
 =========
@@ -17,9 +17,9 @@ Controls whether parsing operates on the raw message instead of only the MSG par
 This parameter applies to :doc:`../../configuration/modules/mmjsonparse`.
 
 :Name: useRawMsg
-:Scope: module
+:Scope: input
 :Type: boolean
-:Default: module=off
+:Default: off
 :Required?: no
 :Introduced: at least 6.6.0, possibly earlier
 
@@ -32,10 +32,9 @@ Notes
 -----
 - Older documentation referred to this boolean setting as ``binary``.
 
-Module usage
-------------
-.. _param-mmjsonparse-module-userawmsg:
-.. _mmjsonparse.parameter.module.userawmsg-usage:
+Input usage
+-----------
+.. _mmjsonparse.parameter.input.userawmsg-usage:
 
 .. code-block:: rsyslog
 

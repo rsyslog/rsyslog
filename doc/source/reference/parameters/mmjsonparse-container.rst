@@ -1,5 +1,5 @@
 .. _param-mmjsonparse-container:
-.. _mmjsonparse.parameter.module.container:
+.. _mmjsonparse.parameter.input.container:
 
 container
 =========
@@ -17,9 +17,9 @@ Sets the JSON container path where parsed properties are stored.
 This parameter applies to :doc:`../../configuration/modules/mmjsonparse`.
 
 :Name: container
-:Scope: module
+:Scope: input
 :Type: string
-:Default: module=$!
+:Default: $!
 :Required?: no
 :Introduced: at least 6.6.0, possibly earlier
 
@@ -32,10 +32,9 @@ properties.
 You can place parsed data under a subtree instead. You can also store them in
 local variables by setting ``container="$."``.
 
-Module usage
-------------
-.. _param-mmjsonparse-module-container:
-.. _mmjsonparse.parameter.module.container-usage:
+Input usage
+-----------
+.. _mmjsonparse.parameter.input.container-usage:
 
 .. code-block:: rsyslog
 
