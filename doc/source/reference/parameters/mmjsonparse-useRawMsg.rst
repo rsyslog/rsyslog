@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/mmjsonparse`.
 
 Description
 -----------
-Specifies if the raw message should be used for normalization (``on``) or just
+Specifies if the raw message should be used for parsing (``on``) or just
 the MSG part of the message (``off``).
 
 Notes
