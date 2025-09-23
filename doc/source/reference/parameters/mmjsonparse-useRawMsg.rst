@@ -1,5 +1,5 @@
-.. _param-mmjsonparse-userawmsg:
-.. _mmjsonparse.parameter.input.userawmsg:
+.. _param-mmjsonparse-useRawMsg:
+.. _mmjsonparse.parameter.input.useRawMsg:
 
 useRawMsg
 =========
@@ -21,7 +21,7 @@ This parameter applies to :doc:`../../configuration/modules/mmjsonparse`.
 :Type: boolean
 :Default: off
 :Required?: no
-:Introduced: at least 6.6.0, possibly earlier
+:Introduced: 6.6.0
 
 Description
 -----------
@@ -34,7 +34,8 @@ Notes
 
 Input usage
 -----------
-.. _mmjsonparse.parameter.input.userawmsg-usage:
+.. _param-mmjsonparse-input-useRawMsg:
+.. _mmjsonparse.parameter.input.useRawMsg-usage:
 
 .. code-block:: rsyslog
 

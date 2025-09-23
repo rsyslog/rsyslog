@@ -21,7 +21,7 @@ This parameter applies to :doc:`../../configuration/modules/mmjsonparse`.
 :Type: string
 :Default: "@cee:"
 :Required?: no
-:Introduced: at least 6.6.0, possibly earlier
+:Introduced: 6.6.0
 
 Description
 -----------

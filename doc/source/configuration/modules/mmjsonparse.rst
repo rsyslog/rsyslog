@@ -64,8 +64,8 @@ Action Parameters
      - .. include:: ../../reference/parameters/mmjsonparse-cookie.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - :ref:`param-mmjsonparse-userawmsg`
-     - .. include:: ../../reference/parameters/mmjsonparse-userawmsg.rst
+   * - :ref:`param-mmjsonparse-useRawMsg`
+     - .. include:: ../../reference/parameters/mmjsonparse-useRawMsg.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`param-mmjsonparse-container`
@@ -121,6 +121,6 @@ To permit parsing messages without cookie, use this action statement
    :hidden:
 
    ../../reference/parameters/mmjsonparse-cookie
-   ../../reference/parameters/mmjsonparse-userawmsg
+   ../../reference/parameters/mmjsonparse-useRawMsg
    ../../reference/parameters/mmjsonparse-container
 
