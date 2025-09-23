@@ -1,3 +1,5 @@
+.. _ref-mmaudit:
+
 Linux Audit Log Parser (mmaudit)
 ================================
 

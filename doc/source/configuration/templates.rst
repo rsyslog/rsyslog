@@ -1,3 +1,5 @@
+.. _ref-templates:
+
 Templates
 =========
 

@@ -1,3 +1,5 @@
+.. _ref-mmjsonparse:
+
 ***********************************************************
 JSON/CEE Structured Content Extraction Module (mmjsonparse)
 ***********************************************************

@@ -1,3 +1,5 @@
+.. _ref-omelasticsearch:
+
 ********************************************
 omelasticsearch: Elasticsearch Output Module
 ********************************************
