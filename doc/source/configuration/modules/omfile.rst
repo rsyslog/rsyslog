@@ -48,6 +48,7 @@ learn about different configuration languages in use by rsyslog.
 
 
    ../../reference/parameters/omfile-asyncwriting
+   ../../reference/parameters/omfile-addlf
    ../../reference/parameters/omfile-closetimeout
    ../../reference/parameters/omfile-compression-driver
    ../../reference/parameters/omfile-compression-zstd-workers
@@ -101,6 +102,10 @@ Module Parameters
      - Summary
    * - :ref:`param-omfile-template`
      - .. include:: ../../reference/parameters/omfile-template.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omfile-addlf`
+     - .. include:: ../../reference/parameters/omfile-addlf.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`param-omfile-dircreatemode`
@@ -172,6 +177,10 @@ selects whether a static or dynamic file (name) shall be written to.
      - Summary
    * - :ref:`param-omfile-template`
      - .. include:: ../../reference/parameters/omfile-template.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omfile-addlf`
+     - .. include:: ../../reference/parameters/omfile-addlf.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`param-omfile-fileowner`

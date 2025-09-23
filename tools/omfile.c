@@ -143,6 +143,7 @@ typedef struct s_dynaFileCacheEntry dynaFileCacheEntry;
 #define FLUSH_INTRVL_DFLT 1 /**< default buffer flush interval (in seconds) */
 #define USE_ASYNCWRITER_DFLT 0 /**< default buffer use async writer */
 #define FLUSHONTX_DFLT 1 /**< default for flush on TX end */
+#define ADDLF_SIGBUF_STACKLEN 1024 /**< stack buffer size for addLF signing helper */
 
 /**
  * @brief Instance data for the omfile module.
@@ -197,6 +198,7 @@ typedef struct _instanceData {
     sbool bFlushOnTXEnd; /**< flush write buffers when transaction has ended? */
     sbool bUseAsyncWriter; /**< use async stream writer? */
     sbool bVeryRobustZip;
+    sbool bAddLF; /**< append LF to records that are missing it? */
     statsobj_t *stats; /**< dynafile, primarily cache stats */
     STATSCOUNTER_DEF(ctrRequests, mutCtrRequests);
     STATSCOUNTER_DEF(ctrLevel0, mutCtrLevel0);
@@ -239,6 +241,7 @@ typedef struct configSettings_s {
     int64 iIOBufSize; /**< size of an io buffer */
     int iFlushInterval; /**< how often flush the output buffer on inactivity? */
     int bUseAsyncWriter; /**< should we enable asynchronous writing? */
+    sbool bAddLF; /**< append LF to records that are missing it? */
     EMPTY_STRUCT
 } configSettings_t;
 static configSettings_t cs;
@@ -259,6 +262,7 @@ struct modConfData_s {
     int bDynafileDoNotSuspend;
     strm_compressionDriver_t compressionDriver;
     int compressionDriver_workers;
+    sbool addLF; /**< default setting for addLF action parameter */
 };
 
 static modConfData_t *loadModConf = NULL; /**< modConf ptr to use for the current load process */
@@ -268,6 +272,7 @@ static modConfData_t *runModConf = NULL; /**< modConf ptr to use for the current
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
     {"template", eCmdHdlrGetWord, 0},
+    {"addlf", eCmdHdlrBinary, 0},
     {"compression.driver", eCmdHdlrGetWord, 0},
     {"compression.zstd.workers", eCmdHdlrPositiveInt, 0},
     {"dircreatemode", eCmdHdlrFileCreateMode, 0},
@@ -312,7 +317,8 @@ static struct cnfparamdescr actpdescr[] = {{"dynafilecachesize", eCmdHdlrInt, 0}
                                            {"closetimeout", eCmdHdlrPositiveInt, 0},
                                            {"rotation.sizelimit", eCmdHdlrSize, 0},
                                            {"rotation.sizelimitcommand", eCmdHdlrString, 0},
-                                           {"template", eCmdHdlrGetWord, 0}};
+                                           {"template", eCmdHdlrGetWord, 0},
+                                           {"addlf", eCmdHdlrBinary, 0}};
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 
@@ -358,6 +364,7 @@ BEGINdbgPrintInstInfo
     dbgprintf("\tuse async writer=%d\n", pData->bUseAsyncWriter);
     dbgprintf("\tflush on TX end=%d\n", pData->bFlushOnTXEnd);
     dbgprintf("\tflush interval=%d\n", pData->iFlushInterval);
+    dbgprintf("\tappend LF=%d\n", pData->bAddLF);
     dbgprintf("\tfile cache size=%d\n", pData->iDynaFileCacheSize);
     dbgprintf("\tcreate directories: %s\n", pData->bCreateDirs ? "on" : "off");
     dbgprintf("\tvery robust zip: %s\n", pData->bCreateDirs ? "on" : "off");
@@ -878,15 +885,51 @@ static rsRetVal doWrite(instanceData *__restrict__ const pData, uchar *__restric
     assert(pData != NULL);
     assert(pszBuf != NULL);
 
-    DBGPRINTF("omfile: write to stream, pData->pStrm %p, lenBuf %d, strt data %.128s\n", pData->pStrm, lenBuf, pszBuf);
+    const int needsLF = pData->bAddLF && (lenBuf == 0 || pszBuf[lenBuf - 1] != '\n');
+    uchar addlfBuf[ADDLF_SIGBUF_STACKLEN];
+    uchar *sigBuf = NULL;
+    uchar *sigWriteBuf = pszBuf;
+    size_t sigLen = 0;
+    rs_size_t sigWriteLen = (rs_size_t)lenBuf;
+    int freeSigBuf = 0;
+
+    DBGPRINTF("omfile: write to stream, pData->pStrm %p, lenBuf %d, needsLF %d, strt data %.128s\n", pData->pStrm,
+              lenBuf, needsLF, pszBuf);
     if (pData->pStrm != NULL) {
-        CHKiRet(strm.Write(pData->pStrm, pszBuf, lenBuf));
-        if (pData->useSigprov) {
-            CHKiRet(pData->sigprov.OnRecordWrite(pData->sigprovFileData, pszBuf, lenBuf));
+        if (lenBuf > 0) {
+            CHKiRet(strm.Write(pData->pStrm, pszBuf, lenBuf));
+        }
+        if (needsLF) {
+            CHKiRet(strm.WriteChar(pData->pStrm, '\n'));
         }
     }
 
+    if (pData->useSigprov) {
+        if (needsLF) {
+            sigLen = (size_t)lenBuf + 1;
+            if (sigLen <= sizeof(addlfBuf)) {
+                sigBuf = addlfBuf;
+            } else {
+                sigBuf = (uchar *)malloc(sigLen);
+                if (sigBuf == NULL) {
+                    ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+                }
+                freeSigBuf = 1;
+            }
+            if (lenBuf > 0) {
+                memcpy(sigBuf, pszBuf, (size_t)lenBuf);
+            }
+            sigBuf[lenBuf] = '\n';
+            sigWriteBuf = sigBuf;
+            sigWriteLen = (rs_size_t)sigLen;
+        }
+        CHKiRet(pData->sigprov.OnRecordWrite(pData->sigprovFileData, sigWriteBuf, sigWriteLen));
+    }
+
 finalize_it:
+    if (freeSigBuf) {
+        free(sigBuf);
+    }
     RETiRet;
 }
 
@@ -946,6 +989,7 @@ BEGINbeginCnfLoad
     pModConf->fileGID = -1;
     pModConf->dirGID = -1;
     pModConf->bDynafileDoNotSuspend = 1;
+    pModConf->addLF = 0;
 ENDbeginCnfLoad
 
 BEGINsetModCnf
@@ -978,6 +1022,8 @@ BEGINsetModCnf
                     "set via legacy directive - may lead to inconsistent "
                     "results.");
             }
+        } else if (!strcmp(modpblk.descr[i].name, "addlf")) {
+            loadModConf->addLF = pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "compression.driver")) {
             if (!es_strcasebufcmp(pvals[i].val.d.estr, (const unsigned char *)"zlib", 4)) {
                 loadModConf->compressionDriver = STRM_COMPRESS_ZIP;
@@ -1107,6 +1153,7 @@ ENDfreeCnf
 BEGINcreateInstance
     CODESTARTcreateInstance;
     pData->pStrm = NULL;
+    pData->bAddLF = 0;
     pthread_mutex_init(&pData->mutWrite, NULL);
 ENDcreateInstance
 
@@ -1221,6 +1268,7 @@ static void setInstParamDefaults(instanceData *__restrict__ const pData) {
     pData->iIOBufSize = IOBUF_DFLT_SIZE;
     pData->iFlushInterval = FLUSH_INTRVL_DFLT;
     pData->bUseAsyncWriter = USE_ASYNCWRITER_DFLT;
+    pData->bAddLF = loadModConf->addLF;
     pData->sigprovName = NULL;
     pData->cryprovName = NULL;
     pData->useSigprov = 0;
@@ -1448,6 +1496,8 @@ BEGINnewActInst
             pData->bSyncFile = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "createdirs")) {
             pData->bCreateDirs = (int)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "addlf")) {
+            pData->bAddLF = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "file")) {
             pData->fname = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
             CODE_STD_STRING_REQUESTnewActInst(1);
@@ -1627,6 +1677,7 @@ BEGINparseSelectorAct
     pData->iIOBufSize = (int)cs.iIOBufSize;
     pData->iFlushInterval = cs.iFlushInterval;
     pData->bUseAsyncWriter = cs.bUseAsyncWriter;
+    pData->bAddLF = cs.bAddLF;
     pData->bVeryRobustZip = 0; /* cannot be specified via legacy conf */
     pData->iCloseTimeout = 0; /* cannot be specified via legacy conf */
     setupInstStatsCtrs(pData);
@@ -1660,6 +1711,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
     cs.iIOBufSize = IOBUF_DFLT_SIZE;
     cs.iFlushInterval = FLUSH_INTRVL_DFLT;
     cs.bUseAsyncWriter = USE_ASYNCWRITER_DFLT;
+    cs.bAddLF = 0;
     free(pszFileDfltTplName);
     pszFileDfltTplName = NULL;
     return RS_RET_OK;
@@ -1719,6 +1771,7 @@ BEGINmodInit(File)
                                STD_LOADABLE_MODULE_ID));
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileflushontxend", 0, eCmdHdlrBinary, NULL, &cs.bFlushOnTXEnd,
                                STD_LOADABLE_MODULE_ID));
+    CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileaddlf", 0, eCmdHdlrBinary, NULL, &cs.bAddLF, STD_LOADABLE_MODULE_ID));
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"omfileiobuffersize", 0, eCmdHdlrSize, NULL, &cs.iIOBufSize,
                                STD_LOADABLE_MODULE_ID));
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"dirowner", 0, eCmdHdlrUID, NULL, &cs.dirUID, STD_LOADABLE_MODULE_ID));

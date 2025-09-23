@@ -1502,6 +1502,18 @@ fi
 AM_CONDITIONAL(LOGNORM_REGEX_SUPPORTED, test x$lognorm_regex_supported = xyes)
 AM_CONDITIONAL(ENABLE_MMNORMALIZE, test x$enable_mmnormalize = xyes)
 
+# mmleefparse
+AC_ARG_ENABLE(mmleefparse,
+        [AS_HELP_STRING([--enable-mmleefparse],[Enable building mmleefparse support @<:@default=yes@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmleefparse="yes" ;;
+          no) enable_mmleefparse="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmleefparse) ;;
+         esac],
+        [enable_mmleefparse=yes]
+)
+AM_CONDITIONAL(ENABLE_MMLEEFPARSE, test x$enable_mmleefparse = xyes)
+
 # mmnjsonparse
 AC_ARG_ENABLE(mmjsonparse,
         [AS_HELP_STRING([--enable-mmjsonparse],[Enable building mmjsonparse support @<:@default=no@:>@])],
@@ -3104,6 +3116,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/ommongodb/Makefile \
 		plugins/mmnormalize/Makefile \
 		plugins/mmjsonparse/Makefile \
+		plugins/mmleefparse/Makefile \
 		plugins/mmaudit/Makefile \
 		plugins/mmanon/Makefile \
 		plugins/mmrm1stspace/Makefile \
@@ -3248,6 +3261,7 @@ echo
 echo "---{ message modification modules }---"
 echo "    mmnormalize module will be compiled:      $enable_mmnormalize"
 echo "    mmjsonparse module will be compiled:      $enable_mmjsonparse"
+echo "    mmleefparse module will be compiled:      $enable_mmleefparse"
 echo "    mmgrok module will be compiled:           $enable_mmgrok"
 echo "    mmjaduit module will be compiled:         $enable_mmaudit"
 echo "    mmsnmptrapd module will be compiled:      $enable_mmsnmptrapd"

@@ -1,4 +1,4 @@
-# Copyright 2020 Rainer Gerhards and Others
+# Copyright 2020-2025 Rainer Gerhards and Others
 #
 # https://github.com/rsyslog/rsyslog-pkg-ubuntu
 #
@@ -26,11 +26,19 @@ name: check kafka distcheck
 
 on:
   pull_request:
-    paths-ignore:
-      - 'ChangeLog'
-      - '**/*.md'
-      - '**/*.txt'
-      - 'doc/**'
+    paths:
+      - 'Makefile.am'
+      - 'runtime/Makefile.am'
+      - 'pluginsg/imkafka/Makefile.am'
+      - 'pluginsg/omkafka/Makefile.am'
+      - '*.[ch]'
+      - 'runtime/*.[ch]'
+      - 'plugins/imkafka/*.[ch]'
+      - 'plugins/omkafka/*.[ch]'
+      - 'tests/*kafka*.sh'
+      - 'diag.sh'
+      - 'configure.ac'
+      - '.github/workflows/*.yml'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -52,6 +60,7 @@ jobs:
                  --enable-imdiag --disable-impstats --enable-imfile --disable-imfile-tests \
                  --disable-fmhttp --enable-valgrind --enable-valgrind-testbench \
                  --disable-helgrind --disable-default-tests --enable-kafka-tests \
+                 --disable-default-tests \
                  --enable-omkafka --enable-gnutls --disable-gnutls-tests --enable-imkafka"
           export RSYSLOG_CONTAINER_UID="" # use default
           export RSYSLOG_STATSURL='http://build.rsyslog.com/testbench-failedtest.php'
