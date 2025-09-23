@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/mmfields`.
 :Name: separator
 :Scope: input
 :Type: char
-:Default: ,
+:Default: ``,``
 :Required?: no
 :Introduced: 7.5.1
 

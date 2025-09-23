@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/mmfields`.
 :Name: jsonroot
 :Scope: input
 :Type: string
-:Default: !
+:Default: ``!``
 :Required?: no
 :Introduced: 7.5.1
 
