@@ -505,13 +505,14 @@ TESTS +=  \
 
 if ENABLE_OMSENDERTRACK
 TESTS += \
-	omsendertrack-basic.sh
-TESTS += \
+	omsendertrack-basic.sh \
+	omsendertrack-invalid-param.sh \
+	omsendertrack-badinterval.sh \
+	omsendertrack-invalid-json.sh \
 	omsendertrack-statefile.sh
 if HAVE_VALGRIND
 TESTS += \
-	omsendertrack-basic-vg.sh
-TESTS += \
+	omsendertrack-basic-vg.sh \
 	omsendertrack-statefile-vg.sh
 endif # if HAVE_VALGRIND
 endif
@@ -2277,6 +2278,11 @@ EXTRA_DIST= \
 	omsendertrack-basic-vg.sh \
 	omsendertrack-statefile.sh \
 	omsendertrack-statefile-vg.sh \
+	omsendertrack-basic.sh \
+	omsendertrack-invalid-param.sh \
+	omsendertrack-badinterval.sh \
+	omsendertrack-invalid-json.sh \
+	omsendertrack-basic-vg.sh \
 	zstd.sh \
 	zstd-vg.sh \
 	gzipwr_hup-vg.sh \
