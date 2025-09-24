@@ -35,6 +35,8 @@
     #include "regexp.h"
     #include "stringbuf.h"
 
+struct tplJsonNode;
+
 struct template {
     struct template *pNext;
     char *pszName;
@@ -56,6 +58,9 @@ struct template {
      * than short...
      */
     char optCaseSensitive; /* case-sensitive variable property references, default False, 0 */
+    char bJsonTreeEnabled;
+    struct tplJsonNode *pJsonRoot;
+    char bJsonTreeBuilt;
 };
 
 enum EntryTypes { UNDEFINED = 0, CONSTANT = 1, FIELD = 2 };
@@ -103,6 +108,7 @@ struct templateEntry {
         struct {
             uchar *pConstant; /* pointer to constant value */
             int iLenConstant; /* its length */
+            unsigned bJSONf : 1; /* constant uses jsonf formatting */
         } constant;
         struct {
             msgPropDescr_t msgProp; /* property to be used */

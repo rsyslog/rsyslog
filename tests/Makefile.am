@@ -242,7 +242,8 @@ TESTS +=  \
 	json-nonstring.sh \
 	json-onempty-at-end.sh \
 	template-json.sh \
-	template-pure-json.sh \
+        template-pure-json.sh \
+        template-jsonf-nested.sh \
 	template-pos-from-to.sh \
 	template-pos-from-to-lowercase.sh \
 	template-pos-from-to-oversize.sh \
@@ -2360,7 +2361,8 @@ EXTRA_DIST= \
 	json-nonstring.sh \
         json-onempty-at-end.sh \
 	template-json.sh \
-	template-pure-json.sh \
+        template-pure-json.sh \
+        template-jsonf-nested.sh \
 	template-pos-from-to.sh \
 	template-pos-from-to-lowercase.sh \
 	template-pos-from-to-oversize.sh \

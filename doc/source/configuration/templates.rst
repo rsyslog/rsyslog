@@ -62,7 +62,7 @@ Choosing a template type
 
 - Use :ref:`ref-templates-type-list` to map fields one by one
   (rename keys, add or drop fields, inject constants) and build JSON safely
-  with ``jsonf``.
+  with ``jsonf`` or ``jsonftree``.
 - Use :ref:`ref-templates-type-subtree` to serialize a prepared
   JSON tree (for example, after :ref:`ref-mmjsonparse` or
   :ref:`ref-mmleefparse` populated ``$!ecs``).
@@ -77,7 +77,9 @@ Schema mapping with JSONF
 
 Modern pipelines should prefer structured JSON. The recommended method is:
 
-- Enable JSON-safe encoding with ``option.jsonf="on``.
+- Enable JSON-safe encoding with ``option.jsonf="on"``.  Use
+  ``option.jsonftree="on"`` instead when you want dotted ``outname``
+  segments to become nested JSON objects automatically.
 - For each field, use
   :ref:`property() <ref-templates-statement-property>` or
   :ref:`constant() <ref-templates-statement-constant>` with ``format="jsonf"``.
@@ -131,7 +133,7 @@ List templates additionally support a block form:
 
 .. code-block:: rsyslog
 
-   template(name="..." type="list" option.jsonf="on") {
+   template(name="..." type="list" option.jsonftree="on") {
      property(outname="field" name="msg" format="jsonf")
      constant(outname="@version" value="1" format="jsonf")
    }
