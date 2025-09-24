@@ -39,7 +39,7 @@ address. However, while "random" mode assigns a new random IP address for every
 address in a message, "random-consistent" will assign the same randomized
 address to every instance of the same original address.
 
-The default "zero" mode will do full anonymization of any number of bits and it
+The default "zero" mode will do full anonymization of any number of bits. It
 will also normalize the address, so that no information about the original IP
 address is available. So in the above example, 10.1.12.123 would be anonymized
 to 10.0.0.0.
@@ -52,6 +52,18 @@ Input usage
 
    module(load="mmanon")
    action(type="mmanon" ipv4.mode="random-consistent")
+
+Legacy names (for reference)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Historic names/directives for compatibility. Do not use in new configs.
+
+.. _mmanon.parameter.legacy.mode:
+
+- mode — maps to ipv4.mode (status: legacy)
+
+.. index::
+   single: mmanon; mode
+   single: mode
 
 See also
 --------

@@ -38,6 +38,18 @@ Input usage
    module(load="mmanon")
    action(type="mmanon" ipv4.mode="simple" ipv4.replaceChar="*")
 
+Legacy names (for reference)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Historic names/directives for compatibility. Do not use in new configs.
+
+.. _mmanon.parameter.legacy.replacementchar:
+
+- replacementChar — maps to ipv4.replaceChar (status: legacy)
+
+.. index::
+   single: mmanon; replacementChar
+   single: replacementChar
+
 See also
 --------
 See also :doc:`../../configuration/modules/mmanon`.
