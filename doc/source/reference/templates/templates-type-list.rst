@@ -9,7 +9,7 @@ List template type
    single: templates; list type
 
 .. meta::
-   :keywords: rsyslog, template type, list, constant statement, property statement, JSON, schema mapping, data pipeline, ECS, LEEF, Palo Alto
+   :keywords: rsyslog, template type, list, constant statement, property statement, JSON, schema mapping, data pipeline, ECS, LEEF
 
 .. summary-start
 
@@ -27,26 +27,28 @@ Description
 --------------------------------------------------------------------------------
 
 The *list template type* generates output from a sequence of **constant** and
-**property** statements enclosed in curly braces. This format is recommended
-when complex substitutions are required, or when building structured documents
-**field by field**.
+**property** statements enclosed in curly braces. Use it when you need to build
+structured output **field by field** or perform explicit schema mapping.
+
+- **Property statement** — emit values from rsyslog properties or variables into
+  the output (see :ref:`ref-templates-statement-property`).
+- **Constant statement** — set fixed values or inject literal text into the output
+  (see :ref:`ref-templates-statement-constant`).
 
 List templates work well for:
 
-- **Schema mapping**: explicitly assigning each output field, one by one.
+- **Schema mapping**: assign each output field one by one.
 - **Structure-aware outputs** such as :ref:`ref-ommongodb` or :ref:`ref-omelasticsearch`.
-- **Text-based outputs** such as :ref:`ref-omfile` where constant text like
-  separators and line breaks must be inserted.
+- **Text outputs** such as :ref:`ref-omfile` where you need constant text (e.g., line breaks).
 
 Compared to :ref:`ref-templates-type-subtree`, list templates are more verbose
-but provide maximum control. They are preferred when no complete schema tree
-exists yet (e.g., when building an ECS mapping from scratch).
+but provide maximum control. Prefer list templates when you **don’t yet have**
+a complete schema tree (e.g., while building an ECS mapping from scratch).
 
 Generic data pipeline
 --------------------------------------------------------------------------------
 
-List templates are a key step in rsyslog **data pipelines**, where they are used
-for schema mapping.
+List templates are a key **data pipeline** step for mapping:
 
 .. mermaid::
 
@@ -54,13 +56,13 @@ for schema mapping.
       A["Input<br>(imudp, imtcp, imkafka)"]
       B["Parser<br>(mmjsonparse, mmaudit)"]
       C["Template<br>list (mapping)"]
-      D["Action<br>(omfile, omkafka, ...)"]
+      D["Action<br>(omfile, omelasticsearch)"]
       A --> B --> C --> D
 
-Example: simple ECS mapping
+Example: simple ECS mapping (jsonf)
 --------------------------------------------------------------------------------
 
-A minimal list template that emits selected ECS fields in JSON format:
+A minimal list template that emits selected ECS fields in JSON format (`jsonf`):
 
 .. code-block:: none
 
@@ -72,8 +74,24 @@ A minimal list template that emits selected ECS fields in JSON format:
      property(outname="log.level"      name="syslogseverity-text" format="jsonf")
    }
 
-This produces valid JSON with the given fields, letting rsyslog handle all
-quoting and escaping.
+This produces valid JSON without hand-crafted quoting or braces.
+
+Example: fixing a field with a constant (jsonf)
+--------------------------------------------------------------------------------
+
+Sometimes you need to set a **fixed JSON field** (e.g., a version marker or a tag).
+Use a **constant** statement with `outname` and `format="jsonf"` so the encoder
+handles quoting consistently:
+
+.. code-block:: none
+
+   template(name="ecs_fix" type="list" option.jsonf="on") {
+     property(outname="@timestamp"     name="timereported"
+              format="jsonf" dateFormat="rfc3339")
+     property(outname="event.original" name="msg" format="jsonf")
+     /* fixed field via constant, encoded as JSON */
+     constant(outname="@version" value="1" format="jsonf")
+   }
 
 Example: Palo Alto firewall (LEEF → ECS)
 --------------------------------------------------------------------------------
@@ -90,8 +108,7 @@ The typical workflow looks like this:
       D["Action<br>(omelasticsearch)"]
       A --> B --> C --> D
 
-The list template itself uses JSON output (`option.jsonf="on"`) and performs
-field-by-field mapping:
+The list template performs field-by-field mapping using `jsonf`:
 
 .. code-block:: none
 
@@ -133,15 +150,11 @@ field-by-field mapping:
      property(outname="observer.hostname"       name="$!leef!fields!DeviceName"    format="jsonf")
    }
 
-This demonstrates a **real production mapping**, where each firewall field
-is translated into its ECS equivalent.
-
 Notes
 --------------------------------------------------------------------------------
 
-- List templates support **constant text**, unlike subtree templates.
+- Prefer `property(... format="jsonf")` for dynamic fields; use **`constant(outname=…, format="jsonf")`** for small fixed values.
 - Best used when mapping output **field by field**.
-- More verbose than subtree templates, but more flexible.
 - For complete schema trees, prefer :ref:`ref-templates-type-subtree`.
 
 See also
