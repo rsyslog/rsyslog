@@ -1,12 +1,12 @@
 .. _param-mmanon-ipv4-mode:
 .. _mmanon.parameter.input.ipv4-mode:
 
-ipv4.mode
+ipv4.Mode
 =========
 
 .. index::
-   single: mmanon; ipv4.mode
-   single: ipv4.mode
+   single: mmanon; ipv4.Mode
+   single: ipv4.Mode
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Selects the IPv4 anonymization mode used by the mmanon action.
 
 This parameter applies to :doc:`../../configuration/modules/mmanon`.
 
-:Name: ipv4.mode
+:Name: ipv4.Mode
 :Scope: input
 :Type: string
 :Default: input=zero
@@ -51,7 +51,7 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="mmanon")
-   action(type="mmanon" ipv4.mode="random-consistent")
+   action(type="mmanon" ipv4.Mode="random-consistent")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -59,7 +59,7 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _mmanon.parameter.legacy.mode:
 
-- mode — maps to ipv4.mode (status: legacy)
+- mode — maps to ipv4.Mode (status: legacy)
 
 .. index::
    single: mmanon; mode
