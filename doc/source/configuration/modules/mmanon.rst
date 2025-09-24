@@ -44,7 +44,7 @@ Configuration Parameters
    Parameter names are case-insensitive; camelCase is recommended for readability.
 
 
-Module Parameters
+Action Parameters
 -----------------
 
 Parameters starting with 'IPv4.' will configure IPv4 anonymization,

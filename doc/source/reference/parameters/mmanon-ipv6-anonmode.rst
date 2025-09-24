@@ -1,12 +1,12 @@
 .. _param-mmanon-ipv6-anonmode:
-.. _mmanon.parameter.module.ipv6-anonmode:
+.. _mmanon.parameter.input.ipv6-anonmode:
 
-ipv6.anonmode
+ipv6.anonMode
 =============
 
 .. index::
-   single: mmanon; ipv6.anonmode
-   single: ipv6.anonmode
+   single: mmanon; ipv6.anonMode
+   single: ipv6.anonMode
 
 .. summary-start
 
@@ -16,10 +16,10 @@ Defines how IPv6 addresses are anonymized by the mmanon action.
 
 This parameter applies to :doc:`../../configuration/modules/mmanon`.
 
-:Name: ipv6.anonmode
-:Scope: module
+:Name: ipv6.anonMode
+:Scope: input
 :Type: string
-:Default: module=zero
+:Default: input=zero
 :Required?: no
 :Introduced: 7.3.7
 
@@ -33,15 +33,15 @@ The default "zero" mode will do full anonymization of any number of bits and it 
 
 Also note that an anonymized IPv6 address will be normalized, meaning there will be no abbreviations, leading zeros will **not** be displayed, and capital letters in the hex numerals will be lowercase.
 
-Module usage
-------------
-.. _param-mmanon-module-ipv6-anonmode:
-.. _mmanon.parameter.module.ipv6-anonmode-usage:
+Input usage
+-----------
+.. _param-mmanon-input-ipv6-anonmode:
+.. _mmanon.parameter.input.ipv6-anonmode-usage:
 
 .. code-block:: rsyslog
 
    module(load="mmanon")
-   action(type="mmanon" ipv6.anonmode="random-consistent")
+   action(type="mmanon" ipv6.anonMode="random-consistent")
 
 See also
 --------

@@ -1,5 +1,5 @@
 .. _param-mmanon-ipv4-bits:
-.. _mmanon.parameter.module.ipv4-bits:
+.. _mmanon.parameter.input.ipv4-bits:
 
 ipv4.bits
 =========
@@ -17,9 +17,9 @@ Sets how many low-order bits of IPv4 addresses are anonymized.
 This parameter applies to :doc:`../../configuration/modules/mmanon`.
 
 :Name: ipv4.bits
-:Scope: module
+:Scope: input
 :Type: positive integer
-:Default: module=16
+:Default: input=16
 :Required?: no
 :Introduced: 7.3.7
 
@@ -29,10 +29,10 @@ This sets the number of bits that should be anonymized (bits are from the right,
 
 Note: when in simple mode, only bits on a byte boundary can be specified. As such, any value other than 8, 16, 24 or 32 is invalid. If an invalid value is given, it is rounded to the next byte boundary (so we favor stronger anonymization in that case). For example, a bit value of 12 will become 16 in simple mode (an error message is also emitted).
 
-Module usage
-------------
-.. _param-mmanon-module-ipv4-bits:
-.. _mmanon.parameter.module.ipv4-bits-usage:
+Input usage
+-----------
+.. _param-mmanon-input-ipv4-bits:
+.. _mmanon.parameter.input.ipv4-bits-usage:
 
 .. code-block:: rsyslog
 

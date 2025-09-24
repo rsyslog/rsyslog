@@ -1,5 +1,5 @@
 .. _param-mmanon-ipv4-enable:
-.. _mmanon.parameter.module.ipv4-enable:
+.. _mmanon.parameter.input.ipv4-enable:
 
 ipv4.enable
 ===========
@@ -17,9 +17,9 @@ Enables or disables IPv4 address anonymization for the mmanon action.
 This parameter applies to :doc:`../../configuration/modules/mmanon`.
 
 :Name: ipv4.enable
-:Scope: module
+:Scope: input
 :Type: boolean
-:Default: module=on
+:Default: input=on
 :Required?: no
 :Introduced: 7.3.7
 
@@ -27,10 +27,10 @@ Description
 -----------
 Allows to enable or disable the anonymization of IPv4 addresses.
 
-Module usage
-------------
-.. _param-mmanon-module-ipv4-enable:
-.. _mmanon.parameter.module.ipv4-enable-usage:
+Input usage
+-----------
+.. _param-mmanon-input-ipv4-enable:
+.. _mmanon.parameter.input.ipv4-enable-usage:
 
 .. code-block:: rsyslog
 

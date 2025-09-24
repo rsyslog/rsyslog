@@ -1,5 +1,5 @@
 .. _param-mmanon-ipv4-mode:
-.. _mmanon.parameter.module.ipv4-mode:
+.. _mmanon.parameter.input.ipv4-mode:
 
 ipv4.mode
 =========
@@ -17,9 +17,9 @@ Selects the IPv4 anonymization mode used by the mmanon action.
 This parameter applies to :doc:`../../configuration/modules/mmanon`.
 
 :Name: ipv4.mode
-:Scope: module
+:Scope: input
 :Type: string
-:Default: module=zero
+:Default: input=zero
 :Required?: no
 :Introduced: 7.3.7
 
@@ -31,10 +31,10 @@ The modes "random" and "random-consistent" are very similar, in that they both a
 
 The default "zero" mode will do full anonymization of any number of bits and it will also normalize the address, so that no information about the original IP address is available. So in the above example, 10.1.12.123 would be anonymized to 10.0.0.0.
 
-Module usage
-------------
-.. _param-mmanon-module-ipv4-mode:
-.. _mmanon.parameter.module.ipv4-mode-usage:
+Input usage
+-----------
+.. _param-mmanon-input-ipv4-mode:
+.. _mmanon.parameter.input.ipv4-mode-usage:
 
 .. code-block:: rsyslog
 
