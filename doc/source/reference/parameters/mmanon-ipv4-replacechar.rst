@@ -44,11 +44,11 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _mmanon.parameter.legacy.replacementchar:
 
-- replacementChar — maps to ipv4.replaceChar (status: legacy)
+- replacementchar — maps to ipv4.replaceChar (status: legacy)
 
 .. index::
-   single: mmanon; replacementChar
-   single: replacementChar
+   single: mmanon; replacementchar
+   single: replacementchar
 
 See also
 --------
