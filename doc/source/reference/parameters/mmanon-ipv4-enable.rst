@@ -29,7 +29,6 @@ Allows to enable or disable the anonymization of IPv4 addresses.
 
 Input usage
 -----------
-.. _param-mmanon-input-ipv4-enable:
 .. _mmanon.parameter.input.ipv4-enable-usage:
 
 .. code-block:: rsyslog

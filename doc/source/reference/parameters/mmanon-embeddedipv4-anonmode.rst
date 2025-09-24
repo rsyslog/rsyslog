@@ -25,17 +25,26 @@ This parameter applies to :doc:`../../configuration/modules/mmanon`.
 
 Description
 -----------
-This defines the mode, in which IPv6 addresses with embedded IPv4 parts will be anonymized. There exist the "random", "random-consistent", and "zero" modes.
+This defines the mode, in which IPv6 addresses with embedded IPv4 parts will be
+anonymized. The available modes are "random", "random-consistent", and
+"zero".
 
-The modes "random" and "random-consistent" are very similar, in that they both anonymize IP addresses by randomizing the last bits (any number) of a given address. However, while "random" mode assigns a new random IP address for every address in a message, "random-consistent" will assign the same randomized address to every instance of the same original address.
+The modes "random" and "random-consistent" are very similar, in that they both
+anonymize IP addresses by randomizing the last bits (any number) of a given
+address. However, while "random" mode assigns a new random IP address for every
+address in a message, "random-consistent" will assign the same randomized
+address to every instance of the same original address.
 
-The default "zero" mode will do full anonymization of any number of bits and it will also normalize the address, so that no information about the original IP address is available.
+The default "zero" mode will do full anonymization of any number of bits and it
+will also normalize the address, so that no information about the original IP
+address is available.
 
-Also note that an anonymized IPv6 address will be normalized, meaning there will be no abbreviations, leading zeros will **not** be displayed, and capital letters in the hex numerals will be lowercase.
+Also note that an anonymized IPv6 address will be normalized, meaning there will
+be no abbreviations, leading zeros will **not** be displayed, and capital
+letters in the hex numerals will be lowercase.
 
 Input usage
 -----------
-.. _param-mmanon-input-embeddedipv4-anonmode:
 .. _mmanon.parameter.input.embeddedipv4-anonmode-usage:
 
 .. code-block:: rsyslog

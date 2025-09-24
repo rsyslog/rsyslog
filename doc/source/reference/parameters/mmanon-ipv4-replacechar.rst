@@ -25,11 +25,12 @@ This parameter applies to :doc:`../../configuration/modules/mmanon`.
 
 Description
 -----------
-In simple mode, this sets the character that the to-be-anonymized part of the IP address is to be overwritten with. In any other mode the parameter is ignored if set.
+In simple mode, this sets the character that the to-be-anonymized part of the IP
+address is to be overwritten with. In any other mode the parameter is ignored if
+set.
 
 Input usage
 -----------
-.. _param-mmanon-input-ipv4-replacechar:
 .. _mmanon.parameter.input.ipv4-replacechar-usage:
 
 .. code-block:: rsyslog

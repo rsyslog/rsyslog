@@ -29,7 +29,6 @@ Allows to enable or disable the anonymization of IPv6 addresses.
 
 Input usage
 -----------
-.. _param-mmanon-input-ipv6-enable:
 .. _mmanon.parameter.input.ipv6-enable-usage:
 
 .. code-block:: rsyslog
