@@ -25,7 +25,6 @@ This parameter applies to :doc:`../../configuration/modules/mmanon`.
 
 Description
 -----------
-This defines the mode, in which IPv6 addresses will be anonymized.
 The available modes are "random", "random-consistent", and "zero".
 
 The modes "random" and "random-consistent" are very similar, in that they both
@@ -53,4 +52,4 @@ Input usage
 
 See also
 --------
-See also :doc:`../../configuration/modules/mmanon`.
+:doc:`../../configuration/modules/mmanon`

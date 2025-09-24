@@ -39,4 +39,4 @@ Input usage
 
 See also
 --------
-See also :doc:`../../configuration/modules/mmanon`.
+:doc:`../../configuration/modules/mmanon`
