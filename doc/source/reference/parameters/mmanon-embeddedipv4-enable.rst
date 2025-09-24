@@ -1,12 +1,12 @@
 .. _param-mmanon-embeddedipv4-enable:
 .. _mmanon.parameter.input.embeddedipv4-enable:
 
-embeddedIPv4.enable
+embeddedipv4.enable
 ===================
 
 .. index::
-   single: mmanon; embeddedIPv4.enable
-   single: embeddedIPv4.enable
+   single: mmanon; embeddedipv4.enable
+   single: embeddedipv4.enable
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Enables or disables anonymization of IPv6 addresses with embedded IPv4 parts.
 
 This parameter applies to :doc:`../../configuration/modules/mmanon`.
 
-:Name: embeddedIPv4.enable
+:Name: embeddedipv4.enable
 :Scope: input
 :Type: boolean
 :Default: input=on

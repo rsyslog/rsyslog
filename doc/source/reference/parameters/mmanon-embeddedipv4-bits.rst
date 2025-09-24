@@ -1,12 +1,12 @@
 .. _param-mmanon-embeddedipv4-bits:
 .. _mmanon.parameter.input.embeddedipv4-bits:
 
-embeddedIPv4.bits
+embeddedipv4.bits
 =================
 
 .. index::
-   single: mmanon; embeddedIPv4.bits
-   single: embeddedIPv4.bits
+   single: mmanon; embeddedipv4.bits
+   single: embeddedipv4.bits
 
 .. summary-start
 
@@ -17,7 +17,7 @@ anonymized.
 
 This parameter applies to :doc:`../../configuration/modules/mmanon`.
 
-:Name: embeddedIPv4.bits
+:Name: embeddedipv4.bits
 :Scope: input
 :Type: positive integer
 :Default: input=96

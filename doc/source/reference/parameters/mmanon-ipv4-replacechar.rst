@@ -1,12 +1,12 @@
 .. _param-mmanon-ipv4-replacechar:
 .. _mmanon.parameter.input.ipv4-replacechar:
 
-ipv4.replaceChar
+ipv4.replacechar
 ================
 
 .. index::
-   single: mmanon; ipv4.replaceChar
-   single: ipv4.replaceChar
+   single: mmanon; ipv4.replacechar
+   single: ipv4.replacechar
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Sets the character used to overwrite anonymized IPv4 octets in simple mode.
 
 This parameter applies to :doc:`../../configuration/modules/mmanon`.
 
-:Name: ipv4.replaceChar
+:Name: ipv4.replacechar
 :Scope: input
 :Type: character
 :Default: input=x
@@ -44,7 +44,7 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _mmanon.parameter.legacy.replacementchar:
 
-- replacementchar — maps to ipv4.replaceChar (status: legacy)
+- replacementchar — maps to ipv4.replacechar (status: legacy)
 
 .. index::
    single: mmanon; replacementchar
