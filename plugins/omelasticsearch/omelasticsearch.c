@@ -692,16 +692,20 @@ static rsRetVal detectTargetPlatformAndVersion(instanceData *const pData) {
 
         if (code == CURLE_OK && status >= 200 && status < 300 && buffer.data != NULL) {
             rsRetVal detectRet = updateDetectedPlatform(pData, buffer.data, (char *)pData->serverBaseUrls[i]);
-            free(buffer.data);
-            buffer.data = NULL;
             if (detectRet == RS_RET_OK) {
                 detected = 1;
-                goto finalize_it;
+            } else {
+                LogMsg(0, detectRet, LOG_WARNING,
+                       "omelasticsearch: ignoring platform detection response from %s due to parse errors",
+                       (char *)pData->serverBaseUrls[i]);
             }
-            LogMsg(0, detectRet, LOG_WARNING,
-                   "omelasticsearch: ignoring platform detection response from %s due to parse errors",
-                   (char *)pData->serverBaseUrls[i]);
-            continue;
+        } else if (code != CURLE_OK) {
+            LogMsg(0, RS_RET_ERR, LOG_WARNING, "omelasticsearch: platform detection request to %s failed: %s",
+                   (char *)pData->serverBaseUrls[i], errbuf[0] != '\0' ? errbuf : curl_easy_strerror(code));
+        } else {
+            LogMsg(0, RS_RET_ERR, LOG_WARNING,
+                   "omelasticsearch: platform detection request to %s returned HTTP status %ld",
+                   (char *)pData->serverBaseUrls[i], status);
         }
 
         if (buffer.data != NULL) {
@@ -709,13 +713,8 @@ static rsRetVal detectTargetPlatformAndVersion(instanceData *const pData) {
             buffer.data = NULL;
         }
 
-        if (code != CURLE_OK) {
-            LogMsg(0, RS_RET_ERR, LOG_WARNING, "omelasticsearch: platform detection request to %s failed: %s",
-                   (char *)pData->serverBaseUrls[i], errbuf[0] != '\0' ? errbuf : curl_easy_strerror(code));
-        } else {
-            LogMsg(0, RS_RET_ERR, LOG_WARNING,
-                   "omelasticsearch: platform detection request to %s returned HTTP status %ld",
-                   (char *)pData->serverBaseUrls[i], status);
+        if (detected) {
+            goto finalize_it;
         }
     }
 
@@ -2372,7 +2371,14 @@ BEGINcheckCnf
         ruleset_t *pRuleset;
         rsRetVal localRet;
 
-        CHKiRet(detectTargetPlatformAndVersion(inst));
+        localRet = detectTargetPlatformAndVersion(inst);
+        if (localRet != RS_RET_OK) {
+            const char *target = (inst->serverBaseUrls != NULL && inst->numServers > 0)
+                                     ? (const char *)inst->serverBaseUrls[0]
+                                     : (inst->searchIndex == NULL ? "configured server" : (char *)inst->searchIndex);
+            LogMsg(0, localRet, LOG_WARNING,
+                   "omelasticsearch: platform detection failed for %s, continuing with defaults", target);
+        }
 
         if (inst->retryRulesetName) {
             localRet = ruleset.GetRuleset(pModConf->pConf, &pRuleset, inst->retryRulesetName);
