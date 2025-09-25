@@ -29,7 +29,7 @@ The available modes are ``simple``, ``random``, ``random-consistent``, and
 ``zero``.
 In simple mode, only octets as a whole can be anonymized and the length of the
 message is never changed. This means that when the last three octets of the
-address 10.1.12.123 are anonymized, the result will be 10.0.00.000. This means
+address 10.1.12.123 are anonymized, the result will be 10.x.xx.xxx. This means
 that the length of the original octets is still visible and may be used to draw
 some privacy-evasive conclusions. This mode is slightly faster than the other
 modes, and this may matter in high throughput environments.
