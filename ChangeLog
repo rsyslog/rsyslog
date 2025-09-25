@@ -1,6 +1,21 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
 - overall improved documentation via a large set of topic updates.
+- 2025-09-25: omelasticsearch: omit _type by default; use typeless endpoint
+  Newer Elasticsearch versions reject typed APIs. This adapts the module
+  so shipping works out of the box with modern clusters and keeps the
+  codebase aligned with typeless ES conventions.
+  Impact: bulk metadata no longer includes _type unless explicitly set.
+  Old setups that relied on a default "events" type (ES < 8) may need
+  explicit configuration.
+  Technically, the default searchType is now NULL
+  (OMES_SEARCHTYPE_DEFAULT). setPostURL continues to route requests to
+  the typeless /_doc endpoint, but bulk metadata is generated without a
+  _type field when searchType is unset. The legacy default "events" for
+  ES < 8 is removed. Tests are updated to stop passing searchType, and
+  the searchType-empty test is dropped to reflect the new default. No
+  OMODTX or action-queue semantics change.
+  Closes: https://github.com/rsyslog/rsyslog/issues/5060
 - 2025-09-25: template: add jsonftree option for nested jsonf output
   We want easy nested JSON to match common schemas (e.g., Elastic ECS)
   without external processors. This introduces an opt-in mode so existing
