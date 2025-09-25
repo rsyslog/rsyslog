@@ -104,6 +104,11 @@ typedef enum {
 
 #define DEFAULT_REBIND_INTERVAL -1
 
+/** Default search type is left unset so that bulk metadata omits `_type`,
+ * but requests still fall back to the typeless endpoint (`/_doc`).
+ */
+#define OMES_SEARCHTYPE_DEFAULT NULL
+
 /* REST API for elasticsearch hits this URL:
  * http://<hostName>:<restPort>/<searchIndex>/<searchType>
  */
@@ -589,13 +594,12 @@ done:
 
 static rsRetVal ATTR_NONNULL(1) setPostURL(wrkrInstanceData_t *const pWrkrData, uchar **const tpls) {
     uchar *searchIndex = NULL;
-    uchar *searchType;
+    uchar *searchType = NULL;
+    uchar *actualSearchType = (uchar *)"_doc";
     uchar *pipelineName;
     uchar *parent;
     uchar *bulkId;
     char *baseUrl;
-    /* since 7.0, the API always requires /idx/_doc, so use that if searchType is not explicitly set */
-    uchar *actualSearchType = (uchar *)"_doc";
     es_str_t *url;
     int r = 0;
     DEFiRet;
@@ -1768,7 +1772,7 @@ static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
     pData->pwd = NULL;
     pData->authBuf = NULL;
     pData->searchIndex = NULL;
-    pData->searchType = NULL;
+    pData->searchType = OMES_SEARCHTYPE_DEFAULT;
     pData->pipelineName = NULL;
     pData->dynPipelineName = 0;
     pData->skipPipelineIfEmpty = 0;
@@ -2058,7 +2062,6 @@ BEGINnewActInst
 
     if (pData->esVersion < 8) {
         if (pData->searchIndex == NULL) pData->searchIndex = (uchar *)strdup("system");
-        if (pData->searchType == NULL) pData->searchType = (uchar *)strdup("events");
 
         if ((pData->writeOperation != ES_WRITE_INDEX) && (pData->bulkId == NULL)) {
             LogError(0, RS_RET_CONFIG_ERROR, "omelasticsearch: writeoperation '%d' requires bulkid",

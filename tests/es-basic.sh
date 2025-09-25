@@ -28,7 +28,6 @@ if $msg contains "msgnum:" then
                server="127.0.0.1"
                serverport="'$ES_PORT'"
                template="tpl"
-               searchType="_doc"
                searchIndex="rsyslog_testbench"
                rebindinterval="'$REBIND_INTERVAL'")
 '

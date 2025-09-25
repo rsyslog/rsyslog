@@ -28,7 +28,6 @@ ruleset(name="foo") {
   action(type="omelasticsearch"
 	 template="tpl"
 	 searchIndex="rsyslog_testbench"
-	 searchType="_doc"
 	 serverport="19200"
 	 bulkmode="on"
 	 errorFile="'${RSYSLOG_DYNNAME}'.errorfile"
