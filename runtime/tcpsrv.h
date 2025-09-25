@@ -47,6 +47,7 @@ struct tcpLstnParams_s {
     sbool bSPFramingFix; /**< support work-around for broken Cisco ASA framing? */
     sbool bPreserveCase; /**< preserve case in fromhost */
     const uchar *pszLstnPortFileName; /**< File in which the dynamic port is written */
+    char *pszNetworkNamespace; /**< network namespace to use */
     uchar *pszStrmDrvrName; /**< stream driver to use */
     uchar *pszInputName; /**< value to be used as input name */
     prop_t *pInputName;
@@ -280,8 +281,27 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
     /* added v28 */
     rsRetVal (*SetNumWrkr)(tcpsrv_t *pThis, int);
     rsRetVal (*SetStarvationMaxReads)(tcpsrv_t *pThis, unsigned int);
+    /* added v29 */
+    /*
+     * @brief Set the Network Namespace into the listener parameters
+     * @param pThis The associated TCP Server instance
+     * @param cnf_params The listener parameters to configure
+     * @param networkNamespace The namespace parameter to set into the
+     *                         listener configuration parameters
+     * @return RS_RET_OK on success, otherwise a failure code.
+     * @details For platforms that do not support network namespaces,
+     *          this function should fail for any non-null and non-empty
+     *          namespace passed.  Note that the empty string is treated
+     *          the same as a NULL, i.e. you are not allowed to actually
+     *          use a network namespace with the empty string.  So both
+     *          a NULL and an empty string "" both mean to use the
+     *          original startup network namespace.
+     */
+    rsRetVal (*SetNetworkNamespace)(tcpsrv_t *pThis, tcpLstnParams_t *const cnf_params,
+                                    const char *const networkNamespace);
+
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 28 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 29 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10
