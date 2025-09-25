@@ -38,6 +38,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <ctype.h>
 #if defined(__FreeBSD__)
     #include <unistd.h>
 #endif
@@ -100,6 +101,10 @@ typedef enum {
     ES_WRITE_UPSERT /* not supported */
 } es_write_ops_t;
 
+#define OMES_PLATFORM_UNKNOWN 0
+#define OMES_PLATFORM_ELASTICSEARCH 1
+#define OMES_PLATFORM_OPENSEARCH 2
+
 #define WRKR_DATA_TYPE_ES 0xBADF0001
 
 #define DEFAULT_REBIND_INTERVAL -1
@@ -135,6 +140,11 @@ typedef struct instanceConf_s {
     uchar *bulkId;
     uchar *errorFile;
     int esVersion;
+    int detectedMajorVersion;
+    int detectedMinorVersion;
+    int detectedPatchVersion;
+    uchar *detectedVersionString;
+    int targetPlatform;
     sbool errorOnly;
     sbool interleaved;
     sbool dynSrchIdx;
@@ -232,6 +242,7 @@ static struct cnfparamdescr actpdescr[] = {{"server", eCmdHdlrArray, 0},
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 static rsRetVal curlSetup(wrkrInstanceData_t *pWrkrData);
+static rsRetVal detectTargetPlatformAndVersion(instanceData *const pData);
 
 BEGINcreateInstance
     CODESTARTcreateInstance;
@@ -327,6 +338,7 @@ BEGINfreeInstance
     free(pData->myCertFile);
     free(pData->myPrivKeyFile);
     free(pData->retryRulesetName);
+    free(pData->detectedVersionString);
     if (pData->ratelimiter != NULL) ratelimitDestruct(pData->ratelimiter);
 ENDfreeInstance
 
@@ -394,6 +406,9 @@ BEGINdbgPrintInstInfo
     dbgprintf("\tratelimit.interval='%u'\n", pData->ratelimitInterval);
     dbgprintf("\tratelimit.burst='%u'\n", pData->ratelimitBurst);
     dbgprintf("\trebindinterval='%d'\n", pData->rebindInterval);
+    dbgprintf("\ttargetPlatform='%d'\n", pData->targetPlatform);
+    dbgprintf("\tdetectedVersion='%s'\n",
+              pData->detectedVersionString == NULL ? (uchar *)"(unknown)" : pData->detectedVersionString);
 ENDdbgPrintInstInfo
 
 
@@ -471,6 +486,233 @@ finalize_it:
     if (urlBuf) {
         es_deleteStr(urlBuf);
     }
+    RETiRet;
+}
+
+struct versionDetectBuffer {
+    char *data;
+    size_t len;
+};
+
+static size_t curlVersionResult(void *const ptr, const size_t size, const size_t nmemb, void *const userdata) {
+    struct versionDetectBuffer *const buffer = (struct versionDetectBuffer *)userdata;
+    const size_t size_add = size * nmemb;
+    char *tmp;
+
+    if (size_add == 0) return 0;
+
+    tmp = realloc(buffer->data, buffer->len + size_add + 1);
+    if (tmp == NULL) {
+        LogError(errno, RS_RET_OUT_OF_MEMORY, "omelasticsearch: realloc failed in curlVersionResult");
+        return 0;
+    }
+
+    memcpy(tmp + buffer->len, ptr, size_add);
+    buffer->data = tmp;
+    buffer->len += size_add;
+    buffer->data[buffer->len] = '\0';
+
+    return size_add;
+}
+
+static int stringsEqualIgnoreCase(const char *const lhs, const char *const rhs) {
+    if (lhs == NULL || rhs == NULL) return 0;
+    const unsigned char *lp = (const unsigned char *)lhs;
+    const unsigned char *rp = (const unsigned char *)rhs;
+    while (*lp != '\0' && *rp != '\0') {
+        if (tolower(*lp) != tolower(*rp)) return 0;
+        ++lp;
+        ++rp;
+    }
+    return *lp == '\0' && *rp == '\0';
+}
+
+static rsRetVal parseVersionString(const char *const version, int *const major, int *const minor, int *const patch) {
+    const char *cursor;
+    char *endptr;
+    long parsed;
+    DEFiRet;
+
+    if (version == NULL) {
+        LogError(0, RS_RET_CONFIG_ERROR, "omelasticsearch: server response missing version number");
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+
+    parsed = strtol(version, &endptr, 10);
+    if (endptr == version) {
+        LogError(0, RS_RET_CONFIG_ERROR,
+                 "omelasticsearch: unable to parse version string '%s' (missing major component)", version);
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+    *major = (int)parsed;
+
+    *minor = 0;
+    *patch = 0;
+
+    if (*endptr == '.') {
+        cursor = endptr + 1;
+        parsed = strtol(cursor, &endptr, 10);
+        if (endptr != cursor) {
+            *minor = (int)parsed;
+        }
+        if (*endptr == '.') {
+            cursor = endptr + 1;
+            parsed = strtol(cursor, &endptr, 10);
+            if (endptr != cursor) {
+                *patch = (int)parsed;
+            }
+        }
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal updateDetectedPlatform(instanceData *const pData,
+                                       const char *const payload,
+                                       const char *const serverUrl) {
+    fjson_object *root = NULL;
+    fjson_object *version = NULL;
+    fjson_object *field = NULL;
+    const char *number = NULL;
+    const char *distribution = NULL;
+    const char *tagline = NULL;
+    int major = -1;
+    int minor = 0;
+    int patch = 0;
+    sbool isOpenSearch = 0;
+    DEFiRet;
+
+    root = fjson_tokener_parse(payload);
+    if (root == NULL) {
+        LogError(0, RS_RET_CONFIG_ERROR, "omelasticsearch: unable to parse platform detection response");
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+
+    if (!fjson_object_object_get_ex(root, "version", &version) || version == NULL) {
+        LogError(0, RS_RET_CONFIG_ERROR, "omelasticsearch: platform detection response missing version object");
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+
+    if (fjson_object_object_get_ex(version, "number", &field)) {
+        number = fjson_object_get_string(field);
+    }
+    if (fjson_object_object_get_ex(version, "distribution", &field)) {
+        distribution = fjson_object_get_string(field);
+    }
+    if (fjson_object_object_get_ex(root, "tagline", &field)) {
+        tagline = fjson_object_get_string(field);
+    }
+
+    CHKiRet(parseVersionString(number, &major, &minor, &patch));
+
+    if (distribution != NULL && stringsEqualIgnoreCase(distribution, "opensearch")) {
+        isOpenSearch = 1;
+    } else if (tagline != NULL && strcasestr(tagline, "opensearch") != NULL) {
+        isOpenSearch = 1;
+    }
+
+    free(pData->detectedVersionString);
+    pData->detectedVersionString = NULL;
+    if (number != NULL) {
+        pData->detectedVersionString = (uchar *)strdup(number);
+        if (pData->detectedVersionString == NULL) {
+            LogError(errno, RS_RET_OUT_OF_MEMORY, "omelasticsearch: strdup failed for version string");
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+    }
+
+    pData->detectedMajorVersion = major;
+    pData->detectedMinorVersion = minor;
+    pData->detectedPatchVersion = patch;
+    pData->targetPlatform = isOpenSearch ? OMES_PLATFORM_OPENSEARCH : OMES_PLATFORM_ELASTICSEARCH;
+
+    if (pData->esVersion == 0) {
+        pData->esVersion = major;
+    }
+
+    LogMsg(0, RS_RET_OK, LOG_INFO, "omelasticsearch: detected %s version %s at %s",
+           isOpenSearch ? "OpenSearch" : "Elasticsearch", number == NULL ? "(unknown)" : number, serverUrl);
+
+finalize_it:
+    if (root != NULL) fjson_object_put(root);
+    RETiRet;
+}
+
+static rsRetVal detectTargetPlatformAndVersion(instanceData *const pData) {
+    CURL *curl = NULL;
+    struct versionDetectBuffer buffer;
+    char errbuf[CURL_ERROR_SIZE];
+    DEFiRet;
+
+    if (pData->serverBaseUrls == NULL || pData->numServers <= 0) {
+        LogError(0, RS_RET_CONFIG_ERROR, "omelasticsearch: no servers configured for platform detection");
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+
+    for (int i = 0; i < pData->numServers; ++i) {
+        buffer.data = NULL;
+        buffer.len = 0;
+        errbuf[0] = '\0';
+
+        curl = curl_easy_init();
+        if (curl == NULL) {
+            LogError(0, RS_RET_OUT_OF_MEMORY, "omelasticsearch: curl_easy_init failed for platform detection");
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+
+        curl_easy_setopt(curl, CURLOPT_URL, (const char *)pData->serverBaseUrls[i]);
+        curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, pData->healthCheckTimeout);
+        curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlVersionResult);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
+        if (pData->allowUnsignedCerts) curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+        if (pData->skipVerifyHost) curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+        if (pData->authBuf != NULL) {
+            curl_easy_setopt(curl, CURLOPT_USERPWD, pData->authBuf);
+            curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+        }
+        if (pData->caCertFile) curl_easy_setopt(curl, CURLOPT_CAINFO, pData->caCertFile);
+        if (pData->myCertFile) curl_easy_setopt(curl, CURLOPT_SSLCERT, pData->myCertFile);
+        if (pData->myPrivKeyFile) curl_easy_setopt(curl, CURLOPT_SSLKEY, pData->myPrivKeyFile);
+
+        CURLcode code = curl_easy_perform(curl);
+        long status = 0;
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
+        curl_easy_cleanup(curl);
+        curl = NULL;
+
+        if (code == CURLE_OK && status >= 200 && status < 300 && buffer.data != NULL) {
+            rsRetVal detectRet = updateDetectedPlatform(pData, buffer.data, (char *)pData->serverBaseUrls[i]);
+            free(buffer.data);
+            buffer.data = NULL;
+            CHKiRet(detectRet);
+            iRet = RS_RET_OK;
+            goto finalize_it;
+        }
+
+        if (buffer.data != NULL) {
+            free(buffer.data);
+            buffer.data = NULL;
+        }
+
+        if (code != CURLE_OK) {
+            LogMsg(0, RS_RET_ERR, LOG_WARNING, "omelasticsearch: platform detection request to %s failed: %s",
+                   (char *)pData->serverBaseUrls[i], errbuf[0] != '\0' ? errbuf : curl_easy_strerror(code));
+        } else {
+            LogMsg(0, RS_RET_ERR, LOG_WARNING,
+                   "omelasticsearch: platform detection request to %s returned HTTP status %ld",
+                   (char *)pData->serverBaseUrls[i], status);
+        }
+    }
+
+    LogError(0, RS_RET_CONFIG_ERROR,
+             "omelasticsearch: unable to detect target platform and version from configured servers");
+    ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+
+finalize_it:
+    if (curl != NULL) curl_easy_cleanup(curl);
     RETiRet;
 }
 
@@ -1803,6 +2045,11 @@ static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
     pData->retryRulesetName = NULL;
     pData->retryRuleset = NULL;
     pData->rebindInterval = DEFAULT_REBIND_INTERVAL;
+    pData->detectedMajorVersion = -1;
+    pData->detectedMinorVersion = -1;
+    pData->detectedPatchVersion = -1;
+    pData->detectedVersionString = NULL;
+    pData->targetPlatform = OMES_PLATFORM_UNKNOWN;
 }
 
 BEGINnewActInst
@@ -2110,6 +2357,8 @@ BEGINcheckCnf
     for (inst = pModConf->root; inst != NULL; inst = inst->next) {
         ruleset_t *pRuleset;
         rsRetVal localRet;
+
+        CHKiRet(detectTargetPlatformAndVersion(inst));
 
         if (inst->retryRulesetName) {
             localRet = ruleset.GetRuleset(pModConf->pConf, &pRuleset, inst->retryRulesetName);
