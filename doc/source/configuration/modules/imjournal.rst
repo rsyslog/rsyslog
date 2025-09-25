@@ -33,9 +33,7 @@ from a database corruption defect that caused the journal API to return
 the same records in a tight loop. When that happened, rsyslog received
 the repeated entries and could exhaust system resources with duplicate
 messages. The systemd project resolved the underlying problem years ago
-and we have not seen it on maintained distributions for a long time. We
-are keeping this note for context because the built-in rate-limiter was
-added to protect against the issue. By default, ratelimiting is
+and we have not seen it on maintained distributions for a long time. This note is kept for context, as the built-in rate-limiter was added to protect against this issue. By default, ratelimiting is
 activated and permits the processing of 20,000 messages within 10
 minutes, which should be well enough for most use cases. If insufficient,
 use the parameters described below to adjust the permitted volume.
