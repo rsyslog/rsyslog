@@ -32,7 +32,6 @@ IPv4 parts, which are controlled by ``embeddedIPv4.enable``.
 
 Input usage
 -----------
-.. _param-mmanon-input-ipv6-enable-usage:
 .. _mmanon.parameter.input.ipv6-enable-usage:
 
 .. code-block:: rsyslog

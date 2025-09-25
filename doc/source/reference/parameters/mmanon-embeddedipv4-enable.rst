@@ -31,7 +31,6 @@ IPv6 addresses with embedded IPv4 parts. If set to ``off``, all other
 
 Input usage
 -----------
-.. _param-mmanon-input-embeddedipv4-enable-usage:
 .. _mmanon.parameter.input.embeddedipv4-enable-usage:
 
 .. code-block:: rsyslog

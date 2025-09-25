@@ -31,7 +31,6 @@ action are ignored.
 
 Input usage
 -----------
-.. _param-mmanon-input-ipv4-enable-usage:
 .. _mmanon.parameter.input.ipv4-enable-usage:
 
 .. code-block:: rsyslog
