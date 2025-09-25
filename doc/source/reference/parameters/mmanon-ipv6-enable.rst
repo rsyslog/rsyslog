@@ -28,7 +28,7 @@ Description
 This parameter controls whether ``mmanon`` will attempt to find and anonymize
 IPv6 addresses. If set to ``off``, all other ``ipv6.*`` parameters for this
 action are ignored. Note that this does not affect IPv6 addresses with embedded
-IPv4 parts, which are controlled by ``embeddedIPv4.enable``.
+IPv4 parts, which are controlled by ``embeddedIpv4.enable``.
 
 Input usage
 -----------
