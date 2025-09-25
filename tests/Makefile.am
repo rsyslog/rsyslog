@@ -1560,6 +1560,34 @@ TESTS +=  \
 endif
 endif
 
+if ENABLE_MBEDTLS
+TESTS +=  \
+	imtcp-multi-drvr-basic-ptcp_gtls_mbedtls.sh \
+	imtcp-tls-mbedtls-basic-brokenhandshake-vg.sh \
+	imtcp-tls-mbedtls-basic.sh \
+	imtcp-tls-mbedtls-basic-verifydepth.sh \
+	imtcp-tls-mbedtls-basic-vg.sh \
+	imtcp-tls-mbedtls-error-ca.sh \
+	imtcp-tls-mbedtls-error-cert.sh \
+	imtcp-tls-mbedtls-error-key2.sh \
+	imtcp-tls-mbedtls-error-key.sh \
+	imtcp-tls-mbedtls-input-basic.sh \
+	imtcp-tls-mbedtls-x509invalid.sh \
+	imtcp-tls-mbedtls-x509name_invalid.sh \
+	imtcp-tls-mbedtls-x509name.sh \
+	imtcp-tls-mbedtls-x509valid.sh \
+	sndrcv_tls_certless_clientonly_mbedtls.sh \
+	sndrcv_tls_gtls_serveranon_mbedtls_clientanon.sh \
+	sndrcv_tls_gtls_servercert_mbedtls_clientanon.sh \
+	sndrcv_tls_mbedtls_certvalid_action_level.sh \
+	sndrcv_tls_mbedtls_certvalid_expired.sh \
+	sndrcv_tls_mbedtls_certvalid_revoked.sh \
+	sndrcv_tls_mbedtls_certvalid.sh \
+	sndrcv_tls_mbedtls_servercert_clientcert.sh \
+	sndrcv_tls_mbedtls_servercert_mbedtls_clientanon.sh \
+	sndrcv_tls_servercert_mbedtls_clientanon.sh
+endif
+
 if ENABLE_OPENSSL
 TESTS +=  \
 	imtcp-tls-ossl-basic.sh \
