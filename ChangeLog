@@ -1,6 +1,25 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
 - overall improved documentation via a large set of topic updates.
+- 2025-09-25: template: add jsonftree option for nested jsonf output
+  We want easy nested JSON to match common schemas (e.g., Elastic ECS)
+  without external processors. This introduces an opt-in mode so existing
+  jsonf users keep exact behavior while enabling structured output when
+  requested.
+  Impact: No change unless option.jsonftree is enabled. With jsonftree,
+  dotted outnames render as nested objects; empty containers are skipped.
+  On name collisions (object vs value), we fall back to flat rendering.
+  Before: jsonf always emitted flat name/value pairs, even for dotted
+  outnames. After: jsonf remains flat by default; enabling jsonftree makes
+  "host.hostname" and "host.ip" render as {"host":{"hostname":...,"ip":...}}.
+  Technically, we add option.jsonftree to templates. When set, we lazily
+  build a per-template JSON tree (tplJsonNode) from dotted segments and
+  render it in one pass, reusing existing jsonf formatting for leaves.
+  The tree state is tracked on the template and freed on template delete.
+  Config parsing enforces mutual exclusivity among sql, stdsql, json,
+  jsonf, and jsonftree. Constants record bJSONf to reuse serialized
+  fragments. Tests cover nested output and pure-json cases using
+  option.jsonftree.
 - 2025-09-23: musrmsg bugfix: potential null pointer dereference causes segfault
   If there is no user in the data base with user ID uid, getpwuid() returns a null
   pointer value. Therefore, it is necessary to check the return value of the function
