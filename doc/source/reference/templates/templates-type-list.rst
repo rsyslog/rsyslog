@@ -59,14 +59,16 @@ List templates are a key **data pipeline** step for mapping:
       D["Action<br>(omfile, omelasticsearch)"]
       A --> B --> C --> D
 
-Example: simple ECS mapping (jsonf)
+Example: simple ECS mapping (jsonftree)
 --------------------------------------------------------------------------------
 
-A minimal list template that emits selected ECS fields in JSON format (`jsonf`):
+A minimal list template that emits selected ECS fields in JSON format.  Use
+``option.jsonftree="on"`` so dotted ``outname`` values become nested objects
+instead of flat strings:
 
 .. code-block:: none
 
-   template(name="ecs_min" type="list" option.jsonf="on") {
+   template(name="ecs_min" type="list" option.jsonftree="on") {
      property(outname="@timestamp"     name="timereported"
               format="jsonf" dateFormat="rfc3339")
      property(outname="event.original" name="msg" format="jsonf")
@@ -76,7 +78,7 @@ A minimal list template that emits selected ECS fields in JSON format (`jsonf`):
 
 This produces valid JSON without hand-crafted quoting or braces.
 
-Example: fixing a field with a constant (jsonf)
+Example: fixing a field with a constant (jsonftree)
 --------------------------------------------------------------------------------
 
 Sometimes you need to set a **fixed JSON field** (e.g., a version marker or a tag).
@@ -85,7 +87,7 @@ handles quoting consistently:
 
 .. code-block:: none
 
-   template(name="ecs_fix" type="list" option.jsonf="on") {
+   template(name="ecs_fix" type="list" option.jsonftree="on") {
      property(outname="@timestamp"     name="timereported"
               format="jsonf" dateFormat="rfc3339")
      property(outname="event.original" name="msg" format="jsonf")
@@ -108,11 +110,12 @@ The typical workflow looks like this:
       D["Action<br>(omelasticsearch)"]
       A --> B --> C --> D
 
-The list template performs field-by-field mapping using `jsonf`:
+The list template performs field-by-field mapping using ``jsonftree`` to keep
+dotted field names properly nested:
 
 .. code-block:: none
 
-   template(name="outfmt" type="list" option.jsonf="on") {
+   template(name="outfmt" type="list" option.jsonftree="on") {
      property(outname="@timestamp"              name="timereported"
               format="jsonf" dateFormat="rfc3339")
      property(outname="event.created"           name="$!leef!fields!ReceiveTime"   format="jsonf")
