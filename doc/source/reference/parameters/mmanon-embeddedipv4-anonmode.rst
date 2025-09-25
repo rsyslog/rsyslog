@@ -48,7 +48,7 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="mmanon")
-   action(type="mmanon" embeddedIpv4.anonMode="random")
+   action(type="mmanon" embeddedipv4.anonMode="random")
 
 See also
 --------

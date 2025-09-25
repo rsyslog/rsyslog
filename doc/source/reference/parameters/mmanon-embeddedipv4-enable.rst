@@ -27,7 +27,7 @@ Description
 -----------
 This parameter controls whether ``mmanon`` will attempt to find and anonymize
 IPv6 addresses with embedded IPv4 parts. If set to ``off``, all other
-``embeddedIpv4.*`` parameters for this action are ignored.
+``embeddedipv4.*`` parameters for this action are ignored.
 
 Input usage
 -----------
@@ -36,7 +36,7 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="mmanon")
-   action(type="mmanon" embeddedIpv4.enable="off")
+   action(type="mmanon" embeddedipv4.enable="off")
 
 See also
 --------

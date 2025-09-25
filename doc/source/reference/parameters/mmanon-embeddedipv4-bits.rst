@@ -41,7 +41,7 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="mmanon")
-   action(type="mmanon" embeddedIpv4.bits="80")
+   action(type="mmanon" embeddedipv4.bits="80")
 
 See also
 --------
