@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <string.h>
+#include <strings.h>
 #include <curl/curl.h>
 #include <curl/easy.h>
 #include <assert.h>
@@ -38,6 +39,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <ctype.h>
 #if defined(__FreeBSD__)
     #include <unistd.h>
@@ -515,18 +517,6 @@ static size_t curlVersionResult(void *const ptr, const size_t size, const size_t
     return size_add;
 }
 
-static int stringsEqualIgnoreCase(const char *const lhs, const char *const rhs) {
-    if (lhs == NULL || rhs == NULL) return 0;
-    const unsigned char *lp = (const unsigned char *)lhs;
-    const unsigned char *rp = (const unsigned char *)rhs;
-    while (*lp != '\0' && *rp != '\0') {
-        if (tolower(*lp) != tolower(*rp)) return 0;
-        ++lp;
-        ++rp;
-    }
-    return *lp == '\0' && *rp == '\0';
-}
-
 static rsRetVal parseVersionString(const char *const version, int *const major, int *const minor, int *const patch) {
     const char *cursor;
     char *endptr;
@@ -538,7 +528,12 @@ static rsRetVal parseVersionString(const char *const version, int *const major, 
         ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
     }
 
+    errno = 0;
     parsed = strtol(version, &endptr, 10);
+    if (errno == ERANGE || parsed < 0 || parsed > INT_MAX) {
+        LogError(errno, RS_RET_CONFIG_ERROR, "omelasticsearch: version component is out of range in '%s'", version);
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
     if (endptr == version) {
         LogError(0, RS_RET_CONFIG_ERROR,
                  "omelasticsearch: unable to parse version string '%s' (missing major component)", version);
@@ -551,13 +546,24 @@ static rsRetVal parseVersionString(const char *const version, int *const major, 
 
     if (*endptr == '.') {
         cursor = endptr + 1;
+        errno = 0;
         parsed = strtol(cursor, &endptr, 10);
+        if (errno == ERANGE || parsed < 0 || parsed > INT_MAX) {
+            LogError(errno, RS_RET_CONFIG_ERROR, "omelasticsearch: version component is out of range in '%s'", version);
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
         if (endptr != cursor) {
             *minor = (int)parsed;
         }
         if (*endptr == '.') {
             cursor = endptr + 1;
+            errno = 0;
             parsed = strtol(cursor, &endptr, 10);
+            if (errno == ERANGE || parsed < 0 || parsed > INT_MAX) {
+                LogError(errno, RS_RET_CONFIG_ERROR, "omelasticsearch: version component is out of range in '%s'",
+                         version);
+                ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+            }
             if (endptr != cursor) {
                 *patch = (int)parsed;
             }
@@ -606,7 +612,7 @@ static rsRetVal updateDetectedPlatform(instanceData *const pData,
 
     CHKiRet(parseVersionString(number, &major, &minor, &patch));
 
-    if (distribution != NULL && stringsEqualIgnoreCase(distribution, "opensearch")) {
+    if (distribution != NULL && strcasecmp(distribution, "opensearch") == 0) {
         isOpenSearch = 1;
     } else if (tagline != NULL && strcasestr(tagline, "opensearch") != NULL) {
         isOpenSearch = 1;
@@ -643,11 +649,12 @@ static rsRetVal detectTargetPlatformAndVersion(instanceData *const pData) {
     CURL *curl = NULL;
     struct versionDetectBuffer buffer;
     char errbuf[CURL_ERROR_SIZE];
+    sbool detected = 0;
     DEFiRet;
 
     if (pData->serverBaseUrls == NULL || pData->numServers <= 0) {
-        LogError(0, RS_RET_CONFIG_ERROR, "omelasticsearch: no servers configured for platform detection");
-        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        LogMsg(0, RS_RET_OK, LOG_WARNING, "omelasticsearch: skipping platform detection (no servers configured)");
+        goto finalize_it;
     }
 
     for (int i = 0; i < pData->numServers; ++i) {
@@ -658,7 +665,7 @@ static rsRetVal detectTargetPlatformAndVersion(instanceData *const pData) {
         curl = curl_easy_init();
         if (curl == NULL) {
             LogError(0, RS_RET_OUT_OF_MEMORY, "omelasticsearch: curl_easy_init failed for platform detection");
-            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            break;
         }
 
         curl_easy_setopt(curl, CURLOPT_URL, (const char *)pData->serverBaseUrls[i]);
@@ -687,9 +694,14 @@ static rsRetVal detectTargetPlatformAndVersion(instanceData *const pData) {
             rsRetVal detectRet = updateDetectedPlatform(pData, buffer.data, (char *)pData->serverBaseUrls[i]);
             free(buffer.data);
             buffer.data = NULL;
-            CHKiRet(detectRet);
-            iRet = RS_RET_OK;
-            goto finalize_it;
+            if (detectRet == RS_RET_OK) {
+                detected = 1;
+                goto finalize_it;
+            }
+            LogMsg(0, detectRet, LOG_WARNING,
+                   "omelasticsearch: ignoring platform detection response from %s due to parse errors",
+                   (char *)pData->serverBaseUrls[i]);
+            continue;
         }
 
         if (buffer.data != NULL) {
@@ -707,12 +719,14 @@ static rsRetVal detectTargetPlatformAndVersion(instanceData *const pData) {
         }
     }
 
-    LogError(0, RS_RET_CONFIG_ERROR,
-             "omelasticsearch: unable to detect target platform and version from configured servers");
-    ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    LogMsg(0, RS_RET_OK, LOG_WARNING,
+           "omelasticsearch: unable to detect target platform and version from configured servers");
 
 finalize_it:
     if (curl != NULL) curl_easy_cleanup(curl);
+    if (!detected) {
+        iRet = RS_RET_OK;
+    }
     RETiRet;
 }
 
