@@ -16,7 +16,6 @@ if $msg contains "msgnum:" then {
                 server="127.0.0.1"
                 serverport="19200"
                 template="tpl"
-                searchType="_doc"
                 action.resumeRetryCount="-1"
                 action.resumeInterval="1"
                 searchIndex="rsyslog_testbench")

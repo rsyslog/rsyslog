@@ -29,7 +29,6 @@ ruleset(name="foo") {
 	 template="tpl"
 	 searchIndex="rsyslog_testbench"
 	 serverport="19200"
-	 searchType="_doc"
 	 bulkmode="on"
 	 errorFile="./'${RSYSLOG_DYNNAME}'.errorfile")
 }
