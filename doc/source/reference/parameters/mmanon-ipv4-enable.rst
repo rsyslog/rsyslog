@@ -25,10 +25,13 @@ This parameter applies to :doc:`../../configuration/modules/mmanon`.
 
 Description
 -----------
-Allows to enable or disable the anonymization of IPv4 addresses.
+This parameter controls whether ``mmanon`` will attempt to find and anonymize
+IPv4 addresses. If set to ``off``, all other ``ipv4.*`` parameters for this
+action are ignored.
 
 Input usage
 -----------
+.. _param-mmanon-input-ipv4-enable-usage:
 .. _mmanon.parameter.input.ipv4-enable-usage:
 
 .. code-block:: rsyslog

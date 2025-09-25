@@ -25,11 +25,13 @@ This parameter applies to :doc:`../../configuration/modules/mmanon`.
 
 Description
 -----------
-Allows to enable or disable the anonymization of IPv6 addresses with embedded
-IPv4.
+This parameter controls whether ``mmanon`` will attempt to find and anonymize
+IPv6 addresses with embedded IPv4 parts. If set to ``off``, all other
+``embeddedIPv4.*`` parameters for this action are ignored.
 
 Input usage
 -----------
+.. _param-mmanon-input-embeddedipv4-enable-usage:
 .. _mmanon.parameter.input.embeddedipv4-enable-usage:
 
 .. code-block:: rsyslog

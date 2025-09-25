@@ -25,10 +25,14 @@ This parameter applies to :doc:`../../configuration/modules/mmanon`.
 
 Description
 -----------
-Allows to enable or disable the anonymization of IPv6 addresses.
+This parameter controls whether ``mmanon`` will attempt to find and anonymize
+IPv6 addresses. If set to ``off``, all other ``ipv6.*`` parameters for this
+action are ignored. Note that this does not affect IPv6 addresses with embedded
+IPv4 parts, which are controlled by ``embeddedIPv4.enable``.
 
 Input usage
 -----------
+.. _param-mmanon-input-ipv6-enable-usage:
 .. _mmanon.parameter.input.ipv6-enable-usage:
 
 .. code-block:: rsyslog
