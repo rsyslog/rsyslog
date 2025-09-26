@@ -2400,6 +2400,7 @@ BEGINcheckCnf
             }
         }
     }
+finalize_it:
 ENDcheckCnf
 
 
