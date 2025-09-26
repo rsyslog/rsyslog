@@ -1,12 +1,12 @@
 .. _param-mmjsonparse-userawmsg:
 .. _mmjsonparse.parameter.input.userawmsg:
 
-useRawMsg
+userawmsg
 =========
 
 .. index::
-   single: mmjsonparse; useRawMsg
-   single: useRawMsg
+   single: mmjsonparse; userawmsg
+   single: userawmsg
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Controls whether parsing operates on the raw message or only the MSG part.
 
 This parameter applies to :doc:`../../configuration/modules/mmjsonparse`.
 
-:Name: useRawMsg
+:Name: userawmsg
 :Scope: input
 :Type: boolean
 :Default: off
