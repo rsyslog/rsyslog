@@ -1,5 +1,5 @@
-.. _param-mmjsonparse-useRawMsg:
-.. _mmjsonparse.parameter.input.useRawMsg:
+.. _param-mmjsonparse-userawmsg:
+.. _mmjsonparse.parameter.input.userawmsg:
 
 useRawMsg
 =========
@@ -34,7 +34,7 @@ Notes
 
 Input usage
 -----------
-.. _mmjsonparse.parameter.input.useRawMsg-usage:
+.. _mmjsonparse.parameter.input.userawmsg-usage:
 
 .. code-block:: rsyslog
 
