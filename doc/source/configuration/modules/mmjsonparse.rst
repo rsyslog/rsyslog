@@ -48,7 +48,8 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive; camelCase is recommended for readability.
+   Parameter names are case-insensitive. For readability, camelCase is
+   recommended.
 
 
 Action Parameters

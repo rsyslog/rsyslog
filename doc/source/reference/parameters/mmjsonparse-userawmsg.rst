@@ -10,7 +10,7 @@ useRawMsg
 
 .. summary-start
 
-Controls whether parsing operates on the raw message instead of only the MSG part.
+Controls whether parsing operates on the raw message or only the MSG part.
 
 .. summary-end
 
