@@ -40,7 +40,7 @@ Input usage
 
 .. code-block:: rsyslog
 
-   action(type="mmjsonparse" cookie="@cee:")
+   action(type="mmjsonparse" cookie="")
 
 See also
 --------
