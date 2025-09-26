@@ -10,7 +10,8 @@ cookie
 
 .. summary-start
 
-Defines the cookie string that must appear before the JSON content of a message.
+Defines the cookie string that must appear before the JSON content of a
+message.
 
 .. summary-end
 
