@@ -244,6 +244,7 @@ static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / si
 
 static rsRetVal curlSetup(wrkrInstanceData_t *pWrkrData);
 static rsRetVal detectTargetPlatformAndVersion(instanceData *const pData);
+static rsRetVal applyVersionRequirements(instanceData *const pData);
 
 BEGINcreateInstance
     CODESTARTcreateInstance;
@@ -560,6 +561,31 @@ finalize_it:
     RETiRet;
 }
 
+static rsRetVal applyVersionRequirements(instanceData *const pData) {
+    DEFiRet;
+
+    if (pData->esVersion < 8) {
+        if (pData->searchIndex == NULL) {
+            pData->searchIndex = (uchar *)strdup("system");
+            if (pData->searchIndex == NULL) {
+                LogError(errno, RS_RET_OUT_OF_MEMORY,
+                         "omelasticsearch: failed to allocate default search index for legacy clusters");
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            }
+        }
+
+        if ((pData->writeOperation != ES_WRITE_INDEX) && (pData->bulkId == NULL)) {
+            LogError(0, RS_RET_CONFIG_ERROR,
+                     "omelasticsearch: writeoperation '%d' requires bulkid for Elasticsearch versions < 8",
+                     pData->writeOperation);
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 static rsRetVal updateDetectedPlatform(instanceData *const pData,
                                        const char *const payload,
                                        const char *const serverUrl) {
@@ -619,8 +645,12 @@ static rsRetVal updateDetectedPlatform(instanceData *const pData,
     pData->detectedPatchVersion = patch;
     pData->targetPlatform = isOpenSearch ? OMES_PLATFORM_OPENSEARCH : OMES_PLATFORM_ELASTICSEARCH;
 
-    if (pData->esVersion == 0) {
-        pData->esVersion = major;
+    const int previousMajor = pData->esVersion;
+    pData->esVersion = major;
+    if (previousMajor != 0 && previousMajor != major) {
+        LogMsg(0, RS_RET_OK, LOG_NOTICE,
+               "omelasticsearch: overriding configured esversion.major %d with detected value %d", previousMajor,
+               major);
     }
 
     LogMsg(0, RS_RET_OK, LOG_INFO, "omelasticsearch: detected %s version %s at %s",
@@ -2303,15 +2333,7 @@ BEGINnewActInst
         CHKiRet(computeBaseUrl("localhost", pData->defaultPort, pData->useHttps, pData->serverBaseUrls));
     }
 
-    if (pData->esVersion < 8) {
-        if (pData->searchIndex == NULL) pData->searchIndex = (uchar *)strdup("system");
-
-        if ((pData->writeOperation != ES_WRITE_INDEX) && (pData->bulkId == NULL)) {
-            LogError(0, RS_RET_CONFIG_ERROR, "omelasticsearch: writeoperation '%d' requires bulkid",
-                     pData->writeOperation);
-            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-        }
-    }
+    CHKiRet(applyVersionRequirements(pData));
 
     if (pData->retryFailures) {
         CHKiRet(ratelimitNew(&pData->ratelimiter, "omelasticsearch", NULL));
@@ -2362,6 +2384,8 @@ BEGINcheckCnf
                     : (inst->searchIndex == NULL ? "configured server" : (const char *)inst->searchIndex);
             LogMsg(0, localRet, LOG_WARNING,
                    "omelasticsearch: platform detection failed for %s, continuing with defaults", target);
+        } else if (inst->detectedMajorVersion >= 0) {
+            CHKiRet(applyVersionRequirements(inst));
         }
 
         if (inst->retryRulesetName) {
