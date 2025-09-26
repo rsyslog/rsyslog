@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/mmjsonparse`.
 :Name: cookie
 :Scope: input
 :Type: string
-:Default: "@cee:"
+:Default: @cee:
 :Required?: no
 :Introduced: 6.6.0
 
