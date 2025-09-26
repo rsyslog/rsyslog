@@ -16,7 +16,7 @@ The property name is case-insensitive (prior to 3.17.0, they were case-sensitive
 Note: many users refer to "rsyslog properties" as "rsyslog variables". You can treat
 them as synonymous.
 Read how `rsyslog lead author Rainer Gerhards explains the naming
-difference <https://rainer.gerhards.net/2020/08/rsyslog-template-variables-where-to-find-them.html">`_.
+difference <https://rainer.gerhards.net/2020/08/rsyslog-template-variables-where-to-find-them.html>`_.
 
 Message Properties
 ------------------
