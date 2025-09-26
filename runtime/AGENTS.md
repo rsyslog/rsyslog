@@ -25,8 +25,8 @@ collection, and process orchestration).
   instructions) and configure with `./configure --enable-testbench` so runtime
   helpers used by the testbench stay available. Run these commands from the
   repository root, not from within `runtime/`.
-- Build the core with `make -j$(nproc)`; this compiles the runtime and shared
-  libraries that tests dynamically load via `-M../runtime/.libs:../.libs`.
+- Build the core with make -j$(nproc); this compiles the runtime and shared
+  libraries, which tests load via the RSYSLOG_MODDIR env var or the -M rsyslogd flag.
 - Prefer targeted test runs over a full `make check`:
   - Directly invoke the most relevant shell test under `tests/` (e.g.
     `./tests/queue-persist.sh`).
