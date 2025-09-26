@@ -40,7 +40,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <limits.h>
-#include <ctype.h>
 #if defined(__FreeBSD__)
     #include <unistd.h>
 #endif
@@ -541,10 +540,10 @@ static rsRetVal parseVersionString(const char *const version, int *const major, 
     }
     *major = (int)parsed;
 
+    int *components[] = {minor, patch};
     *minor = 0;
     *patch = 0;
-
-    if (*endptr == '.') {
+    for (int idx = 0; idx < 2 && *endptr == '.'; ++idx) {
         cursor = endptr + 1;
         errno = 0;
         parsed = strtol(cursor, &endptr, 10);
@@ -553,20 +552,7 @@ static rsRetVal parseVersionString(const char *const version, int *const major, 
             ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
         }
         if (endptr != cursor) {
-            *minor = (int)parsed;
-        }
-        if (*endptr == '.') {
-            cursor = endptr + 1;
-            errno = 0;
-            parsed = strtol(cursor, &endptr, 10);
-            if (errno == ERANGE || parsed < 0 || parsed > INT_MAX) {
-                LogError(errno, RS_RET_CONFIG_ERROR, "omelasticsearch: version component is out of range in '%s'",
-                         version);
-                ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-            }
-            if (endptr != cursor) {
-                *patch = (int)parsed;
-            }
+            *components[idx] = (int)parsed;
         }
     }
 
@@ -665,10 +651,12 @@ static rsRetVal detectTargetPlatformAndVersion(instanceData *const pData) {
         curl = curl_easy_init();
         if (curl == NULL) {
             LogError(0, RS_RET_OUT_OF_MEMORY, "omelasticsearch: curl_easy_init failed for platform detection");
-            break;
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
         }
 
-        curl_easy_setopt(curl, CURLOPT_URL, (const char *)pData->serverBaseUrls[i]);
+        const char *const serverUrl = (const char *)pData->serverBaseUrls[i];
+
+        curl_easy_setopt(curl, CURLOPT_URL, serverUrl);
         curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
         curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, pData->healthCheckTimeout);
         curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
@@ -691,21 +679,19 @@ static rsRetVal detectTargetPlatformAndVersion(instanceData *const pData) {
         curl = NULL;
 
         if (code == CURLE_OK && status >= 200 && status < 300 && buffer.data != NULL) {
-            rsRetVal detectRet = updateDetectedPlatform(pData, buffer.data, (char *)pData->serverBaseUrls[i]);
+            rsRetVal detectRet = updateDetectedPlatform(pData, buffer.data, serverUrl);
             if (detectRet == RS_RET_OK) {
                 detected = 1;
             } else {
                 LogMsg(0, detectRet, LOG_WARNING,
-                       "omelasticsearch: ignoring platform detection response from %s due to parse errors",
-                       (char *)pData->serverBaseUrls[i]);
+                       "omelasticsearch: ignoring platform detection response from %s due to parse errors", serverUrl);
             }
         } else if (code != CURLE_OK) {
             LogMsg(0, RS_RET_ERR, LOG_WARNING, "omelasticsearch: platform detection request to %s failed: %s",
-                   (char *)pData->serverBaseUrls[i], errbuf[0] != '\0' ? errbuf : curl_easy_strerror(code));
+                   serverUrl, errbuf[0] != '\0' ? errbuf : curl_easy_strerror(code));
         } else {
             LogMsg(0, RS_RET_ERR, LOG_WARNING,
-                   "omelasticsearch: platform detection request to %s returned HTTP status %ld",
-                   (char *)pData->serverBaseUrls[i], status);
+                   "omelasticsearch: platform detection request to %s returned HTTP status %ld", serverUrl, status);
         }
 
         if (buffer.data != NULL) {
@@ -723,9 +709,6 @@ static rsRetVal detectTargetPlatformAndVersion(instanceData *const pData) {
 
 finalize_it:
     if (curl != NULL) curl_easy_cleanup(curl);
-    if (!detected) {
-        iRet = RS_RET_OK;
-    }
     RETiRet;
 }
 
@@ -2373,9 +2356,10 @@ BEGINcheckCnf
 
         localRet = detectTargetPlatformAndVersion(inst);
         if (localRet != RS_RET_OK) {
-            const char *target = (inst->serverBaseUrls != NULL && inst->numServers > 0)
-                                     ? (const char *)inst->serverBaseUrls[0]
-                                     : (inst->searchIndex == NULL ? "configured server" : (char *)inst->searchIndex);
+            const char *target =
+                (inst->serverBaseUrls != NULL && inst->numServers > 0)
+                    ? (const char *)inst->serverBaseUrls[0]
+                    : (inst->searchIndex == NULL ? "configured server" : (const char *)inst->searchIndex);
             LogMsg(0, localRet, LOG_WARNING,
                    "omelasticsearch: platform detection failed for %s, continuing with defaults", target);
         }
