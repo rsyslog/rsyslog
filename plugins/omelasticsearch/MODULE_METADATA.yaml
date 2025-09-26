@@ -1,0 +1,17 @@
+support_status: core-supported
+maturity_level: fully-mature
+primary_contact: "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>"
+last_reviewed: 2024-06-22
+build_dependencies:
+  - libcurl development headers (`./devtools/codex-setup.sh`)
+runtime_dependencies:
+  - Elasticsearch 7.x or later reachable over HTTP(S)
+ci_targets:
+  - es-basic.sh
+  - es-bulk-errfile-popul.sh
+  - es-bulk-retry.sh
+documentation:
+  - doc/source/configuration/modules/omelasticsearch.rst
+notes:
+  - Tests require launching Elasticsearch; agents typically skip them and only build the module.
+  - Testbench downloads Elasticsearch via `tests/diag.sh`; set ES_DOWNLOAD to pin versions when maintaining the suite.

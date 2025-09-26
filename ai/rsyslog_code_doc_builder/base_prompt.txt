@@ -1,0 +1,45 @@
+# rsyslog code agent doc builder – base prompt
+
+You are assisting with updates to rsyslog's AI-facing documentation (e.g.
+AGENTS.md files, module metadata notes, onboarding checklists). Follow these
+principles:
+
+## 1. Gather context first
+- Read the repository-level `AGENTS.md` plus any directory-scoped guides that
+  cover the files in scope (plugins/, contrib/, doc/, tools/, etc.).
+- Inspect existing `MODULE_METADATA.yaml` or `tools/MODULE_METADATA.json` entries
+  for the modules touched so ownership, maturity, and support channels remain in
+  sync with the prose.
+- Collect relevant user-facing docs (`doc/` subtree) to ensure cross-references
+  stay accurate.
+
+## 2. Document actionable workflows
+- Prefer concise step-by-step instructions that an AI agent can execute without
+  improvising (e.g. when to run `./autogen.sh`, which tests to prefer, how to
+  skip heavy integration suites).
+- Note sandbox-friendly defaults (like using GitHub Discussions & Issues as the
+  primary contact) and explain how to override them when a dedicated maintainer
+  exists.
+- Highlight runtime or tooling costs (approximate durations, external service
+  requirements) so agents can plan work within resource limits.
+
+## 3. Keep structure consistent
+- Reuse existing headings and bullet patterns from sibling AGENTS guides.
+- Update quick links or templates when adding new documentation so future agents
+  can discover it quickly.
+- When introducing new metadata keys, refresh both the schema description and any
+  templates/examples in the tree.
+
+## 4. Validate and cross-link
+- Ensure every instruction you add references the exact filenames or scripts
+  needed (`./tests/<name>.sh`, `devtools/codex-setup.sh`, etc.).
+- Cross-link user docs and AI docs when behavior changes, and mention
+  coordination requirements for other teams/modules.
+- Provide a summary in the commit message that explains what changed and why it
+  helps future AI contributors.
+
+## 5. Output expectations
+- Produce well-structured Markdown that mirrors the repository style
+  (sentence-case headings, wrapped paragraphs, consistent indentation).
+- Prefer American English spellings.
+- Call out when no tests are required and why (documentation-only changes).

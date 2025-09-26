@@ -1,0 +1,11 @@
+support_status: core-supported
+maturity_level: deprecated
+primary_contact: "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>"
+last_reviewed: 2025-09-26
+build_dependencies: []
+runtime_dependencies: []
+ci_targets: []
+documentation:
+  - doc/source/configuration/modules/omruleset.rst
+notes:
+  - Retained solely for backward compatibility; prefer the RainerScript `call` statement.

@@ -1,4 +1,7 @@
 # Seed map for AI agents; keep minimal and truthful. Extend over time.
+# Per-module metadata (support status, maturity, contacts) lives in each module
+# directory as `MODULE_METADATA.yaml`; update both the metadata file and this map
+# when concurrency guidance changes.
 omfile:
   paths: ["plugins/omfile/"]
   requires_serialization: true
