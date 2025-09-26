@@ -16,7 +16,47 @@ This file defines guidelines and instructions for AI assistants (e.g., Codex, Gi
       - [`liblognorm`](https://github.com/rsyslog/liblognorm)
       - [`librelp`](https://github.com/rsyslog/librelp)
       - [`libestr`](https://github.com/rsyslog/libestr)
-      - [`libfastjson`](https://github.com/rsyslog/libfastjson): A fork of libfastjson by the rsyslog project, optimized for speed. This library is used by multiple external projects.
+      - [`libfastjson`](https://github.com/rsyslog/libfastjson): A fork of libfastjson by the rsyslog project, optimized for speed.
+        This library is used by multiple external projects.
+
+-----
+
+## Quick links for agents
+
+  - **Documentation subtree guide:** [`doc/AGENTS.md`](./doc/AGENTS.md)
+  - **Core plugin subtree guide:** [`plugins/AGENTS.md`](./plugins/AGENTS.md)
+  - **Contrib module subtree guide:** [`contrib/AGENTS.md`](./contrib/AGENTS.md)
+  - **Built-in tools subtree guide:** [`tools/AGENTS.md`](./tools/AGENTS.md)
+  - **Module author checklist:** [`MODULE_AUTHOR_CHECKLIST.md`](./MODULE_AUTHOR_CHECKLIST.md)
+  - **Developer overview:** [`DEVELOPING.md`](./DEVELOPING.md)
+  - **Commit prompt template:** [`ai/rsyslog_commit_assistant/base_prompt.txt`](./ai/rsyslog_commit_assistant/base_prompt.txt)
+  - **Doc builder prompt template:** [`ai/rsyslog_code_doc_builder/base_prompt.txt`](./ai/rsyslog_code_doc_builder/base_prompt.txt)
+
+Use these jump points together with this file to locate the workflow and
+component notes that apply to your task.
+
+-----
+
+## Priming a fresh AI session
+
+When starting a new AI-assisted coding session (for example after a PR merges or
+the workspace is reset):
+
+1. Share this repository-level guide and the relevant subtree `AGENTS.md`
+   files (`plugins/`, `contrib/`, `doc/`, `tools/`, etc.) so the agent absorbs
+   the area-specific build and testing workflows.
+2. Provide the module metadata (`MODULE_METADATA.yaml` or `tools/MODULE_METADATA.json`)
+   for components being modified so ownership, support channels, and maturity
+   are clear.
+3. Supply the commit assistant or doc builder prompt that matches the task type
+   (see the quick links above) to keep commit messages and documentation edits
+   consistent.
+4. Include any recent design or review notes that are not yet in the repository
+   so the agent understands outstanding context.
+
+These steps mirror how the existing sandbox is configured and make it more
+likely that rebuild/bootstrap reminders (such as running `./autogen.sh` before
+the first compile) are followed.
 
 -----
 
@@ -115,6 +155,28 @@ will automatically apply these rules.
 Whenever `.c` or `.h` files are modified, a build should be performed using `make`.
 If new functionality is introduced, at least a basic test should be created and run.
 
+### Generating the autotools build system
+
+The `configure` script and `Makefile.in` files are **not** stored in git. After a
+fresh checkout—or any time `configure.ac`, `Makefile.am`, or macros under `m4/`
+change—you **must** run:
+
+```bash
+./autogen.sh
+```
+
+This bootstraps autotools, downloads any required macros, and generates
+`configure`. Skipping this step is the most common reason for messages such as
+`configure: error: cannot find install-sh, install.sh, or shtool` or `make:
+*** No targets specified and no makefile found`. If a cleanup removed the
+generated files (e.g., `git clean -xfd`), re-run `./autogen.sh` before
+configuring again.
+
+If `autogen.sh` fails, run `./devtools/codex-setup.sh` first to install the
+toolchain dependencies inside the sandbox, then retry `./autogen.sh`.
+
+### Configure & build
+
 If possible, agents should:
 
   - Build the project using `./configure` and `make`
@@ -128,11 +190,13 @@ If possible, agents should:
 
 ## Testing & Validation
 
-All test definitions live under the `tests/` directory and are driven by the `tests/diag.sh` framework. In CI, `make check` remains the canonical way to run the full suite; **AI agents should avoid invoking `make check` by default**, because:
+All test definitions live under the `tests/` directory and are driven by the `tests/diag.sh` framework. Continuous-integration jobs still execute the full suite via `make check`, but **AI agents should stick to direct test scripts** unless a reviewer explicitly requests a CI reproduction. Direct invocation keeps stdout/stderr visible and avoids the 10+ minute runtime of the harness.
 
-  - It wraps all tests in a harness that hides stdout/stderr on failure
-  - It requires parsing `tests/test-suite.log` for details
-  - It can take 10+ minutes and consume significant resources
+Avoiding the harness matters because `make check`:
+
+  - Wraps tests in a harness that hides stdout/stderr on failure
+  - Requires parsing `tests/test-suite.log` for details
+  - Consumes significant resources on large suites
 
 Instead, AI agents should invoke individual test scripts directly. This yields unfiltered output and immediate feedback, without the CI harness. The `diag.sh` framework now builds any required test support automatically, so there is **no longer** a need for a separate “build core components” step.
 
@@ -161,7 +225,7 @@ Instead, AI agents should invoke individual test scripts directly. This yields u
 
 ### Full Test Suite (CI-Only)
 
-For continuous-integration pipelines or when you need to validate the entire suite, use the autotools harness:
+For continuous-integration pipelines or when you explicitly need to validate the entire suite, use the autotools harness:
 
 ```bash
 ./configure --enable-imdiag --enable-testbench
@@ -170,6 +234,7 @@ make check
 
   - To limit parallelism (avoid flaky failures), pass `-j2` or `-j4` to `make`.
   - If a failure occurs, inspect `tests/test-suite.log` for detailed diagnostics.
+  - Note in your report why a full harness run was necessary so reviewers understand the extra runtime.
 
 -----
 
@@ -186,16 +251,16 @@ Minimum setup requires:
   - Autotools toolchain: `autoconf`, `automake`, `libtool`, `make`, `gcc`
   - Side libraries: `libestr`, `librelp`, `libfastjson`, `liblognorm` (must be installed or built manually)
 
-Example commands:
+Example commands (swap the final step for the most relevant smoke test):
 
 ```bash
 ./autogen.sh
 ./configure --enable-debug --enable-testbench
 make -j$(nproc)
-make check
+./tests/imtcp-basic.sh
 ```
 
-Use `make check -j2` or `-j4` max for reliability.
+Reserve `make check` for cases where you must mirror CI or chase harness-only failures. When you do run it, prefer `make check -j2` or `-j4` for reliability.
 
 -----
 

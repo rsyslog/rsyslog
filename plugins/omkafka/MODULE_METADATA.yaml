@@ -1,0 +1,16 @@
+support_status: contributor-supported
+maturity_level: mature
+primary_contact: "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>"
+last_reviewed: 2025-09-26
+build_dependencies:
+  - librdkafka development headers (`./devtools/codex-setup.sh`)
+runtime_dependencies:
+  - Apache Kafka cluster reachable over TCP
+ci_targets:
+  - omkafka.sh
+  - omkafkadynakey.sh
+  - omkafka-headers.sh
+documentation:
+  - doc/source/configuration/modules/omkafka.rst
+notes:
+  - Integration tests start Kafka and ZooKeeper; agents typically skip them and perform build-only validation.
