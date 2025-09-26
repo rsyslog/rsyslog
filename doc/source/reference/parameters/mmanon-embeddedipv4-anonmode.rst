@@ -1,12 +1,12 @@
 .. _param-mmanon-embeddedipv4-anonmode:
 .. _mmanon.parameter.input.embeddedipv4-anonmode:
 
-embeddedipv4.anonmode
+embeddedIpv4.anonMode
 =====================
 
 .. index::
-   single: mmanon; embeddedipv4.anonmode
-   single: embeddedipv4.anonmode
+   single: mmanon; embeddedIpv4.anonMode
+   single: embeddedIpv4.anonMode
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Defines how IPv6 addresses with embedded IPv4 parts are anonymized.
 
 This parameter applies to :doc:`../../configuration/modules/mmanon`.
 
-:Name: embeddedipv4.anonmode
+:Name: embeddedIpv4.anonMode
 :Scope: input
 :Type: string
 :Default: input=zero
@@ -48,7 +48,7 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="mmanon")
-   action(type="mmanon" embeddedipv4.anonMode="random")
+   action(type="mmanon" embeddedIpv4.anonMode="random")
 
 See also
 --------

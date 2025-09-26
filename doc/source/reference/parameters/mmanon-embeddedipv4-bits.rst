@@ -1,12 +1,12 @@
 .. _param-mmanon-embeddedipv4-bits:
 .. _mmanon.parameter.input.embeddedipv4-bits:
 
-embeddedipv4.bits
+embeddedIpv4.bits
 =================
 
 .. index::
-   single: mmanon; embeddedipv4.bits
-   single: embeddedipv4.bits
+   single: mmanon; embeddedIpv4.bits
+   single: embeddedIpv4.bits
 
 .. summary-start
 
@@ -17,7 +17,7 @@ anonymized.
 
 This parameter applies to :doc:`../../configuration/modules/mmanon`.
 
-:Name: embeddedipv4.bits
+:Name: embeddedIpv4.bits
 :Scope: input
 :Type: positive integer
 :Default: input=96
@@ -41,7 +41,7 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="mmanon")
-   action(type="mmanon" embeddedipv4.bits="80")
+   action(type="mmanon" embeddedIpv4.bits="80")
 
 See also
 --------

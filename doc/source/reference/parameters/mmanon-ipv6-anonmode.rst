@@ -1,12 +1,12 @@
 .. _param-mmanon-ipv6-anonmode:
 .. _mmanon.parameter.input.ipv6-anonmode:
 
-ipv6.anonmode
+ipv6.anonMode
 =============
 
 .. index::
-   single: mmanon; ipv6.anonmode
-   single: ipv6.anonmode
+   single: mmanon; ipv6.anonMode
+   single: ipv6.anonMode
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Defines how IPv6 addresses are anonymized by the mmanon action.
 
 This parameter applies to :doc:`../../configuration/modules/mmanon`.
 
-:Name: ipv6.anonmode
+:Name: ipv6.anonMode
 :Scope: input
 :Type: string
 :Default: input=zero
