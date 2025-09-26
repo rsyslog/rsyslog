@@ -56,43 +56,43 @@ while 'IPv6.' parameters do the same for IPv6 anonymization.
 
    * - Parameter
      - Summary
-   * - :ref:`param-mmanon-ipv4-enable`
+   * - :ref:`ipv4.enable <param-mmanon-ipv4-enable>`
      - .. include:: ../../reference/parameters/mmanon-ipv4-enable.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - :ref:`param-mmanon-ipv4-mode`
+   * - :ref:`ipv4.mode <param-mmanon-ipv4-mode>`
      - .. include:: ../../reference/parameters/mmanon-ipv4-mode.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - :ref:`param-mmanon-ipv4-bits`
+   * - :ref:`ipv4.bits <param-mmanon-ipv4-bits>`
      - .. include:: ../../reference/parameters/mmanon-ipv4-bits.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - :ref:`param-mmanon-ipv4-replacechar`
+   * - :ref:`ipv4.replaceChar <param-mmanon-ipv4-replacechar>`
      - .. include:: ../../reference/parameters/mmanon-ipv4-replacechar.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - :ref:`param-mmanon-ipv6-enable`
+   * - :ref:`ipv6.enable <param-mmanon-ipv6-enable>`
      - .. include:: ../../reference/parameters/mmanon-ipv6-enable.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - :ref:`param-mmanon-ipv6-anonmode`
+   * - :ref:`ipv6.anonMode <param-mmanon-ipv6-anonmode>`
      - .. include:: ../../reference/parameters/mmanon-ipv6-anonmode.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - :ref:`param-mmanon-ipv6-bits`
+   * - :ref:`ipv6.bits <param-mmanon-ipv6-bits>`
      - .. include:: ../../reference/parameters/mmanon-ipv6-bits.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - :ref:`param-mmanon-embeddedipv4-enable`
+   * - :ref:`embeddedIpv4.enable <param-mmanon-embeddedipv4-enable>`
      - .. include:: ../../reference/parameters/mmanon-embeddedipv4-enable.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - :ref:`param-mmanon-embeddedipv4-anonmode`
+   * - :ref:`embeddedIpv4.anonMode <param-mmanon-embeddedipv4-anonmode>`
      - .. include:: ../../reference/parameters/mmanon-embeddedipv4-anonmode.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - :ref:`param-mmanon-embeddedipv4-bits`
+   * - :ref:`embeddedIpv4.bits <param-mmanon-embeddedipv4-bits>`
      - .. include:: ../../reference/parameters/mmanon-embeddedipv4-bits.rst
         :start-after: .. summary-start
         :end-before: .. summary-end

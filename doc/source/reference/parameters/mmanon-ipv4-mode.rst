@@ -31,7 +31,7 @@ In simple mode, only octets as a whole can be anonymized and the length of the
 message is never changed. This means that when the last three octets of the
 address 10.1.12.123 are anonymized, the result will be 10.x.xx.xxx.
 The replacement character is configurable via
-:ref:`param-mmanon-ipv4-replacechar`.
+:ref:`ipv4.replaceChar <param-mmanon-ipv4-replacechar>`.
 This means that the length of the original octets is still visible and may
 be used to draw some privacy-evasive conclusions. This mode is slightly
 faster than the other modes, and this may matter in high throughput
