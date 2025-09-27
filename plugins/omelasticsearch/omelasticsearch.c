@@ -242,9 +242,9 @@ static struct cnfparamdescr actpdescr[] = {{"server", eCmdHdlrArray, 0},
                                            {"esversion.major", eCmdHdlrPositiveInt, 0}};
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
-static rsRetVal curlSetup(wrkrInstanceData_t *pWrkrData);
-static rsRetVal detectTargetPlatformAndVersion(instanceData *const pData);
-static rsRetVal applyVersionRequirements(instanceData *const pData);
+static rsRetVal ATTR_NONNULL() curlSetup(wrkrInstanceData_t *pWrkrData);
+static rsRetVal ATTR_NONNULL() detectTargetPlatformAndVersion(instanceData *const pData);
+static rsRetVal ATTR_NONNULL() applyVersionRequirements(instanceData *const pData);
 
 BEGINcreateInstance
     CODESTARTcreateInstance;
@@ -491,12 +491,30 @@ finalize_it:
     RETiRet;
 }
 
+/**
+ * @brief Accumulates HTTP response data while probing the cluster version.
+ *
+ * cURL delivers the payload piecemeal, so we resize the buffer on demand
+ * before handing the full string to the JSON parser.
+ */
 struct versionDetectBuffer {
     char *data;
     size_t len;
 };
 
-static size_t curlVersionResult(void *const ptr, const size_t size, const size_t nmemb, void *const userdata) {
+/**
+ * @brief cURL write callback used during platform/version detection.
+ *
+ * @param[in] ptr    Chunk of bytes provided by libcurl.
+ * @param[in] size   Size of each element in @p ptr.
+ * @param[in] nmemb  Number of elements in @p ptr.
+ * @param[in] userdata  Pointer to the accumulation buffer.
+ *
+ * @return Number of bytes consumed when the append succeeds, or 0 when an
+ *         allocation failure should abort the transfer.
+ */
+static size_t ATTR_NONNULL(1, 4)
+    curlVersionResult(void *const ptr, const size_t size, const size_t nmemb, void *const userdata) {
     struct versionDetectBuffer *const buffer = (struct versionDetectBuffer *)userdata;
     const size_t size_add = size * nmemb;
     char *tmp;
@@ -517,7 +535,22 @@ static size_t curlVersionResult(void *const ptr, const size_t size, const size_t
     return size_add;
 }
 
-static rsRetVal parseVersionString(const char *const version, int *const major, int *const minor, int *const patch) {
+/**
+ * @brief Parses a dotted version string into individual numeric components.
+ *
+ * Missing minor or patch components default to zero so we can safely compare
+ * versions such as "8" and "8.12" alike.
+ *
+ * @param[in]  version  NUL-terminated major[.minor[.patch]] string.
+ * @param[out] major    Parsed major version component.
+ * @param[out] minor    Parsed minor version component (defaults to 0).
+ * @param[out] patch    Parsed patch version component (defaults to 0).
+ *
+ * @retval RS_RET_OK             All components parsed successfully.
+ * @retval RS_RET_CONFIG_ERROR   The version string is missing or malformed.
+ */
+static rsRetVal ATTR_NONNULL(2, 3, 4)
+    parseVersionString(const char *const version, int *const major, int *const minor, int *const patch) {
     const char *cursor;
     char *endptr;
     long parsed;
@@ -561,7 +594,20 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal applyVersionRequirements(instanceData *const pData) {
+/**
+ * @brief Applies compatibility rules that depend on the selected cluster version.
+ *
+ * Versions older than 8 still require an explicit default index name and forbid
+ * certain write operations without a `bulkid`. Later versions leave the
+ * administrator's choices untouched.
+ *
+ * @param[in,out] pData  Instance configuration updated in place.
+ *
+ * @retval RS_RET_OK            Compatibility checks passed.
+ * @retval RS_RET_OUT_OF_MEMORY Memory allocation failed while setting defaults.
+ * @retval RS_RET_CONFIG_ERROR  Legacy configuration is missing required fields.
+ */
+static rsRetVal ATTR_NONNULL() applyVersionRequirements(instanceData *const pData) {
     DEFiRet;
 
     if (pData->esVersion < 8) {
@@ -586,9 +632,24 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal updateDetectedPlatform(instanceData *const pData,
-                                       const char *const payload,
-                                       const char *const serverUrl) {
+/**
+ * @brief Parses the root response document to capture version metadata.
+ *
+ * The routine persists the detected semantic version, infers whether we are
+ * talking to Elasticsearch or OpenSearch, and overrides user-provided
+ * `esversion` settings when necessary.
+ *
+ * @param[in,out] pData     Instance configuration that stores the detection
+ *                          results.
+ * @param[in]     payload   Raw JSON payload returned by the server.
+ * @param[in]     serverUrl URL that produced the payload (used for logging).
+ *
+ * @retval RS_RET_OK             Detection succeeded and the instance data was updated.
+ * @retval RS_RET_CONFIG_ERROR   JSON payload is invalid or missing required fields.
+ * @retval RS_RET_OUT_OF_MEMORY  Memory allocation failed while storing metadata.
+ */
+static rsRetVal ATTR_NONNULL(1, 2, 3)
+    updateDetectedPlatform(instanceData *const pData, const char *const payload, const char *const serverUrl) {
     fjson_object *root = NULL;
     fjson_object *version = NULL;
     fjson_object *field = NULL;
@@ -661,7 +722,21 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal detectTargetPlatformAndVersion(instanceData *const pData) {
+/**
+ * @brief Contacts each configured server to determine the target platform/version.
+ *
+ * The probe issues a lightweight HTTP GET against the base URL, collects the
+ * JSON greeting, and defers to updateDetectedPlatform() for parsing. Detection
+ * failures are non-fatal so the action can still start with conservative
+ * defaults.
+ *
+ * @param[in,out] pData  Instance configuration providing server list and
+ *                       receiving detection results.
+ *
+ * @retval RS_RET_OK             Detection completed (results may remain unknown).
+ * @retval RS_RET_OUT_OF_MEMORY  Failed to allocate cURL handles or buffers.
+ */
+static rsRetVal ATTR_NONNULL() detectTargetPlatformAndVersion(instanceData *const pData) {
     CURL *curl = NULL;
     struct versionDetectBuffer buffer;
     char errbuf[CURL_ERROR_SIZE];
@@ -2379,10 +2454,12 @@ BEGINcheckCnf
             ABORT_FINALIZE(localRet);
         }
         if (localRet != RS_RET_OK) {
-            const char *target =
-                (inst->serverBaseUrls != NULL && inst->numServers > 0)
-                    ? (const char *)inst->serverBaseUrls[0]
-                    : (inst->searchIndex == NULL ? "configured server" : (const char *)inst->searchIndex);
+            const char *target;
+            if (inst->serverBaseUrls != NULL && inst->numServers > 0) {
+                target = (const char *)inst->serverBaseUrls[0];
+            } else {
+                target = "configured server(s)";
+            }
             LogMsg(0, localRet, LOG_WARNING,
                    "omelasticsearch: platform detection failed for %s, continuing with defaults", target);
         }
