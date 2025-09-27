@@ -22,7 +22,7 @@ This property belongs to the **Message Properties** group.
 
 Description
 -----------
-The MSG part of the message (aka "the message" ;)).
+The MSG part of the message (aka "the message").
 
 Usage
 -----
