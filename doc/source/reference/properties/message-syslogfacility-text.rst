@@ -22,7 +22,9 @@ This property belongs to the **Message Properties** group.
 
 Description
 -----------
-The facility from the message - in text form.
+Returns the human-readable name of the syslog facility (such as ``daemon`` or
+``local4``). The names follow the RFC 3164 and RFC 5424 mappings and correspond
+directly to the numeric property :ref:`prop-message-syslogfacility`.
 
 Usage
 -----
@@ -31,6 +33,16 @@ Usage
 .. code-block:: rsyslog
 
    template(name="example" type="string" string="%syslogfacility-text%")
+
+Notes
+~~~~~
+- Expect the canonical names ``kern``, ``user``, ``mail``, ``daemon``,
+  ``auth``, ``syslog``, ``lpr``, ``news``, ``uucp``, ``cron``, ``authpriv``,
+  ``ftp``, system-reserved slots, and ``local0``..``local7``.
+- Some systems expose small spelling differences; compare strings carefully if
+  you expect portable configurations.
+- Facility selection is independent from severity, but both values combine into
+  ``PRI`` (``PRI = facility * 8 + severity``).
 
 See also
 --------

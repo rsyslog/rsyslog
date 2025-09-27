@@ -20,7 +20,6 @@ This property belongs to the **Message Properties** group.
 :Name: timestamp
 :Category: Message Properties
 :Type: timestamp
-:Aliases: timereported
 
 Description
 -----------
@@ -33,10 +32,6 @@ Usage
 .. code-block:: rsyslog
 
    template(name="example" type="string" string="%timestamp%")
-
-Aliases
-~~~~~~~
-- timereported — alias for timestamp
 
 See also
 --------

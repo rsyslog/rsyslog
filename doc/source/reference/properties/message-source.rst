@@ -20,7 +20,6 @@ This property belongs to the **Message Properties** group.
 :Name: source
 :Category: Message Properties
 :Type: string
-:Aliases: hostname
 
 Description
 -----------
@@ -33,10 +32,6 @@ Usage
 .. code-block:: rsyslog
 
    template(name="example" type="string" string="%source%")
-
-Aliases
-~~~~~~~
-- hostname — alias for source
 
 See also
 --------

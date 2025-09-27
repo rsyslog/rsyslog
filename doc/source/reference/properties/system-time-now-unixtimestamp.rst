@@ -30,7 +30,7 @@ Usage
 -----
 .. _properties.system-time.now-unixtimestamp-usage:
 
-.. code-block:: rsyslog
+.. code-block:: none
 
    # Get Unix timestamp of current message
    set $.tnow = $$now-unixtimestamp
@@ -54,6 +54,9 @@ Notes
 ~~~~~
 NOTE: by definition, there is no "UTC equivalent" of the $now-unixtimestamp
 property.
+
+- Properties that include hyphens require the double dollar form (``$$``) when
+  used in expressions so the parser does not treat the hyphen as subtraction.
 
 See also
 --------

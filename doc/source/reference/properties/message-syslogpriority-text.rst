@@ -20,7 +20,6 @@ This property belongs to the **Message Properties** group.
 :Name: syslogpriority-text
 :Category: Message Properties
 :Type: string
-:Aliases: syslogseverity-text
 
 Description
 -----------
@@ -33,10 +32,6 @@ Usage
 .. code-block:: rsyslog
 
    template(name="example" type="string" string="%syslogpriority-text%")
-
-Aliases
-~~~~~~~
-- syslogseverity-text — alias for syslogpriority-text
 
 See also
 --------

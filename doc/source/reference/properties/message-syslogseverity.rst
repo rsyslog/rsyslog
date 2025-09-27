@@ -1,5 +1,6 @@
 .. _prop-message-syslogseverity:
 .. _properties.message.syslogseverity:
+.. _properties.alias.syslogpriority:
 
 syslogseverity
 ==============
@@ -23,7 +24,11 @@ This property belongs to the **Message Properties** group.
 
 Description
 -----------
-Severity from the message - in numerical form.
+Reports the numeric syslog severity defined in RFC 3164 and RFC 5424. The field
+is a 3-bit integer from 0 (``emerg``) to 7 (``debug``); smaller numbers indicate
+higher urgency. The sending application chooses this value, so real-world usage
+can vary and mappings are sometimes fuzzy. Severity combines with the facility
+code to form the PRI value (``PRI = facility * 8 + severity``).
 
 Usage
 -----
@@ -32,6 +37,15 @@ Usage
 .. code-block:: rsyslog
 
    template(name="example" type="string" string="%syslogseverity%")
+
+Notes
+~~~~~
+- Canonical severities: 0 ``emerg``, 1 ``alert``, 2 ``crit``, 3 ``err``,
+  4 ``warning``, 5 ``notice``, 6 ``info``, 7 ``debug``.
+- Filter by number or name; for example ``if $syslogseverity <= 3 then ...``
+  routes urgent messages (``emerg`` through ``err``).
+- The textual property :ref:`prop-message-syslogseverity-text` exposes the same
+  information as words. Legacy selector syntax such as ``*.err`` works as well.
 
 Aliases
 ~~~~~~~

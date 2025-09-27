@@ -22,7 +22,11 @@ This property belongs to the **Message Properties** group.
 
 Description
 -----------
-The facility from the message - in numerical form.
+Reports the numeric syslog facility defined in RFC 3164 and RFC 5424. The field
+is a 5-bit code describing the general origin of the message (for example 3 for
+``daemon`` or 20 for ``local4``). Facility values combine with severity to form
+the PRI value (``PRI = facility * 8 + severity``), but otherwise remain
+independent.
 
 Usage
 -----
@@ -31,6 +35,18 @@ Usage
 .. code-block:: rsyslog
 
    template(name="example" type="string" string="%syslogfacility%")
+
+Notes
+~~~~~
+- Common facility codes: 0 ``kern``, 1 ``user``, 2 ``mail``, 3 ``daemon``,
+  4 ``auth``, 5 ``syslog``, 6 ``lpr``, 7 ``news``, 8 ``uucp``, 9 ``cron``,
+  10 ``authpriv``, 11 ``ftp``, 12-15 reserved/OS-specific, 16-23 ``local0``..
+  ``local7``.
+- Applications assign facilities themselves, so naming can diverge by
+  platform. The ``local0``..``local7`` range is intentionally left for
+  site-defined uses.
+- Filter or route by facility, for example ``if $syslogfacility == 3`` or with
+  legacy selectors such as ``mail.*``.
 
 See also
 --------
