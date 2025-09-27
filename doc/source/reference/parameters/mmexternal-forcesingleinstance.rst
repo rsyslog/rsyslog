@@ -44,6 +44,7 @@ This parameter is equivalent to the
 
 Input usage
 -----------
+.. _param-mmexternal-input-forcesingleinstance:
 .. _mmexternal.parameter.input.forcesingleinstance-usage:
 
 .. code-block:: rsyslog
