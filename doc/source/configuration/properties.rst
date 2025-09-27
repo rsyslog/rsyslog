@@ -25,189 +25,136 @@ properties start with a letter.
 
 The following message properties exist:
 
-**msg**
-  the MSG part of the message (aka "the message" ;))
+.. note::
 
-**rawmsg**
-  the message "as is".  Should be useful for debugging and also if a message
-  should be forwarded totally unaltered.
-  Please notice *EscapecontrolCharactersOnReceive* is enabled by default, so
-  it may be different from what was received in the socket.
+   Property names are case-insensitive. Use the spelling from headings in prose and examples.
 
-**rawmsg-after-pri**
-  Almost the same as **rawmsg**, but the syslog PRI is removed.
-  If no PRI was present, **rawmsg-after-pri** is identical to
-  **rawmsg**. Note that the syslog PRI is header field that
-  contains information on syslog facility and severity. It is
-  enclosed in greater-than and less-than characters, e.g.
-  "<191>". This field is often not written to log files, but
-  usually needs to be present for the receiver to properly
-  classify the message. There are some rare cases where one
-  wants the raw message, but not the PRI. You can use this
-  property to obtain that. In general, you should know that you
-  need this format, otherwise stay away from the property.
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-**hostname**
-  hostname from the message
-
-**source**
-  alias for HOSTNAME
-
-**fromhost**
-  hostname of the system the message was received from (in a relay chain,
-  this is the system immediately in front of us and not necessarily the
-  original sender). This is a DNS-resolved name, except if that is not
-  possible or DNS resolution has been disabled. Reverse lookup results are
-  cached; see :ref:`reverse_dns_cache` for controlling cache timeout. Forward
-  lookups for outbound connections are not cached by rsyslog and are resolved
-  via the system resolver whenever a connection is made.
-
-**fromhost-ip**
-  The same as fromhost, but always as an IP address. Local inputs (like
-  imklog) use 127.0.0.1 in this property.
-
-**fromhost-port**
-  The same as fromhost, but contains the numeric source port of the
-  sender. Local inputs provide an empty string.
-
-**syslogtag**
-  TAG from the message
-
-**programname**
-  the "static" part of the tag, as defined by BSD syslogd. For example,
-  when TAG is "named[12345]", programname is "named".
-
-  Precisely, the programname is terminated by either (whichever occurs first):
-
-  - end of tag
-  - nonprintable character
-  - ':'
-  - '['
-  - '/'
-
-  The above definition has been taken from the FreeBSD syslogd sources.
-
-  Please note that some applications include slashes in the static part
-  of the tag, e.g. "app/foo[1234]". In this case, programname is "app".
-  If they store an absolute path name like in "/app/foo[1234]", programname
-  will become empty (""). If you need to actually store slashes as
-  part of the programname, you can use the global option
-
-  global(parser.permitSlashInProgramName="on")
-
-  to permit this. Then, a syslogtag of "/app/foo[1234]" will result in
-  programname being "/app/foo". Note: this option is available starting at
-  rsyslogd version 8.25.0.
-
-**pri**
-  PRI part of the message - undecoded (single value)
-
-**pri-text**
-  the PRI part of the message in a textual form with the numerical PRI
-  appended in brackets (e.g. "local0.err<133>")
-
-**iut**
-  the monitorware InfoUnitType - used when talking to a
-  `MonitorWare <https://www.monitorware.com>`_ backend (also for
-  `Adiscon LogAnalyzer <https://loganalyzer.adiscon.com/>`_)
-
-**syslogfacility**
-  the facility from the message - in numerical form
-
-**syslogfacility-text**
-  the facility from the message - in text form
-
-**syslogseverity**
-  severity from the message - in numerical form
-
-**syslogseverity-text**
-  severity from the message - in text form
-
-**syslogpriority**
-  an alias for syslogseverity - included for historical reasons (be
-  careful: it still is the severity, not PRI!)
-
-**syslogpriority-text**
-  an alias for syslogseverity-text
-
-**timegenerated**
-  timestamp when the message was RECEIVED. Always in high resolution
-
-**timereported**
-  timestamp from the message. Resolution depends on what was provided in
-  the message (in most cases, only seconds)
-
-**timestamp**
-  alias for timereported
-
-**protocol-version**
-  The contents of the PROTOCOL-VERSION field from IETF draft
-  draft-ietf-syslog-protocol
-
-**structured-data**
-  The contents of the STRUCTURED-DATA field from IETF draft
-  draft-ietf-syslog-protocol
-
-**app-name**
-  The contents of the APP-NAME field from IETF draft
-  draft-ietf-syslog-protocol
-
-**procid**
-  The contents of the PROCID field from IETF draft
-  draft-ietf-syslog-protocol
-
-**msgid**
-  The contents of the MSGID field from IETF draft
-  draft-ietf-syslog-protocol
-
-**inputname**
-  The name of the input module that generated the message (e.g.
-  "imuxsock", "imudp"). Note that not all modules necessarily provide this
-  property. If not provided, it is an empty string. Also note that the
-  input module may provide any value of its liking. Most importantly, it
-  is **not** necessarily the module input name. Internal sources can also
-  provide inputnames. Currently, "rsyslogd" is defined as inputname for
-  messages internally generated by rsyslogd, for example startup and
-  shutdown and error messages. This property is considered useful when
-  trying to filter messages based on where they originated - e.g. locally
-  generated messages ("rsyslogd", "imuxsock", "imklog") should go to a
-  different place than messages generated somewhere else.
-
-**uuid**
-
-  *Only Available if rsyslog is build with --enable-uuid*
-
-  A UUID for the message. It is not present by default, but will be created
-  on first read of the uuid property. Thereafter, in the local rsyslog
-  instance, it will always be the same value. This is also true if rsyslog
-  is restarted and messages stayed in an on-disk queue.
-
-  Note well: the UUID is **not** automatically transmitted to remote
-  syslog servers when forwarding. If that is needed, a special template
-  needs to be created that contains the uuid. Likewise, the receiver must
-  parse that UUID from that template.
-
-  The uuid property is most useful if you would like to track a single
-  message across multiple local destination. An example is messages being
-  written to a database as well as to local files.
-
-**jsonmesg**
-
-  *Available since rsyslog 8.3.0*
-
-  The whole message object as JSON representation. Note that the JSON
-  string will *not* include an LF and it will contain *all other message
-  properties* specified here as respective JSON containers. It also includes
-  all message variables in the "$!" subtree (this may be null if none are
-  present).
-
-  This property is primarily meant as an interface to other systems and
-  tools that want access to the full property set (namely external
-  plugins). Note that it contains the same data items potentially multiple
-  times. For example, parts of the syslog tag will by contained in the
-  rawmsg, syslogtag, and programname properties. As such, this property
-  has some additional overhead. Thus, it is suggested to be used only
-  when there is actual need for it.
+   * - Property
+     - Summary
+   * - :ref:`prop-message-msg`
+     - .. include:: ../reference/properties/message-msg.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-rawmsg`
+     - .. include:: ../reference/properties/message-rawmsg.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-rawmsg-after-pri`
+     - .. include:: ../reference/properties/message-rawmsg-after-pri.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-hostname`
+     - .. include:: ../reference/properties/message-hostname.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-source`
+     - .. include:: ../reference/properties/message-source.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-fromhost`
+     - .. include:: ../reference/properties/message-fromhost.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-fromhost-ip`
+     - .. include:: ../reference/properties/message-fromhost-ip.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-fromhost-port`
+     - .. include:: ../reference/properties/message-fromhost-port.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-syslogtag`
+     - .. include:: ../reference/properties/message-syslogtag.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-programname`
+     - .. include:: ../reference/properties/message-programname.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-pri`
+     - .. include:: ../reference/properties/message-pri.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-pri-text`
+     - .. include:: ../reference/properties/message-pri-text.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-iut`
+     - .. include:: ../reference/properties/message-iut.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-syslogfacility`
+     - .. include:: ../reference/properties/message-syslogfacility.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-syslogfacility-text`
+     - .. include:: ../reference/properties/message-syslogfacility-text.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-syslogseverity`
+     - .. include:: ../reference/properties/message-syslogseverity.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-syslogseverity-text`
+     - .. include:: ../reference/properties/message-syslogseverity-text.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-syslogpriority`
+     - .. include:: ../reference/properties/message-syslogpriority.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-syslogpriority-text`
+     - .. include:: ../reference/properties/message-syslogpriority-text.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-timegenerated`
+     - .. include:: ../reference/properties/message-timegenerated.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-timereported`
+     - .. include:: ../reference/properties/message-timereported.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-timestamp`
+     - .. include:: ../reference/properties/message-timestamp.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-protocol-version`
+     - .. include:: ../reference/properties/message-protocol-version.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-structured-data`
+     - .. include:: ../reference/properties/message-structured-data.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-app-name`
+     - .. include:: ../reference/properties/message-app-name.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-procid`
+     - .. include:: ../reference/properties/message-procid.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-msgid`
+     - .. include:: ../reference/properties/message-msgid.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-inputname`
+     - .. include:: ../reference/properties/message-inputname.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-uuid`
+     - .. include:: ../reference/properties/message-uuid.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-message-jsonmesg`
+     - .. include:: ../reference/properties/message-jsonmesg.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 System Properties
 -----------------
@@ -245,14 +192,20 @@ Special care needs to be taken in regard to time-related system variables:
 
 The following system properties exist:
 
-**$bom**
-  The UTF-8 encoded Unicode byte-order mask (BOM). This may be useful in
-  templates for RFC5424 support, when the character set is known to be
-  Unicode.
-  
-**$myhostname**
-  The name of the current host as it knows itself (probably useful for
-  filtering in a generic way)
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Property
+     - Summary
+   * - :ref:`prop-system-bom`
+     - .. include:: ../reference/properties/system-bom.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-system-myhostname`
+     - .. include:: ../reference/properties/system-myhostname.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 Time-Related System Properties
 ..............................
@@ -272,58 +225,95 @@ within each template. However, as $now always provides local system time
 at time of using it, time may advance and consequently different templates
 may have different time stamp. To avoid this, use *timegenerated* instead.
 
-**$now**
-  The current date stamp in the format YYYY-MM-DD
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-**$year**
-  The current year (4-digit)
+   * - Property
+     - Summary
+   * - :ref:`prop-system-time-now`
+     - .. include:: ../reference/properties/system-time-now.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-system-time-year`
+     - .. include:: ../reference/properties/system-time-year.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-system-time-month`
+     - .. include:: ../reference/properties/system-time-month.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-system-time-day`
+     - .. include:: ../reference/properties/system-time-day.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-system-time-wday`
+     - .. include:: ../reference/properties/system-time-wday.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-system-time-hour`
+     - .. include:: ../reference/properties/system-time-hour.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-system-time-hhour`
+     - .. include:: ../reference/properties/system-time-hhour.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-system-time-qhour`
+     - .. include:: ../reference/properties/system-time-qhour.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-system-time-minute`
+     - .. include:: ../reference/properties/system-time-minute.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`prop-system-time-now-unixtimestamp`
+     - .. include:: ../reference/properties/system-time-now-unixtimestamp.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
-**$month**
-  The current month (2-digit)
+.. toctree::
+   :hidden:
 
-**$day**
-  The current day of the month (2-digit)
-
-**$wday**
-  The current week day as defined by 'gmtime()'. 0=Sunday, ..., 6=Saturday
-
-**$hour**
-  The current hour in military (24 hour) time (2-digit)
-
-**$hhour**
-  The current half hour we are in. From minute 0 to 29, this is always 0
-  while from 30 to 59 it is always 1.
-
-**$qhour**
-  The current quarter hour we are in. Much like $HHOUR, but values range
-  from 0 to 3 (for the four quarter hours that are in each hour)
-
-**$minute**
-  The current minute (2-digit)
-
-**$now-unixtimestamp**
-  The current time as a unix timestamp (seconds since epoch). This actually
-  is a monotonically increasing counter and as such can also be used for any
-  other use cases that require such counters. This is an example of how
-  to use it for rate-limiting::
-
-    # Get Unix timestamp of current message
-    set $.tnow = $$now-unixtimestamp
-
-    # Rate limit info to 5 every 60 seconds
-    if ($!severity == 6 and $!facility == 17) then {
-      if (($.tnow - $/trate) > 60) then {
-        # 5 seconds window expired, allow more messages
-        set $/trate = $.tnow;
-        set $/ratecount = 0;
-      }
-      if ($/ratecount > 5) then {
-        # discard message
-        stop
-      } else {
-        set $/ratecount = $/ratecount + 1;
-      }
-    }
-
-  NOTE: by definition, there is no "UTC equivalent" of the
-  $now-unixtimestamp property.
+   ../reference/properties/message-msg
+   ../reference/properties/message-rawmsg
+   ../reference/properties/message-rawmsg-after-pri
+   ../reference/properties/message-hostname
+   ../reference/properties/message-source
+   ../reference/properties/message-fromhost
+   ../reference/properties/message-fromhost-ip
+   ../reference/properties/message-fromhost-port
+   ../reference/properties/message-syslogtag
+   ../reference/properties/message-programname
+   ../reference/properties/message-pri
+   ../reference/properties/message-pri-text
+   ../reference/properties/message-iut
+   ../reference/properties/message-syslogfacility
+   ../reference/properties/message-syslogfacility-text
+   ../reference/properties/message-syslogseverity
+   ../reference/properties/message-syslogseverity-text
+   ../reference/properties/message-syslogpriority
+   ../reference/properties/message-syslogpriority-text
+   ../reference/properties/message-timegenerated
+   ../reference/properties/message-timereported
+   ../reference/properties/message-timestamp
+   ../reference/properties/message-protocol-version
+   ../reference/properties/message-structured-data
+   ../reference/properties/message-app-name
+   ../reference/properties/message-procid
+   ../reference/properties/message-msgid
+   ../reference/properties/message-inputname
+   ../reference/properties/message-uuid
+   ../reference/properties/message-jsonmesg
+   ../reference/properties/system-bom
+   ../reference/properties/system-myhostname
+   ../reference/properties/system-time-now
+   ../reference/properties/system-time-year
+   ../reference/properties/system-time-month
+   ../reference/properties/system-time-day
+   ../reference/properties/system-time-wday
+   ../reference/properties/system-time-hour
+   ../reference/properties/system-time-hhour
+   ../reference/properties/system-time-qhour
+   ../reference/properties/system-time-minute
+   ../reference/properties/system-time-now-unixtimestamp
