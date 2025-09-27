@@ -29,10 +29,14 @@ Description
 -----------
 .. warning::
 
-   This parameter is deprecated.  The module performs a best-effort probe at
+   This parameter is deprecated as of rsyslog 8.2510.0.  The module performs a
+   best-effort probe at
    startup to discover the target platform (Elasticsearch or OpenSearch) and
    its version, and ``esVersion.major`` is automatically updated with the
    detected major version when the probe succeeds.
+
+.. versionchanged:: 8.2510.0
+   Automatically overridden when startup platform detection succeeds.
 
 This setting is only consulted when detection fails or when no servers are
 reachable during startup.  Administrators may keep it configured as a fallback

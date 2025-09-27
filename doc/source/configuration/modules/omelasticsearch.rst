@@ -26,7 +26,7 @@ Notable Features
 Target platform detection
 =========================
 
-Starting with this release the module probes the configured servers during
+Starting with release 8.2510.0 the module probes the configured servers during
 configuration processing to determine whether they are running Elasticsearch or
 OpenSearch and to capture the version number that is exposed by the cluster.
 The probe happens once at startup, before the action begins to process any
