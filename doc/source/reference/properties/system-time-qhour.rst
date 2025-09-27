@@ -22,7 +22,7 @@ This property belongs to the **Time-Related System Properties** group.
 
 Description
 -----------
-The current quarter hour we are in. Much like $HHOUR, but values range from 0 to 3
+The current quarter hour we are in. Much like :ref:`prop-system-time-hhour`, but values range from 0 to 3
 (for the four quarter hours that are in each hour).
 
 Usage
