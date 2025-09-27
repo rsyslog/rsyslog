@@ -30,7 +30,7 @@ Usage
 -----
 .. _properties.system-time.now-unixtimestamp-usage:
 
-.. code-block:: rsyslog
+Example::
 
    # Get Unix timestamp of current message
    set $.tnow = $$now-unixtimestamp
