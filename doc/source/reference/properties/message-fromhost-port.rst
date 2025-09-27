@@ -10,7 +10,7 @@ fromhost-port
 
 .. summary-start
 
-Reports the numeric source port of the sender when available.
+Reports the numeric source port of the sender in line with :ref:`prop-message-fromhost`.
 
 .. summary-end
 
@@ -22,7 +22,7 @@ This property belongs to the **Message Properties** group.
 
 Description
 -----------
-The same as ``fromhost``, but contains the numeric source port of the sender.
+The same as :ref:`prop-message-fromhost`, but contains the numeric source port of the sender.
 Local inputs provide an empty string.
 
 Usage

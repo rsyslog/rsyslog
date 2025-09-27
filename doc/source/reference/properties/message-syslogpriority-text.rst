@@ -10,7 +10,7 @@ syslogpriority-text
 
 .. summary-start
 
-Returns the same textual severity string as ``syslogseverity-text``.
+Returns the same textual severity string as :ref:`prop-message-syslogseverity-text`.
 
 .. summary-end
 
@@ -22,7 +22,7 @@ This property belongs to the **Message Properties** group.
 
 Description
 -----------
-An alias for ``syslogseverity-text``.
+An alias for :ref:`prop-message-syslogseverity-text`.
 
 Usage
 -----

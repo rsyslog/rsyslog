@@ -10,7 +10,7 @@ source
 
 .. summary-start
 
-Provides the same hostname value as the ``hostname`` property.
+Provides the same hostname value as :ref:`prop-message-hostname`.
 
 .. summary-end
 
@@ -22,7 +22,7 @@ This property belongs to the **Message Properties** group.
 
 Description
 -----------
-Alias for ``hostname``.
+Alias for :ref:`prop-message-hostname`.
 
 Usage
 -----

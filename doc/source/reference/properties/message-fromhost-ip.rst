@@ -10,7 +10,7 @@ fromhost-ip
 
 .. summary-start
 
-Provides the message source as an IP address.
+Provides the message source as an IP address just like :ref:`prop-message-fromhost`.
 
 .. summary-end
 
@@ -22,7 +22,7 @@ This property belongs to the **Message Properties** group.
 
 Description
 -----------
-The same as ``fromhost``, but always as an IP address. Local inputs (like
+The same as :ref:`prop-message-fromhost`, but always as an IP address. Local inputs (like
 imklog) use 127.0.0.1 in this property.
 
 Usage

@@ -10,7 +10,7 @@ timestamp
 
 .. summary-start
 
-Provides the same value as ``timereported`` from the message header.
+Provides the same value as :ref:`prop-message-timereported` from the message header.
 
 .. summary-end
 
@@ -22,7 +22,7 @@ This property belongs to the **Message Properties** group.
 
 Description
 -----------
-Alias for ``timereported``.
+Alias for :ref:`prop-message-timereported`.
 
 Usage
 -----

@@ -10,7 +10,7 @@ syslogpriority
 
 .. summary-start
 
-Provides the same numeric value as ``syslogseverity`` for historical reasons.
+Provides the same numeric value as :ref:`prop-message-syslogseverity` for historical reasons.
 
 .. summary-end
 
@@ -22,7 +22,7 @@ This property belongs to the **Message Properties** group.
 
 Description
 -----------
-An alias for ``syslogseverity`` - included for historical reasons (be careful: it
+An alias for :ref:`prop-message-syslogseverity` - included for historical reasons (be careful: it
 still is the severity, not PRI!).
 
 Usage
