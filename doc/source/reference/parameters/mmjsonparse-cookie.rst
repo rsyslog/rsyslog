@@ -31,9 +31,9 @@ the message.
 
 Most importantly, this can be set to the empty string ("") to not require any
 cookie. In this case, leading spaces are permitted in front of the JSON. No
-non-whitespace characters are permitted after the JSON. If trailing
-non-whitespace characters must be handled, a tool like the
-:doc:`mmnormalize module <../../configuration/modules/mmnormalize>` can be used.
+characters, including whitespace, are permitted after the JSON object. If
+trailing characters must be handled, a tool like the :doc:`mmnormalize module
+<../../configuration/modules/mmnormalize>` can be used.
 
 Input usage
 -----------
