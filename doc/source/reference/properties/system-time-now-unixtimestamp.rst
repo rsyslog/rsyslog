@@ -36,7 +36,9 @@ Usage
        property(name="$now-unixtimestamp")
    }
 
-Additional example::
+Additional example:
+
+.. code-block:: none
 
    # Get Unix timestamp of current message
    set $.tnow = $$now-unixtimestamp
