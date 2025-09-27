@@ -25,7 +25,7 @@ Description
 Almost the same as :ref:`prop-message-rawmsg`, but the syslog PRI is removed. If no PRI was
 present, ``rawmsg-after-pri`` is identical to :ref:`prop-message-rawmsg`. Note that the syslog
 PRI is a header field that contains information on syslog facility and severity.
-It is enclosed in greater-than and less-than characters, e.g. "<191>". This
+It is enclosed in greater-than and less-than characters, e.g. ``<191>``. This
 field is often not written to log files, but usually needs to be present for the
 receiver to properly classify the message. There are some rare cases where one
 wants the raw message, but not the PRI. You can use this property to obtain
