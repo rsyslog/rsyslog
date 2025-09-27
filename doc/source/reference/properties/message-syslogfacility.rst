@@ -41,10 +41,22 @@ Usage
 
 Notes
 ~~~~~
-- Common facility codes: 0 ``kern``, 1 ``user``, 2 ``mail``, 3 ``daemon``,
-  4 ``auth``, 5 ``syslog``, 6 ``lpr``, 7 ``news``, 8 ``uucp``, 9 ``cron``,
-  10 ``authpriv``, 11 ``ftp``, 12-15 reserved/OS-specific, 16-23 ``local0``..
-  ``local7``.
+- Common facility codes:
+
+  - **0** ``kern``
+  - **1** ``user``
+  - **2** ``mail``
+  - **3** ``daemon``
+  - **4** ``auth``
+  - **5** ``syslog``
+  - **6** ``lpr``
+  - **7** ``news``
+  - **8** ``uucp``
+  - **9** ``cron``
+  - **10** ``authpriv``
+  - **11** ``ftp``
+  - **12-15** reserved/OS-specific
+  - **16-23** ``local0``..``local7``
 - Applications assign facilities themselves, so naming can diverge by
   platform. The ``local0``..``local7`` range is intentionally left for
   site-defined uses.
