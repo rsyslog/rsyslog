@@ -1,6 +1,5 @@
 .. _prop-message-timestamp:
 .. _properties.message.timestamp:
-.. _properties.alias.timereported:
 
 timestamp
 =========

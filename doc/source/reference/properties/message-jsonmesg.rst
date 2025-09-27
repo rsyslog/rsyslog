@@ -23,8 +23,6 @@ This property belongs to the **Message Properties** group.
 
 Description
 -----------
-*Available since rsyslog 8.3.0*
-
 The whole message object as JSON representation. Note that the JSON string will
 *not* include an LF and it will contain *all other message properties* specified
 here as respective JSON containers. It also includes all message variables in the

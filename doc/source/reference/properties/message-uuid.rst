@@ -22,7 +22,8 @@ This property belongs to the **Message Properties** group.
 
 Description
 -----------
-*Only Available if rsyslog is build with --enable-uuid*
+.. note::
+   Only available if rsyslog is built with ``--enable-uuid``.
 
 A UUID for the message. It is not present by default, but will be created on
 first read of the uuid property. Thereafter, in the local rsyslog instance, it

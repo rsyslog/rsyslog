@@ -1,6 +1,5 @@
 .. _prop-message-source:
 .. _properties.message.source:
-.. _properties.alias.source:
 
 source
 ======

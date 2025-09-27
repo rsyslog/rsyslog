@@ -1,6 +1,5 @@
 .. _prop-message-syslogpriority-text:
 .. _properties.message.syslogpriority-text:
-.. _properties.alias.syslogpriority-text:
 
 syslogpriority-text
 ===================
