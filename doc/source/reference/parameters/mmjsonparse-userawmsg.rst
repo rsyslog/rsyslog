@@ -42,4 +42,5 @@ Input usage
 
 See also
 --------
-See also :doc:`../../configuration/modules/mmjsonparse`.
+See also the :doc:`main mmjsonparse module documentation
+<../../configuration/modules/mmjsonparse>`.
