@@ -1,0 +1,42 @@
+.. _prop-message-hostname:
+.. _properties.message.hostname:
+
+hostname
+========
+
+.. index::
+   single: properties; hostname
+   single: hostname
+
+.. summary-start
+
+Captures the hostname transmitted within the syslog message.
+
+.. summary-end
+
+This property belongs to the **Message Properties** group.
+
+:Name: hostname
+:Category: Message Properties
+:Type: string
+:Aliases: source
+
+Description
+-----------
+Hostname from the message.
+
+Usage
+-----
+.. _properties.message.hostname-usage:
+
+.. code-block:: rsyslog
+
+   template(name="example" type="string" string="%hostname%")
+
+Aliases
+~~~~~~~
+- source — alias for hostname
+
+See also
+--------
+See :doc:`../../rainerscript/properties` for the category overview.
