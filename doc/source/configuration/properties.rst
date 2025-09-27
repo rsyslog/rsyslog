@@ -36,123 +36,123 @@ The following message properties exist:
    * - Property
      - Summary
    * - :ref:`prop-message-msg`
-     - .. include:: ../../reference/properties/message-msg.rst
+     - .. include:: ../reference/properties/message-msg.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-rawmsg`
-     - .. include:: ../../reference/properties/message-rawmsg.rst
+     - .. include:: ../reference/properties/message-rawmsg.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-rawmsg-after-pri`
-     - .. include:: ../../reference/properties/message-rawmsg-after-pri.rst
+     - .. include:: ../reference/properties/message-rawmsg-after-pri.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-hostname`
-     - .. include:: ../../reference/properties/message-hostname.rst
+     - .. include:: ../reference/properties/message-hostname.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-source`
-     - .. include:: ../../reference/properties/message-source.rst
+     - .. include:: ../reference/properties/message-source.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-fromhost`
-     - .. include:: ../../reference/properties/message-fromhost.rst
+     - .. include:: ../reference/properties/message-fromhost.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-fromhost-ip`
-     - .. include:: ../../reference/properties/message-fromhost-ip.rst
+     - .. include:: ../reference/properties/message-fromhost-ip.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-fromhost-port`
-     - .. include:: ../../reference/properties/message-fromhost-port.rst
+     - .. include:: ../reference/properties/message-fromhost-port.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-syslogtag`
-     - .. include:: ../../reference/properties/message-syslogtag.rst
+     - .. include:: ../reference/properties/message-syslogtag.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-programname`
-     - .. include:: ../../reference/properties/message-programname.rst
+     - .. include:: ../reference/properties/message-programname.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-pri`
-     - .. include:: ../../reference/properties/message-pri.rst
+     - .. include:: ../reference/properties/message-pri.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-pri-text`
-     - .. include:: ../../reference/properties/message-pri-text.rst
+     - .. include:: ../reference/properties/message-pri-text.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-iut`
-     - .. include:: ../../reference/properties/message-iut.rst
+     - .. include:: ../reference/properties/message-iut.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-syslogfacility`
-     - .. include:: ../../reference/properties/message-syslogfacility.rst
+     - .. include:: ../reference/properties/message-syslogfacility.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-syslogfacility-text`
-     - .. include:: ../../reference/properties/message-syslogfacility-text.rst
+     - .. include:: ../reference/properties/message-syslogfacility-text.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-syslogseverity`
-     - .. include:: ../../reference/properties/message-syslogseverity.rst
+     - .. include:: ../reference/properties/message-syslogseverity.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-syslogseverity-text`
-     - .. include:: ../../reference/properties/message-syslogseverity-text.rst
+     - .. include:: ../reference/properties/message-syslogseverity-text.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-syslogpriority`
-     - .. include:: ../../reference/properties/message-syslogpriority.rst
+     - .. include:: ../reference/properties/message-syslogpriority.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-syslogpriority-text`
-     - .. include:: ../../reference/properties/message-syslogpriority-text.rst
+     - .. include:: ../reference/properties/message-syslogpriority-text.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-timegenerated`
-     - .. include:: ../../reference/properties/message-timegenerated.rst
+     - .. include:: ../reference/properties/message-timegenerated.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-timereported`
-     - .. include:: ../../reference/properties/message-timereported.rst
+     - .. include:: ../reference/properties/message-timereported.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-timestamp`
-     - .. include:: ../../reference/properties/message-timestamp.rst
+     - .. include:: ../reference/properties/message-timestamp.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-protocol-version`
-     - .. include:: ../../reference/properties/message-protocol-version.rst
+     - .. include:: ../reference/properties/message-protocol-version.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-structured-data`
-     - .. include:: ../../reference/properties/message-structured-data.rst
+     - .. include:: ../reference/properties/message-structured-data.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-app-name`
-     - .. include:: ../../reference/properties/message-app-name.rst
+     - .. include:: ../reference/properties/message-app-name.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-procid`
-     - .. include:: ../../reference/properties/message-procid.rst
+     - .. include:: ../reference/properties/message-procid.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-msgid`
-     - .. include:: ../../reference/properties/message-msgid.rst
+     - .. include:: ../reference/properties/message-msgid.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-inputname`
-     - .. include:: ../../reference/properties/message-inputname.rst
+     - .. include:: ../reference/properties/message-inputname.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-uuid`
-     - .. include:: ../../reference/properties/message-uuid.rst
+     - .. include:: ../reference/properties/message-uuid.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-message-jsonmesg`
-     - .. include:: ../../reference/properties/message-jsonmesg.rst
+     - .. include:: ../reference/properties/message-jsonmesg.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
 
@@ -199,11 +199,11 @@ The following system properties exist:
    * - Property
      - Summary
    * - :ref:`prop-system-bom`
-     - .. include:: ../../reference/properties/system-bom.rst
+     - .. include:: ../reference/properties/system-bom.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-system-myhostname`
-     - .. include:: ../../reference/properties/system-myhostname.rst
+     - .. include:: ../reference/properties/system-myhostname.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
 
@@ -232,88 +232,88 @@ may have different time stamp. To avoid this, use *timegenerated* instead.
    * - Property
      - Summary
    * - :ref:`prop-system-time-now`
-     - .. include:: ../../reference/properties/system-time-now.rst
+     - .. include:: ../reference/properties/system-time-now.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-system-time-year`
-     - .. include:: ../../reference/properties/system-time-year.rst
+     - .. include:: ../reference/properties/system-time-year.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-system-time-month`
-     - .. include:: ../../reference/properties/system-time-month.rst
+     - .. include:: ../reference/properties/system-time-month.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-system-time-day`
-     - .. include:: ../../reference/properties/system-time-day.rst
+     - .. include:: ../reference/properties/system-time-day.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-system-time-wday`
-     - .. include:: ../../reference/properties/system-time-wday.rst
+     - .. include:: ../reference/properties/system-time-wday.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-system-time-hour`
-     - .. include:: ../../reference/properties/system-time-hour.rst
+     - .. include:: ../reference/properties/system-time-hour.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-system-time-hhour`
-     - .. include:: ../../reference/properties/system-time-hhour.rst
+     - .. include:: ../reference/properties/system-time-hhour.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-system-time-qhour`
-     - .. include:: ../../reference/properties/system-time-qhour.rst
+     - .. include:: ../reference/properties/system-time-qhour.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-system-time-minute`
-     - .. include:: ../../reference/properties/system-time-minute.rst
+     - .. include:: ../reference/properties/system-time-minute.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`prop-system-time-now-unixtimestamp`
-     - .. include:: ../../reference/properties/system-time-now-unixtimestamp.rst
+     - .. include:: ../reference/properties/system-time-now-unixtimestamp.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
 
 .. toctree::
    :hidden:
 
-   ../../reference/properties/message-msg
-   ../../reference/properties/message-rawmsg
-   ../../reference/properties/message-rawmsg-after-pri
-   ../../reference/properties/message-hostname
-   ../../reference/properties/message-source
-   ../../reference/properties/message-fromhost
-   ../../reference/properties/message-fromhost-ip
-   ../../reference/properties/message-fromhost-port
-   ../../reference/properties/message-syslogtag
-   ../../reference/properties/message-programname
-   ../../reference/properties/message-pri
-   ../../reference/properties/message-pri-text
-   ../../reference/properties/message-iut
-   ../../reference/properties/message-syslogfacility
-   ../../reference/properties/message-syslogfacility-text
-   ../../reference/properties/message-syslogseverity
-   ../../reference/properties/message-syslogseverity-text
-   ../../reference/properties/message-syslogpriority
-   ../../reference/properties/message-syslogpriority-text
-   ../../reference/properties/message-timegenerated
-   ../../reference/properties/message-timereported
-   ../../reference/properties/message-timestamp
-   ../../reference/properties/message-protocol-version
-   ../../reference/properties/message-structured-data
-   ../../reference/properties/message-app-name
-   ../../reference/properties/message-procid
-   ../../reference/properties/message-msgid
-   ../../reference/properties/message-inputname
-   ../../reference/properties/message-uuid
-   ../../reference/properties/message-jsonmesg
-   ../../reference/properties/system-bom
-   ../../reference/properties/system-myhostname
-   ../../reference/properties/system-time-now
-   ../../reference/properties/system-time-year
-   ../../reference/properties/system-time-month
-   ../../reference/properties/system-time-day
-   ../../reference/properties/system-time-wday
-   ../../reference/properties/system-time-hour
-   ../../reference/properties/system-time-hhour
-   ../../reference/properties/system-time-qhour
-   ../../reference/properties/system-time-minute
-   ../../reference/properties/system-time-now-unixtimestamp
+   ../reference/properties/message-msg
+   ../reference/properties/message-rawmsg
+   ../reference/properties/message-rawmsg-after-pri
+   ../reference/properties/message-hostname
+   ../reference/properties/message-source
+   ../reference/properties/message-fromhost
+   ../reference/properties/message-fromhost-ip
+   ../reference/properties/message-fromhost-port
+   ../reference/properties/message-syslogtag
+   ../reference/properties/message-programname
+   ../reference/properties/message-pri
+   ../reference/properties/message-pri-text
+   ../reference/properties/message-iut
+   ../reference/properties/message-syslogfacility
+   ../reference/properties/message-syslogfacility-text
+   ../reference/properties/message-syslogseverity
+   ../reference/properties/message-syslogseverity-text
+   ../reference/properties/message-syslogpriority
+   ../reference/properties/message-syslogpriority-text
+   ../reference/properties/message-timegenerated
+   ../reference/properties/message-timereported
+   ../reference/properties/message-timestamp
+   ../reference/properties/message-protocol-version
+   ../reference/properties/message-structured-data
+   ../reference/properties/message-app-name
+   ../reference/properties/message-procid
+   ../reference/properties/message-msgid
+   ../reference/properties/message-inputname
+   ../reference/properties/message-uuid
+   ../reference/properties/message-jsonmesg
+   ../reference/properties/system-bom
+   ../reference/properties/system-myhostname
+   ../reference/properties/system-time-now
+   ../reference/properties/system-time-year
+   ../reference/properties/system-time-month
+   ../reference/properties/system-time-day
+   ../reference/properties/system-time-wday
+   ../reference/properties/system-time-hour
+   ../reference/properties/system-time-hhour
+   ../reference/properties/system-time-qhour
+   ../reference/properties/system-time-minute
+   ../reference/properties/system-time-now-unixtimestamp
