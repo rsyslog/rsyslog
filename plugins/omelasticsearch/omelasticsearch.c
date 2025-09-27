@@ -146,7 +146,6 @@ typedef struct instanceConf_s {
     int detectedPatchVersion;
     uchar *detectedVersionString;
     int targetPlatform;
-    sbool legacyDefaultsApplied;
     sbool errorOnly;
     sbool interleaved;
     sbool dynSrchIdx;
@@ -410,7 +409,6 @@ BEGINdbgPrintInstInfo
     dbgprintf("\tratelimit.burst='%u'\n", pData->ratelimitBurst);
     dbgprintf("\trebindinterval='%d'\n", pData->rebindInterval);
     dbgprintf("\ttargetPlatform='%d'\n", pData->targetPlatform);
-    dbgprintf("\tlegacyDefaultsApplied='%d'\n", pData->legacyDefaultsApplied);
     dbgprintf("\tdetectedVersion='%s'\n",
               pData->detectedVersionString == NULL ? (uchar *)"(unknown)" : pData->detectedVersionString);
 ENDdbgPrintInstInfo
@@ -566,9 +564,7 @@ finalize_it:
 static rsRetVal applyVersionRequirements(instanceData *const pData) {
     DEFiRet;
 
-    const sbool treatLegacy = (pData->esVersion < 8);
-
-    if (treatLegacy) {
+    if (pData->esVersion < 8) {
         if (pData->searchIndex == NULL) {
             pData->searchIndex = (uchar *)strdup("system");
             if (pData->searchIndex == NULL) {
@@ -576,7 +572,6 @@ static rsRetVal applyVersionRequirements(instanceData *const pData) {
                          "omelasticsearch: failed to allocate default search index for legacy clusters");
                 ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
             }
-            pData->legacyDefaultsApplied = 1;
         }
 
         if ((pData->writeOperation != ES_WRITE_INDEX) && (pData->bulkId == NULL)) {
@@ -585,13 +580,6 @@ static rsRetVal applyVersionRequirements(instanceData *const pData) {
                      pData->writeOperation);
             ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
         }
-    } else {
-        if (pData->legacyDefaultsApplied && pData->searchIndex != NULL &&
-            strcmp((char *)pData->searchIndex, "system") == 0) {
-            free(pData->searchIndex);
-            pData->searchIndex = NULL;
-        }
-        pData->legacyDefaultsApplied = 0;
     }
 
 finalize_it:
@@ -2088,7 +2076,6 @@ static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
     pData->detectedPatchVersion = -1;
     pData->detectedVersionString = NULL;
     pData->targetPlatform = OMES_PLATFORM_UNKNOWN;
-    pData->legacyDefaultsApplied = 0;
 }
 
 BEGINnewActInst
