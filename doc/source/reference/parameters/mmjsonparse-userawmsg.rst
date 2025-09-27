@@ -7,6 +7,8 @@ useRawMsg
 .. index::
    single: mmjsonparse; useRawMsg
    single: useRawMsg
+   single: mmjsonparse; userawmsg
+   single: userawmsg
 
 .. summary-start
 
