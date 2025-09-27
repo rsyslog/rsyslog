@@ -42,4 +42,4 @@ Usage
 
 See also
 --------
-See :doc:`../../rainerscript/properties` for the category overview.
+See :doc:`../../configuration/properties` for the category overview.
