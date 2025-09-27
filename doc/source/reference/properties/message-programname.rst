@@ -55,7 +55,9 @@ Usage
 
 .. code-block:: rsyslog
 
-   template(name="example" type="string" string="%programname%")
+   template(name="example" type="list") {
+       property(name="programname")
+   }
 
 See also
 --------

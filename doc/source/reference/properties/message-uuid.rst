@@ -45,7 +45,9 @@ Usage
 
 .. code-block:: rsyslog
 
-   template(name="example" type="string" string="%uuid%")
+   template(name="example" type="list") {
+       property(name="uuid")
+   }
 
 Notes
 ~~~~~

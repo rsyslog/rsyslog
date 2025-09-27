@@ -31,7 +31,9 @@ Usage
 
 .. code-block:: rsyslog
 
-   template(name="example" type="string" string="%$hhour%")
+   template(name="example" type="list") {
+       property(name="$hhour")
+   }
 
 See also
 --------

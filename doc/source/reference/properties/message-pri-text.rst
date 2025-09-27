@@ -34,7 +34,9 @@ Usage
 
 .. code-block:: rsyslog
 
-   template(name="example" type="string" string="%pri-text%")
+   template(name="example" type="list") {
+       property(name="pri-text")
+   }
 
 See also
 --------

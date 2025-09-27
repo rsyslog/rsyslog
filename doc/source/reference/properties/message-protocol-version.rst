@@ -35,7 +35,9 @@ Usage
 
 .. code-block:: rsyslog
 
-   template(name="example" type="string" string="%protocol-version%")
+   template(name="example" type="list") {
+       property(name="protocol-version")
+   }
 
 See also
 --------

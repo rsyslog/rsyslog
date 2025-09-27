@@ -37,7 +37,9 @@ Usage
 
 .. code-block:: rsyslog
 
-   template(name="example" type="string" string="%syslogseverity-text%")
+   template(name="example" type="list") {
+       property(name="syslogseverity-text")
+   }
 
 Notes
 ~~~~~

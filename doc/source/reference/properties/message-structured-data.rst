@@ -35,7 +35,9 @@ Usage
 
 .. code-block:: rsyslog
 
-   template(name="example" type="string" string="%structured-data%")
+   template(name="example" type="list") {
+       property(name="structured-data")
+   }
 
 See also
 --------

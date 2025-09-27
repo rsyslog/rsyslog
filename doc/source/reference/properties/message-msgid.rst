@@ -35,7 +35,9 @@ Usage
 
 .. code-block:: rsyslog
 
-   template(name="example" type="string" string="%msgid%")
+   template(name="example" type="list") {
+       property(name="msgid")
+   }
 
 See also
 --------

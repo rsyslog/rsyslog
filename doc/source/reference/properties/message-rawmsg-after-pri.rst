@@ -38,7 +38,9 @@ Usage
 
 .. code-block:: rsyslog
 
-   template(name="example" type="string" string="%rawmsg-after-pri%")
+   template(name="example" type="list") {
+       property(name="rawmsg-after-pri")
+   }
 
 See also
 --------

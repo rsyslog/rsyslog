@@ -31,7 +31,9 @@ Usage
 
 .. code-block:: rsyslog
 
-   template(name="example" type="string" string="%$bom%")
+   template(name="example" type="list") {
+       property(name="$bom")
+   }
 
 See also
 --------

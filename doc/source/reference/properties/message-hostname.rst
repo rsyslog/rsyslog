@@ -32,7 +32,9 @@ Usage
 
 .. code-block:: rsyslog
 
-   template(name="example" type="string" string="%hostname%")
+   template(name="example" type="list") {
+       property(name="hostname")
+   }
 
 Aliases
 ~~~~~~~

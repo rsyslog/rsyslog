@@ -30,7 +30,9 @@ Usage
 
 .. code-block:: rsyslog
 
-   template(name="example" type="string" string="%$month%")
+   template(name="example" type="list") {
+       property(name="$month")
+   }
 
 See also
 --------

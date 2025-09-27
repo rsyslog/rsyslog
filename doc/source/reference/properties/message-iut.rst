@@ -32,7 +32,9 @@ Usage
 
 .. code-block:: rsyslog
 
-   template(name="example" type="string" string="%iut%")
+   template(name="example" type="list") {
+       property(name="iut")
+   }
 
 See also
 --------

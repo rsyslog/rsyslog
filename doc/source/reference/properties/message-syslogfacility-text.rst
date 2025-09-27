@@ -34,7 +34,9 @@ Usage
 
 .. code-block:: rsyslog
 
-   template(name="example" type="string" string="%syslogfacility-text%")
+   template(name="example" type="list") {
+       property(name="syslogfacility-text")
+   }
 
 Notes
 ~~~~~

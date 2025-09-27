@@ -39,7 +39,9 @@ Usage
 
 .. code-block:: rsyslog
 
-   template(name="example" type="string" string="%inputname%")
+   template(name="example" type="list") {
+       property(name="inputname")
+   }
 
 See also
 --------

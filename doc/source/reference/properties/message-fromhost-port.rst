@@ -31,7 +31,9 @@ Usage
 
 .. code-block:: rsyslog
 
-   template(name="example" type="string" string="%fromhost-port%")
+   template(name="example" type="list") {
+       property(name="fromhost-port")
+   }
 
 See also
 --------

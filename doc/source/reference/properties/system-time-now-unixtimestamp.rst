@@ -30,7 +30,13 @@ Usage
 -----
 .. _properties.system-time.now-unixtimestamp-usage:
 
-Example::
+.. code-block:: rsyslog
+
+   template(name="example" type="list") {
+       property(name="$now-unixtimestamp")
+   }
+
+Additional example::
 
    # Get Unix timestamp of current message
    set $.tnow = $$now-unixtimestamp
