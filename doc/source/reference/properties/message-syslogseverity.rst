@@ -45,8 +45,16 @@ Usage
 
 Notes
 ~~~~~
-- Canonical severities: 0 ``emerg``, 1 ``alert``, 2 ``crit``, 3 ``err``,
-  4 ``warning``, 5 ``notice``, 6 ``info``, 7 ``debug``.
+- Canonical severities:
+
+  - **0** ``emerg``
+  - **1** ``alert``
+  - **2** ``crit``
+  - **3** ``err``
+  - **4** ``warning``
+  - **5** ``notice``
+  - **6** ``info``
+  - **7** ``debug``
 - Filter by number or name; for example ``if $syslogseverity <= 3 then ...``
   routes urgent messages (``emerg`` through ``err``).
 - The textual property :ref:`prop-message-syslogseverity-text` exposes the same
