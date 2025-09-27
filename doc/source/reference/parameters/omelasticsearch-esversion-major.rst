@@ -11,7 +11,8 @@ esVersion.major
 
 .. summary-start
 
-Elasticsearch major version used to select compatible APIs.
+Deprecated manual override for the detected Elasticsearch/OpenSearch major
+version.
 
 .. summary-end
 
@@ -20,13 +21,23 @@ This parameter applies to :doc:`../../configuration/modules/omelasticsearch`.
 :Name: esVersion.major
 :Scope: action
 :Type: integer
-:Default: action=0
+:Default: action=0 (overridden when detection succeeds)
 :Required?: no
 :Introduced: at least 8.x, possibly earlier
 
 Description
 -----------
-Value indicates the Elasticsearch major version (e.g. 7 or 8) and guides which API variant is used. Only value 8 currently changes behaviour.
+.. warning::
+
+   This parameter is deprecated.  The module performs a best-effort probe at
+   startup to discover the target platform (Elasticsearch or OpenSearch) and
+   its version, and ``esVersion.major`` is automatically updated with the
+   detected major version when the probe succeeds.
+
+This setting is only consulted when detection fails or when no servers are
+reachable during startup.  Administrators may keep it configured as a fallback
+for air-gapped or permission-restricted environments, but future releases may
+remove the option entirely.
 
 Action usage
 ------------

@@ -23,6 +23,21 @@ Notable Features
 - :ref:`omelasticsearch-statistic-counter`
 
 
+Target platform detection
+=========================
+
+Starting with this release the module probes the configured servers during
+configuration processing to determine whether they are running Elasticsearch or
+OpenSearch and to capture the version number that is exposed by the cluster.
+The probe happens once at startup, before the action begins to process any
+messages.  When the detection succeeds the module will automatically adapt
+internal defaults (for example, legacy clusters continue to receive the
+``system`` index) and it will override ``esVersion.major`` with the detected
+major version.  The configured action keeps running even if the probe cannot
+reach the servers; in that case rsyslog falls back to the provided
+configuration values.
+
+
 Configuration Parameters
 ========================
 
