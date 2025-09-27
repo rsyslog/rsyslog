@@ -10,7 +10,7 @@ syslogfacility-text
 
 .. summary-start
 
-Returns the syslog facility name in textual form.
+Returns the textual syslog facility defined in RFC 5424 Table 1.
 
 .. summary-end
 
@@ -24,7 +24,9 @@ Description
 -----------
 Returns the human-readable name of the syslog facility (such as ``daemon`` or
 ``local4``). The names follow the RFC 3164 and RFC 5424 mappings and correspond
-directly to the numeric property :ref:`prop-message-syslogfacility`.
+directly to the numeric property :ref:`prop-message-syslogfacility`. When the
+input does not supply a syslog header, rsyslog emits the configured or inferred
+facility name for the message instead.
 
 Usage
 -----

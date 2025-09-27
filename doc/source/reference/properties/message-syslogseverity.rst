@@ -24,11 +24,14 @@ This property belongs to the **Message Properties** group.
 
 Description
 -----------
-Reports the numeric syslog severity defined in RFC 3164 and RFC 5424. The field
-is a 3-bit integer from 0 (``emerg``) to 7 (``debug``); smaller numbers indicate
-higher urgency. The sending application chooses this value, so real-world usage
-can vary and mappings are sometimes fuzzy. Severity combines with the facility
-code to form the PRI value (``PRI = facility * 8 + severity``).
+Reports the numeric syslog severity defined in RFC 3164 and RFC 5424 (Table 2 of
+RFC 5424). The field is a 3-bit integer from 0 (``emerg``) to 7 (``debug``);
+smaller numbers indicate higher urgency. The sending application chooses this
+value, so real-world usage can vary and mappings are sometimes fuzzy. Severity
+combines with the facility code to form the PRI value (``PRI = facility * 8 +
+severity``). When rsyslog accepts messages without a syslog header, the
+severity comes from configured defaults or input metadata rather than a value
+that was transmitted on the wire.
 
 Usage
 -----

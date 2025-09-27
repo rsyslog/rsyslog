@@ -22,7 +22,8 @@ This property belongs to the **Message Properties** group.
 
 Description
 -----------
-An alias for :ref:`prop-message-syslogseverity-text`.
+An alias for :ref:`prop-message-syslogseverity-text`. The rendered string matches
+the derived severity name even when no syslog header was present on receipt.
 
 Usage
 -----

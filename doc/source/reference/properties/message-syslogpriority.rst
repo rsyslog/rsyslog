@@ -23,7 +23,8 @@ This property belongs to the **Message Properties** group.
 Description
 -----------
 An alias for :ref:`prop-message-syslogseverity` - included for historical reasons (be careful: it
-still is the severity, not PRI!).
+still is the severity, not PRI!). The alias mirrors the same derived value even
+for inputs without a syslog header.
 
 Usage
 -----

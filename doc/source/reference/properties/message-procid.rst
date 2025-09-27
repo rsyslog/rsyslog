@@ -10,7 +10,7 @@ procid
 
 .. summary-start
 
-Provides the PROCID field defined by the syslog protocol draft.
+Carries the PROCID header field defined in RFC 5424 Section 6.2.6.
 
 .. summary-end
 
@@ -22,8 +22,12 @@ This property belongs to the **Message Properties** group.
 
 Description
 -----------
-The contents of the PROCID field from IETF draft
-``draft-ietf-syslog-protocol``.
+Carries the ``PROCID`` header field defined in RFC 5424 Section 6.2.6. The
+field has no fixed syntax; senders often use it for a process name, PID,
+transaction identifier, or other origin-specific token, and RFC 5424
+allows the NILVALUE (``-``) when no value applies. When rsyslog ingests
+messages without a syslog header, this property holds the configured or
+inferred value for the source instead of a transmitted header field.
 
 Usage
 -----

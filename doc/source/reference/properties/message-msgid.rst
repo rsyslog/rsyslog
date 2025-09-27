@@ -10,7 +10,7 @@ msgid
 
 .. summary-start
 
-Carries the MSGID field defined by the syslog protocol draft.
+Carries the MSGID header field defined in RFC 5424 Section 6.2.7.
 
 .. summary-end
 
@@ -22,8 +22,12 @@ This property belongs to the **Message Properties** group.
 
 Description
 -----------
-The contents of the MSGID field from IETF draft
-``draft-ietf-syslog-protocol``.
+Carries the ``MSGID`` header field defined in RFC 5424 Section 6.2.7. The
+value identifies the semantic type of the event (for example an SMTP
+transaction label) and RFC 5424 allows the NILVALUE (``-``) when the
+sender cannot provide one. When rsyslog processes messages that lacked a
+syslog header at ingestion, the property contains the configured or
+inferred MSGID value rather than an on-the-wire header.
 
 Usage
 -----

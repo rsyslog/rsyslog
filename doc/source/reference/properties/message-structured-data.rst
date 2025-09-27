@@ -10,7 +10,7 @@ structured-data
 
 .. summary-start
 
-Provides the STRUCTURED-DATA field defined by the syslog protocol draft.
+Provides the STRUCTURED-DATA field defined in RFC 5424 Section 6.3.
 
 .. summary-end
 
@@ -22,8 +22,12 @@ This property belongs to the **Message Properties** group.
 
 Description
 -----------
-The contents of the STRUCTURED-DATA field from IETF draft
-``draft-ietf-syslog-protocol``.
+Contains the ``STRUCTURED-DATA`` portion of a syslog message as defined in
+RFC 5424 Section 6.3. The field holds zero or more SD-ELEMENT blocks with
+ASCII SD-IDs and UTF-8 parameter values. When no structured data is
+present, RFC 5424 requires the NILVALUE (``-``). For events ingested
+without a syslog header, rsyslog populates this property with structured
+data derived from configuration or input metadata, if any.
 
 Usage
 -----

@@ -11,7 +11,7 @@ syslogseverity-text
 
 .. summary-start
 
-Returns the textual representation of the syslog severity.
+Returns the textual syslog severity defined in RFC 5424 Table 2.
 
 .. summary-end
 
@@ -25,9 +25,11 @@ This property belongs to the **Message Properties** group.
 Description
 -----------
 Returns the textual name of the syslog severity defined in RFC 3164 and RFC 5424
-(``emerg`` through ``debug``). These strings describe how urgent the sending
-application considered the event. They map directly to the numeric values
-reported by :ref:`prop-message-syslogseverity`.
+(Table 2, ``emerg`` through ``debug``). These strings describe how urgent the
+sending application considered the event. They map directly to the numeric
+values reported by :ref:`prop-message-syslogseverity`. When rsyslog processes a
+message that lacked a syslog header, this property reports the configured or
+inferred severity label instead of a name supplied by the sender.
 
 Usage
 -----

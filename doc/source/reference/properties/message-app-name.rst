@@ -10,7 +10,7 @@ app-name
 
 .. summary-start
 
-Carries the APP-NAME field defined in the syslog protocol draft.
+Carries the APP-NAME header field defined in RFC 5424 Section 6.2.5.
 
 .. summary-end
 
@@ -22,8 +22,13 @@ This property belongs to the **Message Properties** group.
 
 Description
 -----------
-The contents of the APP-NAME field from IETF draft
-``draft-ietf-syslog-protocol``.
+Carries the ``APP-NAME`` header field defined in RFC 5424 Section 6.2.5,
+which identifies the originator application with up to 48 printable
+characters. RFC 5424 permits the NILVALUE (``-``) when an application
+cannot supply a value. When rsyslog receives events without a native
+syslog header (for example from imfile inputs or JSON
+payloads), this property reflects a configured default or an inferred
+placeholder instead of a transmitted header value.
 
 Usage
 -----

@@ -10,7 +10,7 @@ protocol-version
 
 .. summary-start
 
-Carries the PROTOCOL-VERSION field defined by the syslog protocol draft.
+Carries the VERSION header field defined by RFC 5424 Section 6.2.2.
 
 .. summary-end
 
@@ -22,8 +22,12 @@ This property belongs to the **Message Properties** group.
 
 Description
 -----------
-The contents of the PROTOCOL-VERSION field from IETF draft
-``draft-ietf-syslog-protocol``.
+Contains the RFC 5424 Section 6.2.2 ``VERSION`` header field that signals
+which syslog message format the sender used. RFC 5424 assigns ``1`` to
+the standard defined in the specification and reserves future numbers
+for later revisions. When rsyslog consumes data without a native syslog
+header, this property reflects the configured or inferred version value
+for that input, commonly ``1``.
 
 Usage
 -----
