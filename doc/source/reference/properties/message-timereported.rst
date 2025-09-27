@@ -24,8 +24,14 @@ This property belongs to the **Message Properties** group.
 
 Description
 -----------
-Timestamp from the message. Resolution depends on what was provided in the
-message (in most cases, only seconds).
+Timestamp copied from the sender supplied header. It represents when the
+originating application believes the event occurred, so accuracy depends on the
+remote clock, time zone configuration, and transport delays.
+
+Older transports frequently provide only second-level resolution. Messages that
+spent time on relays or queues can arrive with a ``timereported`` value that is
+minutes or hours behind ``timegenerated`` or ``$now``. Treat the field as a
+hint rather than an absolute truth when correlating events.
 
 Usage
 -----

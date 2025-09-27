@@ -22,7 +22,18 @@ This property belongs to the **Message Properties** group.
 
 Description
 -----------
-Timestamp when the message was RECEIVED. Always in high resolution.
+Timestamp captured when the operating system hands the message to rsyslog's
+reception buffer. The value reflects the precise moment rsyslog accepted the
+event, before any queueing or ruleset processing begins.
+
+If several messages are delivered in the same receive buffer (for example when
+TCP transports multiple entries together), they all carry the same
+``timegenerated`` stamp because rsyslog accepted them at the same instant.
+
+The timestamp remains stable even if the message spends time in an in-memory or
+disk queue. As a result, ``timegenerated`` is usually newer than
+``timereported`` (which comes from the sender) but still older than ``$now``,
+which is evaluated later during processing.
 
 Usage
 -----

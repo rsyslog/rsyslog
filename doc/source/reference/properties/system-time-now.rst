@@ -22,7 +22,14 @@ This property belongs to the **Time-Related System Properties** group.
 
 Description
 -----------
-The current date stamp in the format YYYY-MM-DD.
+Reports the local system date stamp (``YYYY-MM-DD``) at the moment rsyslog
+processes the message. The value is independent of the event payload and
+changes whenever the ruleset advances to the next message.
+
+``$now`` is always a little newer than ``timegenerated`` because rsyslog only
+evaluates it during processing, after the event has left the input queue. When
+queues back up, the gap between the two can grow from fractions of a second to
+minutes or hours.
 
 Usage
 -----
