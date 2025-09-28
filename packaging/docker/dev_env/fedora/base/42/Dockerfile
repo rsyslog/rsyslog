@@ -45,6 +45,7 @@ RUN	dnf -y install \
 	logrotate \
 	lsof \
 	make \
+	mbedtls-devel \
 	mongo-c-driver \
 	mongo-c-driver-devel \
 	mysql-devel \
@@ -238,6 +239,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-libgcrypt \
 	--enable-libzstd \
 	--enable-mail \
+	--enable-mbedtls \
 	--enable-mmanon \
 	--enable-mmaudit \
 	--enable-mmcount \
