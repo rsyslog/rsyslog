@@ -1,6 +1,17 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
 - overall improved documentation via a large set of topic updates.
+- 2025-09-28: ci: add openEuler 24.03 LTS container and CI job
+  Add an openEuler 24.03 LTS development container and wire it into CI to
+  validate builds on that platform.
+  Why: expand RPM-based coverage and catch distro-specific build issues
+  early.
+  Impact: CI-only. No runtime or API changes.
+  Before: no openEuler container or CI job; build breakage went unnoticed.
+  After: dedicated container and matrix entry compile and run unit tests
+  on openEuler.
+  Notes: module and test coverage may differ on openEuler; track gaps in
+  follow-up issues.
 - 2025-09-25: omelasticsearch: omit _type by default; use typeless endpoint
   Newer Elasticsearch versions reject typed APIs. This adapts the module
   so shipping works out of the box with modern clusters and keeps the
