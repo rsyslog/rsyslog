@@ -2477,8 +2477,10 @@ EXTRA_DIST= \
 	clickhouse-retry-error.sh \
 	clickhouse-start.sh \
 	clickhouse-stop.sh \
-	clickhouse-basic.sh \
-	clickhouse-load.sh \
+        clickhouse-basic.sh \
+        clickhouse-mock.sh \
+        clickhouse-mock-server.py \
+        clickhouse-load.sh \
 	clickhouse-bulk.sh \
 	clickhouse-bulk-load.sh \
 	clickhouse-limited-batch.sh \
