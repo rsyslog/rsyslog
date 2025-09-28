@@ -7,6 +7,7 @@ container
 .. index::
    single: mmjsonparse; container
    single: container
+   single: JSON container
 
 .. summary-start
 
