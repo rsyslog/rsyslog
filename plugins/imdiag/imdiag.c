@@ -227,10 +227,17 @@ finalize_it:
 
 /* submit a generated numeric-suffix message to the rsyslog core
  */
+/** The hostname inserted into generated diagnostic messages.
+ * 192.0.2.0/24 (TEST-NET-1) is reserved for documentation and examples per
+ * RFC 5737, so using 192.0.2.8 avoids collisions with real-world systems.
+ */
+static const char diagDefaultHostname[] = "192.0.2.8";
+
 static rsRetVal doInjectNumericSuffixMsg(int iNum, ratelimit_t *ratelimiter) {
     uchar szMsg[1024];
     DEFiRet;
-    snprintf((char *)szMsg, sizeof(szMsg) / sizeof(uchar), "<167>Mar  1 01:00:00 172.20.245.8 tag msgnum:%8.8d:", iNum);
+    snprintf((char *)szMsg, sizeof(szMsg) / sizeof(uchar),
+             "<167>Mar  1 01:00:00 %s tag msgnum:%8.8d:", diagDefaultHostname, iNum);
     iRet = doInjectMsg(szMsg, ratelimiter);
     RETiRet;
 }

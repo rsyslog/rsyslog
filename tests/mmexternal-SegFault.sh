@@ -16,7 +16,7 @@ if $msg contains "msgnum:" then {
 }
 '
 startup
-injectmsg literal "<129>Mar 10 01:00:00 172.20.245.8 tag:msgnum:1"
+injectmsg literal "<129>Mar 10 01:00:00 192.0.2.8 tag:msgnum:1"
 shutdown_when_empty
 wait_shutdown
 

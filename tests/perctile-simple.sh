@@ -32,11 +32,11 @@ if $msg startswith " msgnum:" then {
 startup
 wait_for_stats_flush ${RSYSLOG_DYNNAME}.out.stats.log
 . $srcdir/diag.sh block-stats-flush
-shuf -i 1-1000 | sed -e 's/^/injectmsg literal <167>Mar  1 01:00:00 172.20.245.8 tag msgnum:/g' | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
+shuf -i 1-1000 | sed -e 's/^/injectmsg literal <167>Mar  1 01:00:00 192.0.2.8 tag msgnum:/g' | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 wait_queueempty
 . $srcdir/diag.sh allow-single-stats-flush-after-block-and-wait-for-it
 
-shuf -i 1001-2000 | sed -e 's/^/injectmsg literal <167>Mar  1 01:00:00 172.20.245.8 tag msgnum:/g' | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
+shuf -i 1001-2000 | sed -e 's/^/injectmsg literal <167>Mar  1 01:00:00 192.0.2.8 tag msgnum:/g' | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 . $srcdir/diag.sh await-stats-flush-after-block
 wait_queueempty
 wait_for_stats_flush ${RSYSLOG_DYNNAME}.out.stats.log
