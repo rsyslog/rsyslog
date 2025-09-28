@@ -7,6 +7,7 @@ cookie
 .. index::
    single: mmjsonparse; cookie
    single: cookie
+   single: CEE cookie
 
 .. summary-start
 
