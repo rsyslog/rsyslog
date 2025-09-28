@@ -1,15 +1,21 @@
 support_status: core-supported
 maturity_level: mature
-primary_contact: "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>"
+primary_contact: >-
+  GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>
 last_reviewed: 2024-07-23
 build_dependencies:
   - libcurl development headers
   - json-c development headers
 runtime_dependencies:
   - ClickHouse server reachable over HTTP(S)
-  - `clickhouse-client` CLI for local testing
+  - clickhouse-client CLI for local testing
 ci_targets: []
 documentation: []
 notes:
-  - Module posts SQL INSERT statements via the ClickHouse HTTP interface and relies on libcurl for transport.
-  - Quick CI coverage now uses tests/clickhouse-mock-server.py with tests/clickhouse-mock.sh to emulate a ClickHouse endpoint; heavier integration scripts exit 77 until reworked.
+  - >-
+    Module posts SQL INSERT statements via the ClickHouse HTTP interface and
+    relies on libcurl for transport.
+  - >-
+    Quick CI coverage now uses tests/clickhouse-mock-server.py together with
+    tests/clickhouse-mock.sh to emulate a ClickHouse endpoint; heavier
+    integration scripts exit 77 until they are reworked.
