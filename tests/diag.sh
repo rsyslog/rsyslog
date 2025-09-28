@@ -2656,12 +2656,130 @@ prepare_elasticsearch() {
 }
 
 
+##
+## es_mock_enabled
+## Determine if the shell tests should use the Python Elasticsearch mock.
+es_mock_enabled() {
+        case "${RSYSLOG_TEST_ES_MOCK:-}" in
+        1|true|TRUE|on|ON|yes|YES)
+                return 0
+                ;;
+        esac
+        return 1
+}
+
+##
+## es_mock_work_dir
+## Return the working directory path for the mock Elasticsearch instance.
+es_mock_work_dir() {
+        printf '%s\n' "$RSYSLOG_DYNNAME/es-mock"
+}
+
+##
+## es_mock_pidfile
+## Return the PID file path of the mock Elasticsearch process.
+es_mock_pidfile() {
+        printf '%s\n' "$(es_mock_work_dir)/mock-es.pid"
+}
+
+##
+## es_mock_portfile
+## Return the file path that stores the dynamically chosen port.
+es_mock_portfile() {
+        printf '%s\n' "$(es_mock_work_dir)/mock-es.port"
+}
+
+##
+## es_mock_start
+## Launch the mock Elasticsearch server if it is not already running.
+es_mock_start() {
+        es_mock_server_py="$srcdir/es_mock_server.py"
+        if [ ! -f "$es_mock_server_py" ]; then
+                echo "Cannot find ${es_mock_server_py} for mock elasticsearch"
+                error_exit 1
+        fi
+
+        work_dir=$(es_mock_work_dir)
+        pidfile=$(es_mock_pidfile)
+        portfile=$(es_mock_portfile)
+        logfile="$work_dir/mock-es.log"
+        mkdir -p "$work_dir"
+
+        if [ -f "$pidfile" ] && kill -0 "$(cat "$pidfile")" 2>/dev/null; then
+                existing_pid=$(cat "$pidfile")
+                printf 'Mock ES already running (pid %s)\n' "$existing_pid"
+                return
+        fi
+
+        rm -f "$portfile"
+
+        if [ -n "${ES_PORT:-}" ]; then
+                mock_port="$ES_PORT"
+        else
+                mock_port=19200
+                ES_PORT=$mock_port
+        fi
+        port_args=(--port "$mock_port")
+
+        server_args=(
+                "$es_mock_server_py"
+                --interface 127.0.0.1
+                "${port_args[@]}"
+                --port-file "$portfile"
+        )
+        timeout 30m "$PYTHON" "${server_args[@]}" >>"$logfile" 2>&1 &
+        mock_pid=$!
+        echo "$mock_pid" >"$pidfile"
+
+        wait_file_exists "$portfile"
+        if ! kill -0 "$mock_pid" 2>/dev/null; then
+                echo "mock Elasticsearch failed to start"
+                error_exit 1
+        fi
+
+        ES_PORT=$(cat "$portfile")
+        export ES_PORT
+        printf 'Mock ES ready on 127.0.0.1:%s (pid %s)\n' "$ES_PORT" "$mock_pid"
+}
+
+##
+## es_mock_stop
+## Terminate the running mock Elasticsearch server, if any.
+es_mock_stop() {
+        work_dir=$(es_mock_work_dir)
+        pidfile=$(es_mock_pidfile)
+        portfile=$(es_mock_portfile)
+        if [ -f "$pidfile" ]; then
+                mock_pid=$(cat "$pidfile")
+                if kill -0 "$mock_pid" 2>/dev/null; then
+                        kill "$mock_pid"
+                        wait_pid_termination "$mock_pid"
+                fi
+        fi
+        rm -f "$pidfile" "$portfile"
+        rm -rf "$work_dir"
+}
+
+##
+## es_mock_ensure
+## Ensure that the mock server is running unless --no-start was requested.
+es_mock_ensure() {
+        if [ "$1" = "--no-start" ]; then
+                return 0
+        fi
+        es_mock_start
+}
+
 # ensure that a basic, suitable instance of elasticsearch is running. This is part
 # of an effort to avoid restarting elasticsearch more often than necessary.
 ensure_elasticsearch_ready() {
-	if   printf '%s:%s:%s\n' "$ES_DOWNLOAD" "$ES_PORT" "$(cat es.pid)" \
-	   | cmp -b - elasticsearch.running
-	then
+        if es_mock_enabled; then
+                es_mock_ensure "$@"
+                return
+        fi
+        if   printf '%s:%s:%s\n' "$ES_DOWNLOAD" "$ES_PORT" "$(cat es.pid)" \
+           | cmp -b - elasticsearch.running
+        then
 		printf 'Elasticsearch already running, NOT restarting it\n'
 	else
 		printf '%s Elasticsearch not yet running, starting it\n' "$(date +%H:%M:%S)"
@@ -2685,8 +2803,12 @@ ensure_elasticsearch_ready() {
 
 # $2, if set, is the number of additional ES instances
 start_elasticsearch() {
-	# Heap Size (limit to 256MB for testbench! defaults is way to HIGH)
-	export ES_JAVA_OPTS="-Xms256m -Xmx256m"
+        if es_mock_enabled; then
+                es_mock_start
+                return
+        fi
+        # Heap Size (limit to 256MB for testbench! defaults is way to HIGH)
+        export ES_JAVA_OPTS="-Xms256m -Xmx256m"
 
 	dep_work_dir=$(readlink -f .dep_wrk)
 	dep_work_es_config="es.yml"
@@ -2758,9 +2880,13 @@ es_shutdown_empty_check() {
 
 
 stop_elasticsearch() {
-	dep_work_dir=$(readlink -f $srcdir)
-	dep_work_es_pidfile="es.pid"
-	rm -f elasticsearch.running
+        if es_mock_enabled; then
+                es_mock_stop
+                return
+        fi
+        dep_work_dir=$(readlink -f $srcdir)
+        dep_work_es_pidfile="es.pid"
+        rm -f elasticsearch.running
 	if [ -e $dep_work_es_pidfile ]; then
 		es_pid=$(cat $dep_work_es_pidfile)
 		printf 'stopping ES with pid %d\n' $es_pid
@@ -2771,17 +2897,21 @@ stop_elasticsearch() {
 
 # cleanup es leftovers when it is being stopped
 cleanup_elasticsearch() {
-		dep_work_dir=$(readlink -f .dep_wrk)
-		dep_work_es_pidfile="es.pid"
-		stop_elasticsearch
-		rm -f $dep_work_es_pidfile
-		rm -rf $dep_work_dir/es
+                if es_mock_enabled; then
+                        es_mock_stop
+                        return
+                fi
+                dep_work_dir=$(readlink -f .dep_wrk)
+                dep_work_es_pidfile="es.pid"
+                stop_elasticsearch
+                rm -f $dep_work_es_pidfile
+                rm -rf $dep_work_dir/es
 }
 
 # initialize local Elasticsearch *testbench* instance for the next
 # test. NOTE: do NOT put anything useful on that instance!
 init_elasticsearch() {
-	curl --silent -XDELETE localhost:${ES_PORT:-9200}/rsyslog_testbench
+        curl --silent -XDELETE localhost:${ES_PORT:-9200}/rsyslog_testbench
 }
 
 omhttp_start_server() {
