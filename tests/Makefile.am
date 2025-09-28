@@ -717,10 +717,13 @@ endif # if ENABLE_MMANON
 
 if ENABLE_CLICKHOUSE_TESTS
 TESTS +=  \
-	clickhouse-start.sh \
-	clickhouse-basic.sh \
-	clickhouse-dflt-tpl.sh \
-	clickhouse-retry-error.sh \
+        clickhouse-mock-basic.sh \
+        clickhouse-mock-dflt-tpl.sh \
+        clickhouse-mock-limited-batch.sh \
+        clickhouse-start.sh \
+        clickhouse-basic.sh \
+        clickhouse-dflt-tpl.sh \
+        clickhouse-retry-error.sh \
 	clickhouse-load.sh \
 	clickhouse-bulk.sh \
 	clickhouse-bulk-load.sh \
@@ -2473,26 +2476,29 @@ EXTRA_DIST= \
 	incltest_dir_empty_wildcard.sh \
 	incltest_dir_wildcard.sh \
 	testsuites/es.yml \
-	clickhouse-dflt-tpl.sh \
-	clickhouse-retry-error.sh \
-	clickhouse-start.sh \
-	clickhouse-stop.sh \
+        clickhouse-dflt-tpl.sh \
+        clickhouse-retry-error.sh \
+        clickhouse-start.sh \
+        clickhouse-stop.sh \
         clickhouse-basic.sh \
+        clickhouse-mock-basic.sh \
+        clickhouse-mock-dflt-tpl.sh \
+        clickhouse-mock-limited-batch.sh \
         clickhouse-mock.sh \
         clickhouse-mock-server.py \
         clickhouse-load.sh \
-	clickhouse-bulk.sh \
-	clickhouse-bulk-load.sh \
-	clickhouse-limited-batch.sh \
-	clickhouse-select.sh \
-	clickhouse-wrong-quotation-marks.sh \
-	clickhouse-wrong-template-option.sh \
-	clickhouse-errorfile.sh \
-	clickhouse-wrong-insert-syntax.sh \
-	clickhouse-basic-vg.sh \
-	clickhouse-load-vg.sh \
-	clickhouse-bulk-vg.sh \
-	clickhouse-bulk-load-vg.sh \
+        clickhouse-bulk.sh \
+        clickhouse-bulk-load.sh \
+        clickhouse-limited-batch.sh \
+        clickhouse-select.sh \
+        clickhouse-wrong-quotation-marks.sh \
+        clickhouse-wrong-template-option.sh \
+        clickhouse-errorfile.sh \
+        clickhouse-wrong-insert-syntax.sh \
+        clickhouse-basic-vg.sh \
+        clickhouse-load-vg.sh \
+        clickhouse-bulk-vg.sh \
+        clickhouse-bulk-load-vg.sh \
 	es_response_get_msgnum.py \
 	elasticsearch-error-format-check.py \
 	es-duplicated-ruleset.sh \
