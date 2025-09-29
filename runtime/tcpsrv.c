@@ -657,6 +657,9 @@ static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
     uchar *fromHostFQDN = NULL;
     prop_t *fromHostIP = NULL;
     prop_t *fromHostPort = NULL;
+    const char *fromHostNameStr = "(hostname unknown)";
+    const char *fromHostIPStr = "(IP unknown)";
+    const char *fromHostPortStr = "(port unknown)";
 
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     assert(pLstnInfo != NULL);
@@ -689,6 +692,7 @@ static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
 
     /* get the host name */
     CHKiRet(netstrm.GetRemoteHName(pNewStrm, &fromHostFQDN));
+    fromHostNameStr = szStrOrDefault(fromHostFQDN, "(hostname unknown)");
     if (!cnf_params->bPreserveCase) {
         /* preserve_case = off */
         uchar *p;
@@ -699,6 +703,7 @@ static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
         }
     }
     CHKiRet(netstrm.GetRemoteIP(pNewStrm, &fromHostIP));
+    fromHostIPStr = propGetSzStrOrDefault(fromHostIP, "(IP unknown)");
     CHKiRet(netstrm.GetRemAddr(pNewStrm, &addr));
     char portbuf[8];
     uint16_t port;
@@ -712,10 +717,7 @@ static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
     CHKiRet(prop.Construct(&fromHostPort));
     CHKiRet(prop.SetString(fromHostPort, (uchar *)portbuf, strlen(portbuf)));
     CHKiRet(prop.ConstructFinalize(fromHostPort));
-    const char *const fromHostNameStr = (fromHostFQDN != NULL) ? (const char *)fromHostFQDN : "(hostname unknown)";
-    const char *const fromHostIPStr = (fromHostIP != NULL) ? (const char *)propGetSzStr(fromHostIP) : "(IP unknown)";
-    const char *const fromHostPortStr =
-        (fromHostPort != NULL) ? (const char *)propGetSzStr(fromHostPort) : "(port unknown)";
+    fromHostPortStr = propGetSzStrOrDefault(fromHostPort, "(port unknown)");
     /* Here we check if a host is permitted to send us messages. If it isn't, we do not further
      * process the message but log a warning (if we are configured to do this).
      * rgerhards, 2005-09-26
@@ -737,8 +739,12 @@ static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
      */
     CHKiRet(tcps_sess.SetHost(pSess, fromHostFQDN));
     fromHostFQDN = NULL; /* we handed this string over */
+    fromHostNameStr = propGetSzStrOrDefault(pSess->fromHost, "(hostname unknown)");
     CHKiRet(tcps_sess.SetHostIP(pSess, fromHostIP));
+    fromHostIPStr = propGetSzStrOrDefault(pSess->fromHostIP, "(IP unknown)");
+    fromHostIP = NULL;
     CHKiRet(tcps_sess.SetHostPort(pSess, fromHostPort));
+    fromHostPortStr = propGetSzStrOrDefault(pSess->fromHostPort, "(port unknown)");
     fromHostPort = NULL;
     CHKiRet(tcps_sess.SetStrm(pSess, pNewStrm));
     pNewStrm = NULL; /* prevent it from being freed in error handler, now done in tcps_sess! */
@@ -911,10 +917,8 @@ static rsRetVal ATTR_NONNULL(1)
     const unsigned maxReads = pThis->starvationMaxReads;
 
     ISOBJ_TYPE_assert(pThis, tcpsrv);
-    const char *const peerIP =
-        (pSess->fromHostIP != NULL) ? (const char *)propGetSzStr(pSess->fromHostIP) : "(IP unknown)";
-    const char *const peerPort =
-        (pSess->fromHostPort != NULL) ? (const char *)propGetSzStr(pSess->fromHostPort) : "(port unknown)";
+    const char *const peerIP = propGetSzStrOrDefault(pSess->fromHostIP, "(IP unknown)");
+    const char *const peerPort = propGetSzStrOrDefault(pSess->fromHostPort, "(port unknown)");
     DBGPRINTF("netstream %p with new data from remote peer %s:%s\n", (pSess)->pStrm, peerIP, peerPort);
 
     if (pThis->workQueue.numWrkr > 1) {

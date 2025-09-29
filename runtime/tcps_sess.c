@@ -201,12 +201,9 @@ static ATTR_NONNULL() rsRetVal maybeDetectTlsClientHello(tcps_sess_t *pThis, con
 
     if (pThis->tlsProbeBytes >= sizeof(pThis->tlsProbeBuf)) {
         if (!pThis->tlsMismatchWarned && isLikelyTlsClientHello(pThis->tlsProbeBuf)) {
-            const char *const host =
-                (pThis->fromHost != NULL) ? (const char *)propGetSzStr(pThis->fromHost) : "(host unknown)";
-            const char *const ip =
-                (pThis->fromHostIP != NULL) ? (const char *)propGetSzStr(pThis->fromHostIP) : "(IP unknown)";
-            const char *const port =
-                (pThis->fromHostPort != NULL) ? (const char *)propGetSzStr(pThis->fromHostPort) : "(port unknown)";
+            const char *const host = propGetSzStrOrDefault(pThis->fromHost, "(host unknown)");
+            const char *const ip = propGetSzStrOrDefault(pThis->fromHostIP, "(IP unknown)");
+            const char *const port = propGetSzStrOrDefault(pThis->fromHostPort, "(port unknown)");
             LogError(0, RS_RET_SERVER_NO_TLS,
                      "imtcp: TLS handshake detected from %s (%s:%s) but listener is not TLS-enabled. "
                      "Enable TLS on this listener or disable TLS on the client. "
@@ -496,12 +493,9 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
             }
         } else { /* done with the octet count, so this must be the SP terminator */
             DBGPRINTF("TCP Message with octet-counter, size %d.\n", pThis->iOctetsRemain);
-            const char *const peerName =
-                (pThis->fromHost != NULL) ? (const char *)propGetSzStr(pThis->fromHost) : "(hostname unknown)";
-            const char *const peerIP =
-                (pThis->fromHostIP != NULL) ? (const char *)propGetSzStr(pThis->fromHostIP) : "(IP unknown)";
-            const char *const peerPort =
-                (pThis->fromHostPort != NULL) ? (const char *)propGetSzStr(pThis->fromHostPort) : "(port unknown)";
+            const char *const peerName = propGetSzStrOrDefault(pThis->fromHost, "(hostname unknown)");
+            const char *const peerIP = propGetSzStrOrDefault(pThis->fromHostIP, "(IP unknown)");
+            const char *const peerPort = propGetSzStrOrDefault(pThis->fromHostPort, "(port unknown)");
             if (c != ' ') {
                 LogError(0, NO_ERRCODE,
                          "imtcp %s: Framing Error in received TCP message from "

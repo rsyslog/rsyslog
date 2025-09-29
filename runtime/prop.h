@@ -66,6 +66,14 @@ static inline uchar *__attribute__((unused)) ATTR_NONNULL(1) propGetSzStr(prop_t
     return (pThis->len < CONF_PROP_BUFSIZE) ? pThis->szVal.sz : pThis->szVal.psz;
 }
 
+static inline const char *__attribute__((unused)) propGetSzStrOrDefault(prop_t *pThis, const char *dflt) {
+    return (pThis != NULL) ? (const char *)propGetSzStr(pThis) : dflt;
+}
+
+static inline const char *__attribute__((unused)) szStrOrDefault(const uchar *psz, const char *dflt) {
+    return (psz != NULL) ? (const char *)psz : dflt;
+}
+
 /* prototypes */
 PROTOTYPEObj(prop);
 
