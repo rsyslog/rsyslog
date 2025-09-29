@@ -41,6 +41,12 @@
 #		if set to "YES" and one test fails, all others are not executed but skipped.
 #		This is useful in long-running CI jobs where we are happy with seeing the
 #		first failure (to save time).
+# RSYSLOG_TESTBENCH_EXTERNAL_ES_URL
+#		Base URL (protocol, host, and port) of an externally managed
+#		Elasticsearch instance that the testbench should use instead of
+#		starting its own container. When set, the test harness skips all
+#		local Elasticsearch start/stop handling and assumes that the
+#		specified endpoint is reachable and dedicated to the tests.
 #
 #
 # EXIT STATES
@@ -2098,6 +2104,44 @@ fi
 if [ -z "$ES_PORT" ]; then
 	export ES_PORT=19200
 fi
+if [ -z "$ES_HOST" ]; then
+	export ES_HOST=localhost
+fi
+if [ -n "$RSYSLOG_TESTBENCH_EXTERNAL_ES_URL" ]; then
+	export RSYSLOG_TESTBENCH_EXTERNAL_ES_URL="${RSYSLOG_TESTBENCH_EXTERNAL_ES_URL%/}"
+	export RSYSLOG_TESTBENCH_USE_EXTERNAL_ES="yes"
+	es_url_no_proto="${RSYSLOG_TESTBENCH_EXTERNAL_ES_URL#*://}"
+	if [ "$es_url_no_proto" = "$RSYSLOG_TESTBENCH_EXTERNAL_ES_URL" ]; then
+		RSYSLOG_TESTBENCH_EXTERNAL_ES_URL="http://${RSYSLOG_TESTBENCH_EXTERNAL_ES_URL}"
+		es_url_no_proto="${RSYSLOG_TESTBENCH_EXTERNAL_ES_URL#*://}"
+	fi
+	es_host_port="${es_url_no_proto%%/*}"
+	if [ -n "$es_host_port" ]; then
+		ES_HOST="${es_host_port%%:*}"
+		if [ "$ES_HOST" = "$es_host_port" ]; then
+			es_port=""
+		else
+			es_port="${es_host_port#*:}"
+		fi
+		if [ -n "$es_port" ]; then
+			ES_PORT="$es_port"
+		fi
+	fi
+fi
+
+es_base_url() {
+	local host="${ES_HOST:-localhost}"
+	local port="${ES_PORT:-19200}"
+	local proto="http"
+	if [ -n "$RSYSLOG_TESTBENCH_EXTERNAL_ES_URL" ]; then
+		proto="${RSYSLOG_TESTBENCH_EXTERNAL_ES_URL%%://*}"
+		if [ "$proto" = "$RSYSLOG_TESTBENCH_EXTERNAL_ES_URL" ]; then
+			proto="http"
+		fi
+	fi
+	printf '%s://%s:%s' "$proto" "$host" "$port"
+}
+
 dep_es_cached_file="$dep_cache_dir/$ES_DOWNLOAD"
 
 # kafka (including Zookeeper)
@@ -2585,6 +2629,9 @@ dump_zookeeper_serverlog() {
 
 # download elasticsearch files, if necessary
 download_elasticsearch() {
+	if [ "$RSYSLOG_TESTBENCH_USE_EXTERNAL_ES" = "yes" ]; then
+		return 0
+	fi
 	if [ ! -d $dep_cache_dir ]; then
 		echo "Creating dependency cache dir $dep_cache_dir"
 		mkdir $dep_cache_dir
@@ -2605,6 +2652,9 @@ download_elasticsearch() {
 # prepare elasticsearch execution environment
 # this also stops any previous elasticsearch instance, if found
 prepare_elasticsearch() {
+	if [ "$RSYSLOG_TESTBENCH_USE_EXTERNAL_ES" = "yes" ]; then
+		return 0
+	fi
 	stop_elasticsearch # stop if it is still running
 	# Heap Size (limit to 128MB for testbench! default is way to HIGH)
 	export ES_JAVA_OPTS="-Xms128m -Xmx128m"
@@ -2659,6 +2709,19 @@ prepare_elasticsearch() {
 # ensure that a basic, suitable instance of elasticsearch is running. This is part
 # of an effort to avoid restarting elasticsearch more often than necessary.
 ensure_elasticsearch_ready() {
+	printf '%s ensuring Elasticsearch ready\n' "$(tb_timestamp)"
+	if [ "$RSYSLOG_TESTBENCH_USE_EXTERNAL_ES" = "yes" ]; then
+		local base
+		base=$(es_base_url)
+		printf 'using external Elasticsearch instance at %s\n' "$base"
+		if ! curl --silent --show-error --connect-timeout 5 "$base" >/dev/null; then
+			printf 'external Elasticsearch instance %s not reachable\n' "$base"
+			error_exit 77
+		fi
+		init_elasticsearch
+		printf '\n%s Elasticsearch readied for use as requested\n' "$(date +%H:%M:%S)"
+		return
+	fi
 	if   printf '%s:%s:%s\n' "$ES_DOWNLOAD" "$ES_PORT" "$(cat es.pid)" \
 	   | cmp -b - elasticsearch.running
 	then
@@ -2683,8 +2746,13 @@ ensure_elasticsearch_ready() {
 }
 
 
+
 # $2, if set, is the number of additional ES instances
 start_elasticsearch() {
+	if [ "$RSYSLOG_TESTBENCH_USE_EXTERNAL_ES" = "yes" ]; then
+		printf 'info: skipping local Elasticsearch startup (external instance in use)\n'
+		return 0
+	fi
 	# Heap Size (limit to 256MB for testbench! defaults is way to HIGH)
 	export ES_JAVA_OPTS="-Xms256m -Xmx256m"
 
@@ -2702,10 +2770,12 @@ start_elasticsearch() {
 	# Wait for startup with hardcoded timeout
 	timeoutend=120
 	timeseconds=0
+	local base
+	base=$(es_base_url)
 	# Loop until elasticsearch port is reachable or until
 	# timeout is reached!
-	curl --silent --show-error --connect-timeout 1 http://localhost:${ES_PORT:-19200}
-	until [ "$(curl --silent --show-error --connect-timeout 1 http://localhost:${ES_PORT:-19200} | grep 'rsyslog-testbench')" != "" ]; do
+	curl --silent --show-error --connect-timeout 1 "$base"
+	until [ "$(curl --silent --show-error --connect-timeout 1 "$base" | grep 'rsyslog-testbench')" != "" ]; do
 		echo "--- waiting for ES startup: $timeseconds seconds"
 		$TESTTOOL_DIR/msleep 1000
 		(( timeseconds=timeseconds + 1 ))
@@ -2729,18 +2799,22 @@ start_elasticsearch() {
 	echo ES startup succeeded
 }
 
+
 # read data from ES to a local file so that we can process
 # $1 - number of records (ES does not return all records unless you tell it explicitly).
 # $2 - ES port
 es_getdata() {
 	printf '%s getting data from ElasticSearch\n' "$(date +%H:%M:%S)"
-	curl --silent -XPUT --show-error -H 'Content-Type: application/json' "http://localhost:${2:-$ES_PORT}/rsyslog_testbench/_settings" -d '{ "index" : { "max_result_window" : '${1:-$NUMMESSAGES}' } }'
+	local base
+	base=$(es_base_url)
+	curl --silent -XPUT --show-error -H 'Content-Type: application/json' "${base}/rsyslog_testbench/_settings" -d '{ "index" : { "max_result_window" : '${1:-$NUMMESSAGES}' } }'
 	# refresh to ensure we get the latest data
-	curl --silent localhost:${2:-$ES_PORT}/rsyslog_testbench/_refresh
-	curl --silent localhost:${2:-$ES_PORT}/rsyslog_testbench/_search?size=${1:-$NUMMESSAGES} > $RSYSLOG_DYNNAME.work
+	curl --silent "${base}/rsyslog_testbench/_refresh"
+	curl --silent "${base}/rsyslog_testbench/_search?size=${1:-$NUMMESSAGES}" > $RSYSLOG_DYNNAME.work
 	printf '\n'
 	$PYTHON $srcdir/es_response_get_msgnum.py > ${RSYSLOG_OUT_LOG}
 }
+
 
 # a standard method to support shutdown & queue empty check for a wide range
 # of elasticsearch tests. This works if we assume that ES has delivered messages
@@ -2758,6 +2832,10 @@ es_shutdown_empty_check() {
 
 
 stop_elasticsearch() {
+	if [ "$RSYSLOG_TESTBENCH_USE_EXTERNAL_ES" = "yes" ]; then
+		printf 'info: skipping local Elasticsearch stop (external instance in use)\n'
+		return 0
+	fi
 	dep_work_dir=$(readlink -f $srcdir)
 	dep_work_es_pidfile="es.pid"
 	rm -f elasticsearch.running
@@ -2771,6 +2849,9 @@ stop_elasticsearch() {
 
 # cleanup es leftovers when it is being stopped
 cleanup_elasticsearch() {
+		if [ "$RSYSLOG_TESTBENCH_USE_EXTERNAL_ES" = "yes" ]; then
+			return 0
+		fi
 		dep_work_dir=$(readlink -f .dep_wrk)
 		dep_work_es_pidfile="es.pid"
 		stop_elasticsearch
@@ -2781,7 +2862,9 @@ cleanup_elasticsearch() {
 # initialize local Elasticsearch *testbench* instance for the next
 # test. NOTE: do NOT put anything useful on that instance!
 init_elasticsearch() {
-	curl --silent -XDELETE localhost:${ES_PORT:-9200}/rsyslog_testbench
+	local base
+	base=$(es_base_url)
+	curl --silent -XDELETE "${base}/rsyslog_testbench"
 }
 
 omhttp_start_server() {
