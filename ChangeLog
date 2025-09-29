@@ -1,6 +1,14 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
 - overall improved documentation via a large set of topic updates.
+- 2025-09-29: omelasticserach: detect server version and adjust config
+  On startup, omelasticsearch now detects server version and platform
+  (ES/openSearch) and adjust config parameters accordingly. This is
+  also a change that we can use as a base for further auto-tuning.
+- 2025-09-29: add source port to imtcp user-targeting messages
+  All error, warning etc messages that specify the remote peer via
+  hostname or IP now also give the source port to provide a unified
+  logging experience.
 - 2025-09-28: ci: add openEuler 24.03 LTS container and CI job
   Add an openEuler 24.03 LTS development container and wire it into CI to
   validate builds on that platform.
