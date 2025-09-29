@@ -57,7 +57,7 @@ jobs:
           RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:22.04
           RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE: >-
             --enable-testbench --enable-omstdout --enable-imdiag --enable-impstats
-            --enable-imfile --disable-imfile-tests --disable-fmhttp --enable-valgrind
+            --disable-imfile --disable-imfile-tests --disable-fmhttp --enable-valgrind
             --disable-default-tests --disable-imtcp-tests --enable-elasticsearch-tests
             --enable-elasticsearch
           CI_MAKE_OPT: -j20
