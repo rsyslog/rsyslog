@@ -22,29 +22,28 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
 
-Input Parameter
----------------
+Module Parameters
+-----------------
 
-Input3195ListenPort
-^^^^^^^^^^^^^^^^^^^
-
-.. note::
-
-   Parameter is only available in Legacy Format.
+This module has no module-specific parameters.
 
 
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
+Input Parameters
+----------------
 
-   "integer", "601", "no", "``$Input3195ListenPort``"
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-The port on which im3195 listens for RFC 3195 messages. The default
-port is 601 (the IANA-assigned port)
+   * - Parameter
+     - Summary
+   * - :ref:`param-im3195-input3195listenport`
+     - .. include:: ../../reference/parameters/im3195-input3195listenport.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 
 Caveats/Known Bugs
@@ -71,5 +70,11 @@ The following sample accepts syslog messages via RFC 3195 on port 1601.
 
    $ModLoad im3195
    $Input3195ListenPort 1601
+
+
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/im3195-input3195listenport
 
 
