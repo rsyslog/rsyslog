@@ -495,26 +495,26 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
                 *(pThis->pMsg + pThis->iMsg++) = c;
             }
         } else { /* done with the octet count, so this must be the SP terminator */
-            uchar *propPeerName = NULL;
-            uchar *propPeerIP = NULL;
-            int lenPeerName = 0;
-            int lenPeerIP = 0;
             DBGPRINTF("TCP Message with octet-counter, size %d.\n", pThis->iOctetsRemain);
-            prop.GetString(pThis->fromHost, &propPeerName, &lenPeerName);
-            prop.GetString(pThis->fromHost, &propPeerIP, &lenPeerIP);
+            const char *const peerName =
+                (pThis->fromHost != NULL) ? (const char *)propGetSzStr(pThis->fromHost) : "(hostname unknown)";
+            const char *const peerIP =
+                (pThis->fromHostIP != NULL) ? (const char *)propGetSzStr(pThis->fromHostIP) : "(IP unknown)";
+            const char *const peerPort =
+                (pThis->fromHostPort != NULL) ? (const char *)propGetSzStr(pThis->fromHostPort) : "(port unknown)";
             if (c != ' ') {
                 LogError(0, NO_ERRCODE,
                          "imtcp %s: Framing Error in received TCP message from "
-                         "peer: (hostname) %s, (ip) %s: delimiter is not SP but has "
+                         "peer: (hostname) %s, (ip) %s, (port) %s: delimiter is not SP but has "
                          "ASCII value %d.",
-                         cnf_params->pszInputName, propPeerName, propPeerIP, c);
+                         cnf_params->pszInputName, peerName, peerIP, peerPort, c);
             }
             if (pThis->iOctetsRemain < 1) {
                 /* TODO: handle the case where the octet count is 0! */
                 LogError(0, NO_ERRCODE,
                          "imtcp %s: Framing Error in received TCP message from "
-                         "peer: (hostname) %s, (ip) %s: invalid octet count %d.",
-                         cnf_params->pszInputName, propPeerName, propPeerIP, pThis->iOctetsRemain);
+                         "peer: (hostname) %s, (ip) %s, (port) %s: invalid octet count %d.",
+                         cnf_params->pszInputName, peerName, peerIP, peerPort, pThis->iOctetsRemain);
                 pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
             } else if (pThis->iOctetsRemain > pThis->iMaxLine) {
                 /* while we can not do anything against it, we can at least log an indication
@@ -522,16 +522,16 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
                  */
                 LogError(0, NO_ERRCODE,
                          "imtcp %s: received oversize message from peer: "
-                         "(hostname) %s, (ip) %s: size is %d bytes, max msg size "
+                         "(hostname) %s, (ip) %s, (port) %s: size is %d bytes, max msg size "
                          "is %d, truncating...",
-                         cnf_params->pszInputName, propPeerName, propPeerIP, pThis->iOctetsRemain, pThis->iMaxLine);
+                         cnf_params->pszInputName, peerName, peerIP, peerPort, pThis->iOctetsRemain, pThis->iMaxLine);
             }
             if (pThis->iOctetsRemain > pThis->pSrv->maxFrameSize) {
                 LogError(0, NO_ERRCODE,
                          "imtcp %s: Framing Error in received TCP message from "
-                         "peer: (hostname) %s, (ip) %s: frame too large: %d, change "
+                         "peer: (hostname) %s, (ip) %s, (port) %s: frame too large: %d, change "
                          "to octet stuffing",
-                         cnf_params->pszInputName, propPeerName, propPeerIP, pThis->iOctetsRemain);
+                         cnf_params->pszInputName, peerName, peerIP, peerPort, pThis->iOctetsRemain);
                 pThis->eFraming = TCP_FRAMING_OCTET_STUFFING;
             } else {
                 pThis->iMsg = 0;

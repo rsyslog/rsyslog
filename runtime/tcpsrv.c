@@ -712,6 +712,10 @@ static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
     CHKiRet(prop.Construct(&fromHostPort));
     CHKiRet(prop.SetString(fromHostPort, (uchar *)portbuf, strlen(portbuf)));
     CHKiRet(prop.ConstructFinalize(fromHostPort));
+    const char *const fromHostNameStr = (fromHostFQDN != NULL) ? (const char *)fromHostFQDN : "(hostname unknown)";
+    const char *const fromHostIPStr = (fromHostIP != NULL) ? (const char *)propGetSzStr(fromHostIP) : "(IP unknown)";
+    const char *const fromHostPortStr =
+        (fromHostPort != NULL) ? (const char *)propGetSzStr(fromHostPort) : "(port unknown)";
     /* Here we check if a host is permitted to send us messages. If it isn't, we do not further
      * process the message but log a warning (if we are configured to do this).
      * rgerhards, 2005-09-26
@@ -722,8 +726,8 @@ static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
             errno = 0;
             LogError(0, RS_RET_HOST_NOT_PERMITTED,
                      "connection request from disallowed "
-                     "sender %s discarded",
-                     fromHostFQDN);
+                     "sender %s (%s:%s) discarded",
+                     fromHostNameStr, fromHostIPStr, fromHostPortStr);
         }
         ABORT_FINALIZE(RS_RET_HOST_NOT_PERMITTED);
     }
@@ -753,7 +757,8 @@ static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
     pSess = NULL; /* this is now also handed over */
 
     if (pThis->bEmitMsgOnOpen) {
-        LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO, "imtcp: connection established with host: %s", propGetSzStr(fromHostIP));
+        LogMsg(0, RS_RET_NO_ERRCODE, LOG_INFO, "imtcp: connection established with host: %s (%s:%s)", fromHostNameStr,
+               fromHostIPStr, fromHostPortStr);
     }
 
 finalize_it:
@@ -761,8 +766,8 @@ finalize_it:
         if (iRet != RS_RET_HOST_NOT_PERMITTED && pThis->bEmitMsgOnOpen) {
             LogError(0, NO_ERRCODE,
                      "imtcp: connection could not be "
-                     "established with host: %s",
-                     fromHostIP == NULL ? "(IP unknown)" : (const char *)propGetSzStr(fromHostIP));
+                     "established with host: %s (%s:%s)",
+                     fromHostNameStr, fromHostIPStr, fromHostPortStr);
         }
         if (pSess != NULL) tcps_sess.Destruct(&pSess);
         if (pNewStrm != NULL) netstrm.Destruct(&pNewStrm);
@@ -899,8 +904,6 @@ static rsRetVal ATTR_NONNULL(1)
     ssize_t iRcvd;
     rsRetVal localRet;
     DEFiRet;
-    uchar *pszPeer;
-    int lenPeer;
     int oserr = 0;
     unsigned read_calls = 0;
     tcps_sess_t *const pSess = pioDescr->ptr.pSess;
@@ -908,8 +911,11 @@ static rsRetVal ATTR_NONNULL(1)
     const unsigned maxReads = pThis->starvationMaxReads;
 
     ISOBJ_TYPE_assert(pThis, tcpsrv);
-    prop.GetString((pSess)->fromHostIP, &pszPeer, &lenPeer);
-    DBGPRINTF("netstream %p with new data from remote peer %s\n", (pSess)->pStrm, pszPeer);
+    const char *const peerIP =
+        (pSess->fromHostIP != NULL) ? (const char *)propGetSzStr(pSess->fromHostIP) : "(IP unknown)";
+    const char *const peerPort =
+        (pSess->fromHostPort != NULL) ? (const char *)propGetSzStr(pSess->fromHostPort) : "(port unknown)";
+    DBGPRINTF("netstream %p with new data from remote peer %s:%s\n", (pSess)->pStrm, peerIP, peerPort);
 
     if (pThis->workQueue.numWrkr > 1) {
         pthread_mutex_lock(&pSess->mut);
@@ -927,8 +933,8 @@ static rsRetVal ATTR_NONNULL(1)
         socklen_t len = sizeof(error);
         const int sock = pioDescr->sock;
         if (getsockopt(sock, SOL_SOCKET, SO_ERROR, &error, &len) == 0) {
-            LogError(error, RS_RET_IO_ERROR, "epoll subsystem signaled EPOLLERR for stream %p, peer %s", (pSess)->pStrm,
-                     pszPeer);
+            LogError(error, RS_RET_IO_ERROR, "epoll subsystem signaled EPOLLERR for stream %p, peer %s:%s",
+                     (pSess)->pStrm, peerIP, peerPort);
         }
     }
 #endif
@@ -947,8 +953,9 @@ static rsRetVal ATTR_NONNULL(1)
                         case RS_RET_CLOSED:
                             if (pThis->bEmitMsgOnClose) {
                                 errno = 0;
-                                LogError(0, RS_RET_PEER_CLOSED_CONN, "Netstream session %p closed by remote peer %s.",
-                                         (pSess)->pStrm, pszPeer);
+                                LogError(0, RS_RET_PEER_CLOSED_CONN,
+                                         "Netstream session %p closed by remote peer %s:%s.", (pSess)->pStrm, peerIP,
+                                         peerPort);
                             }
                             state = RS_DONECLOSE;
                             break;
@@ -969,14 +976,14 @@ static rsRetVal ATTR_NONNULL(1)
                             }
                             localRet = tcps_sess.DataRcvd(pSess, buf, iRcvd);
                             if (localRet != RS_RET_OK && localRet != RS_RET_QUEUE_FULL) {
-                                LogError(oserr, localRet, "Tearing down TCP Session from %s", pszPeer);
+                                LogError(oserr, localRet, "Tearing down TCP Session from %s:%s", peerIP, peerPort);
                                 state = RS_DONECLOSE;
                             }
                             break;
 
                         default:
-                            LogError(oserr, iRet, "netstream session %p from %s will be closed due to error",
-                                     pSess->pStrm, pszPeer);
+                            LogError(oserr, iRet, "netstream session %p from %s:%s will be closed due to error",
+                                     pSess->pStrm, peerIP, peerPort);
                             state = RS_DONECLOSE;
                             break;
                     }
