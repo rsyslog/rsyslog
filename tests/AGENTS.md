@@ -34,7 +34,7 @@ agents.
 
 ## Running tests locally
 - Build rsyslog first (`./autogen.sh`, `./configure --enable-testbench`,
-  `make -j$(nproc)`") so the testbench can load freshly built binaries and
+  `make -j$(nproc)`) so the testbench can load freshly built binaries and
   modules. The same bootstrap commands are called out in `tests/README` under
   “Quickstart”.
 - Execute individual scenarios directly for quick feedback
