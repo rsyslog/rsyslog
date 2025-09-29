@@ -40,7 +40,8 @@ RUN 	apt-get update && \
 	libhiredis-dev \
 	libkrb5-dev \
 	liblz4-dev \
-	libmaxminddb-dev libmongoc-dev \
+	libmaxminddb-dev \
+	libmbedtls-dev \
 	libmongoc-dev \
 	libmysqlclient-dev \
 	libnet1-dev \
@@ -322,6 +323,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS=" \
 	--enable-libgcrypt \
 	--enable-libzstd \
 	--enable-mail \
+	--enable-mbedtls \
 	--enable-mmanon \
 	--enable-mmaudit \
 	--enable-mmcapture \
