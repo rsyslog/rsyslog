@@ -46,6 +46,7 @@ external plugin documentation for what needs to be used.
 
 Input usage
 -----------
+.. _param-mmexternal-input-interface-input:
 .. _mmexternal.parameter.input.interface-input-usage:
 
 .. code-block:: rsyslog
