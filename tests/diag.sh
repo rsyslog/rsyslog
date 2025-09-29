@@ -47,6 +47,9 @@
 #		starting its own container. When set, the test harness skips all
 #		local Elasticsearch start/stop handling and assumes that the
 #		specified endpoint is reachable and dedicated to the tests.
+# RSYSLOG_TESTBENCH_ES_MAJOR_VERSION
+#               Detected Elasticsearch major version exposed to the test suite.
+#               Populated automatically by ensure_elasticsearch_ready().
 #
 #
 # EXIT STATES
@@ -2130,16 +2133,102 @@ if [ -n "$RSYSLOG_TESTBENCH_EXTERNAL_ES_URL" ]; then
 fi
 
 es_base_url() {
-	local host="${ES_HOST:-localhost}"
-	local port="${ES_PORT:-19200}"
-	local proto="http"
-	if [ -n "$RSYSLOG_TESTBENCH_EXTERNAL_ES_URL" ]; then
-		proto="${RSYSLOG_TESTBENCH_EXTERNAL_ES_URL%%://*}"
-		if [ "$proto" = "$RSYSLOG_TESTBENCH_EXTERNAL_ES_URL" ]; then
-			proto="http"
-		fi
-	fi
-	printf '%s://%s:%s' "$proto" "$host" "$port"
+        local host="${ES_HOST:-localhost}"
+        local port="${ES_PORT:-19200}"
+        local proto="http"
+        if [ -n "$RSYSLOG_TESTBENCH_EXTERNAL_ES_URL" ]; then
+                proto="${RSYSLOG_TESTBENCH_EXTERNAL_ES_URL%%://*}"
+                if [ "$proto" = "$RSYSLOG_TESTBENCH_EXTERNAL_ES_URL" ]; then
+                        proto="http"
+                fi
+        fi
+        printf '%s://%s:%s' "$proto" "$host" "$port"
+}
+
+es_detect_version() {
+        local base
+        base=$(es_base_url)
+
+        local payload
+        if ! payload=$(curl --silent --show-error --connect-timeout 5 "$base"); then
+                return 1
+        fi
+
+        local python_bin="${PYTHON:-}"
+        if [ -n "$python_bin" ] && ! command -v "$python_bin" >/dev/null 2>&1; then
+                python_bin=""
+        fi
+        if [ -z "$python_bin" ]; then
+                if command -v python3 >/dev/null 2>&1; then
+                        python_bin=$(command -v python3)
+                elif command -v python >/dev/null 2>&1; then
+                        python_bin=$(command -v python)
+                fi
+        fi
+        if [ -z "$python_bin" ]; then
+                printf 'info: unable to detect Elasticsearch version (no python interpreter available)\n'
+                return 1
+        fi
+
+        local result
+        if ! result=$(printf '%s' "$payload" | "$python_bin" - <<'PYCODE'
+import json
+import sys
+
+try:
+    payload = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+
+version = payload.get("version", {})
+number = version.get("number")
+
+if not isinstance(number, str):
+    sys.exit(1)
+
+parts = number.split(".")
+major = parts[0] if parts else ""
+
+if not major.isdigit():
+    sys.exit(1)
+
+print(major)
+print(number)
+PYCODE
+); then
+                return 1
+        fi
+
+        local detected_major=""
+        local detected_full=""
+        if [ -n "$result" ]; then
+                IFS=$'\n' read -r detected_major detected_full <<EOF
+$result
+EOF
+        fi
+
+        if [ -z "$detected_major" ]; then
+                return 1
+        fi
+
+        export RSYSLOG_TESTBENCH_ES_MAJOR_VERSION="$detected_major"
+        if [ -n "$detected_full" ]; then
+                export RSYSLOG_TESTBENCH_ES_VERSION_NUMBER="$detected_full"
+        fi
+
+        printf 'info: detected Elasticsearch version %s (major %s) at %s\n' \
+                "${RSYSLOG_TESTBENCH_ES_VERSION_NUMBER:-unknown}" \
+                "$RSYSLOG_TESTBENCH_ES_MAJOR_VERSION" \
+                "$base"
+
+        return 0
+}
+
+require_elasticsearch_restart_capability() {
+        if [ "$RSYSLOG_TESTBENCH_USE_EXTERNAL_ES" = "yes" ]; then
+                printf 'info: skipping test - external Elasticsearch instance cannot be restarted by the harness\n'
+                exit 77
+        fi
 }
 
 dep_es_cached_file="$dep_cache_dir/$ES_DOWNLOAD"
@@ -2710,17 +2799,18 @@ prepare_elasticsearch() {
 # of an effort to avoid restarting elasticsearch more often than necessary.
 ensure_elasticsearch_ready() {
 	printf '%s ensuring Elasticsearch ready\n' "$(tb_timestamp)"
-	if [ "$RSYSLOG_TESTBENCH_USE_EXTERNAL_ES" = "yes" ]; then
-		local base
-		base=$(es_base_url)
-		printf 'using external Elasticsearch instance at %s\n' "$base"
-		if ! curl --silent --show-error --connect-timeout 5 "$base" >/dev/null; then
-			printf 'external Elasticsearch instance %s not reachable\n' "$base"
-			error_exit 77
-		fi
-		init_elasticsearch
-		printf '\n%s Elasticsearch readied for use as requested\n' "$(date +%H:%M:%S)"
-		return
+        if [ "$RSYSLOG_TESTBENCH_USE_EXTERNAL_ES" = "yes" ]; then
+                local base
+                base=$(es_base_url)
+                printf 'using external Elasticsearch instance at %s\n' "$base"
+                if ! curl --silent --show-error --connect-timeout 5 "$base" >/dev/null; then
+                        printf 'external Elasticsearch instance %s not reachable\n' "$base"
+                        error_exit 77
+                fi
+                init_elasticsearch
+                es_detect_version || printf 'info: unable to determine Elasticsearch version metadata\n'
+                printf '\n%s Elasticsearch readied for use as requested\n' "$(date +%H:%M:%S)"
+                return
 	fi
 	if   printf '%s:%s:%s\n' "$ES_DOWNLOAD" "$ES_PORT" "$(cat es.pid)" \
 	   | cmp -b - elasticsearch.running
@@ -2738,11 +2828,12 @@ ensure_elasticsearch_ready() {
 			printf '%s:%s:%s\n' "$ES_DOWNLOAD" "$ES_PORT" "$(cat es.pid)" > elasticsearch.running
 		fi
 	fi
-	if [ "$1" != "--no-start" ]; then
-		printf 'running elasticsearch instance: %s\n' "$(cat elasticsearch.running)"
-		init_elasticsearch
-	fi
-	printf '\n%s Elasticsearch readied for use as requested\n' "$(date +%H:%M:%S)"
+        if [ "$1" != "--no-start" ]; then
+                printf 'running elasticsearch instance: %s\n' "$(cat elasticsearch.running)"
+                init_elasticsearch
+                es_detect_version || printf 'info: unable to determine Elasticsearch version metadata\n'
+        fi
+        printf '\n%s Elasticsearch readied for use as requested\n' "$(date +%H:%M:%S)"
 }
 
 
