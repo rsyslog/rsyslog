@@ -791,7 +791,7 @@ BEGINactivateCnf
             (void)statsobj.Construct(&inst->stats);
             snprintf(namebuf, sizeof(namebuf), "imkafka[%s_%s]", inst->topic ? (char *)inst->topic : "topic?",
                      inst->consumergroup ? (char *)inst->consumergroup : "group?");
-            (void)statsobj.SetName(inst->stats, (uchar *)strdup(namebuf));
+            (void)statsobj.SetName(inst->stats, (uchar *)namebuf);
             (void)statsobj.SetOrigin(inst->stats, (uchar *)"imkafka");
             /* init and register per-instance counters */
             STATSCOUNTER_INIT(inst->ctrReceived, inst->mutCtrReceived);
