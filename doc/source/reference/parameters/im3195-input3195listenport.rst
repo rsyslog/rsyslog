@@ -33,8 +33,8 @@ Description
 The default port is 601. This is the IANA-assigned port for the BEEP protocol,
 which RFC 3195 is based on.
 
-Since directive names are case-insensitive, ``$input3195listenport`` also
-works.
+Since directive names are case-insensitive, the camelCase form
+``$Input3195ListenPort`` is recommended for readability.
 
 Example
 -------
