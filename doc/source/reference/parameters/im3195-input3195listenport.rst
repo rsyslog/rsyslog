@@ -34,7 +34,7 @@ Examples:
 .. code-block:: rsyslog
 
    module(load="im3195")
-   input(type="im3195" input3195ListenPort="1601")
+   input(type="im3195" input3195ListenPort=1601)
 
 .. code-block:: rsyslog
 
@@ -48,7 +48,7 @@ Input usage
 
 .. code-block:: rsyslog
 
-   input(type="im3195" input3195ListenPort="...")
+   input(type="im3195" input3195ListenPort=...)
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
