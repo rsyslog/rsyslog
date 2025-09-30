@@ -10,7 +10,7 @@ Input3195ListenPort
 
 .. summary-start
 
-Listens for RFC 3195 messages on the specified TCP port.
+The TCP port on which im3195 listens for RFC 3195 messages.
 
 .. summary-end
 
