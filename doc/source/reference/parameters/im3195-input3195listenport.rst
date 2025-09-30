@@ -1,12 +1,12 @@
 .. _param-im3195-input3195listenport:
 .. _im3195.parameter.input.input3195listenport:
 
-Input3195ListenPort
+input3195ListenPort
 ===================
 
 .. index::
-   single: im3195; Input3195ListenPort
-   single: Input3195ListenPort
+   single: im3195; input3195ListenPort
+   single: input3195ListenPort
 
 .. summary-start
 
@@ -16,7 +16,7 @@ The TCP port on which im3195 listens for RFC 3195 messages.
 
 This parameter applies to :doc:`../../configuration/modules/im3195`.
 
-:Name: Input3195ListenPort
+:Name: input3195ListenPort
 :Scope: input
 :Type: integer
 :Default: 601
