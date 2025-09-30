@@ -57,7 +57,8 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _im3195.parameter.legacy.input3195listenport:
 
-- ``$Input3195ListenPort`` — legacy directive for this parameter (status: legacy)
+- ``$Input3195ListenPort`` — legacy directive for this parameter (status:
+  legacy)
 
 .. index::
    single: im3195; $Input3195ListenPort
