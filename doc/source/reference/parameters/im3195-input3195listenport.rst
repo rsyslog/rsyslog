@@ -26,8 +26,8 @@ This parameter applies to :doc:`../../configuration/modules/im3195`.
 Description
 -----------
 
-The port on which im3195 listens for RFC 3195 messages. The default port is
-601 (the IANA-assigned port).
+The default port is 601. This is the IANA-assigned port for the BEEP protocol,
+which RFC 3195 is based on.
 
 Examples
 --------
