@@ -29,7 +29,8 @@ Description
 The port on which im3195 listens for RFC 3195 messages. The default port is
 601 (the IANA-assigned port).
 
-Examples:
+Examples
+--------
 
 .. code-block:: rsyslog
 
@@ -51,7 +52,7 @@ Input usage
    input(type="im3195" input3195ListenPort=...)
 
 Legacy names (for reference)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------
 Historic names/directives for compatibility. Do not use in new configs.
 
 .. _im3195.parameter.legacy.input3195listenport:
