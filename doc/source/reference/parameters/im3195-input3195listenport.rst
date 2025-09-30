@@ -43,12 +43,12 @@ Examples:
 
 Input usage
 -----------
-.. _param-im3195-input-input3195listenport:
+.. _param-im3195-input-input3195listenport-usage:
 .. _im3195.parameter.input.input3195listenport-usage:
 
 .. code-block:: rsyslog
 
-   input(type="im3195" Input3195ListenPort="...")
+   input(type="im3195" input3195ListenPort="...")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
