@@ -218,6 +218,8 @@ ENV SCAN_BUILD=scan-build \
 ENV RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-elasticsearch \
 	--enable-elasticsearch-tests \
+	--disable-clickhouse \
+	--disable-clickhouse-tests \
 	--enable-ffaup \
 	--enable-gnutls \
 	--enable-gssapi-krb5 \
