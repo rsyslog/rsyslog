@@ -17,28 +17,18 @@ This module uses `liblogging <http://www.liblogging.org>`_ for the
 actual protocol handling.
 
 
-Configuration Parameters
+Configuration Directives
 ========================
 
 .. note::
 
    Parameter names are case-insensitive; camelCase is recommended for readability.
 
-
-Module Parameters
------------------
-
-This module has no module-specific parameters.
-
-
-Input Parameters
-----------------
-
 .. list-table::
    :widths: 30 70
    :header-rows: 1
 
-   * - Parameter
+   * - Directive
      - Summary
    * - :ref:`param-im3195-input3195listenport`
      - .. include:: ../../reference/parameters/im3195-input3195listenport.rst
