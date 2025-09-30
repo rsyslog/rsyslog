@@ -4,7 +4,7 @@
  *
  * File begun on 2017-04-25 by alorbach
  *
- * Copyright 2008-2017 Adiscon GmbH.
+ * Copyright 2008-2015 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -790,9 +790,9 @@ ENDqueryEtryPt
 BEGINmodInit()
     CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION;
-    CODEmodInit_QueryRegCFSLineHdlr
-        /* request objects we use */
-        CHKiRet(objUse(glbl, CORE_COMPONENT));
+    CODEmodInit_QueryRegCFSLineHdlr;
+    /* request objects we use */
+    CHKiRet(objUse(glbl, CORE_COMPONENT));
     CHKiRet(objUse(prop, CORE_COMPONENT));
     CHKiRet(objUse(ruleset, CORE_COMPONENT));
     CHKiRet(objUse(statsobj, CORE_COMPONENT));
