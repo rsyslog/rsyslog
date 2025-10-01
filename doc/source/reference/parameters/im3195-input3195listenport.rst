@@ -1,5 +1,5 @@
 .. _param-im3195-input3195listenport:
-.. _im3195.directive.input3195listenport:
+.. _im3195.parameter.module.input3195listenport:
 
 $Input3195ListenPort
 ====================
@@ -21,7 +21,8 @@ This directive applies to :doc:`../../configuration/modules/im3195`.
    This is a legacy global directive. The im3195 module does not support
    the modern ``input()`` syntax.
 
-:Directive: $Input3195ListenPort
+:Name: $Input3195ListenPort
+:Scope: module
 :Type: integer
 :Default: 601
 :Required?: no
@@ -36,8 +37,10 @@ which RFC 3195 is based on.
 Since directive names are case-insensitive, the camelCase form
 ``$Input3195ListenPort`` is recommended for readability.
 
-Example
--------
+Module usage
+------------
+.. _param-im3195-module-input3195listenport:
+.. _im3195.parameter.module.input3195listenport-usage:
 
 .. code-block:: rsyslog
 
