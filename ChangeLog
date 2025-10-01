@@ -1,6 +1,25 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
 - overall improved documentation via a large set of topic updates.
+- 2025-10-01: omkafka: restore producev fallback for older librdkafka
+  Reason: keep omkafka building across librdkafka versions, including
+  newer distro toolchains and legacy environments, to reduce friction
+  for users and CI/container images.
+  Before: builds failed or used unsupported code paths with some
+  librdkafka versions; header config could silently miscompile.
+  After: feature-detect produceva/headers, fall back to legacy produce,
+  and reject header config when not supported.
+  Impact: possible configuration-time error if kafka headers are set
+  but the installed librdkafka lacks header support.
+  This change introduces compile-time feature detection. When
+  produceva is available, we use the vector API; otherwise we fall back
+  to the classic produce path and adjust error handling accordingly.
+  Header support is compiled only when the library provides it; the
+  instance struct and cleanup are guarded to match. A missing
+  RD_KAFKA_VERSION is defined to avoid preprocessor failures. No queue
+  or OMODTX semantics are changed; HUP and stats remain unaffected. No
+  public API/ABI is exposed from omkafka, so impact is limited to build
+  and configuration behavior.
 - 2025-09-29: omelasticserach: detect server version and adjust config
   On startup, omelasticsearch now detects server version and platform
   (ES/openSearch) and adjust config parameters accordingly. This is
