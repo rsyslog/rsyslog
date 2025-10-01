@@ -36,7 +36,7 @@ Description
 The default port is 601. This is the IANA-assigned port for the BEEP protocol,
 which RFC 3195 is based on.
 
-Since directive names are case-insensitive, the camelCase form
+Since directive names are case-insensitive, the PascalCase form
 ``$Input3195ListenPort`` is recommended for readability.
 
 Module usage
@@ -48,19 +48,6 @@ Module usage
 
    $ModLoad im3195
    $Input3195ListenPort 1601
-
-Legacy names (for reference)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Historic names/directives for compatibility. Do not use in new configs.
-
-.. _im3195.parameter.legacy.input3195listenport:
-
-- ``$Input3195ListenPort`` — legacy directive for this parameter (status:
-  legacy)
-
-.. index::
-   single: im3195; $Input3195ListenPort
-   single: $Input3195ListenPort
 
 See also
 ~~~~~~~~
