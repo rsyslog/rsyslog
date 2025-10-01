@@ -38,7 +38,6 @@ Since directive names are case-insensitive, the camelCase form
 
 Module usage
 ------------
-.. _param-im3195-module-input3195listenport:
 .. _im3195.parameter.module.input3195listenport-usage:
 
 .. code-block:: rsyslog

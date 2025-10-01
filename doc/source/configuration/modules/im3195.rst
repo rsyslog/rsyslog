@@ -18,7 +18,7 @@ actual protocol handling.
 
 
 Module Parameters
-=================
+-----------------
 
 .. note::
 
