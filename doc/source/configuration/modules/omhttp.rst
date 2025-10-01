@@ -329,21 +329,14 @@ Each message on the "Inputs" line is the templated log line that is fed into the
     Inputs: {"msg": "message 1"} {"msg"": "message 2"} {"msg": "message 3"}
     Output: [{"msg": "message 1"}, {"msg"": "message 2"}, {"msg": "message 3"}]
 
-3. *json* - Builds a JSON containing all messages in the batch without a JSON Array. This mode requires that each message is parsable JSON, since the plugin parses each message as JSON.
-
-.. code-block:: text
-
-    Inputs: {"msg": "message 1"} {"msg"": "message 2"} {"msg": "message 3"}
-    Output: [{"msg": "message 1"}, {"msg"": "message 2"}, {"msg": "message 3"}]
-
-4. *kafkarest* - Builds a JSON object that conforms to the `Kafka Rest Proxy specification <https://docs.confluent.io/platform/current/kafka-rest/quickstart.html>`_. This mode requires that each message is parsable JSON, since the plugin parses each message as JSON while building the batch object.
+3. *kafkarest* - Builds a JSON object that conforms to the `Kafka Rest Proxy specification <https://docs.confluent.io/platform/current/kafka-rest/quickstart.html>`_. This mode requires that each message is parsable JSON, since the plugin parses each message as JSON while building the batch object.
 
 .. code-block:: text
 
     Inputs: {"msg": "message 1"} {"msg"": "message 2"} {"msg": "message 3"}
     Output: {"records": [{"value": {"msg": "message 1"}}, {"value": {"msg": "message 2"}}, {"value": {"msg": "message 3"}}]}
 
-5. *lokirest* - Builds a JSON object that conforms to the `Loki Rest specification <https://github.com/grafana/loki/blob/main/docs/sources/reference/loki-http-api.md#ingest-logs>`_. This mode requires that each message is parsable JSON, since the plugin parses each message as JSON while building the batch object. Additionally, the operator is responsible for providing index keys, and message values.
+4. *lokirest* - Builds a JSON object that conforms to the `Loki Rest specification <https://github.com/grafana/loki/blob/main/docs/sources/reference/loki-http-api.md#ingest-logs>`_. This mode requires that each message is parsable JSON, since the plugin parses each message as JSON while building the batch object. Additionally, the operator is responsible for providing index keys, and message values.
 
 .. code-block:: text
 
