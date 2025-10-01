@@ -1,10 +1,12 @@
 .. _param-im3195-input3195listenport:
 .. _im3195.parameter.module.input3195listenport:
 
-$Input3195ListenPort
-====================
+Input3195ListenPort
+===================
 
 .. index::
+   single: im3195; Input3195ListenPort
+   single: Input3195ListenPort
    single: im3195; $Input3195ListenPort
    single: $Input3195ListenPort
 
