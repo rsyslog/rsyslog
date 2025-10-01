@@ -759,8 +759,8 @@ rsRetVal tplToString(struct template *__restrict__ const pTpl,
      */
     pTpe = pTpl->pEntryRoot;
     iBuf = 0;
-    const int extra_space = (pTpl->optFormatEscape == JSONF) ? 1 : 3;
-    if (pTpl->optFormatEscape == JSONF && !pTpl->bJsonTreeEnabled) {
+    const int isJsonFlat = (pTpl->optFormatEscape == JSONF && !pTpl->bJsonTreeEnabled);
+    if (isJsonFlat) {
         if (iparam->lenBuf < 2) /* we reserve one char for the final \0! */
             CHKiRet(ExtendBuf(iparam, 2));
         iBuf = 1;
@@ -792,25 +792,30 @@ rsRetVal tplToString(struct template *__restrict__ const pTpl,
             bMustBeFreed = 0;
         }
         /* got source, now copy over */
-        if (iLenVal > 0) { /* may be zero depending on property */
-            /* first, make sure buffer fits */
-            if (iBuf + iLenVal + extra_space >= iparam->lenBuf) /* we reserve one char for the final \0! */
-                CHKiRet(ExtendBuf(iparam, iBuf + iLenVal + 1));
+        const int isLastEntry = (pTpe->pNext == NULL);
+        const size_t closingLen = (isJsonFlat && isLastEntry) ? 2 : 0;
+        size_t requiredLen = closingLen;
+        if (iLenVal > 0) {
+            if (need_comma) requiredLen += 2;
+            requiredLen += (size_t)iLenVal;
+        }
+        if (requiredLen > 0 && (iBuf + requiredLen) >= iparam->lenBuf)
+            CHKiRet(ExtendBuf(iparam, iBuf + requiredLen + 1));
 
+        if (iLenVal > 0) { /* may be zero depending on property */
             if (need_comma) {
                 memcpy(iparam->param + iBuf, ", ", 2);
                 iBuf += 2;
             }
+
             memcpy(iparam->param + iBuf, pVal, iLenVal);
             iBuf += iLenVal;
-            if (pTpl->optFormatEscape == JSONF && !pTpl->bJsonTreeEnabled) {
+            if (isJsonFlat) {
                 need_comma = 1;
             }
         }
 
-        if ((pTpl->optFormatEscape == JSONF && !pTpl->bJsonTreeEnabled) && (pTpe->pNext == NULL)) {
-            /* space was reserved while processing field above
-               (via extra_space in ExtendBuf() new size formula. */
+        if (closingLen > 0) {
             memcpy(iparam->param + iBuf, "}\n", 2);
             iBuf += 2;
         }

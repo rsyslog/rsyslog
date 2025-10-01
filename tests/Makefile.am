@@ -214,6 +214,7 @@ TESTS +=  \
 	omfwd-tls-invalid-permitExpiredCerts.sh \
 	omfwd-keepalive.sh \
 	omfwd-subtree-tpl.sh \
+	omfile-subtree-jsonf.sh \
 	omusrmsg-errmsg-no-params.sh \
 	omusrmsg-noabort.sh \
 	omfile-module-params.sh \
@@ -2269,6 +2270,7 @@ EXTRA_DIST= \
         omfwd-tls-invalid-permitExpiredCerts.sh \
         omfwd-keepalive.sh \
         omfwd-subtree-tpl.sh \
+		omfile-subtree-jsonf.sh \ 
         omfwd_fast_imuxsock.sh \
         omfile_hup-vg.sh \
 	omrelp-keepalive.sh \
