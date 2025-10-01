@@ -36,6 +36,12 @@ contrib_mmkubernetes:
   notes:
     - WID is per-thread; shared caches in pData must be guarded.
 
+mmsnarewinsec:
+  paths: ["plugins/mmsnarewinsec/"]
+  requires_serialization: false
+  notes:
+    - Parsing logic does not maintain shared mutable state.
+
 ommysql:
   paths: ["plugins/ommysql/"]
   requires_serialization: false
