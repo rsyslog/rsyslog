@@ -1,6 +1,87 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
 - overall improved documentation via a large set of topic updates.
+- 2025-10-01: omkafka: restore producev fallback for older librdkafka
+  Reason: keep omkafka building across librdkafka versions, including
+  newer distro toolchains and legacy environments, to reduce friction
+  for users and CI/container images.
+  Before: builds failed or used unsupported code paths with some
+  librdkafka versions; header config could silently miscompile.
+  After: feature-detect produceva/headers, fall back to legacy produce,
+  and reject header config when not supported.
+  Impact: possible configuration-time error if kafka headers are set
+  but the installed librdkafka lacks header support.
+  This change introduces compile-time feature detection. When
+  produceva is available, we use the vector API; otherwise we fall back
+  to the classic produce path and adjust error handling accordingly.
+  Header support is compiled only when the library provides it; the
+  instance struct and cleanup are guarded to match. A missing
+  RD_KAFKA_VERSION is defined to avoid preprocessor failures. No queue
+  or OMODTX semantics are changed; HUP and stats remain unaffected. No
+  public API/ABI is exposed from omkafka, so impact is limited to build
+  and configuration behavior.
+- 2025-09-29: omelasticserach: detect server version and adjust config
+  On startup, omelasticsearch now detects server version and platform
+  (ES/openSearch) and adjust config parameters accordingly. This is
+  also a change that we can use as a base for further auto-tuning.
+- 2025-09-29: add source port to imtcp user-targeting messages
+  All error, warning etc messages that specify the remote peer via
+  hostname or IP now also give the source port to provide a unified
+  logging experience.
+- 2025-09-28: ci: add openEuler 24.03 LTS container and CI job
+  Add an openEuler 24.03 LTS development container and wire it into CI to
+  validate builds on that platform.
+  Why: expand RPM-based coverage and catch distro-specific build issues
+  early.
+  Impact: CI-only. No runtime or API changes.
+  Before: no openEuler container or CI job; build breakage went unnoticed.
+  After: dedicated container and matrix entry compile and run unit tests
+  on openEuler.
+  Notes: module and test coverage may differ on openEuler; track gaps in
+  follow-up issues.
+- 2025-09-25: omelasticsearch: omit _type by default; use typeless endpoint
+  Newer Elasticsearch versions reject typed APIs. This adapts the module
+  so shipping works out of the box with modern clusters and keeps the
+  codebase aligned with typeless ES conventions.
+  Impact: bulk metadata no longer includes _type unless explicitly set.
+  Old setups that relied on a default "events" type (ES < 8) may need
+  explicit configuration.
+  Technically, the default searchType is now NULL
+  (OMES_SEARCHTYPE_DEFAULT). setPostURL continues to route requests to
+  the typeless /_doc endpoint, but bulk metadata is generated without a
+  _type field when searchType is unset. The legacy default "events" for
+  ES < 8 is removed. Tests are updated to stop passing searchType, and
+  the searchType-empty test is dropped to reflect the new default. No
+  OMODTX or action-queue semantics change.
+  Closes: https://github.com/rsyslog/rsyslog/issues/5060
+- 2025-09-25: template: add jsonftree option for nested jsonf output
+  We want easy nested JSON to match common schemas (e.g., Elastic ECS)
+  without external processors. This introduces an opt-in mode so existing
+  jsonf users keep exact behavior while enabling structured output when
+  requested.
+  Impact: No change unless option.jsonftree is enabled. With jsonftree,
+  dotted outnames render as nested objects; empty containers are skipped.
+  On name collisions (object vs value), we fall back to flat rendering.
+  Before: jsonf always emitted flat name/value pairs, even for dotted
+  outnames. After: jsonf remains flat by default; enabling jsonftree makes
+  "host.hostname" and "host.ip" render as {"host":{"hostname":...,"ip":...}}.
+  Technically, we add option.jsonftree to templates. When set, we lazily
+  build a per-template JSON tree (tplJsonNode) from dotted segments and
+  render it in one pass, reusing existing jsonf formatting for leaves.
+  The tree state is tracked on the template and freed on template delete.
+  Config parsing enforces mutual exclusivity among sql, stdsql, json,
+  jsonf, and jsonftree. Constants record bJSONf to reuse serialized
+  fragments. Tests cover nested output and pure-json cases using
+  option.jsonftree.
+- 2025-09-23: musrmsg bugfix: potential null pointer dereference causes segfault
+  If there is no user in the data base with user ID uid, getpwuid() returns a null
+  pointer value. Therefore, it is necessary to check the return value of the function
+  to prevent segfault caused by dereference of null pointer.
+  In addition:
+  [1] Free the memory allocated for the current session identifier sessions_list[j]
+  to prevent a memory leak.
+  [2] Use LogError instead of dbgprintf to display error reports to the user.
+  Many thanks to Qiumiao Zhang for the patch.
 - 2025-09-22: mmleefparse: new message modification module for LEEF format
   This parses the LEEF message (if it is) and creates a JSON subtree.
   The current implementation is PoC and will be provided to gather

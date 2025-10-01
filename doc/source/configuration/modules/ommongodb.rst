@@ -1,3 +1,5 @@
+.. _ref-ommongodb:
+
 ********************************
 ommongodb: MongoDB Output Module
 ********************************

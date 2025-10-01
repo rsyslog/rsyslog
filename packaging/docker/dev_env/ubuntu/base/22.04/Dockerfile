@@ -34,7 +34,7 @@ RUN 	apt-get update && \
 	libhiredis-dev \
 	libkrb5-dev \
 	liblz4-dev \
-	libmaxminddb-dev libmongoc-dev \
+	libmaxminddb-dev \
 	libmongoc-dev \
 	libmysqlclient-dev \
 	libnet1-dev \

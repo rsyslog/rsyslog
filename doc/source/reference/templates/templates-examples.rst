@@ -111,7 +111,7 @@ Produces output similar to:
 
 .. code-block:: none
 
-    {"@timestamp":"2018-03-01T01:00:00+00:00", "host":"172.20.245.8", "severity":7, "facility":20, "syslog-tag":"tag", "source":"tag", "message":" msgnum:00000000:"}
+    {"@timestamp":"2018-03-01T01:00:00+00:00", "host":"192.0.2.8", "severity":7, "facility":20, "syslog-tag":"tag", "source":"tag", "message":" msgnum:00000000:"}
 
 Pretty-printed:
 
@@ -119,7 +119,7 @@ Pretty-printed:
 
     {
       "@timestamp": "2018-03-01T01:00:00+00:00",
-      "host": "172.20.245.8",
+      "host": "192.0.2.8",
       "severity": 7,
       "facility": 20,
       "syslog-tag": "tag",
@@ -131,7 +131,7 @@ If ``onEmpty="null"`` is used and ``source`` is empty:
 
 .. code-block:: none
 
-    {"@timestamp":"2018-03-01T01:00:00+00:00", "host":"172.20.245.8", "severity":7, "facility":20, "syslog-tag":"tag", "source":null, "message":" msgnum:00000000:"}
+    {"@timestamp":"2018-03-01T01:00:00+00:00", "host":"192.0.2.8", "severity":7, "facility":20, "syslog-tag":"tag", "source":null, "message":" msgnum:00000000:"}
 
 .. note:: The output is not pretty-printed in actual use to avoid waste of resources.
 

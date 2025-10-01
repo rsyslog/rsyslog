@@ -82,7 +82,6 @@ DEFobjCurrIf(prop) DEFobjCurrIf(ruleset) DEFobjCurrIf(statsobj)
     STATSCOUNTER_DEF(ctrMessagesSuccess, mutCtrMessagesSuccess);  // Number of messages successfully sent
     STATSCOUNTER_DEF(ctrMessagesFail, mutCtrMessagesFail);  // Number of messages that failed to send
     STATSCOUNTER_DEF(ctrMessagesRetry, mutCtrMessagesRetry);  // Number of messages requeued for retry
-    STATSCOUNTER_DEF(ctrHttpRequestCount, mutCtrHttpRequestCount);  // Number of attempted HTTP requests
     STATSCOUNTER_DEF(ctrHttpRequestSuccess, mutCtrHttpRequestSuccess);  // Number of successful HTTP requests
     STATSCOUNTER_DEF(ctrHttpRequestFail, mutCtrHttpRequestFail);  // Number of failed HTTP req, 4XX+ are NOT failures
     STATSCOUNTER_DEF(ctrHttpStatusSuccess, mutCtrHttpStatusSuccess);  // Number of requests returning 1XX/2XX status
@@ -355,7 +354,8 @@ BEGINfreeInstance
     if (pData->ratelimiter != NULL) ratelimitDestruct(pData->ratelimiter);
     if (pData->bFreeBatchFormatName) free(pData->batchFormatName);
     if (pData->listObjStats != NULL) {
-        for (int j = 0; j < pData->numServers; ++j) {
+        const int numStats = pData->statsBySenders ? pData->numServers : 1;
+        for (int j = 0; j < numStats; ++j) {
             if (pData->listObjStats[j].defaultstats != NULL) statsobj.Destruct(&(pData->listObjStats[j].defaultstats));
         }
         free(pData->listObjStats);
@@ -1227,8 +1227,6 @@ static rsRetVal ATTR_NONNULL(1, 2) curlPost(
 
     curlCode = curl_easy_perform(curl);
     DBGPRINTF("omhttp: curlPost curl returned %lld\n", (long long)curlCode);
-    STATSCOUNTER_INC(pWrkrData->pData->listObjStats[indexStats].ctrHttpRequestCount,
-                     pWrkrData->pData->listObjStats[indexStats].mutCtrHttpRequestCount);
     STATSCOUNTER_INC(pWrkrData->pData->listObjStats[indexStats].ctrHttpRequestsCount,
                      pWrkrData->pData->listObjStats[indexStats].mutCtrHttpRequestsCount);
 
@@ -2018,10 +2016,6 @@ static rsRetVal setStatsObject(instanceData *const pData, const char *const serv
     CHKiRet(statsobj.AddCounter(serverStats->defaultstats, (uchar *)"messages.retry", ctrType_IntCtr,
                                 CTR_FLAG_RESETTABLE, &(serverStats->ctrMessagesRetry)));
 
-    STATSCOUNTER_INIT(serverStats->ctrHttpRequestCount, serverStats->mutCtrHttpRequestCount);
-    CHKiRet(statsobj.AddCounter(serverStats->defaultstats, (uchar *)"request.count", ctrType_IntCtr,
-                                CTR_FLAG_RESETTABLE, &(serverStats->ctrHttpRequestCount)));
-
     STATSCOUNTER_INIT(serverStats->ctrHttpRequestSuccess, serverStats->mutCtrHttpRequestSuccess);
     CHKiRet(statsobj.AddCounter(serverStats->defaultstats, (uchar *)"request.success", ctrType_IntCtr,
                                 CTR_FLAG_RESETTABLE, &(serverStats->ctrHttpRequestSuccess)));
@@ -2348,10 +2342,18 @@ BEGINnewActInst
                      "for http server configuration.");
             ABORT_FINALIZE(RS_RET_ERR);
         }
-        if (pData->statsBySenders) {
-            pData->listObjStats = malloc(servers->nmemb * sizeof(targetStats_t));
-        } else {
-            pData->listObjStats = malloc(1 * sizeof(targetStats_t));
+
+        /* Set up the stats object array */
+        const int numStats = pData->statsBySenders ? servers->nmemb : 1;
+        pData->listObjStats = malloc(numStats * sizeof(targetStats_t));
+        if (pData->listObjStats == NULL) {
+            LogError(0, RS_RET_ERR,
+                     "omhttp: unable to allocate buffer "
+                     "for http server stats object.");
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+
+        if (!pData->statsBySenders) {
             CHKiRet(setStatsObject(pData, NULL, 0));
         }
 

@@ -1,4 +1,4 @@
-# Copyright 2024 Rainer Gerhards and Others
+# Copyright 2024-2025 Rainer Gerhards and Others
 #
 # https://github.com/rsyslog/rsyslog-pkg-ubuntu
 #
@@ -54,7 +54,7 @@ jobs:
                  fedora_41, fedora_42,
                  ubuntu_20, ubuntu_24,
                  ubuntu_22_san, ubuntu_24_tsan, ubuntu_22_distcheck,
-                 elasticsearch]
+                 openeuler, elasticsearch]
 
     steps:
       - name: git checkout project
@@ -112,6 +112,11 @@ jobs:
                      --disable-helgrind --disable-default-tests --disable-kafka-tests \
                      --disable-omkafka --disable-imkafka \
                      --enable-gnutls --enable-openssl --enable-gnutls-tests"
+              ;;
+          'openeuler')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_openeuler:24.03-lts'
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
+                     --disable-kafka-tests"
               ;;
           'fedora_41')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_fedora:41'

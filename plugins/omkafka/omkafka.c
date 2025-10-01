@@ -40,8 +40,31 @@
 #include <unistd.h>
 #include <librdkafka/rdkafka.h>
 
-#if RD_KAFKA_VERSION < 0x000b0000
-    #error "omkafka requires librdkafka v0.11 or later"
+#ifndef RD_KAFKA_VERSION
+    #define RD_KAFKA_VERSION 0
+#endif
+
+/* rd_kafka_produceva() and rd_kafka_vu_t landed in librdkafka v1.5.0. */
+#if RD_KAFKA_VERSION >= 0x01050000
+    #define OMKAFKA_HAS_PRODUCEVA 1
+#else
+    #define OMKAFKA_HAS_PRODUCEVA 0
+#endif
+
+/* rd_kafka_producev() helpers were introduced with librdkafka v0.9.4. */
+#if defined(RD_KAFKA_V_RKT) && defined(RD_KAFKA_V_PARTITION) && defined(RD_KAFKA_V_VALUE) &&    \
+    defined(RD_KAFKA_V_MSGFLAGS) && defined(RD_KAFKA_V_TIMESTAMP) && defined(RD_KAFKA_V_KEY) && \
+    defined(RD_KAFKA_V_END)
+    #define OMKAFKA_HAS_PRODUCEV 1
+#else
+    #define OMKAFKA_HAS_PRODUCEV 0
+#endif
+
+/* Static record header helpers first appeared in librdkafka v0.11.0. */
+#if defined(RD_KAFKA_V_HEADERS) && (OMKAFKA_HAS_PRODUCEVA || OMKAFKA_HAS_PRODUCEV)
+    #define OMKAFKA_HAS_HEADERS 1
+#else
+    #define OMKAFKA_HAS_HEADERS 0
 #endif
 
 #include "rsyslog.h"
@@ -232,7 +255,9 @@ typedef struct _instanceData {
     struct kafka_params *topicConfParams;
     int nHeaders;
     struct kafka_params *headers;
+#if OMKAFKA_HAS_HEADERS
     rd_kafka_headers_t *kafka_headers;
+#endif
     uchar *errorFile;
     uchar *key;
     int bReopenOnHup;
@@ -788,8 +813,8 @@ static rsRetVal ATTR_NONNULL(1, 3) writeKafka(instanceData *const pData,
     pthread_rwlock_t *dynTopicLock = NULL;
     failedmsg_entry *fmsgEntry;
     int topic_mut_locked = 0;
-    rd_kafka_resp_err_t msg_kafka_response;
-#if RD_KAFKA_VERSION >= 0x00090400
+    rd_kafka_resp_err_t msg_kafka_response = RD_KAFKA_RESP_ERR_NO_ERROR;
+#if OMKAFKA_HAS_PRODUCEVA || OMKAFKA_HAS_PRODUCEV
     int64_t ttMsgTimestamp;
 #else
     int msg_enqueue_status = 0;
@@ -812,7 +837,7 @@ static rsRetVal ATTR_NONNULL(1, 3) writeKafka(instanceData *const pData,
         rkt = pData->pTopic;
     }
 
-#if RD_KAFKA_VERSION >= 0x00090400
+#if OMKAFKA_HAS_PRODUCEVA || OMKAFKA_HAS_PRODUCEV
     if (msgTimestamp == NULL) {
         /* Resubmitted items don't have a timestamp */
         ttMsgTimestamp = 0;
@@ -820,6 +845,9 @@ static rsRetVal ATTR_NONNULL(1, 3) writeKafka(instanceData *const pData,
         ttMsgTimestamp = atoi((char *)msgTimestamp); /* Convert timestamp into int */
         ttMsgTimestamp *= 1000; /* Timestamp in Milliseconds for kafka */
     }
+#endif
+
+#if OMKAFKA_HAS_PRODUCEVA
     DBGPRINTF("omkafka: rd_kafka_producev timestamp=%s/%" PRId64 "\n", msgTimestamp, ttMsgTimestamp);
 
     /* Using new Kafka produceva API, build argument list dynamically */
@@ -848,9 +876,11 @@ static rsRetVal ATTR_NONNULL(1, 3) writeKafka(instanceData *const pData,
         v[i++] = V_KEY(key, strlen((char *)key));
     }
 
+    #if OMKAFKA_HAS_HEADERS
     if (pData->kafka_headers) {
         v[i++] = V_HEADERS(pData->kafka_headers);
     }
+    #endif
 
     #undef V_RKT
     #undef V_PART
@@ -888,6 +918,66 @@ static rsRetVal ATTR_NONNULL(1, 3) writeKafka(instanceData *const pData,
                      msg);
         }
     }
+#elif OMKAFKA_HAS_PRODUCEV
+    DBGPRINTF("omkafka: rd_kafka_producev timestamp=%s/%" PRId64 "\n", msgTimestamp, ttMsgTimestamp);
+
+    const size_t msg_len = strlen((char *)msg);
+    const size_t key_len = key ? strlen((char *)key) : 0;
+
+    if (key == NULL) {
+    #if OMKAFKA_HAS_HEADERS
+        if (pData->kafka_headers) {
+            msg_kafka_response = rd_kafka_producev(
+                pData->rk, RD_KAFKA_V_RKT(rkt), RD_KAFKA_V_PARTITION(partition), RD_KAFKA_V_VALUE(msg, msg_len),
+                RD_KAFKA_V_MSGFLAGS(RD_KAFKA_MSG_F_COPY), RD_KAFKA_V_TIMESTAMP(ttMsgTimestamp), RD_KAFKA_V_KEY(NULL, 0),
+                RD_KAFKA_V_HEADERS(pData->kafka_headers), RD_KAFKA_V_END);
+        } else
+    #endif
+        {
+            msg_kafka_response =
+                rd_kafka_producev(pData->rk, RD_KAFKA_V_RKT(rkt), RD_KAFKA_V_PARTITION(partition),
+                                  RD_KAFKA_V_VALUE(msg, msg_len), RD_KAFKA_V_MSGFLAGS(RD_KAFKA_MSG_F_COPY),
+                                  RD_KAFKA_V_TIMESTAMP(ttMsgTimestamp), RD_KAFKA_V_KEY(NULL, 0), RD_KAFKA_V_END);
+        }
+    } else {
+        DBGPRINTF("omkafka: rd_kafka_producev key=%s\n", key);
+    #if OMKAFKA_HAS_HEADERS
+        if (pData->kafka_headers) {
+            msg_kafka_response = rd_kafka_producev(
+                pData->rk, RD_KAFKA_V_RKT(rkt), RD_KAFKA_V_PARTITION(partition), RD_KAFKA_V_VALUE(msg, msg_len),
+                RD_KAFKA_V_MSGFLAGS(RD_KAFKA_MSG_F_COPY), RD_KAFKA_V_TIMESTAMP(ttMsgTimestamp),
+                RD_KAFKA_V_KEY(key, key_len), RD_KAFKA_V_HEADERS(pData->kafka_headers), RD_KAFKA_V_END);
+        } else
+    #endif
+        {
+            msg_kafka_response =
+                rd_kafka_producev(pData->rk, RD_KAFKA_V_RKT(rkt), RD_KAFKA_V_PARTITION(partition),
+                                  RD_KAFKA_V_VALUE(msg, msg_len), RD_KAFKA_V_MSGFLAGS(RD_KAFKA_MSG_F_COPY),
+                                  RD_KAFKA_V_TIMESTAMP(ttMsgTimestamp), RD_KAFKA_V_KEY(key, key_len), RD_KAFKA_V_END);
+        }
+    }
+
+    if (msg_kafka_response != RD_KAFKA_RESP_ERR_NO_ERROR) {
+        updateKafkaFailureCounts(msg_kafka_response);
+
+        /* Put into kafka queue, again if configured! */
+        if (pData->bResubmitOnFailure && b_do_resubmit && msg_kafka_response != RD_KAFKA_RESP_ERR_MSG_SIZE_TOO_LARGE) {
+            DBGPRINTF(
+                "omkafka: Failed to produce to topic '%s' (rd_kafka_producev)"
+                "partition %d: '%d/%s' - adding MSG '%s' to failed for RETRY!\n",
+                rd_kafka_topic_name(rkt), partition, msg_kafka_response, rd_kafka_err2str(msg_kafka_response), msg);
+            CHKmalloc(fmsgEntry = failedmsg_entry_construct((char *)key, key_len, (char *)msg, msg_len,
+                                                            rd_kafka_topic_name(rkt)));
+            SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
+        } else {
+            LogError(0, RS_RET_KAFKA_PRODUCE_ERR,
+                     "omkafka: Failed to produce to topic '%s' (rd_kafka_producev)"
+                     "partition %d: %d/%s - KEY '%s' -MSG '%s'\n",
+                     rd_kafka_topic_name(rkt), partition, msg_kafka_response, rd_kafka_err2str(msg_kafka_response), key,
+                     msg);
+        }
+    }
+
 #else
 
     DBGPRINTF("omkafka: rd_kafka_produce\n");
@@ -903,8 +993,8 @@ static rsRetVal ATTR_NONNULL(1, 3) writeKafka(instanceData *const pData,
             DBGPRINTF(
                 "omkafka: Failed to produce to topic '%s' (rd_kafka_produce)"
                 "partition %d: '%d/%s' - adding MSG '%s' KEY '%s' to failed for RETRY!\n",
-                rd_kafka_topic_name(rkt), partition, msg_kafka_response, rd_kafka_err2str(rd_kafka_errno2err(errno)),
-                msg, key ? (const char *)key : "");
+                rd_kafka_topic_name(rkt), partition, msg_kafka_response, rd_kafka_err2str(msg_kafka_response), msg,
+                key ? (const char *)key : "");
             CHKmalloc(fmsgEntry = failedmsg_entry_construct((char *)key, key ? strlen((char *)key) : 0, (char *)msg,
                                                             strlen((char *)msg), rd_kafka_topic_name(rkt)));
             SLIST_INSERT_HEAD(&pData->failedmsg_head, fmsgEntry, entries);
@@ -922,7 +1012,7 @@ static rsRetVal ATTR_NONNULL(1, 3) writeKafka(instanceData *const pData,
     DBGPRINTF("omkafka: writeKafka kafka outqueue length: %d, callbacks called %d\n", rd_kafka_outq_len(pData->rk),
               callbacksCalled);
 
-#if RD_KAFKA_VERSION >= 0x00090400
+#if OMKAFKA_HAS_PRODUCEVA || OMKAFKA_HAS_PRODUCEV
     if (msg_kafka_response != RD_KAFKA_RESP_ERR_NO_ERROR) {
 #else
     if (msg_enqueue_status == -1) {
@@ -1702,7 +1792,9 @@ BEGINfreeInstance
         free((void *)pData->headers[i].val);
     }
     free(pData->headers);
+#if OMKAFKA_HAS_HEADERS
     if (pData->kafka_headers != NULL) rd_kafka_headers_destroy(pData->kafka_headers);
+#endif
     DESTROY_ATOMIC_HELPER_MUT(pData->mutCurrPartition);
     pthread_rwlock_destroy(&pData->rkLock);
     pthread_mutex_destroy(&pData->mut_doAction);
@@ -1859,7 +1951,9 @@ static void setInstParamDefaults(instanceData *pData) {
     pData->topicConfParams = NULL;
     pData->nHeaders = 0;
     pData->headers = NULL;
+#if OMKAFKA_HAS_HEADERS
     pData->kafka_headers = NULL;
+#endif
     pData->errorFile = NULL;
     pData->statsFile = NULL;
     pData->failedMsgFile = NULL;
@@ -1942,6 +2036,7 @@ BEGINnewActInst
                 free(cstr);
             }
         } else if (!strcmp(actpblk.descr[i].name, "kafkaheader")) {
+#if OMKAFKA_HAS_HEADERS
             pData->nHeaders = pvals[i].val.d.ar->nmemb;
             CHKmalloc(pData->headers = malloc(sizeof(struct kafka_params) * pvals[i].val.d.ar->nmemb));
             for (int j = 0; j < pvals[i].val.d.ar->nmemb; ++j) {
@@ -1949,6 +2044,11 @@ BEGINnewActInst
                 CHKiRet(processKafkaParam(cstr, &pData->headers[j].name, &pData->headers[j].val));
                 free(cstr);
             }
+#else
+            LogError(0, RS_RET_CONFIG_ERROR,
+                     "omkafka: kafkaheader parameter requires librdkafka with record header support (v0.11 or newer)");
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+#endif
         } else if (!strcmp(actpblk.descr[i].name, "errorfile")) {
             pData->errorFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(actpblk.descr[i].name, "statsfile")) {
@@ -1973,6 +2073,7 @@ BEGINnewActInst
         }
     }
 
+#if OMKAFKA_HAS_HEADERS
     if (pData->nHeaders > 0) {
         pData->kafka_headers = rd_kafka_headers_new(pData->nHeaders);
         if (pData->kafka_headers == NULL) {
@@ -1989,6 +2090,7 @@ BEGINnewActInst
             }
         }
     }
+#endif
 
     if (pData->brokers == NULL) {
         CHKmalloc(pData->brokers = strdup("localhost:9092"));

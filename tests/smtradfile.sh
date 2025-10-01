@@ -10,5 +10,5 @@ startup
 injectmsg 0 1
 shutdown_when_empty
 wait_shutdown
-content_check "Mar  1 01:00:00 172.20.245.8 tag msgnum:00000000:"
+content_check "Mar  1 01:00:00 192.0.2.8 tag msgnum:00000000:"
 exit_test

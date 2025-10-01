@@ -46,47 +46,31 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive. camelCase is recommended for readability.
 
 
-Action Parameters
------------------
+**Input Parameters**
 
-separator
-^^^^^^^^^
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
+   * - Parameter
+     - Summary
+   * - :ref:`param-mmfields-separator`
+     - .. include:: ../../reference/parameters/mmfields-separator.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmfields-jsonroot`
+     - .. include:: ../../reference/parameters/mmfields-jsonroot.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
-   "char", ",", "no", "none"
+.. toctree::
+   :hidden:
 
-This is the character used to separate fields. Currently, only a
-single character is permitted, while the RainerScript method permits
-to specify multi-character separator strings. For CEF, this is not
-required. If there is actual need to support multi-character
-separator strings, support can relatively easy be added. It is
-suggested to request it on the rsyslog mailing list, together with
-the use case - we intend to add functionality only if there is a real
-use case behind the request (in the past we too-often implemented
-things that actually never got used).
-The fields are named f\ *nbr*, where *nbr* is the field number
-starting with one and being incremented for each field.
-
-
-jsonRoot
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "!", "no", "none"
-
-This parameters specifies into which json path the extracted fields
-shall be written. The default is to use the json root object itself.
+   ../../reference/parameters/mmfields-separator
+   ../../reference/parameters/mmfields-jsonroot
 
 
 Examples

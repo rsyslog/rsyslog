@@ -641,9 +641,9 @@ statsbysenders
    "binary", "off", "no", "none"
 
 
-This parameter allows the module "impstats" to generate stats by senders (sender list in the field "server") and not stats by omhttp instance.
-if this is enable, the name of the stats will be : "<instance name>(<server name>)".
-if this is disable, the name of the stats will be : "<instance name>(ALL)".
+This parameter configures `omhttp` to generate statistics on a per-destination-server basis, rather than per action instance. The destination servers are specified in the `server` parameter.
+if this is enabled, the name of the stats will be: "<instance name>(<server name>)".
+if this is disabled, the name of the stats will be: "<instance name>(ALL)".
 
 
 Statistic Counter
@@ -660,8 +660,6 @@ accumulates all action instances. The statistic origin is named "omhttp" with fo
 
 - **messages.retry** - Number of messages that omhttp resubmitted for retry via the retry ruleset.
 
-- **request.count** - Number of attempted HTTP requests.
-
 - **request.success** - Number of successful HTTP requests. A successful request can return *any* HTTP status code.
 
 - **request.fail** - Number of failed HTTP requests. A failed request is something like an invalid SSL handshake, or the server is not reachable. Requests returning 4XX or 5XX HTTP status codes are *not* failures.
@@ -669,9 +667,6 @@ accumulates all action instances. The statistic origin is named "omhttp" with fo
 - **request.status.success** - Number of requests returning 1XX or 2XX HTTP status codes.
 
 - **request.status.fail** - Number of requests returning 3XX, 4XX, or 5XX HTTP status codes. If a requests fails (i.e. server not reachable) this counter will *not* be incremented.
-
-
-Additionally, the following statistics can also be configured for a specific action instances. See `statsname`_ for more details.
 
 - **requests.count** - Number of requests 
 

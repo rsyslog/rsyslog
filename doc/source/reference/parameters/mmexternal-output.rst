@@ -41,6 +41,7 @@ processing that happens between plugin and rsyslog core.
 
 Input usage
 -----------
+.. _param-mmexternal-input-output:
 .. _mmexternal.parameter.input.output-usage:
 
 .. code-block:: rsyslog

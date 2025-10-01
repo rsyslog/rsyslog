@@ -8,7 +8,7 @@ $template tcldict, "message \"%msg:::json%\" fromhost \"%HOSTNAME:::json%\" faci
 add_conf "*.* :omtcl:$srcdir/omtcl.tcl,doAction;tcldict
 "
 startup
-echo 'injectmsg literal <167>Mar  1 01:00:00 172.20.245.8 tag hello world' | \
+echo 'injectmsg literal <167>Mar  1 01:00:00 192.0.2.8 tag hello world' | \
 	./diagtalker -p$IMDIAG_PORT || error_exit $?
 echo doing shutdown
 shutdown_when_empty

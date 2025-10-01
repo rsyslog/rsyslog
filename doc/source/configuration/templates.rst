@@ -1,54 +1,145 @@
+.. _ref-templates:
+
 Templates
 =========
 
-.. _templates.description:
+.. index::
+   single: templates; overview
+   single: schema mapping; templates
+   single: data pipeline; templates
 
-Description
------------
+.. meta::
+   :keywords: rsyslog, templates, list, subtree, string, plugin, schema mapping, data pipeline, jsonf, outname, ECS, mmjsonparse, mmleefparse, omelasticsearch, omfile
 
-Templates are a key feature of rsyslog. They define arbitrary output
-formats and enable dynamic file name generation. Every output, including
-files, user messages, and database writes, relies on templates. When no
-explicit template is set, rsyslog uses built-in defaults compatible with
-stock syslogd formats. Key elements of templates are rsyslog
-properties; see :doc:`rsyslog properties <properties>`.
+.. summary-start
 
-.. _templates.template-processing:
+Templates define how rsyslog transforms data before output.
+They map parsed fields into schemas, format records, and generate dynamic destinations.
 
-Template processing
--------------------
+.. summary-end
 
-When defining a template it should include a `HEADER` as defined in
-`RFC5424 <https://datatracker.ietf.org/doc/html/rfc5424>`_. Understanding
-:doc:`rsyslog parsing <parser>` is important. For example, if the ``MSG``
-field is ``"this:is a message"`` and neither ``HOSTNAME`` nor ``TAG`` are
-specified, the outgoing parser splits the message as:
 
-.. code-block:: none
+Overview
+--------
 
-   TAG:this:
-   MSG:is a message
+Templates are a central concept in rsyslog. They sit at the point where **parsed
+messages are transformed into their final structure**. This includes:
+
+- **Schema mapping in pipelines** — normalize or rename parsed fields
+  into a structured schema (e.g., ECS JSON).
+- **Output generation** — create custom message formats or dynamic filenames.
+- **Textual transport formats** — add headers when targeting syslog or other
+  line-based transports.
+
+Every output in rsyslog, from files to Elasticsearch to remote syslog,
+relies on templates. If no explicit template is bound, rsyslog uses built-in
+defaults compatible with classic syslog.
+
+
+Message pipeline integration
+----------------------------
+
+Templates appear between **parsing** and **actions**. They define what data
+is sent forward:
+
+.. mermaid::
+
+   flowchart TD
+      A["Input<br>(imudp, imtcp, imkafka)"]
+      B["Parser (mmjsonparse,<br>mmleefparse)"]
+      C["Template<br>list (mapping)"]
+      D["Action<br>(omfile, omelasticsearch)"]
+      A --> B --> C --> D
+
+   %% Alternative when a prepared tree exists:
+      E["Prepared tree<br>($!ecs)"] --> F["Template<br>subtree"] --> D
+      A --> E
+      B --> E
+
+
+Choosing a template type
+------------------------
+
+- Use :ref:`ref-templates-type-list` to map fields one by one
+  (rename keys, add or drop fields, inject constants) and build JSON safely
+  with ``jsonf`` or ``jsonftree``.
+- Use :ref:`ref-templates-type-subtree` to serialize a prepared
+  JSON tree (for example, after :ref:`ref-mmjsonparse` or
+  :ref:`ref-mmleefparse` populated ``$!ecs``).
+- Use :ref:`ref-templates-type-string` for simple text records
+  (legacy syslog lines, CSV, or other plain-text formats).
+- Use :ref:`ref-templates-type-plugin` for special encodings
+  provided by modules.
+
+
+Schema mapping with JSONF
+-------------------------
+
+Modern pipelines should prefer structured JSON. The recommended method is:
+
+- Enable JSON-safe encoding with ``option.jsonf="on"``.  Use
+  ``option.jsonftree="on"`` instead when you want dotted ``outname``
+  segments to become nested JSON objects automatically.
+- For each field, use
+  :ref:`property() <ref-templates-statement-property>` or
+  :ref:`constant() <ref-templates-statement-constant>` with ``format="jsonf"``.
+- For pre-normalized data, serialize a complete subtree such as ``$!ecs``
+  with a :ref:`subtree template <ref-templates-type-subtree>`.
+
+This ensures correct escaping and avoids handcrafted JSON concatenation.
+
+Detailed examples are provided in the template type pages.
+
+
+Templates for textual transports
+--------------------------------
+
+When the target transport expects **textual records** (for example,
+classic syslog receivers, line-based file formats, or CSV),
+the template must include a transport header. This is required so
+receivers can parse message boundaries and metadata.
+
+Typical cases:
+
+- **Syslog protocols (RFC5424, RFC3164, protocol-23 draft)**
+  Require a syslog header (timestamp, hostname, tag).
+- **Text file formats**
+  Such as ``RSYSLOG_FileFormat`` or ``RSYSLOG_TraditionalFileFormat``,
+  which prepend headers before the message body.
+- **Custom plain-text records**
+  Where a template explicitly builds a line with fields separated by
+  spaces, commas, or tabs.
+
+Predefined reserved templates like ``RSYSLOG_ForwardFormat`` or
+``RSYSLOG_SyslogProtocol23Format`` exist for these purposes.
+
+If your output is a **structured JSON pipeline** (e.g. to Elasticsearch
+or a file), you do not need to add any textual header.
+
 
 .. _templates.template-object:
 
 The ``template()`` object
 -------------------------
 
-Templates are defined with the ``template()`` object, which is a static
-construct processed when rsyslog reads the configuration. Basic syntax:
+Templates are defined with the ``template()`` object, a static construct
+processed when rsyslog reads the configuration. Basic syntax:
 
-.. code-block:: none
+.. code-block:: rsyslog
 
-   template(parameters)
+   template(name="..." type="...")
 
-List templates additionally support an extended syntax:
+List templates additionally support a block form:
 
-.. code-block:: none
+.. code-block:: rsyslog
 
-   template(parameters) { list-descriptions }
+   template(name="..." type="list" option.jsonftree="on") {
+     property(outname="field" name="msg" format="jsonf")
+     constant(outname="@version" value="1" format="jsonf")
+   }
 
-Parameters ``name`` and ``type`` select the template name and type. The
-name must be unique. See below for available types and statements.
+See the type-specific subpages for details.
+
 
 .. _templates.types:
 
@@ -79,6 +170,7 @@ Template types
         :start-after: .. summary-start
         :end-before: .. summary-end
 
+
 .. _templates.statements:
 
 Template statements
@@ -98,6 +190,7 @@ Template statements
      - .. include:: ../reference/templates/templates-statement-property.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+
 
 .. _templates.additional:
 
@@ -127,10 +220,14 @@ Additional topics
         :start-after: .. summary-start
         :end-before: .. summary-end
 
+
 .. _templates.reserved-table:
 
 Reserved template names overview
 --------------------------------
+
+These names provide predefined formats mainly for **compatibility**.
+For modern JSON pipelines, prefer custom list or subtree templates.
 
 .. list-table::
    :header-rows: 1
@@ -165,11 +262,13 @@ Reserved template names overview
    * - RSYSLOG_StdJSONFmt
      - JSON structure of message properties
 
+
 Legacy ``$template`` statement
 ------------------------------
 
 For historical configurations, the legacy ``$template`` syntax is still
 recognized. See :ref:`ref-templates-legacy` for details.
+
 
 See also
 --------
@@ -177,6 +276,7 @@ See also
 - `How to bind a template <https://www.rsyslog.com/how-to-bind-a-template/>`_
 - `Adding the BOM to a message <https://www.rsyslog.com/adding-the-bom-to-a-message/>`_
 - `How to separate log files by host name of the sending device <https://www.rsyslog.com/article60/>`_
+
 
 .. toctree::
    :hidden:
