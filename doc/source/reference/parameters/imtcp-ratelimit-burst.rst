@@ -36,6 +36,11 @@ Input usage
 
    input(type="imtcp" rateLimit.Burst="20000")
 
+Notes
+-----
+
+.. include:: ratelimit-inline-note.rst
+
 See also
 --------
 See also :doc:`../../configuration/modules/imtcp`.

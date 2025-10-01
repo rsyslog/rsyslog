@@ -137,6 +137,7 @@ typedef struct _instanceData {
     unsigned poolResumeInterval;
     unsigned int ratelimitInterval;
     unsigned int ratelimitBurst;
+    ratelimit_config_t *ratelimitCfg;
     ratelimit_t *ratelimiter;
     targetStats_t *target_stats;
 } instanceData;
@@ -245,7 +246,8 @@ static struct cnfparamdescr actpdescr[] = {
     {"template", eCmdHdlrGetWord, 0},
     {"pool.resumeinterval", eCmdHdlrPositiveInt, 0},
     {"ratelimit.interval", eCmdHdlrInt, 0},
-    {"ratelimit.burst", eCmdHdlrInt, 0}};
+    {"ratelimit.burst", eCmdHdlrInt, 0},
+    {"ratelimit.name", eCmdHdlrString, 0}};
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 struct modConfData_s {
@@ -1498,6 +1500,7 @@ static void setInstParamDefaults(instanceData *pData) {
     pData->compressionMode = COMPRESS_NEVER;
     pData->ipfreebind = IPFREEBIND_ENABLED_WITH_LOG;
     pData->poolResumeInterval = 30;
+    pData->ratelimitCfg = NULL;
     pData->ratelimiter = NULL;
     pData->ratelimitInterval = 0;
     pData->ratelimitBurst = 200;
@@ -1558,6 +1561,8 @@ BEGINnewActInst
     int i;
     rsRetVal localRet;
     int complevel = -1;
+    char *ratelimitName = NULL;
+    sbool ratelimitParamsUsed = 0;
     CODESTARTnewActInst;
     DBGPRINTF("newActInst (omfwd)\n");
 
@@ -1760,13 +1765,27 @@ BEGINnewActInst
             pData->poolResumeInterval = (unsigned int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "ratelimit.burst")) {
             pData->ratelimitBurst = (unsigned int)pvals[i].val.d.n;
+            ratelimitParamsUsed = 1;
         } else if (!strcmp(actpblk.descr[i].name, "ratelimit.interval")) {
             pData->ratelimitInterval = (unsigned int)pvals[i].val.d.n;
+            ratelimitParamsUsed = 1;
+        } else if (!strcmp(actpblk.descr[i].name, "ratelimit.name")) {
+            free(ratelimitName);
+            ratelimitName = es_str2cstr(pvals[i].val.d.estr, NULL);
         } else {
             LogError(0, RS_RET_INTERNAL_ERROR, "omfwd: program error, non-handled parameter '%s'",
                      actpblk.descr[i].name);
         }
     }
+
+    const sbool needRatelimitCfg = (pData->ratelimitInterval > 0) || ratelimitParamsUsed || (ratelimitName != NULL);
+    if (needRatelimitCfg && iRet == RS_RET_OK) {
+        CHKiRet(ratelimitResolveFromValues(loadModConf->pConf, "omfwd", ratelimitName, ratelimitParamsUsed,
+                                           &pData->ratelimitInterval, &pData->ratelimitBurst, NULL,
+                                           &pData->ratelimitCfg));
+    }
+
+    free(ratelimitName);
 
     if (pData->protocol == FORW_UDP && pData->nTargets > 1) {
         parser_warnmsg(
@@ -1826,8 +1845,7 @@ BEGINnewActInst
     }
 
     if (pData->ratelimitInterval > 0) {
-        CHKiRet(ratelimitNew(&pData->ratelimiter, "omfwd", NULL));
-        ratelimitSetLinuxLike(pData->ratelimiter, pData->ratelimitInterval, pData->ratelimitBurst);
+        CHKiRet(ratelimitNewFromConfig(&pData->ratelimiter, pData->ratelimitCfg, NULL));
         ratelimitSetNoTimeCache(pData->ratelimiter);
     }
 

@@ -110,6 +110,8 @@ DEF_ATOMIC_HELPER_MUT(mutTerminateInputs);
 static int iFdSetSize = howmany(FD_SETSIZE, __NFDBITS) * sizeof(fd_mask); /* size of select() bitmask in bytes */
 #endif
 static uchar *SourceIPofLocalClient = NULL; /* [ar] Source IP for local client to be used on multihomed host */
+static char *internalMsgRatelimitName = NULL; /* shared ratelimit reference for internal messages */
+static sbool internalMsgRlParamsUsed = 0; /* track inline ratelimit.* usage for internal messages */
 
 /* tables for interfacing with the v6 config system */
 static struct cnfparamdescr cnfparamdescr[] = {
@@ -174,6 +176,7 @@ static struct cnfparamdescr cnfparamdescr[] = {
     {"internal.developeronly.options", eCmdHdlrInt, 0},
     {"internalmsg.ratelimit.interval", eCmdHdlrPositiveInt, 0},
     {"internalmsg.ratelimit.burst", eCmdHdlrPositiveInt, 0},
+    {"internalmsg.ratelimit.name", eCmdHdlrString, 0},
     {"internalmsg.severity", eCmdHdlrSeverity, 0},
     {"allmessagestostderr", eCmdHdlrBinary, 0},
     {"errormessagestostderr.maxnumber", eCmdHdlrPositiveInt, 0},
@@ -1358,8 +1361,13 @@ rsRetVal glblDoneLoadCnf(void) {
             loadConf->globals.bAbortOnFailedQueueStartup = cnfparamvals[i].val.d.n;
         } else if (!strcmp(paramblk.descr[i].name, "internalmsg.ratelimit.burst")) {
             loadConf->globals.intMsgRateLimitBurst = (int)cnfparamvals[i].val.d.n;
+            internalMsgRlParamsUsed = 1;
         } else if (!strcmp(paramblk.descr[i].name, "internalmsg.ratelimit.interval")) {
             loadConf->globals.intMsgRateLimitItv = (int)cnfparamvals[i].val.d.n;
+            internalMsgRlParamsUsed = 1;
+        } else if (!strcmp(paramblk.descr[i].name, "internalmsg.ratelimit.name")) {
+            free(internalMsgRatelimitName);
+            internalMsgRatelimitName = es_str2cstr(cnfparamvals[i].val.d.estr, NULL);
         } else if (!strcmp(paramblk.descr[i].name, "internalmsg.severity")) {
             loadConf->globals.intMsgsSeverityFilter = (int)cnfparamvals[i].val.d.n;
             if ((loadConf->globals.intMsgsSeverityFilter < 0) || (loadConf->globals.intMsgsSeverityFilter > 7)) {
@@ -1421,6 +1429,26 @@ rsRetVal glblDoneLoadCnf(void) {
                 paramblk.descr[i].name);
         }
     }
+
+    const sbool needInternalRlCfg =
+        (loadConf->globals.intMsgRateLimitItv > 0) || internalMsgRlParamsUsed || (internalMsgRatelimitName != NULL);
+    if (needInternalRlCfg) {
+        unsigned int interval = (unsigned int)loadConf->globals.intMsgRateLimitItv;
+        unsigned int burst = (unsigned int)loadConf->globals.intMsgRateLimitBurst;
+        const rsRetVal rlRet =
+            ratelimitResolveFromValues(loadConf, "internalmsg", internalMsgRatelimitName, internalMsgRlParamsUsed,
+                                       &interval, &burst, NULL, &loadConf->globals.internalMsgRatelimitCfg);
+        if (rlRet == RS_RET_OK) {
+            loadConf->globals.intMsgRateLimitItv = (int)interval;
+            loadConf->globals.intMsgRateLimitBurst = (int)burst;
+        } else {
+            LogError(0, rlRet, "global: unable to resolve internalmsg ratelimit configuration");
+        }
+    }
+
+    free(internalMsgRatelimitName);
+    internalMsgRatelimitName = NULL;
+    internalMsgRlParamsUsed = 0;
 
     if (loadConf->globals.debugOnShutdown && Debug != DEBUG_FULL) {
         Debug = DEBUG_ONDEMAND;

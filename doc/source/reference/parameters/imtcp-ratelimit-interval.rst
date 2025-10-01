@@ -37,6 +37,11 @@ Input usage
 
    input(type="imtcp" rateLimit.Interval="5")
 
+Notes
+-----
+
+.. include:: ratelimit-inline-note.rst
+
 See also
 --------
 See also :doc:`../../configuration/modules/imtcp`.

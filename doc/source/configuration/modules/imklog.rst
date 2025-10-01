@@ -202,6 +202,21 @@ set high to allow for a large volume of messages on boot.
 
   module(load="imklog" RatelimitBurst="5000" RatelimitInterval="5")
 
+Using ratelimit.name
+--------------------
+
+.. include:: ../../reference/parameters/imklog-ratelimit-name.rst
+   :start-after: .. summary-start
+   :end-before: .. summary-end
+
+Example usage:
+
+.. code-block:: none
+
+   ratelimit(name="kernel-log", interval="10", burst="200")
+
+   module(load="imklog" ratelimit.name="kernel-log")
+
 
 Unsupported |FmtObsoleteName| directives
 ========================================
@@ -226,5 +241,4 @@ Unsupported |FmtObsoleteName| directives
 
    Linux only, ignored on other platforms (but may be specified).
    Defaults to off.
-
 

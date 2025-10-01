@@ -532,6 +532,14 @@ RateLimit.Burst
 Specifies the rate-limiting burst in number of messages.
 
 
+ratelimit.name
+^^^^^^^^^^^^^^
+
+.. include:: ../../reference/parameters/omfwd-ratelimit-name.rst
+   :start-after: .. summary-start
+   :end-before: .. summary-end
+
+
 StreamDriver
 ^^^^^^^^^^^^
 

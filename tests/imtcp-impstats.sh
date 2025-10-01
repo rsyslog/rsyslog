@@ -41,7 +41,7 @@ if [ "$EXPECTED_COUNT" -gt 0 ]; then
     fi
 else
     if [ "$NUM_STATS" -ne "$EXPECTED_COUNT" ]; then
-        echo "ERROR: Expected $EXPECTED_COUNT lines, but found $NUM_STATS in pstats"
+        echo "ERROR: Expected $EXPECTED_COUNT lines, but not found $NUM_STATS in pstats"
         error_exit 1
     fi
 fi

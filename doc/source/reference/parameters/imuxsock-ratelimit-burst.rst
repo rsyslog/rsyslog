@@ -37,6 +37,8 @@ Input usage
 
    input(type="imuxsock" rateLimit.burst="500")
 
+.. include:: ratelimit-inline-note.rst
+
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Historic names/directives for compatibility. Do not use in new configs.

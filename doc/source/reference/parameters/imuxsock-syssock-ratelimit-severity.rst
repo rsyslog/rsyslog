@@ -27,6 +27,11 @@ Description
 -----------
 Specifies the severity of messages that shall be rate-limited.
 
+.. note::
+
+   When ``syssock.ratelimit.name`` is used, configure the severity inside
+   the referenced :doc:`ratelimit object </rainerscript/ratelimit>`.
+
 .. seealso::
 
    https://en.wikipedia.org/wiki/Syslog#Severity_level

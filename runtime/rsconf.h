@@ -23,12 +23,15 @@
 #ifndef INCLUDED_RSCONF_H
 #define INCLUDED_RSCONF_H
 
+#include <stdint.h>
+
 #include "linkedlist.h"
 #include "queue.h"
 #include "lookup.h"
 #include "dynstats.h"
 #include "perctile_stats.h"
 #include "timezones.h"
+#include "ratelimit.h"
 
 /* --- configuration objects (the plan is to have ALL upper layers in this file) --- */
 
@@ -140,6 +143,7 @@ struct globals_s {
     uint64_t glblDevOptions; /* to be used by developers only */
     int intMsgRateLimitItv;
     int intMsgRateLimitBurst;
+    ratelimit_config_t *internalMsgRatelimitCfg;
     int intMsgsSeverityFilter; /* filter for logging internal messages by syslog sev. */
     int permitCtlC;
 
@@ -207,6 +211,13 @@ struct outchannels_s {
     struct outchannel *ochLast; /* points to the last element of the outchannel list */
 };
 
+struct ratelimit_store_s {
+    ratelimit_config_t *head;
+    ratelimit_config_t *tail;
+    uint64_t next_auto_id;
+};
+typedef struct ratelimit_store_s ratelimit_store_t;
+
 struct templates_s {
     struct template *root; /* the root of the template list */
     struct template *last; /* points to the last element of the template list */
@@ -261,6 +272,7 @@ struct rsconf_s {
         dynstats_buckets_t dynstats_buckets;
         perctile_buckets_t perctile_buckets;
         outchannels_t och;
+        ratelimit_store_t ratelimits;
         actions_t actions;
         rulesets_t rulesets;
         /* note: rulesets include the complete output part:

@@ -115,6 +115,10 @@ Input Parameters
      - .. include:: ../../reference/parameters/imudp-ratelimit-burst.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imudp-ratelimit-name`
+     - .. include:: ../../reference/parameters/imudp-ratelimit-name.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-imudp-name`
      - .. include:: ../../reference/parameters/imudp-name.rst
         :start-after: .. summary-start
@@ -355,6 +359,7 @@ Additional Resources
    ../../reference/parameters/imudp-ruleset
    ../../reference/parameters/imudp-ratelimit-interval
    ../../reference/parameters/imudp-ratelimit-burst
+   ../../reference/parameters/imudp-ratelimit-name
    ../../reference/parameters/imudp-name
    ../../reference/parameters/imudp-name-appendport
    ../../reference/parameters/imudp-defaulttz

@@ -1043,6 +1043,74 @@ content_check_with_count() {
 	done
 }
 
+## wait_ratelimit_lines
+## @brief Wait until the ratelimit output file reaches the expected size.
+## @description
+##  Uses environment controls to decide when enough lines were written by a
+##  rate-limited test so shutdown_when_empty does not wait on the full message
+##  count. The following variables are honoured:
+##  * RATELIMIT_EXPECTED_LINES (mandatory): minimum number of lines to wait for.
+##  * RATELIMIT_OUTPUT_FILE: file to inspect (defaults to RSYSLOG_OUT_LOG).
+##  * RATELIMIT_WAIT_GRACE_SECS: maximum time to wait (defaults to 5 seconds).
+##  * RATELIMIT_POLL_SECS: poll interval (defaults to 0.2 seconds).
+##  * RATELIMIT_SETTLE_SECS: extra sleep once the threshold is met (defaults to
+##    0.5 seconds) to reduce false negatives.
+wait_ratelimit_lines() {
+	local expected="${RATELIMIT_EXPECTED_LINES:-0}"
+	local file="${RATELIMIT_OUTPUT_FILE:-$RSYSLOG_OUT_LOG}"
+	local grace="${RATELIMIT_WAIT_GRACE_SECS:-5}"
+	local poll="${RATELIMIT_POLL_SECS:-0.2}"
+	local settle="${RATELIMIT_SETTLE_SECS:-0.5}"
+
+	if [ "$expected" -le 0 ]; then
+		echo "FAIL: RATELIMIT_EXPECTED_LINES must be greater than zero"
+		error_exit 1
+	fi
+
+	local deadline now lines
+	deadline=$(( $(date +%s) + grace ))
+
+	while : ; do
+		if [ -f "$file" ]; then
+			lines=$(wc -l < "$file")
+			if [ "$lines" -ge "$expected" ]; then
+				sleep "$settle"
+				return 0
+			fi
+		fi
+		now=$(date +%s)
+		if [ "$now" -ge "$deadline" ]; then
+			break
+		fi
+		sleep "$poll"
+	done
+
+	return 1
+}
+
+## assert_ratelimit_delivery
+## @brief Ensure the delivered message count does not exceed the allowed burst.
+## @description Added 2025-10-01. Reads the configured output file and verifies
+##  the number of lines does not exceed RATELIMIT_BURST_LIMIT. Variables used:
+##  * RATELIMIT_BURST_LIMIT (required): maximum permitted line count.
+##  * RATELIMIT_OUTPUT_FILE: file to inspect (defaults to RSYSLOG_OUT_LOG).
+assert_ratelimit_delivery() {
+	local burst="${RATELIMIT_BURST_LIMIT:-0}"
+	local file="${RATELIMIT_OUTPUT_FILE:-$RSYSLOG_OUT_LOG}"
+
+	if [ "$burst" -le 0 ]; then
+		echo "FAIL: RATELIMIT_BURST_LIMIT must be greater than zero"
+		error_exit 1
+	fi
+
+	local delivered
+	delivered=$(grep -c 'msgnum:' "$file" 2>/dev/null)
+	if [ "$delivered" -gt "$burst" ]; then
+		echo "ERROR: expected no more than $burst messages, got $delivered"
+		error_exit 1
+	fi
+}
+
 
 custom_content_check() {
 	grep -qF -- "$1" < $2

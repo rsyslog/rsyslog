@@ -419,6 +419,8 @@ int fileno(FILE *stream);
 				  BEGIN INOBJ; return BEGINOBJ; }
 "module"[ \n\t]*"("		{ cnfPrintToken(yytext); yylval.objType = CNFOBJ_MODULE;
 				  BEGIN INOBJ; return BEGINOBJ; }
+"ratelimit"[ \n\t]*"("	{ cnfPrintToken(yytext); yylval.objType = CNFOBJ_RATELIMIT;
+				  BEGIN INOBJ; return BEGINOBJ; }
 "lookup_table"[ \n\t]*"("	{ cnfPrintToken(yytext); yylval.objType = CNFOBJ_LOOKUP_TABLE;
 				  BEGIN INOBJ; return BEGINOBJ; }
 "dyn_stats"[ \n\t]*"("		{ cnfPrintToken(yytext); yylval.objType = CNFOBJ_DYN_STATS;

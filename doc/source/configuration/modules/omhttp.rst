@@ -469,6 +469,14 @@ ratelimit.burst
 This parameter sets the rate limiting behavior for the retry.ruleset_. Specifies the maximum number of messages that can be emitted within the ratelimit.interval interval. For further information, see description there.
 
 
+ratelimit.name
+^^^^^^^^^^^^^^
+
+.. include:: ../../reference/parameters/omhttp-ratelimit-name.rst
+   :start-after: .. summary-start
+   :end-before: .. summary-end
+
+
 errorfile
 ^^^^^^^^^
 

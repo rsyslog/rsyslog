@@ -197,6 +197,10 @@ Action Parameters
      - .. include:: ../../reference/parameters/omelasticsearch-ratelimit-burst.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-omelasticsearch-ratelimit-name`
+     - .. include:: ../../reference/parameters/omelasticsearch-ratelimit-name.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-omelasticsearch-rebindinterval`
      - .. include:: ../../reference/parameters/omelasticsearch-rebindinterval.rst
         :start-after: .. summary-start
@@ -241,6 +245,7 @@ Action Parameters
    ../../reference/parameters/omelasticsearch-retryruleset
    ../../reference/parameters/omelasticsearch-ratelimit-interval
    ../../reference/parameters/omelasticsearch-ratelimit-burst
+   ../../reference/parameters/omelasticsearch-ratelimit-name
    ../../reference/parameters/omelasticsearch-rebindinterval
 
 .. _omelasticsearch-statistic-counter:

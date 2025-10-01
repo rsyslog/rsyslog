@@ -36,6 +36,11 @@ Input usage
 
    input(type="imptcp" rateLimit.burst="...")
 
+Notes
+-----
+
+.. include:: ratelimit-inline-note.rst
+
 See also
 --------
 See also :doc:`../../configuration/modules/imptcp`.
