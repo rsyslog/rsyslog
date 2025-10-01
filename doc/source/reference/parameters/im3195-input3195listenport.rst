@@ -21,7 +21,6 @@ This directive applies to :doc:`../../configuration/modules/im3195`.
    This is a legacy global directive. The im3195 module does not support
    the modern ``input()`` syntax.
 
-:Name: $Input3195ListenPort
 :Scope: module
 :Type: integer
 :Default: 601
