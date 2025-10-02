@@ -211,7 +211,7 @@ jobs:
         env:
           CFLAGS: ${{ env.CFLAGS }}
           LDFLAGS: ${{ env.LDFLAGS }}
-        run: make -j5 check
+        run: make -j8 check
 
       - name: show error logs (if we errored)
         if: ${{ failure() || cancelled() }}

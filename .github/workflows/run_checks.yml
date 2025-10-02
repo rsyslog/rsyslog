@@ -63,15 +63,17 @@ jobs:
       - name: run container CI pipeline
         run: |
           chmod -R go+rw .
-          export CODECOV_repo_slug="$(git config --get remote.origin.url | sed -E 's#.*[:/]([^/]+/[^/.]+)(\\.git)?$#\1#')"
-          export CODECOV_commit_sha="$(git rev-parse HEAD)"
+          CODECOV_repo_slug="$(git config --get remote.origin.url | sed -E 's#.*[:/]([^/]+/[^/.]+)(\\.git)?$#\1#')"
+          export CODECOV_repo_slug
+          CODECOV_commit_sha="$(git rev-parse HEAD)"
+          export CODECOV_commit_sha
           export RSYSLOG_CONTAINER_UID="" # use default
           export RSYSLOG_STATSURL='http://build.rsyslog.com/testbench-failedtest.php'
           export CFLAGS='-g'
           export CC='gcc'
           export USE_AUTO_DEBUG='off'
           export CI_MAKE_OPT='-j20'
-          export CI_MAKE_CHECK_OPT='-j4'
+          export CI_MAKE_CHECK_OPT='-j8'
           export CI_CHECK_CMD='check'
           export VERBOSE=1
           case "${{ matrix.config }}" in
@@ -131,6 +133,7 @@ jobs:
           'ubuntu_20')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu20.04.supp"
+              export CI_MAKE_CHECK_OPT='-j8'
               ;;
           'tumbleweed')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_suse:tumbleweed'
@@ -139,6 +142,7 @@ jobs:
           'ubuntu_24')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
+              export CI_MAKE_CHECK_OPT='-j8'
               # TODO: enable disabled components when the issues are fixed
               # It is better to run at least the majority of checks than to postpone that
               # any longer. 2025-01-31 RGerhards
@@ -150,6 +154,7 @@ jobs:
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
               export CI_CHECK_CMD='distcheck'
+              export CI_MAKE_CHECK_OPT='-j6'
               export ABORT_ALL_ON_TEST_FAIL='YES'
               export VERBOSE=1
               ;;
@@ -170,7 +175,7 @@ jobs:
           'ubuntu_24_tsan')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
               # This is CPU-heavy due to tsan, so we need less concurrency to prevent flakes
-              export CI_MAKE_CHECK_OPT='-j2'
+              export CI_MAKE_CHECK_OPT='-j3'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
               export CI_SANITIZE_BLACKLIST='tests/tsan.supp'
               export CC='clang'
@@ -191,7 +196,6 @@ jobs:
           'elasticsearch')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
-              export CI_MAKE_CHECK_OPT='-j1'
               export ABORT_ALL_ON_TEST_FAIL='NO'
               export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
                      --enable-imdiag --enable-impstats --enable-imfile --disable-imfile-tests \
