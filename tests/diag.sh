@@ -248,6 +248,15 @@ $IMDiagAbortTimeout '$TB_TEST_MAX_RUNTIME'
 
 :syslogtag, contains, "rsyslogd"  ./'${RSYSLOG_DYNNAME}$1'.started
 ###### end of testbench instrumentation part, test conf follows:' > ${TESTCONF_NM}$1.conf
+	# Optionally enforce IPv4 for this test instance.
+	# Set RSTB_FORCE_IPV4=1 to force, or set RSTB_NET_IPPROTO explicitly
+	# to one of: unspecified | ipv4-only | ipv6-only.
+	if [ "$RSTB_FORCE_IPV4" = "1" ] && [ -z "$RSTB_NET_IPPROTO" ]; then
+		RSTB_NET_IPPROTO="ipv4-only"
+	fi
+	if [ -n "$RSTB_NET_IPPROTO" ]; then
+		add_conf "global(net.ipprotocol=\"${RSTB_NET_IPPROTO}\")" "$1"
+	fi
 }
 
 # add more data to config file. Note: generate_conf must have been called

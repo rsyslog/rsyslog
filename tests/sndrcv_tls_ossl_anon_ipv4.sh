@@ -3,6 +3,10 @@
 # rgerhards, 2011-04-04
 # This file is part of the rsyslog project, released  under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+# Force IPv4 only when not explicitly running the IPv6 variant
+if [ "${TARGET:=127.0.0.1}" != "[::1]" ]; then
+export RSTB_FORCE_IPV4=1
+fi
 if [ "${TARGET:=127.0.0.1}" == "[::1]" ]; then
 . $srcdir/diag.sh check-ipv6-available
 fi
