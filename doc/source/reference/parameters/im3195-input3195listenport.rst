@@ -49,4 +49,4 @@ Module usage
 
 See also
 ~~~~~~~~
-See also :doc:`../../configuration/modules/im3195`.
+:doc:`../../configuration/modules/im3195`
