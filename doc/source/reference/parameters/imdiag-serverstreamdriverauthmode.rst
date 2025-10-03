@@ -18,7 +18,7 @@ This parameter applies to :doc:`../../configuration/modules/imdiag`.
 
 :Name: ServerStreamDriverAuthMode
 :Scope: input
-:Type: string (see :doc:`../../rainerscript/constant_strings`)
+:Type: string
 :Default: input=none
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
