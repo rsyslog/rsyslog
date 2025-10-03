@@ -6,9 +6,7 @@ Input3195ListenPort
 
 .. index::
    single: im3195; Input3195ListenPort
-   single: Input3195ListenPort
    single: im3195; $Input3195ListenPort
-   single: $Input3195ListenPort
 
 .. summary-start
 
