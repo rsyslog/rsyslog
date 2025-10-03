@@ -11,6 +11,7 @@ Input3195ListenPort
 .. summary-start
 
 The TCP port on which im3195 listens for RFC 3195 messages.
+The default is 601.
 
 .. summary-end
 
