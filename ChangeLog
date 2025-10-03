@@ -1,6 +1,41 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
 - overall improved documentation via a large set of topic updates.
+- 2025-10-03: mmjsontransform: add experimental JSON dotted-key (un)flatten
+  Real-world need: unflatten dotted JSON into nested objects, and optionally
+  flatten back for downstream tools. This introduces a general transformer
+  with a dedicated output tree. Interface is intentionally unstable.
+  Impact: New module behind --enable-mmjsontransform; no default behavior
+  changes. New tests and docs added. Parameters and behavior may change.
+  Add mmjsontransform, a message modification module that rewrites dotted
+  JSON keys. By default it "unflattens" an input object to nested containers
+  and stores the result in a configured output property. A mode parameter
+  also supports "flatten" to collapse nested trees into dotted keys. The
+  action refuses to overwrite an existing destination, validates that input
+  is a JSON object, and reports conflicts with precise key paths. Per-action
+  config is immutable; workers hold pointers only, so no extra locking. Docs
+  (Sphinx + parameter refs) and doxygen coverage included, plus a regression
+  test exercising nested arrays/objects. Build system and CI scripts gain
+  --enable-mmjsontransform and a basic test hook. An experimental companion
+  mmjsonrewrite module is wired similarly for dotted-key expansion.
+  Before/After: Previously no built-in JSON un/flatten; now an action can
+  unflatten (default) or flatten JSON into a separate message property.
+- 2025-10-01: mmsnarewinsec: comprehensive Windows Security Event Log parser
+  Implement complete NXLog Snare-formatted Windows Security event parser
+  with multi-format support (RFC5424/RFC3164), 100+ field patterns, and
+  advanced features including GUID/IP/timestamp type detection, runtime
+  configuration, enhanced validation modes, and comprehensive test suite.
+  Features:
+  - Parse major Windows security event types (4624, 4625, 4634, etc.)
+  - Extract structured data into configurable JSON containers (!win default)
+  - Handle modern Windows telemetry (LAPS, TLS, WDAC, WUFB, Kerberos)
+  - Type-aware parsing with validation and fallback handling
+  - Runtime configuration support for custom field patterns
+  - Thread-safe design with no shared mutable state
+  - 9 comprehensive test scripts covering all functionality
+  Impact: Enables structured analysis of Windows Security events for
+  SIEM integration, threat detection, and compliance reporting while
+  preserving original payloads for forensic investigation.
 - 2025-10-01: omkafka: restore producev fallback for older librdkafka
   Reason: keep omkafka building across librdkafka versions, including
   newer distro toolchains and legacy environments, to reduce friction
