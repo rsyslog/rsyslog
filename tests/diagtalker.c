@@ -115,7 +115,7 @@ static void waitRsp(int fd, char *buf, int len) {
 static void doProcessing(void) {
     int fd;
     int len;
-    char line[2048];
+    char line[10 * 1024];
 
     openConn(&fd);
     while (!feof(stdin)) {
