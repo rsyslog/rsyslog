@@ -1,0 +1,6 @@
+support_status: core-supported
+maturity_level: experimental
+primary_contact: "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>"
+last_reviewed: 2025-10-01
+notes:
+  - "Transforms dotted JSON keys into nested objects in a dedicated output tree; the destination must not exist."

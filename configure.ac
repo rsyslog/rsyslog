@@ -1526,6 +1526,18 @@ AC_ARG_ENABLE(mmjsonparse,
 )
 AM_CONDITIONAL(ENABLE_MMJSONPARSE, test x$enable_mmjsonparse = xyes)
 
+# mmjsontransform
+AC_ARG_ENABLE(mmjsontransform,
+        [AS_HELP_STRING([--enable-mmjsontransform],[Enable building mmjsontransform support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmjsontransform="yes" ;;
+          no) enable_mmjsontransform="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmjsontransform) ;;
+         esac],
+        [enable_mmjsontransform=no]
+)
+AM_CONDITIONAL(ENABLE_MMJSONTRANSFORM, test x$enable_mmjsontransform = xyes)
+
 # mmgrok
 AC_ARG_ENABLE(mmgrok,
         [AS_HELP_STRING([--enable-mmgrok],[Enable building mmgrok support @<:@default=no@:>@])],
@@ -3128,16 +3140,17 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omudpspoof/Makefile \
 		plugins/ommongodb/Makefile \
 		plugins/mmnormalize/Makefile \
-		plugins/mmjsonparse/Makefile \
-		plugins/mmleefparse/Makefile \
+        plugins/mmjsonparse/Makefile \
+        plugins/mmjsontransform/Makefile \
+        plugins/mmleefparse/Makefile \
 		plugins/mmaudit/Makefile \
 		plugins/mmanon/Makefile \
 		plugins/mmrm1stspace/Makefile \
 		plugins/mmutf8fix/Makefile \
-                plugins/mmfields/Makefile \
-                plugins/mmpstrucdata/Makefile \
-                plugins/mmaitag/Makefile \
-                plugins/omelasticsearch/Makefile \
+        plugins/mmfields/Makefile \
+        plugins/mmpstrucdata/Makefile \
+        plugins/mmaitag/Makefile \
+        plugins/omelasticsearch/Makefile \
 		plugins/omclickhouse/Makefile \
 		plugins/mmsnmptrapd/Makefile \
 		plugins/pmlastmsg/Makefile \
@@ -3147,10 +3160,10 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omdtls/Makefile \
 		contrib/mmdarwin/Makefile \
 		contrib/omhttp/Makefile \
-               contrib/fmhash/Makefile \
-               contrib/fmunflatten/Makefile \
-               plugins/fmpcre/Makefile \
-               contrib/ffaup/Makefile \
+        contrib/fmhash/Makefile \
+        contrib/fmunflatten/Makefile \
+        plugins/fmpcre/Makefile \
+        contrib/ffaup/Makefile \
 		contrib/pmsnare/Makefile \
 		contrib/pmpanngfw/Makefile \
 		contrib/pmaixforwardedfrom/Makefile \
@@ -3161,10 +3174,10 @@ AC_CONFIG_FILES([Makefile \
 		contrib/mmcount/Makefile \
 		contrib/omczmq/Makefile \
 		contrib/imczmq/Makefile \
-                contrib/mmsequence/Makefile \
-                contrib/mmrfc5424addhmac/Makefile \
-                plugins/mmsnarewinsec/Makefile \
-                contrib/pmcisconames/Makefile \
+        contrib/mmsequence/Makefile \
+        contrib/mmrfc5424addhmac/Makefile \
+        plugins/mmsnarewinsec/Makefile \
+        contrib/pmcisconames/Makefile \
 		contrib/omhttpfs/Makefile \
 		contrib/omamqp1/Makefile \
 		contrib/omtcl/Makefile \
@@ -3275,6 +3288,7 @@ echo
 echo "---{ message modification modules }---"
 echo "    mmnormalize module will be compiled:      $enable_mmnormalize"
 echo "    mmjsonparse module will be compiled:      $enable_mmjsonparse"
+echo "    mmjsontransform module will be compiled:  $enable_mmjsontransform"
 echo "    mmleefparse module will be compiled:      $enable_mmleefparse"
 echo "    mmgrok module will be compiled:           $enable_mmgrok"
 echo "    mmjaduit module will be compiled:         $enable_mmaudit"

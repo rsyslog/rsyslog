@@ -48,3 +48,15 @@ ommysql:
   notes:
     - Per-worker MYSQL handle in pWrkrData; no module-level RW lock required after refactor.
 
+mmjsontransform:
+  paths: ["plugins/mmjsontransform/"]
+  requires_serialization: false
+  notes:
+    - Rewrites JSON trees per message without shared mutable state.
+
+mmjsonrewrite:
+  paths: ["plugins/mmjsonrewrite/"]
+  requires_serialization: false
+  notes:
+    - Expands dotted JSON property names into nested containers per message.
+

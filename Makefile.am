@@ -256,6 +256,10 @@ if ENABLE_MMJSONPARSE
 SUBDIRS += plugins/mmjsonparse
 endif
 
+if ENABLE_MMJSONTRANSFORM
+SUBDIRS += plugins/mmjsontransform
+endif
+
 if ENABLE_MMGROK
 SUBDIRS += contrib/mmgrok
 endif

@@ -73,7 +73,9 @@ else
 		--enable-mmanon \
 		--enable-mmaudit \
 		--enable-mmfields \
-		--enable-mmjsonparse \
+             --enable-mmjsonparse \
+             --enable-mmjsontransform \
+             --enable-mmjsonrewrite \
 		--enable-mmpstrucdata \
 		--enable-mmsequence \
 		--enable-mmutf8fix \

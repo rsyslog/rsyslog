@@ -1517,8 +1517,15 @@ TESTS +=  \
 	stop_when_array_has_element.sh \
 	json_null_array.sh \
 	json_null.sh \
-	json_var_cmpr.sh \
-	json_var_case.sh
+        json_var_cmpr.sh \
+        json_var_case.sh
+endif
+
+if ENABLE_MMJSONTRANSFORM
+if ENABLE_IMTCP_TESTS
+TESTS += \
+        mmjsontransform-basic.sh
+endif
 endif
 
 if ENABLE_MMDBLOOKUP
@@ -2298,7 +2305,7 @@ EXTRA_DIST= \
         omfwd-tls-invalid-permitExpiredCerts.sh \
         omfwd-keepalive.sh \
         omfwd-subtree-tpl.sh \
-		omfile-subtree-jsonf.sh \ 
+		omfile-subtree-jsonf.sh \
         omfwd_fast_imuxsock.sh \
         omfile_hup-vg.sh \
 	omrelp-keepalive.sh \
