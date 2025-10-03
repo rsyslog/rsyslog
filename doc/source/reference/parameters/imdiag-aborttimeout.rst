@@ -10,7 +10,7 @@ AbortTimeout
 
 .. summary-start
 
-Starts a watchdog thread that aborts rsyslog if shutdown exceeds the limit.
+Starts a watchdog thread that aborts rsyslog if it runs longer than the configured time limit.
 
 .. summary-end
 
