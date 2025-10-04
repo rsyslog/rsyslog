@@ -26,10 +26,12 @@ This parameter applies to :doc:`../../configuration/modules/imdiag`.
 Description
 -----------
 When set, :samp:`AbortTimeout` installs a guard thread that tracks the runtime
-of the rsyslog instance. If rsyslog remains active for longer than the
-configured number of seconds after the guard starts, the thread writes a status
-message to ``stderr`` and terminates the daemon with ``abort()``. The guard is
-intended for automated test environments to detect deadlocks or hangs.
+of the rsyslog instance. The guard begins timing as soon as the configuration
+that contains the parameter is loaded, not just during shutdown. If rsyslog
+remains active for longer than the configured number of seconds after the guard
+starts, the thread writes a status message to ``stderr`` and terminates the
+daemon with ``abort()``. The guard is intended for automated test environments
+to detect deadlocks or hangs.
 
 The guard can only be configured once during the lifetime of the process. A
 second attempt to configure the watchdog is ignored and logs an error. Values
