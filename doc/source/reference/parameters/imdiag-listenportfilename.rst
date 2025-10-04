@@ -27,8 +27,8 @@ Description
 -----------
 Specifies a file that receives the TCP port number after
 :ref:`ServerRun <param-imdiag-serverrun>` initializes the listener. The
-parameter is mandatory—imdiag duplicates the value internally and requires it
-before the listener is created.
+parameter is mandatory and must be provided before the listener is
+created.
 
 The file is overwritten each time the listener starts. When the listener is
 configured with port ``0`` (ephemeral port selection), this file is the only way
