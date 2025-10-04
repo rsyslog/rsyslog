@@ -25,9 +25,9 @@ This parameter applies to :doc:`../../configuration/modules/imdiag`.
 
 Description
 -----------
-Specifies a file that receives the TCP port number after
-:ref:`ServerRun <param-imdiag-serverrun>` initializes the listener. The
-parameter is mandatory and must be provided before the listener is
+Specifies a file that receives the TCP port number after the listener starts.
+Use :ref:`ServerRun <param-imdiag-serverrun>` to initialize the listener.
+The parameter is mandatory and must be provided before the listener is
 created.
 
 The file is overwritten each time the listener starts. When the listener is

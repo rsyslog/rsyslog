@@ -29,8 +29,8 @@ Description
 Sets the ``inputname`` metadata assigned to log messages originating from the
 imdiag TCP listener itself (for example, connection warnings). This does **not**
 affect the ``inputname`` of messages injected via the control channel, which
-always remains ``imdiag``. Configure this value before :ref:`ServerRun
-<param-imdiag-serverrun>` so the listener logs use the desired identifier from
+always remains ``imdiag``. Use :ref:`ServerRun <param-imdiag-serverrun>`
+afterward. This ensures the listener logs use the desired identifier from
 startup onward.
 
 Input usage
