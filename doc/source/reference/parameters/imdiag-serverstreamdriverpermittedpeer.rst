@@ -10,7 +10,8 @@ ServerStreamDriverPermittedPeer
 
 .. summary-start
 
-Accepts permitted peer identifiers for compatibility, but the plain TCP driver used by imdiag does not enforce them.
+Accepts permitted peer identifiers for compatibility, but the plain TCP
+driver used by imdiag does not enforce them.
 
 .. summary-end
 
@@ -56,7 +57,8 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _imdiag.parameter.legacy.imdiagserverstreamdriverpermittedpeer:
 
-- $IMDiagServerStreamDriverPermittedPeer — maps to ServerStreamDriverPermittedPeer (status: legacy)
+- $IMDiagServerStreamDriverPermittedPeer — maps to
+  ServerStreamDriverPermittedPeer (status: legacy)
 
 .. index::
    single: imdiag; $IMDiagServerStreamDriverPermittedPeer

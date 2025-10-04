@@ -10,7 +10,8 @@ ServerStreamDriverAuthMode
 
 .. summary-start
 
-Accepts a stream driver authentication mode string, but imdiag always uses the plain TCP driver so the value has no effect.
+Accepts a stream driver authentication mode string, but imdiag always
+uses the plain TCP driver so the value has no effect.
 
 .. summary-end
 
@@ -53,7 +54,8 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _imdiag.parameter.legacy.imdiagserverstreamdriverauthmode:
 
-- $IMDiagServerStreamDriverAuthMode — maps to ServerStreamDriverAuthMode (status: legacy)
+- $IMDiagServerStreamDriverAuthMode — maps to ServerStreamDriverAuthMode
+  (status: legacy)
 
 .. index::
    single: imdiag; $IMDiagServerStreamDriverAuthMode

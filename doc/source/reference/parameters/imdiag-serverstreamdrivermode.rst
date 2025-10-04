@@ -10,7 +10,8 @@ ServerStreamDriverMode
 
 .. summary-start
 
-Accepts a numeric stream driver mode value, but imdiag forces the plain TCP driver so the setting is ignored.
+Accepts a numeric stream driver mode value, but imdiag forces the
+plain TCP driver so the setting is ignored.
 
 .. summary-end
 
@@ -49,7 +50,8 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _imdiag.parameter.legacy.imdiagserverstreamdrivermode:
 
-- $IMDiagServerStreamDriverMode — maps to ServerStreamDriverMode (status: legacy)
+- $IMDiagServerStreamDriverMode — maps to ServerStreamDriverMode
+  (status: legacy)
 
 .. index::
    single: imdiag; $IMDiagServerStreamDriverMode

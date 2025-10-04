@@ -10,7 +10,8 @@ ServerRun
 
 .. summary-start
 
-Creates the imdiag TCP listener on the specified port (``0`` selects an ephemeral port).
+Creates the imdiag TCP listener on the specified port (``0`` selects an
+ephemeral port).
 
 .. summary-end
 
@@ -27,7 +28,8 @@ Description
 -----------
 Starts the diagnostic control listener. The value is the TCP port number to
 bind. Specify ``0`` to request an ephemeral port from the operating system; the
-chosen port is written to :ref:`ListenPortFileName <param-imdiag-listenportfilename>`.
+chosen port is written to :ref:`ListenPortFileName
+<param-imdiag-listenportfilename>`.
 
 imdiag always selects the plain TCP (``ptcp``) network stream driver. As a
 result parameters that normally tune stream driver authentication or permitted
@@ -35,8 +37,8 @@ peers are accepted for compatibility but have no effect in current releases.
 
 imdiag supports only a single listener. Attempting to configure ``ServerRun``
 more than once logs an error and the additional configuration is ignored. All
-module-level parameters (for example :ref:`MaxSessions <param-imdiag-maxsessions>`)
-must be set before invoking ``ServerRun``.
+module-level parameters (for example :ref:`MaxSessions
+<param-imdiag-maxsessions>`) must be set before invoking ``ServerRun``.
 
 Input usage
 -----------

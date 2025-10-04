@@ -10,7 +10,8 @@ ServerInputName
 
 .. summary-start
 
-Overrides the ``inputname`` property for the diagnostic TCP listener's own log messages.
+Overrides the ``inputname`` property for the diagnostic TCP listener's
+own log messages.
 
 .. summary-end
 
