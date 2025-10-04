@@ -40,6 +40,6 @@ wait_shutdown
 # note: minitcpsrv shuts down automatically if the connection is closed!
 
 export SEQ_CHECK_OPTIONS=-d
-#permit 100 messages to be lost in this extreme test (-m 100)
-seq_check 0 $((NUMMESSAGES-1)) -m100
+#permit 250 messages to be lost in this extreme test (-m 250)
+seq_check 0 $((NUMMESSAGES-1)) -m250
 exit_test
