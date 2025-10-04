@@ -18,11 +18,12 @@ actual protocol handling.
 
 
 Module Parameters
-=================
+-----------------
 
 .. note::
 
-   Parameter names are case-insensitive; PascalCase is recommended for readability.
+   Parameter names are case-insensitive; PascalCase is recommended for
+   readability.
 
 .. list-table::
    :widths: 30 70

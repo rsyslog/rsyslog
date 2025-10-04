@@ -32,8 +32,8 @@ This parameter applies to :doc:`../../configuration/modules/im3195`.
 Description
 ~~~~~~~~~~~
 
-The default port is 601, the IANA-assigned port for the BEEP protocol on which
-RFC 3195 is based.
+The default port is 601, the IANA-assigned port for the BEEP protocol
+on which RFC 3195 is based.
 
 Since directive names are case-insensitive, the PascalCase form
 ``$Input3195ListenPort`` is recommended for readability.
