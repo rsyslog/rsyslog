@@ -152,11 +152,47 @@ skip_platform() {
 # note: we depend on CFLAGS to properly reflect build options (what
 #       usually is the case when the testbench is run)
 skip_TSAN() {
-	echo skip:_TSAN, CFLAGS $CFLAGS
-	if [[ "$CFLAGS" == *"sanitize=thread"* ]]; then
-		printf 'test incompatible with TSAN because of %s\n' "$1"
-		exit 77
-	fi
+        echo skip:_TSAN, CFLAGS $CFLAGS
+        if [[ "$CFLAGS" == *"sanitize=thread"* ]]; then
+                printf 'test incompatible with TSAN because of %s\n' "$1"
+                exit 77
+        fi
+}
+
+
+# ensure a dynamically loaded rsyslog plugin is available before continuing.
+# $1 - plugin name (without the leading im/om/mm prefix differentiation)
+# $2 - optional module directory override relative to the current working dir
+require_plugin() {
+        if [ -z "$1" ]; then
+                printf 'TESTBENCH_ERROR: require_plugin requires a plugin name\n'
+                error_exit 100
+        fi
+
+        local plugin="$1"
+        local module_root
+        if [ -n "$2" ]; then
+                module_root="$2"
+        else
+                module_root="../plugins/${plugin}"
+        fi
+
+        local candidates=(
+                "${module_root}/.libs/${plugin}.so"
+                "${module_root}/.libs/${plugin}.la"
+                "${module_root}/${plugin}.so"
+                "${module_root}.so"
+        )
+
+        for candidate in "${candidates[@]}"; do
+                if [ -f "$candidate" ]; then
+                        return 0
+                fi
+        done
+
+        printf 'info: skipping test - plugin %s not available (checked %s)\n' \
+                "$plugin" "${candidates[*]}"
+        exit 77
 }
 
 
@@ -2149,8 +2185,12 @@ es_detect_version() {
         local base
         base=$(es_base_url)
 
+        local detect_url
+        detect_url="${base%/}/"
+
         local payload
-        if ! payload=$(curl --silent --show-error --connect-timeout 5 "$base"); then
+        if ! payload=$(curl --silent --show-error --connect-timeout 5 \
+                --header 'Accept: application/json' "$detect_url"); then
                 return 1
         fi
 
