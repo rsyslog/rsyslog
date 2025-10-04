@@ -2,11 +2,9 @@
 imdiag: Diagnostic instrumentation
 ***********************************
 
-===========================  ===============================
-**Module Name:**             **imdiag**
-**Author:**                  Rainer Gerhards
-**Available since:**         at least 5.x
-===========================  ===============================
+:Module Name: **imdiag**
+:Author: Rainer Gerhards
+:Available since: at least 5.x
 
 Purpose
 =======

@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/imdiag`.
 :Name: ServerInputName
 :Scope: input
 :Type: string
-:Default: input="imdiag"
+:Default: input=imdiag
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
