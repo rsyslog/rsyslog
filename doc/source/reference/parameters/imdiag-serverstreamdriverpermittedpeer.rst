@@ -10,7 +10,7 @@ ServerStreamDriverPermittedPeer
 
 .. summary-start
 
-Restricts the diagnostic listener to the listed peer identities.
+Accepts permitted peer identifiers for compatibility, but the plain TCP driver used by imdiag does not enforce them.
 
 .. summary-end
 
@@ -27,12 +27,16 @@ Description
 -----------
 Defines the set of remote peers that may connect when the chosen
 :doc:`network stream driver <../../concepts/netstrm_drvr>` supports
-authentication (for example, TLS certificate verification). Peer identifiers
-must match the expectations of the active authentication mode; their syntax is
-stream-driver specific.
+authentication. imdiag always selects the plain TCP (``ptcp``) stream driver,
+which offers no peer verification. As a result the configured identities are
+accepted but ignored. The parameter is kept for forward compatibility with the
+generic TCP listener framework should imdiag gain authenticated stream support
+in the future.
 
-Configure this parameter before :ref:`ServerRun <param-imdiag-serverrun>`. When
-multiple peers are allowed, provide an array of identity strings.
+Configure this parameter before :ref:`ServerRun <param-imdiag-serverrun>` if you
+need to preserve configuration compatibility. When multiple peers are listed,
+provide an array of identity strings even though the ``ptcp`` driver ignores
+them.
 
 Input usage
 -----------
@@ -43,7 +47,6 @@ Input usage
 
    module(load="imdiag")
    input(type="imdiag" listenPortFileName="/var/run/imdiag.port"
-         serverStreamDriverAuthMode="x509/name"
          serverStreamDriverPermittedPeer=["diag.example.com","127.0.0.1"]
          serverRun="19998")
 

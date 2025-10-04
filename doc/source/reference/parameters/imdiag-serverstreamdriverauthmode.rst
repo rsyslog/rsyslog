@@ -10,7 +10,7 @@ ServerStreamDriverAuthMode
 
 .. summary-start
 
-Chooses the authentication mode for the configured stream driver.
+Accepts a stream driver authentication mode string, but imdiag always uses the plain TCP driver so the value has no effect.
 
 .. summary-end
 
@@ -26,11 +26,15 @@ This parameter applies to :doc:`../../configuration/modules/imdiag`.
 Description
 -----------
 Selects the authentication mode for the active
-:doc:`network stream driver <../../concepts/netstrm_drvr>`. The accepted values
-are driver-specific (for example, ``anon`` or ``x509/name`` when using a TLS
-stream driver). Configure this parameter before :ref:`ServerRun
-<param-imdiag-serverrun>` to ensure the listener starts with the intended
-transport security.
+:doc:`network stream driver <../../concepts/netstrm_drvr>`. imdiag
+unconditionally binds to the plain TCP driver (``ptcp``) and therefore lacks
+TLS or other authenticated stream implementations. The value is accepted for
+compatibility with the generic TCP listener framework but is ignored by the
+``ptcp`` driver.
+
+Configure this parameter before :ref:`ServerRun <param-imdiag-serverrun>` if you
+need forward compatibility with a future build that supports alternate stream
+drivers. In current releases the setting does not change listener behaviour.
 
 Input usage
 -----------
@@ -41,7 +45,7 @@ Input usage
 
    module(load="imdiag")
    input(type="imdiag" listenPortFileName="/var/run/imdiag.port"
-         serverStreamDriverAuthMode="x509/name" serverRun="19998")
+         serverStreamDriverAuthMode="anon" serverRun="19998")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

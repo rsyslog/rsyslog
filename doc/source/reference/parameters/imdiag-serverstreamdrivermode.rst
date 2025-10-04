@@ -10,7 +10,7 @@ ServerStreamDriverMode
 
 .. summary-start
 
-Sets the mode value passed to the configured network stream driver.
+Accepts a numeric stream driver mode value, but imdiag forces the plain TCP driver so the setting is ignored.
 
 .. summary-end
 
@@ -26,10 +26,11 @@ This parameter applies to :doc:`../../configuration/modules/imdiag`.
 Description
 -----------
 Provides the mode number consumed by the selected
-:doc:`network stream driver <../../concepts/netstrm_drvr>`. The meaning of the
-value is driver-specific. Configure this parameter before invoking
-:ref:`ServerRun <param-imdiag-serverrun>` so that the listener picks up the
-desired transport behavior (for example, TLS wrapper modes).
+:doc:`network stream driver <../../concepts/netstrm_drvr>`. imdiag always binds
+to the plain TCP (``ptcp``) stream driver, which does not act on the provided
+mode value. The parameter remains available for configuration compatibility and
+possible future extensions, but it does not alter behaviour in current
+releases.
 
 Input usage
 -----------
