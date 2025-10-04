@@ -3074,20 +3074,23 @@ fi
 
 dnl ---- gather doc files for EXTRA_DIST ----
 # .rst files
-rst_files=`cd "$srcdir" && find doc/source -type f -name '*.rst' -print 2>/dev/null | LC_ALL=C sort`
+doc_src_files=`cd "$srcdir" && find doc/source -type f \( -name '*.rst' -o -name '*.conf' -o -name '*.jpg' -o -name '*.png' \) -print 2>/dev/null | LC_ALL=C sort`
 
 # assemble; keep paths relative to top (we cd into $srcdir above)
-DOC_FILES="$rst_files
+DOC_FILES="$doc_src_files
 doc/source/conf.py
 doc/source/conf_helpers.py
 doc/source/_ext/edit_on_github.py
 doc/source/_ext/rsyslog_lexer.py
 doc/source/_static/rsyslog.css
+doc/source/tutorials/cert-script.tar.gz
+doc/ai/module_map.yaml
 doc/requirements.txt
 doc/README.md
 doc/STRATEGY.md
 doc/CONTRIBUTING.md
 doc/LICENSE
+doc/Makefile
 $ai_files"
 
 # collapse newlines and extra whitespace to single spaces
