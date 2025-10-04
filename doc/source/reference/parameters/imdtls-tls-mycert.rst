@@ -1,12 +1,12 @@
 .. _param-imdtls-tls-mycert:
 .. _imdtls.parameter.input.tls-mycert:
 
-tls.mycert
+tls.myCert
 ==========
 
 .. index::
-   single: imdtls; tls.mycert
-   single: tls.mycert
+   single: imdtls; tls.myCert
+   single: tls.myCert
 
 .. summary-start
 
@@ -17,7 +17,7 @@ Identifies the certificate file the imdtls listener presents to peers.
 
 This parameter applies to :doc:`../../configuration/modules/imdtls`.
 
-:Name: tls.mycert
+:Name: tls.myCert
 :Scope: input
 :Type: string
 :Default: none
@@ -26,7 +26,8 @@ This parameter applies to :doc:`../../configuration/modules/imdtls`.
 
 Description
 -----------
-Specifies the certificate file used by imdtls. This certificate is presented to peers during the DTLS handshake.
+Specifies the certificate file used by imdtls. This certificate is presented
+to peers during the DTLS handshake.
 
 Input usage
 -----------
@@ -37,8 +38,8 @@ Input usage
 
    module(load="imdtls")
    input(type="imdtls"
-         tls.mycert="/etc/rsyslog/server.pem"
-         tls.myprivkey="/etc/rsyslog/server.key")
+         tls.myCert="/etc/rsyslog/server.pem"
+         tls.myPrivKey="/etc/rsyslog/server.key")
 
 See also
 --------

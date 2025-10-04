@@ -5,8 +5,8 @@ Name
 ====
 
 .. index::
-   single: imdtls; Name
-   single: Name
+   single: imdtls; name
+   single: name
 
 .. summary-start
 
@@ -17,7 +17,7 @@ Assigns a unique identifier to the imdtls input instance.
 
 This parameter applies to :doc:`../../configuration/modules/imdtls`.
 
-:Name: Name
+:Name: name
 :Scope: input
 :Type: word
 :Default: none

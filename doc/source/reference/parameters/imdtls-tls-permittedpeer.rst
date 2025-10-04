@@ -1,12 +1,12 @@
 .. _param-imdtls-tls-permittedpeer:
 .. _imdtls.parameter.input.tls-permittedpeer:
 
-TLS.PermittedPeer
+tls.permittedPeer
 =================
 
 .. index::
-   single: imdtls; TLS.PermittedPeer
-   single: TLS.PermittedPeer
+   single: imdtls; tls.permittedPeer
+   single: tls.permittedPeer
 
 .. summary-start
 
@@ -17,7 +17,7 @@ Restricts DTLS clients to the listed certificate fingerprints or names.
 
 This parameter applies to :doc:`../../configuration/modules/imdtls`.
 
-:Name: TLS.PermittedPeer
+:Name: tls.permittedPeer
 :Scope: input
 :Type: array
 :Default: none
@@ -26,7 +26,7 @@ This parameter applies to :doc:`../../configuration/modules/imdtls`.
 
 Description
 -----------
-``TLS.PermittedPeer`` places access restrictions on this listener. Only peers
+``tls.permittedPeer`` places access restrictions on this listener. Only peers
 whose certificate fingerprint or name is listed in this array parameter may
 connect. The certificate presented by the remote peer is used for its
 validation.

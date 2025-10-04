@@ -5,8 +5,8 @@ Timeout
 =======
 
 .. index::
-   single: imdtls; Timeout
-   single: Timeout
+   single: imdtls; timeout
+   single: timeout
 
 .. summary-start
 
@@ -17,7 +17,7 @@ Closes idle DTLS sessions after the configured inactivity period.
 
 This parameter applies to :doc:`../../configuration/modules/imdtls`.
 
-:Name: Timeout
+:Name: timeout
 :Scope: input
 :Type: word
 :Default: 1800

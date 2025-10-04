@@ -5,8 +5,8 @@ Ruleset
 =======
 
 .. index::
-   single: imdtls; Ruleset
-   single: Ruleset
+   single: imdtls; ruleset
+   single: ruleset
 
 .. summary-start
 
@@ -17,7 +17,7 @@ Binds received DTLS messages to the specified processing ruleset.
 
 This parameter applies to :doc:`../../configuration/modules/imdtls`.
 
-:Name: Ruleset
+:Name: ruleset
 :Scope: input
 :Type: word
 :Default: none
@@ -26,7 +26,8 @@ This parameter applies to :doc:`../../configuration/modules/imdtls`.
 
 Description
 -----------
-Determines the ruleset to which the imdtls input will be bound. This can be overridden at the instance level.
+Determines the ruleset to which the imdtls input will be bound. This can be
+overridden at the instance level.
 
 Input usage
 -----------

@@ -5,8 +5,8 @@ Port
 ====
 
 .. index::
-   single: imdtls; Port
-   single: Port
+   single: imdtls; port
+   single: port
 
 .. summary-start
 
@@ -17,7 +17,7 @@ Binds the imdtls listener to the specified UDP port for DTLS traffic.
 
 This parameter applies to :doc:`../../configuration/modules/imdtls`.
 
-:Name: Port
+:Name: port
 :Scope: input
 :Type: word
 :Default: 4433

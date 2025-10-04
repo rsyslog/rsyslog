@@ -1,12 +1,12 @@
 .. _param-imdtls-tls-tlscfgcmd:
 .. _imdtls.parameter.input.tls-tlscfgcmd:
 
-tls.tlscfgcmd
+tls.tlsCfgCmd
 =============
 
 .. index::
-   single: imdtls; tls.tlscfgcmd
-   single: tls.tlscfgcmd
+   single: imdtls; tls.tlsCfgCmd
+   single: tls.tlsCfgCmd
 
 .. summary-start
 
@@ -17,7 +17,7 @@ Passes additional OpenSSL configuration commands to fine-tune DTLS handling.
 
 This parameter applies to :doc:`../../configuration/modules/imdtls`.
 
-:Name: tls.tlscfgcmd
+:Name: tls.tlsCfgCmd
 :Scope: input
 :Type: string
 :Default: none
@@ -42,14 +42,14 @@ This will allow all protocols except for SSLv2 and SSLv3:
 
 .. code-block:: none
 
-   tls.tlscfgcmd="Protocol=ALL,-SSLv2,-SSLv3"
+   tls.tlsCfgCmd="Protocol=ALL,-SSLv2,-SSLv3"
 
 This will allow all protocols except for SSLv2, SSLv3 and TLSv1 and will also
 set the minimum protocol to TLSv1.2:
 
 .. code-block:: none
 
-   tls.tlscfgcmd="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1\nMinProtocol=TLSv1.2"
+   tls.tlsCfgCmd="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1\nMinProtocol=TLSv1.2"
 
 Input usage
 -----------
@@ -59,7 +59,7 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="imdtls")
-   input(type="imdtls" tls.tlscfgcmd="Protocol=ALL,-SSLv2,-SSLv3")
+   input(type="imdtls" tls.tlsCfgCmd="Protocol=ALL,-SSLv2,-SSLv3")
 
 See also
 --------

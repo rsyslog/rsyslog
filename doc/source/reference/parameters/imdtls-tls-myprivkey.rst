@@ -1,23 +1,23 @@
 .. _param-imdtls-tls-myprivkey:
 .. _imdtls.parameter.input.tls-myprivkey:
 
-tls.myprivkey
+tls.myPrivKey
 =============
 
 .. index::
-   single: imdtls; tls.myprivkey
-   single: tls.myprivkey
+   single: imdtls; tls.myPrivKey
+   single: tls.myPrivKey
 
 .. summary-start
 
 
-Points to the private key file paired with ``tls.mycert``.
+Points to the private key file paired with ``tls.myCert``.
 
 .. summary-end
 
 This parameter applies to :doc:`../../configuration/modules/imdtls`.
 
-:Name: tls.myprivkey
+:Name: tls.myPrivKey
 :Scope: input
 :Type: string
 :Default: none
@@ -26,7 +26,7 @@ This parameter applies to :doc:`../../configuration/modules/imdtls`.
 
 Description
 -----------
-The private key file corresponding to ``tls.mycert``. This key is used for the
+The private key file corresponding to ``tls.myCert``. This key is used for the
 cryptographic operations in the DTLS handshake.
 
 Input usage
@@ -38,8 +38,8 @@ Input usage
 
    module(load="imdtls")
    input(type="imdtls"
-         tls.mycert="/etc/rsyslog/server.pem"
-         tls.myprivkey="/etc/rsyslog/server.key")
+         tls.myCert="/etc/rsyslog/server.pem"
+         tls.myPrivKey="/etc/rsyslog/server.key")
 
 See also
 --------

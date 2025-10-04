@@ -5,8 +5,8 @@ Address
 =======
 
 .. index::
-   single: imdtls; Address
-   single: Address
+   single: imdtls; address
+   single: address
 
 .. summary-start
 
@@ -17,7 +17,7 @@ Listens for DTLS syslog messages on the specified local IP address.
 
 This parameter applies to :doc:`../../configuration/modules/imdtls`.
 
-:Name: Address
+:Name: address
 :Scope: input
 :Type: word
 :Default: none

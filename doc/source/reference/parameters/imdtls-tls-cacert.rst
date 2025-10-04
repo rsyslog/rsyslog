@@ -1,12 +1,12 @@
 .. _param-imdtls-tls-cacert:
 .. _imdtls.parameter.input.tls-cacert:
 
-tls.cacert
+tls.caCert
 ==========
 
 .. index::
-   single: imdtls; tls.cacert
-   single: tls.cacert
+   single: imdtls; tls.caCert
+   single: tls.caCert
 
 .. summary-start
 
@@ -17,7 +17,7 @@ Specifies the CA certificate file used to verify DTLS client certificates.
 
 This parameter applies to :doc:`../../configuration/modules/imdtls`.
 
-:Name: tls.cacert
+:Name: tls.caCert
 :Scope: input
 :Type: string
 :Default: none
@@ -39,7 +39,7 @@ Input usage
 
    module(load="imdtls")
    input(type="imdtls"
-         tls.cacert="/etc/rsyslog/ca.pem"
+         tls.caCert="/etc/rsyslog/ca.pem"
          tls.authMode="certvalid")
 
 See also
