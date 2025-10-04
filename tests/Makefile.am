@@ -1483,7 +1483,13 @@ endif
 if ENABLE_MMJSONPARSE
 TESTS += \
         mmjsonparse-w-o-cookie.sh \
-        mmjsonparse-w-o-cookie-multi-spaces.sh
+        mmjsonparse-w-o-cookie-multi-spaces.sh \
+        mmjsonparse-find-json-basic.sh \
+        mmjsonparse-find-json-trailing.sh \
+        mmjsonparse-find-json-scan-limit.sh \
+        mmjsonparse-find-json-invalid.sh \
+        mmjsonparse-find-json-invalid-mode.sh \
+        mmjsonparse-find-json-parser-validation.sh
 if ENABLE_IMPSTATS
 TESTS += \
 	mmjsonparse-invalid-containerName.sh \
@@ -2485,6 +2491,12 @@ EXTRA_DIST= \
 	mmleefparse_basic.sh \
 	mmjsonparse-w-o-cookie.sh \
 	mmjsonparse-w-o-cookie-multi-spaces.sh \
+        mmjsonparse-find-json-basic.sh \
+        mmjsonparse-find-json-trailing.sh \
+        mmjsonparse-find-json-scan-limit.sh \
+        mmjsonparse-find-json-invalid.sh \
+        mmjsonparse-find-json-invalid-mode.sh \
+        mmjsonparse-find-json-parser-validation.sh \
 	mmjsonparse_simple.sh \
 	mmjsonparse-invalid-containerName.sh \
 	wtpShutdownAll-assertionFailure.sh \

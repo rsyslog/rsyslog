@@ -6,7 +6,7 @@
  *
  * File begun on 2012-02-20 by RGerhards
  *
- * Copyright 2012-2018 Adiscon GmbH.
+ * Copyright 2012-2025 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -58,17 +58,31 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
  */
 DEF_OMOD_STATIC_DATA;
 
+/* parsing modes */
+typedef enum {
+    PARSE_MODE_COOKIE = 0, /**< legacy CEE cookie mode (default) */
+    PARSE_MODE_FIND_JSON = 1 /**< find first JSON object mode */
+} parse_mode_t;
+
 typedef struct _instanceData {
     sbool bUseRawMsg; /**< use %rawmsg% instead of %msg% */
     char *cookie;
     uchar *container;
     int lenCookie;
-    /* REMOVE dummy when real data items are to be added! */
+    parse_mode_t mode; /**< parsing mode: cookie or find-json */
+    int max_scan_bytes; /**< max bytes to scan in find-json mode */
+    sbool allow_trailing; /**< allow trailing data after JSON in find-json mode */
+    /* TODO: add start_regex support in future enhancement */
 } instanceData;
 
 typedef struct wrkrInstanceData {
     instanceData *pData;
     struct json_tokener *tokener;
+    /* Statistics counters */
+    int scan_attempted; /**< incremented when find-json scanning starts */
+    int scan_found; /**< incremented when JSON object found during scan */
+    int scan_failed; /**< incremented when found JSON is invalid */
+    int scan_truncated; /**< incremented when scan hits max_scan_bytes */
 } wrkrInstanceData_t;
 
 struct modConfData_s {
@@ -80,7 +94,8 @@ static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current e
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-    {"cookie", eCmdHdlrString, 0}, {"container", eCmdHdlrString, 0}, {"userawmsg", eCmdHdlrBinary, 0}};
+    {"cookie", eCmdHdlrString, 0}, {"container", eCmdHdlrString, 0},           {"userawmsg", eCmdHdlrBinary, 0},
+    {"mode", eCmdHdlrString, 0},   {"max_scan_bytes", eCmdHdlrPositiveInt, 0}, {"allow_trailing", eCmdHdlrBinary, 0}};
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
 
@@ -113,6 +128,9 @@ BEGINcreateInstance
     CHKmalloc(pData->container = (uchar *)strdup("!"));
     CHKmalloc(pData->cookie = strdup(CONST_CEE_COOKIE));
     pData->lenCookie = CONST_LEN_CEE_COOKIE;
+    pData->mode = PARSE_MODE_COOKIE; /* default to legacy behavior */
+    pData->max_scan_bytes = 65536; /* default scan limit */
+    pData->allow_trailing = 1; /* default allow trailing data */
 finalize_it:
 ENDcreateInstance
 
@@ -125,6 +143,11 @@ BEGINcreateWrkrInstance
                  "tokener, cannot activate instance");
         ABORT_FINALIZE(RS_RET_ERR);
     }
+    /* Initialize statistics counters */
+    pWrkrData->scan_attempted = 0;
+    pWrkrData->scan_found = 0;
+    pWrkrData->scan_failed = 0;
+    pWrkrData->scan_truncated = 0;
 finalize_it:
 ENDcreateWrkrInstance
 
@@ -157,7 +180,110 @@ BEGINtryResume
 ENDtryResume
 
 
-static rsRetVal processJSON(wrkrInstanceData_t *pWrkrData, smsg_t *pMsg, char *buf, size_t lenBuf) {
+/**
+ * Find the first valid JSON object in a message buffer using the actual JSON parser.
+ * This function scans for '{' characters and uses json_tokener to validate complete objects.
+ *
+ * @param pWrkrData Worker instance data (contains tokener)
+ * @param msg       Message buffer to scan
+ * @param len       Length of message buffer
+ * @param start_off Starting offset for scan
+ * @param max_scan  Maximum bytes to scan
+ * @param obj_off   [OUT] Offset where JSON object starts
+ * @param obj_len   [OUT] Length of JSON object
+ * @param parsed_json [OUT] Already parsed JSON object (caller must release)
+ * @param allow_trailing Whether trailing data after JSON is allowed
+ * @return 0 on success, 1 if no JSON found, 2 if scan truncated, 3 if trailing data not allowed
+ */
+static int find_first_json_object(wrkrInstanceData_t *pWrkrData,
+                                  const uchar *msg,
+                                  size_t len,
+                                  size_t start_off,
+                                  size_t max_scan,
+                                  size_t *obj_off,
+                                  size_t *obj_len,
+                                  struct json_object **parsed_json,
+                                  sbool allow_trailing) {
+    size_t i = start_off;
+    size_t scan_end = start_off + max_scan;
+    if (scan_end > len) scan_end = len;
+
+    *parsed_json = NULL;
+
+    /* Find potential JSON start positions ('{' characters) */
+    while (i < scan_end) {
+        /* Find the next '{' */
+        const uchar *p = memchr(msg + i, '{', scan_end - i);
+        if (p == NULL) {
+            i = scan_end;
+        } else {
+            i = p - msg;
+        }
+
+        if (i >= scan_end) {
+            return (i >= len) ? 1 : 2; /* no JSON found or scan truncated */
+        }
+
+        /* Try to parse JSON starting from this position */
+        size_t remaining = len - i;
+        json_tokener_reset(pWrkrData->tokener);
+
+        struct json_object *json = json_tokener_parse_ex(pWrkrData->tokener, (const char *)(msg + i), remaining);
+
+        if (json != NULL && json_object_is_type(json, json_type_object)) {
+            /* Valid JSON object found */
+            size_t parsed_len = pWrkrData->tokener->char_offset;
+
+            /* Check for trailing data if allow_trailing is false */
+            if (!allow_trailing && parsed_len < remaining) {
+                size_t check_pos = i + parsed_len;
+                while (check_pos < len && isspace(msg[check_pos])) {
+                    check_pos++;
+                }
+                if (check_pos < len) {
+                    json_object_put(json); /* release the object */
+                    return 3; /* trailing data not allowed */
+                }
+            }
+
+            *obj_off = i;
+            *obj_len = parsed_len;
+            *parsed_json = json; /* pass ownership to caller */
+            return 0; /* success */
+        }
+
+        /* Clean up if parsing failed */
+        if (json != NULL) {
+            json_object_put(json);
+        }
+
+        /* Move to next potential start position */
+        i++;
+    }
+
+    return 2; /* scan truncated or no valid JSON found */
+}
+
+
+static rsRetVal processJSON(wrkrInstanceData_t *pWrkrData, smsg_t *pMsg, struct json_object *json) {
+    DEFiRet;
+
+    DBGPRINTF("mmjsonparse: processing already parsed JSON object\n");
+
+    /* JSON is already parsed and validated, just add it to the message */
+    CHKiRet(msgAddJSON(pMsg, pWrkrData->pData->container, json, 0, 0));
+    /* Note: msgAddJSON takes ownership of the json object on success,
+     * but we need to clean up on failure */
+
+finalize_it:
+    if (iRet != RS_RET_OK) {
+        /* msgAddJSON failed, we need to clean up the JSON object */
+        json_object_put(json);
+    }
+    RETiRet;
+}
+
+static rsRetVal processJSONBuffer(wrkrInstanceData_t *pWrkrData, smsg_t *pMsg, char *buf, size_t lenBuf) {
     struct json_object *json;
     const char *errMsg;
     DEFiRet;
@@ -210,26 +336,67 @@ BEGINdoAction_NoStrings
     instanceData *pData;
     CODESTARTdoAction;
     pData = pWrkrData->pData;
-    /* note that we can performance-optimize the interface, but this also
-     * requires changes to the libraries. For now, we accept message
-     * duplication. -- rgerhards, 2010-12-01
-     */
+
+    /* Get message buffer */
     if (pWrkrData->pData->bUseRawMsg)
         getRawMsg(pMsg, &buf, &len);
-    else
+    else {
         buf = getMSG(pMsg);
-
-    while (*buf && isspace(*buf)) {
-        ++buf;
+        len = getMSGLen(pMsg);
     }
 
-    if (*buf == '\0' || strncmp((char *)buf, pData->cookie, pData->lenCookie)) {
-        DBGPRINTF("mmjsonparse: no JSON cookie: '%s'\n", buf);
-        ABORT_FINALIZE(RS_RET_NO_CEE_MSG);
+    /* Handle different parsing modes */
+    if (pData->mode == PARSE_MODE_COOKIE) {
+        /* Legacy CEE cookie mode */
+        while (*buf && isspace(*buf)) {
+            ++buf;
+        }
+
+        if (*buf == '\0' || strncmp((char *)buf, pData->cookie, pData->lenCookie)) {
+            DBGPRINTF("mmjsonparse: no JSON cookie: '%s'\n", buf);
+            ABORT_FINALIZE(RS_RET_NO_CEE_MSG);
+        }
+        buf += pData->lenCookie;
+        CHKiRet(processJSONBuffer(pWrkrData, pMsg, (char *)buf, strlen((char *)buf)));
+        bSuccess = 1;
+    } else if (pData->mode == PARSE_MODE_FIND_JSON) {
+        /* Find-JSON mode */
+        size_t obj_off, obj_len;
+        int scan_result;
+        struct json_object *parsed_json = NULL;
+
+        pWrkrData->scan_attempted++;
+
+        scan_result = find_first_json_object(pWrkrData, buf, len, 0, pData->max_scan_bytes, &obj_off, &obj_len,
+                                             &parsed_json, pData->allow_trailing);
+
+        if (scan_result == 0) {
+            /* JSON object found and already parsed */
+            pWrkrData->scan_found++;
+            iRet = processJSON(pWrkrData, pMsg, parsed_json);
+            if (iRet == RS_RET_OK) {
+                bSuccess = 1;
+            } else {
+                /* JSON was found but processing failed */
+                pWrkrData->scan_failed++;
+                /* Will be handled in finalize_it */
+            }
+        } else {
+            /* Handle scan failures */
+            if (scan_result == 2) {
+                pWrkrData->scan_truncated++;
+                DBGPRINTF("mmjsonparse: JSON scan truncated at max_scan_bytes=%d\n", pData->max_scan_bytes);
+            } else if (scan_result == 3) {
+                pWrkrData->scan_found++; /* JSON was found but trailing data rejected */
+                DBGPRINTF("mmjsonparse: trailing data found but allow_trailing=off\n");
+                /* Note: find_first_json_object already cleaned up the JSON object for error case 3 */
+            } else {
+                DBGPRINTF("mmjsonparse: no JSON object found in message\n");
+            }
+            ABORT_FINALIZE(RS_RET_NO_CEE_MSG);
+        }
     }
-    buf += pData->lenCookie;
-    CHKiRet(processJSON(pWrkrData, pMsg, (char *)buf, strlen((char *)buf)));
-    bSuccess = 1;
+
 finalize_it:
     if (iRet == RS_RET_NO_CEE_MSG) {
         /* add buf as msg */
@@ -290,6 +457,26 @@ BEGINnewActInst
             }
         } else if (!strcmp(actpblk.descr[i].name, "userawmsg")) {
             pData->bUseRawMsg = (int)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "mode")) {
+            char *mode_str = es_str2cstr(pvals[i].val.d.estr, NULL);
+            if (!strcmp(mode_str, "cookie")) {
+                pData->mode = PARSE_MODE_COOKIE;
+            } else if (!strcmp(mode_str, "find-json")) {
+                pData->mode = PARSE_MODE_FIND_JSON;
+            } else {
+                parser_errmsg("mmjsonparse: invalid mode '%s', must be 'cookie' or 'find-json'", mode_str);
+                free(mode_str);
+                ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+            }
+            free(mode_str);
+        } else if (!strcmp(actpblk.descr[i].name, "max_scan_bytes")) {
+            pData->max_scan_bytes = (int)pvals[i].val.d.n;
+            if (pData->max_scan_bytes <= 0) {
+                parser_errmsg("mmjsonparse: max_scan_bytes must be positive, got %d", pData->max_scan_bytes);
+                ABORT_FINALIZE(RS_RET_CONF_PARAM_INVLD);
+            }
+        } else if (!strcmp(actpblk.descr[i].name, "allow_trailing")) {
+            pData->allow_trailing = (int)pvals[i].val.d.n;
         } else {
             dbgprintf("mmjsonparse: program error, non-handled param '%s'\n", actpblk.descr[i].name);
         }
