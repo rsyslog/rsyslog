@@ -26,7 +26,8 @@ This parameter applies to :doc:`../../configuration/modules/imdtls`.
 
 Description
 -----------
-The private key file corresponding to ``tls.mycert``. This key is used for the cryptographic operations in the DTLS handshake.
+The private key file corresponding to ``tls.mycert``. This key is used for the
+cryptographic operations in the DTLS handshake.
 
 Input usage
 -----------

@@ -26,7 +26,11 @@ This parameter applies to :doc:`../../configuration/modules/imdtls`.
 
 Description
 -----------
-Specifies the DTLS session timeout. As DTLS runs on the connectionless UDP protocol, there are no automatic detections of a session timeout. The input closes the DTLS session if no data is received from the client for the configured timeout period. The default is 1800 seconds, which is equal to 30 minutes.
+Specifies the DTLS session timeout. As DTLS runs on the connectionless UDP
+protocol, there are no automatic detections of a session timeout. The input
+closes the DTLS session if no data is received from the client for the
+configured timeout period. The default is 1800 seconds, which is equal to
+30 minutes.
 
 Input usage
 -----------

@@ -26,7 +26,8 @@ This parameter applies to :doc:`../../configuration/modules/imdtls`.
 
 Description
 -----------
-Provides a unique name to the input module instance. This is useful for identifying the source of messages when multiple input modules are used.
+Provides a unique name to the input module instance. This is useful for
+identifying the source of messages when multiple input modules are used.
 
 Input usage
 -----------

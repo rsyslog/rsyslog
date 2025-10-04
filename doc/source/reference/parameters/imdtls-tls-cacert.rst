@@ -26,7 +26,9 @@ This parameter applies to :doc:`../../configuration/modules/imdtls`.
 
 Description
 -----------
-The CA certificate that is being used to verify the client certificates. This file must be configured if ``tls.authMode`` is set to ``fingerprint``, ``name`` or ``certvalid``.
+The CA certificate that is being used to verify the client certificates. This
+file must be configured if ``tls.authMode`` is set to ``fingerprint``, ``name``
+or ``certvalid``.
 
 Input usage
 -----------

@@ -26,7 +26,8 @@ This parameter applies to :doc:`../../configuration/modules/imdtls`.
 
 Description
 -----------
-Specifies the UDP port to which the imdtls module will bind and listen for incoming connections. The default port number for DTLS is 4433.
+Specifies the UDP port to which the imdtls module will bind and listen for
+incoming connections. The default port number for DTLS is 4433.
 
 Input usage
 -----------

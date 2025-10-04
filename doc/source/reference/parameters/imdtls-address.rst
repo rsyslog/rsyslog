@@ -26,7 +26,9 @@ This parameter applies to :doc:`../../configuration/modules/imdtls`.
 
 Description
 -----------
-Specifies the IP address on which the imdtls module will listen for incoming syslog messages. By default the module listens on all available network connections.
+Specifies the IP address on which the imdtls module will listen for incoming
+syslog messages. By default the module listens on all available network
+connections.
 
 Input usage
 -----------
