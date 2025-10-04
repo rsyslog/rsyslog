@@ -57,8 +57,8 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _imdiag.parameter.legacy.imdiagserverstreamdriverpermittedpeer:
 
-- $IMDiagServerStreamDriverPermittedPeer — maps to
-  ServerStreamDriverPermittedPeer (status: legacy)
+- $IMDiagServerStreamDriverPermittedPeer — maps to ServerStreamDriverPermittedPeer
+  (status: legacy)
 
 .. index::
    single: imdiag; $IMDiagServerStreamDriverPermittedPeer

@@ -50,7 +50,8 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _imdiag.parameter.legacy.imdiaglistenportfilename:
 
-- $IMDiagListenPortFileName — maps to ListenPortFileName (status: legacy)
+- $IMDiagListenPortFileName — maps to ListenPortFileName
+  (status: legacy)
 
 .. index::
    single: imdiag; $IMDiagListenPortFileName
