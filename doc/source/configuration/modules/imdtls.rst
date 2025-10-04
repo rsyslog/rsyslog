@@ -42,12 +42,12 @@ Configuration Parameters
    Parameter names are case-insensitive; camelCase is recommended for readability.
 
 Module Parameters
------------------
+~~~~~~~~~~~~~~~~~
 
 This module currently has no module-level parameters.
 
 Input Parameters
-----------------
+~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 30 70
@@ -139,7 +139,7 @@ Examples
 ========
 
 Example 1: Basic
-----------------
+~~~~~~~~~~~~~~~~~
 
 The following sample does the following:
 
@@ -155,7 +155,7 @@ The following sample does the following:
 
 
 Example 2: Require valid certificate
-------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The following sample does the following:
 
