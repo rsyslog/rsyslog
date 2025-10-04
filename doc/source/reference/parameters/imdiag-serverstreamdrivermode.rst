@@ -29,7 +29,7 @@ Provides the mode number consumed by the selected
 :doc:`network stream driver <../../concepts/netstrm_drvr>`. imdiag always binds
 to the plain TCP (``ptcp``) stream driver, which does not act on the provided
 mode value. The parameter remains available for configuration compatibility and
-possible future extensions, but it does not alter behaviour in current
+possible future extensions, but it does not alter behavior in current
 releases.
 
 Input usage

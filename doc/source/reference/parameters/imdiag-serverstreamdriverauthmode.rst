@@ -34,7 +34,7 @@ compatibility with the generic TCP listener framework but is ignored by the
 
 Configure this parameter before :ref:`ServerRun <param-imdiag-serverrun>` if you
 need forward compatibility with a future build that supports alternate stream
-drivers. In current releases the setting does not change listener behaviour.
+drivers. In current releases the setting does not change listener behavior.
 
 Input usage
 -----------
