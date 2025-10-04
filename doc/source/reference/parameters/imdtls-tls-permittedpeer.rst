@@ -26,9 +26,9 @@ This parameter applies to :doc:`../../configuration/modules/imdtls`.
 
 Description
 -----------
-``PermittedPeer`` places access restrictions on this listener. Only peers that have been listed in this parameter may connect. The certificate presented by the remote peer is used for its validation.
+``TLS.PermittedPeer`` places access restrictions on this listener. Only peers whose certificate fingerprint or name is listed in this array parameter may connect. The certificate presented by the remote peer is used for its validation.
 
-The ``peer`` parameter lists permitted certificate fingerprints. Note that it is an array parameter, so either a single or multiple fingerprints can be listed. When a non-permitted peer connects, the refusal is logged together with its fingerprint. If the administrator knows this was a valid request, they can simply add the fingerprint by copy and paste from the logfile to ``rsyslog.conf``.
+When a non-permitted peer connects, the refusal is logged together with its fingerprint. If the administrator knows this was a valid request, they can simply add the fingerprint by copy and paste from the logfile to ``rsyslog.conf``.
 
 To specify multiple fingerprints, enclose them in braces like this:
 

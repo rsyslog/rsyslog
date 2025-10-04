@@ -28,12 +28,13 @@ Description
 -----------
 Sets the mode used for mutual authentication.
 
-Supported values are either ``fingerprint``, ``name`` or ``certvalid``.
+Supported values are:
 
 * **fingerprint**: Authentication based on certificate fingerprint.
 * **name**: Authentication based on the ``subjectAltName`` and, as a fallback, the subject common name.
 * **certvalid**: Requires a valid certificate for authentication.
-* **certanon**: Anything else will allow anonymous authentication (no client certificate).
+
+If any other value is provided, or if the parameter is omitted, anonymous authentication (**certanon**) is used, which does not require a client certificate.
 
 Input usage
 -----------
