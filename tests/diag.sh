@@ -2211,7 +2211,7 @@ es_detect_version() {
         fi
 
         local result
-        if ! result=$(printf '%s' "$payload" | "$python_bin" - <<'PYCODE'
+        if ! result=$(printf '%s' "$payload" | "$python_bin" -c '
 import json
 import sys
 
@@ -2234,8 +2234,7 @@ if not major.isdigit():
 
 print(major)
 print(number)
-PYCODE
-); then
+'); then
                 return 1
         fi
 
