@@ -162,6 +162,7 @@ struct instanceConf_s {
     sbool flowControl;
     unsigned int ratelimitInterval;
     unsigned int ratelimitBurst;
+    ratelimit_config_t *ratelimitCfg;
     uchar *startRegex;
     regex_t start_preg; /* compiled version of startRegex */
     int iTCPSessMax; /* max open connections */
@@ -217,6 +218,7 @@ static struct cnfparamdescr inppdescr[] = {{"port", eCmdHdlrString, 0}, /* legac
                                            {"addtlframedelimiter", eCmdHdlrInt, 0},
                                            {"ratelimit.interval", eCmdHdlrInt, 0},
                                            {"ratelimit.burst", eCmdHdlrInt, 0},
+                                           {"ratelimit.name", eCmdHdlrString, 0},
                                            {"multiline", eCmdHdlrBinary, 0},
                                            {"listenportfilename", eCmdHdlrString, 0},
                                            {"socketbacklog", eCmdHdlrInt, 0}};
@@ -1620,6 +1622,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->pBindRuleset = NULL;
     inst->ratelimitBurst = 10000; /* arbitrary high limit */
     inst->ratelimitInterval = 0; /* off */
+    inst->ratelimitCfg = NULL;
     inst->compressionMode = COMPRESS_SINGLE_MSG;
     inst->multiLine = 0;
     inst->socketBacklog = 64;
@@ -1744,8 +1747,12 @@ static rsRetVal addListner(modConfData_t __attribute__((unused)) * modConf, inst
     CHKiRet(prop.SetString(pSrv->pInputName, pSrv->pszInputName, ustrlen(pSrv->pszInputName)));
     CHKiRet(prop.ConstructFinalize(pSrv->pInputName));
 
-    CHKiRet(ratelimitNew(&pSrv->ratelimiter, "imptcp", (char *)pSrv->port));
-    ratelimitSetLinuxLike(pSrv->ratelimiter, inst->ratelimitInterval, inst->ratelimitBurst);
+    if (inst->ratelimitCfg != NULL) {
+        CHKiRet(ratelimitNewFromConfig(&pSrv->ratelimiter, inst->ratelimitCfg, (char *)pSrv->port));
+    } else {
+        CHKiRet(ratelimitNew(&pSrv->ratelimiter, "imptcp", (char *)pSrv->port));
+        ratelimitSetLinuxLike(pSrv->ratelimiter, inst->ratelimitInterval, inst->ratelimitBurst);
+    }
     ratelimitSetThreadSafe(pSrv->ratelimiter);
     /* add to linked list */
     pSrv->pNext = pSrvRoot;
@@ -2102,6 +2109,8 @@ BEGINnewInpInst
     instanceConf_t *inst;
     char *cstr;
     int i;
+    char *ratelimitName = NULL;
+    sbool ratelimitParamsUsed = 0;
     CODESTARTnewInpInst;
     DBGPRINTF("newInpInst (imptcp)\n");
 
@@ -2198,8 +2207,13 @@ BEGINnewInpInst
             inst->dfltTZ = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
             inst->ratelimitBurst = (unsigned int)pvals[i].val.d.n;
+            ratelimitParamsUsed = 1;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
             inst->ratelimitInterval = (unsigned int)pvals[i].val.d.n;
+            ratelimitParamsUsed = 1;
+        } else if (!strcmp(inppblk.descr[i].name, "ratelimit.name")) {
+            free(ratelimitName);
+            ratelimitName = es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(inppblk.descr[i].name, "multiline")) {
             inst->multiLine = (sbool)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "listenportfilename")) {
@@ -2234,7 +2248,13 @@ BEGINnewInpInst
     if (inst->iTCPSessMax == -1) {
         inst->iTCPSessMax = loadModConf->iTCPSessMax;
     }
+
+    if (iRet == RS_RET_OK) {
+        CHKiRet(ratelimitResolveFromValues(loadModConf->pConf, "imptcp", ratelimitName, ratelimitParamsUsed,
+                                           &inst->ratelimitInterval, &inst->ratelimitBurst, NULL, &inst->ratelimitCfg));
+    }
 finalize_it:
+    free(ratelimitName);
     CODE_STD_FINALIZERnewInpInst cnfparamvalsDestruct(pvals, &inppblk);
 ENDnewInpInst
 

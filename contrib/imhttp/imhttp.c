@@ -112,6 +112,7 @@ struct instanceConf_s {
     ratelimit_t *ratelimiter;
     unsigned int ratelimitInterval;
     unsigned int ratelimitBurst;
+    ratelimit_config_t *ratelimitCfg;
     uchar *pszInputName; /* value for inputname property, NULL is OK and handled by core engine */
     prop_t *pInputName;
     sbool flowControl;
@@ -162,6 +163,7 @@ static struct cnfparamdescr inppdescr[] = {{"endpoint", eCmdHdlrString, 0},
                                            {"name", eCmdHdlrString, 0},
                                            {"ratelimit.interval", eCmdHdlrInt, 0},
                                            {"ratelimit.burst", eCmdHdlrInt, 0},
+                                           {"ratelimit.name", eCmdHdlrString, 0},
                                            {"addmetadata", eCmdHdlrBinary, 0}};
 
 #include "im-helper.h" /* must be included AFTER the type definitions! */
@@ -216,6 +218,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->pszEndpoint = NULL;
     inst->pszBasicAuthFile = NULL;
     inst->ratelimiter = NULL;
+    inst->ratelimitCfg = NULL;
     inst->pszInputName = NULL;
     inst->pInputName = NULL;
     inst->ratelimitBurst = 10000; /* arbitrary high limit */
@@ -1043,6 +1046,8 @@ BEGINnewInpInst
     struct cnfparamvals *pvals;
     instanceConf_t *inst;
     int i;
+    char *ratelimitName = NULL;
+    sbool ratelimitParamsUsed = 0;
     CODESTARTnewInpInst;
     DBGPRINTF("newInpInst (imhttp)\n");
     pvals = nvlstGetParams(lst, &inppblk, NULL);
@@ -1070,8 +1075,13 @@ BEGINnewInpInst
             inst->pszInputName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
             inst->ratelimitBurst = (unsigned int)pvals[i].val.d.n;
+            ratelimitParamsUsed = 1;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
             inst->ratelimitInterval = (unsigned int)pvals[i].val.d.n;
+            ratelimitParamsUsed = 1;
+        } else if (!strcmp(inppblk.descr[i].name, "ratelimit.name")) {
+            free(ratelimitName);
+            ratelimitName = es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(inppblk.descr[i].name, "flowcontrol")) {
             inst->flowControl = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "disablelfdelimiter")) {
@@ -1088,15 +1098,20 @@ BEGINnewInpInst
         }
     }
 
+    if (iRet == RS_RET_OK) {
+        CHKiRet(ratelimitResolveFromValues(loadModConf->pConf, "imhttp", ratelimitName, ratelimitParamsUsed,
+                                           &inst->ratelimitInterval, &inst->ratelimitBurst, NULL, &inst->ratelimitCfg));
+    }
+
     if (inst->pszInputName) {
         CHKiRet(prop.Construct(&inst->pInputName));
         CHKiRet(prop.SetString(inst->pInputName, inst->pszInputName, ustrlen(inst->pszInputName)));
         CHKiRet(prop.ConstructFinalize(inst->pInputName));
     }
-    CHKiRet(ratelimitNew(&inst->ratelimiter, "imphttp", NULL));
-    ratelimitSetLinuxLike(inst->ratelimiter, inst->ratelimitInterval, inst->ratelimitBurst);
+    CHKiRet(ratelimitNewFromConfig(&inst->ratelimiter, inst->ratelimitCfg, NULL));
 
 finalize_it:
+    free(ratelimitName);
     CODE_STD_FINALIZERnewInpInst cnfparamvalsDestruct(pvals, &inppblk);
 ENDnewInpInst
 

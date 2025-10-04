@@ -89,6 +89,7 @@ static struct configSettings_s {
     int iPersistStateInterval;
     unsigned int ratelimitInterval;
     unsigned int ratelimitBurst;
+    ratelimit_config_t *ratelimitCfg;
     int bIgnorePrevious;
     int bIgnoreNonValidStatefile;
     int iDfltSeverity;
@@ -108,6 +109,7 @@ static struct cnfparamdescr modpdescr[] = {{"statefile", eCmdHdlrGetWord, 0},
                                            {"filecreatemode", eCmdHdlrFileCreateMode, 0},
                                            {"ratelimit.interval", eCmdHdlrInt, 0},
                                            {"ratelimit.burst", eCmdHdlrInt, 0},
+                                           {"ratelimit.name", eCmdHdlrString, 0},
                                            {"persiststateinterval", eCmdHdlrInt, 0},
                                            {"ignorepreviousmessages", eCmdHdlrBinary, 0},
                                            {"ignorenonvalidstatefile", eCmdHdlrBinary, 0},
@@ -1007,9 +1009,8 @@ static void stopSrvWrkr(journal_etry_t *const etry) {
 
 BEGINrunInput
     CODESTARTrunInput;
-    CHKiRet(ratelimitNew(&ratelimiter, "imjournal", NULL));
+    CHKiRet(ratelimitNewFromConfig(&ratelimiter, cs.ratelimitCfg, NULL));
     dbgprintf("imjournal: ratelimiting burst %u, interval %u\n", cs.ratelimitBurst, cs.ratelimitInterval);
-    ratelimitSetLinuxLike(ratelimiter, cs.ratelimitInterval, cs.ratelimitBurst);
     ratelimitSetNoTimeCache(ratelimiter);
 
     /* handling old "usepidfromsystem" option */
@@ -1049,6 +1050,7 @@ BEGINbeginCnfLoad
     cs.fCreateMode = 0644;
     cs.ratelimitBurst = 20000;
     cs.ratelimitInterval = 600;
+    cs.ratelimitCfg = NULL;
     cs.iDfltSeverity = DFLT_SEVERITY;
     cs.iDfltFacility = DFLT_FACILITY;
     cs.bUseJnlPID = -1;
@@ -1262,7 +1264,10 @@ ENDmodExit
 BEGINsetModCnf
     struct cnfparamvals *pvals = NULL;
     int i;
+    char *ratelimitName = NULL;
+    sbool ratelimitParamsUsed = 0;
     CODESTARTsetModCnf;
+
     pvals = nvlstGetParams(lst, &modpblk, NULL);
     if (pvals == NULL) {
         LogError(0, RS_RET_MISSING_CNFPARAMS,
@@ -1286,8 +1291,13 @@ BEGINsetModCnf
             cs.fCreateMode = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "ratelimit.burst")) {
             cs.ratelimitBurst = (unsigned int)pvals[i].val.d.n;
+            ratelimitParamsUsed = 1;
         } else if (!strcmp(modpblk.descr[i].name, "ratelimit.interval")) {
             cs.ratelimitInterval = (unsigned int)pvals[i].val.d.n;
+            ratelimitParamsUsed = 1;
+        } else if (!strcmp(modpblk.descr[i].name, "ratelimit.name")) {
+            free(ratelimitName);
+            ratelimitName = es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(modpblk.descr[i].name, "ignorepreviousmessages")) {
             cs.bIgnorePrevious = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "ignorenonvalidstatefile")) {
@@ -1323,7 +1333,13 @@ BEGINsetModCnf
         }
     }
 
+    if (iRet == RS_RET_OK) {
+        CHKiRet(ratelimitResolveFromValues(loadConf, "imjournal", ratelimitName, ratelimitParamsUsed,
+                                           &cs.ratelimitInterval, &cs.ratelimitBurst, NULL, &cs.ratelimitCfg));
+    }
+
 finalize_it:
+    free(ratelimitName);
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &modpblk);
 ENDsetModCnf
 

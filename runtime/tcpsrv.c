@@ -372,8 +372,14 @@ static rsRetVal ATTR_NONNULL() addNewLstnPort(tcpsrv_t *const pThis, tcpLstnPara
 
 
     /* support statistics gathering */
-    CHKiRet(ratelimitNew(&pEntry->ratelimiter, "tcperver", NULL));
-    ratelimitSetLinuxLike(pEntry->ratelimiter, pThis->ratelimitInterval, pThis->ratelimitBurst);
+    if (pThis->ratelimitCfg != NULL) {
+        const char *const instName =
+            (const char *)((cnf_params->pszInputName != NULL) ? cnf_params->pszInputName : (uchar *)"tcperver");
+        CHKiRet(ratelimitNewFromConfig(&pEntry->ratelimiter, pThis->ratelimitCfg, instName));
+    } else {
+        CHKiRet(ratelimitNew(&pEntry->ratelimiter, "tcperver", NULL));
+        ratelimitSetLinuxLike(pEntry->ratelimiter, pThis->ratelimitInterval, pThis->ratelimitBurst);
+    }
     ratelimitSetThreadSafe(pEntry->ratelimiter);
 
     CHKiRet(statsobj.Construct(&(pEntry->stats)));
@@ -1696,6 +1702,7 @@ BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macr
     pThis->bSPFramingFix = 0;
     pThis->ratelimitInterval = 0;
     pThis->ratelimitBurst = 10000;
+    pThis->ratelimitCfg = NULL;
     pThis->bUseFlowControl = 1;
     pThis->pszDrvrName = NULL;
     pThis->bPreserveCase = 1; /* preserve case in fromhost; default to true. */
@@ -1979,10 +1986,13 @@ finalize_it:
 }
 
 
-/* Set the linux-like ratelimiter settings */
-static rsRetVal ATTR_NONNULL(1)
-    SetLinuxLikeRatelimiters(tcpsrv_t *pThis, unsigned int ratelimitInterval, unsigned int ratelimitBurst) {
+/* Set the ratelimiter configuration */
+static rsRetVal ATTR_NONNULL(1) SetLinuxLikeRatelimiters(tcpsrv_t *pThis,
+                                                         ratelimit_config_t *const cfg,
+                                                         unsigned int ratelimitInterval,
+                                                         unsigned int ratelimitBurst) {
     DEFiRet;
+    pThis->ratelimitCfg = cfg;
     pThis->ratelimitInterval = ratelimitInterval;
     pThis->ratelimitBurst = ratelimitBurst;
     RETiRet;

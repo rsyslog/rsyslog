@@ -67,6 +67,7 @@
 #include "parserif.h"
 #include "modules.h"
 #include "dirty.h"
+#include "ratelimit.h"
 #include "template.h"
 #include "timezones.h"
 
@@ -207,8 +208,10 @@ static void cnfSetDefaults(rsconf_t *pThis) {
     pThis->globals.glblDevOptions = 0;
     pThis->globals.intMsgRateLimitItv = 5;
     pThis->globals.intMsgRateLimitBurst = 500;
+    pThis->globals.internalMsgRatelimitCfg = NULL;
     pThis->globals.intMsgsSeverityFilter = DFLT_INT_MSGS_SEV_FILTER;
     pThis->globals.permitCtlC = glblPermitCtlC;
+    ratelimitStoreInit(pThis);
 
     pThis->globals.actq_dflt_toQShutdown = 10;
     pThis->globals.actq_dflt_toActShutdown = 1000;
@@ -339,6 +342,7 @@ BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and C
     stdlog_close(pThis->globals.stdlog_hdl);
     free(pThis->globals.stdlog_chanspec);
 #endif
+    ratelimitStoreDestruct(pThis);
     lookupDestroyCnf();
     llDestroy(&(pThis->rulesets.llRulesets));
 ENDobjDestruct(rsconf)
@@ -528,6 +532,9 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
             break;
         case CNFOBJ_MODULE:
             modulesProcessCnf(o);
+            break;
+        case CNFOBJ_RATELIMIT:
+            if (ratelimitProcessCnf(o) != RS_RET_OK) parser_errmsg("error processing ratelimit object");
             break;
         case CNFOBJ_INPUT:
             inputProcessCnf(o);

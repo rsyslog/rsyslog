@@ -20,6 +20,7 @@ The first full implementation is available since rsyslog v6.
    functions/index
    control_structures
    configuration_objects
+   ratelimit
    constant_strings
    variable_property_types
    lookup_tables

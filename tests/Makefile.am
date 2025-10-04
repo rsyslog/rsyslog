@@ -642,7 +642,6 @@ TESTS +=  \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
 	imtcp-basic-hup.sh \
-	imtcp-impstats-single-thread.sh \
 	imtcp-starvation-0.sh \
 	imtcp-starvation-1.sh \
 	imtcp-maxFrameSize.sh \
@@ -654,6 +653,8 @@ TESTS +=  \
 	imtcp-multiport.sh \
 	imtcp-bigmessage-octetcounting.sh \
 	imtcp-bigmessage-octetstuffing.sh \
+	imtcp-ratelimit-object.sh \
+	imtcp-ratelimit-legacy.sh \
 	manytcp.sh \
 	imtcp_conndrop.sh \
 	imtcp_addtlframedelim.sh \
@@ -675,6 +676,8 @@ endif # HAVE_VALGRIND
 if ENABLE_IMTCP_EPOLL
 if ENABLE_IMPSTATS
 TESTS +=  \
+	imtcp-ratelimit-impstats.sh \
+	imtcp-impstats-single-thread.sh \
 	imtcp-impstats.sh
 endif # ENABLE_IMPSTATS
 endif # ENABLE_IMTCP_EPOLL
@@ -2602,6 +2605,9 @@ EXTRA_DIST= \
 	imtcp-multiport.sh \
 	imtcp-bigmessage-octetcounting.sh \
 	imtcp-bigmessage-octetstuffing.sh \
+	imtcp-ratelimit-object.sh \
+	imtcp-ratelimit-legacy.sh \
+	imtcp-ratelimit-impstats.sh \
 	udp-msgreduc-orgmsg-vg.sh \
 	udp-msgreduc-vg.sh \
 	manytcp-too-few-tls-vg.sh \
