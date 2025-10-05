@@ -1,13 +1,12 @@
-***********************************
 imdiag: Diagnostic instrumentation
-***********************************
+==================================
 
 :Module Name: **imdiag**
 :Author: Rainer Gerhards
 :Available since: at least 5.x
 
 Purpose
-=======
+-------
 
 The imdiag input module exposes a TCP-based diagnostics and control channel
 that can inject messages into the
@@ -18,7 +17,7 @@ production systems. Because the interface permits queue control and message
 injection, it **must only be exposed to trusted hosts**.
 
 Configuration Parameters
-========================
+------------------------
 
 .. note::
 
@@ -26,7 +25,7 @@ Configuration Parameters
    readability.
 
 Module Parameters
------------------
+~~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 30 70
@@ -48,7 +47,7 @@ Module Parameters
         :end-before: .. summary-end
 
 Input Parameters
-----------------
+~~~~~~~~~~~~~~~~
 
 .. list-table::
    :widths: 30 70
