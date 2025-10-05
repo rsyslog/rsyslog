@@ -27,9 +27,9 @@ Description
 -----------
 .. versionadded:: 8.38.0
 
-With this parameter you can specify the name for a file, into which the
-port number the listener is listening on will be written. This parameter was
-introduced because the testbench works with dynamic ports.
+Specifies the path to a file where the listener will write its bound port
+number upon startup. This is useful for integration with other services or in
+test environments that use dynamic ports.
 
 .. note::
 
