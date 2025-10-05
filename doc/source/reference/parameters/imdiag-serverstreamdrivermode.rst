@@ -50,8 +50,7 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _imdiag.parameter.legacy.imdiagserverstreamdrivermode:
 
-- $IMDiagServerStreamDriverMode — maps to ServerStreamDriverMode
-  (status: legacy)
+- $IMDiagServerStreamDriverMode — maps to ServerStreamDriverMode (status: legacy)
 
 .. index::
    single: imdiag; $IMDiagServerStreamDriverMode
