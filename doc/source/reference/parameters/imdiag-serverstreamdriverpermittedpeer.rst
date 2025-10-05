@@ -29,7 +29,7 @@ Description
 Defines the set of remote peers that may connect when the chosen
 :doc:`network stream driver <../../concepts/netstrm_drvr>` supports
 authentication. imdiag always uses the plain TCP (``ptcp``) stream driver,
-which offers no peer verification. As a result the configured identities are
+which offers no peer verification. As a result, the configured identities are
 accepted but ignored. The parameter is kept for forward compatibility with the
 generic TCP listener framework should imdiag gain authenticated stream support
 in the future.
