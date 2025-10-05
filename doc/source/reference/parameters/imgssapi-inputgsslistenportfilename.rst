@@ -33,8 +33,8 @@ introduced because the testbench works with dynamic ports.
 
 .. note::
 
-   If this parameter is set, 0 will be accepted as the port. Otherwise it
-   is automatically changed to port 514.
+   If this parameter is set, a port of ``0`` for ``InputGSSServerRun`` is
+   accepted. Otherwise, a port of ``0`` defaults to ``514``.
 
 Input usage
 -----------
