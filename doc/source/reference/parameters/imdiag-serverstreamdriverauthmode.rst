@@ -27,8 +27,8 @@ This parameter applies to :doc:`../../configuration/modules/imdiag`.
 Description
 -----------
 Selects the authentication mode for the active
-:doc:`network stream driver <../../concepts/netstrm_drvr>`. imdiag
-unconditionally binds to the plain TCP driver (``ptcp``) and therefore lacks
+:doc:`network stream driver <../../concepts/netstrm_drvr>`. imdiag always uses
+the plain TCP driver (``ptcp``) and therefore lacks
 TLS or other authenticated stream implementations. The value is accepted for
 compatibility with the generic TCP listener framework but is ignored by the
 ``ptcp`` driver.
