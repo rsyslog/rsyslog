@@ -1,6 +1,12 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
 - overall improved documentation via a large set of topic updates.
+- 2025-10-05: mmjsonparse: add find-json mode for embedded JSON
+  Plain JSON embedded in text is common in production logs. This change
+  lets users parse such logs without cookies, improving ease of use and
+  lowering onboarding friction while keeping legacy behavior intact.
+  Before/After: cookie-only JSON -> find-json parses first top-level {}.
+  Impact: Default behavior unchanged. New mode and counters are opt-in.
 - 2025-10-03: mmjsontransform: add experimental JSON dotted-key (un)flatten
   Real-world need: unflatten dotted JSON into nested objects, and optionally
   flatten back for downstream tools. This introduces a general transformer
