@@ -27,9 +27,9 @@ Description
 -----------
 .. versionadded:: 8.38.0
 
-With this parameter you can specify the name for a file. In this file, the
-port the listener is connected to will be written. This parameter was introduced
-because the testbench works with dynamic ports.
+With this parameter you can specify the name for a file, into which the
+port number the listener is listening on will be written. This parameter was
+introduced because the testbench works with dynamic ports.
 
 .. note::
 

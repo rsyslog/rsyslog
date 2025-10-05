@@ -27,6 +27,12 @@ Description
 -----------
 Sets the maximum number of sessions supported by the listener.
 
+.. note::
+
+   Due to a long-standing bug, the configured limit is not forwarded to the
+   underlying TCP listener. Regardless of the value set here, the listener
+   currently enforces the built-in default of 200 sessions.
+
 Input usage
 -----------
 .. _param-imgssapi-input-inputgssservermaxsessions:

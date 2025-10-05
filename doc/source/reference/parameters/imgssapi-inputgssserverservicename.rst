@@ -25,7 +25,8 @@ This parameter applies to :doc:`../../configuration/modules/imgssapi`.
 
 Description
 -----------
-The service name to use for the GSS server.
+Specifies the service name for the GSS server, used to form the Service
+Principal Name (SPN). If not specified, it defaults to ``host``.
 
 Input usage
 -----------
