@@ -1,65 +1,81 @@
 .. _ref-mmjsonparse:
 
-***********************************************************
-JSON/CEE Structured Content Extraction Module (mmjsonparse)
-***********************************************************
+*******************************************************
+JSON Structured Content Extraction Module (mmjsonparse)
+*******************************************************
 
-===========================  ===========================================================================
-**Module Name:**             **mmjsonparse**
-**Author:**                  `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
-**Available since:**         6.6.0
-===========================  ===========================================================================
+:Module name: **mmjsonparse**
+:Introduced: 6.6.0 (find-json mode added in 8.2510)
+:Author: Rainer Gerhards <rgerhards@adiscon.com>
+
+.. meta::
+   :keywords: rsyslog, mmjsonparse, JSON, structured logging, parsing, find-json, cookie mode
+   :description: Extracts JSON-structured fields from messages; supports legacy cookie-prefixed and find-json scanning modes. Exposes scan counters usable with Prometheus via imhttp.
+
+.. summary-start
+
+Parses JSON-structured content in log messages and exposes fields as message properties.
+Supports legacy cookie-prefixed parsing and a flexible find-json scan mode.
+Provides scan counters to assess success, failure, and truncation.
+
+.. summary-end
 
 
-Purpose
-=======
+Overview
+========
 
-This module provides support for parsing structured log messages that
-follow the CEE/lumberjack spec or contain embedded JSON content.
+``mmjsonparse`` extracts JSON content from incoming messages and exposes parsed
+fields beneath the structured data container (for example, ``$!field``). It supports two
+operating modes:
 
-In the legacy **cookie mode** (default), the module checks for the CEE cookie
-and, if present, parses the JSON-encoded structured message content.
-The properties are then available as original message properties.
+- **find-json (recommended):** scans the message for the first valid top-level JSON object and parses it.
+- **cookie (legacy):** parses JSON only when the message starts with the legacy ``@cee:`` prefix.
 
-In the **find-json mode**, the module scans the message content to locate
-the first valid top-level JSON object "{...}" and parses it, regardless
-of its position in the message. This mode is useful for processing logs
-that contain JSON embedded within other text, such as application logs
-with prefixes.
+Use ``mmjsonparse`` early in the processing pipeline to make JSON fields available for
+filtering, normalization, or routing. The **cookie** mode is retained for backward
+compatibility and should not be used in new deployments.
 
-As a convenience, mmjsonparse will produce a valid CEE/lumberjack log
-message if passed a message without the CEE cookie or valid JSON.  A JSON structure
-will be created and the "msg" field will be the only field and it will
-contain the message. Note that in this case, mmjsonparse will
-nonetheless return that the JSON parsing has failed.
+Introduced and Compatibility
+----------------------------
 
-In **cookie mode**, the "CEE cookie" is the character sequence "@cee:" which must prepend the
-actual JSON. Note that the JSON must be valid and MUST NOT be followed
-by any non-JSON message. If either of these conditions is not true,
-mmjsonparse will **not** parse the associated JSON. This is based on the
-cookie definition used in CEE/project lumberjack and is meant to aid
-against an erroneous detection of a message as being CEE where it is
-not.
+The module has been available since rsyslog **6.6.0**.
+The enhanced **find-json** scanning mode was introduced in version **8.2510** and is present in all later releases.
 
-**Note:** Cookie mode is NOT a generic JSON parser that picks up JSON from
-wherever it may occur in the message. This is intentional, but the new
-find-json mode provides this capability.
+Behavior Notes
+--------------
+
+- This is not a generic validator. If messages contain trailing non-JSON after the parsed
+  object and trailing content is not allowed, parsing is considered failed according
+  to the configured policy.
+- Parameter names are case-insensitive. For readability, camelCase is recommended.
 
 
 Notable Features
 ================
 
 - :ref:`mmjsonparse-parsing-result`
+- :ref:`mmjsonparse-statistics`
+- :ref:`mmjsonparse-failure-handling`
+- :ref:`mmjsonparse-examples`
+
+
+Parsing Modes
+=============
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 78
+
+   * - Mode
+     - Description
+   * - ``find-json``
+     - Scans for the first top-level ``{...}`` anywhere in the message and parses it. Suited for modern app logs that embed JSON within other text.
+   * - ``cookie`` (legacy)
+     - Parses only when the message begins with ``@cee:`` and is immediately followed by valid JSON. Kept for backward compatibility with historic CEE/lumberjack emitters.
 
 
 Configuration Parameters
 ========================
-
-.. note::
-
-   Parameter names are case-insensitive. For readability, camelCase is
-   recommended.
-
 
 Action Parameters
 -----------------
@@ -98,137 +114,187 @@ Action Parameters
 
 .. _mmjsonparse-parsing-result:
 
-Check parsing result
+Check Parsing Result
 ====================
 
-You can check whether rsyslogd was able to successfully parse the
-message by reading the $parsesuccess variable :
+Use the ``$parsesuccess`` variable to check whether JSON parsing succeeded.
 
-.. code-block:: none
+.. code-block:: rsyslog
 
-   action(type="mmjsonparse")
+   action(type="mmjsonparse" mode="find-json")
+
    if $parsesuccess == "OK" then {
-      action(type="omfile" File="/tmp/output")
-   }
-   else if $parsesuccess == "FAIL" then {
-      action(type="omfile" File="/tmp/parsing_failure")
+       # downstream processing for structured messages
+       action(type="omfile" file="/var/log/rsyslog/structured.log")
+   } else if $parsesuccess == "FAIL" then {
+       # handle failures (see dedicated section below)
+       action(type="omfile" file="/var/log/rsyslog/nonconforming.log")
+       stop
    }
 
+
+.. _mmjsonparse-failure-handling:
+
+Handling Parsing Failures
+=========================
+
+If JSON extraction fails, ``$parsesuccess`` is set to ``"FAIL"``. Best practice is to
+keep such messages separate for inspection. Two common patterns are shown below.
+
+A) Direct to non-conforming log with stop
+-----------------------------------------
+
+.. code-block:: rsyslog
+
+   action(type="mmjsonparse" mode="find-json")
+
+   if $parsesuccess == "FAIL" then {
+       action(
+         type="omfile"
+         file="/var/log/rsyslog/nonconforming.log"
+         template="RSYSLOG_TraditionalFileFormat"
+       )
+       stop    # prevent accidental downstream processing
+   }
+
+   # OK path continues as usual
+   if $parsesuccess == "OK" then {
+       action(type="omfile" file="/var/log/rsyslog/structured.log")
+   }
+
+B) Handoff to a dedicated inspection ruleset (with stop)
+--------------------------------------------------------
+
+.. code-block:: rsyslog
+
+   ruleset(name="inspectNonConforming"){
+       # capture raw for triage
+       template(name="rawmsg" type="string" string="%rawmsg%\\n")
+       action(type="omfile" file="/var/log/rsyslog/nonconforming.raw" template="rawmsg")
+       # optional: richer snapshot for short-term debugging
+       # action(type="omfile" file="/var/log/rsyslog/nonconforming.meta" template="RSYSLOG_DebugFormat")
+       stop
+   }
+
+   action(type="mmjsonparse" mode="find-json")
+
+   if $parsesuccess == "FAIL" then {
+       call inspectNonConforming
+   } else {
+       action(type="omfile" file="/var/log/rsyslog/structured.log")
+   }
+
+Operational recommendations
+---------------------------
+
+- Use ``stop`` on the failure path if you must ensure the message does not reach later actions unintentionally.
+  Omit ``stop`` if you intentionally want both paths.
+- Apply a distinct retention policy to non-conforming logs; they can be bursty.
+- For transient debugging, log ``%rawmsg%`` (and, if supported, an all-JSON snapshot) to aid triage.
+- Run ``rsyslogd -N1`` after edits to validate configuration syntax.
+- Consider preceding ``mmjsonparse`` with :doc:`mmutf8fix <mmutf8fix>` if invalid encodings are suspected.
+
+
+.. _mmjsonparse-statistics:
 
 Statistics Counters
 ===================
 
-When using find-json mode, mmjsonparse provides detailed statistics about JSON scanning performance and results. These counters are available through rsyslog's statistics interface and can be viewed using ``rsyslogctl stats`` or through the impstats module.
-
-Available Counters
-------------------
+When using **find-json** mode, ``mmjsonparse`` maintains scan-related counters
+(available via rsyslog’s statistics subsystem):
 
 .. list-table::
    :header-rows: 1
    :widths: 25 75
 
-   * - Counter Name
+   * - Counter
      - Description
    * - ``scan.attempted``
-     - Total number of messages processed in find-json mode. Incremented for every message that enters find-json scanning, regardless of whether JSON is found.
+     - Messages inspected by the find-json scanner.
    * - ``scan.found``
-     - Number of messages where valid JSON objects were successfully located during scanning. This includes cases where JSON was found but later rejected due to trailing data restrictions.
+     - Messages where a JSON object was located (may still fail later on trailing rules).
    * - ``scan.failed``
-     - Number of messages where JSON objects were found during scanning but failed to parse properly. This indicates malformed JSON content.
+     - Messages where a located JSON object could not be parsed (malformed).
    * - ``scan.truncated``
-     - Number of messages where the JSON scan was terminated due to reaching the ``max_scan_bytes`` limit before finding a complete JSON object.
+     - Scans aborted due to the ``max_scan_bytes`` limit.
 
-Counter Usage Examples
-----------------------
+Exposure and collection
+-----------------------
 
-View current statistics:
+- **impstats (recommended):** Configure ``impstats`` to emit periodic statistics as messages.
+- **Prometheus via imhttp:** If :doc:`imhttp <imhttp>` is loaded with :ref:`metricsPath <imhttp-metricspath>`,
+  it exposes rsyslog statistics (including ``mmjsonparse`` counters) in Prometheus text format at the configured HTTP path.
+  See imhttp’s *Prometheus Metrics* section and secure endpoints as needed (for example, ``metricsBasicAuthFile``).
 
-.. code-block:: bash
-
-   # View all rsyslog statistics including mmjsonparse
-   rsyslogctl stats
-
-   # Example output:
-   {
-     "name": "mmjsonparse",
-     "origin": "mmjsonparse",
-     "scan.attempted": 1523,
-     "scan.found": 1456,
-     "scan.failed": 42,
-     "scan.truncated": 25
-   }
-
-Configure automatic statistics reporting:
-
-.. code-block:: none
-
-   # Report statistics every 60 seconds
-   module(load="impstats" interval="60" severity="6")
-
-   # Statistics will appear in rsyslog's main log
-
-Performance Analysis
+Performance guidance
 --------------------
 
-The statistics counters help analyze JSON processing performance:
+- **Success rate:** ``scan.found / scan.attempted`` — ability to locate JSON.
+- **Parse quality:** ``scan.failed / scan.found`` — data quality problems.
+- **Scan efficiency:** ``scan.truncated / scan.attempted`` — raise ``max_scan_bytes`` if frequent.
 
-- **Success Rate**: ``scan.found / scan.attempted`` indicates how often JSON is successfully located
-- **Parse Quality**: ``scan.failed / scan.found`` shows the rate of malformed JSON
-- **Scan Efficiency**: ``scan.truncated / scan.attempted`` indicates if ``max_scan_bytes`` should be increased
 
-Example analysis:
+Processing Flow (informative)
+=============================
 
-.. code-block:: none
+.. note::
+   The diagrams below are informational and do not alter behavior.
 
-   # High truncation rate suggests increasing max_scan_bytes
-   if scan.truncated > (scan.attempted * 0.1) then {
-       # Consider increasing max_scan_bytes parameter
-   }
+.. mermaid::
+   :align: center
 
-   # High failure rate suggests data quality issues
-   if scan.failed > (scan.found * 0.05) then {
-       # Investigate JSON formatting in source logs
-   }
+   flowchart TD
+     A["msg in"] --> B["mmjsonparse<br>mode=find-json|cookie"]
+     B -->| OK | C["fields under $!"]
+     C --> D["structured path"]
+     B -->| FAIL | E["non-conforming"]
+     E --> F{"route"}
+     F -->| file+stop | G["omfile<br>nonconforming.log"]
+     F -->| ruleset+stop | H["inspectNonConforming()"]
 
-**Note**: Statistics counters are only active when using ``mode="find-json"``. Cookie mode does not generate these scanning-specific statistics.
+Metrics exposure (optional)
+---------------------------
 
+.. mermaid::
+   :align: center
+
+   flowchart LR
+     M["mmjsonparse counters"] --> S["stats registry"]
+     S --> I["imhttp<br>/metrics"]
+     I --> P["Prometheus scrape"]
+
+
+.. _mmjsonparse-examples:
 
 Examples
 ========
 
-Apply default normalization (legacy cookie mode)
-------------------------------------------------
+Enable default normalization (legacy cookie mode)
+-------------------------------------------------
 
-This activates the module and applies normalization to all messages using
-the legacy CEE cookie mode.
-
-.. code-block:: none
+.. code-block:: rsyslog
 
    module(load="mmjsonparse")
-   action(type="mmjsonparse")
+   action(type="mmjsonparse" mode="cookie")
 
 
-Permit parsing messages without cookie
---------------------------------------
+Permit parsing messages without cookie (do not require @cee:)
+-------------------------------------------------------------
 
-To permit parsing messages without cookie, use this action statement
-
-.. code-block:: none
+.. code-block:: rsyslog
 
    action(type="mmjsonparse" cookie="")
 
 
 Find-JSON mode for embedded JSON content
------------------------------------------
+----------------------------------------
 
-To parse JSON content embedded anywhere in the message, use find-json mode:
+.. code-block:: rsyslog
 
-.. code-block:: none
-
-   # Basic find-json mode with defaults
+   # Basic find-json mode
    action(type="mmjsonparse" mode="find-json")
 
-   # Find-json mode with custom limits and strict trailing control
+   # With limits and strict trailing control
    action(type="mmjsonparse"
           mode="find-json"
           max_scan_bytes="32768"
@@ -238,19 +304,22 @@ To parse JSON content embedded anywhere in the message, use find-json mode:
 Mixed mode processing
 ---------------------
 
-Different message types can be processed with different modes:
+.. code-block:: rsyslog
 
-.. code-block:: none
-
-   # Legacy CEE messages
    if $msg startswith "@cee:" then {
        action(type="mmjsonparse" mode="cookie")
-   }
-
-   # Modern logs with embedded JSON
-   else if $msg contains "{" then {
+   } else if $msg contains "{" then {
        action(type="mmjsonparse" mode="find-json")
    }
+
+
+See also
+========
+
+- :doc:`mmutf8fix <mmutf8fix>` — fix invalid UTF-8 before parsing
+- :doc:`mmnormalize <mmnormalize>` — normalization after extraction
+- :doc:`omelasticsearch <omelasticsearch>` — indexing structured logs
+- :doc:`imhttp <imhttp>` — expose rsyslog statistics in Prometheus text format via HTTP
 
 
 .. toctree::
