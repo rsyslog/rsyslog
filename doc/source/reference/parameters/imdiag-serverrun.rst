@@ -34,6 +34,11 @@ Record the chosen port in the file specified by
 imdiag always selects the plain TCP (``ptcp``) network stream driver. As a
 result parameters that normally tune stream driver authentication or permitted
 peers are accepted for compatibility but have no effect in current releases.
+This includes :ref:`ServerStreamDriverMode
+<param-imdiag-serverstreamdrivermode>`,
+:ref:`ServerStreamDriverAuthMode <param-imdiag-serverstreamdriverauthmode>`,
+and :ref:`ServerStreamDriverPermittedPeer
+<param-imdiag-serverstreamdriverpermittedpeer>`.
 
 imdiag supports only a single listener. Attempting to configure ``ServerRun``
 more than once logs an error and the additional configuration is ignored. Set
