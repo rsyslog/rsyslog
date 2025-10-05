@@ -39,226 +39,81 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive.
-
-
-Action Parameters
------------------
-
-address
-^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-Specifies the IP address on where the imdtls module will listen for
-incoming syslog messages. By default the module will listen on all available
-network connections.
-
-
-port
-^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "4433", "yes", "none"
-
-Specifies the UDP port to which the imdtls module will bind and listen for
-incoming connections. The default port number for DTLS is 4433.
-
-
-timeout
-^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "1800", "no", "none"
-
-Specifies the DTLS session timeout. As DTLS runs on transportless UDP protocol, there are no
-automatic detections of a session timeout. The input will close the DTLS session if no data
-is received from the client for the configured timeout period. The default is 1800 seconds
-which is equal to 30 minutes.
-
-
-name
-^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive", "Available since"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-Unique name to the input module instance. This is useful for identifying the source of
-messages when multiple input modules are used.
-
-
-ruleset
-^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-Determines the ruleset to which the imdtls input will be bound to. This can be
-overridden at the instance level.
-
-
-tls.AuthMode
-^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "no", "none"
-
-Sets the mode used for mutual authentication.
-
-Supported values are either "*fingerprint*\ ", "*name"* or "*certvalid*\ ".
-
-Fingerprint: Authentication based on certificate fingerprint.
-Name: Authentication based on the subjectAltName and, as a fallback, the
-subject common name.
-Certvalid: Requires a valid certificate for authentication.
-Certanon: Anything else will allow anonymous authentication (no client certificate).
-
-
-tls.cacert
-^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "no", "none"
-
-The CA certificate that is being used to verify the client certificates.
-Has to be configured if tls.authmode is set to "*fingerprint*\ ", "*name"* or "*certvalid*\ ".
-
-
-tls.mycert 
-^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "no", "none"
-
-Specifies the certificate file used by imdtls.
-This certificate is presented to peers during the DTLS handshake.
-
-
-tls.myprivkey 
-^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "no", "none"
-
-The private key file corresponding to tls.mycert.
-This key is used for the cryptographic operations in the DTLS handshake.
-
-
-tls.tlscfgcmd 
-^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "no", "none"
-
-Used to pass additional OpenSSL configuration commands. This can be used to fine-tune the OpenSSL
-settings by passing configuration commands to the openssl library.
-OpenSSL Version 1.0.2 or higher is required for this feature.
-A list of possible commands and their valid values can be found in the documentation:
-https://docs.openssl.org/1.0.2/man3/SSL_CONF_cmd/
-
-The setting can be single or multiline, each configuration command is separated by linefeed (\n).
-Command and value are separated by equal sign (=). Here are a few samples:
-
-Example 1
----------
-
-This will allow all protocols except for SSLv2 and SSLv3:
-
-.. code-block:: none
-
-   tls.tlscfgcmd="Protocol=ALL,-SSLv2,-SSLv3"
-
-
-Example 2
----------
-
-This will allow all protocols except for SSLv2, SSLv3 and TLSv1.
-It will also set the minimum protocol to TLSv1.2
-
-.. code-block:: none
-
-   tls.tlscfgcmd="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1
-   MinProtocol=TLSv1.2"
-
-
-TLS.PermittedPeer
-^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "array", "none", "no", "none"
-
-PermittedPeer places access restrictions on this listener. Only peers which
-have been listed in this parameter may connect. The certificate presented 
-by the remote peer is used for it's validation. 
-
-The *peer* parameter lists permitted certificate fingerprints. Note
-that it is an array parameter, so either a single or multiple
-fingerprints can be listed. When a non-permitted peer connects, the
-refusal is logged together with it's fingerprint. So if the
-administrator knows this was a valid request, he can simply add the
-fingerprint by copy and paste from the logfile to rsyslog.conf.
-
-To specify multiple fingerprints, just enclose them in braces like
-this:
-
-.. code-block:: none
-
-   tls.permittedPeer=["SHA1:...1", "SHA1:....2"]
-
-To specify just a single peer, you can either specify the string
-directly or enclose it in braces. You may also use wildcards to match
-a larger number of permitted peers, e.g. ``*.example.com``.
-
-When using wildcards to match larger number of permitted peers, please
-know that the implementation is similar to Syslog RFC5425 which means:
-This wildcard matches any left-most DNS label in the server name.
-That is, the subject ``*.example.com`` matches the server names ``a.example.com``
-and ``b.example.com``, but does not match ``example.com`` or ``a.b.example.com``.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
+
+Module Parameters
+~~~~~~~~~~~~~~~~~
+
+This module currently has no module-level parameters.
+
+Input Parameters
+~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Parameter
+     - Summary
+   * - :ref:`param-imdtls-address`
+     - .. include:: ../../reference/parameters/imdtls-address.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdtls-port`
+     - .. include:: ../../reference/parameters/imdtls-port.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdtls-timeout`
+     - .. include:: ../../reference/parameters/imdtls-timeout.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdtls-name`
+     - .. include:: ../../reference/parameters/imdtls-name.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdtls-ruleset`
+     - .. include:: ../../reference/parameters/imdtls-ruleset.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdtls-tls-authmode`
+     - .. include:: ../../reference/parameters/imdtls-tls-authmode.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdtls-tls-cacert`
+     - .. include:: ../../reference/parameters/imdtls-tls-cacert.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdtls-tls-mycert`
+     - .. include:: ../../reference/parameters/imdtls-tls-mycert.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdtls-tls-myprivkey`
+     - .. include:: ../../reference/parameters/imdtls-tls-myprivkey.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdtls-tls-tlscfgcmd`
+     - .. include:: ../../reference/parameters/imdtls-tls-tlscfgcmd.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imdtls-tls-permittedpeer`
+     - .. include:: ../../reference/parameters/imdtls-tls-permittedpeer.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/imdtls-address
+   ../../reference/parameters/imdtls-port
+   ../../reference/parameters/imdtls-timeout
+   ../../reference/parameters/imdtls-name
+   ../../reference/parameters/imdtls-ruleset
+   ../../reference/parameters/imdtls-tls-authmode
+   ../../reference/parameters/imdtls-tls-cacert
+   ../../reference/parameters/imdtls-tls-mycert
+   ../../reference/parameters/imdtls-tls-myprivkey
+   ../../reference/parameters/imdtls-tls-tlscfgcmd
+   ../../reference/parameters/imdtls-tls-permittedpeer
 
 
 .. _statistics-counter_imdtls_label:
@@ -284,7 +139,7 @@ Examples
 ========
 
 Example 1: Basic
-----------------
+~~~~~~~~~~~~~~~~~
 
 The following sample does the following:
 
@@ -300,7 +155,7 @@ The following sample does the following:
 
 
 Example 2: Require valid certificate
-------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The following sample does the following:
 
