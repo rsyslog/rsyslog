@@ -28,7 +28,8 @@ Description
 -----------
 Starts the diagnostic control listener. The value is the TCP port number to
 bind. Specify ``0`` to request an ephemeral port from the operating system.
-Record the chosen port in :ref:`this file <param-imdiag-listenportfilename>`.
+Record the chosen port in the file specified by
+:ref:`ListenPortFileName <param-imdiag-listenportfilename>`.
 
 imdiag always selects the plain TCP (``ptcp``) network stream driver. As a
 result parameters that normally tune stream driver authentication or permitted
