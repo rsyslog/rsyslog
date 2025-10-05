@@ -17,7 +17,6 @@ EXTRA_DIST = \
 	contrib/gnutls/ca.pem \
 	contrib/gnutls/cert.pem \
 	contrib/gnutls/key.pem \
-	doc/ai/module_map.yaml \
 	$(DOC_FILES)
 
 SUBDIRS = compat runtime grammar . plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
