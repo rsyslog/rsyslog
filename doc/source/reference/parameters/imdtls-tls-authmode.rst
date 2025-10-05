@@ -1,12 +1,12 @@
 .. _param-imdtls-tls-authmode:
 .. _imdtls.parameter.input.tls-authmode:
 
-tls.AuthMode
+tls.authMode
 ============
 
 .. index::
-   single: imdtls; tls.AuthMode
-   single: tls.AuthMode
+   single: imdtls; tls.authMode
+   single: tls.authMode
 
 .. summary-start
 
@@ -15,7 +15,7 @@ Defines the mutual authentication method used for DTLS clients.
 
 This parameter applies to :doc:`../../configuration/modules/imdtls`.
 
-:Name: tls.AuthMode
+:Name: tls.authMode
 :Scope: input
 :Type: string
 :Default: none
