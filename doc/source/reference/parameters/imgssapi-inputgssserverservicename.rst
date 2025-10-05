@@ -21,7 +21,7 @@ This parameter applies to :doc:`../../configuration/modules/imgssapi`.
 :Type: word
 :Default: input=none
 :Required?: no
-:Introduced: Not specified
+:Introduced: 3.11.5
 
 Description
 -----------

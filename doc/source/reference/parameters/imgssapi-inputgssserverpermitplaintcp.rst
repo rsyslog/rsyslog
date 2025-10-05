@@ -21,7 +21,7 @@ This parameter applies to :doc:`../../configuration/modules/imgssapi`.
 :Type: boolean
 :Default: input=0
 :Required?: no
-:Introduced: Not specified
+:Introduced: 3.11.6
 
 Description
 -----------
