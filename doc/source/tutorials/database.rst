@@ -103,28 +103,41 @@ required database plugins for your database available. It usually is a
 separate package and typically **not** installed by default.
 
 It is important to understand how rsyslogd talks to the database. In
-rsyslogd, there is the concept of "templates". Basically, a template is
-a string that includes some replacement characters, which are called
-"properties" in rsyslog. Properties are accessed via the "`Property
-Replacer <http://www.rsyslog.com/doc-property_replacer.html>`_\ ".
-Simply said, you access properties by including their name between
-percent signs inside the template. For example, if the syslog message is
-"Test", the template "%msg%" would be expanded to "Test". Rsyslogd
-supports sending template text as an SQL statement to the database. As
-such, the template must be a valid SQL statement. There is no limit in
-what the statement might be, but there are some obvious and not so
-obvious choices. For example, a template "drop table xxx" is possible,
-but does not make an awful lot of sense. In practice, you will always
-use an "insert" statement inside the template.
+rsyslogd, there is the concept of "templates". A template is a list of
+text fragments and message properties. When rendered, the
+:doc:`property replacer <../configuration/property_replacer>` expands the
+property references and rsyslog concatenates them with the literal text.
+For example, a template that contains only the ``msg`` property will be
+expanded to the syslog message content. Rsyslogd supports sending the
+resulting text as an SQL statement to the database. As such, the
+template must be a valid SQL statement. There is no limit in what the
+statement might be, but there are some obvious and not so obvious
+choices. For example, a template "drop table xxx" is possible, but does
+not make an awful lot of sense. In practice, you will always use an
+"insert" statement inside the template.
 
 An example: if you would just like to store the msg part of the full
 syslog message, you have probably created a table "syslog" with a single
-column "message". In such a case, a good template would be "insert into
-syslog(message) values ('%msg%')". With the example above, that would be
-expanded to "insert into syslog(message) values('Test')". This expanded
-string is then sent to the database. It's that easy, no special magic.
-The only thing you must ensure is that your template expands to a proper
-SQL statement and that this statement matches your database design.
+column "message". In such a case, a Rainerscript list template might look
+like this:
+
+.. code-block:: rsyslog
+
+   template(
+       name="sqlInsertMessage"
+       type="list"
+   ) {
+       constant(value="insert into syslog(message) values ('")
+       property(name="msg" sql="on")
+       constant(value="')")
+   }
+
+When rendered for a message with the content "Test" the template above
+expands to ``insert into syslog(message) values('Test')``. The action
+then sends that SQL statement to the database. It's that easy, no
+special magic. The only thing you must ensure is that your template
+expands to a proper SQL statement and that this statement matches your
+database design.
 
 Does that mean you need to create database schema yourself and also must
 fully understand rsyslogd's properties? No, that's not needed. Because
@@ -163,70 +176,93 @@ sequences for that encoding.
 
 Database support in rsyslog is integrated via loadable plugin modules.
 To use the database functionality, the database plugin must be enabled
-in the config file BEFORE the first database table action is used. This
-is done by placing the
+in the config file **before** the first database table action is used.
+With Rainerscript this is done via a ``module()`` statement. For MariaDB
+or MySQL place the following near the top of ``/etc/rsyslog.conf``:
 
-    ``$ModLoad ommysql``
+.. code-block:: rsyslog
 
-directive at the beginning of /etc/rsyslog.conf for MySQL and
+   module(load="ommysql")
 
-    ``$ModLoad ompgsql``
+For PostgreSQL replace the module name with ``ompgsql``. For other
+databases, use the plugin that matches your database backend (for
+example ``omlibdbi`` when routing through libdbi).
 
-for PostgreSQL.
+Next, instruct rsyslog to write data to the database. When you use the
+default schema you do **not** need to define a custom template. The
+built-in template is selected automatically. The Rainerscript fragment
+below forwards every received message to a MariaDB/MySQL database:
 
-For other databases, use their plugin name (e.g. omoracle).
+.. code-block:: rsyslog
 
-Next, we need to tell rsyslogd to write data to the database. As we use
-the default schema, we do NOT need to define a template for this. We can
-use the hardcoded one (rsyslogd handles the proper template linking). So
-all we need to do e.g. for MySQL is add a simple selector line to
-/etc/rsyslog.conf:
+   action(
+       type="ommysql"
+       server="database-server"
+       db="database-name"
+       uid="database-userid"
+       pwd="database-password"
+   )
 
-    ``*.*       :ommysql:database-server,database-name,database-userid,database-password``
+The parameters map 1:1 to the plugin options described in the
+:doc:`../configuration/modules/ommysql` documentation. For PostgreSQL
+use ``type="ompgsql"`` and the equivalent parameter names. In many
+cases, the database will run on the local machine. In this case, you can
+simply use ``127.0.0.1`` for ``server``. This can be especially
+advisable, if you do not need to expose the database to any process
+outside of the local machine. In this case, you can simply bind it to
+127.0.0.1, which provides a quite secure setup. Of course, rsyslog also
+supports remote database instances. In that case, use the remote server
+name (e.g. ``mydb.example.com``) or IP-address.
 
-Again, other databases have other selector names, e.g. ":ompgsql:"
-instead of ":ommysql:". See the output plugin's documentation for
-details.
+The ``db`` parameter defaults to ``Syslog``. If you have modified the
+default, use your database name. ``uid`` and ``pwd`` are the credentials
+used to connect to the database. As they are stored in clear text in the
+configuration file, that user should have only the least possible
+privileges. It is sufficient to grant it ``INSERT`` privileges to the
+``systemevents`` table only. As a side note, it is strongly advisable to
+make ``/etc/rsyslog.conf`` readable by root only - if you make it
+world-readable, everybody could obtain the password (and eventually
+other vital information from it). In our example, let's assume you have
+created a database user named ``syslogwriter`` with a password of
+``topsecret`` (just to say it bluntly: such a password is NOT a good
+idea...). If your database is on the local machine, your configuration
+could look like this:
 
-In many cases, the database will run on the local machine. In this case,
-you can simply use "127.0.0.1" for *database-server*. This can be
-especially advisable, if you do not need to expose the database to any
-process outside of the local machine. In this case, you can simply bind
-it to 127.0.0.1, which provides a quite secure setup. Of course, rsyslog
-also supports remote database instances. In that case, use the remote
-server name (e.g. mydb.example.com) or IP-address. The *database-name*
-by default is "Syslog". If you have modified the default, use your name
-here. *Database-userid* and *-password* are the credentials used to
-connect to the database. As they are stored in clear text in
-rsyslog.conf, that user should have only the least possible privileges.
-It is sufficient to grant it INSERT privileges to the systemevents
-table, only. As a side note, it is strongly advisable to make the
-rsyslog.conf file readable by root only - if you make it world-readable,
-everybody could obtain the password (and eventually other vital
-information from it). In our example, let's assume you have created a
-database user named "syslogwriter" with a password of "topsecret" (just
-to say it bluntly: such a password is NOT a good idea...). If your
-database is on the local machine, your rsyslog.conf line might look like
-in this sample:
+.. code-block:: rsyslog
 
-    ``*.*       :ommysql:127.0.0.1,Syslog,syslogwriter,topsecret``
+   action(
+       type="ommysql"
+       server="127.0.0.1"
+       db="Syslog"
+       uid="syslogwriter"
+       pwd="topsecret"
+   )
 
-Save rsyslog.conf, restart rsyslogd - and you should see syslog messages
-being stored in the "systemevents" table!
+Save the configuration and restart rsyslogd - you should see syslog
+messages being stored in the ``systemevents`` table!
 
-The example line stores every message to the database. Especially if you
-have a high traffic volume, you will probably limit the amount of
+The example action stores every message to the database. Especially if
+you have a high traffic volume, you will probably limit the amount of
 messages being logged. This is easy to accomplish: the "write database"
-action is just a regular selector line. As such, you can apply normal
-selector-line filtering. If, for example, you are only interested in
-messages from the mail subsystem, you can use the following selector
-line:
+action can be wrapped by Rainerscript filtering. If, for example, you
+are only interested in messages from the mail subsystem, you can use the
+following construct:
 
-    ``mail.*       :ommysql:127.0.0.1,syslog,syslogwriter,topsecret``
+.. code-block:: rsyslog
 
-Review the
-`rsyslog.conf <http://www.rsyslog.com/doc-rsyslog_conf.html>`_
-documentation for details on selector lines and their filtering.
+   if prifilt("mail.*") then {
+       action(
+           type="ommysql"
+           server="127.0.0.1"
+           db="Syslog"
+           uid="syslogwriter"
+           pwd="topsecret"
+       )
+   }
+
+See :doc:`../rainerscript/control_structures` and
+:doc:`../rainerscript/functions/rs-prifilt` for the available filtering
+primitives.
 
 **You have now completed everything necessary to store syslog messages
 to the a database.** If you would like to try out a front-end, you might
@@ -250,10 +286,9 @@ for an extended period of time, an immediate retry does not help.
 Message loss in this scenario can easily be prevented with rsyslog. All
 you need to do is run the database writer in queued mode. This is now
 described in a generic way and I do not intend to duplicate it here. So
-please be sure to read "`Handling a massive syslog database insert rate
-with
-Rsyslog <http://www.rsyslog.com/doc-rsyslog_high_database_rate.html>`_\ ",
-which describes the scenario and also includes configuration examples.
+please be sure to read :doc:`high_database_rate`, which describes the
+scenario and also includes configuration examples that build on
+:doc:`../rainerscript/queue_parameters`.
 
 Conclusion
 ----------
