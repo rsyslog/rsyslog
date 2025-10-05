@@ -31,106 +31,56 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
 
-Input Parameter
----------------
-
-.. note::
-
-   Parameter are only available in Legacy Format.
-
-
-InputGSSServerRun
-^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "``$InputGSSServerRun``"
-
-Starts a GSSAPI server on selected port - note that this runs
-independently from the TCP server.
-
-
-InputGSSServerServiceName
-^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "``$InputGSSServerServiceName``"
-
-The service name to use for the GSS server.
-
-
-InputGSSServerPermitPlainTCP
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "0", "no", "``$InputGSSServerPermitPlainTCP``"
-
-Permits the server to receive plain tcp syslog (without GSS) on the
-same port.
-
-
-InputGSSServerMaxSessions
-^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "200", "no", "``$InputGSSServerMaxSessions``"
-
-Sets the maximum number of sessions supported.
-
-
-InputGSSServerKeepAlive
-^^^^^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "0", "no", "``$InputGSSServerKeepAlive``"
-
-.. versionadded:: 8.5.0
-
-Enables or disable keep-alive handling.
-
-
-InputGSSListenPortFileName
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "``$InputGSSListenPortFileName``"
-
-.. versionadded:: 8.38.0
-
-With this parameter you can specify the name for a file. In this file the
-port, imtcp is connected to, will be written.
-This parameter was introduced because the testbench works with dynamic ports.
+Input Parameters
+----------------
 
 .. note::
 
-   If this parameter is set, 0 will be accepted as the port. Otherwise it
-   is automatically changed to port 514
+   Parameters are only available in Legacy Format.
+
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Parameter
+     - Summary
+   * - :ref:`param-imgssapi-inputgssserverrun`
+     - .. include:: ../../reference/parameters/imgssapi-inputgssserverrun.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imgssapi-inputgssserverservicename`
+     - .. include:: ../../reference/parameters/imgssapi-inputgssserverservicename.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imgssapi-inputgssserverpermitplaintcp`
+     - .. include:: ../../reference/parameters/imgssapi-inputgssserverpermitplaintcp.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imgssapi-inputgssservermaxsessions`
+     - .. include:: ../../reference/parameters/imgssapi-inputgssservermaxsessions.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imgssapi-inputgssserverkeepalive`
+     - .. include:: ../../reference/parameters/imgssapi-inputgssserverkeepalive.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imgssapi-inputgsslistenportfilename`
+     - .. include:: ../../reference/parameters/imgssapi-inputgsslistenportfilename.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/imgssapi-inputgssserverrun
+   ../../reference/parameters/imgssapi-inputgssserverservicename
+   ../../reference/parameters/imgssapi-inputgssserverpermitplaintcp
+   ../../reference/parameters/imgssapi-inputgssservermaxsessions
+   ../../reference/parameters/imgssapi-inputgssserverkeepalive
+   ../../reference/parameters/imgssapi-inputgsslistenportfilename
 
 
 Caveats/Known Bugs
