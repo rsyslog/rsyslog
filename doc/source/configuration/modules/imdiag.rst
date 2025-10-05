@@ -80,6 +80,22 @@ Input Parameters
         :start-after: .. summary-start
         :end-before: .. summary-end
 
+Examples
+--------
+
+Minimal configuration for testbench integration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This example loads ``imdiag``, starts the diagnostic listener on an
+ephemeral port, and records the chosen port for the testbench to read.
+
+.. code-block:: rsyslog
+
+   module(load="imdiag")
+   input(type="imdiag"
+         listenPortFileName="/var/run/rsyslog/imdiag.port"
+         serverRun="0")
+
 .. toctree::
    :hidden:
 
