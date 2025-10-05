@@ -10,9 +10,7 @@ Port
 
 .. summary-start
 
-
 Binds the imdtls listener to the specified UDP port for DTLS traffic.
-
 .. summary-end
 
 This parameter applies to :doc:`../../configuration/modules/imdtls`.
@@ -31,7 +29,6 @@ incoming connections. The default port number for DTLS is 4433.
 
 Input usage
 -----------
-.. _param-imdtls-input-port:
 .. _imdtls.parameter.input.port-usage:
 
 .. code-block:: rsyslog

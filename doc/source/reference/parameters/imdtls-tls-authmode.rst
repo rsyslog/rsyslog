@@ -10,9 +10,7 @@ tls.AuthMode
 
 .. summary-start
 
-
 Defines the mutual authentication method used for DTLS clients.
-
 .. summary-end
 
 This parameter applies to :doc:`../../configuration/modules/imdtls`.
@@ -41,7 +39,6 @@ certificate.
 
 Input usage
 -----------
-.. _param-imdtls-input-tls-authmode:
 .. _imdtls.parameter.input.tls-authmode-usage:
 
 .. code-block:: rsyslog

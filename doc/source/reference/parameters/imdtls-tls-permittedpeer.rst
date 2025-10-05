@@ -10,9 +10,7 @@ tls.permittedPeer
 
 .. summary-start
 
-
 Restricts DTLS clients to the listed certificate fingerprints or names.
-
 .. summary-end
 
 This parameter applies to :doc:`../../configuration/modules/imdtls`.
@@ -54,7 +52,6 @@ match ``example.com`` or ``a.b.example.com``.
 
 Input usage
 -----------
-.. _param-imdtls-input-tls-permittedpeer:
 .. _imdtls.parameter.input.tls-permittedpeer-usage:
 
 .. code-block:: rsyslog

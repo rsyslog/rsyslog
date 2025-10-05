@@ -10,9 +10,7 @@ tls.myPrivKey
 
 .. summary-start
 
-
 Points to the private key file paired with ``tls.myCert``.
-
 .. summary-end
 
 This parameter applies to :doc:`../../configuration/modules/imdtls`.
@@ -31,7 +29,6 @@ cryptographic operations in the DTLS handshake.
 
 Input usage
 -----------
-.. _param-imdtls-input-tls-myprivkey:
 .. _imdtls.parameter.input.tls-myprivkey-usage:
 
 .. code-block:: rsyslog

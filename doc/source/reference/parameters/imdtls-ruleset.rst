@@ -10,9 +10,7 @@ Ruleset
 
 .. summary-start
 
-
 Binds received DTLS messages to the specified processing ruleset.
-
 .. summary-end
 
 This parameter applies to :doc:`../../configuration/modules/imdtls`.
@@ -31,7 +29,6 @@ overridden at the instance level.
 
 Input usage
 -----------
-.. _param-imdtls-input-ruleset:
 .. _imdtls.parameter.input.ruleset-usage:
 
 .. code-block:: rsyslog

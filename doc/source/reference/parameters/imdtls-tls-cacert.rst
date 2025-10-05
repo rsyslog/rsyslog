@@ -10,9 +10,7 @@ tls.caCert
 
 .. summary-start
 
-
 Specifies the CA certificate file used to verify DTLS client certificates.
-
 .. summary-end
 
 This parameter applies to :doc:`../../configuration/modules/imdtls`.
@@ -32,7 +30,6 @@ or ``certvalid``.
 
 Input usage
 -----------
-.. _param-imdtls-input-tls-cacert:
 .. _imdtls.parameter.input.tls-cacert-usage:
 
 .. code-block:: rsyslog

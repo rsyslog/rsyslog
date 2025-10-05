@@ -10,9 +10,7 @@ tls.tlsCfgCmd
 
 .. summary-start
 
-
 Passes additional OpenSSL configuration commands to fine-tune DTLS handling.
-
 .. summary-end
 
 This parameter applies to :doc:`../../configuration/modules/imdtls`.
@@ -53,7 +51,6 @@ set the minimum protocol to TLSv1.2:
 
 Input usage
 -----------
-.. _param-imdtls-input-tls-tlscfgcmd:
 .. _imdtls.parameter.input.tls-tlscfgcmd-usage:
 
 .. code-block:: rsyslog

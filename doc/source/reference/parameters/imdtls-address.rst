@@ -10,9 +10,7 @@ Address
 
 .. summary-start
 
-
 Listens for DTLS syslog messages on the specified local IP address.
-
 .. summary-end
 
 This parameter applies to :doc:`../../configuration/modules/imdtls`.
@@ -32,7 +30,6 @@ connections.
 
 Input usage
 -----------
-.. _param-imdtls-input-address:
 .. _imdtls.parameter.input.address-usage:
 
 .. code-block:: rsyslog

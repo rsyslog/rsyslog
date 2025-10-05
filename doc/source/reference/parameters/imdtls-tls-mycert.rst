@@ -10,9 +10,7 @@ tls.myCert
 
 .. summary-start
 
-
 Identifies the certificate file the imdtls listener presents to peers.
-
 .. summary-end
 
 This parameter applies to :doc:`../../configuration/modules/imdtls`.
@@ -31,7 +29,6 @@ to peers during the DTLS handshake.
 
 Input usage
 -----------
-.. _param-imdtls-input-tls-mycert:
 .. _imdtls.parameter.input.tls-mycert-usage:
 
 .. code-block:: rsyslog

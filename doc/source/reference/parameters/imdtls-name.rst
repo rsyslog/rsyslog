@@ -10,9 +10,7 @@ Name
 
 .. summary-start
 
-
 Assigns a unique identifier to the imdtls input instance.
-
 .. summary-end
 
 This parameter applies to :doc:`../../configuration/modules/imdtls`.
@@ -31,7 +29,6 @@ identifying the source of messages when multiple input modules are used.
 
 Input usage
 -----------
-.. _param-imdtls-input-name:
 .. _imdtls.parameter.input.name-usage:
 
 .. code-block:: rsyslog

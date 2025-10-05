@@ -10,9 +10,7 @@ Timeout
 
 .. summary-start
 
-
 Closes idle DTLS sessions after the configured inactivity period.
-
 .. summary-end
 
 This parameter applies to :doc:`../../configuration/modules/imdtls`.
@@ -34,7 +32,6 @@ configured timeout period. The default is 1800 seconds, which is equal to
 
 Input usage
 -----------
-.. _param-imdtls-input-timeout:
 .. _imdtls.parameter.input.timeout-usage:
 
 .. code-block:: rsyslog
