@@ -25,6 +25,16 @@ name: check_run_macos
 
 'on':
   pull_request:
+    paths:
+      - '**/*.c'
+      - '**/*.h'
+      - 'grammar/lexer.l'
+      - 'grammar/grammar.y'
+      - 'tests/*.sh'
+      - 'diag.sh'
+      - '**/Makefile.am'
+      - 'configure.ac'
+      - '.github/workflows/*.yml'
 
 jobs:
   check_run:
