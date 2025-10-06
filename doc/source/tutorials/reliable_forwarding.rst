@@ -64,25 +64,33 @@ simple config file, you forward anything you receive to a remote server
 and have buffering applied automatically when it goes down. This must be
 done on the client machine.
 
-.. code-block:: linux-config
+.. code-block:: rsyslog
 
-    $ModLoad imuxsock # local message reception
-    $WorkDirectory /rsyslog/work # default location for work (spool) files
-    $ActionQueueType LinkedList # use asynchronous processing
-    $ActionQueueFileName srvrfwd # set file name, also enables disk mode
-    $ActionResumeRetryCount -1 # infinite retries on insert failure
-    $ActionQueueSaveOnShutdown on # save in-memory data if rsyslog shuts down 
-    *.* @@server:port
+    module(load="imuxsock")            # local message reception
+    global(workDirectory="/rsyslog/work")
 
-The port given above is optional. It may not be specified, in which case
-you only provide the server name. The "$ActionQueueFileName" is used to
-create queue files, should need arise. This value must be unique inside
-rsyslog.conf. No two rules must use the same queue file. Also, for
-obvious reasons, it must only contain those characters that can be used
-inside a valid file name. Rsyslog possibly adds some characters in front
-and/or at the end of that name when it creates files. So that name
-should not be at the file size name length limit (which should not be a
-problem these days).
+    action(
+        type="omfwd"
+        target="loghost.example.net"
+        port="10514"                    # example port, optional
+        protocol="tcp"
+        action.resumeRetryCount="-1"     # infinite retries on insert failure
+        queue.type="LinkedList"          # use asynchronous processing
+        queue.filename="srvrfwd"         # enables disk assistance
+        queue.saveOnShutdown="on"        # persist data if rsyslog shuts down
+    )
+
+The port given above is optional. It may be omitted, in which case you
+only provide the host name. The ``queue.filename`` is used to create
+disk-assisted queue files, should need arise. This value must be unique
+inside the configuration. No two actions must use the same queue file.
+Also, for obvious reasons, it must only contain those characters that
+can be used inside a valid file name. Rsyslog possibly adds some
+characters in front and/or at the end of that name when it creates
+files. So that name should not be at the file size name length limit
+(which should not be a problem these days). See
+:doc:`../rainerscript/queue_parameters` for the full list of queue
+options.
 
 Please note that actual spool files are only created if the remote
 server is down **and** there is no more space in the in-memory queue. By
@@ -114,36 +122,59 @@ your system.
 
 A sample for forwarding to two hosts looks like this:
 
-.. code-block:: linux-config
+.. code-block:: rsyslog
 
-    $ModLoad imuxsock # local message reception
-    $WorkDirectory /rsyslog/work # default location for work (spool) files
-    
+    module(load="imuxsock")
+    global(workDirectory="/rsyslog/work")
+
     # start forwarding rule 1
-    $ActionQueueType LinkedList # use asynchronous processing
-    $ActionQueueFileName srvrfwd1 # set file name, also enables disk mode
-    $ActionResumeRetryCount -1 # infinite retries on insert failure
-    $ActionQueueSaveOnShutdown on # save in-memory data if rsyslog shuts down
-    *.* @@server1:port
+    action(
+        type="omfwd"
+        target="west-loghost.example.net"
+        port="10514"
+        protocol="tcp"
+        action.resumeRetryCount="-1"
+        queue.type="LinkedList"
+        queue.filename="srvrfwd1"
+        queue.saveOnShutdown="on"
+    )
     # end forwarding rule 1
-    
+
     # start forwarding rule 2
-    $ActionQueueType LinkedList # use asynchronous processing
-    $ActionQueueFileName srvrfwd2 # set file name, also enables disk mode
-    $ActionResumeRetryCount -1 # infinite retries on insert failure
-    $ActionQueueSaveOnShutdown on # save in-memory data if rsyslog shuts down
-    *.* @@server2
+    action(
+        type="omfwd"
+        target="east-loghost.example.net"
+        protocol="tcp"
+        action.resumeRetryCount="-1"
+        queue.type="LinkedList"
+        queue.filename="srvrfwd2"
+        queue.saveOnShutdown="on"
+    )
     # end forwarding rule 2
 
-Note the filename used for the first rule it is "srvrfwd1" and for the
-second it is "srvrfwd2". I have used a server without port name in the
-second forwarding rule. This was just to illustrate how this can be
-done. You can also specify a port there (or drop the port from server1).
+Note the filename used for the first rule it is ``srvrfwd1`` and for the
+second it is ``srvrfwd2``. The second forwarding rule omits the
+``port`` parameter to illustrate how rsyslog falls back to the default
+port defined by the output module. You can also specify an explicit
+port there (or drop the port from the first example).
 
 When there are multiple action queues, they all work independently.
-Thus, if server1 goes down, server2 still receives data in real-time.
-The client will **not** block and wait for server1 to come back online.
-Similarly, server1's operation will not be affected by server2's state.
+Thus, if ``west-loghost.example.net`` goes down,
+``east-loghost.example.net`` still receives data in real-time. The
+client will **not** block and wait for the first server to come back
+online. Similarly, ``west-loghost.example.net``\'s operation will not be
+affected by the state of ``east-loghost.example.net``.
+
+See Also
+--------
+
+- :doc:`high_database_rate` for a more in-depth discussion of tuning
+  disk-assisted queues when writing to slow destinations such as
+  databases.
+- :doc:`failover_syslog_server` for a pattern that combines reliable
+  forwarding with multiple fallback targets.
+- :doc:`../concepts/queues` for a conceptual overview of the queueing
+  subsystem that underpins these configurations.
 
 Some Final Words on Reliability ...
 -----------------------------------

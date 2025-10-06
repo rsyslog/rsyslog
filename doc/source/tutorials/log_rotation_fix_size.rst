@@ -19,27 +19,29 @@ your logs at a given size. The following sample is based on rsyslog
 illustrating a simple but effective log rotation with a maximum size
 condition.
 
-Use Output Channels for fixed-length syslog files
--------------------------------------------------
+Use Rainerscript rotation parameters for fixed-length syslog files
+------------------------------------------------------------------
 
 Lets assume you do not want to spend more than 100 MB hard disc space
-for you logs. With rsyslog you can configure Output Channels to achieve
-this. Putting the following directive
+for you logs. With rsyslog you can configure the
+``rotation.sizeLimit`` and ``rotation.sizeLimitCommand`` parameters of
+the :doc:`omfile action <../configuration/modules/omfile>` to achieve
+this. The Rainerscript fragment below writes all messages to a file and
+rotates it once the size limit is exceeded.
 
-::
+.. code-block:: rsyslog
 
-    # start log rotation via outchannel
-    # outchannel definition
-    $outchannel log_rotation,/var/log/log_rotation.log, 52428800,/home/me/./log_rotation_script 
-    #  activate the channel and log everything to it 
-    *.* :omfile:$log_rotation
-    # end log rotation via outchannel
+    action(
+        type="omfile"
+        file="/var/log/log_rotation.log"
+        rotation.sizeLimit="52428800"        # 50 MiB per file
+        rotation.sizeLimitCommand="/home/me/log_rotation_script"
+        template="RSYSLOG_TraditionalFileFormat"
+    )
 
-to rsyslog.conf instruct rsyslog to log everything to the destination
-file '/var/log/log\_rotation.log' until the give file size of 50 MB is
-reached. If the max file size is reached it will perform an action. In
-our case it executes the script /home/me/log\_rotation\_script which
-contains a single command:
+When the configured limit is reached, rsyslog executes the command
+specified in ``rotation.sizeLimitCommand``. In our case it runs
+``/home/me/log_rotation_script`` which contains a single command:
 
 ::
 
@@ -47,8 +49,18 @@ contains a single command:
 
 This moves the original log to a kind of backup log file. After the
 action was successfully performed rsyslog creates a new
-/var/log/log\_rotation.log file and fill it up with new logs. So the
-latest logs are always in log\_rotation.log.
+``/var/log/log_rotation.log`` file and fills it with new logs. So the
+latest logs are always in ``log_rotation.log``. The two rotation
+parameters are documented in
+:doc:`../reference/parameters/omfile-rotation-sizelimit` and
+:doc:`../reference/parameters/omfile-rotation-sizelimitcommand`.
+
+.. note::
+
+   Older examples use the ``$outchannel`` directive. That syntax maps to
+   the same rotation parameters shown above but is kept solely for
+   backward compatibility. New configurations should always use
+   Rainerscript objects and attributes.
 
 Conclusion
 ----------
