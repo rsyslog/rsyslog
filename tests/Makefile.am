@@ -293,7 +293,6 @@ TESTS +=  \
 	msgdup_props.sh \
 	empty-ruleset.sh \
 	ruleset-direct-queue.sh \
-	imtcp-tls-gibberish.sh \
 	imtcp-listen-port-file-2.sh \
 	allowed-sender-tcp-ok.sh \
 	allowed-sender-tcp-fail.sh \
@@ -1554,6 +1553,7 @@ TESTS +=  \
 	imtcp-tls-input-2certs.sh \
 	imtcp-tls-basic-verifydepth.sh \
 	imtcp_conndrop_tls.sh \
+	imtcp-tls-gibberish.sh \
 	sndrcv_tls_anon_rebind.sh \
 	sndrcv_tls_anon_hostname.sh \
 	sndrcv_tls_anon_ipv4.sh \
