@@ -1,5 +1,5 @@
 #!/bin/bash
-## Validate custom pattern loading and section detection for mmsnarewinsec.
+## Validate custom pattern loading and section detection for mmsnareparse.
 unset RSYSLOG_DYNNAME
 . ${srcdir:=.}/diag.sh init
 
@@ -51,7 +51,7 @@ JSON
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-module(load="../plugins/mmsnarewinsec/.libs/mmsnarewinsec" \
+module(load="../plugins/mmsnareparse/.libs/mmsnareparse" \
        definition.file="'${PWD}/${DEF_FILE}'" \
        validation.mode="strict")
 
@@ -66,7 +66,7 @@ template(name="customfmt" type="list") {
     constant(value="\n")
 }
 
-action(type="mmsnarewinsec")
+action(type="mmsnareparse")
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="customfmt")
 
 input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port")
@@ -75,7 +75,7 @@ input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port
 startup
 
 assign_tcpflood_port "$RSYSLOG_DYNNAME.tcpflood_port"
-tcpflood -m 1 -I "${srcdir}/testsuites/mmsnarewinsec/sample-custom-pattern.data"
+tcpflood -m 1 -I "${srcdir}/testsuites/mmsnareparse/sample-custom-pattern.data"
 
 shutdown_when_empty
 wait_shutdown

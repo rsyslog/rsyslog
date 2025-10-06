@@ -1740,17 +1740,17 @@ fi
 AM_CONDITIONAL(ENABLE_MMRFC5424ADDHMAC, test x$enable_mmrfc5424addhmac = xyes)
 
 
-# mmsnarewinsec
-AC_ARG_ENABLE(mmsnarewinsec,
-        [AS_HELP_STRING([--enable-mmsnarewinsec],[Enable building mmsnarewinsec support @<:@default=no@:>@])],
+# mmsnareparse
+AC_ARG_ENABLE(mmsnareparse,
+        [AS_HELP_STRING([--enable-mmsnareparse],[Enable building mmsnareparse support @<:@default=no@:>@])],
         [case "${enableval}" in
-         yes) enable_mmsnarewinsec="yes" ;;
-          no) enable_mmsnarewinsec="no" ;;
-           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmsnarewinsec) ;;
+         yes) enable_mmsnareparse="yes" ;;
+          no) enable_mmsnareparse="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmsnareparse) ;;
          esac],
-        [enable_mmsnarewinsec=no]
+        [enable_mmsnareparse=no]
 )
-AM_CONDITIONAL(ENABLE_MMSNAREWINSEC, test x$enable_mmsnarewinsec = xyes)
+AM_CONDITIONAL(ENABLE_MMSNAREPARSE, test x$enable_mmsnareparse = xyes)
 
 
 # experimental omfile-hardened module
@@ -3177,10 +3177,10 @@ AC_CONFIG_FILES([Makefile \
 		contrib/mmcount/Makefile \
 		contrib/omczmq/Makefile \
 		contrib/imczmq/Makefile \
-        contrib/mmsequence/Makefile \
-        contrib/mmrfc5424addhmac/Makefile \
-        plugins/mmsnarewinsec/Makefile \
-        contrib/pmcisconames/Makefile \
+                contrib/mmsequence/Makefile \
+                contrib/mmrfc5424addhmac/Makefile \
+                plugins/mmsnareparse/Makefile \
+                contrib/pmcisconames/Makefile \
 		contrib/omhttpfs/Makefile \
 		contrib/omamqp1/Makefile \
 		contrib/omtcl/Makefile \
@@ -3298,7 +3298,7 @@ echo "    mmjaduit module will be compiled:         $enable_mmaudit"
 echo "    mmsnmptrapd module will be compiled:      $enable_mmsnmptrapd"
 echo "    mmutf8fix enabled:                        $enable_mmutf8fix"
 echo "    mmrfc5424addhmac enabled:                 $enable_mmrfc5424addhmac"
-echo "    mmsnarewinsec enabled:                    $enable_mmsnarewinsec"
+echo "    mmsnareparse enabled:                    $enable_mmsnareparse"
 echo "    mmpstrucdata enabled:                     $enable_mmpstrucdata"
 echo "    mmsequence enabled:                       $enable_mmsequence"
 echo "    mmdblookup enabled:                       $enable_mmdblookup"

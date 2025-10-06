@@ -1,12 +1,12 @@
 #!/bin/bash
-# Kerberos-focused test for mmsnarewinsec: validate client address/port and certificate info
+# Kerberos-focused test for mmsnareparse: validate client address/port and certificate info
 unset RSYSLOG_DYNNAME
 . ${srcdir:=.}/diag.sh init
 
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-module(load="../plugins/mmsnarewinsec/.libs/mmsnarewinsec")
+module(load="../plugins/mmsnareparse/.libs/mmsnareparse")
 
 template(name="kjson" type="list" option.jsonf="on") {
   property(outname="EventID" name="$!win!Event!EventID" format="jsonf")
@@ -20,7 +20,7 @@ template(name="kjson" type="list" option.jsonf="on") {
 }
 
 ruleset(name="winsec") {
-  action(type="mmsnarewinsec")
+  action(type="mmsnareparse")
   action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="kjson")
 }
 
@@ -30,7 +30,7 @@ input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port
 startup
 assign_tcpflood_port $RSYSLOG_DYNNAME.tcpflood_port
 # Use sample events that include Kerberos service ticket (4769)
-tcpflood -m 1 -I ${srcdir}/testsuites/mmsnarewinsec/sample-events.data
+tcpflood -m 1 -I ${srcdir}/testsuites/mmsnareparse/sample-events.data
 
 shutdown_when_empty
 wait_shutdown

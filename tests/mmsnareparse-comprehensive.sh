@@ -1,5 +1,5 @@
 #!/bin/bash
-# Comprehensive test for mmsnarewinsec module field extraction capabilities
+# Comprehensive test for mmsnareparse module field extraction capabilities
 # This test validates the module's ability to extract structured fields from
 # Windows Security Event Log description sections using dynamic test data from
 # sample-windows2022-security.data and sample-windows2025-security.data files.
@@ -9,7 +9,7 @@ unset RSYSLOG_DYNNAME
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-module(load="../plugins/mmsnarewinsec/.libs/mmsnarewinsec")
+module(load="../plugins/mmsnareparse/.libs/mmsnareparse")
 
 # Template to extract comprehensive structured JSON output
 template(name="jsonfmt" type="list" option.jsonf="on") {
@@ -84,7 +84,7 @@ template(name="basicfmt" type="list") {
 }
 
 ruleset(name="winsec") {
-    action(type="mmsnarewinsec")
+    action(type="mmsnareparse")
     action(type="omfile" file="'$RSYSLOG_OUT_LOG'.json" template="jsonfmt")
     action(type="omfile" file="'$RSYSLOG_OUT_LOG'.basic" template="basicfmt")
 }
@@ -97,13 +97,13 @@ assign_tcpflood_port $RSYSLOG_DYNNAME.tcpflood_port
 
 # Use dynamic test data from sample files
 echo "Using Windows 2022 sample data..."
-tcpflood -m 1 -I ${srcdir}/testsuites/mmsnarewinsec/sample-windows2022-security.data
+tcpflood -m 1 -I ${srcdir}/testsuites/mmsnareparse/sample-windows2022-security.data
 
 echo "Using Windows 2025 sample data..."
-tcpflood -m 1 -I ${srcdir}/testsuites/mmsnarewinsec/sample-windows2025-security.data
+tcpflood -m 1 -I ${srcdir}/testsuites/mmsnareparse/sample-windows2025-security.data
 
 echo "Using sample events with detailed field information..."
-tcpflood -m 1 -I ${srcdir}/testsuites/mmsnarewinsec/sample-events.data
+tcpflood -m 1 -I ${srcdir}/testsuites/mmsnareparse/sample-events.data
 
 shutdown_when_empty
 wait_shutdown

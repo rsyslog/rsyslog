@@ -502,20 +502,20 @@ TESTS +=  \
 	parsertest-snare_ccoff_udp.sh \
     parsertest-snare_ccoff_udp2.sh
 
-if ENABLE_MMSNAREWINSEC
+if ENABLE_MMSNAREPARSE
 TESTS += \
-	mmsnarewinsec-basic.sh \
-	mmsnarewinsec-json.sh \
-	mmsnarewinsec-syslog.sh \
-	mmsnarewinsec-comprehensive.sh \
-	mmsnarewinsec-value-types.sh \
-	mmsnarewinsec-enhanced-validation.sh \
-	mmsnarewinsec-kerberos.sh \
-	mmsnarewinsec-custom.sh \
-	mmsnarewinsec-realworld-4624-4634-5140.sh
+	mmsnareparse-basic.sh \
+	mmsnareparse-json.sh \
+	mmsnareparse-syslog.sh \
+	mmsnareparse-comprehensive.sh \
+	mmsnareparse-value-types.sh \
+	mmsnareparse-enhanced-validation.sh \
+	mmsnareparse-kerberos.sh \
+	mmsnareparse-custom.sh \
+	mmsnareparse-realworld-4624-4634-5140.sh
 if HAVE_VALGRIND
 TESTS += \
-	mmsnarewinsec-comprehensive-vg.sh
+	mmsnareparse-comprehensive-vg.sh
 endif
 endif
 
@@ -2043,17 +2043,17 @@ EXTRA_DIST= \
         mmexternal-SegFault.sh \
         mmexternal-SegFault-empty-jroot-vg.sh \
         testsuites/mmexternal-SegFault-mm-python.py \
-        testsuites/mmsnarewinsec/sample-custom-pattern.data \
-        mmsnarewinsec-basic.sh \
-        mmsnarewinsec-comprehensive.sh \
-        mmsnarewinsec-comprehensive-vg.sh \
-        mmsnarewinsec-custom.sh \
-        mmsnarewinsec-enhanced-validation.sh \
-        mmsnarewinsec-json.sh \
-        mmsnarewinsec-kerberos.sh \
-        mmsnarewinsec-realworld-4624-4634-5140.sh \
-        mmsnarewinsec-syslog.sh \
-        mmsnarewinsec-value-types.sh \
+        testsuites/mmsnareparse/sample-custom-pattern.data \
+        mmsnareparse-basic.sh \
+        mmsnareparse-comprehensive.sh \
+        mmsnareparse-comprehensive-vg.sh \
+        mmsnareparse-custom.sh \
+        mmsnareparse-enhanced-validation.sh \
+        mmsnareparse-json.sh \
+        mmsnareparse-kerberos.sh \
+        mmsnareparse-realworld-4624-4634-5140.sh \
+        mmsnareparse-syslog.sh \
+        mmsnareparse-value-types.sh \
         mmexternal-InvldProg-vg.sh \
 	nested-call-shutdown.sh \
 	1.rstest 2.rstest 3.rstest err1.rstest \

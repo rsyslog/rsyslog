@@ -1,5 +1,5 @@
 /**
- * @file mmsnarewinsec.c
+ * @file mmsnareparse.c
  * @brief NXLog Snare Windows Security parser module.
  *
  * The module consumes Snare-formatted Windows Security events that are either
@@ -41,12 +41,12 @@
 
 MODULE_TYPE_OUTPUT;
 MODULE_TYPE_NOKEEP;
-MODULE_CNFNAME("mmsnarewinsec")
+MODULE_CNFNAME("mmsnareparse")
 
 /**
  * @brief Default message container that receives parsed JSON output.
  */
-#define MMSNAREWINSEC_CONTAINER_DEFAULT "!win"
+#define MMSNAREPARSE_CONTAINER_DEFAULT "!win"
 
 #define SECTION_FLAG_NONE 0u
 #define SECTION_FLAG_NETWORK (1u << 0)
@@ -1511,7 +1511,7 @@ static rsRetVal parse_validation_mode(const char *mode, validation_mode_t *modeO
         *modeOut = VALIDATION_PERMISSIVE;
         return RS_RET_OK;
     }
-    LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: unknown validation.mode '%s'", mode);
+    LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: unknown validation.mode '%s'", mode);
     return RS_RET_INVALID_PARAMS;
 }
 
@@ -1557,22 +1557,22 @@ static rsRetVal read_text_file(const char *path, char **out) {
     *out = NULL;
     fp = fopen(path, "rb");
     if (fp == NULL) {
-        LogError(errno, RS_RET_IO_ERROR, "mmsnarewinsec: failed to open definition file '%s'", path);
+        LogError(errno, RS_RET_IO_ERROR, "mmsnareparse: failed to open definition file '%s'", path);
         return RS_RET_IO_ERROR;
     }
     if (fseek(fp, 0, SEEK_END) != 0) {
-        LogError(errno, RS_RET_IO_ERROR, "mmsnarewinsec: failed to seek definition file '%s'", path);
+        LogError(errno, RS_RET_IO_ERROR, "mmsnareparse: failed to seek definition file '%s'", path);
         fclose(fp);
         return RS_RET_IO_ERROR;
     }
     len = ftell(fp);
     if (len < 0) {
-        LogError(errno, RS_RET_IO_ERROR, "mmsnarewinsec: failed to determine size of definition file '%s'", path);
+        LogError(errno, RS_RET_IO_ERROR, "mmsnareparse: failed to determine size of definition file '%s'", path);
         fclose(fp);
         return RS_RET_IO_ERROR;
     }
     if (fseek(fp, 0, SEEK_SET) != 0) {
-        LogError(errno, RS_RET_IO_ERROR, "mmsnarewinsec: failed to rewind definition file '%s'", path);
+        LogError(errno, RS_RET_IO_ERROR, "mmsnareparse: failed to rewind definition file '%s'", path);
         fclose(fp);
         return RS_RET_IO_ERROR;
     }
@@ -1584,9 +1584,9 @@ static rsRetVal read_text_file(const char *path, char **out) {
     readLen = fread(buf, 1, (size_t)len, fp);
     if (readLen != (size_t)len) {
         if (ferror(fp)) {
-            LogError(errno, RS_RET_IO_ERROR, "mmsnarewinsec: error reading definition file '%s'", path);
+            LogError(errno, RS_RET_IO_ERROR, "mmsnareparse: error reading definition file '%s'", path);
         } else {
-            LogError(0, RS_RET_IO_ERROR, "mmsnarewinsec: unexpected end of file reading definition file '%s'", path);
+            LogError(0, RS_RET_IO_ERROR, "mmsnareparse: unexpected end of file reading definition file '%s'", path);
         }
         free(buf);
         fclose(fp);
@@ -1646,13 +1646,13 @@ static rsRetVal load_configuration(runtime_config_t *config, const char *config_
     struct json_object *sections;
     if (json_object_object_get_ex(root, "sections", &sections)) {
         if (!json_object_is_type(sections, json_type_array)) {
-            LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: runtime config sections must be an array");
+            LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: runtime config sections must be an array");
         } else {
             size_t len = json_object_array_length(sections);
             for (size_t i = 0; i < len; ++i) {
                 struct json_object *entry = json_object_array_get_idx(sections, (int)i);
                 if (!json_object_is_type(entry, json_type_object)) {
-                    LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: runtime config section entry must be object");
+                    LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: runtime config section entry must be object");
                     continue;
                 }
                 section_descriptor_t desc;
@@ -1664,7 +1664,7 @@ static rsRetVal load_configuration(runtime_config_t *config, const char *config_
                 struct json_object *value;
                 if (!json_object_object_get_ex(entry, "pattern", &value) ||
                     !json_object_is_type(value, json_type_string)) {
-                    LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: runtime config section missing pattern");
+                    LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: runtime config section missing pattern");
                     continue;
                 }
                 desc.pattern = strdup(json_object_get_string(value));
@@ -1681,14 +1681,14 @@ static rsRetVal load_configuration(runtime_config_t *config, const char *config_
                 }
                 if (desc.canonical == NULL) {
                     cleanup_section_descriptor(&desc);
-                    LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: runtime config section missing canonical");
+                    LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: runtime config section missing canonical");
                     continue;
                 }
                 if (json_object_object_get_ex(entry, "behavior", &value) &&
                     json_object_is_type(value, json_type_string)) {
                     if (!parse_section_behavior_string(json_object_get_string(value), &desc.behavior)) {
                         cleanup_section_descriptor(&desc);
-                        LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: runtime config unknown section behavior");
+                        LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: runtime config unknown section behavior");
                         continue;
                     }
                 }
@@ -1698,7 +1698,7 @@ static rsRetVal load_configuration(runtime_config_t *config, const char *config_
                     json_object_is_type(value, json_type_string)) {
                     if (!parse_field_sensitivity_string(json_object_get_string(value), &desc.sensitivity)) {
                         cleanup_section_descriptor(&desc);
-                        LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: runtime config unknown sensitivity");
+                        LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: runtime config unknown sensitivity");
                         continue;
                     }
                 }
@@ -1707,7 +1707,7 @@ static rsRetVal load_configuration(runtime_config_t *config, const char *config_
                     desc.flags = parse_section_flags_array(value, &ok);
                     if (!ok) {
                         cleanup_section_descriptor(&desc);
-                        LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: runtime config unknown section flag");
+                        LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: runtime config unknown section flag");
                         continue;
                     }
                 }
@@ -1725,13 +1725,13 @@ static rsRetVal load_configuration(runtime_config_t *config, const char *config_
     struct json_object *fields;
     if (json_object_object_get_ex(root, "fields", &fields)) {
         if (!json_object_is_type(fields, json_type_array)) {
-            LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: runtime config fields must be an array");
+            LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: runtime config fields must be an array");
         } else {
             size_t len = json_object_array_length(fields);
             for (size_t i = 0; i < len; ++i) {
                 struct json_object *entry = json_object_array_get_idx(fields, (int)i);
                 if (!json_object_is_type(entry, json_type_object)) {
-                    LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: runtime config field entry must be object");
+                    LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: runtime config field entry must be object");
                     continue;
                 }
                 field_pattern_t pattern;
@@ -1743,7 +1743,7 @@ static rsRetVal load_configuration(runtime_config_t *config, const char *config_
                 struct json_object *value;
                 if (!json_object_object_get_ex(entry, "pattern", &value) ||
                     !json_object_is_type(value, json_type_string)) {
-                    LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: runtime config field missing pattern");
+                    LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: runtime config field missing pattern");
                     continue;
                 }
                 pattern.pattern = strdup(json_object_get_string(value));
@@ -1760,7 +1760,7 @@ static rsRetVal load_configuration(runtime_config_t *config, const char *config_
                 }
                 if (pattern.canonical == NULL) {
                     cleanup_field_pattern(&pattern);
-                    LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: runtime config field missing canonical");
+                    LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: runtime config field missing canonical");
                     continue;
                 }
                 if (json_object_object_get_ex(entry, "section", &value) &&
@@ -1779,7 +1779,7 @@ static rsRetVal load_configuration(runtime_config_t *config, const char *config_
                     json_object_is_type(value, json_type_string)) {
                     if (!parse_field_value_type_string(json_object_get_string(value), &pattern.value_type)) {
                         cleanup_field_pattern(&pattern);
-                        LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: runtime config unknown field value type");
+                        LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: runtime config unknown field value type");
                         continue;
                     }
                 }
@@ -1787,7 +1787,7 @@ static rsRetVal load_configuration(runtime_config_t *config, const char *config_
                     json_object_is_type(value, json_type_string)) {
                     if (!parse_field_sensitivity_string(json_object_get_string(value), &pattern.sensitivity)) {
                         cleanup_field_pattern(&pattern);
-                        LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: runtime config unknown sensitivity");
+                        LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: runtime config unknown sensitivity");
                         continue;
                     }
                 }
@@ -1805,14 +1805,13 @@ static rsRetVal load_configuration(runtime_config_t *config, const char *config_
     struct json_object *eventFields;
     if (json_object_object_get_ex(root, "eventFields", &eventFields)) {
         if (!json_object_is_type(eventFields, json_type_array)) {
-            LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: runtime config eventFields must be an array");
+            LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: runtime config eventFields must be an array");
         } else {
             size_t len = json_object_array_length(eventFields);
             for (size_t i = 0; i < len; ++i) {
                 struct json_object *entry = json_object_array_get_idx(eventFields, (int)i);
                 if (!json_object_is_type(entry, json_type_object)) {
-                    LogError(0, RS_RET_INVALID_PARAMS,
-                             "mmsnarewinsec: runtime config eventFields entry must be object");
+                    LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: runtime config eventFields entry must be object");
                     continue;
                 }
                 event_field_mapping_t mapping;
@@ -1820,7 +1819,7 @@ static rsRetVal load_configuration(runtime_config_t *config, const char *config_
                 struct json_object *value;
                 if (!json_object_object_get_ex(entry, "event_id", &value) ||
                     !json_object_is_type(value, json_type_int)) {
-                    LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: runtime config eventFields missing event_id");
+                    LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: runtime config eventFields missing event_id");
                     continue;
                 }
                 mapping.event_id = json_object_get_int(value);
@@ -1828,21 +1827,20 @@ static rsRetVal load_configuration(runtime_config_t *config, const char *config_
                     sbool ok = 0;
                     mapping.required_flags = parse_section_flags_array(value, &ok);
                     if (!ok) {
-                        LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: runtime config unknown required flag");
+                        LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: runtime config unknown required flag");
                         continue;
                     }
                 }
                 if (!json_object_object_get_ex(entry, "patterns", &value) ||
                     !json_object_is_type(value, json_type_array)) {
-                    LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: runtime config eventFields missing patterns");
+                    LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: runtime config eventFields missing patterns");
                     continue;
                 }
                 size_t plen = json_object_array_length(value);
                 for (size_t j = 0; j < plen; ++j) {
                     struct json_object *patternObj = json_object_array_get_idx(value, (int)j);
                     if (!json_object_is_type(patternObj, json_type_object)) {
-                        LogError(0, RS_RET_INVALID_PARAMS,
-                                 "mmsnarewinsec: runtime config pattern entry must be object");
+                        LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: runtime config pattern entry must be object");
                         continue;
                     }
                     field_pattern_t patternEntry;
@@ -1853,7 +1851,7 @@ static rsRetVal load_configuration(runtime_config_t *config, const char *config_
                     struct json_object *pv;
                     if (!json_object_object_get_ex(patternObj, "pattern", &pv) ||
                         !json_object_is_type(pv, json_type_string)) {
-                        LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: runtime config pattern missing pattern");
+                        LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: runtime config pattern missing pattern");
                         continue;
                     }
                     patternEntry.pattern = strdup(json_object_get_string(pv));
@@ -1871,7 +1869,7 @@ static rsRetVal load_configuration(runtime_config_t *config, const char *config_
                     }
                     if (patternEntry.canonical == NULL) {
                         cleanup_field_pattern(&patternEntry);
-                        LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: runtime config pattern missing canonical");
+                        LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: runtime config pattern missing canonical");
                         continue;
                     }
                     if (json_object_object_get_ex(patternObj, "section", &pv) &&
@@ -1893,7 +1891,7 @@ static rsRetVal load_configuration(runtime_config_t *config, const char *config_
                         if (!parse_field_value_type_string(json_object_get_string(pv), &patternEntry.value_type)) {
                             cleanup_field_pattern(&patternEntry);
                             LogError(0, RS_RET_INVALID_PARAMS,
-                                     "mmsnarewinsec: runtime config pattern unknown value type");
+                                     "mmsnareparse: runtime config pattern unknown value type");
                             continue;
                         }
                     }
@@ -1902,7 +1900,7 @@ static rsRetVal load_configuration(runtime_config_t *config, const char *config_
                         if (!parse_field_sensitivity_string(json_object_get_string(pv), &patternEntry.sensitivity)) {
                             cleanup_field_pattern(&patternEntry);
                             LogError(0, RS_RET_INVALID_PARAMS,
-                                     "mmsnarewinsec: runtime config pattern unknown sensitivity");
+                                     "mmsnareparse: runtime config pattern unknown sensitivity");
                             continue;
                         }
                     }
@@ -2098,7 +2096,7 @@ static rsRetVal save_configuration(const runtime_config_t *config, const char *c
     if (fp == NULL) {
         int savedErrno = errno;
         json_object_put(root);
-        LogError(savedErrno, RS_RET_IO_ERROR, "mmsnarewinsec: failed to open runtime config '%s'", config_file);
+        LogError(savedErrno, RS_RET_IO_ERROR, "mmsnareparse: failed to open runtime config '%s'", config_file);
         return RS_RET_IO_ERROR;
     }
     size_t len = strlen(jsonText);
@@ -2107,7 +2105,7 @@ static rsRetVal save_configuration(const runtime_config_t *config, const char *c
         int savedErrno = errno;
         fclose(fp);
         json_object_put(root);
-        LogError(savedErrno, RS_RET_IO_ERROR, "mmsnarewinsec: failed to write runtime config '%s'", config_file);
+        LogError(savedErrno, RS_RET_IO_ERROR, "mmsnareparse: failed to write runtime config '%s'", config_file);
         return RS_RET_IO_ERROR;
     }
     fclose(fp);
@@ -2119,16 +2117,16 @@ static rsRetVal report_validation_issue(instanceData *pData, const char *source,
     validation_context_t *ctx = &pData->validationTemplate;
     switch (ctx->mode) {
         case VALIDATION_STRICT:
-            LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: %s rejected: %s", source, message);
+            LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: %s rejected: %s", source, message);
             return RS_RET_INVALID_PARAMS;
         case VALIDATION_MODERATE:
             if (ctx->log_parsing_errors)
-                LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: %s warning: %s", source, message);
+                LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: %s warning: %s", source, message);
             return RS_RET_OK;
         case VALIDATION_PERMISSIVE:
         default:
             if (ctx->enable_debug)
-                LogError(0, RS_RET_INVALID_PARAMS, "mmsnarewinsec: %s ignored (permissive mode): %s", source, message);
+                LogError(0, RS_RET_INVALID_PARAMS, "mmsnareparse: %s ignored (permissive mode): %s", source, message);
             return RS_RET_OK;
     }
     return RS_RET_OK;
@@ -3052,7 +3050,7 @@ static const char *locate_snare_payload(const char *msg) {
     const char *afterPri;
     const char *candidate;
     if (msg == NULL) return NULL;
-    dbgprintf("[mmsnarewinsec DEBUG] locate_snare_payload: input msg='%s'\n", msg);
+    dbgprintf("[mmsnareparse DEBUG] locate_snare_payload: input msg='%s'\n", msg);
     cursor = skip_lws_const(msg);
     afterPri = cursor;
     if (cursor != NULL && *cursor == '<') {
@@ -3068,7 +3066,7 @@ static const char *locate_snare_payload(const char *msg) {
     }
     cursor = skip_lws_const(afterPri);
     if (cursor != NULL && strncmp(cursor, "MSWinEventLog", 13) == 0) {
-        dbgprintf("[mmsnarewinsec DEBUG] locate_snare_payload: found MSWinEventLog at '%s'\n", cursor);
+        dbgprintf("[mmsnareparse DEBUG] locate_snare_payload: found MSWinEventLog at '%s'\n", cursor);
         return cursor;
     }
 
@@ -3077,7 +3075,7 @@ static const char *locate_snare_payload(const char *msg) {
         // Look for MSWinEventLog in the message (after syslog parsing)
         const char *msWinEventLog = strstr(cursor, "MSWinEventLog");
         if (msWinEventLog != NULL) {
-            dbgprintf("[mmsnarewinsec DEBUG] locate_snare_payload: found MSWinEventLog after parsing at '%s'\n",
+            dbgprintf("[mmsnareparse DEBUG] locate_snare_payload: found MSWinEventLog after parsing at '%s'\n",
                       msWinEventLog);
             return msWinEventLog;
         }
@@ -3096,7 +3094,7 @@ static const char *locate_snare_payload(const char *msg) {
                         const char *afterEventId = skip_lws_const(eventIdEnd);
                         if (afterEventId != NULL &&
                             strstr(afterEventId, "Microsoft-Windows-Security-Auditing") != NULL) {
-                            dbgprintf("[mmsnarewinsec DEBUG] locate_snare_payload: found EventID pattern at '%s'\n",
+                            dbgprintf("[mmsnareparse DEBUG] locate_snare_payload: found EventID pattern at '%s'\n",
                                       eventIdStart);
                             return eventIdStart;
                         }
@@ -3119,7 +3117,7 @@ static const char *locate_snare_payload(const char *msg) {
                     }
                     if (eventIdEnd - searchStart == 4) {
                         // Found a 4-digit number before the provider
-                        dbgprintf("[mmsnarewinsec DEBUG] locate_snare_payload: found EventID before provider at '%s'\n",
+                        dbgprintf("[mmsnareparse DEBUG] locate_snare_payload: found EventID before provider at '%s'\n",
                                   searchStart);
                         return searchStart;
                     }
@@ -3127,7 +3125,7 @@ static const char *locate_snare_payload(const char *msg) {
                 searchStart++;
             }
             // If we still can't find EventID, fall back to provider
-            dbgprintf("[mmsnarewinsec DEBUG] locate_snare_payload: found Microsoft-Windows-Security-Auditing at '%s'\n",
+            dbgprintf("[mmsnareparse DEBUG] locate_snare_payload: found Microsoft-Windows-Security-Auditing at '%s'\n",
                       msWinSec);
             return msWinSec;
         }
@@ -3603,7 +3601,7 @@ static rsRetVal parse_field_value_enhanced(const char *value,
     }
 
     if (section_context != NULL && fdCtx->validation->enable_debug) {
-        dbgprintf("mmsnarewinsec: stored field '%s' (section=%s, event=%d)\n", key, section_context, event_id);
+        dbgprintf("mmsnareparse: stored field '%s' (section=%s, event=%d)\n", key, section_context, event_id);
     }
 
     free(trimmed);
@@ -3667,7 +3665,7 @@ static rsRetVal handle_parsing_error(field_detection_context_t *ctx, const char 
     ctx->validation->current_error_count++;
 
     if ((ctx->enable_debug || ctx->validation->enable_debug) && error_message != NULL) {
-        dbgprintf("mmsnarewinsec: parsing error in %s: %s\n", context != NULL ? context : "<unknown>", error_message);
+        dbgprintf("mmsnareparse: parsing error in %s: %s\n", context != NULL ? context : "<unknown>", error_message);
     }
 
     if (ctx->validation->log_parsing_errors && ctx->errors_array != NULL && error_message != NULL) {
@@ -3698,11 +3696,11 @@ static rsRetVal validate_field_count(const char *message,
      */
     if (expected_count > actual_count) {
         if (ctx->enable_debug)
-            dbgprintf("mmsnarewinsec: %zu/%zu fields parsed successfully%s. message='%s'\n", actual_count,
+            dbgprintf("mmsnareparse: %zu/%zu fields parsed successfully%s. message='%s'\n", actual_count,
                       expected_count, (ctx->mode == VALIDATION_STRICT ? " (strict)" : ""),
                       message != NULL ? message : "<n/a>");
         if (ctx->mode == VALIDATION_MODERATE && ctx->log_parsing_errors) {
-            LogError(0, RS_RET_INVALID_VALUE, "mmsnarewinsec: %zu/%zu fields parsed successfully", actual_count,
+            LogError(0, RS_RET_INVALID_VALUE, "mmsnareparse: %zu/%zu fields parsed successfully", actual_count,
                      expected_count);
         }
         if (ctx->mode == VALIDATION_STRICT) {
@@ -3722,11 +3720,11 @@ static rsRetVal validate_required_fields(const char *message,
         if (required_fields[i] == NULL) continue;
         if (strstr(message, required_fields[i]) == NULL) {
             if (ctx->mode == VALIDATION_STRICT) {
-                if (ctx->enable_debug) dbgprintf("mmsnarewinsec: missing required field '%s'\n", required_fields[i]);
+                if (ctx->enable_debug) dbgprintf("mmsnareparse: missing required field '%s'\n", required_fields[i]);
                 return RS_RET_INVALID_VALUE;
             }
             if (ctx->mode == VALIDATION_MODERATE && ctx->log_parsing_errors) {
-                LogError(0, RS_RET_INVALID_VALUE, "mmsnarewinsec: missing required field '%s'", required_fields[i]);
+                LogError(0, RS_RET_INVALID_VALUE, "mmsnareparse: missing required field '%s'", required_fields[i]);
             }
         }
     }
@@ -3836,7 +3834,7 @@ static void parse_key_value_sequence(parse_context_t *ctx,
                                      const char *sectionName) {
     if (text == NULL) return;
 
-    dbgprintf("[mmsnarewinsec DEBUG] parse_key_value_sequence: text='%s', sectionName='%s'\n",
+    dbgprintf("[mmsnareparse DEBUG] parse_key_value_sequence: text='%s', sectionName='%s'\n",
               text != NULL ? text : "<null>", sectionName != NULL ? sectionName : "<none>");
 
     key_value_callback_t cb = {.ctx = ctx, .target = target, .sectionName = sectionName};
@@ -4061,16 +4059,16 @@ static void parse_line(parse_context_t *ctx, char *line) {
     trim_inplace(line);
     if (*line == '\0') return;
 
-    dbgprintf("[mmsnarewinsec DEBUG] parse_line: processing line='%s'\n", line);
+    dbgprintf("[mmsnareparse DEBUG] parse_line: processing line='%s'\n", line);
 
     colon = strchr(line, ':');
     if (colon == NULL) {
-        dbgprintf("[mmsnarewinsec DEBUG] parse_line: no colon found, treating as content\n");
+        dbgprintf("[mmsnareparse DEBUG] parse_line: no colon found, treating as content\n");
 
         // Special handling for Privileges section - collect privilege names
         if (ctx->activeSection != NULL && strcmp(ctx->activeSection->canonical, "Privileges") == 0 &&
             ctx->activeSection->behavior == sectionBehaviorList) {
-            dbgprintf("[mmsnarewinsec DEBUG] parse_line: collecting privilege name '%s' in Privileges section\n", line);
+            dbgprintf("[mmsnareparse DEBUG] parse_line: collecting privilege name '%s' in Privileges section\n", line);
 
             // Get or create the Privileges object
             struct json_object *privileges_obj = NULL;
@@ -4107,11 +4105,11 @@ static void parse_line(parse_context_t *ctx, char *line) {
             json_add_string(ctx->root, "Summary", line);
             ctx->summarySet = 1;
         } else if (ctx->activeSection != NULL && ctx->activeSectionObj != NULL) {
-            dbgprintf("[mmsnarewinsec DEBUG] parse_line: parsing as key-value in active section '%s'\n",
+            dbgprintf("[mmsnareparse DEBUG] parse_line: parsing as key-value in active section '%s'\n",
                       ctx->activeSection->canonical);
             parse_key_value_sequence(ctx, ctx->activeSectionObj, line, ctx->activeSection->canonical);
         } else {
-            dbgprintf("[mmsnarewinsec DEBUG] parse_line: no active section, appending to unparsed\n");
+            dbgprintf("[mmsnareparse DEBUG] parse_line: no active section, appending to unparsed\n");
             append_unparsed(ctx, line);
         }
         return;
@@ -4122,7 +4120,7 @@ static void parse_line(parse_context_t *ctx, char *line) {
     trim_inplace(label);
     while (*rest == ' ') ++rest;
 
-    dbgprintf("[mmsnarewinsec DEBUG] parse_line: label='%s', rest='%s'\n", label, rest);
+    dbgprintf("[mmsnareparse DEBUG] parse_line: label='%s', rest='%s'\n", label, rest);
 
     desc = select_section_descriptor(ctx->inst, label);
     if (desc == NULL) {
@@ -4148,7 +4146,7 @@ static void parse_line(parse_context_t *ctx, char *line) {
         }
     }
     if (desc != NULL) {
-        dbgprintf("[mmsnarewinsec DEBUG] parse_line: matched section pattern '%s' -> '%s'\n", desc->pattern,
+        dbgprintf("[mmsnareparse DEBUG] parse_line: matched section pattern '%s' -> '%s'\n", desc->pattern,
                   desc->canonical);
         switch (desc->behavior) {
             case sectionBehaviorStandard:
@@ -4198,7 +4196,7 @@ static void parse_line(parse_context_t *ctx, char *line) {
     }
     // Check if we have an active section - if so, store the key-value pair in that section
     if (ctx->activeSection != NULL && ctx->activeSectionObj != NULL) {
-        dbgprintf("[mmsnarewinsec DEBUG] parse_line: storing in active section '%s': label='%s', rest='%s'\n",
+        dbgprintf("[mmsnareparse DEBUG] parse_line: storing in active section '%s': label='%s', rest='%s'\n",
                   ctx->activeSection->canonical, label, rest);
         handle_key_value(ctx, ctx->activeSectionObj, ctx->activeSection->canonical, label, rest);
         return;
@@ -4212,11 +4210,11 @@ static void parse_line(parse_context_t *ctx, char *line) {
         return;
     }
     if (*rest == '\0') {
-        dbgprintf("[mmsnarewinsec DEBUG] parse_line: rest is empty, appending to unparsed\n");
+        dbgprintf("[mmsnareparse DEBUG] parse_line: rest is empty, appending to unparsed\n");
         append_unparsed(ctx, label);
         return;
     }
-    dbgprintf("[mmsnarewinsec DEBUG] parse_line: processing general key-value pair: label='%s', rest='%s'\n", label,
+    dbgprintf("[mmsnareparse DEBUG] parse_line: processing general key-value pair: label='%s', rest='%s'\n", label,
               rest);
     {
         const char *restEnd = rest + strlen(rest);
@@ -4230,7 +4228,7 @@ static void parse_line(parse_context_t *ctx, char *line) {
         if (valueStart < valueEnd) {
             valueCopy = trim_copy(valueStart, (size_t)(valueEnd - valueStart));
         }
-        dbgprintf("[mmsnarewinsec DEBUG] parse_line: valueCopy='%s', calling handle_general_key\n",
+        dbgprintf("[mmsnareparse DEBUG] parse_line: valueCopy='%s', calling handle_general key\n",
                   valueCopy ? valueCopy : "NULL");
         if (valueCopy != NULL) {
             handle_general_key(ctx, label, valueCopy);
@@ -4263,20 +4261,20 @@ static void parse_description(parse_context_t *ctx, const char *desc) {
     char *save;
     char *line;
 
-    dbgprintf("[mmsnarewinsec DEBUG] parse_description: input desc='%s'\n", desc);
+    dbgprintf("[mmsnareparse DEBUG] parse_description: input desc='%s'\n", desc);
 
     normalized = normalize_description(desc);
     if (normalized == NULL) {
-        dbgprintf("[mmsnarewinsec DEBUG] parse_description: normalize_description returned NULL\n");
+        dbgprintf("[mmsnareparse DEBUG] parse_description: normalize_description returned NULL\n");
         return;
     }
 
-    dbgprintf("[mmsnarewinsec DEBUG] parse_description: normalized='%s'\n", normalized);
+    dbgprintf("[mmsnareparse DEBUG] parse_description: normalized='%s'\n", normalized);
 
     save = normalized;
     int lineNum = 1;
     while ((line = strsep(&normalized, "\n")) != NULL) {
-        dbgprintf("[mmsnarewinsec DEBUG] parse_description: processing line %d: '%s'\n", lineNum, line);
+        dbgprintf("[mmsnareparse DEBUG] parse_description: processing line %d: '%s'\n", lineNum, line);
         parse_line(ctx, line);
         lineNum++;
     }
@@ -4379,12 +4377,12 @@ static rsRetVal parse_snare_text(
     ctx.patternsPrepared = 0;
     ctx.root = json_object_new_object();
     if (ctx.root == NULL) {
-        LogError(0, RS_RET_OUT_OF_MEMORY, "mmsnarewinsec: failed to create root JSON object");
+        LogError(0, RS_RET_OUT_OF_MEMORY, "mmsnareparse: failed to create root JSON object");
         return RS_RET_OUT_OF_MEMORY;
     }
     ctx.event = json_object_new_object();
     if (ctx.event == NULL) {
-        LogError(0, RS_RET_OUT_OF_MEMORY, "mmsnarewinsec: failed to create event JSON object");
+        LogError(0, RS_RET_OUT_OF_MEMORY, "mmsnareparse: failed to create event JSON object");
         json_object_put(ctx.root);
         return RS_RET_OUT_OF_MEMORY;
     }
@@ -4392,9 +4390,9 @@ static rsRetVal parse_snare_text(
 
     initialize_observability(&ctx);
 
-    dbgprintf("[mmsnarewinsec DEBUG] Processing SNARE text message with %zu tokens\n", tokenCount);
+    dbgprintf("[mmsnareparse DEBUG] Processing SNARE text message with %zu tokens\n", tokenCount);
     if (rawMsg != NULL) {
-        dbgprintf("[mmsnarewinsec DEBUG] Raw message: %s\n", rawMsg);
+        dbgprintf("[mmsnareparse DEBUG] Raw message: %s\n", rawMsg);
     }
 
     if (pData->emitRawPayload && rawMsg != NULL) json_add_string(ctx.root, "Raw", rawMsg);
@@ -4427,12 +4425,12 @@ static rsRetVal parse_snare_text(
                 return vr;
             }
         }
-        dbgprintf("[mmsnarewinsec DEBUG] parse_snare_text: calling parse_description with tokens[%zu]='%s'\n",
+        dbgprintf("[mmsnareparse DEBUG] parse_snare_text: calling parse_description with tokens[%zu]='%s'\n",
                   descriptionIdx, tokens[descriptionIdx]);
         parse_description(&ctx, tokens[descriptionIdx]);
     } else {
         dbgprintf(
-            "[mmsnarewinsec DEBUG] parse_snare_text: not calling parse_description (tokenCount=%zu, "
+            "[mmsnareparse DEBUG] parse_snare_text: not calling parse_description (tokenCount=%zu, "
             "tokens[%zu]='%s')\n",
             tokenCount, descriptionIdx, tokenCount > descriptionIdx ? tokens[descriptionIdx] : "N/A");
     }
@@ -4448,7 +4446,7 @@ static rsRetVal parse_snare_text(
 
     const char *json_str = json_object_to_json_string_ext(ctx.root, JSON_C_TO_STRING_PRETTY);
     if (json_str != NULL) {
-        dbgprintf("[mmsnarewinsec DEBUG] Final parsed JSON:\n%s\n", json_str);
+        dbgprintf("[mmsnareparse DEBUG] Final parsed JSON:\n%s\n", json_str);
     }
     msgAddJSON(pMsg, pData->container, ctx.root, 0, 0);
     return RS_RET_OK;
@@ -4509,30 +4507,30 @@ static rsRetVal parse_snare_json(instanceData *pData, smsg_t *pMsg, const char *
     ctx.patternsPrepared = 0;
     ctx.root = json_object_new_object();
     if (ctx.root == NULL) {
-        LogError(0, RS_RET_OUT_OF_MEMORY, "mmsnarewinsec: failed to create root JSON object");
+        LogError(0, RS_RET_OUT_OF_MEMORY, "mmsnareparse: failed to create root JSON object");
         return RS_RET_OUT_OF_MEMORY;
     }
     ctx.event = json_object_new_object();
     if (ctx.event == NULL) {
-        LogError(0, RS_RET_OUT_OF_MEMORY, "mmsnarewinsec: failed to create event JSON object");
+        LogError(0, RS_RET_OUT_OF_MEMORY, "mmsnareparse: failed to create event JSON object");
         json_object_put(ctx.root);
         return RS_RET_OUT_OF_MEMORY;
     }
     json_object_object_add(ctx.root, "Event", ctx.event);
 
-    dbgprintf("[mmsnarewinsec DEBUG] Processing SNARE JSON message\n");
-    dbgprintf("[mmsnarewinsec DEBUG] JSON payload: %s\n", jsonPayload);
+    dbgprintf("[mmsnareparse DEBUG] Processing SNARE JSON message\n");
+    dbgprintf("[mmsnareparse DEBUG] JSON payload: %s\n", jsonPayload);
 
     tokener = json_tokener_new();
     if (tokener == NULL) {
-        LogError(0, RS_RET_OUT_OF_MEMORY, "mmsnarewinsec: failed to create JSON tokener");
+        LogError(0, RS_RET_OUT_OF_MEMORY, "mmsnareparse: failed to create JSON tokener");
         json_object_put(ctx.root);
         return RS_RET_OUT_OF_MEMORY;
     }
     payload = json_tokener_parse_ex(tokener, jsonPayload, (int)strlen(jsonPayload));
     if (payload == NULL) {
-        LogError(0, RS_RET_COULD_NOT_PARSE, "mmsnarewinsec: failed to parse JSON payload: %s", jsonPayload);
-        dbgprintf("[mmsnarewinsec DEBUG] Failed to parse JSON payload\n");
+        LogError(0, RS_RET_COULD_NOT_PARSE, "mmsnareparse: failed to parse JSON payload: %s", jsonPayload);
+        dbgprintf("[mmsnareparse DEBUG] Failed to parse JSON payload\n");
         json_tokener_free(tokener);
         json_add_string(ctx.root, "RawJSON", jsonPayload);
         msgAddJSON(pMsg, pData->container, ctx.root, 0, 0);
@@ -4541,7 +4539,7 @@ static rsRetVal parse_snare_json(instanceData *pData, smsg_t *pMsg, const char *
 
     const char *json_str = json_object_to_json_string_ext(payload, JSON_C_TO_STRING_PRETTY);
     if (json_str != NULL) {
-        dbgprintf("[mmsnarewinsec DEBUG] Parsed JSON payload:\n%s\n", json_str);
+        dbgprintf("[mmsnareparse DEBUG] Parsed JSON payload:\n%s\n", json_str);
     }
 
     if (pData->emitRawPayload) json_object_object_add(ctx.root, "RawJSON", json_object_get(payload));
@@ -4597,7 +4595,7 @@ static rsRetVal parse_snare_json(instanceData *pData, smsg_t *pMsg, const char *
 
     const char *json_str2 = json_object_to_json_string_ext(ctx.root, JSON_C_TO_STRING_PRETTY);
     if (json_str2 != NULL) {
-        dbgprintf("[mmsnarewinsec DEBUG] Final parsed JSON:\n%s\n", json_str2);
+        dbgprintf("[mmsnareparse DEBUG] Final parsed JSON:\n%s\n", json_str2);
     }
 
     json_tokener_free(tokener);
@@ -4633,12 +4631,12 @@ static rsRetVal process_message(instanceData *pData, smsg_t *pMsg, uchar *msgTex
     rawMsg = payloadStart;
     mutableMsg = strdup(payloadStart);
     if (mutableMsg == NULL) {
-        LogError(0, RS_RET_OUT_OF_MEMORY, "mmsnarewinsec: failed to duplicate message text");
+        LogError(0, RS_RET_OUT_OF_MEMORY, "mmsnareparse: failed to duplicate message text");
         return RS_RET_OUT_OF_MEMORY;
     }
     unescape_hash_sequences(mutableMsg);
     normalize_literal_tabs(mutableMsg);
-    dbgprintf("[mmsnarewinsec DEBUG] After unescaping: '%s'\n", mutableMsg);
+    dbgprintf("[mmsnareparse DEBUG] After unescaping: '%s'\n", mutableMsg);
     cursor = mutableMsg;
     while (cursor != NULL && tokenCount < ARRAY_SIZE(tokens)) {
         tokens[tokenCount++] = cursor;
@@ -4648,13 +4646,13 @@ static rsRetVal process_message(instanceData *pData, smsg_t *pMsg, uchar *msgTex
         cursor = tab + 1;
     }
 
-    dbgprintf("[mmsnarewinsec DEBUG] Processing message with %zu tokens\n", tokenCount);
-    dbgprintf("[mmsnarewinsec DEBUG] Message type: %s\n",
+    dbgprintf("[mmsnareparse DEBUG] Processing message with %zu tokens\n", tokenCount);
+    dbgprintf("[mmsnareparse DEBUG] Message type: %s\n",
               (tokenCount >= 3 && !strcmp(tokens[1], "0") && tokens[2][0] == '{') ? "JSON" : "Text");
 
     // Debug: Print first few tokens
     for (size_t i = 0; i < tokenCount && i < 5; i++) {
-        dbgprintf("[mmsnarewinsec DEBUG] Token %zu: '%s'\n", i, tokens[i]);
+        dbgprintf("[mmsnareparse DEBUG] Token %zu: '%s'\n", i, tokens[i]);
     }
 
     if (tokenCount >= 3 && !strcmp(tokens[1], "0") && tokens[2][0] == '{') {
@@ -4704,11 +4702,11 @@ BEGINsetModCnf
     CODESTARTsetModCnf;
     pvals = nvlstGetParams(lst, &modpblk, NULL);
     if (pvals == NULL) {
-        LogError(0, RS_RET_MISSING_CNFPARAMS, "mmsnarewinsec: error processing module config parameters [module(...)]");
+        LogError(0, RS_RET_MISSING_CNFPARAMS, "mmsnareparse: error processing module config parameters [module(...)]");
         ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
     }
     if (Debug) {
-        dbgprintf("module (global) param blk for mmsnarewinsec:\n");
+        dbgprintf("module (global) param blk for mmsnareparse:\n");
         cnfparamsPrint(&modpblk, pvals);
     }
     for (i = 0; i < (int)modpblk.nParams; ++i) {
@@ -4748,7 +4746,7 @@ BEGINsetModCnf
             }
             loadModConf->validationTemplate.mode = parsedMode;
         } else {
-            dbgprintf("mmsnarewinsec: unhandled module parameter '%s'\n", modpblk.descr[i].name);
+            dbgprintf("mmsnareparse: unhandled module parameter '%s'\n", modpblk.descr[i].name);
         }
     }
 finalize_it:
@@ -4835,7 +4833,7 @@ BEGINnewActInst
     char *templateName = NULL;
     CODESTARTnewActInst;
     if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
-        LogError(0, RS_RET_MISSING_CNFPARAMS, "mmsnarewinsec: missing configuration parameters");
+        LogError(0, RS_RET_MISSING_CNFPARAMS, "mmsnareparse: missing configuration parameters");
         ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
     }
     CHKiRet(createInstance(&pData));
@@ -4889,9 +4887,9 @@ BEGINnewActInst
     }
     CODE_STD_STRING_REQUESTnewActInst(1);
     if (pData->container == NULL) {
-        CHKmalloc(pData->container = (uchar *)strdup(MMSNAREWINSEC_CONTAINER_DEFAULT));
+        CHKmalloc(pData->container = (uchar *)strdup(MMSNAREPARSE_CONTAINER_DEFAULT));
         if (pData->container == NULL) {
-            LogError(0, RS_RET_OUT_OF_MEMORY, "mmsnarewinsec: failed to allocate default container name");
+            LogError(0, RS_RET_OUT_OF_MEMORY, "mmsnareparse: failed to allocate default container name");
         }
     }
     CHKiRet(OMSRsetEntry(*ppOMSR, 0, NULL, OMSR_TPL_AS_MSG));
