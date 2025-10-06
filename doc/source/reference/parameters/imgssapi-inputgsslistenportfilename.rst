@@ -25,8 +25,6 @@ This parameter applies to :doc:`../../configuration/modules/imgssapi`.
 
 Description
 -----------
-.. versionadded:: 8.38.0
-
 Specifies the path to a file where the listener will write its bound port
 number upon startup. This is useful for integration with other services or in
 test environments that use dynamic ports.

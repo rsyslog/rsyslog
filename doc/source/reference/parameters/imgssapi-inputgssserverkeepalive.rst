@@ -25,8 +25,6 @@ This parameter applies to :doc:`../../configuration/modules/imgssapi`.
 
 Description
 -----------
-.. versionadded:: 8.5.0
-
 Enables or disables keep-alive packets at the TCP socket layer.
 
 Input usage
