@@ -71,8 +71,8 @@ done on the client machine.
 
     action(
         type="omfwd"
-        target="server"
-        port="port"                     # optional
+        target="loghost.example.net"
+        port="10514"                    # example port, optional
         protocol="tcp"
         action.resumeRetryCount="-1"     # infinite retries on insert failure
         queue.type="LinkedList"          # use asynchronous processing
@@ -81,7 +81,7 @@ done on the client machine.
     )
 
 The port given above is optional. It may be omitted, in which case you
-only provide the server name. The ``queue.filename`` is used to create
+only provide the host name. The ``queue.filename`` is used to create
 disk-assisted queue files, should need arise. This value must be unique
 inside the configuration. No two actions must use the same queue file.
 Also, for obvious reasons, it must only contain those characters that
@@ -130,8 +130,8 @@ A sample for forwarding to two hosts looks like this:
     # start forwarding rule 1
     action(
         type="omfwd"
-        target="server1"
-        port="port"
+        target="west-loghost.example.net"
+        port="10514"
         protocol="tcp"
         action.resumeRetryCount="-1"
         queue.type="LinkedList"
@@ -143,7 +143,7 @@ A sample for forwarding to two hosts looks like this:
     # start forwarding rule 2
     action(
         type="omfwd"
-        target="server2"
+        target="east-loghost.example.net"
         protocol="tcp"
         action.resumeRetryCount="-1"
         queue.type="LinkedList"
@@ -153,15 +153,17 @@ A sample for forwarding to two hosts looks like this:
     # end forwarding rule 2
 
 Note the filename used for the first rule it is ``srvrfwd1`` and for the
-second it is ``srvrfwd2``. I have used a server without port name in the
-second forwarding rule. This was just to illustrate how this can be
-done. You can also specify a port there (or drop the port from
-``server1``).
+second it is ``srvrfwd2``. The second forwarding rule omits the
+``port`` parameter to illustrate how rsyslog falls back to the default
+port defined by the output module. You can also specify an explicit
+port there (or drop the port from the first example).
 
 When there are multiple action queues, they all work independently.
-Thus, if server1 goes down, server2 still receives data in real-time.
-The client will **not** block and wait for server1 to come back online.
-Similarly, server1's operation will not be affected by server2's state.
+Thus, if ``west-loghost.example.net`` goes down,
+``east-loghost.example.net`` still receives data in real-time. The
+client will **not** block and wait for the first server to come back
+online. Similarly, ``west-loghost.example.net``\'s operation will not be
+affected by the state of ``east-loghost.example.net``.
 
 See Also
 --------
