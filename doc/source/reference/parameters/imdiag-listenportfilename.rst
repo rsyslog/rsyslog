@@ -42,7 +42,9 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="imdiag")
-   input(type="imdiag" listenPortFileName="/var/run/imdiag.port" serverRun="0")
+   input(type="imdiag"
+         listenPortFileName="/var/run/rsyslog/imdiag.port"
+         serverRun="0")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

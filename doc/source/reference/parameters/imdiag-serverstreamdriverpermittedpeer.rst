@@ -47,7 +47,8 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="imdiag")
-   input(type="imdiag" listenPortFileName="/var/run/imdiag.port"
+   input(type="imdiag"
+         listenPortFileName="/var/run/rsyslog/imdiag.port"
          serverStreamDriverPermittedPeer=["diag.example.com","127.0.0.1"]
          serverRun="19998")
 

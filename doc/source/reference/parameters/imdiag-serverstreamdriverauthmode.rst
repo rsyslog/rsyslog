@@ -45,8 +45,10 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="imdiag")
-   input(type="imdiag" listenPortFileName="/var/run/imdiag.port"
-         serverStreamDriverAuthMode="anon" serverRun="19998")
+   input(type="imdiag"
+         listenPortFileName="/var/run/rsyslog/imdiag.port"
+         serverStreamDriverAuthMode="anon"
+         serverRun="19998")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
