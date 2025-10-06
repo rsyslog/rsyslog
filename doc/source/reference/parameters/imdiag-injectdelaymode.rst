@@ -30,13 +30,15 @@ The diagnostics interface can inject messages into rsyslog's queues on demand.
 policy used for those messages:
 
 ``no``
-    Injected messages bypass delay throttling.
+  Injected messages bypass delay throttling.
+
 ``light``
-    Injected messages are marked "light delayable" so that queue congestion
-    slows them while preserving capacity for non-throttleable inputs.
+  Injected messages are marked "light delayable" so that queue congestion
+  slows them while preserving capacity for non-throttleable inputs.
+
 ``full``
-    Injected messages are fully delayable and subject to the strongest
-    throttling when queues fill up.
+  Injected messages are fully delayable and subject to the strongest
+  throttling when queues fill up.
 
 Use this setting to prevent diagnostics traffic from overwhelming production
 inputs when the main queue is near capacity.
