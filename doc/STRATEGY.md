@@ -130,7 +130,9 @@ This contract applies now (manual) and must remain valid when pages are auto-gen
 
 ```rst
 .. summary-start
+
 <single concise sentence; <=160 chars>
+
 .. summary-end
 ```
 

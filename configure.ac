@@ -3084,6 +3084,16 @@ doc/source/_ext/edit_on_github.py
 doc/source/_ext/rsyslog_lexer.py
 doc/source/_static/rsyslog.css
 doc/source/tutorials/cert-script.tar.gz
+doc/ai/structure_and_paths.md
+doc/ai/authoring_guidelines.md
+doc/ai/chunking_and_embeddings.md
+doc/ai/crosslinking_and_nav.md
+doc/ai/drift_monitoring.md
+doc/ai/mermaid_rules.md
+doc/ai/README.md
+doc/ai/templates/template-concept.rst
+doc/ai/templates/template-tutorial.rst
+doc/ai/terminology.md
 doc/ai/module_map.yaml
 doc/requirements.txt
 doc/README.md
