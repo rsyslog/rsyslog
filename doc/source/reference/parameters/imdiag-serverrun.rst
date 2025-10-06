@@ -31,10 +31,10 @@ bind. Specify ``0`` to request an ephemeral port from the operating system.
 The chosen port is recorded in the file specified by the mandatory
 :ref:`ListenPortFileName <param-imdiag-listenportfilename>` parameter.
 
-imdiag always uses the plain TCP (``ptcp``) network stream driver. As a
-result, parameters that normally tune stream driver authentication or
-permitted peers are accepted for compatibility but have no effect in current
-releases.
+imdiag always uses the plain TCP (``ptcp``) :doc:`network stream driver
+<../../concepts/netstrm_drvr>`. As a result, parameters that normally tune
+stream driver authentication or permitted peers are accepted for
+compatibility but have no effect in current releases.
 This includes:
 
 * :ref:`param-imdiag-serverstreamdrivermode`

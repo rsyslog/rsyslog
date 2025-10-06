@@ -26,7 +26,7 @@ This parameter applies to :doc:`../../configuration/modules/imdiag`.
 
 Description
 -----------
-When set, :samp:`AbortTimeout` installs a guard thread that tracks the runtime
+When set, ``AbortTimeout`` installs a guard thread that tracks the runtime
 of the rsyslog instance. The timer starts as soon as this configuration
 parameter is loaded and applies for the entire process runtime. If rsyslog
 remains active for longer than the configured number of seconds after the guard
