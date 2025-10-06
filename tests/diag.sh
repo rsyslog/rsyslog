@@ -3515,7 +3515,11 @@ case $1 in
 			echo "hint: was init accidentally called twice?"
 			exit 2
 		fi
-		export RSYSLOG_DYNNAME="rstb_$(./test_id $(basename $0))$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head --bytes 4)"
+		# Generate a short ASCII-only random suffix in a POSIX/portable way.
+		# On macOS, BSD tr with UTF-8 locales can error with "Illegal byte sequence"
+		# when fed /dev/urandom. Force C locale and use head -c (portable) instead of
+		# GNU head --bytes to avoid flaky failures in GitHub Actions runners.
+		export RSYSLOG_DYNNAME="rstb_$(./test_id $(basename $0))$(LC_ALL=C tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 4)"
 		export RSYSLOG_OUT_LOG="${RSYSLOG_DYNNAME}.out.log"
 		export RSYSLOG2_OUT_LOG="${RSYSLOG_DYNNAME}_2.out.log"
 		export RSYSLOG_PIDBASE="${RSYSLOG_DYNNAME}:" # also used by instance 2!
