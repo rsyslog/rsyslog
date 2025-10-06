@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/imgssapi`.
 
 Description
 -----------
-Sets the maximum number of sessions supported by the listener.
+Sets the maximum number of concurrent sessions supported by the listener.
 
 .. note::
 
