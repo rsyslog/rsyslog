@@ -1,40 +1,40 @@
-.. _tut-04-message-pipeline:
+.. _tut-04-log-pipeline:
 
-The Message Pipeline: Inputs → Rulesets → Actions
-#################################################
+The Log Pipeline: Inputs → Rulesets → Actions
+#############################################
 
 .. meta::
    :audience: beginner
    :tier: entry
-   :keywords: rsyslog pipeline, input, ruleset, action, kafka
+   :keywords: rsyslog log pipeline, message pipeline, input, ruleset, action, kafka, output
 
 .. summary-start
 
-Understand rsyslog’s core architecture: messages enter through **inputs**, are processed by **rulesets**,
-and end up in one or more **actions** (outputs).
+Understand rsyslog’s core architecture: logs enter through **inputs**, are processed by **rulesets**, 
+and end up in one or more **actions** (outputs). This flow is called the **log pipeline** — 
+historically known as the *message pipeline*.
 
 .. summary-end
+
 
 Goal
 ====
 
-Build a correct mental model of rsyslog’s architecture using the **message pipeline**.
-This will help you predict where to add filters, which actions will run, and why your snippets behave as they do.
+Build a correct mental model of rsyslog’s architecture using the **log pipeline**.  
+This helps you predict where to add filters, which actions will run, and why your
+snippets behave as they do.
 
 The three core components
 =========================
 
-1. **Inputs** – how messages arrive.
-
+1. **Inputs** – how logs arrive.  
    Examples: ``imuxsock`` (syslog socket), ``imjournal`` (systemd journal),
    ``imfile`` (text files).
 
-2. **Rulesets** – the logic in between.
+2. **Rulesets** – the logic in between.  
+   They hold filters and actions and decide what happens to each message.
 
-   They hold filters and actions, and decide what happens to each message.
-
-3. **Actions** – where messages go.
-
+3. **Actions** – where logs go.  
    Examples: files (``omfile``), remote syslog (``omfwd``), or modern targets
    like Kafka (``omkafka``).
 
@@ -44,25 +44,25 @@ Visual model
 .. mermaid::
 
    flowchart LR
-     A["Inputs"] --> B["Ruleset"]
-     B --> C1["Action 1"]
-     C1 --> C2["Action 2"]
+     A["Inputs"]:::input --> B["Ruleset"]:::ruleset
+     B --> C1["Action 1"]:::action
+     B --> C2["Action 2"]:::action
 
-     subgraph S["Actions (serial by default)"]
-       C1
-       C2
-     end
+     classDef input fill:#d5e8d4,stroke:#82b366;
+     classDef ruleset fill:#dae8fc,stroke:#6c8ebf;
+     classDef action fill:#ffe6cc,stroke:#d79b00;
 
 Explanation
 ===========
 
 - **Inputs** feed messages into rsyslog.
-- Messages enter a **ruleset**, which decides what to do.
-- The **actions** are a *set of destinations* that run **in order by default** (serial).
-  Concurrency is possible (e.g., per-action queues), but that’s advanced and not needed here.
+- Each message enters a **ruleset**, which decides what to do with it.
+- **Actions** are destinations that execute **in order by default** (serial).  
+  Concurrency is possible through per-action queues or worker threads, 
+  but that’s an advanced topic.
 
-Example: add a second destination for a tag
-===========================================
+Example: add a second destination
+=================================
 
 Write messages tagged ``tut04`` to a file *and* forward them:
 
@@ -83,20 +83,20 @@ Restart and test:
 
 .. note::
 
-   Forwarding requires a **second machine** (or another rsyslog instance
-   listening on a port). Without a reachable target **and** without an action
-   queue, rsyslog will retry and may appear “stuck” for a minute or longer
-   before the next attempt. For a proper walkthrough, see :doc:`../forwarding_logs`.
+   Forwarding requires a **second machine** or another rsyslog instance 
+   listening on a port. Without a reachable target and without an action queue, 
+   rsyslog will retry and may appear “stuck” for a short time before the next attempt.  
+   For a proper walkthrough, see :doc:`../forwarding_logs`.
 
 Action order and config sequence
 ================================
 
 - Actions execute **serially in the order they appear**.
-- Earlier actions can **modify or discard** messages before later actions see them.
-- Include snippets in ``/etc/rsyslog.d/`` are processed in **lexical order**
+- Earlier actions can **modify or discard** messages before later ones run.
+- Include snippets in ``/etc/rsyslog.d/`` are processed in **lexical order** 
   (e.g., ``10-first.conf`` runs before ``50-extra.conf``).
-- You can introduce concurrency by giving an action its **own queue** (``action.queue.*``)
-  or by using separate rulesets/workers — advanced topics, not needed here.
+- Concurrency can be introduced by giving an action its **own queue** 
+  (``action.queue.*``) or by using separate rulesets/workers.
 
 See :doc:`05-order-matters` for a hands-on demo of ordering effects.
 
@@ -105,26 +105,28 @@ Verification checkpoint
 
 You should now be able to:
 
-- Sketch **Input → Ruleset → Actions** from memory.
-- Recognize where your distro-provided **inputs** attach to the flow.
-- Understand that **actions** are a grouped set of destinations that run **in order** by default.
-- Name at least one modern output (e.g., **Kafka**).
+- Sketch **Input → Ruleset → Actions** from memory.  
+- Recognize where your distro-provided **inputs** attach to the flow.  
+- Understand that **actions** are sequential by default.  
+- Name at least one modern output (e.g., **Kafka**).  
 
 See also / Next steps
 =====================
 
-At this point you have installed rsyslog, created your first config, and understood
-the default setup. Next, we build on that foundation:
+You now understand the basic architecture — the **log pipeline**.  
+To explore more advanced pipeline concepts (branching, staging, queues),
+see:
 
-- :doc:`02-first-config` – your first action and targeted filtering.
-- :doc:`03-default-config` – how distro inputs fit the pipeline.
-- :doc:`../forwarding_logs` – basics of forwarding and queues.
-- :doc:`05-order-matters` – how config and file order influence behavior.
+- :doc:`../../concepts/log_pipeline/stages`
+- :doc:`../../concepts/log_pipeline/design_patterns`
+- :doc:`../forwarding_logs` - how forwarding and queues interact.
+- :doc:`05-order-matters` - ordering and include file sequence.
+- :doc:`../../concepts/log_pipeline/index` - conceptual overview
 
 ----
 
 .. tip::
 
-   🎬 *Video idea (2–3 min):* show the diagram, then run
-   ``logger -t tut04 "…"`` and watch the message hit both the file and the
-   forwarder; point out that actions execute sequentially.
+   🎬 *Video idea (2–3 min):* show the diagram, then run  
+   ``logger -t tut04 "…"`` and watch the message hit both the file and the forwarder;  
+   highlight that actions execute sequentially by default.
