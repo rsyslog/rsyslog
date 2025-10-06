@@ -35,7 +35,6 @@ Sets the maximum number of sessions supported by the listener.
 
 Input usage
 -----------
-.. _param-imgssapi-input-inputgssservermaxsessions:
 .. _imgssapi.parameter.input.inputgssservermaxsessions-usage:
 
 .. code-block:: rsyslog

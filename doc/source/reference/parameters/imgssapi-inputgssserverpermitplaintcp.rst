@@ -30,7 +30,6 @@ same port that the GSS listener uses.
 
 Input usage
 -----------
-.. _param-imgssapi-input-inputgssserverpermitplaintcp:
 .. _imgssapi.parameter.input.inputgssserverpermitplaintcp-usage:
 
 .. code-block:: rsyslog

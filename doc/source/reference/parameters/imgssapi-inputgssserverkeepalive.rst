@@ -31,7 +31,6 @@ Enables or disables keep-alive packets at the TCP socket layer.
 
 Input usage
 -----------
-.. _param-imgssapi-input-inputgssserverkeepalive:
 .. _imgssapi.parameter.input.inputgssserverkeepalive-usage:
 
 .. code-block:: rsyslog

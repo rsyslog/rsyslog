@@ -30,7 +30,6 @@ Principal Name (SPN). If not specified, it defaults to ``host``.
 
 Input usage
 -----------
-.. _param-imgssapi-input-inputgssserverservicename:
 .. _imgssapi.parameter.input.inputgssserverservicename-usage:
 
 .. code-block:: rsyslog

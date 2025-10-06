@@ -30,7 +30,6 @@ from the TCP server provided by other modules.
 
 Input usage
 -----------
-.. _param-imgssapi-input-inputgssserverrun:
 .. _imgssapi.parameter.input.inputgssserverrun-usage:
 
 .. code-block:: rsyslog

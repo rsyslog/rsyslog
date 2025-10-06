@@ -38,7 +38,6 @@ test environments that use dynamic ports.
 
 Input usage
 -----------
-.. _param-imgssapi-input-inputgsslistenportfilename:
 .. _imgssapi.parameter.input.inputgsslistenportfilename-usage:
 
 .. code-block:: rsyslog
