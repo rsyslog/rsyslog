@@ -20,7 +20,7 @@ JSON
 
 generate_conf
 add_conf '
-module(load="../plugins/mmsnarewinsec/.libs/mmsnarewinsec" definition.file="'${PWD}/${DEF_FILE}'")
+module(load="../plugins/mmsnareparse/.libs/mmsnareparse" definition.file="'${PWD}/${DEF_FILE}'")
 
 template(name="outjson" type="list" option.jsonf="on") {
   property(outname="EventID" name="$!win!Event!EventID" format="jsonf")
@@ -32,7 +32,7 @@ template(name="outjson" type="list" option.jsonf="on") {
   property(outname="LogonTypeNameEventData" name="$!win!EventData!LogonTypeName" format="jsonf")
 }
 
-action(type="mmsnarewinsec")
+action(type="mmsnareparse")
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outjson")
 '
 

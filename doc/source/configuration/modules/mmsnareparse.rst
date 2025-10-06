@@ -1,7 +1,7 @@
-mmsnarewinsec - NXLog Snare Windows Security parser
+mmsnareparse - NXLog Snare Windows Security parser
 ===================================================
 
-The ``mmsnarewinsec`` parser module extracts structured metadata from NXLog
+The ``mmsnareparse`` parser module extracts structured metadata from NXLog
 Snare-formatted Windows Security events that are transported inside RFC3164 or
 RFC5424 envelopes. It was designed using Windows Server 2016 through Windows
 Server 2025 samples and preserves the original payload while exposing a
@@ -118,7 +118,7 @@ and others are mapped to ``Event.Category``, ``Event.Subtype``, and
 
 * Logon type codes are translated to ``Logon.TypeName``.
 * NTSTATUS and Kerberos result codes are preserved in hex form; additional maps
-  can be added easily in ``mmsnarewinsec.c``.
+  can be added easily in ``mmsnareparse.c``.
 * Timestamps are normalised to ISO 8601 UTC using the rsyslog message timestamp
   if the payload does not contain a parseable value.
 
@@ -148,12 +148,12 @@ Basic Configuration with Error Handling
 
    module(load="imtcp")
    module(load="omfile")
-   module(load="mmsnarewinsec")
+   module(load="mmsnareparse")
 
    template(name="snareWin" type="string" string="%!win%\n")
    input(type="imtcp" port="5514")
 
-   action(type="mmsnarewinsec"
+   action(type="mmsnareparse"
           container="!win"
           enable.network="on"
           enable.laps="on"
@@ -172,7 +172,7 @@ This configuration extracts specific fields into a structured JSON format suitab
 
 .. code-block:: none
 
-   module(load="mmsnarewinsec")
+   module(load="mmsnareparse")
 
    template(name="jsonfmt" type="list" option.jsonf="on") {
      property(outname="EventID" name="$!win!Event!EventID" format="jsonf")
@@ -185,7 +185,7 @@ This configuration extracts specific fields into a structured JSON format suitab
      property(outname="WUFBPolicyID" name="$!win!WUFB!PolicyID" format="jsonf")
    }
 
-   action(type="mmsnarewinsec")
+   action(type="mmsnareparse")
    action(type="omfile" file="/var/log/winsec.json" template="jsonfmt")
 
 Comprehensive Field Extraction with Ruleset
@@ -196,7 +196,7 @@ This configuration demonstrates comprehensive field extraction using a ruleset a
 .. code-block:: none
 
    module(load="imtcp")
-   module(load="mmsnarewinsec")
+   module(load="mmsnareparse")
 
    # Template to extract comprehensive structured JSON output
    template(name="jsonfmt" type="list" option.jsonf="on") {
@@ -255,7 +255,7 @@ This configuration demonstrates comprehensive field extraction using a ruleset a
    }
 
    ruleset(name="winsec") {
-       action(type="mmsnarewinsec")
+       action(type="mmsnareparse")
        action(type="omfile" file="/var/log/winsec.json" template="jsonfmt")
    }
 
@@ -341,9 +341,9 @@ Error handling and observability
 Testing
 -------
 
-The regression suite (``tests/mmsnarewinsec-basic.sh``,
-``tests/mmsnarewinsec-json.sh``, ``tests/mmsnarewinsec-syslog.sh``,
-``tests/mmsnarewinsec-comprehensive.sh``, ``tests/mmsnarewinsec-custom.sh``)
+The regression suite (``tests/mmsnareparse-basic.sh``,
+``tests/mmsnareparse-json.sh``, ``tests/mmsnareparse-syslog.sh``,
+``tests/mmsnareparse-comprehensive.sh``, ``tests/mmsnareparse-custom.sh``)
 replays canonical Windows Security samples and injects custom JSON overrides
 to verify extracted fields remain stable (for example, 4624 with LAPS, 5157 TLS
 inspection, 6281 WDAC enforcement, 1243 WUFB deployment, and bespoke
@@ -352,7 +352,7 @@ definitions supplied at runtime).
 Extending Pattern Tables at Runtime
 -----------------------------------
 
-``mmsnarewinsec`` ships with curated defaults for section detection, field
+``mmsnareparse`` ships with curated defaults for section detection, field
 normalisation and event metadata, but environments frequently contain
 organisation-specific extensions. The module can import supplemental
 definitions at startup using declarative JSON descriptors.
@@ -460,7 +460,7 @@ To activate the overrides:
 
 .. code-block:: none
 
-   module(load="mmsnarewinsec"
+   module(load="mmsnareparse"
           definition.file="/etc/rsyslog.d/custom-winsec.json"
           validation.mode="strict")
 
@@ -476,4 +476,4 @@ Troubleshooting
   ``parsed``, ``partial``, ``failed``) to verify parsing behaviour.
 * Use ``emit.debugjson="on"`` to guarantee an ``!win!Unparsed`` array is present
   for assertions when new Windows releases add previously unknown sections.
-* Extend section handlers or lookup tables in ``plugins/mmsnarewinsec/mmsnarewinsec.c`` when Microsoft introduces additional telemetry fields.
+* Extend section handlers or lookup tables in ``plugins/mmsnareparse/mmsnareparse.c`` when Microsoft introduces additional telemetry fields.

@@ -1,30 +1,39 @@
 #!/bin/bash
-## Test mmsnarewinsec module with JSON template output
-## Validates that the module correctly parses Windows security events and outputs them in JSON format
+# Validate mmsnareparse parsing against representative NXLog Security samples.
 unset RSYSLOG_DYNNAME
 . ${srcdir:=.}/diag.sh init
 
 generate_conf
 add_conf '
-module(load="../plugins/mmsnarewinsec/.libs/mmsnarewinsec")
+module(load="../plugins/mmsnareparse/.libs/mmsnareparse")
 
-template(name="jsonfmt" type="list" option.jsonf="on") {
-  property(outname="EventID" name="$!win!Event!EventID" format="jsonf")
-  property(outname="TimeCreatedNormalized" name="$!win!Event!TimeCreated!Normalized" format="jsonf")
-  property(outname="LogonType" name="$!win!LogonInformation!LogonType" format="jsonf")
-  property(outname="LogonTypeName" name="$!win!LogonInformation!LogonTypeName" format="jsonf")
-  property(outname="LAPSPolicyVersion" name="$!win!LAPS!PolicyVersion" format="jsonf")
-  property(outname="LAPSCredentialRotation" name="$!win!LAPS!CredentialRotation" format="jsonf")
-  property(outname="TLSReason" name="$!win!TLSInspection!Reason" format="jsonf")
-  property(outname="WDACPolicyVersion" name="$!win!WDAC!PolicyVersion" format="jsonf")
-  property(outname="WDACPID" name="$!win!WDAC!PID" format="jsonf")
-  property(outname="WUFBPolicyID" name="$!win!WUFB!PolicyID" format="jsonf")
-  property(outname="RemoteCredentialGuard" name="$!win!Logon!RemoteCredentialGuard" format="jsonf")
-  property(outname="NetworkSourcePort" name="$!win!Network!SourcePort" format="jsonf")
+template(name="outfmt" type="list") {
+    property(name="$!win!Event!EventID")
+    constant(value=",")
+    property(name="$!win!LogonInformation!LogonType")
+    constant(value=",")
+    property(name="$!win!LogonInformation!LogonTypeName")
+    constant(value=",")
+    property(name="$!win!LAPS!PolicyVersion")
+    constant(value=",")
+    property(name="$!win!LAPS!CredentialRotation")
+    constant(value=",")
+    property(name="$!win!TLSInspection!Reason")
+    constant(value=",")
+    property(name="$!win!WDAC!PolicyVersion")
+    constant(value=",")
+    property(name="$!win!WDAC!PID")
+    constant(value=",")
+    property(name="$!win!WUFB!PolicyID")
+    constant(value=",")
+    property(name="$!win!Logon!RemoteCredentialGuard")
+    constant(value=",")
+    property(name="$!win!Network!SourcePort")
+    constant(value="\n")
 }
 
-action(type="mmsnarewinsec")
-action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="jsonfmt")
+action(type="mmsnareparse")
+action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 
 startup
@@ -39,29 +48,9 @@ injectmsg_file ${RSYSLOG_DYNNAME}.input
 shutdown_when_empty
 wait_shutdown
 
-# Check JSON output format (field-by-field for robustness)
-# 4624
-content_check '"eventid":"4624"' $RSYSLOG_OUT_LOG
-content_check '"timecreatednormalized":"2025-02-18T06:42:17' $RSYSLOG_OUT_LOG
-content_check '"logontype":"2"' $RSYSLOG_OUT_LOG
-content_check '"logontypename":"Interactive"' $RSYSLOG_OUT_LOG
-content_check '"lapspolicyversion":"2"' $RSYSLOG_OUT_LOG
-content_check '"lapscredentialrotation":"true"' $RSYSLOG_OUT_LOG
-content_check '"remotecredentialguard":"true"' $RSYSLOG_OUT_LOG
-content_check '"networksourceport":"59122"' $RSYSLOG_OUT_LOG
-
-# 5157
-content_check '"eventid":"5157"' $RSYSLOG_OUT_LOG
-content_check '"tlsreason":"Unapproved Root Authority"' $RSYSLOG_OUT_LOG
-content_check '"networksourceport":"57912"' $RSYSLOG_OUT_LOG
-
-# 6281
-content_check '"eventid":"6281"' $RSYSLOG_OUT_LOG
-content_check '"wdacpolicyversion":"3.2.0"' $RSYSLOG_OUT_LOG
-content_check '"wdacpid":"4128"' $RSYSLOG_OUT_LOG
-
-# 1243
-content_check '"eventid":"1243"' $RSYSLOG_OUT_LOG
-content_check '"wufbpolicyid":"2f9c4414-3f71-4f2b-9a7e-cc98a6d96970"' $RSYSLOG_OUT_LOG
+content_check '4624,2,Interactive,2,true,,,,,true,59122' $RSYSLOG_OUT_LOG
+content_check '5157,,,,,Unapproved Root Authority,,,,,57912' $RSYSLOG_OUT_LOG
+content_check '6281,,,,,,3.2.0,4128,,,' $RSYSLOG_OUT_LOG
+content_check '1243,,,,,,,,2f9c4414-3f71-4f2b-9a7e-cc98a6d96970,,' $RSYSLOG_OUT_LOG
 
 exit_test

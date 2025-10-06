@@ -1,6 +1,6 @@
 #!/bin/bash
-## @file tests/mmsnarewinsec-enhanced-validation.sh
-## @brief Validate enhanced parsing, validation, and stats for mmsnarewinsec.
+## @file tests/mmsnareparse-enhanced-validation.sh
+## @brief Validate enhanced parsing, validation, and stats for mmsnareparse.
 
 unset RSYSLOG_DYNNAME
 . ${srcdir:=.}/diag.sh init
@@ -8,7 +8,7 @@ unset RSYSLOG_DYNNAME
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-module(load="../plugins/mmsnarewinsec/.libs/mmsnarewinsec")
+module(load="../plugins/mmsnareparse/.libs/mmsnareparse")
 
 template(name="validation_test_json" type="list" option.jsonf="on") {
     property(outname="eventid" name="$!win!Event!EventID" format="jsonf")
@@ -18,7 +18,7 @@ template(name="validation_test_json" type="list" option.jsonf="on") {
 }
 
 input(type="imtcp" port="'$TCPFLOOD_PORT'")
-action(type="mmsnarewinsec"
+action(type="mmsnareparse"
        rootpath="!win"
        validation_mode="strict"
        debugjson="on"

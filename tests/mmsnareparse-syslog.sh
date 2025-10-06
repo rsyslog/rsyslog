@@ -1,12 +1,12 @@
 #!/bin/bash
-# Validate mmsnarewinsec when receiving raw syslog messages over TCP.
+# Validate mmsnareparse when receiving raw syslog messages over TCP.
 unset RSYSLOG_DYNNAME
 . ${srcdir:=.}/diag.sh init
 
 generate_conf
 add_conf '
 module(load="../plugins/imtcp/.libs/imtcp")
-module(load="../plugins/mmsnarewinsec/.libs/mmsnarewinsec")
+module(load="../plugins/mmsnareparse/.libs/mmsnareparse")
 
 template(name="outfmt" type="list") {
     property(name="$!win!Event!EventID")
@@ -22,7 +22,7 @@ template(name="outfmt" type="list") {
 }
 
 ruleset(name="winsec") {
-    action(type="mmsnarewinsec")
+    action(type="mmsnareparse")
     action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 }
 
@@ -31,8 +31,8 @@ input(type="imtcp" port="0" listenPortFileName="'$RSYSLOG_DYNNAME'.tcpflood_port
 
 startup
 assign_tcpflood_port $RSYSLOG_DYNNAME.tcpflood_port
-cat "$srcdir/testsuites/mmsnarewinsec/sample-windows2022-security.data" \
-    "$srcdir/testsuites/mmsnarewinsec/sample-windows2025-security.data" \
+cat "$srcdir/testsuites/mmsnareparse/sample-windows2022-security.data" \
+    "$srcdir/testsuites/mmsnareparse/sample-windows2025-security.data" \
     > ${RSYSLOG_DYNNAME}.payload
 tcpflood -m 1 -I ${RSYSLOG_DYNNAME}.payload
 rm -f ${RSYSLOG_DYNNAME}.payload

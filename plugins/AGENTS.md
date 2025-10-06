@@ -37,7 +37,7 @@ Copy `plugins/MODULE_AGENTS_TEMPLATE.md` when creating a new module guide and
 update it whenever workflows or dependencies change.
 
 ## Metadata required for every module
-Each module directory (for example `plugins/omfile/`) must contain a
+Each module directory (for example `plugins/omfile/`) should contain a
 `MODULE_METADATA.yaml` file.  The file communicates ownership and expectations
 for both humans and agents.
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-## @brief Validate GUID, IP address, and timestamp typing for mmsnarewinsec
+## @brief Validate GUID, IP address, and timestamp typing for mmsnareparse
 ## @description
 ## Exercises successful and failing GUID/IP/timestamp samples to ensure
 ## validated values are stored as typed JSON strings while malformed data
@@ -9,14 +9,14 @@ unset RSYSLOG_DYNNAME
 
 generate_conf
 add_conf '
-module(load="../plugins/mmsnarewinsec/.libs/mmsnarewinsec")
+module(load="../plugins/mmsnareparse/.libs/mmsnareparse")
 
 template(name="jsonout" type="list") {
     property(name="$!all-json")
     constant(value="\n")
 }
 
-action(type="mmsnarewinsec")
+action(type="mmsnareparse")
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="jsonout")
 '
 
