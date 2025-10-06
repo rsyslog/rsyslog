@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/imgssapi`.
 :Name: InputGSSServerPermitPlainTCP
 :Scope: input
 :Type: boolean
-:Default: input=0
+:Default: 0
 :Required?: no
 :Introduced: 3.11.6
 

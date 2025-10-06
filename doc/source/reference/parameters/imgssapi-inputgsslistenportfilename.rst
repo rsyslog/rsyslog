@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/imgssapi`.
 :Name: InputGSSListenPortFileName
 :Scope: input
 :Type: word
-:Default: input=none
+:Default: none
 :Required?: no
 :Introduced: 8.38.0
 

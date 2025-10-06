@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/imgssapi`.
 :Name: InputGSSServerMaxSessions
 :Scope: input
 :Type: integer
-:Default: input=200
+:Default: 200
 :Required?: no
 :Introduced: 3.11.5
 

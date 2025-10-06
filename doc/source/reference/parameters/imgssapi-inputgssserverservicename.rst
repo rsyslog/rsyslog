@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/imgssapi`.
 :Name: InputGSSServerServiceName
 :Scope: input
 :Type: word
-:Default: input=host
+:Default: host
 :Required?: no
 :Introduced: 3.11.5
 

@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/imgssapi`.
 :Name: InputGSSServerRun
 :Scope: input
 :Type: word
-:Default: input=none
+:Default: none
 :Required?: no
 :Introduced: 3.11.5
 
