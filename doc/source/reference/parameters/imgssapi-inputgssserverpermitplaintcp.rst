@@ -1,12 +1,12 @@
 .. _param-imgssapi-inputgssserverpermitplaintcp:
 .. _imgssapi.parameter.input.inputgssserverpermitplaintcp:
 
-InputGSSServerPermitPlainTCP
+InputGSSServerPermitPlainTcp
 ============================
 
 .. index::
-   single: imgssapi; InputGSSServerPermitPlainTCP
-   single: InputGSSServerPermitPlainTCP
+   single: imgssapi; InputGSSServerPermitPlainTcp
+   single: InputGSSServerPermitPlainTcp
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Allows accepting plain TCP syslog traffic on the GSS-protected port.
 
 This parameter applies to :doc:`../../configuration/modules/imgssapi`.
 
-:Name: InputGSSServerPermitPlainTCP
+:Name: InputGSSServerPermitPlainTcp
 :Scope: input
 :Type: boolean
 :Default: 0
@@ -42,9 +42,12 @@ Legacy names (for reference)
 
 .. _imgssapi.parameter.legacy.inputgssserverpermitplaintcp:
 
-- $inputGssServerPermitPlainTcp — maps to InputGSSServerPermitPlainTCP (status: legacy)
+- $InputGSSServerPermitPlainTCP — maps to InputGSSServerPermitPlainTcp (status: legacy)
+- $inputGssServerPermitPlainTcp — maps to InputGSSServerPermitPlainTcp (status: legacy)
 
 .. index::
+   single: imgssapi; $InputGSSServerPermitPlainTCP
+   single: $InputGSSServerPermitPlainTCP
    single: imgssapi; $inputGssServerPermitPlainTcp
    single: $inputGssServerPermitPlainTcp
 
