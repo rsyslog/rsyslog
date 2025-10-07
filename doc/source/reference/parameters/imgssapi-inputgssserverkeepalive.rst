@@ -34,18 +34,18 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="imgssapi")
-   $InputGSSServerKeepAlive on
+   $inputGSSServerKeepAlive on
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. _imgssapi.parameter.legacy.inputgssserverkeepalive:
 
-- $InputGSSServerKeepAlive — maps to InputGSSServerKeepAlive (status: legacy)
+- $inputGSSServerKeepAlive — maps to InputGSSServerKeepAlive (status: legacy)
 
 .. index::
-   single: imgssapi; $InputGSSServerKeepAlive
-   single: $InputGSSServerKeepAlive
+   single: imgssapi; $inputGSSServerKeepAlive
+   single: $inputGSSServerKeepAlive
 
 See also
 --------

@@ -35,18 +35,18 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="imgssapi")
-   $InputGSSServerRun 1514
+   $inputGSSServerRun 1514
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. _imgssapi.parameter.legacy.inputgssserverrun:
 
-- $InputGSSServerRun — maps to InputGSSServerRun (status: legacy)
+- $inputGSSServerRun — maps to InputGSSServerRun (status: legacy)
 
 .. index::
-   single: imgssapi; $InputGSSServerRun
-   single: $InputGSSServerRun
+   single: imgssapi; $inputGSSServerRun
+   single: $inputGSSServerRun
 
 See also
 --------

@@ -40,18 +40,18 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="imgssapi")
-   $InputGSSServerMaxSessions 200
+   $inputGSSServerMaxSessions 200
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. _imgssapi.parameter.legacy.inputgssservermaxsessions:
 
-- $InputGSSServerMaxSessions — maps to InputGSSServerMaxSessions (status: legacy)
+- $inputGSSServerMaxSessions — maps to InputGSSServerMaxSessions (status: legacy)
 
 .. index::
-   single: imgssapi; $InputGSSServerMaxSessions
-   single: $InputGSSServerMaxSessions
+   single: imgssapi; $inputGSSServerMaxSessions
+   single: $inputGSSServerMaxSessions
 
 See also
 --------
