@@ -49,7 +49,7 @@ comma-delimited list of values as shown here:
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
 
 Module Parameters
@@ -58,98 +58,49 @@ Module Parameters
 Currently none.
 
 
-Action Parameters
------------------
+Input Parameters
+----------------
 
-Broker
-^^^^^^
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
+   * - Parameter
+     - Summary
+   * - :ref:`param-imkafka-broker`
+     - .. include:: ../../reference/parameters/imkafka-broker.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imkafka-topic`
+     - .. include:: ../../reference/parameters/imkafka-topic.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imkafka-confparam`
+     - .. include:: ../../reference/parameters/imkafka-confparam.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imkafka-consumergroup`
+     - .. include:: ../../reference/parameters/imkafka-consumergroup.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imkafka-ruleset`
+     - .. include:: ../../reference/parameters/imkafka-ruleset.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imkafka-parsehostname`
+     - .. include:: ../../reference/parameters/imkafka-parsehostname.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
-   "array", "localhost:9092", "no", "none"
+.. toctree::
+   :hidden:
 
-Specifies the broker(s) to use.
-
-
-Topic
-^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "yes", "none"
-
-Specifies the topic to produce to.
-
-
-ConfParam
-^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "array", "none", "no", "none"
-
-Permits to specify Kafka options. Rather than offering a myriad of
-config settings to match the Kafka parameters, we provide this setting
-here as a vehicle to set any Kafka parameter. This has the big advantage
-that Kafka parameters that come up in new releases can immediately be used.
-
-Note that we use librdkafka for the Kafka connection, so the parameters
-are actually those that librdkafka supports. As of our understanding, this
-is a superset of the native Kafka parameters.
-
-
-ConsumerGroup
-^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "no", "none"
-
-With this parameter the group.id for the consumer is set. All consumers
-sharing the same group.id belong to the same group.
-
-
-Ruleset
-^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "no", "none"
-
-Specifies the ruleset to be used.
-
-
-ParseHostname
-^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "none"
-
-.. versionadded:: 8.38.0
-
-If this parameter is set to on, imkafka will parse the hostname in log
-if it exists. The result can be retrieved from $hostname. If it's off,
-for compatibility reasons, the local hostname is used, same as the previous
-version.
+   ../../reference/parameters/imkafka-broker
+   ../../reference/parameters/imkafka-topic
+   ../../reference/parameters/imkafka-confparam
+   ../../reference/parameters/imkafka-consumergroup
+   ../../reference/parameters/imkafka-ruleset
+   ../../reference/parameters/imkafka-parsehostname
 
 
 Caveats/Known Bugs

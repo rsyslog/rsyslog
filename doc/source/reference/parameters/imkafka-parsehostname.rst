@@ -1,0 +1,44 @@
+.. _param-imkafka-parsehostname:
+.. _imkafka.parameter.input.parsehostname:
+
+ParseHostname
+=============
+
+.. index::
+   single: imkafka; ParseHostname
+   single: ParseHostname
+
+.. summary-start
+
+Controls whether imkafka parses the hostname from each received message.
+
+.. summary-end
+
+This parameter applies to :doc:`../../configuration/modules/imkafka`.
+
+:Name: ParseHostname
+:Scope: input
+:Type: boolean
+:Default: input=``off``
+:Required?: no
+:Introduced: 8.38.0
+
+Description
+-----------
+.. versionadded:: 8.38.0
+
+   If this parameter is set to on, imkafka will parse the hostname in log if it exists. The result can be retrieved from $hostname. If it's off, for compatibility reasons, the local hostname is used, same as the previous version.
+
+Input usage
+-----------
+.. _param-imkafka-input-parsehostname:
+.. _imkafka.parameter.input.parsehostname-usage:
+
+.. code-block:: rsyslog
+
+   module(load="imkafka")
+   input(type="imkafka" parseHostname="on")
+
+See also
+--------
+See also :doc:`../../configuration/modules/imkafka`.
