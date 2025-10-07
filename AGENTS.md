@@ -40,6 +40,26 @@ component notes that apply to your task.
 
 -----
 
+## Agent Chat Keywords
+
+The following chat codewords instruct AI assistants to perform standardized actions in this repository.
+
+### `FINISH`
+
+When the user says the codeword "FINISH", do the following:
+
+- Perform a final review of all proposed code changes for correctness and style before concluding the session.
+
+### `SUMMARIZE`
+
+When the user says the codeword "SUMMARIZE", do the following:
+
+- Create and print the following summaries in the Agent chat, each in a copy-ready TEXTBOX field:
+  - A summary for the pull request
+  - A summary for a squashed commit message
+
+-----
+
 ## Priming a fresh AI session
 
 When starting a new AI-assisted coding session (for example after a PR merges or
