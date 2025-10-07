@@ -1499,7 +1499,7 @@ finalize_it:
                  "imptcp: failed to fully accept session from remote peer %s[%s]. "
                  "This can be caused by a peer that closed the session immediately after "
                  "connect, like during a security or health check port probe.",
-                 propGetSzStr(peerName), propGetSzStr(peerIP));
+                 propGetSzStrOrDefault(peerName, "(hostname unknown)"), propGetSzStrOrDefault(peerIP, "(IP unknown)"));
         if (pSess != NULL) {
             if (pSess->next != NULL) {
                 unlinkSess(pSess);
