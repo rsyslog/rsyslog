@@ -35,18 +35,18 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="imgssapi")
-   $inputGSSServerPermitPlainTCP on
+   $inputGssServerPermitPlainTcp on
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. _imgssapi.parameter.legacy.inputgssserverpermitplaintcp:
 
-- $inputGSSServerPermitPlainTCP — maps to InputGSSServerPermitPlainTCP (status: legacy)
+- $inputGssServerPermitPlainTcp — maps to InputGSSServerPermitPlainTCP (status: legacy)
 
 .. index::
-   single: imgssapi; $inputGSSServerPermitPlainTCP
-   single: $inputGSSServerPermitPlainTCP
+   single: imgssapi; $inputGssServerPermitPlainTcp
+   single: $inputGssServerPermitPlainTcp
 
 See also
 --------

@@ -37,18 +37,18 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="imgssapi")
-   $inputGSSServerServiceName "host/rsyslog.example.com"
+   $inputGssServerServiceName "host/rsyslog.example.com"
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. _imgssapi.parameter.legacy.inputgssserverservicename:
 
-- $inputGSSServerServiceName — maps to InputGSSServerServiceName (status: legacy)
+- $inputGssServerServiceName — maps to InputGSSServerServiceName (status: legacy)
 
 .. index::
-   single: imgssapi; $inputGSSServerServiceName
-   single: $inputGSSServerServiceName
+   single: imgssapi; $inputGssServerServiceName
+   single: $inputGssServerServiceName
 
 See also
 --------

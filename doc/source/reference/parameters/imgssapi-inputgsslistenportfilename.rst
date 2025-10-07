@@ -41,18 +41,18 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="imgssapi")
-   $inputGSSListenPortFileName "/var/run/rsyslog-gss-port"
+   $inputGssListenPortFileName "/var/run/rsyslog-gss-port"
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. _imgssapi.parameter.legacy.inputgsslistenportfilename:
 
-- $inputGSSListenPortFileName — maps to InputGSSListenPortFileName (status: legacy)
+- $inputGssListenPortFileName — maps to InputGSSListenPortFileName (status: legacy)
 
 .. index::
-   single: imgssapi; $inputGSSListenPortFileName
-   single: $inputGSSListenPortFileName
+   single: imgssapi; $inputGssListenPortFileName
+   single: $inputGssListenPortFileName
 
 See also
 --------
