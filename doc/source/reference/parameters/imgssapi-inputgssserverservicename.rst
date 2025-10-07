@@ -26,7 +26,9 @@ This parameter applies to :doc:`../../configuration/modules/imgssapi`.
 Description
 -----------
 Specifies the service name for the GSS server, used to form the Service
-Principal Name (SPN). If not specified, it defaults to ``host``.
+Principal Name (SPN). This can be a simple name like ``host`` or a
+compound name such as ``host/rsyslog.example.com``. If not specified, it
+defaults to ``host``.
 
 Input usage
 -----------
