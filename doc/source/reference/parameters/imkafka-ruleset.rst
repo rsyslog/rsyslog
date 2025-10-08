@@ -25,7 +25,8 @@ This parameter applies to :doc:`../../configuration/modules/imkafka`.
 
 Description
 -----------
-Specifies the ruleset to be used.
+Binds the input to a specific ruleset for processing. If not specified,
+messages are passed to the default ruleset.
 
 Input usage
 -----------

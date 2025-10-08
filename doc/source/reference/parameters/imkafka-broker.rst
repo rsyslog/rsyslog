@@ -25,7 +25,8 @@ This parameter applies to :doc:`../../configuration/modules/imkafka`.
 
 Description
 -----------
-Specifies the broker or brokers to use.
+Specifies the broker or brokers to use. Provide a single Kafka address or a
+list of bootstrap servers for a cluster.
 
 Input usage
 -----------
