@@ -1,12 +1,12 @@
 .. _param-imkafka-broker:
 .. _imkafka.parameter.input.broker:
 
-Broker
+broker
 ======
 
 .. index::
-   single: imkafka; Broker
-   single: Broker
+   single: imkafka; broker
+   single: broker
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Selects the Kafka broker(s) imkafka connects to when consuming messages.
 
 This parameter applies to :doc:`../../configuration/modules/imkafka`.
 
-:Name: Broker
+:Name: broker
 :Scope: input
 :Type: array
 :Default: input=``localhost:9092``

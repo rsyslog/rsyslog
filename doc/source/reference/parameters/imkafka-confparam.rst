@@ -1,12 +1,12 @@
 .. _param-imkafka-confparam:
 .. _imkafka.parameter.input.confparam:
 
-ConfParam
+confParam
 =========
 
 .. index::
-   single: imkafka; ConfParam
-   single: ConfParam
+   single: imkafka; confParam
+   single: confParam
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Passes arbitrary librdkafka configuration parameters to the imkafka consumer.
 
 This parameter applies to :doc:`../../configuration/modules/imkafka`.
 
-:Name: ConfParam
+:Name: confParam
 :Scope: input
 :Type: array
 :Default: input=``none``

@@ -1,12 +1,12 @@
 .. _param-imkafka-ruleset:
 .. _imkafka.parameter.input.ruleset:
 
-Ruleset
+ruleset
 =======
 
 .. index::
-   single: imkafka; Ruleset
-   single: Ruleset
+   single: imkafka; ruleset
+   single: ruleset
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Assigns the rsyslog ruleset that processes messages received via imkafka.
 
 This parameter applies to :doc:`../../configuration/modules/imkafka`.
 
-:Name: Ruleset
+:Name: ruleset
 :Scope: input
 :Type: string
 :Default: input=``none``

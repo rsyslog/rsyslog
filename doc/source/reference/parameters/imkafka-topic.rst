@@ -1,12 +1,12 @@
 .. _param-imkafka-topic:
 .. _imkafka.parameter.input.topic:
 
-Topic
+topic
 =====
 
 .. index::
-   single: imkafka; Topic
-   single: Topic
+   single: imkafka; topic
+   single: topic
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Identifies the Kafka topic from which imkafka consumes messages.
 
 This parameter applies to :doc:`../../configuration/modules/imkafka`.
 
-:Name: Topic
+:Name: topic
 :Scope: input
 :Type: string
 :Default: input=``none``
