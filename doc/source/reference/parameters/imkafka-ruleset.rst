@@ -1,4 +1,5 @@
 .. _param-imkafka-ruleset:
+.. _imkafka.parameter.module.ruleset:
 .. _imkafka.parameter.input.ruleset:
 
 ruleset
@@ -17,16 +18,28 @@ Assigns the rsyslog ruleset that processes messages received via imkafka.
 This parameter applies to :doc:`../../configuration/modules/imkafka`.
 
 :Name: ruleset
-:Scope: input
+:Scope: module, input
 :Type: string
-:Default: input=``none``
+:Default: module=``none``; input=``none``
 :Required?: no
 :Introduced: 8.27.0
 
 Description
 -----------
 Binds the input to a specific ruleset for processing. If not specified,
-messages are passed to the default ruleset.
+messages are passed to the default ruleset. When set at the module level,
+the value becomes the default ruleset for inputs that do not override it.
+
+Module usage
+------------
+.. _imkafka.parameter.module.ruleset-usage:
+
+.. code-block:: rsyslog
+
+   module(load="imkafka" ruleset="kafkaRules")
+
+   # This input will use 'kafkaRules' ruleset
+   input(type="imkafka" topic="my-topic")
 
 Input usage
 -----------

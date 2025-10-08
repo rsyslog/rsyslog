@@ -55,7 +55,16 @@ comma-delimited list of values as shown here:
 Module Parameters
 -----------------
 
-Currently none.
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Parameter
+     - Summary
+   * - :ref:`param-imkafka-ruleset`
+     - .. include:: ../../reference/parameters/imkafka-ruleset.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 
 Input Parameters
