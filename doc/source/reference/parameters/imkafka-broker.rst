@@ -34,7 +34,9 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="imkafka")
-   input(type="imkafka" broker=["localhost:9092", "localhost:9093"])
+   input(type="imkafka"
+         topic="your-topic"
+         broker=["localhost:9092", "localhost:9093"])
 
 See also
 --------

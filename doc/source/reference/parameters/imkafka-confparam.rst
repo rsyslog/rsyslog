@@ -41,7 +41,10 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="imkafka")
-   input(type="imkafka" confParam=["queued.min.messages=10000", "socket.timeout.ms=60000"])
+   input(type="imkafka"
+         topic="your-topic"
+         confParam=["queued.min.messages=10000",
+                    "socket.timeout.ms=60000"])
 
 See also
 --------

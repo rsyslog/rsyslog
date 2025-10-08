@@ -37,7 +37,9 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="imkafka")
-   input(type="imkafka" parseHostname="on")
+   input(type="imkafka"
+         topic="your-topic"
+         parseHostname="on")
 
 See also
 --------
