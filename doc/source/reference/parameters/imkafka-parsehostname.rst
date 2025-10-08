@@ -25,7 +25,10 @@ This parameter applies to :doc:`../../configuration/modules/imkafka`.
 
 Description
 -----------
-If this parameter is set to on, imkafka will parse the hostname in log if it exists. The result can be retrieved from $hostname. If it's off, for compatibility reasons, the local hostname is used, same as the previous version.
+If this parameter is set to on, imkafka will parse the hostname in log if it
+exists. The result can be retrieved from $hostname. If it's off, for
+compatibility reasons, the local hostname is used, same as the previous
+version.
 
 Input usage
 -----------

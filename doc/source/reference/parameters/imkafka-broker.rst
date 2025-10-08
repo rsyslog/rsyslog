@@ -10,7 +10,7 @@ Broker
 
 .. summary-start
 
-Selects the Kafka broker or brokers imkafka connects to when consuming messages.
+Selects the Kafka broker(s) imkafka connects to when consuming messages.
 
 .. summary-end
 

@@ -25,9 +25,14 @@ This parameter applies to :doc:`../../configuration/modules/imkafka`.
 
 Description
 -----------
-Permits to specify Kafka options. Rather than offering a myriad of config settings to match the Kafka parameters, we provide this setting here as a vehicle to set any Kafka parameter. This has the big advantage that Kafka parameters that come up in new releases can immediately be used.
+Permits to specify Kafka options. Rather than offering a myriad of config
+settings to match the Kafka parameters, we provide this setting here as a
+vehicle to set any Kafka parameter. This has the big advantage that Kafka
+parameters that come up in new releases can immediately be used.
 
-Note that we use librdkafka for the Kafka connection, so the parameters are actually those that librdkafka supports. As of our understanding, this is a superset of the native Kafka parameters.
+Note that we use librdkafka for the Kafka connection, so the parameters are
+actually those that librdkafka supports. As of our understanding, this is a
+superset of the native Kafka parameters.
 
 Input usage
 -----------

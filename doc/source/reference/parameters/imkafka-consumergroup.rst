@@ -25,7 +25,8 @@ This parameter applies to :doc:`../../configuration/modules/imkafka`.
 
 Description
 -----------
-With this parameter the group.id for the consumer is set. All consumers sharing the same group.id belong to the same group.
+With this parameter the group.id for the consumer is set. All consumers
+sharing the same group.id belong to the same group.
 
 Input usage
 -----------
