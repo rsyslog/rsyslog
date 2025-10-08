@@ -25,11 +25,10 @@ This parameter applies to :doc:`../../configuration/modules/imkafka`.
 
 Description
 -----------
-Specifies the topic to produce to.
+Specifies the topic to consume from.
 
 Input usage
 -----------
-.. _param-imkafka-input-topic:
 .. _imkafka.parameter.input.topic-usage:
 
 .. code-block:: rsyslog

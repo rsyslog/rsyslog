@@ -29,7 +29,6 @@ With this parameter the group.id for the consumer is set. All consumers sharing 
 
 Input usage
 -----------
-.. _param-imkafka-input-consumergroup:
 .. _imkafka.parameter.input.consumergroup-usage:
 
 .. code-block:: rsyslog

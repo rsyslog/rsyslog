@@ -29,7 +29,6 @@ Specifies the ruleset to be used.
 
 Input usage
 -----------
-.. _param-imkafka-input-ruleset:
 .. _imkafka.parameter.input.ruleset-usage:
 
 .. code-block:: rsyslog

@@ -29,7 +29,6 @@ Specifies the broker or brokers to use.
 
 Input usage
 -----------
-.. _param-imkafka-input-broker:
 .. _imkafka.parameter.input.broker-usage:
 
 .. code-block:: rsyslog

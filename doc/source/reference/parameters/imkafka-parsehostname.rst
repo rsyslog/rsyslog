@@ -25,13 +25,10 @@ This parameter applies to :doc:`../../configuration/modules/imkafka`.
 
 Description
 -----------
-.. versionadded:: 8.38.0
-
-   If this parameter is set to on, imkafka will parse the hostname in log if it exists. The result can be retrieved from $hostname. If it's off, for compatibility reasons, the local hostname is used, same as the previous version.
+If this parameter is set to on, imkafka will parse the hostname in log if it exists. The result can be retrieved from $hostname. If it's off, for compatibility reasons, the local hostname is used, same as the previous version.
 
 Input usage
 -----------
-.. _param-imkafka-input-parsehostname:
 .. _imkafka.parameter.input.parsehostname-usage:
 
 .. code-block:: rsyslog

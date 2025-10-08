@@ -31,7 +31,6 @@ Note that we use librdkafka for the Kafka connection, so the parameters are actu
 
 Input usage
 -----------
-.. _param-imkafka-input-confparam:
 .. _imkafka.parameter.input.confparam-usage:
 
 .. code-block:: rsyslog
