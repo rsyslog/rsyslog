@@ -24,7 +24,8 @@ This parameter applies to :doc:`../../configuration/modules/imkafka`.
 
 Description
 -----------
-Specifies the topic to consume from.
+Specifies the name of the Kafka topic from which messages will be consumed.
+This is a mandatory parameter for the imkafka input.
 
 Input usage
 -----------
