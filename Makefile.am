@@ -147,6 +147,10 @@ if ENABLE_OMHDFS
 SUBDIRS += plugins/omhdfs
 endif
 
+if ENABLE_OMOTLP
+SUBDIRS += plugins/omotlp
+endif
+
 if ENABLE_OMJOURNAL
 SUBDIRS += plugins/omjournal
 endif
