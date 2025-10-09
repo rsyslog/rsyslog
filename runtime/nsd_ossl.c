@@ -353,7 +353,7 @@ finalize_it:
  */
 rsRetVal osslChkPeerAuth(nsd_ossl_t *pThis) {
     DEFiRet;
-    X509 *certpeer;
+    X509 *certpeer = NULL;
 
     ISOBJ_TYPE_assert(pThis, nsd_ossl);
     uchar *fromHostIP = NULL;
@@ -388,6 +388,9 @@ rsRetVal osslChkPeerAuth(nsd_ossl_t *pThis) {
             break;
     }
 finalize_it:
+    if (certpeer != NULL) {
+        X509_free(certpeer);
+    }
     if (fromHostIP != NULL) {
         free(fromHostIP);
     }
