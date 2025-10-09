@@ -80,10 +80,6 @@ Input Parameters
      - .. include:: ../../reference/parameters/imkafka-broker.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - :ref:`param-imkafka-topic`
-     - .. include:: ../../reference/parameters/imkafka-topic.rst
-        :start-after: .. summary-start
-        :end-before: .. summary-end
    * - :ref:`param-imkafka-confparam`
      - .. include:: ../../reference/parameters/imkafka-confparam.rst
         :start-after: .. summary-start
@@ -96,16 +92,20 @@ Input Parameters
      - .. include:: ../../reference/parameters/imkafka-parsehostname.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imkafka-topic`
+     - .. include:: ../../reference/parameters/imkafka-topic.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 .. toctree::
    :hidden:
 
    ../../reference/parameters/imkafka-broker
-   ../../reference/parameters/imkafka-topic
    ../../reference/parameters/imkafka-confparam
    ../../reference/parameters/imkafka-consumergroup
-   ../../reference/parameters/imkafka-ruleset
    ../../reference/parameters/imkafka-parsehostname
+   ../../reference/parameters/imkafka-ruleset
+   ../../reference/parameters/imkafka-topic
 
 
 Caveats/Known Bugs
