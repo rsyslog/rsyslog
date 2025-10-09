@@ -19,7 +19,6 @@ This parameter applies to :doc:`../../configuration/modules/imkafka`.
 :Name: topic
 :Scope: input
 :Type: string
-:Default: input=``none``
 :Required?: yes
 :Introduced: 8.27.0
 
