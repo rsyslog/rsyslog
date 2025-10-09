@@ -24,7 +24,7 @@ to archive both in order to prove integrity.
 
 -  **cry.algo** <Encryption Algorithm>
    The algorithm (cipher) to be used for encryption. The default algorithm is "AES128".
-   Currently, the following Algorithms are supported:
+   Currently, the following algorithms are supported:
 
    -  3DES
    -  CAST5
@@ -45,7 +45,7 @@ to archive both in order to prove integrity.
    -  CAMELLIA192
    -  CAMELLIA256
 
-   The actual availability of an algorithms depends on which ones are
+   The actual availability of algorithms depends on which ones are
    compiled into libgcrypt. Note that some versions of libgcrypt simply
    abort the process (rsyslogd in this case!) if a supported algorithm
    is select but not available due to libgcrypt build settings. There is

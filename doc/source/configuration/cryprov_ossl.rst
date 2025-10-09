@@ -34,7 +34,7 @@ only if rsyslog is compiled with --enable-openssl option.
 
 -  **cry.algo** <Encryption Algorithm>
    The algorithm and mode to be used for encryption. The default is "AES-128-CBC".
-   The actual availability of an algorithm depends on which ones are
+   The actual availability of algorithm depends on which ones are
    compiled into openssl. The cipher implementation is retrieved using the
    EVP_CIPHER_fetch() function. See "ALGORITHM FETCHING" in crypto(7) for
    further information. Algorithms are not hardcoded, we provide everything
@@ -58,7 +58,7 @@ only if rsyslog is compiled with --enable-openssl option.
 
 **Samples:**
 
-This encrypts a log file. Default parameters are used, they key is
+This encrypts a log file. Default parameters are used, the key is
 provided via a keyfile.
 
 ::
