@@ -1,12 +1,12 @@
 .. _param-imkafka-parsehostname:
 .. _imkafka.parameter.input.parsehostname:
 
-parseHostname
+parsehostname
 =============
 
 .. index::
-   single: imkafka; parseHostname
-   single: parseHostname
+   single: imkafka; parsehostname
+   single: parsehostname
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Controls whether imkafka parses the hostname from each received message.
 
 This parameter applies to :doc:`../../configuration/modules/imkafka`.
 
-:Name: parseHostname
+:Name: parsehostname
 :Scope: input
 :Type: boolean
 :Default: input=``off``
