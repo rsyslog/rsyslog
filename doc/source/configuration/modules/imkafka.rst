@@ -92,10 +92,6 @@ Input Parameters
      - .. include:: ../../reference/parameters/imkafka-consumergroup.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - :ref:`param-imkafka-ruleset`
-     - .. include:: ../../reference/parameters/imkafka-ruleset.rst
-        :start-after: .. summary-start
-        :end-before: .. summary-end
    * - :ref:`param-imkafka-parsehostname`
      - .. include:: ../../reference/parameters/imkafka-parsehostname.rst
         :start-after: .. summary-start
