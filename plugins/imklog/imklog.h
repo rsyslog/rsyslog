@@ -41,8 +41,9 @@ struct modConfData_s {
     sbool bPermitNonKernel;
     sbool configSetViaV2Method;
     ratelimit_t *ratelimiter;
-    int ratelimitInterval;
-    int ratelimitBurst;
+    unsigned int ratelimitInterval;
+    unsigned int ratelimitBurst;
+    ratelimit_config_t *ratelimitCfg;
     ruleset_t *pBindRuleset; /* ruleset to bind (use system default if unspecified) */
     uchar *pszBindRuleset;
 };

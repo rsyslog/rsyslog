@@ -454,6 +454,15 @@ The following parameters can be set:
    the ratelimit.interval interval. For further information, see
    description there.
 
+- **internalmsg.ratelimit.name** [string]
+
+  **Default:** *not set*
+
+   References a :doc:`ratelimit object </rainerscript/ratelimit>` that must
+   be used for internal message throttling. When this parameter is present,
+   ``internalmsg.ratelimit.interval`` and ``internalmsg.ratelimit.burst``
+   must be omitted; the values from the shared object are used instead.
+
 
   **Caution:** Environment variables are set immediately when the
   corresponding statement is encountered. Likewise, modules are loaded when

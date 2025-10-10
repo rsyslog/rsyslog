@@ -68,6 +68,13 @@ parser()
 The :doc:`parser <../configuration/parser>` object is used to define
 custom parser objects.
 
+ratelimit()
+^^^^^^^^^^^
+
+The :doc:`ratelimit </rainerscript/ratelimit>` object provides reusable
+rate-limiting configurations that can be referenced via
+``ratelimit.name`` from inputs and actions.
+
 timezone()
 ^^^^^^^^^^
 

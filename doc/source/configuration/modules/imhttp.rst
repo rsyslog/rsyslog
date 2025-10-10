@@ -261,6 +261,16 @@ RateLimit.Burst
 Specifies the rate-limiting burst in number of messages.
 
 
+.. _imhttp-ratelimit-name:
+
+ratelimit.name
+^^^^^^^^^^^^^^
+
+.. include:: ../../reference/parameters/imhttp-ratelimit-name.rst
+   :start-after: .. summary-start
+   :end-before: .. summary-end
+
+
 
 flowControl
 ^^^^^^^^^^^

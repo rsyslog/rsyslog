@@ -45,6 +45,9 @@ Notes
 -----
 - Setting the value to ``0`` disables rate limiting and is generally not recommended.
 
+.. include:: ratelimit-inline-note.rst
+
+
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. _imjournal.parameter.legacy.imjournalratelimitinterval:

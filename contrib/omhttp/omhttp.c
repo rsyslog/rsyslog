@@ -156,6 +156,7 @@ typedef struct instanceConf_s {
     unsigned int ratelimitInterval;
     unsigned int ratelimitBurst;
     /* for retries */
+    ratelimit_config_t *ratelimitCfg;
     ratelimit_t *ratelimiter;
     uchar *retryRulesetName;
     ruleset_t *retryRuleset;
@@ -246,6 +247,7 @@ static struct cnfparamdescr actpdescr[] = {
     {"retry.ruleset", eCmdHdlrString, 0},
     {"ratelimit.interval", eCmdHdlrInt, 0},
     {"ratelimit.burst", eCmdHdlrInt, 0},
+    {"ratelimit.name", eCmdHdlrString, 0},
     {"name", eCmdHdlrGetWord, 0},
     {"httpignorablecodes", eCmdHdlrArray, 0},
     {"profile", eCmdHdlrGetWord, 0},
@@ -1845,6 +1847,7 @@ static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
     pData->httpRetryCodes = NULL;
     pData->ratelimitBurst = 20000;
     pData->ratelimitInterval = 600;
+    pData->ratelimitCfg = NULL;
     pData->ratelimiter = NULL;
     pData->retryRulesetName = NULL;
     pData->retryRuleset = NULL;
@@ -2145,6 +2148,24 @@ BEGINnewActInst
         }
     }
 
+    int idxInterval = cnfparamGetIdx(&actpblk, "ratelimit.interval");
+    int idxBurst = cnfparamGetIdx(&actpblk, "ratelimit.burst");
+    int idxName = cnfparamGetIdx(&actpblk, "ratelimit.name");
+    sbool ratelimitParamsUsed = 0;
+    char *ratelimitName = NULL;
+    if (idxInterval != -1 && pvals[idxInterval].bUsed) ratelimitParamsUsed = 1;
+    if (idxBurst != -1 && pvals[idxBurst].bUsed) ratelimitParamsUsed = 1;
+    if (idxName != -1 && pvals[idxName].bUsed) ratelimitName = es_str2cstr(pvals[idxName].val.d.estr, NULL);
+
+    const sbool needRatelimitCfg = (pData->retryFailures || ratelimitParamsUsed || (ratelimitName != NULL));
+    if (needRatelimitCfg && iRet == RS_RET_OK) {
+        CHKiRet(ratelimitResolveFromValues(loadModConf->pConf, "omhttp", ratelimitName, ratelimitParamsUsed,
+                                           &pData->ratelimitInterval, &pData->ratelimitBurst, NULL,
+                                           &pData->ratelimitCfg));
+    }
+
+    free(ratelimitName);
+
     if (pData->pwd != NULL && pData->uid == NULL) {
         LogError(0, RS_RET_UID_MISSING,
                  "omhttp: password is provided, but no uid "
@@ -2248,8 +2269,7 @@ BEGINnewActInst
     }
 
     if (pData->retryFailures) {
-        CHKiRet(ratelimitNew(&pData->ratelimiter, "omhttp", NULL));
-        ratelimitSetLinuxLike(pData->ratelimiter, pData->ratelimitInterval, pData->ratelimitBurst);
+        CHKiRet(ratelimitNewFromConfig(&pData->ratelimiter, pData->ratelimitCfg, NULL));
         ratelimitSetNoTimeCache(pData->ratelimiter);
     }
 

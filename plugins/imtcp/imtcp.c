@@ -134,6 +134,7 @@ struct instanceConf_s {
     sbool bSPFramingFix;
     unsigned int ratelimitInterval;
     unsigned int ratelimitBurst;
+    ratelimit_config_t *ratelimitCfg;
     int iAddtlFrameDelim; /* addtl frame delimiter, e.g. for netscreen, default none */
     int maxFrameSize;
     int bUseFlowControl;
@@ -278,6 +279,7 @@ static struct cnfparamdescr inppdescr[] = {{"port", eCmdHdlrString, CNFPARAM_REQ
                                            {"ratelimit.interval", eCmdHdlrInt, 0},
                                            {"framingfix.cisco.asa", eCmdHdlrBinary, 0},
                                            {"ratelimit.burst", eCmdHdlrInt, 0},
+                                           {"ratelimit.name", eCmdHdlrString, 0},
                                            {"socketbacklog", eCmdHdlrNonNegInt, 0}};
 static struct cnfparamblk inppblk = {CNFPARAMBLK_VERSION, sizeof(inppdescr) / sizeof(struct cnfparamdescr), inppdescr};
 
@@ -361,6 +363,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->bSPFramingFix = 0;
     inst->ratelimitInterval = 0;
     inst->ratelimitBurst = 10000;
+    inst->ratelimitCfg = NULL;
 
     inst->pszStrmDrvrName = NULL;
     inst->pszStrmDrvrAuthMode = NULL;
@@ -547,7 +550,8 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
     CHKiRet(tcpsrv.SetOrigin(pOurTcpsrv, (uchar *)"imtcp"));
     CHKiRet(tcpsrv.SetDfltTZ(pOurTcpsrv, (inst->dfltTZ == NULL) ? (uchar *)"" : inst->dfltTZ));
     CHKiRet(tcpsrv.SetbSPFramingFix(pOurTcpsrv, inst->bSPFramingFix));
-    CHKiRet(tcpsrv.SetLinuxLikeRatelimiters(pOurTcpsrv, inst->ratelimitInterval, inst->ratelimitBurst));
+    CHKiRet(
+        tcpsrv.SetLinuxLikeRatelimiters(pOurTcpsrv, inst->ratelimitCfg, inst->ratelimitInterval, inst->ratelimitBurst));
 
     if ((ustrcmp(inst->cnf_params->pszPort, UCHAR_CONSTANT("0")) == 0 &&
          inst->cnf_params->pszLstnPortFileName == NULL) ||
@@ -576,6 +580,8 @@ BEGINnewInpInst
     struct cnfparamvals *pvals;
     instanceConf_t *inst;
     int i;
+    char *ratelimitName = NULL;
+    sbool ratelimitParamsUsed = 0;
     CODESTARTnewInpInst;
     DBGPRINTF("newInpInst (imtcp)\n");
 
@@ -683,8 +689,13 @@ BEGINnewInpInst
             inst->iKeepAliveIntvl = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
             inst->ratelimitBurst = (unsigned int)pvals[i].val.d.n;
+            ratelimitParamsUsed = 1;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
             inst->ratelimitInterval = (unsigned int)pvals[i].val.d.n;
+            ratelimitParamsUsed = 1;
+        } else if (!strcmp(inppblk.descr[i].name, "ratelimit.name")) {
+            free(ratelimitName);
+            ratelimitName = es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(inppblk.descr[i].name, "preservecase")) {
             inst->bPreserveCase = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "socketbacklog")) {
@@ -698,7 +709,13 @@ BEGINnewInpInst
                 inppblk.descr[i].name);
         }
     }
+
+    if (iRet == RS_RET_OK) {
+        CHKiRet(ratelimitResolveFromValues(loadModConf->pConf, "imtcp", ratelimitName, ratelimitParamsUsed,
+                                           &inst->ratelimitInterval, &inst->ratelimitBurst, NULL, &inst->ratelimitCfg));
+    }
 finalize_it:
+    free(ratelimitName);
     CODE_STD_FINALIZERnewInpInst cnfparamvalsDestruct(pvals, &inppblk);
 ENDnewInpInst
 

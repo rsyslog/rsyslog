@@ -309,6 +309,9 @@ const char *cnfobjType2str(const enum cnfobjType ot) {
         case CNFOBJ_MODULE:
             return "module";
             break;
+        case CNFOBJ_RATELIMIT:
+            return "ratelimit";
+            break;
         case CNFOBJ_TPL:
             return "template";
             break;

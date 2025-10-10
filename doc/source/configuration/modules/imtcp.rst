@@ -221,6 +221,7 @@ Module Parameters
    ../../reference/parameters/imtcp-socketbacklog
    ../../reference/parameters/imtcp-ratelimit-interval
    ../../reference/parameters/imtcp-ratelimit-burst
+   ../../reference/parameters/imtcp-ratelimit-name
    ../../reference/parameters/imtcp-streamdriver-cafile
    ../../reference/parameters/imtcp-streamdriver-crlfile
    ../../reference/parameters/imtcp-streamdriver-keyfile
@@ -269,6 +270,10 @@ Input Parameters
         :end-before: .. summary-end
    * - :ref:`param-imtcp-ratelimit-burst`
      - .. include:: ../../reference/parameters/imtcp-ratelimit-burst.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imtcp-ratelimit-name`
+     - .. include:: ../../reference/parameters/imtcp-ratelimit-name.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`param-imtcp-streamdriver-name`
@@ -499,4 +504,3 @@ Additional Resources
 ====================
 
 - `rsyslog video tutorial on how to store remote messages in a separate file <http://www.rsyslog.com/howto-store-remote-messages-in-a-separate-file/>`_ (for legacy syntax, but you get the idea).
-

@@ -36,6 +36,11 @@ Action usage
 
    action(type="omelasticsearch" ratelimit.burst="...")
 
+Notes
+-----
+
+.. include:: ratelimit-inline-note.rst
+
 See also
 --------
 See also :doc:`../../configuration/modules/omelasticsearch`.

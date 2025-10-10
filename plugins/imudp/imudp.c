@@ -113,6 +113,7 @@ struct instanceConf_s {
     uchar *dfltTZ;
     unsigned int ratelimitInterval;
     unsigned int ratelimitBurst;
+    ratelimit_config_t *ratelimitCfg;
     int rcvbuf; /* 0 means: do not set, keep OS default */
     /*  0 means:  IP_FREEBIND is disabled
     1 means:  IP_FREEBIND enabled + warning disabled
@@ -176,6 +177,7 @@ static struct cnfparamdescr inppdescr[] = {{"port", eCmdHdlrArray, CNFPARAM_REQU
                                            {"device", eCmdHdlrString, 0},
                                            {"ratelimit.interval", eCmdHdlrInt, 0},
                                            {"ratelimit.burst", eCmdHdlrInt, 0},
+                                           {"ratelimit.name", eCmdHdlrString, 0},
                                            {"rcvbufsize", eCmdHdlrSize, 0},
                                            {"ipfreebind", eCmdHdlrInt, 0},
                                            {"ruleset", eCmdHdlrString, 0}};
@@ -202,6 +204,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->bAppendPortToInpname = 0;
     inst->ratelimitBurst = 10000; /* arbitrary high limit */
     inst->ratelimitInterval = 0; /* off */
+    inst->ratelimitCfg = NULL;
     inst->rcvbuf = 0;
     inst->ipfreebind = IPFREEBIND_ENABLED_WITH_LOG;
     inst->dfltTZ = NULL;
@@ -315,8 +318,12 @@ static rsRetVal addListner(instanceConf_t *inst) {
             }
             snprintf((char *)dispname, sizeof(dispname), "%s(%s/%s/%s)", inputname, bindName, port, suffix);
             dispname[sizeof(dispname) - 1] = '\0'; /* just to be on the save side... */
-            CHKiRet(ratelimitNew(&newlcnfinfo->ratelimiter, (char *)dispname, NULL));
-            ratelimitSetLinuxLike(newlcnfinfo->ratelimiter, inst->ratelimitInterval, inst->ratelimitBurst);
+            if (inst->ratelimitCfg != NULL) {
+                CHKiRet(ratelimitNewFromConfig(&newlcnfinfo->ratelimiter, inst->ratelimitCfg, (char *)dispname));
+            } else {
+                CHKiRet(ratelimitNew(&newlcnfinfo->ratelimiter, (char *)dispname, NULL));
+                ratelimitSetLinuxLike(newlcnfinfo->ratelimiter, inst->ratelimitInterval, inst->ratelimitBurst);
+            }
             ratelimitSetThreadSafe(newlcnfinfo->ratelimiter);
             if (inst->bAppendPortToInpname) {
                 snprintf((char *)inpnameBuf, sizeof(inpnameBuf), "%s%s", inputname, port);
@@ -883,6 +890,8 @@ static rsRetVal createListner(es_str_t *port, struct cnfparamvals *pvals) {
     instanceConf_t *inst;
     int i;
     int bAppendPortUsed = 0;
+    char *ratelimitName = NULL;
+    sbool ratelimitParamsUsed = 0;
     DEFiRet;
 
     CHKiRet(createInstance(&inst));
@@ -941,8 +950,13 @@ static rsRetVal createListner(es_str_t *port, struct cnfparamvals *pvals) {
             inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
             inst->ratelimitBurst = (unsigned int)pvals[i].val.d.n;
+            ratelimitParamsUsed = 1;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
             inst->ratelimitInterval = (unsigned int)pvals[i].val.d.n;
+            ratelimitParamsUsed = 1;
+        } else if (!strcmp(inppblk.descr[i].name, "ratelimit.name")) {
+            free(ratelimitName);
+            ratelimitName = es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(inppblk.descr[i].name, "rcvbufsize")) {
             const uint64_t val = pvals[i].val.d.n;
             if (val > 1024 * 1024 * 1024) {
@@ -961,7 +975,11 @@ static rsRetVal createListner(es_str_t *port, struct cnfparamvals *pvals) {
                 inppblk.descr[i].name);
         }
     }
+
+    CHKiRet(ratelimitResolveFromValues(loadModConf->pConf, "imudp", ratelimitName, ratelimitParamsUsed,
+                                       &inst->ratelimitInterval, &inst->ratelimitBurst, NULL, &inst->ratelimitCfg));
 finalize_it:
+    free(ratelimitName);
     RETiRet;
 }
 

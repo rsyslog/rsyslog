@@ -30,6 +30,7 @@
 #include "net.h"
 #include "tcps_sess.h"
 #include "statsobj.h"
+#include "ratelimit.h"
 
 /* support for framing anomalies */
 typedef enum ETCPsyslogFramingAnomaly {
@@ -168,6 +169,7 @@ struct tcpsrv_s {
         int iSynBacklog;
         unsigned int ratelimitInterval;
         unsigned int ratelimitBurst;
+        ratelimit_config_t *ratelimitCfg;
         tcps_sess_t **pSessions; /**< array of all of our sessions */
         unsigned int starvationMaxReads;
         void *pUsr; /**< a user-settable pointer (provides extensibility for "derived classes")*/
@@ -247,7 +249,8 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
     /* added v11 -- rgerhards, 2011-05-09 */
     rsRetVal (*SetKeepAlive)(tcpsrv_t *, int);
     /* added v13 -- rgerhards, 2012-10-15 */
-    rsRetVal (*SetLinuxLikeRatelimiters)(tcpsrv_t *pThis, unsigned int interval, unsigned int burst);
+    rsRetVal (*SetLinuxLikeRatelimiters)(tcpsrv_t *pThis, ratelimit_config_t *cfg, unsigned int interval,
+                                         unsigned int burst);
     /* added v14 -- rgerhards, 2013-07-28 */
     rsRetVal (*SetDfltTZ)(tcpsrv_t *pThis, uchar *dfltTZ);
     /* added v15 -- rgerhards, 2013-09-17 */
@@ -281,7 +284,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*SetNumWrkr)(tcpsrv_t *pThis, int);
     rsRetVal (*SetStarvationMaxReads)(tcpsrv_t *pThis, unsigned int);
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 28 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 29 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

@@ -37,6 +37,11 @@ Input usage
 
    input(type="imudp" RateLimit.Interval="...")
 
+Notes
+-----
+
+.. include:: ratelimit-inline-note.rst
+
 See also
 --------
 See also :doc:`../../configuration/modules/imudp`.
