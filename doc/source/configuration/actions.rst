@@ -4,7 +4,7 @@ Actions
 .. index:: ! action
 .. _cfgobj_input:
 
-The Action object describe what is to be done with a message. They are
+The Action object describes what is to be done with a message. They are
 implemented via :doc:`output modules <modules/idx_output>`.
 
 The action object has different parameters:
@@ -14,7 +14,7 @@ The action object has different parameters:
 
 -  parameters for the action queue. While they also apply to all
    parameters, they are queue-specific, not action-specific (they are
-   the same that are used in rulesets, for example). The are documented
+   the same that are used in rulesets, for example). They are documented
    separately under :doc:`queue parameters <../rainerscript/queue_parameters>`.
 
 -  action-specific parameters. These are specific to a certain type of
