@@ -92,6 +92,10 @@ Input Parameters
      - .. include:: ../../reference/parameters/imkafka-parsehostname.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imkafka-ruleset`
+     - .. include:: ../../reference/parameters/imkafka-ruleset.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-imkafka-topic`
      - .. include:: ../../reference/parameters/imkafka-topic.rst
         :start-after: .. summary-start

@@ -1,12 +1,12 @@
 .. _param-imkafka-consumergroup:
 .. _imkafka.parameter.input.consumergroup:
 
-consumergroup
+consumerGroup
 =============
 
 .. index::
-   single: imkafka; consumergroup
-   single: consumergroup
+   single: imkafka; consumerGroup
+   single: consumerGroup
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Sets the Kafka consumer group identifier (group.id) used by imkafka.
 
 This parameter applies to :doc:`../../configuration/modules/imkafka`.
 
-:Name: consumergroup
+:Name: consumerGroup
 :Scope: input
 :Type: string
 :Default: input=``none``
