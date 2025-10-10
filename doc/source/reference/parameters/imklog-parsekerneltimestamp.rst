@@ -27,7 +27,7 @@ Description
 -----------
 If enabled and the kernel creates a timestamp for its log messages, this
 timestamp will be parsed and converted into regular message time instead
-to use the receive time of the kernel message (as in 5.8.x and before).
+of using the receive time of the kernel message (as in 5.8.x and before).
 Default is 'off' to prevent parsing the kernel timestamp, because the
 clock used by the kernel to create the timestamps is not supposed to be
 as accurate as the monotonic clock required to convert it. Depending on
