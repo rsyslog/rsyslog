@@ -39,4 +39,4 @@ Module usage
 
 See also
 --------
-See also :doc:`../../configuration/modules/imklog`.
+:doc:`../../configuration/modules/imklog`

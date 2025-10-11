@@ -57,4 +57,4 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 See also
 --------
-See also :doc:`../../configuration/modules/imklog`.
+:doc:`../../configuration/modules/imklog`

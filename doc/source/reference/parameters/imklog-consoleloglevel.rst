@@ -28,11 +28,11 @@ Description
 Sets the console log level. If specified, only messages with up to the
 specified level are printed to the console. The default is -1, which
 means that the current settings are not modified. To get this behavior,
-do not specify ``ConsoleLogLevel`` in the configuration file. Note that
+do not specify ``consoleLogLevel`` in the configuration file. Note that
 this is a global parameter. Each time it is changed, the previous
 definition is re-set. The active setting will be the last one defined
-when imklog actually starts processing. In short words: do not specify
-this directive more than once!
+when imklog actually starts processing. For this reason, this directive
+should not be specified more than once.
 
 **Linux only**, ignored on other platforms (but may be specified).
 
@@ -59,4 +59,4 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 See also
 --------
-See also :doc:`../../configuration/modules/imklog`.
+:doc:`../../configuration/modules/imklog`
