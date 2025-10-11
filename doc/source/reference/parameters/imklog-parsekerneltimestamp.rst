@@ -32,7 +32,7 @@ Default is 'off' to prevent parsing the kernel timestamp, because the
 clock used by the kernel to create the timestamps is not supposed to be
 as accurate as the monotonic clock required to convert it. Depending on
 the hardware and kernel, it can result in message time differences
-between kernel and system messages which occurred at same time.
+between kernel and system messages which occurred at the same time.
 
 Notes
 -----

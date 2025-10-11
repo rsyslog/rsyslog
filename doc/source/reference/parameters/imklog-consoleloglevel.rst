@@ -30,7 +30,7 @@ specified level are printed to the console. The default is -1, which
 means that the current settings are not modified. To get this behavior,
 do not specify ``consoleLogLevel`` in the configuration file. Note that
 this is a global parameter. Each time it is changed, the previous
-definition is re-set. The active setting will be the last one defined
+definition is reset. The active setting will be the last one defined
 when imklog actually starts processing. For this reason, this directive
 should not be specified more than once.
 
