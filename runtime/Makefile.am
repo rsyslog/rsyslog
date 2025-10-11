@@ -230,6 +230,17 @@ lmnsd_gtls_la_LIBADD = $(GNUTLS_LIBS)
 endif
 
 #
+# Mbed TLS netstream driver
+#
+if ENABLE_MBEDTLS
+pkglib_LTLIBRARIES += lmnsd_mbedtls.la
+lmnsd_mbedtls_la_SOURCES = nsd_mbedtls.c nsd_mbedtls.h
+lmnsd_mbedtls_la_CPPFLAGS = $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(MBEDTLS_CFLAGS)
+lmnsd_mbedtls_la_LDFLAGS = -module -avoid-version
+lmnsd_mbedtls_la_LIBADD = $(MBEDTLS_LIBS)
+endif
+
+#
 # support library for libgcrypt
 #
 if ENABLE_LIBGCRYPT
