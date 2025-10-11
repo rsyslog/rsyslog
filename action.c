@@ -343,7 +343,7 @@ finalize_it:
  * rgerhards, 2007-08-02
  */
 static inline void actionDisable(action_t *__restrict__ const pThis) {
-    pThis->bDisabled = 1;
+    actionStoreDisabled(pThis, 1);
 }
 
 
@@ -586,6 +586,8 @@ static uchar *getActStateName(action_t *const pThis, wti_t *const pWti) {
             return (uchar *)"susp";
         case ACT_STATE_DATAFAIL:
             return (uchar *)"datafail";
+        case ACT_STATE_DISABLED:
+            return (uchar *)"disabled";
         default:
             return (uchar *)"ERROR/UNKNWON";
     }
@@ -619,6 +621,9 @@ static rsRetVal getReturnCode(action_t *const pThis, wti_t *const pWti) {
         case ACT_STATE_DATAFAIL:
             iRet = RS_RET_DATAFAIL;
             break;
+        case ACT_STATE_DISABLED:
+            iRet = RS_RET_DISABLE_ACTION;
+            break;
         default:
             DBGPRINTF("Invalid action engine state %u, program error\n", getActionState(pWti, pThis));
             iRet = RS_RET_ERR;
@@ -635,6 +640,13 @@ static rsRetVal getReturnCode(action_t *const pThis, wti_t *const pWti) {
 static void actionSetState(action_t *const pThis, wti_t *const pWti, uint8_t newState) {
     setActionState(pWti, pThis, newState);
     DBGPRINTF("action[%s] transitioned to state: %s\n", pThis->pszName, getActStateName(pThis, pWti));
+}
+
+static void actionDisableForWorker(action_t *const pThis, wti_t *const pWti) {
+    actionDisable(pThis);
+    if (pWti != NULL && getActionState(pWti, pThis) != ACT_STATE_DISABLED) {
+        actionSetState(pThis, pWti, ACT_STATE_DISABLED);
+    }
 }
 
 /* Handles the transient commit state. So far, this is
@@ -718,6 +730,11 @@ static void setSuspendMessageConfVars(action_t *__restrict__ const pThis) {
  * rgerhards, 2007-08-02
  */
 static void ATTR_NONNULL() actionRetry(action_t *const pThis, wti_t *const pWti) {
+    if (actionIsDisabled(pThis)) {
+        actionDisableForWorker(pThis, pWti);
+        return;
+    }
+
     setSuspendMessageConfVars(pThis);
     actionSetState(pThis, pWti, ACT_STATE_RTRY);
     if (pThis->bReportSuspension) {
@@ -801,6 +818,9 @@ static rsRetVal ATTR_NONNULL() actionDoRetry(action_t *const pThis, wti_t *const
 
     iRetries = 0;
     while ((*pWti->pbShutdownImmediate == 0) && getActionState(pWti, pThis) == ACT_STATE_RTRY) {
+        if (actionIsDisabled(pThis)) {
+            break;
+        }
         DBGPRINTF("actionDoRetry: %s enter loop, iRetries=%d, ResumeInRow %d\n", pThis->pszName, iRetries,
                   getActionResumeInRow(pWti, pThis));
         iRet = pThis->pMod->tryResume(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
@@ -845,7 +865,8 @@ static rsRetVal ATTR_NONNULL() actionDoRetry(action_t *const pThis, wti_t *const
                 }
             }
         } else if (iRet == RS_RET_DISABLE_ACTION) {
-            actionDisable(pThis);
+            actionDisableForWorker(pThis, pWti);
+            break;
         }
     }
 
@@ -870,6 +891,9 @@ static rsRetVal ATTR_NONNULL() actionDoRetry_extFile(action_t *const pThis, wti_
     DBGPRINTF("actionDoRetry_extFile: enter, actionState: %d\n", getActionState(pWti, pThis));
     iRetries = 0;
     while ((*pWti->pbShutdownImmediate == 0) && getActionState(pWti, pThis) == ACT_STATE_RTRY) {
+        if (actionIsDisabled(pThis)) {
+            break;
+        }
         DBGPRINTF("actionDoRetry_extFile: %s enter loop, iRetries=%d, ResumeInRow %d\n", pThis->pszName, iRetries,
                   getActionResumeInRow(pWti, pThis));
         iRet = checkExternalStateFile(pThis, pWti);
@@ -902,7 +926,8 @@ static rsRetVal ATTR_NONNULL() actionDoRetry_extFile(action_t *const pThis, wti_
                 }
             }
         } else if (iRet == RS_RET_DISABLE_ACTION) {
-            actionDisable(pThis);
+            actionDisableForWorker(pThis, pWti);
+            break;
         }
     }
 
@@ -917,6 +942,9 @@ finalize_it:
 static rsRetVal actionCheckAndCreateWrkrInstance(action_t *const pThis, const wti_t *const pWti) {
     int locked = 0;
     DEFiRet;
+    if (actionIsDisabled(pThis)) {
+        FINALIZE;
+    }
     if (pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData == NULL) {
         DBGPRINTF(
             "wti %p: we need to create a new action worker instance for "
@@ -968,6 +996,11 @@ static rsRetVal actionTryResume(action_t *const pThis, wti_t *const pWti) {
 
     DBGPRINTF("actionTryResume: enter\n");
 
+    if (actionIsDisabled(pThis)) {
+        actionDisableForWorker(pThis, pWti);
+        ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
+    }
+
     if (getActionState(pWti, pThis) == ACT_STATE_SUSP) {
         /* if we are suspended, we need to check if the timeout expired.
          * for this handling, we must always obtain a fresh timestamp. We used
@@ -1011,6 +1044,10 @@ static rsRetVal ATTR_NONNULL() actionPrepare(action_t *__restrict__ const pThis,
     DEFiRet;
 
     DBGPRINTF("actionPrepare[%s]: enter\n", pThis->pszName);
+    if (actionIsDisabled(pThis)) {
+        actionDisableForWorker(pThis, pWti);
+        ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
+    }
     CHKiRet(actionCheckAndCreateWrkrInstance(pThis, pWti));
     CHKiRet(actionTryResume(pThis, pWti));
 
@@ -1037,7 +1074,7 @@ static rsRetVal ATTR_NONNULL() actionPrepare(action_t *__restrict__ const pThis,
                 actionRetry(pThis, pWti);
                 break;
             case RS_RET_DISABLE_ACTION:
-                actionDisable(pThis);
+                actionDisableForWorker(pThis, pWti);
                 break;
             default:
                 FINALIZE;
@@ -1185,7 +1222,7 @@ static rsRetVal handleActionExecResult(action_t *__restrict__ const pThis,
             actionSetActionWorked(pThis, pWti); /* we had a successful call! */
             break;
         case RS_RET_DISABLE_ACTION:
-            actionDisable(pThis);
+            actionDisableForWorker(pThis, pWti);
             break;
         case RS_RET_SUSPENDED:
             actionRetry(pThis, pWti);
@@ -1370,7 +1407,7 @@ static rsRetVal ATTR_NONNULL() actionTryCommit(action_t *__restrict__ const pThi
                 actionRetry(pThis, pWti);
                 break;
             case RS_RET_DISABLE_ACTION:
-                actionDisable(pThis);
+                actionDisableForWorker(pThis, pWti);
                 break;
             case RS_RET_DEFER_COMMIT:
                 DBGPRINTF(
@@ -1547,7 +1584,10 @@ static rsRetVal ATTR_NONNULL() actionCommit(action_t *__restrict__ const pThis, 
     DEFiRet;
 
     DBGPRINTF("actionCommit[%s]: enter, %d msgs\n", pThis->pszName, wrkrInfo->p.tx.currIParam);
-    if (!pThis->isTransactional || pWti->actWrkrInfo[pThis->iActionNbr].p.tx.currIParam == 0) {
+    if (actionIsDisabled(pThis)) {
+        actionDisableForWorker(pThis, pWti);
+        ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
+    } else if (!pThis->isTransactional || pWti->actWrkrInfo[pThis->iActionNbr].p.tx.currIParam == 0) {
         FINALIZE;
     } else if (getActionState(pWti, pThis) == ACT_STATE_SUSP) {
         /* if we are suspended, we already tried everything to recover the
@@ -1616,10 +1656,12 @@ static rsRetVal ATTR_NONNULL() actionCommit(action_t *__restrict__ const pThis, 
                 bDone = 1;
             }
             continue;
-        } else if (iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED || iRet == RS_RET_ACTION_FAILED) {
+        } else if (iRet == RS_RET_OK || iRet == RS_RET_SUSPENDED || iRet == RS_RET_ACTION_FAILED ||
+                   iRet == RS_RET_DISABLE_ACTION) {
             bDone = 1;
         }
-        if (getActionState(pWti, pThis) == ACT_STATE_RDY || getActionState(pWti, pThis) == ACT_STATE_SUSP) {
+        if (getActionState(pWti, pThis) == ACT_STATE_RDY || getActionState(pWti, pThis) == ACT_STATE_SUSP ||
+            getActionState(pWti, pThis) == ACT_STATE_DISABLED || actionIsDisabled(pThis)) {
             bDone = 1;
         }
     } while (!bDone);
@@ -1644,7 +1686,7 @@ void ATTR_NONNULL() actionCommitAllDirect(wti_t *__restrict__ const pWti) {
             "actionCommitAllDirect: action %d, state %u, nbr to commit %d "
             "isTransactional %d\n",
             i, getActionStateByNbr(pWti, i), pWti->actWrkrInfo->p.tx.currIParam, pAction->isTransactional);
-        if (pAction->pQueue->qType == QUEUETYPE_DIRECT) actionCommit(pAction, pWti);
+        if (pAction->pQueue->qType == QUEUETYPE_DIRECT && !actionIsDisabled(pAction)) actionCommit(pAction, pWti);
     }
 }
 
@@ -1658,12 +1700,17 @@ static rsRetVal processMsgMain(action_t *__restrict__ const pAction,
                                struct syslogTime *ttNow) {
     DEFiRet;
 
+    if (actionIsDisabled(pAction)) {
+        actionDisableForWorker(pAction, pWti);
+        ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
+    }
+
     CHKiRet(prepareDoActionParams(pAction, pWti, pMsg, ttNow));
 
     if (pAction->isTransactional) {
         pWti->actWrkrInfo[pAction->iActionNbr].pAction = pAction;
         DBGPRINTF("action '%s': is transactional - executing in commit phase\n", pAction->pszName);
-        actionPrepare(pAction, pWti);
+        CHKiRet(actionPrepare(pAction, pWti));
         iRet = getReturnCode(pAction, pWti);
         FINALIZE;
     }
@@ -1700,6 +1747,11 @@ static rsRetVal ATTR_NONNULL() processBatchMain(void *__restrict__ const pVoid,
     /* indicate we have not yet read the date */
     ttNow.year = 0;
 
+    if (actionIsDisabled(pAction)) {
+        actionDisableForWorker(pAction, pWti);
+        ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
+    }
+
     for (i = 0; i < batchNumMsgs(pBatch) && !*pWti->pbShutdownImmediate; ++i) {
         if (batchIsValidElem(pBatch, i)) {
             /* we do not check error state below, because aborting would be
@@ -1711,11 +1763,16 @@ static rsRetVal ATTR_NONNULL() processBatchMain(void *__restrict__ const pVoid,
                 localRet == RS_RET_PREVIOUS_COMMITTED) {
                 batchSetElemState(pBatch, i, BATCH_STATE_COMM);
                 DBGPRINTF("processBatchMain: i %d, COMM state set\n", i);
+            } else if (localRet == RS_RET_DISABLE_ACTION) {
+                actionDisableForWorker(pAction, pWti);
+                ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
             }
         }
     }
 
     iRet = actionCommit(pAction, pWti);
+
+finalize_it:
     RETiRet;
 }
 
@@ -1823,6 +1880,11 @@ static rsRetVal ATTR_NONNULL() doSubmitToActionQ(action_t *const pAction, wti_t 
               module.GetStateName(pAction->pMod), pAction->bExecWhenPrevSusp, pWti->execState.bPrevWasSuspended,
               pAction->pQueue->qType == QUEUETYPE_DIRECT);
 
+    if (actionIsDisabled(pAction)) {
+        actionDisableForWorker(pAction, pWti);
+        ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
+    }
+
     if (pAction->bExecWhenPrevSusp && !pWti->execState.bPrevWasSuspended) {
         DBGPRINTF(
             "action '%s': NOT executing, as previous action was "
@@ -1861,6 +1923,11 @@ finalize_it:
  */
 rsRetVal actionWriteToAction(action_t *const pAction, smsg_t *pMsg, wti_t *const pWti) {
     DEFiRet;
+
+    if (actionIsDisabled(pAction)) {
+        actionDisableForWorker(pAction, pWti);
+        ABORT_FINALIZE(RS_RET_DISABLE_ACTION);
+    }
 
     /* first, we check if the action should actually be called. The action-specific
      * $ActionExecOnlyEveryNthTime permits us to execute an action only every Nth
