@@ -25,10 +25,8 @@ This parameter applies to :doc:`../../configuration/modules/imklog`.
 
 Description
 -----------
-.. versionadded:: 8.35.0
-
-   Specifies the rate-limiting burst in number of messages. Set it high to
-   preserve all boot-up messages.
+Specifies the rate-limiting burst in number of messages. Set it high to
+preserve all boot-up messages.
 
 Module usage
 ------------

@@ -25,10 +25,8 @@ This parameter applies to :doc:`../../configuration/modules/imklog`.
 
 Description
 -----------
-.. versionadded:: 8.35.0
-
-   The rate-limiting interval in seconds. Value 0 turns off rate limiting.
-   Set it to a number of seconds (5 recommended) to activate rate-limiting.
+The rate-limiting interval in seconds. Value 0 turns off rate limiting.
+Set it to a number of seconds (5 recommended) to activate rate-limiting.
 
 Module usage
 ------------
