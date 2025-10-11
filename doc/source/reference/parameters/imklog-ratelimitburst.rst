@@ -27,10 +27,8 @@ Description
 -----------
 .. versionadded:: 8.35.0
 
-   Added support for imklog's built-in rate limiter.
-
-Specifies the rate-limiting burst in number of messages. Set it high to
-preserve all boot-up messages.
+   Specifies the rate-limiting burst in number of messages. Set it high to
+   preserve all boot-up messages.
 
 Module usage
 ------------
@@ -39,7 +37,7 @@ Module usage
 
 .. code-block:: rsyslog
 
-   module(load="imklog" rateLimitBurst="20000")
+   module(load="imklog" ratelimitBurst="20000")
 
 See also
 --------

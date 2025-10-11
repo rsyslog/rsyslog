@@ -18,7 +18,7 @@ This parameter applies to :doc:`../../configuration/modules/imklog`.
 
 :Name: InternalMsgFacility
 :Scope: module
-:Type: facility (see :doc:`../../rainerscript/constant_strings`)
+:Type: facility
 :Default: Linux: "kern"; other platforms: "syslogd"
 :Required?: no
 :Introduced: at least 5.x, possibly earlier

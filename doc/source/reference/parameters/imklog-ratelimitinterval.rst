@@ -27,10 +27,8 @@ Description
 -----------
 .. versionadded:: 8.35.0
 
-   Added support for imklog's built-in rate limiter.
-
-The rate-limiting interval in seconds. Value 0 turns off rate limiting.
-Set it to a number of seconds (5 recommended) to activate rate-limiting.
+   The rate-limiting interval in seconds. Value 0 turns off rate limiting.
+   Set it to a number of seconds (5 recommended) to activate rate-limiting.
 
 Module usage
 ------------
@@ -39,7 +37,7 @@ Module usage
 
 .. code-block:: rsyslog
 
-   module(load="imklog" rateLimitInterval="5")
+   module(load="imklog" ratelimitInterval="5")
 
 See also
 --------
