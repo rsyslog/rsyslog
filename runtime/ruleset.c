@@ -167,7 +167,7 @@ rsRetVal activateRulesetQueues(void) {
 
 static rsRetVal execAct(struct cnfstmt *stmt, smsg_t *pMsg, wti_t *pWti) {
     DEFiRet;
-    if (stmt->d.act->bDisabled) {
+    if (actionIsDisabled(stmt->d.act)) {
         DBGPRINTF("action %d died, do NOT execute\n", stmt->d.act->iActionNbr);
         FINALIZE;
     }
