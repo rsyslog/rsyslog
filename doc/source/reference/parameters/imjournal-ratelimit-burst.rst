@@ -40,6 +40,8 @@ Module usage
 
    module(load="imjournal" Ratelimit.Burst="...")
 
+.. include:: ratelimit-inline-note.rst
+
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 .. _imjournal.parameter.legacy.imjournalratelimitburst:

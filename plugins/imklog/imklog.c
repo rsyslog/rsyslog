@@ -99,7 +99,8 @@ static struct cnfparamdescr modpdescr[] = {{"ruleset", eCmdHdlrString, 0},
                                            {"keepkerneltimestamp", eCmdHdlrBinary, 0},
                                            {"internalmsgfacility", eCmdHdlrFacility, 0},
                                            {"ratelimitinterval", eCmdHdlrInt, 0},
-                                           {"ratelimitburst", eCmdHdlrInt, 0}};
+                                           {"ratelimitburst", eCmdHdlrInt, 0},
+                                           {"ratelimit.name", eCmdHdlrString, 0}};
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 
 static prop_t *pInputName = NULL;
@@ -318,6 +319,7 @@ BEGINbeginCnfLoad
     pModConf->ratelimiter = NULL;
     pModConf->ratelimitBurst = 10000; /* arbitrary high limit */
     pModConf->ratelimitInterval = 0; /* off */
+    pModConf->ratelimitCfg = NULL;
     bLegacyCnfModGlobalsPermitted = 1;
     /* init legacy config vars */
     initConfigSettings();
@@ -327,6 +329,8 @@ ENDbeginCnfLoad
 BEGINsetModCnf
     struct cnfparamvals *pvals = NULL;
     int i;
+    char *ratelimitName = NULL;
+    sbool ratelimitParamsUsed = 0;
     CODESTARTsetModCnf;
     pvals = nvlstGetParams(lst, &modpblk, NULL);
     if (pvals == NULL) {
@@ -357,8 +361,13 @@ BEGINsetModCnf
             loadModConf->iFacilIntMsg = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "ratelimitburst")) {
             loadModConf->ratelimitBurst = (unsigned int)pvals[i].val.d.n;
+            ratelimitParamsUsed = 1;
         } else if (!strcmp(modpblk.descr[i].name, "ratelimitinterval")) {
             loadModConf->ratelimitInterval = (unsigned int)pvals[i].val.d.n;
+            ratelimitParamsUsed = 1;
+        } else if (!strcmp(modpblk.descr[i].name, "ratelimit.name")) {
+            free(ratelimitName);
+            ratelimitName = es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(modpblk.descr[i].name, "ruleset")) {
             loadModConf->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else {
@@ -373,7 +382,14 @@ BEGINsetModCnf
     bLegacyCnfModGlobalsPermitted = 0;
     loadModConf->configSetViaV2Method = 1;
 
+    if (iRet == RS_RET_OK) {
+        CHKiRet(ratelimitResolveFromValues(loadModConf->pConf, "imklog", ratelimitName, ratelimitParamsUsed,
+                                           &loadModConf->ratelimitInterval, &loadModConf->ratelimitBurst, NULL,
+                                           &loadModConf->ratelimitCfg));
+    }
+
 finalize_it:
+    free(ratelimitName);
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &modpblk);
 ENDsetModCnf
 
@@ -415,8 +431,7 @@ ENDactivateCnfPrePrivDrop
 
 BEGINactivateCnf
     CODESTARTactivateCnf;
-    CHKiRet(ratelimitNew(&runModConf->ratelimiter, "imklog", NULL));
-    ratelimitSetLinuxLike(runModConf->ratelimiter, runModConf->ratelimitInterval, runModConf->ratelimitBurst);
+    CHKiRet(ratelimitNewFromConfig(&runModConf->ratelimiter, runModConf->ratelimitCfg, NULL));
 finalize_it:
 ENDactivateCnf
 

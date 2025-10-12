@@ -37,6 +37,8 @@ Module usage
 
    module(load="imuxsock" sysSock.rateLimit.burst="100")
 
+.. include:: ratelimit-inline-note.rst
+
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Historic names/directives for compatibility. Do not use in new configs.
