@@ -10,7 +10,7 @@ Interval
 
 .. summary-start
 
-Sets how often immark injects a mark message into the log stream, in seconds.
+Specifies how often immark injects a mark message, in seconds.
 
 .. summary-end
 
@@ -25,7 +25,8 @@ This parameter applies to :doc:`../../configuration/modules/immark`.
 
 .. seealso::
 
-   The Action Parameter ``action.writeAllMarkMessages`` in :doc:`../../configuration/actions`.
+   The action parameter ``action.writeAllMarkMessages`` is documented in
+   :doc:`../../configuration/actions`.
 
 Module usage
 ------------
@@ -49,4 +50,5 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 See also
 --------
-For more details, see the main :doc:`../../configuration/modules/immark` page.
+For more details, see the main module page:
+:doc:`../../configuration/modules/immark`
