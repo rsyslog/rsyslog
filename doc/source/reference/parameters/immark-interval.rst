@@ -23,10 +23,6 @@ This parameter applies to :doc:`../../configuration/modules/immark`.
 :Required?: no
 :Introduced: at least 5.x, possibly earlier
 
-Description
------------
-Specifies the mark message injection interval in seconds.
-
 .. seealso::
 
    The Action Parameter ``action.writeAllMarkMessages`` in :doc:`../../configuration/actions`.
