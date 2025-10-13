@@ -21,7 +21,7 @@ This parameter applies to :doc:`../../configuration/modules/immark`.
 :Type: integer (seconds)
 :Default: module=1200 (seconds)
 :Required?: no
-:Introduced: at least 5.x, possibly earlier
+:Introduced: 3.0.0
 
 .. seealso::
 
@@ -29,7 +29,6 @@ This parameter applies to :doc:`../../configuration/modules/immark`.
 
 Module usage
 ------------
-.. _param-immark-module-interval:
 .. _immark.parameter.module.interval-usage:
 
 .. code-block:: rsyslog
@@ -37,7 +36,7 @@ Module usage
    module(load="immark" interval="1200")
 
 Legacy names (for reference)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------
 Historic names/directives for compatibility. Do not use in new configs.
 
 .. _immark.parameter.legacy.markmessageperiod:
