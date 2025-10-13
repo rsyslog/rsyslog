@@ -1227,6 +1227,21 @@ fi
 
 AM_CONDITIONAL(ENABLE_GNUTLS_TESTS, test x$enable_gnutls_tests = xyes)
 
+# Mbed TLS support
+AC_ARG_ENABLE(mbedtls,
+        [AS_HELP_STRING([--enable-mbedtls],[Enable Mbed TLS support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mbedtls="yes" ;;
+          no) enable_mbedtls="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mbedtls) ;;
+         esac],
+        [enable_mbedtls=no]
+)
+if test "x$enable_mbedtls" = "xyes"; then
+	PKG_CHECK_MODULES(MBEDTLS, mbedtls)
+	AC_DEFINE([ENABLE_MBEDTLS], [1], [Indicator that mbedtls is present])
+fi
+AM_CONDITIONAL(ENABLE_MBEDTLS, test x$enable_mbedtls = xyes)
 
 # libgcrypt support
 AC_ARG_ENABLE(libgcrypt,
@@ -3332,6 +3347,7 @@ echo
 echo "---{ protocol support }---"
 echo "    openssl network stream driver enabled:    $enable_openssl"
 echo "    GnuTLS network stream driver enabled:     $enable_gnutls"
+echo "    Mbed TLS network stream driver enabled:   $enable_mbedtls"
 echo "    GSSAPI Kerberos 5 support enabled:        $enable_gssapi_krb5"
 echo "    RELP support enabled:                     $enable_relp"
 echo "    SNMP support enabled:                     $enable_snmp"
