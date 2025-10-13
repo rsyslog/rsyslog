@@ -42,7 +42,7 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _immark.parameter.legacy.markmessageperiod:
 
-- $MarkMessagePeriod — maps to Interval (status: legacy)
+- ``$MarkMessagePeriod`` — maps to Interval (status: legacy)
 
 .. index::
    single: immark; $MarkMessagePeriod
