@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/imklog`.
 
 Description
 -----------
-If enabled, this option causes to keep the [timestamp] provided by the
+If enabled, this option keeps the [timestamp] provided by the
 kernel at the beginning of each message rather than to remove it, when it
 could be parsed and converted into local time for use as regular message
 time. Only used when ``ParseKernelTimestamp`` is on.

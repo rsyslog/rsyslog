@@ -25,8 +25,9 @@ This parameter applies to :doc:`../../configuration/modules/imklog`.
 
 Description
 -----------
-Defines the path to the log file that is used. If this parameter is not
-set, it defaults to "/proc/kmsg" on Linux and "/dev/klog" on other platforms.
+Defines the path to the kernel log device or file that imklog reads from.
+If this parameter is not set, it defaults to "/proc/kmsg" on Linux and
+"/dev/klog" on other platforms.
 
 Module usage
 ------------
