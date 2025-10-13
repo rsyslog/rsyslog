@@ -42,7 +42,7 @@ Module usage
 
 .. code-block:: rsyslog
 
-   module(load="impstats" log.file="/var/log/rsyslog-stats")
+   module(load="impstats" logFile="/var/log/rsyslog-stats")
 
 See also
 --------
