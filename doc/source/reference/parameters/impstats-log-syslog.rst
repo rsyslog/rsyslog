@@ -34,7 +34,7 @@ cannot bind the module to ``ruleset``.
 
 Module usage
 ------------
-.. _param-impstats-module-log-syslog:
+.. _param-impstats-module-log-syslog-usage:
 .. _impstats.parameter.module.log-syslog-usage:
 
 .. code-block:: rsyslog

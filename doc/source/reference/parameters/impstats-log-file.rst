@@ -37,7 +37,7 @@ set.
 
 Module usage
 ------------
-.. _param-impstats-module-log-file:
+.. _param-impstats-module-log-file-usage:
 .. _impstats.parameter.module.log-file-usage:
 
 .. code-block:: rsyslog

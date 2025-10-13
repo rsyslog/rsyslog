@@ -32,7 +32,7 @@ exclusive because syslog stream processing must be enabled to use a ruleset.
 
 Module usage
 ------------
-.. _param-impstats-module-ruleset:
+.. _param-impstats-module-ruleset-usage:
 .. _impstats.parameter.module.ruleset-usage:
 
 .. code-block:: rsyslog

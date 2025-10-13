@@ -36,11 +36,11 @@ implementation. ES 2.0 no longer supports valid JSON and disallows dots inside
 names. The ``json-elasticsearch`` format option replaces those dots by the bang
 ("!") character. So ``discarded.full`` becomes ``discarded!full``.
 
-Options: ``json``/``json-elasticsearch``/``cee``/``legacy``.
+Options: ``json`` / ``json-elasticsearch`` / ``cee`` / ``legacy``.
 
 Module usage
 ------------
-.. _param-impstats-module-format:
+.. _param-impstats-module-format-usage:
 .. _impstats.parameter.module.format-usage:
 
 .. code-block:: rsyslog
