@@ -33,8 +33,28 @@ Module Parameters
      - .. include:: ../../reference/parameters/immark-interval.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-immark-markmessagetext`
+     - .. include:: ../../reference/parameters/immark-markmessagetext.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-immark-ruleset`
+     - .. include:: ../../reference/parameters/immark-ruleset.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-immark-use-markflag`
+     - .. include:: ../../reference/parameters/immark-use-markflag.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-immark-use-syslogcall`
+     - .. include:: ../../reference/parameters/immark-use-syslogcall.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 .. toctree::
    :hidden:
 
    ../../reference/parameters/immark-interval
+   ../../reference/parameters/immark-markmessagetext
+   ../../reference/parameters/immark-ruleset
+   ../../reference/parameters/immark-use-markflag
+   ../../reference/parameters/immark-use-syslogcall
