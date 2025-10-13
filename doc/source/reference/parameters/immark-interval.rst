@@ -23,11 +23,6 @@ This parameter applies to :doc:`../../configuration/modules/immark`.
 :Required?: no
 :Introduced: 3.0.0
 
-.. seealso::
-
-   The action parameter ``action.writeAllMarkMessages`` is documented in
-   :doc:`../../configuration/actions`.
-
 Module usage
 ------------
 .. _immark.parameter.module.interval-usage:
@@ -50,5 +45,8 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 See also
 --------
-For more details, see the main module page:
-:doc:`../../configuration/modules/immark`
+
+* The action parameter ``action.writeAllMarkMessages`` is documented in
+  :doc:`../../configuration/actions`.
+* For more details, see the main module page:
+  :doc:`../../configuration/modules/immark`
