@@ -31,7 +31,7 @@ not found, immark logs a warning and continues with the default ruleset.
 
 If a ruleset is configured while
 :ref:`use.syslogCall <param-immark-use-syslogcall>` is still enabled,
-immark logs a notice and automatically switches to its internal message
+immark logs a warning and automatically switches to its internal message
 submission path so the ruleset can be applied.
 
 Module usage
@@ -41,7 +41,7 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="immark"
-          useSyslogCall="off"
+          use.syslogCall="off"
           ruleset="markRouting")
 
 See also

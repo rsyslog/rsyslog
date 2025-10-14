@@ -45,7 +45,7 @@ Module usage
 
 .. code-block:: rsyslog
 
-   module(load="immark" useSyslogCall="off")
+   module(load="immark" use.syslogCall="off")
 
 See also
 --------
