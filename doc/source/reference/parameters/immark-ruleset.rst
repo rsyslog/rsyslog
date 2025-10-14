@@ -47,5 +47,7 @@ Module usage
 See also
 --------
 
-* :ref:`param-immark-use-syslogcall`
-* :doc:`../../configuration/modules/immark`
+.. seealso::
+
+   * :ref:`param-immark-use-syslogcall`
+   * :doc:`../../configuration/modules/immark`

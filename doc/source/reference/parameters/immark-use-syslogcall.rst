@@ -50,5 +50,7 @@ Module usage
 See also
 --------
 
-* :ref:`param-immark-ruleset`
-* :doc:`../../configuration/modules/immark`
+.. seealso::
+
+   * :ref:`param-immark-ruleset`
+   * :doc:`../../configuration/modules/immark`
