@@ -1,12 +1,12 @@
 .. _param-impstats-severity:
 .. _impstats.parameter.module.severity:
 
-Severity
+severity
 ========
 
 .. index::
-   single: impstats; Severity
-   single: Severity
+   single: impstats; severity
+   single: severity
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Sets the syslog severity value that impstats assigns to emitted messages.
 
 This parameter applies to :doc:`../../configuration/modules/impstats`.
 
-:Name: Severity
+:Name: severity
 :Scope: module
 :Type: integer
 :Default: module=6

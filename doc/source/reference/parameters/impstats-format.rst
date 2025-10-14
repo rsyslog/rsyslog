@@ -1,12 +1,12 @@
 .. _param-impstats-format:
 .. _impstats.parameter.module.format:
 
-Format
+format
 ======
 
 .. index::
-   single: impstats; Format
-   single: Format
+   single: impstats; format
+   single: format
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Specifies which output format impstats uses for emitted statistics records.
 
 This parameter applies to :doc:`../../configuration/modules/impstats`.
 
-:Name: Format
+:Name: format
 :Scope: module
 :Type: word
 :Default: module=legacy

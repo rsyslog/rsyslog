@@ -1,12 +1,12 @@
 .. _param-impstats-bracketing:
 .. _impstats.parameter.module.bracketing:
 
-Bracketing
+bracketing
 ==========
 
 .. index::
-   single: impstats; Bracketing
-   single: Bracketing
+   single: impstats; bracketing
+   single: bracketing
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Adds BEGIN and END marker messages so post-processing can group statistics block
 
 This parameter applies to :doc:`../../configuration/modules/impstats`.
 
-:Name: Bracketing
+:Name: bracketing
 :Scope: module
 :Type: boolean
 :Default: module=off

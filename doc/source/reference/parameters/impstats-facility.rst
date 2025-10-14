@@ -1,12 +1,12 @@
 .. _param-impstats-facility:
 .. _impstats.parameter.module.facility:
 
-Facility
+facility
 ========
 
 .. index::
-   single: impstats; Facility
-   single: Facility
+   single: impstats; facility
+   single: facility
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Selects the numeric syslog facility value used for generated statistics messages
 
 This parameter applies to :doc:`../../configuration/modules/impstats`.
 
-:Name: Facility
+:Name: facility
 :Scope: module
 :Type: integer
 :Default: module=5

@@ -1,12 +1,12 @@
 .. _param-impstats-ruleset:
 .. _impstats.parameter.module.ruleset:
 
-Ruleset
+ruleset
 =======
 
 .. index::
-   single: impstats; Ruleset
-   single: Ruleset
+   single: impstats; ruleset
+   single: ruleset
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Binds impstats-generated messages to the specified ruleset for further processin
 
 This parameter applies to :doc:`../../configuration/modules/impstats`.
 
-:Name: Ruleset
+:Name: ruleset
 :Scope: module
 :Type: string
 :Default: module=none

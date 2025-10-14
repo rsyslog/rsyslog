@@ -1,12 +1,12 @@
 .. _param-impstats-resetcounters:
 .. _impstats.parameter.module.resetcounters:
 
-ResetCounters
+resetCounters
 =============
 
 .. index::
-   single: impstats; ResetCounters
-   single: ResetCounters
+   single: impstats; resetCounters
+   single: resetCounters
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Controls whether impstats resets counters after emitting them so they show delta
 
 This parameter applies to :doc:`../../configuration/modules/impstats`.
 
-:Name: ResetCounters
+:Name: resetCounters
 :Scope: module
 :Type: boolean
 :Default: module=off

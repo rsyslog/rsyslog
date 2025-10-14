@@ -1,12 +1,12 @@
 .. _param-impstats-log-file:
 .. _impstats.parameter.module.log.file:
 
-log.file
-========
+logFile
+=======
 
 .. index::
-   single: impstats; log.file
-   single: log.file
+   single: impstats; logFile
+   single: logFile
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Writes impstats statistics records to the specified local file in addition to ot
 
 This parameter applies to :doc:`../../configuration/modules/impstats`.
 
-:Name: log.file
+:Name: logFile
 :Scope: module
 :Type: word
 :Default: module=none

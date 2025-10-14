@@ -1,12 +1,12 @@
 .. _param-impstats-interval:
 .. _impstats.parameter.module.interval:
 
-Interval
+interval
 ========
 
 .. index::
-   single: impstats; Interval
-   single: Interval
+   single: impstats; interval
+   single: interval
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Configures how often, in seconds, impstats emits statistics messages.
 
 This parameter applies to :doc:`../../configuration/modules/impstats`.
 
-:Name: Interval
+:Name: interval
 :Scope: module
 :Type: integer (seconds)
 :Default: module=300
