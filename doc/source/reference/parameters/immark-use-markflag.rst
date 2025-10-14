@@ -36,7 +36,7 @@ Module usage
 
 .. code-block:: rsyslog
 
-   module(load="immark" use.markFlag="off")
+   module(load="immark" useMarkFlag="off")
 
 See also
 --------

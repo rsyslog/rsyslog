@@ -41,7 +41,7 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="immark"
-          use.syslogCall="off"
+          useSyslogCall="off"
           ruleset="markRouting")
 
 See also
