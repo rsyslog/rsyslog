@@ -1,5 +1,5 @@
 .. _param-impstats-log-syslog:
-.. _impstats.parameter.module.log-syslog:
+.. _impstats.parameter.module.log.syslog:
 
 log.syslog
 ==========
@@ -36,7 +36,7 @@ for rulesets.
 Module usage
 ------------
 .. _param-impstats-module-log-syslog-usage:
-.. _impstats.parameter.module.log-syslog-usage:
+.. _impstats.parameter.module.log.syslog-usage:
 
 .. code-block:: rsyslog
 

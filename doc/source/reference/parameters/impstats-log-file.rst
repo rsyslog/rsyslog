@@ -1,5 +1,5 @@
 .. _param-impstats-log-file:
-.. _impstats.parameter.module.log-file:
+.. _impstats.parameter.module.log.file:
 
 log.file
 ========
@@ -38,7 +38,7 @@ set.
 Module usage
 ------------
 .. _param-impstats-module-log-file-usage:
-.. _impstats.parameter.module.log-file-usage:
+.. _impstats.parameter.module.log.file-usage:
 
 .. code-block:: rsyslog
 
