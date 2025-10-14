@@ -40,7 +40,6 @@ Options: ``json`` / ``json-elasticsearch`` / ``cee`` / ``legacy``.
 
 Module usage
 ------------
-.. _param-impstats-module-format-usage:
 .. _impstats.parameter.module.format-usage:
 
 .. code-block:: rsyslog

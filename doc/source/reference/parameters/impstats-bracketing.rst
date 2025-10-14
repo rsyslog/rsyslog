@@ -68,7 +68,6 @@ logic requires ``resetCounters`` to be set to ``off``.
 
 Module usage
 ------------
-.. _param-impstats-module-bracketing-usage:
 .. _impstats.parameter.module.bracketing-usage:
 
 .. code-block:: rsyslog

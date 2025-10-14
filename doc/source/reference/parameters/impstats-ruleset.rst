@@ -27,12 +27,11 @@ Description
 -----------
 Binds the listener to a specific :doc:`ruleset <../../concepts/multi_ruleset>`.
 
-**Note** that setting ``ruleset`` and ``log.syslog="off"`` are mutually
+**Note** that setting ``ruleset`` and ``logSyslog="off"`` are mutually
 exclusive because syslog stream processing must be enabled to use a ruleset.
 
 Module usage
 ------------
-.. _param-impstats-module-ruleset-usage:
 .. _impstats.parameter.module.ruleset-usage:
 
 .. code-block:: rsyslog

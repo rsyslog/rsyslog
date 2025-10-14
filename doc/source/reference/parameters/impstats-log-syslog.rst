@@ -35,7 +35,6 @@ for rulesets.
 
 Module usage
 ------------
-.. _param-impstats-module-log-syslog-usage:
 .. _impstats.parameter.module.log.syslog-usage:
 
 .. code-block:: rsyslog

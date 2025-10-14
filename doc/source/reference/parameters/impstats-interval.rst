@@ -34,7 +34,6 @@ really matter.
 
 Module usage
 ------------
-.. _param-impstats-module-interval-usage:
 .. _impstats.parameter.module.interval-usage:
 
 .. code-block:: rsyslog

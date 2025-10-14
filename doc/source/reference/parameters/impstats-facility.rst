@@ -30,7 +30,6 @@ is 5 (syslog). This is useful for filtering messages.
 
 Module usage
 ------------
-.. _param-impstats-module-facility-usage:
 .. _impstats.parameter.module.facility-usage:
 
 .. code-block:: rsyslog

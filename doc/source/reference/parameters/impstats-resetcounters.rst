@@ -39,7 +39,6 @@ necessarily needed in real-time.
 
 Module usage
 ------------
-.. _param-impstats-module-resetcounters-usage:
 .. _impstats.parameter.module.resetcounters-usage:
 
 .. code-block:: rsyslog

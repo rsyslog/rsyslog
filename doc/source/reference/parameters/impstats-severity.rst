@@ -30,7 +30,6 @@ is 6 (info). This is useful for filtering messages.
 
 Module usage
 ------------
-.. _param-impstats-module-severity-usage:
 .. _impstats.parameter.module.severity-usage:
 
 .. code-block:: rsyslog
