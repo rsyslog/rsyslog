@@ -1,12 +1,12 @@
 .. _param-immark-interval:
 .. _immark.parameter.module.interval:
 
-Interval
+interval
 ========
 
 .. index::
-   single: immark; Interval
-   single: Interval
+   single: immark; interval
+   single: interval
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Specifies how often immark injects a mark message, in seconds.
 
 This parameter applies to :doc:`../../configuration/modules/immark`.
 
-:Name: Interval
+:Name: interval
 :Scope: module
 :Type: integer (seconds)
 :Default: module=1200 (seconds)
@@ -37,7 +37,7 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _immark.parameter.legacy.markmessageperiod:
 
-- ``$MarkMessagePeriod`` — maps to Interval (status: legacy)
+- ``$MarkMessagePeriod`` — maps to interval (status: legacy)
 
 .. index::
    single: immark; $MarkMessagePeriod

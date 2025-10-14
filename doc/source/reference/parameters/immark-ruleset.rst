@@ -1,12 +1,12 @@
 .. _param-immark-ruleset:
 .. _immark.parameter.module.ruleset:
 
-Ruleset
+ruleset
 =======
 
 .. index::
-   single: immark; Ruleset
-   single: Ruleset
+   single: immark; ruleset
+   single: ruleset
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Routes mark messages to the named ruleset instead of the default.
 
 This parameter applies to :doc:`../../configuration/modules/immark`.
 
-:Name: Ruleset
+:Name: ruleset
 :Scope: module
 :Type: string (see :doc:`../../rainerscript/constant_strings`)
 :Default: module=none
@@ -30,7 +30,7 @@ ruleset. The module looks up the ruleset during configuration; if it is
 not found, immark logs a warning and continues with the default ruleset.
 
 If a ruleset is configured while
-:ref:`use.syslogcall <param-immark-use-syslogcall>` is still enabled,
+:ref:`use.syslogCall <param-immark-use-syslogcall>` is still enabled,
 immark logs a notice and automatically switches to its internal message
 submission path so the ruleset can be applied.
 

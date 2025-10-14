@@ -1,12 +1,12 @@
 .. _param-immark-use-markflag:
 .. _immark.parameter.module.use-markflag:
 
-use.markflag
+use.markFlag
 =============
 
 .. index::
-   single: immark; use.markflag
-   single: use.markflag
+   single: immark; use.markFlag
+   single: use.markFlag
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Controls whether emitted mark messages carry the ``MARK`` flag bit.
 
 This parameter applies to :doc:`../../configuration/modules/immark`.
 
-:Name: use.markflag
+:Name: use.markFlag
 :Scope: module
 :Type: boolean
 :Default: module=on

@@ -1,12 +1,12 @@
 .. _param-immark-use-syslogcall:
 .. _immark.parameter.module.use-syslogcall:
 
-use.syslogcall
+use.syslogCall
 ===============
 
 .. index::
-   single: immark; use.syslogcall
-   single: use.syslogcall
+   single: immark; use.syslogCall
+   single: use.syslogCall
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Chooses whether immark logs via syslog(3) or its internal pipeline.
 
 This parameter applies to :doc:`../../configuration/modules/immark`.
 
-:Name: use.syslogcall
+:Name: use.syslogCall
 :Scope: module
 :Type: boolean
 :Default: module=on
@@ -32,10 +32,10 @@ Controls how immark emits its periodic mark messages:
   other syslog API submission.
 * ``off`` — immark constructs the message internally and submits it to
   rsyslog's main queue. This enables features such as binding a custom
-  :ref:`Ruleset <param-immark-ruleset>` or applying mark-specific
+  :ref:`ruleset <param-immark-ruleset>` or applying mark-specific
   templates.
 
-If a ruleset is configured while ``use.syslogcall`` remains ``on``,
+If a ruleset is configured while ``use.syslogCall`` remains ``on``,
 immark issues a warning and forces this parameter to ``off`` so the
 ruleset can take effect.
 
