@@ -39,7 +39,7 @@ Module usage
 
 .. code-block:: rsyslog
 
-   module(load="impstats" log.syslog="off")
+   module(load="impstats" logSyslog="off")
 
 See also
 --------

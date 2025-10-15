@@ -32,7 +32,7 @@ record, all on one line. Only very limited error handling is done, so if things
 go wrong stats records will probably be lost. Logging to file can be a useful
 alternative if for some reasons (e.g. full queues) the regular syslog stream
 method shall not be used solely. Note that turning on file logging does NOT turn
-off syslog logging. If that is desired ``log.syslog="off"`` must be explicitly
+off syslog logging. If that is desired ``logSyslog="off"`` must be explicitly
 set.
 
 Module usage
@@ -41,7 +41,7 @@ Module usage
 
 .. code-block:: rsyslog
 
-   module(load="impstats" log.file="/var/log/rsyslog-stats")
+   module(load="impstats" logFile="/var/log/rsyslog-stats")
 
 See also
 --------
