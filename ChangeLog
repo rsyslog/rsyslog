@@ -1,6 +1,9 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
+Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-14
 - overall improved documentation via a large set of topic updates.
+- overall improvments in build systems and CI testing
+- overall refectoring to make code better understandable (e.g.
+  more doxygen Comments)
 - 2025-10-05: mmjsonparse: add find-json mode for embedded JSON
   Plain JSON embedded in text is common in production logs. This change
   lets users parse such logs without cookies, improving ease of use and
@@ -26,7 +29,7 @@ Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-??
   mmjsonrewrite module is wired similarly for dotted-key expansion.
   Before/After: Previously no built-in JSON un/flatten; now an action can
   unflatten (default) or flatten JSON into a separate message property.
-- 2025-10-01: mmsnarewinsec: comprehensive Windows Security Event Log parser
+- 2025-10-01: mmsnareparse: comprehensive Windows Security Event Log parser
   Implement complete NXLog Snare-formatted Windows Security event parser
   with multi-format support (RFC5424/RFC3164), 100+ field patterns, and
   advanced features including GUID/IP/timestamp type detection, runtime

@@ -95,8 +95,8 @@ rst_epilog = """
 # user builds the docs from "bare" sources not yet processed
 ###############################################################################
 version = '8.2510'
-#release = '8.2510.0'
-release = version + ' daily stable'
+release = '8.2510.0'
+#release = version + ' daily stable'
 
 # For this to be true, it means that we are not attempting to build from
 # a release tarball, as otherwise the values above would have been replaced
