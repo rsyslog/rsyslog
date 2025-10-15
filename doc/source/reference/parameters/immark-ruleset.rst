@@ -29,10 +29,9 @@ Set this parameter to bind mark messages emitted by immark to a specific
 ruleset. The module looks up the ruleset during configuration; if it is
 not found, immark logs a warning and continues with the default ruleset.
 
-If a ruleset is configured while
-:ref:`param-immark-use-syslogcall` is still enabled,
-immark logs a warning and automatically switches to its internal message
-submission path so the ruleset can be applied.
+If a ruleset is configured while :ref:`param-immark-use-syslogcall`
+remains ``on``, immark issues a warning and forces this parameter to ``off``
+so the ruleset can take effect.
 
 Module usage
 ------------
