@@ -59,7 +59,7 @@ the method and process for outputting the rsyslog statistics to file.
 
 .. note::
 
-   Parameter names are case-insensitive; camelCase is recommended for readability.
+   Parameter names are case-insensitive; camelCase is recommended for improved readability.
 
 .. note::
 
