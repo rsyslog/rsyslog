@@ -35,7 +35,7 @@ As such, if and only if messages are kept in sequence, a block of stats counts
 can easily be identified by those BEGIN and END messages.
 
 **Note well:** in general, sequence of syslog messages is **not** strict and is
-not ordered in sequence of message generation. There are various occasion that
+not ordered in sequence of message generation. There are various occasions that
 can cause message reordering, some examples are:
 
 * using multiple threads
