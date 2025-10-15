@@ -1,12 +1,12 @@
 .. _param-impstats-log-file:
 .. _impstats.parameter.module.log.file:
 
-logFile
+logfile
 =======
 
 .. index::
-   single: impstats; logFile
-   single: logFile
+   single: impstats; logfile
+   single: logfile
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Writes impstats statistics records to the specified local file in addition to ot
 
 This parameter applies to :doc:`../../configuration/modules/impstats`.
 
-:Name: logFile
+:Name: logfile
 :Scope: module
 :Type: word
 :Default: module=none
@@ -32,7 +32,7 @@ record, all on one line. Only very limited error handling is done, so if things
 go wrong stats records will probably be lost. Logging to file can be a useful
 alternative if for some reasons (e.g. full queues) the regular syslog stream
 method shall not be used solely. Note that turning on file logging does NOT turn
-off syslog logging. If that is desired ``logSyslog="off"`` must be explicitly
+off syslog logging. If that is desired ``logsyslog="off"`` must be explicitly
 set.
 
 Module usage
