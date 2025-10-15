@@ -1,6 +1,11 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2512.0 (aka 2025.10) 2025-12-0?
 - overall improved documentation via a large set of topic updates.
+- 2025-10-15: ossl bugfix: ensure peer cert is freed in osslChkPeerAuth
+  Ensure osslChkPeerAuth starts with a null peer-certificate pointer and
+  frees any retrieved X509 certificate so OpenSSL allocations from
+  SSL_get_peer_certificate do not leak after TLS handshakes.
+  Thanks to Attila Lakatos for the patch.
 - 2025-10-13: Add MbedTLS netstream driver.
   Thanks to Stephane Adenot for the patch and the great cooperation on this PR.
 - 2025-10-07: imptcp: fix null pointer dereference in error logging
