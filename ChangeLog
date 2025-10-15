@@ -1,5 +1,27 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2512.0 (aka 2025.10) 2025-12-0?
+- overall improved documentation via a large set of topic updates.
+- 2025-10-13: Add MbedTLS netstream driver.
+  Thanks to Stephane Adenot for the patch and the great cooperation on this PR.
+- 2025-10-07: imptcp: fix null pointer dereference in error logging
+  Prevents potential crashes when logging connection failures where peer
+  name or IP information is unavailable.
+  The compiler detected a potential null pointer dereference in the
+  addSess() error cleanup path. When NULL_CHECK() macros fail and jump to
+  finalize_it, the peerName and peerIP parameters could be NULL but were
+  passed directly to propGetSzStr() in LogError().
+  Original error: ../../runtime/prop.h:66:18: error: potential null
+  pointer dereference [-Werror=null-dereference] 66 |     return
+  (pThis->len < CONF_PROP_BUFSIZE) ? pThis->szVal.sz : pThis->szVal.psz; |
+  Thanks to Attila Lakatos for the patch.
+- 2025-10-06: CI: fix imtcp-tls-gibberish being executed in non-TLS builds
+  This tool requires rsyslog to build with TLS support. If not present,
+  the test will always fail. This is solved by executing it only if gnutls
+  is enabled. As this is a fequently tested environment, this does not
+  reduce test coverage. It is easier to do then checking for both gnutls
+  and openssl.
+  Many thanks to Michael Biebl for bringing this to our attention.
+  closes https://github.com/rsyslog/rsyslog/issues/6224
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2510.0 (aka 2025.10) 2025-10-14
 - overall improved documentation via a large set of topic updates.
