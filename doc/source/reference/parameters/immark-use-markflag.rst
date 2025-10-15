@@ -27,7 +27,8 @@ Description
 -----------
 When enabled, immark tags generated messages with the ``MARK`` flag.
 This allows actions to filter or suppress them via settings such as the
-``action.writeAllMarkMessages`` parameter. Disable the flag when mark
+``action.writeAllMarkMessages`` parameter in
+:doc:`../../configuration/actions`. Disable the flag when mark
 messages should be treated exactly like ordinary log entries.
 
 Module usage

@@ -32,7 +32,7 @@ Controls how immark emits its periodic mark messages:
   other syslog API submission.
 * ``off`` — immark constructs the message internally and submits it to
   rsyslog's main queue. This enables features such as binding a custom
-  :ref:`ruleset <param-immark-ruleset>` or applying mark-specific
+  :ref:`param-immark-ruleset` or applying mark-specific
   templates.
 
 If a ruleset is configured while ``use.syslogCall`` remains ``on``,

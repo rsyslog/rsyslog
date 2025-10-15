@@ -30,7 +30,7 @@ ruleset. The module looks up the ruleset during configuration; if it is
 not found, immark logs a warning and continues with the default ruleset.
 
 If a ruleset is configured while
-:ref:`use.syslogCall <param-immark-use-syslogcall>` is still enabled,
+:ref:`param-immark-use-syslogcall` is still enabled,
 immark logs a warning and automatically switches to its internal message
 submission path so the ruleset can be applied.
 
