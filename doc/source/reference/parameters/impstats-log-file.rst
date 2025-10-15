@@ -32,8 +32,8 @@ record, all on one line. Only very limited error handling is done, so if things
 go wrong stats records will probably be lost. Logging to file can be a useful
 alternative if for some reasons (e.g. full queues) the regular syslog stream
 method shall not be used solely. Note that turning on file logging does NOT turn
-off syslog logging. If that is desired ``log.syslog="off"`` must be explicitly
-set.
+off syslog logging. If that is desired, ``log.syslog`` must be explicitly set to
+``off``.
 
 Module usage
 ------------
