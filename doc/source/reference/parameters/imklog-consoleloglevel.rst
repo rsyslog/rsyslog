@@ -10,7 +10,7 @@ ConsoleLogLevel
 
 .. summary-start
 
-Sets the maximum severity that the kernel prints to the console when imklog starts.
+Filters kernel console messages, printing only those with a severity up to the configured level.
 
 .. summary-end
 
