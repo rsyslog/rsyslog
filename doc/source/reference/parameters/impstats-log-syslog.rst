@@ -1,12 +1,12 @@
 .. _param-impstats-log-syslog:
 .. _impstats.parameter.module.log.syslog:
 
-logSyslog
-=========
+log.syslog
+==========
 
 .. index::
-   single: impstats; logSyslog
-   single: logSyslog
+   single: impstats; log.syslog
+   single: log.syslog
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Enables or disables sending statistics to the regular syslog stream.
 
 This parameter applies to :doc:`../../configuration/modules/impstats`.
 
-:Name: logSyslog
+:Name: log.syslog
 :Scope: module
 :Type: boolean
 :Default: module=on
@@ -39,7 +39,7 @@ Module usage
 
 .. code-block:: rsyslog
 
-   module(load="impstats" logSyslog="off")
+   module(load="impstats" log.syslog="off")
 
 See also
 --------
