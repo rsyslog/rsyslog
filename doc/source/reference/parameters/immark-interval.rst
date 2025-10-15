@@ -48,7 +48,5 @@ See also
 
 .. seealso::
 
-   * The action parameter ``action.writeAllMarkMessages`` is documented in
-     :doc:`../../configuration/actions`.
-   * For more details, see the main module page:
-     :doc:`../../configuration/modules/immark`
+   * ``action.writeAllMarkMessages`` in :doc:`../../configuration/actions`
+   * :doc:`../../configuration/modules/immark`
