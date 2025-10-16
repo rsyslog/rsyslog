@@ -37,7 +37,13 @@ implementation. ES 2.0 no longer supports valid JSON and disallows dots inside
 names. The ``json-elasticsearch`` format option replaces those dots by the bang
 ("!") character. So ``discarded.full`` becomes ``discarded!full``.
 
-Options: ``json``, ``json-elasticsearch``, ``cee``, ``legacy``, or ``prometheus``.
+Options:
+
+* ``json``
+* ``json-elasticsearch``
+* ``cee``
+* ``legacy``
+* ``prometheus``
 
 .. note::
 
