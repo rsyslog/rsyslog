@@ -10,7 +10,8 @@ ruleset
 
 .. summary-start
 
-Binds impstats-generated messages to the specified ruleset for further processing.
+Binds impstats-generated messages to the specified ruleset for further
+processing.
 
 .. summary-end
 

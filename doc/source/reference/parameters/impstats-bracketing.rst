@@ -10,7 +10,8 @@ bracketing
 
 .. summary-start
 
-Adds BEGIN and END marker messages so post-processing can group statistics blocks.
+Adds BEGIN and END marker messages so post-processing can group statistics
+blocks.
 
 .. summary-end
 

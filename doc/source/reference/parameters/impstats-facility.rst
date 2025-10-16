@@ -10,7 +10,8 @@ facility
 
 .. summary-start
 
-Selects the numeric syslog facility value used for generated statistics messages.
+Selects the numeric syslog facility value used for generated statistics
+messages.
 
 .. summary-end
 

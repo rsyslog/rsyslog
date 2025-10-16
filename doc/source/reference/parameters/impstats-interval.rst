@@ -25,8 +25,9 @@ This parameter applies to :doc:`../../configuration/modules/impstats`.
 
 Description
 -----------
-Sets the interval, in **seconds**, at which messages are generated. Please note
-that the actual interval may be a bit longer. We do not try to be precise and
+Sets the interval, in **seconds**, at which messages are generated. Please
+note that the actual interval may be a bit longer. We do not try to be precise
+and
 so the interval is actually a sleep period which is entered after generating
 all messages. So the actual interval is what is configured here plus the actual
 time required to generate messages. In general, the difference should not

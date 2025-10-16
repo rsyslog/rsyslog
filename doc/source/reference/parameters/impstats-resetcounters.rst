@@ -10,7 +10,8 @@ resetCounters
 
 .. summary-start
 
-Controls whether impstats resets counters after emitting them so they show deltas.
+Controls whether impstats resets counters after emitting them so they show
+deltas.
 
 .. summary-end
 

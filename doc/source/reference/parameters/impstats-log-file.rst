@@ -10,7 +10,8 @@ log.file
 
 .. summary-start
 
-Writes impstats statistics records to the specified local file in addition to other outputs.
+Writes impstats statistics records to the specified local file in addition to
+other outputs.
 
 .. summary-end
 
