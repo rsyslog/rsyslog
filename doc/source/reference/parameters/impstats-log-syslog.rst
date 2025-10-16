@@ -30,8 +30,8 @@ stream. This is useful if custom formatting or more elaborate processing is
 desired. However, output is placed under the same restrictions as regular
 syslog data, especially in regard to the queue position (stats data may sit for
 an extended period of time in queues if they are full). If set to ``off``, the
-``ruleset`` parameter cannot be used, as syslog stream processing is required
-for rulesets.
+:ref:`param-impstats-ruleset` parameter cannot be used, as syslog stream
+processing is required for rulesets.
 
 Module usage
 ------------
