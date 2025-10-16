@@ -65,7 +65,8 @@ unexpected records and use the previous values for ones missing in the current
 block. To guard against two or more blocks being mixed, it may also be a good
 idea to never reset a value to a lower bound, except when that lower bound is
 seen consistently (which happens due to a restart). Note that such lower bound
-logic requires :ref:`param-impstats-resetcounters` to be set to ``off``.
+logic requires :ref:`param-impstats-resetcounters` (``resetCounters`` in
+camelCase examples) to be set to ``off``.
 
 Module usage
 ------------
