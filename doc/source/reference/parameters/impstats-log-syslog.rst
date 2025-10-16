@@ -1,5 +1,5 @@
 .. _param-impstats-log-syslog:
-.. _impstats.parameter.module.log.syslog:
+.. _impstats.parameter.module.log-syslog:
 
 log.syslog
 ==========
@@ -35,7 +35,7 @@ stream processing is required for rulesets.
 
 Module usage
 ------------
-.. _impstats.parameter.module.log.syslog-usage:
+.. _impstats.parameter.module.log-syslog-usage:
 
 .. code-block:: rsyslog
 

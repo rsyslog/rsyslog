@@ -38,7 +38,8 @@ names. The ``json-elasticsearch`` format option replaces those dots by the bang
 ("!") character. So ``discarded.full`` becomes ``discarded!full``.
 
 Options: ``json``, ``json-elasticsearch``, ``cee``, ``legacy``, or
-``prometheus``.
+``prometheus``. The ``prometheus`` option is available in builds that
+include the 2025-07-15 enhancement noted in the :file:`ChangeLog`.
 
 Module usage
 ------------
