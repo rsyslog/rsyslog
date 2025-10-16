@@ -1,12 +1,12 @@
 .. _param-impstats-resetcounters:
 .. _impstats.parameter.module.resetcounters:
 
-resetCounters
+resetcounters
 =============
 
 .. index::
-   single: impstats; resetCounters
-   single: resetCounters
+   single: impstats; resetcounters
+   single: resetcounters
 
 .. summary-start
 
@@ -17,7 +17,7 @@ deltas.
 
 This parameter applies to :doc:`../../configuration/modules/impstats`.
 
-:Name: resetCounters
+:Name: resetcounters
 :Scope: module
 :Type: boolean
 :Default: module=off
