@@ -42,7 +42,7 @@ Options: ``json``, ``json-elasticsearch``, ``cee``, ``legacy``, or ``prometheus`
 .. note::
 
    The ``prometheus`` option is available in builds that include the 2025-07-15
-   enhancement noted in the :file:`ChangeLog`.
+   enhancement noted in the ``ChangeLog``.
 
 Module usage
 ------------
