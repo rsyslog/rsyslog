@@ -19,23 +19,42 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
 Module Parameters
 -----------------
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-interval
-^^^^^^^^
+   * - Parameter
+     - Summary
+   * - :ref:`param-immark-interval`
+     - .. include:: ../../reference/parameters/immark-interval.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-immark-markmessagetext`
+     - .. include:: ../../reference/parameters/immark-markmessagetext.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-immark-ruleset`
+     - .. include:: ../../reference/parameters/immark-ruleset.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-immark-use-markflag`
+     - .. include:: ../../reference/parameters/immark-use-markflag.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-immark-use-syslogcall`
+     - .. include:: ../../reference/parameters/immark-use-syslogcall.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
-.. csv-table::
-   :header: "type", "default", "max", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
+.. toctree::
+   :hidden:
 
-   "integer", "1200", "", "no", "``$MarkMessagePeriod``"
-
-Specifies the mark message injection interval in seconds.
-
-.. seealso::
-
-   The Action Parameter ``action.writeAllMarkMessages`` in :doc:`../actions`.
+   ../../reference/parameters/immark-interval
+   ../../reference/parameters/immark-markmessagetext
+   ../../reference/parameters/immark-ruleset
+   ../../reference/parameters/immark-use-markflag
+   ../../reference/parameters/immark-use-syslogcall
