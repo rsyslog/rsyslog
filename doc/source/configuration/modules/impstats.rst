@@ -157,7 +157,7 @@ Load module, send stats data to syslog stream
 This activates the module and records messages to /var/log/rsyslog-stats
 in 10 minute intervals:
 
-.. code-block:: none
+.. code-block:: rsyslog
 
    module(load="impstats"
           interval="600"
@@ -173,14 +173,14 @@ Load module, send stats data to local file
 Here, the default interval of 5 minutes is used. However, this time, stats
 data is NOT emitted to the syslog stream but to a local file instead.
 
-.. code-block:: none
+.. code-block:: rsyslog
 
    module(load="impstats"
           interval="600"
           severity="7"
-          log.syslog="off"
+          logSyslog="off"
           # need to turn log stream logging off!
-          log.file="/path/to/local/stats.log")
+          logFile="/path/to/local/stats.log")
 
 
 Load module, send stats data to local file and syslog stream
@@ -190,12 +190,12 @@ Here we log to both the regular syslog log stream as well as a
 file. Within the log stream, we forward the data records to another
 server:
 
-.. code-block:: none
+.. code-block:: rsyslog
 
    module(load="impstats"
           interval="600"
           severity="7"
-          log.file="/path/to/local/stats.log")
+          logFile="/path/to/local/stats.log")
 
    syslog.=debug @central.example.net
 
