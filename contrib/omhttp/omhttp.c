@@ -74,16 +74,30 @@ MODULE_CNFNAME("omhttp")
 DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(prop) DEFobjCurrIf(ruleset) DEFobjCurrIf(statsobj)
 
-    statsobj_t *httpStats;
-STATSCOUNTER_DEF(ctrMessagesSubmitted, mutCtrMessagesSubmitted);  // Number of message submitted to module
-STATSCOUNTER_DEF(ctrMessagesSuccess, mutCtrMessagesSuccess);  // Number of messages successfully sent
-STATSCOUNTER_DEF(ctrMessagesFail, mutCtrMessagesFail);  // Number of messages that failed to send
-STATSCOUNTER_DEF(ctrMessagesRetry, mutCtrMessagesRetry);  // Number of messages requeued for retry
-STATSCOUNTER_DEF(ctrHttpRequestCount, mutCtrHttpRequestCount);  // Number of attempted HTTP requests
-STATSCOUNTER_DEF(ctrHttpRequestSuccess, mutCtrHttpRequestSuccess);  // Number of successful HTTP requests
-STATSCOUNTER_DEF(ctrHttpRequestFail, mutCtrHttpRequestFail);  // Number of failed HTTP req, 4XX+ are NOT failures
-STATSCOUNTER_DEF(ctrHttpStatusSuccess, mutCtrHttpStatusSuccess);  // Number of requests returning 1XX/2XX status
-STATSCOUNTER_DEF(ctrHttpStatusFail, mutCtrHttpStatusFail);  // Number of requests returning 300+ status
+
+    typedef struct _targetStats {
+    statsobj_t *defaultstats;
+
+    STATSCOUNTER_DEF(ctrMessagesSubmitted, mutCtrMessagesSubmitted);  // Number of message submitted to module
+    STATSCOUNTER_DEF(ctrMessagesSuccess, mutCtrMessagesSuccess);  // Number of messages successfully sent
+    STATSCOUNTER_DEF(ctrMessagesFail, mutCtrMessagesFail);  // Number of messages that failed to send
+    STATSCOUNTER_DEF(ctrMessagesRetry, mutCtrMessagesRetry);  // Number of messages requeued for retry
+    STATSCOUNTER_DEF(ctrHttpRequestSuccess, mutCtrHttpRequestSuccess);  // Number of successful HTTP requests
+    STATSCOUNTER_DEF(ctrHttpRequestFail, mutCtrHttpRequestFail);  // Number of failed HTTP req, 4XX+ are NOT failures
+    STATSCOUNTER_DEF(ctrHttpStatusSuccess, mutCtrHttpStatusSuccess);  // Number of requests returning 1XX/2XX status
+    STATSCOUNTER_DEF(ctrHttpStatusFail, mutCtrHttpStatusFail);  // Number of requests returning 300+ status
+    STATSCOUNTER_DEF(ctrHttpRequestsCount, mutCtrHttpRequestsCount);  // Number of attempted HTTP requests
+    STATSCOUNTER_DEF(httpRequestsBytes, mutHttpRequestsBytes);  // Number of bytes in HTTP requests
+    STATSCOUNTER_DEF(httpRequestsTimeMs, mutHttpRequestsTimeMs);  // Number of Times(ms) in HTTP requests
+    STATSCOUNTER_DEF(ctrHttpRequestsStatus0xx, mutCtrHttpRequestsStatus0xx);  // HTTP requests returning 0xx
+    STATSCOUNTER_DEF(ctrHttpRequestsStatus1xx, mutCtrHttpRequestsStatus1xx);  // HTTP requests returning 1xx
+    STATSCOUNTER_DEF(ctrHttpRequestsStatus2xx, mutCtrHttpRequestsStatus2xx);  // HTTP requests returning 2xx
+    STATSCOUNTER_DEF(ctrHttpRequestsStatus3xx, mutCtrHttpRequestsStatus3xx);  // HTTP requests returning 3xx
+    STATSCOUNTER_DEF(ctrHttpRequestsStatus4xx, mutCtrHttpRequestsStatus4xx);  // HTTP requests returning 4xx
+    STATSCOUNTER_DEF(ctrHttpRequestsStatus5xx, mutCtrHttpRequestsStatus5xx);  // HTTP requests returning 5xx
+
+} targetStats_t;
+
 
 static prop_t *pInputName = NULL;
 static int omhttpInstancesCnt = 0;
@@ -162,16 +176,9 @@ typedef struct instanceConf_s {
     struct instanceConf_s *next;
 
     uchar *statsName;
-    statsobj_t *stats;
-    STATSCOUNTER_DEF(ctrHttpRequestsCount, mutCtrHttpRequestsCount);  // Number of attempted HTTP requests
-    STATSCOUNTER_DEF(httpRequestsBytes, mutHttpRequestsBytes);
-    STATSCOUNTER_DEF(httpRequestsTimeMs, mutHttpRequestsTimeMs);
-    STATSCOUNTER_DEF(ctrHttpRequestsStatus0xx, mutCtrHttpRequestsStatus0xx);  // HTTP requests returning 0xx
-    STATSCOUNTER_DEF(ctrHttpRequestsStatus1xx, mutCtrHttpRequestsStatus1xx);  // HTTP requests returning 1xx
-    STATSCOUNTER_DEF(ctrHttpRequestsStatus2xx, mutCtrHttpRequestsStatus2xx);  // HTTP requests returning 2xx
-    STATSCOUNTER_DEF(ctrHttpRequestsStatus3xx, mutCtrHttpRequestsStatus3xx);  // HTTP requests returning 3xx
-    STATSCOUNTER_DEF(ctrHttpRequestsStatus4xx, mutCtrHttpRequestsStatus4xx);  // HTTP requests returning 4xx
-    STATSCOUNTER_DEF(ctrHttpRequestsStatus5xx, mutCtrHttpRequestsStatus5xx);  // HTTP requests returning 5xx
+    /* Stats Counter */
+    targetStats_t *listObjStats;
+    sbool statsBySenders;
 } instanceData;
 
 struct modConfData_s {
@@ -249,6 +256,7 @@ static struct cnfparamdescr actpdescr[] = {
     {"name", eCmdHdlrGetWord, 0},
     {"httpignorablecodes", eCmdHdlrArray, 0},
     {"profile", eCmdHdlrGetWord, 0},
+    {"statsbysenders", eCmdHdlrBinary, 0},
 };
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
@@ -345,8 +353,12 @@ BEGINfreeInstance
     free(pData->ignorableCodes);
     if (pData->ratelimiter != NULL) ratelimitDestruct(pData->ratelimiter);
     if (pData->bFreeBatchFormatName) free(pData->batchFormatName);
-    if (pData->stats) {
-        statsobj.Destruct(&pData->stats);
+    if (pData->listObjStats != NULL) {
+        const int numStats = pData->statsBySenders ? pData->numServers : 1;
+        for (int j = 0; j < numStats; ++j) {
+            if (pData->listObjStats[j].defaultstats != NULL) statsobj.Destruct(&(pData->listObjStats[j].defaultstats));
+        }
+        free(pData->listObjStats);
     }
     free(pData->statsName);
 ENDfreeInstance
@@ -425,6 +437,7 @@ BEGINdbgPrintInstInfo
     dbgprintf("\tratelimit.interval='%d'\n", pData->ratelimitInterval);
     dbgprintf("\tratelimit.burst='%d'\n", pData->ratelimitBurst);
     dbgprintf("\tstatsname='%s'\n", pData->statsName);
+    dbgprintf("\tstatsbysenders='%d'\n", pData->statsBySenders);
 ENDdbgPrintInstInfo
 
 
@@ -782,6 +795,8 @@ static rsRetVal queueBatchOnRetryRuleset(wrkrInstanceData_t *const pWrkrData, in
     smsg_t *pMsg;
     DEFiRet;
 
+    int indexStats = pData->statsBySenders ? pWrkrData->serverIndex : 0;
+
     if (pData->retryRuleset == NULL) {
         LogError(0, RS_RET_ERR, "omhttp: queueBatchOnRetryRuleset invalid call with a NULL retryRuleset");
         ABORT_FINALIZE(RS_RET_ERR);
@@ -811,7 +826,8 @@ static rsRetVal queueBatchOnRetryRuleset(wrkrInstanceData_t *const pWrkrData, in
         ratelimitAddMsg(pData->ratelimiter, NULL, pMsg);
 
         // Count here in case not entire batch succeeds
-        STATSCOUNTER_INC(ctrMessagesRetry, mutCtrMessagesRetry);
+        STATSCOUNTER_INC(pWrkrData->pData->listObjStats[indexStats].ctrMessagesRetry,
+                         pWrkrData->pData->listObjStats[indexStats].mutCtrMessagesRetry);
     }
 finalize_it:
     RETiRet;
@@ -823,9 +839,12 @@ static rsRetVal checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg) {
     size_t numMessages;
     DEFiRet;
     CURLcode resCurl = 0;
+    int indexStats = 0;
 
     pData = pWrkrData->pData;
     statusCode = pWrkrData->httpStatusCode;
+    indexStats = pData->statsBySenders ? pWrkrData->serverIndex : 0;
+    targetStats_t *const serverStats = &pData->listObjStats[indexStats];
 
     if (pData->batchMode) {
         numMessages = pWrkrData->batch.nmemb;
@@ -842,42 +861,42 @@ static rsRetVal checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg) {
      */
     if (statusCode == 0) {
         // Transport/connection failure - retriable
-        STATSCOUNTER_ADD(ctrMessagesFail, mutCtrMessagesFail, numMessages);
-        STATSCOUNTER_INC(pData->ctrHttpRequestsStatus0xx, pData->mutCtrHttpRequestsStatus0xx);
+        STATSCOUNTER_ADD(serverStats->ctrMessagesFail, serverStats->mutCtrMessagesFail, numMessages);
+        STATSCOUNTER_INC(serverStats->ctrHttpRequestsStatus0xx, serverStats->mutCtrHttpRequestsStatus0xx);
         iRet = RS_RET_SUSPENDED;
     } else if (statusCode >= 100 && statusCode < 300) {
         // 1xx (informational) and 2xx (success) - treat as success
-        STATSCOUNTER_INC(ctrHttpStatusSuccess, mutCtrHttpStatusSuccess);
-        STATSCOUNTER_ADD(ctrMessagesSuccess, mutCtrMessagesSuccess, numMessages);
+        STATSCOUNTER_INC(serverStats->ctrHttpStatusSuccess, serverStats->mutCtrHttpStatusSuccess);
+        STATSCOUNTER_ADD(serverStats->ctrMessagesSuccess, serverStats->mutCtrMessagesSuccess, numMessages);
 
         if (statusCode >= 100 && statusCode < 200) {
-            STATSCOUNTER_INC(pData->ctrHttpRequestsStatus1xx, pData->mutCtrHttpRequestsStatus1xx);
+            STATSCOUNTER_INC(serverStats->ctrHttpRequestsStatus1xx, serverStats->mutCtrHttpRequestsStatus1xx);
         } else if (statusCode >= 200 && statusCode < 300) {
-            STATSCOUNTER_INC(pData->ctrHttpRequestsStatus2xx, pData->mutCtrHttpRequestsStatus2xx);
+            STATSCOUNTER_INC(serverStats->ctrHttpRequestsStatus2xx, serverStats->mutCtrHttpRequestsStatus2xx);
         }
         iRet = RS_RET_OK;
     } else if (statusCode >= 300 && statusCode < 400) {
         // 3xx - redirection, treat as permanent failure (non-retriable)
-        STATSCOUNTER_INC(ctrHttpStatusFail, mutCtrHttpStatusFail);
-        STATSCOUNTER_ADD(ctrMessagesFail, mutCtrMessagesFail, numMessages);
-        STATSCOUNTER_INC(pData->ctrHttpRequestsStatus3xx, pData->mutCtrHttpRequestsStatus3xx);
+        STATSCOUNTER_INC(serverStats->ctrHttpStatusFail, serverStats->mutCtrHttpStatusFail);
+        STATSCOUNTER_ADD(serverStats->ctrMessagesFail, serverStats->mutCtrMessagesFail, numMessages);
+        STATSCOUNTER_INC(serverStats->ctrHttpRequestsStatus3xx, serverStats->mutCtrHttpRequestsStatus3xx);
         iRet = RS_RET_DATAFAIL;  // permanent failure
     } else if (statusCode >= 400 && statusCode < 500) {
         // 4xx - client error, permanent failure (non-retriable)
-        STATSCOUNTER_INC(ctrHttpStatusFail, mutCtrHttpStatusFail);
-        STATSCOUNTER_ADD(ctrMessagesFail, mutCtrMessagesFail, numMessages);
-        STATSCOUNTER_INC(pData->ctrHttpRequestsStatus4xx, pData->mutCtrHttpRequestsStatus4xx);
+        STATSCOUNTER_INC(serverStats->ctrHttpStatusFail, serverStats->mutCtrHttpStatusFail);
+        STATSCOUNTER_ADD(serverStats->ctrMessagesFail, serverStats->mutCtrMessagesFail, numMessages);
+        STATSCOUNTER_INC(serverStats->ctrHttpRequestsStatus4xx, serverStats->mutCtrHttpRequestsStatus4xx);
         iRet = RS_RET_DATAFAIL;  // permanent failure
     } else if (statusCode >= 500) {
         // 5xx - server error, retriable
-        STATSCOUNTER_INC(ctrHttpStatusFail, mutCtrHttpStatusFail);
-        STATSCOUNTER_ADD(ctrMessagesFail, mutCtrMessagesFail, numMessages);
-        STATSCOUNTER_INC(pData->ctrHttpRequestsStatus5xx, pData->mutCtrHttpRequestsStatus5xx);
+        STATSCOUNTER_INC(serverStats->ctrHttpStatusFail, serverStats->mutCtrHttpStatusFail);
+        STATSCOUNTER_ADD(serverStats->ctrMessagesFail, serverStats->mutCtrMessagesFail, numMessages);
+        STATSCOUNTER_INC(serverStats->ctrHttpRequestsStatus5xx, serverStats->mutCtrHttpRequestsStatus5xx);
         iRet = RS_RET_SUSPENDED;
     } else {
         // Unexpected status code
-        STATSCOUNTER_INC(ctrHttpStatusFail, mutCtrHttpStatusFail);
-        STATSCOUNTER_ADD(ctrMessagesFail, mutCtrMessagesFail, numMessages);
+        STATSCOUNTER_INC(serverStats->ctrHttpStatusFail, serverStats->mutCtrHttpStatusFail);
+        STATSCOUNTER_ADD(serverStats->ctrMessagesFail, serverStats->mutCtrMessagesFail, numMessages);
         iRet = RS_RET_DATAFAIL;
     }
 
@@ -888,14 +907,13 @@ static rsRetVal checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg) {
         /* record total bytes */
         resCurl = curl_easy_getinfo(pWrkrData->curlPostHandle, CURLINFO_REQUEST_SIZE, &req);
         if (!resCurl) {
-            STATSCOUNTER_ADD(pWrkrData->pData->httpRequestsBytes, pWrkrData->pData->mutHttpRequestsBytes,
-                             (uint64_t)req);
+            STATSCOUNTER_ADD(serverStats->httpRequestsBytes, serverStats->mutHttpRequestsBytes, (uint64_t)req);
         }
         resCurl = curl_easy_getinfo(pWrkrData->curlPostHandle, CURLINFO_TOTAL_TIME, &total);
         if (CURLE_OK == resCurl) {
             /* this needs to be converted to milliseconds */
             long total_time_ms = (long)(total * 1000);
-            STATSCOUNTER_ADD(pWrkrData->pData->httpRequestsTimeMs, pWrkrData->pData->mutHttpRequestsTimeMs,
+            STATSCOUNTER_ADD(serverStats->httpRequestsTimeMs, serverStats->mutHttpRequestsTimeMs,
                              (uint64_t)total_time_ms);
         }
     }
@@ -1166,7 +1184,7 @@ static rsRetVal ATTR_NONNULL(1, 2) curlPost(
     CURLcode curlCode;
     CURL *const curl = pWrkrData->curlPostHandle;
     char errbuf[CURL_ERROR_SIZE] = "";
-
+    int indexStats = pWrkrData->pData->statsBySenders ? pWrkrData->serverIndex : 0;
     char *postData;
     int postLen;
     sbool compressed;
@@ -1209,11 +1227,12 @@ static rsRetVal ATTR_NONNULL(1, 2) curlPost(
 
     curlCode = curl_easy_perform(curl);
     DBGPRINTF("omhttp: curlPost curl returned %lld\n", (long long)curlCode);
-    STATSCOUNTER_INC(ctrHttpRequestCount, mutCtrHttpRequestCount);
-    STATSCOUNTER_INC(pWrkrData->pData->ctrHttpRequestsCount, pWrkrData->pData->mutCtrHttpRequestsCount);
+    STATSCOUNTER_INC(pWrkrData->pData->listObjStats[indexStats].ctrHttpRequestsCount,
+                     pWrkrData->pData->listObjStats[indexStats].mutCtrHttpRequestsCount);
 
     if (curlCode != CURLE_OK) {
-        STATSCOUNTER_INC(ctrHttpRequestFail, mutCtrHttpRequestFail);
+        STATSCOUNTER_INC(pWrkrData->pData->listObjStats[indexStats].ctrHttpRequestFail,
+                         pWrkrData->pData->listObjStats[indexStats].mutCtrHttpRequestFail);
         LogError(0, RS_RET_SUSPENDED, "omhttp: suspending ourselves due to server failure %lld: %s",
                  (long long)curlCode, errbuf);
         // Check the result here too and retry if needed, then we should suspend
@@ -1222,7 +1241,8 @@ static rsRetVal ATTR_NONNULL(1, 2) curlPost(
         checkResult(pWrkrData, message);
         ABORT_FINALIZE(RS_RET_SUSPENDED);
     } else {
-        STATSCOUNTER_INC(ctrHttpRequestSuccess, mutCtrHttpRequestSuccess);
+        STATSCOUNTER_INC(pWrkrData->pData->listObjStats[indexStats].ctrHttpRequestSuccess,
+                         pWrkrData->pData->listObjStats[indexStats].mutCtrHttpRequestSuccess);
     }
 
     // Grab the HTTP Response code
@@ -1570,13 +1590,16 @@ BEGINcommitTransaction
     CODESTARTcommitTransaction;
     instanceData *const pData = pWrkrData->pData;
     const int iNumTpls = pData->dynRestPath ? 2 : 1;
+    int indexStats = pWrkrData->pData->statsBySenders ? pWrkrData->serverIndex : 0;
+
 
     for (i = 0; i < nParams; ++i) {
         uchar *payload = actParam(pParams, iNumTpls, i, 0).param;
         uchar *tpls[2] = {payload, NULL};
         if (iNumTpls == 2) tpls[1] = actParam(pParams, iNumTpls, i, 1).param;
 
-        STATSCOUNTER_INC(ctrMessagesSubmitted, mutCtrMessagesSubmitted);
+        STATSCOUNTER_INC(pWrkrData->pData->listObjStats[indexStats].ctrMessagesSubmitted,
+                         pWrkrData->pData->listObjStats[indexStats].mutCtrMessagesSubmitted);
 
         if (pData->batchMode) {
             if (pData->dynRestPath) {
@@ -1850,6 +1873,7 @@ static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
     pData->retryRuleset = NULL;
     pData->nIgnorableCodes = 0;
     pData->ignorableCodes = NULL;
+    pData->statsBySenders = 0;  // Disable by default
     // increment number of instances
     ++omhttpInstancesCnt;
 }
@@ -1951,6 +1975,100 @@ static rsRetVal applyProfileSettings(instanceData *const pData, const char *cons
         LogError(0, RS_RET_PARAM_ERROR, "omhttp: unknown profile '%s'", profile);
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
+
+finalize_it:
+    RETiRet;
+}
+
+
+static rsRetVal setStatsObject(instanceData *const pData, const char *const serverParam, size_t index) {
+    uchar ctrName[256];
+    DEFiRet;
+
+    targetStats_t *const serverStats = &pData->listObjStats[index];
+
+    if (serverParam == NULL) {
+        snprintf((char *)ctrName, sizeof(ctrName), "%s(ALL)", pData->statsName);
+        ctrName[sizeof(ctrName) - 1] = '\0';
+    } else {
+        snprintf((char *)ctrName, sizeof(ctrName), "%s(%s)", pData->statsName, serverParam);
+        ctrName[sizeof(ctrName) - 1] = '\0';
+    }
+
+    // instantiate the stats object and add the counters
+    CHKiRet(statsobj.Construct(&(serverStats->defaultstats)));
+    CHKiRet(statsobj.SetName(serverStats->defaultstats, ctrName));
+    CHKiRet(statsobj.SetOrigin(serverStats->defaultstats, (uchar *)"omhttp"));
+
+    STATSCOUNTER_INIT(serverStats->ctrMessagesSubmitted, serverStats->mutCtrMessagesSubmitted);
+    CHKiRet(statsobj.AddCounter(serverStats->defaultstats, (uchar *)"messages.submitted", ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &(serverStats->ctrMessagesSubmitted)));
+
+    STATSCOUNTER_INIT(serverStats->ctrMessagesSuccess, serverStats->mutCtrMessagesSuccess);
+    CHKiRet(statsobj.AddCounter(serverStats->defaultstats, (uchar *)"messages.success", ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &(serverStats->ctrMessagesSuccess)));
+
+    STATSCOUNTER_INIT(serverStats->ctrMessagesFail, serverStats->mutCtrMessagesFail);
+    CHKiRet(statsobj.AddCounter(serverStats->defaultstats, (uchar *)"messages.fail", ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &(serverStats->ctrMessagesFail)));
+
+    STATSCOUNTER_INIT(serverStats->ctrMessagesRetry, serverStats->mutCtrMessagesRetry);
+    CHKiRet(statsobj.AddCounter(serverStats->defaultstats, (uchar *)"messages.retry", ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &(serverStats->ctrMessagesRetry)));
+
+    STATSCOUNTER_INIT(serverStats->ctrHttpRequestSuccess, serverStats->mutCtrHttpRequestSuccess);
+    CHKiRet(statsobj.AddCounter(serverStats->defaultstats, (uchar *)"request.success", ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &(serverStats->ctrHttpRequestSuccess)));
+
+    STATSCOUNTER_INIT(serverStats->ctrHttpRequestFail, serverStats->mutCtrHttpRequestFail);
+    CHKiRet(statsobj.AddCounter(serverStats->defaultstats, (uchar *)"request.fail", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
+                                &(serverStats->ctrHttpRequestFail)));
+
+    STATSCOUNTER_INIT(serverStats->ctrHttpStatusSuccess, serverStats->mutCtrHttpStatusSuccess);
+    CHKiRet(statsobj.AddCounter(serverStats->defaultstats, (uchar *)"request.status.success", ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &(serverStats->ctrHttpStatusSuccess)));
+
+    STATSCOUNTER_INIT(serverStats->ctrHttpStatusFail, serverStats->mutCtrHttpStatusFail);
+    CHKiRet(statsobj.AddCounter(serverStats->defaultstats, (uchar *)"request.status.fail", ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &(serverStats->ctrHttpStatusFail)));
+
+    STATSCOUNTER_INIT(serverStats->ctrHttpRequestsCount, serverStats->mutCtrHttpRequestsCount);
+    CHKiRet(statsobj.AddCounter(serverStats->defaultstats, (uchar *)"requests.count", ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &(serverStats->ctrHttpRequestsCount)));
+
+    STATSCOUNTER_INIT(serverStats->ctrHttpRequestsStatus0xx, serverStats->mutCtrHttpRequestsStatus0xx);
+    CHKiRet(statsobj.AddCounter(serverStats->defaultstats, (uchar *)"requests.status.0xx", ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &(serverStats->ctrHttpRequestsStatus0xx)));
+
+    STATSCOUNTER_INIT(serverStats->ctrHttpRequestsStatus1xx, serverStats->mutCtrHttpRequestsStatus1xx);
+    CHKiRet(statsobj.AddCounter(serverStats->defaultstats, (uchar *)"requests.status.1xx", ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &(serverStats->ctrHttpRequestsStatus1xx)));
+
+    STATSCOUNTER_INIT(serverStats->ctrHttpRequestsStatus2xx, serverStats->mutCtrHttpRequestsStatus2xx);
+    CHKiRet(statsobj.AddCounter(serverStats->defaultstats, (uchar *)"requests.status.2xx", ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &(serverStats->ctrHttpRequestsStatus2xx)));
+
+    STATSCOUNTER_INIT(serverStats->ctrHttpRequestsStatus3xx, serverStats->mutCtrHttpRequestsStatus3xx);
+    CHKiRet(statsobj.AddCounter(serverStats->defaultstats, (uchar *)"requests.status.3xx", ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &(serverStats->ctrHttpRequestsStatus3xx)));
+
+    STATSCOUNTER_INIT(serverStats->ctrHttpRequestsStatus4xx, serverStats->mutCtrHttpRequestsStatus4xx);
+    CHKiRet(statsobj.AddCounter(serverStats->defaultstats, (uchar *)"requests.status.4xx", ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &(serverStats->ctrHttpRequestsStatus4xx)));
+
+    STATSCOUNTER_INIT(serverStats->ctrHttpRequestsStatus5xx, serverStats->mutCtrHttpRequestsStatus5xx);
+    CHKiRet(statsobj.AddCounter(serverStats->defaultstats, (uchar *)"requests.status.5xx", ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &(serverStats->ctrHttpRequestsStatus5xx)));
+
+    STATSCOUNTER_INIT(serverStats->httpRequestsBytes, serverStats->mutHttpRequestsBytes);
+    CHKiRet(statsobj.AddCounter(serverStats->defaultstats, (uchar *)"requests.bytes", ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &(serverStats->httpRequestsBytes)));
+
+    STATSCOUNTER_INIT(serverStats->httpRequestsTimeMs, serverStats->mutHttpRequestsTimeMs);
+    CHKiRet(statsobj.AddCounter(serverStats->defaultstats, (uchar *)"requests.time_ms", ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &(serverStats->httpRequestsTimeMs)));
+
+    CHKiRet(statsobj.ConstructFinalize(serverStats->defaultstats));
 
 finalize_it:
     RETiRet;
@@ -2137,6 +2255,8 @@ BEGINnewActInst
             }
         } else if (!strcmp(actpblk.descr[i].name, "profile")) {
             profileName = es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "statsbysenders")) {
+            pData->statsBySenders = pvals[i].val.d.n;
         } else {
             LogError(0, RS_RET_INTERNAL_ERROR,
                      "omhttp: program error, "
@@ -2207,6 +2327,12 @@ BEGINnewActInst
         ++iNumTpls;
     }
 
+    if (!pData->statsName) {
+        uchar pszAName[64];
+        snprintf((char *)pszAName, sizeof(pszAName), "omhttp-%d", omhttpInstancesCnt);
+        pData->statsName = ustrdup(pszAName);
+    }
+
     if (servers != NULL) {
         pData->numServers = servers->nmemb;
         pData->serverBaseUrls = malloc(servers->nmemb * sizeof(uchar *));
@@ -2215,6 +2341,20 @@ BEGINnewActInst
                      "omhttp: unable to allocate buffer "
                      "for http server configuration.");
             ABORT_FINALIZE(RS_RET_ERR);
+        }
+
+        /* Set up the stats object array */
+        const int numStats = pData->statsBySenders ? servers->nmemb : 1;
+        pData->listObjStats = malloc(numStats * sizeof(targetStats_t));
+        if (pData->listObjStats == NULL) {
+            LogError(0, RS_RET_ERR,
+                     "omhttp: unable to allocate buffer "
+                     "for http server stats object.");
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+
+        if (!pData->statsBySenders) {
+            CHKiRet(setStatsObject(pData, NULL, 0));
         }
 
         for (i = 0; i < servers->nmemb; ++i) {
@@ -2230,6 +2370,10 @@ BEGINnewActInst
             if (serverParam[serverParamLastChar] == '/') {
                 serverParam[serverParamLastChar] = '\0';
             }
+            if (pData->statsBySenders) {
+                CHKiRet(setStatsObject(pData, serverParam, i));
+            }
+
             CHKiRet(computeBaseUrl(serverParam, pData->defaultPort, pData->useHttps, pData->serverBaseUrls + i));
             free(serverParam);
             serverParam = NULL;
@@ -2253,53 +2397,6 @@ BEGINnewActInst
         ratelimitSetNoTimeCache(pData->ratelimiter);
     }
 
-    if (!pData->statsName) {
-        uchar pszAName[64];
-        snprintf((char *)pszAName, sizeof(pszAName), "omhttp-%d", omhttpInstancesCnt);
-        pData->statsName = ustrdup(pszAName);
-    }
-    // instantiate the stats object and add the counters
-    CHKiRet(statsobj.Construct(&pData->stats));
-    CHKiRet(statsobj.SetName(pData->stats, (uchar *)pData->statsName));
-    CHKiRet(statsobj.SetOrigin(pData->stats, (uchar *)"omhttp"));
-
-    STATSCOUNTER_INIT(pData->ctrHttpRequestsCount, pData->mutCtrHttpRequestsCount);
-    CHKiRet(statsobj.AddCounter(pData->stats, (uchar *)"requests.count", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &pData->ctrHttpRequestsCount));
-
-    STATSCOUNTER_INIT(pData->ctrHttpRequestsStatus0xx, pData->mutCtrHttpRequestsStatus0xx);
-    CHKiRet(statsobj.AddCounter(pData->stats, (uchar *)"requests.status.0xx", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &pData->ctrHttpRequestsStatus0xx));
-
-    STATSCOUNTER_INIT(pData->ctrHttpRequestsStatus1xx, pData->mutCtrHttpRequestsStatus1xx);
-    CHKiRet(statsobj.AddCounter(pData->stats, (uchar *)"requests.status.1xx", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &pData->ctrHttpRequestsStatus1xx));
-
-    STATSCOUNTER_INIT(pData->ctrHttpRequestsStatus2xx, pData->mutCtrHttpRequestsStatus2xx);
-    CHKiRet(statsobj.AddCounter(pData->stats, (uchar *)"requests.status.2xx", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &pData->ctrHttpRequestsStatus2xx));
-
-    STATSCOUNTER_INIT(pData->ctrHttpRequestsStatus3xx, pData->mutCtrHttpRequestsStatus3xx);
-    CHKiRet(statsobj.AddCounter(pData->stats, (uchar *)"requests.status.3xx", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &pData->ctrHttpRequestsStatus3xx));
-
-    STATSCOUNTER_INIT(pData->ctrHttpRequestsStatus4xx, pData->mutCtrHttpRequestsStatus4xx);
-    CHKiRet(statsobj.AddCounter(pData->stats, (uchar *)"requests.status.4xx", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &pData->ctrHttpRequestsStatus4xx));
-
-    STATSCOUNTER_INIT(pData->ctrHttpRequestsStatus5xx, pData->mutCtrHttpRequestsStatus5xx);
-    CHKiRet(statsobj.AddCounter(pData->stats, (uchar *)"requests.status.5xx", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &pData->ctrHttpRequestsStatus5xx));
-
-    STATSCOUNTER_INIT(pData->httpRequestsBytes, pData->mutHttpRequestsBytes);
-    CHKiRet(statsobj.AddCounter(pData->stats, (uchar *)"requests.bytes", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &pData->httpRequestsBytes));
-
-    STATSCOUNTER_INIT(pData->httpRequestsTimeMs, pData->mutHttpRequestsTimeMs);
-    CHKiRet(statsobj.AddCounter(pData->stats, (uchar *)"requests.time_ms", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &pData->httpRequestsTimeMs));
-
-    CHKiRet(statsobj.ConstructFinalize(pData->stats));
 
     /* node created, let's add to list of instance configs for the module */
     if (loadModConf->tail == NULL) {
@@ -2393,17 +2490,14 @@ BEGINmodExit
     objRelease(prop, CORE_COMPONENT);
     objRelease(ruleset, CORE_COMPONENT);
     objRelease(statsobj, CORE_COMPONENT);
-    statsobj.Destruct(&httpStats);
 ENDmodExit
 
 NO_LEGACY_CONF_parseSelectorAct
 
     BEGINqueryEtryPt CODESTARTqueryEtryPt;
-CODEqueryEtryPt_STD_OMODTX_QUERIES;
-CODEqueryEtryPt_STD_OMOD8_QUERIES;
-CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
-CODEqueryEtryPt_doHUP CODEqueryEtryPt_doHUPWrkr /* Load the worker HUP handling code */
-    CODEqueryEtryPt_STD_CONF2_QUERIES;
+CODEqueryEtryPt_STD_OMODTX_QUERIES CODEqueryEtryPt_STD_OMOD8_QUERIES CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
+    CODEqueryEtryPt_doHUP CODEqueryEtryPt_doHUPWrkr /* Load the worker HUP handling code */
+    CODEqueryEtryPt_STD_CONF2_QUERIES
 ENDqueryEtryPt
 
 
@@ -2413,48 +2507,6 @@ BEGINmodInit()
     CODEmodInit_QueryRegCFSLineHdlr CHKiRet(objUse(prop, CORE_COMPONENT));
     CHKiRet(objUse(ruleset, CORE_COMPONENT));
     CHKiRet(objUse(statsobj, CORE_COMPONENT));
-
-    CHKiRet(statsobj.Construct(&httpStats));
-    CHKiRet(statsobj.SetName(httpStats, (uchar *)"omhttp"));
-    CHKiRet(statsobj.SetOrigin(httpStats, (uchar *)"omhttp"));
-
-    STATSCOUNTER_INIT(ctrMessagesSubmitted, mutCtrMessagesSubmitted);
-    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.submitted", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &ctrMessagesSubmitted));
-
-    STATSCOUNTER_INIT(ctrMessagesSuccess, mutCtrMessagesSuccess);
-    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.success", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &ctrMessagesSuccess));
-
-    STATSCOUNTER_INIT(ctrMessagesFail, mutCtrMessagesFail);
-    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.fail", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &ctrMessagesFail));
-
-    STATSCOUNTER_INIT(ctrMessagesRetry, mutCtrMessagesRetry);
-    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"messages.retry", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &ctrMessagesRetry));
-
-    STATSCOUNTER_INIT(ctrHttpRequestCount, mutCtrHttpRequestCount);
-    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.count", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &ctrHttpRequestCount));
-
-    STATSCOUNTER_INIT(ctrHttpRequestSuccess, mutCtrHttpRequestSuccess);
-    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.success", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &ctrHttpRequestSuccess));
-
-    STATSCOUNTER_INIT(ctrHttpRequestFail, mutCtrHttpRequestFail);
-    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.fail", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &ctrHttpRequestFail));
-
-    STATSCOUNTER_INIT(ctrHttpStatusSuccess, mutCtrHttpStatusSuccess);
-    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.status.success", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &ctrHttpStatusSuccess));
-
-    STATSCOUNTER_INIT(ctrHttpStatusFail, mutCtrHttpStatusFail);
-    CHKiRet(statsobj.AddCounter(httpStats, (uchar *)"request.status.fail", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &ctrHttpStatusFail));
-
-    CHKiRet(statsobj.ConstructFinalize(httpStats));
 
     if (curl_global_init(CURL_GLOBAL_ALL) != 0) {
         LogError(0, RS_RET_OBJ_CREATION_FAILED, "CURL fail. -http disabled");
