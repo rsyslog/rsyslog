@@ -145,7 +145,7 @@ The following parameters can be set:
 
 - **defaultNetstreamDriver**
 
-  Set it to "ossl" or "gtls" to enable TLS.
+  Set it to "ossl", "gtls" or "mbedtls" to enable TLS.
   This `guide <http://www.rsyslog.com/doc/rsyslog_secure_tls.html>`_
   shows how to use TLS.
 

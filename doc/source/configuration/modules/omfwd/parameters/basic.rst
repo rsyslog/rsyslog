@@ -114,7 +114,7 @@ Type of protocol to use for forwarding. Note that ``tcp`` includes both legacy
 plain TCP syslog and 
 `RFC5425 <https://datatracker.ietf.org/doc/html/rfc5425>`_-based TLS-encrypted 
 syslog. The selection depends on the StreamDriver parameter. If StreamDriver is 
-set to "ossl" or "gtls", it will use TLS-encrypted syslog.
+set to "ossl", "gtls" or "mbedtls", it will use TLS-encrypted syslog.
 
 Template
 ========
