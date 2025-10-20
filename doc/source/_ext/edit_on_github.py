@@ -40,4 +40,12 @@ def setup(app):
     app.add_config_value('edit_on_github_project', '', True)
     app.add_config_value('edit_on_github_branch', 'master', True)
     app.connect('html-page-context', html_page_context)
+    # Declare the extension as safe for Sphinx parallel reading/writing.
+    # This extension does not maintain global mutable state and only
+    # augments per-page rendering context, so it is safe.
+    return {
+        'version': '1.0',
+        'parallel_read_safe': True,
+        'parallel_write_safe': True,
+    }
 
