@@ -34,6 +34,7 @@ extensions = ['edit_on_github',
               'sphinx.ext.todo',
               'rsyslog_lexer',
               'sphinxcontrib.mermaid',
+              'sphinx_sitemap',
              ]
 edit_on_github_project = 'https://github.com/rsyslog/rsyslog'
 edit_on_github_branch = 'main'
@@ -235,6 +236,11 @@ suppress_warnings = ['epub.unknown_project_files']
 # It is used to indicate the location of document like canonical_url.
 RSYSLOG_BASE_URL = 'https://www.rsyslog.com'
 html_baseurl = f'{RSYSLOG_BASE_URL}/doc/'
+
+# Sitemap configuration to remove language/version from URLs
+sitemap_url_scheme = "{link}"
+sitemap_localtolinks = False
+sitemap_filename = "sitemap.xml"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
