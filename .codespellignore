@@ -1,0 +1,4 @@
+doc/source/_static/vendor/
+doc/.venv-docs/
+*.min.js
+*.esm.min.mjs

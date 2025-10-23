@@ -23,6 +23,8 @@ clean:
 html:
 	@$(call add_parallel_jobs)
 	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@echo "Applying Mermaid offline fix..."
+	@python3 ./tools/fix-mermaid-offline.py "$(BUILDDIR)/html"
 
 singlehtml:  # -t minimal_build triggers stripped-down config in conf.py
 	@$(call add_parallel_jobs)

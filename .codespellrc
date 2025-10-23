@@ -1,0 +1,3 @@
+[codespell]
+skip = doc/source/_static/vendor
+ignore-words-list = a11y,aac,ba,cd,com,et,fo,nd,ot,rd,st,te,ue,Bu,Fo,Nd,Te,Ue
