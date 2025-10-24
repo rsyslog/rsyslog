@@ -11,7 +11,7 @@ define add_parallel_jobs
 	$(eval SPHINXOPTS += $(if $(filter -j%,$(SPHINXOPTS)),,$(filter -j%,$(MAKEFLAGS))))
 endef
 
-.PHONY: help clean html singlehtml json alljson
+.PHONY: help clean html html-with-sitemap singlehtml json alljson
 
 help:
 	@$(call add_parallel_jobs)
@@ -23,6 +23,13 @@ clean:
 html:
 	@$(call add_parallel_jobs)
 	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@echo "Applying Mermaid offline fix..."
+	@python3 ./tools/fix-mermaid-offline.py "$(BUILDDIR)/html"
+
+# Build HTML with sitemap enabled (opt-in)
+html-with-sitemap:
+	@$(call add_parallel_jobs)
+	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" -t with_sitemap $(SPHINXOPTS) $(O)
 	@echo "Applying Mermaid offline fix..."
 	@python3 ./tools/fix-mermaid-offline.py "$(BUILDDIR)/html"
 

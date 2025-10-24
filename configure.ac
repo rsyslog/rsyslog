@@ -3088,11 +3088,19 @@ fi
 
 
 dnl ---- gather doc files for EXTRA_DIST ----
-# .rst files
+# .rst files and selected assets from doc/source
 doc_src_files=`cd "$srcdir" && find doc/source -type f \( -name '*.rst' -o -name '*.conf' -o -name '*.jpg' -o -name '*.png' \) -print 2>/dev/null | LC_ALL=C sort`
+
+# Additional doc assets that must be shipped in dist tarball
+# - Vendored static JS/CSS used by the docs
+doc_vendor_files=`cd "$srcdir" && find doc/source/_static/vendor -type f -print 2>/dev/null | LC_ALL=C sort`
+# - Documentation build helper scripts and tools
+doc_tools_files=`cd "$srcdir" && find doc/tools -type f -print 2>/dev/null | LC_ALL=C sort`
 
 # assemble; keep paths relative to top (we cd into $srcdir above)
 DOC_FILES="$doc_src_files
+$doc_vendor_files
+$doc_tools_files
 doc/source/conf.py
 doc/source/conf_helpers.py
 doc/source/_ext/edit_on_github.py
