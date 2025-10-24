@@ -92,13 +92,32 @@ Install the base packages for your distro. Only major distros are listed here:
 
 These provide Python 3, `venv`/`pip`, and `git`. If `python3 -m venv` is unavailable on your platform, install `virtualenv` via `pip` and the scripts below will fall back to it automatically.
 
+### Quickstart using make (recommended)
+
+From the repository root:
+
+- Build HTML (no sitemap):
+  - `make -C doc html`
+- Build HTML with sitemap (opt-in):
+  - `make -C doc html-with-sitemap`
+- Build single-page HTML (minimal layout):
+  - `make -C doc singlehtml`
+- List available builders/targets:
+  - `make -C doc help`
+
+Tips:
+- Pass extra Sphinx options via `SPHINXOPTS`, e.g. warnings-as-errors:
+  - `make -C doc html SPHINXOPTS="-W -q --keep-going"`
+- Use parallel jobs: `make -C doc -j4 html` (the Makefile forwards `-j` to Sphinx).
+
 ### Quickstart using helper scripts
 
-We provide simple scripts that create a virtual environment (if missing), install `doc/requirements.txt`, and build the docs.
+We provide simple scripts that create a virtual environment (if missing), install `doc/requirements.txt`, and build the docs. Prefer the Makefile targets above; use these scripts if `make` is unavailable.
 
 -   Linux:
     -   `./doc/tools/build-doc-linux.sh --clean --format html`
     -   Options: `--strict` (treat warnings as errors), `--format html|epub`, `--extra "<opts>"` for extra `sphinx-build` options.
+    -   Optional sitemap: add `--extra "-t with_sitemap"` to enable sitemap generation.
 -   Windows (PowerShell):
     -   `powershell -ExecutionPolicy Bypass -File .\doc\tools\build-doc-windows.ps1 -Clean -Format html`
     -   Options: `-Strict`, `-Format html|epub`, `-Extra "<opts>"`.
@@ -163,14 +182,18 @@ If you prefer the manual route instead of the helper script above:
 
 ### Generate documentation
 
-1.  Generate HTML format:
-    1.  `sphinx-build -b html source build`
+1.  Generate HTML format (Makefile preferred):
+    -   `make -C doc html` (no sitemap)
+    -   `make -C doc html-with-sitemap` (includes sitemap)
+    -   Fallback (no Makefile available): `sphinx-build -b html source build`
+        -   With sitemap: add `-t with_sitemap`
 2.  Generate EPUB format:
-    1.  `sphinx-build -b epub source build`
+    -   `make -C doc epub`
+    -   Fallback: `sphinx-build -b epub source build`
 3.  Review generated contents:
-    -   Open `rsyslog/doc/build/index.html` in a browser.
-    -   Use Calibre, Microsoft Edge, Okular, Google Play Books, or any other
-        EPUB compatible reader to view the `rsyslog/doc/build/rsyslog.epub` file.
+    -   Makefile builds: open `rsyslog/doc/build/html/index.html`.
+    -   Direct Sphinx builds: open `rsyslog/doc/build/index.html`.
+    -   Use any EPUB reader to view `rsyslog/doc/build/rsyslog.epub`.
 
 ---
 

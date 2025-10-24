@@ -34,7 +34,6 @@ extensions = ['edit_on_github',
               'sphinx.ext.todo',
               'rsyslog_lexer',
               'sphinxcontrib.mermaid',
-              'sphinx_sitemap',
              ]
 edit_on_github_project = 'https://github.com/rsyslog/rsyslog'
 edit_on_github_branch = 'main'
@@ -367,10 +366,20 @@ suppress_warnings = ['epub.unknown_project_files']
 RSYSLOG_BASE_URL = 'https://www.rsyslog.com'
 html_baseurl = f'{RSYSLOG_BASE_URL}/doc/'
 
-# Sitemap configuration to remove language/version from URLs
-sitemap_url_scheme = "{link}"
-sitemap_localtolinks = False
-sitemap_filename = "sitemap.xml"
+# Enable sitemap generation only when explicitly requested
+if tags.has('with_sitemap'):
+    try:
+        import sphinx_sitemap  # type: ignore
+    except ImportError:
+        # Optional extension - sitemap generation skipped if not installed
+        pass
+    else:
+        extensions.append('sphinx_sitemap')
+
+        # Sitemap configuration to remove language/version from URLs
+        sitemap_url_scheme = "{link}"
+        sitemap_localtolinks = False
+        sitemap_filename = "sitemap.xml"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
