@@ -156,9 +156,19 @@ This lets
 .B rsyslogd
 perform close all open files.
 .TP
-.B TERM ", " INT ", " QUIT
+.B TERM ", " QUIT
 .B Rsyslogd
 will die.
+.TP
+.B INT
+.B Rsyslogd
+will die. This signal is only processed if
+.B rsyslogd
+was started with the
+.B "\-d"
+debug option, if the
+.B shutdown.enable.ctl-c
+global config parameter is set, or if running as PID 1 (e.g. in a container).
 .TP
 .B USR1
 Switch debugging on/off.  This option can only be used if
