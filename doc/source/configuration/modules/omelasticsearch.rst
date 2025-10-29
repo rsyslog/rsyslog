@@ -145,6 +145,10 @@ Action Parameters
      - .. include:: ../../reference/parameters/omelasticsearch-pwd.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-omelasticsearch-apikey`
+     - .. include:: ../../reference/parameters/omelasticsearch-apikey.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-omelasticsearch-errorfile`
      - .. include:: ../../reference/parameters/omelasticsearch-errorfile.rst
         :start-after: .. summary-start
@@ -228,6 +232,7 @@ Action Parameters
    ../../reference/parameters/omelasticsearch-dynparent
    ../../reference/parameters/omelasticsearch-uid
    ../../reference/parameters/omelasticsearch-pwd
+   ../../reference/parameters/omelasticsearch-apikey
    ../../reference/parameters/omelasticsearch-errorfile
    ../../reference/parameters/omelasticsearch-tls-cacert
    ../../reference/parameters/omelasticsearch-tls-mycert

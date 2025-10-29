@@ -26,6 +26,7 @@ This parameter applies to :doc:`../../configuration/modules/omelasticsearch`.
 Description
 -----------
 Supplies the password when Elasticsearch requires basic authentication.
+This parameter cannot be combined with :ref:`param-omelasticsearch-apikey`.
 
 Action usage
 ------------

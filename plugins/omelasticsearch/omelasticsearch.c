@@ -131,6 +131,8 @@ typedef struct instanceConf_s {
     uchar *uid;
     uchar *pwd;
     uchar *authBuf;
+    uchar *apiKey;
+    uchar *apiKeyHeader;
     uchar *searchIndex;
     uchar *searchType;
     uchar *pipelineName;
@@ -208,6 +210,7 @@ static struct cnfparamdescr actpdescr[] = {{"server", eCmdHdlrArray, 0},
                                            {"indextimeout", eCmdHdlrInt, 0},
                                            {"uid", eCmdHdlrGetWord, 0},
                                            {"pwd", eCmdHdlrGetWord, 0},
+                                           {"apikey", eCmdHdlrGetWord, 0},
                                            {"searchindex", eCmdHdlrGetWord, 0},
                                            {"searchtype", eCmdHdlrGetWord, 0},
                                            {"pipelinename", eCmdHdlrGetWord, 0},
@@ -328,6 +331,8 @@ BEGINfreeInstance
     free(pData->uid);
     free(pData->pwd);
     free(pData->authBuf);
+    free(pData->apiKey);
+    free(pData->apiKeyHeader);
     free(pData->searchIndex);
     free(pData->searchType);
     free(pData->pipelineName);
@@ -379,6 +384,7 @@ BEGINdbgPrintInstInfo
     dbgprintf("]\n");
     dbgprintf("\tdefaultPort=%d\n", pData->defaultPort);
     dbgprintf("\tuid='%s'\n", pData->uid == NULL ? (uchar *)"(not configured)" : pData->uid);
+    dbgprintf("\tapikey=%s\n", pData->apiKey == NULL ? "(not configured)" : "(redacted)");
     dbgprintf("\tpwd=(%sconfigured)\n", pData->pwd == NULL ? "not " : "");
     dbgprintf("\tsearch index='%s'\n", pData->searchIndex == NULL ? (uchar *)"(not configured)" : pData->searchIndex);
     dbgprintf("\tsearch type='%s'\n", pData->searchType == NULL ? (uchar *)"(not configured)" : pData->searchType);
@@ -738,6 +744,7 @@ finalize_it:
  */
 static rsRetVal ATTR_NONNULL() detectTargetPlatformAndVersion(instanceData *const pData) {
     CURL *curl = NULL;
+    struct curl_slist *headers = NULL;
     struct versionDetectBuffer buffer;
     char errbuf[CURL_ERROR_SIZE];
     sbool detected = 0;
@@ -773,6 +780,14 @@ static rsRetVal ATTR_NONNULL() detectTargetPlatformAndVersion(instanceData *cons
             curl_easy_setopt(curl, CURLOPT_USERPWD, pData->authBuf);
             curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
         }
+        if (pData->apiKeyHeader != NULL) {
+            headers = curl_slist_append(NULL, (const char *)pData->apiKeyHeader);
+            if (headers == NULL) {
+                LogError(0, RS_RET_OUT_OF_MEMORY, "omelasticsearch: failed to allocate curl header for api key");
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            }
+            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        }
         if (pData->caCertFile) curl_easy_setopt(curl, CURLOPT_CAINFO, pData->caCertFile);
         if (pData->myCertFile) curl_easy_setopt(curl, CURLOPT_SSLCERT, pData->myCertFile);
         if (pData->myPrivKeyFile) curl_easy_setopt(curl, CURLOPT_SSLKEY, pData->myPrivKeyFile);
@@ -782,6 +797,10 @@ static rsRetVal ATTR_NONNULL() detectTargetPlatformAndVersion(instanceData *cons
         curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
         curl_easy_cleanup(curl);
         curl = NULL;
+        if (headers != NULL) {
+            curl_slist_free_all(headers);
+            headers = NULL;
+        }
 
         if (code == CURLE_OK && status >= 200 && status < 300 && buffer.data != NULL) {
             rsRetVal detectRet = updateDetectedPlatform(pData, buffer.data, serverUrl);
@@ -814,6 +833,7 @@ static rsRetVal ATTR_NONNULL() detectTargetPlatformAndVersion(instanceData *cons
 
 finalize_it:
     if (curl != NULL) curl_easy_cleanup(curl);
+    if (headers != NULL) curl_slist_free_all(headers);
     RETiRet;
 }
 
@@ -2091,6 +2111,18 @@ static void ATTR_NONNULL(1) curlPostSetup(wrkrInstanceData_t *const pWrkrData) {
 static rsRetVal ATTR_NONNULL() curlSetup(wrkrInstanceData_t *const pWrkrData) {
     DEFiRet;
     pWrkrData->curlHeader = curl_slist_append(NULL, CONTENT_JSON);
+    if (pWrkrData->curlHeader == NULL) {
+        LogError(0, RS_RET_OUT_OF_MEMORY, "omelasticsearch: failed to allocate curl header for content-type");
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
+    if (pWrkrData->pData->apiKeyHeader != NULL) {
+        HEADER *const tmp = curl_slist_append(pWrkrData->curlHeader, (const char *)pWrkrData->pData->apiKeyHeader);
+        if (tmp == NULL) {
+            LogError(0, RS_RET_OUT_OF_MEMORY, "omelasticsearch: failed to allocate curl header for api key");
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+        pWrkrData->curlHeader = tmp;
+    }
     CHKmalloc(pWrkrData->curlPostHandle = curl_easy_init());
     ;
     curlPostSetup(pWrkrData);
@@ -2114,6 +2146,8 @@ static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
     pData->uid = NULL;
     pData->pwd = NULL;
     pData->authBuf = NULL;
+    pData->apiKey = NULL;
+    pData->apiKeyHeader = NULL;
     pData->searchIndex = NULL;
     pData->searchType = OMES_SEARCHTYPE_DEFAULT;
     pData->pipelineName = NULL;
@@ -2189,6 +2223,8 @@ BEGINnewActInst
             pData->uid = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(actpblk.descr[i].name, "pwd")) {
             pData->pwd = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "apikey")) {
+            pData->apiKey = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(actpblk.descr[i].name, "searchindex")) {
             pData->searchIndex = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(actpblk.descr[i].name, "searchtype")) {
@@ -2289,6 +2325,33 @@ BEGINnewActInst
         }
     }
 
+    if (pData->apiKey != NULL && (pData->uid != NULL || pData->pwd != NULL)) {
+        LogError(0, RS_RET_CONFIG_ERROR,
+                 "omelasticsearch: apikey cannot be combined with uid/pwd "
+                 "- action definition invalid");
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+
+    if (pData->apiKey != NULL) {
+        es_str_t *header = es_newStr(64);
+        if (header == NULL) {
+            LogError(0, RS_RET_OUT_OF_MEMORY, "omelasticsearch: failed to allocate buffer for api key header");
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+
+        if (es_addBuf(&header, "Authorization: ApiKey ", sizeof("Authorization: ApiKey ") - 1) == 0 &&
+            es_addBuf(&header, (char *)pData->apiKey, strlen((char *)pData->apiKey)) == 0) {
+            pData->apiKeyHeader = (uchar *)es_str2cstr(header, NULL);
+        }
+
+        es_deleteStr(header);
+
+        if (pData->apiKeyHeader == NULL) {
+            LogError(0, RS_RET_OUT_OF_MEMORY, "omelasticsearch: failed to build api key header");
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+    }
+
     if (pData->pwd != NULL && pData->uid == NULL) {
         LogError(0, RS_RET_UID_MISSING,
                  "omelasticsearch: password is provided, but no uid "
@@ -2326,7 +2389,8 @@ BEGINnewActInst
         ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
     }
 
-    if (pData->uid != NULL) CHKiRet(computeAuthHeader((char *)pData->uid, (char *)pData->pwd, &pData->authBuf));
+    if (pData->uid != NULL && pData->apiKey == NULL)
+        CHKiRet(computeAuthHeader((char *)pData->uid, (char *)pData->pwd, &pData->authBuf));
 
     iNumTpls = 1;
     if (pData->dynSrchIdx) ++iNumTpls;
