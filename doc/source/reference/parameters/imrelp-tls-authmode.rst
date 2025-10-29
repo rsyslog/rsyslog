@@ -27,7 +27,7 @@ Description
 -----------
 Sets the mode used for mutual authentication.
 
-Supported values are either "*fingerprint*\ " or "*name"*.
+Supported values are either "*fingerprint*" or "*name*".
 
 Fingerprint mode basically is what SSH does. It does not require a full PKI to
 be present, instead self-signed certs can be used on all peers. Even if a CA
