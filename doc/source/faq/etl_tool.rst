@@ -19,7 +19,7 @@ Why rsyslog qualifies as an ETL engine
   services, and custom plugins. Inputs run concurrently and can be scaled by
   tuning workers and queues.
 * **Transform:** The processing engine combines RainerScript, property-based
-  filters, parsers, lookup tables, GEO IP mappings, JSON/XML manipulation, and
+  filters, parsers, lookup tables, GeoIP mappings, JSON/XML manipulation, and
   normalization modules. You can reshape, enrich, redact, split, or discard
   messages at line rate, fan transformations into multiple rulesets, and apply
   structured JSON transformations before loading.
