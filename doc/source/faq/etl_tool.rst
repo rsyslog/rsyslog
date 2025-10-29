@@ -69,7 +69,7 @@ Getting started
 1. Review the :doc:`Log Pipeline Overview <../concepts/log_pipeline/index>` to
    understand the staging model.
 2. Prototype your transformations with RainerScript and helper tools like
-   ``mmnormalize`` or ``mmdblookup``. The rsyslog AI agent can help you scaffold
+   ``mmnormalize`` or ``mmdblookup``. The rsyslog AI assistant can help you scaffold
    rule sets, explain module options, and accelerate experimentation.
 3. Combine actions, queues, and output modules to deliver the transformed events
    to your analytics or storage platform (including parallel Splunk and
