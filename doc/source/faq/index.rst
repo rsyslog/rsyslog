@@ -11,3 +11,4 @@ FAQ
    common-config-mistakes
    imtcp-tls-gibberish
    etl_tool
+   vespa-ai-integration
