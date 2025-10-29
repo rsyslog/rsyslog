@@ -227,8 +227,8 @@ actual deployments. For details, see parameter descriptions.
    module(load="imrelp" tls.tlslib="openssl")
    input(type="imrelp" port="2514" maxDataSize="10k"
                 tls="on"
-		tls.cacert="/tls-certs/ca.pem"
-		tls.mycert="/tls-certs/cert.pem"
+                tls.cacert="/tls-certs/ca.pem"
+                tls.mycert="/tls-certs/cert.pem"
                 tls.myprivkey="/tls-certs/key.pem"
                 tls.authmode="certvalid"
                 tls.permittedpeer="rsyslog")

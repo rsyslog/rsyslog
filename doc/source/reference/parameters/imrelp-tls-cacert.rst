@@ -26,7 +26,7 @@ This parameter applies to :doc:`../../configuration/modules/imrelp`.
 Description
 -----------
 The CA certificate that is being used to verify the client certificates. Has to
-be configured if TLS.AuthMode is set to "*fingerprint*\ " or "*name"*.
+be configured if TLS.AuthMode is set to "*fingerprint*" or "*name*".
 
 Input usage
 -----------
