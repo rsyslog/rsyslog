@@ -1,12 +1,12 @@
 .. _param-imrelp-keepalive-interval:
 .. _imrelp.parameter.input.keepalive-interval:
 
-KeepAlive.Interval
+keepAlive.interval
 ==================
 
 .. index::
-   single: imrelp; KeepAlive.Interval
-   single: KeepAlive.Interval
+   single: imrelp; keepAlive.interval
+   single: keepAlive.interval
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Determines the delay between successive keep-alive probes when enabled.
 
 This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
-:Name: KeepAlive.Interval
+:Name: keepAlive.interval
 :Scope: input
 :Type: integer
 :Default: input=0

@@ -1,12 +1,12 @@
 .. _param-imrelp-maxdatasize:
 .. _imrelp.parameter.input.maxdatasize:
 
-MaxDataSize
+maxDataSize
 ===========
 
 .. index::
-   single: imrelp; MaxDataSize
-   single: MaxDataSize
+   single: imrelp; maxDataSize
+   single: maxDataSize
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Sets the maximum message size the RELP listener accepts before applying oversize
 
 This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
-:Name: MaxDataSize
+:Name: maxDataSize
 :Scope: input
 :Type: size_nbr
 :Default: input=:doc:`global(maxMessageSize) <../../rainerscript/global>`

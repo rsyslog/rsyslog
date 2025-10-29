@@ -1,12 +1,12 @@
 .. _param-imrelp-tls-cacert:
 .. _imrelp.parameter.input.tls-cacert:
 
-TLS.CaCert
+tls.caCert
 ==========
 
 .. index::
-   single: imrelp; TLS.CaCert
-   single: TLS.CaCert
+   single: imrelp; tls.caCert
+   single: tls.caCert
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Specifies the CA certificate file used to validate client certificates.
 
 This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
-:Name: TLS.CaCert
+:Name: tls.caCert
 :Scope: input
 :Type: string
 :Default: input=none
@@ -26,7 +26,7 @@ This parameter applies to :doc:`../../configuration/modules/imrelp`.
 Description
 -----------
 The CA certificate that is being used to verify the client certificates. Has to
-be configured if TLS.AuthMode is set to "*fingerprint*" or "*name*".
+be configured if tls.authMode is set to "*fingerprint*" or "*name*".
 
 Input usage
 -----------

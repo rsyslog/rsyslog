@@ -1,12 +1,12 @@
 .. _param-imrelp-tls-authmode:
 .. _imrelp.parameter.input.tls-authmode:
 
-TLS.AuthMode
+tls.authMode
 ============
 
 .. index::
-   single: imrelp; TLS.AuthMode
-   single: TLS.AuthMode
+   single: imrelp; tls.authMode
+   single: tls.authMode
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Selects the mutual authentication strategy for TLS-secured RELP sessions.
 
 This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
-:Name: TLS.AuthMode
+:Name: tls.authMode
 :Scope: input
 :Type: string
 :Default: input=none

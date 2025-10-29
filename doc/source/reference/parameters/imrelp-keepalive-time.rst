@@ -1,12 +1,12 @@
 .. _param-imrelp-keepalive-time:
 .. _imrelp.parameter.input.keepalive-time:
 
-KeepAlive.Time
+keepAlive.time
 ==============
 
 .. index::
-   single: imrelp; KeepAlive.Time
-   single: KeepAlive.Time
+   single: imrelp; keepAlive.time
+   single: keepAlive.time
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Controls how long a connection stays idle before the first keep-alive probe is s
 
 This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
-:Name: KeepAlive.Time
+:Name: keepAlive.time
 :Scope: input
 :Type: integer
 :Default: input=0

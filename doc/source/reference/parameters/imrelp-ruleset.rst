@@ -1,12 +1,12 @@
 .. _param-imrelp-ruleset:
 .. _imrelp.parameter.module.ruleset:
 
-Ruleset
+ruleset
 =======
 
 .. index::
-   single: imrelp; Ruleset
-   single: Ruleset
+   single: imrelp; ruleset
+   single: ruleset
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Assigns a ruleset to all RELP listeners created by the module instance.
 
 This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
-:Name: Ruleset
+:Name: ruleset
 :Scope: module
 :Type: word
 :Default: module=none
@@ -43,7 +43,7 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _imrelp.parameter.legacy.inputrelpserverbindruleset:
 
-- $InputRELPServerBindRuleset — maps to Ruleset (status: legacy)
+- $InputRELPServerBindRuleset — maps to ruleset (status: legacy)
 
 .. index::
    single: imrelp; $InputRELPServerBindRuleset

@@ -1,12 +1,12 @@
 .. _param-imrelp-tls-prioritystring:
 .. _imrelp.parameter.input.tls-prioritystring:
 
-TLS.PriorityString
+tls.priorityString
 ==================
 
 .. index::
-   single: imrelp; TLS.PriorityString
-   single: TLS.PriorityString
+   single: imrelp; tls.priorityString
+   single: tls.priorityString
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Passes a custom GnuTLS priority string to fine-tune cryptographic parameters.
 
 This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
-:Name: TLS.PriorityString
+:Name: tls.priorityString
 :Scope: input
 :Type: string
 :Default: input=none
@@ -27,8 +27,8 @@ Description
 -----------
 This parameter allows passing the so-called "priority string" to GnuTLS. This
 string gives complete control over all crypto parameters, including compression
-settings. For this reason, when the prioritystring is specified, the
-"tls.compression" parameter has no effect and is ignored.
+settings. For this reason, when ``tls.priorityString`` is specified, the
+``tls.compression`` parameter has no effect and is ignored.
 
 Full information about how to construct a priority string can be found in the
 GnuTLS manual. At the time of writing, this information was contained in `section

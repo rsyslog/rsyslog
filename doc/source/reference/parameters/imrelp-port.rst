@@ -1,12 +1,12 @@
 .. _param-imrelp-port:
 .. _imrelp.parameter.input.port:
 
-Port
+port
 ====
 
 .. index::
-   single: imrelp; Port
-   single: Port
+   single: imrelp; port
+   single: port
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Starts a RELP server instance that listens on the specified TCP port.
 
 This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
-:Name: Port
+:Name: port
 :Scope: input
 :Type: string
 :Default: input=none
@@ -42,7 +42,7 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _imrelp.parameter.legacy.inputrelpserverrun:
 
-- $InputRELPServerRun — maps to Port (status: legacy)
+- $InputRELPServerRun — maps to port (status: legacy)
 
 .. index::
    single: imrelp; $InputRELPServerRun

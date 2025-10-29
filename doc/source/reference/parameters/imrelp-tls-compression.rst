@@ -1,12 +1,12 @@
 .. _param-imrelp-tls-compression:
 .. _imrelp.parameter.input.tls-compression:
 
-TLS.Compression
+tls.compression
 ===============
 
 .. index::
-   single: imrelp; TLS.Compression
-   single: TLS.Compression
+   single: imrelp; tls.compression
+   single: tls.compression
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Controls whether TLS sessions compress payload data before transmission.
 
 This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
-:Name: TLS.Compression
+:Name: tls.compression
 :Scope: input
 :Type: boolean
 :Default: input=off

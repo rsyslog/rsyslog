@@ -1,12 +1,12 @@
 .. _param-imrelp-keepalive-probes:
 .. _imrelp.parameter.input.keepalive-probes:
 
-KeepAlive.Probes
+keepAlive.probes
 ================
 
 .. index::
-   single: imrelp; KeepAlive.Probes
-   single: KeepAlive.Probes
+   single: imrelp; keepAlive.probes
+   single: keepAlive.probes
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Defines how many keep-alive retries occur before the connection is declared dead
 
 This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
-:Name: KeepAlive.Probes
+:Name: keepAlive.probes
 :Scope: input
 :Type: integer
 :Default: input=0

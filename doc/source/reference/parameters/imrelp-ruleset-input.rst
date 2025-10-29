@@ -1,12 +1,12 @@
 .. _param-imrelp-ruleset-input:
 .. _imrelp.parameter.input.ruleset:
 
-Ruleset
+ruleset
 =======
 
 .. index::
-   single: imrelp; Ruleset (input)
-   single: Ruleset (imrelp input)
+   single: imrelp; ruleset (input)
+   single: ruleset (imrelp input)
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Overrides the module-wide ruleset binding for this specific RELP listener.
 
 This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
-:Name: Ruleset
+:Name: ruleset
 :Scope: input
 :Type: string
 :Default: input=none
@@ -26,7 +26,7 @@ This parameter applies to :doc:`../../configuration/modules/imrelp`.
 Description
 -----------
 Binds the specified ruleset to this listener. This overrides the module-level
-Ruleset parameter.
+ruleset parameter.
 
 Input usage
 -----------

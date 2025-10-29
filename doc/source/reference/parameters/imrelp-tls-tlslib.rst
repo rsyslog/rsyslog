@@ -1,12 +1,12 @@
 .. _param-imrelp-tls-tlslib:
 .. _imrelp.parameter.module.tls-tlslib:
 
-tls.tlslib
-===========
+tls.tlsLib
+==========
 
 .. index::
-   single: imrelp; tls.tlslib
-   single: tls.tlslib
+   single: imrelp; tls.tlsLib
+   single: tls.tlsLib
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Selects the TLS backend library that librelp should use for RELP operations.
 
 This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
-:Name: tls.tlslib
+:Name: tls.tlsLib
 :Scope: module
 :Type: word
 :Default: module=none

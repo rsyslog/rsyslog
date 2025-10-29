@@ -1,12 +1,12 @@
 .. _param-imrelp-name:
 .. _imrelp.parameter.input.name:
 
-Name
+name
 ====
 
 .. index::
-   single: imrelp; Name
-   single: Name
+   single: imrelp; name
+   single: name
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Sets a human-readable name for the RELP listener instance.
 
 This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
-:Name: Name
+:Name: name
 :Scope: input
 :Type: string
 :Default: input=imrelp

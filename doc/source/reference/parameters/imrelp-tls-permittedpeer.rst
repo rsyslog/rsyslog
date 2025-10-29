@@ -1,12 +1,12 @@
 .. _param-imrelp-tls-permittedpeer:
 .. _imrelp.parameter.input.tls-permittedpeer:
 
-TLS.PermittedPeer
+tls.permittedPeer
 =================
 
 .. index::
-   single: imrelp; TLS.PermittedPeer
-   single: TLS.PermittedPeer
+   single: imrelp; tls.permittedPeer
+   single: tls.permittedPeer
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Restricts accepted clients to the listed certificate fingerprints or wildcard na
 
 This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
-:Name: TLS.PermittedPeer
+:Name: tls.permittedPeer
 :Scope: input
 :Type: array
 :Default: input=none
@@ -25,9 +25,9 @@ This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
 Description
 -----------
-PermittedPeer places access restrictions on this listener. Only peers which have
-been listed in this parameter may connect. The certificate presented by the
-remote peer is used for it's validation.
+The ``tls.permittedPeer`` setting places access restrictions on this listener.
+Only peers which have been listed in this parameter may connect. The certificate
+presented by the remote peer is used for it's validation.
 
 The *peer* parameter lists permitted certificate fingerprints. Note that it is
 an array parameter, so either a single or multiple fingerprints can be listed.

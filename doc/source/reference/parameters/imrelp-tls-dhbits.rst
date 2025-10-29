@@ -1,12 +1,12 @@
 .. _param-imrelp-tls-dhbits:
 .. _imrelp.parameter.input.tls-dhbits:
 
-TLS.dhbits
+tls.dhBits
 ==========
 
 .. index::
-   single: imrelp; TLS.dhbits
-   single: TLS.dhbits
+   single: imrelp; tls.dhBits
+   single: tls.dhBits
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Specifies the Diffie-Hellman key size, overriding the librelp default when set.
 
 This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
-:Name: TLS.dhbits
+:Name: tls.dhBits
 :Scope: input
 :Type: integer
 :Default: input=0

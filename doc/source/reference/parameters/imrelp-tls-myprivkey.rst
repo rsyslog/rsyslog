@@ -1,22 +1,22 @@
 .. _param-imrelp-tls-myprivkey:
 .. _imrelp.parameter.input.tls-myprivkey:
 
-TLS.MyPrivKey
+tls.myPrivKey
 =============
 
 .. index::
-   single: imrelp; TLS.MyPrivKey
-   single: TLS.MyPrivKey
+   single: imrelp; tls.myPrivKey
+   single: tls.myPrivKey
 
 .. summary-start
 
-References the private key file that matches the configured TLS.MyCert.
+References the private key file that matches the configured tls.myCert.
 
 .. summary-end
 
 This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
-:Name: TLS.MyPrivKey
+:Name: tls.myPrivKey
 :Scope: input
 :Type: string
 :Default: input=none
@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
 Description
 -----------
-The machine private key for the configured TLS.MyCert.
+The machine private key for the configured tls.myCert.
 
 Input usage
 -----------

@@ -1,12 +1,12 @@
 .. _param-imrelp-address:
 .. _imrelp.parameter.input.address:
 
-Address
+address
 =======
 
 .. index::
-   single: imrelp; Address
-   single: Address
+   single: imrelp; address
+   single: address
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Forces the RELP listener to bind to the specified local IP address or hostname.
 
 This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
-:Name: Address
+:Name: address
 :Scope: input
 :Type: string
 :Default: input=none

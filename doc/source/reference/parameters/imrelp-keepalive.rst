@@ -1,12 +1,12 @@
 .. _param-imrelp-keepalive:
 .. _imrelp.parameter.input.keepalive:
 
-KeepAlive
+keepAlive
 =========
 
 .. index::
-   single: imrelp; KeepAlive
-   single: KeepAlive
+   single: imrelp; keepAlive
+   single: keepAlive
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Toggles TCP keep-alive probes for RELP listener sockets.
 
 This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
-:Name: KeepAlive
+:Name: keepAlive
 :Scope: input
 :Type: boolean
 :Default: input=off

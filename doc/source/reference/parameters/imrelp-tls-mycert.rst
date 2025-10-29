@@ -1,12 +1,12 @@
 .. _param-imrelp-tls-mycert:
 .. _imrelp.parameter.input.tls-mycert:
 
-TLS.MyCert
+tls.myCert
 ==========
 
 .. index::
-   single: imrelp; TLS.MyCert
-   single: TLS.MyCert
+   single: imrelp; tls.myCert
+   single: tls.myCert
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Points rsyslog to the server certificate presented during TLS handshakes.
 
 This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
-:Name: TLS.MyCert
+:Name: tls.myCert
 :Scope: input
 :Type: string
 :Default: input=none

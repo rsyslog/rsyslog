@@ -1,12 +1,12 @@
 .. _param-imrelp-tls:
 .. _imrelp.parameter.input.tls:
 
-TLS
+tls
 ===
 
 .. index::
-   single: imrelp; TLS
-   single: TLS (imrelp)
+   single: imrelp; tls
+   single: tls (imrelp)
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Enables TLS encryption for RELP connections handled by this listener.
 
 This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
-:Name: TLS
+:Name: tls
 :Scope: input
 :Type: boolean
 :Default: input=off
@@ -27,7 +27,7 @@ Description
 -----------
 If set to "on", the RELP connection will be encrypted by TLS, so that the data
 is protected against observers. Please note that both the client and the server
-must have set TLS to either "on" or "off". Other combinations lead to
+must have set ``tls`` to either "on" or "off". Other combinations lead to
 unpredictable results.
 
 *Attention when using GnuTLS 2.10.x or older*

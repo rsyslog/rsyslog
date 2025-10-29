@@ -1,12 +1,12 @@
 .. _param-imrelp-tls-tlscfgcmd:
 .. _imrelp.parameter.input.tls-tlscfgcmd:
 
-tls.tlscfgcmd
+tls.tlsCfgCmd
 =============
 
 .. index::
-   single: imrelp; tls.tlscfgcmd
-   single: tls.tlscfgcmd
+   single: imrelp; tls.tlsCfgCmd
+   single: tls.tlsCfgCmd
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Forwards SSL_CONF-style configuration commands to OpenSSL when using the openssl
 
 This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
-:Name: tls.tlscfgcmd
+:Name: tls.tlsCfgCmd
 :Scope: input
 :Type: string
 :Default: input=none
@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
 Description
 -----------
-The setting can be used if tls.tlslib is set to "openssl" to pass configuration
+The setting can be used if tls.tlsLib is set to "openssl" to pass configuration
 commands to the openssl library. OpenSSL Version 1.0.2 or higher is required for
 this feature. A list of possible commands and their valid values can be found in
 the documentation: https://docs.openssl.org/1.0.2/man3/SSL_CONF_cmd/
@@ -41,7 +41,7 @@ This will allow all protocols except for SSLv2 and SSLv3:
 
 .. code-block:: none
 
-   tls.tlscfgcmd="Protocol=ALL,-SSLv2,-SSLv3"
+   tls.tlsCfgCmd="Protocol=ALL,-SSLv2,-SSLv3"
 
 Example 2
 ---------
@@ -51,7 +51,7 @@ It will also set the minimum protocol to TLSv1.2.
 
 .. code-block:: none
 
-   tls.tlscfgcmd="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1
+   tls.tlsCfgCmd="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1
    MinProtocol=TLSv1.2"
 
 Input usage
