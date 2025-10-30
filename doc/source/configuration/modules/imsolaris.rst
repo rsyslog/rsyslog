@@ -23,21 +23,23 @@ detects another active instance at startup, the module disables itself,
 but rsyslog will continue to run.
 
 
-Configuration Parameters
-========================
+Module Parameters
+=================
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-|FmtObsoleteName| Directives
-----------------------------
-
-| functions:: $IMSolarisLogSocketName <name>
-
-   This is the name of the log socket (stream) to read. If not given,
-   /dev/log is read.
+   * - Parameter
+     - Summary
+   * - :ref:`param-imsolaris-imsolarislogsocketname`
+     - .. include:: ../../reference/parameters/imsolaris-imsolarislogsocketname.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 
 Caveats/Known Bugs
@@ -55,5 +57,11 @@ The following sample pulls messages from the default log source
 .. code-block:: none
 
    $ModLoad imsolaris
+
+
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/imsolaris-imsolarislogsocketname
 
 
