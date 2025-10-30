@@ -23,7 +23,7 @@ This parameter applies to :doc:`../../configuration/modules/imsolaris`.
 :Name: IMSolarisLogSocketName
 :Scope: module
 :Type: string (path)
-:Default: module=/dev/log
+:Default: /dev/log
 :Required?: no
 :Introduced: Not documented
 
@@ -34,13 +34,13 @@ Since directive names are case-insensitive, the canonical form ``$IMSolarisLogSo
 
 Module usage
 ------------
-.. _param-imsolaris-module-imsolarislogsocketname:
+.. _param-imsolaris-module-imsolarislogsocketname-usage:
 .. _imsolaris.parameter.module.imsolarislogsocketname-usage:
 
 .. code-block:: rsyslog
 
    $ModLoad imsolaris
-   $IMSolarisLogSocketName /var/run/rsyslog/solaris.log
+   $IMSolarisLogSocketName "/var/run/rsyslog/solaris.log"
 
 See also
 --------
