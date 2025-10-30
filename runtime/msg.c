@@ -668,7 +668,7 @@ static rsRetVal msgBaseConstruct(smsg_t **ppThis) {
 
     assert(ppThis != NULL);
     CHKmalloc(pM = malloc(sizeof(smsg_t)));
-    objConstructSetObjInfo(pM); /* intialize object helper entities */
+    objConstructSetObjInfo(pM); /* initialize object helper entities */
 
     /* initialize members in ORDER they appear in structure (think "cache line"!) */
     pM->flowCtlType = 0;

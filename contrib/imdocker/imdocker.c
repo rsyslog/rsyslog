@@ -840,7 +840,7 @@ BEGINsetModCnf
             loadModConf->listContainersOptions = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(modpblk.descr[i].name, "getcontainerlogoptions")) {
             CHKmalloc(loadModConf->getContainerLogOptions = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
-            /* also intialize the non-tail version */
+            /* also initialize the non-tail version */
             size_t offset = 0;
             size_t option_str_len = strlen((char *)loadModConf->getContainerLogOptions);
             CHKmalloc(buf = strdup((char *)loadModConf->getContainerLogOptions));

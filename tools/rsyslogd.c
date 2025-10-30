@@ -653,7 +653,7 @@ static rsRetVal rsyslogd_InitGlobalClasses(void) {
     pErrObj = "rsconf";
     CHKiRet(objUse(rsconf, CORE_COMPONENT));
 
-    /* intialize some dummy classes that are not part of the runtime */
+    /* initialize some dummy classes that are not part of the runtime */
     pErrObj = "action";
     CHKiRet(actionClassInit());
     pErrObj = "template";
@@ -2215,7 +2215,7 @@ static void deinitAll(void) {
 }
 
 /* This is the main entry point into rsyslogd. This must be a function in its own
- * right in order to intialize the debug system in a portable way (otherwise we would
+ * right in order to initialize the debug system in a portable way (otherwise we would
  * need to have a statement before variable definitions.
  * rgerhards, 20080-01-28
  */
