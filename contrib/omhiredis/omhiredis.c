@@ -1,24 +1,27 @@
 /* omhiredis.c
-* Copyright 2012 Talksum, Inc
-* Copyright 2015 DigitalOcean, Inc
-*
-* This program is free software: you can redistribute it and/or
-* modify it under the terms of the GNU Lesser General Public License
-* as published by the Free Software Foundation, either version 3 of
-* the License, or (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful, but
-* WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
-* Lesser General Public License for more details.
-*
-* You should have received a copy of the GNU Lesser General Public
-* License along with this program. If not, see
-* <http://www.gnu.org/licenses/>.
-*
-* Author: Brian Knox
-* <bknox@digitalocean.com>
-*/
+ * Copyright 2012 Talksum, Inc
+ * Copyright 2015 DigitalOcean, Inc
+ *
+ * This program is free software: you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * as published by the Free Software Foundation, either version 3 of
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this program. If not, see
+ * <http://www.gnu.org/licenses/>.
+ *
+ * Author: Brian Knox
+ * <bknox@digitalocean.com>
+ *
+ * Author: Jérémie Jourdin (TLS support)
+ * <jeremie.jourdin@advens.fr>
+ */
 
 
 #include "config.h"
@@ -32,6 +35,9 @@
 #include <time.h>
 #include <math.h>
 #include <hiredis/hiredis.h>
+#ifdef HIREDIS_SSL
+    #include <hiredis/hiredis_ssl.h>
+#endif
 
 #include "rsyslog.h"
 #include "conf.h"
@@ -60,68 +66,90 @@ DEF_OMOD_STATIC_DATA
  * this will be accessable
  * via pData */
 typedef struct _instanceData {
-	uchar *server; /* redis server address */
-	int port; /* redis port */
-	uchar *serverpassword; /* redis password */
-	uchar *tplName; /* template name */
-	char *modeDescription; /* mode description */
-	int mode; /* mode constant */
-	uchar *key; /* key for QUEUE, PUBLISH and STREAM modes */
-	uchar *streamKeyAck; /* key name for STREAM ACKs (when enabled) */
-	uchar *streamGroupAck; /* group name for STREAM ACKs (when enabled) */
-	uchar *streamIndexAck; /* index name for STREAM ACKs (when enabled) */
-	int expiration; /* expiration value for SET/SETEX mode */
-	sbool dynaKey; /* Should we treat the key as a template? */
-	sbool streamDynaKeyAck; /* Should we treat the groupAck as a template? */
-	sbool streamDynaGroupAck; /* Should we treat the groupAck as a template? */
-	sbool streamDynaIndexAck; /* Should we treat the IndexAck as a template? */
-	sbool useRPush; /* Should we use RPUSH instead of LPUSH? */
-	uchar *streamOutField; /* Field to place message into (for stream insertions only) */
-	uint streamCapacityLimit; /* zero means stream is not capped (default)
-				setting a non-zero value ultimately activates the approximate MAXLEN option '~'
-				(see Redis XADD docs)*/
-	sbool streamAck; /* Should the module send an XACK for each inserted message?
-				This feature requires that 3 infos are present in the '$.' object of the log:
-				- $.redis!stream
-				- $.redis!group
-				- $.redis!index
-				Those 3 infos can either be provided through usage of imhiredis
-				or set manually with Rainerscript */
-	sbool streamDel; /* Should the module send an XDEL for each inserted message?
-				This feature requires that 2 infos are present in the '$.' object of the log:
-				- $.redis!stream
-				- $.redis!index
-				Those 2 infos can either be provided through usage of imhiredis
-				or set manually with Rainerscript */
+    uchar *server; /* redis server address */
+    uchar *socketPath; /* redis server UDS address (This option only takes effect if the server is not set) */
+    int port; /* redis port */
+    uchar *serverpassword; /* redis password */
+    uchar *tplName; /* template name */
+    char *modeDescription; /* mode description */
+    int mode; /* mode constant */
+    uchar *key; /* key for QUEUE, PUBLISH and STREAM modes */
+    uchar *streamKeyAck; /* key name for STREAM ACKs (when enabled) */
+    uchar *streamGroupAck; /* group name for STREAM ACKs (when enabled) */
+    uchar *streamIndexAck; /* index name for STREAM ACKs (when enabled) */
+    int expiration; /* expiration value for SET/SETEX mode */
+    sbool dynaKey; /* Should we treat the key as a template? */
+    sbool streamDynaKeyAck; /* Should we treat the groupAck as a template? */
+    sbool streamDynaGroupAck; /* Should we treat the groupAck as a template? */
+    sbool streamDynaIndexAck; /* Should we treat the IndexAck as a template? */
+    sbool useRPush; /* Should we use RPUSH instead of LPUSH? */
+    uchar *streamOutField; /* Field to place message into (for stream insertions only) */
+    uint streamCapacityLimit; /* zero means stream is not capped (default)
+                setting a non-zero value ultimately activates the approximate MAXLEN option '~'
+                (see Redis XADD docs)*/
+    sbool streamAck; /* Should the module send an XACK for each inserted message?
+                This feature requires that 3 infos are present in the '$.' object of the log:
+                - $.redis!stream
+                - $.redis!group
+                - $.redis!index
+                Those 3 infos can either be provided through usage of imhiredis
+                or set manually with Rainerscript */
+    sbool streamDel; /* Should the module send an XDEL for each inserted message?
+                This feature requires that 2 infos are present in the '$.' object of the log:
+                - $.redis!stream
+                - $.redis!index
+                Those 2 infos can either be provided through usage of imhiredis
+                or set manually with Rainerscript */
+#ifdef HIREDIS_SSL
+    sbool use_tls; /* Should we use TLS to connect to redis ? */
+    char *ca_cert_bundle; /* CA bundle file */
+    char *ca_cert_dir; /* Path of trusted certificates */
+    char *client_cert; /* Client certificate */
+    char *client_key; /* Client private key */
+    char *sni; /* TLS Server Name Indication */
+#endif
 
 } instanceData;
 
 typedef struct wrkrInstanceData {
-	instanceData *pData; /* instanc data */
-	redisContext *conn; /* redis connection */
-	int count; /* count of command sent for current batch */
+    instanceData *pData; /* instanc data */
+    redisContext *conn; /* redis connection */
+    int count; /* count of command sent for current batch */
+#ifdef HIREDIS_SSL
+    redisSSLContext *ssl_conn; /* redis ssl connection */
+    redisSSLContextError ssl_error; /* ssl error handler */
+#endif
 } wrkrInstanceData_t;
 
 static struct cnfparamdescr actpdescr[] = {
-	{ "server", eCmdHdlrGetWord, 0 },
-	{ "serverport", eCmdHdlrInt, 0 },
-	{ "serverpassword", eCmdHdlrGetWord, 0 },
-	{ "template", eCmdHdlrGetWord, 0 },
-	{ "mode", eCmdHdlrGetWord, 0 },
-	{ "key", eCmdHdlrGetWord, 0 },
-	{ "expiration", eCmdHdlrInt, 0 },
-	{ "dynakey", eCmdHdlrBinary, 0 },
-	{ "userpush", eCmdHdlrBinary, 0 },
-	{ "stream.outField", eCmdHdlrGetWord, 0 },
-	{ "stream.capacityLimit", eCmdHdlrNonNegInt, 0 },
-	{ "stream.ack", eCmdHdlrBinary, 0 },
-	{ "stream.del", eCmdHdlrBinary, 0 },
-	{ "stream.keyAck", eCmdHdlrGetWord, 0 },
-	{ "stream.groupAck", eCmdHdlrGetWord, 0 },
-	{ "stream.indexAck", eCmdHdlrGetWord, 0 },
-	{ "stream.dynaKeyAck", eCmdHdlrBinary, 0 },
-	{ "stream.dynaGroupAck", eCmdHdlrBinary, 0 },
-	{ "stream.dynaIndexAck", eCmdHdlrBinary, 0 },
+    {"server", eCmdHdlrGetWord, 0},
+    {"serverport", eCmdHdlrInt, 0},
+    {"socketpath", eCmdHdlrGetWord, 0},
+    {"serverpassword", eCmdHdlrGetWord, 0},
+    {"template", eCmdHdlrGetWord, 0},
+    {"mode", eCmdHdlrGetWord, 0},
+    {"key", eCmdHdlrGetWord, 0},
+    {"expiration", eCmdHdlrInt, 0},
+    {"dynakey", eCmdHdlrBinary, 0},
+    {"userpush", eCmdHdlrBinary, 0},
+    {"stream.outField", eCmdHdlrGetWord, 0},
+    {"stream.capacityLimit", eCmdHdlrNonNegInt, 0},
+    {"stream.ack", eCmdHdlrBinary, 0},
+    {"stream.del", eCmdHdlrBinary, 0},
+    {"stream.keyAck", eCmdHdlrGetWord, 0},
+    {"stream.groupAck", eCmdHdlrGetWord, 0},
+    {"stream.indexAck", eCmdHdlrGetWord, 0},
+    {"stream.dynaKeyAck", eCmdHdlrBinary, 0},
+    {"stream.dynaGroupAck", eCmdHdlrBinary, 0},
+    {"stream.dynaIndexAck", eCmdHdlrBinary, 0},
+#ifdef HIREDIS_SSL
+    {"use_tls", eCmdHdlrBinary, 0},
+    {"ca_cert_bundle", eCmdHdlrGetWord, 0},
+    {"ca_cert_dir", eCmdHdlrGetWord, 0},
+    {"client_cert", eCmdHdlrGetWord, 0},
+    {"client_key", eCmdHdlrGetWord, 0},
+    {"sni", eCmdHdlrGetWord, 0},
+#endif
 };
 
 static struct cnfparamblk actpblk = {
@@ -135,8 +163,12 @@ CODESTARTcreateInstance
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-CODESTARTcreateWrkrInstance
-	pWrkrData->conn = NULL; /* Connect later */
+    CODESTARTcreateWrkrInstance;
+    pWrkrData->conn = NULL; /* Connect later */
+#ifdef HIREDIS_SSL
+    pWrkrData->ssl_conn = NULL; /* Connect later */
+    pWrkrData->ssl_error = REDIS_SSL_CTX_NONE;
+#endif
 ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
@@ -146,28 +178,43 @@ CODESTARTisCompatibleWithFeature
 ENDisCompatibleWithFeature
 
 /* called when closing */
-static void closeHiredis(wrkrInstanceData_t *pWrkrData)
-{
-	if(pWrkrData->conn != NULL) {
-		redisFree(pWrkrData->conn);
-		pWrkrData->conn = NULL;
-	}
+static void closeHiredis(wrkrInstanceData_t *pWrkrData) {
+    if (pWrkrData->conn != NULL) {
+        redisFree(pWrkrData->conn);
+        pWrkrData->conn = NULL;
+    }
+#ifdef HIREDIS_SSL
+    if (pWrkrData->ssl_conn != NULL) {
+        redisFreeSSLContext(pWrkrData->ssl_conn);
+        pWrkrData->ssl_conn = NULL;
+    }
+#endif
 }
 
 /* Free our instance data. */
 BEGINfreeInstance
-CODESTARTfreeInstance
-	if (pData->server != NULL) {
-		free(pData->server);
-	}
-	free(pData->key);
-	free(pData->modeDescription);
-	free(pData->serverpassword);
-	free(pData->tplName);
-	free(pData->streamKeyAck);
-	free(pData->streamGroupAck);
-	free(pData->streamIndexAck);
-	free(pData->streamOutField);
+    CODESTARTfreeInstance;
+    if (pData->server != NULL) {
+        free(pData->server);
+    }
+    if (pData->socketPath != NULL) {
+        free(pData->socketPath);
+    }
+    free(pData->key);
+    free(pData->modeDescription);
+    free(pData->serverpassword);
+    free(pData->tplName);
+    free(pData->streamKeyAck);
+    free(pData->streamGroupAck);
+    free(pData->streamIndexAck);
+    free(pData->streamOutField);
+#ifdef HIREDIS_SSL
+    free(pData->ca_cert_bundle);
+    free(pData->ca_cert_dir);
+    free(pData->client_cert);
+    free(pData->client_key);
+    free(pData->sni);
+#endif
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
@@ -195,32 +242,55 @@ static rsRetVal initHiredis(wrkrInstanceData_t *pWrkrData, int bSilent)
 	struct timeval timeout = { 1, 500000 }; /* 1.5 seconds */
 	pWrkrData->conn = redisConnectWithTimeout(server, pWrkrData->pData->port,
 			timeout);
-	if (pWrkrData->conn->err) {
+	if (pWrkrData->conn == NULL || pWrkrData->conn->err) {
 		if(!bSilent)
 			LogError(0, RS_RET_SUSPENDED,
 				"can not initialize redis handle");
 		ABORT_FINALIZE(RS_RET_SUSPENDED);
 	}
 
-	if (pWrkrData->pData->serverpassword != NULL) {
-		reply = redisCommand(pWrkrData->conn, "AUTH %s", (char*) pWrkrData->pData->serverpassword);
-		if (reply == NULL) {
-			DBGPRINTF("omhiredis: could not get reply from AUTH command\n");
-			ABORT_FINALIZE(RS_RET_SUSPENDED);
-		}
-		else if (reply->type == REDIS_REPLY_ERROR) {
-			LogError(0, NO_ERRCODE, "omhiredis: error while authenticating: %s", reply->str);
-			ABORT_FINALIZE(RS_RET_ERR);
-		}
-	}
+#ifdef HIREDIS_SSL
+    if (pWrkrData->pData->use_tls) {
+        pWrkrData->ssl_conn = redisCreateSSLContext(pWrkrData->pData->ca_cert_bundle, pWrkrData->pData->ca_cert_dir,
+                                                    pWrkrData->pData->client_cert, pWrkrData->pData->client_key,
+                                                    pWrkrData->pData->sni, &pWrkrData->ssl_error);
+        if (!pWrkrData->ssl_conn || pWrkrData->ssl_error != REDIS_SSL_CTX_NONE) {
+            LogError(0, NO_ERRCODE, "omhiredis: SSL Context error: %s", redisSSLContextGetError(pWrkrData->ssl_error));
+            if (!bSilent) LogError(0, RS_RET_SUSPENDED, "[TLS] can not initialize redis handle");
+            ABORT_FINALIZE(RS_RET_SUSPENDED);
+        }
+        if (redisInitiateSSLWithContext(pWrkrData->conn, pWrkrData->ssl_conn) != REDIS_OK) {
+            LogError(0, NO_ERRCODE, "omhiredis: %s", pWrkrData->conn->errstr);
+            if (!bSilent) LogError(0, RS_RET_SUSPENDED, "[TLS] can not initialize redis handle");
+            ABORT_FINALIZE(RS_RET_SUSPENDED);
+        }
+    }
+#endif
+
+    if (pWrkrData->pData->serverpassword != NULL) {
+        reply = redisCommand(pWrkrData->conn, "AUTH %s", (char *)pWrkrData->pData->serverpassword);
+        if (reply == NULL) {
+            DBGPRINTF("omhiredis: could not get reply from AUTH command\n");
+            ABORT_FINALIZE(RS_RET_SUSPENDED);
+        } else if (reply->type == REDIS_REPLY_ERROR) {
+            LogError(0, NO_ERRCODE, "omhiredis: error while authenticating: %s", reply->str);
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+    }
 
 finalize_it:
-	if (iRet != RS_RET_OK && pWrkrData-> conn != NULL) {
-		redisFree(pWrkrData->conn);
-		pWrkrData->conn = NULL;
-	}
-	if (reply != NULL) freeReplyObject(reply);
-	RETiRet;
+    if (iRet != RS_RET_OK && pWrkrData->conn != NULL) {
+        redisFree(pWrkrData->conn);
+        pWrkrData->conn = NULL;
+    }
+#ifdef HIREDIS_SSL
+    if (iRet != RS_RET_OK && pWrkrData->ssl_conn != NULL) {
+        redisFreeSSLContext(pWrkrData->ssl_conn);
+        pWrkrData->ssl_conn = NULL;
+    }
+#endif
+    if (reply != NULL) freeReplyObject(reply);
+    RETiRet;
 }
 
 static rsRetVal isMaster(wrkrInstanceData_t *pWrkrData) {
@@ -447,29 +517,36 @@ ENDendTransaction
  * and is set to a default in initHiredis if
  * it is still null when it's called - I should
  * probable just set the default here instead */
-static void
-setInstParamDefaults(instanceData *pData)
-{
-	pData->server = NULL;
-	pData->port = 6379;
-	pData->serverpassword = NULL;
-	pData->tplName = NULL;
-	pData->mode = OMHIREDIS_MODE_TEMPLATE;
-	pData->expiration = 0;
-	pData->modeDescription = NULL;
-	pData->key = NULL;
-	pData->dynaKey = 0;
-	pData->useRPush = 0;
-	pData->streamOutField = NULL;
-	pData->streamKeyAck = NULL;
-	pData->streamDynaKeyAck = 0;
-	pData->streamGroupAck = NULL;
-	pData->streamDynaGroupAck = 0;
-	pData->streamIndexAck = NULL;
-	pData->streamDynaIndexAck = 0;
-	pData->streamCapacityLimit = 0;
-	pData->streamAck = 0;
-	pData->streamDel = 0;
+static void setInstParamDefaults(instanceData *pData) {
+    pData->server = NULL;
+    pData->socketPath = NULL;
+    pData->port = 6379;
+    pData->serverpassword = NULL;
+    pData->tplName = NULL;
+    pData->mode = OMHIREDIS_MODE_TEMPLATE;
+    pData->expiration = 0;
+    pData->modeDescription = NULL;
+    pData->key = NULL;
+    pData->dynaKey = 0;
+    pData->useRPush = 0;
+    pData->streamOutField = NULL;
+    pData->streamKeyAck = NULL;
+    pData->streamDynaKeyAck = 0;
+    pData->streamGroupAck = NULL;
+    pData->streamDynaGroupAck = 0;
+    pData->streamIndexAck = NULL;
+    pData->streamDynaIndexAck = 0;
+    pData->streamCapacityLimit = 0;
+    pData->streamAck = 0;
+    pData->streamDel = 0;
+#ifdef HIREDIS_SSL
+    pData->use_tls = 0;
+    pData->ca_cert_bundle = NULL;
+    pData->ca_cert_dir = NULL;
+    pData->client_cert = NULL;
+    pData->client_key = NULL;
+    pData->sni = NULL;
+#endif
 }
 
 /* here is where the work to set up a new instance
@@ -492,66 +569,91 @@ CODESTARTnewActInst
 		if(!pvals[i].bUsed)
 			continue;
 
-		if(!strcmp(actpblk.descr[i].name, "server")) {
-			pData->server = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "serverport")) {
-			pData->port = (int) pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "serverpassword")) {
-			pData->serverpassword = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "template")) {
-			pData->tplName = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "dynakey")) {
-			pData->dynaKey = pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "userpush")) {
-			pData->useRPush = pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "stream.outField")) {
-			pData->streamOutField = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "stream.keyAck")) {
-			pData->streamKeyAck = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "stream.dynaKeyAck")) {
-			pData->streamDynaKeyAck = pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "stream.groupAck")) {
-			pData->streamGroupAck = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "stream.dynaGroupAck")) {
-			pData->streamDynaGroupAck = pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "stream.indexAck")) {
-			pData->streamIndexAck = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "stream.dynaIndexAck")) {
-			pData->streamDynaIndexAck = pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "stream.capacityLimit")) {
-			pData->streamCapacityLimit = pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "stream.ack")) {
-			pData->streamAck = pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "stream.del")) {
-			pData->streamDel = pvals[i].val.d.n;
-		} else if(!strcmp(actpblk.descr[i].name, "mode")) {
-			pData->modeDescription = es_str2cstr(pvals[i].val.d.estr, NULL);
-			if (!strcmp(pData->modeDescription, "template")) {
-				pData->mode = OMHIREDIS_MODE_TEMPLATE;
-			} else if (!strcmp(pData->modeDescription, "queue")) {
-				pData->mode = OMHIREDIS_MODE_QUEUE;
-			} else if (!strcmp(pData->modeDescription, "publish")) {
-				pData->mode = OMHIREDIS_MODE_PUBLISH;
-			} else if (!strcmp(pData->modeDescription, "set")) {
-				pData->mode = OMHIREDIS_MODE_SET;
-			} else if (!strcmp(pData->modeDescription, "stream")) {
-				pData->mode = OMHIREDIS_MODE_STREAM;
-			} else {
-				dbgprintf("omhiredis: unsupported mode %s\n", actpblk.descr[i].name);
-				ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
-			}
-		} else if(!strcmp(actpblk.descr[i].name, "key")) {
-			pData->key = (uchar*)es_str2cstr(pvals[i].val.d.estr, NULL);
-		} else if(!strcmp(actpblk.descr[i].name, "expiration")) {
-			pData->expiration = pvals[i].val.d.n;
-			dbgprintf("omhiredis: expiration set to %d\n", pData->expiration);
-		} else {
-			dbgprintf("omhiredis: program error, non-handled "
-				"param '%s'\n", actpblk.descr[i].name);
-		}
-	}
+        if (!strcmp(actpblk.descr[i].name, "server")) {
+            pData->server = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "serverport")) {
+            pData->port = (int)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "socketpath")) {
+            pData->socketPath = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "serverpassword")) {
+            pData->serverpassword = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "template")) {
+            pData->tplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "dynakey")) {
+            pData->dynaKey = pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "userpush")) {
+            pData->useRPush = pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "stream.outField")) {
+            pData->streamOutField = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "stream.keyAck")) {
+            pData->streamKeyAck = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "stream.dynaKeyAck")) {
+            pData->streamDynaKeyAck = pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "stream.groupAck")) {
+            pData->streamGroupAck = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "stream.dynaGroupAck")) {
+            pData->streamDynaGroupAck = pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "stream.indexAck")) {
+            pData->streamIndexAck = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "stream.dynaIndexAck")) {
+            pData->streamDynaIndexAck = pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "stream.capacityLimit")) {
+            pData->streamCapacityLimit = pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "stream.ack")) {
+            pData->streamAck = pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "stream.del")) {
+            pData->streamDel = pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "mode")) {
+            pData->modeDescription = es_str2cstr(pvals[i].val.d.estr, NULL);
+            if (!strcmp(pData->modeDescription, "template")) {
+                pData->mode = OMHIREDIS_MODE_TEMPLATE;
+            } else if (!strcmp(pData->modeDescription, "queue")) {
+                pData->mode = OMHIREDIS_MODE_QUEUE;
+            } else if (!strcmp(pData->modeDescription, "publish")) {
+                pData->mode = OMHIREDIS_MODE_PUBLISH;
+            } else if (!strcmp(pData->modeDescription, "set")) {
+                pData->mode = OMHIREDIS_MODE_SET;
+            } else if (!strcmp(pData->modeDescription, "stream")) {
+                pData->mode = OMHIREDIS_MODE_STREAM;
+            } else {
+                dbgprintf("omhiredis: unsupported mode %s\n", actpblk.descr[i].name);
+                ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
+            }
+        } else if (!strcmp(actpblk.descr[i].name, "key")) {
+            pData->key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "expiration")) {
+            pData->expiration = pvals[i].val.d.n;
+            dbgprintf("omhiredis: expiration set to %d\n", pData->expiration);
+#ifdef HIREDIS_SSL
+        } else if (!strcmp(actpblk.descr[i].name, "use_tls")) {
+            pData->use_tls = pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "ca_cert_bundle")) {
+            pData->ca_cert_bundle = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "ca_cert_dir")) {
+            pData->ca_cert_dir = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "client_cert")) {
+            pData->client_cert = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "client_key")) {
+            pData->client_key = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "sni")) {
+            pData->sni = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+#endif
+        } else {
+            dbgprintf(
+                "omhiredis: program error, non-handled "
+                "param '%s'\n",
+                actpblk.descr[i].name);
+        }
+    }
 
 	dbgprintf("omhiredis: checking config sanity\n");
+	
+#ifdef HIREDIS_SSL
+	if((pData->client_cert == NULL) ^ (pData->client_key == NULL)){
+		LogMsg(0, RS_RET_PARAM_ERROR, LOG_ERR, "omhiredis: \"client_cert\" and \"client_key\" must be specified together!");
+		ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+	} 
+#endif
 
 	if (!pData->modeDescription) {
 		dbgprintf("omhiredis: no mode specified, setting it to 'template'\n");
@@ -741,13 +843,17 @@ ENDqueryEtryPt
 
 /* note we do not support rsyslog v5 syntax */
 BEGINmodInit()
-CODESTARTmodInit
-	*ipIFVersProvided = CURR_MOD_IF_VERSION; /* only supports rsyslog 6 configs */
-CODEmodInit_QueryRegCFSLineHdlr
-	INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
-	if (!bCoreSupportsBatching) {
-		LogError(0, NO_ERRCODE, "omhiredis: rsyslog core does not support batching - abort");
-		ABORT_FINALIZE(RS_RET_ERR);
-	}
-	DBGPRINTF("omhiredis: module compiled with rsyslog version %s.\n", VERSION);
+    CODESTARTmodInit;
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* only supports rsyslog 6 configs */
+    CODEmodInit_QueryRegCFSLineHdlr INITChkCoreFeature(bCoreSupportsBatching, CORE_FEATURE_BATCHING);
+    if (!bCoreSupportsBatching) {
+        LogError(0, NO_ERRCODE, "omhiredis: rsyslog core does not support batching - abort");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    DBGPRINTF("omhiredis: module compiled with rsyslog version %s.\n", VERSION);
+
+#ifdef HIREDIS_SSL
+    // initialize OpenSSL
+    redisInitOpenSSL();
+#endif
 ENDmodInit
