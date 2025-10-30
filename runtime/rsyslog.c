@@ -101,7 +101,7 @@ static int iRefCount = 0; /* our refcount - it MUST exist only once inside a pro
 /* This is the default instance of the error logger. It simply writes the message
  * to stderr. It is expected that this is replaced by the runtime user very early
  * during startup (at least if the default is unsuitable). However, we provide a
- * default so that we can log errors during the intial phase, most importantly
+ * default so that we can log errors during the initial phase, most importantly
  * during initialization. -- rgerhards. 2008-04-17
  */
 void dfltErrLogger(const int severity, const int iErr, const uchar *errMsg) {

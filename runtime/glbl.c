@@ -1448,7 +1448,7 @@ BEGINAbstractObjClassInit(glbl, 1, OBJ_IS_CORE_MODULE) /* class, version */
     /* request objects we use */
     CHKiRet(objUse(prop, CORE_COMPONENT));
 
-    /* intialize properties */
+    /* initialize properties */
     storeLocalHostIPIF((uchar *)"127.0.0.1");
 
     /* config handlers are never unregistered and need not be - we are always loaded ;) */

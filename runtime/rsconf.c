@@ -1182,7 +1182,7 @@ finalize_it:
 }
 
 
-/* intialize the legacy config system */
+/* initialize the legacy config system */
 static rsRetVal initLegacyConf(void) {
     DEFiRet;
     uchar *pTmp;
