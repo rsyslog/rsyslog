@@ -59,7 +59,7 @@ the method and process for outputting the rsyslog statistics to file.
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for improved readability.
 
 .. note::
 
@@ -69,215 +69,48 @@ the method and process for outputting the rsyslog statistics to file.
 Module Parameters
 -----------------
 
-Interval
-^^^^^^^^
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "300", "no", "none"
-
-Sets the interval, in **seconds** at which messages are generated.
-Please note that the actual interval may be a bit longer. We do not
-try to be precise and so the interval is actually a sleep period
-which is entered after generating all messages. So the actual
-interval is what is configured here plus the actual time required to
-generate messages. In general, the difference should not really
-matter.
-
-
-Facility
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "5", "no", "none"
-
-The numerical syslog facility code to be used for generated
-messages. Default is 5 (syslog). This is useful for filtering
-messages.
-
-
-Severity
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "6", "no", "none"
-
-The numerical syslog severity code to be used for generated
-messages. Default is 6 (info).This is useful for filtering messages.
-
-
-ResetCounters
-^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "none"
-
-When set to "on", counters are automatically reset after they are
-emitted. In that case, the contain only deltas to the last value
-emitted. When set to "off", counters always accumulate their values.
-Note that in auto-reset mode not all counters can be reset. Some
-counters (like queue size) are directly obtained from internal object
-and cannot be modified. Also, auto-resetting introduces some
-additional slight inaccuracies due to the multi-threaded nature of
-rsyslog and the fact that for performance reasons it cannot serialize
-access to counter variables. As an alternative to auto-reset mode,
-you can use rsyslog's statistics manipulation scripts to create delta
-values from the regular statistic logs. This is the suggested method
-if deltas are not necessarily needed in real-time.
-
-
-Format
-^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "legacy", "no", "none"
-
-.. versionadded:: 8.16.0
-
-Specifies the format of emitted stats messages. The default of
-"legacy" is compatible with pre v6-rsyslog. The other options provide
-support for structured formats (note the "cee" is actually "project
-lumberjack" logging).
-
-The json-elasticsearch format supports the broken ElasticSearch
-JSON implementation.  ES 2.0 no longer supports valid JSON and
-disallows dots inside names.  The "json-elasticsearch" format
-option replaces those dots by the bang ("!") character. So
-"discarded.full" becomes "discarded!full".
-Options: json/json-elasticsearch/cee/legacy
-
-
-log.syslog
-^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "on", "no", "none"
-
-This is a boolean setting specifying if data should be sent to the
-usual syslog stream. This is useful if custom formatting or more
-elaborate processing is desired. However, output is placed under the
-same restrictions as regular syslog data, especially in regard to the
-queue position (stats data may sit for an extended period of time in
-queues if they are full). If set "off", then you cannot bind the module to
-ruleset.
-
-
-log.file
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-If specified, statistics data is written to the specified file. For
-robustness, this should be a local file. The file format cannot be
-customized, it consists of a date header, followed by a colon,
-followed by the actual statistics record, all on one line. Only very
-limited error handling is done, so if things go wrong stats records
-will probably be lost. Logging to file can be a useful alternative if
-for some reasons (e.g. full queues) the regular syslog stream method
-shall not be used solely. Note that turning on file logging does NOT
-turn off syslog logging. If that is desired log.syslog="off" must be
-explicitly set.
-
-
-Ruleset
-^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "no", "none"
-
-Binds the listener to a specific :doc:`ruleset <../../concepts/multi_ruleset>`.
-
-**Note** that setting ``ruleset`` and ``log.syslog="off"`` are mutually
-exclusive because syslog stream processing must be enabled to use a ruleset.
-
-
-Bracketing
-^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "none"
-
-.. versionadded:: 8.4.1
-
-This is a utility setting for folks who post-process impstats logs
-and would like to know the begin and end of a block of statistics.
-When "bracketing" is set to "on", impstats issues a "BEGIN" message
-before the first counter is issued, then all counter values
-are issued, and then an "END" message follows. As such, if and only if messages
-are kept in sequence, a block of stats counts can easily be identified
-by those BEGIN and END messages.
-
-**Note well:** in general, sequence of syslog messages is **not**
-strict and is not ordered in sequence of message generation. There
-are various occasion that can cause message reordering, some
-examples are:
-
-* using multiple threads
-* using UDP forwarding
-* using relay systems, especially with buffering enabled
-* using disk-assisted queues
-
-This is not a problem with rsyslog, but rather the way a concurrent
-world works. For strict order, a specific order predicate (e.g. a
-sufficiently fine-grained timestamp) must be used.
-
-As such, BEGIN and END records may actually indicate the begin and
-end of a block of statistics - or they may *not*. Any order is possible
-in theory. So the bracketing option does not in all cases work as
-expected. This is the reason why it is turned off by default.
-
-*However*, bracketing may still be useful for many use cases. First
-and foremost, while there are many scenarios in which messages become
-reordered, in practice it happens relatively seldom. So most of the
-time the statistics records will come in as expected and actually
-will be bracketed by the BEGIN and END messages. Consequently, if
-an application can handle occasional out-of-order delivery (e.g. by
-graceful degradation), bracketing may actually be a great solution.
-It is, however, very important to know and
-handle out of order delivery. For most real-world deployments,
-a good way to handle it is to ignore unexpected
-records and use the previous values for ones missing in the current
-block. To guard against two or more blocks being mixed, it may also
-be a good idea to never reset a value to a lower bound, except when
-that lower bound is seen consistently (which happens due to a
-restart). Note that such lower bound logic requires *resetCounters*
-to be set to off.
+   * - Parameter
+     - Summary
+   * - :ref:`param-impstats-interval`
+     - .. include:: ../../reference/parameters/impstats-interval.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-impstats-facility`
+     - .. include:: ../../reference/parameters/impstats-facility.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-impstats-severity`
+     - .. include:: ../../reference/parameters/impstats-severity.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-impstats-resetcounters`
+     - .. include:: ../../reference/parameters/impstats-resetcounters.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-impstats-format`
+     - .. include:: ../../reference/parameters/impstats-format.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-impstats-log-syslog`
+     - .. include:: ../../reference/parameters/impstats-log-syslog.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-impstats-log-file`
+     - .. include:: ../../reference/parameters/impstats-log-file.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-impstats-ruleset`
+     - .. include:: ../../reference/parameters/impstats-ruleset.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-impstats-bracketing`
+     - .. include:: ../../reference/parameters/impstats-bracketing.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 
 .. _impstats-statistic-counter:
@@ -324,7 +157,7 @@ Load module, send stats data to syslog stream
 This activates the module and records messages to /var/log/rsyslog-stats
 in 10 minute intervals:
 
-.. code-block:: none
+.. code-block:: rsyslog
 
    module(load="impstats"
           interval="600"
@@ -340,14 +173,14 @@ Load module, send stats data to local file
 Here, the default interval of 5 minutes is used. However, this time, stats
 data is NOT emitted to the syslog stream but to a local file instead.
 
-.. code-block:: none
+.. code-block:: rsyslog
 
    module(load="impstats"
           interval="600"
           severity="7"
-          log.syslog="off"
+          logSyslog="off"
           # need to turn log stream logging off!
-          log.file="/path/to/local/stats.log")
+          logFile="/path/to/local/stats.log")
 
 
 Load module, send stats data to local file and syslog stream
@@ -357,12 +190,12 @@ Here we log to both the regular syslog log stream as well as a
 file. Within the log stream, we forward the data records to another
 server:
 
-.. code-block:: none
+.. code-block:: rsyslog
 
    module(load="impstats"
           interval="600"
           severity="7"
-          log.file="/path/to/local/stats.log")
+          logFile="/path/to/local/stats.log")
 
    syslog.=debug @central.example.net
 
@@ -403,3 +236,16 @@ See Also
 -  `impstats delayed or
    lost <http://www.rsyslog.com/impstats-delayed-or-lost/>`_ - cause and
    cure
+
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/impstats-interval
+   ../../reference/parameters/impstats-facility
+   ../../reference/parameters/impstats-severity
+   ../../reference/parameters/impstats-resetcounters
+   ../../reference/parameters/impstats-format
+   ../../reference/parameters/impstats-log-syslog
+   ../../reference/parameters/impstats-log-file
+   ../../reference/parameters/impstats-ruleset
+   ../../reference/parameters/impstats-bracketing
