@@ -27,7 +27,7 @@ Description
 -----------
 This parameter allows passing the so-called "priority string" to GnuTLS. This
 string gives complete control over all crypto parameters, including compression
-settings. For this reason, when :ref:`param-imrelp-tls-prioritystring` is specified, the
+settings. For this reason, when ``tls.priorityString`` is specified, the
 :ref:`param-imrelp-tls-compression` parameter has no effect and is ignored.
 
 Full information about how to construct a priority string can be found in the
