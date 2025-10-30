@@ -30,7 +30,7 @@ ruleset parameter.
 
 Input usage
 -----------
-.. _param-imrelp-input-ruleset:
+.. _param-imrelp-input-ruleset-usage:
 .. _imrelp.parameter.input.ruleset-usage:
 
 .. code-block:: rsyslog

@@ -29,7 +29,7 @@ Starts a RELP server on the selected port.
 
 Input usage
 -----------
-.. _param-imrelp-input-port:
+.. _param-imrelp-input-port-usage:
 .. _imrelp.parameter.input.port-usage:
 
 .. code-block:: rsyslog

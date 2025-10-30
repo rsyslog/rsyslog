@@ -30,7 +30,7 @@ the instance level.
 
 Module usage
 ------------
-.. _param-imrelp-module-ruleset:
+.. _param-imrelp-module-ruleset-usage:
 .. _imrelp.parameter.module.ruleset-usage:
 
 .. code-block:: rsyslog

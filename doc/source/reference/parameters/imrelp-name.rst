@@ -29,7 +29,7 @@ Assigns a name to the listener. If not specified, the default "imrelp" is used.
 
 Input usage
 -----------
-.. _param-imrelp-input-name:
+.. _param-imrelp-input-name-usage:
 .. _imrelp.parameter.input.name-usage:
 
 .. code-block:: rsyslog

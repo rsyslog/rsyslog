@@ -36,7 +36,7 @@ changes are made...).
 
 Input usage
 -----------
-.. _param-imrelp-input-tls-dhbits:
+.. _param-imrelp-input-tls-dhbits-usage:
 .. _imrelp.parameter.input.tls-dhbits-usage:
 
 .. code-block:: rsyslog

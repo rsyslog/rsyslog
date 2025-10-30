@@ -29,7 +29,7 @@ The machine certificate that is being used for TLS communication.
 
 Input usage
 -----------
-.. _param-imrelp-input-tls-mycert:
+.. _param-imrelp-input-tls-mycert-usage:
 .. _imrelp.parameter.input.tls-mycert-usage:
 
 .. code-block:: rsyslog

@@ -30,7 +30,7 @@ to the wildcard address.
 
 Input usage
 -----------
-.. _param-imrelp-input-address:
+.. _param-imrelp-input-address-usage:
 .. _imrelp.parameter.input.address-usage:
 
 .. code-block:: rsyslog

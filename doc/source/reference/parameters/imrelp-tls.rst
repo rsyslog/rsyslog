@@ -39,7 +39,7 @@ same time. Upgrade to a newer version like GnuTLS 2.12.21 to solve the problem.
 
 Input usage
 -----------
-.. _param-imrelp-input-tls:
+.. _param-imrelp-input-tls-usage:
 .. _imrelp.parameter.input.tls-usage:
 
 .. code-block:: rsyslog

@@ -42,7 +42,7 @@ If you have problems with the default setting, we recommend to switch to
 
 Module usage
 ------------
-.. _param-imrelp-module-tls-tlslib:
+.. _param-imrelp-module-tls-tlslib-usage:
 .. _imrelp.parameter.module.tls-tlslib-usage:
 
 .. code-block:: rsyslog

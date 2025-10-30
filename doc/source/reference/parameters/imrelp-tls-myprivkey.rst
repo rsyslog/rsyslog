@@ -29,7 +29,7 @@ The machine private key for the configured :ref:`param-imrelp-tls-mycert`.
 
 Input usage
 -----------
-.. _param-imrelp-input-tls-myprivkey:
+.. _param-imrelp-input-tls-myprivkey-usage:
 .. _imrelp.parameter.input.tls-myprivkey-usage:
 
 .. code-block:: rsyslog

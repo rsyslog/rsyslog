@@ -31,7 +31,7 @@ text-based log records usually compress rather well.
 
 Input usage
 -----------
-.. _param-imrelp-input-tls-compression:
+.. _param-imrelp-input-tls-compression-usage:
 .. _imrelp.parameter.input.tls-compression-usage:
 
 .. code-block:: rsyslog

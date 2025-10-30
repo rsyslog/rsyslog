@@ -47,7 +47,7 @@ the default value.
 
 Input usage
 -----------
-.. _param-imrelp-input-flowcontrol:
+.. _param-imrelp-input-flowcontrol-usage:
 .. _imrelp.parameter.input.flowcontrol-usage:
 
 .. code-block:: rsyslog

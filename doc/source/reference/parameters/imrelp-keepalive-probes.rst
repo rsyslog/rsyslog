@@ -32,7 +32,7 @@ functionality may not be available on all platforms.
 
 Input usage
 -----------
-.. _param-imrelp-input-keepalive-probes:
+.. _param-imrelp-input-keepalive-probes-usage:
 .. _imrelp.parameter.input.keepalive-probes-usage:
 
 .. code-block:: rsyslog

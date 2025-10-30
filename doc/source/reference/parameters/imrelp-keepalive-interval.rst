@@ -32,7 +32,7 @@ enabled. The functionality may not be available on all platforms.
 
 Input usage
 -----------
-.. _param-imrelp-input-keepalive-interval:
+.. _param-imrelp-input-keepalive-interval-usage:
 .. _imrelp.parameter.input.keepalive-interval-usage:
 
 .. code-block:: rsyslog

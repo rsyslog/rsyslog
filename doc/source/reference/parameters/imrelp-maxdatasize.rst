@@ -32,7 +32,7 @@ that maxDataSize cannot be smaller than the global parameter
 
 Input usage
 -----------
-.. _param-imrelp-input-maxdatasize:
+.. _param-imrelp-input-maxdatasize-usage:
 .. _imrelp.parameter.input.maxdatasize-usage:
 
 .. code-block:: rsyslog

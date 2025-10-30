@@ -33,7 +33,7 @@ enabled. The functionality may not be available on all platforms.
 
 Input usage
 -----------
-.. _param-imrelp-input-keepalive-time:
+.. _param-imrelp-input-keepalive-time-usage:
 .. _imrelp.parameter.input.keepalive-time-usage:
 
 .. code-block:: rsyslog

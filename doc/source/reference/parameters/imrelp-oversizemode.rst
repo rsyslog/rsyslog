@@ -37,7 +37,7 @@ used.
 
 Input usage
 -----------
-.. _param-imrelp-input-oversizemode:
+.. _param-imrelp-input-oversizemode-usage:
 .. _imrelp.parameter.input.oversizemode-usage:
 
 .. code-block:: rsyslog

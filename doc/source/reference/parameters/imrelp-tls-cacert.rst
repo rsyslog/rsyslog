@@ -31,7 +31,7 @@ be configured if :ref:`param-imrelp-tls-authmode` is set to ``name`` or
 
 Input usage
 -----------
-.. _param-imrelp-input-tls-cacert:
+.. _param-imrelp-input-tls-cacert-usage:
 .. _imrelp.parameter.input.tls-cacert-usage:
 
 .. code-block:: rsyslog

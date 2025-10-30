@@ -39,7 +39,7 @@ what you are doing.
 
 Input usage
 -----------
-.. _param-imrelp-input-tls-prioritystring:
+.. _param-imrelp-input-tls-prioritystring-usage:
 .. _imrelp.parameter.input.tls-prioritystring-usage:
 
 .. code-block:: rsyslog

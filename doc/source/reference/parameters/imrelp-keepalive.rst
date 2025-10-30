@@ -30,7 +30,7 @@ keep-alive is disabled.
 
 Input usage
 -----------
-.. _param-imrelp-input-keepalive:
+.. _param-imrelp-input-keepalive-usage:
 .. _imrelp.parameter.input.keepalive-usage:
 
 .. code-block:: rsyslog

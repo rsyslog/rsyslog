@@ -46,7 +46,7 @@ when that reduced verification is acceptable.
 
 Input usage
 -----------
-.. _param-imrelp-input-tls-authmode:
+.. _param-imrelp-input-tls-authmode-usage:
 .. _imrelp.parameter.input.tls-authmode-usage:
 
 .. code-block:: rsyslog

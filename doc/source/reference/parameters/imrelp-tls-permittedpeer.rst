@@ -53,7 +53,7 @@ matches any left-most DNS label in the server name. That is, the subject
 
 Input usage
 -----------
-.. _param-imrelp-input-tls-permittedpeer:
+.. _param-imrelp-input-tls-permittedpeer-usage:
 .. _imrelp.parameter.input.tls-permittedpeer-usage:
 
 .. code-block:: rsyslog
