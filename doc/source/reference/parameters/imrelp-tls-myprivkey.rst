@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
 Description
 -----------
-The machine private key for the configured tls.myCert.
+The machine private key for the configured :ref:`param-imrelp-tls-mycert`.
 
 Input usage
 -----------

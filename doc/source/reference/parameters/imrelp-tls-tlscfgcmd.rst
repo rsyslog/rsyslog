@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/imrelp`.
 
 Description
 -----------
-The setting can be used if tls.tlsLib is set to "openssl" to pass configuration
+The setting can be used if :ref:`param-imrelp-tls-tlslib` is set to "openssl" to pass configuration
 commands to the openssl library. OpenSSL Version 1.0.2 or higher is required for
 this feature. A list of possible commands and their valid values can be found in
 the documentation: https://docs.openssl.org/1.0.2/man3/SSL_CONF_cmd/
