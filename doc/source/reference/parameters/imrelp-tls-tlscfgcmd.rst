@@ -28,7 +28,7 @@ Description
 The setting can be used if :ref:`param-imrelp-tls-tlslib` is set to "openssl" to pass configuration
 commands to the openssl library. OpenSSL Version 1.0.2 or higher is required for
 this feature. A list of possible commands and their valid values can be found in
-the documentation: https://docs.openssl.org/1.0.2/man3/SSL_CONF_cmd/
+the documentation: https://www.openssl.org/docs/man3.0/man3/SSL_CONF_cmd/
 
 The setting can be single or multiline, each configuration command is separated
 by linefeed (\n). Command and value are separated by equal sign (=). Here are a
