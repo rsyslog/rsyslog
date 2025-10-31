@@ -1758,6 +1758,10 @@ BEGINobjDestruct(tcpsrv) /* be sure to specify the object type also in END and C
     CODESTARTobjDestruct(tcpsrv);
     if (pThis->OnDestruct != NULL) pThis->OnDestruct(pThis->pUsr);
 
+    if (pThis->workQueue.wrkr_tids != NULL) {
+        stopWrkrPool(pThis);
+    }
+
     deinit_tcp_listener(pThis);
 
 
