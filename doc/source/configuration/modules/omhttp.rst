@@ -1,6 +1,6 @@
-********************************************
+**************************
 omhttp: HTTP Output Module
-********************************************
+**************************
 
 ===========================  ===========================================================================
 **Module Name:**             **omhttp**
@@ -15,9 +15,9 @@ Purpose
 
 This module provides the ability to send messages over an HTTP REST interface.
 
-This module supports sending messages in individual requests (the default), and batching multiple messages into a single request. Support for retrying failed requests is available in both modes. GZIP compression is configurable with the compress_ parameter. TLS encryption is configurable with the useHttps_ parameter and associated tls parameters.
+This module supports sending messages in individual requests (the default), and batching multiple messages into a single request. Support for retrying failed requests is available in both modes. GZIP compression is configurable with the :ref:`param-omhttp-compress` parameter. TLS encryption is configurable with the :ref:`param-omhttp-usehttps` parameter and associated tls parameters.
 
-In the default mode, every message is sent in its own HTTP request and it is a drop-in replacement for any other output module. In batch_ mode, the module implements several batch formatting options that are configurable via the batch.format_ parameter. Some additional attention to message formatting and retry_ strategy is required in this mode.
+In the default mode, every message is sent in its own HTTP request and it is a drop-in replacement for any other output module. In :ref:`param-omhttp-batch` mode, the module implements several batch formatting options that are configurable via the :ref:`param-omhttp-batch-format` parameter. Some additional attention to message formatting and :ref:`param-omhttp-retry` strategy is required in this mode.
 
 See the `Examples`_ section for some configuration examples.
 
@@ -36,598 +36,212 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
 
-Action Parameters
+Module Parameters
 -----------------
 
-Server
-^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "array", "localhost", "no", "none"
-
-The server address you want to connect to.
-
-
-Serverport
-^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "443", "no", "none"
-
-The port you want to connect to.
-
-
-healthchecktimeout
-^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "3500", "no", "none"
-
-The time after which the health check will time out in milliseconds.
-
-httpcontenttype
-^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "application/json; charset=utf-8", "no", "none"
-
-The HTTP "Content-Type" header sent with each request. This parameter will override other defaults. If a batching mode is specified, the correct content type is automatically configured. The "Content-Type" header can also be configured using the httpheaders_ parameter, it should be configured in only one of the parameters.
-
-
-httpheaderkey
-^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-The header key. Currently only a single additional header/key pair is configurable, to specify multiple headers see the httpheaders_ parameter. This parameter along with httpheadervalue_ may be deprecated in the future.
-
-
-httpheadervalue
-^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-The header value for httpheaderkey_.
-
-httpheaders
-^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "array", "none", "no", "none"
-
-An array of strings that defines a list of one or more HTTP headers to send with each message. Keep in mind that some HTTP headers are added using other parameters, "Content-Type" can be configured using httpcontenttype_ and "Content-Encoding: gzip" is added when using the compress_ parameter.
-
-.. code-block:: text
-
-    action(
-        type="omhttp"
-        ...
-        httpheaders=[
-            "X-Insert-Key: key",
-            "X-Event-Source: logs"
-        ]
-        ...
-    )
-
-
-httpretrycodes
-^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "array", "2xx status codes", "no", "none"
-
-An array of strings that defines a list of one or more HTTP status codes that are retriable by the omhttp plugin. By default non-2xx HTTP status codes are considered retriable.
-
-
-httpignorablecodes
-^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "array", "none", "no", "none"
-
-An array of strings that defines a list of one or more HTTP status codes that are not retriable by the omhttp plugin.
-
-
-proxyhost
-^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-Configures `CURLOPT_PROXY` option, for which omhttp can use for HTTP request. For more details see libcurl docs on CURLOPT_PROXY
-
-
-proxyport
-^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-Configures `CURLOPT_PROXYPORT` option, for which omhttp can use for HTTP request. For more details see libcurl docs on CURLOPT_PROXYPORT
-
-
-uid
-^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-The username for basic auth.
-
-
-pwd
-^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-The password for the user for basic auth.
-
-
-restpath
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-The rest path you want to use. Do not include the leading slash character. If the full path looks like "localhost:5000/my/path", restpath should be "my/path".
-
-
-dynrestpath
-^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "none"
-
-When this parameter is set to "on" you can specify a template name in the parameter
-restpath instead of the actual path. This way you will be able to use dynamic rest
-paths for your messages based on the template you are using.
-
-
-restpathtimeout
-^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "none", "no", "none"
-
-Timeout value for the configured restpath. 
-
-
-checkpath
-^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-The health check path you want to use. Do not include the leading slash character. If the full path looks like "localhost:5000/my/path", checkpath should be "my/path".
-When this parameter is set, omhttp utilizes this path to determine if it is safe to resume (from suspend mode) and communicates this status back to rsyslog core.
-This parameter defaults to none, which implies that health checks are not needed, and it is always safe to resume from suspend mode.
-
-**Important** - Note that it is highly recommended to set a valid health check path, as this allows omhttp to better determine whether it is safe to retry.
-See the `rsyslog action queue documentation for more info <https://www.rsyslog.com/doc/v8-stable/configuration/actions.html>`_ regarding general rsyslog suspend and resume behavior.
-
-
-batch
-^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "none"
-
-Batch and bulkmode do the same thing, bulkmode included for backwards compatibility. See the `Message Batching`_ section for a detailed breakdown of how batching is implemented.
-
-This parameter activates batching mode, which queues messages and sends them as a single request. There are several related parameters that specify the format and size of the batch: they are batch.format_, batch.maxbytes_, and batch.maxsize_.
-
-Note that rsyslog core is the ultimate authority on when a batch must be submitted, due to the way that batching is implemented. This plugin implements the `output plugin transaction interface <https://www.rsyslog.com/doc/v8-stable/development/dev_oplugins.html#output-plugin-transaction-interface>`_. There may be multiple batches in a single transaction, but a batch will never span multiple transactions. This means that if batch.maxsize_ or batch.maxbytes_ is set very large, you may never actually see batches hit this size. Additionally, the number of messages per transaction is determined by the size of the main, action, and ruleset queues as well.
-
-The plugin flushes a batch early if either the configured batch.maxsize_ is reached or if adding the next message would exceed batch.maxbytes_ once serialized (format overhead included). When dynrestpath_ is enabled, a change of the effective REST path also forces a flush so that each batch targets a single path.
-
-Additionally, due to some open issues with rsyslog and the transaction interface, batching requires some nuanced retry_ configuration. By default, omhttp signals transport/server failures to rsyslog core (suspend/resume), which performs retries. The retry.ruleset_ mechanism remains available for advanced per-message retry handling in batch mode.
-
-
-batch.format
-^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "newline", "no", "none"
-
-This parameter specifies how to combine multiple messages into a single batch. Valid options are *newline* (default), *jsonarray*, *kafkarest*, and *lokirest*.
-
-Each message on the "Inputs" line is the templated log line that is fed into the omhttp action, and the "Output" line describes the resulting payload sent to the configured HTTP server.
-
-1. *newline* - Concatenates each message into a single string joined by newline ("\\n") characters. This mode is default and places no restrictions on the structure of the input messages.
-
-.. code-block:: text
-
-    Inputs: "message 1" "message 2" "message 3"
-    Output: "message 1\nmessage2\nmessage3"
-
-2. *jsonarray* - Builds a JSON array containing all messages in the batch. This mode requires that each message is parsable JSON, since the plugin parses each message as JSON while building the array.
-
-.. code-block:: text
-
-    Inputs: {"msg": "message 1"} {"msg"": "message 2"} {"msg": "message 3"}
-    Output: [{"msg": "message 1"}, {"msg"": "message 2"}, {"msg": "message 3"}]
-
-3. *kafkarest* - Builds a JSON object that conforms to the `Kafka Rest Proxy specification <https://docs.confluent.io/platform/current/kafka-rest/quickstart.html>`_. This mode requires that each message is parsable JSON, since the plugin parses each message as JSON while building the batch object.
-
-.. code-block:: text
-
-    Inputs: {"msg": "message 1"} {"msg"": "message 2"} {"msg": "message 3"}
-    Output: {"records": [{"value": {"msg": "message 1"}}, {"value": {"msg": "message 2"}}, {"value": {"msg": "message 3"}}]}
-
-4. *lokirest* - Builds a JSON object that conforms to the `Loki Rest specification <https://github.com/grafana/loki/blob/main/docs/sources/reference/loki-http-api.md#ingest-logs>`_. This mode requires that each message is parsable JSON, since the plugin parses each message as JSON while building the batch object. Additionally, the operator is responsible for providing index keys, and message values.
-
-.. code-block:: text
-
-    Inputs: {"stream": {"tag1":"value1"}, values:[[ "%timestamp%", "message 1" ]]} {"stream": {"tag2":"value2"}, values:[[ %timestamp%, "message 2" ]]}
-    Output: {"streams": [{"stream": {"tag1":"value1"}, values:[[ "%timestamp%", "message 1" ]]},{"stream": {"tag2":"value2"}, values:[[ %timestamp%, "message 2" ]]}]}
-
-batch.maxsize
-^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "Size", "100", "no", "none"
-
-This parameter specifies the maximum number of messages that will be sent in each batch.
-
-batch.maxbytes
-^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "Size", "10485760 (10MB)", "no", "none"
-
-batch.maxbytes and maxbytes do the same thing, maxbytes included for backwards compatibility.
-
-This parameter specifies the maximum size in bytes for each batch.
-
-template
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "StdJSONFmt", "no", "none"
-
-The template to be used for the messages.
-
-Note that in batching mode, this describes the format of *each* individual message, *not* the format of the resulting batch. Some batch modes require that a template produces valid JSON.
-
-
-retry
-^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "none"
-
-This parameter specifies whether failed requests should be retried using the custom retry logic implemented in this plugin. Requests returning 5XX HTTP status codes are considered retriable. If retry is enabled, set retry.ruleset_ as well.
-
-Note that retries are generally handled in rsyslog by setting action.resumeRetryCount="-1" (or some other integer), and the plugin lets rsyslog know it should start retrying by suspending itself. This is still the recommended approach in the 2 cases enumerated below when using this plugin. In both of these cases, the output plugin transaction interface is not used. That is, from rsyslog core's point of view, each message is contained in its own transaction.
-
-1. Batching is off (batch="off")
-2. Batching is on and the maximum batch size is 1 (batch="on" batch.maxsize="1")
-
-This custom retry behavior is the result of a bug in rsyslog's handling of transaction commits. See `this issue <https://github.com/rsyslog/rsyslog/issues/2420>`_ for full details. Essentially, if rsyslog hands omhttp 4 messages, and omhttp batches them up but the request fails, rsyslog will only retry the LAST message that it handed the plugin, instead of all 4, even if the plugin returns the correct "defer commit" statuses for messages 1, 2, and 3. This means that omhttp cannot rely on action.resumeRetryCount for any transaction that processes more than a single message, and explains why the 2 above cases do work correctly.
-
-It looks promising that issue will be resolved at some point, so this behavior can be revisited at that time.
-
-retry.ruleset
-^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-This parameter specifies the ruleset where this plugin should requeue failed messages if retry_ is on. This ruleset generally would contain another omhttp action instance.
-
-**Important** - Note that the message that is queued on the retry ruleset is the templated output of the initial omhttp action. This means that no further templating should be done to messages inside this ruleset, unless retries should be templated differently than first-tries. An "echo template" does the trick here.
-
-.. code-block:: text
-
-   template(name="tpl_echo" type="string" string="%msg%")
-
-This retry ruleset can recursively call itself as its own retry.ruleset to retry forever, but there is no timeout behavior currently implemented.
-
-Alternatively, the omhttp action in the retry ruleset could be configured to support action.resumeRetryCount as explained above in the retry parameter section. The benefit of this approach is that retried messages still hit the server in a batch format (though with a single message in it), and the ability to configure rsyslog to give up after some number of resume attempts so as to avoid resource exhaustion.
-
-Or, if some data loss or high latency is acceptable, do not configure retries with the retry ruleset itself. A single retry from the original ruleset might catch most failures, and errors from the retry ruleset could still be logged using the errorfile parameter and sent later on via some other process.
-
-
-retry.addmetadata
-^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "none"
-
-When this option is enabled, omhttp will add the response metadata to: `$!omhttp!response`. There are 3 response metadata added: code, body, batch_index.
-
-
-
-ratelimit.interval
-^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "600", "no", "none"
-
-This parameter sets the rate limiting behavior for the retry.ruleset_. Specifies the interval in seconds onto which rate-limiting is to be applied. If more than ratelimit.burst messages are read during that interval, further messages up to the end of the interval are discarded. The number of messages discarded is emitted at the end of the interval (if there were any discards). Setting this to value zero turns off ratelimiting.
-
-ratelimit.burst
-^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "20000", "no", "none"
-
-This parameter sets the rate limiting behavior for the retry.ruleset_. Specifies the maximum number of messages that can be emitted within the ratelimit.interval interval. For further information, see description there.
-
-
-errorfile
-^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-Here you can set the name of a file where all errors will be written to. Any request that returns a 4XX or 5XX HTTP code is recorded in the error file. Each line is JSON formatted with "request" and "response" fields, example pretty-printed below.
-
-.. code-block:: text
-
-    {
-        "request": {
-            "url": "https://example.com:443/path",
-            "postdata": "mypayload"
-        },
-        "response" : {
-            "status": 400,
-            "message": "error string"
-        }
-    }
-
-It is intended that a full replay of failed data is possible by processing this file.
-
-compress
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "none"
-
-When switched to "on" each message will be compressed as GZIP using zlib's deflate compression algorithm.
-
-A "Content-Encoding: gzip" HTTP header is added to each request when this feature is used. Set the compress.level_ for fine-grained control.
-
-compress.level
-^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "-1", "no", "none"
-
-Specify the zlib compression level if compress_ is enabled. Check the `zlib manual <https://www.zlib.net/manual.html>`_ for further documentation.
-
-"-1" is the default value that strikes a balance between best speed and best compression. "0" disables compression. "1" results in the fastest compression. "9" results in the best compression.
-
-useHttps
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "none"
-
-When switched to "on" you will use `https` instead of `http`.
-
-
-tls.cacert
-^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-This parameter sets the path to the Certificate Authority (CA) bundle. Expects .pem format.
-
-tls.mycert
-^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-This parameter sets the path to the SSL client certificate. Expects .pem format.
-
-tls.myprivkey
-^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-The parameters sets the path to the SSL private key. Expects .pem format.
-
-allowunsignedcerts
-^^^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "boolean", "off", "no", "none"
-
-If `"on"`, this will set the curl `CURLOPT_SSL_VERIFYPEER` option to
-`0`.  You are strongly discouraged to set this to `"on"`.  It is
-primarily useful only for debugging or testing.
-
-skipverifyhost
-^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "boolean", "off", "no", "none"
-
-If `"on"`, this will set the curl `CURLOPT_SSL_VERIFYHOST` option to
-`0`.  You are strongly discouraged to set this to `"on"`.  It is
-primarily useful only for debugging or testing.
-
-reloadonhup
-^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "off", "no", "none"
-
-If this parameter is "on", the plugin will close and reopen any libcurl handles on a HUP signal. This option is primarily intended to enable reloading short-lived certificates without restarting rsyslog.
-
-
-statsname
-^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-
-The name assigned to statistics specific to this action instance. The supported set of
-statistics tracked for this action instance are **submitted**, **acked**, **failures**.
-See the `Statistic Counter`_ section for more details.
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Parameter
+     - Summary
+   * - :ref:`param-omhttp-server`
+     - .. include:: ../../reference/parameters/omhttp-server.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-serverport`
+     - .. include:: ../../reference/parameters/omhttp-serverport.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-healthchecktimeout`
+     - .. include:: ../../reference/parameters/omhttp-healthchecktimeout.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-httpcontenttype`
+     - .. include:: ../../reference/parameters/omhttp-httpcontenttype.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-httpheaderkey`
+     - .. include:: ../../reference/parameters/omhttp-httpheaderkey.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-httpheadervalue`
+     - .. include:: ../../reference/parameters/omhttp-httpheadervalue.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-httpheaders`
+     - .. include:: ../../reference/parameters/omhttp-httpheaders.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-httpretrycodes`
+     - .. include:: ../../reference/parameters/omhttp-httpretrycodes.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-httpignorablecodes`
+     - .. include:: ../../reference/parameters/omhttp-httpignorablecodes.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-proxyhost`
+     - .. include:: ../../reference/parameters/omhttp-proxyhost.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-proxyport`
+     - .. include:: ../../reference/parameters/omhttp-proxyport.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-uid`
+     - .. include:: ../../reference/parameters/omhttp-uid.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-pwd`
+     - .. include:: ../../reference/parameters/omhttp-pwd.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-restpath`
+     - .. include:: ../../reference/parameters/omhttp-restpath.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-dynrestpath`
+     - .. include:: ../../reference/parameters/omhttp-dynrestpath.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-restpathtimeout`
+     - .. include:: ../../reference/parameters/omhttp-restpathtimeout.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-checkpath`
+     - .. include:: ../../reference/parameters/omhttp-checkpath.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-batch`
+     - .. include:: ../../reference/parameters/omhttp-batch.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-batch-format`
+     - .. include:: ../../reference/parameters/omhttp-batch-format.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-batch-maxsize`
+     - .. include:: ../../reference/parameters/omhttp-batch-maxsize.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-batch-maxbytes`
+     - .. include:: ../../reference/parameters/omhttp-batch-maxbytes.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-template`
+     - .. include:: ../../reference/parameters/omhttp-template.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-retry`
+     - .. include:: ../../reference/parameters/omhttp-retry.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-retry-ruleset`
+     - .. include:: ../../reference/parameters/omhttp-retry-ruleset.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-retry-addmetadata`
+     - .. include:: ../../reference/parameters/omhttp-retry-addmetadata.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-ratelimit-interval`
+     - .. include:: ../../reference/parameters/omhttp-ratelimit-interval.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-ratelimit-burst`
+     - .. include:: ../../reference/parameters/omhttp-ratelimit-burst.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-errorfile`
+     - .. include:: ../../reference/parameters/omhttp-errorfile.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-compress`
+     - .. include:: ../../reference/parameters/omhttp-compress.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-compress-level`
+     - .. include:: ../../reference/parameters/omhttp-compress-level.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-usehttps`
+     - .. include:: ../../reference/parameters/omhttp-usehttps.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-tls-cacert`
+     - .. include:: ../../reference/parameters/omhttp-tls-cacert.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-tls-mycert`
+     - .. include:: ../../reference/parameters/omhttp-tls-mycert.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-tls-myprivkey`
+     - .. include:: ../../reference/parameters/omhttp-tls-myprivkey.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-allowunsignedcerts`
+     - .. include:: ../../reference/parameters/omhttp-allowunsignedcerts.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-skipverifyhost`
+     - .. include:: ../../reference/parameters/omhttp-skipverifyhost.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-reloadonhup`
+     - .. include:: ../../reference/parameters/omhttp-reloadonhup.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhttp-statsname`
+     - .. include:: ../../reference/parameters/omhttp-statsname.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/omhttp-server
+   ../../reference/parameters/omhttp-serverport
+   ../../reference/parameters/omhttp-healthchecktimeout
+   ../../reference/parameters/omhttp-httpcontenttype
+   ../../reference/parameters/omhttp-httpheaderkey
+   ../../reference/parameters/omhttp-httpheadervalue
+   ../../reference/parameters/omhttp-httpheaders
+   ../../reference/parameters/omhttp-httpretrycodes
+   ../../reference/parameters/omhttp-httpignorablecodes
+   ../../reference/parameters/omhttp-proxyhost
+   ../../reference/parameters/omhttp-proxyport
+   ../../reference/parameters/omhttp-uid
+   ../../reference/parameters/omhttp-pwd
+   ../../reference/parameters/omhttp-restpath
+   ../../reference/parameters/omhttp-dynrestpath
+   ../../reference/parameters/omhttp-restpathtimeout
+   ../../reference/parameters/omhttp-checkpath
+   ../../reference/parameters/omhttp-batch
+   ../../reference/parameters/omhttp-batch-format
+   ../../reference/parameters/omhttp-batch-maxsize
+   ../../reference/parameters/omhttp-batch-maxbytes
+   ../../reference/parameters/omhttp-template
+   ../../reference/parameters/omhttp-retry
+   ../../reference/parameters/omhttp-retry-ruleset
+   ../../reference/parameters/omhttp-retry-addmetadata
+   ../../reference/parameters/omhttp-ratelimit-interval
+   ../../reference/parameters/omhttp-ratelimit-burst
+   ../../reference/parameters/omhttp-errorfile
+   ../../reference/parameters/omhttp-compress
+   ../../reference/parameters/omhttp-compress-level
+   ../../reference/parameters/omhttp-usehttps
+   ../../reference/parameters/omhttp-tls-cacert
+   ../../reference/parameters/omhttp-tls-mycert
+   ../../reference/parameters/omhttp-tls-myprivkey
+   ../../reference/parameters/omhttp-allowunsignedcerts
+   ../../reference/parameters/omhttp-skipverifyhost
+   ../../reference/parameters/omhttp-reloadonhup
+   ../../reference/parameters/omhttp-statsname
 
 
 statsbysenders
@@ -668,7 +282,10 @@ accumulates all action instances. The statistic origin is named "omhttp" with fo
 
 - **request.status.fail** - Number of requests returning 3XX, 4XX, or 5XX HTTP status codes. If a requests fails (i.e. server not reachable) this counter will *not* be incremented.
 
-- **requests.count** - Number of requests 
+
+Additionally, the following statistics can also be configured for a specific action instances. See :ref:`param-omhttp-statsname` for more details.
+
+- **requests.count** - Number of requests
 
 - **requests.status.0xx** - Number of failed requests. 0xx errors indicate request never reached destination.
 
@@ -691,7 +308,7 @@ accumulates all action instances. The statistic origin is named "omhttp" with fo
 Message Batching
 ================
 
-See the batch.format_ section for some light examples of available batching formats.
+See the :ref:`param-omhttp-batch-format` section for some light examples of available batching formats.
 
 Implementation
 --------------
@@ -811,7 +428,7 @@ And assign it to the retry template..
         )
     }
 
-And the destination is none the wiser! The *newline*, *jsonarray*, and *kafkarest* formats all behave in the same way with respect to their batching and retry behavior, and differ only in the format of the on-the-wire payload. The formats themselves are described in the batch.format_ section.
+And the destination is none the wiser! The *newline*, *jsonarray*, and *kafkarest* formats all behave in the same way with respect to their batching and retry behavior, and differ only in the format of the on-the-wire payload. The formats themselves are described in the :ref:`param-omhttp-batch-format` section.
 
 Examples
 ========
