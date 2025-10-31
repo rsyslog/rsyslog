@@ -10,7 +10,7 @@ tls.tlsCfgCmd
 
 .. summary-start
 
-Forwards SSL_CONF-style configuration commands to OpenSSL when using the openssl backend.
+Forwards SSL_CONF-style commands to OpenSSL when using the openssl backend.
 
 .. summary-end
 

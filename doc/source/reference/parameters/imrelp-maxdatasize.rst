@@ -10,7 +10,7 @@ maxDataSize
 
 .. summary-start
 
-Sets the maximum message size the RELP listener accepts before applying oversize handling.
+Sets the max message size the RELP listener accepts before oversize handling.
 
 .. summary-end
 

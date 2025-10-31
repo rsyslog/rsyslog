@@ -21,7 +21,7 @@ This parameter applies to :doc:`../../configuration/modules/imrelp`.
 :Type: boolean
 :Default: input=off
 :Required?: no
-:Introduced: at least 8.2108.0, possibly earlier
+:Introduced: Not documented
 
 Description
 -----------
