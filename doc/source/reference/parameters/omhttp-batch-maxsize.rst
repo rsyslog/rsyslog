@@ -38,7 +38,7 @@ Module usage
    action(
        type="omhttp"
        batch="on"
-       batch.maxSize="200"
+       batchMaxSize="200"
    )
 
 See also

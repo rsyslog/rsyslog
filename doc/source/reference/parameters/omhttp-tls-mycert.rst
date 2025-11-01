@@ -38,7 +38,7 @@ Module usage
    action(
        type="omhttp"
        useHttps="on"
-       tls.myCert="/etc/rsyslog/certs/omhttp-client.pem"
+       tlsMyCert="/etc/rsyslog/certs/omhttp-client.pem"
    )
 
 See also

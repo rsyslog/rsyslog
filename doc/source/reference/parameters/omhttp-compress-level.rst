@@ -40,7 +40,7 @@ Module usage
    action(
        type="omhttp"
        compress="on"
-       compress.level="9"
+       compressLevel="9"
    )
 
 See also

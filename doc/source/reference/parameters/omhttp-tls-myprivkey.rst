@@ -38,7 +38,7 @@ Module usage
    action(
        type="omhttp"
        useHttps="on"
-       tls.myPrivKey="/etc/rsyslog/certs/omhttp-client.key"
+       tlsMyPrivKey="/etc/rsyslog/certs/omhttp-client.key"
    )
 
 See also

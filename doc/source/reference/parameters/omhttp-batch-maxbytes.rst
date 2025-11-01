@@ -40,7 +40,7 @@ Module usage
    action(
        type="omhttp"
        batch="on"
-       batch.maxBytes="5m"
+       batchMaxBytes="5m"
    )
 
 See also

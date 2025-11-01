@@ -52,8 +52,8 @@ Module usage
            type="omhttp"
            template="tpl_echo"
            batch="on"
-           batch.format="jsonarray"
-           batch.maxsize="5"
+           batchFormat="jsonarray"
+           batchMaxSize="5"
        )
    }
 

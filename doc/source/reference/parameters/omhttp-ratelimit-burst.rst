@@ -38,7 +38,7 @@ Module usage
    action(
        type="omhttp"
        retry="on"
-       rateLimit.burst="1000"
+       rateLimitBurst="1000"
    )
 
 See also

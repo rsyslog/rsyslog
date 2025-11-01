@@ -68,7 +68,7 @@ Module usage
    action(
        type="omhttp"
        batch="on"
-       batch.format="jsonarray"
+       batchFormat="jsonarray"
    )
 
 See also

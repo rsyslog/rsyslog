@@ -38,8 +38,8 @@ Module usage
    action(
        type="omhttp"
        retry="on"
-       retry.ruleSet="rs_omhttp_retry"
-       retry.addMetadata="on"
+       retryRuleSet="rs_omhttp_retry"
+       retryAddMetadata="on"
    )
 
 See also

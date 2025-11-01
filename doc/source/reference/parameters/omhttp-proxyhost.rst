@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 Description
 -----------
-Configures the libcurl ``CURLOPT_PROXY`` option for HTTP requests issued by omhttp. For more details see the libcurl documentation for ``CURLOPT_PROXY``.
+Configures the libcurl ``CURLOPT_PROXY`` option for HTTP requests issued by omhttp. For more details see the `libcurl documentation for CURLOPT_PROXY <https://curl.se/libcurl/c/CURLOPT_PROXY.html>`_.
 
 Module usage
 ------------

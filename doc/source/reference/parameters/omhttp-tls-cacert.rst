@@ -38,7 +38,7 @@ Module usage
    action(
        type="omhttp"
        useHttps="on"
-       tls.caCert="/etc/ssl/certs/ca-bundle.pem"
+       tlsCaCert="/etc/ssl/certs/ca-bundle.pem"
    )
 
 See also

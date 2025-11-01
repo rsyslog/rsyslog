@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 Description
 -----------
-If ``"on"``, this will set the curl ``CURLOPT_SSL_VERIFYHOST`` option to ``0``. You are strongly discouraged to set this to ``"on"``. It is primarily useful only for debugging or testing.
+If ``"on"``, this will set the curl `CURLOPT_SSL_VERIFYHOST <https://curl.se/libcurl/c/CURLOPT_SSL_VERIFYHOST.html>`_ option to ``0``. You are strongly discouraged to set this to ``"on"``. It is primarily useful only for debugging or testing.
 
 Module usage
 ------------
