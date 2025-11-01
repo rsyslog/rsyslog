@@ -2,6 +2,9 @@
 # addd 2019-11-14 by alorbach, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 require_relpEngineSetTLSLibByName
+echo This test seems to have problems with a tcpflood segfault on some platforms, thus skipping
+echo see https://github.com/rsyslog/rsyslog/issues/6267
+skip_test
 export NUMMESSAGES=1000
 export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
 export RSYSLOG_DEBUGLOG="$RSYSLOG_DYNNAME.receiver.debuglog"
