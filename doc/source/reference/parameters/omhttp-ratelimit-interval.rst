@@ -29,7 +29,6 @@ This parameter sets the rate limiting behavior for the :ref:`param-omhttp-retry-
 
 Module usage
 ------------
-.. _param-omhttp-module-ratelimit-interval:
 .. _omhttp.parameter.module.ratelimit-interval-usage:
 
 .. code-block:: rsyslog

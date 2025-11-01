@@ -29,7 +29,6 @@ If ``"on"``, this will set the curl ``CURLOPT_SSL_VERIFYHOST`` option to ``0``. 
 
 Module usage
 ------------
-.. _param-omhttp-module-skipverifyhost:
 .. _omhttp.parameter.module.skipverifyhost-usage:
 
 .. code-block:: rsyslog

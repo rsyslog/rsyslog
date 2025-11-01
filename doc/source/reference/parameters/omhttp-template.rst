@@ -31,7 +31,6 @@ Note that in batching mode, this describes the format of *each* individual messa
 
 Module usage
 ------------
-.. _param-omhttp-module-template:
 .. _omhttp.parameter.module.template-usage:
 
 .. code-block:: rsyslog

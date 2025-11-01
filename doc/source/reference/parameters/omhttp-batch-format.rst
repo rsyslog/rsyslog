@@ -54,12 +54,11 @@ Each message on the "Inputs" line is the templated log line that is fed into the
 
 .. code-block:: text
 
-    Inputs: {"stream": {"tag1":"value1"}, values:[[ "%timestamp%", "message 1" ]]} {"stream": {"tag2":"value2"}, values:[[ %timestamp%, "message 2" ]]}
-    Output: {"streams": [{"stream": {"tag1":"value1"}, values:[[ "%timestamp%", "message 1" ]]},{"stream": {"tag2":"value2"}, values:[[ %timestamp%, "message 2" ]]}]}
+    Inputs: {"stream": {"tag1":"value1"}, values:[[ "%timestamp%", "message 1" ]]} {"stream": {"tag2":"value2"}, values:[[ "%timestamp%", "message 2" ]]}
+    Output: {"streams": [{"stream": {"tag1":"value1"}, values:[[ "%timestamp%", "message 1" ]]},{"stream": {"tag2":"value2"}, values:[[ "%timestamp%", "message 2" ]]}]}
 
 Module usage
 ------------
-.. _param-omhttp-module-batch-format:
 .. _omhttp.parameter.module.batch-format-usage:
 
 .. code-block:: rsyslog

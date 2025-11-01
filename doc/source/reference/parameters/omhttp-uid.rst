@@ -29,7 +29,6 @@ The username for basic auth.
 
 Module usage
 ------------
-.. _param-omhttp-module-uid:
 .. _omhttp.parameter.module.uid-usage:
 
 .. code-block:: rsyslog

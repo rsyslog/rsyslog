@@ -29,7 +29,6 @@ The server address you want to connect to. Specify one or more entries to enable
 
 Module usage
 ------------
-.. _param-omhttp-module-server:
 .. _omhttp.parameter.module.server-usage:
 
 .. code-block:: rsyslog

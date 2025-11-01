@@ -31,7 +31,6 @@ A ``Content-Encoding: gzip`` HTTP header is added to each request when this feat
 
 Module usage
 ------------
-.. _param-omhttp-module-compress:
 .. _omhttp.parameter.module.compress-usage:
 
 .. code-block:: rsyslog

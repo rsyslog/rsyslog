@@ -29,7 +29,6 @@ If ``"on"``, this will set the curl ``CURLOPT_SSL_VERIFYPEER`` option to ``0``. 
 
 Module usage
 ------------
-.. _param-omhttp-module-allowunsignedcerts:
 .. _omhttp.parameter.module.allowunsignedcerts-usage:
 
 .. code-block:: rsyslog

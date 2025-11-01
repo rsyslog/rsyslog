@@ -38,7 +38,6 @@ It looks promising that issue will be resolved at some point, so this behavior c
 
 Module usage
 ------------
-.. _param-omhttp-module-retry:
 .. _omhttp.parameter.module.retry-usage:
 
 .. code-block:: rsyslog

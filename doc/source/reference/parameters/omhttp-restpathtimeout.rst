@@ -29,7 +29,6 @@ Timeout value for the configured :ref:`param-omhttp-restpath`.
 
 Module usage
 ------------
-.. _param-omhttp-module-restpathtimeout:
 .. _omhttp.parameter.module.restpathtimeout-usage:
 
 .. code-block:: rsyslog

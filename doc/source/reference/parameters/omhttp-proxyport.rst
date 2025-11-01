@@ -29,7 +29,6 @@ Configures the libcurl ``CURLOPT_PROXYPORT`` option for HTTP requests issued by 
 
 Module usage
 ------------
-.. _param-omhttp-module-proxyport:
 .. _omhttp.parameter.module.proxyport-usage:
 
 .. code-block:: rsyslog

@@ -31,7 +31,6 @@ This parameter specifies the maximum size in bytes for each batch.
 
 Module usage
 ------------
-.. _param-omhttp-module-batch-maxbytes:
 .. _omhttp.parameter.module.batch-maxbytes-usage:
 
 .. code-block:: rsyslog

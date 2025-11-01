@@ -29,7 +29,6 @@ The name assigned to statistics specific to this action instance. The supported 
 
 Module usage
 ------------
-.. _param-omhttp-module-statsname:
 .. _omhttp.parameter.module.statsname-usage:
 
 .. code-block:: rsyslog

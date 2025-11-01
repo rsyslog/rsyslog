@@ -29,7 +29,6 @@ An array of strings that defines a list of one or more HTTP status codes that ar
 
 Module usage
 ------------
-.. _param-omhttp-module-httpretrycodes:
 .. _omhttp.parameter.module.httpretrycodes-usage:
 
 .. code-block:: rsyslog

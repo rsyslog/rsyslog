@@ -44,7 +44,6 @@ It is intended that a full replay of failed data is possible by processing this 
 
 Module usage
 ------------
-.. _param-omhttp-module-errorfile:
 .. _omhttp.parameter.module.errorfile-usage:
 
 .. code-block:: rsyslog

@@ -29,7 +29,6 @@ When switched to ``on`` you will use ``https`` instead of ``http``.
 
 Module usage
 ------------
-.. _param-omhttp-module-usehttps:
 .. _omhttp.parameter.module.usehttps-usage:
 
 .. code-block:: rsyslog

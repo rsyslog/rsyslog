@@ -29,7 +29,6 @@ The header key. Currently only a single additional header/key pair is configurab
 
 Module usage
 ------------
-.. _param-omhttp-module-httpheaderkey:
 .. _omhttp.parameter.module.httpheaderkey-usage:
 
 .. code-block:: rsyslog

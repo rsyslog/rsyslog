@@ -29,7 +29,6 @@ The password for the user for basic auth.
 
 Module usage
 ------------
-.. _param-omhttp-module-pwd:
 .. _omhttp.parameter.module.pwd-usage:
 
 .. code-block:: rsyslog

@@ -29,7 +29,6 @@ This parameter sets the path to the Certificate Authority (CA) bundle. Expects `
 
 Module usage
 ------------
-.. _param-omhttp-module-tls-cacert:
 .. _omhttp.parameter.module.tls-cacert-usage:
 
 .. code-block:: rsyslog

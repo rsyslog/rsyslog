@@ -29,7 +29,6 @@ This parameter sets the path to the SSL private key. Expects ``.pem`` format.
 
 Module usage
 ------------
-.. _param-omhttp-module-tls-myprivkey:
 .. _omhttp.parameter.module.tls-myprivkey-usage:
 
 .. code-block:: rsyslog

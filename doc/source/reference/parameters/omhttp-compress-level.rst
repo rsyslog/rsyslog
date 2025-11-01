@@ -31,7 +31,6 @@ Specify the zlib compression level if :ref:`param-omhttp-compress` is enabled. C
 
 Module usage
 ------------
-.. _param-omhttp-module-compress-level:
 .. _omhttp.parameter.module.compress-level-usage:
 
 .. code-block:: rsyslog

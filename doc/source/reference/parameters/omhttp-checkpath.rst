@@ -37,7 +37,6 @@ See the `rsyslog action queue documentation for more info <https://www.rsyslog.c
 
 Module usage
 ------------
-.. _param-omhttp-module-checkpath:
 .. _omhttp.parameter.module.checkpath-usage:
 
 .. code-block:: rsyslog

@@ -29,7 +29,6 @@ The REST path you want to use. Do not include the leading slash character. If th
 
 Module usage
 ------------
-.. _param-omhttp-module-restpath:
 .. _omhttp.parameter.module.restpath-usage:
 
 .. code-block:: rsyslog

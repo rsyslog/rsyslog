@@ -29,7 +29,6 @@ An array of strings that defines a list of one or more HTTP headers to send with
 
 Module usage
 ------------
-.. _param-omhttp-module-httpheaders:
 .. _omhttp.parameter.module.httpheaders-usage:
 
 .. code-block:: rsyslog

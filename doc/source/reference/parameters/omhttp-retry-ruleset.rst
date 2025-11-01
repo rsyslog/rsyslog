@@ -41,7 +41,6 @@ Or, if some data loss or high latency is acceptable, do not configure retries wi
 
 Module usage
 ------------
-.. _param-omhttp-module-retry-ruleset:
 .. _omhttp.parameter.module.retry-ruleset-usage:
 
 .. code-block:: rsyslog

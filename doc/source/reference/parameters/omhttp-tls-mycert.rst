@@ -29,7 +29,6 @@ This parameter sets the path to the SSL client certificate. Expects ``.pem`` for
 
 Module usage
 ------------
-.. _param-omhttp-module-tls-mycert:
 .. _omhttp.parameter.module.tls-mycert-usage:
 
 .. code-block:: rsyslog

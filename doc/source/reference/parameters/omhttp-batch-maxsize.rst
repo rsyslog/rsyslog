@@ -29,7 +29,6 @@ This parameter specifies the maximum number of messages that will be sent in eac
 
 Module usage
 ------------
-.. _param-omhttp-module-batch-maxsize:
 .. _omhttp.parameter.module.batch-maxsize-usage:
 
 .. code-block:: rsyslog

@@ -29,7 +29,6 @@ The port you want to connect to.
 
 Module usage
 ------------
-.. _param-omhttp-module-serverport:
 .. _omhttp.parameter.module.serverport-usage:
 
 .. code-block:: rsyslog

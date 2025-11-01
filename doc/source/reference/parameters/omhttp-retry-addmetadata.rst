@@ -29,7 +29,6 @@ When this option is enabled, omhttp will add the response metadata to ``$!omhttp
 
 Module usage
 ------------
-.. _param-omhttp-module-retry-addmetadata:
 .. _omhttp.parameter.module.retry-addmetadata-usage:
 
 .. code-block:: rsyslog

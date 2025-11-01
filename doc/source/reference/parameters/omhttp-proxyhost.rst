@@ -29,7 +29,6 @@ Configures the libcurl ``CURLOPT_PROXY`` option for HTTP requests issued by omht
 
 Module usage
 ------------
-.. _param-omhttp-module-proxyhost:
 .. _omhttp.parameter.module.proxyhost-usage:
 
 .. code-block:: rsyslog

@@ -29,7 +29,6 @@ The time after which the health check will time out in milliseconds.
 
 Module usage
 ------------
-.. _param-omhttp-module-healthchecktimeout:
 .. _omhttp.parameter.module.healthchecktimeout-usage:
 
 .. code-block:: rsyslog

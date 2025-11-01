@@ -29,7 +29,6 @@ The header value for :ref:`param-omhttp-httpheaderkey`.
 
 Module usage
 ------------
-.. _param-omhttp-module-httpheadervalue:
 .. _omhttp.parameter.module.httpheadervalue-usage:
 
 .. code-block:: rsyslog

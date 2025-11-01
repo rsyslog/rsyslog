@@ -29,7 +29,6 @@ When this parameter is set to ``on`` you can specify a template name in the :ref
 
 Module usage
 ------------
-.. _param-omhttp-module-dynrestpath:
 .. _omhttp.parameter.module.dynrestpath-usage:
 
 .. code-block:: rsyslog

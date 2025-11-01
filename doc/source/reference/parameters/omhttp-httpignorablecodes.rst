@@ -29,7 +29,6 @@ An array of strings that defines a list of one or more HTTP status codes that ar
 
 Module usage
 ------------
-.. _param-omhttp-module-httpignorablecodes:
 .. _omhttp.parameter.module.httpignorablecodes-usage:
 
 .. code-block:: rsyslog

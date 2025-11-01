@@ -29,7 +29,6 @@ If this parameter is ``on``, the plugin will close and reopen any libcurl handle
 
 Module usage
 ------------
-.. _param-omhttp-module-reloadonhup:
 .. _omhttp.parameter.module.reloadonhup-usage:
 
 .. code-block:: rsyslog

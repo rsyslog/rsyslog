@@ -37,7 +37,6 @@ Additionally, due to some open issues with rsyslog and the transaction interface
 
 Module usage
 ------------
-.. _param-omhttp-module-batch:
 .. _omhttp.parameter.module.batch-usage:
 
 .. code-block:: rsyslog

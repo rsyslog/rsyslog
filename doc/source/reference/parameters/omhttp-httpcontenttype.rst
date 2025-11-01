@@ -29,7 +29,6 @@ The HTTP ``Content-Type`` header sent with each request. This parameter will ove
 
 Module usage
 ------------
-.. _param-omhttp-module-httpcontenttype:
 .. _omhttp.parameter.module.httpcontenttype-usage:
 
 .. code-block:: rsyslog
