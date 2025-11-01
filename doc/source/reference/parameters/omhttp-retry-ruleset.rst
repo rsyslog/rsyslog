@@ -46,15 +46,14 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="omhttp")
-
    ruleset(name="rs_omhttp_retry") {
-       action(
-           type="omhttp"
-           template="tpl_echo"
-           batch="on"
-           batchFormat="jsonarray"
-           batchMaxSize="5"
-       )
+      action(
+         type="omhttp"
+         template="tpl_echo"
+         batch="on"
+         batchFormat="jsonarray"
+         batchMaxSize="5"
+      )
    }
 
 See also

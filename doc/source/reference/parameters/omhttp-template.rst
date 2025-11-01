@@ -39,14 +39,14 @@ Module usage
       constant(value="{")   property(name="msg"           outname="message"   format="jsonfr")
       constant(value=",")   property(name="hostname"      outname="host"      format="jsonfr")
       constant(value=",")   property(name="timereported"  outname="timestamp" format="jsonfr" dateFormat="rfc3339")
-       constant(value="}")
+      constant(value="}")
    }
 
    module(load="omhttp")
 
    action(
-       type="omhttp"
-       template="tpl_omhttp_json"
+      type="omhttp"
+      template="tpl_omhttp_json"
    )
 
 See also
