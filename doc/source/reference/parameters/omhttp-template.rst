@@ -36,9 +36,9 @@ Module usage
 .. code-block:: rsyslog
 
    template(name="tpl_omhttp_json" type="list") {
-       constant(value="{")   property(name="msg" outname="message" format="jsonfr")
-       constant(value=",")   property(name="hostname" outname="host" format="jsonfr")
-       constant(value=",")   property(name="timereported" outname="timestamp" format="jsonfr" dateFormat="rfc3339")
+      constant(value="{")   property(name="msg"           outname="message"   format="jsonfr")
+      constant(value=",")   property(name="hostname"      outname="host"      format="jsonfr")
+      constant(value=",")   property(name="timereported"  outname="timestamp" format="jsonfr" dateFormat="rfc3339")
        constant(value="}")
    }
 
