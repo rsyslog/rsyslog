@@ -1,12 +1,12 @@
 .. _param-omhttp-server:
 .. _omhttp.parameter.module.server:
 
-Server
+server
 ======
 
 .. index::
-   single: omhttp; Server
-   single: Server
+   single: omhttp; server
+   single: server
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Defines the list of HTTP server hostnames or IP addresses that omhttp connects t
 
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
-:Name: Server
+:Name: server
 :Scope: module
 :Type: array
 :Default: module=localhost

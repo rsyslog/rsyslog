@@ -34,7 +34,7 @@ Each message on the "Inputs" line is the templated log line that is fed into the
 .. code-block:: text
 
     Inputs: "message 1" "message 2" "message 3"
-    Output: "message 1\nmessage2\nmessage3"
+    Output: "message 1\nmessage 2\nmessage 3"
 
 2. *jsonarray* - Builds a JSON array containing all messages in the batch. This mode requires that each message is parsable JSON, since the plugin parses each message as JSON while building the array.
 
