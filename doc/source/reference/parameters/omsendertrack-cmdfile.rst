@@ -40,8 +40,8 @@ Module usage
 
    module(load="omsendertrack")
    action(type="omsendertrack"
-          statefile="/var/lib/rsyslog/senderstats.json"
-          cmdfile="/var/lib/rsyslog/sendercommands.txt")
+          stateFile="/var/lib/rsyslog/senderstats.json"
+          cmdFile="/var/lib/rsyslog/sendercommands.txt")
 
 See also
 --------

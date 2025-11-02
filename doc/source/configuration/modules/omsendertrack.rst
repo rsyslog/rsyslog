@@ -254,9 +254,9 @@ when the overall volume is low.
 
    module(load="omsendertrack")
    action(type="omsendertrack"
-          senderid="%hostname%"
+          senderId="%hostname%"
           interval="60"
-          statefile="/var/lib/rsyslog/senderstats.json")
+          stateFile="/var/lib/rsyslog/senderstats.json")
 
 Example 2: Usage with Dedicated Ruleset
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -273,7 +273,7 @@ processing flows for other actions.
 
 .. code-block:: rsyslog
 
-   # Define the template for senderid in omsendertrack
+   # Define the template for senderId in omsendertrack
    template(name="id-template" type="list") {
        property(name="hostname")
    }
@@ -283,10 +283,10 @@ processing flows for other actions.
    ruleset(name="omsendertrack-ruleset") {
        action(
            type="omsendertrack"
-           senderid="id-template"
+           senderId="id-template"
            interval="60"
-           statefile="/var/lib/rsyslog/senderstats.json"
-           cmdfile="/var/lib/rsyslog/sendercommands.txt"
+           stateFile="/var/lib/rsyslog/senderstats.json"
+           cmdFile="/var/lib/rsyslog/sendercommands.txt"
        )
    }
 
@@ -366,9 +366,9 @@ state files.
    ruleset(name="udp-sender-tracking") {
        action(
            type="omsendertrack"
-           senderid="%fromhost-ip%"
+           senderId="%fromhost-ip%"
            interval="300"
-           statefile="/var/lib/rsyslog/udp_sender_stats.json"
+           stateFile="/var/lib/rsyslog/udp_sender_stats.json"
        )
        # Add other actions for UDP messages here (e.g., forwarding, writing to file)
    }
@@ -377,9 +377,9 @@ state files.
    ruleset(name="tcp-sender-tracking") {
        action(
            type="omsendertrack"
-           senderid="%fromhost-ip%"
+           senderId="%fromhost-ip%"
            interval="300"
-           statefile="/var/lib/rsyslog/tcp_sender_stats.json"
+           stateFile="/var/lib/rsyslog/tcp_sender_stats.json"
        )
        # Add other actions for TCP messages here
    }

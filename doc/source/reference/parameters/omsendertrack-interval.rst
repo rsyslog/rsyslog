@@ -40,7 +40,7 @@ Module usage
    module(load="omsendertrack")
    action(type="omsendertrack"
           interval="60"
-          statefile="/var/lib/rsyslog/senderstats.json")
+          stateFile="/var/lib/rsyslog/senderstats.json")
 
 See also
 --------
