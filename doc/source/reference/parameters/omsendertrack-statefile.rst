@@ -1,5 +1,5 @@
 .. _param-omsendertrack-statefile:
-.. _omsendertrack.parameter.module.statefile:
+.. _omsendertrack.parameter.input.statefile:
 
 statefile
 =========
@@ -17,9 +17,9 @@ Specifies the absolute path to the JSON file where omsendertrack persists sender
 This parameter applies to :doc:`../../configuration/modules/omsendertrack`.
 
 :Name: statefile
-:Scope: module
+:Scope: input
 :Type: string
-:Default: module=none
+:Default: input=none
 :Required?: yes
 :Introduced: 8.2506.0 (Proof-of-Concept)
 
@@ -31,10 +31,10 @@ The module updates this file periodically based on the configured :ref:`interval
 **Important:** Ensure that the rsyslog user has appropriate write permissions to the directory where this ``statefile`` is located.
 Failure to do so will prevent the module from saving its state.
 
-Module usage
-------------
-.. _param-omsendertrack-module-statefile:
-.. _omsendertrack.parameter.module.statefile-usage:
+Input usage
+-----------
+.. _param-omsendertrack-input-statefile:
+.. _omsendertrack.parameter.input.statefile-usage:
 
 .. code-block:: rsyslog
 

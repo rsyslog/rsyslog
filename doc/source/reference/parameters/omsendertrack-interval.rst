@@ -1,5 +1,5 @@
 .. _param-omsendertrack-interval:
-.. _omsendertrack.parameter.module.interval:
+.. _omsendertrack.parameter.input.interval:
 
 interval
 ========
@@ -17,9 +17,9 @@ Sets how many seconds elapse between each write of sender statistics to the stat
 This parameter applies to :doc:`../../configuration/modules/omsendertrack`.
 
 :Name: interval
-:Scope: module
+:Scope: input
 :Type: integer
-:Default: module=60
+:Default: input=60
 :Required?: no
 :Introduced: 8.2506.0 (Proof-of-Concept)
 
@@ -30,10 +30,10 @@ This parameter defines the **interval in seconds** after which the module writes
 A smaller ``interval`` value results in more frequent updates to the state file, reducing potential data loss in case of an unexpected system crash, but it also increases disk I/O.
 A larger ``interval`` reduces I/O but means less up-to-date statistics on disk.
 
-Module usage
-------------
-.. _param-omsendertrack-module-interval:
-.. _omsendertrack.parameter.module.interval-usage:
+Input usage
+-----------
+.. _param-omsendertrack-input-interval:
+.. _omsendertrack.parameter.input.interval-usage:
 
 .. code-block:: rsyslog
 

@@ -1,5 +1,5 @@
 .. _param-omsendertrack-cmdfile:
-.. _omsendertrack.parameter.module.cmdfile:
+.. _omsendertrack.parameter.input.cmdfile:
 
 cmdfile
 =======
@@ -17,9 +17,9 @@ Defines the absolute path to the command file that omsendertrack reads when rsys
 This parameter applies to :doc:`../../configuration/modules/omsendertrack`.
 
 :Name: cmdfile
-:Scope: module
+:Scope: input
 :Type: string
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: 8.2506.0 (Proof-of-Concept)
 
@@ -31,10 +31,10 @@ This file *is designed to be processed when rsyslog receives a HUP signal* (for 
 **Note:** Command file support is currently **not implemented** in this proof-of-concept version of the module.
 When implemented, this feature is intended to allow dynamic control over the module's behavior, such as resetting statistics for specific senders, without requiring an rsyslog restart.
 
-Module usage
-------------
-.. _param-omsendertrack-module-cmdfile:
-.. _omsendertrack.parameter.module.cmdfile-usage:
+Input usage
+-----------
+.. _param-omsendertrack-input-cmdfile:
+.. _omsendertrack.parameter.input.cmdfile-usage:
 
 .. code-block:: rsyslog
 

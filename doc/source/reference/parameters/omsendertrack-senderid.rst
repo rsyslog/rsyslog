@@ -1,5 +1,5 @@
 .. _param-omsendertrack-senderid:
-.. _omsendertrack.parameter.module.senderid:
+.. _omsendertrack.parameter.input.senderid:
 
 senderid
 ========
@@ -17,9 +17,9 @@ Sets the template used to derive the unique sender identifier that omsendertrack
 This parameter applies to :doc:`../../configuration/modules/omsendertrack`.
 
 :Name: senderid
-:Scope: module
+:Scope: input
 :Type: string
-:Default: module=RSYSLOG_FileFormat
+:Default: input=RSYSLOG_FileFormat
 :Required?: no
 :Introduced: 8.2506.0 (Proof-of-Concept)
 
@@ -37,10 +37,10 @@ For instance:
 **Note:** The processing of this template for every incoming message can impact overall throughput, especially if complex templates are used.
 Choose your template wisely based on your tracking needs and performance considerations.
 
-Module usage
-------------
-.. _param-omsendertrack-module-senderid:
-.. _omsendertrack.parameter.module.senderid-usage:
+Input usage
+-----------
+.. _param-omsendertrack-input-senderid:
+.. _omsendertrack.parameter.input.senderid-usage:
 
 .. code-block:: rsyslog
 
