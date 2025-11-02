@@ -40,6 +40,7 @@ Module usage
 
    module(load="omsendertrack")
    action(type="omsendertrack"
+          senderid="%hostname%"
           statefile="/var/lib/rsyslog/senderstats.json")
 
 See also
