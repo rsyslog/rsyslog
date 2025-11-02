@@ -1,5 +1,5 @@
 .. _param-omhttp-httpheaders:
-.. _omhttp.parameter.module.httpheaders:
+.. _omhttp.parameter.input.httpheaders:
 
 httpheaders
 ===========
@@ -17,9 +17,9 @@ Configures an array of additional HTTP headers that omhttp sends with each reque
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: httpheaders
-:Scope: module
+:Scope: input
 :Type: array
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 An array of strings that defines a list of one or more HTTP headers to send with each message. Keep in mind that some HTTP headers are added using other parameters. ``Content-Type`` can be configured using :ref:`param-omhttp-httpcontenttype`, and ``Content-Encoding: gzip`` is added when using the :ref:`param-omhttp-compress` parameter.
 
-Module usage
-------------
-.. _omhttp.parameter.module.httpheaders-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.httpheaders-usage:
 
 .. code-block:: rsyslog
 

@@ -1,5 +1,5 @@
 .. _param-omhttp-ratelimit-interval:
-.. _omhttp.parameter.module.ratelimit-interval:
+.. _omhttp.parameter.input.ratelimit-interval:
 
 ratelimit.interval
 ==================
@@ -17,9 +17,9 @@ Controls the duration, in seconds, of the rate-limiting window for the retry rul
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: ratelimit.interval
-:Scope: module
+:Scope: input
 :Type: integer
-:Default: module=600
+:Default: input=600
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 This parameter sets the rate limiting behavior for the :ref:`param-omhttp-retry-ruleset`. It specifies the interval in seconds onto which rate-limiting is to be applied. If more than :ref:`param-omhttp-ratelimit-burst` messages are read during that interval, further messages up to the end of the interval are discarded. The number of messages discarded is emitted at the end of the interval (if there were any discards). Setting this to value zero turns off ratelimiting.
 
-Module usage
-------------
-.. _omhttp.parameter.module.ratelimit-interval-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.ratelimit-interval-usage:
 
 .. code-block:: rsyslog
 

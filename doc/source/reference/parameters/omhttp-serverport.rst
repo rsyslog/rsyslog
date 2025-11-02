@@ -1,5 +1,5 @@
 .. _param-omhttp-serverport:
-.. _omhttp.parameter.module.serverport:
+.. _omhttp.parameter.input.serverport:
 
 serverport
 ==========
@@ -17,9 +17,9 @@ Specifies the TCP port that omhttp uses when connecting to the configured HTTP s
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: serverport
-:Scope: module
+:Scope: input
 :Type: integer
-:Default: module=443
+:Default: input=443
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 The port you want to connect to.
 
-Module usage
-------------
-.. _omhttp.parameter.module.serverport-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.serverport-usage:
 
 .. code-block:: rsyslog
 

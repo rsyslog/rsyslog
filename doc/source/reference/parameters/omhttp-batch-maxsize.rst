@@ -1,5 +1,5 @@
 .. _param-omhttp-batch-maxsize:
-.. _omhttp.parameter.module.batch-maxsize:
+.. _omhttp.parameter.input.batch-maxsize:
 
 batch.maxsize
 =============
@@ -17,9 +17,9 @@ Limits how many messages omhttp includes in a batch.
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: batch.maxsize
-:Scope: module
+:Scope: input
 :Type: Size
-:Default: module=100
+:Default: input=100
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 This parameter specifies the maximum number of messages that will be sent in each batch.
 
-Module usage
-------------
-.. _omhttp.parameter.module.batch-maxsize-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.batch-maxsize-usage:
 
 .. code-block:: rsyslog
 

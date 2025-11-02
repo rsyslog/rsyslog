@@ -1,5 +1,5 @@
 .. _param-omhttp-ratelimit-burst:
-.. _omhttp.parameter.module.ratelimit-burst:
+.. _omhttp.parameter.input.ratelimit-burst:
 
 ratelimit.burst
 ===============
@@ -17,9 +17,9 @@ Sets how many messages the retry ruleset may emit within each rate-limiting wind
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: ratelimit.burst
-:Scope: module
+:Scope: input
 :Type: integer
-:Default: module=20000
+:Default: input=20000
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 This parameter sets the rate limiting behavior for the :ref:`param-omhttp-retry-ruleset`. It specifies the maximum number of messages that can be emitted within the :ref:`param-omhttp-ratelimit-interval` interval. For further information, see the description there.
 
-Module usage
-------------
-.. _omhttp.parameter.module.ratelimit-burst-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.ratelimit-burst-usage:
 
 .. code-block:: rsyslog
 

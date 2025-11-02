@@ -1,5 +1,5 @@
 .. _param-omhttp-proxyhost:
-.. _omhttp.parameter.module.proxyhost:
+.. _omhttp.parameter.input.proxyhost:
 
 proxyhost
 =========
@@ -17,9 +17,9 @@ Sets the hostname of the HTTP proxy that omhttp should use.
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: proxyhost
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 Configures the libcurl ``CURLOPT_PROXY`` option for HTTP requests issued by omhttp. For more details see the `libcurl documentation for CURLOPT_PROXY <https://curl.se/libcurl/c/CURLOPT_PROXY.html>`_.
 
-Module usage
-------------
-.. _omhttp.parameter.module.proxyhost-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.proxyhost-usage:
 
 .. code-block:: rsyslog
 

@@ -1,5 +1,5 @@
 .. _param-omhttp-restpath:
-.. _omhttp.parameter.module.restpath:
+.. _omhttp.parameter.input.restpath:
 
 restpath
 ========
@@ -17,9 +17,9 @@ Sets the REST path portion of the request URL used by omhttp.
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: restpath
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 The REST path you want to use. Do not include the leading slash character. If the full path looks like ``localhost:5000/my/path``, ``restpath`` should be ``my/path``.
 
-Module usage
-------------
-.. _omhttp.parameter.module.restpath-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.restpath-usage:
 
 .. code-block:: rsyslog
 

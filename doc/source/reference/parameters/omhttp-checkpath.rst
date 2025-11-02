@@ -1,5 +1,5 @@
 .. _param-omhttp-checkpath:
-.. _omhttp.parameter.module.checkpath:
+.. _omhttp.parameter.input.checkpath:
 
 checkpath
 =========
@@ -17,9 +17,9 @@ Defines the health-check endpoint that omhttp polls to decide when to resume aft
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: checkpath
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: Not specified
 
@@ -35,9 +35,9 @@ This parameter defaults to ``none``, which implies that health checks are not ne
 
 See the `rsyslog action queue documentation for more info <https://www.rsyslog.com/doc/v8-stable/configuration/actions.html>`_ regarding general rsyslog suspend and resume behavior.
 
-Module usage
-------------
-.. _omhttp.parameter.module.checkpath-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.checkpath-usage:
 
 .. code-block:: rsyslog
 

@@ -1,5 +1,5 @@
 .. _param-omhttp-skipverifyhost:
-.. _omhttp.parameter.module.skipverifyhost:
+.. _omhttp.parameter.input.skipverifyhost:
 
 skipverifyhost
 ==============
@@ -17,9 +17,9 @@ Controls whether omhttp verifies the HTTPS server hostname.
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: skipverifyhost
-:Scope: module
+:Scope: input
 :Type: boolean
-:Default: module=off
+:Default: input=off
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 If ``"on"``, this will set the curl `CURLOPT_SSL_VERIFYHOST <https://curl.se/libcurl/c/CURLOPT_SSL_VERIFYHOST.html>`_ option to ``0``. You are strongly discouraged to set this to ``"on"``. It is primarily useful only for debugging or testing.
 
-Module usage
-------------
-.. _omhttp.parameter.module.skipverifyhost-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.skipverifyhost-usage:
 
 .. code-block:: rsyslog
 

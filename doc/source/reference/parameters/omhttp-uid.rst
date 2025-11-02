@@ -1,5 +1,5 @@
 .. _param-omhttp-uid:
-.. _omhttp.parameter.module.uid:
+.. _omhttp.parameter.input.uid:
 
 uid
 ===
@@ -17,9 +17,9 @@ Provides the username for HTTP basic authentication.
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: uid
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 The username for basic auth.
 
-Module usage
-------------
-.. _omhttp.parameter.module.uid-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.uid-usage:
 
 .. code-block:: rsyslog
 

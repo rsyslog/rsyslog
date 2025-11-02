@@ -1,5 +1,5 @@
 .. _param-omhttp-restpathtimeout:
-.. _omhttp.parameter.module.restpathtimeout:
+.. _omhttp.parameter.input.restpathtimeout:
 
 restpathtimeout
 ===============
@@ -17,9 +17,9 @@ Specifies how long omhttp waits for a dynamic REST path template to resolve.
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: restpathtimeout
-:Scope: module
+:Scope: input
 :Type: integer
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 Timeout value for the configured :ref:`param-omhttp-restpath`.
 
-Module usage
-------------
-.. _omhttp.parameter.module.restpathtimeout-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.restpathtimeout-usage:
 
 .. code-block:: rsyslog
 

@@ -1,5 +1,5 @@
 .. _param-omhttp-httpheadervalue:
-.. _omhttp.parameter.module.httpheadervalue:
+.. _omhttp.parameter.input.httpheadervalue:
 
 httpheadervalue
 ===============
@@ -17,9 +17,9 @@ Provides the value for the single custom HTTP header defined by :ref:`param-omht
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: httpheadervalue
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 The header value for :ref:`param-omhttp-httpheaderkey`.
 
-Module usage
-------------
-.. _omhttp.parameter.module.httpheadervalue-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.httpheadervalue-usage:
 
 .. code-block:: rsyslog
 

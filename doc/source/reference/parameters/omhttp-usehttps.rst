@@ -1,5 +1,5 @@
 .. _param-omhttp-usehttps:
-.. _omhttp.parameter.module.usehttps:
+.. _omhttp.parameter.input.usehttps:
 
 useHttps
 ========
@@ -17,9 +17,9 @@ Switches omhttp to use HTTPS instead of HTTP when sending requests.
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: useHttps
-:Scope: module
+:Scope: input
 :Type: boolean
-:Default: module=off
+:Default: input=off
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 When switched to ``on`` you will use ``https`` instead of ``http``.
 
-Module usage
-------------
-.. _omhttp.parameter.module.usehttps-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.usehttps-usage:
 
 .. code-block:: rsyslog
 

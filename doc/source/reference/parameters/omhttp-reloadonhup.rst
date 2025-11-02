@@ -1,5 +1,5 @@
 .. _param-omhttp-reloadonhup:
-.. _omhttp.parameter.module.reloadonhup:
+.. _omhttp.parameter.input.reloadonhup:
 
 reloadonhup
 ===========
@@ -17,9 +17,9 @@ Reinitializes libcurl handles on ``HUP`` signals so certificates can be refreshe
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: reloadonhup
-:Scope: module
+:Scope: input
 :Type: boolean
-:Default: module=off
+:Default: input=off
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 If this parameter is ``on``, the plugin will close and reopen any libcurl handles on a HUP signal. This option is primarily intended to enable reloading short-lived certificates without restarting rsyslog.
 
-Module usage
-------------
-.. _omhttp.parameter.module.reloadonhup-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.reloadonhup-usage:
 
 .. code-block:: rsyslog
 

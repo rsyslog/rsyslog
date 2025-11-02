@@ -1,5 +1,5 @@
 .. _param-omhttp-httpheaderkey:
-.. _omhttp.parameter.module.httpheaderkey:
+.. _omhttp.parameter.input.httpheaderkey:
 
 httpheaderkey
 =============
@@ -17,9 +17,9 @@ Defines the single custom HTTP header name to send with each omhttp request.
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: httpheaderkey
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 The header key. Currently only a single additional header/key pair is configurable with this parameter. To specify multiple headers use the :ref:`param-omhttp-httpheaders` parameter. This parameter, along with :ref:`param-omhttp-httpheadervalue`, may be deprecated in the future.
 
-Module usage
-------------
-.. _omhttp.parameter.module.httpheaderkey-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.httpheaderkey-usage:
 
 .. code-block:: rsyslog
 

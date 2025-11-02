@@ -1,5 +1,5 @@
 .. _param-omhttp-retry:
-.. _omhttp.parameter.module.retry:
+.. _omhttp.parameter.input.retry:
 
 retry
 =====
@@ -17,9 +17,9 @@ Enables omhttp's internal retry logic that requeues failed requests for another 
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: retry
-:Scope: module
+:Scope: input
 :Type: boolean
-:Default: module=off
+:Default: input=off
 :Required?: no
 :Introduced: Not specified
 
@@ -36,9 +36,9 @@ This custom retry behavior is the result of a bug in rsyslog's handling of trans
 
 It looks promising that issue will be resolved at some point, so this behavior can be revisited at that time.
 
-Module usage
-------------
-.. _omhttp.parameter.module.retry-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.retry-usage:
 
 .. code-block:: rsyslog
 

@@ -1,5 +1,5 @@
 .. _param-omhttp-httpretrycodes:
-.. _omhttp.parameter.module.httpretrycodes:
+.. _omhttp.parameter.input.httpretrycodes:
 
 httpretrycodes
 ==============
@@ -17,9 +17,9 @@ Lists HTTP status codes that omhttp treats as retriable errors.
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: httpretrycodes
-:Scope: module
+:Scope: input
 :Type: array
-:Default: module=2xx status codes
+:Default: input=2xx status codes
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 An array of strings that defines a list of one or more HTTP status codes that are retriable by the omhttp plugin. By default non-2xx HTTP status codes are considered retriable.
 
-Module usage
-------------
-.. _omhttp.parameter.module.httpretrycodes-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.httpretrycodes-usage:
 
 .. code-block:: rsyslog
 

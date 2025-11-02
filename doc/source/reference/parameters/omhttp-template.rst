@@ -1,5 +1,5 @@
 .. _param-omhttp-template:
-.. _omhttp.parameter.module.template:
+.. _omhttp.parameter.input.template:
 
 template
 ========
@@ -17,9 +17,9 @@ Selects the rsyslog template used to render each message before omhttp submits i
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: template
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=StdJSONFmt
+:Default: input=StdJSONFmt
 :Required?: no
 :Introduced: Not specified
 
@@ -29,9 +29,9 @@ The template to be used for the messages.
 
 Note that in batching mode, this describes the format of *each* individual message, *not* the format of the resulting batch. Some batch modes require that a template produces valid JSON.
 
-Module usage
-------------
-.. _omhttp.parameter.module.template-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.template-usage:
 
 .. code-block:: rsyslog
 

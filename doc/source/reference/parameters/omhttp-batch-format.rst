@@ -1,5 +1,5 @@
 .. _param-omhttp-batch-format:
-.. _omhttp.parameter.module.batch-format:
+.. _omhttp.parameter.input.batch-format:
 
 batch.format
 ============
@@ -17,9 +17,9 @@ Chooses how omhttp combines multiple messages when batching is enabled.
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: batch.format
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=newline
+:Default: input=newline
 :Required?: no
 :Introduced: Not specified
 
@@ -57,9 +57,9 @@ Each message on the "Inputs" line is the templated log line that is fed into the
     Inputs: {"stream": {"tag1":"value1"}, values:[[ "%timestamp%", "message 1" ]]} {"stream": {"tag2":"value2"}, values:[[ "%timestamp%", "message 2" ]]}
     Output: {"streams": [{"stream": {"tag1":"value1"}, values:[[ "%timestamp%", "message 1" ]]},{"stream": {"tag2":"value2"}, values:[[ "%timestamp%", "message 2" ]]}]}
 
-Module usage
-------------
-.. _omhttp.parameter.module.batch-format-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.batch-format-usage:
 
 .. code-block:: rsyslog
 

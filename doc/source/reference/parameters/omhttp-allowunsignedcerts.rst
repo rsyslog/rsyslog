@@ -1,5 +1,5 @@
 .. _param-omhttp-allowunsignedcerts:
-.. _omhttp.parameter.module.allowunsignedcerts:
+.. _omhttp.parameter.input.allowunsignedcerts:
 
 allowunsignedcerts
 ==================
@@ -17,9 +17,9 @@ Controls whether omhttp skips server certificate validation when using HTTPS.
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: allowunsignedcerts
-:Scope: module
+:Scope: input
 :Type: boolean
-:Default: module=off
+:Default: input=off
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 If ``"on"``, this will set the curl `CURLOPT_SSL_VERIFYPEER <https://curl.se/libcurl/c/CURLOPT_SSL_VERIFYPEER.html>`_ option to ``0``. You are strongly discouraged to set this to ``"on"``. It is primarily useful only for debugging or testing.
 
-Module usage
-------------
-.. _omhttp.parameter.module.allowunsignedcerts-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.allowunsignedcerts-usage:
 
 .. code-block:: rsyslog
 

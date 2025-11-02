@@ -1,5 +1,5 @@
 .. _param-omhttp-httpignorablecodes:
-.. _omhttp.parameter.module.httpignorablecodes:
+.. _omhttp.parameter.input.httpignorablecodes:
 
 httpignorablecodes
 ==================
@@ -17,9 +17,9 @@ Lists HTTP status codes that omhttp never retries.
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: httpignorablecodes
-:Scope: module
+:Scope: input
 :Type: array
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 An array of strings that defines a list of one or more HTTP status codes that are not retriable by the omhttp plugin.
 
-Module usage
-------------
-.. _omhttp.parameter.module.httpignorablecodes-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.httpignorablecodes-usage:
 
 .. code-block:: rsyslog
 

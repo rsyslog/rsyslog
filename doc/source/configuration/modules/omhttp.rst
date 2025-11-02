@@ -39,8 +39,8 @@ Configuration Parameters
    Parameter names are case-insensitive; camelCase is recommended for readability.
 
 
-Module Parameters
------------------
+Input Parameters
+----------------
 
 .. list-table::
    :widths: 30 70

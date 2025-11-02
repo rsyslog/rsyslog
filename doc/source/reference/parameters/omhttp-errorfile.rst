@@ -1,5 +1,5 @@
 .. _param-omhttp-errorfile:
-.. _omhttp.parameter.module.errorfile:
+.. _omhttp.parameter.input.errorfile:
 
 errorfile
 =========
@@ -17,9 +17,9 @@ Specifies a file where omhttp records HTTP requests that return error responses.
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: errorfile
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: Not specified
 
@@ -42,9 +42,9 @@ Here you can set the name of a file where all errors will be written to. Any req
 
 It is intended that a full replay of failed data is possible by processing this file.
 
-Module usage
-------------
-.. _omhttp.parameter.module.errorfile-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.errorfile-usage:
 
 .. code-block:: rsyslog
 

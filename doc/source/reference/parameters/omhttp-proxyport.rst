@@ -1,5 +1,5 @@
 .. _param-omhttp-proxyport:
-.. _omhttp.parameter.module.proxyport:
+.. _omhttp.parameter.input.proxyport:
 
 proxyport
 =========
@@ -17,9 +17,9 @@ Sets the port number of the HTTP proxy used by omhttp.
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: proxyport
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 Configures the libcurl ``CURLOPT_PROXYPORT`` option for HTTP requests issued by omhttp. For more details see the `libcurl documentation for CURLOPT_PROXYPORT <https://curl.se/libcurl/c/CURLOPT_PROXYPORT.html>`_.
 
-Module usage
-------------
-.. _omhttp.parameter.module.proxyport-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.proxyport-usage:
 
 .. code-block:: rsyslog
 

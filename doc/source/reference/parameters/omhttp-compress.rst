@@ -1,5 +1,5 @@
 .. _param-omhttp-compress:
-.. _omhttp.parameter.module.compress:
+.. _omhttp.parameter.input.compress:
 
 compress
 ========
@@ -17,9 +17,9 @@ Enables GZIP compression of each HTTP payload sent by omhttp.
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: compress
-:Scope: module
+:Scope: input
 :Type: boolean
-:Default: module=off
+:Default: input=off
 :Required?: no
 :Introduced: Not specified
 
@@ -29,9 +29,9 @@ When switched to ``on`` each message will be compressed as GZIP using zlib's def
 
 A ``Content-Encoding: gzip`` HTTP header is added to each request when this feature is used. Set the :ref:`param-omhttp-compress-level` for fine-grained control.
 
-Module usage
-------------
-.. _omhttp.parameter.module.compress-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.compress-usage:
 
 .. code-block:: rsyslog
 

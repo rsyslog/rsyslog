@@ -1,5 +1,5 @@
 .. _param-omhttp-compress-level:
-.. _omhttp.parameter.module.compress-level:
+.. _omhttp.parameter.input.compress-level:
 
 compress.level
 ==============
@@ -17,9 +17,9 @@ Sets the zlib compression level used when :ref:`param-omhttp-compress` is enable
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: compress.level
-:Scope: module
+:Scope: input
 :Type: integer
-:Default: module=-1
+:Default: input=-1
 :Required?: no
 :Introduced: Not specified
 
@@ -29,9 +29,9 @@ Specify the zlib compression level if :ref:`param-omhttp-compress` is enabled. C
 
 ``-1`` is the default value that strikes a balance between best speed and best compression. ``0`` disables compression. ``1`` results in the fastest compression. ``9`` results in the best compression.
 
-Module usage
-------------
-.. _omhttp.parameter.module.compress-level-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.compress-level-usage:
 
 .. code-block:: rsyslog
 

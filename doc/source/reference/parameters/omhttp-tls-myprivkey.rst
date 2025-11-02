@@ -1,5 +1,5 @@
 .. _param-omhttp-tls-myprivkey:
-.. _omhttp.parameter.module.tls-myprivkey:
+.. _omhttp.parameter.input.tls-myprivkey:
 
 tls.myprivkey
 =============
@@ -17,9 +17,9 @@ Provides the private key file that pairs with :ref:`param-omhttp-tls-mycert`.
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: tls.myprivkey
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 This parameter sets the path to the SSL private key. Expects ``.pem`` format.
 
-Module usage
-------------
-.. _omhttp.parameter.module.tls-myprivkey-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.tls-myprivkey-usage:
 
 .. code-block:: rsyslog
 

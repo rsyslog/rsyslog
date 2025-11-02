@@ -1,5 +1,5 @@
 .. _param-omhttp-healthchecktimeout:
-.. _omhttp.parameter.module.healthchecktimeout:
+.. _omhttp.parameter.input.healthchecktimeout:
 
 healthchecktimeout
 ==================
@@ -17,9 +17,9 @@ Sets the number of milliseconds omhttp waits before a health check request times
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: healthchecktimeout
-:Scope: module
+:Scope: input
 :Type: integer
-:Default: module=3500
+:Default: input=3500
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 The time after which the health check will time out in milliseconds.
 
-Module usage
-------------
-.. _omhttp.parameter.module.healthchecktimeout-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.healthchecktimeout-usage:
 
 .. code-block:: rsyslog
 

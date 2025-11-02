@@ -1,5 +1,5 @@
 .. _param-omhttp-tls-cacert:
-.. _omhttp.parameter.module.tls-cacert:
+.. _omhttp.parameter.input.tls-cacert:
 
 tls.cacert
 ==========
@@ -17,9 +17,9 @@ Points omhttp to the CA bundle used to verify HTTPS servers.
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: tls.cacert
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 This parameter sets the path to the Certificate Authority (CA) bundle. Expects ``.pem`` format.
 
-Module usage
-------------
-.. _omhttp.parameter.module.tls-cacert-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.tls-cacert-usage:
 
 .. code-block:: rsyslog
 

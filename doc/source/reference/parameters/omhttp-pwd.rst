@@ -1,5 +1,5 @@
 .. _param-omhttp-pwd:
-.. _omhttp.parameter.module.pwd:
+.. _omhttp.parameter.input.pwd:
 
 pwd
 ===
@@ -17,9 +17,9 @@ Provides the password for HTTP basic authentication.
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: pwd
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 The password for the user for basic auth.
 
-Module usage
-------------
-.. _omhttp.parameter.module.pwd-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.pwd-usage:
 
 .. code-block:: rsyslog
 

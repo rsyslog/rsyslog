@@ -1,5 +1,5 @@
 .. _param-omhttp-tls-mycert:
-.. _omhttp.parameter.module.tls-mycert:
+.. _omhttp.parameter.input.tls-mycert:
 
 tls.mycert
 ==========
@@ -17,9 +17,9 @@ Supplies the client certificate file used for HTTPS mutual authentication.
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: tls.mycert
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 This parameter sets the path to the SSL client certificate. Expects ``.pem`` format.
 
-Module usage
-------------
-.. _omhttp.parameter.module.tls-mycert-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.tls-mycert-usage:
 
 .. code-block:: rsyslog
 

@@ -1,5 +1,5 @@
 .. _param-omhttp-dynrestpath:
-.. _omhttp.parameter.module.dynrestpath:
+.. _omhttp.parameter.input.dynrestpath:
 
 dynrestpath
 ===========
@@ -17,9 +17,9 @@ Enables using a template name in :ref:`param-omhttp-restpath` so each message ca
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: dynrestpath
-:Scope: module
+:Scope: input
 :Type: boolean
-:Default: module=off
+:Default: input=off
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 When this parameter is set to ``on`` you can specify a template name in the :ref:`param-omhttp-restpath` parameter instead of the actual path. This way you can use dynamic REST paths for your messages based on the template you are using.
 
-Module usage
-------------
-.. _omhttp.parameter.module.dynrestpath-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.dynrestpath-usage:
 
 .. code-block:: rsyslog
 

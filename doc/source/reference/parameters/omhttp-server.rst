@@ -1,5 +1,5 @@
 .. _param-omhttp-server:
-.. _omhttp.parameter.module.server:
+.. _omhttp.parameter.input.server:
 
 server
 ======
@@ -17,9 +17,9 @@ Defines the list of HTTP server hostnames or IP addresses that omhttp connects t
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: server
-:Scope: module
+:Scope: input
 :Type: array
-:Default: module=localhost
+:Default: input=localhost
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 The server address you want to connect to. Specify one or more entries to enable client-side load-balancing behavior provided by libcurl.
 
-Module usage
-------------
-.. _omhttp.parameter.module.server-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.server-usage:
 
 .. code-block:: rsyslog
 

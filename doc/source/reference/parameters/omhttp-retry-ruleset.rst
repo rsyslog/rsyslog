@@ -1,5 +1,5 @@
 .. _param-omhttp-retry-ruleset:
-.. _omhttp.parameter.module.retry-ruleset:
+.. _omhttp.parameter.input.retry-ruleset:
 
 retry.ruleset
 =============
@@ -17,9 +17,9 @@ Names the ruleset where omhttp requeues failed messages when :ref:`param-omhttp-
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: retry.ruleset
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: Not specified
 
@@ -39,21 +39,31 @@ Alternatively, the omhttp action in the retry ruleset could be configured to sup
 
 Or, if some data loss or high latency is acceptable, do not configure retries with the retry ruleset itself. A single retry from the original ruleset might catch most failures, and errors from the retry ruleset could still be logged using the :ref:`param-omhttp-errorfile` parameter and sent later on via some other process.
 
-Module usage
-------------
-.. _omhttp.parameter.module.retry-ruleset-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.retry-ruleset-usage:
 
 .. code-block:: rsyslog
 
    module(load="omhttp")
+
+   # This action enables the retry ruleset.
+   action(
+       type="omhttp"
+       template="tpl_omhttp_json"
+       retry="on"
+       retryRuleSet="rs_omhttp_retry"
+   )
+
+   # The "rs_omhttp_retry" ruleset itself could be defined as follows:
    ruleset(name="rs_omhttp_retry") {
-      action(
-         type="omhttp"
-         template="tpl_echo"
-         batch="on"
-         batchFormat="jsonarray"
-         batchMaxSize="5"
-      )
+       action(
+           type="omhttp"
+           template="tpl_echo"
+           batch="on"
+           batchFormat="jsonarray"
+           batchMaxSize="5"
+       )
    }
 
 See also

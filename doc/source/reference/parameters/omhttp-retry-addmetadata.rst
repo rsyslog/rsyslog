@@ -1,5 +1,5 @@
 .. _param-omhttp-retry-addmetadata:
-.. _omhttp.parameter.module.retry-addmetadata:
+.. _omhttp.parameter.input.retry-addmetadata:
 
 retry.addmetadata
 =================
@@ -17,9 +17,9 @@ Adds HTTP response metadata to ``$!omhttp!response`` for messages handled by the
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: retry.addmetadata
-:Scope: module
+:Scope: input
 :Type: boolean
-:Default: module=off
+:Default: input=off
 :Required?: no
 :Introduced: Not specified
 
@@ -27,9 +27,9 @@ Description
 -----------
 When this option is enabled, omhttp will add the response metadata to ``$!omhttp!response``. There are three response metadata fields added: ``code``, ``body``, ``batch_index``.
 
-Module usage
-------------
-.. _omhttp.parameter.module.retry-addmetadata-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.retry-addmetadata-usage:
 
 .. code-block:: rsyslog
 

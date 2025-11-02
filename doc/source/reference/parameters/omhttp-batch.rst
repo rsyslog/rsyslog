@@ -1,5 +1,5 @@
 .. _param-omhttp-batch:
-.. _omhttp.parameter.module.batch:
+.. _omhttp.parameter.input.batch:
 
 batch
 =====
@@ -17,9 +17,9 @@ Enables batching so omhttp queues messages and submits them in a single HTTP req
 This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 :Name: batch
-:Scope: module
+:Scope: input
 :Type: boolean
-:Default: module=off
+:Default: input=off
 :Required?: no
 :Introduced: Not specified
 
@@ -35,9 +35,9 @@ The plugin flushes a batch early if either the configured :ref:`param-omhttp-bat
 
 Additionally, due to some open issues with rsyslog and the transaction interface, batching requires some nuanced :ref:`param-omhttp-retry` configuration. By default, omhttp signals transport/server failures to rsyslog core (suspend/resume), which performs retries. The :ref:`param-omhttp-retry-ruleset` mechanism remains available for advanced per-message retry handling in batch mode.
 
-Module usage
-------------
-.. _omhttp.parameter.module.batch-usage:
+Input usage
+-----------
+.. _omhttp.parameter.input.batch-usage:
 
 .. code-block:: rsyslog
 
