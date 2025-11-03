@@ -10,7 +10,8 @@ cmdfile
 
 .. summary-start
 
-Defines the absolute path to the command file that omsendertrack reads when rsyslog receives a HUP signal.
+Defines the absolute path to the command file that omsendertrack reads when
+rsyslog receives a HUP signal.
 
 .. summary-end
 
@@ -25,11 +26,14 @@ This parameter applies to :doc:`../../configuration/modules/omsendertrack`.
 
 Description
 -----------
-This optional parameter allows you to specify the **absolute path to a command file**.
-This file *is designed to be processed when rsyslog receives a HUP signal* (for example via ``systemctl reload rsyslog``).
+This optional parameter allows you to specify the **absolute path to a command
+file**. This file *is designed to be processed when rsyslog receives a HUP
+signal* (for example via ``systemctl reload rsyslog``).
 
-**Note:** Command file support is currently **not implemented** in this proof-of-concept version of the module.
-When implemented, this feature is intended to allow dynamic control over the module's behavior, such as resetting statistics for specific senders, without requiring an rsyslog restart.
+**Note:** Command file support is currently **not implemented** in this
+proof-of-concept version of the module. When implemented, this feature is
+intended to allow dynamic control over the module's behavior, such as resetting
+statistics for specific senders, without requiring an rsyslog restart.
 
 Input usage
 -----------

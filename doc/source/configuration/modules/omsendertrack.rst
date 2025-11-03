@@ -217,7 +217,10 @@ adhere to the following best practices:
     house the ``omsendertrack`` action (as shown in Example 2), ensure that
     this specific ruleset **does not have a queue configured**. The module's
     fast execution makes queues redundant here.
-* **Efficient Sender Identification:** Choose your :ref:`senderid <param-omsendertrack-senderid>` template carefully. Simpler templates (e.g., ``"%hostname%"``, ``"%fromhost-ip%"``) result in better performance, as template processing occurs for every message.
+* **Efficient Sender Identification:** Choose your
+  :ref:`senderid <param-omsendertrack-senderid>` template carefully. Simpler
+  templates (e.g., ``"%hostname%"``, ``"%fromhost-ip%"``) result in better
+  performance, as template processing occurs for every message.
 * **Appropriate `interval` for State File Writes:** Balance your need for
     up-to-date statistics against disk I/O. A very small `interval` can lead
     to increased disk writes, while a larger one might mean slightly older data
