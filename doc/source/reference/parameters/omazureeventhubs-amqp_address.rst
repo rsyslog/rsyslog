@@ -1,0 +1,52 @@
+.. _param-omazureeventhubs-amqp_address:
+.. _omazureeventhubs.parameter.module.amqp_address:
+
+amqp_address
+============
+
+.. index::
+   single: omazureeventhubs; amqp_address
+   single: amqp_address
+
+.. summary-start
+
+Provides a full AMQPS connection string that overrides individual Azure settings.
+
+.. summary-end
+
+This parameter applies to :doc:`../../configuration/modules/omazureeventhubs`.
+
+:Name: amqp_address
+:Scope: module
+:Type: word
+:Default: module=none
+:Required?: no
+:Introduced: v8.2304
+
+Description
+-----------
+The configuration property for the AMQP address used to connect to Microsoft
+Azure Event Hubs is typically referred to as the "Event Hubs connection string".
+It specifies the URL that is used to connect to the target Event Hubs instance
+in Microsoft Azure. If ``amqp_address`` is configured, the configuration
+parameters for ``azurehost``, ``azureport``, ``azure_key_name`` and ``azure_key``
+will be ignored.
+
+A sample Event Hubs connection string URL is:
+
+.. code-block:: none
+
+   amqps://[Shared access key name]:[Shared access key]@[Event Hubs namespace].servicebus.windows.net/[Event Hubs Instance]
+
+Module usage
+------------
+.. _param-omazureeventhubs-module-amqp_address:
+.. _omazureeventhubs.parameter.module.amqp_address-usage:
+
+.. code-block:: rsyslog
+
+   action(type="omazureeventhubs" amqpAddress="amqps://user:key@namespace.servicebus.windows.net/hub" ...)
+
+See also
+--------
+See also :doc:`../../configuration/modules/omazureeventhubs`.
