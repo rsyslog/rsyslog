@@ -37,7 +37,6 @@ prevent the module from saving its state.
 
 Input usage
 -----------
-.. _param-omsendertrack-input-statefile:
 .. _omsendertrack.parameter.input.statefile-usage:
 
 .. code-block:: rsyslog

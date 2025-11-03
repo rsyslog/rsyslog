@@ -37,7 +37,6 @@ statistics for specific senders, without requiring an rsyslog restart.
 
 Input usage
 -----------
-.. _param-omsendertrack-input-cmdfile:
 .. _omsendertrack.parameter.input.cmdfile-usage:
 
 .. code-block:: rsyslog

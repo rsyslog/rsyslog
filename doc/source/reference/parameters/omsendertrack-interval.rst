@@ -37,7 +37,6 @@ up-to-date statistics on disk.
 
 Input usage
 -----------
-.. _param-omsendertrack-input-interval:
 .. _omsendertrack.parameter.input.interval-usage:
 
 .. code-block:: rsyslog

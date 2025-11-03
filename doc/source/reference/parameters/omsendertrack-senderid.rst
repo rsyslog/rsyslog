@@ -44,7 +44,6 @@ template wisely based on your tracking needs and performance considerations.
 
 Input usage
 -----------
-.. _param-omsendertrack-input-senderid:
 .. _omsendertrack.parameter.input.senderid-usage:
 
 .. code-block:: rsyslog
