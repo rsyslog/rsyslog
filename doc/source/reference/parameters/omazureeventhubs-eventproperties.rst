@@ -37,8 +37,8 @@ For example, the following configuration setting adds two event properties:
 
 .. code-block:: none
 
-   eventproperties=[       "Table=TestTable",
-                           "Format=JSON"]
+   eventproperties=[ "Table=TestTable",
+                     "Format=JSON"]
 
 In this example, the Table and Format keys are added to the message object as
 event properties, with the corresponding values of ``TestTable`` and ``JSON``,

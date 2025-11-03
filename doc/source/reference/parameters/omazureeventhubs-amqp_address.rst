@@ -28,8 +28,8 @@ Description
 The configuration property for the AMQP address used to connect to Microsoft
 Azure Event Hubs is typically referred to as the "Event Hubs connection string".
 It specifies the URL that is used to connect to the target Event Hubs instance
-in Microsoft Azure. If ``amqp_address`` is configured, the configuration
-parameters for ``azurehost``, ``azureport``, ``azure_key_name`` and ``azure_key``
+in Microsoft Azure. If ``amqpAddress`` is configured, the configuration
+parameters for ``azureHost``, ``azurePort``, ``azureKeyName`` and ``azureKey``
 will be ignored.
 
 A sample Event Hubs connection string URL is:

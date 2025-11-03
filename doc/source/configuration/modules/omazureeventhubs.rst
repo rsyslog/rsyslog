@@ -93,10 +93,6 @@ Input Parameters
      - .. include:: ../../reference/parameters/omazureeventhubs-eventproperties.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - :ref:`param-omazureeventhubs-closetimeout`
-     - .. include:: ../../reference/parameters/omazureeventhubs-closetimeout.rst
-        :start-after: .. summary-start
-        :end-before: .. summary-end
    * - :ref:`param-omazureeventhubs-statsname`
      - .. include:: ../../reference/parameters/omazureeventhubs-statsname.rst
         :start-after: .. summary-start
@@ -113,7 +109,6 @@ Input Parameters
    ../../reference/parameters/omazureeventhubs-template
    ../../reference/parameters/omazureeventhubs-amqp_address
    ../../reference/parameters/omazureeventhubs-eventproperties
-   ../../reference/parameters/omazureeventhubs-closetimeout
    ../../reference/parameters/omazureeventhubs-statsname
 
 .. _statistics-counter_omazureeventhubs_label:

@@ -28,9 +28,7 @@ Description
 The configuration property for the Azure key name used to connect to Microsoft
 Azure Event Hubs is typically referred to as the "Event Hubs shared access key
 name". It specifies the name of the shared access key that is used to
-authenticate and authorize connections to the Event Hubs instance. The shared
-access key is a secret string that is used to securely sign and validate
-requests to the Event Hubs instance.
+authenticate and authorize connections to the Event Hubs instance.
 
 Input usage
 -----------
