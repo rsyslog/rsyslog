@@ -25,12 +25,12 @@ This parameter applies to :doc:`../../configuration/modules/omazureeventhubs`.
 
 Description
 -----------
-The ``eventproperties`` configuration property is an array property used to add
+The ``eventProperties`` configuration property is an array property used to add
 key-value pairs as additional properties to the encoded AMQP message object,
 providing additional information about the log event. These properties can be
 used for filtering, routing, and grouping log events in Azure Event Hubs.
 
-The event properties property is specified as a list of key-value pairs
+The ``eventProperties`` property is specified as a list of key-value pairs
 separated by comma, with the key and value separated by an equal sign.
 
 For example, the following configuration adds two event properties inside an
