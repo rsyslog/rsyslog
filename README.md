@@ -9,6 +9,21 @@ Rsyslog can deliver over one million messages per second to local destinations u
 
 ---
 
+## Table of Contents
+- [Getting Rsyslog News](#getting-rsyslog-news)
+- [🤖 Rsyslog Assistant (Experimental AI Help)](#-rsyslog-assistant-experimental-ai-help)
+- [Getting Help (Other Sources)](#getting-help-other-sources)
+- [Installation](#installation)
+- [Contributing](#contributing)
+- [AI-Based Code Review (Experimental)](#ai-based-code-review-experimental)
+- [Documentation](#documentation)
+- [Project Philosophy](#project-philosophy)
+- [Global Accessibility and Collaboration](#global-accessibility-and-collaboration)
+- [Sponsors](#sponsors)
+- [Legal Notice (GDPR)](#legal-notice-gdpr)
+
+---
+
 ## Getting Rsyslog News
 
 Stay up to date with official rsyslog announcements and community insights:
@@ -65,6 +80,9 @@ Official builds for newer versions are available here:
 * [Debian](https://rsyslog.com/debian-repository/)  
 * [Official Containers](packaging/docker/README.md)
 
+For users in regions where GitHub access is limited, see the  
+[Global Accessibility and Collaboration](#global-accessibility-and-collaboration) section for alternative mirrors.
+
 <details>
 <summary><strong>Building from Source (click to expand)</strong></summary>
 
@@ -110,6 +128,9 @@ Rsyslog is a community-driven open-source project. Contributions are welcome and
 * If you're working with AI coding agents (e.g. GitHub Copilot, OpenAI Codex), see [AGENTS.md](AGENTS.md)  
 * Community: [Code of Conduct](CODE_OF_CONDUCT.md)
 
+If GitHub access is difficult in your region, please contact us or use one of the mirrors listed below;  
+we will help route your patch for review.
+
 **Commit Assistant (recommended):**  
 Draft compliant commit messages with  
 [rsyslog Commit Assistant](https://rsyslog.com/tool_rsyslog-commit-assistant)  
@@ -147,6 +168,29 @@ Rsyslog development is driven by real-world use cases, open standards, and an ac
 While sponsored primarily by Adiscon, technical decisions are made independently via consensus.
 
 All contributors are welcome — there is no formal membership beyond participation.
+
+---
+
+## Global Accessibility and Collaboration
+
+Rsyslog aims to remain accessible worldwide. Different regions sometimes face network or platform limits, so we provide mirrors to ensure that everyone can obtain the source code and contribute on equal terms.
+
+- **GitHub (canonical):** https://github.com/rsyslog/rsyslog  
+- **European mirror (Germany, hosted on DigitalOcean):** http://github-mirror.rsyslog.com/rsyslog/rsyslog  
+- **Community mirror (China, maintained by Gitee):** https://gitee.com/mirrors_rsyslog  
+
+All pull requests ultimately flow through GitHub, where our CI and review infrastructure run.  
+If you experience access issues but can provide a patch, the rsyslog team will gladly assist in forwarding it to GitHub.  
+Our contribution workflow remains GitHub-based for now because CI and automated testing are tightly integrated there.  
+Always verify releases and tags from the official GitHub repository before production use.
+
+> *Open source should have no borders.*  
+> (FR) Le code ouvert ne devrait pas avoir de frontières  
+> (ZH) 开源应该没有边界  
+> (JA) オープンソースに国境はない  
+> (ES) El código abierto no debe tener fronteras  
+> (HI) ओपन सोर्स की कोई सीमाएँ नहीं होनी चाहिए  
+> (AR) المصدر المفتوح يجب ألا يكون له حدود
 
 ---
 
