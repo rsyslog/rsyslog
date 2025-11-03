@@ -39,7 +39,7 @@ Try the **[rsyslog Assistant](https://rsyslog.ai)** — your AI-powered support 
 ✅ Covers both Linux rsyslog and Windows Agent  
 ✅ Version-aware and best-practice focused  
 
-👉 Try it now: [rsyslog.ai](rsyslog.ai)
+👉 Try it now: [rsyslog.ai](https://rsyslog.ai)
 
 ---
 
