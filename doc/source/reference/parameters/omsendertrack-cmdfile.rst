@@ -40,6 +40,7 @@ Input usage
 
    module(load="omsendertrack")
    action(type="omsendertrack"
+          senderId="%hostname%"
           stateFile="/var/lib/rsyslog/senderstats.json"
           cmdFile="/var/lib/rsyslog/sendercommands.txt")
 

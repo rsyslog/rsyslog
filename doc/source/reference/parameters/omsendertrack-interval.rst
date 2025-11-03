@@ -39,6 +39,7 @@ Input usage
 
    module(load="omsendertrack")
    action(type="omsendertrack"
+          senderId="%hostname%"
           interval="60"
           stateFile="/var/lib/rsyslog/senderstats.json")
 
