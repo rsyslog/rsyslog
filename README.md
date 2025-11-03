@@ -11,7 +11,7 @@ Rsyslog can deliver over one million messages per second to local destinations u
 
 ## Table of Contents
 - [Getting Rsyslog News](#getting-rsyslog-news)
-- [🤖 Rsyslog Assistant (Experimental AI Help)](#-rsyslog-assistant-experimental-ai-help)
+- [🤖 Rsyslog Assistant (Experimental AI Help)](#rsyslog-assistant-experimental-ai-help)
 - [Getting Help (Other Sources)](#getting-help-other-sources)
 - [Installation](#installation)
 - [Contributing](#contributing)
