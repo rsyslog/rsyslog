@@ -1,5 +1,5 @@
 .. _param-omazureeventhubs-template:
-.. _omazureeventhubs.parameter.module.template:
+.. _omazureeventhubs.parameter.input.template:
 
 template
 ========
@@ -17,9 +17,9 @@ Selects the rsyslog template that formats messages sent to Event Hubs.
 This parameter applies to :doc:`../../configuration/modules/omazureeventhubs`.
 
 :Name: template
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=RSYSLOG_FileFormat
+:Default: input=RSYSLOG_FileFormat
 :Required?: no
 :Introduced: v8.2304
 
@@ -47,10 +47,9 @@ For a message template sample with valid JSON output see the sample below:
            property(outname="etlsource" name="$myhostname" format="jsonf")
    }
 
-Module usage
-------------
-.. _param-omazureeventhubs-module-template:
-.. _omazureeventhubs.parameter.module.template-usage:
+Input usage
+-----------
+.. _omazureeventhubs.parameter.input.template-usage:
 
 .. code-block:: rsyslog
 

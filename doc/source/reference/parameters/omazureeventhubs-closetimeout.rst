@@ -1,5 +1,5 @@
 .. _param-omazureeventhubs-closetimeout:
-.. _omazureeventhubs.parameter.module.closetimeout:
+.. _omazureeventhubs.parameter.input.closetimeout:
 
 closeTimeout
 ============
@@ -17,9 +17,9 @@ Controls how long the action waits for Event Hubs responses before closing.
 This parameter applies to :doc:`../../configuration/modules/omazureeventhubs`.
 
 :Name: closeTimeout
-:Scope: module
+:Scope: input
 :Type: integer
-:Default: module=2000
+:Default: input=2000
 :Required?: no
 :Introduced: v8.2304
 
@@ -34,10 +34,9 @@ for a response from the target Event Hubs instance before giving up and assuming
 that the connection has failed. The close timeout property is specified in
 milliseconds.
 
-Module usage
-------------
-.. _param-omazureeventhubs-module-closetimeout:
-.. _omazureeventhubs.parameter.module.closetimeout-usage:
+Input usage
+-----------
+.. _omazureeventhubs.parameter.input.closetimeout-usage:
 
 .. code-block:: rsyslog
 

@@ -1,5 +1,5 @@
 .. _param-omazureeventhubs-container:
-.. _omazureeventhubs.parameter.module.container:
+.. _omazureeventhubs.parameter.input.container:
 
 container
 =========
@@ -17,9 +17,9 @@ Identifies the Event Hubs instance that receives the formatted log messages.
 This parameter applies to :doc:`../../configuration/modules/omazureeventhubs`.
 
 :Name: container
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: yes
 :Introduced: v8.2304
 
@@ -29,10 +29,9 @@ The configuration property for the Azure container used to connect to Microsoft
 Azure Event Hubs is typically referred to as the "Event Hubs Instance". It
 specifies the name of the Event Hubs Instance to which log data should be sent.
 
-Module usage
-------------
-.. _param-omazureeventhubs-module-container:
-.. _omazureeventhubs.parameter.module.container-usage:
+Input usage
+-----------
+.. _omazureeventhubs.parameter.input.container-usage:
 
 .. code-block:: rsyslog
 

@@ -1,5 +1,5 @@
 .. _param-omazureeventhubs-amqp_address:
-.. _omazureeventhubs.parameter.module.amqp_address:
+.. _omazureeventhubs.parameter.input.amqp_address:
 
 amqp_address
 ============
@@ -17,9 +17,9 @@ Provides a full AMQPS connection string that overrides individual Azure settings
 This parameter applies to :doc:`../../configuration/modules/omazureeventhubs`.
 
 :Name: amqp_address
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: v8.2304
 
@@ -38,10 +38,9 @@ A sample Event Hubs connection string URL is:
 
    amqps://[Shared access key name]:[Shared access key]@[Event Hubs namespace].servicebus.windows.net/[Event Hubs Instance]
 
-Module usage
-------------
-.. _param-omazureeventhubs-module-amqp_address:
-.. _omazureeventhubs.parameter.module.amqp_address-usage:
+Input usage
+-----------
+.. _omazureeventhubs.parameter.input.amqp_address-usage:
 
 .. code-block:: rsyslog
 

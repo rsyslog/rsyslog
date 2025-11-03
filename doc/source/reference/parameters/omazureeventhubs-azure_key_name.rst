@@ -1,5 +1,5 @@
 .. _param-omazureeventhubs-azure_key_name:
-.. _omazureeventhubs.parameter.module.azure_key_name:
+.. _omazureeventhubs.parameter.input.azure_key_name:
 
 azure_key_name
 ==============
@@ -17,9 +17,9 @@ Specifies the shared access key name used to authenticate with Event Hubs.
 This parameter applies to :doc:`../../configuration/modules/omazureeventhubs`.
 
 :Name: azure_key_name
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: yes
 :Introduced: v8.2304
 
@@ -32,10 +32,9 @@ authenticate and authorize connections to the Event Hubs instance. The shared
 access key is a secret string that is used to securely sign and validate
 requests to the Event Hubs instance.
 
-Module usage
-------------
-.. _param-omazureeventhubs-module-azure_key_name:
-.. _omazureeventhubs.parameter.module.azure_key_name-usage:
+Input usage
+-----------
+.. _omazureeventhubs.parameter.input.azure_key_name-usage:
 
 .. code-block:: rsyslog
 

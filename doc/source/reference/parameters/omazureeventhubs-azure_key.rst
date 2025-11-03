@@ -1,5 +1,5 @@
 .. _param-omazureeventhubs-azure_key:
-.. _omazureeventhubs.parameter.module.azure_key:
+.. _omazureeventhubs.parameter.input.azure_key:
 
 azure_key
 =========
@@ -17,9 +17,9 @@ Provides the shared access key value used to sign Event Hubs requests.
 This parameter applies to :doc:`../../configuration/modules/omazureeventhubs`.
 
 :Name: azure_key
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: yes
 :Introduced: v8.2304
 
@@ -32,10 +32,9 @@ authorize connections to the Event Hubs instance. The shared access key is a
 secret string that is used to securely sign and validate requests to the Event
 Hubs instance.
 
-Module usage
-------------
-.. _param-omazureeventhubs-module-azure_key:
-.. _omazureeventhubs.parameter.module.azure_key-usage:
+Input usage
+-----------
+.. _omazureeventhubs.parameter.input.azure_key-usage:
 
 .. code-block:: rsyslog
 

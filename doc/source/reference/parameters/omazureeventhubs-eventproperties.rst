@@ -1,5 +1,5 @@
 .. _param-omazureeventhubs-eventproperties:
-.. _omazureeventhubs.parameter.module.eventproperties:
+.. _omazureeventhubs.parameter.input.eventproperties:
 
 eventproperties
 ===============
@@ -17,9 +17,9 @@ Adds custom key-value properties to each AMQP message emitted by the action.
 This parameter applies to :doc:`../../configuration/modules/omazureeventhubs`.
 
 :Name: eventproperties
-:Scope: module
+:Scope: input
 :Type: array
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: v8.2304
 
@@ -35,7 +35,7 @@ separated by comma, with the key and value separated by an equal sign.
 
 For example, the following configuration setting adds two event properties:
 
-.. code-block:: rsyslog
+.. code-block:: none
 
    eventproperties=[       "Table=TestTable",
                            "Format=JSON"]
@@ -44,10 +44,9 @@ In this example, the Table and Format keys are added to the message object as
 event properties, with the corresponding values of ``TestTable`` and ``JSON``,
 respectively.
 
-Module usage
-------------
-.. _param-omazureeventhubs-module-eventproperties:
-.. _omazureeventhubs.parameter.module.eventproperties-usage:
+Input usage
+-----------
+.. _omazureeventhubs.parameter.input.eventproperties-usage:
 
 .. code-block:: rsyslog
 

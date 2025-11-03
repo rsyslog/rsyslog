@@ -1,5 +1,5 @@
 .. _param-omazureeventhubs-azureport:
-.. _omazureeventhubs.parameter.module.azureport:
+.. _omazureeventhubs.parameter.input.azureport:
 
 azureport
 =========
@@ -17,9 +17,9 @@ Defines the TCP port used when connecting to the Event Hubs namespace.
 This parameter applies to :doc:`../../configuration/modules/omazureeventhubs`.
 
 :Name: azureport
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=5671
+:Default: input=5671
 :Required?: no
 :Introduced: v8.2304
 
@@ -31,10 +31,9 @@ the AMQP Secure Sockets Layer (SSL) protocol. This property is usually optional
 in the configuration file of the rsyslog output plugin, as the default value of
 5671 is typically used.
 
-Module usage
-------------
-.. _param-omazureeventhubs-module-azureport:
-.. _omazureeventhubs.parameter.module.azureport-usage:
+Input usage
+-----------
+.. _omazureeventhubs.parameter.input.azureport-usage:
 
 .. code-block:: rsyslog
 

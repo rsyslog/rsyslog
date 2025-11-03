@@ -1,5 +1,5 @@
 .. _param-omazureeventhubs-azurehost:
-.. _omazureeventhubs.parameter.module.azurehost:
+.. _omazureeventhubs.parameter.input.azurehost:
 
 azurehost
 =========
@@ -17,9 +17,9 @@ Sets the fully qualified Event Hubs namespace host the action connects to.
 This parameter applies to :doc:`../../configuration/modules/omazureeventhubs`.
 
 :Name: azurehost
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: yes
 :Introduced: v8.2304
 
@@ -30,10 +30,9 @@ rsyslog output plugin should connect to. The format of the hostname should be
 ``<namespace>.servicebus.windows.net``, where ``<namespace>`` is the name of the
 Event Hubs namespace that was created in Microsoft Azure.
 
-Module usage
-------------
-.. _param-omazureeventhubs-module-azurehost:
-.. _omazureeventhubs.parameter.module.azurehost-usage:
+Input usage
+-----------
+.. _omazureeventhubs.parameter.input.azurehost-usage:
 
 .. code-block:: rsyslog
 

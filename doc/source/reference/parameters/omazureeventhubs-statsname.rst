@@ -1,5 +1,5 @@
 .. _param-omazureeventhubs-statsname:
-.. _omazureeventhubs.parameter.module.statsname:
+.. _omazureeventhubs.parameter.input.statsname:
 
 statsname
 =========
@@ -17,9 +17,9 @@ Names the statistics counters that track this action instance.
 This parameter applies to :doc:`../../configuration/modules/omazureeventhubs`.
 
 :Name: statsname
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=omazureeventhubs
+:Default: input=omazureeventhubs
 :Required?: no
 :Introduced: v8.2304
 
@@ -30,10 +30,9 @@ set of statistics tracked for this action instance are ``submitted``,
 ``accepted``, ``failures`` and ``failures_other``. See the
 :ref:`statistics-counter_omazureeventhubs_label` section for more details.
 
-Module usage
-------------
-.. _param-omazureeventhubs-module-statsname:
-.. _omazureeventhubs.parameter.module.statsname-usage:
+Input usage
+-----------
+.. _omazureeventhubs.parameter.input.statsname-usage:
 
 .. code-block:: rsyslog
 
