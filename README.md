@@ -54,7 +54,7 @@ Try the **[rsyslog Assistant](https://rsyslog.ai)** — your AI-powered support 
 ## Installation
 
 ### Via Distribution Package Managers
-Rsyslog is available in most Linux distribution repositoriesand often is pre-installed. 
+Rsyslog is available in most Linux distribution repositories and often is pre-installed. 
 
 ### Project-Provided Packages (Latest Versions)
 Distributions may lag behind in packaging the latest rsyslog releases.  
