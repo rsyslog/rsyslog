@@ -25,12 +25,10 @@ This parameter applies to :doc:`../../configuration/modules/omazureeventhubs`.
 
 Description
 -----------
-The configuration property for the AMQP address used to connect to Microsoft
-Azure Event Hubs is typically referred to as the "Event Hubs connection string".
-It specifies the URL that is used to connect to the target Event Hubs instance
-in Microsoft Azure. If ``amqpAddress`` is configured, the configuration
-parameters for ``azureHost``, ``azurePort``, ``azureKeyName`` and ``azureKey``
-will be ignored.
+Specifies the "Event Hubs connection string", a full AMQPS URL used to connect
+to the target Event Hubs instance. When this parameter is set, it overrides the
+individual ``azureHost``, ``azurePort``, ``azureKeyName``, and ``azureKey``
+parameters.
 
 A sample Event Hubs connection string URL is:
 

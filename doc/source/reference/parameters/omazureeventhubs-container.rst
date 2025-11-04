@@ -25,9 +25,8 @@ This parameter applies to :doc:`../../configuration/modules/omazureeventhubs`.
 
 Description
 -----------
-The configuration property for the Azure container used to connect to Microsoft
-Azure Event Hubs is typically referred to as the "Event Hubs Instance". It
-specifies the name of the Event Hubs Instance to which log data should be sent.
+Specifies the name of the "Event Hubs Instance"—the specific event hub within
+the namespace—that should receive the forwarded log data.
 
 Input usage
 -----------

@@ -25,12 +25,9 @@ This parameter applies to :doc:`../../configuration/modules/omazureeventhubs`.
 
 Description
 -----------
-The configuration property for the Azure key used to connect to Microsoft Azure
-Event Hubs is typically referred to as the "Event Hubs shared access key". It
-specifies the value of the shared access key that is used to authenticate and
-authorize connections to the Event Hubs instance. The shared access key is a
-secret string that is used to securely sign and validate requests to the Event
-Hubs instance.
+Specifies the value of the "Event Hubs shared access key". This secret key
+string authenticates the connection and signs requests to the Event Hubs
+instance.
 
 Input usage
 -----------
