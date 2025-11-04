@@ -34,11 +34,11 @@ hostname, or process name, and it can use rsyslog macros, such as ``$rawmsg`` or
 
 For a message template sample with valid JSON output see the sample below:
 
-.. code-block:: none
+.. code-block:: rsyslog
 
    template(name="generic" type="list" option.jsonf="on") {
        property(outname="timestamp" name="timereported" dateFormat="rfc3339" format="jsonf")
-       constant(value="\"source\": \"EventHubMessage\", ")
+       constant(value='"source": "EventHubMessage", ')
        property(outname="host" name="hostname" format="jsonf")
        property(outname="severity" name="syslogseverity" caseConversion="upper" format="jsonf" datatype="number")
        property(outname="facility" name="syslogfacility" format="jsonf" datatype="number")
