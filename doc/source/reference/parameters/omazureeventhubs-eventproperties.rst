@@ -30,8 +30,8 @@ key-value pairs as additional properties to the encoded AMQP message object,
 providing additional information about the log event. These properties can be
 used for filtering, routing, and grouping log events in Azure Event Hubs.
 
-The ``eventProperties`` property is specified as a list of key-value pairs
-separated by comma, with the key and value separated by an equal sign.
+The ``eventProperties`` property is an array of strings, where each string is a
+key-value pair with the key and value separated by an equal sign.
 
 For example, the following configuration adds two event properties inside an
 action definition:
@@ -41,8 +41,8 @@ action definition:
    action(
        type="omazureeventhubs"
        # ... other parameters
-       eventProperties=[ "Table=TestTable",
-                         "Format=JSON" ]
+       eventProperties=["Table=TestTable",
+                        "Format=JSON"]
    )
 
 In this example, the Table and Format keys are added to the message object as
@@ -55,7 +55,7 @@ Input usage
 
 .. code-block:: rsyslog
 
-   action(type="omazureeventhubs" eventProperties=["Table=TestTable","Format=JSON"] ...)
+   action(type="omazureeventhubs" eventProperties=["Table=TestTable", "Format=JSON"] ...)
 
 See also
 --------
