@@ -3690,6 +3690,30 @@ start_redis() {
 	done
 }
 
+set_redis_tls() {
+	# Only set a random TLS port if not set (useful when Redis must be restarted during a test)
+	if [ -z "$REDIS_RANDOM_TLS_PORT" ]; then
+		export REDIS_RANDOM_TLS_PORT="$(get_free_port)"
+	fi
+	redis_command "CONFIG SET tls-ca-cert-file $(pwd)/testsuites/x.509/ca.pem"
+	redis_command "CONFIG SET tls-cert-file $(pwd)/testsuites/x.509/client-cert.pem"
+	redis_command "CONFIG SET tls-key-file $(pwd)/testsuites/x.509/client-key.pem"
+	redis_command "CONFIG SET tls-port ${REDIS_RANDOM_TLS_PORT}"
+	redis_command "CONFIG REWRITE"
+}
+
+set_redis_tls_expired() {
+	# Only set a random TLS port if not set (useful when Redis must be restarted during a test)
+	if [ -z "$REDIS_RANDOM_TLS_PORT" ]; then
+		export REDIS_RANDOM_TLS_PORT="$(get_free_port)"
+	fi
+	redis_command "CONFIG SET tls-ca-cert-file $(pwd)/testsuites/x.509/ca.pem"
+	redis_command "CONFIG SET tls-cert-file $(pwd)/testsuites/x.509/client-expired-cert.pem"
+	redis_command "CONFIG SET tls-key-file $(pwd)/testsuites/x.509/client-expired-key.pem"
+	redis_command "CONFIG SET tls-port ${REDIS_RANDOM_TLS_PORT}"
+	redis_command "CONFIG REWRITE"
+}
+
 cleanup_redis() {
 	if [ -d ${REDIS_DYN_DIR} ]; then
 		rm -rf ${REDIS_DYN_DIR}
@@ -3734,7 +3758,11 @@ redis_command() {
 		error_exit 1
 	fi
 
-	printf "$1\n" | redis-cli -p "$REDIS_RANDOM_PORT"
+	if [ -n "$REDIS_PASSWORD" ]; then
+		printf "$1\n" | redis-cli --pass "$REDIS_PASSWORD" -p "$REDIS_RANDOM_PORT"
+	else
+		printf "$1\n" | redis-cli -p "$REDIS_RANDOM_PORT"
+	fi
 }
 
 # $1 - replacement string
