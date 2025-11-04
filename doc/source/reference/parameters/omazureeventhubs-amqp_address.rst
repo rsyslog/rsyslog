@@ -36,7 +36,7 @@ A sample Event Hubs connection string URL is:
 
 .. code-block:: none
 
-   amqps://[Shared access key name]:[Shared access key]@[Event Hubs namespace].servicebus.windows.net/[Event Hubs Instance]
+   amqps://<Shared access key name>:<Shared access key>@<Event Hubs namespace>.servicebus.windows.net/<Event Hubs Instance>
 
 Input usage
 -----------
