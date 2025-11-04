@@ -27,7 +27,7 @@ Description
 -----------
 The name assigned to statistics specific to this action instance. The supported
 set of statistics tracked for this action instance are ``submitted``,
-``accepted``, ``failures`` and ``failures_other``. See the
+``accepted``, ``failures`` and ``othererrors``. See the
 :ref:`statistics-counter_omazureeventhubs_label` section for more details.
 
 Input usage
