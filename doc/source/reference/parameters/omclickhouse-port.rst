@@ -1,10 +1,12 @@
 .. _param-omclickhouse-port:
 .. _omclickhouse.parameter.module.port:
 
-Port
+port
 ====
 
 .. index::
+   single: omclickhouse; port
+   single: port
    single: omclickhouse; Port
    single: Port
 
@@ -16,7 +18,7 @@ Sets the HTTP port used to connect to the ClickHouse server.
 
 This parameter applies to :doc:`../../configuration/modules/omclickhouse`.
 
-:Name: Port
+:Name: port
 :Scope: module
 :Type: integer
 :Default: module=8123

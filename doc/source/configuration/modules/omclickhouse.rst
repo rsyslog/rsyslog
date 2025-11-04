@@ -175,7 +175,7 @@ the REST URL.
 
    module(load="omclickhouse")
    action(type="omclickhouse" server="127.0.0.1" port="8124" user="user1" pwd="pwd1"
-          usehttps="off")
+          useHttps="off")
 
 
 Example 3
@@ -187,6 +187,6 @@ If an error occurs it will be written in the error file.
 .. code-block:: none
 
    module(load="omclickhouse")
-   action(type="omclickhouse" maxbytes="10mb" errorfile="clickhouse-error.log")
+   action(type="omclickhouse" maxBytes="10mb" errorFile="clickhouse-error.log")
 
 

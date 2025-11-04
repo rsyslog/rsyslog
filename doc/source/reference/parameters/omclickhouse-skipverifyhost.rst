@@ -1,10 +1,12 @@
 .. _param-omclickhouse-skipverifyhost:
 .. _omclickhouse.parameter.module.skipverifyhost:
 
-skipverifyhost
+skipVerifyHost
 ==============
 
 .. index::
+   single: omclickhouse; skipVerifyHost
+   single: skipVerifyHost
    single: omclickhouse; skipverifyhost
    single: skipverifyhost
 
@@ -16,7 +18,7 @@ Controls whether the module disables host name verification for HTTPS connection
 
 This parameter applies to :doc:`../../configuration/modules/omclickhouse`.
 
-:Name: skipverifyhost
+:Name: skipVerifyHost
 :Scope: module
 :Type: boolean
 :Default: module=off
@@ -35,7 +37,7 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="omclickhouse")
-   action(type="omclickhouse" skipverifyhost="on")
+   action(type="omclickhouse" skipVerifyHost="on")
 
 See also
 --------

@@ -1,10 +1,12 @@
 .. _param-omclickhouse-usehttps:
 .. _omclickhouse.parameter.module.usehttps:
 
-usehttps
+useHttps
 ========
 
 .. index::
+   single: omclickhouse; useHttps
+   single: useHttps
    single: omclickhouse; usehttps
    single: usehttps
 
@@ -16,7 +18,7 @@ Controls whether HTTPS is used by default when no scheme is specified for the Cl
 
 This parameter applies to :doc:`../../configuration/modules/omclickhouse`.
 
-:Name: usehttps
+:Name: useHttps
 :Scope: module
 :Type: boolean
 :Default: module=on
@@ -35,7 +37,7 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="omclickhouse")
-   action(type="omclickhouse" usehttps="off")
+   action(type="omclickhouse" useHttps="off")
 
 See also
 --------

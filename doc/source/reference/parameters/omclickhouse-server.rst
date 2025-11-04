@@ -1,10 +1,12 @@
 .. _param-omclickhouse-server:
 .. _omclickhouse.parameter.module.server:
 
-Server
+server
 ======
 
 .. index::
+   single: omclickhouse; server
+   single: server
    single: omclickhouse; Server
    single: Server
 
@@ -16,7 +18,7 @@ Specifies the address of the ClickHouse server that receives events from this ac
 
 This parameter applies to :doc:`../../configuration/modules/omclickhouse`.
 
-:Name: Server
+:Name: server
 :Scope: module
 :Type: word
 :Default: module=localhost

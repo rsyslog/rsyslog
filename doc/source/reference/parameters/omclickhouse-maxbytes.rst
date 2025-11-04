@@ -1,22 +1,24 @@
 .. _param-omclickhouse-maxbytes:
 .. _omclickhouse.parameter.module.maxbytes:
 
-maxbytes
+maxBytes
 ========
 
 .. index::
+   single: omclickhouse; maxBytes
+   single: maxBytes
    single: omclickhouse; maxbytes
    single: maxbytes
 
 .. summary-start
 
-Limits the maximum size of a bulk HTTP request when bulkmode is enabled.
+Limits the maximum size of a bulk HTTP request when ``bulkMode`` is enabled.
 
 .. summary-end
 
 This parameter applies to :doc:`../../configuration/modules/omclickhouse`.
 
-:Name: maxbytes
+:Name: maxBytes
 :Scope: module
 :Type: size
 :Default: module=104857600/100mb
@@ -25,7 +27,7 @@ This parameter applies to :doc:`../../configuration/modules/omclickhouse`.
 
 Description
 -----------
-When shipping logs with bulkmode **on**, maxbytes specifies the maximum size of the request body sent to ClickHouse. Logs are batched until either the buffer reaches maxbytes or the `dequeue batch size <http://www.rsyslog.com/doc/node35.html>`_ is reached.
+When shipping logs with ``bulkMode`` **on**, ``maxBytes`` specifies the maximum size of the request body sent to ClickHouse. Logs are batched until either the buffer reaches ``maxBytes`` or the `dequeue batch size <http://www.rsyslog.com/doc/node35.html>`_ is reached.
 
 Module usage
 ------------
@@ -35,7 +37,7 @@ Module usage
 .. code-block:: rsyslog
 
    module(load="omclickhouse")
-   action(type="omclickhouse" maxbytes="64mb")
+   action(type="omclickhouse" maxBytes="64mb")
 
 See also
 --------
