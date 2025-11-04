@@ -35,6 +35,9 @@
 #include <pthread.h>
 #include <sys/uio.h>
 #include <hiredis/hiredis.h>
+#ifdef HIREDIS_SSL
+    #include <hiredis/hiredis_ssl.h>
+#endif
 #include <hiredis/async.h>
 #include <hiredis/adapters/libevent.h>
 #include <event2/thread.h>
@@ -93,6 +96,14 @@ struct instanceConf_s {
     int mode;
     uint batchsize;
     sbool useLPop;
+#ifdef HIREDIS_SSL
+    sbool use_tls; /* Should we use TLS to connect to redis ? */
+    char *ca_cert_bundle; /* CA bundle file */
+    char *ca_cert_dir; /* Path of trusted certificates */
+    char *client_cert; /* Client certificate */
+    char *client_key; /* Client private key */
+    char *sni; /* TLS Server Name Indication */
+#endif
 
     struct {
         int nmemb;
@@ -105,6 +116,9 @@ struct instanceConf_s {
 
     redisContext *conn;
     redisAsyncContext *aconn;
+#ifdef HIREDIS_SSL
+    redisSSLContext *ssl_conn; /* redis ssl connection */
+#endif
     struct event_base *evtBase;
 
     redisNode *currentNode; /* currently used redis node, can be any of the nodes in the redisNodesList list */
@@ -186,6 +200,14 @@ static struct cnfparamdescr inppdescr[] = {
     {"stream.consumerACK", eCmdHdlrBinary, 0},
     {"stream.autoclaimIdleTime", eCmdHdlrNonNegInt, 0},
     {"fields", eCmdHdlrArray, 0},
+#ifdef HIREDIS_SSL
+    {"use_tls", eCmdHdlrBinary, 0},
+    {"ca_cert_bundle", eCmdHdlrGetWord, 0},
+    {"ca_cert_dir", eCmdHdlrGetWord, 0},
+    {"client_cert", eCmdHdlrGetWord, 0},
+    {"client_key", eCmdHdlrGetWord, 0},
+    {"sni", eCmdHdlrGetWord, 0},
+#endif
 };
 static struct cnfparamblk inppblk = {CNFPARAMBLK_VERSION, sizeof(inppdescr) / sizeof(struct cnfparamdescr), inppdescr};
 
@@ -211,8 +233,11 @@ static rsRetVal enqMsgJson(instanceConf_t *const inst, struct json_object *json,
 rsRetVal redisAuthentSynchronous(redisContext *conn, uchar *password);
 rsRetVal redisAuthentAsynchronous(redisAsyncContext *aconn, uchar *password);
 rsRetVal redisActualizeCurrentNode(instanceConf_t *inst);
-rsRetVal redisGetServersList(redisNode *node, uchar *password, redisNode **result);
+rsRetVal redisGetServersList(redisNode *node, instanceConf_t *const inst, redisNode **result);
 rsRetVal redisAuthenticate(instanceConf_t *inst);
+#ifdef HIREDIS_SSL
+rsRetVal redisInitSSLContext(redisContext *conn, redisSSLContext *ssl_context);
+#endif
 rsRetVal redisConnectSync(redisContext **conn, redisNode *node);
 rsRetVal connectMasterSync(instanceConf_t *inst);
 static sbool isConnectedSync(instanceConf_t *inst);
@@ -258,10 +283,21 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->pszBindRuleset = NULL;
     inst->pBindRuleset = NULL;
     inst->fieldList.nmemb = 0;
+#ifdef HIREDIS_SSL
+    inst->use_tls = 0;
+    inst->ca_cert_bundle = NULL;
+    inst->ca_cert_dir = NULL;
+    inst->client_cert = NULL;
+    inst->client_key = NULL;
+    inst->sni = NULL;
+#endif
 
     /* Redis objects */
     inst->conn = NULL;
     inst->aconn = NULL;
+#ifdef HIREDIS_SSL
+    inst->ssl_conn = NULL; /* Connect later */
+#endif
 
     /* redis nodes list */
     CHKiRet(createRedisNode(&(inst->redisNodesList)));
@@ -314,6 +350,31 @@ static rsRetVal ATTR_NONNULL() checkInstance(instanceConf_t *const inst) {
         ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
     }
 
+#ifdef HIREDIS_SSL
+    redisSSLContextError ssl_error = REDIS_SSL_CTX_NONE;
+
+    // Check and initialize SSL context
+    if (inst->use_tls) {
+        if ((inst->client_cert == NULL) ^ (inst->client_key == NULL)) {
+            LogMsg(0, RS_RET_CONFIG_ERROR, LOG_ERR,
+                   "imhiredis: \"client_cert\" and \"client_key\" must be specified together!");
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+
+        inst->ssl_conn = redisCreateSSLContext(inst->ca_cert_bundle, inst->ca_cert_dir, inst->client_cert,
+                                               inst->client_key, inst->sni, &ssl_error);
+
+        if (!inst->ssl_conn || ssl_error != REDIS_SSL_CTX_NONE) {
+            LogError(0, RS_RET_REDIS_ERROR, "imhiredis: TLS configuration Error: %s",
+                     redisSSLContextGetError(ssl_error));
+            if (inst->ssl_conn != NULL) {
+                redisFreeSSLContext(inst->ssl_conn);
+                inst->ssl_conn = NULL;
+            }
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+    }
+#endif
 
     if (inst->mode < IMHIREDIS_MODE_QUEUE || inst->mode > IMHIREDIS_MODE_STREAM) {
         LogError(0, RS_RET_CONFIG_ERROR,
@@ -490,6 +551,20 @@ BEGINnewInpInst
             inst->batchsize = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "key")) {
             inst->key = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+#ifdef HIREDIS_SSL
+        } else if (!strcmp(inppblk.descr[i].name, "use_tls")) {
+            inst->use_tls = pvals[i].val.d.n;
+        } else if (!strcmp(inppblk.descr[i].name, "ca_cert_bundle")) {
+            inst->ca_cert_bundle = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(inppblk.descr[i].name, "ca_cert_dir")) {
+            inst->ca_cert_dir = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(inppblk.descr[i].name, "client_cert")) {
+            inst->client_cert = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(inppblk.descr[i].name, "client_key")) {
+            inst->client_key = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(inppblk.descr[i].name, "sni")) {
+            inst->sni = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+#endif
         } else {
             dbgprintf(
                 "imhiredis: program error, non-handled "
@@ -622,6 +697,17 @@ BEGINfreeCnf
             redisAsyncFree(inst->aconn);
             inst->aconn = NULL;
         }
+#ifdef HIREDIS_SSL
+        if (inst->ssl_conn != NULL) {
+            redisFreeSSLContext(inst->ssl_conn);
+            inst->ssl_conn = NULL;
+        }
+        if (inst->ca_cert_bundle != NULL) free(inst->ca_cert_bundle);
+        if (inst->ca_cert_dir != NULL) free(inst->ca_cert_dir);
+        if (inst->client_cert != NULL) free(inst->client_cert);
+        if (inst->client_key != NULL) free(inst->client_key);
+        if (inst->sni) free(inst->sni);
+#endif
 
         for (node = inst->redisNodesList; node != NULL; node = freeNode(node)) {
             ;
@@ -781,6 +867,11 @@ BEGINmodInit()
 
     /* activate libevent for (p)threads support */
     evthread_use_pthreads();
+
+#ifdef HIREDIS_SSL
+    // initialize OpenSSL
+    redisInitOpenSSL();
+#endif
 
 ENDmodInit
 
@@ -1098,13 +1189,13 @@ finalize_it:
 /*
  *	connect to node, authenticate (if necessary), get role, then get all node information provided by ROLE
  *	node should be a non-NULL valid redisNode pointer
- *	password can be NULL, meaning no authentication will be done
+ *	inst is the instance configuration object (used for SSL/password settings)
  *	result will hold the result of the ROLE command executed on the node:
  *		- NULL if the node was a single master instance
  *		- a single (master) node if the provided node was a replica
  *		- a list of (replica) nodes if the provided node was a master
  */
-rsRetVal redisGetServersList(redisNode *node, uchar *password, redisNode **result) {
+rsRetVal redisGetServersList(redisNode *node, instanceConf_t *inst, redisNode **result) {
     DEFiRet;
     redisContext *context;
     redisReply *reply = NULL, *replica;
@@ -1114,8 +1205,14 @@ rsRetVal redisGetServersList(redisNode *node, uchar *password, redisNode **resul
 
     CHKiRet(redisConnectSync(&context, node));
 
-    if (password != NULL && password[0] != '\0') {
-        CHKiRet(redisAuthentSynchronous(context, password));
+#ifdef HIREDIS_SSL
+    if (inst->use_tls && inst->ssl_conn) {
+        CHKiRet(redisInitSSLContext(context, inst->ssl_conn));
+    }
+#endif
+
+    if (inst->password != NULL && inst->password[0] != '\0') {
+        CHKiRet(redisAuthentSynchronous(context, inst->password));
     }
 
     reply = getRole(context);
@@ -1190,7 +1287,7 @@ rsRetVal redisActualizeCurrentNode(instanceConf_t *inst) {
         DBGPRINTF("imhiredis: trying to connect to node to get info...\n");
         dbgPrintNode(node);
 
-        if (RS_RET_OK == redisGetServersList(node, inst->password, &tmp)) {
+        if (RS_RET_OK == redisGetServersList(node, inst, &tmp)) {
             // server replied
 
             if (tmp && tmp->isMaster) {
@@ -1200,7 +1297,7 @@ rsRetVal redisActualizeCurrentNode(instanceConf_t *inst) {
                 tmp = NULL;
 
                 // try to connect to the master and get replicas
-                if (RS_RET_OK != redisGetServersList(inst->currentNode, inst->password, &tmp)) {
+                if (RS_RET_OK != redisGetServersList(inst->currentNode, inst, &tmp)) {
                     /* had a master, but cannot connect
                      * save suspected master in new list but keep searching with other nodes
                      */
@@ -1283,6 +1380,11 @@ rsRetVal redisAuthenticate(instanceConf_t *inst) {
                    "active node synchronously to validate authentication");
             ABORT_FINALIZE(RS_RET_REDIS_ERROR);
         }
+#ifdef HIREDIS_SSL
+        if (inst->use_tls && inst->ssl_conn) {
+            CHKiRet(redisInitSSLContext(usedContext, inst->ssl_conn));
+        }
+#endif
     } else {
         usedContext = inst->conn;
     }
@@ -1304,6 +1406,23 @@ finalize_it:
     if (reply) freeReplyObject(reply);
     RETiRet;
 }
+
+
+#ifdef HIREDIS_SSL
+rsRetVal redisInitSSLContext(redisContext *conn, redisSSLContext *ssl_context) {
+    DEFiRet;
+
+    assert(conn != NULL);
+    assert(ssl_context != NULL);
+
+    if (redisInitiateSSLWithContext(conn, ssl_context) != REDIS_OK) {
+        LogError(0, RS_RET_REDIS_ERROR, "imhiredis error while initializing TLS context: %s", conn->errstr);
+        ABORT_FINALIZE(RS_RET_REDIS_ERROR);
+    }
+finalize_it:
+    RETiRet;
+}
+#endif
 
 
 /*
@@ -1408,6 +1527,16 @@ rsRetVal connectMasterAsync(instanceConf_t *inst) {
         inst->currentNode = NULL;
         ABORT_FINALIZE(RS_RET_REDIS_ERROR);
     }
+
+#ifdef HIREDIS_SSL
+    if (inst->use_tls && inst->ssl_conn && redisInitSSLContext(&(inst->aconn->c), inst->ssl_conn) != RS_RET_OK) {
+        redisAsyncFree(inst->aconn);
+        inst->aconn = NULL;
+        inst->currentNode = NULL;
+        ABORT_FINALIZE(RS_RET_REDIS_ERROR);
+    }
+#endif
+
     if (inst->password != NULL && inst->password[0] != '\0' && RS_RET_OK != redisAuthenticate(inst)) {
         redisAsyncFree(inst->aconn);
         inst->aconn = NULL;
@@ -1445,6 +1574,18 @@ rsRetVal connectMasterSync(instanceConf_t *inst) {
         inst->currentNode = NULL;
         ABORT_FINALIZE(RS_RET_REDIS_ERROR);
     }
+
+#ifdef HIREDIS_SSL
+    if (inst->use_tls && inst->ssl_conn) {
+        if (redisInitSSLContext(inst->conn, inst->ssl_conn) != RS_RET_OK) {
+            redisFree(inst->conn);
+            inst->conn = NULL;
+            inst->currentNode = NULL;
+            ABORT_FINALIZE(RS_RET_REDIS_ERROR);
+        }
+    }
+#endif
+
     if (inst->password != NULL && inst->password[0] != '\0' && RS_RET_OK != redisAuthenticate(inst)) {
         redisFree(inst->conn);
         inst->conn = NULL;
