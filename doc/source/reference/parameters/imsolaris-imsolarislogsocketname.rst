@@ -29,7 +29,7 @@ This parameter applies to :doc:`../../configuration/modules/imsolaris`.
 
 Description
 -----------
-This is the name of the log socket (stream) to read. If not given, ``/dev/log`` is read.
+This directive specifies the path to the Solaris log socket (stream) for reading local application and kernel messages. If omitted, it defaults to ``/dev/log``.
 Since directive names are case-insensitive, the canonical form ``$IMSolarisLogSocketName`` is recommended for readability.
 
 Module usage
