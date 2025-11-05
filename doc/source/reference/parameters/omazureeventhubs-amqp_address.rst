@@ -26,9 +26,10 @@ This parameter applies to :doc:`../../configuration/modules/omazureeventhubs`.
 Description
 -----------
 Specifies the "Event Hubs connection string", a full AMQPS URL used to connect
-to the target Event Hubs instance. When this parameter is set, it overrides the
-individual ``azureHost``, ``azurePort``, ``azureKeyName``, and ``azureKey``
-parameters.
+to the target Event Hubs instance. When this parameter is set, the host, key
+name, and key are parsed from the URL, overriding ``azureHost``,
+``azureKeyName``, and ``azureKey``. The port is not parsed; ``azurePort`` (which
+defaults to ``5671``) continues to be used.
 
 A sample Event Hubs connection string URL is:
 
