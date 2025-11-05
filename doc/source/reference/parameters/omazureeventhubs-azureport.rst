@@ -29,7 +29,8 @@ Specifies the TCP port number used by the Event Hubs instance for incoming
 connections. The default port number for Event Hubs is 5671 for connections over
 the AMQP Secure Sockets Layer (SSL) protocol. This property is usually optional
 in the configuration file of the rsyslog output plugin, as the default value of
-5671 is typically used.
+5671 is typically used. When ``amqpAddress`` is specified, the module ignores
+``azurePort`` and always uses the default.
 
 Input usage
 -----------

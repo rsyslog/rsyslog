@@ -51,6 +51,11 @@ Configuration Parameters
 
    Parameter names are case-insensitive; camelCase is recommended for readability.
 
+.. warning::
+
+   Older guidance mentioned a ``closeTimeout`` parameter, but the module does not
+   implement it. Configurations that reference ``closeTimeout`` will fail to load.
+
 
 Input Parameters
 ----------------

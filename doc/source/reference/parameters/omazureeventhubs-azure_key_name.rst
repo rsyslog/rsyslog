@@ -20,14 +20,15 @@ This parameter applies to :doc:`../../configuration/modules/omazureeventhubs`.
 :Scope: input
 :Type: word
 :Default: input=none
-:Required?: yes
+:Required?: no
 :Introduced: v8.2304
 
 Description
 -----------
 Specifies the "Event Hubs shared access key name" (the shared access policy
 name) used to authenticate and authorize connections to the Event Hubs
-instance.
+instance. Provide this value unless ``amqpAddress`` already supplies the
+credentials.
 
 Input usage
 -----------

@@ -20,14 +20,14 @@ This parameter applies to :doc:`../../configuration/modules/omazureeventhubs`.
 :Scope: input
 :Type: word
 :Default: input=none
-:Required?: yes
+:Required?: no
 :Introduced: v8.2304
 
 Description
 -----------
 Specifies the value of the "Event Hubs shared access key". This secret key
 string authenticates the connection and signs requests to the Event Hubs
-instance.
+instance. Supply it unless ``amqpAddress`` already embeds the key.
 
 Input usage
 -----------

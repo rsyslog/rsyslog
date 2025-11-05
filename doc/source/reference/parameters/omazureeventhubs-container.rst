@@ -20,13 +20,14 @@ This parameter applies to :doc:`../../configuration/modules/omazureeventhubs`.
 :Scope: input
 :Type: word
 :Default: input=none
-:Required?: yes
+:Required?: no
 :Introduced: v8.2304
 
 Description
 -----------
 Specifies the name of the "Event Hubs Instance"—the specific event hub within
-the namespace—that should receive the forwarded log data.
+the namespace—that should receive the forwarded log data. Define it unless
+``amqpAddress`` already points at the desired event hub.
 
 Input usage
 -----------
