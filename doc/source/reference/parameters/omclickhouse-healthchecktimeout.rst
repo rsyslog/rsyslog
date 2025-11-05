@@ -7,6 +7,8 @@ healthCheckTimeout
 .. index::
    single: omclickhouse; healthCheckTimeout
    single: healthCheckTimeout
+   single: omclickhouse; healthchecktimeout
+   single: healthchecktimeout
 
 .. summary-start
 

@@ -7,6 +7,8 @@ allowUnsignedCerts
 .. index::
    single: omclickhouse; allowUnsignedCerts
    single: allowUnsignedCerts
+   single: omclickhouse; allowunsignedcerts
+   single: allowunsignedcerts
 
 .. summary-start
 

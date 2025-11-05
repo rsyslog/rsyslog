@@ -7,6 +7,8 @@ errorFile
 .. index::
    single: omclickhouse; errorFile
    single: errorFile
+   single: omclickhouse; errorfile
+   single: errorfile
 
 .. summary-start
 
