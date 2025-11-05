@@ -28,8 +28,8 @@ Description
 Specifies the "Event Hubs connection string", a full AMQPS URL used to connect
 to the target Event Hubs instance. When this parameter is set, the host, key
 name, and key are parsed from the URL, overriding ``azureHost``,
-``azureKeyName``, and ``azureKey``. The port is not parsed; ``azurePort`` (which
-defaults to ``5671``) continues to be used.
+``azureKeyName``, and ``azureKey``. The port is not parsed from the URL; it
+always defaults to ``5671`` and any configured ``azurePort`` value is ignored.
 
 A sample Event Hubs connection string URL is:
 
