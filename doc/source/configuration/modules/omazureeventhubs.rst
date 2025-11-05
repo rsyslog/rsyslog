@@ -49,208 +49,72 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive.
-
-
-Action Parameters
------------------
-
-azurehost
-^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "yes", "none"
-
-Specifies the fully qualified domain name (FQDN) of the Event Hubs instance that
-the rsyslog output plugin should connect to. The format of the hostname should
-be **<namespace>.servicebus.windows.net**, where **<namespace>** is the name
-of the Event Hubs namespace that was created in Microsoft Azure.
-
-
-azureport
-^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "5671", "no", "none"
-
-Specifies the TCP port number used by the Event Hubs instance for incoming connections.
-The default port number for Event Hubs is 5671 for connections over the
-AMQP Secure Sockets Layer (SSL) protocol. This property is usually optional in the configuration
-file of the rsyslog output plugin, as the default value of 5671 is typically used.
-
-
-azure_key_name
-^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive", "Available since"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "yes", "none"
-
-The configuration property for the Azure key name used to connect to Microsoft Azure Event Hubs is
-typically referred to as the "Event Hubs shared access key name". It specifies the name of
-the shared access key that is used to authenticate and authorize connections to the Event Hubs instance.
-The shared access key is a secret string that is used to securely sign and validate requests
-to the Event Hubs instance.
-
-
-azure_key
-^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "yes", "none"
-
-The configuration property for the Azure key used to connect to Microsoft Azure Event Hubs is
-typically referred to as the "Event Hubs shared access key". It specifies the value of the
-shared access key that is used to authenticate and authorize connections to the Event Hubs instance.
-The shared access key is a secret string that is used to securely sign and validate requests
-to the Event Hubs instance.
-
-
-container
-^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "yes", "none"
-
-The configuration property for the Azure container used to connect to Microsoft Azure Event Hubs is
-typically referred to as the "Event Hubs Instance". It specifies the name of the Event Hubs Instance,
-to which log data should be sent.
-
-
-template
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "RSYSLOG_FileFormat", "no", "none"
-
-Specifies the template used to format and structure the log messages that will be sent from rsyslog to
-Microsoft Azure Event Hubs.
-
-The message template can include rsyslog variables, such as the timestamp, hostname, or process name,
-and it can use rsyslog macros, such as $rawmsg or $json, to control the formatting of log data. 
-
-For a message template sample with valid JSON output see the sample below:
-
-.. code-block:: none
-
-	template(name="generic" type="list" option.jsonf="on") {
-		property(outname="timestamp" name="timereported" dateFormat="rfc3339" format="jsonf")
-		constant(value="\"source\": \"EventHubMessage\", ")
-		property(outname="host" name="hostname" format="jsonf")
-		property(outname="severity" name="syslogseverity" caseConversion="upper" format="jsonf" datatype="number")
-		property(outname="facility" name="syslogfacility" format="jsonf" datatype="number")
-		property(outname="appname" name="syslogtag" format="jsonf")
-		property(outname="message" name="msg" format="jsonf" )
-		property(outname="etlsource" name="$myhostname" format="jsonf")
-	}
-
-
-amqp_address
-^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-The configuration property for the AMQP address used to connect to Microsoft Azure Event Hubs is
-typically referred to as the "Event Hubs connection string". It specifies the URL that is used to connect
-to the target Event Hubs instance in Microsoft Azure. If the amqp_address is configured, the configuration 
-parameters for **azurehost**, **azureport**, **azure_key_name** and **azure_key** will be ignored.
-
-A sample Event Hubs connection string URL is:
-
-.. code-block:: none
-
-	amqps://[Shared access key name]:[Shared access key]@[Event Hubs namespace].servicebus.windows.net/[Event Hubs Instance]
-
-
-eventproperties
-^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "array", "none", "no", "none"
-
-The **eventproperties** configuration property is an array property used to add key-value pairs as additional properties to the
-encoded AMQP message object, providing additional information about the log event.
-These properties can be used for filtering, routing, and grouping log events in Azure Event Hubs.
-
-The event properties property is specified as a list of key-value pairs separated by comma,
-with the key and value separated by an equal sign.
-
-For example, the following configuration setting adds two event properties:
-
-.. code-block:: none
-
-	eventproperties=[	"Table=TestTable",
-				"Format=JSON"]
-
-In this example, the Table and Format keys are added to the message object as event properties,
-with the corresponding values of TestTable and JSON, respectively.
-
-
-closeTimeout
-^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "2000", "no", "none"
-
-The close timeout configuration property is used in the rsyslog output module
-to specify the amount of time the output module should wait for a response
-from Microsoft Azure Event Hubs before timing out and closing the connection.
-
-This property is used to control the amount of time the output module will wait
-for a response from the target Event Hubs instance before giving up and
-assuming that the connection has failed. The close timeout property is specified in milliseconds.
-
-
-statsname
-^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "omazureeventhubs", "no", "none"
-
-The name assigned to statistics specific to this action instance. The supported set of
-statistics tracked for this action instance are **submitted**, **accepted**, **failures** and **failures_other**.
-See the :ref:`statistics-counter_omazureeventhubs_label` section for more details.
-
+   Parameter names are case-insensitive; camelCase is recommended for readability.
+
+.. warning::
+
+   Older guidance mentioned a ``closeTimeout`` parameter, but the module does not
+   implement it. Configurations that reference ``closeTimeout`` will fail to load.
+
+
+Input Parameters
+----------------
+
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Parameter
+     - Summary
+   * - :ref:`param-omazureeventhubs-azurehost`
+     - .. include:: ../../reference/parameters/omazureeventhubs-azurehost.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omazureeventhubs-azureport`
+     - .. include:: ../../reference/parameters/omazureeventhubs-azureport.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omazureeventhubs-azure_key_name`
+     - .. include:: ../../reference/parameters/omazureeventhubs-azure_key_name.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omazureeventhubs-azure_key`
+     - .. include:: ../../reference/parameters/omazureeventhubs-azure_key.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omazureeventhubs-container`
+     - .. include:: ../../reference/parameters/omazureeventhubs-container.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omazureeventhubs-template`
+     - .. include:: ../../reference/parameters/omazureeventhubs-template.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omazureeventhubs-amqp_address`
+     - .. include:: ../../reference/parameters/omazureeventhubs-amqp_address.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omazureeventhubs-eventproperties`
+     - .. include:: ../../reference/parameters/omazureeventhubs-eventproperties.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omazureeventhubs-statsname`
+     - .. include:: ../../reference/parameters/omazureeventhubs-statsname.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/omazureeventhubs-azurehost
+   ../../reference/parameters/omazureeventhubs-azureport
+   ../../reference/parameters/omazureeventhubs-azure_key_name
+   ../../reference/parameters/omazureeventhubs-azure_key
+   ../../reference/parameters/omazureeventhubs-container
+   ../../reference/parameters/omazureeventhubs-template
+   ../../reference/parameters/omazureeventhubs-amqp_address
+   ../../reference/parameters/omazureeventhubs-eventproperties
+   ../../reference/parameters/omazureeventhubs-statsname
 
 .. _statistics-counter_omazureeventhubs_label:
 
