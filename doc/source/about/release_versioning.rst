@@ -58,7 +58,7 @@ If you are evaluating or deploying rsyslog, keep these checkpoints in mind:
 - When you see the same ``yymm`` across different systems, they are running the
   same feature level regardless of packaging metadata.
 - Patch digits greater than ``0`` indicate that the release was respun to ship a
-  focused fix without waiting for the next six-week milestone.
+  focused fix without waiting for the next scheduled release.
 - Major digit changes (for example moving from 8.x to 9.x someday) would signal
   a deliberate compatibility break and be announced separately.
 
