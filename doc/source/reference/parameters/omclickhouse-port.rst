@@ -1,5 +1,5 @@
 .. _param-omclickhouse-port:
-.. _omclickhouse.parameter.module.port:
+.. _omclickhouse.parameter.input.port:
 
 port
 ====
@@ -19,9 +19,9 @@ Sets the HTTP port used to connect to the ClickHouse server.
 This parameter applies to :doc:`../../configuration/modules/omclickhouse`.
 
 :Name: port
-:Scope: module
+:Scope: input
 :Type: integer
-:Default: module=8123
+:Default: 8123
 :Required?: no
 :Introduced: not specified
 
@@ -29,10 +29,9 @@ Description
 -----------
 HTTP port to use to connect to ClickHouse.
 
-Module usage
-------------
-.. _param-omclickhouse-module-port:
-.. _omclickhouse.parameter.module.port-usage:
+Input usage
+-----------
+.. _omclickhouse.parameter.input.port-usage:
 
 .. code-block:: rsyslog
 

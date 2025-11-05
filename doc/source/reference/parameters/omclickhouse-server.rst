@@ -1,5 +1,5 @@
 .. _param-omclickhouse-server:
-.. _omclickhouse.parameter.module.server:
+.. _omclickhouse.parameter.input.server:
 
 server
 ======
@@ -19,9 +19,9 @@ Specifies the address of the ClickHouse server that receives events from this ac
 This parameter applies to :doc:`../../configuration/modules/omclickhouse`.
 
 :Name: server
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=localhost
+:Default: localhost
 :Required?: no
 :Introduced: not specified
 
@@ -29,10 +29,9 @@ Description
 -----------
 The address of a ClickHouse server.
 
-Module usage
-------------
-.. _param-omclickhouse-module-server:
-.. _omclickhouse.parameter.module.server-usage:
+Input usage
+-----------
+.. _omclickhouse.parameter.input.server-usage:
 
 .. code-block:: rsyslog
 

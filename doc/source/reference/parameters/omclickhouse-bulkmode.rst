@@ -1,5 +1,5 @@
 .. _param-omclickhouse-bulkmode:
-.. _omclickhouse.parameter.module.bulkmode:
+.. _omclickhouse.parameter.input.bulkmode:
 
 bulkMode
 ========
@@ -19,9 +19,9 @@ Determines whether events are sent individually or batched together in bulk HTTP
 This parameter applies to :doc:`../../configuration/modules/omclickhouse`.
 
 :Name: bulkMode
-:Scope: module
+:Scope: input
 :Type: boolean
-:Default: module=on
+:Default: on
 :Required?: no
 :Introduced: not specified
 
@@ -29,10 +29,9 @@ Description
 -----------
 The "off" setting means logs are shipped one by one, each in its own HTTP request. The default "on" will send multiple logs in the same request. This is recommended, because it is many times faster than when ``bulkMode`` is turned off. The maximum number of logs sent in a single bulk request depends on your ``maxBytes`` and queue settings - usually limited by the `dequeue batch size <http://www.rsyslog.com/doc/node35.html>`_. More information about queues can be found `here <http://www.rsyslog.com/doc/node32.html>`_.
 
-Module usage
-------------
-.. _param-omclickhouse-module-bulkmode:
-.. _omclickhouse.parameter.module.bulkmode-usage:
+Input usage
+-----------
+.. _omclickhouse.parameter.input.bulkmode-usage:
 
 .. code-block:: rsyslog
 

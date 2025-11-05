@@ -1,5 +1,5 @@
 .. _param-omclickhouse-pwd:
-.. _omclickhouse.parameter.module.pwd:
+.. _omclickhouse.parameter.input.pwd:
 
 pwd
 ===
@@ -17,9 +17,9 @@ Provides the password for HTTP basic authentication when required by ClickHouse.
 This parameter applies to :doc:`../../configuration/modules/omclickhouse`.
 
 :Name: pwd
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=""
+:Default: ""
 :Required?: no
 :Introduced: not specified
 
@@ -27,10 +27,9 @@ Description
 -----------
 Password for basic authentication.
 
-Module usage
-------------
-.. _param-omclickhouse-module-pwd:
-.. _omclickhouse.parameter.module.pwd-usage:
+Input usage
+-----------
+.. _omclickhouse.parameter.input.pwd-usage:
 
 .. code-block:: rsyslog
 

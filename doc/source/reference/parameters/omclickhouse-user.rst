@@ -1,5 +1,5 @@
 .. _param-omclickhouse-user:
-.. _omclickhouse.parameter.module.user:
+.. _omclickhouse.parameter.input.user:
 
 user
 ====
@@ -17,9 +17,9 @@ Sets the username for HTTP basic authentication against ClickHouse.
 This parameter applies to :doc:`../../configuration/modules/omclickhouse`.
 
 :Name: user
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=default
+:Default: default
 :Required?: no
 :Introduced: not specified
 
@@ -27,10 +27,9 @@ Description
 -----------
 If you have basic HTTP authentication deployed you can specify your user-name here.
 
-Module usage
-------------
-.. _param-omclickhouse-module-user:
-.. _omclickhouse.parameter.module.user-usage:
+Input usage
+-----------
+.. _omclickhouse.parameter.input.user-usage:
 
 .. code-block:: rsyslog
 

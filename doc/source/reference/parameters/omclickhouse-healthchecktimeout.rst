@@ -1,5 +1,5 @@
 .. _param-omclickhouse-healthchecktimeout:
-.. _omclickhouse.parameter.module.healthchecktimeout:
+.. _omclickhouse.parameter.input.healthchecktimeout:
 
 healthCheckTimeout
 ==================
@@ -17,9 +17,9 @@ Sets the timeout, in milliseconds, for verifying ClickHouse availability.
 This parameter applies to :doc:`../../configuration/modules/omclickhouse`.
 
 :Name: healthCheckTimeout
-:Scope: module
+:Scope: input
 :Type: int (milliseconds)
-:Default: module=3500
+:Default: 3500
 :Required?: no
 :Introduced: not specified
 
@@ -27,10 +27,9 @@ Description
 -----------
 This parameter sets the timeout for checking the availability of ClickHouse. Value is given in milliseconds.
 
-Module usage
-------------
-.. _param-omclickhouse-module-healthchecktimeout:
-.. _omclickhouse.parameter.module.healthchecktimeout-usage:
+Input usage
+-----------
+.. _omclickhouse.parameter.input.healthchecktimeout-usage:
 
 .. code-block:: rsyslog
 

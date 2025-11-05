@@ -1,5 +1,5 @@
 .. _param-omclickhouse-allowunsignedcerts:
-.. _omclickhouse.parameter.module.allowunsignedcerts:
+.. _omclickhouse.parameter.input.allowunsignedcerts:
 
 allowUnsignedCerts
 ==================
@@ -17,9 +17,9 @@ Allows connections to servers that present unsigned TLS certificates.
 This parameter applies to :doc:`../../configuration/modules/omclickhouse`.
 
 :Name: allowUnsignedCerts
-:Scope: module
+:Scope: input
 :Type: boolean
-:Default: module=on
+:Default: on
 :Required?: no
 :Introduced: not specified
 
@@ -27,10 +27,9 @@ Description
 -----------
 The module accepts connections to servers, which have unsigned certificates. If this parameter is disabled, the module will verify whether the certificates are authentic.
 
-Module usage
-------------
-.. _param-omclickhouse-module-allowunsignedcerts:
-.. _omclickhouse.parameter.module.allowunsignedcerts-usage:
+Input usage
+-----------
+.. _omclickhouse.parameter.input.allowunsignedcerts-usage:
 
 .. code-block:: rsyslog
 

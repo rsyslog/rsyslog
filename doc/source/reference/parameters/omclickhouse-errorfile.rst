@@ -1,5 +1,5 @@
 .. _param-omclickhouse-errorfile:
-.. _omclickhouse.parameter.module.errorfile:
+.. _omclickhouse.parameter.input.errorfile:
 
 errorFile
 =========
@@ -17,9 +17,9 @@ Specifies a file that receives bulk-mode failures along with the ClickHouse erro
 This parameter applies to :doc:`../../configuration/modules/omclickhouse`.
 
 :Name: errorFile
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: none
 :Required?: no
 :Introduced: not specified
 
@@ -29,10 +29,9 @@ If specified, records failed in bulk mode are written to this file, including th
 
 *Please note:* when rsyslog has problems connecting to clickhouse, a general error is assumed. However, if we receive negative responses during batch processing, we assume an error in the data itself (like a mandatory field is not filled in, a format error or something along those lines). Such errors cannot be solved by simply resubmitting the record. As such, they are written to the error file so that the user (script) can examine them and act appropriately. Note that e.g. after search index reconfiguration (e.g. dropping the mandatory attribute) a resubmit may be successful.
 
-Module usage
-------------
-.. _param-omclickhouse-module-errorfile:
-.. _omclickhouse.parameter.module.errorfile-usage:
+Input usage
+-----------
+.. _omclickhouse.parameter.input.errorfile-usage:
 
 .. code-block:: rsyslog
 

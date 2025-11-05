@@ -1,5 +1,5 @@
 .. _param-omclickhouse-usehttps:
-.. _omclickhouse.parameter.module.usehttps:
+.. _omclickhouse.parameter.input.usehttps:
 
 useHttps
 ========
@@ -19,9 +19,9 @@ Controls whether HTTPS is used by default when no scheme is specified for the Cl
 This parameter applies to :doc:`../../configuration/modules/omclickhouse`.
 
 :Name: useHttps
-:Scope: module
+:Scope: input
 :Type: boolean
-:Default: module=on
+:Default: on
 :Required?: no
 :Introduced: not specified
 
@@ -29,10 +29,9 @@ Description
 -----------
 Default scheme to use when sending events to ClickHouse if none is specified on a server.
 
-Module usage
-------------
-.. _param-omclickhouse-module-usehttps:
-.. _omclickhouse.parameter.module.usehttps-usage:
+Input usage
+-----------
+.. _omclickhouse.parameter.input.usehttps-usage:
 
 .. code-block:: rsyslog
 

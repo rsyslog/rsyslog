@@ -1,5 +1,5 @@
 .. _param-omclickhouse-timeout:
-.. _omclickhouse.parameter.module.timeout:
+.. _omclickhouse.parameter.input.timeout:
 
 timeout
 =======
@@ -17,9 +17,9 @@ Configures the send timeout, in milliseconds, for ClickHouse HTTP requests.
 This parameter applies to :doc:`../../configuration/modules/omclickhouse`.
 
 :Name: timeout
-:Scope: module
+:Scope: input
 :Type: int (milliseconds)
-:Default: module=0
+:Default: 0
 :Required?: no
 :Introduced: not specified
 
@@ -27,10 +27,9 @@ Description
 -----------
 This parameter sets the timeout for sending data to ClickHouse. Value is given in milliseconds.
 
-Module usage
-------------
-.. _param-omclickhouse-module-timeout:
-.. _omclickhouse.parameter.module.timeout-usage:
+Input usage
+-----------
+.. _omclickhouse.parameter.input.timeout-usage:
 
 .. code-block:: rsyslog
 

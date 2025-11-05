@@ -1,5 +1,5 @@
 .. _param-omclickhouse-template:
-.. _omclickhouse.parameter.module.template:
+.. _omclickhouse.parameter.input.template:
 
 template
 ========
@@ -17,9 +17,9 @@ Selects the message template that renders the INSERT statement sent to ClickHous
 This parameter applies to :doc:`../../configuration/modules/omclickhouse`.
 
 :Name: template
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=StdClickHouseFmt
+:Default: StdClickHouseFmt
 :Required?: no
 :Introduced: not specified
 
@@ -33,10 +33,9 @@ This is the message format that will be sent to ClickHouse. The resulting string
    "timestamp, hostname, tag, message) VALUES (%syslogseverity%, %syslogfacility%, "
    "'%timereported:::date-unixtimestamp%', '%hostname%', '%syslogtag%', '%msg%')\""
 
-Module usage
-------------
-.. _param-omclickhouse-module-template:
-.. _omclickhouse.parameter.module.template-usage:
+Input usage
+-----------
+.. _omclickhouse.parameter.input.template-usage:
 
 .. code-block:: rsyslog
 
