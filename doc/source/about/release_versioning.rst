@@ -47,6 +47,28 @@ target: for example the December release is typically earlier in the month so
 critical updates can be applied before Christmas downtime. Exceptional security
 needs or project priorities may also pull a build forward or push it back.
 
+Release tracks
+==============
+
+rsyslog publishes two complementary tracks so that operators can pick the
+appropriate balance between rapid updates and scheduled change windows. Both
+channels are **production-stable**. The “daily” name does **not** indicate
+experimental builds — every change merged into either track has cleared the
+project’s automated test matrix and human review, a workflow the community has
+successfully relied on for more than five years.
+
+* **Daily stable release** — A continuously updated stream containing only
+  patches that have passed the regression suite and review gates. Daily builds
+  surface new features and fixes as soon as they are merged while keeping the
+  same stability guarantees as the scheduled track. Packages are available via
+  Ubuntu/Debian APT repositories and RPM repositories for Red Hat Enterprise
+  Linux derivatives.
+* **Scheduled stable release** — The bi-monthly snapshot described above (this
+  track was historically labeled simply “stable release”). It is cut from the
+  daily stable tree roughly every two months to give environments with stricter
+  change control a predictable update cadence. Every scheduled stable build is
+  therefore a tested point-in-time capture of the daily stable branch.
+
 Quick reference for newcomers
 =============================
 
@@ -56,7 +78,10 @@ If you are evaluating or deploying rsyslog, keep these checkpoints in mind:
   about a year usually means you are missing new modules, fixes, or performance
   improvements.
 - When you see the same ``yymm`` across different systems, they are running the
-  same feature level regardless of packaging metadata.
+  same feature level regardless of packaging metadata. Environments tracking
+  the daily stable channel will see the ``yymm`` jump once a scheduled snapshot
+  is cut, while daily packages in between keep the 8.yymm.0 lineage with newer
+  patch content.
 - Patch digits greater than ``0`` indicate that the release was respun to ship a
   focused fix without waiting for the next scheduled release.
 - Major digit changes (for example moving from 8.x to 9.x someday) would signal
