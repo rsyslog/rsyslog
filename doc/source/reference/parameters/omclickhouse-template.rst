@@ -19,7 +19,7 @@ This parameter applies to :doc:`/configuration/modules/omclickhouse`.
 :Name: template
 :Scope: input
 :Type: word
-:Default: StdClickHouseFmt
+:Default: `` StdClickHouseFmt``
 :Required?: no
 :Introduced: not specified
 
