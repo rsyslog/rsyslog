@@ -27,6 +27,10 @@ Description
 -----------
 This is the message format that will be sent to ClickHouse. The resulting string needs to be a valid INSERT Query, otherwise ClickHouse will return an error. Defaults to:
 
+.. note::
+
+   The leading space in `` StdClickHouseFmt`` is intentional. Rsyslog registers its built-in templates with a leading space in the internal configuration state, and the module looks up the default by that exact name. When overriding the parameter yourself, use the natural form ``StdClickHouseFmt`` (without the space) as shown below.
+
 .. code-block:: none
 
    "\"INSERT INTO rsyslog.SystemEvents (severity, facility, "
