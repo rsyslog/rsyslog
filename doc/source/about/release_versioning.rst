@@ -51,13 +51,18 @@ Release tracks
 ==============
 
 rsyslog publishes two complementary tracks so that operators can pick the
-appropriate balance between rapid updates and scheduled change windows:
+appropriate balance between rapid updates and scheduled change windows. Both
+channels are **production-stable**. The “daily” name does **not** indicate
+experimental builds — every change merged into either track has cleared the
+project’s automated test matrix and human review, a workflow the community has
+successfully relied on for more than five years.
 
-* **Daily stable release** — A continuously updated build stream that only
-  contains patches which have passed the project’s regression test suite. Daily
-  builds make new features and fixes available as soon as they are merged. They
-  are published as Ubuntu/Debian APT repositories and as RPM repositories for
-  Red Hat Enterprise Linux derivatives.
+* **Daily stable release** — A continuously updated stream containing only
+  patches that have passed the regression suite and review gates. Daily builds
+  surface new features and fixes as soon as they are merged while keeping the
+  same stability guarantees as the scheduled track. Packages are available via
+  Ubuntu/Debian APT repositories and RPM repositories for Red Hat Enterprise
+  Linux derivatives.
 * **Scheduled stable release** — The bi-monthly snapshot described above (this
   track was historically labeled simply “stable release”). It is cut from the
   daily stable tree roughly every two months to give environments with stricter
