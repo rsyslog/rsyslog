@@ -27,7 +27,7 @@ This parameter applies to :doc:`/configuration/modules/omclickhouse`.
 
 Description
 -----------
-The "off" setting means logs are shipped one by one, each in its own HTTP request. The default "on" will send multiple logs in the same request. This is recommended, because it is many times faster than when ``bulkMode`` is turned off. The maximum number of logs sent in a single bulk request depends on your ``maxBytes`` and queue settings - usually limited by the `dequeue batch size <http://www.rsyslog.com/doc/node35.html>`_. More information about queues can be found `here <http://www.rsyslog.com/doc/node32.html>`_.
+The "off" setting means logs are shipped one by one, each in its own HTTP request. The default "on" will send multiple logs in the same request. This is recommended, because it is many times faster than when ``bulkMode`` is turned off. The maximum number of logs sent in a single bulk request depends on your ``maxBytes`` and queue settings - usually limited by the `dequeue batch size <http://www.rsyslog.com/doc/node35.html>`_. More information about queues can be found in the `rsyslog documentation on queues <http://www.rsyslog.com/doc/node32.html>`_.
 
 Input usage
 -----------

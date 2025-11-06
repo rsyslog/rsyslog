@@ -27,7 +27,10 @@ This parameter applies to :doc:`/configuration/modules/omclickhouse`.
 
 Description
 -----------
-If ``"on"``, this will set the curl ``CURLOPT_SSL_VERIFYHOST`` option to ``0``. You are strongly discouraged to set this to ``"on"``. It is primarily useful only for debugging or testing.
+If ``"on"``, this will set the curl ``CURLOPT_SSL_VERIFYHOST`` option to ``0``.
+
+.. warning::
+   You are strongly discouraged to set this to ``"on"``. It is primarily useful only for debugging or testing.
 
 Input usage
 -----------
