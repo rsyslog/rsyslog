@@ -14,7 +14,7 @@ Configures the send timeout, in milliseconds, for ClickHouse HTTP requests.
 
 .. summary-end
 
-This parameter applies to :doc:`../../configuration/modules/omclickhouse`.
+This parameter applies to :doc:`/configuration/modules/omclickhouse`.
 
 :Name: timeout
 :Scope: input
@@ -38,4 +38,4 @@ Input usage
 
 See also
 --------
-See also :doc:`../../configuration/modules/omclickhouse`.
+See also :doc:`/configuration/modules/omclickhouse`.

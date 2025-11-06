@@ -16,7 +16,7 @@ Limits the maximum size of a bulk HTTP request when ``bulkMode`` is enabled.
 
 .. summary-end
 
-This parameter applies to :doc:`../../configuration/modules/omclickhouse`.
+This parameter applies to :doc:`/configuration/modules/omclickhouse`.
 
 :Name: maxBytes
 :Scope: input
@@ -40,4 +40,4 @@ Input usage
 
 See also
 --------
-See also :doc:`../../configuration/modules/omclickhouse`.
+See also :doc:`/configuration/modules/omclickhouse`.

@@ -16,7 +16,7 @@ Controls whether HTTPS is used by default when no scheme is specified for the Cl
 
 .. summary-end
 
-This parameter applies to :doc:`../../configuration/modules/omclickhouse`.
+This parameter applies to :doc:`/configuration/modules/omclickhouse`.
 
 :Name: useHttps
 :Scope: input
@@ -40,4 +40,4 @@ Input usage
 
 See also
 --------
-See also :doc:`../../configuration/modules/omclickhouse`.
+See also :doc:`/configuration/modules/omclickhouse`.

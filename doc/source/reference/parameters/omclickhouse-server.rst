@@ -16,7 +16,7 @@ Specifies the address of the ClickHouse server that receives events from this ac
 
 .. summary-end
 
-This parameter applies to :doc:`../../configuration/modules/omclickhouse`.
+This parameter applies to :doc:`/configuration/modules/omclickhouse`.
 
 :Name: server
 :Scope: input
@@ -40,4 +40,4 @@ Input usage
 
 See also
 --------
-See also :doc:`../../configuration/modules/omclickhouse`.
+See also :doc:`/configuration/modules/omclickhouse`.

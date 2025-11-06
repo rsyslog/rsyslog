@@ -16,7 +16,7 @@ Sets the HTTP port used to connect to the ClickHouse server.
 
 .. summary-end
 
-This parameter applies to :doc:`../../configuration/modules/omclickhouse`.
+This parameter applies to :doc:`/configuration/modules/omclickhouse`.
 
 :Name: port
 :Scope: input
@@ -40,4 +40,4 @@ Input usage
 
 See also
 --------
-See also :doc:`../../configuration/modules/omclickhouse`.
+See also :doc:`/configuration/modules/omclickhouse`.
