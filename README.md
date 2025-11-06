@@ -176,7 +176,7 @@ All contributors are welcome — there is no formal membership beyond participat
 Rsyslog aims to remain accessible worldwide. Different regions sometimes face network or platform limits, so we provide mirrors to ensure that everyone can obtain the source code and contribute on equal terms.
 
 - **GitHub (canonical):** https://github.com/rsyslog/rsyslog  
-- **European mirror (Germany, hosted on DigitalOcean):** http://github-mirror.rsyslog.com/rsyslog/rsyslog  
+- **European mirror (Germany, hosted on DigitalOcean):** https://github-mirror.rsyslog.com/rsyslog/rsyslog  
 - **Community mirror (China, maintained by Gitee):** https://gitee.com/mirrors_rsyslog  
 
 All pull requests ultimately flow through GitHub, where our CI and review infrastructure run.  
