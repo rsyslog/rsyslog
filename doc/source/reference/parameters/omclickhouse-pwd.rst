@@ -19,7 +19,7 @@ This parameter applies to :doc:`/configuration/modules/omclickhouse`.
 :Name: pwd
 :Scope: input
 :Type: word
-:Default: ""
+:Default: none
 :Required?: no
 :Introduced: not specified
 

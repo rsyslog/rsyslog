@@ -19,7 +19,7 @@ This parameter applies to :doc:`/configuration/modules/omclickhouse`.
 :Name: user
 :Scope: input
 :Type: word
-:Default: default
+:Default: none
 :Required?: no
 :Introduced: not specified
 
