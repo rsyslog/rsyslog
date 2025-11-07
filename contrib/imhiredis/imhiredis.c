@@ -223,6 +223,7 @@ static struct cnfparamblk inppblk =
 	};
 
 struct timeval glblRedisConnectTimeout = { 3, 0 }; /* 3 seconds */
+struct timeval glblRedisCommandTimeout = { 5, 0 }; /* 5 seconds */
 
 
 #include "im-helper.h" /* must be included AFTER the type definitions! */
@@ -1472,13 +1473,19 @@ finalize_it:
  */
 rsRetVal redisConnectSync(redisContext **conn, redisNode *node) {
 	DEFiRet;
+	redisOptions options = {0};
+
+	options.connect_timeout = &glblRedisConnectTimeout;
+	options.command_timeout = &glblRedisCommandTimeout;
 
 	assert(node != NULL);
 
 	if (node->usesSocket)
-		*conn = redisConnectUnixWithTimeout((const char *)node->socketPath, glblRedisConnectTimeout);
+		REDIS_OPTIONS_SET_UNIX(&options, (const char *)node->socketPath);
 	else
-		*conn = redisConnectWithTimeout((const char *)node->server, node->port, glblRedisConnectTimeout);
+		REDIS_OPTIONS_SET_TCP(&options, (const char *)node->server, node->port);
+
+	*conn = redisConnectWithOptions(&options);
 
 	if (*conn == NULL) {
 		if (node->usesSocket) {
@@ -1517,13 +1524,19 @@ finalize_it:
  */
 rsRetVal redisConnectAsync(redisAsyncContext **aconn, redisNode *node) {
 	DEFiRet;
+	redisOptions options = {0};
+
+	options.connect_timeout = &glblRedisConnectTimeout;
+	options.command_timeout = &glblRedisCommandTimeout;
 
 	assert(node != NULL);
 
 	if (node->usesSocket)
-		*aconn = redisAsyncConnectUnix((const char*)node->socketPath);
+		REDIS_OPTIONS_SET_UNIX(&options, (const char *)node->socketPath);
 	else
-		*aconn = redisAsyncConnect((const char *)node->server, node->port);
+		REDIS_OPTIONS_SET_TCP(&options, (const char *)node->server, node->port);
+
+	*aconn = redisAsyncConnectWithOptions(&options);
 
 	if(*aconn == NULL) {
 		LogError(0, RS_RET_REDIS_ERROR, "imhiredis (async): could not allocate context!\n");
