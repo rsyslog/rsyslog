@@ -20,7 +20,7 @@ This parameter applies to :doc:`../../configuration/modules/omdtls`.
 :Name: Template
 :Scope: module, input
 :Type: word
-:Default: module=RSYSLOG_TraditionalForwardFormat, input=module parameter
+:Default: module=RSYSLOG_FileFormat, input=module parameter
 :Required?: no
 :Introduced: v8.2402.0
 

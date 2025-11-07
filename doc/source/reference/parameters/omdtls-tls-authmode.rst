@@ -34,8 +34,9 @@ Supported values are either "*fingerprint*", "*name*" or "*certvalid*".
   the subject common name.
 * **certvalid**: Requires a valid certificate for authentication.
 
-Certanon: Anything else will allow anonymous authentication (no client
-certificate).
+If this parameter is not set, or if an unsupported value is provided, the
+action falls back to anonymous authentication (no client certificate
+required).
 
 Input usage
 -----------
