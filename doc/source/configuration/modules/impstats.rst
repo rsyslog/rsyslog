@@ -140,12 +140,47 @@ maintained:
 -  ``nivcsw``
 -  ``openfiles`` - number of file handles used by rsyslog; includes actual files, sockets and others
 
+Format
+^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "legacy", "no", "none"
+
+.. versionadded:: 8.16.0
+
+Specifies the format of emitted stats messages. The default of
+"legacy" is compatible with pre v6-rsyslog. The other options provide
+support for structured formats (note the "cee" is actually "project
+lumberjack" logging).
+
+The json-elasticsearch format supports the broken ElasticSearch
+JSON implementation.  ES 2.0 no longer supports valid JSON and
+disallows dots inside names.  The "json-elasticsearch" format
+option replaces those dots by the bang ("!") character. So
+"discarded.full" becomes "discarded!full".
+
+The zabbix format supports arrayed-JSON objects with a single JSON object
+per pstats emission to disk or syslog. This format should be compatible
+with most JSON parsers from other monitoring products. log.file is highly
+recommended as log.syslog may encounter message truncation problems if the
+emission is large. If you must use log.syslog, it's recommended to monitor
+pstats for truncation and increase $MaxMessageSize at the top of your
+main rsyslog configuration file.
+
+Options: json/json-elasticsearch/cee/legacy/zabbix
+
 
 Caveats/Known Bugs
 ==================
 
 -  This module MUST be loaded right at the top of rsyslog.conf,
    otherwise stats may not get turned on in all places.
+-  When using the format "zabbix", it is not recommended to use
+   logSyslog="on". This can cause message truncation in stats.
 
 
 Examples
@@ -165,6 +200,18 @@ in 10 minute intervals:
 
    # to actually gather the data:
    syslog.=debug /var/log/rsyslog-stats
+
+Load module, format the output to Zabbix, and output to a local file
+--------------------------------------------------------------------
+
+.. code-block:: rsyslog
+
+   module(loadf="impstats"
+   interval="60"
+   severity="7"
+   format="zabbix"
+   logSyslog="off"
+   logFile="/var/log/stats.log")
 
 
 Load module, send stats data to local file
