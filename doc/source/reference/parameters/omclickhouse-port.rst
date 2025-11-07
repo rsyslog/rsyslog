@@ -7,8 +7,6 @@ port
 .. index::
    single: omclickhouse; port
    single: port
-   single: omclickhouse; Port
-   single: Port
 
 .. summary-start
 

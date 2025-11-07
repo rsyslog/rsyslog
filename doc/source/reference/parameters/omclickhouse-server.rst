@@ -7,8 +7,6 @@ server
 .. index::
    single: omclickhouse; server
    single: server
-   single: omclickhouse; Server
-   single: Server
 
 .. summary-start
 
