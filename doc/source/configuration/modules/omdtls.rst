@@ -39,168 +39,76 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
 Module Parameters
 -----------------
 
-Template
-^^^^^^^^
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "RSYSLOG_TraditionalForwardFormat", "no", "``$ActionForwardDefaultTemplateName``"
-
-Sets a non-standard default template for this module.
+   * - Parameter
+     - Summary
+   * - :ref:`param-omdtls-template`
+     - .. include:: ../../reference/parameters/omdtls-template.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 
 Action Parameters
 -----------------
 
-target
-^^^^^^
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
+   * - Parameter
+     - Summary
+   * - :ref:`param-omdtls-target`
+     - .. include:: ../../reference/parameters/omdtls-target.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omdtls-port`
+     - .. include:: ../../reference/parameters/omdtls-port.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omdtls-tls-authmode`
+     - .. include:: ../../reference/parameters/omdtls-tls-authmode.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omdtls-tls-cacert`
+     - .. include:: ../../reference/parameters/omdtls-tls-cacert.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omdtls-tls-mycert`
+     - .. include:: ../../reference/parameters/omdtls-tls-mycert.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omdtls-tls-myprivkey`
+     - .. include:: ../../reference/parameters/omdtls-tls-myprivkey.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omdtls-tls-tlscfgcmd`
+     - .. include:: ../../reference/parameters/omdtls-tls-tlscfgcmd.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omdtls-template`
+     - .. include:: ../../reference/parameters/omdtls-template.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
-   "word", "none", "no", "none"
+.. toctree::
+   :hidden:
 
-Specifies the target hostname or IP address to send log messages to.
-
-
-port
-^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "4433", "yes", "none"
-
-Defines the port number on the target host where log messages will be sent.
-The default port number for DTLS is 4433.
-
-
-tls.AuthMode
-^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "no", "none"
-
-Sets the mode of authentication to be used.
-Supported values are either "*fingerprint*\ ", "*name"* or "*certvalid*\ ".
-
-Fingerprint: Authentication based on certificate fingerprint.
-Name: Authentication based on the subjectAltName and, as a fallback, the
-subject common name.
-Certvalid: Requires a valid certificate for authentication.
-Certanon: Anything else will allow anonymous authentication (no client certificate).
-
-
-tls.cacert
-^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "no", "none"
-
-The CA certificate that is being used to verify the client certificates.
-Has to be configured if tls.authmode is set to "*fingerprint*\ ", "*name"* or "*certvalid*\ ".
-
-
-tls.mycert 
-^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "no", "none"
-
-Specifies the certificate file used by omdtls.
-This certificate is presented to peers during the DTLS handshake.
-
-
-tls.myprivkey 
-^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "no", "none"
-
-The private key file corresponding to tls.mycert.
-This key is used for the cryptographic operations in the DTLS handshake.
-
-
-tls.tlscfgcmd 
-^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "no", "none"
-
-Used to pass additional OpenSSL configuration commands. This can be used to fine-tune the OpenSSL
-settings by passing configuration commands to the openssl library.
-OpenSSL Version 1.0.2 or higher is required for this feature.
-A list of possible commands and their valid values can be found in the documentation:
-https://docs.openssl.org/1.0.2/man3/SSL_CONF_cmd/
-
-The setting can be single or multiline, each configuration command is separated by linefeed (\n).
-Command and value are separated by equal sign (=). Here are a few samples:
-
-Example 1
----------
-
-This will allow all protocols except for SSLv2 and SSLv3:
-
-.. code-block:: none
-
-   tls.tlscfgcmd="Protocol=ALL,-SSLv2,-SSLv3"
-
-
-Example 2
----------
-
-This will allow all protocols except for SSLv2, SSLv3 and TLSv1.
-It will also set the minimum protocol to TLSv1.2
-
-.. code-block:: none
-
-   tls.tlscfgcmd="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1
-   MinProtocol=TLSv1.2"
-
-
-Template
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "RSYSLOG_TraditionalForwardFormat", "no", ""
-
-Sets a non-standard default template for this action instance.
+   ../../reference/parameters/omdtls-template
+   ../../reference/parameters/omdtls-target
+   ../../reference/parameters/omdtls-port
+   ../../reference/parameters/omdtls-tls-authmode
+   ../../reference/parameters/omdtls-tls-cacert
+   ../../reference/parameters/omdtls-tls-mycert
+   ../../reference/parameters/omdtls-tls-myprivkey
+   ../../reference/parameters/omdtls-tls-tlscfgcmd
 
 
 .. _statistics-counter_omdtls_label:
