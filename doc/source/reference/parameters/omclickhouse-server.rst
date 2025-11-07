@@ -12,7 +12,8 @@ server
 
 .. summary-start
 
-Specifies the address of the ClickHouse server that receives events from this action.
+Specifies the address of the ClickHouse server that receives events from this
+action.
 
 .. summary-end
 

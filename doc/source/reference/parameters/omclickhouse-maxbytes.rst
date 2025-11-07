@@ -27,7 +27,10 @@ This parameter applies to :doc:`/configuration/modules/omclickhouse`.
 
 Description
 -----------
-When shipping logs with ``bulkMode`` **on**, ``maxBytes`` specifies the maximum size of the request body sent to ClickHouse. Logs are batched until either the buffer reaches ``maxBytes`` or the `dequeue batch size <http://www.rsyslog.com/doc/node35.html>`_ is reached.
+When shipping logs with ``bulkMode`` **on**, ``maxBytes`` specifies the maximum
+size of the request body sent to ClickHouse. Logs are batched until either
+the buffer reaches ``maxBytes`` or the `dequeue batch size
+<http://www.rsyslog.com/doc/node35.html>`_ is reached.
 
 Input usage
 -----------

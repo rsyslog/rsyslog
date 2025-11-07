@@ -27,7 +27,9 @@ This parameter applies to :doc:`/configuration/modules/omclickhouse`.
 
 Description
 -----------
-The module accepts connections to servers, which have unsigned certificates. If this parameter is disabled, the module will verify whether the certificates are authentic.
+The module accepts connections to servers, which have unsigned certificates.
+If this parameter is disabled, the module will verify whether the
+certificates are authentic.
 
 Input usage
 -----------

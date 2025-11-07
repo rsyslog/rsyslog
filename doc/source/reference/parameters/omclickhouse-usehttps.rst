@@ -12,7 +12,8 @@ useHttps
 
 .. summary-start
 
-Controls whether HTTPS is used by default when no scheme is specified for the ClickHouse server.
+Controls whether HTTPS is used by default when no scheme is specified for the
+ClickHouse server.
 
 .. summary-end
 
@@ -27,7 +28,8 @@ This parameter applies to :doc:`/configuration/modules/omclickhouse`.
 
 Description
 -----------
-Default scheme to use when sending events to ClickHouse if none is specified on a server.
+Default scheme to use when sending events to ClickHouse if none is specified
+on a server.
 
 Input usage
 -----------

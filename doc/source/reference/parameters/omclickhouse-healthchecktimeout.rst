@@ -27,7 +27,8 @@ This parameter applies to :doc:`/configuration/modules/omclickhouse`.
 
 Description
 -----------
-This parameter sets the timeout for checking the availability of ClickHouse. Value is given in milliseconds.
+This parameter sets the timeout for checking the availability of ClickHouse.
+Value is given in milliseconds.
 
 Input usage
 -----------

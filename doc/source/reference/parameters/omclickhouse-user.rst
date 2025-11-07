@@ -25,7 +25,8 @@ This parameter applies to :doc:`/configuration/modules/omclickhouse`.
 
 Description
 -----------
-If you have basic HTTP authentication deployed you can specify your user-name here.
+If you have basic HTTP authentication deployed you can specify your user-name
+here.
 
 Input usage
 -----------

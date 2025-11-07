@@ -12,7 +12,8 @@ skipVerifyHost
 
 .. summary-start
 
-Controls whether the module disables host name verification for HTTPS connections.
+Controls whether the module disables host name verification for HTTPS
+connections.
 
 .. summary-end
 
@@ -30,7 +31,8 @@ Description
 If ``"on"``, this will set the curl ``CURLOPT_SSL_VERIFYHOST`` option to ``0``.
 
 .. warning::
-   You are strongly discouraged to set this to ``"on"``. It is primarily useful only for debugging or testing.
+   You are strongly discouraged to set this to ``"on"``. It is primarily
+   useful only for debugging or testing.
 
 Input usage
 -----------
