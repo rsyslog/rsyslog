@@ -71,3 +71,46 @@ The picture demonstrate how things work.
 
    rsyslog gssapi support
 
+
+Configuration Parameters
+========================
+
+.. note::
+
+   Parameter names are case-insensitive; camelCase is recommended for readability.
+
+Module Parameters
+-----------------
+
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Parameter
+     - Summary
+   * - :ref:`param-omgssapi-gssforwardservicename`
+     - .. include:: ../../reference/parameters/omgssapi-gssforwardservicename.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omgssapi-gssmode`
+     - .. include:: ../../reference/parameters/omgssapi-gssmode.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omgssapi-actiongssforwarddefaulttemplate`
+     - .. include:: ../../reference/parameters/omgssapi-actiongssforwarddefaulttemplate.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+
+Input Parameters
+----------------
+
+The omgssapi output module does not provide dedicated input parameters. Use the
+legacy ``:omgssapi:`` action syntax when forwarding messages.
+
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/omgssapi-gssforwardservicename
+   ../../reference/parameters/omgssapi-gssmode
+   ../../reference/parameters/omgssapi-actiongssforwarddefaulttemplate
+
