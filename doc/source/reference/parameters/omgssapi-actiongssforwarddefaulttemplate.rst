@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/omgssapi`.
 :Name: ActionGSSForwardDefaultTemplate
 :Scope: module
 :Type: string
-:Default: module=RSYSLOG_TraditionalForwardFormat
+:Default: RSYSLOG_TraditionalForwardFormat
 :Required?: no
 :Introduced: 3.12.4
 

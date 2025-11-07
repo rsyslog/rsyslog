@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/omgssapi`.
 :Name: GssMode
 :Scope: module
 :Type: string
-:Default: module=encryption
+:Default: encryption
 :Required?: no
 :Introduced: 1.21.2
 

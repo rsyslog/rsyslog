@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/omgssapi`.
 :Name: GssForwardServiceName
 :Scope: module
 :Type: string
-:Default: module=host
+:Default: host
 :Required?: no
 :Introduced: 1.21.2
 
