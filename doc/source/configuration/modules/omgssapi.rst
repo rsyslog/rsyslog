@@ -104,8 +104,16 @@ Module Parameters
 Action Parameters
 -----------------
 
-The ``omgssapi`` action is configured via module parameters. The action only
-takes a ``target`` parameter. Legacy ``:omgssapi:`` syntax is also supported.
+The ``omgssapi`` action is configured via module parameters. In modern
+``action()`` syntax, it only takes a ``target`` parameter.
+
+Legacy ``:omgssapi:`` syntax is also supported and includes options for
+compression and TCP framing. These are specified in parentheses after the
+selector, for example ``:omgssapi:(z5,o)hostname``.
+
+-  **z[0-9]**: Enables zlib compression. The optional digit specifies the
+   compression level (0-9). Defaults to 9 if no digit is given.
+-  **o**: Enables octet-counted TCP framing.
 
 .. toctree::
    :hidden:
