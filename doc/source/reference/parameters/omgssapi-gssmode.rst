@@ -32,7 +32,7 @@ Specifies the GSS-API protection level used by the client. The available modes a
   messages when both peers support it.
 
 Legacy configurations set this directive with statements such as
-``$GssMode Encryption``.
+``$GssMode encryption``.
 
 Module usage
 ------------
