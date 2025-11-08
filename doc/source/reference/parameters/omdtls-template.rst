@@ -2,12 +2,12 @@
 .. _omdtls.parameter.module.template:
 .. _omdtls.parameter.input.template:
 
-Template
+template
 ========
 
 .. index::
-   single: omdtls; Template
-   single: Template
+   single: omdtls; template
+   single: template
 
 .. summary-start
 
@@ -17,7 +17,7 @@ Selects the template used to format messages sent through omdtls actions.
 
 This parameter applies to :doc:`../../configuration/modules/omdtls`.
 
-:Name: Template
+:Name: template
 :Scope: module, input
 :Type: word
 :Default: module=none, input=RSYSLOG_FileFormat
@@ -54,7 +54,7 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omdtls.parameter.legacy.actionforwarddefaulttemplatename:
 
-- $ActionForwardDefaultTemplateName — maps to Template (status: legacy)
+- $ActionForwardDefaultTemplateName — maps to template (status: legacy)
 
 .. index::
    single: omdtls; $ActionForwardDefaultTemplateName

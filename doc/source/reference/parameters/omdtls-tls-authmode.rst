@@ -1,12 +1,12 @@
 .. _param-omdtls-tls-authmode:
 .. _omdtls.parameter.input.tls-authmode:
 
-tls.AuthMode
+tls.authmode
 ============
 
 .. index::
-   single: omdtls; tls.AuthMode
-   single: tls.AuthMode
+   single: omdtls; tls.authmode
+   single: tls.authmode
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Sets the DTLS peer authentication method used by the action.
 
 This parameter applies to :doc:`../../configuration/modules/omdtls`.
 
-:Name: tls.AuthMode
+:Name: tls.authmode
 :Scope: input
 :Type: string
 :Default: input=none
