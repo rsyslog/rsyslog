@@ -27,12 +27,12 @@ Description
 -----------
 Sets the mode of authentication to be used.
 
-Supported values are either "*fingerprint*", "*name*" or "*certvalid*".
+Supported values are ``fingerprint``, ``name``, or ``certvalid``.
 
-* **fingerprint**: Authentication based on certificate fingerprint.
-* **name**: Authentication based on the ``subjectAltName`` and, as a fallback,
+* ``fingerprint``: Authentication based on certificate fingerprint.
+* ``name``: Authentication based on the ``subjectAltName`` and, as a fallback,
   the subject common name.
-* **certvalid**: Requires a valid certificate for authentication.
+* ``certvalid``: Requires a valid certificate for authentication.
 
 If this parameter is not set, or if an unsupported value is provided, the
 action falls back to anonymous authentication (no client certificate

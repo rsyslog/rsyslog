@@ -20,15 +20,15 @@ This parameter applies to :doc:`../../configuration/modules/omdtls`.
 :Name: Template
 :Scope: module, input
 :Type: word
-:Default: module=RSYSLOG_FileFormat, input=RSYSLOG_FileFormat
+:Default: module=none, input=RSYSLOG_FileFormat
 :Required?: no
 :Introduced: v8.2402.0
 
 Description
 -----------
-Selects the template that formats messages for omdtls actions. Each action uses
-``RSYSLOG_FileFormat`` unless overridden by the action parameter. The module
-parameter is currently unused but preserved for compatibility.
+Selects the template that formats messages for omdtls actions. If an action
+does not specify this parameter, it uses ``RSYSLOG_FileFormat``. The module
+parameter is defined for compatibility but currently ignored by actions.
 
 Module usage
 ------------
