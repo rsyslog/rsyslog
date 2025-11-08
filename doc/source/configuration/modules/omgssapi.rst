@@ -101,11 +101,11 @@ Module Parameters
         :start-after: .. summary-start
         :end-before: .. summary-end
 
-Input Parameters
-----------------
+Action Parameters
+-----------------
 
-The omgssapi output module does not provide dedicated input parameters. Use the
-legacy ``:omgssapi:`` action syntax when forwarding messages.
+The ``omgssapi`` action is configured via module parameters. The action only
+takes a ``target`` parameter. Legacy ``:omgssapi:`` syntax is also supported.
 
 .. toctree::
    :hidden:
