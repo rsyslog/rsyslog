@@ -20,7 +20,7 @@ This parameter applies to :doc:`../../configuration/modules/omdtls`.
 :Scope: input
 :Type: word
 :Default: input=none
-:Required?: no
+:Required?: yes
 :Introduced: v8.2402.0
 
 Description

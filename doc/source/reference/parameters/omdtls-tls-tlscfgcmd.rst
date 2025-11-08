@@ -39,7 +39,7 @@ Example 1
 ~~~~~~~~~
 This will allow all protocols except for SSLv2 and SSLv3:
 
-.. code-block:: rsyslog
+.. code-block:: none
 
    tls.tlscfgcmd="Protocol=ALL,-SSLv2,-SSLv3"
 
@@ -48,7 +48,7 @@ Example 2
 This will allow all protocols except for SSLv2, SSLv3 and TLSv1. It will also
 set the minimum protocol to TLSv1.2
 
-.. code-block:: rsyslog
+.. code-block:: none
 
    tls.tlscfgcmd="Protocol=ALL,-SSLv2,-SSLv3,-TLSv1\nMinProtocol=TLSv1.2"
 
