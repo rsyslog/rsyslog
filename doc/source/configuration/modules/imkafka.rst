@@ -106,7 +106,7 @@ Statistic Counters
 ==================
 Explanation
 -----------
-These fields come from rsyslog’s periodic statistics (`impstats`) for the imkafka input module (Kafka consumer built on - **librdkafka- **). `impstats` emits per-component counters as JSON or legacy text at a fixed interval; each stats object has a name and origin (the component that registered the counters).
+These fields come from rsyslog’s periodic statistics (`impstats`) for the imkafka input module (Kafka consumer built on **librdkafka**). `impstats` emits per-component counters as JSON or legacy text at a fixed interval; each stats object has a name and origin (the component that registered the counters).
 Metrics are tracked at the global (module) level which exposes additional aggregate data from `librdkafka` metrics. They're also tracked at the local `action` level for more fine-grained tracking in evnrionments with many data pipelines. Metrics remain compatible with most pstats formats, but the `zabbix` format is recommended for
 systems utilizing low-level discovery and JSON compatibility.
 

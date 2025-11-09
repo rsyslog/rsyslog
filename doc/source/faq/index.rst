@@ -12,3 +12,4 @@ FAQ
    imtcp-tls-gibberish
    etl_tool
    vespa-ai-integration
+   does-rsyslog-run-under-windows
