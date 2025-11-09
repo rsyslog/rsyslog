@@ -20,49 +20,42 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
 
-|FmtObsoleteName| Directives
-----------------------------
+Module Parameters
+-----------------
 
-.. csv-table::
-   :header: "|FmtObsoleteName| directive", "type", "default", "mandatory"
-   :widths: auto
-   :class: parameter-table
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-   "``$OMHDFSFileName``", "word", "none", "no"
+   * - Parameter
+     - Summary
+   * - :ref:`param-omhdfs-omhdfsfilename`
+     - .. include:: ../../reference/parameters/omhdfs-omhdfsfilename.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhdfs-omhdfshost`
+     - .. include:: ../../reference/parameters/omhdfs-omhdfshost.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhdfs-omhdfsport`
+     - .. include:: ../../reference/parameters/omhdfs-omhdfsport.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omhdfs-omhdfsdefaulttemplate`
+     - .. include:: ../../reference/parameters/omhdfs-omhdfsdefaulttemplate.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
-The name of the file to which the output data shall be written.
+.. toctree::
+   :hidden:
 
-.. csv-table::
-   :header: "|FmtObsoleteName| directive", "type", "default", "mandatory"
-   :widths: auto
-   :class: parameter-table
-
-   "``$OMHDFSHost``", "word", "default", "no"
-
-Name or IP address of the HDFS host to connect to.
-
-.. csv-table::
-   :header: "|FmtObsoleteName| directive", "type", "default", "mandatory"
-   :widths: auto
-   :class: parameter-table
-
-   "``$OMHDFSPort``", "integer", "0", "no"
-
-Port on which to connect to the HDFS host.
-
-.. csv-table::
-   :header: "|FmtObsoleteName| directive", "type", "default", "mandatory"
-   :widths: auto
-   :class: parameter-table
-
-   "``$OMHDFSDefaultTemplate``", "word", "RSYSLOG_FileFormat", "no"
-
-Default template to be used when none is specified. This saves the work of
-specifying the same template ever and ever again. Of course, the default
-template can be overwritten via the usual method.
+   ../../reference/parameters/omhdfs-omhdfsfilename
+   ../../reference/parameters/omhdfs-omhdfshost
+   ../../reference/parameters/omhdfs-omhdfsport
+   ../../reference/parameters/omhdfs-omhdfsdefaulttemplate
 
 
 Caveats/Known Bugs
