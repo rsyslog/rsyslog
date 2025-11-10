@@ -141,7 +141,7 @@ maintained:
 -  ``openfiles`` - number of file handles used by rsyslog; includes actual files, sockets and others
 
 Format
-^^^^^^
+------
 
 .. csv-table::
    :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
