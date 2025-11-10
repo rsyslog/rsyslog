@@ -26,7 +26,7 @@ This parameter applies to :doc:`../../configuration/modules/omhdfs`.
 Description
 -----------
 Default template to be used when none is specified. This saves the work of
-specifying the same template ever and ever again. Of course, the default
+specifying the same template repeatedly. Of course, the default
 template can be overwritten via the usual method.
 
 Module usage
