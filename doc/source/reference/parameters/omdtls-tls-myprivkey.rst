@@ -30,7 +30,6 @@ This key is used for the cryptographic operations in the DTLS handshake.
 
 Input usage
 -----------
-.. _param-omdtls-input-tls-myprivkey:
 .. _omdtls.parameter.input.tls-myprivkey-usage:
 
 .. code-block:: rsyslog

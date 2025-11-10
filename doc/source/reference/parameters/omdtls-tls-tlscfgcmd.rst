@@ -54,7 +54,6 @@ set the minimum protocol to TLSv1.2
 
 Input usage
 -----------
-.. _param-omdtls-input-tls-tlscfgcmd:
 .. _omdtls.parameter.input.tls-tlscfgcmd-usage:
 
 .. code-block:: rsyslog

@@ -31,7 +31,6 @@ for DTLS traffic.
 
 Input usage
 -----------
-.. _param-omdtls-input-port:
 .. _omdtls.parameter.input.port-usage:
 
 .. code-block:: rsyslog

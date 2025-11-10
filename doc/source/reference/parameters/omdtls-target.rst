@@ -30,7 +30,6 @@ set, the action has no destination and messages cannot be delivered.
 
 Input usage
 -----------
-.. _param-omdtls-input-target:
 .. _omdtls.parameter.input.target-usage:
 
 .. code-block:: rsyslog

@@ -30,7 +30,6 @@ peers during the DTLS handshake.
 
 Input usage
 -----------
-.. _param-omdtls-input-tls-mycert:
 .. _omdtls.parameter.input.tls-mycert-usage:
 
 .. code-block:: rsyslog

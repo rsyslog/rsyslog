@@ -32,7 +32,6 @@ parameter is defined for compatibility but currently ignored by actions.
 
 Module usage
 ------------
-.. _param-omdtls-module-template:
 .. _omdtls.parameter.module.template-usage:
 
 .. code-block:: rsyslog
@@ -41,7 +40,6 @@ Module usage
 
 Input usage
 -----------
-.. _param-omdtls-input-template:
 .. _omdtls.parameter.input.template-usage:
 
 .. code-block:: rsyslog

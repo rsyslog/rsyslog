@@ -40,7 +40,6 @@ required).
 
 Input usage
 -----------
-.. _param-omdtls-input-tls-authmode:
 .. _omdtls.parameter.input.tls-authmode-usage:
 
 .. code-block:: rsyslog
