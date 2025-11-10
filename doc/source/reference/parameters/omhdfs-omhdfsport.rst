@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/omhdfs`.
 :Name: omhdfsPort
 :Scope: module
 :Type: integer
-:Default: module=0
+:Default: 0
 :Required?: no
 :Introduced: Not documented
 

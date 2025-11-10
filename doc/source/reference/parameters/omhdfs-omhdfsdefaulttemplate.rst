@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/omhdfs`.
 :Name: omhdfsDefaultTemplate
 :Scope: module
 :Type: word
-:Default: module=RSYSLOG_FileFormat
+:Default: RSYSLOG_FileFormat
 :Required?: no
 :Introduced: Not documented
 

@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/omhdfs`.
 :Name: omhdfsHost
 :Scope: module
 :Type: word
-:Default: module=default
+:Default: default
 :Required?: no
 :Introduced: Not documented
 
