@@ -28,7 +28,7 @@ Description
 -----------
 Selects the template that formats messages for omdtls actions. If an action
 does not specify this parameter, it uses ``RSYSLOG_FileFormat``. The module
-parameter is defined for compatibility but currently ignored by actions.
+parameter is defined for compatibility but is currently ignored.
 
 Module usage
 ------------
