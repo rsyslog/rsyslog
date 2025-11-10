@@ -1,12 +1,12 @@
 .. _param-omhdfs-omhdfsfilename:
 .. _omhdfs.parameter.module.omhdfsfilename:
 
-OMHDFSFileName
+omhdfsFileName
 ==============
 
 .. index::
-   single: omhdfs; OMHDFSFileName
-   single: OMHDFSFileName
+   single: omhdfs; omhdfsFileName
+   single: omhdfsFileName
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Sets the HDFS path of the file that omhdfs writes log messages to.
 
 This parameter applies to :doc:`../../configuration/modules/omhdfs`.
 
-:Name: OMHDFSFileName
+:Name: omhdfsFileName
 :Scope: module
 :Type: word
 :Default: module=none
@@ -43,7 +43,7 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omhdfs.parameter.legacy.omhdfsfilename:
 
-- $OMHDFSFileName — maps to OMHDFSFileName (status: legacy)
+- $OMHDFSFileName — maps to omhdfsFileName (status: legacy)
 
 .. index::
    single: omhdfs; $OMHDFSFileName

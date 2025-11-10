@@ -1,12 +1,12 @@
 .. _param-omhdfs-omhdfsdefaulttemplate:
 .. _omhdfs.parameter.module.omhdfsdefaulttemplate:
 
-OMHDFSDefaultTemplate
+omhdfsDefaultTemplate
 =====================
 
 .. index::
-   single: omhdfs; OMHDFSDefaultTemplate
-   single: OMHDFSDefaultTemplate
+   single: omhdfs; omhdfsDefaultTemplate
+   single: omhdfsDefaultTemplate
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Sets the template omhdfs applies when no template is specified for an action.
 
 This parameter applies to :doc:`../../configuration/modules/omhdfs`.
 
-:Name: OMHDFSDefaultTemplate
+:Name: omhdfsDefaultTemplate
 :Scope: module
 :Type: word
 :Default: module=RSYSLOG_FileFormat
@@ -45,7 +45,7 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omhdfs.parameter.legacy.omhdfsdefaulttemplate:
 
-- $OMHDFSDefaultTemplate — maps to OMHDFSDefaultTemplate (status: legacy)
+- $OMHDFSDefaultTemplate — maps to omhdfsDefaultTemplate (status: legacy)
 
 .. index::
    single: omhdfs; $OMHDFSDefaultTemplate

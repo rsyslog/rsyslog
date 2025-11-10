@@ -1,12 +1,12 @@
 .. _param-omhdfs-omhdfsport:
 .. _omhdfs.parameter.module.omhdfsport:
 
-OMHDFSPort
+omhdfsPort
 ==========
 
 .. index::
-   single: omhdfs; OMHDFSPort
-   single: OMHDFSPort
+   single: omhdfs; omhdfsPort
+   single: omhdfsPort
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Specifies the TCP port number used to reach the configured HDFS host.
 
 This parameter applies to :doc:`../../configuration/modules/omhdfs`.
 
-:Name: OMHDFSPort
+:Name: omhdfsPort
 :Scope: module
 :Type: integer
 :Default: module=0
@@ -43,7 +43,7 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omhdfs.parameter.legacy.omhdfsport:
 
-- $OMHDFSPort — maps to OMHDFSPort (status: legacy)
+- $OMHDFSPort — maps to omhdfsPort (status: legacy)
 
 .. index::
    single: omhdfs; $OMHDFSPort

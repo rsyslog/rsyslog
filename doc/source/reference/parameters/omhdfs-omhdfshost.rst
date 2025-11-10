@@ -1,12 +1,12 @@
 .. _param-omhdfs-omhdfshost:
 .. _omhdfs.parameter.module.omhdfshost:
 
-OMHDFSHost
+omhdfsHost
 ==========
 
 .. index::
-   single: omhdfs; OMHDFSHost
-   single: OMHDFSHost
+   single: omhdfs; omhdfsHost
+   single: omhdfsHost
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Selects the hostname or IP address of the HDFS system omhdfs connects to.
 
 This parameter applies to :doc:`../../configuration/modules/omhdfs`.
 
-:Name: OMHDFSHost
+:Name: omhdfsHost
 :Scope: module
 :Type: word
 :Default: module=default
@@ -43,7 +43,7 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omhdfs.parameter.legacy.omhdfshost:
 
-- $OMHDFSHost — maps to OMHDFSHost (status: legacy)
+- $OMHDFSHost — maps to omhdfsHost (status: legacy)
 
 .. index::
    single: omhdfs; $OMHDFSHost
