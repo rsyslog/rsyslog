@@ -35,6 +35,9 @@ Module usage
 
    $ModLoad omhdfs
    $omhdfsHost hdfs01.example.net
+   $omhdfsFileName /var/log/hdfs/system.log
+   # write all messages to the specified HDFS host
+   *.* :omhdfs:
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

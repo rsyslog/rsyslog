@@ -34,7 +34,11 @@ Module usage
 .. code-block:: rsyslog
 
    $ModLoad omhdfs
+   $omhdfsHost hdfs01.example.net
    $omhdfsPort 8020
+   $omhdfsFileName /var/log/hdfs/system.log
+   # write all messages to the specified HDFS host and port
+   *.* :omhdfs:
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

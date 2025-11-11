@@ -36,7 +36,10 @@ Module usage
 .. code-block:: rsyslog
 
    $ModLoad omhdfs
+   $omhdfsFileName /var/log/hdfs/system.log
    $omhdfsDefaultTemplate RSYSLOG_FileFormat
+   # write all messages to HDFS using the custom default template
+   *.* :omhdfs:
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

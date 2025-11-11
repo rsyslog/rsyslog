@@ -35,6 +35,8 @@ Module usage
 
    $ModLoad omhdfs
    $omhdfsFileName /var/log/hdfs/system.log
+   # write all messages to the specified HDFS file
+   *.* :omhdfs:
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
