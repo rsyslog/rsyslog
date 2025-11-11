@@ -30,6 +30,11 @@ Selects the template that formats messages for omdtls actions. If an action
 does not specify this parameter, it uses ``RSYSLOG_FileFormat``. The module
 parameter is defined for compatibility but is currently ignored.
 
+The module has always defaulted actions to ``RSYSLOG_FileFormat`` (see
+``plugins/omdtls/omdtls.c``), even though earlier documentation mentioned
+``RSYSLOG_TraditionalForwardFormat``. Update existing configurations only if
+you require a different template.
+
 Module usage
 ------------
 .. _omdtls.parameter.module.template-usage:
