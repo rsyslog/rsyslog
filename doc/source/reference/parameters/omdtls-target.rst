@@ -25,8 +25,9 @@ This parameter applies to :doc:`../../configuration/modules/omdtls`.
 
 Description
 -----------
-Specifies the target hostname or IP address to send log messages to. If not
-set, the action has no destination and messages cannot be delivered.
+Specifies the target hostname or IP address to send log messages to. This
+parameter must be set; otherwise the action has no destination and messages
+cannot be delivered.
 
 Input usage
 -----------

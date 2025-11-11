@@ -26,8 +26,8 @@ This parameter applies to :doc:`../../configuration/modules/omdtls`.
 Description
 -----------
 The CA certificate that is being used to verify the client certificates.
-Has to be configured if :ref:`tls.authmode <param-omdtls-tls-authmode>` is set
-to ``fingerprint``, ``name``, or ``certvalid``.
+Configure it when :ref:`tls.authmode <param-omdtls-tls-authmode>` is set to
+``fingerprint``, ``name``, or ``certvalid``.
 
 Input usage
 -----------

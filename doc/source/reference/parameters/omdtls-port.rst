@@ -26,8 +26,8 @@ This parameter applies to :doc:`../../configuration/modules/omdtls`.
 Description
 -----------
 Defines the port number on the target host where log messages will be sent.
-If omitted, omdtls defaults to port 443 even though 4433 is the standard port
-for DTLS traffic.
+If omitted, omdtls defaults to port 443. This differs from the DTLS standard
+port 4433.
 
 Input usage
 -----------
