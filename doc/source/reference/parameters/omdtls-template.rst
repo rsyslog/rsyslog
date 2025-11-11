@@ -46,18 +46,6 @@ Input usage
 
    action(type="omdtls" target="192.0.2.1" template="ForwardingTemplate")
 
-Legacy names (for reference)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-Historic names/directives for compatibility. Do not use in new configs.
-
-.. _omdtls.parameter.legacy.actionforwarddefaulttemplatename:
-
-- $ActionForwardDefaultTemplateName — maps to template (status: legacy)
-
-.. index::
-   single: omdtls; $ActionForwardDefaultTemplateName
-   single: $ActionForwardDefaultTemplateName
-
 See also
 --------
 See also :doc:`../../configuration/modules/omdtls`.
