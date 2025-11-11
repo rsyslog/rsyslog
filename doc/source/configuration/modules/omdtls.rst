@@ -41,7 +41,7 @@ Configuration Parameters
 
    Parameter names are case-insensitive; camelCase is recommended for readability.
 
-Action Parameters
+Module Parameters
 -----------------
 
 .. list-table::
@@ -54,6 +54,16 @@ Action Parameters
      - .. include:: ../../reference/parameters/omdtls-template.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+
+Action Parameters
+-----------------
+
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Parameter
+     - Summary
    * - :ref:`param-omdtls-target`
      - .. include:: ../../reference/parameters/omdtls-target.rst
         :start-after: .. summary-start
