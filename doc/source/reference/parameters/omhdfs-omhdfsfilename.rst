@@ -29,7 +29,6 @@ The name of the file to which the output data shall be written.
 
 Module usage
 ------------
-.. _param-omhdfs-module-omhdfsfilename:
 .. _omhdfs.parameter.module.omhdfsfilename-usage:
 
 .. code-block:: rsyslog

@@ -31,7 +31,6 @@ template can be overwritten via the usual method.
 
 Module usage
 ------------
-.. _param-omhdfs-module-omhdfsdefaulttemplate:
 .. _omhdfs.parameter.module.omhdfsdefaulttemplate-usage:
 
 .. code-block:: rsyslog

@@ -29,7 +29,6 @@ Port on which to connect to the HDFS host.
 
 Module usage
 ------------
-.. _param-omhdfs-module-omhdfsport:
 .. _omhdfs.parameter.module.omhdfsport-usage:
 
 .. code-block:: rsyslog

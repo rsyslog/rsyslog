@@ -29,7 +29,6 @@ Name or IP address of the HDFS host to connect to.
 
 Module usage
 ------------
-.. _param-omhdfs-module-omhdfshost:
 .. _omhdfs.parameter.module.omhdfshost-usage:
 
 .. code-block:: rsyslog
