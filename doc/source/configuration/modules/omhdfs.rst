@@ -102,6 +102,7 @@ Example 1
 .. code-block:: none
 
    $ModLoad omhdfs
-   $omhdfsFileName /var/log/logfile \*.\* :omhdfs:
+   $omhdfsFileName /var/log/logfile
+   *.* :omhdfs:
 
 
