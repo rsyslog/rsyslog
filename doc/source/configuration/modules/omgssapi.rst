@@ -105,7 +105,7 @@ Action Parameters
 -----------------
 
 The ``omgssapi`` action is configured via module parameters. In modern
-``action()`` syntax, it only takes a ``target`` parameter.
+``action()`` syntax, it takes a ``target`` parameter and can optionally have a ``template`` assigned.
 
 Legacy ``:omgssapi:`` syntax is also supported and includes options for
 compression and TCP framing. These are specified in parentheses after the
