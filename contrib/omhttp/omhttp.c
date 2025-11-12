@@ -133,7 +133,7 @@ static uchar template_StdSplkRaw[] = "\"%rawmsg:::drop-last-lf%\n\"";
 #define DEFAULT_MAX_BATCH_BYTES (10 * 1024 * 1024) /* 10 MB - default max message size for AWS API Gateway */
 #define SPLUNK_HEC_MAX_BATCH_BYTES (1024 * 1024) /* 1 MB - Splunk HEC recommended limit */
 typedef enum batchFormat_e { FMT_NEWLINE, FMT_JSONARRAY, FMT_KAFKAREST, FMT_LOKIREST } batchFormat_t;
-typedef enum vendor_e { LOKI, SPLUNK} vendor_t;
+typedef enum vendor_e { LOKI, SPLUNK } vendor_t;
 
 /* REST API uses this URL:
  * https://<hostName>:<restPort>/restPath
@@ -958,8 +958,8 @@ static rsRetVal checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg) {
              * If receive code 503
              * The HEC server can be full
              * Retry data to an other HEC if more than 1 HEC is set up
-            */
-            if (pData->vendor == SPLUNK && pData->numServers > 1 && statusCode == 503){
+             */
+            if (pData->vendor == SPLUNK && pData->numServers > 1 && statusCode == 503) {
                 incrementServerIndex(pWrkrData);
             }
         }
