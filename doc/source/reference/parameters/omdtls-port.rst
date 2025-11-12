@@ -18,7 +18,7 @@ This parameter applies to :doc:`../../configuration/modules/omdtls`.
 
 :Name: port
 :Scope: input
-:Type: integer (port)
+:Type: word
 :Default: input=443
 :Required?: no
 :Introduced: v8.2402.0
