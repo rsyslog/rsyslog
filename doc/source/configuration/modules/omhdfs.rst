@@ -102,7 +102,7 @@ Example 1
 .. code-block:: rsyslog
 
    $ModLoad omhdfs
-   $omhdfsFileName /var/log/logfile
+   $omhdfsFileName /var/log/hdfs/system.log
    *.* :omhdfs:
 
 
