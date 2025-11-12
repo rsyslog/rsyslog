@@ -44,16 +44,9 @@ Configuration Parameters
 Module Parameters
 -----------------
 
-.. list-table::
-   :widths: 30 70
-   :header-rows: 1
-
-   * - Parameter
-     - Summary
-   * - :ref:`param-omdtls-template`
-     - .. include:: ../../reference/parameters/omdtls-template.rst
-        :start-after: .. summary-start
-        :end-before: .. summary-end
+The omdtls module currently exposes no effective module-only parameters. The
+compatibility placeholder :ref:`template parameter <param-omdtls-template>` is
+documented below because it only affects individual actions.
 
 Action Parameters
 -----------------
