@@ -260,6 +260,51 @@ if this is enabled, the name of the stats will be: "<instance name>(<server name
 if this is disabled, the name of the stats will be: "<instance name>(ALL)".
 
 
+profile
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+
+The profile allow user to use a defined profile supported by this module.
+The list of the current supported profile is :
+
+1. loki : allow Rsyslog to send data to the loki endpoint "loki/api/v1/push"
+2. hec:splunk:event : allow Rsyslog to send data to the Splunk HEC endpoint "event". This profile use a custom template to format logs into json :
+
+.. code-block:: text
+
+    {"event":"%rawmsg:::json%"}
+
+3. hec:splunk:raw : allow Rsyslog to send data to the Splunk HEC endpoint "raw". This profile use a custom template to format logs :
+
+.. code-block:: text
+
+    %rawmsg:::drop-last-lf%\n
+
+
+Other name set up here is ignored.
+
+token
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+
+The token is necessary when you use the profile "hec:splunk:event" or "hec:splunk:raw". The token to set up is given by when you create a Splunk HEC.
+This value is ignored if you use other profile.
+
+
 Statistic Counter
 =================
 
