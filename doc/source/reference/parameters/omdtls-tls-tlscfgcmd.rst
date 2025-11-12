@@ -60,6 +60,7 @@ Input usage
 
    action(type="omdtls"
           target="192.0.2.1"
+          port="4433"
           tls.tlsCfgCmd="Protocol=ALL,-SSLv2,-SSLv3")
 
 See also

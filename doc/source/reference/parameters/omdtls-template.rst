@@ -49,7 +49,7 @@ Input usage
 
 .. code-block:: rsyslog
 
-   action(type="omdtls" target="192.0.2.1" template="ForwardingTemplate")
+   action(type="omdtls" target="192.0.2.1" port="4433" template="ForwardingTemplate")
 
 See also
 --------

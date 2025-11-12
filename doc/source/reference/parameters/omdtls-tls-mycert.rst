@@ -36,6 +36,7 @@ Input usage
 
    action(type="omdtls"
           target="192.0.2.1"
+          port="4433"
           tls.myCert="/etc/rsyslog/omdtls.crt")
 
 See also
