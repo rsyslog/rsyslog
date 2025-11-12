@@ -27,7 +27,7 @@ Description
 -----------
 Default template to be used when none is specified. This saves the work of
 specifying the same template repeatedly. Of course, the default
-template can be overwritten via the usual method.
+template can be overwritten by specifying a template directly on an action.
 
 Module usage
 ------------
