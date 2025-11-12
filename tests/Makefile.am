@@ -102,7 +102,6 @@ TESTS +=  \
 	es-basic-errfile-popul.sh \
 	es-bulk-errfile-empty.sh \
 	es-bulk-errfile-popul.sh \
-	es-searchType-empty.sh \
 	diskqueue-multithread-es.sh \
 	es-writeoperation.sh
 
@@ -113,8 +112,7 @@ es-basic-errfile-empty.log: es-maxbytes-bulk.log
 es-basic-errfile-popul.log: es-basic-errfile-empty.log
 es-bulk-errfile-empty.log: es-basic-errfile-popul.log
 es-bulk-errfile-popul.log: es-bulk-errfile-empty.log
-es-searchType-empty.log: es-bulk-errfile-popul.log
-diskqueue-multithread-es.log: es-searchType-empty.log
+diskqueue-multithread-es.log: es-bulk-errfile-popul.log
 es-writeoperation.log: diskqueue-multithread-es.log
 elasticsearch-stop.log: es-writeoperation.log
 
@@ -216,6 +214,7 @@ TESTS +=  \
 	omfwd-tls-invalid-permitExpiredCerts.sh \
 	omfwd-keepalive.sh \
 	omfwd-subtree-tpl.sh \
+	omfile-subtree-jsonf.sh \
 	omusrmsg-errmsg-no-params.sh \
 	omusrmsg-noabort.sh \
 	omfile-module-params.sh \
@@ -242,7 +241,8 @@ TESTS +=  \
 	json-nonstring.sh \
 	json-onempty-at-end.sh \
 	template-json.sh \
-	template-pure-json.sh \
+        template-pure-json.sh \
+        template-jsonf-nested.sh \
 	template-pos-from-to.sh \
 	template-pos-from-to-lowercase.sh \
 	template-pos-from-to-oversize.sh \
@@ -293,7 +293,6 @@ TESTS +=  \
 	msgdup_props.sh \
 	empty-ruleset.sh \
 	ruleset-direct-queue.sh \
-	imtcp-tls-gibberish.sh \
 	imtcp-listen-port-file-2.sh \
 	allowed-sender-tcp-ok.sh \
 	allowed-sender-tcp-fail.sh \
@@ -501,11 +500,28 @@ TESTS +=  \
 	parsertest-parse-nodate.sh \
 	parsertest-parse-nodate-udp.sh \
 	parsertest-snare_ccoff_udp.sh \
-	parsertest-snare_ccoff_udp2.sh
+    parsertest-snare_ccoff_udp2.sh
+
+if ENABLE_MMSNAREPARSE
+TESTS += \
+	mmsnareparse-basic.sh \
+	mmsnareparse-json.sh \
+	mmsnareparse-syslog.sh \
+	mmsnareparse-comprehensive.sh \
+	mmsnareparse-value-types.sh \
+	mmsnareparse-enhanced-validation.sh \
+	mmsnareparse-kerberos.sh \
+	mmsnareparse-custom.sh \
+	mmsnareparse-realworld-4624-4634-5140.sh
+if HAVE_VALGRIND
+TESTS += \
+	mmsnareparse-comprehensive-vg.sh
+endif
+endif
 
 if ENABLE_OMSENDERTRACK
 TESTS += \
-	omsendertrack-basic.sh
+        omsendertrack-basic.sh
 TESTS += \
 	omsendertrack-statefile.sh
 if HAVE_VALGRIND
@@ -519,10 +535,10 @@ endif
 
 if ENABLE_LIBZSTD
 TESTS +=  \
-	zstd.sh
+        zstd.sh
 if HAVE_VALGRIND
 TESTS +=  \
-	zstd-vg.sh
+        zstd-vg.sh
 endif # if HAVE_VALGRIND
 endif
 
@@ -1466,7 +1482,13 @@ endif
 if ENABLE_MMJSONPARSE
 TESTS += \
         mmjsonparse-w-o-cookie.sh \
-        mmjsonparse-w-o-cookie-multi-spaces.sh
+        mmjsonparse-w-o-cookie-multi-spaces.sh \
+        mmjsonparse-find-json-basic.sh \
+        mmjsonparse-find-json-trailing.sh \
+        mmjsonparse-find-json-scan-limit.sh \
+        mmjsonparse-find-json-invalid.sh \
+        mmjsonparse-find-json-invalid-mode.sh \
+        mmjsonparse-find-json-parser-validation.sh
 if ENABLE_IMPSTATS
 TESTS += \
 	mmjsonparse-invalid-containerName.sh \
@@ -1500,8 +1522,15 @@ TESTS +=  \
 	stop_when_array_has_element.sh \
 	json_null_array.sh \
 	json_null.sh \
-	json_var_cmpr.sh \
-	json_var_case.sh
+        json_var_cmpr.sh \
+        json_var_case.sh
+endif
+
+if ENABLE_MMJSONTRANSFORM
+if ENABLE_IMTCP_TESTS
+TESTS += \
+        mmjsontransform-basic.sh
+endif
 endif
 
 if ENABLE_MMDBLOOKUP
@@ -1524,6 +1553,7 @@ TESTS +=  \
 	imtcp-tls-input-2certs.sh \
 	imtcp-tls-basic-verifydepth.sh \
 	imtcp_conndrop_tls.sh \
+	imtcp-tls-gibberish.sh \
 	sndrcv_tls_anon_rebind.sh \
 	sndrcv_tls_anon_hostname.sh \
 	sndrcv_tls_anon_ipv4.sh \
@@ -1557,6 +1587,45 @@ endif
 if ENABLE_OPENSSL
 TESTS +=  \
 	imtcp-multi-drvr-basic-ptcp_gtls_ossl.sh
+endif
+endif
+
+if ENABLE_MBEDTLS
+TESTS +=  \
+	imtcp-multi-drvr-basic-ptcp_gtls_mbedtls.sh \
+	imtcp-tls-mbedtls-basic.sh \
+	imtcp-tls-mbedtls-basic-verifydepth.sh \
+	imtcp-tls-mbedtls-error-ca.sh \
+	imtcp-tls-mbedtls-error-cert.sh \
+	imtcp-tls-mbedtls-error-key2.sh \
+	imtcp-tls-mbedtls-error-key.sh \
+	imtcp-tls-mbedtls-input-basic.sh \
+	imtcp-tls-mbedtls-x509invalid.sh \
+	imtcp-tls-mbedtls-x509name_invalid.sh \
+	imtcp-tls-mbedtls-x509name.sh \
+	imtcp-tls-mbedtls-x509valid.sh \
+	imtcp-tls-mbedtls-x509fingerprint-invld.sh \
+	imtcp-tls-mbedtls-x509fingerprint.sh \
+	imtcp-tls-mbedtls-x509name-multi-wildcard.sh \
+	sndrcv_tls_certless_clientonly_mbedtls.sh \
+	sndrcv_tls_gtls_serveranon_mbedtls_clientanon.sh \
+	sndrcv_tls_gtls_servercert_mbedtls_clientanon.sh \
+	sndrcv_tls_mbedtls_certvalid_action_level.sh \
+	sndrcv_tls_mbedtls_certvalid_expired.sh \
+	sndrcv_tls_mbedtls_certvalid_revoked.sh \
+	sndrcv_tls_mbedtls_certvalid.sh \
+	sndrcv_tls_mbedtls_servercert_clientcert.sh \
+	sndrcv_tls_mbedtls_servercert_mbedtls_clientanon.sh \
+	sndrcv_tls_servercert_mbedtls_clientanon.sh \
+	sndrcv_tls_mbedtls_certvalid_expired_autrzd.sh \
+	sndrcv_tls_mbedtls_gnutlspriorityString_no_suite_in_common.sh \
+	sndrcv_tls_mbedtls_gnutlspriorityString_suite_in_common.sh \
+	sndrcv_tls_servercert_bad_eku_chk_mbedtls_clientanon.sh \
+	sndrcv_tls_servercert_bad_eku_no_chk_mbedtls_clientanon.sh
+if HAVE_VALGRIND
+TESTS += \
+	imtcp-tls-mbedtls-basic-vg.sh \
+	imtcp-tls-mbedtls-basic-brokenhandshake-vg.sh
 endif
 endif
 
@@ -2010,10 +2079,21 @@ EXTRA_DIST= \
 	imbatchreport_delete_toolarge.sh \
 	imbatchreport_rename_toolarge.sh \
 	imbatchreport_errmsg_no_params-vg.sh \
-	mmexternal-SegFault.sh \
-	mmexternal-SegFault-empty-jroot-vg.sh \
-	testsuites/mmexternal-SegFault-mm-python.py \
-	mmexternal-InvldProg-vg.sh \
+        mmexternal-SegFault.sh \
+        mmexternal-SegFault-empty-jroot-vg.sh \
+        testsuites/mmexternal-SegFault-mm-python.py \
+        testsuites/mmsnareparse/sample-custom-pattern.data \
+        mmsnareparse-basic.sh \
+        mmsnareparse-comprehensive.sh \
+        mmsnareparse-comprehensive-vg.sh \
+        mmsnareparse-custom.sh \
+        mmsnareparse-enhanced-validation.sh \
+        mmsnareparse-json.sh \
+        mmsnareparse-kerberos.sh \
+        mmsnareparse-realworld-4624-4634-5140.sh \
+        mmsnareparse-syslog.sh \
+        mmsnareparse-value-types.sh \
+        mmexternal-InvldProg-vg.sh \
 	nested-call-shutdown.sh \
 	1.rstest 2.rstest 3.rstest err1.rstest \
 	config_multiple_include.sh \
@@ -2270,6 +2350,7 @@ EXTRA_DIST= \
         omfwd-tls-invalid-permitExpiredCerts.sh \
         omfwd-keepalive.sh \
         omfwd-subtree-tpl.sh \
+		omfile-subtree-jsonf.sh \
         omfwd_fast_imuxsock.sh \
         omfile_hup-vg.sh \
 	omrelp-keepalive.sh \
@@ -2360,7 +2441,8 @@ EXTRA_DIST= \
 	json-nonstring.sh \
         json-onempty-at-end.sh \
 	template-json.sh \
-	template-pure-json.sh \
+        template-pure-json.sh \
+        template-jsonf-nested.sh \
 	template-pos-from-to.sh \
 	template-pos-from-to-lowercase.sh \
 	template-pos-from-to-oversize.sh \
@@ -2448,6 +2530,12 @@ EXTRA_DIST= \
 	mmleefparse_basic.sh \
 	mmjsonparse-w-o-cookie.sh \
 	mmjsonparse-w-o-cookie-multi-spaces.sh \
+        mmjsonparse-find-json-basic.sh \
+        mmjsonparse-find-json-trailing.sh \
+        mmjsonparse-find-json-scan-limit.sh \
+        mmjsonparse-find-json-invalid.sh \
+        mmjsonparse-find-json-invalid-mode.sh \
+        mmjsonparse-find-json-parser-validation.sh \
 	mmjsonparse_simple.sh \
 	mmjsonparse-invalid-containerName.sh \
 	wtpShutdownAll-assertionFailure.sh \
@@ -2510,7 +2598,6 @@ EXTRA_DIST= \
 	es-bulk-errfile-popul-erronly.sh \
 	es-bulk-errfile-popul-erronly-interleaved.sh \
 	es-bulk-errfile-popul-def-interleaved.sh \
-	es-searchType-empty.sh \
 	diskqueue-multithread-es.sh \
 	es-basic-vg.sh \
 	es-basic-bulk-vg.sh \
@@ -2927,9 +3014,9 @@ EXTRA_DIST= \
 	imfile-symlink-ext-tmp-dir-tree.sh \
 	imfile-logrotate.sh \
 	imfile-logrotate-async.sh \
+	imfile-logrotate-multiple.sh \
 	imfile-logrotate-copytruncate.sh \
 	imfile-logrotate-nocopytruncate.sh \
-	imfile-logrotate-multiple.sh \
 	imfile-logrotate-state-files.sh \
 	imfile-growing-file-id.sh \
 	imfile-ignore-old-file-1.sh \

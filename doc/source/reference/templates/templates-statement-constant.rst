@@ -55,10 +55,12 @@ To generate a constant JSON field the ``format`` parameter can be used:
 Here the constant statement generates ``"@version":"1"``. Both ``value``
 and ``format`` must be specified.
 
+When you want dotted ``outname`` values to be emitted as nested objects,
+enable ``option.jsonftree="on"`` on the template instead of ``option.jsonf``.
+
 Parameters
 ----------
 
 - ``value`` – constant value to emit
 - ``outname`` – output field name for structured outputs
 - ``format`` – empty or ``jsonf``
-

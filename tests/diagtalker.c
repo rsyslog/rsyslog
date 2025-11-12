@@ -28,55 +28,70 @@
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <netdb.h>
 #if defined(__FreeBSD__)
     #include <netinet/in.h>
 #endif
 
-static char *targetIP = "127.0.0.1";
+static char *targetIP = "localhost";
 static int targetPort = 13500;
 
 
 /* open a single tcp connection
  */
 int openConn(int *fd) {
-    int sock;
-    struct sockaddr_in addr;
-    int port;
+    char service[16];
+    struct addrinfo hints, *res = NULL, *rp = NULL;
     int retries = 0;
+    int sock = -1;
 
-    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-        perror("socket()");
-        exit(1);
-    }
+    snprintf(service, sizeof(service), "%d", targetPort);
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC; /* Try IPv6, then IPv4 */
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = 0;
 
-    port = targetPort;
-    memset((char *)&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    if (inet_aton(targetIP, &addr.sin_addr) == 0) {
-        fprintf(stderr, "inet_aton() failed\n");
-        exit(1);
-    }
-    while (1) { /* loop broken inside */
-        if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
-            break;
-        } else {
-            if (retries++ == 50) {
-                perror("connect()");
-                fprintf(stderr, "[%d] connect() failed\n", port);
-                exit(1);
-            } else {
-                fprintf(stderr, "[%d] connect failed, retrying...\n", port);
-                usleep(100000); /* ms = 1000 us! */
+    for (;;) {
+        if (res == NULL) {
+            if (getaddrinfo(targetIP, service, &hints, &res) != 0 || res == NULL) {
+                /* Fallback: try explicit loopback families */
+                if (getaddrinfo("127.0.0.1", service, &hints, &res) != 0 || res == NULL) {
+                    if (getaddrinfo("::1", service, &hints, &res) != 0 || res == NULL) {
+                        fprintf(stderr, "name resolution failed for 'localhost' and loopback addresses\n");
+                        exit(1);
+                    }
+                }
             }
         }
-    }
-    if (retries > 0) {
-        fprintf(stderr, "[%d] connection established.\n", port);
-    }
 
-    *fd = sock;
-    return 0;
+        for (rp = res; rp != NULL; rp = rp->ai_next) {
+            sock = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+            if (sock == -1) {
+                continue;
+            }
+            if (connect(sock, rp->ai_addr, rp->ai_addrlen) == 0) {
+                *fd = sock;
+                if (retries > 0) {
+                    fprintf(stderr, "[%d] connection established.\n", targetPort);
+                }
+                freeaddrinfo(res);
+                return 0;
+            }
+            close(sock);
+            sock = -1;
+        }
+
+        if (retries++ == 200) {
+            perror("connect()");
+            fprintf(stderr, "[%d] connect() failed\n", targetPort);
+            freeaddrinfo(res);
+            exit(1);
+        } else {
+            fprintf(stderr, "[%d] connect failed, retrying...\n", targetPort);
+            usleep(100000);
+        }
+        /* retry with same resolved list to keep overhead low */
+    }
 }
 
 
@@ -115,7 +130,7 @@ static void waitRsp(int fd, char *buf, int len) {
 static void doProcessing(void) {
     int fd;
     int len;
-    char line[2048];
+    char line[10 * 1024];
 
     openConn(&fd);
     while (!feof(stdin)) {

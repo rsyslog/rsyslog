@@ -28,17 +28,15 @@ We suggest to check out our short presentation on `rsyslog journal
 integration <http://youtu.be/GTS7EuSdFKE>`_ to learn more details of
 anticipated use cases.
 
-**Warning:** Some versions of systemd journal have problems with
-database corruption, which leads to the journal to return the same data
-endlessly in a tight loop. This results in massive message duplication
-inside rsyslog probably resulting in a denial-of-service when the system
-resources get exhausted. This can be somewhat mitigated by using proper
-rate-limiters, but even then there are spikes of old data which are
-endlessly repeated. By default, ratelimiting is activated and permits to
-process 20,000 messages within 10 minutes, what should be well enough
-for most use cases. If insufficient, use the parameters described below
-to adjust the permitted volume. **It is strongly recommended to use this
-plugin only if there is hard need to do so.**
+**Historical warning:** very old systemd journal releases once suffered
+from a database corruption defect that caused the journal API to return
+the same records in a tight loop. When that happened, rsyslog received
+the repeated entries and could exhaust system resources with duplicate
+messages. The systemd project resolved the underlying problem years ago
+and we have not seen it on maintained distributions for a long time. This note is kept for context, as the built-in rate-limiter was added to protect against this issue. By default, ratelimiting is
+activated and permits the processing of 20,000 messages within 10
+minutes, which should be sufficient for most use cases. If insufficient,
+use the parameters described below to adjust the permitted volume.
 
 
 Notable Features

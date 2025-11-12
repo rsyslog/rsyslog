@@ -33,7 +33,7 @@ echo "****************************** END PREP STEP *****************************
 export ASAN_OPTIONS=detect_leaks=0
 
 autoreconf --force --verbose --install
-export CONFIG_FLAGS="--prefix=/opt/rsyslog --enable-silent-rules --enable-testbench --enable-imbatchreport --enable-imdiag --enable-imfile --enable-improg --enable-impstats --enable-mmrm1stspace --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-mmcount --disable-omudpspoof --enable-snmp --enable-mmsnmptrapd --disable-uuid --disable-libgcrypt \
+export CONFIG_FLAGS="--prefix=/opt/rsyslog --enable-silent-rules --enable-testbench --enable-imbatchreport --enable-imdiag --enable-imfile --enable-improg --enable-impstats --enable-mmrm1stspace --enable-mmanon --enable-mmaudit --enable-mmfields --enable-mmjsonparse --enable-mmjsontransform --enable-mmjsonrewrite --enable-mmpstrucdata --enable-mmsequence --enable-mmutf8fix --enable-mail --enable-omprog --enable-omstdout --enable-omuxsock --enable-pmaixforwardedfrom --enable-pmciscoios --enable-pmcisconames --enable-pmlastmsg --enable-pmsnare --enable-mmcount --disable-omudpspoof --enable-snmp --enable-mmsnmptrapd --disable-uuid --disable-libgcrypt \
 	--enable-pmnull \
 	--enable-pmnormalize=no \
 	--enable-imdocker \

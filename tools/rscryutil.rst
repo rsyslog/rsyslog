@@ -60,7 +60,7 @@ OPTIONS
 -K, --key <KEY>
   TESTING AID, NOT FOR PRODUCTION USE. This uses the KEY specified
   on the command line. This is the actual key, and as such this mode
-  is highly insecure. However, it can be useful for intial testing
+  is highly insecure. However, it can be useful for initial testing
   steps. This option may be removed in the future.
 
 -a, --algo <algo>

@@ -1,0 +1,228 @@
+# Copyright 2025 Rainer Gerhards and Others
+#
+# https://github.com/rsyslog/rsyslog-pkg-ubuntu
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# References:
+#
+# https://help.github.com/en/github/managing-subscriptions-and-notifications-on-github/configuring-notifications#github-actions-notification-options
+# https://github.com/settings/notifications
+
+
+---
+name: check_run_macos
+
+'on':
+  pull_request:
+    paths:
+      - '**/*.c'
+      - '**/*.h'
+      - 'grammar/lexer.l'
+      - 'grammar/grammar.y'
+      - 'tests/*.sh'
+      - 'diag.sh'
+      - '**/Makefile.am'
+      - 'configure.ac'
+      - '.github/workflows/*.yml'
+
+jobs:
+  check_run:
+    strategy:
+      # When set to true, cancel all in-progress jobs if any matrix job fails.
+      fail-fast: true
+      matrix:
+        include:
+          # 1 x from macos-13 (x64 NONE)
+          - os: macos-13
+            arch: x64
+            sanitizer: none
+          # 1 x from macos-14 (x64 NONE)
+          - os: macos-14
+            arch: x64
+            sanitizer: none
+          # 2 x from macos-15 (x64 ASAN and arm64 TSAN)
+          - os: macos-15
+            arch: x64
+            sanitizer: asan
+          - os: macos-15
+            arch: arm64
+            sanitizer: tsan
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    name: CI (${{ matrix.os }}, ${{ matrix.arch }}, ${{ matrix.sanitizer }})
+    env:
+      USE_AUTO_DEBUG: true
+      ABORT_ALL_ON_TEST_FAIL: true
+    steps:
+      - name: add extra dependencies
+        if: ${{ runner.os == 'macOS' }}
+        run: |
+          brew install pkgconf \
+            gnutls \
+            libestr \
+            libfastjson \
+            docutils \
+            autoconf \
+            automake \
+            libtool
+      - name: add extra dependencies (Linux for act)
+        if: ${{ runner.os == 'Linux' }}
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            build-essential \
+            flex \
+            bison \
+            autoconf \
+            automake \
+            libtool \
+            pkg-config \
+            libgnutls28-dev \
+            libestr-dev \
+            libfastjson-dev \
+            python3-docutils
+      - name: check disk space
+        run: |
+          df -h
+          echo "Available disk space before build:"
+          df -h . | tail -1 | awk '{print "Free space: " $4 " (" $5 " used)"}'
+
+      - name: git checkout project
+        uses: actions/checkout@v4
+
+      - name: prepare for build
+        run: |
+          # Set debugging flags for better stack traces on segfaults
+          BASE_CFLAGS="-g -O1 -fno-omit-frame-pointer"
+          BASE_LDFLAGS="-g"
+
+          if [ "${{ matrix.sanitizer }}" = "asan" ]; then
+            # AddressSanitizer for memory error detection
+            export CFLAGS="$BASE_CFLAGS -fsanitize=address \
+              -fsanitize-address-use-after-scope"
+            export LDFLAGS="$BASE_LDFLAGS -fsanitize=address"
+            echo "Building with AddressSanitizer"
+          elif [ "${{ matrix.sanitizer }}" = "tsan" ]; then
+            # ThreadSanitizer for threading error detection
+            export CFLAGS="$BASE_CFLAGS -fsanitize=thread"
+            export LDFLAGS="$BASE_LDFLAGS -fsanitize=thread"
+            echo "Building with ThreadSanitizer"
+          else
+            # No sanitizer (normal build)
+            export CFLAGS="$BASE_CFLAGS"
+            export LDFLAGS="$BASE_LDFLAGS"
+            echo "Building without sanitizers"
+          fi
+          autoreconf -fvi
+          ./configure --enable-silent-rules --enable-testbench \
+             --enable-imdiag --disable-imdocker --disable-imfile \
+             --disable-default-tests --disable-impstats --disable-imptcp \
+             --disable-mmanon --disable-mmaudit --disable-mmfields \
+             --disable-mmjsonparse --disable-mmpstrucdata \
+             --disable-mmsequence --disable-mmutf8fix --disable-mail \
+             --disable-omprog --disable-improg --disable-omruleset \
+             --enable-omstdout --disable-omuxsock \
+             --disable-pmaixforwardedfrom --disable-pmciscoios \
+             --disable-pmcisconames --disable-pmlastmsg --disable-pmsnare \
+             --disable-libgcrypt --disable-mmnormalize \
+             --disable-omudpspoof --disable-relp --disable-mmsnmptrapd \
+             --enable-gnutls --enable-usertools --disable-mysql \
+             --disable-valgrind --disable-mmkubernetes --disable-omkafka \
+             --disable-imkafka --disable-ommongodb --disable-omrabbitmq \
+             --disable-mmdarwin --enable-compile-warnings=error \
+             --disable-helgrind --disable-uuid --disable-fmhttp
+
+      - name: build
+        run: |
+          make -j
+
+      - name: check disk space before tests
+        run: |
+          df -h . | tail -1 | \
+            awk '{print "Free space before tests: " $4 " (" $5 " used)"}'
+          # Clean up to free some space
+          rm -rf /tmp/rsyslog-test-*
+      - name: configure macOS core dump path
+        if: ${{ runner.os == 'macOS' }}
+        run: |
+          sudo mkdir -p /cores
+          sudo sysctl -w kern.corefile=/cores/core-%P
+      - name: make check
+        run: |
+          # Enable core dumps for debugging segfaults
+          ulimit -c unlimited
+
+          # Configure sanitizer options based on which one we're using
+          if [ "${{ matrix.sanitizer }}" = "asan" ]; then
+            echo "Configuring AddressSanitizer options"
+            export ASAN_OPTIONS="verbosity=1:halt_on_error=1:\
+              check_initialization_order=1:strict_init_order=1:\
+              detect_stack_use_after_return=1:print_stacktrace=1"
+          elif [ "${{ matrix.sanitizer }}" = "tsan" ]; then
+            echo "Configuring ThreadSanitizer options"
+            export TSAN_OPTIONS="verbosity=1:halt_on_error=1:\
+              history_size=7:suppressions=$PWD/tests/tsan-rt.supp"
+          else
+            echo "Running without sanitizers"
+          fi
+
+          make -j8 check
+      - name: List core files before cleanup
+        run: |
+          echo "=== Core files before cleanup ==="
+          # Search only in likely locations and limit output
+          find_core_files() {
+            find /cores /tmp /var/tmp . -type f -name 'core*' 2>/dev/null
+          }
+          find_core_files | head -20 || true
+          CORE_COUNT=$(find_core_files | wc -l || echo 0)
+          echo "Total core files found: $CORE_COUNT"
+      - name: Free up disk space (keep core files)
+        run: |
+          sudo rm -rf /usr/local/share/gtk-doc
+          sudo rm -rf /usr/local/share/man
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/hostedtoolcache
+          brew cleanup
+          df -h
+
+      - name: List core files after cleanup
+        run: |
+          echo "=== Core files after cleanup ==="
+          # Search only in likely locations and limit output
+          find_core_files() {
+            find /cores /tmp /var/tmp . -type f -name 'core*' 2>/dev/null
+          }
+          find_core_files | head -20 || true
+          CORE_COUNT=$(find_core_files | wc -l || echo 0)
+          echo "Total core files found: $CORE_COUNT"
+      - name: show error logs (if we errored)
+        if: ${{ failure() || cancelled() }}
+        run: |
+          echo "=== Post-failure diagnostics ==="
+          echo "Note: Comprehensive error analysis including core dumps,"
+          echo "system info, and logs is now handled automatically by"
+          echo "tests/diag.sh during test failures."
+          echo ""
+          echo "=== Basic disk space check ==="
+          df -h . | tail -1 | awk '{print "Free space: " $4 " (" $5 " used)"}'
+          echo ""
+          echo "=== Additional error log collection ==="
+          if [ -f "devtools/gather-check-logs.sh" ]; then
+            devtools/gather-check-logs.sh
+          fi
+          if [ -f "failed-tests.log" ]; then
+            echo "=== Failed Tests Summary ==="
+            cat failed-tests.log
+          fi

@@ -1,3 +1,5 @@
+.. _ref-mmleefparse:
+
 LEEF Structured Content Extraction Module (mmleefparse)
 =======================================================
 

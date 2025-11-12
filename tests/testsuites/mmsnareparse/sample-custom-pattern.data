@@ -1,0 +1,1 @@
+<13>1 2025-02-18T08:00:00.000000Z CUSTOMHOST - - - - MSWinEventLog	1	Security	4001	Tue Feb 18 08:00:00 2025	9999	Custom-Provider	N/A	N/A	Success Audit	CUSTOMHOST	CustomCategory		Custom audit event triggered.    Custom Block Delta:   WidgetID:  ZX-42   CustomEventTag:  Demo      -4001

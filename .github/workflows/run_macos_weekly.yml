@@ -1,0 +1,208 @@
+# Copyright 2025 Rainer Gerhards and Others
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+---
+name: weekly_run_macos
+
+'on':
+  schedule:
+    # Every Monday at 03:00 UTC
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check_run:
+    strategy:
+      # Do not cancel other matrix jobs if one fails
+      # We want a full picture weekly
+      fail-fast: false
+      matrix:
+        os: [macos-13, macos-14, macos-15]
+        arch: [x64, arm64]
+        sanitizer: [none, asan, tsan]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    name: Weekly CI ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.sanitizer }}
+    env:
+      USE_AUTO_DEBUG: true
+      ABORT_ALL_ON_TEST_FAIL: true
+    steps:
+      - name: add extra dependencies
+        run: |
+          brew install pkgconf \
+            gnutls \
+            libestr \
+            libfastjson \
+            docutils \
+            autoconf \
+            automake \
+            libtool
+
+      - name: git checkout project
+        uses: actions/checkout@v4
+
+      - name: prepare for build
+        run: |
+          BASE_CFLAGS="-g -O1 -fno-omit-frame-pointer"
+          BASE_LDFLAGS="-g"
+
+          if [ "${{ matrix.sanitizer }}" = "asan" ]; then
+            export CFLAGS="$BASE_CFLAGS -fsanitize=address \
+              -fsanitize-address-use-after-scope"
+            export LDFLAGS="$BASE_LDFLAGS -fsanitize=address"
+          elif [ "${{ matrix.sanitizer }}" = "tsan" ]; then
+            export CFLAGS="$BASE_CFLAGS -fsanitize=thread"
+            export LDFLAGS="$BASE_LDFLAGS -fsanitize=thread"
+          else
+            export CFLAGS="$BASE_CFLAGS"
+            export LDFLAGS="$BASE_LDFLAGS"
+          fi
+
+          autoreconf -fvi
+          ./configure --enable-silent-rules --enable-testbench \
+             --enable-imdiag --disable-imdocker --disable-imfile \
+             --disable-default-tests --disable-impstats --disable-imptcp \
+             --disable-mmanon --disable-mmaudit --disable-mmfields \
+             --disable-mmjsonparse --disable-mmpstrucdata \
+             --disable-mmsequence --disable-mmutf8fix --disable-mail \
+             --disable-omprog --disable-improg --disable-omruleset \
+             --enable-omstdout --disable-omuxsock \
+             --disable-pmaixforwardedfrom --disable-pmciscoios \
+             --disable-pmcisconames --disable-pmlastmsg --disable-pmsnare \
+             --disable-libgcrypt --disable-mmnormalize \
+             --disable-omudpspoof --disable-relp --disable-mmsnmptrapd \
+             --enable-gnutls --enable-usertools --disable-mysql \
+             --disable-valgrind --disable-mmkubernetes --disable-omkafka \
+             --disable-imkafka --disable-ommongodb --disable-omrabbitmq \
+             --disable-mmdarwin --enable-compile-warnings=error \
+             --disable-helgrind --disable-uuid --disable-fmhttp
+
+      - name: build
+        run: make -j
+
+      - name: make check (continue on error to collect results)
+        id: run_tests
+        continue-on-error: true
+        run: |
+          ulimit -c unlimited
+          sudo mkdir -p /cores
+          sudo sysctl -w kern.corefile=/cores/core-%P
+          if [ "${{ matrix.sanitizer }}" = "asan" ]; then
+            export ASAN_OPTIONS="verbosity=1:halt_on_error=1:\
+              check_initialization_order=1:strict_init_order=1:\
+              detect_stack_use_after_return=1:print_stacktrace=1"
+          elif [ "${{ matrix.sanitizer }}" = "tsan" ]; then
+            export TSAN_OPTIONS="verbosity=1:halt_on_error=1:\
+              history_size=7:suppressions=$PWD/tests/tsan-rt.supp"
+          fi
+          set +e
+          make -j8 check
+          EXIT_CODE=$?
+          STATUS=success
+          if [ "$EXIT_CODE" -ne 0 ]; then STATUS=failure; fi
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          {
+            printf "%s,%s,%s,%s\n" \
+              "${{ matrix.os }}" \
+              "${{ matrix.arch }}" \
+              "${{ matrix.sanitizer }}" \
+              "$STATUS"
+          } > result.txt
+          exit 0
+
+      - name: Upload result artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: res-${{ matrix.os }}-${{ matrix.arch }}-${{ matrix.sanitizer }}
+          path: result.txt
+
+      - name: Fail job if tests failed (but after artifact upload)
+        if: steps.run_tests.outputs.status == 'failure'
+        run: exit 1
+
+  report:
+    name: Summarize and report failures
+    needs: check_run
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Download all result artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: results
+
+      - name: Build summary
+        id: summary
+        run: |
+          set -e
+          {
+            echo "Weekly macOS matrix results"
+            echo ""
+            echo "| OS | Arch | Sanitizer | Status |"
+            echo "| --- | --- | --- | --- |"
+          } > summary.md
+          FAILURES=0
+          while IFS= read -r -d '' f; do
+            line=$(cat "$f")
+            IFS=',' read -r os arch sanitizer status <<< "$line"
+            echo "| $os | $arch | $sanitizer | $status |" >> summary.md
+            if [ "$status" != "success" ]; then
+              FAILURES=$((FAILURES+1))
+            fi
+          done < <(find results -type f -name 'result.txt' -print0)
+          echo "failures=$FAILURES" >> "$GITHUB_OUTPUT"
+
+      - name: Create or update tracking issue
+        if: steps.summary.outputs.failures != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('summary.md', 'utf8');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const query = `repo:${owner}/${repo} ` +
+                          `is:issue in:title Weekly macOS matrix failures`;
+            const { data: issues } =
+              await github.rest.search.issuesAndPullRequests({
+                q: query,
+                per_page: 1,
+              });
+            if (issues.items && issues.items.length > 0) {
+              const issue = issues.items[0];
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: 'Weekly macOS matrix failures',
+                body,
+                labels: ['ci']
+              });
+            }
+
+      - name: Upload summary as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-macos-summary
+          path: summary.md

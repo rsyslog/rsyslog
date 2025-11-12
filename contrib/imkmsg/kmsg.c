@@ -44,7 +44,7 @@
 
 /* globals */
 static int fklog = -1; /* kernel log fd */
-static int bInInitialReading = 1; /* are we in the intial kmsg reading phase? */
+static int bInInitialReading = 1; /* are we in the initial kmsg reading phase? */
 /* Note: There is a problem with kernel log time.
  * See https://github.com/troglobit/sysklogd/commit/9f6fbb3301e571d8af95f8d771469291384e9e95
  * We use the same work-around if bFixKernelStamp is on, and use the kernel log time

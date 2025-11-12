@@ -26,8 +26,9 @@ Best Practices
   If you need **encrypted UDP**, consider :doc:`omdtls <omdtls>`.
 
 - **Use TLS where possible:**  
-  When sending logs over untrusted networks, configure TLS (`StreamDriver="ossl"` 
-  or `StreamDriver="gtls"`) with `omfwd` (for TCP) or switch to `omdtls` (for UDP).
+  When sending logs over untrusted networks, configure TLS (`StreamDriver="ossl"`, 
+  `StreamDriver="gtls"` or `StreamDriver="mbedtls"`) with `omfwd` (for TCP) or switch 
+  to `omdtls` (for UDP).
 
 - **Enable queues for TCP forwarding:**  
   Always define a queue (`queue.type="linkedList"`) to avoid blocking if the 

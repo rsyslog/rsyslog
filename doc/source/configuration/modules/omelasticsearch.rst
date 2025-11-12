@@ -1,3 +1,5 @@
+.. _ref-omelasticsearch:
+
 ********************************************
 omelasticsearch: Elasticsearch Output Module
 ********************************************
@@ -19,6 +21,21 @@ Notable Features
 ================
 
 - :ref:`omelasticsearch-statistic-counter`
+
+
+Target platform detection
+=========================
+
+Starting with release 8.2510.0 the module probes the configured servers during
+configuration processing to determine whether they are running Elasticsearch or
+OpenSearch and to capture the version number that is exposed by the cluster.
+The probe happens once at startup, before the action begins to process any
+messages.  When the detection succeeds the module will automatically adapt
+internal defaults (for example, legacy clusters continue to receive the
+``system`` index) and it will override ``esVersion.major`` with the detected
+major version.  The configured action keeps running even if the probe cannot
+reach the servers; in that case rsyslog falls back to the provided
+configuration values.
 
 
 Configuration Parameters
@@ -128,6 +145,10 @@ Action Parameters
      - .. include:: ../../reference/parameters/omelasticsearch-pwd.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-omelasticsearch-apikey`
+     - .. include:: ../../reference/parameters/omelasticsearch-apikey.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-omelasticsearch-errorfile`
      - .. include:: ../../reference/parameters/omelasticsearch-errorfile.rst
         :start-after: .. summary-start
@@ -211,6 +232,7 @@ Action Parameters
    ../../reference/parameters/omelasticsearch-dynparent
    ../../reference/parameters/omelasticsearch-uid
    ../../reference/parameters/omelasticsearch-pwd
+   ../../reference/parameters/omelasticsearch-apikey
    ../../reference/parameters/omelasticsearch-errorfile
    ../../reference/parameters/omelasticsearch-tls-cacert
    ../../reference/parameters/omelasticsearch-tls-mycert

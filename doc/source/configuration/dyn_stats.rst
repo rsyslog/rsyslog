@@ -3,7 +3,7 @@ Dynamic Stats
 
 Rsyslog produces runtime-stats to allow user to study service health, performance, bottlenecks etc. Runtime-stats counters that Rsyslog components publish are statically defined.
 
-**Dynamic Stats** (called dyn-stats henceforth) component allows user to configure stats-namespaces (called stats-buckets) and increment counters within these buckets using Rainerscript function call.
+**Dynamic Stats** (called dyn-stats henceforth) component allows user to configure stats-namespaces (called stats-buckets) and increment counters within these buckets using RainerScript function call.
 
 The metric-name in this case can be a message-property or a sub-string extracted from message etc.
 

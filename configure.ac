@@ -2,9 +2,9 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT([rsyslog],[8.2510.0.daily],[rsyslog@lists.adiscon.com])    # UPDATE on release
+AC_INIT([rsyslog],[8.2512.0.main],[rsyslog@lists.adiscon.com])     # UPDATE on release
 AC_DEFINE(VERSION_YEAR,  25, [year part of real rsyslog version])  # UPDATE on release
-AC_DEFINE(VERSION_MONTH, 10, [month part of real rsyslog version]) # UPDATE on release
+AC_DEFINE(VERSION_MONTH, 12, [month part of real rsyslog version]) # UPDATE on release
 
 AM_INIT_AUTOMAKE([tar-pax subdir-objects])
 
@@ -1227,6 +1227,21 @@ fi
 
 AM_CONDITIONAL(ENABLE_GNUTLS_TESTS, test x$enable_gnutls_tests = xyes)
 
+# Mbed TLS support
+AC_ARG_ENABLE(mbedtls,
+        [AS_HELP_STRING([--enable-mbedtls],[Enable Mbed TLS support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mbedtls="yes" ;;
+          no) enable_mbedtls="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mbedtls) ;;
+         esac],
+        [enable_mbedtls=no]
+)
+if test "x$enable_mbedtls" = "xyes"; then
+	PKG_CHECK_MODULES(MBEDTLS, mbedtls)
+	AC_DEFINE([ENABLE_MBEDTLS], [1], [Indicator that mbedtls is present])
+fi
+AM_CONDITIONAL(ENABLE_MBEDTLS, test x$enable_mbedtls = xyes)
 
 # libgcrypt support
 AC_ARG_ENABLE(libgcrypt,
@@ -1526,6 +1541,18 @@ AC_ARG_ENABLE(mmjsonparse,
 )
 AM_CONDITIONAL(ENABLE_MMJSONPARSE, test x$enable_mmjsonparse = xyes)
 
+# mmjsontransform
+AC_ARG_ENABLE(mmjsontransform,
+        [AS_HELP_STRING([--enable-mmjsontransform],[Enable building mmjsontransform support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmjsontransform="yes" ;;
+          no) enable_mmjsontransform="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmjsontransform) ;;
+         esac],
+        [enable_mmjsontransform=no]
+)
+AM_CONDITIONAL(ENABLE_MMJSONTRANSFORM, test x$enable_mmjsontransform = xyes)
+
 # mmgrok
 AC_ARG_ENABLE(mmgrok,
         [AS_HELP_STRING([--enable-mmgrok],[Enable building mmgrok support @<:@default=no@:>@])],
@@ -1726,6 +1753,19 @@ if test "x$enable_mmrfc5424addhmac" = "xyes"; then
 #AC_CHECK_HEADERS([openssl/crypto.h openssl/x509.h openssl/pem.h openssl/ssl.h openssl/err.h],[],[AC_MSG_ERROR([OpenSSL headers required])])
 fi
 AM_CONDITIONAL(ENABLE_MMRFC5424ADDHMAC, test x$enable_mmrfc5424addhmac = xyes)
+
+
+# mmsnareparse
+AC_ARG_ENABLE(mmsnareparse,
+        [AS_HELP_STRING([--enable-mmsnareparse],[Enable building mmsnareparse support @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_mmsnareparse="yes" ;;
+          no) enable_mmsnareparse="no" ;;
+           *) AC_MSG_ERROR(bad value ${enableval} for --enable-mmsnareparse) ;;
+         esac],
+        [enable_mmsnareparse=no]
+)
+AM_CONDITIONAL(ENABLE_MMSNAREPARSE, test x$enable_mmsnareparse = xyes)
 
 
 # experimental omfile-hardened module
@@ -3048,21 +3088,42 @@ fi
 
 
 dnl ---- gather doc files for EXTRA_DIST ----
-# .rst files
-rst_files=`cd "$srcdir" && find doc/source -type f -name '*.rst' -print 2>/dev/null | LC_ALL=C sort`
+# .rst files and selected assets from doc/source
+doc_src_files=`cd "$srcdir" && find doc/source -type f \( -name '*.rst' -o -name '*.conf' -o -name '*.jpg' -o -name '*.png' \) -print 2>/dev/null | LC_ALL=C sort`
+
+# Additional doc assets that must be shipped in dist tarball
+# - Vendored static JS/CSS used by the docs
+doc_vendor_files=`cd "$srcdir" && find doc/source/_static/vendor -type f -print 2>/dev/null | LC_ALL=C sort`
+# - Documentation build helper scripts and tools
+doc_tools_files=`cd "$srcdir" && find doc/tools -type f -print 2>/dev/null | LC_ALL=C sort`
 
 # assemble; keep paths relative to top (we cd into $srcdir above)
-DOC_FILES="$rst_files
+DOC_FILES="$doc_src_files
+$doc_vendor_files
+$doc_tools_files
 doc/source/conf.py
 doc/source/conf_helpers.py
 doc/source/_ext/edit_on_github.py
 doc/source/_ext/rsyslog_lexer.py
 doc/source/_static/rsyslog.css
+doc/source/tutorials/cert-script.tar.gz
+doc/ai/structure_and_paths.md
+doc/ai/authoring_guidelines.md
+doc/ai/chunking_and_embeddings.md
+doc/ai/crosslinking_and_nav.md
+doc/ai/drift_monitoring.md
+doc/ai/mermaid_rules.md
+doc/ai/README.md
+doc/ai/templates/template-concept.rst
+doc/ai/templates/template-tutorial.rst
+doc/ai/terminology.md
+doc/ai/module_map.yaml
 doc/requirements.txt
 doc/README.md
 doc/STRATEGY.md
 doc/CONTRIBUTING.md
 doc/LICENSE
+doc/Makefile
 $ai_files"
 
 # collapse newlines and extra whitespace to single spaces
@@ -3115,16 +3176,17 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omudpspoof/Makefile \
 		plugins/ommongodb/Makefile \
 		plugins/mmnormalize/Makefile \
-		plugins/mmjsonparse/Makefile \
-		plugins/mmleefparse/Makefile \
+        plugins/mmjsonparse/Makefile \
+        plugins/mmjsontransform/Makefile \
+        plugins/mmleefparse/Makefile \
 		plugins/mmaudit/Makefile \
 		plugins/mmanon/Makefile \
 		plugins/mmrm1stspace/Makefile \
 		plugins/mmutf8fix/Makefile \
-                plugins/mmfields/Makefile \
-                plugins/mmpstrucdata/Makefile \
-                plugins/mmaitag/Makefile \
-                plugins/omelasticsearch/Makefile \
+        plugins/mmfields/Makefile \
+        plugins/mmpstrucdata/Makefile \
+        plugins/mmaitag/Makefile \
+        plugins/omelasticsearch/Makefile \
 		plugins/omclickhouse/Makefile \
 		plugins/mmsnmptrapd/Makefile \
 		plugins/pmlastmsg/Makefile \
@@ -3134,10 +3196,10 @@ AC_CONFIG_FILES([Makefile \
 		plugins/omdtls/Makefile \
 		contrib/mmdarwin/Makefile \
 		contrib/omhttp/Makefile \
-               contrib/fmhash/Makefile \
-               contrib/fmunflatten/Makefile \
-               plugins/fmpcre/Makefile \
-               contrib/ffaup/Makefile \
+        contrib/fmhash/Makefile \
+        contrib/fmunflatten/Makefile \
+        plugins/fmpcre/Makefile \
+        contrib/ffaup/Makefile \
 		contrib/pmsnare/Makefile \
 		contrib/pmpanngfw/Makefile \
 		contrib/pmaixforwardedfrom/Makefile \
@@ -3148,9 +3210,10 @@ AC_CONFIG_FILES([Makefile \
 		contrib/mmcount/Makefile \
 		contrib/omczmq/Makefile \
 		contrib/imczmq/Makefile \
-		contrib/mmsequence/Makefile \
-		contrib/mmrfc5424addhmac/Makefile \
-		contrib/pmcisconames/Makefile \
+                contrib/mmsequence/Makefile \
+                contrib/mmrfc5424addhmac/Makefile \
+                plugins/mmsnareparse/Makefile \
+                contrib/pmcisconames/Makefile \
 		contrib/omhttpfs/Makefile \
 		contrib/omamqp1/Makefile \
 		contrib/omtcl/Makefile \
@@ -3261,12 +3324,14 @@ echo
 echo "---{ message modification modules }---"
 echo "    mmnormalize module will be compiled:      $enable_mmnormalize"
 echo "    mmjsonparse module will be compiled:      $enable_mmjsonparse"
+echo "    mmjsontransform module will be compiled:  $enable_mmjsontransform"
 echo "    mmleefparse module will be compiled:      $enable_mmleefparse"
 echo "    mmgrok module will be compiled:           $enable_mmgrok"
 echo "    mmjaduit module will be compiled:         $enable_mmaudit"
 echo "    mmsnmptrapd module will be compiled:      $enable_mmsnmptrapd"
 echo "    mmutf8fix enabled:                        $enable_mmutf8fix"
 echo "    mmrfc5424addhmac enabled:                 $enable_mmrfc5424addhmac"
+echo "    mmsnareparse enabled:                    $enable_mmsnareparse"
 echo "    mmpstrucdata enabled:                     $enable_mmpstrucdata"
 echo "    mmsequence enabled:                       $enable_mmsequence"
 echo "    mmdblookup enabled:                       $enable_mmdblookup"
@@ -3290,6 +3355,7 @@ echo
 echo "---{ protocol support }---"
 echo "    openssl network stream driver enabled:    $enable_openssl"
 echo "    GnuTLS network stream driver enabled:     $enable_gnutls"
+echo "    Mbed TLS network stream driver enabled:   $enable_mbedtls"
 echo "    GSSAPI Kerberos 5 support enabled:        $enable_gssapi_krb5"
 echo "    RELP support enabled:                     $enable_relp"
 echo "    SNMP support enabled:                     $enable_snmp"

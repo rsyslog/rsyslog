@@ -17,7 +17,6 @@ EXTRA_DIST = \
 	contrib/gnutls/ca.pem \
 	contrib/gnutls/cert.pem \
 	contrib/gnutls/key.pem \
-	doc/ai/module_map.yaml \
 	$(DOC_FILES)
 
 SUBDIRS = compat runtime grammar . plugins/immark plugins/imuxsock plugins/imtcp plugins/imudp plugins/omtesting
@@ -256,6 +255,10 @@ if ENABLE_MMJSONPARSE
 SUBDIRS += plugins/mmjsonparse
 endif
 
+if ENABLE_MMJSONTRANSFORM
+SUBDIRS += plugins/mmjsontransform
+endif
+
 if ENABLE_MMGROK
 SUBDIRS += contrib/mmgrok
 endif
@@ -306,6 +309,10 @@ endif
 
 if ENABLE_MMRFC5424ADDHMAC
 SUBDIRS += contrib/mmrfc5424addhmac
+endif
+
+if ENABLE_MMSNAREPARSE
+SUBDIRS += plugins/mmsnareparse
 endif
 
 # omhttpfs

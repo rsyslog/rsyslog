@@ -16,7 +16,6 @@ module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
                                  server="localhost"
                                  serverport=`echo $ES_PORT`
                                  template="tpl"
-                                 searchType="_doc"
                                  searchIndex="rsyslog_testbench")
 '
 startup

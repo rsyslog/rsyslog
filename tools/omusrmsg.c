@@ -304,16 +304,26 @@ static rsRetVal wallmsg(uchar *pMsg, instanceData *pData) {
             sdRet = sd_session_get_uid(sessions_list[j], &uid);
             if (sdRet >= 0) {
                 pws = getpwuid(uid);
+
+                if (pws == NULL) {
+                    LogError(0, NO_ERRCODE, "failed to get passwd for userid '%d'\n", uid);
+                    free(sessions_list[j]);
+                    continue;
+                }
+
                 user = pws->pw_name; /* DO NOT FREE, OS/LIB internal memory! */
 
                 if (user == NULL) {
-                    dbgprintf("failed to get username for userid '%d'\n", uid);
+                    LogError(0, NO_ERRCODE, "failed to get username for userid '%d'\n", uid);
+                    free(sessions_list[j]);
                     continue;
                 }
             } else {
                 /* we record the state to the debug log */
                 rs_strerror_r(-sdRet, (char *)szErr, sizeof(szErr));
-                dbgprintf("get userid for session '%s' failed with [%d]:%s\n", sessions_list[j], -sdRet, szErr);
+                LogError(0, NO_ERRCODE, "get userid for session '%s' failed with [%d]:%s\n", sessions_list[j], -sdRet,
+                         szErr);
+                free(sessions_list[j]);
                 continue; /* try next session */
             }
             /* should we send the message to this user? */
@@ -333,7 +343,8 @@ static rsRetVal wallmsg(uchar *pMsg, instanceData *pData) {
             if ((sdRet = sd_session_get_tty(sessions_list[j], &tty)) < 0) {
                 /* we record the state to the debug log */
                 rs_strerror_r(-sdRet, (char *)szErr, sizeof(szErr));
-                dbgprintf("get tty for session '%s' failed with [%d]:%s\n", sessions_list[j], -sdRet, szErr);
+                LogError(0, NO_ERRCODE, "get tty for session '%s' failed with [%d]:%s\n", sessions_list[j], -sdRet,
+                         szErr);
                 free(sessions_list[j]);
                 continue; /* try next session */
             }

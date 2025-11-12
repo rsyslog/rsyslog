@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <string.h>
+#include <strings.h>
 #include <curl/curl.h>
 #include <curl/easy.h>
 #include <assert.h>
@@ -38,6 +39,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <limits.h>
 #if defined(__FreeBSD__)
     #include <unistd.h>
 #endif
@@ -100,9 +102,18 @@ typedef enum {
     ES_WRITE_UPSERT /* not supported */
 } es_write_ops_t;
 
+#define OMES_PLATFORM_UNKNOWN 0
+#define OMES_PLATFORM_ELASTICSEARCH 1
+#define OMES_PLATFORM_OPENSEARCH 2
+
 #define WRKR_DATA_TYPE_ES 0xBADF0001
 
 #define DEFAULT_REBIND_INTERVAL -1
+
+/** Default search type is left unset so that bulk metadata omits `_type`,
+ * but requests still fall back to the typeless endpoint (`/_doc`).
+ */
+#define OMES_SEARCHTYPE_DEFAULT NULL
 
 /* REST API for elasticsearch hits this URL:
  * http://<hostName>:<restPort>/<searchIndex>/<searchType>
@@ -120,6 +131,8 @@ typedef struct instanceConf_s {
     uchar *uid;
     uchar *pwd;
     uchar *authBuf;
+    uchar *apiKey;
+    uchar *apiKeyHeader;
     uchar *searchIndex;
     uchar *searchType;
     uchar *pipelineName;
@@ -130,6 +143,11 @@ typedef struct instanceConf_s {
     uchar *bulkId;
     uchar *errorFile;
     int esVersion;
+    int detectedMajorVersion;
+    int detectedMinorVersion;
+    int detectedPatchVersion;
+    uchar *detectedVersionString;
+    int targetPlatform;
     sbool errorOnly;
     sbool interleaved;
     sbool dynSrchIdx;
@@ -192,6 +210,7 @@ static struct cnfparamdescr actpdescr[] = {{"server", eCmdHdlrArray, 0},
                                            {"indextimeout", eCmdHdlrInt, 0},
                                            {"uid", eCmdHdlrGetWord, 0},
                                            {"pwd", eCmdHdlrGetWord, 0},
+                                           {"apikey", eCmdHdlrGetWord, 0},
                                            {"searchindex", eCmdHdlrGetWord, 0},
                                            {"searchtype", eCmdHdlrGetWord, 0},
                                            {"pipelinename", eCmdHdlrGetWord, 0},
@@ -226,7 +245,9 @@ static struct cnfparamdescr actpdescr[] = {{"server", eCmdHdlrArray, 0},
                                            {"esversion.major", eCmdHdlrPositiveInt, 0}};
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
-static rsRetVal curlSetup(wrkrInstanceData_t *pWrkrData);
+static rsRetVal ATTR_NONNULL() curlSetup(wrkrInstanceData_t *pWrkrData);
+static rsRetVal ATTR_NONNULL() detectTargetPlatformAndVersion(instanceData *const pData);
+static rsRetVal ATTR_NONNULL() applyVersionRequirements(instanceData *const pData);
 
 BEGINcreateInstance
     CODESTARTcreateInstance;
@@ -310,6 +331,8 @@ BEGINfreeInstance
     free(pData->uid);
     free(pData->pwd);
     free(pData->authBuf);
+    free(pData->apiKey);
+    free(pData->apiKeyHeader);
     free(pData->searchIndex);
     free(pData->searchType);
     free(pData->pipelineName);
@@ -322,6 +345,7 @@ BEGINfreeInstance
     free(pData->myCertFile);
     free(pData->myPrivKeyFile);
     free(pData->retryRulesetName);
+    free(pData->detectedVersionString);
     if (pData->ratelimiter != NULL) ratelimitDestruct(pData->ratelimiter);
 ENDfreeInstance
 
@@ -360,6 +384,7 @@ BEGINdbgPrintInstInfo
     dbgprintf("]\n");
     dbgprintf("\tdefaultPort=%d\n", pData->defaultPort);
     dbgprintf("\tuid='%s'\n", pData->uid == NULL ? (uchar *)"(not configured)" : pData->uid);
+    dbgprintf("\tapikey=%s\n", pData->apiKey == NULL ? "(not configured)" : "(redacted)");
     dbgprintf("\tpwd=(%sconfigured)\n", pData->pwd == NULL ? "not " : "");
     dbgprintf("\tsearch index='%s'\n", pData->searchIndex == NULL ? (uchar *)"(not configured)" : pData->searchIndex);
     dbgprintf("\tsearch type='%s'\n", pData->searchType == NULL ? (uchar *)"(not configured)" : pData->searchType);
@@ -389,6 +414,9 @@ BEGINdbgPrintInstInfo
     dbgprintf("\tratelimit.interval='%u'\n", pData->ratelimitInterval);
     dbgprintf("\tratelimit.burst='%u'\n", pData->ratelimitBurst);
     dbgprintf("\trebindinterval='%d'\n", pData->rebindInterval);
+    dbgprintf("\ttargetPlatform='%d'\n", pData->targetPlatform);
+    dbgprintf("\tdetectedVersion='%s'\n",
+              pData->detectedVersionString == NULL ? (uchar *)"(unknown)" : pData->detectedVersionString);
 ENDdbgPrintInstInfo
 
 
@@ -466,6 +494,346 @@ finalize_it:
     if (urlBuf) {
         es_deleteStr(urlBuf);
     }
+    RETiRet;
+}
+
+/**
+ * @brief Accumulates HTTP response data while probing the cluster version.
+ *
+ * cURL delivers the payload piecemeal, so we resize the buffer on demand
+ * before handing the full string to the JSON parser.
+ */
+struct versionDetectBuffer {
+    char *data;
+    size_t len;
+};
+
+/**
+ * @brief cURL write callback used during platform/version detection.
+ *
+ * @param[in] ptr    Chunk of bytes provided by libcurl.
+ * @param[in] size   Size of each element in @p ptr.
+ * @param[in] nmemb  Number of elements in @p ptr.
+ * @param[in] userdata  Pointer to the accumulation buffer.
+ *
+ * @return Number of bytes consumed when the append succeeds, or 0 when an
+ *         allocation failure should abort the transfer.
+ */
+static size_t ATTR_NONNULL(1, 4)
+    curlVersionResult(void *const ptr, const size_t size, const size_t nmemb, void *const userdata) {
+    struct versionDetectBuffer *const buffer = (struct versionDetectBuffer *)userdata;
+    const size_t size_add = size * nmemb;
+    char *tmp;
+
+    if (size_add == 0) return 0;
+
+    tmp = realloc(buffer->data, buffer->len + size_add + 1);
+    if (tmp == NULL) {
+        LogError(errno, RS_RET_OUT_OF_MEMORY, "omelasticsearch: realloc failed in curlVersionResult");
+        return 0;
+    }
+
+    memcpy(tmp + buffer->len, ptr, size_add);
+    buffer->data = tmp;
+    buffer->len += size_add;
+    buffer->data[buffer->len] = '\0';
+
+    return size_add;
+}
+
+/**
+ * @brief Parses a dotted version string into individual numeric components.
+ *
+ * Missing minor or patch components default to zero so we can safely compare
+ * versions such as "8" and "8.12" alike.
+ *
+ * @param[in]  version  NUL-terminated major[.minor[.patch]] string.
+ * @param[out] major    Parsed major version component.
+ * @param[out] minor    Parsed minor version component (defaults to 0).
+ * @param[out] patch    Parsed patch version component (defaults to 0).
+ *
+ * @retval RS_RET_OK             All components parsed successfully.
+ * @retval RS_RET_CONFIG_ERROR   The version string is missing or malformed.
+ */
+static rsRetVal ATTR_NONNULL(2, 3, 4)
+    parseVersionString(const char *const version, int *const major, int *const minor, int *const patch) {
+    const char *cursor;
+    char *endptr;
+    long parsed;
+    DEFiRet;
+
+    if (version == NULL) {
+        LogError(0, RS_RET_CONFIG_ERROR, "omelasticsearch: server response missing version number");
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+
+    errno = 0;
+    parsed = strtol(version, &endptr, 10);
+    if (errno == ERANGE || parsed < 0 || parsed > INT_MAX) {
+        LogError(errno, RS_RET_CONFIG_ERROR, "omelasticsearch: version component is out of range in '%s'", version);
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+    if (endptr == version) {
+        LogError(0, RS_RET_CONFIG_ERROR,
+                 "omelasticsearch: unable to parse version string '%s' (missing major component)", version);
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+    *major = (int)parsed;
+
+    int *components[] = {minor, patch};
+    *minor = 0;
+    *patch = 0;
+    for (int idx = 0; idx < 2 && *endptr == '.'; ++idx) {
+        cursor = endptr + 1;
+        errno = 0;
+        parsed = strtol(cursor, &endptr, 10);
+        if (errno == ERANGE || parsed < 0 || parsed > INT_MAX) {
+            LogError(errno, RS_RET_CONFIG_ERROR, "omelasticsearch: version component is out of range in '%s'", version);
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+        if (endptr != cursor) {
+            *components[idx] = (int)parsed;
+        }
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+/**
+ * @brief Applies compatibility rules that depend on the selected cluster version.
+ *
+ * Versions older than 8 still require an explicit default index name and forbid
+ * certain write operations without a `bulkid`. Later versions leave the
+ * administrator's choices untouched.
+ *
+ * @param[in,out] pData  Instance configuration updated in place.
+ *
+ * @retval RS_RET_OK            Compatibility checks passed.
+ * @retval RS_RET_OUT_OF_MEMORY Memory allocation failed while setting defaults.
+ * @retval RS_RET_CONFIG_ERROR  Legacy configuration is missing required fields.
+ */
+static rsRetVal ATTR_NONNULL() applyVersionRequirements(instanceData *const pData) {
+    DEFiRet;
+
+    if (pData->esVersion < 8) {
+        if (pData->searchIndex == NULL) {
+            pData->searchIndex = (uchar *)strdup("system");
+            if (pData->searchIndex == NULL) {
+                LogError(errno, RS_RET_OUT_OF_MEMORY,
+                         "omelasticsearch: failed to allocate default search index for legacy clusters");
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            }
+        }
+
+        if ((pData->writeOperation != ES_WRITE_INDEX) && (pData->bulkId == NULL)) {
+            LogError(0, RS_RET_CONFIG_ERROR,
+                     "omelasticsearch: writeoperation '%d' requires bulkid for Elasticsearch versions < 8",
+                     pData->writeOperation);
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+    }
+
+finalize_it:
+    RETiRet;
+}
+
+/**
+ * @brief Parses the root response document to capture version metadata.
+ *
+ * The routine persists the detected semantic version, infers whether we are
+ * talking to Elasticsearch or OpenSearch, and overrides user-provided
+ * `esversion` settings when necessary.
+ *
+ * @param[in,out] pData     Instance configuration that stores the detection
+ *                          results.
+ * @param[in]     payload   Raw JSON payload returned by the server.
+ * @param[in]     serverUrl URL that produced the payload (used for logging).
+ *
+ * @retval RS_RET_OK             Detection succeeded and the instance data was updated.
+ * @retval RS_RET_CONFIG_ERROR   JSON payload is invalid or missing required fields.
+ * @retval RS_RET_OUT_OF_MEMORY  Memory allocation failed while storing metadata.
+ */
+static rsRetVal ATTR_NONNULL(1, 2, 3)
+    updateDetectedPlatform(instanceData *const pData, const char *const payload, const char *const serverUrl) {
+    fjson_object *root = NULL;
+    fjson_object *version = NULL;
+    fjson_object *field = NULL;
+    const char *number = NULL;
+    const char *distribution = NULL;
+    const char *tagline = NULL;
+    int major = -1;
+    int minor = 0;
+    int patch = 0;
+    sbool isOpenSearch = 0;
+    DEFiRet;
+
+    root = fjson_tokener_parse(payload);
+    if (root == NULL) {
+        LogError(0, RS_RET_CONFIG_ERROR, "omelasticsearch: unable to parse platform detection response");
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+
+    if (!fjson_object_object_get_ex(root, "version", &version) || version == NULL) {
+        LogError(0, RS_RET_CONFIG_ERROR, "omelasticsearch: platform detection response missing version object");
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+
+    if (fjson_object_object_get_ex(version, "number", &field)) {
+        number = fjson_object_get_string(field);
+    }
+    if (fjson_object_object_get_ex(version, "distribution", &field)) {
+        distribution = fjson_object_get_string(field);
+    }
+    if (fjson_object_object_get_ex(root, "tagline", &field)) {
+        tagline = fjson_object_get_string(field);
+    }
+
+    CHKiRet(parseVersionString(number, &major, &minor, &patch));
+
+    if (distribution != NULL && strcasecmp(distribution, "opensearch") == 0) {
+        isOpenSearch = 1;
+    } else if (tagline != NULL && strcasestr(tagline, "opensearch") != NULL) {
+        isOpenSearch = 1;
+    }
+
+    free(pData->detectedVersionString);
+    pData->detectedVersionString = NULL;
+    if (number != NULL) {
+        pData->detectedVersionString = (uchar *)strdup(number);
+        if (pData->detectedVersionString == NULL) {
+            LogError(errno, RS_RET_OUT_OF_MEMORY, "omelasticsearch: strdup failed for version string");
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+    }
+
+    pData->detectedMajorVersion = major;
+    pData->detectedMinorVersion = minor;
+    pData->detectedPatchVersion = patch;
+    pData->targetPlatform = isOpenSearch ? OMES_PLATFORM_OPENSEARCH : OMES_PLATFORM_ELASTICSEARCH;
+
+    const int previousMajor = pData->esVersion;
+    pData->esVersion = major;
+    if (previousMajor != 0 && previousMajor != major) {
+        LogMsg(0, RS_RET_OK, LOG_NOTICE,
+               "omelasticsearch: overriding configured esversion.major %d with detected value %d", previousMajor,
+               major);
+    }
+
+    LogMsg(0, RS_RET_OK, LOG_INFO, "omelasticsearch: detected %s version %s at %s",
+           isOpenSearch ? "OpenSearch" : "Elasticsearch", number == NULL ? "(unknown)" : number, serverUrl);
+
+finalize_it:
+    if (root != NULL) fjson_object_put(root);
+    RETiRet;
+}
+
+/**
+ * @brief Contacts each configured server to determine the target platform/version.
+ *
+ * The probe issues a lightweight HTTP GET against the base URL, collects the
+ * JSON greeting, and defers to updateDetectedPlatform() for parsing. Detection
+ * failures are non-fatal so the action can still start with conservative
+ * defaults.
+ *
+ * @param[in,out] pData  Instance configuration providing server list and
+ *                       receiving detection results.
+ *
+ * @retval RS_RET_OK             Detection completed (results may remain unknown).
+ * @retval RS_RET_OUT_OF_MEMORY  Failed to allocate cURL handles or buffers.
+ */
+static rsRetVal ATTR_NONNULL() detectTargetPlatformAndVersion(instanceData *const pData) {
+    CURL *curl = NULL;
+    struct curl_slist *headers = NULL;
+    struct versionDetectBuffer buffer;
+    char errbuf[CURL_ERROR_SIZE];
+    sbool detected = 0;
+    DEFiRet;
+
+    if (pData->serverBaseUrls == NULL || pData->numServers <= 0) {
+        LogMsg(0, RS_RET_OK, LOG_WARNING, "omelasticsearch: skipping platform detection (no servers configured)");
+        goto finalize_it;
+    }
+
+    for (int i = 0; i < pData->numServers; ++i) {
+        buffer.data = NULL;
+        buffer.len = 0;
+        errbuf[0] = '\0';
+
+        curl = curl_easy_init();
+        if (curl == NULL) {
+            LogError(0, RS_RET_OUT_OF_MEMORY, "omelasticsearch: curl_easy_init failed for platform detection");
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+
+        const char *const serverUrl = (const char *)pData->serverBaseUrls[i];
+
+        curl_easy_setopt(curl, CURLOPT_URL, serverUrl);
+        curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, pData->healthCheckTimeout);
+        curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curlVersionResult);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
+        if (pData->allowUnsignedCerts) curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+        if (pData->skipVerifyHost) curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+        if (pData->authBuf != NULL) {
+            curl_easy_setopt(curl, CURLOPT_USERPWD, pData->authBuf);
+            curl_easy_setopt(curl, CURLOPT_PROXYAUTH, CURLAUTH_ANY);
+        }
+        if (pData->apiKeyHeader != NULL) {
+            headers = curl_slist_append(NULL, (const char *)pData->apiKeyHeader);
+            if (headers == NULL) {
+                LogError(0, RS_RET_OUT_OF_MEMORY, "omelasticsearch: failed to allocate curl header for api key");
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            }
+            curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        }
+        if (pData->caCertFile) curl_easy_setopt(curl, CURLOPT_CAINFO, pData->caCertFile);
+        if (pData->myCertFile) curl_easy_setopt(curl, CURLOPT_SSLCERT, pData->myCertFile);
+        if (pData->myPrivKeyFile) curl_easy_setopt(curl, CURLOPT_SSLKEY, pData->myPrivKeyFile);
+
+        CURLcode code = curl_easy_perform(curl);
+        long status = 0;
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
+        curl_easy_cleanup(curl);
+        curl = NULL;
+        if (headers != NULL) {
+            curl_slist_free_all(headers);
+            headers = NULL;
+        }
+
+        if (code == CURLE_OK && status >= 200 && status < 300 && buffer.data != NULL) {
+            rsRetVal detectRet = updateDetectedPlatform(pData, buffer.data, serverUrl);
+            if (detectRet == RS_RET_OK) {
+                detected = 1;
+            } else {
+                LogMsg(0, detectRet, LOG_WARNING,
+                       "omelasticsearch: ignoring platform detection response from %s due to parse errors", serverUrl);
+            }
+        } else if (code != CURLE_OK) {
+            LogMsg(0, RS_RET_ERR, LOG_WARNING, "omelasticsearch: platform detection request to %s failed: %s",
+                   serverUrl, errbuf[0] != '\0' ? errbuf : curl_easy_strerror(code));
+        } else {
+            LogMsg(0, RS_RET_ERR, LOG_WARNING,
+                   "omelasticsearch: platform detection request to %s returned HTTP status %ld", serverUrl, status);
+        }
+
+        if (buffer.data != NULL) {
+            free(buffer.data);
+            buffer.data = NULL;
+        }
+
+        if (detected) {
+            goto finalize_it;
+        }
+    }
+
+    LogMsg(0, RS_RET_OK, LOG_WARNING,
+           "omelasticsearch: unable to detect target platform and version from configured servers");
+
+finalize_it:
+    if (curl != NULL) curl_easy_cleanup(curl);
+    if (headers != NULL) curl_slist_free_all(headers);
     RETiRet;
 }
 
@@ -589,13 +957,12 @@ done:
 
 static rsRetVal ATTR_NONNULL(1) setPostURL(wrkrInstanceData_t *const pWrkrData, uchar **const tpls) {
     uchar *searchIndex = NULL;
-    uchar *searchType;
+    uchar *searchType = NULL;
+    uchar *actualSearchType = (uchar *)"_doc";
     uchar *pipelineName;
     uchar *parent;
     uchar *bulkId;
     char *baseUrl;
-    /* since 7.0, the API always requires /idx/_doc, so use that if searchType is not explicitly set */
-    uchar *actualSearchType = (uchar *)"_doc";
     es_str_t *url;
     int r = 0;
     DEFiRet;
@@ -1744,6 +2111,18 @@ static void ATTR_NONNULL(1) curlPostSetup(wrkrInstanceData_t *const pWrkrData) {
 static rsRetVal ATTR_NONNULL() curlSetup(wrkrInstanceData_t *const pWrkrData) {
     DEFiRet;
     pWrkrData->curlHeader = curl_slist_append(NULL, CONTENT_JSON);
+    if (pWrkrData->curlHeader == NULL) {
+        LogError(0, RS_RET_OUT_OF_MEMORY, "omelasticsearch: failed to allocate curl header for content-type");
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
+    if (pWrkrData->pData->apiKeyHeader != NULL) {
+        HEADER *const tmp = curl_slist_append(pWrkrData->curlHeader, (const char *)pWrkrData->pData->apiKeyHeader);
+        if (tmp == NULL) {
+            LogError(0, RS_RET_OUT_OF_MEMORY, "omelasticsearch: failed to allocate curl header for api key");
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+        pWrkrData->curlHeader = tmp;
+    }
     CHKmalloc(pWrkrData->curlPostHandle = curl_easy_init());
     ;
     curlPostSetup(pWrkrData);
@@ -1767,8 +2146,10 @@ static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
     pData->uid = NULL;
     pData->pwd = NULL;
     pData->authBuf = NULL;
+    pData->apiKey = NULL;
+    pData->apiKeyHeader = NULL;
     pData->searchIndex = NULL;
-    pData->searchType = NULL;
+    pData->searchType = OMES_SEARCHTYPE_DEFAULT;
     pData->pipelineName = NULL;
     pData->dynPipelineName = 0;
     pData->skipPipelineIfEmpty = 0;
@@ -1799,6 +2180,11 @@ static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
     pData->retryRulesetName = NULL;
     pData->retryRuleset = NULL;
     pData->rebindInterval = DEFAULT_REBIND_INTERVAL;
+    pData->detectedMajorVersion = -1;
+    pData->detectedMinorVersion = -1;
+    pData->detectedPatchVersion = -1;
+    pData->detectedVersionString = NULL;
+    pData->targetPlatform = OMES_PLATFORM_UNKNOWN;
 }
 
 BEGINnewActInst
@@ -1837,6 +2223,8 @@ BEGINnewActInst
             pData->uid = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(actpblk.descr[i].name, "pwd")) {
             pData->pwd = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "apikey")) {
+            pData->apiKey = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(actpblk.descr[i].name, "searchindex")) {
             pData->searchIndex = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(actpblk.descr[i].name, "searchtype")) {
@@ -1937,6 +2325,33 @@ BEGINnewActInst
         }
     }
 
+    if (pData->apiKey != NULL && (pData->uid != NULL || pData->pwd != NULL)) {
+        LogError(0, RS_RET_CONFIG_ERROR,
+                 "omelasticsearch: apikey cannot be combined with uid/pwd "
+                 "- action definition invalid");
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+
+    if (pData->apiKey != NULL) {
+        es_str_t *header = es_newStr(64);
+        if (header == NULL) {
+            LogError(0, RS_RET_OUT_OF_MEMORY, "omelasticsearch: failed to allocate buffer for api key header");
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+
+        if (es_addBuf(&header, "Authorization: ApiKey ", sizeof("Authorization: ApiKey ") - 1) == 0 &&
+            es_addBuf(&header, (char *)pData->apiKey, strlen((char *)pData->apiKey)) == 0) {
+            pData->apiKeyHeader = (uchar *)es_str2cstr(header, NULL);
+        }
+
+        es_deleteStr(header);
+
+        if (pData->apiKeyHeader == NULL) {
+            LogError(0, RS_RET_OUT_OF_MEMORY, "omelasticsearch: failed to build api key header");
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+    }
+
     if (pData->pwd != NULL && pData->uid == NULL) {
         LogError(0, RS_RET_UID_MISSING,
                  "omelasticsearch: password is provided, but no uid "
@@ -1974,7 +2389,8 @@ BEGINnewActInst
         ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
     }
 
-    if (pData->uid != NULL) CHKiRet(computeAuthHeader((char *)pData->uid, (char *)pData->pwd, &pData->authBuf));
+    if (pData->uid != NULL && pData->apiKey == NULL)
+        CHKiRet(computeAuthHeader((char *)pData->uid, (char *)pData->pwd, &pData->authBuf));
 
     iNumTpls = 1;
     if (pData->dynSrchIdx) ++iNumTpls;
@@ -2056,17 +2472,6 @@ BEGINnewActInst
         CHKiRet(computeBaseUrl("localhost", pData->defaultPort, pData->useHttps, pData->serverBaseUrls));
     }
 
-    if (pData->esVersion < 8) {
-        if (pData->searchIndex == NULL) pData->searchIndex = (uchar *)strdup("system");
-        if (pData->searchType == NULL) pData->searchType = (uchar *)strdup("events");
-
-        if ((pData->writeOperation != ES_WRITE_INDEX) && (pData->bulkId == NULL)) {
-            LogError(0, RS_RET_CONFIG_ERROR, "omelasticsearch: writeoperation '%d' requires bulkid",
-                     pData->writeOperation);
-            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-        }
-    }
-
     if (pData->retryFailures) {
         CHKiRet(ratelimitNew(&pData->ratelimiter, "omelasticsearch", NULL));
         ratelimitSetLinuxLike(pData->ratelimiter, pData->ratelimitInterval, pData->ratelimitBurst);
@@ -2108,6 +2513,22 @@ BEGINcheckCnf
         ruleset_t *pRuleset;
         rsRetVal localRet;
 
+        localRet = detectTargetPlatformAndVersion(inst);
+        if (localRet == RS_RET_OUT_OF_MEMORY) {
+            ABORT_FINALIZE(localRet);
+        }
+        if (localRet != RS_RET_OK) {
+            const char *target;
+            if (inst->serverBaseUrls != NULL && inst->numServers > 0) {
+                target = (const char *)inst->serverBaseUrls[0];
+            } else {
+                target = "configured server(s)";
+            }
+            LogMsg(0, localRet, LOG_WARNING,
+                   "omelasticsearch: platform detection failed for %s, continuing with defaults", target);
+        }
+        CHKiRet(applyVersionRequirements(inst));
+
         if (inst->retryRulesetName) {
             localRet = ruleset.GetRuleset(pModConf->pConf, &pRuleset, inst->retryRulesetName);
             if (localRet == RS_RET_NOT_FOUND) {
@@ -2120,6 +2541,7 @@ BEGINcheckCnf
             }
         }
     }
+finalize_it:
 ENDcheckCnf
 
 

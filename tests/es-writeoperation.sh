@@ -2,10 +2,17 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 ensure_elasticsearch_ready
+
+es_major_version="${RSYSLOG_TESTBENCH_ES_MAJOR_VERSION:-0}"
+es_version_label="${RSYSLOG_TESTBENCH_ES_VERSION_NUMBER:-unknown}"
+if [ -z "$RSYSLOG_TESTBENCH_ES_MAJOR_VERSION" ]; then
+        echo "info: Elasticsearch version detection unavailable; assuming legacy behavior (<8)."
+fi
+
 generate_conf
 add_conf '
 template(name="tpl" type="string"
-	 string="{\"msgnum\":\"%msg:F,58:2%\"}")
+         string="{\"msgnum\":\"%msg:F,58:2%\"}")
 
 module(load="../plugins/omelasticsearch/.libs/omelasticsearch")
 
@@ -14,23 +21,32 @@ if $msg contains "msgnum:" then
                server="127.0.0.1"
                serverport="19200"
                template="tpl"
-               searchType="_doc"
                writeoperation="create"
                searchIndex="rsyslog_testbench")
 
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 
+: > "$RSYSLOG_OUT_LOG"
 startup
 injectmsg  0 1
 shutdown_when_empty
 wait_shutdown
-if grep -q "omelasticsearch: writeoperation '1' requires bulkid"  $RSYSLOG_OUT_LOG ; then
-	echo found correct error message
+if [ "$es_major_version" -ge 8 ]; then
+        if grep -q "omelasticsearch: writeoperation '1' requires bulkid"  "$RSYSLOG_OUT_LOG" ; then
+                echo "Error: unexpected legacy writeoperation warning on Elasticsearch >= 8 (detected ${es_version_label})."
+                cat "$RSYSLOG_OUT_LOG"
+                error_exit 1
+        fi
+        echo "info: Elasticsearch >=8 accepted create writeoperation without bulkid as expected."
 else
-	echo Error: did not complain about incorrect writeoperation
-	cat $RSYSLOG_OUT_LOG
-	error_exit 1
+        if grep -q "omelasticsearch: writeoperation '1' requires bulkid"  "$RSYSLOG_OUT_LOG" ; then
+                echo found correct error message
+        else
+                echo Error: did not complain about incorrect writeoperation
+                cat "$RSYSLOG_OUT_LOG"
+                error_exit 1
+        fi
 fi
 
 generate_conf
@@ -45,23 +61,23 @@ if $msg contains "msgnum:" then
                server="127.0.0.1"
                serverport="19200"
                template="tpl"
-               searchType="_doc"
                writeoperation="unknown"
                searchIndex="rsyslog_testbench")
 
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 
+: > "$RSYSLOG_OUT_LOG"
 startup
 injectmsg  0 1
 shutdown_when_empty
 wait_shutdown
-if grep -q "omelasticsearch: invalid value 'unknown' for writeoperation"  $RSYSLOG_OUT_LOG ; then
-	echo found correct error message
+if grep -q "omelasticsearch: invalid value 'unknown' for writeoperation"  "$RSYSLOG_OUT_LOG" ; then
+        echo found correct error message
 else
-	echo Error: did not complain about incorrect writeoperation
-	cat $RSYSLOG_OUT_LOG
-	error_exit 1
+        echo Error: did not complain about incorrect writeoperation
+        cat "$RSYSLOG_OUT_LOG"
+        error_exit 1
 fi
 
 generate_conf
@@ -78,16 +94,16 @@ if $msg contains "msgnum:" then
                server="127.0.0.1"
                serverport="19200"
                template="tpl"
-               searchType="_doc"
                writeoperation="create"
                bulkid="id-template"
-	       dynbulkid="on"
-	       bulkmode="on"
-	       searchIndex="rsyslog_testbench")
+               dynbulkid="on"
+               bulkmode="on"
+               searchIndex="rsyslog_testbench")
 
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
 '
 
+: > "$RSYSLOG_OUT_LOG"
 init_elasticsearch
 
 export QUEUE_EMPTY_CHECK_FUNC=es_shutdown_empty_check

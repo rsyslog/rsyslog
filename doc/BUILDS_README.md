@@ -23,6 +23,10 @@ installation of other packages for your operating system that are not
 installed by following the current setup/prep directions in the
 [`README.md`](README.md) file.
 
+Note on sitemaps: local and preview builds do not emit `sitemap.xml` by default.
+For production docs where a sitemap is desired, opt in explicitly using either
+`make html-with-sitemap` or pass `-t with_sitemap` to `sphinx-build`.
+
 
 ## Generating release version of the docs
 
@@ -58,6 +62,12 @@ steps in this document.
 1. Tag the stable branch
 1. Push all changes to the remote
 1. Run the `tools/release_build.sh` script
+   - By default this produces HTML without a sitemap. If you require a sitemap
+     for production, either:
+     - run `make html-with-sitemap` and package manually, or
+     - run `sphinx-build -t with_sitemap -b html source build` in place of the
+       script’s build step, or
+     - invoke helper scripts with `--extra "-t with_sitemap"`.
 1. Sync the contents of the `build` directory over to the web server
 1. Sync the latest release doc tarball to where the previous release
    tarball is hosted. Update references to this tarball as necessary.
@@ -149,6 +159,7 @@ branch. Substitute `main` for any other branch that you wish to build.
    that path.
 1. Run `sphinx-build -D release="dev-build" -b html source build` to generate
    HTML format and `sphinx-build -b epub source build` to build an epub file.
+   - To include a sitemap, add `-t with_sitemap` or use `make html-with-sitemap`.
 
 
 
@@ -170,3 +181,4 @@ and is useful to identify a dev build from a release set of documentation.
 1. Run `git checkout main`
 1. Change into the documentation folder: `cd doc`
 1. Run `sphinx-build -b html source build` to generate HTML format and `sphinx-build -b epub source build` to build an epub file.
+   - To include a sitemap, add `-t with_sitemap` or use `make html-with-sitemap`.

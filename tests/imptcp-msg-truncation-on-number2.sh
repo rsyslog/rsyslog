@@ -1,7 +1,8 @@
 #!/bin/bash
 # addd 2017-03-01 by RGerhards, released under ASL 2.0
-
 . ${srcdir:=.}/diag.sh init
+skip_platform "Darwin" "Test fails on MacOS 13, TCP chunking causes false octet-counting detection with sequence 9876543210"
+
 generate_conf
 add_conf '
 $MaxMessageSize 128

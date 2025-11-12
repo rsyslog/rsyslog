@@ -1,40 +1,97 @@
 .. _ref-templates-type-subtree:
+.. _templates.parameter.type-subtree:
 
 Subtree template type
 =====================
 
+.. index::
+   single: template; type=subtree
+   single: templates; subtree type
+
 .. summary-start
 
-Builds output from an entire CEE subtree.
-Useful for hierarchical data where the structure is prepared beforehand.
+Builds output from a full JSON subtree (CEE).
+Best used when the schema has already been remapped and an appropriate variable tree exists.
+
 .. summary-end
 
-Available since rsyslog 7.1.4
+:Name: ``type="subtree"``
+:Scope: template
+:Type: subtree
+:Introduced: 7.1.4
 
-The template is generated based on a complete (CEE) subtree. This type is
-most useful for outputs that understand hierarchical structures, such as
-ommongodb. The parameter ``subtree`` selects which subtree to include.
-For example ``template(name="tpl1" type="subtree" subtree="$!")``
-includes all CEE data, while ``template(name="tpl2" type="subtree" subtree="$!usr!tpl2")``
-includes only the subtree starting at ``$!usr!tpl2``.
+Description
+-----------
 
-This method must be used if a complete subtree needs to be placed directly
-into the object's root. With other template types, only subcontainers can
-be generated. Subtree templates can be used with text-based outputs such as
-omfile, but constant text like line breaks cannot be inserted.
+The *subtree template type* generates output from a complete (CEE/JSON) subtree.
+This is useful when working with **data pipelines** where schema mapping
+is done beforehand and a full variable tree (e.g. ``$!ecs``) is available.
 
-Use case
---------
+This method is required when an entire subtree must be placed at the root of
+the generated object. With other template types, only sub-containers can be
+produced. Constant text cannot be inserted inside subtree templates.
 
-A common approach is to create a custom subtree and then include it in the
-template:
+Subtree templates are often used with structured outputs such as
+:ref:`ommongodb <ref-ommongodb>`, :ref:`omelasticsearch <ref-omelasticsearch>`,
+or with text-based outputs like :ref:`omfile <ref-omfile>`.
+
+They are particularly effective after message transformation with parsing
+modules such as :ref:`mmjsonparse <ref-mmjsonparse>`,
+:ref:`mmaudit <ref-mmaudit>`, or :ref:`mmleefparse <ref-mmleefparse>`.
+
+Example: ECS mapping
+--------------------
+
+A typical workflow is to normalize message content into an ECS-compatible
+subtree and then export it with a subtree template:
 
 .. code-block:: none
 
-   set $!usr!tpl2!msg = $msg;
-   set $!usr!tpl2!dataflow = field($msg, 58, 2);
-   template(name="tpl2" type="subtree" subtree="$!usr!tpl2")
+   set $!ecs!event!original = $msg;
+   set $!ecs!host!hostname = $hostname;
+   set $!ecs!log!level = $syslogseverity-text;
+   set $!ecs!observer!type = "rsyslog";
+   template(name="ecs_tpl" type="subtree" subtree="$!ecs")
 
-Here ``$msg`` is assumed to contain several fields, one of which is
-extracted and stored—together with the message—as field content.
+Here the message is mapped into ECS fields under ``$!ecs``. The complete
+ECS subtree is then emitted as JSON by the template.
 
+Data pipeline usage
+-------------------
+
+Subtree templates are a natural part of rsyslog data pipelines:
+
+.. mermaid::
+
+   flowchart TD
+      A["Input<br>(imudp, imtcp, imkafka)"]
+      B["Parser<br>(mmjsonparse, mmaudit, ...)"]
+      C["Schema Tree<br>($!ecs)"]
+      D["Template<br>type=subtree"]
+      E["Action<br>(omfile, omkafka, ...)"]
+
+      A --> B --> C --> D --> E
+
+Alternative mapping approach
+----------------------------
+
+If you do **not** yet have a remapped schema tree,
+consider using a :ref:`list template <ref-templates-type-list>` instead.
+List templates allow mapping fields one-by-one into structured output
+before exporting.
+
+Notes
+-----
+
+* Use subtree templates when a full schema tree is already present.
+* Use list templates when building or remapping the schema incrementally.
+
+See also
+--------
+
+* :ref:`ref-templates-type-list`
+* :ref:`ref-templates`
+* :ref:`ref-ommongodb`
+* :ref:`ref-omelasticsearch`
+* :ref:`ref-omfile`
+* :ref:`ref-omkafka`

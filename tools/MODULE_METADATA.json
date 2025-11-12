@@ -1,0 +1,76 @@
+[
+  {
+    "module": "omdiscard",
+    "support_status": "core-supported",
+    "maturity_level": "mature",
+    "primary_contact": "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>",
+    "last_reviewed": "2025-09-26",
+    "documentation": [],
+    "notes": [
+      "No standalone tests; verify behavior via configuration-based discard scenarios."
+    ]
+  },
+  {
+    "module": "omfile",
+    "support_status": "core-supported",
+    "maturity_level": "fully-mature",
+    "primary_contact": "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>",
+    "last_reviewed": "2025-09-26",
+    "documentation": [
+      "doc/source/configuration/modules/omfile.rst"
+    ],
+    "notes": [
+      "High-traffic path; update doc/ai/module_map.yaml when locking changes."
+    ]
+  },
+  {
+    "module": "omfwd",
+    "support_status": "core-supported",
+    "maturity_level": "fully-mature",
+    "primary_contact": "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>",
+    "last_reviewed": "2025-09-26",
+    "documentation": [
+      "doc/source/configuration/modules/omfwd.rst"
+    ],
+    "notes": [
+      "Shares code with network stack; coordinate with imtcp/omtcp owners when changing defaults."
+    ]
+  },
+  {
+    "module": "ompipe",
+    "support_status": "core-supported",
+    "maturity_level": "mature",
+    "primary_contact": "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>",
+    "last_reviewed": "2025-09-26",
+    "documentation": [
+      "doc/source/configuration/modules/ompipe.rst"
+    ],
+    "notes": [
+      "Ensure platform-specific pipe handling stays in sync with runtime/.*pipe helpers."
+    ]
+  },
+  {
+    "module": "omshell",
+    "support_status": "core-supported",
+    "maturity_level": "mature",
+    "primary_contact": "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>",
+    "last_reviewed": "2025-09-26",
+    "documentation": [],
+    "notes": [
+      "Primarily used for legacy shell pipelines; document security implications when changing behavior."
+    ]
+  },
+  {
+    "module": "omusrmsg",
+    "support_status": "core-supported",
+    "maturity_level": "mature",
+    "primary_contact": "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>",
+    "last_reviewed": "2025-09-26",
+    "documentation": [
+      "doc/source/configuration/modules/omusrmsg.rst"
+    ],
+    "notes": [
+      "Interacts with user accounting facilities; exercise sudo/write permissions when testing."
+    ]
+  }
+]

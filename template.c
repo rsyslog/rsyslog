@@ -34,6 +34,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <assert.h>
+#include <limits.h>
 #include <json.h>
 #include "stringbuf.h"
 #include "syslogd-types.h"
@@ -48,17 +49,598 @@
 #include "parserif.h"
 #include "unicode-helper.h"
 
+/* states for lazily built JSON tree used in list templates with jsonf mode */
+#define TPL_JSON_TREE_NOT_BUILT 0
+#define TPL_JSON_TREE_BUILT 1
+#define TPL_JSON_TREE_UNSUPPORTED 2
+
+enum tplJsonNodeType { tplJsonNodeObject = 0, tplJsonNodeValue = 1 };
+
+struct tplJsonNode {
+    enum tplJsonNodeType type;
+    uchar *name;
+    size_t nameLen;
+    struct templateEntry *pTpe; /* only valid for value nodes */
+    struct tplJsonNode *parent;
+    struct tplJsonNode *firstChild;
+    struct tplJsonNode *lastChild;
+    struct tplJsonNode *nextSibling;
+};
+
+static struct tplJsonNode *tplJsonNodeNew(enum tplJsonNodeType type, const uchar *name, size_t nameLen);
+static void tplJsonNodeAddChild(struct tplJsonNode *parent, struct tplJsonNode *child);
+static void tplJsonNodeFree(struct tplJsonNode *node);
+static rsRetVal tplJsonEnsureContainer(
+    struct tplJsonNode *parent, const uchar *name, size_t nameLen, struct tplJsonNode **ppContainer, int *pUnsupported);
+static rsRetVal tplJsonAddValueNode(
+    struct tplJsonNode *parent, struct templateEntry *pTpe, const uchar *name, size_t nameLen, int *pUnsupported);
+static rsRetVal tplJsonBuildTree(struct template *pTpl);
+static rsRetVal tplJsonRender(struct template *pTpl, smsg_t *pMsg, actWrkrIParams_t *iparam, struct syslogTime *ttNow);
+static rsRetVal tplJsonRenderChildren(
+    const struct tplJsonNode *parent, smsg_t *pMsg, struct syslogTime *ttNow, es_str_t **ppDst, int *pNeedComma);
+static rsRetVal tplJsonRenderNode(
+    const struct tplJsonNode *node, smsg_t *pMsg, struct syslogTime *ttNow, es_str_t **ppOut, int *pHasOutput);
+static rsRetVal tplJsonRenderValue(
+    const struct tplJsonNode *node, smsg_t *pMsg, struct syslogTime *ttNow, es_str_t **ppOut, int *pHasOutput);
+static rsRetVal tplJsonRenderObject(
+    const struct tplJsonNode *node, smsg_t *pMsg, struct syslogTime *ttNow, es_str_t **ppOut, int *pHasOutput);
+static void tplWarnDuplicateJsonKeys(struct template *pTpl);
+
+/**
+ * \brief Allocate a fresh JSON tree node for dotted jsonf rendering.
+ *
+ * The node optionally owns a copy of \p name so descendants can be
+ * addressed without depending on the template entry backing storage.
+ *
+ * \param type     Node role (object container or scalar value).
+ * \param name     Optional name for the node.
+ * \param nameLen  Length of \p name in bytes (without terminator).
+ * \return Newly allocated node or NULL on allocation failure.
+ */
+static struct tplJsonNode *tplJsonNodeNew(enum tplJsonNodeType type, const uchar *name, size_t nameLen) {
+    struct tplJsonNode *node = calloc(1, sizeof(struct tplJsonNode));
+    if (node == NULL) return NULL;
+    node->type = type;
+    node->pTpe = NULL;
+    if (name != NULL && nameLen > 0) {
+        node->name = malloc(nameLen + 1);
+        if (node->name == NULL) {
+            free(node);
+            return NULL;
+        }
+        memcpy(node->name, name, nameLen);
+        node->name[nameLen] = '\0';
+        node->nameLen = nameLen;
+    }
+    return node;
+}
+
+/**
+ * \brief Link a child node to its parent while maintaining sibling order.
+ *
+ * The helper records both first and last child so breadth-first iteration
+ * is cheap when walking the tree later during rendering.
+ *
+ * \param parent Parent object that will receive \p child.
+ * \param child  Node to link; ownership is transferred to \p parent.
+ */
+static void tplJsonNodeAddChild(struct tplJsonNode *parent, struct tplJsonNode *child) {
+    if (parent == NULL || child == NULL) return;
+    child->parent = parent;
+    child->nextSibling = NULL;
+    if (parent->firstChild == NULL) {
+        parent->firstChild = parent->lastChild = child;
+    } else {
+        parent->lastChild->nextSibling = child;
+        parent->lastChild = child;
+    }
+}
+
+/**
+ * \brief Recursively dispose a JSON node subtree.
+ *
+ * Frees all descendants, the node name buffer, and the node itself.
+ * Safe to call with NULL.
+ *
+ * \param node Root of the subtree to release.
+ */
+static void tplJsonNodeFree(struct tplJsonNode *node) {
+    if (node == NULL) return;
+    struct tplJsonNode *child = node->firstChild;
+    while (child != NULL) {
+        struct tplJsonNode *next = child->nextSibling;
+        tplJsonNodeFree(child);
+        child = next;
+    }
+    free(node->name);
+    free(node);
+}
+
+/**
+ * \brief Ensure an object child exists for the given dotted segment.
+ *
+ * Creates an intermediate container when necessary and flags the template
+ * as unsupported if the segment collides with an existing value node.
+ *
+ * \param parent        Current node that should hold the container.
+ * \param name          Segment name to ensure.
+ * \param nameLen       Length of \p name.
+ * \param ppContainer   Out parameter receiving the container when found.
+ * \param pUnsupported  Set to 1 when the template cannot be expressed.
+ * \retval RS_RET_OK         Container exists or was created.
+ * \retval RS_RET_OUT_OF_MEMORY  Allocation failed.
+ */
+static rsRetVal tplJsonEnsureContainer(struct tplJsonNode *parent,
+                                       const uchar *name,
+                                       size_t nameLen,
+                                       struct tplJsonNode **ppContainer,
+                                       int *pUnsupported) {
+    struct tplJsonNode *child;
+    if (ppContainer != NULL) *ppContainer = NULL;
+    if (pUnsupported != NULL) *pUnsupported = 0;
+
+    if (parent == NULL) return RS_RET_ERR;
+
+    for (child = parent->firstChild; child != NULL; child = child->nextSibling) {
+        if (child->nameLen == nameLen && memcmp(child->name, name, nameLen) == 0) {
+            if (child->type != tplJsonNodeObject) {
+                if (pUnsupported != NULL) *pUnsupported = 1;
+                return RS_RET_OK;
+            }
+            if (ppContainer != NULL) *ppContainer = child;
+            return RS_RET_OK;
+        }
+    }
+
+    child = tplJsonNodeNew(tplJsonNodeObject, name, nameLen);
+    if (child == NULL) return RS_RET_OUT_OF_MEMORY;
+    tplJsonNodeAddChild(parent, child);
+    if (ppContainer != NULL) *ppContainer = child;
+    return RS_RET_OK;
+}
+
+/**
+ * \brief Attach a value node for a template entry at the current tree level.
+ *
+ * Rejects collisions where an existing object node already occupies the
+ * desired name and propagates an unsupported flag to the caller.
+ *
+ * \param parent        Object node receiving the value.
+ * \param pTpe          Template entry that supplies the value.
+ * \param name          Final path segment for the value.
+ * \param nameLen       Length of \p name.
+ * \param pUnsupported  Output flag marked when a collision is detected.
+ * \retval RS_RET_OK            Value node linked or collision recorded.
+ * \retval RS_RET_OUT_OF_MEMORY Allocation failed.
+ */
+static rsRetVal tplJsonAddValueNode(
+    struct tplJsonNode *parent, struct templateEntry *pTpe, const uchar *name, size_t nameLen, int *pUnsupported) {
+    struct tplJsonNode *child;
+    if (pUnsupported != NULL) *pUnsupported = 0;
+
+    if (parent == NULL) return RS_RET_ERR;
+
+    for (child = parent->firstChild; child != NULL; child = child->nextSibling) {
+        if (child->nameLen == nameLen && memcmp(child->name, name, nameLen) == 0) {
+            if (child->type == tplJsonNodeObject) {
+                if (pUnsupported != NULL) *pUnsupported = 1;
+                return RS_RET_OK;
+            }
+            child->pTpe = pTpe;
+            return RS_RET_OK;
+        }
+    }
+
+    child = tplJsonNodeNew(tplJsonNodeValue, name, nameLen);
+    if (child == NULL) return RS_RET_OUT_OF_MEMORY;
+    child->pTpe = pTpe;
+    tplJsonNodeAddChild(parent, child);
+    return RS_RET_OK;
+}
+
+/**
+ * \brief Build the JSON tree representation for a jsonf list template.
+ *
+ * Walks dotted outname segments, creating containers as required and
+ * recording which templates cannot be represented as structured JSON.
+ *
+ * \param pTpl Template to analyse; its tree fields are updated in place.
+ * \retval RS_RET_OK on success or when jsonf is unsupported for the template.
+ * \retval RS_RET_OUT_OF_MEMORY on allocation failure.
+ */
+static rsRetVal tplJsonBuildTree(struct template *pTpl) {
+    struct tplJsonNode *root = NULL;
+    struct templateEntry *pTpe;
+    int unsupported = 0;
+    DEFiRet;
+
+    if (pTpl->bJsonTreeBuilt != TPL_JSON_TREE_NOT_BUILT) RETiRet;
+
+    CHKmalloc(root = tplJsonNodeNew(tplJsonNodeObject, NULL, 0));
+
+    for (pTpe = pTpl->pEntryRoot; pTpe != NULL; pTpe = pTpe->pNext) {
+        if (pTpe->fieldName == NULL || pTpe->lenFieldName == 0) {
+            unsupported = 1;
+            break;
+        }
+
+        if (pTpe->eEntryType == CONSTANT) {
+            if (!pTpe->data.constant.bJSONf) {
+                unsupported = 1;
+                break;
+            }
+        } else if (pTpe->eEntryType == FIELD) {
+            if (!pTpe->data.field.options.bJSONf && !pTpe->data.field.options.bJSONfr) {
+                unsupported = 1;
+                break;
+            }
+        } else {
+            unsupported = 1;
+            break;
+        }
+
+        struct tplJsonNode *parent = root;
+        const uchar *segStart = pTpe->fieldName;
+        const uchar *ptr = pTpe->fieldName;
+        const uchar *end = pTpe->fieldName + pTpe->lenFieldName;
+
+        while (ptr < end) {
+            if (*ptr == '.') {
+                if (ptr == segStart) {
+                    unsupported = 1;
+                    break;
+                }
+                struct tplJsonNode *container = NULL;
+                const size_t segLen = (size_t)(ptr - segStart);
+                CHKiRet(tplJsonEnsureContainer(parent, segStart, segLen, &container, &unsupported));
+                if (unsupported) break;
+                parent = container;
+                ++ptr;
+                segStart = ptr;
+                continue;
+            }
+            ++ptr;
+        }
+        if (unsupported) break;
+
+        const size_t segLen = (size_t)(end - segStart);
+        if (segLen == 0) {
+            unsupported = 1;
+            break;
+        }
+
+        CHKiRet(tplJsonAddValueNode(parent, pTpe, segStart, segLen, &unsupported));
+        if (unsupported) break;
+    }
+
+    if (unsupported) {
+        tplJsonNodeFree(root);
+        pTpl->pJsonRoot = NULL;
+        pTpl->bJsonTreeBuilt = TPL_JSON_TREE_UNSUPPORTED;
+        LogError(0, NO_ERRCODE,
+                 "template '%s' with option jsonftree has conflicting keys (e.g. 'a' and 'a.b'); "
+                 "falling back to flat JSON output.",
+                 pTpl->pszName != NULL ? pTpl->pszName : "<unnamed>");
+    } else {
+        pTpl->pJsonRoot = root;
+        pTpl->bJsonTreeBuilt = TPL_JSON_TREE_BUILT;
+    }
+
+finalize_it:
+    if (iRet != RS_RET_OK) {
+        tplJsonNodeFree(root);
+    }
+    RETiRet;
+}
+
+/**
+ * \brief Render a list template with jsonf option via the pre-built tree.
+ *
+ * Serialises the lazily cached tree into the caller-provided work buffer
+ * producing canonical JSON with nested objects.
+ *
+ * \param pTpl    Template to render; must already have a built tree.
+ * \param pMsg    Message supplying field data.
+ * \param iparam  Worker output buffer descriptor.
+ * \param ttNow   Timestamp context for field formatting.
+ * \retval RS_RET_OK on success or an error code from subordinate lookups.
+ */
+static rsRetVal tplJsonRender(struct template *pTpl, smsg_t *pMsg, actWrkrIParams_t *iparam, struct syslogTime *ttNow) {
+    es_str_t *out = NULL;
+    char *rendered = NULL;
+    int needComma = 0;
+    DEFiRet;
+
+    if (pTpl->pJsonRoot == NULL) RETiRet;
+
+    CHKmalloc(out = es_newStr(128));
+    es_addChar(&out, '{');
+    CHKiRet(tplJsonRenderChildren(pTpl->pJsonRoot, pMsg, ttNow, &out, &needComma));
+    es_addBufConstcstr(&out, "}\n");
+
+    const int len = es_strlen(out);
+    if ((size_t)len + 1 > (size_t)iparam->lenBuf) {
+        CHKiRet(ExtendBuf(iparam, (size_t)len + 1));
+    }
+    rendered = es_str2cstr(out, NULL);
+    CHKmalloc(rendered);
+    memcpy(iparam->param, rendered, (size_t)len);
+    iparam->param[len] = '\0';
+    iparam->lenStr = len;
+
+finalize_it:
+    if (rendered != NULL) free(rendered);
+    if (out != NULL) es_deleteStr(out);
+    RETiRet;
+}
+
+/**
+ * \brief Render all children of a JSON node, inserting commas as needed.
+ *
+ * Recursively descends into the tree and appends emitted fragments to the
+ * destination string buffer.
+ *
+ * \param parent     Node whose children should be rendered.
+ * \param pMsg       Message that provides runtime values.
+ * \param ttNow      Timestamp context for property formatting.
+ * \param ppDst      Destination string buffer reference.
+ * \param pNeedComma Tracks whether a comma should precede the next child.
+ */
+static rsRetVal tplJsonRenderChildren(
+    const struct tplJsonNode *parent, smsg_t *pMsg, struct syslogTime *ttNow, es_str_t **ppDst, int *pNeedComma) {
+    const struct tplJsonNode *child = parent->firstChild;
+    es_str_t *childStr = NULL;
+    int childHasOutput = 0;
+    DEFiRet;
+
+    while (child != NULL) {
+        childStr = NULL;
+        childHasOutput = 0;
+        CHKiRet(tplJsonRenderNode(child, pMsg, ttNow, &childStr, &childHasOutput));
+        if (childHasOutput) {
+            if (*pNeedComma) es_addBufConstcstr(ppDst, ", ");
+            es_addStr(ppDst, childStr);
+            *pNeedComma = 1;
+        }
+        if (childStr != NULL) {
+            es_deleteStr(childStr);
+            childStr = NULL;
+        }
+        child = child->nextSibling;
+    }
+
+finalize_it:
+    if (childStr != NULL) es_deleteStr(childStr);
+    RETiRet;
+}
+
+/**
+ * \brief Dispatch renderer for a node depending on its type.
+ *
+ * Value nodes are expanded into name/value pairs, while object nodes yield
+ * nested JSON objects.
+ *
+ * \param node       Node to render.
+ * \param pMsg       Message providing data.
+ * \param ttNow      Timestamp context.
+ * \param ppOut      Output string produced for this node.
+ * \param pHasOutput Flag indicating whether a value was emitted.
+ */
+static rsRetVal tplJsonRenderNode(
+    const struct tplJsonNode *node, smsg_t *pMsg, struct syslogTime *ttNow, es_str_t **ppOut, int *pHasOutput) {
+    if (node->type == tplJsonNodeValue) {
+        return tplJsonRenderValue(node, pMsg, ttNow, ppOut, pHasOutput);
+    }
+    return tplJsonRenderObject(node, pMsg, ttNow, ppOut, pHasOutput);
+}
+
+/**
+ * \brief Render a scalar template entry into a JSON name/value fragment.
+ *
+ * Handles both constant and property-backed entries, including trimming any
+ * legacy jsonf field prefixes and skipping empty expansions.
+ *
+ * \param node       Value node describing the template entry.
+ * \param pMsg       Message context for property lookups.
+ * \param ttNow      Timestamp context.
+ * \param ppOut      Newly allocated string with the rendered fragment.
+ * \param pHasOutput Set to 1 if the fragment contains data.
+ */
+static rsRetVal tplJsonRenderValue(
+    const struct tplJsonNode *node, smsg_t *pMsg, struct syslogTime *ttNow, es_str_t **ppOut, int *pHasOutput) {
+    uchar *pVal = NULL;
+    rs_size_t lenVal = 0;
+    unsigned short bMustBeFreed = 0;
+    es_str_t *out = NULL;
+    const uchar *valuePtr;
+    size_t valueLen;
+    const uchar *colon;
+    DEFiRet;
+
+    *ppOut = NULL;
+    *pHasOutput = 0;
+
+    if (node->pTpe == NULL || node->name == NULL || node->nameLen == 0) RETiRet;
+
+    if (node->pTpe->eEntryType == CONSTANT) {
+        pVal = node->pTpe->data.constant.pConstant;
+        lenVal = node->pTpe->data.constant.iLenConstant;
+    } else if (node->pTpe->eEntryType == FIELD) {
+        pVal = MsgGetProp(pMsg, node->pTpe, &node->pTpe->data.field.msgProp, &lenVal, &bMustBeFreed, ttNow);
+    } else {
+        RETiRet;
+    }
+
+    if (pVal == NULL || lenVal <= 0) goto finalize_it;
+
+    valuePtr = pVal;
+    valueLen = (size_t)lenVal;
+    colon = memchr(pVal, ':', (size_t)lenVal);
+    if (colon != NULL) {
+        const uchar *keyStart = pVal;
+        const uchar *keyEnd = colon;
+        while (keyStart < colon && isspace((int)*keyStart)) ++keyStart;
+        while (keyEnd > keyStart && isspace((int)*(keyEnd - 1))) --keyEnd;
+        const size_t prefixLen = (size_t)(keyEnd - keyStart);
+        int matchesKey = 0;
+        if (prefixLen >= 2 && keyStart[0] == '"' && keyEnd[-1] == '"' && node->pTpe->fieldName != NULL) {
+            if ((size_t)node->pTpe->lenFieldName == prefixLen - 2 &&
+                memcmp(keyStart + 1, node->pTpe->fieldName, node->pTpe->lenFieldName) == 0) {
+                matchesKey = 1;
+            }
+        }
+        if (matchesKey) {
+            size_t offset = (size_t)((colon + 1) - pVal);
+            if (offset >= (size_t)lenVal) goto finalize_it;
+            valuePtr = pVal + offset;
+            valueLen = (size_t)lenVal - offset;
+        }
+    }
+
+    while (valueLen > 0 && isspace((int)*valuePtr)) {
+        ++valuePtr;
+        --valueLen;
+    }
+    while (valueLen > 0 && isspace((int)valuePtr[valueLen - 1])) --valueLen;
+    if (valueLen == 0) goto finalize_it;
+    const size_t requiredLen = node->nameLen + valueLen + 4;
+    if (requiredLen > (size_t)INT_MAX) {
+        parser_errmsg("error: jsonf value to be rendered is too large");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    CHKmalloc(out = es_newStr((int)requiredLen));
+    es_addChar(&out, '"');
+    es_addBuf(&out, (const char *)node->name, node->nameLen);
+    es_addBufConstcstr(&out, "\":");
+    es_addBuf(&out, (const char *)valuePtr, valueLen);
+
+    *ppOut = out;
+    out = NULL;
+    *pHasOutput = 1;
+
+finalize_it:
+    if (bMustBeFreed && pVal != NULL) free(pVal);
+    if (out != NULL) es_deleteStr(out);
+    RETiRet;
+}
+
+/**
+ * \brief Render an object node and all nested children into JSON.
+ *
+ * Skips empty objects to preserve legacy behaviour while ensuring commas
+ * and braces are placed consistently.
+ *
+ * \param node       Object node to render.
+ * \param pMsg       Message supplying data for descendants.
+ * \param ttNow      Timestamp context.
+ * \param ppOut      Output string containing the rendered object.
+ * \param pHasOutput Flag set when the object emitted any fields.
+ */
+static rsRetVal tplJsonRenderObject(
+    const struct tplJsonNode *node, smsg_t *pMsg, struct syslogTime *ttNow, es_str_t **ppOut, int *pHasOutput) {
+    es_str_t *out = NULL;
+    es_str_t *childStr = NULL;
+    int needComma = 0;
+    const struct tplJsonNode *child;
+    DEFiRet;
+
+    *ppOut = NULL;
+    *pHasOutput = 0;
+
+    if (node->name == NULL || node->nameLen == 0) RETiRet;
+
+    const size_t requiredLen = node->nameLen + 5;
+    if (requiredLen > (size_t)INT_MAX) {
+        parser_errmsg("error: jsonf object key to be rendered is too large");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    CHKmalloc(out = es_newStr((int)requiredLen));
+    es_addChar(&out, '"');
+    es_addBuf(&out, (const char *)node->name, node->nameLen);
+    es_addBufConstcstr(&out, "\": {");
+
+    child = node->firstChild;
+    while (child != NULL) {
+        childStr = NULL;
+        int childHasOutput = 0;
+        CHKiRet(tplJsonRenderNode(child, pMsg, ttNow, &childStr, &childHasOutput));
+        if (childHasOutput) {
+            if (needComma) es_addBufConstcstr(&out, ", ");
+            es_addStr(&out, childStr);
+            needComma = 1;
+        }
+        if (childStr != NULL) {
+            es_deleteStr(childStr);
+            childStr = NULL;
+        }
+        child = child->nextSibling;
+    }
+
+    if (!needComma) goto finalize_it;
+
+    es_addChar(&out, '}');
+    *ppOut = out;
+    out = NULL;
+    *pHasOutput = 1;
+
+finalize_it:
+    if (childStr != NULL) es_deleteStr(childStr);
+    if (out != NULL) es_deleteStr(out);
+    RETiRet;
+}
+
+static void tplWarnDuplicateJsonKeys(struct template *pTpl) {
+    struct templateEntry *curr;
+    if (pTpl == NULL) return;
+
+    for (curr = pTpl->pEntryRoot; curr != NULL; curr = curr->pNext) {
+        struct templateEntry *scan;
+        int isJsonField = 0;
+        if (curr->fieldName == NULL || curr->lenFieldName <= 0) continue;
+
+        if (curr->eEntryType == CONSTANT) {
+            isJsonField = curr->data.constant.bJSONf;
+        } else if (curr->eEntryType == FIELD) {
+            isJsonField = curr->data.field.options.bJSONf || curr->data.field.options.bJSONfr;
+        }
+        if (!isJsonField) continue;
+
+        for (scan = pTpl->pEntryRoot; scan != curr; scan = scan->pNext) {
+            int scanJsonField = 0;
+            if (scan->fieldName == NULL || scan->lenFieldName <= 0) continue;
+            if (scan->eEntryType == CONSTANT) {
+                scanJsonField = scan->data.constant.bJSONf;
+            } else if (scan->eEntryType == FIELD) {
+                scanJsonField = scan->data.field.options.bJSONf || scan->data.field.options.bJSONfr;
+            }
+            if (!scanJsonField) continue;
+            if (scan->lenFieldName == curr->lenFieldName &&
+                memcmp(scan->fieldName, curr->fieldName, curr->lenFieldName) == 0) {
+                LogError(0, NO_ERRCODE,
+                         "template '%s': duplicate JSON key '%.*s' encountered; later definition takes precedence",
+                         pTpl->pszName != NULL ? pTpl->pszName : "<unnamed>", curr->lenFieldName, curr->fieldName);
+                break;
+            }
+        }
+    }
+}
+
 PRAGMA_IGNORE_Wswitch_enum
     /* static data */
     DEFobjCurrIf(obj) DEFobjCurrIf(strgen)
 
     /* tables for interfacing with the v6 config system */
-    static struct cnfparamdescr cnfparamdescr[] = {
-        {"name", eCmdHdlrString, 1},         {"type", eCmdHdlrString, 1},
-        {"string", eCmdHdlrString, 0},       {"plugin", eCmdHdlrString, 0},
-        {"subtree", eCmdHdlrString, 0},      {"option.stdsql", eCmdHdlrBinary, 0},
-        {"option.sql", eCmdHdlrBinary, 0},   {"option.json", eCmdHdlrBinary, 0},
-        {"option.jsonf", eCmdHdlrBinary, 0}, {"option.casesensitive", eCmdHdlrBinary, 0}};
+    static struct cnfparamdescr cnfparamdescr[] = {{"name", eCmdHdlrString, 1},
+                                                   {"type", eCmdHdlrString, 1},
+                                                   {"string", eCmdHdlrString, 0},
+                                                   {"plugin", eCmdHdlrString, 0},
+                                                   {"subtree", eCmdHdlrString, 0},
+                                                   {"option.stdsql", eCmdHdlrBinary, 0},
+                                                   {"option.sql", eCmdHdlrBinary, 0},
+                                                   {"option.json", eCmdHdlrBinary, 0},
+                                                   {"option.jsonf", eCmdHdlrBinary, 0},
+                                                   {"option.jsonftree", eCmdHdlrBinary, 0},
+                                                   {"option.casesensitive", eCmdHdlrBinary, 0}};
 static struct cnfparamblk pblk = {CNFPARAMBLK_VERSION, sizeof(cnfparamdescr) / sizeof(struct cnfparamdescr),
                                   cnfparamdescr};
 
@@ -160,6 +742,16 @@ rsRetVal tplToString(struct template *__restrict__ const pTpl,
 
     /* we have a "regular" template with template entries */
 
+    if (pTpl->optFormatEscape == JSONF && pTpl->bJsonTreeEnabled) {
+        if (pTpl->bJsonTreeBuilt == TPL_JSON_TREE_NOT_BUILT) {
+            CHKiRet(tplJsonBuildTree(pTpl));
+        }
+        if (pTpl->bJsonTreeBuilt == TPL_JSON_TREE_BUILT && pTpl->pJsonRoot != NULL) {
+            CHKiRet(tplJsonRender(pTpl, pMsg, iparam, ttNow));
+            FINALIZE;
+        }
+    }
+
     /* loop through the template. We obtain one value
      * and copy it over to our dynamic string buffer. Then, we
      * free the obtained value (if requested). We continue this
@@ -167,8 +759,8 @@ rsRetVal tplToString(struct template *__restrict__ const pTpl,
      */
     pTpe = pTpl->pEntryRoot;
     iBuf = 0;
-    const int extra_space = (pTpl->optFormatEscape == JSONF) ? 1 : 3;
-    if (pTpl->optFormatEscape == JSONF) {
+    const int isJsonFlat = (pTpl->optFormatEscape == JSONF && !pTpl->bJsonTreeEnabled);
+    if (isJsonFlat) {
         if (iparam->lenBuf < 2) /* we reserve one char for the final \0! */
             CHKiRet(ExtendBuf(iparam, 2));
         iBuf = 1;
@@ -200,25 +792,30 @@ rsRetVal tplToString(struct template *__restrict__ const pTpl,
             bMustBeFreed = 0;
         }
         /* got source, now copy over */
-        if (iLenVal > 0) { /* may be zero depending on property */
-            /* first, make sure buffer fits */
-            if (iBuf + iLenVal + extra_space >= iparam->lenBuf) /* we reserve one char for the final \0! */
-                CHKiRet(ExtendBuf(iparam, iBuf + iLenVal + 1));
+        const int isLastEntry = (pTpe->pNext == NULL);
+        const size_t closingLen = (isJsonFlat && isLastEntry) ? 2 : 0;
+        size_t requiredLen = closingLen;
+        if (iLenVal > 0) {
+            if (need_comma) requiredLen += 2;
+            requiredLen += (size_t)iLenVal;
+        }
+        if (requiredLen > 0 && (iBuf + requiredLen) >= iparam->lenBuf)
+            CHKiRet(ExtendBuf(iparam, iBuf + requiredLen + 1));
 
+        if (iLenVal > 0) { /* may be zero depending on property */
             if (need_comma) {
                 memcpy(iparam->param + iBuf, ", ", 2);
                 iBuf += 2;
             }
+
             memcpy(iparam->param + iBuf, pVal, iLenVal);
             iBuf += iLenVal;
-            if (pTpl->optFormatEscape == JSONF) {
+            if (isJsonFlat) {
                 need_comma = 1;
             }
         }
 
-        if ((pTpl->optFormatEscape == JSONF) && (pTpe->pNext == NULL)) {
-            /* space was reserved while processing field above
-               (via extra_space in ExtendBuf() new size formula. */
+        if (closingLen > 0) {
             memcpy(iparam->param + iBuf, "}\n", 2);
             iBuf += 2;
         }
@@ -1306,6 +1903,12 @@ struct template *tplAddLine(rsconf_t *conf, const char *pName, uchar **ppRestOfC
             pTpl->optFormatEscape = NO_ESCAPE;
         } else if (!strcmp(optBuf, "casesensitive")) {
             pTpl->optCaseSensitive = 1;
+        } else if (!strcmp(optBuf, "jsonf")) {
+            pTpl->optFormatEscape = JSONF;
+            pTpl->bJsonTreeEnabled = 0;
+        } else if (!strcmp(optBuf, "jsonftree")) {
+            pTpl->optFormatEscape = JSONF;
+            pTpl->bJsonTreeEnabled = 1;
         } else {
             dbgprintf("Invalid option '%s' ignored.\n", optBuf);
         }
@@ -1313,6 +1916,7 @@ struct template *tplAddLine(rsconf_t *conf, const char *pName, uchar **ppRestOfC
 
     *ppRestOfConfLine = p;
     apply_case_sensitivity(pTpl);
+    if (pTpl->optFormatEscape == JSONF) tplWarnDuplicateJsonKeys(pTpl);
 
     return (pTpl);
 }
@@ -1373,24 +1977,51 @@ static rsRetVal createConstantTpe(struct template *pTpl, struct cnfobj *o) {
     pTpe->eEntryType = CONSTANT;
     pTpe->fieldName = outname;
     if (outname != NULL) pTpe->lenFieldName = ustrlen(outname);
+    pTpe->data.constant.bJSONf = is_jsonf;
     if (is_jsonf) {
-        CHKmalloc(json = json_object_new_object());
+        json = json_object_new_object();
+        CHKmalloc(json);
         const char *sz = es_str2cstr(value, NULL);
         CHKmalloc(sz);
-        CHKmalloc(jval = json_object_new_string(sz));
+        jval = json_object_new_string(sz);
+        if (jval == NULL) {
+            free((void *)sz);
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
         free((void *)sz);
         json_object_object_add(json, (char *)outname, jval);
-        CHKmalloc(sz = json_object_get_string(json));
-        const size_t len_json = strlen(sz) - 4;
-        CHKmalloc(pTpe->data.constant.pConstant = (uchar *)strndup(sz + 2, len_json));
-        pTpe->data.constant.iLenConstant = ustrlen(pTpe->data.constant.pConstant);
+        const char *jsonStr = json_object_get_string(json);
+        CHKmalloc(jsonStr);
+        const size_t jsonLen = strlen(jsonStr);
+        if (jsonLen < 2) {
+            parser_errmsg("error: failed to serialize jsonf constant");
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        const size_t fragmentLen = jsonLen - 2;
+        uchar *fragment = (uchar *)strndup(jsonStr + 1, fragmentLen);
+        CHKmalloc(fragment);
+        size_t fragLen = ustrlen(fragment);
+        while (fragLen > 0 && isspace((int)fragment[fragLen - 1])) {
+            --fragLen;
+        }
+        fragment[fragLen] = '\0';
+        size_t lead = 0;
+        while (lead < fragLen && isspace((int)fragment[lead])) ++lead;
+        if (lead > 0) {
+            memmove(fragment, fragment + lead, fragLen - lead + 1);
+            fragLen -= lead;
+        }
+        pTpe->data.constant.pConstant = fragment;
+        pTpe->data.constant.iLenConstant = fragLen;
         json_object_put(json);
+        json = NULL;
     } else {
         pTpe->data.constant.iLenConstant = es_strlen(value);
         pTpe->data.constant.pConstant = (uchar *)es_str2cstr(value, NULL);
     }
 
 finalize_it:
+    if (json != NULL) json_object_put(json);
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &pblkConstant);
     RETiRet;
 }
@@ -1849,7 +2480,7 @@ rsRetVal ATTR_NONNULL() tplProcessCnf(struct cnfobj *o) {
         T_SUBTREE
     } tplType = T_STRING; /* init just to keep compiler happy: mandatory parameter */
     int i;
-    int o_sql = 0, o_stdsql = 0, o_jsonf = 0, o_json = 0, o_casesensitive = 0; /* options */
+    int o_sql = 0, o_stdsql = 0, o_jsonf = 0, o_jsonftree = 0, o_json = 0, o_casesensitive = 0; /* options */
     int numopts;
     rsRetVal localRet;
     DEFiRet;
@@ -1912,6 +2543,8 @@ rsRetVal ATTR_NONNULL() tplProcessCnf(struct cnfobj *o) {
             o_json = pvals[i].val.d.n;
         } else if (!strcmp(pblk.descr[i].name, "option.jsonf")) {
             o_jsonf = pvals[i].val.d.n;
+        } else if (!strcmp(pblk.descr[i].name, "option.jsonftree")) {
+            o_jsonftree = pvals[i].val.d.n;
         } else if (!strcmp(pblk.descr[i].name, "option.casesensitive")) {
             o_casesensitive = pvals[i].val.d.n;
         } else {
@@ -2005,10 +2638,11 @@ rsRetVal ATTR_NONNULL() tplProcessCnf(struct cnfobj *o) {
     if (o_stdsql) ++numopts;
     if (o_json) ++numopts;
     if (o_jsonf) ++numopts;
+    if (o_jsonftree) ++numopts;
     if (numopts > 1) {
         LogError(0, RS_RET_ERR,
                  "template '%s' has multiple incompatible "
-                 "options of sql, stdsql or json specified",
+                 "options of sql, stdsql, json, jsonf or jsonftree specified",
                  name);
         ABORT_FINALIZE(RS_RET_ERR);
     }
@@ -2067,11 +2701,14 @@ rsRetVal ATTR_NONNULL() tplProcessCnf(struct cnfobj *o) {
         pTpl->optFormatEscape = SQL_ESCAPE;
     else if (o_json)
         pTpl->optFormatEscape = JSON_ESCAPE;
-    else if (o_jsonf)
+    else if (o_jsonf || o_jsonftree)
         pTpl->optFormatEscape = JSONF;
+
+    if (o_jsonftree) pTpl->bJsonTreeEnabled = 1;
 
     if (o_casesensitive) pTpl->optCaseSensitive = 1;
     apply_case_sensitivity(pTpl);
+    if (pTpl->optFormatEscape == JSONF) tplWarnDuplicateJsonKeys(pTpl);
 finalize_it:
     free(tplStr);
     free(plugin);
@@ -2154,6 +2791,7 @@ void tplDeleteAll(rsconf_t *conf) {
         pTpl = pTpl->pNext;
         free(pTplDel->pszName);
         if (pTplDel->bHaveSubtree) msgPropDescrDestruct(&pTplDel->subtree);
+        tplJsonNodeFree(pTplDel->pJsonRoot);
         free(pTplDel);
     }
 }
@@ -2204,6 +2842,7 @@ void tplDeleteNew(rsconf_t *conf) {
         pTpl = pTpl->pNext;
         free(pTplDel->pszName);
         if (pTplDel->bHaveSubtree) msgPropDescrDestruct(&pTplDel->subtree);
+        tplJsonNodeFree(pTplDel->pJsonRoot);
         free(pTplDel);
     }
 }

@@ -1,0 +1,12 @@
+# Copy this file into a contrib module directory and adjust values.
+support_status: contributor-supported  # contributor-supported | stalled
+maturity_level: fresh                  # fully-mature | mature | fresh | experimental | deprecated
+primary_contact: "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>"
+last_reviewed: 2024-01-01
+build_dependencies: []
+runtime_dependencies: []
+ci_targets: []
+documentation: []
+support_channels: []
+notes: |-
+  Document manual setup steps and any missing CI coverage here.

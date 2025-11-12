@@ -21,17 +21,22 @@ subsystem) while the severity provides a glimpse of how important the
 message might be (e.g. error or informational). Be careful with these
 values: they are in no way consistent across applications (especially
 severity). However, they still form the basis of most filtering in
-syslog.conf. For example, the directive (aka "selector line)
+syslog.conf. For example, the directive (aka "selector line)"
+historically looked like ``mail.* /var/log/mail.log``. Rainerscript
+expresses the same idea more explicitly via the
+:doc:`prifilt() <../rainerscript/functions/rs-prifilt>` function:
 
-::
+.. code-block:: rsyslog
 
-  mail.* /var/log/mail.log
+   if prifilt("mail.*") then {
+       action(type="omfile" file="/var/log/mail.log")
+   }
 
-means that messages with the mail facility should be stored to
-/var/log/mail.log, no matter which severity indicator they have (that is
-telling us the asterisk). If you set up complex conditions, it can be
-annoying to find out which PRI value a specific syslog message has. Most
-stock syslogds do not provide any way to record them.
+Messages with the mail facility are stored to ``/var/log/mail.log``, no
+matter which severity indicator they have (that is telling us the
+asterisk). If you set up complex conditions, it can be annoying to find
+out which PRI value a specific syslog message has. Most stock syslogds
+do not provide any way to record them.
 
 How is it done?
 ---------------
@@ -40,19 +45,37 @@ With `rsyslog <http://www.rsyslog.com/>`_, PRI recording is simple. All
 you need is the correct template. Even if you do not use rsyslog on a
 regular basis, it might be a handy tool for finding out the priority.
 
-Rsyslog provides a flexible system to specify the output formats. It is
-template-based. A template with the traditional syslog format looks as
-follows:
+Rsyslog provides a flexible system to specify the output formats. Modern
+Rainerscript configurations prefer list templates: each template is
+composed of ``property()`` and ``constant()`` statements that are
+expanded by the :doc:`property replacer <../configuration/property_replacer>`
+before the final text is emitted. A template with the traditional syslog
+format looks as follows:
 
-::
+.. code-block:: rsyslog
 
-  $template TraditionalFormat,"%timegenerated% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n"
+   template(
+       name="TraditionalFormat"
+       type="list"
+   ) {
+       property(name="timegenerated" dateFormat="rfc3164")
+       constant(value=" ")
+       property(name="hostname")
+       constant(value=" ")
+       property(name="syslogtag")
+       property(name="msg" dropLastLf="on")
+       constant(value="\n")
+   }
 
-The part in quotes is the output formats. Things between percent-signs
-are so-called `messages properties <property_replacer.html>`_. They are
-replaced with the respective content from the syslog message when output
-is written. Everything outside of the percent signs is literal text,
-which is simply written as specified.
+The :doc:`../configuration/templates` documentation walks through the
+available template types and modifiers in more detail.
+
+Each ``property()`` statement pulls in a message property (for example,
+``msg`` or ``hostname``) and can apply :doc:`property replacer
+<../configuration/property_replacer>` options such as ``dropLastLf``. The
+``constant()`` statements inject literal text such as spaces or newline
+characters. Rsyslog concatenates the list entries in the order they are
+defined.
 
 Thankfully, rsyslog provides message properties for the priority. These
 are called "PRI", "syslogfacility" and "syslogpriority" (case is
@@ -64,28 +87,37 @@ article, I assume that you run version 1.13.4 or higher.
 Recording the priority is now a simple matter of adding the respective
 field to the template. It now looks like this:
 
-::
+.. code-block:: rsyslog
 
-  $template TraditionalFormatWithPRI,"%pri-text%: %timegenerated% %HOSTNAME% %syslogtag%%msg:::drop-last-lf%\n"
+   template(
+       name="TraditionalFormatWithPRI"
+       type="list"
+   ) {
+       property(name="pri-text")
+       constant(value=": ")
+       property(name="timegenerated" dateFormat="rfc3164")
+       constant(value=" ")
+       property(name="hostname")
+       constant(value=" ")
+       property(name="syslogtag")
+       property(name="msg" dropLastLf="on")
+       constant(value="\n")
+   }
 
 Now we have the right template - but how to write it to a file? You
 probably have a line like this in your syslog.conf:
 
-::
+.. code-block:: rsyslog
 
-  *.* -/var/log/messages.log
-
-It does not specify a template. Consequently, rsyslog uses the
-traditional format. In order to use some other format, simply specify
-the template after the semicolon:
-
-::
-
-  *.* -/var/log/messages.log;TraditionalFormatWithPRI
+   action(
+       type="omfile"
+       file="/var/log/messages.log"
+       template="TraditionalFormatWithPRI"
+   )
 
 That's all you need to do. There is one common pitfall: you need to
-define the template before you use it in a selector line. Otherwise, you
-will receive an error.
+define the template before you use it in an action. Otherwise, you will
+receive an error.
 
 Once you have applied the changes, you need to restart rsyslogd. It will
 then pick the new configuration.
@@ -96,15 +128,16 @@ What if I do not want rsyslogd to be the standard syslogd?
 If you do not want to switch to rsyslog, you can still use it as a setup
 aid. A little bit of configuration is required.
 
-#. Download, make and install rsyslog
-#. copy your syslog.conf over to rsyslog.conf
-#. add the template described above to it; select the file that should
-   use it
-#. stop your regular syslog daemon for the time being
-#. run rsyslogd (you may even do this interactively by calling it with
-   the -n additional option from a shell)
-#. stop rsyslogd (press ctrl-c when running interactively)
-#. restart your regular syslogd
+#. Download, make and install rsyslog.
+#. Copy your existing configuration to a test file (for example,
+   ``/etc/rsyslog-pri.conf``).
+#. Add the template and action described above to it; select the file
+   that should use it.
+#. Stop your regular syslog daemon for the time being.
+#. Run rsyslogd (you may even do this interactively by calling it with
+   the ``-n`` additional option from a shell).
+#. Stop rsyslogd (press ctrl-c when running interactively).
+#. Restart your regular syslogd.
 
 That's it - you can now review the priorities.
 

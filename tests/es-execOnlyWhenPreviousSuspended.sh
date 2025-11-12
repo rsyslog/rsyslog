@@ -2,6 +2,7 @@
 # This file is part of the rsyslog project, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=100 #10000
+require_elasticsearch_restart_capability
 ensure_elasticsearch_ready
 
 init_elasticsearch
@@ -18,7 +19,6 @@ if $msg contains "msgnum:" then {
                server="127.0.0.1"
                serverport="19200"
                template="tpl"
-               searchType="_doc"
                searchIndex="rsyslog_testbench"
                action.resumeInterval="2"
                action.resumeretrycount="1")

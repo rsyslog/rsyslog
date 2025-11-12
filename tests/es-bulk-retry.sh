@@ -100,7 +100,6 @@ ruleset(name="try_es") {
 		       bulkmode="on"
 		       retryfailures="on"
 		       retryruleset="try_es"
-		       searchType="'${es_search_type}'"
 		       searchIndex="rsyslog_testbench")
 	}
 }

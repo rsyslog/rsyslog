@@ -31,6 +31,7 @@ RUN 	apt-get update && \
 	libkrb5-dev \
 	liblz4-dev \
 	libmaxminddb-dev \
+	libmbedtls-dev \
 	default-libmysqlclient-dev \
 	libnet1-dev \
 	libpcap-dev \
@@ -216,6 +217,7 @@ ENV	RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-libgcrypt \
 	--enable-libzstd \
 	--enable-mail \
+	--enable-mbedtls \
 	--enable-mmanon \
 	--enable-mmaudit \
 	--enable-mmcount \

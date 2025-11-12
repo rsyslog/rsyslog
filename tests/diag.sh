@@ -41,6 +41,15 @@
 #		if set to "YES" and one test fails, all others are not executed but skipped.
 #		This is useful in long-running CI jobs where we are happy with seeing the
 #		first failure (to save time).
+# RSYSLOG_TESTBENCH_EXTERNAL_ES_URL
+#		Base URL (protocol, host, and port) of an externally managed
+#		Elasticsearch instance that the testbench should use instead of
+#		starting its own container. When set, the test harness skips all
+#		local Elasticsearch start/stop handling and assumes that the
+#		specified endpoint is reachable and dedicated to the tests.
+# RSYSLOG_TESTBENCH_ES_MAJOR_VERSION
+#               Detected Elasticsearch major version exposed to the test suite.
+#               Populated automatically by ensure_elasticsearch_ready().
 #
 #
 # EXIT STATES
@@ -82,6 +91,12 @@ TB_TIMEOUT_STARTSTOP=400 # timeout for start/stop rsyslogd in tenths (!) of a se
 # note that 40sec for the startup should be sufficient even on very slow machines. we changed this from 2min on 2017-12-12
 TB_TEST_TIMEOUT=90  # number of seconds after which test checks timeout (eg. waits)
 TB_TEST_MAX_RUNTIME=${TEST_MAX_RUNTIME:-580} # maximum runtime in seconds for a test;
+# Check if valgrind is enabled, use longer timeout if so
+if [ "$USE_VALGRIND" == "YES" ] || [ "$USE_VALGRIND" == "YES-NOLEAK" ]; then
+	TB_STARTUP_MAX_RUNTIME=${STARTUP_MAX_RUNTIME:-240} # maximum runtime in seconds for rsyslog startup with valgrind;
+else
+	TB_STARTUP_MAX_RUNTIME=${STARTUP_MAX_RUNTIME:-60} # maximum runtime in seconds for rsyslog startup;
+fi
 			# default TEST_MAX_RUNTIME e.g. for long-running tests or special
 			# testbench use. Testbench will abort test
 			# after that time (iff it has a chance to, not strictly enforced)
@@ -108,7 +123,7 @@ rsyslog_testbench_test_url_access() {
     fi
 
     local http_endpoint="$1"
-    if ! curl --fail --max-time 30 "${http_endpoint}" 1>/dev/null 2>&1; then
+    if ! curl -L --fail --max-time 30 "${http_endpoint}" 1>/dev/null 2>&1; then
         echo "HTTP endpoint '${http_endpoint}' is not reachable. Skipping test ..."
         exit 77
     else
@@ -137,11 +152,47 @@ skip_platform() {
 # note: we depend on CFLAGS to properly reflect build options (what
 #       usually is the case when the testbench is run)
 skip_TSAN() {
-	echo skip:_TSAN, CFLAGS $CFLAGS
-	if [[ "$CFLAGS" == *"sanitize=thread"* ]]; then
-		printf 'test incompatible with TSAN because of %s\n' "$1"
-		exit 77
-	fi
+        echo skip:_TSAN, CFLAGS $CFLAGS
+        if [[ "$CFLAGS" == *"sanitize=thread"* ]]; then
+                printf 'test incompatible with TSAN because of %s\n' "$1"
+                exit 77
+        fi
+}
+
+
+# ensure a dynamically loaded rsyslog plugin is available before continuing.
+# $1 - plugin name (without the leading im/om/mm prefix differentiation)
+# $2 - optional module directory override relative to the current working dir
+require_plugin() {
+        if [ -z "$1" ]; then
+                printf 'TESTBENCH_ERROR: require_plugin requires a plugin name\n'
+                error_exit 100
+        fi
+
+        local plugin="$1"
+        local module_root
+        if [ -n "$2" ]; then
+                module_root="$2"
+        else
+                module_root="../plugins/${plugin}"
+        fi
+
+        local candidates=(
+                "${module_root}/.libs/${plugin}.so"
+                "${module_root}/.libs/${plugin}.la"
+                "${module_root}/${plugin}.so"
+                "${module_root}.so"
+        )
+
+        for candidate in "${candidates[@]}"; do
+                if [ -f "$candidate" ]; then
+                        return 0
+                fi
+        done
+
+        printf 'info: skipping test - plugin %s not available (checked %s)\n' \
+                "$plugin" "${candidates[*]}"
+        exit 77
 }
 
 
@@ -242,6 +293,15 @@ $IMDiagAbortTimeout '$TB_TEST_MAX_RUNTIME'
 
 :syslogtag, contains, "rsyslogd"  ./'${RSYSLOG_DYNNAME}$1'.started
 ###### end of testbench instrumentation part, test conf follows:' > ${TESTCONF_NM}$1.conf
+	# Optionally enforce IPv4 for this test instance.
+	# Set RSTB_FORCE_IPV4=1 to force, or set RSTB_NET_IPPROTO explicitly
+	# to one of: unspecified | ipv4-only | ipv6-only.
+	if [ "$RSTB_FORCE_IPV4" = "1" ] && [ -z "$RSTB_NET_IPPROTO" ]; then
+		RSTB_NET_IPPROTO="ipv4-only"
+	fi
+	if [ -n "$RSTB_NET_IPPROTO" ]; then
+		add_conf "global(net.ipprotocol=\"${RSTB_NET_IPPROTO}\")" "$1"
+	fi
 }
 
 # add more data to config file. Note: generate_conf must have been called
@@ -315,8 +375,8 @@ wait_startup_pid() {
 	fi
 	while test ! -f $1; do
 		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
-		   printf '%s ABORT! Timeout waiting on startup (pid file %s)\n' "$(tb_timestamp)" "$1"
+		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_STARTUP_MAX_RUNTIME )) ]; then
+		   printf '%s ABORT! Timeout waiting on startup (pid file %s) after %d seconds\n' "$(tb_timestamp)" "$1" $TB_STARTUP_MAX_RUNTIME
 		   ls -l "$1"
 		   ps -fp $($SUDO cat "$1")
 		   error_exit 1
@@ -652,27 +712,64 @@ injectmsg_kcat() {
 }
 
 
+# check if rsyslog process is active
+# $1 - instance ID
+# exits with error if process is not active
+check_rsyslog_active() {
+	local instance_id=$1
+	local pid_file="$RSYSLOG_PIDBASE$instance_id.pid"
+
+	if [ ! -f "$pid_file" ]; then
+		echo "ABORT! rsyslog pid file $pid_file does not exist!"
+		error_exit 1 stacktrace
+	fi
+
+	if ! ps -p "$(cat "$pid_file")" &> /dev/null; then
+		echo "ABORT! rsyslog pid no longer active!"
+		error_exit 1 stacktrace
+	fi
+}
+
 # wait for rsyslogd startup ($1 is the instance)
 wait_startup() {
-	wait_rsyslog_startup_pid $1
-	while test ! -f ${RSYSLOG_DYNNAME}$1.started; do
-		$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-		ps -p $(cat $RSYSLOG_PIDBASE$1.pid) &> /dev/null
-		if [ $? -ne 0 ]
-		then
-		   echo "ABORT! rsyslog pid no longer active during startup!"
-		   error_exit 1 stacktrace
+	local instance=$1
+	local pid_file="$RSYSLOG_PIDBASE$instance.pid"
+	local started_file="${RSYSLOG_DYNNAME}$instance.started"
+	local imdiag_port_file="$RSYSLOG_DYNNAME.imdiag$instance.port"
+	# Wait until any early startup indicator appears: pid file, started marker, or imdiag port file
+	while :; do
+		if [ -f "$pid_file" ] || [ -f "$started_file" ] || { [ -f "$imdiag_port_file" ] && [ "$(cat "$imdiag_port_file" 2>/dev/null)" != "" ]; }; then
+			break
 		fi
-		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_TEST_MAX_RUNTIME )) ]; then
-		   printf '%s ABORT! Timeout waiting startup file %s\n' "$(tb_timestamp)" "${RSYSLOG_DYNNAME}.started"
-		   error_exit 1
+		# If we are exactly at/over timeout threshold, re-check once more before aborting
+		if [ $(date +%s) -gt $(( TB_STARTTEST + TB_STARTUP_MAX_RUNTIME )) ]; then
+			if [ -f "$pid_file" ] || [ -f "$started_file" ] || { [ -f "$imdiag_port_file" ] && [ "$(cat "$imdiag_port_file" 2>/dev/null)" != "" ]; }; then
+				break
+			fi
+			printf '%s ABORT! Timeout waiting startup indicator (%s or %s or %s) after %d seconds\n' "$(tb_timestamp)" "$pid_file" "$started_file" "$imdiag_port_file" $TB_STARTUP_MAX_RUNTIME
+			# show current file states for diagnostics
+			ls -l "$pid_file" "$started_file" "$imdiag_port_file" 2>/dev/null || true
+			# observed late creation on some CI runners; proceed softly and let subsequent waits validate
+			break
 		fi
+		$TESTTOOL_DIR/msleep 50 # wait 50 milliseconds
 	done
-	echo "$(tb_timestamp) rsyslogd$1 startup msg seen, pid " $(cat $RSYSLOG_PIDBASE$1.pid)
-	wait_file_exists $RSYSLOG_DYNNAME.imdiag$1.port
-	eval export IMDIAG_PORT$1=$(cat $RSYSLOG_DYNNAME.imdiag$1.port)
-	eval PORT='$IMDIAG_PORT'$1
-	echo "imdiag$1 port: $PORT"
+	# If we have a pid file, perform a quick liveness check
+	if [ -f "$pid_file" ]; then
+		$TESTTOOL_DIR/msleep 50
+		check_rsyslog_active $instance
+	fi
+	if [ -f "$pid_file" ]; then
+		echo "$(tb_timestamp) rsyslogd$instance startup indicator seen, pid " $(cat "$pid_file")
+	else
+		echo "$(tb_timestamp) rsyslogd$instance startup indicator seen (pid pending)"
+	fi
+	# Ensure we have the imdiag port
+	wait_file_exists "$imdiag_port_file"
+	export "IMDIAG_PORT$instance"=$(cat "$imdiag_port_file")
+	local port_var="IMDIAG_PORT$instance"
+	local PORT="${!port_var}"
+	echo "imdiag$instance port: $PORT"
 	if [ "$PORT" == "" ]; then
 		echo "TESTBENCH ERROR: imdiag port not found!"
 		ls -l $RSYSLOG_DYNNAME*
@@ -1517,39 +1614,124 @@ error_exit() {
 	if [ $1 -eq $TB_ERR_TIMEOUT ]; then
 		printf '%s Test %s exceeded max runtime of %d seconds\n' "$(tb_timestamp)" "$0" $TB_TEST_MAX_RUNTIME
 	fi
-	if [ "$(ls core* 2>/dev/null)" != "" ]; then
-		echo trying to obtain crash location info
-		echo note: this may not be the correct file, check it
-		CORE=$(ls core*)
-		echo "bt" >> gdb.in
-		echo "q" >> gdb.in
-		gdb ../tools/rsyslogd $CORE -batch -x gdb.in
-		CORE=
-		rm gdb.in
-	fi
-	if [[ "$2" == 'stacktrace' || ( ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ) ]]; then
-		if [ "$(ls core* 2>/dev/null)" != "" ]; then
-			CORE=$(ls core*)
-			printf 'trying to analyze core "%s" for main rsyslogd binary\n' "$CORE"
-			printf 'note: this may not be the correct file, check it\n'
-			$SUDO gdb ../tools/rsyslogd "$CORE" -batch <<- EOF
-				bt
-				echo === THREAD INFO ===
-				info thread
-				echo === thread apply all bt full ===
-				thread apply all bt full
-				q
-				EOF
-			$SUDO gdb ./tcpflood "$CORE" -batch <<- EOF
-				bt
-				echo === THREAD INFO ===
-				info thread
-				echo === thread apply all bt full ===
-				thread apply all bt full
-				q
-				EOF
+	# Core dump analysis - always run when cores are detected
+	echo "=== Core Dump Detection and Analysis ==="
+	core_dumps_found=0
+	
+	# Search for core dumps in multiple locations and patterns
+	echo "Searching for core dumps in:"
+	echo "  - Current directory: $(pwd)"
+	echo "  - /cores/ directory (macOS system cores)"
+	echo "  - Subdirectories (*.core, core.*)"
+	
+	# Process core files safely using while read to handle filenames with spaces/special chars
+	process_core_file() {
+		local corefile="$1"
+		if [ -f "$corefile" ]; then
+			core_dumps_found=$((core_dumps_found + 1))
+			echo "=== Analyzing core dump #$core_dumps_found: $corefile ==="
+			
+			# Identify the core file type and size
+			if command -v file >/dev/null 2>&1; then
+			echo "Core file type:"
+			file "$corefile"
 		fi
+		echo "Core file size: $(wc -c < "$corefile") bytes"
+			
+			# Use platform-appropriate debugger for stack trace
+			if [ "$(uname)" == "Darwin" ]; then
+				if command -v lldb >/dev/null 2>&1; then
+					echo "Getting stack trace with lldb:"
+					$SUDO lldb -c "$corefile" -b -o "bt all" -o "thread backtrace all" -o "quit" ../tools/rsyslogd || echo "lldb analysis failed"
+					# Also try tcpflood if available
+					if [ -x "./tcpflood" ]; then
+						echo "Getting stack trace with lldb (tcpflood):"
+						$SUDO lldb -c "$corefile" -b -o "bt all" -o "thread backtrace all" -o "quit" ./tcpflood || echo "lldb analysis failed for tcpflood"
+					fi
+				else
+					echo "lldb not found, trying gdb..."
+					_gdb_in=$(mktemp "${RSYSLOG_DYNNAME}.gdb.in.XXXXXX")
+					echo "bt" > "$_gdb_in"
+					echo "q" >> "$_gdb_in"
+					$SUDO gdb ../tools/rsyslogd "$corefile" -batch -x "$_gdb_in" || echo "gdb analysis failed"
+					# Also try tcpflood if available
+					if [ -x "./tcpflood" ]; then
+						$SUDO gdb ./tcpflood "$corefile" -batch -x "$_gdb_in" || echo "gdb analysis failed for tcpflood"
+					fi
+					rm -f "$_gdb_in"
+				fi
+			else
+				_gdb_in=$(mktemp "${RSYSLOG_DYNNAME}.gdb.in.XXXXXX")
+				echo "bt" > "$_gdb_in"
+				echo "info thread" >> "$_gdb_in"
+				echo "thread apply all bt full" >> "$_gdb_in"
+				echo "q" >> "$_gdb_in"
+				$SUDO gdb ../tools/rsyslogd "$corefile" -batch -x "$_gdb_in" || echo "gdb analysis failed"
+				# Also try tcpflood if available
+				if [ -x "./tcpflood" ]; then
+					$SUDO gdb ./tcpflood "$corefile" -batch -x "$_gdb_in" || echo "gdb analysis failed for tcpflood"
+				fi
+				rm -f "$_gdb_in"
+			fi
+			echo ""
+		fi
+	}
+	
+	# Process glob patterns (handle no-match cleanly via nullglob)
+	shopt -q nullglob; _had_nullglob=$?
+	[ $_had_nullglob -ne 0 ] && shopt -s nullglob
+	for corefile in core* /cores/core-* /cores/core.*; do
+		process_core_file "$corefile"
+	done
+	[ $_had_nullglob -ne 0 ] && shopt -u nullglob
+	
+	# Process find results safely using while read without subshell (process substitution)
+	while IFS= read -r corefile; do
+		process_core_file "$corefile"
+	done < <(find . -name "core.*" -o -name "*.core" 2>/dev/null)
+	
+	if [ $core_dumps_found -eq 0 ]; then
+		echo "No core dumps found. Checking possible reasons:"
+		echo "  - Core dump creation might be disabled"
+		echo "  - Insufficient disk space (check df -h output below)"
+		echo "  - Core dumps might be in unexpected locations"
+		if [ "$(uname)" == "Darwin" ]; then
+			echo "  - macOS core pattern: $(sysctl kern.corefile 2>/dev/null || echo 'unknown')"
+			echo "  - macOS core dump enabled: $(sysctl kern.coredump 2>/dev/null || echo 'unknown')"
+		fi
+		echo "  - Current ulimit -c: $(ulimit -c)"
+		
+		# Look for evidence of recent segfaults in log output or dmesg
+		echo "  - Checking for segfault evidence:"
+		if [ "$(uname)" == "Darwin" ]; then
+			# Check Console.app style crash reports
+			if [ -d "/Library/Logs/CrashReporter" ]; then
+				echo "    Recent crash logs: $(find /Library/Logs/CrashReporter -name '*rsyslogd*' -mtime -1 2>/dev/null | wc -l) found"
+			fi
+			if [ -d "$HOME/Library/Logs/CrashReporter" ]; then
+				echo "    User crash logs: $(find "$HOME/Library/Logs/CrashReporter" -name '*rsyslogd*' -mtime -1 2>/dev/null | wc -l) found"
+			fi
+		else
+			# Check dmesg for segfault messages
+			if command -v dmesg >/dev/null 2>&1; then
+				recent_segfaults=$(dmesg 2>/dev/null | tail -50 | grep -i "segfault\|killed\|terminated" | wc -l)
+				echo "    Recent segfault messages in dmesg: $recent_segfaults"
+			fi
+		fi
+	else
+		echo "=== Analyzed $core_dumps_found core dump(s) ==="
 	fi
+
+	# Check disk space immediately after core dump analysis
+	echo "=== Disk Space Analysis ==="
+df -hP . | tail -1 | awk '{
+		usage=$5+0;
+		if (usage >= 95) 
+			print "WARNING: Disk usage is " $5 " (Free: " $4 ") - This may prevent core dump creation!"
+		else 
+			print "Disk usage: " $5 " (Free: " $4 ")"
+	}'
+	
 	if [[ ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ]]; then
 		touch IN_AUTO_DEBUG
 		# OK, we have the testname and can re-run under valgrind
@@ -1573,6 +1755,57 @@ error_exit() {
 	#	netstat
 	#fi
 
+	# Comprehensive system and error information gathering
+	echo "=== System Information ==="
+	uname -a
+	if [ "$(uname)" == "Darwin" ]; then
+		if command -v sw_vers >/dev/null 2>&1; then
+			sw_vers
+		fi
+		# macOS-specific memory information  
+		echo "=== macOS System Status ==="
+		echo "Memory usage:"
+		top -l 1 | grep "PhysMem" || echo "Memory info unavailable"
+		
+		# Recent system logs for rsyslogd (if available)
+		echo "=== Recent macOS System Logs ==="
+		if command -v log >/dev/null 2>&1; then
+			log show --predicate 'process == "rsyslogd"' --info --last 1h || echo "No recent rsyslogd logs found"
+		else
+			echo "macOS log command not available"
+		fi
+	else
+		# Linux-specific information
+		echo "=== Linux System Status ==="
+		if [ -f /proc/meminfo ]; then
+			echo "Memory info:"
+			grep -E "(MemTotal|MemFree|MemAvailable)" /proc/meminfo
+		fi
+	fi
+	
+	# Gather test error logs
+	echo "=== Error Logs Collection ==="
+	# Run gather-check-logs.sh if available; account for being invoked from tests/ dir
+	if [ -f "$srcdir/../devtools/gather-check-logs.sh" ]; then
+		echo "Running gather-check-logs.sh (via srcdir/..)..."
+		( cd "$srcdir/.." && devtools/gather-check-logs.sh )
+	elif [ -f "../devtools/gather-check-logs.sh" ]; then
+		echo "Running gather-check-logs.sh (via ..)..."
+		( cd .. && devtools/gather-check-logs.sh )
+	elif [ -f "devtools/gather-check-logs.sh" ]; then
+		echo "Running gather-check-logs.sh (cwd)..."
+		devtools/gather-check-logs.sh
+	else
+		echo "gather-check-logs.sh not found, collecting available logs manually..."
+	fi
+	
+	if [ -f "failed-tests.log" ]; then
+		echo "=== Failed Tests Log ==="
+		cat failed-tests.log
+	else
+		echo "No failed-tests.log found"
+	fi
+	
 	# Extended debug output for dependencies started by testbench
 	if [ "$EXTRA_EXITCHECK" == 'dumpkafkalogs' ] && [ "$TEST_OUTPUT" == "VERBOSE" ]; then
 		# Dump Zookeeper log
@@ -1919,6 +2152,133 @@ fi
 if [ -z "$ES_PORT" ]; then
 	export ES_PORT=19200
 fi
+if [ -z "$ES_HOST" ]; then
+	export ES_HOST=localhost
+fi
+if [ -n "$RSYSLOG_TESTBENCH_EXTERNAL_ES_URL" ]; then
+	export RSYSLOG_TESTBENCH_EXTERNAL_ES_URL="${RSYSLOG_TESTBENCH_EXTERNAL_ES_URL%/}"
+	export RSYSLOG_TESTBENCH_USE_EXTERNAL_ES="yes"
+	es_url_no_proto="${RSYSLOG_TESTBENCH_EXTERNAL_ES_URL#*://}"
+	if [ "$es_url_no_proto" = "$RSYSLOG_TESTBENCH_EXTERNAL_ES_URL" ]; then
+		RSYSLOG_TESTBENCH_EXTERNAL_ES_URL="http://${RSYSLOG_TESTBENCH_EXTERNAL_ES_URL}"
+		es_url_no_proto="${RSYSLOG_TESTBENCH_EXTERNAL_ES_URL#*://}"
+	fi
+	es_host_port="${es_url_no_proto%%/*}"
+	if [ -n "$es_host_port" ]; then
+		ES_HOST="${es_host_port%%:*}"
+		if [ "$ES_HOST" = "$es_host_port" ]; then
+			es_port=""
+		else
+			es_port="${es_host_port#*:}"
+		fi
+		if [ -n "$es_port" ]; then
+			ES_PORT="$es_port"
+		fi
+	fi
+fi
+
+es_base_url() {
+        local host="${ES_HOST:-localhost}"
+        local port="${ES_PORT:-19200}"
+        local proto="http"
+        if [ -n "$RSYSLOG_TESTBENCH_EXTERNAL_ES_URL" ]; then
+                proto="${RSYSLOG_TESTBENCH_EXTERNAL_ES_URL%%://*}"
+                if [ "$proto" = "$RSYSLOG_TESTBENCH_EXTERNAL_ES_URL" ]; then
+                        proto="http"
+                fi
+        fi
+        printf '%s://%s:%s' "$proto" "$host" "$port"
+}
+
+es_detect_version() {
+        local base
+        base=$(es_base_url)
+
+        local detect_url
+        detect_url="${base%/}/"
+
+        local payload
+        if ! payload=$(curl --silent --show-error --connect-timeout 5 \
+                --header 'Accept: application/json' "$detect_url"); then
+                return 1
+        fi
+
+        local python_bin="${PYTHON:-}"
+        if [ -n "$python_bin" ] && ! command -v "$python_bin" >/dev/null 2>&1; then
+                python_bin=""
+        fi
+        if [ -z "$python_bin" ]; then
+                if command -v python3 >/dev/null 2>&1; then
+                        python_bin=$(command -v python3)
+                elif command -v python >/dev/null 2>&1; then
+                        python_bin=$(command -v python)
+                fi
+        fi
+        if [ -z "$python_bin" ]; then
+                printf 'info: unable to detect Elasticsearch version (no python interpreter available)\n'
+                return 1
+        fi
+
+        local result
+        if ! result=$(printf '%s' "$payload" | "$python_bin" -c '
+import json
+import sys
+
+try:
+    payload = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+
+version = payload.get("version", {})
+number = version.get("number")
+
+if not isinstance(number, str):
+    sys.exit(1)
+
+parts = number.split(".")
+major = parts[0] if parts else ""
+
+if not major.isdigit():
+    sys.exit(1)
+
+print(major)
+print(number)
+'); then
+                return 1
+        fi
+
+        local detected_major=""
+        local detected_full=""
+        if [ -n "$result" ]; then
+                IFS=$'\n' read -r detected_major detected_full <<EOF
+$result
+EOF
+        fi
+
+        if [ -z "$detected_major" ]; then
+                return 1
+        fi
+
+        export RSYSLOG_TESTBENCH_ES_MAJOR_VERSION="$detected_major"
+        if [ -n "$detected_full" ]; then
+                export RSYSLOG_TESTBENCH_ES_VERSION_NUMBER="$detected_full"
+        fi
+
+        printf 'info: detected Elasticsearch version %s (major %s) at %s\n' \
+                "${RSYSLOG_TESTBENCH_ES_VERSION_NUMBER:-unknown}" \
+                "$RSYSLOG_TESTBENCH_ES_MAJOR_VERSION" \
+                "$base"
+
+        return 0
+}
+
+require_elasticsearch_restart_capability() {
+        if [ "$RSYSLOG_TESTBENCH_USE_EXTERNAL_ES" = "yes" ]; then
+                printf 'info: skipping test - external Elasticsearch instance cannot be restarted by the harness\n'
+                exit 77
+        fi
+}
+
 dep_es_cached_file="$dep_cache_dir/$ES_DOWNLOAD"
 
 # kafka (including Zookeeper)
@@ -2406,6 +2766,9 @@ dump_zookeeper_serverlog() {
 
 # download elasticsearch files, if necessary
 download_elasticsearch() {
+	if [ "$RSYSLOG_TESTBENCH_USE_EXTERNAL_ES" = "yes" ]; then
+		return 0
+	fi
 	if [ ! -d $dep_cache_dir ]; then
 		echo "Creating dependency cache dir $dep_cache_dir"
 		mkdir $dep_cache_dir
@@ -2426,6 +2789,9 @@ download_elasticsearch() {
 # prepare elasticsearch execution environment
 # this also stops any previous elasticsearch instance, if found
 prepare_elasticsearch() {
+	if [ "$RSYSLOG_TESTBENCH_USE_EXTERNAL_ES" = "yes" ]; then
+		return 0
+	fi
 	stop_elasticsearch # stop if it is still running
 	# Heap Size (limit to 128MB for testbench! default is way to HIGH)
 	export ES_JAVA_OPTS="-Xms128m -Xmx128m"
@@ -2480,6 +2846,20 @@ prepare_elasticsearch() {
 # ensure that a basic, suitable instance of elasticsearch is running. This is part
 # of an effort to avoid restarting elasticsearch more often than necessary.
 ensure_elasticsearch_ready() {
+	printf '%s ensuring Elasticsearch ready\n' "$(tb_timestamp)"
+        if [ "$RSYSLOG_TESTBENCH_USE_EXTERNAL_ES" = "yes" ]; then
+                local base
+                base=$(es_base_url)
+                printf 'using external Elasticsearch instance at %s\n' "$base"
+                if ! curl --silent --show-error --connect-timeout 5 "$base" >/dev/null; then
+                        printf 'external Elasticsearch instance %s not reachable\n' "$base"
+                        error_exit 77
+                fi
+                init_elasticsearch
+                es_detect_version || printf 'info: unable to determine Elasticsearch version metadata\n'
+                printf '\n%s Elasticsearch readied for use as requested\n' "$(date +%H:%M:%S)"
+                return
+	fi
 	if   printf '%s:%s:%s\n' "$ES_DOWNLOAD" "$ES_PORT" "$(cat es.pid)" \
 	   | cmp -b - elasticsearch.running
 	then
@@ -2496,16 +2876,22 @@ ensure_elasticsearch_ready() {
 			printf '%s:%s:%s\n' "$ES_DOWNLOAD" "$ES_PORT" "$(cat es.pid)" > elasticsearch.running
 		fi
 	fi
-	if [ "$1" != "--no-start" ]; then
-		printf 'running elasticsearch instance: %s\n' "$(cat elasticsearch.running)"
-		init_elasticsearch
-	fi
-	printf '\n%s Elasticsearch readied for use as requested\n' "$(date +%H:%M:%S)"
+        if [ "$1" != "--no-start" ]; then
+                printf 'running elasticsearch instance: %s\n' "$(cat elasticsearch.running)"
+                init_elasticsearch
+                es_detect_version || printf 'info: unable to determine Elasticsearch version metadata\n'
+        fi
+        printf '\n%s Elasticsearch readied for use as requested\n' "$(date +%H:%M:%S)"
 }
+
 
 
 # $2, if set, is the number of additional ES instances
 start_elasticsearch() {
+	if [ "$RSYSLOG_TESTBENCH_USE_EXTERNAL_ES" = "yes" ]; then
+		printf 'info: skipping local Elasticsearch startup (external instance in use)\n'
+		return 0
+	fi
 	# Heap Size (limit to 256MB for testbench! defaults is way to HIGH)
 	export ES_JAVA_OPTS="-Xms256m -Xmx256m"
 
@@ -2523,10 +2909,12 @@ start_elasticsearch() {
 	# Wait for startup with hardcoded timeout
 	timeoutend=120
 	timeseconds=0
+	local base
+	base=$(es_base_url)
 	# Loop until elasticsearch port is reachable or until
 	# timeout is reached!
-	curl --silent --show-error --connect-timeout 1 http://localhost:${ES_PORT:-19200}
-	until [ "$(curl --silent --show-error --connect-timeout 1 http://localhost:${ES_PORT:-19200} | grep 'rsyslog-testbench')" != "" ]; do
+	curl --silent --show-error --connect-timeout 1 "$base"
+	until [ "$(curl --silent --show-error --connect-timeout 1 "$base" | grep 'rsyslog-testbench')" != "" ]; do
 		echo "--- waiting for ES startup: $timeseconds seconds"
 		$TESTTOOL_DIR/msleep 1000
 		(( timeseconds=timeseconds + 1 ))
@@ -2550,18 +2938,22 @@ start_elasticsearch() {
 	echo ES startup succeeded
 }
 
+
 # read data from ES to a local file so that we can process
 # $1 - number of records (ES does not return all records unless you tell it explicitly).
 # $2 - ES port
 es_getdata() {
 	printf '%s getting data from ElasticSearch\n' "$(date +%H:%M:%S)"
-	curl --silent -XPUT --show-error -H 'Content-Type: application/json' "http://localhost:${2:-$ES_PORT}/rsyslog_testbench/_settings" -d '{ "index" : { "max_result_window" : '${1:-$NUMMESSAGES}' } }'
+	local base
+	base=$(es_base_url)
+	curl --silent -XPUT --show-error -H 'Content-Type: application/json' "${base}/rsyslog_testbench/_settings" -d '{ "index" : { "max_result_window" : '${1:-$NUMMESSAGES}' } }'
 	# refresh to ensure we get the latest data
-	curl --silent localhost:${2:-$ES_PORT}/rsyslog_testbench/_refresh
-	curl --silent localhost:${2:-$ES_PORT}/rsyslog_testbench/_search?size=${1:-$NUMMESSAGES} > $RSYSLOG_DYNNAME.work
+	curl --silent "${base}/rsyslog_testbench/_refresh"
+	curl --silent "${base}/rsyslog_testbench/_search?size=${1:-$NUMMESSAGES}" > $RSYSLOG_DYNNAME.work
 	printf '\n'
 	$PYTHON $srcdir/es_response_get_msgnum.py > ${RSYSLOG_OUT_LOG}
 }
+
 
 # a standard method to support shutdown & queue empty check for a wide range
 # of elasticsearch tests. This works if we assume that ES has delivered messages
@@ -2579,6 +2971,10 @@ es_shutdown_empty_check() {
 
 
 stop_elasticsearch() {
+	if [ "$RSYSLOG_TESTBENCH_USE_EXTERNAL_ES" = "yes" ]; then
+		printf 'info: skipping local Elasticsearch stop (external instance in use)\n'
+		return 0
+	fi
 	dep_work_dir=$(readlink -f $srcdir)
 	dep_work_es_pidfile="es.pid"
 	rm -f elasticsearch.running
@@ -2592,6 +2988,9 @@ stop_elasticsearch() {
 
 # cleanup es leftovers when it is being stopped
 cleanup_elasticsearch() {
+		if [ "$RSYSLOG_TESTBENCH_USE_EXTERNAL_ES" = "yes" ]; then
+			return 0
+		fi
 		dep_work_dir=$(readlink -f .dep_wrk)
 		dep_work_es_pidfile="es.pid"
 		stop_elasticsearch
@@ -2602,7 +3001,9 @@ cleanup_elasticsearch() {
 # initialize local Elasticsearch *testbench* instance for the next
 # test. NOTE: do NOT put anything useful on that instance!
 init_elasticsearch() {
-	curl --silent -XDELETE localhost:${ES_PORT:-9200}/rsyslog_testbench
+	local base
+	base=$(es_base_url)
+	curl --silent -XDELETE "${base}/rsyslog_testbench"
 }
 
 omhttp_start_server() {
@@ -3114,7 +3515,11 @@ case $1 in
 			echo "hint: was init accidentally called twice?"
 			exit 2
 		fi
-		export RSYSLOG_DYNNAME="rstb_$(./test_id $(basename $0))$(tr -dc 'a-zA-Z0-9' < /dev/urandom | head --bytes 4)"
+		# Generate a short ASCII-only random suffix in a POSIX/portable way.
+		# On macOS, BSD tr with UTF-8 locales can error with "Illegal byte sequence"
+		# when fed /dev/urandom. Force C locale and use head -c (portable) instead of
+		# GNU head --bytes to avoid flaky failures in GitHub Actions runners.
+		export RSYSLOG_DYNNAME="rstb_$(./test_id $(basename $0))$(LC_ALL=C tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c 4)"
 		export RSYSLOG_OUT_LOG="${RSYSLOG_DYNNAME}.out.log"
 		export RSYSLOG2_OUT_LOG="${RSYSLOG_DYNNAME}_2.out.log"
 		export RSYSLOG_PIDBASE="${RSYSLOG_DYNNAME}:" # also used by instance 2!

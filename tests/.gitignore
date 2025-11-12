@@ -10,3 +10,5 @@ rsyslog.out.compare
 *.pid.save
 *.started
 test-spool/*
+check_relpEngineVersion
+testbench_test_failed_rsyslog

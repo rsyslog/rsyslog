@@ -1,6 +1,7 @@
 #!/bin/bash
 # test many concurrent tcp connections
 # released under ASL 2.0
+export USE_VALGRIND="YES"
 . ${srcdir:=.}/diag.sh init
 skip_platform "FreeBSD"  "This test does not work on FreeBSD"
 export NUMMESSAGES=40000 # we unfortunately need many messages as we have many connections

@@ -1,3 +1,5 @@
+.. _ref-omkafka:
+
 ******************************
 omkafka: write to Apache Kafka
 ******************************

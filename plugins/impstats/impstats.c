@@ -9,9 +9,9 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *       http://www.apache.org/licenses/LICENSE-2.0
- *       -or-
- *       see COPYING.ASL20 in the source distribution
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * -or-
+ * see COPYING.ASL20 in the source distribution
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -33,12 +33,12 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include <sys/time.h>
+#include <time.h>
 #include <sys/resource.h>
 #ifdef OS_LINUX
     #include <sys/types.h>
     #include <dirent.h>
 #endif
-
 #include "dirty.h"
 #include "cfsysline.h"
 #include "module-template.h"
@@ -51,16 +51,19 @@
 #include "prop.h"
 #include "ruleset.h"
 #include "parserif.h"
+#include <libfastjson/json.h> /* libfastjson for robust JSON parsing in Zabbix collector */
 
-
-MODULE_TYPE_INPUT;
-MODULE_TYPE_NOKEEP;
+MODULE_TYPE_INPUT
+MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("impstats")
 
 /* defines */
 #define DEFAULT_STATS_PERIOD (5 * 60)
 #define DEFAULT_FACILITY 5 /* syslog */
 #define DEFAULT_SEVERITY 6 /* info */
+
+/* Sentinel value for the Zabbix format (distinct from values defined in statsobj.h) */
+#define statsFmt_Zabbix ((statsFmtType_t)(1001))
 
 /* Module static data */
 DEF_IMOD_STATIC_DATA;
@@ -90,9 +93,9 @@ struct modConfData_s {
     sbool configSetViaV2Method;
     uchar *pszBindRuleset; /* name of ruleset to bind to */
 };
+
 static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
 static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current load process */
-
 static configSettings_t cs;
 static int bLegacyCnfModGlobalsPermitted; /* are legacy module-global config parameters permitted? */
 static prop_t *pInputName = NULL;
@@ -102,8 +105,8 @@ static struct cnfparamdescr modpdescr[] = {
     {"interval", eCmdHdlrInt, 0},      {"facility", eCmdHdlrInt, 0},      {"severity", eCmdHdlrInt, 0},
     {"bracketing", eCmdHdlrBinary, 0}, {"log.syslog", eCmdHdlrBinary, 0}, {"resetcounters", eCmdHdlrBinary, 0},
     {"log.file", eCmdHdlrGetWord, 0},  {"format", eCmdHdlrGetWord, 0},    {"ruleset", eCmdHdlrString, 0}};
-static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 
+static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 
 /* resource use stats counters */
 #ifdef OS_LINUX
@@ -119,8 +122,10 @@ static intctr_t st_ru_oublock;
 static intctr_t st_ru_nvcsw;
 static intctr_t st_ru_nivcsw;
 static statsobj_t *statsobj_resources;
-
 static pthread_mutex_t hup_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/* forward declaration for Zabbix grouped JSON output */
+static void generateZabbixStats(void);
 
 BEGINmodExit
     CODESTARTmodExit;
@@ -131,13 +136,10 @@ BEGINmodExit
     objRelease(statsobj, CORE_COMPONENT);
     objRelease(ruleset, CORE_COMPONENT);
 ENDmodExit
-
-
 BEGINisCompatibleWithFeature
     CODESTARTisCompatibleWithFeature;
     if (eFeat == sFEATURENonCancelInputTermination) iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
-
 
 #ifdef OS_LINUX
 /* count number of open files (linux specific) */
@@ -145,24 +147,19 @@ static void countOpenFiles(void) {
     char proc_path[MAXFNAME];
     DIR *dp;
     struct dirent *files;
-
     st_openfiles = 0;
     snprintf(proc_path, sizeof(proc_path), "/proc/%d/fd", glblGetOurPid());
     if ((dp = opendir(proc_path)) == NULL) {
         LogError(errno, RS_RET_ERR, "impstats: error reading %s\n", proc_path);
-        goto done;
+        return;
     }
     while ((files = readdir(dp)) != NULL) {
         if (!strcmp(files->d_name, ".") || !strcmp(files->d_name, "..")) continue;
         st_openfiles++;
     }
     closedir(dp);
-
-done:
-    return;
 }
 #endif
-
 
 static void initConfigSettings(void) {
     cs.iStatsInterval = DEFAULT_STATS_PERIOD;
@@ -170,18 +167,15 @@ static void initConfigSettings(void) {
     cs.iSeverity = DEFAULT_SEVERITY;
     cs.bJSON = 0;
     cs.bCEE = 0;
-    cs.bPrometheus = 0;
 }
 
-
-/* actually submit a message to the rsyslog core
- */
-static void doSubmitMsg(uchar *line) {
+/* actually submit a message to the rsyslog core */
+static void doSubmitMsg(const char *line) {
     smsg_t *pMsg;
-
     if (msgConstruct(&pMsg) != RS_RET_OK) goto finalize_it;
     MsgSetInputName(pMsg, pInputName);
-    MsgSetRawMsgWOSize(pMsg, (char *)line);
+    /* COPY-IN variant so the core owns the message buffer */
+    MsgSetRawMsg(pMsg, line, strlen(line));
     MsgSetHOSTNAME(pMsg, glbl.GetLocalHostName(), ustrlen(glbl.GetLocalHostName()));
     MsgSetRcvFrom(pMsg, glbl.GetLocalHostNameProp());
     MsgSetRcvFromIP(pMsg, glbl.GetLocalHostIP());
@@ -191,15 +185,12 @@ static void doSubmitMsg(uchar *line) {
     pMsg->iFacility = runModConf->iFacility;
     pMsg->iSeverity = runModConf->iSeverity;
     pMsg->msgFlags = 0;
-
     /* we do not use rate-limiting, as the stats message always need to be emitted */
     submitMsg2(pMsg);
     DBGPRINTF("impstats: submit [%d,%d] msg '%s'\n", runModConf->iFacility, runModConf->iSeverity, line);
-
 finalize_it:
     return;
 }
-
 
 /* log stats message to file; limited error handling done */
 static void doLogToFile(const char *ln, const size_t lenLn) {
@@ -210,7 +201,6 @@ static void doLogToFile(const char *ln, const size_t lenLn) {
     char timebuf[32];
 
     pthread_mutex_lock(&hup_mutex);
-
     if (lenLn == 0) goto done;
 
     if (runModConf->logfd == -1) {
@@ -225,7 +215,7 @@ static void doLogToFile(const char *ln, const size_t lenLn) {
 
     time(&t);
     iov[0].iov_base = ctime_r(&t, timebuf);
-    iov[0].iov_len = nexpect = strlen(iov[0].iov_base) - 1; /* -1: strip \n */
+    iov[0].iov_len = nexpect = strlen((char *)iov[0].iov_base) - 1; /* strip \n */
     iov[1].iov_base = (void *)": ";
     iov[1].iov_len = 2;
     nexpect += 2;
@@ -236,23 +226,23 @@ static void doLogToFile(const char *ln, const size_t lenLn) {
     iov[3].iov_len = 1;
     nexpect++;
     nwritten = writev(runModConf->logfd, iov, 4);
-
     if (nwritten != nexpect) {
-        dbgprintf("error writing stats file %s, nwritten %lld, expected %lld\n", runModConf->logfile,
+        DBGPRINTF("error writing stats file %s, nwritten %lld, expected %lld\n", runModConf->logfile,
                   (long long)nwritten, (long long)nexpect);
     }
-done:
+_done2:
     pthread_mutex_unlock(&hup_mutex);
     return;
+done:
+    goto _done2;
 }
-
 
 /* submit a line to our log destinations. Line must be fully formatted as
  * required (but may be a simple verb like "BEGIN" and "END".
  */
 static rsRetVal submitLine(const char *const ln, const size_t lenLn) {
     DEFiRet;
-    if (runModConf->bLogToSyslog) doSubmitMsg((uchar *)ln);
+    if (runModConf->bLogToSyslog) doSubmitMsg(ln);
     if (runModConf->logfile != NULL) doLogToFile(ln, lenLn);
     RETiRet;
 }
@@ -266,7 +256,6 @@ static rsRetVal doStatsLine(void __attribute__((unused)) * usrptr, const char *c
     RETiRet;
 }
 
-
 /* the function to generate the actual statistics messages
  * rgerhards, 2010-09-09
  */
@@ -275,7 +264,7 @@ static void generateStatsMsgs(void) {
     int r;
     r = getrusage(RUSAGE_SELF, &ru);
     if (r != 0) {
-        dbgprintf("impstats: getrusage() failed with error %d, zeroing out\n", errno);
+        DBGPRINTF("impstats: getrusage() failed with error %d, zeroing out\n", errno);
         memset(&ru, 0, sizeof(ru));
     }
 #ifdef OS_LINUX
@@ -290,14 +279,23 @@ static void generateStatsMsgs(void) {
     st_ru_oublock = ru.ru_oublock;
     st_ru_nvcsw = ru.ru_nvcsw;
     st_ru_nivcsw = ru.ru_nivcsw;
-    statsobj.GetAllStatsLines(doStatsLine, NULL, runModConf->statsFmt, runModConf->bResetCtrs);
-}
 
+    if (runModConf->statsFmt == statsFmt_Zabbix) { /* statsFmt_Zabbix sentinel */
+#ifdef DEBUG_ZABBIX
+        DBGPRINTF("impstats: statsFmt=%d (Zabbix sentinel=1001) -> entering generateZabbixStats()\n",
+                  (int)runModConf->statsFmt);
+#endif
+        generateZabbixStats();
+    } else {
+        statsobj.GetAllStatsLines(doStatsLine, NULL, runModConf->statsFmt, runModConf->bResetCtrs);
+    }
+}
 
 BEGINbeginCnfLoad
     CODESTARTbeginCnfLoad;
     loadModConf = pModConf;
     pModConf->pConf = pConf;
+
     /* init our settings */
     loadModConf->configSetViaV2Method = 0;
     loadModConf->iStatsInterval = DEFAULT_STATS_PERIOD;
@@ -315,25 +313,21 @@ BEGINbeginCnfLoad
     initConfigSettings();
 ENDbeginCnfLoad
 
-
 BEGINsetModCnf
     struct cnfparamvals *pvals = NULL;
     char *mode;
     int i;
+
     CODESTARTsetModCnf;
     pvals = nvlstGetParams(lst, &modpblk, NULL);
     if (pvals == NULL) {
-        LogError(0, RS_RET_MISSING_CNFPARAMS,
-                 "error processing module "
-                 "config parameters [module(...)]");
+        LogError(0, RS_RET_MISSING_CNFPARAMS, "error processing module config parameters [module(...)]");
         ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
     }
-
     if (Debug) {
-        dbgprintf("module (global) param blk for impstats:\n");
+        DBGPRINTF("module (global) param blk for impstats:\n");
         cnfparamsPrint(&modpblk, pvals);
     }
-
     for (i = 0; i < modpblk.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(modpblk.descr[i].name, "interval")) {
@@ -362,6 +356,8 @@ BEGINsetModCnf
                 loadModConf->statsFmt = statsFmt_Legacy;
             } else if (!strcasecmp(mode, "prometheus")) {
                 loadModConf->statsFmt = statsFmt_Prometheus;
+            } else if (!strcasecmp(mode, "zabbix")) {
+                loadModConf->statsFmt = statsFmt_Zabbix; /* RFC 8259 Compliant */
             } else {
                 LogError(0, RS_RET_ERR, "impstats: invalid format %s", mode);
             }
@@ -369,13 +365,9 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "ruleset")) {
             loadModConf->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else {
-            dbgprintf(
-                "impstats: program error, non-handled "
-                "param '%s' in beginCnfLoad\n",
-                modpblk.descr[i].name);
+            DBGPRINTF("impstats: program error, non-handled param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
         }
     }
-
     if (loadModConf->pszBindRuleset != NULL && loadModConf->bLogToSyslog == 0) {
         parser_warnmsg(
             "impstats: log.syslog set to \"off\" but ruleset specified - with "
@@ -385,13 +377,21 @@ BEGINsetModCnf
         loadModConf->pszBindRuleset = NULL;
     }
 
+    /* Add warning about log.syslog and format=zabbix without log.file */
+    if (loadModConf->bLogToSyslog != 0 && loadModConf->statsFmt == statsFmt_Zabbix && loadModConf->logfile == NULL) {
+        parser_warnmsg(
+            "impstats: log.syslog set to \"on\" and format set to \"zabbix\" without "
+            "log.file set. This is not recommended due to potential for pstats msg "
+            "truncation leading to malformed JSON. Ensure \"$MaxMessageSize\" at the "
+            "top of rsyslog.conf to a sufficient size or ensure log.file is specified. "
+            "Increasing $MaxMessageSize may have other adverse side effect.");
+    }
     loadModConf->configSetViaV2Method = 1;
     bLegacyCnfModGlobalsPermitted = 0;
 
 finalize_it:
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &modpblk);
 ENDsetModCnf
-
 
 BEGINendCnfLoad
     CODESTARTendCnfLoad;
@@ -410,22 +410,16 @@ BEGINendCnfLoad
     }
 ENDendCnfLoad
 
-
 /* we need our special version of checkRuleset(), as we do not have any instances */
 static rsRetVal checkRuleset(modConfData_t *modConf) {
     ruleset_t *pRuleset;
     rsRetVal localRet;
     DEFiRet;
-
     modConf->pBindRuleset = NULL; /* assume default ruleset */
-
     if (modConf->pszBindRuleset == NULL) FINALIZE;
-
     localRet = ruleset.GetRuleset(modConf->pConf, &pRuleset, modConf->pszBindRuleset);
     if (localRet == RS_RET_NOT_FOUND) {
-        LogError(0, NO_ERRCODE,
-                 "impstats: ruleset '%s' not found - "
-                 "using default ruleset instead",
+        LogError(0, NO_ERRCODE, "impstats: ruleset '%s' not found - using default ruleset instead",
                  modConf->pszBindRuleset);
     }
     CHKiRet(localRet);
@@ -434,7 +428,6 @@ finalize_it:
     RETiRet;
 }
 
-
 /* to use HUP, we need to have an instanceData type, as this was
  * originally designed for actions. However, we do not, and cannot,
  * use the content. The core will always provide a NULL pointer.
@@ -442,9 +435,10 @@ finalize_it:
 typedef struct _instanceData {
     int dummy;
 } instanceData;
+
 BEGINdoHUP
     CODESTARTdoHUP;
-    DBGPRINTF("impstats: received HUP\n")
+    DBGPRINTF("impstats: received HUP\n");
     pthread_mutex_lock(&hup_mutex);
     if (runModConf->logfd != -1) {
         DBGPRINTF("impstats: closing log file due to HUP\n");
@@ -454,19 +448,15 @@ BEGINdoHUP
     pthread_mutex_unlock(&hup_mutex);
 ENDdoHUP
 
-
 BEGINcheckCnf
     CODESTARTcheckCnf;
     if (pModConf->iStatsInterval == 0) {
-        LogError(0, NO_ERRCODE,
-                 "impstats: stats interval zero not permitted, using "
-                 "default of %d seconds",
+        LogError(0, NO_ERRCODE, "impstats: stats interval zero not permitted, using default of %d seconds",
                  DEFAULT_STATS_PERIOD);
         pModConf->iStatsInterval = DEFAULT_STATS_PERIOD;
     }
     checkRuleset(pModConf);
 ENDcheckCnf
-
 
 BEGINactivateCnf
     rsRetVal localRet;
@@ -475,11 +465,13 @@ BEGINactivateCnf
     DBGPRINTF("impstats: stats interval %d seconds, reset %d, logToSyslog %d, logFile %s\n", runModConf->iStatsInterval,
               runModConf->bResetCtrs, runModConf->bLogToSyslog,
               runModConf->logfile == NULL ? "deactivated" : (char *)runModConf->logfile);
+
     localRet = statsobj.EnableStats();
     if (localRet != RS_RET_OK) {
         LogError(0, localRet, "impstats: error enabling statistics gathering");
         ABORT_FINALIZE(RS_RET_NO_RUN);
     }
+
     /* initialize our own counters */
     CHKiRet(statsobj.Construct(&statsobj_resources));
     CHKiRet(statsobj.SetName(statsobj_resources, (uchar *)"resource-usage"));
@@ -507,6 +499,7 @@ BEGINactivateCnf
                                 &st_openfiles));
 #endif
     CHKiRet(statsobj.ConstructFinalize(statsobj_resources));
+
 finalize_it:
     if (iRet != RS_RET_OK) {
         LogError(0, iRet, "impstats: error activating module");
@@ -514,14 +507,12 @@ finalize_it:
     }
 ENDactivateCnf
 
-
 BEGINfreeCnf
     CODESTARTfreeCnf;
     if (runModConf->logfd != -1) close(runModConf->logfd);
     free(runModConf->logfile);
     free(runModConf->pszBindRuleset);
 ENDfreeCnf
-
 
 BEGINrunInput
     CODESTARTrunInput;
@@ -540,16 +531,13 @@ BEGINrunInput
     }
 ENDrunInput
 
-
 BEGINwillRun
     CODESTARTwillRun;
 ENDwillRun
 
-
 BEGINafterRun
     CODESTARTafterRun;
 ENDafterRun
-
 
 BEGINqueryEtryPt
     CODESTARTqueryEtryPt;
@@ -557,7 +545,7 @@ BEGINqueryEtryPt
     CODEqueryEtryPt_STD_CONF2_QUERIES;
     CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
     CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
-    CODEqueryEtryPt_doHUP
+    CODEqueryEtryPt_doHUP;
 ENDqueryEtryPt
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal) {
@@ -565,17 +553,16 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
     return RS_RET_OK;
 }
 
-
 BEGINmodInit()
     CODESTARTmodInit;
-    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* support the current interface spec */
     CODEmodInit_QueryRegCFSLineHdlr DBGPRINTF("impstats version %s loading\n", VERSION);
     initConfigSettings();
     CHKiRet(objUse(glbl, CORE_COMPONENT));
     CHKiRet(objUse(prop, CORE_COMPONENT));
     CHKiRet(objUse(statsobj, CORE_COMPONENT));
     CHKiRet(objUse(ruleset, CORE_COMPONENT));
-    /* the pstatsinverval is an alias to support a previous screwed-up syntax... */
+    /* legacy aliases */
     CHKiRet(regCfSysLineHdlr2((uchar *)"pstatsinterval", 0, eCmdHdlrInt, NULL, &cs.iStatsInterval,
                               STD_LOADABLE_MODULE_ID, &bLegacyCnfModGlobalsPermitted));
     CHKiRet(regCfSysLineHdlr2((uchar *)"pstatinterval", 0, eCmdHdlrInt, NULL, &cs.iStatsInterval,
@@ -590,10 +577,242 @@ BEGINmodInit()
                               &bLegacyCnfModGlobalsPermitted));
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL,
                                STD_LOADABLE_MODULE_ID));
-
     CHKiRet(prop.Construct(&pInputName));
     CHKiRet(prop.SetString(pInputName, UCHAR_CONSTANT("impstats"), sizeof("impstats") - 1));
     CHKiRet(prop.ConstructFinalize(pInputName));
 ENDmodInit
-/* vi:set ai:
- */
+
+/* ---------- Zabbix (grouped JSON object) builder ----------
+ Produces RFC 8259 Compliant Arrayed-JSON.
+ Produces one JSON object per emission:
+ {
+   "timedate": "<ctime_r>",
+   "stats_<origin>": [ ... ],
+   "stats_<origin>_global": [ ... ], "stats_<origin>_local": [ ... ] // for dual-origins
+ }
+ Dual-origin rule:
+ - For origins that have both global and local statistics (imkafka, omkafka, imtcp, imudp):
+   if (name == origin) -> "stats_<origin>_global"
+   else -> "stats_<origin>_local"
+ Remap rule (this patch):
+ - If origin == "core.action" AND name contains "omkafka":
+   group into "stats_omkafka_local" (without changing the JSON line).
+*/
+
+/* NOTE: statsFmt_Zabbix is defined at the top with other defines (no duplicates here). */
+
+/* whether this origin has both global & local lines we must separate */
+static int is_dual_origin(const char *origin) {
+    return (!strcmp(origin, "imkafka") || !strcmp(origin, "omkafka") || !strcmp(origin, "imtcp") ||
+            !strcmp(origin, "imudp"));
+}
+
+/* sanitize origin into identifier-friendly token: replace '.' with '_' */
+static void sanitize_origin(const char *origin, char *out, size_t outlen) {
+    size_t i = 0;
+    for (; origin[i] && i + 1 < outlen; ++i) {
+        char c = origin[i];
+        out[i] = (c == '.') ? '_' : c;
+    }
+    if (outlen) out[i < outlen ? i : outlen - 1] = '\0';
+}
+
+typedef struct zbx_group_s {
+    es_str_t *arr; /* array buffer (open with '['; we'll close later) */
+    int first; /* first element flag */
+    char *key; /* group key string (e.g., "stats_core_action") */
+    size_t count; /* # of items pushed */
+} zbx_group_t;
+
+typedef struct zbx_ctx_s {
+    zbx_group_t *groups;
+    size_t len, cap;
+} zbx_ctx_t;
+
+static zbx_group_t *zbx_find_or_create_group(zbx_ctx_t *ctx, const char *key) {
+    for (size_t i = 0; i < ctx->len; ++i) {
+        if (!strcmp(ctx->groups[i].key, key)) return &ctx->groups[i];
+    }
+    /* grow */
+    if (ctx->len == ctx->cap) {
+        size_t ncap = ctx->cap ? ctx->cap * 2 : 8;
+        zbx_group_t *ng = (zbx_group_t *)realloc(ctx->groups, ncap * sizeof(*ng));
+        if (!ng) return NULL;
+        ctx->groups = ng;
+        ctx->cap = ncap;
+    }
+    /* init new group */
+    zbx_group_t *g = &ctx->groups[ctx->len++];
+    g->arr = es_newStrFromCStr("[", 1);
+    g->first = 1;
+    g->key = strdup(key);
+    g->count = 0;
+    if (g->arr == NULL || g->key == NULL) {
+        if (g->arr != NULL) es_deleteStr(g->arr);
+        if (g->key != NULL) free(g->key);
+        ctx->len--;
+        return NULL;
+    }
+    return g;
+}
+
+/* Simple detector: core.action entry that belongs to omkafka */
+static int is_core_action_omkafka(const char *origin, const char *name) {
+    return (strcmp(origin, "core.action") == 0) && (strstr(name, "omkafka") != NULL);
+}
+
+/* Parse once and read "origin" and "name" via libfastjson (robust), minimizing overhead. */
+static void parse_origin_name(const char *json, char *origin, size_t olen, char *name, size_t nlen) {
+    if (olen) origin[0] = '\0';
+    if (nlen) name[0] = '\0';
+
+    struct fjson_object *root = fjson_tokener_parse(json);
+    if (!root) {
+        if (olen) {
+            strncpy(origin, "unknown", olen - 1);
+            origin[olen - 1] = '\0';
+        }
+        return;
+    }
+
+    struct fjson_object *j = NULL;
+
+    if (fjson_object_object_get_ex(root, "origin", &j) && fjson_object_is_type(j, fjson_type_string)) {
+        const char *s = fjson_object_get_string(j);
+        if (s && olen) {
+            strncpy(origin, s, olen - 1);
+            origin[olen - 1] = '\0';
+        }
+    } else if (olen) {
+        strncpy(origin, "unknown", olen - 1);
+        origin[olen - 1] = '\0';
+    }
+
+    j = NULL;
+    if (fjson_object_object_get_ex(root, "name", &j) && fjson_object_is_type(j, fjson_type_string)) {
+        const char *s = fjson_object_get_string(j);
+        if (s && nlen) {
+            strncpy(name, s, nlen - 1);
+            name[nlen - 1] = '\0';
+        }
+    }
+
+    fjson_object_put(root);
+}
+
+/* Collector: called for each JSON stats line from statsobj (rendered as JSON). */
+static rsRetVal collectStats_zbx(void *usrptr, const char *const str) {
+    zbx_ctx_t *ctx = (zbx_ctx_t *)usrptr;
+
+    /* Parse minimal fields from the JSON line (once) */
+    char origin[128] = {0}, name[256] = {0};
+    parse_origin_name(str, origin, sizeof(origin), name, sizeof(name));
+
+    /* Remap core.action/omkafka lines into stats_omkafka_local (no JSON mutation) */
+    if (is_core_action_omkafka(origin, name)) {
+        zbx_group_t *g = zbx_find_or_create_group(ctx, "stats_omkafka_local");
+        if (!g) return RS_RET_ERR;
+        if (!g->first) es_addChar(&g->arr, ',');
+        es_addBuf(&g->arr, str, strlen(str));
+        g->first = 0;
+        g->count++;
+        return RS_RET_OK;
+    }
+
+    /* Standard grouping */
+    char or_sanit[128];
+    sanitize_origin(origin, or_sanit, sizeof(or_sanit));
+    char keybuf[256];
+
+    if (is_dual_origin(origin)) {
+        /* strict equality check for global vs local */
+        int is_global = (name[0] != '\0' && !strcmp(origin, name));
+        snprintf(keybuf, sizeof(keybuf), "stats_%s_%s", or_sanit, is_global ? "global" : "local");
+    } else {
+        snprintf(keybuf, sizeof(keybuf), "stats_%s", or_sanit);
+    }
+
+    zbx_group_t *g = zbx_find_or_create_group(ctx, keybuf);
+    if (!g) return RS_RET_ERR;
+    if (!g->first) es_addChar(&g->arr, ',');
+    es_addBuf(&g->arr, str, strlen(str));
+    g->first = 0;
+    g->count++;
+    return RS_RET_OK;
+}
+
+/* Build one grouped object and emit it as a single line */
+static void generateZabbixStats(void) {
+    /* Update resource counters (safe/optional) */
+    struct rusage ru;
+    if (getrusage(RUSAGE_SELF, &ru) == 0) {
+        st_ru_utime = ru.ru_utime.tv_sec * 1000000 + ru.ru_utime.tv_usec;
+        st_ru_stime = ru.ru_stime.tv_sec * 1000000 + ru.ru_stime.tv_usec;
+        st_ru_maxrss = ru.ru_maxrss;
+        st_ru_minflt = ru.ru_minflt;
+        st_ru_majflt = ru.ru_majflt;
+        st_ru_inblock = ru.ru_inblock;
+        st_ru_oublock = ru.ru_oublock;
+        st_ru_nvcsw = ru.ru_nvcsw;
+        st_ru_nivcsw = ru.ru_nivcsw;
+    }
+#ifdef OS_LINUX
+    countOpenFiles();
+#endif
+
+    /* Collect and group */
+    zbx_ctx_t ctx = {.groups = NULL, .len = 0, .cap = 0};
+#ifdef DEBUG_ZABBIX
+    DBGPRINTF("impstats: generateZabbixStats() start\n");
+#endif
+    statsobj.GetAllStatsLines(collectStats_zbx, &ctx, statsFmt_JSON, runModConf->bResetCtrs);
+
+    /* Timestamp */
+    time_t t = time(NULL);
+    char timebuf[32];
+#if defined(OS_LINUX) || defined(_POSIX_VERSION)
+    struct tm tm_local;
+    localtime_r(&t, &tm_local);
+    strftime(timebuf, sizeof(timebuf), "%a %b %d %H:%M:%S %Y", &tm_local);
+#else
+    strftime(timebuf, sizeof(timebuf), "%a %b %d %H:%M:%S %Y", localtime(&t));
+#endif
+
+    /* Build final grouped JSON */
+    es_str_t *finalJson = es_newStrFromCStr("{ \"timedate\": \"", strlen("{ \"timedate\": \""));
+    if (finalJson == NULL) {
+        LogError(0, RS_RET_OUT_OF_MEMORY, "impstats: fn() generateZabbixStats: could not create finalJson string");
+        /* cleanup of ctx is handled at the end of the function, so we can just return */
+        return;
+    }
+    es_addBuf(&finalJson, timebuf, strlen(timebuf));
+    es_addBuf(&finalJson, "\"", 1);
+
+    /* Append each group in insertion order */
+    for (size_t i = 0; i < ctx.len; ++i) {
+        es_addBuf(&finalJson, ", \"", 3);
+        es_addBuf(&finalJson, ctx.groups[i].key, strlen(ctx.groups[i].key));
+        es_addBuf(&finalJson, "\": ", 3);
+        /* close group's array */
+        es_addBuf(&ctx.groups[i].arr, "]", 1);
+        es_addBuf(&finalJson, (const char *)es_getBufAddr(ctx.groups[i].arr), es_strlen(ctx.groups[i].arr));
+    }
+    es_addChar(&finalJson, '}');
+
+#ifdef DEBUG_ZABBIX
+    DBGPRINTF("impstats: Zabbix: %zu groups emitted\n", ctx.len);
+#endif
+
+    /* Emit */
+    char *out = es_str2cstr(finalJson, NULL);
+    submitLine(out, strlen(out));
+    free(out);
+
+    /* Cleanup */
+    for (size_t i = 0; i < ctx.len; ++i) {
+        es_deleteStr(ctx.groups[i].arr);
+        free(ctx.groups[i].key);
+    }
+    free(ctx.groups);
+    es_deleteStr(finalJson);
+}

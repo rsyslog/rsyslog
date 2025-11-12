@@ -32,6 +32,7 @@ included in the string.
 
 Input usage
 -----------
+.. _param-mmexternal-input-binary:
 .. _mmexternal.parameter.input.binary-usage:
 
 .. code-block:: rsyslog
