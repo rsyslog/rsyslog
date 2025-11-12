@@ -44,9 +44,7 @@ Configuration Parameters
 Module Parameters
 -----------------
 
-The omdtls module currently exposes no effective module-only parameters. The
-compatibility placeholder :ref:`template parameter <param-omdtls-template>` is
-documented below because it only affects individual actions.
+The omdtls module currently exposes no effective module-only parameters.
 
 Action Parameters
 -----------------
