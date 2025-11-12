@@ -64,6 +64,10 @@ Action Parameters
 
    * - Parameter
      - Summary
+   * - :ref:`param-omdtls-template`
+     - .. include:: ../../reference/parameters/omdtls-template.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-omdtls-target`
      - .. include:: ../../reference/parameters/omdtls-target.rst
         :start-after: .. summary-start
