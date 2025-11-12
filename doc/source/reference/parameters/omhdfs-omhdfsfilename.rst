@@ -43,7 +43,8 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omhdfs.parameter.legacy.omhdfsfilename:
 
-- ``$OMHDFSFileName`` — maps to ``omhdfsFileName`` (status: legacy)
+- ``$OMHDFSFileName`` — maps to ``omhdfsFileName``
+  (status: legacy)
 
 .. index::
    single: omhdfs; $OMHDFSFileName

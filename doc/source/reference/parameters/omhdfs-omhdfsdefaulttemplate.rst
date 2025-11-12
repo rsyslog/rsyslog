@@ -47,7 +47,8 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omhdfs.parameter.legacy.omhdfsdefaulttemplate:
 
-- ``$OMHDFSDefaultTemplate`` — maps to ``omhdfsDefaultTemplate`` (status: legacy)
+- ``$OMHDFSDefaultTemplate`` — maps to ``omhdfsDefaultTemplate``
+  (status: legacy)
 
 .. index::
    single: omhdfs; $OMHDFSDefaultTemplate

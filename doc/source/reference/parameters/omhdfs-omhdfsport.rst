@@ -46,7 +46,8 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omhdfs.parameter.legacy.omhdfsport:
 
-- ``$OMHDFSPort`` — maps to ``omhdfsPort`` (status: legacy)
+- ``$OMHDFSPort`` — maps to ``omhdfsPort``
+  (status: legacy)
 
 .. index::
    single: omhdfs; $OMHDFSPort

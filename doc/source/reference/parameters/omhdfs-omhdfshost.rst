@@ -45,7 +45,8 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omhdfs.parameter.legacy.omhdfshost:
 
-- ``$OMHDFSHost`` — maps to ``omhdfsHost`` (status: legacy)
+- ``$OMHDFSHost`` — maps to ``omhdfsHost``
+  (status: legacy)
 
 .. index::
    single: omhdfs; $OMHDFSHost
