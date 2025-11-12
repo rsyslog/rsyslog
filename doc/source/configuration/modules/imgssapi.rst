@@ -20,18 +20,14 @@ Note: This is a contributed module, which is not supported by the
 rsyslog team. We recommend to use RFC5425 TLS-protected syslog
 instead.
 
-.. toctree::
-   :maxdepth: 1
-
-   gssapi
-
-
 Configuration Parameters
 ========================
 
 .. note::
 
    Parameter names are case-insensitive; camelCase is recommended for readability.
+
+For client-side forwarding using GSSAPI, see :doc:`omgssapi <omgssapi>`.
 
 
 Input Parameters

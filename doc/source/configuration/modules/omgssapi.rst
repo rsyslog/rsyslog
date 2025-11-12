@@ -71,3 +71,54 @@ The picture demonstrate how things work.
 
    rsyslog gssapi support
 
+
+Configuration Parameters
+========================
+
+.. note::
+
+   Parameter names are case-insensitive; camelCase is recommended for readability.
+
+Module Parameters
+-----------------
+
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Parameter
+     - Summary
+   * - :ref:`param-omgssapi-gssforwardservicename`
+     - .. include:: ../../reference/parameters/omgssapi-gssforwardservicename.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omgssapi-gssmode`
+     - .. include:: ../../reference/parameters/omgssapi-gssmode.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omgssapi-actiongssforwarddefaulttemplate`
+     - .. include:: ../../reference/parameters/omgssapi-actiongssforwarddefaulttemplate.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+
+Action Parameters
+-----------------
+
+The ``omgssapi`` action is configured via module parameters. In modern
+``action()`` syntax, it takes a ``target`` parameter and can optionally have a ``template`` assigned.
+
+Legacy ``:omgssapi:`` syntax is also supported and includes options for
+compression and TCP framing. These are specified in parentheses after the
+selector, for example ``:omgssapi:(z5,o)hostname``.
+
+-  **z[0-9]**: Enables zlib compression. The optional digit specifies the
+   compression level (0-9). Defaults to 9 if no digit is given.
+-  **o**: Enables octet-counted TCP framing.
+
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/omgssapi-gssforwardservicename
+   ../../reference/parameters/omgssapi-gssmode
+   ../../reference/parameters/omgssapi-actiongssforwarddefaulttemplate
+
