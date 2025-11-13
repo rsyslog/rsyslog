@@ -64,16 +64,16 @@ Action Parameters
 
    * - Parameter
      - Summary
-   * - :ref:`param-omdtls-template`
-     - .. include:: ../../reference/parameters/omdtls-template.rst
-        :start-after: .. summary-start
-        :end-before: .. summary-end
    * - :ref:`param-omdtls-target`
      - .. include:: ../../reference/parameters/omdtls-target.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`param-omdtls-port`
      - .. include:: ../../reference/parameters/omdtls-port.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omdtls-template`
+     - .. include:: ../../reference/parameters/omdtls-template.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`param-omdtls-tls-authmode`
@@ -100,9 +100,9 @@ Action Parameters
 .. toctree::
    :hidden:
 
-   ../../reference/parameters/omdtls-template
    ../../reference/parameters/omdtls-target
    ../../reference/parameters/omdtls-port
+   ../../reference/parameters/omdtls-template
    ../../reference/parameters/omdtls-tls-authmode
    ../../reference/parameters/omdtls-tls-cacert
    ../../reference/parameters/omdtls-tls-mycert
