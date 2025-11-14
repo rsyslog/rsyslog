@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/omjournal`.
 :Name: template
 :Scope: module
 :Type: word
-:Default: module=none
+:Default: none
 :Required?: no
 :Introduced: Not documented
 
