@@ -29,7 +29,7 @@ Used to pass additional OpenSSL configuration commands. This can be used to
 fine-tune the OpenSSL settings by passing configuration commands to the OpenSSL
 library. OpenSSL Version 1.0.2 or higher is required for this feature. A list of
 possible commands and their valid values can be found in the documentation:
-https://www.openssl.org/docs/man1.1.1/man3/SSL_CONF_cmd.html
+https://www.openssl.org/docs/man3/SSL_CONF_cmd.html
 
 The setting can be single or multiline, each configuration command is separated
 by linefeed (``\n``). Command and value are separated by an equal sign (``=``).
