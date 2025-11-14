@@ -1,12 +1,12 @@
 .. _param-omjournal-template:
 .. _omjournal.parameter.module.template:
 
-Template
+template
 ========
 
 .. index::
-   single: omjournal; Template
-   single: Template
+   single: omjournal; template
+   single: template
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Selects the template that formats journal entries before they are written.
 
 This parameter applies to :doc:`../../configuration/modules/omjournal`.
 
-:Name: Template
+:Name: template
 :Scope: module
 :Type: word
 :Default: module=none
