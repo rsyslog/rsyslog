@@ -77,6 +77,12 @@ static pthread_mutex_t mutGtlsStrerror;
 
 static gnutls_dh_params_t dh_params; /**< server DH parameters for anon mode */
 
+/* Module-level bitfield for warnings that have been logged (shared across all instances)
+ * NOTE: Intentionally NOT thread-safe. Occasional duplicate warnings (1-2) are acceptable
+ * vs. thousands without this mechanism. Atomic ops/locks are overkill for startup warnings.
+ */
+static unsigned loggedWarnings = 0;
+
 /* bitfield for warnings that have been logged */
 enum {
     GTLS_LOGGED_WARN_CERT_MISSING = 1 << 0,
@@ -674,13 +680,14 @@ static rsRetVal gtlsAddOurCert(nsd_gtls_t *const pThis) {
     keyFile = (pThis->pszKeyFile == NULL) ? glbl.GetDfltNetstrmDrvrKeyFile(runConf) : pThis->pszKeyFile;
     dbgprintf("GTLS certificate file: '%s'\n", certFile);
     dbgprintf("GTLS key file: '%s'\n", keyFile);
-    if (certFile == NULL && !(pThis->loggedWarnings & GTLS_LOGGED_WARN_CERT_MISSING)) {
-        LogMsg(0, RS_RET_CERT_MISSING, LOG_WARNING, "warning: certificate file is not set");
-        pThis->loggedWarnings |= GTLS_LOGGED_WARN_CERT_MISSING;
+
+    if (certFile == NULL && !(loggedWarnings & GTLS_LOGGED_WARN_CERT_MISSING)) {
+        LogError(0, RS_RET_CERT_MISSING, "warning: certificate file is not set");
+        loggedWarnings |= GTLS_LOGGED_WARN_CERT_MISSING;
     }
-    if (keyFile == NULL && !(pThis->loggedWarnings & GTLS_LOGGED_WARN_KEY_MISSING)) {
-        LogMsg(0, RS_RET_CERTKEY_MISSING, LOG_WARNING, "warning: key file is not set");
-        pThis->loggedWarnings |= GTLS_LOGGED_WARN_KEY_MISSING;
+    if (keyFile == NULL && !(loggedWarnings & GTLS_LOGGED_WARN_KEY_MISSING)) {
+        LogError(0, RS_RET_CERTKEY_MISSING, "warning: key file is not set");
+        loggedWarnings |= GTLS_LOGGED_WARN_KEY_MISSING;
     }
 
     /* set certificate in gnutls */
@@ -757,10 +764,11 @@ static rsRetVal gtlsInitCred(nsd_gtls_t *const pThis) {
 
     /* sets the trusted cas file */
     cafile = (pThis->pszCAFile == NULL) ? glbl.GetDfltNetstrmDrvrCAF(runConf) : pThis->pszCAFile;
-    if (cafile == NULL && !(pThis->loggedWarnings & GTLS_LOGGED_WARN_CA_MISSING)) {
-        LogMsg(0, RS_RET_CA_CERT_MISSING, LOG_WARNING, "Warning: CA certificate is not set");
-        pThis->loggedWarnings |= GTLS_LOGGED_WARN_CA_MISSING;
-    } else {
+    if (cafile == NULL && !(loggedWarnings & GTLS_LOGGED_WARN_CA_MISSING)) {
+        LogError(0, RS_RET_CA_CERT_MISSING, "Warning: CA certificate is not set");
+        loggedWarnings |= GTLS_LOGGED_WARN_CA_MISSING;
+    }
+    if (cafile != NULL) {
         dbgprintf("GTLS CA file: '%s'\n", cafile);
         gnuRet = gnutls_certificate_set_x509_trust_file(pThis->xcred, (char *)cafile, GNUTLS_X509_FMT_PEM);
         if (gnuRet == GNUTLS_E_FILE_ERROR) {
@@ -1432,7 +1440,6 @@ static inline void gtlsSetTransportPtr(nsd_gtls_t *pThis, int sock) {
 BEGINobjConstruct(nsd_gtls) /* be sure to specify the object type also in END macro! */
     iRet = nsd_ptcp.Construct(&pThis->pTcp);
     pThis->bReportAuthErr = 1;
-    pThis->loggedWarnings = 0;
 ENDobjConstruct(nsd_gtls)
 
 
