@@ -68,7 +68,7 @@ struct action_s {
     /* should all mark msgs be written (not matter how recent the action was executed)? */
     sbool bReportSuspension; /* should suspension (and reactivation) of the action reported */
     sbool bReportSuspensionCont;
-    sbool bDisabled;
+    int bDisabled; /* disable flag; accessed atomically via mutCAS helper */
     sbool isTransactional;
     sbool bCopyMsg;
     int iSecsExecOnceInterval; /* if non-zero, minimum seconds to wait until action is executed again */
@@ -116,6 +116,22 @@ struct action_s {
     STATSCOUNTER_DEF(ctrSuspendDuration, mutCtrSuspendDuration)
     STATSCOUNTER_DEF(ctrResume, mutCtrResume)
 };
+
+static inline int actionLoadDisabled(action_t *const pAction) {
+    return ATOMIC_FETCH_32BIT(&pAction->bDisabled, &pAction->mutCAS);
+}
+
+static inline void actionStoreDisabled(action_t *const pAction, const int value) {
+    if (value == 0) {
+        ATOMIC_STORE_0_TO_INT(&pAction->bDisabled, &pAction->mutCAS);
+    } else {
+        ATOMIC_STORE_1_TO_INT(&pAction->bDisabled, &pAction->mutCAS);
+    }
+}
+
+static inline int actionIsDisabled(action_t *const pAction) {
+    return actionLoadDisabled(pAction) != 0;
+}
 
 
 /* function prototypes */
