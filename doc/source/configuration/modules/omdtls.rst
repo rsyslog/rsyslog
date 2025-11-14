@@ -96,6 +96,10 @@ Action Parameters
      - .. include:: ../../reference/parameters/omdtls-tls-tlscfgcmd.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-omdtls-statsname`
+     - .. include:: ../../reference/parameters/omdtls-statsname.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 .. toctree::
    :hidden:
@@ -108,6 +112,7 @@ Action Parameters
    ../../reference/parameters/omdtls-tls-mycert
    ../../reference/parameters/omdtls-tls-myprivkey
    ../../reference/parameters/omdtls-tls-tlscfgcmd
+   ../../reference/parameters/omdtls-statsname
 
 
 .. _statistics-counter_omdtls_label:
