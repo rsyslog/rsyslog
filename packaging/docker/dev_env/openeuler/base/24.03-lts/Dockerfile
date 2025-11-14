@@ -55,6 +55,7 @@ RUN     dnf -y install \
         libtool \
         libuuid-devel \
         libxml2-devel \
+        libyaml-devel \
         libzstd-devel \
         logrotate \
         lsof \

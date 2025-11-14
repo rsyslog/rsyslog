@@ -54,6 +54,7 @@ RUN 	apt-get update && \
 	libtokyocabinet-dev \
 	libtool \
 	libtool-bin \
+	libyaml-dev \
 	libzstd-dev \
 	logrotate \
 	lsof \
