@@ -26,7 +26,7 @@ This parameter applies to :doc:`../../configuration/modules/omdtls`.
 Description
 -----------
 This parameter assigns a unique name to a dedicated statistics counter for the
-`omdtls` action instance. When set, rsyslog tracks separate "submitted" and
+``omdtls`` action instance. When set, rsyslog tracks separate "submitted" and
 "failures" counters for this action that can be retrieved via the
 :doc:`impstats <../../configuration/modules/impstats>` module by referencing the
 specified name. This makes it easier to monitor the performance and health of
