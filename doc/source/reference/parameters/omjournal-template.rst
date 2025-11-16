@@ -1,5 +1,5 @@
 .. _param-omjournal-template:
-.. _omjournal.parameter.module.template:
+.. _omjournal.parameter.input.template:
 
 template
 ========
@@ -17,7 +17,7 @@ Selects the template that formats journal entries before they are written.
 This parameter applies to :doc:`../../configuration/modules/omjournal`.
 
 :Name: template
-:Scope: module
+:Scope: input
 :Type: word
 :Default: none
 :Required?: no
@@ -37,10 +37,10 @@ fields will be coerced to strings.
 
 Journald requires that you include a template parameter named ``MESSAGE``.
 
-Module usage
-------------
-.. _param-omjournal-module-template:
-.. _omjournal.parameter.module.template-usage:
+Input usage
+-----------
+.. _param-omjournal-input-template:
+.. _omjournal.parameter.input.template-usage:
 
 .. code-block:: rsyslog
 
