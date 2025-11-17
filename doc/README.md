@@ -199,12 +199,11 @@ If you prefer the manual route instead of the helper script above:
 
 ### JSON-LD metadata and author resolution
 
-JSON-LD is injected only when explicitly enabled. The recommended path is the
-`webhtml` build target (`make -C doc webhtml`), but it can also be toggled for
-other HTML builds by exporting `ENABLE_JSON_LD=1` (or `RSYSLOG_DOC_BUILD_TARGET=webhtml`)
-before running Sphinx. Regular `html` builds stay as thin as they are today unless
-one of those flags is set.【F:doc/source/conf.py†L371-L625】 Author detection for that
-JSON-LD block follows this order:
+JSON-LD is injected by default for HTML documentation builds. To skip emitting it
+(useful for package maintainers who want to minimize offline footprint), run the
+build with `DISABLE_JSON_LD=1` in the environment before invoking Sphinx or
+`make -C doc html`.【F:doc/source/conf.py†L371-L627】 Author detection for that JSON-LD
+block follows this order:
 
 1. Use `:author:` or `:authors:` from a page's ``.. meta::`` block. If multiple
    authors are provided, only the first is used.【F:doc/source/conf.py†L593-L603】
@@ -224,7 +223,8 @@ specific author on a page, add an author entry to its ``.. meta::`` block:
    :description: Short synopsis for search and JSON-LD.
 ```
 
-This value will be used for the JSON-LD ``author`` field during `webhtml` builds.
+This value will be used for the JSON-LD ``author`` field during HTML builds unless
+`DISABLE_JSON_LD` is set.
 
 ## CI deployment to GitHub Pages
 

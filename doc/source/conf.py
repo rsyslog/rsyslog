@@ -368,11 +368,8 @@ suppress_warnings = ['epub.unknown_project_files']
 RSYSLOG_BASE_URL = 'https://www.rsyslog.com'
 html_baseurl = f'{RSYSLOG_BASE_URL}/doc/'
 
-RSYSLOG_DOC_BUILD_TARGET = os.environ.get('RSYSLOG_DOC_BUILD_TARGET', '')
-ENABLE_JSON_LD = (
-    os.environ.get('ENABLE_JSON_LD', '').lower() in ('1', 'true', 'yes')
-    or RSYSLOG_DOC_BUILD_TARGET == 'webhtml'
-)
+DISABLE_JSON_LD = os.environ.get('DISABLE_JSON_LD', '').lower() in ('1', 'true', 'yes')
+ENABLE_JSON_LD = not DISABLE_JSON_LD
 
 # Enable sitemap generation only when explicitly requested
 if tags.has('with_sitemap'):

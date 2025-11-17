@@ -6,14 +6,12 @@ SPHINXBUILD ?= sphinx-build
 SOURCEDIR = source
 BUILDDIR = build
 
-export RSYSLOG_DOC_BUILD_TARGET ?= $(firstword $(MAKECMDGOALS))
-
 # Function to add parallel jobs from MAKEFLAGS to SPHINXOPTS
 define add_parallel_jobs
-	$(eval SPHINXOPTS += $(if $(filter -j%,$(SPHINXOPTS)),,$(filter -j%,$(MAKEFLAGS))))
+        $(eval SPHINXOPTS += $(if $(filter -j%,$(SPHINXOPTS)),,$(filter -j%,$(MAKEFLAGS))))
 endef
 
-.PHONY: help clean html webhtml html-with-sitemap singlehtml json alljson
+.PHONY: help clean html html-with-sitemap singlehtml json alljson
 
 help:
 	@$(call add_parallel_jobs)
@@ -22,7 +20,7 @@ help:
 clean:
 	rm -rf "$(BUILDDIR)"
 
-html webhtml:
+html:
 	@$(call add_parallel_jobs)
 	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 	@echo "Applying Mermaid offline fix..."
