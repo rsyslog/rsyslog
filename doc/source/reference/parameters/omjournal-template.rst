@@ -31,9 +31,9 @@ By default, rsyslog will use the incoming ``%msg%`` as the ``MESSAGE`` field
 of the journald entry, and include the syslog tag and priority.
 
 You can override the default formatting of the message, and include
-custom fields with a template. Complex fields in the template
-(e.g. json entries) will be added to the journal as json text. Other
-fields will be coerced to strings.
+custom fields with a template. The values of fields from the template's
+JSON output are converted to strings before being sent to journald. For
+example, a JSON object becomes a JSON-formatted string.
 
 Journald requires that you include a template parameter named ``MESSAGE``.
 
