@@ -11,8 +11,12 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
+import json
 import os
 import sys
+from urllib.parse import urljoin
+
+from docutils import nodes
 
 # Module for our custom functions. Used with automating build info.
 sys.path.append(os.getcwd())
@@ -366,6 +370,9 @@ suppress_warnings = ['epub.unknown_project_files']
 RSYSLOG_BASE_URL = 'https://www.rsyslog.com'
 html_baseurl = f'{RSYSLOG_BASE_URL}/doc/'
 
+DISABLE_JSON_LD = os.environ.get('DISABLE_JSON_LD', '').lower() in ('1', 'true', 'yes')
+ENABLE_JSON_LD = not DISABLE_JSON_LD
+
 # Enable sitemap generation only when explicitly requested
 if tags.has('with_sitemap'):
     try:
@@ -574,6 +581,96 @@ epub_description = u'Documentation for the rsyslog project'
 # Include our custom stylesheet in addition to specified theme
 def setup(app):
     app.add_css_file('rsyslog.css')
+
+    if ENABLE_JSON_LD:
+        app.connect('html-page-context', _add_json_ld_to_context)
+
+
+def _add_json_ld_to_context(app, pagename, templatename, context, doctree):
+    if app.builder.format != 'html':
+        return
+
+    canonical_url = urljoin(html_baseurl, f"{pagename}.html")
+
+    meta = context.get('meta')
+
+    author_name = None
+    if isinstance(meta, dict):
+        author_name = meta.get('author') or meta.get('authors')
+        if isinstance(author_name, list):
+            author_name = author_name[0] if author_name else None
+
+    if not author_name:
+        author_name = context.get('author') or author
+
+    faq_entries = _extract_faq_entries(doctree) if pagename.startswith('faq/') else []
+
+    json_ld = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage" if faq_entries else "TechArticle",
+        "headline": context.get('title', pagename),
+        "author": author_name,
+        "url": canonical_url,
+        "inLanguage": context.get('language', app.config.language) or 'en',
+    }
+
+    if faq_entries:
+        json_ld['mainEntity'] = faq_entries
+
+    description = None
+    if isinstance(meta, dict):
+        description = meta.get('description')
+        if isinstance(description, list) and description:
+            description = description[0]
+
+    if description:
+        json_ld['description'] = description
+
+    metatags = context.get('metatags', '')
+    json_ld_string = json.dumps(json_ld, indent=2)
+    script_tag = f'\n<script type="application/ld+json">\n{json_ld_string}\n</script>\n'
+    context['metatags'] = metatags + script_tag
+
+
+def _extract_faq_entries(doctree):
+    faq_entries = []
+
+    if doctree is None:
+        return faq_entries
+
+    for section in doctree.traverse(nodes.section):
+        title_node = section.next_node(nodes.title)
+        if title_node is None:
+            continue
+
+        question = title_node.astext().strip()
+        if not question:
+            continue
+
+        answers = []
+        for child in section.children:
+            if isinstance(child, nodes.title):
+                continue
+
+            text = child.astext().strip()
+            if text:
+                answers.append(text)
+
+        if not answers:
+            continue
+
+        faq_entries.append(
+            {
+                "@type": "Question",
+                "name": question,
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "\n\n".join(answers),
+                },
+            }
+        )
+
+    return faq_entries
 
 # -- Conditional settings for minimal singlehtml build ----------------------------
 # This block is activated by the '-t minimal_build' tag passed from the Makefile

@@ -124,3 +124,24 @@ Maintenance
 - Review docs at every release for outdated content.
 - Check for deprecated parameters and move them to Legacy.
 - Run `make linkcheck` to verify links.
+
+Metadata and JSON-LD
+--------------------
+
+- Add a ``.. meta::`` block near the top of each page to keep HTML meta tags and
+  JSON-LD in sync. Populate at least ``:description:`` and ``:keywords:``, and
+  set ``:author:`` when the page has a specific owner.
+
+  .. code-block:: rst
+
+     .. meta::
+        :author: Ada Writer
+        :description: One-line summary reused in JSON-LD and previews.
+        :keywords: rsyslog, queues, reliability
+
+- FAQ pages (``faq/*.rst``) automatically emit ``FAQPage`` JSON-LD. Write each
+  question as the section title and keep the answer in the section body so the
+  extractor can pair them correctly.
+- Generative AI assistants should preserve existing ``.. meta::`` blocks,
+  update only the specific fields required for a change, and avoid inventing
+  authors when none are provided.

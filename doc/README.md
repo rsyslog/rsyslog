@@ -197,6 +197,60 @@ If you prefer the manual route instead of the helper script above:
 
 ---
 
+### JSON-LD metadata and author resolution
+
+JSON-LD is injected by default for HTML documentation builds. To skip emitting it
+(useful for package maintainers who want to minimize offline footprint), run the
+build with `DISABLE_JSON_LD=1` in the environment before invoking Sphinx or
+`make -C doc html`.【F:doc/source/conf.py†L370-L633】 Author detection for that JSON-LD
+block follows this order:
+
+1. Use `:author:` or `:authors:` from a page's ``.. meta::`` block. If multiple
+   authors are provided, only the first is used.【F:doc/source/conf.py†L595-L604】
+2. Fall back to the page context's ``author`` value if Sphinx sets one.
+3. Fall back to the global `author` configured in ``conf.py``
+   (``Rainer Gerhards and Others``).【F:doc/source/conf.py†L603-L604】
+
+Most existing pages define only description/keyword metadata, so they inherit the
+global author. For example, ``doc/source/concepts/log_pipeline/stages.rst`` has a
+``.. meta::`` block without an author entry, so the JSON-LD author defaults to
+the global value.【F:doc/source/concepts/log_pipeline/stages.rst†L1-L16】 To set a
+specific author on a page, add an author entry to its ``.. meta::`` block:
+
+```
+.. meta::
+   :author: Jane Doe
+   :description: Short synopsis for search and JSON-LD.
+```
+
+This value will be used for the JSON-LD ``author`` field during HTML builds unless
+`DISABLE_JSON_LD` is set.
+
+FAQ pages automatically emit ``FAQPage`` schema with one question/answer pair per
+section title and body. Other pages continue to use ``TechArticle`` by default.
+Set ``DISABLE_JSON_LD`` to suppress both forms during HTML builds (e.g., for
+space-constrained offline packages).【F:doc/source/conf.py†L606-L669】
+
+### Adding page metadata for JSON-LD
+
+Place a ``.. meta::`` block near the top of an ``.rst`` file to enrich the
+generated JSON-LD (and HTML meta tags). Populate ``:author:``,
+``:description:``, and ``:keywords:`` where appropriate. This keeps search
+snippets and structured data aligned for both human readers and generative AI
+consumers.
+
+```
+.. meta::
+   :author: Lee Documentation
+   :description: Short synopsis used in page previews and JSON-LD.
+   :keywords: rsyslog, queue, reliability
+```
+
+FAQ pages (``doc/source/faq/*.rst``) automatically produce ``FAQPage`` JSON-LD.
+Write each question as a section title and include the answer in the section
+body. Use a ``.. meta::`` block to add a synopsis for that FAQ page so language
+models and search engines see concise context in the emitted JSON-LD.
+
 ## CI deployment to GitHub Pages
 
 A GitHub Actions workflow automatically builds and deploys documentation previews for pull requests and updates the main documentation site.

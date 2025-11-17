@@ -8,7 +8,7 @@ BUILDDIR = build
 
 # Function to add parallel jobs from MAKEFLAGS to SPHINXOPTS
 define add_parallel_jobs
-	$(eval SPHINXOPTS += $(if $(filter -j%,$(SPHINXOPTS)),,$(filter -j%,$(MAKEFLAGS))))
+        $(eval SPHINXOPTS += $(if $(filter -j%,$(SPHINXOPTS)),,$(filter -j%,$(MAKEFLAGS))))
 endef
 
 .PHONY: help clean html html-with-sitemap singlehtml json alljson
