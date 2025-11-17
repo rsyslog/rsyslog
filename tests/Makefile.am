@@ -510,6 +510,7 @@ TESTS += \
 	mmsnareparse-comprehensive.sh \
 	mmsnareparse-value-types.sh \
 	mmsnareparse-enhanced-validation.sh \
+	mmsnareparse-sysmon.sh \
 	mmsnareparse-kerberos.sh \
 	mmsnareparse-custom.sh \
 	mmsnareparse-realworld-4624-4634-5140.sh
@@ -2089,6 +2090,7 @@ EXTRA_DIST= \
         mmsnareparse-custom.sh \
         mmsnareparse-enhanced-validation.sh \
         mmsnareparse-json.sh \
+        mmsnareparse-sysmon.sh \
         mmsnareparse-kerberos.sh \
         mmsnareparse-realworld-4624-4634-5140.sh \
         mmsnareparse-syslog.sh \
