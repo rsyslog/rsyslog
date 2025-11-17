@@ -31,7 +31,7 @@ Module usage
 ------------
 .. _omhdfs.parameter.module.omhdfshost-usage:
 
-.. code-block:: rsyslog
+.. code-block:: none
 
    $ModLoad omhdfs
    $omhdfsHost hdfs01.example.net

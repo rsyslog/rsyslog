@@ -99,7 +99,7 @@ Examples
 Example 1
 ---------
 
-.. code-block:: rsyslog
+.. code-block:: none
 
    $ModLoad omhdfs
    $omhdfsFileName /var/log/hdfs/system.log

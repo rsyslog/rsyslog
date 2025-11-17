@@ -33,7 +33,7 @@ Module usage
 ------------
 .. _omhdfs.parameter.module.omhdfsdefaulttemplate-usage:
 
-.. code-block:: rsyslog
+.. code-block:: none
 
    $ModLoad omhdfs
    $omhdfsFileName /var/log/hdfs/system.log
