@@ -11,8 +11,10 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 
+import json
 import os
 import sys
+from urllib.parse import urljoin
 
 # Module for our custom functions. Used with automating build info.
 sys.path.append(os.getcwd())
@@ -366,6 +368,9 @@ suppress_warnings = ['epub.unknown_project_files']
 RSYSLOG_BASE_URL = 'https://www.rsyslog.com'
 html_baseurl = f'{RSYSLOG_BASE_URL}/doc/'
 
+RSYSLOG_DOC_BUILD_TARGET = os.environ.get('RSYSLOG_DOC_BUILD_TARGET', '')
+ENABLE_JSON_LD = RSYSLOG_DOC_BUILD_TARGET == 'webhtml'
+
 # Enable sitemap generation only when explicitly requested
 if tags.has('with_sitemap'):
     try:
@@ -574,6 +579,51 @@ epub_description = u'Documentation for the rsyslog project'
 # Include our custom stylesheet in addition to specified theme
 def setup(app):
     app.add_css_file('rsyslog.css')
+
+    if ENABLE_JSON_LD:
+        app.connect('html-page-context', _add_json_ld_to_context)
+
+
+def _add_json_ld_to_context(app, pagename, templatename, context, doctree):
+    if app.builder.format != 'html':
+        return
+
+    canonical_url = urljoin(html_baseurl, f"{pagename}.html")
+
+    meta = context.get('meta')
+
+    author_name = None
+    if isinstance(meta, dict):
+        author_name = meta.get('author') or meta.get('authors')
+        if isinstance(author_name, list):
+            author_name = author_name[0] if author_name else None
+
+    if not author_name:
+        author_name = context.get('author') or author
+
+    json_ld = {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": context.get('title', pagename),
+        "author": author_name,
+        "url": canonical_url,
+        "inLanguage": context.get('language', app.config.language) or 'en',
+    }
+
+    description = None
+    if isinstance(meta, dict):
+        description = meta.get('description')
+        if isinstance(description, list) and description:
+            description = description[0]
+
+    if description:
+        json_ld['description'] = description
+
+    metatags = context.get('metatags', '')
+    metatags += "\n<script type=\"application/ld+json\">\n"
+    metatags += json.dumps(json_ld, indent=2)
+    metatags += "\n</script>\n"
+    context['metatags'] = metatags
 
 # -- Conditional settings for minimal singlehtml build ----------------------------
 # This block is activated by the '-t minimal_build' tag passed from the Makefile

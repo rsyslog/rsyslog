@@ -197,6 +197,33 @@ If you prefer the manual route instead of the helper script above:
 
 ---
 
+### JSON-LD metadata and author resolution
+
+JSON-LD is injected only for the `webhtml` build target, which is selected by
+running `make -C doc webhtml` (or by exporting `RSYSLOG_DOC_BUILD_TARGET=webhtml`
+for a direct Sphinx build).【F:doc/source/conf.py†L371-L625】 Author detection for
+that JSON-LD block follows this order:
+
+1. Use `:author:` or `:authors:` from a page's ``.. meta::`` block. If multiple
+   authors are provided, only the first is used.【F:doc/source/conf.py†L593-L603】
+2. Fall back to the page context's ``author`` value if Sphinx sets one.
+3. Fall back to the global `author` configured in ``conf.py``
+   (``Rainer Gerhards and Others``).【F:doc/source/conf.py†L601-L603】
+
+Most existing pages define only description/keyword metadata, so they inherit the
+global author. For example, ``doc/source/concepts/log_pipeline/stages.rst`` has a
+``.. meta::`` block without an author entry, so the JSON-LD author defaults to
+the global value.【F:doc/source/concepts/log_pipeline/stages.rst†L1-L16】 To set a
+specific author on a page, add an author entry to its ``.. meta::`` block:
+
+```
+.. meta::
+   :author: Jane Doe
+   :description: Short synopsis for search and JSON-LD.
+```
+
+This value will be used for the JSON-LD ``author`` field during `webhtml` builds.
+
 ## CI deployment to GitHub Pages
 
 A GitHub Actions workflow automatically builds and deploys documentation previews for pull requests and updates the main documentation site.
