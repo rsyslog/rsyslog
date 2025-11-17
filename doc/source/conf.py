@@ -16,6 +16,8 @@ import os
 import sys
 from urllib.parse import urljoin
 
+from docutils import nodes
+
 # Module for our custom functions. Used with automating build info.
 sys.path.append(os.getcwd())
 import conf_helpers
@@ -601,14 +603,19 @@ def _add_json_ld_to_context(app, pagename, templatename, context, doctree):
     if not author_name:
         author_name = context.get('author') or author
 
+    faq_entries = _extract_faq_entries(doctree) if pagename.startswith('faq/') else []
+
     json_ld = {
         "@context": "https://schema.org",
-        "@type": "TechArticle",
+        "@type": "FAQPage" if faq_entries else "TechArticle",
         "headline": context.get('title', pagename),
         "author": author_name,
         "url": canonical_url,
         "inLanguage": context.get('language', app.config.language) or 'en',
     }
+
+    if faq_entries:
+        json_ld['mainEntity'] = faq_entries
 
     description = None
     if isinstance(meta, dict):
@@ -623,6 +630,47 @@ def _add_json_ld_to_context(app, pagename, templatename, context, doctree):
     json_ld_string = json.dumps(json_ld, indent=2)
     script_tag = f'\n<script type="application/ld+json">\n{json_ld_string}\n</script>\n'
     context['metatags'] = metatags + script_tag
+
+
+def _extract_faq_entries(doctree):
+    faq_entries = []
+
+    if doctree is None:
+        return faq_entries
+
+    for section in doctree.traverse(nodes.section):
+        title_node = section.next_node(nodes.title)
+        if title_node is None:
+            continue
+
+        question = title_node.astext().strip()
+        if not question:
+            continue
+
+        answers = []
+        for child in section.children:
+            if isinstance(child, nodes.title):
+                continue
+
+            text = child.astext().strip()
+            if text:
+                answers.append(text)
+
+        if not answers:
+            continue
+
+        faq_entries.append(
+            {
+                "@type": "Question",
+                "name": question,
+                "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "\n\n".join(answers),
+                },
+            }
+        )
+
+    return faq_entries
 
 # -- Conditional settings for minimal singlehtml build ----------------------------
 # This block is activated by the '-t minimal_build' tag passed from the Makefile

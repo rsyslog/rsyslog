@@ -202,14 +202,14 @@ If you prefer the manual route instead of the helper script above:
 JSON-LD is injected by default for HTML documentation builds. To skip emitting it
 (useful for package maintainers who want to minimize offline footprint), run the
 build with `DISABLE_JSON_LD=1` in the environment before invoking Sphinx or
-`make -C doc html`.【F:doc/source/conf.py†L371-L627】 Author detection for that JSON-LD
+`make -C doc html`.【F:doc/source/conf.py†L370-L633】 Author detection for that JSON-LD
 block follows this order:
 
 1. Use `:author:` or `:authors:` from a page's ``.. meta::`` block. If multiple
-   authors are provided, only the first is used.【F:doc/source/conf.py†L593-L603】
+   authors are provided, only the first is used.【F:doc/source/conf.py†L595-L604】
 2. Fall back to the page context's ``author`` value if Sphinx sets one.
 3. Fall back to the global `author` configured in ``conf.py``
-   (``Rainer Gerhards and Others``).【F:doc/source/conf.py†L601-L603】
+   (``Rainer Gerhards and Others``).【F:doc/source/conf.py†L603-L604】
 
 Most existing pages define only description/keyword metadata, so they inherit the
 global author. For example, ``doc/source/concepts/log_pipeline/stages.rst`` has a
@@ -225,6 +225,11 @@ specific author on a page, add an author entry to its ``.. meta::`` block:
 
 This value will be used for the JSON-LD ``author`` field during HTML builds unless
 `DISABLE_JSON_LD` is set.
+
+FAQ pages automatically emit ``FAQPage`` schema with one question/answer pair per
+section title and body. Other pages continue to use ``TechArticle`` by default.
+Set ``DISABLE_JSON_LD`` to suppress both forms during HTML builds (e.g., for
+space-constrained offline packages).【F:doc/source/conf.py†L606-L669】
 
 ## CI deployment to GitHub Pages
 
