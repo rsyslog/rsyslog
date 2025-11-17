@@ -231,6 +231,26 @@ section title and body. Other pages continue to use ``TechArticle`` by default.
 Set ``DISABLE_JSON_LD`` to suppress both forms during HTML builds (e.g., for
 space-constrained offline packages).【F:doc/source/conf.py†L606-L669】
 
+### Adding page metadata for JSON-LD
+
+Place a ``.. meta::`` block near the top of an ``.rst`` file to enrich the
+generated JSON-LD (and HTML meta tags). Populate ``:author:``,
+``:description:``, and ``:keywords:`` where appropriate. This keeps search
+snippets and structured data aligned for both human readers and generative AI
+consumers.
+
+```
+.. meta::
+   :author: Lee Documentation
+   :description: Short synopsis used in page previews and JSON-LD.
+   :keywords: rsyslog, queue, reliability
+```
+
+FAQ pages (``doc/source/faq/*.rst``) automatically produce ``FAQPage`` JSON-LD.
+Write each question as a section title and include the answer in the section
+body. Use a ``.. meta::`` block to add a synopsis for that FAQ page so language
+models and search engines see concise context in the emitted JSON-LD.
+
 ## CI deployment to GitHub Pages
 
 A GitHub Actions workflow automatically builds and deploys documentation previews for pull requests and updates the main documentation site.
