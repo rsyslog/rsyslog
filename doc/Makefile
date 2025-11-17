@@ -22,13 +22,7 @@ help:
 clean:
 	rm -rf "$(BUILDDIR)"
 
-html:
-	@$(call add_parallel_jobs)
-	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-	@echo "Applying Mermaid offline fix..."
-	@python3 ./tools/fix-mermaid-offline.py "$(BUILDDIR)/html"
-
-webhtml:
+html webhtml:
 	@$(call add_parallel_jobs)
 	@$(SPHINXBUILD) -M html "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 	@echo "Applying Mermaid offline fix..."

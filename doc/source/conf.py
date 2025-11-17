@@ -369,7 +369,10 @@ RSYSLOG_BASE_URL = 'https://www.rsyslog.com'
 html_baseurl = f'{RSYSLOG_BASE_URL}/doc/'
 
 RSYSLOG_DOC_BUILD_TARGET = os.environ.get('RSYSLOG_DOC_BUILD_TARGET', '')
-ENABLE_JSON_LD = RSYSLOG_DOC_BUILD_TARGET == 'webhtml'
+ENABLE_JSON_LD = (
+    os.environ.get('ENABLE_JSON_LD', '').lower() in ('1', 'true', 'yes')
+    or RSYSLOG_DOC_BUILD_TARGET == 'webhtml'
+)
 
 # Enable sitemap generation only when explicitly requested
 if tags.has('with_sitemap'):
@@ -620,10 +623,9 @@ def _add_json_ld_to_context(app, pagename, templatename, context, doctree):
         json_ld['description'] = description
 
     metatags = context.get('metatags', '')
-    metatags += "\n<script type=\"application/ld+json\">\n"
-    metatags += json.dumps(json_ld, indent=2)
-    metatags += "\n</script>\n"
-    context['metatags'] = metatags
+    json_ld_string = json.dumps(json_ld, indent=2)
+    script_tag = f'\n<script type="application/ld+json">\n{json_ld_string}\n</script>\n'
+    context['metatags'] = metatags + script_tag
 
 # -- Conditional settings for minimal singlehtml build ----------------------------
 # This block is activated by the '-t minimal_build' tag passed from the Makefile
