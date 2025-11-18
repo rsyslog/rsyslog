@@ -145,3 +145,17 @@ See also
 - :doc:`../../configuration/modules/imtcp`
 - :doc:`../../configuration/modules/mmjsonparse`
 - :doc:`../../configuration/modules/omfile`
+
+
+.. _concept-model-concepts-log_pipeline-stages:
+
+Conceptual model
+----------------
+
+- The pipeline is a staged flow: inputs ingest, rulesets transform, actions emit, and queues buffer between each boundary.
+- Inputs can bind to specific rulesets, selecting both processing logic and queue isolation per ingress path.
+- Rulesets encapsulate deterministic filtering and transformation; ``call`` composes them into multi-stage flows.
+- Actions execute within a ruleset context, with optional per-action queues to absorb destination latency.
+- Queue types govern durability and throughput: direct for synchronous handoff, memory for speed, disk-assisted for reliability.
+- Worker threads and queue sizing shape concurrency and backpressure, preventing slow consumers from halting ingestion.
+- Impstats telemetry and queue tuning are essential to maintain predictable latency under varying workloads.

@@ -214,5 +214,18 @@ be discussed ;)
 -  The implications of the current syslog/tcp industry standard on
    syslog-protocol should be further evaluated and be fully understood
 
+
+.. _concept-model-whitepapers-syslog_protocol:
+
+Conceptual model
+----------------
+
+- syslog-protocol introduces a structured header (PRI, VERSION, TIMESTAMP, HOSTNAME, APP-NAME, PROCID, MSGID, SD, MSG) to standardize message framing.
+- rsyslog auto-detects legacy vs. protocol messages, mapping missing fields (e.g., TAG to APP-NAME/PROCID) to maintain compatibility during transition.
+- Parsing focuses on minimal validation for performance; structured data may be accepted without strict checks to avoid drop-induced data loss.
+- Message transport (UDP/TCP) imposes limits: UDP fragmentation and LF-delimited TCP can truncate or split protocol frames.
+- Encoding and NUL handling are implementation challenges; messages are often forwarded as-is because source encoding is unknown.
+- Rules for discarding malformed messages are relaxed in practice; marking and routing invalid messages preserves observability.
+
  
 

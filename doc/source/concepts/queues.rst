@@ -522,3 +522,19 @@ includes data elements there were begun being processed by workers that
 needed to be cancelled due to too-long processing. For a large queue,
 this operation may be lengthy. No timeout applies to a required shutdown
 save.
+
+
+.. _concept-model-concepts-queues:
+
+Conceptual model
+----------------
+
+- Queues decouple producers and consumers so message flow continues even when downstream actions stall.
+- Each queue instance is typed (direct, memory, disk, disk-assisted) to trade throughput, latency, and durability.
+- Direct queues act as synchronous pass-through channels, enabling return-code propagation for backup actions.
+- Memory queues prioritize low latency and throughput, with LinkedList vs. FixedArray implementations balancing footprint and CPU cost.
+- Disk queues persist every element to chunked files, favoring durability over performance and bypassing in-memory buffering.
+- Disk-assisted queues layer a memory primary queue with a spillover disk queue, governed by high/low watermarks to avoid unnecessary writes.
+- Worker thread pools dequeue elements in batches, scaling concurrency based on backlog while respecting configured limits.
+- Flow control uses enqueue timeouts, discard watermarks, and optional rate limiting to bound resource use under pressure.
+- Shutdown sequencing uses timeouts and optional save-on-shutdown persistence to minimize data loss during termination.

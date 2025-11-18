@@ -362,3 +362,16 @@ also far from trivial and a real joy for an implementer to work on ;).
 If you have not done so before, it may be worth reading
 :doc:`Understanding rsyslog Queues <../concepts/queues>`, which most
 importantly lists all the knobs you can turn to tweak queue operation.
+
+
+.. _concept-model-whitepapers-queues_analogy:
+
+Conceptual model
+----------------
+
+- rsyslog message flow mirrors traffic: the main queue drives processing and pushes work to passive consumers.
+- Every action conceptually has a queue; "direct" mode is equivalent to a zero-capacity turning lane that still gates flow.
+- Non-direct queues duplicate messages for parallel delivery, isolating slow actions from the main path.
+- Queue workers are the active agents pulling from queues and invoking parsers or actions; consumers never request data.
+- Queue capacity and worker counts bound concurrency: more lanes/queues increase parallelism, while zero-capacity queues serialize.
+- Shutdown, error handling, and timeouts are governed by the queue, which decides completion and can cancel long-running actions.

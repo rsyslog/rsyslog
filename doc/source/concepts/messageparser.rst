@@ -302,3 +302,16 @@ and also offer some interesting ideas that may be explored in the future
 - up to full message normalization capabilities. It is strongly
 recommended that anyone with a heterogeneous environment take a look at
 message parser capabilities.
+
+
+.. _concept-model-concepts-messageparser:
+
+Conceptual model
+----------------
+
+- Message parsers operate on already-framed syslog messages, leaving transport framing to input/output modules.
+- Parsers are loadable modules arranged in ordered chains; the first parser that recognizes a format produces the canonical internal representation.
+- Parser ordering encodes precedence, ensuring specific formats (e.g., RFC5424) are matched before permissive fallbacks (e.g., RFC3164).
+- Each ruleset carries its own parser chain, and binding an input to a ruleset selects the parsing semantics for that traffic.
+- Failure to match any parser causes message drop with guardrails to avoid loops, so configurations should end chains with a catch-all parser when loss is unacceptable.
+- Custom parsers extend the system by translating malformed or proprietary formats into rsyslog's internal schema for downstream processing.
