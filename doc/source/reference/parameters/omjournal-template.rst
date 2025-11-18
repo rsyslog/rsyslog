@@ -21,7 +21,7 @@ This parameter applies to :doc:`../../configuration/modules/omjournal`.
 :Type: word
 :Default: none
 :Required?: no
-:Introduced: Not documented
+:Introduced: 8.17.0
 
 Description
 -----------
@@ -32,9 +32,16 @@ of the journald entry. It also includes ``SYSLOG_IDENTIFIER`` (from the tag),
 ``SYSLOG_FACILITY``, and ``PRIORITY`` (derived from facility and severity).
 
 You can override the default formatting of the message, and include
-custom fields with a template. The values of fields from the template's
-JSON output are converted to strings before being sent to journald. For
-example, a JSON object becomes a JSON-formatted string.
+custom fields with a template.
+
+.. warning::
+
+   Complex JSON objects or arrays from ``json`` or ``subtree`` templates
+   are **not** supported. The omjournal action currently converts each
+   field via ``json_object_get_string()``, which returns ``NULL`` for
+   nested JSON structures and leads to a crash inside
+   ``build_iovec()``. Emit only values that convert cleanly to strings
+   (plain text, numbers, booleans) until this limitation is fixed.
 
 Journald requires that you include a template parameter named ``MESSAGE``.
 

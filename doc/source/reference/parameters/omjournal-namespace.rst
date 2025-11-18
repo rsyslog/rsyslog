@@ -21,7 +21,7 @@ This parameter applies to :doc:`../../configuration/modules/omjournal`.
 :Type: word
 :Default: none
 :Required?: no
-:Introduced: Not documented
+:Introduced: 8.2406.0 (requires systemd v256+)
 
 Description
 -----------
