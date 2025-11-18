@@ -43,7 +43,7 @@ custom fields with a template.
    ``build_iovec()``. Emit only values that convert cleanly to strings
    (plain text, numbers, booleans) until this limitation is fixed.
 
-Journald requires that you include a template parameter named ``MESSAGE``.
+Journald requires that the template's output contains a field named ``MESSAGE``.
 
 Action usage
 ------------
