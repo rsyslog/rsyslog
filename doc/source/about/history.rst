@@ -5,13 +5,6 @@
                  early releases after the sysklogd fork.
    :keywords: rsyslog, history, syslog, sysklogd, RainerScript, logging, observability, AI First
 
-.. summary-start
-
-A reverse-chronological history of rsyslog covering its evolution from the AI First era back to
-its early releases following the 2004 fork from sysklogd.
-
-.. summary-end
-
 
 History of rsyslog
 ==================
@@ -109,14 +102,18 @@ This period marks rsyslog’s evolution into a flexible, general-purpose log-pro
 
 2008 introduced two defining technologies.
 
-### Multi-threaded queue engine
+Multi-threaded queue engine
+...........................
+
 Released on January 31, 2008, enabling:
 
 - scalable parallelism,
 - disk-assisted buffering,
 - flexible queue types.
 
-### RainerScript
+RainerScript
+............
+
 Introduced on February 28, 2008:
 
 - expressive configuration language,
