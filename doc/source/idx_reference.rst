@@ -4,6 +4,7 @@ Reference
 .. toctree::
    :maxdepth: 1
 
+   about/history
    containers/index
    installation/index
    historical/index

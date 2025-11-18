@@ -31,7 +31,11 @@ Module usage
 ------------
 .. _omhdfs.parameter.module.omhdfsport-usage:
 
+<<<<<<< HEAD
 .. code-block:: none
+=======
+.. code-block:: text
+>>>>>>> 717d9e259 (doc: restructure and modernize project history; add origins page and xrefs)
 
    $ModLoad omhdfs
    $omhdfsHost hdfs01.example.net
