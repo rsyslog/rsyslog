@@ -29,9 +29,12 @@ Starting from systemd v256, the journal supports namespaces. This allows
 you to write to a specific namespace in the journal, which can be useful
 for isolating logs from different applications or components.
 
-However, this feature is not compatible with templates. If you specify a
-namespace, you must not specify a template. If you do, the action will
-fail with an error message. Namespaces must be created before use.
+However, this feature has important limitations:
+
+* It is not compatible with templates. If you specify a namespace, you
+  must not specify a template. If you do, the action fails with an error
+  message.
+* Namespaces must be created before use.
 
 Action usage
 ------------

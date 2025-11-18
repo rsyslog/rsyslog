@@ -28,7 +28,8 @@ Description
 Template to use when submitting messages.
 
 By default, rsyslog will use the incoming ``%msg%`` as the ``MESSAGE`` field
-of the journald entry, and include the syslog tag, facility, and priority.
+of the journald entry. It also includes ``SYSLOG_IDENTIFIER`` (from the tag),
+``SYSLOG_FACILITY``, and ``PRIORITY`` (derived from facility and severity).
 
 You can override the default formatting of the message, and include
 custom fields with a template. The values of fields from the template's
