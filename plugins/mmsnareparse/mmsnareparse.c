@@ -3045,7 +3045,7 @@ static const char *skip_rfc3164_header(const char *p) {
  * @return Pointer to the beginning of the Snare payload or @c NULL when no
  *         payload could be identified.
  */
-static const char *locate_snare_payload(const char *msg) {
+static const char *locate_snare_payload(const char *msg, smsg_t *pMsg) {
     const char *cursor;
     const char *afterPri;
     const char *candidate;
@@ -3065,6 +3065,65 @@ static const char *locate_snare_payload(const char *msg) {
         }
     }
     cursor = skip_lws_const(afterPri);
+
+    // Check if MSWinEventLog is in the syslog tag (RFC3164 parser moves it there)
+    // If so, the message body should start with version, channel, etc.
+    // But after syslog parsing, the message might start with timestamp instead
+    // We need to find the version ("1") followed by tab and channel
+    if (pMsg != NULL) {
+        uchar *tagBuf = NULL;
+        int tagLen = 0;
+        getTAG(pMsg, &tagBuf, &tagLen, 0);
+        if (tagBuf != NULL && tagLen > 0 && strstr((const char *)tagBuf, "MSWinEventLog") != NULL) {
+            // MSWinEventLog is in tag - message body should be: version, channel, record, timestamp, eventid,
+            // provider... But after syslog parsing, it might be: timestamp, eventid, provider... (version and channel
+            // missing) Or it might be: version, channel, record, timestamp, eventid, provider... Look for pattern:
+            // version number (single or multi-digit) followed by tab/escaped-tab, then channel name
+            const char *p = cursor;
+            while (p != NULL && *p != '\0') {
+                // Skip whitespace
+                while (*p == ' ' || *p == '\t') p++;
+                if (*p == '\0') break;  // Reached end after skipping whitespace
+                // Check for version number (single or multi-digit) followed by tab/escaped-tab
+                if (*p >= '0' && *p <= '9') {
+                    const char *versionEnd = p;
+                    while (*versionEnd >= '0' && *versionEnd <= '9') versionEnd++;
+                    if (versionEnd > p && (*versionEnd == '\t' || *versionEnd == ' ' ||
+                                           (versionEnd[0] == '#' && versionEnd[1] == '0' && versionEnd[2] == '1' &&
+                                            versionEnd[3] == '1'))) {
+                        const char *afterVersion = versionEnd;
+                        if (*afterVersion == '#') {
+                            afterVersion += 4;
+                        } else {
+                            afterVersion++;
+                        }
+                        while (*afterVersion == ' ' || *afterVersion == '\t') afterVersion++;
+                        if (strncmp(afterVersion, "Microsoft-Windows-", 19) == 0) {
+                            dbgprintf(
+                                "[mmsnareparse DEBUG] locate_snare_payload: found MSWinEventLog in syslog tag, found "
+                                "version+channel at '%s'\n",
+                                p);
+                            return p;
+                        }
+                    }
+                    // Advance past the version number we just checked to avoid redundant checks
+                    p = versionEnd;
+                } else {
+                    p++;
+                }
+            }
+            // If we can't find version+channel pattern, the version and channel were removed by syslog parser
+            // In this case, we need to extract channel from the original message
+            // Return cursor for tokenization, but channel extraction will use rawMsg
+            dbgprintf(
+                "[mmsnareparse DEBUG] locate_snare_payload: found MSWinEventLog in syslog tag, version+channel not "
+                "found, using cursor '%s'\n",
+                cursor);
+            return cursor;
+        }
+    }
+
+    // First, check if MSWinEventLog is at the cursor (direct match)
     if (cursor != NULL && strncmp(cursor, "MSWinEventLog", 13) == 0) {
         dbgprintf("[mmsnareparse DEBUG] locate_snare_payload: found MSWinEventLog at '%s'\n", cursor);
         return cursor;
@@ -3072,10 +3131,11 @@ static const char *locate_snare_payload(const char *msg) {
 
     // Handle case where syslog header has been parsed and we have a timestamp followed by MSWinEventLog
     if (cursor != NULL) {
-        // Look for MSWinEventLog in the message (after syslog parsing)
-        const char *msWinEventLog = strstr(cursor, "MSWinEventLog");
+        // Look for MSWinEventLog anywhere in the original message
+        // This is the most reliable way to detect RFC5424 format
+        const char *msWinEventLog = strstr(msg, "MSWinEventLog");
         if (msWinEventLog != NULL) {
-            dbgprintf("[mmsnareparse DEBUG] locate_snare_payload: found MSWinEventLog after parsing at '%s'\n",
+            dbgprintf("[mmsnareparse DEBUG] locate_snare_payload: found MSWinEventLog in message at '%s'\n",
                       msWinEventLog);
             return msWinEventLog;
         }
@@ -3102,6 +3162,30 @@ static const char *locate_snare_payload(const char *msg) {
                 }
             }
             eventIdStart++;
+        }
+        // After syslog parsing, MSWinEventLog may be removed from the message
+        // Try to find MSWinEventLog anywhere in the original message
+        // This allows us to use RFC5424 format with channel in tokens[2]
+        const char *msWinEventLogPos = strstr(msg, "MSWinEventLog");
+        if (msWinEventLogPos != NULL) {
+            // Found MSWinEventLog in original message - use RFC5424 format
+            // If it's before cursor, return it directly
+            // If it's after cursor, we still want to use it (cursor might be after syslog header)
+            if (msWinEventLogPos < cursor) {
+                dbgprintf(
+                    "[mmsnareparse DEBUG] locate_snare_payload: found MSWinEventLog before cursor, using RFC5424 "
+                    "format at '%s'\n",
+                    msWinEventLogPos);
+                return msWinEventLogPos;
+            } else {
+                // MSWinEventLog is after cursor (e.g., after syslog header)
+                // This is still valid - return it to use RFC5424 format
+                dbgprintf(
+                    "[mmsnareparse DEBUG] locate_snare_payload: found MSWinEventLog after cursor, using RFC5424 format "
+                    "at '%s'\n",
+                    msWinEventLogPos);
+                return msWinEventLogPos;
+            }
         }
         // If we didn't find EventID pattern, try looking for Microsoft-Windows-Security-Auditing
         // but we need to go back to find the EventID that comes before it
@@ -3420,6 +3504,21 @@ static const field_pattern_t *select_field_pattern(parse_context_t *ctx,
 
     if (bestSection != NULL) return bestSection;
     if (bestGeneric != NULL) return bestGeneric;
+    // If sectionName is NULL and we have a fallback, prefer EventData section patterns
+    if (sectionName == NULL && bestFallback != NULL) {
+        // Look for EventData section pattern specifically
+        for (size_t pass = 0; pass < 2; ++pass) {
+            const field_pattern_t *patterns = (pass == 0) ? ctx->eventPatterns : ctx->corePatterns;
+            size_t patternCount = (pass == 0) ? eventCount : coreCount;
+            for (size_t i = 0; i < patternCount; ++i) {
+                const field_pattern_t *candidate = &patterns[i];
+                if (pattern_matches(candidate, label, canon) && candidate->section != NULL &&
+                    strcmp(candidate->section, "EventData") == 0) {
+                    return candidate;
+                }
+            }
+        }
+    }
     return bestFallback;
 }
 
@@ -3838,7 +3937,99 @@ static void parse_key_value_sequence(parse_context_t *ctx,
               text != NULL ? text : "<null>", sectionName != NULL ? sectionName : "<none>");
 
     key_value_callback_t cb = {.ctx = ctx, .target = target, .sectionName = sectionName};
+
+    // First try tokenize_on_multispace (for multi-space separated tokens)
     tokenize_on_multispace(text, strlen(text), parse_key_value_token, &cb);
+
+    // If that didn't work (single-space separated key-value pairs), parse directly
+    // Look for patterns like "Key: Value" where Key starts with uppercase
+    const char *p = text;
+    const char *end = text + strlen(text);
+    while (p < end) {
+        // Skip whitespace
+        while (p < end && isspace((unsigned char)*p)) p++;
+        if (p >= end) break;
+
+        // Look for a label start (uppercase letter)
+        if (!isupper((unsigned char)*p)) {
+            p++;
+            continue;
+        }
+
+        // Find the colon - keys should be single words (alphanumeric, no spaces)
+        // This prevents matching "Event ID 3 User:" as a key
+        const char *keyStart = p;
+        const char *keyEnd = keyStart;
+        // Find the end of the key (alphanumeric characters only, no spaces)
+        while (keyEnd < end && isalnum((unsigned char)*keyEnd)) {
+            keyEnd++;
+        }
+        // If we didn't find a colon right after the key, this isn't a valid key-value pair
+        if (keyEnd >= end || *keyEnd != ':') {
+            p++;
+            continue;
+        }
+        const char *colon = keyEnd;
+        p = colon + 1;  // Skip colon, update p
+
+        // Extract key
+        size_t keyLen = colon - keyStart;
+        char *key = trim_copy(keyStart, keyLen);
+        if (key == NULL || *key == '\0') {
+            if (key) free(key);
+            continue;
+        }
+
+        // Skip whitespace after colon
+        while (p < end && isspace((unsigned char)*p)) p++;
+
+        // Find the value end (next key-value pair pattern: space + uppercase + alphanumeric + colon)
+        // Values can contain: letters, numbers, spaces, backslashes, hyphens, and other characters
+        // Only stop when we find a complete key pattern: whitespace + uppercase + alphanumeric_word + colon
+        const char *valueStart = p;
+        const char *valueEnd = valueStart;
+        while (valueEnd < end) {
+            // Look for potential start of next key: whitespace + uppercase letter
+            // We need to check this carefully to avoid false positives when values contain
+            // uppercase letters, spaces, or backslashes (e.g., "CORP\NETWORK SERVICE")
+            if (valueEnd > valueStart && isspace((unsigned char)*(valueEnd - 1)) && isupper((unsigned char)*valueEnd)) {
+                // Potential key start found. Verify it's a complete key pattern:
+                // 1. Must be a single alphanumeric word (no spaces, backslashes, etc.)
+                // 2. Must be followed immediately by a colon
+                const char *keyCandidate = valueEnd;
+                const char *candidateKeyEnd = keyCandidate;
+
+                // Scan for alphanumeric characters only (keys are single words)
+                while (candidateKeyEnd < end && isalnum((unsigned char)*candidateKeyEnd)) {
+                    candidateKeyEnd++;
+                }
+
+                // Check if we have a valid key pattern:
+                // - Must have at least one alphanumeric character
+                // - Must be followed immediately by a colon (no spaces or other chars)
+                // - The character before keyCandidate must be whitespace (already checked above)
+                if ((candidateKeyEnd - keyCandidate) > 0 && candidateKeyEnd < end && *candidateKeyEnd == ':') {
+                    // Found a complete key pattern - this is the start of the next key-value pair
+                    // Back up to the whitespace before the key (start of next pair)
+                    valueEnd = keyCandidate - 1;  // Point to the space before the key
+                    break;
+                }
+                // Not a valid key pattern - continue scanning (this might be part of the value)
+            }
+            valueEnd++;
+        }
+
+        // Extract value
+        size_t valueLen = valueEnd - valueStart;
+        char *value = trim_copy(valueStart, valueLen);
+        if (value != NULL) {
+            handle_key_value(ctx, target, sectionName, key, value);
+            free(value);
+        }
+        free(key);
+
+        p = valueEnd;
+    }
 }
 
 static void parse_privilege_sequence(parse_context_t *ctx, const char *text) {
@@ -4241,8 +4432,26 @@ static void parse_line(parse_context_t *ctx, char *line) {
         } else {
             handle_general_key(ctx, label, "");
         }
+        // Parse remaining key-value pairs in the rest of the line
+        // Even if find_next_token didn't find a token (e.g., key-value pairs separated by single spaces),
+        // we should still try to parse the rest as key-value pairs
         if (nextToken != NULL) {
             parse_key_value_sequence(ctx, NULL, nextToken, NULL);
+        } else {
+            // No next token found (key-value pairs separated by single spaces)
+            // Check if the rest contains key-value pairs (has colons) and parse them
+            const char *remaining = valueEnd;
+            while (remaining < restEnd && *remaining == ' ') ++remaining;
+            if (remaining < restEnd && strchr(remaining, ':') != NULL) {
+                dbgprintf("[mmsnareparse DEBUG] parse_line: parsing remaining content as key-value pairs: '%s'\n",
+                          remaining);
+                parse_key_value_sequence(ctx, NULL, remaining, NULL);
+            } else if (valueStart < restEnd && strchr(valueStart, ':') != NULL) {
+                // The value itself might contain key-value pairs - parse the entire rest
+                dbgprintf("[mmsnareparse DEBUG] parse_line: parsing entire rest as key-value pairs: '%s'\n",
+                          valueStart);
+                parse_key_value_sequence(ctx, NULL, valueStart, NULL);
+            }
         }
     }
 }
@@ -4282,6 +4491,92 @@ static void parse_description(parse_context_t *ctx, const char *desc) {
 }
 
 /**
+ * @brief Check if the first two tokens represent a version and channel.
+ *
+ * Determines if tokens[0] is a single-digit version number and tokens[1] starts
+ * with "Microsoft-Windows-" (indicating a channel name).
+ *
+ * @param tokens     Array of token strings.
+ * @param tokenCount Number of valid entries in @p tokens.
+ * @return true if tokens[0] is a version and tokens[1] is a channel, false otherwise.
+ */
+static bool tokens_have_version_and_channel(char **tokens, size_t tokenCount) {
+    if (tokenCount > 1 && tokens[0] != NULL && tokens[1] != NULL) {
+        if (tokens[0][0] >= '0' && tokens[0][0] <= '9' && tokens[0][1] == '\0' &&
+            strncmp(tokens[1], "Microsoft-Windows-", 19) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * @brief Extract channel name from raw message containing MSWinEventLog format.
+ *
+ * Parses the MSWinEventLog format to extract the channel name. The format is:
+ * MSWinEventLog<tab>version<tab>channel<tab>...
+ *
+ * @param rawMsg Original message text containing MSWinEventLog (can be NULL).
+ * @return Malloc'd string containing the channel name, or NULL if not found.
+ *         Caller must free the returned string.
+ */
+static char *extract_channel_from_raw_msg(const char *rawMsg) {
+    if (rawMsg == NULL) {
+        return NULL;
+    }
+
+    // Look for MSWinEventLog followed by tab/escaped-tab, then version, then tab, then channel
+    const char *msWinPos = strstr(rawMsg, "MSWinEventLog");
+    if (msWinPos == NULL) {
+        return NULL;
+    }
+
+    const char *afterMSWin = msWinPos + 13;  // Skip "MSWinEventLog"
+    // Skip tab/escaped-tab and version
+    if (*afterMSWin == '\t' || *afterMSWin == ' ' ||
+        (afterMSWin[0] == '#' && afterMSWin[1] == '0' && afterMSWin[2] == '1' && afterMSWin[3] == '1')) {
+        // Skip tab/escaped-tab
+        if (*afterMSWin == '#') {
+            afterMSWin += 4;
+        } else {
+            afterMSWin++;
+        }
+        afterMSWin = skip_lws_const(afterMSWin);
+        // Skip version (single digit typically)
+        while (*afterMSWin >= '0' && *afterMSWin <= '9') {
+            afterMSWin++;
+        }
+        // Skip next tab/escaped-tab
+        if (*afterMSWin == '\t' || *afterMSWin == ' ' ||
+            (afterMSWin[0] == '#' && afterMSWin[1] == '0' && afterMSWin[2] == '1' && afterMSWin[3] == '1')) {
+            if (*afterMSWin == '#') {
+                afterMSWin += 4;
+            } else {
+                afterMSWin++;
+            }
+            afterMSWin = skip_lws_const(afterMSWin);
+            // Extract channel (up to next tab/escaped-tab or end)
+            const char *channelStart = afterMSWin;
+            const char *channelEnd = channelStart;
+            while (*channelEnd != '\0' && *channelEnd != '\t' && *channelEnd != ' ' &&
+                   !(channelEnd[0] == '#' && channelEnd[1] == '0' && channelEnd[2] == '1' && channelEnd[3] == '1')) {
+                channelEnd++;
+            }
+            if (channelEnd > channelStart) {
+                size_t channelLen = channelEnd - channelStart;
+                char *channelBuf = malloc(channelLen + 1);
+                if (channelBuf != NULL) {
+                    strncpy(channelBuf, channelStart, channelLen);
+                    channelBuf[channelLen] = '\0';
+                    return channelBuf;
+                }
+            }
+        }
+    }
+    return NULL;
+}
+
+/**
  * @brief Extract core metadata fields from the header token array.
  *
  * Both RFC3164 and RFC5424 Snare formats are supported. The function populates
@@ -4291,8 +4586,11 @@ static void parse_description(parse_context_t *ctx, const char *desc) {
  * @param ctx        Active parsing context.
  * @param tokens     Array of tab-delimited tokens that form the header.
  * @param tokenCount Number of valid entries in @p tokens.
+ * @param rawMsg     Original message text for extracting channel when not in tokens (can be NULL).
+ *                   This is the full message text before locate_snare_payload processing.
  */
-static void populate_event_metadata(parse_context_t *ctx, char **tokens, size_t tokenCount) {
+static void populate_event_metadata(
+    parse_context_t *ctx, char **tokens, size_t tokenCount, const char *rawMsg, smsg_t *pMsg) {
     // Detect format based on token structure
     // RFC5424 format: MSWinEventLog, version, channel, record, timestamp, eventid, provider, n/a, n/a, eventtype,
     // computer, categorytext, empty, empty, description RFC3164 format: year, eventid, provider, n/a, n/a, eventtype,
@@ -4301,13 +4599,69 @@ static void populate_event_metadata(parse_context_t *ctx, char **tokens, size_t 
     size_t eventIdIdx, providerIdx, eventTypeIdx, computerIdx, categoryTextIdx;
 
     // Check if this is RFC5424 format (MSWinEventLog at tokens[0])
+    // Also check if MSWinEventLog is in the original message or syslog tag
+    // (RFC3164 syslog parser may move MSWinEventLog to SyslogTAG)
+    bool isRFC5424 = false;
     if (tokenCount > 0 && !is_placeholder(tokens[0]) && strcmp(tokens[0], "MSWinEventLog") == 0) {
+        isRFC5424 = true;
+    } else if (rawMsg != NULL && strstr(rawMsg, "MSWinEventLog") != NULL) {
+        // MSWinEventLog found in original message - treat as RFC5424 format
+        isRFC5424 = true;
+    } else if (pMsg != NULL) {
+        // Check if MSWinEventLog is in the syslog tag (RFC3164 parser moves it there)
+        uchar *tagBuf = NULL;
+        int tagLen = 0;
+        getTAG(pMsg, &tagBuf, &tagLen, 0);
+        if (tagBuf != NULL && tagLen > 0) {
+            // Check if tag contains MSWinEventLog
+            if (strstr((const char *)tagBuf, "MSWinEventLog") != NULL) {
+                isRFC5424 = true;
+            }
+        }
+    }
+
+    if (isRFC5424) {
         // RFC5424 format
-        eventIdIdx = 5;
-        providerIdx = 6;
-        eventTypeIdx = 9;
-        computerIdx = 10;
-        categoryTextIdx = 11;
+        // Check if MSWinEventLog is in syslog tag (RFC3164 parser moved it)
+        bool msWinInTag = false;
+        if (pMsg != NULL && (tokenCount == 0 || is_placeholder(tokens[0]) || strcmp(tokens[0], "MSWinEventLog") != 0)) {
+            uchar *tagBuf = NULL;
+            int tagLen = 0;
+            getTAG(pMsg, &tagBuf, &tagLen, 0);
+            if (tagBuf != NULL && tagLen > 0 && strstr((const char *)tagBuf, "MSWinEventLog") != NULL) {
+                msWinInTag = true;
+            }
+        }
+        if (msWinInTag) {
+            // MSWinEventLog in tag: message body structure depends on what syslog parser did
+            // If version and channel are present: version=0, channel=1, record=2, timestamp=3, eventid=4, provider=5...
+            // If version and channel were removed: timestamp=0, eventid=1, provider=2...
+            // Check if tokens[0] looks like a timestamp (contains month name like "Nov", "Mar", "Jun")
+            bool versionChannelPresent = tokens_have_version_and_channel(tokens, tokenCount);
+            if (versionChannelPresent) {
+                // Version and channel present: version=0, channel=1, record=2, timestamp=3, eventid=4, provider=5
+                eventIdIdx = 4;
+                providerIdx = 5;
+                eventTypeIdx = 8;
+                computerIdx = 9;
+                categoryTextIdx = 10;
+            } else {
+                // Version and channel removed by syslog parser: timestamp=0, eventid=1, provider=2
+                // But tokens[0] might be timestamp, tokens[1] is EventID
+                eventIdIdx = 1;
+                providerIdx = 2;
+                eventTypeIdx = 5;
+                computerIdx = 6;
+                categoryTextIdx = 7;
+            }
+        } else {
+            // Standard RFC5424: MSWinEventLog, version, channel, record, timestamp, eventid, provider...
+            eventIdIdx = 5;
+            providerIdx = 6;
+            eventTypeIdx = 9;
+            computerIdx = 10;
+            categoryTextIdx = 11;
+        }
     } else {
         // RFC3164 format
         eventIdIdx = 1;
@@ -4330,8 +4684,45 @@ static void populate_event_metadata(parse_context_t *ctx, char **tokens, size_t 
         json_add_string(ctx->event, "Provider", tokens[providerIdx]);
     if (tokenCount > eventTypeIdx && !is_placeholder(tokens[eventTypeIdx]))
         json_add_string(ctx->event, "EventType", tokens[eventTypeIdx]);
-    // Add Channel field - for Windows security events, this is typically "Security"
-    json_add_string(ctx->event, "Channel", "Security");
+    // Extract Channel field for RFC5424 format (MSWinEventLog)
+    // For RFC3164 format, try to extract from raw message, fall back to "Security"
+    if (isRFC5424) {
+        // RFC5424 format: channel location depends on where MSWinEventLog is
+        if (tokenCount > 0 && !is_placeholder(tokens[0]) && strcmp(tokens[0], "MSWinEventLog") == 0) {
+            // Standard RFC5424: MSWinEventLog at tokens[0], channel is at tokens[2]
+            if (tokenCount > 2 && !is_placeholder(tokens[2])) {
+                json_add_string(ctx->event, "Channel", tokens[2]);
+            } else {
+                json_add_string(ctx->event, "Channel", "Security");
+            }
+        } else {
+            // MSWinEventLog is in syslog tag (RFC3164 parser moved it)
+            // Check if version and channel are present in tokens
+            bool channelInTokens = tokens_have_version_and_channel(tokens, tokenCount);
+            size_t channelIdx = 1;
+            if (channelInTokens && tokenCount > channelIdx && !is_placeholder(tokens[channelIdx])) {
+                json_add_string(ctx->event, "Channel", tokens[channelIdx]);
+            } else {
+                // Fallback: extract from rawMsg (original message before syslog parsing)
+                char *channelBuf = extract_channel_from_raw_msg(rawMsg);
+                if (channelBuf != NULL) {
+                    json_add_string(ctx->event, "Channel", channelBuf);
+                    free(channelBuf);
+                } else {
+                    json_add_string(ctx->event, "Channel", "Security");
+                }
+            }
+        }
+    } else {
+        // RFC3164 format: try to extract channel from original message
+        char *channelBuf = extract_channel_from_raw_msg(rawMsg);
+        if (channelBuf != NULL) {
+            json_add_string(ctx->event, "Channel", channelBuf);
+            free(channelBuf);
+        } else {
+            json_add_string(ctx->event, "Channel", "Security");
+        }
+    }
     if (tokenCount > computerIdx && !is_placeholder(tokens[computerIdx]))
         json_add_string(ctx->event, "Computer", tokens[computerIdx]);
     if (tokenCount > categoryTextIdx && !is_placeholder(tokens[categoryTextIdx]))
@@ -4364,7 +4755,7 @@ static void populate_event_metadata(parse_context_t *ctx, char **tokens, size_t 
  * @return ::RS_RET_OK on success or an error code on allocation failures.
  */
 static rsRetVal parse_snare_text(
-    instanceData *pData, smsg_t *pMsg, const char *rawMsg, char **tokens, size_t tokenCount) {
+    instanceData *pData, smsg_t *pMsg, const char *rawMsg, const char *originalMsg, char **tokens, size_t tokenCount) {
     parse_context_t ctx;
     memset(&ctx, 0, sizeof(ctx));
     ctx.inst = pData;
@@ -4396,7 +4787,7 @@ static rsRetVal parse_snare_text(
     }
 
     if (pData->emitRawPayload && rawMsg != NULL) json_add_string(ctx.root, "Raw", rawMsg);
-    populate_event_metadata(&ctx, tokens, tokenCount);
+    populate_event_metadata(&ctx, tokens, tokenCount, originalMsg, pMsg);
 
     // Determine the correct description index based on message format
     size_t descriptionIdx;
@@ -4404,8 +4795,34 @@ static rsRetVal parse_snare_text(
         // RFC5424 format
         descriptionIdx = 13;
     } else {
-        // RFC3164 format
-        descriptionIdx = 9;
+        // RFC3164 format: description is typically the last token or contains "Sysmon"/"Event ID"
+        // Try to find the token that contains the description
+        descriptionIdx = tokenCount > 0 ? tokenCount - 1 : 0;
+        // Look backwards for a token that looks like a description
+        // Priority: tokens containing "Sysmon", then "Event ID", then any token with ":"
+        size_t sysmonIdx = SIZE_MAX;
+        size_t eventIdIdx = SIZE_MAX;
+        size_t colonIdx = SIZE_MAX;
+        for (size_t i = tokenCount; i > 0; i--) {
+            size_t idx = i - 1;
+            if (idx < tokenCount && tokens[idx] != NULL) {
+                if (strstr(tokens[idx], "Sysmon") != NULL) {
+                    sysmonIdx = idx;
+                    break;  // Highest priority, use this
+                } else if (strstr(tokens[idx], "Event ID") != NULL && eventIdIdx == SIZE_MAX) {
+                    eventIdIdx = idx;
+                } else if (strchr(tokens[idx], ':') != NULL && colonIdx == SIZE_MAX) {
+                    colonIdx = idx;
+                }
+            }
+        }
+        if (sysmonIdx != SIZE_MAX) {
+            descriptionIdx = sysmonIdx;
+        } else if (eventIdIdx != SIZE_MAX) {
+            descriptionIdx = eventIdIdx;
+        } else if (colonIdx != SIZE_MAX) {
+            descriptionIdx = colonIdx;
+        }
     }
 
     if (tokenCount > descriptionIdx && !is_placeholder(tokens[descriptionIdx])) {
@@ -4425,9 +4842,49 @@ static rsRetVal parse_snare_text(
                 return vr;
             }
         }
-        dbgprintf("[mmsnareparse DEBUG] parse_snare_text: calling parse_description with tokens[%zu]='%s'\n",
-                  descriptionIdx, tokens[descriptionIdx]);
-        parse_description(&ctx, tokens[descriptionIdx]);
+        // For descriptions that might span multiple tokens, try to concatenate them
+        // Start from descriptionIdx and concatenate remaining tokens
+        // First calculate total length to avoid inefficient realloc in loop
+        size_t totalLen = 0;
+        for (size_t i = descriptionIdx; i < tokenCount; i++) {
+            if (tokens[i] != NULL && !is_placeholder(tokens[i])) {
+                if (totalLen > 0) {
+                    totalLen++;  // For space separator
+                }
+                totalLen += strlen(tokens[i]);
+            }
+        }
+
+        char *fullDescription = NULL;
+        if (totalLen > 0) {
+            fullDescription = malloc(totalLen + 1);  // +1 for null terminator
+            if (fullDescription != NULL) {
+                char *p = fullDescription;
+                for (size_t i = descriptionIdx; i < tokenCount; i++) {
+                    if (tokens[i] != NULL && !is_placeholder(tokens[i])) {
+                        if (p != fullDescription) {
+                            *p++ = ' ';  // Add space between tokens
+                        }
+                        size_t tokenLen = strlen(tokens[i]);
+                        memcpy(p, tokens[i], tokenLen);
+                        p += tokenLen;
+                    }
+                }
+                *p = '\0';
+            }
+        }
+        if (fullDescription != NULL) {
+            dbgprintf(
+                "[mmsnareparse DEBUG] parse_snare_text: calling parse_description with concatenated description (from "
+                "token %zu): '%s'\n",
+                descriptionIdx, fullDescription);
+            parse_description(&ctx, fullDescription);
+            free(fullDescription);
+        } else if (tokenCount > descriptionIdx && !is_placeholder(tokens[descriptionIdx])) {
+            dbgprintf("[mmsnareparse DEBUG] parse_snare_text: calling parse_description with tokens[%zu]='%s'\n",
+                      descriptionIdx, tokens[descriptionIdx]);
+            parse_description(&ctx, tokens[descriptionIdx]);
+        }
     } else {
         dbgprintf(
             "[mmsnareparse DEBUG] parse_snare_text: not calling parse_description (tokenCount=%zu, "
@@ -4626,9 +5083,35 @@ static rsRetVal process_message(instanceData *pData, smsg_t *pMsg, uchar *msgTex
     const char *rawMsg;
     const char *payloadStart;
     if (msgText == NULL) return RS_RET_COULD_NOT_PARSE;
-    payloadStart = locate_snare_payload((const char *)msgText);
+    payloadStart = locate_snare_payload((const char *)msgText, pMsg);
     if (payloadStart == NULL) return RS_RET_COULD_NOT_PARSE;
-    rawMsg = payloadStart;
+    // rawMsg should be the original full message for channel extraction
+    // Try to get raw message before syslog parsing if MSWinEventLog is in tag
+    if (pMsg != NULL) {
+        uchar *tagBuf = NULL;
+        int tagLen = 0;
+        getTAG(pMsg, &tagBuf, &tagLen, 0);
+        if (tagBuf != NULL && tagLen > 0 && strstr((const char *)tagBuf, "MSWinEventLog") != NULL) {
+            // MSWinEventLog is in tag - try to get raw message before syslog parsing
+            uchar *rawBuf = NULL;
+            int rawLen = 0;
+            getRawMsg(pMsg, &rawBuf, &rawLen);
+            if (rawBuf != NULL && rawLen > 0) {
+                // Check if raw message contains MSWinEventLog
+                if (strstr((const char *)rawBuf, "MSWinEventLog") != NULL) {
+                    rawMsg = (const char *)rawBuf;
+                } else {
+                    rawMsg = (const char *)msgText;
+                }
+            } else {
+                rawMsg = (const char *)msgText;
+            }
+        } else {
+            rawMsg = (const char *)msgText;
+        }
+    } else {
+        rawMsg = (const char *)msgText;
+    }
     mutableMsg = strdup(payloadStart);
     if (mutableMsg == NULL) {
         LogError(0, RS_RET_OUT_OF_MEMORY, "mmsnareparse: failed to duplicate message text");
@@ -4658,7 +5141,8 @@ static rsRetVal process_message(instanceData *pData, smsg_t *pMsg, uchar *msgTex
     if (tokenCount >= 3 && !strcmp(tokens[1], "0") && tokens[2][0] == '{') {
         iRet = parse_snare_json(pData, pMsg, tokens[2]);
     } else if (tokenCount >= 2) {
-        iRet = parse_snare_text(pData, pMsg, rawMsg, tokens, tokenCount);
+        // Pass rawMsg as originalMsg so populate_event_metadata can extract channel from it
+        iRet = parse_snare_text(pData, pMsg, rawMsg, rawMsg, tokens, tokenCount);
     }
     free(mutableMsg);
     return iRet;

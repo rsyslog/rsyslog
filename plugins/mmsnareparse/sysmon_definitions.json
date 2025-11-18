@@ -1,0 +1,804 @@
+{
+  "events": [
+    {
+      "event_id": 1,
+      "category": "Process",
+      "subtype": "Creation",
+      "outcome": "success"
+    },
+    {
+      "event_id": 2,
+      "category": "File",
+      "subtype": "TimeChange",
+      "outcome": "success"
+    },
+    {
+      "event_id": 3,
+      "category": "Network",
+      "subtype": "Connection",
+      "outcome": "success"
+    },
+    {
+      "event_id": 4,
+      "category": "System",
+      "subtype": "ServiceStateChange",
+      "outcome": "success"
+    },
+    {
+      "event_id": 5,
+      "category": "Process",
+      "subtype": "Termination",
+      "outcome": "success"
+    },
+    {
+      "event_id": 6,
+      "category": "Driver",
+      "subtype": "Load",
+      "outcome": "success"
+    },
+    {
+      "event_id": 7,
+      "category": "Image",
+      "subtype": "Load",
+      "outcome": "success"
+    },
+    {
+      "event_id": 8,
+      "category": "Process",
+      "subtype": "RemoteThread",
+      "outcome": "success"
+    },
+    {
+      "event_id": 9,
+      "category": "File",
+      "subtype": "RawAccessRead",
+      "outcome": "success"
+    },
+    {
+      "event_id": 10,
+      "category": "Process",
+      "subtype": "Access",
+      "outcome": "success"
+    },
+    {
+      "event_id": 11,
+      "category": "File",
+      "subtype": "Create",
+      "outcome": "success"
+    },
+    {
+      "event_id": 12,
+      "category": "Registry",
+      "subtype": "ObjectCreateDelete",
+      "outcome": "success"
+    },
+    {
+      "event_id": 13,
+      "category": "Registry",
+      "subtype": "ValueSet",
+      "outcome": "success"
+    },
+    {
+      "event_id": 14,
+      "category": "Registry",
+      "subtype": "KeyValueRename",
+      "outcome": "success"
+    },
+    {
+      "event_id": 15,
+      "category": "File",
+      "subtype": "StreamHash",
+      "outcome": "success"
+    },
+    {
+      "event_id": 16,
+      "category": "System",
+      "subtype": "ConfigStateChange",
+      "outcome": "success"
+    },
+    {
+      "event_id": 17,
+      "category": "Pipe",
+      "subtype": "Created",
+      "outcome": "success"
+    },
+    {
+      "event_id": 18,
+      "category": "Pipe",
+      "subtype": "Connected",
+      "outcome": "success"
+    },
+    {
+      "event_id": 19,
+      "category": "WMI",
+      "subtype": "EventFilter",
+      "outcome": "success"
+    },
+    {
+      "event_id": 20,
+      "category": "WMI",
+      "subtype": "EventConsumer",
+      "outcome": "success"
+    },
+    {
+      "event_id": 21,
+      "category": "WMI",
+      "subtype": "ConsumerToFilter",
+      "outcome": "success"
+    },
+    {
+      "event_id": 22,
+      "category": "Network",
+      "subtype": "DNS",
+      "outcome": "success"
+    },
+    {
+      "event_id": 23,
+      "category": "File",
+      "subtype": "Delete",
+      "outcome": "success"
+    },
+    {
+      "event_id": 24,
+      "category": "Clipboard",
+      "subtype": "Change",
+      "outcome": "success"
+    },
+    {
+      "event_id": 25,
+      "category": "Process",
+      "subtype": "Tampering",
+      "outcome": "success"
+    },
+    {
+      "event_id": 26,
+      "category": "File",
+      "subtype": "DeleteLogged",
+      "outcome": "success"
+    },
+    {
+      "event_id": 27,
+      "category": "File",
+      "subtype": "BlockExecutable",
+      "outcome": "success"
+    },
+    {
+      "event_id": 28,
+      "category": "File",
+      "subtype": "BlockShredding",
+      "outcome": "success"
+    },
+    {
+      "event_id": 29,
+      "category": "File",
+      "subtype": "ExecutableDetected",
+      "outcome": "success"
+    }
+  ],
+  "fields": [
+    {
+      "pattern": "UtcTime",
+      "canonical": "UtcTime",
+      "value_type": "timestamp",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "ProcessGuid",
+      "canonical": "ProcessGuid",
+      "value_type": "guid",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "ProcessId",
+      "canonical": "ProcessId",
+      "value_type": "int64",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Image",
+      "canonical": "Image",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "FileVersion",
+      "canonical": "FileVersion",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Description",
+      "canonical": "Description",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Product",
+      "canonical": "Product",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Company",
+      "canonical": "Company",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "OriginalFileName",
+      "canonical": "OriginalFileName",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "CommandLine",
+      "canonical": "CommandLine",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "CurrentDirectory",
+      "canonical": "CurrentDirectory",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "User",
+      "canonical": "User",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "LogonGuid",
+      "canonical": "LogonGuid",
+      "value_type": "guid",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "LogonId",
+      "canonical": "LogonId",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "TerminalSessionId",
+      "canonical": "TerminalSessionId",
+      "value_type": "int64",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "IntegrityLevel",
+      "canonical": "IntegrityLevel",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Hashes",
+      "canonical": "Hashes",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "ParentProcessGuid",
+      "canonical": "ParentProcessGuid",
+      "value_type": "guid",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "ParentProcessId",
+      "canonical": "ParentProcessId",
+      "value_type": "int64",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "ParentImage",
+      "canonical": "ParentImage",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "ParentCommandLine",
+      "canonical": "ParentCommandLine",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "ParentUser",
+      "canonical": "ParentUser",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "SourceIp",
+      "canonical": "SourceIp",
+      "value_type": "ip_address",
+      "section": "Network",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "SourcePort",
+      "canonical": "SourcePort",
+      "value_type": "int64",
+      "section": "Network",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "DestinationIp",
+      "canonical": "DestinationIp",
+      "value_type": "ip_address",
+      "section": "Network",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "DestinationPort",
+      "canonical": "DestinationPort",
+      "value_type": "int64",
+      "section": "Network",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Protocol",
+      "canonical": "Protocol",
+      "value_type": "string",
+      "section": "Network",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Initiated",
+      "canonical": "Initiated",
+      "value_type": "bool",
+      "section": "Network",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "SourceIsIpv6",
+      "canonical": "SourceIsIpv6",
+      "value_type": "bool",
+      "section": "Network",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "SourceHostname",
+      "canonical": "SourceHostname",
+      "value_type": "string",
+      "section": "Network",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "DestinationIsIpv6",
+      "canonical": "DestinationIsIpv6",
+      "value_type": "bool",
+      "section": "Network",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "DestinationPortName",
+      "canonical": "DestinationPortName",
+      "value_type": "string",
+      "section": "Network",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "TargetFilename",
+      "canonical": "TargetFilename",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "CreationUtcTime",
+      "canonical": "CreationUtcTime",
+      "value_type": "timestamp",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "PreviousCreationUtcTime",
+      "canonical": "PreviousCreationUtcTime",
+      "value_type": "timestamp",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "State",
+      "canonical": "State",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Version",
+      "canonical": "Version",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "SchemaVersion",
+      "canonical": "SchemaVersion",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "ImageLoaded",
+      "canonical": "ImageLoaded",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Signed",
+      "canonical": "Signed",
+      "value_type": "bool",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Signature",
+      "canonical": "Signature",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "SignatureStatus",
+      "canonical": "SignatureStatus",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "SourceProcessGuid",
+      "canonical": "SourceProcessGuid",
+      "value_type": "guid",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "SourceProcessId",
+      "canonical": "SourceProcessId",
+      "value_type": "int64",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "SourceThreadId",
+      "canonical": "SourceThreadId",
+      "value_type": "int64",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "SourceImage",
+      "canonical": "SourceImage",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "TargetProcessGuid",
+      "canonical": "TargetProcessGuid",
+      "value_type": "guid",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "TargetProcessId",
+      "canonical": "TargetProcessId",
+      "value_type": "int64",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "TargetImage",
+      "canonical": "TargetImage",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "NewThreadId",
+      "canonical": "NewThreadId",
+      "value_type": "int64",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "StartAddress",
+      "canonical": "StartAddress",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "StartModule",
+      "canonical": "StartModule",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "StartFunction",
+      "canonical": "StartFunction",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Device",
+      "canonical": "Device",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "GrantedAccess",
+      "canonical": "GrantedAccess",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "CallTrace",
+      "canonical": "CallTrace",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Configuration",
+      "canonical": "Configuration",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "PipeName",
+      "canonical": "PipeName",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "EventType",
+      "canonical": "EventType",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Operation",
+      "canonical": "Operation",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "EventNamespace",
+      "canonical": "EventNamespace",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Name",
+      "canonical": "Name",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Query",
+      "canonical": "Query",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Type",
+      "canonical": "Type",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Destination",
+      "canonical": "Destination",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Consumer",
+      "canonical": "Consumer",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Filter",
+      "canonical": "Filter",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "QueryName",
+      "canonical": "QueryName",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "QueryStatus",
+      "canonical": "QueryStatus",
+      "value_type": "int64",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "QueryResults",
+      "canonical": "QueryResults",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "IsExecutable",
+      "canonical": "IsExecutable",
+      "value_type": "bool",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Archived",
+      "canonical": "Archived",
+      "value_type": "bool",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Session",
+      "canonical": "Session",
+      "value_type": "int64",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Client Info",
+      "canonical": "ClientInfo",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "TargetObject",
+      "canonical": "TargetObject",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "NewName",
+      "canonical": "NewName",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "Details",
+      "canonical": "Details",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    },
+    {
+      "pattern": "RuleName",
+      "canonical": "RuleName",
+      "value_type": "string",
+      "section": "EventData",
+      "priority": 10,
+      "sensitivity": "case_sensitive"
+    }
+  ]
+}

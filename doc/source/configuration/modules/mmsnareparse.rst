@@ -2,16 +2,21 @@ mmsnareparse - NXLog Snare Windows Security parser
 ===================================================
 
 The ``mmsnareparse`` parser module extracts structured metadata from NXLog
-Snare-formatted Windows Security events that are transported inside RFC3164 or
-RFC5424 envelopes. It was designed using Windows Server 2016 through Windows
-Server 2025 samples and preserves the original payload while exposing a
-normalized JSON view under a configurable container (``!win`` by default).
+Snare-formatted Windows Security events and Microsoft Sysinternals Sysmon events
+that are transported inside RFC3164 or RFC5424 envelopes. It was designed using
+Windows Server 2016 through Windows Server 2025 samples and preserves the
+original payload while exposing a normalized JSON view under a configurable
+container (``!win`` by default).
 
 Highlights
 ----------
 
 * Supports classic tab-delimited ``MSWinEventLog`` payloads as well as the
   Snare JSON variant (``MSWinEventLog\t0\t{...}``).
+* Parses Microsoft Sysinternals Sysmon events from the
+  ``Microsoft-Windows-Sysmon/Operational`` channel, with support for Event IDs
+  1-29 and common Sysmon fields (process creation, network connections, file
+  operations, registry changes, and more).
 * Derives event-level metadata such as event IDs (with integer promotion when
   possible), provider, NXLog event type, channel, computer, and RFC 3339
   timestamps, and maps high-value event IDs to semantic categories
@@ -343,11 +348,12 @@ Testing
 
 The regression suite (``tests/mmsnareparse-basic.sh``,
 ``tests/mmsnareparse-json.sh``, ``tests/mmsnareparse-syslog.sh``,
-``tests/mmsnareparse-comprehensive.sh``, ``tests/mmsnareparse-custom.sh``)
-replays canonical Windows Security samples and injects custom JSON overrides
-to verify extracted fields remain stable (for example, 4624 with LAPS, 5157 TLS
-inspection, 6281 WDAC enforcement, 1243 WUFB deployment, and bespoke
-definitions supplied at runtime).
+``tests/mmsnareparse-comprehensive.sh``, ``tests/mmsnareparse-custom.sh``,
+``tests/mmsnareparse-sysmon.sh``) replays canonical Windows Security samples
+and Sysmon events, and injects custom JSON overrides to verify extracted fields
+remain stable (for example, 4624 with LAPS, 5157 TLS inspection, 6281 WDAC
+enforcement, 1243 WUFB deployment, Sysmon process and network events, and
+bespoke definitions supplied at runtime).
 
 Extending Pattern Tables at Runtime
 -----------------------------------
@@ -356,6 +362,45 @@ Extending Pattern Tables at Runtime
 normalisation and event metadata, but environments frequently contain
 organisation-specific extensions. The module can import supplemental
 definitions at startup using declarative JSON descriptors.
+
+Sysmon Event Support
+~~~~~~~~~~~~~~~~~~~~
+
+The module includes built-in support for Microsoft Sysinternals Sysmon events
+via a definition file located at ``plugins/mmsnareparse/sysmon_definitions.json``.
+This file provides event mappings and field patterns for common Sysmon Event IDs
+(1-29), including:
+
+* Process events (creation, termination, access, tampering)
+* Network events (connections, DNS queries)
+* File events (creation, deletion, time changes, stream hashes)
+* Registry events (value sets, key renames, object create/delete)
+* System events (service state changes, config changes)
+* Driver and image load events
+* Pipe events (creation, connections)
+* WMI events (filters, consumers, bindings)
+* Clipboard changes
+* File blocking events
+
+To enable Sysmon parsing, load the definition file:
+
+.. code-block:: none
+
+   module(load="mmsnareparse"
+          definition.file="../plugins/mmsnareparse/sysmon_definitions.json")
+
+   action(type="mmsnareparse" container="!win")
+
+The definition file maps Sysmon Event IDs to semantic categories and subtypes,
+and provides field patterns for common Sysmon fields such as ``ProcessGuid``,
+``ProcessId``, ``Image``, ``CommandLine``, ``SourceIp``, ``DestinationIp``,
+``Protocol``, and many others. Fields are automatically routed to appropriate
+JSON sections (``EventData``, ``Network``, etc.) based on their type and
+context.
+
+You can extend or customize the Sysmon definitions by creating your own JSON
+file that merges with or overrides the built-in patterns. See the
+``sysmon_definitions.json`` file for the complete schema and examples.
 
 New module parameters
 ~~~~~~~~~~~~~~~~~~~~~
