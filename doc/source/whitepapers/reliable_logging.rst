@@ -79,3 +79,17 @@ why traditional syslog had a reputation for being very slow.
 See Also
 --------
 * https://rainer.gerhards.net/2008/04/on-unreliability-of-plain-tcp-syslog.html
+
+
+.. _concept-model-whitepapers-reliable_logging:
+
+Conceptual model
+----------------
+
+- Reliability is a policy choice: block the application when logging stalls or drop messages to keep workloads running.
+- rsyslog decouples applications via in-memory queues, only halting writers when queues saturate.
+- Disk-assisted queues extend buffer capacity and persistence but introduce latency and eventual disk exhaustion risks.
+- Per-action queues isolate unreliable destinations so other actions can continue during outages.
+- High/low watermarks and severity-based discard policies bound backlog growth under sustained failures.
+- Transport choice defines delivery guarantees: UDP sacrifices reliability; TCP reduces loss window but can drop in-flight data; RELP adds application-level acknowledgements.
+- Absolute durability is limited by OS and disk flush semantics; stronger guarantees trade away throughput by orders of magnitude.

@@ -279,3 +279,16 @@ I hope this is a useful guide. You may also have a look at the `rsyslog
 troubleshooting guide <troubleshoot.html>`_ for further help and places
 where to ask questions.
 
+
+.. _concept-model-whitepapers-syslog_parsing:
+
+Conceptual model
+----------------
+
+- Legacy syslog message format is underspecified; parsers must tolerate malformed inputs and often rely on heuristics.
+- RFC3164 provides only informational guidance, so vendors emit divergent formats that can blur hostname, tag, and message boundaries.
+- Parser ambiguity arises when tokens can represent multiple fields; without clear delimiters, deterministic recovery is impossible.
+- rsyslog exposes internal properties (e.g., fromhost, timegenerated, rawmsg) to rebuild structured output when parsing fails.
+- Custom C parsers can be bound per ruleset to normalize proprietary formats efficiently, avoiding heavy regex-based workarounds.
+- The safest path is to configure senders to emit well-formed messages, reducing guesswork and preserving semantic fidelity.
+

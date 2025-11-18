@@ -39,3 +39,15 @@ this takes up some system resources and is not considered useful, we
 have not implemented it that way. If the HUP/janitor interaction causes
 problems, let the rsyslog team know and we can change the implementation.
 
+
+.. _concept-model-concepts-janitor:
+
+Conceptual model
+----------------
+
+- The janitor is a periodic scheduler that runs maintenance jobs such as closing inactive files.
+- All time-based actions are NET (no earlier than) relative to the janitor interval, so deadlines are approximate windows.
+- Frequency tuning trades precision for power usage: shorter intervals reduce latency but increase wakeups.
+- A HUP signal triggers an immediate janitor run, potentially bunching cleanup work with configuration reloads.
+- Janitor work currently reuses existing threads; a dedicated thread is avoided to conserve resources unless needed.
+

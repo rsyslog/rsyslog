@@ -171,3 +171,16 @@ See also
 - :doc:`../../configuration/modules/omfile`
 - :doc:`../../configuration/modules/omrelp`
 - :doc:`../../configuration/modules/mmjsonparse`
+
+
+.. _concept-model-concepts-log_pipeline-design_patterns:
+
+Conceptual model
+----------------
+
+- The pipeline is a DAG of rulesets: actions hang off nodes and can be branched (fan-out) or chained (call) to form stages.
+- Each ruleset executes independently on queued messages, so slow or failing actions do not block sibling branches.
+- Fan-out duplicates the same message stream to multiple actions, relying on per-action queues for backpressure isolation.
+- Chained rulesets decompose processing into composable stages, enabling reuse and clearer failure boundaries.
+- Binding inputs to distinct rulesets with dedicated queues partitions workloads and prevents noisy sources from starving others.
+- Queue sizing and worker-thread counts tune throughput vs. isolation; impstats telemetry is needed to monitor backlogs.

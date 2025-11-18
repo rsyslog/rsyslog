@@ -310,3 +310,17 @@ By default, rulesets do **not** have their own queue. It must be
 activated via the
 :doc:`$RulesetCreateMainQueue <../configuration/ruleset/rsconf1_rulesetcreatemainqueue>`
 directive.
+
+
+.. _concept-model-concepts-multi_ruleset:
+
+Conceptual model
+----------------
+
+- A ruleset is an isolated rule pipeline: filters and actions run only for messages explicitly bound to that ruleset.
+- Inputs bind to rulesets, so routing decisions happen at ingest time rather than through in-pipeline filtering.
+- Parser chains are scoped per ruleset, enabling device-specific parsing semantics alongside routing.
+- Each ruleset can optionally own a dedicated queue, decoupling its work from the global queue and enabling parallel ingestion.
+- Binding listeners to distinct rulesets partitions traffic, reducing filter overhead and improving throughput on multicore hosts.
+- Default ruleset binding applies when no explicit ruleset is provided, but custom bindings override it per input.
+- Queue-enabled rulesets process asynchronously, so message mutations inside them do not propagate back to callers.
