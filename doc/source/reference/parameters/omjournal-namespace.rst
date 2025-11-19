@@ -42,7 +42,7 @@ Action usage
 .. _param-omjournal-action-namespace:
 .. _omjournal.parameter.action.namespace-usage:
 
-.. code-block:: rsyslog
+.. code-block:: shell
 
    action(type="omjournal" namespace="audit-journal-namespace")
 

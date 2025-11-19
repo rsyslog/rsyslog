@@ -50,7 +50,7 @@ Action usage
 .. _param-omjournal-action-template:
 .. _omjournal.parameter.action.template-usage:
 
-.. code-block:: rsyslog
+.. code-block:: shell
 
    action(type="omjournal" template="journal")
 
