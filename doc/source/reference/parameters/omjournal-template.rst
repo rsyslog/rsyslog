@@ -41,7 +41,9 @@ custom fields with a template.
    field via ``json_object_get_string()``, which returns ``NULL`` for
    nested JSON structures and leads to a crash inside
    ``build_iovec()``. Emit only values that convert cleanly to strings
-   (plain text, numbers, booleans) until this limitation is fixed.
+   (plain text, numbers, booleans) until this limitation is fixed. See
+   `rsyslog issue #881 <https://github.com/rsyslog/rsyslog/issues/881>`_
+   for background on the crash.
 
 Journald requires that the template's output contains a field named ``MESSAGE``.
 
