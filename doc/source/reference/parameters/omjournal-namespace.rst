@@ -34,7 +34,8 @@ However, this feature has important limitations:
 * It is not compatible with templates. If you specify a namespace, you
   must not specify a template. If you do, the action fails with an error
   message.
-* Namespaces must be created before use.
+* Namespaces must be created before use. If a namespace does not exist,
+  the action fails and logs an error.
 
 Action usage
 ------------
