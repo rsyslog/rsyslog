@@ -1,5 +1,5 @@
 .. _param-omjournal-template:
-.. _omjournal.parameter.action.template:
+.. _omjournal.parameter.input.template:
 
 template
 ========
@@ -17,7 +17,7 @@ Selects the template that formats journal entries before they are written.
 This parameter applies to :doc:`../../configuration/modules/omjournal`.
 
 :Name: template
-:Scope: action
+:Scope: input
 :Type: word
 :Default: none
 :Required?: no
@@ -47,10 +47,10 @@ custom fields with a template.
 
 Journald requires that the template's output contains a field named ``MESSAGE``.
 
-Action usage
-------------
-.. _param-omjournal-action-template:
-.. _omjournal.parameter.action.template-usage:
+Input usage
+-----------
+.. _param-omjournal-input-template:
+.. _omjournal.parameter.input.template-usage:
 
 .. code-block:: shell
 

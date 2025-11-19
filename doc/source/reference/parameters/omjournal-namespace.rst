@@ -1,5 +1,5 @@
 .. _param-omjournal-namespace:
-.. _omjournal.parameter.action.namespace:
+.. _omjournal.parameter.input.namespace:
 
 namespace
 =========
@@ -17,7 +17,7 @@ Writes journal entries to a specific systemd journal namespace instead of the de
 This parameter applies to :doc:`../../configuration/modules/omjournal`.
 
 :Name: namespace
-:Scope: action
+:Scope: input
 :Type: word
 :Default: none
 :Required?: no
@@ -39,10 +39,10 @@ However, this feature has important limitations:
   directories under ``/var/log/journal/`` and defining them in
   `journald.conf(5) <https://www.freedesktop.org/software/systemd/man/latest/journald.conf.html>`_.
 
-Action usage
-------------
-.. _param-omjournal-action-namespace:
-.. _omjournal.parameter.action.namespace-usage:
+Input usage
+-----------
+.. _param-omjournal-input-namespace:
+.. _omjournal.parameter.input.namespace-usage:
 
 .. code-block:: shell
 
