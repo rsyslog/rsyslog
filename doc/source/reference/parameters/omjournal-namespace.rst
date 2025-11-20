@@ -1,4 +1,5 @@
 .. _param-omjournal-namespace:
+.. _omjournal.parameter.input.namespace:
 
 namespace
 =========
@@ -41,6 +42,9 @@ However, this feature has important limitations:
 
 Input usage
 -----------
+.. _param-omjournal-input-namespace:
+.. _omjournal.parameter.input.namespace-usage:
+
 .. code-block:: shell
 
    action(type="omjournal" namespace="audit-journal-namespace")

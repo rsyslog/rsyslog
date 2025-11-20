@@ -1,4 +1,5 @@
 .. _param-omjournal-template:
+.. _omjournal.parameter.input.template:
 
 template
 ========
@@ -48,6 +49,9 @@ Journald requires that the template's output contains a field named ``MESSAGE``.
 
 Input usage
 -----------
+.. _param-omjournal-input-template:
+.. _omjournal.parameter.input.template-usage:
+
 .. code-block:: shell
 
    action(type="omjournal" template="journal")
