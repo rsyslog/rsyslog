@@ -35,9 +35,10 @@ However, this feature has important limitations:
   must not specify a template. If you do, the action fails with an error
   message.
 * Namespaces must be created before use. If a namespace does not exist,
-  the action fails and logs an error. Create namespaces by adding
-  directories under ``/var/log/journal/`` and defining them in
-  `journald.conf(5) <https://www.freedesktop.org/software/systemd/man/latest/journald.conf.html>`_.
+  the action fails and logs an error. Create namespaces by adding directories
+  under ``/var/log/journal/``. For more information, see the
+  `systemd-journald.service(8) <https://www.freedesktop.org/software/systemd/man/latest/systemd-journald.service.html>`_
+  man page.
 
 Input usage
 -----------
