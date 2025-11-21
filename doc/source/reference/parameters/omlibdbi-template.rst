@@ -21,7 +21,7 @@ This parameter applies to :doc:`../../configuration/modules/omlibdbi`.
 :Name: Template
 :Scope: module, input
 :Type: word
-:Default: module=none; input=inherits module
+:Default: module=StdDBFmt; input=inherits module
 :Required?: no
 :Introduced: Not documented
 
@@ -30,8 +30,8 @@ Description
 Set the default template that omlibdbi uses when writing to the database,
 then optionally override it per action.
 
-If no template is provided, omlibdbi relies on the rsyslog standard
-template.
+If no template is provided at the action or module level, omlibdbi uses
+the built-in ``StdDBFmt`` template.
 
 Module usage
 ------------
