@@ -285,6 +285,7 @@ Parameters
    "``definition.json``", "string", "``unset``", "Inline JSON descriptor following the same schema as ``definition.file``. Processed after the file-based overrides."
    "``runtime.config``", "string", "``unset``", "Persistent runtime configuration file. Supports the definition schema plus ``options`` such as ``enable_debug`` and ``enable_fallback``."
    "``validation.mode`` / ``validation_mode``", "string", "``permissive``", "Selects parser strictness: ``permissive`` ignores issues, ``moderate`` records warnings, ``strict`` aborts when thresholds are exceeded."
+   "``ignoreTrailingPattern``", "string", "``unset``", "Pattern that marks the start of a trailing extra-data section to be ignored during parsing. When set, the parser searches for this pattern in trailing positions (after the last tab-separated token). If found, the message is truncated at that point before parsing, and the truncated extra-data section is stored in the ``!extradata_section`` message property. This is useful for removing non-standard trailing enrichment data that may be added by third-party enrichers. The pattern is a literal string match (not a regex)."
 
 Extracted fields
 ----------------
