@@ -56,6 +56,84 @@ agents.
 - Keep suppression files (e.g. `*.supp`) current when adding new Valgrind noise;
   failing to do so will cause CI false positives.
 
+### Enabling Debug Output
+
+To enable rsyslog debug logging for a test, temporarily uncomment these lines in `tests/diag.sh` (around lines 88-89):
+
+```bash
+export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
+export RSYSLOG_DEBUGLOG="log"
+```
+
+This creates a `log` file in the tests directory with detailed execution traces.
+
+**Important:** Remember to re-comment these lines after debugging to avoid cluttering test output.
+
+### Preventing Test Cleanup for Inspection
+
+To examine test output files after a test runs, temporarily comment out `exit_test` at the end of the test script:
+
+```bash
+# exit_test  # Temporarily disabled to inspect logs
+```
+
+This preserves:
+- `rstb_*.out.log` - The actual test output
+- `rstb_*.conf` - The generated rsyslog configuration
+- `log` - Debug log (if enabled)
+- `rstb_*.input*` - Test input files
+
+### Example Debugging Workflow
+
+1. **Enable debug output** in `diag.sh`:
+   ```bash
+   # Uncomment lines 88-89
+   export RSYSLOG_DEBUG="debug nologfuncflow noprintmutexaction nostdout"
+   export RSYSLOG_DEBUGLOG="log"
+   ```
+
+2. **Disable cleanup** in your test script:
+   ```bash
+   # Comment the exit_test line
+   #exit_test
+   ```
+
+3. **Run the test**:
+   ```bash
+   cd tests
+   ./mmsnareparse-trailing-extradata.sh
+   ```
+
+4. **Examine output**:
+   ```bash
+   # Check actual output vs expected
+   cat rstb_*.out.log
+   
+   # Search debug log for specific patterns
+   grep "extradata_section" log
+   grep "Truncated trailing" log
+   ```
+
+5. **Restore test environment**:
+   - Re-comment debug exports in `diag.sh`
+   - Uncomment `exit_test` in your test script
+   - Clean up test artifacts: `rm -f rstb_* log`
+
+### Understanding Test Output
+
+When a test fails with `content_check`, the error shows:
+```
+FAIL: content_check failed to find "expected content"
+FILE "rstb_*.out.log" content:
+     1  actual line 1
+     2  actual line 2
+```
+
+This helps identify:
+- What the test expected vs what was produced
+- Whether the module parsed the message correctly
+- If fields are populated as expected
+
 ## Coordination
 - When adding tests for a plugin or runtime subsystem, mention them in the
   component’s `AGENTS.md` so future authors know smoke coverage exists.

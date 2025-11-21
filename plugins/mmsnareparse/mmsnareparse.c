@@ -441,6 +441,7 @@ typedef struct _instanceData {
     sbool enableWdac;
     sbool emitRawPayload;
     sbool emitDebugJson;
+    uchar *ignoreTrailingPattern;
     validation_context_t validationTemplate;
     section_descriptor_t *sectionDescriptors;
     size_t sectionDescriptorCount;
@@ -492,6 +493,7 @@ struct modConfData_s {
     char *definitionFile;
     char *definitionJson;
     char *runtimeConfigFile;
+    uchar *ignoreTrailingPattern;
     validation_context_t validationTemplate;
 };
 static modConfData_t *loadModConf = NULL;
@@ -5062,6 +5064,94 @@ static rsRetVal parse_snare_json(instanceData *pData, smsg_t *pMsg, const char *
 }
 
 /**
+ * @brief Detect and truncate trailing extra-data section if pattern is configured.
+ *
+ * Searches for the configured pattern in the message. If found in a trailing
+ * position (after the last tab-separated token), truncates the message at that
+ * point and optionally stores the truncated content as a message property.
+ *
+ * @param pData      Module instance configuration.
+ * @param mutableMsg Mutable copy of the message payload (will be modified if truncation occurs).
+ * @param msgLen     Pointer to the length of mutableMsg (will be updated if truncation occurs).
+ * @return Pointer to the truncated extra-data section (if found and truncated), NULL otherwise.
+ *         The caller is responsible for freeing this memory if not NULL.
+ */
+static char *detect_and_truncate_trailing_extradata(instanceData *pData, char *mutableMsg, size_t *msgLen) {
+    char *extradataSection = NULL;
+
+    if (pData->ignoreTrailingPattern == NULL || mutableMsg == NULL) {
+        return NULL;
+    }
+
+    const char *pattern = (const char *)pData->ignoreTrailingPattern;
+    size_t patternLen = strlen(pattern);
+    if (patternLen == 0) {
+        return NULL;
+    }
+
+    /* Find the last tab character to identify the end of the last token */
+    char *lastTab = strrchr(mutableMsg, '\t');
+    if (lastTab == NULL) {
+        /* No tabs found - this is an edge case as SNARE format normally uses tab-separated values.
+         * However, we still attempt to remove trailing enrichment sections from malformed or
+         * non-standard messages. Be conservative: only truncate if pattern appears in the
+         * trailing portion (last 20% or last 200 chars, whichever is smaller) to avoid
+         * accidentally removing legitimate message content. */
+        size_t msgLenVal = strlen(mutableMsg);
+        if (msgLenVal < patternLen) {
+            return NULL;
+        }
+        size_t trailingSearchLen = msgLenVal / 5; /* Last 20% */
+        if (trailingSearchLen > 200) {
+            trailingSearchLen = 200;
+        }
+        if (trailingSearchLen < patternLen) {
+            trailingSearchLen = patternLen;
+        }
+        /* Search backwards from end within the trailing portion only */
+        char *searchStart = mutableMsg + msgLenVal - trailingSearchLen;
+        for (char *searchPos = mutableMsg + msgLenVal - patternLen; searchPos >= searchStart; searchPos--) {
+            if (memcmp(searchPos, pattern, patternLen) == 0) {
+                /* Found pattern in trailing position - save it and truncate before it */
+                extradataSection = strdup(searchPos);
+                if (extradataSection == NULL) {
+                    return NULL; /* out of memory */
+                }
+                *searchPos = '\0';
+                if (msgLen != NULL) {
+                    *msgLen = searchPos - mutableMsg;
+                }
+                return extradataSection;
+            }
+        }
+        return NULL;
+    }
+
+    /* Pattern must appear after the last tab to be considered trailing */
+    char *searchStart = lastTab + 1;
+    char *patternPos = strstr(searchStart, pattern);
+
+    if (patternPos != NULL) {
+        /* Pattern found in trailing position - truncate at the start of the last token
+         * (after the last tab) to remove the entire enrichment section including any
+         * preceding content in that token (e.g., dynamic numbers before the pattern) */
+        /* Save the extra-data section before truncating */
+        extradataSection = strdup(searchStart);
+        if (extradataSection == NULL) {
+            return NULL;
+        }
+        /* Now truncate at the last tab */
+        *lastTab = '\0';
+        if (msgLen != NULL) {
+            *msgLen = lastTab - mutableMsg;
+        }
+        return extradataSection;
+    }
+
+    return NULL;
+}
+
+/**
  * @brief Detect the payload type, parse it, and attach JSON metadata.
  *
  * This is the main entry point for each message processed by the action. It
@@ -5120,6 +5210,22 @@ static rsRetVal process_message(instanceData *pData, smsg_t *pMsg, uchar *msgTex
     unescape_hash_sequences(mutableMsg);
     normalize_literal_tabs(mutableMsg);
     dbgprintf("[mmsnareparse DEBUG] After unescaping: '%s'\n", mutableMsg);
+
+    /* Detect and truncate trailing extra-data section if pattern is configured */
+    char *extradataSection = NULL;
+    size_t msgLen = strlen(mutableMsg);
+    extradataSection = detect_and_truncate_trailing_extradata(pData, mutableMsg, &msgLen);
+    if (extradataSection != NULL) {
+        dbgprintf("[mmsnareparse DEBUG] Truncated trailing extra-data section: '%s'\n", extradataSection);
+        /* Optionally expose the extra-data section as a message property */
+        if (pMsg != NULL) {
+            struct json_object *extradataJson = json_object_new_string(extradataSection);
+            if (extradataJson != NULL) {
+                msgAddJSON(pMsg, (uchar *)"!extradata_section", extradataJson, 0, 0);
+            }
+        }
+    }
+
     cursor = mutableMsg;
     while (cursor != NULL && tokenCount < ARRAY_SIZE(tokens)) {
         tokens[tokenCount++] = cursor;
@@ -5145,6 +5251,7 @@ static rsRetVal process_message(instanceData *pData, smsg_t *pMsg, uchar *msgTex
         iRet = parse_snare_text(pData, pMsg, rawMsg, rawMsg, tokens, tokenCount);
     }
     free(mutableMsg);
+    free(extradataSection);
     return iRet;
 }
 
@@ -5153,7 +5260,8 @@ DEF_OMOD_STATIC_DATA;
 static struct cnfparamdescr modpdescr[] = {{"definition.file", eCmdHdlrString, 0},
                                            {"definition.json", eCmdHdlrString, 0},
                                            {"runtime.config", eCmdHdlrString, 0},
-                                           {"validation.mode", eCmdHdlrString, 0}};
+                                           {"validation.mode", eCmdHdlrString, 0},
+                                           {"ignoreTrailingPattern", eCmdHdlrString, 0}};
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, ARRAY_SIZE(modpdescr), modpdescr};
 
 static struct cnfparamdescr actpdescr[] = {
@@ -5164,7 +5272,7 @@ static struct cnfparamdescr actpdescr[] = {
     {"emit.debugjson", eCmdHdlrBinary, 0},  {"debugjson", eCmdHdlrBinary, 0},
     {"definition.file", eCmdHdlrString, 0}, {"definition.json", eCmdHdlrString, 0},
     {"runtime.config", eCmdHdlrString, 0},  {"validation.mode", eCmdHdlrString, 0},
-    {"validation_mode", eCmdHdlrString, 0}};
+    {"validation_mode", eCmdHdlrString, 0}, {"ignoreTrailingPattern", eCmdHdlrString, 0}};
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, ARRAY_SIZE(actpdescr), actpdescr};
 
 BEGINbeginCnfLoad
@@ -5177,6 +5285,8 @@ BEGINbeginCnfLoad
     pModConf->definitionJson = NULL;
     free(pModConf->runtimeConfigFile);
     pModConf->runtimeConfigFile = NULL;
+    free(pModConf->ignoreTrailingPattern);
+    pModConf->ignoreTrailingPattern = NULL;
     init_validation_context(&pModConf->validationTemplate);
 ENDbeginCnfLoad
 
@@ -5229,6 +5339,13 @@ BEGINsetModCnf
                 ABORT_FINALIZE(r);
             }
             loadModConf->validationTemplate.mode = parsedMode;
+        } else if (!strcmp(modpblk.descr[i].name, "ignoreTrailingPattern")) {
+            char *value = es_str2cstr(pvals[i].val.d.estr, NULL);
+            if (value == NULL) {
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            }
+            free(loadModConf->ignoreTrailingPattern);
+            loadModConf->ignoreTrailingPattern = (uchar *)value;
         } else {
             dbgprintf("mmsnareparse: unhandled module parameter '%s'\n", modpblk.descr[i].name);
         }
@@ -5259,6 +5376,8 @@ BEGINfreeCnf
         pModConf->definitionJson = NULL;
         free(pModConf->runtimeConfigFile);
         pModConf->runtimeConfigFile = NULL;
+        free(pModConf->ignoreTrailingPattern);
+        pModConf->ignoreTrailingPattern = NULL;
     }
 ENDfreeCnf
 
@@ -5277,6 +5396,7 @@ ENDisCompatibleWithFeature
 BEGINfreeInstance
     CODESTARTfreeInstance;
     free(pData->container);
+    free(pData->ignoreTrailingPattern);
     free_runtime_tables(pData);
     free_runtime_config(&pData->runtimeConfig);
 ENDfreeInstance
@@ -5296,6 +5416,7 @@ static inline void setInstParamDefaults(instanceData *pData) {
     pData->enableWdac = 1;
     pData->emitRawPayload = 1;
     pData->emitDebugJson = 0;
+    pData->ignoreTrailingPattern = NULL;
     init_validation_context(&pData->validationTemplate);
     init_runtime_config(&pData->runtimeConfig);
     pData->sectionDescriptors = NULL;
@@ -5326,6 +5447,13 @@ BEGINnewActInst
         pData->validationTemplate = loadModConf->validationTemplate;
         if (loadModConf->runtimeConfigFile != NULL) {
             CHKiRet(load_configuration(&pData->runtimeConfig, loadModConf->runtimeConfigFile));
+        }
+        if (loadModConf->ignoreTrailingPattern != NULL) {
+            free(pData->ignoreTrailingPattern);
+            pData->ignoreTrailingPattern = (uchar *)strdup((char *)loadModConf->ignoreTrailingPattern);
+            if (pData->ignoreTrailingPattern == NULL) {
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            }
         }
     }
     for (i = 0; i < (int)actpblk.nParams; ++i) {
@@ -5367,6 +5495,13 @@ BEGINnewActInst
             }
             CHKiRet(set_validation_mode(pData, mode));
             free(mode);
+        } else if (!strcmp(actpblk.descr[i].name, "ignoreTrailingPattern")) {
+            char *value = es_str2cstr(pvals[i].val.d.estr, NULL);
+            if (value == NULL) {
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            }
+            free(pData->ignoreTrailingPattern);
+            pData->ignoreTrailingPattern = (uchar *)value;
         }
     }
     CODE_STD_STRING_REQUESTnewActInst(1);

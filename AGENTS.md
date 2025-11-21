@@ -274,14 +274,84 @@ Minimum setup requires:
   - Autotools toolchain: `autoconf`, `automake`, `libtool`, `make`, `gcc`
   - Side libraries: `libestr`, `librelp`, `libfastjson`, `liblognorm` (must be installed or built manually)
 
-Example commands (swap the final step for the most relevant smoke test):
+### Complete Dependency Installation (Ubuntu/Debian WSL)
+
+For a full development environment with all common dependencies:
 
 ```bash
-./autogen.sh
-./configure --enable-debug --enable-testbench
-make -j$(nproc)
+sudo apt-get update
+sudo apt-get install -y \
+    autoconf autoconf-archive automake autotools-dev \
+    bison flex gcc \
+    libcurl4-gnutls-dev libdbi-dev libgcrypt20-dev \
+    libglib2.0-dev libgnutls28-dev \
+    libtool libtool-bin libzstd-dev make \
+    libestr-dev python3-docutils libfastjson-dev \
+    liblognorm-dev libcurl4-gnutls-dev \
+    libaprutil1-dev libcivetweb-dev \
+    valgrind clang-format
+```
+
+Mark the environment as configured (optional, for tracking):
+```bash
+touch /tmp/rsyslog_base_env.flag
+```
+
+### Build Process
+
+1. **Generate configure script** (required after fresh checkout or changes to build files):
+   ```bash
+   ./autogen.sh
+   ```
+
+2. **Configure with testbench and required modules**:
+   ```bash
+   # Basic configuration
+   ./configure --enable-testbench --enable-imdiag --enable-omstdout
+   
+   # For specific module testing, add the module's enable flag:
+   ./configure --enable-testbench --enable-imdiag --enable-omstdout \
+       --enable-mmsnareparse
+   
+   # For multiple modules:
+   ./configure --enable-testbench --enable-imdiag --enable-omstdout \
+       --enable-mmsnareparse \
+       --enable-omotlp \
+       --enable-imhttp
+   ```
+
+3. **Build the project**:
+   ```bash
+   make -j$(nproc)
+   ```
+
+### Running Tests
+
+#### Example 1: Run a single test directly (recommended for debugging)
+```bash
 ./tests/imtcp-basic.sh
 ```
+
+#### Example 2: Run a single test through make check
+```bash
+make check -j16 TESTS="imtcp-basic.sh"
+```
+
+#### Example 3: Run module-specific tests
+```bash
+# mmsnareparse test
+make check -j16 TESTS="mmsnareparse-sysmon.sh"
+
+# Multiple tests
+make check -j16 TESTS="mmsnareparse-sysmon.sh mmsnareparse-trailing-extradata.sh"
+```
+
+#### Example 4: Run all tests (CI-style, time-consuming)
+```bash
+make check -j4
+```
+
+**Note:** The `-j` flag controls parallelism. Use `-j2` or `-j4` for reliability on resource-constrained systems, or `-j16` for faster execution on powerful machines.
 
 Reserve `make check` for cases where you must mirror CI or chase harness-only failures. When you do run it, prefer `make check -j2` or `-j4` for reliability.
 
