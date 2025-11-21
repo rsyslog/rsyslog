@@ -694,7 +694,8 @@ endif # if ENABLE_SNMP
 if ENABLE_MMUTF8FIX
 TESTS +=  \
         mmutf8fix_no_error.sh
-endif # if ENABLE_MAIL
+        mmutf8fix_tag.sh
+endif # if ENABLE_MMUTF8FIX
 
 if ENABLE_MMAITAG
 TESTS +=  \
