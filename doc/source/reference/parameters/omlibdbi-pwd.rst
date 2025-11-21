@@ -44,11 +44,11 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omlibdbi.parameter.legacy.actionlibdbipassword:
 
-- $ActionlibdbiPassword — maps to PWD (status: legacy)
+- $ActionLibdbiPassword — maps to PWD (status: legacy)
 
 .. index::
-   single: omlibdbi; $ActionlibdbiPassword
-   single: $ActionlibdbiPassword
+   single: omlibdbi; $ActionLibdbiPassword
+   single: $ActionLibdbiPassword
 
 See also
 --------
