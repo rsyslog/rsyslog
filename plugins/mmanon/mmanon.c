@@ -162,25 +162,8 @@ ENDfreeCnf
 
 BEGINcreateInstance
     CODESTARTcreateInstance;
-    int ipv4MutexInitialized = 0;
-    int ipv6MutexInitialized = 0;
-    if (pthread_mutex_init(&pData->ipv4Mutex, NULL) != 0) {
-        ABORT_FINALIZE(RS_RET_ERR);
-    }
-    ipv4MutexInitialized = 1;
-    if (pthread_mutex_init(&pData->ipv6Mutex, NULL) != 0) {
-        ABORT_FINALIZE(RS_RET_ERR);
-    }
-    ipv6MutexInitialized = 1;
-finalize_it:
-    if (iRet != RS_RET_OK) {
-        if (ipv6MutexInitialized != 0) {
-            pthread_mutex_destroy(&pData->ipv6Mutex);
-        }
-        if (ipv4MutexInitialized != 0) {
-            pthread_mutex_destroy(&pData->ipv4Mutex);
-        }
-    }
+    pthread_mutex_init(&pData->ipv4Mutex, NULL);
+    pthread_mutex_init(&pData->ipv6Mutex, NULL);
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
