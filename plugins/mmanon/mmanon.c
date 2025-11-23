@@ -75,8 +75,10 @@ struct ipv6_int {
 typedef struct _instanceData {
     /*
      * Concurrency & Locking
-     * - ipv4Mutex protects the IPv4 consistency trie shared across workers.
-     * - ipv6Mutex protects the IPv6 and embedded-IPv4 consistency hash tables.
+     * - ipv4Mutex protects the IPv4 consistency trie shared across workers and
+     *   prevents concurrent insertions from corrupting the shared prefixes.
+     * - ipv6Mutex protects the IPv6 and embedded-IPv4 consistency hash tables
+     *   so worker lookups do not race with first-time allocations of entries.
      */
     pthread_mutex_t ipv4Mutex;
     pthread_mutex_t ipv6Mutex;
