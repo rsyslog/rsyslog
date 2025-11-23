@@ -39,6 +39,7 @@
 #include "errmsg.h"
 #include "parserif.h"
 #include "hashtable.h"
+#include <pthread.h>
 
 
 MODULE_TYPE_OUTPUT;
@@ -72,6 +73,13 @@ struct ipv6_int {
 #define SIMPLE_MODE 0 /* just overwrite */
 #define REWRITE_MODE 1 /* rewrite IP address, canoninized */
 typedef struct _instanceData {
+    /*
+     * Concurrency & Locking
+     * - ipv4Mutex protects the IPv4 consistency trie shared across workers.
+     * - ipv6Mutex protects the IPv6 and embedded-IPv4 consistency hash tables.
+     */
+    pthread_mutex_t ipv4Mutex;
+    pthread_mutex_t ipv6Mutex;
     struct {
         sbool enable;
         int8_t bits;
@@ -152,6 +160,13 @@ ENDfreeCnf
 
 BEGINcreateInstance
     CODESTARTcreateInstance;
+    if (pthread_mutex_init(&pData->ipv4Mutex, NULL) != 0) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    if (pthread_mutex_init(&pData->ipv6Mutex, NULL) != 0) {
+        pthread_mutex_destroy(&pData->ipv4Mutex);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
@@ -188,6 +203,8 @@ BEGINfreeInstance
     if (pData->embeddedIPv4.hash != NULL) {
         hashtable_destroy(pData->embeddedIPv4.hash, 1);
     }
+    pthread_mutex_destroy(&pData->ipv4Mutex);
+    pthread_mutex_destroy(&pData->ipv6Mutex);
 ENDfreeInstance
 
 
@@ -671,7 +688,12 @@ static rsRetVal findip(char *address, wrkrInstanceData_t *pWrkrData) {
     union node *Last;
     int MoreLess;
     char *CurrentCharPtr;
+    sbool locked = 0;
 
+    if (pthread_mutex_lock(&pWrkrData->pData->ipv4Mutex) != 0) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    locked = 1;
     current = pWrkrData->pData->ipv4.Root;
     num = ipv42num(address);
     for (i = 0; i < 31; i++) {
@@ -709,6 +731,9 @@ static rsRetVal findip(char *address, wrkrInstanceData_t *pWrkrData) {
         strcpy(address, CurrentCharPtr);
     }
 finalize_it:
+    if (locked) {
+        pthread_mutex_unlock(&pWrkrData->pData->ipv4Mutex);
+    }
     RETiRet;
 }
 
@@ -984,7 +1009,12 @@ static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t
     struct ipv6_int *hashKey = NULL;
     DEFiRet;
     struct hashtable *hash = useEmbedded ? pWrkrData->pData->embeddedIPv4.hash : pWrkrData->pData->ipv6.hash;
+    sbool locked = 0;
 
+    if (pthread_mutex_lock(&pWrkrData->pData->ipv6Mutex) != 0) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    locked = 1;
 
     if (hash == NULL) {
         CHKmalloc(hash = create_hashtable(512, hash_from_key_fn, keys_equal_fn, NULL));
@@ -1022,6 +1052,9 @@ static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t
         hashKey = NULL;
     }
 finalize_it:
+    if (locked) {
+        pthread_mutex_unlock(&pWrkrData->pData->ipv6Mutex);
+    }
     free(hashKey);
     RETiRet;
 }
