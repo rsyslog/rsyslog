@@ -29,6 +29,7 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <regex.h>
 
 #include "conf.h"
 #include "datetime.h"
@@ -442,6 +443,8 @@ typedef struct _instanceData {
     sbool emitRawPayload;
     sbool emitDebugJson;
     uchar *ignoreTrailingPattern;
+    regex_t ignoreTrailingPattern_preg; /* compiled regex for ignoreTrailingPattern.regex */
+    sbool ignoreTrailingPattern_isRegex; /* flag indicating if regex mode is enabled */
     validation_context_t validationTemplate;
     section_descriptor_t *sectionDescriptors;
     size_t sectionDescriptorCount;
@@ -494,6 +497,7 @@ struct modConfData_s {
     char *definitionJson;
     char *runtimeConfigFile;
     uchar *ignoreTrailingPattern;
+    uchar *ignoreTrailingPatternRegex;
     validation_context_t validationTemplate;
 };
 static modConfData_t *loadModConf = NULL;
@@ -5083,45 +5087,77 @@ static char *detect_and_truncate_trailing_extradata(instanceData *pData, char *m
         return NULL;
     }
 
-    const char *pattern = (const char *)pData->ignoreTrailingPattern;
-    size_t patternLen = strlen(pattern);
-    if (patternLen == 0) {
-        return NULL;
-    }
-
     /* Find the last tab character to identify the end of the last token */
     char *lastTab = strrchr(mutableMsg, '\t');
     if (lastTab == NULL) {
         /* No tabs found - this is an edge case as SNARE format normally uses tab-separated values.
-         * However, we still attempt to remove trailing enrichment sections from malformed or
+         * Valid Snare messages will always have tabs and be handled in the else block below,
+         * where truncation is safely anchored to the last token.
+         *
+         * This fallback path attempts to remove trailing enrichment sections from malformed or
          * non-standard messages. Be conservative: only truncate if pattern appears in the
          * trailing portion (last 20% or last 200 chars, whichever is smaller) to avoid
          * accidentally removing legitimate message content. */
         size_t msgLenVal = strlen(mutableMsg);
-        if (msgLenVal < patternLen) {
-            return NULL;
-        }
-        size_t trailingSearchLen = msgLenVal / 5; /* Last 20% */
-        if (trailingSearchLen > 200) {
-            trailingSearchLen = 200;
-        }
-        if (trailingSearchLen < patternLen) {
-            trailingSearchLen = patternLen;
-        }
-        /* Search backwards from end within the trailing portion only */
-        char *searchStart = mutableMsg + msgLenVal - trailingSearchLen;
-        for (char *searchPos = mutableMsg + msgLenVal - patternLen; searchPos >= searchStart; searchPos--) {
-            if (memcmp(searchPos, pattern, patternLen) == 0) {
+        if (pData->ignoreTrailingPattern_isRegex) {
+            /* For regex mode, search within the trailing portion (last 20% or last 200 chars) */
+            size_t trailingSearchLen = msgLenVal / 5; /* Last 20% */
+            if (trailingSearchLen > 200) {
+                trailingSearchLen = 200;
+            }
+            if (trailingSearchLen > msgLenVal) {
+                trailingSearchLen = msgLenVal;
+            }
+            char *searchStart = mutableMsg + msgLenVal - trailingSearchLen;
+            if (searchStart < mutableMsg) {
+                searchStart = mutableMsg;
+            }
+            /* Try regex match on the trailing portion */
+            const int isMatch = !regexec(&pData->ignoreTrailingPattern_preg, searchStart, 0, NULL, 0);
+            if (isMatch) {
                 /* Found pattern in trailing position - save it and truncate before it */
-                extradataSection = strdup(searchPos);
+                extradataSection = strdup(searchStart);
                 if (extradataSection == NULL) {
                     return NULL; /* out of memory */
                 }
-                *searchPos = '\0';
+                *searchStart = '\0';
                 if (msgLen != NULL) {
-                    *msgLen = searchPos - mutableMsg;
+                    *msgLen = searchStart - mutableMsg;
                 }
                 return extradataSection;
+            }
+        } else {
+            /* Static pattern mode */
+            const char *pattern = (const char *)pData->ignoreTrailingPattern;
+            size_t patternLen = strlen(pattern);
+            if (patternLen == 0) {
+                return NULL;
+            }
+            if (msgLenVal < patternLen) {
+                return NULL;
+            }
+            size_t trailingSearchLen = msgLenVal / 5; /* Last 20% */
+            if (trailingSearchLen > 200) {
+                trailingSearchLen = 200;
+            }
+            if (trailingSearchLen < patternLen) {
+                trailingSearchLen = patternLen;
+            }
+            /* Search backwards from end within the trailing portion only */
+            char *searchStart = mutableMsg + msgLenVal - trailingSearchLen;
+            for (char *searchPos = mutableMsg + msgLenVal - patternLen; searchPos >= searchStart; searchPos--) {
+                if (memcmp(searchPos, pattern, patternLen) == 0) {
+                    /* Found pattern in trailing position - save it and truncate before it */
+                    extradataSection = strdup(searchPos);
+                    if (extradataSection == NULL) {
+                        return NULL; /* out of memory */
+                    }
+                    *searchPos = '\0';
+                    if (msgLen != NULL) {
+                        *msgLen = searchPos - mutableMsg;
+                    }
+                    return extradataSection;
+                }
             }
         }
         return NULL;
@@ -5129,23 +5165,50 @@ static char *detect_and_truncate_trailing_extradata(instanceData *pData, char *m
 
     /* Pattern must appear after the last tab to be considered trailing */
     char *searchStart = lastTab + 1;
-    char *patternPos = strstr(searchStart, pattern);
 
-    if (patternPos != NULL) {
-        /* Pattern found in trailing position - truncate at the start of the last token
-         * (after the last tab) to remove the entire enrichment section including any
-         * preceding content in that token (e.g., dynamic numbers before the pattern) */
-        /* Save the extra-data section before truncating */
-        extradataSection = strdup(searchStart);
-        if (extradataSection == NULL) {
-            return NULL;
+    if (pData->ignoreTrailingPattern_isRegex) {
+        /* Regex mode: apply regexec to the trailing token */
+        const int isMatch = !regexec(&pData->ignoreTrailingPattern_preg, searchStart, 0, NULL, 0);
+        if (isMatch) {
+            /* Pattern found in trailing position - truncate at the start of the last token
+             * (after the last tab) to remove the entire enrichment section including any
+             * preceding content in that token (e.g., dynamic numbers before the pattern) */
+            /* Save the extra-data section before truncating */
+            extradataSection = strdup(searchStart);
+            if (extradataSection == NULL) {
+                return NULL;
+            }
+            /* Now truncate at the last tab */
+            *lastTab = '\0';
+            if (msgLen != NULL) {
+                *msgLen = lastTab - mutableMsg;
+            }
+            return extradataSection;
         }
-        /* Now truncate at the last tab */
-        *lastTab = '\0';
-        if (msgLen != NULL) {
-            *msgLen = lastTab - mutableMsg;
+    } else {
+        /* Static pattern mode: use strstr */
+        const char *pattern = (const char *)pData->ignoreTrailingPattern;
+        /* Defensive check: ensure pattern is not empty to avoid unintended matches */
+        if (strlen(pattern) > 0) {
+            char *patternPos = strstr(searchStart, pattern);
+
+            if (patternPos != NULL) {
+                /* Pattern found in trailing position - truncate at the start of the last token
+                 * (after the last tab) to remove the entire enrichment section including any
+                 * preceding content in that token (e.g., dynamic numbers before the pattern) */
+                /* Save the extra-data section before truncating */
+                extradataSection = strdup(searchStart);
+                if (extradataSection == NULL) {
+                    return NULL;
+                }
+                /* Now truncate at the last tab */
+                *lastTab = '\0';
+                if (msgLen != NULL) {
+                    *msgLen = lastTab - mutableMsg;
+                }
+                return extradataSection;
+            }
         }
-        return extradataSection;
     }
 
     return NULL;
@@ -5257,22 +5320,29 @@ static rsRetVal process_message(instanceData *pData, smsg_t *pMsg, uchar *msgTex
 
 DEF_OMOD_STATIC_DATA;
 
-static struct cnfparamdescr modpdescr[] = {{"definition.file", eCmdHdlrString, 0},
+static struct cnfparamdescr modpdescr[] = {
+    {"definition.file", eCmdHdlrString, 0},       {"definition.json", eCmdHdlrString, 0},
+    {"runtime.config", eCmdHdlrString, 0},        {"validation.mode", eCmdHdlrString, 0},
+    {"ignoreTrailingPattern", eCmdHdlrString, 0}, {"ignoreTrailingPattern.regex", eCmdHdlrString, 0}};
+static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, ARRAY_SIZE(modpdescr), modpdescr};
+
+static struct cnfparamdescr actpdescr[] = {{"container", eCmdHdlrString, 0},
+                                           {"rootpath", eCmdHdlrString, 0},
+                                           {"template", eCmdHdlrGetWord, 0},
+                                           {"enable.network", eCmdHdlrBinary, 0},
+                                           {"enable.laps", eCmdHdlrBinary, 0},
+                                           {"enable.tls", eCmdHdlrBinary, 0},
+                                           {"enable.wdac", eCmdHdlrBinary, 0},
+                                           {"emit.rawpayload", eCmdHdlrBinary, 0},
+                                           {"emit.debugjson", eCmdHdlrBinary, 0},
+                                           {"debugjson", eCmdHdlrBinary, 0},
+                                           {"definition.file", eCmdHdlrString, 0},
                                            {"definition.json", eCmdHdlrString, 0},
                                            {"runtime.config", eCmdHdlrString, 0},
                                            {"validation.mode", eCmdHdlrString, 0},
-                                           {"ignoreTrailingPattern", eCmdHdlrString, 0}};
-static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, ARRAY_SIZE(modpdescr), modpdescr};
-
-static struct cnfparamdescr actpdescr[] = {
-    {"container", eCmdHdlrString, 0},       {"rootpath", eCmdHdlrString, 0},
-    {"template", eCmdHdlrGetWord, 0},       {"enable.network", eCmdHdlrBinary, 0},
-    {"enable.laps", eCmdHdlrBinary, 0},     {"enable.tls", eCmdHdlrBinary, 0},
-    {"enable.wdac", eCmdHdlrBinary, 0},     {"emit.rawpayload", eCmdHdlrBinary, 0},
-    {"emit.debugjson", eCmdHdlrBinary, 0},  {"debugjson", eCmdHdlrBinary, 0},
-    {"definition.file", eCmdHdlrString, 0}, {"definition.json", eCmdHdlrString, 0},
-    {"runtime.config", eCmdHdlrString, 0},  {"validation.mode", eCmdHdlrString, 0},
-    {"validation_mode", eCmdHdlrString, 0}, {"ignoreTrailingPattern", eCmdHdlrString, 0}};
+                                           {"validation_mode", eCmdHdlrString, 0},
+                                           {"ignoreTrailingPattern", eCmdHdlrString, 0},
+                                           {"ignoreTrailingPattern.regex", eCmdHdlrString, 0}};
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, ARRAY_SIZE(actpdescr), actpdescr};
 
 BEGINbeginCnfLoad
@@ -5287,6 +5357,8 @@ BEGINbeginCnfLoad
     pModConf->runtimeConfigFile = NULL;
     free(pModConf->ignoreTrailingPattern);
     pModConf->ignoreTrailingPattern = NULL;
+    free(pModConf->ignoreTrailingPatternRegex);
+    pModConf->ignoreTrailingPatternRegex = NULL;
     init_validation_context(&pModConf->validationTemplate);
 ENDbeginCnfLoad
 
@@ -5346,9 +5418,22 @@ BEGINsetModCnf
             }
             free(loadModConf->ignoreTrailingPattern);
             loadModConf->ignoreTrailingPattern = (uchar *)value;
+        } else if (!strcmp(modpblk.descr[i].name, "ignoreTrailingPattern.regex")) {
+            char *value = es_str2cstr(pvals[i].val.d.estr, NULL);
+            if (value == NULL) {
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            }
+            free(loadModConf->ignoreTrailingPatternRegex);
+            loadModConf->ignoreTrailingPatternRegex = (uchar *)value;
         } else {
             dbgprintf("mmsnareparse: unhandled module parameter '%s'\n", modpblk.descr[i].name);
         }
+    }
+    /* Check mutual exclusivity */
+    if (loadModConf->ignoreTrailingPattern != NULL && loadModConf->ignoreTrailingPatternRegex != NULL) {
+        LogError(0, RS_RET_PARAM_NOT_PERMITTED,
+                 "mmsnareparse: ignoreTrailingPattern and ignoreTrailingPattern.regex are mutually exclusive");
+        ABORT_FINALIZE(RS_RET_PARAM_NOT_PERMITTED);
     }
 finalize_it:
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &modpblk);
@@ -5378,6 +5463,8 @@ BEGINfreeCnf
         pModConf->runtimeConfigFile = NULL;
         free(pModConf->ignoreTrailingPattern);
         pModConf->ignoreTrailingPattern = NULL;
+        free(pModConf->ignoreTrailingPatternRegex);
+        pModConf->ignoreTrailingPatternRegex = NULL;
     }
 ENDfreeCnf
 
@@ -5397,6 +5484,9 @@ BEGINfreeInstance
     CODESTARTfreeInstance;
     free(pData->container);
     free(pData->ignoreTrailingPattern);
+    if (pData->ignoreTrailingPattern_isRegex) {
+        regfree(&pData->ignoreTrailingPattern_preg);
+    }
     free_runtime_tables(pData);
     free_runtime_config(&pData->runtimeConfig);
 ENDfreeInstance
@@ -5417,6 +5507,8 @@ static inline void setInstParamDefaults(instanceData *pData) {
     pData->emitRawPayload = 1;
     pData->emitDebugJson = 0;
     pData->ignoreTrailingPattern = NULL;
+    pData->ignoreTrailingPattern_isRegex = 0;
+    memset(&pData->ignoreTrailingPattern_preg, 0, sizeof(regex_t));
     init_validation_context(&pData->validationTemplate);
     init_runtime_config(&pData->runtimeConfig);
     pData->sectionDescriptors = NULL;
@@ -5436,6 +5528,8 @@ BEGINnewActInst
     char *definitionJson = NULL;
     char *runtimeConfigFile = NULL;
     char *templateName = NULL;
+    sbool hasStaticPattern = 0;
+    sbool hasRegexPattern = 0;
     CODESTARTnewActInst;
     if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
         LogError(0, RS_RET_MISSING_CNFPARAMS, "mmsnareparse: missing configuration parameters");
@@ -5454,6 +5548,14 @@ BEGINnewActInst
             if (pData->ignoreTrailingPattern == NULL) {
                 ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
             }
+        }
+        if (loadModConf->ignoreTrailingPatternRegex != NULL) {
+            free(pData->ignoreTrailingPattern);
+            pData->ignoreTrailingPattern = (uchar *)strdup((char *)loadModConf->ignoreTrailingPatternRegex);
+            if (pData->ignoreTrailingPattern == NULL) {
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            }
+            pData->ignoreTrailingPattern_isRegex = 1;
         }
     }
     for (i = 0; i < (int)actpblk.nParams; ++i) {
@@ -5496,12 +5598,51 @@ BEGINnewActInst
             CHKiRet(set_validation_mode(pData, mode));
             free(mode);
         } else if (!strcmp(actpblk.descr[i].name, "ignoreTrailingPattern")) {
+            hasStaticPattern = 1;
             char *value = es_str2cstr(pvals[i].val.d.estr, NULL);
             if (value == NULL) {
                 ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
             }
             free(pData->ignoreTrailingPattern);
             pData->ignoreTrailingPattern = (uchar *)value;
+            pData->ignoreTrailingPattern_isRegex = 0;
+        } else if (!strcmp(actpblk.descr[i].name, "ignoreTrailingPattern.regex")) {
+            hasRegexPattern = 1;
+            char *value = es_str2cstr(pvals[i].val.d.estr, NULL);
+            if (value == NULL) {
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            }
+            free(pData->ignoreTrailingPattern);
+            pData->ignoreTrailingPattern = (uchar *)value;
+            pData->ignoreTrailingPattern_isRegex = 1;
+        }
+    }
+    /* Check mutual exclusivity - both action parameters cannot be set */
+    if (hasStaticPattern && hasRegexPattern) {
+        LogError(0, RS_RET_PARAM_NOT_PERMITTED,
+                 "mmsnareparse: ignoreTrailingPattern and ignoreTrailingPattern.regex are mutually exclusive");
+        ABORT_FINALIZE(RS_RET_PARAM_NOT_PERMITTED);
+    }
+    /* Also check if module config and action config conflict */
+    if (loadModConf != NULL) {
+        if ((loadModConf->ignoreTrailingPattern != NULL && hasRegexPattern) ||
+            (loadModConf->ignoreTrailingPatternRegex != NULL && hasStaticPattern)) {
+            LogError(0, RS_RET_PARAM_NOT_PERMITTED,
+                     "mmsnareparse: ignoreTrailingPattern and ignoreTrailingPattern.regex are mutually exclusive");
+            ABORT_FINALIZE(RS_RET_PARAM_NOT_PERMITTED);
+        }
+    }
+    /* Compile regex if regex mode is enabled */
+    if (pData->ignoreTrailingPattern != NULL && pData->ignoreTrailingPattern_isRegex == 1) {
+        const int errcode =
+            regcomp(&pData->ignoreTrailingPattern_preg, (char *)pData->ignoreTrailingPattern, REG_EXTENDED);
+        if (errcode != 0) {
+            char errbuff[512];
+            /* POSIX: Use NULL as regex argument after regcomp failure for portability */
+            regerror(errcode, NULL, errbuff, sizeof(errbuff));
+            LogError(0, RS_RET_ERR, "mmsnareparse: error compiling ignoreTrailingPattern.regex '%s': %s",
+                     (char *)pData->ignoreTrailingPattern, errbuff);
+            ABORT_FINALIZE(RS_RET_ERR);
         }
     }
     CODE_STD_STRING_REQUESTnewActInst(1);
