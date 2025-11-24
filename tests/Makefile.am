@@ -514,7 +514,8 @@ TESTS += \
 	mmsnareparse-kerberos.sh \
 	mmsnareparse-custom.sh \
 	mmsnareparse-realworld-4624-4634-5140.sh \
-	mmsnareparse-trailing-extradata.sh
+	mmsnareparse-trailing-extradata.sh \
+	mmsnareparse-trailing-extradata-regex.sh
 if HAVE_VALGRIND
 TESTS += \
 	mmsnareparse-comprehensive-vg.sh
@@ -2097,6 +2098,7 @@ EXTRA_DIST= \
         mmsnareparse-syslog.sh \
         mmsnareparse-value-types.sh \
         mmsnareparse-trailing-extradata.sh \
+        mmsnareparse-trailing-extradata-regex.sh \
         mmexternal-InvldProg-vg.sh \
 	nested-call-shutdown.sh \
 	1.rstest 2.rstest 3.rstest err1.rstest \
