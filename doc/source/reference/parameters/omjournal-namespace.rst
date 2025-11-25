@@ -31,9 +31,8 @@ for isolating logs from different applications or components.
 
 However, this feature has important limitations:
 
-* It is not compatible with templates. If you specify a namespace, you
-  must not specify a template. If you do, the action fails with an error
-  message.
+* This parameter is mutually exclusive with the ``template`` parameter.
+  If both are specified for the same action, the action fails with an error.
 * Namespaces must be created before use. If a namespace does not exist,
   the action fails and logs an error. Create namespaces by adding directories
   under ``/var/log/journal/``. For more information, see the
