@@ -1,6 +1,8 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2512.0 (aka 2025.10) 2025-12-0?
 - overall improved documentation via a large set of topic updates.
+- 2025-11-25: mmanon: fixed data race issue in pseudonymization handling
+  Thanks to Jan Gerhards for the patch.
 - 2025-11-12: omhttp: added explicit splunk HEC profile
   permits easier configuration with good defaults.
   Thanks to github user shinigami35 for the patch.
