@@ -8,9 +8,8 @@ rsyslog
    copies of our documentation on third-party websites, including outdated versions
    on platforms like readthedocs.io.
 
-   To ensure your configuration is secure, performant, and uses modern **RainerScript**
-   syntax, please rely **exclusively** on the official documentation hosted
-   at `www.rsyslog.com/doc <https://www.rsyslog.com/doc>`_ This is the only
+   To ensure your configuration is secure, performant, and uses modern **RainerScript**syntax, please rely **exclusively** on the official documentation hosted
+  at `www.rsyslog.com/doc <https://www.rsyslog.com/doc>`_. This is the only
    source actively maintained by the rsyslog development team.
 
 **rsyslog** is a high-performance, modular logging framework designed for
@@ -46,7 +45,7 @@ logs to a wide variety of destinations.
 Community and Sponsors
 ----------------------
 
-See the `Sponsor's Page <http://www.rsyslog.com/sponsors>`_ for details on
+See the `Sponsors Page <http://www.rsyslog.com/sponsors>`_ for details on
 project sponsors and how to support ongoing development.
 
 Want to help? See :doc:`how2help`.
