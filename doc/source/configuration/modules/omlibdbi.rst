@@ -65,133 +65,72 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
 
 Module Parameters
 -----------------
 
-DriverDirectory
-^^^^^^^^^^^^^^^
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "``$ActionLibdbiDriverDirectory``"
-
-This is a global setting. It points libdbi to its driver directory.
-Usually, you do not need to set it. If you installed libdbi-driver's
-at a non-standard location, you may need to specify the directory
-here. If you are unsure, do not use this configuration parameter.
-Usually, everything works just fine.
-
-
-Template
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-Standard template used for the actions.
+   * - Parameter
+     - Summary
+   * - :ref:`param-omlibdbi-driverdirectory`
+     - .. include:: ../../reference/parameters/omlibdbi-driverdirectory.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omlibdbi-template`
+     - .. include:: ../../reference/parameters/omlibdbi-template.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 
-Action Parameters
+Input Parameters
 -----------------
 
-Driver
-^^^^^^
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
+   * - Parameter
+     - Summary
+   * - :ref:`param-omlibdbi-driver`
+     - .. include:: ../../reference/parameters/omlibdbi-driver.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omlibdbi-server`
+     - .. include:: ../../reference/parameters/omlibdbi-server.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omlibdbi-uid`
+     - .. include:: ../../reference/parameters/omlibdbi-uid.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omlibdbi-pwd`
+     - .. include:: ../../reference/parameters/omlibdbi-pwd.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omlibdbi-db`
+     - .. include:: ../../reference/parameters/omlibdbi-db.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omlibdbi-template`
+     - .. include:: ../../reference/parameters/omlibdbi-template.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
-   "word", "none", "yes", "``$ActionLibdbiDriver``"
+.. toctree::
+   :hidden:
 
-Name of the dbidriver to use, see libdbi-drivers documentation. As a
-quick excerpt, at least those were available at the time of this
-writing:
-
-- ``mysql`` (:doc:`ommysql` is recommended instead)
-- ``firebird`` (Firebird and InterBase)
-- ``ingres``
-- ``msql``
-- ``Oracle``
-- ``sqlite``
-- ``sqlite3``
-- ``freetds`` (for Microsoft SQL and Sybase)
-- ``pgsql`` (:doc:`ompgsql` is recommended instead)
-
-
-Server
-^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "yes", "``$ActionLibdbiHost``"
-
-The host to connect to.
-
-
-UID
-^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "yes", "``$ActionLibdbiUserName``"
-
-The user used to connect to the database.
-
-
-PWD
-^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "yes", "``$ActionlibdbiPassword``"
-
-That user's password.
-
-
-DB
-^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "yes", "``$ActionlibdbiDBName``"
-
-The database that shall be written to.
-
-
-Template
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-Template used for this action.
+   ../../reference/parameters/omlibdbi-driverdirectory
+   ../../reference/parameters/omlibdbi-template
+   ../../reference/parameters/omlibdbi-driver
+   ../../reference/parameters/omlibdbi-server
+   ../../reference/parameters/omlibdbi-uid
+   ../../reference/parameters/omlibdbi-pwd
+   ../../reference/parameters/omlibdbi-db
 
 
 Caveats/Known Bugs:
