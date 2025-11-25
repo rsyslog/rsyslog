@@ -58,6 +58,85 @@ When the user says the codeword "SUMMARIZE", do the following:
   - A summary for the pull request
   - A summary for a squashed commit message
 
+### `SETUP`
+
+When the user says the codeword "SETUP", do the following:
+
+- Install all necessary development dependencies for the rsyslog workspace
+- Run the complete dependency installation command for Ubuntu/Debian systems:
+  ```bash
+  sudo apt-get update
+  sudo apt-get install -y \
+      autoconf autoconf-archive automake autotools-dev \
+      bison flex gcc \
+      libcurl4-gnutls-dev libdbi-dev libgcrypt20-dev \
+      libglib2.0-dev libgnutls28-dev \
+      libtool libtool-bin libzstd-dev make \
+      libestr-dev python3-docutils libfastjson-dev \
+      liblognorm-dev libcurl4-gnutls-dev \
+      libaprutil1-dev libcivetweb-dev \
+      valgrind clang-format
+  ```
+- Mark the environment as configured (optional): `touch /tmp/rsyslog_base_env.flag`
+- Note: This keyword is intended for local Ubuntu/Debian environments (including WSL). In containerized or pre-configured environments, skip this step.
+
+### `BUILD [configure-options]`
+
+When the user says the codeword "BUILD" optionally followed by configure options, do the following:
+
+1. **Generate the autotools build system** (if not already done):
+   ```bash
+   ./autogen.sh
+   ```
+
+2. **Configure the project**:
+   - If configure options are provided after "BUILD", use them:
+     ```bash
+     ./configure [user-provided-options]
+     ```
+   - If no options are provided, use the default testbench configuration:
+     ```bash
+     ./configure --enable-testbench --enable-imdiag --enable-omstdout
+     ```
+
+3. **Build the project**:
+   ```bash
+   make -j$(nproc)
+   ```
+
+Examples:
+- `BUILD` - Uses default testbench configuration
+- `BUILD --enable-testbench --enable-mmsnareparse` - Custom configuration with mmsnareparse module
+- `BUILD --enable-testbench --enable-imdiag --enable-omstdout --enable-mmsnareparse --enable-omotlp` - Multiple modules
+
+### `TEST [test-script-names]`
+
+When the user says the codeword "TEST" optionally followed by test script names, do the following:
+
+1. **Ensure the project is built** (if not already built, run BUILD first)
+
+2. **Run tests**:
+   - If test script names are provided after "TEST", run those specific tests:
+     ```bash
+     ./tests/<test-script-name>.sh
+     ```
+     For multiple tests, run each one:
+     ```bash
+     ./tests/<test-script-1>.sh
+     ./tests/<test-script-2>.sh
+     ```
+   - If no test names are provided, run the default smoke test:
+     ```bash
+     ./tests/imtcp-basic.sh
+     ```
+
+Examples:
+- `TEST` - Runs the default smoke test (`imtcp-basic.sh`)
+- `TEST mmsnareparse-sysmon.sh` - Runs the mmsnareparse-sysmon test
+- `TEST mmsnareparse-sysmon.sh mmsnareparse-trailing-extradata.sh` - Runs multiple specific tests
+
+Note: Tests are run directly (not via `make check`) to provide unfiltered stdout/stderr output.
+
 -----
 
 ## Priming a fresh AI session
