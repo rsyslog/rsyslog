@@ -475,9 +475,35 @@ The following sample does the following:
            action.resumeretrycount="-1")
 
 
+Example 4
+---------
+
+The following sample sends events to Elasticsearch over TLS:
+
+-  loads the omelasticsearch module
+-  enables HTTPS for a cluster that presents a trusted certificate
+-  demonstrates how to supply the CA bundle and (optionally) client
+   authentication material
+
+.. code-block:: none
+
+    module(load="omelasticsearch")
+    action(type="omelasticsearch"
+           server="es01.example.net:9200"
+           usehttps="on"
+           tls.cacert="/etc/ssl/certs/ca-bundle.crt"
+           # Uncomment the following lines if client auth is required
+           # tls.mycert="/etc/rsyslog/keys/es-client.crt"
+           # tls.myprivkey="/etc/rsyslog/keys/es-client.key")
+
+The ``server`` value accepts hostnames with optional ports (or explicit
+``https://`` URLs) and is normalized to include the chosen scheme and
+port. Avoid malformed host strings such as ``https://server.example:net:9200``;
+the hostname must be valid when passed directly to libcurl.
+
 .. _omelasticsearch-writeoperation-example:
 
-Example 4
+Example 5
 ---------
 
 The following sample shows how to use :ref:`param-omelasticsearch-writeoperation`
@@ -500,7 +526,7 @@ provides the `uuid` property for each record:
 
 .. _omelasticsearch-retry-example:
 
-Example 5
+Example 6
 ---------
 
 The following sample shows how to use :ref:`param-omelasticsearch-retryfailures` to

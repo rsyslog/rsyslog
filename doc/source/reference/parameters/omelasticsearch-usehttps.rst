@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/omelasticsearch`.
 
 Description
 -----------
-If enabled, URLs in `server` without an explicit scheme use HTTPS; otherwise HTTP is assumed.
+If enabled, entries in `server` without an explicit scheme use HTTPS; otherwise HTTP is assumed. Servers that already specify ``http`` or ``https`` keep their declared scheme.
 
 Action usage
 ------------
