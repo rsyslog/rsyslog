@@ -29,7 +29,6 @@ Use this parameter to set a **constant** subject text. Choose :ref:`param-ommail
 
 Module usage
 ------------
-.. _param-ommail-module-subject-text:
 .. _ommail.parameter.module.subject-text-usage:
 
 .. code-block:: rsyslog

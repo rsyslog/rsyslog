@@ -29,7 +29,6 @@ Setting this to "off" permits the actual message body to be excluded. This may b
 
 Module usage
 ------------
-.. _param-ommail-module-body-enable:
 .. _ommail.parameter.module.body-enable-usage:
 
 .. code-block:: rsyslog

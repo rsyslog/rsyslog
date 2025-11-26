@@ -29,7 +29,6 @@ Name or IP address of the SMTP server to be used. Must currently be set. The def
 
 Module usage
 ------------
-.. _param-ommail-module-server:
 .. _ommail.parameter.module.server-usage:
 
 .. code-block:: rsyslog

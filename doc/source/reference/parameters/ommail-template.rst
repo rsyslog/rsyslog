@@ -29,7 +29,6 @@ Template to be used for the mail body when body output is enabled.
 
 Module usage
 ------------
-.. _param-ommail-module-template:
 .. _ommail.parameter.module.template-usage:
 
 .. code-block:: rsyslog

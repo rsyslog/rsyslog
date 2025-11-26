@@ -29,7 +29,6 @@ The name of the template to be used as the mail subject. Use this parameter when
 
 Module usage
 ------------
-.. _param-ommail-module-subject-template:
 .. _ommail.parameter.module.subject-template-usage:
 
 .. code-block:: rsyslog

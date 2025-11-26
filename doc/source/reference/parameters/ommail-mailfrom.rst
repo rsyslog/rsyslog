@@ -29,7 +29,6 @@ The email address used as the sender's address.
 
 Module usage
 ------------
-.. _param-ommail-module-mailfrom:
 .. _ommail.parameter.module.mailfrom-usage:
 
 .. code-block:: rsyslog

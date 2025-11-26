@@ -29,7 +29,6 @@ The recipient email address(es). This is an array parameter, so multiple recipie
 
 Module usage
 ------------
-.. _param-ommail-module-mailto:
 .. _ommail.parameter.module.mailto-usage:
 
 .. code-block:: rsyslog

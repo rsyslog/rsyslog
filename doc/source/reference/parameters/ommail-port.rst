@@ -29,7 +29,6 @@ Port number or name of the SMTP port to be used. While the module may fall back 
 
 Module usage
 ------------
-.. _param-ommail-module-port:
 .. _ommail.parameter.module.port-usage:
 
 .. code-block:: rsyslog
