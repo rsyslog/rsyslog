@@ -9,7 +9,7 @@ MailFrom
    single: MailFrom
 
 .. summary-start
- 
+
 Defines the sender email address placed in outgoing messages from ommail.
 
 .. summary-end

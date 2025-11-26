@@ -9,7 +9,7 @@ Port
    single: Port
 
 .. summary-start
- 
+
 Sets the SMTP port number or service name that ommail uses to send mail.
 
 .. summary-end
@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/ommail`.
 
 Description
 -----------
-Port number or name of the SMTP port to be used. The default SMTP port is 25.
+Port number or name of the SMTP port to be used. While the module may fall back to port 25 in some legacy scenarios, this parameter is required and must be set explicitly in modern configurations.
 
 Module usage
 ------------

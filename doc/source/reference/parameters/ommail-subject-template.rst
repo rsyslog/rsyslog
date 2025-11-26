@@ -9,7 +9,7 @@ Subject.Template
    single: Subject.Template
 
 .. summary-start
- 
+
 Selects the template used to generate the mail subject line.
 
 .. summary-end

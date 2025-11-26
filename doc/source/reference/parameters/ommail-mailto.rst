@@ -9,7 +9,7 @@ MailTo
    single: MailTo
 
 .. summary-start
- 
+
 Provides one or more recipient email addresses for each mail sent by ommail.
 
 .. summary-end
