@@ -1,0 +1,54 @@
+.. _param-ommail-port:
+.. _ommail.parameter.module.port:
+
+Port
+====
+
+.. index::
+   single: ommail; Port
+   single: Port
+
+.. summary-start
+ 
+Sets the SMTP port number or service name that ommail uses to send mail.
+
+.. summary-end
+
+This parameter applies to :doc:`../../configuration/modules/ommail`.
+
+:Name: Port
+:Scope: module
+:Type: word
+:Default: module=none
+:Required?: yes
+:Introduced: 8.5.0
+
+Description
+-----------
+Port number or name of the SMTP port to be used. The default SMTP port is 25.
+
+Module usage
+------------
+.. _param-ommail-module-port:
+.. _ommail.parameter.module.port-usage:
+
+.. code-block:: rsyslog
+
+   module(load="ommail")
+   action(type="ommail" port="25")
+
+Legacy names (for reference)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Historic names/directives for compatibility. Do not use in new configs.
+
+.. _ommail.parameter.legacy.actionmailsmtpport:
+
+- $ActionMailSMTPPort — maps to Port (status: legacy)
+
+.. index::
+   single: ommail; $ActionMailSMTPPort
+   single: $ActionMailSMTPPort
+
+See also
+--------
+See also :doc:`../../configuration/modules/ommail`.

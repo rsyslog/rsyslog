@@ -58,132 +58,62 @@ v7 and v8 versions did only support legacy parameters.
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
 
 Action Parameters
 -----------------
 
-Server
-^^^^^^
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
+   * - Parameter
+     - Summary
+   * - :ref:`param-ommail-server`
+     - .. include:: ../../reference/parameters/ommail-server.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-ommail-port`
+     - .. include:: ../../reference/parameters/ommail-port.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-ommail-mailfrom`
+     - .. include:: ../../reference/parameters/ommail-mailfrom.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-ommail-mailto`
+     - .. include:: ../../reference/parameters/ommail-mailto.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-ommail-subject-template`
+     - .. include:: ../../reference/parameters/ommail-subject-template.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-ommail-subject-text`
+     - .. include:: ../../reference/parameters/ommail-subject-text.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-ommail-body-enable`
+     - .. include:: ../../reference/parameters/ommail-body-enable.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-ommail-template`
+     - .. include:: ../../reference/parameters/ommail-template.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
-   "word", "none", "yes", "``$ActionMailSMTPServer``"
+.. toctree::
+   :hidden:
 
-Name or IP address of the SMTP server to be used. Must currently be
-set. The default is 127.0.0.1, the SMTP server on the local machine.
-Obviously it is not good to expect one to be present on each machine,
-so this value should be specified.
-
-
-Port
-^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "yes", "``$ActionMailSMTPPort``"
-
-Port number or name of the SMTP port to be used. The default is 25,
-the standard SMTP port.
-
-
-MailFrom
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "yes", "``$ActionMailFrom``"
-
-The email address used as the senders address.
-
-
-MailTo
-^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "array", "none", "yes", "``$ActionMailTo``"
-
-The recipient email address(es). Note that this is an array parameter. See
-samples below on how to specify multiple recipients.
-
-
-Subject.Template
-^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "``$ActionMailSubject``"
-
-The name of the template to be used as the mail subject.
-
-If you want to include some information from the message inside the
-template, you need to use *subject.template* with an appropriate template.
-If you just need a constant text, you can simply use *subject.text*
-instead, which doesn't require a template definition.
-
-
-Subject.Text
-^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "string", "none", "no", "none"
-
-This is used to set a **constant** subject text.
-
-
-Body.Enable
-^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "on", "no", "``$ActionMailEnableBody``"
-
-Setting this to "off" permits to exclude the actual message body.
-This may be useful for pager-like devices or cell phone SMS messages.
-The default is "on", which is appropriate for almost all cases. Turn
-it off only if you know exactly what you do!
-
-
-Template
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "RSYSLOG_FileFormat", "no", "none"
-
-Template to be used for the mail body (if enabled).
-
-The *template.subject* and *template.text* parameters cannot be given together
-inside a single action definition. Use either one of them. If none is used,
-a more or less meaningless mail subject is generated (we don't tell you the exact
-text because that can change - if you want to have something specific, configure it!).
+   ../../reference/parameters/ommail-server
+   ../../reference/parameters/ommail-port
+   ../../reference/parameters/ommail-mailfrom
+   ../../reference/parameters/ommail-mailto
+   ../../reference/parameters/ommail-subject-template
+   ../../reference/parameters/ommail-subject-text
+   ../../reference/parameters/ommail-body-enable
+   ../../reference/parameters/ommail-template
 
 
 Caveats/Known Bugs
