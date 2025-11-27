@@ -1,5 +1,5 @@
 .. _param-ommail-port:
-.. _ommail.parameter.module.port:
+.. _ommail.parameter.input.port:
 
 Port
 ====
@@ -17,9 +17,9 @@ Sets the SMTP port number or service name that ommail uses to send mail.
 This parameter applies to :doc:`../../configuration/modules/ommail`.
 
 :Name: Port
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: yes
 :Introduced: 8.5.0
 
@@ -27,9 +27,9 @@ Description
 -----------
 Port number or name of the SMTP port to be used. While the module may fall back to port 25 in some legacy scenarios, this parameter is required and must be set explicitly in modern configurations.
 
-Module usage
+Input usage
 ------------
-.. _ommail.parameter.module.port-usage:
+.. _ommail.parameter.input.port-usage:
 
 .. code-block:: rsyslog
 

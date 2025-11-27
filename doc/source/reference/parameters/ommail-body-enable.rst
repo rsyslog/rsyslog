@@ -1,5 +1,5 @@
 .. _param-ommail-body-enable:
-.. _ommail.parameter.module.body-enable:
+.. _ommail.parameter.input.body-enable:
 
 Body.Enable
 ===========
@@ -17,9 +17,9 @@ Toggles inclusion of the mail body in messages sent by ommail.
 This parameter applies to :doc:`../../configuration/modules/ommail`.
 
 :Name: Body.Enable
-:Scope: module
+:Scope: input
 :Type: boolean
-:Default: module=on
+:Default: input=on
 :Required?: no
 :Introduced: 8.5.0
 
@@ -27,14 +27,14 @@ Description
 -----------
 Setting this to "off" permits the actual message body to be excluded. This may be useful for pager-like devices or cell phone SMS messages. The default is "on", which is appropriate for almost all cases. Turn it off only if you know exactly what you do!
 
-Module usage
+Input usage
 ------------
-.. _ommail.parameter.module.body-enable-usage:
+.. _ommail.parameter.input.body-enable-usage:
 
 .. code-block:: rsyslog
 
    module(load="ommail")
-   action(type="ommail" body.enable="off")
+   action(type="ommail" bodyEnable="off")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -1,5 +1,5 @@
 .. _param-ommail-subject-template:
-.. _ommail.parameter.module.subject-template:
+.. _ommail.parameter.input.subject-template:
 
 Subject.Template
 ================
@@ -17,9 +17,9 @@ Selects the template used to generate the mail subject line.
 This parameter applies to :doc:`../../configuration/modules/ommail`.
 
 :Name: Subject.Template
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: 8.5.0
 
@@ -27,14 +27,14 @@ Description
 -----------
 The name of the template to be used as the mail subject. Use this parameter when message content should appear in the subject. If you just need a constant subject line, use :ref:`param-ommail-subject-text` instead. The *subject.template* and *subject.text* parameters cannot both be configured within a single action.
 
-Module usage
+Input usage
 ------------
-.. _ommail.parameter.module.subject-template-usage:
+.. _ommail.parameter.input.subject-template-usage:
 
 .. code-block:: rsyslog
 
    module(load="ommail")
-   action(type="ommail" subject.template="mailSubject")
+   action(type="ommail" subjectTemplate="mailSubject")
 
 Legacy names (for reference)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

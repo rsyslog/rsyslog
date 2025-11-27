@@ -1,5 +1,5 @@
 .. _param-ommail-template:
-.. _ommail.parameter.module.template:
+.. _ommail.parameter.input.template:
 
 Template
 ========
@@ -17,9 +17,9 @@ Selects the template used for the mail body when body text is enabled.
 This parameter applies to :doc:`../../configuration/modules/ommail`.
 
 :Name: Template
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=RSYSLOG_FileFormat
+:Default: input=RSYSLOG_FileFormat
 :Required?: no
 :Introduced: 8.5.0
 
@@ -27,9 +27,9 @@ Description
 -----------
 Template to be used for the mail body when body output is enabled.
 
-Module usage
+Input usage
 ------------
-.. _ommail.parameter.module.template-usage:
+.. _ommail.parameter.input.template-usage:
 
 .. code-block:: rsyslog
 

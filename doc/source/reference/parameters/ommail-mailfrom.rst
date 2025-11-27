@@ -1,5 +1,5 @@
 .. _param-ommail-mailfrom:
-.. _ommail.parameter.module.mailfrom:
+.. _ommail.parameter.input.mailfrom:
 
 MailFrom
 ========
@@ -17,9 +17,9 @@ Defines the sender email address placed in outgoing messages from ommail.
 This parameter applies to :doc:`../../configuration/modules/ommail`.
 
 :Name: MailFrom
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: yes
 :Introduced: 8.5.0
 
@@ -27,9 +27,9 @@ Description
 -----------
 The email address used as the sender's address.
 
-Module usage
+Input usage
 ------------
-.. _ommail.parameter.module.mailfrom-usage:
+.. _ommail.parameter.input.mailfrom-usage:
 
 .. code-block:: rsyslog
 

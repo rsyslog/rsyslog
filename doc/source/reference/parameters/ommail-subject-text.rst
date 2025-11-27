@@ -1,5 +1,5 @@
 .. _param-ommail-subject-text:
-.. _ommail.parameter.module.subject-text:
+.. _ommail.parameter.input.subject-text:
 
 Subject.Text
 ============
@@ -17,9 +17,9 @@ Sets a fixed subject line instead of generating one from a template.
 This parameter applies to :doc:`../../configuration/modules/ommail`.
 
 :Name: Subject.Text
-:Scope: module
+:Scope: input
 :Type: string
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: 8.5.0
 
@@ -27,14 +27,14 @@ Description
 -----------
 Use this parameter to set a **constant** subject text. Choose :ref:`param-ommail-subject-template` when the subject should be generated from a template. The *subject.template* and *subject.text* parameters cannot both be configured within a single action.
 
-Module usage
+Input usage
 ------------
-.. _ommail.parameter.module.subject-text-usage:
+.. _ommail.parameter.input.subject-text-usage:
 
 .. code-block:: rsyslog
 
    module(load="ommail")
-   action(type="ommail" subject.text="rsyslog detected disk problem")
+   action(type="ommail" subjectText="rsyslog detected disk problem")
 
 See also
 --------

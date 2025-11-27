@@ -1,5 +1,5 @@
 .. _param-ommail-mailto:
-.. _ommail.parameter.module.mailto:
+.. _ommail.parameter.input.mailto:
 
 MailTo
 ======
@@ -17,9 +17,9 @@ Provides one or more recipient email addresses for each mail sent by ommail.
 This parameter applies to :doc:`../../configuration/modules/ommail`.
 
 :Name: MailTo
-:Scope: module
+:Scope: input
 :Type: array
-:Default: module=none
+:Default: input=none
 :Required?: yes
 :Introduced: 8.5.0
 
@@ -27,9 +27,9 @@ Description
 -----------
 The recipient email address(es). This is an array parameter, so multiple recipients can be provided in a list.
 
-Module usage
+Input usage
 ------------
-.. _ommail.parameter.module.mailto-usage:
+.. _ommail.parameter.input.mailto-usage:
 
 .. code-block:: rsyslog
 

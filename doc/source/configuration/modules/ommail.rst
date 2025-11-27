@@ -61,8 +61,8 @@ v7 and v8 versions did only support legacy parameters.
    Parameter names are case-insensitive; camelCase is recommended for readability.
 
 
-Action Parameters
------------------
+Input Parameters
+----------------
 
 .. list-table::
    :widths: 30 70

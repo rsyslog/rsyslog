@@ -1,5 +1,5 @@
 .. _param-ommail-server:
-.. _ommail.parameter.module.server:
+.. _ommail.parameter.input.server:
 
 Server
 ======
@@ -17,9 +17,9 @@ Specifies the hostname or IP address of the SMTP server used by ommail actions.
 This parameter applies to :doc:`../../configuration/modules/ommail`.
 
 :Name: Server
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: yes
 :Introduced: 8.5.0
 
@@ -27,9 +27,9 @@ Description
 -----------
 Name or IP address of the SMTP server to be used. Must currently be set. The default SMTP server is 127.0.0.1 on the local machine, but it should generally be specified explicitly.
 
-Module usage
+Input usage
 ------------
-.. _ommail.parameter.module.server-usage:
+.. _ommail.parameter.input.server-usage:
 
 .. code-block:: rsyslog
 
