@@ -28,7 +28,8 @@ Description
 Use this parameter to set a **constant** subject text. Choose
 :ref:`param-ommail-subject-template` when the subject should be generated from a
 template. The ``subject.template`` and ``subject.text`` parameters cannot both
-be configured within a single action.
+be configured within a single action. If neither is specified, a default,
+non-configurable subject line will be generated.
 
 Input usage
 ------------
