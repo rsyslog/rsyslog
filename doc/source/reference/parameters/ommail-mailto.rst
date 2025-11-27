@@ -25,7 +25,8 @@ This parameter applies to :doc:`../../configuration/modules/ommail`.
 
 Description
 -----------
-The recipient email address(es). This is an array parameter, so multiple recipients can be provided in a list.
+The recipient email address(es). This is an array parameter, so multiple
+recipients can be provided in a list.
 
 Input usage
 ------------

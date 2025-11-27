@@ -25,7 +25,9 @@ This parameter applies to :doc:`../../configuration/modules/ommail`.
 
 Description
 -----------
-Name or IP address of the SMTP server to be used. Must currently be set. The default SMTP server is 127.0.0.1 on the local machine, but it should generally be specified explicitly.
+Name or IP address of the SMTP server to be used. Must currently be set. The
+default SMTP server is 127.0.0.1 on the local machine, but it should
+generally be specified explicitly.
 
 Input usage
 ------------

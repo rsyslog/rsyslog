@@ -25,7 +25,9 @@ This parameter applies to :doc:`../../configuration/modules/ommail`.
 
 Description
 -----------
-Port number or name of the SMTP port to be used. While the module may fall back to port 25 in some legacy scenarios, this parameter is required and must be set explicitly in modern configurations.
+Port number or name of the SMTP port to be used. While the module may fall
+back to port 25 in some legacy scenarios, this parameter is required and must
+be set explicitly in modern configurations.
 
 Input usage
 ------------

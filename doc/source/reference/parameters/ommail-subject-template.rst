@@ -25,7 +25,11 @@ This parameter applies to :doc:`../../configuration/modules/ommail`.
 
 Description
 -----------
-The name of the template to be used as the mail subject. Use this parameter when message content should appear in the subject. If you just need a constant subject line, use :ref:`param-ommail-subject-text` instead. The *subject.template* and *subject.text* parameters cannot both be configured within a single action.
+The name of the template to be used as the mail subject. Use this parameter
+when message content should appear in the subject. If you just need a constant
+subject line, use :ref:`param-ommail-subject-text` instead. The
+``subject.template`` and ``subject.text`` parameters cannot both be configured
+within a single action.
 
 Input usage
 ------------
