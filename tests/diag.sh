@@ -1039,9 +1039,9 @@ content_count_check() {
 		grep_opt=-F
 	fi
 	file=${3:-$RSYSLOG_OUT_LOG}
-	count=$(grep -c $grep_opt -- "$1" <${RSYSLOG_OUT_LOG})
+	count=$(grep -c $grep_opt -- "$1" <${file})
 	if [ ${count:=0} -ne "$2" ]; then
-	    grep -c -F -- "$1" <${RSYSLOG_OUT_LOG}
+	    grep -c -F -- "$1" <${file}
 	    printf '\n============================================================\n'
 	    printf 'FILE "%s" content:\n' "$file"
 	    cat -n ${file}
@@ -1617,27 +1617,27 @@ error_exit() {
 	# Core dump analysis - always run when cores are detected
 	echo "=== Core Dump Detection and Analysis ==="
 	core_dumps_found=0
-	
+
 	# Search for core dumps in multiple locations and patterns
 	echo "Searching for core dumps in:"
 	echo "  - Current directory: $(pwd)"
 	echo "  - /cores/ directory (macOS system cores)"
 	echo "  - Subdirectories (*.core, core.*)"
-	
+
 	# Process core files safely using while read to handle filenames with spaces/special chars
 	process_core_file() {
 		local corefile="$1"
 		if [ -f "$corefile" ]; then
 			core_dumps_found=$((core_dumps_found + 1))
 			echo "=== Analyzing core dump #$core_dumps_found: $corefile ==="
-			
+
 			# Identify the core file type and size
 			if command -v file >/dev/null 2>&1; then
 			echo "Core file type:"
 			file "$corefile"
 		fi
 		echo "Core file size: $(wc -c < "$corefile") bytes"
-			
+
 			# Use platform-appropriate debugger for stack trace
 			if [ "$(uname)" == "Darwin" ]; then
 				if command -v lldb >/dev/null 2>&1; then
@@ -1676,7 +1676,7 @@ error_exit() {
 			echo ""
 		fi
 	}
-	
+
 	# Process glob patterns (handle no-match cleanly via nullglob)
 	shopt -q nullglob; _had_nullglob=$?
 	[ $_had_nullglob -ne 0 ] && shopt -s nullglob
@@ -1684,12 +1684,12 @@ error_exit() {
 		process_core_file "$corefile"
 	done
 	[ $_had_nullglob -ne 0 ] && shopt -u nullglob
-	
+
 	# Process find results safely using while read without subshell (process substitution)
 	while IFS= read -r corefile; do
 		process_core_file "$corefile"
 	done < <(find . -name "core.*" -o -name "*.core" 2>/dev/null)
-	
+
 	if [ $core_dumps_found -eq 0 ]; then
 		echo "No core dumps found. Checking possible reasons:"
 		echo "  - Core dump creation might be disabled"
@@ -1700,7 +1700,7 @@ error_exit() {
 			echo "  - macOS core dump enabled: $(sysctl kern.coredump 2>/dev/null || echo 'unknown')"
 		fi
 		echo "  - Current ulimit -c: $(ulimit -c)"
-		
+
 		# Look for evidence of recent segfaults in log output or dmesg
 		echo "  - Checking for segfault evidence:"
 		if [ "$(uname)" == "Darwin" ]; then
@@ -1726,12 +1726,12 @@ error_exit() {
 	echo "=== Disk Space Analysis ==="
 df -hP . | tail -1 | awk '{
 		usage=$5+0;
-		if (usage >= 95) 
+		if (usage >= 95)
 			print "WARNING: Disk usage is " $5 " (Free: " $4 ") - This may prevent core dump creation!"
-		else 
+		else
 			print "Disk usage: " $5 " (Free: " $4 ")"
 	}'
-	
+
 	if [[ ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ]]; then
 		touch IN_AUTO_DEBUG
 		# OK, we have the testname and can re-run under valgrind
@@ -1762,11 +1762,11 @@ df -hP . | tail -1 | awk '{
 		if command -v sw_vers >/dev/null 2>&1; then
 			sw_vers
 		fi
-		# macOS-specific memory information  
+		# macOS-specific memory information
 		echo "=== macOS System Status ==="
 		echo "Memory usage:"
 		top -l 1 | grep "PhysMem" || echo "Memory info unavailable"
-		
+
 		# Recent system logs for rsyslogd (if available)
 		echo "=== Recent macOS System Logs ==="
 		if command -v log >/dev/null 2>&1; then
@@ -1782,7 +1782,7 @@ df -hP . | tail -1 | awk '{
 			grep -E "(MemTotal|MemFree|MemAvailable)" /proc/meminfo
 		fi
 	fi
-	
+
 	# Gather test error logs
 	echo "=== Error Logs Collection ==="
 	# Run gather-check-logs.sh if available; account for being invoked from tests/ dir
@@ -1798,14 +1798,14 @@ df -hP . | tail -1 | awk '{
 	else
 		echo "gather-check-logs.sh not found, collecting available logs manually..."
 	fi
-	
+
 	if [ -f "failed-tests.log" ]; then
 		echo "=== Failed Tests Log ==="
 		cat failed-tests.log
 	else
 		echo "No failed-tests.log found"
 	fi
-	
+
 	# Extended debug output for dependencies started by testbench
 	if [ "$EXTRA_EXITCHECK" == 'dumpkafkalogs' ] && [ "$TEST_OUTPUT" == "VERBOSE" ]; then
 		# Dump Zookeeper log
