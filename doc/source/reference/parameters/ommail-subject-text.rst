@@ -38,7 +38,14 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="ommail")
-   action(type="ommail" subjectText="rsyslog detected disk problem")
+   action(
+       type="ommail"
+       server="mail.example.net"
+       port="25"
+       mailFrom="rsyslog@example.net"
+       mailTo="operator@example.net"
+       subjectText="rsyslog detected disk problem"
+   )
 
 See also
 --------

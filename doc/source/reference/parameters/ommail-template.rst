@@ -34,7 +34,14 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="ommail")
-   action(type="ommail" template="mailBody")
+   action(
+       type="ommail"
+       server="mail.example.net"
+       port="25"
+       mailFrom="rsyslog@example.net"
+       mailTo="operator@example.net"
+       template="mailBody"
+   )
 
 See also
 --------
