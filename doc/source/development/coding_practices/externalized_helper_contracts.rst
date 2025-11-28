@@ -48,4 +48,4 @@ extra checks or move the helper back into its parent.
 
 **References:**
 
-- :ref:`practice-embedded-ipv4-tail-helper` — example of documenting a helper that assumes prevalidated offsets inside ``runtime/mmanon.c``.
+- :doc:`embedded_ipv4_tail_helper` — example of documenting a helper that assumes prevalidated offsets inside ``runtime/mmanon.c``.

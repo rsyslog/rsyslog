@@ -1,0 +1,20 @@
+# Fail2ban custom configuration for ROSI Collector
+# Relaxed settings for basic installation
+
+[DEFAULT]
+# Ban duration: 10 minutes
+bantime = 600
+# Detection window: 10 minutes
+findtime = 600
+# Max retries before ban
+maxretry = 5
+# Backend for log monitoring
+backend = systemd
+
+[sshd]
+enabled = true
+port    = 22
+filter  = sshd
+logpath = /var/log/auth.log
+maxretry = 5
+bantime = 600

@@ -1,0 +1,447 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "doc",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Syslog Explorer",
+      "tooltip": "View syslog logs",
+      "type": "link",
+      "url": "/d/logs-explore-like-v4"
+    },
+    {
+      "asDropdown": false,
+      "icon": "search-plus",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Analysis",
+      "tooltip": "Log analysis and patterns",
+      "type": "link",
+      "url": "/d/syslog-deep-dive"
+    },
+    {
+      "asDropdown": false,
+      "icon": "bell",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Alerting",
+      "tooltip": "View alerts overview",
+      "type": "link",
+      "url": "/d/alerting-overview"
+    },
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Host Metrics",
+      "tooltip": "CPU, memory, disk, network metrics",
+      "type": "link",
+      "url": "/d/node-overview"
+    }
+  ],
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana",
+        "uid": "-- Grafana --"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "displayMode": "list",
+        "minRefreshInterval": "10s",
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "State"
+          }
+        ],
+        "maxItems": 10,
+        "dashboardFilter": "",
+        "folderFilter": "",
+        "stateFilter": {
+          "firing": true,
+          "pending": true,
+          "noData": false,
+          "normal": false,
+          "error": true
+        }
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana",
+            "uid": "-- Grafana --"
+          },
+          "refId": "A",
+          "queryType": "",
+          "panelId": 1
+        }
+      ],
+      "title": "Active Alerts",
+      "type": "alertlist",
+      "fieldConfig": {
+        "defaults": {}
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana",
+        "uid": "-- Grafana --"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "displayMode": "list",
+        "minRefreshInterval": "10s",
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "State"
+          }
+        ],
+        "maxItems": 10,
+        "dashboardFilter": "",
+        "folderFilter": "Alerts",
+        "stateFilter": {
+          "firing": true,
+          "pending": true,
+          "noData": true,
+          "normal": true,
+          "error": true
+        }
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana",
+            "uid": "-- Grafana --"
+          },
+          "refId": "A",
+          "queryType": "",
+          "panelId": 2
+        }
+      ],
+      "title": "Alert Rules (Alerts Folder)",
+      "type": "alertlist",
+      "fieldConfig": {
+        "defaults": {}
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana",
+        "uid": "-- Grafana --"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "id": 4,
+      "options": {
+        "displayMode": "list",
+        "minRefreshInterval": "10s",
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "State"
+          }
+        ],
+        "maxItems": 10,
+        "dashboardFilter": "",
+        "folderFilter": "",
+        "stateFilter": {
+          "firing": true,
+          "pending": true,
+          "noData": true,
+          "normal": true,
+          "error": true
+        }
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana",
+            "uid": "-- Grafana --"
+          },
+          "refId": "A",
+          "queryType": "",
+          "panelId": 4
+        }
+      ],
+      "title": "All Alert Rules",
+      "type": "alertlist",
+      "fieldConfig": {
+        "defaults": {}
+      }
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 5,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showTime": true,
+        "sortOrder": "Descending"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{job=\"syslog\"} |~ \"(?i)(error|critical|alert|warning|fail)\" | line_format \"{{.host}}: {{__line__}}\"",
+          "refId": "A"
+        }
+      ],
+      "title": "Recent Error/Warning Logs",
+      "type": "logs",
+      "fieldConfig": {
+        "defaults": {}
+      }
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "100 - (avg by(instance, host, role, network) (rate(node_cpu_seconds_total{mode=\"idle\", host=~\"$host\", role=~\"$role\", network=~\"$network\"}[5m])) * 100)",
+          "refId": "A",
+          "legendFormat": "CPU {{host}} ({{role}})"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "(1 - (node_memory_MemAvailable_bytes{host=~\"$host\", role=~\"$role\", network=~\"$network\"} / node_memory_MemTotal_bytes{host=~\"$host\", role=~\"$role\", network=~\"$network\"})) * 100",
+          "refId": "B",
+          "legendFormat": "Memory {{host}} ({{role}})"
+        }
+      ],
+      "title": "System Resources (CPU & Memory)",
+      "type": "timeseries",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "max": 100,
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 80
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent"
+        }
+      }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [
+    "alerting",
+    "monitoring"
+  ],
+  "templating": {
+    "list": [
+      {
+        "allValue": ".*",
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(node_uname_info, role)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Role",
+        "multi": true,
+        "name": "role",
+        "options": [],
+        "query": {
+          "query": "label_values(node_uname_info, role)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(node_uname_info, network)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Network",
+        "multi": true,
+        "name": "network",
+        "options": [],
+        "query": {
+          "query": "label_values(node_uname_info, network)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": ".*",
+        "current": {},
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(node_uname_info{role=~\"$role\", network=~\"$network\"}, host)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Host",
+        "multi": true,
+        "name": "host",
+        "options": [],
+        "query": {
+          "query": "label_values(node_uname_info{role=~\"$role\", network=~\"$network\"}, host)",
+          "refId": "PrometheusVariableQueryEditor-VariableQuery"
+        },
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Alerting Overview",
+  "uid": "alerting-overview",
+  "version": 1,
+  "weekStart": ""
+}
