@@ -1,0 +1,6 @@
+http:
+  middlewares:
+    admin-auth:
+      basicAuth:
+        users:
+          - "__BASIC_AUTH_CREDENTIALS__"

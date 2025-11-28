@@ -35,7 +35,7 @@ Input usage
 
 .. code-block:: rsyslog
 
-   action(type="omlibdbi" driver="mysql" server="db.example.net" \
+   action(type="omlibdbi" driver="mysql" server="db.example.net"
           uid="dbwriter" pwd="sup3rSecret" db="syslog")
 
 Legacy names (for reference)

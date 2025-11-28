@@ -9,7 +9,11 @@ with advanced features like structured logging, reliable TCP/TLS
 delivery, and integration with modern pipelines (e.g., Elasticsearch,
 Kafka, or cloud services).
 
-This guide helps you get up and running quickly. It includes:
+This guide helps you get up and running quickly. For a complete
+production deployment with dashboards and monitoring, see
+:doc:`../deployments/rosi_collector/index`.
+
+It includes:
 
 .. toctree::
    :maxdepth: 1
