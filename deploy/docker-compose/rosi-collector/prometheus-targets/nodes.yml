@@ -1,0 +1,34 @@
+# prometheus-targets/nodes.yml
+# Node Exporter Targets for Prometheus
+#
+# This file is auto-reloaded by Prometheus (no restart needed for changes).
+# Prometheus picks up changes within ~5 minutes.
+#
+# To add targets on the server, use:
+#   /usr/local/bin/prometheus-target add <ip:port> [host=name] [role=value] [network=value]
+#
+# Example entries (replace with actual targets):
+
+# Example: Monitoring server
+#- targets:
+#    - 10.0.0.1:9100
+#  labels:
+#    host: monitoring-server
+#    role: monitoring
+#    network: internal
+
+# Example: Web server
+#- targets:
+#    - 10.0.0.2:9100
+#  labels:
+#    host: web-server
+#    role: web
+#    network: internal
+
+# Example: External/public server
+#- targets:
+#    - 203.0.113.10:9100
+#  labels:
+#    host: public-server
+#    role: app
+#    network: external
