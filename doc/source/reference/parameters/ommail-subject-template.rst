@@ -39,6 +39,7 @@ Input usage
 .. code-block:: rsyslog
 
    module(load="ommail")
+   template(name="mailSubject" type="string" string="Alert: %msg%")
    action(
        type="ommail"
        server="mail.example.net"
