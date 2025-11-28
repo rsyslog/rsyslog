@@ -27,8 +27,8 @@ Description
 -----------
 Setting this to "off" permits the actual message body to be excluded. This may
 be useful for pager-like devices or cell phone SMS messages. The default is
-"on", which is appropriate for almost all cases. Turn it off only if you know
-exactly what you do!
+"on", which is appropriate for almost all cases. This option should only be
+disabled for specific use cases, as it deviates from standard email behavior.
 
 Input usage
 ------------
