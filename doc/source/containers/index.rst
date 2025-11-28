@@ -15,6 +15,9 @@ Since version 8.32.0 rsyslog also adjusts a few defaults when it detects
 that it is running as PID 1 inside a container: ``Ctrl-C`` is handled and
 no pid file is written.
 
+For complete production deployments with dashboards and monitoring, see
+:doc:`../deployments/index`.
+
 .. toctree::
    :maxdepth: 2
 
