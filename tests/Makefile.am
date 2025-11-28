@@ -1597,11 +1597,13 @@ endif
 if ENABLE_OMUXSOCK
 TESTS += uxsock_simple.sh \
 	 uxsock_simple_abstract.sh \
-	 uxsock_simple_abstract-vg.sh \
 	 uxsock_multiple.sh \
+	 uxsock_multiple_netns.sh
+if HAVE_VALGRIND
+TESTS += uxsock_simple_abstract-vg.sh \
 	 uxsock_multiple-vg.sh \
-	 uxsock_multiple_netns.sh \
 	 uxsock_multiple_netns-vg.sh
+endif # HAVE_VALGRIND
 endif
 
 if ENABLE_RELP
