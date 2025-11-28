@@ -19,48 +19,32 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
 
 Action Parameters
 -----------------
 
-Template
-^^^^^^^^
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
+   * - Parameter
+     - Summary
+   * - :ref:`param-omjournal-template`
+     - .. include:: ../../reference/parameters/omjournal-template.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omjournal-namespace`
+     - .. include:: ../../reference/parameters/omjournal-namespace.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
-   "word", "none", "no", "none"
+.. toctree::
+   :hidden:
 
-Template to use when submitting messages.
-
-By default, rsyslog will use the incoming %msg% as the MESSAGE field
-of the journald entry, and include the syslog tag and priority.
-
-You can override the default formatting of the message, and include
-custom fields with a template. Complex fields in the template
-(eg. json entries) will be added to the journal as json text. Other
-fields will be coerced to strings.
-
-Journald requires that you include a template parameter named MESSAGE.
-
-namespace
-^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-Starting from systemd v256, the journal supports namespaces. This allows
-you to write to a specific namespace in the journal, which can be useful
-for isolating logs from different applications or components.
-However, this feature does not support templates yet.
+   ../../reference/parameters/omjournal-template
+   ../../reference/parameters/omjournal-namespace
 
 Examples
 ========
