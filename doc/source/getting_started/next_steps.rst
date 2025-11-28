@@ -4,6 +4,21 @@ Next Steps
 You have installed rsyslog, configured local logging, and optionally
 set up log forwarding. Here are some recommended next steps.
 
+Production Deployments
+----------------------
+
+For a complete log collection stack with dashboards and alerting, see
+ROSI Collector (RSyslog Open System for Information):
+
+:doc:`../deployments/rosi_collector/index`
+
+ROSI Collector provides:
+
+- Centralized log aggregation from multiple hosts
+- Pre-built Grafana dashboards for log exploration
+- Prometheus metrics collection
+- Automatic TLS with Traefik
+
 Explore Modules
 ---------------
 

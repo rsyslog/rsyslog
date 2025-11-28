@@ -3144,7 +3144,7 @@ fi
 
 dnl ---- gather doc files for EXTRA_DIST ----
 # .rst files and selected assets from doc/source
-doc_src_files=`cd "$srcdir" && find doc/source -type f \( -name '*.rst' -o -name '*.conf' -o -name '*.jpg' -o -name '*.png' \) -print 2>/dev/null | LC_ALL=C sort`
+doc_src_files=`cd "$srcdir" && find doc/source -type f \( -name '*.rst' -o -name '*.conf' -o -name '*.jpg' -o -name '*.png' -o -name '*.svg' \) -print 2>/dev/null | LC_ALL=C sort`
 
 # Additional doc assets that must be shipped in dist tarball
 # - Vendored static JS/CSS used by the docs
