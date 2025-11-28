@@ -1,6 +1,30 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2512.0 (aka 2025.10) 2025-12-0?
 - overall improved documentation via a large set of topic updates.
+- 2025-11-28: imtcp: add support for NetworkNamespace
+  This builds on
+    https://github.com/rsyslog/rsyslog/pull/6121
+  to add Network Namespace support to imtcp module. This
+  extends imtcp to support a wider range of Unix/Linux
+  environments (or any environment supporting network
+  namespaces).
+  The imtcp module is enhanced to accept a NetworkNamespace
+  parameter, both as a default at the module level, and
+  on a per-instance basis.
+  The tcpsrv module is enhanced to allow the NetworkNamespace
+  to be applied to a listener's configuration parameters.
+  Finally, the netstrm module is enhanced to switch namespaces
+  before invoking the downstream (driver specific) LstnInit
+  function.
+  A new test imtcp-netns (and associated imtcp-netns-vg) is
+  added to test this functionality.  This must be run as root
+  (technically it must be run by a user with CAP_SYS_ADMIN
+  capabilities, as network namespace creating/change is
+  required).
+  A slight change to diag.sh is made to allow passing $RS_REDIR
+  to valgrind (as $RS_REDIR is used in the imtcp-netns.sh
+  test for some negative cases).
+  Thanks to Billie Alsup for the patch.
 - 2025-11-25: mmanon: fixed data race issue in pseudonymization handling
   Thanks to Jan Gerhards for the patch.
 - 2025-11-12: omhttp: added explicit splunk HEC profile
