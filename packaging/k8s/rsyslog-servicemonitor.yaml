@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rsyslog
+  labels:
+    app: rsyslog
+    release: prometheus # or whatever label your Prometheus Operator is configured to look for
+spec:
+  selector:
+    matchLabels:
+      app: rsyslog
+  endpoints:
+  - port: http-metrics
+    path: /metrics
+    interval: 15s

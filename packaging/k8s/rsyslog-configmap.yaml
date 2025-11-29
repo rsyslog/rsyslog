@@ -1,0 +1,52 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rsyslog-config
+  labels:
+    app: rsyslog
+data:
+  rsyslog.conf: |
+    # rsyslog.conf for Kubernetes
+    # This configuration is designed for running rsyslog in a container.
+
+    # --- Global Settings ---
+    global(
+      # Directory for rsyslog's working files (e.g., for queues).
+      workDirectory="/var/spool/rsyslog"
+    )
+
+    # --- Modules ---
+    module(load="imuxsock")  # Unix sockets for local logging
+    module(load="imklog")    # Kernel logging
+    module(load="omstdout")  # Output to stdout
+    module(load="imtcp")     # TCP input
+    module(load="imudp")     # UDP input
+    module(
+      load="imhttp"
+      # Expose an HTTP server on port 8080.
+      ports="8080"
+      # Define the health check endpoint.
+      healthCheckPath="/health"
+      # Define the Prometheus metrics endpoint.
+      metricsPath="/metrics"
+    )
+
+    # --- Main Queue ---
+    # Create a disk-assisted queue for reliability.
+    # If rsyslog is temporarily unable to process messages, they will be queued.
+    main_queue(
+      queue.type="LinkedList"
+      queue.size="10000"
+      queue.filename="main_q"
+      queue.saveOnShutdown="on"
+    )
+
+    # --- Input Configuration ---
+    # Listen for syslog messages on a non-privileged port.
+    input(type="imtcp" port="10514")
+    input(type="imudp" port="10514")
+
+    # --- Output Configuration ---
+    # Log everything to standard output.
+    # This is the standard practice for containers.
+    action(type="omstdout")

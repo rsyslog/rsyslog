@@ -1,0 +1,31 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rsyslog-network-policy
+  labels:
+    app: rsyslog
+spec:
+  podSelector:
+    matchLabels:
+      app: rsyslog
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    # Allow traffic from pods with the 'role: syslog-client' label.
+    # This should be adjusted to match the labels of the pods that will be sending logs to rsyslog.
+    - podSelector:
+        matchLabels:
+          role: syslog-client
+    # Allow traffic from the Prometheus scraper.
+    # This assumes the Prometheus server is in a namespace with the 'prometheus: true' label.
+    - namespaceSelector:
+        matchLabels:
+          prometheus: "true"
+      ports:
+      - protocol: TCP
+        port: 10514
+      - protocol: UDP
+        port: 10514
+      - protocol: TCP
+        port: 8080
