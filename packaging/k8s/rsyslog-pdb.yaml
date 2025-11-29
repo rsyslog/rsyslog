@@ -1,0 +1,11 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rsyslog-pdb
+  labels:
+    app: rsyslog
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: rsyslog

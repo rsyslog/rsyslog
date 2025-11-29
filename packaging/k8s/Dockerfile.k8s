@@ -1,0 +1,52 @@
+# Dockerfile for a Kubernetes-native rsyslog image
+# This image is designed to be a "good citizen" in a Kubernetes environment.
+
+# Use a minimal Ubuntu base image.
+FROM ubuntu:24.04
+
+# Arguments for versioning
+ARG RSYSLOG_VERSION="2025.04"
+LABEL version="${RSYSLOG_VERSION}"
+LABEL maintainer="Rainer Gerhards <rgerhards@adiscon.com>"
+LABEL description="Kubernetes-native rsyslog container."
+
+# Set DEBIAN_FRONTEND to noninteractive to prevent interactive prompts.
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 1. Add Adiscon PPA for the latest rsyslog
+# 2. Install rsyslog and required modules (imhttp for health/metrics, omstdout for stdout logging)
+# 3. Clean up apt cache
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends software-properties-common gnutls-bin && \
+    add-apt-repository -y ppa:adiscon/v8-stable && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends rsyslog rsyslog-imhttp rsyslog-omstdout && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# Create a non-root user and group for rsyslog.
+# Also create a working directory.
+RUN groupadd -r rsyslog && \
+    useradd -r -g rsyslog -d /var/spool/rsyslog -s /sbin/nologin -c "rsyslog user" rsyslog && \
+    mkdir -p /var/spool/rsyslog && \
+    chown -R rsyslog:rsyslog /var/spool/rsyslog
+
+# Copy the Kubernetes-specific rsyslog configuration and entrypoint script.
+COPY rsyslog.k8s.conf /etc/rsyslog.conf
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Switch to the non-root user.
+USER rsyslog
+
+# Expose ports for syslog (TCP/UDP) and the HTTP server (for health/metrics).
+# Note: In k8s, this is mostly for documentation. The actual port mapping is done in the Service manifest.
+EXPOSE 10514/tcp
+EXPOSE 10514/udp
+EXPOSE 8080/tcp
+
+# Set the entrypoint to our script which will handle signals and start rsyslog.
+ENTRYPOINT ["/entrypoint.sh"]
+
+# The default command is to run rsyslog in the foreground.
+CMD ["/usr/sbin/rsyslogd", "-n", "-f", "/etc/rsyslog.conf"]
