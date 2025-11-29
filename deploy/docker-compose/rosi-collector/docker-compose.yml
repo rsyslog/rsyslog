@@ -1,0 +1,165 @@
+services:
+  traefik:
+    image: traefik:latest
+    container_name: traefik-central
+    restart: unless-stopped
+    command:
+      - --api.dashboard=true
+      - --api.insecure=false
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=rosi-collector-net
+      - --providers.file.filename=/etc/traefik/dynamic.yml
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.prometheus.address=:9090
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+    ports:
+      - "80:80"
+      - "443:443"
+      - "9090:9090"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/letsencrypt:/letsencrypt
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+    networks:
+      - rosi-collector-net
+  loki:
+    image: grafana/loki:2.9.6
+    command: -config.file=/etc/loki/local-config.yml
+    ports:
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - loki-data:/loki
+      - ./loki-config.yml:/etc/loki/local-config.yml:ro
+    restart: unless-stopped
+    networks:
+      - rosi-collector-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3100/ready >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+  grafana:
+    image: grafana/grafana:main-ubuntu
+    env_file: .env
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-https://grafana.${TRAEFIK_DOMAIN}/}
+      GF_SERVER_DOMAIN: ${GRAFANA_DOMAIN:-grafana.${TRAEFIK_DOMAIN}}
+      # Increase datasource proxy limits to handle more concurrent requests
+      GF_DATAPROXY_MAX_IDLE_CONNS_PER_HOST: "300"
+      GF_DATAPROXY_MAX_IDLE_CONNS: "300"
+      GF_DATAPROXY_TIMEOUT: "60"
+      GF_DATAPROXY_KEEP_ALIVE: "60"
+      # Increase query timeout
+      GF_DATAPROXY_QUERY_TIMEOUT: "60"
+      # Allow more concurrent requests per datasource
+      GF_DATAPROXY_MAX_CONCURRENT_REQUESTS: "250"
+      # Increase response limit for large queries
+      GF_DATAPROXY_RESPONSE_LIMIT: "0"
+      # SMTP configuration for alerting
+      GF_SMTP_ENABLED: ${SMTP_ENABLED:-false}
+      GF_SMTP_HOST: ${SMTP_HOST:-}
+      GF_SMTP_PORT: ${SMTP_PORT:-587}
+      GF_SMTP_USER: ${SMTP_USER:-}
+      GF_SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      GF_SMTP_FROM_ADDRESS: ${ALERT_EMAIL_FROM:-}
+      GF_SMTP_FROM_NAME: "Rsyslog Central Alerts"
+      GF_SMTP_SKIP_VERIFY: ${SMTP_SKIP_VERIFY:-false}
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on:
+      - loki
+      - traefik
+    restart: unless-stopped
+    networks:
+      - rosi-collector-net
+    labels:
+      - "traefik.enable=true"
+      - 'traefik.http.routers.grafana.rule=Host(`${GRAFANA_DOMAIN:-grafana.${TRAEFIK_DOMAIN}}`) && !PathPrefix(`/downloads/`)'
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - "traefik.http.routers.grafana.priority=1"
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus-central
+    user: "root"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/prometheus/consoles
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus-targets:/etc/prometheus/targets:ro
+      - prometheus-data:/prometheus
+    restart: unless-stopped
+    networks:
+      - rosi-collector-net
+    labels:
+      - "traefik.enable=true"
+      - 'traefik.http.routers.prometheus.rule=Host(`${TRAEFIK_DOMAIN}`)'
+      - "traefik.http.routers.prometheus.entrypoints=prometheus"
+      - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.prometheus.middlewares=admin-auth@file"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+
+  rsyslog:
+    image: rsyslog/rsyslog-collector:latest
+    env_file: .env
+    environment:
+      WRITE_JSON_FILE: ${WRITE_JSON_FILE:-off}
+    container_name: rsyslog-central
+    ports:
+      - "0.0.0.0:514:514/udp"
+      - "[::]:514:514/udp"
+      - "0.0.0.0:10514:514/tcp"
+      - "[::]:10514:514/tcp"
+    volumes:
+      - /var/log/rsyslog-central:/var/log
+      - ./rsyslog.conf/30-send-loki-http.conf:/etc/rsyslog.d/30-send-loki-http.conf:ro
+      - ./rsyslog.conf/80-file-output.conf:/etc/rsyslog.d/80-file-output.conf:ro
+    restart: unless-stopped
+    depends_on:
+      loki:
+        condition: service_healthy
+    networks:
+      - rosi-collector-net
+
+  downloads:
+    image: nginx:alpine
+    container_name: downloads-central
+    restart: unless-stopped
+    volumes:
+      - ./downloads:/usr/share/nginx/html/downloads:ro
+    networks:
+      - rosi-collector-net
+    labels:
+      - "traefik.enable=true"
+      - 'traefik.http.routers.downloads.rule=Host(`${GRAFANA_DOMAIN:-grafana.${TRAEFIK_DOMAIN}}`) && PathPrefix(`/downloads/`)'
+      - "traefik.http.routers.downloads.entrypoints=websecure"
+      - "traefik.http.routers.downloads.tls.certresolver=letsencrypt"
+      - "traefik.http.services.downloads.loadbalancer.server.port=80"
+      - "traefik.http.routers.downloads.priority=100"
+
+
+volumes:
+  loki-data:
+  grafana-data:
+  prometheus-data:
+
+networks:
+  rosi-collector-net:
+    driver: bridge
