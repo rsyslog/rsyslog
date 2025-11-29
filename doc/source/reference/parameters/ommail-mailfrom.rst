@@ -25,7 +25,8 @@ This parameter applies to :doc:`../../configuration/modules/ommail`.
 
 Description
 -----------
-The email address used as the sender's address.
+This mandatory parameter defines the email address used as the sender. It will
+appear in the ``From:`` header of the email.
 
 Input usage
 ------------

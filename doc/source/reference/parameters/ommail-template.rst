@@ -25,7 +25,8 @@ This parameter applies to :doc:`../../configuration/modules/ommail`.
 
 Description
 -----------
-Template to be used for the mail body when body output is enabled.
+Specifies the name of the template for the mail body. This parameter is only
+effective if :ref:`param-ommail-body-enable` is "on" (which is the default).
 
 Input usage
 ------------
