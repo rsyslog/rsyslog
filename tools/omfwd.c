@@ -39,6 +39,8 @@
 #include <fcntl.h>
 #include <zlib.h>
 #include <pthread.h>
+#include <arpa/nameser.h>
+#include <resolv.h>
 #include "rsyslog.h"
 #include "syslogd.h"
 #include "conf.h"
@@ -100,6 +102,7 @@ typedef struct _instanceData {
     int nActiveTargets; /* how many targets have been active the last time? */
     DEF_ATOMIC_HELPER_MUT(mut_nActiveTargets);
     char **target_name;
+    char *targetSrv;
     int nPorts;
     char **ports;
     char *address;
@@ -202,7 +205,8 @@ static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / si
 
 /* action (instance) parameters */
 static struct cnfparamdescr actpdescr[] = {
-    {"target", eCmdHdlrArray, CNFPARAM_REQUIRED},
+    {"target", eCmdHdlrArray, 0},
+    {"targetsrv", eCmdHdlrGetWord, 0},
     {"address", eCmdHdlrGetWord, 0},
     {"device", eCmdHdlrGetWord, 0},
     {"port", eCmdHdlrArray, 0},
@@ -309,6 +313,193 @@ static rsRetVal setLegacyDfltTpl(void __attribute__((unused)) * pVal, uchar *new
     free(cs.pszTplName);
     cs.pszTplName = newVal;
 finalize_it:
+    RETiRet;
+}
+
+typedef struct srvRecord_s {
+    char host[MAXDNAME];
+    uint16_t port;
+    uint16_t priority;
+    uint16_t weight;
+} srvRecord_t;
+
+static void freeConfiguredPorts(instanceData *const pData) {
+    if (pData->ports != NULL) {
+        for (int j = 0; j < pData->nPorts; ++j) {
+            free(pData->ports[j]);
+        }
+        free(pData->ports);
+    }
+    pData->ports = NULL;
+    pData->nPorts = 0;
+}
+
+static int compareSrvPriority(const void *lhs, const void *rhs) {
+    const srvRecord_t *const left = (const srvRecord_t *)lhs;
+    const srvRecord_t *const right = (const srvRecord_t *)rhs;
+    if (left->priority == right->priority) return 0;
+    return (left->priority < right->priority) ? -1 : 1;
+}
+
+static rsRetVal buildSrvTargets(instanceData *const pData, const srvRecord_t *const ordered, const unsigned recCount) {
+    unsigned i;
+    DEFiRet;
+
+    pData->nTargets = (int)recCount;
+    pData->nPorts = (int)recCount;
+    CHKmalloc(pData->target_name = (char **)calloc(recCount, sizeof(char *)));
+    CHKmalloc(pData->ports = (char **)calloc(recCount, sizeof(char *)));
+
+    for (i = 0; i < recCount; ++i) {
+        char portBuf[16];
+        if (snprintf(portBuf, sizeof(portBuf), "%u", (unsigned)ordered[i].port) >= (int)sizeof(portBuf)) {
+            LogError(0, RS_RET_INTERNAL_ERROR,
+                     "omfwd: SRV-discovered port for %s exceeds buffer length", ordered[i].host);
+            ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+        }
+
+        CHKmalloc(pData->target_name[i] = strdup(ordered[i].host));
+        CHKmalloc(pData->ports[i] = strdup(portBuf));
+    }
+
+finalize_it:
+    if (iRet != RS_RET_OK) {
+        if (pData->target_name != NULL) {
+            for (unsigned j = 0; j < recCount; ++j) {
+                free(pData->target_name[j]);
+            }
+            free(pData->target_name);
+            pData->target_name = NULL;
+        }
+        freeConfiguredPorts(pData);
+    }
+
+    RETiRet;
+}
+
+static rsRetVal resolveSrvTargets(instanceData *const pData) {
+    unsigned char answer[4096];
+    srvRecord_t *records = NULL;
+    srvRecord_t *ordered = NULL;
+    unsigned recCount = 0;
+    DEFiRet;
+
+    const char *const proto = (pData->protocol == FORW_TCP) ? "tcp" : "udp";
+    char srvName[2 * MAXDNAME];
+    if (snprintf(srvName, sizeof(srvName), "_syslog._%s.%s", proto, pData->targetSrv) >= (int)sizeof(srvName)) {
+        LogError(0, RS_RET_PARAM_ERROR, "omfwd: targetSrv value '%s' is too long", pData->targetSrv);
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    const int ansLen = res_query(srvName, ns_c_in, ns_t_srv, answer, sizeof(answer));
+    if (ansLen < 0) {
+        LogError(0, RS_RET_PARAM_ERROR, "omfwd: failed to resolve SRV records for '%s': %s", srvName, hstrerror(h_errno));
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    ns_msg handle;
+    if (ns_initparse(answer, ansLen, &handle) != 0) {
+        LogError(0, RS_RET_INTERNAL_ERROR, "omfwd: failed to parse SRV response for '%s'", srvName);
+        ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
+    }
+
+    const int ancount = ns_msg_count(handle, ns_s_an);
+    for (int i = 0; i < ancount; ++i) {
+        ns_rr rr;
+        if (ns_parserr(&handle, ns_s_an, i, &rr) != 0) continue;
+        if (ns_rr_type(rr) != ns_t_srv || ns_rr_rdlen(rr) < 6) continue;
+
+        char targetName[MAXDNAME];
+        if (ns_name_uncompress(ns_msg_base(handle), ns_msg_end(handle), ns_rr_rdata(rr) + 6, targetName,
+                               sizeof(targetName)) < 0) {
+            continue;
+        }
+
+        srvRecord_t record;
+        memset(&record, 0, sizeof(record));
+        record.priority = ns_get16(ns_rr_rdata(rr));
+        record.weight = ns_get16(ns_rr_rdata(rr) + 2);
+        record.port = ns_get16(ns_rr_rdata(rr) + 4);
+
+        size_t hostLen = strlen(targetName);
+        if (hostLen > 0 && targetName[hostLen - 1] == '.') {
+            targetName[hostLen - 1] = '\0';
+            --hostLen;
+        }
+
+        if (hostLen >= sizeof(record.host)) {
+            LogError(0, RS_RET_PARAM_ERROR,
+                     "omfwd: SRV target name '%s' exceeds supported length", targetName);
+            continue;
+        }
+
+        memcpy(record.host, targetName, hostLen + 1);
+
+        ++recCount;
+        srvRecord_t *const tmp = (srvRecord_t *)realloc(records, recCount * sizeof(srvRecord_t));
+        if (tmp == NULL) {
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+        records = tmp;
+        records[recCount - 1] = record;
+    }
+
+    if (recCount == 0) {
+        LogError(0, RS_RET_NOT_FOUND, "omfwd: no usable SRV records found for '%s'", srvName);
+        ABORT_FINALIZE(RS_RET_NOT_FOUND);
+    }
+
+    qsort(records, recCount, sizeof(srvRecord_t), compareSrvPriority);
+
+    CHKmalloc(ordered = (srvRecord_t *)calloc(recCount, sizeof(srvRecord_t)));
+    unsigned outIdx = 0;
+    for (unsigned idx = 0; idx < recCount;) {
+        const uint16_t priority = records[idx].priority;
+        unsigned grpStart = idx;
+        while (idx < recCount && records[idx].priority == priority) {
+            ++idx;
+        }
+
+        const unsigned grpCount = idx - grpStart;
+        unsigned char *used = NULL;
+        CHKmalloc(used = (unsigned char *)calloc(grpCount, sizeof(unsigned char)));
+        unsigned remaining = grpCount;
+        while (remaining > 0) {
+            uint32_t totalWeight = 0;
+            for (unsigned j = 0; j < grpCount; ++j) {
+                if (used[j]) continue;
+                totalWeight += records[grpStart + j].weight;
+            }
+
+            unsigned selected = 0;
+            if (totalWeight == 0) {
+                while (used[selected]) ++selected;
+            } else {
+                seedRandomNumber();
+                const uint32_t pick = (uint32_t)(labs(randomNumber()) % totalWeight);
+                uint32_t running = 0;
+                for (unsigned j = 0; j < grpCount; ++j) {
+                    if (used[j]) continue;
+                    running += records[grpStart + j].weight;
+                    if (pick < running) {
+                        selected = j;
+                        break;
+                    }
+                }
+            }
+
+            ordered[outIdx++] = records[grpStart + selected];
+            used[selected] = 1;
+            --remaining;
+        }
+        free(used);
+    }
+
+    CHKiRet(buildSrvTargets(pData, ordered, outIdx));
+
+finalize_it:
+    free(records);
+    free(ordered);
     RETiRet;
 }
 
@@ -499,6 +690,7 @@ BEGINfreeInstance
     free(pData->pszStrmDrvrAuthMode);
     free(pData->pszStrmDrvrPermitExpiredCerts);
     free(pData->gnutlsPriorityString);
+    free(pData->targetSrv);
     free(pData->networkNamespace);
     if (pData->ports != NULL) { /* could happen in error case (very unlikely) */
         for (int j = 0; j < pData->nPorts; ++j) {
@@ -1464,6 +1656,7 @@ finalize_it:
 
 static void setInstParamDefaults(instanceData *pData) {
     pData->tplName = NULL;
+    pData->targetSrv = NULL;
     pData->protocol = FORW_UDP;
     pData->networkNamespace = NULL;
     pData->originalNamespace = -1;
@@ -1585,6 +1778,8 @@ BEGINnewActInst
             for (int j = 0; j < nTargets; ++j) {
                 pData->target_name[j] = (char *)es_str2cstr(pvals[i].val.d.ar->arr[j], NULL);
             }
+        } else if (!strcmp(actpblk.descr[i].name, "targetsrv")) {
+            pData->targetSrv = es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(actpblk.descr[i].name, "address")) {
             pData->address = es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(actpblk.descr[i].name, "device")) {
@@ -1766,6 +1961,24 @@ BEGINnewActInst
             LogError(0, RS_RET_INTERNAL_ERROR, "omfwd: program error, non-handled parameter '%s'",
                      actpblk.descr[i].name);
         }
+    }
+
+    if (pData->targetSrv != NULL && pData->target_name != NULL) {
+        LogError(0, RS_RET_PARAM_ERROR, "omfwd: target and targetSrv are mutually exclusive");
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    if (pData->targetSrv == NULL && pData->target_name == NULL) {
+        LogError(0, RS_RET_PARAM_ERROR, "omfwd: either target or targetSrv must be specified");
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    if (pData->targetSrv != NULL) {
+        if (pData->ports != NULL) {
+            parser_warnmsg("omfwd: targetSrv was set, ignoring explicit port list");
+            freeConfiguredPorts(pData);
+        }
+        CHKiRet(resolveSrvTargets(pData));
     }
 
     if (pData->protocol == FORW_UDP && pData->nTargets > 1) {
