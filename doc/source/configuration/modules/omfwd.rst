@@ -1,6 +1,26 @@
+.. _module-omfwd:
+
 **************************************
 omfwd: syslog Forwarding Output Module
 **************************************
+
+.. index:: ! omfwd
+
+.. meta::
+   :description: Forward syslog messages to remote targets over UDP, TCP, or TLS, including DNS SRV discovery.
+   :keywords: rsyslog, omfwd, forwarding, syslog, tcp, udp, tls, srv
+
+.. summary-start
+
+omfwd forwards syslog messages to remote systems via UDP, TCP, or TLS, with optional DNS SRV discovery for target pools.
+
+.. summary-end
+
+===========================  ==========================================================
+**Module Name:**             **omfwd**
+**Author/Maintainer:**       `Rainer Gerhards <https://rainer.gerhards.net/>`_ <rgerhards@adiscon.com>
+**Introduced:**              Legacy (pre-3.0)
+===========================  ==========================================================
 
 The `omfwd` module forwards logs to remote systems using **UDP, TCP, or TLS**.
 
@@ -78,6 +98,30 @@ The most common forwarding examples:
        StreamDriverAuthMode="x509/name"
        StreamDriverPermittedPeers="logs.example.com"
    )
+
+**3. Discover receivers via DNS SRV**
+
+.. code-block:: rsyslog
+
+   # Resolve _syslog._tcp.example.com SRV records to build the target pool
+   action(
+       type="omfwd"
+       targetSrv="example.com"
+       protocol="tcp"
+   )
+
+When ``targetSrv`` is set, omfwd queries the protocol-specific SRV record and
+constructs the forwarding targets from the returned host and port values. The
+SRV priority/weight ordering is preserved before the existing pool/load-balancer
+logic runs.
+
+SRV discovery depends on resolver support for ``ns_initparse``. When that
+capability is missing at build time, ``targetSrv`` configuration fails with a
+not-implemented error.
+
+For test and controlled environments, you can override the resolver used for
+SRV lookups by setting ``RSYSLOG_DNS_SERVER`` (IPv4 address) and the optional
+``RSYSLOG_DNS_PORT`` environment variables before starting rsyslog.
 
 Outdated Legacy Methods
 =======================
