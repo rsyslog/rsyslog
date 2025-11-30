@@ -1,12 +1,12 @@
 .. _param-ommail-mailto:
 .. _ommail.parameter.input.mailto:
 
-MailTo
+mailTo
 ======
 
 .. index::
-   single: ommail; MailTo
-   single: MailTo
+   single: ommail; mailTo
+   single: mailTo
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Provides one or more recipient email addresses for each mail sent by ommail.
 
 This parameter applies to :doc:`../../configuration/modules/ommail`.
 
-:Name: MailTo
+:Name: mailTo
 :Scope: input
 :Type: array
 :Default: input=none
@@ -50,7 +50,7 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _ommail.parameter.legacy.actionmailto:
 
-- $ActionMailTo — maps to MailTo (status: legacy)
+- $ActionMailTo — maps to mailTo (status: legacy)
 
 .. index::
    single: ommail; $ActionMailTo

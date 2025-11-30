@@ -1,12 +1,12 @@
 .. _param-ommail-body-enable:
 .. _ommail.parameter.input.body-enable:
 
-Body.Enable
-===========
+bodyEnable
+==========
 
 .. index::
-   single: ommail; Body.Enable
-   single: Body.Enable
+   single: ommail; bodyEnable
+   single: bodyEnable
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Toggles inclusion of the mail body in messages sent by ommail.
 
 This parameter applies to :doc:`../../configuration/modules/ommail`.
 
-:Name: Body.Enable
+:Name: bodyEnable
 :Scope: input
 :Type: boolean
 :Default: input=on
@@ -52,7 +52,7 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _ommail.parameter.legacy.actionmailenablebody:
 
-- $ActionMailEnableBody — maps to Body.Enable (status: legacy)
+- $ActionMailEnableBody — maps to bodyEnable (status: legacy)
 
 .. index::
    single: ommail; $ActionMailEnableBody

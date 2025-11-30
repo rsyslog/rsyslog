@@ -1,12 +1,12 @@
 .. _param-ommail-mailfrom:
 .. _ommail.parameter.input.mailfrom:
 
-MailFrom
+mailFrom
 ========
 
 .. index::
-   single: ommail; MailFrom
-   single: MailFrom
+   single: ommail; mailFrom
+   single: mailFrom
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Defines the sender email address placed in outgoing messages from ommail.
 
 This parameter applies to :doc:`../../configuration/modules/ommail`.
 
-:Name: MailFrom
+:Name: mailFrom
 :Scope: input
 :Type: word
 :Default: input=none
@@ -49,7 +49,7 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _ommail.parameter.legacy.actionmailfrom:
 
-- $ActionMailFrom — maps to MailFrom (status: legacy)
+- $ActionMailFrom — maps to mailFrom (status: legacy)
 
 .. index::
    single: ommail; $ActionMailFrom

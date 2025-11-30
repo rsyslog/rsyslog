@@ -1,12 +1,12 @@
 .. _param-ommail-server:
 .. _ommail.parameter.input.server:
 
-Server
+server
 ======
 
 .. index::
-   single: ommail; Server
-   single: Server
+   single: ommail; server
+   single: server
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Specifies the hostname or IP address of the SMTP server used by ommail actions.
 
 This parameter applies to :doc:`../../configuration/modules/ommail`.
 
-:Name: Server
+:Name: server
 :Scope: input
 :Type: word
 :Default: input=none
@@ -50,7 +50,7 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _ommail.parameter.legacy.actionmailsmtpserver:
 
-- $ActionMailSMTPServer — maps to Server (status: legacy)
+- $ActionMailSMTPServer — maps to server (status: legacy)
 
 .. index::
    single: ommail; $ActionMailSMTPServer

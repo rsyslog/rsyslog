@@ -1,12 +1,12 @@
 .. _param-ommail-subject-text:
 .. _ommail.parameter.input.subject-text:
 
-Subject.Text
-============
+subjectText
+===========
 
 .. index::
-   single: ommail; Subject.Text
-   single: Subject.Text
+   single: ommail; subjectText
+   single: subjectText
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Sets a fixed subject line instead of generating one from a template.
 
 This parameter applies to :doc:`../../configuration/modules/ommail`.
 
-:Name: Subject.Text
+:Name: subjectText
 :Scope: input
 :Type: string
 :Default: input=none

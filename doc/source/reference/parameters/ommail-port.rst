@@ -1,12 +1,12 @@
 .. _param-ommail-port:
 .. _ommail.parameter.input.port:
 
-Port
+port
 ====
 
 .. index::
-   single: ommail; Port
-   single: Port
+   single: ommail; port
+   single: port
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Sets the SMTP port number or service name that ommail uses to send mail.
 
 This parameter applies to :doc:`../../configuration/modules/ommail`.
 
-:Name: Port
+:Name: port
 :Scope: input
 :Type: word
 :Default: input=none
@@ -50,7 +50,7 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _ommail.parameter.legacy.actionmailsmtpport:
 
-- $ActionMailSMTPPort — maps to Port (status: legacy)
+- $ActionMailSMTPPort — maps to port (status: legacy)
 
 .. index::
    single: ommail; $ActionMailSMTPPort

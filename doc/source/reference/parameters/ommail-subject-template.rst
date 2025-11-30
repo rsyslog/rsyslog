@@ -1,12 +1,12 @@
 .. _param-ommail-subject-template:
 .. _ommail.parameter.input.subject-template:
 
-Subject.Template
+subjectTemplate
 ================
 
 .. index::
-   single: ommail; Subject.Template
-   single: Subject.Template
+   single: ommail; subjectTemplate
+   single: subjectTemplate
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Selects the template used to generate the mail subject line.
 
 This parameter applies to :doc:`../../configuration/modules/ommail`.
 
-:Name: Subject.Template
+:Name: subjectTemplate
 :Scope: input
 :Type: word
 :Default: input=none
@@ -55,7 +55,7 @@ Historic names/directives for compatibility. Do not use in new configs.
 
 .. _ommail.parameter.legacy.actionmailsubject:
 
-- $ActionMailSubject — maps to Subject.Template (status: legacy)
+- $ActionMailSubject — maps to subjectTemplate (status: legacy)
 
 .. index::
    single: ommail; $ActionMailSubject
