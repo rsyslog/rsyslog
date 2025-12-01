@@ -1,0 +1,10 @@
+# rsyslog Prometheus Exporter Dependencies
+
+# Prometheus client library for Python
+prometheus-client>=0.19.0
+
+# WSGI utilities for HTTP server
+Werkzeug>=3.0.0
+
+# Production WSGI server (recommended for production deployments)
+gunicorn>=21.2.0
