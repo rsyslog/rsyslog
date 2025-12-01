@@ -1,0 +1,61 @@
+.. _param-ommail-mailto:
+.. _ommail.parameter.input.mailto:
+
+mailTo
+======
+
+.. index::
+   single: ommail; mailTo
+   single: mailTo
+
+.. summary-start
+
+Provides one or more recipient email addresses for each mail sent by ommail.
+
+.. summary-end
+
+This parameter applies to :doc:`../../configuration/modules/ommail`.
+
+:Name: mailTo
+:Scope: input
+:Type: array
+:Default: input=none
+:Required?: yes
+:Introduced: 8.5.0
+
+Description
+-----------
+The recipient email address(es). This is an array parameter, so multiple
+recipients can be provided in a list. For a single recipient, a simple string
+value is also accepted (for example, ``mailTo="operator@example.net"``).
+
+Input usage
+------------
+.. _ommail.parameter.input.mailto-usage:
+
+.. code-block:: rsyslog
+
+   module(load="ommail")
+   action(
+       type="ommail"
+       server="mail.example.net"
+       port="25"
+       mailFrom="rsyslog@example.net"
+       mailTo=["operator@example.net", "admin@example.net"]
+   )
+
+Legacy names (for reference)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Historic names/directives for compatibility. Do not use in new configs.
+
+.. _ommail.parameter.legacy.actionmailto:
+
+- $ActionMailTo — maps to mailTo (status: legacy)
+
+.. index::
+   single: ommail; $ActionMailTo
+   single: $ActionMailTo
+
+See also
+--------
+See also :doc:`../../configuration/modules/ommail`.
