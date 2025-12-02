@@ -1,6 +1,30 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2512.0 (aka 2025.10) 2025-12-0?
 - overall improved documentation via a large set of topic updates.
+- 2025-12-02: omuxsock: add NetworkNamespace functionality
+  This builds on "PR#6121 net: Add NetworkNamespace APIS"
+  to add Network Namespace support for omuxsock.  In
+  addition, new functionality is added to support
+  abstract socket names, as well as connected sockets.
+  Changes are isolated to omuxsock to provide the new
+  functionality:
+  a. Abstract unix socket names (including network namespaces)
+  b. Connected socket support (SOCK_STREAM, SOCK_SEQPACKET)
+  c. Support for load, and action configuration
+  d. Bug fix related to closing/reopening sockets
+     This bug would cause the socket to be closed and
+     reopened for every message sent.
+  New tests are added as follows:
+  a. uxsock_multiple.sh tests basic functionality with
+     multiple output instances.
+  b. uxsock_multiple_netns.sh is similar but using
+     multiple namespaces.
+  c. uxsock_simple_abstract.sh mirrors the existing
+     uxsock_simple.sh but tests with abstract socket
+     names.
+  The uxsockrcvr test program was modified to support
+  these new tests.
+  Thanks to Billie Alsup for the patch.
 - 2025-11-28: imtcp: add support for NetworkNamespace
   This builds on
     https://github.com/rsyslog/rsyslog/pull/6121
