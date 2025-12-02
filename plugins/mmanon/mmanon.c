@@ -77,8 +77,8 @@ struct ipv6_int {
     unsigned long long low;
 };
 /* define operation modes we have */
-#define SIMPLE_MODE 0 // just overwrite
-#define REWRITE_MODE 1 // rewrite IP address, canonicalized
+#define SIMPLE_MODE 0  // just overwrite
+#define REWRITE_MODE 1  // rewrite IP address, canonicalized
 typedef struct _instanceData {
     /*
      * Concurrency & Locking
@@ -121,9 +121,9 @@ typedef struct wrkrInstanceData {
 } wrkrInstanceData_t;
 
 struct modConfData_s {
-    rsconf_t *pConf; // our overall config object
+    rsconf_t *pConf;  // our overall config object
 };
-static modConfData_t *loadModConf = NULL; // modConf ptr to use for the current load process
+static modConfData_t *loadModConf = NULL;  // modConf ptr to use for the current load process
 static modConfData_t *runModConf = NULL;  // modConf ptr to use for the current exec process
 
 
@@ -433,7 +433,7 @@ static int getHexVal(char c) {
  * \return 1 if a valid byte was parsed, 0 otherwise.
  */
 static int isPosByte(const uchar *const __restrict__ buf, const size_t buflen, size_t *const __restrict__ nprocessed) {
-    int val = 0; // Default means no byte found
+    int val = 0;  // Default means no byte found
     size_t i;
     for (i = 0; i < buflen; i++) {
         if ('0' <= buf[i] && buf[i] <= '9') {
@@ -1651,6 +1651,6 @@ ENDqueryEtryPt
 
 BEGINmodInit()
     CODESTARTmodInit;
-    *ipIFVersProvided = CURR_MOD_IF_VERSION; // we only support the current interface specification
+    *ipIFVersProvided = CURR_MOD_IF_VERSION;  // we only support the current interface specification
     CODEmodInit_QueryRegCFSLineHdlr DBGPRINTF("mmanon: module compiled with rsyslog version %s.\n", VERSION);
 ENDmodInit
