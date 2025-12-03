@@ -7,9 +7,9 @@ principles:
 ## 1. Gather context first
 - Read the repository-level `AGENTS.md` plus any directory-scoped guides that
   cover the files in scope (plugins/, contrib/, doc/, tools/, etc.).
-- Pull the `doc/source/development/coding_practices` page into your context so
-  pattern/antipattern expectations are available for cross-repo references or
-  RAG snippets.
+- Pull the `doc/source/development/coding_practices.rst` page into your context
+  so pattern/antipattern expectations are available for cross-repo references
+  or RAG snippets.
 - Inspect existing `MODULE_METADATA.yaml` or `tools/MODULE_METADATA.json` entries
   for the modules touched so ownership, maturity, and support channels remain in
   sync with the prose.
