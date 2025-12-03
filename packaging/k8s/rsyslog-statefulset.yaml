@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rsyslog
+  labels:
+    app: rsyslog
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rsyslog
+  serviceName: rsyslog
+  template:
+    metadata:
+      labels:
+        app: rsyslog
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+      - name: rsyslog
+        image: rsyslog/rsyslog-k8s:v8.2025.04.0
+        ports:
+        - containerPort: 10514
+          name: syslog-tcp
+          protocol: TCP
+        - containerPort: 10514
+          name: syslog-udp
+          protocol: UDP
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/rsyslog.conf
+          subPath: rsyslog.conf
+        - name: data
+          mountPath: /var/spool/rsyslog
+      volumes:
+      - name: config-volume
+        configMap:
+          name: rsyslog-config
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 1Gi
