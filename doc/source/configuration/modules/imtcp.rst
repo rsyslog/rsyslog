@@ -183,6 +183,10 @@ Module Parameters
      - .. include:: ../../reference/parameters/imtcp-preservecase.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imtcp-networknamespace`
+     - .. include:: ../../reference/parameters/imtcp-networknamespace.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 .. toctree::
    :hidden:
@@ -225,6 +229,7 @@ Module Parameters
    ../../reference/parameters/imtcp-streamdriver-crlfile
    ../../reference/parameters/imtcp-streamdriver-keyfile
    ../../reference/parameters/imtcp-streamdriver-certfile
+   ../../reference/parameters/imtcp-networknamespace
 
 Input Parameters
 ----------------
@@ -375,6 +380,10 @@ Input Parameters
      - .. include:: ../../reference/parameters/imtcp-keepalive-interval.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imtcp-networknamespace`
+     - .. include:: ../../reference/parameters/imtcp-networknamespace.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 .. _imtcp-statistic-counter:
 
 Statistic Counter
@@ -493,6 +502,33 @@ connections:
 
 Note that the global parameters (here: max sessions) need to be set when
 the module is loaded. Otherwise, the parameters will not apply.
+
+Example 2
+---------
+
+A single rsyslogd instance can accept messages from multiple network namespaces. This example sets up a TCP server on port 514 in three named namespaces, plus one in the default startup namespace. Note that these namespaces must be created before rsyslogd starts. For example, this can be done using the `ExecStartPre` option in a systemd service file.
+
+.. code-block:: none
+
+   module(load="imtcp" MaxSessions="500")
+   input(type="imtcp" port="514" NetworkNamespace="ns_eth0.0")
+   input(type="imtcp" port="514" NetworkNamespace="ns_eth0.1")
+   input(type="imtcp" port="514" NetworkNamespace="ns_eth0.2")
+   input(type="imtcp" port="514")
+
+
+Example 3
+---------
+
+This example sets a default `NetworkNamespace` at the module level. Multiple TCP servers are then started within that namespace. It also shows that setting `NetworkNamespace` to an empty string (`""`) makes an input listen in the startup namespace instead. The `Address` parameter is used to bind listeners to specific interfaces within their namespaces. This can be combined with a `PermittedPeer` list to control which peers can connect to these ports.
+
+.. code-block:: none
+
+   module(load="imtcp" MaxSessions="500" NetworkNamespace="ns_eth0")
+   input(type="imtcp" Address="172.0.0.1" port="514")
+   input(type="imtcp" Address="172.0.1.1" port="514")
+   input(type="imtcp" Address="172.0.2.1" port="514")
+   input(type="imtcp" port="514" NetworkNamespace="")
 
 
 Additional Resources
