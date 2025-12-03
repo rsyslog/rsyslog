@@ -11,6 +11,9 @@ This guide applies to everything under `doc/`.
   Markdown files are reserved for meta-docs such as `/doc/ai/` and other authoring guides.
 - Follow existing heading levels and section names from `doc/README.md`.
 - Cross-link new pages from the appropriate `index.rst` (or local `.. toctree::`) so they appear in navigation.
+- Keep the `source/development/coding_practices.rst` page discoverable; it is
+  the canonical source for patterns and antipatterns that AI agents must
+  ingest.
 - When touching shared style guidance, also review `doc/STRATEGY.md`.
 
 ### For AI-driven documentation work
@@ -22,6 +25,13 @@ This guide applies to everything under `doc/`.
   - `mermaid_rules.md` — syntax rules (blank line after directive, quoted node labels, `<br>` for line breaks).
   - `templates/` — standard concept/tutorial RST templates.
   - `terminology.md` — canonical rsyslog vocabulary.
+- Prime code-generation agents with the `source/development/coding_practices.rst`
+  page so RAG pipelines can inject the right patterns and antipatterns into
+  their context.
+- Keep discoverability explicit for AI agents: this file is linked from the
+  top-level `AGENTS.md`, and `coding_practices.rst` sits in the development
+  toctree. When you move or rename that page, update the links here and in the
+  base prompts so automated seeding does not break.
 - Every new page must include anchors, meta, and summary blocks per `authoring_guidelines.md`.
 
 ## Build & validation

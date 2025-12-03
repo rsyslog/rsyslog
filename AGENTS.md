@@ -24,6 +24,8 @@ This file defines guidelines and instructions for AI assistants (e.g., Codex, Gi
 ## Quick links for agents
 
   - **Documentation subtree guide:** [`doc/AGENTS.md`](./doc/AGENTS.md)
+  - **Coding practices reference (patterns & antipatterns for AI seeding):**
+    [`doc/source/development/coding_practices.rst`](./doc/source/development/coding_practices.rst)
   - **Core plugin subtree guide:** [`plugins/AGENTS.md`](./plugins/AGENTS.md)
   - **Contrib module subtree guide:** [`contrib/AGENTS.md`](./contrib/AGENTS.md)
   - **Built-in tools subtree guide:** [`tools/AGENTS.md`](./tools/AGENTS.md)
@@ -564,6 +566,10 @@ This ensures Codex can build core components even in constrained environments. S
   - `contrib/` contains external contributions (e.g., plugins) that are not core-maintained
   - `statsobj.c` implements the statistics interface
   - Documentation resides in the monorepo’s doc/ directory
+  - Discovery order for AI agents: start with this file, follow the per-tree
+    `AGENTS.md` (for docs, `doc/AGENTS.md`), then ingest the coding practices
+    reference at `doc/source/development/coding_practices.rst` to prime RAG
+    seeding before planning or reviews.
   - You may reference `rsyslog-docker` for dev/test environment setup
   - Side libraries are external GitHub repos, not subdirectories
 
