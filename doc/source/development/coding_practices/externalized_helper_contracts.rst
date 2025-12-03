@@ -26,6 +26,26 @@ Pattern: document contracts for externalized helpers
 #. Document what postconditions the caller can assume on return so downstream code is safe to execute without rechecking the same invariants.
 #. Link to the parent routine or a concrete example so reviewers understand the intended call path and can keep contracts in sync when either side changes.
 
+Assert + safe fallback (defensive design-by-contract)
+----------------------------------------------------
+
+Prefer a hybrid guard for narrow helpers instead of inlining logic back into a
+larger function:
+
+- **Development safety:** Keep an ``assert()`` or ``rs_assert()`` on the
+  "impossible" path so contract violations surface immediately in CI and debug
+  builds.
+- **Production safety:** Follow the assertion with a minimal, sane return value
+  (``0``, ``NULL``, or a specific error code) to avoid undefined behavior when
+  assertions are compiled out. Accept the small branch as the cost of clearer,
+  testable helpers.
+- **Analyzer noise:** If a static analyzer calls the fallback dead code, prefer
+  suppressing the warning to losing the protective path; do not re-inline the
+  helper solely to quiet the tool.
+
+This approach balances readability and safety without forcing callers to carry
+extra checks or move the helper back into its parent.
+
 **References:**
 
 - :ref:`practice-embedded-ipv4-tail-helper` — example of documenting a helper that assumes prevalidated offsets inside ``runtime/mmanon.c``.
