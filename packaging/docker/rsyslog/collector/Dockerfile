@@ -29,11 +29,13 @@ LABEL com.adiscon.rsyslog.base.image="${BASE_IMAGE_TAG}"
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install additional rsyslog modules/packages specific to the collector's role.
+# Includes TLS support via OpenSSL (rsyslog-openssl) for secure log collection.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         rsyslog-elasticsearch \
         rsyslog-omhttp \
         rsyslog-relp \
+        rsyslog-openssl \
     && apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -44,16 +46,24 @@ COPY 10-collector.conf 80-file-output.conf /etc/rsyslog.d/
 
 # Expose standard syslog ports.
 # These ports will be exposed by default for UDP and TCP syslog reception.
+# Port 6514/tcp is the standard port for syslog over TLS (RFC 5425).
 EXPOSE 514/udp
 EXPOSE 514/tcp
 EXPOSE 2514/tcp
+EXPOSE 6514/tcp
 
 # Default config toggles for an entrypoint script to use
 ENV ENABLE_UDP=on
 ENV ENABLE_TCP=on
 ENV ENABLE_RELP=off
+ENV ENABLE_TLS=off
 ENV WRITE_ALL_FILE=on
 ENV WRITE_JSON_FILE=on
+# TLS configuration paths (can be overridden via volume mounts or environment)
+ENV TLS_CA_FILE=""
+ENV TLS_CERT_FILE=""
+ENV TLS_KEY_FILE=""
+ENV TLS_AUTH_MODE="anon"
 
 # Define the container role for the entrypoint script
 ENV RSYSLOG_ROLE=collector
