@@ -86,7 +86,7 @@ class RainerScriptLexer(RegexLexer):
             (r'\b\d+\b', Number.Integer),
             
             # Punctuation
-            (r'[{}(),;\[\].&]', Punctuation),
+            (r'[{}(),;\\\[\].&]', Punctuation),
             
             # Identifiers
             (r'[a-zA-Z_][a-zA-Z0-9_-]*', Name), # <<<--- THIS IS THE CHANGE: Added '-' to allowed identifier characters
