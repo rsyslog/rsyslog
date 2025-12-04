@@ -1,5 +1,5 @@
 /* mmanon.c
- * anonnymize IP addresses inside the syslog message part
+ * anonymize IP addresses inside the syslog message part
  *
  * Copyright 2013 Adiscon GmbH.
  *
@@ -54,6 +54,11 @@ DEF_OMOD_STATIC_DATA;
 // enumerator for the mode
 enum mode { ZERO, RANDOMINT, SIMPLE };
 
+/*
+ * Binary tree node used in consistent IPv4 randomization. Each level mirrors
+ * one bit of the original address; the final node stores two replacement
+ * strings so we do not need to allocate a separate leaf for the last bit.
+ */
 union node {
     struct {
         union node *more;
@@ -65,13 +70,15 @@ union node {
     } ips;
 };
 
+/* Split IPv6 into two 64-bit halves so masks and randomization can be applied
+ * without using compiler-specific 128-bit integers. */
 struct ipv6_int {
     unsigned long long high;
     unsigned long long low;
 };
 /* define operation modes we have */
-#define SIMPLE_MODE 0 /* just overwrite */
-#define REWRITE_MODE 1 /* rewrite IP address, canoninized */
+#define SIMPLE_MODE 0  // just overwrite
+#define REWRITE_MODE 1  // rewrite IP address, canonicalized
 typedef struct _instanceData {
     /*
      * Concurrency & Locking
@@ -114,10 +121,10 @@ typedef struct wrkrInstanceData {
 } wrkrInstanceData_t;
 
 struct modConfData_s {
-    rsconf_t *pConf; /* our overall config object */
+    rsconf_t *pConf;  // our overall config object
 };
-static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
-static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current exec process */
+static modConfData_t *loadModConf = NULL;  // modConf ptr to use for the current load process
+static modConfData_t *runModConf = NULL;  // modConf ptr to use for the current exec process
 
 
 /* tables for interfacing with the v6 config system */
@@ -177,6 +184,15 @@ BEGINisCompatibleWithFeature
 ENDisCompatibleWithFeature
 
 
+/**
+ * \brief Recursively release the IPv4 consistency trie.
+ *
+ * The trie stores anonymized IPv4 replacements. This helper tears down all
+ * dynamically allocated nodes after configuration is unloaded.
+ *
+ * \param node current trie node.
+ * \param layer depth used to stop the recursion at the leaves.
+ */
 static void delTree(union node *node, const int layer) {
     if (node == NULL) {
         return;
@@ -210,6 +226,14 @@ BEGINfreeWrkrInstance
 ENDfreeWrkrInstance
 
 
+/**
+ * \brief Set default anonymization settings for a new action instance.
+ *
+ * Initializes IPv4, IPv6, and embedded-IPv4 settings with sensible defaults
+ * before configuration parsing applies user overrides.
+ *
+ * \param pData instance data to populate.
+ */
 static inline void setInstParamDefaults(instanceData *pData) {
     pData->ipv4.enable = 1;
     pData->ipv4.bits = 16;
@@ -379,6 +403,12 @@ BEGINtryResume
 ENDtryResume
 
 
+/**
+ * \brief Convert a hexadecimal digit to its numeric value.
+ *
+ * \param c character representing a hex digit.
+ * \return numeric value in the range [0, 15] or -1 if invalid.
+ */
 static int getHexVal(char c) {
     if ('0' <= c && c <= '9') {
         return c - '0';
@@ -392,9 +422,18 @@ static int getHexVal(char c) {
 }
 
 
-/* returns 1 if valid IPv4 digit, 0 if not */
+/**
+ * \brief Parse a single IPv4 byte.
+ *
+ * Consumes up to three digits and reports whether they form a valid octet.
+ *
+ * \param buf input buffer start.
+ * \param buflen number of bytes available.
+ * \param nprocessed bytes consumed while scanning the octet.
+ * \return 1 if a valid byte was parsed, 0 otherwise.
+ */
 static int isPosByte(const uchar *const __restrict__ buf, const size_t buflen, size_t *const __restrict__ nprocessed) {
-    int val = 0; /* Default means no byte found */
+    int val = 0;  // Default means no byte found
     size_t i;
     for (i = 0; i < buflen; i++) {
         if ('0' <= buf[i] && buf[i] <= '9') {
@@ -407,7 +446,7 @@ static int isPosByte(const uchar *const __restrict__ buf, const size_t buflen, s
             break;
     }
     *nprocessed = i;
-    /* Return 1 if more than 1 and less the 4 digits and between 0 and 255 */
+    // Return 1 if more than 1 and less than 4 digits and between 0 and 255
     if (i > 0 && i < 4 && (val >= 0 && val <= 255)) {
         return 1;
     } else {
@@ -415,7 +454,17 @@ static int isPosByte(const uchar *const __restrict__ buf, const size_t buflen, s
     }
 }
 
-/* 1 - is IPv4, 0 not */
+/**
+ * \brief Check whether a buffer starts with an IPv4 address.
+ *
+ * Advances through dotted decimal octets, returning success after four
+ * well-formed segments.
+ *
+ * \param buf input buffer start.
+ * \param buflen number of bytes available.
+ * \param nprocessed bytes consumed while parsing the address.
+ * \return 1 if a valid IPv4 address is found, 0 otherwise.
+ */
 static int syntax_ipv4(const uchar *const __restrict__ buf,
                        const size_t buflen,
                        size_t *const __restrict__ nprocessed) {
@@ -459,6 +508,19 @@ done:
 }
 
 
+/**
+ * \brief Parse a hexadecimal component within an IPv6 candidate.
+ *
+ * Scans hexadecimal digits until a non-hex separator is found. Callers can
+ * optionally treat an immediate dot as a separator when parsing embedded IPv4
+ * notation.
+ *
+ * \param buf input buffer start.
+ * \param buflen number of bytes available.
+ * \param nprocessed bytes consumed while scanning this component.
+ * \param handleDot whether a leading '.' should be treated as a separator.
+ * \return number of hex digits read, -1 for ':', or -2 for '.'.
+ */
 static int isValidHexNum(const uchar *const __restrict__ buf,
                          const size_t buflen,
                          size_t *const __restrict__ nprocessed,
@@ -520,6 +582,17 @@ done:
 }
 
 
+/**
+ * \brief Check whether a buffer starts with an IPv6 address.
+ *
+ * Walks hexadecimal segments from left to right, handling abbreviation rules
+ * and detecting trailing port numbers so callers can trim them back out.
+ *
+ * \param buf input buffer start.
+ * \param buflen number of bytes available.
+ * \param nprocessed bytes consumed while parsing the address.
+ * \return 1 if a valid IPv6 address is found, 0 otherwise.
+ */
 static int syntax_ipv6(const uchar *const __restrict__ buf,
                        const size_t buflen,
                        size_t *const __restrict__ nprocessed) {
@@ -529,6 +602,12 @@ static int syntax_ipv6(const uchar *const __restrict__ buf,
     int ipParts = 0;
     int numLen;
     int isIP = 0;
+
+    /*
+     * The parser walks the address left to right, accounting for IPv6
+     * abbreviation (::) rules. Ports are treated as a five-hex-digit tail and
+     * trimmed back out when detected so the caller keeps the original port.
+     */
 
     while (*nprocessed < buflen) {
         numLen = isValidHexNum(buf + *nprocessed, buflen - *nprocessed, nprocessed, 0);
@@ -564,7 +643,7 @@ static int syntax_ipv6(const uchar *const __restrict__ buf,
                 *nprocessed -= 6;
             } else {
                 isIP = 0;
-                /* nprocessed need not be corrected - it's only used if isIP == 1 */
+                // nprocessed need not be corrected - it's only used if isIP == 1
             }
             goto done;
         } else {  // no valid num
@@ -599,6 +678,12 @@ done:
 }
 
 
+/**
+ * \brief Convert dotted IPv4 text to an integer.
+ *
+ * \param str NUL-terminated IPv4 address string.
+ * \return numeric IPv4 value.
+ */
 static unsigned ipv42num(const char *str) {
     unsigned num[4] = {0, 0, 0, 0};
     unsigned value = -1;
@@ -632,12 +717,23 @@ static unsigned ipv42num(const char *str) {
 }
 
 
+/**
+ * \brief Apply IPv4 anonymization to a numeric address.
+ *
+ * Zeroes or randomizes the configured prefix width using the worker's RNG
+ * state. Simple mode is filtered out before entry.
+ *
+ * \param ip original IPv4 value.
+ * \param pWrkrData worker context providing configuration and RNG state.
+ * \return rewritten IPv4 value.
+ */
 static unsigned code_int(unsigned ip, wrkrInstanceData_t *pWrkrData) {
     unsigned random;
     unsigned long long shiftIP_subst = ip;
     // variable needed because shift operation of 32nd bit in unsigned does not work
     switch (pWrkrData->pData->ipv4.mode) {
         case ZERO:
+            // zero out the configured prefix length
             shiftIP_subst = ((shiftIP_subst >> (pWrkrData->pData->ipv4.bits)) << (pWrkrData->pData->ipv4.bits));
             return (unsigned)shiftIP_subst;
         case RANDOMINT:
@@ -654,6 +750,13 @@ static unsigned code_int(unsigned ip, wrkrInstanceData_t *pWrkrData) {
 }
 
 
+/**
+ * \brief Convert a numeric IPv4 value into dotted text.
+ *
+ * \param num numeric IPv4 value.
+ * \param str buffer to receive the textual representation.
+ * \return number of bytes written (excluding NUL terminator).
+ */
 static int num2ipv4(unsigned num, char *str) {
     int numip[4];
     size_t len;
@@ -666,6 +769,13 @@ static int num2ipv4(unsigned num, char *str) {
 }
 
 
+/**
+ * \brief Copy a substring into a temporary address buffer.
+ *
+ * \param start pointer to the substring start.
+ * \param end length to copy.
+ * \param address destination buffer terminated with NUL.
+ */
 static void getip(uchar *start, size_t end, char *address) {
     size_t i;
 
@@ -675,8 +785,17 @@ static void getip(uchar *start, size_t end, char *address) {
     address[i] = '\0';
 }
 
-/* in case of error with malloc causing abort of function, the
- * string at the target of address remains the same */
+/**
+ * \brief Ensure consistent IPv4 anonymization for repeat callers.
+ *
+ * Walks or builds the IPv4 trie under a lock and stores the mapped replacement
+ * string on the terminal node. If allocation fails, the input buffer remains
+ * unchanged.
+ *
+ * \param address IPv4 text buffer to anonymize in place.
+ * \param pWrkrData worker context with shared trie state.
+ * \return RS_RET_OK on success, an error otherwise.
+ */
 static rsRetVal findip(char *address, wrkrInstanceData_t *pWrkrData) {
     DEFiRet;
     int i;
@@ -687,6 +806,11 @@ static rsRetVal findip(char *address, wrkrInstanceData_t *pWrkrData) {
     char *CurrentCharPtr;
     sbool locked = 0;
 
+    /*
+     * Walk/construct the prefix trie for the incoming address. The last bit is
+     * used to pick one of two string slots on the terminal node, letting us
+     * reuse the same allocation for both possible children.
+     */
     if (pthread_mutex_lock(&pWrkrData->pData->ipv4Mutex) != 0) {
         ABORT_FINALIZE(RS_RET_ERR);
     }
@@ -735,6 +859,15 @@ finalize_it:
 }
 
 
+/**
+ * \brief Rewrite an IPv4 address according to the configured mode.
+ *
+ * Chooses between consistent anonymization via the trie, zeroing the prefix,
+ * or replacing digits with a fixed character for simple mode.
+ *
+ * \param address IPv4 text buffer to rewrite in place.
+ * \param pWrkrData worker context providing configuration and shared state.
+ */
 static void process_IPv4(char *address, wrkrInstanceData_t *pWrkrData) {
     unsigned num;
 
@@ -748,10 +881,23 @@ static void process_IPv4(char *address, wrkrInstanceData_t *pWrkrData) {
 }
 
 
+/**
+ * \brief Apply simple anonymization by replacing digits with a fixed character.
+ *
+ * \param pWrkrData worker context providing replacement configuration.
+ * \param msg message buffer containing the address.
+ * \param hasChanged flag updated when the buffer is modified.
+ * \param iplen length of the detected address segment.
+ */
 static void simpleAnon(wrkrInstanceData_t *const pWrkrData, uchar *const msg, int *const hasChanged, int iplen) {
     int maxidx = iplen - 1;
 
     int j = -1;
+    /*
+     * Overwrite the lower `bits` of the textual IPv4 octets (counted from the
+     * end of the address) with the configured replacement character. This keeps
+     * delimiters untouched while ensuring the tail of the address is obscured.
+     */
     for (int i = (pWrkrData->pData->ipv4.bits / 8); i > 0; i--) {
         j++;
         while ('0' <= msg[maxidx - j] && msg[maxidx - j] <= '9') {
@@ -765,6 +911,18 @@ static void simpleAnon(wrkrInstanceData_t *const pWrkrData, uchar *const msg, in
 }
 
 
+/**
+ * \brief Find and anonymize IPv4 addresses within a message.
+ *
+ * Scans forward from the current index, rewrites detected addresses, and
+ * adjusts the buffer if the replacement length changes.
+ *
+ * \param pWrkrData worker context providing anonymization configuration.
+ * \param msg pointer to the message buffer pointer.
+ * \param pLenMsg pointer to the buffer length, updated when resized.
+ * \param idx current scan index, advanced past any rewritten address.
+ * \param hasChanged flag updated when the buffer is modified.
+ */
 static void anonipv4(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMsg, int *idx, int *hasChanged) {
     char address[16];
     char caddress[16];
@@ -789,6 +947,11 @@ static void anonipv4(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMsg, i
         caddresslen = strlen(caddress);
         *hasChanged = 1;
 
+        /*
+         * If the anonymized address differs in length, allocate a fresh buffer
+         * and splice the untouched prefix/suffix back in around the rewritten
+         * IP literal.
+         */
         if (caddresslen != strlen(address)) {
             *pLenMsg = *pLenMsg + ((int)caddresslen - (int)strlen(address));
             *msg = (uchar *)malloc(*pLenMsg);
@@ -806,6 +969,16 @@ static void anonipv4(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMsg, i
 }
 
 
+/**
+ * \brief Apply IPv6 anonymization to a split integer representation.
+ *
+ * Zeroes or randomizes the configured prefix length using either the IPv6 or
+ * embedded-IPv4 configuration depending on the caller.
+ *
+ * \param ip address split into high and low 64-bit halves.
+ * \param pWrkrData worker context providing configuration and RNG state.
+ * \param useEmbedded non-zero to use the embedded-IPv4 settings.
+ */
 static void code_ipv6_int(struct ipv6_int *ip, wrkrInstanceData_t *pWrkrData, int useEmbedded) {
     unsigned long long randlow = 0;
     unsigned long long randhigh = 0;
@@ -815,6 +988,10 @@ static void code_ipv6_int(struct ipv6_int *ip, wrkrInstanceData_t *pWrkrData, in
     int bits = useEmbedded ? pWrkrData->pData->embeddedIPv4.bits : pWrkrData->pData->ipv6.bits;
     enum mode anonmode = useEmbedded ? pWrkrData->pData->embeddedIPv4.anonmode : pWrkrData->pData->ipv6.anonmode;
 
+    /*
+     * Apply the mask first, then optionally fill the cleared bits with random
+     * data. 128-bit shifts are emulated by zeroing both halves explicitly.
+     */
     if (bits == 128) {  // has to be handled separately, since shift
                         // 128 bits doesn't work on unsigned long long
         ip->high = 0;
@@ -894,6 +1071,16 @@ static void code_ipv6_int(struct ipv6_int *ip, wrkrInstanceData_t *pWrkrData, in
 // separate function from recognising ipv6, since the recognition might get more
 // complex. This function always stays
 // the same, since it always gets an valid ipv6 input
+/**
+ * \brief Parse textual IPv6 (or embedded IPv4) into split integers.
+ *
+ * Handles abbreviations and embedded IPv4 syntax, filling an ipv6_int with
+ * the parsed value.
+ *
+ * \param address textual IPv6 address.
+ * \param iplen length of the address substring.
+ * \param ip output structure for the parsed value.
+ */
 static void ipv62num(char *const address, const size_t iplen, struct ipv6_int *const ip) {
     int num[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     int cyc = 0;
@@ -948,6 +1135,12 @@ static void ipv62num(char *const address, const size_t iplen, struct ipv6_int *c
 }
 
 
+/**
+ * \brief Convert split IPv6 integers back to canonical text.
+ *
+ * \param ip address halves to stringify.
+ * \param address buffer to receive the textual representation.
+ */
 static void num2ipv6(struct ipv6_int *ip, char *address) {
     int num[8];
     int i;
@@ -966,6 +1159,13 @@ static void num2ipv6(struct ipv6_int *ip, char *address) {
 }
 
 
+/**
+ * \brief Compare two ipv6_int keys for hash table equality.
+ *
+ * \param key1 first key.
+ * \param key2 second key.
+ * \return 1 if keys match, 0 otherwise.
+ */
 static int keys_equal_fn(void *key1, void *key2) {
     struct ipv6_int *const k1 = (struct ipv6_int *)key1;
     struct ipv6_int *const k2 = (struct ipv6_int *)key2;
@@ -974,6 +1174,14 @@ static int keys_equal_fn(void *key1, void *key2) {
 }
 
 
+/**
+ * \brief Hash function for ipv6_int entries.
+ *
+ * Mixes the high and low halves to produce a size_t hash value.
+ *
+ * \param k key to hash.
+ * \return hash code.
+ */
 static unsigned hash_from_key_fn(void *k) {
     struct ipv6_int *const key = (struct ipv6_int *)k;
     unsigned hashVal;
@@ -983,6 +1191,15 @@ static unsigned hash_from_key_fn(void *k) {
 }
 
 
+/**
+ * \brief Convert split integers to an embedded-IPv4 textual address.
+ *
+ * Formats the lower 32 bits as IPv4 dotted decimal appended to the IPv6
+ * prefix stored in the upper bits.
+ *
+ * \param ip address halves to stringify.
+ * \param address buffer to receive the textual representation.
+ */
 static void num2embedded(struct ipv6_int *ip, char *address) {
     int num[8];
     int i;
@@ -1002,11 +1219,29 @@ static void num2embedded(struct ipv6_int *ip, char *address) {
 }
 
 
+/**
+ * \brief Ensure consistent IPv6/embedded anonymization for repeat callers.
+ *
+ * Looks up or inserts an anonymized value in the appropriate hash table under
+ * a lock, updating the provided text buffer with the stored replacement.
+ *
+ * \param num split integer representation of the address.
+ * \param address buffer containing the textual address to rewrite.
+ * \param pWrkrData worker context with hash tables and RNG state.
+ * \param useEmbedded non-zero to use the embedded-IPv4 state.
+ * \return RS_RET_OK on success, an error otherwise.
+ */
 static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t *const pWrkrData, int useEmbedded) {
     struct ipv6_int *hashKey = NULL;
     DEFiRet;
     struct hashtable *hash = useEmbedded ? pWrkrData->pData->embeddedIPv4.hash : pWrkrData->pData->ipv6.hash;
     sbool locked = 0;
+
+    /*
+     * Consistent randomization keeps a per-action hash table of original->
+     * anonymized addresses. The mutex guards the first allocation of the hash
+     * and concurrent inserts so workers share one stable mapping.
+     */
 
     if (pthread_mutex_lock(&pWrkrData->pData->ipv6Mutex) != 0) {
         ABORT_FINALIZE(RS_RET_ERR);
@@ -1057,6 +1292,16 @@ finalize_it:
 }
 
 
+/**
+ * \brief Rewrite an IPv6 address according to the configured mode.
+ *
+ * Chooses between consistent anonymization, zeroing, or randomization of the
+ * configured prefix. Embedded-IPv4 mode can reuse this helper.
+ *
+ * \param address IPv6 text buffer to rewrite in place.
+ * \param pWrkrData worker context providing configuration and shared state.
+ * \param iplen length of the address substring within the buffer.
+ */
 static void process_IPv6(char *address, wrkrInstanceData_t *pWrkrData, const size_t iplen) {
     struct ipv6_int num = {0, 0};
 
@@ -1071,6 +1316,18 @@ static void process_IPv6(char *address, wrkrInstanceData_t *pWrkrData, const siz
 }
 
 
+/**
+ * \brief Find and anonymize IPv6 addresses within a message.
+ *
+ * Scans forward from the current index, rewrites detected addresses, and
+ * adjusts the buffer if the replacement length changes.
+ *
+ * \param pWrkrData worker context providing anonymization configuration.
+ * \param msg pointer to the message buffer pointer.
+ * \param pLenMsg pointer to the buffer length, updated when resized.
+ * \param idx current scan index, advanced past any rewritten address.
+ * \param hasChanged flag updated when the buffer is modified.
+ */
 static void anonipv6(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMsg, int *idx, int *hasChanged) {
     size_t iplen = 0;
     int offset = *idx;
@@ -1106,6 +1363,16 @@ static void anonipv6(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMsg, i
 }
 
 
+/**
+ * \brief Locate the start of an embedded IPv4 suffix.
+ *
+ * Walks backward from the first dot to find the preceding colon separating the
+ * IPv6 prefix from the dotted tail.
+ *
+ * \param buf buffer containing the candidate address.
+ * \param dotPos index of the first '.' in the embedded IPv4 portion.
+ * \return offset where the embedded IPv4 begins.
+ */
 static size_t findV4Start(const uchar *const __restrict__ buf, size_t dotPos) {
     while (dotPos > 0) {
         if (buf[dotPos] == ':') {
@@ -1113,10 +1380,22 @@ static size_t findV4Start(const uchar *const __restrict__ buf, size_t dotPos) {
         }
         dotPos--;
     }
-    return -1;  // should not happen
+    return -1;  // should not happen (caller checks validity first)
 }
 
 
+/**
+ * \brief Check whether a buffer starts with an embedded IPv4 address.
+ *
+ * Parses hexadecimal IPv6 segments followed by dotted-decimal IPv4, supporting
+ * abbreviation rules and returning the start of the IPv4 suffix.
+ *
+ * \param buf input buffer start.
+ * \param buflen number of bytes available.
+ * \param nprocessed bytes consumed while parsing the address.
+ * \param v4Start offset to the embedded IPv4 portion within the buffer.
+ * \return 1 if a valid embedded address is found, 0 otherwise.
+ */
 static int syntax_embedded(const uchar *const __restrict__ buf,
                            const size_t buflen,
                            size_t *const __restrict__ nprocessed,
@@ -1127,6 +1406,12 @@ static int syntax_embedded(const uchar *const __restrict__ buf,
     int numLen;
     int isIP = 0;
     size_t ipv4Len;
+
+    /*
+     * Similar to syntax_ipv6 but keeps an eye out for an IPv4 tail (last two
+     * 16-bit groups written as dotted quad). v4Start tracks where the IPv4
+     * substring begins so anonymization can re-encode it later.
+     */
 
     while (*nprocessed < buflen) {
         numLen = isValidHexNum(buf + *nprocessed, buflen - *nprocessed, nprocessed, 1);
@@ -1179,6 +1464,16 @@ done:
 }
 
 
+/**
+ * \brief Parse embedded IPv4 notation into split integers.
+ *
+ * Converts the dotted IPv4 tail and hexadecimal prefix into the ipv6_int
+ * representation used by the anonymizer.
+ *
+ * \param address textual embedded IPv4 address.
+ * \param v4Start offset where the dotted tail begins.
+ * \param ip output structure for the parsed value.
+ */
 static void embedded2num(char *address, size_t v4Start, struct ipv6_int *ip) {
     int num[8] = {0, 0, 0, 0, 0, 0, 0, 0};
     int cyc = 0;
@@ -1237,6 +1532,16 @@ static void embedded2num(char *address, size_t v4Start, struct ipv6_int *ip) {
 }
 
 
+/**
+ * \brief Rewrite an embedded IPv4 address according to configuration.
+ *
+ * Selects consistent anonymization or direct rewriting using the embedded
+ * configuration and converts the numeric result back into text.
+ *
+ * \param address embedded IPv4 text buffer to rewrite in place.
+ * \param pWrkrData worker context providing configuration and shared state.
+ * \param v4Start offset where the embedded IPv4 portion begins.
+ */
 static void process_embedded(char *address, wrkrInstanceData_t *pWrkrData, size_t v4Start) {
     struct ipv6_int num = {0, 0};
 
@@ -1251,6 +1556,18 @@ static void process_embedded(char *address, wrkrInstanceData_t *pWrkrData, size_
 }
 
 
+/**
+ * \brief Find and anonymize embedded IPv4 addresses within a message.
+ *
+ * Scans forward from the current index, rewrites detected addresses, and
+ * resizes the buffer if the replacement length changes.
+ *
+ * \param pWrkrData worker context providing anonymization configuration.
+ * \param msg pointer to the message buffer pointer.
+ * \param pLenMsg pointer to the buffer length, updated when resized.
+ * \param idx current scan index, advanced past any rewritten address.
+ * \param hasChanged flag updated when the buffer is modified.
+ */
 static void anonEmbedded(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMsg, int *idx, int *hasChanged) {
     size_t iplen = 0;
     int offset = *idx;
@@ -1270,6 +1587,7 @@ static void anonEmbedded(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMs
         caddresslen = strlen(address);
         *hasChanged = 1;
 
+        // Reallocate if the embedded IPv4 shrinks or grows after rewriting.
         if (caddresslen != iplen) {
             *pLenMsg = *pLenMsg + ((int)caddresslen - (int)iplen);
             *msg = (uchar *)malloc(*pLenMsg);
@@ -1333,6 +1651,6 @@ ENDqueryEtryPt
 
 BEGINmodInit()
     CODESTARTmodInit;
-    *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
+    *ipIFVersProvided = CURR_MOD_IF_VERSION;  // we only support the current interface specification
     CODEmodInit_QueryRegCFSLineHdlr DBGPRINTF("mmanon: module compiled with rsyslog version %s.\n", VERSION);
 ENDmodInit
