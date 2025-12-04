@@ -1241,24 +1241,40 @@ finalize_it:
     RETiRet;
 }
 
-
+/**
+ * @brief Safely stops the worker thread pool.
+ *
+ * This function can be called multiple times or in partial-init states.
+ * It checks preconditions and only performs cleanup operations that are safe.
+ */
 static void ATTR_NONNULL() stopWrkrPool(tcpsrv_t *const pThis) {
     workQueue_t *const queue = &pThis->workQueue;
 
+    /* Guard against being called when pool was never started or already stopped. */
+    if (queue->numWrkr <= 1 || queue->wrkr_tids == NULL) {
+        return;
+    }
+
+    /* Signal all workers to wake and exit. */
     pthread_mutex_lock(&queue->mut);
     pthread_cond_broadcast(&queue->workRdy);
     pthread_mutex_unlock(&queue->mut);
 
+    /* Wait for all worker threads to finish. */
     for (unsigned i = 0; i < queue->numWrkr; i++) {
         pthread_join(queue->wrkr_tids[i], NULL);
     }
-    free(pThis->workQueue.wrkr_tids);
-    free(pThis->workQueue.wrkr_data);
 
+    /* Free allocated resources. */
+    free(queue->wrkr_tids);
+    free(queue->wrkr_data);
+
+    /* Destroy synchronization primitives. */
     pthread_mutex_destroy(&queue->mut);
     pthread_cond_destroy(&queue->workRdy);
-    pThis->workQueue.wrkr_tids = NULL;
-    pThis->workQueue.wrkr_data = NULL;
+
+    queue->wrkr_tids = NULL;
+    queue->wrkr_data = NULL;
 }
 
 static tcpsrv_io_descr_t ATTR_NONNULL() * dequeueWork(tcpsrv_t *pSrv) {
@@ -1677,9 +1693,7 @@ static rsRetVal ATTR_NONNULL() Run(tcpsrv_t *const pThis) {
     iRet = RunPoll(pThis);
 #endif
 
-    if (pThis->workQueue.numWrkr > 1) {
-        stopWrkrPool(pThis);
-    }
+    stopWrkrPool(pThis);
     eventNotify_exit(pThis);
 
 finalize_it:
@@ -1761,6 +1775,8 @@ finalize_it:
 BEGINobjDestruct(tcpsrv) /* be sure to specify the object type also in END and CODESTART macros! */
     CODESTARTobjDestruct(tcpsrv);
     if (pThis->OnDestruct != NULL) pThis->OnDestruct(pThis->pUsr);
+
+    stopWrkrPool(pThis);
 
     deinit_tcp_listener(pThis);
 
