@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/ommysql`.
 
 Description
 -----------
-This is the address of the MariaDB/MySQL-Server.
+This is the hostname or IP address of the MariaDB/MySQL server.
 
 Module usage
 ------------

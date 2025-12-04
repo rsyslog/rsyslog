@@ -32,10 +32,10 @@ database. It works on the MonitorWare schema. This template is:
 
    template(name="tpl" type="string" string="insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')" option.sql="on")
 
-As you can see, the template is an actual SQL statement. Note the ",SQL"
-option: it tells the template processor that the template is used for
+As you can see, the template is an actual SQL statement. Note the ``option.sql="on"``
+parameter: it tells the template processor that the template is used for
 SQL processing, thus quote characters are quoted to prevent security
-issues. You can not assign a template without ",SQL" to a MariaDB/MySQL
+issues. You can not assign a template without ``option.sql="on"`` to a MariaDB/MySQL
 output action.
 
 If you would like to change fields contents or add or delete your own

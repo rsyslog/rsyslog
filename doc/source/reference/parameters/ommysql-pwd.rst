@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/ommysql`.
 
 Description
 -----------
-This is the password for the user specified in UID.
+This is the password for the user account specified in the ``uid`` parameter, used to authenticate with the MariaDB/MySQL server.
 
 Module usage
 ------------

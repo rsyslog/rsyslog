@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/ommysql`.
 
 Description
 -----------
-This is the name of the database used.
+This is the name of the database on the MariaDB/MySQL server where log records will be inserted.
 
 Module usage
 ------------
