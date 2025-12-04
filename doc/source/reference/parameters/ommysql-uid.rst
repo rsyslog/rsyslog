@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/ommysql`.
 
 Description
 -----------
-This is the user who is used.
+This is the username used to authenticate with the MariaDB/MySQL server.
 
 Module usage
 ------------

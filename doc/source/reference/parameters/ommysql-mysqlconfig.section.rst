@@ -45,6 +45,7 @@ Module usage
 
    module(load="ommysql")
    action(type="ommysql"
+          server="mysqlserver.example.com"
           mysqlConfig.file="/etc/mysql/my.cnf"
           mysqlConfig.section="custom-client"
           db="syslog_db" uid="user" pwd="pwd")

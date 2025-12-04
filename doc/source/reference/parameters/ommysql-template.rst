@@ -28,13 +28,9 @@ Description
 Rsyslog contains a canned default template to write to the MariaDB/MySQL
 database. It works on the MonitorWare schema. This template is:
 
-.. code-block:: none
+.. code-block:: rsyslog
 
-   $template tpl,"insert into SystemEvents (Message, Facility, FromHost,
-   Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values
-   ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%,
-   '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%,
-   '%syslogtag%')",SQL
+   template(name="tpl" type="string" string="insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')" option.sql="on")
 
 As you can see, the template is an actual SQL statement. Note the ",SQL"
 option: it tells the template processor that the template is used for
