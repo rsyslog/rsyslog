@@ -1475,19 +1475,16 @@ AM_CONDITIONAL(ENABLE_FMHTTP, test x$enable_fmhttp = xyes)
 # imdiag support
 # This is a core testbench tool. You need to enable it if you want to
 # use not only a small subset of the testbench.
+imdiag_user_set=no
 AC_ARG_ENABLE(imdiag,
         [AS_HELP_STRING([--enable-imdiag],[Enable imdiag @<:@default=no@:>@])],
         [case "${enableval}" in
-         yes) enable_imdiag="yes" ;;
-          no) enable_imdiag="no" ;;
+         yes) enable_imdiag="yes"; imdiag_user_set=yes ;;
+          no) enable_imdiag="no"; imdiag_user_set=yes ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-imdiag) ;;
          esac],
         [enable_imdiag=no]
 )
-if test "x$enable_imdiag" = "xyes"; then
-	AC_DEFINE([ENABLE_IMDIAG], [1], [Indicator that IMDIAG is present])
-fi
-AM_CONDITIONAL(ENABLE_IMDIAG, test x$enable_imdiag = xyes)
 
 
 # mmnormalize
@@ -2298,27 +2295,41 @@ AC_ARG_ENABLE(omsendertrack,
 )
 AM_CONDITIONAL(ENABLE_OMSENDERTRACK, test x$enable_omsendertrack = xyes)
 
+omstdout_user_set=no
 # settings for omstdout
 AC_ARG_ENABLE(omstdout,
         [AS_HELP_STRING([--enable-omstdout],[Compiles stdout module @<:@default=no@:>@])],
         [case "${enableval}" in
-         yes) enable_omstdout="yes" ;;
-          no) enable_omstdout="no" ;;
+         yes) enable_omstdout="yes"; omstdout_user_set=yes ;;
+          no) enable_omstdout="no"; omstdout_user_set=yes ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-omstdout) ;;
          esac],
         [enable_omstdout=no]
 )
-AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
 
-AM_CONDITIONAL(ENABLE_TESTBENCH, test x$enable_testbench = xyes)
 if test "x$enable_testbench" = "xyes"; then
 	if test "x$enable_imdiag" != "xyes"; then
-		AC_MSG_ERROR("--enable-testbench requires --enable-imdiag")
+		if test "x$imdiag_user_set" = "xyes"; then
+			AC_MSG_ERROR([--enable-testbench conflicts with --disable-imdiag])
+		fi
+		AC_MSG_NOTICE([--enable-testbench auto-enabling imdiag])
+		enable_imdiag="yes"
 	fi
 	if test "x$enable_omstdout" != "xyes"; then
-		AC_MSG_ERROR("--enable-testbench requires --enable-omstdout")
+		if test "x$omstdout_user_set" = "xyes"; then
+			AC_MSG_ERROR([--enable-testbench conflicts with --disable-omstdout])
+		fi
+		AC_MSG_NOTICE([--enable-testbench auto-enabling omstdout])
+		enable_omstdout="yes"
 	fi
 fi
+
+if test "x$enable_imdiag" = "xyes"; then
+	AC_DEFINE([ENABLE_IMDIAG], [1], [Indicator that IMDIAG is present])
+fi
+AM_CONDITIONAL(ENABLE_IMDIAG, test x$enable_imdiag = xyes)
+AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
+AM_CONDITIONAL(ENABLE_TESTBENCH, test x$enable_testbench = xyes)
 
 
 # settings for omjournal
