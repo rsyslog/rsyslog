@@ -445,6 +445,7 @@ typedef struct _instanceData {
     uchar *ignoreTrailingPattern;
     regex_t ignoreTrailingPattern_preg; /* compiled regex for ignoreTrailingPattern.regex */
     sbool ignoreTrailingPattern_isRegex; /* flag indicating if regex mode is enabled */
+    size_t searchLimit; /* maximum characters to search at end of message for trailing pattern */
     validation_context_t validationTemplate;
     section_descriptor_t *sectionDescriptors;
     size_t sectionDescriptorCount;
@@ -498,6 +499,7 @@ struct modConfData_s {
     char *runtimeConfigFile;
     uchar *ignoreTrailingPattern;
     uchar *ignoreTrailingPatternRegex;
+    size_t searchLimit;
     validation_context_t validationTemplate;
 };
 static modConfData_t *loadModConf = NULL;
@@ -5096,14 +5098,14 @@ static char *detect_and_truncate_trailing_extradata(instanceData *pData, char *m
          *
          * This fallback path attempts to remove trailing enrichment sections from malformed or
          * non-standard messages. Be conservative: only truncate if pattern appears in the
-         * trailing portion (last 20% or last 200 chars, whichever is smaller) to avoid
+         * trailing portion (last 20% or searchLimit chars, whichever is smaller) to avoid
          * accidentally removing legitimate message content. */
         size_t msgLenVal = strlen(mutableMsg);
         if (pData->ignoreTrailingPattern_isRegex) {
-            /* For regex mode, search within the trailing portion (last 20% or last 200 chars) */
+            /* For regex mode, search within the trailing portion (last 20% or searchLimit chars) */
             size_t trailingSearchLen = msgLenVal / 5; /* Last 20% */
-            if (trailingSearchLen > 200) {
-                trailingSearchLen = 200;
+            if (trailingSearchLen > pData->searchLimit) {
+                trailingSearchLen = pData->searchLimit;
             }
             if (trailingSearchLen > msgLenVal) {
                 trailingSearchLen = msgLenVal;
@@ -5137,8 +5139,8 @@ static char *detect_and_truncate_trailing_extradata(instanceData *pData, char *m
                 return NULL;
             }
             size_t trailingSearchLen = msgLenVal / 5; /* Last 20% */
-            if (trailingSearchLen > 200) {
-                trailingSearchLen = 200;
+            if (trailingSearchLen > pData->searchLimit) {
+                trailingSearchLen = pData->searchLimit;
             }
             if (trailingSearchLen < patternLen) {
                 trailingSearchLen = patternLen;
@@ -5320,10 +5322,13 @@ static rsRetVal process_message(instanceData *pData, smsg_t *pMsg, uchar *msgTex
 
 DEF_OMOD_STATIC_DATA;
 
-static struct cnfparamdescr modpdescr[] = {
-    {"definition.file", eCmdHdlrString, 0},       {"definition.json", eCmdHdlrString, 0},
-    {"runtime.config", eCmdHdlrString, 0},        {"validation.mode", eCmdHdlrString, 0},
-    {"ignoreTrailingPattern", eCmdHdlrString, 0}, {"ignoreTrailingPattern.regex", eCmdHdlrString, 0}};
+static struct cnfparamdescr modpdescr[] = {{"definition.file", eCmdHdlrString, 0},
+                                           {"definition.json", eCmdHdlrString, 0},
+                                           {"runtime.config", eCmdHdlrString, 0},
+                                           {"validation.mode", eCmdHdlrString, 0},
+                                           {"ignoreTrailingPattern", eCmdHdlrString, 0},
+                                           {"ignoreTrailingPattern.regex", eCmdHdlrString, 0},
+                                           {"ignoreTrailingPattern.searchWindow", eCmdHdlrInt, 0}};
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, ARRAY_SIZE(modpdescr), modpdescr};
 
 static struct cnfparamdescr actpdescr[] = {{"container", eCmdHdlrString, 0},
@@ -5342,7 +5347,8 @@ static struct cnfparamdescr actpdescr[] = {{"container", eCmdHdlrString, 0},
                                            {"validation.mode", eCmdHdlrString, 0},
                                            {"validation_mode", eCmdHdlrString, 0},
                                            {"ignoreTrailingPattern", eCmdHdlrString, 0},
-                                           {"ignoreTrailingPattern.regex", eCmdHdlrString, 0}};
+                                           {"ignoreTrailingPattern.regex", eCmdHdlrString, 0},
+                                           {"ignoreTrailingPattern.searchWindow", eCmdHdlrInt, 0}};
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, ARRAY_SIZE(actpdescr), actpdescr};
 
 BEGINbeginCnfLoad
@@ -5359,6 +5365,7 @@ BEGINbeginCnfLoad
     pModConf->ignoreTrailingPattern = NULL;
     free(pModConf->ignoreTrailingPatternRegex);
     pModConf->ignoreTrailingPatternRegex = NULL;
+    pModConf->searchLimit = 256; /* default search window limit */
     init_validation_context(&pModConf->validationTemplate);
 ENDbeginCnfLoad
 
@@ -5425,6 +5432,13 @@ BEGINsetModCnf
             }
             free(loadModConf->ignoreTrailingPatternRegex);
             loadModConf->ignoreTrailingPatternRegex = (uchar *)value;
+        } else if (!strcmp(modpblk.descr[i].name, "ignoreTrailingPattern.searchWindow")) {
+            long long value = pvals[i].val.d.n;
+            if (value < 1) {
+                LogError(0, RS_RET_PARAM_ERROR, "mmsnareparse: ignoreTrailingPattern.searchWindow must be >= 1");
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+            }
+            loadModConf->searchLimit = (size_t)value;
         } else {
             dbgprintf("mmsnareparse: unhandled module parameter '%s'\n", modpblk.descr[i].name);
         }
@@ -5508,6 +5522,7 @@ static inline void setInstParamDefaults(instanceData *pData) {
     pData->emitDebugJson = 0;
     pData->ignoreTrailingPattern = NULL;
     pData->ignoreTrailingPattern_isRegex = 0;
+    pData->searchLimit = 256; /* default search window limit */
     memset(&pData->ignoreTrailingPattern_preg, 0, sizeof(regex_t));
     init_validation_context(&pData->validationTemplate);
     init_runtime_config(&pData->runtimeConfig);
@@ -5539,6 +5554,7 @@ BEGINnewActInst
     setInstParamDefaults(pData);
     if (loadModConf != NULL) {
         pData->validationTemplate = loadModConf->validationTemplate;
+        pData->searchLimit = loadModConf->searchLimit;
         if (loadModConf->runtimeConfigFile != NULL) {
             CHKiRet(load_configuration(&pData->runtimeConfig, loadModConf->runtimeConfigFile));
         }
@@ -5615,6 +5631,13 @@ BEGINnewActInst
             free(pData->ignoreTrailingPattern);
             pData->ignoreTrailingPattern = (uchar *)value;
             pData->ignoreTrailingPattern_isRegex = 1;
+        } else if (!strcmp(actpblk.descr[i].name, "ignoreTrailingPattern.searchWindow")) {
+            long long value = pvals[i].val.d.n;
+            if (value < 1) {
+                LogError(0, RS_RET_PARAM_ERROR, "mmsnareparse: ignoreTrailingPattern.searchWindow must be >= 1");
+                ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+            }
+            pData->searchLimit = (size_t)value;
         }
     }
     /* Check mutual exclusivity - both action parameters cannot be set */
