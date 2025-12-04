@@ -16,6 +16,7 @@ template(name="outfmt" type="string" string="%msg%")
 
 local4.* {
         action(type="omhiredis"
+                name="omhiredis-setex"
                 server="127.0.0.1"
                 serverport="'$REDIS_RANDOM_PORT'"
                 mode="set"
@@ -28,8 +29,8 @@ local4.* {
 action(type="omfile" file="'$RSYSLOG_DYNNAME.othermsg'" template="outfmt")
 '
 
-# Should get nothing
-redis_command "GET outKey" > $RSYSLOG_OUT_LOG
+# Should get 'none'
+redis_command "TYPE outKey" > $RSYSLOG_OUT_LOG
 
 startup
 
@@ -47,8 +48,8 @@ redis_command "GET outKey" >> $RSYSLOG_OUT_LOG
 
 sleep $EXPIRATION
 
-# Should get nothing
-redis_command "GET outKey" >> $RSYSLOG_OUT_LOG
+# Should get 'none'
+redis_command "TYPE outKey" >> $RSYSLOG_OUT_LOG
 
 if [ $ttl -lt 0 ] || [ $ttl -gt $EXPIRATION ]; then
     echo "ERROR: expiration is not in [0:$EXPIRATION] -> $ttl"
@@ -58,14 +59,13 @@ fi
 # The first get is before inserting
 # The third is while the key is still valid
 # The fourth is after the key expired
-export EXPECTED="/usr/bin/redis-cli
-
-/usr/bin/redis-cli
+export EXPECTED="none
  msgnum:00000001:
-/usr/bin/redis-cli
-"
+none"
 
 cmp_exact $RSYSLOG_OUT_LOG
+
+content_check "omhiredis[omhiredis-setex]: trying connect to '127.0.0.1'" ${RSYSLOG_DYNNAME}.started
 
 stop_redis
 

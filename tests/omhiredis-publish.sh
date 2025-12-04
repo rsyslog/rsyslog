@@ -15,6 +15,7 @@ template(name="outfmt" type="string" string="%msg%")
 
 local4.* {
         action(type="omhiredis"
+                name="omhiredis-publish"
                 server="127.0.0.1"
                 serverport="'$REDIS_RANDOM_PORT'"
                 mode="publish"
@@ -36,8 +37,7 @@ shutdown_when_empty
 wait_shutdown
 
 # The SUBSCRIBE command gets the result of the subscribing and the 3 subsequent messages published by omhiredis
-export EXPECTED="/usr/bin/redis-cli
-subscribe
+export EXPECTED="subscribe
 myChannel
 1
 message
@@ -51,6 +51,8 @@ myChannel
  msgnum:00000003:"
 
 cmp_exact $RSYSLOG_OUT_LOG
+
+content_check "omhiredis[omhiredis-publish]: trying connect to '127.0.0.1'" ${RSYSLOG_DYNNAME}.started
 
 stop_redis
 

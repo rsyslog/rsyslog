@@ -48,6 +48,8 @@
 #include "errmsg.h"
 #include "cfsysline.h"
 #include "unicode-helper.h"
+#include "parserif.h"
+#include "action.h"
 
 MODULE_TYPE_OUTPUT;
 MODULE_TYPE_NOKEEP;
@@ -109,6 +111,8 @@ typedef struct _instanceData {
     char *sni; /* TLS Server Name Indication */
 #endif
 
+    action_t *pAction;
+
 } instanceData;
 
 typedef struct wrkrInstanceData {
@@ -150,6 +154,7 @@ static struct cnfparamdescr actpdescr[] = {
     {"client_key", eCmdHdlrGetWord, 0},
     {"sni", eCmdHdlrGetWord, 0},
 #endif
+    {"name", eCmdHdlrGetWord, 0},
 };
 
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
@@ -157,6 +162,11 @@ static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / si
 BEGINcreateInstance
     CODESTARTcreateInstance;
 ENDcreateInstance
+
+BEGINsetActionInfo
+    CODESTARTsetActionInfo;
+    pData->pAction = pAction;
+ENDsetActionInfo
 
 BEGINcreateWrkrInstance
     CODESTARTcreateWrkrInstance;
@@ -240,10 +250,12 @@ static rsRetVal initHiredis(wrkrInstanceData_t *pWrkrData, int bSilent) {
 
     struct timeval timeout = {1, 500000}; /* 1.5 seconds */
     if (udsAddr) {
-        DBGPRINTF("omhiredis: trying connect to UDS socket '%s'\n", server);
+        LogMsg(0, RS_RET_OK, LOG_INFO, "omhiredis[%s]: trying connect to UDS socket '%s'",
+               actionGetName(pWrkrData->pData->pAction), server);
         pWrkrData->conn = redisConnectUnixWithTimeout(server, timeout);
     } else {
-        DBGPRINTF("omhiredis: trying connect to '%s' at port %d\n", server, pWrkrData->pData->port);
+        LogMsg(0, RS_RET_OK, LOG_INFO, "omhiredis[%s]: trying connect to '%s' at port %d",
+               actionGetName(pWrkrData->pData->pAction), server, pWrkrData->pData->port);
         pWrkrData->conn = redisConnectWithTimeout(server, pWrkrData->pData->port, timeout);
     }
 
@@ -251,13 +263,13 @@ static rsRetVal initHiredis(wrkrInstanceData_t *pWrkrData, int bSilent) {
         if (!bSilent) {
             const char *err_str = pWrkrData->conn == NULL ? "could not allocate context!" : pWrkrData->conn->errstr;
             if (udsAddr) {
-                LogError(0, RS_RET_REDIS_ERROR, "omhiredis: can not connect to redis UDS socket '%s' -> %s", server,
-                         err_str);
+                LogError(0, RS_RET_REDIS_ERROR, "omhiredis[%s]: can not connect to redis UDS socket '%s' -> %s",
+                         actionGetName(pWrkrData->pData->pAction), server, err_str);
             } else {
                 LogError(0, RS_RET_REDIS_ERROR,
-                         "omhiredis: can not connect to redis server '%s', "
+                         "omhiredis[%s]: can not connect to redis server '%s', "
                          "port %d -> %s",
-                         server, pWrkrData->pData->port, err_str);
+                         actionGetName(pWrkrData->pData->pAction), server, pWrkrData->pData->port, err_str);
             }
         }
         ABORT_FINALIZE(RS_RET_SUSPENDED);
@@ -269,13 +281,17 @@ static rsRetVal initHiredis(wrkrInstanceData_t *pWrkrData, int bSilent) {
                                                     pWrkrData->pData->client_cert, pWrkrData->pData->client_key,
                                                     pWrkrData->pData->sni, &pWrkrData->ssl_error);
         if (!pWrkrData->ssl_conn || pWrkrData->ssl_error != REDIS_SSL_CTX_NONE) {
-            LogError(0, NO_ERRCODE, "omhiredis: SSL Context error: %s", redisSSLContextGetError(pWrkrData->ssl_error));
-            if (!bSilent) LogError(0, RS_RET_SUSPENDED, "[TLS] can not initialize redis handle");
+            LogError(0, NO_ERRCODE, "omhiredis[%s]: SSL Context error: %s", actionGetName(pWrkrData->pData->pAction),
+                     redisSSLContextGetError(pWrkrData->ssl_error));
+            if (!bSilent) LogError(0, RS_RET_SUSPENDED, "omhiredis[%s]: can not initialize TLS context");
             ABORT_FINALIZE(RS_RET_SUSPENDED);
         }
         if (redisInitiateSSLWithContext(pWrkrData->conn, pWrkrData->ssl_conn) != REDIS_OK) {
-            LogError(0, NO_ERRCODE, "omhiredis: %s", pWrkrData->conn->errstr);
-            if (!bSilent) LogError(0, RS_RET_SUSPENDED, "[TLS] can not initialize redis handle");
+            LogError(0, NO_ERRCODE, "omhiredis[%s]: %s", actionGetName(pWrkrData->pData->pAction),
+                     pWrkrData->conn->errstr);
+            if (!bSilent)
+                LogError(0, RS_RET_SUSPENDED, "omhiredis[%s]: [TLS] can not initialize redis handle",
+                         actionGetName(pWrkrData->pData->pAction));
             ABORT_FINALIZE(RS_RET_SUSPENDED);
         }
     }
@@ -287,7 +303,8 @@ static rsRetVal initHiredis(wrkrInstanceData_t *pWrkrData, int bSilent) {
             DBGPRINTF("omhiredis: could not get reply from AUTH command\n");
             ABORT_FINALIZE(RS_RET_SUSPENDED);
         } else if (reply->type == REDIS_REPLY_ERROR) {
-            LogError(0, NO_ERRCODE, "omhiredis: error while authenticating: %s", reply->str);
+            LogError(0, NO_ERRCODE, "omhiredis[%s]: error while authenticating: %s",
+                     actionGetName(pWrkrData->pData->pAction), reply->str);
             ABORT_FINALIZE(RS_RET_ERR);
         }
     }
@@ -315,20 +332,21 @@ static rsRetVal isMaster(wrkrInstanceData_t *pWrkrData) {
 
     reply = redisCommand(pWrkrData->conn, "ROLE");
     if (reply == NULL) {
-        DBGPRINTF("omhiredis: could not get reply from ROLE command\n");
+        LogMsg(0, RS_RET_OK, LOG_WARNING, "omhiredis[%s]: could not get reply from ROLE command",
+               actionGetName(pWrkrData->pData->pAction));
         ABORT_FINALIZE(RS_RET_SUSPENDED);
     } else if (reply->type == REDIS_REPLY_ERROR) {
-        LogMsg(0, RS_RET_REDIS_ERROR, LOG_WARNING,
-               "omhiredis: got an error while querying role -> "
-               "%s\n",
-               reply->str);
+        LogMsg(0, RS_RET_REDIS_ERROR, LOG_WARNING, "omhiredis[%s]: got an error while querying role -> %s",
+               actionGetName(pWrkrData->pData->pAction), reply->str);
         ABORT_FINALIZE(RS_RET_SUSPENDED);
     } else if (reply->type != REDIS_REPLY_ARRAY || reply->element[0]->type != REDIS_REPLY_STRING) {
-        LogMsg(0, RS_RET_REDIS_ERROR, LOG_ERR, "omhiredis: did not get a proper reply from ROLE command");
+        LogMsg(0, RS_RET_REDIS_ERROR, LOG_ERR, "omhiredis[%s]: did not get a proper reply from ROLE command",
+               actionGetName(pWrkrData->pData->pAction));
         ABORT_FINALIZE(RS_RET_SUSPENDED);
     } else {
         if (strncmp(reply->element[0]->str, "master", 6)) {
-            LogMsg(0, RS_RET_OK, LOG_WARNING, "omhiredis: current connected node is not a master");
+            LogMsg(0, RS_RET_OK, LOG_WARNING, "omhiredis[%s]: current connected node is not a master",
+                   actionGetName(pWrkrData->pData->pAction));
             ABORT_FINALIZE(RS_RET_SUSPENDED);
         }
     }
@@ -394,7 +412,7 @@ static rsRetVal writeHiredis(uchar *key, uchar *message, wrkrInstanceData_t *pWr
     }
 
     if (rc == REDIS_ERR) {
-        LogError(0, NO_ERRCODE, "omhiredis: %s", pWrkrData->conn->errstr);
+        LogError(0, NO_ERRCODE, "omhiredis[%s]: %s", actionGetName(pWrkrData->pData->pAction), pWrkrData->conn->errstr);
         dbgprintf("omhiredis: %s\n", pWrkrData->conn->errstr);
         ABORT_FINALIZE(RS_RET_ERR);
     } else {
@@ -410,7 +428,7 @@ static rsRetVal ackHiredisStreamIndex(wrkrInstanceData_t *pWrkrData, uchar *key,
     DEFiRet;
 
     if (REDIS_ERR == redisAppendCommand(pWrkrData->conn, "XACK %s %s %s", key, group, index)) {
-        LogError(0, NO_ERRCODE, "omhiredis: %s", pWrkrData->conn->errstr);
+        LogError(0, NO_ERRCODE, "omhiredis[%s]: %s", actionGetName(pWrkrData->pData->pAction), pWrkrData->conn->errstr);
         DBGPRINTF("omhiredis: %s\n", pWrkrData->conn->errstr);
         ABORT_FINALIZE(RS_RET_ERR);
     } else {
@@ -425,7 +443,7 @@ static rsRetVal delHiredisStreamIndex(wrkrInstanceData_t *pWrkrData, uchar *key,
     DEFiRet;
 
     if (REDIS_ERR == redisAppendCommand(pWrkrData->conn, "XDEL %s %s", key, index)) {
-        LogError(0, NO_ERRCODE, "omhiredis: %s", pWrkrData->conn->errstr);
+        LogError(0, NO_ERRCODE, "omhiredis[%s]: %s", actionGetName(pWrkrData->pData->pAction), pWrkrData->conn->errstr);
         DBGPRINTF("omhiredis: %s\n", pWrkrData->conn->errstr);
         ABORT_FINALIZE(RS_RET_ERR);
     } else {
@@ -500,12 +518,14 @@ BEGINendTransaction
     for (i = 0; i < pWrkrData->count; i++) {
         if (REDIS_OK != redisGetReply(pWrkrData->conn, (void *)&reply) || pWrkrData->conn->err) {
             dbgprintf("omhiredis: %s\n", pWrkrData->conn->errstr);
-            LogError(0, RS_RET_REDIS_ERROR, "Error while processing replies: %s", pWrkrData->conn->errstr);
+            LogError(0, RS_RET_REDIS_ERROR, "omhiredis[%s]: Error while processing replies: %s",
+                     actionGetName(pWrkrData->pData->pAction), pWrkrData->conn->errstr);
             closeHiredis(pWrkrData);
             ABORT_FINALIZE(RS_RET_SUSPENDED);
         } else {
             if (reply->type == REDIS_REPLY_ERROR) {
-                LogError(0, RS_RET_REDIS_ERROR, "Received error from redis -> %s", reply->str);
+                LogError(0, RS_RET_REDIS_ERROR, "omhiredis[%s]: Received error from redis -> %s",
+                         actionGetName(pWrkrData->pData->pAction), reply->str);
                 closeHiredis(pWrkrData);
                 freeReplyObject(reply);
                 ABORT_FINALIZE(RS_RET_SUSPENDED);
@@ -551,6 +571,7 @@ static void setInstParamDefaults(instanceData *pData) {
     pData->client_key = NULL;
     pData->sni = NULL;
 #endif
+    pData->pAction = NULL;
 }
 
 /* here is where the work to set up a new instance
@@ -650,134 +671,122 @@ BEGINnewActInst
 
     dbgprintf("omhiredis: checking config sanity\n");
 
+#ifdef HIREDIS_SSL
+    if ((pData->client_cert == NULL) ^ (pData->client_key == NULL)) {
+        parser_errmsg("omhiredis: \"client_cert\" and \"client_key\" must be specified together!");
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+#endif
+
     if (!pData->modeDescription) {
-        dbgprintf("omhiredis: no mode specified, setting it to 'template'\n");
+        parser_warnmsg("omhiredis: no mode specified, setting it to 'template'\n");
         pData->mode = OMHIREDIS_MODE_TEMPLATE;
     }
 
     if (pData->mode == OMHIREDIS_MODE_STREAM && !pData->streamOutField) {
-        LogError(0, RS_RET_CONF_PARSE_WARNING,
-                 "omhiredis: no stream.outField set, "
-                 "using 'msg' as default");
+        parser_warnmsg("omhiredis: no stream.outField set, using 'msg' as default");
         pData->streamOutField = ustrdup("msg");
     }
 
     if (pData->server != NULL && pData->socketPath != NULL) {
-        LogError(0, RS_RET_CONF_PARSE_WARNING,
-                 "omhiredis: both 'server' and 'socketpath' are set; 'socketpath' will be ignored");
+        parser_warnmsg("omhiredis: both 'server' and 'socketpath' are set; 'socketpath' will be ignored");
         free(pData->socketPath);
         pData->socketPath = NULL;
     }
 
     if (pData->tplName == NULL) {
         if (pData->mode == OMHIREDIS_MODE_TEMPLATE) {
-            LogError(0, RS_RET_CONF_PARSE_ERROR, "omhiredis: selected mode requires a template");
+            parser_errmsg("omhiredis: selected mode requires a template");
             ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
         } else {
             CHKmalloc(pData->tplName = ustrdup("RSYSLOG_ForwardFormat"));
-            LogError(0, RS_RET_CONF_PARSE_WARNING,
-                     "omhiredis: no template set, "
-                     "using RSYSLOG_ForwardFormat as default");
+            parser_warnmsg("omhiredis: no template set, using RSYSLOG_ForwardFormat as default");
         }
     }
 
     if (pData->mode != OMHIREDIS_MODE_TEMPLATE && pData->key == NULL) {
-        LogError(0, RS_RET_CONF_PARSE_ERROR, "omhiredis: mode %s requires a key", pData->modeDescription);
+        parser_errmsg("omhiredis: mode %s requires a key", pData->modeDescription);
         ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
     }
 
     if (pData->expiration && pData->mode != OMHIREDIS_MODE_SET) {
-        LogError(0, RS_RET_CONF_PARSE_WARNING,
-                 "omhiredis: expiration set but mode is not "
-                 "'set', expiration will be ignored");
+        parser_warnmsg("omhiredis: expiration set but mode is not 'set', expiration will be ignored");
     }
 
     if (pData->mode != OMHIREDIS_MODE_STREAM) {
         if (pData->streamOutField) {
-            LogError(0, RS_RET_CONF_PARSE_WARNING,
-                     "omhiredis: stream.outField set "
-                     "but mode is not 'stream', field will be ignored");
+            parser_warnmsg("omhiredis: stream.outField set but mode is not 'stream', field will be ignored");
         }
         if (pData->streamAck) {
-            LogError(0, RS_RET_CONF_PARSE_WARNING,
-                     "omhiredis: stream.ack set "
-                     "but mode is not 'stream', XACK will be ignored");
+            parser_warnmsg("omhiredis: stream.ack set but mode is not 'stream', XACK will be ignored");
         }
         if (pData->streamDel) {
-            LogError(0, RS_RET_CONF_PARSE_WARNING,
-                     "omhiredis: stream.del set "
-                     "but mode is not 'stream', XDEL will be ignored");
+            parser_warnmsg("omhiredis: stream.del set but mode is not 'stream', XDEL will be ignored");
         }
         if (pData->streamCapacityLimit) {
-            LogError(0, RS_RET_CONF_PARSE_WARNING,
-                     "omhiredis: stream.capacityLimit set "
-                     "but mode is not 'stream', stream trimming will be ignored");
+            parser_warnmsg(
+                "omhiredis: stream.capacityLimit set "
+                "but mode is not 'stream', stream trimming will be ignored");
         }
         if (pData->streamKeyAck) {
-            LogError(0, RS_RET_CONF_PARSE_WARNING,
-                     "omhiredis: stream.keyAck set "
-                     "but mode is not 'stream', parameter will be ignored");
+            parser_warnmsg(
+                "omhiredis: stream.keyAck set "
+                "but mode is not 'stream', parameter will be ignored");
         }
         if (pData->streamDynaKeyAck) {
-            LogError(0, RS_RET_CONF_PARSE_WARNING,
-                     "omhiredis: stream.dynaKeyAck set "
-                     "but mode is not 'stream', parameter will be ignored");
+            parser_warnmsg(
+                "omhiredis: stream.dynaKeyAck set "
+                "but mode is not 'stream', parameter will be ignored");
         }
         if (pData->streamGroupAck) {
-            LogError(0, RS_RET_CONF_PARSE_WARNING,
-                     "omhiredis: stream.groupAck set "
-                     "but mode is not 'stream', parameter will be ignored");
+            parser_warnmsg(
+                "omhiredis: stream.groupAck set "
+                "but mode is not 'stream', parameter will be ignored");
         }
         if (pData->streamDynaGroupAck) {
-            LogError(0, RS_RET_CONF_PARSE_WARNING,
-                     "omhiredis: stream.dynaGroupAck set "
-                     "but mode is not 'stream', parameter will be ignored");
+            parser_warnmsg(
+                "omhiredis: stream.dynaGroupAck set "
+                "but mode is not 'stream', parameter will be ignored");
         }
         if (pData->streamIndexAck) {
-            LogError(0, RS_RET_CONF_PARSE_WARNING,
-                     "omhiredis: stream.indexAck set "
-                     "but mode is not 'stream', parameter will be ignored");
+            parser_warnmsg(
+                "omhiredis: stream.indexAck set "
+                "but mode is not 'stream', parameter will be ignored");
         }
         if (pData->streamDynaIndexAck) {
-            LogError(0, RS_RET_CONF_PARSE_WARNING,
-                     "omhiredis: stream.dynaIndexAck set "
-                     "but mode is not 'stream', parameter will be ignored");
+            parser_warnmsg(
+                "omhiredis: stream.dynaIndexAck set "
+                "but mode is not 'stream', parameter will be ignored");
         }
     } else {
         if (pData->streamAck) {
             if (!pData->streamKeyAck || !pData->streamGroupAck || !pData->streamIndexAck) {
-                LogError(0, RS_RET_CONF_PARSE_ERROR,
-                         "omhiredis: 'stream.ack' is set but one of "
-                         "'stream.keyAck', 'stream.groupAck' or 'stream.indexAck' is missing");
+                parser_errmsg(
+                    "omhiredis: 'stream.ack' is set but one of "
+                    "'stream.keyAck', 'stream.groupAck' or 'stream.indexAck' is missing");
                 ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
             }
         }
         if (pData->streamDel) {
             if (!pData->streamKeyAck || !pData->streamIndexAck) {
-                LogError(0, RS_RET_CONF_PARSE_ERROR,
-                         "omhiredis: 'stream.del' is set but one of "
-                         "'stream.keyAck' or 'stream.indexAck' is missing");
+                parser_errmsg(
+                    "omhiredis: 'stream.del' is set but one of "
+                    "'stream.keyAck' or 'stream.indexAck' is missing");
                 ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
             }
         }
     }
 
     if (pData->streamDynaKeyAck && pData->streamKeyAck == NULL) {
-        LogError(0, RS_RET_CONF_PARSE_WARNING,
-                 "omhiredis: 'stream.dynaKeyAck' set "
-                 "but 'stream.keyAck' is empty, disabling");
+        parser_warnmsg("omhiredis: 'stream.dynaKeyAck' set but 'stream.keyAck' is empty, disabling");
         pData->streamDynaKeyAck = 0;
     }
     if (pData->streamDynaGroupAck && pData->streamGroupAck == NULL) {
-        LogError(0, RS_RET_CONF_PARSE_WARNING,
-                 "omhiredis: 'stream.dynaGroupAck' set "
-                 "but 'stream.groupAck' is empty, disabling");
+        parser_warnmsg("omhiredis: 'stream.dynaGroupAck' set but 'stream.groupAck' is empty, disabling");
         pData->streamDynaGroupAck = 0;
     }
     if (pData->streamDynaIndexAck && pData->streamIndexAck == NULL) {
-        LogError(0, RS_RET_CONF_PARSE_WARNING,
-                 "omhiredis: 'stream.dynaGroupAck' set "
-                 "but 'stream.indexAck' is empty, disabling");
+        parser_warnmsg("omhiredis: 'stream.dynaIndexAck' set but 'stream.indexAck' is empty, disabling");
         pData->streamDynaIndexAck = 0;
     }
 
@@ -850,6 +859,7 @@ ENDmodExit
  * with the rsyslog core engine */
 BEGINqueryEtryPt
     CODESTARTqueryEtryPt;
+    CODEqueryEtryPt_SetActionInfo_IF_OMOD_QUERIES;
     CODEqueryEtryPt_STD_OMOD_QUERIES;
     CODEqueryEtryPt_STD_OMOD8_QUERIES;
     CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;
