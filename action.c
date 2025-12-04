@@ -314,8 +314,6 @@ rsRetVal actionDestruct(action_t *const pThis) {
      */
     if (pThis->statsobj != NULL) statsobj.Destruct(&pThis->statsobj);
 
-    if (pThis->pModData != NULL) pThis->pMod->freeInstance(pThis->pModData);
-
     if (pThis->fdErrFile != -1) close(pThis->fdErrFile);
     pthread_mutex_destroy(&pThis->mutErrFile);
     pthread_mutex_destroy(&pThis->mutAction);
@@ -326,6 +324,12 @@ rsRetVal actionDestruct(action_t *const pThis) {
     free(pThis->ppTpl);
     free(pThis->peParamPassing);
     freeWrkrDataTable(pThis);
+
+    /* The module's instance data must be freed after the worker data table,
+     * as workers may need to access the shared module data during their
+     * cleanup.
+     */
+    if (pThis->pModData != NULL) pThis->pMod->freeInstance(pThis->pModData);
 
 finalize_it:
     free(pThis);
