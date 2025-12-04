@@ -1,5 +1,3 @@
-.. _practice-externalized-helper-contracts:
-
 .. meta::
    :description: Pattern for documenting narrow helper contracts when logic is split from larger routines, including precondition guards and defensive fallbacks.
    :keywords: rsyslog, coding practice, helper function, contract, preconditions, assertions
@@ -9,6 +7,8 @@
 Document explicit preconditions and defensive fallbacks for helpers that are split out of larger routines so callers cannot misuse narrowly scoped logic.
 
 .. summary-end
+
+.. _practice-externalized-helper-contracts:
 
 Pattern: document contracts for externalized helpers
 ====================================================
@@ -27,7 +27,7 @@ Pattern: document contracts for externalized helpers
 #. Link to the parent routine or a concrete example so reviewers understand the intended call path and can keep contracts in sync when either side changes.
 
 Assert + safe fallback (defensive design-by-contract)
-----------------------------------------------------
+-----------------------------------------------------
 
 Prefer a hybrid guard for narrow helpers instead of inlining logic back into a
 larger function:
