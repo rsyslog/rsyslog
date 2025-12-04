@@ -1364,14 +1364,11 @@ static void anonipv6(wrkrInstanceData_t *pWrkrData, uchar **msg, int *pLenMsg, i
 
 
 /**
- * \brief Locate the start of an embedded IPv4 suffix.
- *
- * Walks backward from the first dot to find the preceding colon separating the
- * IPv6 prefix from the dotted tail.
- *
- * \param buf buffer containing the candidate address.
- * \param dotPos index of the first '.' in the embedded IPv4 portion.
- * \return offset where the embedded IPv4 begins.
+ * Locate the start offset of the IPv4 tail inside an embedded IPv4-in-IPv6
+ * literal. The caller must pass the substring that begins at the first hex
+ * group of the IPv6 address and a dot position that is guaranteed to belong
+ * to the IPv4 tail; this routine is not a general-purpose search helper.
+ * The substring must contain a ':' before the provided dot index.
  */
 static size_t findV4Start(const uchar *const __restrict__ buf, size_t dotPos) {
     while (dotPos > 0) {
@@ -1380,7 +1377,10 @@ static size_t findV4Start(const uchar *const __restrict__ buf, size_t dotPos) {
         }
         dotPos--;
     }
-    return -1;  // should not happen (caller checks validity first)
+    assert(!"embedded IPv4 must have a ':' before its first '.'");
+    /* If assertions are disabled, fall back to start-of-substring; parsing will
+     * then fail and the caller will treat the sequence as non-IPv4. */
+    return 0;
 }
 
 
