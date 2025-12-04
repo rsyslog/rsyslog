@@ -1,5 +1,3 @@
-.. _practice-embedded-ipv4-tail-helper:
-
 .. meta::
    :description: Antipattern for the embedded IPv4-in-IPv6 tail helper that lacked explicit preconditions; includes the corrected pattern with documented contract.
    :keywords: rsyslog, coding practice, antipattern, IPv6, IPv4 tail, mmanon
@@ -9,6 +7,8 @@
 Document the IPv4-in-IPv6 tail helper contract so callers cannot treat it as a general search routine and skip the validations its parent function depends on.
 
 .. summary-end
+
+.. _practice-embedded-ipv4-tail-helper:
 
 Antipattern: undocumented IPv4-in-IPv6 tail helper
 ==================================================
