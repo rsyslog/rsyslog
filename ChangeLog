@@ -1,5 +1,7 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2512.0 (aka 2025.10) 2025-12-09
+Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
+----------------------------------------------------------------------------------------
+Scheduled Release 8.2512.0 (aka 2025.12) 2025-12-09
 - overall improved documentation via a large set of topic updates.
 - 2025-12-05: omhiredis: add TLS support
   * Add support for TLS in omhiredis
