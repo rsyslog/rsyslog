@@ -16,7 +16,7 @@ Specifies the password for the MariaDB/MySQL user defined in :ref:`param-ommysql
 
 This parameter applies to :doc:`../../configuration/modules/ommysql`.
 
-:Name: PWD
+:Name: pwd
 :Scope: input
 :Type: word
 :Default: input=none

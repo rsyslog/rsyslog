@@ -16,7 +16,7 @@ Sets the Unix socket path to use when connecting to the MariaDB/MySQL server.
 
 This parameter applies to :doc:`../../configuration/modules/ommysql`.
 
-:Name: Socket
+:Name: socket
 :Scope: input
 :Type: word
 :Default: input=none

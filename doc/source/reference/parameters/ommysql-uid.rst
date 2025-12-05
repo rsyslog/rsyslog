@@ -16,7 +16,7 @@ Defines the MariaDB/MySQL user account used for the connection.
 
 This parameter applies to :doc:`../../configuration/modules/ommysql`.
 
-:Name: UID
+:Name: uid
 :Scope: input
 :Type: word
 :Default: input=none

@@ -16,7 +16,7 @@ Sets the MariaDB/MySQL server address the action connects to.
 
 This parameter applies to :doc:`../../configuration/modules/ommysql`.
 
-:Name: Server
+:Name: server
 :Scope: input
 :Type: word
 :Default: input=none

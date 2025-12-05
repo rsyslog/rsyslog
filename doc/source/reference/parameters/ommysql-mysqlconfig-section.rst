@@ -16,7 +16,7 @@ Chooses the section within the client configuration file specified by :ref:`para
 
 This parameter applies to :doc:`../../configuration/modules/ommysql`.
 
-:Name: MySQLConfig.Section
+:Name: mysqlconfig.section
 :Scope: input
 :Type: word
 :Default: input=client

@@ -16,7 +16,7 @@ Selects an optional MariaDB/MySQL client configuration file (my.cnf) for the con
 
 This parameter applies to :doc:`../../configuration/modules/ommysql`.
 
-:Name: MySQLConfig.File
+:Name: mysqlconfig.file
 :Scope: input
 :Type: word
 :Default: input=none

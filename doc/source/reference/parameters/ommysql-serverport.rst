@@ -16,7 +16,7 @@ Selects a non-standard port for the MariaDB/MySQL server connection.
 
 This parameter applies to :doc:`../../configuration/modules/ommysql`.
 
-:Name: ServerPort
+:Name: serverport
 :Scope: input
 :Type: integer
 :Default: input=0 (system default port)
