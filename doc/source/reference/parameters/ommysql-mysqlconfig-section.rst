@@ -1,5 +1,5 @@
 .. _param-ommysql-mysqlconfig-section:
-.. _ommysql.parameter.module.mysqlconfig-section:
+.. _ommysql.parameter.input.mysqlconfig-section:
 
 MySQLConfig.Section
 ===================
@@ -17,9 +17,9 @@ Chooses the section within the client configuration file specified by :ref:`para
 This parameter applies to :doc:`../../configuration/modules/ommysql`.
 
 :Name: MySQLConfig.Section
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=client
+:Default: input=client
 :Required?: no
 :Introduced: at least 7.x, possibly earlier
 
@@ -36,10 +36,10 @@ is also used in the rsyslog configuration file.
 If omitted, the MariaDB/MySQL Client Library default of "client" will be
 used.
 
-Module usage
-------------
-.. _param-ommysql-module-mysqlconfig-section:
-.. _ommysql.parameter.module.mysqlconfig-section-usage:
+Input usage
+-----------
+.. _param-ommysql-input-mysqlconfig-section:
+.. _ommysql.parameter.input.mysqlconfig-section-usage:
 
 .. code-block:: rsyslog
 

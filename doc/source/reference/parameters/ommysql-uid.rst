@@ -1,5 +1,5 @@
 .. _param-ommysql-uid:
-.. _ommysql.parameter.module.uid:
+.. _ommysql.parameter.input.uid:
 
 UID
 ===
@@ -17,9 +17,9 @@ Defines the MariaDB/MySQL user account used for the connection.
 This parameter applies to :doc:`../../configuration/modules/ommysql`.
 
 :Name: UID
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: yes
 :Introduced: at least 7.x, possibly earlier
 
@@ -27,10 +27,10 @@ Description
 -----------
 This is the username used to authenticate with the MariaDB/MySQL server.
 
-Module usage
-------------
-.. _param-ommysql-module-uid:
-.. _ommysql.parameter.module.uid-usage:
+Input usage
+-----------
+.. _param-ommysql-input-uid:
+.. _ommysql.parameter.input.uid-usage:
 
 .. code-block:: rsyslog
 

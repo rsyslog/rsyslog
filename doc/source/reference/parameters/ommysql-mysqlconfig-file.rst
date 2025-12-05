@@ -1,5 +1,5 @@
 .. _param-ommysql-mysqlconfig-file:
-.. _ommysql.parameter.module.mysqlconfig-file:
+.. _ommysql.parameter.input.mysqlconfig-file:
 
 MySQLConfig.File
 ================
@@ -17,9 +17,9 @@ Selects an optional MariaDB/MySQL client configuration file (my.cnf) for the con
 This parameter applies to :doc:`../../configuration/modules/ommysql`.
 
 :Name: MySQLConfig.File
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: at least 7.x, possibly earlier
 
@@ -31,10 +31,10 @@ The use of this configuration parameter is necessary only if you have
 a non-standard environment or if fine-grained control over the
 database connection is desired.
 
-Module usage
-------------
-.. _param-ommysql-module-mysqlconfig-file:
-.. _ommysql.parameter.module.mysqlconfig-file-usage:
+Input usage
+-----------
+.. _param-ommysql-input-mysqlconfig-file:
+.. _ommysql.parameter.input.mysqlconfig-file-usage:
 
 .. code-block:: rsyslog
 

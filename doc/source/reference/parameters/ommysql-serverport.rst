@@ -1,5 +1,5 @@
 .. _param-ommysql-serverport:
-.. _ommysql.parameter.module.serverport:
+.. _ommysql.parameter.input.serverport:
 
 ServerPort
 ==========
@@ -17,9 +17,9 @@ Selects a non-standard port for the MariaDB/MySQL server connection.
 This parameter applies to :doc:`../../configuration/modules/ommysql`.
 
 :Name: ServerPort
-:Scope: module
+:Scope: input
 :Type: integer
-:Default: module=0 (system default port)
+:Default: input=0 (system default port)
 :Required?: no
 :Introduced: at least 7.x, possibly earlier
 
@@ -30,10 +30,10 @@ default is 0, which means the system default port is used. There is
 no need to specify this parameter unless you know the server is
 running on a non-standard listen port.
 
-Module usage
-------------
-.. _param-ommysql-module-serverport:
-.. _ommysql.parameter.module.serverport-usage:
+Input usage
+-----------
+.. _param-ommysql-input-serverport:
+.. _ommysql.parameter.input.serverport-usage:
 
 .. code-block:: rsyslog
 

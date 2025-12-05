@@ -1,5 +1,5 @@
 .. _param-ommysql-db:
-.. _ommysql.parameter.module.db:
+.. _ommysql.parameter.input.db:
 
 db
 ==
@@ -17,9 +17,9 @@ Names the MariaDB/MySQL database that receives the log records.
 This parameter applies to :doc:`../../configuration/modules/ommysql`.
 
 :Name: db
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: yes
 :Introduced: at least 7.x, possibly earlier
 
@@ -27,10 +27,10 @@ Description
 -----------
 This is the name of the database on the MariaDB/MySQL server where log records will be inserted.
 
-Module usage
-------------
-.. _param-ommysql-module-db:
-.. _ommysql.parameter.module.db-usage:
+Input usage
+-----------
+.. _param-ommysql-input-db:
+.. _ommysql.parameter.input.db-usage:
 
 .. code-block:: rsyslog
 

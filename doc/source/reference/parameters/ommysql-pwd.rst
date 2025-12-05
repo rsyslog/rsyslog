@@ -1,5 +1,5 @@
 .. _param-ommysql-pwd:
-.. _ommysql.parameter.module.pwd:
+.. _ommysql.parameter.input.pwd:
 
 PWD
 ===
@@ -17,20 +17,20 @@ Specifies the password for the MariaDB/MySQL user defined in :ref:`param-ommysql
 This parameter applies to :doc:`../../configuration/modules/ommysql`.
 
 :Name: PWD
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: yes
 :Introduced: at least 7.x, possibly earlier
 
 Description
 -----------
-This is the password for the user account specified in the ``uid`` parameter, used to authenticate with the MariaDB/MySQL server.
+This is the password for the user account specified in the :ref:`param-ommysql-uid` parameter, used to authenticate with the MariaDB/MySQL server.
 
-Module usage
-------------
-.. _param-ommysql-module-pwd:
-.. _ommysql.parameter.module.pwd-usage:
+Input usage
+-----------
+.. _param-ommysql-input-pwd:
+.. _ommysql.parameter.input.pwd-usage:
 
 .. code-block:: rsyslog
 

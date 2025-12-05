@@ -1,5 +1,5 @@
 .. _param-ommysql-socket:
-.. _ommysql.parameter.module.socket:
+.. _ommysql.parameter.input.socket:
 
 Socket
 ======
@@ -17,9 +17,9 @@ Sets the Unix socket path to use when connecting to the MariaDB/MySQL server.
 This parameter applies to :doc:`../../configuration/modules/ommysql`.
 
 :Name: Socket
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: no
 :Introduced: at least 7.x, possibly earlier
 
@@ -31,10 +31,10 @@ the default unix socket specified at build time.
 If you run MariaDB/MySQL server and run the unix socket path differently
 than the default, you can set the socket path with this option.
 
-Module usage
-------------
-.. _param-ommysql-module-socket:
-.. _ommysql.parameter.module.socket-usage:
+Input usage
+-----------
+.. _param-ommysql-input-socket:
+.. _ommysql.parameter.input.socket-usage:
 
 .. code-block:: rsyslog
 

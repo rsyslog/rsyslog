@@ -1,5 +1,5 @@
 .. _param-ommysql-template:
-.. _ommysql.parameter.module.template:
+.. _ommysql.parameter.input.template:
 
 Template
 ========
@@ -17,9 +17,9 @@ Specifies the template used to format log records for insertion into the MariaDB
 This parameter applies to :doc:`../../configuration/modules/ommysql`.
 
 :Name: Template
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=StdDBFmt
+:Default: input=StdDBFmt
 :Required?: no
 :Introduced: at least 7.x, possibly earlier
 
@@ -42,10 +42,10 @@ If you would like to change fields contents or add or delete your own
 fields, you can simply do so by modifying the schema (if required) and
 creating your own custom template.
 
-Module usage
-------------
-.. _param-ommysql-module-template:
-.. _ommysql.parameter.module.template-usage:
+Input usage
+-----------
+.. _param-ommysql-input-template:
+.. _ommysql.parameter.input.template-usage:
 
 .. code-block:: rsyslog
 

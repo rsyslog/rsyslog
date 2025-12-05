@@ -1,5 +1,5 @@
 .. _param-ommysql-server:
-.. _ommysql.parameter.module.server:
+.. _ommysql.parameter.input.server:
 
 Server
 ======
@@ -17,9 +17,9 @@ Sets the MariaDB/MySQL server address the action connects to.
 This parameter applies to :doc:`../../configuration/modules/ommysql`.
 
 :Name: Server
-:Scope: module
+:Scope: input
 :Type: word
-:Default: module=none
+:Default: input=none
 :Required?: yes
 :Introduced: at least 7.x, possibly earlier
 
@@ -27,10 +27,10 @@ Description
 -----------
 This is the hostname or IP address of the MariaDB/MySQL server.
 
-Module usage
-------------
-.. _param-ommysql-module-server:
-.. _ommysql.parameter.module.server-usage:
+Input usage
+-----------
+.. _param-ommysql-input-server:
+.. _ommysql.parameter.input.server-usage:
 
 .. code-block:: rsyslog
 
