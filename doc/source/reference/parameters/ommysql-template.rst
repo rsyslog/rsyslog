@@ -31,7 +31,13 @@ database. It works on the MonitorWare schema. This template is:
 .. code-block:: rsyslog
 
    template(name="tpl" type="string"
-            string="insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')"
+            string="insert into SystemEvents (Message, Facility, " &
+                   "FromHost, Priority, DeviceReportedTime, ReceivedAt, " &
+                   "InfoUnitID, SysLogTag) values ('%msg%', " &
+                   "%syslogfacility%, '%HOSTNAME%', %syslogpriority%, " &
+                   "'%timereported:::date-mysql%', " &
+                   "'%timegenerated:::date-mysql%', %iut%, " &
+                   "'%syslogtag%')"
             option.sql="on")
 
 As you can see, the template is an actual SQL statement. Note the ``option.sql="on"``
@@ -53,7 +59,13 @@ Input usage
 
    module(load="ommysql")
    template(name="tpl" type="string"
-            string="insert into SystemEvents (Message, Facility, FromHost, Priority, DeviceReportedTime, ReceivedAt, InfoUnitID, SysLogTag) values ('%msg%', %syslogfacility%, '%HOSTNAME%', %syslogpriority%, '%timereported:::date-mysql%', '%timegenerated:::date-mysql%', %iut%, '%syslogtag%')"
+            string="insert into SystemEvents (Message, Facility, " &
+                   "FromHost, Priority, DeviceReportedTime, ReceivedAt, " &
+                   "InfoUnitID, SysLogTag) values ('%msg%', " &
+                   "%syslogfacility%, '%HOSTNAME%', %syslogpriority%, " &
+                   "'%timereported:::date-mysql%', " &
+                   "'%timegenerated:::date-mysql%', %iut%, " &
+                   "'%syslogtag%')"
             option.sql="on")
    action(type="ommysql" server="mysqlserver.example.com" db="syslog_db" uid="user" pwd="pwd" template="tpl")
 
