@@ -1,0 +1,62 @@
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  log_level: warn
+
+common:
+  path_prefix: /loki
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: boltdb-shipper
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: loki_index_
+        period: 24h
+
+storage_config:
+  boltdb_shipper:
+    active_index_directory: /loki/index
+    cache_location: /loki/cache
+    shared_store: filesystem
+  filesystem:
+    directory: /loki/chunks
+
+limits_config:
+  retention_period: 720h
+  # Accept timestamps up to 2 hours in the future (for clock skew)
+  reject_old_samples: true
+  reject_old_samples_max_age: 720h
+  creation_grace_period: 2h
+  # Increase concurrent query limits to handle more panels
+  max_concurrent_tail_requests: 250
+  max_query_parallelism: 64
+  max_query_series: 1000
+  max_query_length: 721h
+  max_query_lookback: 721h
+  max_streams_per_user: 10000
+  max_line_size: 256KB
+  # Split queries by interval to distribute load
+  split_queries_by_interval: 24h
+  # Increase query timeout
+  query_timeout: 300s
+
+chunk_store_config:
+  max_look_back_period: 0s
+
+table_manager:
+  retention_deletes_enabled: true
+  retention_period: 720h
+
+compactor:
+  working_directory: /loki/compactor
+  shared_store: filesystem
+  retention_enabled: true
+  compaction_interval: 1h

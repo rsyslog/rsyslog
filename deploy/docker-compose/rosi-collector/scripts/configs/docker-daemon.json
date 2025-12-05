@@ -1,0 +1,11 @@
+{
+  "log-driver": "syslog",
+  "log-opts": {
+    "syslog-facility": "daemon",
+    "syslog-address": "unixgram:///dev/log",
+    "tag": "docker/{{.Name}}"
+  },
+  "storage-driver": "overlay2",
+  "live-restore": true,
+  "userland-proxy": false
+}

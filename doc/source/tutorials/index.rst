@@ -1,6 +1,8 @@
 Tutorials
 =========
 
+These tutorials cover specific rsyslog features and use cases.
+
 .. toctree::
    :maxdepth: 2
 
@@ -16,3 +18,11 @@ Tutorials
    log_sampling
    random_sampling
    hash_sampling
+
+Related
+-------
+
+For complete production deployment guides, see:
+
+- :doc:`../deployments/index` - Production-ready deployment stacks
+- :doc:`../deployments/rosi_collector/index` - ROSI Collector with Grafana dashboards
