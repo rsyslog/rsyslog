@@ -1,5 +1,5 @@
-.. _param-ommysql-mysqlconfig.section:
-.. _ommysql.parameter.module.mysqlconfig.section:
+.. _param-ommysql-mysqlconfig-section:
+.. _ommysql.parameter.module.mysqlconfig-section:
 
 MySQLConfig.Section
 ===================
@@ -10,7 +10,7 @@ MySQLConfig.Section
 
 .. summary-start
 
-Chooses the section within the client configuration file specified by :ref:`param-ommysql-mysqlconfig.file`.
+Chooses the section within the client configuration file specified by :ref:`param-ommysql-mysqlconfig-file`.
 
 .. summary-end
 
@@ -26,20 +26,20 @@ This parameter applies to :doc:`../../configuration/modules/ommysql`.
 Description
 -----------
 Permits the selection of the section within the configuration file
-specified by the :ref:`param-ommysql-mysqlconfig.file` parameter (legacy name
+specified by the :ref:`param-ommysql-mysqlconfig-file` parameter (legacy name
 **$OmMySQLConfigFile**).
 This will likely only be used where the database administrator
 provides a single configuration file with multiple profiles.
 This configuration parameter is ignored unless
-:ref:`param-ommysql-mysqlconfig.file` (legacy name **$OmMySQLConfigFile**)
+:ref:`param-ommysql-mysqlconfig-file` (legacy name **$OmMySQLConfigFile**)
 is also used in the rsyslog configuration file.
 If omitted, the MariaDB/MySQL Client Library default of "client" will be
 used.
 
 Module usage
 ------------
-.. _param-ommysql-module-mysqlconfig.section:
-.. _ommysql.parameter.module.mysqlconfig.section-usage:
+.. _param-ommysql-module-mysqlconfig-section:
+.. _ommysql.parameter.module.mysqlconfig-section-usage:
 
 .. code-block:: rsyslog
 

@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/ommysql`.
 
 Description
 -----------
-This is the unix socket path of the MariaDB/MySQL-Server. When the server
+This is the unix socket path of the MariaDB/MySQL server. When the server
 address is set localhost, the MariaDB/MySQL client library connects using
 the default unix socket specified at build time.
 If you run MariaDB/MySQL server and run the unix socket path differently

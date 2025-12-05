@@ -57,12 +57,12 @@ Action Parameters
      - .. include:: ../../reference/parameters/ommysql-serverport.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - :ref:`param-ommysql-mysqlconfig.file`
-     - .. include:: ../../reference/parameters/ommysql-mysqlconfig.file.rst
+   * - :ref:`param-ommysql-mysqlconfig-file`
+     - .. include:: ../../reference/parameters/ommysql-mysqlconfig-file.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - :ref:`param-ommysql-mysqlconfig.section`
-     - .. include:: ../../reference/parameters/ommysql-mysqlconfig.section.rst
+   * - :ref:`param-ommysql-mysqlconfig-section`
+     - .. include:: ../../reference/parameters/ommysql-mysqlconfig-section.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`param-ommysql-template`
@@ -79,8 +79,8 @@ Action Parameters
    ../../reference/parameters/ommysql-uid
    ../../reference/parameters/ommysql-pwd
    ../../reference/parameters/ommysql-serverport
-   ../../reference/parameters/ommysql-mysqlconfig.file
-   ../../reference/parameters/ommysql-mysqlconfig.section
+   ../../reference/parameters/ommysql-mysqlconfig-file
+   ../../reference/parameters/ommysql-mysqlconfig-section
    ../../reference/parameters/ommysql-template
 
 

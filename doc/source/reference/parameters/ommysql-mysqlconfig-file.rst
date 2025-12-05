@@ -1,5 +1,5 @@
-.. _param-ommysql-mysqlconfig.file:
-.. _ommysql.parameter.module.mysqlconfig.file:
+.. _param-ommysql-mysqlconfig-file:
+.. _ommysql.parameter.module.mysqlconfig-file:
 
 MySQLConfig.File
 ================
@@ -33,8 +33,8 @@ database connection is desired.
 
 Module usage
 ------------
-.. _param-ommysql-module-mysqlconfig.file:
-.. _ommysql.parameter.module.mysqlconfig.file-usage:
+.. _param-ommysql-module-mysqlconfig-file:
+.. _ommysql.parameter.module.mysqlconfig-file-usage:
 
 .. code-block:: rsyslog
 
