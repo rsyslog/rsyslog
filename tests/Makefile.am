@@ -214,7 +214,7 @@ TESTS +=  \
 	omfwd-tls-invalid-permitExpiredCerts.sh \
 	omfwd-keepalive.sh \
 	omfwd-subtree-tpl.sh \
-	omfile-subtree-jsonf.sh \
+    omfile-subtree-jsonf.sh \
 	omusrmsg-errmsg-no-params.sh \
 	omusrmsg-noabort.sh \
 	omfile-module-params.sh \
@@ -2092,24 +2092,24 @@ EXTRA_DIST= \
 	imbatchreport_delete_toolarge.sh \
 	imbatchreport_rename_toolarge.sh \
 	imbatchreport_errmsg_no_params-vg.sh \
-        mmexternal-SegFault.sh \
-        mmexternal-SegFault-empty-jroot-vg.sh \
-        testsuites/mmexternal-SegFault-mm-python.py \
-        testsuites/mmsnareparse/sample-custom-pattern.data \
-        mmsnareparse-basic.sh \
-        mmsnareparse-comprehensive.sh \
-        mmsnareparse-comprehensive-vg.sh \
-        mmsnareparse-custom.sh \
-        mmsnareparse-enhanced-validation.sh \
-        mmsnareparse-json.sh \
-        mmsnareparse-sysmon.sh \
-        mmsnareparse-kerberos.sh \
-        mmsnareparse-realworld-4624-4634-5140.sh \
-        mmsnareparse-syslog.sh \
-        mmsnareparse-value-types.sh \
-        mmsnareparse-trailing-extradata.sh \
-        mmsnareparse-trailing-extradata-regex.sh \
-        mmexternal-InvldProg-vg.sh \
+    mmexternal-SegFault.sh \
+    mmexternal-SegFault-empty-jroot-vg.sh \
+    testsuites/mmexternal-SegFault-mm-python.py \
+    testsuites/mmsnareparse/sample-custom-pattern.data \
+    mmsnareparse-basic.sh \
+    mmsnareparse-comprehensive.sh \
+    mmsnareparse-comprehensive-vg.sh \
+    mmsnareparse-custom.sh \
+    mmsnareparse-enhanced-validation.sh \
+    mmsnareparse-json.sh \
+    mmsnareparse-sysmon.sh \
+    mmsnareparse-kerberos.sh \
+    mmsnareparse-realworld-4624-4634-5140.sh \
+    mmsnareparse-syslog.sh \
+    mmsnareparse-value-types.sh \
+    mmsnareparse-trailing-extradata.sh \
+    mmsnareparse-trailing-extradata-regex.sh \
+    mmexternal-InvldProg-vg.sh \
 	nested-call-shutdown.sh \
 	1.rstest 2.rstest 3.rstest err1.rstest \
 	config_multiple_include.sh \
@@ -2362,15 +2362,15 @@ EXTRA_DIST= \
 	omfwd-lb-2target-basic.sh \
 	omfwd-lb-2target-impstats.sh \
 	omfwd-lb-2target-retry.sh \
-        omfwd-lb-2target-one_fail.sh \
-        omfwd-tls-invalid-permitExpiredCerts.sh \
-        omfwd-keepalive.sh \
-        omfwd-subtree-tpl.sh \
-		omfile-subtree-jsonf.sh \
-        omfwd_fast_imuxsock.sh \
-        omfile_hup-vg.sh \
+    omfwd-lb-2target-one_fail.sh \
+    omfwd-tls-invalid-permitExpiredCerts.sh \
+    omfwd-keepalive.sh \
+    omfwd-subtree-tpl.sh \
+    omfile-subtree-jsonf.sh \
+    omfwd_fast_imuxsock.sh \
+    omfile_hup-vg.sh \
 	omrelp-keepalive.sh \
-        omsendertrack-basic.sh \
+    omsendertrack-basic.sh \
 	omsendertrack-basic-vg.sh \
 	omsendertrack-statefile.sh \
 	omsendertrack-statefile-vg.sh \
@@ -2455,10 +2455,10 @@ EXTRA_DIST= \
 	privdropabortonidfail.sh \
 	privdropabortonidfaillegacy.sh \
 	json-nonstring.sh \
-        json-onempty-at-end.sh \
+    json-onempty-at-end.sh \
 	template-json.sh \
-        template-pure-json.sh \
-        template-jsonf-nested.sh \
+    template-pure-json.sh \
+    template-jsonf-nested.sh \
 	template-pos-from-to.sh \
 	template-pos-from-to-lowercase.sh \
 	template-pos-from-to-oversize.sh \
@@ -2504,11 +2504,11 @@ EXTRA_DIST= \
 	timegenerated-utc-legacy.sh \
 	timereported-utc.sh \
 	timereported-utc-legacy.sh \
-        timereported-utc-vg.sh \
-        mmrm1stspace-basic.sh \
-        mmaitag-basic.sh \
-        mmaitag-invalid-key.sh \
-        mmnormalize_parsesuccess.sh \
+    timereported-utc-vg.sh \
+    mmrm1stspace-basic.sh \
+    mmaitag-basic.sh \
+    mmaitag-invalid-key.sh \
+    mmnormalize_parsesuccess.sh \
 	mmnormalize_parsesuccess-vg.sh \
 	mmnormalize_rule_from_string.sh \
 	mmnormalize_rule_from_array.sh \
@@ -2546,12 +2546,12 @@ EXTRA_DIST= \
 	mmleefparse_basic.sh \
 	mmjsonparse-w-o-cookie.sh \
 	mmjsonparse-w-o-cookie-multi-spaces.sh \
-        mmjsonparse-find-json-basic.sh \
-        mmjsonparse-find-json-trailing.sh \
-        mmjsonparse-find-json-scan-limit.sh \
-        mmjsonparse-find-json-invalid.sh \
-        mmjsonparse-find-json-invalid-mode.sh \
-        mmjsonparse-find-json-parser-validation.sh \
+    mmjsonparse-find-json-basic.sh \
+    mmjsonparse-find-json-trailing.sh \
+    mmjsonparse-find-json-scan-limit.sh \
+    mmjsonparse-find-json-invalid.sh \
+    mmjsonparse-find-json-invalid-mode.sh \
+    mmjsonparse-find-json-parser-validation.sh \
 	mmjsonparse_simple.sh \
 	mmjsonparse-invalid-containerName.sh \
 	wtpShutdownAll-assertionFailure.sh \
@@ -3365,6 +3365,36 @@ EXTRA_DIST= \
 	testsuites/invalid.conf \
 	testsuites/valid.conf \
 	testsuites/variable_leading_underscore.conf \
+    omhiredis-dynakey.sh \
+    omhiredis-dynakey-vg.sh \
+    omhiredis-publish.sh \
+    omhiredis-publish-vg.sh \
+    omhiredis-queue-rpush.sh \
+    omhiredis-queue-rpush-vg.sh \
+    omhiredis-queue.sh \
+    omhiredis-queue-vg.sh \
+    omhiredis-setex.sh \
+    omhiredis-setex-vg.sh \
+    omhiredis-set.sh \
+    omhiredis-set-vg.sh \
+    omhiredis-stream-ack.sh \
+    omhiredis-stream-ack-vg.sh \
+    omhiredis-stream-capped.sh \
+    omhiredis-stream-capped-vg.sh \
+    omhiredis-stream-del.sh \
+    omhiredis-stream-del-vg.sh \
+    omhiredis-stream-dynack.sh \
+    omhiredis-stream-dynack-vg.sh \
+    omhiredis-stream-outfield.sh \
+    omhiredis-stream-outfield-vg.sh \
+    omhiredis-stream.sh \
+    omhiredis-stream-vg.sh \
+    omhiredis-template.sh \
+    omhiredis-template-vg.sh \
+    omhiredis-withpass.sh \
+    omhiredis-withpass-vg.sh \
+    omhiredis-wrongpass.sh \
+    omhiredis-wrongpass-vg.sh \
 	omamqp1-common.sh \
 	omamqp1-basic.sh \
 	omamqp1-basic-vg.sh
