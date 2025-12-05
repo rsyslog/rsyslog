@@ -1,6 +1,25 @@
 ----------------------------------------------------------------------------------------
-Scheduled Release 8.2512.0 (aka 2025.10) 2025-12-0?
+Scheduled Release 8.2512.0 (aka 2025.10) 2025-12-09
 - overall improved documentation via a large set of topic updates.
+- 2025-12-05: omhiredis: add TLS support
+  * Add support for TLS in omhiredis
+  * fix(omhiredis): Make redis SSL support user-configurable
+  * fix(omhiredis): Adding SSL variables into conditinal compilation
+  * fix(omhiredis): Ensure both client_cert and client_key are specified together
+  * fix(omhiredis): fix SSL initialization for thread safety
+  * fix(configure.ac): Need hiredis_ssl>=1.0.0
+  Thanks to Jérémie Jourdin, Amine EL AKKANI, frikilax for the patch.
+- 2025-12-04: packaging/docker: add TLS support to collector image
+  Add OpenSSL-based TLS support to the rsyslog collector Docker
+  image, enabling secure log collection over encrypted connections
+  while maintaining full backward compatibility.
+- 2025-12-04: mmsnareparse: make regex trailing search limit configurable
+  Add ignoreTrailingPattern.searchWindow parameter to control the maximum number
+  of characters searched at the end of messages.
+- 2025-12-04: nsd_gtls: fix repeated warnings on connection retry
+  Move loggedWarnings to static storage to ensure missing cert/key/CA warnings are
+  emitted only once per process, preventing log spam on broken connections.
+  Thanks to Attila Lakatos for the patch.
 - 2025-12-02: omuxsock: add NetworkNamespace functionality
   This builds on "PR#6121 net: Add NetworkNamespace APIS"
   to add Network Namespace support for omuxsock.  In
@@ -51,12 +70,34 @@ Scheduled Release 8.2512.0 (aka 2025.10) 2025-12-0?
   Thanks to Billie Alsup for the patch.
 - 2025-11-25: mmanon: fixed data race issue in pseudonymization handling
   Thanks to Jan Gerhards for the patch.
+- 2025-11-24: mmsnareparse: add regex support for trailing data removal
+  Add ignoreTrailingPattern.regex parameter to support POSIX extended regular
+  expressions for dynamic trailing data removal.
+- 2025-11-21: mmsnareparse: add ignoreTrailingPattern parameter
+  Add configurable mechanism to detect and remove trailing extra-data sections
+  from messages before parsing.
+- 2025-11-17: mmsnareparse: add Sysmon event support
+  Add support for Microsoft Sysinternals Sysmon events via an external JSON
+  definition file.
 - 2025-11-12: omhttp: added explicit splunk HEC profile
   permits easier configuration with good defaults.
   Thanks to github user shinigami35 for the patch.
-
---- TODO: check git log, some commits are missing! ---
-
+- 2025-11-07: imkafka: Implement Kafka Metrics and new pstats format
+  * Adapted omkafka pstats counters to the consumer imkafka modules.
+  * Implemented both global (module-level) and local (topic+cg-level) metrics.
+  * Added support for librdkafka metrics and JSON emissions.
+  * Updated impstats to include new format="zabbix" compatible with Zabbix LLD.
+  Thanks to MRedbourne for the patch.
+- 2025-11-03: content_count_check: use optional file argument if provided
+  Thanks to Attila Lakatos for the patch.
+- 2025-10-30: omhttp: Implement optional per destination server stats
+  Thanks to github user shinigami35 for the patch.
+- 2025-10-30: omhiredis: support UDS redis server address
+  Thanks to github user Appla for the patch.
+- 2025-10-29: omelasticsearch: add apikey authentication
+  Add support for APIKEY authentication, which is recommended by Elasticsearch.
+- 2025-10-28: net: Add IP address SAN support
+  Thanks to Sebastien Deronne for the patch.
 - 2025-10-15: ossl bugfix: ensure peer cert is freed in osslChkPeerAuth
   Ensure osslChkPeerAuth starts with a null peer-certificate pointer and
   frees any retrieved X509 certificate so OpenSSL allocations from
