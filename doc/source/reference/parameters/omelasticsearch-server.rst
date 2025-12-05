@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/omelasticsearch`.
 
 Description
 -----------
-Defines one or more Elasticsearch servers. If no scheme is given, it is chosen based on `usehttps`. Missing ports use `serverport`. Requests are load-balanced in round-robin order.
+Defines one or more Elasticsearch servers. Each entry may be a bare hostname or an ``http``/``https`` URL without a trailing slash or path component. If no scheme is given, one is selected based on `usehttps`, otherwise the provided scheme is honored. Missing ports use `serverport`. Requests are load-balanced in round-robin order.
 
 Action usage
 ------------
