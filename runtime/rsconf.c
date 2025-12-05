@@ -1073,7 +1073,7 @@ static rsRetVal setMainMsgQueType(void __attribute__((unused)) * pVal, uchar *ps
 static rsRetVal setMaxFiles(void __attribute__((unused)) * pVal, int iFiles) {
     // TODO this must use a local var, then carry out action during activate!
     struct rlimit maxFiles;
-    char errStr[1024];
+
     DEFiRet;
 
     maxFiles.rlim_cur = iFiles;
@@ -1081,11 +1081,10 @@ static rsRetVal setMaxFiles(void __attribute__((unused)) * pVal, int iFiles) {
 
     if (setrlimit(RLIMIT_NOFILE, &maxFiles) < 0) {
         /* NOTE: under valgrind, we seem to be unable to extend the size! */
-        rs_strerror_r(errno, errStr, sizeof(errStr));
-        LogError(0, RS_RET_ERR_RLIM_NOFILE,
-                 "could not set process file limit to %d: %s "
+        LogError(errno, RS_RET_ERR_RLIM_NOFILE,
+                 "could not set process file limit to %d "
                  "[kernel max %ld]",
-                 iFiles, errStr, (long)maxFiles.rlim_max);
+                 iFiles, (long)maxFiles.rlim_max);
         ABORT_FINALIZE(RS_RET_ERR_RLIM_NOFILE);
     }
 #ifdef USE_UNLIMITED_SELECT
