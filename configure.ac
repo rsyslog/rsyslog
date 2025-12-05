@@ -244,6 +244,12 @@ AM_CONDITIONAL(ENABLE_INOTIFY, test x$rsyslog_sysinotify = xyes -a x$rsyslog_ino
 # getifaddrs is in libc (mostly) or in libsocket (eg Solaris 11) or not defined (eg Solaris 10)
 AC_SEARCH_LIBS([getifaddrs], [socket], [AC_DEFINE(HAVE_GETIFADDRS, [1], [set define])])
 
+AC_CHECK_HEADERS([arpa/nameser.h resolv.h])
+AC_SEARCH_LIBS([ns_initparse], [resolv])
+LIBRESOLV_LIBS=$ac_cv_search_ns_initparse
+AS_CASE([$LIBRESOLV_LIBS], ["none required"], [LIBRESOLV_LIBS=""])
+AC_SUBST([LIBRESOLV_LIBS])
+
 # the check below is probably ugly. If someone knows how to do it in a better way, please
 # let me know! -- rgerhards, 2010-10-06
 AC_CHECK_DECL([SCM_CREDENTIALS], [AC_DEFINE(HAVE_SCM_CREDENTIALS, [1], [set define])], [], [#include <sys/types.h>

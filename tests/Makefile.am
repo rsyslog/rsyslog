@@ -209,11 +209,14 @@ TESTS +=  \
 	omfwd-lb-1target-retry-1_byte_buf-TargetFail.sh \
 	omfwd-lb-susp.sh \
 	omfwd-lb-2target-basic.sh \
-	omfwd-lb-2target-retry.sh \
-	omfwd-lb-2target-one_fail.sh \
-	omfwd-tls-invalid-permitExpiredCerts.sh \
-	omfwd-keepalive.sh \
-	omfwd-subtree-tpl.sh \
+        omfwd-lb-2target-retry.sh \
+        omfwd-lb-2target-one_fail.sh \
+        omfwd-tls-invalid-permitExpiredCerts.sh \
+        omfwd-keepalive.sh \
+        omfwd-srv-discovery-tcp.sh \
+        omfwd-srv-discovery-udp.sh \
+        omfwd-srv-discovery-errors.sh \
+        omfwd-subtree-tpl.sh \
 	omfile-subtree-jsonf.sh \
 	omusrmsg-errmsg-no-params.sh \
 	omusrmsg-noabort.sh \
@@ -2019,9 +2022,10 @@ distclean-local:
 	rm -rf .dep_cache .dep_wrk
 
 EXTRA_DIST= \
-	set-envvars.in \
-	urlencode.py \
-	dnscache-TTL-0.sh \
+        set-envvars.in \
+        urlencode.py \
+        dns_srv_mock.py \
+        dnscache-TTL-0.sh \
 	dnscache-TTL-0-vg.sh \
 	loadbalance.sh \
 	smtradfile.sh \

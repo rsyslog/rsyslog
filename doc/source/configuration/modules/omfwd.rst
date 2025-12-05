@@ -79,6 +79,22 @@ The most common forwarding examples:
        StreamDriverPermittedPeers="logs.example.com"
    )
 
+**3. Discover receivers via DNS SRV**
+
+.. code-block:: rsyslog
+
+   # Resolve _syslog._tcp.example.com SRV records to build the target pool
+   action(
+       type="omfwd"
+       targetSrv="example.com"
+       protocol="tcp"
+   )
+
+When ``targetSrv`` is set, omfwd queries the protocol-specific SRV record and
+constructs the forwarding targets from the returned host and port values. The
+SRV priority/weight ordering is preserved before the existing pool/load-balancer
+logic runs.
+
 Outdated Legacy Methods
 =======================
 

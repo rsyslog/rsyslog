@@ -80,6 +80,49 @@ Visual Flow
        OMFWD --> T3[syslog3.example.net]
 
 
+targetSrv
+=========
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "none", "no", "none"
+
+Description
+~~~~~~~~~~~
+
+Automatically builds the target list from DNS SRV records instead of a static
+``target`` entry. The lookup depends on the transport:
+
+- UDP: ``_syslog._udp.<targetSrv>``
+- TCP/TLS: ``_syslog._tcp.<targetSrv>``
+
+`targetSrv` is **mutually exclusive** with ``target``. If no usable SRV records
+are returned, initialization fails with a clear error message.
+
+SRV Order and Failover
+~~~~~~~~~~~~~~~~~~~~~~
+
+SRV priority and weight are honored when building the candidate list. Existing
+pool/load-balancing behavior is reused after the SRV answers are translated into
+host/port pairs.
+
+Example
+~~~~~~~
+
+Use SRV discovery to find UDP receivers under ``_syslog._udp.example.com``:
+
+.. code-block:: rsyslog
+
+   action(
+       type="omfwd"
+       targetSrv="example.com"
+       protocol="udp"
+   )
+
+
 Port
 ====
 
