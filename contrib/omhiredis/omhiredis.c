@@ -18,6 +18,9 @@
  *
  * Author: Brian Knox
  * <bknox@digitalocean.com>
+ *
+ * Author: Jérémie Jourdin (TLS support)
+ * <jeremie.jourdin@advens.fr>
  */
 
 
@@ -32,6 +35,9 @@
 #include <time.h>
 #include <math.h>
 #include <hiredis/hiredis.h>
+#ifdef HIREDIS_SSL
+    #include <hiredis/hiredis_ssl.h>
+#endif
 
 #include "rsyslog.h"
 #include "conf.h"
@@ -94,6 +100,14 @@ typedef struct _instanceData {
                 - $.redis!index
                 Those 2 infos can either be provided through usage of imhiredis
                 or set manually with Rainerscript */
+#ifdef HIREDIS_SSL
+    sbool use_tls; /* Should we use TLS to connect to redis ? */
+    char *ca_cert_bundle; /* CA bundle file */
+    char *ca_cert_dir; /* Path of trusted certificates */
+    char *client_cert; /* Client certificate */
+    char *client_key; /* Client private key */
+    char *sni; /* TLS Server Name Indication */
+#endif
 
 } instanceData;
 
@@ -101,6 +115,10 @@ typedef struct wrkrInstanceData {
     instanceData *pData; /* instanc data */
     redisContext *conn; /* redis connection */
     int count; /* count of command sent for current batch */
+#ifdef HIREDIS_SSL
+    redisSSLContext *ssl_conn; /* redis ssl connection */
+    redisSSLContextError ssl_error; /* ssl error handler */
+#endif
 } wrkrInstanceData_t;
 
 static struct cnfparamdescr actpdescr[] = {
@@ -124,6 +142,14 @@ static struct cnfparamdescr actpdescr[] = {
     {"stream.dynaKeyAck", eCmdHdlrBinary, 0},
     {"stream.dynaGroupAck", eCmdHdlrBinary, 0},
     {"stream.dynaIndexAck", eCmdHdlrBinary, 0},
+#ifdef HIREDIS_SSL
+    {"use_tls", eCmdHdlrBinary, 0},
+    {"ca_cert_bundle", eCmdHdlrGetWord, 0},
+    {"ca_cert_dir", eCmdHdlrGetWord, 0},
+    {"client_cert", eCmdHdlrGetWord, 0},
+    {"client_key", eCmdHdlrGetWord, 0},
+    {"sni", eCmdHdlrGetWord, 0},
+#endif
 };
 
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
@@ -135,6 +161,10 @@ ENDcreateInstance
 BEGINcreateWrkrInstance
     CODESTARTcreateWrkrInstance;
     pWrkrData->conn = NULL; /* Connect later */
+#ifdef HIREDIS_SSL
+    pWrkrData->ssl_conn = NULL; /* Connect later */
+    pWrkrData->ssl_error = REDIS_SSL_CTX_NONE;
+#endif
 ENDcreateWrkrInstance
 
 BEGINisCompatibleWithFeature
@@ -148,6 +178,12 @@ static void closeHiredis(wrkrInstanceData_t *pWrkrData) {
         redisFree(pWrkrData->conn);
         pWrkrData->conn = NULL;
     }
+#ifdef HIREDIS_SSL
+    if (pWrkrData->ssl_conn != NULL) {
+        redisFreeSSLContext(pWrkrData->ssl_conn);
+        pWrkrData->ssl_conn = NULL;
+    }
+#endif
 }
 
 /* Free our instance data. */
@@ -167,6 +203,13 @@ BEGINfreeInstance
     free(pData->streamGroupAck);
     free(pData->streamIndexAck);
     free(pData->streamOutField);
+#ifdef HIREDIS_SSL
+    free(pData->ca_cert_bundle);
+    free(pData->ca_cert_dir);
+    free(pData->client_cert);
+    free(pData->client_key);
+    free(pData->sni);
+#endif
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
@@ -220,6 +263,24 @@ static rsRetVal initHiredis(wrkrInstanceData_t *pWrkrData, int bSilent) {
         ABORT_FINALIZE(RS_RET_SUSPENDED);
     }
 
+#ifdef HIREDIS_SSL
+    if (pWrkrData->pData->use_tls) {
+        pWrkrData->ssl_conn = redisCreateSSLContext(pWrkrData->pData->ca_cert_bundle, pWrkrData->pData->ca_cert_dir,
+                                                    pWrkrData->pData->client_cert, pWrkrData->pData->client_key,
+                                                    pWrkrData->pData->sni, &pWrkrData->ssl_error);
+        if (!pWrkrData->ssl_conn || pWrkrData->ssl_error != REDIS_SSL_CTX_NONE) {
+            LogError(0, NO_ERRCODE, "omhiredis: SSL Context error: %s", redisSSLContextGetError(pWrkrData->ssl_error));
+            if (!bSilent) LogError(0, RS_RET_SUSPENDED, "[TLS] can not initialize redis handle");
+            ABORT_FINALIZE(RS_RET_SUSPENDED);
+        }
+        if (redisInitiateSSLWithContext(pWrkrData->conn, pWrkrData->ssl_conn) != REDIS_OK) {
+            LogError(0, NO_ERRCODE, "omhiredis: %s", pWrkrData->conn->errstr);
+            if (!bSilent) LogError(0, RS_RET_SUSPENDED, "[TLS] can not initialize redis handle");
+            ABORT_FINALIZE(RS_RET_SUSPENDED);
+        }
+    }
+#endif
+
     if (pWrkrData->pData->serverpassword != NULL) {
         reply = redisCommand(pWrkrData->conn, "AUTH %s", (char *)pWrkrData->pData->serverpassword);
         if (reply == NULL) {
@@ -236,6 +297,12 @@ finalize_it:
         redisFree(pWrkrData->conn);
         pWrkrData->conn = NULL;
     }
+#ifdef HIREDIS_SSL
+    if (iRet != RS_RET_OK && pWrkrData->ssl_conn != NULL) {
+        redisFreeSSLContext(pWrkrData->ssl_conn);
+        pWrkrData->ssl_conn = NULL;
+    }
+#endif
     if (reply != NULL) freeReplyObject(reply);
     RETiRet;
 }
@@ -476,6 +543,14 @@ static void setInstParamDefaults(instanceData *pData) {
     pData->streamCapacityLimit = 0;
     pData->streamAck = 0;
     pData->streamDel = 0;
+#ifdef HIREDIS_SSL
+    pData->use_tls = 0;
+    pData->ca_cert_bundle = NULL;
+    pData->ca_cert_dir = NULL;
+    pData->client_cert = NULL;
+    pData->client_key = NULL;
+    pData->sni = NULL;
+#endif
 }
 
 /* here is where the work to set up a new instance
@@ -551,6 +626,20 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "expiration")) {
             pData->expiration = pvals[i].val.d.n;
             dbgprintf("omhiredis: expiration set to %d\n", pData->expiration);
+#ifdef HIREDIS_SSL
+        } else if (!strcmp(actpblk.descr[i].name, "use_tls")) {
+            pData->use_tls = pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "ca_cert_bundle")) {
+            pData->ca_cert_bundle = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "ca_cert_dir")) {
+            pData->ca_cert_dir = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "client_cert")) {
+            pData->client_cert = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "client_key")) {
+            pData->client_key = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "sni")) {
+            pData->sni = (char *)es_str2cstr(pvals[i].val.d.estr, NULL);
+#endif
         } else {
             dbgprintf(
                 "omhiredis: program error, non-handled "
@@ -777,4 +866,9 @@ BEGINmodInit()
         ABORT_FINALIZE(RS_RET_ERR);
     }
     DBGPRINTF("omhiredis: module compiled with rsyslog version %s.\n", VERSION);
+
+#ifdef HIREDIS_SSL
+    // initialize OpenSSL
+    redisInitOpenSSL();
+#endif
 ENDmodInit
