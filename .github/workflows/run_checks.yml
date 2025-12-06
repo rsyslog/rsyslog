@@ -145,8 +145,8 @@ jobs:
               # It is better to run at least the majority of checks than to postpone that
               # any longer. 2025-01-31 RGerhards
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--enable-omazureeventhubs --enable-imdtls \
-                     --enable-omdtls --disable-omamqp1 --disable-snmp --disable-kafka-tests \
-                     --disable-elasticsearch-tests --enable-mmsnareparse"
+                    --enable-omdtls --enable-omotlp --disable-omamqp1 --disable-snmp --disable-kafka-tests \
+                    --disable-elasticsearch-tests --enable-mmsnareparse"
               ;;
           'ubuntu_22_distcheck')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
@@ -161,6 +161,7 @@ jobs:
               export CC='clang'
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
                       --disable-libfaketime --without-valgrind-testbench --disable-valgrind \
+                      --enable-omotlp \
                       --disable-kafka-tests --enable-imdtls --enable-omdtls \
                       --enable-mmsnareparse"
               export CFLAGS="-fstack-protector -D_FORTIFY_SOURCE=2 \
@@ -182,6 +183,7 @@ jobs:
               # imhttp disabled because of race in civetweb (need to consider different lib)
               export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --enable-imfile-tests \
                     --disable-impstats --disable-kafka-tests --disable-mmpstrucdata \
+                    --enable-omotlp \
                     --disable-clickhouse --disable-clickhouse-tests --disable-kafka-tests \
                     --disable-libfaketime --disable-imhttp \
                     --without-valgrind-testbench --disable-valgrind \

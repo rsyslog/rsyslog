@@ -1,0 +1,20 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:0
+
+exporters:
+  file:
+    path: ${OTEL_OUTPUT_FILE}
+    format: json
+    flush_interval: 1s
+
+service:
+  telemetry:
+    metrics:
+      address: 0.0.0.0:${OTEL_METRICS_PORT}
+  pipelines:
+    logs:
+      receivers: [otlp]
+      exporters: [file]
