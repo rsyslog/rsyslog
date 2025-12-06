@@ -745,8 +745,8 @@ static rsRetVal dtls_init(wrkrInstanceData_t *pWrkrData) {
     pWrkrData->sockout = socket(AF_INET, SOCK_DGRAM, 0);
     if (connect(pWrkrData->sockout, pWrkrData->dtls_rcvr_addrinfo->ai_addr, pWrkrData->dtls_rcvr_addrinfo->ai_addrlen) <
         0) {
-        LogError(0, RS_RET_SUSPENDED, "dtls_init[%p]: Failed to connect to hostname '%s':'%s': %s", pWrkrData,
-                 pData->target, pData->port, gai_strerror(iErr));
+        LogError(errno, RS_RET_SUSPENDED, "dtls_init[%p]: Failed to connect to hostname '%s':'%s'", pWrkrData,
+                 pData->target, pData->port);
         ABORT_FINALIZE(RS_RET_ERR);
     }
 
