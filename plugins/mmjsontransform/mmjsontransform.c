@@ -156,7 +156,8 @@ static rsRetVal jsontransformFlattenInto(struct json_object *src,
 /**
  * @brief Record conflict details if not already set.
  */
-static rsRetVal jsontransformConflictSet(jsontransformConflict_t *conflict, const char *fmt, ...);
+static rsRetVal jsontransformConflictSet(jsontransformConflict_t *conflict, const char *fmt, ...)
+    __attribute__((format(printf, 2, 3)));
 /**
  * @brief Release any resources captured in the conflict descriptor.
  */
