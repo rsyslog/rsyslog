@@ -2194,7 +2194,7 @@ BEGINnewActInst
     int i;
     int iNumTpls;
     FILE *fp;
-    char errStr[1024];
+
     CODESTARTnewActInst;
     if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
         ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
@@ -2265,9 +2265,8 @@ BEGINnewActInst
             pData->caCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
             fp = fopen((const char *)pData->caCertFile, "r");
             if (fp == NULL) {
-                rs_strerror_r(errno, errStr, sizeof(errStr));
-                LogError(0, RS_RET_NO_FILE_ACCESS, "error: 'tls.cacert' file %s couldn't be accessed: %s\n",
-                         pData->caCertFile, errStr);
+                LogError(errno, RS_RET_NO_FILE_ACCESS, "error: 'tls.cacert' file %s couldn't be accessed",
+                         pData->caCertFile);
             } else {
                 fclose(fp);
             }
@@ -2275,9 +2274,8 @@ BEGINnewActInst
             pData->myCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
             fp = fopen((const char *)pData->myCertFile, "r");
             if (fp == NULL) {
-                rs_strerror_r(errno, errStr, sizeof(errStr));
-                LogError(0, RS_RET_NO_FILE_ACCESS, "error: 'tls.mycert' file %s couldn't be accessed: %s\n",
-                         pData->myCertFile, errStr);
+                LogError(errno, RS_RET_NO_FILE_ACCESS, "error: 'tls.mycert' file %s couldn't be accessed",
+                         pData->myCertFile);
             } else {
                 fclose(fp);
             }
@@ -2285,9 +2283,8 @@ BEGINnewActInst
             pData->myPrivKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
             fp = fopen((const char *)pData->myPrivKeyFile, "r");
             if (fp == NULL) {
-                rs_strerror_r(errno, errStr, sizeof(errStr));
-                LogError(0, RS_RET_NO_FILE_ACCESS, "error: 'tls.myprivkey' file %s couldn't be accessed: %s\n",
-                         pData->myPrivKeyFile, errStr);
+                LogError(errno, RS_RET_NO_FILE_ACCESS, "error: 'tls.myprivkey' file %s couldn't be accessed",
+                         pData->myPrivKeyFile);
             } else {
                 fclose(fp);
             }
