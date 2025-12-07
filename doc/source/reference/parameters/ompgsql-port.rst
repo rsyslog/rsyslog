@@ -1,5 +1,5 @@
 .. _param-ompgsql-port:
-.. _ompgsql.parameter.module.port:
+.. _ompgsql.parameter.input.port:
 
 Port
 ====
@@ -17,7 +17,7 @@ Sets the TCP port of the PostgreSQL server (also accepted as ``serverport``).
 This parameter applies to :doc:`../../configuration/modules/ompgsql`.
 
 :Name: Port
-:Scope: module
+:Scope: input
 :Type: integer
 :Default: 5432
 :Required?: no
@@ -27,10 +27,10 @@ Description
 -----------
 The IP port of the PostgreSQL server. The name ``serverport`` is also accepted.
 
-Module usage
-------------
-.. _param-ompgsql-module-port:
-.. _ompgsql.parameter.module.port-usage:
+Input usage
+-----------
+.. _param-ompgsql-input-port:
+.. _ompgsql.parameter.input.port-usage:
 
 .. code-block:: rsyslog
 

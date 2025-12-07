@@ -1,5 +1,5 @@
 .. _param-ompgsql-template:
-.. _ompgsql.parameter.module.template:
+.. _ompgsql.parameter.input.template:
 
 Template
 ========
@@ -17,7 +17,7 @@ Selects the template used for the SQL ``INSERT`` statement sent to PostgreSQL.
 This parameter applies to :doc:`../../configuration/modules/ompgsql`.
 
 :Name: Template
-:Scope: module
+:Scope: input
 :Type: word
 :Default: none
 :Required?: no
@@ -27,10 +27,10 @@ Description
 -----------
 The template name to use to ``INSERT`` rows into the database with. Valid SQL syntax is required, as the module does not perform any insertion statement checking.
 
-Module usage
-------------
-.. _param-ompgsql-module-template:
-.. _ompgsql.parameter.module.template-usage:
+Input usage
+-----------
+.. _param-ompgsql-input-template:
+.. _ompgsql.parameter.input.template-usage:
 
 .. code-block:: rsyslog
 

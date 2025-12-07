@@ -1,5 +1,5 @@
 .. _param-ompgsql-server:
-.. _ompgsql.parameter.module.server:
+.. _ompgsql.parameter.input.server:
 
 Server
 ======
@@ -17,7 +17,7 @@ Specifies the hostname or address of the PostgreSQL server when not using a conn
 This parameter applies to :doc:`../../configuration/modules/ompgsql`.
 
 :Name: Server
-:Scope: module
+:Scope: input
 :Type: word
 :Default: none
 :Required?: no
@@ -27,10 +27,10 @@ Description
 -----------
 The hostname or address of the PostgreSQL server. Required if ``conninfo`` is not specified.
 
-Module usage
-------------
-.. _param-ompgsql-module-server:
-.. _ompgsql.parameter.module.server-usage:
+Input usage
+-----------
+.. _param-ompgsql-input-server:
+.. _ompgsql.parameter.input.server-usage:
 
 .. code-block:: rsyslog
 

@@ -1,5 +1,5 @@
 .. _param-ompgsql-pass:
-.. _ompgsql.parameter.module.pass:
+.. _ompgsql.parameter.input.pass:
 
 Pass
 ====
@@ -17,7 +17,7 @@ Provides the password used for PostgreSQL authentication.
 This parameter applies to :doc:`../../configuration/modules/ompgsql`.
 
 :Name: Pass
-:Scope: module
+:Scope: input
 :Type: word
 :Default: postgres
 :Required?: no
@@ -27,10 +27,10 @@ Description
 -----------
 The password to connect to the PostgreSQL server with. The name ``PWD`` is also accepted.
 
-Module usage
-------------
-.. _param-ompgsql-module-pass:
-.. _ompgsql.parameter.module.pass-usage:
+Input usage
+-----------
+.. _param-ompgsql-input-pass:
+.. _ompgsql.parameter.input.pass-usage:
 
 .. code-block:: rsyslog
 

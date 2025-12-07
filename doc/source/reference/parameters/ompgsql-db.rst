@@ -1,5 +1,5 @@
 .. _param-ompgsql-db:
-.. _ompgsql.parameter.module.db:
+.. _ompgsql.parameter.input.db:
 
 db
 ==
@@ -17,7 +17,7 @@ Names the PostgreSQL database into which rows are inserted when not specified in
 This parameter applies to :doc:`../../configuration/modules/ompgsql`.
 
 :Name: db
-:Scope: module
+:Scope: input
 :Type: word
 :Default: none
 :Required?: no
@@ -27,10 +27,10 @@ Description
 -----------
 The multi-tenant database name to ``INSERT`` rows into. Required if ``conninfo`` is not specified.
 
-Module usage
-------------
-.. _param-ompgsql-module-db:
-.. _ompgsql.parameter.module.db-usage:
+Input usage
+-----------
+.. _param-ompgsql-input-db:
+.. _ompgsql.parameter.input.db-usage:
 
 .. code-block:: rsyslog
 

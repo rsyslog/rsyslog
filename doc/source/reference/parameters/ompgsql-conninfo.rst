@@ -1,5 +1,5 @@
 .. _param-ompgsql-conninfo:
-.. _ompgsql.parameter.module.conninfo:
+.. _ompgsql.parameter.input.conninfo:
 
 Conninfo
 ========
@@ -17,7 +17,7 @@ Defines PostgreSQL connection information as a URI or key-value pairs, taking pr
 This parameter applies to :doc:`../../configuration/modules/ompgsql`.
 
 :Name: Conninfo
-:Scope: module
+:Scope: input
 :Type: word
 :Default: none
 :Required?: no
@@ -29,10 +29,10 @@ The URI or set of key-value pairs that describe how to connect to the PostgreSQL
 
 The format corresponds to `standard PostgreSQL connection string format <https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING>`_.
 
-Module usage
-------------
-.. _param-ompgsql-module-conninfo:
-.. _ompgsql.parameter.module.conninfo-usage:
+Input usage
+-----------
+.. _param-ompgsql-input-conninfo:
+.. _ompgsql.parameter.input.conninfo-usage:
 
 .. code-block:: rsyslog
 

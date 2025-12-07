@@ -1,5 +1,5 @@
 .. _param-ompgsql-user:
-.. _ompgsql.parameter.module.user:
+.. _ompgsql.parameter.input.user:
 
 User
 ====
@@ -17,7 +17,7 @@ Sets the username used to authenticate to the PostgreSQL server.
 This parameter applies to :doc:`../../configuration/modules/ompgsql`.
 
 :Name: User
-:Scope: module
+:Scope: input
 :Type: word
 :Default: postgres
 :Required?: no
@@ -27,10 +27,10 @@ Description
 -----------
 The username to connect to the PostgreSQL server with. The name ``UID`` is also accepted.
 
-Module usage
-------------
-.. _param-ompgsql-module-user:
-.. _ompgsql.parameter.module.user-usage:
+Input usage
+-----------
+.. _param-ompgsql-input-user:
+.. _ompgsql.parameter.input.user-usage:
 
 .. code-block:: rsyslog
 
