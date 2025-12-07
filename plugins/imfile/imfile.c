@@ -237,6 +237,7 @@ static void ATTR_NONNULL() act_obj_unlink(act_obj_t *act);
 static uchar *ATTR_NONNULL(1, 2) getStateFileName(const act_obj_t *, uchar *, const size_t);
 static int ATTR_NONNULL()
     getFullStateFileName(const uchar *const, const char *const, uchar *const pszout, const size_t ilenout);
+static void ATTR_NONNULL(1) getFileID(act_obj_t *const act);
 
 
 #define OPMODE_POLLING 0
@@ -983,6 +984,7 @@ static void act_obj_destroy(act_obj_t *const act, const int is_deleted) {
         pollFile(act); /* get any left-over data */
         if (inst->bRMStateOnDel) {
             statefn = getStateFileName(act, statefile, sizeof(statefile));
+	    getFileID(act);
             getFullStateFileName(statefn, act->file_id, toDel, sizeof(toDel));  // TODO: check!
             statefn = toDel;
         }
