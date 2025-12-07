@@ -278,16 +278,23 @@ static void doUTF8(instanceData *pData, uchar *msg, int lenMsg) {
 BEGINdoAction_NoStrings
     smsg_t **ppMsg = (smsg_t **)pMsgData;
     smsg_t *pMsg = ppMsg[0];
+    pthread_mutex_lock(&pMsg->mut);
     uchar *msg;
     int lenMsg;
+    uchar *tag;
+    int lenTag;
     CODESTARTdoAction;
     lenMsg = getMSGLen(pMsg);
     msg = getMSG(pMsg);
+    getTAG(pMsg, &tag, &lenTag, NO_LOCK_MUTEX);
     if (pWrkrData->pData->mode == MODE_CC) {
         doCC(pWrkrData->pData, msg, lenMsg);
+        doCC(pWrkrData->pData, tag, lenTag);
     } else {
         doUTF8(pWrkrData->pData, msg, lenMsg);
+        doUTF8(pWrkrData->pData, tag, lenTag);
     }
+    pthread_mutex_unlock(&pMsg->mut);
 ENDdoAction
 
 
