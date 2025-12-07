@@ -29,7 +29,6 @@ This is the hostname or IP address of the MariaDB/MySQL server.
 
 Input usage
 -----------
-.. _param-ommysql-input-server:
 .. _ommysql.parameter.input.server-usage:
 
 .. code-block:: rsyslog

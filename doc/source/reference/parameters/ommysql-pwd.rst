@@ -29,7 +29,6 @@ This is the password for the user account specified in the :ref:`param-ommysql-u
 
 Input usage
 -----------
-.. _param-ommysql-input-pwd:
 .. _ommysql.parameter.input.pwd-usage:
 
 .. code-block:: rsyslog

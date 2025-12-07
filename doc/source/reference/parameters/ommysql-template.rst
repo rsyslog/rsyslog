@@ -52,7 +52,6 @@ creating your own custom template.
 
 Input usage
 -----------
-.. _param-ommysql-input-template:
 .. _ommysql.parameter.input.template-usage:
 
 .. code-block:: rsyslog

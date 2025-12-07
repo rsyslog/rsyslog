@@ -33,7 +33,6 @@ database connection is desired.
 
 Input usage
 -----------
-.. _param-ommysql-input-mysqlconfig-file:
 .. _ommysql.parameter.input.mysqlconfig-file-usage:
 
 .. code-block:: rsyslog

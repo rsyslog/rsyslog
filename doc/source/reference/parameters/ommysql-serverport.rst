@@ -32,7 +32,6 @@ running on a non-standard listen port.
 
 Input usage
 -----------
-.. _param-ommysql-input-serverport:
 .. _ommysql.parameter.input.serverport-usage:
 
 .. code-block:: rsyslog

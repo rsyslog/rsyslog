@@ -29,7 +29,6 @@ This is the username used to authenticate with the MariaDB/MySQL server.
 
 Input usage
 -----------
-.. _param-ommysql-input-uid:
 .. _ommysql.parameter.input.uid-usage:
 
 .. code-block:: rsyslog

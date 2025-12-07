@@ -33,7 +33,6 @@ than the default, you can set the socket path with this option.
 
 Input usage
 -----------
-.. _param-ommysql-input-socket:
 .. _ommysql.parameter.input.socket-usage:
 
 .. code-block:: rsyslog

@@ -38,7 +38,6 @@ used.
 
 Input usage
 -----------
-.. _param-ommysql-input-mysqlconfig-section:
 .. _ommysql.parameter.input.mysqlconfig-section-usage:
 
 .. code-block:: rsyslog

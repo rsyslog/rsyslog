@@ -29,7 +29,6 @@ This is the name of the database on the MariaDB/MySQL server where log records w
 
 Input usage
 -----------
-.. _param-ommysql-input-db:
 .. _ommysql.parameter.input.db-usage:
 
 .. code-block:: rsyslog
