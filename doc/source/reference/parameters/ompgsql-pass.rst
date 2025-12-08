@@ -29,7 +29,6 @@ The password to connect to the PostgreSQL server with. The name ``PWD`` is also 
 
 Input usage
 -----------
-.. _param-ompgsql-input-pass:
 .. _ompgsql.parameter.input.pass-usage:
 
 .. code-block:: rsyslog

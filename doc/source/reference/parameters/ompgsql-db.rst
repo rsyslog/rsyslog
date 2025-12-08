@@ -29,7 +29,6 @@ The multi-tenant database name to ``INSERT`` rows into. Required if ``conninfo``
 
 Input usage
 -----------
-.. _param-ompgsql-input-db:
 .. _ompgsql.parameter.input.db-usage:
 
 .. code-block:: rsyslog

@@ -29,7 +29,6 @@ The hostname or address of the PostgreSQL server. Required if ``conninfo`` is no
 
 Input usage
 -----------
-.. _param-ompgsql-input-server:
 .. _ompgsql.parameter.input.server-usage:
 
 .. code-block:: rsyslog

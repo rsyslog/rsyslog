@@ -29,7 +29,6 @@ The template name to use to ``INSERT`` rows into the database with. Valid SQL sy
 
 Input usage
 -----------
-.. _param-ompgsql-input-template:
 .. _ompgsql.parameter.input.template-usage:
 
 .. code-block:: rsyslog

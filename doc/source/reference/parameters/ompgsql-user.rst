@@ -29,7 +29,6 @@ The username to connect to the PostgreSQL server with. The name ``UID`` is also 
 
 Input usage
 -----------
-.. _param-ompgsql-input-user:
 .. _ompgsql.parameter.input.user-usage:
 
 .. code-block:: rsyslog

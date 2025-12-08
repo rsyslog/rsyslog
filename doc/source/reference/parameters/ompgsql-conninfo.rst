@@ -31,7 +31,6 @@ The format corresponds to `standard PostgreSQL connection string format <https:/
 
 Input usage
 -----------
-.. _param-ompgsql-input-conninfo:
 .. _ompgsql.parameter.input.conninfo-usage:
 
 .. code-block:: rsyslog

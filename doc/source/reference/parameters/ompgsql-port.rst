@@ -29,7 +29,6 @@ The IP port of the PostgreSQL server. The name ``serverport`` is also accepted.
 
 Input usage
 -----------
-.. _param-ompgsql-input-port:
 .. _ompgsql.parameter.input.port-usage:
 
 .. code-block:: rsyslog
