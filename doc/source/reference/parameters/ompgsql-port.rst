@@ -10,7 +10,7 @@ Port
 
 .. summary-start
 
-Sets the TCP port of the PostgreSQL server (also accepted as ``serverport``).
+Sets the TCP port of the PostgreSQL server.
 
 .. summary-end
 
