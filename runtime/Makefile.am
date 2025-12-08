@@ -81,6 +81,8 @@ librsyslog_la_SOURCES = \
 	prop.h \
 	ratelimit.c \
 	ratelimit.h \
+	persourceratelimit.c \
+	persourceratelimit.h \
 	lookup.c \
 	lookup.h \
 	cfsysline.c \
@@ -119,8 +121,8 @@ else
 librsyslog_la_CPPFLAGS = -DSD_EXPORT_SYMBOLS -D_PATH_MODDIR=\"$(pkglibdir)/\" -I\$(top_srcdir) -I\$(top_srcdir)/grammar
 endif
 #librsyslog_la_LDFLAGS = -module -avoid-version
-librsyslog_la_CPPFLAGS += $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBUUID_CFLAGS) $(LIBFASTJSON_CFLAGS) ${LIBESTR_CFLAGS}
-librsyslog_la_LIBADD =  $(DL_LIBS) $(RT_LIBS) $(LIBUUID_LIBS) $(LIBFASTJSON_LIBS) ${LIBESTR_LIBS} -lm
+librsyslog_la_CPPFLAGS += $(PTHREADS_CFLAGS) $(RSRT_CFLAGS) $(LIBUUID_CFLAGS) $(LIBFASTJSON_CFLAGS) ${LIBESTR_CFLAGS} $(LIBYAML_CFLAGS)
+librsyslog_la_LIBADD =  $(DL_LIBS) $(RT_LIBS) $(LIBUUID_LIBS) $(LIBFASTJSON_LIBS) ${LIBESTR_LIBS} $(LIBYAML_LIBS) -lm
 
 if ENABLE_LIBLOGGING_STDLOG
 librsyslog_la_CPPFLAGS += ${LIBLOGGING_STDLOG_CFLAGS}

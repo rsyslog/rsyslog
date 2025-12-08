@@ -30,6 +30,8 @@
 #include "net.h"
 #include "tcps_sess.h"
 #include "statsobj.h"
+#include "persourceratelimit.h"
+#include "ruleset.h"
 
 /* support for framing anomalies */
 typedef enum ETCPsyslogFramingAnomaly {
@@ -37,6 +39,9 @@ typedef enum ETCPsyslogFramingAnomaly {
     frame_NetScreen = 1,
     frame_CiscoIOS = 2
 } eTCPsyslogFramingAnomaly;
+
+#define TCPSRV_CONNINFO_SIZE 128
+#define DEFAULT_STARVATIONMAXREADS 500
 
 
 /* config parameters for TCP listeners */
@@ -169,139 +174,102 @@ struct tcpsrv_s {
         int iSynBacklog;
         unsigned int ratelimitInterval;
         unsigned int ratelimitBurst;
+        perSourceRateLimiter_t *perSourceLimiter;
+        struct template *perSourceKeyTpl;
+        int bPerSourcePolicyReloadOnHUP;
         tcps_sess_t **pSessions; /**< array of all of our sessions */
-        unsigned int starvationMaxReads;
-        void *pUsr; /**< a user-settable pointer (provides extensibility for "derived classes")*/
+        void *pUsr; /**< a user-pointer */
+
+        workQueue_t workQueue;
+        unsigned starvationMaxReads;
+        int currWrkrs;
+
         /* callbacks */
-        int (*pIsPermittedHost)(struct sockaddr *addr, char *fromHostFQDN, void *pUsrSrv, void *pUsrSess);
-        rsRetVal (*pRcvData)(tcps_sess_t *, char *, size_t, ssize_t *, int *, unsigned *);
-        rsRetVal (*OpenLstnSocks)(struct tcpsrv_s *);
-        rsRetVal (*pOnListenDeinit)(void *);
-        rsRetVal (*OnDestruct)(void *);
-        rsRetVal (*pOnRegularClose)(tcps_sess_t *pSess);
-        rsRetVal (*pOnErrClose)(tcps_sess_t *pSess);
-        /* session specific callbacks */
-        rsRetVal (*pOnSessAccept)(tcpsrv_t *, tcps_sess_t *, char *connInfo);
-#define TCPSRV_CONNINFO_SIZE (2 * (INET_ADDRSTRLEN + 20))
+        int (*pIsPermittedHost)(struct sockaddr *addr, char *fromHostFQDN, void *pUsr, void *pSessUsr);
+        rsRetVal (*DoSubmitMessage)(tcps_sess_t *pSess, struct syslogTime *stTime, time_t ttGenTime,
+                                    multi_submit_t *pMultiSub);
+        rsRetVal (*OpenLstnSocks)(tcpsrv_t *);
+        rsRetVal (*pOnSessAccept)(tcpsrv_t *, tcps_sess_t *, char *);
         rsRetVal (*OnSessConstructFinalize)(void *);
         rsRetVal (*pOnSessDestruct)(void *);
-        rsRetVal (*OnMsgReceive)(tcps_sess_t *, uchar *pszMsg, int iLenMsg); /* submit message callback */
-        /* work queue */
-        workQueue_t workQueue;
-        int currWrkrs;
-};
+        rsRetVal (*pOnRegularClose)(tcps_sess_t *pSess);
+        rsRetVal (*pOnErrClose)(tcps_sess_t *pSess);
+        rsRetVal (*pRcvData)(tcps_sess_t *, char *, size_t, ssize_t *, int *, unsigned *);
+        rsRetVal (*OnMsgReceive)(tcps_sess_t *, uchar *, int);
+        rsRetVal (*OnDestruct)(void *);
+        rsRetVal (*pOnListenDeinit)(void *);
 
+        /* v6 additions */
+        rsRetVal (*OnPubKeyAuth)(tcps_sess_t *pSess, long unsigned eKeyUsage, uchar *x509_subject);
+    };
 
-/**
- */
-struct tcpsrv_workset_s {
-    int idx; /**< index into session table (or -1 if listener) */
-    void *pUsr;
-};
+/* ... */
 
-
-/* interfaces */
 BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
-    INTERFACEObjDebugPrint(tcpsrv);
     rsRetVal (*Construct)(tcpsrv_t **ppThis);
-    rsRetVal (*ConstructFinalize)(tcpsrv_t __attribute__((unused)) * pThis);
+    rsRetVal (*ConstructFinalize)(tcpsrv_t *pThis);
     rsRetVal (*Destruct)(tcpsrv_t **ppThis);
-    rsRetVal (*ATTR_NONNULL(1, 2) configureTCPListen)(tcpsrv_t *, tcpLstnParams_t *const cnf_params);
+    rsRetVal (*DebugPrint)(tcpsrv_t *pThis);
+    rsRetVal (*configureTCPListen)(tcpsrv_t *pThis, tcpLstnParams_t *cnf_params);
     rsRetVal (*create_tcp_socket)(tcpsrv_t *pThis);
     rsRetVal (*Run)(tcpsrv_t *pThis);
-    /* set methods */
-    rsRetVal (*SetAddtlFrameDelim)(tcpsrv_t *, int);
-    rsRetVal (*SetMaxFrameSize)(tcpsrv_t *, int);
-    rsRetVal (*SetInputName)(tcpsrv_t *const pThis, tcpLstnParams_t *const cnf_params, const uchar *const name);
-    rsRetVal (*SetUsrP)(tcpsrv_t *, void *);
-    rsRetVal (*SetCBIsPermittedHost)(tcpsrv_t *, int (*)(struct sockaddr *addr, char *, void *, void *));
-    rsRetVal (*SetCBOpenLstnSocks)(tcpsrv_t *, rsRetVal (*)(tcpsrv_t *));
-    rsRetVal (*SetCBRcvData)(tcpsrv_t *pThis,
-                             rsRetVal (*pRcvData)(tcps_sess_t *, char *, size_t, ssize_t *, int *, unsigned *));
-    rsRetVal (*SetCBOnListenDeinit)(tcpsrv_t *, rsRetVal (*)(void *));
-    rsRetVal (*SetCBOnDestruct)(tcpsrv_t *, rsRetVal (*)(void *));
-    rsRetVal (*SetCBOnRegularClose)(tcpsrv_t *, rsRetVal (*)(tcps_sess_t *));
-    rsRetVal (*SetCBOnErrClose)(tcpsrv_t *, rsRetVal (*)(tcps_sess_t *));
-    rsRetVal (*SetDrvrMode)(tcpsrv_t *pThis, int iMode);
-    rsRetVal (*SetDrvrAuthMode)(tcpsrv_t *pThis, uchar *pszMode);
-    rsRetVal (*SetDrvrPermitExpiredCerts)(tcpsrv_t *pThis, uchar *pszMode);
-    rsRetVal (*SetDrvrPermPeers)(tcpsrv_t *pThis, permittedPeers_t *);
-    /* session specifics */
-    rsRetVal (*SetCBOnSessAccept)(tcpsrv_t *, rsRetVal (*)(tcpsrv_t *, tcps_sess_t *, char *));
-    rsRetVal (*SetCBOnSessDestruct)(tcpsrv_t *, rsRetVal (*)(void *));
-    rsRetVal (*SetCBOnSessConstructFinalize)(tcpsrv_t *, rsRetVal (*)(void *));
-    /* added v5 */
-    rsRetVal (*SetSessMax)(tcpsrv_t *pThis, int iMaxSess); /* 2009-04-09 */
-    /* added v6 */
-    rsRetVal (*SetOnMsgReceive)(tcpsrv_t *pThis,
-                                rsRetVal (*OnMsgReceive)(tcps_sess_t *, uchar *, int)); /* 2009-05-24 */
-    rsRetVal (*SetRuleset)(tcpsrv_t *pThis, ruleset_t *); /* 2009-06-12 */
-    /* added v7 (accidently named v8!) */
-    rsRetVal (*SetLstnMax)(tcpsrv_t *pThis, int iMaxLstn); /* 2009-08-17 */
-    rsRetVal (*SetNotificationOnRemoteClose)(tcpsrv_t *pThis, int bNewVal); /* 2009-10-01 */
-    rsRetVal (*SetNotificationOnRemoteOpen)(tcpsrv_t *pThis, int bNewVal); /* 2022-08-23 */
-    /* added v9 -- rgerhards, 2010-03-01 */
-    rsRetVal (*SetbDisableLFDelim)(tcpsrv_t *, int);
-    /* added v10 -- rgerhards, 2011-04-01 */
-    rsRetVal (*SetDiscardTruncatedMsg)(tcpsrv_t *, int);
-    rsRetVal (*SetUseFlowControl)(tcpsrv_t *, int);
-    /* added v11 -- rgerhards, 2011-05-09 */
-    rsRetVal (*SetKeepAlive)(tcpsrv_t *, int);
-    /* added v13 -- rgerhards, 2012-10-15 */
-    rsRetVal (*SetLinuxLikeRatelimiters)(tcpsrv_t *pThis, unsigned int interval, unsigned int burst);
-    /* added v14 -- rgerhards, 2013-07-28 */
+    rsRetVal (*SetKeepAlive)(tcpsrv_t *pThis, int iVal);
+    rsRetVal (*SetKeepAliveIntvl)(tcpsrv_t *pThis, int iVal);
+    rsRetVal (*SetKeepAliveProbes)(tcpsrv_t *pThis, int iVal);
+    rsRetVal (*SetKeepAliveTime)(tcpsrv_t *pThis, int iVal);
+    rsRetVal (*SetGnutlsPriorityString)(tcpsrv_t *pThis, uchar *pszPriorityString);
+    rsRetVal (*SetUsrP)(tcpsrv_t *pThis, void *pUsr);
+    rsRetVal (*SetInputName)(tcpsrv_t *pThis, tcpLstnParams_t *const cnf_params, const uchar *const name);
+    rsRetVal (*SetOrigin)(tcpsrv_t *pThis, uchar *origin);
     rsRetVal (*SetDfltTZ)(tcpsrv_t *pThis, uchar *dfltTZ);
-    /* added v15 -- rgerhards, 2013-09-17 */
-    rsRetVal (*SetDrvrName)(tcpsrv_t *pThis, uchar *pszName);
-    /* added v16 -- rgerhards, 2014-09-08 */
-    rsRetVal (*SetOrigin)(tcpsrv_t *, uchar *);
-    /* added v17 */
-    rsRetVal (*SetKeepAliveIntvl)(tcpsrv_t *, int);
-    rsRetVal (*SetKeepAliveProbes)(tcpsrv_t *, int);
-    rsRetVal (*SetKeepAliveTime)(tcpsrv_t *, int);
-    /* added v18 */
-    rsRetVal (*SetbSPFramingFix)(tcpsrv_t *, sbool);
-    /* added v19 -- PascalWithopf, 2017-08-08 */
-    rsRetVal (*SetGnutlsPriorityString)(tcpsrv_t *, uchar *);
-    /* added v21 -- Preserve case in fromhost, 2018-08-16 */
+    rsRetVal (*SetbSPFramingFix)(tcpsrv_t *pThis, const sbool bSPFramingFix);
+    rsRetVal (*SetAddtlFrameDelim)(tcpsrv_t *pThis, int iDelim);
+    rsRetVal (*SetMaxFrameSize)(tcpsrv_t *pThis, int iMax);
+    rsRetVal (*SetbDisableLFDelim)(tcpsrv_t *pThis, int bDisable);
+    rsRetVal (*SetDiscardTruncatedMsg)(tcpsrv_t *pThis, int bDiscard);
+    rsRetVal (*SetSessMax)(tcpsrv_t *pThis, int iMax);
+    rsRetVal (*SetUseFlowControl)(tcpsrv_t *pThis, int bUse);
+    rsRetVal (*SetLstnMax)(tcpsrv_t *pThis, int iMax);
+    rsRetVal (*SetDrvrMode)(tcpsrv_t *pThis, int iMode);
+    rsRetVal (*SetDrvrAuthMode)(tcpsrv_t *pThis, uchar *mode);
+    rsRetVal (*SetDrvrPermitExpiredCerts)(tcpsrv_t *pThis, uchar *mode);
+    rsRetVal (*SetDrvrCAFile)(tcpsrv_t *pThis, uchar *mode);
+    rsRetVal (*SetDrvrCRLFile)(tcpsrv_t *pThis, uchar *mode);
+    rsRetVal (*SetDrvrKeyFile)(tcpsrv_t *pThis, uchar *mode);
+    rsRetVal (*SetDrvrCertFile)(tcpsrv_t *pThis, uchar *mode);
+    rsRetVal (*SetDrvrName)(tcpsrv_t *pThis, uchar *name);
+    rsRetVal (*SetDrvrPermPeers)(tcpsrv_t *pThis, permittedPeers_t *pPermPeers);
+    rsRetVal (*SetCBIsPermittedHost)(tcpsrv_t *pThis, int (*pCB)(struct sockaddr *addr, char *fromHostFQDN, void *, void *));
+    rsRetVal (*SetCBOpenLstnSocks)(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t *));
+    rsRetVal (*SetCBRcvData)(tcpsrv_t *pThis, rsRetVal (*pRcvData)(tcps_sess_t *, char *, size_t, ssize_t *, int *, unsigned *));
+    rsRetVal (*SetCBOnListenDeinit)(tcpsrv_t *pThis, rsRetVal (*pCB)(void *));
+    rsRetVal (*SetCBOnSessAccept)(tcpsrv_t *pThis, rsRetVal (*pCB)(tcpsrv_t *, tcps_sess_t *, char *));
+    rsRetVal (*SetCBOnSessConstructFinalize)(tcpsrv_t *pThis, rsRetVal (*pCB)(void *));
+    rsRetVal (*SetCBOnSessDestruct)(tcpsrv_t *pThis, rsRetVal (*pCB)(void *));
+    rsRetVal (*SetCBOnDestruct)(tcpsrv_t *pThis, rsRetVal (*pCB)(void *));
+    rsRetVal (*SetCBOnRegularClose)(tcpsrv_t *pThis, rsRetVal (*pCB)(tcps_sess_t *));
+    rsRetVal (*SetCBOnErrClose)(tcpsrv_t *pThis, rsRetVal (*pCB)(tcps_sess_t *));
+    rsRetVal (*SetOnMsgReceive)(tcpsrv_t *pThis, rsRetVal (*OnMsgReceive)(tcps_sess_t *, uchar *, int));
+    rsRetVal (*SetLinuxLikeRatelimiters)(tcpsrv_t *pThis, unsigned int ratelimitInterval, unsigned int ratelimitBurst);
+    rsRetVal (*SetNotificationOnRemoteClose)(tcpsrv_t *pThis, int bNewVal);
+    rsRetVal (*SetNotificationOnRemoteOpen)(tcpsrv_t *pThis, int bNewVal);
     rsRetVal (*SetPreserveCase)(tcpsrv_t *pThis, int bPreserveCase);
-    /* added v23 -- Options for stricter driver behavior, 2019-08-16 */
     rsRetVal (*SetDrvrCheckExtendedKeyUsage)(tcpsrv_t *pThis, int ChkExtendedKeyUsage);
     rsRetVal (*SetDrvrPrioritizeSAN)(tcpsrv_t *pThis, int prioritizeSan);
-    /* added v24 -- Options for TLS verify depth driver behavior, 2019-12-20 */
     rsRetVal (*SetDrvrTlsVerifyDepth)(tcpsrv_t *pThis, int verifyDepth);
-    /* added v25 -- Options for TLS certificates, 2021-07-19 */
-    rsRetVal (*SetDrvrCAFile)(tcpsrv_t *pThis, uchar *pszMode);
-    rsRetVal (*SetDrvrKeyFile)(tcpsrv_t *pThis, uchar *pszMode);
-    rsRetVal (*SetDrvrCertFile)(tcpsrv_t *pThis, uchar *pszMode);
-    /* added v26 -- Options for TLS CRL file */
-    rsRetVal (*SetDrvrCRLFile)(tcpsrv_t *pThis, uchar *pszMode);
-    /* added v27 -- sync backlog for listen() */
-    rsRetVal (*SetSynBacklog)(tcpsrv_t *pThis, int);
-    /* added v28 */
-    rsRetVal (*SetNumWrkr)(tcpsrv_t *pThis, int);
-    rsRetVal (*SetStarvationMaxReads)(tcpsrv_t *pThis, unsigned int);
-    /* added v29 */
-    /*
-     * @brief Set the Network Namespace into the listener parameters
-     * @param pThis The associated TCP Server instance
-     * @param cnf_params The listener parameters to configure
-     * @param networkNamespace The namespace parameter to set into the
-     *                         listener configuration parameters
-     * @return RS_RET_OK on success, otherwise a failure code.
-     * @details For platforms that do not support network namespaces,
-     *          this function should fail for any non-null and non-empty
-     *          namespace passed.  Note that the empty string is treated
-     *          the same as a NULL, i.e. you are not allowed to actually
-     *          use a network namespace with the empty string.  So both
-     *          a NULL and an empty string "" both mean to use the
-     *          original startup network namespace.
-     */
+    rsRetVal (*SetSynBacklog)(tcpsrv_t *pThis, int iSynBacklog);
+    rsRetVal (*SetNumWrkr)(tcpsrv_t *pThis, int numWrkr);
+    rsRetVal (*SetStarvationMaxReads)(tcpsrv_t *pThis, unsigned int maxReads);
     rsRetVal (*SetNetworkNamespace)(tcpsrv_t *pThis, tcpLstnParams_t *const cnf_params,
                                     const char *const networkNamespace);
+    /* added v30 */
+    rsRetVal (*SetPerSourceRateLimiter)(tcpsrv_t *pThis, perSourceRateLimiter_t *limiter);
+    rsRetVal (*SetPerSourceKeyTpl)(tcpsrv_t *pThis, struct template *tpl);
+    rsRetVal (*ReloadPerSourceRateLimiter)(tcpsrv_t *pThis);
+    rsRetVal (*SetPerSourcePolicyReloadOnHUP)(tcpsrv_t *pThis, int bReload);
 
 ENDinterface(tcpsrv)
-#define tcpsrvCURR_IF_VERSION 29 /* increment whenever you change the interface structure! */
+#define tcpsrvCURR_IF_VERSION 30 /* increment whenever you change the interface structure! */
 /* change for v4:
  * - SetAddtlFrameDelim() added -- rgerhards, 2008-12-10
  * - SetInputName() added -- rgerhards, 2008-12-10

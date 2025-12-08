@@ -1713,7 +1713,11 @@ BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macr
     pThis->dfltTZ[0] = '\0';
     pThis->bSPFramingFix = 0;
     pThis->ratelimitInterval = 0;
-    pThis->ratelimitBurst = 10000;
+    pThis->ratelimitBurst = 0;
+    pThis->perSourceLimiter = NULL;
+    pThis->perSourceKeyTpl = NULL;
+    pThis->bPerSourcePolicyReloadOnHUP = 0;
+    pThis->starvationMaxReads = DEFAULT_STARVATIONMAXREADS;
     pThis->bUseFlowControl = 1;
     pThis->pszDrvrName = NULL;
     pThis->bPreserveCase = 1; /* preserve case in fromhost; default to true. */
@@ -2223,6 +2227,37 @@ static rsRetVal ATTR_NONNULL(1) SetNumWrkr(tcpsrv_t *pThis, const int numWrkr) {
 }
 
 
+static rsRetVal SetPerSourceRateLimiter(tcpsrv_t *pThis, perSourceRateLimiter_t *limiter) {
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, tcpsrv);
+    pThis->perSourceLimiter = limiter;
+    RETiRet;
+}
+
+static rsRetVal SetPerSourceKeyTpl(tcpsrv_t *pThis, struct template *tpl) {
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, tcpsrv);
+    pThis->perSourceKeyTpl = tpl;
+    RETiRet;
+}
+
+static rsRetVal ReloadPerSourceRateLimiter(tcpsrv_t *pThis) {
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, tcpsrv);
+    if (pThis->perSourceLimiter != NULL && pThis->bPerSourcePolicyReloadOnHUP) {
+        CHKiRet(perSourceRateLimiterReload(pThis->perSourceLimiter));
+    }
+finalize_it:
+    RETiRet;
+}
+
+static rsRetVal SetPerSourcePolicyReloadOnHUP(tcpsrv_t *pThis, int bReload) {
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, tcpsrv);
+    pThis->bPerSourcePolicyReloadOnHUP = bReload;
+    RETiRet;
+}
+
 /* queryInterface function
  * rgerhards, 2008-02-29
  */
@@ -2295,6 +2330,10 @@ BEGINobjQueryInterface(tcpsrv)
     pIf->SetNumWrkr = SetNumWrkr;
     pIf->SetStarvationMaxReads = SetStarvationMaxReads;
 
+    pIf->SetPerSourceRateLimiter = SetPerSourceRateLimiter;
+    pIf->SetPerSourceKeyTpl = SetPerSourceKeyTpl;
+    pIf->ReloadPerSourceRateLimiter = ReloadPerSourceRateLimiter;
+    pIf->SetPerSourcePolicyReloadOnHUP = SetPerSourcePolicyReloadOnHUP;
 finalize_it:
 ENDobjQueryInterface(tcpsrv)
 
