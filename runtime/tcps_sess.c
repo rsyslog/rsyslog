@@ -36,6 +36,9 @@
 
 #include "rsyslog.h"
 #include "dirty.h"
+#include "nsd_ptcp.h"
+#include "persourceratelimit.h"
+#include "template.h"
 #include "unicode-helper.h"
 #include "module-template.h"
 #include "net.h"
@@ -307,6 +310,27 @@ static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis,
     MsgSetRuleset(pMsg, cnf_params->pRuleset);
 
     STATSCOUNTER_INC(pThis->pLstnInfo->ctrSubmit, pThis->pLstnInfo->mutCtrSubmit);
+
+    /* Per-source rate limiting */
+    if (pThis->pSrv->perSourceLimiter != NULL && pThis->pSrv->perSourceKeyTpl != NULL) {
+        actWrkrIParams_t iparam;
+        iparam.param = (uchar*) malloc(256);
+        if (iparam.param != NULL) {
+            iparam.lenBuf = 256;
+            iparam.lenStr = 0;
+            
+            rsRetVal iRetTpl = tplToString(pThis->pSrv->perSourceKeyTpl, pMsg, &iparam, stTime);
+            if (iRetTpl == RS_RET_OK) {
+                rsRetVal iRetLimit = perSourceRateLimiterCheck(pThis->pSrv->perSourceLimiter, iparam.param, ttGenTime);
+                if (iRetLimit != RS_RET_OK) {
+                    free(iparam.param);
+                    FINALIZE; /* Drop message */
+                }
+            }
+            free(iparam.param);
+        }
+    }
+
     ratelimitAddMsg(pThis->pLstnInfo->ratelimiter, pMultiSub, pMsg);
 
 finalize_it:
