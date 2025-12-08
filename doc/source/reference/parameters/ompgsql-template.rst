@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/ompgsql`.
 :Name: Template
 :Scope: input
 :Type: word
-:Default: none
+:Default: StdPgSQLFmt
 :Required?: no
 :Introduced: 8.32.0
 
