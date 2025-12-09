@@ -19,7 +19,7 @@ This parameter applies to :doc:`../../configuration/modules/omruleset`.
 :Name: Ruleset
 :Scope: module
 :Type: string
-:Default: module=no default
+:Default: No default
 :Required?: yes
 :Introduced: 5.3.4
 
