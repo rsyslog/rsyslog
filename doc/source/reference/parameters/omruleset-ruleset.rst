@@ -29,7 +29,6 @@ This parameter specifies the name of the ruleset that the message provided to om
 
 Module usage
 ------------
-.. _param-omruleset-module-ruleset:
 .. _omruleset.parameter.module.ruleset-usage:
 
 .. code-block:: rsyslog
