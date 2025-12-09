@@ -79,8 +79,8 @@ before using omruleset!**
 
    * - Parameter
      - Summary
-   * - :ref:`param-omruleset-actionomrulesetrulesetname`
-     - .. include:: ../../reference/parameters/omruleset-actionomrulesetrulesetname.rst
+   * - :ref:`param-omruleset-ruleset`
+     - .. include:: ../../reference/parameters/omruleset-ruleset.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
 
@@ -186,5 +186,5 @@ log <troubleshoot.html>`_ is your friend.
 .. toctree::
    :hidden:
 
-   ../../reference/parameters/omruleset-actionomrulesetrulesetname
+   ../../reference/parameters/omruleset-ruleset
 
