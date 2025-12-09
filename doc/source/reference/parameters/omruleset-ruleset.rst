@@ -1,5 +1,5 @@
 .. _param-omruleset-ruleset:
-.. _omruleset.parameter.module.ruleset:
+.. _omruleset.parameter.input.ruleset:
 
 Ruleset
 =======
@@ -17,7 +17,7 @@ Specifies the target ruleset that omruleset should submit messages to.
 This parameter applies to :doc:`../../configuration/modules/omruleset`.
 
 :Name: Ruleset
-:Scope: module
+:Scope: input
 :Type: string
 :Default: No default
 :Required?: yes
@@ -27,9 +27,10 @@ Description
 -----------
 This parameter specifies the name of the ruleset that the message provided to omruleset should be submitted to. The ruleset must already exist. The directive is automatically reset after each :omruleset: action and there is no default. This behavior helps prevent accidental loops in ruleset definition. The :omruleset: action is ignored if no ruleset name has been defined. As usual, the ruleset name must be specified in front of the action that it modifies.
 
-Module usage
-------------
-.. _omruleset.parameter.module.ruleset-usage:
+Input usage
+-----------
+.. _param-omruleset-input-ruleset:
+.. _omruleset.parameter.input.ruleset-usage:
 
 .. code-block:: rsyslog
 

@@ -66,8 +66,8 @@ before using omruleset!**
    endless loops - the rsyslog engine does not detect these
 
 
-|FmtObsoleteName| directives
-============================
+Input Parameters
+================
 
 .. note::
 
