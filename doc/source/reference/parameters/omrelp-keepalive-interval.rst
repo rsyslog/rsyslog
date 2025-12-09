@@ -34,7 +34,7 @@ Input usage
 
 .. code-block:: rsyslog
 
-   action(type="omrelp" target="centralserv" keepAlive.interval="30")
+   action(type="omrelp" target="centralserv" keepAliveInterval="30")
 
 See also
 --------

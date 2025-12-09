@@ -34,7 +34,7 @@ Input usage
 
 .. code-block:: rsyslog
 
-   action(type="omrelp" target="centralserv" conn.timeout="10")
+   action(type="omrelp" target="centralserv" connTimeout="10")
 
 See also
 --------

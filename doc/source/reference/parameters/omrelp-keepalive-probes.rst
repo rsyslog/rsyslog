@@ -34,7 +34,7 @@ Input usage
 
 .. code-block:: rsyslog
 
-   action(type="omrelp" target="centralserv" keepAlive.probes="5")
+   action(type="omrelp" target="centralserv" keepAliveProbes="5")
 
 See also
 --------
