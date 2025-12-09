@@ -71,17 +71,18 @@ before using omruleset!**
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
--  **$ActionOmrulesetRulesetName** ruleset-to-submit-to
-   This directive specifies the name of the ruleset that the message
-   provided to omruleset should be submitted to. This ruleset must
-   already have been defined. Note that the directive is automatically
-   reset after each :omruleset: action and there is no default. This is
-   done to prevent accidental loops in ruleset definition, what can
-   happen very quickly. The :omruleset: action will NOT be honored if no
-   ruleset name has been defined. As usual, the ruleset name must be
-   specified in front of the action that it modifies.
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Parameter
+     - Summary
+   * - :ref:`param-omruleset-actionomrulesetrulesetname`
+     - .. include:: ../../reference/parameters/omruleset-actionomrulesetrulesetname.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 
 Examples
@@ -181,4 +182,9 @@ care when nesting rulesets and be sure to test-run your config before
 putting it into production, ensuring you have a sufficiently large probe
 of the traffic run over it. If problems arise, the `rsyslog debug
 log <troubleshoot.html>`_ is your friend.
+
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/omruleset-actionomrulesetrulesetname
 
