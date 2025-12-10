@@ -25,7 +25,10 @@ This parameter applies to :doc:`../../configuration/modules/omruleset`.
 
 Description
 -----------
-This parameter specifies the name of the ruleset that the message provided to omruleset should be submitted to. The target ruleset must already be defined. This parameter is required for each ``omruleset`` action, which helps prevent accidental misconfiguration and potential processing loops.
+This parameter specifies the name of the ruleset that the message provided
+to omruleset should be submitted to. The target ruleset must already be
+defined. This parameter is required for each ``omruleset`` action, which
+helps prevent accidental misconfiguration and potential processing loops.
 
 Input usage
 -----------
