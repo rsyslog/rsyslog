@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/omruleset`.
 
 Description
 -----------
-This parameter specifies the name of the ruleset that the message provided to omruleset should be submitted to. The ruleset must already exist. The directive is automatically reset after each :omruleset: action and there is no default. This behavior helps prevent accidental loops in ruleset definition. The :omruleset: action is ignored if no ruleset name has been defined. As usual, the ruleset name must be specified in front of the action that it modifies.
+This parameter specifies the name of the ruleset that the message provided to omruleset should be submitted to. The target ruleset must already be defined. This parameter is required for each ``omruleset`` action, which helps prevent accidental misconfiguration and potential processing loops.
 
 Input usage
 -----------
@@ -38,7 +38,7 @@ Input usage
    action(type="omruleset" ruleset="CommonAction")
 
 Legacy names (for reference)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------
 Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omruleset.parameter.legacy.actionomrulesetrulesetname:
