@@ -67,7 +67,7 @@ before using omruleset!**
 
 
 Input Parameters
-================
+----------------
 
 .. note::
 
@@ -84,6 +84,20 @@ Input Parameters
      - .. include:: ../../reference/parameters/omruleset-ruleset.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+
+
+Legacy syntax
+~~~~~~~~~~~~~
+
+**$ActionOmrulesetRulesetName** ruleset-to-submit-to
+This directive specifies the name of the ruleset that the message provided
+to omruleset should be submitted to. This ruleset must already have been
+defined. Note that the directive is automatically reset after each
+:omruleset: action and there is no default. This is done to prevent
+accidental loops in ruleset definition, what can happen very quickly. The
+:omruleset: action will NOT be honored if no ruleset name has been defined.
+As usual, the ruleset name must be specified in front of the action that it
+modifies.
 
 
 Examples
