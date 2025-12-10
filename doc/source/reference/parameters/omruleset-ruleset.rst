@@ -29,7 +29,7 @@ This parameter specifies the name of the ruleset that the message provided to om
 
 Input usage
 -----------
-.. _param-omruleset-input-ruleset:
+.. _param-omruleset-ruleset-usage:
 .. _omruleset.parameter.input.ruleset-usage:
 
 .. code-block:: rsyslog
