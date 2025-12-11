@@ -27,7 +27,7 @@ Configuration Parameters
 
    Parameter names are case-insensitive; camelCase is recommended for readability.
 
-Action Parameters
+Module Parameters
 -----------------
 
 .. list-table::
