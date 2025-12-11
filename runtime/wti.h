@@ -40,6 +40,9 @@
 questions needs to be dropped as it will always fail. The             \
 action must still do a "normal" retry in order to bring               \
 it back to regular state. */
+#define ACT_STATE_DISABLED                                  \
+    6 /* action encountered an unrecoverable failure and is \
+         permanently disabled for this process lifetime */
 /* note: 3 bit bit field --> highest value is 7! */
 
 typedef struct actWrkrInfo {
