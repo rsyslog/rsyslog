@@ -804,10 +804,8 @@ BEGINnewInpInst
             inst->pNetOssl->pszCAFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
             fp = fopen((const char *)inst->pNetOssl->pszCAFile, "r");
             if (fp == NULL) {
-                char errStr[1024];
-                rs_strerror_r(errno, errStr, sizeof(errStr));
-                LogError(0, RS_RET_NO_FILE_ACCESS, "error: certificate file %s couldn't be accessed: %s\n",
-                         inst->pNetOssl->pszCAFile, errStr);
+                LogError(errno, RS_RET_NO_FILE_ACCESS, "error: certificate file %s couldn't be accessed",
+                         inst->pNetOssl->pszCAFile);
             } else {
                 fclose(fp);
             }
@@ -815,10 +813,8 @@ BEGINnewInpInst
             inst->pNetOssl->pszCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
             fp = fopen((const char *)inst->pNetOssl->pszCertFile, "r");
             if (fp == NULL) {
-                char errStr[1024];
-                rs_strerror_r(errno, errStr, sizeof(errStr));
-                LogError(0, RS_RET_NO_FILE_ACCESS, "error: certificate file %s couldn't be accessed: %s\n",
-                         inst->pNetOssl->pszCertFile, errStr);
+                LogError(errno, RS_RET_NO_FILE_ACCESS, "error: certificate file %s couldn't be accessed",
+                         inst->pNetOssl->pszCertFile);
             } else {
                 fclose(fp);
             }
@@ -826,10 +822,8 @@ BEGINnewInpInst
             inst->pNetOssl->pszKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
             fp = fopen((const char *)inst->pNetOssl->pszKeyFile, "r");
             if (fp == NULL) {
-                char errStr[1024];
-                rs_strerror_r(errno, errStr, sizeof(errStr));
-                LogError(0, RS_RET_NO_FILE_ACCESS, "error: certificate file %s couldn't be accessed: %s\n",
-                         inst->pNetOssl->pszKeyFile, errStr);
+                LogError(errno, RS_RET_NO_FILE_ACCESS, "error: certificate file %s couldn't be accessed",
+                         inst->pNetOssl->pszKeyFile);
             } else {
                 fclose(fp);
             }

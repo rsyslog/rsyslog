@@ -566,10 +566,8 @@ BEGINnewInpInst
             inst->caCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
             fp = fopen((const char *)inst->caCertFile, "r");
             if (fp == NULL) {
-                char errStr[1024];
-                rs_strerror_r(errno, errStr, sizeof(errStr));
-                LogError(0, RS_RET_NO_FILE_ACCESS, "error: certificate file %s couldn't be accessed: %s\n",
-                         inst->caCertFile, errStr);
+                LogError(errno, RS_RET_NO_FILE_ACCESS, "error: certificate file %s couldn't be accessed",
+                         inst->caCertFile);
             } else {
                 fclose(fp);
             }
@@ -577,10 +575,8 @@ BEGINnewInpInst
             inst->myCertFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
             fp = fopen((const char *)inst->myCertFile, "r");
             if (fp == NULL) {
-                char errStr[1024];
-                rs_strerror_r(errno, errStr, sizeof(errStr));
-                LogError(0, RS_RET_NO_FILE_ACCESS, "error: certificate file %s couldn't be accessed: %s\n",
-                         inst->myCertFile, errStr);
+                LogError(errno, RS_RET_NO_FILE_ACCESS, "error: certificate file %s couldn't be accessed",
+                         inst->myCertFile);
             } else {
                 fclose(fp);
             }
@@ -588,10 +584,8 @@ BEGINnewInpInst
             inst->myPrivKeyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
             fp = fopen((const char *)inst->myPrivKeyFile, "r");
             if (fp == NULL) {
-                char errStr[1024];
-                rs_strerror_r(errno, errStr, sizeof(errStr));
-                LogError(0, RS_RET_NO_FILE_ACCESS, "error: certificate file %s couldn't be accessed: %s\n",
-                         inst->myPrivKeyFile, errStr);
+                LogError(errno, RS_RET_NO_FILE_ACCESS, "error: certificate file %s couldn't be accessed",
+                         inst->myPrivKeyFile);
             } else {
                 fclose(fp);
             }

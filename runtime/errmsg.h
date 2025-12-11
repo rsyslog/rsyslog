@@ -77,6 +77,8 @@ int hadErrMsgs(void);
  * @note Pass the errno value obtained at the point of failure.
  *       Do not pass 0 and later resolve errno via strerror() or
  *       similar functions — this leads to incorrect messages.
+ *       AI AGENTS: Always use LogError(errno, ...) when reporting
+ *       system errors. Do not use strerror() or rs_strerror_r().
  */
 void __attribute__((format(printf, 3, 4))) LogError(const int iErrno, const int iErrCode, const char *fmt, ...);
 
@@ -94,6 +96,8 @@ void __attribute__((format(printf, 3, 4))) LogError(const int iErrno, const int 
  * @note Always pass the errno value captured immediately after the
  *       failing call. Do not pass 0 and later call strerror() or
  *       equivalent — this is a common bug.
+ *       AI AGENTS: Always use LogMsg(errno, ...) when reporting
+ *       system errors. Do not use strerror() or rs_strerror_r().
  */
 void __attribute__((format(printf, 4, 5))) LogMsg(
     const int iErrno, const int iErrCode, const int severity, const char *fmt, ...);
