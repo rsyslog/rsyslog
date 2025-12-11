@@ -1725,3 +1725,45 @@ dist-hook:
 	$(AM_V_GEN)echo $(VERSION) > $(distdir)/.tarball-version
 
 ACLOCAL_AMFLAGS = -I m4
+
+COVERAGE_INFO = $(top_builddir)/coverage.info
+COVERAGE_DIR =  coverage
+
+LCOV_FLAGS =	--capture \
+	--config-file "$(top_srcdir)/lcovrc" \
+	--directory "$(abs_top_builddir)" \
+	--ignore-errors mismatch \
+	--output-file $(COVERAGE_INFO)
+
+GENHTML_FLAGS = --legend \
+	--title "$(PACKAGE_NAME)-$(PACKAGE_VERSION) Code Coverage" \
+	--output-directory $(top_builddir)/$(COVERAGE_DIR)
+
+check-coverage: reset-coverage-stats
+if ENABLE_COVERAGE
+	$(MAKE) check || true
+	$(MAKE) coverage
+
+reset-coverage-stats:
+	$(LCOV) --zerocounters --directory "$(abs_top_builddir)"
+
+coverage: clean-coverage-local distclean-coverage-local
+	@echo "Aggregating coverage files and generating HTML summary..."
+	$(LCOV) $(LCOV_FLAGS) > /dev/null
+	$(GENHTML) $(GENHTML_FLAGS) $(COVERAGE_INFO) > /dev/null
+	@echo "Coverage HTML page result file://$(abs_builddir)/$(COVERAGE_DIR)/index.html"
+else
+	@echo "Code coverage not enabled; to enable:"
+	@echo
+	@echo "    ./configure --enable-coverage"
+endif
+
+clean-local: clean-coverage-local
+
+clean-coverage-local:
+	rm -f $(COVERAGE_INFO)
+
+distclean-local: distclean-coverage-local
+
+distclean-coverage-local:
+	rm -rf $(COVERAGE_DIR)

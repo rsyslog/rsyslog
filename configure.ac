@@ -8,6 +8,8 @@ AC_DEFINE(VERSION_MONTH,  2, [month part of real rsyslog version])  # UPDATE on 
 
 AM_INIT_AUTOMAKE([tar-pax subdir-objects])
 
+AM_EXTRA_RECURSIVE_TARGETS([clean-coverage distclean-coverage])
+
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 unamestr=$(uname)
@@ -806,6 +808,36 @@ AC_ARG_ENABLE(debug_symbols,
         [enable_debug_symbols="yes"]
 )
 
+# coverage
+AC_ARG_ENABLE([coverage],
+        [AS_HELP_STRING([--enable-coverage], [Enable code coverage @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_coverage="yes" ;;
+          no) enable_coverage="no" ;;
+           *) AC_MSG_ERROR([bad value ${enableval} for --enable-coverage]) ;;
+         esac],
+        [enable_coverage="no"]
+)
+if test "$enable_coverage" = "yes"; then
+        AC_CHECK_TOOL([GCOV], [gcov], [no])
+        AS_IF(
+                [test "x$GCOV" = "xno"],
+                [AC_MSG_ERROR([required program "gcov" for code coverage not found])]
+        )
+        AC_CHECK_PROG([LCOV], [lcov], [lcov], [no])
+        AS_IF(
+                [test "x$LCOV" = "xno"],
+                [AC_MSG_ERROR([required program "lcov" for code coverage not found])]
+        )
+        AC_CHECK_PROG([GENHTML], [genhtml], [genhtml], [no])
+        AS_IF(
+                [test "x$GENHTML" = "xno"],
+                [AC_MSG_ERROR([required program "genhtml" for code coverage not found])]
+        )
+        AC_DEFINE([ENABLE_COVERAGE], [1], [Define to 1 if code coverage is enabled.])
+fi
+AM_CONDITIONAL([ENABLE_COVERAGE], [test "x$enable_coverage" = xyes])
+
 
 # total debugless: highest performance, but no way at all to enable debug
 # logging
@@ -1370,6 +1402,10 @@ if test "$GCC" = "yes"; then
 
   if test "x$enable_debug_symbols" = "xyes"; then
     RSRT_CFLAGS="$RSRT_CFLAGS -g"
+  fi
+  if test "x$enable_coverage" = "xyes"; then
+    RSRT_CFLAGS="$RSRT_CFLAGS --coverage -g -O0"
+    LDFLAGS="$LDFLAGS --coverage"
   fi
 fi
 RSRT_CFLAGS="$RSRT_CFLAGS $WARN_CFLAGS"
@@ -3405,4 +3441,5 @@ echo "    (total) debugless mode enabled:           $enable_debugless"
 echo "    Diagnostic tools enabled:                 $enable_diagtools"
 echo "    End-User tools enabled:                   $enable_usertools"
 echo "    Valgrind support settings enabled:        $enable_valgrind"
+echo "    Code coverage using gcov/lcov enabled:    $enable_coverage"
 echo
