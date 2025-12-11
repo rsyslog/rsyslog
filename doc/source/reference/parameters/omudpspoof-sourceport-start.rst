@@ -1,5 +1,5 @@
 .. _param-omudpspoof-sourceport-start:
-.. _omudpspoof.parameter.module.sourceport-start:
+.. _omudpspoof.parameter.action.sourceport-start:
 
 sourcePort.start
 ================
@@ -15,7 +15,7 @@ Sets the starting source port when cycling through spoofed source ports.
 This parameter applies to :doc:`../../configuration/modules/omudpspoof`.
 
 :Name: sourcePort.start
-:Scope: module
+:Scope: action
 :Type: integer
 :Default: 32000
 :Required?: no
@@ -25,10 +25,10 @@ Description
 -----------
 Specify the start value for circling the source ports. Start must be less than or equal to sourcePort.end.
 
-Module usage
+Action usage
 ------------
-.. _param-omudpspoof-module-sourceport-start:
-.. _omudpspoof.parameter.module.sourceport-start-usage:
+.. _param-omudpspoof-action-sourceport-start:
+.. _omudpspoof.parameter.action.sourceport-start-usage:
 
 .. code-block:: rsyslog
 

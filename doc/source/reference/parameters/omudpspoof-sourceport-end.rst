@@ -1,5 +1,5 @@
 .. _param-omudpspoof-sourceport-end:
-.. _omudpspoof.parameter.module.sourceport-end:
+.. _omudpspoof.parameter.action.sourceport-end:
 
 sourcePort.end
 ==============
@@ -15,7 +15,7 @@ Sets the ending source port when cycling through spoofed source ports.
 This parameter applies to :doc:`../../configuration/modules/omudpspoof`.
 
 :Name: sourcePort.end
-:Scope: module
+:Scope: action
 :Type: integer
 :Default: 42000
 :Required?: no
@@ -25,10 +25,10 @@ Description
 -----------
 Specify the end value for circling the source ports. End must be equal to or more than sourcePort.start.
 
-Module usage
+Action usage
 ------------
-.. _param-omudpspoof-module-sourceport-end:
-.. _omudpspoof.parameter.module.sourceport-end-usage:
+.. _param-omudpspoof-action-sourceport-end:
+.. _omudpspoof.parameter.action.sourceport-end-usage:
 
 .. code-block:: rsyslog
 

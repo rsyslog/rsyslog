@@ -1,5 +1,5 @@
 .. _param-omudpspoof-target:
-.. _omudpspoof.parameter.module.target:
+.. _omudpspoof.parameter.action.target:
 
 target
 ======
@@ -15,7 +15,7 @@ Sets the destination host to which omudpspoof sends messages.
 This parameter applies to :doc:`../../configuration/modules/omudpspoof`.
 
 :Name: target
-:Scope: module
+:Scope: action
 :Type: word
 :Default: none
 :Required?: yes
@@ -25,10 +25,10 @@ Description
 -----------
 Host that the messages shall be sent to.
 
-Module usage
+Action usage
 ------------
-.. _param-omudpspoof-module-target:
-.. _omudpspoof.parameter.module.target-usage:
+.. _param-omudpspoof-action-target:
+.. _omudpspoof.parameter.action.target-usage:
 
 .. code-block:: rsyslog
 

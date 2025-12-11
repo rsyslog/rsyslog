@@ -1,5 +1,5 @@
 .. _param-omudpspoof-port:
-.. _omudpspoof.parameter.module.port:
+.. _omudpspoof.parameter.action.port:
 
 port
 ====
@@ -15,7 +15,7 @@ Specifies the destination port used when sending messages.
 This parameter applies to :doc:`../../configuration/modules/omudpspoof`.
 
 :Name: port
-:Scope: module
+:Scope: action
 :Type: word
 :Default: 514
 :Required?: no
@@ -25,10 +25,10 @@ Description
 -----------
 Remote port that the messages shall be sent to. Default is 514.
 
-Module usage
+Action usage
 ------------
-.. _param-omudpspoof-module-port:
-.. _omudpspoof.parameter.module.port-usage:
+.. _param-omudpspoof-action-port:
+.. _omudpspoof.parameter.action.port-usage:
 
 .. code-block:: rsyslog
 

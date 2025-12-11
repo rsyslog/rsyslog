@@ -1,5 +1,5 @@
 .. _param-omudpspoof-mtu:
-.. _omudpspoof.parameter.module.mtu:
+.. _omudpspoof.parameter.action.mtu:
 
 mtu
 ===
@@ -15,7 +15,7 @@ Sets the maximum packet length that omudpspoof sends.
 This parameter applies to :doc:`../../configuration/modules/omudpspoof`.
 
 :Name: mtu
-:Scope: module
+:Scope: action
 :Type: integer
 :Default: 1500
 :Required?: no
@@ -25,10 +25,10 @@ Description
 -----------
 Maximum packet length to send.
 
-Module usage
+Action usage
 ------------
-.. _param-omudpspoof-module-mtu:
-.. _omudpspoof.parameter.module.mtu-usage:
+.. _param-omudpspoof-action-mtu:
+.. _omudpspoof.parameter.action.mtu-usage:
 
 .. code-block:: rsyslog
 

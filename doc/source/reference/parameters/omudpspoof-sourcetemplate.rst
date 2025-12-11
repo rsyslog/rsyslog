@@ -1,5 +1,5 @@
 .. _param-omudpspoof-sourcetemplate:
-.. _omudpspoof.parameter.module.sourcetemplate:
+.. _omudpspoof.parameter.action.sourcetemplate:
 
 sourceTemplate
 ==============
@@ -15,7 +15,7 @@ Names the template that provides the spoofed source IP address for sent messages
 This parameter applies to :doc:`../../configuration/modules/omudpspoof`.
 
 :Name: sourceTemplate
-:Scope: module
+:Scope: action
 :Type: word
 :Default: RSYSLOG_omudpspoofDfltSourceTpl
 :Required?: no
@@ -31,10 +31,10 @@ This is the name of the template that contains a numerical IP address that is to
 
 So in essence, the default template spoofs the address of the system the message was received from. This is considered the most important use case.
 
-Module usage
+Action usage
 ------------
-.. _param-omudpspoof-module-sourcetemplate:
-.. _omudpspoof.parameter.module.sourcetemplate-usage:
+.. _param-omudpspoof-action-sourcetemplate:
+.. _omudpspoof.parameter.action.sourcetemplate-usage:
 
 .. code-block:: rsyslog
 
