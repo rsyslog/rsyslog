@@ -1,5 +1,25 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
+- overall improved documentation via a large set of topic updates.
+
+- 2025-12-11: core: stop busy-loop when action disables itself
+  In the field, an action that disables itself could leave workers in a
+  tight retry/commit cycle, pegging a CPU core. This change makes the
+  engine recognize and short-circuit disabled actions promptly, avoiding
+  spin and wasted work.
+  Before/After: disabled action could spin in retry/commit ->
+  disabled action is marked and skipped with a clear return code.
+  Impact: CPU spikes from disabled actions are eliminated. Messages for
+  that action are no longer retried once disabled (unchanged intent).
+  Fixes: https://github.com/rsyslog/rsyslog/issues/5423
+- 2025-12-11: build: Add code coverage targets
+  Add new feature to enable code coverage using gcc, lcov and genhtml
+  Add Makeile targets to run coverage after or during checks
+  Note: full coverage report requires that all tests run on various platforms
+  and must be consolidated. This patch is primarily for focussed checks for
+  specific modules. The rsyslog CI uses codecov application to gain overall
+  insight.
+  Thanks to Théo Bertin for the patch.
 - 2025-12-11: doc: added omelasticsearch TLS doc, which was missing
 - 2025-12-11: core: fix LogError(0, ...) anti-pattern and add guidelines
   This change improves the consistency and reliability of error logging by
