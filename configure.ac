@@ -2561,9 +2561,27 @@ AC_ARG_ENABLE(omhdfs,
         [enable_omhdfs=no]
 )
 if test "x$enable_omhdfs"; then
-	AC_CHECK_HEADERS([hdfs.h hadoop/hdfs.h])
+        AC_CHECK_HEADERS([hdfs.h hadoop/hdfs.h])
 fi
 AM_CONDITIONAL(ENABLE_OMHDFS, test x$enable_omhdfs = xyes)
+
+AC_ARG_ENABLE(omotlp,
+        [AS_HELP_STRING([--enable-omotlp],[Enable OpenTelemetry output module @<:@default=no@:>@])],
+        [case "${enableval}" in
+         yes) enable_omotlp="yes" ;;
+          no) enable_omotlp="no" ;;
+            *) AC_MSG_ERROR(bad value ${enableval} for --enable-omotlp) ;;
+         esac],
+        [enable_omotlp=no]
+)
+OMOTLP_HTTP_CFLAGS=""
+OMOTLP_HTTP_LIBS=""
+if test "x$enable_omotlp" = "xyes"; then
+        PKG_CHECK_MODULES([OMOTLP_HTTP], [libcurl libfastjson])
+fi
+AC_SUBST([OMOTLP_HTTP_CFLAGS])
+AC_SUBST([OMOTLP_HTTP_LIBS])
+AM_CONDITIONAL(ENABLE_OMOTLP, test x$enable_omotlp = xyes)
 
 # support for kafka input output
 AC_ARG_ENABLE(omkafka,
@@ -3190,8 +3208,9 @@ AC_CONFIG_FILES([Makefile \
 		plugins/imjournal/Makefile \
 		plugins/immark/Makefile \
 		plugins/imklog/Makefile \
-		plugins/omhdfs/Makefile \
-		plugins/omkafka/Makefile \
+                plugins/omhdfs/Makefile \
+                plugins/omotlp/Makefile \
+                plugins/omkafka/Makefile \
 		plugins/omprog/Makefile \
 		plugins/mmexternal/Makefile \
 		plugins/omstdout/Makefile \
@@ -3339,6 +3358,7 @@ echo "    omstdout module will be compiled:         $enable_omstdout"
 echo "    omsendertrack module will be compiled:    $enable_omsendertrack"
 echo "    omjournal module will be compiled:        $enable_omjournal"
 echo "    omhdfs module will be compiled:           $enable_omhdfs"
+echo "    omotlp module will be compiled:           $enable_omotlp"
 echo "    omelasticsearch module will be compiled:  $enable_elasticsearch"
 echo "    omclickhouse module will be compiled:     $enable_clickhouse"
 echo "    omhttp module will be compiled:           $enable_omhttp"

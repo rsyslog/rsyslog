@@ -1043,18 +1043,29 @@ TESTS +=  \
 	omhttp-batch-dynrestpath.sh
 if HAVE_VALGRIND
 TESTS +=  \
-	omhttp-auth-vg.sh \
-	omhttp-basic-vg.sh \
-	omhttp-basic-ignorecodes-vg.sh \
-	omhttp-batch-jsonarray-compress-vg.sh \
-	omhttp-batch-jsonarray-retry-vg.sh \
-	omhttp-batch-jsonarray-vg.sh \
-	omhttp-batch-kafkarest-retry-vg.sh \
-	omhttp-batch-lokirest-retry-vg.sh \
-	omhttp-retry-vg.sh \
-	omhttp-retry-timeout-vg.sh \
-	omhttp-batch-lokirest-vg.sh
+        omhttp-auth-vg.sh \
+        omhttp-basic-vg.sh \
+        omhttp-basic-ignorecodes-vg.sh \
+        omhttp-batch-jsonarray-compress-vg.sh \
+        omhttp-batch-jsonarray-retry-vg.sh \
+        omhttp-batch-jsonarray-vg.sh \
+        omhttp-batch-kafkarest-retry-vg.sh \
+        omhttp-batch-lokirest-retry-vg.sh \
+        omhttp-retry-vg.sh \
+        omhttp-retry-timeout-vg.sh \
+        omhttp-batch-lokirest-vg.sh
 endif
+endif
+
+if ENABLE_OMOTLP
+TESTS += \
+        omotlp-http-batch.sh \
+        omotlp-basic.sh \
+        omotlp-batch.sh \
+        omotlp-compression.sh \
+        omotlp-proxy.sh \
+        omotlp-tls.sh \
+        omotlp-trace-correlation.sh
 endif
 
 if ENABLE_OMKAFKA

@@ -60,3 +60,9 @@ mmjsonrewrite:
   notes:
     - Expands dotted JSON property names into nested containers per message.
 
+omotlp:
+  paths: ["plugins/omotlp/"]
+  requires_serialization: false
+  notes:
+    - Transport resources are not yet active; introduce pData locking once they appear.
+

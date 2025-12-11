@@ -1,0 +1,6 @@
+support_status: core-supported
+maturity_level: fresh
+primary_contact: "GitHub Discussions & Issues <https://github.com/rsyslog/rsyslog/discussions>"
+last_reviewed: 2024-04-09
+notes:
+  - "Phase 1 HTTP/JSON transport now batches with configurable thresholds, gzip, and retry/backoff; optional gRPC remains under development."
