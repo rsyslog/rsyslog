@@ -1,5 +1,23 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
+- 2025-12-11: doc: added omelasticsearch TLS doc, which was missing
+- 2025-12-11: core: fix LogError(0, ...) anti-pattern and add guidelines
+  This change improves the consistency and reliability of error logging by
+  removing a common anti-pattern where errno was manually formatted. It
+  also establishes clear coding guidelines to prevent this in the future,
+  enhancing code maintainability.
+  Impact: No user-visible behavior change; internal error logging consistency improved.
+  Refactored LogError(0, ...) calls that used manual rs_strerror_r or
+  strerror formatting to instead pass errno directly to LogError.
+  This allows LogError to handle error string formatting consistently.
+  Affected components include imrelp, omrelp, imdtls,
+  omelasticsearch, and runtime/rsconf.
+  Added doc/source/development/coding_practices/error_logging_with_errno.rst
+  to document this pattern and updated the coding practices index.
+  Fixed a format string error in runtime/rsconf.c discovered during
+  refactoring.
+  Updated runtime/errmsg.h with explicit Doxygen notes for AI agents
+  to use LogError(errno, ...) correctly.
 - 2025-12-11: omdtls: fix incorrect usage of gai_strerror
   The gai_strerror function was being used to report errors from connect(),
   which sets errno. This resulted in misleading error messages.
