@@ -1,5 +1,10 @@
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
+- 2025-12-11: omdtls: fix incorrect usage of gai_strerror
+  The gai_strerror function was being used to report errors from connect(),
+  which sets errno. This resulted in misleading error messages.
+  Replaced gai_strerror with rs_strerror_r to correctly report system errors.
+  closes https://github.com/rsyslog/rsyslog/issues/5518
 ----------------------------------------------------------------------------------------
 Scheduled Release 8.2512.0 (aka 2025.12) 2025-12-09
 - overall improved documentation via a large set of topic updates.
