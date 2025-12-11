@@ -1,12 +1,12 @@
 .. _param-omstdout-ensurelfending:
 .. _omstdout.parameter.input.ensurelfending:
 
-EnsureLFEnding
+ensureLFEnding
 ==============
 
 .. index::
-   single: omstdout; EnsureLFEnding
-   single: EnsureLFEnding
+   single: omstdout; ensureLFEnding
+   single: ensureLFEnding
 
 .. summary-start
 
@@ -16,7 +16,7 @@ Ensures each message is written with a terminating line feed when sent to stdout
 
 This parameter applies to :doc:`../../configuration/modules/omstdout`.
 
-:Name: EnsureLFEnding
+:Name: ensureLFEnding
 :Scope: input
 :Type: boolean
 :Default: input=on
@@ -25,9 +25,9 @@ This parameter applies to :doc:`../../configuration/modules/omstdout`.
 
 Description
 -----------
-Ensures that each message is written with a terminating LF. If the message
-already contains a trailing LF, none is added. This is needed for the automated
-tests.
+Ensures that each message is written with a terminating line feed. If the
+message already contains a trailing line feed, none is added. This is needed for
+the automated tests.
 
 Input usage
 -----------
@@ -43,7 +43,7 @@ Legacy names (for reference)
 Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omstdout.parameter.legacy.actionomstdoutensurelfending:
-- ``$ActionOMStdoutEnsureLFEnding`` — maps to EnsureLFEnding (status: legacy)
+- ``$ActionOMStdoutEnsureLFEnding`` — maps to ensureLFEnding (status: legacy)
 
 .. index::
    single: omstdout; $ActionOMStdoutEnsureLFEnding
