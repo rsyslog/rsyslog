@@ -25,16 +25,16 @@ This parameter applies to :doc:`../../configuration/modules/ommysql`.
 
 Description
 -----------
-Permits the selection of the section within the configuration file
-specified by the :ref:`param-ommysql-mysqlconfig-file` parameter (legacy name
-**$OmMySQLConfigFile**).
-This will likely only be used where the database administrator
-provides a single configuration file with multiple profiles.
-This configuration parameter is ignored unless
-:ref:`param-ommysql-mysqlconfig-file` (legacy name **$OmMySQLConfigFile**)
-is also used in the rsyslog configuration file.
+Permits the selection of the section within the client configuration file
+specified by the :ref:`param-ommysql-mysqlconfig-file` parameter.
+
+This parameter is only effective if :ref:`param-ommysql-mysqlconfig-file` is
+also used. It is typically used when a database administrator provides a
+single configuration file with multiple profiles.
+
 If omitted, the MariaDB/MySQL Client Library default of "client" will be
 used.
+
 
 Input usage
 -----------
