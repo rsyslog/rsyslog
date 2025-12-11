@@ -10,7 +10,7 @@ Conninfo
 
 .. summary-start
 
-Defines PostgreSQL connection information as a URI or key-value pairs, taking precedence over server, port, database, and password parameters.
+Defines PostgreSQL connection information as a URI or key-value pairs, taking precedence over ``server``, ``port``, ``db``, and ``pass`` parameters.
 
 .. summary-end
 
