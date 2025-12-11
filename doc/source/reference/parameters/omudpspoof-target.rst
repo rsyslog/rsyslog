@@ -1,12 +1,12 @@
 .. _param-omudpspoof-target:
 .. _omudpspoof.parameter.module.target:
 
-Target
+target
 ======
 
 .. index::
-   single: omudpspoof; Target
-   single: Target
+   single: omudpspoof; target
+   single: target
 
 .. summary-start
 Sets the destination host to which omudpspoof sends messages.
@@ -14,7 +14,7 @@ Sets the destination host to which omudpspoof sends messages.
 
 This parameter applies to :doc:`../../configuration/modules/omudpspoof`.
 
-:Name: Target
+:Name: target
 :Scope: module
 :Type: word
 :Default: none
@@ -39,7 +39,7 @@ Legacy names (for reference)
 Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omudpspoof.parameter.legacy.actionomudpspooftargethost:
-- $ActionOMUDPSpoofTargetHost — maps to Target (status: legacy)
+- $ActionOMUDPSpoofTargetHost — maps to target (status: legacy)
 
 .. index::
    single: omudpspoof; $ActionOMUDPSpoofTargetHost

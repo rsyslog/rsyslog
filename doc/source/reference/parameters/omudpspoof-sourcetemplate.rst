@@ -1,12 +1,12 @@
 .. _param-omudpspoof-sourcetemplate:
 .. _omudpspoof.parameter.module.sourcetemplate:
 
-SourceTemplate
+sourceTemplate
 ==============
 
 .. index::
-   single: omudpspoof; SourceTemplate
-   single: SourceTemplate
+   single: omudpspoof; sourceTemplate
+   single: sourceTemplate
 
 .. summary-start
 Names the template that provides the spoofed source IP address for sent messages.
@@ -14,7 +14,7 @@ Names the template that provides the spoofed source IP address for sent messages
 
 This parameter applies to :doc:`../../configuration/modules/omudpspoof`.
 
-:Name: SourceTemplate
+:Name: sourceTemplate
 :Scope: module
 :Type: word
 :Default: RSYSLOG_omudpspoofDfltSourceTpl
@@ -46,7 +46,7 @@ Legacy names (for reference)
 Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omudpspoof.parameter.legacy.actionomudpspoofsourcenametemplate:
-- $ActionOMUDPSpoofSourceNameTemplate — maps to SourceTemplate (status: legacy)
+- $ActionOMUDPSpoofSourceNameTemplate — maps to sourceTemplate (status: legacy)
 
 .. index::
    single: omudpspoof; $ActionOMUDPSpoofSourceNameTemplate

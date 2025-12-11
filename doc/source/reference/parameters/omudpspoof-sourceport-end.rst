@@ -1,12 +1,12 @@
 .. _param-omudpspoof-sourceport-end:
 .. _omudpspoof.parameter.module.sourceport-end:
 
-SourcePort.End
+sourcePort.end
 ==============
 
 .. index::
-   single: omudpspoof; SourcePort.End
-   single: SourcePort.End
+   single: omudpspoof; sourcePort.end
+   single: sourcePort.end
 
 .. summary-start
 Sets the ending source port when cycling through spoofed source ports.
@@ -14,7 +14,7 @@ Sets the ending source port when cycling through spoofed source ports.
 
 This parameter applies to :doc:`../../configuration/modules/omudpspoof`.
 
-:Name: SourcePort.End
+:Name: sourcePort.end
 :Scope: module
 :Type: integer
 :Default: 42000
@@ -23,7 +23,7 @@ This parameter applies to :doc:`../../configuration/modules/omudpspoof`.
 
 Description
 -----------
-Specify the end value for circling the source ports. End must be equal to or more than sourcePort.Start.
+Specify the end value for circling the source ports. End must be equal to or more than sourcePort.start.
 
 Module usage
 ------------
@@ -39,7 +39,7 @@ Legacy names (for reference)
 Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omudpspoof.parameter.legacy.actionomudpspoofsourceportend:
-- $ActionOMUDPSpoofSourcePortEnd — maps to SourcePort.End (status: legacy)
+- $ActionOMUDPSpoofSourcePortEnd — maps to sourcePort.end (status: legacy)
 
 .. index::
    single: omudpspoof; $ActionOMUDPSpoofSourcePortEnd

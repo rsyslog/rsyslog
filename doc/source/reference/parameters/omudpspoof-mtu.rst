@@ -1,12 +1,12 @@
 .. _param-omudpspoof-mtu:
 .. _omudpspoof.parameter.module.mtu:
 
-MTU
+mtu
 ===
 
 .. index::
-   single: omudpspoof; MTU
-   single: MTU
+   single: omudpspoof; mtu
+   single: mtu
 
 .. summary-start
 Sets the maximum packet length that omudpspoof sends.
@@ -14,7 +14,7 @@ Sets the maximum packet length that omudpspoof sends.
 
 This parameter applies to :doc:`../../configuration/modules/omudpspoof`.
 
-:Name: MTU
+:Name: mtu
 :Scope: module
 :Type: integer
 :Default: 1500

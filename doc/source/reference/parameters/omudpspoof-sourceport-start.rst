@@ -1,12 +1,12 @@
 .. _param-omudpspoof-sourceport-start:
 .. _omudpspoof.parameter.module.sourceport-start:
 
-SourcePort.start
+sourcePort.start
 ================
 
 .. index::
-   single: omudpspoof; SourcePort.start
-   single: SourcePort.start
+   single: omudpspoof; sourcePort.start
+   single: sourcePort.start
 
 .. summary-start
 Sets the starting source port when cycling through spoofed source ports.
@@ -14,7 +14,7 @@ Sets the starting source port when cycling through spoofed source ports.
 
 This parameter applies to :doc:`../../configuration/modules/omudpspoof`.
 
-:Name: SourcePort.start
+:Name: sourcePort.start
 :Scope: module
 :Type: integer
 :Default: 32000
@@ -23,7 +23,7 @@ This parameter applies to :doc:`../../configuration/modules/omudpspoof`.
 
 Description
 -----------
-Specify the start value for circling the source ports. Start must be less than or equal to sourcePort.End.
+Specify the start value for circling the source ports. Start must be less than or equal to sourcePort.end.
 
 Module usage
 ------------
@@ -39,7 +39,7 @@ Legacy names (for reference)
 Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omudpspoof.parameter.legacy.actionomudpspoofsourceportstart:
-- $ActionOMUDPSpoofSourcePortStart — maps to SourcePort.start (status: legacy)
+- $ActionOMUDPSpoofSourcePortStart — maps to sourcePort.start (status: legacy)
 
 .. index::
    single: omudpspoof; $ActionOMUDPSpoofSourcePortStart

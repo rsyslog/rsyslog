@@ -1,12 +1,12 @@
 .. _param-omudpspoof-template:
 .. _omudpspoof.parameter.module.template:
 
-Template
+template
 ========
 
 .. index::
-   single: omudpspoof; Template
-   single: Template
+   single: omudpspoof; template
+   single: template
 
 .. summary-start
 Sets the default template used by omudpspoof actions without an explicitly configured template.
@@ -14,7 +14,7 @@ Sets the default template used by omudpspoof actions without an explicitly confi
 
 This parameter applies to :doc:`../../configuration/modules/omudpspoof`.
 
-:Name: Template
+:Name: template
 :Scope: module
 :Type: word
 :Default: RSYSLOG_TraditionalForwardFormat
@@ -40,7 +40,7 @@ Legacy names (for reference)
 Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omudpspoof.parameter.legacy.actionomudpspoofdefaulttemplate:
-- $ActionOMUDPSpoofDefaultTemplate — maps to Template (status: legacy)
+- $ActionOMUDPSpoofDefaultTemplate — maps to template (status: legacy)
 
 .. index::
    single: omudpspoof; $ActionOMUDPSpoofDefaultTemplate

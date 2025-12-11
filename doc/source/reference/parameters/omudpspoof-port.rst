@@ -1,12 +1,12 @@
 .. _param-omudpspoof-port:
 .. _omudpspoof.parameter.module.port:
 
-Port
+port
 ====
 
 .. index::
-   single: omudpspoof; Port
-   single: Port
+   single: omudpspoof; port
+   single: port
 
 .. summary-start
 Specifies the destination port used when sending messages.
@@ -14,7 +14,7 @@ Specifies the destination port used when sending messages.
 
 This parameter applies to :doc:`../../configuration/modules/omudpspoof`.
 
-:Name: Port
+:Name: port
 :Scope: module
 :Type: word
 :Default: 514
@@ -39,7 +39,7 @@ Legacy names (for reference)
 Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omudpspoof.parameter.legacy.actionomudpspooftargetport:
-- $ActionOMUDPSpoofTargetPort — maps to Port (status: legacy)
+- $ActionOMUDPSpoofTargetPort — maps to port (status: legacy)
 
 .. index::
    single: omudpspoof; $ActionOMUDPSpoofTargetPort
