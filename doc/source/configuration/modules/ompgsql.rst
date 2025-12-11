@@ -24,109 +24,57 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
 
 Action Parameters
 -----------------
 
-Conninfo
-^^^^^^^^
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
+   * - Parameter
+     - Summary
+   * - :ref:`param-ompgsql-conninfo`
+     - .. include:: ../../reference/parameters/ompgsql-conninfo.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-ompgsql-server`
+     - .. include:: ../../reference/parameters/ompgsql-server.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-ompgsql-port`
+     - .. include:: ../../reference/parameters/ompgsql-port.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-ompgsql-db`
+     - .. include:: ../../reference/parameters/ompgsql-db.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-ompgsql-user`
+     - .. include:: ../../reference/parameters/ompgsql-user.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-ompgsql-pass`
+     - .. include:: ../../reference/parameters/ompgsql-pass.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-ompgsql-template`
+     - .. include:: ../../reference/parameters/ompgsql-template.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
-   "word", "none", "no", "none"
+.. toctree::
+   :hidden:
 
-The URI or set of key-value pairs that describe how to connect to the PostgreSQL
-server. This takes precedence over ``server``, ``port``, ``db``, and ``pass``
-parameters. Required if ``server`` and ``db`` are not specified.
-
-The format corresponds to `standard PostgreSQL connection string format
-<https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING>`_.
-
-Server
-^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-The hostname or address of the PostgreSQL server. Required if ``conninfo`` is
-not specified.
-
-
-Port/Serverport
-^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "5432", "no", "none"
-
-The IP port of the PostgreSQL server.
-
-
-db
-^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-The multi-tenant database name to ``INSERT`` rows into. Required if ``conninfo``
-is not specified.
-
-
-User/UID
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "postgres", "no", "none"
-
-The username to connect to the PostgreSQL server with.
-
-
-Pass/PWD
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "postgres", "no", "none"
-
-The password to connect to the PostgreSQL server with.
-
-
-Template
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "no", "none"
-
-The template name to use to ``INSERT`` rows into the database with. Valid SQL
-syntax is required, as the module does not perform any insertion statement
-checking.
+   ../../reference/parameters/ompgsql-conninfo
+   ../../reference/parameters/ompgsql-server
+   ../../reference/parameters/ompgsql-port
+   ../../reference/parameters/ompgsql-db
+   ../../reference/parameters/ompgsql-user
+   ../../reference/parameters/ompgsql-pass
+   ../../reference/parameters/ompgsql-template
 
 
 Examples
