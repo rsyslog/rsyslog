@@ -25,45 +25,45 @@ Configuration
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
 
 Module Parameters
 -----------------
 
-none
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
+
+   * - Parameter
+     - Summary
+   * - *(none)*
+     - This module has no module-scope parameters.
 
 
 Action Parameters
 -----------------
 
-template
-^^^^^^^^
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
+   * - Parameter
+     - Summary
+   * - :ref:`param-omstdout-template`
+     - .. include:: ../../reference/parameters/omstdout-template.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omstdout-ensurelfending`
+     - .. include:: ../../reference/parameters/omstdout-ensurelfending.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
-   "word", "RSYSLOG_FileFormat", "no", "none"
+.. toctree::
+   :hidden:
 
-Set the template which will be used for the output. If none is specified
-the default will be used.
-
-
-EnsureLFEnding
-^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "binary", "on", "no", "``$ActionOMStdoutEnsureLFEnding``"
-
-Makes sure, that each message is written with a terminating LF. If the
-message contains a trailing LF, none is added. This is needed for the
-automated tests.
+   ../../reference/parameters/omstdout-template
+   ../../reference/parameters/omstdout-ensurelfending
 
 
 Configure statement
