@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/omstdout`.
 
 Description
 -----------
-Makes sure that each message is written with a terminating LF. If the message
+Ensures that each message is written with a terminating LF. If the message
 already contains a trailing LF, none is added. This is needed for the automated
 tests.
 
@@ -43,7 +43,7 @@ Legacy names (for reference)
 Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omstdout.parameter.legacy.actionomstdoutensurelfending:
-- $ActionOMStdoutEnsureLFEnding — maps to EnsureLFEnding (status: legacy)
+- ``$ActionOMStdoutEnsureLFEnding`` — maps to EnsureLFEnding (status: legacy)
 
 .. index::
    single: omstdout; $ActionOMStdoutEnsureLFEnding
