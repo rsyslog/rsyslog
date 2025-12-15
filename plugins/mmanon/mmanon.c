@@ -94,6 +94,8 @@ typedef struct _instanceData {
         int8_t bits;
         union node *Root;
         int randConsis;
+        int randConsisUnique;
+        struct hashtable *randConsisUniqueGeneratedIPs;
         enum mode mode;
         uchar replaceChar;
     } ipv4;
@@ -103,7 +105,9 @@ typedef struct _instanceData {
         uint8_t bits;
         enum mode anonmode;
         int randConsis;
-        struct hashtable *hash;
+        int randConsisUnique;
+        struct hashtable *randConsisUniqueGeneratedIPs;
+        struct hashtable *randConsisIPs;
     } ipv6;
 
     struct {
@@ -111,7 +115,9 @@ typedef struct _instanceData {
         uint8_t bits;
         enum mode anonmode;
         int randConsis;
-        struct hashtable *hash;
+        int randConsisUnique;
+        struct hashtable *randConsisUniqueGeneratedIPs;
+        struct hashtable *randConsisIPs;
     } embeddedIPv4;
 } instanceData;
 
@@ -125,6 +131,9 @@ struct modConfData_s {
 };
 static modConfData_t *loadModConf = NULL;  // modConf ptr to use for the current load process
 static modConfData_t *runModConf = NULL;  // modConf ptr to use for the current exec process
+
+static unsigned hash_from_u32(void *k);
+static int key_equals_u32(void *key1, void *key2);
 
 
 /* tables for interfacing with the v6 config system */
@@ -210,11 +219,20 @@ static void delTree(union node *node, const int layer) {
 BEGINfreeInstance
     CODESTARTfreeInstance;
     delTree(pData->ipv4.Root, 0);
-    if (pData->ipv6.hash != NULL) {
-        hashtable_destroy(pData->ipv6.hash, 1);
+    if (pData->ipv4.randConsisUniqueGeneratedIPs != NULL) {
+        hashtable_destroy(pData->ipv4.randConsisUniqueGeneratedIPs, 0);
     }
-    if (pData->embeddedIPv4.hash != NULL) {
-        hashtable_destroy(pData->embeddedIPv4.hash, 1);
+    if (pData->ipv6.randConsisIPs != NULL) {
+        hashtable_destroy(pData->ipv6.randConsisIPs, 1);
+    }
+    if (pData->ipv6.randConsisUniqueGeneratedIPs != NULL) {
+        hashtable_destroy(pData->ipv6.randConsisUniqueGeneratedIPs, 0);
+    }
+    if (pData->embeddedIPv4.randConsisIPs != NULL) {
+        hashtable_destroy(pData->embeddedIPv4.randConsisIPs, 1);
+    }
+    if (pData->embeddedIPv4.randConsisUniqueGeneratedIPs != NULL) {
+        hashtable_destroy(pData->embeddedIPv4.randConsisUniqueGeneratedIPs, 0);
     }
     pthread_mutex_destroy(&pData->ipv4Mutex);
     pthread_mutex_destroy(&pData->ipv6Mutex);
@@ -239,6 +257,8 @@ static inline void setInstParamDefaults(instanceData *pData) {
     pData->ipv4.bits = 16;
     pData->ipv4.Root = NULL;
     pData->ipv4.randConsis = 0;
+    pData->ipv4.randConsisUnique = 0;
+    pData->ipv4.randConsisUniqueGeneratedIPs = NULL;
     pData->ipv4.mode = ZERO;
     pData->ipv4.replaceChar = 'x';
 
@@ -246,13 +266,17 @@ static inline void setInstParamDefaults(instanceData *pData) {
     pData->ipv6.bits = 96;
     pData->ipv6.anonmode = ZERO;
     pData->ipv6.randConsis = 0;
-    pData->ipv6.hash = NULL;
+    pData->ipv6.randConsisUnique = 0;
+    pData->ipv6.randConsisUniqueGeneratedIPs = NULL;
+    pData->ipv6.randConsisIPs = NULL;
 
     pData->embeddedIPv4.enable = 1;
     pData->embeddedIPv4.bits = 96;
     pData->embeddedIPv4.anonmode = ZERO;
     pData->embeddedIPv4.randConsis = 0;
-    pData->embeddedIPv4.hash = NULL;
+    pData->embeddedIPv4.randConsisUnique = 0;
+    pData->embeddedIPv4.randConsisUniqueGeneratedIPs = NULL;
+    pData->embeddedIPv4.randConsisIPs = NULL;
 }
 
 BEGINnewActInst
@@ -283,6 +307,11 @@ BEGINnewActInst
                                      sizeof("random-consistent") - 1)) {
                 pData->ipv4.mode = RANDOMINT;
                 pData->ipv4.randConsis = 1;
+            } else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"random-consistent-unique",
+                                     sizeof("random-consistent-unique") - 1)) {
+                pData->ipv4.mode = RANDOMINT;
+                pData->ipv4.randConsis = 1;
+                pData->ipv4.randConsisUnique = 1;
             } else {
                 parser_errmsg(
                     "mmanon: configuration error, unknown option for ipv4.mode, "
@@ -326,6 +355,11 @@ BEGINnewActInst
                                      sizeof("random-consistent") - 1)) {
                 pData->ipv6.anonmode = RANDOMINT;
                 pData->ipv6.randConsis = 1;
+            } else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"random-consistent-unique",
+                                     sizeof("random-consistent-unique") - 1)) {
+                pData->ipv6.anonmode = RANDOMINT;
+                pData->ipv6.randConsis = 1;
+                pData->ipv6.randConsisUnique = 1;
             } else {
                 parser_errmsg(
                     "mmanon: configuration error, unknown option for "
@@ -352,6 +386,11 @@ BEGINnewActInst
                                      sizeof("random-consistent") - 1)) {
                 pData->embeddedIPv4.anonmode = RANDOMINT;
                 pData->embeddedIPv4.randConsis = 1;
+            } else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"random-consistent-unique",
+                                     sizeof("random-consistent-unique") - 1)) {
+                pData->embeddedIPv4.anonmode = RANDOMINT;
+                pData->embeddedIPv4.randConsis = 1;
+                pData->embeddedIPv4.randConsisUnique = 1;
             } else {
                 parser_errmsg(
                     "mmanon: configuration error, unknown option for ipv6.anonmode, "
@@ -800,10 +839,12 @@ static rsRetVal findip(char *address, wrkrInstanceData_t *pWrkrData) {
     DEFiRet;
     int i;
     unsigned num;
+    unsigned origNum;
     union node *current;
     union node *Last;
     int MoreLess;
     char *CurrentCharPtr;
+    uint32_t *uniqueKey = NULL;
     sbool locked = 0;
 
     /*
@@ -816,7 +857,8 @@ static rsRetVal findip(char *address, wrkrInstanceData_t *pWrkrData) {
     }
     locked = 1;
     current = pWrkrData->pData->ipv4.Root;
-    num = ipv42num(address);
+    origNum = ipv42num(address);
+    num = origNum;
     for (i = 0; i < 31; i++) {
         if (pWrkrData->pData->ipv4.Root == NULL) {
             CHKmalloc(current = (union node *)calloc(1, sizeof(union node)));
@@ -847,14 +889,35 @@ static rsRetVal findip(char *address, wrkrInstanceData_t *pWrkrData) {
     if (CurrentCharPtr[0] != '\0') {
         strcpy(address, CurrentCharPtr);
     } else {
-        num = code_int(num, pWrkrData);
+        if (pWrkrData->pData->ipv4.randConsisUnique && pWrkrData->pData->ipv4.randConsisUniqueGeneratedIPs == NULL) {
+            CHKmalloc(pWrkrData->pData->ipv4.randConsisUniqueGeneratedIPs =
+                          create_hashtable(512, hash_from_u32, key_equals_u32, NULL));
+        }
+
+        do {
+            num = code_int(origNum, pWrkrData);
+        } while (pWrkrData->pData->ipv4.randConsisUnique &&
+                 hashtable_search(pWrkrData->pData->ipv4.randConsisUniqueGeneratedIPs, &num) != NULL);
+
         num2ipv4(num, CurrentCharPtr);
+
+        if (pWrkrData->pData->ipv4.randConsisUnique) {
+            CHKmalloc(uniqueKey = (uint32_t *)malloc(sizeof(uint32_t)));
+            *uniqueKey = num;
+            if (!hashtable_insert(pWrkrData->pData->ipv4.randConsisUniqueGeneratedIPs, uniqueKey, (void *)1)) {
+                DBGPRINTF("hashtable error: insert to ipv4 unique table failed");
+                ABORT_FINALIZE(RS_RET_ERR);
+            }
+            uniqueKey = NULL;
+        }
+
         strcpy(address, CurrentCharPtr);
     }
 finalize_it:
     if (locked) {
         pthread_mutex_unlock(&pWrkrData->pData->ipv4Mutex);
     }
+    free(uniqueKey);
     RETiRet;
 }
 
@@ -1190,6 +1253,25 @@ static unsigned hash_from_key_fn(void *k) {
     return hashVal;
 }
 
+/**
+ * \brief Hash function for 32-bit IPv4 keys.
+ *
+ * Uses the numeric IPv4 value directly, which is already randomized, so the
+ * low bits provide sufficient entropy for the hash table.
+ */
+static unsigned hash_from_u32(void *k) {
+    const uint32_t key = *((uint32_t *)k);
+
+    return (unsigned)key;
+}
+
+/**
+ * \brief Key comparator for 32-bit IPv4 entries.
+ */
+static int key_equals_u32(void *key1, void *key2) {
+    return *((uint32_t *)key1) == *((uint32_t *)key2);
+}
+
 
 /**
  * \brief Convert split integers to an embedded-IPv4 textual address.
@@ -1234,7 +1316,14 @@ static void num2embedded(struct ipv6_int *ip, char *address) {
 static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t *const pWrkrData, int useEmbedded) {
     struct ipv6_int *hashKey = NULL;
     DEFiRet;
-    struct hashtable *hash = useEmbedded ? pWrkrData->pData->embeddedIPv4.hash : pWrkrData->pData->ipv6.hash;
+    struct hashtable *randConsisIPs =
+        useEmbedded ? pWrkrData->pData->embeddedIPv4.randConsisIPs : pWrkrData->pData->ipv6.randConsisIPs;
+    struct hashtable *randConsisUniqueGeneratedIPs = useEmbedded
+                                                         ? pWrkrData->pData->embeddedIPv4.randConsisUniqueGeneratedIPs
+                                                         : pWrkrData->pData->ipv6.randConsisUniqueGeneratedIPs;
+    const int uniqueMode = useEmbedded ? pWrkrData->pData->embeddedIPv4.randConsisUnique : pWrkrData->pData->ipv6.randConsisUnique;
+    struct ipv6_int original = *num;
+    struct ipv6_int *uniqueKey = NULL;
     sbool locked = 0;
 
     /*
@@ -1248,46 +1337,68 @@ static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t
     }
     locked = 1;
 
-    if (hash == NULL) {
-        CHKmalloc(hash = create_hashtable(512, hash_from_key_fn, keys_equal_fn, NULL));
+    if (randConsisIPs == NULL) {
+        CHKmalloc(randConsisIPs = create_hashtable(512, hash_from_key_fn, keys_equal_fn, NULL));
         if (useEmbedded) {
-            pWrkrData->pData->embeddedIPv4.hash = hash;
+            pWrkrData->pData->embeddedIPv4.randConsisIPs = randConsisIPs;
         } else {
-            pWrkrData->pData->ipv6.hash = hash;
+            pWrkrData->pData->ipv6.randConsisIPs = randConsisIPs;
         }
     }
 
-    char *val = (char *)(hashtable_search(hash, num));
+    if (uniqueMode && randConsisUniqueGeneratedIPs == NULL) {
+        CHKmalloc(randConsisUniqueGeneratedIPs = create_hashtable(512, hash_from_key_fn, keys_equal_fn, NULL));
+        if (useEmbedded) {
+            pWrkrData->pData->embeddedIPv4.randConsisUniqueGeneratedIPs = randConsisUniqueGeneratedIPs;
+        } else {
+            pWrkrData->pData->ipv6.randConsisUniqueGeneratedIPs = randConsisUniqueGeneratedIPs;
+        }
+    }
+
+    char *val = (char *)(hashtable_search(randConsisIPs, num));
 
     if (val != NULL) {
         strcpy(address, val);
     } else {
         CHKmalloc(hashKey = (struct ipv6_int *)malloc(sizeof(struct ipv6_int)));
-        hashKey->low = num->low;
-        hashKey->high = num->high;
+        *hashKey = original;
 
-        if (useEmbedded) {
-            code_ipv6_int(num, pWrkrData, 1);
-            num2embedded(num, address);
-        } else {
-            code_ipv6_int(num, pWrkrData, 0);
-            num2ipv6(num, address);
-        }
+        do {
+            *num = original;
+            if (useEmbedded) {
+                code_ipv6_int(num, pWrkrData, 1);
+                num2embedded(num, address);
+            } else {
+                code_ipv6_int(num, pWrkrData, 0);
+                num2ipv6(num, address);
+            }
+        } while (uniqueMode && hashtable_search(randConsisUniqueGeneratedIPs, num) != NULL);
         char *hashString;
         CHKmalloc(hashString = strdup(address));
 
-        if (!hashtable_insert(hash, hashKey, hashString)) {
+        if (!hashtable_insert(randConsisIPs, hashKey, hashString)) {
             DBGPRINTF("hashtable error: insert to %s-table failed", useEmbedded ? "embedded ipv4" : "ipv6");
             free(hashString);
             ABORT_FINALIZE(RS_RET_ERR);
         }
         hashKey = NULL;
+
+        if (uniqueMode) {
+            CHKmalloc(uniqueKey = (struct ipv6_int *)malloc(sizeof(struct ipv6_int)));
+            *uniqueKey = *num;
+            if (!hashtable_insert(randConsisUniqueGeneratedIPs, uniqueKey, (void *)1)) {
+                DBGPRINTF("hashtable error: insert to %s unique table failed", useEmbedded ? "embedded ipv4" : "ipv6");
+                ABORT_FINALIZE(RS_RET_ERR);
+            }
+            uniqueKey = NULL;
+        }
     }
 finalize_it:
     if (locked) {
         pthread_mutex_unlock(&pWrkrData->pData->ipv6Mutex);
     }
     free(hashKey);
+    free(uniqueKey);
     RETiRet;
 }
 

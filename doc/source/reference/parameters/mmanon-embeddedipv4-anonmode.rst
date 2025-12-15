@@ -25,13 +25,19 @@ This parameter applies to :doc:`../../configuration/modules/mmanon`.
 
 Description
 -----------
-The available modes are ``random``, ``random-consistent``, and ``zero``.
+The available modes are ``random``, ``random-consistent``,
+``random-consistent-unique``, and ``zero``.
 
 The modes ``random`` and ``random-consistent`` are very similar, in that they
 both anonymize IP addresses by randomizing the last bits (any number) of a given
 address. However, while ``random`` mode assigns a new random IP address for
 every address in a message, ``random-consistent`` will assign the same
 randomized address to every instance of the same original address.
+``random-consistent-unique`` builds on that behavior and guarantees that no
+two distinct original addresses share the same anonymized result. It may
+take longer to generate addresses because a replacement is retried until an
+unused randomized value is found; this effect grows as more unique IPs are
+processed.
 
 The default ``zero`` mode will do full anonymization of any number of bits and
 it will also normalize the address, so that no information about the original IP
