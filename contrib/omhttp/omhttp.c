@@ -199,6 +199,10 @@ typedef struct instanceConf_s {
     /* Stats Counter */
     targetStats_t *listObjStats;
     sbool statsBySenders;
+
+    /* Health Check */
+    time_t *lastHealthCheck;
+    long healthCheckTimeDelay;  // Delay between two Health Check (in seconds)
 } instanceData;
 
 struct modConfData_s {
@@ -278,6 +282,7 @@ static struct cnfparamdescr actpdescr[] = {
     {"httpignorablecodes", eCmdHdlrArray, 0},
     {"profile", eCmdHdlrGetWord, 0},
     {"statsbysenders", eCmdHdlrBinary, 0},
+    {"healthchecktimedelay", eCmdHdlrInt, 0},
 };
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
 
@@ -383,6 +388,7 @@ BEGINfreeInstance
         free(pData->listObjStats);
     }
     free(pData->statsName);
+    free(pData->lastHealthCheck);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
@@ -412,6 +418,7 @@ BEGINdbgPrintInstInfo
     dbgprintf("\ttemplate='%s'\n", pData->tplName);
     dbgprintf("\tnumServers=%d\n", pData->numServers);
     dbgprintf("\thealthCheckTimeout=%lu\n", pData->healthCheckTimeout);
+    dbgprintf("\thealthchecktimedelay=%lu\n", pData->healthCheckTimeDelay);
     dbgprintf("\trestPathTimeout=%lu\n", pData->restPathTimeout);
     dbgprintf("\tserverBaseUrls=");
     for (i = 0; i < pData->numServers; ++i) dbgprintf("%c'%s'", i == 0 ? '[' : ' ', pData->serverBaseUrls[i]);
@@ -562,6 +569,23 @@ static rsRetVal ATTR_NONNULL() checkConn(wrkrInstanceData_t *const pWrkrData) {
         FINALIZE;
     }
 
+    /*  Check last time was health check was done
+     *   1- get lastHealthCheck for all server in the list
+     *   2- Check diff time is in good order
+     *   3- add lastcheck upgrade
+     *   4- time_t is an unsigned long (https://koor.fr/C/ctime/time_t.wp)
+     */
+    time_t now = time(NULL);
+    if (pWrkrData->pData->lastHealthCheck != NULL && pWrkrData->pData->healthCheckTimeDelay != -1) {
+        if (pWrkrData->pData->lastHealthCheck[pWrkrData->serverIndex] != 0 &&
+            now <
+                (pWrkrData->pData->lastHealthCheck[pWrkrData->serverIndex] + pWrkrData->pData->healthCheckTimeDelay)) {
+            DBGPRINTF("omhttp: health check for server %d skipped due to healthCheckTimeDelay\n",
+                      pWrkrData->serverIndex);
+            ABORT_FINALIZE(RS_RET_OK);
+        }
+    }
+
     pWrkrData->reply = NULL;
     pWrkrData->replyLen = 0;
     curl = pWrkrData->curlCheckConnHandle;
@@ -590,6 +614,8 @@ static rsRetVal ATTR_NONNULL() checkConn(wrkrInstanceData_t *const pWrkrData) {
         free(healthUrl);
 
         if (res == CURLE_OK) {
+            pWrkrData->pData->lastHealthCheck[pWrkrData->serverIndex] = now;
+
             DBGPRINTF(
                 "omhttp: checkConn %s completed with success "
                 "on attempt %d\n",
@@ -1862,6 +1888,8 @@ static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
     pData->serverBaseUrls = NULL;
     pData->defaultPort = 443;
     pData->healthCheckTimeout = 3500;
+    pData->healthCheckTimeDelay = -1;  // in seconds | -1 is disable
+    pData->lastHealthCheck = NULL;
     pData->token = NULL;
     pData->uid = NULL;
     pData->restPathTimeout = 0;
@@ -2218,6 +2246,8 @@ BEGINnewActInst
             pData->defaultPort = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "healthchecktimeout")) {
             pData->healthCheckTimeout = (long)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "healthchecktimedelay")) {
+            pData->healthCheckTimeDelay = (long)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "restpathtimeout")) {
             pData->restPathTimeout = (long)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "token")) {
@@ -2454,8 +2484,10 @@ BEGINnewActInst
     }
 
     if (servers != NULL) {
+        time_t tmp_lastHealthCheckArray[servers->nmemb];
         pData->numServers = servers->nmemb;
         pData->serverBaseUrls = malloc(servers->nmemb * sizeof(uchar *));
+
         if (pData->serverBaseUrls == NULL) {
             LogError(0, RS_RET_ERR,
                      "omhttp: unable to allocate buffer "
@@ -2497,7 +2529,10 @@ BEGINnewActInst
             CHKiRet(computeBaseUrl(serverParam, pData->defaultPort, pData->useHttps, pData->serverBaseUrls + i));
             free(serverParam);
             serverParam = NULL;
+            tmp_lastHealthCheckArray[i] = time(NULL);
         }
+        CHKmalloc(pData->lastHealthCheck = malloc(sizeof(tmp_lastHealthCheckArray)));
+        memcpy(pData->lastHealthCheck, tmp_lastHealthCheckArray, sizeof(tmp_lastHealthCheckArray));
     } else {
         LogMsg(0, RS_RET_OK, LOG_WARNING, "omhttp: No servers specified, using localhost");
         pData->numServers = 1;
