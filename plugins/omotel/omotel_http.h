@@ -1,8 +1,8 @@
 /**
- * @file omotlp_http.h
+ * @file omotel_http.h
  * @brief HTTP client interface for OTLP/HTTP JSON transport
  *
- * This header defines the HTTP client API used by the omotlp module to
+ * This header defines the HTTP client API used by the omotel module to
  * communicate with OpenTelemetry collectors over HTTP/JSON. It provides
  * functions for client lifecycle management and HTTP POST operations with
  * retry semantics, TLS, and proxy support.
@@ -25,8 +25,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef OMOTLP_HTTP_H
-#define OMOTLP_HTTP_H
+#ifndef OMOTEL_HTTP_H
+#define OMOTEL_HTTP_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -39,7 +39,7 @@
  * Contains all configuration parameters needed to create and configure
  * an HTTP client for OTLP/HTTP JSON transport.
  */
-typedef struct omotlp_http_client_config_s {
+typedef struct omotel_http_client_config_s {
     const char *url; /**< Target URL for HTTP POST requests */
     long timeout_ms; /**< Request timeout in milliseconds */
     const char *user_agent; /**< User-Agent header value */
@@ -60,10 +60,10 @@ typedef struct omotlp_http_client_config_s {
     const char *proxy_url; /**< Proxy URL (http://, https://, socks4://, or socks5://) */
     const char *proxy_user; /**< Proxy username for authentication */
     const char *proxy_password; /**< Proxy password for authentication */
-} omotlp_http_client_config_t;
+} omotel_http_client_config_t;
 
 /** @brief Opaque HTTP client handle */
-typedef struct omotlp_http_client_s omotlp_http_client_t;
+typedef struct omotel_http_client_s omotel_http_client_t;
 
 /**
  * @brief Initialize the HTTP client library
@@ -74,7 +74,7 @@ typedef struct omotlp_http_client_s omotlp_http_client_t;
  *
  * @return RS_RET_OK on success, RS_RET_INTERNAL_ERROR on failure
  */
-rsRetVal omotlp_http_global_init(void);
+rsRetVal omotel_http_global_init(void);
 
 /**
  * @brief Cleanup the HTTP client library
@@ -82,13 +82,13 @@ rsRetVal omotlp_http_global_init(void);
  * This function should be called during module shutdown to cleanup
  * the underlying libcurl library. It is safe to call multiple times.
  */
-void omotlp_http_global_cleanup(void);
+void omotel_http_global_cleanup(void);
 
 /**
  * @brief Create a new HTTP client instance
  *
  * Creates and configures an HTTP client with the provided configuration.
- * The client handle must be destroyed using omotlp_http_client_destroy()
+ * The client handle must be destroyed using omotel_http_client_destroy()
  * when no longer needed.
  *
  * @param[in] config Configuration parameters for the HTTP client
@@ -97,7 +97,7 @@ void omotlp_http_global_cleanup(void);
  *         RS_RET_OUT_OF_MEMORY on allocation failure, RS_RET_INTERNAL_ERROR
  *         on configuration failure
  */
-rsRetVal omotlp_http_client_create(const omotlp_http_client_config_t *config, omotlp_http_client_t **out_client);
+rsRetVal omotel_http_client_create(const omotel_http_client_config_t *config, omotel_http_client_t **out_client);
 
 /**
  * @brief Destroy an HTTP client instance
@@ -107,7 +107,7 @@ rsRetVal omotlp_http_client_create(const omotlp_http_client_config_t *config, om
  *
  * @param[in,out] client_ptr Pointer to the client handle to destroy
  */
-void omotlp_http_client_destroy(omotlp_http_client_t **client_ptr);
+void omotel_http_client_destroy(omotel_http_client_t **client_ptr);
 
 /**
  * @brief Send an HTTP POST request
@@ -126,10 +126,10 @@ void omotlp_http_client_destroy(omotlp_http_client_t **client_ptr);
  *         errors (5xx, 408, 429, network errors), RS_RET_INTERNAL_ERROR for
  *         configuration errors, RS_RET_PARAM_ERROR for invalid parameters
  */
-rsRetVal omotlp_http_client_post(omotlp_http_client_t *client,
+rsRetVal omotel_http_client_post(omotel_http_client_t *client,
                                  const uint8_t *payload,
                                  size_t payload_len,
                                  long *out_status_code,
                                  long *out_latency_ms);
 
-#endif /* OMOTLP_HTTP_H */
+#endif /* OMOTEL_HTTP_H */

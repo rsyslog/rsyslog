@@ -209,9 +209,9 @@ finalize_it:
     RETiRet;
 }
 
-rsRetVal omotlp_json_build_export(const omotlp_log_record_t *records,
+rsRetVal omotel_json_build_export(const omotel_log_record_t *records,
                                   size_t record_count,
-                                  const omotlp_resource_attrs_t *resource_attrs,
+                                  const omotel_resource_attrs_t *resource_attrs,
                                   const attribute_map_t *attribute_map,
                                   char **out_payload) {
     struct json_object *root = NULL;
@@ -267,7 +267,7 @@ rsRetVal omotlp_json_build_export(const omotlp_log_record_t *records,
     fjson_object_object_add(resource, "attributes", resource_attributes);
 
     CHKiRet(add_string_attribute(resource_attributes, "service.name", "rsyslog"));
-    CHKiRet(add_string_attribute(resource_attributes, "telemetry.sdk.name", "rsyslog-omotlp"));
+    CHKiRet(add_string_attribute(resource_attributes, "telemetry.sdk.name", "rsyslog-omotel"));
     CHKiRet(add_string_attribute(resource_attributes, "telemetry.sdk.language", "C"));
     CHKiRet(add_string_attribute(resource_attributes, "telemetry.sdk.version", VERSION));
 
@@ -386,7 +386,7 @@ rsRetVal omotlp_json_build_export(const omotlp_log_record_t *records,
         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
     fjson_object_object_add(scope_entry, "scope", scope);
-    fjson_object_object_add(scope, "name", fjson_object_new_string("rsyslog.omotlp"));
+    fjson_object_object_add(scope, "name", fjson_object_new_string("rsyslog.omotel"));
     fjson_object_object_add(scope, "version", fjson_object_new_string(VERSION));
 
     log_records = fjson_object_new_array();
@@ -396,7 +396,7 @@ rsRetVal omotlp_json_build_export(const omotlp_log_record_t *records,
     fjson_object_object_add(scope_entry, "logRecords", log_records);
 
     for (i = 0; i < record_count; ++i) {
-        const omotlp_log_record_t *record = &records[i];
+        const omotel_log_record_t *record = &records[i];
         struct json_object *log_record = NULL;
         struct json_object *attributes = NULL;
 

@@ -2565,23 +2565,23 @@ if test "x$enable_omhdfs"; then
 fi
 AM_CONDITIONAL(ENABLE_OMHDFS, test x$enable_omhdfs = xyes)
 
-AC_ARG_ENABLE(omotlp,
-        [AS_HELP_STRING([--enable-omotlp],[Enable OpenTelemetry output module @<:@default=no@:>@])],
+AC_ARG_ENABLE(omotel,
+        [AS_HELP_STRING([--enable-omotel],[Enable OpenTelemetry output module @<:@default=no@:>@])],
         [case "${enableval}" in
-         yes) enable_omotlp="yes" ;;
-          no) enable_omotlp="no" ;;
-            *) AC_MSG_ERROR(bad value ${enableval} for --enable-omotlp) ;;
+         yes) enable_omotel="yes" ;;
+          no) enable_omotel="no" ;;
+            *) AC_MSG_ERROR(bad value ${enableval} for --enable-omotel) ;;
          esac],
-        [enable_omotlp=no]
+        [enable_omotel=no]
 )
-OMOTLP_HTTP_CFLAGS=""
-OMOTLP_HTTP_LIBS=""
-if test "x$enable_omotlp" = "xyes"; then
-        PKG_CHECK_MODULES([OMOTLP_HTTP], [libcurl libfastjson])
+OMOTEL_HTTP_CFLAGS=""
+OMOTEL_HTTP_LIBS=""
+if test "x$enable_omotel" = "xyes"; then
+        PKG_CHECK_MODULES([OMOTEL_HTTP], [libcurl libfastjson])
 fi
-AC_SUBST([OMOTLP_HTTP_CFLAGS])
-AC_SUBST([OMOTLP_HTTP_LIBS])
-AM_CONDITIONAL(ENABLE_OMOTLP, test x$enable_omotlp = xyes)
+AC_SUBST([OMOTEL_HTTP_CFLAGS])
+AC_SUBST([OMOTEL_HTTP_LIBS])
+AM_CONDITIONAL(ENABLE_OMOTEL, test x$enable_omotel = xyes)
 
 # support for kafka input output
 AC_ARG_ENABLE(omkafka,
@@ -3209,7 +3209,7 @@ AC_CONFIG_FILES([Makefile \
 		plugins/immark/Makefile \
 		plugins/imklog/Makefile \
                 plugins/omhdfs/Makefile \
-                plugins/omotlp/Makefile \
+                plugins/omotel/Makefile \
                 plugins/omkafka/Makefile \
 		plugins/omprog/Makefile \
 		plugins/mmexternal/Makefile \
@@ -3358,7 +3358,7 @@ echo "    omstdout module will be compiled:         $enable_omstdout"
 echo "    omsendertrack module will be compiled:    $enable_omsendertrack"
 echo "    omjournal module will be compiled:        $enable_omjournal"
 echo "    omhdfs module will be compiled:           $enable_omhdfs"
-echo "    omotlp module will be compiled:           $enable_omotlp"
+echo "    omotel module will be compiled:           $enable_omotel"
 echo "    omelasticsearch module will be compiled:  $enable_elasticsearch"
 echo "    omclickhouse module will be compiled:     $enable_clickhouse"
 echo "    omhttp module will be compiled:           $enable_omhttp"

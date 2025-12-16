@@ -1,8 +1,8 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
-## omotlp-compression.sh -- compression and resource config test for omotlp module
+## omotel-compression.sh -- compression and resource config test for omotel module
 ##
-## Tests that omotlp correctly sends gzip-compressed payloads
+## Tests that omotel correctly sends gzip-compressed payloads
 ## and that OTEL Collector can decode them. Also tests resource parameter
 ## configuration with string, integer, double, and boolean attributes.
 
@@ -32,12 +32,12 @@ generate_conf
 add_conf '
 template(name="otlpBody" type="string" string="msgnum:%msg:F,58:2%")
 
-module(load="../plugins/omotlp/.libs/omotlp")
+module(load="../plugins/omotel/.libs/omotel")
 
 if $msg contains "msgnum:" then
 	action(
-		name="omotlp-http"
-		type="omotlp"
+		name="omotel-http"
+		type="omotel"
 		template="otlpBody"
 		endpoint="http://127.0.0.1:'$otel_port'"
 		path="/v1/logs"
@@ -85,14 +85,14 @@ try:
             if "resourceLogs" in payload:
                 payloads.append(payload)
 except Exception as exc:
-    sys.stderr.write(f"omotlp-compression: failed to parse OTLP output: {exc}\n")
+    sys.stderr.write(f"omotel-compression: failed to parse OTLP output: {exc}\n")
     sys.exit(1)
 
 if not payloads:
-    sys.stderr.write("omotlp-compression: OTLP output did not contain any resourceLogs\n")
+    sys.stderr.write("omotel-compression: OTLP output did not contain any resourceLogs\n")
     sys.exit(1)
 
-sys.stdout.write(f"omotlp-compression: found {len(payloads)} payload(s)\n")
+sys.stdout.write(f"omotel-compression: found {len(payloads)} payload(s)\n")
 
 # Extract resource attributes from the first payload
 resource_attrs = {}
@@ -104,7 +104,7 @@ for payload in payloads:
             if "resource" in resource_log and "attributes" in resource_log["resource"]:
                 found_resource = True
                 attrs = resource_log["resource"]["attributes"]
-                sys.stdout.write(f"omotlp-compression: found {len(attrs)} resource attributes\n")
+                sys.stdout.write(f"omotel-compression: found {len(attrs)} resource attributes\n")
                 
                 # Parse attributes into a dictionary
                 for attr_entry in attrs:
@@ -129,16 +129,16 @@ for payload in payloads:
             break
 
 if not found_resource:
-    sys.stderr.write("omotlp-compression: no resource attributes found in OTLP output\n")
+    sys.stderr.write("omotel-compression: no resource attributes found in OTLP output\n")
     sys.exit(1)
 
-sys.stdout.write(f"omotlp-compression: extracted {len(resource_attrs)} resource attributes\n")
+sys.stdout.write(f"omotel-compression: extracted {len(resource_attrs)} resource attributes\n")
 
 # Expected attributes (automatic + custom)
 expected_attrs = {
     # Automatic attributes (always present)
     "service.name": ("string", "test-service"),  # Overridden by custom config
-    "telemetry.sdk.name": ("string", "rsyslog-omotlp"),
+    "telemetry.sdk.name": ("string", "rsyslog-omotel"),
     "telemetry.sdk.language": ("string", "C"),
     
     # Custom attributes from resource parameter
@@ -168,7 +168,7 @@ for key, (expected_type, expected_value) in expected_attrs.items():
         errors.append(f"attribute {key}: value mismatch (expected {expected_value}, got {actual_value})")
         continue
     
-    sys.stdout.write(f"omotlp-compression: verified {key} = {actual_value} ({actual_type})\n")
+    sys.stdout.write(f"omotel-compression: verified {key} = {actual_value} ({actual_type})\n")
 
 # Check for telemetry.sdk.version (automatic, but version may vary)
 if "telemetry.sdk.version" not in resource_attrs:
@@ -178,15 +178,15 @@ else:
     if sdk_type != "string" or not sdk_version:
         errors.append(f"telemetry.sdk.version has invalid value: {sdk_version}")
     else:
-        sys.stdout.write(f"omotlp-compression: verified telemetry.sdk.version = {sdk_version}\n")
+        sys.stdout.write(f"omotel-compression: verified telemetry.sdk.version = {sdk_version}\n")
 
 if errors:
-    sys.stderr.write("omotlp-compression: resource attribute verification errors:\n")
+    sys.stderr.write("omotel-compression: resource attribute verification errors:\n")
     for error in errors:
         sys.stderr.write(f"  - {error}\n")
     sys.exit(1)
 
-sys.stdout.write(f"omotlp-compression: successfully verified all resource attributes\n")
+sys.stdout.write(f"omotel-compression: successfully verified all resource attributes\n")
 PY
 
 seq_check

@@ -1,14 +1,14 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
-## omotlp-proxy.sh -- proxy support test for omotlp module
+## omotel-proxy.sh -- proxy support test for omotel module
 ##
-## Tests that omotlp correctly uses HTTP proxy to forward requests to
+## Tests that omotel correctly uses HTTP proxy to forward requests to
 ## OTEL Collector, with and without proxy authentication.
 
 . ${srcdir:=.}/diag.sh init
 
-# Check if omotlp module is available
-require_plugin omotlp
+# Check if omotel module is available
+require_plugin omotel
 
 export NUMMESSAGES=100
 export EXTRA_EXIT="otel proxy"
@@ -38,7 +38,7 @@ fi
 echo "Using OTEL Collector port: $otel_port"
 
 # Start proxy server (no authentication)
-proxy_server_py="$srcdir/omotlp_proxy_server.py"
+proxy_server_py="$srcdir/omotel_proxy_server.py"
 if [ ! -f "$proxy_server_py" ]; then
 	echo "ERROR: Proxy server script not found: $proxy_server_py"
 	error_exit 1
@@ -101,12 +101,12 @@ generate_conf
 add_conf '
 template(name="otlpBody" type="string" string="msgnum:%msg:F,58:2%")
 
-module(load="../plugins/omotlp/.libs/omotlp")
+module(load="../plugins/omotel/.libs/omotel")
 
 if $msg contains "msgnum:" then
 	action(
-		name="omotlp-proxy"
-		type="omotlp"
+		name="omotel-proxy"
+		type="omotel"
 		template="otlpBody"
 		endpoint="http://127.0.0.1:'$otel_port'"
 		path="/v1/logs"
@@ -178,14 +178,14 @@ try:
                             if "logRecords" in scope_log:
                                 records.extend(scope_log["logRecords"])
 except Exception as exc:
-    sys.stderr.write(f"omotlp-proxy: failed to parse OTLP output: {exc}\n")
+    sys.stderr.write(f"omotel-proxy: failed to parse OTLP output: {exc}\n")
     sys.exit(1)
 
 if not records:
-    sys.stderr.write("omotlp-proxy: OTLP output did not contain any logRecords\n")
+    sys.stderr.write("omotel-proxy: OTLP output did not contain any logRecords\n")
     sys.exit(1)
 
-sys.stdout.write(f"omotlp-proxy: successfully received {len(records)} log records via proxy\n")
+sys.stdout.write(f"omotel-proxy: successfully received {len(records)} log records via proxy\n")
 PY
 
 seq_check
@@ -247,12 +247,12 @@ generate_conf
 add_conf '
 template(name="otlpBody" type="string" string="msgnum:%msg:F,58:2%")
 
-module(load="../plugins/omotlp/.libs/omotlp")
+module(load="../plugins/omotel/.libs/omotel")
 
 if $msg contains "msgnum:" then
 	action(
-		name="omotlp-proxy-auth"
-		type="omotlp"
+		name="omotel-proxy-auth"
+		type="omotel"
 		template="otlpBody"
 		endpoint="http://127.0.0.1:'$otel_port2'"
 		path="/v1/logs"
