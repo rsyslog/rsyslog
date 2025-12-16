@@ -33,8 +33,7 @@ Module usage
 
 .. code-block:: rsyslog
 
-   module(load="omudpspoof")
-   action(type="omudpspoof" template="RSYSLOG_TraditionalForwardFormat" target="192.0.2.1")
+   module(load="omudpspoof" template="RSYSLOG_TraditionalForwardFormat")
 
 Action usage
 ------------
