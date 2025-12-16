@@ -1,8 +1,8 @@
 .. _param-omhttp-healthchecktimedelay:
 .. _omhttp.parameter.input.healthchecktimedelay:
 
-healthchecktimeout
-==================
+healthchecktimedelay
+====================
 
 .. index::
    single: omhttp; healthchecktimedelay
@@ -26,7 +26,7 @@ This parameter applies to :doc:`../../configuration/modules/omhttp`.
 
 Description
 -----------
-Sets the number of seconds omhttp waits before doing an other health check to the API.
+Sets the number of seconds omhttp waits before doing another health check to the API.
 This parameter is used only if "checkpath" is set up.
 
 Input usage

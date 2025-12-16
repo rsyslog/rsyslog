@@ -388,6 +388,7 @@ BEGINfreeInstance
         free(pData->listObjStats);
     }
     free(pData->statsName);
+    free(pData->lastHealthCheck);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
@@ -575,13 +576,12 @@ static rsRetVal ATTR_NONNULL() checkConn(wrkrInstanceData_t *const pWrkrData) {
      *   4- time_t is an unsigned long (https://koor.fr/C/ctime/time_t.wp)
      */
     time_t now = time(NULL);
-    struct tm now_tm = *localtime(&now);
     if (pWrkrData->pData->lastHealthCheck != NULL && pWrkrData->pData->healthCheckTimeDelay != -1) {
-        const time_t currentServerHealthCheck = pWrkrData->pData->lastHealthCheck[pWrkrData->serverIndex];
-        struct tm lastcheck_tm = *localtime(&currentServerHealthCheck);
-        lastcheck_tm.tm_sec += (int)pWrkrData->pData->healthCheckTimeDelay;
-
-        if (difftime(mktime(&lastcheck_tm), mktime(&now_tm)) >= 0) {
+        if (pWrkrData->pData->lastHealthCheck[pWrkrData->serverIndex] != 0 &&
+            now <
+                (pWrkrData->pData->lastHealthCheck[pWrkrData->serverIndex] + pWrkrData->pData->healthCheckTimeDelay)) {
+            DBGPRINTF("omhttp: health check for server %d skipped due to healthCheckTimeDelay\n",
+                      pWrkrData->serverIndex);
             ABORT_FINALIZE(RS_RET_OK);
         }
     }
@@ -614,6 +614,8 @@ static rsRetVal ATTR_NONNULL() checkConn(wrkrInstanceData_t *const pWrkrData) {
         free(healthUrl);
 
         if (res == CURLE_OK) {
+            pWrkrData->pData->lastHealthCheck[pWrkrData->serverIndex] = now;
+
             DBGPRINTF(
                 "omhttp: checkConn %s completed with success "
                 "on attempt %d\n",
@@ -2482,8 +2484,10 @@ BEGINnewActInst
     }
 
     if (servers != NULL) {
+        time_t tmp_lastHealthCheckArray[servers->nmemb];
         pData->numServers = servers->nmemb;
         pData->serverBaseUrls = malloc(servers->nmemb * sizeof(uchar *));
+
         if (pData->serverBaseUrls == NULL) {
             LogError(0, RS_RET_ERR,
                      "omhttp: unable to allocate buffer "
@@ -2525,7 +2529,10 @@ BEGINnewActInst
             CHKiRet(computeBaseUrl(serverParam, pData->defaultPort, pData->useHttps, pData->serverBaseUrls + i));
             free(serverParam);
             serverParam = NULL;
+            tmp_lastHealthCheckArray[i] = time(NULL);
         }
+        CHKmalloc(pData->lastHealthCheck = malloc(sizeof(tmp_lastHealthCheckArray)));
+        memcpy(pData->lastHealthCheck, tmp_lastHealthCheckArray, sizeof(tmp_lastHealthCheckArray));
     } else {
         LogMsg(0, RS_RET_OK, LOG_WARNING, "omhttp: No servers specified, using localhost");
         pData->numServers = 1;
@@ -2645,7 +2652,7 @@ NO_LEGACY_CONF_parseSelectorAct
     BEGINqueryEtryPt CODESTARTqueryEtryPt;
 CODEqueryEtryPt_STD_OMODTX_QUERIES CODEqueryEtryPt_STD_OMOD8_QUERIES CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES
     CODEqueryEtryPt_doHUP CODEqueryEtryPt_doHUPWrkr /* Load the worker HUP handling code */
-        CODEqueryEtryPt_STD_CONF2_QUERIES
+    CODEqueryEtryPt_STD_CONF2_QUERIES
 ENDqueryEtryPt
 
 
