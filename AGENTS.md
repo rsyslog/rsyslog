@@ -109,7 +109,7 @@ When the user says the codeword "BUILD" optionally followed by configure options
 Examples:
 - `BUILD` - Uses default testbench configuration
 - `BUILD --enable-testbench --enable-mmsnareparse` - Custom configuration with mmsnareparse module
-- `BUILD --enable-testbench --enable-imdiag --enable-omstdout --enable-mmsnareparse --enable-omotlp` - Multiple modules
+- `BUILD --enable-testbench --enable-imdiag --enable-omstdout --enable-mmsnareparse --enable-omotel` - Multiple modules
 
 ### `TEST [test-script-names]`
 
@@ -397,7 +397,7 @@ touch /tmp/rsyslog_base_env.flag
    # For multiple modules:
    ./configure --enable-testbench --enable-imdiag --enable-omstdout \
        --enable-mmsnareparse \
-       --enable-omotlp \
+       --enable-omotel \
        --enable-imhttp
    ```
 

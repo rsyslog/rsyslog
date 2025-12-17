@@ -1,14 +1,14 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
-## omotlp-attribute-mapping.sh -- test custom attribute mapping for omotlp module
+## omotel-attribute-mapping.sh -- test custom attribute mapping for omotel module
 ##
 ## Tests that custom attribute mappings (attributeMap) correctly remap
 ## rsyslog properties to custom OTLP attribute names.
 
 . ${srcdir:=.}/diag.sh init
 
-# Check if omotlp module is available
-require_plugin omotlp
+# Check if omotel module is available
+require_plugin omotel
 
 export NUMMESSAGES=10
 export EXTRA_EXIT=otel
@@ -49,12 +49,12 @@ generate_conf
 add_conf '
 template(name="otlpBody" type="string" string="%msg%")
 
-module(load="../plugins/omotlp/.libs/omotlp")
+module(load="../plugins/omotel/.libs/omotel")
 
 # Export with custom attribute mapping
 action(
-	name="omotlp-http"
-	type="omotlp"
+	name="omotel-http"
+	type="omotel"
 	template="otlpBody"
 	endpoint="http://127.0.0.1:'$otel_port'"
 	path="/v1/logs"
@@ -103,14 +103,14 @@ try:
                             if "logRecords" in scope_log:
                                 records.extend(scope_log["logRecords"])
 except Exception as exc:
-    sys.stderr.write(f"omotlp-attribute-mapping: failed to parse OTLP output: {exc}\n")
+    sys.stderr.write(f"omotel-attribute-mapping: failed to parse OTLP output: {exc}\n")
     sys.exit(1)
 
 if not records:
-    sys.stderr.write("omotlp-attribute-mapping: OTLP output did not contain any logRecords\n")
+    sys.stderr.write("omotel-attribute-mapping: OTLP output did not contain any logRecords\n")
     sys.exit(1)
 
-sys.stdout.write(f"omotlp-attribute-mapping: found {len(records)} log records in OTLP output\n")
+sys.stdout.write(f"omotel-attribute-mapping: found {len(records)} log records in OTLP output\n")
 
 # Filter records to only test messages (contain "test message" in body)
 test_records = []
@@ -121,10 +121,10 @@ for record in records:
         test_records.append(record)
 
 if len(test_records) < 10:
-    sys.stderr.write(f"omotlp-attribute-mapping: expected at least 10 test records, found {len(test_records)}\n")
+    sys.stderr.write(f"omotel-attribute-mapping: expected at least 10 test records, found {len(test_records)}\n")
     sys.exit(1)
 
-sys.stdout.write(f"omotlp-attribute-mapping: filtered to {len(test_records)} test records\n")
+sys.stdout.write(f"omotel-attribute-mapping: filtered to {len(test_records)} test records\n")
 
 # Expected test data (from input file)
 expected_test_data = [
@@ -237,15 +237,15 @@ for idx, record in enumerate(test_records[:10]):  # Only check first 10 test rec
         if facility_int != expected_facility:
             errors.append(f"record {idx}: log.syslog.facility.code mismatch: expected {expected_facility}, got {facility_int}")
     
-    sys.stdout.write(f"omotlp-attribute-mapping: record {idx}: verified {len(attr_dict)} attributes\n")
+    sys.stdout.write(f"omotel-attribute-mapping: record {idx}: verified {len(attr_dict)} attributes\n")
 
 if errors:
-    sys.stderr.write("omotlp-attribute-mapping: attribute mapping verification errors:\n")
+    sys.stderr.write("omotel-attribute-mapping: attribute mapping verification errors:\n")
     for error in errors:
         sys.stderr.write(f"  - {error}\n")
     sys.exit(1)
 
-sys.stdout.write(f"omotlp-attribute-mapping: successfully verified custom attribute mappings for {len(test_records[:10])} test records\n")
+sys.stdout.write(f"omotel-attribute-mapping: successfully verified custom attribute mappings for {len(test_records[:10])} test records\n")
 PY
 
 exit_test

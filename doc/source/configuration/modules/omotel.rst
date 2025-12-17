@@ -1,19 +1,19 @@
-.. _module-omotlp:
+.. _module-omotel:
 
 .. meta::
-   :description: Scaffolding for the omotlp OpenTelemetry output module.
-   :keywords: omotlp, otlp, opentelemetry, rsyslog module
+   :description: Scaffolding for the omotel OpenTelemetry output module.
+   :keywords: omotel, otlp, opentelemetry, rsyslog module
 
 .. summary-start
 
-Phase 1 of the omotlp output plugin streams OpenTelemetry logs over
+Phase 1 of the omotel output plugin streams OpenTelemetry logs over
 OTLP/HTTP JSON with configurable batching, gzip compression, retry/backoff
 controls, TLS/mTLS support for secure HTTPS connections, and HTTP proxy
 support for corporate networks and firewalled environments.
 
 .. summary-end
 
-omotlp: OpenTelemetry output module (preview)
+omotel: OpenTelemetry output module (preview)
 =============================================
 
 .. warning::
@@ -25,7 +25,7 @@ omotlp: OpenTelemetry output module (preview)
 Overview
 --------
 
-``omotlp`` prepares rsyslog for native :abbr:`OTLP (OpenTelemetry Log Protocol)`
+``omotel`` prepares rsyslog for native :abbr:`OTLP (OpenTelemetry Log Protocol)`
 exports. Phase 1 focuses on the OTLP/HTTP JSON transport path: the module maps
 rsyslog metadata into the canonical OTLP JSON structure, joins the configured
 endpoint and path, and posts batches of rendered payloads via ``libcurl`` using
@@ -38,8 +38,8 @@ Availability
 ------------
 
 The module is built only when ``./configure`` is invoked with
-``--enable-omotlp=yes`` and both ``libcurl`` and ``libfastjson`` are present.
-The default ``--enable-omotlp`` setting is ``no``, so you must opt in
+``--enable-omotel=yes`` and both ``libcurl`` and ``libfastjson`` are present.
+The default ``--enable-omotel`` setting is ``no``, so you must opt in
 explicitly. The HTTP transport depends on ``libcurl`` at runtime.
 
 Configuration
@@ -49,7 +49,7 @@ The action parameters listed below mirror the current transport design. All
 parameters are optional and fall back to sensible defaults inspired by the
 `OTLP specification <https://opentelemetry.io/docs/specs/otlp/>`_.
 
-.. csv-table:: ``omotlp`` action parameters
+.. csv-table:: ``omotel`` action parameters
    :header: "Parameter", "Type", "Default", "Description"
    :widths: auto
 
@@ -120,9 +120,9 @@ other non-success responses discard the message and log an error.
 
 .. code-block:: none
 
-   module(load="omotlp")
+   module(load="omotel")
    action(
-     type="omotlp"
+     type="omotel"
      endpoint="https://otel-collector:4318"
      path="/v1/logs"
      protocol="http/json"
@@ -152,20 +152,20 @@ Trace Correlation Example
 
 The following example demonstrates how to extract trace context from JSON messages
 and populate OTLP trace correlation fields. The trace context is extracted from
-the message using ``mmjsonparse`` and then exported via ``omotlp`` with trace
+the message using ``mmjsonparse`` and then exported via ``omotel`` with trace
 correlation enabled.
 
 .. code-block:: none
 
    module(load="mmjsonparse")
-   module(load="omotlp")
+   module(load="omotel")
 
    # Parse JSON messages to extract trace properties
    action(type="mmjsonparse" mode="find-json")
 
    # Export with trace correlation
    action(
-     type="omotlp"
+     type="omotel"
      endpoint="https://otel-collector:4318"
      path="/v1/logs"
      trace_id.property="trace_id"
@@ -187,9 +187,9 @@ resource semantic conventions compliance.
 
 .. code-block:: none
 
-   module(load="omotlp")
+   module(load="omotel")
    action(
-     type="omotlp"
+     type="omotel"
      endpoint="https://otel-collector:4318"
      path="/v1/logs"
      resource='{
@@ -220,9 +220,9 @@ bundle and optional mutual TLS authentication with client certificates.
 
 .. code-block:: none
 
-   module(load="omotlp")
+   module(load="omotel")
    action(
-     type="omotlp"
+     type="omotel"
      endpoint="https://otel-collector:4318"
      path="/v1/logs"
      tls.cacert="/etc/ssl/certs/ca-bundle.pem"
@@ -273,14 +273,14 @@ Proxy Configuration Example
 
 The following example demonstrates how to configure HTTP proxy support for
 corporate networks or environments that require traffic to pass through a proxy
-server. Proxy support enables omotlp to work through firewalls, network gateways,
+server. Proxy support enables omotel to work through firewalls, network gateways,
 and corporate proxies.
 
 .. code-block:: none
 
-   module(load="omotlp")
+   module(load="omotel")
    action(
-     type="omotlp"
+     type="omotel"
      endpoint="https://otel-collector:4318"
      path="/v1/logs"
      proxy="http://proxy.example.com:8080"
@@ -290,9 +290,9 @@ For proxies that require authentication, provide both username and password:
 
 .. code-block:: none
 
-   module(load="omotlp")
+   module(load="omotel")
    action(
-     type="omotlp"
+     type="omotel"
      endpoint="https://otel-collector:4318"
      path="/v1/logs"
      proxy="http://proxy.example.com:8080"
@@ -331,7 +331,7 @@ header for each HTTP request.
 When a proxy is configured, all HTTP requests to the OTLP collector endpoint
 are routed through the proxy server. The proxy acts as an intermediary,
 forwarding requests to the target collector and returning responses. This
-enables omotlp to work in environments where:
+enables omotel to work in environments where:
 
 - Direct connections to the collector are blocked by firewall rules
 - Network traffic must pass through a corporate proxy gateway
@@ -375,7 +375,7 @@ log data model. Each batch wraps log records in the following hierarchy:
    :widths: auto
 
    "``service.name``", "``rsyslog``"
-   "``telemetry.sdk.name``", "``rsyslog-omotlp``"
+   "``telemetry.sdk.name``", "``rsyslog-omotel``"
    "``telemetry.sdk.language``", "``C``"
    "``telemetry.sdk.version``", "rsyslog version string"
    "``host.name``", "hostname (only if uniform across all records in batch)"
@@ -386,7 +386,7 @@ log data model. Each batch wraps log records in the following hierarchy:
    :header: "Field", "Value"
    :widths: auto
 
-   "``scope.name``", "``rsyslog.omotlp``"
+   "``scope.name``", "``rsyslog.omotel``"
    "``scope.version``", "rsyslog version string"
 
 **Per-record attributes** (derived from syslog metadata):
@@ -448,9 +448,9 @@ mapping to match collector expectations or custom severity schemes:
 
 .. code-block:: none
 
-   module(load="omotlp")
+   module(load="omotel")
    action(
-     type="omotlp"
+     type="omotel"
      endpoint="https://otel-collector:4318"
      path="/v1/logs"
      attributeMap='{
@@ -486,8 +486,8 @@ Statistic Counter
 =================
 
 This plugin maintains :doc:`statistics <../rsyslog_statistic_counter>` for each
-worker instance. The statistic origin is named "omotlp" with the instance URL
-appended (e.g., "omotlp-http://127.0.0.1:4318/v1/logs"). Statistics are visible
+worker instance. The statistic origin is named "omotel" with the instance URL
+appended (e.g., "omotel-http://127.0.0.1:4318/v1/logs"). Statistics are visible
 via the :doc:`impstats <../modules/impstats>` module when enabled.
 
 The following counters are tracked per worker instance:
@@ -519,4 +519,4 @@ The following counters are tracked per worker instance:
 
 Counters are thread-safe and use atomic operations for updates. Each worker
 instance maintains its own statistics object, allowing operators to monitor
-performance per action instance when multiple omotlp actions are configured.
+performance per action instance when multiple omotel actions are configured.

@@ -1,15 +1,15 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
-## omotlp-tls.sh -- TLS/mTLS support test for omotlp module
+## omotel-tls.sh -- TLS/mTLS support test for omotel module
 ##
-## Tests that omotlp correctly establishes HTTPS connections with TLS
+## Tests that omotel correctly establishes HTTPS connections with TLS
 ## certificate verification, and optionally with mutual TLS (mTLS) using
 ## client certificates.
 
 . ${srcdir:=.}/diag.sh init
 
-# Check if omotlp module is available
-require_plugin omotlp
+# Check if omotel module is available
+require_plugin omotel
 
 export NUMMESSAGES=500
 export EXTRA_EXIT=otel
@@ -114,12 +114,12 @@ generate_conf
 add_conf '
 template(name="otlpBody" type="string" string="msgnum:%msg:F,58:2%")
 
-module(load="../plugins/omotlp/.libs/omotlp")
+module(load="../plugins/omotel/.libs/omotel")
 
 if $msg contains "msgnum:" then
 	action(
-		name="omotlp-https"
-		type="omotlp"
+		name="omotel-https"
+		type="omotel"
 		template="otlpBody"
 		endpoint="https://127.0.0.1:'$otel_port'"
 		path="/v1/logs"
@@ -172,14 +172,14 @@ try:
                             if "logRecords" in scope_log:
                                 records.extend(scope_log["logRecords"])
 except Exception as exc:
-    sys.stderr.write(f"omotlp-tls: failed to parse OTLP output: {exc}\n")
+    sys.stderr.write(f"omotel-tls: failed to parse OTLP output: {exc}\n")
     sys.exit(1)
 
 if not records:
-    sys.stderr.write("omotlp-tls: OTLP output did not contain any logRecords\n")
+    sys.stderr.write("omotel-tls: OTLP output did not contain any logRecords\n")
     sys.exit(1)
 
-sys.stdout.write(f"omotlp-tls: successfully received {len(records)} log records via HTTPS/TLS\n")
+sys.stdout.write(f"omotel-tls: successfully received {len(records)} log records via HTTPS/TLS\n")
 PY
 
 seq_check

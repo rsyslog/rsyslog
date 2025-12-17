@@ -1,5 +1,5 @@
 /**
- * @file omotlp.c
+ * @file omotel.c
  * @brief OpenTelemetry (OTLP) output module for rsyslog
  *
  * This module provides native OpenTelemetry log export capabilities using
@@ -58,22 +58,22 @@
 #include "statsobj.h"
 
 #include "otlp_json.h"
-#include "omotlp_http.h"
+#include "omotel_http.h"
 
 MODULE_TYPE_OUTPUT;
 MODULE_TYPE_NOKEEP;
-MODULE_CNFNAME("omotlp")
+MODULE_CNFNAME("omotel")
 
 DEF_OMOD_STATIC_DATA;
 DEFobjCurrIf(datetime);
 DEFobjCurrIf(prop);
 DEFobjCurrIf(statsobj);
 
-typedef enum omotlp_compression_e {
-    OMOTLP_COMPRESSION_UNSET = 0,
-    OMOTLP_COMPRESSION_NONE,
-    OMOTLP_COMPRESSION_GZIP,
-} omotlp_compression_t;
+typedef enum omotel_compression_e {
+    OMOTEL_COMPRESSION_UNSET = 0,
+    OMOTEL_COMPRESSION_NONE,
+    OMOTEL_COMPRESSION_GZIP,
+} omotel_compression_t;
 
 typedef struct header_list_s {
     char **values;
@@ -104,8 +104,8 @@ typedef struct severity_map_s {
 } severity_map_t;
 
 enum {
-    OMOTLP_OMSR_IDX_MESSAGE = 0,
-    OMOTLP_OMSR_IDX_BODY = 1,
+    OMOTEL_OMSR_IDX_MESSAGE = 0,
+    OMOTEL_OMSR_IDX_BODY = 1,
 };
 
 typedef struct _instanceData {
@@ -122,7 +122,7 @@ typedef struct _instanceData {
     long retryMaxMs;
     unsigned int retryMaxRetries;
     unsigned int retryJitterPercent;
-    omotlp_compression_t compression_mode;
+    omotel_compression_t compression_mode;
     int compressionConfigured;
     int headersConfigured;
     int bearerConfigured;
@@ -154,8 +154,8 @@ typedef struct _instanceData {
     uchar *proxyPassword;
 } instanceData;
 
-typedef struct omotlp_batch_entry_s {
-    omotlp_log_record_t record;
+typedef struct omotel_batch_entry_s {
+    omotel_log_record_t record;
     char *body;
     char *hostname;
     char *app_name;
@@ -163,20 +163,20 @@ typedef struct omotlp_batch_entry_s {
     char *msg_id;
     char *trace_id; /* Allocated string for trace_id */
     char *span_id; /* Allocated string for span_id */
-} omotlp_batch_entry_t;
+} omotel_batch_entry_t;
 
-typedef struct omotlp_batch_state_s {
-    omotlp_batch_entry_t *entries;
+typedef struct omotel_batch_state_s {
+    omotel_batch_entry_t *entries;
     size_t count;
     size_t capacity;
     size_t estimated_bytes;
     long long first_enqueue_ms;
-} omotlp_batch_state_t;
+} omotel_batch_state_t;
 
 typedef struct wrkrInstanceData {
     instanceData *pData;
-    omotlp_http_client_t *http_client;
-    omotlp_batch_state_t batch;
+    omotel_http_client_t *http_client;
+    omotel_batch_state_t batch;
     pthread_t flush_thread;
     pthread_mutex_t batch_mutex;
     int flush_thread_running;
@@ -324,7 +324,7 @@ static rsRetVal applyEnvDefaults(instanceData *pData) {
         }
     }
 
-    if (!pData->compressionConfigured && pData->compression_mode == OMOTLP_COMPRESSION_UNSET) {
+    if (!pData->compressionConfigured && pData->compression_mode == OMOTEL_COMPRESSION_UNSET) {
         value = firstPopulatedEnv(compressionEnvVars);
         if (value != NULL) {
             CHKiRet(set_compression_mode(pData, value));
@@ -412,7 +412,7 @@ static rsRetVal validateProtocol(instanceData *pData) {
         goto finalize_it;
     }
 
-    LogError(0, RS_RET_NOT_IMPLEMENTED, "omotlp: protocol '%s' is not supported by the scaffolding build",
+    LogError(0, RS_RET_NOT_IMPLEMENTED, "omotel: protocol '%s' is not supported by the scaffolding build",
              pData->protocol);
     ABORT_FINALIZE(RS_RET_NOT_IMPLEMENTED);
 
@@ -495,17 +495,17 @@ static const severity_mapping_t severity_lookup[8] = {{24u, "EMERGENCY"}, {23u, 
                                                       {17u, "ERROR"},     {13u, "WARNING"}, {11u, "NOTICE"},
                                                       {9u, "INFO"},       {5u, "DEBUG"}};
 
-#define OMOTLP_DEFAULT_BATCH_MAX_ITEMS 512u
-#define OMOTLP_DEFAULT_BATCH_MAX_BYTES (512u * 1024u)
-#define OMOTLP_DEFAULT_BATCH_TIMEOUT_MS 5000L
-#define OMOTLP_DEFAULT_RETRY_INITIAL_MS 1000L
-#define OMOTLP_DEFAULT_RETRY_MAX_MS 30000L
-#define OMOTLP_DEFAULT_RETRY_MAX_RETRIES 5u
-#define OMOTLP_DEFAULT_RETRY_JITTER_PERCENT 20u
+#define OMOTEL_DEFAULT_BATCH_MAX_ITEMS 512u
+#define OMOTEL_DEFAULT_BATCH_MAX_BYTES (512u * 1024u)
+#define OMOTEL_DEFAULT_BATCH_TIMEOUT_MS 5000L
+#define OMOTEL_DEFAULT_RETRY_INITIAL_MS 1000L
+#define OMOTEL_DEFAULT_RETRY_MAX_MS 30000L
+#define OMOTEL_DEFAULT_RETRY_MAX_RETRIES 5u
+#define OMOTEL_DEFAULT_RETRY_JITTER_PERCENT 20u
 
-#define OMOTLP_BATCH_BASE_OVERHEAD 256u
-#define OMOTLP_BATCH_RECORD_OVERHEAD 256u
-#define OMOTLP_IDLE_FLUSH_INTERVAL_MS 1000L
+#define OMOTEL_BATCH_BASE_OVERHEAD 256u
+#define OMOTEL_BATCH_RECORD_OVERHEAD 256u
+#define OMOTEL_IDLE_FLUSH_INTERVAL_MS 1000L
 
 static void header_list_init(header_list_t *list) {
     if (list == NULL) {
@@ -772,12 +772,12 @@ static rsRetVal parse_long_param(const char *name, es_str_t *value, long min, lo
     errno = 0;
     parsed = strtol(text, &end, 10);
     if (errno != 0 || end == text || *end != '\0') {
-        LogError(0, RS_RET_PARAM_ERROR, "omotlp: invalid numeric value '%s' for parameter %s", text, name);
+        LogError(0, RS_RET_PARAM_ERROR, "omotel: invalid numeric value '%s' for parameter %s", text, name);
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
     if (parsed < min) {
-        LogError(0, RS_RET_PARAM_ERROR, "omotlp: value %ld for %s is below the minimum %ld", parsed, name, min);
+        LogError(0, RS_RET_PARAM_ERROR, "omotel: value %ld for %s is below the minimum %ld", parsed, name, min);
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
@@ -809,12 +809,12 @@ static rsRetVal parse_size_param(const char *name, es_str_t *value, size_t min, 
     errno = 0;
     parsed = strtoull(text, &end, 10);
     if (errno != 0 || end == text || *end != '\0') {
-        LogError(0, RS_RET_PARAM_ERROR, "omotlp: invalid size value '%s' for parameter %s", text, name);
+        LogError(0, RS_RET_PARAM_ERROR, "omotel: invalid size value '%s' for parameter %s", text, name);
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
     if (parsed < (unsigned long long)min) {
-        LogError(0, RS_RET_PARAM_ERROR, "omotlp: value %s for %s is below the minimum %zu", text, name, min);
+        LogError(0, RS_RET_PARAM_ERROR, "omotel: value %s for %s is below the minimum %zu", text, name, min);
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
@@ -846,12 +846,12 @@ static rsRetVal parse_uint_param(const char *name, es_str_t *value, unsigned int
     errno = 0;
     parsed = strtoul(text, &end, 10);
     if (errno != 0 || end == text || *end != '\0') {
-        LogError(0, RS_RET_PARAM_ERROR, "omotlp: invalid numeric value '%s' for parameter %s", text, name);
+        LogError(0, RS_RET_PARAM_ERROR, "omotel: invalid numeric value '%s' for parameter %s", text, name);
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
     if (parsed < (unsigned long)min) {
-        LogError(0, RS_RET_PARAM_ERROR, "omotlp: value %lu for %s is below the minimum %u", parsed, name, min);
+        LogError(0, RS_RET_PARAM_ERROR, "omotel: value %lu for %s is below the minimum %u", parsed, name, min);
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
@@ -877,12 +877,12 @@ static rsRetVal parse_headers_json(instanceData *pData, const char *text) {
 
     root = fjson_tokener_parse(text);
     if (root == NULL) {
-        LogError(0, RS_RET_PARAM_ERROR, "omotlp: failed to parse headers JSON '%s'", text);
+        LogError(0, RS_RET_PARAM_ERROR, "omotel: failed to parse headers JSON '%s'", text);
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
     if (!fjson_object_is_type(root, fjson_type_object)) {
-        LogError(0, RS_RET_PARAM_ERROR, "omotlp: headers parameter must be a JSON object");
+        LogError(0, RS_RET_PARAM_ERROR, "omotel: headers parameter must be a JSON object");
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
@@ -895,7 +895,7 @@ static rsRetVal parse_headers_json(instanceData *pData, const char *text) {
 
         if (value_obj != NULL) {
             if (!fjson_object_is_type(value_obj, fjson_type_string)) {
-                LogError(0, RS_RET_PARAM_ERROR, "omotlp: header '%s' value must be a string", key);
+                LogError(0, RS_RET_PARAM_ERROR, "omotel: header '%s' value must be a string", key);
                 ABORT_FINALIZE(RS_RET_PARAM_ERROR);
             }
             value = fjson_object_get_string(value_obj);
@@ -925,12 +925,12 @@ static rsRetVal parse_attribute_map(instanceData *pData, const char *json_text) 
 
     root = fjson_tokener_parse(json_text);
     if (root == NULL) {
-        LogError(0, RS_RET_PARAM_ERROR, "omotlp: failed to parse attributeMap JSON: %s", json_text);
+        LogError(0, RS_RET_PARAM_ERROR, "omotel: failed to parse attributeMap JSON: %s", json_text);
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
     if (!fjson_object_is_type(root, fjson_type_object)) {
-        LogError(0, RS_RET_PARAM_ERROR, "omotlp: attributeMap must be a JSON object");
+        LogError(0, RS_RET_PARAM_ERROR, "omotel: attributeMap must be a JSON object");
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
@@ -943,7 +943,7 @@ static rsRetVal parse_attribute_map(instanceData *pData, const char *json_text) 
         const char *otlp_attr = NULL;
 
         if (value_obj == NULL || !fjson_object_is_type(value_obj, fjson_type_string)) {
-            LogError(0, RS_RET_PARAM_ERROR, "omotlp: attributeMap value for '%s' must be a string", rsyslog_prop);
+            LogError(0, RS_RET_PARAM_ERROR, "omotel: attributeMap value for '%s' must be a string", rsyslog_prop);
             ABORT_FINALIZE(RS_RET_PARAM_ERROR);
         }
 
@@ -979,12 +979,12 @@ static rsRetVal parse_severity_map(instanceData *pData, const char *json_text) {
 
     root = fjson_tokener_parse(json_text);
     if (root == NULL) {
-        LogError(0, RS_RET_PARAM_ERROR, "omotlp: failed to parse severity.map JSON: %s", json_text);
+        LogError(0, RS_RET_PARAM_ERROR, "omotel: failed to parse severity.map JSON: %s", json_text);
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
     if (!fjson_object_is_type(root, fjson_type_object)) {
-        LogError(0, RS_RET_PARAM_ERROR, "omotlp: severity.map must be a JSON object");
+        LogError(0, RS_RET_PARAM_ERROR, "omotel: severity.map must be a JSON object");
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
@@ -1007,12 +1007,12 @@ static rsRetVal parse_severity_map(instanceData *pData, const char *json_text) {
         errno = 0;
         priority = (int)strtol(key, NULL, 10);
         if (errno != 0 || priority < 0 || priority > 7) {
-            LogError(0, RS_RET_PARAM_ERROR, "omotlp: severity.map key '%s' must be a number 0-7", key);
+            LogError(0, RS_RET_PARAM_ERROR, "omotel: severity.map key '%s' must be a number 0-7", key);
             ABORT_FINALIZE(RS_RET_PARAM_ERROR);
         }
 
         if (value_obj == NULL || !fjson_object_is_type(value_obj, fjson_type_object)) {
-            LogError(0, RS_RET_PARAM_ERROR, "omotlp: severity.map value for priority %d must be an object", priority);
+            LogError(0, RS_RET_PARAM_ERROR, "omotel: severity.map value for priority %d must be an object", priority);
             ABORT_FINALIZE(RS_RET_PARAM_ERROR);
         }
 
@@ -1021,12 +1021,12 @@ static rsRetVal parse_severity_map(instanceData *pData, const char *json_text) {
         fjson_object_object_get_ex(value_obj, "text", &text_obj);
 
         if (number_obj == NULL || !fjson_object_is_type(number_obj, fjson_type_int)) {
-            LogError(0, RS_RET_PARAM_ERROR, "omotlp: severity.map[%d] must have 'number' field (integer)", priority);
+            LogError(0, RS_RET_PARAM_ERROR, "omotel: severity.map[%d] must have 'number' field (integer)", priority);
             ABORT_FINALIZE(RS_RET_PARAM_ERROR);
         }
 
         if (text_obj == NULL || !fjson_object_is_type(text_obj, fjson_type_string)) {
-            LogError(0, RS_RET_PARAM_ERROR, "omotlp: severity.map[%d] must have 'text' field (string)", priority);
+            LogError(0, RS_RET_PARAM_ERROR, "omotel: severity.map[%d] must have 'text' field (string)", priority);
             ABORT_FINALIZE(RS_RET_PARAM_ERROR);
         }
 
@@ -1093,7 +1093,7 @@ static rsRetVal parse_headers_env(instanceData *pData, const char *text) {
 
         value = strchr(token, '=');
         if (value == NULL) {
-            LogError(0, RS_RET_PARAM_ERROR, "omotlp: header entry '%s' is missing '='", token);
+            LogError(0, RS_RET_PARAM_ERROR, "omotel: header entry '%s' is missing '='", token);
             ABORT_FINALIZE(RS_RET_PARAM_ERROR);
         }
 
@@ -1147,17 +1147,17 @@ static rsRetVal parse_timeout_string(const char *text, long *out) {
     errno = 0;
     parsed = strtol(number, &end, 10);
     if (errno != 0 || end == number || *end != '\0') {
-        LogError(0, RS_RET_PARAM_ERROR, "omotlp: invalid timeout value '%s'", text);
+        LogError(0, RS_RET_PARAM_ERROR, "omotel: invalid timeout value '%s'", text);
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
     if (parsed < 0) {
-        LogError(0, RS_RET_PARAM_ERROR, "omotlp: timeout must be non-negative, got %ld", parsed);
+        LogError(0, RS_RET_PARAM_ERROR, "omotel: timeout must be non-negative, got %ld", parsed);
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
     if (multiplier != 1 && parsed > LONG_MAX / multiplier) {
-        LogError(0, RS_RET_PARAM_ERROR, "omotlp: timeout '%s' exceeds range", text);
+        LogError(0, RS_RET_PARAM_ERROR, "omotel: timeout '%s' exceeds range", text);
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
@@ -1183,7 +1183,7 @@ static rsRetVal set_compression_mode(instanceData *pData, const char *value) {
 
     len = strlen(value);
     if (len >= sizeof(buffer)) {
-        LogError(0, RS_RET_PARAM_ERROR, "omotlp: unsupported compression value '%s'", value);
+        LogError(0, RS_RET_PARAM_ERROR, "omotel: unsupported compression value '%s'", value);
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
@@ -1193,11 +1193,11 @@ static rsRetVal set_compression_mode(instanceData *pData, const char *value) {
     buffer[len] = '\0';
 
     if (!strcmp(buffer, "gzip")) {
-        pData->compression_mode = OMOTLP_COMPRESSION_GZIP;
+        pData->compression_mode = OMOTEL_COMPRESSION_GZIP;
     } else if (!strcmp(buffer, "none")) {
-        pData->compression_mode = OMOTLP_COMPRESSION_NONE;
+        pData->compression_mode = OMOTEL_COMPRESSION_NONE;
     } else {
-        LogError(0, RS_RET_PARAM_ERROR, "omotlp: compression '%s' is not supported", value);
+        LogError(0, RS_RET_PARAM_ERROR, "omotel: compression '%s' is not supported", value);
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
@@ -1235,7 +1235,7 @@ finalize_it:
     RETiRet;
 }
 
-static void mapSeverity(int syslogSeverity, instanceData *pData, omotlp_log_record_t *record) {
+static void mapSeverity(int syslogSeverity, instanceData *pData, omotel_log_record_t *record) {
     if (syslogSeverity < 0 || syslogSeverity > 7) {
         record->severity_number = 0u;
         record->severity_text = NULL;
@@ -1511,7 +1511,7 @@ static char *extract_property_string(smsg_t *msg, const char *prop_name) {
  * @param[out] record OTLP log record to populate
  * @return RS_RET_OK on success
  */
-static rsRetVal populateLogRecord(smsg_t *msg, const char *body, instanceData *pData, omotlp_log_record_t *record) {
+static rsRetVal populateLogRecord(smsg_t *msg, const char *body, instanceData *pData, omotel_log_record_t *record) {
     int severity;
     char *trace_id_str = NULL;
     char *span_id_str = NULL;
@@ -1543,7 +1543,7 @@ static rsRetVal populateLogRecord(smsg_t *msg, const char *body, instanceData *p
                     record->trace_id = trace_id_str;
                     trace_id_str = NULL; /* Ownership transferred */
                 } else {
-                    LogError(0, RS_RET_OK, "omotlp: invalid trace_id format (expected 32 hex chars): %s", trace_id_str);
+                    LogError(0, RS_RET_OK, "omotel: invalid trace_id format (expected 32 hex chars): %s", trace_id_str);
                     free(trace_id_str);
                     trace_id_str = NULL;
                 }
@@ -1555,7 +1555,7 @@ static rsRetVal populateLogRecord(smsg_t *msg, const char *body, instanceData *p
                     record->span_id = span_id_str;
                     span_id_str = NULL; /* Ownership transferred */
                 } else {
-                    LogError(0, RS_RET_OK, "omotlp: invalid span_id format (expected 16 hex chars): %s", span_id_str);
+                    LogError(0, RS_RET_OK, "omotel: invalid span_id format (expected 16 hex chars): %s", span_id_str);
                     free(span_id_str);
                     span_id_str = NULL;
                 }
@@ -1603,7 +1603,7 @@ finalize_it:
     RETiRet;
 }
 
-static void omotlp_batch_entry_clear(omotlp_batch_entry_t *entry) {
+static void omotel_batch_entry_clear(omotel_batch_entry_t *entry) {
     if (entry == NULL) {
         return;
     }
@@ -1619,7 +1619,7 @@ static void omotlp_batch_entry_clear(omotlp_batch_entry_t *entry) {
     memset(entry, 0, sizeof(*entry));
 }
 
-static void omotlp_batch_clear(omotlp_batch_state_t *batch) {
+static void omotel_batch_clear(omotel_batch_state_t *batch) {
     size_t i;
 
     if (batch == NULL) {
@@ -1627,7 +1627,7 @@ static void omotlp_batch_clear(omotlp_batch_state_t *batch) {
     }
 
     for (i = 0; i < batch->count; ++i) {
-        omotlp_batch_entry_clear(&batch->entries[i]);
+        omotel_batch_entry_clear(&batch->entries[i]);
     }
 
     batch->count = 0u;
@@ -1635,19 +1635,19 @@ static void omotlp_batch_clear(omotlp_batch_state_t *batch) {
     batch->first_enqueue_ms = 0;
 }
 
-static void omotlp_batch_destroy(omotlp_batch_state_t *batch) {
+static void omotel_batch_destroy(omotel_batch_state_t *batch) {
     if (batch == NULL) {
         return;
     }
 
-    omotlp_batch_clear(batch);
+    omotel_batch_clear(batch);
     free(batch->entries);
     batch->entries = NULL;
     batch->capacity = 0u;
 }
 
-static rsRetVal omotlp_batch_ensure_capacity(omotlp_batch_state_t *batch, size_t needed) {
-    omotlp_batch_entry_t *tmp;
+static rsRetVal omotel_batch_ensure_capacity(omotel_batch_state_t *batch, size_t needed) {
+    omotel_batch_entry_t *tmp;
     size_t new_capacity;
 
     DEFiRet;
@@ -1665,12 +1665,12 @@ static rsRetVal omotlp_batch_ensure_capacity(omotlp_batch_state_t *batch, size_t
         new_capacity *= 2u;
     }
 
-    tmp = (omotlp_batch_entry_t *)realloc(batch->entries, new_capacity * sizeof(omotlp_batch_entry_t));
+    tmp = (omotel_batch_entry_t *)realloc(batch->entries, new_capacity * sizeof(omotel_batch_entry_t));
     if (tmp == NULL) {
         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
 
-    memset(tmp + batch->capacity, 0, (new_capacity - batch->capacity) * sizeof(omotlp_batch_entry_t));
+    memset(tmp + batch->capacity, 0, (new_capacity - batch->capacity) * sizeof(omotel_batch_entry_t));
     batch->entries = tmp;
     batch->capacity = new_capacity;
 
@@ -1702,7 +1702,7 @@ static rsRetVal gzip_compress_buffer(const uint8_t *input, size_t input_len, uin
     memset(&stream, 0, sizeof(stream));
     rc = deflateInit2(&stream, Z_DEFAULT_COMPRESSION, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
     if (rc != Z_OK) {
-        LogError(0, RS_RET_INTERNAL_ERROR, "omotlp: deflateInit2 failed: %d", rc);
+        LogError(0, RS_RET_INTERNAL_ERROR, "omotel: deflateInit2 failed: %d", rc);
         ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
     }
 
@@ -1713,7 +1713,7 @@ static rsRetVal gzip_compress_buffer(const uint8_t *input, size_t input_len, uin
 
     rc = deflate(&stream, Z_FINISH);
     if (rc != Z_STREAM_END) {
-        LogError(0, RS_RET_INTERNAL_ERROR, "omotlp: gzip compression failed: %d", rc);
+        LogError(0, RS_RET_INTERNAL_ERROR, "omotel: gzip compression failed: %d", rc);
         deflateEnd(&stream);
         ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
     }
@@ -1748,8 +1748,8 @@ finalize_it:
  * @return RS_RET_OK on success, RS_RET_SUSPENDED for retryable errors,
  *         RS_RET_PARAM_ERROR for invalid parameters
  */
-static rsRetVal omotlp_flush_batch_locked(wrkrInstanceData_t *pWrkrData, omotlp_batch_state_t *batch) {
-    omotlp_log_record_t *records = NULL;
+static rsRetVal omotel_flush_batch_locked(wrkrInstanceData_t *pWrkrData, omotel_batch_state_t *batch) {
+    omotel_log_record_t *records = NULL;
     char *payload = NULL;
     uint8_t *compressed = NULL;
     const uint8_t *to_send;
@@ -1759,27 +1759,27 @@ static rsRetVal omotlp_flush_batch_locked(wrkrInstanceData_t *pWrkrData, omotlp_
     long status_code = 0;
     long latency_ms = 0;
     size_t record_count = 0u;
-    omotlp_resource_attrs_t resource_attrs;
+    omotel_resource_attrs_t resource_attrs;
 
     DEFiRet;
 
-    DBGPRINTF("omotlp: omotlp_flush_batch called, batch->count=%zu", batch ? batch->count : 0u);
+    DBGPRINTF("omotel: omotel_flush_batch called, batch->count=%zu", batch ? batch->count : 0u);
 
     if (pWrkrData == NULL || batch == NULL) {
         ABORT_FINALIZE(RS_RET_PARAM_ERROR);
     }
 
     if (batch->count == 0u) {
-        DBGPRINTF("omotlp: omotlp_flush_batch: batch is empty, skipping");
+        DBGPRINTF("omotel: omotel_flush_batch: batch is empty, skipping");
         goto finalize_it;
     }
 
     record_count = batch->count;
-    DBGPRINTF("omotlp: omotlp_flush_batch: flushing %zu records", record_count);
+    DBGPRINTF("omotel: omotel_flush_batch: flushing %zu records", record_count);
 
     STATSCOUNTER_INC(pWrkrData->ctrBatchesSubmitted, pWrkrData->mutCtrBatchesSubmitted);
 
-    records = (omotlp_log_record_t *)malloc(batch->count * sizeof(*records));
+    records = (omotel_log_record_t *)malloc(batch->count * sizeof(*records));
     if (records == NULL) {
         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
@@ -1788,8 +1788,8 @@ static rsRetVal omotlp_flush_batch_locked(wrkrInstanceData_t *pWrkrData, omotlp_
         records[i] = batch->entries[i].record;
     }
 
-    DBGPRINTF("omotlp: omotlp_flush_batch: building JSON export for %zu records", batch->count);
-    resource_attrs = (omotlp_resource_attrs_t){
+    DBGPRINTF("omotel: omotel_flush_batch: building JSON export for %zu records", batch->count);
+    resource_attrs = (omotel_resource_attrs_t){
         .service_instance_id = pWrkrData->pData->resourceServiceInstanceId
                                    ? (const char *)pWrkrData->pData->resourceServiceInstanceId
                                    : NULL,
@@ -1800,25 +1800,25 @@ static rsRetVal omotlp_flush_batch_locked(wrkrInstanceData_t *pWrkrData, omotlp_
     };
 
     CHKiRet(
-        omotlp_json_build_export(records, batch->count, &resource_attrs, &pWrkrData->pData->attributeMap, &payload));
+        omotel_json_build_export(records, batch->count, &resource_attrs, &pWrkrData->pData->attributeMap, &payload));
 
     if (payload != NULL) {
         payload_len = strlen(payload);
-        DBGPRINTF("omotlp: omotlp_flush_batch: JSON payload length=%zu", payload_len);
+        DBGPRINTF("omotel: omotel_flush_batch: JSON payload length=%zu", payload_len);
     }
 
     to_send = (const uint8_t *)payload;
     send_len = payload_len;
 
-    if (pWrkrData->pData->compression_mode == OMOTLP_COMPRESSION_GZIP) {
-        DBGPRINTF("omotlp: omotlp_flush_batch: compressing payload");
+    if (pWrkrData->pData->compression_mode == OMOTEL_COMPRESSION_GZIP) {
+        DBGPRINTF("omotel: omotel_flush_batch: compressing payload");
         CHKiRet(gzip_compress_buffer((const uint8_t *)payload, payload_len, &compressed, &send_len));
         to_send = compressed;
-        DBGPRINTF("omotlp: omotlp_flush_batch: compressed size=%zu", send_len);
+        DBGPRINTF("omotel: omotel_flush_batch: compressed size=%zu", send_len);
     }
 
-    DBGPRINTF("omotlp: omotlp_flush_batch: calling omotlp_http_client_post, send_len=%zu", send_len);
-    iRet = omotlp_http_client_post(pWrkrData->http_client, to_send, send_len, &status_code, &latency_ms);
+    DBGPRINTF("omotel: omotel_flush_batch: calling omotel_http_client_post, send_len=%zu", send_len);
+    iRet = omotel_http_client_post(pWrkrData->http_client, to_send, send_len, &status_code, &latency_ms);
 
     /* Update statistics based on HTTP response (status_code is set even on error) */
     if (status_code > 0) {
@@ -1828,8 +1828,8 @@ static rsRetVal omotlp_flush_batch_locked(wrkrInstanceData_t *pWrkrData, omotlp_
             if (latency_ms > 0) {
                 STATSCOUNTER_ADD(pWrkrData->httpRequestLatencyMs, pWrkrData->mutHttpRequestLatencyMs, latency_ms);
             }
-            DBGPRINTF("omotlp: omotlp_flush_batch: HTTP POST successful, clearing batch");
-            omotlp_batch_clear(batch);
+            DBGPRINTF("omotel: omotel_flush_batch: HTTP POST successful, clearing batch");
+            omotel_batch_clear(batch);
         } else if (status_code >= 400 && status_code < 500) {
             STATSCOUNTER_INC(pWrkrData->ctrHttpStatus4xx, pWrkrData->mutCtrHttpStatus4xx);
             if (status_code == 408 || status_code == 429) {
@@ -1843,7 +1843,7 @@ static rsRetVal omotlp_flush_batch_locked(wrkrInstanceData_t *pWrkrData, omotlp_
                         STATSCOUNTER_ADD(pWrkrData->httpRequestLatencyMs, pWrkrData->mutHttpRequestLatencyMs,
                                          latency_ms);
                     }
-                    DBGPRINTF("omotlp: omotlp_flush_batch: HTTP %ld error, retaining batch for retry", status_code);
+                    DBGPRINTF("omotel: omotel_flush_batch: HTTP %ld error, retaining batch for retry", status_code);
                     /* Don't clear batch - it will be retried by rsyslog */
                 } else {
                     STATSCOUNTER_INC(pWrkrData->ctrBatchesDropped, pWrkrData->mutCtrBatchesDropped);
@@ -1851,8 +1851,8 @@ static rsRetVal omotlp_flush_batch_locked(wrkrInstanceData_t *pWrkrData, omotlp_
                         STATSCOUNTER_ADD(pWrkrData->httpRequestLatencyMs, pWrkrData->mutHttpRequestLatencyMs,
                                          latency_ms);
                     }
-                    DBGPRINTF("omotlp: omotlp_flush_batch: HTTP %ld error, clearing batch", status_code);
-                    omotlp_batch_clear(batch);
+                    DBGPRINTF("omotel: omotel_flush_batch: HTTP %ld error, clearing batch", status_code);
+                    omotel_batch_clear(batch);
                 }
             } else {
                 /* Non-retryable 4xx (400, 401, 403, 404, etc.) - clear batch */
@@ -1860,8 +1860,8 @@ static rsRetVal omotlp_flush_batch_locked(wrkrInstanceData_t *pWrkrData, omotlp_
                 if (latency_ms > 0) {
                     STATSCOUNTER_ADD(pWrkrData->httpRequestLatencyMs, pWrkrData->mutHttpRequestLatencyMs, latency_ms);
                 }
-                DBGPRINTF("omotlp: omotlp_flush_batch: HTTP 4xx error, clearing batch");
-                omotlp_batch_clear(batch);
+                DBGPRINTF("omotel: omotel_flush_batch: HTTP 4xx error, clearing batch");
+                omotel_batch_clear(batch);
                 /* For non-retryable 4xx errors, clear the error so the caller can continue.
                  * The batch has been dropped, but new records should still be accepted. */
                 if (iRet == RS_RET_DISCARDMSG) {
@@ -1897,7 +1897,7 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal omotlp_flush_batch(wrkrInstanceData_t *pWrkrData) {
+static rsRetVal omotel_flush_batch(wrkrInstanceData_t *pWrkrData) {
     rsRetVal iRet;
 
     if (pWrkrData == NULL) {
@@ -1905,7 +1905,7 @@ static rsRetVal omotlp_flush_batch(wrkrInstanceData_t *pWrkrData) {
     }
 
     pthread_mutex_lock(&pWrkrData->batch_mutex);
-    iRet = omotlp_flush_batch_locked(pWrkrData, &pWrkrData->batch);
+    iRet = omotel_flush_batch_locked(pWrkrData, &pWrkrData->batch);
     pthread_mutex_unlock(&pWrkrData->batch_mutex);
 
     return iRet;
@@ -1922,7 +1922,7 @@ static rsRetVal omotlp_flush_batch(wrkrInstanceData_t *pWrkrData) {
  * @param[in] arg Worker instance data pointer (cast from void*)
  * @return NULL (pthread requirement)
  */
-static void *omotlp_batch_flush_thread(void *arg) {
+static void *omotel_batch_flush_thread(void *arg) {
     wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t *)arg;
     struct timespec req;
     req.tv_sec = 0;
@@ -1939,13 +1939,13 @@ static void *omotlp_batch_flush_thread(void *arg) {
 
         if (pWrkrData->batch.count > 0u) {
             long long timeout_ms =
-                pWrkrData->pData->batchTimeoutMs > 0 ? pWrkrData->pData->batchTimeoutMs : OMOTLP_IDLE_FLUSH_INTERVAL_MS;
+                pWrkrData->pData->batchTimeoutMs > 0 ? pWrkrData->pData->batchTimeoutMs : OMOTEL_IDLE_FLUSH_INTERVAL_MS;
             if (timeout_ms > 0) {
                 long long now = currentTimeMills();
                 if (pWrkrData->batch.first_enqueue_ms != 0 && now - pWrkrData->batch.first_enqueue_ms >= timeout_ms) {
                     /* Check stop flag before starting potentially long-running flush operation */
                     if (!pWrkrData->flush_thread_stop) {
-                        (void)omotlp_flush_batch_locked(pWrkrData, &pWrkrData->batch);
+                        (void)omotel_flush_batch_locked(pWrkrData, &pWrkrData->batch);
                     }
                 }
             }
@@ -1957,7 +1957,7 @@ static void *omotlp_batch_flush_thread(void *arg) {
     pthread_mutex_lock(&pWrkrData->batch_mutex);
     /* Final flush before thread exit - flush any remaining data */
     if (pWrkrData->batch.count > 0u) {
-        (void)omotlp_flush_batch_locked(pWrkrData, &pWrkrData->batch);
+        (void)omotel_flush_batch_locked(pWrkrData, &pWrkrData->batch);
     }
     pthread_mutex_unlock(&pWrkrData->batch_mutex);
 
@@ -1981,12 +1981,12 @@ static void *omotlp_batch_flush_thread(void *arg) {
  * @return RS_RET_OK on success, RS_RET_PARAM_ERROR for invalid parameters,
  *         RS_RET_OUT_OF_MEMORY on allocation failure
  */
-static rsRetVal omotlp_batch_add_record(wrkrInstanceData_t *pWrkrData,
-                                        const omotlp_log_record_t *record,
+static rsRetVal omotel_batch_add_record(wrkrInstanceData_t *pWrkrData,
+                                        const omotel_log_record_t *record,
                                         const char *body) {
-    omotlp_batch_state_t *batch;
+    omotel_batch_state_t *batch;
     instanceData *cfg;
-    omotlp_batch_entry_t *entry = NULL;
+    omotel_batch_entry_t *entry = NULL;
     const char *body_text;
     size_t body_len;
     size_t estimated_bytes;
@@ -2007,24 +2007,24 @@ static rsRetVal omotlp_batch_add_record(wrkrInstanceData_t *pWrkrData,
     mutex_locked = 1;
 
     if (cfg->batchMaxItems > 0u && batch->count >= cfg->batchMaxItems) {
-        CHKiRet(omotlp_flush_batch_locked(pWrkrData, batch));
+        CHKiRet(omotel_flush_batch_locked(pWrkrData, batch));
     }
 
     body_text = (body != NULL) ? body : "";
     body_len = strlen(body_text);
-    estimated_bytes = OMOTLP_BATCH_RECORD_OVERHEAD + body_len;
+    estimated_bytes = OMOTEL_BATCH_RECORD_OVERHEAD + body_len;
 
     if (cfg->batchMaxBytes > 0u && batch->count > 0u && batch->estimated_bytes + estimated_bytes > cfg->batchMaxBytes) {
-        CHKiRet(omotlp_flush_batch_locked(pWrkrData, batch));
+        CHKiRet(omotel_flush_batch_locked(pWrkrData, batch));
     }
 
     if (cfg->batchMaxBytes > 0u && estimated_bytes > cfg->batchMaxBytes) {
         LogError(0, RS_RET_OK,
-                 "omotlp: single record estimated size %zu exceeds batch.max_bytes %zu; sending individually",
+                 "omotel: single record estimated size %zu exceeds batch.max_bytes %zu; sending individually",
                  estimated_bytes, cfg->batchMaxBytes);
     }
 
-    CHKiRet(omotlp_batch_ensure_capacity(batch, batch->count + 1u));
+    CHKiRet(omotel_batch_ensure_capacity(batch, batch->count + 1u));
     entry = &batch->entries[batch->count];
     memset(entry, 0, sizeof(*entry));
 
@@ -2059,7 +2059,7 @@ static rsRetVal omotlp_batch_add_record(wrkrInstanceData_t *pWrkrData,
     ++batch->count;
     count_incremented = 1;
     if (batch->count == 1u) {
-        batch->estimated_bytes = OMOTLP_BATCH_BASE_OVERHEAD + estimated_bytes;
+        batch->estimated_bytes = OMOTEL_BATCH_BASE_OVERHEAD + estimated_bytes;
         batch->first_enqueue_ms = currentTimeMills();
         estimated_bytes_updated = 1;
     } else {
@@ -2068,9 +2068,9 @@ static rsRetVal omotlp_batch_add_record(wrkrInstanceData_t *pWrkrData,
     }
 
     if (cfg->batchMaxItems > 0u && batch->count >= cfg->batchMaxItems) {
-        CHKiRet(omotlp_flush_batch_locked(pWrkrData, batch));
+        CHKiRet(omotel_flush_batch_locked(pWrkrData, batch));
     } else if (cfg->batchMaxBytes > 0u && batch->estimated_bytes >= cfg->batchMaxBytes) {
-        CHKiRet(omotlp_flush_batch_locked(pWrkrData, batch));
+        CHKiRet(omotel_flush_batch_locked(pWrkrData, batch));
     }
 
 finalize_it:
@@ -2092,12 +2092,12 @@ finalize_it:
             }
             /* Cleanup entry if it was allocated */
             if (entry != NULL) {
-                omotlp_batch_entry_clear(entry);
+                omotel_batch_entry_clear(entry);
             }
         } else {
             /* Cleanup entry without mutex if mutex was never acquired */
             if (entry != NULL) {
-                omotlp_batch_entry_clear(entry);
+                omotel_batch_entry_clear(entry);
             }
         }
     }
@@ -2107,8 +2107,8 @@ finalize_it:
     RETiRet;
 }
 
-static rsRetVal omotlp_batch_flush_if_due(wrkrInstanceData_t *pWrkrData, long long now_ms) {
-    omotlp_batch_state_t *batch;
+static rsRetVal omotel_batch_flush_if_due(wrkrInstanceData_t *pWrkrData, long long now_ms) {
+    omotel_batch_state_t *batch;
     long long age;
     int mutex_locked = 0;
 
@@ -2131,7 +2131,7 @@ static rsRetVal omotlp_batch_flush_if_due(wrkrInstanceData_t *pWrkrData, long lo
 
     age = now_ms - batch->first_enqueue_ms;
     if (age >= pWrkrData->pData->batchTimeoutMs) {
-        CHKiRet(omotlp_flush_batch_locked(pWrkrData, batch));
+        CHKiRet(omotel_flush_batch_locked(pWrkrData, batch));
     }
 
 finalize_it:
@@ -2148,14 +2148,14 @@ static inline void setInstParamDefaults(instanceData *pData) {
     pData->bodyTemplateName = NULL;
     pData->url = NULL;
     pData->requestTimeoutMs = 10000;
-    pData->batchMaxItems = OMOTLP_DEFAULT_BATCH_MAX_ITEMS;
-    pData->batchMaxBytes = OMOTLP_DEFAULT_BATCH_MAX_BYTES;
-    pData->batchTimeoutMs = OMOTLP_DEFAULT_BATCH_TIMEOUT_MS;
-    pData->retryInitialMs = OMOTLP_DEFAULT_RETRY_INITIAL_MS;
-    pData->retryMaxMs = OMOTLP_DEFAULT_RETRY_MAX_MS;
-    pData->retryMaxRetries = OMOTLP_DEFAULT_RETRY_MAX_RETRIES;
-    pData->retryJitterPercent = OMOTLP_DEFAULT_RETRY_JITTER_PERCENT;
-    pData->compression_mode = OMOTLP_COMPRESSION_UNSET;
+    pData->batchMaxItems = OMOTEL_DEFAULT_BATCH_MAX_ITEMS;
+    pData->batchMaxBytes = OMOTEL_DEFAULT_BATCH_MAX_BYTES;
+    pData->batchTimeoutMs = OMOTEL_DEFAULT_BATCH_TIMEOUT_MS;
+    pData->retryInitialMs = OMOTEL_DEFAULT_RETRY_INITIAL_MS;
+    pData->retryMaxMs = OMOTEL_DEFAULT_RETRY_MAX_MS;
+    pData->retryMaxRetries = OMOTEL_DEFAULT_RETRY_MAX_RETRIES;
+    pData->retryJitterPercent = OMOTEL_DEFAULT_RETRY_JITTER_PERCENT;
+    pData->compression_mode = OMOTEL_COMPRESSION_UNSET;
     pData->compressionConfigured = 0;
     pData->headersConfigured = 0;
     pData->bearerConfigured = 0;
@@ -2217,7 +2217,7 @@ BEGINcreateInstance
 ENDcreateInstance
 
 BEGINcreateWrkrInstance
-    omotlp_http_client_config_t http_cfg;
+    omotel_http_client_config_t http_cfg;
     char stats_name[256];
     CODESTARTcreateWrkrInstance;
     pWrkrData->pData = pData;
@@ -2239,7 +2239,7 @@ BEGINcreateWrkrInstance
 
     http_cfg.url = (const char *)pData->url;
     http_cfg.timeout_ms = pData->requestTimeoutMs;
-    http_cfg.user_agent = "rsyslog-omotlp/" VERSION;
+    http_cfg.user_agent = "rsyslog-omotel/" VERSION;
     http_cfg.headers = (const char *const *)pData->headers.values;
     http_cfg.header_count = pData->headers.count;
     http_cfg.retry_initial_ms = pData->retryInitialMs;
@@ -2260,17 +2260,17 @@ BEGINcreateWrkrInstance
     http_cfg.proxy_user = (const char *)pData->proxyUser;
     http_cfg.proxy_password = (const char *)pData->proxyPassword;
 
-    iRet = omotlp_http_client_create(&http_cfg, &pWrkrData->http_client);
+    iRet = omotel_http_client_create(&http_cfg, &pWrkrData->http_client);
     if (iRet != RS_RET_OK) {
         goto finalize_it;
     }
 
     /* Initialize statistics */
-    snprintf(stats_name, sizeof(stats_name), "omotlp-%s", pData->url ? (char *)pData->url : "default");
+    snprintf(stats_name, sizeof(stats_name), "omotel-%s", pData->url ? (char *)pData->url : "default");
     stats_name[sizeof(stats_name) - 1] = '\0';
     CHKiRet(statsobj.Construct(&pWrkrData->stats));
     CHKiRet(statsobj.SetName(pWrkrData->stats, (uchar *)stats_name));
-    CHKiRet(statsobj.SetOrigin(pWrkrData->stats, (uchar *)"omotlp"));
+    CHKiRet(statsobj.SetOrigin(pWrkrData->stats, (uchar *)"omotel"));
 
     STATSCOUNTER_INIT(pWrkrData->ctrBatchesSubmitted, pWrkrData->mutCtrBatchesSubmitted);
     CHKiRet(statsobj.AddCounter(pWrkrData->stats, (uchar *)"batches.submitted", ctrType_IntCtr, CTR_FLAG_RESETTABLE,
@@ -2306,8 +2306,8 @@ BEGINcreateWrkrInstance
 
     CHKiRet(statsobj.ConstructFinalize(pWrkrData->stats));
 
-    if (pthread_create(&pWrkrData->flush_thread, NULL, omotlp_batch_flush_thread, pWrkrData) != 0) {
-        LogError(errno, RS_RET_SYS_ERR, "omotlp: failed to create flush thread");
+    if (pthread_create(&pWrkrData->flush_thread, NULL, omotel_batch_flush_thread, pWrkrData) != 0) {
+        LogError(errno, RS_RET_SYS_ERR, "omotel: failed to create flush thread");
         iRet = RS_RET_SYS_ERR;
         goto finalize_it;
     }
@@ -2329,7 +2329,7 @@ finalize_it:
             }
             pthread_mutex_destroy(&pWrkrData->batch_mutex);
         }
-        omotlp_http_client_destroy(&pWrkrData->http_client);
+        omotel_http_client_destroy(&pWrkrData->http_client);
         free(pWrkrData);
         pWrkrData = NULL;
     }
@@ -2379,10 +2379,10 @@ BEGINfreeWrkrInstance
             pthread_join(pWrkrData->flush_thread, NULL);
             pWrkrData->flush_thread_running = 0;
         }
-        (void)omotlp_flush_batch(pWrkrData);
-        omotlp_batch_destroy(&pWrkrData->batch);
+        (void)omotel_flush_batch(pWrkrData);
+        omotel_batch_destroy(&pWrkrData->batch);
         pthread_mutex_destroy(&pWrkrData->batch_mutex);
-        omotlp_http_client_destroy(&pWrkrData->http_client);
+        omotel_http_client_destroy(&pWrkrData->http_client);
         if (pWrkrData->stats != NULL) {
             statsobj.Destruct(&pWrkrData->stats);
         }
@@ -2391,7 +2391,7 @@ ENDfreeWrkrInstance
 
 BEGINdbgPrintInstInfo
     CODESTARTdbgPrintInstInfo;
-    dbgprintf("omotlp\n");
+    dbgprintf("omotel\n");
     dbgprintf("\tendpoint='%s'\n", pData->endpoint ? (char *)pData->endpoint : "(default)");
     dbgprintf("\tpath='%s'\n", pData->path ? (char *)pData->path : "(default)");
     dbgprintf("\tprotocol='%s'\n", pData->protocol ? (char *)pData->protocol : "(default)");
@@ -2405,7 +2405,7 @@ BEGINdbgPrintInstInfo
     dbgprintf("\tretry.max.ms=%ld\n", pData->retryMaxMs);
     dbgprintf("\tretry.max_retries=%u\n", pData->retryMaxRetries);
     dbgprintf("\tretry.jitter.percent=%u\n", pData->retryJitterPercent);
-    dbgprintf("\tcompression=%s\n", pData->compression_mode == OMOTLP_COMPRESSION_GZIP ? "gzip" : "none");
+    dbgprintf("\tcompression=%s\n", pData->compression_mode == OMOTEL_COMPRESSION_GZIP ? "gzip" : "none");
 ENDdbgPrintInstInfo
 
 BEGINtryResume
@@ -2442,7 +2442,7 @@ BEGINnewActInst
     CODESTARTnewActInst;
 
     if ((pvals = nvlstGetParams(lst, &actpblk, NULL)) == NULL) {
-        LogError(0, RS_RET_MISSING_CNFPARAMS, "omotlp: error reading config parameters");
+        LogError(0, RS_RET_MISSING_CNFPARAMS, "omotel: error reading config parameters");
         ABORT_FINALIZE(RS_RET_MISSING_CNFPARAMS);
     }
 
@@ -2501,7 +2501,7 @@ BEGINnewActInst
             unsigned int jitter = 0u;
             CHKiRet(parse_uint_param("retry.jitter.percent", pvals[i].val.d.estr, 0u, &jitter));
             if (jitter > 100u) {
-                LogError(0, RS_RET_PARAM_ERROR, "omotlp: retry.jitter.percent must be between 0 and 100");
+                LogError(0, RS_RET_PARAM_ERROR, "omotel: retry.jitter.percent must be between 0 and 100");
                 ABORT_FINALIZE(RS_RET_PARAM_ERROR);
             }
             pData->retryJitterPercent = jitter;
@@ -2548,7 +2548,7 @@ BEGINnewActInst
             /* Parse and validate JSON */
             resource_parsed = fjson_tokener_parse(resource_json_text);
             if (resource_parsed == NULL) {
-                LogError(0, RS_RET_PARAM_ERROR, "omotlp: resource parameter contains invalid JSON: %s",
+                LogError(0, RS_RET_PARAM_ERROR, "omotel: resource parameter contains invalid JSON: %s",
                          resource_json_text);
                 free(resource_json_text);
                 resource_json_text = NULL;
@@ -2556,7 +2556,7 @@ BEGINnewActInst
             }
 
             if (!fjson_object_is_type(resource_parsed, fjson_type_object)) {
-                LogError(0, RS_RET_PARAM_ERROR, "omotlp: resource parameter must be a JSON object");
+                LogError(0, RS_RET_PARAM_ERROR, "omotel: resource parameter must be a JSON object");
                 fjson_object_put(resource_parsed);
                 resource_parsed = NULL;
                 free(resource_json_text);
@@ -2599,7 +2599,7 @@ BEGINnewActInst
             if (fp == NULL) {
                 char errStr[1024];
                 rs_strerror_r(errno, errStr, sizeof(errStr));
-                LogError(0, RS_RET_NO_FILE_ACCESS, "omotlp: tls.cacert file '%s' cannot be accessed: %s",
+                LogError(0, RS_RET_NO_FILE_ACCESS, "omotel: tls.cacert file '%s' cannot be accessed: %s",
                          pData->tlsCaCertFile, errStr);
                 ABORT_FINALIZE(RS_RET_NO_FILE_ACCESS);
             }
@@ -2611,7 +2611,7 @@ BEGINnewActInst
             if (dir == NULL) {
                 char errStr[1024];
                 rs_strerror_r(errno, errStr, sizeof(errStr));
-                LogError(0, RS_RET_NO_FILE_ACCESS, "omotlp: tls.cadir directory '%s' cannot be accessed: %s",
+                LogError(0, RS_RET_NO_FILE_ACCESS, "omotel: tls.cadir directory '%s' cannot be accessed: %s",
                          pData->tlsCaCertDir, errStr);
                 ABORT_FINALIZE(RS_RET_NO_FILE_ACCESS);
             }
@@ -2623,7 +2623,7 @@ BEGINnewActInst
             if (fp == NULL) {
                 char errStr[1024];
                 rs_strerror_r(errno, errStr, sizeof(errStr));
-                LogError(0, RS_RET_NO_FILE_ACCESS, "omotlp: tls.cert file '%s' cannot be accessed: %s",
+                LogError(0, RS_RET_NO_FILE_ACCESS, "omotel: tls.cert file '%s' cannot be accessed: %s",
                          pData->tlsClientCertFile, errStr);
                 ABORT_FINALIZE(RS_RET_NO_FILE_ACCESS);
             }
@@ -2635,7 +2635,7 @@ BEGINnewActInst
             if (fp == NULL) {
                 char errStr[1024];
                 rs_strerror_r(errno, errStr, sizeof(errStr));
-                LogError(0, RS_RET_NO_FILE_ACCESS, "omotlp: tls.key file '%s' cannot be accessed: %s",
+                LogError(0, RS_RET_NO_FILE_ACCESS, "omotel: tls.key file '%s' cannot be accessed: %s",
                          pData->tlsClientKeyFile, errStr);
                 ABORT_FINALIZE(RS_RET_NO_FILE_ACCESS);
             }
@@ -2651,7 +2651,7 @@ BEGINnewActInst
             } else if (!strcmp(text, "off") || !strcmp(text, "no") || !strcmp(text, "0")) {
                 pData->tlsVerifyHostname = 0;
             } else {
-                LogError(0, RS_RET_PARAM_ERROR, "omotlp: tls.verify_hostname must be 'on' or 'off'");
+                LogError(0, RS_RET_PARAM_ERROR, "omotel: tls.verify_hostname must be 'on' or 'off'");
                 free(text);
                 text = NULL;
                 ABORT_FINALIZE(RS_RET_PARAM_ERROR);
@@ -2669,7 +2669,7 @@ BEGINnewActInst
             } else if (!strcmp(text, "off") || !strcmp(text, "no") || !strcmp(text, "0")) {
                 pData->tlsVerifyPeer = 0;
             } else {
-                LogError(0, RS_RET_PARAM_ERROR, "omotlp: tls.verify_peer must be 'on' or 'off'");
+                LogError(0, RS_RET_PARAM_ERROR, "omotel: tls.verify_peer must be 'on' or 'off'");
                 free(text);
                 text = NULL;
                 ABORT_FINALIZE(RS_RET_PARAM_ERROR);
@@ -2685,7 +2685,7 @@ BEGINnewActInst
                     strncmp((char *)pData->proxyUrl, "socks4://", 9) != 0 &&
                     strncmp((char *)pData->proxyUrl, "socks5://", 9) != 0) {
                     LogError(0, RS_RET_PARAM_ERROR,
-                             "omotlp: proxy URL must start with http://, https://, socks4://, or socks5://");
+                             "omotel: proxy URL must start with http://, https://, socks4://, or socks5://");
                     ABORT_FINALIZE(RS_RET_PARAM_ERROR);
                 }
             }
@@ -2694,7 +2694,7 @@ BEGINnewActInst
         } else if (!strcmp(actpblk.descr[i].name, "proxy.password")) {
             CHKiRet(assignParamFromEStr(&pData->proxyPassword, pvals[i].val.d.estr));
         } else {
-            dbgprintf("omotlp: unhandled parameter '%s'\n", actpblk.descr[i].name);
+            dbgprintf("omotel: unhandled parameter '%s'\n", actpblk.descr[i].name);
         }
     }
 
@@ -2712,11 +2712,11 @@ BEGINnewActInst
         CHKmalloc(pData->traceFlagsPropertyName = (uchar *)strdup("trace_flags"));
     }
 
-    if (pData->compression_mode == OMOTLP_COMPRESSION_UNSET) {
-        pData->compression_mode = OMOTLP_COMPRESSION_NONE;
+    if (pData->compression_mode == OMOTEL_COMPRESSION_UNSET) {
+        pData->compression_mode = OMOTEL_COMPRESSION_NONE;
     }
 
-    if (pData->compression_mode == OMOTLP_COMPRESSION_GZIP) {
+    if (pData->compression_mode == OMOTEL_COMPRESSION_GZIP) {
         CHKiRet(header_list_add(&pData->headers, "Content-Encoding: gzip"));
     }
 
@@ -2730,13 +2730,13 @@ BEGINnewActInst
     CHKiRet(buildEffectiveUrl(pData));
 
     CODE_STD_STRING_REQUESTnewActInst(2);
-    CHKiRet(OMSRsetEntry(*ppOMSR, OMOTLP_OMSR_IDX_MESSAGE, NULL, OMSR_TPL_AS_MSG));
+    CHKiRet(OMSRsetEntry(*ppOMSR, OMOTEL_OMSR_IDX_MESSAGE, NULL, OMSR_TPL_AS_MSG));
 
     tplToUse = (uchar *)strdup((char *)pData->bodyTemplateName);
     if (tplToUse == NULL) {
         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
-    CHKiRet(OMSRsetEntry(*ppOMSR, OMOTLP_OMSR_IDX_BODY, tplToUse, OMSR_NO_RQD_TPL_OPTS));
+    CHKiRet(OMSRsetEntry(*ppOMSR, OMOTEL_OMSR_IDX_BODY, tplToUse, OMSR_NO_RQD_TPL_OPTS));
 
     CODE_STD_FINALIZERnewActInst;
     /* Free text allocations if they were allocated but not freed (error path cleanup) */
@@ -2776,10 +2776,10 @@ ENDnewActInst
 
 BEGINdoAction
     char *body = NULL;
-    omotlp_log_record_t record = {0};
+    omotel_log_record_t record = {0};
     long long now_ms;
     smsg_t **ppMsgParam = (smsg_t **)pMsgData;
-    smsg_t *msg = (ppMsgParam != NULL) ? ppMsgParam[OMOTLP_OMSR_IDX_MESSAGE] : NULL;
+    smsg_t *msg = (ppMsgParam != NULL) ? ppMsgParam[OMOTEL_OMSR_IDX_MESSAGE] : NULL;
     CODESTARTdoAction;
 
     if (pWrkrData->pData == NULL) {
@@ -2790,8 +2790,8 @@ BEGINdoAction
         ABORT_FINALIZE(RS_RET_INTERNAL_ERROR);
     }
 
-    if (ppString != NULL && ppString[OMOTLP_OMSR_IDX_BODY] != NULL) {
-        body = (char *)ppString[OMOTLP_OMSR_IDX_BODY];
+    if (ppString != NULL && ppString[OMOTEL_OMSR_IDX_BODY] != NULL) {
+        body = (char *)ppString[OMOTEL_OMSR_IDX_BODY];
     }
 
     if (body == NULL) {
@@ -2799,10 +2799,10 @@ BEGINdoAction
     }
 
     now_ms = currentTimeMills();
-    CHKiRet(omotlp_batch_flush_if_due(pWrkrData, now_ms));
+    CHKiRet(omotel_batch_flush_if_due(pWrkrData, now_ms));
 
     CHKiRet(populateLogRecord(msg, body, pWrkrData->pData, &record));
-    CHKiRet(omotlp_batch_add_record(pWrkrData, &record, body));
+    CHKiRet(omotel_batch_add_record(pWrkrData, &record, body));
 
     pthread_mutex_lock(&pWrkrData->batch_mutex);
     if (pWrkrData->batch.count == 0u) {
@@ -2827,7 +2827,7 @@ ENDdoAction
 NO_LEGACY_CONF_parseSelectorAct /* clang-format off */
 BEGINmodExit
     CODESTARTmodExit;
-    omotlp_http_global_cleanup();
+    omotel_http_global_cleanup();
     objRelease(datetime, CORE_COMPONENT);
     objRelease(prop, CORE_COMPONENT);
     objRelease(statsobj, CORE_COMPONENT);
@@ -2848,7 +2848,7 @@ ENDqueryEtryPt /* clang-format on */
 BEGINmodInit()
     CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
-    CHKiRet(omotlp_http_global_init());
+    CHKiRet(omotel_http_global_init());
     CHKiRet(objUse(datetime, CORE_COMPONENT));
     CHKiRet(objUse(prop, CORE_COMPONENT));
     CHKiRet(objUse(statsobj, CORE_COMPONENT));

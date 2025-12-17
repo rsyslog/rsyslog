@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Simple HTTP proxy server for omotlp proxy testing.
+Simple HTTP proxy server for omotel proxy testing.
 
 This proxy server:
 - Forwards HTTP requests to a target server
@@ -206,7 +206,7 @@ class ProxyHandler(BaseHTTPRequestHandler):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Simple HTTP proxy for omotlp testing')
+    parser = argparse.ArgumentParser(description='Simple HTTP proxy for omotel testing')
     parser.add_argument('-p', '--port', type=int, default=0, help='Listen port (0 = auto)')
     parser.add_argument('--port-file', type=str, default='', help='File to write listen port')
     parser.add_argument('--target-host', type=str, default='127.0.0.1', help='Target server host')

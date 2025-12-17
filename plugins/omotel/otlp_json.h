@@ -25,8 +25,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef OMOTLP_OTLP_JSON_H
-#define OMOTLP_OTLP_JSON_H
+#ifndef OMOTEL_OTLP_JSON_H
+#define OMOTEL_OTLP_JSON_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -40,7 +40,7 @@
  * Contains all fields for a single OpenTelemetry log record. String fields
  * are pointers to external memory and are not freed by this module.
  */
-typedef struct omotlp_log_record_s {
+typedef struct omotel_log_record_s {
     uint64_t time_unix_nano; /**< Log timestamp in Unix nanoseconds */
     uint64_t observed_time_unix_nano; /**< Observation timestamp in Unix nanoseconds */
     uint32_t severity_number; /**< OTLP severity number (0-24) */
@@ -54,7 +54,7 @@ typedef struct omotlp_log_record_s {
     const char *span_id; /**< OpenTelemetry span ID (16 hex chars) */
     uint8_t trace_flags; /**< OpenTelemetry trace flags */
     uint16_t facility; /**< Syslog facility number */
-} omotlp_log_record_t;
+} omotel_log_record_t;
 
 /**
  * @brief OTLP resource attributes structure
@@ -62,11 +62,11 @@ typedef struct omotlp_log_record_s {
  * Contains resource-level attributes that are applied to all log records
  * in a batch. Custom attributes are provided as a parsed JSON object.
  */
-typedef struct omotlp_resource_attrs_s {
+typedef struct omotel_resource_attrs_s {
     const char *service_instance_id; /**< Service instance identifier */
     const char *deployment_environment; /**< Deployment environment name */
     struct json_object *custom_attributes; /**< Parsed JSON object with custom resource attributes */
-} omotlp_resource_attrs_t;
+} omotel_resource_attrs_t;
 
 /* Forward declaration for attribute_map_t */
 typedef struct attribute_map_s attribute_map_t;
@@ -92,10 +92,10 @@ typedef struct attribute_map_s attribute_map_t;
  * @return RS_RET_OK on success, RS_RET_PARAM_ERROR for invalid parameters,
  *         RS_RET_OUT_OF_MEMORY on allocation failure
  */
-rsRetVal omotlp_json_build_export(const omotlp_log_record_t *records,
+rsRetVal omotel_json_build_export(const omotel_log_record_t *records,
                                   size_t record_count,
-                                  const omotlp_resource_attrs_t *resource_attrs,
+                                  const omotel_resource_attrs_t *resource_attrs,
                                   const attribute_map_t *attribute_map,
                                   char **out_payload);
 
-#endif /* OMOTLP_OTLP_JSON_H */
+#endif /* OMOTEL_OTLP_JSON_H */

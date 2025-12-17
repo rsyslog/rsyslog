@@ -1,6 +1,6 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
-## omotlp-trace-correlation.sh -- test trace correlation support for omotlp module
+## omotel-trace-correlation.sh -- test trace correlation support for omotel module
 ##
 ## Tests that trace_id, span_id, and trace_flags are extracted from message
 ## properties and included in the OTLP export. Uses mmjsonparse to extract
@@ -8,8 +8,8 @@
 
 . ${srcdir:=.}/diag.sh init
 
-# Check if omotlp module is available
-require_plugin omotlp
+# Check if omotel module is available
+require_plugin omotel
 require_plugin mmjsonparse
 
 export NUMMESSAGES=10
@@ -52,15 +52,15 @@ add_conf '
 template(name="otlpBody" type="string" string="%msg%")
 
 module(load="../plugins/mmjsonparse/.libs/mmjsonparse")
-module(load="../plugins/omotlp/.libs/omotlp")
+module(load="../plugins/omotel/.libs/omotel")
 
 # Parse JSON to extract trace properties
 action(type="mmjsonparse" mode="find-json")
 
 # Export with trace correlation
 action(
-	name="omotlp-http"
-	type="omotlp"
+	name="omotel-http"
+	type="omotel"
 	template="otlpBody"
 	endpoint="http://127.0.0.1:'$otel_port'"
 	path="/v1/logs"
@@ -111,21 +111,21 @@ try:
                             if "logRecords" in scope_log:
                                 records.extend(scope_log["logRecords"])
 except Exception as exc:
-    sys.stderr.write(f"omotlp-trace-correlation: failed to parse OTLP output: {exc}\n")
+    sys.stderr.write(f"omotel-trace-correlation: failed to parse OTLP output: {exc}\n")
     sys.exit(1)
 
 if not records:
-    sys.stderr.write("omotlp-trace-correlation: OTLP output did not contain any logRecords\n")
+    sys.stderr.write("omotel-trace-correlation: OTLP output did not contain any logRecords\n")
     sys.exit(1)
 
-sys.stdout.write(f"omotlp-trace-correlation: found {len(records)} log records in OTLP output\n")
+sys.stdout.write(f"omotel-trace-correlation: found {len(records)} log records in OTLP output\n")
 
 # Expected trace values
 expected_trace_id = "4bf92f3577b34da6a3ce929d0e0e4736"
 expected_span_id = "00f067aa0ba902b7"
 expected_trace_flags = 1
 
-sys.stdout.write(f"omotlp-trace-correlation: expected traceId='{expected_trace_id}', spanId='{expected_span_id}', flags={expected_trace_flags}\n")
+sys.stdout.write(f"omotel-trace-correlation: expected traceId='{expected_trace_id}', spanId='{expected_span_id}', flags={expected_trace_flags}\n")
 
 # Verify trace correlation fields
 for idx, record in enumerate(records):
@@ -133,30 +133,30 @@ for idx, record in enumerate(records):
     span_id = record.get("spanId")
     trace_flags = record.get("flags")
     
-    sys.stdout.write(f"omotlp-trace-correlation: record {idx}: traceId={trace_id}, spanId={span_id}, flags={trace_flags}\n")
+    sys.stdout.write(f"omotel-trace-correlation: record {idx}: traceId={trace_id}, spanId={span_id}, flags={trace_flags}\n")
     
     if trace_id is None:
-        sys.stderr.write(f"omotlp-trace-correlation: record {idx} missing traceId\n")
+        sys.stderr.write(f"omotel-trace-correlation: record {idx} missing traceId\n")
         sys.exit(1)
     if trace_id != expected_trace_id:
-        sys.stderr.write(f"omotlp-trace-correlation: record {idx} traceId mismatch: expected '{expected_trace_id}', got '{trace_id}'\n")
+        sys.stderr.write(f"omotel-trace-correlation: record {idx} traceId mismatch: expected '{expected_trace_id}', got '{trace_id}'\n")
         sys.exit(1)
     
     if span_id is None:
-        sys.stderr.write(f"omotlp-trace-correlation: record {idx} missing spanId\n")
+        sys.stderr.write(f"omotel-trace-correlation: record {idx} missing spanId\n")
         sys.exit(1)
     if span_id != expected_span_id:
-        sys.stderr.write(f"omotlp-trace-correlation: record {idx} spanId mismatch: expected '{expected_span_id}', got '{span_id}'\n")
+        sys.stderr.write(f"omotel-trace-correlation: record {idx} spanId mismatch: expected '{expected_span_id}', got '{span_id}'\n")
         sys.exit(1)
     
     if trace_flags is None:
-        sys.stderr.write(f"omotlp-trace-correlation: record {idx} missing flags\n")
+        sys.stderr.write(f"omotel-trace-correlation: record {idx} missing flags\n")
         sys.exit(1)
     if trace_flags != expected_trace_flags:
-        sys.stderr.write(f"omotlp-trace-correlation: record {idx} flags mismatch: expected {expected_trace_flags}, got {trace_flags}\n")
+        sys.stderr.write(f"omotel-trace-correlation: record {idx} flags mismatch: expected {expected_trace_flags}, got {trace_flags}\n")
         sys.exit(1)
 
-sys.stdout.write(f"omotlp-trace-correlation: verified {len(records)} records with trace correlation\n")
+sys.stdout.write(f"omotel-trace-correlation: verified {len(records)} records with trace correlation\n")
 PY
 
 exit_test

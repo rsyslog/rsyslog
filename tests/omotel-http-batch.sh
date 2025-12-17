@@ -1,27 +1,27 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
-## omotlp-http-batch.sh -- smoke-test OTLP batching and retries
+## omotel-http-batch.sh -- smoke-test OTLP batching and retries
 ##
-## Starts the omhttp test server, emits four messages through omotlp with
+## Starts the omhttp test server, emits four messages through omotel with
 ## batching and gzip enabled, and verifies the collector captured two payloads
 ## with the expected retry behaviour and record order.
 
 . ${srcdir:=.}/diag.sh init
 
-# Check if omotlp module is available
-require_plugin omotlp
+# Check if omotel module is available
+require_plugin omotel
 
 omhttp_start_server 0 --decompress --fail-every 2 --fail-with 503
 
 generate_conf
 add_conf '
-module(load="../plugins/omotlp/.libs/omotlp")
+module(load="../plugins/omotel/.libs/omotel")
 template(name="otlpBody" type="string" string="%msg%")
 
-# Process all messages through omotlp
+# Process all messages through omotel
 action(
-  name="omotlp-http"
-  type="omotlp"
+  name="omotel-http"
+  type="omotel"
   template="otlpBody"
   endpoint="http://127.0.0.1:'$omhttp_server_lstnport'"
   path="/v1/logs"
@@ -31,7 +31,7 @@ action(
   retry.initial.ms="10"
   retry.max.ms="100"
   retry.max_retries="3"
-  headers='{ "X-Test-Header": "omotlp" }'
+  headers='{ "X-Test-Header": "omotel" }'
 )
 '
 

@@ -1,8 +1,8 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
-## omotlp-batch.sh -- batching test for omotlp module
+## omotel-batch.sh -- batching test for omotel module
 ##
-## Tests that omotlp correctly batches multiple log records into
+## Tests that omotel correctly batches multiple log records into
 ## single ExportLogsServiceRequest payloads.
 
 . ${srcdir:=.}/diag.sh init
@@ -31,12 +31,12 @@ generate_conf
 add_conf '
 template(name="otlpBody" type="string" string="msgnum:%msg:F,58:2%")
 
-module(load="../plugins/omotlp/.libs/omotlp")
+module(load="../plugins/omotel/.libs/omotel")
 
 if $msg contains "msgnum:" then
 	action(
-		name="omotlp-http"
-		type="omotlp"
+		name="omotel-http"
+		type="omotel"
 		template="otlpBody"
 		endpoint="http://127.0.0.1:'$otel_port'"
 		path="/v1/logs"

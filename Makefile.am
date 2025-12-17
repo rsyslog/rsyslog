@@ -1214,8 +1214,8 @@ if ENABLE_OMHDFS
 SUBDIRS += plugins/omhdfs
 endif
 
-if ENABLE_OMOTLP
-SUBDIRS += plugins/omotlp
+if ENABLE_OMOTEL
+SUBDIRS += plugins/omotel
 endif
 
 if ENABLE_OMJOURNAL

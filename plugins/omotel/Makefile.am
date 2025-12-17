@@ -1,25 +1,25 @@
-pkglib_LTLIBRARIES = omotlp.la
+pkglib_LTLIBRARIES = omotel.la
 
-omotlp_la_SOURCES = \
-       omotlp.c \
+omotel_la_SOURCES = \
+       omotel.c \
        otlp_json.c \
-       omotlp_http.c
+       omotel_http.c
 
 noinst_HEADERS = \
        otlp_json.h \
-       omotlp_http.h
+       omotel_http.h
 
-omotlp_la_CPPFLAGS = \
+omotel_la_CPPFLAGS = \
        -I$(srcdir) \
        -I$(top_srcdir) \
        -I$(top_srcdir)/runtime \
        -I$(top_srcdir)/grammar \
        $(RSRT_CFLAGS) \
-       $(OMOTLP_HTTP_CFLAGS)
+       $(OMOTEL_HTTP_CFLAGS)
 
-omotlp_la_LDFLAGS = -module -avoid-version
+omotel_la_LDFLAGS = -module -avoid-version
 
-omotlp_la_LIBADD = $(OMOTLP_HTTP_LIBS) $(ZLIB_LIBS)
+omotel_la_LIBADD = $(OMOTEL_HTTP_LIBS) $(ZLIB_LIBS)
 
 EXTRA_DIST = \
         AGENTS.md \

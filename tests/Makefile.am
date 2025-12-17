@@ -1057,15 +1057,15 @@ TESTS +=  \
 endif
 endif
 
-if ENABLE_OMOTLP
+if ENABLE_OMOTEL
 TESTS += \
-        omotlp-http-batch.sh \
-        omotlp-basic.sh \
-        omotlp-batch.sh \
-        omotlp-compression.sh \
-        omotlp-proxy.sh \
-        omotlp-tls.sh \
-        omotlp-trace-correlation.sh
+        omotel-http-batch.sh \
+        omotel-basic.sh \
+        omotel-batch.sh \
+        omotel-compression.sh \
+        omotel-proxy.sh \
+        omotel-tls.sh \
+        omotel-trace-correlation.sh
 endif
 
 if ENABLE_OMKAFKA

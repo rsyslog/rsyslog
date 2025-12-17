@@ -1,17 +1,17 @@
 #!/bin/bash
 # This file is part of the rsyslog project, released under ASL 2.0
-## omotlp-basic.sh -- basic functionality test for omotlp module
+## omotel-basic.sh -- basic functionality test for omotel module
 ##
-## Starts OTEL Collector, sends messages via omotlp, and verifies
+## Starts OTEL Collector, sends messages via omotel, and verifies
 ## messages are received and stored correctly in OTLP JSON format.
 
 . ${srcdir:=.}/diag.sh init
 
-# Check if omotlp module is available
-# NOTE: The module must be enabled during configure with --enable-omotlp
+# Check if omotel module is available
+# NOTE: The module must be enabled during configure with --enable-omotel
 # If the module fails to load with error -1001 (RS_RET_MISSING_INTERFACE),
-# the module was not built correctly and needs to be rebuilt with --enable-omotlp
-require_plugin omotlp
+# the module was not built correctly and needs to be rebuilt with --enable-omotel
+require_plugin omotel
 
 export NUMMESSAGES=1000
 export EXTRA_EXIT=otel
@@ -38,12 +38,12 @@ generate_conf
 add_conf '
 template(name="otlpBody" type="string" string="msgnum:%msg:F,58:2%")
 
-module(load="../plugins/omotlp/.libs/omotlp")
+module(load="../plugins/omotel/.libs/omotel")
 
 if $msg contains "msgnum:" then
 	action(
-		name="omotlp-http"
-		type="omotlp"
+		name="omotel-http"
+		type="omotel"
 		template="otlpBody"
 		endpoint="http://127.0.0.1:'$otel_port'"
 		path="/v1/logs"
@@ -92,11 +92,11 @@ try:
                             if "logRecords" in scope_log:
                                 records.extend(scope_log["logRecords"])
 except Exception as exc:
-    sys.stderr.write(f"omotlp-basic: failed to parse OTLP output: {exc}\n")
+    sys.stderr.write(f"omotel-basic: failed to parse OTLP output: {exc}\n")
     sys.exit(1)
 
 if not records:
-    sys.stderr.write("omotlp-basic: OTLP output did not contain any logRecords\n")
+    sys.stderr.write("omotel-basic: OTLP output did not contain any logRecords\n")
     sys.exit(1)
 
 def has_hostname(attrs):
@@ -109,10 +109,10 @@ def has_hostname(attrs):
 
 for idx, record in enumerate(records):
     if record.get("severityNumber", 0) == 0:
-        sys.stderr.write(f"omotlp-basic: record {idx} missing severityNumber\n")
+        sys.stderr.write(f"omotel-basic: record {idx} missing severityNumber\n")
         sys.exit(1)
     if not has_hostname(record.get("attributes", [])):
-        sys.stderr.write(f"omotlp-basic: record {idx} missing log.syslog.hostname attribute\n")
+        sys.stderr.write(f"omotel-basic: record {idx} missing log.syslog.hostname attribute\n")
         sys.exit(1)
 PY
 
