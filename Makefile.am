@@ -262,6 +262,7 @@ EXTRA_DIST += \
     doc/source/dataflow.png \
     doc/source/development/coding_practices.rst \
     doc/source/development/coding_practices/embedded_ipv4_tail_helper.rst \
+    doc/source/development/coding_practices/error_logging_with_errno.rst \
     doc/source/development/coding_practices/externalized_helper_contracts.rst \
     doc/source/development/config_data_model.rst \
     doc/source/development/debugging.rst \
@@ -919,6 +920,22 @@ EXTRA_DIST += \
     doc/source/reference/parameters/ommail-subject-template.rst \
     doc/source/reference/parameters/ommail-subject-text.rst \
     doc/source/reference/parameters/ommail-template.rst \
+    doc/source/reference/parameters/ommysql-db.rst \
+    doc/source/reference/parameters/ommysql-mysqlconfig-file.rst \
+    doc/source/reference/parameters/ommysql-mysqlconfig-section.rst \
+    doc/source/reference/parameters/ommysql-pwd.rst \
+    doc/source/reference/parameters/ommysql-server.rst \
+    doc/source/reference/parameters/ommysql-serverport.rst \
+    doc/source/reference/parameters/ommysql-socket.rst \
+    doc/source/reference/parameters/ommysql-template.rst \
+    doc/source/reference/parameters/ommysql-uid.rst \
+    doc/source/reference/parameters/ompgsql-conninfo.rst \
+    doc/source/reference/parameters/ompgsql-db.rst \
+    doc/source/reference/parameters/ompgsql-pass.rst \
+    doc/source/reference/parameters/ompgsql-port.rst \
+    doc/source/reference/parameters/ompgsql-server.rst \
+    doc/source/reference/parameters/ompgsql-template.rst \
+    doc/source/reference/parameters/ompgsql-user.rst \
     doc/source/reference/parameters/omprog-begintransactionmark.rst \
     doc/source/reference/parameters/omprog-binary.rst \
     doc/source/reference/parameters/omprog-closetimeout.rst \
@@ -934,6 +951,28 @@ EXTRA_DIST += \
     doc/source/reference/parameters/omprog-signalonclose.rst \
     doc/source/reference/parameters/omprog-template.rst \
     doc/source/reference/parameters/omprog-usetransactions.rst \
+    doc/source/reference/parameters/omrelp-conn-timeout.rst \
+    doc/source/reference/parameters/omrelp-keepalive.rst \
+    doc/source/reference/parameters/omrelp-keepalive-interval.rst \
+    doc/source/reference/parameters/omrelp-keepalive-probes.rst \
+    doc/source/reference/parameters/omrelp-keepalive-time.rst \
+    doc/source/reference/parameters/omrelp-localclientip.rst \
+    doc/source/reference/parameters/omrelp-port.rst \
+    doc/source/reference/parameters/omrelp-rebindinterval.rst \
+    doc/source/reference/parameters/omrelp-target.rst \
+    doc/source/reference/parameters/omrelp-template.rst \
+    doc/source/reference/parameters/omrelp-timeout.rst \
+    doc/source/reference/parameters/omrelp-tls.rst \
+    doc/source/reference/parameters/omrelp-tls-authmode.rst \
+    doc/source/reference/parameters/omrelp-tls-cacert.rst \
+    doc/source/reference/parameters/omrelp-tls-compression.rst \
+    doc/source/reference/parameters/omrelp-tls-mycert.rst \
+    doc/source/reference/parameters/omrelp-tls-myprivkey.rst \
+    doc/source/reference/parameters/omrelp-tls-permittedpeer.rst \
+    doc/source/reference/parameters/omrelp-tls-prioritystring.rst \
+    doc/source/reference/parameters/omrelp-tls-tlscfgcmd.rst \
+    doc/source/reference/parameters/omrelp-tls-tlslib.rst \
+    doc/source/reference/parameters/omrelp-windowsize.rst \
     doc/source/reference/parameters/omsendertrack-cmdfile.rst \
     doc/source/reference/parameters/omsendertrack-interval.rst \
     doc/source/reference/parameters/omsendertrack-senderid.rst \
@@ -949,6 +988,8 @@ EXTRA_DIST += \
     doc/source/reference/parameters/omsnmp-trapoid.rst \
     doc/source/reference/parameters/omsnmp-traptype.rst \
     doc/source/reference/parameters/omsnmp-version.rst \
+    doc/source/reference/parameters/omstdout-ensurelfending.rst \
+    doc/source/reference/parameters/omstdout-template.rst \
     doc/source/reference/parameters/omuxsock-abstract.rst \
     doc/source/reference/parameters/omuxsock-networknamespace.rst \
     doc/source/reference/parameters/omuxsock-socketname.rst \
