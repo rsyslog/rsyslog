@@ -43,6 +43,7 @@ Legacy names (for reference)
 Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omstdout.parameter.legacy.actionomstdoutensurelfending:
+
 - ``$ActionOMStdoutEnsureLFEnding`` — maps to ensureLFEnding (status: legacy)
 
 .. index::
