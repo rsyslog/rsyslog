@@ -25,9 +25,9 @@ Description
 -----------
 This is the name of the template that contains a numerical IP address that is to be used as the source system IP address. While it may often be a constant value, it can be generated as usual via the property replacer, as long as it is a valid IPv4 address. If not specified, the built-in default template RSYSLOG_omudpspoofDfltSourceTpl is used. This template is defined as follows:
 
-.. code-block:: none
+.. code-block:: rsyslog
 
-   $template RSYSLOG_omudpspoofDfltSourceTpl,"%fromhost-ip%"
+   template(name="RSYSLOG_omudpspoofDfltSourceTpl" type="string" string="%fromhost-ip%")
 
 So in essence, the default template spoofs the address of the system the message was received from. This is considered the most important use case.
 

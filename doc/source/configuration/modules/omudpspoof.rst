@@ -103,9 +103,9 @@ Forwarding message through multiple ports
 
 Forward the message to 192.168.1.1, using original source and port between 10000 and 19999.
 
-.. code-block:: none
+.. code-block:: rsyslog
 
-   Action (
+   action(
      type="omudpspoof"
      target="192.168.1.1"
      sourcePort.start="10000"
@@ -118,17 +118,17 @@ Forwarding message using another source address
 
 Forward the message to 192.168.1.1, using source address 192.168.111.111 and default ports.
 
-.. code-block:: none
+.. code-block:: rsyslog
 
-   Module (
+   module(
      load="omudpspoof"
    )
-   Template (
+   template(
      name="spoofaddr"
      type="string"
      string="192.168.111.111"
    )
-   Action (
+   action(
      type="omudpspoof"
      target="192.168.1.1"
      sourceTemplate="spoofaddr"
