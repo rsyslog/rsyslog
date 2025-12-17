@@ -43,10 +43,6 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          # 1 x from macos-13 (x64 NONE)
-          - os: macos-13
-            arch: x64
-            sanitizer: none
           # 1 x from macos-14 (x64 NONE)
           - os: macos-14
             arch: x64
