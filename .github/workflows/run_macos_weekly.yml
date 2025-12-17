@@ -32,7 +32,7 @@ jobs:
       # We want a full picture weekly
       fail-fast: false
       matrix:
-        os: [macos-13, macos-14, macos-15]
+        os: [macos-14, macos-15]
         arch: [x64, arm64]
         sanitizer: [none, asan, tsan]
     runs-on: ${{ matrix.os }}
