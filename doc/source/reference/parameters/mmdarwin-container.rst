@@ -27,12 +27,12 @@ Description
 -----------
 Set the JSON container path that mmdarwin uses when it writes Darwin metadata
 and response values back to the message. The container string must begin with
-:json:`"!"` or :json:`"."` so the path resolves to either the structured data
+``"!"`` or ``"."`` so the path resolves to either the structured data
 in the message or a local variable tree.
 
-If no value is configured, mmdarwin stores data under :json:`"!mmdarwin"`.
+If no value is configured, mmdarwin stores data under ``"!mmdarwin"``.
 The module prefixes this container to the target specified by
-:ref:`param-mmdarwin-key` and to the generated :json:`"darwin_id"` field that
+:ref:`param-mmdarwin-key` and to the generated ``"darwin_id"`` field that
 tracks the request UUID. As a result, selecting a custom container lets you
 control where the Darwin score and identifier are recorded.
 

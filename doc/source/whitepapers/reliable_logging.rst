@@ -21,7 +21,7 @@ rather than following the original behavior of writing the data to disk and
 doing a fsync before acknowledging the log message.
 
 If you have a problem with your output from rsyslog, your application will
-keep running until rsyslog fills it's queues, and then it will stop.
+keep running until rsyslog fills its queues, and then it will stop.
 
 When you configure rsyslog to send the logs to another machine (either to
 rsyslog on another machine or to some sort of database), you introduce a
@@ -31,8 +31,8 @@ You can configure the size of the rsyslog memory queues (I had one machine
 dedicated to running rsyslog where I created queues large enough to use
 >100G of ram for logs)
 
-You can configure rsyslog to spill from it's memory queues to disk queues
-(disk assisted queue mode) when it fills it's memory queues.
+You can configure rsyslog to spill from its memory queues to disk queues
+(disk assisted queue mode) when it fills its memory queues.
 
 You can create a separate set of queues for the action that has a high
 probability of failing (sending to a remote machine via TCP in this case),

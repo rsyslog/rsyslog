@@ -27,14 +27,14 @@ Description
 -----------
 Tells the Darwin filter what to do next:
 
-* :json:`"no"`: no response will be sent, nothing will be sent to next
+* ``"no"``: no response will be sent, nothing will be sent to next
   filter.
-* :json:`"back"`: a score for the input will be returned by the filter,
+* ``"back"``: a score for the input will be returned by the filter,
   nothing will be forwarded to the next filter.
-* :json:`"darwin"`: the data provided will be forwarded to the next filter
+* ``"darwin"``: the data provided will be forwarded to the next filter
   (in the format specified in the filter's configuration), no response will
   be given to mmdarwin.
-* :json:`"both"`: the filter will respond to mmdarwin with the input's score
+* ``"both"``: the filter will respond to mmdarwin with the input's score
   AND forward the data (in the format specified in the filter's
   configuration) to the next filter.
 
@@ -42,8 +42,8 @@ Tells the Darwin filter what to do next:
 
    Please be mindful when setting this parameter, as the called filter will
    only forward data to the next configured filter if you ask the filter to do
-   so with :json:`"darwin"` or :json:`"both"`. If a next filter is configured
-   but you ask for a :json:`"back"` response, the next filter **WILL NOT**
+   so with ``"darwin"`` or ``"both"``. If a next filter is configured
+   but you ask for a ``"back"`` response, the next filter **WILL NOT**
    receive anything!
 
 Input usage

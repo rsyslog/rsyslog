@@ -26,7 +26,7 @@ This parameter applies to :doc:`../../configuration/modules/mmdarwin`.
 Description
 -----------
 Each Darwin module has a unique filter code. For example, the code of the
-hostlookup filter is :json:`"0x66726570"`.
+hostlookup filter is ``"0x66726570"``.
 This code was mandatory but is now obsolete. It can be omitted or left at its
 default value.
 

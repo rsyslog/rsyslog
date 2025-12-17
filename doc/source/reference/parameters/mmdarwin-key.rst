@@ -41,7 +41,7 @@ For example, given the following log line:
        }
    }
 
-and the :json:`"certitude"` key, the enriched log line would be:
+and the ``"certitude"`` key, the enriched log line would be:
 
 .. code-block:: json
    :emphasize-lines: 9
@@ -57,7 +57,7 @@ and the :json:`"certitude"` key, the enriched log line would be:
        "certitude": 0
    }
 
-where :json:`"certitude"` represents the score returned by Darwin.
+where ``"certitude"`` represents the score returned by Darwin.
 
 Input usage
 -----------

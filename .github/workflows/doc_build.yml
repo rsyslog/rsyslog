@@ -6,8 +6,6 @@ name: documentation build
 on:
   pull_request_target:
     types: [opened, synchronize, reopened, closed]
-  pull_request:
-    types: [opened, synchronize, reopened, closed]
   push:
     branches: [main, master]
   workflow_dispatch:
@@ -18,7 +16,9 @@ permissions:
   id-token: write
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  group: >-
+    ${{ github.workflow }}-${{ github.event_name }}-${{
+    github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -29,9 +29,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 8
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Check for doc changes
         id: doc_changes
@@ -42,7 +39,9 @@ jobs:
 
       # we build from tarball to ensure no missing files!
       - name: setup make dist build env
-        if: ${{ (github.event_name != 'pull_request' && github.event_name != 'pull_request_target') || steps.doc_changes.outputs.any_changed == 'true' }}
+        if: >-
+          ${{ github.event_name != 'pull_request' ||
+          steps.doc_changes.outputs.any_changed == 'true' }}
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -67,25 +66,35 @@ jobs:
             zstd
 
       - name: create tarball
-        if: ${{ (github.event_name != 'pull_request' && github.event_name != 'pull_request_target') || steps.doc_changes.outputs.any_changed == 'true' }}
+        if: >-
+          ${{ github.event_name != 'pull_request' ||
+          steps.doc_changes.outputs.any_changed == 'true' }}
         run: |
           autoreconf -fvi
           ./configure --enable-silent-rules --disable-testbench \
-             --disable-imdiag --disable-imdocker --disable-imfile --disable-default-tests\
-             --disable-impstats --disable-imptcp --disable-mmanon --disable-mmaudit --disable-mmfields \
-             --disable-mmjsonparse --disable-mmpstrucdata --disable-mmsequence --disable-mmutf8fix \
-             --disable-mail --disable-omprog --disable-improg --disable-omruleset --disable-omstdout \
-             --disable-omuxsock --disable-pmaixforwardedfrom --disable-pmciscoios --disable-pmcisconames \
-             --disable-pmlastmsg --disable-pmsnare --disable-libgcrypt --disable-mmnormalize \
-             --disable-omudpspoof --disable-relp --disable-mmsnmptrapd --disable-gnutls --disable-usertools \
-             --disable-mysql --disable-valgrind --disable-omjournal --enable-libsystemd \
-             --disable-mmkubernetes --disable-imjournal --disable-omkafka --disable-imkafka \
-             --disable-ommongodb --disable-omrabbitmq --disable-journal-tests --disable-mmdarwin \
+             --disable-imdiag --disable-imdocker --disable-imfile \
+             --disable-default-tests --disable-impstats --disable-imptcp \
+             --disable-mmanon --disable-mmaudit --disable-mmfields \
+             --disable-mmjsonparse --disable-mmpstrucdata \
+             --disable-mmsequence --disable-mmutf8fix --disable-mail \
+             --disable-omprog --disable-improg --disable-omruleset \
+             --disable-omstdout --disable-omuxsock \
+             --disable-pmaixforwardedfrom --disable-pmciscoios \
+             --disable-pmcisconames --disable-pmlastmsg --disable-pmsnare \
+             --disable-libgcrypt --disable-mmnormalize \
+             --disable-omudpspoof --disable-relp --disable-mmsnmptrapd \
+             --disable-gnutls --disable-usertools --disable-mysql \
+             --disable-valgrind --disable-omjournal --enable-libsystemd \
+             --disable-mmkubernetes --disable-imjournal \
+             --disable-omkafka --disable-imkafka --disable-ommongodb \
+             --disable-omrabbitmq --disable-journal-tests --disable-mmdarwin \
              --disable-helgrind --disable-uuid --disable-fmhttp
           make dist
 
       - name: unpack tarball for build
-        if: ${{ (github.event_name != 'pull_request' && github.event_name != 'pull_request_target') || steps.doc_changes.outputs.any_changed == 'true' }}
+        if: >-
+          ${{ github.event_name != 'pull_request' ||
+          steps.doc_changes.outputs.any_changed == 'true' }}
         run: |
           mkdir doc-builder
           cd doc-builder
@@ -95,23 +104,31 @@ jobs:
           cd ..
 
       - name: Setup Python
-        if: ${{ (github.event_name != 'pull_request' && github.event_name != 'pull_request_target') || steps.doc_changes.outputs.any_changed == 'true' }}
+        if: >-
+          ${{ github.event_name != 'pull_request' ||
+          steps.doc_changes.outputs.any_changed == 'true' }}
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
       - name: Install Sphinx
-        if: ${{ (github.event_name != 'pull_request' && github.event_name != 'pull_request_target') || steps.doc_changes.outputs.any_changed == 'true' }}
+        if: >-
+          ${{ github.event_name != 'pull_request' ||
+          steps.doc_changes.outputs.any_changed == 'true' }}
         run: python -m pip install -r doc/requirements.txt
 
       - name: Build documentation
-        if: ${{ (github.event_name != 'pull_request' && github.event_name != 'pull_request_target') || steps.doc_changes.outputs.any_changed == 'true' }}
+        if: >-
+          ${{ github.event_name != 'pull_request' ||
+          steps.doc_changes.outputs.any_changed == 'true' }}
         run: |
           cd doc-builder/doc
-          make html SPHINXOPTS="-W -q --keep-going"
+          make html SPHINXOPTS="-j8 -W -q --keep-going"
 
       - name: Upload build artifact
-        if: ${{ (github.event_name != 'pull_request' && github.event_name != 'pull_request_target') || steps.doc_changes.outputs.any_changed == 'true' }}
+        if: >-
+          ${{ github.event_name != 'pull_request' ||
+          steps.doc_changes.outputs.any_changed == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: docs-html
@@ -123,9 +140,8 @@ jobs:
     needs: build_docs
     runs-on: ubuntu-latest
     if: >-
-      ${{ (github.event_name=='pull_request'||github.event_name=='pull_request_target')&&
+      ${{ github.event_name=='pull_request'&&
       github.event.action!='closed'&&
-      github.event.pull_request.head.repo.full_name==github.repository&&
       needs.build_docs.outputs.docs_changed=='true'}}
     permissions:
       contents: write
@@ -156,47 +172,88 @@ jobs:
             pages-deployment/pr-${{ github.event.pull_request.number }}/
 
       - name: Setup Pages
+        if: >-
+          ${{ github.event.pull_request.head.repo.full_name ==
+          github.repository }}
         uses: actions/configure-pages@v4
 
       - name: Upload to Pages (artifact)
+        if: >-
+          ${{ github.event.pull_request.head.repo.full_name ==
+          github.repository }}
         uses: actions/upload-pages-artifact@v3
         with:
           path: pages-deployment
 
       - name: Deploy to GitHub Pages
+        if: >-
+          ${{ github.event.pull_request.head.repo.full_name ==
+          github.repository }}
         id: deployment
         uses: actions/deploy-pages@v4
 
       - name: Comment on PR with download links and preview
-        if: ${{ success() }}
+        if: >-
+          ${{ success() &&
+          github.event.pull_request.head.repo.full_name == github.repository }}
         uses: actions/github-script@v7
         env:
           PAGES_BASE_URL: ${{ steps.deployment.outputs.page_url }}
+          IS_FORK: >-
+            ${{ github.event.pull_request.head.repo.full_name !=
+            github.repository }}
         with:
           script: |
             const repo = context.repo;
             const runId = context.runId;
             const prNum = '${{ github.event.pull_request.number }}';
-            const pagesUrl = process.env.PAGES_BASE_URL + 'pr-' + prNum + '/';
+            const isFork = process.env.IS_FORK === 'true';
+            const pagesUrl = process.env.PAGES_BASE_URL ?
+              process.env.PAGES_BASE_URL + 'pr-' + prNum + '/' : null;
 
-            const commentBody = [
-              '## 📖 Documentation Preview Ready!\n',
-              '✅ **Sphinx docs built and deployed for this PR.**\n',
-              '### 🌐 Browse Online (Recommended):',
-              '**[📚 View Documentation Online →](' + pagesUrl + ')**',
-              '',
-              '### 🔗 Quick Links:',
-              `- **Browse Online →** ${pagesUrl}`,
-              `- **View workflow run →** ` +
-              'https://github.com/' + repo.owner + '/' + repo.repo +
-              '/actions/runs/' + runId,
-              `- **Download artifacts →** ` +
-              'https://github.com/' + repo.owner + '/' + repo.repo +
-              '/actions/runs/' + runId + '#artifacts',
-              '',
-              '---',
-              '*🤖 This comment was generated by the docs workflow.*'
-            ].join('\n');
+            let commentBody;
+            if (isFork || !pagesUrl) {
+              // Fork PRs: no Pages deployment, but artifacts available
+              commentBody = [
+                '## 📖 Documentation Preview Ready!\n',
+                '✅ **Sphinx docs built successfully for this PR.**\n',
+                '### 📦 Download Documentation:',
+                `- **Download HTML artifacts →** ` +
+                'https://github.com/' + repo.owner + '/' + repo.repo +
+                '/actions/runs/' + runId + '#artifacts',
+                '',
+                '### 🔗 Quick Links:',
+                `- **View workflow run →** ` +
+                'https://github.com/' + repo.owner + '/' + repo.repo +
+                '/actions/runs/' + runId,
+                '',
+                '---',
+                '*Note: Online preview is only available for PRs from ' +
+                'the main repository. Fork contributors can download ' +
+                'the HTML artifacts to preview locally.*',
+                '*🤖 This comment was generated by the docs workflow.*'
+              ].join('\n');
+            } else {
+              // Same-repo PRs: full preview with Pages deployment
+              commentBody = [
+                '## 📖 Documentation Preview Ready!\n',
+                '✅ **Sphinx docs built and deployed for this PR.**\n',
+                '### 🌐 Browse Online (Recommended):',
+                '**[📚 View Documentation Online →](' + pagesUrl + ')**',
+                '',
+                '### 🔗 Quick Links:',
+                `- **Browse Online →** ${pagesUrl}`,
+                `- **View workflow run →** ` +
+                'https://github.com/' + repo.owner + '/' + repo.repo +
+                '/actions/runs/' + runId,
+                `- **Download artifacts →** ` +
+                'https://github.com/' + repo.owner + '/' + repo.repo +
+                '/actions/runs/' + runId + '#artifacts',
+                '',
+                '---',
+                '*🤖 This comment was generated by the docs workflow.*'
+              ].join('\n');
+            }
 
             const comments = await github.rest.issues.listComments({
               owner: repo.owner,
@@ -228,7 +285,7 @@ jobs:
     name: Cleanup PR preview (on close)
     runs-on: ubuntu-latest
     if: >-
-      ${{(github.event_name=='pull_request'||github.event_name=='pull_request_target')&&github.event.action=='closed'}}
+      ${{ github.event_name=='pull_request'&&github.event.action=='closed'}}
     permissions:
       contents: write
     steps:
