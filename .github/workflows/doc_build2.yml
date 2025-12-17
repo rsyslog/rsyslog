@@ -1,0 +1,246 @@
+name: doc build
+
+# This workflow runs on all pull requests because branch protection requires it.
+# If no documentation files change, the build steps are skipped to save time.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_docs:
+    runs-on: ubuntu-latest
+    outputs:
+      docs_changed: ${{steps.doc_changes.outputs.any_changed}}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for doc changes
+        id: doc_changes
+        uses: tj-actions/changed-files@v46
+        with:
+          files: |
+            doc/**/*.rst
+
+      # we build from tarball to ensure no missing files!
+      - name: setup make dist build env
+        if: ${{ (github.event_name != 'pull_request' && github.event_name != 'pull_request_target') || steps.doc_changes.outputs.any_changed == 'true' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libestr-dev \
+            libglib2.0-dev \
+            libgnutls28-dev \
+            liblognorm-dev \
+            liblz4-dev \
+            libnet1-dev \
+            librelp-dev \
+            libssl-dev \
+            libsystemd-dev \
+            libtool \
+            libtool-bin \
+            libzstd-dev \
+            lsof \
+            make \
+            net-tools \
+            pkg-config \
+            python3-docutils  \
+            software-properties-common \
+            zstd
+
+      - name: create tarball
+        if: ${{ (github.event_name != 'pull_request' && github.event_name != 'pull_request_target') || steps.doc_changes.outputs.any_changed == 'true' }}
+        run: |
+          autoreconf -fvi
+          ./configure --enable-silent-rules --disable-testbench \
+             --disable-imdiag --disable-imdocker --disable-imfile --disable-default-tests\
+             --disable-impstats --disable-imptcp --disable-mmanon --disable-mmaudit --disable-mmfields \
+             --disable-mmjsonparse --disable-mmpstrucdata --disable-mmsequence --disable-mmutf8fix \
+             --disable-mail --disable-omprog --disable-improg --disable-omruleset --disable-omstdout \
+             --disable-omuxsock --disable-pmaixforwardedfrom --disable-pmciscoios --disable-pmcisconames \
+             --disable-pmlastmsg --disable-pmsnare --disable-libgcrypt --disable-mmnormalize \
+             --disable-omudpspoof --disable-relp --disable-mmsnmptrapd --disable-gnutls --disable-usertools \
+             --disable-mysql --disable-valgrind --disable-omjournal --enable-libsystemd \
+             --disable-mmkubernetes --disable-imjournal --disable-omkafka --disable-imkafka \
+             --disable-ommongodb --disable-omrabbitmq --disable-journal-tests --disable-mmdarwin \
+             --disable-helgrind --disable-uuid --disable-fmhttp
+          make dist
+
+      - name: unpack tarball for build
+        if: ${{ (github.event_name != 'pull_request' && github.event_name != 'pull_request_target') || steps.doc_changes.outputs.any_changed == 'true' }}
+        run: |
+          mkdir doc-builder
+          cd doc-builder
+          tar -xf ../rsyslog-8*.tar.gz --strip-components=1
+          pwd
+          ls -l
+          cd ..
+
+      - name: Setup Python
+        if: ${{ (github.event_name != 'pull_request' && github.event_name != 'pull_request_target') || steps.doc_changes.outputs.any_changed == 'true' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Sphinx
+        if: ${{ (github.event_name != 'pull_request' && github.event_name != 'pull_request_target') || steps.doc_changes.outputs.any_changed == 'true' }}
+        run: python -m pip install -r doc/requirements.txt
+
+      - name: Build documentation
+        if: ${{ (github.event_name != 'pull_request' && github.event_name != 'pull_request_target') || steps.doc_changes.outputs.any_changed == 'true' }}
+        run: |
+          cd doc-builder/doc
+          make html SPHINXOPTS="-W -q --keep-going"
+
+      - name: Upload build artifact
+        if: ${{ (github.event_name != 'pull_request' && github.event_name != 'pull_request_target') || steps.doc_changes.outputs.any_changed == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-html
+          path: doc-builder/doc/build/html
+
+
+  publish_pr_preview:
+    name: Publish PR preview (Actions Pages pr-<num>)
+    needs: build_docs
+    runs-on: ubuntu-latest
+    if: >-
+      ${{ (github.event_name=='pull_request'||github.event_name=='pull_request_target')&&
+      github.event.action!='closed'&&
+      github.event.pull_request.head.repo.full_name==github.repository&&
+      needs.build_docs.outputs.docs_changed=='true'}}
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      pages: write
+      id-token: write
+    steps:
+      - name: Download built docs artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docs-html
+          path: preview-site
+
+      - name: List downloaded files (debug)
+        run: |
+          echo "Listing preview-site contents"
+          ls -la
+          ls -la preview-site || true
+          echo "Show a few files recursively:"
+          find preview-site -maxdepth 2 -type f | head -n 50
+
+      - name: Prepare Pages artifact directory
+        run: |
+          set -e
+          mkdir -p pages-deployment/pr-${{ github.event.pull_request.number }}
+          rsync -a --delete preview-site/ \
+            pages-deployment/pr-${{ github.event.pull_request.number }}/
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload to Pages (artifact)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages-deployment
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Comment on PR with download links and preview
+        if: ${{ success() }}
+        uses: actions/github-script@v7
+        env:
+          PAGES_BASE_URL: ${{ steps.deployment.outputs.page_url }}
+        with:
+          script: |
+            const repo = context.repo;
+            const runId = context.runId;
+            const prNum = '${{ github.event.pull_request.number }}';
+            const pagesUrl = process.env.PAGES_BASE_URL + 'pr-' + prNum + '/';
+
+            const commentBody = [
+              '## 📖 Documentation Preview Ready!\n',
+              '✅ **Sphinx docs built and deployed for this PR.**\n',
+              '### 🌐 Browse Online (Recommended):',
+              '**[📚 View Documentation Online →](' + pagesUrl + ')**',
+              '',
+              '### 🔗 Quick Links:',
+              `- **Browse Online →** ${pagesUrl}`,
+              `- **View workflow run →** ` +
+              'https://github.com/' + repo.owner + '/' + repo.repo +
+              '/actions/runs/' + runId,
+              `- **Download artifacts →** ` +
+              'https://github.com/' + repo.owner + '/' + repo.repo +
+              '/actions/runs/' + runId + '#artifacts',
+              '',
+              '---',
+              '*🤖 This comment was generated by the docs workflow.*'
+            ].join('\n');
+
+            const comments = await github.rest.issues.listComments({
+              owner: repo.owner,
+              repo: repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const marker = '## 📖 Documentation Preview Ready!';
+            const existing = comments.data.find(c =>
+              typeof c.body === 'string' && c.body.includes(marker)
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: repo.owner,
+                repo: repo.repo,
+                comment_id: existing.id,
+                body: commentBody,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: repo.owner,
+                repo: repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody,
+              });
+            }
+
+  cleanup_pr_preview:
+    name: Cleanup PR preview (on close)
+    runs-on: ubuntu-latest
+    if: >-
+      ${{(github.event_name=='pull_request'||github.event_name=='pull_request_target')&&github.event.action=='closed'}}
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          fetch-depth: 0
+
+      - name: Remove pr folder and push
+        run: |
+          set -e
+          dir="pr-${{ github.event.pull_request.number }}"
+          if [ -d "$dir" ]; then
+            git config user.name "github-actions"
+            git config user.email "github-actions@github.com"
+            git rm -r "$dir"
+            git commit -m "chore(docs): remove PR preview $dir"
+            git push
+          else
+            echo "No preview folder $dir to remove"
+          fi
