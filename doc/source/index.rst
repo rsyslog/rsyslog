@@ -1,6 +1,8 @@
 rsyslog
 =======
 
+THIS IS JUST FOR CI TESTING - DO NOT MERGE!
+
 .. important::
    **Confirm Your Source: Use the Official Documentation**
 
