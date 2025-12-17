@@ -698,6 +698,11 @@ static rsRetVal pollJournal(struct journalContext_s *journalContext, char *state
 
     err = sd_journal_wait(journalContext->j, POLL_TIMEOUT);
     if (err == SD_JOURNAL_INVALIDATE) {
+        const int processRet = sd_journal_process(journalContext->j);
+        if (processRet < 0) {
+            LogError(-processRet, RS_RET_ERR, "imjournal: sd_journal_process() failed during rotation handling");
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
         CHKiRet(handleRotation(journalContext, stateFile));
     }
 
