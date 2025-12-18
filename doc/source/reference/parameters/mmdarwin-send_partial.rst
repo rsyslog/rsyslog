@@ -26,10 +26,10 @@ This parameter applies to :doc:`../../configuration/modules/mmdarwin`.
 
 Description
 -----------
-Controls whether to send data to Darwin if not all :json:`"fields"` could be
+Controls whether to send data to Darwin if not all ``"fields"`` could be
 found in the message.
 Darwin filters typically require a strict set of parameters and may not process
-incomplete data, so leaving this setting at :json:`"off"` is recommended unless
+incomplete data, so leaving this setting at ``"off"`` is recommended unless
 you have verified the filter accepts missing fields.
 
 For example, for the following log line:
@@ -46,7 +46,7 @@ For example, for the following log line:
        }
    }
 
-and the :json:`"fields"` array:
+and the ``"fields"`` array:
 
 .. code-block:: none
 
