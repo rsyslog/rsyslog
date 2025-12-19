@@ -1277,6 +1277,8 @@ endif # ENABLE_REDIS_TESTS
 if ENABLE_IMPSTATS
 TESTS +=  \
 	impstats-hup.sh \
+	impstats-overwrite.sh \
+	impstats-no-overwrite.sh \
 	perctile-simple.sh \
 	dynstats.sh \
 	dynstats_overflow.sh \
@@ -3163,6 +3165,8 @@ EXTRA_DIST= \
 	dynstats_reset.sh \
 	dynstats_reset-vg.sh \
 	impstats-hup.sh \
+	impstats-overwrite.sh \
+	impstats-no-overwrite.sh \
 	dynstats.sh \
 	dynstats-vg.sh \
 	dynstats_prevent_premature_eviction.sh \

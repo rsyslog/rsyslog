@@ -89,6 +89,7 @@ struct modConfData_s {
     sbool bLogToSyslog;
     sbool bResetCtrs;
     sbool bBracketing;
+    sbool bLogOverwrite;
     char *logfile;
     sbool configSetViaV2Method;
     uchar *pszBindRuleset; /* name of ruleset to bind to */
@@ -102,9 +103,11 @@ static prop_t *pInputName = NULL;
 
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
-    {"interval", eCmdHdlrInt, 0},      {"facility", eCmdHdlrInt, 0},      {"severity", eCmdHdlrInt, 0},
-    {"bracketing", eCmdHdlrBinary, 0}, {"log.syslog", eCmdHdlrBinary, 0}, {"resetcounters", eCmdHdlrBinary, 0},
-    {"log.file", eCmdHdlrGetWord, 0},  {"format", eCmdHdlrGetWord, 0},    {"ruleset", eCmdHdlrString, 0}};
+    {"interval", eCmdHdlrInt, 0},      {"facility", eCmdHdlrInt, 0},
+    {"severity", eCmdHdlrInt, 0},      {"bracketing", eCmdHdlrBinary, 0},
+    {"log.syslog", eCmdHdlrBinary, 0}, {"resetcounters", eCmdHdlrBinary, 0},
+    {"log.file", eCmdHdlrGetWord, 0},  {"format", eCmdHdlrGetWord, 0},
+    {"ruleset", eCmdHdlrString, 0},    {"log.file.overwrite", eCmdHdlrBinary, 0}};
 
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 
@@ -204,6 +207,12 @@ static void doLogToFile(const char *ln, const size_t lenLn) {
     if (lenLn == 0) goto done;
 
     if (runModConf->logfd == -1) {
+        if (runModConf->bLogOverwrite) {
+            /* If overwriting, the file should have been opened by the main loop.
+             * If it's not open, we just skip logging to file.
+             */
+            goto done;
+        }
         runModConf->logfd = open(runModConf->logfile, O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC, S_IRUSR | S_IWUSR);
         if (runModConf->logfd == -1) {
             DBGPRINTF("impstats: error opening stats file %s\n", runModConf->logfile);
@@ -308,6 +317,7 @@ BEGINbeginCnfLoad
     loadModConf->bLogToSyslog = 1;
     loadModConf->bBracketing = 0;
     loadModConf->bResetCtrs = 0;
+    loadModConf->bLogOverwrite = 0;
     bLegacyCnfModGlobalsPermitted = 1;
     /* init legacy config vars */
     initConfigSettings();
@@ -344,6 +354,8 @@ BEGINsetModCnf
             loadModConf->bResetCtrs = (sbool)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "log.file")) {
             loadModConf->logfile = es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(modpblk.descr[i].name, "log.file.overwrite")) {
+            loadModConf->bLogOverwrite = (sbool)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "format")) {
             mode = es_str2cstr(pvals[i].val.d.estr, NULL);
             if (!strcasecmp(mode, "json")) {
@@ -441,9 +453,11 @@ BEGINdoHUP
     DBGPRINTF("impstats: received HUP\n");
     pthread_mutex_lock(&hup_mutex);
     if (runModConf->logfd != -1) {
-        DBGPRINTF("impstats: closing log file due to HUP\n");
-        close(runModConf->logfd);
-        runModConf->logfd = -1;
+        if (!runModConf->bLogOverwrite) {
+            DBGPRINTF("impstats: closing log file due to HUP\n");
+            close(runModConf->logfd);
+            runModConf->logfd = -1;
+        }
     }
     pthread_mutex_unlock(&hup_mutex);
 ENDdoHUP
@@ -525,9 +539,41 @@ BEGINrunInput
     while (glbl.GetGlobalInputTermState() == 0) {
         srSleep(runModConf->iStatsInterval, 0); /* seconds, micro seconds */
         DBGPRINTF("impstats: woke up, generating messages\n");
+
+        char *tmp_logfile = NULL;
+        if (runModConf->bLogOverwrite && runModConf->logfile != NULL) {
+            const size_t len_tmp_logfile = strlen(runModConf->logfile) + 5;
+            if ((tmp_logfile = malloc(len_tmp_logfile)) == NULL) {
+                LogError(errno, RS_RET_OUT_OF_MEMORY, "impstats: could not allocate memory for temp log file name");
+            } else {
+                snprintf(tmp_logfile, len_tmp_logfile, "%s.tmp", runModConf->logfile);
+                pthread_mutex_lock(&hup_mutex);
+                runModConf->logfd = open(tmp_logfile, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, S_IRUSR | S_IWUSR);
+                if (runModConf->logfd == -1) {
+                    LogError(errno, RS_RET_ERR, "impstats: error opening temp stats file %s", tmp_logfile);
+                    free(tmp_logfile);
+                    tmp_logfile = NULL;
+                }
+                pthread_mutex_unlock(&hup_mutex);
+            }
+        }
+
         if (runModConf->bBracketing) submitLine("BEGIN", sizeof("BEGIN") - 1);
         generateStatsMsgs();
         if (runModConf->bBracketing) submitLine("END", sizeof("END") - 1);
+
+        if (tmp_logfile != NULL) {
+            pthread_mutex_lock(&hup_mutex);
+            close(runModConf->logfd);
+            runModConf->logfd = -1;
+            pthread_mutex_unlock(&hup_mutex);
+            if (rename(tmp_logfile, runModConf->logfile) != 0) {
+                LogError(errno, RS_RET_ERR, "impstats: error renaming temp stats file %s to %s", tmp_logfile,
+                         runModConf->logfile);
+                unlink(tmp_logfile);
+            }
+            free(tmp_logfile);
+        }
     }
 ENDrunInput
 
