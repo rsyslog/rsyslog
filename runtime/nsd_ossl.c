@@ -318,8 +318,11 @@ static rsRetVal osslInitSession(nsd_ossl_t *pThis, osslSslState_t osslType) /* ,
         }
     }
 
-    /* Create BIO from ptcp socket! */
-    conn = BIO_new_socket(pPtcp->sock, BIO_CLOSE /*BIO_NOCLOSE*/);
+    /* Create BIO from ptcp socket!
+     * Use BIO_NOCLOSE to prevent OpenSSL from closing the socket when
+     * SSL_free is called. The socket is owned and will be closed by ptcp.
+     */
+    conn = BIO_new_socket(pPtcp->sock, BIO_NOCLOSE);
     dbgprintf("osslInitSession: Init conn BIO[%p] done\n", (void *)conn);
 
     /* Set debug Callback for conn BIO as well! */
@@ -482,6 +485,15 @@ BEGINobjDestruct(nsd_ossl) /* be sure to specify the object type also in END and
     /* TODO MOVE Free SSL obj also if we do not have a session - or are NOT in TLS mode! */
     if (pThis->pNetOssl->ssl != NULL) {
         DBGPRINTF("nsd_ossl_destruct: [%p] FREE pThis->pNetOssl->ssl \n", pThis);
+        /* If pTcp is NULL, we configure the BIO to close it on SSL_free
+           This is a purely defensive measure and is this case is not actually expected
+           */
+        if (pThis->pTcp == NULL) {
+            BIO *bio = SSL_get_rbio(pThis->pNetOssl->ssl);
+            if (bio != NULL) {
+                BIO_set_close(bio, BIO_CLOSE);
+            }
+        }
         SSL_free(pThis->pNetOssl->ssl);
         pThis->pNetOssl->ssl = NULL;
     }
