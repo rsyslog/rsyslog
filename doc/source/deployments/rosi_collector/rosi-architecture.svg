@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 950 650" font-family="Arial, sans-serif">
+  <!-- Background -->
+  <rect width="950" height="650" fill="#f8f9fa"/>
+  
+  <!-- Title -->
+  <text x="475" y="35" text-anchor="middle" font-size="24" font-weight="bold" fill="#2c3e50">ROSI Collector Architecture</text>
+  <text x="475" y="55" text-anchor="middle" font-size="12" fill="#7f8c8d">RSyslog Open System for Information</text>
+  
+  <!-- Client Hosts Section -->
+  <rect x="30" y="80" width="240" height="520" rx="10" fill="#e8f4f8" stroke="#3498db" stroke-width="2"/>
+  <text x="150" y="105" text-anchor="middle" font-size="16" font-weight="bold" fill="#2980b9">Client Hosts</text>
+  
+  <!-- Client 1 -->
+  <rect x="50" y="130" width="200" height="110" rx="8" fill="#fff" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="150" y="152" text-anchor="middle" font-size="13" font-weight="bold" fill="#34495e">Client Host 1</text>
+  <rect x="70" y="165" width="160" height="25" rx="4" fill="#27ae60" opacity="0.9"/>
+  <text x="150" y="182" text-anchor="middle" font-size="11" fill="#fff">rsyslog</text>
+  <rect x="70" y="195" width="160" height="18" rx="4" fill="#9b59b6" opacity="0.9"/>
+  <text x="150" y="208" text-anchor="middle" font-size="9" fill="#fff">node_exporter :9100</text>
+  
+  <!-- Client 2 -->
+  <rect x="50" y="260" width="200" height="110" rx="8" fill="#fff" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="150" y="282" text-anchor="middle" font-size="13" font-weight="bold" fill="#34495e">Client Host 2</text>
+  <rect x="70" y="295" width="160" height="25" rx="4" fill="#27ae60" opacity="0.9"/>
+  <text x="150" y="312" text-anchor="middle" font-size="11" fill="#fff">rsyslog</text>
+  <rect x="70" y="325" width="160" height="18" rx="4" fill="#9b59b6" opacity="0.9"/>
+  <text x="150" y="338" text-anchor="middle" font-size="9" fill="#fff">node_exporter :9100</text>
+  
+  <!-- Client N (ellipsis) -->
+  <text x="150" y="400" text-anchor="middle" font-size="20" fill="#7f8c8d">...</text>
+  
+  <!-- Client N -->
+  <rect x="50" y="420" width="200" height="110" rx="8" fill="#fff" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="150" y="442" text-anchor="middle" font-size="13" font-weight="bold" fill="#34495e">Client Host N</text>
+  <rect x="70" y="455" width="160" height="25" rx="4" fill="#27ae60" opacity="0.9"/>
+  <text x="150" y="472" text-anchor="middle" font-size="11" fill="#fff">rsyslog</text>
+  <rect x="70" y="485" width="160" height="18" rx="4" fill="#9b59b6" opacity="0.9"/>
+  <text x="150" y="498" text-anchor="middle" font-size="9" fill="#fff">node_exporter :9100</text>
+  
+  <!-- ROSI Collector Server Section -->
+  <rect x="320" y="80" width="600" height="520" rx="10" fill="#fef9e7" stroke="#f39c12" stroke-width="2"/>
+  <text x="620" y="105" text-anchor="middle" font-size="16" font-weight="bold" fill="#d68910">ROSI Collector Server</text>
+  
+  <!-- Docker Compose Stack Label -->
+  <rect x="340" y="120" width="560" height="460" rx="8" fill="#fff" stroke="#e0e0e0" stroke-width="1" stroke-dasharray="5,5"/>
+  <text x="620" y="140" text-anchor="middle" font-size="11" fill="#95a5a6">Docker Compose Stack</text>
+  
+  <!-- rsyslog Collector -->
+  <rect x="360" y="155" width="130" height="75" rx="8" fill="#27ae60"/>
+  <text x="425" y="183" text-anchor="middle" font-size="13" font-weight="bold" fill="#fff">rsyslog</text>
+  <text x="425" y="200" text-anchor="middle" font-size="9" fill="#fff">Collector</text>
+  <text x="425" y="218" text-anchor="middle" font-size="8" fill="#d5f4e6">:514/UDP :10514/TCP</text>
+  
+  <!-- rsyslog TLS (optional) -->
+  <rect x="360" y="240" width="130" height="50" rx="8" fill="#27ae60" stroke="#16a085" stroke-width="2" stroke-dasharray="4,2"/>
+  <text x="425" y="262" text-anchor="middle" font-size="11" font-weight="bold" fill="#fff">rsyslog-tls</text>
+  <text x="425" y="280" text-anchor="middle" font-size="8" fill="#d5f4e6">:6514/TCP (optional)</text>
+  
+  <!-- Loki -->
+  <rect x="560" y="155" width="130" height="75" rx="8" fill="#e74c3c"/>
+  <text x="625" y="183" text-anchor="middle" font-size="13" font-weight="bold" fill="#fff">Grafana Loki</text>
+  <text x="625" y="200" text-anchor="middle" font-size="9" fill="#fff">Log Storage</text>
+  <text x="625" y="218" text-anchor="middle" font-size="8" fill="#fadbd8">:3100</text>
+  
+  <!-- Arrow: rsyslog to Loki -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#34495e"/>
+    </marker>
+    <marker id="arrowhead-blue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#3498db"/>
+    </marker>
+    <marker id="arrowhead-purple" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#9b59b6"/>
+    </marker>
+    <marker id="arrowhead-orange" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#e67e22"/>
+    </marker>
+    <marker id="arrowhead-green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#27ae60"/>
+    </marker>
+  </defs>
+  
+  <line x1="490" y1="190" x2="555" y2="190" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <text x="522" y="182" text-anchor="middle" font-size="8" fill="#34495e">omhttp</text>
+  
+  <!-- Arrow: rsyslog-tls to Loki -->
+  <path d="M 490 265 L 520 265 L 520 205 L 555 205" stroke="#34495e" stroke-width="1.5" fill="none" marker-end="url(#arrowhead)" stroke-dasharray="4,2"/>
+  
+  <!-- Prometheus -->
+  <rect x="360" y="310" width="130" height="70" rx="8" fill="#9b59b6"/>
+  <text x="425" y="340" text-anchor="middle" font-size="13" font-weight="bold" fill="#fff">Prometheus</text>
+  <text x="425" y="358" text-anchor="middle" font-size="9" fill="#fff">Metrics</text>
+  <text x="425" y="372" text-anchor="middle" font-size="8" fill="#e8daef">:9090</text>
+  
+  <!-- Grafana -->
+  <rect x="560" y="310" width="130" height="70" rx="8" fill="#f39c12"/>
+  <text x="625" y="340" text-anchor="middle" font-size="13" font-weight="bold" fill="#fff">Grafana</text>
+  <text x="625" y="358" text-anchor="middle" font-size="9" fill="#fff">Dashboards</text>
+  <text x="625" y="372" text-anchor="middle" font-size="8" fill="#fef5e7">:3000</text>
+  
+  <!-- Arrows to Grafana -->
+  <line x1="625" y1="230" x2="625" y2="305" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+  <line x1="490" y1="345" x2="555" y2="345" stroke="#34495e" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Downloads Container -->
+  <rect x="750" y="155" width="130" height="70" rx="8" fill="#16a085"/>
+  <text x="815" y="183" text-anchor="middle" font-size="12" font-weight="bold" fill="#fff">Downloads</text>
+  <text x="815" y="200" text-anchor="middle" font-size="9" fill="#fff">nginx</text>
+  <text x="815" y="215" text-anchor="middle" font-size="8" fill="#d1f2eb">/downloads/</text>
+  
+  <!-- Traefik -->
+  <rect x="480" y="420" width="170" height="65" rx="8" fill="#3498db"/>
+  <text x="565" y="448" text-anchor="middle" font-size="13" font-weight="bold" fill="#fff">Traefik</text>
+  <text x="565" y="465" text-anchor="middle" font-size="9" fill="#fff">Reverse Proxy + Auto TLS</text>
+  <text x="565" y="480" text-anchor="middle" font-size="8" fill="#d6eaf8">:80, :443</text>
+  
+  <!-- Arrow: Traefik to Grafana -->
+  <path d="M 565 420 Q 565 395 590 380" stroke="#3498db" stroke-width="2" fill="none" marker-end="url(#arrowhead-blue)"/>
+  
+  <!-- Arrow: Traefik to Downloads -->
+  <path d="M 630 430 Q 700 400 780 225" stroke="#3498db" stroke-width="1.5" fill="none" marker-end="url(#arrowhead-blue)" stroke-dasharray="3,2"/>
+  
+  <!-- External Access -->
+  <rect x="760" y="420" width="120" height="65" rx="8" fill="#1abc9c"/>
+  <text x="820" y="445" text-anchor="middle" font-size="11" font-weight="bold" fill="#fff">Users</text>
+  <text x="820" y="462" text-anchor="middle" font-size="9" fill="#fff">HTTPS</text>
+  <text x="820" y="478" text-anchor="middle" font-size="8" fill="#d1f2eb">Web Browser</text>
+  
+  <!-- Arrow: Users to Traefik -->
+  <line x1="755" y1="452" x2="655" y2="452" stroke="#1abc9c" stroke-width="2" marker-end="url(#arrowhead)"/>
+  
+  <!-- Log Flow Arrow (Client to rsyslog) -->
+  <line x1="255" y1="190" x2="355" y2="190" stroke="#27ae60" stroke-width="3" marker-end="url(#arrowhead-green)"/>
+  <text x="305" y="180" text-anchor="middle" font-size="9" fill="#27ae60">Logs</text>
+  <text x="305" y="205" text-anchor="middle" font-size="8" fill="#27ae60">TCP :10514</text>
+  
+  <!-- TLS Log Flow Arrow (Client to rsyslog-tls) - optional -->
+  <line x1="255" y1="265" x2="355" y2="265" stroke="#27ae60" stroke-width="2" stroke-dasharray="4,2" marker-end="url(#arrowhead-green)"/>
+  <text x="305" y="255" text-anchor="middle" font-size="8" fill="#16a085">TLS :6514</text>
+  <text x="305" y="278" text-anchor="middle" font-size="7" fill="#16a085">(optional)</text>
+  
+  <!-- Metrics Flow Arrow (Prometheus to Clients) -->
+  <path d="M 360 345 L 290 345 L 290 230 L 255 230" stroke="#9b59b6" stroke-width="2" fill="none" marker-end="url(#arrowhead-purple)"/>
+  <text x="290" y="285" text-anchor="middle" font-size="8" fill="#9b59b6" transform="rotate(-90, 290, 285)">scrape :9100</text>
+  
+  <!-- Legend -->
+  <rect x="30" y="610" width="890" height="35" rx="5" fill="#ecf0f1"/>
+  <circle cx="55" cy="627" r="6" fill="#27ae60"/>
+  <text x="70" y="632" font-size="9" fill="#34495e">Log Flow</text>
+  <circle cx="140" cy="627" r="6" fill="#9b59b6"/>
+  <text x="155" y="632" font-size="9" fill="#34495e">Metrics</text>
+  <circle cx="215" cy="627" r="6" fill="#3498db"/>
+  <text x="230" y="632" font-size="9" fill="#34495e">HTTPS Proxy</text>
+  <rect x="310" y="621" width="12" height="12" rx="2" fill="#f39c12"/>
+  <text x="330" y="632" font-size="9" fill="#34495e">Visualization</text>
+  <rect x="415" y="621" width="12" height="12" rx="2" fill="#e74c3c"/>
+  <text x="435" y="632" font-size="9" fill="#34495e">Storage</text>
+  <rect x="500" y="621" width="12" height="12" rx="2" fill="#16a085"/>
+  <text x="520" y="632" font-size="9" fill="#34495e">Downloads</text>
+  <rect x="600" y="621" width="30" height="12" rx="2" fill="none" stroke="#16a085" stroke-dasharray="3,2"/>
+  <text x="640" y="632" font-size="9" fill="#34495e">Optional (TLS)</text>
+  <text x="780" y="632" font-size="9" fill="#7f8c8d">Let's Encrypt TLS</text>
+</svg>

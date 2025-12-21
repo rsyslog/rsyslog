@@ -121,8 +121,17 @@ To confirm that the collector is listening on the expected ports:
 
 This should show listeners on ``514/udp``, ``514/tcp``, and ``2514/tcp`` when RELP is enabled.
 
+Production Deployments
+----------------------
+
+For a complete production deployment with dashboards, alerting, and log storage,
+see :doc:`../deployments/rosi_collector/index`. ROSI Collector builds on this
+container image to provide Grafana visualization, Loki log storage, and
+Prometheus metrics collection.
+
 .. seealso::
 
+   - :doc:`../deployments/rosi_collector/index` - Complete log collection stack
    - `GitHub Discussions <https://github.com/rsyslog/rsyslog/discussions>`_ for community support.
    - `rsyslog Assistant AI <https://rsyslog.ai>`_ for self-help and examples.
 

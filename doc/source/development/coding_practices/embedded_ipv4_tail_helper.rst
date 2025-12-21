@@ -64,4 +64,4 @@ Antipattern: undocumented IPv4-in-IPv6 tail helper
 **References:**
 
 - ``runtime/mmanon.c`` embedded IPv4 parsing helper (to be updated with this contract).
-- :ref:`practice-externalized-helper-contracts` for the general pattern of documenting narrow helper contracts and defensive fallbacks.
+- :doc:`externalized_helper_contracts` for the general pattern of documenting narrow helper contracts and defensive fallbacks.
