@@ -1,0 +1,3 @@
+@cee:{"name":"global","origin":"core","utime":"123456","stime":"78901","maxrss":"50000"}
+@cee:{"name":"main queue","origin":"core.queue","size":"0","enqueued":"5000","full":"0","discarded.full":"0"}
+@cee:{"name":"action 0","origin":"core.action","processed":"4950","failed":"5","suspended":"0"}
