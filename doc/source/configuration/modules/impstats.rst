@@ -103,6 +103,10 @@ Module Parameters
      - .. include:: ../../reference/parameters/impstats-log-file.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-impstats-log-file-overwrite`
+     - .. include:: ../../reference/parameters/impstats-log-file-overwrite.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-impstats-ruleset`
      - .. include:: ../../reference/parameters/impstats-ruleset.rst
         :start-after: .. summary-start
@@ -294,5 +298,6 @@ See Also
    ../../reference/parameters/impstats-format
    ../../reference/parameters/impstats-log-syslog
    ../../reference/parameters/impstats-log-file
+   ../../reference/parameters/impstats-log-file-overwrite
    ../../reference/parameters/impstats-ruleset
    ../../reference/parameters/impstats-bracketing

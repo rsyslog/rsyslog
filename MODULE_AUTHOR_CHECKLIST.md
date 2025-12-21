@@ -17,6 +17,7 @@
 **Docs in code**
 - [ ] Top-of-file “Concurrency & Locking” block explains the above for this module.
 - [ ] Doxygen comments on pData/WID typedefs describe lifetime & locking rules.
+- [ ] **Documentation**: New parameters added to `doc/source/reference/parameters/` and linked in module `.rst`.
 
 **Testing**
 - [ ] Run with `queue.workerThreads > 1`. CI already runs TSAN on the full suite.

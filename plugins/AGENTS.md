@@ -91,6 +91,8 @@ support expectations change.
 - Update `doc/ai/module_map.yaml` if concurrency expectations change.
 - When adding a new module, update `plugins/Makefile.am`, `configure.ac`, and
   provide tests under `tests/` to cover the new behavior.
+- **Documentation**: Every new configuration parameter **must** be documented in
+  `doc/source/reference/parameters/` and linked from the module's `.rst` file.
 
 ## Testing expectations
 - Prefer module-focused tests in `tests/` named after the module (e.g.

@@ -306,6 +306,17 @@ Instead, AI agents should invoke individual test scripts directly. This yields u
 
 -----
 
+## Documentation Requirements
+
+When introducing new configuration parameters, features, or significant behavior changes, you **must** update the user-facing documentation in the `doc/` subtree.
+
+1.  **Locate the relevant guide**: Most module documentation is in `doc/source/configuration/modules/<module>.rst`.
+2.  **Update parameter references**: If adding a parameter, create or update the corresponding file in `doc/source/reference/parameters/` and include it in the module's `.rst` file.
+3.  **Cross-link**: Ensure new documentation is discoverable from the module's main page and appropriate `index.rst`.
+4.  **Validate**: If possible, run `./doc/tools/build-doc-linux.sh --clean --format html` to catch Sphinx errors.
+
+-----
+
 ### Running Individual Tests (AI-Agent Best Practice)
 
 1.  **Configure the project** (once per session):
