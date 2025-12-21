@@ -2,6 +2,47 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2025-12-21: doc: update agent guidelines to require documentation for new parameters
+  This change updates the root AGENTS.md, plugins/AGENTS.md, and
+  MODULE_AUTHOR_CHECKLIST.md to explicitly require that new configuration
+  parameters be documented in the doc/ subtree. This ensures that
+  future AI agents (and humans) do not overlook documentation tasks
+  when implementing new features.
+  Impact: Improved documentation coverage and consistency for new
+  features.
+  AI-Agent: Antigravity
+- 2025-12-21: impstats: add log.file.overwrite parameter for atomic overwrites
+  This change adds the capability to overwrite the statistics log file
+  instead of appending to it. This is particularly useful for
+  observability tools like Prometheus scraping sidecars or node exporter,
+  which expect a consistent and complete set of metrics in a single file.
+  The implementation ensures atomicity by writing the statistics to a
+  temporary file and then renaming it to the final destination. This
+  prevents reader processes from seeing partial or inconsistent data
+  during the emission process.
+  This commit includes:
+  - The implementation in impstats.c.
+  - New test cases in the testbench.
+  - User-facing documentation for the new parameter.
+  Impact: Users can now enable atomic overwrites using
+  log.file.overwrite="on". Default behavior remains append.
+  AI-Agent: Antigravity
+- 2025-12-21: Fix doc build CI security, spelling, and RST build errors
+  Security & CI improvements:
+  - Remove pull_request_target trigger (security vulnerability)
+  - Simplify checkout to use default behavior (matches other workflows)
+  - Reduce fetch-depth from 8 to 2 for change detection
+  - Simplify conditional logic throughout workflow
+  - Enable fork PR support: allow fork PRs to build docs and produce artifacts
+  - Make Pages deployment conditional: only deploy for same-repo PRs
+  - Update PR comments to handle fork vs same-repo PRs appropriately
+  Documentation fixes:
+  - Fix 3 instances of "it's" → "its" in reliable_logging.rst
+  - Fix 22 RST build errors: replace :json: roles with inline code in
+    6 mmdarwin parameter files
+  The workflow now follows the same pattern as 19 other workflows in the
+  repository, improves security posture, enables fork contributors to build
+  documentation, and fixes all documentation build errors.
 - 2025-12-11: core: stop busy-loop when action disables itself
   In the field, an action that disables itself could leave workers in a
   tight retry/commit cycle, pegging a CPU core. This change makes the
