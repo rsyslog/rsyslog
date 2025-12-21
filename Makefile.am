@@ -500,6 +500,7 @@ EXTRA_DIST += \
     doc/source/reference/parameters/impstats-format.rst \
     doc/source/reference/parameters/impstats-interval.rst \
     doc/source/reference/parameters/impstats-log-file.rst \
+    doc/source/reference/parameters/impstats-log-file-overwrite.rst \
     doc/source/reference/parameters/impstats-log-syslog.rst \
     doc/source/reference/parameters/impstats-resetcounters.rst \
     doc/source/reference/parameters/impstats-ruleset.rst \
