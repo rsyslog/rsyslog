@@ -7,7 +7,7 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
   push:
-    branches: [main, master]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -98,7 +98,7 @@ jobs:
         run: |
           mkdir doc-builder
           cd doc-builder
-          tar -xf ../rsyslog-8*.tar.gz --strip-components=1
+          tar -xvf ../rsyslog-8*.tar.gz --strip-components=1
           pwd
           ls -l
           cd ..
