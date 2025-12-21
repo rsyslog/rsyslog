@@ -240,6 +240,16 @@ When fixing compiler warnings like `stringop-overread`, explain in the commit me
 
 -----
 
+## Defensive Coding and Assertions
+
+Use `assert()` to signal "impossible" states to Static Analyzers and AI agents. Whenever feasible and low-complexity, follow with a defensive `if` check to prevent production crashes. See [Defensive Coding Practice](doc/source/development/coding_practices/defensive_coding.rst) for full details.
+
+- **Mandatory**: `assert()` for invariants (allows SA/AI to reason about code).
+- **Recommended**: Defensive `if` check (optional if fallback logic is excessively complex).
+- **Prohibited**: `__builtin_unreachable()` (causes Undefined Behavior).
+
+-----
+
 ## Editor & Formatting Configuration
 
 The repository includes:

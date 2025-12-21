@@ -122,6 +122,7 @@ toctree so navigation remains discoverable from the development guide.
    coding_practices/externalized_helper_contracts
    coding_practices/embedded_ipv4_tail_helper
    coding_practices/error_logging_with_errno
+   coding_practices/defensive_coding
 
 AI agent integration
 --------------------

@@ -264,6 +264,7 @@ EXTRA_DIST += \
     doc/source/development/coding_practices/embedded_ipv4_tail_helper.rst \
     doc/source/development/coding_practices/error_logging_with_errno.rst \
     doc/source/development/coding_practices/externalized_helper_contracts.rst \
+    doc/source/development/coding_practices/defensive_coding.rst \
     doc/source/development/config_data_model.rst \
     doc/source/development/debugging.rst \
     doc/source/development/dev_action_threads.rst \
