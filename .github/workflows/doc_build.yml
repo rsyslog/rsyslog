@@ -4,7 +4,7 @@ name: documentation build
 # If no documentation files change, the build steps are skipped to save time.
 
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, synchronize, reopened, closed]
   push:
     branches: [main, master]
