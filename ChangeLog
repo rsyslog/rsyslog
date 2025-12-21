@@ -2,6 +2,10 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2025-12-21: netstream ossl driver: fix double close
+  There was a double-close of the socket due to a code bug. This caused a race
+  that, depending on timing, could lead to undefined behaviour or segfault.
+  Thanks to Yuli Fiterman for the patch.
 - 2025-12-21: doc: update agent guidelines to require documentation for new parameters
   This change updates the root AGENTS.md, plugins/AGENTS.md, and
   MODULE_AUTHOR_CHECKLIST.md to explicitly require that new configuration
