@@ -488,6 +488,7 @@ BEGINobjDestruct(nsd_ossl) /* be sure to specify the object type also in END and
         /* If pTcp is NULL, we configure the BIO to close it on SSL_free
            This is a purely defensive measure and is this case is not actually expected
            */
+        assert(pThis->pTcp != NULL);
         if (pThis->pTcp == NULL) {
             BIO *bio = SSL_get_rbio(pThis->pNetOssl->ssl);
             if (bio != NULL) {
