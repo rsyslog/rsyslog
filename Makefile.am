@@ -30,6 +30,7 @@ EXTRA_DIST += \
     doc/Makefile \
     doc/README.md \
     doc/STRATEGY.md \
+    doc/build_rag_db.py \
     doc/ai/README.md \
     doc/ai/authoring_guidelines.md \
     doc/ai/chunking_and_embeddings.md \

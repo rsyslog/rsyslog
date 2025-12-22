@@ -104,11 +104,13 @@ From the repository root:
   - `make -C doc singlehtml`
 - List available builders/targets:
   - `make -C doc help`
+- Generate RAG Knowledge Base (JSON):
+  - `make -C doc json-formatter` (Alias for `rag-db`; builds HTML first; output in `build/rag/`)
 
 Tips:
 - Pass extra Sphinx options via `SPHINXOPTS`, e.g. warnings-as-errors:
   - `make -C doc html SPHINXOPTS="-W -q --keep-going"`
-- Use parallel jobs: `make -C doc -j4 html` (the Makefile forwards `-j` to Sphinx).
+- Use parallel jobs: `make -C doc -j4 html` (the Makefile forwards `-j` to Sphinx)
 
 ### Quickstart using helper scripts
 
