@@ -3018,6 +3018,69 @@ finalize_it:
     }
 }
 
+static void ATTR_NONNULL() doFunct_split(struct cnffunc *__restrict__ const func,
+                                        struct svar *__restrict__ const ret,
+                                        void *const usrptr,
+                                        wti_t *const pWti) {
+    struct svar srcVal[2];
+    int bMustFree = 0;
+    int bMustFree2 = 0;
+
+    cnfexprEval(func->expr[0], &srcVal[0], usrptr, pWti);
+    cnfexprEval(func->expr[1], &srcVal[1], usrptr, pWti);
+
+    char *inputStr = (char *)var2CString(&srcVal[0], &bMustFree);
+    char *separator = (char *)var2CString(&srcVal[1], &bMustFree2);
+
+    struct json_object *jsonArray = json_object_new_array();
+
+    if (jsonArray == NULL || inputStr == NULL || separator == NULL || strlen(separator) == 0) {
+        goto done;
+    }
+
+    if (*inputStr == '\0') {
+        goto done;
+    }
+
+    char *workStr = strdup(inputStr);
+    if (workStr == NULL) {
+        goto done;
+    }
+
+    const size_t sepLen = strlen(separator);
+    char *p = workStr;
+
+    while (1) {
+        char *next_sep = strstr(p, separator);
+        if (next_sep != NULL) {
+            *next_sep = '\0';
+        }
+        struct json_object *jsonStr = json_object_new_string(p);
+        if (jsonStr == NULL) {
+            break;
+        }
+        if (json_object_array_add(jsonArray, jsonStr) != 0) {
+            json_object_put(jsonStr);
+            break;
+        }
+        if (next_sep == NULL) {
+            break;
+        }
+        p = next_sep + sepLen;
+    }
+
+    free(workStr);
+
+done:
+    ret->datatype = 'J';
+    ret->d.json = jsonArray;
+
+    if (bMustFree) free(inputStr);
+    if (bMustFree2) free(separator);
+    varFreeMembers(&srcVal[0]);
+    varFreeMembers(&srcVal[1]);
+}
+
 static void evalVar(struct cnfvar *__restrict__ const var,
                     void *__restrict__ const usrptr,
                     struct svar *__restrict__ const ret) {
@@ -3796,6 +3859,7 @@ static struct scriptFunct functions[] = {
     {"script_error", 0, 0, doFunct_ScriptError, NULL, NULL},
     {"previous_action_suspended", 0, 0, doFunct_PreviousActionSuspended, NULL, NULL},
     {"b64_decode", 1, 1, doFunct_Base64Dec, NULL, NULL},
+    {"split", 2, 2, doFunct_split, NULL, NULL},
     {NULL, 0, 0, NULL, NULL, NULL}  // last element to check end of array
 };
 
