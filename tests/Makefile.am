@@ -449,6 +449,7 @@ TESTS +=  \
 	rscript_is_time.sh \
 	rscript_script_error.sh \
 	rscript_parse_json.sh \
+	rscript_parse_json_issue.sh \
 	rscript_previous_action_suspended.sh \
 	rscript_str2num_negative.sh \
 	rscript_exists-yes.sh \
@@ -2286,6 +2287,7 @@ EXTRA_DIST= \
 	rscript_is_time.sh \
 	rscript_script_error.sh \
 	rscript_parse_json.sh \
+	rscript_parse_json_issue.sh \
 	rscript_parse_json-vg.sh \
 	rscript_backticks-vg.sh \
 	rscript_backticks_empty_envvar.sh \
