@@ -9,7 +9,9 @@ mtu
    single: mtu
 
 .. summary-start
+
 Sets the maximum packet length that omudpspoof sends.
+
 .. summary-end
 
 This parameter applies to :doc:`../../configuration/modules/omudpspoof`.

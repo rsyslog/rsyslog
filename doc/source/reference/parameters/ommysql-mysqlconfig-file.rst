@@ -48,6 +48,7 @@ Legacy names (for reference)
 Historic names/directives for compatibility. Do not use in new configs.
 
 .. _ommysql.parameter.legacy.ommysqlconfigfile:
+
 - $OmMySQLConfigFile — maps to MySQLConfig.File (status: legacy)
 
 .. index::

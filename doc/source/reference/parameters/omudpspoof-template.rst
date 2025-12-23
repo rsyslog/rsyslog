@@ -10,7 +10,9 @@ template
    single: template
 
 .. summary-start
+
 Sets the default template used by omudpspoof actions without an explicitly configured template.
+
 .. summary-end
 
 This parameter applies to :doc:`../../configuration/modules/omudpspoof`.
@@ -49,6 +51,7 @@ Legacy names (for reference)
 Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omudpspoof.parameter.legacy.actionomudpspoofdefaulttemplate:
+
 - $ActionOMUDPSpoofDefaultTemplate — maps to template (status: legacy)
 
 .. index::

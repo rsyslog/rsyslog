@@ -9,7 +9,9 @@ port
    single: port
 
 .. summary-start
+
 Specifies the destination port used when sending messages.
+
 .. summary-end
 
 This parameter applies to :doc:`../../configuration/modules/omudpspoof`.
@@ -39,6 +41,7 @@ Legacy names (for reference)
 Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omudpspoof.parameter.legacy.actionomudpspooftargetport:
+
 - $ActionOMUDPSpoofTargetPort — maps to port (status: legacy)
 
 .. index::

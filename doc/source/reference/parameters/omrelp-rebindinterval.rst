@@ -25,7 +25,7 @@ This parameter applies to :doc:`../../configuration/modules/omrelp`.
 
 Description
 -----------
-Permits to specify an interval at which the current connection is broken and re-established. This setting is primarily an aid to load balancers. After the configured number of messages has been transmitted, the current connection is terminated and a new one started. This usually is perceived as a ``new connection'' by load balancers, which in turn forward messages to another physical target system.
+Permits to specify an interval at which the current connection is broken and re-established. This setting is primarily an aid to load balancers. After the configured number of messages has been transmitted, the current connection is terminated and a new one started. This usually is perceived as a ``new connection`` by load balancers, which in turn forward messages to another physical target system.
 
 Input usage
 -----------

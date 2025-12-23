@@ -9,7 +9,9 @@ sourcePort.start
    single: sourcePort.start
 
 .. summary-start
+
 Sets the starting source port when cycling through spoofed source ports.
+
 .. summary-end
 
 This parameter applies to :doc:`../../configuration/modules/omudpspoof`.
@@ -39,6 +41,7 @@ Legacy names (for reference)
 Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omudpspoof.parameter.legacy.actionomudpspoofsourceportstart:
+
 - $ActionOMUDPSpoofSourcePortStart — maps to sourcePort.start (status: legacy)
 
 .. index::

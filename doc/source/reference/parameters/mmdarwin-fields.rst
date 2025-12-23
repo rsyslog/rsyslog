@@ -29,11 +29,11 @@ Array containing values to be sent to Darwin as parameters.
 
 Two types of values can be set:
 
-* if it starts with a bang (:json:`"!"`) or a dot (:json:`"."`), mmdarwin
-  will search in the JSON-parsed log line (:json:`"!"`) or in rsyslog local
-  variables (:json:`"."`) for the associated value. For nested properties,
-  use additional bangs as separators (for example, :json:`"!data!status"`
-  reads the :json:`"status"` property inside the :json:`"data"` object).
+* if it starts with a bang (``"!"``) or a dot (``"."``), mmdarwin
+  will search in the JSON-parsed log line (``"!"``) or in rsyslog local
+  variables (``"."``) for the associated value. For nested properties,
+  use additional bangs as separators (for example, ``"!data!status"``
+  reads the ``"status"`` property inside the ``"data"`` object).
 * otherwise, the value is considered static, and will be forwarded directly to
   Darwin.
 
@@ -51,14 +51,14 @@ For example, given the following log line:
        }
    }
 
-and the :json:`"fields"` array:
+and the ``"fields"`` array:
 
 .. code-block:: none
 
    ["!from", "!data!status", "rsyslog"]
 
-The parameters sent to Darwin would be :json:`"192.168.1.42"`, :json:`true` and
-:json:`"rsyslog"`.
+The parameters sent to Darwin would be ``"192.168.1.42"``, ``true`` and
+``"rsyslog"``.
 
 .. note::
    The order of the parameters is important and must match the order expected

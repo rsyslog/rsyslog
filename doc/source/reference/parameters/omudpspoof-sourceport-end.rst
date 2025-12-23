@@ -9,7 +9,9 @@ sourcePort.end
    single: sourcePort.end
 
 .. summary-start
+
 Sets the ending source port when cycling through spoofed source ports.
+
 .. summary-end
 
 This parameter applies to :doc:`../../configuration/modules/omudpspoof`.
@@ -39,6 +41,7 @@ Legacy names (for reference)
 Historic names/directives for compatibility. Do not use in new configs.
 
 .. _omudpspoof.parameter.legacy.actionomudpspoofsourceportend:
+
 - $ActionOMUDPSpoofSourcePortEnd — maps to sourcePort.end (status: legacy)
 
 .. index::
