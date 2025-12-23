@@ -31,8 +31,12 @@
 #if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
     #include <openssl/bioerr.h>
 #endif
-#ifndef OPENSSL_NO_ENGINE
-    #include <openssl/engine.h>
+#ifdef HAVE_OPENSSL_3
+#	include <openssl/provider.h>
+#else
+#	ifndef OPENSSL_NO_ENGINE
+#		include <openssl/engine.h>
+#	endif
 #endif
 #include <openssl/rand.h>
 #include <openssl/evp.h>
@@ -72,6 +76,9 @@ struct net_ossl_s {
         BIO *bio; /* OpenSSL main BIO obj */
         int ctx_is_copy;
         SSL_CTX *ctx; /* credentials, ciphers, ... */
+#ifdef HAVE_OPENSSL_3
+	OSSL_PROVIDER *provider;
+#endif
         SSL *ssl; /* OpenSSL main SSL obj */
         osslSslState_t sslState; /**< what must we retry? */
 };
