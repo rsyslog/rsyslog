@@ -24,7 +24,7 @@ This parameter applies to :doc:`../../configuration/modules/omudpspoof`.
 
 Description
 -----------
-This setting instructs omudpspoof to use a template different from the default template for all of its actions that do not have a template specified explicitly. When set at the module level, it defines the default template for all omudpspoof actions that do not have a template specified explicitly. When set on a specific action, it overrides the module-level default for that action.
+This setting specifies the template for formatting output messages. When set at the module level, it becomes the default for all ``omudpspoof`` actions that do not have an explicit template. When set on a specific action, it overrides the module-level default for that action.
 
 Module usage
 ------------
