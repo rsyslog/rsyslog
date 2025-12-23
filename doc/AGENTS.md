@@ -36,6 +36,7 @@ This guide applies to everything under `doc/`.
 
 ## Build & validation
 - Run `./doc/tools/build-doc-linux.sh --clean --format html` after changes to catch Sphinx errors early.
+- For RAG Knowledge Base updates, use `make -j16 json-formatter`. This builds the doctrees and runs the extraction script to generate `doc/build/rag/rsyslog_rag_db.json`.
 - For quick linting, use `make -C doc html` (uses the repo’s virtualenv if present).
 - Verify Mermaid diagrams render correctly; invalid syntax halts the build.
 - Documentation-only commits generally do **not** require the full C test suite.
@@ -59,5 +60,7 @@ This guide applies to everything under `doc/`.
 | Authoring guide | `doc/ai/authoring_guidelines.md` |
 | Concept/tutorial templates | `doc/ai/templates/` |
 | Build scripts | `doc/tools/` |
+| RAG Knowledge Base script | `doc/build_rag_db.py` |
+| RAG Knowledge Base (Output) | `doc/build/rag/rsyslog_rag_db.json` |
 | Strategy and style | `doc/STRATEGY.md` |
 

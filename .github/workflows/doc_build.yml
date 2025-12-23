@@ -125,6 +125,19 @@ jobs:
           cd doc-builder/doc
           make html SPHINXOPTS="-j8 -W -q --keep-going"
 
+      - name: Build RAG Knowledge Base
+        if: >-
+          ${{ github.event_name != 'pull_request' ||
+          steps.doc_changes.outputs.any_changed == 'true' }}
+        run: |
+          cd doc-builder/doc
+          python3 build_rag_db.py
+          # Verify the RAG database was created and has content
+          test -f build/rag/rsyslog_rag_db.json
+          chunk_count=$(python3 -c "import json; print(len(json.load(open('build/rag/rsyslog_rag_db.json'))))")
+          echo "Generated $chunk_count RAG chunks"
+          test "$chunk_count" -gt 10000
+
       - name: Upload build artifact
         if: >-
           ${{ github.event_name != 'pull_request' ||
@@ -133,6 +146,16 @@ jobs:
         with:
           name: docs-html
           path: doc-builder/doc/build/html
+
+      - name: Upload RAG artifact
+        if: >-
+          ${{ github.event_name != 'pull_request' ||
+          steps.doc_changes.outputs.any_changed == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: rag-knowledge-base
+          path: doc-builder/doc/build/rag/rsyslog_rag_db.json
+
 
 
   publish_pr_preview:

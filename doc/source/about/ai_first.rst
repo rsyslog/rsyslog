@@ -193,6 +193,10 @@ verified by any contributor:
 - Inline provenance notes in AI-assisted files.
 - Issue and PR templates guiding contributors to supply needed info.
 - Metadata template applied to parameter documentation pages.
+- RAG Knowledge Base (``build/rag/rsyslog_rag_db.json``): A machine-readable
+  dataset of ~12,000 structured chunks extracted from all documentation pages,
+  enabling AI-powered search and context injection for the rsyslog Assistant.
+  Regenerated automatically by CI; build locally with ``make json-formatter``.
 
 .. _ai-first-roles:
 .. index:: Roles; Human-in-Control

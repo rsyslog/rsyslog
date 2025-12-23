@@ -11,7 +11,7 @@ define add_parallel_jobs
         $(eval SPHINXOPTS += $(if $(filter -j%,$(SPHINXOPTS)),,$(filter -j%,$(MAKEFLAGS))))
 endef
 
-.PHONY: help clean html html-with-sitemap singlehtml json alljson
+.PHONY: help clean html html-with-sitemap singlehtml json alljson rag-db json-formatter
 
 help:
 	@$(call add_parallel_jobs)
@@ -50,3 +50,8 @@ alljson: json
 %:
 	@$(call add_parallel_jobs)
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+rag-db: html
+	@python3 build_rag_db.py
+
+json-formatter: rag-db
