@@ -2,6 +2,15 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2025-12-23: imjournal: fix potential segfault (SIGBUS)
+  This fixes a problem in imjournal that can result in SIGBUS or other
+  problems. Note that I could not reproduce the issue myself, but it looks
+  very plausible that this is indeed a useful fix.
+  closes: https://github.com/rsyslog/rsyslog/issues/6359
+- 2025-12-23: doc/AI: add RAG Knowledge Base extraction and build integration
+  This commit adds a context-aware RAG dataset generator and integrates
+  it into the build system to support advanced AI-driven documentation
+  workflows. It ensures a consistent knowledge base for RAG pipelines.
 - 2025-12-21: doc: modernize and expand queue concept documentation
   This brings the queue concepts page in line with current RainerScript
   syntax and features. It improves maintainability and makes the docs
