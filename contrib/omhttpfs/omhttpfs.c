@@ -473,7 +473,7 @@ replication - required block replication for the file.
     if (success) {
         return RS_RET_OK;
     } else {
-        return RS_RET_FALSE;
+        return RS_RET_ERR_HDFS_OPEN;
     }
 }
 
@@ -515,7 +515,7 @@ static rsRetVal httpfs_append_file(wrkrInstanceData_t* pWrkrData, uchar* buf) {
     if (success) {
         return RS_RET_OK;
     } else {
-        return RS_RET_FALSE;
+        return RS_RET_ERR_HDFS_WRITE;
     }
 }
 
@@ -548,9 +548,9 @@ static rsRetVal httpfs_log(wrkrInstanceData_t* pWrkrData, uchar* buf) {
 
     curl_easy_getinfo(pWrkrData->curl, CURLINFO_RESPONSE_CODE, &response_code);
     if (response_code != 404) {
-        /* TODO: log error */
-        DBGPRINTF("omhttpfs: Append fail HTTP %ld: %s\n", response_code, pWrkrData->file);
-        return RS_RET_FALSE;
+        LogError(0, RS_RET_ERR_HDFS_WRITE, "omhttpfs: Append fail HTTP %ld: %s, reply: %s", response_code,
+                 pWrkrData->file, pWrkrData->reply ? pWrkrData->reply : "NULL");
+        return RS_RET_ERR_HDFS_WRITE;
     }
 
     iRet = httpfs_create_file(pWrkrData, buf);
@@ -589,7 +589,7 @@ static rsRetVal httpfs_log(wrkrInstanceData_t* pWrkrData, uchar* buf) {
         DBGPRINTF("omhttpfs: Create file failed: %s %s\n", pWrkrData->file, pWrkrData->reply);
     }
 
-    return RS_RET_FALSE;
+    return RS_RET_ERR;
 }
 
 
