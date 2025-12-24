@@ -121,6 +121,43 @@ static struct configSettings_s {
     uchar *lstnPortFile;
 } cs;
 
+struct modConfData_s {
+    rsconf_t *pConf; /* our overall config object */
+    instanceConf_t *root, *tail;
+    int iTCPSessMax; /* max number of sessions */
+    int iTCPLstnMax; /* max number of sessions */
+    unsigned numWrkr;
+    int iStrmDrvrMode; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
+    int iStrmDrvrExtendedCertCheck; /* verify also purpose OID in certificate extended field */
+    int iStrmDrvrSANPreference; /* ignore CN when any SAN set */
+    int iStrmTlsVerifyDepth; /**< Verify Depth for certificate chains */
+    int iAddtlFrameDelim; /* addtl frame delimiter, e.g. for netscreen, default none */
+    int maxFrameSize;
+    int bSuppOctetFram;
+    sbool bDisableLFDelim; /* disable standard LF delimiter */
+    sbool discardTruncatedMsg;
+    sbool bUseFlowControl; /* use flow control, what means indicate ourselfs a "light delayable" */
+    sbool bKeepAlive;
+    int iKeepAliveIntvl;
+    int iKeepAliveProbes;
+    int iKeepAliveTime;
+    sbool bEmitMsgOnClose; /* emit an informational message on close by remote peer */
+    sbool bEmitMsgOnOpen; /* emit an informational message on close by remote peer */
+    uchar *gnutlsPriorityString;
+    char *pszNetworkNamespace; /**< default network namespace to use */
+    uchar *pszStrmDrvrName; /* stream driver to use */
+    uchar *pszStrmDrvrAuthMode; /* authentication mode to use */
+    uchar *pszStrmDrvrPermitExpiredCerts; /* control how to handly expired certificates */
+    uchar *pszStrmDrvrCAFile;
+    uchar *pszStrmDrvrCRLFile;
+    uchar *pszStrmDrvrKeyFile;
+    uchar *pszStrmDrvrCertFile;
+    permittedPeers_t *pPermPeersRoot;
+    sbool configSetViaV2Method;
+    sbool bPreserveCase; /* preserve case of fromhost; true by default */
+    unsigned starvationMaxReads;
+};
+
 struct instanceConf_s {
     int iTCPSessMax;
     int iTCPLstnMax;
@@ -161,49 +198,70 @@ struct instanceConf_s {
     int iKeepAliveProbes;
     int iKeepAliveTime;
     unsigned starvationMaxReads;
+    
+    /* Per-source rate limiting */
+    sbool bPerSourceRate;
+    uchar *pszPerSourceKeyTpl;
+    uchar *pszPerSourcePolicyFile;
+    sbool bPerSourcePolicyReloadOnHUP;
+    perSourceRateLimiter_t *perSourceLimiter;
+    struct template *perSourceKeyTpl;
+    
     struct instanceConf_s *next;
 };
 
-
-struct modConfData_s {
-    rsconf_t *pConf; /* our overall config object */
-    instanceConf_t *root, *tail;
-    int iTCPSessMax; /* max number of sessions */
-    int iTCPLstnMax; /* max number of sessions */
-    unsigned numWrkr;
-    int iStrmDrvrMode; /* mode for stream driver, driver-dependent (0 mostly means plain tcp) */
-    int iStrmDrvrExtendedCertCheck; /* verify also purpose OID in certificate extended field */
-    int iStrmDrvrSANPreference; /* ignore CN when any SAN set */
-    int iStrmTlsVerifyDepth; /**< Verify Depth for certificate chains */
-    int iAddtlFrameDelim; /* addtl frame delimiter, e.g. for netscreen, default none */
-    int maxFrameSize;
-    int bSuppOctetFram;
-    sbool bDisableLFDelim; /* disable standard LF delimiter */
-    sbool discardTruncatedMsg;
-    sbool bUseFlowControl; /* use flow control, what means indicate ourselfs a "light delayable" */
-    sbool bKeepAlive;
-    int iKeepAliveIntvl;
-    int iKeepAliveProbes;
-    int iKeepAliveTime;
-    sbool bEmitMsgOnClose; /* emit an informational message on close by remote peer */
-    sbool bEmitMsgOnOpen; /* emit an informational message on close by remote peer */
-    uchar *gnutlsPriorityString;
-    char *pszNetworkNamespace; /**< default network namespace to use */
-    uchar *pszStrmDrvrName; /* stream driver to use */
-    uchar *pszStrmDrvrAuthMode; /* authentication mode to use */
-    uchar *pszStrmDrvrPermitExpiredCerts; /* control how to handly expired certificates */
-    uchar *pszStrmDrvrCAFile;
-    uchar *pszStrmDrvrCRLFile;
-    uchar *pszStrmDrvrKeyFile;
-    uchar *pszStrmDrvrCertFile;
-    permittedPeers_t *pPermPeersRoot;
-    sbool configSetViaV2Method;
-    sbool bPreserveCase; /* preserve case of fromhost; true by default */
-    unsigned starvationMaxReads;
-};
+/* input instance parameters */
+static struct cnfparamdescr inppdescr[] = {{"port", eCmdHdlrString, CNFPARAM_REQUIRED}, /* legacy: InputTCPServerRun */
+                                           {"maxsessions", eCmdHdlrPositiveInt, 0},
+                                           {"maxlisteners", eCmdHdlrPositiveInt, 0},
+                                           {"address", eCmdHdlrString, 0},
+                                           {"name", eCmdHdlrString, 0},
+                                           {"defaulttz", eCmdHdlrString, 0},
+                                           {"ruleset", eCmdHdlrString, 0},
+                                           {"supportoctetcountedframing", eCmdHdlrBinary, 0},
+                                           {"notifyonconnectionclose", eCmdHdlrBinary, 0},
+                                           {"notifyonconnectionopen", eCmdHdlrBinary, 0},
+                                           {"ratelimit.interval", eCmdHdlrPositiveInt, 0},
+                                           {"ratelimit.burst", eCmdHdlrPositiveInt, 0},
+                                           {"compression.mode", eCmdHdlrGetWord, 0},
+                                           {"framingfix.cisco.asa", eCmdHdlrBinary, 0},
+                                           {"maxframesize", eCmdHdlrInt, 0},
+                                           {"discardtruncatedmsg", eCmdHdlrBinary, 0},
+                                           {"disablelfdelimiter", eCmdHdlrBinary, 0},
+                                           {"preservecase", eCmdHdlrBinary, 0},
+                                           {"flowcontrol", eCmdHdlrBinary, 0},
+                                           {"addtlFrameDelimiter", eCmdHdlrInt, 0},
+                                           {"listenportfilename", eCmdHdlrString, 0},
+                                           {"streamdriver.mode", eCmdHdlrPositiveInt, 0},
+                                           {"streamdriver.authmode", eCmdHdlrString, 0},
+                                           {"streamdriver.permitexpiredcerts", eCmdHdlrString, 0},
+                                           {"streamdriver.CheckExtendedKeyPurpose", eCmdHdlrBinary, 0},
+                                           {"streamdriver.PrioritizeSAN", eCmdHdlrBinary, 0},
+                                           {"streamdriver.TlsVerifyDepth", eCmdHdlrPositiveInt, 0},
+                                           {"streamdriver.cafile", eCmdHdlrString, 0},
+                                           {"streamdriver.crlfile", eCmdHdlrString, 0},
+                                           {"streamdriver.keyfile", eCmdHdlrString, 0},
+                                           {"streamdriver.certfile", eCmdHdlrString, 0},
+                                           {"streamdriver.name", eCmdHdlrString, 0},
+                                           {"gnutlsprioritystring", eCmdHdlrString, 0},
+                                           {"permittedpeer", eCmdHdlrArray, 0},
+                                           {"keepalive", eCmdHdlrBinary, 0},
+                                           {"keepalive.probes", eCmdHdlrPositiveInt, 0},
+                                           {"keepalive.interval", eCmdHdlrPositiveInt, 0},
+                                           {"keepalive.time", eCmdHdlrPositiveInt, 0},
+                                           {"synbacklog", eCmdHdlrPositiveInt, 0},
+                                           {"threads", eCmdHdlrPositiveInt, 0},
+                                           {"starvationprotection.maxreads", eCmdHdlrPositiveInt, 0},
+                                           {"networknamespace", eCmdHdlrString, 0},
+                                           {"perSourceRate", eCmdHdlrBinary, 0},
+                                           {"perSourceKeyTpl", eCmdHdlrString, 0},
+                                           {"perSourcePolicyFile", eCmdHdlrString, 0},
+                                           {"perSourcePolicyReloadOnHUP", eCmdHdlrBinary, 0}
+                                           };
+static struct cnfparamblk inppblk = {CNFPARAMBLK_VERSION, sizeof(inppdescr) / sizeof(struct cnfparamdescr), inppdescr};
 
 static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
-static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current load process */
+static modConfData_t *runModConf = NULL; /* modConf ptr to use for the current exec process */
 
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {{"flowcontrol", eCmdHdlrBinary, 0},
@@ -239,50 +297,6 @@ static struct cnfparamdescr modpdescr[] = {{"flowcontrol", eCmdHdlrBinary, 0},
                                            {"preservecase", eCmdHdlrBinary, 0},
                                            {"networknamespace", eCmdHdlrString, 0}};
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
-
-/* input instance parameters */
-static struct cnfparamdescr inppdescr[] = {{"port", eCmdHdlrString, CNFPARAM_REQUIRED}, /* legacy: InputTCPServerRun */
-                                           {"maxsessions", eCmdHdlrPositiveInt, 0},
-                                           {"maxlisteners", eCmdHdlrPositiveInt, 0},
-                                           {"workerthreads", eCmdHdlrPositiveInt, 0},
-                                           {"flowcontrol", eCmdHdlrBinary, 0},
-                                           {"disablelfdelimiter", eCmdHdlrBinary, 0},
-                                           {"discardtruncatedmsg", eCmdHdlrBinary, 0},
-                                           {"notifyonconnectionclose", eCmdHdlrBinary, 0},
-                                           {"notifyonconnectionopen", eCmdHdlrBinary, 0},
-                                           {"addtlframedelimiter", eCmdHdlrNonNegInt, 0},
-                                           {"maxframesize", eCmdHdlrInt, 0},
-                                           {"preservecase", eCmdHdlrBinary, 0},
-                                           {"listenportfilename", eCmdHdlrString, 0},
-                                           {"address", eCmdHdlrString, 0},
-                                           {"name", eCmdHdlrString, 0},
-                                           {"defaulttz", eCmdHdlrString, 0},
-                                           {"ruleset", eCmdHdlrString, 0},
-                                           {"starvationprotection.maxreads", eCmdHdlrNonNegInt, 0},
-                                           {"streamdriver.mode", eCmdHdlrNonNegInt, 0},
-                                           {"streamdriver.authmode", eCmdHdlrString, 0},
-                                           {"streamdriver.permitexpiredcerts", eCmdHdlrString, 0},
-                                           {"streamdriver.name", eCmdHdlrString, 0},
-                                           {"streamdriver.CheckExtendedKeyPurpose", eCmdHdlrBinary, 0},
-                                           {"streamdriver.PrioritizeSAN", eCmdHdlrBinary, 0},
-                                           {"streamdriver.TlsVerifyDepth", eCmdHdlrPositiveInt, 0},
-                                           {"streamdriver.cafile", eCmdHdlrString, 0},
-                                           {"streamdriver.crlfile", eCmdHdlrString, 0},
-                                           {"streamdriver.keyfile", eCmdHdlrString, 0},
-                                           {"streamdriver.certfile", eCmdHdlrString, 0},
-                                           {"permittedpeer", eCmdHdlrArray, 0},
-                                           {"gnutlsprioritystring", eCmdHdlrString, 0},
-                                           {"keepalive", eCmdHdlrBinary, 0},
-                                           {"keepalive.probes", eCmdHdlrNonNegInt, 0},
-                                           {"keepalive.time", eCmdHdlrNonNegInt, 0},
-                                           {"keepalive.interval", eCmdHdlrNonNegInt, 0},
-                                           {"supportoctetcountedframing", eCmdHdlrBinary, 0},
-                                           {"ratelimit.interval", eCmdHdlrInt, 0},
-                                           {"framingfix.cisco.asa", eCmdHdlrBinary, 0},
-                                           {"ratelimit.burst", eCmdHdlrInt, 0},
-                                           {"socketbacklog", eCmdHdlrNonNegInt, 0},
-                                           {"networknamespace", eCmdHdlrString, 0}};
-static struct cnfparamblk inppblk = {CNFPARAMBLK_VERSION, sizeof(inppdescr) / sizeof(struct cnfparamdescr), inppdescr};
 
 #include "im-helper.h" /* must be included AFTER the type definitions! */
 
@@ -396,6 +410,13 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->iTCPSessMax = loadModConf->iTCPSessMax;
     inst->numWrkr = loadModConf->numWrkr;
     inst->starvationMaxReads = loadModConf->starvationMaxReads;
+    
+    inst->bPerSourceRate = 0;
+    inst->pszPerSourceKeyTpl = NULL;
+    inst->pszPerSourcePolicyFile = NULL;
+    inst->bPerSourcePolicyReloadOnHUP = 0;
+    inst->perSourceLimiter = NULL;
+    inst->perSourceKeyTpl = NULL;
 
     inst->cnf_params->pszLstnPortFileName = NULL;
 
@@ -557,6 +578,27 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
     CHKiRet(tcpsrv.SetDfltTZ(pOurTcpsrv, (inst->dfltTZ == NULL) ? (uchar *)"" : inst->dfltTZ));
     CHKiRet(tcpsrv.SetbSPFramingFix(pOurTcpsrv, inst->bSPFramingFix));
     CHKiRet(tcpsrv.SetLinuxLikeRatelimiters(pOurTcpsrv, inst->ratelimitInterval, inst->ratelimitBurst));
+
+    if (inst->bPerSourceRate) {
+        if (inst->pszPerSourceKeyTpl == NULL) {
+             LogError(0, RS_RET_ERR, "imtcp: perSourceRate enabled but perSourceKeyTpl not set");
+        } else {
+             inst->perSourceKeyTpl = tplFind(modConf->pConf, (char*)inst->pszPerSourceKeyTpl, strlen((char*)inst->pszPerSourceKeyTpl));
+             if (inst->perSourceKeyTpl == NULL) {
+                 LogError(0, RS_RET_ERR, "imtcp: perSourceKeyTpl '%s' not found", inst->pszPerSourceKeyTpl);
+             }
+        }
+        
+        CHKiRet(perSourceRateLimiterNew(&inst->perSourceLimiter));
+        if (inst->pszPerSourcePolicyFile) {
+            CHKiRet(perSourceRateLimiterSetPolicyFile(inst->perSourceLimiter, inst->pszPerSourcePolicyFile));
+            CHKiRet(perSourceRateLimiterReload(inst->perSourceLimiter));
+        }
+        
+        CHKiRet(tcpsrv.SetPerSourceRateLimiter(pOurTcpsrv, inst->perSourceLimiter));
+        CHKiRet(tcpsrv.SetPerSourceKeyTpl(pOurTcpsrv, inst->perSourceKeyTpl));
+        CHKiRet(tcpsrv.SetPerSourcePolicyReloadOnHUP(pOurTcpsrv, inst->bPerSourcePolicyReloadOnHUP));
+    }
 
     if ((ustrcmp(inst->cnf_params->pszPort, UCHAR_CONSTANT("0")) == 0 &&
          inst->cnf_params->pszLstnPortFileName == NULL) ||
