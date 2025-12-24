@@ -3,6 +3,10 @@
 System Architecture
 ===================
 
+.. meta::
+   :description: High-level architectural overview of rsyslog, describing the microkernel pattern, core components, and data flow pipeline.
+   :keywords: architecture, microkernel, plugins, data flow, pipeline, core engine, components
+
 .. page-summary-start
 
 High-level architectural overview of rsyslog, describing the microkernel pattern,
@@ -81,3 +85,10 @@ Rsyslog implements a custom **Object System** in C (``runtime/obj.h``) to provid
     -   ``SetProperty(pThis, ...)``: Configure the instance.
     -   ``ConstructFinalize(pThis)``: Ready the instance for use.
     -   ``Destruct(&pThis)``: Teardown and free.
+
+See Also
+--------
+- :doc:`engine_overview`
+- :doc:`dev_action_threads`
+- :doc:`dev_queue`
+- :doc:`generic_design`
