@@ -2,6 +2,49 @@
 
 This file defines guidelines and instructions for AI assistants (e.g., Codex, GitHub Copilot Workspace, ChatGPT agents) to understand and contribute effectively to the rsyslog codebase.
 
+## Agent Quick Start: The "Happy Path"
+
+Follow these three steps for a typical development task. This workflow is the recommended starting point for any new session.
+
+### Step 1: Set Up the Environment (If Needed)
+
+For some agents, like Jules, the development environment is often Debian/Ubuntu-based. If you are in such an environment and need to install dependencies, the following command provides a complete set for building and testing.
+
+**Warning:** Only run this command if you are on a Debian-based system (like Ubuntu) and have `sudo` privileges. Do not run this in an unknown CI or containerized environment, as it may cause unintended changes.
+
+```bash
+# Optional: For Debian/Ubuntu-based environments
+sudo apt-get update && sudo apt-get install -y \
+    autoconf autoconf-archive automake autotools-dev \
+    bison flex gcc \
+    libcurl4-gnutls-dev libdbi-dev libgcrypt20-dev \
+    libglib2.0-dev libgnutls28-dev \
+    libtool libtool-bin libzstd-dev make \
+    libestr-dev python3-docutils libfastjson-dev \
+    librelp-dev liblognorm-dev libaprutil1-dev libcivetweb-dev \
+    valgrind clang-format
+```
+
+### Step 2: Build the Project
+
+Build the project with a recommended set of `./configure` options that enables the testbench and a common set of modules suitable for most development and testing tasks.
+
+```bash
+./autogen.sh
+./configure --enable-testbench --enable-imdiag --enable-omstdout --enable-mmsnareparse --enable-omotel --enable-imhttp
+make -j$(nproc)
+```
+
+**Note:** If `autogen.sh` has been run before, you only need to run it again if `configure.ac` or `Makefile.am` files have changed.
+
+### Step 3: Run Tests
+
+Run a relevant test to verify your changes. The testbench allows test scripts to be run directly. `imtcp-basic.sh` serves as a good general-purpose smoke test.
+
+```bash
+./tests/imtcp-basic.sh
+```
+
 ## Repository Overview
 
   - **Primary Language**: C
@@ -64,23 +107,7 @@ When the user says the codeword "SUMMARIZE", do the following:
 
 When the user says the codeword "SETUP", do the following:
 
-- Install all necessary development dependencies for the rsyslog workspace
-- Run the complete dependency installation command for Ubuntu/Debian systems:
-  ```bash
-  sudo apt-get update
-  sudo apt-get install -y \
-      autoconf autoconf-archive automake autotools-dev \
-      bison flex gcc \
-      libcurl4-gnutls-dev libdbi-dev libgcrypt20-dev \
-      libglib2.0-dev libgnutls28-dev \
-      libtool libtool-bin libzstd-dev make \
-      libestr-dev python3-docutils libfastjson-dev \
-      liblognorm-dev libcurl4-gnutls-dev \
-      libaprutil1-dev libcivetweb-dev \
-      valgrind clang-format
-  ```
-- Mark the environment as configured (optional): `touch /tmp/rsyslog_base_env.flag`
-- Note: This keyword is intended for local Ubuntu/Debian environments (including WSL). In containerized or pre-configured environments, skip this step.
+- Follow the instructions in the "Step 1: Set Up the Environment" section of the "Agent Quick Start" guide at the top of this file to install all necessary development dependencies.
 
 ### `BUILD [configure-options]`
 
@@ -365,114 +392,10 @@ make check
 
 ### Test Environment
 
-Human developers can replicate CI conditions using the official container images available on **Docker Hub**. For single-test runs, we recommend `rsyslog/rsyslog_dev_base_ubuntu:24.04`. Please note that **AI agents should not attempt to pull or run these images**. Instead, they should utilize the standard configure + direct-test workflow within their existing container environment.
+Human developers can replicate CI conditions using the official container images available on **Docker Hub**. For single-test runs, we recommend `rsyslog/rsyslog_dev_base_ubuntu:24.04`. It is **recommended** that AI agents use the standard workflow within their existing environment to avoid potential complications, but they may use container images if necessary to reproduce a specific environment.
 
 -----
 
-## Manual Setup (discouraged)
-
-Minimum setup requires:
-
-  - Autotools toolchain: `autoconf`, `automake`, `libtool`, `make`, `gcc`
-  - Side libraries: `libestr`, `librelp`, `libfastjson`, `liblognorm` (must be installed or built manually)
-
-### Complete Dependency Installation (Ubuntu/Debian WSL)
-
-For a full development environment with all common dependencies:
-
-```bash
-sudo apt-get update
-sudo apt-get install -y \
-    autoconf autoconf-archive automake autotools-dev \
-    bison flex gcc \
-    libcurl4-gnutls-dev libdbi-dev libgcrypt20-dev \
-    libglib2.0-dev libgnutls28-dev \
-    libtool libtool-bin libzstd-dev make \
-    libestr-dev python3-docutils libfastjson-dev \
-    liblognorm-dev libcurl4-gnutls-dev \
-    libaprutil1-dev libcivetweb-dev \
-    valgrind clang-format
-```
-
-Mark the environment as configured (optional, for tracking):
-```bash
-touch /tmp/rsyslog_base_env.flag
-```
-
-### Build Process
-
-1. **Generate configure script** (required after fresh checkout or changes to build files):
-   ```bash
-   ./autogen.sh
-   ```
-
-2. **Configure with testbench and required modules**:
-   ```bash
-   # Basic configuration
-   ./configure --enable-testbench --enable-imdiag --enable-omstdout
-   
-   # For specific module testing, add the module's enable flag:
-   ./configure --enable-testbench --enable-imdiag --enable-omstdout \
-       --enable-mmsnareparse
-   
-   # For multiple modules:
-   ./configure --enable-testbench --enable-imdiag --enable-omstdout \
-       --enable-mmsnareparse \
-       --enable-omotel \
-       --enable-imhttp
-   ```
-
-3. **Build the project**:
-   ```bash
-   make -j$(nproc)
-   ```
-
-### Running Tests
-
-#### Example 1: Run a single test directly (recommended for debugging)
-```bash
-./tests/imtcp-basic.sh
-```
-
-#### Example 2: Run a single test through make check
-```bash
-make check -j16 TESTS="imtcp-basic.sh"
-```
-
-#### Example 3: Run module-specific tests
-```bash
-# mmsnareparse test
-make check -j16 TESTS="mmsnareparse-sysmon.sh"
-
-# Multiple tests
-make check -j16 TESTS="mmsnareparse-sysmon.sh mmsnareparse-trailing-extradata.sh"
-```
-
-#### Example 4: Run all tests (CI-style, time-consuming)
-```bash
-make check -j4
-```
-
-**Note:** The `-j` flag controls parallelism. Use `-j2` or `-j4` for reliability on resource-constrained systems, or `-j16` for faster execution on powerful machines.
-
-Reserve `make check` for cases where you must mirror CI or chase harness-only failures. When you do run it, prefer `make check -j2` or `-j4` for reliability.
-
------
-
-### Codex Build Environment Setup
-
-Codex-based agents must only perform this setup **if a compile or test is required** (e.g., not for review-only tasks):
-
-  - Run this setup script to install core dependencies:
-    ```bash
-    ./devtools/codex-setup.sh
-    ```
-  - Then, always run:
-    ```bash
-    ./autogen.sh
-    ```
-
-This ensures Codex can build core components even in constrained environments. Skipping setup when not needed (e.g., code review) saves significant execution time.
 
 -----
 
@@ -615,9 +538,8 @@ If you are an AI agent contributing code or documentation:
       - Describe **what changed** and **why** (as far as known to the agent).
       - Note any impact on existing versions or behaviors (especially for bug fixes).
   - Commit message descriptions should clearly identify that they were generated or co-authored by an AI tool.
-  - Include a **commit footer tag** like "AI-Agent: Codex"
-  - **Use the canonical commit-message base prompt** to draft/lint messages (ASCII, 62/72 wrap, `<component>:` title, non-tech “why”, Impact, Before/After, full-URL Fixes/Refs):
-    ai/rsyslog_commit_assistant/base_prompt.txt
+  - Include a line in the commit footer like `With the help of AI-Agents: <agent-name>`
+  - **When crafting commit messages, you must use the canonical commit-message base prompt** located at `ai/rsyslog_commit_assistant/base_prompt.txt`. This template ensures the final commit adheres to the project's formatting rules: a title of **62 characters or less** and body lines wrapped at **72 characters**.
   - **Commit-first:** ensure the substance is in the commit body (not only the PR). If needed, amend before opening the PR (`git commit --amend`).
 
 -----
