@@ -2,6 +2,14 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2025-12-24: rainerscript: ensure parse_json consumes entire input string
+  This fix ensures that parse_json() only succeeds if the entire input
+  string is a valid JSON value. This prevents false positives when a
+  non-JSON string happens to start with a valid JSON value, like a number.
+  Documentation is updated to reflect this stricter validation.
+  Impact: Corrects false-success in parse_json() for malformed input.
+  Fixes: https://github.com/rsyslog/rsyslog/issues/4970
+  With the helpo of AI-Agent: Antigravity
 - 2025-12-23: imjournal: fix potential segfault (SIGBUS)
   This fixes a problem in imjournal that can result in SIGBUS or other
   problems. Note that I could not reproduce the issue myself, but it looks
