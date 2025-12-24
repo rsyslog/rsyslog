@@ -1823,9 +1823,20 @@ static void ATTR_NONNULL() doFunc_parse_json(struct cnffunc *__restrict__ const 
     if (json == NULL) {
         retVal = RS_SCRIPT_EINVAL;
     } else {
-        size_t off = (*container == '$') ? 1 : 0;
-        msgAddJSON(pMsg, (uchar *)container + off, json, 0, 0);
-        retVal = RS_SCRIPT_EOK;
+        /* Check for trailing garbage */
+        int i = tokener->char_offset;
+        while (jsontext[i] != '\0' && isspace((uchar)jsontext[i])) {
+            i++;
+        }
+        if (jsontext[i] != '\0') {
+            json_object_put(json);
+            json = NULL;
+            retVal = RS_SCRIPT_EINVAL;
+        } else {
+            size_t off = (*container == '$') ? 1 : 0;
+            msgAddJSON(pMsg, (uchar *)container + off, json, 0, 0);
+            retVal = RS_SCRIPT_EOK;
+        }
     }
     wtiSetScriptErrno(pWti, retVal);
     json_tokener_free(tokener);

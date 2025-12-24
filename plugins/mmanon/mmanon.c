@@ -1321,7 +1321,8 @@ static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t
     struct hashtable *randConsisUniqueGeneratedIPs = useEmbedded
                                                          ? pWrkrData->pData->embeddedIPv4.randConsisUniqueGeneratedIPs
                                                          : pWrkrData->pData->ipv6.randConsisUniqueGeneratedIPs;
-    const int uniqueMode = useEmbedded ? pWrkrData->pData->embeddedIPv4.randConsisUnique : pWrkrData->pData->ipv6.randConsisUnique;
+    const int uniqueMode =
+        useEmbedded ? pWrkrData->pData->embeddedIPv4.randConsisUnique : pWrkrData->pData->ipv6.randConsisUnique;
     struct ipv6_int original = *num;
     struct ipv6_int *uniqueKey = NULL;
     sbool locked = 0;

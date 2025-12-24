@@ -9,8 +9,11 @@ parse_json(str, container)
 
 Parses the json string ``str`` and places the resulting json object
 into ``container`` where container can be any valid rsyslog variable.
+Note that the **entire** ``str`` must be valid JSON for the function
+to succeed. If there is trailing data after a valid JSON object/value,
+it will be considered as an error.
 Returns 0 on success and something otherwise if ``str`` does **not**
-contain valid json.
+contain a valid, complete json string.
 
 
 Example
