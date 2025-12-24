@@ -45,14 +45,14 @@ The system operates as an **Event-Driven, Multi-threaded Producer-Consumer Pipel
 .. mermaid::
 
    flowchart LR
-     Source((Log Source)) --> Input[Input Module<br>(imtcp)]
-     Input -->|smsg_t| PreProc[Preprocessing]
-     PreProc --> Queue[Main Queue<br>(qqueue_t)]
-     Queue -->|Batch| Parser[Parsers]
-     Parser --> Rules[Ruleset Engine]
-     Rules -->|Filter| ActionQ[Action Queue]
-     ActionQ --> Output[Output Module<br>(omfile)]
-     Output --> Dest((Destination))
+     Source(("Log Source")) --> Input["Input Module<br>(imtcp)"]
+     Input -->|smsg_t| PreProc["Preprocessing"]
+     PreProc --> Queue["Main Queue<br>(qqueue_t)"]
+     Queue -->|Batch| Parser["Parsers"]
+     Parser --> Rules["Ruleset Engine"]
+     Rules -->|Filter| ActionQ["Action Queue"]
+     ActionQ --> Output["Output Module<br>(omfile)"]
+     Output --> Dest(("Destination"))
 
 1.  **Input (Producer):** An input module runs a thread (often an infinite loop like `runInput`) to listen for data. It creates a **Message Object** (``smsg_t``) and submits it to the core.
 2.  **Queue (Buffer):** The core ``qqueue_t`` buffers messages in memory or on disk to handle bursts and ensure reliability.
