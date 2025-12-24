@@ -2,7 +2,7 @@
 
 **Rsyslog** is a **r**ocket-fast **sys**tem for **log** processing pipelines.
 
-It offers high performance, advanced security features, and a modular design.  
+It offers high performance, advanced security features, and a **modular microkernel-like architecture**.
 Originally a regular syslogd, rsyslog has evolved into a highly versatile logging solution capable of ingesting data from numerous sources, transforming it, and outputting it to a wide variety of destinations.
 
 Rsyslog can deliver over one million messages per second to local destinations under minimal processing (based on v7, Dec 2013). Even with complex routing and remote forwarding, performance remains excellent.

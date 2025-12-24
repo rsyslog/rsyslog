@@ -6,7 +6,8 @@ This file defines guidelines and instructions for AI assistants (e.g., Codex, Gi
 
   - **Primary Language**: C
   - **Build System**: autotools (`autogen.sh`, `configure`, `make`)
-  - **Modules**: Dynamically loaded from `plugins/`
+  - **Architecture**: Microkernel-like core (`runtime/`) with loadable plugins (`plugins/`)
+  - **Modules**: Dynamically loaded from `plugins/` (note: legacy modules like `omfile` reside in `tools/`)
   - **Contrib Modules**: Community-contributed under `contrib/`
   - **Contributions**: Additional modules and features are placed in `contrib/`, which contains community-contributed plugins not actively maintained by the core rsyslog team. These are retained in `contrib/` even if adopted later, to avoid disruptions in dependent software.
   - **Documentation**: Maintained in the doc/ subdirectory
@@ -34,6 +35,7 @@ This file defines guidelines and instructions for AI assistants (e.g., Codex, Gi
   - **Inline comment conventions:** [`COMMENTING_STYLE.md`](./COMMENTING_STYLE.md)
   - **Module author checklist:** [`MODULE_AUTHOR_CHECKLIST.md`](./MODULE_AUTHOR_CHECKLIST.md)
   - **Developer overview:** [`DEVELOPING.md`](./DEVELOPING.md)
+  - **Architecture overview:** [`doc/source/development/architecture.rst`](./doc/source/development/architecture.rst)
   - **Commit prompt template:** [`ai/rsyslog_commit_assistant/base_prompt.txt`](./ai/rsyslog_commit_assistant/base_prompt.txt)
   - **Doc builder prompt template:** [`ai/rsyslog_code_doc_builder/base_prompt.txt`](./ai/rsyslog_code_doc_builder/base_prompt.txt)
 
