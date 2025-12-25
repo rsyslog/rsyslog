@@ -29,6 +29,7 @@ The system is cleanly divided into two layers:
 1.  **The Core (Runtime):**
     Located in ``runtime/``, this acts as the "kernel." It knows nothing about
     TCP, files, or Elasticsearch. It manages:
+
     -   **Resources:** Worker threads (``wtp.c``), memory, and queues.
     -   **Orchestration:** Loading plugins, parsing `rsyslog.conf`, and routing messages.
     -   **Interfaces:** Defines the contract (``modules.h``) that all plugins must obey.
@@ -36,6 +37,7 @@ The system is cleanly divided into two layers:
 2.  **The Plugins (Extensions):**
     Located in ``plugins/`` (and some legacy ones in ``tools/``), these provide
     functionality. They are classified by their prefix:
+
     -   **Input (`im`):** Producers (e.g., `imtcp`, `imfile`).
     -   **Output (`om`):** Consumers (e.g., `omelasticsearch`, `omfile`).
     -   **Parser (`pm`):** Decoders (e.g., `pmrfc5424`).
@@ -68,6 +70,7 @@ Component Map
 
 - **``tools/``**: Contains the **Entry Point** (``rsyslogd.c``) and legacy built-in modules (e.g., `omfile.c`, `ompipe.c`).
 - **``runtime/``**: The **Core Engine**.
+
     -   ``msg.c``: The Message object.
     -   ``queue.c``: Queue implementation (In-Memory, Disk, DA).
     -   ``modules.c``: Plugin loader and interface definitions.
@@ -81,6 +84,7 @@ Rsyslog implements a custom **Object System** in C (``runtime/obj.h``) to provid
 
 -   **Macros:** It relies heavily on macros like ``DEFobjCurrIf`` (Define Object Current Interface) and ``BEGINobjInstance`` to simulate classes.
 -   **Lifecycle:** Objects follow a strict constructor/destructor pattern:
+
     -   ``Construct(&pThis)``: Allocate memory.
     -   ``SetProperty(pThis, ...)``: Configure the instance.
     -   ``ConstructFinalize(pThis)``: Ready the instance for use.
