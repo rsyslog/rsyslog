@@ -92,6 +92,7 @@ Rsyslog implements a custom **Object System** in C (``runtime/obj.h``) to provid
 
 See Also
 --------
+
 - :doc:`engine_overview`
 - :doc:`dev_action_threads`
 - :doc:`dev_queue`
