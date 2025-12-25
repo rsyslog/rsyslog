@@ -261,6 +261,7 @@ EXTRA_DIST += \
     doc/source/containers/standard.rst \
     doc/source/containers/user_images.rst \
     doc/source/dataflow.png \
+    doc/source/development/architecture.rst \
     doc/source/development/coding_practices.rst \
     doc/source/development/coding_practices/embedded_ipv4_tail_helper.rst \
     doc/source/development/coding_practices/error_logging_with_errno.rst \
