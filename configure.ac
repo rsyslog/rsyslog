@@ -1194,6 +1194,32 @@ if test "x$enable_openssl" = "xyes"; then
 	PKG_CHECK_MODULES(OPENSSL, openssl)
 	AC_DEFINE([ENABLE_OPENSSL], [1], [Indicator that openssl is present])
 	save_libs=$LIBS
+	AC_MSG_CHECKING([for OpenSSL version >= 3.0])
+	openssl_version=$($PKG_CONFIG --modversion openssl)
+	openssl_major_version=$(echo "$openssl_version" | cut -d. -f1)
+	if test "$openssl_major_version" -ge 3; then
+		have_openssl3="yes"
+		AC_MSG_RESULT([yes ($openssl_version)])
+	else
+		have_openssl3="no"
+		AC_MSG_RESULT([no ($openssl_version)])
+	fi
+
+	AC_MSG_CHECKING([if we are using LibreSSL])
+	AC_COMPILE_IFELSE(
+		[AC_LANG_PROGRAM([[#include <openssl/opensslv.h>]], [[
+			#if !defined(LIBRESSL_VERSION_NUMBER)
+			#error "not LibreSSL"
+			#endif
+		]])],
+		[is_libressl=yes],
+		[is_libressl=no]
+	)
+	AC_MSG_RESULT([$is_libressl])
+
+	if test "$have_openssl3" = "yes" -a "$is_libressl" = "no"; then
+		AC_DEFINE([HAVE_OPENSSL_3], [1], [Define to 1 if OpenSSL version is >= 3.0 and not LibreSSL])
+	fi
 fi
 AM_CONDITIONAL(ENABLE_OPENSSL, test x$enable_openssl = xyes)
 

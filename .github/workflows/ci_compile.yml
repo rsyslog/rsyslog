@@ -42,7 +42,7 @@ jobs:
         # note: we compile only with the oldest and newest supported compilers to
         # save resources. Other important ones are used during the rest of
         # the check runs (most importantly the distro-default ones).
-        config: [clang9, clang18-noatomics, clang18-ndebug, gcc8-debug, gcc-11-ndebug, gcc14-gnu23-debug]
+        config: [clang9, clang18-noatomics, clang18-ndebug, gcc8-debug, gcc-11-ndebug, gcc14-gnu23-debug, libressl]
 
     steps:
       - name: git checkout project
@@ -99,6 +99,13 @@ jobs:
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
               export CFLAGS="-g -std=gnu23"
               export CC='gcc-14'
+              ;;
+          'libressl')
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-openssl'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
+              export EXTRA_PRE_INSTALL_PKGS='libressl-dev'
+              export CC='gcc-11'
+              export PKG_CONFIG_PATH='/usr/lib/x86_64-linux-gnu/pkgconfig-libressl'
               ;;
           *)
               echo "unknown configuration "

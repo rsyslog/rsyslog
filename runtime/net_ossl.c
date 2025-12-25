@@ -172,6 +172,13 @@ int opensslh_THREAD_cleanup(void) {
 
 
 /*--------------------------------------OpenSSL helpers ------------------------------------------*/
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+static void
+list_provider_callback(OSSL_PROVIDER *provider, void __attribute__((unused)) *cbdata)
+{
+	DBGPRINTF("osslGlblInit: Loaded Provider: Name = %s\n", OSSL_PROVIDER_get0_name(provider));
+}
+#endif
 
 /* globally initialize OpenSSL
  */
@@ -192,15 +199,7 @@ void osslGlblInit(void) {
 
     /* Load readable error strings */
     SSL_load_error_strings();
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
-    /*
-     * ERR_load_*(), ERR_func_error_string(), ERR_get_error_line(), ERR_get_error_line_data(), ERR_get_state()
-     * OpenSSL now loads error strings automatically so these functions are not needed.
-     * SEE FOR MORE:
-     *	https://www.openssl.org/docs/manmaster/man7/migration_guide.html
-     *
-     */
-#else
+#ifndef HAVE_OPENSSL_3
     /* Load error strings into mem*/
     ERR_load_BIO_strings();
     ERR_load_crypto_strings();
@@ -209,6 +208,9 @@ void osslGlblInit(void) {
     PRAGMA_DIAGNOSTIC_PUSH
     PRAGMA_IGNORE_Wdeprecated_declarations
 
+#ifdef HAVE_OPENSSL_3
+    OSSL_PROVIDER_do_all(NULL, list_provider_callback, NULL);
+#else
 #ifndef OPENSSL_NO_ENGINE
     // Initialize OpenSSL engine library
     ENGINE_load_builtin_engines();
@@ -233,6 +235,7 @@ void osslGlblInit(void) {
 #else
         DBGPRINTF("osslGlblInit: OpenSSL compiled without ENGINE support - ENGINE support disabled\n");
 #endif /* OPENSSL_NO_ENGINE */
+#endif
 
     PRAGMA_DIAGNOSTIC_POP
 }
@@ -240,12 +243,14 @@ void osslGlblInit(void) {
 /* globally de-initialize OpenSSL */
 void osslGlblExit(void) {
     DBGPRINTF("openssl: entering osslGlblExit\n");
+#ifndef HAVE_OPENSSL_3
 #ifndef OPENSSL_NO_ENGINE
     ENGINE_cleanup();
 #endif
     ERR_free_strings();
     EVP_cleanup();
     CRYPTO_cleanup_all_ex_data();
+#endif
 }
 
 
@@ -330,7 +335,7 @@ static rsRetVal net_ossl_osslCtxInit(net_ossl_t *pThis, const SSL_METHOD *method
         ABORT_FINALIZE(RS_RET_TLS_CERT_ERR);
     }
     if (bHaveCRL == 1) {
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+#ifdef HAVE_OPENSSL_3
         // Get X509_STORE reference
         X509_STORE *store = SSL_CTX_get_cert_store(pThis->ctx);
         if (!X509_STORE_load_file(store, crlFile)) {
@@ -1112,6 +1117,22 @@ static rsRetVal net_ossl_init_engine(__attribute__((unused)) net_ossl_t *pThis) 
     // OpenSSL Engine Support feature relies on an outdated version of OpenSSL and is
     // strictly experimental. No support or guarantees are provided. Use at your own risk.
     DEFiRet;
+#ifdef HAVE_OPENSSL_3
+    if (runConf != NULL && glbl.GetDfltOpensslEngine(runConf) != NULL) {
+        const char *provider_name = (const char*) glbl.GetDfltOpensslEngine(runConf);
+        pThis->provider = OSSL_PROVIDER_load(NULL, provider_name);
+        if (pThis->provider == NULL) {
+            LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+                    "error: failed to load OpenSSL provider '%s' for "
+                    "ossl netstream driver", provider_name);
+            net_ossl_lastOpenSSLErrorMsg(NULL, 0, NULL, LOG_ERR, "net_ossl_init_engine", "OSSL_PROVIDER_load");
+        } else {
+            DBGPRINTF("net_ossl_init_engine: Loaded OpenSSL provider '%s'\n", provider_name);
+        }
+    } else {
+        DBGPRINTF("net_ossl_init_engine: use openssl default provider");
+    }
+#else
     #ifndef OPENSSL_NO_ENGINE
     const char *engine_id = NULL;
     const char *engine_name = NULL;
@@ -1160,7 +1181,7 @@ static rsRetVal net_ossl_init_engine(__attribute__((unused)) net_ossl_t *pThis) 
     #else
     DBGPRINTF("net_ossl_init_engine: OpenSSL compiled without ENGINE support - ENGINE support disabled\n");
     #endif /* OPENSSL_NO_ENGINE */
-
+#endif
     RETiRet;
 }
 
@@ -1189,7 +1210,7 @@ void net_ossl_set_ctx_verify_callback(SSL_CTX *pCtx, int flags) {
 }
 
 void net_ossl_set_bio_callback(BIO *conn) {
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+#ifdef HAVE_OPENSSL_3
     BIO_set_callback_ex(conn, RSYSLOG_BIO_debug_callback_ex);
 #else
     BIO_set_callback(conn, RSYSLOG_BIO_debug_callback);
@@ -1203,6 +1224,9 @@ BEGINobjConstruct(net_ossl) /* be sure to specify the object type also in END ma
     DBGPRINTF("net_ossl_construct: [%p]\n", pThis);
     pThis->bReportAuthErr = 1;
     pThis->bSANpriority = 0;
+#ifdef HAVE_OPENSSL_3
+    pThis->provider = NULL;
+#endif
 #if OPENSSL_VERSION_NUMBER >= 0x10100000L
     CHKiRet(net_ossl_init_engine(pThis));
 finalize_it:
@@ -1222,6 +1246,11 @@ BEGINobjDestruct(net_ossl) /* be sure to specify the object type also in END and
     if (pThis->ctx != NULL && !pThis->ctx_is_copy) {
         SSL_CTX_free(pThis->ctx);
     }
+#ifdef HAVE_OPENSSL_3
+    if (pThis->provider != NULL) {
+	OSSL_PROVIDER_unload(pThis->provider);
+    }
+#endif
     free((void *)pThis->pszCAFile);
     free((void *)pThis->pszCRLFile);
     free((void *)pThis->pszKeyFile);
