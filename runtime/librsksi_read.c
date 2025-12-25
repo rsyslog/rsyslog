@@ -80,9 +80,12 @@ static void outputHexBlob(FILE *fp, const uint8_t *blob, const uint16_t len, con
 void outputKSIHash(FILE *fp, const char *hdr, const KSI_DataHash *const __restrict__ hash, const uint8_t verbose) {
     const unsigned char *digest;
     size_t digest_len;
-    KSI_DataHash_extract(hash, NULL, &digest, &digest_len);  // TODO: error check
 
     fprintf(fp, "%s", hdr);
+    if (KSI_DataHash_extract(hash, NULL, &digest, &digest_len) != KSI_OK) {
+        fprintf(fp, "<error: extraction failed>\n");
+        return;
+    }
     outputHexBlob(fp, digest, digest_len, verbose);
     fputc('\n', fp);
 }
@@ -1508,7 +1511,11 @@ static int rsksi_vrfy_chkRecHash(ksifile ksi, FILE *sigfp, FILE *nsigfp, KSI_Dat
     imprint_t *imp = NULL;
 
     const unsigned char *digest;
-    KSI_DataHash_extract(hash, NULL, &digest, NULL);  // TODO: error check
+    if (KSI_DataHash_extract(hash, NULL, &digest, NULL) != KSI_OK) {
+        r = RSGTE_EXTRACT_HASH;
+        reportError(r, ectx);
+        goto done;
+    }
 
     if ((r = rsksi_tlvrdRecHash(sigfp, nsigfp, &imp)) != 0) reportError(r, ectx);
     goto done;
@@ -1535,7 +1542,11 @@ static int rsksi_vrfy_chkTreeHash(ksifile ksi, FILE *sigfp, FILE *nsigfp, KSI_Da
     int r = 0;
     imprint_t *imp = NULL;
     const unsigned char *digest;
-    KSI_DataHash_extract(hash, NULL, &digest, NULL);  // TODO: error check
+    if (KSI_DataHash_extract(hash, NULL, &digest, NULL) != KSI_OK) {
+        r = RSGTE_EXTRACT_HASH;
+        reportError(r, ectx);
+        goto done;
+    }
 
 
     if ((r = rsksi_tlvrdTreeHash(sigfp, nsigfp, &imp)) != 0) {
