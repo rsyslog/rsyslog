@@ -312,23 +312,8 @@ finalize_it:
     RETiRet;
 }
 
-/* Close the UDP sockets.
- * rgerhards, 2009-05-29
- */
-static rsRetVal closeUDPSockets(wrkrInstanceData_t *pWrkrData) {
-    DEFiRet;
-    if (pWrkrData->target[0].pSockArray != NULL) {
-        net.closeUDPListenSockets(pWrkrData->target[0].pSockArray);
-        pWrkrData->target[0].pSockArray = NULL;
-        freeaddrinfo(pWrkrData->target[0].f_addr);
-        pWrkrData->target[0].f_addr = NULL;
-    }
-    pWrkrData->target[0].bIsConnected = 0;
-    RETiRet;
-}
 
-
-static void DestructTCPTargetData(targetData_t *const pTarget) {
+static void DestructTargetData(targetData_t *const pTarget, const sbool bIsRebind) {
     // TODO: do we need to do a final send? if so, old bug!
     doZipFinish(pTarget);
 
@@ -338,16 +323,28 @@ static void DestructTCPTargetData(targetData_t *const pTarget) {
     if (pTarget->pNS != NULL) {
         netstrms.Destruct(&pTarget->pNS);
     }
+    if (pTarget->pSockArray != NULL) {
+        net.closeUDPListenSockets(pTarget->pSockArray);
+        pTarget->pSockArray = NULL;
+    }
+    if (pTarget->f_addr != NULL) {
+        freeaddrinfo(pTarget->f_addr);
+        pTarget->f_addr = NULL;
+    }
 
-    /* set resume time for interal retries */
-    datetime.GetTime(&pTarget->ttResume);
-    pTarget->ttResume += pTarget->pData->poolResumeInterval;
+    if (bIsRebind) {
+        pTarget->ttResume = 0;
+    } else {
+        /* set resume time for interal retries */
+        datetime.GetTime(&pTarget->ttResume);
+        pTarget->ttResume += pTarget->pData->poolResumeInterval;
+    }
     pTarget->bIsConnected = 0;
-    DBGPRINTF("omfwd: DestructTCPTargetData: %p %s:%s, connected %d, ttResume %lld\n", &pTarget, pTarget->target_name,
+    DBGPRINTF("omfwd: DestructTargetData: %p %s:%s, connected %d, ttResume %lld\n", pTarget, pTarget->target_name,
               pTarget->port, pTarget->bIsConnected, (long long)pTarget->ttResume);
 }
 
-/* destruct the TCP helper objects
+/* destruct the helper objects
  * This, for example, is needed after something went wrong.
  * This function is void because it "can not" fail.
  * rgerhards, 2008-06-04
@@ -356,11 +353,11 @@ static void DestructTCPTargetData(targetData_t *const pTarget) {
  * the worst case, some duplication occurs, but we do not
  * loose data.
  */
-static void DestructTCPInstanceData(wrkrInstanceData_t *pWrkrData) {
-    LogMsg(0, RS_RET_DEBUG, LOG_DEBUG, "omfwd: Destructing TCP target pool of %d targets (DestructTCPInstanceData)",
+static void DestructInstanceData(wrkrInstanceData_t *pWrkrData, const sbool bIsRebind) {
+    LogMsg(0, RS_RET_DEBUG, LOG_DEBUG, "omfwd: Destructing target pool of %d targets (DestructInstanceData)",
            pWrkrData->pData->nTargets);
     for (int j = 0; j < pWrkrData->pData->nTargets; ++j) {
-        DestructTCPTargetData(&(pWrkrData->target[j]));
+        DestructTargetData(&(pWrkrData->target[j]), bIsRebind);
     }
 }
 
@@ -535,8 +532,7 @@ BEGINfreeWrkrInstance
     LogMsg(0, RS_RET_DEBUG, LOG_DEBUG, "omfwd: [wrkr %u/%" PRIuPTR "] Destructing worker instance", pWrkrData->wrkrID,
            (uintptr_t)pthread_self());
 
-    DestructTCPInstanceData(pWrkrData);
-    closeUDPSockets(pWrkrData);
+    DestructInstanceData(pWrkrData, 0);
 
     if (pWrkrData->pData->protocol == FORW_TCP) {
         for (int i = 0; i < pWrkrData->pData->nTargets; ++i) {
@@ -572,11 +568,11 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData, uchar 
     if (pWrkrData->pData->iRebindInterval && (pTarget->nXmit++ % pWrkrData->pData->iRebindInterval == 0)) {
         dbgprintf("omfwd dropping UDP 'connection' (as configured)\n");
         pTarget->nXmit = 1; /* else we have an addtl wrap at 2^31-1 */
-        CHKiRet(closeUDPSockets(pWrkrData));
+        DestructTargetData(pTarget, 1);
     }
 
     if (pWrkrData->target[0].pSockArray == NULL) {
-        CHKiRet(doTryResume(pTarget)); /* for UDP, we have only a single tartget! */
+        CHKiRet(doTryResume(pTarget)); /* for UDP, we have only a single target! */
     }
 
     if (pTarget->pSockArray == NULL) {
@@ -635,7 +631,7 @@ static rsRetVal UDPSend(wrkrInstanceData_t *__restrict__ const pWrkrData, uchar 
 
     /* one or more send failures; close sockets and re-init */
     if (reInit == RSTRUE) {
-        CHKiRet(closeUDPSockets(pWrkrData));
+        DestructTargetData(pTarget, 0);
     }
 
     /* finished looping */
@@ -723,7 +719,7 @@ static rsRetVal CheckConnection(targetData_t *const pTarget) {
 finalize_it:
     if (iRet != RS_RET_OK) {
         emitConnectionErrorMsg(pTarget, iRet);
-        DestructTCPTargetData(pTarget);
+        DestructTargetData(pTarget, 0);
         iRet = RS_RET_SUSPENDED;
     }
     RETiRet;
@@ -753,7 +749,7 @@ static rsRetVal TCPSendBufUncompressed(targetData_t *const pTarget, uchar *const
 finalize_it:
     if (iRet != RS_RET_OK) {
         emitConnectionErrorMsg(pTarget, iRet);
-        DestructTCPTargetData(pTarget);
+        DestructTargetData(pTarget, 0);
         iRet = RS_RET_SUSPENDED;
     }
     RETiRet;
@@ -953,7 +949,7 @@ static rsRetVal TCPSendInitTarget(targetData_t *const pTarget) {
 finalize_it:
     if (iRet != RS_RET_OK) {
         dbgprintf("TCPSendInitTarget FAILED with %d.\n", iRet);
-        DestructTCPTargetData(pTarget);
+        DestructTargetData(pTarget, 0);
     }
 
     RETiRet;
@@ -972,9 +968,9 @@ static rsRetVal TCPSendInit(void *pvData) {
  * side-note: TCPSendInit() is called afterwards by the generic tcp client code.
  */
 static rsRetVal TCPSendPrepRetry(void *pvData) {
-    DestructTCPTargetData((targetData_t *)pvData);
+    DestructTargetData((targetData_t *)pvData, 0);
     /* Even if the destruct fails, it does not help to provide this info to
-     * the upper layer. Also, DestructTCPTargtData() does currently not
+     * the upper layer. Also, DestructTargetData() does currently not
      * provide a return status.
      */
     return RS_RET_OK;
@@ -1272,7 +1268,7 @@ static rsRetVal processMsg(targetData_t *__restrict__ const pTarget, actWrkrIPar
             /* error! */
             LogError(0, iRet, "omfwd: error forwarding via tcp to %s:%s, suspending target", pTarget->target_name,
                      pTarget->port);
-            DestructTCPTargetData(pTarget);
+            DestructTargetData(pTarget, 0);
             iRet = RS_RET_SUSPENDED;
         }
     }
@@ -1291,14 +1287,14 @@ BEGINcommitTransaction
     char namebuf[264]; /* 256 for FQDN, 5 for port and 3 for transport => 264 */
     CODESTARTcommitTransaction;
     /* if needed, rebind first. This ensure we can deliver to the rebound addresses.
-     * Note that rebind requires reconnect to the new targets. This is done by the
-     * poolTryResume(), which needs to be made in any case.
+     * Note that rebind requires reconnect (TCP) or socket recreation (UDP) to the
+     * new targets. This is done by the poolTryResume(), which needs to be made in any case.
      */
     if (pWrkrData->pData->iRebindInterval && (pWrkrData->nXmit++ >= pWrkrData->pData->iRebindInterval)) {
         dbgprintf("REBIND (sent %d, interval %d) - omfwd dropping target connection (as configured)\n",
                   pWrkrData->nXmit, pWrkrData->pData->iRebindInterval);
         pWrkrData->nXmit = 0; /* else we have an addtl wrap at 2^31-1 */
-        DestructTCPInstanceData(pWrkrData);
+        DestructInstanceData(pWrkrData, 1);
         initTCP(pWrkrData);
         LogMsg(0, RS_RET_PARAM_ERROR, LOG_WARNING, "omfwd: dropped connections due to configured rebind interval");
     }
@@ -1373,7 +1369,7 @@ BEGINcommitTransaction
                        "omfwd: [wrkr %u] target %s:%s became unavailable during buffer flush. "
                        "Remaining messages will be sent when it is online again.",
                        pWrkrData->wrkrID, pWrkrData->target[j].target_name, pWrkrData->target[j].port);
-                DestructTCPTargetData(&(pWrkrData->target[j]));
+                DestructTargetData(&(pWrkrData->target[j]), 0);
                 /* Note: do not return RS_RET_SUSPENDED here. We only return SUSPENDED
                  * when no pool member is left active (see block below after pool stats).
                  * For multi-target pools, other active targets may continue to work
