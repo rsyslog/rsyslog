@@ -27,8 +27,8 @@ startup
 # Send 5 messages.
 # Message 1: OK
 # Message 2: OK, but after this, RebindInterval=2 is reached.
-# Transaction commit will call DestructTCPTargetData -> ttResume = now + 2s.
-# Message 3: will try to send, but action will be suspended for 2s.
+# Transaction commit will trigger a rebind, which now correctly avoids setting a suspension timeout.
+# Previously, this would have caused the action to be suspended for 2s.
 injectmsg 0 5
 
 shutdown_when_empty
