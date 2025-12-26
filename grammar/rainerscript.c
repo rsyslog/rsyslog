@@ -3104,6 +3104,119 @@ done:
     varFreeMembers(&srcVal[1]);
 }
 
+static void ATTR_NONNULL() doFunct_append_json(struct cnffunc *__restrict__ const func,
+                                               struct svar *__restrict__ const ret,
+                                               void *const usrptr,
+                                               wti_t *const pWti) {
+    struct svar srcVal[3];
+    int bMustFree = 0;
+    int bMustFree2 = 0;
+    struct json_object *result = NULL;
+
+    cnfexprEval(func->expr[0], &srcVal[0], usrptr, pWti);
+
+    if (srcVal[0].datatype != 'J' || srcVal[0].d.json == NULL) {
+        ret->datatype = 'J';
+        ret->d.json = NULL;
+        varFreeMembers(&srcVal[0]);
+        return;
+    }
+
+    struct json_object *input = srcVal[0].d.json;
+    enum json_type type = json_object_get_type(input);
+
+    if (type == json_type_array) {
+        cnfexprEval(func->expr[1], &srcVal[1], usrptr, pWti);
+
+        result = json_object_new_array();
+        if (result == NULL) {
+            goto done_array;
+        }
+
+        int len = json_object_array_length(input);
+        for (int i = 0; i < len; i++) {
+            struct json_object *elem = json_object_array_get_idx(input, i);
+            struct json_object *elem_ref = json_object_get(elem);
+            if (json_object_array_add(result, elem_ref) != 0) {
+                json_object_put(elem_ref);
+                json_object_put(result);
+                result = NULL;
+                goto done_array;
+            }
+        }
+
+        struct json_object *newElem = NULL;
+        if (srcVal[1].datatype == 'J') {
+            newElem = json_object_get(srcVal[1].d.json);
+        } else if (srcVal[1].datatype == 'S') {
+            char *str = (char *)var2CString(&srcVal[1], &bMustFree);
+            if (str != NULL) {
+                newElem = json_object_new_string(str);
+            }
+            if (bMustFree) free(str);
+        } else {
+            newElem = json_object_new_int64(srcVal[1].d.n);
+        }
+        if (newElem != NULL) {
+            if (json_object_array_add(result, newElem) != 0) {
+                json_object_put(newElem);
+                json_object_put(result);
+                result = NULL;
+            }
+        }
+
+    done_array:
+        varFreeMembers(&srcVal[1]);
+
+    } else if (type == json_type_object && func->nParams >= 3) {
+        cnfexprEval(func->expr[1], &srcVal[1], usrptr, pWti);
+        cnfexprEval(func->expr[2], &srcVal[2], usrptr, pWti);
+
+        char *key = (char *)var2CString(&srcVal[1], &bMustFree);
+        if (key == NULL) {
+            goto done_object;
+        }
+
+        result = json_object_new_object();
+        if (result == NULL) {
+            goto done_object;
+        }
+
+        struct json_object_iterator it = json_object_iter_begin(input);
+        struct json_object_iterator itEnd = json_object_iter_end(input);
+        while (!json_object_iter_equal(&it, &itEnd)) {
+            json_object_object_add(result, json_object_iter_peek_name(&it),
+                                   json_object_get(json_object_iter_peek_value(&it)));
+            json_object_iter_next(&it);
+        }
+
+        struct json_object *newVal = NULL;
+        if (srcVal[2].datatype == 'J') {
+            newVal = json_object_get(srcVal[2].d.json);
+        } else if (srcVal[2].datatype == 'S') {
+            char *str = (char *)var2CString(&srcVal[2], &bMustFree2);
+            if (str != NULL) {
+                newVal = json_object_new_string(str);
+            }
+            if (bMustFree2) free(str);
+        } else {
+            newVal = json_object_new_int64(srcVal[2].d.n);
+        }
+        if (newVal != NULL) {
+            json_object_object_add(result, key, newVal);
+        }
+
+    done_object:
+        if (bMustFree) free(key);
+        varFreeMembers(&srcVal[1]);
+        varFreeMembers(&srcVal[2]);
+    }
+
+    ret->datatype = 'J';
+    ret->d.json = result;
+    varFreeMembers(&srcVal[0]);
+}
+
 static void evalVar(struct cnfvar *__restrict__ const var,
                     void *__restrict__ const usrptr,
                     struct svar *__restrict__ const ret) {
@@ -3883,6 +3996,7 @@ static struct scriptFunct functions[] = {
     {"previous_action_suspended", 0, 0, doFunct_PreviousActionSuspended, NULL, NULL},
     {"b64_decode", 1, 1, doFunct_Base64Dec, NULL, NULL},
     {"split", 2, 2, doFunct_split, NULL, NULL},
+    {"append_json", 2, 3, doFunct_append_json, NULL, NULL},
     {NULL, 0, 0, NULL, NULL, NULL}  // last element to check end of array
 };
 
