@@ -2,6 +2,10 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2025-12-26: rainerscript: add split() function
+  Users need to parse delimited strings (CSV, tags, paths) into arrays
+  for iteration or JSON output without external processing.
+  Thanks to github user 20syldev for the patch.
 - 2025-12-24: rainerscript: ensure parse_json consumes entire input string
   This fix ensures that parse_json() only succeeds if the entire input
   string is a valid JSON value. This prevents false positives when a
