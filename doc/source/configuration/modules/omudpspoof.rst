@@ -30,132 +30,60 @@ Configuration Parameters
 
 .. note::
 
-   Parameter names are case-insensitive.
+   Parameter names are case-insensitive; camelCase is recommended for readability.
 
 Module Parameters
 -----------------
 
-Template
-^^^^^^^^
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "RSYSLOG_TraditionalForwardFormat", "no", "none"
-
-This setting instructs omudpspoof to use a template different from
-the default template for all of its actions that do not have a
-template specified explicitly.
+   * - Parameter
+     - Summary
+   * - :ref:`param-omudpspoof-template`
+     - .. include:: ../../reference/parameters/omudpspoof-template.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 
 Action Parameters
 -----------------
 
-Target
-^^^^^^
+.. list-table::
+   :widths: 30 70
+   :header-rows: 1
 
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "none", "yes", "``$ActionOMUDPSpoofTargetHost``"
-
-Host that the messages shall be sent to.
-
-
-Port
-^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "514", "no", "``$ActionOMUDPSpoofTargetPort``"
-
-Remote port that the messages shall be sent to. Default is 514.
-
-
-SourceTemplate
-^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "RSYSLOG_omudpspoofDfltSourceTpl", "no", "``$ActionOMUDPSpoofSourceNameTemplate``"
-
-This is the name of the template that contains a numerical IP
-address that is to be used as the source system IP address. While it
-may often be a constant value, it can be generated as usual via the
-property replacer, as long as it is a valid IPv4 address. If not
-specified, the built-in default template
-RSYSLOG\_omudpspoofDfltSourceTpl is used. This template is defined as
-follows:
-$template RSYSLOG\_omudpspoofDfltSourceTpl,"%fromhost-ip%"
-So in essence, the default template spoofs the address of the system
-the message was received from. This is considered the most important
-use case.
-
-
-SourcePort.start
-^^^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "32000", "no", "``$ActionOMUDPSpoofSourcePortStart``"
-
-Specify the start value for circling the source ports. Start must be
-less than or equal to sourcePort.End.
-
-
-SourcePort.End
-^^^^^^^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "42000", "no", "``$ActionOMUDPSpoofSourcePortEnd``"
-
-Specify the end value for circling the source ports. End must be
-equal to or more than sourcePort.Start.
-
-
-MTU
-^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "integer", "1500", "no", "none"
-
-Maximum packet length to send.
-
-
-Template
-^^^^^^^^
-
-.. csv-table::
-   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
-   :widths: auto
-   :class: parameter-table
-
-   "word", "RSYSLOG_TraditionalForwardFormat", "no", "``$ActionOMUDPSpoofDefaultTemplate``"
-
-This setting instructs omudpspoof to use a template different from
-the default template for all of its actions that do not have a
-template specified explicitly.
+   * - Parameter
+     - Summary
+   * - :ref:`param-omudpspoof-target`
+     - .. include:: ../../reference/parameters/omudpspoof-target.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omudpspoof-port`
+     - .. include:: ../../reference/parameters/omudpspoof-port.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omudpspoof-sourcetemplate`
+     - .. include:: ../../reference/parameters/omudpspoof-sourcetemplate.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omudpspoof-sourceport-start`
+     - .. include:: ../../reference/parameters/omudpspoof-sourceport-start.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omudpspoof-sourceport-end`
+     - .. include:: ../../reference/parameters/omudpspoof-sourceport-end.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omudpspoof-mtu`
+     - .. include:: ../../reference/parameters/omudpspoof-mtu.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omudpspoof-template`
+     - .. include:: ../../reference/parameters/omudpspoof-template.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 
 Caveats/Known Bugs
@@ -175,13 +103,13 @@ Forwarding message through multiple ports
 
 Forward the message to 192.168.1.1, using original source and port between 10000 and 19999.
 
-.. code-block:: none
+.. code-block:: rsyslog
 
-   Action (
+   action(
      type="omudpspoof"
      target="192.168.1.1"
-     sourceport.start="10000"
-     sourceport.end="19999"
+     sourcePort.start="10000"
+     sourcePort.end="19999"
    )
 
 
@@ -190,20 +118,31 @@ Forwarding message using another source address
 
 Forward the message to 192.168.1.1, using source address 192.168.111.111 and default ports.
 
-.. code-block:: none
+.. code-block:: rsyslog
 
-   Module (
+   module(
      load="omudpspoof"
    )
-   Template (
+   template(
      name="spoofaddr"
      type="string"
      string="192.168.111.111"
    )
-   Action (
+   action(
      type="omudpspoof"
      target="192.168.1.1"
-     sourcetemplate="spoofaddr"
+     sourceTemplate="spoofaddr"
    )
+
+.. toctree::
+   :hidden:
+
+   ../../reference/parameters/omudpspoof-template
+   ../../reference/parameters/omudpspoof-target
+   ../../reference/parameters/omudpspoof-port
+   ../../reference/parameters/omudpspoof-sourcetemplate
+   ../../reference/parameters/omudpspoof-sourceport-start
+   ../../reference/parameters/omudpspoof-sourceport-end
+   ../../reference/parameters/omudpspoof-mtu
 
 
