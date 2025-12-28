@@ -175,8 +175,6 @@ The following properties are maintained for each listener:
 
 -  **failed** - total number of failures to read messages from journal.
 
--  **poll_failed** - total number of journal poll failures.
-
 -  **rotations** - total number of journal file rotations.
 
 -  **recovery_attempts** - total number of recovery attempts by imjournal after unknown errors by closing and
@@ -194,7 +192,7 @@ spews lots of logs to stdout:
 .. code-block:: none
 
 	Jun 13 15:02:48 app1-1.example.com rsyslogd-pstats: imjournal: origin=imjournal submitted=20000 read=216557
-	discarded=196557 failed=0 poll_failed=0 rotations=6 recovery_attempts=0 ratelimit_discarded_in_interval=196557
+	discarded=196557 failed=0 rotations=6 recovery_attempts=0 ratelimit_discarded_in_interval=196557
 	disk_usage_bytes=106610688
 
 Although these counters provide insight into imjournal end message submissions to main queue as well as losses due to

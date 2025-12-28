@@ -157,7 +157,6 @@ static struct {
     STATSCOUNTER_DEF(ctrRead, mutCtrRead);
     STATSCOUNTER_DEF(ctrDiscarded, mutCtrDiscarded);
     STATSCOUNTER_DEF(ctrFailed, mutCtrFailed);
-    STATSCOUNTER_DEF(ctrPollFailed, mutCtrPollFailed);
     STATSCOUNTER_DEF(ctrRotations, mutCtrRotations);
     STATSCOUNTER_DEF(ctrRecoveryAttempts, mutCtrRecoveryAttempts);
     uint64 ratelimitDiscardedInInterval;
@@ -1113,9 +1112,6 @@ BEGINactivateCnf
     STATSCOUNTER_INIT(statsCounter.ctrFailed, statsCounter.mutCtrFailed);
     CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("failed"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
                                 &(statsCounter.ctrFailed)));
-    STATSCOUNTER_INIT(statsCounter.ctrPollFailed, statsCounter.mutCtrPollFailed);
-    CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("poll_failed"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
-                                &(statsCounter.ctrPollFailed)));
     STATSCOUNTER_INIT(statsCounter.ctrRotations, statsCounter.mutCtrRotations);
     CHKiRet(statsobj.AddCounter(statsCounter.stats, UCHAR_CONSTANT("rotations"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
                                 &(statsCounter.ctrRotations)));
