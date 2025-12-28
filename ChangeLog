@@ -2,6 +2,12 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2025-12-28: omfwd: fix RebindInterval suspension and improve UDP cleanup
+  This fix ensures that forwarding actions do not experience a 30-second
+  suspension when re-establishing connections as configured by
+  RebindInterval. This improves maintainability and reliability.
+  Impact: Eliminates unwanted action suspensions during rebinds.
+  closes: https://github.com/rsyslog/rsyslog/issues/5722
 - 2025-12-28: imjournal: removed unused pollfailed stats counter
   This was probably a left-over from some copy&paste when stats counters
   were initially added.
