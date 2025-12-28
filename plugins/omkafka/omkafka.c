@@ -67,6 +67,15 @@
     #define OMKAFKA_HAS_HEADERS 0
 #endif
 
+#define OMKAFKA_COPY_HEADERS_OR_ABORT(hdrs_var, pData)                                  \
+    do {                                                                                \
+        (hdrs_var) = rd_kafka_headers_copy((pData)->kafka_headers);                     \
+        if ((hdrs_var) == NULL) {                                                       \
+            LogError(0, RS_RET_OUT_OF_MEMORY, "omkafka: failed to copy kafka headers"); \
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);                                       \
+        }                                                                               \
+    } while (0)
+
 #include "rsyslog.h"
 #include "syslogd-types.h"
 #include "srUtils.h"
@@ -877,8 +886,10 @@ static rsRetVal ATTR_NONNULL(1, 3) writeKafka(instanceData *const pData,
     }
 
     #if OMKAFKA_HAS_HEADERS
+    rd_kafka_headers_t *hdrs = NULL;
     if (pData->kafka_headers) {
-        v[i++] = V_HEADERS(pData->kafka_headers);
+        OMKAFKA_COPY_HEADERS_OR_ABORT(hdrs, pData);
+        v[i++] = V_HEADERS(hdrs);
     }
     #endif
 
@@ -899,6 +910,11 @@ static rsRetVal ATTR_NONNULL(1, 3) writeKafka(instanceData *const pData,
     }
 
     if (msg_kafka_response != RD_KAFKA_RESP_ERR_NO_ERROR) {
+    #if OMKAFKA_HAS_HEADERS
+        if (hdrs) {
+            rd_kafka_headers_destroy(hdrs);
+        }
+    #endif
         updateKafkaFailureCounts(msg_kafka_response);
 
         /* Put into kafka queue, again if configured! */
@@ -927,10 +943,15 @@ static rsRetVal ATTR_NONNULL(1, 3) writeKafka(instanceData *const pData,
     if (key == NULL) {
     #if OMKAFKA_HAS_HEADERS
         if (pData->kafka_headers) {
+            rd_kafka_headers_t *hdrs;
+            OMKAFKA_COPY_HEADERS_OR_ABORT(hdrs, pData);
             msg_kafka_response = rd_kafka_producev(
                 pData->rk, RD_KAFKA_V_RKT(rkt), RD_KAFKA_V_PARTITION(partition), RD_KAFKA_V_VALUE(msg, msg_len),
                 RD_KAFKA_V_MSGFLAGS(RD_KAFKA_MSG_F_COPY), RD_KAFKA_V_TIMESTAMP(ttMsgTimestamp), RD_KAFKA_V_KEY(NULL, 0),
-                RD_KAFKA_V_HEADERS(pData->kafka_headers), RD_KAFKA_V_END);
+                RD_KAFKA_V_HEADERS(hdrs), RD_KAFKA_V_END);
+            if (msg_kafka_response != RD_KAFKA_RESP_ERR_NO_ERROR) {
+                rd_kafka_headers_destroy(hdrs);
+            }
         } else
     #endif
         {
@@ -943,10 +964,15 @@ static rsRetVal ATTR_NONNULL(1, 3) writeKafka(instanceData *const pData,
         DBGPRINTF("omkafka: rd_kafka_producev key=%s\n", key);
     #if OMKAFKA_HAS_HEADERS
         if (pData->kafka_headers) {
+            rd_kafka_headers_t *hdrs;
+            OMKAFKA_COPY_HEADERS_OR_ABORT(hdrs, pData);
             msg_kafka_response = rd_kafka_producev(
                 pData->rk, RD_KAFKA_V_RKT(rkt), RD_KAFKA_V_PARTITION(partition), RD_KAFKA_V_VALUE(msg, msg_len),
                 RD_KAFKA_V_MSGFLAGS(RD_KAFKA_MSG_F_COPY), RD_KAFKA_V_TIMESTAMP(ttMsgTimestamp),
-                RD_KAFKA_V_KEY(key, key_len), RD_KAFKA_V_HEADERS(pData->kafka_headers), RD_KAFKA_V_END);
+                RD_KAFKA_V_KEY(key, key_len), RD_KAFKA_V_HEADERS(hdrs), RD_KAFKA_V_END);
+            if (msg_kafka_response != RD_KAFKA_RESP_ERR_NO_ERROR) {
+                rd_kafka_headers_destroy(hdrs);
+            }
         } else
     #endif
         {
