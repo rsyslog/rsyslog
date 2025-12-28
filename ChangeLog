@@ -1,7 +1,10 @@
-----------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2025-12-28: imjournal: removed unused pollfailed stats counter
+  This was probably a left-over from some copy&paste when stats counters
+  were initially added.
 - 2025-12-26: rainerscript: add split() function
   Users need to parse delimited strings (CSV, tags, paths) into arrays
   for iteration or JSON output without external processing.
