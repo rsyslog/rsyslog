@@ -305,6 +305,10 @@ static rsRetVal net_ossl_osslCtxInit(net_ossl_t *pThis, const SSL_METHOD *method
     }
 
     /* Create main CTX Object based on method parameter */
+    if (pThis->ctx != NULL) {
+        SSL_CTX_free(pThis->ctx);
+        pThis->ctx = NULL;
+    }
     pThis->ctx = SSL_CTX_new(method);
 
     if (bHaveExtraCAFiles == 1) {
@@ -1221,6 +1225,7 @@ BEGINobjDestruct(net_ossl) /* be sure to specify the object type also in END and
     }
     if (pThis->ctx != NULL && !pThis->ctx_is_copy) {
         SSL_CTX_free(pThis->ctx);
+        pThis->ctx = NULL;
     }
     free((void *)pThis->pszCAFile);
     free((void *)pThis->pszCRLFile);
