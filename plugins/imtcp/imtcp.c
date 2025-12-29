@@ -280,6 +280,7 @@ static struct cnfparamdescr modpdescr[] = {{"flowcontrol", eCmdHdlrBinary, 0},
                                            {"addtlframedelimiter", eCmdHdlrNonNegInt, 0},
                                            {"maxframesize", eCmdHdlrInt, 0},
                                            {"maxsessions", eCmdHdlrPositiveInt, 0},
+                                           {"maxlistners", eCmdHdlrPositiveInt, 0}, /* backward compatibility for typo */
                                            {"maxlisteners", eCmdHdlrPositiveInt, 0},
                                            {"workerthreads", eCmdHdlrPositiveInt, 0},
                                            {"starvationprotection.maxreads", eCmdHdlrNonNegInt, 0},
@@ -865,7 +866,8 @@ BEGINsetModCnf
             loadModConf->iTCPSessMax = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "starvationprotection.maxreads")) {
             loadModConf->starvationMaxReads = (unsigned)pvals[i].val.d.n;
-        } else if (!strcmp(modpblk.descr[i].name, "maxlisteners")) {
+        } else if (!strcmp(modpblk.descr[i].name, "maxlisteners") ||
+                   !strcmp(modpblk.descr[i].name, "maxlistners")) { /* backward compatibility for typo */
             loadModConf->iTCPLstnMax = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "workerthreads")) {
             loadModConf->numWrkr = (int)pvals[i].val.d.n;
