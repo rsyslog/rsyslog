@@ -65,7 +65,7 @@ rsRetVal perSourceRateLimiterNew(perSourceRateLimiter_t **ppThis) {
     CHKiRet(objGetObjInterface(&obj));
 
     CHKmalloc(pThis = (perSourceRateLimiter_t *)calloc(1, sizeof(perSourceRateLimiter_t)));
-    pThis->defaultMax = 0; /* 0 means unlimited/disabled by default until loaded */
+    pThis->defaultMax = UINT_MAX; /* default to unlimited (allow all) */
     pThis->defaultWindow = 1;
 
     STATSCOUNTER_INIT(pThis->ctrAllowed, pThis->mutCtrAllowed);
@@ -156,9 +156,15 @@ finalize_it:
 
 #ifdef HAVE_LIBYAML
 static unsigned int parseDuration(const char *val) {
-    unsigned int num = atoi(val);
-    const char *p = val;
-    while (*p && (*p >= '0' && *p <= '9')) p++;
+    char *p;
+    unsigned long num_ul = strtoul(val, &p, 10);
+    
+    if (p == val || num_ul > UINT_MAX) {
+         LogError(0, RS_RET_INVALID_VALUE, "perSourceRateLimiter: invalid duration '%s'", val);
+         return 1; /* safe default */
+    }
+
+    unsigned int num = (unsigned int)num_ul;
     if (*p == 's') return num;
     if (*p == 'm') return num * 60;
     if (*p == 'h') return num * 3600;
@@ -284,14 +290,28 @@ static rsRetVal loadYamlPolicy(perSourceRateLimiter_t *pThis) {
                     } else {
                         /* This is a value */
                         if (section == 1) { /* default */
-                            if (strcmp(last_key, "max") == 0) pThis->defaultMax = atoi(val);
-                            else if (strcmp(last_key, "window") == 0) pThis->defaultWindow = parseDuration(val);
+                            if (strcmp(last_key, "max") == 0) {
+                                char *endptr;
+                                unsigned long max_ul = strtoul(val, &endptr, 10);
+                                if (endptr == val || *endptr != '\0' || max_ul > UINT_MAX) {
+                                     LogError(0, RS_RET_INVALID_VALUE, "perSourceRateLimiter: invalid default max '%s'", val);
+                                } else {
+                                     pThis->defaultMax = (unsigned int)max_ul;
+                                }
+                            } else if (strcmp(last_key, "window") == 0) pThis->defaultWindow = parseDuration(val);
                         } else if (section == 2) { /* overrides */
                             if (strcmp(last_key, "key") == 0) {
                                 if (curr_key) free(curr_key);
                                 CHKmalloc(curr_key = strdup(val));
                             } else if (strcmp(last_key, "max") == 0) {
-                                curr_max = atoi(val);
+                                char *endptr;
+                                unsigned long max_ul = strtoul(val, &endptr, 10);
+                                if (endptr == val || *endptr != '\0' || max_ul > UINT_MAX) {
+                                     LogError(0, RS_RET_INVALID_VALUE, "perSourceRateLimiter: invalid override max '%s'", val);
+                                     curr_max = 0; /* will cause item skip */
+                                } else {
+                                     curr_max = (unsigned int)max_ul;
+                                }
                             } else if (strcmp(last_key, "window") == 0) {
                                 curr_window = parseDuration(val);
                             }
