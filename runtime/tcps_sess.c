@@ -80,6 +80,11 @@ BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END m
     memset(pThis->tlsProbeBuf, 0, sizeof(pThis->tlsProbeBuf));
     /* now allocate the message reception buffer */
     CHKmalloc(pThis->pMsg = (uchar *)malloc(pThis->iMaxLine + 1));
+
+    /* Initialize per-source rate limiting buffer */
+    pThis->perSourceIParam.lenBuf = 256;
+    pThis->perSourceIParam.lenStr = 0;
+    CHKmalloc(pThis->perSourceIParam.param = (uchar*)malloc(256));
 finalize_it:
 ENDobjConstruct(tcps_sess)
 
@@ -112,6 +117,7 @@ BEGINobjDestruct(tcps_sess) /* be sure to specify the object type also in END an
     if (pThis->fromHostIP != NULL) CHKiRet(prop.Destruct(&pThis->fromHostIP));
     if (pThis->fromHostPort != NULL) CHKiRet(prop.Destruct(&pThis->fromHostPort));
     free(pThis->pMsg);
+    free(pThis->perSourceIParam.param);
 ENDobjDestruct(tcps_sess)
 
 
@@ -313,21 +319,17 @@ static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis,
 
     /* Per-source rate limiting */
     if (pThis->pSrv->perSourceLimiter != NULL && pThis->pSrv->perSourceKeyTpl != NULL) {
-        actWrkrIParams_t iparam;
-        iparam.param = (uchar*) malloc(256);
-        if (iparam.param != NULL) {
-            iparam.lenBuf = 256;
-            iparam.lenStr = 0;
-            
-            rsRetVal iRetTpl = tplToString(pThis->pSrv->perSourceKeyTpl, pMsg, &iparam, stTime);
-            if (iRetTpl == RS_RET_OK) {
-                rsRetVal iRetLimit = perSourceRateLimiterCheck(pThis->pSrv->perSourceLimiter, iparam.param, ttGenTime);
-                if (iRetLimit != RS_RET_OK) {
-                    free(iparam.param);
-                    FINALIZE; /* Drop message */
-                }
+        pThis->perSourceIParam.lenStr = 0; /* Reset for each message */
+        
+        rsRetVal iRetTpl = tplToString(pThis->pSrv->perSourceKeyTpl, pMsg, &pThis->perSourceIParam, stTime);
+        if (iRetTpl == RS_RET_OK) {
+            rsRetVal iRetLimit = perSourceRateLimiterCheck(pThis->pSrv->perSourceLimiter, pThis->perSourceIParam.param, ttGenTime);
+            if (iRetLimit != RS_RET_OK) {
+                msgDestruct(&pMsg);
+                FINALIZE; /* Drop message */
             }
-            free(iparam.param);
+        } else {
+            LogError(0, iRetTpl, "imtcp: could not generate key for per-source rate limiter");
         }
     }
 

@@ -53,6 +53,7 @@ struct tcps_sess_s {
         uchar tlsProbeBuf[5]; /**< first bytes received for TLS client detection */
         sbool tlsProbeDone; /**< indicates TLS client detection has been completed */
         sbool tlsMismatchWarned; /**< avoids logging the same TLS mismatch twice */
+        actWrkrIParams_t perSourceIParam;
 };
 
 

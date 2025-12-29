@@ -35,14 +35,12 @@
 #include "hashtable.h"
 #include "hashtable_itr.h"
 #include "srUtils.h"
+#include "statsobj.h"
+#include "obj.h"
 
-/* Helper to parse time duration string (e.g. "10s") */
-static unsigned int parseDuration(const char *str) {
-    if (str == NULL) return 0;
-    int val = atoi(str);
-    if (val < 0) return 0;
-    return (unsigned int)val;
-}
+DEFobjCurrIf(statsobj);
+DEFobjStaticHelpers;
+
 
 /* Destructor for sender state */
 static void freeSenderState(void *pPtr) {
@@ -64,12 +62,18 @@ static void freeOverride(void *pPtr) {
 rsRetVal perSourceRateLimiterNew(perSourceRateLimiter_t **ppThis) {
     perSourceRateLimiter_t *pThis;
     DEFiRet;
+    CHKiRet(objGetObjInterface(&obj));
 
     CHKmalloc(pThis = (perSourceRateLimiter_t *)calloc(1, sizeof(perSourceRateLimiter_t)));
     pThis->defaultMax = 0; /* 0 means unlimited/disabled by default until loaded */
     pThis->defaultWindow = 1;
-    
-    pthread_rwlock_init(&pThis->rwlock, NULL);
+
+    STATSCOUNTER_INIT(pThis->ctrAllowed, pThis->mutCtrAllowed);
+    STATSCOUNTER_INIT(pThis->ctrDropped, pThis->mutCtrDropped);
+
+    if (pthread_rwlock_init(&pThis->rwlock, NULL) != 0) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
     
     /* Create hashtables */
     pThis->htSenders = create_hashtable(100, hash_from_string, key_equals_string, freeSenderState);
@@ -93,8 +97,30 @@ finalize_it:
     RETiRet;
 }
 
-rsRetVal perSourceRateLimiterConstructFinalize(perSourceRateLimiter_t __attribute__((unused)) *pThis) {
-    return RS_RET_OK;
+rsRetVal perSourceRateLimiterConstructFinalize(perSourceRateLimiter_t *pThis) {
+    DEFiRet;
+    uchar *statsName;
+    
+    if (objUse(statsobj, CORE_COMPONENT) != RS_RET_OK) {
+        FINALIZE;
+    }
+
+    if (pThis->pszOrigin == NULL) {
+        statsName = (uchar*)"perSourceRateLimiter";
+    } else {
+        statsName = pThis->pszOrigin;
+    }
+
+    CHKiRet(statsobj.Construct(&(pThis->stats)));
+    CHKiRet(statsobj.SetName(pThis->stats, statsName));
+    CHKiRet(statsobj.AddCounter(pThis->stats, (uchar*)"allowed",
+        ctrType_IntCtr, CTR_FLAG_NONE, (void*)&pThis->ctrAllowed));
+    CHKiRet(statsobj.AddCounter(pThis->stats, (uchar*)"dropped",
+        ctrType_IntCtr, CTR_FLAG_NONE, (void*)&pThis->ctrDropped));
+    CHKiRet(statsobj.ConstructFinalize(pThis->stats));
+
+finalize_it:
+    RETiRet;
 }
 
 rsRetVal perSourceRateLimiterDestruct(perSourceRateLimiter_t **ppThis) {
@@ -109,8 +135,10 @@ rsRetVal perSourceRateLimiterDestruct(perSourceRateLimiter_t **ppThis) {
     hashtable_destroy(pThis->htOverrides, 1);
     pthread_rwlock_unlock(&pThis->rwlock);
     
+    if (pThis->stats != NULL) statsobj.Destruct(&(pThis->stats));
+    if (pThis->pszOrigin != NULL) free(pThis->pszOrigin);
+    if (pThis->pszPolicyFile != NULL) free(pThis->pszPolicyFile);
     pthread_rwlock_destroy(&pThis->rwlock);
-    free(pThis->pszPolicyFile);
     free(pThis);
     *ppThis = NULL;
 
@@ -126,6 +154,17 @@ rsRetVal perSourceRateLimiterSetPolicyFile(perSourceRateLimiter_t *pThis, const 
 }
 
 #ifdef HAVE_LIBYAML
+static unsigned int parseDuration(const char *val) {
+    unsigned int num = atoi(val);
+    const char *p = val;
+    while (*p && (*p >= '0' && *p <= '9')) p++;
+    if (*p == 's') return num;
+    if (*p == 'm') return num * 60;
+    if (*p == 'h') return num * 3600;
+    if (*p == 'd') return num * 86400;
+    return num;
+}
+
 static rsRetVal loadYamlPolicy(perSourceRateLimiter_t *pThis) {
     DEFiRet;
     FILE *fp = NULL;
@@ -245,6 +284,12 @@ static rsRetVal loadYamlPolicy(perSourceRateLimiter_t *pThis) {
                     }
                 }
                 break;
+            case YAML_NO_EVENT:
+            case YAML_STREAM_START_EVENT:
+            case YAML_DOCUMENT_START_EVENT:
+            case YAML_DOCUMENT_END_EVENT:
+            case YAML_ALIAS_EVENT:
+                break;
             default:
                 break;
         }
@@ -256,7 +301,9 @@ static rsRetVal loadYamlPolicy(perSourceRateLimiter_t *pThis) {
     if (curr_key) free(curr_key);
     
     yaml_parser_delete(&parser);
-    fclose(fp);
+    if (fp) fclose(fp);
+
+finalize_it:
     RETiRet;
 }
 #endif
@@ -307,9 +354,19 @@ rsRetVal perSourceRateLimiterCheck(perSourceRateLimiter_t *pThis, const uchar *k
         if (pState == NULL) {
             pState = (perSourceSenderState_t*)calloc(1, sizeof(perSourceSenderState_t));
             if (pState) {
-                pthread_mutex_init(&pState->mut, NULL);
-                pState->windowStart = ttNow;
-                hashtable_insert(pThis->htSenders, strdup((const char*)key), pState);
+                if (pthread_mutex_init(&pState->mut, NULL) != 0) {
+                    free(pState);
+                    pState = NULL;
+                } else {
+                    pState->windowStart = ttNow;
+                    char *pKeyStore = strdup((const char*)key);
+                    if (pKeyStore == NULL || hashtable_insert(pThis->htSenders, pKeyStore, pState) == 0) {
+                        if (pKeyStore) free(pKeyStore);
+                        pthread_mutex_destroy(&pState->mut);
+                        free(pState);
+                        pState = NULL;
+                    }
+                }
             }
         }
         
@@ -342,12 +399,13 @@ rsRetVal perSourceRateLimiterCheck(perSourceRateLimiter_t *pThis, const uchar *k
         pState->currentCount = 0;
     }
     
-    if (pState->currentCount >= limitMax) {
-        /* Limit exceeded */
-        iRet = RS_RET_RATE_LIMITED;
-    } else {
+    if (pState->currentCount < limitMax) {
         pState->currentCount++;
+        STATSCOUNTER_INC(pThis->ctrAllowed, pThis->mutCtrAllowed);
         iRet = RS_RET_OK;
+    } else {
+        iRet = RS_RET_RATE_LIMITED;
+        STATSCOUNTER_INC(pThis->ctrDropped, pThis->mutCtrDropped);
     }
     
     pthread_mutex_unlock(&pState->mut);
@@ -355,4 +413,9 @@ rsRetVal perSourceRateLimiterCheck(perSourceRateLimiter_t *pThis, const uchar *k
 
 finalize_it:
     RETiRet;
+}
+rsRetVal perSourceRateLimiterSetOrigin(perSourceRateLimiter_t *pThis, const uchar *pszOrigin) {
+    if (pThis->pszOrigin != NULL) free(pThis->pszOrigin);
+    pThis->pszOrigin = (uchar*)strdup((const char*)pszOrigin);
+    return RS_RET_OK;
 }

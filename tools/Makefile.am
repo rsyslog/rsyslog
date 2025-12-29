@@ -53,7 +53,7 @@ rsyslogd_LDADD = ../grammar/libgrammar.la ../runtime/librsyslog.la ../compat/com
 # Note: do NOT indent the if chain - it will not work!
 if OS_LINUX
 rsyslogd_LDFLAGS = -export-dynamic \
-	#-Wl,--whole-archive,$(top_builddir)/runtime/.libs/librsyslog.a,--no-whole-archive
+	-Wl,--whole-archive,$(top_builddir)/runtime/.libs/librsyslog.a,--no-whole-archive
 exports_list_file =
 else
 if OS_APPLE

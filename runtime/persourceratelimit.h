@@ -25,6 +25,7 @@
 
 #include "rsyslog.h"
 #include "hashtable.h"
+#include "statsobj.h"
 
 /* Structure for override configuration */
 struct perSourceOverride_s {
@@ -50,6 +51,11 @@ struct perSourceRateLimiter_s {
     /* Default limits */
     unsigned int defaultMax;
     unsigned int defaultWindow;
+
+    statsobj_t *stats;
+    STATSCOUNTER_DEF(ctrAllowed, mutCtrAllowed);
+    STATSCOUNTER_DEF(ctrDropped, mutCtrDropped);
+    uchar *pszOrigin;
 };
 
 typedef struct perSourceRateLimiter_s perSourceRateLimiter_t;
@@ -61,5 +67,6 @@ rsRetVal perSourceRateLimiterDestruct(perSourceRateLimiter_t **ppThis);
 rsRetVal perSourceRateLimiterSetPolicyFile(perSourceRateLimiter_t *pThis, const uchar *pszFileName);
 rsRetVal perSourceRateLimiterCheck(perSourceRateLimiter_t *pThis, const uchar *key, time_t ttNow);
 rsRetVal perSourceRateLimiterReload(perSourceRateLimiter_t *pThis);
+rsRetVal perSourceRateLimiterSetOrigin(perSourceRateLimiter_t *pThis, const uchar *pszOrigin);
 
 #endif /* #ifndef INCLUDED_PERSOURCERATELIMIT_H */

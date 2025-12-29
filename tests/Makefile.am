@@ -643,6 +643,8 @@ TESTS +=  \
 	allowed-sender-tcp-hostname-fail.sh \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
+	imtcp-persource-ratelimit.sh \
+	imtcp-persource-ratelimit-hup.sh \
 	imtcp-basic-hup.sh \
 	imtcp-impstats-single-thread.sh \
 	imtcp-starvation-0.sh \
@@ -2640,6 +2642,8 @@ EXTRA_DIST= \
 	allowed-sender-tcp-hostname-fail.sh \
 	imtcp-octet-framing-too-long-vg.sh \
 	imtcp-discard-truncated-msg.sh \
+	imtcp-persource-ratelimit.sh \
+	imtcp-persource-ratelimit-hup.sh \
 	imtcp-basic.sh \
 	imtcp-basic-hup.sh \
 	imtcp-impstats.sh \

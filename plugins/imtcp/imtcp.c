@@ -54,9 +54,16 @@
 #endif
 #include "rsyslog.h"
 #include "dirty.h"
+#include "datetime.h"
+#include "prop.h"
+#include "ratelimit.h"
+#include "debug.h"
+#include "rsconf.h"
 #include "cfsysline.h"
-#include "module-template.h"
+#include "persourceratelimit.h"
+#include "template.h"
 #include "unicode-helper.h"
+#include "module-template.h"
 #include "net.h"
 #include "netstrm.h"
 #include "errmsg.h"
@@ -582,18 +589,22 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
     if (inst->bPerSourceRate) {
         if (inst->pszPerSourceKeyTpl == NULL) {
              LogError(0, RS_RET_ERR, "imtcp: perSourceRate enabled but perSourceKeyTpl not set");
+             ABORT_FINALIZE(RS_RET_ERR);
         } else {
              inst->perSourceKeyTpl = tplFind(modConf->pConf, (char*)inst->pszPerSourceKeyTpl, strlen((char*)inst->pszPerSourceKeyTpl));
              if (inst->perSourceKeyTpl == NULL) {
                  LogError(0, RS_RET_ERR, "imtcp: perSourceKeyTpl '%s' not found", inst->pszPerSourceKeyTpl);
+                 ABORT_FINALIZE(RS_RET_ERR);
              }
         }
         
         CHKiRet(perSourceRateLimiterNew(&inst->perSourceLimiter));
+        CHKiRet(perSourceRateLimiterSetOrigin(inst->perSourceLimiter, inst->pszInputName == NULL ? UCHAR_CONSTANT("imtcp") : inst->pszInputName));
         if (inst->pszPerSourcePolicyFile) {
             CHKiRet(perSourceRateLimiterSetPolicyFile(inst->perSourceLimiter, inst->pszPerSourcePolicyFile));
             CHKiRet(perSourceRateLimiterReload(inst->perSourceLimiter));
         }
+        CHKiRet(perSourceRateLimiterConstructFinalize(inst->perSourceLimiter));
         
         CHKiRet(tcpsrv.SetPerSourceRateLimiter(pOurTcpsrv, inst->perSourceLimiter));
         CHKiRet(tcpsrv.SetPerSourceKeyTpl(pOurTcpsrv, inst->perSourceKeyTpl));
@@ -744,6 +755,14 @@ BEGINnewInpInst
             inst->iSynBacklog = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "listenportfilename")) {
             inst->cnf_params->pszLstnPortFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(inppblk.descr[i].name, "perSourceRate")) {
+            inst->bPerSourceRate = (int)pvals[i].val.d.n;
+        } else if (!strcmp(inppblk.descr[i].name, "perSourceKeyTpl")) {
+            inst->pszPerSourceKeyTpl = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(inppblk.descr[i].name, "perSourcePolicyFile")) {
+            inst->pszPerSourcePolicyFile = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(inppblk.descr[i].name, "perSourcePolicyReloadOnHUP")) {
+            inst->bPerSourcePolicyReloadOnHUP = (int)pvals[i].val.d.n;
         } else {
             dbgprintf(
                 "imtcp: program error, non-handled "
@@ -1034,6 +1053,11 @@ BEGINfreeCnf
         if (inst->pPermPeersRoot != NULL) {
             net.DestructPermittedPeers(&inst->pPermPeersRoot);
         }
+        if (inst->perSourceLimiter != NULL) {
+            perSourceRateLimiterDestruct(&inst->perSourceLimiter);
+        }
+        free(inst->pszPerSourceKeyTpl);
+        free(inst->pszPerSourcePolicyFile);
         del = inst;
         inst = inst->next;
         free(del);
@@ -1174,6 +1198,22 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
 }
 
 
+typedef struct _instanceData {
+    int dummy;
+} instanceData;
+
+
+BEGINdoHUP
+    CODESTARTdoHUP;
+    tcpsrv_etry_t *etry = tcpsrv_root;
+    while(etry != NULL) {
+        CHKiRet(tcpsrv.ReloadPerSourceRateLimiter(etry->tcpsrv));
+        etry = etry->next;
+    }
+finalize_it:
+ENDdoHUP
+
+
 BEGINqueryEtryPt
     CODESTARTqueryEtryPt;
     CODEqueryEtryPt_STD_IMOD_QUERIES;
@@ -1182,6 +1222,7 @@ BEGINqueryEtryPt
     CODEqueryEtryPt_STD_CONF2_PREPRIVDROP_QUERIES;
     CODEqueryEtryPt_STD_CONF2_IMOD_QUERIES;
     CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES;
+    CODEqueryEtryPt_doHUP;
 ENDqueryEtryPt
 
 

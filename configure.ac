@@ -92,7 +92,11 @@ fi
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.9)
 
 PKG_CHECK_MODULES([LIBFASTJSON], [libfastjson >= 0.99.8],,)
-PKG_CHECK_MODULES([LIBYAML], [yaml-0.1])
+PKG_CHECK_MODULES([LIBYAML], [yaml-0.1], [
+	AC_DEFINE([HAVE_LIBYAML], [1], [Define if libyaml is available])
+], [
+	AC_MSG_WARN([libyaml not found, perSourceRate limiting with policy files will be disabled])
+])
 
 AC_DEFINE_UNQUOTED([PLATFORM_ID], ["${host}"], [platform id for display purposes])
 # we don't mind if we don't have the lsb_release utility. But if we have, it's
