@@ -149,7 +149,8 @@ finalize_it:
 rsRetVal perSourceRateLimiterSetPolicyFile(perSourceRateLimiter_t *pThis, const uchar *pszFileName) {
     DEFiRet;
     if (pThis->pszPolicyFile) free(pThis->pszPolicyFile);
-    pThis->pszPolicyFile = (uchar*)strdup((const char*)pszFileName);
+    CHKmalloc(pThis->pszPolicyFile = (uchar*)strdup((const char*)pszFileName));
+finalize_it:
     RETiRet;
 }
 
@@ -162,6 +163,9 @@ static unsigned int parseDuration(const char *val) {
     if (*p == 'm') return num * 60;
     if (*p == 'h') return num * 3600;
     if (*p == 'd') return num * 86400;
+    if (*p != '\0') {
+        LogError(0, RS_RET_INVALID_VALUE, "perSourceRateLimiter: unknown duration suffix '%c' in '%s', ignoring suffix", *p, val);
+    }
     return num;
 }
 
@@ -230,18 +234,23 @@ static rsRetVal loadYamlPolicy(perSourceRateLimiter_t *pThis) {
                     /* End of an override item */
                     if (curr_key && curr_max > 0) {
                         perSourceOverride_t *ovr = calloc(1, sizeof(perSourceOverride_t));
-                        if (ovr != NULL) {
-                            char *key_copy = strdup(curr_key);
-                            if (key_copy == NULL) {
-                                free(ovr);
-                            } else {
-                                ovr->max = curr_max;
-                                ovr->window = curr_window;
-                                if (hashtable_insert(pThis->htOverrides, key_copy, ovr) == 0) {
-                                    free(key_copy);
-                                    free(ovr);
-                                }
-                            }
+                        if (ovr == NULL) {
+                            LogError(0, RS_RET_OUT_OF_MEMORY, "perSourceRateLimiter: "
+                                     "failed to allocate override for %s", curr_key);
+                            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+                        }
+                        char *key_copy = strdup(curr_key);
+                        if (key_copy == NULL) {
+                            free(ovr);
+                            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+                        }
+                        ovr->max = curr_max;
+                        ovr->window = curr_window;
+                        if (hashtable_insert(pThis->htOverrides, key_copy, ovr) == 0) {
+                            free(key_copy);
+                            free(ovr);
+                            LogError(0, RS_RET_ERR, "perSourceRateLimiter: "
+                                     "failed to insert override for %s", curr_key);
                         }
                     }
                     if (curr_key) free(curr_key);
@@ -280,7 +289,7 @@ static rsRetVal loadYamlPolicy(perSourceRateLimiter_t *pThis) {
                         } else if (section == 2) { /* overrides */
                             if (strcmp(last_key, "key") == 0) {
                                 if (curr_key) free(curr_key);
-                                curr_key = strdup(val);
+                                CHKmalloc(curr_key = strdup(val));
                             } else if (strcmp(last_key, "max") == 0) {
                                 curr_max = atoi(val);
                             } else if (strcmp(last_key, "window") == 0) {
@@ -425,7 +434,9 @@ finalize_it:
     RETiRet;
 }
 rsRetVal perSourceRateLimiterSetOrigin(perSourceRateLimiter_t *pThis, const uchar *pszOrigin) {
+    DEFiRet;
     if (pThis->pszOrigin != NULL) free(pThis->pszOrigin);
-    pThis->pszOrigin = (uchar*)strdup((const char*)pszOrigin);
-    return RS_RET_OK;
+    CHKmalloc(pThis->pszOrigin = (uchar*)strdup((const char*)pszOrigin));
+finalize_it:
+    RETiRet;
 }
