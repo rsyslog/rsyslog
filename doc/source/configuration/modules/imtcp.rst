@@ -268,6 +268,10 @@ Input Parameters
      - .. include:: ../../reference/parameters/imtcp-socketbacklog.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imtcp-ratelimit-name`
+     - .. include:: ../../reference/parameters/imtcp-ratelimit-name.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-imtcp-ratelimit-interval`
      - .. include:: ../../reference/parameters/imtcp-ratelimit-interval.rst
         :start-after: .. summary-start

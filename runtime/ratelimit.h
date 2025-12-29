@@ -1,6 +1,6 @@
 /* header for ratelimit.c
  *
- * Copyright 2012-2016 Adiscon GmbH.
+ * Copyright 2012-2025 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -21,12 +21,20 @@
 #ifndef INCLUDED_RATELIMIT_H
 #define INCLUDED_RATELIMIT_H
 
-struct ratelimit_s {
-    char *name; /**< rate limiter name, e.g. for user messages */
-    /* support for Linux kernel-type ratelimiting */
+typedef struct ratelimit_shared_s {
+    char *name;
     unsigned int interval;
     unsigned int burst;
-    intTiny severity; /**< ratelimit only equal or lower severity levels (eq or higher values) */
+    intTiny severity;
+    char *policy_file;
+    pthread_mutex_t mut;
+} ratelimit_shared_t;
+
+struct ratelimit_s {
+    char *name; /**< rate limiter name, e.g. for user messages */
+    ratelimit_shared_t *pShared;
+    sbool bOwnsShared; /**< if we own pShared (and need to free it) */
+
     unsigned done;
     unsigned missed;
     time_t begin;
@@ -38,8 +46,24 @@ struct ratelimit_s {
     pthread_mutex_t mut; /**< mutex if thread-safe operation desired */
 };
 
+typedef struct ratelimit_cfgs_s {
+    struct hashtable *ht;
+    pthread_rwlock_t lock;
+} ratelimit_cfgs_t;
+
 /* prototypes */
+typedef struct rsconf_s rsconf_t;
 rsRetVal ratelimitNew(ratelimit_t **ppThis, const char *modname, const char *dynname);
+rsRetVal ratelimitNewFromConfig(
+    ratelimit_t **ppThis, rsconf_t *conf, const char *configname, const char *modname, const char *dynname);
+rsRetVal ratelimitAddConfig(rsconf_t *conf,
+                            const char *name,
+                            unsigned int interval,
+                            unsigned int burst,
+                            intTiny severity,
+                            const char *policy_file);
+void ratelimit_cfgsInit(ratelimit_cfgs_t *cfgs);
+void ratelimit_cfgsDestruct(ratelimit_cfgs_t *cfgs);
 void ratelimitSetThreadSafe(ratelimit_t *ratelimit);
 void ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned int interval, unsigned int burst);
 void ratelimitSetNoTimeCache(ratelimit_t *ratelimit);
@@ -51,5 +75,6 @@ void ratelimitDestruct(ratelimit_t *pThis);
 int ratelimitChecked(ratelimit_t *ratelimit);
 rsRetVal ratelimitModInit(void);
 void ratelimitModExit(void);
+void ratelimitDoHUP(void);
 
 #endif /* #ifndef INCLUDED_RATELIMIT_H */
