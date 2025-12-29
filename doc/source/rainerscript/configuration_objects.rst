@@ -39,6 +39,13 @@ If the variable is set to ``off``, the module will **not** be loaded.
 Objects
 -------
 
+.. toctree::
+   :maxdepth: 1
+   :hidden:
+
+   configuration_objects/ratelimit
+
+
 action()
 ^^^^^^^^
 
@@ -79,3 +86,8 @@ include()
 
 The :doc:`include <include>`  object is use to include configuration snippets
 stored elsewhere into the configuration.
+
+ratelimit()
+^^^^^^^^^^^
+
+The :doc:`ratelimit <configuration_objects/ratelimit>` object is used to define named rate limit policies.

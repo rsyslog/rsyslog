@@ -9,7 +9,7 @@
  * File begun on 2008-03-01 by RGerhards (extracted from tcpsrv.c, which
  * based on the BSD-licensed syslogd.c)
  *
- * Copyright 2007-2025 Adiscon GmbH.
+ * Copyright 2007-2026 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -44,17 +44,43 @@
 #include "obj.h"
 #include "errmsg.h"
 #include "netstrm.h"
+#include "template.h"
+#include "wti.h"
 #include "msg.h"
 #include "datetime.h"
 #include "prop.h"
+#include "parser.h"
 #include "ratelimit.h"
 #include "debug.h"
 #include "rsconf.h"
 
+static rsRetVal ensurePerSourceKeyBuf(actWrkrIParams_t *param, size_t need) {
+    uchar *pNewBuf;
+    size_t iNewSize;
+    DEFiRet;
+
+    if (param->lenBuf >= need + 1) {
+        RETiRet;
+    }
+
+    iNewSize = ((need + 1) / 128 + 1) * 128;
+    CHKmalloc(pNewBuf = (uchar *)realloc(param->param, iNewSize));
+    param->param = pNewBuf;
+    param->lenBuf = iNewSize;
+
+finalize_it:
+    RETiRet;
+}
+
 
 /* static data */
 DEFobjStaticHelpers;
-DEFobjCurrIf(glbl) DEFobjCurrIf(netstrm) DEFobjCurrIf(prop) DEFobjCurrIf(datetime) DEFobjCurrIf(regexp)
+DEFobjCurrIf(glbl);
+DEFobjCurrIf(netstrm);
+DEFobjCurrIf(prop);
+DEFobjCurrIf(datetime);
+DEFobjCurrIf(regexp);
+DEFobjCurrIf(parser)
 
 
     /* forward definitions */
@@ -77,6 +103,7 @@ BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END m
     pThis->tlsProbeDone = 0;
     pThis->tlsMismatchWarned = 0;
     memset(pThis->tlsProbeBuf, 0, sizeof(pThis->tlsProbeBuf));
+    wtiInitIParam(&pThis->perSourceKeyParam);
     /* now allocate the message reception buffer */
     CHKmalloc(pThis->pMsg = (uchar *)malloc(pThis->iMaxLine + 1));
 finalize_it:
@@ -117,6 +144,7 @@ BEGINobjDestruct(tcps_sess) /* be sure to specify the object type also in END an
     if (pThis->fromHost != NULL) CHKiRet(prop.Destruct(&pThis->fromHost));
     if (pThis->fromHostIP != NULL) CHKiRet(prop.Destruct(&pThis->fromHostIP));
     if (pThis->fromHostPort != NULL) CHKiRet(prop.Destruct(&pThis->fromHostPort));
+    free(pThis->perSourceKeyParam.param);
     free(pThis->pMsg);
     free(pThis->pMsg_save);
 ENDobjDestruct(tcps_sess)
@@ -317,7 +345,89 @@ static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis,
     MsgSetRuleset(pMsg, cnf_params->pRuleset);
 
     STATSCOUNTER_INC(pThis->pLstnInfo->ctrSubmit, pThis->pLstnInfo->mutCtrSubmit);
-    ratelimitAddMsg(pThis->pLstnInfo->ratelimiter, pMultiSub, pMsg);
+    if (pThis->pLstnInfo->ratelimiter->pShared != NULL && pThis->pLstnInfo->ratelimiter->pShared->per_source_enabled) {
+        const char *per_source_key = NULL;
+        size_t per_source_key_len = 0;
+        if (pThis->pLstnInfo->ratelimiter->pShared->per_source_key_needs_parsing &&
+            (pMsg->msgFlags & NEEDS_PARSING) != 0) {
+            parser.ParseMsg(pMsg);
+        }
+        if (pThis->pLstnInfo->ratelimiter->pShared->per_source_key_mode == RL_PS_KEY_TPL) {
+            if (pThis->pLstnInfo->ratelimiter->pShared->per_source_key_tpl == NULL ||
+                pThis->pLstnInfo->ratelimiter->pShared->per_source_key_tpl_default) {
+                per_source_key = getHOSTNAME(pMsg);
+                per_source_key_len = getHOSTNAMELen(pMsg);
+            } else {
+                if (tplToString(pThis->pLstnInfo->ratelimiter->pShared->per_source_key_tpl, pMsg,
+                                &pThis->perSourceKeyParam, NULL) == RS_RET_OK) {
+                    per_source_key = (const char *)pThis->perSourceKeyParam.param;
+                    per_source_key_len = pThis->perSourceKeyParam.lenStr;
+                }
+            }
+        } else {
+            uchar *pHost = NULL;
+            uchar *pPort = NULL;
+            int hostLen = 0;
+            int portLen = 0;
+
+            switch (pThis->pLstnInfo->ratelimiter->pShared->per_source_key_mode) {
+                case RL_PS_KEY_FROMHOST_IP:
+                    if (pThis->fromHostIP != NULL) {
+                        prop.GetString(pThis->fromHostIP, &pHost, &hostLen);
+                        per_source_key = (const char *)pHost;
+                        per_source_key_len = (size_t)hostLen;
+                    }
+                    break;
+                case RL_PS_KEY_FROMHOST:
+                    if (pThis->fromHost != NULL) {
+                        prop.GetString(pThis->fromHost, &pHost, &hostLen);
+                        per_source_key = (const char *)pHost;
+                        per_source_key_len = (size_t)hostLen;
+                    }
+                    break;
+                case RL_PS_KEY_FROMHOST_IP_PORT:
+                case RL_PS_KEY_FROMHOST_PORT:
+                    if (pThis->fromHostPort != NULL) {
+                        prop.GetString(pThis->fromHostPort, &pPort, &portLen);
+                    }
+                    if (pThis->pLstnInfo->ratelimiter->pShared->per_source_key_mode == RL_PS_KEY_FROMHOST_IP_PORT) {
+                        if (pThis->fromHostIP != NULL) {
+                            prop.GetString(pThis->fromHostIP, &pHost, &hostLen);
+                        }
+                    } else {
+                        if (pThis->fromHost != NULL) {
+                            prop.GetString(pThis->fromHost, &pHost, &hostLen);
+                        }
+                    }
+                    if (pHost == NULL) {
+                        pHost = (uchar *)"";
+                        hostLen = 0;
+                    }
+                    if (pPort == NULL) {
+                        pPort = (uchar *)"";
+                        portLen = 0;
+                    }
+                    if (ensurePerSourceKeyBuf(&pThis->perSourceKeyParam, (size_t)hostLen + 1 + (size_t)portLen) ==
+                        RS_RET_OK) {
+                        memcpy(pThis->perSourceKeyParam.param, pHost, (size_t)hostLen);
+                        pThis->perSourceKeyParam.param[hostLen] = ':';
+                        memcpy(pThis->perSourceKeyParam.param + hostLen + 1, pPort, (size_t)portLen);
+                        pThis->perSourceKeyParam.param[hostLen + 1 + portLen] = '\0';
+                        pThis->perSourceKeyParam.lenStr = (size_t)hostLen + 1 + (size_t)portLen;
+                        per_source_key = (const char *)pThis->perSourceKeyParam.param;
+                        per_source_key_len = pThis->perSourceKeyParam.lenStr;
+                    }
+                    break;
+                case RL_PS_KEY_TPL:
+                default:
+                    break;
+            }
+        }
+        ratelimitAddMsgPerSource(pThis->pLstnInfo->ratelimiter, pMultiSub, pMsg, per_source_key, per_source_key_len,
+                                 ttGenTime);
+    } else {
+        ratelimitAddMsg(pThis->pLstnInfo->ratelimiter, pMultiSub, pMsg);
+    }
 
 finalize_it:
     /* reset status variables */
@@ -429,9 +539,14 @@ static rsRetVal ATTR_NONNULL() processDataRcvd_regexFraming(tcps_sess_t *const _
 }
 #endif
 
-/* Closes a TCP session
- * No attention is paid to the return code
- * of close, so potential-double closes are not detected.
+/**
+ * @brief Close a TCP session and release session-owned properties.
+ *
+ * Tears down the network stream and frees per-session sender properties
+ * (hostname/IP). This does not flush pending data; callers should invoke
+ * PrepareClose() beforehand when needed. The netstrm close result is ignored
+ * because we are shutting down a session and there is no recovery path for a
+ * close failure.
  */
 static rsRetVal Close(tcps_sess_t *pThis) {
     DEFiRet;
@@ -742,6 +857,7 @@ BEGINObjClassExit(tcps_sess, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END
     objRelease(netstrm, LM_NETSTRMS_FILENAME);
     objRelease(datetime, CORE_COMPONENT);
     objRelease(prop, CORE_COMPONENT);
+    objRelease(parser, CORE_COMPONENT);
     objRelease(regexp, LM_REGEXP_FILENAME);
 ENDObjClassExit(tcps_sess)
 
@@ -755,6 +871,7 @@ BEGINObjClassInit(tcps_sess, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE c
     CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));
     CHKiRet(objUse(datetime, CORE_COMPONENT));
     CHKiRet(objUse(prop, CORE_COMPONENT));
+    CHKiRet(objUse(parser, CORE_COMPONENT));
     CHKiRet(objUse(regexp, LM_REGEXP_FILENAME));
 
     CHKiRet(objUse(glbl, CORE_COMPONENT));

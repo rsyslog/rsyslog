@@ -40,7 +40,14 @@ typedef enum ETCPsyslogFramingAnomaly {
 } eTCPsyslogFramingAnomaly;
 
 
-/* config parameters for TCP listeners */
+/**
+ * Config parameters for TCP listeners.
+ *
+ * Ownership: the caller allocates and populates this struct, then hands it to
+ * tcpsrv via `configureTCPListen()`. tcpsrv becomes the owner (including any
+ * dynamically allocated fields) and will free it on error or when the listener
+ * is torn down.
+ */
 struct tcpLstnParams_s {
     const uchar *pszPort; /**< the ports the listener shall listen on */
     const uchar *pszAddr; /**< the addrs the listener shall listen on */
@@ -56,6 +63,7 @@ struct tcpLstnParams_s {
     uchar dfltTZ[8]; /**< default TZ if none in timestamp; '\0' =No Default */
     sbool bMultiLine; /**< support multi-line messages */
     uchar *pszStartRegex; /**< regex that indicates start of frame */
+    uchar *pszRatelimitName; /**< name of rate limit configuration */
 };
 
 /* list of tcp listen ports */
@@ -214,12 +222,25 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*Construct)(tcpsrv_t **ppThis);
     rsRetVal (*ConstructFinalize)(tcpsrv_t __attribute__((unused)) * pThis);
     rsRetVal (*Destruct)(tcpsrv_t **ppThis);
+    /**
+     * Configure a TCP listener using the provided configuration parameters.
+     *
+     * Ownership of `cnf_params` is always transferred to tcpsrv. On success,
+     * tcpsrv retains the configuration for the listener. On failure (including
+     * invalid port), tcpsrv frees `cnf_params` and its owned fields.
+     */
     rsRetVal (*ATTR_NONNULL(1, 2) configureTCPListen)(tcpsrv_t *, tcpLstnParams_t *const cnf_params);
     rsRetVal (*create_tcp_socket)(tcpsrv_t *pThis);
     rsRetVal (*Run)(tcpsrv_t *pThis);
     /* set methods */
     rsRetVal (*SetAddtlFrameDelim)(tcpsrv_t *, int);
     rsRetVal (*SetMaxFrameSize)(tcpsrv_t *, int);
+    /**
+     * Set the input name for a listener configuration.
+     *
+     * Ownership: the name is duplicated into `cnf_params` and managed by
+     * tcpsrv along with the rest of `cnf_params` after ownership transfer.
+     */
     rsRetVal (*SetInputName)(tcpsrv_t *const pThis, tcpLstnParams_t *const cnf_params, const uchar *const name);
     rsRetVal (*SetUsrP)(tcpsrv_t *, void *);
     rsRetVal (*SetCBIsPermittedHost)(tcpsrv_t *, int (*)(struct sockaddr *addr, char *, void *, void *));

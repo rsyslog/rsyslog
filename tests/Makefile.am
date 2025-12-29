@@ -235,6 +235,7 @@ TESTS_DEFAULT = \
 	sndrcv_udp_nonstdpt.sh \
 	sndrcv_udp_nonstdpt_v6.sh \
 	imudp_thread_hang.sh \
+	imudp_ratelimit_name.sh \
 	asynwr_simple.sh \
 	asynwr_simple_2.sh \
 	asynwr_timeout.sh \
@@ -543,6 +544,8 @@ TESTS_DEFAULT_VALGRIND = \
 
 TESTS_LIBGCRYPT_VALGRIND = \
 	queue-encryption-disk_keyfile-vg.sh
+TESTS_LIBYAML = \
+	ratelimit_hup.sh
 
 TESTS_IMTCP = \
 	fromhost-port.sh \
@@ -581,11 +584,17 @@ TESTS_IMTCP = \
 	sndrcv_failover.sh \
 	sndrcv_gzip.sh \
 	sndrcv_udp_nonstdpt.sh \
-	sndrcv_udp_nonstdpt_v6.sh \
 	sndrcv_udp_nonstdpt_v6.sh
+TESTS_IMTCP_YAML = \
+	imtcp-persource-ratelimit.sh
 
 TESTS_IMTCP_VALGRIND = \
 	imtcp-octet-framing-too-long-vg.sh
+
+TESTS_RATELIMIT = \
+	ratelimit_exclusivity.sh \
+	ratelimit_name.sh \
+	ratelimit_duplicate.sh
 
 TESTS_IMTCP_IMPSTATS = \
 	imtcp-impstats.sh
@@ -1642,9 +1651,12 @@ EXTRA_DIST += $(TESTS_GNUTLS_WRONG_OPT)
 EXTRA_DIST += $(TESTS_OSSL_WRONG_OPT)
 EXTRA_DIST += $(TESTS_DEFAULT_VALGRIND)
 EXTRA_DIST += $(TESTS_LIBGCRYPT_VALGRIND)
+EXTRA_DIST += $(TESTS_LIBYAML)
 EXTRA_DIST += $(TESTS_IMTCP)
+EXTRA_DIST += $(TESTS_IMTCP_YAML)
 EXTRA_DIST += $(TESTS_IMTCP_VALGRIND)
 EXTRA_DIST += $(TESTS_IMTCP_IMPSTATS)
+EXTRA_DIST += $(TESTS_RATELIMIT)
 EXTRA_DIST += $(TESTS_SNMP_MINIMAL)
 EXTRA_DIST += $(TESTS_SNMP_FULL)
 EXTRA_DIST += $(TESTS_MMUTF8FIX)
@@ -1966,6 +1978,9 @@ if ENABLE_LIBGCRYPT
 TESTS += $(TESTS_LIBGCRYPT_VALGRIND)
 endif # ENABLE_LIBGCRYPT
 endif # HAVE_VALGRIND
+if HAVE_LIBYAML
+TESTS += $(TESTS_LIBYAML)
+endif # HAVE_LIBYAML
 endif # ENABLE_DEFAULT_TESTS
 
 
@@ -1975,6 +1990,13 @@ endif # ENABLE_DEFAULT_TESTS
 
 if ENABLE_IMTCP_TESTS
 TESTS += $(TESTS_IMTCP)
+
+if HAVE_LIBYAML
+TESTS += $(TESTS_IMTCP_YAML)
+endif # HAVE_LIBYAML
+if ENABLE_IMPTCP
+TESTS += $(TESTS_RATELIMIT)
+endif # ENABLE_IMPTCP
 
 if HAVE_VALGRIND
 TESTS += $(TESTS_IMTCP_VALGRIND)
@@ -2773,6 +2795,9 @@ EXTRA_DIST += \
 	testsuites/x.509/machine-key.pem \
 	testsuites/x.509/client-expired-cert.pem \
 	testsuites/x.509/client-expired-key.pem \
+	ratelimit_name.sh \
+	test_policy_hup.yaml \
+	ratelimit_duplicate.sh \
 	cfg.sh \
 	cfg1.cfgtest \
 	cfg1.testin \
