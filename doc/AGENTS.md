@@ -32,7 +32,16 @@ This guide applies to everything under `doc/`.
   top-level `AGENTS.md`, and `coding_practices.rst` sits in the development
   toctree. When you move or rename that page, update the links here and in the
   base prompts so automated seeding does not break.
-- Every new page must include anchors, meta, and summary blocks per `authoring_guidelines.md`.
+- Every new or materially edited page must include anchors, meta, and summary
+  blocks per `authoring_guidelines.md`. If an existing page lacks them, add
+  the blocks as part of the update.
+- Module docs should include an explicit module metadata header (module name,
+  author/maintainer, introduced/version when known) and an `.. index::`
+  directive. Use `doc/ai/templates/template-module.rst` as the reference
+  structure when updating module pages.
+- Keep sections short for human scanning and RAG chunking: prefer 1–3 short
+  paragraphs per section and split long pages into subpages when they exceed
+  the size guidance in `doc/ai/chunking_and_embeddings.md`.
 
 ## Build & validation
 - Run `./doc/tools/build-doc-linux.sh --clean --format html` after changes to catch Sphinx errors early.
@@ -63,4 +72,3 @@ This guide applies to everything under `doc/`.
 | RAG Knowledge Base script | `doc/build_rag_db.py` |
 | RAG Knowledge Base (Output) | `doc/build/rag/rsyslog_rag_db.json` |
 | Strategy and style | `doc/STRATEGY.md` |
-

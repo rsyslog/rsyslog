@@ -4,10 +4,12 @@ Guidelines for documentation structure and the automated RAG extraction process.
 
 ## Authoring Guidelines
 
-- Target 400–900 words per page.
+- Target 400–800 words per page.
 - One diagram and one code block typical.
 - Use lists; avoid giant paragraphs.
 - Maintain logical independence per file.
+- Keep sections to 150–350 words; split earlier if a section becomes hard to
+  scan or exceeds the ~2,000-character chunk cap.
 
 ## RAG Knowledge Base
 
@@ -19,7 +21,7 @@ which processes Sphinx doctrees and generates `build/rag/rsyslog_rag_db.json`.
 | Type | Description |
 |------|-------------|
 | `section_header` | Document section titles with hierarchy context |
-| `text_block` | Prose content (~2000 chars, merged thematically) |
+| `text_block` | Prose content (~600–2,000 chars, merged thematically) |
 | `code` | Configuration examples and code blocks |
 
 ### Metadata Schema

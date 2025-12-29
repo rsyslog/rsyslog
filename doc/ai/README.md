@@ -16,7 +16,7 @@
 | `crosslinking_and_nav.md` | Navigation and cross-reference patterns |
 | `drift_monitoring.md` | Detecting doc/code drift |
 | `module_map.yaml` | Module paths and locking hints |
-| `templates/` | RST templates for concept and tutorial pages |
+| `templates/` | RST templates for concept, tutorial, and module pages |
 
 ## RAG Knowledge Base
 

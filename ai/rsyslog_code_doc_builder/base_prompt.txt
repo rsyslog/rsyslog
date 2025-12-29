@@ -32,6 +32,11 @@ principles:
   can discover it quickly.
 - When introducing new metadata keys, refresh both the schema description and any
   templates/examples in the tree.
+- For RST pages under `doc/source`, include anchors, `.. meta::`, and summary
+  slices per `doc/ai/authoring_guidelines.md`. Add them when editing legacy
+  pages that lack the blocks.
+- Use the module template at `doc/ai/templates/template-module.rst` when
+  creating or normalizing module docs.
 
 ## 4. Validate and cross-link
 - Ensure every instruction you add references the exact filenames or scripts
@@ -46,3 +51,5 @@ principles:
   (sentence-case headings, wrapped paragraphs, consistent indentation).
 - Prefer American English spellings.
 - Call out when no tests are required and why (documentation-only changes).
+- Keep sections compact for human scanning and RAG chunking; follow the size
+  guidance in `doc/ai/chunking_and_embeddings.md`.
