@@ -230,10 +230,18 @@ static rsRetVal loadYamlPolicy(perSourceRateLimiter_t *pThis) {
                     /* End of an override item */
                     if (curr_key && curr_max > 0) {
                         perSourceOverride_t *ovr = calloc(1, sizeof(perSourceOverride_t));
-                        if (ovr) {
-                            ovr->max = curr_max;
-                            ovr->window = curr_window;
-                            hashtable_insert(pThis->htOverrides, strdup(curr_key), ovr);
+                        if (ovr != NULL) {
+                            char *key_copy = strdup(curr_key);
+                            if (key_copy == NULL) {
+                                free(ovr);
+                            } else {
+                                ovr->max = curr_max;
+                                ovr->window = curr_window;
+                                if (hashtable_insert(pThis->htOverrides, key_copy, ovr) == 0) {
+                                    free(key_copy);
+                                    free(ovr);
+                                }
+                            }
                         }
                     }
                     if (curr_key) free(curr_key);
@@ -370,11 +378,13 @@ rsRetVal perSourceRateLimiterCheck(perSourceRateLimiter_t *pThis, const uchar *k
             }
         }
         
-        /* Downgrade to read lock not possible in pthreads usually, so just unlock and relock or keep write lock?
-           Keeping write lock is safe but blocks others. 
-           Let's just keep write lock for the check this time, or unlock and re-read-lock.
-           For simplicity, let's proceed with write lock held (it acts as exclusive).
-        */
+        /* Downgrade to read lock to allow other readers. */
+        pthread_rwlock_unlock(&pThis->rwlock);
+        pthread_rwlock_rdlock(&pThis->rwlock);
+        
+        /* After re-acquiring read lock, we must search again to ensure pState is still valid
+           (though in this specific implementation, once added it's not removed during Check) */
+        pState = (perSourceSenderState_t*)hashtable_search(pThis->htSenders, (void*)key);
     }
     
     if (pState == NULL) {
