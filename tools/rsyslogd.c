@@ -2025,6 +2025,8 @@ static void doHUP(void) {
     modDoHUP();
     DBGPRINTF("doHUP: doing lookup tables\n");
     lookupDoHUP();
+    DBGPRINTF("doHUP: doing ratelimits\n");
+    ratelimitDoHUP();
     DBGPRINTF("doHUP: doing errmsgs\n");
     errmsgDoHUP();
 }

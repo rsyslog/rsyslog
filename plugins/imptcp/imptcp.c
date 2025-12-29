@@ -160,8 +160,9 @@ struct instanceConf_s {
     sbool bUnlink;
     sbool discardTruncatedMsg;
     sbool flowControl;
-    unsigned int ratelimitInterval;
-    unsigned int ratelimitBurst;
+    int ratelimitInterval;
+    int ratelimitBurst;
+    uchar *pszRatelimitName;
     uchar *startRegex;
     regex_t start_preg; /* compiled version of startRegex */
     int iTCPSessMax; /* max open connections */
@@ -217,6 +218,7 @@ static struct cnfparamdescr inppdescr[] = {{"port", eCmdHdlrString, 0}, /* legac
                                            {"addtlframedelimiter", eCmdHdlrInt, 0},
                                            {"ratelimit.interval", eCmdHdlrInt, 0},
                                            {"ratelimit.burst", eCmdHdlrInt, 0},
+                                           {"ratelimit.name", eCmdHdlrString, 0},
                                            {"multiline", eCmdHdlrBinary, 0},
                                            {"listenportfilename", eCmdHdlrString, 0},
                                            {"socketbacklog", eCmdHdlrInt, 0}};
@@ -1618,12 +1620,13 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->iAddtlFrameDelim = TCPSRV_NO_ADDTL_DELIMITER;
     inst->startRegex = NULL;
     inst->pBindRuleset = NULL;
-    inst->ratelimitBurst = 10000; /* arbitrary high limit */
-    inst->ratelimitInterval = 0; /* off */
+    inst->ratelimitBurst = -1;
+    inst->ratelimitInterval = -1;
     inst->compressionMode = COMPRESS_SINGLE_MSG;
     inst->multiLine = 0;
     inst->socketBacklog = 64;
     inst->pszLstnPortFileName = NULL;
+    inst->pszRatelimitName = NULL;
     inst->iTCPSessMax = -1;
 
     /* node created, let's add to config */
@@ -1744,8 +1747,13 @@ static rsRetVal addListner(modConfData_t __attribute__((unused)) * modConf, inst
     CHKiRet(prop.SetString(pSrv->pInputName, pSrv->pszInputName, ustrlen(pSrv->pszInputName)));
     CHKiRet(prop.ConstructFinalize(pSrv->pInputName));
 
-    CHKiRet(ratelimitNew(&pSrv->ratelimiter, "imptcp", (char *)pSrv->port));
-    ratelimitSetLinuxLike(pSrv->ratelimiter, inst->ratelimitInterval, inst->ratelimitBurst);
+    if (inst->pszRatelimitName != NULL) {
+        CHKiRet(ratelimitNewFromConfig(&pSrv->ratelimiter, runConf, (char *)inst->pszRatelimitName, "imptcp",
+                                       (char *)pSrv->port));
+    } else {
+        CHKiRet(ratelimitNew(&pSrv->ratelimiter, "imptcp", (char *)pSrv->port));
+        ratelimitSetLinuxLike(pSrv->ratelimiter, inst->ratelimitInterval, inst->ratelimitBurst);
+    }
     ratelimitSetThreadSafe(pSrv->ratelimiter);
     /* add to linked list */
     pSrv->pNext = pSrvRoot;
@@ -2197,9 +2205,11 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "defaulttz")) {
             inst->dfltTZ = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
-            inst->ratelimitBurst = (unsigned int)pvals[i].val.d.n;
+            inst->ratelimitBurst = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
-            inst->ratelimitInterval = (unsigned int)pvals[i].val.d.n;
+            inst->ratelimitInterval = (int)pvals[i].val.d.n;
+        } else if (!strcmp(inppblk.descr[i].name, "ratelimit.name")) {
+            inst->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(inppblk.descr[i].name, "multiline")) {
             inst->multiLine = (sbool)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "listenportfilename")) {
@@ -2228,6 +2238,23 @@ BEGINnewInpInst
             regerror(errcode, &inst->start_preg, errbuff, sizeof(errbuff));
             parser_errmsg("imptcp: error in framing.delimiter.regex expansion: %s", errbuff);
             ABORT_FINALIZE(RS_RET_ERR);
+        }
+    }
+
+
+    if (inst->pszRatelimitName != NULL) {
+        if (inst->ratelimitInterval != -1 || inst->ratelimitBurst != -1) {
+            LogError(0, RS_RET_INVALID_PARAMS,
+                     "imptcp: ratelimit.name is mutually exclusive with "
+                     "ratelimit.interval and ratelimit.burst - using named "
+                     "ratelimit");
+        }
+    } else {
+        if (inst->ratelimitInterval == -1) {
+            inst->ratelimitInterval = 0; /* off by default */
+        }
+        if (inst->ratelimitBurst == -1) {
+            inst->ratelimitBurst = 10000;
         }
     }
 
@@ -2386,6 +2413,7 @@ BEGINfreeCnf
         free(inst->pszBindRuleset);
         free(inst->pszInputName);
         free(inst->dfltTZ);
+        free(inst->pszRatelimitName);
         if (inst->startRegex != NULL) {
             regfree(&inst->start_preg);
             free(inst->startRegex);

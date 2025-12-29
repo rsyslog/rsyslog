@@ -15,6 +15,7 @@ rsyslog Release Numbering Scheme
 rsyslog release numbers follow the 8.yymm.0 pattern so users can instantly
 judge how current a build is while keeping long-standing compatibility promises
 and a predictable release day.
+
 .. summary-end
 
 Overview

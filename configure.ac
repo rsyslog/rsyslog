@@ -166,6 +166,14 @@ AC_COMPILE_IFELSE( [AC_LANG_PROGRAM([[#include <limits.h>]],
                  )
 
 # Checks for libraries.
+PKG_CHECK_MODULES([LIBYAML], [yaml-0.1], [
+	AC_DEFINE([HAVE_LIBYAML], [1], [Define if libyaml is available])
+	have_libyaml=yes
+], [
+	AC_MSG_WARN([libyaml not found, rate limiting policies from files will be disabled])
+	have_libyaml=no
+])
+AM_CONDITIONAL(HAVE_LIBYAML, test x$have_libyaml = xyes)
 save_LIBS=$LIBS
 LIBS=
 AC_SEARCH_LIBS(clock_gettime, rt)
