@@ -994,6 +994,13 @@ EXTRA_DIST += \
     doc/source/reference/parameters/omsnmp-version.rst \
     doc/source/reference/parameters/omstdout-ensurelfending.rst \
     doc/source/reference/parameters/omstdout-template.rst \
+    doc/source/reference/parameters/omudpspoof-mtu.rst \
+    doc/source/reference/parameters/omudpspoof-port.rst \
+    doc/source/reference/parameters/omudpspoof-sourceport-end.rst \
+    doc/source/reference/parameters/omudpspoof-sourceport-start.rst \
+    doc/source/reference/parameters/omudpspoof-sourcetemplate.rst \
+    doc/source/reference/parameters/omudpspoof-target.rst \
+    doc/source/reference/parameters/omudpspoof-template.rst \
     doc/source/reference/parameters/omuxsock-abstract.rst \
     doc/source/reference/parameters/omuxsock-networknamespace.rst \
     doc/source/reference/parameters/omuxsock-socketname.rst \
