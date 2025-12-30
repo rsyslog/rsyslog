@@ -40,39 +40,11 @@ Check the following usage examples to understand how these statements behave:
 sets the value of a local-variable or json property, but if the addressed
 variable already contains a value its behaviour differs as follows:
 
-**merges** the value if both existing and new value are objects, 
-but merges the new value to *root* rather than with value of the given key. Eg. 
+**merges** the value if both existing and new value are objects,
+but merges the new value to *root* rather than with value of the given key.
+If a key exists in both the existing object and the new object, the value from
+the new object overwrites the existing one.
 
-::
-
-   set $.x!one = "val_1";
-   # results in $. = { "x": { "one": "val_1" } }
-   set $.y!two = "val_2";
-   # results in $. = { "x": { "one": "val_1" }, "y": { "two": "val_2" } }
-
-   set $.z!var = $.x;
-   # results in $. = { "x": { "one": "val_1" }, "y": { "two": "val_2" }, "z": { "var": { "one": "val_1" } } }
-
-   set $.z!var = $.y;
-   # results in $. = { "x": { "one": "val_1" }, "y": { "two": "val_2" }, "z": { "var": { "one": "val_1" } }, "two": "val_2" }
-   # note that the key *two* is at root level and not  under *$.z!var*.
-
-**ignores** the new value if old value was an object, but new value is a not an object (Eg. string, number etc). Eg:
-
-::
-
-   set $.x!one = "val_1";
-   set $.x = "quux";
-   # results in $. = { "x": { "one": "val_1" } }
-   # note that "quux" was ignored
-
-**resets** variable, if old value was not an object.
-
-::
-
-   set $.x!val = "val_1";
-   set $.x!val = "quux";
-   # results in $. = { "x": { "val": "quux" } }
 
 **unset**
 ---------
