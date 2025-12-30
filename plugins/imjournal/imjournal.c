@@ -456,20 +456,45 @@ static rsRetVal readjournal(struct journalContext_s *journalContext, ruleset_t *
 
     /* Get message severity ("priority" in journald's terminology) */
     if (journalGetData(journalContext, "PRIORITY", &get, &length) >= 0) {
-        if (length == 10) {
-            severity = ((char *)get)[9] - '0';
-            if (severity < 0 || 7 < severity) {
-                LogError(0, RS_RET_ERR,
-                         "imjournal: the value of the 'PRIORITY' field is "
-                         "out of bounds: %d, resetting",
-                         severity);
+        /* value is "PRIORITY=x", so we need to skip 9 characters */
+        if (length > 9) {
+            char prio_buf[12];
+            char *p;
+            size_t val_len = length - 9;
+
+            if (val_len >= sizeof(prio_buf)) {
+                val_len = sizeof(prio_buf) - 1;
+            }
+            memcpy(prio_buf, (const char *)get + 9, val_len);
+            prio_buf[val_len] = '\0';
+
+            long priority = strtol(prio_buf, &p, 10);
+            /* check for conversion errors */
+            if (p > prio_buf) {
+                if (priority < 0 || 7 < priority) {
+                    /* Only log invalid values if they are numeric.
+                     * We use LOG_INFO to avoid flooding the log if there is a
+                     * persistent issue with the journal data.
+                     */
+                    LogMsg(0, RS_RET_OK, LOG_INFO,
+                           "imjournal: the value of the 'PRIORITY' field is "
+                           "out of bounds: %ld, resetting",
+                           priority);
+                    severity = cs.iDfltSeverity;
+                } else {
+                    severity = (int)priority;
+                }
+            } else {
+                /* We silently ignore non-parsable priority values.
+                 * This is robust against unexpected journal data formats.
+                 */
                 severity = cs.iDfltSeverity;
             }
         } else {
-            LogError(0, RS_RET_ERR,
-                     "The value of the 'PRIORITY' field has an "
-                     "unexpected length: %zu\n",
-                     length);
+            /* We silently ignore unexpected length.
+             * This prevents log flooding if the journal data is malformed.
+             */
+            severity = cs.iDfltSeverity;
         }
     }
 
