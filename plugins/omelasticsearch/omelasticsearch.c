@@ -316,7 +316,11 @@ BEGINfreeInstance
                 if (loadModConf->tail == inst) {
                     loadModConf->tail = prev;
                 }
-                prev->next = inst->next;
+                if (prev != NULL) {
+                    prev->next = inst->next;
+                } else {
+                    loadModConf->root = inst->next;
+                }
                 /* no need to correct inst back to prev - we exit now! */
                 break;
             } else {
