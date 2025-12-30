@@ -2,6 +2,12 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2025-12-30: omelasticsearch fix: potential NULL dereference
+  Under some exotic cases, omelasticsearch could dereference a NULL
+  pointer during shutdown cleanup. This would lead to undefined behaviour
+  and most likely an abort. This is fixed in this patch.
+  With the Help of AI Agent: ChatGPT Codex
+  closes https://github.com/rsyslog/rsyslog/issues/4016
 - 2025-12-28: omfwd: fix RebindInterval suspension and improve UDP cleanup
   This fix ensures that forwarding actions do not experience a 30-second
   suspension when re-establishing connections as configured by
