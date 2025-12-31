@@ -3,7 +3,7 @@
  * because it was either written from scratch by me (rgerhards) or
  * contributors who agreed to ASL 2.0.
  *
- * Copyright 2004-2024 Rainer Gerhards and Adiscon
+ * Copyright 2004-2025 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
@@ -733,11 +733,18 @@ finalize_it:
 }
 
 
-/* The consumer of dequeued messages. This function is called by the
- * queue engine on dequeueing of a message. It runs on a SEPARATE
- * THREAD. It receives an array of pointers, which it must iterate
- * over. We do not do any further batching, as this is of no benefit
- * for the main queue.
+/**
+ * @brief Message Consumer (Worker Thread).
+ *
+ * This function runs on a **separate thread** as part of the Queue Worker Pool.
+ * It consumes a batch of messages dequeued from the main message queue.
+ *
+ * @note No further batching is performed here, as optimization happens in `preprocessBatch`.
+ *
+ * @param notNeeded Unused argument (required for thread signature).
+ * @param pBatch Pointer to the batch of messages to process.
+ * @param pWti Pointer to the Worker Thread Instance (WTI) data.
+ * @return RS_RET_OK on success.
  */
 static rsRetVal msgConsumer(void __attribute__((unused)) * notNeeded, batch_t *pBatch, wti_t *pWti) {
     DEFiRet;
@@ -1086,9 +1093,14 @@ finalize_it:
 }
 
 
-/* submit a message to the main message queue.   This is primarily
- * a hook to prevent the need for callers to know about the main message queue
- * rgerhards, 2008-02-13
+/**
+ * @brief Submit a message to the Main Message Queue (Wrapper).
+ *
+ * A helper function that abstracts the main message queue details from callers.
+ * It is commonly used by plugins to inject messages into the processing pipeline.
+ *
+ * @param pMsg The message object to submit.
+ * @return RS_RET_OK on success.
  */
 rsRetVal submitMsg2(smsg_t *pMsg) {
     qqueue_t *pQueue;
@@ -1328,16 +1340,18 @@ static void initAll(int argc, char **argv) {
     hdlr_enable(SIGTTIN, hdlr_sigttin_ou);
     hdlr_enable(SIGTTOU, hdlr_sigttin_ou);
 
-    /* first, parse the command line options. We do not carry out any actual work, just
-     * see what we should do. This relieves us from certain anomalies and we can process
-     * the parameters down below in the correct order. For example, we must know the
-     * value of -M before we can do the init, but at the same time we need to have
-     * the base classes init before we can process most of the options. Now, with the
-     * split of functionality, this is no longer a problem. Thanks to varmofekoj for
-     * suggesting this algo.
-     * Note: where we just need to set some flags and can do so without knowledge
-     * of other options, we do this during the inital option processing.
-     * rgerhards, 2008-04-04
+    /*
+     * Command-line option parser (Pass 1).
+     *
+     * Parses command-line options to determine the operating mode and set initial flags.
+     *
+     * This block implements a "two-pass" strategy:
+     * 1. Immediate flags: Options like debug (`-d`) or no-fork (`-n`) are set immediately.
+     * 2. Deferred arguments: Complex options are buffered into a list (`bufOptAdd`)
+     *    to be processed later by `processStartupOptions`.
+     *
+     * This separation allows rsyslog to set up the runtime environment (like debug logging)
+     * before processing complex configurations that might depend on it.
      */
 #if defined(_AIX)
     while ((ch = getopt(argc, argv, "46ACDdf:hi:M:nN:o:qQS:T:u:vwxR")) != EOF) {
@@ -1810,11 +1824,26 @@ void processImInternal(void) {
 }
 
 
-/* This takes a received message that must be decoded and submits it to
- * the main message queue. This is a legacy function which is being provided
- * to aid older input plugins that do not support message creation via
- * the new interfaces themselves. It is not recommended to use this
- * function for new plugins. -- rgerhards, 2009-10-12
+/**
+ * @brief Parse and submit a raw message to the main queue (Legacy).
+ *
+ * Decodes a received message and submits it to the main message queue.
+ *
+ * @note **Legacy Function**: This function is provided to support older input plugins that
+ * do not support message creation via the new message interfaces.
+ * **NEW PLUGINS SHOULD NOT USE THIS FUNCTION.**
+ *
+ * @param hname Hostname of the sender.
+ * @param hnameIP IP address of the sender.
+ * @param msg The raw message content.
+ * @param len Length of the message content.
+ * @param flags Message flags.
+ * @param flowCtlType Type of flow control to apply.
+ * @param pInputName Name of the input module.
+ * @param stTime Syslog time stamp.
+ * @param ttGenTime Time the message was generated.
+ * @param pRuleset Ruleset to apply to this message.
+ * @return RS_RET_OK on success.
  */
 rsRetVal parseAndSubmitMessage(const uchar *const hname,
                                const uchar *const hnameIP,
@@ -1861,7 +1890,6 @@ finalize_it:
 
 /* helper to doHUP(), this "HUPs" each action. The necessary locking
  * is done inside the action class and nothing we need to take care of.
- * rgerhards, 2008-10-22
  */
 DEFFUNC_llExecFunc(doHUPActions) {
     actionCallHUPHdlr((action_t *)pData);
@@ -1869,15 +1897,23 @@ DEFFUNC_llExecFunc(doHUPActions) {
 }
 
 
-/* This function processes a HUP after one has been detected. Note that this
- * is *NOT* the sighup handler. The signal is recorded by the handler, that record
- * detected inside the mainloop and then this function is called to do the
- * real work. -- rgerhards, 2008-10-22
- * Note: there is a VERY slim chance of a data race when the hostname is reset.
+/** Processes a HUP after detection in the main loop.
+ *
+ * @brief Handles SIGHUP signal logic.
+ *
+ * @note This function is *called* by the main loop after a signal handler
+ * detected SIGHUP. It is NOT the signal handler itself.
+ *
+ * @note This function **DOES NOT** reload the main configuration (rsyslog.conf).
+ * It is primarily used for **Log Rotation** (closing/reopening output files)
+ * and notifying modules to refresh internal state (like lookup tables).
+ * To reload configuration, a restart is required.
+ *
+ * There is a VERY slim chance of a data race when the hostname is reset.
  * We prefer to take this risk rather than sync all accesses, because to the best
  * of my analysis it can not really hurt (the actual property is reference-counted)
  * but the sync would require some extra CPU for *each* message processed.
- * rgerhards, 2012-04-11
+ * -- rgerhards, 2008-10-22 / 2012-04-11
  */
 static void doHUP(void) {
     char buf[512];
@@ -1902,18 +1938,20 @@ static void doHUP(void) {
     errmsgDoHUP();
 }
 
-/* rsyslogdDoDie() is a signal handler. If called, it sets the bFinished variable
- * to indicate the program should terminate. However, it does not terminate
- * it itself, because that causes issues with multi-threading. The actual
- * termination is then done on the main thread. This solution might introduce
- * a minimal delay, but it is much cleaner than the approach of doing everything
- * inside the signal handler.
- * rgerhards, 2005-10-26
- * Note:
- * - we do not call DBGPRINTF() as this may cause us to block in case something
- *   with the threading is wrong.
- * - we do not really care about the return state of write(), but we need this
- *   strange check we do to silence compiler warnings (thanks, Ubuntu!)
+/**
+ * @brief Signal Handler for termination (SIGTERM, SIGINT).
+ *
+ * Sets the global `bFinished` flag to indicate the program should terminate.
+ *
+ * @warning This function runs in a **signal handler context**.
+ * It does NOT terminate the process directly, as that would be unsafe in a multi-threaded
+ * environment. Instead, it signals the main loop to exit gracefully.
+ *
+ * @note We avoid using `DBGPRINTF()` or other complex functions here to prevent
+ * deadlocks or undefined behavior if the signal interrupted a critical section.
+ * The `write()` check exists solely to silence compiler warnings on some platforms (e.g., Ubuntu).
+ *
+ * @param sig The signal number received.
  */
 void rsyslogdDoDie(int sig) {
 #define MSG1 "DoDie called.\n"
@@ -2044,6 +2082,15 @@ static void wait_timeout(const sigset_t *sigmask) {
 }
 
 
+/**
+ * @brief Reap Terminated Child Processes.
+ *
+ * Loops through all terminated child processes (`waitpid` with `WNOHANG`)
+ * and reports their exit status.
+ *
+ * Useful for monitoring short-lived helper processes or scripts launched by rsyslog.
+ * Also needed for proper cleanup of child processes in case of termination.
+ */
 static void reapChild(void) {
     pid_t child;
     do {
@@ -2056,10 +2103,14 @@ static void reapChild(void) {
 }
 
 
-/* This is the main processing loop. It is called after successful initialization.
- * When it returns, the syslogd terminates.
- * Its sole function is to provide some housekeeping things. The real work is done
- * by the other threads spawned.
+/**
+ * @brief Application Main Loop.
+ *
+ * Handles housekeeping tasks (signal handling, child reaping, time updates)
+ * while worker threads perform the actual log processing.
+ *
+ * @note This function blocks waiting for signals (`wait_timeout`) and only exits when
+ * `bFinished` is set (e.g., by `rsyslogdDoDie`).
  */
 static void mainloop(void) {
     time_t tTime;
@@ -2214,10 +2265,15 @@ static void deinitAll(void) {
     clearPidFile();
 }
 
-/* This is the main entry point into rsyslogd. This must be a function in its own
- * right in order to initialize the debug system in a portable way (otherwise we would
- * need to have a statement before variable definitions.
- * rgerhards, 20080-01-28
+/**
+ * @brief Application Entry Point.
+ *
+ * Initializes the debug system and invokes the main initialization sequence.
+ * This is kept minimal to ensure the debug system is initialized early and in a portable way.
+ *
+ * @param argc Number of arguments.
+ * @param argv Array of argument strings.
+ * @return 0 on clean exit, non-zero on error.
  */
 int main(int argc, char **argv) {
 #if defined(_AIX)
