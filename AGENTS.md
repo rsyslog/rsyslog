@@ -81,6 +81,7 @@ Run a relevant test to verify your changes. The testbench allows test scripts to
   - **Architecture overview:** [`doc/source/development/architecture.rst`](./doc/source/development/architecture.rst)
   - **Commit prompt template:** [`ai/rsyslog_commit_assistant/base_prompt.txt`](./ai/rsyslog_commit_assistant/base_prompt.txt)
   - **Doc builder prompt template:** [`ai/rsyslog_code_doc_builder/base_prompt.txt`](./ai/rsyslog_code_doc_builder/base_prompt.txt)
+  - **Doc assistant prompt template:** [`ai/rsyslog_doc_assistant/base_prompt.txt`](./ai/rsyslog_doc_assistant/base_prompt.txt)
 
 Use these jump points together with this file to locate the workflow and
 component notes that apply to your task.
