@@ -2,6 +2,20 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2025-12-31: imjournal: make PRIORITY parsing robust and quiet
+  Some systems emit journal entries where PRIORITY is not exactly
+  "PRIORITY=X". The previous parser treated multi-byte PRIORITY values
+  as errors and logged for every message, creating the impression of
+  trouble when internal rate limiting kicked in. This also lead users to
+  the false impression that journal messages were lost. The change reduces
+  noise and keeps rsyslog calm in noisy journald environments.
+  Impact: Internal error spam is eliminated; unparsable values fall back
+  to the configured default severity; numeric out-of-range is logged at
+  INFO, not ERROR.
+  Before/After: BEFORE required length==10 and errored on mismatch.
+  AFTER parses the integer from a safe buffer, validates 0–7, otherwise
+  uses the default severity without spamming logs.
+  closes: https://github.com/rsyslog/rsyslog/issues/5613
 - 2025-12-30: omelasticsearch fix: potential NULL dereference
   Under some exotic cases, omelasticsearch could dereference a NULL
   pointer during shutdown cleanup. This would lead to undefined behaviour
