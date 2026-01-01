@@ -11,7 +11,7 @@
  *
  * File begun on 2007-07-22 by RGerhards
  *
- * Copyright 2007-2018 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2026 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -622,6 +622,13 @@ static rsRetVal doModInit(pModInit_t modInit, uchar *name, void *pModHdlr, modIn
 
             localRet = (*pNew->modQueryEtryPt)((uchar *)"SetShutdownImmdtPtr", &pNew->mod.om.SetShutdownImmdtPtr);
             if (localRet != RS_RET_OK && localRet != RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) ABORT_FINALIZE(localRet);
+
+            localRet = (*pNew->modQueryEtryPt)((uchar *)"setActionInfo", &pNew->mod.om.setActionInfo);
+            if (localRet == RS_RET_MODULE_ENTRY_POINT_NOT_FOUND) {
+                pNew->mod.om.setActionInfo = NULL;
+            } else if (localRet != RS_RET_OK) {
+                ABORT_FINALIZE(localRet);
+            }
 
             pNew->mod.om.supportsTX = 1;
             localRet = (*pNew->modQueryEtryPt)((uchar *)"beginTransaction", &pNew->mod.om.beginTransaction);

@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *	 works!
  *
- * Copyright 2007-2024 Adiscon GmbH.
+ * Copyright 2007-2026 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -50,6 +50,7 @@
 #include "omfwd.h"
 #include "template.h"
 #include "msg.h"
+#include "action.h"
 #include "tcpclt.h"
 #include "cfsysline.h"
 #include "module-template.h"
@@ -84,6 +85,7 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(net) DEFobjCurrIf(netstrms) DEFobjCurrIf(netstrm
 
 typedef struct _instanceData {
     uchar *tplName; /* name of assigned template */
+    action_t *pAction;
     uchar *pszStrmDrvr;
     uchar *pszStrmDrvrAuthMode;
     uchar *pszStrmDrvrPermitExpiredCerts;
@@ -488,6 +490,12 @@ BEGINisCompatibleWithFeature
     CODESTARTisCompatibleWithFeature;
     if (eFeat == sFEATURERepeatedMsgReduction) iRet = RS_RET_OK;
 ENDisCompatibleWithFeature
+
+
+BEGINsetActionInfo
+    CODESTARTsetActionInfo;
+    pData->pAction = pAction;
+ENDsetActionInfo
 
 
 BEGINfreeInstance
@@ -1322,7 +1330,8 @@ BEGINcommitTransaction
                 iRet = RS_RET_OK;
                 continue;
             } else if (iRet != RS_RET_OK) {
-                LogError(0, RS_RET_ERR, "omfwd: error during rate limit : %d.\n", iRet);
+                LogError(0, RS_RET_ERR, "omfwd: action '%s' error during rate limit: %d.\n",
+                         actionGetName(pWrkrData->pData->pAction), iRet);
             }
         }
 
@@ -1460,6 +1469,7 @@ finalize_it:
 
 static void setInstParamDefaults(instanceData *pData) {
     pData->tplName = NULL;
+    pData->pAction = NULL;
     pData->protocol = FORW_UDP;
     pData->networkNamespace = NULL;
     pData->originalNamespace = -1;
@@ -2038,6 +2048,7 @@ BEGINqueryEtryPt
     CODESTARTqueryEtryPt;
     CODEqueryEtryPt_STD_OMODTX_QUERIES;
     CODEqueryEtryPt_STD_OMOD8_QUERIES;
+    CODEqueryEtryPt_SetActionInfo_IF_OMOD_QUERIES;
     CODEqueryEtryPt_STD_CONF2_QUERIES;
     CODEqueryEtryPt_STD_CONF2_setModCnf_QUERIES;
     CODEqueryEtryPt_STD_CONF2_OMOD_QUERIES;

@@ -12,7 +12,7 @@
  *
  * File begun on 2007-07-22 by RGerhards
  *
- * Copyright 2007-2018 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2026 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -37,6 +37,8 @@
 
 #include "objomsr.h"
 #include "rainerscript.h"
+
+typedef struct action_s action_t;
 
 
 /* the following define defines the current version of the module interface.
@@ -142,6 +144,7 @@ struct modInfo_s {
             rsRetVal (*SetShutdownImmdtPtr)(void *pData, void *pPtr);
             rsRetVal (*createWrkrInstance)(void *ppWrkrData, void *pData);
             rsRetVal (*freeWrkrInstance)(void *pWrkrData);
+            rsRetVal (*setActionInfo)(void *pData, action_t *pAction);
             sbool supportsTX; /* set if the module supports transactions */
         } om;
         struct { /* data for library modules */

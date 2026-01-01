@@ -4,7 +4,7 @@
  *
  * File begun on 2007-07-25 by RGerhards
  *
- * Copyright 2007-2025 Adiscon GmbH.
+ * Copyright 2007-2026 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -270,6 +270,23 @@
 
 #define ENDdoAction \
     RETiRet;        \
+    }
+
+/* setActionInfo()
+ * Optional callback to provide the action object after creation.
+ */
+#define BEGINsetActionInfo                                                         \
+    static rsRetVal setActionInfo(void *const pModData, action_t *const pAction) { \
+        DEFiRet;                                                                   \
+        instanceData *pData;
+
+#define CODESTARTsetActionInfo        \
+    pData = (instanceData *)pModData; \
+    (void)pAction;                    \
+    (void)pData;
+
+#define ENDsetActionInfo \
+    RETiRet;             \
     }
 
 /* below is a variant of doAction where the passed-in data is not the common
@@ -600,6 +617,11 @@
 #define CODEqueryEtryPt_IsCompatibleWithFeature_IF_OMOD_QUERIES \
     if (!strcmp((char *)name, "isCompatibleWithFeature")) {     \
         *pEtryPoint = isCompatibleWithFeature;                  \
+    }
+
+#define CODEqueryEtryPt_SetActionInfo_IF_OMOD_QUERIES \
+    if (!strcmp((char *)name, "setActionInfo")) {     \
+        *pEtryPoint = setActionInfo;                  \
     }
 
 /**
