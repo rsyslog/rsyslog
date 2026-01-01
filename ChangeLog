@@ -2,6 +2,13 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-01: net driver ossl: fix ctx double-free and config string leaks
+  This improves stability of the OpenSSL stream driver and prevents
+  occasional aborts seen in the field with rulesets and per-host TLS
+  configuration. It also reduces memory growth during reconfiguration.
+  Impact: Fixes a crash (double-free) and plugs several leaks; no config
+  or API changes.
+  closes: https://github.com/rsyslog/rsyslog/issues/6358
 - 2026-01-01: core, runtime, omfwd: plumb action name into modules and logs
   Non-technical: actions need to obtain their name for better reporting.
   This wires a safe way for OMs to learn their owning action and use its
