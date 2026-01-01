@@ -4666,7 +4666,6 @@ finalize_it:
 }
 
 static rsRetVal jsonMerge(struct json_object *existing, struct json_object *json) {
-    /* TODO: check & handle duplicate names */
     DEFiRet;
 
     struct json_object_iterator it = json_object_iter_begin(json);
