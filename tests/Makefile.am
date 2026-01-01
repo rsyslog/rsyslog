@@ -1859,6 +1859,7 @@ if ENABLE_IMFILE_TESTS
 TESTS += \
 	imfile-basic.sh \
 	imfile-basic-legacy.sh \
+	imfile-statistics.sh \
 	imfile-discard-truncated-line.sh \
 	imfile-truncate-line.sh \
 	imfile-file-not-found-error.sh \
@@ -2994,6 +2995,7 @@ EXTRA_DIST= \
 	complex1.sh \
 	random.sh \
 	testsuites/imfile-old-state-file_imfile-state_.-rsyslog.input \
+	imfile-statistics.sh \
 	imfile-readmode0-vg.sh \
 	imfile-readmode2.sh \
 	imfile-readmode2-polling.sh \
