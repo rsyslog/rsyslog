@@ -18,7 +18,7 @@
  *
  * File begun on 2007-08-06 by Rainer Gerhards (extracted from syslogd.c).
  *
- * Copyright 2007-2022 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2026 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -2257,6 +2257,9 @@ rsRetVal addAction(action_t **ppAction,
     pAction->pModData = pModData;
 
     CHKiRet(actionConstructFinalize(pAction, lst));
+    if (pAction->pMod->mod.om.setActionInfo != NULL) {
+        CHKiRet(pAction->pMod->mod.om.setActionInfo(pAction->pModData, pAction));
+    }
 
     *ppAction = pAction; /* finally store the action pointer */
 
@@ -2270,6 +2273,19 @@ finalize_it:
     }
 
     RETiRet;
+}
+
+const uchar *actionGetName(const action_t *const pAction) {
+    static const uchar fallbackName[] = "[action]";
+
+    if (pAction == NULL) {
+        assert(pAction != NULL); /* should not happen, but we are robust */
+        return fallbackName;
+    }
+    if (pAction->pszName == NULL) {
+        return fallbackName;
+    }
+    return pAction->pszName;
 }
 
 
