@@ -1154,7 +1154,10 @@ finalize_it:
  * a pointer to the objects interface.
  * rgerhards, 2008-02-29
  */
-static rsRetVal UseObj(const char *srcFile, uchar *pObjName, uchar *pObjFile, interface_t *pIf) {
+static ATTR_NO_SANITIZE_UNDEFINED rsRetVal UseObj(const char *srcFile,
+                                                  uchar *pObjName,
+                                                  uchar *pObjFile,
+                                                  interface_t *pIf) {
     DEFiRet;
     objInfo_t *pObjInfo;
 
@@ -1201,6 +1204,9 @@ static rsRetVal UseObj(const char *srcFile, uchar *pObjName, uchar *pObjFile, in
         module.Use(srcFile, pObjInfo->pModInfo); /* increase refcount */
     }
 
+    // TODO: fix interface pointer type, remove ATTR_NO_SANITIZE_UNDEFINED above
+    //       The supression is just an interim solution until the pointer issue
+    //       has been fully analyzed and aligned (or considered OK w/ reasoning).
     CHKiRet(pObjInfo->QueryIF(pIf));
     pIf->ifIsLoaded = 1; /* we are happy */
 
