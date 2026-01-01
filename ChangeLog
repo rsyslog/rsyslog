@@ -2,6 +2,15 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-01: core, runtime, omfwd: plumb action name into modules and logs
+  Non-technical: actions need to obtain their name for better reporting.
+  This wires a safe way for OMs to learn their owning action and use its
+  human-readable name in diagnostics.
+  Impact: omfwd log messages now include the action name in some errors.
+  Also, a generic internal API has been added to enable actions to obtain
+  their assigned name. The omfwd change is primarily a template of how
+  this can be done (but also useful in itself).
+  With the help of AI Agents: ChatGPT Codex
 - 2025-12-31: imjournal: make PRIORITY parsing robust and quiet
   Some systems emit journal entries where PRIORITY is not exactly
   "PRIORITY=X". The previous parser treated multi-byte PRIORITY values
