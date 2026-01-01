@@ -16,7 +16,31 @@ EXTRA_DIST = \
 	COPYING.ASL20 \
 	contrib/gnutls/ca.pem \
 	contrib/gnutls/cert.pem \
-	contrib/gnutls/key.pem
+	contrib/gnutls/key.pem \
+	sidecar/rsyslog_exporter.py \
+	sidecar/requirements.txt \
+	sidecar/Dockerfile \
+	sidecar/docker-compose.yml \
+	sidecar/docker-compose-udp.yml \
+	sidecar/rsyslog-exporter.service \
+	sidecar/README.md \
+	sidecar/PRODUCTION.md \
+	sidecar/SECURITY.md \
+	sidecar/SECURITY_REVIEW.md \
+	sidecar/FILE_GROWTH_SOLUTION.md \
+	sidecar/.gitignore \
+	sidecar/test.sh \
+	sidecar/test_udp.py \
+	sidecar/validate.py \
+	sidecar/examples/prometheus.yml \
+	sidecar/examples/rsyslog.conf \
+	sidecar/examples/rsyslog-udp.conf \
+	sidecar/examples/rsyslog-impstats.conf \
+	sidecar/examples/rsyslog-impstats-udp.conf \
+	sidecar/examples/rsyslog-impstats-file-future.conf \
+	sidecar/examples/sample-impstats.json \
+	sidecar/examples/sample-impstats.prom \
+	sidecar/examples/sample-impstats.cee \
 
 # doc files - actual enumration, "pickup script" did not work well.
 EXTRA_DIST += \
