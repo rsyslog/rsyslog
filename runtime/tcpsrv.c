@@ -1202,7 +1202,7 @@ static rsRetVal ATTR_NONNULL() startWrkrPool(tcpsrv_t *const pThis) {
     /* Spawn workers. */
     pThis->currWrkrs = 0;
     for (unsigned i = 0; i < queue->numWrkr; ++i) {
-        if (pthread_create(&queue->wrkr_tids[i], NULL, wrkr, pThis) != 0) {
+        if (pthread_create(&queue->wrkr_tids[i], &default_thread_attr, wrkr, pThis) != 0) {
             iRet = RS_RET_ERR;
             break;
         }
