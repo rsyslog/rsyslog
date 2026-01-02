@@ -560,7 +560,15 @@ int openConnections(void) {
 #elif defined(ENABLE_GNUTLS)
     sessArray = calloc(numConnections, sizeof(gnutls_session_t));
 #endif
-    sockArray = calloc(numConnections, sizeof(int));
+    sockArray = malloc(numConnections * sizeof(int));
+    if (sockArray == NULL) {
+        fprintf(stderr, "tcpflood: could not allocate sockArray, OOM.\n");
+        return 1;
+    }
+    /* use for loop based init for portability - no time critical code */
+    for (i = 0; i < numConnections; ++i) {
+        sockArray[i] = -1;
+    }
 
 #if defined(ENABLE_OPENSSL)
     // Use setupDTLS on DTLS
