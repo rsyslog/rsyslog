@@ -243,6 +243,29 @@ static rsRetVal doInjectNumericSuffixMsg(int64_t iNum, ratelimit_t *ratelimiter)
     RETiRet;
 }
 
+static rsRetVal parseInt64Arg(const uchar *arg, const char *name, int64_t *outVal) {
+    char *end = NULL;
+    long long parsed = 0;
+    DEFiRet;
+
+    if (arg == NULL || *arg == '\0') {
+        LogError(0, RS_RET_PARAM_ERROR, "imdiag: missing %s argument", name);
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    errno = 0;
+    parsed = strtoll((const char *)arg, &end, 10);
+    if (errno == ERANGE || end == (char *)arg || (end != NULL && *end != '\0')) {
+        LogError(0, RS_RET_PARAM_ERROR, "imdiag: invalid %s value '%s'", name, arg);
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    *outVal = (int64_t)parsed;
+
+finalize_it:
+    RETiRet;
+}
+
 /* This function injects messages. Command format:
  * injectmsg <fromnbr> <number-of-messages>
  * rgerhards, 2009-05-27
@@ -267,9 +290,9 @@ static rsRetVal injectMsg(uchar *pszCmd, tcps_sess_t *pSess) {
         CHKiRet(doInjectMsg(pszCmd, ratelimit));
         nMsgs = 1;
     } else { /* assume 2 args, (from_idx, count) */
-        iFrom = atoll((char *)wordBuf);
+        CHKiRet(parseInt64Arg(wordBuf, "from", &iFrom));
         getFirstWord(&pszCmd, wordBuf, sizeof(wordBuf), TO_LOWERCASE);
-        nMsgs = atoll((char *)wordBuf);
+        CHKiRet(parseInt64Arg(wordBuf, "count", &nMsgs));
         for (i = 0; i < nMsgs; ++i) {
             CHKiRet(doInjectNumericSuffixMsg(i + iFrom, ratelimit));
         }
