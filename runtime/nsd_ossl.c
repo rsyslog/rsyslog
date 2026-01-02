@@ -80,9 +80,12 @@ static rsRetVal doRetry(nsd_ossl_t *pNsd) {
     switch (pNsd->rtryCall) {
         case osslRtry_handshake:
             dbgprintf("doRetry: start osslHandshakeCheck, nsd: %p\n", pNsd);
+            /* Reset retry flag before calling handshake check.
+             * If it needs more retries, it will set it again.
+             */
+            pNsd->rtryCall = osslRtry_None;
             /* Do the handshake again*/
             CHKiRet(osslHandshakeCheck(pNsdOSSL));
-            pNsd->rtryCall = osslRtry_None; /* we are done */
             break;
         case osslRtry_recv:
         case osslRtry_None:
