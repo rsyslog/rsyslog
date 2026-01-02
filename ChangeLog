@@ -2,7 +2,15 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
-- 2026-01-01: omfwd: add DNS SRV discovery (targetSrv)
+- 2026-01-02: tcpsrv: restore default stack size assignment
+  Worker threads need to be assigned the "rsyslog default stack size".
+  This is especially an issue with musl lib, which has a very small stack
+  size. As such, rsyslog can segfault without specifying our expected
+  Note that the segfault would most probably occur with imtcp when running
+  e.g. under Alpine Linux.
+  stack size.
+  closes https://github.com/rsyslog/rsyslog/issues/6357
+- 2026-01-02: omfwd: add DNS SRV discovery (targetSrv)
   Simplify large-scale configs by auto-discovering receivers via DNS SRV
   records. This reduces per-host configuration and helps enterprise and
   container setups where target pools change over time.
