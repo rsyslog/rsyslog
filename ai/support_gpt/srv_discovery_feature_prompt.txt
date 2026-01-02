@@ -1,0 +1,49 @@
+You are an expert rsyslog core/plugin developer.
+Your task: implement SRV-based target discovery for omfwd by adding a new
+configuration parameter that can be used instead of "target".
+
+Context
+- Large deployments want omfwd to auto-discover syslog receivers using DNS
+  SRV records (RFC 2782), similar to how Active Directory clients locate
+  LDAP services. Existing configs require a static "target" hostname/port.
+- The new parameter should let operators provide a domain or service name and
+  have omfwd resolve `_syslog._udp`/`_syslog._tcp` records to build the
+  forwarding target list.
+
+Feature requirements
+- Add a new omfwd parameter named `targetSrv` (string) that is mutually
+  exclusive with `target`. If `targetSrv` is set, omfwd must discover
+  servers via DNS SRV and bypass the static `target` host list.
+- Query `_syslog._udp.<targetSrv>` when the action’s transport is UDP and
+  `_syslog._tcp.<targetSrv>` when using TCP/TLS. Respect RFC 2782 priority
+  and weight when constructing the candidate list. Reuse the existing host
+  selection logic after converting SRV results into host+port pairs.
+- Provide a clear error path when SRV lookup fails or returns no usable
+  records (log a meaningful message and fail initialization). Allow multiple
+  SRV answers; ensure retry/failover respects priority/weight ordering.
+- Ensure the new parameter is reload-safe and works with both legacy (v5/6)
+  and RainerScript configuration syntax.
+
+Implementation checklist
+- Update omfwd parameter parsing/validation to accept `targetSrv`, enforce
+  mutual exclusivity with `target`, and propagate the resolved endpoints into
+  the existing connection setup.
+- Implement SRV resolution using the codebase’s resolver helpers (prefer
+  portable APIs already used for DNS/host lookups). Add a small, focused unit
+  helper if needed to map SRV priority/weight into a randomized ordering.
+- Add tests that cover: successful SRV discovery (UDP & TCP), priority/weight
+  ordering, missing SRV records, and the exclusivity check with `target`.
+- Document the new parameter in the omfwd reference and include an example
+  showing discovery against `_syslog._udp.example.com`.
+
+Deliverables
+- Code changes for omfwd implementing `targetSrv` as described.
+- Tests demonstrating SRV lookup behavior and error handling.
+- Documentation updates covering the new parameter and defaults.
+
+Guardrails
+- Maintain existing omfwd defaults; behavior is unchanged unless `targetSrv`
+  is set. Keep thread safety and action queue semantics intact.
+- Avoid adding new external dependencies; rely on existing resolver support.
+- Follow repository coding style and update concurrency/locking notes if
+  shared state changes.

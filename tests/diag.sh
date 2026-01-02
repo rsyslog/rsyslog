@@ -58,6 +58,8 @@
 # 77 - SKIP
 # 100 - Testbench failure
 export TB_ERR_TIMEOUT=101
+# Default module directory path for rsyslogd startup/config checks.
+RSYSLOG_MODDIR=${RSYSLOG_MODDIR:-"../runtime/.libs:../.libs"}
 # 177 - internal state: test failed, but in a way that makes us strongly believe
 #       this is caused by environment. This will lead to exit 77 (SKIP), but report
 #       the failure if failure reporting is active
@@ -194,6 +196,7 @@ require_plugin() {
                 "$plugin" "${candidates[*]}"
         exit 77
 }
+
 
 
 # a consistent format to output testbench timestamps
@@ -365,6 +368,13 @@ startup_common() {
 	fi
 	echo config $CONF_FILE is:
 	cat -n $CONF_FILE
+}
+
+# run rsyslogd config check (-N1) with default module dirs.
+# $1: config file name (optional), $2: instance (optional)
+rsyslogd_config_check() {
+	startup_common "$1" "$2"
+	eval LD_PRELOAD=$RSYSLOG_PRELOAD ../tools/rsyslogd -C -N1 -M"$RSYSLOG_MODDIR" -f$CONF_FILE $RS_REDIR
 }
 
 # wait for appearance of a specific pid file, given as $1
@@ -857,7 +867,7 @@ startup() {
 	else
 		n_option="-n"
 	fi
-	eval LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C $n_option -i$RSYSLOG_PIDBASE$instance.pid -M../runtime/.libs:../.libs -f$CONF_FILE $RS_REDIR &
+	eval LD_PRELOAD=$RSYSLOG_PRELOAD $valgrind ../tools/rsyslogd -C $n_option -i$RSYSLOG_PIDBASE$instance.pid -M"$RSYSLOG_MODDIR" -f$CONF_FILE $RS_REDIR &
 	wait_startup $instance
 	reassign_ports
 }
@@ -944,7 +954,7 @@ startup_vg_waitpid_only() {
 	# add --keep-debuginfo=yes for hard to find cases; this cannot be used generally,
 	# because it is only supported by newer versions of valgrind (else CI will fail
 	# on older platforms).
-	LD_PRELOAD=$RSYSLOG_PRELOAD valgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --suppressions=$srcdir/known_issues.supp ${EXTRA_VALGRIND_SUPPRESSIONS:-} --gen-suppressions=all --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=$RS_TESTBENCH_LEAK_CHECK ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$instance.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+	LD_PRELOAD=$RSYSLOG_PRELOAD valgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --suppressions=$srcdir/known_issues.supp ${EXTRA_VALGRIND_SUPPRESSIONS:-} --gen-suppressions=all --log-fd=1 --error-exitcode=10 --malloc-fill=ff --free-fill=fe --leak-check=$RS_TESTBENCH_LEAK_CHECK ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$instance.pid -M"$RSYSLOG_MODDIR" -f$CONF_FILE &
 	wait_rsyslog_startup_pid $1
 }
 
@@ -969,7 +979,7 @@ startup_vg_noleak() {
 # same as startup-vgthread, BUT we do NOT wait on the startup message!
 startup_vgthread_waitpid_only() {
 	startup_common "$1" "$2"
-	valgrind --tool=helgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --suppressions=$srcdir/linux_localtime_r.supp --suppressions=$srcdir/known_issues.supp ${EXTRA_VALGRIND_SUPPRESSIONS:-} --suppressions=$srcdir/CI/gcov.supp --gen-suppressions=all ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$2.pid -M../runtime/.libs:../.libs -f$CONF_FILE &
+	valgrind --tool=helgrind $RS_TEST_VALGRIND_EXTRA_OPTS $RS_TESTBENCH_VALGRIND_EXTRA_OPTS --log-fd=1 --error-exitcode=10 --suppressions=$srcdir/linux_localtime_r.supp --suppressions=$srcdir/known_issues.supp ${EXTRA_VALGRIND_SUPPRESSIONS:-} --suppressions=$srcdir/CI/gcov.supp --gen-suppressions=all ../tools/rsyslogd -C -n -i$RSYSLOG_PIDBASE$2.pid -M"$RSYSLOG_MODDIR" -f$CONF_FILE &
 	wait_rsyslog_startup_pid $2
 }
 

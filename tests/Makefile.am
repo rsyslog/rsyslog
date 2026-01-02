@@ -214,7 +214,7 @@ TESTS +=  \
 	omfwd-tls-invalid-permitExpiredCerts.sh \
 	omfwd-keepalive.sh \
 	omfwd-subtree-tpl.sh \
-    omfile-subtree-jsonf.sh \
+	omfile-subtree-jsonf.sh \
 	omusrmsg-errmsg-no-params.sh \
 	omusrmsg-noabort.sh \
 	omfile-module-params.sh \
@@ -2023,6 +2023,13 @@ TESTS +=  \
 endif
 endif # ENABLE_OMAMQP1
 
+if HAVE_SRV_DISCOVERY
+TESTS += \
+	omfwd-srv-discovery-tcp.sh \
+	omfwd-srv-discovery-udp.sh \
+	omfwd-srv-discovery-errors.sh
+endif # HAVE_SRV_DISCOVERY
+
 endif # if ENABLE_TESTBENCH
 
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
@@ -2035,10 +2042,14 @@ distclean-local:
 	rm -rf .dep_cache .dep_wrk
 
 EXTRA_DIST= \
-	set-envvars.in \
-	urlencode.py \
-	dnscache-TTL-0.sh \
+        set-envvars.in \
+        urlencode.py \
+        dns_srv_mock.py \
+        dnscache-TTL-0.sh \
 	dnscache-TTL-0-vg.sh \
+	omfwd-srv-discovery-tcp.sh \
+	omfwd-srv-discovery-udp.sh \
+	omfwd-srv-discovery-errors.sh \
 	loadbalance.sh \
 	smtradfile.sh \
 	smtradfile-vg.sh \
@@ -2381,15 +2392,18 @@ EXTRA_DIST= \
 	omfwd-lb-2target-basic.sh \
 	omfwd-lb-2target-impstats.sh \
 	omfwd-lb-2target-retry.sh \
-    omfwd-lb-2target-one_fail.sh \
-    omfwd-tls-invalid-permitExpiredCerts.sh \
-    omfwd-keepalive.sh \
-    omfwd-subtree-tpl.sh \
-    omfile-subtree-jsonf.sh \
-    omfwd_fast_imuxsock.sh \
-    omfile_hup-vg.sh \
+	omfwd-lb-2target-one_fail.sh \
+	omfwd-tls-invalid-permitExpiredCerts.sh \
+	omfwd-keepalive.sh \
+	omfwd-subtree-tpl.sh \
+	omfwd-srv-discovery-tcp.sh \
+	omfwd-srv-discovery-udp.sh \
+	omfwd-srv-discovery-errors.sh \
+	omfile-subtree-jsonf.sh \
+	omfwd_fast_imuxsock.sh \
+	omfile_hup-vg.sh \
 	omrelp-keepalive.sh \
-    omsendertrack-basic.sh \
+	omsendertrack-basic.sh \
 	omsendertrack-basic-vg.sh \
 	omsendertrack-statefile.sh \
 	omsendertrack-statefile-vg.sh \
