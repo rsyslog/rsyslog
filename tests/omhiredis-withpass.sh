@@ -19,6 +19,7 @@ template(name="outfmt" type="string" string="%msg%")
 
 local4.* {
         action(type="omhiredis"
+                name="omhiredis-withpass"
                 server="127.0.0.1"
                 serverport="'$REDIS_RANDOM_PORT'"
                 serverpassword="'${REDIS_PASSWORD}'"
@@ -32,7 +33,7 @@ action(type="omfile" file="'$RSYSLOG_DYNNAME.othermsg'" template="outfmt")
 '
 
 # Client MUST authentiate here!
-redis_command "AUTH ${REDIS_PASSWORD} \n GET outKey" > $RSYSLOG_OUT_LOG
+redis_command "AUTH ${REDIS_PASSWORD} \n TYPE outKey" > $RSYSLOG_OUT_LOG
 
 startup
 
@@ -46,14 +47,14 @@ wait_shutdown
 redis_command "AUTH ${REDIS_PASSWORD} \n GET outKey" >> $RSYSLOG_OUT_LOG
 
 # the "OK" replies are for authentication of the redis cli client
-export EXPECTED="/usr/bin/redis-cli
-OK
-
-/usr/bin/redis-cli
+export EXPECTED="OK
+none
 OK
  msgnum:00000001:"
 
 cmp_exact $RSYSLOG_OUT_LOG
+
+content_check "omhiredis[omhiredis-withpass]: trying connect to '127.0.0.1'" ${RSYSLOG_DYNNAME}.started
 
 stop_redis
 
