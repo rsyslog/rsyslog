@@ -51,6 +51,71 @@ burst
 
 The maximum number of messages allowed within the ``interval``.
 
+.. _ratelimit_persource:
+
+perSource
+^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "required", "default"
+   :widths: 20, 10, 20
+
+   "boolean", "no", "off"
+
+Enable per-source rate limiting using an external YAML policy.
+
+.. _ratelimit_persourcepolicy:
+
+perSourcePolicy
+^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "required", "default"
+   :widths: 20, 10, 20
+
+   "string", "no", "none"
+
+Path to the YAML file that defines per-source limits. Required when ``perSource`` is ``on``.
+The YAML file must define a ``default`` block with ``max`` and ``window`` values
+and may optionally include ``overrides`` keyed by exact sender values.
+
+.. code-block:: yaml
+
+   default:
+     max: 1000
+     window: 10s
+   overrides:
+     - key: "db01.corp.local"
+       max: 5000
+       window: 10s
+
+.. _ratelimit_persourcemaxstates:
+
+perSourceMaxStates
+^^^^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "required", "default"
+   :widths: 20, 10, 20
+
+   "integer", "no", "10000"
+
+Upper bound on the number of tracked sender keys for per-source limits. When the cap is reached,
+least-recently-used sender state is evicted.
+
+.. _ratelimit_persourcetopn:
+
+perSourceTopN
+^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "required", "default"
+   :widths: 20, 10, 20
+
+   "integer", "no", "10"
+
+Number of per-source drop counters to expose in statistics output (top-N by drops).
+
 Example
 -------
 
@@ -59,8 +124,16 @@ Example
    # Define a strict rate limit for public facing ports
    ratelimit(name="strict" interval="1" burst="50")
 
+   # Define per-source policy for TCP inputs
+   ratelimit(name="per_source"
+             perSource="on"
+             perSourcePolicy="/etc/rsyslog/imtcp-ratelimits.yaml")
+
    # Apply it to a TCP listener
    input(type="imtcp" port="10514" rateLimit.Name="strict")
 
    # Apply it to a Plain TCP listener
    input(type="imptcp" port="10515" rateLimit.Name="strict")
+
+   # Apply per-source limits to a TCP listener
+   input(type="imtcp" port="10514" rateLimit.Name="per_source" perSourceRate="on")

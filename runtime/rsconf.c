@@ -135,6 +135,7 @@ static uchar template_StdClickHouseFmt[] =
     "'%timereported:::date-unixtimestamp%', '%hostname%', '%syslogtag%', '%msg%')\",STDSQL";
 static uchar template_StdOmSenderTrack_senderid[] =
     "\"%fromhost-ip%\""; /* default template for omsendertrack "senderid" parameter*/
+static uchar template_PerSourceKey[] = "\"%hostname%\""; /* default template for per-source ratelimiting */
 /* end templates */
 
 /* tables for interfacing with the v6 config system (as far as we need to) */
@@ -151,7 +152,11 @@ static struct cnfparamdescr ratelimitpdescr[] = {{"name", eCmdHdlrString, CNFPAR
                                                  {"interval", eCmdHdlrInt, 0},
                                                  {"burst", eCmdHdlrInt, 0},
                                                  {"severity", eCmdHdlrSeverity, 0},
-                                                 {"policy", eCmdHdlrString, 0}};
+                                                 {"policy", eCmdHdlrString, 0},
+                                                 {"perSource", eCmdHdlrBinary, 0},
+                                                 {"perSourcePolicy", eCmdHdlrString, 0},
+                                                 {"perSourceMaxStates", eCmdHdlrInt, 0},
+                                                 {"perSourceTopN", eCmdHdlrInt, 0}};
 static struct cnfparamblk ratelimitpblk = {CNFPARAMBLK_VERSION, sizeof(ratelimitpdescr) / sizeof(struct cnfparamdescr),
                                            ratelimitpdescr};
 
@@ -485,6 +490,10 @@ static rsRetVal initFunc_ratelimit(struct cnfobj *o) {
     int burst = 10000;
     int severity = -1; /* -1 means not set/all */
     uchar *policy = NULL;
+    int per_source_enabled = 0;
+    uchar *per_source_policy = NULL;
+    int per_source_max_states = 0;
+    int per_source_topn = 0;
     DEFiRet;
 
     pvals = nvlstGetParams(o->nvlst, &ratelimitpblk, NULL);
@@ -504,15 +513,33 @@ static rsRetVal initFunc_ratelimit(struct cnfobj *o) {
             severity = (int)pvals[i].val.d.n;
         } else if (!strcmp(ratelimitpblk.descr[i].name, "policy")) {
             policy = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(ratelimitpblk.descr[i].name, "perSource")) {
+            per_source_enabled = (int)pvals[i].val.d.n;
+        } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourcePolicy")) {
+            per_source_policy = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourceMaxStates")) {
+            per_source_max_states = (int)pvals[i].val.d.n;
+        } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourceTopN")) {
+            per_source_topn = (int)pvals[i].val.d.n;
         }
     }
 
+    if (per_source_policy != NULL && !per_source_enabled) {
+        per_source_enabled = 1;
+    }
+    if (per_source_max_states < 0 || per_source_topn < 0) {
+        LogError(0, RS_RET_CONFIG_ERROR, "ratelimit: perSourceMaxStates/perSourceTopN must be >= 0 for '%s'", name);
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+
     CHKiRet(ratelimitAddConfig(loadConf, (char *)name, (unsigned)interval, (unsigned)burst, (intTiny)severity,
-                               (char *)policy));
+                               (char *)policy, per_source_enabled, (char *)per_source_policy,
+                               (unsigned)per_source_max_states, (unsigned)per_source_topn));
 
 finalize_it:
     free(name);
     free(policy);
+    free(per_source_policy);
     cnfparamvalsDestruct(pvals, &ratelimitpblk);
     RETiRet;
 }
@@ -1382,6 +1409,8 @@ static rsRetVal initLegacyConf(void) {
     tplAddLine(ourConf, " StdClickHouseFmt", &pTmp);
     pTmp = template_StdOmSenderTrack_senderid;
     tplAddLine(ourConf, " StdOmSenderTrack-senderid", &pTmp);
+    pTmp = template_PerSourceKey;
+    tplAddLine(ourConf, "RSYSLOG_PerSourceKey", &pTmp);
     pTmp = template_spoofadr;
     tplLastStaticInit(ourConf, tplAddLine(ourConf, "RSYSLOG_omudpspoofDfltSourceTpl", &pTmp));
 

@@ -594,6 +594,8 @@ EXTRA_DIST += \
     doc/source/reference/parameters/imtcp-ratelimit-burst.rst \
     doc/source/reference/parameters/imtcp-ratelimit-interval.rst \
     doc/source/reference/parameters/imtcp-ratelimit-name.rst \
+    doc/source/reference/parameters/imtcp-persourcerate.rst \
+    doc/source/reference/parameters/imtcp-persourcekeytpl.rst \
     doc/source/reference/parameters/imtcp-ruleset.rst \
     doc/source/reference/parameters/imtcp-socketbacklog.rst \
     doc/source/reference/parameters/imtcp-starvationprotection-maxreads.rst \

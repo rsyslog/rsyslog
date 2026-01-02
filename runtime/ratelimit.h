@@ -21,6 +21,15 @@
 #ifndef INCLUDED_RATELIMIT_H
 #define INCLUDED_RATELIMIT_H
 
+#include <stddef.h>
+#include "rsyslog.h"
+#include "statsobj.h"
+
+struct hashtable;
+struct ratelimit_ps_state_s;
+struct template;
+typedef struct statsobj_s statsobj_t;
+
 typedef struct ratelimit_shared_s {
     char *name;
     unsigned int interval;
@@ -28,6 +37,23 @@ typedef struct ratelimit_shared_s {
     intTiny severity;
     char *policy_file;
     pthread_mutex_t mut;
+    sbool per_source_enabled;
+    char *per_source_policy_file;
+    unsigned int per_source_default_max;
+    unsigned int per_source_default_window;
+    unsigned int per_source_max_states;
+    unsigned int per_source_topn;
+    struct hashtable *per_source_overrides;
+    struct hashtable *per_source_states;
+    struct ratelimit_ps_state_s *per_source_lru_head;
+    struct ratelimit_ps_state_s *per_source_lru_tail;
+    pthread_mutex_t per_source_mut;
+    statsobj_t *per_source_stats;
+    STATSCOUNTER_DEF(ctrPerSourceAllowed, mutCtrPerSourceAllowed);
+    STATSCOUNTER_DEF(ctrPerSourceDropped, mutCtrPerSourceDropped);
+    ctr_t **per_source_top_ctrs;
+    intctr_t *per_source_top_values;
+    char **per_source_top_keys;
 } ratelimit_shared_t;
 
 struct ratelimit_s {
@@ -61,7 +87,11 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
                             unsigned int interval,
                             unsigned int burst,
                             intTiny severity,
-                            const char *policy_file);
+                            const char *policy_file,
+                            sbool per_source_enabled,
+                            const char *per_source_policy_file,
+                            unsigned int per_source_max_states,
+                            unsigned int per_source_topn);
 void ratelimit_cfgsInit(ratelimit_cfgs_t *cfgs);
 void ratelimit_cfgsDestruct(ratelimit_cfgs_t *cfgs);
 void ratelimitSetThreadSafe(ratelimit_t *ratelimit);
@@ -71,6 +101,12 @@ void ratelimitSetSeverity(ratelimit_t *ratelimit, intTiny severity);
 rsRetVal ratelimitMsgCount(ratelimit_t *ratelimit, time_t tt, const char *const appname);
 rsRetVal ATTR_NONNULL(1, 2, 3) ratelimitMsg(ratelimit_t *ratelimit, smsg_t *pMsg, smsg_t **ppRep);
 rsRetVal ATTR_NONNULL(1, 3) ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, smsg_t *pMsg);
+rsRetVal ATTR_NONNULL(1, 3) ratelimitAddMsgPerSource(ratelimit_t *ratelimit,
+                                                     multi_submit_t *pMultiSub,
+                                                     smsg_t *pMsg,
+                                                     const char *per_source_key,
+                                                     size_t per_source_key_len,
+                                                     time_t tt);
 void ratelimitDestruct(ratelimit_t *pThis);
 int ratelimitChecked(ratelimit_t *ratelimit);
 rsRetVal ratelimitModInit(void);
