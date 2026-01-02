@@ -6,7 +6,8 @@
 . ${srcdir:=.}/diag.sh init
 export NUMMESSAGES=20000
 generate_conf
-add_conf '$MaxMessageSize 10k
+add_conf '$MaxMessageSize 100k
+# Intentionally allow 100k payloads to exercise large octet-counted frames.
 template(name="outfmt" type="string" string="%msg:F,58:2%,%msg:F,58:3%,%msg:F,58:4%\n")
 
 module(load="../plugins/imptcp/.libs/imptcp" threads="32" processOnPoller="off")
