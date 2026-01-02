@@ -1,0 +1,69 @@
+version: "3.9"
+
+services:
+  etl:
+    image: ${RSYSLOG_ETL_IMAGE:-rsyslog/rsyslog-etl:2025-10}
+    container_name: rsyslog-etl
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    environment:
+      # Toggle rsyslog UDP input module; keep set to "on" for imudp listener.
+      ENABLE_UDP: ${ENABLE_UDP:-on}
+      # Toggle rsyslog TCP input module; keep set to "on" for imtcp listener.
+      ENABLE_TCP: ${ENABLE_TCP:-on}
+      # Toggle rsyslog RELP input module; keep set to "on" to accept RELP on port 2514.
+      ENABLE_RELP: ${ENABLE_RELP:-on}
+      # Enable Vespa forwarding action defined in 70-vespa_ai.conf.
+      ENABLE_VESPA: ${ENABLE_VESPA:-on}
+      # Vespa namespace that receives normalized log events.
+      VESPA_NAMESPACE: ${VESPA_NAMESPACE:-default-namespace}
+      # Vespa document type used for schema alignment and indexing.
+      VESPA_DOCTYPE: ${VESPA_DOCTYPE:-default-doctype}
+      # Hostname or load balancer endpoint for the Vespa HTTP ingestion API.
+      VESPA_SERVER: ${VESPA_SERVER:-vespa.example.com}
+      # TCP port for the Vespa HTTP ingestion API (default 8080 for Vespa Cloud).
+      VESPA_PORT: ${VESPA_PORT:-8080}
+    ports:
+      # Expose syslog over TCP.
+      - target: 514
+        published: 514
+        protocol: tcp
+        mode: host
+      # Expose syslog over UDP.
+      - target: 514
+        published: 514
+        protocol: udp
+        mode: host
+      # Expose alternative TCP port for segregated ingestion pipelines.
+      - target: 2514
+        published: 2514
+        protocol: tcp
+        mode: host
+    volumes:
+      # Persist rsyslog state files and spools between container restarts.
+      - rsyslog-etl-spool:/var/spool/rsyslog
+    tmpfs:
+      # Store transient runtime files in memory to reduce disk churn.
+      - /tmp
+    healthcheck:
+      test: ["CMD-SHELL", "pidof rsyslogd >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - rsyslog-etl-net
+
+volumes:
+  rsyslog-etl-spool:
+    driver: local
+
+networks:
+  rsyslog-etl-net:
+    driver: bridge

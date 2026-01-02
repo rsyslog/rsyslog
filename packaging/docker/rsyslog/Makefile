@@ -4,7 +4,7 @@
 # New Naming Scheme:
 # Standard Image: rsyslog/rsyslog:<VERSION>
 # Functional Variants: rsyslog/rsyslog-<function>:<VERSION>
-# Functions: minimal, standard, collector, dockerlogs (extensible)
+# Functions: minimal, standard, collector, dockerlogs, etl (extensible)
 # Version: rsyslog version (e.g., 2025-04, matches rsyslog release)
 # ==============================================================================
 
@@ -40,23 +40,25 @@ RSYSLOG_FUNCTION_PREFIX = $(strip $(ORG_NAME)/rsyslog-)
 MINIMAL_IMAGE_NAME = $(strip $(RSYSLOG_FUNCTION_PREFIX)minimal)
 COLLECTOR_IMAGE_NAME = $(strip $(RSYSLOG_FUNCTION_PREFIX)collector)
 DOCKERLOGS_IMAGE_NAME = $(strip $(RSYSLOG_FUNCTION_PREFIX)dockerlogs)
+ETL_IMAGE_NAME = $(strip $(RSYSLOG_FUNCTION_PREFIX)etl)
 
 MINIMAL_IMAGE_TAG = $(strip $(MINIMAL_IMAGE_NAME):$(VERSION))
 COLLECTOR_IMAGE_TAG = $(strip $(COLLECTOR_IMAGE_NAME):$(VERSION))
 DOCKERLOGS_IMAGE_TAG = $(strip $(DOCKERLOGS_IMAGE_NAME):$(VERSION))
+ETL_IMAGE_TAG = $(strip $(ETL_IMAGE_NAME):$(VERSION))
 
 
 # --- Phony Targets (commands, not actual files) ---
 .PHONY: all build clean push all_push tag_latest push_latest help \
-        minimal standard collector dockerlogs \
-        build_minimal_image build_standard_image build_collector_image build_dockerlogs_image \
-        push_minimal push_standard push_collector push_dockerlogs \
+        minimal standard collector dockerlogs etl \
+        build_minimal_image build_standard_image build_collector_image build_dockerlogs_image build_etl_image \
+        push_minimal push_standard push_collector push_dockerlogs push_etl \
         rebuild_all
 
 # Default target: Builds all functional images.
-# Assumed layering: minimal -> standard -> (collector, dockerlogs)
-all: build_collector_image build_dockerlogs_image
-# build_standard_image is a dependency for collector and dockerlogs
+# Assumed layering: minimal -> standard -> (collector, dockerlogs, etl)
+all: build_collector_image build_dockerlogs_image build_etl_image
+# build_standard_image is a dependency for collector, dockerlogs, and etl
 # build_minimal_image is a dependency for standard
 
 # --- User-Friendly Build Targets ---
@@ -71,6 +73,9 @@ collector: build_collector_image
 
 dockerlogs: build_dockerlogs_image
 	@echo "Convenience target: Dockerlogs image build triggered."
+
+etl: build_etl_image
+	@echo "Convenience target: ETL image build triggered."
 
 
 # --- Core Build Logic ---
@@ -118,6 +123,19 @@ build_dockerlogs_image: build_standard_image \
 	              --build-arg RSYSLOG_IMG_VERSION=$(VERSION) \
 	              -f ./dockerlogs/Dockerfile ./dockerlogs
 
+# Build the etl rsyslog container.
+# Depends on 'build_standard_image'.
+build_etl_image: build_standard_image \
+                  ./etl/Dockerfile \
+                  ./etl/10-collector.conf \
+                  ./etl/70-vespa_ai.conf
+	@echo "--- Building ETL image: $(ETL_IMAGE_TAG) ---"
+	docker build $(DOCKER_BUILD_FLAGS) \
+	              -t $(ETL_IMAGE_TAG) \
+	              --build-arg BASE_IMAGE_TAG=$(STANDARD_IMAGE_TAG) \
+	              --build-arg RSYSLOG_IMG_VERSION=$(VERSION) \
+	              -f ./etl/Dockerfile ./etl
+
 # Generic build target, alias for 'all'.
 build: all
 
@@ -141,17 +159,22 @@ push_dockerlogs: build_dockerlogs_image
 	@echo "--- Pushing dockerlogs image: $(DOCKERLOGS_IMAGE_TAG) ---"
 	docker push $(DOCKERLOGS_IMAGE_TAG)
 
-all_push: push_minimal push_standard push_collector push_dockerlogs
+push_etl: build_etl_image
+	@echo "--- Pushing ETL image: $(ETL_IMAGE_TAG) ---"
+	docker push $(ETL_IMAGE_TAG)
+
+all_push: push_minimal push_standard push_collector push_dockerlogs push_etl
 	@echo "All images pushed successfully with version: $(VERSION)"
 
 # --- Tagging Targets ---
 # Ensures all images are built before attempting to tag them.
-tag_latest: build_minimal_image build_standard_image build_collector_image build_dockerlogs_image
+tag_latest: build_minimal_image build_standard_image build_collector_image build_dockerlogs_image build_etl_image
 	@echo "--- Tagging images with 'latest' ---"
 	docker tag $(STANDARD_IMAGE_TAG) $(STANDARD_IMAGE_NAME):latest
 	docker tag $(MINIMAL_IMAGE_TAG) $(MINIMAL_IMAGE_NAME):latest
 	docker tag $(COLLECTOR_IMAGE_TAG) $(COLLECTOR_IMAGE_NAME):latest
 	docker tag $(DOCKERLOGS_IMAGE_TAG) $(DOCKERLOGS_IMAGE_NAME):latest
+	docker tag $(ETL_IMAGE_TAG) $(ETL_IMAGE_NAME):latest
 	@echo "All images tagged with 'latest' in their respective repositories."
 
 push_latest: tag_latest
@@ -160,13 +183,14 @@ push_latest: tag_latest
 	docker push $(MINIMAL_IMAGE_NAME):latest
 	docker push $(COLLECTOR_IMAGE_NAME):latest
 	docker push $(DOCKERLOGS_IMAGE_NAME):latest
+	docker push $(ETL_IMAGE_NAME):latest
 	@echo "All 'latest' images pushed successfully."
 
 # --- Clean Target ---
 clean:
 	@echo "--- Cleaning up images ---"
-	docker rmi $(STANDARD_IMAGE_TAG) $(MINIMAL_IMAGE_TAG) $(COLLECTOR_IMAGE_TAG) $(DOCKERLOGS_IMAGE_TAG) || true
-	docker rmi $(STANDARD_IMAGE_NAME):latest $(MINIMAL_IMAGE_NAME):latest $(COLLECTOR_IMAGE_NAME):latest $(DOCKERLOGS_IMAGE_NAME):latest || true
+	docker rmi $(STANDARD_IMAGE_TAG) $(MINIMAL_IMAGE_TAG) $(COLLECTOR_IMAGE_TAG) $(DOCKERLOGS_IMAGE_TAG) $(ETL_IMAGE_TAG) || true
+	docker rmi $(STANDARD_IMAGE_NAME):latest $(MINIMAL_IMAGE_NAME):latest $(COLLECTOR_IMAGE_NAME):latest $(DOCKERLOGS_IMAGE_NAME):latest $(ETL_IMAGE_NAME):latest || true
 	@echo "Clean-up complete."
 
 # --- Help Target ---
@@ -174,11 +198,12 @@ help:
 	@echo "Usage: make [target] [VERSION=<tag>] [REBUILD=yes]"
 	@echo ""
 	@echo "Primary Build Targets:"
-	@echo "  all                - Builds all versioned images (minimal, standard, collector, dockerlogs)."
+	@echo "  all                - Builds all versioned images (minimal, standard, collector, dockerlogs, etl)."
 	@echo "  minimal            - Builds only the minimal image (versioned)."
 	@echo "  standard           - Builds only the standard image (versioned, builds minimal first)."
 	@echo "  collector          - Builds only the collector image (versioned, builds standard first)."
 	@echo "  dockerlogs         - Builds only the dockerlogs image (versioned, builds standard first)."
+	@echo "  etl                - Builds only the etl image (versioned, builds standard first)."
 	@echo "  rebuild_all        - Forces a rebuild of all images, bypassing Docker cache."
 	@echo ""
 	@echo "Push & Tagging Targets:"
@@ -186,6 +211,7 @@ help:
 	@echo "  push_standard      - Builds and pushes the rsyslog/rsyslog:<VERSION> image."
 	@echo "  push_collector     - Builds and pushes the rsyslog/rsyslog-collector:<VERSION> image."
 	@echo "  push_dockerlogs    - Builds and pushes the rsyslog/rsyslog-dockerlogs:<VERSION> image."
+	@echo "  push_etl           - Builds and pushes the rsyslog/rsyslog-etl:<VERSION> image."
 	@echo "  all_push           - Builds and pushes all versioned images."
 	@echo "  tag_latest         - Tags all built images with ':latest' in their respective repositories."
 	@echo "  push_latest        - Pushes all ':latest' tagged images."
