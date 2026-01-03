@@ -45,8 +45,8 @@ void ratelimitSetLinuxLike(ratelimit_t *ratelimit, unsigned int interval, unsign
 void ratelimitSetNoTimeCache(ratelimit_t *ratelimit);
 void ratelimitSetSeverity(ratelimit_t *ratelimit, intTiny severity);
 rsRetVal ratelimitMsgCount(ratelimit_t *ratelimit, time_t tt, const char *const appname);
-rsRetVal ratelimitMsg(ratelimit_t *ratelimit, smsg_t *pMsg, smsg_t **ppRep);
-rsRetVal ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, smsg_t *pMsg);
+rsRetVal ATTR_NONNULL(1, 2, 3) ratelimitMsg(ratelimit_t *ratelimit, smsg_t *pMsg, smsg_t **ppRep);
+rsRetVal ATTR_NONNULL(1, 3) ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, smsg_t *pMsg);
 void ratelimitDestruct(ratelimit_t *pThis);
 int ratelimitChecked(ratelimit_t *ratelimit);
 rsRetVal ratelimitModInit(void);

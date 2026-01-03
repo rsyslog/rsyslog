@@ -208,11 +208,15 @@ finalize_it:
  * If *ppRepMsg != NULL on return, the caller must enqueue that
  * message before the original message.
  */
-rsRetVal ratelimitMsg(ratelimit_t *__restrict__ const ratelimit, smsg_t *pMsg, smsg_t **ppRepMsg) {
+rsRetVal ATTR_NONNULL(1, 2, 3)
+    ratelimitMsg(ratelimit_t *__restrict__ const ratelimit, smsg_t *pMsg, smsg_t **ppRepMsg) {
     DEFiRet;
     rsRetVal localRet;
     int severity = 0;
 
+    assert(ratelimit != NULL);
+    assert(pMsg != NULL);
+    assert(ppRepMsg != NULL);
     *ppRepMsg = NULL;
 
     if (runConf->globals.bReduceRepeatMsgs || ratelimit->severity > 0) {
@@ -257,11 +261,13 @@ int ratelimitChecked(ratelimit_t *ratelimit) {
  * settings.
  * if pMultiSub == NULL, a single-message enqueue happens (under reconsideration)
  */
-rsRetVal ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, smsg_t *pMsg) {
+rsRetVal ATTR_NONNULL(1, 3) ratelimitAddMsg(ratelimit_t *ratelimit, multi_submit_t *pMultiSub, smsg_t *pMsg) {
     rsRetVal localRet;
     smsg_t *repMsg;
     DEFiRet;
 
+    assert(ratelimit != NULL);
+    assert(pMsg != NULL);
     localRet = ratelimitMsg(ratelimit, pMsg, &repMsg);
     if (pMultiSub == NULL) {
         if (repMsg != NULL) CHKiRet(submitMsg2(repMsg));
