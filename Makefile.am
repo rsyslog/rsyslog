@@ -269,6 +269,7 @@ EXTRA_DIST += \
     doc/source/development/coding_practices/defensive_coding.rst \
     doc/source/development/config_data_model.rst \
     doc/source/development/debugging.rst \
+    doc/source/development/design_decisions.rst \
     doc/source/development/dev_action_threads.rst \
     doc/source/development/dev_codestyle.rst \
     doc/source/development/dev_oplugins.rst \
@@ -342,6 +343,7 @@ EXTRA_DIST += \
     doc/source/proposals/index.rst \
     doc/source/queue_analogy_tv.png \
     doc/source/rainerscript/configuration_objects.rst \
+    doc/source/rainerscript/configuration_objects/ratelimit.rst \
     doc/source/rainerscript/constant_strings.rst \
     doc/source/rainerscript/control_structures.rst \
     doc/source/rainerscript/data_types.rst \
@@ -538,6 +540,7 @@ EXTRA_DIST += \
     doc/source/reference/parameters/imptcp-processonpoller.rst \
     doc/source/reference/parameters/imptcp-ratelimit-burst.rst \
     doc/source/reference/parameters/imptcp-ratelimit-interval.rst \
+    doc/source/reference/parameters/imptcp-ratelimit-name.rst \
     doc/source/reference/parameters/imptcp-ruleset.rst \
     doc/source/reference/parameters/imptcp-socketbacklog.rst \
     doc/source/reference/parameters/imptcp-supportoctetcountedframing.rst \
@@ -590,6 +593,9 @@ EXTRA_DIST += \
     doc/source/reference/parameters/imtcp-preservecase.rst \
     doc/source/reference/parameters/imtcp-ratelimit-burst.rst \
     doc/source/reference/parameters/imtcp-ratelimit-interval.rst \
+    doc/source/reference/parameters/imtcp-ratelimit-name.rst \
+    doc/source/reference/parameters/imtcp-persourcerate.rst \
+    doc/source/reference/parameters/imtcp-persourcekeytpl.rst \
     doc/source/reference/parameters/imtcp-ruleset.rst \
     doc/source/reference/parameters/imtcp-socketbacklog.rst \
     doc/source/reference/parameters/imtcp-starvationprotection-maxreads.rst \
@@ -617,6 +623,7 @@ EXTRA_DIST += \
     doc/source/reference/parameters/imudp-preservecase.rst \
     doc/source/reference/parameters/imudp-ratelimit-burst.rst \
     doc/source/reference/parameters/imudp-ratelimit-interval.rst \
+    doc/source/reference/parameters/imudp-ratelimit-name.rst \
     doc/source/reference/parameters/imudp-rcvbufsize.rst \
     doc/source/reference/parameters/imudp-ruleset.rst \
     doc/source/reference/parameters/imudp-schedulingpolicy.rst \

@@ -425,6 +425,8 @@ int fileno(FILE *stream);
 				  BEGIN INOBJ; return BEGINOBJ; }
 "percentile_stats"[ \n\t]*"("		{ cnfPrintToken(yytext); yylval.objType = CNFOBJ_PERCTILE_STATS;
 				  BEGIN INOBJ; return BEGINOBJ; }
+"ratelimit"[ \n\t]*"("		{ cnfPrintToken(yytext); yylval.objType = CNFOBJ_RATELIMIT;
+				  BEGIN INOBJ; return BEGINOBJ; }
 "include"[ \n\t]*"("		{ cnfPrintToken(yytext); BEGIN INOBJ; return BEGIN_INCLUDE; }
 "action"[ \n\t]*"("		{ cnfPrintToken(yytext); BEGIN INOBJ; return BEGIN_ACTION; }
 ^[ \t]*:\$?[a-z\-]+[ ]*,[ ]*!?[a-z]+[ ]*,[ ]*\"(\\\"|[^\"])*\"	{

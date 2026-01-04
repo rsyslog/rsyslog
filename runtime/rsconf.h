@@ -29,6 +29,7 @@
 #include "dynstats.h"
 #include "perctile_stats.h"
 #include "timezones.h"
+#include "ratelimit.h"
 
 /* --- configuration objects (the plan is to have ALL upper layers in this file) --- */
 
@@ -271,6 +272,7 @@ struct rsconf_s {
          */
         timezones_t timezones;
         qqueue_t *pMsgQueue; /* the main message queue */
+        ratelimit_cfgs_t ratelimit_cfgs;
 };
 
 

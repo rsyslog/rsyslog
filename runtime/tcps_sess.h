@@ -22,6 +22,7 @@
 #ifndef INCLUDED_TCPS_SESS_H
 #define INCLUDED_TCPS_SESS_H
 
+#include "rsyslog.h"
 #include "obj.h"
 #include "prop.h"
 
@@ -45,6 +46,7 @@ struct tcps_sess_s {
         prop_t *fromHost; /* host name we received messages from */
         prop_t *fromHostIP;
         prop_t *fromHostPort;
+        actWrkrIParams_t perSourceKeyParam; /**< reusable template buffer */
         void *pUsr; /* a user-pointer */
         rsRetVal (*DoSubmitMessage)(tcps_sess_t *, uchar *, int); /* submit message callback */
         int iMaxLine; /* fast lookup buffer for config property */

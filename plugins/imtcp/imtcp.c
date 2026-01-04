@@ -56,6 +56,7 @@
 #include "dirty.h"
 #include "cfsysline.h"
 #include "module-template.h"
+#include "template.h"
 #include "unicode-helper.h"
 #include "net.h"
 #include "netstrm.h"
@@ -72,8 +73,9 @@ MODULE_CNFNAME("imtcp")
 /* static data */
 DEF_IMOD_STATIC_DATA;
 DEFobjCurrIf(tcpsrv) DEFobjCurrIf(tcps_sess) DEFobjCurrIf(net) DEFobjCurrIf(netstrm) DEFobjCurrIf(ruleset)
+    DEFobjCurrIf(prop)
 
-    static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal);
+        static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal);
 
 /* Module static data */
 typedef struct tcpsrv_etry_s {
@@ -131,8 +133,8 @@ struct instanceConf_s {
     uchar *pszInputName; /* value for inputname property, NULL is OK and handled by core engine */
     uchar *dfltTZ;
     sbool bSPFramingFix;
-    unsigned int ratelimitInterval;
-    unsigned int ratelimitBurst;
+    int ratelimitInterval;
+    int ratelimitBurst;
     int iAddtlFrameDelim; /* addtl frame delimiter, e.g. for netscreen, default none */
     int maxFrameSize;
     int bUseFlowControl;
@@ -280,6 +282,9 @@ static struct cnfparamdescr inppdescr[] = {{"port", eCmdHdlrString, CNFPARAM_REQ
                                            {"ratelimit.interval", eCmdHdlrInt, 0},
                                            {"framingfix.cisco.asa", eCmdHdlrBinary, 0},
                                            {"ratelimit.burst", eCmdHdlrInt, 0},
+                                           {"ratelimit.name", eCmdHdlrString, 0},
+                                           {"perSourceRate", eCmdHdlrBinary, 0},
+                                           {"perSourceKeyTpl", eCmdHdlrString, 0},
                                            {"socketbacklog", eCmdHdlrNonNegInt, 0},
                                            {"networknamespace", eCmdHdlrString, 0}};
 static struct cnfparamblk inppblk = {CNFPARAMBLK_VERSION, sizeof(inppdescr) / sizeof(struct cnfparamdescr), inppdescr};
@@ -361,9 +366,13 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->pszInputName = NULL;
     inst->dfltTZ = NULL;
     inst->cnf_params->bSuppOctetFram = -1; /* unset */
+    inst->cnf_params->bPerSourceRateLimit = 0;
+    inst->cnf_params->bPerSourceKeyTplDefault = 1;
+    inst->cnf_params->pszPerSourceKeyTplName = NULL;
+    inst->cnf_params->pPerSourceKeyTpl = NULL;
     inst->bSPFramingFix = 0;
-    inst->ratelimitInterval = 0;
-    inst->ratelimitBurst = 10000;
+    inst->ratelimitInterval = -1;
+    inst->ratelimitBurst = -1;
 
     inst->pszNetworkNamespace = NULL;
     inst->pszStrmDrvrName = NULL;
@@ -561,10 +570,14 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
     if ((ustrcmp(inst->cnf_params->pszPort, UCHAR_CONSTANT("0")) == 0 &&
          inst->cnf_params->pszLstnPortFileName == NULL) ||
         ustrcmp(inst->cnf_params->pszPort, UCHAR_CONSTANT("0")) < 0) {
+        uchar *newPort = NULL;
         LogMsg(0, RS_RET_OK, LOG_WARNING, "imtcp: port 0 and no port file set -> using port 514 instead");
-        CHKmalloc(inst->cnf_params->pszPort = (uchar *)strdup("514"));
+        CHKmalloc(newPort = (uchar *)strdup("514"));
+        free((void *)inst->cnf_params->pszPort);
+        inst->cnf_params->pszPort = newPort;
     }
     tcpsrv.configureTCPListen(pOurTcpsrv, inst->cnf_params);
+    inst->cnf_params = NULL; /* ownership transferred to tcpsrv */
 
     tcpsrv_etry_t *etry;
     CHKmalloc(etry = (tcpsrv_etry_t *)calloc(1, sizeof(tcpsrv_etry_t)));
@@ -693,9 +706,16 @@ BEGINnewInpInst
         } else if (!strcmp(inppblk.descr[i].name, "keepalive.interval")) {
             inst->iKeepAliveIntvl = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
-            inst->ratelimitBurst = (unsigned int)pvals[i].val.d.n;
+            inst->ratelimitBurst = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
-            inst->ratelimitInterval = (unsigned int)pvals[i].val.d.n;
+            inst->ratelimitInterval = (int)pvals[i].val.d.n;
+        } else if (!strcmp(inppblk.descr[i].name, "ratelimit.name")) {
+            inst->cnf_params->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(inppblk.descr[i].name, "perSourceRate")) {
+            inst->cnf_params->bPerSourceRateLimit = (int)pvals[i].val.d.n;
+        } else if (!strcmp(inppblk.descr[i].name, "perSourceKeyTpl")) {
+            inst->cnf_params->pszPerSourceKeyTplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            inst->cnf_params->bPerSourceKeyTplDefault = 0;
         } else if (!strcmp(inppblk.descr[i].name, "preservecase")) {
             inst->bPreserveCase = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "socketbacklog")) {
@@ -707,6 +727,49 @@ BEGINnewInpInst
                 "imtcp: program error, non-handled "
                 "param '%s'\n",
                 inppblk.descr[i].name);
+        }
+    }
+
+    if (inst->cnf_params->pszRatelimitName != NULL) {
+        if (inst->ratelimitInterval != -1 || inst->ratelimitBurst != -1) {
+            LogError(0, RS_RET_INVALID_PARAMS,
+                     "imtcp: ratelimit.name is mutually exclusive with "
+                     "ratelimit.interval and ratelimit.burst - using named "
+                     "ratelimit");
+        }
+    } else {
+        if (inst->ratelimitInterval == -1) {
+            inst->ratelimitInterval = 0; /* off by default */
+        }
+        if (inst->ratelimitBurst == -1) {
+            inst->ratelimitBurst = 10000;
+        }
+    }
+
+    if (inst->cnf_params->bPerSourceRateLimit && inst->cnf_params->pszRatelimitName == NULL) {
+        LogError(0, RS_RET_INVALID_PARAMS,
+                 "imtcp: perSourceRate requires ratelimit.name to reference a ratelimit() object");
+        ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+    }
+
+    if (inst->cnf_params->bPerSourceRateLimit && inst->cnf_params->pPerSourceKeyTpl == NULL) {
+        if (inst->cnf_params->pszPerSourceKeyTplName != NULL) {
+            inst->cnf_params->pPerSourceKeyTpl =
+                tplFind(loadModConf->pConf, (char *)inst->cnf_params->pszPerSourceKeyTplName,
+                        strlen((char *)inst->cnf_params->pszPerSourceKeyTplName));
+            if (inst->cnf_params->pPerSourceKeyTpl == NULL) {
+                LogError(0, RS_RET_INVALID_PARAMS, "imtcp: perSourceKeyTpl template '%s' not found",
+                         inst->cnf_params->pszPerSourceKeyTplName);
+                ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+            }
+        } else {
+            inst->cnf_params->pPerSourceKeyTpl =
+                tplFind(loadModConf->pConf, (char *)"RSYSLOG_PerSourceKey", (int)strlen("RSYSLOG_PerSourceKey"));
+            if (inst->cnf_params->pPerSourceKeyTpl == NULL) {
+                LogError(0, RS_RET_INVALID_PARAMS, "imtcp: default perSourceKeyTpl 'RSYSLOG_PerSourceKey' not found");
+                ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
+            }
+            inst->cnf_params->bPerSourceKeyTplDefault = 1;
         }
     }
 finalize_it:
@@ -987,6 +1050,20 @@ BEGINfreeCnf
         free((void *)inst->pszStrmDrvrKeyFile);
         free((void *)inst->pszStrmDrvrCertFile);
         free((void *)inst->gnutlsPriorityString);
+        if (inst->cnf_params != NULL) {
+            if (inst->cnf_params->pInputName != NULL) {
+                prop.Destruct(&inst->cnf_params->pInputName);
+            }
+            free((void *)inst->cnf_params->pszPort);
+            free((void *)inst->cnf_params->pszAddr);
+            free((void *)inst->cnf_params->pszLstnPortFileName);
+            free((void *)inst->cnf_params->pszNetworkNamespace);
+            free((void *)inst->cnf_params->pszStrmDrvrName);
+            free((void *)inst->cnf_params->pszInputName);
+            free((void *)inst->cnf_params->pszRatelimitName);
+            free((void *)inst->cnf_params->pszPerSourceKeyTplName);
+            free((void *)inst->cnf_params);
+        }
         free((void *)inst->pszInputName);
         free((void *)inst->dfltTZ);
         if (inst->pPermPeersRoot != NULL) {
@@ -1153,6 +1230,7 @@ BEGINmodInit()
     CHKiRet(objUse(tcps_sess, LM_TCPSRV_FILENAME));
     CHKiRet(objUse(tcpsrv, LM_TCPSRV_FILENAME));
     CHKiRet(objUse(ruleset, CORE_COMPONENT));
+    CHKiRet(objUse(prop, CORE_COMPONENT));
 
     /* register config file handlers */
     CHKiRet(omsdRegCFSLineHdlr(UCHAR_CONSTANT("inputtcpserverrun"), 0, eCmdHdlrGetWord, addInstance, NULL,
