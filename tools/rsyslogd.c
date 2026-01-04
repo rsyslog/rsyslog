@@ -1812,6 +1812,7 @@ void processImInternal(void) {
     smsg_t *pMsg;
     smsg_t *repMsg;
 
+    assert(internalMsg_ratelimiter != NULL);
     while (iminternalRemoveMsg(&pMsg) == RS_RET_OK) {
         rsRetVal localRet = ratelimitMsg(internalMsg_ratelimiter, pMsg, &repMsg);
         if (repMsg != NULL) {
