@@ -2,6 +2,16 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-03: runtime/nsd_ossl.c: fix potential authmode authorization bypass
+  In the `ossl` driver, `doRetry` unconditionally cleared the `rtryCall` state after
+  calling `osslHandshakeCheck`, even if the handshake was still incomplete (e.g.,
+  returning `WANT_READ` and re-setting the retry flag). This caused subsequent receive
+  operations to assume the handshake was finished, potentially bypassing the
+  authorization check (`osslChkPeerAuth`).
+  This change ensures `rtryCall` is reset *before* attempting the handshake, so that
+  if `osslHandshakeCheck` sets it again, the state is preserved. This logic aligns
+  with the intent of the retry mechanism and prevents the bypass.
+  closes https://github.com/rsyslog/rsyslog/issues/6350
 - 2026-01-02: tcpsrv: restore default stack size assignment
   Worker threads need to be assigned the "rsyslog default stack size".
   This is especially an issue with musl lib, which has a very small stack
