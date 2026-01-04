@@ -29,6 +29,10 @@ nits outlined above, is a much more reliable solution than plain TCP
 syslog and so it is highly suggested to use RELP instead of plain TCP.
 Clients send messages to the RELP server via omrelp.
 
+**Note:** Unlike ``imtcp`` and ``imptcp``, ``imrelp`` does **not** support the ``MaxSessions`` parameter.
+It relies on the underlying ``librelp`` library, which does not currently implement a session limit.
+The number of concurrent sessions is limited only by system resources (e.g., file descriptors, memory).
+
 
 Notable Features
 ================
@@ -186,6 +190,8 @@ available starting rsyslog 7.5.1
 The following properties are maintained for each listener:
 
 -  **submitted** - total number of messages submitted for processing since startup
+
+**Note:** Unlike ``imtcp`` and ``imptcp``, ``imrelp`` does **not** provide session-related statistics such as ``sessions.opened``, ``sessions.closed``, or ``sessions.openfailed``. Only the ``submitted`` counter is available for ``imrelp``.
 
 
 Caveats/Known Bugs
