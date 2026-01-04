@@ -92,11 +92,11 @@ DEF_IMOD_STATIC_DATA /* must be present, starts static data */
     DEFobjCurrIf(glbl) DEFobjCurrIf(strm) DEFobjCurrIf(prop) DEFobjCurrIf(ruleset) DEFobjCurrIf(datetime)
         DEFobjCurrIf(statsobj)
 
-        extern int rs_siphash(const uint8_t *in,
-                              const size_t inlen,
-                              const uint8_t *k,
-                              uint8_t *out,
-                              const size_t outlen); /* see siphash.c */
+            extern int rs_siphash(const uint8_t *in,
+                                  const size_t inlen,
+                                  const uint8_t *k,
+                                  uint8_t *out,
+                                  const size_t outlen); /* see siphash.c */
 
 static int bLegacyCnfModGlobalsPermitted; /* are legacy module-global config parameters permitted? */
 
@@ -769,7 +769,18 @@ static rsRetVal ATTR_NONNULL(1, 2) act_obj_add(fs_edge_t *const edge,
 finalize_it:
     if (iRet != RS_RET_OK) {
         if (act != NULL) {
-            if (act->ratelimiter != NULL) ratelimitDestruct(act->ratelimiter);
+            /* Clean up stats resources if they were allocated */
+            if (act->stats != NULL) {
+                statsobj.Destruct(&act->stats);
+                DESTROY_ATOMIC_HELPER_MUT64(act->mutBytesProcessed);
+                DESTROY_ATOMIC_HELPER_MUT64(act->mutLinesProcessed);
+            }
+            if (act->ratelimiter != NULL) {
+                ratelimitDestruct(act->ratelimiter);
+            }
+            free(act->multiSub.ppMsgs);
+            free(act->basename);
+            free(act->source_name);
             free(act->name);
             free(act);
         }
