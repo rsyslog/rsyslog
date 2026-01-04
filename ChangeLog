@@ -2,6 +2,10 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-04: lookup_table: fix issue with int32 vs. int64
+  There were some issues with int32 overflow, which could lead to improper
+  lookup table returns. This has now been fixed.
+  Thanks to Janmejay Singh for the patch.
 - 2026-01-03: runtime/nsd_ossl.c: fix potential authmode authorization bypass
   In the `ossl` driver, `doRetry` unconditionally cleared the `rtryCall` state after
   calling `osslHandshakeCheck`, even if the handshake was still incomplete (e.g.,
