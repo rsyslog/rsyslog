@@ -191,7 +191,7 @@ The following properties are maintained for each listener:
 
 -  **submitted** - total number of messages submitted for processing since startup
 
-**Note:** We clarify this to avoid user confusion which we already experienced: ``imrelp`` does **not** provide session-related statistics such as ``sessions.opened``, ``sessions.closed``, or ``sessions.openfailed``. These counters are specific to the ``imptcp`` module. Only the ``submitted`` counter is available for ``imrelp``.
+**Note:** Unlike ``imtcp`` and ``imptcp``, ``imrelp`` does **not** provide session-related statistics such as ``sessions.opened``, ``sessions.closed``, or ``sessions.openfailed``. Only the ``submitted`` counter is available for ``imrelp``.
 
 
 Caveats/Known Bugs
