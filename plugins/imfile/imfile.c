@@ -784,7 +784,7 @@ static void detect_updates(fs_edge_t *const edge) {
                    e.g. file has been closed, so we will never have old inode (but
                         why was it closed then? --> check)
              */
-            r = fstat(act->ino, &fileInfo);
+            r = fstat(act->fd, &fileInfo);
             if (r == -1) {
                 time_t ttNow;
                 time(&ttNow);
