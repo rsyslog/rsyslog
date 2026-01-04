@@ -33,6 +33,7 @@
 #include <stdarg.h>
 #include <ctype.h>
 #include <signal.h>
+#include <inttypes.h>
 #include <netinet/in.h>
 #include <netdb.h>
 #include <sys/types.h>
@@ -233,12 +234,35 @@ finalize_it:
  */
 static const char diagDefaultHostname[] = "192.0.2.8";
 
-static rsRetVal doInjectNumericSuffixMsg(int iNum, ratelimit_t *ratelimiter) {
+static rsRetVal doInjectNumericSuffixMsg(int64_t iNum, ratelimit_t *ratelimiter) {
     uchar szMsg[1024];
     DEFiRet;
-    snprintf((char *)szMsg, sizeof(szMsg) / sizeof(uchar),
-             "<167>Mar  1 01:00:00 %s tag msgnum:%8.8d:", diagDefaultHostname, iNum);
+    snprintf((char *)szMsg, sizeof(szMsg) / sizeof(uchar), "<167>Mar  1 01:00:00 %s tag msgnum:%8.8" PRId64 ":",
+             diagDefaultHostname, iNum);
     iRet = doInjectMsg(szMsg, ratelimiter);
+    RETiRet;
+}
+
+static rsRetVal parseInt64Arg(const uchar *arg, const char *name, int64_t *outVal) {
+    char *end = NULL;
+    long long parsed = 0;
+    DEFiRet;
+
+    if (arg == NULL || *arg == '\0') {
+        LogError(0, RS_RET_PARAM_ERROR, "imdiag: missing %s argument", name);
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    errno = 0;
+    parsed = strtoll((const char *)arg, &end, 10);
+    if (errno == ERANGE || end == (char *)arg || (end != NULL && *end != '\0')) {
+        LogError(0, RS_RET_PARAM_ERROR, "imdiag: invalid %s value '%s'", name, arg);
+        ABORT_FINALIZE(RS_RET_PARAM_ERROR);
+    }
+
+    *outVal = (int64_t)parsed;
+
+finalize_it:
     RETiRet;
 }
 
@@ -248,9 +272,9 @@ static rsRetVal doInjectNumericSuffixMsg(int iNum, ratelimit_t *ratelimiter) {
  */
 static rsRetVal injectMsg(uchar *pszCmd, tcps_sess_t *pSess) {
     uchar wordBuf[1024];
-    int iFrom, nMsgs;
+    int64_t iFrom, nMsgs;
     uchar *literalMsg;
-    int i;
+    int64_t i;
     ratelimit_t *ratelimit = NULL;
     DEFiRet;
 
@@ -266,16 +290,16 @@ static rsRetVal injectMsg(uchar *pszCmd, tcps_sess_t *pSess) {
         CHKiRet(doInjectMsg(pszCmd, ratelimit));
         nMsgs = 1;
     } else { /* assume 2 args, (from_idx, count) */
-        iFrom = atoi((char *)wordBuf);
+        CHKiRet(parseInt64Arg(wordBuf, "from", &iFrom));
         getFirstWord(&pszCmd, wordBuf, sizeof(wordBuf), TO_LOWERCASE);
-        nMsgs = atoi((char *)wordBuf);
+        CHKiRet(parseInt64Arg(wordBuf, "count", &nMsgs));
         for (i = 0; i < nMsgs; ++i) {
             CHKiRet(doInjectNumericSuffixMsg(i + iFrom, ratelimit));
         }
     }
-    CHKiRet(sendResponse(pSess, "%d messages injected\n", nMsgs));
+    CHKiRet(sendResponse(pSess, "%" PRId64 " messages injected\n", nMsgs));
 
-    DBGPRINTF("imdiag: %d messages injected\n", nMsgs);
+    DBGPRINTF("imdiag: %" PRId64 " messages injected\n", nMsgs);
 
 finalize_it:
     if (ratelimit != NULL) ratelimitDestruct(ratelimit);

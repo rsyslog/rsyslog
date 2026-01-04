@@ -93,7 +93,7 @@ fi
 # modules we require
 PKG_CHECK_MODULES(LIBESTR, libestr >= 0.1.9)
 
-PKG_CHECK_MODULES([LIBFASTJSON], [libfastjson >= 0.99.8],,)
+PKG_CHECK_MODULES([LIBFASTJSON], [libfastjson >= 0.99.9],,)
 
 AC_DEFINE_UNQUOTED([PLATFORM_ID], ["${host}"], [platform id for display purposes])
 # we don't mind if we don't have the lsb_release utility. But if we have, it's

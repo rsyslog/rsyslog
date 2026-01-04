@@ -993,20 +993,20 @@ startup_vgthread() {
 }
 
 
-# inject messages via our inject interface (imdiag)
-# $1 is start message number, env var NUMMESSAGES is number of messages to inject
+## Inject messages via our inject interface (imdiag).
+## $1 is start message number, env var NUMMESSAGES is number of messages to inject.
 injectmsg() {
 	if [ "$3" != "" ] ; then
 		printf 'error: injectmsg only has two arguments, extra arg is %s\n' "$3"
 	fi
-	msgs=${2:-$NUMMESSAGES}
+	msgs=${2:-${NUMMESSAGES:-1}}
 	echo injecting $msgs messages
 	echo injectmsg "${1:-0}" "$msgs" | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT || error_exit  $?
 }
 
-# inject messages in INSTANCE 2 via our inject interface (imdiag)
+## Inject messages in INSTANCE 2 via our inject interface (imdiag).
 injectmsg2() {
-	msgs=${2:-$NUMMESSAGES}
+	msgs=${2:-${NUMMESSAGES:-1}}
 	echo injecting $msgs messages into instance 2
 	echo injectmsg "${1:-0}" "$msgs" $3 $4 | $TESTTOOL_DIR/diagtalker -p$IMDIAG_PORT2 || error_exit  $?
 	# TODO: some return state checking? (does it really make sense here?)

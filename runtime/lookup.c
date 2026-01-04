@@ -281,7 +281,10 @@ static int qs_arrcmp_uint32_index_val(const void *s1, const void *s2) {
     if (first_value < second_value) {
         return -1;
     }
-    return first_value - second_value;
+    if (first_value > second_value) {
+        return 1;
+    }
+    return 0;
 }
 
 static int qs_arrcmp_sprsArrtab(const void *s1, const void *s2) {
@@ -290,7 +293,10 @@ static int qs_arrcmp_sprsArrtab(const void *s1, const void *s2) {
     if (first_value < second_value) {
         return -1;
     }
-    return first_value - second_value;
+    if (first_value > second_value) {
+        return 1;
+    }
+    return 0;
 }
 
 /* comparison function for bsearch() and string array compare
@@ -310,7 +316,10 @@ static int bs_arrcmp_sprsArrtab(const void *s1, const void *s2) {
     if (key < array_member_value) {
         return -1;
     }
-    return key - array_member_value;
+    if (key > array_member_value) {
+        return 1;
+    }
+    return 0;
 }
 
 static inline const char *defaultVal(lookup_t *pThis) {
@@ -506,7 +515,14 @@ static rsRetVal build_ArrayTable(lookup_t *pThis, struct json_object *jtab, cons
             if (jindex == NULL || json_object_is_type(jindex, json_type_null)) {
                 NO_INDEX_ERROR("array", name);
             }
-            indexes[i].index = (uint32_t)json_object_get_int(jindex);
+            int64_t index_val = json_object_get_int64(jindex);
+            if (index_val < 0 || index_val > UINT32_MAX) {
+                LogError(0, RS_RET_INVALID_VALUE,
+                         "'array' lookup table name: '%s' has index '%lld' outside uint32 range", name,
+                         (long long)index_val);
+                ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+            }
+            indexes[i].index = (uint32_t)index_val;
             indexes[i].val = (uchar *)json_object_get_string(jvalue);
         }
         qsort(indexes, pThis->nmemb, sizeof(uint32_index_val_t), qs_arrcmp_uint32_index_val);
@@ -566,7 +582,14 @@ static rsRetVal build_SparseArrayTable(lookup_t *pThis, struct json_object *jtab
             if (jindex == NULL || json_object_is_type(jindex, json_type_null)) {
                 NO_INDEX_ERROR("sparseArray", name);
             }
-            pThis->table.sprsArr->entries[i].key = (uint32_t)json_object_get_int(jindex);
+            int64_t index_val = json_object_get_int64(jindex);
+            if (index_val < 0 || index_val > UINT32_MAX) {
+                LogError(0, RS_RET_INVALID_VALUE,
+                         "'sparseArray' lookup table name: '%s' has index '%lld' outside uint32 range", name,
+                         (long long)index_val);
+                ABORT_FINALIZE(RS_RET_INVALID_VALUE);
+            }
+            pThis->table.sprsArr->entries[i].key = (uint32_t)index_val;
             value = (uchar *)json_object_get_string(jvalue);
             uchar *const *const canonicalValueRef_ptr =
                 bsearch(value, pThis->interned_vals, pThis->interned_val_count, sizeof(uchar *), bs_arrcmp_str);
