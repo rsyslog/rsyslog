@@ -2,6 +2,22 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-05: mysql: stabilize async ommysql workers via proper thread init
+  ThreadSanitizer flagged potential races in the MySQL client library when
+  multiple workers run concurrently. While the rsyslog module architecture
+  already ensures per-worker isolation (each worker has its own connection
+  handle and data structures), the client library itself can trigger
+  TSAN reports or Valgrind aborts if thread initialization is not strictly
+  managed.
+  This patch improves stability by keeping mysql_thread_init/mysql_thread_end
+  paired per worker using a `threadInitialized` flag. This ensures the
+  client library stays correctly bound to rsyslog queue threads, avoiding
+  the Valgrind aborts seen in mysql-asyn-vg and potential TSAN warnings
+  without the need for heavy-handed mutex serialization or skipping tests.
+  Further changes:
+  - Use a per-worker reusable SQL buffer to reduce allocation overhead
+  - Overflow-safe SQL buffer growth (SIZE_MAX guard)
+  - tests/mysql-asyn.sh: Enabled for TSAN, as thread_init fixes the root cause
 - 2026-01-05: queue: re-implement queue size warnings
   This restores the warnings for invalid queue.highWaterMark and
   queue.lowWaterMark configurations which were reverted in a previous
