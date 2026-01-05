@@ -3293,6 +3293,7 @@ finalize_it:
 
 void qqueueCorrectParams(qqueue_t *pThis) {
     int goodval; /* a "good value" to use for comparisons (different objects) */
+    int needWarnHigh = 0, needWarnLow = 0;
 
     if (pThis->iMaxQueueSize < 100 && (pThis->qType == QUEUETYPE_LINKEDLIST || pThis->qType == QUEUETYPE_FIXED_ARRAY)) {
         LogMsg(0, RS_RET_OK_WARN, LOG_WARNING,
@@ -3355,16 +3356,43 @@ void qqueueCorrectParams(qqueue_t *pThis) {
     }
 
     /* now come parameter corrections and defaults */
-    if (pThis->iHighWtrMrk < 2 || pThis->iHighWtrMrk > pThis->iMaxQueueSize) {
+    if (pThis->iHighWtrMrk != -1 && (pThis->iHighWtrMrk < 2 || pThis->iHighWtrMrk > pThis->iMaxQueueSize)) {
+        needWarnHigh = 1;
+    }
+
+    if (pThis->iHighWtrMrk == -1 || needWarnHigh) {
         pThis->iHighWtrMrk = (pThis->iMaxQueueSize / 100) * 90;
         if (pThis->iHighWtrMrk == 0) { /* guard against very low max queue sizes! */
             pThis->iHighWtrMrk = pThis->iMaxQueueSize;
         }
+        if (needWarnHigh) {
+            LogMsg(0, RS_RET_CONF_PARSE_WARNING, LOG_WARNING,
+                   "queue \"%s\": queue.highWaterMark "
+                   "is invalid (must be between 2 and queue size). It has been automatically "
+                   "adjusted to %d. In any case, we strongly recommend to review the "
+                   "queue definition and resolve inconsistencies to guarantee "
+                   "the config really matches your intent.",
+                   obj.GetName((obj_t *)pThis), pThis->iHighWtrMrk);
+        }
     }
-    if (pThis->iLowWtrMrk < 2 || pThis->iLowWtrMrk > pThis->iMaxQueueSize || pThis->iLowWtrMrk > pThis->iHighWtrMrk) {
-        pThis->iLowWtrMrk = (pThis->iMaxQueueSize / 100) * 70;
+
+    if (pThis->iLowWtrMrk != -1 && (pThis->iLowWtrMrk < 2 || pThis->iLowWtrMrk > pThis->iHighWtrMrk)) {
+        needWarnLow = 1;
+    }
+
+    if (pThis->iLowWtrMrk == -1 || needWarnLow) {
+        pThis->iLowWtrMrk = (pThis->iHighWtrMrk * 7ll / 10);
         if (pThis->iLowWtrMrk == 0) {
             pThis->iLowWtrMrk = 1;
+        }
+        if (needWarnLow) {
+            LogMsg(0, RS_RET_CONF_PARSE_WARNING, LOG_WARNING,
+                   "queue \"%s\": queue.lowWaterMark "
+                   "is invalid (must be between 2 and highWaterMark). It has been automatically "
+                   "adjusted to %d. In any case, we strongly recommend to review the "
+                   "queue definition and resolve inconsistencies to guarantee "
+                   "the config really matches your intent.",
+                   obj.GetName((obj_t *)pThis), pThis->iLowWtrMrk);
         }
     }
 
