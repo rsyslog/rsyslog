@@ -578,6 +578,25 @@ static ATTR_NO_SANITIZE_THREAD rsRetVal emitPrometheusForObject(statsobj_t *o,
 }
 
 
+static rsRetVal generatePrometheusStats(rsRetVal (*cb)(void *, const char *), void *usrptr, int8_t bResetCtrs) {
+    statsobj_t *o;
+    DEFiRet;
+
+    /* For each statsobj in our linked list, emit Prometheus lines. */
+    for (o = objRoot; o != NULL; o = o->next) {
+        CHKiRet(emitPrometheusForObject(o, cb, usrptr, bResetCtrs));
+        /* If the object has a read_notifier, call it now */
+        if (o->read_notifier != NULL) {
+            o->read_notifier(o, o->read_notifier_ctx);
+        }
+    }
+    /* Optionally, handle sender stats as additional metrics:
+     * e.g. emit "rsyslog_sender_<sender> <nMsgs>" lines.
+     * For simplicity, we skip this, or you can extend similarly. */
+finalize_it:
+    RETiRet;
+}
+
 /* this function can be used to obtain all stats lines. In this case,
  * a callback must be provided. This module than iterates over all objects and
  * submits each stats line to the callback. The callback has two parameters:
@@ -594,18 +613,7 @@ static rsRetVal getAllStatsLines(rsRetVal (*cb)(void *, const char *),
 
 
     if (fmt == statsFmt_Prometheus) {
-        // TODO: move to function
-        /* For each statsobj in our linked list, emit Prometheus lines. */
-        for (o = objRoot; o != NULL; o = o->next) {
-            emitPrometheusForObject(o, cb, usrptr, bResetCtrs);
-            /* If the object has a read_notifier, call it now */
-            if (o->read_notifier != NULL) {
-                o->read_notifier(o, o->read_notifier_ctx);
-            }
-        }
-        /* Optionally, handle sender stats as additional metrics:
-         * e.g. emit "rsyslog_sender_<sender> <nMsgs>" lines.
-         * For simplicity, we skip this, or you can extend similarly. */
+        CHKiRet(generatePrometheusStats(cb, usrptr, bResetCtrs));
         FINALIZE;
     }
 
@@ -620,18 +628,7 @@ static rsRetVal getAllStatsLines(rsRetVal (*cb)(void *, const char *),
                 CHKiRet(getStatsLineCEE(o, &cstr, fmt, bResetCtrs));
                 break;
             case statsFmt_Prometheus:
-                // TODO: move to function
-                /* For each statsobj in our linked list, emit Prometheus lines. */
-                for (o = objRoot; o != NULL; o = o->next) {
-                    emitPrometheusForObject(o, cb, usrptr, bResetCtrs);
-                    /* If the object has a read_notifier, call it now */
-                    if (o->read_notifier != NULL) {
-                        o->read_notifier(o, o->read_notifier_ctx);
-                    }
-                }
-                /* Optionally, handle sender stats as additional metrics:
-                 * e.g. emit "rsyslog_sender_<sender> <nMsgs>" lines.
-                 * For simplicity, we skip this, or you can extend similarly. */
+                /* already handled above */
                 break;
             default:
                 // No action needed for other cases
