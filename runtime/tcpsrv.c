@@ -84,6 +84,11 @@ PRAGMA_IGNORE_Wswitch_enum MODULE_TYPE_LIB MODULE_TYPE_NOKEEP;
 /* defines */
 #define TCPSESS_MAX_DEFAULT 200 /* default for nbr of tcp sessions if no number is given */
 #define TCPLSTN_MAX_DEFAULT 20 /* default for nbr of listeners */
+/* Temporary marker value used to reserve a session slot during allocation.
+ * This is set before the actual session object is created to prevent
+ * other threads from selecting the same slot. Must be a non-NULL pointer
+ * value that is not a valid session pointer. */
+#define TCPSESS_SLOT_RESERVED ((tcps_sess_t *)(uintptr_t)1)
 
 /* static data */
 DEFobjStaticHelpers;
@@ -454,11 +459,20 @@ static rsRetVal ATTR_NONNULL() TCPSessTblInit(tcpsrv_t *const pThis) {
         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
 
+    /* Initialize mutex protecting session table access */
+    if (pthread_mutex_init(&pThis->mutSessions, NULL) != 0) {
+        DBGPRINTF("Error: TCPSessInit() could not initialize session table mutex.\n");
+        free(pThis->pSessions);
+        pThis->pSessions = NULL;
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+
 finalize_it:
     RETiRet;
 }
 
 
+#if !defined(ENABLE_IMTCP_EPOLL)
 /* find a free spot in the session table. If the table
  * is full, -1 is returned, else the index of the free
  * entry (0 or higher).
@@ -474,6 +488,7 @@ static int ATTR_NONNULL() TCPSessTblFindFreeSpot(tcpsrv_t *const pThis) {
 
     return ((i < pThis->iSessMax) ? i : -1);
 }
+#endif
 
 
 #if !defined(ENABLE_IMTCP_EPOLL)
@@ -484,6 +499,9 @@ static int ATTR_NONNULL() TCPSessTblFindFreeSpot(tcpsrv_t *const pThis) {
  * further entry in the table. Please note that the initial call
  * might as well return -1, if there is no session at all in the
  * session table.
+ * Temporary slot reservations (TCPSESS_SLOT_RESERVED) are also skipped
+ * to prevent race conditions where a slot is marked but the session
+ * object hasn't been created yet.
  */
 static int ATTR_NONNULL() TCPSessGetNxtSess(tcpsrv_t *pThis, const int iCurr) {
     register int i;
@@ -491,7 +509,10 @@ static int ATTR_NONNULL() TCPSessGetNxtSess(tcpsrv_t *pThis, const int iCurr) {
     ISOBJ_TYPE_assert(pThis, tcpsrv);
     assert(pThis->pSessions != NULL);
     for (i = iCurr + 1; i < pThis->iSessMax; ++i) {
-        if (pThis->pSessions[i] != NULL) break;
+        /* Skip NULL entries (free slots) and temporary reservations */
+        if (pThis->pSessions[i] != NULL && pThis->pSessions[i] != TCPSESS_SLOT_RESERVED) {
+            break;
+        }
     }
 
     return ((i < pThis->iSessMax) ? i : -1);
@@ -522,6 +543,9 @@ static void ATTR_NONNULL() deinit_tcp_listener(tcpsrv_t *const pThis) {
             i = TCPSessGetNxtSess(pThis, i);
         }
 #endif
+
+        /* Destroy mutex before freeing session table */
+        (void)pthread_mutex_destroy(&pThis->mutSessions);
 
         /* we are done with the session table - so get rid of it...  */
         free(pThis->pSessions);
@@ -656,7 +680,13 @@ static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
     tcps_sess_t *pSess = NULL;
     netstrm_t *pNewStrm = NULL;
     const tcpLstnParams_t *const cnf_params = pLstnInfo->cnf_params;
+#if !defined(ENABLE_IMTCP_EPOLL)
     int iSess = -1;
+#else
+    /* In EPOLL mode, iSess is not used but declared for code consistency */
+    int iSess ATTR_UNUSED;
+    (void)iSess; /* suppress unused variable warning */
+#endif
     struct sockaddr_storage *addr;
     uchar *fromHostFQDN = NULL;
     prop_t *fromHostIP = NULL;
@@ -670,13 +700,25 @@ static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
 
     CHKiRet(netstrm.AcceptConnReq(pStrm, &pNewStrm, connInfo));
 
-    /* Add to session list */
+    /* Add to session list - protect with mutex to prevent race conditions */
+#if !defined(ENABLE_IMTCP_EPOLL)
+    pthread_mutex_lock(&pThis->mutSessions);
     iSess = TCPSessTblFindFreeSpot(pThis);
     if (iSess == -1) {
+        pthread_mutex_unlock(&pThis->mutSessions);
         errno = 0;
         LogError(0, RS_RET_MAX_SESS_REACHED, "too many tcp sessions - dropping incoming request");
         ABORT_FINALIZE(RS_RET_MAX_SESS_REACHED);
     }
+    /* Mark slot as in-use by setting a temporary non-NULL value to prevent
+     * other threads from selecting the same slot. We'll set the actual session
+     * pointer later after construction succeeds. */
+    pThis->pSessions[iSess] = TCPSESS_SLOT_RESERVED;
+    pthread_mutex_unlock(&pThis->mutSessions);
+#else
+    /* In EPOLL mode, we don't use the session table, so no need to find a slot */
+    /* iSess is declared but intentionally unused in EPOLL builds */
+#endif
 
     if (pThis->bUseKeepAlive) {
         CHKiRet(netstrm.SetKeepAliveProbes(pNewStrm, pThis->iKeepAliveProbes));
@@ -762,7 +804,10 @@ static ATTR_NONNULL() rsRetVal SessAccept(tcpsrv_t *const pThis,
 
     *ppSess = pSess;
 #if !defined(ENABLE_IMTCP_EPOLL)
+    /* Update session table with actual session pointer (replacing temporary marker) */
+    pthread_mutex_lock(&pThis->mutSessions);
     pThis->pSessions[iSess] = pSess;
+    pthread_mutex_unlock(&pThis->mutSessions);
 #endif
     pSess = NULL; /* this is now also handed over */
 
@@ -779,6 +824,18 @@ finalize_it:
                      "established with host: %s (%s:%s)",
                      fromHostNameStr, fromHostIPStr, fromHostPortStr);
         }
+#if !defined(ENABLE_IMTCP_EPOLL)
+        /* If we reserved a session slot, release it */
+        if (iSess != -1) {
+            pthread_mutex_lock(&pThis->mutSessions);
+            /* Only clear if it's still our reservation marker (not already
+             * overwritten by another thread, which shouldn't happen but be safe) */
+            if (pThis->pSessions[iSess] == TCPSESS_SLOT_RESERVED) {
+                pThis->pSessions[iSess] = NULL;
+            }
+            pthread_mutex_unlock(&pThis->mutSessions);
+        }
+#endif
         if (pSess != NULL) tcps_sess.Destruct(&pSess);
         if (pNewStrm != NULL) netstrm.Destruct(&pNewStrm);
         if (fromHostIP != NULL) prop.Destruct(&fromHostIP);
@@ -835,7 +892,10 @@ static ATTR_NONNULL() rsRetVal closeSess(tcpsrv_t *const pThis, tcpsrv_io_descr_
     DESTROY_ATOMIC_HELPER_MUT(pioDescr->mut_isInError);
     free(pioDescr);
 #else
+    /* Protect session table removal with mutex */
+    pthread_mutex_lock(&pThis->mutSessions);
     pThis->pSessions[pioDescr->id] = NULL;
+    pthread_mutex_unlock(&pThis->mutSessions);
 #endif
     RETiRet;
 }

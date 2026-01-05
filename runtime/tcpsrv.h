@@ -170,6 +170,7 @@ struct tcpsrv_s {
         unsigned int ratelimitInterval;
         unsigned int ratelimitBurst;
         tcps_sess_t **pSessions; /**< array of all of our sessions */
+        pthread_mutex_t mutSessions; /**< mutex protecting pSessions array access */
         unsigned int starvationMaxReads;
         void *pUsr; /**< a user-settable pointer (provides extensibility for "derived classes")*/
         /* callbacks */

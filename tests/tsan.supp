@@ -12,7 +12,7 @@ fun:doSIGTTIN
 #fun:
 
 # actual bugs that should be fixed ASAP after TSAN is in place:
-fun:TCPSessTblFindFreeSpot
+# fun:TCPSessTblFindFreeSpot - FIXED: protected with mutSessions mutex
 fun:processWorksetItem
 
 fun:doLogMsg
