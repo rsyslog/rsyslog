@@ -2031,8 +2031,10 @@ static void wait_timeout(const sigset_t *sigmask) {
                 rc = recvfrom(SRC_FD, &srcpacket, SRCMSG, 0, &srcaddr, &addrsz);
                 if (rc < 0) {
                     if (errno != EINTR) {
-                        fprintf(stderr, "%s: ERROR: '%d' recvfrom\n", progname, errno);
-                        exit(1);  // TODO: this needs to be handled gracefully
+                        LogError(errno, NO_ERRCODE, "%s: ERROR: recvfrom failed - disabling AIX SRC", progname);
+                        src_exists = FALSE;
+                        rsRetVal = RS_RET_IO_ERROR; /* Or a more specific error code */
+                        ABORT_FINALIZE(rsRetVal);
                     } else { /* punt on short read */
                         return;
                     }
