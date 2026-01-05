@@ -272,14 +272,6 @@ Input Parameters
      - .. include:: ../../reference/parameters/imtcp-ratelimit-name.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
-   * - :ref:`param-imtcp-persourcerate`
-     - .. include:: ../../reference/parameters/imtcp-persourcerate.rst
-        :start-after: .. summary-start
-        :end-before: .. summary-end
-   * - :ref:`param-imtcp-persourcekeytpl`
-     - .. include:: ../../reference/parameters/imtcp-persourcekeytpl.rst
-        :start-after: .. summary-start
-        :end-before: .. summary-end
    * - :ref:`param-imtcp-ratelimit-interval`
      - .. include:: ../../reference/parameters/imtcp-ratelimit-interval.rst
         :start-after: .. summary-start

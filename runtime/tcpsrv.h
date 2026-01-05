@@ -47,8 +47,6 @@ typedef enum ETCPsyslogFramingAnomaly {
  * dynamically allocated fields) and will free it on error or when the listener
  * is torn down.
  */
-struct template;
-
 struct tcpLstnParams_s {
     const uchar *pszPort; /**< the ports the listener shall listen on */
     const uchar *pszAddr; /**< the addrs the listener shall listen on */
@@ -63,10 +61,6 @@ struct tcpLstnParams_s {
     ruleset_t *pRuleset; /**< associated ruleset */
     uchar dfltTZ[8]; /**< default TZ if none in timestamp; '\0' =No Default */
     uchar *pszRatelimitName; /**< name of rate limit configuration */
-    sbool bPerSourceRateLimit; /**< enable per-source ratelimit */
-    sbool bPerSourceKeyTplDefault; /**< default key template selection */
-    uchar *pszPerSourceKeyTplName; /**< template name for per-source key */
-    struct template *pPerSourceKeyTpl; /**< template used to compute per-source key */
 };
 
 /* list of tcp listen ports */

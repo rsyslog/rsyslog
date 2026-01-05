@@ -312,17 +312,19 @@ static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis,
     MsgSetRuleset(pMsg, cnf_params->pRuleset);
 
     STATSCOUNTER_INC(pThis->pLstnInfo->ctrSubmit, pThis->pLstnInfo->mutCtrSubmit);
-    if (cnf_params->bPerSourceRateLimit) {
+    if (pThis->pLstnInfo->ratelimiter->pShared->per_source_enabled) {
         const char *per_source_key = NULL;
         size_t per_source_key_len = 0;
         if ((pMsg->msgFlags & NEEDS_PARSING) != 0) {
             parser.ParseMsg(pMsg);
         }
-        if (cnf_params->bPerSourceKeyTplDefault || cnf_params->pPerSourceKeyTpl == NULL) {
+        if (pThis->pLstnInfo->ratelimiter->pShared->per_source_key_tpl == NULL ||
+            pThis->pLstnInfo->ratelimiter->pShared->per_source_key_tpl_default) {
             per_source_key = getHOSTNAME(pMsg);
             per_source_key_len = getHOSTNAMELen(pMsg);
         } else {
-            if (tplToString(cnf_params->pPerSourceKeyTpl, pMsg, &pThis->perSourceKeyParam, NULL) == RS_RET_OK) {
+            if (tplToString(pThis->pLstnInfo->ratelimiter->pShared->per_source_key_tpl, pMsg,
+                            &pThis->perSourceKeyParam, NULL) == RS_RET_OK) {
                 per_source_key = (const char *)pThis->perSourceKeyParam.param;
                 per_source_key_len = pThis->perSourceKeyParam.lenStr;
             }
