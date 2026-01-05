@@ -6,19 +6,15 @@
 - Support status: core-supported. Maturity: fully-mature.
 
 ## Build & dependencies
-- Configure with `--enable-elasticsearch` to compile this plugin.
-- `./devtools/codex-setup.sh` installs the required libcurl development headers
-  inside the sandbox.
-- Re-run `./configure` after toggling the flag; rerun `./autogen.sh` if you touch
-  `configure.ac`, any `Makefile.am`, or files under `m4/`.
+- **Efficient Build:** Use `make -j$(nproc) check TESTS=""` to build the module and test dependencies.
+- **Configure:** Run `./configure --enable-elasticsearch` (and other needed flags).
+- **Bootstrap:** Only run `./autogen.sh` if you touch `configure.ac`, `Makefile.am`, or `m4/`.
 
 ## Local testing
 - **Do not run the integration tests during routine agent work.** They require
   downloading and launching an Elasticsearch node, which is too heavy for the
   sandbox environment.
-- Compiling the module is sufficient validation. Rebuild the tree with
-  `./configure --enable-elasticsearch` followed by `make modules` to ensure the
-  plugin links correctly.
+- Compiling the module is sufficient validation. Run the efficient build command above.
 - Maintainers who need full coverage can enable the suite with
   `--enable-elasticsearch-tests=minimal` and run `make es-basic.log` (additional
   scenarios live beside it), but expect multi-minute startup overhead for the

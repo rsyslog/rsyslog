@@ -33,10 +33,11 @@ agents.
   should know about the new knob.
 
 ## Running tests locally
-- Build rsyslog first (`./autogen.sh`, `./configure --enable-testbench`,
-  `make -j$(nproc)`) so the testbench can load freshly built binaries and
-  modules. The same bootstrap commands are called out in `tests/README` under
-  “Quickstart”.
+- Build rsyslog first using the efficient incremental command:
+  ```bash
+  make -j$(nproc) check TESTS=""
+  ```
+  This ensures the testbench can load freshly built binaries and modules. If the `Makefile` is missing, see "Step 2" in the top-level `AGENTS.md`.
 - Execute individual scenarios directly for quick feedback
   (`./tests/imfile-basic.sh`).
 - Use `make check TESTS='script.sh'` when you need Automake logging,

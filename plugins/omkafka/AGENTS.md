@@ -6,13 +6,13 @@
 - Support status: contributor-supported. Maturity: mature.
 
 ## Build & dependencies
-- Configure with `--enable-omkafka` (optionally pair with `--enable-imkafka` for end-to-end tests).
-- `./devtools/codex-setup.sh` installs librdkafka headers inside the sandbox when available.
-- Re-run `./configure` after toggling Kafka-related flags; rerun `./autogen.sh` if you touch `configure.ac`, any `Makefile.am`, or files under `m4/`.
+- **Efficient Build:** Use `make -j$(nproc) check TESTS=""` to build the module and test dependencies.
+- **Configure:** Run `./configure --enable-omkafka` (and `--enable-imkafka` if needed).
+- **Bootstrap:** Only run `./autogen.sh` if you touch `configure.ac`, `Makefile.am`, or `m4/`.
 
 ## Local testing
 - **Skip the Kafka integration tests for routine agent tasks.** They download and run Kafka plus ZooKeeper, which exceeds the sandbox resource budget.
-- Build validation is sufficient: run `./configure --enable-omkafka` (and `--enable-imkafka` if desired) followed by `make modules` to confirm the plugin links.
+- Build validation is sufficient. Run the efficient build command above.
 - Maintainers who must exercise the suite can enable `--enable-kafka-tests` and run scripts such as `./tests/omkafka.sh`, but expect multi-minute startup time for the embedded Kafka cluster.
 
 ## Diagnostics & troubleshooting

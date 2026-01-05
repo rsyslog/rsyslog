@@ -10,18 +10,13 @@ These instructions apply to everything under `contrib/`.
   available in CI.  Document any manual setup that reviewers must perform.
 
 ## Build & bootstrap reminders
-- Run `./autogen.sh` before your first build in a fresh checkout and whenever
-  you modify autotools inputs (`configure.ac`, `Makefile.am`, files under `m4/`).  Expect
-  the bootstrap step to take up to about 2 minutes; you can skip it when the
-  task does not require building (for example, documentation-only changes).
-- Configure with the switches needed to include the contrib module.  Some
-  modules are disabled unless their dependencies are detected.  Use
-  `./configure --help` and the module's `MODULE_METADATA.yaml` to identify
-  the relevant `--enable`/`--with` flags.
-- Build with `make -j$(nproc)` and execute the most relevant smoke test
-  directly (for example `./tests/imtcp-basic.sh` or a module-specific script).
-  Reserve `make check` for cases where you must mirror CI or diagnose harness
-  behavior.
+- **Efficient Build:** Use `make -j$(nproc) check TESTS=""` to incrementally build the core and all test dependencies. This is the primary build command.
+- **Bootstrap/Configure:** Only run `./autogen.sh` and `./configure` if:
+    1.  The `Makefile` is missing (first run).
+    2.  You have modified `configure.ac`, `Makefile.am`, or `m4/` files.
+    3.  You need to change build options (e.g., enabling a new contrib module).
+    4.  You need to enable a module that requires specific flags (check `MODULE_METADATA.yaml`).
+- **Run Tests:** Execute the most relevant smoke/regression test directly (e.g., `./tests/imtcp-basic.sh`). Direct invocation keeps stdout/stderr visible. Use `make check` only when mirroring CI.
 
 ## Metadata required for every module
 Each contrib module directory (for example `contrib/mmkubernetes/`) must contain
