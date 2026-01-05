@@ -26,6 +26,7 @@
 #include "config.h"
 #include "rsyslog.h"
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -51,6 +52,7 @@ MODULE_CNFNAME("ommysql")
 
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal);
 
+
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA;
@@ -71,6 +73,9 @@ typedef struct wrkrInstanceData {
     instanceData *pData;
     MYSQL *hmysql; /* handle to MySQL */
     unsigned uLastMySQLErrno; /* last errno returned by MySQL or 0 if all is well */
+    bool threadInitialized; /* whether mysql_thread_init() succeeded */
+    char *sqlBuf; /* per-worker reusable SQL buffer */
+    size_t sqlBufCap; /* capacity of sqlBuf */
 } wrkrInstanceData_t;
 
 typedef struct configSettings_s {
@@ -110,6 +115,9 @@ ENDcreateInstance
 BEGINcreateWrkrInstance
     CODESTARTcreateWrkrInstance;
     pWrkrData->hmysql = NULL;
+    pWrkrData->threadInitialized = false;
+    pWrkrData->sqlBuf = NULL;
+    pWrkrData->sqlBufCap = 0;
 ENDcreateWrkrInstance
 
 
@@ -138,7 +146,11 @@ ENDfreeInstance
 BEGINfreeWrkrInstance
     CODESTARTfreeWrkrInstance;
     closeMySQL(pWrkrData);
-    mysql_thread_end();
+    if (pWrkrData->threadInitialized) {
+        mysql_thread_end();
+        pWrkrData->threadInitialized = false;
+    }
+    free(pWrkrData->sqlBuf);
 ENDfreeWrkrInstance
 
 
@@ -185,6 +197,14 @@ static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent) {
 
     assert(pWrkrData->hmysql == NULL);
     pData = pWrkrData->pData;
+
+    if (!pWrkrData->threadInitialized) {
+        if (mysql_thread_init()) {
+            LogError(0, RS_RET_SUSPENDED, "ommysql: failed to initialize thread for MySQL client library");
+            ABORT_FINALIZE(RS_RET_SUSPENDED);
+        }
+        pWrkrData->threadInitialized = true;
+    }
 
     pWrkrData->hmysql = mysql_init(NULL);
     if (pWrkrData->hmysql == NULL) {
@@ -243,8 +263,28 @@ static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, const uchar *const psz
         CHKiRet(initMySQL(pWrkrData, 0));
     }
 
+    /* ensure per-worker buffer exists and is large enough */
+    const size_t need = strlen((const char *)psz) + 1;
+    if (need > pWrkrData->sqlBufCap) {
+        size_t newCap = pWrkrData->sqlBufCap == 0 ? need : pWrkrData->sqlBufCap;
+        while (newCap < need) {
+            if (newCap > SIZE_MAX / 2) {
+                newCap = need; /* avoid overflow */
+                break;
+            }
+            newCap *= 2;
+        }
+        char *newBuf = realloc(pWrkrData->sqlBuf, newCap);
+        if (newBuf == NULL) {
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
+        pWrkrData->sqlBuf = newBuf;
+        pWrkrData->sqlBufCap = newCap;
+    }
+    memcpy(pWrkrData->sqlBuf, psz, need);
+
     /* try insert */
-    if (mysql_query(pWrkrData->hmysql, (char *)psz)) {
+    if (mysql_query(pWrkrData->hmysql, pWrkrData->sqlBuf)) {
         const int mysql_err = mysql_errno(pWrkrData->hmysql);
         /* We assume server error codes are non-recoverable, mainly data errors.
          * This also means we need to differentiate between client and server error
@@ -260,7 +300,8 @@ static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, const uchar *const psz
         /* potentially recoverable error occurred, try to re-init connection and retry */
         closeMySQL(pWrkrData); /* close the current handle */
         CHKiRet(initMySQL(pWrkrData, 0)); /* try to re-open */
-        if (mysql_query(pWrkrData->hmysql, (char *)psz)) { /* re-try insert */
+        /* retry with the same per-worker buffer contents */
+        if (mysql_query(pWrkrData->hmysql, pWrkrData->sqlBuf)) { /* re-try insert */
             /* we failed, giving up for now */
             DBGPRINTF("ommysql: suspending due to failed write of '%s'\n", psz);
             reportDBError(pWrkrData, 0);
@@ -287,9 +328,10 @@ ENDtryResume
 
 BEGINbeginTransaction
     CODESTARTbeginTransaction;
-    // NOTHING TO DO IN HERE
+    /* no-op: serialization is handled inside commitTransaction */
 ENDbeginTransaction
 
+/* no extra wrapper needed; locking is at transaction scope */
 BEGINcommitTransaction
     CODESTARTcommitTransaction;
     DBGPRINTF("ommysql: commitTransaction\n");
@@ -302,13 +344,10 @@ BEGINcommitTransaction
                 DBGPRINTF(
                     "ommysql: server error: hmysql is closed, transaction rollback "
                     "will not be tried (it probably already happened)\n");
-            } else {
-                if (mysql_rollback(pWrkrData->hmysql) != 0) {
-                    DBGPRINTF("ommysql: server error: transaction could not be rolled back\n");
-                }
-                closeMySQL(pWrkrData);
+            } else if (mysql_rollback(pWrkrData->hmysql) != 0) {
+                DBGPRINTF("ommysql: server error: transaction could not be rolled back\n");
             }
-            FINALIZE;
+            ABORT_FINALIZE(iRet);
         }
     }
 
@@ -319,6 +358,10 @@ BEGINcommitTransaction
     }
     DBGPRINTF("ommysql: transaction committed\n");
 finalize_it:
+    if (iRet != RS_RET_OK && iRet != RS_RET_PREVIOUS_COMMITTED && iRet != RS_RET_DEFER_COMMIT &&
+        pWrkrData->hmysql != NULL) {
+        closeMySQL(pWrkrData);
+    }
 ENDcommitTransaction
 
 static inline void setInstParamDefaults(instanceData *pData) {
