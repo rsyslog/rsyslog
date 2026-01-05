@@ -252,6 +252,48 @@ key     return
 100     baz
 ======  ==============
 
+**IPv4 Subnet Matching with sparseArray**:
+
+A common use case for ``sparseArray`` is matching IPv4 subnets. To do this,
+you must convert the IPv4 address to its integer representation using the
+``ipv42num()`` function. The table index should be the integer value of the
+*start* of each subnet or range.
+
+Since ``sparseArray`` matches the largest index less than or equal to the key,
+a defined index starts a range that continues until the next defined index.
+
+Example mapping:
+* ``10.0.0.0/24`` (Start: ``167772160``) -> "Office"
+* ``10.0.1.0/24`` (Start: ``167772416``) -> "Guest"
+* ``10.0.2.0/24`` (Start: ``167772672``) -> "Lab"
+
+Table file:
+
+::
+
+    { "version" : 1,
+      "nomatch" : "unknown",
+      "type" : "sparseArray",
+      "table" : [
+        {"index" : 167772160, "value" : "Office" },
+        {"index" : 167772416, "value" : "Guest" },
+        {"index" : 167772672, "value" : "Lab" }]}
+
+Configuration:
+
+::
+
+   lookup_table(name="net_map" file="/path/to/net_map.json")
+   # ...
+   set $.ip_num = ipv42num($fromhost-ip);
+   set $.network = lookup("net_map", $.ip_num);
+
+Note: Any IP between ``10.0.0.0`` and ``10.0.0.255`` will match "Office".
+Any IP between ``10.0.1.0`` and ``10.0.1.255`` will match "Guest".
+Any IP greater than or equal to ``10.0.2.0`` will match "Lab" (unless another
+entry follows). Be sure to define the start of "gaps" if you want them to
+return a different value or fallback to a default.
+
 **regex table**:
 
 ::

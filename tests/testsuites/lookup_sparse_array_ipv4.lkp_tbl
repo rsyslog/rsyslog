@@ -1,0 +1,7 @@
+{
+  "type" : "sparseArray",
+  "table":[
+      {"index": 167772160, "value":"NetA" },
+      {"index": 167772416, "value":"Gap" },
+      {"index": 167772672, "value":"NetB" }]
+}
