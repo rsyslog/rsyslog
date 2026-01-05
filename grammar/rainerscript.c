@@ -3252,6 +3252,102 @@ finalize_it:
     ret->d.n = result;
 }
 
+static void ATTR_NONNULL() doFunct_append_json(struct cnffunc *__restrict__ const func,
+                                               struct svar *__restrict__ const ret,
+                                               void *const usrptr,
+                                               wti_t *const pWti) {
+    struct svar srcVal[3];
+    struct json_object *result = NULL;
+    struct json_object *input = NULL;
+    enum json_type type;
+    char *key = NULL;
+    int bMustFree = 0;
+    int bMustFree2 = 0;
+    int nParamsEvaluated = 0;
+
+    memset(srcVal, 0, sizeof(srcVal));
+
+    cnfexprEval(func->expr[0], &srcVal[0], usrptr, pWti);
+
+    if (srcVal[0].datatype != 'J' || srcVal[0].d.json == NULL) {
+        goto finalize_it;
+    }
+
+    input = srcVal[0].d.json;
+    type = json_object_get_type(input);
+
+    if (type == json_type_array) {
+        cnfexprEval(func->expr[1], &srcVal[1], usrptr, pWti);
+        nParamsEvaluated = 1;
+
+        result = jsonDeepCopy(input);
+        if (result == NULL) {
+            goto finalize_it;
+        }
+
+        struct json_object *newElem = NULL;
+        if (srcVal[1].datatype == 'J') {
+            newElem = jsonDeepCopy(srcVal[1].d.json);
+        } else if (srcVal[1].datatype == 'S') {
+            char *str = (char *)var2CString(&srcVal[1], &bMustFree2);
+            if (str != NULL) {
+                newElem = json_object_new_string(str);
+            }
+            if (bMustFree2) free(str);
+        } else if (srcVal[1].datatype == 'N') {
+            newElem = json_object_new_int64(srcVal[1].d.n);
+        }
+        if (newElem != NULL) {
+            if (json_object_array_add(result, newElem) != 0) {
+                json_object_put(newElem);
+                json_object_put(result);
+                result = NULL;
+            }
+        }
+
+    } else if (type == json_type_object && func->nParams >= 3) {
+        cnfexprEval(func->expr[1], &srcVal[1], usrptr, pWti);
+        cnfexprEval(func->expr[2], &srcVal[2], usrptr, pWti);
+        nParamsEvaluated = 2;
+
+        key = (char *)var2CString(&srcVal[1], &bMustFree);
+        if (key == NULL) {
+            goto finalize_it;
+        }
+
+        result = jsonDeepCopy(input);
+        if (result == NULL) {
+            goto finalize_it;
+        }
+
+        struct json_object *newVal = NULL;
+        if (srcVal[2].datatype == 'J') {
+            newVal = jsonDeepCopy(srcVal[2].d.json);
+        } else if (srcVal[2].datatype == 'S') {
+            char *str = (char *)var2CString(&srcVal[2], &bMustFree2);
+            if (str != NULL) {
+                newVal = json_object_new_string(str);
+            }
+            if (bMustFree2) free(str);
+        } else if (srcVal[2].datatype == 'N') {
+            newVal = json_object_new_int64(srcVal[2].d.n);
+        }
+        if (newVal != NULL) {
+            json_object_object_add(result, key, newVal);
+        }
+    }
+
+finalize_it:
+    ret->datatype = 'J';
+    ret->d.json = result;
+
+    if (bMustFree) free(key);
+    varFreeMembers(&srcVal[0]);
+
+    if (nParamsEvaluated >= 1) varFreeMembers(&srcVal[1]);
+    if (nParamsEvaluated >= 2) varFreeMembers(&srcVal[2]);
+}
+
 static void evalVar(struct cnfvar *__restrict__ const var,
                     void *__restrict__ const usrptr,
                     struct svar *__restrict__ const ret) {
@@ -4032,6 +4128,7 @@ static struct scriptFunct functions[] = {
     {"b64_decode", 1, 1, doFunct_Base64Dec, NULL, NULL},
     {"split", 2, 2, doFunct_split, NULL, NULL},
     {"is_in_subnet", 2, 2, doFunct_is_in_subnet, NULL, NULL},
+    {"append_json", 2, 3, doFunct_append_json, NULL, NULL},
     {NULL, 0, 0, NULL, NULL, NULL}  // last element to check end of array
 };
 

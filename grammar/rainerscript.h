@@ -250,7 +250,8 @@ enum cnffuncid {
     CNFFUNC_SCRIPT_ERROR,
     CNFFUNC_HTTP_REQUEST,
     CNFFUNC_IS_TIME,
-    CNFFUNC_SPLIT
+    CNFFUNC_SPLIT,
+    CNFFUNC_APPEND_JSON
 };
 
 typedef struct cnffunc cnffunc_t;

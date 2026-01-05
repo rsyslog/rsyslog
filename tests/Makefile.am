@@ -462,6 +462,7 @@ TESTS +=  \
 	rscript-config_enable-on.sh \
 	rscript_get_property.sh \
 	rscript_split.sh \
+	rscript_append_json.sh \
 	config_output-o-option.sh \
 	rs-cnum.sh \
 	rs-substring.sh \
@@ -627,7 +628,8 @@ TESTS +=  \
 	threadingmqaq.sh \
 	func-substring-invld-startpos-vg.sh \
 	rscript_trim-vg.sh \
-	rscript_split-vg.sh
+	rscript_split-vg.sh \
+	rscript_append_json-vg.sh
 if ENABLE_LIBGCRYPT
 TESTS +=  \
 	queue-encryption-disk_keyfile-vg.sh
@@ -2347,6 +2349,8 @@ EXTRA_DIST= \
 	rscript_get_property-vg.sh \
 	rscript_split.sh \
 	rscript_split-vg.sh \
+	rscript_append_json.sh \
+	rscript_append_json-vg.sh \
 	rs-cnum.sh \
 	rs-int2hex.sh \
 	rs-substring.sh \
@@ -3242,6 +3246,7 @@ EXTRA_DIST= \
 	rscript_replace.sh \
 	rscript_replace_complex.sh \
 	rscript_split.sh \
+	rscript_append_json.sh \
 	testsuites/complex_replace_input \
 	rscript_unaffected_reset.sh \
 	rscript_wrap2.sh \
