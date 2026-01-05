@@ -365,7 +365,6 @@ static void freeLstnParams(tcpLstnParams_t *cnf_params) {
     free((void *)cnf_params->pszNetworkNamespace);
     free((void *)cnf_params->pszStrmDrvrName);
     free((void *)cnf_params->pszRatelimitName);
-    free((void *)cnf_params->pszPerSourceKeyTplName);
     free(cnf_params);
 }
 
@@ -399,12 +398,6 @@ static rsRetVal ATTR_NONNULL() addNewLstnPort(tcpsrv_t *const pThis, tcpLstnPara
         ratelimitSetLinuxLike(pEntry->ratelimiter, pThis->ratelimitInterval, pThis->ratelimitBurst);
     }
     ratelimitSetThreadSafe(pEntry->ratelimiter);
-    if (pEntry->cnf_params->bPerSourceRateLimit && !pEntry->ratelimiter->pShared->per_source_enabled) {
-        LogError(0, RS_RET_INVALID_PARAMS,
-                 "per-source ratelimit requested but ratelimit() policy '%s' has no perSourcePolicy configured",
-                 pEntry->cnf_params->pszRatelimitName ? (char *)pEntry->cnf_params->pszRatelimitName : "unnamed");
-    }
-
     CHKiRet(statsobj.Construct(&(pEntry->stats)));
     snprintf((char *)statname, sizeof(statname), "%s(%s)", cnf_params->pszInputName, cnf_params->pszPort);
     statname[sizeof(statname) - 1] = '\0'; /* just to be on the save side... */

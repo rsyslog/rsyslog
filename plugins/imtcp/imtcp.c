@@ -283,8 +283,6 @@ static struct cnfparamdescr inppdescr[] = {{"port", eCmdHdlrString, CNFPARAM_REQ
                                            {"framingfix.cisco.asa", eCmdHdlrBinary, 0},
                                            {"ratelimit.burst", eCmdHdlrInt, 0},
                                            {"ratelimit.name", eCmdHdlrString, 0},
-                                           {"perSourceRate", eCmdHdlrBinary, 0},
-                                           {"perSourceKeyTpl", eCmdHdlrString, 0},
                                            {"socketbacklog", eCmdHdlrNonNegInt, 0},
                                            {"networknamespace", eCmdHdlrString, 0}};
 static struct cnfparamblk inppblk = {CNFPARAMBLK_VERSION, sizeof(inppdescr) / sizeof(struct cnfparamdescr), inppdescr};
@@ -366,10 +364,6 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->pszInputName = NULL;
     inst->dfltTZ = NULL;
     inst->cnf_params->bSuppOctetFram = -1; /* unset */
-    inst->cnf_params->bPerSourceRateLimit = 0;
-    inst->cnf_params->bPerSourceKeyTplDefault = 1;
-    inst->cnf_params->pszPerSourceKeyTplName = NULL;
-    inst->cnf_params->pPerSourceKeyTpl = NULL;
     inst->bSPFramingFix = 0;
     inst->ratelimitInterval = -1;
     inst->ratelimitBurst = -1;
@@ -711,11 +705,6 @@ BEGINnewInpInst
             inst->ratelimitInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.name")) {
             inst->cnf_params->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
-        } else if (!strcmp(inppblk.descr[i].name, "perSourceRate")) {
-            inst->cnf_params->bPerSourceRateLimit = (int)pvals[i].val.d.n;
-        } else if (!strcmp(inppblk.descr[i].name, "perSourceKeyTpl")) {
-            inst->cnf_params->pszPerSourceKeyTplName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
-            inst->cnf_params->bPerSourceKeyTplDefault = 0;
         } else if (!strcmp(inppblk.descr[i].name, "preservecase")) {
             inst->bPreserveCase = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "socketbacklog")) {
@@ -746,32 +735,6 @@ BEGINnewInpInst
         }
     }
 
-    if (inst->cnf_params->bPerSourceRateLimit && inst->cnf_params->pszRatelimitName == NULL) {
-        LogError(0, RS_RET_INVALID_PARAMS,
-                 "imtcp: perSourceRate requires ratelimit.name to reference a ratelimit() object");
-        ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
-    }
-
-    if (inst->cnf_params->bPerSourceRateLimit && inst->cnf_params->pPerSourceKeyTpl == NULL) {
-        if (inst->cnf_params->pszPerSourceKeyTplName != NULL) {
-            inst->cnf_params->pPerSourceKeyTpl =
-                tplFind(loadModConf->pConf, (char *)inst->cnf_params->pszPerSourceKeyTplName,
-                        strlen((char *)inst->cnf_params->pszPerSourceKeyTplName));
-            if (inst->cnf_params->pPerSourceKeyTpl == NULL) {
-                LogError(0, RS_RET_INVALID_PARAMS, "imtcp: perSourceKeyTpl template '%s' not found",
-                         inst->cnf_params->pszPerSourceKeyTplName);
-                ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
-            }
-        } else {
-            inst->cnf_params->pPerSourceKeyTpl =
-                tplFind(loadModConf->pConf, (char *)"RSYSLOG_PerSourceKey", (int)strlen("RSYSLOG_PerSourceKey"));
-            if (inst->cnf_params->pPerSourceKeyTpl == NULL) {
-                LogError(0, RS_RET_INVALID_PARAMS, "imtcp: default perSourceKeyTpl 'RSYSLOG_PerSourceKey' not found");
-                ABORT_FINALIZE(RS_RET_INVALID_PARAMS);
-            }
-            inst->cnf_params->bPerSourceKeyTplDefault = 1;
-        }
-    }
 finalize_it:
     CODE_STD_FINALIZERnewInpInst cnfparamvalsDestruct(pvals, &inppblk);
 ENDnewInpInst
@@ -1061,7 +1024,6 @@ BEGINfreeCnf
             free((void *)inst->cnf_params->pszStrmDrvrName);
             free((void *)inst->cnf_params->pszInputName);
             free((void *)inst->cnf_params->pszRatelimitName);
-            free((void *)inst->cnf_params->pszPerSourceKeyTplName);
             free((void *)inst->cnf_params);
         }
         free((void *)inst->pszInputName);

@@ -43,6 +43,9 @@ typedef struct ratelimit_shared_s {
     unsigned int per_source_default_window;
     unsigned int per_source_max_states;
     unsigned int per_source_topn;
+    sbool per_source_key_tpl_default;
+    char *per_source_key_tpl_name;
+    struct template *per_source_key_tpl;
     struct hashtable *per_source_overrides;
     struct hashtable *per_source_states;
     struct ratelimit_ps_state_s *per_source_lru_head;
@@ -90,6 +93,7 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
                             const char *policy_file,
                             sbool per_source_enabled,
                             const char *per_source_policy_file,
+                            const char *per_source_key_tpl_name,
                             unsigned int per_source_max_states,
                             unsigned int per_source_topn);
 void ratelimit_cfgsInit(ratelimit_cfgs_t *cfgs);

@@ -155,6 +155,7 @@ static struct cnfparamdescr ratelimitpdescr[] = {{"name", eCmdHdlrString, CNFPAR
                                                  {"policy", eCmdHdlrString, 0},
                                                  {"perSource", eCmdHdlrBinary, 0},
                                                  {"perSourcePolicy", eCmdHdlrString, 0},
+                                                 {"perSourceKeyTpl", eCmdHdlrString, 0},
                                                  {"perSourceMaxStates", eCmdHdlrInt, 0},
                                                  {"perSourceTopN", eCmdHdlrInt, 0}};
 static struct cnfparamblk ratelimitpblk = {CNFPARAMBLK_VERSION, sizeof(ratelimitpdescr) / sizeof(struct cnfparamdescr),
@@ -492,6 +493,7 @@ static rsRetVal initFunc_ratelimit(struct cnfobj *o) {
     uchar *policy = NULL;
     int per_source_enabled = 0;
     uchar *per_source_policy = NULL;
+    uchar *per_source_key_tpl = NULL;
     int per_source_max_states = 0;
     int per_source_topn = 0;
     DEFiRet;
@@ -517,6 +519,8 @@ static rsRetVal initFunc_ratelimit(struct cnfobj *o) {
             per_source_enabled = (int)pvals[i].val.d.n;
         } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourcePolicy")) {
             per_source_policy = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourceKeyTpl")) {
+            per_source_key_tpl = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourceMaxStates")) {
             per_source_max_states = (int)pvals[i].val.d.n;
         } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourceTopN")) {
@@ -534,12 +538,13 @@ static rsRetVal initFunc_ratelimit(struct cnfobj *o) {
 
     CHKiRet(ratelimitAddConfig(loadConf, (char *)name, (unsigned)interval, (unsigned)burst, (intTiny)severity,
                                (char *)policy, per_source_enabled, (char *)per_source_policy,
-                               (unsigned)per_source_max_states, (unsigned)per_source_topn));
+                               (char *)per_source_key_tpl, (unsigned)per_source_max_states, (unsigned)per_source_topn));
 
 finalize_it:
     free(name);
     free(policy);
     free(per_source_policy);
+    free(per_source_key_tpl);
     cnfparamvalsDestruct(pvals, &ratelimitpblk);
     RETiRet;
 }

@@ -37,6 +37,7 @@
 #include "dirty.h"
 #include "hashtable.h"
 #include "statsobj.h"
+#include "template.h"
 #include "hashtable_itr.h"
 #ifdef HAVE_LIBYAML
     #include <yaml.h>
@@ -68,6 +69,7 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(datetime) DEFobjCurrIf(parser) DEFobjCurrIf(stat
         }
     }
     free(shared->per_source_top_keys);
+    free(shared->per_source_key_tpl_name);
     if (shared->per_source_enabled) {
         pthread_mutex_destroy(&shared->per_source_mut);
     }
@@ -623,6 +625,9 @@ static rsRetVal ratelimitInitPerSourceShared(ratelimit_shared_t *shared,
     shared->per_source_default_max = policy->default_max;
     shared->per_source_default_window = policy->default_window;
     shared->per_source_overrides = policy->overrides;
+    shared->per_source_key_tpl_default = 0;
+    shared->per_source_key_tpl_name = NULL;
+    shared->per_source_key_tpl = NULL;
     shared->per_source_states = create_hashtable(128, hash_from_string, key_equals_string, ratelimitFreePerSourceState);
     if (shared->per_source_states == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     shared->per_source_max_states = (max_states == 0) ? RATELIMIT_PERSOURCE_DEFAULT_MAX_STATES : max_states;
@@ -776,6 +781,7 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
                             const char *policy_file,
                             sbool per_source_enabled,
                             const char *per_source_policy_file,
+                            const char *per_source_key_tpl_name,
                             unsigned int per_source_max_states,
                             unsigned int per_source_topn) {
     DEFiRet;
@@ -857,6 +863,28 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
                 free(per_source_policy);
                 per_source_policy = NULL;
             }
+            if (per_source_key_tpl_name != NULL) {
+                if (existing_shared->per_source_key_tpl_name == NULL) {
+                    existing_shared->per_source_key_tpl_name = strdup(per_source_key_tpl_name);
+                    if (existing_shared->per_source_key_tpl_name == NULL) {
+                        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+                    }
+                    existing_shared->per_source_key_tpl =
+                        tplFind(conf, existing_shared->per_source_key_tpl_name,
+                                (int)strlen(existing_shared->per_source_key_tpl_name));
+                    if (existing_shared->per_source_key_tpl == NULL) {
+                        LogError(0, RS_RET_CONFIG_ERROR, "ratelimit: perSourceKeyTpl '%s' not found for '%s'",
+                                 existing_shared->per_source_key_tpl_name, name);
+                        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+                    }
+                    existing_shared->per_source_key_tpl_default = 0;
+                } else if (strcmp(existing_shared->per_source_key_tpl_name, per_source_key_tpl_name) != 0) {
+                    LogError(0, RS_RET_CONFIG_ERROR,
+                             "ratelimit: perSourceKeyTpl is immutable for '%s' (existing: %s, new: %s)", name,
+                             existing_shared->per_source_key_tpl_name, per_source_key_tpl_name);
+                    ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+                }
+            }
         }
         pthread_rwlock_unlock(&conf->ratelimit_cfgs.lock);
         FINALIZE;
@@ -881,6 +909,26 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
         free(per_source_policy);
         per_source_policy = NULL;
         CHKiRet(iRet);
+        if (per_source_key_tpl_name != NULL) {
+            CHKmalloc(shared->per_source_key_tpl_name = strdup(per_source_key_tpl_name));
+            shared->per_source_key_tpl =
+                tplFind(conf, shared->per_source_key_tpl_name, (int)strlen(shared->per_source_key_tpl_name));
+            if (shared->per_source_key_tpl == NULL) {
+                LogError(0, RS_RET_CONFIG_ERROR, "ratelimit: perSourceKeyTpl '%s' not found for '%s'",
+                         per_source_key_tpl_name, name);
+                ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+            }
+            shared->per_source_key_tpl_default = 0;
+        } else {
+            char default_tpl[] = "RSYSLOG_PerSourceKey";
+            shared->per_source_key_tpl = tplFind(conf, default_tpl, (int)sizeof(default_tpl) - 1);
+            if (shared->per_source_key_tpl == NULL) {
+                LogError(0, RS_RET_CONFIG_ERROR,
+                         "ratelimit: default perSourceKeyTpl 'RSYSLOG_PerSourceKey' not found for '%s'", name);
+                ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+            }
+            shared->per_source_key_tpl_default = 1;
+        }
     }
 
     if (hashtable_insert(conf->ratelimit_cfgs.ht, key, shared) == 0) {
@@ -919,6 +967,7 @@ finalize_it:
             }
         }
         free(shared->per_source_top_keys);
+        free(shared->per_source_key_tpl_name);
         if (shared->per_source_enabled) {
             pthread_mutex_destroy(&shared->per_source_mut);
         }

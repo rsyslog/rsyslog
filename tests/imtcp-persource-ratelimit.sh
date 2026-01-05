@@ -26,15 +26,13 @@ generate_conf
 add_conf '
 template(name="PerSourceKey" type="string" string="%hostname%")
 
-ratelimit(name="per_source" perSource="on" perSourcePolicy="'$POLICY_FILE'")
+ratelimit(name="per_source" perSource="on" perSourcePolicy="'$POLICY_FILE'" perSourceKeyTpl="PerSourceKey")
 
 module(load="../plugins/imtcp/.libs/imtcp")
 input(type="imtcp"
       port="0"
       listenPortFileName="'$RSYSLOG_DYNNAME'.tcp.port"
-      ratelimit.name="per_source"
-      perSourceRate="on"
-      perSourceKeyTpl="PerSourceKey")
+      ratelimit.name="per_source")
 
 template(name="outfmt" type="string" string="host=%hostname% msg=%msg%\n")
 action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")

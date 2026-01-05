@@ -89,6 +89,20 @@ and may optionally include ``overrides`` keyed by exact sender values.
        max: 5000
        window: 10s
 
+.. _ratelimit_persourcekeytpl:
+
+perSourceKeyTpl
+^^^^^^^^^^^^^^^
+
+.. csv-table::
+   :header: "type", "required", "default"
+   :widths: 20, 10, 20
+
+   "string", "no", "RSYSLOG_PerSourceKey"
+
+Template that computes the per-source key. The default template is equivalent to
+``%hostname%``.
+
 .. _ratelimit_persourcemaxstates:
 
 perSourceMaxStates
@@ -127,7 +141,8 @@ Example
    # Define per-source policy for TCP inputs
    ratelimit(name="per_source"
              perSource="on"
-             perSourcePolicy="/etc/rsyslog/imtcp-ratelimits.yaml")
+             perSourcePolicy="/etc/rsyslog/imtcp-ratelimits.yaml"
+             perSourceKeyTpl="PerSourceKey")
 
    # Apply it to a TCP listener
    input(type="imtcp" port="10514" rateLimit.Name="strict")
@@ -136,4 +151,25 @@ Example
    input(type="imptcp" port="10515" rateLimit.Name="strict")
 
    # Apply per-source limits to a TCP listener
-   input(type="imtcp" port="10514" rateLimit.Name="per_source" perSourceRate="on")
+   input(type="imtcp" port="10514" rateLimit.Name="per_source")
+
+Per-source key examples
+-----------------------
+
+.. code-block:: rsyslog
+
+   # Key by IP address
+   template(name="PerSourceIP" type="string" string="%fromhost-ip%")
+   ratelimit(name="per_source_ip"
+             perSource="on"
+             perSourcePolicy="/etc/rsyslog/imtcp-ratelimits.yaml"
+             perSourceKeyTpl="PerSourceIP")
+   input(type="imtcp" port="514" rateLimit.Name="per_source_ip")
+
+   # Key by hostname (default)
+   template(name="PerSourceHost" type="string" string="%hostname%")
+   ratelimit(name="per_source_host"
+             perSource="on"
+             perSourcePolicy="/etc/rsyslog/imtcp-ratelimits.yaml"
+             perSourceKeyTpl="PerSourceHost")
+   input(type="imtcp" port="514" rateLimit.Name="per_source_host")
