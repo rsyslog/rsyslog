@@ -13,9 +13,8 @@ core but are compiled directly into the rsyslog binary:
 ## Build & testing expectations
 - These modules are always built as part of the default configuration; no
   additional `./configure` flags are required.
-- Follow the top-level build workflow: run `./autogen.sh` only when autotools
-  inputs change, configure with the options your change requires, and rebuild via
-  `make`.
+- **Efficient Build:** Use `make -j$(nproc) check TESTS=""` to incrementally build the tools and test dependencies.
+- **Bootstrap:** Run `./autogen.sh` only when autotools inputs change.
 - There are no standalone regression scripts for these built-in modules. When
   modifying them, rely on targeted configuration tests under `tests/` (e.g.
   `./tests/omfile-basic.sh`) or add new ones as needed.

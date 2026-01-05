@@ -21,21 +21,13 @@ collection, and process orchestration).
 - `timezones.c`, `datetime.c`: time conversion helpers.
 
 ## Build & validation
-- Bootstrap with `./autogen.sh` only when build scripts change (see root
-  instructions) and configure with `./configure --enable-testbench` so runtime
-  helpers used by the testbench stay available. Run these commands from the
-  repository root, not from within `runtime/`.
-- Build the core with `make -j$(nproc)`; this compiles the runtime and shared
-  libraries that tests dynamically load via `-M../runtime/.libs:../.libs`.
-- Prefer targeted test runs over a full `make check`:
-  - Directly invoke the most relevant shell test under `tests/` (e.g.
-    `./tests/queue-persist.sh`).
-  - Use `make check TESTS='<script>.sh'` when you need automake’s harness or
-    Valgrind variants (`*-vg.sh`).
+- **Efficient Build:** Use `make -j$(nproc) check TESTS=""` to incrementally build the core, shared libraries, and test dependencies. This ensures that tests can dynamically load the runtime via `-M../runtime/.libs`.
+- **Bootstrap/Configure:** Run `./autogen.sh` and `./configure --enable-testbench` only when build scripts change (`configure.ac`, `Makefile.am`, etc.) or if the `Makefile` is missing. Run these from the repository root.
+- **Run Tests:** Prefer targeted test runs:
+  - Directly invoke the most relevant shell test under `tests/` (e.g. `./tests/queue-persist.sh`).
+  - Use `make check TESTS='<script>.sh'` when you need automake’s harness or Valgrind variants (`*-vg.sh`).
   - For configuration validation edits, run `./tests/validation-run.sh`.
-- When changing exported symbols, update `runtime/Makefile.am` and ensure the
-  library version script (if touched) remains consistent with existing
-  SONAME policies.
+- When changing exported symbols, update `runtime/Makefile.am` and ensure the library version script (if touched) remains consistent with existing SONAME policies.
 
 ## Coding expectations
 - Follow `COMMENTING_STYLE.md` and add/update "Concurrency & Locking" blocks in

@@ -9,6 +9,10 @@ These instructions apply to files inside `plugins/omotel/`.
 - Refresh the concurrency note in `omotel.c` if locking expectations change.
 - Run `devtools/format-code.sh` before committing.
 
+## Build & dependencies
+- **Efficient Build:** Use `make -j$(nproc) check TESTS=""`.
+- **Configure:** Use `--enable-omotel` to enable this module.
+
 ## Testing
 - Run `tests/omotel-http-batch.sh` to exercise the HTTP batching, gzip, and
   retry path.

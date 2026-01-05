@@ -27,15 +27,19 @@ sudo apt-get update && sudo apt-get install -y \
 
 ### Step 2: Build the Project
 
-Build the project with a recommended set of `./configure` options that enables the testbench and a common set of modules suitable for most development and testing tasks.
+Build the project efficiently. The following command incrementally builds the core and all test dependencies without running the full suite.
+
+```bash
+make -j$(nproc) check TESTS=""
+```
+
+**Note:** If the `Makefile` is missing (first run) or you need to change build options, run the full bootstrap sequence first:
 
 ```bash
 ./autogen.sh
 ./configure --enable-testbench --enable-imdiag --enable-omstdout --enable-mmsnareparse --enable-omotel --enable-imhttp
-make -j$(nproc)
+make -j$(nproc) check TESTS=""
 ```
-
-**Note:** If `autogen.sh` has been run before, you only need to run it again if `configure.ac` or `Makefile.am` files have changed.
 
 ### Step 3: Run Tests
 
@@ -116,30 +120,32 @@ When the user says the codeword "SETUP", do the following:
 
 When the user says the codeword "BUILD" optionally followed by configure options, do the following:
 
-1. **Generate the autotools build system** (if not already done):
+1. **Check for existing build configuration**:
+   - If a `Makefile` exists and no new configure options are provided, **SKIP** to Step 3.
+
+2. **Generate and Configure** (if Makefile is missing or options provided):
    ```bash
    ./autogen.sh
    ```
-
-2. **Configure the project**:
-   - If configure options are provided after "BUILD", use them:
+   - If configure options are provided:
      ```bash
      ./configure [user-provided-options]
      ```
-   - If no options are provided, use the default testbench configuration:
+   - If no options are provided:
      ```bash
-     ./configure --enable-testbench --enable-imdiag --enable-omstdout
+     ./configure --enable-testbench --enable-imdiag --enable-omstdout --enable-mmsnareparse --enable-omotel --enable-imhttp
      ```
 
 3. **Build the project**:
+   Use the efficient incremental build command that prepares all test binaries:
    ```bash
-   make -j$(nproc)
+   make -j$(nproc) check TESTS=""
    ```
 
 Examples:
-- `BUILD` - Uses default testbench configuration
-- `BUILD --enable-testbench --enable-mmsnareparse` - Custom configuration with mmsnareparse module
-- `BUILD --enable-testbench --enable-imdiag --enable-omstdout --enable-mmsnareparse --enable-omotel` - Multiple modules
+- `BUILD` (Makefile exists) - Runs `make -j$(nproc) check TESTS=""` directly.
+- `BUILD` (First run) - Runs autogen, default configure, then make.
+- `BUILD --enable-imkafka` - Runs autogen, custom configure, then make.
 
 ### `TEST [test-script-names]`
 

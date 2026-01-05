@@ -8,7 +8,8 @@
 
 ## Build & dependencies
 - Built automatically when plugins are enabled; no extra configure flags or external dependencies.
-- Follow the repository-wide autotools guidance (rerun `./autogen.sh` only when autotools inputs change).
+- **Efficient Build:** Use `make -j$(nproc) check TESTS=""`.
+- **Bootstrap:** Run `./autogen.sh` only when autotools inputs change.
 
 ## Local testing
 - There is no standalone test suite for `omruleset`. Building rsyslog with `make` is sufficient validation.
