@@ -2,6 +2,18 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-05: queue: re-implement queue size warnings
+  This restores the warnings for invalid queue.highWaterMark and
+  queue.lowWaterMark configurations which were reverted in a previous
+  commit due to regressions.
+  The logic has been improved to only emit warnings if the user
+  explicitly configured an invalid value (i.e., not the default -1).
+  Previously, default values (which are -1) were triggering the warnings
+  incorrectly.
+  See also https://github.com/rsyslog/rsyslog/issues/5615
+  See also https://github.com/rsyslog/rsyslog/issues/5586
+  See also https://github.com/rsyslog/rsyslog/issues/5676
+  closes https://github.com/rsyslog/rsyslog/issues/5677
 - 2026-01-04: lookup_table: fix issue with int32 vs. int64
   There were some issues with int32 overflow, which could lead to improper
   lookup table returns. This has now been fixed.
