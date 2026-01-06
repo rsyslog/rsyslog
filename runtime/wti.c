@@ -9,7 +9,7 @@
  * (and in the web doc set on https://www.rsyslog.com/doc/). Be sure to read it
  * if you are getting aquainted to the object.
  *
- * Copyright 2008-2025 Adiscon GmbH.
+ * Copyright 2008-2026 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -119,6 +119,17 @@ rsRetVal ATTR_NONNULL() wtiSetState(wti_t *pThis, const int newVal) {
         ATOMIC_OR_INT_TO_INT(&pThis->bIsRunning, &pThis->mutIsRunning, newVal);
     }
     return RS_RET_OK;
+}
+
+/* Compare and Set state (atomic).
+ */
+rsRetVal ATTR_NONNULL() wtiCASState(wti_t *pThis, const int oldVal, const int newVal) {
+    ISOBJ_TYPE_assert(pThis, wti);
+    if (ATOMIC_CAS(&pThis->bIsRunning, oldVal, newVal, &pThis->mutIsRunning)) {
+        return RS_RET_OK;
+    } else {
+        return RS_RET_FALSE;
+    }
 }
 
 

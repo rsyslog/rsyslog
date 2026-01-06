@@ -8,7 +8,7 @@
  * (and in the web doc set on https://www.rsyslog.com/doc/). Be sure to read it
  * if you are getting aquainted to the object.
  *
- * Copyright 2008-2018 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2026 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -454,7 +454,7 @@ static rsRetVal ATTR_NONNULL() wtpStartWrkr(wtp_t *const pThis, const int permit
     wtpJoinTerminatedWrkr(pThis);
     /* find free spot in thread table. */
     for (i = 0; i < pThis->iNumWorkerThreads; ++i) {
-        if (wtiGetState(pThis->pWrkr[i]) == WRKTHRD_STOPPED) {
+        if (wtiCASState(pThis->pWrkr[i], WRKTHRD_STOPPED, WRKTHRD_INITIALIZING) == RS_RET_OK) {
             break;
         }
     }
@@ -466,7 +466,6 @@ static rsRetVal ATTR_NONNULL() wtpStartWrkr(wtp_t *const pThis, const int permit
     }
 
     pWti = pThis->pWrkr[i];
-    wtiSetState(pWti, WRKTHRD_INITIALIZING);
     iState = pthread_create(&(pWti->thrdID), &pThis->attrThrd, wtpWorker, (void *)pWti);
     ATOMIC_INC(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd); /* we got one more! */
 
