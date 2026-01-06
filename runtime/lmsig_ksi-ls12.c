@@ -99,15 +99,6 @@ BEGINobjDestruct(lmsig_ksi_ls12) /* be sure to specify the object type also in E
     rsksiCtxDel(pThis->ctx);
 ENDobjDestruct(lmsig_ksi_ls12)
 
-#define REPORT_PARAM_MISSING(param)                                                                         \
-    do {                                                                                                    \
-        pThis->ctx->disabled = true;                                                                        \
-        LogError(0, RS_RET_ERR, "%s missing - signing disabled", param);                                    \
-        /* TODO: ABORT_FINALIZE actually is useless because the return value is not checked by the caller*/ \
-        ABORT_FINALIZE(RS_RET_KSI_ERR);                                                                     \
-    } while (0)
-
-
 /* apply all params from param block to us. This must be called
  * after construction, but before the OnFileOpen() entry point.
  * Defaults are expected to have been set during construction.
