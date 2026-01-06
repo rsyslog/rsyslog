@@ -2,6 +2,18 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-06: runtime: fix race condition in worker thread startup
+  Fixed a critical race condition in `wtpStartWrkr` where the same worker thread
+  instance (`wti_t`) could be started twice if multiple threads called `wtpStartWrkr`
+  concurrently. This occurred because the check for `WRKTHRD_STOPPED` and the
+  subsequent transition to `WRKTHRD_INITIALIZING` were not atomic.
+  The fix introduces a new `wtiCASState` function that uses atomic Compare-And-Swap
+  to safely reserve a worker slot. This ensures that only one thread can successfully
+  transition a worker from `STOPPED` to `INITIALIZING`, preventing duplicate reuse.
+  This resolves crashes and memory corruption seen in threaded outputs (e.g., ommysql)
+  where thread-local data was incorrectly shared between two active threads.
+  Note that such conditions only occured under pressure. There were no bug
+  reports from practice, we detected this via CI.
 - 2026-01-05: mysql: stabilize async ommysql workers via proper thread init
   ThreadSanitizer flagged potential races in the MySQL client library when
   multiple workers run concurrently. While the rsyslog module architecture
