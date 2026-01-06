@@ -105,6 +105,7 @@ rsRetVal wtiCancelThrd(wti_t *const pThis, const uchar *const cancelobj);
 void ATTR_NONNULL() wtiJoinThrd(wti_t *const pThis);
 rsRetVal wtiSetAlwaysRunning(wti_t *const pThis);
 rsRetVal wtiSetState(wti_t *const pThis, int bNew);
+rsRetVal wtiCASState(wti_t *const pThis, const int oldVal, const int newVal);
 rsRetVal wtiWakeupThrd(wti_t *const pThis);
 int wtiGetState(wti_t *const pThis);
 wti_t *wtiGetDummy(void);
