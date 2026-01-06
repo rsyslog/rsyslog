@@ -1944,7 +1944,9 @@ static int sendTLS(int __attribute__((unused)) i,
 static void closeTLSSess(int __attribute__((unused)) i) {}
 
 static void initDTLSSess(void) {}
-static int sendDTLS(char *buf, size_t lenBuf) {}
+static int sendDTLS(__attribute__((unused)) char *buf, __attribute__((unused)) size_t lenBuf) {
+    return 0;
+}
 static void closeDTLSSess(void) {}
 #endif
 
