@@ -41,7 +41,7 @@ rg.conf*
 # some common names I use during development
 utils
 tmp*
-log 
+log
 logfile
 debug
 core.*
@@ -94,6 +94,7 @@ tests/xlate_1.lkp_tbl
 tests/xlate_array.lkp_tbl
 tests/rstb_*
 .vscode/
+utils/*
 *.sw*
 clang_output_*
 tools/logctl
