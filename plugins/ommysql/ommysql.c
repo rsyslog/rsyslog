@@ -4,9 +4,15 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
+ * Concurrency & Locking:
+ * - Configuration is stored in instanceData and is read-only at runtime.
+ * - MySQL client usage runs per worker handle. If the client library
+ *   reports itself as not thread-safe, we serialize access globally
+ *   across all module instances.
+ *
  * File begun on 2007-07-20 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2021 Adiscon GmbH.
+ * Copyright 2007-2026 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,6 +41,7 @@
 #include <errno.h>
 #include <time.h>
 #include <netdb.h>
+#include <pthread.h>
 #include <mysql.h>
 #include <mysqld_error.h>
 #include "conf.h"
@@ -56,6 +63,8 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA;
+static pthread_mutex_t mysqlGlobalMutex;
+static int useMysqlGlobalMutex = 0;
 
 typedef struct _instanceData {
     char dbsrv[MAXHOSTNAMELEN + 1]; /* IP or hostname of DB server*/
@@ -70,13 +79,14 @@ typedef struct _instanceData {
 } instanceData;
 
 typedef struct wrkrInstanceData {
-    instanceData *pData;
+    const instanceData *pData;
     MYSQL *hmysql; /* handle to MySQL */
     unsigned uLastMySQLErrno; /* last errno returned by MySQL or 0 if all is well */
     bool threadInitialized; /* whether mysql_thread_init() succeeded */
-    char *sqlBuf; /* per-worker reusable SQL buffer */
-    size_t sqlBufCap; /* capacity of sqlBuf */
 } wrkrInstanceData_t;
+
+static inline void lockMySQL(wrkrInstanceData_t *pWrkrData, int *locked);
+static inline void unlockMySQL(wrkrInstanceData_t *pWrkrData, int *locked);
 
 typedef struct configSettings_s {
     int iSrvPort; /* database server port */
@@ -116,8 +126,6 @@ BEGINcreateWrkrInstance
     CODESTARTcreateWrkrInstance;
     pWrkrData->hmysql = NULL;
     pWrkrData->threadInitialized = false;
-    pWrkrData->sqlBuf = NULL;
-    pWrkrData->sqlBufCap = 0;
 ENDcreateWrkrInstance
 
 
@@ -144,13 +152,15 @@ ENDfreeInstance
 
 
 BEGINfreeWrkrInstance
+    int mutexLocked = 0;
     CODESTARTfreeWrkrInstance;
+    lockMySQL(pWrkrData, &mutexLocked);
     closeMySQL(pWrkrData);
+    unlockMySQL(pWrkrData, &mutexLocked);
     if (pWrkrData->threadInitialized) {
         mysql_thread_end();
         pWrkrData->threadInitialized = false;
     }
-    free(pWrkrData->sqlBuf);
 ENDfreeWrkrInstance
 
 
@@ -191,8 +201,8 @@ static void reportDBError(wrkrInstanceData_t *pWrkrData, int bSilent) {
  * MySQL connection.
  * Initially added 2004-10-28 mmeckelein
  */
-static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, int bSilent) {
-    instanceData *pData;
+static rsRetVal initMySQL(wrkrInstanceData_t *pWrkrData, const int bSilent) {
+    const instanceData *pData;
     DEFiRet;
 
     assert(pWrkrData->hmysql == NULL);
@@ -250,6 +260,22 @@ finalize_it:
     RETiRet;
 }
 
+static inline void lockMySQL(wrkrInstanceData_t *pWrkrData, int *locked) {
+    (void)pWrkrData;
+    if (useMysqlGlobalMutex) {
+        pthread_mutex_lock(&mysqlGlobalMutex);
+        *locked = 1;
+    }
+}
+
+static inline void unlockMySQL(wrkrInstanceData_t *pWrkrData, int *locked) {
+    (void)pWrkrData;
+    if (*locked) {
+        pthread_mutex_unlock(&mysqlGlobalMutex);
+        *locked = 0;
+    }
+}
+
 
 /* The following function writes the current log entry
  * to an established MySQL session.
@@ -263,28 +289,8 @@ static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, const uchar *const psz
         CHKiRet(initMySQL(pWrkrData, 0));
     }
 
-    /* ensure per-worker buffer exists and is large enough */
-    const size_t need = strlen((const char *)psz) + 1;
-    if (need > pWrkrData->sqlBufCap) {
-        size_t newCap = pWrkrData->sqlBufCap == 0 ? need : pWrkrData->sqlBufCap;
-        while (newCap < need) {
-            if (newCap > SIZE_MAX / 2) {
-                newCap = need; /* avoid overflow */
-                break;
-            }
-            newCap *= 2;
-        }
-        char *newBuf = realloc(pWrkrData->sqlBuf, newCap);
-        if (newBuf == NULL) {
-            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-        }
-        pWrkrData->sqlBuf = newBuf;
-        pWrkrData->sqlBufCap = newCap;
-    }
-    memcpy(pWrkrData->sqlBuf, psz, need);
-
     /* try insert */
-    if (mysql_query(pWrkrData->hmysql, pWrkrData->sqlBuf)) {
+    if (mysql_query(pWrkrData->hmysql, (const char *)psz)) {
         const int mysql_err = mysql_errno(pWrkrData->hmysql);
         /* We assume server error codes are non-recoverable, mainly data errors.
          * This also means we need to differentiate between client and server error
@@ -300,8 +306,7 @@ static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, const uchar *const psz
         /* potentially recoverable error occurred, try to re-init connection and retry */
         closeMySQL(pWrkrData); /* close the current handle */
         CHKiRet(initMySQL(pWrkrData, 0)); /* try to re-open */
-        /* retry with the same per-worker buffer contents */
-        if (mysql_query(pWrkrData->hmysql, pWrkrData->sqlBuf)) { /* re-try insert */
+        if (mysql_query(pWrkrData->hmysql, (const char *)psz)) { /* re-try insert */
             /* we failed, giving up for now */
             DBGPRINTF("ommysql: suspending due to failed write of '%s'\n", psz);
             reportDBError(pWrkrData, 0);
@@ -320,9 +325,12 @@ finalize_it:
 
 
 BEGINtryResume
+    int mutexLocked = 0;
     CODESTARTtryResume;
     if (pWrkrData->hmysql == NULL) {
+        lockMySQL(pWrkrData, &mutexLocked);
         iRet = initMySQL(pWrkrData, 1);
+        unlockMySQL(pWrkrData, &mutexLocked);
     }
 ENDtryResume
 
@@ -333,7 +341,9 @@ ENDbeginTransaction
 
 /* no extra wrapper needed; locking is at transaction scope */
 BEGINcommitTransaction
+    int mutexLocked = 0;
     CODESTARTcommitTransaction;
+    lockMySQL(pWrkrData, &mutexLocked);
     DBGPRINTF("ommysql: commitTransaction\n");
     CHKiRet(writeMySQL(pWrkrData, (uchar *)"START TRANSACTION"));
 
@@ -362,6 +372,7 @@ finalize_it:
         pWrkrData->hmysql != NULL) {
         closeMySQL(pWrkrData);
     }
+    unlockMySQL(pWrkrData, &mutexLocked);
 ENDcommitTransaction
 
 static inline void setInstParamDefaults(instanceData *pData) {
@@ -533,6 +544,10 @@ ENDparseSelectorAct
 
 BEGINmodExit
     CODESTARTmodExit;
+    if (useMysqlGlobalMutex) {
+        pthread_mutex_destroy(&mysqlGlobalMutex);
+        useMysqlGlobalMutex = 0;
+    }
 #ifdef HAVE_MYSQL_LIBRARY_INIT
     mysql_library_end();
 #else
@@ -585,6 +600,11 @@ BEGINmodInit()
         ABORT_FINALIZE(RS_RET_ERR);
     }
 
+    useMysqlGlobalMutex = (mysql_thread_safe() == 0);
+    if (useMysqlGlobalMutex) {
+        CHKiConcCtrl(pthread_mutex_init(&mysqlGlobalMutex, NULL));
+    }
+
     /* register our config handlers */
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"actionommysqlserverport", 0, eCmdHdlrInt, NULL, &cs.iSrvPort,
                                STD_LOADABLE_MODULE_ID));
@@ -594,4 +614,9 @@ BEGINmodInit()
                                STD_LOADABLE_MODULE_ID));
     CHKiRet(omsdRegCFSLineHdlr((uchar *)"resetconfigvariables", 1, eCmdHdlrCustomHandler, resetConfigVariables, NULL,
                                STD_LOADABLE_MODULE_ID));
+finalize_it:
+    if (iRet != RS_RET_OK && useMysqlGlobalMutex) {
+        pthread_mutex_destroy(&mysqlGlobalMutex);
+        useMysqlGlobalMutex = 0;
+    }
 ENDmodInit
