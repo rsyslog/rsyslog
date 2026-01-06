@@ -2124,6 +2124,9 @@ EXTRA_DIST= \
     mmexternal-SegFault-empty-jroot-vg.sh \
     testsuites/mmexternal-SegFault-mm-python.py \
     testsuites/mmsnareparse/sample-custom-pattern.data \
+    testsuites/mmsnareparse/sample-windows2022-security.data \
+    testsuites/mmsnareparse/sample-windows2025-security.data \
+    testsuites/mmsnareparse/sample-events.data \
     mmsnareparse-basic.sh \
     mmsnareparse-comprehensive.sh \
     mmsnareparse-comprehensive-vg.sh \
