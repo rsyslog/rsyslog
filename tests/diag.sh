@@ -288,7 +288,7 @@ global(inputs.timeout.shutdown="'$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT'"
        default.action.queue.timeoutEnqueue="'$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE'"
        debug.abortOnProgramError="on")
 # use legacy-style for the following settings so that we can override if needed
-$MainmsgQueueTimeoutEnqueue 40000
+$MainmsgQueueTimeoutEnqueue $RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE
 $MainmsgQueueTimeoutShutdown '$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT'
 $IMDiagListenPortFileName '$RSYSLOG_DYNNAME.imdiag$1.port'
 $IMDiagServerRun 0
