@@ -272,7 +272,7 @@ generate_conf() {
 		RSTB_ACTION_DEFAULT_Q_TO_SHUTDOWN="20000"
 	fi
 	if [ "$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE" == "" ]; then
-		RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE="20000"
+		RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE="30000"
 	fi
 	export TCPFLOOD_PORT="$(get_free_port)"
 	if [ "$1" == "" ]; then
@@ -288,7 +288,7 @@ global(inputs.timeout.shutdown="'$RSTB_GLOBAL_INPUT_SHUTDOWN_TIMEOUT'"
        default.action.queue.timeoutEnqueue="'$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE'"
        debug.abortOnProgramError="on")
 # use legacy-style for the following settings so that we can override if needed
-$MainmsgQueueTimeoutEnqueue 20000
+$MainmsgQueueTimeoutEnqueue '$RSTB_ACTION_DEFAULT_Q_TO_ENQUEUE'
 $MainmsgQueueTimeoutShutdown '$RSTB_GLOBAL_QUEUE_SHUTDOWN_TIMEOUT'
 $IMDiagListenPortFileName '$RSYSLOG_DYNNAME.imdiag$1.port'
 $IMDiagServerRun 0
