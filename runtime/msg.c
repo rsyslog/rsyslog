@@ -7,7 +7,7 @@
  * of the "old" message code without any modifications. However, it
  * helps to have things at the right place one we go to the meat of it.
  *
- * Copyright 2007-2023 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2026 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -3367,6 +3367,45 @@ finalize_it:
         *pPropLen = sizeof("**OUT OF MEMORY**") - 1;  \
         return (UCHAR_CONSTANT("**OUT OF MEMORY**")); \
     }
+
+/**
+ * \brief Helper function to generate a string property from a source buffer.
+ *
+ * This function allocates a new buffer, copies the content from the source,
+ * null-terminates it, and manages the memory of the previous result string.
+ *
+ * \param[in,out] ppRes        Pointer to the result string pointer. The old string is freed if *pbMustBeFreed is set.
+ *                             The new string is assigned to *ppRes.
+ * \param[in,out] pbMustBeFreed Pointer to the boolean flag indicating if *ppRes must be freed.
+ *                              Updated to 1 (true) upon successful allocation.
+ * \param[out]    pBufLen      Pointer to store the length of the new string.
+ * \param[in]     pSrc         Pointer to the source buffer to copy from.
+ * \param[in]     len          Length of the data to copy.
+ *
+ * \return rsRetVal RS_RET_OK on success, RS_RET_OUT_OF_MEMORY on allocation failure.
+ */
+static rsRetVal msgPropStrGen(
+    uchar **ppRes, unsigned short *pbMustBeFreed, rs_size_t *pBufLen, const uchar *pSrc, size_t len) {
+    uchar *pBuf = NULL;
+    DEFiRet;
+
+    CHKmalloc(pBuf = malloc(len + 1));
+
+    memcpy(pBuf, pSrc, len);
+    pBuf[len] = '\0';
+
+    if (*pbMustBeFreed == 1) free(*ppRes);
+    *ppRes = pBuf;
+    *pbMustBeFreed = 1;
+    *pBufLen = (rs_size_t)len;
+
+finalize_it:
+    if (iRet != RS_RET_OK) {
+        free(pBuf);
+    }
+    RETiRet;
+}
+
 uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                   struct templateEntry *__restrict__ const pTpe,
                   msgPropDescr_t *pProp,
@@ -3808,18 +3847,13 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             /* we got our end pointer, now do the copy */
             /* TODO: code copied from below, this is a candidate for a separate function */
             iLen = pFldEnd - pFld + 1; /* the +1 is for an actual char, NOT \0! */
-            pBufStart = pBuf = malloc(iLen + 1);
-            if (pBuf == NULL) {
-                if (*pbMustBeFreed == 1) free(pRes);
+            if (msgPropStrGen(&pRes, pbMustBeFreed, &bufLen, pFld, iLen) != RS_RET_OK) {
+                if (*pbMustBeFreed == 1) {
+                    free(pRes);
+                    *pbMustBeFreed = 0;
+                }
                 RET_OUT_OF_MEMORY;
             }
-            /* now copy */
-            memcpy(pBuf, pFld, iLen);
-            bufLen = iLen;
-            pBuf[iLen] = '\0'; /* terminate it */
-            if (*pbMustBeFreed == 1) free(pRes);
-            pRes = pBufStart;
-            *pbMustBeFreed = 1;
         } else {
             /* field not found, return error */
             if (*pbMustBeFreed == 1) free(pRes);
@@ -3917,25 +3951,19 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
                     }
                     /* OK, we have a usable match - we now need to malloc pB */
                     int iLenBuf;
-                    uchar *pB;
 
                     iLenBuf =
                         pmatch[pTpe->data.field.iSubMatchToUse].rm_eo - pmatch[pTpe->data.field.iSubMatchToUse].rm_so;
-                    pB = malloc(iLenBuf + 1);
 
-                    if (pB == NULL) {
-                        if (*pbMustBeFreed == 1) free(pRes);
+                    if (msgPropStrGen(&pRes, pbMustBeFreed, &bufLen,
+                                      pRes + iOffs + pmatch[pTpe->data.field.iSubMatchToUse].rm_so,
+                                      iLenBuf) != RS_RET_OK) {
+                        if (*pbMustBeFreed == 1) {
+                            free(pRes);
+                            *pbMustBeFreed = 0;
+                        }
                         RET_OUT_OF_MEMORY;
                     }
-
-                    /* Lets copy the matched substring to the buffer */
-                    memcpy(pB, pRes + iOffs + pmatch[pTpe->data.field.iSubMatchToUse].rm_so, iLenBuf);
-                    bufLen = iLenBuf;
-                    pB[iLenBuf] = '\0'; /* terminate string, did not happen before */
-
-                    if (*pbMustBeFreed == 1) free(pRes);
-                    pRes = pB;
-                    *pbMustBeFreed = 1;
                 }
             } else {
                 /* we could not load regular expression support. This is quite unexpected at
