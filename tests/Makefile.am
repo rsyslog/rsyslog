@@ -320,6 +320,7 @@ TESTS +=  \
 	sndrcv_udp_nonstdpt.sh \
 	sndrcv_udp_nonstdpt_v6.sh \
 	imudp_thread_hang.sh \
+	imudp_ratelimit_name.sh \
 	sndrcv_udp_nonstdpt_v6.sh \
 	asynwr_simple.sh \
 	asynwr_simple_2.sh \
@@ -647,6 +648,7 @@ TESTS +=  \
 	allowed-sender-tcp-hostname-fail.sh \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
+	imtcp-persource-ratelimit.sh \
 	imtcp-basic-hup.sh \
 	imtcp-impstats-single-thread.sh \
 	imtcp-starvation-0.sh \
@@ -1568,6 +1570,14 @@ TESTS += \
 endif
 endif
 
+if ENABLE_IMTCP_TESTS
+if ENABLE_IMPTCP
+TESTS +=  \
+	ratelimit_exclusivity.sh \
+	ratelimit_name.sh
+endif
+endif
+
 if ENABLE_GNUTLS_TESTS
 TESTS +=  \
 	imtcp-tls-basic.sh \
@@ -2181,6 +2191,7 @@ EXTRA_DIST= \
 	testsuites/x.509/machine-key.pem \
 	testsuites/x.509/client-expired-cert.pem \
 	testsuites/x.509/client-expired-key.pem \
+	ratelimit_name.sh \
 	cfg.sh \
 	cfg1.cfgtest \
 	cfg1.testin \
@@ -2533,6 +2544,7 @@ EXTRA_DIST= \
 	omjournal-basic-template.sh \
 	omjournal-basic-no-template.sh \
 	timegenerated-ymd.sh \
+	ratelimit_exclusivity.sh \
 	timegenerated-uxtimestamp.sh \
 	timegenerated-uxtimestamp-invld.sh \
 	timegenerated-dateordinal.sh \
@@ -2678,6 +2690,7 @@ EXTRA_DIST= \
 	imtcp-octet-framing-too-long-vg.sh \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
+	imtcp-persource-ratelimit.sh \
 	imtcp-basic-hup.sh \
 	imtcp-impstats.sh \
 	imtcp-impstats-single-thread.sh \
@@ -2849,6 +2862,7 @@ EXTRA_DIST= \
 	sndrcv_relp_dflt_pt.sh \
 	sndrcv_udp.sh \
 	imudp_thread_hang.sh \
+	imudp_ratelimit_name.sh \
 	sndrcv_udp_nonstdpt.sh \
 	sndrcv_udp_nonstdpt_v6.sh \
 	omudpspoof_errmsg_no_params.sh \

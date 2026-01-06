@@ -268,6 +268,10 @@ Input Parameters
      - .. include:: ../../reference/parameters/imtcp-socketbacklog.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imtcp-ratelimit-name`
+     - .. include:: ../../reference/parameters/imtcp-ratelimit-name.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-imtcp-ratelimit-interval`
      - .. include:: ../../reference/parameters/imtcp-ratelimit-interval.rst
         :start-after: .. summary-start
@@ -535,4 +539,3 @@ Additional Resources
 ====================
 
 - `rsyslog video tutorial on how to store remote messages in a separate file <http://www.rsyslog.com/howto-store-remote-messages-in-a-separate-file/>`_ (for legacy syntax, but you get the idea).
-
