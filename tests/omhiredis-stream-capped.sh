@@ -15,6 +15,7 @@ template(name="outfmt" type="string" string="%msg%")
 
 local4.* {
         action(type="omhiredis"
+                name="omhiredis-stream-capped"
                 server="127.0.0.1"
                 serverport="'$REDIS_RANDOM_PORT'"
                 mode="stream"
@@ -44,6 +45,9 @@ if [ ! "${count}" -le 500 ]; then
     echo "error: stream has too much entries -> $count"
     error_exit 1
 fi
+
+content_check "omhiredis: no stream.outField set, using 'msg' as default" ${RSYSLOG_DYNNAME}.started
+content_check "omhiredis[omhiredis-stream-capped]: trying connect to '127.0.0.1'" ${RSYSLOG_DYNNAME}.started
 
 stop_redis
 

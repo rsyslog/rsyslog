@@ -19,6 +19,7 @@ template(name="outfmt" type="string" string="%msg%")
 
 local4.* {
         action(type="omhiredis"
+                name="omhiredis-wrongpass"
                 server="127.0.0.1"
                 serverport="'$REDIS_RANDOM_PORT'"
                 serverpassword="ThatsNotMyPassword"
@@ -27,8 +28,6 @@ local4.* {
                 template="outfmt")
         stop
 }
-
-action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 
 startup
@@ -39,7 +38,9 @@ injectmsg 1 1
 shutdown_when_empty
 wait_shutdown
 
-content_check "error while authenticating: WRONGPASS invalid username-password pair or user is disabled." $RSYSLOG_OUT_LOG
+content_check "omhiredis[omhiredis-wrongpass]: trying connect to '127.0.0.1'" ${RSYSLOG_DYNNAME}.started
+content_check "omhiredis[omhiredis-wrongpass]: error while authenticating: WRONGPASS invalid username-password pair or user is disabled." ${RSYSLOG_DYNNAME}.started
+
 
 stop_redis
 

@@ -15,6 +15,7 @@ template(name="outfmt" type="string" string="%msg%")
 
 local4.* {
         action(type="omhiredis"
+                name="omhiredis-stream-ack"
                 server="127.0.0.1"
                 serverport="'$REDIS_RANDOM_PORT'"
                 mode="stream"
@@ -51,16 +52,12 @@ redis_command "XINFO GROUPS inStream" >> $RSYSLOG_OUT_LOG
 # 4. show group infos -> pending shows 1 pending entry
 # 4.2. start Rsyslog and send message -> omhiredis acknowledges index 1-0 on group 'group' for stream 'inStream'
 # 5. show group infos again -> pending now shows 0 pending entries
-export EXPECTED="/usr/bin/redis-cli
-OK
-/usr/bin/redis-cli
+export EXPECTED="OK
 1-0
-/usr/bin/redis-cli
 inStream
 1-0
 key
 value
-/usr/bin/redis-cli
 name
 group
 consumers
@@ -73,7 +70,6 @@ entries-read
 1
 lag
 0
-/usr/bin/redis-cli
 name
 group
 consumers
@@ -88,6 +84,9 @@ lag
 0"
 
 cmp_exact $RSYSLOG_OUT_LOG
+
+content_check "omhiredis: no stream.outField set, using 'msg' as default" ${RSYSLOG_DYNNAME}.started
+content_check "omhiredis[omhiredis-stream-ack]: trying connect to '127.0.0.1'" ${RSYSLOG_DYNNAME}.started
 
 stop_redis
 
