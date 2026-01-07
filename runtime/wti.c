@@ -162,40 +162,69 @@ rsRetVal wtiWakeupThrd(wti_t *pThis) {
  */
 rsRetVal ATTR_NONNULL() wtiCancelThrd(wti_t *pThis, const uchar *const cancelobj) {
     DEFiRet;
+    int state;
+    wtp_t *pWtp;
+    pthread_t thrdID;
 
     ISOBJ_TYPE_assert(pThis, wti);
+    pWtp = pThis->pWtp;
+    ISOBJ_TYPE_assert(pWtp, wtp);
 
     wtiJoinThrd(pThis);
-    if (wtiGetState(pThis) != WRKTHRD_STOPPED) {
+
+    /* Lock wtp mutex to safely check state and access thrdID atomically.
+     * This prevents race where thread terminates and thrdID becomes invalid
+     * between state check and pthread_kill/pthread_cancel calls.
+     */
+    d_pthread_mutex_lock(&pWtp->mutWtp);
+    state = wtiGetState(pThis);
+    if (state == WRKTHRD_RUNNING || state == WRKTHRD_INITIALIZING) {
+        thrdID = pThis->thrdID; /* Safe copy under mutex */
+        d_pthread_mutex_unlock(&pWtp->mutWtp);
+
         LogMsg(0, RS_RET_ERR, LOG_WARNING,
                "%s: need to do cooperative cancellation "
                "- some data may be lost, increase timeout?",
                cancelobj);
-        /* we first try the cooperative "cancel" interface */
-        pthread_kill(pThis->thrdID, SIGTTIN);
-        DBGPRINTF("sent SIGTTIN to worker thread %p, giving it a chance to terminate\n", (void *)pThis->thrdID);
+        pthread_kill(thrdID, SIGTTIN);
+        DBGPRINTF("sent SIGTTIN to worker thread %p, giving it a chance to terminate\n", (void *)thrdID);
         srSleep(0, 50000);
         wtiJoinThrd(pThis);
+    } else {
+        d_pthread_mutex_unlock(&pWtp->mutWtp);
+        if (state == WRKTHRD_STOPPED) {
+            FINALIZE; /* Already stopped, nothing to do */
+        }
     }
 
-    if (wtiGetState(pThis) != WRKTHRD_STOPPED) {
+    /* Second attempt with hard cancellation if needed */
+    d_pthread_mutex_lock(&pWtp->mutWtp);
+    state = wtiGetState(pThis);
+    if (state == WRKTHRD_RUNNING || state == WRKTHRD_INITIALIZING) {
+        thrdID = pThis->thrdID; /* Safe copy under mutex */
+        d_pthread_mutex_unlock(&pWtp->mutWtp);
+
         LogMsg(0, RS_RET_ERR, LOG_WARNING, "%s: need to do hard cancellation", cancelobj);
         if (dbgTimeoutToStderr) {
             fprintf(stderr, "rsyslog debug: %s: need to do hard cancellation\n", cancelobj);
         }
-        pthread_cancel(pThis->thrdID);
-        pthread_kill(pThis->thrdID, SIGTTIN);
+        pthread_cancel(thrdID);
+        pthread_kill(thrdID, SIGTTIN);
         DBGPRINTF("cooperative worker termination failed, using cancellation...\n");
         DBGOPRINT((obj_t *)pThis, "canceling worker thread\n");
-        pthread_cancel(pThis->thrdID);
-        /* now wait until the thread terminates... */
-        while (wtiGetState(pThis) != WRKTHRD_STOPPED && wtiGetState(pThis) != WRKTHRD_WAIT_JOIN) {
-            DBGOPRINT((obj_t *)pThis, "waiting on termination, state %d\n", wtiGetState(pThis));
+
+        /* Wait for thread to terminate */
+        while ((state = wtiGetState(pThis)) != WRKTHRD_STOPPED && state != WRKTHRD_WAIT_JOIN) {
+            DBGOPRINT((obj_t *)pThis, "waiting on termination, state %d\n", state);
             srSleep(0, 10000);
         }
+    } else {
+        d_pthread_mutex_unlock(&pWtp->mutWtp);
     }
 
     wtiJoinThrd(pThis);
+
+finalize_it:
     RETiRet;
 }
 
