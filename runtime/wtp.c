@@ -181,17 +181,26 @@ BEGINobjDestruct(wtp) /* be sure to specify the object type also in END and CODE
 ENDobjDestruct(wtp)
 
 
-/* Sent a specific state for the worker thread pool. -- rgerhards, 2008-01-21
- * We do not need to do atomic instructions as set operations are only
- * called when terminating the pool, and then in strict sequence. So we
- * can never overwrite each other. On the other hand, it also doesn't
- * matter if the read operation obtains an older value, as we then simply
- * do one more iteration, what is perfectly legal (during shutdown
- * they are awoken in any case). -- rgerhards, 2009-07-20
+/* Set worker thread pool state. -- rgerhards, 2008-01-21
+ *
+ * This function is called from multiple contexts:
+ *   1. During shutdown (wtpShutdownAll, queue destructor)
+ *   2. During persistence mode changes (queuePersist)
+ *
+ * IMPORTANT: Uses atomic store because worker threads read wtpState atomically
+ * in wtpChkStopWrkr(). Mixing plain stores with atomic loads violates the C11
+ * memory model and creates undefined behavior.
+ *
+ * The atomic store ensures:
+ *   - Immediate visibility to all worker threads
+ *   - SHUTDOWN_IMMEDIATE is seen without delay
+ *   - Proper memory barriers on all architectures (including ARM)
+ *
+ * rgerhards, 2008-01-21
  */
 rsRetVal wtpSetState(wtp_t *pThis, wtpState_t iNewState) {
     ISOBJ_TYPE_assert(pThis, wtp);
-    pThis->wtpState = iNewState;  // TODO: do we need a mutex here? 2010-04-26
+    ATOMIC_STORE_INT((int *)&pThis->wtpState, &pThis->mutWtpState, iNewState);
     return RS_RET_OK;
 }
 
