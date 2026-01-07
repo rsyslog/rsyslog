@@ -2,6 +2,10 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-07: imfile: fix file handle leaks
+  FIle handler leaks can occur if the deleted file still has a lingering symbolic
+  link, even if the file has actually been deleted.
+  Thanks to Nelson Yen for the patch.
 - 2026-01-06: runtime: fix race condition in worker thread startup
   Fixed a critical race condition in `wtpStartWrkr` where the same worker thread
   instance (`wti_t`) could be started twice if multiple threads called `wtpStartWrkr`
