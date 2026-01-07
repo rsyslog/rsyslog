@@ -448,8 +448,20 @@ static rsRetVal ATTR_NONNULL() wtpStartWrkr(wtp_t *const pThis, const int permit
         fprintf(stderr, "%s: worker start requested, num workers currently %d\n", wtpGetDbgHdr(pThis),
                 ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
     }
+
+    d_pthread_mutex_lock(&pThis->mutWtp);
+
+    /* Check state under mutex to prevent TOCTOU race where worker could be
+     * created during shutdown. Must hold mutWtp to ensure state doesn't change
+     * between check and worker creation.
+     *
+     * Note: An atomic read is required as wtpState is protected by its own
+     * lock (mutWtpState). This lock on mutWtp ensures the check and
+     * subsequent worker creation are an atomic unit, fixing the TOCTOU race.
+     */
     const wtpState_t wtpState = (wtpState_t)ATOMIC_FETCH_32BIT((int *)&pThis->wtpState, &pThis->mutWtpState);
     if (wtpState != wtpState_RUNNING && !permit_during_shutdown) {
+        d_pthread_mutex_unlock(&pThis->mutWtp);
         DBGPRINTF("%s: worker start requested during shutdown - ignored\n", wtpGetDbgHdr(pThis));
         if (dbgTimeoutToStderr) {
             fprintf(stderr, "rsyslog debug: %s: worker start requested during shutdown - ignored\n",
@@ -457,8 +469,6 @@ static rsRetVal ATTR_NONNULL() wtpStartWrkr(wtp_t *const pThis, const int permit
         }
         return RS_RET_ERR; /* exceptional case, but really makes sense here! */
     }
-
-    d_pthread_mutex_lock(&pThis->mutWtp);
 
     wtpJoinTerminatedWrkr(pThis);
     /* find free spot in thread table. */
