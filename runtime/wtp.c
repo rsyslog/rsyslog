@@ -275,7 +275,11 @@ PRAGMA_IGNORE_Wempty_body
     d_pthread_mutex_lock(&pThis->mutWtp);
     pthread_cleanup_push(mutexCancelCleanup, &pThis->mutWtp);
     bTimedOut = 0;
-    while (pThis->iCurNumWrkThrd > 0 && !bTimedOut) {
+    /* Use atomic read for consistency - iCurNumWrkThrd is updated atomically by
+     * worker threads. Even though we hold mutWtp, workers update this counter
+     * atomically, so we must read it atomically to ensure we see the latest value.
+     */
+    while (ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd) > 0 && !bTimedOut) {
         wtpJoinTerminatedWrkr(pThis);
         DBGPRINTF("%s: waiting %ldms on worker thread termination, %d still running\n", wtpGetDbgHdr(pThis),
                   timeoutVal(ptTimeout), ATOMIC_FETCH_32BIT(&pThis->iCurNumWrkThrd, &pThis->mutCurNumWrkThrd));
