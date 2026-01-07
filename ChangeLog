@@ -2,6 +2,13 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-07: runtime: runtime: fix TOCTOU race in worker thread creation
+  Fixed a Time-Of-Check-Time-Of-Use race condition in wtpStartWrkr() where
+  the wtpState check occurred before acquiring mutWtp. This allowed the
+  state to change between the check and worker thread creation, potentially
+  resulting in workers being created during shutdown.
+  Note: there were not reports from practice, patch trigerred by code review.
+  This is from a series of patches on potential data races in action runtime.
 - 2026-01-07: runtime: fix race in wtpSetState()
   Fixed a race condition where wtpSetState() used a plain store while readers
   (wtpChkStopWrkr) used atomic loads. This violated the C11 memory model and
