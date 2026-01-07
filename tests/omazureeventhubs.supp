@@ -11,3 +11,45 @@
    fun:start_thread
    fun:clone
 }
+
+# Proton OpenSSL initialization leak (library-level)
+{
+   omazureeventhubs_pn_ssl_domain_leak
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:initialize
+   fun:__pthread_once_slow
+   fun:UnknownInlinedFun
+   fun:pni_init_ssl_domain
+   fun:pn_ssl_domain
+   fun:openProton
+   fun:setupProtonHandle
+   fun:actionPrepare
+   fun:processMsgMain
+   fun:doSubmitToActionQ
+   fun:execAct
+   fun:scriptExec
+   fun:execPROPFILT
+   fun:scriptExec
+}
+
+# Proton OpenSSL initialization leak (library-level) seen in interrupt test path
+{
+   omazureeventhubs_pn_ssl_domain_leak_interrupt
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:initialize
+   fun:__pthread_once_slow
+   fun:UnknownInlinedFun
+   fun:pni_init_ssl_domain
+   fun:pn_ssl_domain
+   fun:openProton
+   fun:setupProtonHandle
+   fun:actionPrepare
+   fun:processMsgMain
+   fun:processBatchMain
+   fun:ConsumerReg
+   fun:wtiWorker
+}

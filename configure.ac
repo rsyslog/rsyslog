@@ -1191,6 +1191,13 @@ AC_ARG_ENABLE(clickhouse_tests,
 )
 AM_CONDITIONAL(ENABLE_CLICKHOUSE_TESTS, test x$enable_clickhouse_tests = xyes)
 
+AC_DEFUN([RSYSLOG_CHECK_OPENSSL_FOR_PROTON], [
+	# Proton requires OpenSSL for SSL/TLS support. Ensure OpenSSL is available.
+	# If OPENSSL_LIBS is not already set (from --enable-openssl), detect it now.
+	if test "x$OPENSSL_LIBS" = "x"; then
+		PKG_CHECK_MODULES(OPENSSL, openssl)
+	fi
+])
 
 # openssl support
 AC_ARG_ENABLE(openssl,
@@ -2766,6 +2773,7 @@ if test "x$enable_omazureeventhubs" = "xyes"; then
         PKG_CHECK_MODULES(PROTON_PROACTOR, libqpid-proton-proactor >= 0.13)
         AC_SUBST(PROTON_PROACTOR_CFLAGS)
         AC_SUBST(PROTON_PROACTOR_LIBS)
+        RSYSLOG_CHECK_OPENSSL_FOR_PROTON
 fi
 AM_CONDITIONAL(ENABLE_OMAZUREEVENTHUBS, test x$enable_omazureeventhubs = xyes)
 # END PROTON
@@ -3076,6 +3084,7 @@ if test "x$enable_omamqp1" = "xyes"; then
         PKG_CHECK_MODULES(PROTON, libqpid-proton >= 0.13)
         AC_SUBST(PROTON_CFLAGS)
         AC_SUBST(PROTON_LIBS)
+        RSYSLOG_CHECK_OPENSSL_FOR_PROTON
 fi
 AM_CONDITIONAL(ENABLE_OMAMQP1, test x$enable_omamqp1 = xyes)
 
