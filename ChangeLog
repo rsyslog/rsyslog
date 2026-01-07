@@ -2,6 +2,17 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-07: omazureeventhubs: fix data races and suppressions
+  There were thread synchronization issues in omazureeventhubs, which now
+  have been solved. Also some new, verified, valgrind suppressions have
+  been added for Proton lib (outside of rsyslog project).
+- 2026-01-07: runtime: fix inconsistent synchronization of iCurNumWrkThrd
+  Fixed inconsistent access to iCurNumWrkThrd where the shutdown loop used
+  a plain read while all other accesses used atomic operations. This could
+  result in the loop reading a stale value and not properly detecting when
+  all workers have terminated.
+  Note: there were not reports from practice, patch trigerred by code review.
+  This is from a series of patches on potential data races in action runtime.
 - 2026-01-07: runtime: runtime: fix TOCTOU race in worker thread creation
   Fixed a Time-Of-Check-Time-Of-Use race condition in wtpStartWrkr() where
   the wtpState check occurred before acquiring mutWtp. This allowed the
