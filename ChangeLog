@@ -2,6 +2,13 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-07: runtime: fix race in wtpSetState()
+  Fixed a race condition where wtpSetState() used a plain store while readers
+  (wtpChkStopWrkr) used atomic loads. This violated the C11 memory model and
+  created undefined behavior, potentially causing shutdown delays and
+  potential message loss.
+  Note: there were not reports from practice, patch trigerred by code review.
+  This is from a series of patches on potential data races in action runtime.
 - 2026-01-07: imfile: fix file handle leaks
   FIle handler leaks can occur if the deleted file still has a lingering symbolic
   link, even if the file has actually been deleted.
