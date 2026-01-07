@@ -784,34 +784,31 @@ static void detect_updates(fs_edge_t *const edge) {
                    e.g. file has been closed, so we will never have old inode (but
                         why was it closed then? --> check)
              */
-            r = fstat(act->ino, &fileInfo);
-            if (r == -1) {
-                time_t ttNow;
-                time(&ttNow);
-                if (act->time_to_delete == 0) {
-                    act->time_to_delete = ttNow;
-                }
-                /* First time we run into this code, we need to give imfile a little time to process
-                 *  the old file in case a process is still writing into it until the FILE_DELETE_DELAY
-                 *  is reached OR the inode has changed (see elseif below). In most cases, the
-                 *  delay will never be reached and the file will be closed when the inode has changed.
-                 *  Directories are deleted without delay.
-                 */
-                sbool is_file = act->edge->is_file;
-                if (!is_file || act->time_to_delete + FILE_DELETE_DELAY < ttNow) {
-                    DBGPRINTF(
-                        "detect_updates obj gone away, unlinking: "
-                        "'%s', ttDelete: %" PRId64 "s, ttNow:%" PRId64 " isFile: %d\n",
-                        act->name, (int64_t)ttNow - (act->time_to_delete + FILE_DELETE_DELAY), (int64_t)ttNow, is_file);
-                    act_obj_unlink(act);
-                    restart = 1;
-                } else {
-                    DBGPRINTF(
-                        "detect_updates obj gone away, keep '%s' "
-                        "open: %" PRId64 "/%" PRId64 "/%" PRId64 "s!\n",
-                        act->name, (int64_t)act->time_to_delete, (int64_t)ttNow, (int64_t)ttNow - act->time_to_delete);
-                    pollFile(act);
-                }
+            time_t ttNow;
+            time(&ttNow);
+            if (act->time_to_delete == 0) {
+                act->time_to_delete = ttNow;
+            }
+            /* First time we run into this code, we need to give imfile a little time to process
+             *  the old file in case a process is still writing into it until the FILE_DELETE_DELAY
+             *  is reached OR the inode has changed (see elseif below). In most cases, the
+             *  delay will never be reached and the file will be closed when the inode has changed.
+             *  Directories are deleted without delay.
+             */
+            sbool is_file = act->edge->is_file;
+            if (!is_file || act->time_to_delete + FILE_DELETE_DELAY < ttNow) {
+                DBGPRINTF(
+                    "detect_updates obj gone away, unlinking: "
+                    "'%s', ttDelete: %" PRId64 "s, ttNow:%" PRId64 " isFile: %d\n",
+                    act->name, (int64_t)ttNow - (act->time_to_delete + FILE_DELETE_DELAY), (int64_t)ttNow, is_file);
+                act_obj_unlink(act);
+                restart = 1;
+            } else {
+                DBGPRINTF(
+                    "detect_updates obj gone away, keep '%s' "
+                    "open: %" PRId64 "/%" PRId64 "/%" PRId64 "s!\n",
+                    act->name, (int64_t)act->time_to_delete, (int64_t)ttNow, (int64_t)ttNow - act->time_to_delete);
+                pollFile(act);
             }
             break;
         } else if (fileInfo.st_ino != act->ino) {
