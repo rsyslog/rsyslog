@@ -105,3 +105,4 @@ tools/rscryutil.1
 *.gcda
 *.gcno
 coverage*
+_codeql_detected_source_root
