@@ -48,6 +48,7 @@ RUN 	apt-get update && \
 	pkg-config \
 	postgresql-client \
 	python3-docutils \
+	python3-pip \
 	python3-pysnmp4 \
 	python3-pysnmp4-apps \
 	python3-pysnmp4-mibs \
@@ -59,7 +60,8 @@ RUN 	apt-get update && \
 	zlib1g-dev \
 	libmongoc-dev \
 	zstd \
-	&& apt clean
+	&& apt-get clean && \
+	rm -rf /var/lib/apt/lists/*
 #	libbson-dev
 #	libgrok1 libgrok-dev
 #	software-properties-common
@@ -76,7 +78,9 @@ RUN	apt-get update -y && \
 	apt-get install -y \
 	libestr-dev \
 	libfastjson-dev \
-	libsodium-dev
+	libsodium-dev && \
+	apt-get clean && \
+	rm -rf /var/lib/apt/lists/*
 
 # Create libgcrypt-config wrapper for Debian 13 compatibility
 # (libgcrypt-config is not provided in Debian 13, but pkg-config is available)
@@ -186,6 +190,8 @@ RUN	cd helper-projects && \
 	rm -r librelp && \
 	cd ..
 
+RUN	pip install --no-cache-dir pyasn1 pysnmp --break-system-packages --upgrade
+
 # next ENV is specifically for running scan-build - so we do not need to
 # change scripts if at a later time we can move on to a newer version
 ENV	SCAN_BUILD=scan-build \
@@ -263,10 +269,7 @@ ENV	RSYSLOG_CONFIGURE_OPTIONS \
 	--enable-pmsnare \
 	--enable-relp \
 	--enable-snmp \
-	# SNMP Tests disabled due to Python 3.12+ compatibility issues
-	# TODO: Re-enable once pysnmp is updated to support Python 3.12+
-	# See: https://github.com/rsyslog/rsyslog/issues/5999
-	#--enable-snmp-tests \
+	--enable-snmp-tests \
 	--enable-usertools \
 	--enable-valgrind \
 	\

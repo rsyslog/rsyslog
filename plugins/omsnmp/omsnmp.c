@@ -198,6 +198,8 @@ static rsRetVal omsnmp_initSession(wrkrInstanceData_t *pWrkrData) {
     netsnmp_session session;
     instanceData *pData;
     char szTargetAndPort[MAXHOSTNAMELEN + 128]; /* work buffer for specifying a full target and port string */
+    char *peername = NULL;
+    unsigned char *community_dup = NULL;
     DEFiRet;
 
     /* should not happen, but if session is not cleared yet - we do it now! */
@@ -217,12 +219,23 @@ static rsRetVal omsnmp_initSession(wrkrInstanceData_t *pWrkrData) {
     session.version = pData->iSNMPVersion;
     session.callback = NULL; /* NOT NEEDED */
     session.callback_magic = NULL;
-    session.peername = (char *)szTargetAndPort;
+    /*
+     * net-snmp's snmp_open() internally copies the session. However, we still
+     * must not hand it a pointer to stack memory for peername/community
+     * because ownership/copy behavior may vary between versions/builds.
+     *
+     * Provide heap-backed strings so the session open code can safely copy
+     * from them.
+     */
+    CHKmalloc(peername = strdup(szTargetAndPort));
+    session.peername = peername;
 
     /* Set SNMP Community */
     if (session.version == SNMP_VERSION_1 || session.version == SNMP_VERSION_2c) {
-        session.community = (unsigned char *)pData->szCommunity == NULL ? (uchar *)"public" : pData->szCommunity;
-        session.community_len = strlen((char *)session.community);
+        const char *const community = (pData->szCommunity == NULL) ? "public" : (const char *)pData->szCommunity;
+        CHKmalloc(community_dup = (unsigned char *)strdup(community));
+        session.community = community_dup;
+        session.community_len = strlen((char *)community_dup);
     }
 
     pWrkrData->snmpsession = snmp_open(&session);
@@ -236,6 +249,13 @@ static rsRetVal omsnmp_initSession(wrkrInstanceData_t *pWrkrData) {
     }
 
 finalize_it:
+    /*
+     * snmp_open() copies relevant session data; these scratch buffers are
+     * no longer needed afterwards. If snmp_open() did not copy them for some
+     * reason, the resulting problems will be detected quickly in tests.
+     */
+    free(peername);
+    free(community_dup);
     RETiRet;
 }
 
@@ -414,6 +434,12 @@ BEGINfreeInstance
     CODESTARTfreeInstance;
     free(pData->tplName);
     free(pData->szTarget);
+    free(pData->szTransport);
+    free(pData->szCommunity);
+    free(pData->szEnterpriseOID);
+    free(pData->szSnmpTrapOID);
+    free(pData->szSyslogMessageOID);
+    free(pData->szSnmpV1Source);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
@@ -423,6 +449,7 @@ ENDfreeWrkrInstance
 
 static void setInstParamDefaults(instanceData *pData) {
     pData->tplName = NULL;
+    pData->szTransport = NULL;
     pData->szCommunity = NULL;
     pData->szEnterpriseOID = NULL;
     pData->szSnmpTrapOID = NULL;
@@ -487,14 +514,29 @@ BEGINnewActInst
     /* Set some defaults in the NetSNMP library */
     netsnmp_ds_set_int(NETSNMP_DS_LIBRARY_ID, NETSNMP_DS_LIB_DEFAULT_PORT, pData->iPort);
 
-    CHKiRet(OMSRsetEntry(*ppOMSR, 0,
-                         (uchar *)strdup((pData->tplName == NULL) ? "RSYSLOG_FileFormat" : (char *)pData->tplName),
-                         OMSR_NO_RQD_TPL_OPTS));
+    uchar *tpl_msg = NULL;
+    uchar *tpl_v1src = NULL;
 
-    CHKiRet(OMSRsetEntry(
-        *ppOMSR, 1,
-        (uchar *)strdup((pData->szSnmpV1Source == NULL) ? " SNMP_SOURCETEMPLATE" : (char *)pData->szSnmpV1Source),
-        OMSR_NO_RQD_TPL_OPTS));
+    CHKmalloc(tpl_msg = (uchar *)strdup((pData->tplName == NULL) ? "RSYSLOG_FileFormat" : (char *)pData->tplName));
+    iRet = OMSRsetEntry(*ppOMSR, 0, tpl_msg, OMSR_NO_RQD_TPL_OPTS);
+    if (iRet != RS_RET_OK) {
+        free(tpl_msg);
+        tpl_msg = NULL;
+        ABORT_FINALIZE(iRet);
+    }
+    /* ownership transferred to OMSR */
+    tpl_msg = NULL;
+
+    CHKmalloc(tpl_v1src = (uchar *)strdup((pData->szSnmpV1Source == NULL) ? " SNMP_SOURCETEMPLATE"
+                                                                          : (char *)pData->szSnmpV1Source));
+    iRet = OMSRsetEntry(*ppOMSR, 1, tpl_v1src, OMSR_NO_RQD_TPL_OPTS);
+    if (iRet != RS_RET_OK) {
+        free(tpl_v1src);
+        tpl_v1src = NULL;
+        ABORT_FINALIZE(iRet);
+    }
+    /* ownership transferred to OMSR */
+    tpl_v1src = NULL;
 
     CODE_STD_FINALIZERnewActInst;
     cnfparamvalsDestruct(pvals, &actpblk);
@@ -503,7 +545,7 @@ ENDnewActInst
 
 BEGINparseSelectorAct
     CODESTARTparseSelectorAct;
-    CODE_STD_STRING_REQUESTparseSelectorAct(1) if (!strncmp((char *)p, ":omsnmp:", sizeof(":omsnmp:") - 1)) {
+    CODE_STD_STRING_REQUESTparseSelectorAct(2) if (!strncmp((char *)p, ":omsnmp:", sizeof(":omsnmp:") - 1)) {
         p += sizeof(":omsnmp:") - 1; /* eat indicator sequence (-1 because of '\0'!) */
     }
     else {
@@ -512,6 +554,7 @@ BEGINparseSelectorAct
 
     /* ok, if we reach this point, we have something for us */
     if ((iRet = createInstance(&pData)) != RS_RET_OK) FINALIZE;
+    setInstParamDefaults(pData);
 
     /* Check Target */
     if (cs.pszTarget == NULL) {
@@ -555,14 +598,27 @@ BEGINparseSelectorAct
     dbgprintf("TrapType: %d\n", pData->iTrapType);
     dbgprintf("SpecificType: %d\n", pData->iSpecificType);
 
-    /* process template */
-    CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar *)"RSYSLOG_TraditionalForwardFormat"));
-
     /* Init NetSNMP library and read in MIB database */
     init_snmp("rsyslog");
 
     /* Set some defaults in the NetSNMP library */
     netsnmp_ds_set_int(NETSNMP_DS_LIBRARY_ID, NETSNMP_DS_LIB_DEFAULT_PORT, pData->iPort);
+
+    /* process template */
+    CHKiRet(cflineParseTemplateName(&p, *ppOMSR, 0, OMSR_NO_RQD_TPL_OPTS, (uchar *)"RSYSLOG_TraditionalForwardFormat"));
+
+    /* Set up second template for SNMPv1 source (same as newActInst) */
+    uchar *tpl_v1src = NULL;
+    CHKmalloc(tpl_v1src = (uchar *)strdup((pData->szSnmpV1Source == NULL) ? " SNMP_SOURCETEMPLATE"
+                                                                          : (char *)pData->szSnmpV1Source));
+    iRet = OMSRsetEntry(*ppOMSR, 1, tpl_v1src, OMSR_NO_RQD_TPL_OPTS);
+    if (iRet != RS_RET_OK) {
+        free(tpl_v1src);
+        tpl_v1src = NULL;
+        ABORT_FINALIZE(iRet);
+    }
+    /* ownership transferred to OMSR */
+    tpl_v1src = NULL;
     CODE_STD_FINALIZERparseSelectorAct
 ENDparseSelectorAct
 
