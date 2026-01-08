@@ -2,6 +2,11 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-07: runtime: fix race condition in worker thread cancellation
+  Fixed a race condition in wtiCancelThrd() where thrdID could be accessed
+  after the thread had already terminated and been joined by another caller,
+  potentially resulting in pthread_cancel/pthread_kill operating on an
+  invalid or reused thread ID.
 - 2026-01-07: omazureeventhubs: fix data races and suppressions
   There were thread synchronization issues in omazureeventhubs, which now
   have been solved. Also some new, verified, valgrind suppressions have
