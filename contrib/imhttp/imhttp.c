@@ -95,6 +95,7 @@ struct modConfData_s {
     instanceConf_t *root, *tail;
     struct option ports;
     struct option docroot;
+    struct option address;
     struct option *options;
     int nOptions;
     char *pszHealthCheckPath;
