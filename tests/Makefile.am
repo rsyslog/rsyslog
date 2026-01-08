@@ -1502,6 +1502,7 @@ endif
 
 if ENABLE_MMJSONPARSE
 TESTS += \
+	mmjsonparse_qradar.sh \
         mmjsonparse-w-o-cookie.sh \
         mmjsonparse-w-o-cookie-multi-spaces.sh \
         mmjsonparse-find-json-basic.sh \
@@ -1552,6 +1553,10 @@ if ENABLE_MMJSONTRANSFORM
 if ENABLE_IMTCP_TESTS
 TESTS += \
         mmjsontransform-basic.sh
+endif
+if ENABLE_MMJSONPARSE
+TESTS += \
+	data_pipeline-qradar.sh
 endif
 endif
 
@@ -2581,6 +2586,10 @@ EXTRA_DIST= \
 	cee_simple.sh \
 	cee_diskqueue.sh \
 	mmleefparse_basic.sh \
+	data_pipeline-qradar.sh \
+	validate_json_equality.py \
+	testsuites/qradar_json \
+	mmjsonparse_qradar.sh \
 	mmjsonparse-w-o-cookie.sh \
 	mmjsonparse-w-o-cookie-multi-spaces.sh \
     mmjsonparse-find-json-basic.sh \
