@@ -176,7 +176,7 @@ static rsRetVal initCZMQ(instanceData *pData) {
 
     switch (pData->sockType) {
         case ZMQ_PUB:
-#if defined(ZMQ_RADIO)
+#if defined(ZMQ_RADIO) && (CZMQ_VERSION_MAJOR < 4 || (CZMQ_VERSION_MAJOR == 4 && CZMQ_VERSION_MINOR < 2))
         case ZMQ_RADIO:
 #endif
             pData->serverish = true;
@@ -231,7 +231,7 @@ static rsRetVal outputCZMQ(uchar **ppString, instanceData *pData) {
 
     /* if we are using a PUB (or RADIO) socket and we have a topic list then we
      * need some special care and attention */
-#if defined(ZMQ_RADIO)
+#if defined(ZMQ_RADIO) && (CZMQ_VERSION_MAJOR < 4 || (CZMQ_VERSION_MAJOR == 4 && CZMQ_VERSION_MINOR < 2))
     DBGPRINTF("omczmq: ZMQ_RADIO is defined...\n");
     if ((pData->sockType == ZMQ_PUB || pData->sockType == ZMQ_RADIO) && pData->topics) {
 #else
@@ -264,7 +264,7 @@ static rsRetVal outputCZMQ(uchar **ppString, instanceData *pData) {
                     ABORT_FINALIZE(RS_RET_SUSPENDED);
                 }
             }
-#if defined(ZMQ_RADIO)
+#if defined(ZMQ_RADIO) && (CZMQ_VERSION_MAJOR < 4 || (CZMQ_VERSION_MAJOR == 4 && CZMQ_VERSION_MINOR < 2))
             else if (pData->sockType == ZMQ_RADIO) {
                 DBGPRINTF("omczmq: sending on RADIO socket...\n");
                 zframe_t *frame = zframe_from((char *)ppString[0]);
@@ -521,7 +521,7 @@ BEGINnewActInst
                     pData->sockType = ZMQ_PUB;
                     DBGPRINTF("omczmq: sockType set to ZMQ_PUB\n");
                 }
-#if defined(ZMQ_RADIO)
+#if defined(ZMQ_RADIO) && (CZMQ_VERSION_MAJOR < 4 || (CZMQ_VERSION_MAJOR == 4 && CZMQ_VERSION_MINOR < 2))
                 else if (!strcmp("RADIO", stringType)) {
                     pData->sockType = ZMQ_RADIO;
                     DBGPRINTF("omczmq: sockType set to ZMQ_RADIO\n");
