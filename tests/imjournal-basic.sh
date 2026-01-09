@@ -14,7 +14,13 @@ module(load="../plugins/imjournal/.libs/imjournal" IgnorePreviousMessages="on"
 	RateLimit.Burst="1000000")
 
 template(name="outfmt" type="string" string="%msg%\n")
-action(type="omfile" template="outfmt" file="'$RSYSLOG_OUT_LOG'")
+
+# Filter to only process messages from this test instance to avoid interference
+# from other parallel journal tests writing to the same system journal
+if $msg contains "'"$RSYSLOG_DYNNAME"'" then {
+	action(type="omfile" template="outfmt" file="'"$RSYSLOG_OUT_LOG"'")
+	stop
+}
 '
 TESTMSG="TestBenCH-RSYSLog imjournal This is a test message - $(date +%s) - $RSYSLOG_DYNNAME"
 
