@@ -2907,6 +2907,10 @@ if test "x$enable_omrabbitmq" = "xyes"; then
         PKG_CHECK_MODULES(RABBITMQ, librabbitmq >= 0.2.0)
         AC_SUBST(RABBITMQ_CFLAGS)
         AC_SUBST(RABBITMQ_LIBS)
+        # Check which header path is used by rabbitmq-c (0.8.0+ uses rabbitmq-c/ prefix)
+        AC_CHECK_HEADER([rabbitmq-c/amqp.h],
+                [AC_DEFINE([HAVE_RABBITMQ_C_AMQP_H], [1], [Define if rabbitmq-c/amqp.h exists (rabbitmq-c 0.8.0+)])],
+                [])
 fi
 AM_CONDITIONAL(ENABLE_OMRABBITMQ, test x$enable_omrabbitmq = xyes)
 
