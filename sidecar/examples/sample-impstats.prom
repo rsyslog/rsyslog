@@ -1,0 +1,12 @@
+# TYPE rsyslog_global_utime counter
+rsyslog_global_utime{origin="core"} 123456
+# TYPE rsyslog_global_stime counter
+rsyslog_global_stime{origin="core"} 78901
+# TYPE rsyslog_queue_size gauge
+rsyslog_queue_size{name="main queue",origin="core.queue"} 0
+# TYPE rsyslog_queue_enqueued counter
+rsyslog_queue_enqueued{name="main queue",origin="core.queue"} 5000
+# TYPE rsyslog_action_processed counter
+rsyslog_action_processed{name="action 0",origin="core.action"} 4950
+# TYPE rsyslog_action_failed counter
+rsyslog_action_failed{name="action 0",origin="core.action"} 5
