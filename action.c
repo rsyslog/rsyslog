@@ -945,6 +945,29 @@ static rsRetVal actionCheckAndCreateWrkrInstance(action_t *const pThis, const wt
     if (actionIsDisabled(pThis)) {
         FINALIZE;
     }
+
+    /* Fast path: check without lock if instance already exists.
+     * This optimization avoids mutex contention in the common case where
+     * the worker instance has already been created.
+     */
+    if (pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData != NULL) {
+        FINALIZE;
+    }
+
+    /* Worker instance does not exist. Acquire lock to prevent race condition
+     * where multiple threads might try to create instances simultaneously.
+     * We use double-checked locking: recheck the condition under the lock
+     * in case another thread created the instance between our check above
+     * and acquiring the lock.
+     * This fix addresses a TSAN-reported data race where two workers could
+     * simultaneously create instances and overwrite each other's pointers,
+     * causing both workers to share the same instance data (violating the
+     * per-worker design) and leaking the lost pointer.
+     */
+    pthread_mutex_lock(&pThis->mutWrkrDataTable);
+    locked = 1;
+
+    /* Recheck under lock (double-checked locking pattern) */
     if (pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData == NULL) {
         DBGPRINTF(
             "wti %p: we need to create a new action worker instance for "
@@ -956,9 +979,6 @@ static rsRetVal actionCheckAndCreateWrkrInstance(action_t *const pThis, const wt
         setActionState(pWti, pThis, ACT_STATE_RDY); /* action is enabled */
 
         /* maintain worker data table -- only needed if wrkrHUP is requested! */
-
-        pthread_mutex_lock(&pThis->mutWrkrDataTable);
-        locked = 1;
         int freeSpot;
         for (freeSpot = 0; freeSpot < pThis->wrkrDataTableSize; ++freeSpot)
             if (pThis->wrkrDataTable[freeSpot] == NULL) break;
