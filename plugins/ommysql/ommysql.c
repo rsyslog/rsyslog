@@ -6,7 +6,7 @@
  *
  * File begun on 2007-07-20 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2021 Adiscon GmbH.
+ * Copyright 2007-2026 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -281,6 +281,7 @@ static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, const uchar *const psz
         pWrkrData->sqlBuf = newBuf;
         pWrkrData->sqlBufCap = newCap;
     }
+    /* TSAN note: see plugins/ommysql/README.md about libmysqlclient races. */
     memcpy(pWrkrData->sqlBuf, psz, need);
 
     /* try insert */
