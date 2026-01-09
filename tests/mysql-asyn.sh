@@ -27,8 +27,9 @@ mysql_prep_for_test
 startup
 injectmsg
 shutdown_when_empty
-wait_shutdown 
+wait_shutdown
 mysql_get_data
 seq_check
 mysql_cleanup_test
+exit 1
 exit_test

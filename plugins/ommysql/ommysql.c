@@ -281,6 +281,8 @@ static rsRetVal writeMySQL(wrkrInstanceData_t *pWrkrData, const uchar *const psz
         pWrkrData->sqlBuf = newBuf;
         pWrkrData->sqlBufCap = newCap;
     }
+    /* TSAN note: see plugins/ommysql/README.md about libmysqlclient races. */
+    /* TSAN note: see plugins/ommysql/README.md about libmysqlclient races. */
     memcpy(pWrkrData->sqlBuf, psz, need);
 
     /* try insert */
