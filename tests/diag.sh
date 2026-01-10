@@ -3250,19 +3250,19 @@ prepare_otel_collector() {
 		echo "ERROR: RSYSLOG_DYNNAME is not set when preparing OTEL Collector"
 		error_exit 1
 	fi
-	
+
 	dep_work_otel_collector_config="otel-collector-config.yaml"
 	dep_work_otel_collector_pidfile="otelcol.pid"
-	
+
 	# Create .dep_wrk directory first if it doesn't exist, then resolve path
 	if [ ! -d .dep_wrk ]; then
 		mkdir -p .dep_wrk
 	fi
 	dep_work_dir=$(readlink -f .dep_wrk 2>/dev/null || echo "$(pwd)/.dep_wrk")
-	
+
 	# Use per-test directory to allow parallel execution
 	otelcol_work_dir="$dep_work_dir/otelcol-${RSYSLOG_DYNNAME}"
-	
+
 	if [ ! -f $dep_otel_collector_cached_file ]; then
 		echo "Dependency-cache does not have OTEL Collector package, did you download dependencies?"
 		error_exit 77
@@ -3286,7 +3286,7 @@ prepare_otel_collector() {
 	echo "TEST USES OTEL COLLECTOR BINARY $dep_otel_collector_cached_file"
 	mkdir -p "$otelcol_work_dir"
 	(cd "$otelcol_work_dir" && tar -zxf $dep_otel_collector_cached_file) > /dev/null
-	
+
 	# Find the actual binary location (tarball may extract to subdirectory or root)
 	otelcol_binary=""
 	if [ -f "$otelcol_work_dir/otelcol-contrib" ]; then
@@ -3309,10 +3309,10 @@ prepare_otel_collector() {
 			otelcol_binary="$otelcol_work_dir/otelcol-contrib"
 		fi
 	fi
-	
+
 	# Make binary executable
 	chmod +x $otelcol_binary
-	
+
 	# Generate config file with dynamic port and output file path
 	# Use absolute path so OTEL Collector writes to test directory regardless of working directory
 	# Use srcdir if available (tests directory), otherwise use current directory
@@ -3323,22 +3323,22 @@ prepare_otel_collector() {
 	fi
 	otel_output_file="$test_dir/${RSYSLOG_DYNNAME}.otel-output.json"
 	export OTEL_OUTPUT_FILE="$otel_output_file"
-	
+
 	# Ensure the output directory exists (OTEL Collector file exporter may not create it)
 	mkdir -p "$(dirname "$otel_output_file")"
-	
+
 	# Get a free port for the collector (use existing get_free_port function for portability)
 	if [ -z "$OTEL_COLLECTOR_PORT" ]; then
 		OTEL_COLLECTOR_PORT=$(get_free_port)
 	fi
 	export OTEL_COLLECTOR_PORT
-	
+
 	# Get a free port for metrics/telemetry
 	if [ -z "$OTEL_METRICS_PORT" ]; then
 		OTEL_METRICS_PORT=$(get_free_port)
 	fi
 	export OTEL_METRICS_PORT
-	
+
 	if [ ! -f $srcdir/testsuites/$dep_work_otel_collector_config ]; then
 		echo "OTEL Collector config template not found: $srcdir/testsuites/$dep_work_otel_collector_config"
 		error_exit 1
@@ -3354,12 +3354,12 @@ prepare_otel_collector() {
 	sed -i "s|\${OTEL_OUTPUT_FILE}|$otel_output_file_escaped|g" "$otelcol_work_dir/config.yaml"
 	sed -i "s|\${OTEL_METRICS_PORT}|$OTEL_METRICS_PORT|g" "$otelcol_work_dir/config.yaml"
 	sed -i "s|endpoint: 0.0.0.0:0|endpoint: 0.0.0.0:$OTEL_COLLECTOR_PORT|g" "$otelcol_work_dir/config.yaml"
-	
+
 	if [ ! -f "$otelcol_work_dir/config.yaml" ]; then
 		echo "Failed to create OTEL Collector config file"
 		error_exit 1
 	fi
-	
+
 	echo "OTEL Collector prepared for use in test."
 	echo "OTEL Collector output file path: $otel_output_file"
 	echo "OTEL Collector config:"
@@ -3378,20 +3378,20 @@ start_otel_collector() {
 	dep_work_otel_collector_pidfile="$otelcol_work_dir/otelcol.pid"
 	dep_work_otel_collector_logfile="$otelcol_work_dir/otelcol.log"
 	otel_port_file="${RSYSLOG_DYNNAME}.otel_port.file"
-	
+
 	if [ ! -d "$otelcol_work_dir" ]; then
 		echo "OTEL Collector work-dir $otelcol_work_dir does not exist, did you prepare it?"
 		error_exit 1
 	fi
-	
+
 	echo "Starting OTEL Collector"
-	
+
 	# Verify config file exists
 	if [ ! -f "$otelcol_work_dir/config.yaml" ]; then
 		echo "OTEL Collector config file not found: $otelcol_work_dir/config.yaml"
 		error_exit 1
 	fi
-	
+
 	# Binary should be at known location after prepare_otel_collector()
 	otelcol_binary="$otelcol_work_dir/otelcol-contrib"
 	if [ ! -f "$otelcol_binary" ]; then
@@ -3399,26 +3399,26 @@ start_otel_collector() {
 		echo "Did you call prepare_otel_collector()?"
 		error_exit 1
 	fi
-	
+
 	# Verify binary is executable
 	if [ ! -x "$otelcol_binary" ]; then
 		chmod +x "$otelcol_binary"
 	fi
-	
+
 	otelcol_binary_rel="./otelcol-contrib"
-	
+
 	# Start collector in background and capture output (both stdout and stderr)
 	(cd "$otelcol_work_dir" && $otelcol_binary_rel --config=config.yaml > $dep_work_otel_collector_logfile 2>&1) &
 	otelcol_pid=$!
 	echo $otelcol_pid > $dep_work_otel_collector_pidfile
-	
+
 	# Wait a moment for the process to start
 	if [ -n "$TESTTOOL_DIR" ] && [ -f "$TESTTOOL_DIR/msleep" ]; then
 		$TESTTOOL_DIR/msleep 500
 	else
 		sleep 0.5
 	fi
-	
+
 	# Use the port we configured (no discovery needed)
 	otel_port="$OTEL_COLLECTOR_PORT"
 	if [ -z "$otel_port" ]; then
@@ -3427,14 +3427,14 @@ start_otel_collector() {
 	fi
 	echo $otel_port > $otel_port_file
 	echo "OTEL Collector configured to listen on port $otel_port"
-	
+
 	# Wait a bit more for collector to be fully ready
 	if [ -n "$TESTTOOL_DIR" ] && [ -f "$TESTTOOL_DIR/msleep" ]; then
 		$TESTTOOL_DIR/msleep 1000
 	else
 		sleep 1
 	fi
-	
+
 	# Verify port is listening using existing helper function
 	if ! wait_for_tcp_service "127.0.0.1" "$otel_port" 10 "OTEL Collector"; then
 		echo "OTEL Collector port $otel_port is not listening"
@@ -3445,7 +3445,7 @@ start_otel_collector() {
 		kill $otelcol_pid 2>/dev/null
 		error_exit 1
 	fi
-	
+
 	printf 'OTEL Collector pid is %s, listening on port %s\n' "$otelcol_pid" "$otel_port"
 }
 
@@ -3459,28 +3459,28 @@ stop_otel_collector() {
 	dep_work_dir=$(readlink -f .dep_wrk 2>/dev/null || echo "$(pwd)/.dep_wrk")
 	otelcol_work_dir="$dep_work_dir/otelcol-${RSYSLOG_DYNNAME}"
 	dep_work_otel_collector_pidfile="$otelcol_work_dir/otelcol.pid"
-	
+
 	if [ ! -f "$dep_work_otel_collector_pidfile" ]; then
 		echo "OTEL Collector pidfile does not exist, no action needed"
 		return
 	fi
-	
+
 	otelcol_pid=$(cat "$dep_work_otel_collector_pidfile" 2>/dev/null)
 	if [ -z "$otelcol_pid" ]; then
 		echo "OTEL Collector pidfile is empty, no action needed"
 		return
 	fi
-	
+
 	# Check if process is still running
 	if ! kill -0 $otelcol_pid 2>/dev/null; then
 		echo "OTEL Collector process $otelcol_pid is not running"
 		rm -f "$dep_work_otel_collector_pidfile"
 		return
 	fi
-	
+
 	echo "Stopping OTEL Collector (PID $otelcol_pid)"
 	kill -SIGTERM $otelcol_pid
-	
+
 	# Wait for graceful shutdown
 	i=0
 	while kill -0 $otelcol_pid 2>/dev/null; do
@@ -3492,7 +3492,7 @@ stop_otel_collector() {
 			break
 		fi
 	done
-	
+
 	rm -f "$dep_work_otel_collector_pidfile"
 }
 
@@ -3520,9 +3520,9 @@ otel_collector_get_data() {
 		echo "ERROR: OTEL_OUTPUT_FILE not set. Did you call prepare_otel_collector()?"
 		error_exit 1
 	fi
-	
+
 	otel_output_file="$OTEL_OUTPUT_FILE"
-	
+
 	# Wait for file to appear (OTEL Collector file exporter may buffer data)
 	i=0
 	timeout=10
@@ -3534,12 +3534,12 @@ otel_collector_get_data() {
 		fi
 		((i++))
 	done
-	
+
 	if [ ! -f "$otel_output_file" ]; then
 		echo "OTEL Collector output file does not exist: $otel_output_file"
 		error_exit 1
 	fi
-	
+
 	# Parse OTLP JSON structure and extract log records
 	# Structure: resourceLogs[].scopeLogs[].logRecords[]
 	# Extract body.stringValue from each log record
@@ -3576,7 +3576,7 @@ try:
                                                 body_value = base64.b64decode(body['bytesValue']).decode('utf-8', errors='ignore')
                                             except Exception:
                                                 pass
-                                        
+
                                         if body_value:
                                             # Extract just the numeric part for seq_check compatibility
                                             # chkseq expects just a number, not "msgnum:00000000"
@@ -3611,7 +3611,7 @@ try:
                                                     records.append((999999999, body_value))
             except json.JSONDecodeError:
                 continue
-        
+
         # Output records, one per line, sorted by numeric value
         # Extract just the numeric string (second element of tuple) for output
         for num_value, num_str in sorted(records):
