@@ -937,7 +937,7 @@ static void getip(uchar *start, size_t end, char *address) {
 static void log_max_retry_warning(const char *addressType, unsigned int retryCount, enum maxRetryOption handling) {
     const char *handlingLabel = handling == MAX_RETRY_ZERO ? "zero" : "accept-duplicates";
 
-    LogMsg(0, LOG_WARNING, "mmanon: unique retry limit %u reached for %s random-consistent-unique; handling=%s",
+    LogMsg(0, RS_RET_OK, LOG_WARNING, "mmanon: unique retry limit %u reached for %s random-consistent-unique; handling=%s",
            retryCount, addressType, handlingLabel);
 }
 
