@@ -352,7 +352,7 @@ BEGINnewActInst
                 pData->ipv4.bits = (int8_t)pvals[i].val.d.n;
             } else {
                 pData->ipv4.bits = 32;
-                parser_errmsg(
+                parser_warnmsg(
                     "warning: invalid number of ipv4.bits (%d), corrected "
                     "to 32",
                     (int)pvals[i].val.d.n);
@@ -371,7 +371,7 @@ BEGINnewActInst
                 pData->ipv4.maxRetryCount = (unsigned int)pvals[i].val.d.n;
             } else {
                 pData->ipv4.maxRetryCount = 1000;
-                parser_errmsg(
+                parser_warnmsg(
                     "warning: invalid number of ipv4.uniqueRetryCount (%d), "
                     "corrected to 1000",
                     (int)pvals[i].val.d.n);
@@ -395,7 +395,7 @@ BEGINnewActInst
                 pData->ipv6.bits = (uint8_t)pvals[i].val.d.n;
             } else {
                 pData->ipv6.bits = 128;
-                parser_errmsg(
+                parser_warnmsg(
                     "warning: invalid number of ipv6.bits (%d), corrected "
                     "to 128",
                     (int)pvals[i].val.d.n);
@@ -426,7 +426,7 @@ BEGINnewActInst
                 pData->ipv6.maxRetryCount = (unsigned int)pvals[i].val.d.n;
             } else {
                 pData->ipv6.maxRetryCount = 1000;
-                parser_errmsg(
+                parser_warnmsg(
                     "warning: invalid number of ipv6.uniqueRetryCount (%d), "
                     "corrected to 1000",
                     (int)pvals[i].val.d.n);
@@ -450,7 +450,7 @@ BEGINnewActInst
                 pData->embeddedIPv4.bits = (uint8_t)pvals[i].val.d.n;
             } else {
                 pData->embeddedIPv4.bits = 128;
-                parser_errmsg(
+                parser_warnmsg(
                     "warning: invalid number of embeddedipv4.bits (%d), "
                     "corrected to 128",
                     (int)pvals[i].val.d.n);
@@ -481,7 +481,7 @@ BEGINnewActInst
                 pData->embeddedIPv4.maxRetryCount = (unsigned int)pvals[i].val.d.n;
             } else {
                 pData->embeddedIPv4.maxRetryCount = 1000;
-                parser_errmsg(
+                parser_warnmsg(
                     "warning: invalid number of embeddedIpv4.uniqueRetryCount (%d), "
                     "corrected to 1000",
                     (int)pvals[i].val.d.n);
@@ -937,8 +937,8 @@ static void getip(uchar *start, size_t end, char *address) {
 static void log_max_retry_warning(const char *addressType, unsigned int retryCount, enum maxRetryOption handling) {
     const char *handlingLabel = handling == MAX_RETRY_ZERO ? "zero" : "accept-duplicates";
 
-    LogError(0, RS_RET_OK, "mmanon: unique retry limit %u reached for %s random-consistent-unique; handling=%s",
-             retryCount, addressType, handlingLabel);
+    LogMsg(0, LOG_WARNING, "mmanon: unique retry limit %u reached for %s random-consistent-unique; handling=%s",
+           retryCount, addressType, handlingLabel);
 }
 
 /**
