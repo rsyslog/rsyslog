@@ -963,8 +963,8 @@ static rsRetVal findip(char *address, wrkrInstanceData_t *pWrkrData) {
     char *CurrentCharPtr;
     uint32_t *uniqueKey = NULL;
     sbool locked = 0;
-    int bits = pWrkrData->pData->ipv4.bits;
-    enum mode anonmode = pWrkrData->pData->ipv4.mode;
+    const int bits = pWrkrData->pData->ipv4.bits;
+    const enum mode anonmode = pWrkrData->pData->ipv4.mode;
 
     /*
      * Walk/construct the prefix trie for the incoming address. The last bit is
@@ -1013,9 +1013,9 @@ static rsRetVal findip(char *address, wrkrInstanceData_t *pWrkrData) {
                           create_hashtable(512, hash_from_u32, key_equals_u32, NULL));
         }
         unsigned int attempts = 0;
-        sbool limitRetries = pWrkrData->pData->ipv4.limitMaxRetries;
-        unsigned int maxRetries = pWrkrData->pData->ipv4.maxRetryCount;
-        enum maxRetryOption handling = pWrkrData->pData->ipv4.maxRetryFallback;
+        const sbool limitRetries = pWrkrData->pData->ipv4.limitMaxRetries;
+        const unsigned int maxRetries = pWrkrData->pData->ipv4.maxRetryCount;
+        const enum maxRetryOption handling = pWrkrData->pData->ipv4.maxRetryFallback;
         sbool maxRetryReached = 0;
         sbool duplicateFound = 0;
 
@@ -1502,18 +1502,18 @@ static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t
     struct ipv6_int original = *num;
     struct ipv6_int *uniqueKey = NULL;
     sbool locked = 0;
-    sbool limitRetries =
+    const sbool limitRetries =
         useEmbedded ? pWrkrData->pData->embeddedIPv4.limitMaxRetries : pWrkrData->pData->ipv6.limitMaxRetries;
-    unsigned int maxRetries =
+    const unsigned int maxRetries =
         useEmbedded ? pWrkrData->pData->embeddedIPv4.maxRetryCount : pWrkrData->pData->ipv6.maxRetryCount;
-    enum maxRetryOption handling =
+    const enum maxRetryOption handling =
         useEmbedded ? pWrkrData->pData->embeddedIPv4.maxRetryFallback : pWrkrData->pData->ipv6.maxRetryFallback;
     unsigned int attempts = 0;
     sbool maxRetryReached = 0;
     sbool duplicateFound = 0;
     const char *addressType = useEmbedded ? "embeddedipv4" : "ipv6";
-    int bits = useEmbedded ? pWrkrData->pData->embeddedIPv4.bits : pWrkrData->pData->ipv6.bits;
-    enum mode anonmode =
+    const int bits = useEmbedded ? pWrkrData->pData->embeddedIPv4.bits : pWrkrData->pData->ipv6.bits;
+    const enum mode anonmode =
         useEmbedded ? pWrkrData->pData->embeddedIPv4.anonmode : pWrkrData->pData->ipv6.anonmode;
 
     /*
