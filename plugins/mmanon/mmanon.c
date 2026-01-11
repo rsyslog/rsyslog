@@ -963,6 +963,8 @@ static rsRetVal findip(char *address, wrkrInstanceData_t *pWrkrData) {
     char *CurrentCharPtr;
     uint32_t *uniqueKey = NULL;
     sbool locked = 0;
+    int bits = pWrkrData->pData->ipv4.bits;
+    enum mode anonmode = pWrkrData->pData->ipv4.mode;
 
     /*
      * Walk/construct the prefix trie for the incoming address. The last bit is
@@ -1019,7 +1021,7 @@ static rsRetVal findip(char *address, wrkrInstanceData_t *pWrkrData) {
 
         if (pWrkrData->pData->ipv4.randConsisUnique) {
             do {
-                num = code_ipv4_int(origNum, pWrkrData, pWrkrData->pData->ipv4.bits, pWrkrData->pData->ipv4.mode);
+                num = code_ipv4_int(origNum, pWrkrData, bits, anonmode);
                 duplicateFound =
                     (hashtable_search(pWrkrData->pData->ipv4.randConsisUniqueGeneratedIPs, &num) != NULL);
                 if (duplicateFound) {
@@ -1031,13 +1033,13 @@ static rsRetVal findip(char *address, wrkrInstanceData_t *pWrkrData) {
                 }
             } while (duplicateFound);
         } else {
-            num = code_ipv4_int(origNum, pWrkrData, pWrkrData->pData->ipv4.bits, pWrkrData->pData->ipv4.mode);
+            num = code_ipv4_int(origNum, pWrkrData, bits, anonmode);
         }
 
         if (maxRetryReached) {
             log_max_retry_warning("ipv4", maxRetries, handling);
             if (handling == MAX_RETRY_ZERO) {
-                num = code_ipv4_int(origNum, pWrkrData, pWrkrData->pData->ipv4.bits, ZERO);
+                num = code_ipv4_int(origNum, pWrkrData, bits, ZERO);
                 // duplicateFound determines whether the zeroed IP should be added to the table of unique generated IPs.
                 duplicateFound =
                     (hashtable_search(pWrkrData->pData->ipv4.randConsisUniqueGeneratedIPs, &num) != NULL);
@@ -1480,6 +1482,8 @@ static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t
     sbool duplicateFound = 0;
     const char *addressType = useEmbedded ? "embeddedipv4" : "ipv6";
     int bits = useEmbedded ? pWrkrData->pData->embeddedIPv4.bits : pWrkrData->pData->ipv6.bits;
+    enum mode anonmode =
+        useEmbedded ? pWrkrData->pData->embeddedIPv4.anonmode : pWrkrData->pData->ipv6.anonmode;
 
     /*
      * Consistent randomization keeps a per-action hash table of original->
@@ -1522,11 +1526,10 @@ static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t
             do {
                 *num = original;
                 if (useEmbedded) {
-                    code_ipv6_int(num, pWrkrData, pWrkrData->pData->embeddedIPv4.bits,
-                                  pWrkrData->pData->embeddedIPv4.anonmode);
+                    code_ipv6_int(num, pWrkrData, bits, anonmode);
                     num2embedded(num, address);
                 } else {
-                    code_ipv6_int(num, pWrkrData, pWrkrData->pData->ipv6.bits, pWrkrData->pData->ipv6.anonmode);
+                    code_ipv6_int(num, pWrkrData, bits, anonmode);
                     num2ipv6(num, address);
                 }
                 duplicateFound = (hashtable_search(randConsisUniqueGeneratedIPs, num) != NULL);
@@ -1541,20 +1544,16 @@ static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t
         } else {
             *num = original;
             if (useEmbedded) {
-                code_ipv6_int(num, pWrkrData, pWrkrData->pData->embeddedIPv4.bits,
-                              pWrkrData->pData->embeddedIPv4.anonmode);
+                code_ipv6_int(num, pWrkrData, bits, anonmode);
                 num2embedded(num, address);
             } else {
-                code_ipv6_int(num, pWrkrData, pWrkrData->pData->ipv6.bits, pWrkrData->pData->ipv6.anonmode);
+                code_ipv6_int(num, pWrkrData, bits, anonmode);
                 num2ipv6(num, address);
             }
         }
 
         if (maxRetryReached) {
-            log_max_retry_warning(
-                addressType,
-                useEmbedded ? pWrkrData->pData->embeddedIPv4.maxRetryCount : pWrkrData->pData->ipv6.maxRetryCount,
-                handling);
+            log_max_retry_warning(addressType, maxRetries, handling);
             if (handling == MAX_RETRY_ZERO) {
                 *num = original;
                 code_ipv6_int(num, pWrkrData, bits, ZERO);
