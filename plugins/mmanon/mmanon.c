@@ -1572,13 +1572,7 @@ static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t
         if (maxRetryReached) {
             log_max_retry_warning(addressType, maxRetries, handling);
             if (handling == MAX_RETRY_ZERO) {
-                *num = original;
-                code_ipv6_int(num, pWrkrData, bits, ZERO);
-                if (useEmbedded) {
-                    num2embedded(num, address);
-                } else {
-                    num2ipv6(num, address);
-                }
+                generate_ipv6_candidate(num, original, address, pWrkrData, useEmbedded, bits, ZERO);
                 // duplicateFound determines whether the zeroed IP should be added to the table of unique generated IPs.
                 duplicateFound = (hashtable_search(randConsisUniqueGeneratedIPs, num) != NULL);
             } else {
