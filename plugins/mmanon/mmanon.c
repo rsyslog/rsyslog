@@ -1445,6 +1445,37 @@ static void num2embedded(struct ipv6_int *ip, char *address) {
              (num[6] & 0xff00) >> 8, num[6] & 0xff, (num[7] & 0xff00) >> 8, num[7] & 0xff);
 }
 
+/**
+ * \brief Helper to generate a randomized IPv6/embedded address string.
+ *
+ * This helper is intentionally scoped to the findIPv6() retry loop, where
+ * all required preconditions and locking have already been validated. Do not
+ * use it elsewhere.
+ *
+ * \param num address value updated in place.
+ * \param original source address to randomize from.
+ * \param address buffer to receive the textual representation.
+ * \param pWrkrData worker context with RNG state.
+ * \param useEmbedded non-zero to format as embedded IPv4.
+ * \param bits number of bits to anonymize.
+ * \param anonmode anonymization mode to apply.
+ */
+static void generate_ipv6_candidate(struct ipv6_int *num,
+                                    const struct ipv6_int original,
+                                    char *address,
+                                    wrkrInstanceData_t *const pWrkrData,
+                                    int useEmbedded,
+                                    int bits,
+                                    enum mode anonmode) {
+    *num = original;
+    code_ipv6_int(num, pWrkrData, bits, anonmode);
+    if (useEmbedded) {
+        num2embedded(num, address);
+    } else {
+        num2ipv6(num, address);
+    }
+}
+
 
 /**
  * \brief Ensure consistent IPv6/embedded anonymization for repeat callers.
@@ -1524,14 +1555,7 @@ static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t
 
         if (uniqueMode) {
             do {
-                *num = original;
-                if (useEmbedded) {
-                    code_ipv6_int(num, pWrkrData, bits, anonmode);
-                    num2embedded(num, address);
-                } else {
-                    code_ipv6_int(num, pWrkrData, bits, anonmode);
-                    num2ipv6(num, address);
-                }
+                generate_ipv6_candidate(num, original, address, pWrkrData, useEmbedded, bits, anonmode);
                 duplicateFound = (hashtable_search(randConsisUniqueGeneratedIPs, num) != NULL);
                 if (duplicateFound) {
                     if (limitRetries && attempts >= maxRetries) {
@@ -1542,14 +1566,7 @@ static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t
                 }
             } while (duplicateFound);
         } else {
-            *num = original;
-            if (useEmbedded) {
-                code_ipv6_int(num, pWrkrData, bits, anonmode);
-                num2embedded(num, address);
-            } else {
-                code_ipv6_int(num, pWrkrData, bits, anonmode);
-                num2ipv6(num, address);
-            }
+            generate_ipv6_candidate(num, original, address, pWrkrData, useEmbedded, bits, anonmode);
         }
 
         if (maxRetryReached) {
