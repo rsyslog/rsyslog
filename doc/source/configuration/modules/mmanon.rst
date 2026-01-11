@@ -72,6 +72,18 @@ while 'IPv6.' parameters do the same for IPv6 anonymization.
      - .. include:: ../../reference/parameters/mmanon-ipv4-replacechar.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`ipv4.limitUniqueMaxRetries <param-mmanon-ipv4-limituniquemaxretries>`
+     - .. include:: ../../reference/parameters/mmanon-ipv4-limituniquemaxretries.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`ipv4.uniqueRetryCount <param-mmanon-ipv4-uniqueretrycount>`
+     - .. include:: ../../reference/parameters/mmanon-ipv4-uniqueretrycount.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`ipv4.maxRetryHandling <param-mmanon-ipv4-maxretryhandling>`
+     - .. include:: ../../reference/parameters/mmanon-ipv4-maxretryhandling.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`ipv6.enable <param-mmanon-ipv6-enable>`
      - .. include:: ../../reference/parameters/mmanon-ipv6-enable.rst
         :start-after: .. summary-start
@@ -82,6 +94,18 @@ while 'IPv6.' parameters do the same for IPv6 anonymization.
         :end-before: .. summary-end
    * - :ref:`ipv6.bits <param-mmanon-ipv6-bits>`
      - .. include:: ../../reference/parameters/mmanon-ipv6-bits.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`ipv6.limitUniqueMaxRetries <param-mmanon-ipv6-limituniquemaxretries>`
+     - .. include:: ../../reference/parameters/mmanon-ipv6-limituniquemaxretries.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`ipv6.uniqueRetryCount <param-mmanon-ipv6-uniqueretrycount>`
+     - .. include:: ../../reference/parameters/mmanon-ipv6-uniqueretrycount.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`ipv6.maxRetryHandling <param-mmanon-ipv6-maxretryhandling>`
+     - .. include:: ../../reference/parameters/mmanon-ipv6-maxretryhandling.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`embeddedIpv4.enable <param-mmanon-embeddedipv4-enable>`
@@ -96,6 +120,18 @@ while 'IPv6.' parameters do the same for IPv6 anonymization.
      - .. include:: ../../reference/parameters/mmanon-embeddedipv4-bits.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`embeddedIpv4.limitUniqueMaxRetries <param-mmanon-embeddedipv4-limituniquemaxretries>`
+     - .. include:: ../../reference/parameters/mmanon-embeddedipv4-limituniquemaxretries.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`embeddedIpv4.uniqueRetryCount <param-mmanon-embeddedipv4-uniqueretrycount>`
+     - .. include:: ../../reference/parameters/mmanon-embeddedipv4-uniqueretrycount.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`embeddedIpv4.maxRetryHandling <param-mmanon-embeddedipv4-maxretryhandling>`
+     - .. include:: ../../reference/parameters/mmanon-embeddedipv4-maxretryhandling.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 .. toctree::
    :hidden:
@@ -104,12 +140,21 @@ while 'IPv6.' parameters do the same for IPv6 anonymization.
    ../../reference/parameters/mmanon-ipv4-mode
    ../../reference/parameters/mmanon-ipv4-bits
    ../../reference/parameters/mmanon-ipv4-replacechar
+   ../../reference/parameters/mmanon-ipv4-limituniquemaxretries
+   ../../reference/parameters/mmanon-ipv4-uniqueretrycount
+   ../../reference/parameters/mmanon-ipv4-maxretryhandling
    ../../reference/parameters/mmanon-ipv6-enable
    ../../reference/parameters/mmanon-ipv6-anonmode
    ../../reference/parameters/mmanon-ipv6-bits
+   ../../reference/parameters/mmanon-ipv6-limituniquemaxretries
+   ../../reference/parameters/mmanon-ipv6-uniqueretrycount
+   ../../reference/parameters/mmanon-ipv6-maxretryhandling
    ../../reference/parameters/mmanon-embeddedipv4-enable
    ../../reference/parameters/mmanon-embeddedipv4-anonmode
    ../../reference/parameters/mmanon-embeddedipv4-bits
+   ../../reference/parameters/mmanon-embeddedipv4-limituniquemaxretries
+   ../../reference/parameters/mmanon-embeddedipv4-uniqueretrycount
+   ../../reference/parameters/mmanon-embeddedipv4-maxretryhandling
 
 
 See Also
@@ -220,4 +265,3 @@ disable IPv4 anonymization. This example will lead to only IPv6 addresses anonym
    action(type="omfile" file="/path/to/non-anon.log")
    action(type="mmanon" ipv4.enable="off" ipv6.anonmode="random-consistent")
    action(type="omfile" file="/path/to/anon.log")
-
