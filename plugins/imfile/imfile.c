@@ -981,7 +981,7 @@ static void act_obj_destroy(act_obj_t *const act, const int is_deleted) {
         pollFile(act); /* get any left-over data */
         if (inst->bRMStateOnDel) {
             statefn = getStateFileName(act, statefile, sizeof(statefile));
-	    getFileID(act);
+            getFileID(act);
             getFullStateFileName(statefn, act->file_id, toDel, sizeof(toDel));  // TODO: check!
             statefn = toDel;
         }
