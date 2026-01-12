@@ -48,7 +48,7 @@
     #define ATOMIC_DEC(data, phlpmut) ((void)__sync_sub_and_fetch(data, 1))
     #define ATOMIC_DEC_AND_FETCH(data, phlpmut) __sync_sub_and_fetch(data, 1)
     #define ATOMIC_FETCH_32BIT(data, phlpmut) ((int)__sync_fetch_and_and(data, 0xffffffff))
-    #define ATOMIC_FETCH_32BIT_unsigned(data, phlpmut) ((int)__sync_fetch_and_and(data, 0xffffffff))
+    #define ATOMIC_FETCH_32BIT_unsigned(data, phlpmut) ((unsigned)__sync_fetch_and_and(data, 0xffffffff))
     #define ATOMIC_STORE_1_TO_32BIT(data) __sync_lock_test_and_set(&(data), 1)
     #define ATOMIC_STORE_0_TO_INT(data, phlpmut) __sync_fetch_and_and(data, 0)
     #define ATOMIC_STORE_1_TO_INT(data, phlpmut) __sync_fetch_and_or(data, 1)
@@ -57,6 +57,10 @@
     #define ATOMIC_CAS(data, oldVal, newVal, phlpmut) __sync_bool_compare_and_swap(data, (oldVal), (newVal))
     #define ATOMIC_CAS_time_t(data, oldVal, newVal, phlpmut) __sync_bool_compare_and_swap(data, (oldVal), (newVal))
     #define ATOMIC_CAS_VAL(data, oldVal, newVal, phlpmut) __sync_val_compare_and_swap(data, (oldVal), (newVal));
+    /* Atomic operations for pointers (word-sized on all supported platforms) */
+    #define ATOMIC_FETCH_PTR(data, phlpmut) ((void *)__sync_fetch_and_add(data, 0))
+    #define ATOMIC_STORE_PTR(data, phlpmut, val) ((void)__sync_lock_test_and_set((data), (val)))
+    #define ATOMIC_CAS_PTR(data, oldVal, newVal, phlpmut) __sync_bool_compare_and_swap(data, (oldVal), (newVal))
 
     /* functions below are not needed if we have atomics */
     #define DEF_ATOMIC_HELPER_MUT(x)
@@ -211,6 +215,35 @@ static inline void ATOMIC_SUB_unsigned(unsigned *data, int val, pthread_mutex_t 
     (*data) -= val;
     pthread_mutex_unlock(phlpmut);
 }
+
+/* Atomic operations for pointers - fallback to mutex-protected operations */
+static inline void *ATOMIC_FETCH_PTR(void **data, pthread_mutex_t *phlpmut) {
+    void *val;
+    pthread_mutex_lock(phlpmut);
+    val = *data;
+    pthread_mutex_unlock(phlpmut);
+    return val;
+}
+
+static inline void ATOMIC_STORE_PTR(void **data, pthread_mutex_t *phlpmut, void *val) {
+    pthread_mutex_lock(phlpmut);
+    *data = val;
+    pthread_mutex_unlock(phlpmut);
+}
+
+static inline int ATOMIC_CAS_PTR(void **data, void *oldVal, void *newVal, pthread_mutex_t *phlpmut) {
+    int bSuccess;
+    pthread_mutex_lock(phlpmut);
+    if (*data == oldVal) {
+        *data = newVal;
+        bSuccess = 1;
+    } else {
+        bSuccess = 0;
+    }
+    pthread_mutex_unlock(phlpmut);
+    return bSuccess;
+}
+
     #define DEF_ATOMIC_HELPER_MUT(x) pthread_mutex_t x
     #define INIT_ATOMIC_HELPER_MUT(x) pthread_mutex_init(&(x), NULL)
     #define DESTROY_ATOMIC_HELPER_MUT(x) pthread_mutex_destroy(&(x))

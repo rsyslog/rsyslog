@@ -941,11 +941,41 @@ finalize_it:
 
 static rsRetVal actionCheckAndCreateWrkrInstance(action_t *const pThis, const wti_t *const pWti) {
     int locked = 0;
+    void *existingInstance;
     DEFiRet;
     if (actionIsDisabled(pThis)) {
         FINALIZE;
     }
-    if (pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData == NULL) {
+
+    /* Fast path: atomic read to check if instance already exists.
+     * This optimization avoids mutex contention in the common case where
+     * the worker instance has already been created. Uses atomic operations
+     * to ensure proper memory ordering and visibility across threads.
+     */
+#ifdef HAVE_ATOMIC_BUILTINS
+    existingInstance = ATOMIC_FETCH_PTR(&pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData, &pThis->mutWrkrDataTable);
+    if (existingInstance != NULL) {
+        FINALIZE; /* Common case: instance exists, return immediately */
+    }
+#endif
+
+    /* Worker instance does not exist. Acquire lock to prevent race condition
+     * where multiple threads might try to create instances simultaneously.
+     * We use double-checked locking when atomic reads are available to
+     * confirm another thread did not create the instance between checks.
+     * On platforms without atomic builtins, we perform the full check under
+     * a single mutex to avoid nested locking in the fallback path.
+     */
+    pthread_mutex_lock(&pThis->mutWrkrDataTable);
+    locked = 1;
+
+#ifdef HAVE_ATOMIC_BUILTINS
+    /* Recheck under lock (double-checked locking pattern with atomics) */
+    existingInstance = ATOMIC_FETCH_PTR(&pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData, &pThis->mutWrkrDataTable);
+#else
+    existingInstance = pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData;
+#endif
+    if (existingInstance == NULL) {
         DBGPRINTF(
             "wti %p: we need to create a new action worker instance for "
             "action %d\n",
@@ -956,9 +986,6 @@ static rsRetVal actionCheckAndCreateWrkrInstance(action_t *const pThis, const wt
         setActionState(pWti, pThis, ACT_STATE_RDY); /* action is enabled */
 
         /* maintain worker data table -- only needed if wrkrHUP is requested! */
-
-        pthread_mutex_lock(&pThis->mutWrkrDataTable);
-        locked = 1;
         int freeSpot;
         for (freeSpot = 0; freeSpot < pThis->wrkrDataTableSize; ++freeSpot)
             if (pThis->wrkrDataTable[freeSpot] == NULL) break;
