@@ -54,10 +54,21 @@
 
 #include <sys/socket.h>
 
-#include "amqp.h"
-#include "amqp_framing.h"
-#include "amqp_tcp_socket.h"
-#include "amqp_ssl_socket.h"
+/* rabbitmq-c 0.8.0+ uses rabbitmq-c/ prefix for headers */
+#ifdef HAVE_RABBITMQ_C_AMQP_H
+    /* rabbitmq-c 0.8.0+ header path */
+    #include <rabbitmq-c/amqp.h>
+    #include <rabbitmq-c/framing.h>
+    #include <rabbitmq-c/tcp_socket.h>
+    #include <rabbitmq-c/ssl_socket.h>
+#else
+    /* Fallback for older rabbitmq-c versions (< 0.8.0) */
+    #include "amqp.h"
+    #include "amqp_framing.h"
+    #include "amqp_tcp_socket.h"
+    #include "amqp_ssl_socket.h"
+#endif
+
 #if (AMQP_VERSION_MAJOR == 0) && (AMQP_VERSION_MINOR < 4)
     #error "rabbitmq-c version must be >= 0.4.0"
 #endif
@@ -352,10 +363,13 @@ static amqp_connection_state_t tryConnection(wrkrInstanceData_t *self, server_t 
     amqp_connection_state_t a_conn = amqp_new_connection();
     if (a_conn) {
         if (self->pData->ssl) {
+            /* amqp_set_initialize_ssl_library() deprecated in 0.8.0+ */
+#if (AMQP_VERSION_MAJOR == 0) && (AMQP_VERSION_MINOR < 8)
             if (!self->pData->initOpenSSL) {
                 // prevent OpenSSL double initialization
                 amqp_set_initialize_ssl_library(0);
             }
+#endif
             sockfd = amqp_ssl_socket_new(a_conn);
         } else {
             sockfd = amqp_tcp_socket_new(a_conn);
@@ -390,7 +404,8 @@ static amqp_connection_state_t tryConnection(wrkrInstanceData_t *self, server_t 
     /* the connection failed so free it and return NULL */
     amqp_connection_close(a_conn, 200);
     amqp_destroy_connection(a_conn);
-#if ((AMQP_VERSION_MAJOR == 0) && (AMQP_VERSION_MINOR > 8)) || (AMQP_VERSION_MAJOR > 0)
+    /* amqp_uninitialize_ssl_library() deprecated in 0.8.0+ */
+#if (AMQP_VERSION_MAJOR == 0) && (AMQP_VERSION_MINOR < 8)
     if (self->pData->ssl && self->pData->initOpenSSL) {
         amqp_uninitialize_ssl_library();
     }
@@ -436,7 +451,8 @@ static int manage_connection(wrkrInstanceData_t *self, amqp_frame_t *pFrame) {
                 DBGPRINTF("omrabbitmq module %d: reconnects to usual server.\n", self->iidx);
                 amqp_connection_close(old_conn, 200);
                 amqp_destroy_connection(old_conn);
-#if ((AMQP_VERSION_MAJOR == 0) && (AMQP_VERSION_MINOR > 8)) || (AMQP_VERSION_MAJOR > 0)
+                /* amqp_uninitialize_ssl_library() deprecated in 0.8.0+ */
+#if (AMQP_VERSION_MAJOR == 0) && (AMQP_VERSION_MINOR < 8)
                 if (self->pData->ssl && self->pData->initOpenSSL) {
                     amqp_uninitialize_ssl_library();
                 }
@@ -525,7 +541,8 @@ static void *run_connection_routine(void *arg) {
         if (self->a_conn != NULL) {
             amqp_connection_close(self->a_conn, 200);
             amqp_destroy_connection(self->a_conn);
-#if ((AMQP_VERSION_MAJOR == 0) && (AMQP_VERSION_MINOR > 8)) || (AMQP_VERSION_MAJOR > 0)
+            /* amqp_uninitialize_ssl_library() deprecated in 0.8.0+ */
+#if (AMQP_VERSION_MAJOR == 0) && (AMQP_VERSION_MINOR < 8)
             if (self->pData->ssl && self->pData->initOpenSSL) {
                 amqp_uninitialize_ssl_library();
             }
@@ -704,7 +721,8 @@ static void *run_connection_routine(void *arg) {
         if (self->connected) amqp_connection_close(self->a_conn, 200);
         amqp_destroy_connection(self->a_conn);
         self->a_conn = NULL;
-#if ((AMQP_VERSION_MAJOR == 0) && (AMQP_VERSION_MINOR > 8)) || (AMQP_VERSION_MAJOR > 0)
+        /* amqp_uninitialize_ssl_library() deprecated in 0.8.0+ */
+#if (AMQP_VERSION_MAJOR == 0) && (AMQP_VERSION_MINOR < 8)
         if (self->pData->ssl && self->pData->initOpenSSL) {
             amqp_uninitialize_ssl_library();
         }
