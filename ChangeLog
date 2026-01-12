@@ -2,6 +2,10 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-12:imfile: ensure state files are deleted correctly on log rotation
+  When log rotation occurs, imfile sometimes fails to delete the old state
+  files.
+  Thanks to Sagar Singh for the patch.
 - 2026-01-12: rainerscript: add is_in_subnet() built-in
   Improve usability by providing a simple way to check if an IP is inside
   a CIDR subnet directly in RainerScript. This reduces awkward workarounds
