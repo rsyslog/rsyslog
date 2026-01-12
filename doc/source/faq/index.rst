@@ -5,6 +5,7 @@ FAQ
    :maxdepth: 2
 
    faq_overall
+   blocking_actions
    difference_queues
    encrypt_mysql_traffic_ommysql
    imudp-packet-loss
