@@ -937,8 +937,9 @@ static void getip(uchar *start, size_t end, char *address) {
 static void log_max_retry_warning(const char *addressType, unsigned int retryCount, enum maxRetryOption handling) {
     const char *handlingLabel = handling == MAX_RETRY_ZERO ? "zero" : "accept-duplicates";
 
-    LogMsg(0, RS_RET_OK, LOG_WARNING, "mmanon: unique retry limit %u reached for %s random-consistent-unique; handling=%s",
-           retryCount, addressType, handlingLabel);
+    LogMsg(0, RS_RET_OK, LOG_WARNING,
+           "mmanon: unique retry limit %u reached for %s random-consistent-unique; handling=%s", retryCount,
+           addressType, handlingLabel);
 }
 
 /**
@@ -1022,8 +1023,7 @@ static rsRetVal findip(char *address, wrkrInstanceData_t *pWrkrData) {
         if (pWrkrData->pData->ipv4.randConsisUnique) {
             do {
                 num = code_ipv4_int(origNum, pWrkrData, bits, anonmode);
-                duplicateFound =
-                    (hashtable_search(pWrkrData->pData->ipv4.randConsisUniqueGeneratedIPs, &num) != NULL);
+                duplicateFound = (hashtable_search(pWrkrData->pData->ipv4.randConsisUniqueGeneratedIPs, &num) != NULL);
                 if (duplicateFound) {
                     if (limitRetries && attempts >= maxRetries) {
                         maxRetryReached = 1;
@@ -1041,8 +1041,7 @@ static rsRetVal findip(char *address, wrkrInstanceData_t *pWrkrData) {
             if (handling == MAX_RETRY_ZERO) {
                 num = code_ipv4_int(origNum, pWrkrData, bits, ZERO);
                 // duplicateFound determines whether the zeroed IP should be added to the table of unique generated IPs.
-                duplicateFound =
-                    (hashtable_search(pWrkrData->pData->ipv4.randConsisUniqueGeneratedIPs, &num) != NULL);
+                duplicateFound = (hashtable_search(pWrkrData->pData->ipv4.randConsisUniqueGeneratedIPs, &num) != NULL);
             } else {
                 // Accept-duplicates keeps the last randomized IP; no extra work needed.
             }
@@ -1513,8 +1512,7 @@ static rsRetVal findIPv6(struct ipv6_int *num, char *address, wrkrInstanceData_t
     sbool duplicateFound = 0;
     const char *addressType = useEmbedded ? "embeddedipv4" : "ipv6";
     const int bits = useEmbedded ? pWrkrData->pData->embeddedIPv4.bits : pWrkrData->pData->ipv6.bits;
-    const enum mode anonmode =
-        useEmbedded ? pWrkrData->pData->embeddedIPv4.anonmode : pWrkrData->pData->ipv6.anonmode;
+    const enum mode anonmode = useEmbedded ? pWrkrData->pData->embeddedIPv4.anonmode : pWrkrData->pData->ipv6.anonmode;
 
     /*
      * Consistent randomization keeps a per-action hash table of original->
