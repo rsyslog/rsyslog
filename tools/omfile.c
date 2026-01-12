@@ -17,7 +17,7 @@
  * pipes. These have been moved to ompipe, to reduced the entanglement
  * between the two different functionalities. -- rgerhards
  *
- * Copyright 2007-2024 Adiscon GmbH.
+ * Copyright 2007-2026 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -485,10 +485,7 @@ static rsRetVal cflineParseOutchannel(
     /* OK, we finally got a correct template. So let's use it... */
     pData->fname = ustrdup(pOch->pszFileTemplate);
     pData->iSizeLimit = pOch->uSizeLimit;
-    /* WARNING: It is dangerous "just" to pass the pointer. As we
-     * never rebuild the output channel description, this is acceptable here.
-     */
-    pData->pszSizeLimitCmd = pOch->cmdOnSizeLimit;
+    if (pOch->cmdOnSizeLimit != NULL) pData->pszSizeLimitCmd = ustrdup(pOch->cmdOnSizeLimit);
 
     iRet = cflineParseTemplateName(&p, pOMSR, iEntry, iTplOpts, getDfltTpl());
 
@@ -1167,6 +1164,7 @@ BEGINfreeInstance
     CODESTARTfreeInstance;
     free(pData->tplName);
     free(pData->fname);
+    free(pData->pszSizeLimitCmd);
     if (pData->iCloseTimeout > 0) janitorDelEtry(pData->janitorID);
     if (pData->bDynamicName) {
         dynaFileFreeCache(pData);
