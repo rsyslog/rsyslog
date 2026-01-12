@@ -2,6 +2,10 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-12: rainerscript: add is_in_subnet() built-in
+  Improve usability by providing a simple way to check if an IP is inside
+  a CIDR subnet directly in RainerScript. This reduces awkward workarounds
+  and makes common filtering and routing tasks easier to express.
 - 2026-01-12: testbench: improved tests for mmjsontransform and mmjsonparse
 - 2026-01-07: runtime: fix race condition in worker thread cancellation
   Fixed a race condition in wtiCancelThrd() where thrdID could be accessed
