@@ -637,15 +637,16 @@ static rsRetVal getReturnCode(action_t *const pThis, wti_t *const pWti) {
 /* set the action to a new state
  * rgerhards, 2007-08-02
  */
-static void actionSetState(action_t *const pThis, wti_t *const pWti, uint8_t newState) {
+static void actionSetState(action_t *const pThis, const char *const callerName, wti_t *const pWti, uint8_t newState) {
     setActionState(pWti, pThis, newState);
-    DBGPRINTF("action[%s] transitioned to state: %s\n", pThis->pszName, getActStateName(pThis, pWti));
+    DBGPRINTF("action[%s] transitioned to state: %s (caller %s)\n", pThis->pszName, getActStateName(pThis, pWti),
+              callerName);
 }
 
 static void actionDisableForWorker(action_t *const pThis, wti_t *const pWti) {
     actionDisable(pThis);
     if (pWti != NULL && getActionState(pWti, pThis) != ACT_STATE_DISABLED) {
-        actionSetState(pThis, pWti, ACT_STATE_DISABLED);
+        actionSetState(pThis, __func__, pWti, ACT_STATE_DISABLED);
     }
 }
 
@@ -654,7 +655,7 @@ static void actionDisableForWorker(action_t *const pThis, wti_t *const pWti) {
  * rgerhards, 2007-08-02
  */
 static void actionCommitted(action_t *const pThis, wti_t *const pWti) {
-    actionSetState(pThis, pWti, ACT_STATE_RDY);
+    actionSetState(pThis, __func__, pWti, ACT_STATE_RDY);
 }
 
 
@@ -736,7 +737,7 @@ static void ATTR_NONNULL() actionRetry(action_t *const pThis, wti_t *const pWti)
     }
 
     setSuspendMessageConfVars(pThis);
-    actionSetState(pThis, pWti, ACT_STATE_RTRY);
+    actionSetState(pThis, __func__, pWti, ACT_STATE_RTRY);
     if (pThis->bReportSuspension) {
         LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING,
                "action '%s' suspended (module '%s'), retry %d. There should "
@@ -771,7 +772,7 @@ static void ATTR_NONNULL() actionSuspend(action_t *const pThis, wti_t *const pWt
         suspendDuration = pThis->iResumeIntervalMax;
     }
     pThis->ttResumeRtry = ttNow + suspendDuration;
-    actionSetState(pThis, pWti, ACT_STATE_SUSP);
+    actionSetState(pThis, __func__, pWti, ACT_STATE_SUSP);
     pThis->ctrSuspendDuration += suspendDuration;
     if (getActionNbrResRtry(pWti, pThis) == 0) {
         STATSCOUNTER_INC(pThis->ctrSuspend, pThis->mutCtrSuspend);
@@ -841,7 +842,7 @@ static rsRetVal ATTR_NONNULL() actionDoRetry(action_t *const pThis, wti_t *const
                        "resumed (module '%s')",
                        pThis->pszName, pThis->pMod->pszName);
             }
-            actionSetState(pThis, pWti, ACT_STATE_RDY);
+            actionSetState(pThis, __func__, pWti, ACT_STATE_RDY);
         } else if (iRet == RS_RET_SUSPENDED || bTreatOKasSusp) {
             /* max retries reached? */
             DBGPRINTF(
@@ -906,7 +907,7 @@ static rsRetVal ATTR_NONNULL() actionDoRetry_extFile(action_t *const pThis, wti_
                        "resumed (module '%s') via external state file",
                        pThis->pszName, pThis->pMod->pszName);
             }
-            actionSetState(pThis, pWti, ACT_STATE_RDY);
+            actionSetState(pThis, __func__, pWti, ACT_STATE_RDY);
         } else if (iRet == RS_RET_SUSPENDED) {
             /* max retries reached? */
             DBGPRINTF(
@@ -1038,7 +1039,7 @@ static rsRetVal actionTryResume(action_t *const pThis, wti_t *const pWti) {
          */
         datetime.GetTime(&ttNow); /* cache "now" */
         if (ttNow >= pThis->ttResumeRtry) {
-            actionSetState(pThis, pWti, ACT_STATE_RTRY); /* back to retries */
+            actionSetState(pThis, __func__, pWti, ACT_STATE_RTRY); /* back to retries */
         }
     }
 
@@ -1095,7 +1096,7 @@ static rsRetVal ATTR_NONNULL() actionPrepare(action_t *__restrict__ const pThis,
         iRet = pThis->pMod->mod.om.beginTransaction(pWti->actWrkrInfo[pThis->iActionNbr].actWrkrData);
         switch (iRet) {
             case RS_RET_OK:
-                actionSetState(pThis, pWti, ACT_STATE_ITX);
+                actionSetState(pThis, __func__, pWti, ACT_STATE_ITX);
                 break;
             case RS_RET_SUSPENDED:
                 actionRetry(pThis, pWti);
@@ -1263,7 +1264,7 @@ static rsRetVal handleActionExecResult(action_t *__restrict__ const pThis,
                      "message lost, could not be processed. Check for "
                      "additional error messages before this one.",
                      pThis->pszName, pThis->pMod->pszName);
-            actionSetState(pThis, pWti, ACT_STATE_DATAFAIL);
+            actionSetState(pThis, __func__, pWti, ACT_STATE_DATAFAIL);
             break;
     }
     iRet = getReturnCode(pThis, pWti);
