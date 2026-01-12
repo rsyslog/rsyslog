@@ -15,6 +15,7 @@ template(name="outfmt" type="string" string="%msg%")
 
 local4.* {
         action(type="omhiredis"
+                name="omhiredis-stream-outfield"
                 server="127.0.0.1"
                 serverport="'$REDIS_RANDOM_PORT'"
                 mode="stream"
@@ -48,6 +49,8 @@ content_count_check " msgnum:00000002:" 1 $RSYSLOG_OUT_LOG
 content_count_check "custom_field" 2 $RSYSLOG_OUT_LOG
 content_count_check "msg" 2 $RSYSLOG_OUT_LOG
 content_count_check "msgnum" 2 $RSYSLOG_OUT_LOG
+
+content_check "omhiredis[omhiredis-stream-outfield]: trying connect to '127.0.0.1'" ${RSYSLOG_DYNNAME}.started
 
 stop_redis
 

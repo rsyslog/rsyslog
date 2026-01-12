@@ -17,6 +17,7 @@ template(name="dynakey" type="string" string="%$!dynaKey%")
 local4.* {
         set $!dynaKey = "myDynaKey";
         action(type="omhiredis"
+                name="omhiredis-dynakey"
                 server="127.0.0.1"
                 serverport="'$REDIS_RANDOM_PORT'"
                 mode="set"
@@ -44,12 +45,12 @@ wait_shutdown
 redis_command "GET myDynaKey" >> $RSYSLOG_OUT_LOG
 
 # The first get is before inserting, the second is after
-export EXPECTED="/usr/bin/redis-cli
-
-/usr/bin/redis-cli
+export EXPECTED="
  msgnum:00000001:"
 
 cmp_exact $RSYSLOG_OUT_LOG
+
+content_check "omhiredis[omhiredis-dynakey]: trying connect to '127.0.0.1'" ${RSYSLOG_DYNNAME}.started
 
 stop_redis
 

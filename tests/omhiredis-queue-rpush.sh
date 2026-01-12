@@ -15,6 +15,7 @@ template(name="outfmt" type="string" string="%msg%")
 
 local4.* {
         action(type="omhiredis"
+                name="omhiredis-queue-rpush"
                 server="127.0.0.1"
                 serverport="'$REDIS_RANDOM_PORT'"
                 mode="queue"
@@ -39,9 +40,7 @@ redis_command "LLEN myKey" > $RSYSLOG_OUT_LOG
 redis_command "LPOP myKey 6" >> $RSYSLOG_OUT_LOG
 
 # Messages should be retrieved in order (as they were inserted using RPUSH)
-export EXPECTED="/usr/bin/redis-cli
-5
-/usr/bin/redis-cli
+export EXPECTED="5
  msgnum:00000001:
  msgnum:00000002:
  msgnum:00000003:
@@ -49,6 +48,8 @@ export EXPECTED="/usr/bin/redis-cli
  msgnum:00000005:"
 
 cmp_exact $RSYSLOG_OUT_LOG
+
+content_check "omhiredis[omhiredis-queue-rpush]: trying connect to '127.0.0.1'" ${RSYSLOG_DYNNAME}.started
 
 stop_redis
 
