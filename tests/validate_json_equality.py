@@ -1,16 +1,15 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 JSON semantic equality validator for rsyslog tests.
 Compares input JSON (after cookie removal) with output JSON for semantic equality.
 Ignores whitespace differences and field ordering.
 """
-
+from __future__ import print_function
 import json
 import sys
-from typing import Any
 
-
-def extract_json_from_syslog(line: str, cookie: str = "<01> @cee:") -> str:
+def extract_json_from_syslog(line, cookie="<01> @cee:"):
     """Extract JSON part from syslog line with cookie."""
     if cookie in line:
         json_part = line.split(cookie, 1)[1].strip()
@@ -18,7 +17,7 @@ def extract_json_from_syslog(line: str, cookie: str = "<01> @cee:") -> str:
     return line.strip()
 
 
-def normalize_json(obj: Any) -> Any:
+def normalize_json(obj):
     """Recursively normalize JSON object for comparison."""
     if isinstance(obj, dict):
         # Sort keys for consistent comparison
@@ -29,7 +28,7 @@ def normalize_json(obj: Any) -> Any:
         return obj
 
 
-def compare_json_semantically(json1_str: str, json2_str: str):
+def compare_json_semantically(json1_str, json2_str):
     """Compare two JSON strings semantically."""
     try:
         obj1 = json.loads(json1_str)
@@ -41,13 +40,18 @@ def compare_json_semantically(json1_str: str, json2_str: str):
         if norm1 == norm2:
             return True, "JSON objects are semantically equal"
         else:
-            return False, f"JSON objects differ:\nExpected: {json.dumps(norm1, sort_keys=True, indent=2)}\nActual: {json.dumps(norm2, sort_keys=True, indent=2)}"
+            return False, "JSON objects differ:\nExpected: {0}\nActual: {1}".format(
+                json.dumps(norm1, sort_keys=True, indent=2),
+                json.dumps(norm2, sort_keys=True, indent=2)
+            )
     
-    except json.JSONDecodeError as e:
-        return False, f"JSON parsing error: {e}"
+    except ValueError as e:
+        return False, "JSON parsing error: {0}".format(e)
+    except Exception as e:
+        return False, "JSON parsing error: {0}".format(e)
 
 
-def validate_files(input_file: str, output_file: str, cookie: str = "<01> @cee:") -> bool:
+def validate_files(input_file, output_file, cookie="<01> @cee:"):
     """Validate that input and output files contain semantically equal JSON."""
     try:
         with open(input_file, 'r') as f:
@@ -57,7 +61,7 @@ def validate_files(input_file: str, output_file: str, cookie: str = "<01> @cee:"
             output_lines = f.readlines()
         
         if len(input_lines) != len(output_lines):
-            print(f"ERROR: Line count mismatch. Input: {len(input_lines)}, Output: {len(output_lines)}")
+            print("ERROR: Line count mismatch. Input: {0}, Output: {1}".format(len(input_lines), len(output_lines)))
             return False
         
         all_passed = True
@@ -72,18 +76,18 @@ def validate_files(input_file: str, output_file: str, cookie: str = "<01> @cee:"
             
             success, message = compare_json_semantically(input_json, output_json)
             if success:
-                print(f"Line {i}: ✓ JSON semantically equal")
+                print("Line {0}: ✓ JSON semantically equal".format(i))
             else:
-                print(f"Line {i}: ✗ {message}")
+                print("Line {0}: ✗ {1}".format(i, message))
                 all_passed = False
         
         return all_passed
     
-    except FileNotFoundError as e:
-        print(f"ERROR: File not found: {e}")
+    except IOError as e:
+        print("ERROR: File not found: {0}".format(e))
         return False
     except Exception as e:
-        print(f"ERROR: {e}")
+        print("ERROR: {0}".format(e))
         return False
 
 
@@ -97,8 +101,8 @@ def main():
     output_file = sys.argv[2]
     cookie = sys.argv[3] if len(sys.argv) > 3 else "<01> @cee:"
     
-    print(f"Validating JSON equality between {input_file} and {output_file}")
-    print(f"Using cookie: {cookie}")
+    print("Validating JSON equality between {0} and {1}".format(input_file, output_file))
+    print("Using cookie: {0}".format(cookie))
     print("-" * 50)
     
     success = validate_files(input_file, output_file, cookie)
