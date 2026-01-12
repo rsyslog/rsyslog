@@ -417,7 +417,7 @@ BEGINnewActInst
             } else {
                 parser_errmsg(
                     "mmanon: configuration error, unknown option for "
-                    "ipv6.anonmode, will use \"zero\"\n");
+                    "ipv6.anonMode, will use \"zero\"\n");
             }
         } else if (!strcmp(actpblk.descr[i].name, "ipv6.limituniquemaxretries")) {
             pData->ipv6.limitMaxRetries = (int)pvals[i].val.d.n;
@@ -451,7 +451,7 @@ BEGINnewActInst
             } else {
                 pData->embeddedIPv4.bits = 128;
                 parser_warnmsg(
-                    "warning: invalid number of embeddedipv4.bits (%d), "
+                    "warning: invalid number of embeddedIpv4.bits (%d), "
                     "corrected to 128",
                     (int)pvals[i].val.d.n);
             }
@@ -471,7 +471,7 @@ BEGINnewActInst
                 pData->embeddedIPv4.randConsisUnique = 1;
             } else {
                 parser_errmsg(
-                    "mmanon: configuration error, unknown option for ipv6.anonmode, "
+                    "mmanon: configuration error, unknown option for embeddedIpv4.anonMode, "
                     "will use \"zero\"\n");
             }
         } else if (!strcmp(actpblk.descr[i].name, "embeddedipv4.limituniquemaxretries")) {
