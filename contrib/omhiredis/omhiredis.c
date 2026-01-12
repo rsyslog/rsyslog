@@ -154,7 +154,6 @@ static struct cnfparamdescr actpdescr[] = {
     {"client_key", eCmdHdlrGetWord, 0},
     {"sni", eCmdHdlrGetWord, 0},
 #endif
-    {"name", eCmdHdlrGetWord, 0},
 };
 
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
