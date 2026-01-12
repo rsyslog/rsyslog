@@ -52,6 +52,9 @@ Ports
 Configures "listening_ports" in the civetweb library. This option may also be configured using the
 liboptions_ (below) however, this option will take precedence.
 
+The `ports` parameter accepts a comma-separated list of ports. To bind to a specific interface, use
+the format ``IP:Port``. For IPv6 addresses, enclose the IP in brackets, e.g., ``[::1]:8080``.
+
 - `Civetweb listening_ports <https://github.com/civetweb/civetweb/blob/master/docs/UserManual.md#listening_ports-8080>`_
 
 
@@ -432,14 +435,26 @@ This sets up an HTTP server instance on ports 80 and 443s (use 's' to indicate s
 
    # ports=8080, 443 (ssl)
    # document root='.'
-   module(load="imhttp" ports=8080,443s)
+   module(load="imhttp" ports="8080,443s")
    input(type="imhttp"
          endpoint="/postrequest"
          ruleset="postrequest_rs")
 
 
-
 Example 3
+---------
+
+Bind imhttp to specific IP addresses (e.g., localhost only) to prevent external access. This example
+binds to IPv4 ``127.0.0.1`` on port 8080 and IPv6 ``[::1]`` on port 8081.
+
+.. code-block:: none
+
+   module(load="imhttp" ports="127.0.0.1:8080, [::1]:8081")
+   input(type="imhttp" endpoint="/postrequest")
+
+
+
+Example 4
 ---------
 
 imhttp can also support the underlying options of `Civetweb <https://github.com/civetweb/civetweb/blob/master/docs/UserManual.md>`_ using the liboptions_ option.
@@ -458,7 +473,7 @@ imhttp can also support the underlying options of `Civetweb <https://github.com/
          )
 
 
-Example 4
+Example 5
 ---------
 
 Expose a Prometheus metrics endpoint alongside an input path:
@@ -477,7 +492,7 @@ Expose a Prometheus metrics endpoint alongside an input path:
    # TYPE imhttp_submitted_total counter
    imhttp_submitted_total 0
 
-Example 5
+Example 6
 ---------
 
 Expose only a Prometheus metrics endpoint secured with Basic
