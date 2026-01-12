@@ -447,6 +447,7 @@ TESTS +=  \
 	rscript_format_time.sh \
 	rscript_parse_time.sh \
 	rscript_is_time.sh \
+	rscript_is_in_subnet.sh \
 	rscript_script_error.sh \
 	rscript_parse_json.sh \
 	rscript_parse_json_issue.sh \
@@ -2307,6 +2308,7 @@ EXTRA_DIST= \
 	rscript_parse_time.sh \
 	rscript_parse_time_get-ts.py \
 	rscript_is_time.sh \
+	rscript_is_in_subnet.sh \
 	rscript_script_error.sh \
 	rscript_parse_json.sh \
 	rscript_parse_json_issue.sh \
