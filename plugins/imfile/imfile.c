@@ -957,7 +957,7 @@ static void ATTR_NONNULL() poll_timeouts(fs_edge_t *const edge) {
 
 /* destruct a single act_obj object */
 static void act_obj_destroy(act_obj_t *const act, const int is_deleted) {
-    uchar *statefn;
+    uchar *statefn = NULL;
     uchar statefile[MAXFNAME];
     uchar toDel[MAXFNAME];
 
@@ -979,11 +979,18 @@ static void act_obj_destroy(act_obj_t *const act, const int is_deleted) {
     if (act->pStrm != NULL) {
         const instanceConf_t *const inst = act->edge->instarr[0];  // TODO: same file, multiple instances?
         pollFile(act); /* get any left-over data */
-        if (inst->bRMStateOnDel) {
+        if (inst->bRMStateOnDel || (is_deleted && inst->bRMStateOnMove)) {
+            int lenout;
+
             statefn = getStateFileName(act, statefile, sizeof(statefile));
             getFileID(act);
-            getFullStateFileName(statefn, act->file_id, toDel, sizeof(toDel));  // TODO: check!
-            statefn = toDel;
+            lenout = getFullStateFileName(statefn, act->file_id, toDel, sizeof(toDel));
+            if (lenout < 0 || (size_t)lenout >= sizeof(toDel)) {
+                LogError(0, RS_RET_ERR, "imfile: could not get full state file name for '%s'", act->name);
+                statefn = NULL;
+            } else {
+                statefn = toDel;
+            }
         }
         persistStrmState(act);
         strm.Destruct(&act->pStrm);
@@ -997,7 +1004,7 @@ static void act_obj_destroy(act_obj_t *const act, const int is_deleted) {
          *   - If the configuration specifies not to preserve the state file after the file
          *     has been renamed. This prevents orphaned state files.
          */
-        if (is_deleted && ((!act->in_move && inst->bRMStateOnDel) || inst->bRMStateOnMove)) {
+        if (statefn != NULL && is_deleted && ((!act->in_move && inst->bRMStateOnDel) || inst->bRMStateOnMove)) {
             DBGPRINTF("act_obj_destroy: deleting state file %s\n", statefn);
             unlink((char *)statefn);
         }
