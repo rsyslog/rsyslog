@@ -2,7 +2,9 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
-- 2026-01-12:imfile: ensure state files are deleted correctly on log rotation
+- 2026-01-13: rainerscript: add append_json() function
+  Thanks to github user 20syldev for the patch.
+- 2026-01-12: imfile: ensure state files are deleted correctly on log rotation
   When log rotation occurs, imfile sometimes fails to delete the old state
   files.
   Thanks to Sagar Singh for the patch.
