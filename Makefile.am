@@ -49,6 +49,7 @@ EXTRA_DIST += \
     doc/source/about/index.rst \
     doc/source/about/origins.rst \
     doc/source/about/release_versioning.rst \
+	doc/source/about/philosophy.rst \
     doc/source/community.rst \
     doc/source/concepts/index.rst \
     doc/source/concepts/janitor.rst \
