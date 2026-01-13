@@ -15,6 +15,7 @@ strategic direction, including our **AI First** initiative.
    :maxdepth: 1
 
    ai_first
+   philosophy
    release_versioning
    history
    origins
