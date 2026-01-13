@@ -90,8 +90,11 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*GetRemotePort)(nsd_t *pThis, int *);
     rsRetVal (*FmtRemotePortStr)(const int port, uchar *const buf, const size_t len);
 
+    /* v18 -- allow remote server's TLS SNI to be set manually */
+    rsRetVal (*SetRemoteSNI)(nsd_t *pThis, uchar *pszRemoteSNI);
+
 ENDinterface(nsd)
-#define nsdCURR_IF_VERSION 17 /* increment whenever you change the interface structure! */
+#define nsdCURR_IF_VERSION 18 /* increment whenever you change the interface structure! */
     /* interface version 4 added GetRemAddr()
      * interface version 5 added EnableKeepAlive() -- rgerhards, 2009-06-02
      * interface version 6 changed return of CheckConnection from void to rsRetVal -- alorbach, 2012-09-06
@@ -100,6 +103,7 @@ ENDinterface(nsd)
      * interface version 9 changed signature of Connect() -- dsa, 2016-11-14
      * interface version 10 added SetGnutlsPriorityString() -- PascalWithopf, 2017-08-08
      * interface version 11 added oserr to Rcv() signature -- rgerhards, 2017-09-04
+     * interface version 18 added SetRemoteSNI -- jfcantu, 2020-01-15
      */
 
 #endif /* #ifndef INCLUDED_NSD_H */

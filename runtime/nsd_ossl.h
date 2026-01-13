@@ -54,6 +54,7 @@ struct nsd_ossl_s {
                    meaning no sess) */
         uchar *gnutlsPriorityString; /* gnutls priority string */
         int DrvrVerifyDepth; /* Verify Depth for certificate chains */
+        uchar *remoteSNI; /**< Remote SNI to use instead of the server hostname */
         short bOurCertIsInit; /**< 1 if our certificate is initialized and must be deinit on destruction */
         short bOurKeyIsInit; /**< 1 if our private key is initialized and must be deinit on destruction */
         char *pszRcvBuf;

@@ -1605,6 +1605,9 @@ TESTS +=  \
 	imtcp-tls-gtls-x509name-invld.sh \
 	imtcp-tls-gtls-x509name.sh \
 	imtcp-tls-gtls-x509name-legacy.sh \
+	omfwd-tls-gtls-no-sni.sh \
+	omfwd-tls-gtls-auto-sni.sh \
+	omfwd-tls-gtls-configured-sni.sh \
 	imtcp-drvr-in-input-basic.sh \
 	imtcp-multi-drvr-basic.sh \
 	imtcp-multi-drvr-basic-parallel.sh
@@ -1686,7 +1689,10 @@ TESTS +=  \
 	imtcp-tls-ossl-error-ca.sh \
 	imtcp-tls-ossl-error-cert.sh \
 	imtcp-tls-ossl-error-key.sh \
-	imtcp-tls-ossl-error-key2.sh
+	imtcp-tls-ossl-error-key2.sh \
+	omfwd-tls-ossl-no-sni.sh \
+	omfwd-tls-ossl-auto-sni.sh \
+	omfwd-tls-ossl-configured-sni.sh
 #	imtcp-tls-ossl-basic-stress.sh
 if HAVE_VALGRIND
 TESTS += \
@@ -2039,6 +2045,21 @@ TESTS += \
 	omfwd-srv-discovery-errors.sh
 endif # HAVE_SRV_DISCOVERY
 
+if ENABLE_GNUTLS
+check_PROGRAMS += gnutls_sni_server
+gnutls_sni_server_SOURCES = gnutls_sni_server.c
+gnutls_sni_server_CFLAGS = $(GNUTLS_CFLAGS)
+gnutls_sni_server_CPPFLAGS = $(GNUTLS_CFLAGS)
+gnutls_sni_server_LDADD = $(GNUTLS_LIBS) $(SOL_LIBS)
+endif
+if ENABLE_OPENSSL
+check_PROGRAMS += openssl_sni_server
+openssl_sni_server_SOURCES = openssl_sni_server.c
+openssl_sni_server_CFLAGS = $(OPENSSL_CFLAGS)
+openssl_sni_server_CPPFLAGS = $(OPENSSL_CFLAGS)
+openssl_sni_server_LDADD = $(OPENSSL_LIBS) $(SOL_LIBS)
+endif
+
 endif # if ENABLE_TESTBENCH
 
 TESTS_ENVIRONMENT = RSYSLOG_MODDIR='$(abs_top_builddir)'/runtime/.libs/
@@ -2059,6 +2080,12 @@ EXTRA_DIST= \
 	omfwd-srv-discovery-tcp.sh \
 	omfwd-srv-discovery-udp.sh \
 	omfwd-srv-discovery-errors.sh \
+	omfwd-tls-gtls-no-sni.sh \
+	omfwd-tls-gtls-auto-sni.sh \
+	omfwd-tls-gtls-configured-sni.sh \
+	omfwd-tls-ossl-no-sni.sh \
+	omfwd-tls-ossl-auto-sni.sh \
+	omfwd-tls-ossl-configured-sni.sh \
 	loadbalance.sh \
 	smtradfile.sh \
 	smtradfile-vg.sh \

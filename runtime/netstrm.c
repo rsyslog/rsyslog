@@ -309,6 +309,16 @@ finalize_it:
     RETiRet;
 }
 
+/* Set remote host's TLS SNI */
+static rsRetVal SetDrvrRemoteSNI(netstrm_t *pThis, uchar *remoteSNI) {
+    DEFiRet;
+    NULL_CHECK(pThis);
+    iRet = pThis->Drvr.SetRemoteSNI(pThis->pDrvrData, remoteSNI);
+
+finalize_it:
+    RETiRet;
+}
+
 /* End of methods to shuffle autentication settings to the driver.
  * -------------------------------------------------------------------------- */
 
@@ -500,6 +510,7 @@ BEGINobjQueryInterface(netstrm)
     pIf->SetDrvrTlsCRLFile = SetDrvrTlsCRLFile;
     pIf->SetDrvrTlsKeyFile = SetDrvrTlsKeyFile;
     pIf->SetDrvrTlsCertFile = SetDrvrTlsCertFile;
+    pIf->SetDrvrRemoteSNI = SetDrvrRemoteSNI;
 finalize_it:
 ENDobjQueryInterface(netstrm)
 
