@@ -75,7 +75,7 @@ BEGINparse
 #define OpeningText "last message repeated "
 #define ClosingText " times"
     CODESTARTparse;
-    dbgprintf("Message will now be parsed by \"last message repated n times\" parser.\n");
+    dbgprintf("Message will now be parsed by \"last message repeated n times\" parser.\n");
     assert(pMsg != NULL);
     assert(pMsg->pszRawMsg != NULL);
     lenMsg = pMsg->iLenRawMsg - pMsg->offAfterPRI;
