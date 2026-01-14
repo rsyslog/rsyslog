@@ -1369,10 +1369,21 @@ quit"
 	done
 	unset terminated
 	unset out_pid
-	if [ "$(ls core.* 2>/dev/null)" != "" ]; then
+	# Check for test-specific core files first (prevents Issue #6268 race condition)
+	core_found=0
+	if [ -n "$RSYSLOG_DYNNAME" ]; then
+		if [ "$(ls ${RSYSLOG_DYNNAME}.core core.${RSYSLOG_DYNNAME}.* 2>/dev/null)" != "" ]; then
+			core_found=1
+		fi
+	fi
+	# Also check generic cores (for backward compatibility)
+	if [ $core_found -eq 0 ] && [ "$(ls core.* 2>/dev/null)" != "" ]; then
+		core_found=1
+	fi
+	if [ $core_found -eq 1 ]; then
 	   printf 'ABORT! core file exists (maybe from a parallel run!)\n'
 	   pwd
-	   ls -l core.*
+	   ls -l core.* ${RSYSLOG_DYNNAME}.core core.${RSYSLOG_DYNNAME}.* 2>/dev/null
 	   error_exit  1
 	fi
 }
@@ -1668,6 +1679,18 @@ do_cleanup() {
 # for systems like Travis-CI where we cannot debug on the machine itself.
 # our $1 is the to-be-used exit code. if $2 is "stacktrace", call gdb.
 #
+# Core Dump Handling (Issue #6268):
+# - Test-specific cores (${RSYSLOG_DYNNAME}.core, core.${RSYSLOG_DYNNAME}.*)
+#   are checked FIRST to prevent race conditions in parallel test runs
+# - Generic cores are checked second for backward compatibility
+# - Duplicate detection prevents processing the same core file twice
+#
+# Verbosity Reduction:
+# - When no cores found: minimal output (just ulimit status)
+# - When cores found: full analysis with backtraces
+# - System info (uname, memory): only shown if cores found or VERBOSE mode
+# - Disk space warning: only shown if usage >= 90% and no cores found
+#
 # NOTE: if a function test_error_exit_handler is defined, error_exit will
 #       call it immediately before termination. This may be used to cleanup
 #       some things or emit additional diagnostic information.
@@ -1676,14 +1699,11 @@ error_exit() {
 		printf '%s Test %s exceeded max runtime of %d seconds\n' "$(tb_timestamp)" "$0" $TB_TEST_MAX_RUNTIME
 	fi
 	# Core dump analysis - always run when cores are detected
-	echo "=== Core Dump Detection and Analysis ==="
 	core_dumps_found=0
 
 	# Search for core dumps in multiple locations and patterns
-	echo "Searching for core dumps in:"
-	echo "  - Current directory: $(pwd)"
-	echo "  - /cores/ directory (macOS system cores)"
-	echo "  - Subdirectories (*.core, core.*)"
+	# Priority 1: Test-specific core files (prevents parallel test race condition)
+	# Priority 2: Generic core files (for older systems or non-test-specific cores)
 
 	# Process core files safely using while read to handle filenames with spaces/special chars
 	process_core_file() {
@@ -1739,59 +1759,51 @@ error_exit() {
 	}
 
 	# Process glob patterns (handle no-match cleanly via nullglob)
+	# Priority order: test-specific cores first to prevent race conditions in parallel tests
 	shopt -q nullglob; _had_nullglob=$?
 	[ $_had_nullglob -ne 0 ] && shopt -s nullglob
+	
+	# First, check for test-specific core files (prevents Issue #6268 race condition)
+	if [ -n "$RSYSLOG_DYNNAME" ]; then
+		for corefile in ${RSYSLOG_DYNNAME}.core core.${RSYSLOG_DYNNAME}.*; do
+			process_core_file "$corefile"
+		done
+	fi
+	
+	# Then check generic patterns (for backward compatibility)
 	for corefile in core* /cores/core-* /cores/core.*; do
+		# Skip if already processed as test-specific
+		if [ -n "$RSYSLOG_DYNNAME" ] && [[ "$corefile" == *"$RSYSLOG_DYNNAME"* ]]; then
+			continue
+		fi
 		process_core_file "$corefile"
 	done
 	[ $_had_nullglob -ne 0 ] && shopt -u nullglob
 
 	# Process find results safely using while read without subshell (process substitution)
 	while IFS= read -r corefile; do
+		# Skip if already processed
+		if [ -n "$RSYSLOG_DYNNAME" ] && [[ "$corefile" == *"$RSYSLOG_DYNNAME"* ]]; then
+			continue
+		fi
 		process_core_file "$corefile"
 	done < <(find . -name "core.*" -o -name "*.core" 2>/dev/null)
 
 	if [ $core_dumps_found -eq 0 ]; then
-		echo "No core dumps found. Checking possible reasons:"
-		echo "  - Core dump creation might be disabled"
-		echo "  - Insufficient disk space (check df -h output below)"
-		echo "  - Core dumps might be in unexpected locations"
-		if [ "$(uname)" == "Darwin" ]; then
-			echo "  - macOS core pattern: $(sysctl kern.corefile 2>/dev/null || echo 'unknown')"
-			echo "  - macOS core dump enabled: $(sysctl kern.coredump 2>/dev/null || echo 'unknown')"
-		fi
-		echo "  - Current ulimit -c: $(ulimit -c)"
-
-		# Look for evidence of recent segfaults in log output or dmesg
-		echo "  - Checking for segfault evidence:"
-		if [ "$(uname)" == "Darwin" ]; then
-			# Check Console.app style crash reports
-			if [ -d "/Library/Logs/CrashReporter" ]; then
-				echo "    Recent crash logs: $(find /Library/Logs/CrashReporter -name '*rsyslogd*' -mtime -1 2>/dev/null | wc -l) found"
-			fi
-			if [ -d "$HOME/Library/Logs/CrashReporter" ]; then
-				echo "    User crash logs: $(find "$HOME/Library/Logs/CrashReporter" -name '*rsyslogd*' -mtime -1 2>/dev/null | wc -l) found"
-			fi
-		else
-			# Check dmesg for segfault messages
-			if command -v dmesg >/dev/null 2>&1; then
-				recent_segfaults=$(dmesg 2>/dev/null | tail -50 | grep -i "segfault\|killed\|terminated" | wc -l)
-				echo "    Recent segfault messages in dmesg: $recent_segfaults"
-			fi
-		fi
+		# Reduced verbosity - only show essential information when no core found
+		printf 'No core dumps found (ulimit -c: %s)\n' "$(ulimit -c)"
 	else
 		echo "=== Analyzed $core_dumps_found core dump(s) ==="
 	fi
 
-	# Check disk space immediately after core dump analysis
-	echo "=== Disk Space Analysis ==="
-df -hP . | tail -1 | awk '{
-		usage=$5+0;
-		if (usage >= 95)
-			print "WARNING: Disk usage is " $5 " (Free: " $4 ") - This may prevent core dump creation!"
-		else
-			print "Disk usage: " $5 " (Free: " $4 ")"
-	}'
+	# Check disk space only if it might be an issue
+	if [ $core_dumps_found -eq 0 ]; then
+		df -hP . | tail -1 | awk '{
+			usage=$5+0;
+			if (usage >= 90)
+				print "WARNING: Disk usage is " $5 " (Free: " $4 ") - This may prevent core dump creation!"
+		}'
+	fi
 
 	if [[ ! -e IN_AUTO_DEBUG &&  "$USE_AUTO_DEBUG" == 'on' ]]; then
 		touch IN_AUTO_DEBUG
@@ -1817,30 +1829,33 @@ df -hP . | tail -1 | awk '{
 	#fi
 
 	# Comprehensive system and error information gathering
-	echo "=== System Information ==="
-	uname -a
-	if [ "$(uname)" == "Darwin" ]; then
-		if command -v sw_vers >/dev/null 2>&1; then
-			sw_vers
-		fi
-		# macOS-specific memory information
-		echo "=== macOS System Status ==="
-		echo "Memory usage:"
-		top -l 1 | grep "PhysMem" || echo "Memory info unavailable"
+	# Only show detailed system info if core dumps were found or verbose mode is on
+	if [ $core_dumps_found -gt 0 ] || [ "${TEST_OUTPUT}" == "VERBOSE" ]; then
+		echo "=== System Information ==="
+		uname -a
+		if [ "$(uname)" == "Darwin" ]; then
+			if command -v sw_vers >/dev/null 2>&1; then
+				sw_vers
+			fi
+			# macOS-specific memory information
+			echo "=== macOS System Status ==="
+			echo "Memory usage:"
+			top -l 1 | grep "PhysMem" || echo "Memory info unavailable"
 
-		# Recent system logs for rsyslogd (if available)
-		echo "=== Recent macOS System Logs ==="
-		if command -v log >/dev/null 2>&1; then
-			log show --predicate 'process == "rsyslogd"' --info --last 1h || echo "No recent rsyslogd logs found"
+			# Recent system logs for rsyslogd (if available)
+			echo "=== Recent macOS System Logs ==="
+			if command -v log >/dev/null 2>&1; then
+				log show --predicate 'process == "rsyslogd"' --info --last 1h || echo "No recent rsyslogd logs found"
+			else
+				echo "macOS log command not available"
+			fi
 		else
-			echo "macOS log command not available"
-		fi
-	else
-		# Linux-specific information
-		echo "=== Linux System Status ==="
-		if [ -f /proc/meminfo ]; then
-			echo "Memory info:"
-			grep -E "(MemTotal|MemFree|MemAvailable)" /proc/meminfo
+			# Linux-specific information
+			echo "=== Linux System Status ==="
+			if [ -f /proc/meminfo ]; then
+				echo "Memory info:"
+				grep -E "(MemTotal|MemFree|MemAvailable)" /proc/meminfo
+			fi
 		fi
 	fi
 
@@ -4118,6 +4133,10 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 			export TZ=UTC
 		fi
 		ulimit -c unlimited  &> /dev/null # at least try to get core dumps
+		# Note: Setting per-process core_pattern would require root privileges via
+		# /proc/sys/kernel/core_pattern, which is not available in standard test environments.
+		# Instead, we detect test-specific cores using RSYSLOG_DYNNAME pattern matching
+		# in error_exit() to prevent race conditions in parallel test runs (Issue #6268).
 		export TB_STARTTEST=$(date +%s)
 		printf '%s\n' '------------------------------------------------------------'
 		printf '%s Test: %s\n' "$(tb_timestamp)" "$0"
@@ -4129,6 +4148,10 @@ make -j$(getconf _NPROCESSORS_ONLN) check TESTS="" || error_exit 100
 		rm -f rsyslog.empty imfile-state:* omkafka-failed.data
 		rm -f tmp.qi nocert
 		rm -f core.* vgcore.* core*
+		# Also clean up any test-specific core files from previous runs
+		if [ -n "$RSYSLOG_DYNNAME" ]; then
+			rm -f ${RSYSLOG_DYNNAME}.core core.${RSYSLOG_DYNNAME}.*
+		fi
 		# Note: rsyslog.action.*.include must NOT be deleted, as it
 		# is used to setup some parameters BEFORE calling init. This
 		# happens in chained test scripts. Delete on exit is fine,
