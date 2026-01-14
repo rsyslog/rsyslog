@@ -27,18 +27,31 @@
 /* Needed OpenSSL Includes */
 #ifdef ENABLE_WOLFSSL
     #include <wolfssl/options.h>
+    #include <wolfssl/ssl.h>
+    #include <wolfssl/openssl/ssl.h>
+    #include <wolfssl/openssl/x509v3.h>
+    #include <wolfssl/openssl/err.h>
+    #include <wolfssl/openssl/rand.h>
+    #include <wolfssl/openssl/evp.h>
+    #if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+        #include <wolfssl/openssl/bioerr.h>
+    #endif
+    #ifndef OPENSSL_NO_ENGINE
+        #include <wolfssl/openssl/engine.h>
+    #endif
+#else
+    #include <openssl/ssl.h>
+    #include <openssl/x509v3.h>
+    #include <openssl/err.h>
+    #if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+        #include <openssl/bioerr.h>
+    #endif
+    #ifndef OPENSSL_NO_ENGINE
+        #include <openssl/engine.h>
+    #endif
+    #include <openssl/rand.h>
+    #include <openssl/evp.h>
 #endif
-#include <openssl/ssl.h>
-#include <openssl/x509v3.h>
-#include <openssl/err.h>
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
-    #include <openssl/bioerr.h>
-#endif
-#ifndef OPENSSL_NO_ENGINE
-    #include <openssl/engine.h>
-#endif
-#include <openssl/rand.h>
-#include <openssl/evp.h>
 
 /* Internal OpenSSL defined ENUMS */
 typedef enum {

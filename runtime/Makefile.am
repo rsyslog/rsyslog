@@ -208,7 +208,7 @@ endif # if ENABLE_INET
 #
 # openssl base and netstream driver
 #
-if ENABLE_OPENSSL
+if ENABLE_OSSL
 # noinst_LTLIBRARIES += lmnsd_ossl.la
 pkglib_LTLIBRARIES += lmnsd_ossl.la
 lmnsd_ossl_la_SOURCES = net_ossl.c net_ossl.h nsd_ossl.c nsd_ossl.h

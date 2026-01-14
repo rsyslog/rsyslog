@@ -1652,13 +1652,11 @@ DISTCHECK_CONFIGURE_FLAGS+= --disable-gnutls-tests
 endif
 
 if ENABLE_OPENSSL
-if !ENABLE_WOLFSSL
 DISTCHECK_CONFIGURE_FLAGS+= --enable-openssl
-endif
 endif
 
 if ENABLE_WOLFSSL
-DISTCHECK_CONFIGURE_FLAGS+= --with-wolfssl
+DISTCHECK_CONFIGURE_FLAGS+= --enable-wolfssl
 endif
 
 if ENABLE_MYSQL

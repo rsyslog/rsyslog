@@ -1201,11 +1201,11 @@ AC_DEFUN([RSYSLOG_CHECK_OPENSSL_FOR_PROTON], [
 
 AC_SUBST(WOLFSSL_CFLAGS)
 AC_SUBST(WOLFSSL_LIBS)
-AC_ARG_WITH(wolfssl,
-    AS_HELP_STRING([--with-wolfssl@<:@=DIR@:>@],
+AC_ARG_ENABLE(wolfssl,
+    AS_HELP_STRING([--enable-wolfssl@<:@=DIR@:>@],
 		   [Enable wolfssl support @<:@default=no@:>@]),
 [
-	case "${withval}" in
+	case "${enableval}" in
 		yes)
 			PKG_CHECK_MODULES(WOLFSSL, wolfssl)
 			;;
@@ -1213,14 +1213,14 @@ AC_ARG_WITH(wolfssl,
 			enable_wolfssl=no
 			;;
 		*)
-			WOLFSSL_CFLAGS="-I${withval}/include/wolfssl -I${withval}/include"
-			WOLFSSL_LIBS="-L${withval}/lib -lwolfssl"
+			WOLFSSL_CFLAGS="-I${enableval}/include/wolfssl -I${enableval}/include"
+			WOLFSSL_LIBS="-L${enableval}/lib -lwolfssl"
 			;;
 	esac
 	if test "x$enable_wolfssl" != "xno"; then
 		enable_wolfssl=yes
-		AC_DEFINE([ENABLE_OPENSSL], [1], [Indicator that openssl is present])
 		AC_DEFINE([ENABLE_WOLFSSL], [1], [Indicator that wolfssl is present])
+		AC_DEFINE([ENABLE_OSSL], [1], [Indicator that ossl driver is present])
 	fi
 ],
 [
@@ -1241,9 +1241,14 @@ AC_ARG_ENABLE(openssl,
 if test "x$enable_openssl" = "xyes"; then
 	PKG_CHECK_MODULES(OPENSSL, openssl)
 	AC_DEFINE([ENABLE_OPENSSL], [1], [Indicator that openssl is present])
+	AC_DEFINE([ENABLE_OSSL], [1], [Indicator that ossl driver is present])
 	save_libs=$LIBS
 fi
-AM_CONDITIONAL(ENABLE_OPENSSL, [test "x$enable_openssl" = "xyes" || test "x$enable_wolfssl" = "xyes"])
+if test "x$enable_wolfssl" = "xyes" && test "x$enable_openssl" = "xyes"; then
+	AC_MSG_ERROR([wolfSSL and OpenSSL cannot be enabled together; select only one])
+fi
+AM_CONDITIONAL(ENABLE_OPENSSL, [test "x$enable_openssl" = "xyes"])
+AM_CONDITIONAL(ENABLE_OSSL, [test "x$enable_openssl" = "xyes" || test "x$enable_wolfssl" = "xyes"])
 
 AC_ARG_ENABLE(openssl_crypto_provider,
         [AS_HELP_STRING([--enable-opensslcrypto],[Enable openssl crypto provider @<:@default=no@:>@])],
@@ -2884,6 +2889,12 @@ if test "x$enable_omdtls" = "xyes"; then
 fi
 AM_CONDITIONAL(ENABLE_OMDTLS, test x$enable_omdtls = xyes)
 # END OMDTLS INPUT
+
+if test "x$enable_wolfssl" = "xyes"; then
+	if test "x$enable_imdtls" = "xyes" -o "x$enable_omdtls" = "xyes"; then
+		AC_MSG_ERROR([DTLS modules (imdtls/omdtls) require OpenSSL; they cannot be built with wolfSSL enabled])
+	fi
+fi
 
 
 # BEGIN CZMQ INPUT SUPPORT

@@ -367,7 +367,12 @@ static rsRetVal osslInitSession(nsd_ossl_t *pThis, osslSslState_t osslType) /* ,
 
         dbgprintf("osslInitSession: setting anon ciphers: %s\n", pristringBuf);
         if (SSL_set_cipher_list(pThis->pNetOssl->ssl, pristringBuf) == 0) {
+#ifdef ENABLE_WOLFSSL
+            LogMsg(0, RS_RET_SYS_ERR, LOG_ERR,
+                   "osslInitSession: Error setting anon ciphers '%s' (wolfSSL requires --enable-anon)\n", pristringBuf);
+#else
             dbgprintf("osslInitSession: Error setting ciphers '%s'\n", pristringBuf);
+#endif
             ABORT_FINALIZE(RS_RET_SYS_ERR);
         }
     }

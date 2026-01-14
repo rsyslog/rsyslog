@@ -864,7 +864,11 @@ rsRetVal net_ossl_chkpeercertvalidity(net_ossl_t __attribute__((unused)) * pThis
     ISOBJ_TYPE_assert(pThis, net_ossl);
     PermitExpiredCerts *pPermitExpiredCerts = (PermitExpiredCerts *)SSL_get_ex_data(ssl, 1);
 
+#ifdef ENABLE_WOLFSSL
+    iVerErr = wolfSSL_get_verify_result(ssl);
+#else
     iVerErr = SSL_get_verify_result(ssl);
+#endif
     if (iVerErr != X509_V_OK) {
         if (iVerErr == X509_V_ERR_CERT_HAS_EXPIRED) {
             if (pPermitExpiredCerts != NULL && *pPermitExpiredCerts == OSSL_EXPIRED_DENY) {
@@ -922,11 +926,7 @@ int net_ossl_verify_callback(int status, X509_STORE_CTX *store) {
         X509 *cert = X509_STORE_CTX_get_current_cert(store);
         int depth = X509_STORE_CTX_get_error_depth(store);
         SSL *ssl = X509_STORE_CTX_get_ex_data(store, SSL_get_ex_data_X509_STORE_CTX_idx());
-#ifdef ENABLE_WOLFSSL
-        int err = SSL_get_verify_result(ssl);
-#else
         int err = X509_STORE_CTX_get_error(store);
-#endif
         int iVerifyMode = SSL_get_verify_mode(ssl);
         nsd_t *pNsdTcp = (nsd_t *)SSL_get_ex_data(ssl, 0);
         PermitExpiredCerts *pPermitExpiredCerts = (PermitExpiredCerts *)SSL_get_ex_data(ssl, 1);

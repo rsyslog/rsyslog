@@ -54,6 +54,7 @@ RUN 	apt-get update && \
 	libtokyocabinet-dev \
 	libtool \
 	libtool-bin \
+	libwolfssl-dev \
 	libyaml-dev \
 	libzstd-dev \
 	logrotate \
