@@ -49,6 +49,14 @@ Run a relevant test to verify your changes. The testbench allows test scripts to
 ./tests/imtcp-basic.sh
 ```
 
+### Step 4: Format Code
+
+Before committing, run the normalization script to ensure code style consistency. This script wraps clang-format and applies project-specific rules.
+
+```bash
+devtools/format-code.sh
+```
+
 ## Repository Overview
 
   - **Primary Language**: C
