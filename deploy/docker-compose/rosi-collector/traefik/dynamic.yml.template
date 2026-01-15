@@ -1,0 +1,42 @@
+http:
+  middlewares:
+    admin-auth:
+      basicAuth:
+        users:
+          - "__BASIC_AUTH_CREDENTIALS__"
+
+    security-headers:
+      headers:
+        # Prevent clickjacking
+        frameDeny: true
+        # Force HTTPS for 1 year
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        # Prevent MIME sniffing
+        contentTypeNosniff: true
+        # XSS protection (legacy browsers)
+        browserXssFilter: true
+        # Referrer policy
+        referrerPolicy: "strict-origin-when-cross-origin"
+        # Hide server version
+        customResponseHeaders:
+          server: ""
+
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 50
+        period: 1m
+
+tls:
+  options:
+    default:
+      minVersion: VersionTLS12
+      cipherSuites:
+        - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+        - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+        - TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+        - TLS_AES_128_GCM_SHA256
+        - TLS_AES_256_GCM_SHA384
+        - TLS_CHACHA20_POLY1305_SHA256

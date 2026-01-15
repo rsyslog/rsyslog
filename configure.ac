@@ -3220,6 +3220,52 @@ if test "x$have_to_generate_man_pages" = "xyes" && test "x$RST2MAN" = "xfalse"; 
         AC_MSG_ERROR([rst2man is required when building from git source or --enable-generate-man-pages option was set, please install python-docutils.])
 fi
 
+
+dnl ---- gather doc files for EXTRA_DIST ----
+# .rst files and selected assets from doc/source
+doc_src_files=`cd "$srcdir" && find doc/source -type f \( -name '*.rst' -o -name '*.conf' -o -name '*.jpg' -o -name '*.png' -o -name '*.svg' \) -print 2>/dev/null | LC_ALL=C sort`
+
+# Additional doc assets that must be shipped in dist tarball
+# - Vendored static JS/CSS used by the docs
+doc_vendor_files=`cd "$srcdir" && find doc/source/_static/vendor -type f -print 2>/dev/null | LC_ALL=C sort`
+# - Documentation build helper scripts and tools
+doc_tools_files=`cd "$srcdir" && find doc/tools -type f -print 2>/dev/null | LC_ALL=C sort`
+
+# assemble; keep paths relative to top (we cd into $srcdir above)
+DOC_FILES="$doc_src_files
+$doc_vendor_files
+$doc_tools_files
+doc/source/conf.py
+doc/source/conf_helpers.py
+doc/source/_ext/edit_on_github.py
+doc/source/_ext/rsyslog_lexer.py
+doc/source/_static/rsyslog.css
+doc/source/tutorials/cert-script.tar.gz
+doc/ai/structure_and_paths.md
+doc/ai/authoring_guidelines.md
+doc/ai/chunking_and_embeddings.md
+doc/ai/crosslinking_and_nav.md
+doc/ai/drift_monitoring.md
+doc/ai/mermaid_rules.md
+doc/ai/README.md
+doc/ai/templates/template-concept.rst
+doc/ai/templates/template-tutorial.rst
+doc/ai/terminology.md
+doc/ai/module_map.yaml
+doc/requirements.txt
+doc/README.md
+doc/STRATEGY.md
+doc/CONTRIBUTING.md
+doc/LICENSE
+doc/Makefile
+$ai_files"
+
+# collapse newlines and extra whitespace to single spaces
+DOC_FILES=`printf "%s\n" "$DOC_FILES" | awk 'NF' | tr '\n' ' '`
+
+AC_SUBST([DOC_FILES])
+
+
 AC_CONFIG_FILES([Makefile \
 		runtime/Makefile \
 		compat/Makefile \

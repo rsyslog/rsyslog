@@ -44,6 +44,28 @@ EXTRA_DIST += \
     doc/proposed-toc \
     doc/README.md \
     doc/requirements.txt \
+    doc/source/_ext/edit_on_github.py \
+    doc/source/_ext/rsyslog_lexer.py \
+    doc/source/_static/client-logs.png \
+    doc/source/_static/dashboard-alerts.png \
+    doc/source/_static/dashboard-deepdive.png \
+    doc/source/_static/dashboard-explorer.png \
+    doc/source/_static/dashboard-health.png \
+    doc/source/_static/dashboard-node.png \
+    doc/source/_static/docker-logs.png \
+    doc/source/_static/rosi-overview.png \
+    doc/source/_static/rsyslog.css \
+    doc/source/_static/vendor/README.md \
+    doc/source/_static/vendor/d3/d3.min.js \
+    doc/source/_static/vendor/mermaid/mermaid-layout-elk.esm.min.mjs \
+    doc/source/_static/vendor/mermaid/mermaid-layout-elk.min.js \
+    doc/source/_static/vendor/mermaid/mermaid.esm.min.mjs \
+    doc/source/_static/vendor/mermaid/mermaid.min.js \
+    doc/source/_templates/sourcelink.html \
+    doc/source/_templates_minimal/README \
+    doc/source/_templates_minimal/footer.html \
+    doc/source/_templates_minimal/header.html \
+    doc/source/_templates_minimal/relbar.html \
     doc/source/about/ai_first.rst \
     doc/source/about/history.rst \
     doc/source/about/index.rst \
@@ -248,6 +270,14 @@ EXTRA_DIST += \
     doc/source/dataflow.png \
     doc/source/development/architecture.rst \
     doc/source/development/coding_practices/defensive_coding.rst \
+    doc/source/deployments/index.rst \
+    doc/source/deployments/rosi_collector/architecture.rst \
+    doc/source/deployments/rosi_collector/client_setup.rst \
+    doc/source/deployments/rosi_collector/grafana_dashboards.rst \
+    doc/source/deployments/rosi_collector/index.rst \
+    doc/source/deployments/rosi_collector/installation.rst \
+    doc/source/deployments/rosi_collector/rosi-architecture.svg \
+    doc/source/deployments/rosi_collector/troubleshooting.rst \
     doc/source/development/coding_practices/embedded_ipv4_tail_helper.rst \
     doc/source/development/coding_practices/error_logging_with_errno.rst \
     doc/source/development/coding_practices/externalized_helper_contracts.rst \

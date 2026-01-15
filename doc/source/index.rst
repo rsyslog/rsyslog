@@ -38,6 +38,7 @@ logs to a wide variety of destinations.
    configuration/index
    faq/index
    tutorials/index
+   deployments/index
    troubleshooting/index
    concepts/index
    development/index
