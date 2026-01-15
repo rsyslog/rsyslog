@@ -653,13 +653,22 @@ EXTRA_DIST += \
     doc/source/reference/parameters/mmanon-embeddedipv4-anonmode.rst \
     doc/source/reference/parameters/mmanon-embeddedipv4-bits.rst \
     doc/source/reference/parameters/mmanon-embeddedipv4-enable.rst \
+    doc/source/reference/parameters/mmanon-embeddedipv4-limituniquemaxretries.rst \
+    doc/source/reference/parameters/mmanon-embeddedipv4-maxretryhandling.rst \
+    doc/source/reference/parameters/mmanon-embeddedipv4-uniqueretrycount.rst \
     doc/source/reference/parameters/mmanon-ipv4-bits.rst \
     doc/source/reference/parameters/mmanon-ipv4-enable.rst \
+    doc/source/reference/parameters/mmanon-ipv4-limituniquemaxretries.rst \
+    doc/source/reference/parameters/mmanon-ipv4-maxretryhandling.rst \
     doc/source/reference/parameters/mmanon-ipv4-mode.rst \
     doc/source/reference/parameters/mmanon-ipv4-replacechar.rst \
+    doc/source/reference/parameters/mmanon-ipv4-uniqueretrycount.rst \
     doc/source/reference/parameters/mmanon-ipv6-anonmode.rst \
     doc/source/reference/parameters/mmanon-ipv6-bits.rst \
     doc/source/reference/parameters/mmanon-ipv6-enable.rst \
+    doc/source/reference/parameters/mmanon-ipv6-limituniquemaxretries.rst \
+    doc/source/reference/parameters/mmanon-ipv6-maxretryhandling.rst \
+    doc/source/reference/parameters/mmanon-ipv6-uniqueretrycount.rst \
     doc/source/reference/parameters/mmcount-appname.rst \
     doc/source/reference/parameters/mmcount-key.rst \
     doc/source/reference/parameters/mmcount-value.rst \
