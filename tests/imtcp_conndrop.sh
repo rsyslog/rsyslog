@@ -22,7 +22,8 @@ local0.* ?dynfile;outfmt
 '
 startup
 # 100 byte messages to gain more practical data use
-tcpflood -c20 -m$NUMMESSAGES -r -d100 -P129 -D
+# Use -A to not abort on send failures, which are expected with -D (random connection drops)
+tcpflood -c20 -m$NUMMESSAGES -r -d100 -P129 -D -A
 shutdown_when_empty
 wait_shutdown
 export SEQ_CHECK_OPTIONS=-E
