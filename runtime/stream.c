@@ -2322,6 +2322,19 @@ static rsRetVal strmGetCurrOffset(strm_t *pThis, int64 *pOffs) {
     RETiRet;
 }
 
+static rsRetVal strmSync(strm_t *pStrmDest, const strm_t *pStrmSrc) {
+    DEFiRet;
+
+    ISOBJ_TYPE_assert(pStrmDest, strm);
+    ISOBJ_TYPE_assert(pStrmSrc, strm);
+
+    pStrmDest->iCurrFNum = pStrmSrc->iCurrFNum;
+    pStrmDest->iCurrOffs = pStrmSrc->iCurrOffs;
+    pStrmDest->strtOffs = pStrmSrc->strtOffs;
+
+    RETiRet;
+}
+
 
 /* queryInterface function
  * rgerhards, 2008-02-29
@@ -2356,6 +2369,7 @@ BEGINobjQueryInterface(strm)
     pIf->Serialize = strmSerialize;
     pIf->GetCurrOffset = strmGetCurrOffset;
     pIf->Dup = strmDup;
+    pIf->Sync = strmSync;
     pIf->SetCompressionWorkers = SetCompressionWorkers;
     pIf->SetWCntr = strmSetWCntr;
     pIf->CheckFileChange = CheckFileChange;
