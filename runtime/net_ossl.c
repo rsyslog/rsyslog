@@ -57,7 +57,7 @@ void net_ossl_set_ssl_verify_callback(SSL *pSsl, int flags);
 void net_ossl_set_ctx_verify_callback(SSL_CTX *pCtx, int flags);
 void net_ossl_set_bio_callback(BIO *conn);
 int net_ossl_verify_callback(int status, X509_STORE_CTX *store);
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER) && !defined(ENABLE_WOLFSSL)
 rsRetVal net_ossl_apply_tlscgfcmd(net_ossl_t *pThis, uchar *tlscfgcmd);
 #endif  // OPENSSL_VERSION_NUMBER >= 0x10002000L
 rsRetVal net_ossl_chkpeercertvalidity(net_ossl_t *pThis, SSL *ssl, uchar *fromHostIP);
@@ -67,6 +67,7 @@ rsRetVal net_ossl_chkpeername(net_ossl_t *pThis, X509 *certpeer, uchar *fromHost
 
 
 /*--------------------------------------MT OpenSSL helpers ------------------------------------------*/
+#ifndef ENABLE_WOLFSSL
 static MUTEX_TYPE *mutex_buf = NULL;
 static sbool openssl_initialized = 0;  // Avoid multiple initialization / deinitialization
 
@@ -125,9 +126,9 @@ int opensslh_THREAD_setup(void) {
     if (mutex_buf == NULL) return 0;
     for (i = 0; i < CRYPTO_num_locks(); i++) MUTEX_SETUP(mutex_buf[i]);
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    #if OPENSSL_VERSION_NUMBER < 0x10100000L
     CRYPTO_set_id_callback(id_function);
-#endif /* OPENSSL_VERSION_NUMBER < 0x10100000L */
+    #endif /* OPENSSL_VERSION_NUMBER < 0x10100000L */
     CRYPTO_set_locking_callback(locking_function);
     /* The following three CRYPTO_... functions are the OpenSSL functions
     for registering the callbacks we implemented above */
@@ -151,9 +152,9 @@ int opensslh_THREAD_cleanup(void) {
     }
     if (!mutex_buf) return 0;
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    #if OPENSSL_VERSION_NUMBER < 0x10100000L
     CRYPTO_set_id_callback(NULL);
-#endif /* OPENSSL_VERSION_NUMBER < 0x10100000L */
+    #endif /* OPENSSL_VERSION_NUMBER < 0x10100000L */
     CRYPTO_set_locking_callback(NULL);
     CRYPTO_set_dynlock_create_callback(NULL);
     CRYPTO_set_dynlock_lock_callback(NULL);
@@ -168,6 +169,15 @@ int opensslh_THREAD_cleanup(void) {
     openssl_initialized = 0;
     return 1;
 }
+#else
+int opensslh_THREAD_setup(void) {
+    return 1;
+}
+
+int opensslh_THREAD_cleanup(void) {
+    return 1;
+}
+#endif /* !ENABLE_WOLFSSL */
 /*-------------------------------------- MT OpenSSL helpers -----------------------------------------*/
 
 
@@ -178,17 +188,27 @@ int opensslh_THREAD_cleanup(void) {
 void osslGlblInit(void) {
     DBGPRINTF("osslGlblInit: ENTER\n");
 
+#ifdef ENABLE_WOLFSSL
+    if (!SSL_library_init()) {
+        LogError(0, RS_RET_NO_ERRCODE, "Error: OpenSSL initialization failed!");
+    }
+#else
     if ((opensslh_THREAD_setup() == 0) ||
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    #if OPENSSL_VERSION_NUMBER < 0x10100000L
         /* Setup OpenSSL library  < 1.1.0 */
         !SSL_library_init()
-#else
+    #else
         /* Setup OpenSSL library >= 1.1.0 with system default settings */
         OPENSSL_init_ssl(0, NULL) == 0
-#endif
+    #endif
     ) {
         LogError(0, RS_RET_NO_ERRCODE, "Error: OpenSSL initialization failed!");
     }
+#endif
+
+#if defined(ENABLE_WOLFSSL) && defined(DEBUG_WOLFSSL)
+    wolfSSL_Debugging_ON();
+#endif
 
     /* Load readable error strings */
     SSL_load_error_strings();
@@ -431,27 +451,29 @@ static rsRetVal net_ossl_osslCtxInit(net_ossl_t *pThis, const SSL_METHOD *method
     SSL_CTX_set_timeout(pThis->ctx, 30); /* Default Session Timeout, TODO: Make configureable */
     SSL_CTX_set_mode(pThis->ctx, SSL_MODE_AUTO_RETRY);
 
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(ENABLE_WOLFSSL)
     /* Enable Support for automatic ephemeral/temporary DH parameter selection. */
     SSL_CTX_set_dh_auto(pThis->ctx, 1);
 #endif
 
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L
-    #if OPENSSL_VERSION_NUMBER <= 0x101010FFL
+#ifndef ENABLE_WOLFSSL
+    #if OPENSSL_VERSION_NUMBER >= 0x10002000L
+        #if OPENSSL_VERSION_NUMBER <= 0x101010FFL
     /* Enable Support for automatic EC temporary key parameter selection. */
     SSL_CTX_set_ecdh_auto(pThis->ctx, 1);
-    #else
+        #else
         /*
          * SSL_CTX_set_ecdh_auto and SSL_CTX_set_tmp_ecdh are depreceated in higher
          * OpenSSL Versions, so we no more need them - see for more:
          * https://www.openssl.org/docs/manmaster/man3/SSL_CTX_set_ecdh_auto.html
          */
-    #endif
-#else
+        #endif
+    #else
     dbgprintf(
         "osslCtxInit: openssl to old, cannot use SSL_CTX_set_ecdh_auto."
         "Using SSL_CTX_set_tmp_ecdh with NID_X9_62_prime256v1/() instead.\n");
     SSL_CTX_set_tmp_ecdh(pThis->ctx, EC_KEY_new_by_curve_name(NID_X9_62_prime256v1));
+    #endif
 #endif
 finalize_it:
     RETiRet;
@@ -490,7 +512,7 @@ void net_ossl_lastOpenSSLErrorMsg(
     }
 }
 
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER) && !defined(ENABLE_WOLFSSL)
 /* initialize tls config commands in openssl context
  */
 rsRetVal net_ossl_apply_tlscgfcmd(net_ossl_t *pThis, uchar *tlscfgcmd) {
@@ -842,7 +864,11 @@ rsRetVal net_ossl_chkpeercertvalidity(net_ossl_t __attribute__((unused)) * pThis
     ISOBJ_TYPE_assert(pThis, net_ossl);
     PermitExpiredCerts *pPermitExpiredCerts = (PermitExpiredCerts *)SSL_get_ex_data(ssl, 1);
 
+#ifdef ENABLE_WOLFSSL
+    iVerErr = wolfSSL_get_verify_result(ssl);
+#else
     iVerErr = SSL_get_verify_result(ssl);
+#endif
     if (iVerErr != X509_V_OK) {
         if (iVerErr == X509_V_ERR_CERT_HAS_EXPIRED) {
             if (pPermitExpiredCerts != NULL && *pPermitExpiredCerts == OSSL_EXPIRED_DENY) {
@@ -899,8 +925,8 @@ int net_ossl_verify_callback(int status, X509_STORE_CTX *store) {
         /* Retrieve all needed pointers */
         X509 *cert = X509_STORE_CTX_get_current_cert(store);
         int depth = X509_STORE_CTX_get_error_depth(store);
-        int err = X509_STORE_CTX_get_error(store);
         SSL *ssl = X509_STORE_CTX_get_ex_data(store, SSL_get_ex_data_X509_STORE_CTX_idx());
+        int err = X509_STORE_CTX_get_error(store);
         int iVerifyMode = SSL_get_verify_mode(ssl);
         nsd_t *pNsdTcp = (nsd_t *)SSL_get_ex_data(ssl, 0);
         PermitExpiredCerts *pPermitExpiredCerts = (PermitExpiredCerts *)SSL_get_ex_data(ssl, 1);
@@ -985,7 +1011,8 @@ int net_ossl_verify_callback(int status, X509_STORE_CTX *store) {
 }
 
 
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+#ifndef ENABLE_WOLFSSL
+    #if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
 static long RSYSLOG_BIO_debug_callback_ex(BIO *bio,
                                           int cmd,
                                           const char __attribute__((unused)) * argp,
@@ -994,10 +1021,10 @@ static long RSYSLOG_BIO_debug_callback_ex(BIO *bio,
                                           long __attribute__((unused)) argl,
                                           int ret,
                                           size_t __attribute__((unused)) * processed)
-#else
+    #else
 static long RSYSLOG_BIO_debug_callback(
     BIO *bio, int cmd, const char __attribute__((unused)) * argp, int argi, long __attribute__((unused)) argl, long ret)
-#endif
+    #endif
 {
     long ret2 = ret;
     long r = 1;
@@ -1007,8 +1034,8 @@ static long RSYSLOG_BIO_debug_callback(
         case BIO_CB_FREE:
             dbgprintf("Free - %s\n", RSYSLOG_BIO_method_name(bio));
             break;
-/* Disabled due API changes for OpenSSL 1.1.0+ */
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+    /* Disabled due API changes for OpenSSL 1.1.0+ */
+    #if OPENSSL_VERSION_NUMBER < 0x10100000L
         case BIO_CB_READ:
             if (bio->method->type & BIO_TYPE_DESCRIPTOR)
                 dbgprintf("read(%d,%lu) - %s fd=%d\n", RSYSLOG_BIO_number_read(bio), (unsigned long)argi,
@@ -1025,14 +1052,14 @@ static long RSYSLOG_BIO_debug_callback(
                 dbgprintf("write(%d,%lu) - %s\n", RSYSLOG_BIO_number_written(bio), (unsigned long)argi,
                           RSYSLOG_BIO_method_name(bio));
             break;
-#else
+    #else
         case BIO_CB_READ:
             dbgprintf("read %s\n", RSYSLOG_BIO_method_name(bio));
             break;
         case BIO_CB_WRITE:
             dbgprintf("write %s\n", RSYSLOG_BIO_method_name(bio));
             break;
-#endif
+    #endif
         case BIO_CB_PUTS:
             dbgprintf("puts() - %s\n", RSYSLOG_BIO_method_name(bio));
             break;
@@ -1064,8 +1091,9 @@ static long RSYSLOG_BIO_debug_callback(
 
     return (r);
 }
+#endif /* !ENABLE_WOLFSSL */
 
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(ENABLE_WOLFSSL)
 // Requires at least OpenSSL v1.1.1
 PRAGMA_DIAGNOSTIC_PUSH
 PRAGMA_IGNORE_Wunused_parameter static int net_ossl_generate_cookie(SSL *ssl,
@@ -1193,11 +1221,15 @@ void net_ossl_set_ctx_verify_callback(SSL_CTX *pCtx, int flags) {
 }
 
 void net_ossl_set_bio_callback(BIO *conn) {
-#if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
+#ifndef ENABLE_WOLFSSL
+    #if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
     BIO_set_callback_ex(conn, RSYSLOG_BIO_debug_callback_ex);
-#else
+    #else
     BIO_set_callback(conn, RSYSLOG_BIO_debug_callback);
-#endif  // OPENSSL_VERSION_NUMBER >= 0x10100000L
+    #endif  // OPENSSL_VERSION_NUMBER >= 0x10100000L
+#else
+    (void)conn;
+#endif
 }
 /* ------------------------------ End OpenSSL Callback set helpers -----------------------------*/
 
@@ -1207,7 +1239,7 @@ BEGINobjConstruct(net_ossl) /* be sure to specify the object type also in END ma
     DBGPRINTF("net_ossl_construct: [%p]\n", pThis);
     pThis->bReportAuthErr = 1;
     pThis->bSANpriority = 0;
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(ENABLE_WOLFSSL)
     CHKiRet(net_ossl_init_engine(pThis));
 finalize_it:
 #endif
@@ -1248,14 +1280,14 @@ BEGINobjQueryInterface(net_ossl)
     pIf->osslPeerfingerprint = net_ossl_peerfingerprint;
     pIf->osslGetpeercert = net_ossl_getpeercert;
     pIf->osslChkpeercertvalidity = net_ossl_chkpeercertvalidity;
-#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER)
+#if OPENSSL_VERSION_NUMBER >= 0x10002000L && !defined(LIBRESSL_VERSION_NUMBER) && !defined(ENABLE_WOLFSSL)
     pIf->osslApplyTlscgfcmd = net_ossl_apply_tlscgfcmd;
 #endif  // OPENSSL_VERSION_NUMBER >= 0x10002000L
     pIf->osslSetBioCallback = net_ossl_set_bio_callback;
     pIf->osslSetCtxVerifyCallback = net_ossl_set_ctx_verify_callback;
     pIf->osslSetSslVerifyCallback = net_ossl_set_ssl_verify_callback;
     pIf->osslLastOpenSSLErrorMsg = net_ossl_lastOpenSSLErrorMsg;
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && !defined(ENABLE_WOLFSSL)
     pIf->osslCtxInitCookie = net_ossl_ctx_init_cookie;
     pIf->osslInitEngine = net_ossl_init_engine;
 #endif

@@ -1,4 +1,4 @@
-# Copyright 2024-2025 Rainer Gerhards and Others
+# Copyright 2024-2026 Rainer Gerhards and Others
 #
 # https://github.com/rsyslog/rsyslog-pkg-ubuntu
 #
@@ -54,7 +54,7 @@ jobs:
                  fedora_41, fedora_42,
                  ubuntu_20, ubuntu_24,
                  ubuntu_22_san, ubuntu_24_tsan, ubuntu_22_distcheck,
-                 openeuler, elasticsearch]
+                 openeuler, wolfssl, elasticsearch]
 
     steps:
       - name: git checkout project
@@ -198,17 +198,27 @@ jobs:
               export TSAN_OPTIONS="halt_on_error=1 suppressions=/rsyslog/tests/tsan-rt.supp"
               export ABORT_ALL_ON_TEST_FAIL='YES'
               ;;
+          'wolfssl')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
+              export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
+              export ABORT_ALL_ON_TEST_FAIL='YES'
+              export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
+                     --enable-imdiag --enable-impstats --enable-imfile --disable-imfile-tests \
+                     --disable-fmhttp --enable-valgrind --disable-default-tests --disable-imtcp-tests \
+                     --enable-wolfssl"
+              export CI_MAKE_OPT='-j20'
+              export CI_MAKE_CHECK_OPT='-j8'
+              export CI_CHECK_CMD='check'
+              ;;
           'elasticsearch')
               export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
-              export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp"
-              export CI_MAKE_CHECK_OPT='-j1'
               export ABORT_ALL_ON_TEST_FAIL='NO'
               export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
                      --enable-imdiag --enable-impstats --enable-imfile --disable-imfile-tests \
                      --disable-fmhttp --enable-valgrind --disable-default-tests --disable-imtcp-tests \
                      --enable-elasticsearch-tests --enable-elasticsearch"
               export CI_MAKE_OPT='-j20'
-              export CI_MAKE_CHECK_OPT='-j8'
+              export CI_MAKE_CHECK_OPT='-j3'
               export CI_CHECK_CMD='check'
               export CI_VALGRIND_SUPPRESSIONS="ubuntu22.04.supp" # they are still valid
               ;;

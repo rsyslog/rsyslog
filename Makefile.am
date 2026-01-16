@@ -1694,6 +1694,10 @@ if ENABLE_OPENSSL
 DISTCHECK_CONFIGURE_FLAGS+= --enable-openssl
 endif
 
+if ENABLE_WOLFSSL
+DISTCHECK_CONFIGURE_FLAGS+= --enable-wolfssl
+endif
+
 if ENABLE_MYSQL
 DISTCHECK_CONFIGURE_FLAGS+= --enable-mysql
 endif

@@ -563,10 +563,10 @@ if ENABLE_GNUTLS_TESTS
 TESTS +=  \
 	tcpflood_wrong_option_output.sh
 endif # ENABLE_GNUTLS_TESTS
-if ENABLE_OPENSSL
+if ENABLE_OSSL
 TESTS +=  \
 	tcpflood_wrong_option_output.sh
-endif # ENABLE_OPENSSL
+endif # ENABLE_OSSL
 TESTS +=  \
 	omusrmsg-noabort-vg.sh \
 	omfile_hup-vg.sh \
@@ -1662,42 +1662,49 @@ TESTS += \
 endif
 endif
 
-if ENABLE_OPENSSL
+if ENABLE_OSSL
 TESTS +=  \
-	imtcp-tls-ossl-basic.sh \
-	imtcp-tls-ossl-input-basic.sh \
 	imtcp-tls-ossl-input-2certs.sh \
-	imtcp-tls-ossl-basic-tlscommands.sh \
 	imtcp-tls-ossl-basic-verifydepth.sh \
 	imtcp-tls-ossl-invalid-verifydepth.sh \
-	sndrcv_tls_ossl_anon_ipv4.sh \
-	sndrcv_tls_ossl_anon_ipv6.sh \
-	sndrcv_tls_ossl_anon_rebind.sh \
-	sndrcv_tls_ossl_anon_ciphers.sh \
-	sndrcv_tls_ossl_serveranon_ossl_clientanon.sh \
-	sndrcv_tls_ossl_servercert_ossl_clientanon.sh \
 	sndrcv_tls_ossl_certvalid.sh \
 	sndrcv_tls_ossl_certvalid_action_level.sh \
-	sndrcv_tls_ossl_certvalid_expired.sh \
 	sndrcv_tls_ossl_certvalid_tlscommand.sh \
 	sndrcv_tls_ossl_certvalid_ciphers.sh \
-	sndrcv_tls_ossl_certvalid_revoked.sh \
 	sndrcv_tls_ossl_intermediate_ca_chain.sh \
 	imtcp-tls-ossl-x509valid.sh \
 	imtcp-tls-ossl-x509name.sh \
 	imtcp-tls-ossl-x509fingerprint.sh \
 	imtcp-tls-ossl-error-ca.sh \
 	imtcp-tls-ossl-error-cert.sh \
-	imtcp-tls-ossl-error-key.sh \
+	imtcp-tls-ossl-error-key.sh
+
+if ENABLE_OPENSSL
+TESTS +=  \
+	imtcp-tls-ossl-basic.sh \
+	imtcp-tls-ossl-input-basic.sh \
+	imtcp-tls-ossl-basic-tlscommands.sh \
 	imtcp-tls-ossl-error-key2.sh \
-	omfwd-tls-ossl-no-sni.sh \
-	omfwd-tls-ossl-auto-sni.sh \
-	omfwd-tls-ossl-configured-sni.sh
-#	imtcp-tls-ossl-basic-stress.sh
+	sndrcv_tls_ossl_anon_ipv4.sh \
+	sndrcv_tls_ossl_anon_ipv6.sh \
+	sndrcv_tls_ossl_anon_rebind.sh \
+	sndrcv_tls_ossl_anon_ciphers.sh \
+	sndrcv_tls_ossl_serveranon_ossl_clientanon.sh \
+	sndrcv_tls_ossl_servercert_ossl_clientanon.sh \
+	sndrcv_tls_ossl_certvalid_expired.sh \
+	sndrcv_tls_ossl_certvalid_revoked.sh
 if HAVE_VALGRIND
 TESTS += \
 	imtcp-tls-ossl-basic-vg.sh \
 	imtcp-tls-ossl-basic-brokenhandshake-vg.sh
+endif
+endif
+
+if ENABLE_OPENSSL
+TESTS +=  \
+	omfwd-tls-ossl-no-sni.sh \
+	omfwd-tls-ossl-auto-sni.sh \
+	omfwd-tls-ossl-configured-sni.sh
 endif
 endif
 
@@ -3507,10 +3514,16 @@ tcpflood_CFLAGS += $(GNUTLS_CFLAGS)
 tcpflood_CPPFLAGS += $(GNUTLS_CFLAGS)
 tcpflood_LDADD += $(GNUTLS_LIBS)
 endif
-if ENABLE_OPENSSL
+if ENABLE_OSSL
+if ENABLE_WOLFSSL
+tcpflood_CFLAGS += $(WOLFSSL_CFLAGS)
+tcpflood_CPPFLAGS += $(WOLFSSL_CFLAGS)
+tcpflood_LDADD += $(WOLFSSL_LIBS)
+else
 tcpflood_CFLAGS += $(OPENSSL_CFLAGS)
 tcpflood_CPPFLAGS += $(OPENSSL_CFLAGS)
 tcpflood_LDADD += $(OPENSSL_LIBS)
+endif
 endif
 
 minitcpsrv_SOURCES = minitcpsrvr.c
