@@ -200,6 +200,7 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*GetCurrOffset)(strm_t *pThis, int64 *pOffs);
     rsRetVal (*SetWCntr)(strm_t *pThis, number_t *pWCnt);
     rsRetVal (*Dup)(strm_t *pThis, strm_t **ppNew);
+    rsRetVal (*Sync)(strm_t *pStrmDest, const strm_t *pStrmSrc);
     rsRetVal (*SetCompressionWorkers)(strm_t *const pThis, int num_wrkrs);
     INTERFACEpropSetMeth(strm, bDeleteOnClose, int);
     INTERFACEpropSetMeth(strm, iMaxFileSize, int64);
@@ -227,7 +228,7 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
     INTERFACEpropSetMeth(strm, cryprov, cryprov_if_t *);
     INTERFACEpropSetMeth(strm, cryprovData, void *);
 ENDinterface(strm)
-#define strmCURR_IF_VERSION 14 /* increment whenever you change the interface structure! */
+#define strmCURR_IF_VERSION 15 /* increment whenever you change the interface structure! */
     /* V10, 2013-09-10: added new parameter bEscapeLF, changed mode to uint8_t (rgerhards) */
     /* V11, 2015-12-03: added new parameter bReopenOnTruncate */
     /* V12, 2015-12-11: added new parameter trimLineOverBytes, changed mode to uint32_t */
