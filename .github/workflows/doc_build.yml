@@ -122,8 +122,26 @@ jobs:
           ${{ github.event_name != 'pull_request' ||
           steps.doc_changes.outputs.any_changed == 'true' }}
         run: |
-          cd doc-builder/doc
-          make html SPHINXOPTS="-j8 -W -q --keep-going"
+          cd doc-builder
+          ./configure --enable-silent-rules --disable-testbench \
+             --disable-imdiag --disable-imdocker --disable-imfile \
+             --disable-default-tests --disable-impstats --disable-imptcp \
+             --disable-mmanon --disable-mmaudit --disable-mmfields \
+             --disable-mmjsonparse --disable-mmpstrucdata \
+             --disable-mmsequence --disable-mmutf8fix --disable-mail \
+             --disable-omprog --disable-improg --disable-omruleset \
+             --disable-omstdout --disable-omuxsock \
+             --disable-pmaixforwardedfrom --disable-pmciscoios \
+             --disable-pmcisconames --disable-pmlastmsg --disable-pmsnare \
+             --disable-libgcrypt --disable-mmnormalize \
+             --disable-omudpspoof --disable-relp --disable-mmsnmptrapd \
+             --disable-gnutls --disable-usertools --disable-mysql \
+             --disable-valgrind --disable-omjournal --enable-libsystemd \
+             --disable-mmkubernetes --disable-imjournal \
+             --disable-omkafka --disable-imkafka --disable-ommongodb \
+             --disable-omrabbitmq --disable-journal-tests --disable-mmdarwin \
+             --disable-helgrind --disable-uuid --disable-fmhttp
+          make -C doc html SPHINXOPTS="-j8 -W -q --keep-going"
 
       - name: Build RAG Knowledge Base
         if: >-

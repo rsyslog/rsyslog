@@ -6,3 +6,5 @@ source/_build
 *.pyc
 *.sw?
 .idea/
+Makefile
+Makefile.in
