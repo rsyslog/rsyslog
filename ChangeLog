@@ -2,6 +2,13 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-16: ossl net driver: added support for wolfssl
+  This disablles some of the ossl driver capabilities that are not conformant
+  with how wolfssl operates (e.g. anon ciphers) but is a very solid basis
+  for using wolfssl where there is e.g. a certification requirement.
+  Note that the ossl driver can either be build for wolfssl, libressl, or
+  openssl. This needs to be decided at build time.
+  Thanks to Hayden Roche for the contribution.
 - 2026-01-13: rainerscript: add append_json() function
   Thanks to github user 20syldev for the patch.
 - 2026-01-12: imfile: ensure state files are deleted correctly on log rotation
