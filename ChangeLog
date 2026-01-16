@@ -2,6 +2,20 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-16: core: fsync+atomic rename for pid file; abort on failure
+  Empty pid files were reported by users, leading to supervision issues.
+  This hardens startup so that the pid file is either durably written or
+  rsyslog exits. This improves reliability for service managers and
+  container setups where pid files are still required.
+  Impact: Startup now aborts when the pid file cannot be durably written.
+  Special thanks to github user @HappyDrink-okk for a prototype PR and
+  bringing up the issue.
+  NOTE: CHANGE OF BEHAVIOUR
+        Other than before, failing to write the pid file will make rsyslog
+		abort on startup. This is highly unlikely, and on VMs/bare metal
+		pid files are usually no longer used. For containers the new
+		mode is much more considerable.
+  see also https://github.com/rsyslog/rsyslog/pull/5391
 - 2026-01-16: ossl net driver: added support for wolfssl
   This disablles some of the ossl driver capabilities that are not conformant
   with how wolfssl operates (e.g. anon ciphers) but is a very solid basis
