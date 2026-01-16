@@ -29,4 +29,4 @@ startup
 shutdown_when_empty
 wait_shutdown
 content_check "ratelimit.name is mutually exclusive with ratelimit.interval and ratelimit.burst" $RSYSLOG_DYNNAME.started
-exit 0
+exit_test

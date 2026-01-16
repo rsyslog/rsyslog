@@ -305,6 +305,7 @@ Create a unix domain socket:
    ../../reference/parameters/imptcp-keepalive-probes
    ../../reference/parameters/imptcp-keepalive-interval
    ../../reference/parameters/imptcp-keepalive-time
+   ../../reference/parameters/imptcp-ratelimit-name
    ../../reference/parameters/imptcp-ratelimit-interval
    ../../reference/parameters/imptcp-ratelimit-burst
    ../../reference/parameters/imptcp-compression-mode

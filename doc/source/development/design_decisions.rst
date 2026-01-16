@@ -1,7 +1,15 @@
+.. meta::
+   :description: Design decisions and architectural choices in rsyslog development.
+   :keywords: rsyslog, design, architecture, libyaml, decisions
+
 .. _design_decisions:
 
 Design Decisions
 ================
+
+.. summary-start
+Records significant architectural and library choices made during rsyslog development.
+.. summary-end
 
 This document records significant architectural and library choices made during the development of rsyslog, providing context for future contributors.
 

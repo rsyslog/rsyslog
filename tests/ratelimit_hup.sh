@@ -52,15 +52,8 @@ echo "interval: 10" > $POLICY_FILE
 echo "burst: 0" >> $POLICY_FILE
 echo "severity: 0" >> $POLICY_FILE
 
-RSYSLOG_PIDFILE="${CONF_FILE%_.conf}:.pid"
-if [ ! -f "$RSYSLOG_PIDFILE" ]; then
-    echo "ERROR: PID file $RSYSLOG_PIDFILE not found"
-    error_exit 1
-fi
-PID=$(cat $RSYSLOG_PIDFILE)
-echo "Sending HUP to PID $PID..."
-kill -HUP $PID
-./msleep 1000 # Wait for HUP processing
+echo "Sending HUP..."
+issue_HUP
 echo "Checking rsyslog process:"
 ps aux | grep rsyslogd | grep -v grep
 

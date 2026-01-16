@@ -223,6 +223,7 @@ Module Parameters
    ../../reference/parameters/imtcp-ruleset
    ../../reference/parameters/imtcp-supportoctetcountedframing
    ../../reference/parameters/imtcp-socketbacklog
+   ../../reference/parameters/imtcp-ratelimit-name
    ../../reference/parameters/imtcp-ratelimit-interval
    ../../reference/parameters/imtcp-ratelimit-burst
    ../../reference/parameters/imtcp-streamdriver-cafile

@@ -329,7 +329,9 @@ static rsRetVal addListner(instanceConf_t *inst) {
                  */
             } else {
                 CHKiRet(ratelimitNew(&newlcnfinfo->ratelimiter, (char *)dispname, NULL));
-                ratelimitSetLinuxLike(newlcnfinfo->ratelimiter, inst->ratelimitInterval, inst->ratelimitBurst);
+                ratelimitSetLinuxLike(newlcnfinfo->ratelimiter, 
+                                      (inst->ratelimitInterval == -1) ? 0 : (unsigned)inst->ratelimitInterval,
+                                      (inst->ratelimitBurst == -1) ? 0 : (unsigned)inst->ratelimitBurst);
             }
             ratelimitSetThreadSafe(newlcnfinfo->ratelimiter);
             if (inst->bAppendPortToInpname) {

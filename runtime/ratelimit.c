@@ -247,6 +247,7 @@ static void ratelimitFreePerSourceState(void *ptr) {
 static void ratelimitFreePerSourceOverride(void *ptr) {
     ratelimit_ps_override_t *ovr = (ratelimit_ps_override_t *)ptr;
     if (ovr == NULL) return;
+    free(ovr->key);
     free(ovr);
 }
 
@@ -829,65 +830,9 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
     existing_shared = (ratelimit_shared_t *)hashtable_search(conf->ratelimit_cfgs.ht, (void *)name);
 
     if (existing_shared != NULL) {
-        if (policy_file != NULL) {
-            /* Update existing policy from file */
-            pthread_mutex_lock(&existing_shared->mut);
-            existing_shared->interval = interval;
-            existing_shared->burst = burst;
-            existing_shared->severity = severity;
-            pthread_mutex_unlock(&existing_shared->mut);
-            DBGPRINTF("ratelimit: updated shared policy '%s' from file '%s'\n", name, policy_file);
-        } else {
-            /* Update policy file if provided, otherwise keep existing */
-            if (policy_file) {
-                if (existing_shared->policy_file) free(existing_shared->policy_file);
-                existing_shared->policy_file = strdup(policy_file);
-            }
-            DBGPRINTF("ratelimit: policy '%s' exists and no policy file given - keeping existing values\n", name);
-        }
-        if (per_source_enabled) {
-            if (existing_shared->per_source_policy_file == NULL) {
-                iRet = ratelimitInitPerSourceShared(existing_shared, per_source_policy, per_source_policy_file,
-                                                    per_source_max_states, per_source_topn);
-                free(per_source_policy);
-                per_source_policy = NULL;
-                CHKiRet(iRet);
-            } else if (strcmp(existing_shared->per_source_policy_file, per_source_policy_file) != 0) {
-                LogError(0, RS_RET_CONFIG_ERROR,
-                         "ratelimit: per-source policy file is immutable for '%s' (existing: %s, new: %s)", name,
-                         existing_shared->per_source_policy_file, per_source_policy_file);
-                ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-            } else if (per_source_policy != NULL) {
-                ratelimitSwapPerSourcePolicy(existing_shared, per_source_policy);
-                per_source_policy->overrides = NULL;
-                free(per_source_policy);
-                per_source_policy = NULL;
-            }
-            if (per_source_key_tpl_name != NULL) {
-                if (existing_shared->per_source_key_tpl_name == NULL) {
-                    existing_shared->per_source_key_tpl_name = strdup(per_source_key_tpl_name);
-                    if (existing_shared->per_source_key_tpl_name == NULL) {
-                        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
-                    }
-                    existing_shared->per_source_key_tpl =
-                        tplFind(conf, existing_shared->per_source_key_tpl_name,
-                                (int)strlen(existing_shared->per_source_key_tpl_name));
-                    if (existing_shared->per_source_key_tpl == NULL) {
-                        LogError(0, RS_RET_CONFIG_ERROR, "ratelimit: perSourceKeyTpl '%s' not found for '%s'",
-                                 existing_shared->per_source_key_tpl_name, name);
-                        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-                    }
-                    existing_shared->per_source_key_tpl_default = 0;
-                } else if (strcmp(existing_shared->per_source_key_tpl_name, per_source_key_tpl_name) != 0) {
-                    LogError(0, RS_RET_CONFIG_ERROR,
-                             "ratelimit: perSourceKeyTpl is immutable for '%s' (existing: %s, new: %s)", name,
-                             existing_shared->per_source_key_tpl_name, per_source_key_tpl_name);
-                    ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
-                }
-            }
-        }
+        LogError(0, RS_RET_CONFIG_ERROR, "ratelimit: duplicate name '%s' in current config set", name);
         pthread_rwlock_unlock(&conf->ratelimit_cfgs.lock);
-        FINALIZE;
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
     }
 
     /* Not found - Create New */
@@ -899,8 +844,6 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
     shared->severity = severity;
     if (policy_file) {
         CHKmalloc(shared->policy_file = strdup(policy_file));
-    } else {
-        shared->policy_file = NULL;
     }
     pthread_mutex_init(&shared->mut, NULL);
     if (per_source_enabled) {
@@ -916,6 +859,7 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
             if (shared->per_source_key_tpl == NULL) {
                 LogError(0, RS_RET_CONFIG_ERROR, "ratelimit: perSourceKeyTpl '%s' not found for '%s'",
                          per_source_key_tpl_name, name);
+                pthread_rwlock_unlock(&conf->ratelimit_cfgs.lock);
                 ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
             }
             shared->per_source_key_tpl_default = 0;
@@ -925,6 +869,7 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
             if (shared->per_source_key_tpl == NULL) {
                 LogError(0, RS_RET_CONFIG_ERROR,
                          "ratelimit: default perSourceKeyTpl 'RSYSLOG_PerSourceKey' not found for '%s'", name);
+                pthread_rwlock_unlock(&conf->ratelimit_cfgs.lock);
                 ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
             }
             shared->per_source_key_tpl_default = 1;
@@ -935,9 +880,6 @@ rsRetVal ratelimitAddConfig(rsconf_t *conf,
         pthread_rwlock_unlock(&conf->ratelimit_cfgs.lock);
         LogError(0, RS_RET_OUT_OF_MEMORY, "ratelimit: error inserting config into hashtable");
         free(key);
-        pthread_mutex_destroy(&shared->mut);
-        free(shared); /* shared was not inserted, so we must free it */
-        shared = NULL; /* prevent double free in finalize_it */
         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
 

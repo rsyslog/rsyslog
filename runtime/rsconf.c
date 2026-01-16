@@ -536,6 +536,15 @@ static rsRetVal initFunc_ratelimit(struct cnfobj *o) {
         ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
     }
 
+    if (interval < 0) {
+        LogError(0, RS_RET_CONFIG_ERROR, "ratelimit: interval must be >= 0 for '%s'", name);
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+    if (burst < 0) {
+        LogError(0, RS_RET_CONFIG_ERROR, "ratelimit: burst must be >= 0 for '%s'", name);
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+
     CHKiRet(ratelimitAddConfig(loadConf, (char *)name, (unsigned)interval, (unsigned)burst, (intTiny)severity,
                                (char *)policy, per_source_enabled, (char *)per_source_policy,
                                (char *)per_source_key_tpl, (unsigned)per_source_max_states, (unsigned)per_source_topn));

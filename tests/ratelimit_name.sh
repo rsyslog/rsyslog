@@ -30,7 +30,10 @@ wait_shutdown
 
 # Check if messages were rate limited (we sent 20, burst is 5, interval 2s)
 # We expect some loss.
-content_count=$(grep -c "msgnum:" $RSYSLOG_OUT_LOG)
+content_count=$(grep -c "msgnum:" $RSYSLOG_OUT_LOG 2>/dev/null)
+if [ -z "$content_count" ]; then
+    content_count=0
+fi
 echo "content_count: $content_count"
 if [ $content_count -eq 40 ]; then
     echo "FAIL: No rate limiting occurred (received all 40 messages)"

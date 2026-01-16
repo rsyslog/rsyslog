@@ -42,7 +42,7 @@ Input usage
 .. code-block:: rsyslog
 
    ratelimit(name="myLimit" interval="60" burst="100")
-   input(type="imptcp" rateLimit.Name="myLimit")
+   input(type="imptcp" RateLimit.Name="myLimit")
 
 See also
 --------

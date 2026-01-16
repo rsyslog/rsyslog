@@ -151,7 +151,7 @@ Example
    input(type="imptcp" port="10515" rateLimit.Name="strict")
 
    # Apply per-source limits to a TCP listener
-   input(type="imtcp" port="10514" rateLimit.Name="per_source")
+   input(type="imtcp" port="10516" rateLimit.Name="per_source")
 
 Per-source key examples
 -----------------------

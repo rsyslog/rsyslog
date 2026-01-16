@@ -47,5 +47,5 @@ if [ $content_count -eq 0 ]; then
      error_exit 1
 fi
 
-echo "SUCCESS: Rate limiting occurred (received $content_count/$NUMMESSAGES)"
+echo "SUCCESS: Rate limiting occurred (received $content_count/$SENDMESSAGES)"
 exit_test

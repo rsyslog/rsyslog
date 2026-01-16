@@ -1,8 +1,8 @@
-.. index:: ! imudp; ratelimit.name
+.. index:: ! imudp; RateLimit.Name
 
 .. _param-imudp-ratelimit-name:
 
-ratelimit.name
+RateLimit.Name
 ==============
 
 .. summary-start

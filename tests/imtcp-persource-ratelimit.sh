@@ -8,7 +8,6 @@ if ! grep -q "HAVE_LIBYAML 1" ../config.h 2>/dev/null; then
     skip_test
 fi
 
-export PORT_RCVR="$(get_free_port)"
 export POLICY_FILE="$(pwd)/${RSYSLOG_DYNNAME}.persource.yaml"
 export INPUT_FILE="$(pwd)/${RSYSLOG_DYNNAME}.input"
 

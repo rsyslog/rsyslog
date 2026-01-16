@@ -321,6 +321,7 @@ TESTS +=  \
 	sndrcv_udp_nonstdpt_v6.sh \
 	imudp_thread_hang.sh \
 	imudp_ratelimit_name.sh \
+	ratelimit_hup.sh \
 	sndrcv_udp_nonstdpt_v6.sh \
 	asynwr_simple.sh \
 	asynwr_simple_2.sh \
@@ -1573,7 +1574,8 @@ if ENABLE_IMTCP_TESTS
 if ENABLE_IMPTCP
 TESTS +=  \
 	ratelimit_exclusivity.sh \
-	ratelimit_name.sh
+	ratelimit_name.sh \
+	ratelimit_duplicate.sh
 endif
 endif
 
