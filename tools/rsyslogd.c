@@ -3,7 +3,7 @@
  * because it was either written from scratch by me (rgerhards) or
  * contributors who agreed to ASL 2.0.
  *
- * Copyright 2004-2025 Rainer Gerhards and Adiscon
+ * Copyright 2004-2026 Rainer Gerhards and Adiscon
  *
  * This file is part of rsyslog.
  *
@@ -30,6 +30,8 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <errno.h>
+#include <fcntl.h>
+#include <string.h>
 #ifdef ENABLE_LIBLOGGING_STDLOG
     #include <liblogging/stdlog.h>
 #else
@@ -270,11 +272,47 @@ finalize_it:
     RETiRet;
 }
 
+static void syncPidFileDir(const char *pidFilePath) {
+    const char *slash = strrchr(pidFilePath, '/');
+    char *dirPath = NULL;
+    int dirfd = -1;
+
+    if (slash == NULL) {
+        dirPath = strdup(".");
+    } else if (slash == pidFilePath) {
+        dirPath = strdup("/");
+    } else {
+        dirPath = strndup(pidFilePath, slash - pidFilePath);
+    }
+
+    if (dirPath == NULL) {
+        DBGPRINTF("rsyslogd: out of memory syncing pidfile directory\n");
+        return;
+    }
+
+    dirfd = open(dirPath, O_RDONLY | O_CLOEXEC | O_NOCTTY);
+    if (dirfd == -1) {
+        DBGPRINTF("rsyslogd: error opening pidfile directory '%s' for sync\n", dirPath);
+        goto finalize_it;
+    }
+
+    if (fsync(dirfd) != 0) {
+        DBGPRINTF("rsyslogd: error syncing pidfile directory '%s'\n", dirPath);
+    }
+
+finalize_it:
+    if (dirfd != -1) {
+        close(dirfd);
+    }
+    free(dirPath);
+}
+
 static rsRetVal writePidFile(void) {
-    FILE *fp;
+    FILE *fp = NULL;
     DEFiRet;
 
     const char *tmpPidFile = NULL;
+    int fd = -1;
 
     if (!strcmp(PidFile, NO_PIDFILE)) {
         FINALIZE;
@@ -282,7 +320,6 @@ static rsRetVal writePidFile(void) {
     if (asprintf((char **)&tmpPidFile, "%s.tmp", PidFile) == -1) {
         ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     }
-    if (tmpPidFile == NULL) tmpPidFile = PidFile;
 
     DBGPRINTF("rsyslogd: writing pidfile '%s'.\n", tmpPidFile);
     if ((fp = fopen((char *)tmpPidFile, "w")) == NULL) {
@@ -290,16 +327,43 @@ static rsRetVal writePidFile(void) {
         ABORT_FINALIZE(RS_RET_ERR);
     }
     if (fprintf(fp, "%d", (int)glblGetOurPid()) < 0) {
-        LogError(errno, iRet, "rsyslog: error writing pid file");
+        perror("rsyslogd: error writing pid file");
+        ABORT_FINALIZE(RS_RET_ERR);
     }
-    fclose(fp);
+    if (fflush(fp) != 0) {
+        perror("rsyslogd: error flushing pid file");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    fd = fileno(fp);
+    if (fd == -1) {
+        perror("rsyslogd: error obtaining pid file descriptor");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    if (fsync(fd) != 0) {
+        perror("rsyslogd: error syncing pid file");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    if (fclose(fp) != 0) {
+        fp = NULL;
+        perror("rsyslogd: error closing pid file");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    fp = NULL;
     if (tmpPidFile != PidFile) {
         if (rename(tmpPidFile, PidFile) != 0) {
             perror("rsyslogd: error writing pid file (rename stage)");
+            ABORT_FINALIZE(RS_RET_ERR);
         }
+        syncPidFileDir(PidFile);
     }
 
 finalize_it:
+    if (iRet != RS_RET_OK && tmpPidFile != NULL && tmpPidFile != PidFile) {
+        unlink(tmpPidFile);
+    }
+    if (fp != NULL) {
+        fclose(fp);
+    }
     if (tmpPidFile != PidFile) {
         free((void *)tmpPidFile);
     }
