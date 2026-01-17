@@ -250,6 +250,7 @@ struct modConfData_s {
     int iPollInterval; /* number of seconds to sleep when there was no file activity */
     int readTimeout;
     int timeoutGranularity; /* value in ms */
+    int maxiNotifyWatches;
     instanceConf_t *root, *tail;
     fs_node_t *conf_tree;
     uint8_t opMode;
@@ -313,6 +314,7 @@ static struct cnfparamdescr modpdescr[] = {
     {"normalizepath", eCmdHdlrBinary, 0},
     {"mode", eCmdHdlrGetWord, 0},
     {"deletestateonfilemove", eCmdHdlrBinary, 0},
+    {"maxinotifywatches", eCmdHdlrNonNegInt, 0},
 };
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 
@@ -698,6 +700,15 @@ static rsRetVal ATTR_NONNULL(1, 2) act_obj_add(fs_edge_t *const edge,
             }
         }
     }
+#ifdef HAVE_INOTIFY_INIT
+    if (runModConf->maxiNotifyWatches > 0 && nWdmap >= runModConf->maxiNotifyWatches) {
+        LogError(0, RS_RET_ERR,
+                 "imfile: act_obj_add: cannot add new active object '%s' - "
+                 "the module limit on the total number of inotify watches(%d) was reached",
+                 name, runModConf->maxiNotifyWatches);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+#endif
     DBGPRINTF("need to add new active object '%s' in '%s' - checking if accessible\n", name, edge->path);
     fd = open(name, O_RDONLY | O_CLOEXEC);
     if (fd < 0) {
@@ -1987,6 +1998,7 @@ BEGINbeginCnfLoad
     loadModConf->readTimeout = 0; /* default: no timeout */
     loadModConf->timeoutGranularity = 1000; /* default: 1 second */
     loadModConf->haveReadTimeouts = 0; /* default: no timeout */
+    loadModConf->maxiNotifyWatches = 0; /* default: no limit */
     loadModConf->normalizePath = 1;
     loadModConf->sortFiles = GLOB_NOSORT;
     loadModConf->stateFileDirectory = NULL;
@@ -2043,6 +2055,8 @@ BEGINsetModCnf
         } else if (!strcmp(modpblk.descr[i].name, "timeoutgranularity")) {
             /* note: we need ms, thus "* 1000" */
             loadModConf->timeoutGranularity = (int)pvals[i].val.d.n * 1000;
+        } else if (!strcmp(modpblk.descr[i].name, "maxinotifywatches")) {
+            loadModConf->maxiNotifyWatches = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "sortfiles")) {
             loadModConf->sortFiles = ((sbool)pvals[i].val.d.n) ? 0 : GLOB_NOSORT;
         } else if (!strcmp(modpblk.descr[i].name, "statefile.directory")) {
