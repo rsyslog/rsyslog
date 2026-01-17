@@ -1918,6 +1918,15 @@ error_exit() {
 	printf '%s FAIL: Test %s (took %s seconds)\n' "$(tb_timestamp)" "$0" "$(( $(date +%s) - TB_STARTTEST ))"
 	if [ $exitval -ne 77 ]; then
 		echo $0 > testbench_test_failed_rsyslog
+		# --- AI AGENT GUIDANCE ---
+		echo " "
+		echo " AI AGENT NOTICE:"
+		echo "   If this output is sparse or you ran 'make check', you are doing it wrong."
+		echo "   1. READ AGENTS.md NOW."
+		echo "   2. Run this test directly: ./tests/$(basename $0)"
+		echo "   3. Do NOT use specific make targets like 'check-TESTS'."
+		echo " "
+		# -------------------------
 	fi
 	exit $exitval
 }
