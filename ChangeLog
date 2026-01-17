@@ -2,6 +2,8 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-17: make mmutf8fix work also on tags
+  Thanks to Jan Jeroným Zvánovec for the base patch, which we improved a bit.
 - 2026-01-16: queue: harden disk recovery after invalid .qi
   This probably fixes rare but reported disk queue startup errors, at
   least a subset of them (these cases were hard to reproduce).
