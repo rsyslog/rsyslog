@@ -95,6 +95,10 @@ Module Parameters
      - .. include:: ../../reference/parameters/imfile-statefile-directory.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imfile-maxinotifywatches`
+     - .. include:: ../../reference/parameters/imfile-maxinotifywatches.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 Input Parameters
 ----------------
@@ -366,6 +370,7 @@ defaults instead.
    ../../reference/parameters/imfile-freshstarttail
    ../../reference/parameters/imfile-ignoreolderthan
    ../../reference/parameters/imfile-maxbytesperminute
+   ../../reference/parameters/imfile-maxinotifywatches
    ../../reference/parameters/imfile-maxlinesatonce
    ../../reference/parameters/imfile-maxlinesperminute
    ../../reference/parameters/imfile-maxsubmitatonce
