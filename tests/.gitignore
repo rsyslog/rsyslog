@@ -12,3 +12,5 @@ rsyslog.out.compare
 test-spool/*
 check_relpEngineVersion
 testbench_test_failed_rsyslog
+gnutls_sni_server
+openssl_sni_server
