@@ -703,8 +703,9 @@ endif # if ENABLE_SNMP
 
 if ENABLE_MMUTF8FIX
 TESTS +=  \
-        mmutf8fix_no_error.sh
-endif # if ENABLE_MAIL
+        mmutf8fix_no_error.sh \
+        mmutf8fix_tag.sh
+endif # if ENABLE_MMUTF8FIX
 
 if ENABLE_MMAITAG
 TESTS +=  \
@@ -2398,6 +2399,7 @@ EXTRA_DIST= \
 	mmdarwin_errmsg_no_sock.sh \
 	mmdarwin_errmsg_no_sock-vg.sh \
 	mmutf8fix_no_error.sh \
+	mmutf8fix_tag.sh \
 	tcpflood_wrong_option_output.sh \
 	msleep_usage_output.sh \
 	mangle_qi_usage_output.sh \

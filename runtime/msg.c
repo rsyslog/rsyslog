@@ -241,13 +241,13 @@ void getRawMsgAfterPRI(smsg_t *const pM, uchar **pBuf, int *piLen);
 
 
 /* the locking and unlocking implementations: */
-static inline void MsgLock(smsg_t *pThis) {
+void MsgLock(smsg_t *pThis) {
 #if DEV_DEBUG == 1
     dbgprintf("MsgLock(0x%lx)\n", (unsigned long)pThis);
 #endif
     pthread_mutex_lock(&pThis->mut);
 }
-static inline void MsgUnlock(smsg_t *pThis) {
+void MsgUnlock(smsg_t *pThis) {
 #if DEV_DEBUG == 1
     dbgprintf("MsgUnlock(0x%lx)\n", (unsigned long)pThis);
 #endif

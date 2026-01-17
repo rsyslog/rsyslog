@@ -225,6 +225,20 @@ rsRetVal MsgSetPropsViaJSON(smsg_t *__restrict__ const pMsg, const uchar *__rest
 rsRetVal MsgSetPropsViaJSON_Object(smsg_t *__restrict__ const pMsg, struct json_object *json);
 const uchar *msgGetJSONMESG(smsg_t *__restrict__ const pMsg);
 
+/**
+ * @brief Acquire the message mutex.
+ *
+ * @param pMsg Message instance to lock.
+ */
+void MsgLock(smsg_t *pMsg);
+
+/**
+ * @brief Release the message mutex.
+ *
+ * @param pMsg Message instance to unlock.
+ */
+void MsgUnlock(smsg_t *pMsg);
+
 uchar *getMSG(smsg_t *pM);
 const char *getHOSTNAME(smsg_t *pM);
 char *getPROCID(smsg_t *pM, sbool bLockMutex);

@@ -40,6 +40,7 @@
 #include "srUtils.h"
 #include "template.h"
 #include "module-template.h"
+#include "msg.h"
 #include "errmsg.h"
 
 MODULE_TYPE_OUTPUT;
@@ -280,14 +281,21 @@ BEGINdoAction_NoStrings
     smsg_t *pMsg = ppMsg[0];
     uchar *msg;
     int lenMsg;
+    uchar *tag;
+    int lenTag;
     CODESTARTdoAction;
+    MsgLock(pMsg);
     lenMsg = getMSGLen(pMsg);
     msg = getMSG(pMsg);
+    getTAG(pMsg, &tag, &lenTag, MUTEX_ALREADY_LOCKED);
     if (pWrkrData->pData->mode == MODE_CC) {
         doCC(pWrkrData->pData, msg, lenMsg);
+        doCC(pWrkrData->pData, tag, lenTag);
     } else {
         doUTF8(pWrkrData->pData, msg, lenMsg);
+        doUTF8(pWrkrData->pData, tag, lenTag);
     }
+    MsgUnlock(pMsg);
 ENDdoAction
 
 
