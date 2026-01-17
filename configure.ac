@@ -3307,6 +3307,7 @@ AC_SUBST([DOC_FILES])
 
 
 AC_CONFIG_FILES([Makefile \
+		doc/Makefile \
 		runtime/Makefile \
 		compat/Makefile \
 		grammar/Makefile \
