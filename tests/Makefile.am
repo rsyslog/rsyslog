@@ -1951,6 +1951,10 @@ if ENABLE_MMNORMALIZE
 TESTS += \
 	imfile-endmsg.regex-with-example.sh
 endif
+if ENABLE_IMPSTATS
+TESTS += \
+	imfile-statistics.sh
+endif
 
 if HAVE_VALGRIND
 TESTS += \
@@ -3063,6 +3067,7 @@ EXTRA_DIST= \
 	complex1.sh \
 	random.sh \
 	testsuites/imfile-old-state-file_imfile-state_.-rsyslog.input \
+	imfile-statistics.sh \
 	imfile-readmode0-vg.sh \
 	imfile-readmode2.sh \
 	imfile-readmode2-polling.sh \
