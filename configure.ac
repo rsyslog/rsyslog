@@ -2299,16 +2299,16 @@ AM_CONDITIONAL(ENABLE_IMPTCP, test x$enable_imptcp = xyes)
 
 
 # settings for the pstats input module
+impstats_user_set=no
 AC_ARG_ENABLE(impstats,
         [AS_HELP_STRING([--enable-impstats],[periodic statistics module enabled @<:@default=no@:>@])],
         [case "${enableval}" in
-         yes) enable_impstats="yes" ;;
-          no) enable_impstats="no" ;;
+         yes) enable_impstats="yes"; impstats_user_set=yes ;;
+          no) enable_impstats="no"; impstats_user_set=yes ;;
            *) AC_MSG_ERROR(bad value ${enableval} for --enable-impstats) ;;
          esac],
         [enable_impstats=no]
 )
-AM_CONDITIONAL(ENABLE_IMPSTATS, test x$enable_impstats = xyes)
 
 # settings for the pcap input module
 AC_ARG_ENABLE(impcap,
@@ -2411,6 +2411,12 @@ if test "x$enable_testbench" = "xyes"; then
 		AC_MSG_NOTICE([--enable-testbench auto-enabling omstdout])
 		enable_omstdout="yes"
 	fi
+	if test "x$enable_impstats" != "xyes"; then
+		if test "x$impstats_user_set" != "xyes"; then
+			AC_MSG_NOTICE([--enable-testbench auto-enabling impstats])
+			enable_impstats="yes"
+		fi
+	fi
 fi
 
 if test "x$enable_imdiag" = "xyes"; then
@@ -2418,6 +2424,7 @@ if test "x$enable_imdiag" = "xyes"; then
 fi
 AM_CONDITIONAL(ENABLE_IMDIAG, test x$enable_imdiag = xyes)
 AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
+AM_CONDITIONAL(ENABLE_IMPSTATS, test x$enable_impstats = xyes)
 AM_CONDITIONAL(ENABLE_TESTBENCH, test x$enable_testbench = xyes)
 
 

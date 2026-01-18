@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <limits.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <time.h>
@@ -102,6 +103,7 @@ static int bLegacyCnfModGlobalsPermitted; /* are legacy module-global config par
 
 #define NUM_MULTISUB 1024 /* default max number of submits */
 #define DFLT_PollInterval 10
+#define DFLT_INOTIFY_FALLBACK_INTERVAL 60
 #define INIT_WDMAP_TAB_SIZE 1 /* default wdMap table size - is extended as needed, use 2^x value */
 #define ADD_METADATA_UNSPECIFIED -1
 
@@ -240,6 +242,7 @@ static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __
 static rsRetVal ATTR_NONNULL(1) pollFile(act_obj_t *act);
 static int ATTR_NONNULL() getBasename(uchar *const __restrict__ basen, uchar *const __restrict__ path);
 static void ATTR_NONNULL() act_obj_unlink(act_obj_t *act);
+static void ATTR_NONNULL(1, 2) fs_node_walk(fs_node_t *const node, void (*f_usr)(fs_edge_t *const));
 static uchar *ATTR_NONNULL(1, 2) getStateFileName(const act_obj_t *, uchar *, const size_t);
 static int ATTR_NONNULL()
     getFullStateFileName(const uchar *const, const char *const, uchar *const pszout, const size_t ilenout);
@@ -257,6 +260,8 @@ struct modConfData_s {
     int readTimeout;
     int timeoutGranularity; /* value in ms */
     int maxiNotifyWatches;
+    int inotifyFallbackInterval;
+    sbool bInotifyLimitHit;
     instanceConf_t *root, *tail;
     fs_node_t *conf_tree;
     uint8_t opMode;
@@ -295,6 +300,7 @@ static wd_map_t *wdmap = NULL;
 static int nWdmap;
 static int allocMaxWdmap;
 static int ino_fd; /* fd for inotify calls */
+static sbool inotifyFallbackNeeded;
 #endif /* #if HAVE_INOTIFY_INIT -------------------------------------------------- */
 
 #if defined(OS_SOLARIS) && defined(HAVE_PORT_SOURCE_FILE)
@@ -321,6 +327,7 @@ static struct cnfparamdescr modpdescr[] = {
     {"mode", eCmdHdlrGetWord, 0},
     {"deletestateonfilemove", eCmdHdlrBinary, 0},
     {"maxinotifywatches", eCmdHdlrNonNegInt, 0},
+    {"inotifyfallbackinterval", eCmdHdlrNonNegInt, 0},
 };
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 
@@ -519,6 +526,18 @@ static int in_setupWatch(act_obj_t *const act, const int is_file) {
     int wd = -1;
     if (runModConf->opMode != OPMODE_INOTIFY) goto done;
 
+    if (runModConf->maxiNotifyWatches > 0 && nWdmap >= runModConf->maxiNotifyWatches) {
+        if (!runModConf->bInotifyLimitHit) {
+            LogError(0, RS_RET_ERR,
+                     "imfile: reached module limit for inotify watches (%d); "
+                     "falling back to periodic scans",
+                     runModConf->maxiNotifyWatches);
+        }
+        runModConf->bInotifyLimitHit = 1;
+        inotifyFallbackNeeded = 1;
+        goto done;
+    }
+
     wd =
         inotify_add_watch(ino_fd, act->name,
                           (is_file) ? IN_MODIFY | IN_DONT_FOLLOW : IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO);
@@ -528,12 +547,37 @@ static int in_setupWatch(act_obj_t *const act, const int is_file) {
         } else {
             LogError(errno, RS_RET_IO_ERROR, "imfile: cannot watch object '%s'", act->name);
         }
+        if (errno == ENOSPC) {
+            if (!runModConf->bInotifyLimitHit) {
+                LogError(errno, RS_RET_IO_ERROR, "imfile: inotify watch limit reached; falling back to periodic scans");
+            }
+            runModConf->bInotifyLimitHit = 1;
+            inotifyFallbackNeeded = 1;
+        }
         goto done;
     }
     wdmapAdd(wd, act);
     DBGPRINTF("in_setupWatch: watch %d added for %s(object %p)\n", wd, act->name, act);
 done:
     return wd;
+}
+
+static void in_retryMissingWatches(fs_edge_t *const edge) {
+    if (runModConf->opMode != OPMODE_INOTIFY) {
+        return;
+    }
+
+    for (act_obj_t *act = edge->active; act != NULL; act = act->next) {
+        if (act->wd != -1) {
+            continue;
+        }
+        int wd = in_setupWatch(act, edge->is_file);
+        if (wd >= 0) {
+            act->wd = wd;
+        } else {
+            inotifyFallbackNeeded = 1;
+        }
+    }
 }
 
 /* compare function for bsearch() */
@@ -706,15 +750,6 @@ static rsRetVal ATTR_NONNULL(1, 2) act_obj_add(fs_edge_t *const edge,
             }
         }
     }
-#ifdef HAVE_INOTIFY_INIT
-    if (runModConf->maxiNotifyWatches > 0 && nWdmap >= runModConf->maxiNotifyWatches) {
-        LogError(0, RS_RET_ERR,
-                 "imfile: act_obj_add: cannot add new active object '%s' - "
-                 "the module limit on the total number of inotify watches(%d) was reached",
-                 name, runModConf->maxiNotifyWatches);
-        ABORT_FINALIZE(RS_RET_ERR);
-    }
-#endif
     DBGPRINTF("need to add new active object '%s' in '%s' - checking if accessible\n", name, edge->path);
     fd = open(name, O_RDONLY | O_CLOEXEC);
     if (fd < 0) {
@@ -860,10 +895,13 @@ static void detect_updates(fs_edge_t *const edge) {
 
 
 /* check if active files need to be processed. This is only needed in
- * polling mode.
+ * polling mode or inotify fallback mode.
  */
 static void ATTR_NONNULL() poll_active_files(fs_edge_t *const edge) {
-    if (runModConf->opMode != OPMODE_POLLING || !edge->is_file || glbl.GetGlobalInputTermState() != 0) {
+    const sbool inotify_fallback = (runModConf->opMode == OPMODE_INOTIFY && runModConf->bInotifyLimitHit &&
+                                    runModConf->inotifyFallbackInterval > 0);
+    if ((runModConf->opMode != OPMODE_POLLING && !inotify_fallback) || !edge->is_file ||
+        glbl.GetGlobalInputTermState() != 0) {
         return;
     }
 
@@ -980,6 +1018,19 @@ static void ATTR_NONNULL() poll_timeouts(fs_edge_t *const edge) {
                 pollFile(act);
             }
         }
+    }
+}
+
+static void in_doFallbackScan(void) {
+    if (!runModConf->bInotifyLimitHit || runModConf->inotifyFallbackInterval <= 0) {
+        return;
+    }
+
+    inotifyFallbackNeeded = 0;
+    fs_node_walk(runModConf->conf_tree, poll_tree);
+    fs_node_walk(runModConf->conf_tree, in_retryMissingWatches);
+    if (!inotifyFallbackNeeded) {
+        runModConf->bInotifyLimitHit = 0;
     }
 }
 #endif
@@ -2034,6 +2085,8 @@ BEGINbeginCnfLoad
     loadModConf->timeoutGranularity = 1000; /* default: 1 second */
     loadModConf->haveReadTimeouts = 0; /* default: no timeout */
     loadModConf->maxiNotifyWatches = 0; /* default: no limit */
+    loadModConf->inotifyFallbackInterval = DFLT_INOTIFY_FALLBACK_INTERVAL;
+    loadModConf->bInotifyLimitHit = 0;
     loadModConf->normalizePath = 1;
     loadModConf->sortFiles = GLOB_NOSORT;
     loadModConf->stateFileDirectory = NULL;
@@ -2092,6 +2145,8 @@ BEGINsetModCnf
             loadModConf->timeoutGranularity = (int)pvals[i].val.d.n * 1000;
         } else if (!strcmp(modpblk.descr[i].name, "maxinotifywatches")) {
             loadModConf->maxiNotifyWatches = (int)pvals[i].val.d.n;
+        } else if (!strcmp(modpblk.descr[i].name, "inotifyfallbackinterval")) {
+            loadModConf->inotifyFallbackInterval = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "sortfiles")) {
             loadModConf->sortFiles = ((sbool)pvals[i].val.d.n) ? 0 : GLOB_NOSORT;
         } else if (!strcmp(modpblk.descr[i].name, "statefile.directory")) {
@@ -2414,6 +2469,7 @@ static rsRetVal do_inotify(void) {
     int rd;
     int currev;
     static int last_timeout = 0;
+    time_t last_fallback = 0;
     struct pollfd pollfd;
     DEFiRet;
 
@@ -2431,24 +2487,42 @@ static rsRetVal do_inotify(void) {
 
     while (glbl.GetGlobalInputTermState() == 0) {
         int r;
+        int poll_timeout = -1;
 
         pollfd.fd = ino_fd;
         pollfd.events = POLLIN;
 
-        if (runModConf->haveReadTimeouts)
-            r = poll(&pollfd, 1, runModConf->timeoutGranularity);
-        else
-            r = poll(&pollfd, 1, -1);
+        if (runModConf->haveReadTimeouts) {
+            poll_timeout = runModConf->timeoutGranularity;
+        }
+        if (runModConf->bInotifyLimitHit && runModConf->inotifyFallbackInterval > 0) {
+            int fallback_timeout = runModConf->inotifyFallbackInterval;
+            if (fallback_timeout > INT_MAX / 1000) {
+                fallback_timeout = INT_MAX / 1000;
+            }
+            fallback_timeout *= 1000;
+            if (poll_timeout == -1 || fallback_timeout < poll_timeout) {
+                poll_timeout = fallback_timeout;
+            }
+        }
+        r = poll(&pollfd, 1, poll_timeout);
 
         if (r == -1 && errno == EINTR) {
             DBGPRINTF("do_inotify interrupted while polling on ino_fd\n");
             continue;
         }
         if (r == 0) {
-            DBGPRINTF("readTimeouts are configured, checking if some apply\n");
             if (runModConf->haveReadTimeouts) {
+                DBGPRINTF("readTimeouts are configured, checking if some apply\n");
                 fs_node_walk(runModConf->conf_tree, poll_timeouts);
                 last_timeout = time(NULL);
+            }
+            if (runModConf->bInotifyLimitHit && runModConf->inotifyFallbackInterval > 0) {
+                time_t now = time(NULL);
+                if (last_fallback == 0 || last_fallback + runModConf->inotifyFallbackInterval <= now) {
+                    in_doFallbackScan();
+                    last_fallback = now;
+                }
             }
             continue;
         } else if (r == -1) {
@@ -2465,9 +2539,16 @@ static rsRetVal do_inotify(void) {
             // process timeouts always, ino_fd may be too busy to ever have timeout occur from poll
             if (runModConf->haveReadTimeouts) {
                 int now = time(NULL);
-                if (last_timeout + (runModConf->timeoutGranularity / 1000) > now) {
+                if (last_timeout + (runModConf->timeoutGranularity / 1000) <= now) {
                     fs_node_walk(runModConf->conf_tree, poll_timeouts);
                     last_timeout = time(NULL);
+                }
+            }
+            if (runModConf->bInotifyLimitHit && runModConf->inotifyFallbackInterval > 0) {
+                time_t now = time(NULL);
+                if (last_fallback == 0 || last_fallback + runModConf->inotifyFallbackInterval <= now) {
+                    in_doFallbackScan();
+                    last_fallback = now;
                 }
             }
             rd = read(ino_fd, iobuf, sizeof(iobuf));
