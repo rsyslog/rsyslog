@@ -917,6 +917,9 @@ finalize_it:
 
 /*--------------------------------------OCSP Support ------------------------------------------*/
 
+#ifndef ENABLE_WOLFSSL
+/* OCSP is not available in WolfSSL builds */
+
 /*
  * CRL is not implemented!
  *
@@ -976,7 +979,7 @@ static X509 *ocsp_find_issuer(X509 *target_cert,
 
     /* find issuer among local trusted issuers */
     if (store != NULL) {
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    #if OPENSSL_VERSION_NUMBER >= 0x10100000L
         objs = X509_STORE_get0_objects(store);
         for (int i = 0; i < sk_X509_OBJECT_num(objs); i++) {
             X509 *cert = X509_OBJECT_get0_X509(sk_X509_OBJECT_value(objs, i));
@@ -985,18 +988,18 @@ static X509 *ocsp_find_issuer(X509 *target_cert,
                 break;
             }
         }
-#else
+    #else
         /* OpenSSL 1.0.2 compatibility: direct access to store fields */
         objs = store->objs;
         for (int i = 0; i < sk_X509_OBJECT_num(objs); i++) {
-            X509_OBJECT *obj = sk_X509_OBJECT_value(objs, i);
-            X509 *cert = obj->type == X509_LU_X509 ? obj->data.x509 : NULL;
+            X509_OBJECT *x509obj = sk_X509_OBJECT_value(objs, i);
+            X509 *cert = x509obj->type == X509_LU_X509 ? x509obj->data.x509 : NULL;
             if (cert && X509_check_issued(cert, target_cert) == X509_V_OK) {
                 issuer = cert;
                 break;
             }
         }
-#endif
+    #endif
     }
 
     if (!issuer) {
@@ -1139,17 +1142,17 @@ static BIO *ocsp_connect(const char *host, const char *port, const char *device)
         if (sock == -1) continue;
 
         if (device && *device) {
-#ifdef SO_BINDTODEVICE
+    #ifdef SO_BINDTODEVICE
             if (setsockopt(sock, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device)) < 0) {
                 LogError(errno, RS_RET_NO_ERRCODE, "OCSP: Failed to bind socket to device %s\n", device);
                 close(sock);
                 sock = -1;
                 continue;
             }
-#else
+    #else
             LogMsg(0, RS_RET_NO_ERRCODE, LOG_WARNING,
                    "OCSP: SO_BINDTODEVICE not supported, ignoring device parameter\n");
-#endif
+    #endif
         }
 
         /* Set socket to non-blocking for timeout support */
@@ -1443,6 +1446,8 @@ err:
     return ret;
 }
 
+#endif /* !ENABLE_WOLFSSL */
+
 /*--------------------------------------End OCSP Support ------------------------------------------*/
 
 /* Verify Callback for X509 Certificate validation. Force visibility as this function is not called anywhere but
@@ -1556,6 +1561,9 @@ int net_ossl_verify_callback(int status, X509_STORE_CTX *store) {
     /* Note: device binding is not currently supported in the refactored code */
     /* This is left here for future enhancement */
 
+#ifndef ENABLE_WOLFSSL
+    /* OCSP revocation checking is not available in WolfSSL builds */
+
     /* 1. OCSP */
     /* TODO: OCSP check performs blocking network I/O (DNS + socket connect/send/recv)
      * inside the TLS handshake verify callback. This can cause:
@@ -1599,6 +1607,7 @@ int net_ossl_verify_callback(int status, X509_STORE_CTX *store) {
         /* Cert is revoked, or check failed -> fail verification */
         status = 0;
     }
+#endif /* !ENABLE_WOLFSSL */
 
 done:
     if (untrusted_peer_certs) sk_X509_pop_free(untrusted_peer_certs, X509_free);
