@@ -976,6 +976,7 @@ static X509 *ocsp_find_issuer(X509 *target_cert,
 
     /* find issuer among local trusted issuers */
     if (store != NULL) {
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
         objs = X509_STORE_get0_objects(store);
         for (int i = 0; i < sk_X509_OBJECT_num(objs); i++) {
             X509 *cert = X509_OBJECT_get0_X509(sk_X509_OBJECT_value(objs, i));
@@ -984,6 +985,18 @@ static X509 *ocsp_find_issuer(X509 *target_cert,
                 break;
             }
         }
+#else
+        /* OpenSSL 1.0.2 compatibility: direct access to store fields */
+        objs = store->objs;
+        for (int i = 0; i < sk_X509_OBJECT_num(objs); i++) {
+            X509_OBJECT *obj = sk_X509_OBJECT_value(objs, i);
+            X509 *cert = obj->type == X509_LU_X509 ? obj->data.x509 : NULL;
+            if (cert && X509_check_issued(cert, target_cert) == X509_V_OK) {
+                issuer = cert;
+                break;
+            }
+        }
+#endif
     }
 
     if (!issuer) {
