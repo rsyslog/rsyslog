@@ -27,23 +27,22 @@ sudo apt-get update && sudo apt-get install -y \
 
 ### Step 2: Build the Project
 
-Build the project efficiently. The following command incrementally builds the core and all test dependencies without running the full suite.
+Build the project efficiently. The following command builds the core and all test dependencies without running any tests (`TESTS=""` is build-only).
 
 ```bash
 make -j$(nproc) check TESTS=""
 ```
 
-**Note:** If the `Makefile` is missing (first run) or you need to change build options, run the full bootstrap sequence first:
+**Note:** If `configure` or `Makefile.in` is missing, or you changed `configure.ac`, any `Makefile.am`, or files under `m4/`, run the full bootstrap sequence first. `autogen.sh` runs `configure` internally, so pass configure flags directly to it:
 
 ```bash
-./autogen.sh
-./configure --enable-testbench --enable-imdiag --enable-omstdout --enable-mmsnareparse --enable-omotel --enable-imhttp
+./autogen.sh --enable-debug --enable-testbench --enable-imdiag --enable-omstdout --enable-mmsnareparse --enable-omotel --enable-imhttp
 make -j$(nproc) check TESTS=""
 ```
 
 ### Step 3: Run Tests
 
-Run a relevant test to verify your changes. The testbench allows test scripts to be run directly. `imtcp-basic.sh` serves as a good general-purpose smoke test.
+Run a relevant test to verify your changes. Use direct test scripts only; do not use the `make check` harness in agent workflows. `imtcp-basic.sh` serves as a good general-purpose smoke test. See “Validate Code Changes” below for the full validation checklist.
 
 ```bash
 ./tests/imtcp-basic.sh
@@ -51,7 +50,7 @@ Run a relevant test to verify your changes. The testbench allows test scripts to
 
 ### Step 4: Format Code
 
-Before committing, run the normalization script to ensure code style consistency. This script wraps clang-format and applies project-specific rules.
+Before committing, run the normalization script to ensure code style consistency. This script wraps clang-format and applies project-specific rules. See “Pre-Commit Checklist” below for the final gate.
 
 ```bash
 devtools/format-code.sh
@@ -129,23 +128,24 @@ When the user says the codeword "SETUP", do the following:
 When the user says the codeword "BUILD" optionally followed by configure options, do the following:
 
 1. **Check for existing build configuration**:
-   - If a `Makefile` exists and no new configure options are provided, **SKIP** to Step 3.
+   - If `configure` and `Makefile` exist, no new configure options are provided, and you did not change `configure.ac`, `Makefile.am`, or files under `m4/`, **SKIP** to Step 3.
 
 2. **Generate and Configure** (if Makefile is missing or options provided):
    ```bash
-   ./autogen.sh
+   ./autogen.sh --enable-debug
    ```
-   - If configure options are provided:
+   `autogen.sh` accepts configure options and runs `configure`. Pass any module or test flags directly to `autogen.sh`.
+   - If configure options are provided, run:
      ```bash
-     ./configure [user-provided-options]
+     ./autogen.sh --enable-debug [user-provided-options]
      ```
-   - If no options are provided:
+   - If no options are provided, run:
      ```bash
-     ./configure --enable-testbench --enable-imdiag --enable-omstdout --enable-mmsnareparse --enable-omotel --enable-imhttp
+     ./autogen.sh --enable-debug --enable-testbench --enable-imdiag --enable-omstdout --enable-mmsnareparse --enable-omotel --enable-imhttp
      ```
 
 3. **Build the project**:
-   Use the efficient incremental build command that prepares all test binaries:
+   Use the build-only command that prepares all test binaries without running tests:
    ```bash
    make -j$(nproc) check TESTS=""
    ```
@@ -203,7 +203,7 @@ the workspace is reset):
    so the agent understands outstanding context.
 
 These steps mirror how the existing sandbox is configured and make it more
-likely that rebuild/bootstrap reminders (such as running `./autogen.sh` before
+likely that rebuild/bootstrap reminders (such as running `./autogen.sh --enable-debug` before
 the first compile) are followed.
 
 -----
@@ -310,7 +310,7 @@ will automatically apply these rules.
 
 ## Build & Test Expectations
 
-Whenever `.c` or `.h` files are modified, a build should be performed using `make`.
+Whenever `.c` or `.h` files are modified, a build should be performed using `make -j$(nproc) check TESTS=""` when possible.
 If new functionality is introduced, at least a basic test should be created and run.
 
 ### Generating the autotools build system
@@ -320,26 +320,34 @@ fresh checkout—or any time `configure.ac`, `Makefile.am`, or macros under `m4/
 change—you **must** run:
 
 ```bash
-./autogen.sh
+./autogen.sh --enable-debug
 ```
+`autogen.sh` accepts configure options and runs `configure`; pass any additional module or test flags directly to `autogen.sh`.
 
 This bootstraps autotools, downloads any required macros, and generates
-`configure`. Skipping this step is the most common reason for messages such as
+`configure`. `make` may rerun `config.status` when `configure` or `Makefile.in`
+change, but it does **not** regenerate `configure` or `Makefile.in` from
+`configure.ac` or `m4/`—that still requires `autogen.sh`.
+Skipping this step is the most common reason for messages such as
 `configure: error: cannot find install-sh, install.sh, or shtool` or `make:
 *** No targets specified and no makefile found`. If a cleanup removed the
-generated files (e.g., `git clean -xfd`), re-run `./autogen.sh` before
+generated files (e.g., `git clean -xfd`), re-run `./autogen.sh --enable-debug` before
 configuring again.
 
-If `autogen.sh` fails, run `./devtools/codex-setup.sh` first to install the
-toolchain dependencies inside the sandbox, then retry `./autogen.sh`.
+If `./autogen.sh --enable-debug` fails, run `./devtools/codex-setup.sh` first to install the
+toolchain dependencies inside the sandbox, then retry `./autogen.sh --enable-debug`.
 
 ### Configure & build
 
 If possible, agents should:
 
-  - Build the project using `./configure` and `make`
+  - Build the project using `make -j$(nproc) check TESTS=""`
   - Run an individual test using the instructions below
   - After building, run `./tests/imtcp-basic.sh` as a smoke test unless another test is more appropriate
+
+Build trigger reminders:
+  - If `configure` is missing or when `configure.ac`, `Makefile.am`, or files under `m4/` change, run `./autogen.sh --enable-debug [configure-flags]` with any required module/test options.
+  - If only source files change, re-run `make -j$(nproc) check TESTS=""`.
 
 > In restricted environments, a build may not be possible. In such cases, ensure the
 > generated code is clear and well-commented to aid review.
@@ -348,7 +356,7 @@ If possible, agents should:
 
 ## Testing & Validation
 
-All test definitions live under the `tests/` directory and are driven by the `tests/diag.sh` framework. Continuous-integration jobs still execute the full suite via `make check`, but **AI agents should stick to direct test scripts** unless a reviewer explicitly requests a CI reproduction. Direct invocation keeps stdout/stderr visible and avoids the 10+ minute runtime of the harness.
+All test definitions live under the `tests/` directory and are driven by the `tests/diag.sh` framework. **AI agents must use direct test scripts only**; never use the `make check` harness. Direct invocation keeps stdout/stderr visible and avoids the 10+ minute runtime of the harness.
 
 Avoiding the harness matters because `make check`:
 
@@ -356,7 +364,7 @@ Avoiding the harness matters because `make check`:
   - Requires parsing `tests/test-suite.log` for details
   - Consumes significant resources on large suites
 
-Instead, AI agents should invoke individual test scripts directly. This yields unfiltered output and immediate feedback, without the CI harness. The `diag.sh` framework now builds any required test support automatically, so there is **no longer** a need for a separate “build core components” step.
+Instead, AI agents should invoke individual test scripts directly. This yields unfiltered output and immediate feedback, without the CI harness. The `diag.sh` framework builds required test support automatically, but the build-only step is still required when code changes warrant it.
 
 -----
 
@@ -373,9 +381,9 @@ When introducing new configuration parameters, features, or significant behavior
 
 ### Running Individual Tests (AI-Agent Best Practice)
 
-1.  **Configure the project** (once per session):
+1.  **Configure the project** (once per session, if `configure` is missing):
     ```bash
-    ./configure --enable-imdiag --enable-testbench
+    ./autogen.sh --enable-debug --enable-imdiag --enable-testbench
     ```
 2.  **Invoke your test**:
     ```bash
@@ -392,18 +400,35 @@ When introducing new configuration parameters, features, or significant behavior
 
 -----
 
-### Full Test Suite (CI-Only)
+### Validate Code Changes (AI Agents)
 
-For continuous-integration pipelines or when you explicitly need to validate the entire suite, use the autotools harness:
+Run these checks after code changes, before you consider the work ready:
 
-```bash
-./configure --enable-imdiag --enable-testbench
-make check
-```
+1.  **Build** (required):
+    ```bash
+    make -j$(nproc) check TESTS=""
+    ```
+2.  **Run relevant tests** (required):
+    ```bash
+    ./tests/<test-script>.sh
+    ```
+3.  **Run Cubic review** (best-effort):
+    ```bash
+    cubic review --json --base main
+    ```
+    If `cubic` is unavailable in the current session, skip this step. If it runs, address any reported issues.
 
-  - To limit parallelism (avoid flaky failures), pass `-j2` or `-j4` to `make`.
-  - If a failure occurs, inspect `tests/test-suite.log` for detailed diagnostics.
-  - Note in your report why a full harness run was necessary so reviewers understand the extra runtime.
+### Pre-Commit Checklist (AI Agents)
+
+Complete these steps when the change is ready to commit:
+
+1.  **Format code** (required):
+    ```bash
+    devtools/format-code.sh
+    ```
+    Skipping this step can cause CI failures.
+2.  **Confirm validation** (required): ensure the steps in “Validate Code Changes” are complete.
+3.  **Use commit prompt** (required): generate commit messages using `ai/rsyslog_commit_assistant/base_prompt.txt`.
 
 -----
 
@@ -556,7 +581,7 @@ If you are an AI agent contributing code or documentation:
       - Note any impact on existing versions or behaviors (especially for bug fixes).
   - Commit message descriptions should clearly identify that they were generated or co-authored by an AI tool.
   - Include a line in the commit footer like `With the help of AI-Agents: <agent-name>`
-  - **When crafting commit messages, you must use the canonical commit-message base prompt** located at `ai/rsyslog_commit_assistant/base_prompt.txt`. This template ensures the final commit adheres to the project's formatting rules: a title of **62 characters or less** and body lines wrapped at **72 characters**.
+  - **When crafting commit messages, you must use the canonical commit-message base prompt** located at `ai/rsyslog_commit_assistant/base_prompt.txt`. Do not draft commit messages without the prompt. This template ensures the final commit adheres to the project's formatting rules: a title of **62 characters or less** and body lines wrapped at **72 characters**.
   - **Commit-first:** ensure the substance is in the commit body (not only the PR). If needed, amend before opening the PR (`git commit --amend`).
 
 -----
