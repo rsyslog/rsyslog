@@ -1023,6 +1023,11 @@ static void *fileWriteWorker(void *data) {
                 DBGPRINTF("dynstats: worker %llu waiting on new work items\n", (unsigned long long)bkts->wrkrInfo.tid);
                 pthread_cond_wait(&bkts->work_q.wakeup_worker, &bkts->work_q.mut);
                 DBGPRINTF("dynstats: worker %llu awoken\n", (unsigned long long)bkts->wrkrInfo.tid);
+                /* Check termination flag after waking up */
+                if (bkts->wkrTermState == 1) {
+                    pthread_mutex_unlock(&bkts->work_q.mut);
+                    break;
+                }
             }
             ++bkts->wrkrRunning;
         }
