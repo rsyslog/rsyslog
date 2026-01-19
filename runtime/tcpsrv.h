@@ -123,6 +123,7 @@ struct tcpsrv_s {
         int DrvrChkExtendedKeyUsage; /**< if true, verify extended key usage in certs */
         int DrvrPrioritizeSan; /**< if true, perform stricter checking of names in certs */
         int DrvrTlsVerifyDepth; /**< Verify Depth for certificate chains */
+        int DrvrTlsRevocationCheck; /**< Enable TLS revocation checking (OCSP/CRL) */
         uchar *gnutlsPriorityString; /**< priority string for gnutls */
         uchar *pszLstnPortFileName; /**< File in which the dynamic port is written */
         uchar *pszDrvrAuthMode; /**< auth mode of the stream driver to use */
@@ -270,6 +271,7 @@ BEGINinterface(tcpsrv) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*SetDrvrPrioritizeSAN)(tcpsrv_t *pThis, int prioritizeSan);
     /* added v24 -- Options for TLS verify depth driver behavior, 2019-12-20 */
     rsRetVal (*SetDrvrTlsVerifyDepth)(tcpsrv_t *pThis, int verifyDepth);
+    rsRetVal (*SetDrvrTlsRevocationCheck)(tcpsrv_t *pThis, int enabled);
     /* added v25 -- Options for TLS certificates, 2021-07-19 */
     rsRetVal (*SetDrvrCAFile)(tcpsrv_t *pThis, uchar *pszMode);
     rsRetVal (*SetDrvrKeyFile)(tcpsrv_t *pThis, uchar *pszMode);

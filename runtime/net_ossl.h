@@ -43,6 +43,7 @@
     #include <openssl/ssl.h>
     #include <openssl/x509v3.h>
     #include <openssl/err.h>
+    #include <openssl/ocsp.h>
     #if OPENSSL_VERSION_NUMBER >= 0x30000000L && !defined(LIBRESSL_VERSION_NUMBER)
         #include <openssl/bioerr.h>
     #endif

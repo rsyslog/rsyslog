@@ -289,6 +289,19 @@ finalize_it:
     RETiRet;
 }
 
+static rsRetVal SetTlsRevocationCheck(nsd_t __attribute__((unused)) * pNsd, int enabled) {
+    DEFiRet;
+    if (enabled) {
+        LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+                 "error: TLS revocation checking not supported by "
+                 "ptcp netstream driver (plain TCP has no TLS)");
+        ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 /* Set priorityString
  * PascalWithopf 2017-08-18 */
 static rsRetVal SetGnutlsPriorityString(nsd_t __attribute__((unused)) * pNsd, uchar *iVal) {
@@ -751,6 +764,7 @@ static rsRetVal ATTR_NONNULL(1, 3, 5) LstnInit(netstrms_t *const pNS,
         CHKiRet(pNS->Drvr.SetTlsKeyFile(pNewNsd, netstrms.GetDrvrTlsKeyFile(pNS)));
         CHKiRet(pNS->Drvr.SetTlsCertFile(pNewNsd, netstrms.GetDrvrTlsCertFile(pNS)));
         CHKiRet(pNS->Drvr.SetTlsVerifyDepth(pNewNsd, netstrms.GetDrvrTlsVerifyDepth(pNS)));
+        CHKiRet(pNS->Drvr.SetTlsRevocationCheck(pNewNsd, netstrms.GetDrvrTlsRevocationCheck(pNS)));
         CHKiRet(pNS->Drvr.SetAuthMode(pNewNsd, netstrms.GetDrvrAuthMode(pNS)));
         CHKiRet(pNS->Drvr.SetPermitExpiredCerts(pNewNsd, netstrms.GetDrvrPermitExpiredCerts(pNS)));
         CHKiRet(pNS->Drvr.SetPermPeers(pNewNsd, netstrms.GetDrvrPermPeers(pNS)));
@@ -1189,6 +1203,7 @@ BEGINobjQueryInterface(nsd_ptcp)
     pIf->SetTlsKeyFile = SetTlsKeyFile;
     pIf->SetTlsCertFile = SetTlsCertFile;
     pIf->SetRemoteSNI = SetRemoteSNI;
+    pIf->SetTlsRevocationCheck = SetTlsRevocationCheck;
 finalize_it:
 ENDobjQueryInterface(nsd_ptcp)
 

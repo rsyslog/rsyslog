@@ -1755,6 +1755,24 @@ finalize_it:
     RETiRet;
 }
 
+static rsRetVal SetTlsRevocationCheck(nsd_t *pNsd, int enabled) {
+    DEFiRet;
+    nsd_gtls_t *pThis = (nsd_gtls_t *)pNsd;
+
+    ISOBJ_TYPE_assert(pThis, nsd_gtls);
+    pThis->DrvrTlsRevocationCheck = (enabled != 0) ? 1 : 0;
+
+    if (pThis->DrvrTlsRevocationCheck) {
+        LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+                 "error: TLS revocation checking not supported by "
+                 "gtls netstream driver (GnuTLS does not implement OCSP checking)");
+        ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 /* Provide access to the underlying OS socket. This is primarily
  * useful for other drivers (like nsd_gtls) who utilize ourselfs
  * for some of their functionality. -- rgerhards, 2008-04-18
@@ -1957,6 +1975,7 @@ static rsRetVal AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo) 
     pNew->pPermPeers = pThis->pPermPeers;
     pNew->gnutlsPriorityString = pThis->gnutlsPriorityString;
     pNew->DrvrVerifyDepth = pThis->DrvrVerifyDepth;
+    pNew->DrvrTlsRevocationCheck = pThis->DrvrTlsRevocationCheck;
     pNew->dataTypeCheck = pThis->dataTypeCheck;
     pNew->bSANpriority = pThis->bSANpriority;
     pNew->pszCertFile = pThis->pszCertFile;
@@ -2450,6 +2469,7 @@ BEGINobjQueryInterface(nsd_gtls)
     pIf->GetRemotePort = GetRemotePort;
     pIf->FmtRemotePortStr = FmtRemotePortStr;
     pIf->SetRemoteSNI = SetRemoteSNI;
+    pIf->SetTlsRevocationCheck = SetTlsRevocationCheck;
 
 finalize_it:
 ENDobjQueryInterface(nsd_gtls)

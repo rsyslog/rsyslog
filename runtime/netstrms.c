@@ -346,6 +346,20 @@ static int GetDrvrPrioritizeSAN(netstrms_t *pThis) {
 }
 
 /* set the driver TlsVerifyDepth -- alorbach, 2019-12-20 */
+/* set TLS revocation check */
+static rsRetVal SetDrvrTlsRevocationCheck(netstrms_t *pThis, int enabled) {
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    pThis->DrvrTlsRevocationCheck = (enabled != 0) ? 1 : 0;
+    RETiRet;
+}
+
+/* return TLS revocation check setting */
+static int GetDrvrTlsRevocationCheck(netstrms_t *pThis) {
+    ISOBJ_TYPE_assert(pThis, netstrms);
+    return pThis->DrvrTlsRevocationCheck;
+}
+
 static rsRetVal SetDrvrTlsVerifyDepth(netstrms_t *pThis, int verifyDepth) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, netstrms);
@@ -453,7 +467,9 @@ BEGINobjQueryInterface(netstrms)
     pIf->SetDrvrPrioritizeSAN = SetDrvrPrioritizeSAN;
     pIf->GetDrvrPrioritizeSAN = GetDrvrPrioritizeSAN;
     pIf->SetDrvrTlsVerifyDepth = SetDrvrTlsVerifyDepth;
+    pIf->SetDrvrTlsRevocationCheck = SetDrvrTlsRevocationCheck;
     pIf->GetDrvrTlsVerifyDepth = GetDrvrTlsVerifyDepth;
+    pIf->GetDrvrTlsRevocationCheck = GetDrvrTlsRevocationCheck;
     pIf->SetDrvrRemoteSNI = SetDrvrRemoteSNI;
     pIf->GetDrvrRemoteSNI = GetDrvrRemoteSNI;
     pIf->GetDrvrTlsCAFile = GetDrvrTlsCAFile;

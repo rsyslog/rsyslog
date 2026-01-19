@@ -93,8 +93,11 @@ BEGINinterface(nsd) /* name must also be changed in ENDinterface macro! */
     /* v18 -- allow remote server's TLS SNI to be set manually */
     rsRetVal (*SetRemoteSNI)(nsd_t *pThis, uchar *pszRemoteSNI);
 
+    /* v19 -- TLS revocation checking (OCSP/CRL) */
+    rsRetVal (*SetTlsRevocationCheck)(nsd_t *pThis, int enabled);
+
 ENDinterface(nsd)
-#define nsdCURR_IF_VERSION 18 /* increment whenever you change the interface structure! */
+#define nsdCURR_IF_VERSION 19 /* increment whenever you change the interface structure! */
     /* interface version 4 added GetRemAddr()
      * interface version 5 added EnableKeepAlive() -- rgerhards, 2009-06-02
      * interface version 6 changed return of CheckConnection from void to rsRetVal -- alorbach, 2012-09-06
