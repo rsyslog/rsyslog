@@ -3100,7 +3100,7 @@ stop_elasticsearch() {
 		i=0
 		while kill -0 $es_pid 2> /dev/null; do
 			$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
-			if test $i -gt $TB_TIMEOUT_STARTSTOP; then
+                        if test $i -ge $TB_TIMEOUT_STARTSTOP; then
 				printf 'Elasticsearch (pid %d) still running - Performing hard shutdown (-9)\n' $es_pid
 				kill -9 $es_pid
 				break
