@@ -2253,6 +2253,7 @@ EXTRA_DIST= \
 	testsuites/x.509/client-expired-cert.pem \
 	testsuites/x.509/client-expired-key.pem \
 	ratelimit_name.sh \
+	ratelimit_duplicate.sh \
 	cfg.sh \
 	cfg1.cfgtest \
 	cfg1.testin \
