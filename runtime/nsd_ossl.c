@@ -1047,14 +1047,18 @@ static rsRetVal AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo) 
     pNew->pNetOssl->pPermPeers = pThis->pNetOssl->pPermPeers;
     pNew->pNetOssl->bSANpriority = pThis->pNetOssl->bSANpriority;
     pNew->DrvrVerifyDepth = pThis->DrvrVerifyDepth;
+    pNew->DrvrTlsRevocationCheck = pThis->DrvrTlsRevocationCheck;
     pNew->gnutlsPriorityString = pThis->gnutlsPriorityString;
     pNew->pNetOssl->ctx = pThis->pNetOssl->ctx;
     pNew->pNetOssl->ctx_is_copy = 1;  // do not free on pNew Destruction
     CHKiRet(osslInitSession(pNew, osslServer));
 
-    /* Store nsd_ossl_t* reference in SSL obj */
+    /* Store nsd_ossl_t* reference in SSL obj
+     * Index allocation: 0=pTcp, 1=permitExpiredCerts, 2=imdtls instance, 3=revocationCheck
+     */
     SSL_set_ex_data(pNew->pNetOssl->ssl, 0, pThis->pTcp);
     SSL_set_ex_data(pNew->pNetOssl->ssl, 1, &pThis->permitExpiredCerts);
+    SSL_set_ex_data(pNew->pNetOssl->ssl, 3, &pThis->DrvrTlsRevocationCheck);
 
     /* We now do the handshake */
     CHKiRet(osslHandshakeCheck(pNew));
@@ -1327,9 +1331,12 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
 
     CHKiRet(SetServerNameIfPresent(pThis, host));
 
-    /* Store nsd_ossl_t* reference in SSL obj */
+    /* Store nsd_ossl_t* reference in SSL obj
+     * Index allocation: 0=pTcp, 1=permitExpiredCerts, 2=imdtls instance, 3=revocationCheck
+     */
     SSL_set_ex_data(pThis->pNetOssl->ssl, 0, pThis->pTcp);
     SSL_set_ex_data(pThis->pNetOssl->ssl, 1, &pThis->permitExpiredCerts);
+    SSL_set_ex_data(pThis->pNetOssl->ssl, 3, &pThis->DrvrTlsRevocationCheck);
 
     /* We now do the handshake */
     iRet = osslHandshakeCheck(pThis);
@@ -1459,6 +1466,21 @@ static rsRetVal SetTlsVerifyDepth(nsd_t *pNsd, int verifyDepth) {
     pThis->DrvrVerifyDepth = verifyDepth;
 
 finalize_it:
+    RETiRet;
+}
+
+/* Set TLS revocation check (OCSP/CRL)
+ * 0 - disable revocation checking (default for compatibility)
+ * 1 - enable revocation checking via OCSP (and CRL when implemented)
+ */
+static rsRetVal SetTlsRevocationCheck(nsd_t *pNsd, int enabled) {
+    DEFiRet;
+    nsd_ossl_t *pThis = (nsd_ossl_t *)pNsd;
+
+    ISOBJ_TYPE_assert((pThis), nsd_ossl);
+    pThis->DrvrTlsRevocationCheck = (enabled != 0) ? 1 : 0;
+    dbgprintf("SetTlsRevocationCheck: revocation check %s\n", pThis->DrvrTlsRevocationCheck ? "enabled" : "disabled");
+
     RETiRet;
 }
 
@@ -1595,6 +1617,7 @@ BEGINobjQueryInterface(nsd_ossl)
     pIf->SetCheckExtendedKeyUsage = SetCheckExtendedKeyUsage; /* we don't NEED this interface! */
     pIf->SetPrioritizeSAN = SetPrioritizeSAN;
     pIf->SetTlsVerifyDepth = SetTlsVerifyDepth;
+    pIf->SetTlsRevocationCheck = SetTlsRevocationCheck;
     pIf->SetTlsCAFile = SetTlsCAFile;
     pIf->SetTlsCRLFile = SetTlsCRLFile;
     pIf->SetTlsKeyFile = SetTlsKeyFile;

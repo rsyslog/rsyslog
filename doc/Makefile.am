@@ -648,6 +648,7 @@ EXTRA_DIST = \
     source/reference/parameters/imtcp-streamdriver-permitexpiredcerts.rst \
     source/reference/parameters/imtcp-streamdriver-prioritizesan.rst \
     source/reference/parameters/imtcp-streamdriver-tlsverifydepth.rst \
+    source/reference/parameters/imtcp-streamdriver-tlsrevocationcheck.rst \
     source/reference/parameters/imtcp-supportoctetcountedframing.rst \
     source/reference/parameters/imtcp-workerthreads.rst \
     source/reference/parameters/imudp-address.rst \

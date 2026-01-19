@@ -264,6 +264,12 @@ finalize_it:
 }
 
 /* tls verify depth */
+static rsRetVal SetDrvrTlsRevocationCheck(netstrm_t *pThis, int enabled) {
+    DEFiRet;
+    iRet = pThis->Drvr.SetTlsRevocationCheck(pThis->pDrvrData, enabled);
+    RETiRet;
+}
+
 static rsRetVal SetDrvrTlsVerifyDepth(netstrm_t *pThis, int verifyDepth) {
     DEFiRet;
     NULL_CHECK(pThis);
@@ -506,6 +512,7 @@ BEGINobjQueryInterface(netstrm)
     pIf->SetDrvrCheckExtendedKeyUsage = SetDrvrCheckExtendedKeyUsage;
     pIf->SetDrvrPrioritizeSAN = SetDrvrPrioritizeSAN;
     pIf->SetDrvrTlsVerifyDepth = SetDrvrTlsVerifyDepth;
+    pIf->SetDrvrTlsRevocationCheck = SetDrvrTlsRevocationCheck;
     pIf->SetDrvrTlsCAFile = SetDrvrTlsCAFile;
     pIf->SetDrvrTlsCRLFile = SetDrvrTlsCRLFile;
     pIf->SetDrvrTlsKeyFile = SetDrvrTlsKeyFile;

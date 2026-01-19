@@ -562,6 +562,24 @@ finalize_it:
     RETiRet;
 }
 
+static rsRetVal SetTlsRevocationCheck(nsd_t *pNsd, int enabled) {
+    DEFiRet;
+    nsd_mbedtls_t *pThis = (nsd_mbedtls_t *)pNsd;
+
+    ISOBJ_TYPE_assert(pThis, nsd_mbedtls);
+    pThis->DrvrTlsRevocationCheck = (enabled != 0) ? 1 : 0;
+
+    if (pThis->DrvrTlsRevocationCheck) {
+        LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+                 "error: TLS revocation checking not supported by "
+                 "mbedtls netstream driver (mbedTLS does not implement OCSP checking)");
+        ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
+    }
+
+finalize_it:
+    RETiRet;
+}
+
 /* Provide access to the underlying OS socket. This is primarily
  * useful for other drivers (like nsd_mbedtls) who utilize ourselfs
  * for some of their functionality. -- rgerhards, 2008-04-18
@@ -1045,6 +1063,7 @@ static rsRetVal AcceptConnReq(nsd_t *pNsd, nsd_t **ppNew, char *const connInfo) 
     pNew->bSANpriority = pThis->bSANpriority;
     pNew->pPermPeers = pThis->pPermPeers;
     pNew->DrvrVerifyDepth = pThis->DrvrVerifyDepth;
+    pNew->DrvrTlsRevocationCheck = pThis->DrvrTlsRevocationCheck;
     pNew->dataTypeCheck = pThis->dataTypeCheck;
     pNew->permitExpiredCerts = pThis->permitExpiredCerts;
     if (pThis->anzCipherSuites) CHKiRet(zeroTermIntArrayDup(pThis->anzCipherSuites, &(pNew->anzCipherSuites)));
@@ -1362,6 +1381,7 @@ BEGINobjQueryInterface(nsd_mbedtls)
     pIf->SetTlsCRLFile = SetTlsCRLFile;
     pIf->SetTlsKeyFile = SetTlsKeyFile;
     pIf->SetTlsCertFile = SetTlsCertFile;
+    pIf->SetTlsRevocationCheck = SetTlsRevocationCheck;
 finalize_it:
 ENDobjQueryInterface(nsd_mbedtls)
 

@@ -60,6 +60,7 @@ struct nsd_mbedtls_s {
         enum { MBEDTLS_NONE = 0, MBEDTLS_PURPOSE = 1 } dataTypeCheck;
         int bHaveSess; /* true if a tls session is active */
         int DrvrVerifyDepth; /* Verify Depth for certificate chains */
+        int DrvrTlsRevocationCheck; /**< Enable TLS revocation checking (OCSP/CRL) */
         permittedPeers_t *pPermPeers; /* permitted peers */
         int *anzCipherSuites; /* array of cipher suites (IANA ids) in decreasing priority order (0-terminated) */
         int bSANpriority; /* if true, we do stricter checking (if any SAN present we do not check CN) */

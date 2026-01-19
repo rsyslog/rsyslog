@@ -167,6 +167,10 @@ Module Parameters
      - .. include:: ../../reference/parameters/imtcp-streamdriver-tlsverifydepth.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imtcp-streamdriver-tlsrevocationcheck`
+     - .. include:: ../../reference/parameters/imtcp-streamdriver-tlsrevocationcheck.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-imtcp-permittedpeer`
      - .. include:: ../../reference/parameters/imtcp-permittedpeer.rst
         :start-after: .. summary-start
@@ -212,6 +216,7 @@ Module Parameters
    ../../reference/parameters/imtcp-streamdriver-checkextendedkeypurpose
    ../../reference/parameters/imtcp-streamdriver-prioritizesan
    ../../reference/parameters/imtcp-streamdriver-tlsverifydepth
+   ../../reference/parameters/imtcp-streamdriver-tlsrevocationcheck
    ../../reference/parameters/imtcp-permittedpeer
    ../../reference/parameters/imtcp-discardtruncatedmsg
    ../../reference/parameters/imtcp-gnutlsprioritystring
@@ -302,6 +307,10 @@ Input Parameters
         :end-before: .. summary-end
    * - :ref:`param-imtcp-streamdriver-tlsverifydepth`
      - .. include:: ../../reference/parameters/imtcp-streamdriver-tlsverifydepth.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-imtcp-streamdriver-tlsrevocationcheck`
+     - .. include:: ../../reference/parameters/imtcp-streamdriver-tlsrevocationcheck.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
    * - :ref:`param-imtcp-streamdriver-cafile`

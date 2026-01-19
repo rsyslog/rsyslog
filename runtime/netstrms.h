@@ -37,6 +37,7 @@ struct netstrms_s {
         int DrvrChkExtendedKeyUsage; /**< if true, verify extended key usage in certs */
         int DrvrPrioritizeSan; /**< if true, perform stricter checking of names in certs */
         int DrvrVerifyDepth; /**< Verify Depth for certificate chains */
+        int DrvrTlsRevocationCheck; /**< Enable TLS revocation checking (OCSP/CRL) */
         uchar *pszDrvrPermitExpiredCerts;
         const uchar *pszDrvrCAFile;
         const uchar *pszDrvrCRLFile;
@@ -74,7 +75,9 @@ BEGINinterface(netstrms) /* name must also be changed in ENDinterface macro! */
     rsRetVal (*SetDrvrPrioritizeSAN)(netstrms_t *pThis, int prioritizeSan);
     int (*GetDrvrPrioritizeSAN)(netstrms_t *pThis);
     rsRetVal (*SetDrvrTlsVerifyDepth)(netstrms_t *pThis, int verifyDepth);
+    rsRetVal (*SetDrvrTlsRevocationCheck)(netstrms_t *pThis, int enabled);
     int (*GetDrvrTlsVerifyDepth)(netstrms_t *pThis);
+    int (*GetDrvrTlsRevocationCheck)(netstrms_t *pThis);
     rsRetVal (*SetDrvrRemoteSNI)(netstrms_t *pThis, uchar *);
     uchar *(*GetDrvrRemoteSNI)(netstrms_t *pThis);
     /* v2 */

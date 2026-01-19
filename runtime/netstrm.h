@@ -86,6 +86,7 @@ BEGINinterface(netstrm) /* name must also be changed in ENDinterface macro! */
 
     /* v14 -- Tls functions */
     rsRetVal (*SetDrvrTlsVerifyDepth)(netstrm_t *pThis, int verifyDepth);
+    rsRetVal (*SetDrvrTlsRevocationCheck)(netstrm_t *pThis, int enabled);
 
     /* v15 -- Tls cert functions */
     rsRetVal (*SetDrvrTlsCAFile)(netstrm_t *pThis, const uchar *file);

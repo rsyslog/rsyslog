@@ -156,6 +156,7 @@ struct instanceConf_s {
     int iStrmDrvrExtendedCertCheck;
     int iStrmDrvrSANPreference;
     int iStrmTlsVerifyDepth;
+    int iStrmTlsRevocationCheck; /**< Enable TLS revocation checking (OCSP/CRL) */
     int bKeepAlive;
     int iKeepAliveIntvl;
     int iKeepAliveProbes;
@@ -175,6 +176,7 @@ struct modConfData_s {
     int iStrmDrvrExtendedCertCheck; /* verify also purpose OID in certificate extended field */
     int iStrmDrvrSANPreference; /* ignore CN when any SAN set */
     int iStrmTlsVerifyDepth; /**< Verify Depth for certificate chains */
+    int iStrmTlsRevocationCheck; /**< Enable TLS revocation checking (OCSP/CRL) */
     int iAddtlFrameDelim; /* addtl frame delimiter, e.g. for netscreen, default none */
     int maxFrameSize;
     int bSuppOctetFram;
@@ -226,6 +228,7 @@ static struct cnfparamdescr modpdescr[] = {{"flowcontrol", eCmdHdlrBinary, 0},
                                            {"streamdriver.CheckExtendedKeyPurpose", eCmdHdlrBinary, 0},
                                            {"streamdriver.PrioritizeSAN", eCmdHdlrBinary, 0},
                                            {"streamdriver.TlsVerifyDepth", eCmdHdlrPositiveInt, 0},
+                                           {"streamdriver.TlsRevocationCheck", eCmdHdlrBinary, 0},
                                            {"streamdriver.cafile", eCmdHdlrString, 0},
                                            {"streamdriver.crlfile", eCmdHdlrString, 0},
                                            {"streamdriver.keyfile", eCmdHdlrString, 0},
@@ -266,6 +269,7 @@ static struct cnfparamdescr inppdescr[] = {{"port", eCmdHdlrString, CNFPARAM_REQ
                                            {"streamdriver.CheckExtendedKeyPurpose", eCmdHdlrBinary, 0},
                                            {"streamdriver.PrioritizeSAN", eCmdHdlrBinary, 0},
                                            {"streamdriver.TlsVerifyDepth", eCmdHdlrPositiveInt, 0},
+                                           {"streamdriver.TlsRevocationCheck", eCmdHdlrBinary, 0},
                                            {"streamdriver.cafile", eCmdHdlrString, 0},
                                            {"streamdriver.crlfile", eCmdHdlrString, 0},
                                            {"streamdriver.keyfile", eCmdHdlrString, 0},
@@ -379,6 +383,7 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->iStrmDrvrExtendedCertCheck = loadModConf->iStrmDrvrExtendedCertCheck;
     inst->iStrmDrvrSANPreference = loadModConf->iStrmDrvrSANPreference;
     inst->iStrmTlsVerifyDepth = loadModConf->iStrmTlsVerifyDepth;
+    inst->iStrmTlsRevocationCheck = loadModConf->iStrmTlsRevocationCheck;
     inst->bKeepAlive = loadModConf->bKeepAlive;
     inst->iKeepAliveIntvl = loadModConf->iKeepAliveIntvl;
     inst->iKeepAliveProbes = loadModConf->iKeepAliveProbes;
@@ -501,6 +506,7 @@ static rsRetVal addListner(modConfData_t *modConf, instanceConf_t *inst) {
     CHKiRet(tcpsrv.SetDrvrCheckExtendedKeyUsage(pOurTcpsrv, inst->iStrmDrvrExtendedCertCheck));
     CHKiRet(tcpsrv.SetDrvrPrioritizeSAN(pOurTcpsrv, inst->iStrmDrvrSANPreference));
     CHKiRet(tcpsrv.SetDrvrTlsVerifyDepth(pOurTcpsrv, inst->iStrmTlsVerifyDepth));
+    CHKiRet(tcpsrv.SetDrvrTlsRevocationCheck(pOurTcpsrv, inst->iStrmTlsRevocationCheck));
     CHKiRet(tcpsrv.SetUseFlowControl(pOurTcpsrv, inst->bUseFlowControl));
     CHKiRet(tcpsrv.SetAddtlFrameDelim(pOurTcpsrv, inst->iAddtlFrameDelim));
     CHKiRet(tcpsrv.SetMaxFrameSize(pOurTcpsrv, inst->maxFrameSize));
@@ -629,6 +635,8 @@ BEGINnewInpInst
             } else {
                 parser_errmsg("streamdriver.TlsVerifyDepth must be 2 or higher but is %d", (int)pvals[i].val.d.n);
             }
+        } else if (!strcmp(inppblk.descr[i].name, "streamdriver.TlsRevocationCheck")) {
+            inst->iStrmTlsRevocationCheck = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "streamdriver.authmode")) {
             inst->pszStrmDrvrAuthMode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(inppblk.descr[i].name, "streamdriver.permitexpiredcerts")) {
@@ -728,6 +736,7 @@ BEGINbeginCnfLoad
     loadModConf->iStrmDrvrExtendedCertCheck = 0;
     loadModConf->iStrmDrvrSANPreference = 0;
     loadModConf->iStrmTlsVerifyDepth = 0;
+    loadModConf->iStrmTlsRevocationCheck = 0; /* disabled by default */
     loadModConf->bUseFlowControl = 1;
     loadModConf->bKeepAlive = 0;
     loadModConf->iKeepAliveIntvl = 0;
@@ -834,6 +843,8 @@ BEGINsetModCnf
             } else {
                 parser_errmsg("streamdriver.TlsVerifyDepth must be 2 or higher but is %d", (int)pvals[i].val.d.n);
             }
+        } else if (!strcmp(modpblk.descr[i].name, "streamdriver.TlsRevocationCheck")) {
+            loadModConf->iStrmTlsRevocationCheck = (int)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "streamdriver.authmode")) {
             loadModConf->pszStrmDrvrAuthMode = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(modpblk.descr[i].name, "streamdriver.permitexpiredcerts")) {

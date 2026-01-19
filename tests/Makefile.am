@@ -1583,6 +1583,7 @@ TESTS +=  \
 	imtcp-tls-input-basic.sh \
 	imtcp-tls-input-2certs.sh \
 	imtcp-tls-basic-verifydepth.sh \
+	imtcp-tls-gtls-revocationcheck-error.sh \
 	imtcp_conndrop_tls.sh \
 	imtcp-tls-gibberish.sh \
 	sndrcv_tls_anon_rebind.sh \
@@ -1667,6 +1668,7 @@ if ENABLE_OSSL
 TESTS +=  \
 	imtcp-tls-ossl-input-2certs.sh \
 	imtcp-tls-ossl-basic-verifydepth.sh \
+	imtcp-tls-ossl-revocationcheck-off.sh \
 	imtcp-tls-ossl-invalid-verifydepth.sh \
 	sndrcv_tls_ossl_certvalid.sh \
 	sndrcv_tls_ossl_certvalid_action_level.sh \
@@ -2753,6 +2755,7 @@ EXTRA_DIST= \
 	imtcp-tls-input-basic.sh \
 	imtcp-tls-input-2certs.sh \
 	imtcp-tls-basic-verifydepth.sh \
+	imtcp-tls-gtls-revocationcheck-error.sh \
 	imtcp-tls-basic-vg.sh \
 	imtcp-tls-no-lstn-startup.sh \
 	imtcp_incomplete_frame_at_end.sh \
@@ -2767,6 +2770,7 @@ EXTRA_DIST= \
 	imtcp-tls-ossl-input-2certs.sh \
 	imtcp-tls-ossl-basic-tlscommands.sh \
 	imtcp-tls-ossl-basic-verifydepth.sh \
+imtcp-tls-ossl-revocationcheck-off.sh \
 	imtcp-tls-ossl-invalid-verifydepth.sh \
 	imtcp-tls-ossl-basic-stress.sh \
 	sndrcv_tls_ossl_anon_ipv4.sh \

@@ -1719,6 +1719,7 @@ BEGINobjConstruct(tcpsrv) /* be sure to specify the object type also in END macr
     pThis->bPreserveCase = 1; /* preserve case in fromhost; default to true. */
     pThis->iSynBacklog = 0; /* default: unset */
     pThis->DrvrTlsVerifyDepth = 0;
+    pThis->DrvrTlsRevocationCheck = 0;
 ENDobjConstruct(tcpsrv)
 
 
@@ -1735,6 +1736,7 @@ static rsRetVal ATTR_NONNULL() tcpsrvConstructFinalize(tcpsrv_t *pThis) {
     CHKiRet(netstrms.SetDrvrCheckExtendedKeyUsage(pThis->pNS, pThis->DrvrChkExtendedKeyUsage));
     CHKiRet(netstrms.SetDrvrPrioritizeSAN(pThis->pNS, pThis->DrvrPrioritizeSan));
     CHKiRet(netstrms.SetDrvrTlsVerifyDepth(pThis->pNS, pThis->DrvrTlsVerifyDepth));
+    CHKiRet(netstrms.SetDrvrTlsRevocationCheck(pThis->pNS, pThis->DrvrTlsRevocationCheck));
     if (pThis->pszDrvrAuthMode != NULL) CHKiRet(netstrms.SetDrvrAuthMode(pThis->pNS, pThis->pszDrvrAuthMode));
     /* Call SetDrvrPermitExpiredCerts required
      * when param is NULL default handling for ExpiredCerts is set! */
@@ -2157,6 +2159,13 @@ static rsRetVal ATTR_NONNULL(1) SetDrvrTlsVerifyDepth(tcpsrv_t *pThis, int verif
     RETiRet;
 }
 
+static rsRetVal ATTR_NONNULL(1) SetDrvrTlsRevocationCheck(tcpsrv_t *pThis, int enabled) {
+    DEFiRet;
+    ISOBJ_TYPE_assert(pThis, tcpsrv);
+    pThis->DrvrTlsRevocationCheck = (enabled != 0) ? 1 : 0;
+    RETiRet;
+}
+
 
 /* End of methods to shuffle autentication settings to the driver.;
 
@@ -2291,6 +2300,7 @@ BEGINobjQueryInterface(tcpsrv)
     pIf->SetDrvrCheckExtendedKeyUsage = SetDrvrCheckExtendedKeyUsage;
     pIf->SetDrvrPrioritizeSAN = SetDrvrPrioritizeSAN;
     pIf->SetDrvrTlsVerifyDepth = SetDrvrTlsVerifyDepth;
+    pIf->SetDrvrTlsRevocationCheck = SetDrvrTlsRevocationCheck;
     pIf->SetSynBacklog = SetSynBacklog;
     pIf->SetNumWrkr = SetNumWrkr;
     pIf->SetStarvationMaxReads = SetStarvationMaxReads;
