@@ -2,6 +2,21 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+ossl: add experimental OCSP certificate revocation checking support
+  This implements certificate revocation checking using OCSP (RFC 6960)
+  for the OpenSSL network stream driver. The feature is disabled by
+  default and can be enabled via the new StreamDriver.TlsRevocationCheck
+  configuration parameter.
+  This is a rebased and refactored version of the original implementation
+  by Daniel Gollub from June 2020, updated to work with the current main
+  branch and enhanced with proper plumbing, security hardening, tests,
+  and documentation.
+  Note: this is experimental, the OCSP request does NOT run asynchronously.
+  As such, it can block rsyslog threads for some seconds, which may not be
+  suitable for all applications. See documentation for full details.
+  Upcoming work is expected to improve the state.
+  Thanks to Daniel Gollub for the patch.
+- 2026-01-19:
 - 2026-01-17: make mmutf8fix work also on tags
   Thanks to Jan Jeroným Zvánovec for the base patch, which we improved a bit.
 - 2026-01-16: queue: harden disk recovery after invalid .qi
