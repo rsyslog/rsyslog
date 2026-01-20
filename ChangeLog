@@ -2,7 +2,17 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
-ossl: add experimental OCSP certificate revocation checking support
+- 2026-01-20: impstats/dynstats: add opt-in state persistence
+  Operators want dynstats to survive restarts for consistent metrics and
+  smoother observability in containers and rolling deploys.
+  Before: dynstats buckets were ephemeral; restarts reset counters.
+  After: optional on-disk persistence restores counters; worker thread is
+  started on demand and torn down with the owning rsconf.
+  Impact: New state files under WorkDirectory (or statefile.directory)
+  when enabled; slight I/O overhead on configured thresholds. Defaults
+  preserve previous behavior (persistence off).
+  Thanks to github user n2yen for the initial prototype patch.
+- 2026-01-19: ossl: add experimental OCSP certificate revocation checking support
   This implements certificate revocation checking using OCSP (RFC 6960)
   for the OpenSSL network stream driver. The feature is disabled by
   default and can be enabled via the new StreamDriver.TlsRevocationCheck
