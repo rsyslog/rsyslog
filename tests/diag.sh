@@ -3096,7 +3096,17 @@ stop_elasticsearch() {
 		es_pid=$(cat $dep_work_es_pidfile)
 		printf 'stopping ES with pid %d\n' $es_pid
 		kill -SIGTERM $es_pid
-		wait_pid_termination $es_pid
+
+		i=0
+		while kill -0 $es_pid 2> /dev/null; do
+			$TESTTOOL_DIR/msleep 100 # wait 100 milliseconds
+                        if test $i -ge $TB_TIMEOUT_STARTSTOP; then
+				printf 'Elasticsearch (pid %d) still running - Performing hard shutdown (-9)\n' $es_pid
+				kill -9 $es_pid
+				break
+			fi
+			(( i++ ))
+		done
 	fi
 }
 
