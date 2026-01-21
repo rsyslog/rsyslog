@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # rsyslog service configured to send impstats via UDP
+  rsyslog:
+    image: rsyslog/rsyslog_dev_base_ubuntu:24.04
+    container_name: rsyslog
+    volumes:
+      # Mount rsyslog config with UDP impstats
+      - ./examples/rsyslog-udp.conf:/etc/rsyslog.conf:ro
+    ports:
+      - "514:514/tcp"
+      - "514:514/udp"
+    restart: unless-stopped
+    networks:
+      - rsyslog-net
+
+  # Prometheus exporter sidecar (UDP listener mode)
+  rsyslog-exporter:
+    build: .
+    container_name: rsyslog-exporter
+    environment:
+      IMPSTATS_MODE: udp
+      IMPSTATS_FORMAT: json
+      IMPSTATS_UDP_ADDR: 0.0.0.0
+      IMPSTATS_UDP_PORT: 19090
+      STATS_COMPLETE_TIMEOUT: "5"
+      LISTEN_ADDR: 0.0.0.0
+      LISTEN_PORT: 9898
+      LOG_LEVEL: INFO
+      # Optional: restrict UDP sources (comma-separated IPs)
+      # ALLOWED_UDP_SOURCES: "127.0.0.1,10.0.1.50"
+      # Note: UDP mode requires a single gunicorn worker (default in image).
+      # Increase workers only for file mode.
+    ports:
+      - "9898:9898"   # Prometheus metrics endpoint
+      - "19090:19090/udp"  # Receive impstats from rsyslog
+    restart: unless-stopped
+    networks:
+      - rsyslog-net
+    depends_on:
+      - rsyslog
+
+  # Optional: Local Prometheus instance for testing
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./examples/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    restart: unless-stopped
+    networks:
+      - rsyslog-net
+    depends_on:
+      - rsyslog-exporter
+
+networks:
+  rsyslog-net:
+    driver: bridge

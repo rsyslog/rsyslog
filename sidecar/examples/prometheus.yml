@@ -1,0 +1,27 @@
+# Prometheus configuration for scraping rsyslog exporter
+#
+# Place this in /etc/prometheus/prometheus.yml or include it
+
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+scrape_configs:
+  # rsyslog exporter sidecar
+  - job_name: 'rsyslog'
+    static_configs:
+      - targets: ['rsyslog-exporter:9898']
+        labels:
+          instance: 'rsyslog-main'
+          environment: 'production'
+
+    # For bare-metal deployment, use hostname/IP
+    # - targets: ['localhost:9898']
+
+  # If running multiple rsyslog instances
+  # - job_name: 'rsyslog-cluster'
+  #   static_configs:
+  #     - targets:
+  #       - 'rsyslog-node1:9898'
+  #       - 'rsyslog-node2:9898'
+  #       - 'rsyslog-node3:9898'

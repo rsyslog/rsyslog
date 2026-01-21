@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # rsyslog service (example configuration)
+  rsyslog:
+    image: rsyslog/rsyslog_dev_base_ubuntu:24.04
+    container_name: rsyslog
+    volumes:
+      # Mount shared volume for impstats
+      - impstats:/var/log/rsyslog
+      # Mount rsyslog config (customize as needed)
+      - ./examples/rsyslog.conf:/etc/rsyslog.conf:ro
+    ports:
+      - "514:514/tcp"
+      - "514:514/udp"
+    restart: unless-stopped
+
+  # Prometheus exporter sidecar
+  rsyslog-exporter:
+    build: .
+    container_name: rsyslog-exporter
+    volumes:
+      # Share impstats volume with rsyslog
+      - impstats:/var/log/rsyslog:ro
+    environment:
+      IMPSTATS_MODE: file
+      IMPSTATS_PATH: /var/log/rsyslog/impstats.json
+      IMPSTATS_FORMAT: json
+      LISTEN_ADDR: 0.0.0.0
+      LISTEN_PORT: 9898
+      LOG_LEVEL: INFO
+    ports:
+      - "9898:9898"
+    restart: unless-stopped
+    depends_on:
+      - rsyslog
+
+  # Optional: Local Prometheus instance for testing
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./examples/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    restart: unless-stopped
+    depends_on:
+      - rsyslog-exporter
+
+volumes:
+  impstats:
+    driver: local

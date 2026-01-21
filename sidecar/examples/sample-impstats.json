@@ -1,0 +1,5 @@
+{"name":"global","origin":"core","utime":"123456","stime":"78901","maxrss":"50000","minflt":"1000","majflt":"10"}
+{"name":"main queue","origin":"core.queue","size":"0","enqueued":"5000","full":"0","discarded.full":"0","discarded.nf":"0","maxqsize":"10000"}
+{"name":"action 0","origin":"core.action","processed":"4950","failed":"5","suspended":"0","suspended.duration":"0","resumed":"0"}
+{"name":"tcp","origin":"imtcp","submitted":"5000","bytes.rcvd":"500000","disallowed":"0"}
+{"name":"resource-usage","origin":"impstats","utime":"100000","stime":"50000","maxrss":"75000","minflt":"2000","majflt":"5"}

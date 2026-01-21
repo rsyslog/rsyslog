@@ -1,0 +1,81 @@
+# systemd service file for rsyslog Prometheus Exporter
+# 
+# Installation:
+# 1. Copy this file to /etc/systemd/system/rsyslog-exporter.service
+# 2. Create log directory: sudo mkdir -p /var/log/rsyslog-exporter
+# 3. Adjust paths and environment variables as needed
+# 4. Enable and start: sudo systemctl enable --now rsyslog-exporter
+
+[Unit]
+Description=rsyslog Prometheus Exporter
+Documentation=https://github.com/rsyslog/rsyslog
+After=network.target rsyslog.service
+Wants=rsyslog.service
+
+[Service]
+# Gunicorn does not emit sd_notify; use simple for portability
+Type=simple
+User=rsyslog
+Group=rsyslog
+WorkingDirectory=/opt/rsyslog-exporter
+
+# Production WSGI server with gunicorn (REQUIRED for production)
+# UDP mode requires a single worker. File mode may increase workers.
+ExecStart=/bin/sh -c "\
+  /opt/rsyslog-exporter/venv/bin/python -m gunicorn \
+    --bind ${LISTEN_ADDR}:${LISTEN_PORT} \
+    --workers 1 \
+    --threads 2 \
+    --timeout 30 \
+    --access-logfile /var/log/rsyslog-exporter/access.log \
+    --error-logfile /var/log/rsyslog-exporter/error.log \
+    --log-level info \
+    --pid /run/rsyslog-exporter/rsyslog-exporter.pid \
+    rsyslog_exporter:application"
+
+# Graceful reload on configuration changes
+ExecReload=/bin/kill -s HUP $MAINPID
+
+# Environment variables for configuration
+
+# Input mode: 'file' or 'udp' (udp recommended for production)
+Environment="IMPSTATS_MODE=udp"
+Environment="IMPSTATS_FORMAT=json"
+Environment="IMPSTATS_UDP_ADDR=127.0.0.1"
+Environment="IMPSTATS_UDP_PORT=19090"
+
+# HTTP endpoint binding (use 127.0.0.1 for localhost-only access)
+Environment="LISTEN_ADDR=127.0.0.1"
+Environment="LISTEN_PORT=9898"
+
+# Logging
+Environment="LOG_LEVEL=INFO"
+
+# Security limits
+Environment="MAX_BURST_BUFFER_LINES=10000"
+Environment="ALLOWED_UDP_SOURCES="
+
+# NOTE: For file mode (not recommended), uncomment:
+# Environment="IMPSTATS_MODE=file"
+# Environment="IMPSTATS_PATH=/var/log/rsyslog/impstats.json"
+
+# Restart policy
+Restart=on-failure
+RestartSec=5s
+KillMode=mixed
+KillSignal=SIGTERM
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/rsyslog-exporter
+RuntimeDirectory=rsyslog-exporter
+
+# Resource limits
+MemoryMax=256M
+TasksMax=50
+
+[Install]
+WantedBy=multi-user.target
