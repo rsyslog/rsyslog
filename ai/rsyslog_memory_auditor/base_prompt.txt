@@ -19,7 +19,14 @@ Check for the following common rsyslog patterns/antipatterns:
    - Verify `modInit` and `modExit` balance global resource allocations.
    - Ensure `createInstance` results in a fully initialized `pData` that `freeInstance` can safely clean up (even if only partially initialized).
 
+5. **Memory Macros**:
+   - Prefer `CHKmalloc()` for allocations. It handles the `NULL` check and jumps to `finalize_it` (or the local error label) automatically.
+   - If `malloc` or `strdup` is used directly, verify there is an immediate `NULL` check.
+
+6. **Function-Specific Checks**:
+   - `es_str2cstr()` can fail and return `NULL`. Every call MUST be followed by a `NULL` check (or wrapped in `CHKmalloc` logic if applicable).
+
 **Output**:
-- List any identified risks.
+- List any identified risks (e.g., "Line 123: es_str2cstr return is not checked").
 - Provide a summary of "Clean" vs "At Risk" allocations.
-- Suggest specific `free()` placements for identified leaks.
+- Suggest specific `free()` placements or macro replacements (like `CHKmalloc`).

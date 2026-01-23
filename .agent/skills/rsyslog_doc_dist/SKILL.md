@@ -27,16 +27,21 @@ Whenever you perform a filesystem operation on documentation:
 - **Renaming/Moving**: Locate the old path in `doc/Makefile.am` and replace it with the new one.
 - **Deletion**: Locate and remove the entry to avoid build failures during `make dist`.
 
-### 3. Verification
-You can verify synchronization by checking if the number of `.rst` files in `doc/source` matches the count in `doc/Makefile.am` (adjusting for non-rst files in `EXTRA_DIST`).
+### 3. Extended Verification (Automated)
+For changes involving file additions, moves, or deletions, you MUST run the extended distribution check. This ensures that the documentation is correctly packaged in the source tarball and can be built from it.
 
-**Command to find unregistered files**:
+**Command**:
 ```bash
-# Run from the doc/ directory
-find source -name "*.rst" | sort > /tmp/rst_files
-grep "source/.*\.rst" Makefile.am | sed 's/^[ \t]*//;s/[ \t]*\\$//' | sort > /tmp/makefile_files
-diff /tmp/rst_files /tmp/makefile_files
+bash .agent/skills/rsyslog_doc_dist/scripts/check-doc-dist.sh
 ```
+
+This script will:
+1. Parse the project version.
+2. Run `make dist`.
+3. Unpack the distribution in a temporary directory.
+4. Run `autoreconf -fvi && ./configure.sh` (special case).
+5. Verify `make html` in the distribution.
+6. Clean up temporary files.
 
 ## Related Skills
 - `rsyslog_doc`: For documentation content and metadata standards.
