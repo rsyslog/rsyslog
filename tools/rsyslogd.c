@@ -64,6 +64,7 @@
 #include "glbl.h"
 #include "debug.h"
 #include "srUtils.h"
+#include "rainerscript.h"
 #include "rsconf.h"
 #include "cfsysline.h"
 #include "datetime.h"
@@ -833,9 +834,32 @@ static rsRetVal msgConsumer(void __attribute__((unused)) * notNeeded, batch_t *p
 rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *lst) {
     struct queuefilenames_s *qfn;
     uchar *qfname = NULL;
+    uchar *queueName = pszQueueName;
+    uchar *queueNameOverride = NULL;
     static int qfn_renamenum = 0;
     uchar qfrenamebuf[1024];
     DEFiRet;
+
+    if (lst != NULL) {
+        static struct cnfparamdescr mainqdescr[] = {{"name", eCmdHdlrString, 0}};
+        static struct cnfparamblk mainqpblk = {CNFPARAMBLK_VERSION, sizeof(mainqdescr) / sizeof(mainqdescr[0]),
+                                               mainqdescr};
+        struct cnfparamvals *pvals;
+        int nameIdx;
+
+        pvals = nvlstGetParams(lst, &mainqpblk, NULL);
+        if (pvals == NULL) {
+            ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+        }
+        nameIdx = cnfparamGetIdx(&mainqpblk, "name");
+        if (nameIdx != -1 && pvals[nameIdx].bUsed) {
+            queueNameOverride = (uchar *)es_str2cstr(pvals[nameIdx].val.d.estr, NULL);
+            if (queueNameOverride != NULL && queueNameOverride[0] != '\0') {
+                queueName = queueNameOverride;
+            }
+        }
+        cnfparamvalsDestruct(pvals, &mainqpblk);
+    }
 
     /* create message queue */
     CHKiRet_Hdlr(qqueueConstruct(ppQueue, ourConf->globals.mainQ.MainMsgQueType,
@@ -845,7 +869,7 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
         LogError(0, iRet, "could not create (ruleset) main message queue");
     }
     /* name our main queue object (it's not fatal if it fails...) */
-    obj.SetName((obj_t *)(*ppQueue), pszQueueName);
+    obj.SetName((obj_t *)(*ppQueue), queueName);
 
     if (lst == NULL) { /* use legacy parameters? */
         /* ... set some properties ... */
@@ -873,7 +897,7 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
                 if (!ustrcmp(qfn->name, ourConf->globals.mainQ.pszMainMsgQFName)) {
                     snprintf((char *)qfrenamebuf, sizeof(qfrenamebuf), "%d-%s-%s", ++qfn_renamenum,
                              ourConf->globals.mainQ.pszMainMsgQFName,
-                             (pszQueueName == NULL) ? "NONAME" : (char *)pszQueueName);
+                             (queueName == NULL) ? "NONAME" : (char *)queueName);
                     qfname = ustrdup(qfrenamebuf);
                     LogError(0, NO_ERRCODE,
                              "Error: queue file name '%s' already in use "
@@ -926,6 +950,8 @@ rsRetVal createMainQueue(qqueue_t **ppQueue, uchar *pszQueueName, struct nvlst *
     }
     qqueueCorrectParams(*ppQueue);
 
+finalize_it:
+    free(queueNameOverride);
     RETiRet;
 }
 
