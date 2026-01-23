@@ -111,6 +111,7 @@ struct action_s {
     /* for statistics subsystem */
     statsobj_t *statsobj;
     STATSCOUNTER_DEF(ctrProcessed, mutCtrProcessed)
+    STATSCOUNTER_DEF(ctrBatchesProcessed, mutCtrBatchesProcessed)
     STATSCOUNTER_DEF(ctrFail, mutCtrFail)
     STATSCOUNTER_DEF(ctrSuspend, mutCtrSuspend)
     STATSCOUNTER_DEF(ctrSuspendDuration, mutCtrSuspendDuration)

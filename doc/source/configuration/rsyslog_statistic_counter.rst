@@ -1,6 +1,17 @@
 rsyslog statistic counter
 =========================
 
+.. meta::
+   :description: Overview of rsyslog statistic counters emitted via impstats.
+   :keywords: rsyslog, impstats, statistics, counters, monitoring
+
+.. summary-start
+
+This page describes core and plugin statistic counters emitted via impstats so
+operators can interpret rsyslog performance data.
+
+.. summary-end
+
 Rsyslog supports statistic counters via the :doc:`impstats <modules/impstats>` module.
 It is important to know that impstats and friends only provides an infrastructure
 where core components and plugins can register statistics counter. This FAQ entry
@@ -52,6 +63,8 @@ Actions
 
 -  **processed** - total number of messages processed by this action. This includes those messages that failed actual execution (so it is a total count of messages ever seen, but not necessarily successfully processed)
 
+-  **batchesprocessed** - total number of batches processed by this action. For direct actions (no action queue), each message counts as a batch of size 1.
+
 -  **failed** - total number of messages that failed during processing. These are actually lost if they have not been processed by some other action. Most importantly in a failover chain the messages are flagged as "failed" in the failing actions even though they are forwarded to the failover action (the failover action’s "processed" count should equal to failing actions "fail" count in this scenario)a
 
 -  **suspended** - (7.5.8+) – total number of times this action suspended itself. Note that this counts the number of times the action transitioned from active to suspended state. The counter is no indication of how long the action was suspended or how often it was retried. This is intentional, as the counter as it currently is permits to tell how often the action ran into a failure condition.
@@ -80,4 +93,3 @@ Plugins
 :doc:`omelasticsearch <modules/omelasticsearch>`
 
 :doc:`omkafka <modules/omkafka>`
-

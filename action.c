@@ -440,6 +440,10 @@ rsRetVal actionConstructFinalize(action_t *__restrict__ const pThis, struct nvls
     CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("processed"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
                                 &pThis->ctrProcessed));
 
+    STATSCOUNTER_INIT(pThis->ctrBatchesProcessed, pThis->mutCtrBatchesProcessed);
+    CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("batchesprocessed"), ctrType_IntCtr,
+                                CTR_FLAG_RESETTABLE, &pThis->ctrBatchesProcessed));
+
     STATSCOUNTER_INIT(pThis->ctrFail, pThis->mutCtrFail);
     CHKiRet(statsobj.AddCounter(pThis->statsobj, UCHAR_CONSTANT("failed"), ctrType_IntCtr, CTR_FLAG_RESETTABLE,
                                 &pThis->ctrFail));
@@ -1798,6 +1802,9 @@ static rsRetVal ATTR_NONNULL() processBatchMain(void *__restrict__ const pVoid,
         }
     }
 
+    if (batchNumMsgs(pBatch) > 0) {
+        STATSCOUNTER_INC(pAction->ctrBatchesProcessed, pAction->mutCtrBatchesProcessed);
+    }
     iRet = actionCommit(pAction, pWti);
 
 finalize_it:
@@ -1923,6 +1930,7 @@ static rsRetVal ATTR_NONNULL() doSubmitToActionQ(action_t *const pAction, wti_t 
 
     STATSCOUNTER_INC(pAction->ctrProcessed, pAction->mutCtrProcessed);
     if (pAction->pQueue->qType == QUEUETYPE_DIRECT) {
+        STATSCOUNTER_INC(pAction->ctrBatchesProcessed, pAction->mutCtrBatchesProcessed);
         ttNow.year = 0;
         iRet = processMsgMain(pAction, pWti, pMsg, &ttNow);
     } else { /* in this case, we do single submits to the queue.
