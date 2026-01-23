@@ -33,7 +33,7 @@ Every documentation page must include:
 
 ---
 > [!IMPORTANT]
-> **Trigger Side-Effect**: If you add, move, or remove any `.rst` file, YOU MUST follow the [`rsyslog_doc_dist`](../rsyslog_doc_dist/SKILL.md) skill to update `doc/Makefile.am`.
+> **Trigger Side-Effect**: If you add, move, or remove any `.rst` file, YOU MUST follow the [`rsyslog_doc_dist`](../rsyslog_doc_dist/SKILL.md) skill to update `doc/Makefile.am` and run the **extended distribution check**.
 
 ### 2. Module Documentation
 - **Parameters**: Use the `include` directive to pull parameter details from `doc/source/reference/parameters/`.
