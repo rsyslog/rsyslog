@@ -1762,14 +1762,14 @@ error_exit() {
 	# Priority order: test-specific cores first to prevent race conditions in parallel tests
 	shopt -q nullglob; _had_nullglob=$?
 	[ $_had_nullglob -ne 0 ] && shopt -s nullglob
-	
+
 	# First, check for test-specific core files (prevents Issue #6268 race condition)
 	if [ -n "$RSYSLOG_DYNNAME" ]; then
 		for corefile in ${RSYSLOG_DYNNAME}.core core.${RSYSLOG_DYNNAME}.*; do
 			process_core_file "$corefile"
 		done
 	fi
-	
+
 	# Then check generic patterns (for backward compatibility)
 	for corefile in core* /cores/core-* /cores/core.*; do
 		# Skip if already processed as test-specific
@@ -4062,6 +4062,14 @@ case $1 in
     export srcdir # in case it was not yet in environment
     $srcdir/killrsyslog.sh # kill rsyslogd if it runs for some reason
 		source set-envvars
+    # check for special test runs, via TEST_RUN_TYPE env var
+    if [ "$TEST_RUN_TYPE" == "MOCK-OK" ]; then
+      # used for mock distcheck, just to check all tests are present
+      # in dist tarball. All test "execute" but do nothing but exit
+      # with SUCCESS.
+      exit 0
+    fi
+
 		# for (solaris) load debugging, uncomment next 2 lines:
 		#export LD_DEBUG=all
 		#ldd ../tools/rsyslogd
