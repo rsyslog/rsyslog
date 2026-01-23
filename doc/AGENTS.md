@@ -2,73 +2,19 @@
 
 This guide applies to everything under `doc/`.
 
-## Purpose & scope
-- The `doc/` tree contains all **Sphinx documentation sources**, helper tools, and the **AI knowledge base** under `doc/ai/`.
-- Use this file together with the top-level `AGENTS.md` or `CONTRIBUTING.md` instructions.
+## Workflow & Skills
 
-## Editing guidelines
-- Prefer **reStructuredText (`*.rst`)** for content.  
-  Markdown files are reserved for meta-docs such as `/doc/ai/` and other authoring guides.
-- Follow existing heading levels and section names from `doc/README.md`.
-- Cross-link new pages from the appropriate `index.rst` (or local `.. toctree::`) so they appear in navigation.
-- Keep the `source/development/coding_practices.rst` page discoverable; it is
-  the canonical source for patterns and antipatterns that AI agents must
-  ingest.
-- When touching shared style guidance, also review `doc/STRATEGY.md`.
+AI agents working on documentation MUST use the standardized skills in `.agent/skills/`:
 
-### For AI-driven documentation work
-- Prime new contributors or agents with the base prompt at  
-  **`ai/rsyslog_code_doc_builder/base_prompt.txt`**.  
-  This defines the model’s role, tone, and default workflow.
-- Use the supplemental **knowledge base** in `doc/ai/`:
-  - `authoring_guidelines.md` — required blocks, tone, and section order.
-  - `mermaid_rules.md` — syntax rules (blank line after directive, quoted node labels, `<br>` for line breaks).
-  - `templates/` — standard concept/tutorial RST templates.
-  - `terminology.md` — canonical rsyslog vocabulary.
-- Prime code-generation agents with the `source/development/coding_practices.rst`
-  page so RAG pipelines can inject the right patterns and antipatterns into
-  their context.
-- Keep discoverability explicit for AI agents: this file is linked from the
-  top-level `AGENTS.md`, and `coding_practices.rst` sits in the development
-  toctree. When you move or rename that page, update the links here and in the
-  base prompts so automated seeding does not break.
-- Every new or materially edited page must include anchors, meta, and summary
-  blocks per `authoring_guidelines.md`. If an existing page lacks them, add
-  the blocks as part of the update.
-- Module docs should include an explicit module metadata header (module name,
-  author/maintainer, introduced/version when known) and an `.. index::`
-  directive. Use `doc/ai/templates/template-module.rst` as the reference
-  structure when updating module pages.
-- Keep sections short for human scanning and RAG chunking: prefer 1–3 short
-  paragraphs per section and split long pages into subpages when they exceed
-  the size guidance in `doc/ai/chunking_and_embeddings.md`.
+- **Doc**: Use [`rsyslog_doc`](../.agent/skills/rsyslog_doc/SKILL.md) for metadata blocks, summary slices, and Sphinx validation.
+- **Dist**: Use [`rsyslog_doc_dist`](../.agent/skills/rsyslog_doc_dist/SKILL.md) for `doc/Makefile.am` synchronization.
+- **Commit**: Use [`rsyslog_commit`](../.agent/skills/rsyslog_commit/SKILL.md) for doc-specific commit trailers.
 
-## Build & validation
-- Run `./doc/tools/build-doc-linux.sh --clean --format html` after changes to catch Sphinx errors early.
-- For RAG Knowledge Base updates, use `make -j16 json-formatter`. This builds the doctrees and runs the extraction script to generate `doc/build/rag/rsyslog_rag_db.json`.
-- For quick linting, use `make -C doc html` (uses the repo’s virtualenv if present).
-- Verify Mermaid diagrams render correctly; invalid syntax halts the build.
-- Documentation-only commits generally do **not** require the full C test suite.
+## Subtree Specifics
 
-## Commit messaging
-- Summarize the **reader impact** (new topic, restructure, typo fix, etc.) in the commit body.
-- Include the `AI-Agent: ChatGPT` trailer as requested by repository guidelines.
-- If a change updates or regenerates the KB, mention the **KB version** in the message.
+- **Knowledge Base**: `doc/ai/` contains canonical guides for Mermaid, Terminology, and authoring.
+- **Prompting**: Use `ai/rsyslog_code_doc_builder/base_prompt.txt` for tone and style guidance.
+- **Build**: Use `./doc/tools/build-doc-linux.sh --clean --format html` for validation.
 
-## Coordination
-- When editing module-specific docs, consult `doc/ai/module_map.yaml` for component ownership.
-- Mention any **locking or runtime considerations** in the relevant module page.
-- If the change alters common terms (e.g., *log pipeline*), update both the glossary and `/doc/ai/terminology.md`.
-
-## Quick reference
-| Task | Location |
-|------|-----------|
-| Base prompt (AI agent seed) | `ai/rsyslog_code_doc_builder/base_prompt.txt` |
-| AI knowledge base | `doc/ai/` |
-| Mermaid rules | `doc/ai/mermaid_rules.md` |
-| Authoring guide | `doc/ai/authoring_guidelines.md` |
-| Concept/tutorial templates | `doc/ai/templates/` |
-| Build scripts | `doc/tools/` |
-| RAG Knowledge Base script | `doc/build_rag_db.py` |
-| RAG Knowledge Base (Output) | `doc/build/rag/rsyslog_rag_db.json` |
-| Strategy and style | `doc/STRATEGY.md` |
+---
+*For detailed authoring rules, see [doc/ai/AGENTS.md](./ai/AGENTS.md).*

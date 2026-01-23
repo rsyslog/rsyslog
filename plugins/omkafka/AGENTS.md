@@ -1,28 +1,17 @@
 # AGENTS.md – omkafka output module
 
-## Module overview
-- Ships events to Apache Kafka topics via librdkafka.
-- User documentation: `doc/source/configuration/modules/omkafka.rst`.
-- Support status: contributor-supported. Maturity: mature.
+## Workflow & Skills
 
-## Build & dependencies
-- **Efficient Build:** Use `make -j$(nproc) check TESTS=""` to build the module and test dependencies.
-- **Configure:** Run `./configure --enable-omkafka` (and `--enable-imkafka` if needed).
-- **Bootstrap:** Only run `./autogen.sh` if you touch `configure.ac`, `Makefile.am`, or `m4/`.
+AI agents working on `omkafka` MUST follow the standardized skills in `.agent/skills/`:
 
-## Local testing
-- **Skip the Kafka integration tests for routine agent tasks.** They download and run Kafka plus ZooKeeper, which exceeds the sandbox resource budget.
-- Build validation is sufficient. Run the efficient build command above.
-- Maintainers who must exercise the suite can enable `--enable-kafka-tests` and run scripts such as `./tests/omkafka.sh`, but expect multi-minute startup time for the embedded Kafka cluster.
+- **Build**: Use [`rsyslog_build`](../../.agent/skills/rsyslog_build/SKILL.md) (requires `--enable-omkafka`).
+- **Test**: Use [`rsyslog_test`](../../.agent/skills/rsyslog_test/SKILL.md).
+  - **Policy**: Skip heavy integration tests (e.g., `./tests/omkafka.sh`) in sandboxes as they require a local Kafka cluster.
+- **Doc**: Use [`rsyslog_doc`](../../.agent/skills/rsyslog_doc/SKILL.md).
+- **Module**: Use [`rsyslog_module`](../../.agent/skills/rsyslog_module/SKILL.md) and keep `MODULE_METADATA.yaml` current.
 
-## Diagnostics & troubleshooting
-- `impstats` exposes the `omkafka` counter set (submitted, failed, retry metrics); enable the module and inspect `impstats` output for delivery issues.
-- Kafka-side diagnostics live in the working directory under `.dep_wrk/`; the helper `./tests/diag.sh dump-kafka-topic <topic>` extracts queued messages for debugging.
+## Module Specifics
 
-## Cross-component coordination
-- Changes to shared Kafka helpers in `runtime/` or `tests/diag.sh` must also be reviewed by `imkafka` maintainers.
-- Align parameter documentation with `doc/source/configuration/modules/omkafka.rst` and update examples when defaults change.
-
-## Metadata & housekeeping
-- Keep `plugins/omkafka/MODULE_METADATA.yaml` current (support status, maturity, contacts).
-- Update `doc/ai/module_map.yaml` if the concurrency model or locking guidance changes.
+- **Dependencies**: Ships events via `librdkafka`.
+- **Diagnostics**: `impstats` exposes counters (submitted, failed, retry).
+- **Review**: Changes to shared Kafka helpers in `runtime/` must be coordinated with `imkafka`.

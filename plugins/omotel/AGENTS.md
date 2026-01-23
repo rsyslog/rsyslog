@@ -1,18 +1,16 @@
 # AGENTS.md – omotel output module
 
-These instructions apply to files inside `plugins/omotel/`.
+## Workflow & Skills
 
-## Development notes
-- Keep the module pure C unless the optional gRPC shim is enabled.
-- Update `MODULE_METADATA.yaml` and the user documentation when adding new
-  configuration parameters or behavioral changes.
-- Refresh the concurrency note in `omotel.c` if locking expectations change.
-- Run `devtools/format-code.sh` before committing.
+AI agents working on `omotel` MUST follow the standardized skills in `.agent/skills/`:
 
-## Build & dependencies
-- **Efficient Build:** Use `make -j$(nproc) check TESTS=""`.
-- **Configure:** Use `--enable-omotel` to enable this module.
+- **Build**: Use [`rsyslog_build`](../../.agent/skills/rsyslog_build/SKILL.md) (requires `--enable-omotel`).
+- **Test**: Use [`rsyslog_test`](../../.agent/skills/rsyslog_test/SKILL.md).
+  - **Policy**: Run `tests/omotel-http-batch.sh` to exercise the HTTP batching path.
+- **Doc**: Use [`rsyslog_doc`](../../.agent/skills/rsyslog_doc/SKILL.md).
+- **Module**: Use [`rsyslog_module`](../../.agent/skills/rsyslog_module/SKILL.md) and keep `MODULE_METADATA.yaml` current.
 
-## Testing
-- Run `tests/omotel-http-batch.sh` to exercise the HTTP batching, gzip, and
-  retry path.
+## Module Specifics
+
+- **Dependencies**: Keep the module pure C unless gRPC is enabled.
+- **Normalization**: Run `devtools/format-code.sh` before committing (see `rsyslog_commit`).
