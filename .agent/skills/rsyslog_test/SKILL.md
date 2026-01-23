@@ -45,6 +45,9 @@ Certain modules (Kafka, Elasticsearch, Journald) have heavy integration tests re
 ### 6. Memory Lifecycle Validation (Mental Audit)
 Before committing C changes, agents SHOULD perform a self-audit of memory ownership and lifecycle.
 - **Rule**: Use the [Memory Lifecycle Prompt](../../ai/rsyslog_memory_auditor/base_prompt.txt) to review your diff.
+- **Critical Patterns**: 
+  - **NULL Checks**: `es_str2cstr()` can return `NULL`. Every call MUST be followed by a `NULL` check.
+  - **Macro Usage**: Prefer `CHKmalloc()` for allocations as it automatically handles the `NULL` check and jumps to `finalize_it`.
 - **Focus**: Pay special attention to `RS_RET` error paths and `strdup` calls in configuration parsing.
 
 ## Related Skills
