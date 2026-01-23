@@ -684,6 +684,14 @@ conflict:
     }
 
 finalize_it:
+    if (child != NULL) {
+        json_object_put(child);
+        child = NULL;
+    }
+    if (valueContext != NULL) {
+        free(valueContext);
+        valueContext = NULL;
+    }
     if (dest != NULL) json_object_put(dest);
     RETiRet;
 }

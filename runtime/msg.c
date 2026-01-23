@@ -2935,6 +2935,9 @@ rsRetVal getJSONPropVal(
     }
     if (field != NULL) {
         *pRes = (uchar *)strdup(jsonToString(field));
+        if (*pRes == NULL) {
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
         *buflen = (int)ustrlen(*pRes);
         *pbMustBeFreed = 1;
     }
@@ -3228,8 +3231,14 @@ static rsRetVal jsonEncode(uchar **ppRes, unsigned short *pbMustBeFreed, int *pB
         /* we updated the string and need to replace the
          * previous data.
          */
+        uchar *const newRes = (uchar *)es_str2cstr(dst, NULL);
+        if (newRes == NULL) {
+            if (*pbMustBeFreed) free(*ppRes);
+            es_deleteStr(dst);
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+        }
         if (*pbMustBeFreed) free(*ppRes);
-        CHKmalloc(*ppRes = (uchar *)es_str2cstr(dst, NULL));
+        *ppRes = newRes;
         *pbMustBeFreed = 1;
         *pBufLen = -1;
         es_deleteStr(dst);
@@ -3323,14 +3332,25 @@ static rsRetVal ATTR_NONNULL() jsonField(const struct templateEntry *const pTpe,
         }
     }
 
+    uchar *const newRes = (uchar *)es_str2cstr(dst, NULL);
+    if (newRes == NULL) {
+        if (*pbMustBeFreed) free(*ppRes);
+        es_deleteStr(dst);
+        dst = NULL;
+        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+    }
+
     if (*pbMustBeFreed) free(*ppRes);
     /* we know we do not have \0 chars - so the size does not change */
     *pBufLen = es_strlen(dst);
-    CHKmalloc(*ppRes = (uchar *)es_str2cstr(dst, NULL));
+    *ppRes = newRes;
     *pbMustBeFreed = 1;
     es_deleteStr(dst);
 
 finalize_it:
+    if (iRet != RS_RET_OK && dst != NULL) {
+        es_deleteStr(dst);
+    }
     RETiRet;
 }
 
@@ -3742,9 +3762,16 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
             break;
         case PROP_CEE:
         case PROP_LOCAL_VAR:
-        case PROP_GLOBAL_VAR:
-            getJSONPropVal(pMsg, pProp, &pRes, &bufLen, pbMustBeFreed);
-            break;
+        case PROP_GLOBAL_VAR: {
+            const rsRetVal ret = getJSONPropVal(pMsg, pProp, &pRes, &bufLen, pbMustBeFreed);
+            if (ret == RS_RET_OUT_OF_MEMORY) {
+                if (*pbMustBeFreed == 1) {
+                    free(pRes);
+                    *pbMustBeFreed = 0;
+                }
+                RET_OUT_OF_MEMORY;
+            }
+        } break;
         case PROP_SYS_BOM:
             pRes = (uchar *)"\xEF\xBB\xBF";
             *pbMustBeFreed = 0;
@@ -4427,13 +4454,25 @@ uchar *MsgGetProp(smsg_t *__restrict__ const pMsg,
         bufLen = -1;
         *pbMustBeFreed = 1;
     } else if (pTpe->data.field.options.bJSON) {
-        jsonEncode(&pRes, pbMustBeFreed, &bufLen, RSTRUE);
+        if (jsonEncode(&pRes, pbMustBeFreed, &bufLen, RSTRUE) != RS_RET_OK) {
+            if (*pbMustBeFreed == 1) free(pRes);
+            RET_OUT_OF_MEMORY;
+        }
     } else if (pTpe->data.field.options.bJSONf) {
-        jsonField(pTpe, &pRes, pbMustBeFreed, &bufLen, RSTRUE);
+        if (jsonField(pTpe, &pRes, pbMustBeFreed, &bufLen, RSTRUE) != RS_RET_OK) {
+            if (*pbMustBeFreed == 1) free(pRes);
+            RET_OUT_OF_MEMORY;
+        }
     } else if (pTpe->data.field.options.bJSONr) {
-        jsonEncode(&pRes, pbMustBeFreed, &bufLen, RSFALSE);
+        if (jsonEncode(&pRes, pbMustBeFreed, &bufLen, RSFALSE) != RS_RET_OK) {
+            if (*pbMustBeFreed == 1) free(pRes);
+            RET_OUT_OF_MEMORY;
+        }
     } else if (pTpe->data.field.options.bJSONfr) {
-        jsonField(pTpe, &pRes, pbMustBeFreed, &bufLen, RSFALSE);
+        if (jsonField(pTpe, &pRes, pbMustBeFreed, &bufLen, RSFALSE) != RS_RET_OK) {
+            if (*pbMustBeFreed == 1) free(pRes);
+            RET_OUT_OF_MEMORY;
+        }
     }
 
     *pPropLen = (bufLen == -1) ? (int)ustrlen(pRes) : bufLen;
