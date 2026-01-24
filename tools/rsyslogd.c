@@ -2080,8 +2080,9 @@ void rsyslogdDoDie(int sig) {
 }
 
 
-static void wait_timeout(const sigset_t *sigmask) {
+static rsRetVal wait_timeout(const sigset_t *sigmask) {
     struct timespec tvSelectTimeout;
+    DEFiRet;
 
     tvSelectTimeout.tv_sec = runConf->globals.janitorInterval * 60; /* interval is in minutes! */
     tvSelectTimeout.tv_nsec = 0;
@@ -2123,48 +2124,47 @@ static void wait_timeout(const sigset_t *sigmask) {
                     if (errno != EINTR) {
                         LogError(errno, NO_ERRCODE, "%s: ERROR: recvfrom failed - disabling AIX SRC", progname);
                         src_exists = FALSE;
-                        rsRetVal = RS_RET_IO_ERROR; /* Or a more specific error code */
-                        ABORT_FINALIZE(rsRetVal);
+                        ABORT_FINALIZE(RS_RET_IO_ERROR);
                     } else { /* punt on short read */
-                        return;
+                        FINALIZE;
                     }
+                }
 
-                    switch (srcpacket.subreq.action) {
-                        case START:
+                switch (srcpacket.subreq.action) {
+                    case START:
+                        dosrcpacket(SRC_SUBMSG,
+                                    "ERROR: rsyslogd does not support this "
+                                    "option.\n",
+                                    sizeof(struct srcrep));
+                        break;
+                    case STOP:
+                        if (srcpacket.subreq.object == SUBSYSTEM) {
+                            dosrcpacket(SRC_OK, NULL, sizeof(struct srcrep));
+                            (void)snprintf(buf, sizeof(buf) / sizeof(char),
+                                           " [origin "
+                                           "software=\"rsyslogd\" "
+                                           "swVersion=\"" VERSION
+                                           "\" x-pid=\"%d\" x-info=\"https://www.rsyslog.com\"]"
+                                           " exiting due to stopsrc.",
+                                           (int)glblGetOurPid());
+                            errno = 0;
+                            logmsgInternal(NO_ERRCODE, LOG_SYSLOG | LOG_INFO, (uchar *)buf, 0);
+                            FINALIZE;
+                        } else
                             dosrcpacket(SRC_SUBMSG,
-                                        "ERROR: rsyslogd does not support this "
-                                        "option.\n",
+                                        "ERROR: rsyslogd does not support "
+                                        "this option.\n",
                                         sizeof(struct srcrep));
-                            break;
-                        case STOP:
-                            if (srcpacket.subreq.object == SUBSYSTEM) {
-                                dosrcpacket(SRC_OK, NULL, sizeof(struct srcrep));
-                                (void)snprintf(buf, sizeof(buf) / sizeof(char),
-                                               " [origin "
-                                               "software=\"rsyslogd\" "
-                                               "swVersion=\"" VERSION
-                                               "\" x-pid=\"%d\" x-info=\"https://www.rsyslog.com\"]"
-                                               " exiting due to stopsrc.",
-                                               (int)glblGetOurPid());
-                                errno = 0;
-                                logmsgInternal(NO_ERRCODE, LOG_SYSLOG | LOG_INFO, (uchar *)buf, 0);
-                                return;
-                            } else
-                                dosrcpacket(SRC_SUBMSG,
-                                            "ERROR: rsyslogd does not support "
-                                            "this option.\n",
-                                            sizeof(struct srcrep));
-                            break;
-                        case REFRESH:
-                            dosrcpacket(SRC_SUBMSG,
-                                        "ERROR: rsyslogd does not support this "
-                                        "option.\n",
-                                        sizeof(struct srcrep));
-                            break;
-                        default:
-                            dosrcpacket(SRC_SUBICMD, NULL, sizeof(struct srcrep));
-                            break;
-                    }
+                        break;
+                    case REFRESH:
+                        dosrcpacket(SRC_SUBMSG,
+                                    "ERROR: rsyslogd does not support this "
+                                    "option.\n",
+                                    sizeof(struct srcrep));
+                        break;
+                    default:
+                        dosrcpacket(SRC_SUBICMD, NULL, sizeof(struct srcrep));
+                        break;
                 }
             }
         }
@@ -2172,6 +2172,11 @@ static void wait_timeout(const sigset_t *sigmask) {
 #else
     pselect(0, NULL, NULL, NULL, &tvSelectTimeout, sigmask);
 #endif /* AIXPORT : SRC end */
+
+#ifdef _AIX
+finalize_it:
+#endif
+    RETiRet;
 }
 
 
