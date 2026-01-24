@@ -41,6 +41,7 @@ Every module must implement and register standard entry points:
 
 ### 4. Build Configuration
 - Update `plugins/Makefile.am` and `configure.ac` when adding new modules.
+- **Test Registration**: Follow the "Define at Top, Distribute Unconditionally, Register Conditionally" pattern in `tests/Makefile.am`. See the `rsyslog_test` skill for details. This is critical for `make distcheck` validity.
 - Use `MODULE_TYPE(eMOD_OUT)` and other macros from `runtime/module-template.h`.
 
 ## Related Skills
