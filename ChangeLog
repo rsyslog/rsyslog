@@ -2,6 +2,10 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-24: AI: added improved AI agent skills
+  Added skills, so that AI agents will hopefully follow instructions and
+  rsyslog workflow better. Adapted AGENTS.md to support them. First results
+  look very promising, so merged to main branch.
 - 2026-01-24: testbench: refactor Makefile.am; factor test lists, fix dist
   Reduce Makefile clutter and make the test harness easier to reason
   about for humans and machines. This also aims to lower CI flakes by
