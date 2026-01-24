@@ -2,6 +2,14 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-24: imfile: add inotify fallback rescans on watch limits
+  Graceful degradation when watch limits are reached avoids a hard stop
+  and keeps logs flowing in constrained environments.
+  Inotify watch setup now marks limit hits and schedules retry scans.
+  Fallback scans re-walk the tree and rearm missing watches, then
+  disable fallback once all watches are active.
+  The fallback interval is configurable and bounded to avoid overflow.
+  Docs add the new parameter and clarify watch-limit behavior.
 - 2026-01-20: impstats/dynstats: add opt-in state persistence
   Operators want dynstats to survive restarts for consistent metrics and
   smoother observability in containers and rolling deploys.
