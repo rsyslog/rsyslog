@@ -44,9 +44,12 @@
 #include "obj.h"
 #include "errmsg.h"
 #include "netstrm.h"
+#include "template.h"
+#include "wti.h"
 #include "msg.h"
 #include "datetime.h"
 #include "prop.h"
+#include "parser.h"
 #include "ratelimit.h"
 #include "debug.h"
 #include "rsconf.h"
@@ -54,7 +57,7 @@
 
 /* static data */
 DEFobjStaticHelpers;
-DEFobjCurrIf(glbl) DEFobjCurrIf(netstrm) DEFobjCurrIf(prop) DEFobjCurrIf(datetime)
+DEFobjCurrIf(glbl) DEFobjCurrIf(netstrm) DEFobjCurrIf(prop) DEFobjCurrIf(datetime) DEFobjCurrIf(parser)
 
 
     /* forward definitions */
@@ -75,6 +78,7 @@ BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END m
     pThis->tlsProbeDone = 0;
     pThis->tlsMismatchWarned = 0;
     memset(pThis->tlsProbeBuf, 0, sizeof(pThis->tlsProbeBuf));
+    wtiInitIParam(&pThis->perSourceKeyParam);
     /* now allocate the message reception buffer */
     CHKmalloc(pThis->pMsg = (uchar *)malloc(pThis->iMaxLine + 1));
 finalize_it:
@@ -108,6 +112,7 @@ BEGINobjDestruct(tcps_sess) /* be sure to specify the object type also in END an
     if (pThis->fromHost != NULL) CHKiRet(prop.Destruct(&pThis->fromHost));
     if (pThis->fromHostIP != NULL) CHKiRet(prop.Destruct(&pThis->fromHostIP));
     if (pThis->fromHostPort != NULL) CHKiRet(prop.Destruct(&pThis->fromHostPort));
+    free(pThis->perSourceKeyParam.param);
     free(pThis->pMsg);
 ENDobjDestruct(tcps_sess)
 
@@ -307,7 +312,28 @@ static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis,
     MsgSetRuleset(pMsg, cnf_params->pRuleset);
 
     STATSCOUNTER_INC(pThis->pLstnInfo->ctrSubmit, pThis->pLstnInfo->mutCtrSubmit);
-    ratelimitAddMsg(pThis->pLstnInfo->ratelimiter, pMultiSub, pMsg);
+    if (pThis->pLstnInfo->ratelimiter->pShared != NULL && pThis->pLstnInfo->ratelimiter->pShared->per_source_enabled) {
+        const char *per_source_key = NULL;
+        size_t per_source_key_len = 0;
+        if ((pMsg->msgFlags & NEEDS_PARSING) != 0) {
+            parser.ParseMsg(pMsg);
+        }
+        if (pThis->pLstnInfo->ratelimiter->pShared->per_source_key_tpl == NULL ||
+            pThis->pLstnInfo->ratelimiter->pShared->per_source_key_tpl_default) {
+            per_source_key = getHOSTNAME(pMsg);
+            per_source_key_len = getHOSTNAMELen(pMsg);
+        } else {
+            if (tplToString(pThis->pLstnInfo->ratelimiter->pShared->per_source_key_tpl, pMsg, &pThis->perSourceKeyParam,
+                            NULL) == RS_RET_OK) {
+                per_source_key = (const char *)pThis->perSourceKeyParam.param;
+                per_source_key_len = pThis->perSourceKeyParam.lenStr;
+            }
+        }
+        ratelimitAddMsgPerSource(pThis->pLstnInfo->ratelimiter, pMultiSub, pMsg, per_source_key, per_source_key_len,
+                                 ttGenTime);
+    } else {
+        ratelimitAddMsg(pThis->pLstnInfo->ratelimiter, pMultiSub, pMsg);
+    }
 
 finalize_it:
     /* reset status variables */
@@ -367,9 +393,14 @@ finalize_it:
 }
 
 
-/* Closes a TCP session
- * No attention is paid to the return code
- * of close, so potential-double closes are not detected.
+/**
+ * @brief Close a TCP session and release session-owned properties.
+ *
+ * Tears down the network stream and frees per-session sender properties
+ * (hostname/IP). This does not flush pending data; callers should invoke
+ * PrepareClose() beforehand when needed. The netstrm close result is ignored
+ * because we are shutting down a session and there is no recovery path for a
+ * close failure.
  */
 static rsRetVal Close(tcps_sess_t *pThis) {
     DEFiRet;
@@ -636,6 +667,7 @@ BEGINObjClassExit(tcps_sess, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END
     objRelease(netstrm, LM_NETSTRMS_FILENAME);
     objRelease(datetime, CORE_COMPONENT);
     objRelease(prop, CORE_COMPONENT);
+    objRelease(parser, CORE_COMPONENT);
 ENDObjClassExit(tcps_sess)
 
 
@@ -648,6 +680,7 @@ BEGINObjClassInit(tcps_sess, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE c
     CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));
     CHKiRet(objUse(datetime, CORE_COMPONENT));
     CHKiRet(objUse(prop, CORE_COMPONENT));
+    CHKiRet(objUse(parser, CORE_COMPONENT));
 
     CHKiRet(objUse(glbl, CORE_COMPONENT));
     objRelease(glbl, CORE_COMPONENT);

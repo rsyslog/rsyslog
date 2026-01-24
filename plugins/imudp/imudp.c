@@ -4,7 +4,7 @@
  * NOTE: read comments in module-template.h to understand how this file
  *       works!
  *
- * Copyright 2007-2018 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2025 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -103,6 +103,9 @@ static struct configSettings_s {
     int iTimeRequery; /* how often is time to be queried inside tight recv loop? 0=always */
 } cs;
 
+#define DFLT_ratelimitInterval 0 /* off by default */
+#define DFLT_ratelimitBurst 10000
+
 struct instanceConf_s {
     uchar *pszBindAddr; /* IP to bind socket to */
     char *pszBindDevice; /* Device to bind socket to */
@@ -111,8 +114,9 @@ struct instanceConf_s {
     uchar *inputname;
     ruleset_t *pBindRuleset; /* ruleset to bind listener to (use system default if unspecified) */
     uchar *dfltTZ;
-    unsigned int ratelimitInterval;
-    unsigned int ratelimitBurst;
+    uchar *pszRatelimitName;
+    int ratelimitInterval;
+    int ratelimitBurst;
     int rcvbuf; /* 0 means: do not set, keep OS default */
     /*  0 means:  IP_FREEBIND is disabled
     1 means:  IP_FREEBIND enabled + warning disabled
@@ -174,6 +178,7 @@ static struct cnfparamdescr inppdescr[] = {{"port", eCmdHdlrArray, CNFPARAM_REQU
                                            {"name.appendport", eCmdHdlrBinary, 0},
                                            {"address", eCmdHdlrString, 0},
                                            {"device", eCmdHdlrString, 0},
+                                           {"ratelimit.name", eCmdHdlrString, 0},
                                            {"ratelimit.interval", eCmdHdlrInt, 0},
                                            {"ratelimit.burst", eCmdHdlrInt, 0},
                                            {"rcvbufsize", eCmdHdlrSize, 0},
@@ -200,11 +205,12 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->pszBindRuleset = NULL;
     inst->inputname = NULL;
     inst->bAppendPortToInpname = 0;
-    inst->ratelimitBurst = 10000; /* arbitrary high limit */
-    inst->ratelimitInterval = 0; /* off */
+    inst->ratelimitBurst = -1;
+    inst->ratelimitInterval = -1;
     inst->rcvbuf = 0;
     inst->ipfreebind = IPFREEBIND_ENABLED_WITH_LOG;
     inst->dfltTZ = NULL;
+    inst->pszRatelimitName = NULL;
 
     /* node created, let's add to config */
     if (loadModConf->tail == NULL) {
@@ -315,8 +321,18 @@ static rsRetVal addListner(instanceConf_t *inst) {
             }
             snprintf((char *)dispname, sizeof(dispname), "%s(%s/%s/%s)", inputname, bindName, port, suffix);
             dispname[sizeof(dispname) - 1] = '\0'; /* just to be on the save side... */
-            CHKiRet(ratelimitNew(&newlcnfinfo->ratelimiter, (char *)dispname, NULL));
-            ratelimitSetLinuxLike(newlcnfinfo->ratelimiter, inst->ratelimitInterval, inst->ratelimitBurst);
+            if (inst->pszRatelimitName != NULL) {
+                CHKiRet(ratelimitNewFromConfig(&newlcnfinfo->ratelimiter, runModConf->pConf,
+                                               (char *)inst->pszRatelimitName, (char *)dispname, NULL));
+                /* named ratelimiters use the shared registry configuration exclusively.
+                 * Per-instance interval/burst parameters are ignored/prohibited when ratelimit.name is set.
+                 */
+            } else {
+                CHKiRet(ratelimitNew(&newlcnfinfo->ratelimiter, (char *)dispname, NULL));
+                ratelimitSetLinuxLike(newlcnfinfo->ratelimiter,
+                                      (inst->ratelimitInterval == -1) ? 0 : (unsigned)inst->ratelimitInterval,
+                                      (inst->ratelimitBurst == -1) ? 0 : (unsigned)inst->ratelimitBurst);
+            }
             ratelimitSetThreadSafe(newlcnfinfo->ratelimiter);
             if (inst->bAppendPortToInpname) {
                 snprintf((char *)inpnameBuf, sizeof(inpnameBuf), "%s%s", inputname, port);
@@ -940,9 +956,11 @@ static rsRetVal createListner(es_str_t *port, struct cnfparamvals *pvals) {
         } else if (!strcmp(inppblk.descr[i].name, "ruleset")) {
             inst->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.burst")) {
-            inst->ratelimitBurst = (unsigned int)pvals[i].val.d.n;
+            inst->ratelimitBurst = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "ratelimit.interval")) {
-            inst->ratelimitInterval = (unsigned int)pvals[i].val.d.n;
+            inst->ratelimitInterval = (int)pvals[i].val.d.n;
+        } else if (!strcmp(inppblk.descr[i].name, "ratelimit.name")) {
+            inst->pszRatelimitName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else if (!strcmp(inppblk.descr[i].name, "rcvbufsize")) {
             const uint64_t val = pvals[i].val.d.n;
             if (val > 1024 * 1024 * 1024) {
@@ -960,6 +978,23 @@ static rsRetVal createListner(es_str_t *port, struct cnfparamvals *pvals) {
                 "param '%s'\n",
                 inppblk.descr[i].name);
         }
+    }
+
+    /* check for mutual exclusivity and apply defaults */
+    if (inst->pszRatelimitName != NULL) {
+        if (inst->ratelimitInterval != -1 || inst->ratelimitBurst != -1) {
+            LogError(0, RS_RET_INVALID_PARAMS,
+                     "imudp: ratelimit.name is mutually exclusive with "
+                     "ratelimit.interval and ratelimit.burst - using ratelimit.name");
+        }
+        /* ensure defaults are set to "off" values that won't interfere,
+         * though they should be ignored by logic using the name.
+         */
+        inst->ratelimitInterval = 0;
+        inst->ratelimitBurst = 0;
+    } else {
+        if (inst->ratelimitInterval == -1) inst->ratelimitInterval = DFLT_ratelimitInterval;
+        if (inst->ratelimitBurst == -1) inst->ratelimitBurst = DFLT_ratelimitBurst;
     }
 finalize_it:
     RETiRet;
@@ -1164,6 +1199,7 @@ BEGINfreeCnf
         free(inst->pszBindRuleset);
         free(inst->inputname);
         free(inst->dfltTZ);
+        free(inst->pszRatelimitName);
         del = inst;
         inst = inst->next;
         free(del);

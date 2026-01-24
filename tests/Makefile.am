@@ -320,6 +320,7 @@ TESTS +=  \
 	sndrcv_udp_nonstdpt.sh \
 	sndrcv_udp_nonstdpt_v6.sh \
 	imudp_thread_hang.sh \
+	imudp_ratelimit_name.sh \
 	sndrcv_udp_nonstdpt_v6.sh \
 	asynwr_simple.sh \
 	asynwr_simple_2.sh \
@@ -635,7 +636,13 @@ TESTS +=  \
 	queue-encryption-disk_keyfile-vg.sh
 endif # ENABLE_LIBGCRYPT
 endif # HAVE_VALGRIND
+if HAVE_LIBYAML
+TESTS += ratelimit_hup.sh
+endif # HAVE_LIBYAML
 endif # ENABLE_DEFAULT_TESTS
+
+
+
 
 
 
@@ -677,6 +684,10 @@ TESTS +=  \
 	sndrcv_udp_nonstdpt.sh \
 	sndrcv_udp_nonstdpt_v6.sh \
 	sndrcv_udp_nonstdpt_v6.sh
+
+if HAVE_LIBYAML
+TESTS += imtcp-persource-ratelimit.sh
+endif # HAVE_LIBYAML
 
 if HAVE_VALGRIND
 TESTS +=  \
@@ -1579,6 +1590,15 @@ TESTS += \
 endif
 endif
 
+if ENABLE_IMTCP_TESTS
+if ENABLE_IMPTCP
+TESTS +=  \
+	ratelimit_exclusivity.sh \
+	ratelimit_name.sh \
+	ratelimit_duplicate.sh
+endif
+endif
+
 if ENABLE_GNUTLS_TESTS
 TESTS +=  \
 	imtcp-tls-basic.sh \
@@ -2232,6 +2252,8 @@ EXTRA_DIST= \
 	testsuites/x.509/machine-key.pem \
 	testsuites/x.509/client-expired-cert.pem \
 	testsuites/x.509/client-expired-key.pem \
+	ratelimit_name.sh \
+	ratelimit_duplicate.sh \
 	cfg.sh \
 	cfg1.cfgtest \
 	cfg1.testin \
@@ -2588,6 +2610,7 @@ EXTRA_DIST= \
 	omjournal-basic-template.sh \
 	omjournal-basic-no-template.sh \
 	timegenerated-ymd.sh \
+	ratelimit_exclusivity.sh \
 	timegenerated-uxtimestamp.sh \
 	timegenerated-uxtimestamp-invld.sh \
 	timegenerated-dateordinal.sh \
@@ -2737,6 +2760,7 @@ EXTRA_DIST= \
 	imtcp-octet-framing-too-long-vg.sh \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
+	imtcp-persource-ratelimit.sh \
 	imtcp-basic-hup.sh \
 	imtcp-impstats.sh \
 	imtcp-impstats-single-thread.sh \
@@ -2910,6 +2934,7 @@ imtcp-tls-ossl-revocationcheck-off.sh \
 	sndrcv_relp_dflt_pt.sh \
 	sndrcv_udp.sh \
 	imudp_thread_hang.sh \
+	imudp_ratelimit_name.sh \
 	sndrcv_udp_nonstdpt.sh \
 	sndrcv_udp_nonstdpt_v6.sh \
 	omudpspoof_errmsg_no_params.sh \
