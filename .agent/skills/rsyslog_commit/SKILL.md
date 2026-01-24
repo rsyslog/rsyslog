@@ -16,8 +16,10 @@ This skill standardizes the final step of the development workflow: committing a
 ## Detailed Instructions
 
 ### 1. Pre-Commit Checklist
-- **Code Style**: Run `bash devtools/format-code.sh`. This is mandatory.
+- **Code Style**: Run `bash devtools/format-code.sh` IF any `.c` or `.h` files were modified. This is mandatory for C source changes.
 - **Validation**: Ensure `make -j$(nproc) check TESTS=""` passes and relevant tests are run.
+  - **Multi-Pass AI Audit**: Run the `/audit` workflow for a rigorous, persona-based review (Memory, Concurrency, Standards) using the project's canned prompts.
+  - **Mock Smoke Check**: If you added or renamed test files, run `make distcheck TEST_RUN_TYPE=MOCK-OK -j$(nproc)` as a final distribution check.
   - **Note**: If you already successfully built and tested your changes immediately *before* formatting, you do NOT need to re-run the build/test cycle. Formatting is a normalization step and does not affect functionality.
 
 ### 2. Commit Message Structure
