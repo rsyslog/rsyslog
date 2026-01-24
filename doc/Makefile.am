@@ -480,6 +480,7 @@ EXTRA_DIST = \
     source/reference/parameters/imfile-ignoreolderthan.rst \
     source/reference/parameters/imfile-maxbytesperminute.rst \
     source/reference/parameters/imfile-maxinotifywatches.rst \
+    source/reference/parameters/imfile-inotifyfallbackinterval.rst \
     source/reference/parameters/imfile-maxlinesatonce.rst \
     source/reference/parameters/imfile-maxlinesperminute.rst \
     source/reference/parameters/imfile-maxsubmitatonce.rst \

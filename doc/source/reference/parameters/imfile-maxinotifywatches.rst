@@ -29,9 +29,10 @@ Description
 This sets the maximum number of inotify watches that imfile can consume.
 This is useful to limit rsyslog's consumption of inotify watches, for example, to prevent
 it from using up all available watches on a system where other applications also need them.
-exceeded, imfile will not be able to monitor new files. It is recommended to
-set this value high enough to cover all monitored files, including those that
-may be created in the future.
+When the limit is reached, imfile keeps processing known files and switches to
+periodic rescans (see ``inotifyFallbackInterval``) to discover changes and retry
+arming watches. It is recommended to set this value high enough to cover all
+monitored files, including those that may be created in the future.
 
 The system's limit can be checked via ``/proc/sys/fs/inotify/max_user_watches``.
 If you do not have sufficient permissions to change the system-wide limit,
