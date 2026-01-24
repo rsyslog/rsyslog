@@ -2,6 +2,20 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-24: testbench: refactor Makefile.am; factor test lists, fix dist
+  Reduce Makefile clutter and make the test harness easier to reason
+  about for humans and machines. This also aims to lower CI flakes by
+  making the dist artifact complete and predictable.
+  Impact: build/test harness only; no runtime change. New
+  TEST_RUN_TYPE=MOCK-OK opt-in fast path in diag.sh.
+  Before: many scattered conditional TESTS entries; some scripts were
+  only in EXTRA_DIST when corresponding features were enabled, leading
+  to missing files in "make dist*" tarballs. Duplicates existed.
+  After: conditional test lists are grouped into variables (e.g.,
+  TESTS_ELASTICSEARCH_MINIMAL) and appended to TESTS under the same
+  conditionals; all lists are always added to EXTRA_DIST. Duplicate
+  entries removed. diag.sh recognizes TEST_RUN_TYPE=MOCK-OK for mock
+  distchecks and exits success without executing.
 - 2026-01-24: imfile: add inotify fallback rescans on watch limits
   Graceful degradation when watch limits are reached avoids a hard stop
   and keeps logs flowing in constrained environments.
