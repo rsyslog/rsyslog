@@ -2,6 +2,14 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-25: Add support healthchecktimedelay into omhttp
+  This PR add the possibility to set up a time to delay the check
+  of an "API health URL" to avoid multi request to an API.
+  In some case, when you use the omhttp module to send massive
+  volume of data to an API, the check of the API status does not
+  need to be done at each post request. This parameter allow to
+  set up a delay between two check of the API health URL.
+  Thanks to github user shinigami35 for the patch.
 - 2026-01-24: AI: added improved AI agent skills
   Added skills, so that AI agents will hopefully follow instructions and
   rsyslog workflow better. Adapted AGENTS.md to support them. First results
