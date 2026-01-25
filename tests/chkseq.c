@@ -127,12 +127,14 @@ int main(int argc, char *argv[]) {
 
     for (i = start; i <= end; i += increment) {
         if (bHaveExtraData) {
+            edLen = 0;
+            edBuf[0] = '\0';
             if (fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
                 scanfOK = 0;
             } else {
                 scanfOK = sscanf(ioBuf, "%d,%d,%s\n", &val, &edLen, edBuf) == 3 ? 1 : 0;
             }
-            if (edLen != (int)strlen(edBuf)) {
+            if (scanfOK && edLen != (int)strlen(edBuf)) {
                 if (bAnticipateTruncation == 1) {
                     if (edLen < (int)strlen(edBuf)) {
                         printf(
@@ -192,12 +194,14 @@ int main(int argc, char *argv[]) {
             i = end;
             while (!feof(fp)) {
                 if (bHaveExtraData) {
+                    edLen = 0;
+                    edBuf[0] = '\0';
                     if (fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
                         scanfOK = 0;
                     } else {
                         scanfOK = sscanf(ioBuf, "%d,%d,%s\n", &val, &edLen, edBuf) == 3 ? 1 : 0;
                     }
-                    if (edLen != (int)strlen(edBuf)) {
+                    if (scanfOK && edLen != (int)strlen(edBuf)) {
                         if (bAnticipateTruncation == 1) {
                             if (edLen < (int)strlen(edBuf)) {
                                 printf(
