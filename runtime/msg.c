@@ -3229,7 +3229,7 @@ static rsRetVal jsonEncode(uchar **ppRes, unsigned short *pbMustBeFreed, int *pB
          * previous data.
          */
         if (*pbMustBeFreed) free(*ppRes);
-        *ppRes = (uchar *)es_str2cstr(dst, NULL);
+        CHKmalloc(*ppRes = (uchar *)es_str2cstr(dst, NULL));
         *pbMustBeFreed = 1;
         *pBufLen = -1;
         es_deleteStr(dst);
@@ -3269,6 +3269,18 @@ static rsRetVal ATTR_NONNULL() jsonField(const struct templateEntry *const pTpe,
             FINALIZE;
         }
         is_numeric = 0;
+    } else if (pTpe->data.field.options.dataType == TPE_DATATYPE_NUMBER) {
+        /* trim whitespace for numeric checks */
+        while (buflen > 0 && isspace((int)*pSrc)) {
+            ++pSrc;
+            --buflen;
+        }
+        while (buflen > 0 && isspace((int)pSrc[buflen - 1])) --buflen;
+
+        if (pTpe->data.field.options.bOmitIfZero && buflen == 1 && pSrc[0] == '0') {
+            *pBufLen = 0;
+            FINALIZE;
+        }
     }
     /* we hope we have only few escapes... */
     dst = es_newStr(buflen + pTpe->lenFieldName + 15);
@@ -3314,7 +3326,7 @@ static rsRetVal ATTR_NONNULL() jsonField(const struct templateEntry *const pTpe,
     if (*pbMustBeFreed) free(*ppRes);
     /* we know we do not have \0 chars - so the size does not change */
     *pBufLen = es_strlen(dst);
-    *ppRes = (uchar *)es_str2cstr(dst, NULL);
+    CHKmalloc(*ppRes = (uchar *)es_str2cstr(dst, NULL));
     *pbMustBeFreed = 1;
     es_deleteStr(dst);
 
@@ -4725,7 +4737,7 @@ rsRetVal jsonFind(smsg_t *const pMsg, msgPropDescr_t *pProp, struct json_object 
 
     if (*jroot == NULL) {
         field = NULL;
-        goto finalize_it;
+        FINALIZE;
     }
 
     if (!strcmp((char *)pProp->name, "!")) {
@@ -4981,7 +4993,7 @@ rsRetVal msgSetJSONFromVar(smsg_t *const pMsg, uchar *varname, struct svar *v, i
     DEFiRet;
     switch (v->datatype) {
         case 'S': /* string */
-            cstr = es_str2cstr(v->d.estr, NULL);
+            CHKmalloc(cstr = es_str2cstr(v->d.estr, NULL));
             json = json_object_new_string(cstr);
             free(cstr);
             break;

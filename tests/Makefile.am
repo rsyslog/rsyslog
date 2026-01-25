@@ -13,6 +13,9 @@ EXTRA_DIST = \
 	proprepltest-rfctag-udp.sh \
 	proprepltest-rfctag.sh
 
+TESTS_JSON_OMITIFZERO = json-omitifzero.sh json-omitifzero-subtree.sh json-whitespace.sh
+EXTRA_DIST += $(TESTS_JSON_OMITIFZERO)
+
 TESTS_IMPTCP_TABESCAPE = \
 	tabescape_dflt.sh \
 	tabescape_dflt-udp.sh \
@@ -1259,7 +1262,6 @@ TESTS_GNUTLS = \
 	imtcp-tls-no-lstn-startup.sh \
 	imtcp-tls-gtls-x509fingerprint-invld.sh \
 	imtcp-tls-gtls-x509fingerprint.sh \
-	imtcp-tls-gtls-manycon.sh \
 	imtcp-tls-gtls-x509name-invld.sh \
 	imtcp-tls-gtls-x509name.sh \
 	imtcp-tls-gtls-x509name-legacy.sh \
@@ -1923,6 +1925,7 @@ endif # if ENABLE_ELASTICSEARCH_TESTS
 
 if ENABLE_DEFAULT_TESTS
 TESTS += $(TESTS_DEFAULT)
+TESTS += $(TESTS_JSON_OMITIFZERO)
 
 if ENABLE_MMSNAREPARSE
 TESTS += $(TESTS_MMSNAREPARSE_MINIMAL)

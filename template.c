@@ -362,8 +362,7 @@ static rsRetVal tplJsonRender(struct template *pTpl, smsg_t *pMsg, actWrkrIParam
     if ((size_t)len + 1 > (size_t)iparam->lenBuf) {
         CHKiRet(ExtendBuf(iparam, (size_t)len + 1));
     }
-    rendered = es_str2cstr(out, NULL);
-    CHKmalloc(rendered);
+    CHKmalloc(rendered = es_str2cstr(out, NULL));
     memcpy(iparam->param, rendered, (size_t)len);
     iparam->param[len] = '\0';
     iparam->lenStr = len;
@@ -471,7 +470,9 @@ static rsRetVal tplJsonRenderValue(
         RETiRet;
     }
 
-    if (pVal == NULL || lenVal <= 0) goto finalize_it;
+    if (pVal == NULL || lenVal <= 0) {
+        FINALIZE;
+    }
 
     valuePtr = pVal;
     valueLen = (size_t)lenVal;
@@ -491,18 +492,28 @@ static rsRetVal tplJsonRenderValue(
         }
         if (matchesKey) {
             size_t offset = (size_t)((colon + 1) - pVal);
-            if (offset >= (size_t)lenVal) goto finalize_it;
+            if (offset >= (size_t)lenVal) {
+                FINALIZE;
+            }
             valuePtr = pVal + offset;
             valueLen = (size_t)lenVal - offset;
         }
     }
 
-    while (valueLen > 0 && isspace((int)*valuePtr)) {
-        ++valuePtr;
-        --valueLen;
+    if (node->pTpe->eEntryType == FIELD && node->pTpe->data.field.options.dataType == TPE_DATATYPE_NUMBER) {
+        while (valueLen > 0 && isspace((int)*valuePtr)) {
+            ++valuePtr;
+            --valueLen;
+        }
+        while (valueLen > 0 && isspace((int)valuePtr[valueLen - 1])) --valueLen;
+
+        if (node->pTpe->data.field.options.bOmitIfZero && valueLen == 1 && valuePtr[0] == '0') {
+            FINALIZE;
+        }
     }
-    while (valueLen > 0 && isspace((int)valuePtr[valueLen - 1])) --valueLen;
-    if (valueLen == 0) goto finalize_it;
+    if (valueLen == 0) {
+        FINALIZE;
+    }
     const size_t requiredLen = node->nameLen + valueLen + 4;
     if (requiredLen > (size_t)INT_MAX) {
         parser_errmsg("error: jsonf value to be rendered is too large");
@@ -576,7 +587,9 @@ static rsRetVal tplJsonRenderObject(
         child = child->nextSibling;
     }
 
-    if (!needComma) goto finalize_it;
+    if (!needComma) {
+        FINALIZE;
+    }
 
     es_addChar(&out, '}');
     *ppOut = out;
@@ -668,6 +681,7 @@ static struct cnfparamdescr cnfparamdescrProperty[] = {{"name", eCmdHdlrString, 
                                                        {"datatype", eCmdHdlrString, 0},
                                                        {"onempty", eCmdHdlrString, 0},
                                                        {"mandatory", eCmdHdlrBinary, 0},
+                                                       {"omitifzero", eCmdHdlrBinary, 0},
                                                        {"spifno1stsp", eCmdHdlrBinary, 0}};
 static struct cnfparamblk pblkProperty = {
     CNFPARAMBLK_VERSION, sizeof(cnfparamdescrProperty) / sizeof(struct cnfparamdescr), cnfparamdescrProperty};
@@ -1930,6 +1944,7 @@ static rsRetVal createConstantTpe(struct template *pTpl, struct cnfobj *o) {
     struct json_object *json = NULL;
     struct json_object *jval = NULL;
     uchar *outname = NULL;
+    const char *sz = NULL;
     DEFiRet;
 
     /* pull params */
@@ -1945,12 +1960,13 @@ static rsRetVal createConstantTpe(struct template *pTpl, struct cnfobj *o) {
         if (!strcmp(pblkConstant.descr[i].name, "value")) {
             value = pvals[i].val.d.estr;
         } else if (!strcmp(pblkConstant.descr[i].name, "outname")) {
-            outname = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(outname = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(pblkConstant.descr[i].name, "format")) {
             if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"jsonf", sizeof("jsonf") - 1)) {
                 is_jsonf = 1;
             } else {
-                uchar *typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+                uchar *typeStr;
+                CHKmalloc(typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
                 LogError(0, RS_RET_ERR, "invalid format type '%s' for constant", typeStr);
                 free(typeStr);
                 ABORT_FINALIZE(RS_RET_ERR);
@@ -1981,8 +1997,7 @@ static rsRetVal createConstantTpe(struct template *pTpl, struct cnfobj *o) {
     if (is_jsonf) {
         json = json_object_new_object();
         CHKmalloc(json);
-        const char *sz = es_str2cstr(value, NULL);
-        CHKmalloc(sz);
+        CHKmalloc(sz = es_str2cstr(value, NULL));
         jval = json_object_new_string(sz);
         if (jval == NULL) {
             free((void *)sz);
@@ -2017,7 +2032,7 @@ static rsRetVal createConstantTpe(struct template *pTpl, struct cnfobj *o) {
         json = NULL;
     } else {
         pTpe->data.constant.iLenConstant = es_strlen(value);
-        pTpe->data.constant.pConstant = (uchar *)es_str2cstr(value, NULL);
+        CHKmalloc(pTpe->data.constant.pConstant = (uchar *)es_str2cstr(value, NULL));
     }
 
 finalize_it:
@@ -2034,6 +2049,7 @@ static rsRetVal createPropertyTpe(struct template *pTpl, struct cnfobj *o) {
     int droplastlf = 0;
     int spifno1stsp = 0;
     int mandatory = 0;
+    int omitifzero = 0;
     int frompos = -1;
     int topos = 0;
     int topos_set = 0;
@@ -2070,7 +2086,7 @@ static rsRetVal createPropertyTpe(struct template *pTpl, struct cnfobj *o) {
     for (i = 0; i < pblkProperty.nParams; ++i) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(pblkProperty.descr[i].name, "name")) {
-            name = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(name = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(pblkProperty.descr[i].name, "datatype")) {
             if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"string", sizeof("string") - 1)) {
                 dataType = TPE_DATATYPE_STRING;
@@ -2081,7 +2097,8 @@ static rsRetVal createPropertyTpe(struct template *pTpl, struct cnfobj *o) {
             } else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"auto", sizeof("auto") - 1)) {
                 dataType = TPE_DATATYPE_AUTO;
             } else {
-                uchar *typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+                uchar *typeStr;
+                CHKmalloc(typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
                 LogError(0, RS_RET_ERR, "invalid dataType '%s' for property", typeStr);
                 free(typeStr);
                 ABORT_FINALIZE(RS_RET_ERR);
@@ -2094,7 +2111,8 @@ static rsRetVal createPropertyTpe(struct template *pTpl, struct cnfobj *o) {
             } else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"null", sizeof("null") - 1)) {
                 onEmpty = TPE_DATAEMPTY_NULL;
             } else {
-                uchar *typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+                uchar *typeStr;
+                CHKmalloc(typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
                 LogError(0, RS_RET_ERR, "invalid onEmpty value '%s' for property", typeStr);
                 free(typeStr);
                 ABORT_FINALIZE(RS_RET_ERR);
@@ -2107,11 +2125,13 @@ static rsRetVal createPropertyTpe(struct template *pTpl, struct cnfobj *o) {
             bComplexProcessing = 1;
         } else if (!strcmp(pblkProperty.descr[i].name, "mandatory")) {
             mandatory = pvals[i].val.d.n;
+        } else if (!strcmp(pblkProperty.descr[i].name, "omitifzero")) {
+            omitifzero = pvals[i].val.d.n;
         } else if (!strcmp(pblkProperty.descr[i].name, "spifno1stsp")) {
             spifno1stsp = pvals[i].val.d.n;
             bComplexProcessing = 1;
         } else if (!strcmp(pblkProperty.descr[i].name, "outname")) {
-            outname = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(outname = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(pblkProperty.descr[i].name, "position.from")) {
             frompos = pvals[i].val.d.n;
             bComplexProcessing = 1;
@@ -2128,7 +2148,7 @@ static rsRetVal createPropertyTpe(struct template *pTpl, struct cnfobj *o) {
             fielddelim = pvals[i].val.d.n;
             bComplexProcessing = 1;
         } else if (!strcmp(pblkProperty.descr[i].name, "regex.expression")) {
-            re_expr = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(re_expr = es_str2cstr(pvals[i].val.d.estr, NULL));
             bComplexProcessing = 1;
         } else if (!strcmp(pblkProperty.descr[i].name, "regex.type")) {
             bComplexProcessing = 1;
@@ -2137,7 +2157,8 @@ static rsRetVal createPropertyTpe(struct template *pTpl, struct cnfobj *o) {
             } else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"ERE", sizeof("ERE") - 1)) {
                 re_type = TPL_REGEX_ERE;
             } else {
-                uchar *typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+                uchar *typeStr;
+                CHKmalloc(typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
                 LogError(0, RS_RET_ERR, "invalid regex.type '%s' for property", typeStr);
                 free(typeStr);
                 ABORT_FINALIZE(RS_RET_ERR);
@@ -2153,7 +2174,8 @@ static rsRetVal createPropertyTpe(struct template *pTpl, struct cnfobj *o) {
             } else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"ZERO", sizeof("ZERO") - 1)) {
                 re_nomatchType = TPL_REGEX_NOMATCH_USE_ZERO;
             } else {
-                uchar *typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+                uchar *typeStr;
+                CHKmalloc(typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
                 LogError(0, RS_RET_ERR, "invalid format type '%s' for property", typeStr);
                 free(typeStr);
                 ABORT_FINALIZE(RS_RET_ERR);
@@ -2177,7 +2199,8 @@ static rsRetVal createPropertyTpe(struct template *pTpl, struct cnfobj *o) {
             } else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"jsonfr", sizeof("jsonfr") - 1)) {
                 formatType = F_JSONFR;
             } else {
-                uchar *typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+                uchar *typeStr;
+                CHKmalloc(typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
                 LogError(0, RS_RET_ERR, "invalid format type '%s' for property", typeStr);
                 free(typeStr);
                 ABORT_FINALIZE(RS_RET_ERR);
@@ -2191,7 +2214,8 @@ static rsRetVal createPropertyTpe(struct template *pTpl, struct cnfobj *o) {
             } else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"drop", sizeof("drop") - 1)) {
                 controlchr = CC_DROP;
             } else {
-                uchar *typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+                uchar *typeStr;
+                CHKmalloc(typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
                 LogError(0, RS_RET_ERR, "invalid controlcharacter mode '%s' for property", typeStr);
                 free(typeStr);
                 ABORT_FINALIZE(RS_RET_ERR);
@@ -2203,7 +2227,8 @@ static rsRetVal createPropertyTpe(struct template *pTpl, struct cnfobj *o) {
             } else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"replace", sizeof("replace") - 1)) {
                 secpath = SP_REPLACE;
             } else {
-                uchar *typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+                uchar *typeStr;
+                CHKmalloc(typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
                 LogError(0, RS_RET_ERR, "invalid securepath mode '%s' for property", typeStr);
                 free(typeStr);
                 ABORT_FINALIZE(RS_RET_ERR);
@@ -2215,7 +2240,8 @@ static rsRetVal createPropertyTpe(struct template *pTpl, struct cnfobj *o) {
             } else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"upper", sizeof("upper") - 1)) {
                 caseconv = tplCaseConvUpper;
             } else {
-                uchar *typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+                uchar *typeStr;
+                CHKmalloc(typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
                 LogError(0, RS_RET_ERR, "invalid caseconversion type '%s' for property", typeStr);
                 free(typeStr);
                 ABORT_FINALIZE(RS_RET_ERR);
@@ -2268,7 +2294,8 @@ static rsRetVal createPropertyTpe(struct template *pTpl, struct cnfobj *o) {
             } else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"week", sizeof("week") - 1)) {
                 datefmt = tplFmtWeek;
             } else {
-                uchar *typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+                uchar *typeStr;
+                CHKmalloc(typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
                 LogError(0, RS_RET_ERR, "invalid date format '%s' for property", typeStr);
                 free(typeStr);
                 ABORT_FINALIZE(RS_RET_ERR);
@@ -2322,6 +2349,7 @@ static rsRetVal createPropertyTpe(struct template *pTpl, struct cnfobj *o) {
     pTpe->data.field.options.bDropLastLF = droplastlf;
     pTpe->data.field.options.bSPIffNo1stSP = spifno1stsp;
     pTpe->data.field.options.bMandatory = mandatory;
+    pTpe->data.field.options.bOmitIfZero = omitifzero;
     pTpe->data.field.options.bFixedWidth = fixedwidth;
     pTpe->data.field.options.dataType = dataType;
     pTpe->data.field.options.onEmpty = onEmpty;
@@ -2430,6 +2458,7 @@ finalize_it:
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &pblkProperty);
     free(name);
     free(outname);
+    free(re_expr);
     RETiRet;
 }
 
@@ -2483,6 +2512,7 @@ rsRetVal ATTR_NONNULL() tplProcessCnf(struct cnfobj *o) {
     int o_sql = 0, o_stdsql = 0, o_jsonf = 0, o_jsonftree = 0, o_json = 0, o_casesensitive = 0; /* options */
     int numopts;
     rsRetVal localRet;
+    uchar *cstr = NULL;
     DEFiRet;
 
     pvals = nvlstGetParams(o->nvlst, &pblk, NULL);
@@ -2496,7 +2526,7 @@ rsRetVal ATTR_NONNULL() tplProcessCnf(struct cnfobj *o) {
         if (!pvals[i].bUsed) continue;
         if (!strcmp(pblk.descr[i].name, "name")) {
             lenName = es_strlen(pvals[i].val.d.estr);
-            name = es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(name = es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(pblk.descr[i].name, "type")) {
             if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"string", sizeof("string") - 1)) {
                 tplType = T_STRING;
@@ -2507,34 +2537,31 @@ rsRetVal ATTR_NONNULL() tplProcessCnf(struct cnfobj *o) {
             } else if (!es_strbufcmp(pvals[i].val.d.estr, (uchar *)"subtree", sizeof("subtree") - 1)) {
                 tplType = T_SUBTREE;
             } else {
-                uchar *typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+                uchar *typeStr;
+                CHKmalloc(typeStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
                 LogError(0, RS_RET_ERR, "invalid template type '%s'", typeStr);
                 free(typeStr);
                 ABORT_FINALIZE(RS_RET_ERR);
             }
         } else if (!strcmp(pblk.descr[i].name, "string")) {
-            tplStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(tplStr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(pblk.descr[i].name, "subtree")) {
             uchar *st_str = es_getBufAddr(pvals[i].val.d.estr);
             if (st_str[0] != '$' || st_str[1] != '!') {
-                char *cstr = es_str2cstr(pvals[i].val.d.estr, NULL);
+                CHKmalloc(cstr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
                 LogError(0, RS_RET_ERR,
                          "invalid subtree "
                          "parameter, variable must start with '$!' but "
                          "var name is '%s'",
                          cstr);
-                free(cstr);
-                free(name); /* overall assigned */
                 ABORT_FINALIZE(RS_RET_ERR);
             } else {
-                uchar *cstr;
-                cstr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
-                CHKiRet(msgPropDescrFill(&subtree, cstr, ustrlen(cstr)));
-                free(cstr);
+                CHKmalloc(cstr = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
+                CHKiRet(msgPropDescrFill(&subtree, (uchar *)cstr, ustrlen(cstr)));
                 bHaveSubtree = 1;
             }
         } else if (!strcmp(pblk.descr[i].name, "plugin")) {
-            plugin = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            CHKmalloc(plugin = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL));
         } else if (!strcmp(pblk.descr[i].name, "option.stdsql")) {
             o_stdsql = pvals[i].val.d.n;
         } else if (!strcmp(pblk.descr[i].name, "option.sql")) {
@@ -2652,7 +2679,8 @@ rsRetVal ATTR_NONNULL() tplProcessCnf(struct cnfobj *o) {
         DBGPRINTF("template.c: tplConstruct failed!\n");
         ABORT_FINALIZE(RS_RET_ERR);
     }
-    pTpl->pszName = name;
+    pTpl->pszName = (char *)name;
+    name = NULL;
     pTpl->iLenName = lenName;
 
     switch (tplType) {
@@ -2710,6 +2738,11 @@ rsRetVal ATTR_NONNULL() tplProcessCnf(struct cnfobj *o) {
     apply_case_sensitivity(pTpl);
     if (pTpl->optFormatEscape == JSONF) tplWarnDuplicateJsonKeys(pTpl);
 finalize_it:
+    if (iRet != RS_RET_OK && bHaveSubtree) {
+        msgPropDescrDestruct(&subtree);
+    }
+    free(name);
+    free(cstr);
     free(tplStr);
     free(plugin);
     if (pvals != NULL) cnfparamvalsDestruct(pvals, &pblk);
