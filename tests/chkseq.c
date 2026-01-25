@@ -48,13 +48,9 @@
 #endif
 
 #define EDBUF_SIZE (500 * 1024)
-#define EDBUF_SCAN_WIDTH 511999
+#define EDBUF_SCAN_WIDTH (EDBUF_SIZE - 1)
 #define SCN_WIDTH_STR(x) #x
 #define SCN_WIDTH(x) SCN_WIDTH_STR(x)
-
-#if EDBUF_SCAN_WIDTH != (EDBUF_SIZE - 1)
-    #error "EDBUF_SCAN_WIDTH must match EDBUF_SIZE - 1"
-#endif
 
 int main(int argc, char *argv[]) {
     FILE *fp;
