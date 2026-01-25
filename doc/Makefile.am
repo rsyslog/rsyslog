@@ -915,6 +915,7 @@ EXTRA_DIST = \
     source/reference/parameters/omhttp-dynrestpath.rst \
     source/reference/parameters/omhttp-errorfile.rst \
     source/reference/parameters/omhttp-healthchecktimeout.rst \
+    source/reference/parameters/omhttp-healthchecktimedelay.rst \
     source/reference/parameters/omhttp-httpcontenttype.rst \
     source/reference/parameters/omhttp-httpheaderkey.rst \
     source/reference/parameters/omhttp-httpheaders.rst \
