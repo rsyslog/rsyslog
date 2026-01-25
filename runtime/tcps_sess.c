@@ -54,8 +54,7 @@
 
 /* static data */
 DEFobjStaticHelpers;
-DEFobjCurrIf(glbl) DEFobjCurrIf(netstrm) DEFobjCurrIf(prop) DEFobjCurrIf(datetime)
-DEFobjCurrIf(regexp)
+DEFobjCurrIf(glbl) DEFobjCurrIf(netstrm) DEFobjCurrIf(prop) DEFobjCurrIf(datetime) DEFobjCurrIf(regexp)
 
 
     /* forward definitions */
@@ -72,7 +71,7 @@ BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END m
     pThis->fromHost = NULL;
     pThis->fromHostIP = NULL;
     pThis->fromHostPort = NULL;
-    pThis->iCurrLine = 1;
+    pThis->iCurrLine = 0;
     pThis->pMsg_save = NULL;
     pThis->tlsProbeBytes = 0;
     pThis->tlsProbeDone = 0;
@@ -86,11 +85,11 @@ ENDobjConstruct(tcps_sess)
 
 /* ConstructionFinalizer
  */
-static rsRetVal tcps_sessConstructFinalize(tcps_sess_t * pThis) {
+static rsRetVal tcps_sessConstructFinalize(tcps_sess_t *pThis) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcps_sess);
 #ifdef FEATURE_REGEXP
-    if(pThis->pLstnInfo->bHasStartRegex) {
+    if (pThis->pLstnInfo->bHasStartRegex) {
         /* in this case, we need a second buffer and a larger primary one */
         CHKmalloc(pThis->pMsg = (uchar *)realloc(pThis->pMsg, (2 * pThis->iMaxLine) + 1));
         CHKmalloc(pThis->pMsg_save = (uchar *)malloc((2 * pThis->iMaxLine) + 1));
@@ -400,25 +399,29 @@ static rsRetVal ATTR_NONNULL() processDataRcvd_regexFraming(tcps_sess_t *const _
         defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
         ++(*pnMsgs);
         pThis->iMsg = 0;
-        pThis->iCurrLine = 1;
+        pThis->iCurrLine = 0;
     }
 
 
     if (c == '\n') {
         pThis->iCurrLine = pThis->iMsg;
     } else {
-        const int isMatch = !regexp.regexec(&pThis->pLstnInfo->start_preg, (char *)pThis->pMsg + pThis->iCurrLine, 0, NULL, 0);
-        if (isMatch) {
+        const int isMatch =
+            !regexp.regexec(&pThis->pLstnInfo->start_preg, (char *)pThis->pMsg + pThis->iCurrLine, 0, NULL, 0);
+        if (pThis->iCurrLine > 0 && isMatch) {
             DBGPRINTF("regex match (%d), framing line: %s\n", pThis->iCurrLine, pThis->pMsg);
-            strcpy((char *)pThis->pMsg_save, (char *)pThis->pMsg + pThis->iCurrLine);
-            pThis->iMsg = pThis->iCurrLine - 1;
+            const size_t len_save = pThis->iMsg - pThis->iCurrLine;
+            memmove(pThis->pMsg_save, pThis->pMsg + pThis->iCurrLine, len_save);
+            pThis->pMsg_save[len_save] = '\0';
+
+            pThis->iMsg = pThis->iCurrLine - 1; /* remove trailing LF */
 
             defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
             ++(*pnMsgs);
 
-            strcpy((char *)pThis->pMsg, (char *)pThis->pMsg_save);
-            pThis->iMsg = ustrlen(pThis->pMsg_save);
-            pThis->iCurrLine = 1;
+            memmove(pThis->pMsg, pThis->pMsg_save, len_save + 1);
+            pThis->iMsg = len_save;
+            pThis->iCurrLine = 0;
         }
     }
 

@@ -38,7 +38,13 @@ struct tcps_sess_s {
         int iMsg; /* index of next char to store in msg */
         sbool bSuppOctetFram; /**< copy from listener, to speed up access */
         sbool bSPFramingFix;
-        enum { eAtStrtFram, eInOctetCnt, eInMsg, eInMsgTruncating, eInMsgCheckMultiLine } inputState; /* our current state */
+        enum {
+            eAtStrtFram,
+            eInOctetCnt,
+            eInMsg,
+            eInMsgTruncating,
+            eInMsgCheckMultiLine
+        } inputState; /* our current state */
         int iOctetsRemain; /* Number of Octets remaining in message */
         TCPFRAMINGMODE eFraming;
         uchar *pMsg; /* message (fragment) received */
