@@ -48,8 +48,13 @@
 #endif
 
 #define EDBUF_SIZE (500 * 1024)
+#define EDBUF_SCAN_WIDTH 511999
 #define SCN_WIDTH_STR(x) #x
 #define SCN_WIDTH(x) SCN_WIDTH_STR(x)
+
+#if EDBUF_SCAN_WIDTH != (EDBUF_SIZE - 1)
+    #error "EDBUF_SCAN_WIDTH must match EDBUF_SIZE - 1"
+#endif
 
 int main(int argc, char *argv[]) {
     FILE *fp;
@@ -136,7 +141,7 @@ int main(int argc, char *argv[]) {
             if (fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
                 scanfOK = 0;
             } else {
-                scanfOK = sscanf(ioBuf, "%d,%d,%" SCN_WIDTH(EDBUF_SIZE - 1) "s\n", &val, &edLen, edBuf) == 3;
+                scanfOK = sscanf(ioBuf, "%d,%d,%" SCN_WIDTH(EDBUF_SCAN_WIDTH) "s\n", &val, &edLen, edBuf) == 3;
             }
             if (scanfOK && edLen != (int)strlen(edBuf)) {
                 if (bAnticipateTruncation == 1) {
@@ -203,7 +208,7 @@ int main(int argc, char *argv[]) {
                     if (fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
                         scanfOK = 0;
                     } else {
-                        scanfOK = sscanf(ioBuf, "%d,%d,%" SCN_WIDTH(EDBUF_SIZE - 1) "s\n", &val, &edLen, edBuf) == 3;
+                        scanfOK = sscanf(ioBuf, "%d,%d,%" SCN_WIDTH(EDBUF_SCAN_WIDTH) "s\n", &val, &edLen, edBuf) == 3;
                     }
                     if (scanfOK && edLen != (int)strlen(edBuf)) {
                         if (bAnticipateTruncation == 1) {
