@@ -22,7 +22,7 @@ This parameter applies to :doc:`../../configuration/modules/omhttp`.
 :Type: integer
 :Default: input=-1
 :Required?: no
-:Introduced: Not specified
+:Introduced: v8.2602.0
 
 Description
 -----------

@@ -561,24 +561,13 @@ static rsRetVal ATTR_NONNULL() checkConn(wrkrInstanceData_t *const pWrkrData) {
     char *serverUrl;
     char *checkPath;
     int i;
+    int actualAttempts = 0;
     int r;
     DEFiRet;
 
     if (pWrkrData->pData->checkPath == NULL) {
         DBGPRINTF("omhttp: checkConn no health check uri configured skipping it\n");
         FINALIZE;
-    }
-
-    /* Skip health check if the configured delay has not yet passed. */
-    time_t now = time(NULL);
-    if (pWrkrData->pData->lastHealthCheck != NULL && pWrkrData->pData->healthCheckTimeDelay != -1) {
-        if (pWrkrData->pData->lastHealthCheck[pWrkrData->serverIndex] != 0 &&
-            now <
-                (pWrkrData->pData->lastHealthCheck[pWrkrData->serverIndex] + pWrkrData->pData->healthCheckTimeDelay)) {
-            DBGPRINTF("omhttp: health check for server %d skipped due to healthCheckTimeDelay\n",
-                      pWrkrData->serverIndex);
-            ABORT_FINALIZE(RS_RET_OK);
-        }
     }
 
     pWrkrData->reply = NULL;
@@ -590,7 +579,20 @@ static rsRetVal ATTR_NONNULL() checkConn(wrkrInstanceData_t *const pWrkrData) {
         ABORT_FINALIZE(RS_RET_SUSPENDED);
     }
 
+    time_t now = time(NULL);
     for (i = 0; i < pWrkrData->pData->numServers; ++i) {
+        /* Skip health check if the configured delay has not yet passed. */
+        if (pWrkrData->pData->lastHealthCheck != NULL && pWrkrData->pData->healthCheckTimeDelay != -1) {
+            if (pWrkrData->pData->lastHealthCheck[pWrkrData->serverIndex] != 0 &&
+                now < (pWrkrData->pData->lastHealthCheck[pWrkrData->serverIndex] +
+                       pWrkrData->pData->healthCheckTimeDelay)) {
+                DBGPRINTF("omhttp: health check for server %d skipped due to healthCheckTimeDelay\n",
+                          pWrkrData->serverIndex);
+                incrementServerIndex(pWrkrData);
+                continue;
+            }
+        }
+
         serverUrl = (char *)pWrkrData->pData->serverBaseUrls[pWrkrData->serverIndex];
         checkPath = (char *)pWrkrData->pData->checkPath;
 
@@ -607,22 +609,30 @@ static rsRetVal ATTR_NONNULL() checkConn(wrkrInstanceData_t *const pWrkrData) {
         curl_easy_setopt(curl, CURLOPT_URL, healthUrl);
         res = curl_easy_perform(curl);
         free(healthUrl);
+        actualAttempts++;
 
         if (res == CURLE_OK) {
-            pWrkrData->pData->lastHealthCheck[pWrkrData->serverIndex] = now;
+            if (pWrkrData->pData->lastHealthCheck != NULL) {
+                pWrkrData->pData->lastHealthCheck[pWrkrData->serverIndex] = now;
+            }
 
             DBGPRINTF(
                 "omhttp: checkConn %s completed with success "
                 "on attempt %d\n",
-                serverUrl, i);
+                serverUrl, actualAttempts);
             ABORT_FINALIZE(RS_RET_OK);
         }
 
-        DBGPRINTF("omhttp: checkConn %s failed on attempt %d: %s\n", serverUrl, i, curl_easy_strerror(res));
+        DBGPRINTF("omhttp: checkConn %s failed on attempt %d: %s\n", serverUrl, actualAttempts,
+                  curl_easy_strerror(res));
         incrementServerIndex(pWrkrData);
     }
 
-    LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING, "omhttp: checkConn failed after %d attempts.", i);
+    if (actualAttempts == 0 && pWrkrData->pData->numServers > 0) {
+        /* all checks were skipped due to healthCheckTimeDelay, assume OK */
+        ABORT_FINALIZE(RS_RET_OK);
+    }
+    LogMsg(0, RS_RET_SUSPENDED, LOG_WARNING, "omhttp: checkConn failed after %d attempts.", actualAttempts);
     ABORT_FINALIZE(RS_RET_SUSPENDED);
 
 finalize_it:
@@ -2530,12 +2540,23 @@ BEGINnewActInst
         LogMsg(0, RS_RET_OK, LOG_WARNING, "omhttp: No servers specified, using localhost");
         pData->numServers = 1;
         pData->serverBaseUrls = malloc(sizeof(uchar *));
+        CHKmalloc(pData->lastHealthCheck = calloc(1, sizeof(time_t)));
         if (pData->serverBaseUrls == NULL) {
             LogError(0, RS_RET_ERR,
                      "omhttp: unable to allocate buffer "
                      "for http server configuration.");
             ABORT_FINALIZE(RS_RET_ERR);
         }
+
+        pData->listObjStats = malloc(sizeof(targetStats_t));
+        if (pData->listObjStats == NULL) {
+            LogError(0, RS_RET_ERR,
+                     "omhttp: unable to allocate buffer "
+                     "for http server stats object.");
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        CHKiRet(setStatsObject(pData, NULL, 0));
+
         CHKiRet(computeBaseUrl("localhost", pData->defaultPort, pData->useHttps, pData->serverBaseUrls));
     }
 
