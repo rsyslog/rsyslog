@@ -30,6 +30,7 @@
 #include "net.h"
 #include "tcps_sess.h"
 #include "statsobj.h"
+#include "regexp.h"
 
 /* support for framing anomalies */
 typedef enum ETCPsyslogFramingAnomaly {
@@ -53,6 +54,8 @@ struct tcpLstnParams_s {
     prop_t *pInputName;
     ruleset_t *pRuleset; /**< associated ruleset */
     uchar dfltTZ[8]; /**< default TZ if none in timestamp; '\0' =No Default */
+    sbool bMultiLine; /**< support multi-line messages */
+    uchar *pszStartRegex; /**< regex that indicates start of frame */
 };
 
 /* list of tcp listen ports */
@@ -62,6 +65,10 @@ struct tcpLstnPortList_s {
     statsobj_t *stats; /**< associated stats object */
     ratelimit_t *ratelimiter;
     STATSCOUNTER_DEF(ctrSubmit, mutCtrSubmit)
+#ifdef FEATURE_REGEXP
+    regex_t start_preg;
+    sbool bHasStartRegex;
+#endif
     tcpLstnPortList_t *pNext; /**< next port or NULL */
 };
 

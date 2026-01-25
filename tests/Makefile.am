@@ -554,6 +554,8 @@ TESTS_IMTCP = \
 	allowed-sender-tcp-hostname-fail.sh \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
+	imtcp_framing_regex.sh \
+	imtcp-multiline.sh \
 	imtcp-basic-hup.sh \
 	imtcp-impstats-single-thread.sh \
 	imtcp-starvation-0.sh \
@@ -2791,6 +2793,7 @@ EXTRA_DIST += \
 	es_response_get_msgnum.py \
 	elasticsearch-error-format-check.py \
 	testsuites/imptcp_framing_regex.testdata \
+	testsuites/imtcp-multiline.testdata \
 	testsuites/imptcp_framing_regex-oversize.testdata \
 	testsuites/imptcp_multi_line.testdata \
 	testsuites/no_octet_counted.testdata \
