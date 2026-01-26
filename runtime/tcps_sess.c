@@ -742,6 +742,7 @@ BEGINObjClassExit(tcps_sess, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END
     objRelease(netstrm, LM_NETSTRMS_FILENAME);
     objRelease(datetime, CORE_COMPONENT);
     objRelease(prop, CORE_COMPONENT);
+    objRelease(regexp, LM_REGEXP_FILENAME);
 ENDObjClassExit(tcps_sess)
 
 

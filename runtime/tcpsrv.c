@@ -420,6 +420,11 @@ finalize_it:
             if (pEntry->stats != NULL) {
                 statsobj.Destruct(&pEntry->stats);
             }
+#ifdef FEATURE_REGEXP
+            if (pEntry->bHasStartRegex) {
+                regexp.regfree(&pEntry->start_preg);
+            }
+#endif
             free(pEntry);
         }
     }
