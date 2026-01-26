@@ -387,10 +387,7 @@ static rsRetVal ATTR_NONNULL() processDataRcvd_regexFraming(tcps_sess_t *const _
     DEFiRet;
     const char c = **buff;
 
-    pThis->pMsg[pThis->iMsg++] = c;
-    pThis->pMsg[pThis->iMsg] = '\0';
-
-    if (pThis->iMsg == 2 * pThis->iMaxLine) {
+    if (pThis->iMsg >= 2 * pThis->iMaxLine) {
         LogError(0, RS_RET_OVERSIZE_MSG,
                  "imtcp: more then double max message size (%d) "
                  "received without finding frame terminator via regex - assuming "
@@ -401,6 +398,9 @@ static rsRetVal ATTR_NONNULL() processDataRcvd_regexFraming(tcps_sess_t *const _
         pThis->iMsg = 0;
         pThis->iCurrLine = 0;
     }
+
+    pThis->pMsg[pThis->iMsg++] = c;
+    pThis->pMsg[pThis->iMsg] = '\0';
 
 
     if (c == '\n') {
