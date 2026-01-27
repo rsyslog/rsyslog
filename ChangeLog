@@ -2,6 +2,17 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-27: imfile: add inode generation check for file rotation detection
+  This commit adds a check for inode generation number in the imfile module.
+  This addresses an issue where file rotation is not detected when a new file
+  reuses the same inode number as the old one (which can happen on some
+  filesystems or scenarios).
+  The check is implemented by using `FS_IOC_GETVERSION` ioctl on Linux.
+  It is guarded by `HAVE_FS_IOC_GETVERSION` and `HAVE_LINUX_FS_H`.
+  To minimize performance impact, the check is only performed if `st_ctime`
+  has changed while the inode number remains the same.
+  This also updates the state file format to include `inode_gen` to detect
+  inode reuse across rsyslog restarts.
 - 2026-01-25: Add support healthchecktimedelay into omhttp
   This PR add the possibility to set up a time to delay the check
   of an "API health URL" to avoid multi request to an API.
