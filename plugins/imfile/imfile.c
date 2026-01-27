@@ -46,6 +46,12 @@
 #ifdef HAVE_SYS_STAT_H
     #include <sys/stat.h>
 #endif
+#ifdef HAVE_SYS_IOCTL_H
+    #include <sys/ioctl.h>
+#endif
+#ifdef HAVE_LINUX_FS_H
+    #include <linux/fs.h>
+#endif
 #if defined(OS_SOLARIS) && defined(HAVE_PORT_SOURCE_FILE)
     #include <port.h>
     #include <sys/port.h>
@@ -207,6 +213,8 @@ struct act_obj_s {
     char file_id_prev[FILE_ID_HASH_SIZE]; /* previous file id for this entry, set if changed */
     int in_move; /* workaround for inotify move: if set, state file must not be deleted */
     ino_t ino; /* current inode nbr */
+    uint32_t inode_gen; /* inode generation number (if supported) */
+    time_t last_ctime; /* last ctime of the file */
     int fd; /* fd to file in order to obtain file_id (needs to be preserved across move) */
     strm_t *pStrm; /* its stream (NULL if not assigned) */
     int nRecords; /**< How many records did we process before persisting the stream? */
@@ -241,7 +249,8 @@ static rsRetVal persistStrmState(act_obj_t *);
 static rsRetVal resetConfigVariables(uchar __attribute__((unused)) * pp, void __attribute__((unused)) * pVal);
 static rsRetVal ATTR_NONNULL(1) pollFile(act_obj_t *act);
 static int ATTR_NONNULL() getBasename(uchar *const __restrict__ basen, uchar *const __restrict__ path);
-static void ATTR_NONNULL() act_obj_unlink(act_obj_t *act);
+static void act_obj_destroy(act_obj_t *const act, const int is_deleted);
+static void ATTR_NONNULL() act_obj_unlink_nodestroy(act_obj_t *act);
 static void ATTR_NONNULL(1, 2) fs_node_walk(fs_node_t *const node, void (*f_usr)(fs_edge_t *const));
 static uchar *ATTR_NONNULL(1, 2) getStateFileName(const act_obj_t *, uchar *, const size_t);
 static int ATTR_NONNULL()
@@ -722,6 +731,22 @@ static sbool isIgnoreOlderFile(const instanceConf_t *const inst, const char *con
     return 0;
 }
 
+static void get_inode_gen(int fd, uint32_t *gen) {
+#if defined(FS_IOC_GETVERSION)
+    unsigned int g = 0;
+    if (ioctl(fd, FS_IOC_GETVERSION, &g) == 0) {
+        *gen = (uint32_t)g;
+        DBGPRINTF("imfile: inode generation: %u\n", *gen);
+    } else {
+        *gen = 0;
+        DBGPRINTF("imfile: failed to get inode generation: %d\n", errno);
+    }
+#else
+    (void)fd;
+    *gen = 0;
+#endif
+}
+
 /* add a new file system object if it not yet exists, ignore call
  * if it already does.
  */
@@ -771,6 +796,14 @@ static rsRetVal ATTR_NONNULL(1, 2) act_obj_add(fs_edge_t *const edge,
     act->edge = edge;
     act->ino = ino;
     act->fd = fd;
+    struct stat stat_buf;
+    if (fstat(fd, &stat_buf) == 0) {
+        act->last_ctime = stat_buf.st_ctime;
+    } else {
+        act->last_ctime = 0;
+    }
+    get_inode_gen(fd, &act->inode_gen);
+
     act->file_id[0] = '\0';
     act->file_id_prev[0] = '\0';
     act->is_symlink = is_symlink;
@@ -834,62 +867,99 @@ finalize_it:
  */
 static void detect_updates(fs_edge_t *const edge) {
     act_obj_t *act;
+    act_obj_t *pending_destroy = NULL;
     struct stat fileInfo;
-    int restart = 0;
+    int restart;
 
-    for (act = edge->active; act != NULL; act = act->next) {
-        DBGPRINTF("detect_updates checking active obj '%s'\n", act->name);
-        // lstat() has the disadvantage, that we get "deleted" when the name has changed
-        // but inode is still the same (like with logrotate)
-        int r = lstat(act->name, &fileInfo);
-        if (r == -1) { /* object gone away? */
-            /* now let's see if the file itself already exist (e.g. rotated away) */
-            /* NOTE: this will NOT stall the file. The reason is that when a new file
-             * with the same name is detected, we will not run into this code.
-             TODO: check the full implications, there are for sure some!
-                   e.g. file has been closed, so we will never have old inode (but
-                        why was it closed then? --> check)
+    do {
+        restart = 0;
+        for (act = edge->active; act != NULL; act = act->next) {
+            /* Save act->name before any calls that might free act, as act_obj_destroy()
+             * may be called recursively (e.g., via detect_updates called from within
+             * act_obj_destroy for symlink handling), potentially freeing this act object.
              */
-            time_t ttNow;
-            time(&ttNow);
-            if (act->time_to_delete == 0) {
-                act->time_to_delete = ttNow;
-            }
-            /* First time we run into this code, we need to give imfile a little time to process
-             *  the old file in case a process is still writing into it until the FILE_DELETE_DELAY
-             *  is reached OR the inode has changed (see elseif below). In most cases, the
-             *  delay will never be reached and the file will be closed when the inode has changed.
-             *  Directories are deleted without delay.
-             */
-            sbool is_file = act->edge->is_file;
-            if (!is_file || act->time_to_delete + FILE_DELETE_DELAY < ttNow) {
+            const char *const act_name = act->name;
+            DBGPRINTF("detect_updates checking active obj '%s'\n", act_name);
+            // lstat() has the disadvantage, that we get "deleted" when the name has changed
+            // but inode is still the same (like with logrotate)
+            int r = lstat(act_name, &fileInfo);
+            if (r == -1) { /* object gone away? */
+                /* now let's see if the file itself already exist (e.g. rotated away) */
+                /* NOTE: this will NOT stall the file. The reason is that when a new file
+                 * with the same name is detected, we will not run into this code.
+                 TODO: check the full implications, there are for sure some!
+                       e.g. file has been closed, so we will never have old inode (but
+                            why was it closed then? --> check)
+                 */
+                time_t ttNow;
+                time(&ttNow);
+                if (act->time_to_delete == 0) {
+                    act->time_to_delete = ttNow;
+                }
+                /* First time we run into this code, we need to give imfile a little time to process
+                 *  the old file in case a process is still writing into it until the FILE_DELETE_DELAY
+                 *  is reached OR the inode has changed (see elseif below). In most cases, the
+                 *  delay will never be reached and the file will be closed when the inode has changed.
+                 *  Directories are deleted without delay.
+                 */
+                sbool is_file = act->edge->is_file;
+                if (!is_file || act->time_to_delete + FILE_DELETE_DELAY < ttNow) {
+                    DBGPRINTF(
+                        "detect_updates obj gone away, unlinking: "
+                        "'%s', ttDelete: %" PRId64 "s, ttNow:%" PRId64 " isFile: %d\n",
+                        act_name, (int64_t)ttNow - (act->time_to_delete + FILE_DELETE_DELAY), (int64_t)ttNow, is_file);
+                    act_obj_unlink_nodestroy(act);
+                    act->next = pending_destroy;
+                    pending_destroy = act;
+                    restart = 1;
+                } else {
+                    DBGPRINTF(
+                        "detect_updates obj gone away, keep '%s' "
+                        "open: %" PRId64 "/%" PRId64 "/%" PRId64 "s!\n",
+                        act_name, (int64_t)act->time_to_delete, (int64_t)ttNow, (int64_t)ttNow - act->time_to_delete);
+                    pollFile(act);
+                }
+                break;
+            } else if (fileInfo.st_ino != act->ino) {
                 DBGPRINTF(
-                    "detect_updates obj gone away, unlinking: "
-                    "'%s', ttDelete: %" PRId64 "s, ttNow:%" PRId64 " isFile: %d\n",
-                    act->name, (int64_t)ttNow - (act->time_to_delete + FILE_DELETE_DELAY), (int64_t)ttNow, is_file);
-                act_obj_unlink(act);
+                    "file '%s' inode changed from %llu to %llu, unlinking from "
+                    "internal lists\n",
+                    act_name, (long long unsigned)act->ino, (long long unsigned)fileInfo.st_ino);
+                act_obj_unlink_nodestroy(act);
+                act->next = pending_destroy;
+                pending_destroy = act;
                 restart = 1;
+                break;
             } else {
-                DBGPRINTF(
-                    "detect_updates obj gone away, keep '%s' "
-                    "open: %" PRId64 "/%" PRId64 "/%" PRId64 "s!\n",
-                    act->name, (int64_t)act->time_to_delete, (int64_t)ttNow, (int64_t)ttNow - act->time_to_delete);
-                pollFile(act);
+#ifdef FS_IOC_GETVERSION
+                if (fileInfo.st_ctime != act->last_ctime) {
+                    uint32_t current_gen;
+                    int fd_tmp = open(act_name, O_RDONLY | O_CLOEXEC);
+                    if (fd_tmp >= 0) {
+                        get_inode_gen(fd_tmp, &current_gen);
+                        close(fd_tmp);
+                        if (current_gen != act->inode_gen) {
+                            DBGPRINTF("file '%s' inode generation changed from %u to %u (inode same), unlinking\n",
+                                      act_name, act->inode_gen, current_gen);
+                            act_obj_unlink_nodestroy(act);
+                            act->next = pending_destroy;
+                            pending_destroy = act;
+                            restart = 1;
+                            break;
+                        }
+                    }
+                    act->last_ctime = fileInfo.st_ctime;
+                }
+#endif
             }
-            break;
-        } else if (fileInfo.st_ino != act->ino) {
-            DBGPRINTF(
-                "file '%s' inode changed from %llu to %llu, unlinking from "
-                "internal lists\n",
-                act->name, (long long unsigned)act->ino, (long long unsigned)fileInfo.st_ino);
-            act_obj_unlink(act);
-            restart = 1;
-            break;
         }
-    }
+    } while (restart);
 
-    if (restart) {
-        detect_updates(edge);
+    while (pending_destroy != NULL) {
+        act_obj_t *const to_destroy = pending_destroy;
+        pending_destroy = pending_destroy->next;
+        to_destroy->next = NULL;
+        act_obj_destroy(to_destroy, 1);
     }
 }
 
@@ -1160,8 +1230,7 @@ chk_active(const act_obj_t *act, const act_obj_t *const deleted)
 /* unlink act object from linked list and then
  * destruct it.
  */
-static void ATTR_NONNULL() act_obj_unlink(act_obj_t *act) {
-    DBGPRINTF("act_obj_unlink %p: %s, pStrm %p, ttDelete: %ld\n", act, act->name, act->pStrm, act->time_to_delete);
+static void ATTR_NONNULL() act_obj_unlink_nodestroy(act_obj_t *act) {
     if (act->prev == NULL) {
         act->edge->active = act->next;
     } else {
@@ -1170,8 +1239,8 @@ static void ATTR_NONNULL() act_obj_unlink(act_obj_t *act) {
     if (act->next != NULL) {
         act->next->prev = act->prev;
     }
-    act_obj_destroy(act, 1);
-    act = NULL;
+    act->prev = NULL;
+    act->next = NULL;
 }
 
 static void fs_node_destroy(fs_node_t *const node) {
@@ -1541,6 +1610,17 @@ static rsRetVal ATTR_NONNULL(1) openFileWithStateFile(act_obj_t *const act) {
 
     fjson_object_object_get_ex(json, "strt_offs", &jval);
     act->pStrm->strtOffs = fjson_object_get_int64(jval);
+
+    fjson_object_object_get_ex(json, "inode_gen", &jval);
+    if (jval != NULL) {
+        uint32_t saved_gen = (uint32_t)fjson_object_get_int64(jval);
+        if (saved_gen != act->inode_gen) {
+            DBGPRINTF("imfile: inode generation mismatch in state file: saved %u, current %u - ignoring state file\n",
+                      saved_gen, act->inode_gen);
+            fjson_object_put(json);
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+    }
 
     fjson_object_object_get_ex(json, "prev_line_segment", &jval);
     const uchar *const prev_line_segment = (const uchar *)fjson_object_get_string(jval);
@@ -2835,6 +2915,8 @@ static rsRetVal ATTR_NONNULL() persistStrmState(act_obj_t *const act) {
     json_object_object_add(json, "curr_offs", jval);
     jval = json_object_new_int64(act->pStrm->strtOffs);
     json_object_object_add(json, "strt_offs", jval);
+    jval = json_object_new_int64((int64_t)act->inode_gen);
+    json_object_object_add(json, "inode_gen", jval);
 
     const uchar *const prevLineSegment = strmGetPrevLineSegment(act->pStrm);
     if (prevLineSegment != NULL) {
