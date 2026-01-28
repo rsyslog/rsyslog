@@ -34,8 +34,8 @@ installed at build time. Enable it during configure:
 
    ./configure --enable-fmpcre
 
-Usage
-=====
+Example
+=======
 
 Load the module before calling the function:
 
@@ -57,3 +57,8 @@ configuration parsing.
 
    PCRE matching can be more expensive than simple string operations.
    Consider cheaper filters before using complex expressions.
+
+.. seealso::
+
+   :doc:`re_match()<rs-re_match>`
+   :doc:`re_match_i()<rs-re_match_i>`

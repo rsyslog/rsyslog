@@ -1,3 +1,14 @@
+.. meta::
+   :description: Overview of RainerScript module functions and how to load them.
+   :keywords: rsyslog, rainerscript, module functions, fmpcre, pcre_match
+
+.. summary-start
+
+Module functions are provided by loadable modules, such as fmpcre with
+pcre_match() for PCRE-style matching.
+
+.. summary-end
+
 ****************
 Module Functions
 ****************
@@ -13,4 +24,3 @@ all functions will be available once the module is loaded.
    :maxdepth: 1
 
    mo*
-
