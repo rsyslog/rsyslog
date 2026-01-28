@@ -392,6 +392,7 @@ EXTRA_DIST = \
     source/rainerscript/functions/idx_built-in_functions.rst \
     source/rainerscript/functions/idx_module_functions.rst \
     source/rainerscript/functions/index.rst \
+    source/rainerscript/functions/mo-fmpcre.rst \
     source/rainerscript/functions/mo-ffaup.rst \
     source/rainerscript/functions/mo-hashXX.rst \
     source/rainerscript/functions/mo-hashXXmod.rst \
