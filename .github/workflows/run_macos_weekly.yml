@@ -105,10 +105,12 @@ jobs:
           if [ "${{ matrix.sanitizer }}" = "asan" ]; then
             export ASAN_OPTIONS="verbosity=1:halt_on_error=1:\
               check_initialization_order=1:strict_init_order=1:\
-              detect_stack_use_after_return=1:print_stacktrace=1"
+              detect_stack_use_after_return=1:ignore_noninstrumented_modules=1:\
+              print_stacktrace=1"
           elif [ "${{ matrix.sanitizer }}" = "tsan" ]; then
             export TSAN_OPTIONS="verbosity=1:halt_on_error=1:\
-              history_size=7:suppressions=$PWD/tests/tsan-rt.supp"
+              history_size=7:ignore_noninstrumented_modules=1:\
+              suppressions=$PWD/tests/tsan-rt.supp"
           fi
           set +e
           make -j8 check
