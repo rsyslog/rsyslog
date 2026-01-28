@@ -23,7 +23,9 @@ Some limited RainerScript support is available since rsyslog 3.12.0
 (for expression support). In v5, "if .. then" statements are supported.
 The first full implementation is available since rsyslog v6.
 Function support includes built-ins and module functions; see
-:doc:`functions/index` for the full list.
+:doc:`functions/index` for the full list. For quick access, review
+:doc:`functions/idx_built-in_functions` and
+:doc:`functions/idx_module_functions`.
 
 .. toctree::
    :maxdepth: 2
