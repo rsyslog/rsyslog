@@ -105,7 +105,7 @@ ENDtryResume
 BEGINdoAction
     CODESTARTdoAction;
     dbgprintf("\n");
-    if (execProg((uchar *)pWrkrData->pData->progName, 1, ppString[0]) == 0)
+    if (execProg((uchar *)pWrkrData->pData->progName, 1, (uchar *)ppString[0], NULL) == 0)
         LogError(0, NO_ERRCODE, "Executing program '%s' failed", (char *)pWrkrData->pData->progName);
 ENDdoAction
 
