@@ -162,12 +162,12 @@ jobs:
           # Configure sanitizer options based on which one we're using
           if [ "${{ matrix.sanitizer }}" = "asan" ]; then
             echo "Configuring AddressSanitizer options"
-            export ASAN_OPTIONS="verbosity=1:halt_on_error=1:\
+            export ASAN_OPTIONS=":halt_on_error=1:\
               check_initialization_order=1:strict_init_order=1:\
               detect_stack_use_after_return=1:print_stacktrace=1"
           elif [ "${{ matrix.sanitizer }}" = "tsan" ]; then
             echo "Configuring ThreadSanitizer options"
-            export TSAN_OPTIONS="verbosity=1:halt_on_error=1:\
+            export TSAN_OPTIONS=":halt_on_error=1:\
               history_size=7:suppressions=$PWD/tests/tsan-rt.supp"
           else
             echo "Running without sanitizers"
