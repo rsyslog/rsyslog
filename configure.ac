@@ -440,7 +440,7 @@ if test "$enable_fmhash_xxhash" = "yes"; then
 			HASH_XXHASH_LIBS="-lxxhash"
 			AC_SUBST(HASH_XXHASH_LIBS)],
 			[AC_MSG_ERROR([Unable to add XXHASH support for hash64.])])
-	])
+	], [AC_MSG_ERROR([libxxhash not found, but xxhash support was requested])])
 fi
 
 
