@@ -10,7 +10,7 @@ healthchecktimedelay
 
 .. summary-start
 
-Sets the number of seconds omhttp waits before doing another health check to the API.
+Sets the number of seconds omhttp waits before doing an other health check to the API.
 This parameter is used only if "checkpath" is set up.
 
 .. summary-end
@@ -22,7 +22,7 @@ This parameter applies to :doc:`../../configuration/modules/omhttp`.
 :Type: integer
 :Default: input=-1
 :Required?: no
-:Introduced: v8.2602.0
+:Introduced: Not specified
 
 Description
 -----------
