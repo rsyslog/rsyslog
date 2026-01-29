@@ -515,7 +515,8 @@ static rsRetVal qqueueAdviseMaxWorkers(qqueue_t *pThis) {
     ISOBJ_TYPE_assert(pThis, qqueue);
 
     if (!pThis->bEnqOnly) {
-        if (pThis->bIsDA && getLogicalQueueSize(pThis) >= pThis->iHighWtrMrk) {
+        if (pThis->bIsDA && (getLogicalQueueSize(pThis) >= pThis->iHighWtrMrk ||
+                             (pThis->pqDA != NULL && getLogicalQueueSize(pThis->pqDA) > 0))) {
             DBGOPRINT((obj_t *)pThis, "(re)activating DA worker\n");
             wtpAdviseMaxWorkers(pThis->pWtpDA, 1, DENY_WORKER_START_DURING_SHUTDOWN);
             /* disk queues have always one worker */
