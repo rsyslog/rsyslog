@@ -529,6 +529,7 @@ EXTRA_DIST = \
     source/reference/parameters/imkafka-consumergroup.rst \
     source/reference/parameters/imkafka-parsehostname.rst \
     source/reference/parameters/imkafka-ruleset.rst \
+    source/reference/parameters/imkafka-split-json-records.rst \
     source/reference/parameters/imkafka-topic.rst \
     source/reference/parameters/imklog-consoleloglevel.rst \
     source/reference/parameters/imklog-internalmsgfacility.rst \
