@@ -892,6 +892,7 @@ EXTRA_DIST = \
     source/reference/parameters/omfile-iobuffersize.rst \
     source/reference/parameters/omfile-rotation-sizelimit.rst \
     source/reference/parameters/omfile-rotation-sizelimitcommand.rst \
+    source/reference/parameters/omfile-rotation-sizelimitcommandpassfilename.rst \
     source/reference/parameters/omfile-sig-provider.rst \
     source/reference/parameters/omfile-sync.rst \
     source/reference/parameters/omfile-template.rst \

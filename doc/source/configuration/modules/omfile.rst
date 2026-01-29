@@ -76,6 +76,7 @@ learn about different configuration languages in use by rsyslog.
    ../../reference/parameters/omfile-iobuffersize
    ../../reference/parameters/omfile-rotation-sizelimit
    ../../reference/parameters/omfile-rotation-sizelimitcommand
+   ../../reference/parameters/omfile-rotation-sizelimitcommandpassfilename
    ../../reference/parameters/omfile-sig-provider
    ../../reference/parameters/omfile-sync
    ../../reference/parameters/omfile-template
@@ -237,6 +238,18 @@ selects whether a static or dynamic file (name) shall be written to.
      - .. include:: ../../reference/parameters/omfile-ziplevel.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-omfile-rotation-sizelimit`
+     - .. include:: ../../reference/parameters/omfile-rotation-sizelimit.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omfile-rotation-sizelimitcommand`
+     - .. include:: ../../reference/parameters/omfile-rotation-sizelimitcommand.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-omfile-rotation-sizelimitcommandpassfilename`
+     - .. include:: ../../reference/parameters/omfile-rotation-sizelimitcommandpassfilename.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-omfile-veryrobustzip`
      - .. include:: ../../reference/parameters/omfile-veryrobustzip.rst
         :start-after: .. summary-start
@@ -283,14 +296,6 @@ selects whether a static or dynamic file (name) shall be written to.
         :end-before: .. summary-end
    * - :ref:`param-omfile-cry-provider`
      - .. include:: ../../reference/parameters/omfile-cry-provider.rst
-        :start-after: .. summary-start
-        :end-before: .. summary-end
-   * - :ref:`param-omfile-rotation-sizelimit`
-     - .. include:: ../../reference/parameters/omfile-rotation-sizelimit.rst
-        :start-after: .. summary-start
-        :end-before: .. summary-end
-   * - :ref:`param-omfile-rotation-sizelimitcommand`
-     - .. include:: ../../reference/parameters/omfile-rotation-sizelimitcommand.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
 .. _omfile-statistic-counter:
@@ -395,5 +400,3 @@ The following command writes all syslog messages into a file.
 
    action(type="omfile" dirCreateMode="0700" FileCreateMode="0644"
           File="/var/log/messages")
-
-

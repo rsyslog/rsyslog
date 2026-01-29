@@ -191,6 +191,7 @@ typedef struct _instanceData {
     dynaFileCacheEntry **dynCache;
     off_t iSizeLimit; /**< file size limit, 0 = no limit */
     uchar *pszSizeLimitCmd; /**< command to carry out when size limit is reached */
+    sbool bSizeLimitCmdPassFileName; /**< pass current file name to size limit command? */
     int iZipLevel; /**< zip mode to use for this selector */
     int iIOBufSize; /**< size of associated io buffer */
     int iFlushInterval; /**< how fast flush buffer on inactivity? */
@@ -317,6 +318,7 @@ static struct cnfparamdescr actpdescr[] = {{"dynafilecachesize", eCmdHdlrInt, 0}
                                            {"closetimeout", eCmdHdlrPositiveInt, 0},
                                            {"rotation.sizelimit", eCmdHdlrSize, 0},
                                            {"rotation.sizelimitcommand", eCmdHdlrString, 0},
+                                           {"rotation.sizelimitcommandpassfilename", eCmdHdlrBinary, 0},
                                            {"template", eCmdHdlrGetWord, 0},
                                            {"addlf", eCmdHdlrBinary, 0}};
 static struct cnfparamblk actpblk = {CNFPARAMBLK_VERSION, sizeof(actpdescr) / sizeof(struct cnfparamdescr), actpdescr};
@@ -486,6 +488,8 @@ static rsRetVal cflineParseOutchannel(
     pData->fname = ustrdup(pOch->pszFileTemplate);
     pData->iSizeLimit = pOch->uSizeLimit;
     if (pOch->cmdOnSizeLimit != NULL) pData->pszSizeLimitCmd = ustrdup(pOch->cmdOnSizeLimit);
+    /* legacy outchannel: preserve historic behavior (no filename argument) */
+    pData->bSizeLimitCmdPassFileName = 0;
 
     iRet = cflineParseTemplateName(&p, pOMSR, iEntry, iTplOpts, getDfltTpl());
 
@@ -706,6 +710,7 @@ static rsRetVal prepareFile(instanceData *__restrict__ const pData, const uchar 
     CHKiRet(strm.SetbSync(pData->pStrm, pData->bSyncFile));
     CHKiRet(strm.SetsType(pData->pStrm, STREAMTYPE_FILE_SINGLE));
     CHKiRet(strm.SetiSizeLimit(pData->pStrm, pData->iSizeLimit));
+    CHKiRet(strm.SetbSizeLimitCmdPassFileName(pData->pStrm, pData->bSizeLimitCmdPassFileName));
     if (pData->useCryprov) {
         CHKiRet(strm.Setcryprov(pData->pStrm, &pData->cryprov));
         CHKiRet(strm.SetcryprovData(pData->pStrm, pData->cryprovData));
@@ -1275,6 +1280,7 @@ static void setInstParamDefaults(instanceData *__restrict__ const pData) {
     pData->iSizeLimit = 0;
     pData->isDevNull = 0;
     pData->pszSizeLimitCmd = NULL;
+    pData->bSizeLimitCmdPassFileName = 1;
 }
 
 /**
@@ -1519,6 +1525,8 @@ BEGINnewActInst
             pData->iSizeLimit = (int)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "rotation.sizelimitcommand")) {
             pData->pszSizeLimitCmd = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(actpblk.descr[i].name, "rotation.sizelimitcommandpassfilename")) {
+            pData->bSizeLimitCmdPassFileName = (int)pvals[i].val.d.n;
         } else {
             dbgprintf(
                 "omfile: program error, non-handled "

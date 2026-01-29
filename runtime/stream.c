@@ -174,7 +174,7 @@ static rsRetVal resolveFileSizeLimit(strm_t *pThis, uchar *pszCurrFName) {
      * handled, we should also revisit how this command is run (and
      * with which parameters).   rgerhards, 2007-07-20
      */
-    execProg(pCmd, 1, pParams);
+    execProg(pCmd, 1, pParams, pThis->bSizeLimitCmdPassFileName ? pszCurrFName : NULL);
 
     free(pCmd);
 
@@ -1143,6 +1143,7 @@ BEGINobjConstruct(strm) /* be sure to specify the object type also in END macro!
     pThis->tOpenMode = 0600;
     pThis->compressionDriver = STRM_COMPRESS_ZIP;
     pThis->pszSizeLimitCmd = NULL;
+    pThis->bSizeLimitCmdPassFileName = 1;
     pThis->prevLineSegment = NULL;
     pThis->prevMsgSegment = NULL;
     pThis->strtOffs = 0;
@@ -2002,7 +2003,8 @@ DEFpropSetMeth(strm, iMaxFileSize, int64) DEFpropSetMeth(strm, iFileNumDigits, i
                 DEFpropSetMeth(strm, bSync, int) DEFpropSetMeth(strm, bReopenOnTruncate, int)
                     DEFpropSetMeth(strm, sIOBufSize, size_t) DEFpropSetMeth(strm, iSizeLimit, off_t)
                         DEFpropSetMeth(strm, iFlushInterval, int) DEFpropSetMeth(strm, pszSizeLimitCmd, uchar *)
-                            DEFpropSetMeth(strm, cryprov, cryprov_if_t *) DEFpropSetMeth(strm, cryprovData, void *)
+                            DEFpropSetMeth(strm, bSizeLimitCmdPassFileName, int)
+                                DEFpropSetMeth(strm, cryprov, cryprov_if_t *) DEFpropSetMeth(strm, cryprovData, void *)
 
     /* sets timeout in seconds */
     void ATTR_NONNULL() strmSetReadTimeout(strm_t *const __restrict__ pThis, const int val) {
@@ -2390,6 +2392,7 @@ BEGINobjQueryInterface(strm)
     pIf->SetiSizeLimit = strmSetiSizeLimit;
     pIf->SetiFlushInterval = strmSetiFlushInterval;
     pIf->SetpszSizeLimitCmd = strmSetpszSizeLimitCmd;
+    pIf->SetbSizeLimitCmdPassFileName = strmSetbSizeLimitCmdPassFileName;
     pIf->Setcryprov = strmSetcryprov;
     pIf->SetcryprovData = strmSetcryprovData;
 finalize_it:

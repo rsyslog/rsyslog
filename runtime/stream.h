@@ -41,7 +41,7 @@
  * deflateInit2(zstrmptr, 6, Z_DEFLATED, 31, 9, Z_DEFAULT_STRATEGY);
  * --------------------------------------------------------------------------
  *
- * Copyright 2008-2018 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2026 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -167,6 +167,7 @@ struct strm_s {
         /* support for omfile size-limiting commands, special counters, NOT persisted! */
         off_t iSizeLimit; /* file size limit, 0 = no limit */
         uchar *pszSizeLimitCmd; /* command to carry out when size limit is reached */
+        sbool bSizeLimitCmdPassFileName; /* pass current file name as arg to size limit command? */
         sbool bIsTTY; /* is this a tty file? */
         cstr_t *prevLineSegment; /* for ReadLine, previous, unprocessed part of file */
         cstr_t *prevMsgSegment; /* for ReadMultiLine, previous, yet unprocessed part of msg */
@@ -217,6 +218,7 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
     INTERFACEpropSetMeth(strm, iSizeLimit, off_t);
     INTERFACEpropSetMeth(strm, iFlushInterval, int);
     INTERFACEpropSetMeth(strm, pszSizeLimitCmd, uchar *);
+    INTERFACEpropSetMeth(strm, bSizeLimitCmdPassFileName, int);
     /* v6 added */
     rsRetVal (*ReadLine)(strm_t *pThis, cstr_t **ppCStr, uint8_t mode, sbool bEscapeLF, const uchar *,
                          uint32_t trimLineOverBytes, int64 *const strtOffs);
@@ -228,12 +230,14 @@ BEGINinterface(strm) /* name must also be changed in ENDinterface macro! */
     INTERFACEpropSetMeth(strm, cryprov, cryprov_if_t *);
     INTERFACEpropSetMeth(strm, cryprovData, void *);
 ENDinterface(strm)
-#define strmCURR_IF_VERSION 15 /* increment whenever you change the interface structure! */
+#define strmCURR_IF_VERSION 16 /* increment whenever you change the interface structure! */
     /* V10, 2013-09-10: added new parameter bEscapeLF, changed mode to uint8_t (rgerhards) */
     /* V11, 2015-12-03: added new parameter bReopenOnTruncate */
     /* V12, 2015-12-11: added new parameter trimLineOverBytes, changed mode to uint32_t */
     /* V13, 2017-09-06: added new parameter strtoffs to ReadLine() */
     /* V14, 2019-11-13: added new parameter bEscapeLFString (rgerhards) */
+    /* V15, ?? - description missing */
+    /* V16, 2026-01-28: added new parameter bSizeLimitCmdPassFileName (rgerhards) */
 
 #define strmGetCurrFileNum(pStrm) ((pStrm)->iCurrFNum)
 
