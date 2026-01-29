@@ -2,6 +2,28 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-29: omfile: pass size-limit file to rotate cmd
+  Some rotation scripts need the target file name to act without
+  external logrotate and to retain existing args.
+  To support this, new action param rotation.sizeLimitCommandPassFileName
+  has been added.
+  closes https://github.com/rsyslog/rsyslog/issues/6435
+- 2026-01-29: configure: fix xxhash library check missing error action
+  When --enable-fmhash-xxhash is specified but libxxhash is not
+  found, configure should fail with a clear error message instead
+  of silently continuing and reporting success. This has now been fixed
+  and a proper error message is emitted.
+  closes https://github.com/rsyslog/rsyslog/issues/2816
+- 2026-01-29: queue: fix slow drain of disk-assisted queues
+  Disk-assisted queues were taking days to drain after recovery
+  because the DA worker only activated when the in-memory queue
+  reached the high watermark, creating a catch-22 when starting
+  with an empty memory queue but full disk queue.
+  Impact:
+  This fix enables proper recovery from backlogs and prevents data
+  loss from queues that cannot drain. Existing behavior for normal
+  operations is preserved.
+  closes https://github.com/rsyslog/rsyslog/issues/2646
 - 2026-01-27: imfile: add inode generation check for file rotation detection
   This commit adds a check for inode generation number in the imfile module.
   This addresses an issue where file rotation is not detected when a new file
