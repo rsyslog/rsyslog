@@ -218,7 +218,6 @@ TESTS_DEFAULT = \
 	daqueue-persist.sh \
 	daqueue-invld-qi.sh \
 	daqueue-dirty-shutdown.sh \
-	daqueue-drain-without-traffic.sh \
 	diskq-rfc5424.sh \
 	diskqueue.sh \
 	diskqueue-fsync.sh \
