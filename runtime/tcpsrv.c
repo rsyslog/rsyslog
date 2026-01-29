@@ -2353,6 +2353,7 @@ BEGINObjClassExit(tcpsrv, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MA
     objRelease(netstrms, DONT_LOAD_LIB);
     objRelease(netstrm, LM_NETSTRMS_FILENAME);
     objRelease(net, LM_NET_FILENAME);
+    objRelease(regexp, LM_REGEXP_FILENAME);
 ENDObjClassExit(tcpsrv)
 
 
