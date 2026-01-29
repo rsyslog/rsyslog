@@ -7,4 +7,5 @@ race:^imptcp_destruct_epd$
 race:doLogMsg
 race:setlocale
 race:doSIGTTIN
+race:libfaketime
 race:libmysqlclient
