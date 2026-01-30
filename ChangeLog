@@ -2,6 +2,10 @@
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-01-30: omfile: avoid rare close/open race
+  ... and prevent lock-order inversion when internal logging runs
+  during open failures.
+  Closes https://github.com/rsyslog/rsyslog/issues/3404
 - 2026-01-29: omfile: pass size-limit file to rotate cmd
   Some rotation scripts need the target file name to act without
   external logrotate and to retain existing args.
