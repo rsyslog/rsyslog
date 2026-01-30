@@ -239,11 +239,20 @@ finalize_it:
  * strm instance object.
  */
 
-/* do the physical open() call on a file.
+/**
+ * @brief Open the underlying file descriptor and initialize stream state.
+ *
+ * This performs the actual open(2), detects TTYs, and initializes the crypto
+ * provider if configured. In async mode, a mutex protects the open/init sequence
+ * from concurrent close/reopen operations.
  */
 static rsRetVal doPhysOpen(strm_t *pThis) {
     int iFlags = 0;
     struct stat statOpen;
+    const sbool bDoLock = (pThis->bAsyncWrite != 0);
+    sbool bNeedOpenErrLog = 0;
+    int openErrno = 0;
+    rsRetVal openErrcode = RS_RET_OK;
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, strm);
 
@@ -271,9 +280,9 @@ static rsRetVal doPhysOpen(strm_t *pThis) {
         iFlags |= O_NONBLOCK;
     }
 
-    if (pThis->bAsyncWrite) d_pthread_mutex_lock(&pThis->mut);
+    /* Keep lock held through open + init to avoid async close/open races. */
+    if (bDoLock) d_pthread_mutex_lock(&pThis->mut);
     pThis->fd = open((char *)pThis->pszCurrFName, iFlags | O_LARGEFILE, pThis->tOpenMode);
-    if (pThis->bAsyncWrite) d_pthread_mutex_unlock(&pThis->mut);
 
     const int errno_save = errno; /* dbgprintf can mangle it! */
     DBGPRINTF("file '%s' opened as #%d with mode %d\n", pThis->pszCurrFName, pThis->fd, (int)pThis->tOpenMode);
@@ -281,7 +290,12 @@ static rsRetVal doPhysOpen(strm_t *pThis) {
         const rsRetVal errcode = (errno_save == ENOENT) ? RS_RET_FILE_NOT_FOUND : RS_RET_FILE_OPEN_ERROR;
         if (pThis->fileNotFoundError) {
             if (pThis->noRepeatedErrorOutput == 0) {
-                LogError(errno_save, errcode, "file '%s': open error", pThis->pszCurrFName);
+                /* Defer LogError until after mutex unlock to avoid lock-order inversion
+                 * with internal message logging paths.
+                 */
+                bNeedOpenErrLog = 1;
+                openErrno = errno_save;
+                openErrcode = errcode;
                 pThis->noRepeatedErrorOutput = 1;
             }
         } else {
@@ -314,6 +328,10 @@ static rsRetVal doPhysOpen(strm_t *pThis) {
     }
 
 finalize_it:
+    if (bDoLock) d_pthread_mutex_unlock(&pThis->mut);
+    if (bNeedOpenErrLog) {
+        LogError(openErrno, openErrcode, "file '%s': open error", pThis->pszCurrFName);
+    }
     RETiRet;
 }
 
