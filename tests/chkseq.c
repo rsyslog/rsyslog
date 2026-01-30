@@ -48,9 +48,6 @@
 #endif
 
 #define EDBUF_SIZE (500 * 1024)
-#define EDBUF_SCAN_WIDTH (EDBUF_SIZE - 1)
-#define SCN_WIDTH_STR(x) #x
-#define SCN_WIDTH(x) SCN_WIDTH_STR(x)
 
 int main(int argc, char *argv[]) {
     FILE *fp;
@@ -71,7 +68,10 @@ int main(int argc, char *argv[]) {
     int edLen; /* length of extra data */
     static char edBuf[EDBUF_SIZE]; /* buffer for extra data (pretty large to be on the save side...) */
     static char ioBuf[sizeof(edBuf) + 1024];
+    char extraFmt[64];
     char *file = NULL;
+
+    snprintf(extraFmt, sizeof(extraFmt), "%%d,%%d,%%%zus\n", sizeof(edBuf) - 1);
 
     while ((opt = getopt(argc, argv, "i:e:f:ds:vm:ET")) != EOF) {
         switch ((char)opt) {
@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
             if (fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
                 scanfOK = 0;
             } else {
-                scanfOK = sscanf(ioBuf, "%d,%d,%" SCN_WIDTH(EDBUF_SCAN_WIDTH) "s\n", &val, &edLen, edBuf) == 3;
+                scanfOK = sscanf(ioBuf, extraFmt, &val, &edLen, edBuf) == 3;
             }
             if (scanfOK && edLen != (int)strlen(edBuf)) {
                 if (bAnticipateTruncation == 1) {
@@ -204,7 +204,7 @@ int main(int argc, char *argv[]) {
                     if (fgets(ioBuf, sizeof(ioBuf), fp) == NULL) {
                         scanfOK = 0;
                     } else {
-                        scanfOK = sscanf(ioBuf, "%d,%d,%" SCN_WIDTH(EDBUF_SCAN_WIDTH) "s\n", &val, &edLen, edBuf) == 3;
+                        scanfOK = sscanf(ioBuf, extraFmt, &val, &edLen, edBuf) == 3;
                     }
                     if (scanfOK && edLen != (int)strlen(edBuf)) {
                         if (bAnticipateTruncation == 1) {
