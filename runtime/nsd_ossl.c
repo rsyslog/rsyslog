@@ -519,6 +519,17 @@ static rsRetVal osslEndSess(nsd_ossl_t *pThis) {
     }
     RETiRet;
 }
+
+static void osslAbortSess(nsd_ossl_t *pThis) {
+    if (pThis->pNetOssl->ssl != NULL) {
+        SSL_free(pThis->pNetOssl->ssl);
+        pThis->pNetOssl->ssl = NULL;
+    }
+    pThis->bHaveSess = 0;
+    pThis->bAbortConn = 1;
+    pThis->iMode = 0;
+    pThis->rtryCall = osslRtry_None;
+}
 /* ---------------------------- end OpenSSL specifics ---------------------------- */
 
 
@@ -950,6 +961,7 @@ rsRetVal osslHandshakeCheck(nsd_ossl_t *pNsd) {
                            "nsd_ossl:TLS session terminated with remote client '%s:%s': "
                            "Handshake failed with SSL_ERROR_SYSCALL",
                            fromHostIP, remotePortStr);
+                    osslAbortSess(pNsd);
                     ABORT_FINALIZE(RS_RET_NO_ERRCODE);
                 } else {
                     nsd_ossl_lastOpenSSLErrorMsg(pNsd, res, pNsd->pNetOssl->ssl, LOG_ERR, "osslHandshakeCheck Server",
@@ -958,6 +970,7 @@ rsRetVal osslHandshakeCheck(nsd_ossl_t *pNsd) {
                            "nsd_ossl:TLS session terminated with remote client '%s:%s': "
                            "Handshake failed with error code: %d",
                            fromHostIP, remotePortStr, resErr);
+                    osslAbortSess(pNsd);
                     ABORT_FINALIZE(RS_RET_NO_ERRCODE);
                 }
             }
@@ -981,6 +994,7 @@ rsRetVal osslHandshakeCheck(nsd_ossl_t *pNsd) {
                     "- Aborting handshake.\n");
                 nsd_ossl_lastOpenSSLErrorMsg(pNsd, res, pNsd->pNetOssl->ssl, LOG_WARNING, "osslHandshakeCheck Client",
                                              "SSL_do_handshake");
+                osslAbortSess(pNsd);
                 ABORT_FINALIZE(RS_RET_NO_ERRCODE /*RS_RET_RETRY*/);
             } else {
                 dbgprintf(
@@ -995,6 +1009,7 @@ rsRetVal osslHandshakeCheck(nsd_ossl_t *pNsd) {
                        "nsd_ossl:TLS session terminated with remote syslog server '%s:%s':"
                        "Handshake failed with error code: %d",
                        fromHostIP, remotePortStr, resErr);
+                osslAbortSess(pNsd);
                 ABORT_FINALIZE(RS_RET_NO_ERRCODE);
             }
         }
