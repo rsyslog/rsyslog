@@ -29,6 +29,7 @@
 
 #include "stringbuf.h"
 #include "syslogd-types.h"
+#include "atomic.h"
 
 /* property types for obj[De]Serialize() */
 typedef enum {
