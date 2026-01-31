@@ -285,7 +285,9 @@ static struct cnfparamdescr inppdescr[] = {{"port", eCmdHdlrString, CNFPARAM_REQ
                                            {"framingfix.cisco.asa", eCmdHdlrBinary, 0},
                                            {"ratelimit.burst", eCmdHdlrInt, 0},
                                            {"socketbacklog", eCmdHdlrNonNegInt, 0},
-                                           {"networknamespace", eCmdHdlrString, 0}};
+                                           {"networknamespace", eCmdHdlrString, 0},
+                                           {"multiline", eCmdHdlrBinary, 0},
+                                           {"framing.delimiter.regex", eCmdHdlrString, 0}};
 static struct cnfparamblk inppblk = {CNFPARAMBLK_VERSION, sizeof(inppdescr) / sizeof(struct cnfparamdescr), inppdescr};
 
 #include "im-helper.h" /* must be included AFTER the type definitions! */
@@ -403,6 +405,8 @@ static rsRetVal createInstance(instanceConf_t **pinst) {
     inst->starvationMaxReads = loadModConf->starvationMaxReads;
 
     inst->cnf_params->pszLstnPortFileName = NULL;
+    inst->cnf_params->bMultiLine = 0;
+    inst->cnf_params->pszStartRegex = NULL;
 
     /* node created, let's add to config */
     if (loadModConf->tail == NULL) {
@@ -710,6 +714,10 @@ BEGINnewInpInst
             inst->iSynBacklog = (int)pvals[i].val.d.n;
         } else if (!strcmp(inppblk.descr[i].name, "listenportfilename")) {
             inst->cnf_params->pszLstnPortFileName = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(inppblk.descr[i].name, "multiline")) {
+            inst->cnf_params->bMultiLine = (int)pvals[i].val.d.n;
+        } else if (!strcmp(inppblk.descr[i].name, "framing.delimiter.regex")) {
+            inst->cnf_params->pszStartRegex = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
         } else {
             dbgprintf(
                 "imtcp: program error, non-handled "

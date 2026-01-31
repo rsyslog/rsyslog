@@ -96,6 +96,7 @@ DEFobjCurrIf(netstrms);
 DEFobjCurrIf(netstrm);
 DEFobjCurrIf(prop);
 DEFobjCurrIf(statsobj);
+DEFobjCurrIf(regexp);
 
 #define NSPOLL_MAX_EVENTS_PER_WAIT 128
 
@@ -370,6 +371,23 @@ static rsRetVal ATTR_NONNULL() addNewLstnPort(tcpsrv_t *const pThis, tcpLstnPara
     pEntry->cnf_params->bPreserveCase = pThis->bPreserveCase;
     pEntry->pSrv = pThis;
 
+#ifdef FEATURE_REGEXP
+    if (cnf_params->pszStartRegex != NULL) {
+        const int errcode = regexp.regcomp(&pEntry->start_preg, (char *)cnf_params->pszStartRegex, REG_EXTENDED);
+        if (errcode != 0) {
+            char errbuff[512];
+            regexp.regerror(errcode, &pEntry->start_preg, errbuff, sizeof(errbuff));
+            LogError(0, RS_RET_ERR, "imtcp: error in framing.delimiter.regex expansion: %s", errbuff);
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        pEntry->bHasStartRegex = 1;
+    }
+#else
+    if (cnf_params->pszStartRegex != NULL) {
+        LogError(0, RS_RET_ERR, "imtcp: framing.delimiter.regex set, but regexp support not available");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+#endif
 
     /* support statistics gathering */
     CHKiRet(ratelimitNew(&pEntry->ratelimiter, "tcperver", NULL));
@@ -402,6 +420,11 @@ finalize_it:
             if (pEntry->stats != NULL) {
                 statsobj.Destruct(&pEntry->stats);
             }
+#ifdef FEATURE_REGEXP
+            if (pEntry->bHasStartRegex) {
+                regexp.regfree(&pEntry->start_preg);
+            }
+#endif
             free(pEntry);
         }
     }
@@ -531,12 +554,18 @@ static void ATTR_NONNULL() deinit_tcp_listener(tcpsrv_t *const pThis) {
     /* free list of tcp listen ports */
     pEntry = pThis->pLstnPorts;
     while (pEntry != NULL) {
+#ifdef FEATURE_REGEXP
+        if (pEntry->bHasStartRegex) {
+            regexp.regfree(&pEntry->start_preg);
+        }
+#endif
         prop.Destruct(&pEntry->cnf_params->pInputName);
         free((void *)pEntry->cnf_params->pszInputName);
         free((void *)pEntry->cnf_params->pszPort);
         free((void *)pEntry->cnf_params->pszAddr);
         free((void *)pEntry->cnf_params->pszLstnPortFileName);
         free((void *)pEntry->cnf_params->pszNetworkNamespace);
+        free((void *)pEntry->cnf_params->pszStartRegex);
         free((void *)pEntry->cnf_params);
         ratelimitDestruct(pEntry->ratelimiter);
         statsobj.Destruct(&(pEntry->stats));
@@ -2324,6 +2353,7 @@ BEGINObjClassExit(tcpsrv, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END MA
     objRelease(netstrms, DONT_LOAD_LIB);
     objRelease(netstrm, LM_NETSTRMS_FILENAME);
     objRelease(net, LM_NET_FILENAME);
+    objRelease(regexp, LM_REGEXP_FILENAME);
 ENDObjClassExit(tcpsrv)
 
 
@@ -2342,6 +2372,7 @@ BEGINObjClassInit(tcpsrv, 1, OBJ_IS_LOADABLE_MODULE) /* class, version - CHANGE 
     CHKiRet(objUse(ruleset, CORE_COMPONENT));
     CHKiRet(objUse(statsobj, CORE_COMPONENT));
     CHKiRet(objUse(prop, CORE_COMPONENT));
+    CHKiRet(objUse(regexp, LM_REGEXP_FILENAME));
 
     /* set our own handlers */
     OBJSetMethodHandler(objMethod_DEBUGPRINT, tcpsrvDebugPrint);
