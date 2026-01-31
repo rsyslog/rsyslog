@@ -557,6 +557,19 @@ EXTRA_DIST = \
     source/reference/parameters/impstats-log-file-overwrite.rst \
     source/reference/parameters/impstats-log-file.rst \
     source/reference/parameters/impstats-log-syslog.rst \
+    source/reference/parameters/impstats-push-batch-maxbytes.rst \
+    source/reference/parameters/impstats-push-batch-maxseries.rst \
+    source/reference/parameters/impstats-push-label-instance.rst \
+    source/reference/parameters/impstats-push-label-job.rst \
+    source/reference/parameters/impstats-push-label-name.rst \
+    source/reference/parameters/impstats-push-label-origin.rst \
+    source/reference/parameters/impstats-push-labels.rst \
+    source/reference/parameters/impstats-push-timeout-ms.rst \
+    source/reference/parameters/impstats-push-tls-cafile.rst \
+    source/reference/parameters/impstats-push-tls-certfile.rst \
+    source/reference/parameters/impstats-push-tls-insecureskipverify.rst \
+    source/reference/parameters/impstats-push-tls-keyfile.rst \
+    source/reference/parameters/impstats-push-url.rst \
     source/reference/parameters/impstats-resetcounters.rst \
     source/reference/parameters/impstats-ruleset.rst \
     source/reference/parameters/impstats-severity.rst \

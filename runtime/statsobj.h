@@ -89,6 +89,37 @@ typedef enum statsFmtType_e {
 #define STATSOBJ_FLAG_NONE 0
 #define STATSOBJ_FLAG_DO_PREPEND 1
 
+/**
+ * Callback type for native counter iteration via GetAllCounters().
+ *
+ * @param ctx       User context pointer passed to GetAllCounters()
+ * @param obj_name  Name of the statsobj instance (may be NULL/empty)
+ * @param obj_origin Origin of the statsobj (e.g., "resource-usage", "core.queue")
+ * @param ctr_name  Name of the counter
+ * @param ctr_type  Type of counter (ctrType_IntCtr or ctrType_Int)
+ * @param value     Current counter value (read atomically for IntCtr, best-effort for Int)
+ * @param flags     Counter flags (CTR_FLAG_RESETTABLE, etc.)
+ * @return RS_RET_OK to continue iteration, error code to abort
+ *
+ * THREAD SAFETY:
+ * - ctrType_IntCtr: value is read atomically (uint64 on aligned address)
+ * - ctrType_Int: value is read without application lock; may be stale but acceptable
+ *   for monitoring. These counters are typically gauges (queue size, open files)
+ *   protected by application-level mutexes that the stats system cannot acquire.
+ *
+ * LOCKING CONSTRAINT:
+ * - The counter list mutex is HELD during callback invocation to prevent concurrent
+ *   list modification. Callbacks MUST complete quickly and MUST NOT call back into
+ *   statsobj or deadlock will occur.
+ */
+typedef rsRetVal (*statsobj_counter_cb_t)(void *ctx,
+                                          const uchar *obj_name,
+                                          const uchar *obj_origin,
+                                          const uchar *ctr_name,
+                                          statsCtrType_t ctr_type,
+                                          uint64_t value,
+                                          int8_t flags);
+
 /* helper entity, the counter */
 typedef struct ctr_s {
     uchar *name;
@@ -139,6 +170,7 @@ BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
     void (*SetStatsObjFlags)(statsobj_t *pThis, int flags);
     rsRetVal (*GetAllStatsLines)(rsRetVal (*cb)(void *, const char *), void *usrptr, statsFmtType_t fmt,
                                  int8_t bResetCtr);
+    rsRetVal (*GetAllCounters)(statsobj_counter_cb_t cb, void *ctx);
     rsRetVal (*AddCounter)(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags, void *pCtr);
     rsRetVal (*AddManagedCounter)(statsobj_t *pThis, const uchar *ctrName, statsCtrType_t ctrType, int8_t flags,
                                   void *pCtr, ctr_t **ref, int8_t linked);
@@ -148,13 +180,14 @@ BEGINinterface(statsobj) /* name must also be changed in ENDinterface macro! */
     ctr_t *(*UnlinkAllCounters)(statsobj_t *pThis);
     rsRetVal (*EnableStats)(void);
 ENDinterface(statsobj)
-#define statsobjCURR_IF_VERSION 13 /* increment whenever you change the interface structure! */
+#define statsobjCURR_IF_VERSION 14 /* increment whenever you change the interface structure! */
 /* Changes
  * v2-v9 rserved for future use in "older" version branches
  * v10, 2012-04-01: GetAllStatsLines got fmt parameter
  * v11, 2013-09-07: - add "flags" to AddCounter API
  *                  - GetAllStatsLines got parameter telling if ctrs shall be reset
  * v13, 2016-05-19: GetAllStatsLines cb data type changed (char* instead of cstr)
+ * v14, 2026-02-01: Add GetAllCounters() native counter iteration API
  */
 
 
