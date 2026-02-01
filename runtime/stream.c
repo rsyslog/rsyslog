@@ -1935,7 +1935,7 @@ static rsRetVal strmWriteLong(strm_t *__restrict__ const pThis, const long i) {
 
     assert(pThis != NULL);
 
-    CHKiRet(srUtilItoA((char *)szBuf, sizeof(szBuf), i));
+    CHKiRet(srUtilItoA((char *)szBuf, sizeof(szBuf), (number_t)i));
     CHKiRet(strmWrite(pThis, szBuf, strlen((char *)szBuf)));
 
 finalize_it:
