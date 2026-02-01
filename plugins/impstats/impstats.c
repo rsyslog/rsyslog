@@ -53,6 +53,10 @@
 #include "parserif.h"
 #include <libfastjson/json.h> /* libfastjson for robust JSON parsing in Zabbix collector */
 
+#ifdef ENABLE_IMPSTATS_PUSH
+    #include "impstats_push.h"
+#endif
+
 MODULE_TYPE_INPUT
 MODULE_TYPE_NOKEEP
 MODULE_CNFNAME("impstats")
@@ -93,6 +97,10 @@ struct modConfData_s {
     char *logfile;
     sbool configSetViaV2Method;
     uchar *pszBindRuleset; /* name of ruleset to bind to */
+#ifdef ENABLE_IMPSTATS_PUSH
+    sbool bPushEnabled;
+    impstats_push_config_t pushConfig;
+#endif
 };
 
 static modConfData_t *loadModConf = NULL; /* modConf ptr to use for the current load process */
@@ -103,11 +111,16 @@ static prop_t *pInputName = NULL;
 
 /* module-global parameters */
 static struct cnfparamdescr modpdescr[] = {
-    {"interval", eCmdHdlrInt, 0},      {"facility", eCmdHdlrInt, 0},
-    {"severity", eCmdHdlrInt, 0},      {"bracketing", eCmdHdlrBinary, 0},
-    {"log.syslog", eCmdHdlrBinary, 0}, {"resetcounters", eCmdHdlrBinary, 0},
-    {"log.file", eCmdHdlrGetWord, 0},  {"format", eCmdHdlrGetWord, 0},
-    {"ruleset", eCmdHdlrString, 0},    {"log.file.overwrite", eCmdHdlrBinary, 0}};
+    {"interval", eCmdHdlrInt, 0},        {"facility", eCmdHdlrInt, 0},
+    {"severity", eCmdHdlrInt, 0},        {"bracketing", eCmdHdlrBinary, 0},
+    {"log.syslog", eCmdHdlrBinary, 0},   {"resetcounters", eCmdHdlrBinary, 0},
+    {"log.file", eCmdHdlrGetWord, 0},    {"format", eCmdHdlrGetWord, 0},
+    {"ruleset", eCmdHdlrString, 0},      {"log.file.overwrite", eCmdHdlrBinary, 0},
+#ifdef ENABLE_IMPSTATS_PUSH
+    {"push.url", eCmdHdlrGetWord, 0},    {"push.labels", eCmdHdlrArray, 0},
+    {"push.timeout.ms", eCmdHdlrInt, 0},
+#endif
+};
 
 static struct cnfparamblk modpblk = {CNFPARAMBLK_VERSION, sizeof(modpdescr) / sizeof(struct cnfparamdescr), modpdescr};
 
@@ -289,6 +302,20 @@ static void generateStatsMsgs(void) {
     st_ru_nvcsw = ru.ru_nvcsw;
     st_ru_nivcsw = ru.ru_nivcsw;
 
+#ifdef ENABLE_IMPSTATS_PUSH
+    /* Push metrics to remote endpoint if configured */
+    DBGPRINTF("impstats: bPushEnabled=%d\n", runModConf->bPushEnabled);
+    if (runModConf->bPushEnabled) {
+        DBGPRINTF("impstats: calling impstats_push_send\n");
+        rsRetVal iPushRet = impstats_push_send(&runModConf->pushConfig, &statsobj);
+        if (iPushRet != RS_RET_OK) {
+            LogError(0, iPushRet, "impstats: push to remote endpoint failed (will retry next interval)");
+        } else {
+            DBGPRINTF("impstats: push successful\n");
+        }
+    }
+#endif
+
     if (runModConf->statsFmt == statsFmt_Zabbix) { /* statsFmt_Zabbix sentinel */
 #ifdef DEBUG_ZABBIX
         DBGPRINTF("impstats: statsFmt=%d (Zabbix sentinel=1001) -> entering generateZabbixStats()\n",
@@ -318,6 +345,11 @@ BEGINbeginCnfLoad
     loadModConf->bBracketing = 0;
     loadModConf->bResetCtrs = 0;
     loadModConf->bLogOverwrite = 0;
+#ifdef ENABLE_IMPSTATS_PUSH
+    loadModConf->bPushEnabled = 0;
+    memset(&loadModConf->pushConfig, 0, sizeof(loadModConf->pushConfig));
+    loadModConf->pushConfig.timeoutMs = 5000; /* default 5 seconds */
+#endif
     bLegacyCnfModGlobalsPermitted = 1;
     /* init legacy config vars */
     initConfigSettings();
@@ -354,10 +386,18 @@ BEGINsetModCnf
             loadModConf->bResetCtrs = (sbool)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "log.file")) {
             loadModConf->logfile = es_str2cstr(pvals[i].val.d.estr, NULL);
+            if (loadModConf->logfile == NULL) {
+                LogError(0, RS_RET_OUT_OF_MEMORY, "impstats: failed to convert log.file parameter");
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            }
         } else if (!strcmp(modpblk.descr[i].name, "log.file.overwrite")) {
             loadModConf->bLogOverwrite = (sbool)pvals[i].val.d.n;
         } else if (!strcmp(modpblk.descr[i].name, "format")) {
             mode = es_str2cstr(pvals[i].val.d.estr, NULL);
+            if (mode == NULL) {
+                LogError(0, RS_RET_OUT_OF_MEMORY, "impstats: failed to convert format parameter");
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            }
             if (!strcasecmp(mode, "json")) {
                 loadModConf->statsFmt = statsFmt_JSON;
             } else if (!strcasecmp(mode, "json-elasticsearch")) {
@@ -376,6 +416,46 @@ BEGINsetModCnf
             free(mode);
         } else if (!strcmp(modpblk.descr[i].name, "ruleset")) {
             loadModConf->pszBindRuleset = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            if (loadModConf->pszBindRuleset == NULL) {
+                LogError(0, RS_RET_OUT_OF_MEMORY, "impstats: failed to convert ruleset parameter");
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            }
+#ifdef ENABLE_IMPSTATS_PUSH
+        } else if (!strcmp(modpblk.descr[i].name, "push.url")) {
+            loadModConf->pushConfig.url = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+            if (loadModConf->pushConfig.url == NULL) {
+                LogError(0, RS_RET_OUT_OF_MEMORY, "impstats: failed to convert push.url parameter");
+                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+            }
+            loadModConf->bPushEnabled = 1;
+        } else if (!strcmp(modpblk.descr[i].name, "push.labels")) {
+            /* Array of label strings */
+            struct cnfarray *arr = pvals[i].val.d.ar;
+            loadModConf->pushConfig.nLabels = arr->nmemb;
+            if (arr->nmemb == 0) {
+                /* Empty labels array is valid */
+                loadModConf->pushConfig.labels = NULL;
+            } else {
+                CHKmalloc(loadModConf->pushConfig.labels = (uchar **)calloc(arr->nmemb, sizeof(uchar *)));
+                int j;
+                for (j = 0; j < arr->nmemb; j++) {
+                    loadModConf->pushConfig.labels[j] = (uchar *)es_str2cstr(arr->arr[j], NULL);
+                    if (loadModConf->pushConfig.labels[j] == NULL) {
+                        LogError(0, RS_RET_OUT_OF_MEMORY, "impstats: failed to convert push label");
+                        /* Free previously allocated labels */
+                        for (int k = 0; k < j; k++) {
+                            free(loadModConf->pushConfig.labels[k]);
+                        }
+                        free(loadModConf->pushConfig.labels);
+                        loadModConf->pushConfig.labels = NULL;
+                        loadModConf->pushConfig.nLabels = 0;
+                        ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+                    }
+                }
+            }
+        } else if (!strcmp(modpblk.descr[i].name, "push.timeout.ms")) {
+            loadModConf->pushConfig.timeoutMs = (long)pvals[i].val.d.n;
+#endif
         } else {
             DBGPRINTF("impstats: program error, non-handled param '%s' in beginCnfLoad\n", modpblk.descr[i].name);
         }
@@ -479,6 +559,10 @@ BEGINactivateCnf
     DBGPRINTF("impstats: stats interval %d seconds, reset %d, logToSyslog %d, logFile %s\n", runModConf->iStatsInterval,
               runModConf->bResetCtrs, runModConf->bLogToSyslog,
               runModConf->logfile == NULL ? "deactivated" : (char *)runModConf->logfile);
+#ifdef ENABLE_IMPSTATS_PUSH
+    DBGPRINTF("impstats: activateCnf bPushEnabled=%d, url=%s\n", runModConf->bPushEnabled,
+              runModConf->pushConfig.url ? (char *)runModConf->pushConfig.url : "NULL");
+#endif
 
     localRet = statsobj.EnableStats();
     if (localRet != RS_RET_OK) {
@@ -526,10 +610,30 @@ BEGINfreeCnf
     if (runModConf->logfd != -1) close(runModConf->logfd);
     free(runModConf->logfile);
     free(runModConf->pszBindRuleset);
+#ifdef ENABLE_IMPSTATS_PUSH
+    /* Cleanup push configuration */
+    free(runModConf->pushConfig.url);
+    if (runModConf->pushConfig.labels) {
+        size_t i;
+        for (i = 0; i < runModConf->pushConfig.nLabels; i++) {
+            free(runModConf->pushConfig.labels[i]);
+        }
+        free(runModConf->pushConfig.labels);
+    }
+#endif
 ENDfreeCnf
 
 BEGINrunInput
     CODESTARTrunInput;
+#ifdef ENABLE_IMPSTATS_PUSH
+    if (runModConf->bPushEnabled) {
+        rsRetVal iPushRet = impstats_push_init();
+        if (iPushRet != RS_RET_OK) {
+            LogError(0, iPushRet, "impstats: failed to initialize push support, disabling");
+            runModConf->bPushEnabled = 0;
+        }
+    }
+#endif
     /* this is an endless loop - it is terminated when the thread is
      * signalled to do so. This, however, is handled by the framework,
      * right into the sleep below. Note that we DELIBERATLY output
@@ -539,6 +643,9 @@ BEGINrunInput
     while (glbl.GetGlobalInputTermState() == 0) {
         srSleep(runModConf->iStatsInterval, 0); /* seconds, micro seconds */
         DBGPRINTF("impstats: woke up, generating messages\n");
+#ifdef ENABLE_IMPSTATS_PUSH
+        DBGPRINTF("impstats: about to check bPushEnabled=%d\n", runModConf->bPushEnabled);
+#endif
 
         char *tmp_logfile = NULL;
         if (runModConf->bLogOverwrite && runModConf->logfile != NULL) {
@@ -583,6 +690,11 @@ ENDwillRun
 
 BEGINafterRun
     CODESTARTafterRun;
+#ifdef ENABLE_IMPSTATS_PUSH
+    if (runModConf->bPushEnabled) {
+        impstats_push_cleanup();
+    }
+#endif
 ENDafterRun
 
 BEGINqueryEtryPt
@@ -851,8 +963,10 @@ static void generateZabbixStats(void) {
 
     /* Emit */
     char *out = es_str2cstr(finalJson, NULL);
-    submitLine(out, strlen(out));
-    free(out);
+    if (out != NULL) {
+        submitLine(out, strlen(out));
+        free(out);
+    }
 
     /* Cleanup */
     for (size_t i = 0; i < ctx.len; ++i) {

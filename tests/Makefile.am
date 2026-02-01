@@ -1016,6 +1016,10 @@ TESTS_IMPSTATS = \
 	omfwd_impstats-udp.sh \
 	omfwd_impstats-tcp.sh
 
+if ENABLE_IMPSTATS_PUSH
+TESTS_IMPSTATS += impstats-push-basic.sh
+endif
+
 TESTS_IMPSTATS_VALGRIND = \
 	perctile-simple-vg.sh \
 	dynstats-vg.sh \

@@ -106,3 +106,5 @@ tools/rscryutil.1
 *.gcno
 coverage*
 _codeql_detected_source_root
+plugins/impstats/remote.pb-c.c
+plugins/impstats/remote.pb-c.h

@@ -666,6 +666,11 @@ static void printVersion(void) {
 #else
     printf("\tsystemd support:\t\t\tNo\n");
 #endif
+#ifdef ENABLE_IMPSTATS_PUSH
+    printf("\tFEATURE_IMPSTATS_PUSH:\t\t\tYes\n");
+#else
+    printf("\tFEATURE_IMPSTATS_PUSH:\t\t\tNo\n");
+#endif
     /* we keep the following message to so that users don't need
      * to wonder.
      */
