@@ -101,6 +101,13 @@ static unsigned int hash_from_key_fn(void *k) {
         hashval = (unsigned)(hashval * (unsigned long long)33) + *rkey++;
     }
 
+    if (((struct sockaddr *)k)->sa_family == AF_INET6) {
+        const uint32_t scope_id = ((struct sockaddr_in6 *)k)->sin6_scope_id;
+        for (size_t i = 0; i < sizeof(scope_id); ++i) {
+            hashval = (unsigned)(hashval * (unsigned long long)33) + ((scope_id >> (i * 8)) & 0xff);
+        }
+    }
+
     return hashval;
 }
 
@@ -118,7 +125,8 @@ static int key_equals_fn(void *key1, void *key2) {
             break;
         case AF_INET6:
             RetVal = !memcmp(&((struct sockaddr_in6 *)key1)->sin6_addr, &((struct sockaddr_in6 *)key2)->sin6_addr,
-                             sizeof(struct in6_addr));
+                             sizeof(struct in6_addr)) &&
+                     ((struct sockaddr_in6 *)key1)->sin6_scope_id == ((struct sockaddr_in6 *)key2)->sin6_scope_id;
             break;
         default:
             // No action needed for other cases
