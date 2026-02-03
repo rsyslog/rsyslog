@@ -66,6 +66,13 @@ typedef enum {
     QUEUETYPE_DIRECT = 3 /* no queuing happens, consumer is directly called */
 } queueType_t;
 
+/* queue recovery modes */
+typedef enum {
+    QUEUE_ON_CORRUPTION_SAFE_MODE = 0,
+    QUEUE_ON_CORRUPTION_IN_MEMORY = 1,
+    QUEUE_ON_CORRUPTION_IGNORE = 2
+} queueOnCorruption_t;
+
 /* list member definition for linked list types of queues: */
 typedef struct qLinkedList_S {
     struct qLinkedList_S *pNext;
@@ -110,6 +117,7 @@ struct queue_s {
         int iLightDlyMrk; /* if the queue is above this mark, LIGHT_DELAYable message are put on hold */
         int iDiscardSeverity; /* messages of this severity above are discarded on too-full queue */
         sbool bNeedDelQIF; /* does the QIF file need to be deleted when queue becomes empty? */
+        queueOnCorruption_t onCorruption; /* what to do on queue corruption */
         int toQShutdown; /* timeout for regular queue shutdown in ms */
         int toActShutdown; /* timeout for long-running action shutdown in ms */
         int toWrkShutdown; /* timeout for idle workers in ms, -1 means indefinite (0 is immediate) */

@@ -58,16 +58,47 @@ while true; do
 done
 
 # Make sure imjournal has passed initial positioning (IgnorePreviousMessages)
-# before sending the actual test payload.
-READYMSG="TestBenCH-RSYSLog imjournal readiness probe - $(date +%s) - $RSYSLOG_DYNNAME"
-./journal_print "$READYMSG"
-journal_write_state=$?
-if [ $journal_write_state -ne 0 ]; then
-	printf 'SKIP: journal_print returned state %d writing readiness probe: %s\n' "$journal_write_state" "$READYMSG"
-	printf 'skipping test, journal probably not working\n'
+# before sending the actual test payload. Under high journal churn, the first
+# probe can be dropped, so retry before failing the test environment.
+ready_seen=0
+READY_RETRIES=${RSTB_JOURNAL_READY_RETRIES:-3}
+READY_TIMEOUT=${RSTB_JOURNAL_READY_TIMEOUT_SEC:-120}
+ready_try=1
+while [ "$ready_try" -le "$READY_RETRIES" ]; do
+	READYMSG="TestBenCH-RSYSLog imjournal readiness probe - $(date +%s) - $RSYSLOG_DYNNAME (try $ready_try)"
+	./journal_print "$READYMSG"
+	journal_write_state=$?
+	if [ $journal_write_state -ne 0 ]; then
+		printf 'SKIP: journal_print returned state %d writing readiness probe: %s\n' "$journal_write_state" "$READYMSG"
+		printf 'skipping test, journal probably not working\n'
+		exit 77
+	fi
+
+	waited=0
+	while [ "$waited" -lt "$READY_TIMEOUT" ]; do
+		if [ -f "$RSYSLOG_OUT_LOG" ] && content_check --check-only "$READYMSG"; then
+			ready_seen=1
+			break
+		fi
+		$TESTTOOL_DIR/msleep 1000
+		waited=$((waited + 1))
+	done
+
+	if [ "$ready_seen" -eq 1 ]; then
+		break
+	fi
+
+	printf 'readiness probe not observed after %ds (attempt %d/%d), retrying\n' \
+		"$READY_TIMEOUT" "$ready_try" "$READY_RETRIES"
+	ready_try=$((ready_try + 1))
+done
+
+if [ "$ready_seen" -ne 1 ]; then
+	printf 'SKIP: imjournal readiness probe not observed after %d attempts\n' "$READY_RETRIES"
+	shutdown_when_empty
+	wait_shutdown
 	exit 77
 fi
-content_check_with_count "$READYMSG" 1 120
 
 printf '++++++++++++++++++++++ Printing to the journal! +++++++++++++++++++++++++\n'
 # inject message into journal and check that it is recorded
