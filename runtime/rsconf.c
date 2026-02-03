@@ -205,8 +205,8 @@ static void cnfSetDefaults(rsconf_t *pThis) {
     const char *const log_dflt = getenv("RSYSLOG_DFLT_LOG_INTERNAL");
     if (log_dflt != NULL && !strcmp(log_dflt, "1")) pThis->globals.bProcessInternalMessages = 1;
     pThis->globals.glblDevOptions = 0;
-    pThis->globals.intMsgRateLimitItv = 5;
-    pThis->globals.intMsgRateLimitBurst = 500;
+    pThis->globals.intMsgRateLimitItv = 60;
+    pThis->globals.intMsgRateLimitBurst = 100;
     pThis->globals.intMsgsSeverityFilter = DFLT_INT_MSGS_SEV_FILTER;
     pThis->globals.permitCtlC = glblPermitCtlC;
 
