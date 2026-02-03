@@ -1243,6 +1243,26 @@ if test "x$enable_openssl" = "xyes"; then
 	AC_DEFINE([ENABLE_OPENSSL], [1], [Indicator that openssl is present])
 	AC_DEFINE([ENABLE_OSSL], [1], [Indicator that ossl driver is present])
 	save_libs=$LIBS
+
+	# Check if OpenSSL has ENGINE support (it is deprecated in 3.0 and may be missing)
+	save_CFLAGS="$CFLAGS"
+	save_LIBS="$LIBS"
+	CFLAGS="$CFLAGS $OPENSSL_CFLAGS"
+	LIBS="$LIBS $OPENSSL_LIBS"
+	AC_CHECK_HEADER([openssl/engine.h],
+	  [
+	     AC_CHECK_DECL([ENGINE_load_builtin_engines],
+	        [],
+	        [AC_DEFINE([OPENSSL_NO_ENGINE], [1], [Define if OpenSSL ENGINE support is missing])],
+	        [[#include <openssl/engine.h>]]
+	     )
+	  ],
+	  [
+	     AC_DEFINE([OPENSSL_NO_ENGINE], [1], [Define if OpenSSL ENGINE support is missing])
+	  ]
+	)
+	CFLAGS="$save_CFLAGS"
+	LIBS="$save_LIBS"
 fi
 if test "x$enable_wolfssl" = "xyes" && test "x$enable_openssl" = "xyes"; then
 	AC_MSG_ERROR([wolfSSL and OpenSSL cannot be enabled together; select only one])
