@@ -106,3 +106,4 @@ tools/rscryutil.1
 *.gcno
 coverage*
 _codeql_detected_source_root
+/doc/.venv-docs/

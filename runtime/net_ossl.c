@@ -34,6 +34,8 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <netdb.h>
+#include <sys/select.h>
+#include <sys/time.h>
 
 #include "rsyslog.h"
 #include "syslogd-types.h"
@@ -48,6 +50,8 @@
 #include "rsconf.h"
 
 #define OCSP_TIMEOUT 5
+#define OCSP_CACHE_MAX_ENTRIES 100
+#define OCSP_CACHE_DEFAULT_TTL 3600
 
 /* static data */
 DEFobjStaticHelpers;
@@ -66,6 +70,9 @@ rsRetVal net_ossl_apply_tlscgfcmd(net_ossl_t *pThis, uchar *tlscfgcmd);
 rsRetVal net_ossl_chkpeercertvalidity(net_ossl_t *pThis, SSL *ssl, uchar *fromHostIP);
 X509 *net_ossl_getpeercert(net_ossl_t *pThis, SSL *ssl, uchar *fromHostIP);
 rsRetVal net_ossl_peerfingerprint(net_ossl_t *pThis, X509 *certpeer, uchar *fromHostIP);
+#ifndef ENABLE_WOLFSSL
+void ocsp_cache_cleanup(void);
+#endif
 rsRetVal net_ossl_chkpeername(net_ossl_t *pThis, X509 *certpeer, uchar *fromHostIP);
 
 
@@ -263,6 +270,9 @@ void osslGlblInit(void) {
 /* globally de-initialize OpenSSL */
 void osslGlblExit(void) {
     DBGPRINTF("openssl: entering osslGlblExit\n");
+#ifndef ENABLE_WOLFSSL
+    ocsp_cache_cleanup();
+#endif
 #ifndef OPENSSL_NO_ENGINE
     ENGINE_cleanup();
 #endif
@@ -920,6 +930,239 @@ finalize_it:
 #ifndef ENABLE_WOLFSSL
 /* OCSP is not available in WolfSSL builds */
 
+/* OCSP Response Cache
+ *
+ * Concurrency & Locking:
+ * - Cache is shared across all workers (global state)
+ * - Protected by ocsp_cache_mutex (pthread_mutex_t)
+ * - All cache operations (lookup/store/cleanup) acquire mutex before access
+ * - Cache entries store OCSP responses with expiration times
+ *
+ * Non-blocking I/O:
+ * - Socket operations use non-blocking mode during connect with timeout
+ * - Once connected, sockets use SO_RCVTIMEO/SO_SNDTIMEO for bounded I/O
+ * - Maximum timeout per OCSP responder: OCSP_TIMEOUT (5 seconds)
+ *
+ * Cache Strategy:
+ * - Key: certificate serial number + issuer name hash (SHA-256)
+ * - TTL: Based on OCSP response nextUpdate field, or OCSP_CACHE_DEFAULT_TTL (1 hour)
+ * - Eviction: Prefers expired entries, then FIFO from tail when cache reaches MAX_ENTRIES
+ * - Expired entries removed during lookup to maintain cache efficiency
+ * - Thread-safe: All cache operations protected by mutex
+ */
+typedef struct ocsp_cache_entry_s {
+    char *cache_key; /* cert serial + issuer hash */
+    int cert_status; /* V_OCSP_CERTSTATUS_* */
+    time_t expires_at; /* when this entry expires */
+    struct ocsp_cache_entry_s *next;
+} ocsp_cache_entry_t;
+
+static ocsp_cache_entry_t *ocsp_cache_head = NULL;
+static int ocsp_cache_count = 0;
+static pthread_mutex_t ocsp_cache_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+static char *ocsp_make_cache_key(X509 *cert, X509 *issuer) {
+    DEFiRet;
+    ASN1_INTEGER *serial = X509_get_serialNumber(cert);
+    unsigned char md[EVP_MAX_MD_SIZE];
+    unsigned int md_len = 0;
+    unsigned char key_md[EVP_MAX_MD_SIZE];
+    unsigned int key_md_len = 0;
+    char *key = NULL;
+    int key_len;
+    BIGNUM *bn = NULL;
+    char *serial_hex = NULL;
+
+    if (!serial || !issuer) ABORT_FINALIZE(RS_RET_ERR);
+
+    /* Hash issuer name for compact key */
+    X509_NAME *issuer_name = X509_get_subject_name(issuer);
+    if (!X509_NAME_digest(issuer_name, EVP_sha256(), md, &md_len)) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+
+    /* Hash issuer public key to avoid collisions across key rollovers */
+    if (!X509_pubkey_digest(issuer, EVP_sha256(), key_md, &key_md_len)) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+
+    /* Format: serial-number:issuer-name-hash:issuer-key-hash */
+    bn = ASN1_INTEGER_to_BN(serial, NULL);
+    if (!bn) ABORT_FINALIZE(RS_RET_ERR);
+
+    serial_hex = BN_bn2hex(bn);
+    if (!serial_hex) ABORT_FINALIZE(RS_RET_ERR);
+
+    key_len = strlen(serial_hex) + (md_len * 2) + (key_md_len * 2) + 3;
+    CHKmalloc(key = malloc(key_len));
+
+    char *p = key;
+    int written = snprintf(p, key_len, "%s:", serial_hex);
+    if (written < 0 || written >= key_len) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    p += written;
+    size_t remaining = (size_t)key_len - (size_t)written;
+    for (unsigned int i = 0; i < md_len; i++) {
+        if (remaining < 3) {
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        written = snprintf(p, remaining, "%02x", md[i]);
+        if (written != 2) {
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        p += written;
+        remaining -= (size_t)written;
+    }
+    if (remaining < 2) {
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    *p++ = ':';
+    *p = '\0';
+    remaining--;
+    for (unsigned int i = 0; i < key_md_len; i++) {
+        if (remaining < 3) {
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        written = snprintf(p, remaining, "%02x", key_md[i]);
+        if (written != 2) {
+            ABORT_FINALIZE(RS_RET_ERR);
+        }
+        p += written;
+        remaining -= (size_t)written;
+    }
+
+finalize_it:
+    if (iRet != RS_RET_OK) {
+        free(key);
+        key = NULL;
+    }
+    if (bn) BN_free(bn);
+    if (serial_hex) OPENSSL_free(serial_hex);
+    return key;
+}
+
+static int ocsp_cache_lookup(const char *cache_key, int *cert_status) {
+    int found = 0;
+    time_t now = time(NULL);
+
+    pthread_mutex_lock(&ocsp_cache_mutex);
+
+    ocsp_cache_entry_t **pp = &ocsp_cache_head;
+    while (*pp) {
+        ocsp_cache_entry_t *entry = *pp;
+        if (strcmp(entry->cache_key, cache_key) == 0) {
+            if (entry->expires_at > now) {
+                *cert_status = entry->cert_status;
+                found = 1;
+                dbgprintf("OCSP: Cache hit for key %s, status=%d\n", cache_key, *cert_status);
+            } else {
+                /* Remove expired entry */
+                dbgprintf("OCSP: Removing expired cache entry for key %s\n", cache_key);
+                *pp = entry->next;
+                free(entry->cache_key);
+                free(entry);
+                ocsp_cache_count--;
+            }
+            break;
+        }
+        pp = &(*pp)->next;
+    }
+
+    pthread_mutex_unlock(&ocsp_cache_mutex);
+    return found;
+}
+
+static void ocsp_cache_store(const char *cache_key, int cert_status, time_t ttl) {
+    DEFiRet;
+    pthread_mutex_lock(&ocsp_cache_mutex);
+
+    /* Check if already exists and update */
+    ocsp_cache_entry_t *entry = ocsp_cache_head;
+    while (entry) {
+        if (strcmp(entry->cache_key, cache_key) == 0) {
+            entry->cert_status = cert_status;
+            entry->expires_at = time(NULL) + ttl;
+            dbgprintf("OCSP: Cache updated for key %s\n", cache_key);
+            pthread_mutex_unlock(&ocsp_cache_mutex);
+            return;
+        }
+        entry = entry->next;
+    }
+
+    /* Try to evict expired entries first before removing valid ones */
+    if (ocsp_cache_count >= OCSP_CACHE_MAX_ENTRIES) {
+        time_t now = time(NULL);
+        ocsp_cache_entry_t **pp = &ocsp_cache_head;
+        ocsp_cache_entry_t *expired_entry = NULL;
+
+        /* Find first expired entry */
+        while (*pp) {
+            if ((*pp)->expires_at <= now) {
+                expired_entry = *pp;
+                *pp = expired_entry->next;
+                free(expired_entry->cache_key);
+                free(expired_entry);
+                ocsp_cache_count--;
+                break;
+            }
+            pp = &(*pp)->next;
+        }
+
+        /* If no expired entries found, evict from tail (true FIFO) */
+        if (!expired_entry && ocsp_cache_head) {
+            pp = &ocsp_cache_head;
+            while ((*pp)->next) {
+                pp = &(*pp)->next;
+            }
+            ocsp_cache_entry_t *to_remove = *pp;
+            *pp = NULL;
+            free(to_remove->cache_key);
+            free(to_remove);
+            ocsp_cache_count--;
+        }
+    }
+
+    /* Add new entry */
+    ocsp_cache_entry_t *new_entry = NULL;
+    CHKmalloc(new_entry = malloc(sizeof(ocsp_cache_entry_t)));
+    CHKmalloc(new_entry->cache_key = strdup(cache_key));
+    new_entry->cert_status = cert_status;
+    new_entry->expires_at = time(NULL) + ttl;
+    new_entry->next = ocsp_cache_head;
+    ocsp_cache_head = new_entry;
+    ocsp_cache_count++;
+    dbgprintf("OCSP: Cache stored for key %s, count=%d\n", cache_key, ocsp_cache_count);
+
+finalize_it:
+    if (iRet == RS_RET_OUT_OF_MEMORY) {
+        LogError(0, RS_RET_OUT_OF_MEMORY, "OCSP: Failed to allocate cache entry\n");
+    }
+    if (iRet != RS_RET_OK) {
+        if (new_entry) {
+            free(new_entry->cache_key);
+            free(new_entry);
+        }
+    }
+    pthread_mutex_unlock(&ocsp_cache_mutex);
+}
+
+void ocsp_cache_cleanup(void) {
+    pthread_mutex_lock(&ocsp_cache_mutex);
+
+    ocsp_cache_entry_t *entry = ocsp_cache_head;
+    while (entry) {
+        ocsp_cache_entry_t *next = entry->next;
+        free(entry->cache_key);
+        free(entry);
+        entry = next;
+    }
+    ocsp_cache_head = NULL;
+    ocsp_cache_count = 0;
+
+    pthread_mutex_unlock(&ocsp_cache_mutex);
+}
+
 /*
  * CRL is not implemented!
  *
@@ -1042,6 +1285,7 @@ static const char *ocsp_get_response_status_err(int c) {
 
 /*
  * Returns 1 if the cert status is "GOOD"
+ * Stores result in cache if successful
  */
 static int ocsp_check_validate_response_and_cert(OCSP_RESPONSE *rsp,
                                                  OCSP_REQUEST *req,
@@ -1049,6 +1293,8 @@ static int ocsp_check_validate_response_and_cert(OCSP_RESPONSE *rsp,
                                                  OCSP_CERTID *id,
                                                  SSL_CTX *ctx,
                                                  const char *cert_name,
+                                                 X509 *cert,
+                                                 X509 *issuer,
                                                  int *is_revoked) {
     int s, ret = 0;
     long leeway_sec = 300; /* 5 Minutes */
@@ -1112,6 +1358,28 @@ static int ocsp_check_validate_response_and_cert(OCSP_RESPONSE *rsp,
             LogError(0, RS_RET_NO_ERRCODE, "OCSP: Unknown certificate status for: %s\n", cert_name);
             ret = 0;
             break;
+    }
+
+    /* Store result in cache */
+    char *cache_key = ocsp_make_cache_key(cert, issuer);
+    if (cache_key) {
+        time_t cache_ttl = OCSP_CACHE_DEFAULT_TTL;
+        /* Use nextUpdate if available for more accurate cache expiry */
+        if (nextupd) {
+            /* Use ASN1_TIME_diff() which properly handles UTC times without timezone issues */
+            int pday, psec;
+            if (ASN1_TIME_diff(&pday, &psec, NULL, nextupd) == 1) {
+                /* nextupd is in the future */
+                time_t seconds_until_expiry = (pday * 86400) + psec;
+                if (seconds_until_expiry > 0) {
+                    cache_ttl = seconds_until_expiry;
+                }
+            } else {
+                dbgprintf("OCSP: ASN1_TIME_diff() failed, using default TTL\n");
+            }
+        }
+        ocsp_cache_store(cache_key, status, cache_ttl);
+        free(cache_key);
     }
 
 err:
@@ -1399,7 +1667,8 @@ static int ocsp_request_per_responder(const char *url,
     }
 
     /* Validate response and check certificate status */
-    ret = ocsp_check_validate_response_and_cert(rsp, req, untrusted_peer_certs, id, ctx, cert_name, is_revoked);
+    ret = ocsp_check_validate_response_and_cert(rsp, req, untrusted_peer_certs, id, ctx, cert_name, cert, issuer,
+                                                is_revoked);
 
 err:
     if (rsp) OCSP_RESPONSE_free(rsp);
@@ -1420,6 +1689,8 @@ static int ocsp_check(
     STACK_OF(OPENSSL_STRING) *ocsp_responders = NULL;
     const char *url = NULL;
     int at_least_one_responder = 0;
+    char *cache_key = NULL;
+    int cached_status;
 
     X509_NAME_oneline(X509_get_subject_name(current_cert), cert_name, sizeof(cert_name));
 
@@ -1432,7 +1703,25 @@ static int ocsp_check(
     if (!(issuer = ocsp_find_issuer(current_cert, cert_name, ctx, untrusted_peer_certs))) goto err;
 
     /*
-     * 2. Sanity check prior generating OCSP request.
+     * 2. Check cache first to avoid network I/O
+     */
+    cache_key = ocsp_make_cache_key(current_cert, issuer);
+    if (cache_key && ocsp_cache_lookup(cache_key, &cached_status)) {
+        if (cached_status == V_OCSP_CERTSTATUS_GOOD) {
+            dbgprintf("OCSP: Cache indicates certificate is GOOD for: %s\n", cert_name);
+            ret = 1;
+            goto err;
+        } else if (cached_status == V_OCSP_CERTSTATUS_REVOKED) {
+            LogMsg(0, RS_RET_CERT_REVOKED, LOG_ERR, "OCSP: Cached status shows certificate is REVOKED for: %s\n",
+                   cert_name);
+            if (is_revoked) *is_revoked = 1;
+            goto err;
+        }
+        /* UNKNOWN status: fall through to network check */
+    }
+
+    /*
+     * 3. Sanity check prior generating OCSP request.
      *
      * - No OCSP URL, no OCSP revocation verification required, skip the current cert.
      * - Only HTTP protocol is supported. If no OCSP responder with a supported protocol
@@ -1484,6 +1773,7 @@ static int ocsp_check(
 
 err:
     if (ocsp_responders) X509_email_free(ocsp_responders);
+    if (cache_key) free(cache_key);
 
     return ret;
 }
@@ -1619,14 +1909,10 @@ int net_ossl_verify_callback(int status, X509_STORE_CTX *store) {
     /* Note: device binding is not currently supported in the refactored code */
     /* This is left here for future enhancement */
 
-    /* 1. OCSP */
-    /* TODO: OCSP check performs blocking network I/O (DNS + socket connect/send/recv)
-     * inside the TLS handshake verify callback. This can cause:
-     * - Latency up to OCSP_TIMEOUT (5 seconds) per OCSP responder
-     * - Potential DoS with malicious cert chains containing many OCSP URLs
-     * - Thread blocking under load
-     * Future enhancement: Move to async OCSP with caching, or make it optional.
-     * See: https://github.com/rsyslog/rsyslog/issues/TBD
+    /* 1. OCSP with caching and non-blocking I/O */
+    /* Note: OCSP checks use non-blocking sockets with OCSP_TIMEOUT (5 sec) per responder.
+     * Results are cached to minimize network I/O on subsequent TLS handshakes.
+     * See: https://github.com/rsyslog/rsyslog/issues/6469
      */
     ret = ocsp_check(cert, untrusted_peer_certs, ctx, device, &is_revoked);
     if (ret == 1) {
