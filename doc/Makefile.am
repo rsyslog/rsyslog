@@ -249,6 +249,7 @@ EXTRA_DIST = \
     source/configuration/modules/ommongodb.rst \
     source/configuration/modules/ommysql.rst \
     source/configuration/modules/omoracle.rst \
+    source/configuration/modules/omotel.rst \
     source/configuration/modules/ompgsql.rst \
     source/configuration/modules/ompipe.rst \
     source/configuration/modules/omprog.rst \
@@ -398,6 +399,7 @@ EXTRA_DIST = \
     source/rainerscript/functions/mo-hashXXmod.rst \
     source/rainerscript/functions/mo-http_request.rst \
     source/rainerscript/functions/mo-unflatten.rst \
+    source/rainerscript/functions/rs-append_json.rst \
     source/rainerscript/functions/rs-cnum.rst \
     source/rainerscript/functions/rs-cstr.rst \
     source/rainerscript/functions/rs-dyn_inc.rst \
@@ -410,6 +412,7 @@ EXTRA_DIST = \
     source/rainerscript/functions/rs-int2hex.rst \
     source/rainerscript/functions/rs-ipv4convert.rst \
     source/rainerscript/functions/rs-is_time.rst \
+    source/rainerscript/functions/rs-is_in_subnet.rst \
     source/rainerscript/functions/rs-lookup.rst \
     source/rainerscript/functions/rs-parse_json.rst \
     source/rainerscript/functions/rs-parse_time.rst \
@@ -423,6 +426,7 @@ EXTRA_DIST = \
     source/rainerscript/functions/rs-re_match_i.rst \
     source/rainerscript/functions/rs-replace.rst \
     source/rainerscript/functions/rs-script_error.rst \
+    source/rainerscript/functions/rs-split.rst \
     source/rainerscript/functions/rs-strlen.rst \
     source/rainerscript/functions/rs-substring.rst \
     source/rainerscript/functions/rs-tolower.rst \
