@@ -191,6 +191,9 @@
 #include <time.h>
 #include <errno.h>
 #include <inttypes.h>
+#include <limits.h>
+#include <dirent.h>
+#include <sys/types.h>
 
 #include "rsyslog.h"
 #include "queue.h"
@@ -226,6 +229,7 @@ DEFobjCurrIf(glbl) DEFobjCurrIf(strm) DEFobjCurrIf(datetime) DEFobjCurrIf(statso
 #endif
 
 #define OVERSIZE_QUEUE_WATERMARK 500000 /* when is a queue considered to be "overly large"? */
+#define MAX_DISK_QUEUE_FILES 10000000 /* maximum file number for disk queues */
 
 
 /* forward-definitions */
@@ -246,6 +250,8 @@ rsRetVal qqueueSetSpoolDir(qqueue_t *pThis, uchar *pszSpoolDir, int lenSpoolDir)
 static rsRetVal handleReadSeekError(rsRetVal seekRet, qqueue_t *pThis, const char *streamName, sbool *pReadSeekFailed);
 static void alignReadDeqToWrite(qqueue_t *pThis);
 static void recoverFromInvalidQi(qqueue_t *pThis, int wr_fd, int64_t wr_offs);
+static void qqueueDestroyDiskStreams(qqueue_t *pThis);
+static rsRetVal qqueueSwitchToInMemoryEmergency(qqueue_t *pThis);
 
 /* some constants for queuePersist () */
 #define QUEUE_CHECKPOINT 1
@@ -281,7 +287,8 @@ static struct cnfparamdescr cnfpdescr[] = {{"queue.filename", eCmdHdlrGetWord, 0
                                            {"queue.dequeuetimeend", eCmdHdlrInt, 0},
                                            {"queue.cry.provider", eCmdHdlrGetWord, 0},
                                            {"queue.samplinginterval", eCmdHdlrInt, 0},
-                                           {"queue.takeflowctlfrommsg", eCmdHdlrBinary, 0}};
+                                           {"queue.takeflowctlfrommsg", eCmdHdlrBinary, 0},
+                                           {"queue.oncorruption", eCmdHdlrGetWord, 0}};
 static struct cnfparamblk pblk = {CNFPARAMBLK_VERSION, sizeof(cnfpdescr) / sizeof(struct cnfparamdescr), cnfpdescr};
 
 /* support to detect duplicate queue file names */
@@ -863,6 +870,394 @@ static rsRetVal qDelLinkedList(qqueue_t *pThis) {
 /* -------------------- disk  -------------------- */
 
 
+/* Helper to switch queue to LinkedList mode */
+static void qqueueSetupLinkedList(qqueue_t *pThis) {
+    pThis->qConstruct = qConstructLinkedList;
+    pThis->qDestruct = qDestructLinkedList;
+    pThis->qAdd = qAddLinkedList;
+    pThis->qDeq = qDeqLinkedList;
+    pThis->qDel = qDelLinkedList;
+    pThis->MultiEnq = qqueueMultiEnqObjNonDirect;
+}
+
+static void qqueueDestroyDiskStreams(qqueue_t *pThis) {
+    /* Emergency recovery must not delete queue files while switching modes. */
+    if (pThis->tVars.disk.pWrite != NULL) strm.SetbDeleteOnClose(pThis->tVars.disk.pWrite, 0);
+    if (pThis->tVars.disk.pReadDeq != NULL) strm.SetbDeleteOnClose(pThis->tVars.disk.pReadDeq, 0);
+    if (pThis->tVars.disk.pReadDel != NULL) strm.SetbDeleteOnClose(pThis->tVars.disk.pReadDel, 0);
+    if (pThis->tVars.disk.pWrite != NULL) strm.Destruct(&pThis->tVars.disk.pWrite);
+    if (pThis->tVars.disk.pReadDeq != NULL) strm.Destruct(&pThis->tVars.disk.pReadDeq);
+    if (pThis->tVars.disk.pReadDel != NULL) strm.Destruct(&pThis->tVars.disk.pReadDel);
+}
+
+static void qqueueResetRecoveredQueueSize(qqueue_t *pThis) {
+    if (pThis->iQueueSize > 0) {
+#ifdef ENABLE_IMDIAG
+    #ifdef HAVE_ATOMIC_BUILTINS
+        ATOMIC_SUB(&iOverallQueueSize, pThis->iQueueSize, &NULL);
+    #else
+        iOverallQueueSize -= pThis->iQueueSize; /* racy, but we can't wait for a mutex! */
+    #endif
+#endif
+        pThis->iQueueSize = 0;
+    }
+    pThis->nLogDeq = 0;
+}
+
+static rsRetVal qqueueSwitchToInMemoryEmergency(qqueue_t *pThis) {
+    DEFiRet;
+    qqueueResetRecoveredQueueSize(pThis);
+    qqueueDestroyDiskStreams(pThis);
+    free(pThis->pszFilePrefix);
+    pThis->pszFilePrefix = NULL;
+    pThis->lenFilePrefix = 0;
+    pThis->bIsDA = 0;
+    free(pThis->pszQIFNam);
+    pThis->pszQIFNam = NULL;
+    pThis->lenQIFNam = 0;
+    pThis->bNeedDelQIF = 0;
+    pThis->qType = QUEUETYPE_LINKEDLIST;
+    qqueueSetupLinkedList(pThis);
+    CHKiRet(pThis->qConstruct(pThis));
+    LogMsg(0, RS_RET_ERR, LOG_ALERT,
+           "Queue now runs in pure in-memory emergency mode. Data is not persistent and can be lost "
+           "on restart or crash.");
+finalize_it:
+    RETiRet;
+}
+
+typedef struct fileEntry_s {
+    int number;
+    char *name;
+} fileEntry_t;
+
+static int fileEntryCmpByNumber(const void *a, const void *b) {
+    const fileEntry_t *e1 = (const fileEntry_t *)a;
+    const fileEntry_t *e2 = (const fileEntry_t *)b;
+    if (e1->number < e2->number) return -1;
+    if (e1->number > e2->number) return 1;
+    return 0;
+}
+
+static sbool fileEntryExistsByNumber(const fileEntry_t *files, int nFiles, int number) {
+    fileEntry_t key;
+    if (nFiles <= 0 || files == NULL) {
+        return 0;
+    }
+    key.number = number;
+    key.name = NULL;
+    return bsearch(&key, files, (size_t)nFiles, sizeof(fileEntry_t), fileEntryCmpByNumber) != NULL;
+}
+
+static rsRetVal qqueueVerifyAndRecover(qqueue_t *pThis, rsRetVal loadRet) {
+    DEFiRet;
+    DIR *d = NULL;
+    struct dirent *dir;
+    fileEntry_t *files = NULL;
+    int nFiles = 0;
+    int capFiles = 0;
+    int fileNum;
+    int corruptionDetected = 0;
+    int canScanDir = 1;
+    int i;
+
+    if (pThis->onCorruption == QUEUE_ON_CORRUPTION_IGNORE) {
+        return loadRet;
+    }
+
+    if (pThis->pszSpoolDir == NULL || pThis->pszSpoolDir[0] == '\0' || pThis->pszFilePrefix == NULL) {
+        iRet = loadRet;
+        FINALIZE;
+    }
+
+    if (strchr((char *)pThis->pszFilePrefix, '/') != NULL || strchr((char *)pThis->pszFilePrefix, '\\') != NULL) {
+        LogError(0, RS_RET_ERR,
+                 "queue corruption: queue file prefix contains path separators; switching to emergency in-memory mode");
+        CHKiRet(qqueueSwitchToInMemoryEmergency(pThis));
+        iRet = RS_RET_OK;
+        FINALIZE;
+    }
+
+    /* 1. Directory Scan */
+    d = opendir((char *)pThis->pszSpoolDir);
+    if (d) {
+        while (1) {
+            errno = 0;
+            dir = readdir(d);
+            if (dir == NULL) {
+                break;
+            }
+            size_t nameLen = strlen(dir->d_name);
+            size_t prefixLen = pThis->lenFilePrefix;
+            if (nameLen > prefixLen + 1 && strncmp(dir->d_name, (char *)pThis->pszFilePrefix, prefixLen) == 0 &&
+                dir->d_name[prefixLen] == '.') {
+                char *suffix = dir->d_name + prefixLen + 1;
+                if (strcmp(suffix, "qi") == 0) continue;
+
+                char *endptr;
+                long parsedNum;
+                errno = 0;
+                parsedNum = strtol(suffix, &endptr, 10);
+                if (*endptr == '\0') {
+                    if (errno == ERANGE || parsedNum < 0 || parsedNum > INT_MAX) {
+                        LogError(0, RS_RET_ERR, "queue corruption: found file with invalid sequence number %s", suffix);
+                        corruptionDetected = 1;
+                        continue;
+                    }
+                    fileNum = (int)parsedNum;
+                    if (nFiles == capFiles) {
+                        fileEntry_t *newFiles;
+                        int newCapFiles = capFiles ? capFiles * 2 : 16;
+                        if ((size_t)newCapFiles > SIZE_MAX / sizeof(fileEntry_t)) {
+                            LogError(0, RS_RET_OUT_OF_MEMORY,
+                                     "queue corruption: too many queue files while scanning spool directory");
+                            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
+                        }
+                        CHKmalloc(newFiles = realloc(files, (size_t)newCapFiles * sizeof(fileEntry_t)));
+                        files = newFiles;
+                        capFiles = newCapFiles;
+                    }
+                    char *dupName = strdup(dir->d_name);
+                    if (dupName == NULL) {
+                        iRet = RS_RET_OUT_OF_MEMORY;
+                        FINALIZE;
+                    }
+                    files[nFiles].number = fileNum;
+                    files[nFiles].name = dupName;
+                    nFiles++;
+                }
+            }
+        }
+        if (errno != 0) {
+            canScanDir = 0;
+            LogError(errno, RS_RET_ERR,
+                     "queue corruption: unable to fully scan spool directory %s; skipping corruption scan",
+                     pThis->pszSpoolDir);
+        }
+        closedir(d);
+        d = NULL;
+    } else {
+        canScanDir = 0;
+        if (errno != ENOENT && errno != ENOTDIR) {
+            LogError(errno, RS_RET_ERR, "queue corruption: unable to scan spool directory %s; skipping corruption scan",
+                     pThis->pszSpoolDir);
+        }
+    }
+
+    /* If we cannot scan spool files, we cannot safely validate file continuity. */
+    if (!canScanDir) {
+        iRet = loadRet;
+        FINALIZE;
+    }
+
+    if (nFiles > 1) {
+        qsort(files, (size_t)nFiles, sizeof(fileEntry_t), fileEntryCmpByNumber);
+    }
+
+    /* 2. State Validation */
+    if (loadRet == RS_RET_OK) {
+        int deqNum = strmGetCurrFileNum(pThis->tVars.disk.pReadDeq);
+        int enqNum = strmGetCurrFileNum(pThis->tVars.disk.pWrite);
+
+        if (deqNum < 0 || deqNum >= MAX_DISK_QUEUE_FILES) {
+            LogError(0, RS_RET_ERR, "queue corruption: .qi file contains invalid dequeue number %d", deqNum);
+            corruptionDetected = 1;
+        }
+        if (enqNum < 0 || enqNum >= MAX_DISK_QUEUE_FILES) {
+            LogError(0, RS_RET_ERR, "queue corruption: .qi file contains invalid enqueue number %d", enqNum);
+            corruptionDetected = 1;
+        }
+
+        if (!corruptionDetected) {
+            int curr = deqNum;
+            int limit = 0;
+            /* Verify chain from deqNum to enqNum */
+            while (curr != enqNum) {
+                if (!fileEntryExistsByNumber(files, nFiles, curr)) {
+                    LogError(0, RS_RET_ERR, "queue corruption: missing file in sequence: %d", curr);
+                    corruptionDetected = 1;
+                    break;
+                }
+                curr = (curr + 1) % MAX_DISK_QUEUE_FILES;
+                limit++;
+                if (limit > MAX_DISK_QUEUE_FILES) {
+                    /* Should theoretically not happen unless strm logic is broken */
+                    LogError(0, RS_RET_ERR, "queue corruption: infinite loop detected verifying sequence");
+                    corruptionDetected = 1;
+                    break;
+                }
+            }
+            /* Check enqueue file itself */
+            if (!corruptionDetected && !fileEntryExistsByNumber(files, nFiles, enqNum)) {
+                LogError(0, RS_RET_ERR, "queue corruption: missing enqueue file: %d", enqNum);
+                corruptionDetected = 1;
+            }
+        }
+
+        /* Check for orphaned files (files on disk not in the active range) */
+        if (!corruptionDetected) {
+            int isWrapped = (enqNum < deqNum);
+            for (i = 0; i < nFiles; i++) {
+                int fNum = files[i].number;
+                int isOrphan = 0;
+                if (fNum < 0 || fNum >= MAX_DISK_QUEUE_FILES) continue; /* Already logged above */
+
+                if (!isWrapped) {
+                    if (fNum < deqNum || fNum > enqNum) isOrphan = 1;
+                } else {
+                    if (fNum > enqNum && fNum < deqNum) isOrphan = 1;
+                }
+
+                if (isOrphan) {
+                    LogError(0, RS_RET_ERR,
+                             "queue corruption: orphaned file found: %s (seq %d not in range [%d, %d]%s)",
+                             files[i].name, fNum, deqNum, enqNum, isWrapped ? " wrapped" : "");
+                    corruptionDetected = 1;
+                }
+            }
+        }
+
+    } else {
+        /* If .qi is missing/corrupt but we have segment files */
+        if (nFiles > 0) {
+            corruptionDetected = 1;
+            LogError(0, RS_RET_ERR, "queue corruption: .qi file missing or inaccessible but %d segment files exist",
+                     nFiles);
+        }
+    }
+
+    /* 3. Recovery */
+    if (corruptionDetected) {
+        if (pThis->onCorruption == QUEUE_ON_CORRUPTION_IN_MEMORY) {
+            LogMsg(0, RS_RET_ERR, LOG_ALERT,
+                   "Queue corruption detected. Entering emergency in-memory mode (non-persistent queue).");
+            CHKiRet(qqueueSwitchToInMemoryEmergency(pThis));
+            iRet = RS_RET_OK;
+
+        } else {
+            /* SAFE_MODE */
+            LogMsg(0, RS_RET_ERR, LOG_ALERT,
+                   "Queue corruption detected! Moving queue files to .bad directory and starting fresh.");
+
+            char timebuf[64];
+            struct tm tm_buf;
+            time_t now = time(NULL);
+            if (now == (time_t)-1) {
+                LogError(errno, RS_RET_ERR,
+                         "queue corruption: time() failed during recovery directory generation, using PID fallback");
+                struct timespec ts;
+                if (clock_gettime(CLOCK_REALTIME, &ts) == 0) {
+                    snprintf(timebuf, sizeof(timebuf), "timeerr-%ld-%ld", (long)getpid(), (long)ts.tv_nsec);
+                } else {
+                    snprintf(timebuf, sizeof(timebuf), "timeerr-%ld", (long)getpid());
+                }
+            } else {
+                localtime_r(&now, &tm_buf);
+                strftime(timebuf, sizeof(timebuf), "%Y%m%d%H%M%S", &tm_buf);
+            }
+
+            char badDir[MAXFNAME];
+            int badDirLen =
+                snprintf(badDir, sizeof(badDir), "%s/%s.bad.%s", pThis->pszSpoolDir, pThis->pszFilePrefix, timebuf);
+            if (badDirLen < 0 || badDirLen >= (int)sizeof(badDir)) {
+                LogError(0, RS_RET_ERR,
+                         "queue corruption: recovery directory path too long, switching to emergency in-memory mode");
+                CHKiRet(qqueueSwitchToInMemoryEmergency(pThis));
+                iRet = RS_RET_OK;
+                FINALIZE;
+            }
+
+            if (mkdir(badDir, 0700) != 0) {
+                if (errno == EEXIST) {
+                    struct stat badDirStat;
+                    if (stat(badDir, &badDirStat) != 0 || !S_ISDIR(badDirStat.st_mode)) {
+                        LogError(errno, RS_RET_ERR,
+                                 "queue corruption: recovery directory path exists but is unusable %s; switching to "
+                                 "emergency in-memory mode",
+                                 badDir);
+                        CHKiRet(qqueueSwitchToInMemoryEmergency(pThis));
+                        iRet = RS_RET_OK;
+                        FINALIZE;
+                    }
+                } else {
+                    LogError(errno, RS_RET_ERR,
+                             "queue corruption: failed to create recovery directory %s; switching to emergency "
+                             "in-memory mode",
+                             badDir);
+                    CHKiRet(qqueueSwitchToInMemoryEmergency(pThis));
+                    iRet = RS_RET_OK;
+                    FINALIZE;
+                }
+            }
+
+            qqueueDestroyDiskStreams(pThis);
+
+            char oldPath[MAXFNAME];
+            char newPath[MAXFNAME];
+            int pathLen1 = snprintf(oldPath, sizeof(oldPath), "%s/%s.qi", pThis->pszSpoolDir, pThis->pszFilePrefix);
+            int pathLen2 = snprintf(newPath, sizeof(newPath), "%s/%s.qi", badDir, pThis->pszFilePrefix);
+            if (pathLen1 < 0 || pathLen1 >= (int)sizeof(oldPath) || pathLen2 < 0 || pathLen2 >= (int)sizeof(newPath)) {
+                LogError(0, RS_RET_ERR,
+                         "queue corruption: .qi recovery path too long; switching to emergency in-memory mode");
+                CHKiRet(qqueueSwitchToInMemoryEmergency(pThis));
+                iRet = RS_RET_OK;
+                FINALIZE;
+            }
+            struct stat sb;
+            if (stat(oldPath, &sb) == 0) {
+                if (rename(oldPath, newPath) != 0) {
+                    LogError(errno, RS_RET_ERR,
+                             "queue corruption: could not move .qi file to recovery directory; switching to emergency "
+                             "in-memory mode");
+                    CHKiRet(qqueueSwitchToInMemoryEmergency(pThis));
+                    iRet = RS_RET_OK;
+                    FINALIZE;
+                }
+            }
+
+            for (i = 0; i < nFiles; i++) {
+                char oldSegPath[MAXFNAME];
+                char newSegPath[MAXFNAME];
+                int segPathLen1 = snprintf(oldSegPath, sizeof(oldSegPath), "%s/%s", pThis->pszSpoolDir, files[i].name);
+                int segPathLen2 = snprintf(newSegPath, sizeof(newSegPath), "%s/%s", badDir, files[i].name);
+                if (segPathLen1 < 0 || segPathLen1 >= (int)sizeof(oldSegPath) || segPathLen2 < 0 ||
+                    segPathLen2 >= (int)sizeof(newSegPath)) {
+                    LogError(0, RS_RET_ERR,
+                             "queue corruption: queue file recovery path too long; switching to emergency "
+                             "in-memory mode");
+                    CHKiRet(qqueueSwitchToInMemoryEmergency(pThis));
+                    iRet = RS_RET_OK;
+                    FINALIZE;
+                }
+                if (rename(oldSegPath, newSegPath) != 0) {
+                    LogError(errno, RS_RET_ERR,
+                             "queue corruption: could not move queue file %s to recovery directory; switching to "
+                             "emergency in-memory mode",
+                             files[i].name);
+                    CHKiRet(qqueueSwitchToInMemoryEmergency(pThis));
+                    iRet = RS_RET_OK;
+                    FINALIZE;
+                }
+            }
+
+            qqueueResetRecoveredQueueSize(pThis);
+            iRet = RS_RET_FILE_NOT_FOUND;
+        }
+    } else {
+        iRet = loadRet;
+    }
+
+finalize_it:
+    if (d != NULL) {
+        closedir(d);
+    }
+    if (files) {
+        for (i = 0; i < nFiles; i++) free(files[i].name);
+        free(files);
+    }
+    RETiRet;
+}
+
 /* The following function is used to "save" ourself from being killed by
  * a fatally failed disk queue. A fatal failure is, for example, if no
  * data can be read or written. In that case, the disk support is disabled,
@@ -1021,6 +1416,14 @@ static rsRetVal qConstructDisk(qqueue_t *pThis) {
 
     /* and now check if there is some persistent information that needs to be read in */
     iRet = qqueueTryLoadPersistedInfo(pThis);
+
+    iRet = qqueueVerifyAndRecover(pThis, iRet);
+
+    if (iRet == RS_RET_OK && pThis->qType == QUEUETYPE_LINKEDLIST) {
+        /* we switched to in-memory mode, so we are done */
+        FINALIZE;
+    }
+
     if (iRet == RS_RET_OK)
         bRestarted = 1;
     else if (iRet != RS_RET_FILE_NOT_FOUND)
@@ -1032,7 +1435,7 @@ static rsRetVal qConstructDisk(qqueue_t *pThis) {
         CHKiRet(strm.Construct(&pThis->tVars.disk.pWrite));
         CHKiRet(strm.SetbSync(pThis->tVars.disk.pWrite, pThis->bSyncQueueFiles));
         CHKiRet(strm.SetDir(pThis->tVars.disk.pWrite, pThis->pszSpoolDir, pThis->lenSpoolDir));
-        CHKiRet(strm.SetiMaxFiles(pThis->tVars.disk.pWrite, 10000000));
+        CHKiRet(strm.SetiMaxFiles(pThis->tVars.disk.pWrite, MAX_DISK_QUEUE_FILES));
         CHKiRet(strm.SettOperationsMode(pThis->tVars.disk.pWrite, STREAMMODE_WRITE));
         CHKiRet(strm.SetsType(pThis->tVars.disk.pWrite, STREAMTYPE_FILE_CIRCULAR));
         if (pThis->useCryprov) {
@@ -1044,7 +1447,7 @@ static rsRetVal qConstructDisk(qqueue_t *pThis) {
         CHKiRet(strm.Construct(&pThis->tVars.disk.pReadDeq));
         CHKiRet(strm.SetbDeleteOnClose(pThis->tVars.disk.pReadDeq, 0));
         CHKiRet(strm.SetDir(pThis->tVars.disk.pReadDeq, pThis->pszSpoolDir, pThis->lenSpoolDir));
-        CHKiRet(strm.SetiMaxFiles(pThis->tVars.disk.pReadDeq, 10000000));
+        CHKiRet(strm.SetiMaxFiles(pThis->tVars.disk.pReadDeq, MAX_DISK_QUEUE_FILES));
         CHKiRet(strm.SettOperationsMode(pThis->tVars.disk.pReadDeq, STREAMMODE_READ));
         CHKiRet(strm.SetsType(pThis->tVars.disk.pReadDeq, STREAMTYPE_FILE_CIRCULAR));
         if (pThis->useCryprov) {
@@ -1057,7 +1460,7 @@ static rsRetVal qConstructDisk(qqueue_t *pThis) {
         CHKiRet(strm.SetbSync(pThis->tVars.disk.pReadDel, pThis->bSyncQueueFiles));
         CHKiRet(strm.SetbDeleteOnClose(pThis->tVars.disk.pReadDel, 1));
         CHKiRet(strm.SetDir(pThis->tVars.disk.pReadDel, pThis->pszSpoolDir, pThis->lenSpoolDir));
-        CHKiRet(strm.SetiMaxFiles(pThis->tVars.disk.pReadDel, 10000000));
+        CHKiRet(strm.SetiMaxFiles(pThis->tVars.disk.pReadDel, MAX_DISK_QUEUE_FILES));
         CHKiRet(strm.SettOperationsMode(pThis->tVars.disk.pReadDel, STREAMMODE_READ));
         CHKiRet(strm.SetsType(pThis->tVars.disk.pReadDel, STREAMTYPE_FILE_CIRCULAR));
         if (pThis->useCryprov) {
@@ -1594,6 +1997,7 @@ rsRetVal qqueueConstruct(qqueue_t **ppThis,
     pThis->iDeqBatchSize = 8; /* conservative default, should still provide good performance */
     pThis->iMinDeqBatchSize = 0; /* conservative default, should still provide good performance */
     pThis->isRunning = 0;
+    pThis->onCorruption = QUEUE_ON_CORRUPTION_SAFE_MODE;
 
     pThis->pszFilePrefix = NULL;
     pThis->qType = qType;
@@ -1640,6 +2044,7 @@ void qqueueSetDefaultsActionQueue(qqueue_t *pThis) {
     pThis->iDeqtWinFromHr = 0;
     pThis->iDeqtWinToHr = 25; /* disable time-windowed dequeuing by default */
     pThis->iSmpInterval = 0; /* disable sampling */
+    pThis->onCorruption = QUEUE_ON_CORRUPTION_SAFE_MODE;
 }
 
 
@@ -1671,6 +2076,7 @@ void qqueueSetDefaultsRulesetQueue(qqueue_t *pThis) {
     pThis->iDeqtWinFromHr = 0;
     pThis->iDeqtWinToHr = 25; /* disable time-windowed dequeuing by default */
     pThis->iSmpInterval = 0; /* disable sampling */
+    pThis->onCorruption = QUEUE_ON_CORRUPTION_SAFE_MODE;
 }
 
 
@@ -3642,6 +4048,20 @@ rsRetVal qqueueApplyCnfParam(qqueue_t *pThis, struct nvlst *lst) {
             pThis->iSmpInterval = pvals[i].val.d.n;
         } else if (!strcmp(pblk.descr[i].name, "queue.takeflowctlfrommsg")) {
             pThis->takeFlowCtlFromMsg = pvals[i].val.d.n;
+        } else if (!strcmp(pblk.descr[i].name, "queue.oncorruption")) {
+            char *mode;
+            CHKmalloc(mode = es_str2cstr(pvals[i].val.d.estr, NULL));
+            if (!strcasecmp(mode, "ignore")) {
+                pThis->onCorruption = QUEUE_ON_CORRUPTION_IGNORE;
+            } else if (!strcasecmp(mode, "safe")) {
+                pThis->onCorruption = QUEUE_ON_CORRUPTION_SAFE_MODE;
+            } else if (!strcasecmp(mode, "inMemory")) {
+                pThis->onCorruption = QUEUE_ON_CORRUPTION_IN_MEMORY;
+            } else {
+                LogError(0, RS_RET_CONF_PARAM_INVLD, "queue.oncorruption: invalid value '%s', using 'safe'", mode);
+                pThis->onCorruption = QUEUE_ON_CORRUPTION_SAFE_MODE;
+            }
+            free(mode);
         } else {
             DBGPRINTF(
                 "queue: program error, non-handled "
