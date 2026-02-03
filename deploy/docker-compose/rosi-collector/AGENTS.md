@@ -1,6 +1,6 @@
 # AGENTS.md – ROSI Collector Agent Guide
 
-This file provides guidelines for AI assistants working with the ROSI Collector stack (RSyslog Open System for Information).
+This file provides guidelines for AI assistants working with the ROSI Collector stack (Rsyslog Operations Stack Initiative).
 
 ## Overview
 
@@ -28,17 +28,22 @@ rosi-collector/
 │   ├── rsyslog-forward*.conf
 │   └── *.md                    # Setup documentation
 ├── grafana/provisioning/       # Grafana auto-provisioning
-│   ├── dashboards/             # JSON dashboard definitions
+│   ├── dashboards/
+│   │   ├── templates/          # Edit these; run render-dashboards.py
+│   │   ├── generated/         # Provisioned JSON (built from templates)
+│   │   └── dashboards.yml      # Provider path points to generated/
 │   ├── datasources/            # Loki & Prometheus configs
-│   └── alerting/               # Alert rule definitions
+│   └── alerting/               # Alert rules (default.yml)
 ├── prometheus-targets/         # Dynamic scrape targets
-│   └── nodes.yml
+│   ├── nodes.yml               # node_exporter targets
+│   └── impstats.yml            # rsyslog impstats sidecar targets
 ├── rsyslog.conf/               # rsyslog configuration files
 ├── scripts/                    # Management scripts
 │   ├── init.sh                 # Environment initialization
 │   ├── monitor.sh              # Health monitoring CLI
 │   ├── install-server.sh       # Fresh server preparation
-│   └── prometheus-target.sh    # Target management CLI
+│   ├── prometheus-target.sh    # Target management (node + impstats jobs)
+│   └── render-dashboards.py    # Build dashboards/generated/ from templates/
 └── traefik/
     └── dynamic.yml.template    # Traefik routing template
 ```
@@ -112,10 +117,12 @@ docker compose up -d  # Recreates changed containers
 
 ### Testing Grafana Dashboards
 
-1. Edit JSON files in `grafana/provisioning/dashboards/`
-2. Copy to install directory
-3. Restart Grafana: `docker compose restart grafana`
-4. Access Grafana at `https://grafana.TRAEFIK_DOMAIN/` or `http://localhost:3000`
+1. Edit JSON in `grafana/provisioning/dashboards/templates/` (not `generated/`).
+2. Run `python3 scripts/render-dashboards.py` to update `generated/`.
+3. Copy updated files to install directory and restart Grafana: `docker compose restart grafana`.
+4. Access Grafana at `https://grafana.TRAEFIK_DOMAIN/` or `http://localhost:3000`.
+
+**Syslog Health dashboard** (`syslog-health-impstats.json`): Panel groups are Overview, Queues, Input, Actions (collapsed by default, panels nested in row when collapsed), Output & resource usage. Row order in JSON determines which panels belong to which group; collapsed rows must have panels in the row’s `panels` array for the panel count to display correctly.
 
 ### Testing Alert Rules
 
@@ -151,7 +158,7 @@ curl -s http://localhost:3000/api/health  # Grafana health
 ```bash
 # Use the helper script
 prometheus-target list
-prometheus-target add 10.0.0.5:9100 host=webserver role=web
+prometheus-target add 10.0.0.5:9100 host=webserver role=web network=internal
 prometheus-target remove 10.0.0.5:9100
 ```
 
@@ -172,15 +179,23 @@ docker compose start grafana
 - Image versions should be pinned (not `latest` for production)
 - Environment variables from `.env` file
 
+### rsyslog client configs
+- `omfwd` is built-in in rsyslog; do not add `module(load="omfwd")`
+- If a config fails with `omfwd.so` missing, remove explicit module load
+
 ### loki-config.yml
 - `retention_period`: Log retention (default: 720h = 30 days)
 - `max_query_*`: Query limits for performance
 - Must match documentation claims
 
-### grafana/provisioning/dashboards/*.json
-- Dashboard UID in `"uid"` field at end of file
-- Used for home dashboard configuration
-- Provisioned on Grafana startup
+### grafana/provisioning/dashboards/
+- **templates/** – Source JSON; edit here. Run `scripts/render-dashboards.py` to refresh **generated/**.
+- **generated/** – Provisioned dashboards (Grafana loads from here via dashboards.yml).
+- Dashboard UID in `"uid"` field; used for links and home dashboard.
+
+### grafana/provisioning/alerting/default.yml
+- Contains alert rule groups (e.g. missing-logs, system-resources, rsyslog-metrics, rsyslog-impstats).
+- **rsyslog-impstats** rules (queue depth, discards, action failures, action suspended) are **disabled by default** (`isPaused: true`); enable in Grafana UI after tuning thresholds.
 
 ### scripts/init.sh
 - Creates `.env` from template

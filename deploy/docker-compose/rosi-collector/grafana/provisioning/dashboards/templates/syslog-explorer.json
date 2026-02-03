@@ -20,68 +20,6 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": null,
-  "links": [
-    {
-      "asDropdown": false,
-      "icon": "doc",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "Syslog Explorer",
-      "tooltip": "View syslog logs",
-      "type": "link",
-      "url": "/d/logs-explore-like-v4"
-    },
-    {
-      "asDropdown": false,
-      "icon": "search-plus",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "Analysis",
-      "tooltip": "Log analysis and patterns",
-      "type": "link",
-      "url": "/d/syslog-deep-dive"
-    },
-    {
-      "asDropdown": false,
-      "icon": "bell",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "Alerting",
-      "tooltip": "View alerts overview",
-      "type": "link",
-      "url": "/d/alerting-overview"
-    },
-    {
-      "asDropdown": false,
-      "icon": "dashboard",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "Host Metrics",
-      "tooltip": "CPU, memory, disk, network metrics",
-      "type": "link",
-      "url": "/d/node-overview"
-    },
-    {
-      "asDropdown": false,
-      "icon": "refresh",
-      "includeVars": false,
-      "keepTime": false,
-      "tags": [],
-      "targetBlank": false,
-      "title": "Reset Filters",
-      "tooltip": "Reset all filters to default values",
-      "type": "link",
-      "url": "/d/${__dashboard.uid}?var-job=All&var-host=All&var-severity=All&var-facility=All&var-search="
-    }
-  ],
   "refresh": "30s",
   "panels": [
     {
@@ -1258,6 +1196,16 @@
               {
                 "id": "custom.width",
                 "value": 150
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Open Analysis for host",
+                    "url": "/d/syslog-deep-dive?var-host=${__value.text}&var-job=${job}",
+                    "targetBlank": false
+                  }
+                ]
               }
             ]
           },
@@ -1435,13 +1383,9 @@
       {
         "allValue": ".+",
         "current": {
-          "selected": true,
-          "text": [
-            "All"
-          ],
-          "value": [
-            "$__all"
-          ]
+          "selected": false,
+          "text": "syslog",
+          "value": "syslog"
         },
         "datasource": {
           "type": "loki",
@@ -1593,4 +1537,3 @@
   "version": 1,
   "weekStart": ""
 }
-
