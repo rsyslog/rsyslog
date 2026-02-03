@@ -1,7 +1,39 @@
 ---------------------------------------------------------------------------------------
-Scheduled Release 8.2602.0 (aka 2026.02) 2026-12-??
+Scheduled Release 8.2602.0 (aka 2026.02) 2026-02-??
 - overall improved documentation via a large set of topic updates.
 
+- 2026-02-03: runtime: fix potentially wrong lookup in DNS cache
+  Link-local IPv6 sources can share an address but differ by scope,
+  which can collide in the DNS cache and mix hostnames, this could
+  cause misrouting for IPv6 link-local senders.
+  Root cause: DNS cache treated link-local IPv6 addresses as identical.
+  closes https://github.com/rsyslog/rsyslog/issues/5645
+- 2026-02-03: nsd_ossl: fix potential memory leak on failed handshakes
+  Avoid keeping failed TLS handshakes alive when probes hit TLS listeners,
+  which can contribute to memory growth.
+  closes https://github.com/rsyslog/rsyslog/issues/4017.
+- 2026-02-03: Fix lookup table reload race condition (Device or resource busy)
+  Previously, the `lookupTableReloader` thread held the `reloader_mut` mutex
+  for the entire duration of the reload operation (`lookupDoReload`). Since
+  reloading a lookup table involves file I/O and parsing, it can take a
+  significant amount of time. If a SIGHUP (or other reload trigger) occurred
+  while a reload was in progress, the main thread (executing `lookupReload`)
+  would fail to acquire the mutex via `pthread_mutex_trylock`, resulting in
+  the error "Device or resource busy" and the reload request being dropped.
+  This commit modifies `lookupTableReloader` to release the mutex before
+  calling `lookupDoReload` and re-acquire it afterwards. This allows
+  `lookupReload` to successfully acquire the mutex, queue a new reload request
+  (by setting `do_reload = 1`), and update the stub value if necessary.
+  To ensure thread safety, `lookupDoReload` now accepts the `stub_val` as an
+  argument (instead of accessing the shared `stub_value_for_reload_failure`
+  member directly) and takes ownership of it (freeing it upon completion).
+  `lookupTableReloader` extracts the stub value to a local variable while
+  holding the lock before passing it to `lookupDoReload`.
+  The `ATTR_NONNULL` attribute on `lookupDoReload` was updated to `ATTR_NONNULL(1)`
+  to allow the `stub_val` argument to be NULL, fixing a build failure with
+  `-Werror`.
+  closes https://github.com/rsyslog/rsyslog/issues/5628
+- 2026-02-03: doc: document pcre_match function
 - 2026-01-31: imtcp: add MultiLine and regex framing support
   Non-technical: improves operator ergonomics and closes a feature gap
   with imptcp. Enables regex-based start-of-frame detection and optional
