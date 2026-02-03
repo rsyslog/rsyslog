@@ -37,7 +37,7 @@
 ## @author rsyslog project
 ## @see https://github.com/rsyslog/rsyslog
 ##
-## Part of RSyslog Open System for Information (ROSI)
+## Part of Rsyslog Operations Stack Initiative (ROSI)
 
 set -euo pipefail
 
@@ -242,10 +242,19 @@ rsync -a --exclude='*.template' --exclude='prometheus-targets/' "${CONFIGS_DIR}/
 # Create prometheus-targets directory if it doesn't exist (first run)
 if [ ! -d "${BASE}/prometheus-targets" ]; then
   install -d -m 0755 "${BASE}/prometheus-targets"
+  echo "Created prometheus-targets directory"
+fi
+
+# Ensure target templates exist (supports re-runs and upgrades)
+if [ ! -f "${BASE}/prometheus-targets/nodes.yml" ]; then
   cp "${CONFIGS_DIR}/prometheus-targets/nodes.yml" "${BASE}/prometheus-targets/"
-  # Ensure Prometheus container can read targets (runs as nobody/65534)
   chmod 644 "${BASE}/prometheus-targets/nodes.yml"
-  echo "Created prometheus-targets directory with template"
+  echo "Installed prometheus-targets/nodes.yml"
+fi
+if [ ! -f "${BASE}/prometheus-targets/impstats.yml" ]; then
+  cp "${CONFIGS_DIR}/prometheus-targets/impstats.yml" "${BASE}/prometheus-targets/"
+  chmod 644 "${BASE}/prometheus-targets/impstats.yml"
+  echo "Installed prometheus-targets/impstats.yml"
 fi
 
 # ==========================================
@@ -267,6 +276,8 @@ fi
 ##   5. Configures firewall rules for container access
 ##
 ## @env NODE_EXPORTER_VERSION Version to install (default: 1.8.2)
+## @env IMPSTATS_EXPORTER_PORT Port for rsyslog impstats exporter (default: 9898)
+## @env ENABLE_IMPSTATS_FIREWALL Set to "false" to skip impstats firewall rule
 ## @return The IP address node_exporter is bound to (stdout)
 ## @exitcode 0 Success
 ## @exitcode 1 Unsupported architecture or download failure
@@ -528,6 +539,57 @@ configure_node_exporter_firewall() {
   fi
 }
 
+## @fn configure_impstats_exporter_firewall()
+## @brief Configure firewall rules to allow Docker containers to reach impstats exporter
+## @param bind_ip The IP address the impstats exporter is bound to
+## @param port The TCP port for the impstats exporter
+## @description
+##   Adds firewall rules for UFW, firewalld, or raw iptables to allow
+##   the Docker network subnet to access the impstats exporter port.
+configure_impstats_exporter_firewall() {
+  local bind_ip="$1"
+  local port="$2"
+
+  if [ -z "${bind_ip}" ] || [ "${bind_ip}" = "0.0.0.0" ]; then
+    return 0
+  fi
+
+  # Determine the Docker network subnet from the bind IP
+  local subnet
+  subnet=$(echo "${bind_ip}" | sed 's/\.[0-9]*$/\.0\/16/')
+
+  if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active"; then
+    if ! ufw status | grep -q "${bind_ip} ${port}/tcp.*ALLOW.*${subnet}"; then
+      echo "Configuring UFW firewall for impstats exporter..." >&2
+      ufw allow from "${subnet}" to "${bind_ip}" port "${port}" proto tcp comment "rsyslog impstats from Docker" >/dev/null 2>&1
+      echo "Added UFW rule: allow ${subnet} -> ${bind_ip}:${port}" >&2
+    else
+      echo "UFW rule for impstats exporter already exists" >&2
+    fi
+  elif command -v firewall-cmd >/dev/null 2>&1 && systemctl is-active --quiet firewalld; then
+    local rule="rule family=ipv4 source address=${subnet} destination address=${bind_ip} port port=${port} protocol=tcp accept"
+    if ! firewall-cmd --list-rich-rules 2>/dev/null | grep -q "${port}"; then
+      echo "Configuring firewalld for impstats exporter..." >&2
+      firewall-cmd --permanent --add-rich-rule="${rule}" >/dev/null 2>&1
+      firewall-cmd --reload >/dev/null 2>&1
+      echo "Added firewalld rule: allow ${subnet} -> ${bind_ip}:${port}" >&2
+    else
+      echo "firewalld rule for impstats exporter already exists" >&2
+    fi
+  elif command -v iptables >/dev/null 2>&1; then
+    local policy
+    policy=$(iptables -L INPUT -n 2>/dev/null | head -1 | grep -oP 'policy \K\w+')
+    if [ "${policy}" = "DROP" ] || [ "${policy}" = "REJECT" ]; then
+      if ! iptables -C INPUT -s "${subnet}" -d "${bind_ip}" -p tcp --dport "${port}" -j ACCEPT 2>/dev/null; then
+        echo "Configuring iptables for impstats exporter..." >&2
+        iptables -I INPUT -s "${subnet}" -d "${bind_ip}" -p tcp --dport "${port}" -j ACCEPT
+        echo "Added iptables rule: allow ${subnet} -> ${bind_ip}:${port}" >&2
+        echo "Note: This rule is not persistent. Add to /etc/iptables/rules.v4 for persistence." >&2
+      fi
+    fi
+  fi
+}
+
 ## @fn add_server_to_prometheus_targets()
 ## @brief Add the ROSI Collector server to Prometheus scrape targets
 ## @param server_ip The IP address of the node_exporter endpoint
@@ -742,10 +804,41 @@ DASHBOARDS_DST="${BASE}/grafana/provisioning/dashboards"
 install -d -m 0755 "${DASHBOARDS_DST}"
 
 if [ -d "${DASHBOARDS_SRC}" ]; then
+  source_rendered=false
+  if [ -f "${CONFIGS_DIR}/scripts/render-dashboards.py" ]; then
+    if command -v python3 >/dev/null 2>&1; then
+      echo "Rendering Grafana dashboards from templates (source)..."
+      if python3 "${CONFIGS_DIR}/scripts/render-dashboards.py"; then
+        source_rendered=true
+      else
+        echo "Warning: Failed to render dashboards in source tree" >&2
+      fi
+    else
+      echo "Warning: python3 not found; skipping source dashboard rendering" >&2
+    fi
+  else
+    echo "Warning: render-dashboards.py not found in source tree; skipping source rendering" >&2
+  fi
+
   echo "Installing local Grafana dashboards..."
   rsync -a --delete "${DASHBOARDS_SRC}/" "${DASHBOARDS_DST}/" || {
     echo "Warning: Failed to copy dashboards" >&2
   }
+
+  if [ -f "${BASE}/scripts/render-dashboards.py" ]; then
+    if [ "${source_rendered}" = false ]; then
+      if command -v python3 >/dev/null 2>&1; then
+        echo "Rendering Grafana dashboards from templates (installed copy)..."
+        if ! python3 "${BASE}/scripts/render-dashboards.py"; then
+          echo "Warning: Failed to render dashboards" >&2
+        fi
+      else
+        echo "Warning: python3 not found; skipping dashboard rendering" >&2
+      fi
+    fi
+  else
+    echo "Warning: render-dashboards.py not found; skipping dashboard rendering" >&2
+  fi
 fi
 
 echo "Downloading Grafana dashboards from grafana.com..."
@@ -766,11 +859,29 @@ if [ -d "${CONFIGS_DIR}/downloads" ]; then
   }
   
   CLIENTS_DIR="${CONFIGS_DIR}/clients"
+  for script in install-rsyslog-client.sh install-node-exporter.sh; do
+    if [ -f "${CLIENTS_DIR}/${script}" ]; then
+      echo "Copying ${script} to downloads..."
+      cp "${CLIENTS_DIR}/${script}" "${BASE}/downloads/" || {
+        echo "Warning: Failed to copy ${script}" >&2
+      }
+    fi
+  done
   if [ -f "${CLIENTS_DIR}/rsyslog-forward-minimal.conf" ]; then
     echo "Copying rsyslog client config to downloads..."
     cp "${CLIENTS_DIR}/rsyslog-forward-minimal.conf" "${BASE}/downloads/" || {
       echo "Warning: Failed to copy rsyslog-forward-minimal.conf" >&2
     }
+  fi
+  
+  SIDECAR_DIR="$(cd "${CONFIGS_DIR}/../../.." && pwd)/sidecar"
+  if [ -d "${SIDECAR_DIR}" ]; then
+    echo "Packaging rsyslog exporter sidecar for downloads..."
+    tar -czf "${BASE}/downloads/rsyslog-exporter.tar.gz" -C "${SIDECAR_DIR}/.." "sidecar" || {
+      echo "Warning: Failed to create rsyslog-exporter.tar.gz" >&2
+    }
+  else
+    echo "Warning: sidecar directory not found; skipping rsyslog exporter package" >&2
   fi
   
   if [ -f "${ENVFILE}" ]; then
@@ -1375,6 +1486,9 @@ echo "Setting up server monitoring..."
 SERVER_IP=$(install_node_exporter)
 if [ -n "${SERVER_IP}" ] && [ "${SERVER_IP}" != "0.0.0.0" ]; then
   add_server_to_prometheus_targets "${SERVER_IP}"
+  if [ "${ENABLE_IMPSTATS_FIREWALL:-true}" != "false" ]; then
+    configure_impstats_exporter_firewall "${SERVER_IP}" "${IMPSTATS_EXPORTER_PORT:-9898}"
+  fi
 else
   echo "Warning: Could not determine server IP for Prometheus target" >&2
   echo "Add manually with: prometheus-target add <IP>:9100 host=$(hostname -s) role=monitoring" >&2

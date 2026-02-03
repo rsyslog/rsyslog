@@ -57,7 +57,8 @@ The script will:
 3. Prompt you to enter port (default: 10514)
 4. Ask for confirmation to overwrite if configuration exists
 5. Install and configure everything automatically
-6. Restart rsyslog and show logs for verification
+6. Install the rsyslog impstats sidecar (default enabled)
+7. Restart rsyslog and show logs for verification
 
 ### Script Features
 
@@ -65,8 +66,29 @@ The script will:
 - **Overwrite protection**: Detects existing configs and asks before overwriting
 - **Configuration testing**: Validates configuration syntax before applying
 - **Automatic setup**: Creates spool directory and installs configuration
+- **Impstats sidecar**: Installs the rsyslog exporter service by default
+- **Exporter IP selection**: Prompts for the exporter bind address
+- **Python venv check**: Offers to install `pythonX.Y-venv` if missing
+- **Firewall rules**: Adds UFW or iptables-persistent rules on Ubuntu/Debian
 - **Log verification**: Shows recent logs and checks for errors
 - **Error handling**: Comprehensive error checking and reporting
+
+### Sidecar Installer (Optional)
+
+The client installer also sets up the rsyslog impstats exporter sidecar
+by default. To skip sidecar installation:
+
+```bash
+sudo ./install-rsyslog-client.sh --no-sidecar
+```
+
+### Add Client Targets (One Command)
+
+On the ROSI Collector server, add both node and impstats targets at once:
+
+```bash
+prometheus-target add-client CLIENT_IP host=CLIENT_HOSTNAME role=ROLE network=NETWORK
+```
 
 ### Example Output
 
@@ -76,6 +98,17 @@ The script provides color-coded output and interactive prompts:
 [INFO]==========================================
 [INFO]rsyslog Client Configuration Installer
 [INFO]==========================================
+
+[PROMPT]Install rsyslog impstats sidecar? [Y/n]
+y
+[WARN]python3 venv/ensurepip module is missing.
+[PROMPT]Run 'apt update && apt install python3.12-venv'? [Y/n]
+
+[INFO]Detected IP addresses on this system:
+  [1] 127.0.0.1
+  [2] 10.0.3.1
+[PROMPT]Select IP address to bind exporter [1-2] or enter custom IP:
+2
 
 [PROMPT]Enter central server IP address:
 10.135.0.10

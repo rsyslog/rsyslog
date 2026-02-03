@@ -1,6 +1,6 @@
 # ROSI Collector
 
-**RSyslog Open System for Information** - A production-ready centralized log collection and monitoring stack.
+**Rsyslog Operations Stack Initiative** - A production-ready centralized log collection and monitoring stack.
 
 ROSI Collector provides a complete solution for collecting, storing, and visualizing system logs from multiple hosts using rsyslog, Loki, Grafana, and Prometheus.
 
@@ -114,7 +114,7 @@ docker compose logs -f
   ```bash
   grep GRAFANA_ADMIN_PASSWORD /opt/rosi-collector/.env
   ```
-- Pre-configured dashboards are available under "Dashboards"
+- Pre-configured dashboards are available under **Dashboards**. To change dashboard layout or panels, edit the JSON files in `grafana/provisioning/dashboards/templates/` and run `python3 scripts/render-dashboards.py` to update `generated/`; then copy to the install directory and restart Grafana.
 
 ### 5. Configure Clients
 
@@ -125,6 +125,9 @@ On each client host, forward logs to your ROSI Collector:
 wget https://your-domain.com/downloads/install-rsyslog-client.sh
 sudo bash install-rsyslog-client.sh
 ```
+
+Note: `omfwd` is built-in in rsyslog and does not require `module(load="omfwd")`.
+If you see errors about `omfwd.so` missing, remove any explicit module load.
 
 See `clients/README.md` for detailed client setup instructions.
 
@@ -139,6 +142,7 @@ See `clients/README.md` for detailed client setup instructions.
 | rsyslog | 10514 | Log receiver (TCP plaintext) |
 | rsyslog | 6514 | Log receiver (TCP TLS, if enabled) |
 | node_exporter | 9100 | Host metrics (auto-installed and configured on server) |
+| rsyslog-impstats exporter | 9898 | rsyslog impstats sidecar metrics (optional) |
 
 ## Directory Structure
 
@@ -152,15 +156,21 @@ rosi-collector/
 ├── rsyslog.conf/               # rsyslog configuration
 ├── traefik/                    # Traefik configuration
 ├── prometheus-targets/         # Prometheus scrape targets
-├── grafana/                    # Grafana provisioning
+│   ├── nodes.yml               # node_exporter targets
+│   └── impstats.yml            # rsyslog impstats sidecar targets
+├── grafana/
 │   └── provisioning/
-│       ├── dashboards/         # Pre-built dashboards
-│       ├── datasources/        # Data source configs
-│       └── alerting/           # Alert rules
-├── scripts/                    # Management scripts
+│       ├── dashboards/
+│       │   ├── dashboards.yml  # Points to generated/
+│       │   ├── templates/      # Edit these; run render-dashboards.py
+│       │   └── generated/      # Provisioned JSON (do not edit by hand)
+│       ├── datasources/        # Loki & Prometheus configs
+│       └── alerting/           # Alert rules (default.yml)
+├── scripts/
 │   ├── init.sh                 # Initialize environment
 │   ├── monitor.sh              # Health monitoring (rosi-monitor)
-│   ├── prometheus-target.sh    # Manage scrape targets
+│   ├── prometheus-target.sh    # Manage scrape targets (node + impstats)
+│   ├── render-dashboards.py    # Build generated/ from templates/
 │   ├── generate-ca.sh          # Generate TLS CA and server certs
 │   ├── generate-client-cert.sh # Generate client certificates
 │   ├── install-server.sh       # Prepare fresh Ubuntu server
@@ -170,15 +180,37 @@ rosi-collector/
 
 ## Pre-built Dashboards
 
-ROSI Collector includes several pre-configured Grafana dashboards:
+ROSI Collector includes several pre-configured Grafana dashboards (provisioned from `grafana/provisioning/dashboards/generated/`):
 
 | Dashboard | Description |
 |-----------|-------------|
-| Syslog Explorer | Search and browse logs |
-| Syslog Deep Dive | Detailed log analysis |
-| Node Overview | System metrics overview |
-| Client Health | rsyslog client status |
-| Alerting Overview | Active alerts status |
+| Syslog Explorer | Search and browse logs by host, time range, and filters |
+| Syslog Analysis | Distribution analysis (severity, hosts, facilities) |
+| Syslog Health | rsyslog impstats metrics (queues, actions, input, output, CPU) — see below |
+| Host Metrics Overview | Node exporter metrics (CPU, memory, disk) per host |
+| Alerting Overview | Active alerts and alert rule status |
+
+### Syslog Health (impstats) dashboard
+
+When client hosts run the **impstats sidecar** (default with `install-rsyslog-client.sh`), Prometheus scrapes the sidecar’s `/metrics` endpoint. The **Syslog Health** dashboard visualizes those metrics. Add impstats targets with:
+
+```bash
+prometheus-target --job impstats add <client-ip>:9898 host=<hostname> role=rsyslog network=internal
+# Or add both node and impstats for a client in one step:
+prometheus-target add-client <client-ip> host=<hostname> role=rsyslog network=internal
+```
+
+The dashboard is grouped into sections:
+
+| Section | Contents |
+|---------|----------|
+| **Overview** | Exporter count, action failures, suspended actions, queue full, open files, max RSS |
+| **Queues** | Queue size vs max, utilization %, drop rates (discarded_full / discarded_nf) |
+| **Input** | Ingest rate by input (e.g. imuxsock) |
+| **Actions** | Action processed rate, action failures by action, suspended duration (collapsed by default) |
+| **Output & resource usage** | Output bytes (omfwd) and CPU usage (impstats) side by side |
+
+Use the **Host** dropdown to filter by client. For metric details and suggested alert thresholds, see `ROSI_IMPSTATS_PLAN.md`.
 
 ## Management Scripts
 
@@ -201,6 +233,26 @@ Config file locations (in priority order):
 2. User config: `~/.config/rsyslog/rosi-collector.conf`
 3. System config: `/etc/rsyslog/rosi-collector.conf`
 4. Default: `/opt/rosi-collector`
+
+**Impstats exporter firewall rule:**
+If UFW/firewalld is active, `init.sh` will add a rule to allow the Docker
+subnet to reach the rsyslog impstats exporter on port 9898. To disable this:
+`ENABLE_IMPSTATS_FIREWALL=false ./scripts/init.sh`.
+
+### Prometheus Targets
+
+Use the `prometheus-target` helper to manage scrape targets. The default job
+is `node` (node_exporter). For the rsyslog impstats sidecar exporter, use the
+`impstats` job:
+
+```bash
+# Impstats only (sidecar on port 9898)
+sudo prometheus-target --job impstats add 127.0.0.1:9898 host=rosi-collector role=rsyslog network=internal
+sudo prometheus-target --job impstats list
+
+# Add both node_exporter (9100) and impstats (9898) for a client in one step
+sudo prometheus-target add-client 10.0.0.5 host=client01 role=rsyslog network=internal
+```
 
 ### Prepare Fresh Server (Optional)
 
@@ -291,8 +343,8 @@ After running `init.sh`, the `prometheus-target` command is available system-wid
 # Add a target (host label is required)
 prometheus-target add 10.0.0.5:9100 host=webserver
 
-# Add with multiple labels
-prometheus-target add 10.0.0.5:9100 host=webserver role=web env=production
+# Add with multiple labels (role, network, env)
+prometheus-target add 10.0.0.5:9100 host=webserver role=web network=internal env=production
 
 # List all configured targets
 prometheus-target list
@@ -403,8 +455,6 @@ rosi-generate-client-cert --download client-hostname
 
 # The package includes: client-key.pem, client-cert.pem, ca.pem
 ```
-
-#### Traefik TLS (HTTPS)
 
 #### Traefik TLS (HTTPS)
 

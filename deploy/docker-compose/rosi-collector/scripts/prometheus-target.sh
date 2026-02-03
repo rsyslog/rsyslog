@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# prometheus-target - Manage Prometheus node exporter targets
-# Part of RSyslog Open System for Information (ROSI)
-#
-# Installed to /usr/local/bin/prometheus-target by init.sh
+## @file prometheus-target.sh
+## @brief Manage Prometheus scrape targets for ROSI.
+##
+## Installed to /usr/local/bin/prometheus-target by init.sh
 
 set -euo pipefail
 
@@ -49,14 +49,20 @@ detect_install_dir() {
 }
 
 INSTALL_DIR="$(detect_install_dir)"
-TARGETS_FILE="${INSTALL_DIR}/prometheus-targets/nodes.yml"
+JOB="node"
+TARGETS_FILE=""
 
 usage() {
   cat <<EOF
-Usage: $(basename "$0") <command> [options]
+Usage: $(basename "$0") [--job node|impstats] <command> [options]
+
+Options:
+  --job <name>                Select target job (node|impstats)
+  --targets-file <path>       Override target file path
 
 Commands:
   add <ip:port> [labels...]   Add a new target
+  add-client <ip> [labels...] Add node + impstats targets for a host
   remove <ip:port|hostname>   Remove a target by IP:port or hostname
   list                        List all targets
   
@@ -70,6 +76,8 @@ Labels (for add command):
 Examples:
   $(basename "$0") add 10.0.0.5:9100 host=webserver role=web network=internal
   $(basename "$0") add 192.168.1.10:9100 host=database role=db env=production
+  $(basename "$0") --job impstats add 127.0.0.1:9898 host=rosi-collector role=rsyslog
+  $(basename "$0") add-client 10.0.0.5 host=webserver role=web network=internal
   $(basename "$0") remove 10.0.0.5:9100
   $(basename "$0") remove webserver
   $(basename "$0") list
@@ -79,6 +87,25 @@ Environment:
                               (default: auto-detected or /opt/rosi-collector)
 EOF
   exit 1
+}
+
+resolve_targets_file() {
+  if [ -n "$TARGETS_FILE" ]; then
+    return 0
+  fi
+
+  case "$JOB" in
+    node)
+      TARGETS_FILE="${INSTALL_DIR}/prometheus-targets/nodes.yml"
+      ;;
+    impstats)
+      TARGETS_FILE="${INSTALL_DIR}/prometheus-targets/impstats.yml"
+      ;;
+    *)
+      echo "Error: Unknown job '$JOB' (use node or impstats)" >&2
+      exit 1
+      ;;
+  esac
 }
 
 check_root() {
@@ -95,6 +122,8 @@ check_file() {
     echo "" >&2
     echo "Or set INSTALL_DIR environment variable to your installation path:" >&2
     echo "  INSTALL_DIR=/srv/central prometheus-target list" >&2
+    echo "If managing impstats targets, use:" >&2
+    echo "  prometheus-target --job impstats list" >&2
     exit 1
   fi
 }
@@ -103,6 +132,40 @@ validate_target() {
   local target="$1"
   if [[ ! "$target" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+$ ]]; then
     echo "Error: Invalid target format. Use IP:PORT (e.g., 10.0.0.1:9100)" >&2
+    exit 1
+  fi
+}
+
+validate_ip() {
+  local ip="$1"
+  if [[ ! "$ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    return 1
+  fi
+  local a b c d
+  IFS='.' read -r a b c d <<<"$ip"
+  for octet in "$a" "$b" "$c" "$d"; do
+    if [ "$octet" -lt 0 ] || [ "$octet" -gt 255 ]; then
+      return 1
+    fi
+  done
+  return 0
+}
+
+ensure_host_label() {
+  local has_host="false"
+  for arg in "$@"; do
+    if [[ "$arg" =~ ^([a-zA-Z_][a-zA-Z0-9_]*)=(.+)$ ]]; then
+      local key="${BASH_REMATCH[1]}"
+      if [ "$key" = "host" ]; then
+        has_host="true"
+      fi
+    else
+      echo "Error: Invalid label format: $arg (use key=value)" >&2
+      exit 1
+    fi
+  done
+  if [ "$has_host" != "true" ]; then
+    echo "Error: host=<name> label is required" >&2
     exit 1
   fi
 }
@@ -166,6 +229,49 @@ cmd_add() {
 
   echo "Added target: $target (host=$host)"
   echo "Prometheus will pick up changes within 5 minutes"
+}
+
+cmd_add_client() {
+  if [ $# -lt 2 ]; then
+    echo "Error: Missing IP and/or host label" >&2
+    echo "Usage: $(basename "$0") add-client <ip> host=<name> [labels...]" >&2
+    exit 1
+  fi
+
+  local ip="$1"
+  shift
+
+  if ! validate_ip "$ip"; then
+    echo "Error: Invalid IP address: $ip" >&2
+    exit 1
+  fi
+
+  ensure_host_label "$@"
+
+  # Pre-check both targets so we don't leave partial config if the second add fails
+  TARGETS_FILE="${INSTALL_DIR}/prometheus-targets/nodes.yml"
+  check_file
+  if target_exists "${ip}:9100"; then
+    echo "Error: Target ${ip}:9100 already exists in nodes" >&2
+    exit 1
+  fi
+  TARGETS_FILE="${INSTALL_DIR}/prometheus-targets/impstats.yml"
+  check_file
+  if target_exists "${ip}:9898"; then
+    echo "Error: Target ${ip}:9898 already exists in impstats" >&2
+    exit 1
+  fi
+
+  TARGETS_FILE="${INSTALL_DIR}/prometheus-targets/nodes.yml"
+  cmd_add "${ip}:9100" "$@"
+
+  TARGETS_FILE="${INSTALL_DIR}/prometheus-targets/impstats.yml"
+  ( cmd_add "${ip}:9898" "$@" ) || {
+    echo "Error: Failed to add impstats target; rolling back node target" >&2
+    TARGETS_FILE="${INSTALL_DIR}/prometheus-targets/nodes.yml"
+    cmd_remove "${ip}:9100"
+    exit 1
+  }
 }
 
 cmd_remove() {
@@ -244,7 +350,7 @@ cmd_remove() {
 }
 
 cmd_list() {
-  echo "Prometheus Node Exporter Targets"
+  echo "Prometheus Targets (${JOB})"
   echo "================================="
   echo ""
   
@@ -275,19 +381,59 @@ cmd_list() {
   ' "$TARGETS_FILE"
 }
 
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --job)
+      if [ $# -lt 2 ]; then
+        echo "Error: --job requires a value" >&2
+        exit 1
+      fi
+      JOB="$2"
+      shift 2
+      ;;
+    --targets-file)
+      if [ $# -lt 2 ]; then
+        echo "Error: --targets-file requires a value" >&2
+        exit 1
+      fi
+      TARGETS_FILE="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      ;;
+    --)
+      shift
+      break
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
 check_root
-check_file
 
 case "${1:-}" in
   add)
     shift
+    resolve_targets_file
+    check_file
     cmd_add "$@"
+    ;;
+  add-client)
+    shift
+    cmd_add_client "$@"
     ;;
   remove|rm|delete)
     shift
+    resolve_targets_file
+    check_file
     cmd_remove "$@"
     ;;
   list|ls)
+    resolve_targets_file
+    check_file
     cmd_list
     ;;
   *)

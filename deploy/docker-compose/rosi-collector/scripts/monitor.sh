@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # monitor.sh
 # Comprehensive monitoring and debugging script for ROSI Collector Docker stack (Loki/Grafana/Prometheus)
-# Part of RSyslog Open System for Information (ROSI)
+# Part of Rsyslog Operations Stack Initiative (ROSI)
 #
 # Usage examples:
 #   ./monitor.sh status          # Show container status
