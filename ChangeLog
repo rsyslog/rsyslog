@@ -1,7 +1,18 @@
 ---------------------------------------------------------------------------------------
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-02-??
+- DEFAULT CHANGE: internal ratelimiter now by default set to
+  500 messages/5s vs previous default of 100 messages/60s. This
+  is to prevent spamming the log to much in extreme cases. For some
+  users, this may be too low and need to be adjusted. We excect this
+  to be an exotic case, thus the change of default.
+
 - overall improved documentation via a large set of topic updates.
 
+- 2026-02-04: runtime: lower internal message rate defaults
+  Reduce default internal log spam during error loops while keeping
+  visibility for operators.
+  Impact: Default internal message rate limiting is tighter.
+  Before/After: 500 messages/5s -> 100 messages/60s by default.
 - 2026-02-03: runtime: fix potentially wrong lookup in DNS cache
   Link-local IPv6 sources can share an address but differ by scope,
   which can collide in the DNS cache and mix hostnames, this could
