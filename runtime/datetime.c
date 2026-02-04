@@ -1268,13 +1268,14 @@ static int formatUnixTimeFromTime_t(time_t unixtime,
         }
 
         // MMM dd HH:mm:ss
-        sprintf(pBuf, "%s %2d %.2d:%.2d:%.2d", monthNames[lt.tm_mon], lt.tm_mday, lt.tm_hour, lt.tm_min, lt.tm_sec);
+        snprintf(pBuf, pBufMax, "%s %2d %.2d:%.2d:%.2d", monthNames[lt.tm_mon], lt.tm_mday, lt.tm_hour, lt.tm_min,
+                 lt.tm_sec);
     } else if (strcmp(format, "date-rfc3339") == 0) {
         assert(pBufMax >= 26);
 
         // YYYY-MM-DDTHH:mm:ss+00:00
-        sprintf(pBuf, "%d-%.2d-%.2dT%.2d:%.2d:%.2dZ", lt.tm_year + 1900, lt.tm_mon + 1, lt.tm_mday, lt.tm_hour,
-                lt.tm_min, lt.tm_sec);
+        snprintf(pBuf, pBufMax, "%d-%.2d-%.2dT%.2d:%.2d:%.2dZ", lt.tm_year + 1900, lt.tm_mon + 1, lt.tm_mday,
+                 lt.tm_hour, lt.tm_min, lt.tm_sec);
     }
 
     return strlen(pBuf);
