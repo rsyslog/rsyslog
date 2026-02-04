@@ -351,6 +351,25 @@ finalize_it:
 
 #endif /* event notification compile time selection */
 
+static void freeLstnParams(tcpLstnParams_t *cnf_params) {
+    if (cnf_params == NULL) {
+        return;
+    }
+
+    if (cnf_params->pInputName != NULL) {
+        prop.Destruct(&cnf_params->pInputName);
+    }
+    free((void *)cnf_params->pszInputName);
+    free((void *)cnf_params->pszPort);
+    free((void *)cnf_params->pszAddr);
+    free((void *)cnf_params->pszLstnPortFileName);
+    free((void *)cnf_params->pszNetworkNamespace);
+    free((void *)cnf_params->pszStrmDrvrName);
+    free((void *)cnf_params->pszStartRegex);
+    free((void *)cnf_params->pszRatelimitName);
+    free(cnf_params);
+}
+
 
 /* add new listener port to listener port list
  * rgerhards, 2009-05-21
@@ -390,10 +409,14 @@ static rsRetVal ATTR_NONNULL() addNewLstnPort(tcpsrv_t *const pThis, tcpLstnPara
 #endif
 
     /* support statistics gathering */
-    CHKiRet(ratelimitNew(&pEntry->ratelimiter, "tcperver", NULL));
-    ratelimitSetLinuxLike(pEntry->ratelimiter, pThis->ratelimitInterval, pThis->ratelimitBurst);
+    if (pEntry->cnf_params->pszRatelimitName != NULL) {
+        CHKiRet(ratelimitNewFromConfig(&(pEntry->ratelimiter), runConf, (char *)pEntry->cnf_params->pszRatelimitName,
+                                       "tcpsrv", NULL));
+    } else {
+        CHKiRet(ratelimitNew(&(pEntry->ratelimiter), "tcpsrv", NULL));
+        ratelimitSetLinuxLike(pEntry->ratelimiter, pThis->ratelimitInterval, pThis->ratelimitBurst);
+    }
     ratelimitSetThreadSafe(pEntry->ratelimiter);
-
     CHKiRet(statsobj.Construct(&(pEntry->stats)));
     snprintf((char *)statname, sizeof(statname), "%s(%s)", cnf_params->pszInputName, cnf_params->pszPort);
     statname[sizeof(statname) - 1] = '\0'; /* just to be on the save side... */
@@ -411,9 +434,6 @@ static rsRetVal ATTR_NONNULL() addNewLstnPort(tcpsrv_t *const pThis, tcpLstnPara
 finalize_it:
     if (iRet != RS_RET_OK) {
         if (pEntry != NULL) {
-            if (pEntry->cnf_params->pInputName != NULL) {
-                prop.Destruct(&pEntry->cnf_params->pInputName);
-            }
             if (pEntry->ratelimiter != NULL) {
                 ratelimitDestruct(pEntry->ratelimiter);
             }
@@ -440,6 +460,7 @@ finalize_it:
 static rsRetVal ATTR_NONNULL() configureTCPListen(tcpsrv_t *const pThis, tcpLstnParams_t *const cnf_params) {
     assert(cnf_params->pszPort != NULL);
     int i;
+    sbool added = 0;
     DEFiRet;
 
     ISOBJ_TYPE_assert(pThis, tcpsrv);
@@ -453,11 +474,15 @@ static rsRetVal ATTR_NONNULL() configureTCPListen(tcpsrv_t *const pThis, tcpLstn
 
     if (i >= 0 && i <= 65535) {
         CHKiRet(addNewLstnPort(pThis, cnf_params));
+        added = 1;
     } else {
         LogError(0, NO_ERRCODE, "Invalid TCP listen port %s - ignored.\n", cnf_params->pszPort);
     }
 
 finalize_it:
+    if (iRet != RS_RET_OK || !added) {
+        freeLstnParams(cnf_params);
+    }
     RETiRet;
 }
 
@@ -559,14 +584,7 @@ static void ATTR_NONNULL() deinit_tcp_listener(tcpsrv_t *const pThis) {
             regexp.regfree(&pEntry->start_preg);
         }
 #endif
-        prop.Destruct(&pEntry->cnf_params->pInputName);
-        free((void *)pEntry->cnf_params->pszInputName);
-        free((void *)pEntry->cnf_params->pszPort);
-        free((void *)pEntry->cnf_params->pszAddr);
-        free((void *)pEntry->cnf_params->pszLstnPortFileName);
-        free((void *)pEntry->cnf_params->pszNetworkNamespace);
-        free((void *)pEntry->cnf_params->pszStartRegex);
-        free((void *)pEntry->cnf_params);
+        freeLstnParams(pEntry->cnf_params);
         ratelimitDestruct(pEntry->ratelimiter);
         statsobj.Destruct(&(pEntry->stats));
         pDel = pEntry;

@@ -166,6 +166,10 @@ the input they are specified with.
      - .. include:: ../../reference/parameters/imptcp-keepalive-time.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-imptcp-ratelimit-name`
+     - .. include:: ../../reference/parameters/imptcp-ratelimit-name.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
    * - :ref:`param-imptcp-ratelimit-interval`
      - .. include:: ../../reference/parameters/imptcp-ratelimit-interval.rst
         :start-after: .. summary-start
@@ -301,6 +305,7 @@ Create a unix domain socket:
    ../../reference/parameters/imptcp-keepalive-probes
    ../../reference/parameters/imptcp-keepalive-interval
    ../../reference/parameters/imptcp-keepalive-time
+   ../../reference/parameters/imptcp-ratelimit-name
    ../../reference/parameters/imptcp-ratelimit-interval
    ../../reference/parameters/imptcp-ratelimit-burst
    ../../reference/parameters/imptcp-compression-mode
