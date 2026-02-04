@@ -1,5 +1,10 @@
 ---------------------------------------------------------------------------------------
 Scheduled Release 8.2602.0 (aka 2026.02) 2026-02-??
+- NEW DEPENDENCES: names vary by distribution
+  - libyaml-dev
+  - libprotobuf-c-dev   (module dependency)
+  - libsnappy-dev       (module dependency)
+  - protobuf-c-compiler (build dependency)
 - DEFAULT CHANGE: internal ratelimiter now by default set to
   500 messages/5s vs previous default of 100 messages/60s. This
   is to prevent spamming the log to much in extreme cases. For some
@@ -8,6 +13,33 @@ Scheduled Release 8.2602.0 (aka 2026.02) 2026-02-??
 
 - overall improved documentation via a large set of topic updates.
 
+- 2026-02-04: ratelimit: add named policies; wire into imtcp/imptcp
+  Centralize and reuse rate-limit definitions so admins can apply
+  consistent policies across listeners. This is part of an
+  ongoing series to improve rate limiting and its manageability.
+  Before: inputs set per-listener interval/burst ad hoc.
+  After: inputs can reference a named ratelimit() policy shared across
+  listeners; per-listener values remain as fallback.
+  Impact: New ratelimit() object and RateLimit.Name param for imtcp/imptcp.
+  If a policy file is configured but libyaml is unavailable, config fails.
+  Technical details:
+  - Add top-level ratelimit() Rainerscript object. Parsed in rsconf and
+    stored in a central registry (hashtable + rwlock) on rsconf.
+  - New runtime API: ratelimitAddConfig(), ratelimitNewFromConfig(), plus
+    cfgs init/destruct on rsconf lifecycle.
+  - imtcp/imptcp accept RateLimit.Name; when set, tcpsrv/imptcp build the
+    ratelimiter from the named policy; otherwise legacy interval/burst is
+    used. Thread-safety retained via ratelimitSetThreadSafe().
+  - tcpsrv gains ownership helpers for listener params and frees them on
+    errors; imtcp explicitly transfers ownership and nulls the pointer.
+  - Optional libyaml: detected at configure; runtime parser loads simple
+    key/value policy files (interval, burst, severity).
+  - Docs: new ratelimit object page; imtcp/imptcp parameter references and
+    module docs updated; design-decisions note added for libyaml.
+  - Tests: add ratelimit_name.sh (guarded for imtcp+imptcp) to validate
+    named policy application and observable throttling.
+  Refs: https://github.com/rsyslog/rsyslog/issues/6201
+  Refs: https://github.com/rsyslog/rsyslog/issues/6201
 - 2026-02-04: runtime: lower internal message rate defaults
   Reduce default internal log spam during error loops while keeping
   visibility for operators.
