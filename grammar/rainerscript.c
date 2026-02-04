@@ -1665,7 +1665,14 @@ static void doFunc_re_extract(struct cnffunc *func, struct svar *ret, void *usrp
             } else {
                 DBGPRINTF("re_extract: regex found at offset %d, new offset %d, tries %d\n", iOffs,
                           (int)(iOffs + pmatch[0].rm_eo), iTry);
-                iOffs += pmatch[0].rm_eo;
+                if (pmatch[0].rm_eo == 0) {
+                    if (str[iOffs] == '\0') {
+                        break;
+                    }
+                    iOffs++;
+                } else {
+                    iOffs += pmatch[0].rm_eo;
+                }
                 ++iTry;
             }
         } else {
