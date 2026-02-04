@@ -5730,8 +5730,9 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
                     "[cwd: %s]: %s",
                     cfgFile, cwdBuf, errStr);
                 ret = 1;
+                goto done;
             }
-            goto done;
+            continue;
         }
 
         if (S_ISLNK(linkInfo.st_mode)) {
@@ -5744,8 +5745,9 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
                         "[cwd: %s]: %s",
                         cfgFile, cwdBuf, errStr);
                     ret = 1;
+                    goto done;
                 }
-                goto done;
+                continue;
             }
         } else {
             fileInfo = linkInfo;
