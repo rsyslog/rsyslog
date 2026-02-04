@@ -5672,6 +5672,7 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
     glob_t cfgFiles;
     int ret = 0;
     struct stat fileInfo;
+    struct stat linkInfo;
     char errStr[1024];
     char nameBuf[MAXFNAME + 1];
     char cwdBuf[MAXFNAME + 1];
@@ -5720,7 +5721,7 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
      */
     for (i = cfgFiles.gl_pathc - 1; i >= 0; i--) {
         cfgFile = cfgFiles.gl_pathv[i];
-        if (stat(cfgFile, &fileInfo) != 0) {
+        if (lstat(cfgFile, &linkInfo) != 0) {
             if (optional == 0) {
                 rs_strerror_r(errno, errStr, sizeof(errStr));
                 if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) strcpy(cwdBuf, "??getcwd() failed??");
@@ -5731,6 +5732,23 @@ int ATTR_NONNULL() cnfDoInclude(const char *const name, const int optional) {
                 ret = 1;
             }
             goto done;
+        }
+
+        if (S_ISLNK(linkInfo.st_mode)) {
+            if (stat(cfgFile, &fileInfo) != 0) {
+                if (optional == 0) {
+                    rs_strerror_r(errno, errStr, sizeof(errStr));
+                    if (getcwd(cwdBuf, sizeof(cwdBuf)) == NULL) strcpy(cwdBuf, "??getcwd() failed??");
+                    parser_errmsg(
+                        "error accessing config file or directory '%s' "
+                        "[cwd: %s]: %s",
+                        cfgFile, cwdBuf, errStr);
+                    ret = 1;
+                }
+                goto done;
+            }
+        } else {
+            fileInfo = linkInfo;
         }
 
         if (S_ISREG(fileInfo.st_mode)) { /* config file */
