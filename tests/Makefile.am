@@ -70,6 +70,7 @@ TESTS_ELASTICSEARCH_VALGRIND = \
 	es-basic-ha-vg.sh
 
 TESTS_DEFAULT = \
+	preservefqdn-localhostname-internal.sh \
 	immark.sh \
 	immark-inputname.sh \
 	immark-ruleset.sh \
