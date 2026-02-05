@@ -37,7 +37,8 @@ jobs:
     timeout-minutes: 30
     strategy:
       # When set to true, cancel all in-progress jobs if any matrix job fails.
-      fail-fast: false
+      # A single compile failure is sufficient; stop the remaining matrix to save CI time.
+      fail-fast: true
       matrix:
         # note: we compile only with the oldest and newest supported compilers to
         # save resources. Other important ones are used during the rest of
