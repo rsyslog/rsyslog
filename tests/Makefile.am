@@ -329,6 +329,7 @@ TESTS_DEFAULT = \
 	rscript_wrap3.sh \
 	rscript_re_extract_i.sh \
 	rscript_re_extract.sh \
+	rscript_re_extract_loop.sh \
 	rscript_re_match_i.sh \
 	rscript_re_match.sh \
 	rscript_re_match-dbl_quotes.sh \
