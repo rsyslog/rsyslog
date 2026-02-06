@@ -39,8 +39,9 @@ jobs:
     # Only proceed for successful compile runs on pull requests from this repo.
     if: >-
       ${{ github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'pull_request' &&
-      github.event.workflow_run.pull_requests[0].head.repo.full_name == github.repository }}
+      github.event.workflow_run.event == 'pull_request' }}
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 50
     strategy:
@@ -58,8 +59,14 @@ jobs:
       - name: git checkout project
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          repository: ${{ github.event.workflow_run.pull_requests[0].head.repo.full_name }}
+          ref: ${{ github.event.workflow_run.pull_requests[0].head.ref }}
           fetch-depth: 0
+
+      - name: fetch upstream (for changed-files diff)
+        run: |
+          git remote add upstream https://github.com/${{ github.repository }}.git
+          git fetch upstream
 
       - name: Check for code changes
         id: code_changes
