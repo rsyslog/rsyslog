@@ -65,7 +65,6 @@
 #include "threads.h"
 #include "datetime.h"
 #include "parserif.h"
-#include "grammar.h"
 #include "modules.h"
 #include "dirty.h"
 #include "template.h"
@@ -558,6 +557,7 @@ finalize_it:
 
 /*------------------------------ interface to flex/bison parser ------------------------------*/
 extern int yylineno;
+extern int yyparse(void);
 
 void parser_warnmsg(const char *fmt, ...) {
     va_list ap;
