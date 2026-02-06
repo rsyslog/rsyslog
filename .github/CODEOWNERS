@@ -1,1 +1,2 @@
-.github/workflows/ @rgerhards
+.github/workflows/*.yml @rgerhards
+.github/workflows/*.yaml @rgerhards
