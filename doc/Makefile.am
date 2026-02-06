@@ -920,6 +920,7 @@ EXTRA_DIST = \
     source/reference/parameters/omhttp-batch-maxbytes.rst \
     source/reference/parameters/omhttp-batch-maxsize.rst \
     source/reference/parameters/omhttp-batch.rst \
+    source/reference/parameters/omhttp-replymaxbytes.rst \
     source/reference/parameters/omhttp-checkpath.rst \
     source/reference/parameters/omhttp-compress-level.rst \
     source/reference/parameters/omhttp-compress.rst \
