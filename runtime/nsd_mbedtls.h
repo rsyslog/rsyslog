@@ -88,6 +88,8 @@ struct nsd_mbedtls_s {
 
 /* prototypes */
 PROTOTYPEObj(nsd_mbedtls);
+rsRetVal nsd_mbedtlsConstruct(nsd_mbedtls_t **ppThis);
+rsRetVal nsd_mbedtlsDestruct(nsd_mbedtls_t **ppThis);
 
 /* the name of our library binary */
 #define LM_NSD_MBEDTLS_FILENAME "lmnsd_mbedtls"
