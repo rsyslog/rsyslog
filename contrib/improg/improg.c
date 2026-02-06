@@ -117,7 +117,7 @@ static instanceConf_t *confRoot = NULL;
 static fd_set rfds;
 static int nfds = 0;
 
-extern char **environ; /* POSIX environment ptr, by std not in a header... (see man 7 environ) */
+#include "im-helper.h" /* must be included AFTER the type definitions! */
 
 static inline void std_checkRuleset_genErrMsg(__attribute__((unused)) modConfData_t *modConf, instanceConf_t *pInst) {
     LogError(0, NO_ERRCODE,
@@ -125,8 +125,6 @@ static inline void std_checkRuleset_genErrMsg(__attribute__((unused)) modConfDat
              "using default ruleset instead",
              pInst->pszBindRuleset, pInst->pszBinary);
 }
-
-#include "im-helper.h" /* must be included AFTER the type definitions! */
 
 /* tables for interfacing with the v6 config system */
 /* action (instance) parameters */
@@ -195,7 +193,7 @@ static __attribute__((noreturn)) void execBinary(const instanceConf_t *pInst, in
     alarm(0);
 
     /* finally exec program */
-    execve((char *)pInst->pszBinary, pInst->aParams, environ);
+    execv((char *)pInst->pszBinary, pInst->aParams);
 
 failed:
     /* an error occurred: log it and exit the child process. We use the
