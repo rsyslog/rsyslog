@@ -25,21 +25,95 @@
 name: check
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_repository.full_name }}-${{ github.event.workflow_run.head_branch }}-${{ github.event.workflow_run.head_sha }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 on:
-  workflow_run:
-    # Run only after compile check completes so we avoid expensive CI if compile fails.
-    workflows: ["compile check"]
-    types: [completed]
+  pull_request:
 
 jobs:
+  compile:
+    name: compile (${{ matrix.config }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: true
+      matrix:
+        config: [clang9, clang18-noatomics, clang18-ndebug, gcc8-debug, gcc-11-ndebug, gcc14-gnu23-debug]
+    steps:
+      - name: git checkout project
+        uses: actions/checkout@v4
+
+      - name: Check for code changes
+        id: code_changes
+        uses: tj-actions/changed-files@v46
+        with:
+          files: |
+            **/*.c
+            **/*.h
+            grammar/lexer.l
+            grammar/grammar.y
+            tests/*.sh
+            diag.sh
+            **/Makefile.am
+
+      - name: run compile check (container)
+        if: steps.code_changes.outputs.any_changed == 'true'
+        run: |
+          chmod -R go+rw .
+          export RSYSLOG_CONTAINER_UID="" # use default
+          export CFLAGS='-g'
+          case "${{ matrix.config }}" in
+          'clang9')
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:20.04'
+              export CC='clang-9'
+              ;;
+          'clang18-ndebug')
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=no'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
+              export CC='clang-18'
+              ;;
+          'clang18-noatomics')
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-atomic-operations=no'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
+              export CC='clang-18'
+              ;;
+          'gcc8-debug')
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=yes'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:18.04'
+              export CC='gcc-8'
+              ;;
+          'gcc-11-ndebug')
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=no'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:22.04'
+              export CC='gcc-11'
+              ;;
+          'gcc14-gnu23-debug')
+              # omamqp1 seems to have an issue with the build system - exclude it for now
+              # rgerhards, 2024-12-06
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA='--enable-debug=yes --disable-omamqp1'
+              export RSYSLOG_DEV_CONTAINER='rsyslog/rsyslog_dev_base_ubuntu:24.04'
+              export CFLAGS="-g -std=gnu23"
+              export CC='gcc-14'
+              ;;
+          *)
+              echo "unknown configuration "
+              echo "error-terminating this check run"
+              exit 1
+              ;;
+          esac
+          devtools/devcontainer.sh --rm devtools/run-configure.sh
+          devtools/devcontainer.sh --rm make -j20
+
+      - name: Skip compile check, no relevant changes
+        if: steps.code_changes.outputs.any_changed != 'true'
+        run: echo "No relevant changes detected; skipping compile stage."
+
   CI:
-    # Only proceed for successful compile runs triggered by pull requests.
-    if: >-
-      ${{ github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.event == 'pull_request' }}
+    needs: compile
+    if: ${{ needs.compile.result == 'success' }}
     permissions:
       contents: read
     runs-on: ubuntu-latest
@@ -59,30 +133,19 @@ jobs:
       - name: git checkout project
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.event.workflow_run.head_repository.full_name }}
-          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
       - name: fetch upstream (for changed-files diff)
         run: |
           git remote add upstream https://github.com/${{ github.repository }}.git
-          git fetch upstream
-
-      - name: determine base sha
-        id: base_sha
-        run: |
-          set -euo pipefail
-          default_branch="${{ github.event.repository.default_branch }}"
-          git fetch --no-tags upstream "${default_branch}"
-          base_sha="$(git merge-base "${{ github.event.workflow_run.head_sha }}" "upstream/${default_branch}")"
-          echo "base_sha=${base_sha}" >> "$GITHUB_OUTPUT"
+          git fetch upstream "${{ github.event.pull_request.base.ref }}"
 
       - name: Check for code changes
         id: code_changes
         uses: tj-actions/changed-files@v46
         with:
-          base_sha: ${{ steps.base_sha.outputs.base_sha }}
-          sha: ${{ github.event.workflow_run.head_sha }}
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          sha: ${{ github.event.pull_request.head.sha }}
           files: |
             **/*.c
             **/*.h
@@ -92,7 +155,7 @@ jobs:
             diag.sh
             **/Makefile.am
             configure.ac
-            .github/workflows/*.yml
+            .github/workflows/run_checks.yml
           files_ignore: |
             doc/Makefile.am
 
