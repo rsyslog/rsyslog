@@ -155,7 +155,7 @@ static void aix_close_it(int i) {
 DEFobjCurrIf(obj) DEFobjCurrIf(prop) DEFobjCurrIf(parser) DEFobjCurrIf(ruleset) DEFobjCurrIf(net) DEFobjCurrIf(rsconf)
     DEFobjCurrIf(module) DEFobjCurrIf(datetime) DEFobjCurrIf(glbl)
 
-        extern int yydebug; /* interface to flex */
+        extern int yydebug; /* interface to parser */
 
 
 /* forward definitions */

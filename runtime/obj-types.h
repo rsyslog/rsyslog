@@ -5,7 +5,7 @@
  * that loop somehow and I've done that by moving the typedefs
  * into this file here.
  *
- * Copyright 2008-2024 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2008-2026 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -169,7 +169,6 @@ struct obj_s { /* the dummy struct that each derived class can be casted to */
     }
 #define PROTOTYPEpropSetMethFP(obj, prop, dataType) rsRetVal obj##Set##prop(obj##_t *pThis, dataType)
 #define DEFpropSetMeth(obj, prop, dataType)                  \
-    rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal);  \
     rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal) { \
         pThis->prop = pVal;                                  \
         return RS_RET_OK;                                    \
@@ -238,6 +237,7 @@ finalize_it:                                                \
 /* this defines both the constructor and initializer
  * rgerhards, 2008-01-10
  */
+#define PROTOTYPEobjConstruct(obj) rsRetVal obj##Construct(obj##_t **ppThis)
 #define BEGINobjConstruct(obj)                                                 \
     static rsRetVal obj##Initialize(obj##_t __attribute__((unused)) * pThis) { \
         DEFiRet;
@@ -246,7 +246,6 @@ finalize_it:                                                \
     /* use finalize_it: before calling the macro (if you need it)! */  \
     RETiRet;                                                           \
     }                                                                  \
-    rsRetVal obj##Construct(obj##_t **ppThis);                         \
     rsRetVal obj##Construct(obj##_t **ppThis) {                        \
         DEFiRet;                                                       \
         obj##_t *pThis;                                                \
@@ -290,7 +289,6 @@ finalize_it:                                                \
  * warnings.
  */
 #define BEGINobjDestruct(OBJ)                                           \
-    rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) * *ppThis);  \
     rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) * *ppThis) { \
         DEFiRet;                                                        \
         OBJ##_t *pThis;
@@ -330,7 +328,6 @@ finalize_it:                                            \
 #define PROTOTYPEObjDebugPrint(obj) rsRetVal obj##DebugPrint(obj##_t *pThis)
 #define INTERFACEObjDebugPrint(obj) rsRetVal (*DebugPrint)(obj##_t * pThis)
 #define BEGINobjDebugPrint(obj)                                         \
-    rsRetVal obj##DebugPrint(obj##_t __attribute__((unused)) * pThis);  \
     rsRetVal obj##DebugPrint(obj##_t __attribute__((unused)) * pThis) { \
         DEFiRet;
 
@@ -364,7 +361,6 @@ finalize_it:                                            \
  * present in all objects.
  */
 #define BEGINobjQueryInterface(obj)                 \
-    rsRetVal obj##QueryInterface(obj##_if_t *pIf);  \
     rsRetVal obj##QueryInterface(obj##_if_t *pIf) { \
         DEFiRet;
 
@@ -413,13 +409,22 @@ finalize_it:                                            \
  */
 #define DEFobjCurrIf(obj) static obj##_if_t obj = {.ifVersion = obj##CURR_IF_VERSION, .ifIsLoaded = 0};
 
-/* define the prototypes for a class - when we use interfaces, we just have few
- * functions that actually need to be non-static.
+/* define the prototypes for a class - keep signatures behind PROTOTYPE*
+ * macros so interface changes are localized in this file.
  */
-#define PROTOTYPEObj(obj)       \
+#define PROTOTYPEObjBasic(obj)  \
     PROTOTYPEObjClassInit(obj); \
     PROTOTYPEObjClassExit(obj); \
     PROTOTYPEObjQueryInterface(obj)
+
+/* use where typed object ctor/dtor declarations are valid in scope */
+#define PROTOTYPEObjFull(obj)   \
+    PROTOTYPEObjBasic(obj);     \
+    PROTOTYPEobjConstruct(obj); \
+    PROTOTYPEobjDestruct(obj)
+
+/* legacy alias kept for broad in-tree compatibility */
+#define PROTOTYPEObj(obj) PROTOTYPEObjBasic(obj)
 
 /* ------------------------------ end object loader system ------------------------------ */
 

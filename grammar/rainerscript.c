@@ -59,6 +59,8 @@
 #include "unicode-helper.h"
 #include "errmsg.h"
 
+extern int yylineno;
+
 PRAGMA_IGNORE_Wswitch_enum
 
     DEFobjCurrIf(obj) DEFobjCurrIf(regexp) DEFobjCurrIf(datetime)
@@ -4692,8 +4694,6 @@ struct cnfstmt *cnfstmtNew(unsigned s_type) {
 static void cnfstmtDisable(struct cnfstmt *cnfstmt) {
     cnfstmt->nodetype = S_NOP;
 }
-
-void cnfstmtDestructLst(struct cnfstmt *root);
 
 static void cnfIteratorDestruct(struct cnfitr *itr);
 

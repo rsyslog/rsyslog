@@ -1755,7 +1755,7 @@ BEGINqueryEtryPt
 ENDqueryEtryPt
 
 
-BEGINmodInit(File)
+BEGINmodInitNoPredecl(File)
     CODESTARTmodInit;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */
     CODEmodInit_QueryRegCFSLineHdlr INITLegCnfVars;

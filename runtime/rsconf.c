@@ -72,6 +72,8 @@
 #include "ratelimit.h"
 
 extern char *yytext;
+extern int yylineno;
+extern int yyparse(void);
 /* static data */
 DEFobjStaticHelpers;
 DEFobjCurrIf(ruleset) DEFobjCurrIf(module) DEFobjCurrIf(conf) DEFobjCurrIf(glbl) DEFobjCurrIf(parser)
@@ -160,9 +162,6 @@ static struct cnfparamdescr ratelimitpdescr[] = {{"name", eCmdHdlrString, CNFPAR
                                                  {"perSourceTopN", eCmdHdlrInt, 0}};
 static struct cnfparamblk ratelimitpblk = {CNFPARAMBLK_VERSION, sizeof(ratelimitpdescr) / sizeof(struct cnfparamdescr),
                                            ratelimitpdescr};
-
-/* forward-definitions */
-void cnfDoCfsysline(char *ln);
 
 int rsconfNeedDropPriv(rsconf_t *const cnf) {
     return ((cnf->globals.gidDropPriv != 0) || (cnf->globals.uidDropPriv != 0));
@@ -331,7 +330,6 @@ static void freeCnf(rsconf_t *pThis) {
 }
 
 /* destructor for the rsconf object */
-PROTOTYPEobjDestruct(rsconf);
 BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and CODESTART macros! */
     CODESTARTobjDestruct(rsconf);
     freeCnf(pThis);
@@ -559,7 +557,6 @@ finalize_it:
 }
 
 /*------------------------------ interface to flex/bison parser ------------------------------*/
-extern int yylineno;
 
 void parser_warnmsg(const char *fmt, ...) {
     va_list ap;

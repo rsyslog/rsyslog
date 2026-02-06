@@ -1,6 +1,6 @@
 /* header for strgen.c
  *
- * Copyright 2010 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2010-2026 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -56,6 +56,5 @@ ENDinterface(strgen)
 
 
 /* prototypes */
-PROTOTYPEObj(strgen);
-
+PROTOTYPEObjFull(strgen);
 #endif /* #ifndef INCLUDED_STRGEN_H */

@@ -11,7 +11,7 @@
  * File begun on 2007-07-20 by Rainer Gerhards (extracted from syslogd.c,
  * which at the time of the fork from sysklogd was under BSD license).
  *
- * Copyright 2007-2025 Adiscon GmbH.
+ * Copyright 2007-2026 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -572,7 +572,7 @@ BEGINqueryEtryPt
 ENDqueryEtryPt
 
 
-BEGINmodInit(UsrMsg)
+BEGINmodInitNoPredecl(UsrMsg)
     CODESTARTmodInit;
     INITLegCnfVars;
     *ipIFVersProvided = CURR_MOD_IF_VERSION; /* we only support the current interface specification */

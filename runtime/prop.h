@@ -2,7 +2,7 @@
  *
  * This implements props within rsyslog.
  *
- * Copyright 2009-2012 Adiscon GmbH.
+ * Copyright 2009-2026 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -75,6 +75,7 @@ static inline const char *__attribute__((unused)) szStrOrDefault(const uchar *ps
 }
 
 /* prototypes */
-PROTOTYPEObj(prop);
+PROTOTYPEObjFull(prop);
+PROTOTYPEObjDebugPrint(prop);
 
 #endif /* #ifndef INCLUDED_PROP_H */
