@@ -72,6 +72,8 @@ struct nsd_ossl_s {
 
 /* prototypes */
 PROTOTYPEObj(nsd_ossl);
+rsRetVal nsd_osslConstruct(nsd_ossl_t **ppThis);
+rsRetVal nsd_osslDestruct(nsd_ossl_t **ppThis);
 
 /* some prototypes for things used by our nsdsel_ossl helper class */
 uchar *osslStrerror(int error);

@@ -72,6 +72,9 @@ ENDinterface(ruleset)
 
 /* prototypes */
 PROTOTYPEObj(ruleset);
+rsRetVal rulesetConstruct(ruleset_t **ppThis);
+rsRetVal rulesetDestruct(ruleset_t **ppThis);
+rsRetVal rulesetDebugPrint(ruleset_t *pThis);
 
 /* TODO: remove these -- currently done dirty for config file
  * redo -- rgerhards, 2011-04-19

@@ -71,6 +71,23 @@
 #include "timezones.h"
 #include "ratelimit.h"
 
+/*
+ * Built-in module init entry points used for registration below.
+ * Declarations are kept local to avoid redundant redecls in module TUs.
+ */
+extern rsRetVal modInitFile(int, int *, rsRetVal (**)(), rsRetVal (*)(uchar *, rsRetVal (**)()), modInfo_t *);
+extern rsRetVal modInitPipe(int, int *, rsRetVal (**)(), rsRetVal (*)(uchar *, rsRetVal (**)()), modInfo_t *);
+extern rsRetVal modInitShell(int, int *, rsRetVal (**)(), rsRetVal (*)(uchar *, rsRetVal (**)()), modInfo_t *);
+extern rsRetVal modInitDiscard(int, int *, rsRetVal (**)(), rsRetVal (*)(uchar *, rsRetVal (**)()), modInfo_t *);
+extern rsRetVal modInitFwd(int, int *, rsRetVal (**)(), rsRetVal (*)(uchar *, rsRetVal (**)()), modInfo_t *);
+extern rsRetVal modInitUsrMsg(int, int *, rsRetVal (**)(), rsRetVal (*)(uchar *, rsRetVal (**)()), modInfo_t *);
+extern rsRetVal modInitpmrfc5424(int, int *, rsRetVal (**)(), rsRetVal (*)(uchar *, rsRetVal (**)()), modInfo_t *);
+extern rsRetVal modInitpmrfc3164(int, int *, rsRetVal (**)(), rsRetVal (*)(uchar *, rsRetVal (**)()), modInfo_t *);
+extern rsRetVal modInitsmfile(int, int *, rsRetVal (**)(), rsRetVal (*)(uchar *, rsRetVal (**)()), modInfo_t *);
+extern rsRetVal modInitsmtradfile(int, int *, rsRetVal (**)(), rsRetVal (*)(uchar *, rsRetVal (**)()), modInfo_t *);
+extern rsRetVal modInitsmfwd(int, int *, rsRetVal (**)(), rsRetVal (*)(uchar *, rsRetVal (**)()), modInfo_t *);
+extern rsRetVal modInitsmtradfwd(int, int *, rsRetVal (**)(), rsRetVal (*)(uchar *, rsRetVal (**)()), modInfo_t *);
+
 extern char *yytext;
 /* static data */
 DEFobjStaticHelpers;

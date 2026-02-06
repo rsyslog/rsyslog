@@ -112,6 +112,8 @@ ENDinterface(netstrm)
 
 /* prototypes */
 PROTOTYPEObj(netstrm);
+rsRetVal netstrmConstruct(netstrm_t **ppThis);
+rsRetVal netstrmDestruct(netstrm_t **ppThis);
 
 /* the name of our library binary */
 #define LM_NETSTRM_FILENAME LM_NETSTRMS_FILENAME

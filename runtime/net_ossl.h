@@ -172,6 +172,8 @@ void osslGlblExit(void);
 
 /* prototypes */
 PROTOTYPEObj(net_ossl);
+rsRetVal net_osslConstruct(net_ossl_t **ppThis);
+rsRetVal net_osslDestruct(net_ossl_t **ppThis);
 
 /* the name of our library binary */
 // #define LM_NET_OSSL_FILENAME "lmnet_ossl"

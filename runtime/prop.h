@@ -76,5 +76,8 @@ static inline const char *__attribute__((unused)) szStrOrDefault(const uchar *ps
 
 /* prototypes */
 PROTOTYPEObj(prop);
+rsRetVal propConstruct(prop_t **ppThis);
+rsRetVal propDestruct(prop_t **ppThis);
+rsRetVal propDebugPrint(prop_t *pThis);
 
 #endif /* #ifndef INCLUDED_PROP_H */

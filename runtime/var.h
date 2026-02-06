@@ -59,5 +59,8 @@ ENDinterface(var)
 
 /* prototypes */
 PROTOTYPEObj(var);
+rsRetVal varConstruct(var_t **ppThis);
+rsRetVal varDestruct(var_t **ppThis);
+rsRetVal varDebugPrint(var_t *pThis);
 
 #endif /* #ifndef INCLUDED_VAR_H */

@@ -65,6 +65,8 @@ ENDinterface(tcpclt)
 
 /* prototypes */
 PROTOTYPEObj(tcpclt);
+rsRetVal tcpcltConstruct(tcpclt_t **ppThis);
+rsRetVal tcpcltDestruct(tcpclt_t **ppThis);
 
 /* the name of our library binary */
 #define LM_TCPCLT_FILENAME "lmtcpclt"

@@ -266,6 +266,8 @@ PROTOTYPEpropSetMeth(qqueue, pAction, action_t *);
 PROTOTYPEpropSetMeth(qqueue, iDeqSlowdown, int);
 PROTOTYPEpropSetMeth(qqueue, sizeOnDiskMax, int64);
 PROTOTYPEpropSetMeth(qqueue, iDeqBatchSize, int);
+PROTOTYPEpropSetMeth(qqueue, iMinDeqBatchSize, int);
+PROTOTYPEpropSetMeth(qqueue, iSmpInterval, int);
 #define qqueueGetID(pThis) ((unsigned long)pThis)
 
 #ifdef ENABLE_IMDIAG

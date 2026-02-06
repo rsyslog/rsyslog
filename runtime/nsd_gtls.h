@@ -96,6 +96,8 @@ struct nsd_gtls_s {
 
 /* prototypes */
 PROTOTYPEObj(nsd_gtls);
+rsRetVal nsd_gtlsConstruct(nsd_gtls_t **ppThis);
+rsRetVal nsd_gtlsDestruct(nsd_gtls_t **ppThis);
 /* some prototypes for things used by our nsdsel_gtls helper class */
 uchar *gtlsStrerror(int error);
 rsRetVal gtlsChkPeerAuth(nsd_gtls_t *pThis);

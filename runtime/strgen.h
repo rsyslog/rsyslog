@@ -57,5 +57,7 @@ ENDinterface(strgen)
 
 /* prototypes */
 PROTOTYPEObj(strgen);
+rsRetVal strgenConstruct(strgen_t **ppThis);
+rsRetVal strgenDestruct(strgen_t **ppThis);
 
 #endif /* #ifndef INCLUDED_STRGEN_H */

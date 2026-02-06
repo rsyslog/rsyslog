@@ -343,6 +343,9 @@ ENDinterface(tcpsrv)
 
 /* prototypes */
 PROTOTYPEObj(tcpsrv);
+rsRetVal tcpsrvConstruct(tcpsrv_t **ppThis);
+rsRetVal tcpsrvDestruct(tcpsrv_t **ppThis);
+rsRetVal tcpsrvDebugPrint(tcpsrv_t *pThis);
 
 /* the name of our library binary */
 #define LM_TCPSRV_FILENAME "lmtcpsrv"

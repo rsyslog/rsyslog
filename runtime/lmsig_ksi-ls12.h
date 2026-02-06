@@ -37,5 +37,7 @@ typedef struct lmsig_ksi_ls12_s lmsig_ksi_ls12_t;
 
 /* prototypes */
 PROTOTYPEObj(lmsig_ksi_ls12);
+rsRetVal lmsig_ksi_ls12Construct(lmsig_ksi_ls12_t **ppThis);
+rsRetVal lmsig_ksi_ls12Destruct(lmsig_ksi_ls12_t **ppThis);
 
 #endif /* #ifndef INCLUDED_LMSIG_LS12_KSI_H */

@@ -100,6 +100,9 @@ ENDinterface(tcps_sess)
 
 /* prototypes */
 PROTOTYPEObj(tcps_sess);
+rsRetVal tcps_sessConstruct(tcps_sess_t **ppThis);
+rsRetVal tcps_sessDestruct(tcps_sess_t **ppThis);
+rsRetVal tcps_sessDebugPrint(tcps_sess_t *pThis);
 
 
 #endif /* #ifndef INCLUDED_TCPS_SESS_H */

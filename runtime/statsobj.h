@@ -160,6 +160,9 @@ ENDinterface(statsobj)
 
 /* prototypes */
 PROTOTYPEObj(statsobj);
+rsRetVal statsobjConstruct(statsobj_t **ppThis);
+rsRetVal statsobjDestruct(statsobj_t **ppThis);
+rsRetVal statsobjDebugPrint(statsobj_t *pThis);
 
 rsRetVal statsRecordSender(const uchar *sender, unsigned nMsgs, time_t lastSeen);
 /* checkGoneAwaySenders() is part of this module because all it needs is

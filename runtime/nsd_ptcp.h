@@ -46,6 +46,8 @@ struct nsd_ptcp_s {
 
 /* prototypes */
 PROTOTYPEObj(nsd_ptcp);
+rsRetVal nsd_ptcpConstruct(nsd_ptcp_t **ppThis);
+rsRetVal nsd_ptcpDestruct(nsd_ptcp_t **ppThis);
 
 /* the name of our library binary */
 #define LM_NSD_PTCP_FILENAME "lmnsd_ptcp"

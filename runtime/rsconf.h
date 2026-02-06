@@ -289,6 +289,9 @@ ENDinterface(rsconf)
 
 /* prototypes */
 PROTOTYPEObj(rsconf);
+rsRetVal rsconfConstruct(rsconf_t **ppThis);
+rsRetVal rsconfDestruct(rsconf_t **ppThis);
+rsRetVal rsconfDebugPrint(rsconf_t *pThis);
 
 /* globally-visible external data */
 extern rsconf_t *runConf; /* the currently running config */

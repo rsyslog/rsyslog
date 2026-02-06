@@ -54,8 +54,6 @@ MODULE_TYPE_OUTPUT;
 MODULE_TYPE_NOKEEP;
 MODULE_CNFNAME("omprog")
 
-extern char **environ; /* POSIX environment ptr, by std not in a header... (see man 7 environ) */
-
 /* internal structures
  */
 DEF_OMOD_STATIC_DATA;
@@ -221,7 +219,7 @@ static __attribute__((noreturn)) void execBinary(const instanceData *pData, int 
     alarm(0);
 
     /* finally exec program */
-    execve((char *)pData->szBinary, pData->aParams, environ);
+    execv((char *)pData->szBinary, pData->aParams);
 
 failed:
     /* an error occurred: log it and exit the child process. We use the
