@@ -545,7 +545,6 @@ ENDobjConstruct(nsd_ossl)
 
 
 /* destructor for the nsd_ossl object */
-PROTOTYPEobjDestruct(nsd_ossl);
 BEGINobjDestruct(nsd_ossl) /* be sure to specify the object type also in END and CODESTART macros! */
     CODESTARTobjDestruct(nsd_ossl);
     DBGPRINTF("nsd_ossl_destruct: [%p] Mode %d\n", pThis, pThis->iMode);
