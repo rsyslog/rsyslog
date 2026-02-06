@@ -29,24 +29,6 @@
 #ifndef OMUSRMSG_H_INCLUDED
     #define OMUSRMSG_H_INCLUDED 1
 
-/* prototypes */
-/**
- * Initialize the omusrmsg module.
- *
- * @param[in]  iIFVersRequested  interface version requested by the core
- * @param[out] ipIFVersProvided  the interface version actually provided
- * @param[out] pQueryEtryPt      receives module entry points
- * @param[in]  pHostQueryEtryPt  callback used to query host entry points
- * @param[in]  pModInfo          pointer to the module information block
- *
- * @return rsRetVal              standard return code
- */
-rsRetVal modInitUsrMsg(int iIFVersRequested __attribute__((unused)),
-                       int *ipIFVersProvided,
-                       rsRetVal (**pQueryEtryPt)(),
-                       rsRetVal (*pHostQueryEtryPt)(uchar *, rsRetVal (**)()),
-                       modInfo_t *pModInfo);
-
 #endif /* #ifndef OMUSRMSG_H_INCLUDED */
 /* vi:set ai:
  */

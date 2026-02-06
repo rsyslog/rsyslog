@@ -12,10 +12,6 @@
  * we really run into troubles, it is better to change to libfastjson, which
  * we should do in the medium to long term anyhow...
  */
-#ifdef __GNUC__
-    #pragma GCC diagnostic ignored "-Wredundant-decls"
-#endif
-
 /*
 Credit for primes table: Aaron Krowne
 http://br.endernet.org/~akrowne/

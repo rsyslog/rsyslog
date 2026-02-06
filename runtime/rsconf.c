@@ -65,6 +65,7 @@
 #include "threads.h"
 #include "datetime.h"
 #include "parserif.h"
+#include "grammar.h"
 #include "modules.h"
 #include "dirty.h"
 #include "template.h"
@@ -160,9 +161,6 @@ static struct cnfparamdescr ratelimitpdescr[] = {{"name", eCmdHdlrString, CNFPAR
                                                  {"perSourceTopN", eCmdHdlrInt, 0}};
 static struct cnfparamblk ratelimitpblk = {CNFPARAMBLK_VERSION, sizeof(ratelimitpdescr) / sizeof(struct cnfparamdescr),
                                            ratelimitpdescr};
-
-/* forward-definitions */
-void cnfDoCfsysline(char *ln);
 
 int rsconfNeedDropPriv(rsconf_t *const cnf) {
     return ((cnf->globals.gidDropPriv != 0) || (cnf->globals.uidDropPriv != 0));

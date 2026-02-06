@@ -267,18 +267,8 @@ struct bufstack {
 char *cnfcurrfn;			/* name of currently processed file */
 
 int popfile(void);
-int cnfSetLexFile(const char *fname);
 
 static void cnfPrintToken(const char *token);
-extern int yydebug;
-
-/* somehow, I need these prototype even though the headers are
- * included. I guess that's some autotools magic I don't understand...
- */
-#if !defined(__FreeBSD__) && !defined(__NetBSD__) && !defined(__OpenBSD__) \
-	&& !defined(__DragonflyBSD__) && !defined(_AIX)
-int fileno(FILE *stream);
-#endif
 
 
 %}

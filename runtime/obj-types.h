@@ -169,7 +169,6 @@ struct obj_s { /* the dummy struct that each derived class can be casted to */
     }
 #define PROTOTYPEpropSetMethFP(obj, prop, dataType) rsRetVal obj##Set##prop(obj##_t *pThis, dataType)
 #define DEFpropSetMeth(obj, prop, dataType)                  \
-    rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal);  \
     rsRetVal obj##Set##prop(obj##_t *pThis, dataType pVal) { \
         pThis->prop = pVal;                                  \
         return RS_RET_OK;                                    \
@@ -246,7 +245,6 @@ finalize_it:                                                \
     /* use finalize_it: before calling the macro (if you need it)! */  \
     RETiRet;                                                           \
     }                                                                  \
-    rsRetVal obj##Construct(obj##_t **ppThis);                         \
     rsRetVal obj##Construct(obj##_t **ppThis) {                        \
         DEFiRet;                                                       \
         obj##_t *pThis;                                                \
@@ -290,7 +288,6 @@ finalize_it:                                                \
  * warnings.
  */
 #define BEGINobjDestruct(OBJ)                                           \
-    rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) * *ppThis);  \
     rsRetVal OBJ##Destruct(OBJ##_t __attribute__((unused)) * *ppThis) { \
         DEFiRet;                                                        \
         OBJ##_t *pThis;
@@ -330,7 +327,6 @@ finalize_it:                                            \
 #define PROTOTYPEObjDebugPrint(obj) rsRetVal obj##DebugPrint(obj##_t *pThis)
 #define INTERFACEObjDebugPrint(obj) rsRetVal (*DebugPrint)(obj##_t * pThis)
 #define BEGINobjDebugPrint(obj)                                         \
-    rsRetVal obj##DebugPrint(obj##_t __attribute__((unused)) * pThis);  \
     rsRetVal obj##DebugPrint(obj##_t __attribute__((unused)) * pThis) { \
         DEFiRet;
 
@@ -364,7 +360,6 @@ finalize_it:                                            \
  * present in all objects.
  */
 #define BEGINobjQueryInterface(obj)                 \
-    rsRetVal obj##QueryInterface(obj##_if_t *pIf);  \
     rsRetVal obj##QueryInterface(obj##_if_t *pIf) { \
         DEFiRet;
 
