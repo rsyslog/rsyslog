@@ -1,6 +1,6 @@
 /* Definitions for tcpsrv class.
  *
- * Copyright 2008-2025 Adiscon GmbH.
+ * Copyright 2008-2026 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -342,7 +342,8 @@ ENDinterface(tcpsrv)
 
 
 /* prototypes */
-PROTOTYPEObj(tcpsrv);
+PROTOTYPEObjFull(tcpsrv);
+PROTOTYPEObjDebugPrint(tcpsrv);
 
 /* the name of our library binary */
 #define LM_TCPSRV_FILENAME "lmtcpsrv"

@@ -1,6 +1,6 @@
 /* The statsobj object.
  *
- * Copyright 2010-2016 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2010-2026 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -159,7 +159,8 @@ ENDinterface(statsobj)
 
 
 /* prototypes */
-PROTOTYPEObj(statsobj);
+PROTOTYPEObjFull(statsobj);
+PROTOTYPEObjDebugPrint(statsobj);
 
 rsRetVal statsRecordSender(const uchar *sender, unsigned nMsgs, time_t lastSeen);
 /* checkGoneAwaySenders() is part of this module because all it needs is

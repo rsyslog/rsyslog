@@ -234,7 +234,6 @@ BEGINobjConstruct(nsd_mbedtls) /* be sure to specify the object type also in END
 ENDobjConstruct(nsd_mbedtls)
 
 /* destructor for the nsd_mbedtls object */
-PROTOTYPEobjDestruct(nsd_mbedtls);
 BEGINobjDestruct(nsd_mbedtls) /* be sure to specify the object type also in END and CODESTART macros! */
     CODESTARTobjDestruct(nsd_mbedtls) if (pThis->iMode == 1) {
         mbedtlsEndSess(pThis);

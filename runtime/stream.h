@@ -243,6 +243,26 @@ ENDinterface(strm)
 
 /* prototypes */
 PROTOTYPEObjClassInit(strm);
+PROTOTYPEObjQueryInterface(strm);
+PROTOTYPEobjConstruct(strm);
+PROTOTYPEobjDestruct(strm);
+PROTOTYPEpropSetMeth(strm, iMaxFileSize, int64);
+PROTOTYPEpropSetMeth(strm, iFileNumDigits, int);
+PROTOTYPEpropSetMeth(strm, tOperationsMode, int);
+PROTOTYPEpropSetMeth(strm, tOpenMode, mode_t);
+PROTOTYPEpropSetMeth(strm, compressionDriver, strm_compressionDriver_t);
+PROTOTYPEpropSetMeth(strm, sType, strmType_t);
+PROTOTYPEpropSetMeth(strm, iZipLevel, int);
+PROTOTYPEpropSetMeth(strm, bVeryReliableZip, int);
+PROTOTYPEpropSetMeth(strm, bSync, int);
+PROTOTYPEpropSetMeth(strm, bReopenOnTruncate, int);
+PROTOTYPEpropSetMeth(strm, sIOBufSize, size_t);
+PROTOTYPEpropSetMeth(strm, iSizeLimit, off_t);
+PROTOTYPEpropSetMeth(strm, iFlushInterval, int);
+PROTOTYPEpropSetMeth(strm, pszSizeLimitCmd, uchar *);
+PROTOTYPEpropSetMeth(strm, bSizeLimitCmdPassFileName, int);
+PROTOTYPEpropSetMeth(strm, cryprov, cryprov_if_t *);
+PROTOTYPEpropSetMeth(strm, cryprovData, void *);
 rsRetVal strmMultiFileSeek(strm_t *pThis, unsigned int fileNum, off64_t offs, off64_t *bytesDel);
 rsRetVal ATTR_NONNULL(1, 2) strmReadMultiLine(strm_t *pThis,
                                               cstr_t **ppCStr,

@@ -1,6 +1,6 @@
 /* An implementation of the nsd interface for plain tcp sockets.
  *
- * Copyright 2007-2020 Adiscon GmbH.
+ * Copyright 2007-2026 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -45,7 +45,7 @@ struct nsd_ptcp_s {
 #define nsd_ptcpCURR_IF_VERSION nsdCURR_IF_VERSION
 
 /* prototypes */
-PROTOTYPEObj(nsd_ptcp);
+PROTOTYPEObjFull(nsd_ptcp);
 
 /* the name of our library binary */
 #define LM_NSD_PTCP_FILENAME "lmnsd_ptcp"

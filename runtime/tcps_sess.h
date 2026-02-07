@@ -1,7 +1,7 @@
 /* Definitions for tcps_sess class. This implements a session of the
  * plain TCP server.
  *
- * Copyright 2008-2025 Adiscon GmbH.
+ * Copyright 2008-2026 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -99,7 +99,8 @@ ENDinterface(tcps_sess)
 
 
 /* prototypes */
-PROTOTYPEObj(tcps_sess);
+PROTOTYPEObjFull(tcps_sess);
+PROTOTYPEObjDebugPrint(tcps_sess);
 
 
 #endif /* #ifndef INCLUDED_TCPS_SESS_H */

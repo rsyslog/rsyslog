@@ -35,6 +35,6 @@ struct lmcry_gcry_s {
 typedef struct lmcry_gcry_s lmcry_gcry_t;
 
 /* prototypes */
-PROTOTYPEObj(lmcry_gcry);
+PROTOTYPEObjFull(lmcry_gcry);
 
 #endif /* #ifndef INCLUDED_LMCRY_GCRY_H */

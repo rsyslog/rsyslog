@@ -1,6 +1,6 @@
 /* Definitions for the stream-based netstrm sworking class.
  *
- * Copyright 2007-2025 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2007-2026 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -98,7 +98,7 @@ ENDinterface(netstrms)
 #define netstrmsCURR_IF_VERSION 5 /* increment whenever you change the interface structure! */
 
 /* prototypes */
-PROTOTYPEObj(netstrms);
+PROTOTYPEObjFull(netstrms);
 
 /* the name of our library binary */
 #define LM_NETSTRMS_FILENAME "lmnetstrms"
