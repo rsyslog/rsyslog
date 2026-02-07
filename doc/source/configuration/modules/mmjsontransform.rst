@@ -43,6 +43,8 @@ Notable Features
   and nested containers.
 - :ref:`mmjsontransform-conflict-handling` — detailed conflict reporting to
   locate incompatible payloads quickly.
+- :ref:`mmjsontransform-policy` — optional YAML policy-based key renaming and
+  field dropping before flatten/unflatten processing.
 
 Configuration Parameters
 ========================
@@ -71,6 +73,10 @@ Action Parameters
         :end-before: .. summary-end
    * - :ref:`param-mmjsontransform-mode`
      - .. include:: ../../reference/parameters/mmjsontransform-mode.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-mmjsontransform-policy`
+     - .. include:: ../../reference/parameters/mmjsontransform-policy.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
 
@@ -155,3 +161,4 @@ input property needs to be renamed or moved before retrying the transformation.
    ../../reference/parameters/mmjsontransform-input
    ../../reference/parameters/mmjsontransform-output
    ../../reference/parameters/mmjsontransform-mode
+   ../../reference/parameters/mmjsontransform-policy
