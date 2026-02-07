@@ -31,6 +31,7 @@
 #include <config.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <syslog.h>
 #include <unistd.h>
 #include <systemd/sd-journal.h>
@@ -57,9 +58,18 @@ int main(int argc, char *argv[]) {
     }
 
     /* Now we can try inserting something */
-    if (fprintf(log, "%s", argv[1]) <= 0) {
+    if (fprintf(log, "%s\n", argv[1]) <= 0) {
         fprintf(stderr, "Failed to write to journal log: %m\n");
-        close(fd);
+        fclose(log);
+        exit(3);
+    }
+    if (fflush(log) != 0) {
+        fprintf(stderr, "Failed to flush journal log: %m\n");
+        fclose(log);
+        exit(3);
+    }
+    if (fclose(log) != 0) {
+        fprintf(stderr, "Failed to close journal log: %m\n");
         exit(3);
     }
 
