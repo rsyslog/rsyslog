@@ -1120,6 +1120,11 @@ content_count_check() {
 content_check_with_count() {
 	timeoutend=${3:-1}
 	timecounter=0
+	if [ -n "$TB_STARTTEST" ] && [ -n "$TB_TEST_MAX_RUNTIME" ]; then
+		hard_deadline=$(( TB_STARTTEST + TB_TEST_MAX_RUNTIME ))
+	else
+		hard_deadline=$(( $(date +%s) + timeoutend ))
+	fi
 	while [  $timecounter -lt $timeoutend ]; do
 		(( timecounter=timecounter+1 ))
 		count=0
@@ -1131,20 +1136,34 @@ content_check_with_count() {
 			break
 		else
 			if [ "$timecounter" == "$timeoutend" ]; then
+				# If the output file does not exist yet, treat this as "not yet done"
+				# and continue waiting until the global test runtime deadline.
+				if [ ! -f "$RSYSLOG_OUT_LOG" ] && [ "$(date +%s)" -lt "$hard_deadline" ]; then
+					printf '%s content_check_with_count: output file %s not yet created; extending wait (deadline %s)\n' \
+						"$(tb_timestamp)" "$RSYSLOG_OUT_LOG" "$hard_deadline"
+					(( timeoutend=timeoutend+1 ))
+					$TESTTOOL_DIR/msleep 1000
+					continue
+				fi
+
 				shutdown_when_empty ""
 				wait_shutdown ""
 
 				echo "$(tb_timestamp)" content_check_with_count failed, expected \"$1\" to occur $2 times, but found it "$count" times
 				echo file $RSYSLOG_OUT_LOG content is:
-				if [ $(wc -l < "$RSYSLOG_OUT_LOG") -gt 10000 ]; then
-					printf 'truncation, we have %d lines, which is way too much\n' \
-						$(wc -l < "$RSYSLOG_OUT_LOG")
-					printf 'showing first and last 5000 lines\n'
-					head -n 5000 < "$RSYSLOG_OUT_LOG"
-					print '\n ... CUT ..................................................\n\n'
-					tail -n 5000 < "$RSYSLOG_OUT_LOG"
+				if [ -f "$RSYSLOG_OUT_LOG" ]; then
+					nlines=$(wc -l < "$RSYSLOG_OUT_LOG")
+					if [ "$nlines" -gt 10000 ]; then
+						printf 'truncation, we have %d lines, which is way too much\n' "$nlines"
+						printf 'showing first and last 5000 lines\n'
+						head -n 5000 < "$RSYSLOG_OUT_LOG"
+						print '\n ... CUT ..................................................\n\n'
+						tail -n 5000 < "$RSYSLOG_OUT_LOG"
+					else
+						cat -n "$RSYSLOG_OUT_LOG"
+					fi
 				else
-					cat -n "$RSYSLOG_OUT_LOG"
+					echo "(file does not exist)"
 				fi
 				error_exit 1
 			else
