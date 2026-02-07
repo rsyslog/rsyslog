@@ -48,6 +48,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <limits.h>
 #if defined(__FreeBSD__)
     #include <unistd.h>
 #endif
@@ -131,6 +132,7 @@ static uchar template_StdSplkRaw[] = "\"%rawmsg:::drop-last-lf%\n\"";
 
 /* Default batch size constants */
 #define DEFAULT_MAX_BATCH_BYTES (10 * 1024 * 1024) /* 10 MB - default max message size for AWS API Gateway */
+#define DEFAULT_REPLY_MAX_BYTES (1024 * 1024) /* 1 MB - default max response size */
 #define SPLUNK_HEC_MAX_BATCH_BYTES (1024 * 1024) /* 1 MB - Splunk HEC recommended limit */
 typedef enum batchFormat_e { FMT_NEWLINE, FMT_JSONARRAY, FMT_KAFKAREST, FMT_LOKIREST } batchFormat_t;
 typedef enum vendor_e { LOKI, SPLUNK } vendor_t;
@@ -172,6 +174,7 @@ typedef struct instanceConf_s {
     sbool dynRestPath;
     size_t maxBatchBytes;
     size_t maxBatchSize;
+    size_t replyMaxBytes;
     sbool compress;
     int compressionLevel; /* Compression level for zlib, default=-1, fastest=1, best=9, none=0*/
     sbool useHttps;
@@ -215,7 +218,8 @@ typedef struct wrkrInstanceData {
     PTR_ASSERT_DEF
     instanceData *pData;
     int serverIndex;
-    int replyLen;
+    size_t replyLen;
+    size_t replyBufLen;
     char *reply;
     long httpStatusCode; /* http status code of response */
     CURL *curlCheckConnHandle; /* libcurl session handle for checking the server connection */
@@ -261,6 +265,7 @@ static struct cnfparamdescr actpdescr[] = {
     {"batch.format", eCmdHdlrGetWord, 0},
     {"batch.maxbytes", eCmdHdlrSize, 0},
     {"batch.maxsize", eCmdHdlrSize, 0},
+    {"replymaxbytes", eCmdHdlrSize, 0},
     {"compress", eCmdHdlrBinary, 0},
     {"compress.level", eCmdHdlrInt, 0},
     {"usehttps", eCmdHdlrBinary, 0},
@@ -322,6 +327,9 @@ BEGINcreateWrkrInstance
     pWrkrData->curlCheckConnHandle = NULL;
     pWrkrData->serverIndex = 0;
     pWrkrData->httpStatusCode = 0;
+    pWrkrData->reply = NULL;
+    pWrkrData->replyLen = 0;
+    pWrkrData->replyBufLen = 0;
     pWrkrData->restURL = NULL;
     pWrkrData->bzInitDone = 0;
     if (pData->batchMode) {
@@ -408,6 +416,10 @@ BEGINfreeWrkrInstance
 
     if (pWrkrData->bzInitDone) deflateEnd(&pWrkrData->zstrm);
     freeCompressCtx(pWrkrData);
+    free(pWrkrData->reply);
+    pWrkrData->reply = NULL;
+    pWrkrData->replyBufLen = 0;
+    pWrkrData->replyLen = 0;
 
 ENDfreeWrkrInstance
 
@@ -446,6 +458,7 @@ BEGINdbgPrintInstInfo
     dbgprintf("\tbatch.format='%s'\n", pData->batchFormatName);
     dbgprintf("\tbatch.maxbytes=%zu\n", pData->maxBatchBytes);
     dbgprintf("\tbatch.maxsize=%zu\n", pData->maxBatchSize);
+    dbgprintf("\treplymaxbytes=%zu\n", pData->replyMaxBytes);
     dbgprintf("\tcompress=%d\n", pData->compress);
     dbgprintf("\tcompress.level=%d\n", pData->compressionLevel);
     dbgprintf("\tallowUnsignedCerts=%d\n", pData->allowUnsignedCerts);
@@ -473,20 +486,46 @@ ENDdbgPrintInstInfo
 
 /* http POST result string ... useful for debugging */
 static size_t curlResult(void *ptr, size_t size, size_t nmemb, void *userdata) {
-    char *p = (char *)ptr;
-    wrkrInstanceData_t *pWrkrData = (wrkrInstanceData_t *)userdata;
+    const char *const p = (const char *)ptr;
+    wrkrInstanceData_t *const pWrkrData = (wrkrInstanceData_t *)userdata;
     char *buf;
+    const size_t size_add = size * nmemb;
     size_t newlen;
     PTR_ASSERT_CHK(pWrkrData, WRKR_DATA_TYPE_ES);
-    newlen = pWrkrData->replyLen + size * nmemb;
-    if ((buf = realloc(pWrkrData->reply, newlen + 1)) == NULL) {
-        LogError(errno, RS_RET_ERR, "omhttp: realloc failed in curlResult");
-        return 0; /* abort due to failure */
+    if (size_add > SIZE_MAX - pWrkrData->replyLen) {
+        LogError(0, RS_RET_ERR, "omhttp: reply buffer size overflow in curlResult");
+        pWrkrData->replyLen = 0;
+        if (pWrkrData->reply != NULL && pWrkrData->replyBufLen > 0) {
+            pWrkrData->reply[0] = '\0';
+        }
+        return 0;
     }
-    memcpy(buf + pWrkrData->replyLen, p, size * nmemb);
+    newlen = pWrkrData->replyLen + size_add;
+    if (pWrkrData->pData->replyMaxBytes > 0 && newlen > pWrkrData->pData->replyMaxBytes) {
+        LogError(0, RS_RET_ERR, "omhttp: reply buffer exceeds replymaxbytes limit (%zu)",
+                 pWrkrData->pData->replyMaxBytes);
+        if (pWrkrData->reply != NULL && pWrkrData->replyBufLen > 0) {
+            pWrkrData->reply[pWrkrData->replyLen] = '\0';
+        }
+        return 0;
+    }
+    if (newlen + 1 > pWrkrData->replyBufLen) {
+        if ((buf = realloc(pWrkrData->reply, newlen + 1)) == NULL) {
+            LogError(errno, RS_RET_ERR, "omhttp: realloc failed in curlResult");
+            if (pWrkrData->reply != NULL && pWrkrData->replyBufLen > 0) {
+                pWrkrData->reply[pWrkrData->replyLen] = '\0';
+            }
+            return 0; /* abort due to failure */
+        }
+        pWrkrData->replyBufLen = newlen + 1;
+        pWrkrData->reply = buf;
+    }
+    memcpy(pWrkrData->reply + pWrkrData->replyLen, p, size_add);
     pWrkrData->replyLen = newlen;
-    pWrkrData->reply = buf;
-    return size * nmemb;
+    if (pWrkrData->replyBufLen > 0) {
+        pWrkrData->reply[pWrkrData->replyLen] = '\0';
+    }
+    return size_add;
 }
 
 /* Build basic URL part, which includes hostname and port as follows:
@@ -570,7 +609,6 @@ static rsRetVal ATTR_NONNULL() checkConn(wrkrInstanceData_t *const pWrkrData) {
         FINALIZE;
     }
 
-    pWrkrData->reply = NULL;
     pWrkrData->replyLen = 0;
     curl = pWrkrData->curlCheckConnHandle;
     urlBuf = es_newStr(256);
@@ -638,8 +676,10 @@ static rsRetVal ATTR_NONNULL() checkConn(wrkrInstanceData_t *const pWrkrData) {
 finalize_it:
     if (urlBuf != NULL) es_deleteStr(urlBuf);
 
-    free(pWrkrData->reply);
-    pWrkrData->reply = NULL; /* don't leave dangling pointer */
+    pWrkrData->replyLen = 0;
+    if (pWrkrData->reply != NULL && pWrkrData->replyBufLen > 0) {
+        pWrkrData->reply[0] = '\0';
+    }
     RETiRet;
 }
 
@@ -738,7 +778,8 @@ static rsRetVal renderJsonErrorMessage(wrkrInstanceData_t *pWrkrData, uchar *req
     if (pWrkrData->reply == NULL) {
         fjson_object_object_add(res, "message", fjson_object_new_string_len(ERR_MSG_NULL, strlen(ERR_MSG_NULL)));
     } else {
-        fjson_object_object_add(res, "message", fjson_object_new_string_len(pWrkrData->reply, pWrkrData->replyLen));
+        const size_t cappedLen = pWrkrData->replyLen > INT_MAX ? INT_MAX : pWrkrData->replyLen;
+        fjson_object_object_add(res, "message", fjson_object_new_string_len(pWrkrData->reply, (int)cappedLen));
     }
 
     if ((errRoot = fjson_object_new_object()) == NULL) {
@@ -827,7 +868,8 @@ static rsRetVal msgAddResponseMetadata(smsg_t *const __restrict__ pMsg,
     */
     json_object_object_add(json, "code", json_object_new_int(pWrkrData->httpStatusCode));
     if (pWrkrData->reply) {
-        json_object_object_add(json, "body", json_object_new_string(pWrkrData->reply));
+        const size_t cappedLen = pWrkrData->replyLen > INT_MAX ? INT_MAX : pWrkrData->replyLen;
+        json_object_object_add(json, "body", json_object_new_string_len(pWrkrData->reply, (int)cappedLen));
     }
     json_object_object_add(json, "batch_index", json_object_new_int(batch_index));
     CHKiRet(msgAddJSON(pMsg, (uchar *)"!omhttp!response", json, 0, 0));
@@ -1249,7 +1291,8 @@ static rsRetVal ATTR_NONNULL(1, 2) curlPost(
     char errbuf[CURL_ERROR_SIZE] = "";
     int indexStats = pWrkrData->pData->statsBySenders ? pWrkrData->serverIndex : 0;
     char *postData;
-    int postLen;
+    size_t postLen;
+    curl_off_t postLenCurl;
     sbool compressed;
     DEFiRet;
 
@@ -1261,9 +1304,11 @@ static rsRetVal ATTR_NONNULL(1, 2) curlPost(
     }
     CHKiRet(setPostURL(pWrkrData, tpls));
 
-    pWrkrData->reply = NULL;
     pWrkrData->replyLen = 0;
     pWrkrData->httpStatusCode = 0;
+    if (pWrkrData->reply != NULL && pWrkrData->replyBufLen > 0) {
+        pWrkrData->reply[0] = '\0';
+    }
 
     postData = (char *)message;
     postLen = msglen;
@@ -1277,14 +1322,19 @@ static rsRetVal ATTR_NONNULL(1, 2) curlPost(
             postData = (char *)pWrkrData->compressCtx.buf;
             postLen = pWrkrData->compressCtx.curLen;
             compressed = 1;
-            DBGPRINTF("omhttp: curlPost compressed %d to %d bytes\n", msglen, postLen);
+            DBGPRINTF("omhttp: curlPost compressed %d to %zu bytes\n", msglen, postLen);
         }
     }
 
     buildCurlHeaders(pWrkrData, compressed);
 
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postData);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, postLen);
+    if (postLen > (size_t)LLONG_MAX) {
+        LogError(0, RS_RET_ERR, "omhttp: POST payload too large for libcurl (%zu bytes)", postLen);
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    postLenCurl = (curl_off_t)postLen;
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE_LARGE, postLenCurl);
     curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_HTTPHEADER, pWrkrData->curlHeader);
     curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errbuf);
 
@@ -1311,24 +1361,21 @@ static rsRetVal ATTR_NONNULL(1, 2) curlPost(
     // Grab the HTTP Response code
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &pWrkrData->httpStatusCode);
     if (pWrkrData->reply == NULL) {
-        DBGPRINTF("omhttp: curlPost pWrkrData reply==NULL, replyLen = '%d'\n", pWrkrData->replyLen);
+        DBGPRINTF("omhttp: curlPost pWrkrData reply==NULL, replyLen = '%llu'\n",
+                  (unsigned long long)pWrkrData->replyLen);
     } else {
-        DBGPRINTF("omhttp: curlPost pWrkrData replyLen = '%d'\n", pWrkrData->replyLen);
-        if (pWrkrData->replyLen > 0) {
+        DBGPRINTF("omhttp: curlPost pWrkrData replyLen = '%llu'\n", (unsigned long long)pWrkrData->replyLen);
+        if (pWrkrData->replyBufLen > 0) {
             pWrkrData->reply[pWrkrData->replyLen] = '\0';
-            /* Append 0 Byte if replyLen is above 0 - byte has been reserved in malloc */
+            /* Append 0 byte when buffer is allocated to keep reply safely NUL-terminated */
         }
-        // TODO: replyLen++? because 0 Byte is appended
         DBGPRINTF("omhttp: curlPost pWrkrData reply: '%s'\n", pWrkrData->reply);
     }
     CHKiRet(checkResult(pWrkrData, message));
 
 finalize_it:
     incrementServerIndex(pWrkrData);
-    if (pWrkrData->reply != NULL) {
-        free(pWrkrData->reply);
-        pWrkrData->reply = NULL; /* don't leave dangling pointer */
-    }
+    pWrkrData->replyLen = 0;
     RETiRet;
 }
 
@@ -1919,6 +1966,7 @@ static void ATTR_NONNULL() setInstParamDefaults(instanceData *const pData) {
     pData->useHttps = 1;
     pData->maxBatchBytes = DEFAULT_MAX_BATCH_BYTES;  // 10 MB - default max message size for AWS API Gateway
     pData->maxBatchSize = 100;  // 100 messages
+    pData->replyMaxBytes = DEFAULT_REPLY_MAX_BYTES;  // 1 MB default max response size (0 disables limit)
     pData->compress = 0;  // off
     pData->compressionLevel = -1;  // default compression
     pData->allowUnsignedCerts = 0;
@@ -2308,6 +2356,8 @@ BEGINnewActInst
             pData->maxBatchBytes = (size_t)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "batch.maxsize")) {
             pData->maxBatchSize = (size_t)pvals[i].val.d.n;
+        } else if (!strcmp(actpblk.descr[i].name, "replymaxbytes")) {
+            pData->replyMaxBytes = (size_t)pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "compress")) {
             pData->compress = pvals[i].val.d.n;
         } else if (!strcmp(actpblk.descr[i].name, "compress.level")) {
