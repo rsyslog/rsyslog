@@ -107,9 +107,9 @@ Log Data Flow
 Metrics Data Flow
 ^^^^^^^^^^^^^^^^^
 
-1. **Client hosts** run node_exporter exposing system metrics on port 9100
-2. **Prometheus** scrapes metrics from targets listed in ``nodes.yml``
-3. **Grafana** queries Prometheus to display metrics in dashboards
+1. **Client hosts** run node_exporter exposing system metrics on port 9100; optionally an impstats sidecar on port 9898 for rsyslog internal metrics (Syslog Health dashboard)
+2. **Prometheus** scrapes metrics from targets listed in ``nodes.yml`` and ``impstats.yml``
+3. **Grafana** queries Prometheus to display metrics in dashboards (Host Metrics Overview and Syslog Health)
 
 Network Ports
 -------------

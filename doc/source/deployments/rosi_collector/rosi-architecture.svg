@@ -5,38 +5,40 @@
   
   <!-- Title -->
   <text x="475" y="35" text-anchor="middle" font-size="24" font-weight="bold" fill="#2c3e50">ROSI Collector Architecture</text>
-  <text x="475" y="55" text-anchor="middle" font-size="12" fill="#7f8c8d">RSyslog Open System for Information</text>
+  <text x="475" y="55" text-anchor="middle" font-size="12" fill="#7f8c8d">Rsyslog Operations Stack Initiative</text>
   
   <!-- Client Hosts Section -->
   <rect x="30" y="80" width="240" height="520" rx="10" fill="#e8f4f8" stroke="#3498db" stroke-width="2"/>
   <text x="150" y="105" text-anchor="middle" font-size="16" font-weight="bold" fill="#2980b9">Client Hosts</text>
   
-  <!-- Client 1 -->
-  <rect x="50" y="130" width="200" height="110" rx="8" fill="#fff" stroke="#bdc3c7" stroke-width="1"/>
+  <!-- Client 1 (with optional impstats) -->
+  <rect x="50" y="130" width="200" height="130" rx="8" fill="#fff" stroke="#bdc3c7" stroke-width="1"/>
   <text x="150" y="152" text-anchor="middle" font-size="13" font-weight="bold" fill="#34495e">Client Host 1</text>
   <rect x="70" y="165" width="160" height="25" rx="4" fill="#27ae60" opacity="0.9"/>
   <text x="150" y="182" text-anchor="middle" font-size="11" fill="#fff">rsyslog</text>
   <rect x="70" y="195" width="160" height="18" rx="4" fill="#9b59b6" opacity="0.9"/>
   <text x="150" y="208" text-anchor="middle" font-size="9" fill="#fff">node_exporter :9100</text>
+  <rect x="70" y="218" width="160" height="18" rx="4" fill="#16a085" opacity="0.85" stroke="#16a085" stroke-width="1" stroke-dasharray="3,2"/>
+  <text x="150" y="231" text-anchor="middle" font-size="8" fill="#fff">impstats :9898 (optional)</text>
   
   <!-- Client 2 -->
-  <rect x="50" y="260" width="200" height="110" rx="8" fill="#fff" stroke="#bdc3c7" stroke-width="1"/>
-  <text x="150" y="282" text-anchor="middle" font-size="13" font-weight="bold" fill="#34495e">Client Host 2</text>
-  <rect x="70" y="295" width="160" height="25" rx="4" fill="#27ae60" opacity="0.9"/>
-  <text x="150" y="312" text-anchor="middle" font-size="11" fill="#fff">rsyslog</text>
-  <rect x="70" y="325" width="160" height="18" rx="4" fill="#9b59b6" opacity="0.9"/>
-  <text x="150" y="338" text-anchor="middle" font-size="9" fill="#fff">node_exporter :9100</text>
+  <rect x="50" y="280" width="200" height="110" rx="8" fill="#fff" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="150" y="302" text-anchor="middle" font-size="13" font-weight="bold" fill="#34495e">Client Host 2</text>
+  <rect x="70" y="315" width="160" height="25" rx="4" fill="#27ae60" opacity="0.9"/>
+  <text x="150" y="332" text-anchor="middle" font-size="11" fill="#fff">rsyslog</text>
+  <rect x="70" y="345" width="160" height="18" rx="4" fill="#9b59b6" opacity="0.9"/>
+  <text x="150" y="358" text-anchor="middle" font-size="9" fill="#fff">node_exporter :9100</text>
   
   <!-- Client N (ellipsis) -->
-  <text x="150" y="400" text-anchor="middle" font-size="20" fill="#7f8c8d">...</text>
+  <text x="150" y="420" text-anchor="middle" font-size="20" fill="#7f8c8d">...</text>
   
   <!-- Client N -->
-  <rect x="50" y="420" width="200" height="110" rx="8" fill="#fff" stroke="#bdc3c7" stroke-width="1"/>
-  <text x="150" y="442" text-anchor="middle" font-size="13" font-weight="bold" fill="#34495e">Client Host N</text>
-  <rect x="70" y="455" width="160" height="25" rx="4" fill="#27ae60" opacity="0.9"/>
-  <text x="150" y="472" text-anchor="middle" font-size="11" fill="#fff">rsyslog</text>
-  <rect x="70" y="485" width="160" height="18" rx="4" fill="#9b59b6" opacity="0.9"/>
-  <text x="150" y="498" text-anchor="middle" font-size="9" fill="#fff">node_exporter :9100</text>
+  <rect x="50" y="440" width="200" height="110" rx="8" fill="#fff" stroke="#bdc3c7" stroke-width="1"/>
+  <text x="150" y="462" text-anchor="middle" font-size="13" font-weight="bold" fill="#34495e">Client Host N</text>
+  <rect x="70" y="475" width="160" height="25" rx="4" fill="#27ae60" opacity="0.9"/>
+  <text x="150" y="492" text-anchor="middle" font-size="11" fill="#fff">rsyslog</text>
+  <rect x="70" y="505" width="160" height="18" rx="4" fill="#9b59b6" opacity="0.9"/>
+  <text x="150" y="518" text-anchor="middle" font-size="9" fill="#fff">node_exporter :9100</text>
   
   <!-- ROSI Collector Server Section -->
   <rect x="320" y="80" width="600" height="520" rx="10" fill="#fef9e7" stroke="#f39c12" stroke-width="2"/>
@@ -141,25 +143,35 @@
   <text x="305" y="255" text-anchor="middle" font-size="8" fill="#16a085">TLS :6514</text>
   <text x="305" y="278" text-anchor="middle" font-size="7" fill="#16a085">(optional)</text>
   
-  <!-- Metrics Flow Arrow (Prometheus to Clients) -->
-  <path d="M 360 345 L 290 345 L 290 230 L 255 230" stroke="#9b59b6" stroke-width="2" fill="none" marker-end="url(#arrowhead-purple)"/>
-  <text x="290" y="285" text-anchor="middle" font-size="8" fill="#9b59b6" transform="rotate(-90, 290, 285)">scrape :9100</text>
+  <!-- Metrics Flow Arrow (Prometheus to Clients :9100) -->
+  <path d="M 360 345 L 290 345 L 290 358 L 255 358" stroke="#9b59b6" stroke-width="2" fill="none" marker-end="url(#arrowhead-purple)"/>
+  <text x="272" y="352" text-anchor="middle" font-size="8" fill="#9b59b6">scrape :9100</text>
+  <!-- Metrics Flow Arrow (Prometheus to Client impstats :9898, optional) -->
+  <path d="M 360 338 L 290 338 L 290 224 L 255 224" stroke="#16a085" stroke-width="1.5" fill="none" marker-end="url(#arrowhead)" stroke-dasharray="5,3"/>
+  <text x="272" y="218" text-anchor="middle" font-size="7" fill="#16a085">scrape :9898 (optional)</text>
   
-  <!-- Legend -->
-  <rect x="30" y="610" width="890" height="35" rx="5" fill="#ecf0f1"/>
-  <circle cx="55" cy="627" r="6" fill="#27ae60"/>
-  <text x="70" y="632" font-size="9" fill="#34495e">Log Flow</text>
-  <circle cx="140" cy="627" r="6" fill="#9b59b6"/>
-  <text x="155" y="632" font-size="9" fill="#34495e">Metrics</text>
-  <circle cx="215" cy="627" r="6" fill="#3498db"/>
-  <text x="230" y="632" font-size="9" fill="#34495e">HTTPS Proxy</text>
-  <rect x="310" y="621" width="12" height="12" rx="2" fill="#f39c12"/>
-  <text x="330" y="632" font-size="9" fill="#34495e">Visualization</text>
-  <rect x="415" y="621" width="12" height="12" rx="2" fill="#e74c3c"/>
-  <text x="435" y="632" font-size="9" fill="#34495e">Storage</text>
-  <rect x="500" y="621" width="12" height="12" rx="2" fill="#16a085"/>
-  <text x="520" y="632" font-size="9" fill="#34495e">Downloads</text>
-  <rect x="600" y="621" width="30" height="12" rx="2" fill="none" stroke="#16a085" stroke-dasharray="3,2"/>
-  <text x="640" y="632" font-size="9" fill="#34495e">Optional (TLS)</text>
-  <text x="780" y="632" font-size="9" fill="#7f8c8d">Let's Encrypt TLS</text>
+  <!-- Legend (two rows, centered, with generous spacing) -->
+  <rect x="30" y="602" width="890" height="44" rx="5" fill="#ecf0f1"/>
+  <!-- Row 1: 5 items, ~170px per slot, centered (total 850, start 50) -->
+  <circle cx="68" cy="618" r="6" fill="#27ae60"/>
+  <text x="85" y="624" font-size="9" fill="#34495e">Log Flow</text>
+  <circle cx="238" cy="618" r="6" fill="#9b59b6"/>
+  <text x="255" y="624" font-size="9" fill="#34495e">Metrics (:9100)</text>
+  <line x1="398" y1="618" x2="418" y2="618" stroke="#16a085" stroke-width="2" stroke-dasharray="3,2"/>
+  <text x="435" y="624" font-size="9" fill="#34495e">impstats :9898 (opt)</text>
+  <circle cx="558" cy="618" r="6" fill="#3498db"/>
+  <text x="575" y="624" font-size="9" fill="#34495e">HTTPS Proxy</text>
+  <rect x="718" y="612" width="12" height="12" rx="2" fill="#f39c12"/>
+  <text x="735" y="624" font-size="9" fill="#34495e">Visualization</text>
+  <!-- Row 2: 4 items, ~190px per slot, centered (total 760, start 95) -->
+  <rect x="110" y="634" width="12" height="12" rx="2" fill="#e74c3c"/>
+  <text x="127" y="642" font-size="9" fill="#34495e">Storage</text>
+  <rect x="300" y="634" width="12" height="12" rx="2" fill="#16a085"/>
+  <text x="317" y="642" font-size="9" fill="#34495e">Downloads</text>
+  <line x1="490" y1="640" x2="510" y2="640" stroke="#16a085" stroke-width="2" stroke-dasharray="3,2"/>
+  <text x="527" y="642" font-size="9" fill="#34495e">Optional (TLS)</text>
+  <rect x="680" y="634" width="14" height="14" rx="2" fill="none" stroke="#2ecc71" stroke-width="1.5"/>
+  <rect x="683" y="638" width="8" height="6" rx="1" fill="#2ecc71"/>
+  <path d="M 683 638 L 683 634 Q 683 632 685 632 L 689 632 Q 691 632 691 634 L 691 638" fill="none" stroke="#2ecc71" stroke-width="1.2" stroke-linecap="round"/>
+  <text x="702" y="642" font-size="9" fill="#7f8c8d">Let's Encrypt TLS</text>
 </svg>

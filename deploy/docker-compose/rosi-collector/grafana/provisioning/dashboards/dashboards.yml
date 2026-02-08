@@ -9,4 +9,4 @@ providers:
     editable: true
     allowUiUpdates: true
     options:
-      path: /etc/grafana/provisioning/dashboards
+      path: /etc/grafana/provisioning/dashboards/generated
