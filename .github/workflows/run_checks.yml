@@ -1257,6 +1257,80 @@ jobs:
         if: steps.code_changes.outputs.any_changed != 'true'
         run: echo "No relevant changes detected; skipping elasticsearch CI."
 
+  victorialogs_CI:
+    needs: compile
+    if: ${{ needs.compile.result == 'success' }}
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    name: victorialogs-tests
+    env:
+      DOCKER_RUN_EXTRA_OPTS: --network host
+    services:
+      victorialogs:
+        image: victoriametrics/victoria-logs:latest
+        ports:
+          - 29428:9428
+    steps:
+      - name: checkout project
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for code changes
+        id: code_changes
+        uses: tj-actions/changed-files@v46
+        with:
+          base_sha: ${{ github.event.pull_request.base.sha }}
+          sha: ${{ github.event.pull_request.head.sha }}
+          files: |
+            tests/omhttp-victorialogs-jsonline.sh
+            tests/Makefile.am
+            contrib/omhttp/**
+            .github/workflows/run_checks.yml
+          files_ignore: |
+            doc/Makefile.am
+
+      - name: run victoria logs omhttp jsonl test
+        if: steps.code_changes.outputs.any_changed == 'true'
+        env:
+          RSYSLOG_DEV_CONTAINER: rsyslog/rsyslog_dev_base_ubuntu:22.04
+          RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE: >-
+            --enable-testbench --enable-omstdout --enable-imdiag --enable-omhttp
+            --disable-default-tests --disable-imtcp-tests --disable-imfile
+            --disable-imfile-tests --disable-fmhttp
+          CI_MAKE_OPT: -j20
+          CI_MAKE_CHECK_OPT: -j1 TESTS=omhttp-victorialogs-jsonline.sh
+          CI_CHECK_CMD: check
+          ABORT_ALL_ON_TEST_FAIL: 'NO'
+          USE_AUTO_DEBUG: 'off'
+          VERBOSE: '1'
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:29428/metrics >/dev/null; then
+              echo "VictoriaLogs is ready"
+              break
+            fi
+            sleep 1
+            if [ "$i" -eq 60 ]; then
+              echo "VictoriaLogs service did not become ready in time"
+              exit 1
+            fi
+          done
+          chmod -R go+rw .
+          devtools/devcontainer.sh --rm devtools/run-ci.sh
+
+      - name: show error logs (if we errored)
+        if: ${{ (failure() || cancelled()) && steps.code_changes.outputs.any_changed == 'true' }}
+        run: |
+          devtools/gather-check-logs.sh
+          cat failed-tests.log
+
+      - name: Skip VictoriaLogs CI, no relevant changes
+        if: steps.code_changes.outputs.any_changed != 'true'
+        run: echo "No relevant changes detected; skipping VictoriaLogs CI."
+
   clang_analyzer_CI:
     needs: compile
     if: ${{ needs.compile.result == 'success' }}
