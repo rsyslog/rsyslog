@@ -37,9 +37,9 @@ cp "$RSYSLOG_OUT_LOG" tmp.log
 seq_check
 printf "\nSUCCESS for part 1 of the test\n\n"
 
-echo WARNING: The next part of this test is flacky, because there is an
+echo WARNING: The next part of this test is flaky, because there is an
 echo inevitable race on the port number for minitcpsrvr. If another
-echo parallel test has aquired it in the interim, this test here will
+echo parallel test has acquired it in the interim, this test here will
 echo invalidly fail.
 ./minitcpsrv -t127.0.0.1 -p $TCPFLOOD_PORT -f "$RSYSLOG2_OUT_LOG" \
 	-P "$RSYSLOG_DYNNAME.minitcpsrvr_port2"  &
@@ -56,8 +56,10 @@ injectmsg $NUMMESSAGES $NUMMESSAGES
 shutdown_when_empty
 wait_shutdown
 
-if [ "$(wc -l < $RSYSLOG2_OUT_LOG)" != "$(( NUMMESSAGES / 2 ))" ]; then
-	echo "ERROR: RSYSLOG2_OUT_LOG has invalid number of messages $(( NUMMESSAGES / 2 ))"
+actual_lines=$(wc -l < "$RSYSLOG2_OUT_LOG")
+expected_lines=$(( NUMMESSAGES / 2 ))
+if [ "$actual_lines" != "$expected_lines" ]; then
+	echo "ERROR: RSYSLOG2_OUT_LOG has invalid number of messages (expected=$expected_lines actual=$actual_lines)"
 	cat -n  $RSYSLOG2_OUT_LOG | head -10
 	error_exit 100
 fi
