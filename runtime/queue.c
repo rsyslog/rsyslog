@@ -881,14 +881,37 @@ static void qqueueSetupLinkedList(qqueue_t *pThis) {
 }
 
 static void qqueueDestroyDiskStreams(qqueue_t *pThis) {
+    /* Emergency recovery must not delete queue files while switching modes. */
+    if (pThis->tVars.disk.pWrite != NULL) strm.SetbDeleteOnClose(pThis->tVars.disk.pWrite, 0);
+    if (pThis->tVars.disk.pReadDeq != NULL) strm.SetbDeleteOnClose(pThis->tVars.disk.pReadDeq, 0);
+    if (pThis->tVars.disk.pReadDel != NULL) strm.SetbDeleteOnClose(pThis->tVars.disk.pReadDel, 0);
     if (pThis->tVars.disk.pWrite != NULL) strm.Destruct(&pThis->tVars.disk.pWrite);
     if (pThis->tVars.disk.pReadDeq != NULL) strm.Destruct(&pThis->tVars.disk.pReadDeq);
     if (pThis->tVars.disk.pReadDel != NULL) strm.Destruct(&pThis->tVars.disk.pReadDel);
 }
 
+static void qqueueResetRecoveredQueueSize(qqueue_t *pThis) {
+    if (pThis->iQueueSize > 0) {
+#ifdef ENABLE_IMDIAG
+    #ifdef HAVE_ATOMIC_BUILTINS
+        ATOMIC_SUB(&iOverallQueueSize, pThis->iQueueSize, &NULL);
+    #else
+        iOverallQueueSize -= pThis->iQueueSize; /* racy, but we can't wait for a mutex! */
+    #endif
+#endif
+        pThis->iQueueSize = 0;
+    }
+    pThis->nLogDeq = 0;
+}
+
 static rsRetVal qqueueSwitchToInMemoryEmergency(qqueue_t *pThis) {
     DEFiRet;
+    qqueueResetRecoveredQueueSize(pThis);
     qqueueDestroyDiskStreams(pThis);
+    free(pThis->pszFilePrefix);
+    pThis->pszFilePrefix = NULL;
+    pThis->lenFilePrefix = 0;
+    pThis->bIsDA = 0;
     free(pThis->pszQIFNam);
     pThis->pszQIFNam = NULL;
     pThis->lenQIFNam = 0;
@@ -1202,6 +1225,7 @@ static rsRetVal qqueueVerifyAndRecover(qqueue_t *pThis, rsRetVal loadRet) {
                 }
             }
 
+            qqueueResetRecoveredQueueSize(pThis);
             iRet = RS_RET_FILE_NOT_FOUND;
         }
     } else {
