@@ -685,8 +685,7 @@ static rsRetVal jsontransformMaybeReloadPolicy(instanceData *pData) {
     if (localRet == RS_RET_OK) {
         DBGPRINTF("mmjsontransform: reloaded policy file '%s'\n", pData->policyPath);
     } else {
-        LogError(0, localRet,
-                 "mmjsontransform: failed to reload policy file '%s' on HUP, keeping previous policy",
+        LogError(0, localRet, "mmjsontransform: failed to reload policy file '%s' on HUP, keeping previous policy",
                  pData->policyPath);
     }
     return RS_RET_OK;
