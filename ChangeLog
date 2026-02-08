@@ -13,6 +13,12 @@ Scheduled Release 8.2602.0 (aka 2026.02) 2026-02-??
 
 - overall improved documentation via a large set of topic updates.
 
+- 2026-02-07: omhttp: reuse reply buffer with cap and safer sizing
+  This improves performance by avoiding frequent alloc/free of the
+  response buffer and bounding memory use. It also advances overall
+  maintainability by using size-safe types and curl's large size API.
+  Impact: adds 'replymaxbytes' (default 1 MiB). Large replies may be
+  truncated and the transfer aborted, which can change retry behavior.
 - 2026-02-07: build: normalize object prototypes and remove decl noise
   Keep strict warning builds useful without relying on broad
   diagnostic suppressions.
