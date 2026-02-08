@@ -1870,7 +1870,7 @@ static void ATTR_NONNULL() curlCheckConnSetup(wrkrInstanceData_t *const pWrkrDat
 static void ATTR_NONNULL(1) curlPostSetup(wrkrInstanceData_t *const pWrkrData) {
     PTR_ASSERT_SET_TYPE(pWrkrData, WRKR_DATA_TYPE_ES);
     curlSetupCommon(pWrkrData, pWrkrData->curlPostHandle);
-    curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_POST, 1);
+    curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_POST, 1L);
     CURLcode cRet;
     /* Enable TCP keep-alive for this transfer */
     cRet = curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_TCP_KEEPALIVE, 1L);
