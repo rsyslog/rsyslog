@@ -2338,6 +2338,55 @@ AC_ARG_ENABLE(impstats,
         [enable_impstats=no]
 )
 
+# settings for impstats push support (requires impstats)
+AC_ARG_ENABLE(impstats-push,
+	[AS_HELP_STRING([--enable-impstats-push],[Enable native push support in impstats (requires --enable-impstats, libcurl, protobuf-c, snappy) @<:@default=no@:>@])],
+	[case "${enableval}" in
+	 yes) enable_impstats_push="yes" ;;
+	  no) enable_impstats_push="no" ;;
+	   *) AC_MSG_ERROR(bad value ${enableval} for --enable-impstats-push) ;;
+	 esac],
+	[enable_impstats_push=no]
+)
+
+IMPSTATS_PUSH_CFLAGS=""
+IMPSTATS_PUSH_LIBS=""
+if test "x$enable_impstats_push" = "xyes"; then
+	if test "x$enable_impstats" != "xyes"; then
+		AC_MSG_ERROR([--enable-impstats-push requires --enable-impstats to be enabled])
+	fi
+	
+	# Check for protoc-c compiler
+	AC_PATH_PROG([PROTOC_C], [protoc-c])
+	if test "x$PROTOC_C" = "x"; then
+		AC_MSG_ERROR([protoc-c not found. Please install protobuf-c-compiler package.])
+	fi
+	AC_SUBST([PROTOC_C])
+	
+	PKG_CHECK_MODULES([IMPSTATS_PUSH_CURL], [libcurl >= 7.40.0])
+	PKG_CHECK_MODULES([IMPSTATS_PUSH_PROTOBUF], [libprotobuf-c >= 1.0.0])
+	# Note: snappy doesn't always provide a pkg-config file, try library check as fallback
+	PKG_CHECK_MODULES([IMPSTATS_PUSH_SNAPPY], [snappy], [
+		AC_DEFINE([HAVE_SNAPPY_PKG_CONFIG], [1], [snappy has pkg-config])
+	], [
+		AC_CHECK_HEADER([snappy-c.h], [], [
+			AC_MSG_ERROR([snappy header not found - install libsnappy-dev])
+		])
+		AC_CHECK_LIB([snappy], [snappy_compress], [
+			IMPSTATS_PUSH_SNAPPY_LIBS="-lsnappy"
+		], [
+			AC_MSG_ERROR([snappy library not found - install libsnappy])
+		])
+	])
+	
+	IMPSTATS_PUSH_CFLAGS="$IMPSTATS_PUSH_CURL_CFLAGS $IMPSTATS_PUSH_PROTOBUF_CFLAGS $IMPSTATS_PUSH_SNAPPY_CFLAGS"
+	IMPSTATS_PUSH_LIBS="$IMPSTATS_PUSH_CURL_LIBS $IMPSTATS_PUSH_PROTOBUF_LIBS $IMPSTATS_PUSH_SNAPPY_LIBS"
+	
+	AC_DEFINE([ENABLE_IMPSTATS_PUSH], [1], [Enable push support in impstats module])
+fi
+AC_SUBST([IMPSTATS_PUSH_CFLAGS])
+AC_SUBST([IMPSTATS_PUSH_LIBS])
+
 # settings for the pcap input module
 AC_ARG_ENABLE(impcap,
         [AS_HELP_STRING([--enable-impcap],[libpcap input module enabled @<:@default=no@:>@])],
@@ -2453,6 +2502,7 @@ fi
 AM_CONDITIONAL(ENABLE_IMDIAG, test x$enable_imdiag = xyes)
 AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
 AM_CONDITIONAL(ENABLE_IMPSTATS, test x$enable_impstats = xyes)
+AM_CONDITIONAL(ENABLE_IMPSTATS_PUSH, test x$enable_impstats_push = xyes)
 AM_CONDITIONAL(ENABLE_TESTBENCH, test x$enable_testbench = xyes)
 
 

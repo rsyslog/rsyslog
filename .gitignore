@@ -106,4 +106,6 @@ tools/rscryutil.1
 *.gcno
 coverage*
 _codeql_detected_source_root
-/doc/.venv-docs/
+doc/.venv-docs/
+plugins/impstats/remote.pb-c.c
+plugins/impstats/remote.pb-c.h

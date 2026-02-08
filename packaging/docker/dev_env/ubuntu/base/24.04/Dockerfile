@@ -46,10 +46,13 @@ RUN 	apt-get update && \
 	libmysqlclient-dev \
 	libnet1-dev \
 	libpcap-dev \
+	libprotobuf-c-dev \
 	librabbitmq-dev \
 	libsnmp-dev \
+	libsnappy-dev \
 	libssl-dev libsasl2-dev libsasl2-2 libsasl2-modules \
 	libsystemd-dev \
+	protobuf-c-compiler \
 	libtirpc-dev \
 	libtokyocabinet-dev \
 	libtool \
@@ -329,6 +332,7 @@ ENV RSYSLOG_CONFIGURE_OPTIONS=" \
 	--enable-imjournal \
 	--enable-imkafka \
 	--enable-impstats \
+	--enable-impstats-push \
 	--enable-impcap \
 	--enable-imptcp \
 	--enable-kafka-tests \

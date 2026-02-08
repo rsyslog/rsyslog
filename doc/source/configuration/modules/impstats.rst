@@ -115,6 +115,58 @@ Module Parameters
      - .. include:: ../../reference/parameters/impstats-bracketing.rst
         :start-after: .. summary-start
         :end-before: .. summary-end
+   * - :ref:`param-impstats-push-url`
+     - .. include:: ../../reference/parameters/impstats-push-url.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-impstats-push-labels`
+     - .. include:: ../../reference/parameters/impstats-push-labels.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-impstats-push-timeout-ms`
+     - .. include:: ../../reference/parameters/impstats-push-timeout-ms.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-impstats-push-label-instance`
+     - .. include:: ../../reference/parameters/impstats-push-label-instance.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-impstats-push-label-job`
+     - .. include:: ../../reference/parameters/impstats-push-label-job.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-impstats-push-label-origin`
+     - .. include:: ../../reference/parameters/impstats-push-label-origin.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-impstats-push-label-name`
+     - .. include:: ../../reference/parameters/impstats-push-label-name.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-impstats-push-batch-maxbytes`
+     - .. include:: ../../reference/parameters/impstats-push-batch-maxbytes.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-impstats-push-batch-maxseries`
+     - .. include:: ../../reference/parameters/impstats-push-batch-maxseries.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-impstats-push-tls-cafile`
+     - .. include:: ../../reference/parameters/impstats-push-tls-cafile.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-impstats-push-tls-certfile`
+     - .. include:: ../../reference/parameters/impstats-push-tls-certfile.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-impstats-push-tls-keyfile`
+     - .. include:: ../../reference/parameters/impstats-push-tls-keyfile.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
+   * - :ref:`param-impstats-push-tls-insecureskipverify`
+     - .. include:: ../../reference/parameters/impstats-push-tls-insecureskipverify.rst
+        :start-after: .. summary-start
+        :end-before: .. summary-end
 
 
 .. _impstats-statistic-counter:

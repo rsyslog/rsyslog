@@ -287,10 +287,13 @@ jobs:
               # impstats has known and OK races
               # mmpstrucdata TEMPORARILY disabled because of a threading hang on shutdown
               # imhttp disabled because of race in civetweb (need to consider different lib)
-              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests --enable-imfile-tests \
-                    --disable-impstats --disable-kafka-tests --disable-mmpstrucdata \
+              export RSYSLOG_CONFIGURE_OPTIONS_EXTRA="--disable-elasticsearch-tests \
+                    --enable-imfile-tests \
+                    --disable-impstats --disable-impstats-push \
+                    --disable-kafka-tests --disable-mmpstrucdata \
                     --enable-omotel \
-                    --disable-clickhouse --disable-clickhouse-tests --disable-kafka-tests \
+                    --disable-clickhouse --disable-clickhouse-tests \
+                    --disable-kafka-tests \
                     --disable-libfaketime --disable-imhttp \
                     --without-valgrind-testbench --disable-valgrind \
                     --enable-mmsnareparse"
