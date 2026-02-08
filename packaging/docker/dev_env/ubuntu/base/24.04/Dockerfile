@@ -75,7 +75,8 @@ RUN 	apt-get update && \
 	wget \
 	zlib1g-dev \
 	zstd \
-	&& apt clean
+	&& apt-get clean \
+	&& rm -rf /var/lib/apt/lists/*
 #	libgrok1 libgrok-dev \
 ENV	REBUILD=1
 # Adiscon/rsyslog components
@@ -89,7 +90,9 @@ RUN	echo 'deb http://download.opensuse.org/repositories/home:/rgerhards/xUbuntu_
 	apt-get install -y  \
 	libestr-dev \
 	liblogging-stdlog-dev \
-	liblognorm-dev
+	liblognorm-dev \
+	&& apt-get clean \
+	&& rm -rf /var/lib/apt/lists/* Release.key
 # 0mq (currently not needed, but we keep it in just in case)
 #RUN	echo "deb http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_18.04/ ./" > /etc/apt/sources.list.d/0mq.list && \
 #	wget -nv -O - http://download.opensuse.org/repositories/network:/messaging:/zeromq:/git-draft/xUbuntu_18.04/Release.key | apt-key add - && \
@@ -98,7 +101,9 @@ RUN	apt-get update -y && \
 	apt-get install -y  \
 	libczmq-dev \
 	tcl-dev \
-	libsodium-dev
+	libsodium-dev \
+	&& apt-get clean \
+	&& rm -rf /var/lib/apt/lists/*
 # clickhouse
 #RUN	echo "deb http://repo.yandex.ru/clickhouse/deb/stable/ main/" > /etc/apt/sources.list.d/clickhouse.list && \
 #	apt-key adv --keyserver keyserver.ubuntu.com --recv E0C56BD4 && \
@@ -199,6 +204,7 @@ RUN	cd helper-projects && \
 	./configure --prefix=/usr --libdir=/usr/lib/x86_64-linux-gnu --includedir=/usr/include && \
 	make -j && \
 	make install && \
+	rm -f /usr/lib/x86_64-linux-gnu/libfastjson.a && \
 	cd .. && \
 	rm -r libfastjson && \
 	cd ..
@@ -223,6 +229,7 @@ RUN	cd helper-projects && \
 	cd build && \
 	cmake .. && make -j && \
 	make install && \
+	rm -f /usr/local/lib/libfaupl.a && \
 	cd .. && \
 	cd .. && \
 	rm -r faup && \
@@ -236,6 +243,7 @@ RUN	cd helper-projects && \
 	./configure --prefix=/usr && \
 	make -j && \
 	make install && \
+	rm -f /usr/lib/libksi.a && \
 	cd .. && \
 	rm -r libksi && \
 	cd ..
@@ -249,6 +257,7 @@ RUN	cd helper-projects && \
 	./configure --prefix=/usr --enable-compile-warnings=yes --libdir=/usr/lib --includedir=/usr/include && \
 	make -j && \
 	make install && \
+	rm -f /usr/lib/librelp.a && \
 	cd .. && \
 	rm -r librelp && \
 	cd ..
@@ -262,6 +271,8 @@ RUN	cd helper-projects && \
 	cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DSYSINSTALL_BINDINGS=ON -DBUILD_TESTING=OFF && \
 	make -j8 && \
 	make install && \
+	rm -f /usr/lib/libqpid-proton-core.a /usr/lib/libqpid-proton-cpp.a \
+		/usr/lib/libqpid-proton-proactor.a /usr/lib/libqpid-proton.a && \
 	cd .. && \
 	cd .. && \
 	rm -r qpid-proton && \
@@ -274,7 +285,9 @@ RUN	cd helper-projects && \
 	git checkout v1.5.3 && \
 	(unset CFLAGS; ./configure --prefix=/usr --libdir=/usr/lib --CFLAGS="-g" ; make -j) && \
 	make install && \
+	rm -f /usr/lib/librdkafka.a /usr/lib/librdkafka++.a && \
 	cd .. && \
+	rm -rf librdkafka && \
 	cd ..
 
 # kafkacat
@@ -284,9 +297,10 @@ RUN	cd helper-projects \
 	&& (unset CFLAGS; ./configure --prefix=/usr --CFLAGS="-g" ; make -j) \
 	&& make install \
 	&& cd .. \
+	&& rm -rf kafkacat \
 	&& cd ..
 
-RUN	pip install pyasn1 pysnmp --break-system-packages --upgrade
+RUN	pip install pyasn1 pysnmp --break-system-packages --upgrade --no-cache-dir
 
 # next ENV is specifically for running scan-build - so we do not need to
 # change scripts if at a later time we can move on to a newer version
@@ -396,6 +410,8 @@ RUN	printf '\n' > /var/log/mysql/error.log
 ENV	ASAN_SYMBOLIZER_PATH="/usr/lib/llvm-18/bin/llvm-symbolizer"
 VOLUME	/var/lib/mysql
 ENV	C_INCLUDE_PATH="/usr/include/tirpc/"
+
+RUN	rm -rf /home/devel/helper-projects /root/.cache/pip /tmp/* /var/tmp/*
 
 RUN	groupadd -g 1002 rsyslog998 \
 	&& groupadd -g 1003 rsyslog997 \
