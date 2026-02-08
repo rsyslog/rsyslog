@@ -881,14 +881,37 @@ static void qqueueSetupLinkedList(qqueue_t *pThis) {
 }
 
 static void qqueueDestroyDiskStreams(qqueue_t *pThis) {
+    /* Emergency recovery must not delete queue files while switching modes. */
+    if (pThis->tVars.disk.pWrite != NULL) strm.SetbDeleteOnClose(pThis->tVars.disk.pWrite, 0);
+    if (pThis->tVars.disk.pReadDeq != NULL) strm.SetbDeleteOnClose(pThis->tVars.disk.pReadDeq, 0);
+    if (pThis->tVars.disk.pReadDel != NULL) strm.SetbDeleteOnClose(pThis->tVars.disk.pReadDel, 0);
     if (pThis->tVars.disk.pWrite != NULL) strm.Destruct(&pThis->tVars.disk.pWrite);
     if (pThis->tVars.disk.pReadDeq != NULL) strm.Destruct(&pThis->tVars.disk.pReadDeq);
     if (pThis->tVars.disk.pReadDel != NULL) strm.Destruct(&pThis->tVars.disk.pReadDel);
 }
 
+static void qqueueResetRecoveredQueueSize(qqueue_t *pThis) {
+    if (pThis->iQueueSize > 0) {
+#ifdef ENABLE_IMDIAG
+    #ifdef HAVE_ATOMIC_BUILTINS
+        ATOMIC_SUB(&iOverallQueueSize, pThis->iQueueSize, &NULL);
+    #else
+        iOverallQueueSize -= pThis->iQueueSize; /* racy, but we can't wait for a mutex! */
+    #endif
+#endif
+        pThis->iQueueSize = 0;
+    }
+    pThis->nLogDeq = 0;
+}
+
 static rsRetVal qqueueSwitchToInMemoryEmergency(qqueue_t *pThis) {
     DEFiRet;
+    qqueueResetRecoveredQueueSize(pThis);
     qqueueDestroyDiskStreams(pThis);
+    free(pThis->pszFilePrefix);
+    pThis->pszFilePrefix = NULL;
+    pThis->lenFilePrefix = 0;
+    pThis->bIsDA = 0;
     free(pThis->pszQIFNam);
     pThis->pszQIFNam = NULL;
     pThis->lenQIFNam = 0;
@@ -908,12 +931,26 @@ typedef struct fileEntry_s {
     char *name;
 } fileEntry_t;
 
+static int fileEntryCmpByNumber(const void *a, const void *b) {
+    const fileEntry_t *e1 = (const fileEntry_t *)a;
+    const fileEntry_t *e2 = (const fileEntry_t *)b;
+    if (e1->number < e2->number) return -1;
+    if (e1->number > e2->number) return 1;
+    return 0;
+}
+
+static sbool fileEntryExistsByNumber(const fileEntry_t *files, int nFiles, int number) {
+    fileEntry_t key;
+    key.number = number;
+    key.name = NULL;
+    return bsearch(&key, files, (size_t)nFiles, sizeof(fileEntry_t), fileEntryCmpByNumber) != NULL;
+}
+
 static rsRetVal qqueueVerifyAndRecover(qqueue_t *pThis, rsRetVal loadRet) {
     DEFiRet;
     DIR *d = NULL;
     struct dirent *dir;
     fileEntry_t *files = NULL;
-    char *filesPresent = NULL;
     int nFiles = 0;
     int capFiles = 0;
     int fileNum;
@@ -933,15 +970,6 @@ static rsRetVal qqueueVerifyAndRecover(qqueue_t *pThis, rsRetVal loadRet) {
     if (strchr((char *)pThis->pszFilePrefix, '/') != NULL || strchr((char *)pThis->pszFilePrefix, '\\') != NULL) {
         LogError(0, RS_RET_ERR,
                  "queue corruption: queue file prefix contains path separators; switching to emergency in-memory mode");
-        CHKiRet(qqueueSwitchToInMemoryEmergency(pThis));
-        iRet = RS_RET_OK;
-        FINALIZE;
-    }
-
-    filesPresent = calloc(MAX_DISK_QUEUE_FILES, sizeof(char));
-    if (filesPresent == NULL) {
-        LogError(errno, RS_RET_OUT_OF_MEMORY,
-                 "queue corruption: unable to allocate verification bitmap; switching to emergency in-memory mode");
         CHKiRet(qqueueSwitchToInMemoryEmergency(pThis));
         iRet = RS_RET_OK;
         FINALIZE;
@@ -989,14 +1017,6 @@ static rsRetVal qqueueVerifyAndRecover(qqueue_t *pThis, rsRetVal loadRet) {
                     files[nFiles].number = fileNum;
                     files[nFiles].name = dupName;
                     nFiles++;
-
-                    if (fileNum >= 0 && fileNum < MAX_DISK_QUEUE_FILES) {
-                        filesPresent[fileNum] = 1;
-                    } else {
-                        LogError(0, RS_RET_ERR, "queue corruption: found file with invalid sequence number %d (max %d)",
-                                 fileNum, MAX_DISK_QUEUE_FILES);
-                        corruptionDetected = 1;
-                    }
                 }
             }
         }
@@ -1014,6 +1034,10 @@ static rsRetVal qqueueVerifyAndRecover(qqueue_t *pThis, rsRetVal loadRet) {
     if (!canScanDir) {
         iRet = loadRet;
         FINALIZE;
+    }
+
+    if (nFiles > 1) {
+        qsort(files, (size_t)nFiles, sizeof(fileEntry_t), fileEntryCmpByNumber);
     }
 
     /* 2. State Validation */
@@ -1035,7 +1059,7 @@ static rsRetVal qqueueVerifyAndRecover(qqueue_t *pThis, rsRetVal loadRet) {
             int limit = 0;
             /* Verify chain from deqNum to enqNum */
             while (curr != enqNum) {
-                if (!filesPresent[curr]) {
+                if (!fileEntryExistsByNumber(files, nFiles, curr)) {
                     LogError(0, RS_RET_ERR, "queue corruption: missing file in sequence: %d", curr);
                     corruptionDetected = 1;
                     break;
@@ -1050,7 +1074,7 @@ static rsRetVal qqueueVerifyAndRecover(qqueue_t *pThis, rsRetVal loadRet) {
                 }
             }
             /* Check enqueue file itself */
-            if (!corruptionDetected && !filesPresent[enqNum]) {
+            if (!corruptionDetected && !fileEntryExistsByNumber(files, nFiles, enqNum)) {
                 LogError(0, RS_RET_ERR, "queue corruption: missing enqueue file: %d", enqNum);
                 corruptionDetected = 1;
             }
@@ -1202,6 +1226,7 @@ static rsRetVal qqueueVerifyAndRecover(qqueue_t *pThis, rsRetVal loadRet) {
                 }
             }
 
+            qqueueResetRecoveredQueueSize(pThis);
             iRet = RS_RET_FILE_NOT_FOUND;
         }
     } else {
@@ -1216,7 +1241,6 @@ finalize_it:
         for (i = 0; i < nFiles; i++) free(files[i].name);
         free(files);
     }
-    free(filesPresent);
     RETiRet;
 }
 
