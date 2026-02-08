@@ -13,6 +13,15 @@ Scheduled Release 8.2602.0 (aka 2026.02) 2026-02-??
 
 - overall improved documentation via a large set of topic updates.
 
+- 2026-02-08: curl modules: pass long literal to CURLOPT_POST
+  Why:
+  Debian builds against newer curl headers fail with -Werror because
+  CURLOPT_POST requires a long argument and int literals trigger
+  attribute warnings.
+  Impact:
+  Fixes compile failures in omhttp, omelasticsearch, and omclickhouse
+  with strict warning settings.
+  closes https://github.com/rsyslog/rsyslog/issues/6516
 - 2026-02-07: omhttp: reuse reply buffer with cap and safer sizing
   This improves performance by avoiding frequent alloc/free of the
   response buffer and bounding memory use. It also advances overall
