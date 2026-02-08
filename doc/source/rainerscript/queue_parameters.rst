@@ -318,6 +318,38 @@ be turned on without a good reason. Note that the penalty also depends on
 *queue.checkpointInterval* frequency.
 
 
+queue.onCorruption
+------------------
+
+.. csv-table::
+   :header: "type", "default", "mandatory", "|FmtObsoleteName| directive"
+   :widths: auto
+   :class: parameter-table
+
+   "word", "safe", "no", "none"
+
+Controls how rsyslog handles disk queue corruption detected during startup.
+This applies to queue files and checkpoint state (``.qi``).
+
+Supported values are:
+
+* ``safe``: detect corruption, move queue files to a timestamped
+  ``.bad`` directory, and start with a fresh disk queue.
+* ``inMemory``: switch to a non-persistent in-memory queue for the current
+  process lifetime.
+* ``ignore``: skip the corruption verification logic and keep legacy startup
+  behavior.
+
+If rsyslog cannot safely quarantine corrupted files in ``safe`` mode (for
+example because the recovery directory cannot be created or files cannot be
+moved), it logs alert-level errors and switches to pure in-memory emergency
+mode for safety.
+
+The startup verification checks queue structure consistency (file sequence and
+pointer continuity). It does **not** parse and validate each payload record
+inside queue segment files.
+
+
 queue.samplingInterval
 ----------------------
 
