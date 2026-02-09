@@ -4,9 +4,14 @@
 # Automatically fetches latest version from GitHub and configures with local network IP binding
 #
 # Usage:
-#   sudo ./install-node-exporter.sh
+#   sudo ./install-node-exporter.sh [--overwrite]
+#
+# Options:
+#   --overwrite   Overwrite existing node_exporter (stop service / free port 9100)
 #
 set -euo pipefail
+
+OVERWRITE_FLAG=false
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -18,6 +23,11 @@ log_info() { echo -e "${GREEN}[INFO]${NC} $1" >&2; }
 log_warn() { echo -e "${YELLOW}[WARN]${NC} $1" >&2; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1" >&2; }
 log_prompt() { echo -e "${BLUE}[PROMPT]${NC} $1" >&2; }
+
+usage() {
+    echo "Usage: sudo $0 [--overwrite]" >&2
+    echo "  --overwrite   Overwrite existing node_exporter (stop service and reinstall)" >&2
+}
 
 need_root() {
     [ "${EUID:-$(id -u)}" -eq 0 ] || {
@@ -233,36 +243,116 @@ prompt_ip_address() {
 check_port_availability() {
     local bind_ip="$1"
     local port=9100
-    
+
     if command -v ss >/dev/null 2>&1; then
-        if ss -tlnp 2>/dev/null | grep -q ":${port}"; then
-            log_warn "Port $port is already in use"
-            if systemctl is-active --quiet node_exporter 2>/dev/null; then
-                log_info "node_exporter service is already running"
-                return 0
-            else
-                log_error "Port $port is in use by another service"
-                return 1
-            fi
+        if ! ss -tlnp 2>/dev/null | grep -q ":${port}"; then
+            return 0
         fi
     elif command -v netstat >/dev/null 2>&1; then
-        if netstat -tlnp 2>/dev/null | grep -q ":${port}"; then
-            log_warn "Port $port is already in use"
-            if systemctl is-active --quiet node_exporter 2>/dev/null; then
-                log_info "node_exporter service is already running"
-                return 0
-            else
-                log_error "Port $port is in use by another service"
-                return 1
-            fi
+        if ! netstat -tlnp 2>/dev/null | grep -q ":${port}"; then
+            return 0
         fi
+    else
+        return 0
     fi
-    
+
+    log_warn "Port $port is already in use"
+    local who
+    who=$(is_port_9100_node_exporter 2>/dev/null); who=${who:-other}
+    if [ "$who" = "node_exporter" ]; then
+        if [ "$OVERWRITE_FLAG" = true ]; then
+            log_info "Overwriting existing node_exporter (--overwrite)"
+            stop_existing_node_exporter
+            return 0
+        fi
+        log_prompt "Port 9100 is in use by node_exporter. Overwrite existing installation? [y/N]"
+        read -r reply < /dev/tty
+        if [[ "$reply" =~ ^[Yy]$ ]]; then
+            stop_existing_node_exporter
+            return 0
+        fi
+        log_error "Installation cancelled (port 9100 in use)"
+        return 1
+    fi
+    log_error "Port $port is in use by another service"
+    return 1
+}
+
+# Stop and disable any known node_exporter systemd unit (etc or usr lib).
+# Returns 0 if a service was stopped, 1 if none found.
+stop_node_exporter_systemd() {
+    local stopped=0
+    for unit in node_exporter prometheus-node-exporter; do
+        if systemctl list-unit-files --full "${unit}.service" 2>/dev/null | grep -q "^${unit}.service"; then
+            if systemctl is-active --quiet "$unit" 2>/dev/null; then
+                log_info "Stopping existing $unit service..."
+                systemctl stop "$unit" || {
+                    log_error "Failed to stop $unit"
+                    return 1
+                }
+                stopped=1
+            fi
+            systemctl disable "$unit" 2>/dev/null || true
+        fi
+    done
+    [ "$stopped" -eq 1 ] && return 0
+    return 1
+}
+
+# Get PID of process listening on port 9100 (empty if none or unknown).
+get_pid_on_port_9100() {
+    if command -v ss >/dev/null 2>&1; then
+        ss -tlnp 2>/dev/null | grep ":9100" | sed -n 's/.*pid=\([0-9]*\).*/\1/p' | head -1
+    elif command -v netstat >/dev/null 2>&1; then
+        netstat -tlnp 2>/dev/null | awk '/:9100 / { split($NF, a, "/"); print a[1]; exit }'
+    fi
+}
+
+# If something is listening on port 9100, echo "node_exporter" or "other".
+# Checks the process on port 9100 first (accurate); falls back to systemctl only if PID unknown.
+is_port_9100_node_exporter() {
+    local pid
+    pid=$(get_pid_on_port_9100)
+    if [ -n "$pid" ] && [ -d "/proc/$pid" ] 2>/dev/null; then
+        local cmd
+        cmd=$(readlink -f "/proc/$pid/exe" 2>/dev/null || true)
+        if [[ "$cmd" == *"node_exporter"* ]]; then
+            echo "node_exporter"
+            return 0
+        fi
+        echo "other"
+        return 0
+    fi
+    # Fallback: no process identified on port 9100, check if node_exporter service is running
+    if systemctl is-active --quiet node_exporter 2>/dev/null || systemctl is-active --quiet prometheus-node-exporter 2>/dev/null; then
+        echo "node_exporter"
+        return 0
+    fi
+    echo "other"
     return 0
 }
 
+# Stop any existing node_exporter (systemd and/or process on 9100) so install can proceed.
+stop_existing_node_exporter() {
+    stop_node_exporter_systemd || true
+    local who
+    who=$(is_port_9100_node_exporter 2>/dev/null); who=${who:-other}
+    if [ "$who" = "node_exporter" ]; then
+        local pid
+        pid=$(get_pid_on_port_9100)
+        if [ -n "$pid" ] && [ "$pid" -gt 0 ] 2>/dev/null; then
+            log_info "Stopping process on port 9100 (PID $pid)..."
+            kill "$pid" 2>/dev/null || true
+            sleep 1
+            if kill -0 "$pid" 2>/dev/null; then
+                kill -9 "$pid" 2>/dev/null || true
+            fi
+        fi
+    fi
+}
+
 check_existing_installation() {
-    if [ -f "/etc/systemd/system/node_exporter.service" ]; then
+    if [ -f "/etc/systemd/system/node_exporter.service" ] || [ -f "/usr/lib/systemd/system/node_exporter.service" ]; then
         log_warn "node_exporter service already exists"
         if systemctl is-active --quiet node_exporter 2>/dev/null; then
             log_info "Stopping existing service..."
@@ -271,6 +361,19 @@ check_existing_installation() {
                 exit 1
             }
         fi
+        systemctl disable node_exporter 2>/dev/null || true
+        return 0
+    fi
+    if [ -f "/usr/lib/systemd/system/prometheus-node-exporter.service" ]; then
+        log_warn "prometheus-node-exporter service already exists"
+        if systemctl is-active --quiet prometheus-node-exporter 2>/dev/null; then
+            log_info "Stopping existing service..."
+            systemctl stop prometheus-node-exporter || {
+                log_error "Failed to stop existing service"
+                exit 1
+            }
+        fi
+        systemctl disable prometheus-node-exporter 2>/dev/null || true
         return 0
     fi
     return 1
@@ -659,12 +762,30 @@ main() {
     local arch
     local bind_ip
     local central_ip
-    
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --overwrite)
+                OVERWRITE_FLAG=true
+                shift
+                ;;
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            *)
+                log_error "Unknown option: $1"
+                usage
+                exit 1
+                ;;
+        esac
+    done
+
     log_info "=========================================="
     log_info "Prometheus Node Exporter Installer"
     log_info "=========================================="
     echo ""
-    
+
     need_root
     log_info "Root check passed"
     

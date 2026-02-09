@@ -7,6 +7,8 @@ Grafana Dashboards
    pair: ROSI Collector; dashboards
    single: Grafana
    single: Syslog Explorer
+   single: Syslog Health
+   single: impstats
    single: LogQL
 
 ROSI Collector includes pre-built Grafana dashboards for exploring logs
@@ -18,19 +20,22 @@ Dashboard Overview
 
 ROSI Collector provisions five dashboards:
 
-+------------------------+------------------------------------------------+
-| Dashboard              | Purpose                                        |
-+========================+================================================+
-| Syslog Explorer        | Search and browse logs from all hosts          |
-+------------------------+------------------------------------------------+
-| Syslog Deep Dive       | Detailed analysis of log patterns              |
-+------------------------+------------------------------------------------+
-| Node Overview          | System metrics (CPU, memory, disk, network)    |
-+------------------------+------------------------------------------------+
-| Client Health          | rsyslog client status and statistics           |
-+------------------------+------------------------------------------------+
-| Alerting Overview      | Active alerts and notification status          |
-+------------------------+------------------------------------------------+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 72
+
+   * - Dashboard
+     - Purpose
+   * - Syslog Explorer
+     - Search and browse logs from all hosts
+   * - Syslog Analysis
+     - Distribution analysis (severity, hosts, etc.)
+   * - Syslog Health
+     - rsyslog impstats (queues, actions, CPU)
+   * - Host Metrics Overview
+     - System metrics (CPU, memory, disk) per host
+   * - Alerting Overview
+     - Active alerts and notification status
 
 Syslog Explorer
 ---------------
@@ -71,14 +76,14 @@ Click "Explore" in the left sidebar and use LogQL queries:
    # Count errors by host
    sum by (host) (count_over_time({job="syslog"} | json | severity = "err" [5m]))
 
-Syslog Deep Dive
-----------------
+Syslog Analysis
+---------------
 
 .. figure:: /_static/dashboard-deepdive.png
-   :alt: Syslog Deep Dive Dashboard
+   :alt: Syslog Analysis Dashboard
    :align: center
    
-   Syslog Deep Dive dashboard for log analysis
+   Syslog Analysis dashboard for log distribution
 
 This dashboard provides analytical views of log data:
 
@@ -93,16 +98,34 @@ Use this dashboard to:
 - Track error rates over time
 - Find the most common error messages
 
-Node Overview
--------------
+Syslog Health (impstats)
+------------------------
+
+The **Syslog Health** dashboard shows rsyslog internal metrics when client
+hosts run the **impstats sidecar** (installed by default with the client
+setup script). Add impstats targets on the collector:
+
+.. code-block:: bash
+
+   prometheus-target --job impstats add CLIENT_IP:9898 host=HOSTNAME role=rsyslog network=internal
+   # Or add both node_exporter and impstats in one step:
+   prometheus-target add-client CLIENT_IP host=HOSTNAME role=rsyslog network=internal
+
+The dashboard is grouped into: **Overview** (exporter count, failures, queues),
+**Queues** (size, utilization, drops), **Input** (ingest rate), **Actions**
+(processed/failed/suspended), and **Output & resource usage** (egress bytes
+and CPU). Use the Host dropdown to filter by client.
+
+Host Metrics Overview
+---------------------
 
 .. figure:: /_static/dashboard-node.png
-   :alt: Node Overview Dashboard
+   :alt: Host Metrics Overview Dashboard
    :align: center
    
-   Node Overview showing system metrics
+   Host Metrics Overview showing system metrics
 
-The Node Overview shows system metrics from node_exporter:
+The Host Metrics Overview shows system metrics from node_exporter:
 
 - **CPU usage** - Per-core and total utilization
 - **Memory** - Used, available, and cached
@@ -111,7 +134,8 @@ The Node Overview shows system metrics from node_exporter:
 - **Disk space** - Usage by filesystem
 
 Select a host from the dropdown to view its metrics. Time range applies
-to all panels.
+to all panels. (When clients run the impstats sidecar, see **Syslog Health**
+for rsyslog-specific metrics.)
 
 **Key metrics to watch**:
 

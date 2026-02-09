@@ -1,0 +1,64 @@
+{
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "doc",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Syslog Explorer",
+      "tooltip": "View All Syslogs",
+      "type": "link",
+      "url": "/d/logs-explore-like-v4"
+    },
+    {
+      "asDropdown": false,
+      "icon": "chart-line",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Analysis",
+      "tooltip": "Log analysis and patterns",
+      "type": "link",
+      "url": "/d/syslog-deep-dive"
+    },
+    {
+      "asDropdown": false,
+      "icon": "chart-line",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Health",
+      "tooltip": "rsyslog health (impstats)",
+      "type": "link",
+      "url": "/d/syslog-health-impstats"
+    },
+    {
+      "asDropdown": false,
+      "icon": "exclamation-triangle",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Alerting",
+      "tooltip": "View alerts overview",
+      "type": "link",
+      "url": "/d/alerting-overview"
+    },
+    {
+      "asDropdown": false,
+      "icon": "dashboard",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Host Metrics",
+      "tooltip": "CPU, memory, disk, network metrics",
+      "type": "link",
+      "url": "/d/node-overview"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+# prometheus-targets/impstats.yml
+# rsyslog impstats exporter targets for Prometheus
+#
+# This file is auto-reloaded by Prometheus (no restart needed for changes).
+# Prometheus picks up changes within ~5 minutes.
+#
+# To add targets on the server, use:
+#   /usr/local/bin/prometheus-target --job impstats add <ip:port> host=<name> [labels...]
+#
+# Example entries (replace with actual targets):
+#
+#- targets:
+#    - 127.0.0.1:9898
+#  labels:
+#    host: rosi-collector
+#    role: rsyslog
+#    network: internal
