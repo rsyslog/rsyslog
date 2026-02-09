@@ -13,6 +13,11 @@ Scheduled Release 8.2602.0 (aka 2026.02) 2026-02-??
 
 - overall improved documentation via a large set of topic updates.
 
+- 2026-02-08: CI: added test for VictoriaLogs via omhttp
+  This also verifies that current rsyslog can actually push to
+  VictoriaLogs via their native interface. The new test also sets
+  stage for upcoming enhancements and ensure omhttp changes will not
+  break the VictoriaLogs functionality.
 - 2026-02-08: curl modules: pass long literal to CURLOPT_POST
   Why:
   Debian builds against newer curl headers fail with -Werror because
