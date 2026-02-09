@@ -847,6 +847,9 @@ TESTS_OMHTTP_VALGRIND = \
         omhttp-retry-timeout-vg.sh \
         omhttp-batch-lokirest-vg.sh
 
+TESTS_OMHTTP_VICTORIALOGS = \
+	omhttp-victorialogs-jsonline.sh
+
 TESTS_OMOTEL = \
         omotel-http-batch.sh \
         omotel-basic.sh \
@@ -1698,6 +1701,7 @@ EXTRA_DIST += $(TESTS_OMPROG)
 EXTRA_DIST += $(TESTS_OMPROG_VALGRIND)
 EXTRA_DIST += $(TESTS_OMHTTP)
 EXTRA_DIST += $(TESTS_OMHTTP_VALGRIND)
+EXTRA_DIST += $(TESTS_OMHTTP_VICTORIALOGS)
 EXTRA_DIST += $(TESTS_OMOTEL)
 EXTRA_DIST += $(TESTS_KAFKA)
 EXTRA_DIST += $(TESTS_KAFKA_VALGRIND)
