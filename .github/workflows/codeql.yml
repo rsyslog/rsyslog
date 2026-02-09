@@ -88,6 +88,8 @@ jobs:
               logrotate \
               net-tools \
               postgresql-client libpq-dev \
+              protobuf-c-compiler \
+              libprotobuf-c-dev \
               python3-docutils  \
               python3-pip \
               software-properties-common \

@@ -211,7 +211,7 @@ jobs:
               # Note: we completely override the container configure options here!
               export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
                      --enable-imdiag --disable-imtcp-epoll --enable-imtcp-tests\
-                     --disable-impstats --disable-imfile --disable-imfile-tests \
+                     --disable-impstats --disable-impstats-push --disable-imfile --disable-imfile-tests \
                      --disable-fmhttp --enable-valgrind --enable-valgrind-testbench \
                      --disable-helgrind --disable-default-tests --disable-kafka-tests \
                      --disable-omkafka --disable-imkafka \
@@ -455,7 +455,7 @@ jobs:
           autoreconf -fvi
           ./configure --enable-silent-rules --enable-testbench \
              --enable-imdiag --disable-imdocker --disable-imfile \
-             --disable-default-tests --disable-impstats --disable-imptcp \
+            --disable-default-tests --disable-impstats --disable-impstats-push --disable-imptcp \
              --disable-mmanon --disable-mmaudit --disable-mmfields \
              --disable-mmjsonparse --disable-mmpstrucdata \
              --disable-mmsequence --disable-mmutf8fix --disable-mail \
@@ -662,7 +662,7 @@ jobs:
           autoreconf -fvi
           ./configure --enable-silent-rules --enable-testbench \
              --enable-imdiag --disable-imdocker --disable-imfile --disable-default-tests\
-             --disable-impstats --disable-imptcp --disable-mmanon --disable-mmaudit --disable-mmfields \
+             --disable-impstats --disable-impstats-push --disable-imptcp --disable-mmanon --disable-mmaudit --disable-mmfields \
              --disable-mmjsonparse --disable-mmpstrucdata --disable-mmsequence --disable-mmutf8fix \
              --disable-mail --disable-omprog --disable-improg --disable-omruleset --enable-omstdout \
              --disable-omuxsock --disable-pmaixforwardedfrom --disable-pmciscoios --disable-pmcisconames \
@@ -807,6 +807,9 @@ jobs:
             libtool \
             libtool-bin \
             libzstd-dev \
+            libprotobuf-c-dev \
+            protobuf-c-compiler \
+            libsnappy-dev \
             mysql-server \
             net-tools \
             postgresql-client libpq-dev \
@@ -1104,6 +1107,7 @@ jobs:
             --enable-imdiag \
             --disable-generate-man-pages \
             --disable-impstats \
+            --disable-impstats-push \
             --enable-imfile \
             --disable-imfile-tests \
             --disable-fmhttp \
@@ -1455,7 +1459,7 @@ jobs:
         run: |
           chmod -R go+rw .
           export RSYSLOG_CONFIGURE_OPTIONS_OVERRIDE="--enable-testbench --enable-omstdout \
-                 --enable-imdiag --disable-impstats --enable-imfile --disable-imfile-tests \
+                 --enable-imdiag --disable-impstats --disable-impstats-push --enable-imfile --disable-imfile-tests \
                  --disable-fmhttp --enable-valgrind --enable-valgrind-testbench \
                  --disable-helgrind --disable-default-tests --enable-kafka-tests \
                  --disable-default-tests \

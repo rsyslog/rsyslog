@@ -62,6 +62,8 @@ RUN	dnf -y install \
 	python3-docutils \
 	python3-pysnmp \
 	python3-sphinx \
+	protobuf-c \
+	protobuf-c-devel \
 	qpid-proton-c-devel \
 	redhat-rpm-config \
 	snappy-devel \
