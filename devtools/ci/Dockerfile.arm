@@ -1,0 +1,10 @@
+FROM ubuntu:24.04
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       build-essential autoconf automake libtool libtool-bin \
+       pkg-config flex bison python3-docutils \
+       libgnutls28-dev libestr-dev libfastjson-dev zlib1g-dev \
+       libgcrypt20-dev librelp-dev uuid-dev libyaml-dev \
+       iproute2 \
+    && rm -rf /var/lib/apt/lists/*

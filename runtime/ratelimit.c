@@ -142,8 +142,7 @@ static void ratelimitFreeShared(void *ptr) {
         pthread_mutex_destroy(&shared->per_source_mut);
     }
     free(shared->per_source_policy_file);
-    /* shared->name is the key, which is freed by hashtable */
-    free(shared->name);
+    /* shared->name is the key, freed by hashtable_destroy via freekey(); do not free here */
     free(shared);
 }
 

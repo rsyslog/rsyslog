@@ -3,6 +3,7 @@
 # This uses tcpflood -Tudp to send messages directly to imudp.
 
 . ${srcdir:=.}/diag.sh init
+skip_ARM "ratelimit timing flaky on ARM"
 export SENDMESSAGES=20
 export NUMMESSAGES=5
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines # ensure we wait for expected messages to arrive

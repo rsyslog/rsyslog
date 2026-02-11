@@ -8,6 +8,7 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 . ${srcdir:=.}/diag.sh init
+require_netns_capable
 generate_conf
 
 NS_PREFIX=$(basename ${RSYSLOG_DYNNAME})

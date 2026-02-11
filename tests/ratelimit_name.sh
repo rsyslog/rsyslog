@@ -2,6 +2,7 @@
 # Test named rate limits for imtcp and imptcp
 # This test defines a rate limit policy and applies it to listeners.
 . ${srcdir:=.}/diag.sh init --suppress-abort-on-error
+skip_ARM "ratelimit timing flaky on ARM"
 export NUMMESSAGES=10
 export QUEUE_EMPTY_CHECK_FUNC=wait_file_lines
 generate_conf

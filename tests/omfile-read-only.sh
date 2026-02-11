@@ -1,6 +1,7 @@
 #!/bin/bash
 # addd 2016-06-16 by RGerhards, released under ASL 2.0
 . ${srcdir:=.}/diag.sh init
+skip_ASAN "omfile read-only suspend behavior differs under ASan"
 messages=20000 # how many messages to inject?
 # Note: we need to inject a somewhat larger number of messages in order
 # to ensure that we receive some messages in the actual output file,

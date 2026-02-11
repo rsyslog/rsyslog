@@ -10,6 +10,7 @@
 # This is part of the rsyslog testbench, licensed under ASL 2.0
 . ${srcdir:=.}/diag.sh init
 skip_platform "AIX" "we cannot preload required dummy lib"
+skip_ASAN "LD_PRELOAD conflicts with ASan runtime load order"
 generate_conf
 add_conf '
 action(type="omfile" file=`echo $RSYSLOG_OUT_LOG`)
