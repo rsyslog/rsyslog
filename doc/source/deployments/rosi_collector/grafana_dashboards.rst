@@ -101,12 +101,15 @@ Use this dashboard to:
 Syslog Health (impstats)
 ------------------------
 
-The **Syslog Health** dashboard shows rsyslog internal metrics when client
-hosts run the **impstats sidecar** (installed by default with the client
-setup script). Add impstats targets on the collector:
+The **Syslog Health** dashboard shows rsyslog internal metrics when hosts
+run the **impstats sidecar**. The collector server can run the sidecar too:
+``init.sh`` prompts to install it (or use ``SERVER_IMPSTATS_SIDECAR=true``
+in non-interactive mode). For client hosts, the client setup script installs
+it by default. Add impstats targets on the collector:
 
 .. code-block:: bash
 
+   # Client (or init.sh adds the server automatically when sidecar is installed)
    prometheus-target --job impstats add CLIENT_IP:9898 host=HOSTNAME role=rsyslog network=internal
    # Or add both node_exporter and impstats in one step:
    prometheus-target add-client CLIENT_IP host=HOSTNAME role=rsyslog network=internal
@@ -127,6 +130,8 @@ Host Metrics Overview
 
 The Host Metrics Overview shows system metrics from node_exporter:
 
+- **Node Status Overview** - Table of hosts with CPU, memory, disk, uptime.
+  Fixed height with vertical scroll when many hosts are configured.
 - **CPU usage** - Per-core and total utilization
 - **Memory** - Used, available, and cached
 - **Disk I/O** - Read/write throughput
@@ -134,8 +139,13 @@ The Host Metrics Overview shows system metrics from node_exporter:
 - **Disk space** - Usage by filesystem
 
 Select a host from the dropdown to view its metrics. Time range applies
-to all panels. (When clients run the impstats sidecar, see **Syslog Health**
-for rsyslog-specific metrics.)
+to all panels. Use the Role and Network filters to narrow the view.
+(When clients run the impstats sidecar, see **Syslog Health** for
+rsyslog-specific metrics.)
+
+.. note::
+   If you see ``429 Too Many Requests`` when reloading dashboards, see
+   :ref:`rosi-grafana-429`.
 
 **Key metrics to watch**:
 

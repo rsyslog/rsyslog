@@ -178,9 +178,20 @@ prompt_ip_address() {
                 echo "  [$((i+1))] ${all_ips[$i]}" >&2
             done
             echo "" >&2
+            log_prompt "Enter number [1-${#all_ips[@]}] to select an IP, or enter a custom IP address:"
+            read -r user_input < /dev/tty
+            if [[ "$user_input" =~ ^[0-9]+$ ]] && [ "$user_input" -ge 1 ] && [ "$user_input" -le ${#all_ips[@]} ]; then
+                echo "${all_ips[$((user_input-1))]}"
+                return
+            fi
+            if validate_ip "$user_input"; then
+                echo "$user_input"
+                return
+            fi
+        else
+            log_prompt "Please enter the IP address to bind node_exporter (can be local or external):"
+            read -r user_input < /dev/tty
         fi
-        log_prompt "Please enter the IP address to bind node_exporter (can be local or external):"
-        read -r user_input < /dev/tty
         while ! validate_ip "$user_input"; do
             log_error "Invalid IP address format: $user_input"
             log_prompt "Please enter a valid IP address (e.g., 10.135.0.10 or external IP):"

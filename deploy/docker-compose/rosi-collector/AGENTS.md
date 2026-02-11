@@ -205,16 +205,35 @@ docker compose start grafana
 
 ## Troubleshooting
 
+When a service fails after install, direct users to run `rosi-monitor health` first, then use the per-service commands below. See README.md "Troubleshooting" for full details.
+
+### Diagnostic flow (service not starting / unhealthy)
+
+1. **rosi-monitor health** – Shows container status and endpoint checks
+2. **docker inspect <container> --format '{{.State.Health.Status}}'** – Container health (healthy/unhealthy)
+3. **docker compose logs <service> --tail 100** – Service-specific logs
+4. For Grafana: **cd INSTALL_DIR && chmod -R o+rX grafana/provisioning && docker compose restart grafana** if logs show "permission denied" on `generated/`
+
 ### Container Won't Start
 
 ```bash
-# Check logs
-docker compose logs <service-name>
+docker compose logs <service-name> --tail 100
 
 # Common issues:
-# - Port already in use: Check `netstat -tlnp | grep <port>`
-# - Volume permissions: Check ownership matches container user
-# - Config syntax: Validate YAML files
+# - Port already in use: Check `ss -tlnp | grep <port>`
+# - Volume permissions: Grafana provisioning -> chmod -R o+rX grafana/provisioning
+# - Config syntax: Validate YAML files (yamllint)
+```
+
+### Grafana crash-loop / unhealthy (permission denied)
+
+Error in logs: `open /etc/grafana/provisioning/dashboards/generated: permission denied`
+
+Solution: Grafana (UID 472) cannot read the mounted provisioning dir. Run:
+```bash
+cd /opt/rosi-collector  # or INSTALL_DIR
+chmod -R o+rX grafana/provisioning
+docker compose restart grafana
 ```
 
 ### Grafana Alert Provisioning Fails
@@ -235,7 +254,7 @@ sudo chown -R 65534:65534 /path/to/volume/_data
 
 ### Loki Not Receiving Logs
 
-1. Check rsyslog container logs: `docker compose logs rsyslog`
+1. Check rsyslog container logs: `docker compose logs rsyslog --tail 50`
 2. Verify Loki is healthy: `curl http://localhost:3100/ready`
 3. Check rsyslog config in `rsyslog.conf/30-send-loki-http.conf`
 
