@@ -962,7 +962,12 @@ finalize_it:
 static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device) {
     nsd_ptcp_t *pThis = (nsd_ptcp_t *)pNsd;
     struct addrinfo *res = NULL;
+    struct addrinfo *currAddr;
     struct addrinfo hints;
+    int saved_errno = 0;
+    struct timeval start, end;
+    long seconds = 0, useconds = 0;
+    int gai_rc;
 
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, nsd_ptcp);
@@ -973,8 +978,9 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = family;
     hints.ai_socktype = SOCK_STREAM;
-    if (getaddrinfo((char *)host, (char *)port, &hints, &res) != 0) {
-        LogError(errno, RS_RET_IO_ERROR, "cannot resolve hostname '%s'", host);
+    gai_rc = getaddrinfo((char *)host, (char *)port, &hints, &res);
+    if (gai_rc != 0) {
+        LogError(0, RS_RET_IO_ERROR, "cannot resolve hostname '%s': %s", host, gai_strerror(gai_rc));
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
 
@@ -982,25 +988,41 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
     if ((pThis->pRemHostName = malloc(strlen((char *)host) + 1)) == NULL) ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);
     memcpy(pThis->pRemHostName, host, strlen((char *)host) + 1);
 
-    if ((pThis->sock = socket(res->ai_family, res->ai_socktype, res->ai_protocol)) == -1) {
-        LogError(errno, RS_RET_IO_ERROR, "cannot bind socket for %s:%s", host, port);
-        ABORT_FINALIZE(RS_RET_IO_ERROR);
-    }
-
-    if (device) {
-#if defined(SO_BINDTODEVICE)
-        if (setsockopt(pThis->sock, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device) + 1) < 0)
+    if (device != NULL) {
+#if !defined(SO_BINDTODEVICE)
+        LogError(0, RS_RET_VALUE_NOT_SUPPORTED,
+                 "cannot use device '%s': SO_BINDTODEVICE is not supported on this platform", device);
+        ABORT_FINALIZE(RS_RET_VALUE_NOT_SUPPORTED);
 #endif
-        {
-            dbgprintf("setsockopt(SO_BINDTODEVICE) failed\n");
-            ABORT_FINALIZE(RS_RET_IO_ERROR);
-        }
     }
 
-    struct timeval start, end;
-    long seconds, useconds;
     gettimeofday(&start, NULL);
-    if (connect(pThis->sock, res->ai_addr, res->ai_addrlen) != 0) {
+    for (currAddr = res; currAddr != NULL; currAddr = currAddr->ai_next) {
+        pThis->sock = socket(currAddr->ai_family, currAddr->ai_socktype, currAddr->ai_protocol);
+        if (pThis->sock == -1) {
+            saved_errno = errno;
+            continue;
+        }
+
+        if (device) {
+#if defined(SO_BINDTODEVICE)
+            if (setsockopt(pThis->sock, SOL_SOCKET, SO_BINDTODEVICE, device, strlen(device) + 1) < 0) {
+                saved_errno = errno;
+                dbgprintf("setsockopt(SO_BINDTODEVICE) failed\n");
+                sockClose(&pThis->sock);
+                continue;
+            }
+#endif
+        }
+
+        if (connect(pThis->sock, currAddr->ai_addr, currAddr->ai_addrlen) == 0) {
+            break;
+        }
+        saved_errno = errno;
+        sockClose(&pThis->sock);
+    }
+
+    if (currAddr == NULL) {
         gettimeofday(&end, NULL);
         seconds = end.tv_sec - start.tv_sec;
         useconds = end.tv_usec - start.tv_usec;
@@ -1012,7 +1034,7 @@ static rsRetVal Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char 
             seconds = 0;
             useconds = 0;
         }
-        LogError(errno, RS_RET_IO_ERROR, "cannot connect to %s:%s (took %ld.%02ld seconds)", host, port, seconds,
+        LogError(saved_errno, RS_RET_IO_ERROR, "cannot connect to %s:%s (took %ld.%02ld seconds)", host, port, seconds,
                  useconds / 10000);
         ABORT_FINALIZE(RS_RET_IO_ERROR);
     }
