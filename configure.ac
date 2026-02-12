@@ -166,6 +166,14 @@ AC_COMPILE_IFELSE( [AC_LANG_PROGRAM([[#include <limits.h>]],
                  )
 
 # Checks for libraries.
+PKG_CHECK_MODULES([LIBYAML], [yaml-0.1], [
+	AC_DEFINE([HAVE_LIBYAML], [1], [Define if libyaml is available])
+	have_libyaml=yes
+], [
+	AC_MSG_WARN([libyaml not found, rate limiting policies from files will be disabled])
+	have_libyaml=no
+])
+AM_CONDITIONAL(HAVE_LIBYAML, test x$have_libyaml = xyes)
 save_LIBS=$LIBS
 LIBS=
 AC_SEARCH_LIBS(clock_gettime, rt)
@@ -202,7 +210,7 @@ AC_CHECK_HEADERS([malloc.h],[],[],[
      #endif
   ]
 ])
-AC_CHECK_HEADERS([fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h unistd.h utmp.h utmpx.h sys/epoll.h sys/prctl.h sys/select.h getopt.h linux/close_range.h])
+AC_CHECK_HEADERS([fcntl.h locale.h netdb.h netinet/in.h paths.h stddef.h stdlib.h string.h sys/file.h sys/ioctl.h sys/param.h sys/socket.h sys/time.h sys/stat.h unistd.h utmp.h utmpx.h sys/epoll.h sys/prctl.h sys/select.h getopt.h linux/close_range.h linux/fs.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -440,7 +448,7 @@ if test "$enable_fmhash_xxhash" = "yes"; then
 			HASH_XXHASH_LIBS="-lxxhash"
 			AC_SUBST(HASH_XXHASH_LIBS)],
 			[AC_MSG_ERROR([Unable to add XXHASH support for hash64.])])
-	])
+	], [AC_MSG_ERROR([libxxhash not found, but xxhash support was requested])])
 fi
 
 
@@ -1243,6 +1251,26 @@ if test "x$enable_openssl" = "xyes"; then
 	AC_DEFINE([ENABLE_OPENSSL], [1], [Indicator that openssl is present])
 	AC_DEFINE([ENABLE_OSSL], [1], [Indicator that ossl driver is present])
 	save_libs=$LIBS
+
+	# Check if OpenSSL has ENGINE support (it is deprecated in 3.0 and may be missing)
+	save_CFLAGS="$CFLAGS"
+	save_LIBS="$LIBS"
+	CFLAGS="$CFLAGS $OPENSSL_CFLAGS"
+	LIBS="$LIBS $OPENSSL_LIBS"
+	AC_CHECK_HEADER([openssl/engine.h],
+	  [
+	     AC_CHECK_DECL([ENGINE_load_builtin_engines],
+	        [],
+	        [AC_DEFINE([OPENSSL_NO_ENGINE], [1], [Define if OpenSSL ENGINE support is missing])],
+	        [[#include <openssl/engine.h>]]
+	     )
+	  ],
+	  [
+	     AC_DEFINE([OPENSSL_NO_ENGINE], [1], [Define if OpenSSL ENGINE support is missing])
+	  ]
+	)
+	CFLAGS="$save_CFLAGS"
+	LIBS="$save_LIBS"
 fi
 if test "x$enable_wolfssl" = "xyes" && test "x$enable_openssl" = "xyes"; then
 	AC_MSG_ERROR([wolfSSL and OpenSSL cannot be enabled together; select only one])
@@ -2310,6 +2338,55 @@ AC_ARG_ENABLE(impstats,
         [enable_impstats=no]
 )
 
+# settings for impstats push support (requires impstats)
+AC_ARG_ENABLE(impstats-push,
+	[AS_HELP_STRING([--enable-impstats-push],[Enable native push support in impstats (requires --enable-impstats, libcurl, protobuf-c, snappy) @<:@default=no@:>@])],
+	[case "${enableval}" in
+	 yes) enable_impstats_push="yes" ;;
+	  no) enable_impstats_push="no" ;;
+	   *) AC_MSG_ERROR(bad value ${enableval} for --enable-impstats-push) ;;
+	 esac],
+	[enable_impstats_push=no]
+)
+
+IMPSTATS_PUSH_CFLAGS=""
+IMPSTATS_PUSH_LIBS=""
+if test "x$enable_impstats_push" = "xyes"; then
+	if test "x$enable_impstats" != "xyes"; then
+		AC_MSG_ERROR([--enable-impstats-push requires --enable-impstats to be enabled])
+	fi
+	
+	# Check for protoc-c compiler
+	AC_PATH_PROG([PROTOC_C], [protoc-c])
+	if test "x$PROTOC_C" = "x"; then
+		AC_MSG_ERROR([protoc-c not found. Please install protobuf-c-compiler package.])
+	fi
+	AC_SUBST([PROTOC_C])
+	
+	PKG_CHECK_MODULES([IMPSTATS_PUSH_CURL], [libcurl >= 7.40.0])
+	PKG_CHECK_MODULES([IMPSTATS_PUSH_PROTOBUF], [libprotobuf-c >= 1.0.0])
+	# Note: snappy doesn't always provide a pkg-config file, try library check as fallback
+	PKG_CHECK_MODULES([IMPSTATS_PUSH_SNAPPY], [snappy], [
+		AC_DEFINE([HAVE_SNAPPY_PKG_CONFIG], [1], [snappy has pkg-config])
+	], [
+		AC_CHECK_HEADER([snappy-c.h], [], [
+			AC_MSG_ERROR([snappy header not found - install libsnappy-dev])
+		])
+		AC_CHECK_LIB([snappy], [snappy_compress], [
+			IMPSTATS_PUSH_SNAPPY_LIBS="-lsnappy"
+		], [
+			AC_MSG_ERROR([snappy library not found - install libsnappy])
+		])
+	])
+	
+	IMPSTATS_PUSH_CFLAGS="$IMPSTATS_PUSH_CURL_CFLAGS $IMPSTATS_PUSH_PROTOBUF_CFLAGS $IMPSTATS_PUSH_SNAPPY_CFLAGS"
+	IMPSTATS_PUSH_LIBS="$IMPSTATS_PUSH_CURL_LIBS $IMPSTATS_PUSH_PROTOBUF_LIBS $IMPSTATS_PUSH_SNAPPY_LIBS"
+	
+	AC_DEFINE([ENABLE_IMPSTATS_PUSH], [1], [Enable push support in impstats module])
+fi
+AC_SUBST([IMPSTATS_PUSH_CFLAGS])
+AC_SUBST([IMPSTATS_PUSH_LIBS])
+
 # settings for the pcap input module
 AC_ARG_ENABLE(impcap,
         [AS_HELP_STRING([--enable-impcap],[libpcap input module enabled @<:@default=no@:>@])],
@@ -2425,6 +2502,7 @@ fi
 AM_CONDITIONAL(ENABLE_IMDIAG, test x$enable_imdiag = xyes)
 AM_CONDITIONAL(ENABLE_OMSTDOUT, test x$enable_omstdout = xyes)
 AM_CONDITIONAL(ENABLE_IMPSTATS, test x$enable_impstats = xyes)
+AM_CONDITIONAL(ENABLE_IMPSTATS_PUSH, test x$enable_impstats_push = xyes)
 AM_CONDITIONAL(ENABLE_TESTBENCH, test x$enable_testbench = xyes)
 
 

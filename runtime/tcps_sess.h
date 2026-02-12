@@ -1,7 +1,7 @@
 /* Definitions for tcps_sess class. This implements a session of the
  * plain TCP server.
  *
- * Copyright 2008-2025 Adiscon GmbH.
+ * Copyright 2008-2026 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -22,6 +22,7 @@
 #ifndef INCLUDED_TCPS_SESS_H
 #define INCLUDED_TCPS_SESS_H
 
+#include "rsyslog.h"
 #include "obj.h"
 #include "prop.h"
 
@@ -38,13 +39,22 @@ struct tcps_sess_s {
         int iMsg; /* index of next char to store in msg */
         sbool bSuppOctetFram; /**< copy from listener, to speed up access */
         sbool bSPFramingFix;
-        enum { eAtStrtFram, eInOctetCnt, eInMsg, eInMsgTruncating } inputState; /* our current state */
+        enum {
+            eAtStrtFram,
+            eInOctetCnt,
+            eInMsg,
+            eInMsgTruncating,
+            eInMsgCheckMultiLine
+        } inputState; /* our current state */
         int iOctetsRemain; /* Number of Octets remaining in message */
         TCPFRAMINGMODE eFraming;
         uchar *pMsg; /* message (fragment) received */
         prop_t *fromHost; /* host name we received messages from */
         prop_t *fromHostIP;
         prop_t *fromHostPort;
+        int iCurrLine; /* 2nd char of current line in regex framing mode */
+        uchar *pMsg_save; /* message (fragment) save area in regex framing mode */
+        actWrkrIParams_t perSourceKeyParam; /**< reusable template buffer */
         void *pUsr; /* a user-pointer */
         rsRetVal (*DoSubmitMessage)(tcps_sess_t *, uchar *, int); /* submit message callback */
         int iMaxLine; /* fast lookup buffer for config property */
@@ -89,7 +99,8 @@ ENDinterface(tcps_sess)
 
 
 /* prototypes */
-PROTOTYPEObj(tcps_sess);
+PROTOTYPEObjFull(tcps_sess);
+PROTOTYPEObjDebugPrint(tcps_sess);
 
 
 #endif /* #ifndef INCLUDED_TCPS_SESS_H */

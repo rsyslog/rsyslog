@@ -4,7 +4,7 @@
  *
  * File begun on 2007-07-21 by RGerhards (extracted from syslogd.c)
  *
- * Copyright 2007-2012 Adiscon GmbH.
+ * Copyright 2007-2026 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -64,7 +64,7 @@ ENDinterface(tcpclt)
 
 
 /* prototypes */
-PROTOTYPEObj(tcpclt);
+PROTOTYPEObjFull(tcpclt);
 
 /* the name of our library binary */
 #define LM_TCPCLT_FILENAME "lmtcpclt"

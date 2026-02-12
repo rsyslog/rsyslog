@@ -36,12 +36,16 @@ rotates it once the size limit is exceeded.
         file="/var/log/log_rotation.log"
         rotation.sizeLimit="52428800"        # 50 MiB per file
         rotation.sizeLimitCommand="/home/me/log_rotation_script"
+        rotation.sizeLimitCommandPassFileName="on"
         template="RSYSLOG_TraditionalFileFormat"
     )
 
 When the configured limit is reached, rsyslog executes the command
-specified in ``rotation.sizeLimitCommand``. In our case it runs
-``/home/me/log_rotation_script`` which contains a single command:
+specified in ``rotation.sizeLimitCommand``. By default, the current file
+name is appended as the last argument; set
+``rotation.sizeLimitCommandPassFileName="off"`` if your script expects no
+additional arguments. In our case it runs ``/home/me/log_rotation_script``
+which contains a single command:
 
 ::
 
@@ -69,4 +73,3 @@ With this approach two files for logging are used, each with a maximum
 size of 50 MB. So we can say we have successfully configured a log
 rotation which satisfies our requirement. We keep the logs at a
 fixed-size level of 100 MB.
-

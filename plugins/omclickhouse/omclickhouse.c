@@ -647,7 +647,7 @@ static void ATTR_NONNULL() curlCheckConnSetup(wrkrInstanceData_t *const pWrkrDat
 
 static void ATTR_NONNULL(1) curlPostSetup(wrkrInstanceData_t *const pWrkrData) {
     curlSetupCommon(pWrkrData, pWrkrData->curlPostHandle);
-    curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_POST, 1);
+    curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_POST, 1L);
     if (pWrkrData->pData->timeout) {
         curl_easy_setopt(pWrkrData->curlPostHandle, CURLOPT_TIMEOUT_MS, pWrkrData->pData->timeout);
     }

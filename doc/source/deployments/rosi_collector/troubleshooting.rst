@@ -50,102 +50,95 @@ After running ``init.sh``, the ``rosi-monitor`` command is available:
    docker compose logs loki
    docker compose logs rsyslog
 
+When a Service Fails After Install
+----------------------------------
+
+Run ``rosi-monitor health`` first. For specific issues, see the sections below or use
+``rosi-monitor debug`` for an interactive menu.
+
+.. _rosi-downloads-404:
+
+Downloads URL Returns 404
+-------------------------
+
+**Symptom**: ``https://YOUR_DOMAIN/downloads/install-rsyslog-client.sh`` returns 404.
+
+Verify the downloads container is running and that ``downloads/install-rsyslog-client.sh``
+exists in the install directory. If missing, re-run ``init.sh`` to populate downloads,
+then restart the stack.
+
+.. _rosi-grafana-troubleshooting:
+
+Grafana Not Starting or Not Accessible
+---------------------------------------
+
+**Symptom**: ``rosi-monitor health`` reports "Grafana web interface is not accessible" or the Grafana container is unhealthy.
+
+Check container logs (``docker compose logs grafana``). Ensure you access
+``https://YOUR_TRAEFIK_DOMAIN/`` and that ``GF_SERVER_ROOT_URL`` matches your URL.
+
+.. _rosi-grafana-429:
+
+429 Too Many Requests When Reloading Dashboards
+-----------------------------------------------
+
+**Symptom**: ``429 Too Many Requests`` when reloading Grafana dashboards (e.g. ``/api/annotations?...``).
+
+**Cause**: Traefik rate limiting. A dashboard reload triggers many parallel API calls (annotations,
+panel queries, variables). The default burst limit can be exceeded quickly.
+
+**Solution**: The stack uses separate rate limiters—Grafana has higher limits (600 req/min, burst 300).
+Ensure you have the latest config:
+
+1. Re-run ``init.sh`` to regenerate ``traefik/dynamic.yml`` from the template.
+2. If you use ``docker-compose.override.yml``, ensure Grafana uses ``rate-limit-grafana@file`` (not ``rate-limit@file``).
+3. Restart Traefik: ``docker compose restart traefik``.
+
+.. _rosi-impstats-sidecar-failure:
+
+Impstats Sidecar Installation Fails (ensurepip Missing)
+-------------------------------------------------------
+
+**Symptom**: When installing the impstats sidecar during ``init.sh`` (on the
+collector server) or via the client script, you see: "The virtual environment
+was not created successfully because ensurepip is not available."
+
+**Cause**: The ``python3-venv`` package is missing. On Debian/Ubuntu this
+provides the ``ensurepip`` module required for Python virtual environments.
+
+**Solution**: Install the package. On interactive runs, the script may prompt
+to run the install. Otherwise:
+
+.. code-block:: bash
+
+   # Debian/Ubuntu (use matching Python version, e.g. python3.12-venv)
+   sudo apt update
+   sudo apt install python3-venv
+   # Or for a specific Python version:
+   sudo apt install python3.12-venv
+
+Then re-run ``init.sh`` or the client setup script.
+
+.. _rosi-logs-not-appearing:
+
 Logs Not Appearing in Grafana
 -----------------------------
 
 **Symptom**: Clients are configured but no logs appear in Grafana.
 
-**Check 1: rsyslog is receiving logs**
-
-.. code-block:: bash
-
-   docker compose logs rsyslog | tail -20
-
-Look for incoming message indicators or errors.
-
-**Check 2: Network connectivity**
-
-From a client:
-
-.. code-block:: bash
-
-   telnet COLLECTOR_IP 10514
-   # Should connect. Type some text and press Enter.
-   # Ctrl+] then 'quit' to exit
-
-If connection fails, check firewalls on both client and collector.
-
-**Check 3: rsyslog is sending to Loki**
-
-.. code-block:: bash
-
-   docker compose logs rsyslog | grep -i loki
-
-Look for omhttp connection messages or errors.
-
-**Check 4: Loki is healthy**
-
-.. code-block:: bash
-
-   curl http://localhost:3100/ready
-   # Should return: ready
-   
-   curl http://localhost:3100/metrics | grep loki_ingester
-
-**Check 5: Client rsyslog queue**
-
-On the client:
-
-.. code-block:: bash
-
-   ls -la /var/spool/rsyslog/
-   # Growing files indicate delivery problems
+Verify rsyslog is receiving logs (``docker compose logs rsyslog``), Loki is healthy
+(``curl http://localhost:3100/ready``), and network connectivity from client to collector
+(``telnet COLLECTOR_IP 10514``). The ``rosi-monitor health`` command includes an
+integrated log-flow test.
 
 Container Won't Start
 ---------------------
 
 **Symptom**: ``docker compose up`` fails or containers restart repeatedly.
 
-**Check 1: View logs**
-
-.. code-block:: bash
-
-   docker compose logs <service-name>
-
-Look for error messages indicating the cause.
-
-**Check 2: Port conflicts**
-
-.. code-block:: bash
-
-   sudo netstat -tlnp | grep -E "80|443|3000|3100|9090|10514"
-
-If ports are in use, stop conflicting services or change ports in
-``docker-compose.yml``.
-
-**Check 3: Disk space**
-
-.. code-block:: bash
-
-   df -h
-   docker system df
-
-Remove old containers and images if disk is full:
-
-.. code-block:: bash
-
-   docker system prune -a
-
-**Check 4: Permissions**
-
-Ensure volumes have correct ownership:
-
-.. code-block:: bash
-
-   docker compose down
-   sudo chown -R 472:472 ./grafana-data  # Grafana user
-   sudo chown -R 10001:10001 ./loki-data  # Loki user
-   docker compose up -d
+Check logs (``docker compose logs <service-name>``), port conflicts, and disk space.
+For volume permission issues, adjust ownership to match the container user (e.g. 472 for
+Grafana, 10001 for Loki).
 
 Loki Storage Issues
 -------------------

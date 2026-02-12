@@ -1,3 +1,4 @@
+---
 name: rsyslog_doc
 description: Guidelines for maintaining structured, RAG-optimized documentation and module metadata.
 triggers:

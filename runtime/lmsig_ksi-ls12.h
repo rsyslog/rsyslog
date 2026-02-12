@@ -36,6 +36,6 @@ struct lmsig_ksi_ls12_s {
 typedef struct lmsig_ksi_ls12_s lmsig_ksi_ls12_t;
 
 /* prototypes */
-PROTOTYPEObj(lmsig_ksi_ls12);
+PROTOTYPEObjFull(lmsig_ksi_ls12);
 
 #endif /* #ifndef INCLUDED_LMSIG_LS12_KSI_H */

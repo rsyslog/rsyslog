@@ -9,7 +9,7 @@
  * File begun on 2008-03-01 by RGerhards (extracted from tcpsrv.c, which
  * based on the BSD-licensed syslogd.c)
  *
- * Copyright 2007-2025 Adiscon GmbH.
+ * Copyright 2007-2026 Adiscon GmbH.
  *
  * This file is part of rsyslog.
  *
@@ -44,17 +44,43 @@
 #include "obj.h"
 #include "errmsg.h"
 #include "netstrm.h"
+#include "template.h"
+#include "wti.h"
 #include "msg.h"
 #include "datetime.h"
 #include "prop.h"
+#include "parser.h"
 #include "ratelimit.h"
 #include "debug.h"
 #include "rsconf.h"
 
+static rsRetVal ensurePerSourceKeyBuf(actWrkrIParams_t *param, size_t need) {
+    uchar *pNewBuf;
+    size_t iNewSize;
+    DEFiRet;
+
+    if (param->lenBuf >= need + 1) {
+        RETiRet;
+    }
+
+    iNewSize = ((need + 1) / 128 + 1) * 128;
+    CHKmalloc(pNewBuf = (uchar *)realloc(param->param, iNewSize));
+    param->param = pNewBuf;
+    param->lenBuf = iNewSize;
+
+finalize_it:
+    RETiRet;
+}
+
 
 /* static data */
 DEFobjStaticHelpers;
-DEFobjCurrIf(glbl) DEFobjCurrIf(netstrm) DEFobjCurrIf(prop) DEFobjCurrIf(datetime)
+DEFobjCurrIf(glbl);
+DEFobjCurrIf(netstrm);
+DEFobjCurrIf(prop);
+DEFobjCurrIf(datetime);
+DEFobjCurrIf(regexp);
+DEFobjCurrIf(parser)
 
 
     /* forward definitions */
@@ -71,10 +97,13 @@ BEGINobjConstruct(tcps_sess) /* be sure to specify the object type also in END m
     pThis->fromHost = NULL;
     pThis->fromHostIP = NULL;
     pThis->fromHostPort = NULL;
+    pThis->iCurrLine = 0;
+    pThis->pMsg_save = NULL;
     pThis->tlsProbeBytes = 0;
     pThis->tlsProbeDone = 0;
     pThis->tlsMismatchWarned = 0;
     memset(pThis->tlsProbeBuf, 0, sizeof(pThis->tlsProbeBuf));
+    wtiInitIParam(&pThis->perSourceKeyParam);
     /* now allocate the message reception buffer */
     CHKmalloc(pThis->pMsg = (uchar *)malloc(pThis->iMaxLine + 1));
 finalize_it:
@@ -83,9 +112,16 @@ ENDobjConstruct(tcps_sess)
 
 /* ConstructionFinalizer
  */
-static rsRetVal tcps_sessConstructFinalize(tcps_sess_t __attribute__((unused)) * pThis) {
+static rsRetVal tcps_sessConstructFinalize(tcps_sess_t *pThis) {
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, tcps_sess);
+#ifdef FEATURE_REGEXP
+    if (pThis->pLstnInfo->bHasStartRegex) {
+        /* in this case, we need a second buffer and a larger primary one */
+        CHKmalloc(pThis->pMsg = (uchar *)realloc(pThis->pMsg, (2 * pThis->iMaxLine) + 1));
+        CHKmalloc(pThis->pMsg_save = (uchar *)malloc((2 * pThis->iMaxLine) + 1));
+    }
+#endif
     if (pThis->pSrv->OnSessConstructFinalize != NULL) {
         CHKiRet(pThis->pSrv->OnSessConstructFinalize(&pThis->pUsr));
     }
@@ -108,7 +144,9 @@ BEGINobjDestruct(tcps_sess) /* be sure to specify the object type also in END an
     if (pThis->fromHost != NULL) CHKiRet(prop.Destruct(&pThis->fromHost));
     if (pThis->fromHostIP != NULL) CHKiRet(prop.Destruct(&pThis->fromHostIP));
     if (pThis->fromHostPort != NULL) CHKiRet(prop.Destruct(&pThis->fromHostPort));
+    free(pThis->perSourceKeyParam.param);
     free(pThis->pMsg);
+    free(pThis->pMsg_save);
 ENDobjDestruct(tcps_sess)
 
 
@@ -307,7 +345,89 @@ static rsRetVal defaultDoSubmitMessage(tcps_sess_t *pThis,
     MsgSetRuleset(pMsg, cnf_params->pRuleset);
 
     STATSCOUNTER_INC(pThis->pLstnInfo->ctrSubmit, pThis->pLstnInfo->mutCtrSubmit);
-    ratelimitAddMsg(pThis->pLstnInfo->ratelimiter, pMultiSub, pMsg);
+    if (pThis->pLstnInfo->ratelimiter->pShared != NULL && pThis->pLstnInfo->ratelimiter->pShared->per_source_enabled) {
+        const char *per_source_key = NULL;
+        size_t per_source_key_len = 0;
+        if (pThis->pLstnInfo->ratelimiter->pShared->per_source_key_needs_parsing &&
+            (pMsg->msgFlags & NEEDS_PARSING) != 0) {
+            parser.ParseMsg(pMsg);
+        }
+        if (pThis->pLstnInfo->ratelimiter->pShared->per_source_key_mode == RL_PS_KEY_TPL) {
+            if (pThis->pLstnInfo->ratelimiter->pShared->per_source_key_tpl == NULL ||
+                pThis->pLstnInfo->ratelimiter->pShared->per_source_key_tpl_default) {
+                per_source_key = getHOSTNAME(pMsg);
+                per_source_key_len = getHOSTNAMELen(pMsg);
+            } else {
+                if (tplToString(pThis->pLstnInfo->ratelimiter->pShared->per_source_key_tpl, pMsg,
+                                &pThis->perSourceKeyParam, NULL) == RS_RET_OK) {
+                    per_source_key = (const char *)pThis->perSourceKeyParam.param;
+                    per_source_key_len = pThis->perSourceKeyParam.lenStr;
+                }
+            }
+        } else {
+            uchar *pHost = NULL;
+            uchar *pPort = NULL;
+            int hostLen = 0;
+            int portLen = 0;
+
+            switch (pThis->pLstnInfo->ratelimiter->pShared->per_source_key_mode) {
+                case RL_PS_KEY_FROMHOST_IP:
+                    if (pThis->fromHostIP != NULL) {
+                        prop.GetString(pThis->fromHostIP, &pHost, &hostLen);
+                        per_source_key = (const char *)pHost;
+                        per_source_key_len = (size_t)hostLen;
+                    }
+                    break;
+                case RL_PS_KEY_FROMHOST:
+                    if (pThis->fromHost != NULL) {
+                        prop.GetString(pThis->fromHost, &pHost, &hostLen);
+                        per_source_key = (const char *)pHost;
+                        per_source_key_len = (size_t)hostLen;
+                    }
+                    break;
+                case RL_PS_KEY_FROMHOST_IP_PORT:
+                case RL_PS_KEY_FROMHOST_PORT:
+                    if (pThis->fromHostPort != NULL) {
+                        prop.GetString(pThis->fromHostPort, &pPort, &portLen);
+                    }
+                    if (pThis->pLstnInfo->ratelimiter->pShared->per_source_key_mode == RL_PS_KEY_FROMHOST_IP_PORT) {
+                        if (pThis->fromHostIP != NULL) {
+                            prop.GetString(pThis->fromHostIP, &pHost, &hostLen);
+                        }
+                    } else {
+                        if (pThis->fromHost != NULL) {
+                            prop.GetString(pThis->fromHost, &pHost, &hostLen);
+                        }
+                    }
+                    if (pHost == NULL) {
+                        pHost = (uchar *)"";
+                        hostLen = 0;
+                    }
+                    if (pPort == NULL) {
+                        pPort = (uchar *)"";
+                        portLen = 0;
+                    }
+                    if (ensurePerSourceKeyBuf(&pThis->perSourceKeyParam, (size_t)hostLen + 1 + (size_t)portLen) ==
+                        RS_RET_OK) {
+                        memcpy(pThis->perSourceKeyParam.param, pHost, (size_t)hostLen);
+                        pThis->perSourceKeyParam.param[hostLen] = ':';
+                        memcpy(pThis->perSourceKeyParam.param + hostLen + 1, pPort, (size_t)portLen);
+                        pThis->perSourceKeyParam.param[hostLen + 1 + portLen] = '\0';
+                        pThis->perSourceKeyParam.lenStr = (size_t)hostLen + 1 + (size_t)portLen;
+                        per_source_key = (const char *)pThis->perSourceKeyParam.param;
+                        per_source_key_len = pThis->perSourceKeyParam.lenStr;
+                    }
+                    break;
+                case RL_PS_KEY_TPL:
+                default:
+                    break;
+            }
+        }
+        ratelimitAddMsgPerSource(pThis->pLstnInfo->ratelimiter, pMultiSub, pMsg, per_source_key, per_source_key_len,
+                                 ttGenTime);
+    } else {
+        ratelimitAddMsg(pThis->pLstnInfo->ratelimiter, pMultiSub, pMsg);
+    }
 
 finalize_it:
     /* reset status variables */
@@ -367,9 +487,66 @@ finalize_it:
 }
 
 
-/* Closes a TCP session
- * No attention is paid to the return code
- * of close, so potential-double closes are not detected.
+#ifdef FEATURE_REGEXP
+static rsRetVal ATTR_NONNULL() processDataRcvd_regexFraming(tcps_sess_t *const __restrict__ pThis,
+                                                            char **const buff,
+                                                            struct syslogTime *const stTime,
+                                                            const time_t ttGenTime,
+                                                            multi_submit_t *const pMultiSub,
+                                                            unsigned *const __restrict__ pnMsgs) {
+    DEFiRet;
+    const char c = **buff;
+
+    if (pThis->iMsg >= 2 * pThis->iMaxLine) {
+        LogError(0, RS_RET_OVERSIZE_MSG,
+                 "imtcp: more then double max message size (%d) "
+                 "received without finding frame terminator via regex - assuming "
+                 "end of frame now.",
+                 pThis->iMsg + 1);
+        defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
+        ++(*pnMsgs);
+        pThis->iMsg = 0;
+        pThis->iCurrLine = 0;
+    }
+
+    pThis->pMsg[pThis->iMsg++] = c;
+    pThis->pMsg[pThis->iMsg] = '\0';
+
+
+    if (c == '\n') {
+        pThis->iCurrLine = pThis->iMsg;
+    } else {
+        const int isMatch =
+            !regexp.regexec(&pThis->pLstnInfo->start_preg, (char *)pThis->pMsg + pThis->iCurrLine, 0, NULL, 0);
+        if (pThis->iCurrLine > 0 && isMatch) {
+            DBGPRINTF("regex match (%d), framing line: %s\n", pThis->iCurrLine, pThis->pMsg);
+            const size_t len_save = pThis->iMsg - pThis->iCurrLine;
+            memmove(pThis->pMsg_save, pThis->pMsg + pThis->iCurrLine, len_save);
+            pThis->pMsg_save[len_save] = '\0';
+
+            pThis->iMsg = pThis->iCurrLine - 1; /* remove trailing LF */
+
+            defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
+            ++(*pnMsgs);
+
+            memmove(pThis->pMsg, pThis->pMsg_save, len_save + 1);
+            pThis->iMsg = len_save;
+            pThis->iCurrLine = 0;
+        }
+    }
+
+    RETiRet;
+}
+#endif
+
+/**
+ * @brief Close a TCP session and release session-owned properties.
+ *
+ * Tears down the network stream and frees per-session sender properties
+ * (hostname/IP). This does not flush pending data; callers should invoke
+ * PrepareClose() beforehand when needed. The netstrm close result is ignored
+ * because we are shutting down a session and there is no recovery path for a
+ * close failure.
  */
 static rsRetVal Close(tcps_sess_t *pThis) {
     DEFiRet;
@@ -392,14 +569,39 @@ static rsRetVal Close(tcps_sess_t *pThis) {
  * rgerhards, 2008-03-14
  */
 static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
-                                                const char c,
+                                                char **buff,
+                                                const int buffLen,
                                                 struct syslogTime *stTime,
                                                 const time_t ttGenTime,
                                                 multi_submit_t *pMultiSub,
                                                 unsigned *const __restrict__ pnMsgs) {
     DEFiRet;
+    const char c = **buff;
     const tcpLstnParams_t *const cnf_params = pThis->pLstnInfo->cnf_params;
     ISOBJ_TYPE_assert(pThis, tcps_sess);
+
+#ifdef FEATURE_REGEXP
+    if (pThis->pLstnInfo->bHasStartRegex) {
+        processDataRcvd_regexFraming(pThis, buff, stTime, ttGenTime, pMultiSub, pnMsgs);
+        FINALIZE;
+    }
+#endif
+
+    if (pThis->inputState == eInMsgCheckMultiLine) {
+        if (c == '<') {
+            defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
+            ++(*pnMsgs);
+            pThis->inputState = eAtStrtFram;
+        } else {
+            /* this was a continuation line, so we need to add the LF
+             * that we "missed" at the end of the previous packet.
+             */
+            if (pThis->iMsg < pThis->iMaxLine) {
+                *(pThis->pMsg + pThis->iMsg++) = '\n';
+            }
+            pThis->inputState = eInMsg;
+        }
+    }
 
     if (pThis->inputState == eAtStrtFram) {
         if (c >= '0' && c <= '9' && pThis->bSuppOctetFram) {
@@ -428,9 +630,27 @@ static rsRetVal ATTR_NONNULL(1) processDataRcvd(tcps_sess_t *pThis,
         if ((((c == '\n') && !pThis->pSrv->bDisableLFDelim) ||
              ((pThis->pSrv->addtlFrameDelim != TCPSRV_NO_ADDTL_DELIMITER) && (c == pThis->pSrv->addtlFrameDelim))) &&
             pThis->eFraming == TCP_FRAMING_OCTET_STUFFING) { /* record delimiter? */
-            defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
-            ++(*pnMsgs);
-            pThis->inputState = eAtStrtFram;
+            if (cnf_params->bMultiLine) {
+                if (buffLen > 1) {
+                    if (*(*buff + 1) == '<') {
+                        defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
+                        ++(*pnMsgs);
+                        pThis->inputState = eAtStrtFram;
+                    } else {
+                        if (pThis->iMsg < pThis->iMaxLine) {
+                            *(pThis->pMsg + pThis->iMsg++) = c;
+                        }
+                    }
+                } else {
+                    /* at end of buffer, check next packet */
+                    pThis->inputState = eInMsgCheckMultiLine;
+                    FINALIZE;
+                }
+            } else {
+                defaultDoSubmitMessage(pThis, stTime, ttGenTime, pMultiSub);
+                ++(*pnMsgs);
+                pThis->inputState = eAtStrtFram;
+            }
         } else {
             /* IMPORTANT: here we copy the actual frame content to the message - for BOTH framing modes!
              * If we have a message that is larger than the max msg size, we truncate it. This is the best
@@ -579,7 +799,8 @@ static rsRetVal DataRcvd(tcps_sess_t *pThis, char *pData, const size_t iLen) {
     pEnd = pData + iLen; /* this is one off, which is intensional */
 
     while (pData < pEnd) {
-        CHKiRet(processDataRcvd(pThis, *pData++, &stTime, ttGenTime, &multiSub, &nMsgs));
+        CHKiRet(processDataRcvd(pThis, &pData, pEnd - pData, &stTime, ttGenTime, &multiSub, &nMsgs));
+        pData++;
     }
     iRet = multiSubmitFlush(&multiSub);
 
@@ -636,6 +857,8 @@ BEGINObjClassExit(tcps_sess, OBJ_IS_LOADABLE_MODULE) /* CHANGE class also in END
     objRelease(netstrm, LM_NETSTRMS_FILENAME);
     objRelease(datetime, CORE_COMPONENT);
     objRelease(prop, CORE_COMPONENT);
+    objRelease(parser, CORE_COMPONENT);
+    objRelease(regexp, LM_REGEXP_FILENAME);
 ENDObjClassExit(tcps_sess)
 
 
@@ -648,6 +871,8 @@ BEGINObjClassInit(tcps_sess, 1, OBJ_IS_CORE_MODULE) /* class, version - CHANGE c
     CHKiRet(objUse(netstrm, LM_NETSTRMS_FILENAME));
     CHKiRet(objUse(datetime, CORE_COMPONENT));
     CHKiRet(objUse(prop, CORE_COMPONENT));
+    CHKiRet(objUse(parser, CORE_COMPONENT));
+    CHKiRet(objUse(regexp, LM_REGEXP_FILENAME));
 
     CHKiRet(objUse(glbl, CORE_COMPONENT));
     objRelease(glbl, CORE_COMPONENT);

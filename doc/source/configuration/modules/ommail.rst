@@ -2,6 +2,16 @@
 ommail: Mail Output Module
 **************************
 
+.. meta::
+   :description: Send syslog messages as email alerts via the ommail output module.
+   :keywords: rsyslog, ommail, mail output module, smtp, alerting, templates
+
+.. summary-start
+
+Ommail sends selected syslog messages as email alerts via SMTP, with
+optional templates for the subject and body.
+.. summary-end
+
 .. index:: ! imudp
 
 ===========================  ===========================================================================
@@ -154,10 +164,13 @@ The following example alerts the operator if the string "hard disk fatal
 failure" is present inside a syslog message. The mail server at
 mail.example.net is used and the subject shall be "disk problem on
 <hostname>". Note how \\r\\n is included inside the body text to create
-line breaks. A message is sent at most once every 6 hours (21600 seconds),
-any other messages are silently discarded (or, to be precise, not being
-forwarded - they are still being processed by the rest of the configuration
-file).
+line breaks (double backslashes are required in RainerScript string
+literals). The ``body.enable="on"`` and ``template="mailBody"``
+parameters bind the body
+template to this action. A message is sent at most once every 6 hours
+(21600 seconds), any other messages are silently discarded (or, to be
+precise, not being forwarded - they are still being processed by the rest
+of the configuration file).
 
 .. code-block:: none
 
@@ -170,6 +183,7 @@ file).
       action(type="ommail" server="mail.example.net" port="25"
 	     mailfrom="rsyslog@example.net"
 	     mailto="operator@example.net"
+	     body.enable="on" template="mailBody"
 	     subject.template="mailSubject"
 	     action.execonlyonceeveryinterval="21600")
    }
@@ -192,6 +206,7 @@ to two different email addresses:
       action(type="ommail" server="mail.example.net" port="25"
 	     mailfrom="rsyslog@example.net"
 	     mailto=["operator@example.net", "admin@example.net"]
+	     body.enable="on" template="mailBody"
 	     subject.template="mailSubject"
 	     action.execonlyonceeveryinterval="21600")
    }
@@ -220,6 +235,7 @@ constant subject line, so no subject template is required:
       action(type="ommail" server="mail.example.net" port="25"
 	     mailfrom="rsyslog@example.net"
 	     mailto=["operator@example.net", "admin@example.net"]
+	     body.enable="on" template="mailBody"
 	     subject.text="rsyslog detected disk problem"
 	     action.execonlyonceeveryinterval="21600")
    }
@@ -232,5 +248,3 @@ A more advanced example plus a discussion on using the email feature
 inside a reliable system can be found in Rainer's blogpost "`Why is
 native email capability an advantage for a
 syslogd? <https://rainer.gerhards.net/2008/04/why-is-native-email-capability-an-advantage-for-a-syslogd.html>`_\ "
-
-

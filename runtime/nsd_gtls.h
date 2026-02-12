@@ -1,6 +1,6 @@
 /* An implementation of the nsd interface for GnuTLS.
  *
- * Copyright 2008-2021 Adiscon GmbH.
+ * Copyright 2008-2026 Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -95,7 +95,7 @@ struct nsd_gtls_s {
 #define nsd_gtlsCURR_IF_VERSION nsdCURR_IF_VERSION
 
 /* prototypes */
-PROTOTYPEObj(nsd_gtls);
+PROTOTYPEObjFull(nsd_gtls);
 /* some prototypes for things used by our nsdsel_gtls helper class */
 uchar *gtlsStrerror(int error);
 rsRetVal gtlsChkPeerAuth(nsd_gtls_t *pThis);

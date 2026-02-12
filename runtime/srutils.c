@@ -7,7 +7,7 @@
  * \date    2003-09-09
  *          Coding begun.
  *
- * Copyright 2003-2018 Rainer Gerhards and Adiscon GmbH.
+ * Copyright 2003-2026 Rainer Gerhards and Adiscon GmbH.
  *
  * This file is part of the rsyslog runtime library.
  *
@@ -258,20 +258,45 @@ int makeFileParentDirs(const uchar *const szFile,
 }
 
 
-/* execute a program with a single argument
- * returns child pid if everything ok, 0 on failure. if
- * it fails, errno is set. if it fails after the fork(), the caller
- * can not be notfied for obvious reasons. if bwait is set to 1,
- * the code waits until the child terminates - that potentially takes
- * a lot of time.
- * implemented 2007-07-20 rgerhards
+/**
+ * @brief Execute a program with up to two optional arguments.
+ *
+ * This helper forks and then execs `program`. In the child process it resets
+ * all signal handlers to defaults and clears any pending alarm before exec.
+ * That behavior is intentional to avoid inheriting rsyslogd signal handling
+ * into the external command.
+ *
+ * Arguments are optional and passed as-is (no shell parsing). If @p arg1 is
+ * NULL and @p arg2 is non-NULL, @p arg2 is shifted into the first argument
+ * position so callers can pass either only arg2 or both without extra logic.
+ *
+ * If bWait is set, the parent will wait for the child to exit and record
+ * its status via glblReportChildProcessExit(). If not set, the child is
+ * allowed to continue independently.
+ *
+ * @param program Executable name/path to run.
+ * @param bWait If non-zero, wait for the child to exit before returning.
+ * @param arg1 Optional first argument (may be NULL).
+ * @param arg2 Optional second argument (may be NULL).
+ * @return Child PID on success, 0 on fork failure (errno set).
  */
-int execProg(uchar *program, int bWait, uchar *arg) {
+int execProg(uchar *program, int bWait, uchar *arg1, uchar *arg2) {
     int pid;
     int sig;
     struct sigaction sigAct;
+    int i;
+    char **exec_argv;
+    uchar *args[2];
+    int argc = 0;
 
-    dbgprintf("exec program '%s' with param '%s'\n", program, arg);
+    if (arg1 == NULL && arg2 != NULL) {
+        arg1 = arg2;
+        arg2 = NULL;
+    }
+    if (arg1 != NULL) args[argc++] = arg1;
+    if (arg2 != NULL) args[argc++] = arg2;
+
+    dbgprintf("exec program '%s' with %d args\n", program, argc);
     pid = fork();
     if (pid < 0) {
         return 0;
@@ -304,7 +329,19 @@ int execProg(uchar *program, int bWait, uchar *arg) {
 
     for (sig = 1; sig < NSIG; ++sig) sigaction(sig, &sigAct, NULL);
 
-    execlp((char *)program, (char *)program, (char *)arg, NULL);
+    exec_argv = (char **)malloc(sizeof(char *) * (argc + 2));
+    if (exec_argv == NULL) {
+        perror("exec");
+        fprintf(stderr, "malloc failed for exec argv\n");
+        exit(1);
+    }
+    exec_argv[0] = (char *)program;
+    for (i = 0; i < argc; ++i) {
+        exec_argv[i + 1] = (char *)args[i];
+    }
+    exec_argv[argc + 1] = NULL;
+
+    execvp((char *)program, exec_argv);
     /* In the long term, it's a good idea to implement some enhanced error
      * checking here. However, it can not easily be done. For starters, we
      * may run into endless loops if we log to syslog. The next problem is
@@ -313,7 +350,7 @@ int execProg(uchar *program, int bWait, uchar *arg) {
      * system() way of doing things. rgerhards, 2007-07-20
      */
     perror("exec");
-    fprintf(stderr, "exec program was '%s' with param '%s'\n", program, arg);
+    fprintf(stderr, "exec program was '%s'\n", program);
     exit(1); /* not much we can do in this case */
 }
 

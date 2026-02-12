@@ -69,8 +69,11 @@
 #include "dirty.h"
 #include "template.h"
 #include "timezones.h"
+#include "ratelimit.h"
 
 extern char *yytext;
+extern int yylineno;
+extern int yyparse(void);
 /* static data */
 DEFobjStaticHelpers;
 DEFobjCurrIf(ruleset) DEFobjCurrIf(module) DEFobjCurrIf(conf) DEFobjCurrIf(glbl) DEFobjCurrIf(parser)
@@ -134,6 +137,7 @@ static uchar template_StdClickHouseFmt[] =
     "'%timereported:::date-unixtimestamp%', '%hostname%', '%syslogtag%', '%msg%')\",STDSQL";
 static uchar template_StdOmSenderTrack_senderid[] =
     "\"%fromhost-ip%\""; /* default template for omsendertrack "senderid" parameter*/
+static uchar template_PerSourceKey[] = "\"%hostname%\""; /* default template for per-source ratelimiting */
 /* end templates */
 
 /* tables for interfacing with the v6 config system (as far as we need to) */
@@ -145,8 +149,19 @@ static struct cnfparamdescr parserpdescr[] = {{"type", eCmdHdlrString, CNFPARAM_
 static struct cnfparamblk parserpblk = {CNFPARAMBLK_VERSION, sizeof(parserpdescr) / sizeof(struct cnfparamdescr),
                                         parserpdescr};
 
-/* forward-definitions */
-void cnfDoCfsysline(char *ln);
+/* ratelimit() */
+static struct cnfparamdescr ratelimitpdescr[] = {{"name", eCmdHdlrString, CNFPARAM_REQUIRED},
+                                                 {"interval", eCmdHdlrInt, 0},
+                                                 {"burst", eCmdHdlrInt, 0},
+                                                 {"severity", eCmdHdlrSeverity, 0},
+                                                 {"policy", eCmdHdlrString, 0},
+                                                 {"perSource", eCmdHdlrBinary, 0},
+                                                 {"perSourcePolicy", eCmdHdlrString, 0},
+                                                 {"perSourceKeyTpl", eCmdHdlrString, 0},
+                                                 {"perSourceMaxStates", eCmdHdlrInt, 0},
+                                                 {"perSourceTopN", eCmdHdlrInt, 0}};
+static struct cnfparamblk ratelimitpblk = {CNFPARAMBLK_VERSION, sizeof(ratelimitpdescr) / sizeof(struct cnfparamdescr),
+                                           ratelimitpdescr};
 
 int rsconfNeedDropPriv(rsconf_t *const cnf) {
     return ((cnf->globals.gidDropPriv != 0) || (cnf->globals.uidDropPriv != 0));
@@ -205,8 +220,8 @@ static void cnfSetDefaults(rsconf_t *pThis) {
     const char *const log_dflt = getenv("RSYSLOG_DFLT_LOG_INTERNAL");
     if (log_dflt != NULL && !strcmp(log_dflt, "1")) pThis->globals.bProcessInternalMessages = 1;
     pThis->globals.glblDevOptions = 0;
-    pThis->globals.intMsgRateLimitItv = 5;
-    pThis->globals.intMsgRateLimitBurst = 500;
+    pThis->globals.intMsgRateLimitItv = 60;
+    pThis->globals.intMsgRateLimitBurst = 100;
     pThis->globals.intMsgsSeverityFilter = DFLT_INT_MSGS_SEV_FILTER;
     pThis->globals.permitCtlC = glblPermitCtlC;
 
@@ -282,6 +297,7 @@ BEGINobjConstruct(rsconf) /* be sure to specify the object type also in END macr
     lookupInitCnf(&pThis->lu_tabs);
     CHKiRet(dynstats_initCnf(&pThis->dynstats_buckets));
     CHKiRet(perctile_initCnf(&pThis->perctile_buckets));
+    ratelimit_cfgsInit(&pThis->ratelimit_cfgs);
     CHKiRet(llInit(&pThis->rulesets.llRulesets, rulesetDestructForLinkedList, rulesetKeyDestruct,
                    (int (*)(void *, void *))strcasecmp));
 finalize_it:
@@ -314,7 +330,6 @@ static void freeCnf(rsconf_t *pThis) {
 }
 
 /* destructor for the rsconf object */
-PROTOTYPEobjDestruct(rsconf);
 BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and CODESTART macros! */
     CODESTARTobjDestruct(rsconf);
     freeCnf(pThis);
@@ -340,6 +355,7 @@ BEGINobjDestruct(rsconf) /* be sure to specify the object type also in END and C
     free(pThis->globals.stdlog_chanspec);
 #endif
     lookupDestroyCnf();
+    ratelimit_cfgsDestruct(&pThis->ratelimit_cfgs);
     llDestroy(&(pThis->rulesets.llRulesets));
 ENDobjDestruct(rsconf)
 
@@ -464,8 +480,83 @@ finalize_it:
     RETiRet;
 }
 
+/* Process ratelimit() objects */
+static rsRetVal initFunc_ratelimit(struct cnfobj *o) {
+    struct cnfparamvals *pvals;
+    int i;
+    uchar *name = NULL;
+    int interval = 0;
+    int burst = 10000;
+    int severity = -1; /* -1 means not set/all */
+    uchar *policy = NULL;
+    int per_source_enabled = 0;
+    uchar *per_source_policy = NULL;
+    uchar *per_source_key_tpl = NULL;
+    int per_source_max_states = 0;
+    int per_source_topn = 0;
+    DEFiRet;
+
+    pvals = nvlstGetParams(o->nvlst, &ratelimitpblk, NULL);
+    if (pvals == NULL) {
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+
+    for (i = 0; i < ratelimitpblk.nParams; ++i) {
+        if (!pvals[i].bUsed) continue;
+        if (!strcmp(ratelimitpblk.descr[i].name, "name")) {
+            name = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(ratelimitpblk.descr[i].name, "interval")) {
+            interval = (int)pvals[i].val.d.n;
+        } else if (!strcmp(ratelimitpblk.descr[i].name, "burst")) {
+            burst = (int)pvals[i].val.d.n;
+        } else if (!strcmp(ratelimitpblk.descr[i].name, "severity")) {
+            severity = (int)pvals[i].val.d.n;
+        } else if (!strcmp(ratelimitpblk.descr[i].name, "policy")) {
+            policy = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(ratelimitpblk.descr[i].name, "perSource")) {
+            per_source_enabled = (int)pvals[i].val.d.n;
+        } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourcePolicy")) {
+            per_source_policy = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourceKeyTpl")) {
+            per_source_key_tpl = (uchar *)es_str2cstr(pvals[i].val.d.estr, NULL);
+        } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourceMaxStates")) {
+            per_source_max_states = (int)pvals[i].val.d.n;
+        } else if (!strcmp(ratelimitpblk.descr[i].name, "perSourceTopN")) {
+            per_source_topn = (int)pvals[i].val.d.n;
+        }
+    }
+
+    if (per_source_policy != NULL && !per_source_enabled) {
+        per_source_enabled = 1;
+    }
+    if (per_source_max_states < 0 || per_source_topn < 0) {
+        LogError(0, RS_RET_CONFIG_ERROR, "ratelimit: perSourceMaxStates/perSourceTopN must be >= 0 for '%s'", name);
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+
+    if (interval < 0) {
+        LogError(0, RS_RET_CONFIG_ERROR, "ratelimit: interval must be >= 0 for '%s'", name);
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+    if (burst < 0) {
+        LogError(0, RS_RET_CONFIG_ERROR, "ratelimit: burst must be >= 0 for '%s'", name);
+        ABORT_FINALIZE(RS_RET_CONFIG_ERROR);
+    }
+
+    CHKiRet(ratelimitAddConfig(loadConf, (char *)name, (unsigned)interval, (unsigned)burst, (intTiny)severity,
+                               (char *)policy, per_source_enabled, (char *)per_source_policy,
+                               (char *)per_source_key_tpl, (unsigned)per_source_max_states, (unsigned)per_source_topn));
+
+finalize_it:
+    free(name);
+    free(policy);
+    free(per_source_policy);
+    free(per_source_key_tpl);
+    cnfparamvalsDestruct(pvals, &ratelimitpblk);
+    RETiRet;
+}
+
 /*------------------------------ interface to flex/bison parser ------------------------------*/
-extern int yylineno;
 
 void parser_warnmsg(const char *fmt, ...) {
     va_list ap;
@@ -543,6 +634,9 @@ void ATTR_NONNULL() cnfDoObj(struct cnfobj *const o) {
             break;
         case CNFOBJ_PARSER:
             parserProcessCnf(o);
+            break;
+        case CNFOBJ_RATELIMIT:
+            initFunc_ratelimit(o);
             break;
         case CNFOBJ_TPL:
             if (tplProcessCnf(o) != RS_RET_OK) parser_errmsg("error processing template object");
@@ -1326,6 +1420,8 @@ static rsRetVal initLegacyConf(void) {
     tplAddLine(ourConf, " StdClickHouseFmt", &pTmp);
     pTmp = template_StdOmSenderTrack_senderid;
     tplAddLine(ourConf, " StdOmSenderTrack-senderid", &pTmp);
+    pTmp = template_PerSourceKey;
+    tplAddLine(ourConf, "RSYSLOG_PerSourceKey", &pTmp);
     pTmp = template_spoofadr;
     tplLastStaticInit(ourConf, tplAddLine(ourConf, "RSYSLOG_omudpspoofDfltSourceTpl", &pTmp));
 

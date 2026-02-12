@@ -77,16 +77,13 @@ MODULE_TYPE_NOKEEP;
 DEFobjStaticHelpers;
 DEFobjCurrIf(glbl) DEFobjCurrIf(prop)
 
-#ifndef HAVE_STRUCT_SOCKADDR_SA_LEN
-    extern size_t SALEN(struct sockaddr *sa);
-#endif
-/* support for defining allowed TCP and UDP senders. We use the same
- * structure to implement this (a linked list), but we define two different
- * list roots, one for UDP and one for TCP.
- * rgerhards, 2005-09-26
- */
-/* All of the five below are read-only after startup */
-struct AllowedSenders *pAllowedSenders_UDP = NULL; /* the roots of the allowed sender */
+    /* support for defining allowed TCP and UDP senders. We use the same
+     * structure to implement this (a linked list), but we define two different
+     * list roots, one for UDP and one for TCP.
+     * rgerhards, 2005-09-26
+     */
+    /* All of the five below are read-only after startup */
+    struct AllowedSenders *pAllowedSenders_UDP = NULL; /* the roots of the allowed sender */
 struct AllowedSenders *pAllowedSenders_TCP = NULL; /* lists. If NULL, all senders are ok! */
 static struct AllowedSenders *pLastAllowedSenders_UDP = NULL; /* and now the pointers to the last */
 static struct AllowedSenders *pLastAllowedSenders_TCP = NULL; /* element in the respective list */

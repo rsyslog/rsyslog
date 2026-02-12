@@ -32,7 +32,6 @@
  */
 extern int NoHops;
 extern int send_to_all;
-extern int Debug;
 #include "dirty.h"
 
 #endif /* #ifndef SYSLOGD_H_INCLUDED */

@@ -174,7 +174,7 @@ static rsRetVal resolveFileSizeLimit(strm_t *pThis, uchar *pszCurrFName) {
      * handled, we should also revisit how this command is run (and
      * with which parameters).   rgerhards, 2007-07-20
      */
-    execProg(pCmd, 1, pParams);
+    execProg(pCmd, 1, pParams, pThis->bSizeLimitCmdPassFileName ? pszCurrFName : NULL);
 
     free(pCmd);
 
@@ -239,11 +239,20 @@ finalize_it:
  * strm instance object.
  */
 
-/* do the physical open() call on a file.
+/**
+ * @brief Open the underlying file descriptor and initialize stream state.
+ *
+ * This performs the actual open(2), detects TTYs, and initializes the crypto
+ * provider if configured. In async mode, a mutex protects the open/init sequence
+ * from concurrent close/reopen operations.
  */
 static rsRetVal doPhysOpen(strm_t *pThis) {
     int iFlags = 0;
     struct stat statOpen;
+    const sbool bDoLock = (pThis->bAsyncWrite != 0);
+    sbool bNeedOpenErrLog = 0;
+    int openErrno = 0;
+    rsRetVal openErrcode = RS_RET_OK;
     DEFiRet;
     ISOBJ_TYPE_assert(pThis, strm);
 
@@ -271,9 +280,9 @@ static rsRetVal doPhysOpen(strm_t *pThis) {
         iFlags |= O_NONBLOCK;
     }
 
-    if (pThis->bAsyncWrite) d_pthread_mutex_lock(&pThis->mut);
+    /* Keep lock held through open + init to avoid async close/open races. */
+    if (bDoLock) d_pthread_mutex_lock(&pThis->mut);
     pThis->fd = open((char *)pThis->pszCurrFName, iFlags | O_LARGEFILE, pThis->tOpenMode);
-    if (pThis->bAsyncWrite) d_pthread_mutex_unlock(&pThis->mut);
 
     const int errno_save = errno; /* dbgprintf can mangle it! */
     DBGPRINTF("file '%s' opened as #%d with mode %d\n", pThis->pszCurrFName, pThis->fd, (int)pThis->tOpenMode);
@@ -281,7 +290,12 @@ static rsRetVal doPhysOpen(strm_t *pThis) {
         const rsRetVal errcode = (errno_save == ENOENT) ? RS_RET_FILE_NOT_FOUND : RS_RET_FILE_OPEN_ERROR;
         if (pThis->fileNotFoundError) {
             if (pThis->noRepeatedErrorOutput == 0) {
-                LogError(errno_save, errcode, "file '%s': open error", pThis->pszCurrFName);
+                /* Defer LogError until after mutex unlock to avoid lock-order inversion
+                 * with internal message logging paths.
+                 */
+                bNeedOpenErrLog = 1;
+                openErrno = errno_save;
+                openErrcode = errcode;
                 pThis->noRepeatedErrorOutput = 1;
             }
         } else {
@@ -314,6 +328,10 @@ static rsRetVal doPhysOpen(strm_t *pThis) {
     }
 
 finalize_it:
+    if (bDoLock) d_pthread_mutex_unlock(&pThis->mut);
+    if (bNeedOpenErrLog) {
+        LogError(openErrno, openErrcode, "file '%s': open error", pThis->pszCurrFName);
+    }
     RETiRet;
 }
 
@@ -1143,6 +1161,7 @@ BEGINobjConstruct(strm) /* be sure to specify the object type also in END macro!
     pThis->tOpenMode = 0600;
     pThis->compressionDriver = STRM_COMPRESS_ZIP;
     pThis->pszSizeLimitCmd = NULL;
+    pThis->bSizeLimitCmdPassFileName = 1;
     pThis->prevLineSegment = NULL;
     pThis->prevMsgSegment = NULL;
     pThis->strtOffs = 0;
@@ -1916,7 +1935,7 @@ static rsRetVal strmWriteLong(strm_t *__restrict__ const pThis, const long i) {
 
     assert(pThis != NULL);
 
-    CHKiRet(srUtilItoA((char *)szBuf, sizeof(szBuf), i));
+    CHKiRet(srUtilItoA((char *)szBuf, sizeof(szBuf), (number_t)i));
     CHKiRet(strmWrite(pThis, szBuf, strlen((char *)szBuf)));
 
 finalize_it:
@@ -2002,7 +2021,8 @@ DEFpropSetMeth(strm, iMaxFileSize, int64) DEFpropSetMeth(strm, iFileNumDigits, i
                 DEFpropSetMeth(strm, bSync, int) DEFpropSetMeth(strm, bReopenOnTruncate, int)
                     DEFpropSetMeth(strm, sIOBufSize, size_t) DEFpropSetMeth(strm, iSizeLimit, off_t)
                         DEFpropSetMeth(strm, iFlushInterval, int) DEFpropSetMeth(strm, pszSizeLimitCmd, uchar *)
-                            DEFpropSetMeth(strm, cryprov, cryprov_if_t *) DEFpropSetMeth(strm, cryprovData, void *)
+                            DEFpropSetMeth(strm, bSizeLimitCmdPassFileName, int)
+                                DEFpropSetMeth(strm, cryprov, cryprov_if_t *) DEFpropSetMeth(strm, cryprovData, void *)
 
     /* sets timeout in seconds */
     void ATTR_NONNULL() strmSetReadTimeout(strm_t *const __restrict__ pThis, const int val) {
@@ -2390,6 +2410,7 @@ BEGINobjQueryInterface(strm)
     pIf->SetiSizeLimit = strmSetiSizeLimit;
     pIf->SetiFlushInterval = strmSetiFlushInterval;
     pIf->SetpszSizeLimitCmd = strmSetpszSizeLimitCmd;
+    pIf->SetbSizeLimitCmdPassFileName = strmSetbSizeLimitCmdPassFileName;
     pIf->Setcryprov = strmSetcryprov;
     pIf->SetcryprovData = strmSetcryprovData;
 finalize_it:

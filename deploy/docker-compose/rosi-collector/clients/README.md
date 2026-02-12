@@ -8,6 +8,7 @@ To integrate a client host with the ROSI Collector, you need to configure:
 
 1. **rsyslog** - Forward system logs to the collector (TCP port 10514)
 2. **Prometheus Node Exporter** - Expose system metrics for collection (port 9100)
+3. **rsyslog impstats sidecar** - Export rsyslog metrics to Prometheus (port 9898)
 
 ## Quick Start
 
@@ -21,6 +22,16 @@ To integrate a client host with the ROSI Collector, you need to configure:
    sudo ./install-rsyslog-client.sh
    ```
    Replace `YOUR_ROSI_DOMAIN` with your ROSI Collector's domain name or IP address.
+   
+   The installer also sets up the rsyslog impstats sidecar by default. To skip it:
+   ```bash
+   sudo ./install-rsyslog-client.sh --no-sidecar
+   ```
+   
+   When sidecar install is enabled, the script:
+   - Prompts you to select the exporter bind IP
+   - Prompts to install the matching `pythonX.Y-venv` if `ensurepip` is missing
+   - Adds firewall rules on Ubuntu/Debian (UFW or iptables-persistent)
 
 2. **Install Prometheus Node Exporter**:
    ```bash
@@ -59,6 +70,7 @@ Ensure the following ports are accessible:
 - **Outbound TCP 10514** - For rsyslog log forwarding (plaintext)
 - **Outbound TCP 6514** - For rsyslog TLS forwarding (if TLS enabled on server)
 - **Inbound TCP 9100** - For Prometheus metrics scraping (ROSI Collector -> client)
+- **Inbound TCP 9898** - For rsyslog impstats exporter scraping (ROSI Collector -> client)
 
 ## TLS Client Setup (Optional)
 
@@ -84,9 +96,18 @@ On the client host, ensure firewall allows:
 # Allow inbound connections for Prometheus node exporter (from ROSI Collector)
 sudo ufw allow from ROSI_COLLECTOR_IP to any port 9100 proto tcp
 
+# Allow inbound connections for impstats exporter (from ROSI Collector)
+sudo ufw allow from ROSI_COLLECTOR_IP to any port 9898 proto tcp
+
 # Verify outbound connectivity to ROSI Collector
 telnet ROSI_COLLECTOR_IP 10514
 ```
+
+The installer will automatically add UFW rules (if active) or iptables-persistent
+rules (if `/etc/iptables/rules.v4` or `rules.v6` exist). When iptables-persistent
+is used, it will prompt you to run:
+`iptables-restore < /etc/iptables/rules.v4` and/or
+`ip6tables-restore < /etc/iptables/rules.v6` after the script finishes.
 
 ## Verification
 
@@ -101,19 +122,28 @@ logger "test message from $(hostname)"
 curl http://localhost:9100/metrics
 # Or from ROSI Collector:
 curl http://CLIENT_IP:9100/metrics
+
+# Test rsyslog impstats exporter
+curl http://localhost:9898/metrics
+# Or from ROSI Collector:
+curl http://CLIENT_IP:9898/metrics
 ```
 
 ## Adding Client to ROSI Collector
 
 After configuring the client, add it to the ROSI Collector's Prometheus targets:
 
-1. SSH to the ROSI Collector server and add the target:
+1. SSH to the ROSI Collector server and add both targets:
    ```bash
-   prometheus-target add CLIENT_IP:9100 host=CLIENT_HOSTNAME role=ROLE network=NETWORK
+   prometheus-target add-client CLIENT_IP host=CLIENT_HOSTNAME role=ROLE network=NETWORK
    
    # Example:
-   prometheus-target add 10.135.0.10:9100 host=webserver.example.com role=web network=internal
+   prometheus-target add-client 10.135.0.10 host=webserver.example.com role=web network=internal
    ```
+   
+   This adds:
+   - `CLIENT_IP:9100` to the `node` job
+   - `CLIENT_IP:9898` to the `impstats` job
 
 2. Verify the target was added:
    ```bash

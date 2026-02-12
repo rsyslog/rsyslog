@@ -90,6 +90,7 @@
 #include "cfsysline.h"
 #include "unicode-helper.h"
 #include "datetime.h"
+#include "atomic.h"
 
 /* static data */
 DEFobjCurrIf(obj) /* we define our own interface, as this is expected by some macros! */
@@ -308,19 +309,19 @@ static rsRetVal SerializeProp(strm_t *pStrm, uchar *pszPropName, propType_t prop
             vType = VARTYPE_STR;
             break;
         case PROPTYPE_SHORT:
-            CHKiRet(srUtilItoA((char *)szBuf, sizeof(szBuf), (long)*((short *)pUsr)));
+            CHKiRet(srUtilItoA((char *)szBuf, sizeof(szBuf), (number_t) * ((short *)pUsr)));
             pszBuf = szBuf;
             lenBuf = ustrlen(szBuf);
             vType = VARTYPE_NUMBER;
             break;
         case PROPTYPE_INT:
-            CHKiRet(srUtilItoA((char *)szBuf, sizeof(szBuf), (long)*((int *)pUsr)));
+            CHKiRet(srUtilItoA((char *)szBuf, sizeof(szBuf), (number_t) * ((int *)pUsr)));
             pszBuf = szBuf;
             lenBuf = ustrlen(szBuf);
             vType = VARTYPE_NUMBER;
             break;
         case PROPTYPE_LONG:
-            CHKiRet(srUtilItoA((char *)szBuf, sizeof(szBuf), *((long *)pUsr)));
+            CHKiRet(srUtilItoA((char *)szBuf, sizeof(szBuf), (number_t) * ((long *)pUsr)));
             pszBuf = szBuf;
             lenBuf = ustrlen(szBuf);
             vType = VARTYPE_NUMBER;
@@ -1154,6 +1155,12 @@ finalize_it:
  * a pointer to the objects interface.
  * rgerhards, 2008-02-29
  */
+/* Note on atomic operations:
+ * ifIsLoaded uses PREFER_FETCH_32BIT for reads to prevent data races on platforms with atomics.
+ * Writes always occur under mutObjGlobalOp and use plain assignment.
+ * On platforms without atomics, PREFER_* degrades to plain operations (acceptable for 20+ years).
+ * The mutex provides full synchronization; atomics only improve diagnostic cleanliness (TSAN).
+ */
 static ATTR_NO_SANITIZE_UNDEFINED rsRetVal UseObj(const char *srcFile,
                                                   uchar *pObjName,
                                                   uchar *pObjFile,
@@ -1163,17 +1170,20 @@ static ATTR_NO_SANITIZE_UNDEFINED rsRetVal UseObj(const char *srcFile,
 
 
 #if DEV_DEBUG == 1
+    /* Best-effort atomic read before mutex: avoids TSAN warnings on platforms with atomics */
     dbgprintf(
         "source file %s requests object '%s', "
         " ifIsLoaded %d\n",
-        srcFile, pObjName, pIf->ifIsLoaded);
+        srcFile, pObjName, PREFER_FETCH_32BIT(pIf->ifIsLoaded));
 #endif
     pthread_mutex_lock(&mutObjGlobalOp);
 
-    if (pIf->ifIsLoaded == 1) {
+    /* Best-effort atomic reads: avoid UB/TSAN warnings from concurrent plain-write by other threads.
+     * Synchronization is provided by mutex; these are defensive reads only. */
+    if (PREFER_FETCH_32BIT(pIf->ifIsLoaded) == 1) {
         ABORT_FINALIZE(RS_RET_OK); /* we are already set */
     }
-    if (pIf->ifIsLoaded == 2) {
+    if (PREFER_FETCH_32BIT(pIf->ifIsLoaded) == 2) {
         ABORT_FINALIZE(RS_RET_LOAD_ERROR); /* we had a load error and can not continue */
     }
 
@@ -1183,7 +1193,7 @@ static ATTR_NO_SANITIZE_UNDEFINED rsRetVal UseObj(const char *srcFile,
      * and set it to "fully initialized" when the load succeeded. It's a bit hackish, but
      * looks like a good solution. -- rgerhards, 2008-03-07
      */
-    pIf->ifIsLoaded = 2;
+    pIf->ifIsLoaded = 2; /* plain write: protected by mutObjGlobalOp */
 
     iRet = FindObjInfo((const char *)pObjName, &pObjInfo);
     if (iRet == RS_RET_NOT_FOUND) {
@@ -1208,7 +1218,7 @@ static ATTR_NO_SANITIZE_UNDEFINED rsRetVal UseObj(const char *srcFile,
     //       The supression is just an interim solution until the pointer issue
     //       has been fully analyzed and aligned (or considered OK w/ reasoning).
     CHKiRet(pObjInfo->QueryIF(pIf));
-    pIf->ifIsLoaded = 1; /* we are happy */
+    pIf->ifIsLoaded = 1; /* plain write: protected by mutObjGlobalOp */
 
 finalize_it:
     pthread_mutex_unlock(&mutObjGlobalOp);
@@ -1226,15 +1236,16 @@ static rsRetVal ReleaseObj(const char *srcFile, uchar *pObjName, uchar *pObjFile
     objInfo_t *pObjInfo;
 
     /* dev debug only dbgprintf("source file %s releasing object '%s',
-    ifIsLoaded %d\n", srcFile, pObjName, pIf->ifIsLoaded); */
+    ifIsLoaded %d\n", srcFile, pObjName, PREFER_FETCH_32BIT(pIf->ifIsLoaded)); */
     pthread_mutex_lock(&mutObjGlobalOp);
 
     if (pObjFile == NULL) FINALIZE; /* if it is not a lodable module, we do not need to do anything... */
 
-    if (pIf->ifIsLoaded == 0) {
+    if (PREFER_FETCH_32BIT(pIf->ifIsLoaded) == 0) {
         FINALIZE; /* we are not loaded - this is perfectly OK... */
-    } else if (pIf->ifIsLoaded == 2) {
-        pIf->ifIsLoaded = 0; /* clean up */
+    } else if (PREFER_FETCH_32BIT(pIf->ifIsLoaded) == 2) {
+        /* Clean up failed load attempt */
+        pIf->ifIsLoaded = 0; /* plain write: protected by mutObjGlobalOp */
         FINALIZE; /* we had a load error and can not/must not continue */
     }
 
@@ -1243,7 +1254,7 @@ static rsRetVal ReleaseObj(const char *srcFile, uchar *pObjName, uchar *pObjFile
     /* if we reach this point, we have a valid pObjInfo */
     module.Release(srcFile, &pObjInfo->pModInfo); /* decrease refcount */
 
-    pIf->ifIsLoaded = 0; /* indicated "no longer valid" */
+    pIf->ifIsLoaded = 0; /* plain write: protected by mutObjGlobalOp */
 
 finalize_it:
     pthread_mutex_unlock(&mutObjGlobalOp);

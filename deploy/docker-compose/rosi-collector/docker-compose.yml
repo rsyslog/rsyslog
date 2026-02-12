@@ -99,7 +99,7 @@ services:
       GF_SMTP_FROM_NAME: "Rsyslog Central Alerts"
       GF_SMTP_SKIP_VERIFY: ${SMTP_SKIP_VERIFY:-false}
       # Set default home dashboard to Syslog Explorer
-      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/provisioning/dashboards/syslog-explorer-logs.json
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/provisioning/dashboards/generated/syslog-explorer.json
     ports:
       - "127.0.0.1:3000:3000"
     volumes:
@@ -134,7 +134,7 @@ services:
       - 'traefik.http.routers.grafana.rule=Host(`${TRAEFIK_DOMAIN}`) && !PathPrefix(`/downloads`)'
       - "traefik.http.routers.grafana.entrypoints=websecure"
       - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.grafana.middlewares=security-headers@file,rate-limit@file"
+      - "traefik.http.routers.grafana.middlewares=security-headers@file,rate-limit-grafana@file"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
       - "traefik.http.routers.grafana.priority=1"
   prometheus:
@@ -202,8 +202,9 @@ services:
         condition: service_healthy
     networks:
       - rosi-collector-net
+    # Healthcheck: container runs rsyslog in foreground (-n), so no PID file exists; check process instead.
     healthcheck:
-      test: ["CMD-SHELL", "test -f /var/run/rsyslogd.pid && kill -0 $(cat /var/run/rsyslogd.pid)"]
+      test: ["CMD-SHELL", "pidof rsyslogd >/dev/null || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -252,8 +253,9 @@ services:
         condition: service_healthy
     networks:
       - rosi-collector-net
+    # Healthcheck: container runs rsyslog in foreground (-n), so no PID file exists; check process instead.
     healthcheck:
-      test: ["CMD-SHELL", "test -f /var/run/rsyslogd.pid && kill -0 $(cat /var/run/rsyslogd.pid)"]
+      test: ["CMD-SHELL", "pidof rsyslogd >/dev/null || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3

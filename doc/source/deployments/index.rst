@@ -19,7 +19,7 @@ Available Deployments
 ROSI Collector
 ^^^^^^^^^^^^^^
 
-**RSyslog Open System for Information** is a complete log collection and
+**Rsyslog Operations Stack Initiative** is a complete log collection and
 monitoring stack including:
 
 - Centralized log aggregation with rsyslog

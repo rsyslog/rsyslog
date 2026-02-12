@@ -17,7 +17,7 @@ module(load="../plugins/imuxsock/.libs/imuxsock"
        SysSock.name="'$RSYSLOG_DYNNAME'-testbench_socket")
 
 template(name="outfmt" type="string" string="%msg:%\n")
-local1.*	action(type="omfile" file=`echo $RSYSLOG_OUT_LOG` template="outfmt")
+local1.*	action(type="omfile" file="'$RSYSLOG_OUT_LOG'" template="outfmt")
 '
 startup
 ./syslog_caller -fsyslog_inject-l -m1 -C "uxsock:$RSYSLOG_DYNNAME-testbench_socket"

@@ -28,8 +28,9 @@
 ##   TRAEFIK_DOMAIN=192.168.1.100 sudo ./init.sh
 ##
 ## @environment
-##   INSTALL_DIR          Installation directory (default: /opt/rosi-collector)
-##   TRAEFIK_DOMAIN       Domain name or IP address for web access (required)
+##   INSTALL_DIR              Installation directory (default: /opt/rosi-collector)
+##   TRAEFIK_DOMAIN           Domain name or IP address for web access (required)
+##   SERVER_IMPSTATS_SIDECAR  Set to "true" to install impstats sidecar in non-interactive mode
 ##   TRAEFIK_EMAIL        Email for Let's Encrypt notifications
 ##   USE_SELF_SIGNED_TLS  Force self-signed cert (auto-detected for IP addresses)
 ##   SYSLOG_TLS_ENABLED   Enable TLS syslog on port 6514 (true/false)
@@ -37,7 +38,7 @@
 ## @author rsyslog project
 ## @see https://github.com/rsyslog/rsyslog
 ##
-## Part of RSyslog Open System for Information (ROSI)
+## Part of Rsyslog Operations Stack Initiative (ROSI)
 
 set -euo pipefail
 
@@ -242,10 +243,19 @@ rsync -a --exclude='*.template' --exclude='prometheus-targets/' "${CONFIGS_DIR}/
 # Create prometheus-targets directory if it doesn't exist (first run)
 if [ ! -d "${BASE}/prometheus-targets" ]; then
   install -d -m 0755 "${BASE}/prometheus-targets"
+  echo "Created prometheus-targets directory"
+fi
+
+# Ensure target templates exist (supports re-runs and upgrades)
+if [ ! -f "${BASE}/prometheus-targets/nodes.yml" ]; then
   cp "${CONFIGS_DIR}/prometheus-targets/nodes.yml" "${BASE}/prometheus-targets/"
-  # Ensure Prometheus container can read targets (runs as nobody/65534)
   chmod 644 "${BASE}/prometheus-targets/nodes.yml"
-  echo "Created prometheus-targets directory with template"
+  echo "Installed prometheus-targets/nodes.yml"
+fi
+if [ ! -f "${BASE}/prometheus-targets/impstats.yml" ]; then
+  cp "${CONFIGS_DIR}/prometheus-targets/impstats.yml" "${BASE}/prometheus-targets/"
+  chmod 644 "${BASE}/prometheus-targets/impstats.yml"
+  echo "Installed prometheus-targets/impstats.yml"
 fi
 
 # ==========================================
@@ -267,6 +277,8 @@ fi
 ##   5. Configures firewall rules for container access
 ##
 ## @env NODE_EXPORTER_VERSION Version to install (default: 1.8.2)
+## @env IMPSTATS_EXPORTER_PORT Port for rsyslog impstats exporter (default: 9898)
+## @env ENABLE_IMPSTATS_FIREWALL Set to "false" to skip impstats firewall rule
 ## @return The IP address node_exporter is bound to (stdout)
 ## @exitcode 0 Success
 ## @exitcode 1 Unsupported architecture or download failure
@@ -528,6 +540,57 @@ configure_node_exporter_firewall() {
   fi
 }
 
+## @fn configure_impstats_exporter_firewall()
+## @brief Configure firewall rules to allow Docker containers to reach impstats exporter
+## @param bind_ip The IP address the impstats exporter is bound to
+## @param port The TCP port for the impstats exporter
+## @description
+##   Adds firewall rules for UFW, firewalld, or raw iptables to allow
+##   the Docker network subnet to access the impstats exporter port.
+configure_impstats_exporter_firewall() {
+  local bind_ip="$1"
+  local port="$2"
+
+  if [ -z "${bind_ip}" ] || [ "${bind_ip}" = "0.0.0.0" ]; then
+    return 0
+  fi
+
+  # Determine the Docker network subnet from the bind IP
+  local subnet
+  subnet=$(echo "${bind_ip}" | sed 's/\.[0-9]*$/\.0\/16/')
+
+  if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active"; then
+    if ! ufw status | grep -q "${bind_ip} ${port}/tcp.*ALLOW.*${subnet}"; then
+      echo "Configuring UFW firewall for impstats exporter..." >&2
+      ufw allow from "${subnet}" to "${bind_ip}" port "${port}" proto tcp comment "rsyslog impstats from Docker" >/dev/null 2>&1
+      echo "Added UFW rule: allow ${subnet} -> ${bind_ip}:${port}" >&2
+    else
+      echo "UFW rule for impstats exporter already exists" >&2
+    fi
+  elif command -v firewall-cmd >/dev/null 2>&1 && systemctl is-active --quiet firewalld; then
+    local rule="rule family=ipv4 source address=${subnet} destination address=${bind_ip} port port=${port} protocol=tcp accept"
+    if ! firewall-cmd --list-rich-rules 2>/dev/null | grep -q "${port}"; then
+      echo "Configuring firewalld for impstats exporter..." >&2
+      firewall-cmd --permanent --add-rich-rule="${rule}" >/dev/null 2>&1
+      firewall-cmd --reload >/dev/null 2>&1
+      echo "Added firewalld rule: allow ${subnet} -> ${bind_ip}:${port}" >&2
+    else
+      echo "firewalld rule for impstats exporter already exists" >&2
+    fi
+  elif command -v iptables >/dev/null 2>&1; then
+    local policy
+    policy=$(iptables -L INPUT -n 2>/dev/null | head -1 | grep -oP 'policy \K\w+')
+    if [ "${policy}" = "DROP" ] || [ "${policy}" = "REJECT" ]; then
+      if ! iptables -C INPUT -s "${subnet}" -d "${bind_ip}" -p tcp --dport "${port}" -j ACCEPT 2>/dev/null; then
+        echo "Configuring iptables for impstats exporter..." >&2
+        iptables -I INPUT -s "${subnet}" -d "${bind_ip}" -p tcp --dport "${port}" -j ACCEPT
+        echo "Added iptables rule: allow ${subnet} -> ${bind_ip}:${port}" >&2
+        echo "Note: This rule is not persistent. Add to /etc/iptables/rules.v4 for persistence." >&2
+      fi
+    fi
+  fi
+}
+
 ## @fn add_server_to_prometheus_targets()
 ## @brief Add the ROSI Collector server to Prometheus scrape targets
 ## @param server_ip The IP address of the node_exporter endpoint
@@ -590,6 +653,253 @@ EOF
   chmod 644 "${targets_file}"
   
   echo "Added ${hostname} (${server_ip}:9100) to Prometheus targets"
+}
+
+## @fn add_server_to_impstats_targets()
+## @brief Add the ROSI Collector server to Prometheus impstats scrape targets
+## @param server_ip The IP address of the impstats exporter endpoint (host:9898)
+add_server_to_impstats_targets() {
+  local server_ip="$1"
+  local targets_file="${BASE}/prometheus-targets/impstats.yml"
+  local hostname
+
+  hostname=$(hostname -s 2>/dev/null || echo "rosi-collector")
+
+  if [ -z "${server_ip}" ] || [ "${server_ip}" = "0.0.0.0" ]; then
+    return 0
+  fi
+
+  if grep -q "${server_ip}:9898" "${targets_file}" 2>/dev/null; then
+    echo "Server ${server_ip}:9898 already in impstats targets"
+    return 0
+  fi
+
+  # Check if hostname already exists (IP may have changed) - avoid duplicate host
+  if grep -q "host: ${hostname}" "${targets_file}" 2>/dev/null; then
+    echo "Server ${hostname} already in impstats targets (updating IP to ${server_ip})"
+    if [ -x "${SCRIPT_DIR}/prometheus-target.sh" ]; then
+      INSTALL_DIR="${BASE}" "${SCRIPT_DIR}/prometheus-target.sh" --job impstats remove "${hostname}" 2>/dev/null || true
+      INSTALL_DIR="${BASE}" "${SCRIPT_DIR}/prometheus-target.sh" --job impstats add "${server_ip}:9898" \
+        "host=${hostname}" "role=rsyslog" "network=internal"
+    else
+      echo "Warning: Cannot update IP without prometheus-target.sh script" >&2
+      echo "Please manually update ${targets_file}" >&2
+    fi
+    chmod 644 "${targets_file}"
+    return 0
+  fi
+
+  if [ -x "${SCRIPT_DIR}/prometheus-target.sh" ]; then
+    INSTALL_DIR="${BASE}" "${SCRIPT_DIR}/prometheus-target.sh" --job impstats add "${server_ip}:9898" \
+      "host=${hostname}" "role=rsyslog" "network=internal"
+  else
+    cat >> "${targets_file}" << EOF
+
+# ROSI Collector Server impstats (auto-added by init.sh)
+- targets:
+    - ${server_ip}:9898
+  labels:
+    host: ${hostname}
+    role: rsyslog
+    network: internal
+EOF
+  fi
+  chmod 644 "${targets_file}"
+  echo "Added ${hostname} (${server_ip}:9898) to impstats Prometheus targets"
+}
+
+# ==========================================
+# Configure server impstats sidecar (optional)
+# ==========================================
+
+## @fn configure_server_impstats_sidecar()
+## @brief Install impstats config and rsyslog_exporter sidecar on the collector server
+## @param server_ip The IP for the sidecar to bind (so Prometheus can scrape)
+## @description
+##   Installs /etc/rsyslog.d/10-impstats.conf (impstats -> UDP 127.0.0.1:19090),
+##   the rsyslog_exporter sidecar service, adds server to impstats Prometheus targets,
+##   and restarts rsyslog. Firewall for port 9898 is already configured earlier.
+## @env SERVER_IMPSTATS_SIDECAR Set to "true" to enable in non-interactive mode
+check_sidecar_requirements() {
+  # Ensure python3, tar, and python3-venv are available; prompt to apt install on Debian/Ubuntu
+  local missing=()
+  local py_ver venv_pkg
+
+  for cmd in python3 tar; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+      missing+=("$cmd")
+    fi
+  done
+  if [ ${#missing[@]} -gt 0 ]; then
+    echo "Error: Missing required commands for sidecar install: ${missing[*]}" >&2
+    echo "  Install with: apt install python3 tar" >&2
+    return 1
+  fi
+
+  if python3 -m venv -h >/dev/null 2>&1 && python3 -m ensurepip --version >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if [ -f /etc/os-release ]; then
+    . /etc/os-release
+  fi
+  if ! command -v apt-get >/dev/null 2>&1 || ! [[ "${ID:-}" =~ ^(ubuntu|debian)$ ]]; then
+    echo "Error: python3 venv/ensurepip module is missing. Install python3-venv and retry." >&2
+    return 1
+  fi
+
+  py_ver=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "")
+  if [ -n "$py_ver" ]; then
+    venv_pkg="python${py_ver}-venv"
+  else
+    venv_pkg="python3-venv"
+  fi
+
+  if [ -t 0 ]; then
+    echo "Warning: python3 venv/ensurepip module is missing." >&2
+    read -rp "Run 'apt update && apt install ${venv_pkg}'? [Y/n]: " confirm
+    if [[ "${confirm}" =~ ^[Nn]$ ]]; then
+      echo "Error: python3 venv module is required for sidecar install" >&2
+      return 1
+    fi
+    apt update
+    if ! apt install -y "${venv_pkg}"; then
+      if [ "${venv_pkg}" != "python3-venv" ]; then
+        echo "Trying python3-venv as fallback..." >&2
+        apt install -y python3-venv
+      fi
+    fi
+    # Re-check after install
+    if ! python3 -m venv -h >/dev/null 2>&1 || ! python3 -m ensurepip --version >/dev/null 2>&1; then
+      echo "Error: venv still not available after package install" >&2
+      return 1
+    fi
+    return 0
+  fi
+
+  echo "Error: python3 venv module is missing. Install with: apt install ${venv_pkg}" >&2
+  return 1
+}
+
+configure_server_impstats_sidecar() {
+  local server_ip="$1"
+  local config_file="/etc/rsyslog.d/10-impstats.conf"
+  local installer=""
+  local sidecar_dir temp_extract=""
+
+  if [ -z "${server_ip}" ] || [ "${server_ip}" = "0.0.0.0" ]; then
+    return 0
+  fi
+
+  # Non-interactive: skip unless explicitly enabled
+  if [ ! -t 0 ]; then
+    if [ "${SERVER_IMPSTATS_SIDECAR:-false}" != "true" ]; then
+      echo "Non-interactive: Skipping server impstats sidecar (set SERVER_IMPSTATS_SIDECAR=true to enable)"
+      return 0
+    fi
+  fi
+
+  echo ""
+  echo "┌─────────────────────────────────────────────────────────────┐"
+  echo "│ Server impstats Sidecar                                    │"
+  echo "│ Install rsyslog impstats + exporter for Syslog Health      │"
+  echo "│ dashboard (queues, actions, discards, CPU usage)           │"
+  echo "└─────────────────────────────────────────────────────────────┘"
+
+  if [ -t 0 ]; then
+    read -rp "Install impstats sidecar on this server? [y/N]: " confirm
+    if [[ ! "${confirm}" =~ ^[Yy]$ ]]; then
+      echo "Skipping server impstats sidecar"
+      return 0
+    fi
+  fi
+
+  # Resolve installer: prefer repo sidecar, else extract from downloads bundle
+  sidecar_dir="$(cd "${CONFIGS_DIR}/../../.." 2>/dev/null && pwd)/sidecar"
+  if [ -x "${sidecar_dir}/install-service.sh" ]; then
+    installer="${sidecar_dir}/install-service.sh"
+  elif [ -f "${BASE}/downloads/rsyslog-exporter.tar.gz" ]; then
+    temp_extract="$(mktemp -d)"
+    tar -xzf "${BASE}/downloads/rsyslog-exporter.tar.gz" -C "${temp_extract}" || {
+      echo "Warning: Failed to extract rsyslog-exporter bundle" >&2
+      rm -rf "${temp_extract}"
+      return 1
+    }
+    if [ -x "${temp_extract}/sidecar/install-service.sh" ]; then
+      installer="${temp_extract}/sidecar/install-service.sh"
+    else
+      rm -rf "${temp_extract}"
+    fi
+  fi
+
+  if [ -z "${installer}" ] || [ ! -x "${installer}" ]; then
+    echo "Warning: rsyslog exporter installer not found; skipping impstats sidecar" >&2
+    echo "  Install manually: download rsyslog-exporter.tar.gz and run install-service.sh" >&2
+    return 1
+  fi
+
+  if ! check_sidecar_requirements; then
+    echo "Warning: Sidecar dependencies not met; skipping impstats sidecar" >&2
+    return 1
+  fi
+
+  # Install rsyslog impstats config (impstats -> UDP 127.0.0.1:19090)
+  if [ ! -f "${config_file}" ] || [ "${SERVER_IMPSTATS_SIDECAR:-false}" = "true" ]; then
+    echo "Installing impstats config: ${config_file}"
+    cat > "${config_file}" << 'IMPSTATS_CONF'
+# rsyslog impstats -> UDP -> rsyslog_exporter sidecar
+# Auto-generated by init.sh
+
+template(name="impstatsJsonOnly" type="string" string="%msg%\n")
+
+ruleset(name="impstats_to_exporter") {
+  action(
+    type="omfwd"
+    target="127.0.0.1"
+    port="19090"
+    protocol="udp"
+    template="impstatsJsonOnly"
+  )
+  stop
+}
+
+module(load="impstats"
+       interval="30"
+       format="json"
+       ruleset="impstats_to_exporter"
+       bracketing="on"
+       resetCounters="off")
+IMPSTATS_CONF
+    chmod 644 "${config_file}"
+    echo "  Created: ${config_file}"
+  fi
+
+  # Install sidecar: listen on server_ip:9898, receive impstats UDP on 127.0.0.1:19090
+  echo "Installing rsyslog exporter sidecar..."
+  local ret=0
+  "${installer}" \
+    --prefix /opt/rsyslog-exporter \
+    --listen-addr "${server_ip}" \
+    --listen-port "${IMPSTATS_EXPORTER_PORT:-9898}" \
+    --impstats-mode udp \
+    --impstats-format json \
+    --impstats-udp-addr 127.0.0.1 \
+    --impstats-udp-port 19090 \
+    --overwrite || ret=$?
+
+  [ -n "${temp_extract:-}" ] && [ -d "${temp_extract}" ] && rm -rf "${temp_extract}"
+
+  if [ "$ret" -ne 0 ]; then
+    echo "Warning: Sidecar installation failed" >&2
+    return 1
+  fi
+
+  # Signal that impstats target should be added at end of init (avoids duplicate)
+  SIDECAR_INSTALLED=1
+  echo ""
+  echo "Server impstats sidecar configured!"
+  echo "  Config: ${config_file}"
+  echo "  Sidecar: ${server_ip}:${IMPSTATS_EXPORTER_PORT:-9898} (Prometheus impstats target)"
 }
 
 # ==========================================
@@ -742,10 +1052,41 @@ DASHBOARDS_DST="${BASE}/grafana/provisioning/dashboards"
 install -d -m 0755 "${DASHBOARDS_DST}"
 
 if [ -d "${DASHBOARDS_SRC}" ]; then
+  source_rendered=false
+  if [ -f "${CONFIGS_DIR}/scripts/render-dashboards.py" ]; then
+    if command -v python3 >/dev/null 2>&1; then
+      echo "Rendering Grafana dashboards from templates (source)..."
+      if python3 "${CONFIGS_DIR}/scripts/render-dashboards.py"; then
+        source_rendered=true
+      else
+        echo "Warning: Failed to render dashboards in source tree" >&2
+      fi
+    else
+      echo "Warning: python3 not found; skipping source dashboard rendering" >&2
+    fi
+  else
+    echo "Warning: render-dashboards.py not found in source tree; skipping source rendering" >&2
+  fi
+
   echo "Installing local Grafana dashboards..."
   rsync -a --delete "${DASHBOARDS_SRC}/" "${DASHBOARDS_DST}/" || {
     echo "Warning: Failed to copy dashboards" >&2
   }
+
+  if [ -f "${BASE}/scripts/render-dashboards.py" ]; then
+    if [ "${source_rendered}" = false ]; then
+      if command -v python3 >/dev/null 2>&1; then
+        echo "Rendering Grafana dashboards from templates (installed copy)..."
+        if ! python3 "${BASE}/scripts/render-dashboards.py"; then
+          echo "Warning: Failed to render dashboards" >&2
+        fi
+      else
+        echo "Warning: python3 not found; skipping dashboard rendering" >&2
+      fi
+    fi
+  else
+    echo "Warning: render-dashboards.py not found; skipping dashboard rendering" >&2
+  fi
 fi
 
 echo "Downloading Grafana dashboards from grafana.com..."
@@ -758,21 +1099,48 @@ find "${DASHBOARDS_DST}" -name "*.json" -type f -exec chmod 644 {} \;
 DASHBOARD_COUNT=$(find "${DASHBOARDS_DST}" -name "*.json" -type f | wc -l)
 echo "Total dashboards installed: ${DASHBOARD_COUNT}"
 
-if [ -d "${CONFIGS_DIR}/downloads" ]; then
+# Grafana runs as UID 472; provisioning dir must be readable via bind mount
+if [ -d "${BASE}/grafana/provisioning" ]; then
+  chmod -R o+rX "${BASE}/grafana/provisioning"
+fi
+
+# Run when source has downloads OR install dir already has downloads (e.g. from TLS)
+if [ -d "${CONFIGS_DIR}/downloads" ] || [ -d "${BASE}/downloads" ]; then
   echo "Installing download files..."
   install -d -m 0755 "${BASE}/downloads"
+  if [ -d "${CONFIGS_DIR}/downloads" ]; then
   rsync -a "${CONFIGS_DIR}/downloads/" "${BASE}/downloads/" || {
     echo "Warning: Failed to copy download files" >&2
   }
-  
+  fi
+
   CLIENTS_DIR="${CONFIGS_DIR}/clients"
+  for script in install-rsyslog-client.sh install-node-exporter.sh; do
+    if [ -f "${CLIENTS_DIR}/${script}" ]; then
+      echo "Copying ${script} to downloads..."
+      cp "${CLIENTS_DIR}/${script}" "${BASE}/downloads/" || {
+        echo "Warning: Failed to copy ${script}" >&2
+      }
+    fi
+  done
   if [ -f "${CLIENTS_DIR}/rsyslog-forward-minimal.conf" ]; then
     echo "Copying rsyslog client config to downloads..."
     cp "${CLIENTS_DIR}/rsyslog-forward-minimal.conf" "${BASE}/downloads/" || {
       echo "Warning: Failed to copy rsyslog-forward-minimal.conf" >&2
     }
   fi
-  
+
+  # Package sidecar when repo has it (SIDECAR_DIR relative to CONFIGS_DIR)
+  SIDECAR_DIR="$(cd "${CONFIGS_DIR}/../../.." && pwd)/sidecar"
+  if [ -d "${SIDECAR_DIR}" ]; then
+    echo "Packaging rsyslog exporter sidecar for downloads..."
+    tar -czf "${BASE}/downloads/rsyslog-exporter.tar.gz" -C "${SIDECAR_DIR}/.." "sidecar" || {
+      echo "Warning: Failed to create rsyslog-exporter.tar.gz" >&2
+    }
+  else
+    echo "Warning: sidecar directory not found; skipping rsyslog exporter package" >&2
+  fi
+
   if [ -f "${ENVFILE}" ]; then
     TRAEFIK_DOMAIN=$(grep "^TRAEFIK_DOMAIN=" "${ENVFILE}" | cut -d'=' -f2- | tr -d '"' || echo "")
   fi
@@ -1125,7 +1493,7 @@ services:
       - 'traefik.http.routers.grafana.rule=Host(`${TRAEFIK_DOMAIN}`) && !PathPrefix(`/downloads`)'
       - "traefik.http.routers.grafana.entrypoints=websecure"
       - "traefik.http.routers.grafana.tls=true"
-      - "traefik.http.routers.grafana.middlewares=security-headers@file,rate-limit@file"
+      - "traefik.http.routers.grafana.middlewares=security-headers@file,rate-limit-grafana@file"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
       - "traefik.http.routers.grafana.priority=1"
 
@@ -1369,12 +1737,14 @@ if ! docker network inspect "${NET}" >/dev/null 2>&1; then
   docker network create "${NET}" >/dev/null 2>&1 || true
 fi
 
-# Install node_exporter and add server as first target
+# Install node_exporter on the server (automatic, always)
 echo ""
 echo "Setting up server monitoring..."
 SERVER_IP=$(install_node_exporter)
 if [ -n "${SERVER_IP}" ] && [ "${SERVER_IP}" != "0.0.0.0" ]; then
-  add_server_to_prometheus_targets "${SERVER_IP}"
+  if [ "${ENABLE_IMPSTATS_FIREWALL:-true}" != "false" ]; then
+    configure_impstats_exporter_firewall "${SERVER_IP}" "${IMPSTATS_EXPORTER_PORT:-9898}"
+  fi
 else
   echo "Warning: Could not determine server IP for Prometheus target" >&2
   echo "Add manually with: prometheus-target add <IP>:9100 host=$(hostname -s) role=monitoring" >&2
@@ -1383,10 +1753,29 @@ fi
 # Configure server syslog forwarding to ROSI Collector
 configure_server_syslog_forwarding
 
+# Optionally install impstats sidecar on the server (prompt or SERVER_IMPSTATS_SIDECAR=true)
+# Failure is non-fatal: Prometheus targets, rsyslog restart, credentials still run
+SIDECAR_INSTALLED=0
+if [ -n "${SERVER_IP}" ] && [ "${SERVER_IP}" != "0.0.0.0" ]; then
+  configure_server_impstats_sidecar "${SERVER_IP}" || true
+fi
+
+# Add server to Prometheus targets at the end (no duplicates)
+# node_exporter: always when SERVER_IP is set
+# impstats: only when sidecar was installed
+if [ -n "${SERVER_IP}" ] && [ "${SERVER_IP}" != "0.0.0.0" ]; then
+  echo ""
+  echo "Registering server in Prometheus targets..."
+  add_server_to_prometheus_targets "${SERVER_IP}"
+  if [ "${SIDECAR_INSTALLED:-0}" = "1" ]; then
+    add_server_to_impstats_targets "${SERVER_IP}"
+  fi
+fi
+
 # Restart rsyslog if any server config was modified
 restart_server_rsyslog() {
   # Check if any server rsyslog config exists
-  if [ -f "/etc/rsyslog.d/99-forward-to-rosi.conf" ]; then
+  if [ -f "/etc/rsyslog.d/99-forward-to-rosi.conf" ] || [ -f "/etc/rsyslog.d/10-impstats.conf" ]; then
     echo ""
     echo "Testing rsyslog configuration..."
     if rsyslogd -N1 2>&1 | grep -qi "error"; then

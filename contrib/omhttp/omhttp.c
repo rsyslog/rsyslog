@@ -541,11 +541,10 @@ static size_t curlResult(void *ptr, size_t size, size_t nmemb, void *userdata) {
     const char *const p = (const char *)ptr;
     wrkrInstanceData_t *const pWrkrData = (wrkrInstanceData_t *)userdata;
     char *buf;
-    const size_t size_add = size * nmemb; // Size is always 1
+    const size_t size_add = size * nmemb;  // Size is always 1
     size_t newlen;
 
     PTR_ASSERT_CHK(pWrkrData, WRKR_DATA_TYPE_ES);
-    
     if (size_add > SIZE_MAX - pWrkrData->replyLen) {
         LogError(0, RS_RET_ERR, "omhttp: reply buffer size overflow in curlResult");
         pWrkrData->replyLen = 0;
@@ -575,7 +574,6 @@ static size_t curlResult(void *ptr, size_t size, size_t nmemb, void *userdata) {
         pWrkrData->reply = buf;
     }
     memcpy(pWrkrData->reply + pWrkrData->replyLen, p, size_add);
-    
     pWrkrData->replyLen = newlen;
     if (pWrkrData->replyBufLen > 0) {
         pWrkrData->reply[pWrkrData->replyLen] = '\0';
@@ -664,6 +662,7 @@ static rsRetVal ATTR_NONNULL() checkConn(wrkrInstanceData_t *const pWrkrData) {
         DBGPRINTF("omhttp: checkConn no health check uri configured skipping it\n");
         FINALIZE;
     }
+
     pWrkrData->replyLen = 0;
 
     for (i = 0; i < pData->numServers; ++i) {
@@ -696,7 +695,7 @@ static rsRetVal ATTR_NONNULL() checkConn(wrkrInstanceData_t *const pWrkrData) {
         }
         /* Setup URL and Handle if needed */
         if (server->fullUrlHealth == NULL) {
-             pWrkrData->replyLen = 0;
+            pWrkrData->replyLen = 0;
             urlBuf = es_newStr(256);
             if (urlBuf == NULL) {
                 LogError(0, RS_RET_OUT_OF_MEMORY, "omhttp: unable to allocate urlBuf buffer.");
@@ -1079,7 +1078,7 @@ static rsRetVal checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg) {
         STATSCOUNTER_INC(serverStats->ctrHttpStatusFail, serverStats->mutCtrHttpStatusFail);
         STATSCOUNTER_ADD(serverStats->ctrMessagesRetry, serverStats->mutCtrMessagesRetry, numMessages);
         STATSCOUNTER_INC(serverStats->ctrHttpRequestsStatus4xx, serverStats->mutCtrHttpRequestsStatus4xx);
-        if (statusCode == 429){
+        if (statusCode == 429) {
             /* Return SUSPENDED to trigger rsyslog's retry logic */
             iRet = RS_RET_SUSPENDED;
         } else {
@@ -1142,7 +1141,7 @@ static rsRetVal checkResult(wrkrInstanceData_t *pWrkrData, uchar *reqmsg) {
     }
 
     if (iRet != RS_RET_OK) {
-        char* serverName = (char *)pData->serverBaseUrls[pWrkrData->serverIndex];
+        char *serverName = (char *)pData->serverBaseUrls[pWrkrData->serverIndex];
         LogMsg(0, iRet, LOG_ERR, "omhttp: checkResult error http status server: %s code: %ld reply: %s", serverName,
                statusCode, pWrkrData->reply != NULL ? pWrkrData->reply : "NULL");
 
@@ -1314,20 +1313,20 @@ finalize_it:
  * This prevents the leak where slist = curl_slist_append(slist...) returns NULL
  * and causes us to lose the reference to the previously allocated list.
  */
- #define SAFE_APPEND(header_str) \
-        do { \
-            temp = curl_slist_append(slist, header_str); \
-            if (temp == NULL) { \
-                curl_slist_free_all(slist); \
-                ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY); \
-            } \
-            slist = temp; \
-        } while(0);
+#define SAFE_APPEND(header_str)                      \
+    do {                                             \
+        temp = curl_slist_append(slist, header_str); \
+        if (temp == NULL) {                          \
+            curl_slist_free_all(slist);              \
+            ABORT_FINALIZE(RS_RET_OUT_OF_MEMORY);    \
+        }                                            \
+        slist = temp;                                \
+    } while (0);
 
 static rsRetVal ATTR_NONNULL() buildCurlHeaders(wrkrInstanceData_t *pWrkrData, sbool contentEncodeGzip) {
     struct curl_slist *slist = NULL;
     /* Optimization: Temp pointer to capture return without losing list on error */
-    struct curl_slist *temp = NULL; 
+    struct curl_slist *temp = NULL;
     DEFiRet;
 
     /* 1. Set Content-Type Header */

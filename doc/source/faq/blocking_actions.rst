@@ -3,7 +3,9 @@
    :keywords: blocking, action, queue, stall, hang, decouple, performance, rsyslog
 
 .. summary-start
+
    Explains why a slow or suspended output action can block the entire processing queue and how to solve this by configuring a dedicated action queue.
+
 .. summary-end
 
 Why does a blocking action stop all log processing?

@@ -10,7 +10,7 @@ ROSI Collector
    single: Loki
    single: Grafana
 
-**RSyslog Open System for Information** (ROSI) Collector is a production-ready
+**Rsyslog Operations Stack Initiative** (ROSI) Collector is a production-ready
 centralized log collection and monitoring stack. It combines rsyslog's powerful
 log processing with modern observability tools to provide a complete logging
 solution.
@@ -55,8 +55,8 @@ Key Features
 ------------
 
 **Pre-built Dashboards**
-   Five Grafana dashboards included: Syslog Explorer, Syslog Deep Dive,
-   Node Overview, Client Health, and Alerting Overview.
+   Five Grafana dashboards: Syslog Explorer, Syslog Analysis, Syslog Health
+   (impstats), Host Metrics Overview, and Alerting Overview.
 
 **Automatic TLS**
    Traefik obtains Let's Encrypt certificates automatically. No manual
@@ -99,10 +99,10 @@ Quick Start
    
    - Prompt for installation directory (default: ``/opt/rosi-collector``)
    - Generate ``.env`` with secure passwords
-   - Copy all configuration files
-   - Install and configure node_exporter for server self-monitoring
+   - Copy config files, create Docker network, and systemd service
+   - Install node_exporter on the server and add to Prometheus
+   - Optionally configure server syslog forwarding and impstats sidecar
    - Configure firewall rules for Docker container access
-   - Create Docker network and systemd service
 
 3. **Start the stack**::
 

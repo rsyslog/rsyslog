@@ -70,6 +70,7 @@ TESTS_ELASTICSEARCH_VALGRIND = \
 	es-basic-ha-vg.sh
 
 TESTS_DEFAULT = \
+	preservefqdn-localhostname-internal.sh \
 	immark.sh \
 	immark-inputname.sh \
 	immark-ruleset.sh \
@@ -235,6 +236,7 @@ TESTS_DEFAULT = \
 	sndrcv_udp_nonstdpt.sh \
 	sndrcv_udp_nonstdpt_v6.sh \
 	imudp_thread_hang.sh \
+	imudp_ratelimit_name.sh \
 	asynwr_simple.sh \
 	asynwr_simple_2.sh \
 	asynwr_timeout.sh \
@@ -327,6 +329,7 @@ TESTS_DEFAULT = \
 	rscript_wrap3.sh \
 	rscript_re_extract_i.sh \
 	rscript_re_extract.sh \
+	rscript_re_extract_loop.sh \
 	rscript_re_match_i.sh \
 	rscript_re_match.sh \
 	rscript_re_match-dbl_quotes.sh \
@@ -543,6 +546,8 @@ TESTS_DEFAULT_VALGRIND = \
 
 TESTS_LIBGCRYPT_VALGRIND = \
 	queue-encryption-disk_keyfile-vg.sh
+TESTS_LIBYAML = \
+	ratelimit_hup.sh
 
 TESTS_IMTCP = \
 	fromhost-port.sh \
@@ -554,6 +559,8 @@ TESTS_IMTCP = \
 	allowed-sender-tcp-hostname-fail.sh \
 	imtcp-discard-truncated-msg.sh \
 	imtcp-basic.sh \
+	imtcp_framing_regex.sh \
+	imtcp-multiline.sh \
 	imtcp-basic-hup.sh \
 	imtcp-impstats-single-thread.sh \
 	imtcp-starvation-0.sh \
@@ -579,11 +586,17 @@ TESTS_IMTCP = \
 	sndrcv_failover.sh \
 	sndrcv_gzip.sh \
 	sndrcv_udp_nonstdpt.sh \
-	sndrcv_udp_nonstdpt_v6.sh \
 	sndrcv_udp_nonstdpt_v6.sh
+TESTS_IMTCP_YAML = \
+	imtcp-persource-ratelimit.sh
 
 TESTS_IMTCP_VALGRIND = \
 	imtcp-octet-framing-too-long-vg.sh
+
+TESTS_RATELIMIT = \
+	ratelimit_exclusivity.sh \
+	ratelimit_name.sh \
+	ratelimit_duplicate.sh
 
 TESTS_IMTCP_IMPSTATS = \
 	imtcp-impstats.sh
@@ -834,6 +847,9 @@ TESTS_OMHTTP_VALGRIND = \
         omhttp-retry-timeout-vg.sh \
         omhttp-batch-lokirest-vg.sh
 
+TESTS_OMHTTP_VICTORIALOGS = \
+	omhttp-victorialogs-jsonline.sh
+
 TESTS_OMOTEL = \
         omotel-http-batch.sh \
         omotel-basic.sh \
@@ -1013,6 +1029,11 @@ TESTS_IMPSTATS = \
 	omfwd_fast_imuxsock.sh \
 	omfwd_impstats-udp.sh \
 	omfwd_impstats-tcp.sh
+
+if ENABLE_IMPSTATS_PUSH
+TESTS_IMPSTATS += impstats-push-basic.sh
+TESTS_IMPSTATS += impstats-push-tls-missing-key.sh
+endif
 
 TESTS_IMPSTATS_VALGRIND = \
 	perctile-simple-vg.sh \
@@ -1640,9 +1661,12 @@ EXTRA_DIST += $(TESTS_GNUTLS_WRONG_OPT)
 EXTRA_DIST += $(TESTS_OSSL_WRONG_OPT)
 EXTRA_DIST += $(TESTS_DEFAULT_VALGRIND)
 EXTRA_DIST += $(TESTS_LIBGCRYPT_VALGRIND)
+EXTRA_DIST += $(TESTS_LIBYAML)
 EXTRA_DIST += $(TESTS_IMTCP)
+EXTRA_DIST += $(TESTS_IMTCP_YAML)
 EXTRA_DIST += $(TESTS_IMTCP_VALGRIND)
 EXTRA_DIST += $(TESTS_IMTCP_IMPSTATS)
+EXTRA_DIST += $(TESTS_RATELIMIT)
 EXTRA_DIST += $(TESTS_SNMP_MINIMAL)
 EXTRA_DIST += $(TESTS_SNMP_FULL)
 EXTRA_DIST += $(TESTS_MMUTF8FIX)
@@ -1677,6 +1701,7 @@ EXTRA_DIST += $(TESTS_OMPROG)
 EXTRA_DIST += $(TESTS_OMPROG_VALGRIND)
 EXTRA_DIST += $(TESTS_OMHTTP)
 EXTRA_DIST += $(TESTS_OMHTTP_VALGRIND)
+EXTRA_DIST += $(TESTS_OMHTTP_VICTORIALOGS)
 EXTRA_DIST += $(TESTS_OMOTEL)
 EXTRA_DIST += $(TESTS_KAFKA)
 EXTRA_DIST += $(TESTS_KAFKA_VALGRIND)
@@ -1964,6 +1989,9 @@ if ENABLE_LIBGCRYPT
 TESTS += $(TESTS_LIBGCRYPT_VALGRIND)
 endif # ENABLE_LIBGCRYPT
 endif # HAVE_VALGRIND
+if HAVE_LIBYAML
+TESTS += $(TESTS_LIBYAML)
+endif # HAVE_LIBYAML
 endif # ENABLE_DEFAULT_TESTS
 
 
@@ -1973,6 +2001,13 @@ endif # ENABLE_DEFAULT_TESTS
 
 if ENABLE_IMTCP_TESTS
 TESTS += $(TESTS_IMTCP)
+
+if HAVE_LIBYAML
+TESTS += $(TESTS_IMTCP_YAML)
+endif # HAVE_LIBYAML
+if ENABLE_IMPTCP
+TESTS += $(TESTS_RATELIMIT)
+endif # ENABLE_IMPTCP
 
 if HAVE_VALGRIND
 TESTS += $(TESTS_IMTCP_VALGRIND)
@@ -2771,6 +2806,9 @@ EXTRA_DIST += \
 	testsuites/x.509/machine-key.pem \
 	testsuites/x.509/client-expired-cert.pem \
 	testsuites/x.509/client-expired-key.pem \
+	ratelimit_name.sh \
+	test_policy_hup.yaml \
+	ratelimit_duplicate.sh \
 	cfg.sh \
 	cfg1.cfgtest \
 	cfg1.testin \
@@ -2791,6 +2829,7 @@ EXTRA_DIST += \
 	es_response_get_msgnum.py \
 	elasticsearch-error-format-check.py \
 	testsuites/imptcp_framing_regex.testdata \
+	testsuites/imtcp-multiline.testdata \
 	testsuites/imptcp_framing_regex-oversize.testdata \
 	testsuites/imptcp_multi_line.testdata \
 	testsuites/no_octet_counted.testdata \

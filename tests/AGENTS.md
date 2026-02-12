@@ -42,6 +42,18 @@ agents.
   (`./tests/imfile-basic.sh`).
 - Use `make check TESTS='script.sh'` when you need Automake logging,
   parallelisation control, or to exercise the Valgrind wrappers.
+
+### Multi-Module Test Guards
+When adding a test that requires multiple modules (e.g., `imtcp` AND `imptcp`), you **MUST** wrap the test definition in `tests/Makefile.am` with significantly separate conditionals for **ALL** required modules. Do not assume one implies the others.
+**Example**:
+```makefile
+if ENABLE_IMTCP
+if ENABLE_IMPTCP
+TESTS += multi_module_test.sh
+endif
+endif
+```
+Failing to do this breaks the build on systems where only one of the modules is enabled.
 - Remove stale `.log`/`.trs` files before re-running a flaky test to avoid
   Automake caching previous outcomes.
 - For configuration validation changes, run `./tests/validation-run.sh` to

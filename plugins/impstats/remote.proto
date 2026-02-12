@@ -1,0 +1,32 @@
+// Copyright 2024-2026 Adiscon GmbH and contributors
+// Licensed under the Apache License, Version 2.0
+//
+// Prometheus Remote Write Protocol v1.0
+// Based on: https://prometheus.io/docs/concepts/remote_write_spec/
+
+syntax = "proto3";
+package prometheus;
+
+// WriteRequest is the top-level message sent to the remote write endpoint.
+// It contains one or more time series.
+message WriteRequest {
+  repeated TimeSeries timeseries = 1;
+}
+
+// TimeSeries represents a single metric with its labels and samples.
+message TimeSeries {
+  repeated Label labels = 1;
+  repeated Sample samples = 2;
+}
+
+// Label is a key-value pair attached to a time series.
+message Label {
+  string name = 1;
+  string value = 2;
+}
+
+// Sample is a single data point: value + timestamp.
+message Sample {
+  double value = 1;
+  int64 timestamp = 2;  // milliseconds since Unix epoch
+}
