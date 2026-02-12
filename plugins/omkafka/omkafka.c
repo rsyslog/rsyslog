@@ -290,6 +290,7 @@ typedef struct _instanceData {
     pthread_t pollThread;
     int pollThreadRunning;
     int stopPollThread;
+    DEF_ATOMIC_HELPER_MUT(mutStopPollThread);
     rd_kafka_t *rk;
     int closeTimeout;
     SLIST_HEAD(failedmsg_listhead, s_failedmsg_entry) failedmsg_head;
@@ -308,7 +309,7 @@ typedef struct wrkrInstanceData {
 static void *pollCallbackThread(void *arg) {
     instanceData *const pData = (instanceData *)arg;
 
-    while (!pData->stopPollThread) {
+    while (!ATOMIC_FETCH_32BIT(&pData->stopPollThread, &pData->mutStopPollThread)) {
         if (pthread_mutex_trylock(&pData->mut_doAction) == 0) {
             pthread_rwlock_rdlock(&pData->rkLock);
             if (pData->bIsOpen && pData->rk != NULL) {
@@ -332,7 +333,7 @@ static rsRetVal startPollCallbackThread(instanceData *const pData) {
         FINALIZE;
     }
 
-    pData->stopPollThread = 0;
+    ATOMIC_STORE_0_TO_INT(&pData->stopPollThread, &pData->mutStopPollThread);
     const int r = pthread_create(&pData->pollThread, NULL, pollCallbackThread, pData);
     if (r != 0) {
         LogError(r, RS_RET_ERR, "omkafka: unable to create librdkafka callback poller thread");
@@ -349,7 +350,7 @@ static void stopPollCallbackThread(instanceData *const pData) {
         return;
     }
 
-    pData->stopPollThread = 1;
+    ATOMIC_STORE_1_TO_INT(&pData->stopPollThread, &pData->mutStopPollThread);
     const int r = pthread_join(pData->pollThread, NULL);
     if (r != 0) {
         LogError(r, RS_RET_ERR, "omkafka: unable to join librdkafka callback poller thread");
@@ -1807,8 +1808,9 @@ BEGINcreateInstance
     CHKiRet(pthread_rwlock_init(&pData->rkLock, NULL));
     CHKiRet(pthread_mutex_init(&pData->mutDynCache, NULL));
     INIT_ATOMIC_HELPER_MUT(pData->mutCurrPartition);
+    INIT_ATOMIC_HELPER_MUT(pData->mutStopPollThread);
     pData->pollThreadRunning = 0;
-    pData->stopPollThread = 0;
+    ATOMIC_STORE_0_TO_INT(&pData->stopPollThread, &pData->mutStopPollThread);
 finalize_it:
 ENDcreateInstance
 
@@ -1888,6 +1890,7 @@ BEGINfreeInstance
     pthread_mutex_destroy(&pData->mutErrFile);
     pthread_mutex_destroy(&pData->mutStatsFile);
     pthread_mutex_destroy(&pData->mutDynCache);
+    DESTROY_ATOMIC_HELPER_MUT(pData->mutStopPollThread);
 ENDfreeInstance
 
 BEGINfreeWrkrInstance
