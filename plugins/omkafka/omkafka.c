@@ -217,6 +217,8 @@ static uint64 getClockTopicAccess(void) {
 static int closeTimeout = 1000;
 static pthread_mutex_t closeTimeoutMut = PTHREAD_MUTEX_INITIALIZER;
 
+#define OMKAFKA_POLL_THREAD_SLEEP_USEC 100000
+
 /* stats callback window metrics */
 static uint64 rtt_avg_usec;
 static uint64 throttle_avg_msec;
@@ -285,6 +287,9 @@ typedef struct _instanceData {
     int bIsSuspended; /* when broker fail, we need to suspend the action */
     pthread_rwlock_t rkLock;
     pthread_mutex_t mut_doAction; /* make sure one wrkr instance max in parallel */
+    pthread_t pollThread;
+    int pollThreadRunning;
+    int stopPollThread;
     rd_kafka_t *rk;
     int closeTimeout;
     SLIST_HEAD(failedmsg_listhead, s_failedmsg_entry) failedmsg_head;
@@ -299,6 +304,58 @@ typedef struct _instanceData {
 typedef struct wrkrInstanceData {
     instanceData *pData;
 } wrkrInstanceData_t;
+
+static void *pollCallbackThread(void *arg) {
+    instanceData *const pData = (instanceData *)arg;
+
+    while (!pData->stopPollThread) {
+        if (pthread_mutex_trylock(&pData->mut_doAction) == 0) {
+            pthread_rwlock_rdlock(&pData->rkLock);
+            if (pData->bIsOpen && pData->rk != NULL) {
+                const int callbacksCalled = rd_kafka_poll(pData->rk, 0); /* call callbacks */
+                DBGPRINTF("omkafka: callback-poller outqueue length: %d, callbacks called %d\n",
+                          rd_kafka_outq_len(pData->rk), callbacksCalled);
+            }
+            pthread_rwlock_unlock(&pData->rkLock);
+            pthread_mutex_unlock(&pData->mut_doAction);
+        }
+        usleep(OMKAFKA_POLL_THREAD_SLEEP_USEC);
+    }
+
+    return NULL;
+}
+
+static rsRetVal startPollCallbackThread(instanceData *const pData) {
+    DEFiRet;
+
+    if (pData->pollThreadRunning) {
+        FINALIZE;
+    }
+
+    pData->stopPollThread = 0;
+    const int r = pthread_create(&pData->pollThread, NULL, pollCallbackThread, pData);
+    if (r != 0) {
+        LogError(r, RS_RET_ERR, "omkafka: unable to create librdkafka callback poller thread");
+        ABORT_FINALIZE(RS_RET_ERR);
+    }
+    pData->pollThreadRunning = 1;
+
+finalize_it:
+    RETiRet;
+}
+
+static void stopPollCallbackThread(instanceData *const pData) {
+    if (!pData->pollThreadRunning) {
+        return;
+    }
+
+    pData->stopPollThread = 1;
+    const int r = pthread_join(pData->pollThread, NULL);
+    if (r != 0) {
+        LogError(r, RS_RET_ERR, "omkafka: unable to join librdkafka callback poller thread");
+    }
+    pData->pollThreadRunning = 0;
+}
 
 #define INST_STATSCOUNTER_INC(inst, ctr, mut) \
     do {                                      \
@@ -1469,6 +1526,7 @@ static rsRetVal openKafka(instanceData *const __restrict__ pData) {
     }
 
     pData->bIsOpen = 1;
+    CHKiRet(startPollCallbackThread(pData));
 finalize_it:
     if (iRet == RS_RET_OK) {
         pData->bReportErrs = 1;
@@ -1749,6 +1807,8 @@ BEGINcreateInstance
     CHKiRet(pthread_rwlock_init(&pData->rkLock, NULL));
     CHKiRet(pthread_mutex_init(&pData->mutDynCache, NULL));
     INIT_ATOMIC_HELPER_MUT(pData->mutCurrPartition);
+    pData->pollThreadRunning = 0;
+    pData->stopPollThread = 0;
 finalize_it:
 ENDcreateInstance
 
@@ -1768,6 +1828,7 @@ BEGINfreeInstance
     /* Helpers for Failed Msg List */
     failedmsg_entry *fmsgEntry1;
     failedmsg_entry *fmsgEntry2;
+    stopPollCallbackThread(pData);
     if (pData->fdErrFile != -1) close(pData->fdErrFile);
     if (pData->fdStatsFile != -1) close(pData->fdStatsFile);
     /* Closing Kafka first! */
