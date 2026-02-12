@@ -13,6 +13,14 @@ Scheduled Release 8.2602.0 (aka 2026.02) 2026-02-??
 
 - overall improved documentation via a large set of topic updates.
 
+- 2026-02-12: runtime: iterate ptcp addresses and validate bind device
+  Some connect failures were caused by stopping after the first resolved
+  address and by repeating unsupported SO_BINDTODEVICE handling per address.
+  This made retries less robust and error reporting less clear.
+  Ptcp connect now tries all resolved addresses and fails fast with a
+  specific unsupported-value error when a bind device is configured on
+  platforms without SO_BINDTODEVICE.
+  closes https://github.com/rsyslog/rsyslog/pull/5305
 - 2026-02-08: CI: added test for VictoriaLogs via omhttp
   This also verifies that current rsyslog can actually push to
   VictoriaLogs via their native interface. The new test also sets
